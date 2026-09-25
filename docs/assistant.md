@@ -28,7 +28,10 @@ assistant on the right. Ask it about your mail in plain words:
 - "Save this thread as an mbox in my Documents folder."
 
 It reads mail with the same tools you use: it lists mailboxes, searches
-Gmail, and reads conversations. It looks people up in your address book,
+each account's server, and reads conversations. On an account from
+another provider it files mail in folders, and when you ask for
+something only a Gmail account has, such as categories or filters, it
+tells you why that account cannot. It looks people up in your address book,
 by name, address or organisation, and gets back their addresses, phone
 number and organisation. It acts through the app too, so Ctrl+Z
 undoes what it archived, trashed, flagged, muted, or marked. It can also
@@ -98,8 +101,9 @@ the conversation.
 
 It lists your drafts, changes one, and deletes one, asking before each
 change. An encrypted draft stays encrypted to your own key when it goes
-back to Gmail, and opening it may ask for your passphrase. Gmail deletes
-a draft for good, with no copy in the Trash.
+back to the account's server, and opening it may ask for your
+passphrase. The server deletes a draft for good, with no copy in the
+Trash.
 
 ## Your calendar
 

@@ -250,11 +250,11 @@ pub(super) fn catalog<A: Accounts>() -> Vec<MailTool<A>> {
         MailTool {
             name: "list_mail",
             label: || gettext("Reading a mailbox"),
-            description: "Lists conversations in a mailbox, newest first. Inbox, flagged, sent, drafts, VIPs, muted, and labels read the mail kept on this computer (the last few weeks plus everything in the inbox); archive, junk, trash, all_mail, and smart mailboxes ask Gmail. archive is received mail taken out of the inbox. send_later, outbox, and reminders list what waits, soonest first: each row says why it waits and when it goes or returns, and its account, thread_id, and message_id are the target send_now, cancel_send, delete_queued, reschedule, cancel_reminder, and change_reminder take.",
+            description: "Lists conversations in a mailbox, newest first. Inbox, flagged, sent, drafts, VIPs, muted, and labels read the mail kept on this computer (the last few weeks plus everything in the inbox); archive, junk, trash, all_mail, and smart mailboxes ask the account's server. archive is received mail taken out of the inbox. send_later, outbox, and reminders list what waits, soonest first: each row says why it waits and when it goes or returns, and its account, thread_id, and message_id are the target send_now, cancel_send, delete_queued, reschedule, cancel_reminder, and change_reminder take.",
             input: || {
                 json!({
                     "mailbox": {"type": "string", "enum": MailboxName::ALL.map(MailboxName::key), "description": "follow_up lists sent mail that has waited 3 to 30 days for a reply."},
-                    "category": {"type": "string", "enum": categories(), "description": "Narrow the inbox to one of Gmail's categories."},
+                    "category": {"type": "string", "enum": categories(), "description": "Narrow the inbox to one of its categories, which only Gmail accounts have."},
                     "label": {"type": "string", "description": "The label's name, when mailbox is \"label\"."},
                     "name": {"type": "string", "description": "The smart mailbox's name, when mailbox is \"smart\"."},
                     "account": account("Limit to one account. All accounts when left out."),
@@ -268,7 +268,7 @@ pub(super) fn catalog<A: Accounts>() -> Vec<MailTool<A>> {
         MailTool {
             name: "search_mail",
             label: || gettext("Searching mail"),
-            description: "Searches mail across all accounts or one, and reaches all mail, not only recent mail. The query takes Gmail's search syntax: from:, to:, subject:, has:attachment, is:unread, newer_than:7d, older_than:1y, label:, in:anywhere, and plain words.",
+            description: "Searches mail across all accounts or one, and reaches all mail, not only recent mail. On a Gmail account the query takes Gmail's search syntax: from:, to:, subject:, has:attachment, is:unread, newer_than:7d, older_than:1y, label:, in:anywhere, and plain words. On any other account the query takes from:, to:, subject:, is:unread, is:flagged, newer_than:, older_than:, after:YYYY/MM/DD, before:YYYY/MM/DD, larger:, label:, in:, OR, a leading minus, and plain words. The mail on this computer answers first and the server searches past it; has:attachment, a category, or a folder inside OR is answered from this computer alone, so it may miss older mail.",
             input: || {
                 json!({
                     "query": {"type": "string"},
@@ -309,7 +309,7 @@ pub(super) fn catalog<A: Accounts>() -> Vec<MailTool<A>> {
         MailTool {
             name: "label",
             label: || gettext("Changing labels"),
-            description: "Adds or removes Gmail labels on conversations, by label name. When add names a label an account lacks, the user decides whether to create it; if they decline, only mail in accounts that have the label gets it. On an account that files mail in folders, one name in add and none in remove moves the mail into that folder.",
+            description: "Adds or removes labels on conversations, by label name. When add names a label an account lacks, the user decides whether to create it; if they decline, only mail in accounts that have the label gets it. On an account that files mail in folders, name one folder in add and leave remove empty to move the mail there; any other combination is refused.",
             input: || {
                 json!({
                     "targets": targets(),
@@ -352,7 +352,7 @@ pub(super) fn catalog<A: Accounts>() -> Vec<MailTool<A>> {
         MailTool {
             name: "list_drafts",
             label: || gettext("Reading drafts"),
-            description: "Lists the drafts waiting in Gmail, newest first, with their subjects, recipients, dates and message ids. Read one with read_conversation.",
+            description: "Lists the drafts waiting on each account's server, newest first, with their subjects, recipients, dates and message ids. Read one with read_conversation.",
             input: || json!({"account": account("Limit to one account. All accounts when left out.")}),
             required: &[],
             run: Run::Now(|t, input| Box::pin(t.list_drafts(input))),
@@ -360,7 +360,7 @@ pub(super) fn catalog<A: Accounts>() -> Vec<MailTool<A>> {
         MailTool {
             name: "edit_draft",
             label: || gettext("Changing a draft"),
-            description: "Changes a draft Gmail keeps and saves it back. Only the fields given change: to, cc and bcc replace the lists, body replaces the whole text, attachments adds files, remove_attachments takes files out by name. An encrypted draft stays encrypted unless encrypt is false. The user approves it first.",
+            description: "Changes a draft the account's server keeps and saves it back. Only the fields given change: to, cc and bcc replace the lists, body replaces the whole text, attachments adds files, remove_attachments takes files out by name. An encrypted draft stays encrypted unless encrypt is false. The user approves it first.",
             input: || {
                 json!({
                     "account": account("The draft's account."),
@@ -382,7 +382,7 @@ pub(super) fn catalog<A: Accounts>() -> Vec<MailTool<A>> {
         MailTool {
             name: "delete_draft",
             label: || gettext("Deleting a draft"),
-            description: "Deletes a draft from Gmail for good. The user approves it first.",
+            description: "Deletes a draft from the account's server for good. The user approves it first.",
             input: || {
                 json!({
                     "account": account("The draft's account."),
@@ -395,7 +395,7 @@ pub(super) fn catalog<A: Accounts>() -> Vec<MailTool<A>> {
         MailTool {
             name: "block_sender",
             label: || gettext("Blocking a sender"),
-            description: "Sends all future mail from an address straight to the Trash, with a Gmail filter.",
+            description: "Sends all future mail from an address straight to the Trash, with a filter on a Gmail account.",
             input: || {
                 json!({
                     "account": account("The account to block the sender in."),
@@ -416,7 +416,7 @@ pub(super) fn catalog<A: Accounts>() -> Vec<MailTool<A>> {
         MailTool {
             name: "set_automatic_reply",
             label: || gettext("Setting the automatic reply"),
-            description: "Turns an account's out-of-office automatic reply on or off. Gmail sends it, even with the computer off.",
+            description: "Turns an account's out-of-office automatic reply on or off. The account's server sends it, even with the computer off.",
             input: || {
                 json!({
                     "account": account("The account."),
@@ -434,7 +434,7 @@ pub(super) fn catalog<A: Accounts>() -> Vec<MailTool<A>> {
         MailTool {
             name: "list_rules",
             label: || gettext("Reading rules"),
-            description: "Lists an account's Gmail filters, described in words, with their ids.",
+            description: "Lists an account's rules, the filters of a Gmail account, described in words, with their ids.",
             input: || json!({"account": account("The account.")}),
             required: &["account"],
             run: Run::Now(|t, input| Box::pin(t.list_rules(input))),
@@ -442,7 +442,7 @@ pub(super) fn catalog<A: Accounts>() -> Vec<MailTool<A>> {
         MailTool {
             name: "create_rule",
             label: || gettext("Creating a rule"),
-            description: "Creates a Gmail filter. Give at least one condition and one action.",
+            description: "Creates a rule, as a filter on a Gmail account. Give at least one condition and one action.",
             input: || {
                 json!({
                     "account": account("The account."),
@@ -466,7 +466,7 @@ pub(super) fn catalog<A: Accounts>() -> Vec<MailTool<A>> {
         MailTool {
             name: "delete_rule",
             label: || gettext("Deleting a rule"),
-            description: "Deletes a Gmail filter by the id list_rules gave.",
+            description: "Deletes a rule by the id list_rules gave.",
             input: || json!({"account": account("The account."), "id": {"type": "string"}}),
             required: &["account", "id"],
             run: Run::AsksFirst(|t, input| Box::pin(t.delete_rule(input))),
@@ -474,7 +474,7 @@ pub(super) fn catalog<A: Accounts>() -> Vec<MailTool<A>> {
         MailTool {
             name: "create_label",
             label: || gettext("Creating a label"),
-            description: "Creates a Gmail label. Use a slash to nest it: \"Work/Clients\".",
+            description: "Creates a label, or a folder on an account that files mail in folders. Use a slash to nest it: \"Work/Clients\".",
             input: || json!({"account": account("The account."), "name": {"type": "string"}}),
             required: &["account", "name"],
             run: Run::Now(|t, input| Box::pin(t.create_label(input))),
@@ -482,7 +482,7 @@ pub(super) fn catalog<A: Accounts>() -> Vec<MailTool<A>> {
         MailTool {
             name: "rename_label",
             label: || gettext("Renaming a label"),
-            description: "Renames a Gmail label. Labels nested under it move along. The user approves it first.",
+            description: "Renames a label or folder. Those nested under it move along. The user approves it first.",
             input: || {
                 json!({
                     "account": account("The account."),
@@ -496,7 +496,7 @@ pub(super) fn catalog<A: Accounts>() -> Vec<MailTool<A>> {
         MailTool {
             name: "recolor_label",
             label: || gettext("Coloring a label"),
-            description: "Gives a Gmail label one of the colours of Gmail's palette. The user approves it first.",
+            description: "Gives a label on a Gmail account one of the colors of Gmail's palette. The user approves it first.",
             input: || {
                 json!({
                     "account": account("The account."),
@@ -510,7 +510,7 @@ pub(super) fn catalog<A: Accounts>() -> Vec<MailTool<A>> {
         MailTool {
             name: "delete_label",
             label: || gettext("Deleting a label"),
-            description: "Deletes a Gmail label. Its mail stays in Gmail without it, and labels nested under it stay. The user sees how many conversations carry it and approves it first.",
+            description: "Deletes a label or folder, and labels nested under it stay. On a Gmail account its mail stays without the label; on an account that files mail in folders the mail in the folder is deleted with it. The user sees how many conversations it holds and approves it first.",
             input: || json!({"account": account("The account."), "label": {"type": "string", "description": "The label's name."}}),
             required: &["account", "label"],
             run: Run::AsksFirst(|t, input| Box::pin(t.delete_label(input))),
@@ -518,7 +518,7 @@ pub(super) fn catalog<A: Accounts>() -> Vec<MailTool<A>> {
         MailTool {
             name: "list_smart_mailboxes",
             label: || gettext("Reading smart mailboxes"),
-            description: "Lists the smart mailboxes with their ids, conditions, and the Gmail search each one runs.",
+            description: "Lists the smart mailboxes with their ids and conditions, and for Gmail accounts the Gmail search each one runs.",
             input: || json!({}),
             required: &[],
             run: Run::Now(|t, _| Box::pin(ready(Ok(t.list_smart_mailboxes())))),
@@ -584,7 +584,7 @@ pub(super) fn catalog<A: Accounts>() -> Vec<MailTool<A>> {
         MailTool {
             name: "create_contact",
             label: || gettext("Adding a contact"),
-            description: "Adds a person to an account's Google Contacts. Give a name or an address at least. The user approves it first.",
+            description: "Adds a person to a Gmail account's contacts. Give a name or an address at least. The user approves it first.",
             input: || {
                 json!({
                     "account": account("The account whose contacts get the person. Defaults to the default account."),
@@ -600,7 +600,7 @@ pub(super) fn catalog<A: Accounts>() -> Vec<MailTool<A>> {
         MailTool {
             name: "update_contact",
             label: || gettext("Changing a contact"),
-            description: "Changes a person in an account's Google Contacts. Only the fields given change; emails and phones replace the whole list, and an empty string clears a field. The user approves it first.",
+            description: "Changes a person in a Gmail account's contacts. Only the fields given change; emails and phones replace the whole list, and an empty string clears a field. The user approves it first.",
             input: || {
                 json!({
                     "contact": {"type": "string", "description": "The id find_contact gave, or one of the contact's addresses."},
@@ -703,7 +703,7 @@ pub(super) fn catalog<A: Accounts>() -> Vec<MailTool<A>> {
         MailTool {
             name: "create_smart_mailbox",
             label: || gettext("Creating a smart mailbox"),
-            description: "Saves a smart mailbox: conditions that list matching mail from Gmail.",
+            description: "Saves a smart mailbox: conditions that list matching mail from every account.",
             input: || {
                 json!({
                     "name": {"type": "string"},
@@ -729,7 +729,7 @@ pub(super) fn catalog<A: Accounts>() -> Vec<MailTool<A>> {
         MailTool {
             name: "categorize_sender",
             label: || gettext("Sorting a sender"),
-            description: "Moves a sender's mail into an inbox category and sorts their future mail there with a Gmail filter.",
+            description: "Moves a sender's mail into an inbox category and sorts their future mail there with a filter. Only Gmail accounts have categories.",
             input: || {
                 json!({
                     "account": account("The account."),
@@ -840,7 +840,7 @@ pub(super) fn catalog<A: Accounts>() -> Vec<MailTool<A>> {
         MailTool {
             name: "cancel_send",
             label: || gettext("Canceling a scheduled message"),
-            description: "Stops messages in Send Later from going out. Each goes back to Gmail's Drafts; one Gmail cannot take right now opens in a composer for the user to save. The user approves it first.",
+            description: "Stops messages in Send Later from going out. Each goes back to its account's Drafts; one the server cannot take right now opens in a composer for the user to save. The user approves it first.",
             input: || json!({"targets": targets()}),
             required: &["targets"],
             run: Run::AsksFirst(|t, input| Box::pin(t.cancel_send(input))),
@@ -950,7 +950,7 @@ pub(super) fn catalog<A: Accounts>() -> Vec<MailTool<A>> {
         MailTool {
             name: "unsubscribe",
             label: || gettext("Unsubscribing"),
-            description: "Leaves the mailing lists 1 to 20 conversations came from, as list_newsletters gives them: a one-click request, an email to the list, or the sender's own unsubscribe page, which Penguin Mail loads out of sight, fills in and submits. It opens one dialog naming every list and what will be pressed, and does nothing the user does not tick there. A page takes up to 45 seconds, so a long list can take minutes; wait for the answer rather than calling again. Each list comes back as done, unclear (submitted, page said nothing), waiting (the request mail sits in the Outbox until Gmail takes it), failed with a reason, opened (the page needed the user and opened in their browser), or declined.",
+            description: "Leaves the mailing lists 1 to 20 conversations came from, as list_newsletters gives them: a one-click request, an email to the list, or the sender's own unsubscribe page, which Penguin Mail loads out of sight, fills in and submits. It opens one dialog naming every list and what will be pressed, and does nothing the user does not tick there. A page takes up to 45 seconds, so a long list can take minutes; wait for the answer rather than calling again. Each list comes back as done, unclear (submitted, page said nothing), waiting (the request mail sits in the Outbox until the account's server takes it), failed with a reason, opened (the page needed the user and opened in their browser), or declined.",
             input: || {
                 json!({
                     "conversations": {
@@ -995,7 +995,7 @@ pub(super) fn catalog<A: Accounts>() -> Vec<MailTool<A>> {
         MailTool {
             name: "find_contact",
             label: || gettext("Looking up a contact"),
-            description: "Looks people up by name, address, or organization: first in the address books Penguin Mail keeps from Google Contacts, then among the people in stored mail.",
+            description: "Looks people up by name, address, or organization: first in the address books Penguin Mail keeps from the contacts of Gmail accounts, then among the people in stored mail.",
             input: || json!({"query": {"type": "string", "description": "Words to find, such as \"priya\" or \"fernwood\"."}}),
             required: &["query"],
             run: Run::Now(|t, input| Box::pin(t.find_contact(input))),
@@ -1003,7 +1003,7 @@ pub(super) fn catalog<A: Accounts>() -> Vec<MailTool<A>> {
         MailTool {
             name: "list_events",
             label: || gettext("Reading the calendar"),
-            description: "Lists the events on an account's Google calendar between two local times, with their ids, times, places, guests, and the user's own answer.",
+            description: "Lists the events on an account's calendar between two local times, with their ids, times, places, guests, and the user's own answer.",
             input: || {
                 json!({
                     "from": {"type": "string", "description": "Local time as YYYY-MM-DDTHH:MM, or a day as YYYY-MM-DD for its start."},
@@ -1035,13 +1035,13 @@ pub(super) fn catalog<A: Accounts>() -> Vec<MailTool<A>> {
         MailTool {
             name: "create_event",
             label: || gettext("Adding an event"),
-            description: "Puts an event on an account's Google calendar and invites its guests. Give start and end as local times, or both as days for an all-day event. The user approves it first.",
+            description: "Puts an event on an account's calendar and invites its guests. Give start and end as local times, or both as days for an all-day event. The user approves it first.",
             input: || {
                 json!({
                     "title": {"type": "string"},
                     "start": {"type": "string", "description": "Local time as YYYY-MM-DDTHH:MM, or the first day as YYYY-MM-DD."},
                     "end": {"type": "string", "description": "Local time as YYYY-MM-DDTHH:MM, or the last day as YYYY-MM-DD."},
-                    "attendees": {"type": "array", "items": {"type": "string"}, "description": "Guests' addresses. Google emails each an invitation."},
+                    "attendees": {"type": "array", "items": {"type": "string"}, "description": "Guests' addresses. The calendar's server emails each an invitation."},
                     "location": {"type": "string"},
                     "description": {"type": "string"},
                     "account": account("The calendar's account. Defaults to the default account.")
@@ -1053,7 +1053,7 @@ pub(super) fn catalog<A: Accounts>() -> Vec<MailTool<A>> {
         MailTool {
             name: "update_event",
             label: || gettext("Changing an event"),
-            description: "Changes an event on the calendar by the id list_events gave. Only the fields given change; attendees replaces the guest list. Google tells the guests. The user approves it first.",
+            description: "Changes an event on the calendar by the id list_events gave. Only the fields given change; attendees replaces the guest list. The calendar's server tells the guests. The user approves it first.",
             input: || {
                 json!({
                     "id": {"type": "string"},
@@ -1073,7 +1073,7 @@ pub(super) fn catalog<A: Accounts>() -> Vec<MailTool<A>> {
         MailTool {
             name: "delete_event",
             label: || gettext("Deleting an event"),
-            description: "Deletes an event from the calendar by the id list_events gave. Google tells the guests. The user approves it first.",
+            description: "Deletes an event from the calendar by the id list_events gave. The calendar's server tells the guests. The user approves it first.",
             input: || {
                 json!({
                     "id": {"type": "string"},
@@ -1087,7 +1087,7 @@ pub(super) fn catalog<A: Accounts>() -> Vec<MailTool<A>> {
         MailTool {
             name: "answer_invitation",
             label: || gettext("Answering an invitation"),
-            description: "Answers the meeting invitation in a message: yes, no, or maybe. Google Calendar records it when it holds the event; otherwise the answer goes to the organizer by email. The user approves it first.",
+            description: "Answers the meeting invitation in a message: yes, no, or maybe. The account's calendar records it when it holds the event; otherwise the answer goes to the organizer by email. The user approves it first.",
             input: || {
                 json!({
                     "account": account("The message's account."),
@@ -1135,5 +1135,54 @@ mod tests {
             assert_ne!(name, gettext("Working"), "{}", spec.name);
         }
         assert_eq!(label("web_search"), None);
+    }
+
+    /// Every `description` string in a tool's input schema. A property may
+    /// itself be called `description`, so only a string value counts.
+    fn schema_descriptions(value: &Value, into: &mut Vec<String>) {
+        match value {
+            Value::Object(map) => {
+                for (key, inner) in map {
+                    match (key.as_str(), inner) {
+                        ("description", Value::String(text)) => into.push(text.clone()),
+                        _ => schema_descriptions(inner, into),
+                    }
+                }
+            }
+            Value::Array(items) => {
+                for item in items {
+                    schema_descriptions(item, into);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    /// Accounts come from Gmail and from IMAP providers, and the prompt
+    /// and the catalog are one text for all of them. So a sentence that
+    /// names Gmail or Google says it is about a Gmail account.
+    #[test]
+    fn no_tool_or_the_system_prompt_takes_every_account_for_gmail() {
+        let prompt = crate::assistant::SYSTEM_PROMPT;
+        assert!(
+            !prompt.contains("mail app for Gmail accounts."),
+            "the prompt says the app serves Gmail alone"
+        );
+        let mut texts = vec![("the system prompt".to_string(), prompt.to_string())];
+        for spec in specs() {
+            texts.push((spec.name.clone(), spec.description.clone()));
+            let mut inner = Vec::new();
+            schema_descriptions(&spec.input_schema, &mut inner);
+            texts.extend(inner.into_iter().map(|text| (spec.name.clone(), text)));
+        }
+        for (whose, text) in &texts {
+            for sentence in text.split(['\n', ';']).flat_map(|part| part.split(". ")) {
+                let names = sentence.contains("Gmail") || sentence.contains("Google");
+                assert!(
+                    !names || sentence.contains("Gmail account"),
+                    "{whose} says this of every account: {sentence}"
+                );
+            }
+        }
     }
 }
