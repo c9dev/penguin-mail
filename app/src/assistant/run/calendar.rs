@@ -136,7 +136,10 @@ fn event_json(occurrence: &model::Occurrence, calendar_name: &HashMap<String, St
         description.push_str("\n[cut short]");
     }
     json!({
-        "id": event.id,
+        // An occurrence of a series has an id of its own, so a change the
+        // model makes to it reaches that occurrence and not the series.
+        "id": occurrence.id(),
+        "repeats": !event.rules.is_empty() || event.series.is_some(),
         "title": event.title,
         "start": start_text,
         "end": end_text,

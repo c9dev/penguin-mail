@@ -667,6 +667,16 @@ impl FakeGmail {
         });
     }
 
+    /// The series an occurrence id (`<series>_<start>`) names on `calendar`,
+    /// and the occurrence's original start.
+    fn series_of(&self, calendar: &str, id: &str) -> Option<(calendar::Event, EpochMillis)> {
+        let (series, start) = calendar::split_occurrence_id(id)?;
+        let held = self.with(|s| {
+            s.calendar_events.iter().find(|e| e.calendar == calendar && e.id == series && !e.rules.is_empty()).cloned()
+        })?;
+        Some((held, start))
+    }
+
     /// Removes an event from a calendar, as someone deleting it elsewhere
     /// would, and records it in the change log a sync token reads from.
     pub fn drop_calendar_event(&self, calendar: &str, id: &str) {
@@ -1256,6 +1266,9 @@ impl GmailApi for FakeGmail {
         });
         match (&held, create) {
             (Some(_), true) => return Err(GmailError::Http { status: 409, body: "duplicate".into() }),
+            // An occurrence of a series has an id before anyone changes
+            // it; the first change makes it an event of its own.
+            (None, false) if self.series_of(&event.calendar, &event.id).is_some() => {}
             (None, false) => return Err(GmailError::NotFound),
             _ => {}
         }
@@ -1284,7 +1297,24 @@ impl GmailApi for FakeGmail {
         self.calendar_open()?;
         let held = self.with(|s| s.calendar_events.iter().find(|e| e.calendar == calendar && e.id == id).cloned());
         match (held, etag) {
-            (None, _) => Err(GmailError::NotFound),
+            // Deleting one occurrence of a series leaves a cancelled
+            // occurrence behind, which the change feed hands out.
+            (None, _) => match self.series_of(calendar, id) {
+                Some((series, start)) => {
+                    self.put_calendar_event(calendar::Event {
+                        id: id.to_string(),
+                        rules: Vec::new(),
+                        status: calendar::Status::Cancelled,
+                        series: Some(series.id.clone()),
+                        original_start: Some(start),
+                        start,
+                        end: start + (series.end - series.start),
+                        ..series
+                    });
+                    Ok(())
+                }
+                None => Err(GmailError::NotFound),
+            },
             (Some(held), Some(etag)) if held.etag != etag => Err(GmailError::Changed),
             _ => {
                 self.drop_calendar_event(calendar, id);
