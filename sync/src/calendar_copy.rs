@@ -140,6 +140,11 @@ impl<A: Accounts> CalendarCopy<A> {
         let every = if window_open { READ_EVERY_OPEN } else { READ_EVERY_TRAY };
         let mut total = Refreshed::default();
         for &account_id in accounts {
+            // An account still starting, signed out or just removed has
+            // nothing to read with, and the app ticks every 15 seconds.
+            if self.accounts.services(account_id).is_none() {
+                continue;
+            }
             // Queued changes go out before the account is read, so an
             // edit made here shows up in what comes back rather than
             // waiting for the read after it (Task 6 Interfaces). Calls
