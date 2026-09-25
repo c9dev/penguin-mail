@@ -13,6 +13,7 @@ use std::sync::{Arc, Mutex, PoisonError};
 use std::ops::RangeInclusive;
 use std::time::Duration;
 
+use mailrs_domain::calendar as model;
 use mailrs_domain::invitation::Answer;
 use mailrs_domain::mailbox::keyword;
 use mailrs_domain::{EpochMillis, Filter, MailSet, MailboxKind, RemoteMailbox, Role, Vacation};
@@ -517,11 +518,72 @@ impl<G: GmailApi> CalendarService for Google<G> {
     }
 
     async fn update_event(&self, id: &str, fields: &EventFields) -> Result<Event, BackendError> {
-        Ok(paced(self.gmail.update_event(id, fields)).await?)
+        paced(self.gmail.update_event(id, fields)).await.map_err(gone_is_not_found)
     }
 
     async fn delete_event(&self, id: &str) -> Result<(), BackendError> {
-        Ok(paced(self.gmail.delete_event(id)).await?)
+        paced(self.gmail.delete_event(id)).await.map_err(gone_is_not_found)
+    }
+
+    async fn calendars(&self) -> Result<Vec<model::Calendar>, BackendError> {
+        Ok(paced(self.gmail.calendars()).await?)
+    }
+
+    async fn event_changes(
+        &self,
+        calendar: &str,
+        token: Option<&str>,
+        page: Option<&str>,
+        from: EpochMillis,
+    ) -> Result<model::EventPage, BackendError> {
+        match paced(self.gmail.event_changes(calendar, token, page, from)).await {
+            // Only the call that reads changes can say the server lost
+            // its place; elsewhere a 404 means an event is gone.
+            Err(GmailError::ExpiredSyncToken) => Err(BackendError::StateLost),
+            other => Ok(other?),
+        }
+    }
+
+    async fn put_event(
+        &self,
+        event: &model::Event,
+        etag: Option<&str>,
+        create: bool,
+    ) -> Result<model::Event, BackendError> {
+        paced(self.gmail.put_event(event, etag, create)).await.map_err(calendar_write_error)
+    }
+
+    async fn remove_event(&self, calendar: &str, id: &str, etag: Option<&str>) -> Result<(), BackendError> {
+        paced(self.gmail.remove_event(calendar, id, etag)).await.map_err(calendar_write_error)
+    }
+}
+
+/// A live write's error, with 410 Gone read as the event being gone
+/// rather than as the expired sync token the client takes it for.
+fn gone_is_not_found(err: GmailError) -> BackendError {
+    match err {
+        GmailError::ExpiredSyncToken => BackendError::NotFound,
+        other => other.into(),
+    }
+}
+
+/// Maps a calendar write's Gmail error to a neutral kind, so the copy
+/// never names a Gmail error: a
+/// version conflict, Google's 412 or the 409 a duplicate create answers,
+/// becomes `Changed`; any other 4xx becomes `Refused` in Google's own
+/// words, since nothing else can say what a client-side refusal meant.
+fn calendar_write_error(err: GmailError) -> BackendError {
+    match &err {
+        GmailError::Changed => BackendError::Changed,
+        // The client reads every 410 as an expired sync token, which only
+        // the change feed can mean. A write gets 410 Gone for an event
+        // already deleted.
+        GmailError::ExpiredSyncToken => BackendError::NotFound,
+        GmailError::Http { status: 409, .. } => BackendError::Changed,
+        GmailError::Http { status, .. } if (400..500).contains(status) => {
+            BackendError::Refused(err.to_string())
+        }
+        _ => err.into(),
     }
 }
 

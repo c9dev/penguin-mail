@@ -44,6 +44,23 @@ pub fn list_accounts(conn: &Connection) -> Result<Vec<Account>> {
     .collect()
 }
 
+/// The account by id, such as `CalendarCopy` reads to name a Google
+/// account's primary calendar by its own address when the calendar list
+/// is out of reach.
+pub fn account(conn: &Connection, id: AccountId) -> Result<Option<Account>> {
+    let row: Option<(AccountId, String, String, String, Option<String>)> = conn
+        .query_row(
+            "SELECT id, email, state, provider, provider_name FROM accounts WHERE id = ?1",
+            params![id],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?, row.get(4)?)),
+        )
+        .optional()?;
+    row.map(|(id, email, state, provider, provider_name)| {
+        to_account(id, email, state, provider, provider_name)
+    })
+    .transpose()
+}
+
 pub fn account_by_email(conn: &Connection, email: &str) -> Result<Option<Account>> {
     let row: Option<(AccountId, String, String, String, Option<String>)> = conn
         .query_row(

@@ -7,13 +7,19 @@
 //! Times go in and come back as local time, `YYYY-MM-DDTHH:MM`, the shape
 //! `remind_me` takes, and a plain `YYYY-MM-DD` stands for a whole day.
 
-use chrono::{Datelike, Local, NaiveDate, NaiveTime, TimeZone, Weekday};
+use std::collections::HashMap;
+
+use chrono::{DateTime, Datelike, Local, NaiveDate, NaiveTime, TimeZone, Utc, Weekday};
+use mailrs_domain::calendar as model;
 use mailrs_domain::invitation::Answer;
-use mailrs_gmail::{Event, EventFields, EventTime};
+use mailrs_gmail::{EventFields, EventTime};
 use mailrs_sync::Told;
 use mailrs_sync::calendar::at;
 
 use super::*;
+
+/// A day, in milliseconds.
+const DAY: EpochMillis = 24 * 60 * 60 * 1000;
 
 /// The longest stretch `find_free_time` looks through, in days.
 const MOST_DAYS: i64 = 31;
@@ -78,66 +84,83 @@ fn window(input: &Value) -> Result<(EpochMillis, EpochMillis), String> {
     Ok((from, to))
 }
 
-/// What Google calls an answer, in the words the tools use.
-fn answer_word(google: &str) -> &'static str {
-    match google {
-        "accepted" => "yes",
-        "declined" => "no",
-        "tentative" => "maybe",
-        _ => "not yet",
+/// What the tools call an answer nobody has given yet.
+fn answer_word(answer: Option<Answer>) -> &'static str {
+    match answer {
+        Some(Answer::Yes) => "yes",
+        Some(Answer::No) => "no",
+        Some(Answer::Maybe) => "maybe",
+        None => "not yet",
     }
 }
 
-/// An event's start or end as the tools write it. An all-day event ends
-/// on the day after its last one in Google's terms, and on its last day
-/// in the tools', since that is how a person says it.
-fn time_text(time: Option<&EventTime>, end: bool) -> Option<String> {
-    match time? {
-        EventTime::At(_) => mailrs_sync::calendar::instant(time?).map(local_text),
-        EventTime::Day(day) => {
-            let day = NaiveDate::parse_from_str(day, "%Y-%m-%d").ok()?;
-            let day = if end { day.pred_opt()? } else { day };
-            Some(day.format("%Y-%m-%d").to_string())
-        }
-    }
+/// Wraps a single event `create` or `update` hands back into the
+/// occurrence `event_json` reads, so both tools share the one formatter.
+fn as_occurrence(account_id: AccountId, event: model::Event) -> model::Occurrence {
+    let (start, end) = (event.start, event.end);
+    model::Occurrence { account_id, event: std::sync::Arc::new(event), start, end }
 }
 
-fn event_json(event: &Event) -> Value {
+/// The UTC date an instant falls on, for an all-day event: a date means
+/// the same date wherever the reader is, so this reads UTC rather than
+/// local time.
+fn utc_date(at: EpochMillis) -> Option<NaiveDate> {
+    DateTime::<Utc>::from_timestamp_millis(at).map(|at| at.date_naive())
+}
+
+/// One occurrence, in the shape the calendar tools write. `calendar_name`
+/// is looked up once per call, from the account's own calendar list, and
+/// keyed by id.
+fn event_json(occurrence: &model::Occurrence, calendar_name: &HashMap<String, String>) -> Value {
     const MAX_DESCRIPTION: usize = 1000;
-    let all_day = matches!(event.start, Some(EventTime::Day(_)));
-    let weekday = match &event.start {
-        Some(EventTime::Day(day)) => NaiveDate::parse_from_str(day, "%Y-%m-%d")
-            .ok()
-            .map(|d| d.format("%A").to_string()),
-        Some(time) => mailrs_sync::calendar::instant(time)
-            .and_then(crate::format::local)
-            .map(|at| at.format("%A").to_string()),
-        None => None,
+    let event = &occurrence.event;
+    let (start_text, end_text, weekday) = if event.all_day {
+        // The neutral end sits at midnight UTC after the last day; the
+        // tools name that last day itself, the way a person says it.
+        let start_day = utc_date(occurrence.start);
+        let end_day = utc_date(occurrence.end - DAY).or(start_day);
+        (
+            start_day.map(|d| d.format("%Y-%m-%d").to_string()),
+            end_day.map(|d| d.format("%Y-%m-%d").to_string()),
+            start_day.map(|d| d.format("%A").to_string()),
+        )
+    } else {
+        (
+            Some(local_text(occurrence.start)),
+            Some(local_text(occurrence.end)),
+            crate::format::local(occurrence.start).map(|at| at.format("%A").to_string()),
+        )
     };
     let mut description: String = event.description.chars().take(MAX_DESCRIPTION).collect();
     if event.description.chars().count() > MAX_DESCRIPTION {
         description.push_str("\n[cut short]");
     }
-    let mine = event.guests.iter().find(|g| g.me);
     json!({
-        "id": event.id,
-        "title": event.summary,
-        "start": time_text(event.start.as_ref(), false),
-        "end": time_text(event.end.as_ref(), true),
+        // An occurrence of a series has an id of its own, so a change the
+        // model makes to it reaches that occurrence and not the series.
+        "id": occurrence.id(),
+        "repeats": !event.rules.is_empty() || event.series.is_some(),
+        "title": event.title,
+        "start": start_text,
+        "end": end_text,
         "weekday": weekday,
-        "all_day": all_day,
-        "location": event.location,
+        "all_day": event.all_day,
+        "location": event.place,
         "description": description,
         "organizer": event.organizer,
         "guests": event.guests.iter().map(|g| json!({
             "email": g.email,
             "name": g.name,
-            "answer": answer_word(&g.answer),
+            "answer": answer_word(g.answer),
         })).collect::<Vec<_>>(),
-        "my_answer": mine.map(|g| answer_word(&g.answer)),
-        "busy": event.busy,
-        "cancelled": event.cancelled,
-        "link": event.link,
+        "my_answer": answer_word(event.my_answer),
+        // What free time and the clash line count, so a declined or
+        // all-day event reads as free, as it did before the copy.
+        "busy": event.blocks_time(),
+        "cancelled": event.status == model::Status::Cancelled,
+        "link": Value::Null,
+        "calendar": calendar_name.get(&event.calendar).cloned().unwrap_or_else(|| event.calendar.clone()),
+        "pending": event.pending,
     })
 }
 
@@ -223,11 +246,23 @@ impl<A: Accounts> Tools<A> {
                 calendar.events(account_id, from, to).await
             })
             .await?;
+        let names = self.calendar_names(account_id).await?;
         Ok(json!({
             "account": account.email,
             "count": events.len(),
-            "events": events.iter().map(event_json).collect::<Vec<_>>(),
+            "events": events.iter().map(|o| event_json(o, &names)).collect::<Vec<_>>(),
         }))
+    }
+
+    /// Each of the account's calendars, by id, for `event_json`'s
+    /// "calendar" key. Empty before the
+    /// local copy has ever read the account's calendar list, which
+    /// leaves `event_json` to fall back to the raw id.
+    async fn calendar_names(&self, account_id: AccountId) -> Result<HashMap<String, String>, String> {
+        let names = self
+            .read(move |c| mailrs_store::calendar::calendars(c, account_id))
+            .await?;
+        Ok(names.into_iter().map(|c| (c.id, c.name)).collect())
     }
 
     pub(super) async fn find_free_time(&self, input: &Value) -> ToolResult {
@@ -346,7 +381,9 @@ impl<A: Accounts> Tools<A> {
                     calendar.create(account_id, &fields).await
                 })
                 .await?;
-            Ok(json!({"account": account.email, "created": event_json(&made)}))
+            let names = self.calendar_names(account_id).await?;
+            let occurrence = as_occurrence(account_id, made);
+            Ok(json!({"account": account.email, "created": event_json(&occurrence, &names)}))
         }))
     }
 
@@ -422,7 +459,9 @@ impl<A: Accounts> Tools<A> {
                     calendar.update(account_id, &id, &fields).await
                 })
                 .await?;
-            Ok(json!({"account": account.email, "updated": event_json(&changed)}))
+            let names = self.calendar_names(account_id).await?;
+            let occurrence = as_occurrence(account_id, changed);
+            Ok(json!({"account": account.email, "updated": event_json(&occurrence, &names)}))
         }))
     }
 

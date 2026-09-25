@@ -24,6 +24,7 @@ use chrono::{Duration, NaiveDate, NaiveDateTime, TimeZone};
 use icalendar::{
     Calendar, CalendarComponent, CalendarDateTime, Component, DatePerhapsTime, Property,
 };
+use serde::{Deserialize, Serialize};
 
 use crate::translate::gettext;
 use crate::{Address, EpochMillis, UnknownVariant};
@@ -43,7 +44,7 @@ pub enum Method {
 }
 
 /// Yes, No or Maybe: what an attendee said, and what the user sends back.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Answer {
     Yes,
     No,
@@ -106,6 +107,18 @@ impl Answer {
             "ACCEPTED" => Some(Answer::Yes),
             "DECLINED" => Some(Answer::No),
             "TENTATIVE" => Some(Answer::Maybe),
+            _ => None,
+        }
+    }
+
+    /// The answer Google Calendar's `responseStatus` stands for.
+    /// `needsAction` and anything unrecognized give `None`, meaning nobody
+    /// has answered yet.
+    pub fn from_response_status(status: &str) -> Option<Answer> {
+        match status {
+            "accepted" => Some(Answer::Yes),
+            "declined" => Some(Answer::No),
+            "tentative" => Some(Answer::Maybe),
             _ => None,
         }
     }

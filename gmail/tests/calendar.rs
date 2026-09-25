@@ -2,6 +2,7 @@
 //! a stand-in Calendar API. No network: `wiremock` answers the calls and
 //! checks what went out.
 
+use mailrs_domain::calendar::Access;
 use mailrs_domain::invitation::Answer;
 use mailrs_gmail::{
     Answered, EventFields, EventTime, GmailClient, GmailError, OAuthClient, Series,
@@ -587,4 +588,135 @@ async fn an_event_that_does_not_repeat_has_no_series() {
         .await
         .unwrap();
     assert_eq!(series, None);
+}
+
+#[tokio::test]
+async fn the_calendar_list_reads_each_calendar_with_its_access() {
+    let server = MockServer::start().await;
+    mount_token(&server).await;
+    Mock::given(method("GET"))
+        .and(path(format!("{CALENDAR}/users/me/calendarList")))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({"items": [
+            {"id": "me@example.com", "summary": "me@example.com", "summaryOverride": "Personal",
+             "backgroundColor": "#e8660c", "accessRole": "owner", "timeZone": "Europe/Lisbon",
+             "primary": true, "defaultReminders": [{"method": "popup", "minutes": 10}]},
+            {"id": "pt.portuguese#holiday@group.v.calendar.google.com", "summary": "Holidays in Portugal",
+             "backgroundColor": "#e01b24", "accessRole": "reader", "timeZone": "Europe/Lisbon"}
+        ]})))
+        .mount(&server)
+        .await;
+    let list = client(&server).calendar_list().await.unwrap();
+    assert_eq!(list.len(), 2);
+    assert_eq!(list[0].name, "Personal");
+    assert!(list[0].primary);
+    assert_eq!(list[0].reminders.len(), 1);
+    assert_eq!(list[1].access, Access::Reader);
+}
+
+#[tokio::test]
+async fn a_change_page_maps_events_and_names_the_deleted_ones() {
+    let server = MockServer::start().await;
+    mount_token(&server).await;
+    Mock::given(method("GET"))
+        .and(path(format!("{CALENDAR}/calendars/work/events")))
+        .and(query_param("syncToken", "t1"))
+        .and(query_param("showDeleted", "true"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "items": [
+                {"id": "a", "iCalUID": "a@google.com", "etag": "\"3\"", "status": "confirmed",
+                 "summary": "Sprint planning",
+                 "start": {"dateTime": "2026-09-23T10:00:00+01:00", "timeZone": "Europe/Lisbon"},
+                 "end": {"dateTime": "2026-09-23T11:30:00+01:00", "timeZone": "Europe/Lisbon"},
+                 "recurrence": ["RRULE:FREQ=WEEKLY;BYDAY=WE"],
+                 "hangoutLink": "https://meet.google.com/abc-defg-hij",
+                 "attendees": [{"email": "me@example.com", "self": true, "responseStatus": "tentative"}]},
+                {"id": "b", "status": "cancelled"},
+                {"id": "c", "iCalUID": "c@google.com", "etag": "\"1\"", "status": "confirmed",
+                 "summary": "Company holiday",
+                 "start": {"date": "2026-09-24"}, "end": {"date": "2026-09-25"}}
+            ],
+            "nextSyncToken": "t2"
+        })))
+        .mount(&server)
+        .await;
+    let page = client(&server)
+        .event_changes("work", Some("t1"), None, "2025-09-23T00:00:00Z")
+        .await
+        .unwrap();
+    assert_eq!(page.removed, vec!["b".to_string()]);
+    assert_eq!(page.next_sync.as_deref(), Some("t2"));
+    let event = &page.events[0];
+    assert_eq!(event.title, "Sprint planning");
+    assert_eq!(event.zone, "Europe/Lisbon");
+    assert_eq!(event.end - event.start, 90 * 60 * 1000);
+    assert_eq!(event.rules, vec!["RRULE:FREQ=WEEKLY;BYDAY=WE".to_string()]);
+    assert_eq!(event.conference.as_deref(), Some("https://meet.google.com/abc-defg-hij"));
+    assert_eq!(event.my_answer, Some(Answer::Maybe));
+    // Google writes an all-day holiday with no transparency, so its own
+    // flag says busy; `Event::blocks_time` is what leaves the day open.
+    assert!(page.events[1].busy);
+}
+
+#[tokio::test]
+async fn an_expired_calendar_token_says_so() {
+    let server = MockServer::start().await;
+    mount_token(&server).await;
+    Mock::given(method("GET"))
+        .and(path(format!("{CALENDAR}/calendars/work/events")))
+        .respond_with(ResponseTemplate::new(410).set_body_json(json!({"error": {"code": 410, "message": "Sync token is no longer valid, a full sync is required."}})))
+        .mount(&server)
+        .await;
+    let err = client(&server).event_changes("work", Some("old"), None, "x").await.unwrap_err();
+    assert!(matches!(err, GmailError::ExpiredSyncToken));
+}
+
+#[tokio::test]
+async fn a_write_against_an_older_version_is_refused_as_changed() {
+    let server = MockServer::start().await;
+    mount_token(&server).await;
+    Mock::given(method("PATCH"))
+        .and(path(format!("{CALENDAR}/calendars/work/events/a")))
+        .and(wiremock::matchers::header("If-Match", "\"2\""))
+        .respond_with(ResponseTemplate::new(412))
+        .mount(&server)
+        .await;
+    let event = mailrs_domain::calendar::Event {
+        calendar: "work".into(),
+        id: "a".into(),
+        zone: "UTC".into(),
+        ..Default::default()
+    };
+    let err = client(&server).put_event(&event, Some("\"2\""), false).await.unwrap_err();
+    assert!(matches!(err, GmailError::Changed));
+}
+
+#[tokio::test]
+async fn a_new_event_goes_out_with_its_own_id() {
+    let server = MockServer::start().await;
+    mount_token(&server).await;
+    Mock::given(method("POST"))
+        .and(path(format!("{CALENDAR}/calendars/work/events")))
+        .and(query_param("sendUpdates", "all"))
+        .respond_with(|request: &Request| {
+            let body: Value = serde_json::from_slice(&request.body).unwrap();
+            assert_eq!(body["id"], "pm0123abcd");
+            ResponseTemplate::new(200).set_body_json(json!({
+                "id": "pm0123abcd", "iCalUID": "pm0123abcd@google.com", "etag": "\"1\"",
+                "summary": body["summary"], "start": body["start"], "end": body["end"]
+            }))
+        })
+        .mount(&server)
+        .await;
+    let event = mailrs_domain::calendar::Event {
+        calendar: "work".into(),
+        id: "pm0123abcd".into(),
+        title: "Lunch".into(),
+        start: 1_790_000_000_000,
+        end: 1_790_003_600_000,
+        zone: "Europe/Lisbon".into(),
+        ..Default::default()
+    };
+    let made = client(&server).put_event(&event, None, true).await.unwrap();
+    assert_eq!(made.etag, "\"1\"");
+    assert_eq!(made.title, "Lunch");
 }
