@@ -1521,57 +1521,57 @@ msgstr ""
 msgid "Updates come from the Snap Store"
 msgstr ""
 
-#: app/src/permission.rs:97
+#: app/src/permission.rs:101
 msgid "Allow Changes to Gmail Settings"
 msgstr ""
 
-#: app/src/permission.rs:99
+#: app/src/permission.rs:103
 msgid ""
 "Penguin Mail needs permission to change Gmail settings for {account}. Google "
 "asks you to confirm in your browser."
 msgstr ""
 
-#: app/src/permission.rs:104
+#: app/src/permission.rs:108
 msgid "Allow Penguin Mail to Delete Mail"
 msgstr ""
 
-#: app/src/permission.rs:106
+#: app/src/permission.rs:110
 msgid ""
 "Deleting mail for good needs one more permission for {account}. Google asks "
 "you to confirm in your browser."
 msgstr ""
 
-#: app/src/permission.rs:111
+#: app/src/permission.rs:115
 msgid "Allow Penguin Mail to Read Your Contacts"
 msgstr ""
 
-#: app/src/permission.rs:113
+#: app/src/permission.rs:117
 msgid ""
 "Reading the contacts of {account} needs one more permission. Google asks you "
 "to confirm in your browser. Names and photos stay on this computer."
 msgstr ""
 
-#: app/src/permission.rs:119
+#: app/src/permission.rs:123
 msgid "Allow Penguin Mail to Change Your Contacts"
 msgstr ""
 
-#: app/src/permission.rs:121
+#: app/src/permission.rs:125
 msgid ""
 "The assistant needs permission to add and change the contacts of {account}. "
 "Google asks you to confirm in your browser."
 msgstr ""
 
-#: app/src/permission.rs:126 app/src/permission.rs:133
+#: app/src/permission.rs:130 app/src/permission.rs:137
 msgid "Allow Penguin Mail to Use Your Calendar"
 msgstr ""
 
-#: app/src/permission.rs:128
+#: app/src/permission.rs:132
 msgid ""
 "The assistant needs permission to read and change events on the calendar for "
 "{account}. Google asks you to confirm in your browser."
 msgstr ""
 
-#: app/src/permission.rs:135
+#: app/src/permission.rs:139
 msgid ""
 "Your reply went to the organizer as mail. With permission to change events "
 "on the calendar for {account}, the meeting is marked on your own calendar "
