@@ -13,9 +13,6 @@ use mailrs_domain::translate::gettext;
 
 pub use super::range::ViewKind;
 
-/// Days the narrow list covers from the day it opens on.
-const LIST_DAYS: u32 = 60;
-
 /// What the calendar page has on screen.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Showing {
@@ -104,11 +101,6 @@ pub fn stepped(kind: ViewKind, day: NaiveDate, by: i32) -> NaiveDate {
 /// they asked to see declined events.
 pub fn keep(o: &Occurrence, show_declined: bool) -> bool {
     show_declined || o.event.my_answer != Some(Answer::No)
-}
-
-/// The first day and the length of the narrow list that opens on `day`.
-pub fn list_days(day: NaiveDate) -> (NaiveDate, u32) {
-    (day, LIST_DAYS)
 }
 
 /// The days among `count` days from `first` that hold an event, for the
@@ -329,11 +321,5 @@ mod tests {
         );
         let days = busy_days(&[long], d(2026, 9, 21), 42, &chrono::Utc);
         assert_eq!(days.len(), 42);
-    }
-
-    #[test]
-    fn the_list_runs_sixty_days_from_the_day_shown() {
-        let (first, days) = list_days(d(2026, 9, 23));
-        assert_eq!((first, days), (d(2026, 9, 23), 60));
     }
 }

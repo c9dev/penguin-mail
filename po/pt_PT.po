@@ -3342,13 +3342,17 @@ msgstr "Chave de API do Brave Search (guardada)"
 msgid "Brave Search API Key"
 msgstr "Chave de API do Brave Search"
 
-#: app/src/ui/calendar/agenda.rs:246 app/src/ui/calendar/words.rs:52
+#: app/src/ui/calendar/agenda.rs:294 app/src/ui/calendar/words.rs:52
 msgid "All day"
 msgstr "Todo o dia"
 
-#: app/src/ui/calendar/agenda.rs:264
+#: app/src/ui/calendar/agenda.rs:312
 msgid "{title}, {when}, {calendar}"
 msgstr "{title}, {when}, {calendar}"
+
+#: app/src/ui/calendar/agenda.rs:443
+msgid "Nothing earlier on this computer"
+msgstr "Nada mais antigo neste computador"
 
 #: app/src/ui/calendar/block.rs:100
 msgid "Waiting to be saved"
@@ -3378,57 +3382,57 @@ msgstr "{title}, todo o dia, {calendar}"
 msgid "{title}, {start} to {end}, {calendar}"
 msgstr "{title}, {start} às {end}, {calendar}"
 
-#: app/src/ui/calendar/mod.rs:223
+#: app/src/ui/calendar/mod.rs:232
 msgid "View"
 msgstr "Vista"
 
-#: app/src/ui/calendar/mod.rs:231
+#: app/src/ui/calendar/mod.rs:240
 msgid "New Event"
 msgstr "Novo evento"
 
-#: app/src/ui/calendar/mod.rs:234 app/src/ui/calendar/mod.rs:236
+#: app/src/ui/calendar/mod.rs:243 app/src/ui/calendar/mod.rs:245
 msgid "Search the Calendar (Ctrl+F)"
 msgstr "Pesquisar no calendário (Ctrl+F)"
 
-#: app/src/ui/calendar/mod.rs:239 app/src/ui/calendar/mod.rs:242
+#: app/src/ui/calendar/mod.rs:248 app/src/ui/calendar/mod.rs:251
 msgid "Show Calendars"
 msgstr "Mostrar os calendários"
 
-#: app/src/ui/calendar/mod.rs:245 app/src/ui/calendar/mod.rs:247
+#: app/src/ui/calendar/mod.rs:254 app/src/ui/calendar/mod.rs:256
 #: app/src/ui/thread_list.rs:234
 msgid "Assistant (Ctrl+J)"
 msgstr "Assistente (Ctrl+J)"
 
-#: app/src/ui/calendar/mod.rs:264 app/src/ui/calendar/mod.rs:266
+#: app/src/ui/calendar/mod.rs:273 app/src/ui/calendar/mod.rs:275
 msgid "Search the Calendar"
 msgstr "Pesquisar no calendário"
 
-#: app/src/ui/calendar/mod.rs:654
+#: app/src/ui/calendar/mod.rs:666
 msgid "List"
 msgstr "Lista"
 
-#: app/src/ui/calendar/mod.rs:655
+#: app/src/ui/calendar/mod.rs:667
 msgid "Day"
 msgstr "Dia"
 
-#: app/src/ui/calendar/mod.rs:656
+#: app/src/ui/calendar/mod.rs:668
 msgid "Week"
 msgstr "Semana"
 
-#: app/src/ui/calendar/mod.rs:657
+#: app/src/ui/calendar/mod.rs:669
 msgid "Month"
 msgstr "Mês"
 
-#: app/src/ui/calendar/mod.rs:801
+#: app/src/ui/calendar/mod.rs:813
 msgid "All-day"
 msgstr "Dia inteiro"
 
-#: app/src/ui/calendar/mod.rs:1052 app/src/ui/calendar/mod.rs:1419
+#: app/src/ui/calendar/mod.rs:1064 app/src/ui/calendar/mod.rs:1517
 #: app/src/ui/calendar/sidebar.rs:111
 msgid "%a"
 msgstr "%a"
 
-#: app/src/ui/calendar/mod.rs:1275
+#: app/src/ui/calendar/mod.rs:1340
 msgid "Could not send your answer: {reason}"
 msgstr "Não foi possível enviar a sua resposta: {reason}"
 
@@ -3440,55 +3444,55 @@ msgstr "Abrir no mapa"
 msgid "Answer"
 msgstr "Resposta"
 
-#: app/src/ui/calendar/range.rs:91 app/src/ui/calendar/words.rs:74
+#: app/src/ui/calendar/range.rs:102 app/src/ui/calendar/words.rs:74
 msgid "%A %-d"
 msgstr "%A %-d"
 
-#: app/src/ui/calendar/range.rs:94 app/src/ui/calendar/sidebar.rs:326
+#: app/src/ui/calendar/range.rs:105 app/src/ui/calendar/sidebar.rs:326
 msgid "%B %Y"
 msgstr "%B %Y"
 
-#: app/src/ui/calendar/range.rs:102 app/src/ui/calendar/range.rs:133
+#: app/src/ui/calendar/range.rs:113 app/src/ui/calendar/range.rs:144
 msgid "%B"
 msgstr "%B"
 
-#: app/src/ui/calendar/range.rs:106 app/src/ui/calendar/words.rs:80
+#: app/src/ui/calendar/range.rs:117 app/src/ui/calendar/words.rs:80
 msgid "{first} – {last}"
 msgstr "{first} – {last}"
 
-#: app/src/ui/calendar/range.rs:112 app/src/ui/calendar/range.rs:118
+#: app/src/ui/calendar/range.rs:123 app/src/ui/calendar/range.rs:129
 msgid "%b"
 msgstr "%b"
 
-#: app/src/ui/calendar/range.rs:125 app/src/ui/calendar/range.rs:136
+#: app/src/ui/calendar/range.rs:136 app/src/ui/calendar/range.rs:147
 msgid "%Y"
 msgstr "%Y"
 
-#: app/src/ui/calendar/range.rs:153
+#: app/src/ui/calendar/range.rs:184
 msgid "W{week}"
 msgstr "S{week}"
 
-#: app/src/ui/calendar/shown.rs:81
+#: app/src/ui/calendar/shown.rs:78
 msgid "Next Day"
 msgstr "Dia seguinte"
 
-#: app/src/ui/calendar/shown.rs:81
+#: app/src/ui/calendar/shown.rs:78
 msgid "Previous Day"
 msgstr "Dia anterior"
 
-#: app/src/ui/calendar/shown.rs:82
+#: app/src/ui/calendar/shown.rs:79
 msgid "Next Week"
 msgstr "Semana seguinte"
 
-#: app/src/ui/calendar/shown.rs:82
+#: app/src/ui/calendar/shown.rs:79
 msgid "Previous Week"
 msgstr "Semana anterior"
 
-#: app/src/ui/calendar/shown.rs:83 app/src/ui/calendar/sidebar.rs:186
+#: app/src/ui/calendar/shown.rs:80 app/src/ui/calendar/sidebar.rs:186
 msgid "Next Month"
 msgstr "Mês seguinte"
 
-#: app/src/ui/calendar/shown.rs:83 app/src/ui/calendar/sidebar.rs:185
+#: app/src/ui/calendar/shown.rs:80 app/src/ui/calendar/sidebar.rs:185
 msgid "Previous Month"
 msgstr "Mês anterior"
 
