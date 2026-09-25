@@ -3156,6 +3156,34 @@ msgstr ""
 msgid "Brave Search API Key"
 msgstr ""
 
+#: app/src/ui/calendar/block.rs:87
+msgid "Waiting to be saved"
+msgstr ""
+
+#: app/src/ui/calendar/block.rs:139
+msgid "Waiting to be sent"
+msgstr ""
+
+#: app/src/ui/calendar/block.rs:142
+msgid "Not answered yet"
+msgstr ""
+
+#: app/src/ui/calendar/block.rs:143
+msgid "Declined"
+msgstr ""
+
+#: app/src/ui/calendar/block.rs:173
+msgid "{start}–{end}"
+msgstr ""
+
+#: app/src/ui/calendar/block.rs:202
+msgid "{title}, all day, {calendar}"
+msgstr ""
+
+#: app/src/ui/calendar/block.rs:207
+msgid "{title}, {start} to {end}, {calendar}"
+msgstr ""
+
 #: app/src/ui/calendar/range.rs:91
 msgid "%A %-d"
 msgstr ""
@@ -3183,6 +3211,12 @@ msgstr ""
 #: app/src/ui/calendar/range.rs:153
 msgid "W{week}"
 msgstr ""
+
+#: app/src/ui/calendar/time_grid.rs:107
+msgid "{count} more event"
+msgid_plural "{count} more events"
+msgstr[0] ""
+msgstr[1] ""
 
 #: app/src/ui/composer/mod.rs:204 app/src/ui/conversation.rs:1561
 msgid "Choose a Time…"
