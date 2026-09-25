@@ -23,9 +23,10 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 ### Improved
 
 - Adding a Google account asks for every permission Penguin Mail uses
-  in one visit to Google; an account added earlier shows a Grant
-  Access banner until you allow the rest, and anything you leave
-  unticked says why it is off.
+  in one visit to Google, and anything you leave unticked says why it
+  is off, with Grant Access where you would use it. An account added
+  earlier shows a bar above its mail that names what it lacks, until
+  you go through Google's screen once more.
 - The assistant and the invitation card read your Google calendars from
   this computer, so they answer without the network. A change the
   assistant makes waits there until Google takes it, and moving or

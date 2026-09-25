@@ -42,6 +42,10 @@ pub struct ThreadList {
     /// Shows or hides the assistant pane.
     pub assistant_button: gtk::ToggleButton,
     pub banner: adw::Banner,
+    /// The Grant Access bars, one for each account that still wants
+    /// one; the window fills it. They sit on the mail list, since the
+    /// calendar says what its accounts lack in its own sidebar.
+    pub grant_bars: gtk::Box,
     pub search_entry: gtk::SearchEntry,
     search_bar: gtk::SearchBar,
     title: adw::WindowTitle,
@@ -256,6 +260,8 @@ impl ThreadList {
         toolbar.add_top_bar(&header);
         toolbar.add_top_bar(&search_bar);
         toolbar.add_top_bar(&banner);
+        let grant_bars = gtk::Box::new(gtk::Orientation::Vertical, 0);
+        toolbar.add_top_bar(&grant_bars);
         toolbar.set_content(Some(&stack));
         let page = adw::NavigationPage::builder()
             .title(gettext("Mail"))
@@ -269,6 +275,7 @@ impl ThreadList {
             search_button,
             assistant_button,
             banner,
+            grant_bars,
             search_entry,
             search_bar,
             title,
