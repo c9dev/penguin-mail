@@ -92,7 +92,9 @@ CI runs those four on every push, in an Ubuntu 26.04 container set up by
 entry, and builds and starts the Flatpak. The OpenPGP and S/MIME tests
 build a throwaway GnuPG keyring and skip when `gpg` or `gpgsm` is missing.
 `PENGUIN_MAIL_REQUIRE_CRYPTO=1`, which CI sets, turns that skip into a
-failure.
+failure. The IMAP and SMTP tests start Dovecot and Mailpit in Docker and
+skip without it; a separate CI job runs them on the runner with
+`PENGUIN_MAIL_REQUIRE_IMAP=1`.
 
 Release builds mask email addresses in the log, as `d…@example.com`.
 Debug builds keep them whole, and `PENGUIN_MAIL_LOG_DETAILS=1` does the
