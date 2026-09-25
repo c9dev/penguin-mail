@@ -21,7 +21,7 @@ use crate::core::Core;
 
 /// The dialog's height, enough for Server Settings to show both servers
 /// and the Sign-In group without scrolling on a 768-pixel screen.
-const RAISED_HEIGHT: i32 = 680;
+const RAISED_HEIGHT: i32 = 720;
 
 /// Where the dialog opens.
 pub enum Opening {
@@ -122,6 +122,9 @@ struct FirstStep {
     suggest_line: gtk::Label,
     take: gtk::Button,
     servers: adw::ActionRow,
+    /// The group holding Server Settings, hidden whole so no empty list
+    /// is left behind.
+    more: adw::PreferencesGroup,
 }
 
 struct SecondStep {
@@ -478,7 +481,7 @@ impl Dialog {
                 Next::Password(proposal) => this.show_password(proposal),
                 Next::Say(said) => this.say(&said),
                 Next::Closed(said) => {
-                    this.first.servers.set_visible(false);
+                    this.first.more.set_visible(false);
                     this.say(&said);
                 }
                 Next::Google => this.finish(Done::Google(Some(address.full()))),
@@ -526,7 +529,7 @@ impl Dialog {
         self.proposal.replace(None);
         self.first.said.set_visible(false);
         self.first.suggest.set_visible(false);
-        self.first.servers.set_visible(true);
+        self.first.more.set_visible(true);
         self.first.looking.set_visible(false);
         self.first.look.set_sensitive(true);
     }
@@ -850,6 +853,7 @@ fn first_step() -> FirstStep {
         suggest_line,
         take,
         servers,
+        more,
     }
 }
 
@@ -918,14 +922,13 @@ fn second_step() -> SecondStep {
 fn manual_step() -> ManualStep {
     let imap_user = entry(&gettext("Incoming User Name"));
     let smtp_user = entry(&gettext("Outgoing User Name"));
-    // The title leaves the field once the cursor is in it, so the
-    // placeholder says what an empty outgoing name does.
-    if let Some(text) = smtp_user
-        .delegate()
-        .and_then(|editable| editable.downcast::<gtk::Text>().ok())
-    {
-        text.set_placeholder_text(Some(&gettext("Same as incoming")));
-    }
+    // An entry row has no placeholder of its own: one set on its inner
+    // text draws over the title. The rule goes in a tooltip, since a
+    // second line under the group would push this row off a 768-pixel
+    // screen.
+    smtp_user.set_tooltip_text(Some(&gettext(
+        "Leave it empty to use the incoming user name.",
+    )));
     let incoming = adw::PreferencesGroup::builder()
         .title(gettext("Incoming Mail"))
         .build();
@@ -937,9 +940,7 @@ fn manual_step() -> ManualStep {
     let problem = line(Some("error"));
     let login = adw::PreferencesGroup::builder()
         .title(gettext("Sign-In"))
-        .description(gettext(
-            "Leave them empty to sign in with your address. An empty outgoing name takes the incoming one.",
-        ))
+        .description(gettext("Leave them empty to sign in with your address."))
         .build();
     login.add(&imap.user);
     login.add(&smtp.user);

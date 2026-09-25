@@ -30,7 +30,6 @@ pub fn first_account_page(
              choose Advanced, then continue.",
         ))
         .wrap(true)
-        .max_width_chars(36)
         .justify(gtk::Justification::Center)
         .css_classes(["caption", "dim-label"])
         .build();
@@ -48,14 +47,20 @@ pub fn first_account_page(
     let buttons = gtk::Box::builder()
         .orientation(gtk::Orientation::Vertical)
         .spacing(24)
-        .halign(gtk::Align::Center)
         .build();
     buttons.append(&with_google);
     buttons.append(&other);
+    // The clamp keeps both buttons one width and wraps the warning to it,
+    // where the warning's own width would stretch them across the page.
+    let clamp = adw::Clamp::builder()
+        .maximum_size(320)
+        .tightening_threshold(320)
+        .child(&buttons)
+        .build();
     let page = adw::StatusPage::builder()
         .icon_name("io.github.c9dev.PenguinMail")
         .title(gettext("Add Your First Account"))
-        .child(&buttons)
+        .child(&clamp)
         .vexpand(true)
         .build();
     FirstAccount {

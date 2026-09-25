@@ -131,115 +131,117 @@ msgstr "Gmail e Google Workspace"
 msgid "Fastmail, iCloud, Yahoo and any server with IMAP"
 msgstr "Fastmail, iCloud, Yahoo e qualquer servidor com IMAP"
 
-#: app/src/add_account.rs:131
+#: app/src/add_account.rs:135
 msgid "Did you mean {address}?"
 msgstr "Queria dizer {address}?"
 
-#: app/src/add_account.rs:165
+#: app/src/add_account.rs:169
 msgid "Type the whole address, such as dana@example.com."
 msgstr "Escreva o endereço completo, como dana@example.com."
 
-#: app/src/add_account.rs:224
+#: app/src/add_account.rs:228
 msgid "{provider} has no IMAP, so other mail apps cannot reach it."
 msgstr ""
 "{provider} não tem IMAP, por isso outras aplicações de correio não lhe "
 "conseguem aceder."
 
-#: app/src/add_account.rs:231
+#: app/src/add_account.rs:235
 msgid "Penguin Mail cannot reach {provider} yet."
 msgstr "O Penguin Mail ainda não consegue aceder a {provider}."
 
-#: app/src/add_account.rs:236
+#: app/src/add_account.rs:240
 msgid "Microsoft accounts come in a later version of Penguin Mail."
 msgstr "As contas Microsoft chegam numa versão futura do Penguin Mail."
 
-#: app/src/add_account.rs:293
+#: app/src/add_account.rs:297
 msgid "Penguin Mail found no mail servers for {domain}. Enter them below."
 msgstr ""
 "O Penguin Mail não encontrou servidores de correio para {domain}. Introduza-"
 "os abaixo."
 
-#: app/src/add_account.rs:318
+#: app/src/add_account.rs:322
 msgid "{provider} needs an app password."
 msgstr "{provider} precisa de uma palavra-passe de aplicação."
 
-#: app/src/add_account.rs:320
+#: app/src/add_account.rs:324
 msgid "With two-step sign-in on, {provider} needs an app password."
 msgstr ""
 "Com a verificação em dois passos ativa, {provider} precisa de uma palavra-"
 "passe de aplicação."
 
-#: app/src/add_account.rs:326
+#: app/src/add_account.rs:330
 msgid "Make one in {provider}'s settings."
 msgstr "Crie uma nas definições de {provider}."
 
-#: app/src/add_account.rs:336
+#: app/src/add_account.rs:340
 msgid "App Password"
 msgstr "Palavra-passe de aplicação"
 
-#: app/src/add_account.rs:337
+#: app/src/add_account.rs:341
 msgid "Password"
 msgstr "Palavra-passe"
 
-#: app/src/add_account.rs:371
+#: app/src/add_account.rs:375
 msgid "{host} on port {port}"
 msgstr "{host} na porta {port}"
 
-#: app/src/add_account.rs:474
+#: app/src/add_account.rs:481
 msgid "Could not sign in: {reason}"
 msgstr "Não foi possível iniciar sessão: {reason}"
 
-#: app/src/add_account.rs:480
+#: app/src/add_account.rs:487
 msgid "The server refused the password."
 msgstr "O servidor recusou a palavra-passe."
 
-#: app/src/add_account.rs:483
+#: app/src/add_account.rs:490
 msgid "IMAP is off for this account."
 msgstr "O IMAP está desativado nesta conta."
 
-#: app/src/add_account.rs:488
+#: app/src/add_account.rs:495
 msgid "The server's certificate does not match {host}."
 msgstr "O certificado do servidor não corresponde a {host}."
 
-#: app/src/add_account.rs:492
+#: app/src/add_account.rs:499
 msgid "Could not reach {host}: {reason}"
 msgstr "Não foi possível contactar {host}: {reason}"
 
-#: app/src/add_account.rs:500
+#: app/src/add_account.rs:507
 msgid ""
 "{host} answered but turned down another connection. Try again in a few "
 "minutes."
-msgstr "{host} respondeu mas recusou outra ligação. Tente de novo dentro de alguns minutos."
+msgstr ""
+"{host} respondeu mas recusou outra ligação. Tente de novo dentro de alguns "
+"minutos."
 
-#: app/src/add_account.rs:522
+#: app/src/add_account.rs:529
 msgid "The server said: {reason}"
 msgstr "O servidor respondeu: {reason}"
 
-#: app/src/add_account.rs:532
+#: app/src/add_account.rs:539
 msgid "Turn on IMAP in {provider}'s settings."
 msgstr "Ative o IMAP nas definições de {provider}."
 
-#: app/src/add_account.rs:543
+#: app/src/add_account.rs:550
 msgid "Make an app password in {provider}'s settings."
 msgstr "Crie uma palavra-passe de aplicação nas definições de {provider}."
 
-#: app/src/add_account.rs:551
+#: app/src/add_account.rs:558
 msgid "{provider}'s help for mail apps"
 msgstr "Ajuda de {provider} para aplicações de correio"
 
-#: app/src/add_account.rs:653
+#: app/src/add_account.rs:660
 msgid "{host} is not a server name."
 msgstr "{host} não é um nome de servidor."
 
-#: app/src/add_account.rs:659
+#: app/src/add_account.rs:666
 msgid "Type the incoming server's name."
 msgstr "Escreva o nome do servidor de entrada."
 
-#: app/src/add_account.rs:660
+#: app/src/add_account.rs:667
 msgid "Type the outgoing server's name."
 msgstr "Escreva o nome do servidor de saída."
 
-#: app/src/add_account.rs:735
+#: app/src/add_account.rs:742
 msgid "Penguin Mail needs the password for {address} again."
 msgstr "O Penguin Mail precisa de novo da palavra-passe de {address}."
 
@@ -2645,32 +2647,32 @@ msgstr "Mostrar registo"
 msgid "The update to {version} failed"
 msgstr "A atualização para a versão {version} falhou"
 
-#: app/src/ui/add_account.rs:169
+#: app/src/ui/add_account.rs:168
 msgid "Server"
 msgstr "Servidor"
 
-#: app/src/ui/add_account.rs:172 app/src/ui/add_account.rs:173
+#: app/src/ui/add_account.rs:171 app/src/ui/add_account.rs:172
 msgid "Port"
 msgstr "Porta"
 
-#: app/src/ui/add_account.rs:183 app/src/ui/add_account.rs:185
+#: app/src/ui/add_account.rs:182 app/src/ui/add_account.rs:184
 msgid "Security"
 msgstr "Segurança"
 
-#: app/src/ui/add_account.rs:333 app/src/ui/add_account.rs:956
+#: app/src/ui/add_account.rs:332 app/src/ui/add_account.rs:955
 msgid "Server Settings"
 msgstr "Definições do servidor"
 
-#: app/src/ui/add_account.rs:344 app/src/ui/add_account.rs:437
+#: app/src/ui/add_account.rs:343 app/src/ui/add_account.rs:436
 #: app/src/ui/sidebar.rs:78
 msgid "Add Account"
 msgstr "Adicionar conta"
 
-#: app/src/ui/add_account.rs:583
+#: app/src/ui/add_account.rs:582
 msgid "Use These Servers?"
 msgstr "Usar estes servidores?"
 
-#: app/src/ui/add_account.rs:585
+#: app/src/ui/add_account.rs:584
 msgid ""
 "Penguin Mail guessed these servers. Your password goes to them only after "
 "you check the box."
@@ -2678,74 +2680,76 @@ msgstr ""
 "O Penguin Mail deduziu estes servidores. A sua palavra-passe só lhes é "
 "enviada depois de assinalar a caixa."
 
-#: app/src/ui/add_account.rs:588 app/src/ui/add_account.rs:892
+#: app/src/ui/add_account.rs:587 app/src/ui/add_account.rs:894
 msgid "Servers"
 msgstr "Servidores"
 
-#: app/src/ui/add_account.rs:627
+#: app/src/ui/add_account.rs:626
 msgid "Signing In…"
 msgstr "A iniciar sessão…"
 
-#: app/src/ui/add_account.rs:635 app/src/ui/add_account.rs:901
+#: app/src/ui/add_account.rs:634 app/src/ui/add_account.rs:903
 #: app/src/ui/window.rs:835
 msgid "Sign In"
 msgstr "Iniciar sessão"
 
-#: app/src/ui/add_account.rs:798
+#: app/src/ui/add_account.rs:799
 msgid "Email Address"
 msgstr "Endereço de e-mail"
 
-#: app/src/ui/add_account.rs:807
+#: app/src/ui/add_account.rs:808
 msgid "Looking for your mail servers…"
 msgstr "A procurar os seus servidores de correio…"
 
-#: app/src/ui/add_account.rs:818
+#: app/src/ui/add_account.rs:819
 msgid "Use This Address"
 msgstr "Usar este endereço"
 
-#: app/src/ui/add_account.rs:839
+#: app/src/ui/add_account.rs:840
 msgid "Continue"
 msgstr "Continuar"
 
-#: app/src/ui/add_account.rs:859
+#: app/src/ui/add_account.rs:861
 msgid "Your Name"
 msgstr "O seu nome"
 
-#: app/src/ui/add_account.rs:873 app/src/ui/add_account.rs:932
+#: app/src/ui/add_account.rs:875 app/src/ui/add_account.rs:933
 msgid "Incoming Mail"
 msgstr "Correio de entrada"
 
-#: app/src/ui/add_account.rs:877 app/src/ui/add_account.rs:936
+#: app/src/ui/add_account.rs:879 app/src/ui/add_account.rs:937
 msgid "Outgoing Mail"
 msgstr "Correio de saída"
 
-#: app/src/ui/add_account.rs:883 app/src/ui/add_account.rs:885
+#: app/src/ui/add_account.rs:885 app/src/ui/add_account.rs:887
 msgid "Use these servers"
 msgstr "Usar estes servidores"
 
-#: app/src/ui/add_account.rs:921
+#: app/src/ui/add_account.rs:923
 msgid "Incoming User Name"
 msgstr "Nome de utilizador de entrada"
 
-#: app/src/ui/add_account.rs:922
+#: app/src/ui/add_account.rs:924
 msgid "Outgoing User Name"
 msgstr "Nome de utilizador de saída"
 
-#: app/src/ui/add_account.rs:929
-msgid "Same as incoming"
-msgstr "Igual ao de entrada"
+#. An entry row has no placeholder of its own: one set on its inner
+#. text draws over the title. The rule goes in a tooltip, since a
+#. second line under the group would push this row off a 768-pixel
+#. screen.
+#: app/src/ui/add_account.rs:930
+msgid "Leave it empty to use the incoming user name."
+msgstr "Deixe vazio para usar o nome de utilizador de entrada."
 
-#: app/src/ui/add_account.rs:941
+#: app/src/ui/add_account.rs:942
 msgid "Sign-In"
 msgstr "Início de sessão"
 
 #: app/src/ui/add_account.rs:943
-msgid ""
-"Leave them empty to sign in with your address. An empty outgoing name takes "
-"the incoming one."
-msgstr "Deixe-os vazios para iniciar sessão com o seu endereço. Um nome de saída vazio usa o de entrada."
+msgid "Leave them empty to sign in with your address."
+msgstr "Deixe-os vazios para iniciar sessão com o seu endereço."
 
-#: app/src/ui/add_account.rs:953
+#: app/src/ui/add_account.rs:952
 msgid "Use These Settings"
 msgstr "Usar estas definições"
 
@@ -5314,11 +5318,11 @@ msgstr ""
 "não terminar de verificar o Penguin Mail, avisa que não verificou a "
 "aplicação: escolha Avançadas e depois continue."
 
-#: app/src/ui/welcome.rs:44
+#: app/src/ui/welcome.rs:43
 msgid "Use Another Provider"
 msgstr "Usar outro fornecedor"
 
-#: app/src/ui/welcome.rs:57
+#: app/src/ui/welcome.rs:62
 msgid "Add Your First Account"
 msgstr "Adicione a sua primeira conta"
 
@@ -6852,6 +6856,9 @@ msgstr "Marcar como não sendo spam"
 #: sync/src/triage.rs:62
 msgid "Move to {folder}"
 msgstr "Mover para {folder}"
+
+#~ msgid "Same as incoming"
+#~ msgstr "Igual ao de entrada"
 
 #~ msgid "Unsubscribed from {count} list"
 #~ msgid_plural "Unsubscribed from {count} lists"
