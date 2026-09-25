@@ -10,11 +10,12 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use adw::prelude::*;
-use gtk::{gdk, gio, pango};
+use gtk::{gdk, gio, glib, pango};
 use mailrs_domain::calendar::{Event, Guest, Occurrence};
 use mailrs_domain::invitation::Answer;
 use mailrs_domain::translate::gettext;
 
+use super::shown::{self, Refocus};
 use super::tint;
 use super::words;
 
@@ -76,13 +77,17 @@ pub struct EventPopover {
     answer_box: gtk::Box,
     answer_buttons: Vec<(Answer, gtk::Button)>,
     on_answer: RefCell<Option<Box<OnAnswer>>>,
+    /// The block the popover points at, which takes the focus back when
+    /// it closes.
+    anchor: glib::WeakRef<gtk::Widget>,
 }
 
 impl EventPopover {
     /// Parents the one popover this view will ever open to `parent`, so
     /// it survives every reload; `show` repositions it at whichever
-    /// block was pressed.
-    pub fn new(parent: &impl IsA<gtk::Widget>) -> Rc<EventPopover> {
+    /// block was pressed. `fallback` takes the focus when the popover
+    /// closes after its block has gone.
+    pub fn new(parent: &impl IsA<gtk::Widget>, fallback: &impl IsA<gtk::Widget>) -> Rc<EventPopover> {
         let bar = gtk::Box::builder()
             .css_classes(["popover-bar"])
             .width_request(4)
@@ -211,6 +216,24 @@ impl EventPopover {
             answer_box,
             answer_buttons,
             on_answer: RefCell::new(None),
+            anchor: glib::WeakRef::new(),
+        });
+
+        // A popover gives the focus back to nothing when it closes, which
+        // left a keyboard user at the top of the window without the
+        // calendar's keys.
+        let weak = Rc::downgrade(&this);
+        let fallback = fallback.as_ref().downgrade();
+        this.popover.connect_closed(move |_| {
+            let Some(this) = weak.upgrade() else { return };
+            let anchor = this.anchor.upgrade();
+            let back = match shown::after_popover(anchor.as_ref().is_some_and(|a| a.is_mapped())) {
+                Refocus::Anchor => anchor.is_some_and(|a| a.grab_focus()),
+                _ => false,
+            };
+            if !back && let Some(fallback) = fallback.upgrade() {
+                fallback.grab_focus();
+            }
         });
 
         let weak = Rc::downgrade(&this);
@@ -307,6 +330,7 @@ impl EventPopover {
         }
 
         self.on_answer.replace(Some(Box::new(on_answer)));
+        self.anchor.set(Some(anchor));
 
         if let Some(bounds) = anchor.compute_bounds(&self.parent) {
             let rect = gdk::Rectangle::new(
