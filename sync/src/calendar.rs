@@ -315,7 +315,9 @@ fn guest_list(fields: &EventFields) -> Vec<model::Guest> {
 }
 
 /// Writes what `fields` sets onto `event`, leaving the rest as it was, the
-/// way a Google patch would.
+/// way a Google patch would. A new start with no new end keeps the
+/// event's length, since a person moving a meeting means to move all of
+/// it.
 fn apply_fields(event: &mut model::Event, fields: &EventFields) {
     if let Some(summary) = &fields.summary {
         event.title = summary.clone();
@@ -323,7 +325,9 @@ fn apply_fields(event: &mut model::Event, fields: &EventFields) {
     if let Some(start) = &fields.start {
         event.all_day = matches!(start, EventTime::Day(_));
         if let Some(at) = instant(start) {
+            let length = event.end - event.start;
             event.start = at;
+            event.end = at + length;
         }
     }
     if let Some(end) = &fields.end

@@ -449,3 +449,27 @@ async fn a_new_event_on_a_calendar_of_unknown_zone_names_no_zone() {
     let sent = h.fake.with(|s| s.calendar_events.iter().find(|e| e.title == "Dentist").cloned()).expect("sent");
     assert_eq!(sent.zone, "");
 }
+
+/// Moving a meeting by its start alone keeps its length, rather than
+/// queuing an end before the start that Google refuses after the
+/// assistant already said the change is on its way.
+#[tokio::test]
+async fn moving_an_event_by_its_start_alone_keeps_its_length() {
+    let h = harness().await;
+    h.fake.with(|s| s.calendars = vec![primary()]);
+    h.fake.put_calendar_event(Ev {
+        calendar: "primary".into(),
+        id: "a".into(),
+        title: "Review".into(),
+        zone: "UTC".into(),
+        start: NINE + HOUR,
+        end: NINE + 2 * HOUR,
+        busy: true,
+        ..Ev::default()
+    });
+    let (calendar, copy) = calendar_with_copy(&h);
+    copy.refresh(h.account_id, NINE).await.unwrap();
+    let only_start = EventFields { start: at(NINE + 5 * HOUR), ..EventFields::default() };
+    let moved = calendar.update(h.account_id, "a", &only_start).await.unwrap().done().unwrap();
+    assert_eq!((moved.start, moved.end), (NINE + 5 * HOUR, NINE + 6 * HOUR));
+}
