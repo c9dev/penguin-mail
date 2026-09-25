@@ -50,7 +50,9 @@ app/src/ui/assistant_mcp_prefs.rs
 app/src/ui/assistant_prefs.rs
 app/src/ui/assistant_skills_prefs.rs
 app/src/ui/assistant_web_prefs.rs
+app/src/ui/calendar/block.rs
 app/src/ui/calendar/range.rs
+app/src/ui/calendar/time_grid.rs
 app/src/ui/composer/mod.rs
 app/src/ui/composer/recipients.rs
 app/src/ui/composer/spell.rs

@@ -166,6 +166,8 @@ Terms the code and its docs use for Gmail mail. The `domain` crate holds the cod
 
 **Occurrence**: one showing of an event on the grid; a series has one per repeat, expanded for the range on screen. `mailrs_domain::calendar::Occurrence`. Each has an id of its own, `Occurrence::id`, in Google's form: the series id, an underscore and the original start in UTC (`standup_20261022T090000Z`, or `standup_20261022` for a whole day). A change or a delete given that id reaches that occurrence alone, never the series. Not to be confused with `invitation::Occurrence`, the one occurrence an invitation names by the `RECURRENCE-ID` it carries. _Avoid_: instance, recurrence.
 
+**Event block**: the button `TimeGrid` and `AllDayStrip` draw for one placed occurrence: a bar in the calendar's or the event's own colour, the title and the time, dashed while the account has not answered it and struck through once it has declined. `mailrs::ui::calendar::block::EventBlock`. Named apart from "Event card", which is the invitation card a message shows (`mailrs::ui::invitation::EventCard`), so the two never collide in a search or a stack trace. _Avoid_: event card, event cell.
+
 **Change queue**: calendar edits made here that the provider has not taken yet, sent in order; a change the provider turns down leaves the queue and the provider's version stays. `mailrs_store::calendar::QueuedChange`. _Avoid_: outbox (that is mail's).
 
 **Turned down**: a change made here that the provider refused when the queue tried to send it, such as an event changed elsewhere first or a calendar gone read-only; the local copy takes the provider's version in its place. `mailrs_sync::calendar_copy::TurnedDown`. _Avoid_: conflict, rejected change.
