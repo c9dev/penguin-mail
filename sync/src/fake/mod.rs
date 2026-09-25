@@ -183,8 +183,8 @@ pub struct FakeState {
     /// Gone, which the client reads as `ExpiredSyncToken`, rather than
     /// the 404 the fake gives otherwise.
     pub deleted_answers_gone: bool,
-    /// Calendars Google no longer has. Every write to one answers
-    /// `NotFound`.
+    /// Calendars Google no longer has. Every read of one and every write
+    /// to one answers `NotFound`.
     pub deleted_calendars: Vec<String>,
     /// The OAuth scopes the account has not granted. A call that needs one
     /// answers `MissingScope`, as Google does until the user says yes.
@@ -1238,6 +1238,7 @@ impl GmailApi for FakeGmail {
     ) -> Result<calendar::EventPage, GmailError> {
         self.call("calendar.events.list", 0).await?;
         self.calendar_open()?;
+        self.calendar_held(calendar)?;
         self.with(|s| {
             let end = s.calendar_log.len().to_string();
             match token {
