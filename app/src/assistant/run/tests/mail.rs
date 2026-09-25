@@ -119,12 +119,22 @@ async fn delete_forever_asks_then_erases() {
 #[test]
 fn the_delete_forever_question_names_the_accounts_provider() {
     assert_eq!(
-        super::super::mail::erase_question(1, "Fastmail"),
+        super::super::mail::erase_question(1, &["Fastmail"]),
         "Delete 1 conversation forever? Fastmail cannot bring it back."
     );
     assert_eq!(
-        super::super::mail::erase_question(3, "Fastmail"),
+        super::super::mail::erase_question(3, &["Fastmail"]),
         "Delete 3 conversations forever? Fastmail cannot bring them back."
+    );
+}
+
+/// A call whose targets span more than one provider says so instead of
+/// naming just one of them.
+#[test]
+fn the_delete_forever_question_covers_every_provider_it_spans() {
+    assert_eq!(
+        super::super::mail::erase_question(2, &["Gmail", "Fastmail"]),
+        "Delete 2 conversations forever? Each account's server cannot bring them back."
     );
 }
 

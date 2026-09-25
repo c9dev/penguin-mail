@@ -165,17 +165,44 @@ impl<A: Accounts> Tools<A> {
     pub(super) async fn delete_forever<'a>(&'a self, input: &'a Value) -> Result<Plan<'a>, String> {
         let targets = self.parse_targets(input)?;
         let first = targets.first().ok_or("`targets` is empty")?.account_id;
-        let account = self
-            .desk
-            .accounts()
-            .into_iter()
-            .find(|a| a.id == first)
-            .ok_or("That account is gone.")?;
-        if let Some(answer) = self.unavailable(&account, Missing::DeleteForever) {
+        let accounts = self.desk.accounts();
+        // Group by account, as the window's own plan does: only the
+        // accounts that can erase for good take part, and the count and
+        // the question's wording follow what is left once they are
+        // dropped.
+        let mut erasing: Vec<Target> = Vec::new();
+        let mut erasers: Vec<String> = Vec::new();
+        for target in &targets {
+            let Some(account) = accounts.iter().find(|a| a.id == target.account_id) else {
+                continue;
+            };
+            if self.unavailable(account, Missing::DeleteForever).is_some() {
+                continue;
+            }
+            erasing.push(target.clone());
+            let provider = account.provider_name().to_string();
+            if !erasers.contains(&provider) {
+                erasers.push(provider);
+            }
+        }
+        if erasing.is_empty() {
+            let account = accounts
+                .into_iter()
+                .find(|a| a.id == first)
+                .ok_or("That account is gone.")?;
+            let answer = self
+                .unavailable(&account, Missing::DeleteForever)
+                .ok_or("That account is gone.")?;
             return Ok(Plan::without_asking(async move { Ok(answer) }));
         }
-        let question = erase_question(targets.len(), account.provider_name());
-        Ok(Plan::ask(question, self.erase(account, targets)))
+        let leader = erasing[0].account_id;
+        let account = accounts
+            .into_iter()
+            .find(|a| a.id == leader)
+            .ok_or("That account is gone.")?;
+        let refs: Vec<&str> = erasers.iter().map(String::as_str).collect();
+        let question = erase_question(erasing.len(), &refs);
+        Ok(Plan::ask(question, self.erase(account, erasing)))
     }
 
     async fn erase(&self, account: Account, targets: Vec<Target>) -> ToolResult {
@@ -358,13 +385,19 @@ impl<A: Accounts> Tools<A> {
     }
 }
 
-/// The question before the assistant erases `count` conversations from an
-/// account on `provider`.
-pub(super) fn erase_question(count: usize, provider: &str) -> String {
+/// The question before the assistant erases `count` conversations, from
+/// accounts on `erasers`' servers: one provider's name when every
+/// account shares it, as `press::erase_question` words it, or "Each
+/// account's server" when they differ.
+pub(super) fn erase_question(count: usize, erasers: &[&str]) -> String {
+    let who = match erasers {
+        [provider] => (*provider).to_string(),
+        _ => gettext("Each account's server"),
+    };
     fill_plural(
         "Delete {count} conversation forever? {provider} cannot bring it back.",
         "Delete {count} conversations forever? {provider} cannot bring them back.",
         count,
-        &[("count", &count.to_string()), ("provider", provider)],
+        &[("count", &count.to_string()), ("provider", who.as_str())],
     )
 }
