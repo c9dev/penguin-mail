@@ -583,3 +583,30 @@ async fn a_change_google_cannot_take_for_any_other_reason_leaves_the_queue() {
     assert_eq!(stored(&h, "primary", "a").await.unwrap().title, "a", "Google's version is back");
     assert_eq!(stored(&h, "primary", "b").await.unwrap().title, "Second");
 }
+
+/// Google took the create and its answer was lost, so the row is still a
+/// create when the person edits the event. The next send meets 409 for
+/// the id, and the edit must still reach Google.
+#[tokio::test]
+async fn an_edit_after_a_create_whose_answer_was_lost_still_goes_out() {
+    let h = harness().await;
+    h.fake.with(|s| s.calendars = vec![calendar("primary", true)]);
+    let copy = copy(&h);
+    copy.refresh(h.account_id, NOW).await.unwrap();
+    let id = new_event_id();
+    copy.save(h.account_id, event("primary", &id)).await.unwrap();
+    // The create reached Google, but this computer never heard back.
+    h.fake.put_calendar_event(event("primary", &id));
+    let mut edited = stored(&h, "primary", &id).await.unwrap();
+    edited.title = "Edited".into();
+    copy.save(h.account_id, edited).await.unwrap();
+
+    let turned_down = copy.send(h.account_id).await.unwrap();
+
+    assert!(turned_down.is_empty(), "{turned_down:?}");
+    assert!(queue(&h).await.is_empty());
+    let on_google = h.fake.with(|s| s.calendar_events.iter().find(|e| e.id == id).cloned()).unwrap();
+    assert_eq!(on_google.title, "Edited");
+    let held = stored(&h, "primary", &id).await.unwrap();
+    assert_eq!((held.title.as_str(), held.pending), ("Edited", false));
+}
