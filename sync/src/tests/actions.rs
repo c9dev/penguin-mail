@@ -65,6 +65,46 @@ async fn archive_then_undo_puts_the_thread_back() {
     assert!(actions.undo().await.is_none(), "undo works once");
 }
 
+/// Undo names a label as the person named it, not by Gmail's id for it.
+#[tokio::test]
+async fn undo_names_a_label_by_its_name() {
+    let h = harness().await;
+    h.fake.with(|s| {
+        s.labels.push(mailrs_gmail::RemoteLabel {
+            id: "Label_5".into(),
+            name: "Receipts".into(),
+            kind: Some("user".into()),
+            color: None,
+        })
+    });
+    h.fake.seed(meta("a", "t1", now_millis(), &["INBOX"]));
+    h.bootstrap_all().await;
+    let actions = actions(&h);
+    let target = Target::thread(h.account_id, "t1");
+    let receipts = MailAction::Triage(TriageAction::AddLabel("Label_5".into()));
+
+    let outcome = actions.run(&[target], receipts, History::Record).await;
+    assert!(outcome.failed.is_empty(), "{:?}", outcome.failed);
+    assert_eq!(
+        actions.newest_words().await.as_deref(),
+        Some("Add label Receipts")
+    );
+    let undone = actions.undo().await.expect("an undo");
+    assert_eq!(undone.words, "Add label Receipts");
+    assert_eq!(actions.newest_words().await, None);
+}
+
+#[tokio::test]
+async fn undo_words_an_action_that_names_no_mailbox_as_before() {
+    let h = harness().await;
+    h.fake.seed(meta("a", "t1", now_millis(), &["INBOX"]));
+    h.bootstrap_all().await;
+    let actions = actions(&h);
+    let target = Target::thread(h.account_id, "t1");
+    actions.run(&[target], ARCHIVE, History::Record).await;
+    assert_eq!(actions.undo().await.expect("an undo").words, "Archive");
+}
+
 /// Archiving three conversations and changing your mind three times gives
 /// all three back, the last one first.
 #[tokio::test]

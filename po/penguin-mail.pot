@@ -869,7 +869,7 @@ msgid_plural "Bring {count} conversations back {when} instead?"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/assistant/run/queue.rs:422
+#: app/src/assistant/run/queue.rs:421
 msgid "Undo “{action}”?"
 msgstr ""
 
@@ -6328,19 +6328,19 @@ msgstr[1] ""
 msgid "a minute"
 msgstr ""
 
-#: sync/src/actions.rs:115 sync/src/actions.rs:591
+#: sync/src/actions.rs:122 sync/src/actions.rs:649
 msgid "Change labels"
 msgstr ""
 
-#: sync/src/actions.rs:314
+#: sync/src/actions.rs:323
 msgid "Delete Forever failed: {reason}"
 msgstr ""
 
-#: sync/src/actions.rs:484
+#: sync/src/actions.rs:541
 msgid "This mail has moved since, so Undo left it where it is."
 msgstr ""
 
-#: sync/src/actions.rs:545 sync/src/actions.rs:598
+#: sync/src/actions.rs:602 sync/src/actions.rs:656
 msgid "Could not undo: {reason}"
 msgstr ""
 
@@ -6533,42 +6533,42 @@ msgstr ""
 msgid "{address} is already in Penguin Mail as a {provider} account."
 msgstr ""
 
-#: sync/src/triage.rs:45
+#: sync/src/triage.rs:53
 msgid "Mark read"
 msgstr ""
 
-#: sync/src/triage.rs:46
+#: sync/src/triage.rs:54
 msgid "Mark unread"
 msgstr ""
 
-#: sync/src/triage.rs:47
+#: sync/src/triage.rs:55
 msgid "Star"
 msgstr ""
 
-#: sync/src/triage.rs:48
+#: sync/src/triage.rs:56
 msgid "Unstar"
 msgstr ""
 
-#: sync/src/triage.rs:50
+#: sync/src/triage.rs:58
 msgid "Add label {label}"
 msgstr ""
 
-#: sync/src/triage.rs:53
+#: sync/src/triage.rs:61
 msgid "Remove label {label}"
 msgstr ""
 
-#: sync/src/triage.rs:56
+#: sync/src/triage.rs:64
 msgid "Move out of trash"
 msgstr ""
 
-#: sync/src/triage.rs:57
+#: sync/src/triage.rs:65
 msgid "Mark as junk"
 msgstr ""
 
-#: sync/src/triage.rs:58
+#: sync/src/triage.rs:66
 msgid "Mark as not junk"
 msgstr ""
 
-#: sync/src/triage.rs:62
+#: sync/src/triage.rs:70
 msgid "Move to {folder}"
 msgstr ""

@@ -38,8 +38,16 @@ pub enum TriageAction {
 }
 
 impl TriageAction {
-    /// The action in words, for a toast the person reads.
+    /// The action in words, for a toast the person reads. A mailbox shows
+    /// by its server id; [`TriageAction::describe_named`] shows its name.
     pub fn describe(&self) -> String {
+        self.describe_named(|id| id.to_string())
+    }
+
+    /// The action in words, each server mailbox it names shown as `name`
+    /// gives it: `name` turns an id such as `Label_5` into the name the
+    /// person gave the label or folder.
+    pub fn describe_named(&self, name: impl Fn(&str) -> String) -> String {
         match self {
             TriageAction::Archive => gettext("Archive"),
             TriageAction::MarkRead => gettext("Mark read"),
@@ -47,10 +55,10 @@ impl TriageAction {
             TriageAction::Star => gettext("Star"),
             TriageAction::Unstar => gettext("Unstar"),
             TriageAction::AddLabel(label) => {
-                fill(&gettext("Add label {label}"), &[("label", label)])
+                fill(&gettext("Add label {label}"), &[("label", &name(label))])
             }
             TriageAction::RemoveLabel(label) => {
-                fill(&gettext("Remove label {label}"), &[("label", label)])
+                fill(&gettext("Remove label {label}"), &[("label", &name(label))])
             }
             TriageAction::Trash => gettext("Move to trash"),
             TriageAction::Untrash => gettext("Move out of trash"),
@@ -59,7 +67,7 @@ impl TriageAction {
             TriageAction::Mute => gettext("Mute"),
             TriageAction::Unmute => gettext("Unmute"),
             TriageAction::MoveTo(folder) => {
-                fill(&gettext("Move to {folder}"), &[("folder", folder)])
+                fill(&gettext("Move to {folder}"), &[("folder", &name(folder))])
             }
             TriageAction::Relabel { .. } => gettext("Change labels"),
         }

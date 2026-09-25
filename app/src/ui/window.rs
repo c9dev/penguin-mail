@@ -1592,7 +1592,7 @@ impl MainWindow {
                 Some(error) => this.toast(error),
                 None => this.toast(&fill(
                     &gettext("{action} undone"),
-                    &[("action", &undone.action.describe())],
+                    &[("action", &undone.words)],
                 )),
             }
         });

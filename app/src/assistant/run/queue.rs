@@ -413,15 +413,12 @@ impl<A: Accounts> Tools<A> {
     /// Takes back the newest action on the undo stack, as Ctrl+Z does,
     /// whether the window or the assistant took it.
     pub(super) async fn undo<'a>(&'a self, _input: &'a Value) -> Result<Plan<'a>, String> {
+        let mail = Arc::clone(&self.modules.mail);
         let newest = self
-            .modules
-            .mail
-            .newest()
+            .away(async move { mail.newest_words().await })
+            .await?
             .ok_or("There is nothing to undo.")?;
-        let question = fill(
-            &gettext("Undo “{action}”?"),
-            &[("action", &newest.describe())],
-        );
+        let question = fill(&gettext("Undo “{action}”?"), &[("action", &newest)]);
         Ok(Plan::ask(question, async move {
             let mail = Arc::clone(&self.modules.mail);
             let undone = self
@@ -434,7 +431,7 @@ impl<A: Accounts> Tools<A> {
                 return Err(error.to_string());
             }
             let mut result = json!({
-                "undone": undone.action.describe(),
+                "undone": undone.words,
                 "done": outcome.done.len(),
             });
             if !outcome.failed.is_empty() {
