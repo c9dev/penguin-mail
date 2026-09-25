@@ -18,8 +18,8 @@ use mailrs_mime::Parts;
 
 use super::{
     AutoReplyService, Backfill, CalendarService, Changes, ContactsService, Found, Google,
-    IdentityService, Imap, KeywordsPage, MailBackend, MailCapabilities, RawMessage, RemoteRef,
-    RulesService, SearchQuery, SendAsAddress, SyncState, Unapplied, Want,
+    IdentityService, Imap, KeywordsPage, MailBackend, MailCapabilities, RawMessage, Relocated,
+    RemoteRef, RulesService, SearchQuery, SendAsAddress, SyncState, Unapplied, Want,
 };
 use crate::api::{AccountClient, DraftRef, SavedDraft};
 #[cfg(any(test, feature = "fake"))]
@@ -132,7 +132,11 @@ impl MailBackend for AnyMail {
         forward_all_now!(AnyMail, self, set_of(id))
     }
 
-    async fn apply(&self, messages: &[String], ops: &[MailOp]) -> Result<(), Unapplied> {
+    async fn apply(
+        &self,
+        messages: &[String],
+        ops: &[MailOp],
+    ) -> Result<Vec<Relocated>, Unapplied> {
         forward_all!(AnyMail, self, apply(messages, ops))
     }
 

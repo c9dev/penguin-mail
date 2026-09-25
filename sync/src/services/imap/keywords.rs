@@ -44,6 +44,18 @@ pub(super) fn is_deleted(flags: &[String]) -> bool {
     flags.iter().any(|f| f.eq_ignore_ascii_case("\\Deleted"))
 }
 
+/// The flag the server stores for `keyword`: IMAP's own for the four it
+/// has, the keyword itself otherwise.
+pub(super) fn flag_of(keyword: &str) -> String {
+    match keyword {
+        self::keyword::SEEN => "\\Seen".to_string(),
+        self::keyword::FLAGGED => "\\Flagged".to_string(),
+        self::keyword::ANSWERED => "\\Answered".to_string(),
+        self::keyword::DRAFT => "\\Draft".to_string(),
+        other => other.to_string(),
+    }
+}
+
 /// Which keywords a mailbox with `permanent` as its PERMANENTFLAGS stores.
 /// A server that sends none is taken to store the system flags alone, so
 /// `$muted` stays on this computer rather than vanish.
@@ -91,7 +103,7 @@ pub(super) fn flag_changes(id: &str, flags: &[String], stored: &[&str]) -> Vec<R
 mod tests {
     use mailrs_domain::Membership;
 
-    use super::{flag_changes, keywords_of, stored_keywords};
+    use super::{flag_changes, flag_of, keywords_of, stored_keywords};
     use crate::services::RemoteChange;
 
     fn owned(flags: &[&str]) -> Vec<String> {
@@ -122,6 +134,13 @@ mod tests {
         assert!(stored_keywords(&open).contains(&"$muted"));
         let named = owned(&["\\Seen", "$Muted"]);
         assert!(stored_keywords(&named).contains(&"$muted"));
+    }
+
+    #[test]
+    fn keywords_go_to_the_server_as_its_flags() {
+        assert_eq!(flag_of("$seen"), "\\Seen");
+        assert_eq!(flag_of("$draft"), "\\Draft");
+        assert_eq!(flag_of("$muted"), "$muted");
     }
 
     #[test]

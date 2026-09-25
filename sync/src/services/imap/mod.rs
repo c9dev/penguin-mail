@@ -13,10 +13,11 @@ mod mailboxes;
 mod state;
 mod syntax;
 mod window;
+mod writes;
 
 pub use api::{ImapApi, Submit};
 
-use std::collections::VecDeque;
+use std::collections::{HashMap, VecDeque};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::ops::RangeInclusive;
 use std::time::Duration;
@@ -29,7 +30,7 @@ use mailrs_mime::Parts;
 
 use super::{
     Backfill, Changes, Found, IdentityService, KeywordsPage, MailBackend, MailCapabilities,
-    RawMessage, RemoteRef, SearchQuery, SendAsAddress, SyncState, Unapplied, Want,
+    RawMessage, Relocated, RemoteRef, SearchQuery, SendAsAddress, SyncState, Unapplied, Want,
 };
 use crate::api::{DraftRef, SavedDraft};
 use crate::{BackendError, MailOp};
@@ -81,8 +82,10 @@ struct Known {
     folders: Vec<Folder>,
     /// The server's hierarchy delimiter.
     delimiter: Option<char>,
-    /// The keywords the Inbox's PERMANENTFLAGS take, once it was selected.
-    keywords: Option<&'static [&'static str]>,
+    /// The keywords each mailbox's own PERMANENTFLAGS take, recorded as it
+    /// is selected. Bounded by how many mailboxes the account has, not by
+    /// their size.
+    keywords: HashMap<String, &'static [&'static str]>,
     /// Messages whose text the client's guard refused this session, the
     /// latest [`UNREADABLE_KEPT`], so opening one again does not ask for
     /// the part and lose the connection each time.
@@ -141,20 +144,31 @@ impl<I, S> Imap<I, S> {
 
 impl<I: ImapApi, S: Submit> Imap<I, S> {
     /// Selects `mailbox`, with QRESYNC's parameters when `since` gives
-    /// them, and notes which keywords the Inbox's PERMANENTFLAGS let the
-    /// server store.
+    /// them, and notes which keywords this mailbox's own PERMANENTFLAGS
+    /// let the server store.
     async fn select(&self, mailbox: &str, since: Option<Since>) -> Result<Selected, BackendError> {
         let selected = self.api.select(mailbox, since).await?;
         self.note_keywords(mailbox, &selected);
         Ok(selected)
     }
 
-    /// Remembers which keywords the Inbox's PERMANENTFLAGS let the server
-    /// store, once it is selected.
+    /// Remembers which keywords `mailbox`'s own PERMANENTFLAGS let the
+    /// server store there. Every mailbox can differ, so a look or a write
+    /// in one never decides for another.
     fn note_keywords(&self, mailbox: &str, selected: &Selected) {
-        if mailbox.eq_ignore_ascii_case("INBOX") {
-            self.known().keywords = Some(keywords::stored_keywords(&selected.permanent_flags));
-        }
+        self.known()
+            .keywords
+            .insert(mailbox.to_string(), keywords::stored_keywords(&selected.permanent_flags));
+    }
+
+    /// The keywords `mailbox`'s own PERMANENTFLAGS store, or the system
+    /// flags alone when the mailbox has not been selected yet.
+    fn stored_keywords(&self, mailbox: &str) -> &'static [&'static str] {
+        self.known()
+            .keywords
+            .get(mailbox)
+            .copied()
+            .unwrap_or(SYSTEM_KEYWORDS)
     }
 
     /// The server's capabilities, asked once. The client asks after the
@@ -203,7 +217,7 @@ impl<I: ImapApi, S: Submit> MailBackend for Imap<I, S> {
             categories: false,
             delete_forever: true,
             batch_limit: BATCH_LIMIT,
-            keywords: self.known().keywords.unwrap_or(SYSTEM_KEYWORDS),
+            keywords: self.stored_keywords("INBOX"),
             native_search: false,
         }
     }
@@ -362,11 +376,12 @@ impl<I: ImapApi, S: Submit> MailBackend for Imap<I, S> {
         }
     }
 
-    async fn apply(&self, _messages: &[String], _ops: &[MailOp]) -> Result<(), Unapplied> {
-        Err(Unapplied {
-            taken: 0,
-            error: BackendError::Unsupported,
-        })
+    async fn apply(
+        &self,
+        messages: &[String],
+        ops: &[MailOp],
+    ) -> Result<Vec<Relocated>, Unapplied> {
+        self.write(messages, ops).await
     }
 
     async fn send(&self, _raw: &[u8], _thread_id: Option<&str>) -> Result<String, BackendError> {

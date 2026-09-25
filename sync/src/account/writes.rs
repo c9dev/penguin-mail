@@ -1,18 +1,18 @@
 //! Mail actions: operations applied to the store at once and to the
 //! server after.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::time::Duration;
 
 use futures::StreamExt;
 use mailrs_domain::translate::{fill, fill_plural, gettext};
-use mailrs_domain::{Applied, ChangeEvent, Memberships, Role, Target};
+use mailrs_domain::{Applied, ChangeEvent, Location, Memberships, Role, Target};
 use mailrs_store::messages::Change;
-use mailrs_store::{messages, reminders, threads};
+use mailrs_store::{mailboxes, messages, reminders, remote_refs, threads};
 
 use super::{AccountSync, FETCH_CONCURRENCY};
-use crate::ops::{Roles, local_changes, ops_for, reverse_changes};
-use crate::services::Unapplied;
+use crate::ops::{Roles, local_changes, ops_for, reverse_changes, split_keywords};
+use crate::services::{Relocated, Unapplied};
 use crate::{
     BackendError, MailBackend, MailOp, SyncError, TriageAction, backoff_delay, with_jitter,
 };
@@ -247,6 +247,8 @@ impl AccountSync {
         // may not hold yet. Fetch those first so there is something to change.
         self.ensure_threads(&threads).await?;
 
+        let (to_server, kept_here) =
+            split_keywords(ops, self.services.mail.capabilities().keywords);
         let (ids, applied) = {
             let (wanted, ops, roles) = (wanted.clone(), ops.to_vec(), self.roles());
             self.db
@@ -271,25 +273,35 @@ impl AccountSync {
                         })
                         .collect();
                     let applied = messages::apply(c, account_id, &changes)?.applied;
+                    for keyword in &kept_here {
+                        messages::mark_local(c, account_id, &ids, keyword)?;
+                    }
                     Ok((ids, applied))
                 })
                 .await?
         };
         self.emit_threads(threads.clone());
+        if to_server.is_empty() {
+            return Ok(applied);
+        }
 
+        let names = self.remotes(&ids).await?;
         let writing = Writing {
             what: what.to_string(),
             conversations: threads.len(),
         };
         let mut budget = Budget::new(self.retry_max, self.wait_ceiling);
-        let mut taken = BTreeSet::new();
-        if let Err(err) = self
-            .write_ops(&mut budget, &ids, &writing, ops, &mut taken)
-            .await
-        {
+        let mut progress = Progress::default();
+        let written = self
+            .write_ops(&mut budget, &ids, &names, &writing, &to_server, &mut progress)
+            .await;
+        // What the server moved before any refusal has moved, so its refs
+        // follow whatever else happened.
+        self.relocate(&ids, &names, progress.moved).await?;
+        if let Err(err) = written {
             let back: Vec<Change> = applied
                 .iter()
-                .filter(|a| !taken.contains(&a.message_id))
+                .filter(|a| !progress.taken.contains(&a.message_id))
                 .flat_map(reverse_changes)
                 .collect();
             self.db
@@ -308,34 +320,41 @@ impl AccountSync {
         Ok(applied)
     }
 
-    /// Sends `ops` over `ids` to the server, waiting out what is worth
-    /// waiting out and sending the rest after each wait. The waiting
-    /// belongs to the action, not to each message, so a rate-limited
-    /// archive of twenty threads waits its minute once rather than twenty
-    /// times. `taken` collects the messages the server accepted, so a
-    /// failure part way can tell them from the rest.
+    /// Sends `ops` over the messages `ids` names, which the server knows
+    /// as `names`, waiting out what is worth waiting out and sending the
+    /// rest after each wait. The waiting belongs to the action, not to each
+    /// message, so a rate-limited archive of twenty threads waits its
+    /// minute once rather than twenty times. `progress` collects the
+    /// messages the server accepted and where it moved any, so a failure
+    /// part way can tell them from the rest.
     async fn write_ops(
         &self,
         budget: &mut Budget,
         ids: &[String],
+        names: &[String],
         writing: &Writing,
         ops: &[MailOp],
-        taken: &mut BTreeSet<String>,
+        progress: &mut Progress,
     ) -> Result<(), BackendError> {
-        let mut rest = ids;
+        let mut from = 0;
         loop {
-            match self.services.mail.apply(rest, ops).await {
-                Ok(()) => {
-                    taken.extend(rest.iter().cloned());
+            match self.services.mail.apply(&names[from..], ops).await {
+                Ok(moved) => {
+                    progress.moved.extend(moved);
+                    progress.taken.extend(ids[from..].iter().cloned());
                     return Ok(());
                 }
                 Err(Unapplied {
                     taken: through,
                     error,
+                    relocated,
                 }) => {
-                    let through = through.min(rest.len());
-                    taken.extend(rest[..through].iter().cloned());
-                    rest = &rest[through..];
+                    progress.moved.extend(relocated);
+                    let through = through.min(names.len() - from);
+                    progress
+                        .taken
+                        .extend(ids[from..from + through].iter().cloned());
+                    from += through;
                     match budget.wait(&error) {
                         Some(delay) => self.hold_on(budget, delay, writing).await,
                         None => return Err(error),
@@ -343,6 +362,90 @@ impl AccountSync {
                 }
             }
         }
+    }
+
+    /// Records where the server moved messages: each one's remote ref, and
+    /// the mailbox it sits in now, which the store has not filed it under
+    /// when the server made that mailbox for this move. A mailbox the store
+    /// has not listed is listed.
+    async fn relocate(
+        &self,
+        ids: &[String],
+        names: &[String],
+        moved: Vec<Relocated>,
+    ) -> Result<(), SyncError> {
+        if moved.is_empty() {
+            return Ok(());
+        }
+        let by_name: HashMap<&str, &str> = names
+            .iter()
+            .map(String::as_str)
+            .zip(ids.iter().map(String::as_str))
+            .collect();
+        let placed: Vec<(String, Location)> = moved
+            .into_iter()
+            .filter_map(|r| Some((by_name.get(r.from.as_str())?.to_string(), r.to)))
+            .collect();
+        let account_id = self.account_id;
+        let (touched, unknown) = self
+            .db
+            .write(move |c| {
+                let known: HashSet<String> = mailboxes::listed(c, account_id)?
+                    .into_iter()
+                    .map(|m| m.id)
+                    .collect();
+                let ids: Vec<String> = placed.iter().map(|(id, _)| id.clone()).collect();
+                let held = messages::memberships_of(c, account_id, &ids)?;
+                let none = Memberships::default();
+                let mut changes = Vec::new();
+                let mut unknown = BTreeSet::new();
+                for (id, at) in &placed {
+                    if !known.contains(&at.mailbox) {
+                        unknown.insert(at.mailbox.clone());
+                    }
+                    changes.extend(local_changes(
+                        id,
+                        held.get(id).unwrap_or(&none),
+                        &[MailOp::MoveToMailbox(at.mailbox.clone())],
+                        &Roles::new(),
+                    ));
+                }
+                let touched = messages::apply(c, account_id, &changes)?.threads;
+                for (id, at) in &placed {
+                    remote_refs::locate(c, account_id, id, at)?;
+                }
+                Ok((touched, unknown))
+            })
+            .await?;
+        if !unknown.is_empty() {
+            self.refresh_labels().await?;
+            self.tell_archive_made(unknown).await?;
+        }
+        self.emit_threads(touched);
+        Ok(())
+    }
+
+    /// Says so when a move landed in an Archive the server made for it.
+    /// `new` holds the mailboxes the moves went into that the store had
+    /// not listed; once listed again, one of them holding the Archive role
+    /// is the one this archive made.
+    async fn tell_archive_made(&self, new: BTreeSet<String>) -> Result<(), SyncError> {
+        let account_id = self.account_id;
+        let made = self
+            .db
+            .read(move |c| {
+                Ok(mailboxes::listed(c, account_id)?
+                    .into_iter()
+                    .find(|m| m.role == Some(Role::Archive) && new.contains(&m.id)))
+            })
+            .await?;
+        if let Some(archive) = made {
+            self.emit(ChangeEvent::ArchiveMade {
+                account_id,
+                name: archive.name,
+            });
+        }
+        Ok(())
     }
 
     /// Fetches the threads the store does not hold yet, several at a time.
@@ -388,6 +491,15 @@ impl AccountSync {
 struct Writing {
     what: String,
     conversations: usize,
+}
+
+/// What reached the server during one mail action.
+#[derive(Default)]
+struct Progress {
+    /// The messages the server took.
+    taken: BTreeSet<String>,
+    /// Where the server moved messages, by the names they went under.
+    moved: Vec<Relocated>,
 }
 
 /// The waiting one mail action may do, however many messages it touches

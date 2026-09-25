@@ -68,7 +68,7 @@ pub use services::{
     RemoteRef, SearchQuery, Want, AnyCalendar, AnyContacts, AnyIdentities, AnyMail, AnyRules,
     AutoReplyService, CalendarService, ContactsService, Google, Imap, ImapApi, ImapSettings,
     IdentityService, KeywordsOf, KeywordsPage, MailBackend, MailCapabilities, Missing, Offers,
-    Priority, RemoteChange,
+    Priority, Relocated, RemoteChange,
     RulesService, SendAsAddress, SyncState, Unapplied, Changes, RAW_LIMIT, Submit, background,
 };
 pub use settings::{AccountSettings, AutomaticReply, HIDE_MY_EMAIL_LABEL, Permitted};

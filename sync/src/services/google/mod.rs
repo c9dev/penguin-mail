@@ -26,8 +26,8 @@ use mailrs_mime::html::html_to_text;
 
 use super::{
     AutoReplyService, Backfill, CalendarService, Changes, ContactsService, Found, IdentityService,
-    KeywordsPage, MailBackend, MailCapabilities, Priority, RawMessage, RemoteRef, RulesService,
-    SearchQuery, SendAsAddress, SyncState, Unapplied, Want, priority,
+    KeywordsPage, MailBackend, MailCapabilities, Priority, RawMessage, Relocated, RemoteRef,
+    RulesService, SearchQuery, SendAsAddress, SyncState, Unapplied, Want, priority,
 };
 use crate::api::{DraftRef, GmailApi, SavedDraft};
 use crate::{BackendError, MailOp};
@@ -164,8 +164,13 @@ impl<G: GmailApi> MailBackend for Google<G> {
         gmail::set_of(id)
     }
 
-    async fn apply(&self, messages: &[String], ops: &[MailOp]) -> Result<(), Unapplied> {
-        self.write(messages, ops).await
+    /// Gmail never renames a message, so nothing is relocated.
+    async fn apply(
+        &self,
+        messages: &[String],
+        ops: &[MailOp],
+    ) -> Result<Vec<Relocated>, Unapplied> {
+        self.write(messages, ops).await.map(|()| Vec::new())
     }
 
     fn person_waiting(&self) -> bool {

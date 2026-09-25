@@ -22,7 +22,7 @@ use mailrs_imap::{Capabilities, FlagsOf, ImapError, Selected, Since, UidSet};
 use super::keywords::{flag_changes, is_deleted, keywords_of};
 use super::state::{ImapState, Kept};
 use super::window::{window_keys, windows};
-use super::{Imap, ImapApi, SYSTEM_KEYWORDS, Submit};
+use super::{Imap, ImapApi, Submit};
 use crate::BackendError;
 use crate::services::{Changes, KeywordsOf, KeywordsPage, RemoteChange, SyncState};
 
@@ -114,7 +114,7 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
             mailbox,
             uidvalidity: selected.uidvalidity,
             uidnext: kept.uidnext,
-            stored: self.known().keywords.unwrap_or(SYSTEM_KEYWORDS),
+            stored: self.stored_keywords(mailbox),
         };
         // QRESYNC's report counts only when the server applied QRESYNC to
         // this SELECT. A plain SELECT, and a QRESYNC SELECT that fell back
@@ -243,6 +243,7 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
         Ok(KeywordsPage {
             found,
             covered: Some(window),
+            storable: self.stored_keywords(mailbox),
         })
     }
 

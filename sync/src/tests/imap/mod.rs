@@ -5,6 +5,7 @@ mod feed;
 mod mailboxes;
 mod uidvalidity;
 mod window;
+mod writes;
 
 use std::sync::Arc;
 

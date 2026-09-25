@@ -698,4 +698,10 @@ pub enum ChangeEvent {
         account_id: AccountId,
         message: String,
     },
+    /// The server had no Archive mailbox, so archiving made one, which the
+    /// server lists as `name`.
+    ArchiveMade {
+        account_id: AccountId,
+        name: String,
+    },
 }

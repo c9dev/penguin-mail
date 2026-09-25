@@ -235,7 +235,9 @@ impl AccountSync {
                 break;
             };
             let next = covered.end().checked_add(1);
-            let storable = self.services.mail.capabilities().keywords;
+            // This mailbox's own PERMANENTFLAGS, not the Inbox's: Archive
+            // or another mailbox can store a different set of keywords.
+            let storable = page.storable;
             let (name, found) = (mailbox.to_string(), page.found);
             changes.extend(
                 self.db

@@ -84,6 +84,16 @@ pub struct MailCapabilities {
 pub struct Unapplied {
     pub taken: usize,
     pub error: BackendError,
+    /// Where the server moved the messages it took before the refusal.
+    pub relocated: Vec<Relocated>,
+}
+
+/// Where a write moved a message on a server that renames what it moves:
+/// `from` is the name the caller handed in, `to` the message's place now.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Relocated {
+    pub from: String,
+    pub to: Location,
 }
 
 /// Where a mail backend's feed of changes stands, in that backend's own
@@ -186,6 +196,9 @@ pub struct KeywordsPage {
     /// The UIDs this page covered, which the caller compares; the next
     /// page starts above them.
     pub covered: Option<RangeInclusive<u32>>,
+    /// The keywords this mailbox's own PERMANENTFLAGS store, read as it
+    /// was selected. Unset (empty) when nothing was covered.
+    pub storable: &'static [&'static str],
 }
 
 /// What the server calls one message, with its thread, as a listing or a
@@ -608,12 +621,13 @@ pub trait MailBackend: Send + Sync + 'static {
     /// Applies `ops` to `messages`, in order. On a refusal it says how
     /// many messages from the front went through. `MailOp::Destroy`
     /// comes alone and answers `BackendError::NeedsPermission` until the
-    /// account grants the delete permission.
+    /// account grants the delete permission. Answers where the server put
+    /// each message it moved, on a server that renames what it moves.
     fn apply(
         &self,
         messages: &[String],
         ops: &[MailOp],
-    ) -> impl Future<Output = Result<(), Unapplied>> + Send;
+    ) -> impl Future<Output = Result<Vec<Relocated>, Unapplied>> + Send;
 
     /// Sends raw RFC 822 bytes. Returns the new message id.
     fn send(
