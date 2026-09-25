@@ -62,6 +62,10 @@ pub struct Hooks {
     pub change: Box<dyn Fn(Change)>,
     /// Asks the account for the permissions it left out.
     pub grant: Box<dyn Fn(AccountId)>,
+    /// Explains that an answer stopped for want of the calendar
+    /// permission and offers to ask for it, as every other refusal of
+    /// that kind does before a browser opens.
+    pub needs_permission: Box<dyn Fn(AccountId)>,
 }
 
 /// An account as the calendar reads it: who it is, what its provider
@@ -162,6 +166,13 @@ pub struct CalendarView {
     /// to the top before it answers does not start another one.
     list_loading: Cell<bool>,
     search_read: Cell<u64>,
+    /// Set by a sidebar read that should fill the pages once it answers.
+    /// A newer read drops the older one's answer, so the flag carries
+    /// the fill over to whichever read answers last.
+    fill_owed: Cell<bool>,
+    /// Counts `open`'s reads, so a newer one, or a move to another range,
+    /// drops an older answer.
+    open_read: Cell<u64>,
     /// An event to open once the page that holds it has been read.
     pending_open: RefCell<Option<EventKey>>,
     /// Set while the view changes its own switch, so the switch's signal
@@ -426,6 +437,8 @@ impl CalendarView {
                 list_exhausted: Cell::new(false),
                 list_loading: Cell::new(false),
                 search_read: Cell::new(0),
+                fill_owed: Cell::new(false),
+                open_read: Cell::new(0),
                 pending_open: RefCell::new(None),
                 switching: Cell::new(false),
                 arranging: Cell::new(false),
@@ -484,13 +497,23 @@ impl CalendarView {
         // The tints are stronger in dark mode (tint.rs), and the rules key
         // off this class.
         let style = adw::StyleManager::default();
-        let page = view.page.clone();
-        let mark = move |style: &adw::StyleManager| match style.is_dark() {
-            true => page.add_css_class("calendar-dark"),
-            false => page.remove_css_class("calendar-dark"),
+        let page = view.page.downgrade();
+        let mark = move |style: &adw::StyleManager| {
+            let Some(page) = page.upgrade() else { return };
+            match style.is_dark() {
+                true => page.add_css_class("calendar-dark"),
+                false => page.remove_css_class("calendar-dark"),
+            }
         };
         mark(&style);
-        style.connect_dark_notify(mark);
+        // The style manager lives as long as the process, and a window
+        // closed to the tray goes; the handler goes with the page.
+        let handler = RefCell::new(Some(style.connect_dark_notify(mark)));
+        view.page.connect_destroy(move |_| {
+            if let Some(handler) = handler.take() {
+                adw::StyleManager::default().disconnect(handler);
+            }
+        });
         let weak = Rc::downgrade(&view);
         view.more.connect_closed(move |_| {
             let Some(view) = weak.upgrade() else { return };
@@ -520,6 +543,7 @@ impl CalendarView {
 
     /// Moves the view to the range around `day`.
     pub fn go_to(self: &Rc<Self>, day: NaiveDate) {
+        self.open_read.set(self.next_read());
         self.day.set(day);
         self.place_ranges();
         self.show_range();
@@ -572,13 +596,21 @@ impl CalendarView {
     pub fn open(self: &Rc<Self>, account_id: AccountId, calendar: &str, id: &str) {
         let (calendar, id) = (calendar.to_string(), id.to_string());
         let key: EventKey = (account_id, calendar.clone(), id.clone());
+        let read = self.next_read();
+        self.open_read.set(read);
         let weak = Rc::downgrade(self);
         let core = Rc::clone(&self.core);
+        let asked = read;
         glib::spawn_future_local(async move {
             let read = core
                 .read(move |c| store::event(c, account_id, &calendar, &id))
                 .await;
             let Some(view) = weak.upgrade() else { return };
+            // The person moved on while the store answered: to another
+            // range, another event, or away from the calendar.
+            if view.open_read.get() != asked || !view.page.is_mapped() {
+                return;
+            }
             match read {
                 Ok(Some(event)) => {
                     let day = date_of(event.start, event.all_day);
@@ -1401,7 +1433,7 @@ impl CalendarView {
             let Some(view) = weak.upgrade() else { return };
             match sent {
                 Ok(Permitted::Done(())) => view.reload(),
-                Ok(Permitted::NeedsPermission) => (view.hooks.grant)(account_id),
+                Ok(Permitted::NeedsPermission) => (view.hooks.needs_permission)(account_id),
                 Err(err) => (view.hooks.toast)(&with_reason(
                     &gettext("Could not send your answer: {reason}"),
                     &err,
@@ -1441,6 +1473,9 @@ impl CalendarView {
     /// redraws the sidebar, and with `then_fill` reads the pages again,
     /// since a calendar's colour or shown flag may have changed.
     fn read_sidebar(self: &Rc<Self>, then_fill: bool) {
+        if then_fill {
+            self.fill_owed.set(true);
+        }
         let read = self.next_read();
         self.sidebar_read.set(read);
         let accounts = self.account_ids();
@@ -1467,7 +1502,7 @@ impl CalendarView {
                 Ok((calendars, busy)) => view.show_sidebar(calendars, &busy, mini),
                 Err(err) => tracing::warn!(%err, "could not read the calendars"),
             }
-            if then_fill {
+            if view.fill_owed.replace(false) {
                 view.fill_all();
             }
         });
