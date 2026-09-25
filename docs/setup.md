@@ -14,10 +14,12 @@ The account appears in the sidebar and starts downloading. For each account
 after the first, click **Add Account** at the bottom of the sidebar. From a
 terminal, `penguin-mail-cli account add` does the same.
 
-Some features ask Google for more access the first time you use them:
-automatic replies and Rules, contacts, the calendar, and Delete Forever. Penguin
-Mail asks with a **Grant Access** button, and Google confirms once per
-account. Mail keeps syncing throughout.
+Adding an account asks for every permission Penguin Mail uses in that one
+visit, so you never see a second consent screen for automatic replies and
+Rules, contacts, the calendar, or Delete Forever. Leave a box unticked and
+the feature it serves turns off with a reason rather than an error; a
+banner across the window offers **Grant Access** until you go through
+consent again. Mail keeps syncing throughout.
 
 Accounts you added through the old setup page signed in with a Google Cloud
 client of your own, kept in `~/.config/penguin-mail/config.toml`. They keep

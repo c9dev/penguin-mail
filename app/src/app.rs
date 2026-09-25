@@ -634,6 +634,14 @@ impl App {
         Ok(loaded)
     }
 
+    /// Every account's consent, for the Grant Access banner: whether it
+    /// was ever asked for every scope, and which scopes it granted.
+    pub async fn all_consent(
+        self: &Rc<Self>,
+    ) -> anyhow::Result<std::collections::HashMap<AccountId, accounts::Consent>> {
+        self.core.read(accounts::all_consent).await
+    }
+
     /// Finds a display name and the send-as addresses for each account
     /// that just arrived, and updates the tray. The name comes from the
     /// send-as addresses Preferences keeps when they hold one, so a restart

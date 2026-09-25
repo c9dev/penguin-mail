@@ -73,6 +73,10 @@ pub mod cost {
     pub const CONTACT_WRITE: u32 = 5;
 }
 
+/// What runs when a refresh reports a different set of scopes than
+/// [`GmailClient`] held. See the field's own doc for what it must not do.
+type GrantedHook = std::sync::Arc<dyn Fn(&Granted) + Send + Sync>;
+
 /// A Gmail client for one account.
 pub struct GmailClient {
     oauth: OAuthClient,
@@ -92,7 +96,7 @@ pub struct GmailClient {
     /// different set of scopes than `granted` held, with the refresh lock
     /// still taken. It must only hand the value on, never await anything
     /// that itself waits on this client.
-    on_granted: Option<std::sync::Arc<dyn Fn(&Granted) + Send + Sync>>,
+    on_granted: Option<GrantedHook>,
 }
 
 impl GmailClient {

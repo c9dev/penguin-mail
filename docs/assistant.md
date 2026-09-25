@@ -126,10 +126,11 @@ that copy rather than asking Google, and an event the assistant makes or
 changes waits in a short queue before it reaches Google, shown as
 pending until it does.
 
-The first time a calendar question comes up, Penguin Mail asks for
-permission to use the calendar, and Google confirms it in your browser.
-If the Google Cloud project Penguin Mail signs in with has the Calendar
-API switched off, a dialog says so and opens the page that turns it on.
+Signing in already asked for the calendar permission; a calendar tool
+that finds it withheld says so instead of failing silently, and the
+window's Grant Access banner offers to ask again. If the Google Cloud
+project Penguin Mail signs in with has the Calendar API switched off, a
+dialog says so and opens the page that turns it on.
 
 ## What it did
 
