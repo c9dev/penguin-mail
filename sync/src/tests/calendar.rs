@@ -433,3 +433,19 @@ async fn free_time_from_the_copy_leaves_declined_free_and_all_day_events_open() 
 
     assert_eq!(free, vec![(NINE, NINE + 3 * HOUR)]);
 }
+
+/// Without the list permission the copy cannot know the primary
+/// calendar's zone, so a new event names none and Google writes it in
+/// the calendar's own, rather than in UTC, where a repeat added later in
+/// Google would drift an hour at the clock change.
+#[tokio::test]
+async fn a_new_event_on_a_calendar_of_unknown_zone_names_no_zone() {
+    let h = harness().await;
+    h.fake.withhold(mailrs_gmail::CALENDAR_LIST_SCOPE);
+    let (calendar, copy) = calendar_with_copy(&h);
+    copy.refresh(h.account_id, NINE).await.unwrap();
+    calendar.create(h.account_id, &event("Dentist", NINE, NINE + HOUR)).await.unwrap().done().unwrap();
+    copy.send(h.account_id).await.unwrap();
+    let sent = h.fake.with(|s| s.calendar_events.iter().find(|e| e.title == "Dentist").cloned()).expect("sent");
+    assert_eq!(sent.zone, "");
+}
