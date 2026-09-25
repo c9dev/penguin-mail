@@ -860,10 +860,7 @@ impl<A: Accounts> Tools<A> {
         {
             return Err("That draft is waiting to go out. cancel_send stops it first.".into());
         }
-        let question = fill(
-            &gettext("Delete the draft “{subject}”? Gmail cannot bring it back."),
-            &[("subject", &subject_of(&stored.subject))],
-        );
+        let question = discard_question(&subject_of(&stored.subject), account.provider_name());
         Ok(Plan::ask(question, async move {
             let gone = self
                 .call(async move { sync.discard_draft(&message_id).await })
@@ -933,4 +930,13 @@ fn edit_lines(edits: &Edits) -> Vec<String> {
         None => {}
     }
     lines
+}
+
+/// The question before the assistant deletes the draft `subject` from an
+/// account on `provider`.
+pub(super) fn discard_question(subject: &str, provider: &str) -> String {
+    fill(
+        &gettext("Delete the draft “{subject}”? {provider} cannot bring it back."),
+        &[("subject", subject), ("provider", provider)],
+    )
 }

@@ -143,11 +143,16 @@ pub struct MainWindow {
     /// kept here, since every thread that opens asks about it.
     image_senders: RefCell<Vec<mailrs_store::image_senders::ImageSender>>,
     /// The conversations in windows of their own, each with the mailbox it
-    /// was opened from, so a flag colour or an undo reaches them too. An
-    /// entry that no longer upgrades is a window somebody closed.
-    detached: RefCell<Vec<(Weak<ConversationView>, Mailbox)>>,
+    /// was opened from and its own action group, so a flag colour, an
+    /// undo or a gate set again reaches them too. An entry that no longer
+    /// upgrades is a window somebody closed.
+    detached: RefCell<Vec<detached::Detached>>,
     /// The scratch copies of attachments this window opened.
     previews: previews::Previews,
+    /// The server mailboxes this window has already asked each account to
+    /// follow, so a reload does not fetch a folder's window again: the
+    /// slow poll covers it from here. Cleared for an account that stops.
+    followed: RefCell<HashMap<AccountId, HashSet<String>>>,
 }
 
 /// The toast after erasing.
@@ -222,6 +227,15 @@ const RELEASES: &str = "https://github.com/c9dev/penguin-mail/releases";
 /// a label called "R&D" would otherwise show nothing at all.
 fn toast_title(text: &str) -> glib::GString {
     glib::markup_escape_text(text)
+}
+
+/// The toast line when archiving made the account's Archive folder,
+/// because its server had none.
+fn archive_made_line(provider: &str, name: &str) -> String {
+    fill(
+        &gettext("Made a folder called “{name}” on {provider} for archived mail"),
+        &[("name", name), ("provider", provider)],
+    )
 }
 
 /// The colour a flag toast names.
@@ -559,6 +573,7 @@ impl MainWindow {
                 image_senders: RefCell::new(Vec::new()),
                 detached: RefCell::new(Vec::new()),
                 previews: previews::Previews::default(),
+                followed: RefCell::new(HashMap::new()),
             }
         });
         if window.core.demo {
@@ -735,8 +750,15 @@ impl MainWindow {
             // minute. Say so, or the window looks stuck and the reader
             // presses Delete again.
             ChangeEvent::WaitingOnGmail { message, .. } => self.toast(message),
-            // The LabelsChanged sent with it redraws the sidebar.
-            ChangeEvent::ArchiveMade { .. } => {}
+            // The first archive on a server without an Archive folder made
+            // one. Say so once; the LabelsChanged sent with it redraws the
+            // sidebar.
+            ChangeEvent::ArchiveMade { account_id, name } => {
+                if let Some(account) = self.account(*account_id) {
+                    let provider = mailrs_discover::resolved_provider_name(account.provider_name());
+                    self.toast(&archive_made_line(&provider, name));
+                }
+            }
         }
     }
 
@@ -797,6 +819,8 @@ impl MainWindow {
             "mail"
         };
         self.stack.set_visible_child_name(page);
+        let live: HashSet<AccountId> = data.iter().map(|(a, _)| a.id).collect();
+        self.followed.borrow_mut().retain(|id, _| live.contains(id));
         // A label deleted elsewhere, by the assistant or in the browser,
         // leaves the window on a mailbox that is no longer there, so the
         // inbox takes over as it does for a signed-out account.
@@ -810,15 +834,26 @@ impl MainWindow {
             self.sidebar
                 .rebuild(&data, &extras, &mailbox, |id| self.offers(id));
         }
-        // Each hidden address comes with its own rules, so the window's
-        // Hide My Email works only while some account can hold them.
-        if let Some(action) = self
-            .actions
-            .lookup_action("hide-my-email")
-            .and_downcast::<gio::SimpleAction>()
-        {
-            action.set_enabled(data.iter().any(|(a, _)| self.offers(a.id).rules));
+        // A search on screen skips the rebuild above, but an account's own
+        // heading row still needs its Rules, Hide My Email and Automatic
+        // Reply gated again when the account starts mid-search.
+        self.sidebar.regate(|id| self.offers(id));
+        // Each hidden address comes with its own rules, so Hide My Email
+        // works only while some account can hold them, and each account
+        // action only while some account has what it opens.
+        let offers: Vec<Offers> = data.iter().map(|(a, _)| self.offers(a.id)).collect();
+        for (name, enabled) in crate::offered::account_actions(&offers) {
+            if let Some(action) = self
+                .actions
+                .lookup_action(name)
+                .and_downcast::<gio::SimpleAction>()
+            {
+                action.set_enabled(enabled);
+            }
         }
+        // This runs when an account starts, so what the open
+        // conversations offer is read again here.
+        self.follow_gates();
         self.list
             .set_show_accounts(mailbox.account().is_none() && data.len() > 1);
         let reauth: Vec<&str> = data
@@ -989,6 +1024,12 @@ impl MainWindow {
     /// earlier requests for.
     fn list_first_page(self: &Rc<Self>, ticket: Ticket) {
         let mailbox = self.shown().clone();
+        if let Some(account_id) = mailbox.account()
+            && let Some((account_id, server_mailbox)) = follows(&mailbox, self.offers(account_id))
+            && newly_followed(&mut self.followed.borrow_mut(), account_id, server_mailbox.clone())
+        {
+            self.follow_mailbox(account_id, server_mailbox);
+        }
         if mailbox.is_remote() {
             self.list.show_loading();
         }
@@ -1010,6 +1051,26 @@ impl MainWindow {
             }
             if let Some((account_id, thread_id, then)) = landed.reveal {
                 this.select_revealed(account_id, thread_id, then);
+            }
+        });
+    }
+
+    /// Keeps `server_mailbox` of `account_id` in step from now on, as
+    /// [`follows`] decided when it landed on screen. This never touches
+    /// the window: a failure only logs, and the listing on screen, which
+    /// came from the store already, stays as it is.
+    fn follow_mailbox(&self, account_id: AccountId, server_mailbox: String) {
+        let Some(account) = self.core.account(account_id) else {
+            return;
+        };
+        self.core.spawn(async move {
+            if let Err(err) = account.follow_mailbox(&server_mailbox).await {
+                tracing::warn!(
+                    account = account_id,
+                    mailbox = %server_mailbox,
+                    error = %err,
+                    "could not follow the folder opened on screen"
+                );
             }
         });
     }
@@ -1302,14 +1363,14 @@ impl MainWindow {
         scope: press::Scope,
         press: Press,
     ) -> bool {
-        let erases = self.erases(reach.targets.iter().map(|t| t.account_id));
+        let accounts = press::reached(&reach.targets, |id| self.account(id), |id| self.offers(id));
         let plan = press::plan(Pressed {
             press,
             reach,
             scope,
             flag_color: self.settings_with(|s| s.flag_color),
             threaded: self.settings_with(|s| s.threading),
-            erases,
+            accounts,
         });
         let taken = plan.taken();
         let pressing = Pressing {
@@ -1357,8 +1418,8 @@ impl MainWindow {
 
     /// Words the trash button of `view` for `mailbox`: the folder's own
     /// words, or what Delete calls off in a mailbox of queued mail. In a
-    /// Trash the button shows only while every account in `accounts`, the
-    /// ones an action on `view` reaches, can delete mail for good.
+    /// Trash the button shows while any account in `accounts`, the ones an
+    /// action on `view` reaches, can delete mail for good.
     pub(super) fn word_buttons(
         &self,
         view: &ConversationView,
@@ -1389,12 +1450,13 @@ impl MainWindow {
         }
     }
 
-    /// Whether the server of every account in `accounts` can delete mail
-    /// for good.
+    /// Whether the server of any account in `accounts` can delete mail for
+    /// good. Delete Forever then erases the mail of the accounts that can,
+    /// and its question names the others.
     fn erases(&self, accounts: impl IntoIterator<Item = AccountId>) -> bool {
         accounts
             .into_iter()
-            .all(|id| self.offers(id).delete_forever)
+            .any(|id| self.offers(id).delete_forever)
     }
 
     /// Erases the targets. Nothing reverses this, so the toast offers no
@@ -1592,7 +1654,7 @@ impl MainWindow {
                 Some(error) => this.toast(error),
                 None => this.toast(&fill(
                     &gettext("{action} undone"),
-                    &[("action", &undone.action.describe())],
+                    &[("action", &undone.words)],
                 )),
             }
         });
@@ -2253,12 +2315,18 @@ impl MainWindow {
         let with_account = |name: &str, run: AccountAction| {
             let action = gio::SimpleAction::new(name, Some(glib::VariantTy::INT64));
             let weak = Rc::downgrade(self);
+            let gate = name.to_string();
             action.connect_activate(move |_, parameter| {
                 let (Some(win), Some(id)) =
                     (weak.upgrade(), parameter.and_then(|p| p.get::<i64>()))
                 else {
                     return;
                 };
+                // One action serves every account's menu, so it turns away
+                // an account that lacks what the action opens.
+                if !crate::offered::account_action_on(&gate, win.offers(id)) {
+                    return;
+                }
                 if let Some(account) = win.account(id) {
                     run(&win, account);
                 }
@@ -2725,8 +2793,11 @@ impl MainWindow {
         self.toasts.add_toast(toast);
     }
 
+    /// Shows the Keyboard Shortcuts window. Its label line says Move to
+    /// folder when every account files mail in folders.
     fn show_shortcuts(&self) {
-        shortcuts::dialog().present(Some(&self.window));
+        let offers: Vec<Offers> = self.accounts().iter().map(|a| self.offers(a.id)).collect();
+        shortcuts::dialog(Filing::of(offers)).present(Some(&self.window));
     }
 
     fn show_about(self: &Rc<Self>) {
@@ -2881,6 +2952,35 @@ fn unique_path(dir: &std::path::Path, name: &str) -> PathBuf {
         .expect("some name is free")
 }
 
+/// The account and mailbox id to keep in step once `mailbox` lands on
+/// screen: a folder on an account whose mail sits in one mailbox at a
+/// time, since its window otherwise fills only as far as a listing has
+/// asked. A label account keeps every label in step already, and no
+/// other kind of mailbox names a server mailbox to follow, so both give
+/// `None`.
+fn follows(mailbox: &Mailbox, offers: Offers) -> Option<(AccountId, String)> {
+    match mailbox {
+        Mailbox::Label {
+            account_id,
+            label_id,
+            ..
+        } if !offers.labels => Some((*account_id, label_id.clone())),
+        _ => None,
+    }
+}
+
+/// Whether asking to follow `server_mailbox` of `account_id` needs to
+/// reach the account at all: `false` once `followed` already holds the
+/// pair, so a reload of the folder on screen does not fetch its window
+/// again. The slow poll covers it from the first time.
+fn newly_followed(
+    followed: &mut HashMap<AccountId, HashSet<String>>,
+    account_id: AccountId,
+    server_mailbox: String,
+) -> bool {
+    followed.entry(account_id).or_default().insert(server_mailbox)
+}
+
 /// Whether `mailbox` is still there once the accounts read as `data`. A
 /// mailbox of one account goes with that account, and a label goes when
 /// its account no longer lists it.
@@ -2902,6 +3002,64 @@ fn still_there(mailbox: &Mailbox, data: &[(Account, Vec<Label>)]) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_folder_on_a_folder_account_is_followed_when_opened() {
+        let work = Mailbox::Label {
+            account_id: 7,
+            label_id: "Work".into(),
+            name: "Work".into(),
+        };
+        assert_eq!(
+            follows(&work, Offers { labels: false, ..Offers::EVERYTHING }),
+            Some((7, "Work".to_string()))
+        );
+    }
+
+    #[test]
+    fn a_label_on_a_gmail_account_is_not_followed() {
+        let work = Mailbox::Label {
+            account_id: 7,
+            label_id: "Label_1".into(),
+            name: "Work".into(),
+        };
+        assert_eq!(follows(&work, Offers::EVERYTHING), None);
+    }
+
+    #[test]
+    fn a_mailbox_that_names_no_server_mailbox_is_never_followed() {
+        let offers = Offers { labels: false, ..Offers::EVERYTHING };
+        let standard = Mailbox::Standard {
+            account_id: 1,
+            which: super::super::Standard::Inbox,
+        };
+        let unified = Mailbox::Unified(super::super::Standard::Inbox);
+        let smart = Mailbox::Smart(mailrs_domain::SmartMailbox {
+            id: "smart-1".into(),
+            name: "Big mail".into(),
+            account: None,
+            match_all: true,
+            conditions: Vec::new(),
+        });
+        for mailbox in [&standard, &unified, &smart] {
+            assert_eq!(follows(mailbox, offers), None, "{mailbox:?}");
+        }
+    }
+
+    #[test]
+    fn a_mailbox_followed_once_is_not_followed_again() {
+        let mut followed = HashMap::new();
+        assert!(newly_followed(&mut followed, 1, "Work".to_string()));
+        assert!(!newly_followed(&mut followed, 1, "Work".to_string()));
+        assert!(
+            newly_followed(&mut followed, 1, "Travel".to_string()),
+            "a different mailbox of the same account still follows"
+        );
+        assert!(
+            newly_followed(&mut followed, 2, "Work".to_string()),
+            "the same mailbox name on a different account still follows"
+        );
+    }
 
     #[test]
     fn a_mailbox_of_a_removed_account_is_gone() {
@@ -2956,6 +3114,14 @@ mod tests {
     fn a_toast_shows_an_ampersand_in_a_label_name_as_written() {
         assert_eq!(toast_title("Moved to R&D"), "Moved to R&amp;D");
         assert_eq!(toast_title("Archived"), "Archived");
+    }
+
+    #[test]
+    fn the_archive_line_names_the_folder_and_the_provider() {
+        assert_eq!(
+            archive_made_line("Fastmail", "Archive"),
+            "Made a folder called “Archive” on Fastmail for archived mail"
+        );
     }
 
     #[test]

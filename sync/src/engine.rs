@@ -153,6 +153,11 @@ impl SyncEngine {
         }
     }
 
+    /// Whether the engine currently thinks the main window is open.
+    pub fn window_open(&self) -> bool {
+        self.window_open.load(Ordering::SeqCst)
+    }
+
     pub fn is_running(&self, account_id: AccountId) -> bool {
         self.lock()
             .get(&account_id)

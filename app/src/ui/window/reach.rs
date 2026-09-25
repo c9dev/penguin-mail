@@ -93,14 +93,58 @@ impl MainWindow {
         Reach::new(&selected, view.read(Open::of), self.mailbox_of(view))
     }
 
-    /// Words the Labels button of `view` for how `accounts`, the ones an
-    /// action on it reaches, file mail: in labels or in folders.
+    /// Words the Labels button of `view` the way the picker it opens words
+    /// itself: for `accounts`, the ones an action on it reaches, or with
+    /// none, for the accounts of the mailbox `view` was opened from.
     pub(super) fn word_filing(
         &self,
         view: &ConversationView,
         accounts: impl IntoIterator<Item = AccountId>,
     ) {
-        view.set_filing(Filing::of(accounts.into_iter().map(|id| self.offers(id))));
+        let reached: Vec<AccountId> = accounts.into_iter().collect();
+        let shown = self.accounts_of(&self.mailbox_of(view));
+        view.set_filing(Filing::picker(&reached, &shown, |id| self.offers(id)));
+    }
+
+    /// Sets again what each conversation on screen offers, from what its
+    /// accounts offer now. An account offers everything until it starts,
+    /// so a gate set while it was starting may be out of date once it
+    /// runs.
+    pub(super) fn follow_gates(&self) {
+        if let Some(account_id) = self.conversation.read(|o| o.account_id) {
+            self.follow_sender_actions(account_id);
+        }
+        let shown = self.shown();
+        let accounts: Vec<AccountId> = self
+            .reach(&self.conversation)
+            .targets
+            .iter()
+            .map(|t| t.account_id)
+            .collect();
+        let reached = match accounts.is_empty() {
+            true => self.accounts_of(&shown),
+            false => accounts.clone(),
+        };
+        self.word_buttons(&self.conversation, &shown, reached);
+        self.word_filing(&self.conversation, accounts);
+        // Collected first, so word_filing (which borrows `detached`
+        // through mailbox_of) does not run while this loop holds it. A
+        // window that closed between gates drops out of `detached` here,
+        // the same way `views` prunes it, so the list holds one entry per
+        // window opened rather than growing with every one closed.
+        let mut windows = Vec::new();
+        self.detached.borrow_mut().retain(|held| match held.view.upgrade() {
+            Some(view) => {
+                windows.push((view, held.mailbox.clone(), held.account_id, held.actions.clone()));
+                true
+            }
+            None => false,
+        });
+        for (view, mailbox, account_id, actions) in windows {
+            self.word_buttons(&view, &mailbox, [account_id]);
+            self.word_filing(&view, [account_id]);
+            self.gate_window(&actions, &view, &mailbox, account_id);
+        }
     }
 }
 

@@ -6,6 +6,7 @@
 
 use std::path::{Path, PathBuf};
 
+use mailrs_domain::query::Query;
 use mailrs_gmail::{ContactFields, LabelColor};
 use mailrs_store::address_book::{self, Contact};
 use mailrs_store::image_senders::{self, ImageSender};
@@ -190,15 +191,16 @@ fn contact_fields(input: &Value) -> ContactFields {
     }
 }
 
-fn smart_json(mailbox: &SmartMailbox) -> Value {
-    json!({
-        "id": mailbox.id,
-        "name": mailbox.name,
-        "account": mailbox.account,
-        "match_all": mailbox.match_all,
-        "conditions": mailbox.conditions,
-        "gmail_query": mailbox.query().map(|query| mailrs_gmail::query::print(&query)),
-    })
+/// The text `query` searches as: Gmail's operators when `native_search`
+/// promises the account reads them, plain English words otherwise, so an
+/// account whose server speaks only IMAP SEARCH still gets a query the
+/// model and the person can both read.
+pub(super) fn query_words(query: &Query, native_search: bool) -> String {
+    if native_search {
+        mailrs_gmail::query::print(query)
+    } else {
+        mailrs_domain::query::describe(query)
+    }
 }
 
 impl<A: Accounts> Tools<A> {
@@ -314,7 +316,19 @@ impl<A: Accounts> Tools<A> {
 
     pub(super) fn list_smart_mailboxes(&self) -> Value {
         let all = self.desk.settings().smart_mailboxes;
-        json!({"smart_mailboxes": all.iter().map(smart_json).collect::<Vec<_>>()})
+        json!({"smart_mailboxes": all.iter().map(|m| self.smart_json(m)).collect::<Vec<_>>()})
+    }
+
+    fn smart_json(&self, mailbox: &SmartMailbox) -> Value {
+        let native_search = self.native_search(mailbox.account.as_deref());
+        json!({
+            "id": mailbox.id,
+            "name": mailbox.name,
+            "account": mailbox.account,
+            "match_all": mailbox.match_all,
+            "conditions": mailbox.conditions,
+            "query": mailbox.query().map(|query| query_words(&query, native_search)),
+        })
     }
 
     /// The smart mailbox a call names, by id or by name. The error lists
@@ -376,7 +390,7 @@ impl<A: Accounts> Tools<A> {
         if mailbox.query().is_none() {
             return Err("Give at least one condition with a value.".into());
         }
-        let result = smart_json(&mailbox);
+        let result = self.smart_json(&mailbox);
         self.effects
             .change_settings(Change::SaveSmartMailbox(Box::new(mailbox)))?;
         Ok(json!({"updated": result}))

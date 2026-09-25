@@ -232,12 +232,12 @@ impl AccountSync {
     /// Starts keeping `mailbox` in step, as a person opening it asks: its
     /// window is listed and stored now, and the slow poll looks at it from
     /// then on. A label server keeps every label in step already and is
-    /// asked nothing.
+    /// asked nothing; a mailbox already followed is asked nothing either,
+    /// since the slow poll covers it from the first time.
     pub async fn follow_mailbox(&self, mailbox: &str) -> Result<(), SyncError> {
-        if !self.renames() {
+        if !self.renames() || !self.services.mail.follow(mailbox) {
             return Ok(());
         }
-        self.services.mail.follow(mailbox);
         let listed = self
             .services
             .mail

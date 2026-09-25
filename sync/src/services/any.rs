@@ -124,6 +124,10 @@ impl MailBackend for AnyMail {
         forward_all_now!(AnyMail, self, capabilities())
     }
 
+    fn provider_name(&self) -> &str {
+        forward_all_now!(AnyMail, self, provider_name())
+    }
+
     fn mailbox_for(&self, role: Role) -> Option<String> {
         forward_all_now!(AnyMail, self, mailbox_for(role))
     }
@@ -261,7 +265,7 @@ impl MailBackend for AnyMail {
         forward_all!(AnyMail, self, mailbox_threads(id))
     }
 
-    fn follow(&self, mailbox: &str) {
+    fn follow(&self, mailbox: &str) -> bool {
         forward_all_now!(AnyMail, self, follow(mailbox))
     }
 

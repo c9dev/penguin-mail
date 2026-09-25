@@ -18,6 +18,7 @@ use mailrs_domain::translate::gettext;
 
 use super::MainWindow;
 use crate::compose::ReplyKind;
+use crate::offered::Filing;
 use crate::ui::conversation::{Action, ConversationView};
 use crate::ui::thread_list::MENU_KEYS;
 
@@ -224,6 +225,15 @@ pub(super) struct Shortcut {
 }
 
 impl Shortcut {
+    /// What the dialog's line says. The label key opens the label picker,
+    /// so its line reads the way the picker words itself for `filing`.
+    pub(super) fn line(&self, filing: Filing) -> String {
+        match self.keys.iter().any(|k| k.action == "win.label") {
+            true => filing.shortcut_line(),
+            false => (self.description)(),
+        }
+    }
+
     /// The keys the dialog shows, in GTK's accelerator syntax. A run of
     /// one action told apart by its argument, such as the mailbox numbers,
     /// reads as a range, and a key that works in both kinds of window
@@ -548,14 +558,15 @@ pub(super) fn conversation_chords() -> gtk::ShortcutController {
     chords(Place::Conversation)
 }
 
-/// The Keyboard Shortcuts dialog, one section per heading.
-pub(super) fn dialog() -> adw::ShortcutsDialog {
+/// The Keyboard Shortcuts dialog, one section per heading, with the label
+/// key's line worded for how the accounts file mail.
+pub(super) fn dialog(filing: Filing) -> adw::ShortcutsDialog {
     let dialog = adw::ShortcutsDialog::new();
     for section in Section::ALL {
         let group = adw::ShortcutsSection::new(Some(&section.title()));
         for shortcut in SHORTCUTS.iter().filter(|s| s.section == section) {
             group.add(adw::ShortcutsItem::new(
-                &(shortcut.description)(),
+                &shortcut.line(filing),
                 &shortcut.accelerators(),
             ));
         }
@@ -898,6 +909,19 @@ mod tests {
             "<Control>plus <Control>minus"
         );
         assert_eq!(line("Search"), "slash <Control><Alt>f");
+    }
+
+    #[test]
+    fn the_label_keys_line_says_what_the_picker_says() {
+        let line_of = |action: &str| {
+            SHORTCUTS
+                .iter()
+                .find(|s| s.keys.iter().any(|k| k.action == action))
+                .expect("a line for the action")
+        };
+        assert_eq!(line_of("win.label").line(Filing::Labels), "Labels");
+        assert_eq!(line_of("win.label").line(Filing::Folders), "Move to folder");
+        assert_eq!(line_of("win.undo").line(Filing::Folders), "Undo");
     }
 
     #[test]

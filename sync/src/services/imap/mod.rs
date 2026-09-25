@@ -326,6 +326,10 @@ impl<I: ImapApi, S: Submit> MailBackend for Imap<I, S> {
         }
     }
 
+    fn provider_name(&self) -> &str {
+        &self.settings.provider_name
+    }
+
     /// Nothing paces an IMAP server the way Gmail's quota does, so nobody
     /// waits on it.
     fn person_waiting(&self) -> bool {
@@ -392,8 +396,8 @@ impl<I: ImapApi, S: Submit> MailBackend for Imap<I, S> {
         Ok(u64::from(self.select(id, None).await?.exists))
     }
 
-    fn follow(&self, mailbox: &str) {
-        self.known().followed.insert(mailbox.to_string());
+    fn follow(&self, mailbox: &str) -> bool {
+        self.known().followed.insert(mailbox.to_string())
     }
 
     fn set_window_open(&self, open: bool) {

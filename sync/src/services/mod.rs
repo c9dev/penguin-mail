@@ -398,6 +398,10 @@ impl AccountServices {
             contacts: self.contacts.is_some(),
             rules: self.rules.is_some(),
             auto_reply: self.auto_reply.is_some(),
+            // Gmail searches in its own syntax and IMAP with SEARCH. POP3,
+            // in part 6, keeps no mail on the server to search, and adds a
+            // capability for it then.
+            search: true,
         }
     }
 }
@@ -417,6 +421,9 @@ pub struct Offers {
     pub contacts: bool,
     pub rules: bool,
     pub auto_reply: bool,
+    /// The server searches past the mail kept on this computer. The
+    /// window reads nothing of it yet, since every account so far can.
+    pub search: bool,
 }
 
 impl Offers {
@@ -430,6 +437,7 @@ impl Offers {
         contacts: true,
         rules: true,
         auto_reply: true,
+        search: true,
     };
 
     /// What the account lacks, in the order Preferences lists it.
@@ -463,6 +471,10 @@ pub enum Missing {
 /// Listing, reading, changing and sending mail.
 pub trait MailBackend: Send + Sync + 'static {
     fn capabilities(&self) -> MailCapabilities;
+
+    /// Who runs the account's server, in the words a person reads: a
+    /// brand such as "Gmail", or an IMAP account's own provider name.
+    fn provider_name(&self) -> &str;
 
     /// Whether the person is waiting on this account's server now.
     /// Backfill reads it between pages and gives way.
@@ -517,8 +529,10 @@ pub trait MailBackend: Send + Sync + 'static {
 
     /// Starts keeping `mailbox` in step, for a mailbox the account does
     /// not sync on its own. A server that keeps every mailbox in step
-    /// ignores it.
-    fn follow(&self, mailbox: &str);
+    /// ignores it and answers `false`. Answers whether this is the first
+    /// time anyone asked to follow `mailbox`, so a caller that already
+    /// asked once does no work a second time.
+    fn follow(&self, mailbox: &str) -> bool;
 
     /// Tells the backend whether the main window is open, which sets how
     /// often it looks at mail nobody is watching.
@@ -845,6 +859,17 @@ mod tests {
         services.calendar = None;
         services.rules = None;
         assert_eq!(services.offers().missing(), [Missing::Calendar, Missing::Rules]);
+    }
+
+    #[test]
+    fn gmail_and_imap_both_search_on_the_server() {
+        let gmail = AccountServices::fake(Arc::new(FakeGmail::new()));
+        assert!(gmail.offers().search);
+        let imap = AccountServices::fake_imap(
+            Arc::new(crate::fake::FakeImap::new()),
+            Arc::new(crate::fake::FakeSmtp::default()),
+        );
+        assert!(imap.offers().search);
     }
 
     #[tokio::test]

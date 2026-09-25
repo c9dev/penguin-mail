@@ -122,6 +122,24 @@ pub fn provider_named(name: &str) -> Option<ProviderInfo> {
     Table::built_in().by_name(name).map(Entry::info)
 }
 
+/// The table's name for `provider_name`: itself, when the table already
+/// names an entry `provider_name` or lists no entry that matches it at
+/// all; an entry's own name, when `provider_name` is instead one of the
+/// domains that entry lists, as "Set up manually" saved an account
+/// before it consulted the table. An account saved that way then shows
+/// its real provider from here on, with no migration needed.
+pub fn resolved_provider_name(provider_name: &str) -> String {
+    let table = Table::built_in();
+    if table.by_name(provider_name).is_some() {
+        return provider_name.to_string();
+    }
+    table
+        .by_domain(provider_name)
+        .filter(|entry| entry.kind == Kind::Imap)
+        .map(|entry| entry.name.clone())
+        .unwrap_or_else(|| provider_name.to_string())
+}
+
 /// Every address domain the built-in table lists, in the table's order,
 /// which puts a provider's main domain before its regional ones.
 pub fn listed_domains() -> impl Iterator<Item = &'static str> {
@@ -500,6 +518,16 @@ mod tests {
         for name in ["Tuta", "Proton Mail", "Google", "fastmail", "Example"] {
             assert_eq!(provider_named(name), None, "{name}");
         }
+    }
+
+    #[test]
+    fn a_domain_saved_as_the_provider_name_resolves_to_the_real_one() {
+        assert_eq!(resolved_provider_name("fastmail.com"), "Fastmail");
+        assert_eq!(resolved_provider_name("Fastmail"), "Fastmail");
+        assert_eq!(resolved_provider_name("example.com"), "example.com");
+        // Gmail's own domain is in the table under a non-IMAP kind, so it
+        // must never resolve to a name here.
+        assert_eq!(resolved_provider_name("gmail.com"), "gmail.com");
     }
 
     /// Zoho's data centers and GMX's two families share a name, and an

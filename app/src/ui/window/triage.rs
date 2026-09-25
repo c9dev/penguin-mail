@@ -65,8 +65,8 @@ impl Marks {
 
 /// What `action` does to mail carrying `marks` in `mailbox`. `None` for
 /// an action that changes no mail. `erases` says whether the server of
-/// every account the mail belongs to can delete it for good; where one
-/// cannot, Delete in the Trash has nothing left to do.
+/// some account the mail belongs to can delete it for good; where none
+/// can, Delete in the Trash has nothing left to do.
 pub(super) fn decide(
     action: &Action,
     mailbox: &Mailbox,

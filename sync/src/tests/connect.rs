@@ -7,7 +7,9 @@ use mailrs_store::{Db, accounts};
 
 use crate::passwords::{MemoryPasswords, PasswordError, PasswordStore};
 use crate::sign_in::{ImapSignInError, NewImap, imap_signed_in};
-use crate::{BackendError, SyncError, connect_account, connect_imap, server_of, servers_for};
+use crate::{
+    BackendError, MailBackend, SyncError, connect_account, connect_imap, server_of, servers_for,
+};
 
 #[tokio::test]
 async fn connecting_needs_a_stored_refresh_token() {
@@ -117,6 +119,44 @@ async fn an_imap_account_without_a_password_needs_to_sign_in() {
     assert_eq!(
         account(&db, "dana@fastmail.com").await.state,
         AccountState::NeedsReauth
+    );
+}
+
+/// A "Set up manually" account saved before it consulted the table keeps
+/// its address's domain as `provider_name`. Sync must still find Yahoo's
+/// own sent-copy rule from there, or a message filed by Yahoo gets a
+/// second copy from the app.
+#[tokio::test]
+async fn a_saved_account_under_its_domain_still_gets_its_real_sent_copy_rule() {
+    let (db, _dir) = store().await;
+    let yahoo = Servers {
+        imap: Saved {
+            host: "imap.mail.yahoo.com".into(),
+            port: 993,
+            security: Security::Tls,
+            user_name: "dana@yahoo.com".into(),
+        },
+        smtp: Saved {
+            host: "smtp.mail.yahoo.com".into(),
+            port: 465,
+            security: Security::Tls,
+            user_name: "dana@yahoo.com".into(),
+        },
+    };
+    db.write(move |c| {
+        let id = accounts::insert_imap_account(c, "dana@yahoo.com", "yahoo.com", 0)?
+            .expect("nobody holds the address");
+        servers::save(c, id, &yahoo)
+    })
+    .await
+    .unwrap();
+    let dana = account(&db, "dana@yahoo.com").await;
+    let passwords = Arc::new(MemoryPasswords::default());
+    passwords.save(dana.id, "secret").unwrap();
+    let services = connect_imap(&db, passwords, &dana, 30).await.unwrap();
+    assert!(
+        services.mail.capabilities().files_sent_mail,
+        "Yahoo files its own Sent copy, so the app must not file a second one"
     );
 }
 

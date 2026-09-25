@@ -156,6 +156,8 @@ impl FromStr for SignInClient {
 pub enum LabelKind {
     System,
     User,
+    /// A server folder that holds only other folders.
+    Group,
 }
 
 impl LabelKind {
@@ -163,6 +165,7 @@ impl LabelKind {
         match self {
             LabelKind::System => "system",
             LabelKind::User => "user",
+            LabelKind::Group => "group",
         }
     }
 }
@@ -174,6 +177,7 @@ impl FromStr for LabelKind {
         match s {
             "system" => Ok(LabelKind::System),
             "user" => Ok(LabelKind::User),
+            "group" => Ok(LabelKind::Group),
             other => Err(UnknownVariant(other.to_string())),
         }
     }

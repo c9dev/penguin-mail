@@ -156,6 +156,10 @@ impl<G: GmailApi> MailBackend for Google<G> {
         self.capabilities.unwrap_or(GMAIL)
     }
 
+    fn provider_name(&self) -> &str {
+        "Gmail"
+    }
+
     fn mailbox_for(&self, role: Role) -> Option<String> {
         gmail::label_of_role(role).map(str::to_string)
     }
@@ -408,7 +412,9 @@ impl<G: GmailApi> MailBackend for Google<G> {
 
     /// Gmail's history speaks for every label, so there is nothing more to
     /// follow.
-    fn follow(&self, _mailbox: &str) {}
+    fn follow(&self, _mailbox: &str) -> bool {
+        false
+    }
 
     /// The engine's own interval paces Gmail whether the window is open or
     /// not.

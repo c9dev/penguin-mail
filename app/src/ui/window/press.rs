@@ -11,8 +11,8 @@
 //! reads the same table to word the Delete button in each mailbox.
 
 use mailrs_domain::translate::{fill, fill_plural, gettext};
-use mailrs_domain::{FlagColor, Target};
-use mailrs_sync::{History, MailAction, TriageAction};
+use mailrs_domain::{Account, AccountId, FlagColor, Target};
+use mailrs_sync::{History, MailAction, Offers, TriageAction};
 
 use super::aftermath;
 use super::reach::Reach;
@@ -97,6 +97,52 @@ pub(super) enum Scope {
     },
 }
 
+/// One account a press reaches, and what its server does with mail.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(super) struct Reached {
+    pub account_id: AccountId,
+    /// The account's address, which the question before Delete Forever
+    /// names when this account keeps its mail.
+    pub email: String,
+    /// Who serves its mail, as people know it: Gmail, Fastmail.
+    pub provider: String,
+    /// Its server can delete mail for good.
+    pub erases: bool,
+    /// Its server keeps a message in one folder, so mail moves between
+    /// folders rather than gaining labels.
+    pub moves: bool,
+}
+
+/// The accounts `targets` belong to, each once, in the order they first
+/// appear, with what `offers` says each one's server does. `account`
+/// names each; an account the window no longer knows keeps empty names.
+pub(super) fn reached(
+    targets: &[Target],
+    account: impl Fn(AccountId) -> Option<Account>,
+    offers: impl Fn(AccountId) -> Offers,
+) -> Vec<Reached> {
+    let mut reached: Vec<Reached> = Vec::new();
+    for target in targets {
+        let id = target.account_id;
+        if reached.iter().any(|r| r.account_id == id) {
+            continue;
+        }
+        let offered = offers(id);
+        let (email, provider) = account(id).map_or_else(
+            || (String::new(), String::new()),
+            |a| (a.email.clone(), a.provider_name().to_string()),
+        );
+        reached.push(Reached {
+            account_id: id,
+            email,
+            provider,
+            erases: offered.delete_forever,
+            moves: !offered.labels,
+        });
+    }
+    reached
+}
+
 /// A press and what it was made on.
 #[derive(Debug, Clone)]
 pub(super) struct Pressed {
@@ -107,9 +153,8 @@ pub(super) struct Pressed {
     pub flag_color: FlagColor,
     /// The list shows conversations, not messages, which the words count.
     pub threaded: bool,
-    /// The server of every account the targets belong to can delete mail
-    /// for good.
-    pub erases: bool,
+    /// The accounts the targets belong to, from [`reached`].
+    pub accounts: Vec<Reached>,
 }
 
 /// The question before a step nothing brings back.
@@ -167,9 +212,9 @@ pub(super) fn plan(pressed: Pressed) -> Plan {
         scope,
         flag_color,
         threaded,
-        erases,
+        accounts,
     } = pressed;
-    let targets = reach.targets;
+    let mut targets = reach.targets;
     if targets.is_empty() {
         return Plan {
             targets,
@@ -191,6 +236,7 @@ pub(super) fn plan(pressed: Pressed) -> Plan {
             said: None,
         }
     };
+    let erases = accounts.iter().any(|a| a.erases);
     let step = match press {
         Press::Button(button) => match decide(&button.action(), mailbox, reach.marks, erases) {
             None => Step::Nothing,
@@ -202,7 +248,26 @@ pub(super) fn plan(pressed: Pressed) -> Plan {
                 History::Record,
                 None,
             ),
-            Some(Decision::DeleteForever) => Step::Erase(erase_question(targets.len(), threaded)),
+            Some(Decision::DeleteForever) => {
+                targets.retain(|target| {
+                    accounts
+                        .iter()
+                        .find(|a| a.account_id == target.account_id)
+                        .is_none_or(|a| a.erases)
+                });
+                let mut erasers: Vec<&str> = Vec::new();
+                for account in accounts.iter().filter(|a| a.erases && !a.provider.is_empty()) {
+                    if !erasers.contains(&account.provider.as_str()) {
+                        erasers.push(account.provider.as_str());
+                    }
+                }
+                let kept: Vec<&str> = accounts
+                    .iter()
+                    .filter(|a| !a.erases)
+                    .map(|a| a.email.as_str())
+                    .collect();
+                Step::Erase(erase_question(targets.len(), threaded, &erasers, &kept))
+            }
             // A message's own menu leaves this item out; a key that
             // reaches it anyway calls off nothing.
             Some(Decision::Cancel(_)) if matches!(scope, Scope::Message { .. }) => Step::Nothing,
@@ -238,16 +303,18 @@ pub(super) fn plan(pressed: Pressed) -> Plan {
         ),
         Press::Flag(color) => act(MailAction::Flag(color), History::Record, None),
         Press::DismissFollowUp => act(MailAction::DismissFollowUp, History::Record, None),
-        Press::Drop(to) => dropped(&targets, mailbox, &to, act),
+        Press::Drop(to) => dropped(&targets, mailbox, &to, &accounts, act),
     };
     Plan { targets, step }
 }
 
-/// What dropping `targets`, listed in `from`, on `to` comes to.
+/// What dropping `targets`, listed in `from`, on `to` comes to. `accounts`
+/// are the accounts the targets belong to.
 fn dropped(
     targets: &[Target],
     from: &Mailbox,
     to: &Mailbox,
+    accounts: &[Reached],
     act: impl Fn(MailAction, History, Option<String>) -> Step,
 ) -> Step {
     if let Mailbox::Label { account_id, .. } | Mailbox::Standard { account_id, .. } = to
@@ -262,9 +329,23 @@ fn dropped(
         Ok(triage) => triage,
         Err(reason) => return Step::Refuse(reason),
     };
+    // A folder account keeps a message in one folder, so mail dropped on
+    // a folder moves there from wherever the list showed it, Flagged and
+    // a search included, where a label account only adds the label.
+    let triage = match (triage, to) {
+        (TriageAction::Relabel { .. }, Mailbox::Label { account_id, label_id, .. })
+            if accounts.iter().any(|a| a.account_id == *account_id && a.moves) =>
+        {
+            TriageAction::MoveTo(label_id.clone())
+        }
+        (triage, _) => triage,
+    };
     let words = matches!(
         triage,
-        TriageAction::AddLabel(_) | TriageAction::RemoveLabel(_) | TriageAction::Relabel { .. }
+        TriageAction::AddLabel(_)
+            | TriageAction::RemoveLabel(_)
+            | TriageAction::MoveTo(_)
+            | TriageAction::Relabel { .. }
     )
     .then(|| moved_to(&to.title()));
     act(MailAction::Triage(triage), History::Record, words)
@@ -275,10 +356,13 @@ fn moved_to(name: &str) -> String {
     fill(&gettext("Moved to {mailbox}"), &[("mailbox", name)])
 }
 
-/// The question before Delete Forever, which names how much goes. Every
-/// count writes its own sentence: a language decides for itself where
-/// the number goes and which form the noun takes beside it.
-fn erase_question(count: usize, threaded: bool) -> Question {
+/// The question before Delete Forever, which names how much goes and who
+/// erases it. `count` is the mail that goes, `erasers` the providers of
+/// the accounts it goes from, and `kept` the addresses of the accounts
+/// whose server cannot erase, whose mail stays in the Trash. Every count
+/// writes its own sentence: a language decides for itself where the
+/// number goes and which form the noun takes beside it.
+fn erase_question(count: usize, threaded: bool, erasers: &[&str], kept: &[&str]) -> Question {
     let number = count.to_string();
     let values = [("count", number.as_str())];
     let heading = match (threaded, count) {
@@ -297,12 +381,36 @@ fn erase_question(count: usize, threaded: bool) -> Question {
             &values,
         ),
     };
+    let body = match (erasers, count) {
+        ([provider], 1) => fill(
+            &gettext("{provider} deletes it from every device and cannot bring it back."),
+            &[("provider", *provider)],
+        ),
+        ([provider], _) => fill(
+            &gettext("{provider} deletes them from every device and cannot bring them back."),
+            &[("provider", *provider)],
+        ),
+        (_, 1) => gettext("The server deletes it from every device and cannot bring it back."),
+        _ => gettext(
+            "Each account's server deletes them from every device and cannot bring them back.",
+        ),
+    };
+    let body = match kept {
+        [] => body,
+        _ => {
+            let accounts = kept.join(", ");
+            let stays = fill_plural(
+                "Mail in {accounts} stays in the Trash, since its server cannot delete mail for good.",
+                "Mail in {accounts} stays in the Trash, since their servers cannot delete mail for good.",
+                kept.len(),
+                &[("accounts", &accounts)],
+            );
+            format!("{body} {stays}")
+        }
+    };
     Question {
         heading,
-        body: match count {
-            1 => gettext("Gmail deletes it from every device and cannot bring it back."),
-            _ => gettext("Gmail deletes them from every device and cannot bring them back."),
-        },
+        body,
         verb: gettext("Delete Forever"),
     }
 }
@@ -409,6 +517,16 @@ mod tests {
         }
     }
 
+    fn gmail(id: AccountId) -> Reached {
+        Reached {
+            account_id: id,
+            email: format!("me{id}@gmail.com"),
+            provider: "Gmail".into(),
+            erases: true,
+            moves: false,
+        }
+    }
+
     fn pressed(press: Press, mailbox: Mailbox, scope: Scope) -> Pressed {
         Pressed {
             press,
@@ -421,7 +539,7 @@ mod tests {
             scope,
             flag_color: FlagColor::Orange,
             threaded: true,
-            erases: true,
+            accounts: vec![gmail(1)],
         }
     }
 
@@ -504,10 +622,153 @@ mod tests {
     #[test]
     fn delete_in_a_trash_that_cannot_erase_asks_nothing_and_does_nothing() {
         let pressed = Pressed {
-            erases: false,
+            accounts: vec![Reached {
+                erases: false,
+                ..gmail(1)
+            }],
             ..pressed(Press::Button(Button::Trash), folder(Folder::Trash), Scope::Shown)
         };
         assert_eq!(plan(pressed).step, Step::Nothing);
+    }
+
+    #[test]
+    fn mail_dropped_on_a_folder_of_a_folder_account_moves_there_from_anywhere() {
+        let folders = Reached {
+            moves: true,
+            ..gmail(1)
+        };
+        let search = Mailbox::Search {
+            query: "x".into(),
+            account_id: None,
+        };
+        for from in [Mailbox::Unified(Standard::Flagged), search, label("Work")] {
+            let drop = Pressed {
+                accounts: vec![folders.clone()],
+                ..pressed(
+                    Press::Drop(label("Receipts")),
+                    from.clone(),
+                    Scope::Carried { open: false },
+                )
+            };
+            let Step::Act { action, words, .. } = plan(drop).step else {
+                panic!("the drop from {from:?} is taken");
+            };
+            assert_eq!(
+                action,
+                MailAction::Triage(TriageAction::MoveTo("Receipts".into())),
+                "from {from:?}"
+            );
+            assert_eq!(words.as_deref(), Some("Moved to Receipts"));
+        }
+    }
+
+    #[test]
+    fn each_account_a_press_reaches_counts_once() {
+        let targets = [
+            Target::thread(1, "a"),
+            Target::thread(2, "b"),
+            Target::thread(1, "c"),
+        ];
+        let offers = |id| match id {
+            2 => Offers {
+                labels: false,
+                delete_forever: false,
+                ..Offers::EVERYTHING
+            },
+            _ => Offers::EVERYTHING,
+        };
+        let unnamed = |id| Reached {
+            email: String::new(),
+            provider: String::new(),
+            ..gmail(id)
+        };
+        assert_eq!(
+            reached(&targets, |_| None, offers),
+            [
+                unnamed(1),
+                Reached {
+                    erases: false,
+                    moves: true,
+                    ..unnamed(2)
+                },
+            ]
+        );
+    }
+
+    fn trash_of(targets: Vec<Target>, accounts: Vec<Reached>) -> Plan {
+        let mut pressed = pressed(Press::Button(Button::Trash), folder(Folder::Trash), Scope::Shown);
+        pressed.reach.targets = targets;
+        pressed.accounts = accounts;
+        plan(pressed)
+    }
+
+    #[test]
+    fn delete_forever_names_the_provider_that_erases() {
+        let fastmail = Reached {
+            provider: "Fastmail".into(),
+            ..gmail(1)
+        };
+        let Step::Erase(one) = trash_of(vec![Target::thread(1, "t1")], vec![fastmail.clone()]).step
+        else {
+            panic!("the Trash erases");
+        };
+        assert_eq!(
+            one.body,
+            "Fastmail deletes it from every device and cannot bring it back."
+        );
+        let two = vec![Target::thread(1, "t1"), Target::thread(1, "t2")];
+        let Step::Erase(many) = trash_of(two, vec![fastmail]).step else {
+            panic!("the Trash erases");
+        };
+        assert_eq!(
+            many.body,
+            "Fastmail deletes them from every device and cannot bring them back."
+        );
+    }
+
+    #[test]
+    fn delete_forever_erases_where_it_can_and_names_the_accounts_that_cannot() {
+        let keeps = Reached {
+            erases: false,
+            ..gmail(2)
+        };
+        let targets = vec![
+            Target::thread(1, "t1"),
+            Target::thread(2, "t2"),
+            Target::thread(1, "t3"),
+        ];
+        let plan = trash_of(targets, vec![gmail(1), keeps]);
+        assert_eq!(
+            plan.targets,
+            [Target::thread(1, "t1"), Target::thread(1, "t3")],
+            "only the mail of the account that can erase goes"
+        );
+        let Step::Erase(question) = plan.step else {
+            panic!("account 1 erases");
+        };
+        assert_eq!(question.heading, "Delete 2 Conversations Forever?");
+        assert_eq!(
+            question.body,
+            "Gmail deletes them from every device and cannot bring them back. \
+             Mail in me2@gmail.com stays in the Trash, since its server cannot \
+             delete mail for good."
+        );
+    }
+
+    #[test]
+    fn delete_forever_across_providers_names_each_accounts_server() {
+        let fastmail = Reached {
+            provider: "Fastmail".into(),
+            ..gmail(2)
+        };
+        let targets = vec![Target::thread(1, "t1"), Target::thread(2, "t2")];
+        let Step::Erase(question) = trash_of(targets, vec![gmail(1), fastmail]).step else {
+            panic!("both erase");
+        };
+        assert_eq!(
+            question.body,
+            "Each account's server deletes them from every device and cannot bring them back."
+        );
     }
 
     #[test]

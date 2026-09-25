@@ -26,6 +26,7 @@ pub fn list_labels(conn: &Connection, account_id: AccountId) -> Result<Vec<Label
         let kind = match kind.parse::<MailboxKind>() {
             Ok(MailboxKind::System) => LabelKind::System,
             Ok(MailboxKind::Label | MailboxKind::Folder) => LabelKind::User,
+            Ok(MailboxKind::Group) => LabelKind::Group,
             Err(_) => {
                 return Err(StoreError::Corrupt {
                     column: "mailboxes.kind",

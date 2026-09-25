@@ -604,6 +604,23 @@ impl<A: Accounts> Tools<A> {
         crate::offered::offers_for(services.as_ref())
     }
 
+    /// Whether the account named `email` reads a search in its own
+    /// syntax, so Gmail's operators describe what it will fetch: true for
+    /// Gmail, false for a folder account whose server runs only IMAP
+    /// SEARCH. No account named, which spans every account, or one not
+    /// yet running counts as Gmail's, so a printed query does not
+    /// flicker between the two as accounts start.
+    fn native_search(&self, email: Option<&str>) -> bool {
+        let Some(email) = email else { return true };
+        let Ok(account) = self.account_named(email) else {
+            return true;
+        };
+        self.modules
+            .accounts
+            .services(account.id)
+            .is_none_or(|services| services.capabilities().native_search)
+    }
+
     fn email_of(&self, account_id: AccountId) -> String {
         self.desk
             .accounts()
@@ -1114,8 +1131,9 @@ impl<A: Accounts> Tools<A> {
         }
         let ([name], []) = (add, remove) else {
             return unavailable(format!(
-                "{email} files mail in folders, one folder per message. Name one folder in `add` \
-                 and none in `remove` to move the mail there."
+                "{email} files mail in folders, one folder per message. To take mail out of a \
+                 folder, archive it with organize; to move it, name one folder in `add` and \
+                 none in `remove`."
             ));
         };
         let folder = self
@@ -1516,14 +1534,15 @@ impl<A: Accounts> Tools<A> {
             match_all: flag(input, "match_all").unwrap_or(true),
             conditions,
         };
+        let native_search = self.native_search(mailbox.account.as_deref());
         let query = mailbox
             .query()
-            .map(|query| mailrs_gmail::query::print(&query))
+            .map(|query| manage::query_words(&query, native_search))
             .ok_or("Give at least one condition with a value.")?;
         let name = mailbox.name.clone();
         self.effects
             .change_settings(Change::SaveSmartMailbox(Box::new(mailbox)))?;
-        Ok(json!({"created": name, "gmail_query": query}))
+        Ok(json!({"created": name, "query": query}))
     }
 
     fn open(&self, input: &Value) -> ToolResult {
@@ -1554,17 +1573,7 @@ impl<A: Accounts> Tools<A> {
         let key = required(input, "category")?;
         let category = named_category(&key)?;
         let who = text(input, "name").unwrap_or_else(|| email.clone());
-        let question = fill(
-            &gettext(
-                "Move mail from {sender} to {category} in {account}, and add a Gmail \
-                 rule for their future mail?",
-            ),
-            &[
-                ("sender", &who),
-                ("category", &category.name()),
-                ("account", &account.email),
-            ],
-        );
+        let question = categorize_question(&who, &category.name(), &account);
         Ok(Plan::ask(question, async move {
             let mail = Arc::clone(&self.modules.mail);
             let (account_id, asked) = (account.id, email.clone());
@@ -1755,4 +1764,22 @@ fn report(outcome: &Outcome) -> ToolResult {
             .collect();
     }
     Ok(result)
+}
+
+/// The question before the assistant moves `sender`'s mail into
+/// `category` in `account` and adds a rule on the account's server for
+/// the mail still to come.
+fn categorize_question(sender: &str, category: &str, account: &Account) -> String {
+    fill(
+        &gettext(
+            "Move mail from {sender} to {category} in {account}, and add a {provider} \
+             rule for their future mail?",
+        ),
+        &[
+            ("sender", sender),
+            ("category", category),
+            ("account", &account.email),
+            ("provider", account.provider_name()),
+        ],
+    )
 }

@@ -40,6 +40,50 @@ pub fn sender_actions(offers: Offers) -> [(&'static str, bool); 2] {
     ]
 }
 
+/// The window's actions that need rules or an automatic reply, and
+/// whether each is on for accounts that offer `offers`: on while one of
+/// them can do it. Each account action also turns away an account that
+/// cannot, through [`account_action_on`], since one action serves every
+/// account's menu.
+pub fn account_actions(offers: &[Offers]) -> [(&'static str, bool); 4] {
+    let rules = offers.iter().any(|o| o.rules);
+    let auto_reply = offers.iter().any(|o| o.auto_reply);
+    [
+        ("hide-my-email", rules),
+        ("account-rules", rules),
+        ("account-hide-my-email", rules),
+        ("account-vacation", auto_reply),
+    ]
+}
+
+/// Whether the account action `name` runs for an account that offers
+/// `offers`. An account's menu reaches these through its own actions
+/// ([`account_menu_actions`]), which are off where the account lacks what
+/// they open, but the demo's script activates the `win.` action with any
+/// account's id. Hide My Email writes a rule for each address, so it
+/// needs rules.
+pub fn account_action_on(name: &str, offers: Offers) -> bool {
+    match name {
+        "account-rules" | "account-hide-my-email" => offers.rules,
+        "account-vacation" => offers.auto_reply,
+        _ => true,
+    }
+}
+
+/// The actions an account's own menu holds under the `account` prefix,
+/// and whether each is on for an account that offers `offers`. A
+/// parameterized `win.` action serves every account, so it cannot be off
+/// for one; these belong to one account's row, so each is off where that
+/// account lacks what it opens. Hide My Email writes a rule for each
+/// address, so it needs rules.
+pub fn account_menu_actions(offers: Offers) -> [(&'static str, bool); 3] {
+    [
+        ("vacation", offers.auto_reply),
+        ("rules", offers.rules),
+        ("hide-my-email", offers.rules),
+    ]
+}
+
 /// How the accounts on screen file mail: with labels, several at once, or
 /// in folders, one at a time.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -71,6 +115,35 @@ impl Filing {
         match offers.into_iter().all(|offer| offer.labels) {
             true => Filing::Labels,
             false => Filing::Folders,
+        }
+    }
+
+    /// How the Labels button words itself, which is how the picker it
+    /// opens words itself. `reached` are the accounts of the mail it acts
+    /// on, one entry per row; `shown` the accounts the mailbox on screen
+    /// lists. With nothing reached the mailbox's accounts decide, as the
+    /// picker's "Open or select mail" line does; mail from several
+    /// accounts reads as it files across them.
+    pub fn picker(
+        reached: &[AccountId],
+        shown: &[AccountId],
+        offers: impl Fn(AccountId) -> Offers,
+    ) -> Filing {
+        let mut accounts = reached.to_vec();
+        accounts.sort_unstable();
+        accounts.dedup();
+        match accounts.as_slice() {
+            [] => Filing::of(shown.iter().map(|id| offers(*id))),
+            [one] => Filing::of([offers(*one)]),
+            many => Filing::across(many.iter().map(|id| offers(*id))),
+        }
+    }
+
+    /// The Keyboard Shortcuts line for the key that opens the picker.
+    pub fn shortcut_line(self) -> String {
+        match self {
+            Filing::Labels => gettext("Labels"),
+            Filing::Folders => gettext("Move to folder"),
         }
     }
 
@@ -211,7 +284,8 @@ pub fn reason(account: &Account, missing: Missing) -> String {
         }
         (_, Missing::Categories) => gettext("{provider} does not sort the inbox into categories."),
     };
-    fill(&template, &[("provider", account.provider_name())])
+    let provider = mailrs_discover::resolved_provider_name(account.provider_name());
+    fill(&template, &[("provider", &provider)])
 }
 
 /// The lines Preferences shows under Not Available: everything an
@@ -373,6 +447,27 @@ mod tests {
     }
 
     #[test]
+    fn the_labels_button_says_what_its_picker_says() {
+        let offers = |id| if id == 2 { folders() } else { Offers::EVERYTHING };
+        // Nothing picked: the accounts the mailbox lists decide.
+        assert_eq!(Filing::picker(&[], &[2], offers), Filing::Folders);
+        assert_eq!(Filing::picker(&[], &[1, 2], offers), Filing::Labels);
+        // One account decides for itself, however many of its rows.
+        assert_eq!(Filing::picker(&[1, 1], &[2], offers), Filing::Labels);
+        assert_eq!(Filing::picker(&[2], &[1], offers), Filing::Folders);
+        // Mail from a label account and a folder account files the way
+        // folders do, one account at a time.
+        assert_eq!(Filing::picker(&[1, 2], &[1, 2], offers), Filing::Folders);
+        assert_eq!(Filing::picker(&[1, 3], &[1, 3], offers), Filing::Labels);
+    }
+
+    #[test]
+    fn the_shortcut_line_follows_filing() {
+        assert_eq!(Filing::Labels.shortcut_line(), "Labels");
+        assert_eq!(Filing::Folders.shortcut_line(), "Move to folder");
+    }
+
+    #[test]
     fn the_new_folder_dialog_says_folder_where_the_new_label_one_says_label() {
         assert_eq!(Filing::Labels.new_heading(), "New Label");
         assert_eq!(Filing::Folders.new_heading(), "New Folder");
@@ -409,6 +504,81 @@ mod tests {
         assert_eq!(
             sender_actions(without_categories()),
             [("block-sender", true), ("categorize-sender", false)]
+        );
+    }
+
+    use super::{account_action_on, account_actions};
+
+    #[test]
+    fn an_account_action_is_on_while_one_account_can_do_it() {
+        let bare = Offers {
+            rules: false,
+            auto_reply: false,
+            ..Offers::EVERYTHING
+        };
+        assert_eq!(
+            account_actions(&[bare, Offers::EVERYTHING]),
+            [
+                ("hide-my-email", true),
+                ("account-rules", true),
+                ("account-hide-my-email", true),
+                ("account-vacation", true),
+            ]
+        );
+        assert_eq!(
+            account_actions(&[bare]),
+            [
+                ("hide-my-email", false),
+                ("account-rules", false),
+                ("account-hide-my-email", false),
+                ("account-vacation", false),
+            ]
+        );
+    }
+
+    #[test]
+    fn an_account_action_turns_away_an_account_that_lacks_it() {
+        let bare = Offers {
+            rules: false,
+            auto_reply: false,
+            ..Offers::EVERYTHING
+        };
+        assert!(!account_action_on("account-rules", bare));
+        assert!(!account_action_on("account-hide-my-email", bare));
+        assert!(!account_action_on("account-vacation", bare));
+        assert!(account_action_on("account-signature", bare));
+        assert!(account_action_on("account-rules", Offers::EVERYTHING));
+    }
+
+    use super::account_menu_actions;
+
+    #[test]
+    fn an_accounts_own_rules_action_is_off_when_its_server_has_no_rules() {
+        let imap = Offers {
+            labels: false,
+            categories: false,
+            calendar: false,
+            contacts: false,
+            rules: false,
+            auto_reply: false,
+            ..Offers::EVERYTHING
+        };
+        assert_eq!(
+            account_menu_actions(imap),
+            [("vacation", false), ("rules", false), ("hide-my-email", false)]
+        );
+        assert_eq!(
+            account_menu_actions(Offers::EVERYTHING),
+            [("vacation", true), ("rules", true), ("hide-my-email", true)]
+        );
+        let replies_only = Offers {
+            rules: false,
+            ..Offers::EVERYTHING
+        };
+        assert_eq!(
+            account_menu_actions(replies_only),
+            [("vacation", true), ("rules", false), ("hide-my-email", false)],
+            "Hide My Email needs rules, the automatic reply does not"
         );
     }
 

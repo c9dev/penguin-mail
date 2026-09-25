@@ -152,6 +152,28 @@ async fn a_mailbox_a_person_opens_is_listed_and_kept_in_step() {
     assert_eq!(h.ids().await, ["Work/1007/1", "Work/1007/2"]);
 }
 
+/// Following an already-followed mailbox again, as a window reload does
+/// on a mailbox already opened once, fetches its window no second time:
+/// the slow poll covers it from the first `follow_mailbox`.
+#[tokio::test]
+async fn following_a_mailbox_a_second_time_fetches_nothing() {
+    let h = imap_harness().await;
+    h.imap.add_mailbox("Work", None);
+    h.imap
+        .deliver_flagged("Work", &message("w1", "Plans", ""), &[], days_ago(2));
+    h.bootstrap().await;
+    h.sync.follow_mailbox("Work").await.unwrap();
+
+    let fetched = h.imap.calls_to("headers");
+    h.sync.follow_mailbox("Work").await.unwrap();
+
+    assert_eq!(
+        h.imap.calls_to("headers"),
+        fetched,
+        "nothing is fetched again"
+    );
+}
+
 #[tokio::test]
 async fn a_followed_mailbox_deleted_elsewhere_is_let_go() {
     let h = imap_harness().await;

@@ -85,6 +85,68 @@ pub fn plain(text: &str) -> String {
         .to_string()
 }
 
+/// `query`'s conditions in plain English words, comma-joined, such as
+/// "from ana, unread, last 7 days". Written for an account that reads no
+/// search syntax of its own, so a person or a model can tell what it
+/// fetches without knowing any provider's operators.
+pub fn describe(query: &Query) -> String {
+    match query {
+        Query::Term(term) => describe_term(term),
+        Query::And(items) => descriptions(items).join(", "),
+        Query::Or(items) => descriptions(items).join(" or "),
+        Query::Not(inner) => {
+            let described = describe(inner);
+            if described.is_empty() {
+                String::new()
+            } else {
+                format!("not {described}")
+            }
+        }
+    }
+}
+
+fn descriptions(items: &[Query]) -> Vec<String> {
+    items.iter().map(describe).filter(|d| !d.is_empty()).collect()
+}
+
+fn describe_term(term: &Term) -> String {
+    match term {
+        Term::From(text) => format!("from {text}"),
+        Term::To(text) => format!("to {text}"),
+        Term::Subject(text) => format!("subject {text}"),
+        Term::Words(text) => text.clone(),
+        Term::Since(day) => format!("since {}", day.format("%Y-%m-%d")),
+        Term::Before(day) => format!("before {}", day.format("%Y-%m-%d")),
+        Term::NewerThan(days) => format!("last {days} days"),
+        Term::HasAttachment => "has an attachment".into(),
+        Term::Unread => "unread".into(),
+        Term::Flagged => "flagged".into(),
+        Term::In(set) => describe_set(set),
+        Term::MailboxNamed(name) => format!("in {name}"),
+        Term::Larger(bytes) if *bytes % MEGABYTE == 0 => {
+            format!("larger than {} MB", bytes / MEGABYTE)
+        }
+        Term::Larger(bytes) => format!("larger than {bytes} bytes"),
+    }
+}
+
+fn describe_set(set: &MailSet) -> String {
+    match set {
+        MailSet::Role(crate::Role::Inbox) => "in the inbox".into(),
+        MailSet::Role(crate::Role::Sent) => "sent".into(),
+        MailSet::Role(crate::Role::Drafts) => "a draft".into(),
+        MailSet::Role(crate::Role::Trash) => "in the trash".into(),
+        MailSet::Role(crate::Role::Junk) => "in spam".into(),
+        MailSet::Role(crate::Role::Archive) => "archived".into(),
+        MailSet::Role(crate::Role::All) => "in all mail".into(),
+        MailSet::Role(crate::Role::Important) => "important".into(),
+        MailSet::Mailbox(name) => format!("in {name}"),
+        MailSet::Keyword(word) => format!("keyword {word}"),
+        MailSet::Unseen => "unread".into(),
+        MailSet::Category(name) => format!("in the {name} category"),
+    }
+}
+
 /// Gmail's spelling of a label name in its search: lower case, with each
 /// space and slash as a dash, without double quotes or parentheses. The
 /// search box suggests `label:` in this spelling, so a typed label is
@@ -117,6 +179,30 @@ mod tests {
         assert_eq!(plain("  \"Ann\" (work) "), "Ann work");
         assert_eq!(plain("\"()"), "");
         assert_eq!(plain("Zé Ninguém"), "Zé Ninguém");
+    }
+
+    #[test]
+    fn describe_lists_conditions_in_words_a_person_reads() {
+        let tree = Query::And(vec![
+            Query::term(Term::From("ana".into())),
+            Query::term(Term::Unread),
+            Query::term(Term::NewerThan(7)),
+        ]);
+        assert_eq!(describe(&tree), "from ana, unread, last 7 days");
+    }
+
+    #[test]
+    fn describe_reads_a_lone_term_without_a_separator() {
+        assert_eq!(describe(&Query::term(Term::Flagged)), "flagged");
+    }
+
+    #[test]
+    fn describe_joins_alternatives_with_or() {
+        let tree = Query::Or(vec![
+            Query::term(Term::From("ana".into())),
+            Query::term(Term::From("bo".into())),
+        ]);
+        assert_eq!(describe(&tree), "from ana or from bo");
     }
 
     #[test]

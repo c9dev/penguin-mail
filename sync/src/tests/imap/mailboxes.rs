@@ -45,6 +45,7 @@ fn an_imap_account_offers_mail_alone() {
             contacts: false,
             rules: false,
             auto_reply: false,
+            search: true,
         }
     );
 }

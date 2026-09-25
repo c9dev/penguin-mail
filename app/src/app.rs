@@ -272,6 +272,7 @@ impl App {
     pub fn show_window(self: &Rc<Self>) -> Rc<MainWindow> {
         crate::ensure_gtk();
         self.apply_style();
+        self.core.set_window_open(true);
         if let Some(window) = self.window.borrow().as_ref() {
             window.present();
             return Rc::clone(window);
@@ -345,6 +346,9 @@ impl App {
     fn window_closed(self: &Rc<Self>) {
         let open = self.open_windows.get().saturating_sub(1);
         self.open_windows.set(open);
+        if open == 0 {
+            self.core.set_window_open(false);
+        }
         if open > 0 || self.core.demo {
             return;
         }

@@ -4,7 +4,7 @@ use mailrs_gmail::{GmailError, HistoryChange};
 
 use crate::api::GmailApi;
 use crate::fake::{FakeGmail, meta};
-use crate::{TriageAction, backoff_delay};
+use crate::{MailAction, TriageAction, backoff_delay};
 
 fn close(actual: Duration, expected: Duration) -> bool {
     (actual.as_secs_f64() - expected.as_secs_f64()).abs() < 1e-6
@@ -74,6 +74,21 @@ fn triage_actions_parse_and_map_to_operations() {
     assert_eq!(TriageAction::MarkRead.describe(), "Mark read");
     assert!("explode".parse::<TriageAction>().is_err());
     assert!("label:".parse::<TriageAction>().is_err());
+}
+
+#[test]
+fn an_action_names_a_mailbox_as_it_is_told() {
+    let moving = TriageAction::MoveTo("Label_5".into());
+    assert_eq!(moving.describe(), "Move to Label_5");
+    assert_eq!(
+        moving.describe_named(|_| "Receipts".to_string()),
+        "Move to Receipts"
+    );
+    assert_eq!(
+        MailAction::Triage(TriageAction::AddLabel("Label_5".into()))
+            .describe_named(|_| "Receipts".to_string()),
+        "Add label Receipts"
+    );
 }
 
 #[tokio::test]

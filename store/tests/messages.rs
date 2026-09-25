@@ -3,7 +3,7 @@ mod common;
 use std::collections::HashSet;
 
 use common::{LabelChange, db, labels_of, meta, store};
-use mailrs_domain::{Applied, MailSet, MailboxKind, Membership, RemoteMailbox, Role};
+use mailrs_domain::{Applied, LabelKind, MailSet, MailboxKind, Membership, RemoteMailbox, Role};
 use mailrs_store::messages::Change;
 use mailrs_store::threads::ThreadFilter;
 use mailrs_store::{labels, mailboxes, messages, threads};
@@ -41,6 +41,32 @@ fn labels_are_replaced_wholesale_and_listed_system_first() {
     let inbox = listed("INBOX", "INBOX", MailboxKind::System, None);
     mailboxes::replace_listed(&conn, id, &[inbox]).unwrap();
     assert_eq!(labels::list_labels(&conn, id).unwrap().len(), 1);
+}
+
+#[test]
+fn a_mailbox_that_holds_only_mailboxes_lists_as_a_group() {
+    let (conn, id) = db();
+    mailboxes::replace_listed(
+        &conn,
+        id,
+        &[
+            listed("Work", "Work", MailboxKind::Group, None),
+            listed("Work/Clients", "Work/Clients", MailboxKind::Folder, None),
+        ],
+    )
+    .unwrap();
+    let kinds: Vec<(String, LabelKind)> = labels::list_labels(&conn, id)
+        .unwrap()
+        .into_iter()
+        .map(|l| (l.name, l.kind))
+        .collect();
+    assert_eq!(
+        kinds,
+        [
+            ("Work".to_string(), LabelKind::Group),
+            ("Work/Clients".to_string(), LabelKind::User),
+        ]
+    );
 }
 
 #[test]

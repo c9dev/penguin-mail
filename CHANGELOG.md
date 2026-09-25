@@ -11,12 +11,24 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   with IMAP: choose Add Account, then Another Provider, and type your
   address and password. Penguin Mail finds the servers, says when the
   provider wants an app password, and offers gmail.com when you type
-  gmial.com.
+  gmial.com. Archiving on a server with no Archive folder makes one,
+  and a message says so; opening a folder lists its mail right away.
+  Folders that only hold other folders show in the sidebar with their
+  folders under them; you cannot open them or drop mail on them.
 
 ### Improved
 
 - With Claude Opus 5 or newer, translating a message and reading an unsubscribe
   page take less time, because those quick jobs no longer think at length.
+
+### Fixed
+
+- The message after Undo names the label, such as Receipts, where it
+  showed a code such as Label_5.
+- Archiving or moving a whole conversation on an IMAP account no longer
+  pulls your own reply out of Sent, or an old message out of Trash.
+- An account set up manually under a listed provider, such as Fastmail,
+  shows that provider's name and rules instead of its bare domain.
 
 ## 0.3.0 (2026-09-24)
 

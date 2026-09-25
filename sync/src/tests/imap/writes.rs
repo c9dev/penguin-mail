@@ -5,10 +5,10 @@ use mailrs_store::messages::{self, Change};
 use mailrs_store::{bodies, mailboxes};
 
 use super::{days_ago, message, offering};
-use crate::fake::FakeImap;
+use crate::fake::{FakeImap, raw_message};
 use crate::services::ImapApi;
 use crate::tests::{ImapHarness, fake_settings, imap_harness, imap_harness_on};
-use crate::{MailBackend, TriageAction};
+use crate::{BackendError, MailBackend, TriageAction};
 
 /// An account on `imap` holding one unread message from Ann in the Inbox,
 /// loaded, with the thread it sits in.
@@ -56,6 +56,45 @@ async fn archiving_moves_the_message_and_its_remote_ref_follows() {
             .iter()
             .any(|e| matches!(e, ChangeEvent::ArchiveMade { .. })),
         "an Archive the server had is nothing new"
+    );
+}
+
+/// A thread with a received message in a folder and the person's own
+/// reply in Sent: dragging it onto Archive moves the received message
+/// and leaves the Sent copy where it sat.
+#[tokio::test]
+async fn a_thread_wide_archive_leaves_a_sent_copy_in_sent() {
+    let imap = FakeImap::new();
+    imap.add_mailbox("Work", None);
+    imap.deliver_flagged("Work", &raw_message("w", "Kites", days_ago(2), None), &[], days_ago(2));
+    let h = imap_harness_on(imap, fake_settings()).await;
+    h.bootstrap().await;
+    h.sync.follow_mailbox("Work").await.unwrap();
+    h.imap.deliver_flagged(
+        "Sent",
+        &raw_message("s", "Re: Kites", days_ago(1), Some("w")),
+        &["\\Seen"],
+        days_ago(1),
+    );
+    h.sync.incremental().await.unwrap();
+    h.drain();
+    let thread = h.thread_of("Work/1007/1").await.expect("threaded");
+    assert_eq!(
+        h.thread_of("Sent/1002/1").await.as_deref(),
+        Some(thread.as_str()),
+        "the reply threads with the message it answers"
+    );
+
+    archive(&h, &thread).await;
+
+    assert_eq!(
+        h.stored("Work/1007/1").await.unwrap().held.mailboxes,
+        ["Archive"]
+    );
+    assert_eq!(
+        h.stored("Sent/1002/1").await.unwrap().held.mailboxes,
+        ["Sent"],
+        "the reply stays in Sent"
     );
 }
 
@@ -407,4 +446,42 @@ async fn archiving_on_a_server_without_an_archive_makes_one_once() {
         })
         .collect();
     assert_eq!(made, ["Archive"], "said once, for the first archive only");
+}
+
+/// A failure toast names a folder as the person reads it, not by the
+/// server's raw wire name, which is modified UTF-7.
+#[tokio::test]
+async fn a_failed_move_names_the_folder_its_person_reads() {
+    let imap = FakeImap::new();
+    // Modified UTF-7 for "Entwürfe".
+    imap.add_mailbox("Entw&APw-rfe", None);
+    imap.deliver_flagged("INBOX", &message("a", "Kites", ""), &[], days_ago(1));
+    let h = imap_harness_on(imap, fake_settings()).await;
+    h.bootstrap().await;
+    h.sync.refresh_labels().await.unwrap();
+    let thread = h.thread_of("INBOX/1001/1").await.expect("threaded");
+
+    h.imap
+        .fail_on("move", ImapError::Refused("NO no room".into()));
+    let err = h
+        .sync
+        .triage_thread(&thread, &TriageAction::MoveTo("Entw&APw-rfe".into()))
+        .await
+        .unwrap_err();
+    assert!(matches!(
+        err,
+        crate::SyncError::Backend(BackendError::Refused(_))
+    ));
+
+    let told: Vec<String> = h
+        .drain()
+        .into_iter()
+        .filter_map(|e| match e {
+            ChangeEvent::WriteFailed { message, .. } => Some(message),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(told.len(), 1);
+    assert!(told[0].contains("Entwürfe"), "{}", told[0]);
+    assert!(!told[0].contains("&APw-"), "{}", told[0]);
 }

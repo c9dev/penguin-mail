@@ -4,7 +4,7 @@
 //! what each message gained and lost, and hands them to the account's
 //! backend; undo builds the operations that reverse that report.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 use mailrs_domain::mailbox::keyword::{FLAGGED, MUTED, SEEN};
 use mailrs_domain::{Applied, MailSet, Membership, Memberships, Role};
@@ -40,10 +40,13 @@ pub enum MailOp {
 pub type Roles = BTreeMap<Role, String>;
 
 /// The operations `action` stands for on an account whose mail service can
-/// do `caps`. A label account files and unfiles; a folder account moves.
-/// `set_of` reads a mailbox id the action names as the mail set it stands
-/// for, as the account's mail service reads it. `Unsupported` when a label
-/// account lacks the mailbox the action files mail in.
+/// do `caps`. A label account files and unfiles; a folder account moves,
+/// since a message there sits in one folder: the one place an action adds
+/// is where the mail goes, and mail that leaves a place with nowhere named
+/// goes to the Archive. `set_of` reads a mailbox id the action names as
+/// the mail set it stands for, as the account's mail service reads it.
+/// `Unsupported` when a label account lacks the mailbox the action files
+/// mail in, or when an action puts mail in two folders at once.
 pub fn ops_for(
     action: &TriageAction,
     caps: &MailCapabilities,
@@ -85,8 +88,11 @@ pub fn ops_for(
         // On a label account a move files the mail and takes it out of
         // the inbox, as Gmail's own Move to does.
         TriageAction::MoveTo(id) => vec![MailOp::AddToMailbox(id.clone()), remove(Role::Inbox)?],
+        TriageAction::AddLabel(id) if moves => moved(&[set_of(id)], &[], roles)?,
         TriageAction::AddLabel(id) => vec![set_op(&set_of(id), true, roles)?],
+        TriageAction::RemoveLabel(id) if moves => moved(&[], &[set_of(id)], roles)?,
         TriageAction::RemoveLabel(id) => vec![set_op(&set_of(id), false, roles)?],
+        TriageAction::Relabel { add, remove } if moves => moved(add, remove, roles)?,
         TriageAction::Relabel { add, remove } => add
             .iter()
             .map(|set| set_op(set, true, roles))
@@ -108,6 +114,112 @@ fn set_op(set: &MailSet, on: bool, roles: &Roles) -> Result<MailOp, BackendError
         MailSet::Keyword(k) => MailOp::SetKeyword { keyword: k.clone(), on },
         MailSet::Unseen => MailOp::SetKeyword { keyword: SEEN.into(), on: !on },
         MailSet::Category(c) => MailOp::SetCategory { category: c.clone(), on },
+    })
+}
+
+/// The operations that change mail sets on a folder account. Marks, such
+/// as a keyword, unread or a category, go on and come off as on a label
+/// account. The one place `add` names is where the mail moves, which
+/// takes it out of every other; with none named, mail that leaves a place
+/// goes to the Archive, since a folder server has nowhere else to keep
+/// it. Two places at once is `Unsupported`.
+fn moved(add: &[MailSet], remove: &[MailSet], roles: &Roles) -> Result<Vec<MailOp>, BackendError> {
+    let mut ops = Vec::new();
+    for (sets, on) in [(add, true), (remove, false)] {
+        for set in sets.iter().filter(|set| move_op(set).is_none()) {
+            ops.push(set_op(set, on, roles)?);
+        }
+    }
+    let mut into = add.iter().filter_map(move_op);
+    let destination = match (into.next(), into.next()) {
+        (Some(_), Some(_)) => return Err(BackendError::Unsupported),
+        (Some(op), None) => Some(op),
+        (None, _) if remove.iter().any(|set| move_op(set).is_some()) => {
+            Some(MailOp::MoveToRole(Role::Archive))
+        }
+        (None, _) => None,
+    };
+    ops.extend(destination);
+    Ok(ops)
+}
+
+/// The move into `set`, when `set` is a place mail sits in rather than a
+/// mark it carries.
+fn move_op(set: &MailSet) -> Option<MailOp> {
+    match set {
+        MailSet::Role(role) => Some(MailOp::MoveToRole(*role)),
+        MailSet::Mailbox(id) => Some(MailOp::MoveToMailbox(id.clone())),
+        MailSet::Keyword(_) | MailSet::Unseen | MailSet::Category(_) => None,
+    }
+}
+
+/// `ids` without those a whole-thread move should leave alone: a message
+/// that sits only in Sent, Drafts, Trash or Junk stays there unless `ops`
+/// moves mail into or out of that same place, since a folder server keeps
+/// only one copy and a thread-wide move must not pull a sent reply out of
+/// Sent or an old message out of Trash for a change aimed elsewhere.
+/// `whole_thread` names the ids a thread target picked up on its own; an
+/// id a person named by hand always moves.
+pub fn drop_protected(
+    ids: Vec<String>,
+    whole_thread: &BTreeSet<String>,
+    held: &HashMap<String, Memberships>,
+    ops: &[MailOp],
+    roles: &Roles,
+) -> Vec<String> {
+    if !ops.iter().any(is_move_op) {
+        return ids;
+    }
+    let none = Memberships::default();
+    ids.into_iter()
+        .filter(|id| {
+            if !whole_thread.contains(id) {
+                return true;
+            }
+            let mailboxes = &held.get(id).unwrap_or(&none).mailboxes;
+            match only_role(mailboxes, roles) {
+                Some(role) => !move_leaves_alone(role, ops, roles),
+                None => true,
+            }
+        })
+        .collect()
+}
+
+fn is_move_op(op: &MailOp) -> bool {
+    matches!(op, MailOp::MoveToRole(_) | MailOp::MoveToMailbox(_))
+}
+
+/// The role `mailboxes` names, when it is exactly one mailbox and that
+/// mailbox carries a role.
+fn only_role(mailboxes: &[String], roles: &Roles) -> Option<Role> {
+    let [only] = mailboxes else { return None };
+    roles.iter().find(|(_, id)| *id == only).map(|(role, _)| *role)
+}
+
+/// Whether a move `ops` describes should leave a message alone that sits
+/// only in `role`. Sent and Drafts never move on a thread-wide change;
+/// Trash and Junk stay put unless the move takes mail into the Inbox
+/// (Untrash, Not Junk, a reminder coming due), and Junk mail goes to
+/// Trash as any other message does.
+fn move_leaves_alone(role: Role, ops: &[MailOp], roles: &Roles) -> bool {
+    match role {
+        Role::Sent | Role::Drafts => true,
+        Role::Trash => !targets_role(ops, Role::Inbox, roles),
+        Role::Junk => {
+            !targets_role(ops, Role::Inbox, roles) && !targets_role(ops, Role::Trash, roles)
+        }
+        _ => false,
+    }
+}
+
+/// Whether one of `ops` moves mail into `role`, by role or by the
+/// mailbox `roles` names for it.
+fn targets_role(ops: &[MailOp], role: Role, roles: &Roles) -> bool {
+    let id = roles.get(&role);
+    ops.iter().any(|op| match op {
+        MailOp::MoveToRole(r) => *r == role,
+        MailOp::MoveToMailbox(m) => id.is_some_and(|rid| rid == m),
+        _ => false,
     })
 }
 
@@ -403,6 +515,85 @@ mod tests {
     }
 
     #[test]
+    fn a_folder_account_moves_where_a_label_account_adds_a_mailbox() {
+        let roles = gmail_roles();
+        let ops = |action: TriageAction| {
+            ops_for(&action, &folder_account(), &roles, named).unwrap()
+        };
+        // Dropped from Flagged or a search, nothing is taken away, and the
+        // mail still moves rather than gaining a copy.
+        assert_eq!(
+            ops(TriageAction::Relabel {
+                add: vec![MailSet::Mailbox("Label_5".into())],
+                remove: vec![],
+            }),
+            [MailOp::MoveToMailbox("Label_5".into())]
+        );
+        assert_eq!(
+            ops(TriageAction::Relabel {
+                add: vec![MailSet::Mailbox("Label_5".into())],
+                remove: vec![MailSet::Role(Role::Inbox)],
+            }),
+            [MailOp::MoveToMailbox("Label_5".into())]
+        );
+        assert_eq!(
+            ops(TriageAction::AddLabel("Label_5".into())),
+            [MailOp::MoveToMailbox("Label_5".into())]
+        );
+        // A reminder coming due puts the mail back in the inbox, unread.
+        assert_eq!(
+            ops(TriageAction::Relabel {
+                add: vec![MailSet::Role(Role::Inbox), MailSet::Unseen],
+                remove: vec![],
+            }),
+            [keyword(SEEN, false), MailOp::MoveToRole(Role::Inbox)]
+        );
+    }
+
+    #[test]
+    fn a_folder_account_archives_mail_that_leaves_a_folder_for_nowhere() {
+        let roles = gmail_roles();
+        let ops = |action: TriageAction| {
+            ops_for(&action, &folder_account(), &roles, named).unwrap()
+        };
+        assert_eq!(
+            ops(TriageAction::Relabel {
+                add: vec![],
+                remove: vec![MailSet::Mailbox("Work".into()), MailSet::Role(Role::Inbox)],
+            }),
+            [MailOp::MoveToRole(Role::Archive)]
+        );
+        assert_eq!(
+            ops(TriageAction::RemoveLabel("Work".into())),
+            [MailOp::MoveToRole(Role::Archive)]
+        );
+        assert_eq!(
+            ops(TriageAction::Relabel {
+                add: vec![MailSet::muted()],
+                remove: vec![MailSet::Role(Role::Inbox)],
+            }),
+            [keyword(MUTED, true), MailOp::MoveToRole(Role::Archive)]
+        );
+        assert_eq!(
+            ops(TriageAction::RemoveLabel("UNREAD".into())),
+            [keyword(SEEN, true)],
+            "a mark comes off without moving anything"
+        );
+    }
+
+    #[test]
+    fn a_folder_account_cannot_put_mail_in_two_folders() {
+        let two = TriageAction::Relabel {
+            add: vec![MailSet::Mailbox("Work".into()), MailSet::Mailbox("Travel".into())],
+            remove: vec![],
+        };
+        assert!(matches!(
+            ops_for(&two, &folder_account(), &gmail_roles(), named),
+            Err(BackendError::Unsupported)
+        ));
+    }
+
+    #[test]
     fn a_label_account_without_the_mailbox_cannot_file_there() {
         assert!(matches!(
             ops_for(&TriageAction::Trash, &label_account(), &Roles::new(), named),
@@ -485,6 +676,103 @@ mod tests {
         assert_eq!(
             split_keywords(&mute, &["$seen", "$flagged", "$muted"]),
             (mute.to_vec(), vec![])
+        );
+    }
+
+    #[test]
+    fn a_whole_thread_move_leaves_a_sent_copy_in_sent() {
+        let roles = Roles::from([
+            (Role::Archive, "Archive".to_string()),
+            (Role::Sent, "Sent".to_string()),
+        ]);
+        let held = HashMap::from([
+            (
+                "work".to_string(),
+                Memberships { mailboxes: vec!["Work".into()], ..Memberships::default() },
+            ),
+            (
+                "sent".to_string(),
+                Memberships { mailboxes: vec!["Sent".into()], ..Memberships::default() },
+            ),
+        ]);
+        let whole_thread = BTreeSet::from(["work".to_string(), "sent".to_string()]);
+        let ids = vec!["work".to_string(), "sent".to_string()];
+        let ops = [MailOp::MoveToRole(Role::Archive)];
+        assert_eq!(
+            drop_protected(ids, &whole_thread, &held, &ops, &roles),
+            ["work".to_string()]
+        );
+    }
+
+    #[test]
+    fn a_message_picked_by_hand_moves_even_from_sent() {
+        let roles = Roles::from([
+            (Role::Archive, "Archive".to_string()),
+            (Role::Sent, "Sent".to_string()),
+        ]);
+        let held = HashMap::from([(
+            "sent".to_string(),
+            Memberships { mailboxes: vec!["Sent".into()], ..Memberships::default() },
+        )]);
+        let ids = vec!["sent".to_string()];
+        let ops = [MailOp::MoveToRole(Role::Archive)];
+        assert_eq!(
+            drop_protected(ids, &BTreeSet::new(), &held, &ops, &roles),
+            ["sent".to_string()]
+        );
+    }
+
+    #[test]
+    fn untrash_brings_a_trashed_copy_back_to_the_inbox() {
+        let roles = Roles::from([
+            (Role::Inbox, "INBOX".to_string()),
+            (Role::Trash, "Trash".to_string()),
+        ]);
+        let held = HashMap::from([(
+            "t".to_string(),
+            Memberships { mailboxes: vec!["Trash".into()], ..Memberships::default() },
+        )]);
+        let whole_thread = BTreeSet::from(["t".to_string()]);
+        let ids = vec!["t".to_string()];
+        let ops = [MailOp::MoveToRole(Role::Inbox)];
+        assert_eq!(
+            drop_protected(ids, &whole_thread, &held, &ops, &roles),
+            ["t".to_string()]
+        );
+    }
+
+    #[test]
+    fn trashing_takes_junk_mail_too() {
+        let roles = Roles::from([
+            (Role::Trash, "Trash".to_string()),
+            (Role::Junk, "Junk".to_string()),
+        ]);
+        let held = HashMap::from([(
+            "j".to_string(),
+            Memberships { mailboxes: vec!["Junk".into()], ..Memberships::default() },
+        )]);
+        let whole_thread = BTreeSet::from(["j".to_string()]);
+        let ids = vec!["j".to_string()];
+        let ops = [MailOp::MoveToRole(Role::Trash)];
+        assert_eq!(
+            drop_protected(ids, &whole_thread, &held, &ops, &roles),
+            ["j".to_string()]
+        );
+    }
+
+    #[test]
+    fn a_mark_with_no_move_touches_every_message_of_the_thread() {
+        let roles = Roles::new();
+        let held = HashMap::from([(
+            "sent".to_string(),
+            Memberships { mailboxes: vec!["Sent".into()], ..Memberships::default() },
+        )]);
+        let whole_thread = BTreeSet::from(["sent".to_string()]);
+        let ids = vec!["sent".to_string()];
+        let ops = [keyword(SEEN, true)];
+        assert_eq!(
+            drop_protected(ids, &whole_thread, &held, &ops, &roles),
+            ["sent".to_string()]
         );
     }
 

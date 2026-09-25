@@ -102,10 +102,17 @@ pub enum MailAction {
 }
 
 impl MailAction {
-    /// The action in words, for a toast the person reads.
+    /// The action in words, for a toast the person reads, with a mailbox
+    /// shown by its server id.
     pub fn describe(&self) -> String {
+        self.describe_named(|id| id.to_string())
+    }
+
+    /// The action in words, each server mailbox it names shown as `name`
+    /// gives it.
+    pub fn describe_named(&self, name: impl Fn(&str) -> String) -> String {
         match self {
-            MailAction::Triage(triage) => triage.describe(),
+            MailAction::Triage(triage) => triage.describe_named(name),
             MailAction::Flag(Some(_)) => gettext("Flag"),
             MailAction::Flag(None) => gettext("Unflag"),
             MailAction::Remind { .. } => gettext("Remind Me"),
@@ -213,11 +220,13 @@ impl Undo {
     }
 }
 
-/// What an undo took back: the action it reversed, and what reversing it
+/// What an undo took back: the action it reversed, that action in words
+/// with each mailbox named as the person named it, and what reversing it
 /// did to each target.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Undone {
     pub action: MailAction,
+    pub words: String,
     pub outcome: Outcome,
 }
 
@@ -281,9 +290,11 @@ impl<A: Accounts> MailActions<A> {
             .map(|(t, _)| t.clone())
             .collect();
         if let Err(err) = self.keep_locally(ready, &action, &mut undo).await {
+            let accounts: BTreeSet<AccountId> = targets.iter().map(|t| t.account_id).collect();
+            let words = self.words_for(&action, accounts).await;
             let error = fill(
                 &gettext("{action} failed: {reason}"),
-                &[("action", &action.describe()), ("reason", &err.to_string())],
+                &[("action", &words), ("reason", &err.to_string())],
             );
             for result in results.iter_mut().filter(|r| r.is_ok()) {
                 *result = Err(error.clone());
@@ -403,9 +414,13 @@ impl<A: Accounts> MailActions<A> {
                     }
                 }
                 Err(err) => {
+                    let accounts = BTreeSet::from([batch[0].account_id]);
+                    let words = self
+                        .words_for(&MailAction::Triage(triage.clone()), accounts)
+                        .await;
                     let message = fill(
                         &gettext("{action} failed: {reason}"),
-                        &[("action", &triage.describe()), ("reason", &err.to_string())],
+                        &[("action", &words), ("reason", &err.to_string())],
                     );
                     for index in members {
                         results[index] = Err(message.clone());
@@ -467,6 +482,53 @@ impl<A: Accounts> MailActions<A> {
         self.lock().back().map(|undo| undo.action.clone())
     }
 
+    /// The action the next undo reverses, in words, with each mailbox it
+    /// names given by its name. `None` when the stack is empty.
+    pub async fn newest_words(&self) -> Option<String> {
+        let (action, accounts) = {
+            let stack = self.lock();
+            let undo = stack.back()?;
+            (undo.action.clone(), accounts_in(&undo.relabel))
+        };
+        Some(self.words_for(&action, accounts).await)
+    }
+
+    /// `action` in words, each server mailbox it names given by the name
+    /// the store holds for it in `accounts`, or by its id where the store
+    /// holds none. Only an action that names a mailbox reads the store.
+    async fn words_for(&self, action: &MailAction, accounts: BTreeSet<AccountId>) -> String {
+        let names_one = matches!(
+            action,
+            MailAction::Triage(
+                TriageAction::AddLabel(_) | TriageAction::RemoveLabel(_) | TriageAction::MoveTo(_)
+            )
+        );
+        if !names_one {
+            return action.describe();
+        }
+        let read = self
+            .db
+            .read(move |c| {
+                let mut names: BTreeMap<String, String> = BTreeMap::new();
+                for account_id in accounts {
+                    for label in labels::list_labels(c, account_id)? {
+                        names.entry(label.id).or_insert(label.name);
+                    }
+                }
+                Ok(names)
+            })
+            .await;
+        match read {
+            Ok(names) => action.describe_named(|id| {
+                names.get(id).cloned().unwrap_or_else(|| id.to_string())
+            }),
+            Err(err) => {
+                tracing::warn!(error = %err, "could not read mailbox names for Undo");
+                action.describe()
+            }
+        }
+    }
+
     /// Reverses the action on top of the stack and takes it off, leaving
     /// the one before it for the next undo. `None` when the stack is
     /// empty. A target that has left the folder the action put it in is
@@ -474,6 +536,7 @@ impl<A: Accounts> MailActions<A> {
     /// archive cannot pull a conversation back out of the trash.
     pub async fn undo(&self) -> Option<Undone> {
         let undo = self.lock().pop_back()?;
+        let words = self.words_for(&undo.action, accounts_in(&undo.relabel)).await;
         let mut outcome = Outcome::default();
         let mut reversing = Vec::new();
         let mut left_alone = Vec::new();
@@ -556,6 +619,7 @@ impl<A: Accounts> MailActions<A> {
         }
         Some(Undone {
             action: undo.action,
+            words,
             outcome,
         })
     }
@@ -902,6 +966,11 @@ fn covers(target: &Target, change: &Applied) -> bool {
 /// they point at.
 fn same_thread(one: &Target, other: &Target) -> bool {
     one.account_id == other.account_id && one.thread_id == other.thread_id
+}
+
+/// The accounts an entry on the undo stack changed mail in.
+fn accounts_in(relabel: &[Reversal]) -> BTreeSet<AccountId> {
+    relabel.iter().map(|r| r.target.account_id).collect()
 }
 
 /// The targets that want the same label change in the same account, as

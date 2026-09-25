@@ -32,6 +32,9 @@ struct Heading {
     name: String,
     chevron: gtk::Image,
     count: gtk::Label,
+    /// The row's own Rules, Hide My Email and Automatic Reply actions,
+    /// gated again by [`Sidebar::regate`] when the account starts.
+    actions: gio::SimpleActionGroup,
 }
 
 pub struct Sidebar {
@@ -196,6 +199,26 @@ impl Sidebar {
         }
     }
 
+    /// Sets each account heading's own Rules, Hide My Email and Automatic
+    /// Reply actions from what `offers` says now, without rebuilding
+    /// anything else. `read_accounts` calls this every time, even while a
+    /// search on screen skips the rest of a rebuild, so an account that
+    /// starts mid-search does not leave its menu gated at "everything".
+    pub fn regate(&self, offers: impl Fn(AccountId) -> Offers) {
+        for heading in self.headings.borrow().iter() {
+            for (name, enabled) in crate::offered::account_menu_actions(offers(heading.account_id))
+            {
+                if let Some(action) = heading
+                    .actions
+                    .lookup_action(name)
+                    .and_downcast::<gio::SimpleAction>()
+                {
+                    action.set_enabled(enabled);
+                }
+            }
+        }
+    }
+
     /// Rebuilds every row. `selected` is kept selected when it still exists.
     /// Rebuilds every row. `vips` lists VIPs by address and name. `offers`
     /// says what each account offers, which words its menu.
@@ -306,7 +329,8 @@ impl Sidebar {
         }
         for (account, labels) in accounts {
             let shown = extras.names.get(&account.id);
-            let (row, chevron, count) = heading(account, shown, offers(account.id));
+            let account_offers = offers(account.id);
+            let (row, chevron, count, actions) = heading(account, shown, account_offers);
             self.list.append(&row);
             self.headings.borrow_mut().push(Heading {
                 row,
@@ -314,6 +338,7 @@ impl Sidebar {
                 name: shown.unwrap_or(&account.email).clone(),
                 chevron,
                 count,
+                actions,
             });
             for which in Standard::ALL {
                 let mailbox = Mailbox::Standard {
@@ -329,21 +354,22 @@ impl Sidebar {
                 };
                 self.add_mailbox(mailbox, &folder.name(), folder.icon(), 1);
             }
-            let mut user: Vec<&Label> = labels
-                .iter()
-                .filter(|l| l.kind == LabelKind::User)
-                .collect();
-            user.sort_by_key(|l| l.name.to_lowercase());
-            for label in user {
-                // Gmail nests labels with slashes: "Work/Clients" sits under "Work".
-                let depth = 1 + label.name.matches('/').count() as u32;
-                let leaf = label.name.rsplit('/').next().unwrap_or(&label.name);
+            // Gmail nests labels with slashes, and an IMAP server's folder
+            // names reach the store with slashes too: "Work/Clients" sits
+            // under "Work".
+            for entry in label_rows(labels) {
+                let label = entry.label;
                 let mailbox = Mailbox::Label {
                     account_id: account.id,
                     label_id: label.id.clone(),
                     name: label.name.replace('/', " › "),
                 };
-                let row = self.add_mailbox(mailbox, leaf, "penguin-mail-tag-symbolic", depth);
+                if !entry.opens {
+                    self.add_group(mailbox, entry.leaf, entry.depth);
+                    continue;
+                }
+                let row =
+                    self.add_mailbox(mailbox, entry.leaf, label_icon(account_offers), entry.depth);
                 if let Some(color) = label.color.as_deref().and_then(css_hex)
                     && let Some(icon) = row.child().and_then(|c| c.first_child())
                 {
@@ -369,6 +395,27 @@ impl Sidebar {
     /// Adds a mailbox row. `depth` indents it: 0 for the unified views, 1
     /// for an account's mailboxes, and one more per level of label nesting.
     fn add_mailbox(&self, mailbox: Mailbox, name: &str, icon: &str, depth: u32) -> gtk::ListBoxRow {
+        self.add_row(mailbox, name, icon, depth, true)
+    }
+
+    /// Adds a row for a group, a server folder that holds only other
+    /// folders. It indents and closes with its account like a mailbox, so
+    /// the folders under it nest, but nothing selects or opens it and it
+    /// takes no dropped mail.
+    fn add_group(&self, mailbox: Mailbox, name: &str, depth: u32) {
+        let row = self.add_row(mailbox, name, "folder-symbolic", depth, false);
+        row.set_tooltip_text(Some(&gettext("Holds folders, not mail")));
+    }
+
+    /// Adds a row. `opens` is false for a row that only groups others.
+    fn add_row(
+        &self,
+        mailbox: Mailbox,
+        name: &str,
+        icon: &str,
+        depth: u32,
+        opens: bool,
+    ) -> gtk::ListBoxRow {
         let content = gtk::Box::builder()
             .spacing(12)
             .margin_start(18 * depth as i32)
@@ -391,8 +438,10 @@ impl Sidebar {
         let row = gtk::ListBoxRow::builder()
             .child(&content)
             .visible(!hidden_until_used(&mailbox))
+            .selectable(opens)
+            .activatable(opens)
             .build();
-        if takes_mail(&mailbox) {
+        if opens && takes_mail(&mailbox) {
             let target = gtk::DropTarget::new(glib::Type::STRING, gdk::DragAction::MOVE);
             let (on_drop, dest) = (Rc::clone(&self.on_drop), mailbox.clone());
             target.connect_drop(move |_, value, _, _| {
@@ -599,6 +648,18 @@ fn hidden_until_used(mailbox: &Mailbox) -> bool {
     )
 }
 
+/// The icon for a folder row a person can open: the tag Gmail's labels
+/// wear, since mail there can carry several at once, or the plain folder
+/// icon the sidebar gives a group once the account keeps mail in one
+/// place at a time.
+fn label_icon(offers: Offers) -> &'static str {
+    if offers.labels {
+        "penguin-mail-tag-symbolic"
+    } else {
+        "folder-symbolic"
+    }
+}
+
 /// Mailboxes mail can be moved into.
 fn takes_mail(mailbox: &Mailbox) -> bool {
     match mailbox {
@@ -617,6 +678,36 @@ fn takes_mail(mailbox: &Mailbox) -> bool {
         | Mailbox::Set { .. }
         | Mailbox::Smart(_) => false,
     }
+}
+
+/// One of an account's own labels or folders as the sidebar lists it.
+#[derive(Debug, PartialEq, Eq)]
+struct LabelRow<'a> {
+    label: &'a Label,
+    /// The part of the name after the last slash.
+    leaf: &'a str,
+    /// 1 at the top, one more for each slash in the name.
+    depth: u32,
+    /// False for a group, which holds only other folders.
+    opens: bool,
+}
+
+/// An account's labels and folders by name, ignoring case, with the
+/// groups that hold folders, so "Work/Clients" sits under "Work" even
+/// where the server keeps no mail in "Work".
+fn label_rows(labels: &[Label]) -> Vec<LabelRow<'_>> {
+    let mut rows: Vec<LabelRow<'_>> = labels
+        .iter()
+        .filter(|l| matches!(l.kind, LabelKind::User | LabelKind::Group))
+        .map(|label| LabelRow {
+            label,
+            leaf: label.name.rsplit('/').next().unwrap_or(&label.name),
+            depth: 1 + label.name.matches('/').count() as u32,
+            opens: label.kind == LabelKind::User,
+        })
+        .collect();
+    rows.sort_by_key(|row| row.label.name.to_lowercase());
+    rows
 }
 
 /// Rename and Delete on a right click or long press of a label row.
@@ -669,28 +760,25 @@ fn context_menu(row: &gtk::ListBoxRow, menu: &gio::Menu) {
     row.connect_destroy(move |_| popover.unparent());
 }
 
-/// The settings section of an account's menu, as words and actions,
-/// holding only what the account's server `offers`. Hide My Email writes
-/// a rule for each address, so it goes where rules go.
+/// The settings section of an account's menu, as words and actions. Every
+/// setting is listed; the ones a server may lack are the account's own
+/// actions under the `account` prefix, which `heading` turns off from
+/// what the account `offers`, and their items hide while they are off.
 fn account_settings(offers: Offers) -> Vec<(String, &'static str)> {
-    let mut items = Vec::new();
-    if offers.auto_reply {
-        items.push((gettext("Automatic Reply…"), "win.account-vacation"));
-    }
-    items.push((gettext("Signature…"), "win.account-signature"));
-    if offers.rules {
-        items.push((gettext("Rules…"), "win.account-rules"));
-        items.push((gettext("Hide My Email…"), "win.account-hide-my-email"));
-    }
-    items.push((Filing::of([offers]).new_item(), "win.account-new-label"));
-    items
+    vec![
+        (gettext("Automatic Reply…"), "account.vacation"),
+        (gettext("Signature…"), "win.account-signature"),
+        (gettext("Rules…"), "account.rules"),
+        (gettext("Hide My Email…"), "account.hide-my-email"),
+        (Filing::of([offers]).new_item(), "win.account-new-label"),
+    ]
 }
 
 fn heading(
     account: &Account,
     name: Option<&String>,
     offers: Offers,
-) -> (gtk::ListBoxRow, gtk::Image, gtk::Label) {
+) -> (gtk::ListBoxRow, gtk::Image, gtk::Label, gio::SimpleActionGroup) {
     let content = gtk::Box::builder()
         .spacing(8)
         .css_classes(["sidebar-heading"])
@@ -743,7 +831,14 @@ fn heading(
     let menu = gio::Menu::new();
     let item = |label: &str, action: &str| {
         let item = gio::MenuItem::new(Some(label), None);
-        item.set_action_and_target_value(Some(action), Some(&account.id.to_variant()));
+        if action.starts_with("account.") {
+            // The row's own action knows its account, so it takes no
+            // target, and its item hides while the account lacks it.
+            item.set_action_and_target_value(Some(action), None);
+            item.set_attribute_value("hidden-when", Some(&"action-disabled".to_variant()));
+        } else {
+            item.set_action_and_target_value(Some(action), Some(&account.id.to_variant()));
+        }
         item
     };
     menu.append_item(&item(&gettext("Check for Mail"), "win.account-check"));
@@ -795,12 +890,34 @@ fn heading(
         .selectable(false)
         .activatable(true)
         .build();
+    // One `win.` action serves every account's menu, so it cannot be off
+    // for one account. The row holds this account's own Rules, Hide My
+    // Email and Automatic Reply, each off when the account lacks it;
+    // `Sidebar::regate` sets them again once the account's offers change,
+    // whether or not the row itself gets rebuilt.
+    let own = gio::SimpleActionGroup::new();
+    for (name, enabled) in crate::offered::account_menu_actions(offers) {
+        let action = gio::SimpleAction::new(name, None);
+        action.set_enabled(enabled);
+        let (weak, account_id) = (row.downgrade(), account.id);
+        action.connect_activate(move |_, _| {
+            let Some(row) = weak.upgrade() else {
+                return;
+            };
+            let target = format!("win.account-{name}");
+            if let Err(err) = row.activate_action(&target, Some(&account_id.to_variant())) {
+                tracing::warn!(error = %err, action = %target, "could not open an account setting");
+            }
+        });
+        own.add_action(&action);
+    }
+    row.insert_action_group("account", Some(&own));
     describe(
         &row,
         &heading_row_name(name.unwrap_or(&account.email), 0),
         &gettext("Show or hide this account's mailboxes"),
     );
-    (row, chevron, count)
+    (row, chevron, count, own)
 }
 
 /// The icon and the words beside an account's name for its state, or
@@ -816,7 +933,7 @@ fn status_of(account: &Account) -> Option<(&'static str, String)> {
             "network-offline-symbolic",
             fill(
                 &gettext("{provider} is not responding; retrying"),
-                &[("provider", account.provider_name())],
+                &[("provider", &mailrs_discover::resolved_provider_name(account.provider_name()))],
             ),
         )),
         AccountState::Bootstrapping => {
@@ -835,9 +952,28 @@ mod tests {
     use mailrs_domain::{Account, AccountState, Provider};
 
     use super::status_of;
-    use super::{Mailbox, Standard, heading_row_name, mailbox_row_name, takes_mail};
+    use super::{
+        Label, LabelKind, LabelRow, Mailbox, Standard, heading_row_name, label_icon, label_rows,
+        mailbox_row_name, takes_mail,
+    };
 
     use super::{Offers, account_settings};
+
+    #[test]
+    fn a_label_account_opens_a_folder_row_under_a_tag() {
+        assert_eq!(
+            label_icon(Offers { labels: true, ..Offers::EVERYTHING }),
+            "penguin-mail-tag-symbolic"
+        );
+    }
+
+    #[test]
+    fn a_folder_account_opens_a_folder_row_under_a_folder() {
+        assert_eq!(
+            label_icon(Offers { labels: false, ..Offers::EVERYTHING }),
+            "folder-symbolic"
+        );
+    }
 
     #[test]
     fn an_account_that_backs_off_names_who_is_not_answering() {
@@ -853,9 +989,18 @@ mod tests {
             provider_name: Some("Fastmail".into()),
             ..gmail.clone()
         };
+        let by_domain = Account {
+            provider_name: Some("fastmail.com".into()),
+            ..fastmail.clone()
+        };
         let said = |account: &Account| status_of(account).map(|(_, said)| said);
         assert_eq!(said(&gmail).as_deref(), Some("Gmail is not responding; retrying"));
         assert_eq!(said(&fastmail).as_deref(), Some("Fastmail is not responding; retrying"));
+        assert_eq!(
+            said(&by_domain).as_deref(),
+            Some("Fastmail is not responding; retrying"),
+            "an account saved under its domain still shows its real provider"
+        );
     }
 
     #[test]
@@ -879,26 +1024,25 @@ mod tests {
         assert_eq!(
             actions(Offers::EVERYTHING),
             [
-                "win.account-vacation",
+                "account.vacation",
                 "win.account-signature",
-                "win.account-rules",
-                "win.account-hide-my-email",
+                "account.rules",
+                "account.hide-my-email",
                 "win.account-new-label",
             ]
         );
     }
 
     #[test]
-    fn an_account_menu_leaves_out_what_the_server_lacks() {
+    fn an_account_menu_lists_every_setting_and_its_own_actions_hide_what_it_lacks() {
         let bare = Offers {
             rules: false,
             auto_reply: false,
             ..Offers::EVERYTHING
         };
-        assert_eq!(
-            actions(bare),
-            ["win.account-signature", "win.account-new-label"]
-        );
+        // The items stay in the model; the account's own actions are off,
+        // and an item bound to an action that is off hides.
+        assert_eq!(actions(bare), actions(Offers::EVERYTHING));
     }
 
     #[test]
@@ -932,5 +1076,30 @@ mod tests {
             assert!(!takes_mail(&Mailbox::Unified(which)), "{which:?}");
             assert!(!takes_mail(&Mailbox::Standard { account_id: 1, which }), "{which:?}");
         }
+    }
+
+    #[test]
+    fn a_group_nests_its_folders_but_opens_nothing() {
+        let label = |name: &str, kind| Label {
+            account_id: 1,
+            id: name.to_string(),
+            name: name.to_string(),
+            kind,
+            color: None,
+        };
+        let labels = [
+            label("Work/Clients", LabelKind::User),
+            label("INBOX", LabelKind::System),
+            label("Work", LabelKind::Group),
+            label("receipts", LabelKind::User),
+        ];
+        let rows: Vec<(&str, u32, bool)> = label_rows(&labels)
+            .iter()
+            .map(|row: &LabelRow<'_>| (row.leaf, row.depth, row.opens))
+            .collect();
+        assert_eq!(
+            rows,
+            [("receipts", 1, true), ("Work", 1, false), ("Clients", 2, true)]
+        );
     }
 }

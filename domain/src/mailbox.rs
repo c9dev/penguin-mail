@@ -114,11 +114,19 @@ pub enum MailboxKind {
     Label,
     /// A person's folder: a message sits in one.
     Folder,
+    /// A folder that holds other folders and no mail, as an IMAP server
+    /// lists a `\Noselect` or `\NonExistent` parent. Nothing opens it or
+    /// moves mail into it.
+    Group,
 }
 
 impl MailboxKind {
-    pub const ALL: [MailboxKind; 3] =
-        [MailboxKind::System, MailboxKind::Label, MailboxKind::Folder];
+    pub const ALL: [MailboxKind; 4] = [
+        MailboxKind::System,
+        MailboxKind::Label,
+        MailboxKind::Folder,
+        MailboxKind::Group,
+    ];
 
     /// The stored form, in `mailboxes.kind`.
     pub fn as_str(self) -> &'static str {
@@ -126,6 +134,7 @@ impl MailboxKind {
             MailboxKind::System => "system",
             MailboxKind::Label => "label",
             MailboxKind::Folder => "folder",
+            MailboxKind::Group => "group",
         }
     }
 }
@@ -297,6 +306,12 @@ mod tests {
             assert_eq!(provider.as_str().parse::<Provider>(), Ok(provider));
         }
         assert!("outbox".parse::<Role>().is_err());
+    }
+
+    #[test]
+    fn a_group_is_stored_as_group() {
+        assert_eq!(MailboxKind::Group.as_str(), "group");
+        assert_eq!("group".parse::<MailboxKind>(), Ok(MailboxKind::Group));
     }
 
     #[test]

@@ -16,9 +16,9 @@ mod table;
 #[cfg(any(test, feature = "fake"))]
 pub mod fake;
 
-pub use find::{STEP_LIMIT, find};
+pub use find::{STEP_LIMIT, find, table_only};
 pub use net::{Net, RealNet, RealNetError, SrvRecord};
-pub use table::{listed_domains, provider_named};
+pub use table::{listed_domains, provider_named, resolved_provider_name};
 
 use serde::Deserialize;
 

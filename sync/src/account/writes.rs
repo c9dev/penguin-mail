@@ -8,10 +8,10 @@ use futures::StreamExt;
 use mailrs_domain::translate::{fill, fill_plural, gettext};
 use mailrs_domain::{Applied, ChangeEvent, Location, Memberships, Role, Target};
 use mailrs_store::messages::Change;
-use mailrs_store::{mailboxes, messages, reminders, remote_refs, threads};
+use mailrs_store::{labels, mailboxes, messages, reminders, remote_refs, threads};
 
 use super::{AccountSync, FETCH_CONCURRENCY};
-use crate::ops::{Roles, local_changes, ops_for, reverse_changes, split_keywords};
+use crate::ops::{Roles, drop_protected, local_changes, ops_for, reverse_changes, split_keywords};
 use crate::services::{Relocated, Unapplied};
 use crate::{
     BackendError, MailBackend, MailOp, SyncError, TriageAction, backoff_delay, with_jitter,
@@ -203,7 +203,42 @@ impl AccountSync {
     ) -> Result<Vec<Applied>, SyncError> {
         let mail = &self.services.mail;
         let ops = ops_for(action, &mail.capabilities(), &self.roles(), |id| mail.set_of(id))?;
-        self.change_all(targets, &ops, &action.describe()).await
+        let what = self.describe_named(action).await;
+        self.change_all(targets, &ops, &what).await
+    }
+
+    /// `action` in words, each server mailbox it names given by the name
+    /// the store holds for it, or by its id where the store holds none.
+    /// On IMAP that id is the server's raw mailbox name, in modified
+    /// UTF-7, which a toast must never show as it is.
+    async fn describe_named(&self, action: &TriageAction) -> String {
+        let names_one = matches!(
+            action,
+            TriageAction::AddLabel(_) | TriageAction::RemoveLabel(_) | TriageAction::MoveTo(_)
+        );
+        if !names_one {
+            return action.describe();
+        }
+        let account_id = self.account_id;
+        let read = self
+            .db
+            .read(move |c| {
+                let mut names: BTreeMap<String, String> = BTreeMap::new();
+                for label in labels::list_labels(c, account_id)? {
+                    names.entry(label.id).or_insert(label.name);
+                }
+                Ok(names)
+            })
+            .await;
+        match read {
+            Ok(names) => {
+                action.describe_named(|id| names.get(id).cloned().unwrap_or_else(|| id.to_string()))
+            }
+            Err(err) => {
+                tracing::warn!(account = self.account_id, error = %err, "could not read mailbox names for a toast");
+                action.describe()
+            }
+        }
     }
 
     /// The server's id for each role's mailbox.
@@ -254,17 +289,22 @@ impl AccountSync {
             self.db
                 .write(move |c| {
                     let mut ids = Vec::new();
+                    let mut whole_thread = BTreeSet::new();
                     for (thread, only) in &wanted {
                         for message in messages::thread_messages(c, account_id, thread)? {
                             if only
                                 .as_ref()
                                 .is_none_or(|named| named.contains(&message.id))
                             {
+                                if only.is_none() {
+                                    whole_thread.insert(message.id.clone());
+                                }
                                 ids.push(message.id);
                             }
                         }
                     }
                     let held = messages::memberships_of(c, account_id, &ids)?;
+                    let ids = drop_protected(ids, &whole_thread, &held, &ops, &roles);
                     let none = Memberships::default();
                     let changes: Vec<Change> = ids
                         .iter()
@@ -290,6 +330,7 @@ impl AccountSync {
         let writing = Writing {
             what: what.to_string(),
             conversations: threads.len(),
+            provider: self.services.mail.provider_name().to_string(),
         };
         let mut budget = Budget::new(self.retry_max, self.wait_ceiling);
         let mut progress = Progress::default();
@@ -571,6 +612,9 @@ impl AccountSync {
 struct Writing {
     what: String,
     conversations: usize,
+    /// Who runs the account's server, such as "Gmail" or "Fastmail", for
+    /// a message that says who is busy or who refused.
+    provider: String,
 }
 
 /// What reached the server during one mail action.
@@ -667,8 +711,11 @@ fn retry_delay(err: &BackendError, attempt: u32, max: Duration) -> Duration {
 /// What the window says while an action sits out a rate limit.
 fn still_waiting(writing: &Writing) -> String {
     fill(
-        &gettext("Gmail is busy. Still working on {conversations}."),
-        &[("conversations", &conversations(writing.conversations))],
+        &gettext("{provider} is busy. Still working on {conversations}."),
+        &[
+            ("provider", writing.provider.as_str()),
+            ("conversations", &conversations(writing.conversations)),
+        ],
     )
 }
 
@@ -678,11 +725,15 @@ fn still_waiting(writing: &Writing) -> String {
 fn write_failure(writing: &Writing, err: &BackendError, waited: Duration) -> String {
     let what = writing.what.to_lowercase();
     let many = conversations(writing.conversations);
-    let values = [("action", what.as_str()), ("conversations", many.as_str())];
+    let values = [
+        ("action", what.as_str()),
+        ("conversations", many.as_str()),
+        ("provider", writing.provider.as_str()),
+    ];
     match err {
         BackendError::RateLimited(_) if waited.is_zero() => fill(
             &gettext(
-                "Gmail is busy, so {action} did not go through for {conversations}. \
+                "{provider} is busy, so {action} did not go through for {conversations}. \
                  Try again in a moment.",
             ),
             &values,
@@ -691,10 +742,10 @@ fn write_failure(writing: &Writing, err: &BackendError, waited: Duration) -> Str
             let waited = roughly(waited);
             fill(
                 &gettext(
-                    "Gmail stayed busy for {waited}, so {action} did not go through \
+                    "{provider} stayed busy for {waited}, so {action} did not go through \
                      for {conversations}.",
                 ),
-                &[("waited", waited.as_str()), values[0], values[1]],
+                &[("waited", waited.as_str()), values[0], values[1], values[2]],
             )
         }
         _ => fill(
@@ -724,5 +775,40 @@ fn roughly(waited: Duration) -> String {
             &[("count", &seconds.to_string())],
         ),
         _ => gettext("a minute"),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn writing(provider: &str) -> Writing {
+        Writing {
+            what: "Archive".into(),
+            conversations: 1,
+            provider: provider.into(),
+        }
+    }
+
+    #[test]
+    fn a_busy_message_names_the_accounts_own_provider() {
+        assert_eq!(
+            still_waiting(&writing("Fastmail")),
+            "Fastmail is busy. Still working on 1 conversation."
+        );
+        assert_eq!(still_waiting(&writing("Gmail")), "Gmail is busy. Still working on 1 conversation.");
+    }
+
+    #[test]
+    fn a_rate_limit_failure_names_the_accounts_own_provider() {
+        let err = BackendError::RateLimited(None);
+        assert_eq!(
+            write_failure(&writing("Fastmail"), &err, Duration::ZERO),
+            "Fastmail is busy, so archive did not go through for 1 conversation. Try again in a moment."
+        );
+        assert_eq!(
+            write_failure(&writing("Fastmail"), &err, Duration::from_secs(5)),
+            "Fastmail stayed busy for 5 seconds, so archive did not go through for 1 conversation."
+        );
     }
 }

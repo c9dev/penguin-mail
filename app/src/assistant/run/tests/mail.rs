@@ -116,6 +116,28 @@ async fn delete_forever_asks_then_erases() {
     assert_eq!(h.asked().relisted, 1, "the list drops the erased rows");
 }
 
+#[test]
+fn the_delete_forever_question_names_the_accounts_provider() {
+    assert_eq!(
+        super::super::mail::erase_question(1, &["Fastmail"]),
+        "Delete 1 conversation forever? Fastmail cannot bring it back."
+    );
+    assert_eq!(
+        super::super::mail::erase_question(3, &["Fastmail"]),
+        "Delete 3 conversations forever? Fastmail cannot bring them back."
+    );
+}
+
+/// A call whose targets span more than one provider says so instead of
+/// naming just one of them.
+#[test]
+fn the_delete_forever_question_covers_every_provider_it_spans() {
+    assert_eq!(
+        super::super::mail::erase_question(2, &["Gmail", "Fastmail"]),
+        "Delete 2 conversations forever? Each account's server cannot bring them back."
+    );
+}
+
 #[tokio::test]
 async fn delete_forever_asks_for_the_permission_it_lacks() {
     let h = harness().await;
@@ -210,6 +232,24 @@ async fn a_label_change_a_folder_account_cannot_make_says_why() {
     }
     assert!(h.asked().mail_changed.is_empty());
     assert!(h.asked().questions.is_empty());
+}
+
+/// A remove-only change stays refused, since it would otherwise move the
+/// whole thread rather than take mail out of one folder; the refusal
+/// names organize's archive as the way to do that instead.
+#[tokio::test]
+async fn a_remove_only_change_on_a_folder_account_points_to_organize() {
+    let h = folder_account().await;
+    let answer = h
+        .run("label", json!({"targets": [target("t1")], "remove": ["Kites"]}))
+        .await
+        .unwrap();
+    assert_eq!(
+        answer["unavailable"],
+        "dana@example.com files mail in folders, one folder per message. To take mail out of \
+         a folder, archive it with organize; to move it, name one folder in `add` and none in \
+         `remove`."
+    );
 }
 
 #[tokio::test]
