@@ -83,7 +83,9 @@ Installing for the owner: `NO_AUTOSTART=1 scripts/install.sh`.
 throwaway store; nothing talks to Google. With no display, run it under
 `Xvfb` and `dbus-run-session`; `scripts/a11y-names.sh` shows the full
 recipe, including waiting for the window to reach the accessibility bus.
-Take screenshots of the hidden display to check a visual change.
+Take screenshots of the hidden display with `scripts/demo-shot.sh out.png`
+(`--run drive.py` clicks or types first). It takes down the accessibility
+registry it starts; a hand-made recipe leaves one running for every shot.
 Render SVGs with `rsvg-convert`: ImageMagick mangles gradients and makes
 a good icon look broken.
 
