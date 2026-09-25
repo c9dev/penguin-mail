@@ -548,11 +548,6 @@ impl MainWindow {
                 .bidirectional()
                 .sync_create()
                 .build();
-            assistant_split
-                .bind_property("show-sidebar", &calendar.assistant_button, "active")
-                .bidirectional()
-                .sync_create()
-                .build();
             let stack = gtk::Stack::builder()
                 .transition_type(gtk::StackTransitionType::Crossfade)
                 .build();
@@ -2608,6 +2603,11 @@ impl MainWindow {
         calendar.append_item(&declined);
         menu.append_section(None, &calendar);
         let first = gio::Menu::new();
+        // The calendar's header has no room for the assistant's button,
+        // so the menu both spaces share offers it, with its key.
+        let assistant = gio::MenuItem::new(Some(&gettext("Assistant")), Some("win.assistant"));
+        assistant.set_attribute_value("accel", Some(&"<Control>j".to_variant()));
+        first.append_item(&assistant);
         first.append(Some(&gettext("Check for Mail")), Some("win.check"));
         first.append(Some(&gettext("Add Account…")), Some("win.add-account"));
         first.append(Some(&gettext("New Smart Mailbox…")), Some("win.smart-new"));

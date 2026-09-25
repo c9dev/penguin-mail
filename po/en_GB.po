@@ -1341,7 +1341,7 @@ msgstr "New message"
 msgid "From {senders}"
 msgstr "From {senders}"
 
-#: app/src/notify.rs:195 app/src/ui/window.rs:2227
+#: app/src/notify.rs:195 app/src/ui/window.rs:2222
 msgid "Open"
 msgstr "Open"
 
@@ -1891,7 +1891,7 @@ msgstr "That account is not connected."
 msgid "Could not save: {reason}"
 msgstr "Could not save: {reason}"
 
-#: app/src/protection/draft.rs:200 app/src/ui/window.rs:2145
+#: app/src/protection/draft.rs:200 app/src/ui/window.rs:2140
 msgid "Could not open the draft: {reason}"
 msgstr "Could not open the draft: {reason}"
 
@@ -2117,7 +2117,10 @@ msgstr "Anthropic API"
 msgid "Claude subscription"
 msgstr "Claude subscription"
 
+#. The calendar's header has no room for the assistant's button,
+#. so the menu both spaces share offers it, with its key.
 #: app/src/settings/mod.rs:200 app/src/ui/assistant.rs:99
+#: app/src/ui/window.rs:2608
 msgid "Assistant"
 msgstr "Assistant"
 
@@ -2540,7 +2543,7 @@ msgid "Signing In…"
 msgstr "Signing In…"
 
 #: app/src/ui/add_account.rs:634 app/src/ui/add_account.rs:903
-#: app/src/ui/window.rs:963
+#: app/src/ui/window.rs:958
 msgid "Sign In"
 msgstr "Sign In"
 
@@ -2732,7 +2735,7 @@ msgid "Edit {server}"
 msgstr "Edit {server}"
 
 #: app/src/ui/assistant_mcp_prefs.rs:121 app/src/ui/composer/mod.rs:1413
-#: app/src/ui/composer/recipients.rs:304 app/src/ui/window.rs:2425
+#: app/src/ui/composer/recipients.rs:304 app/src/ui/window.rs:2420
 msgid "Remove"
 msgstr "Remove"
 
@@ -3147,57 +3150,52 @@ msgstr "{title}, all day, {calendar}"
 msgid "{title}, {start} to {end}, {calendar}"
 msgstr "{title}, {start} to {end}, {calendar}"
 
-#: app/src/ui/calendar/mod.rs:236
+#: app/src/ui/calendar/mod.rs:235
 msgid "View"
 msgstr "View"
 
-#: app/src/ui/calendar/mod.rs:244
+#: app/src/ui/calendar/mod.rs:243
 msgid "New Event"
 msgstr "New Event"
 
-#: app/src/ui/calendar/mod.rs:247 app/src/ui/calendar/mod.rs:249
+#: app/src/ui/calendar/mod.rs:246 app/src/ui/calendar/mod.rs:248
 msgid "Search the Calendar (Ctrl+F)"
 msgstr "Search the Calendar (Ctrl+F)"
 
-#: app/src/ui/calendar/mod.rs:252 app/src/ui/calendar/mod.rs:255
+#: app/src/ui/calendar/mod.rs:251 app/src/ui/calendar/mod.rs:254
 msgid "Show Calendars"
 msgstr "Show Calendars"
 
-#: app/src/ui/calendar/mod.rs:258 app/src/ui/calendar/mod.rs:260
-#: app/src/ui/thread_list.rs:238
-msgid "Assistant (Ctrl+J)"
-msgstr "Assistant (Ctrl+J)"
-
-#: app/src/ui/calendar/mod.rs:277 app/src/ui/calendar/mod.rs:279
+#: app/src/ui/calendar/mod.rs:270 app/src/ui/calendar/mod.rs:272
 msgid "Search the Calendar"
 msgstr "Search the Calendar"
 
-#: app/src/ui/calendar/mod.rs:683
+#: app/src/ui/calendar/mod.rs:675
 msgid "List"
 msgstr "List"
 
-#: app/src/ui/calendar/mod.rs:684
+#: app/src/ui/calendar/mod.rs:676
 msgid "Day"
 msgstr "Day"
 
-#: app/src/ui/calendar/mod.rs:685
+#: app/src/ui/calendar/mod.rs:677
 msgid "Week"
 msgstr "Week"
 
-#: app/src/ui/calendar/mod.rs:686
+#: app/src/ui/calendar/mod.rs:678
 msgid "Month"
 msgstr "Month"
 
-#: app/src/ui/calendar/mod.rs:873
+#: app/src/ui/calendar/mod.rs:865
 msgid "All-day"
 msgstr "All-day"
 
-#: app/src/ui/calendar/mod.rs:1135 app/src/ui/calendar/mod.rs:1614
+#: app/src/ui/calendar/mod.rs:1127 app/src/ui/calendar/mod.rs:1606
 #: app/src/ui/calendar/sidebar.rs:111
 msgid "%a"
 msgstr "%a"
 
-#: app/src/ui/calendar/mod.rs:1414
+#: app/src/ui/calendar/mod.rs:1406
 msgid "Could not send your answer: {reason}"
 msgstr "Could not send your answer: {reason}"
 
@@ -3271,7 +3269,7 @@ msgstr "Penguin Mail cannot see this account's calendars"
 
 #: app/src/ui/calendar/sidebar.rs:381 app/src/ui/contacts_prefs.rs:228
 #: app/src/ui/permission.rs:41 app/src/ui/permission.rs:64
-#: app/src/ui/window.rs:1032
+#: app/src/ui/window.rs:1027
 msgid "Grant Access"
 msgstr "Grant Access"
 
@@ -5038,6 +5036,10 @@ msgstr "New Message (C)"
 msgid "Search (/)"
 msgstr "Search (/)"
 
+#: app/src/ui/thread_list.rs:238
+msgid "Assistant (Ctrl+J)"
+msgstr "Assistant (Ctrl+J)"
+
 #. The tooltips already say what these do; the spoken name takes
 #. the words and leaves the keys to a property of their own.
 #: app/src/ui/thread_list.rs:242
@@ -5223,7 +5225,7 @@ msgstr "Only Reply to My Contacts"
 msgid "%a, %-d %b %Y"
 msgstr "%a, %-d %b %Y"
 
-#: app/src/ui/welcome.rs:20 app/src/ui/window.rs:2353
+#: app/src/ui/welcome.rs:20 app/src/ui/window.rs:2348
 msgid "Sign In with Google"
 msgstr "Sign In with Google"
 
@@ -5405,104 +5407,104 @@ msgid_plural "Moved {count} messages to the Inbox"
 msgstr[0] "Moved {count} message to the Inbox"
 msgstr[1] "Moved {count} messages to the Inbox"
 
-#: app/src/ui/window.rs:573
+#: app/src/ui/window.rs:568
 msgid "Penguin Mail (Demo)"
 msgstr "Penguin Mail (Demo)"
 
-#: app/src/ui/window.rs:906
+#: app/src/ui/window.rs:901
 msgid "Could not read accounts: {reason}"
 msgstr "Could not read accounts: {reason}"
 
-#: app/src/ui/window.rs:960
+#: app/src/ui/window.rs:955
 msgid "Sign in again to keep {account} syncing"
 msgstr "Sign in again to keep {account} syncing"
 
-#: app/src/ui/window.rs:1633
+#: app/src/ui/window.rs:1628
 msgid "Could not delete the mail: {reason}"
 msgstr "Could not delete the mail: {reason}"
 
-#: app/src/ui/window.rs:1703
+#: app/src/ui/window.rs:1698
 msgid "Turn On the {service}"
 msgstr "Turn On the {service}"
 
-#: app/src/ui/window.rs:1706
+#: app/src/ui/window.rs:1701
 msgid "The Google Cloud project Penguin Mail signs in with has the {service} switched off, so Google refuses before it can ask for your permission. Turn it on, wait a minute, and try again."
 msgstr "The Google Cloud project Penguin Mail signs in with has the {service} switched off, so Google refuses before it can ask for your permission. Turn it on, wait a minute, and try again."
 
-#: app/src/ui/window.rs:1712
+#: app/src/ui/window.rs:1707
 msgid "Open Google Cloud"
 msgstr "Open Google Cloud"
 
-#: app/src/ui/window.rs:1793 app/src/ui/window/scheduled.rs:21
+#: app/src/ui/window.rs:1788 app/src/ui/window/scheduled.rs:21
 #: app/src/ui/window/shortcuts.rs:444
 msgid "Undo"
 msgstr "Undo"
 
-#: app/src/ui/window.rs:1814
+#: app/src/ui/window.rs:1809
 msgid "Nothing to undo"
 msgstr "Nothing to undo"
 
-#: app/src/ui/window.rs:1820
+#: app/src/ui/window.rs:1815
 msgid "{action} undone"
 msgstr "{action} undone"
 
-#: app/src/ui/window.rs:2092
+#: app/src/ui/window.rs:2087
 msgid "Could not include {file}: {reason}"
 msgstr "Could not include {file}: {reason}"
 
-#: app/src/ui/window.rs:2203
+#: app/src/ui/window.rs:2198
 msgid "Downloading {file}…"
 msgstr "Downloading {file}…"
 
-#: app/src/ui/window.rs:2224 app/src/ui/window/attachments.rs:229
+#: app/src/ui/window.rs:2219 app/src/ui/window/attachments.rs:229
 msgid "Saved {file} to Downloads"
 msgstr "Saved {file} to Downloads"
 
-#: app/src/ui/window.rs:2242 app/src/ui/window/attachments.rs:234
+#: app/src/ui/window.rs:2237 app/src/ui/window/attachments.rs:234
 msgid "Could not save {file}: {reason}"
 msgstr "Could not save {file}: {reason}"
 
-#: app/src/ui/window.rs:2270
+#: app/src/ui/window.rs:2265
 msgid "{account} is signed in again."
 msgstr "{account} is signed in again."
 
-#: app/src/ui/window.rs:2305 app/src/ui/window.rs:2340
+#: app/src/ui/window.rs:2300 app/src/ui/window.rs:2335
 msgid "Added {account}. Downloading mail…"
 msgstr "Added {account}. Downloading mail…"
 
-#: app/src/ui/window.rs:2331
+#: app/src/ui/window.rs:2326
 msgid "Waiting for Your Browser…"
 msgstr "Waiting for Your Browser…"
 
-#: app/src/ui/window.rs:2334
+#: app/src/ui/window.rs:2329
 msgid "Continue in your browser"
 msgstr "Continue in your browser"
 
-#: app/src/ui/window.rs:2364
+#: app/src/ui/window.rs:2359
 msgid "This copy of Penguin Mail was built without Google sign-in."
 msgstr "This copy of Penguin Mail was built without Google sign-in."
 
-#: app/src/ui/window.rs:2366
+#: app/src/ui/window.rs:2361
 msgid "Get a Release"
 msgstr "Get a Release"
 
-#: app/src/ui/window.rs:2418
+#: app/src/ui/window.rs:2413
 msgid "Remove {account}?"
 msgstr "Remove {account}?"
 
-#: app/src/ui/window.rs:2422
+#: app/src/ui/window.rs:2417
 msgid "Its downloaded mail and saved sign-in are deleted from this computer. Nothing changes in Gmail."
 msgstr "Its downloaded mail and saved sign-in are deleted from this computer. Nothing changes in Gmail."
 
-#: app/src/ui/window.rs:2438
+#: app/src/ui/window.rs:2433
 msgid "Removed {account}"
 msgstr "Removed {account}"
 
-#: app/src/ui/window.rs:2440
+#: app/src/ui/window.rs:2435
 msgid "Could not remove {account}: {reason}"
 msgstr "Could not remove {account}: {reason}"
 
-#: app/src/ui/window.rs:2604
+#: app/src/ui/window.rs:2599
 msgid "Show Declined Events"
 msgstr "Show Declined Events"
 
