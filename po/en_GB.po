@@ -3122,31 +3122,27 @@ msgstr "{title}, {when}, {calendar}"
 msgid "Nothing earlier on this computer"
 msgstr "Nothing earlier on this computer"
 
-#: app/src/ui/calendar/block.rs:100
-msgid "Waiting to be saved"
-msgstr "Waiting to be saved"
-
-#: app/src/ui/calendar/block.rs:152
+#: app/src/ui/calendar/block.rs:256
 msgid "Waiting to be sent"
 msgstr "Waiting to be sent"
 
-#: app/src/ui/calendar/block.rs:155
+#: app/src/ui/calendar/block.rs:259 app/src/ui/calendar/popover.rs:330
 msgid "Not answered yet"
 msgstr "Not answered yet"
 
-#: app/src/ui/calendar/block.rs:156
+#: app/src/ui/calendar/block.rs:260
 msgid "Declined"
 msgstr "Declined"
 
-#: app/src/ui/calendar/block.rs:186
+#: app/src/ui/calendar/block.rs:305
 msgid "{start}–{end}"
 msgstr "{start}–{end}"
 
-#: app/src/ui/calendar/block.rs:215
+#: app/src/ui/calendar/block.rs:332
 msgid "{title}, all day, {calendar}"
 msgstr "{title}, all day, {calendar}"
 
-#: app/src/ui/calendar/block.rs:220
+#: app/src/ui/calendar/block.rs:337
 msgid "{title}, {start} to {end}, {calendar}"
 msgstr "{title}, {start} to {end}, {calendar}"
 
@@ -3199,19 +3195,24 @@ msgstr "%a"
 msgid "Could not send your answer: {reason}"
 msgstr "Could not send your answer: {reason}"
 
-#: app/src/ui/calendar/popover.rs:132
+#: app/src/ui/calendar/popover.rs:135
 msgid "Open in Maps"
 msgstr "Open in Maps"
 
-#: app/src/ui/calendar/popover.rs:154 app/src/ui/invitation.rs:188
+#: app/src/ui/calendar/popover.rs:154 app/src/ui/calendar/popover.rs:332
+#: app/src/ui/invitation.rs:188
 msgid "Answer"
 msgstr "Answer"
+
+#: app/src/ui/calendar/popover.rs:342
+msgid "Your answer"
+msgstr "Your answer"
 
 #: app/src/ui/calendar/range.rs:102 app/src/ui/calendar/words.rs:74
 msgid "%A %-d"
 msgstr "%A %-d"
 
-#: app/src/ui/calendar/range.rs:105 app/src/ui/calendar/sidebar.rs:326
+#: app/src/ui/calendar/range.rs:105 app/src/ui/calendar/sidebar.rs:328
 msgid "%B %Y"
 msgstr "%B %Y"
 
@@ -3251,37 +3252,37 @@ msgstr "Next Week"
 msgid "Previous Week"
 msgstr "Previous Week"
 
-#: app/src/ui/calendar/shown.rs:80 app/src/ui/calendar/sidebar.rs:186
+#: app/src/ui/calendar/shown.rs:80 app/src/ui/calendar/sidebar.rs:188
 msgid "Next Month"
 msgstr "Next Month"
 
-#: app/src/ui/calendar/shown.rs:80 app/src/ui/calendar/sidebar.rs:185
+#: app/src/ui/calendar/shown.rs:80 app/src/ui/calendar/sidebar.rs:187
 msgid "Previous Month"
 msgstr "Previous Month"
 
-#: app/src/ui/calendar/sidebar.rs:371
+#: app/src/ui/calendar/sidebar.rs:373
 msgid "Grant Access to show shared calendars"
 msgstr "Grant Access to show shared calendars"
 
-#: app/src/ui/calendar/sidebar.rs:377
+#: app/src/ui/calendar/sidebar.rs:379
 msgid "Penguin Mail cannot see this account's calendars"
 msgstr "Penguin Mail cannot see this account's calendars"
 
-#: app/src/ui/calendar/sidebar.rs:381 app/src/ui/contacts_prefs.rs:228
+#: app/src/ui/calendar/sidebar.rs:383 app/src/ui/contacts_prefs.rs:228
 #: app/src/ui/permission.rs:41 app/src/ui/permission.rs:64
 #: app/src/ui/window.rs:1027
 msgid "Grant Access"
 msgstr "Grant Access"
 
-#: app/src/ui/calendar/sidebar.rs:406
+#: app/src/ui/calendar/sidebar.rs:408
 msgid "You can only read this calendar"
 msgstr "You can only read this calendar"
 
-#: app/src/ui/calendar/sidebar.rs:447 app/src/ui/contacts_prefs.rs:234
+#: app/src/ui/calendar/sidebar.rs:449 app/src/ui/contacts_prefs.rs:234
 msgid "Grant Access for {account}"
 msgstr "Grant Access for {account}"
 
-#: app/src/ui/calendar/time_grid.rs:130
+#: app/src/ui/calendar/time_grid.rs:140
 msgid "{count} more event"
 msgid_plural "{count} more events"
 msgstr[0] "{count} more event"
@@ -3323,19 +3324,23 @@ msgstr "Join with Google Meet"
 msgid "Join Call"
 msgstr "Join Call"
 
-#: app/src/ui/calendar/words.rs:156
+#: app/src/ui/calendar/words.rs:147
+msgid "Open {place} in Maps"
+msgstr "Open {place} in Maps"
+
+#: app/src/ui/calendar/words.rs:162
 msgid "{count} more"
 msgid_plural "{count} more"
 msgstr[0] "{count} more"
 msgstr[1] "{count} more"
 
-#: app/src/ui/calendar/words.rs:167
+#: app/src/ui/calendar/words.rs:173
 msgid "{count} more event on {date}"
 msgid_plural "{count} more events on {date}"
 msgstr[0] "{count} more event on {date}"
 msgstr[1] "{count} more events on {date}"
 
-#: app/src/ui/calendar/words.rs:182
+#: app/src/ui/calendar/words.rs:188
 msgid "{date}, has events"
 msgstr "{date}, has events"
 

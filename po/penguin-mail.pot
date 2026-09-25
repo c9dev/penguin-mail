@@ -3195,31 +3195,27 @@ msgstr ""
 msgid "Nothing earlier on this computer"
 msgstr ""
 
-#: app/src/ui/calendar/block.rs:100
-msgid "Waiting to be saved"
-msgstr ""
-
-#: app/src/ui/calendar/block.rs:152
+#: app/src/ui/calendar/block.rs:256
 msgid "Waiting to be sent"
 msgstr ""
 
-#: app/src/ui/calendar/block.rs:155
+#: app/src/ui/calendar/block.rs:259 app/src/ui/calendar/popover.rs:330
 msgid "Not answered yet"
 msgstr ""
 
-#: app/src/ui/calendar/block.rs:156
+#: app/src/ui/calendar/block.rs:260
 msgid "Declined"
 msgstr ""
 
-#: app/src/ui/calendar/block.rs:186
+#: app/src/ui/calendar/block.rs:305
 msgid "{start}–{end}"
 msgstr ""
 
-#: app/src/ui/calendar/block.rs:215
+#: app/src/ui/calendar/block.rs:332
 msgid "{title}, all day, {calendar}"
 msgstr ""
 
-#: app/src/ui/calendar/block.rs:220
+#: app/src/ui/calendar/block.rs:337
 msgid "{title}, {start} to {end}, {calendar}"
 msgstr ""
 
@@ -3272,19 +3268,24 @@ msgstr ""
 msgid "Could not send your answer: {reason}"
 msgstr ""
 
-#: app/src/ui/calendar/popover.rs:132
+#: app/src/ui/calendar/popover.rs:135
 msgid "Open in Maps"
 msgstr ""
 
-#: app/src/ui/calendar/popover.rs:154 app/src/ui/invitation.rs:188
+#: app/src/ui/calendar/popover.rs:154 app/src/ui/calendar/popover.rs:332
+#: app/src/ui/invitation.rs:188
 msgid "Answer"
+msgstr ""
+
+#: app/src/ui/calendar/popover.rs:342
+msgid "Your answer"
 msgstr ""
 
 #: app/src/ui/calendar/range.rs:102 app/src/ui/calendar/words.rs:74
 msgid "%A %-d"
 msgstr ""
 
-#: app/src/ui/calendar/range.rs:105 app/src/ui/calendar/sidebar.rs:326
+#: app/src/ui/calendar/range.rs:105 app/src/ui/calendar/sidebar.rs:328
 msgid "%B %Y"
 msgstr ""
 
@@ -3324,37 +3325,37 @@ msgstr ""
 msgid "Previous Week"
 msgstr ""
 
-#: app/src/ui/calendar/shown.rs:80 app/src/ui/calendar/sidebar.rs:186
+#: app/src/ui/calendar/shown.rs:80 app/src/ui/calendar/sidebar.rs:188
 msgid "Next Month"
 msgstr ""
 
-#: app/src/ui/calendar/shown.rs:80 app/src/ui/calendar/sidebar.rs:185
+#: app/src/ui/calendar/shown.rs:80 app/src/ui/calendar/sidebar.rs:187
 msgid "Previous Month"
 msgstr ""
 
-#: app/src/ui/calendar/sidebar.rs:371
+#: app/src/ui/calendar/sidebar.rs:373
 msgid "Grant Access to show shared calendars"
 msgstr ""
 
-#: app/src/ui/calendar/sidebar.rs:377
+#: app/src/ui/calendar/sidebar.rs:379
 msgid "Penguin Mail cannot see this account's calendars"
 msgstr ""
 
-#: app/src/ui/calendar/sidebar.rs:381 app/src/ui/contacts_prefs.rs:228
+#: app/src/ui/calendar/sidebar.rs:383 app/src/ui/contacts_prefs.rs:228
 #: app/src/ui/permission.rs:41 app/src/ui/permission.rs:64
 #: app/src/ui/window.rs:1027
 msgid "Grant Access"
 msgstr ""
 
-#: app/src/ui/calendar/sidebar.rs:406
+#: app/src/ui/calendar/sidebar.rs:408
 msgid "You can only read this calendar"
 msgstr ""
 
-#: app/src/ui/calendar/sidebar.rs:447 app/src/ui/contacts_prefs.rs:234
+#: app/src/ui/calendar/sidebar.rs:449 app/src/ui/contacts_prefs.rs:234
 msgid "Grant Access for {account}"
 msgstr ""
 
-#: app/src/ui/calendar/time_grid.rs:130
+#: app/src/ui/calendar/time_grid.rs:140
 msgid "{count} more event"
 msgid_plural "{count} more events"
 msgstr[0] ""
@@ -3396,19 +3397,23 @@ msgstr ""
 msgid "Join Call"
 msgstr ""
 
-#: app/src/ui/calendar/words.rs:156
+#: app/src/ui/calendar/words.rs:147
+msgid "Open {place} in Maps"
+msgstr ""
+
+#: app/src/ui/calendar/words.rs:162
 msgid "{count} more"
 msgid_plural "{count} more"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/calendar/words.rs:167
+#: app/src/ui/calendar/words.rs:173
 msgid "{count} more event on {date}"
 msgid_plural "{count} more events on {date}"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/calendar/words.rs:182
+#: app/src/ui/calendar/words.rs:188
 msgid "{date}, has events"
 msgstr ""
 

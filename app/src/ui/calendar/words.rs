@@ -141,7 +141,13 @@ pub fn is_meet(link: &str) -> bool {
     link.contains("meet.google.com")
 }
 
-/// Where the "Open in Maps" link opens: an OpenStreetMap search for
+/// What the popover's place row says it does: it opens the place in a
+/// map, though it shows only the place.
+pub fn open_place_words(place: &str) -> String {
+    fill(&gettext("Open {place} in Maps"), &[("place", place)])
+}
+
+/// Where the popover's place row opens: an OpenStreetMap search for
 /// `place`, form-encoded the way a calendar event's free-text place
 /// needs to be.
 pub fn maps_url(place: &str) -> String {
@@ -292,6 +298,14 @@ mod tests {
     fn is_meet_reads_a_google_meet_link() {
         assert!(is_meet("https://meet.google.com/abc-defg-hij"));
         assert!(!is_meet("https://zoom.example/meet/1"));
+    }
+
+    #[test]
+    fn the_place_row_says_it_opens_the_place_in_maps() {
+        assert_eq!(
+            open_place_words("Room 2.04, Rua Augusta 24"),
+            "Open Room 2.04, Rua Augusta 24 in Maps"
+        );
     }
 
     #[test]
