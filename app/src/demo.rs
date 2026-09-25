@@ -48,9 +48,19 @@ const DESIGN_TEAM: &str = "design-team";
 /// own primary.
 const HOLIDAYS_PT: &str = "holidays-pt";
 
+/// The first demo account's own second calendar, for its non-work life.
+const FAMILY: &str = "family";
+
+/// The second demo account's calendar it only reads, and keeps out of
+/// the merged view: the mockup's "Marketing", read-only and hidden.
+const MARKETING: &str = "marketing";
+
 /// Sprint planning's video call link, on both its series and its moved
 /// occurrence.
 const SPRINT_PLANNING_LINK: &str = "https://meet.google.com/fernwood-sprint";
+
+/// Quarterly review's video call link.
+const QUARTERLY_REVIEW_LINK: &str = "https://meet.google.com/fernwood-quarterly";
 
 pub const DISPLAY_NAME: &str = "Dana Reyes";
 
@@ -776,21 +786,31 @@ impl mailrs_sync::Accounts for Seeding {
 
 /// The calendars demo account `index` keeps, its own primary always
 /// among them. Split across the three accounts so the merged view shows
-/// each event once.
+/// each event once, and named and coloured as the approved mockup's
+/// sidebar draws them (`calendar-mockup/mockups.py`).
 fn demo_calendars(index: usize) -> Vec<CalendarModel> {
-    let personal = CalendarModel {
-        id: "primary".into(),
-        name: "Personal".into(),
-        color: "#e8660c".into(),
-        access: Access::Owner,
-        zone: LISBON.into(),
-        primary: true,
-        shown: true,
-        reminders: Vec::new(),
-    };
     match index {
         0 => vec![
-            personal,
+            CalendarModel {
+                id: "primary".into(),
+                name: "Personal".into(),
+                color: "#e8660c".into(),
+                access: Access::Owner,
+                zone: LISBON.into(),
+                primary: true,
+                shown: true,
+                reminders: Vec::new(),
+            },
+            CalendarModel {
+                id: FAMILY.into(),
+                name: "Family".into(),
+                color: "#2ec27e".into(),
+                access: Access::Owner,
+                zone: LISBON.into(),
+                primary: false,
+                shown: true,
+                reminders: Vec::new(),
+            },
             CalendarModel {
                 id: HOLIDAYS_PT.into(),
                 name: "Holidays in Portugal".into(),
@@ -803,7 +823,16 @@ fn demo_calendars(index: usize) -> Vec<CalendarModel> {
             },
         ],
         1 => vec![
-            personal,
+            CalendarModel {
+                id: "primary".into(),
+                name: "Work".into(),
+                color: "#3584e4".into(),
+                access: Access::Owner,
+                zone: LISBON.into(),
+                primary: true,
+                shown: true,
+                reminders: Vec::new(),
+            },
             CalendarModel {
                 id: DESIGN_TEAM.into(),
                 name: "Design team".into(),
@@ -814,8 +843,27 @@ fn demo_calendars(index: usize) -> Vec<CalendarModel> {
                 shown: true,
                 reminders: Vec::new(),
             },
+            CalendarModel {
+                id: MARKETING.into(),
+                name: "Marketing".into(),
+                color: "#e5a50a".into(),
+                access: Access::Reader,
+                zone: LISBON.into(),
+                primary: false,
+                shown: false,
+                reminders: Vec::new(),
+            },
         ],
-        _ => vec![personal],
+        _ => vec![CalendarModel {
+            id: "primary".into(),
+            name: "Personal".into(),
+            color: "#e8660c".into(),
+            access: Access::Owner,
+            zone: LISBON.into(),
+            primary: true,
+            shown: true,
+            reminders: Vec::new(),
+        }],
     }
 }
 
@@ -871,22 +919,48 @@ fn all_day_utc(date: chrono::NaiveDate, days: i64) -> (EpochMillis, EpochMillis)
     (start, end)
 }
 
-/// The first demo account's week: Personal for its own doings, Holidays
-/// in Portugal for the one public holiday near `now`.
+/// The first demo account's week: Personal for its own doings, Family
+/// for Ana's birthday and the two family outings, and Holidays in
+/// Portugal for the one public holiday near `now`. Titles, times and
+/// calendars follow the approved mockup (`calendar-mockup/mockups.py`),
+/// for the week it draws (Monday to Sunday).
 fn account0_events(now: EpochMillis) -> Vec<CalendarEvent> {
     use chrono::Datelike;
     let monday = week_monday(now);
     let mut events = vec![
         timed_event("primary", "lunch-with-ana", "Lunch with Ana", at_week(monday, 1, 13, 0), at_week(monday, 1, 14, 0)),
         timed_event("primary", "dentist", "Dentist", at_week(monday, 2, 11, 0), at_week(monday, 2, 12, 0)),
+        timed_event("primary", "gym", "Gym", at_week(monday, 1, 16, 0), at_week(monday, 1, 17, 0)),
         timed_event(
-            "primary",
+            FAMILY,
             "swimming-lessons",
             "Swimming lessons",
             at_week(monday, 5, 10, 0),
             at_week(monday, 5, 12, 0),
         ),
+        timed_event(
+            FAMILY,
+            "family-lunch",
+            "Family lunch",
+            at_week(monday, 6, 13, 0),
+            at_week(monday, 6, 15, 30),
+        ),
     ];
+    let (birthday_start, birthday_end) = all_day_utc(monday.date_naive(), 1);
+    events.push(CalendarEvent {
+        calendar: FAMILY.into(),
+        id: "anas-birthday".into(),
+        uid: "anas-birthday@local".into(),
+        start: birthday_start,
+        end: birthday_end,
+        zone: "UTC".into(),
+        all_day: true,
+        title: "Ana's birthday".into(),
+        busy: false,
+        status: CalendarStatus::Confirmed,
+        rules: vec!["RRULE:FREQ=YEARLY".into()],
+        ..CalendarEvent::default()
+    });
     let year = monday.year();
     let republic_day = chrono::NaiveDate::from_ymd_opt(year, 10, 5).unwrap_or_else(|| monday.date_naive());
     let (start, end) = all_day_utc(republic_day, 1);
@@ -907,11 +981,14 @@ fn account0_events(now: EpochMillis) -> Vec<CalendarEvent> {
     events
 }
 
-/// The second demo account's week: the Design team's own meetings, and,
-/// on its primary calendar, the two invitation-linked events under the
-/// same UIDs the sample mail carries, plus "Design crit" so the design
-/// review's card shows a clash. The invitations' events sit there alone,
-/// so the week holds no second "Sprint planning".
+/// The second demo account's week: the weekday Stand-up and the rest of
+/// its own doings on Work, the Design team's own meetings, and, on the
+/// Work calendar, the two invitation-linked events under the same UIDs
+/// the sample mail carries, plus "Design crit" so the design review's
+/// card shows a clash. The invitations' events sit there alone, so the
+/// week holds no second "Sprint planning". Titles, times and calendars
+/// otherwise follow the approved mockup (`calendar-mockup/mockups.py`),
+/// for the week it draws (Monday to Sunday).
 fn account1_events(now: EpochMillis) -> Vec<CalendarEvent> {
     let monday = week_monday(now);
 
@@ -919,12 +996,7 @@ fn account1_events(now: EpochMillis) -> Vec<CalendarEvent> {
     let mut events = vec![
         CalendarEvent {
             rules: vec!["RRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR".into()],
-            ..timed_event(DESIGN_TEAM, "standup", "Stand-up", standup_start, at_week(monday, 0, 9, 45))
-        },
-        CalendarEvent {
-            series: Some("standup".into()),
-            original_start: Some(at_week(monday, 3, 9, 30)),
-            ..timed_event(DESIGN_TEAM, "standup-moved", "Stand-up", at_week(monday, 3, 10, 0), at_week(monday, 3, 10, 15))
+            ..timed_event("primary", "standup", "Stand-up", standup_start, at_week(monday, 0, 9, 45))
         },
         timed_event(
             DESIGN_TEAM,
@@ -933,27 +1005,24 @@ fn account1_events(now: EpochMillis) -> Vec<CalendarEvent> {
             at_week(monday, 0, 11, 0),
             at_week(monday, 0, 12, 0),
         ),
-        {
-            let mut workshop = timed_event(
-                DESIGN_TEAM,
-                "client-workshop",
-                "Client workshop",
-                at_week(monday, 3, 11, 0),
-                at_week(monday, 3, 13, 0),
-            );
-            workshop.my_answer = Some(Answer::No);
-            workshop.guests = vec![CalendarGuest {
-                email: ACCOUNTS[1].email.into(),
-                me: true,
-                answer: Some(Answer::No),
-                ..CalendarGuest::default()
-            }];
-            workshop
-        },
+        timed_event(
+            "primary",
+            "one-on-one-rita",
+            "1:1 with Rita",
+            at_week(monday, 0, 14, 0),
+            at_week(monday, 0, 15, 30),
+        ),
+        timed_event(
+            "primary",
+            "client-workshop",
+            "Client workshop",
+            at_week(monday, 3, 11, 0),
+            at_week(monday, 3, 13, 0),
+        ),
     ];
     let (offsite_start, offsite_end) = all_day_utc(monday.date_naive() + chrono::Duration::days(3), 2);
     events.push(CalendarEvent {
-        calendar: DESIGN_TEAM.into(),
+        calendar: "primary".into(),
         id: "lisbon-offsite".into(),
         uid: "lisbon-offsite@local".into(),
         start: offsite_start,
@@ -971,13 +1040,13 @@ fn account1_events(now: EpochMillis) -> Vec<CalendarEvent> {
     // team", so it agrees with the invitation reaching the guest's own
     // calendar).
     let (rule, starts) = planning_series(now);
-    let sprint_start = *starts.first().unwrap_or(&at_week(monday, 2, 15, 0));
+    let sprint_start = *starts.first().unwrap_or(&at_week(monday, 2, 10, 0));
     events.push(CalendarEvent {
         calendar: "primary".into(),
         id: "sprint-planning".into(),
         uid: MOVED_UID.into(),
         start: sprint_start,
-        end: sprint_start + 60 * 60_000,
+        end: sprint_start + 90 * 60_000,
         zone: LISBON.into(),
         title: "Sprint planning".into(),
         busy: true,
@@ -992,7 +1061,7 @@ fn account1_events(now: EpochMillis) -> Vec<CalendarEvent> {
         id: "sprint-planning-moved".into(),
         uid: MOVED_UID.into(),
         start: moved_start,
-        end: moved_start + 60 * 60_000,
+        end: moved_start + 90 * 60_000,
         zone: LISBON.into(),
         title: "Sprint planning".into(),
         busy: true,
@@ -1050,6 +1119,65 @@ fn account1_events(now: EpochMillis) -> Vec<CalendarEvent> {
         title: "Design crit".into(),
         busy: true,
         status: CalendarStatus::Confirmed,
+        ..CalendarEvent::default()
+    });
+
+    // Quarterly review, on the Design team calendar, still waiting for an
+    // answer, as the mockup's popover draws it: dashed on the grid, four
+    // of its six guests already said yes.
+    let quarterly_start = at_week(monday, 2, 15, 0);
+    events.push(CalendarEvent {
+        calendar: DESIGN_TEAM.into(),
+        id: "quarterly-review".into(),
+        uid: "quarterly-review@local".into(),
+        start: quarterly_start,
+        end: quarterly_start + 60 * 60_000,
+        zone: LISBON.into(),
+        title: "Quarterly review".into(),
+        place: "Room 2.04, Rua Augusta 24".into(),
+        busy: true,
+        status: CalendarStatus::Confirmed,
+        organizer: Some("rita@fernwood.example".into()),
+        conference: Some(QUARTERLY_REVIEW_LINK.into()),
+        guests: vec![
+            CalendarGuest {
+                email: "rita@fernwood.example".into(),
+                name: Some("Rita Lopes".into()),
+                answer: Some(Answer::Yes),
+                organizer: true,
+                me: false,
+            },
+            CalendarGuest {
+                email: ACCOUNTS[1].email.into(),
+                me: true,
+                answer: None,
+                ..CalendarGuest::default()
+            },
+            CalendarGuest {
+                email: "priya@fernwood.example".into(),
+                name: Some("Priya Raman".into()),
+                answer: Some(Answer::Yes),
+                ..CalendarGuest::default()
+            },
+            CalendarGuest {
+                email: "jonas@fernwood.example".into(),
+                name: Some("Jonas Weber".into()),
+                answer: Some(Answer::Yes),
+                ..CalendarGuest::default()
+            },
+            CalendarGuest {
+                email: "theo.alves@fernwood.example".into(),
+                name: Some("Theo Alves".into()),
+                answer: Some(Answer::Yes),
+                ..CalendarGuest::default()
+            },
+            CalendarGuest {
+                email: "mara.okafor@example.org".into(),
+                name: Some("Mara Okafor".into()),
+                answer: Some(Answer::No),
+                ..CalendarGuest::default()
+            },
+        ],
         ..CalendarEvent::default()
     });
 
@@ -1815,7 +1943,7 @@ fn moved_ics(now: EpochMillis) -> String {
     let stamp = |at: chrono::DateTime<chrono::Utc>| at.format("%Y%m%dT%H%M%SZ").to_string();
     let sent = chrono::DateTime::from_timestamp_millis(now).unwrap_or_default();
     let start = planning_is(now);
-    let end = start + chrono::Duration::minutes(60);
+    let end = start + chrono::Duration::minutes(90);
     [
         "BEGIN:VCALENDAR".to_string(),
         "PRODID:-//Google Inc//Google Calendar 70.9054//EN".to_string(),
@@ -1851,9 +1979,9 @@ fn moved_ics(now: EpochMillis) -> String {
 }
 
 /// Where the sprint planning meeting sat before the update: Wednesday at
-/// 15:00 local.
+/// 10:00 local, as the approved mockup draws it overlapping Dentist.
 fn planning_was(now: EpochMillis) -> chrono::DateTime<chrono::Local> {
-    weekday_at(now, chrono::Weekday::Wed, 15)
+    weekday_at(now, chrono::Weekday::Wed, 10)
 }
 
 /// Where it sits now: Thursday at 11:00 local.
