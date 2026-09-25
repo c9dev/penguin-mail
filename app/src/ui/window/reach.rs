@@ -128,16 +128,18 @@ impl MainWindow {
         self.word_buttons(&self.conversation, &shown, reached);
         self.word_filing(&self.conversation, accounts);
         // Collected first, so word_filing (which borrows `detached`
-        // through mailbox_of) does not run while this loop holds it.
-        let windows: Vec<_> = self
-            .detached
-            .borrow()
-            .iter()
-            .filter_map(|held| {
-                let view = held.view.upgrade()?;
-                Some((view, held.mailbox.clone(), held.account_id, held.actions.clone()))
-            })
-            .collect();
+        // through mailbox_of) does not run while this loop holds it. A
+        // window that closed between gates drops out of `detached` here,
+        // the same way `views` prunes it, so the list holds one entry per
+        // window opened rather than growing with every one closed.
+        let mut windows = Vec::new();
+        self.detached.borrow_mut().retain(|held| match held.view.upgrade() {
+            Some(view) => {
+                windows.push((view, held.mailbox.clone(), held.account_id, held.actions.clone()));
+                true
+            }
+            None => false,
+        });
         for (view, mailbox, account_id, actions) in windows {
             self.word_buttons(&view, &mailbox, [account_id]);
             self.word_filing(&view, [account_id]);
