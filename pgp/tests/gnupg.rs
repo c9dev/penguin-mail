@@ -9,21 +9,35 @@ use mailrs_pgp::{Trust, Verdict};
 /// A directory holding one executable called `gpg` that runs `script`.
 fn stand_in(script: &str) -> (tempfile::TempDir, Program) {
     let dir = tempfile::tempdir().expect("a temp directory");
-    let path = dir.path().join("gpg");
-    std::fs::write(&path, format!("#!/bin/sh\n{script}\n")).expect("write");
-    permit_run(&path);
+    write_script(&dir.path().join("gpg"), script);
     let program = Program::find_on(&dir.path().to_string_lossy(), &["gpg"]).expect("found");
     (dir, program)
 }
 
-#[cfg(unix)]
-fn permit_run(path: &Path) {
-    use std::os::unix::fs::PermissionsExt;
-    std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o700)).expect("chmod");
+/// Writes `body` as a shell script at `path`, ready to run. A child `sh`
+/// writes it, so this process never holds it open for writing. Had it held
+/// it, another test forking at that moment would pass the write handle to
+/// its child, and Linux would refuse to run the script with "Text file busy"
+/// until that child exec'd.
+fn write_script(path: &Path, body: &str) {
+    use std::io::Write;
+    let mut writer = std::process::Command::new("sh")
+        .args(["-c", "cat > \"$1\" && chmod 700 \"$1\"", "sh"])
+        .arg(path)
+        .stdin(std::process::Stdio::piped())
+        .spawn()
+        .expect("sh starts");
+    writer
+        .stdin
+        .take()
+        .expect("sh's input")
+        .write_all(format!("#!/bin/sh\n{body}\n").as_bytes())
+        .expect("write");
+    assert!(
+        writer.wait().expect("sh ends").success(),
+        "sh wrote the script"
+    );
 }
-
-#[cfg(not(unix))]
-fn permit_run(_path: &Path) {}
 
 /// The bug this pins: status lines and human messages shared stderr, and
 /// the human messages quote what a sender wrote. A line there that looked
@@ -98,24 +112,14 @@ fn a_run_with_a_limit_stops_a_program_that_never_answers() {
     ));
     let started = std::time::Instant::now();
 
-    // Another test forking while this one's script is still open for
-    // writing makes Linux refuse to run it ("Text file busy") until that
-    // child execs, so the refusal gets a few tries before it counts.
-    let mut tries = 0;
-    let err = loop {
-        match program.run_within(
-            std::time::Duration::from_millis(500),
-            b"",
-            Pinentry::Never,
-            |_| {},
-        ) {
-            Ok(_) => panic!("a program that sleeps for 30 seconds answered in half of one"),
-            Err(err) if err.kind() == std::io::ErrorKind::ExecutableFileBusy && tries < 5 => {
-                tries += 1;
-                std::thread::sleep(std::time::Duration::from_millis(50));
-            }
-            Err(err) => break err,
-        }
+    let err = match program.run_within(
+        std::time::Duration::from_millis(500),
+        b"",
+        Pinentry::Never,
+        |_| {},
+    ) {
+        Ok(_) => panic!("a program that sleeps for 30 seconds answered in half of one"),
+        Err(err) => err,
     };
 
     let waited = started.elapsed();
@@ -217,12 +221,10 @@ fn every_address_is_looked_up_in_one_run() {
     let dir = tempfile::tempdir().expect("a temp directory");
     let asked = dir.path().join("asked");
     let path = dir.path().join("gpg");
-    std::fs::write(
+    write_script(
         &path,
-        format!("#!/bin/sh\necho \"$@\" >> {}\n", asked.to_string_lossy()),
-    )
-    .expect("write");
-    permit_run(&path);
+        &format!("echo \"$@\" >> {}", asked.to_string_lossy()),
+    );
     let pgp = mailrs_pgp::Pgp::find_on(&dir.path().to_string_lossy()).expect("found");
     let addresses: Vec<String> = ["ada", "bo", "cy"]
         .iter()
@@ -247,12 +249,10 @@ fn reading_a_message_never_goes_looking_for_a_key() {
     let dir = tempfile::tempdir().expect("a temp directory");
     let asked = dir.path().join("asked");
     let path = dir.path().join("gpg");
-    std::fs::write(
+    write_script(
         &path,
-        format!("#!/bin/sh\necho \"$@\" >> {}\n", asked.to_string_lossy()),
-    )
-    .expect("write");
-    permit_run(&path);
+        &format!("echo \"$@\" >> {}", asked.to_string_lossy()),
+    );
     let pgp = mailrs_pgp::Pgp::find_on(&dir.path().to_string_lossy()).expect("found");
 
     let _ = pgp.verify(b"Meet at six.", b"signature");
