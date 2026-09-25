@@ -124,6 +124,10 @@ impl MailBackend for AnyMail {
         forward_all_now!(AnyMail, self, capabilities())
     }
 
+    fn provider_name(&self) -> &str {
+        forward_all_now!(AnyMail, self, provider_name())
+    }
+
     fn mailbox_for(&self, role: Role) -> Option<String> {
         forward_all_now!(AnyMail, self, mailbox_for(role))
     }

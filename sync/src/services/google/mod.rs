@@ -156,6 +156,10 @@ impl<G: GmailApi> MailBackend for Google<G> {
         self.capabilities.unwrap_or(GMAIL)
     }
 
+    fn provider_name(&self) -> &str {
+        "Gmail"
+    }
+
     fn mailbox_for(&self, role: Role) -> Option<String> {
         gmail::label_of_role(role).map(str::to_string)
     }

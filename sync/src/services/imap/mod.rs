@@ -326,6 +326,10 @@ impl<I: ImapApi, S: Submit> MailBackend for Imap<I, S> {
         }
     }
 
+    fn provider_name(&self) -> &str {
+        &self.settings.provider_name
+    }
+
     /// Nothing paces an IMAP server the way Gmail's quota does, so nobody
     /// waits on it.
     fn person_waiting(&self) -> bool {

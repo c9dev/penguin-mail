@@ -472,6 +472,10 @@ pub enum Missing {
 pub trait MailBackend: Send + Sync + 'static {
     fn capabilities(&self) -> MailCapabilities;
 
+    /// Who runs the account's server, in the words a person reads: a
+    /// brand such as "Gmail", or an IMAP account's own provider name.
+    fn provider_name(&self) -> &str;
+
     /// Whether the person is waiting on this account's server now.
     /// Backfill reads it between pages and gives way.
     fn person_waiting(&self) -> bool;
