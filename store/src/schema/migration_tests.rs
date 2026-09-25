@@ -592,3 +592,35 @@ fn a_gmail_account_from_before_imap_stays_as_it_was() {
     assert_eq!((provider.as_str(), name), ("gmail", None));
     assert!(dir.path().join("mail.db.before-32").exists());
 }
+
+/// A message's location is `remote_refs(account_id, mailbox, uidvalidity,
+/// uid)`: an IMAP account looks up a mailbox's stored messages by that
+/// tuple on every listing, so it needs an index rather than a table scan.
+#[test]
+fn migration_32_indexes_remote_refs_by_location() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("mail.db");
+    let conn = open_with(&path, &MIGRATIONS[..32]).unwrap();
+    let indexed_columns = |index: &str| -> Vec<String> {
+        conn.prepare(&format!("PRAGMA index_info({index})"))
+            .unwrap()
+            .query_map([], |row| row.get::<_, String>(2))
+            .unwrap()
+            .collect::<rusqlite::Result<_>>()
+            .unwrap()
+    };
+    let indexes: Vec<String> = conn
+        .prepare("SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = 'remote_refs'")
+        .unwrap()
+        .query_map([], |row| row.get(0))
+        .unwrap()
+        .collect::<rusqlite::Result<_>>()
+        .unwrap();
+    assert!(
+        indexes
+            .iter()
+            .any(|index| indexed_columns(index)
+                == ["account_id", "mailbox", "uidvalidity", "uid"]),
+        "remote_refs has no index on (account_id, mailbox, uidvalidity, uid): {indexes:?}"
+    );
+}

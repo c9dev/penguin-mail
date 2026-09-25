@@ -472,6 +472,8 @@ CREATE TABLE account_servers (
     pinned_certificate BLOB,
     PRIMARY KEY (account_id, role)
 );
+-- An IMAP folder's listing looks up its stored messages by location.
+CREATE INDEX remote_refs_by_location ON remote_refs(account_id, mailbox, uidvalidity, uid);
 "#,
 ];
 
