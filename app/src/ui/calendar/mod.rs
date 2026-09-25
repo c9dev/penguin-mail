@@ -4,3 +4,4 @@
 
 pub mod layout;
 pub mod range;
+pub mod tint;

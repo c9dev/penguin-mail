@@ -322,3 +322,92 @@ flowboxchild:focus-visible > .recipient-chip {
 /* Add Account's links to a provider's pages line up under the words they
    follow, where a link button's own padding would push them in. */
 .account-note button.link { padding: 2px 0; min-height: 0; }
+
+/* Calendar. The grid is a card on the window background; hairlines only
+   at hour marks; events are tinted cards with a bar of their colour. The
+   per-colour tints come from ui/calendar/tint.rs. */
+.cal-accent { --cal-colour: var(--accent-bg-color); }
+.calendar-card {
+  background: var(--view-bg-color);
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, currentColor 10%, transparent);
+}
+/* An event block is a button so a press answers at once; GTK's own
+   button rules would otherwise add a background, a border and a shadow
+   on top of the tint. */
+button.event-block {
+  border-radius: 8px;
+  padding: 4px 8px 4px 11px;
+  background-color: color-mix(in srgb, var(--accent-bg-color) 14%, var(--view-bg-color));
+  box-shadow: none;
+  min-height: 0;
+  border: none;
+}
+button.event-block:hover {
+  background-color: color-mix(in srgb, var(--accent-bg-color) 22%, var(--view-bg-color));
+}
+button.event-block:active {
+  background-color: color-mix(in srgb, var(--accent-bg-color) 28%, var(--view-bg-color));
+}
+@media (prefers-color-scheme: dark) {
+  button.event-block:hover {
+    background-color: color-mix(in srgb, var(--accent-bg-color) 32%, var(--view-bg-color));
+  }
+}
+.event-block .bar { min-width: 3px; border-radius: 2px; background: var(--cal-colour); }
+.event-block .title { font-weight: 700; }
+.event-block .time { opacity: 0.62; font-size: 0.88em; font-feature-settings: "tnum"; }
+.event-block.unanswered {
+  background: var(--view-bg-color);
+  border: 1.5px dashed var(--cal-colour);
+}
+.event-block.declined { opacity: 0.5; }
+.event-block.declined .title { text-decoration: line-through; }
+.event-block:focus-visible { outline: 2px solid var(--accent-color); outline-offset: 1px; }
+/* "Mon" and "All-day" stay title case in the string a screen reader
+   reads; the small capitals are drawn, not spoken. */
+.day-heading .weekday {
+  font-size: 0.8em;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  opacity: 0.62;
+  text-transform: uppercase;
+}
+.day-heading .date { font-weight: 800; }
+.day-heading.today {
+  background: color-mix(in srgb, var(--accent-bg-color) 18%, transparent);
+  border-radius: 999px;
+  color: var(--accent-color);
+}
+.hour-label { font-size: 0.8em; opacity: 0.5; font-feature-settings: "tnum"; }
+.all-day-label {
+  font-size: 0.68em;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  opacity: 0.5;
+  text-transform: uppercase;
+}
+.range-title .bold { font-weight: 800; font-size: 1.35em; }
+.range-title .dim { font-size: 1.35em; opacity: 0.45; }
+.range-title .week { font-size: 0.85em; font-weight: 600; opacity: 0.45; }
+.mini-month button { min-width: 30px; min-height: 28px; padding: 0; border-radius: 8px; }
+.mini-month button.today {
+  background: var(--accent-bg-color);
+  color: var(--accent-fg-color);
+  font-weight: 700;
+}
+.mini-month button.outside { opacity: 0.4; }
+.mini-month .dot { min-width: 4px; min-height: 4px; border-radius: 99px; background: currentColor; opacity: 0.45; }
+/* The indicator is the checkbutton's `check` child, not the row itself,
+   or the circle would wrap the calendar's name too. */
+checkbutton.calendar-check > check {
+  min-width: 16px;
+  min-height: 16px;
+  border-radius: 99px;
+  border: 1.6px solid var(--cal-colour);
+  background: transparent;
+}
+checkbutton.calendar-check > check:checked {
+  background: var(--cal-colour);
+  color: white;
+}
