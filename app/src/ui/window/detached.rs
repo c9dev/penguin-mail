@@ -14,6 +14,16 @@ use super::triage::deletes;
 use crate::ui::conversation::ConversationView;
 use mailrs_domain::translate::gettext;
 
+/// A conversation in a window of its own, and what gating its actions
+/// again needs: the mailbox it was opened from, its account, and the
+/// action group its menus and keys use.
+pub(super) struct Detached {
+    pub view: Weak<ConversationView>,
+    pub mailbox: Mailbox,
+    pub account_id: AccountId,
+    pub actions: gio::SimpleActionGroup,
+}
+
 impl MainWindow {
     /// Opens the conversation on screen in its own window.
     pub(super) fn open_current_in_window(self: &Rc<Self>) {
@@ -46,9 +56,6 @@ impl MainWindow {
         let mailbox = self.shown();
         self.word_buttons(&view, &mailbox, [summary.account_id]);
         self.word_filing(&view, [summary.account_id]);
-        self.detached
-            .borrow_mut()
-            .push((Rc::downgrade(&view), mailbox.clone()));
         if let Some(filter) = self.app.upgrade().and_then(|app| app.filter()) {
             view.set_filter(filter);
         }
@@ -63,7 +70,13 @@ impl MainWindow {
             .default_height(760)
             .content(&view.page)
             .build();
-        self.install_window_actions(&window, &view, &mailbox, summary.account_id);
+        let actions = self.install_window_actions(&window, &view, &mailbox, summary.account_id);
+        self.detached.borrow_mut().push(Detached {
+            view: Rc::downgrade(&view),
+            mailbox,
+            account_id: summary.account_id,
+            actions,
+        });
         // The view lives as long as its window.
         let keep = Rc::clone(&view);
         window.connect_destroy(move |_| {
@@ -79,7 +92,7 @@ impl MainWindow {
         let mut views = vec![Rc::clone(&self.conversation)];
         self.detached
             .borrow_mut()
-            .retain(|(held, _)| match held.upgrade() {
+            .retain(|held| match held.view.upgrade() {
                 Some(view) => {
                     views.push(view);
                     true
@@ -96,29 +109,43 @@ impl MainWindow {
         self.detached
             .borrow()
             .iter()
-            .find(|(held, _)| {
-                held.upgrade()
+            .find(|held| {
+                held.view
+                    .upgrade()
                     .is_some_and(|held| std::ptr::eq(&*held, view))
             })
-            .map_or_else(
-                || self.shown(),
-                |(_, mailbox)| mailbox.clone(),
-            )
+            .map_or_else(|| self.shown(), |held| held.mailbox.clone())
     }
 
     /// The `win.*` actions a separate window's menus and keys use, and
-    /// its keys. The window shows one conversation from `account_id` for
-    /// good, so what that account lacks is turned off once, here.
+    /// its keys. The window shows one conversation from `account_id`, so
+    /// what that account lacks is turned off here, and again by
+    /// `follow_gates` once the account has started.
     fn install_window_actions(
         self: &Rc<Self>,
         window: &adw::Window,
         view: &Rc<ConversationView>,
         mailbox: &Mailbox,
         account_id: AccountId,
-    ) {
+    ) -> gio::SimpleActionGroup {
         let group = gio::SimpleActionGroup::new();
         self.install_view_actions(&group, view);
         self.install_outbox_actions(&group, view);
+        self.gate_window(&group, view, mailbox, account_id);
+        window.insert_action_group("win", Some(&group));
+        window.add_controller(super::shortcuts::conversation_chords());
+        group
+    }
+
+    /// Turns a separate window's actions on or off by what `account_id`
+    /// offers now.
+    pub(super) fn gate_window(
+        &self,
+        group: &gio::SimpleActionGroup,
+        view: &ConversationView,
+        mailbox: &Mailbox,
+        account_id: AccountId,
+    ) {
         for (name, enabled) in gates(mailbox, self.offers(account_id)) {
             if let Some(action) = group.lookup_action(name).and_downcast::<gio::SimpleAction>() {
                 action.set_enabled(enabled);
@@ -127,8 +154,6 @@ impl MainWindow {
                 view.offer_categorize_sender(enabled);
             }
         }
-        window.insert_action_group("win", Some(&group));
-        window.add_controller(super::shortcuts::conversation_chords());
     }
 
     /// Shows the newest message in `view` as it arrived, headers and all.

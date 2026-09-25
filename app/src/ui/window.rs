@@ -143,9 +143,10 @@ pub struct MainWindow {
     /// kept here, since every thread that opens asks about it.
     image_senders: RefCell<Vec<mailrs_store::image_senders::ImageSender>>,
     /// The conversations in windows of their own, each with the mailbox it
-    /// was opened from, so a flag colour or an undo reaches them too. An
-    /// entry that no longer upgrades is a window somebody closed.
-    detached: RefCell<Vec<(Weak<ConversationView>, Mailbox)>>,
+    /// was opened from and its own action group, so a flag colour, an
+    /// undo or a gate set again reaches them too. An entry that no longer
+    /// upgrades is a window somebody closed.
+    detached: RefCell<Vec<detached::Detached>>,
     /// The scratch copies of attachments this window opened.
     previews: previews::Previews,
 }
@@ -810,15 +811,22 @@ impl MainWindow {
             self.sidebar
                 .rebuild(&data, &extras, &mailbox, |id| self.offers(id));
         }
-        // Each hidden address comes with its own rules, so the window's
-        // Hide My Email works only while some account can hold them.
-        if let Some(action) = self
-            .actions
-            .lookup_action("hide-my-email")
-            .and_downcast::<gio::SimpleAction>()
-        {
-            action.set_enabled(data.iter().any(|(a, _)| self.offers(a.id).rules));
+        // Each hidden address comes with its own rules, so Hide My Email
+        // works only while some account can hold them, and each account
+        // action only while some account has what it opens.
+        let offers: Vec<Offers> = data.iter().map(|(a, _)| self.offers(a.id)).collect();
+        for (name, enabled) in crate::offered::account_actions(&offers) {
+            if let Some(action) = self
+                .actions
+                .lookup_action(name)
+                .and_downcast::<gio::SimpleAction>()
+            {
+                action.set_enabled(enabled);
+            }
         }
+        // This runs when an account starts, so what the open
+        // conversations offer is read again here.
+        self.follow_gates();
         self.list
             .set_show_accounts(mailbox.account().is_none() && data.len() > 1);
         let reauth: Vec<&str> = data
@@ -2254,12 +2262,18 @@ impl MainWindow {
         let with_account = |name: &str, run: AccountAction| {
             let action = gio::SimpleAction::new(name, Some(glib::VariantTy::INT64));
             let weak = Rc::downgrade(self);
+            let gate = name.to_string();
             action.connect_activate(move |_, parameter| {
                 let (Some(win), Some(id)) =
                     (weak.upgrade(), parameter.and_then(|p| p.get::<i64>()))
                 else {
                     return;
                 };
+                // One action serves every account's menu, so it turns away
+                // an account that lacks what the action opens.
+                if !crate::offered::account_action_on(&gate, win.offers(id)) {
+                    return;
+                }
                 if let Some(account) = win.account(id) {
                     run(&win, account);
                 }
@@ -2726,8 +2740,11 @@ impl MainWindow {
         self.toasts.add_toast(toast);
     }
 
+    /// Shows the Keyboard Shortcuts window. Its label line says Move to
+    /// folder when every account files mail in folders.
     fn show_shortcuts(&self) {
-        shortcuts::dialog().present(Some(&self.window));
+        let offers: Vec<Offers> = self.accounts().iter().map(|a| self.offers(a.id)).collect();
+        shortcuts::dialog(Filing::of(offers)).present(Some(&self.window));
     }
 
     fn show_about(self: &Rc<Self>) {

@@ -669,21 +669,18 @@ fn context_menu(row: &gtk::ListBoxRow, menu: &gio::Menu) {
     row.connect_destroy(move |_| popover.unparent());
 }
 
-/// The settings section of an account's menu, as words and actions,
-/// holding only what the account's server `offers`. Hide My Email writes
-/// a rule for each address, so it goes where rules go.
+/// The settings section of an account's menu, as words and actions. Every
+/// setting is listed; the ones a server may lack are the account's own
+/// actions under the `account` prefix, which `heading` turns off from
+/// what the account `offers`, and their items hide while they are off.
 fn account_settings(offers: Offers) -> Vec<(String, &'static str)> {
-    let mut items = Vec::new();
-    if offers.auto_reply {
-        items.push((gettext("Automatic Reply…"), "win.account-vacation"));
-    }
-    items.push((gettext("Signature…"), "win.account-signature"));
-    if offers.rules {
-        items.push((gettext("Rules…"), "win.account-rules"));
-        items.push((gettext("Hide My Email…"), "win.account-hide-my-email"));
-    }
-    items.push((Filing::of([offers]).new_item(), "win.account-new-label"));
-    items
+    vec![
+        (gettext("Automatic Reply…"), "account.vacation"),
+        (gettext("Signature…"), "win.account-signature"),
+        (gettext("Rules…"), "account.rules"),
+        (gettext("Hide My Email…"), "account.hide-my-email"),
+        (Filing::of([offers]).new_item(), "win.account-new-label"),
+    ]
 }
 
 fn heading(
@@ -743,7 +740,14 @@ fn heading(
     let menu = gio::Menu::new();
     let item = |label: &str, action: &str| {
         let item = gio::MenuItem::new(Some(label), None);
-        item.set_action_and_target_value(Some(action), Some(&account.id.to_variant()));
+        if action.starts_with("account.") {
+            // The row's own action knows its account, so it takes no
+            // target, and its item hides while the account lacks it.
+            item.set_action_and_target_value(Some(action), None);
+            item.set_attribute_value("hidden-when", Some(&"action-disabled".to_variant()));
+        } else {
+            item.set_action_and_target_value(Some(action), Some(&account.id.to_variant()));
+        }
         item
     };
     menu.append_item(&item(&gettext("Check for Mail"), "win.account-check"));
@@ -795,6 +799,27 @@ fn heading(
         .selectable(false)
         .activatable(true)
         .build();
+    // One `win.` action serves every account's menu, so it cannot be off
+    // for one account. The row holds this account's own Rules, Hide My
+    // Email and Automatic Reply, each off when the account lacks it; the
+    // sidebar is rebuilt when an account starts, which gates them again.
+    let own = gio::SimpleActionGroup::new();
+    for (name, enabled) in crate::offered::account_menu_actions(offers) {
+        let action = gio::SimpleAction::new(name, None);
+        action.set_enabled(enabled);
+        let (weak, account_id) = (row.downgrade(), account.id);
+        action.connect_activate(move |_, _| {
+            let Some(row) = weak.upgrade() else {
+                return;
+            };
+            let target = format!("win.account-{name}");
+            if let Err(err) = row.activate_action(&target, Some(&account_id.to_variant())) {
+                tracing::warn!(error = %err, action = %target, "could not open an account setting");
+            }
+        });
+        own.add_action(&action);
+    }
+    row.insert_action_group("account", Some(&own));
     describe(
         &row,
         &heading_row_name(name.unwrap_or(&account.email), 0),
@@ -879,26 +904,25 @@ mod tests {
         assert_eq!(
             actions(Offers::EVERYTHING),
             [
-                "win.account-vacation",
+                "account.vacation",
                 "win.account-signature",
-                "win.account-rules",
-                "win.account-hide-my-email",
+                "account.rules",
+                "account.hide-my-email",
                 "win.account-new-label",
             ]
         );
     }
 
     #[test]
-    fn an_account_menu_leaves_out_what_the_server_lacks() {
+    fn an_account_menu_lists_every_setting_and_its_own_actions_hide_what_it_lacks() {
         let bare = Offers {
             rules: false,
             auto_reply: false,
             ..Offers::EVERYTHING
         };
-        assert_eq!(
-            actions(bare),
-            ["win.account-signature", "win.account-new-label"]
-        );
+        // The items stay in the model; the account's own actions are off,
+        // and an item bound to an action that is off hides.
+        assert_eq!(actions(bare), actions(Offers::EVERYTHING));
     }
 
     #[test]
