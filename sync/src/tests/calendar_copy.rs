@@ -139,6 +139,33 @@ async fn without_any_calendar_permission_the_refresh_says_so() {
     assert!(matches!(done, Permitted::NeedsPermission));
 }
 
+/// Google cannot say which calendar scope a refusal is for, so the first
+/// refresh finds out with one list call and one read. After that the
+/// account costs nothing until half an hour passes or the person grants
+/// the permission, and it keeps no calendar that would read as synced.
+#[tokio::test]
+async fn without_any_calendar_permission_the_account_is_left_alone() {
+    let h = harness().await;
+    h.fake.with(|s| s.calendars = vec![calendar("primary", true)]);
+    h.fake.withhold(mailrs_gmail::CALENDAR_SCOPE);
+    let copy = copy(&h);
+    let accounts = [h.account_id];
+    let first = copy.refresh_due(&accounts, NOW, true).await.unwrap();
+    assert_eq!(first.needs_permission, vec![h.account_id]);
+    let calls = || h.fake.usage().calls_to("calendar.events.list") + h.fake.usage().calls_to("calendar.calendarList.list");
+    let before = calls();
+    let again = copy.refresh_due(&accounts, NOW + READ_EVERY_OPEN, true).await.unwrap();
+    assert_eq!(calls(), before, "no call a minute later");
+    assert!(again.needs_permission.is_empty(), "nothing new to say");
+    let account = h.account_id;
+    assert!(h.db.read(move |c| store::calendars(c, account)).await.unwrap().is_empty(), "no fallback calendar");
+
+    h.fake.grant(mailrs_gmail::CALENDAR_SCOPE);
+    copy.permission_changed(h.account_id);
+    copy.refresh_due(&accounts, NOW + 2 * READ_EVERY_OPEN, true).await.unwrap();
+    assert!(h.db.read(move |c| store::synced(c, account)).await.unwrap(), "a grant reads at once");
+}
+
 /// reconcile.md Task 5 item 4: recording `last_list` only after a
 /// successful call meant a refused list was asked for again on every
 /// tick. It now waits `LIST_EVERY` whether the call succeeded or not.

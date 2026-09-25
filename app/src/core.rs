@@ -688,6 +688,7 @@ impl Core {
             .ok_or_else(|| anyhow!("sync is not running"))?;
         let (db, tokens) = (self.db.clone(), Arc::clone(&self.tokens));
         let extra = extra.to_vec();
+        let calendar_copy = self.calendar_copy();
         self.call(async move {
             let flow = authorize(&oauth, GMAIL_API_BASE, &extra, move |url: &str| {
                 let _ = urls.try_send(url.to_string());
@@ -716,6 +717,9 @@ impl Core {
             let account = signed_in(&db, &authorized.email, now_millis()).await?;
             let services = AccountServices::google(connect_account(oauth, tokens, &account).await?);
             engine.start_account(account.id, services);
+            // The sign-in may have granted the calendar permission, so the
+            // copy stops waiting out an earlier refusal.
+            calendar_copy.permission_changed(account.id);
             Ok::<_, anyhow::Error>(account)
         })
         .await

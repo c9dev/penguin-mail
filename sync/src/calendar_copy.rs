@@ -14,7 +14,9 @@
 //! An account that granted `calendar.events` but not the list scope
 //! (ruling R2) still gets its primary calendar, addressed by the
 //! account's own address, which needs no list permission; stage 2 asks
-//! for the list scope so a shared or subscribed calendar joins it.
+//! for the list scope so a shared or subscribed calendar joins it. An
+//! account without `calendar.events` costs one list call and one read,
+//! then nothing until half an hour passes or the person signs it in again.
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -79,6 +81,8 @@ pub struct CalendarCopy<A: Accounts> {
     db: Db,
     last_list: Mutex<HashMap<AccountId, EpochMillis>>,
     last_read: Mutex<HashMap<AccountId, EpochMillis>>,
+    /// When each account was last found to lack `calendar.events` itself.
+    refused: Mutex<HashMap<AccountId, EpochMillis>>,
     /// Held for the length of one `refresh_due` pass, so a tick that is
     /// still reading a large calendar is never joined by a second one
     /// reading and, once Task 6 lands, sending the same change twice
@@ -94,8 +98,30 @@ impl<A: Accounts> CalendarCopy<A> {
             db,
             last_list: Mutex::new(HashMap::new()),
             last_read: Mutex::new(HashMap::new()),
+            refused: Mutex::new(HashMap::new()),
             running: tokio::sync::Mutex::new(()),
         }
+    }
+
+    /// Forgets what the account was refused and when it was last read,
+    /// so the next tick reads it at once. The app calls this once the
+    /// person signs the account in again, which is how a permission is
+    /// granted.
+    pub fn permission_changed(&self, account_id: AccountId) {
+        self.refused.lock().expect("copy poisoned").remove(&account_id);
+        self.last_list.lock().expect("copy poisoned").remove(&account_id);
+        self.last_read.lock().expect("copy poisoned").remove(&account_id);
+    }
+
+    /// Whether the account turned out to lack the calendar permission less
+    /// than [`LIST_EVERY`] ago, so asking again would only spend a call on
+    /// a refusal.
+    fn refused_lately(&self, account_id: AccountId, now: EpochMillis) -> bool {
+        self.refused
+            .lock()
+            .expect("copy poisoned")
+            .get(&account_id)
+            .is_some_and(|at| now - at < LIST_EVERY)
     }
 
     /// Refreshes each account whose last read is older than the cadence
@@ -126,7 +152,7 @@ impl<A: Accounts> CalendarCopy<A> {
                 }
             }
             let last = self.last_read.lock().expect("copy poisoned").get(&account_id).copied();
-            if last.is_some_and(|last| now - last < every) {
+            if last.is_some_and(|last| now - last < every) || self.refused_lately(account_id, now) {
                 continue;
             }
             match self.refresh(account_id, now).await {
@@ -164,6 +190,9 @@ impl<A: Accounts> CalendarCopy<A> {
         account_id: AccountId,
         now: EpochMillis,
     ) -> Result<Permitted<Refreshed>, SyncError> {
+        if self.refused_lately(account_id, now) {
+            return Ok(Permitted::NeedsPermission);
+        }
         let list_due = self
             .last_list
             .lock()
@@ -201,7 +230,16 @@ impl<A: Accounts> CalendarCopy<A> {
             }
             match self.read_calendar(calendar, account_id, &entry.id, now).await? {
                 Permitted::Done(count) => refreshed.events += count,
-                Permitted::NeedsPermission => return Ok(Permitted::NeedsPermission),
+                Permitted::NeedsPermission => {
+                    // Google cannot say which scope a refusal is for, so
+                    // the list call alone could not tell a missing list
+                    // scope from a missing calendar.events. This read
+                    // can: the account has no calendar to read, and the
+                    // fallback calendar would only ask again every minute.
+                    self.refused.lock().expect("copy poisoned").insert(account_id, now);
+                    self.db.write(move |c| store::save_calendars(c, account_id, &[])).await?;
+                    return Ok(Permitted::NeedsPermission);
+                }
             }
         }
         Ok(Permitted::Done(refreshed))
