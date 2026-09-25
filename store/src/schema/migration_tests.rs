@@ -676,7 +676,7 @@ fn a_store_from_before_the_calendar_opens_with_no_calendars() {
     drop(conn);
 
     let conn = open_with(&path, MIGRATIONS).unwrap();
-    assert_eq!(schema_version(&conn).unwrap(), 33);
+    assert_eq!(schema_version(&conn).unwrap(), 34);
     for table in ["calendars", "events", "calendar_changes"] {
         let count: i64 = conn
             .query_row(&format!("SELECT COUNT(*) FROM {table}"), [], |row| row.get(0))
@@ -690,4 +690,33 @@ fn a_store_from_before_the_calendar_opens_with_no_calendars() {
         })
         .unwrap();
     assert_eq!(servers, 0);
+}
+
+/// Migration 34 adds the two consent columns to every existing account,
+/// with nothing known yet: `granted_scopes` waits for that account's next
+/// token refresh, and `asked_scopes` for its next sign-in or Grant
+/// Access, since only those ask Google for every scope in one visit.
+#[test]
+fn migration_34_leaves_every_account_s_scopes_unknown() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("mail.db");
+    let conn = open_with(&path, &MIGRATIONS[..33]).unwrap();
+    conn.execute(
+        "INSERT INTO accounts (id, email, added_at) VALUES (1, 'me@gmail.com', 0)",
+        [],
+    )
+    .unwrap();
+    drop(conn);
+
+    let conn = open_with(&path, MIGRATIONS).unwrap();
+    assert_eq!(schema_version(&conn).unwrap(), 34);
+    let (granted, asked): (Option<String>, Option<String>) = conn
+        .query_row(
+            "SELECT granted_scopes, asked_scopes FROM accounts WHERE id = 1",
+            [],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .unwrap();
+    assert_eq!(granted, None);
+    assert_eq!(asked, None);
 }

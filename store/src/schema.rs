@@ -557,6 +557,17 @@ CREATE TABLE calendar_changes (
     body       TEXT
 );
 "#,
+    // What Google told this account about its consent, kept as the
+    // space-joined scopes: `granted_scopes` from the last token refresh
+    // or exchange, `asked_scopes` from the last sign-in or Grant Access
+    // that asked for everything. NULL means unknown: `granted_scopes`
+    // until the first refresh after this migration, `asked_scopes` for
+    // an account that has never been through a consent asking for every
+    // scope, which is every account added before this one.
+    r#"
+ALTER TABLE accounts ADD COLUMN granted_scopes TEXT;
+ALTER TABLE accounts ADD COLUMN asked_scopes TEXT;
+"#,
 ];
 
 /// How long the copy taken before a migration stays once the store has
