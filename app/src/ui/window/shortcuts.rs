@@ -635,6 +635,10 @@ const MAIL_ONLY: &[&str] = &[
     "previous-conversation",
     "clear-selection",
     "flag-color",
+    // The text size is the message's, which the calendar hides.
+    "zoom-in",
+    "zoom-out",
+    "zoom-reset",
 ];
 
 /// Where a main window action goes while `space` shows. The chords are
@@ -1076,6 +1080,14 @@ mod tests {
         assert_eq!(route(Space::Calendar, "find"), Route::Calendar);
         assert_eq!(route(Space::Calendar, "search"), Route::Calendar);
         assert_eq!(route(Space::Mail, "find"), Route::Run);
+    }
+
+    #[test]
+    fn zoom_stops_in_the_calendar() {
+        for name in ["zoom-in", "zoom-out", "zoom-reset"] {
+            assert_eq!(route(Space::Calendar, name), Route::Skip, "{name}");
+            assert_eq!(route(Space::Mail, name), Route::Run, "{name}");
+        }
     }
 
     #[test]
