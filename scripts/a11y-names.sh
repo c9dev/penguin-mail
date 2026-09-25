@@ -23,6 +23,7 @@ here=${1:-}
 walk=$(mktemp)
 trap 'rm -f "$walk"' EXIT
 cat > "$walk" <<'PYTHON'
+import re
 import sys
 import time
 
@@ -52,14 +53,16 @@ ACTS = {
 found = []
 
 
-def walk(node, path):
-    """Records every control under `node`, and says whether a named
-    control was found in there.
+def walk(node, path, sink=None):
+    """Records every control under `node` into `sink` (`found` by
+    default), and says whether a named control was found in there.
 
     A control that holds another named control is a wrapper rather than
     something a person acts on, and wanting a name of its own would be
     asking for the same words twice: a list view puts every row inside a
     list item of its own, and the row is what carries the name."""
+    if sink is None:
+        sink = found
     try:
         role = node.get_role_name()
         name = (node.get_name() or "").strip()
@@ -70,10 +73,10 @@ def walk(node, path):
     wraps = False
     for index in range(node.get_child_count()):
         child = node.get_child_at_index(index)
-        if child is not None and walk(child, here):
+        if child is not None and walk(child, here, sink):
             wraps = True
     if role in ACTS and (name or not wraps):
-        found.append((role, name, " > ".join(here[-4:])))
+        sink.append((role, name, " > ".join(here[-4:])))
     return (role in ACTS and bool(name)) or wraps
 
 
@@ -162,6 +165,15 @@ class Input:
         time.sleep(0.1)
         for pressed in (1, 0):
             self.xtst.XTestFakeButtonEvent(self.display, 3, pressed, 0)
+            self.x11.XFlush(self.display)
+            time.sleep(0.05)
+
+    def click(self, x, y):
+        self.xtst.XTestFakeMotionEvent(self.display, -1, x, y, 0)
+        self.x11.XFlush(self.display)
+        time.sleep(0.1)
+        for pressed in (1, 0):
+            self.xtst.XTestFakeButtonEvent(self.display, 1, pressed, 0)
             self.x11.XFlush(self.display)
             time.sleep(0.05)
 
@@ -352,14 +364,105 @@ def open_menus():
     print("%d menus opened" % opened)
 
 
+def walk_calendar(keys):
+    """Switches to the Calendar space, walks it into a list of its own so
+    `found`'s own count stays what the mail walk left it, opens the
+    first event's popover so its controls are counted too, then closes
+    the popover again.
+
+    Reports the calendar's own line and gives back how many of its
+    controls came back with no name, which the exit status adds to the
+    mail walk's own count."""
+
+    def find_first(predicate):
+        for app in penguins()[0]:
+            for n in nodes(app):
+                try:
+                    role = n.get_role_name()
+                    name = (n.get_name() or "").strip()
+                except Exception:
+                    continue
+                if predicate(role, name):
+                    return n
+        return None
+
+    def activate(node):
+        # A libadwaita toggle may carry no AT-SPI action, unlike a plain
+        # button; click its centre instead, the way a row's menu opens.
+        try:
+            action = node.get_action_iface()
+        except Exception:
+            action = None
+        if action is not None:
+            try:
+                if action.do_action(0):
+                    return True
+            except Exception:
+                pass
+        try:
+            box = node.get_component_iface().get_extents(Atspi.CoordType.WINDOW)
+        except Exception:
+            return False
+        keys.click(box.x + box.width // 2, box.y + box.height // 2)
+        return True
+
+    def total_nodes():
+        return sum(1 for app in penguins()[0] for _ in nodes(app))
+
+    # Libadwaita's own toggles arrive as either "toggle button" or "radio
+    # button", so the switch is found by its name and any acted-on role.
+    toggle = find_first(lambda role, name: role in ACTS and name == "Calendar")
+    if toggle is None or not activate(toggle):
+        print("No 'Calendar' toggle to switch spaces.", file=sys.stderr)
+        sys.exit(2)
+    # A plain gtk::Button arrives as "button" here, not "push button";
+    # both spellings are in ACTS for the same reason the mail walk needs
+    # them (see the comment there).
+    if not wait_until(
+        lambda: find_first(lambda role, name: role in ("button", "push button") and name == "Today")
+        is not None,
+        5.0,
+    ):
+        print("The calendar page never reached the accessibility bus.", file=sys.stderr)
+        sys.exit(2)
+
+    # An event block's accessible name reads "{title}, {start} to {end},
+    # {calendar}" or, all day, "{title}, all day, {calendar}".
+    event = find_first(
+        lambda role, name: role in ("button", "push button")
+        and re.search(r"\d{1,2}:\d{2} to \d{1,2}:\d{2}|, all day,", name)
+    )
+    if event is None:
+        print("No event on the calendar's own range to open.", file=sys.stderr)
+        sys.exit(2)
+    before = total_nodes()
+    if activate(event):
+        wait_until(lambda: total_nodes() != before, 5.0)
+        time.sleep(0.2)
+
+    calendar_found = []
+    for app in penguins()[0]:
+        walk(app, [], calendar_found)
+
+    keys.escape()
+
+    unnamed = [row for row in calendar_found if not row[1]]
+    print("calendar: %d controls, %d unnamed" % (len(calendar_found), len(unnamed)))
+    for role, _, path in unnamed:
+        print("  %s" % path)
+    return len(unnamed)
+
+
+calendar_unnamed = 0
 if sys.argv[1:] == ["--menus"]:
     open_menus()
+    calendar_unnamed = walk_calendar(Input())
 
 unnamed = [row for row in found if not row[1]]
 print("%d controls, %d named, %d unnamed" % (len(found), len(found) - len(unnamed), len(unnamed)))
 for role, _, path in unnamed:
     print("  %s" % path)
-sys.exit(1 if unnamed else 0)
+sys.exit(1 if (unnamed or calendar_unnamed) else 0)
 PYTHON
 
 if [ "$here" = --here ]; then
