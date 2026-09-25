@@ -3,6 +3,7 @@
 # from what it found.
 app/data/io.github.c9dev.PenguinMail.desktop
 app/data/io.github.c9dev.PenguinMail.metainfo.xml
+app/src/add_account.rs
 app/src/app.rs
 app/src/app/sending.rs
 app/src/app/updates.rs
@@ -43,6 +44,7 @@ app/src/templates.rs
 app/src/translation.rs
 app/src/tray.rs
 app/src/ui/about.rs
+app/src/ui/add_account.rs
 app/src/ui/assistant.rs
 app/src/ui/assistant_mcp_prefs.rs
 app/src/ui/assistant_prefs.rs
@@ -111,5 +113,7 @@ sync/src/actions.rs
 sync/src/actions/labelling.rs
 sync/src/error.rs
 sync/src/mailbox.rs
+sync/src/passwords.rs
 sync/src/services/imap/outgoing.rs
+sync/src/sign_in.rs
 sync/src/triage.rs

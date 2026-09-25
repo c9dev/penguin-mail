@@ -18,7 +18,7 @@ pub mod fake;
 
 pub use find::{STEP_LIMIT, find};
 pub use net::{Net, RealNet, RealNetError, SrvRecord};
-pub use table::provider_named;
+pub use table::{listed_domains, provider_named};
 
 use serde::Deserialize;
 

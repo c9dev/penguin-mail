@@ -14,23 +14,29 @@ use crate::UnknownVariant;
 pub enum Provider {
     #[default]
     Gmail,
+    /// Any server that speaks IMAP and SMTP. Who runs it, such as
+    /// Fastmail, is the account's provider name.
+    Imap,
 }
 
 impl Provider {
-    pub const ALL: [Provider; 1] = [Provider::Gmail];
+    pub const ALL: [Provider; 2] = [Provider::Gmail, Provider::Imap];
 
     /// The stored form, in `accounts.provider`.
     pub fn as_str(self) -> &'static str {
         match self {
             Provider::Gmail => "gmail",
+            Provider::Imap => "imap",
         }
     }
 
-    /// The provider's name as people know it. A brand, so it is not
-    /// translated.
+    /// The provider's name as people know it. A brand or a protocol, so
+    /// it is not translated. An IMAP account names its own provider
+    /// through `Account::provider_name`.
     pub fn name(self) -> &'static str {
         match self {
             Provider::Gmail => "Gmail",
+            Provider::Imap => "IMAP",
         }
     }
 }

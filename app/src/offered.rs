@@ -183,48 +183,99 @@ impl Filing {
     }
 }
 
-/// One line saying why an account on `provider` lacks `missing`.
-pub fn reason(provider: Provider, missing: Missing) -> String {
-    let template = match missing {
-        Missing::Calendar => gettext("{provider} has no calendar that other apps can reach."),
-        Missing::Contacts => gettext("{provider} keeps no contacts that other apps can reach."),
-        Missing::Rules => gettext("{provider} has no rules that other apps can change."),
-        Missing::AutoReply => {
+/// One line saying why `account` lacks `missing`, naming who serves it.
+pub fn reason(account: &Account, missing: Missing) -> String {
+    let template = match (account.provider, missing) {
+        // IMAP carries mail and nothing else. A calendar and contacts
+        // need CalDAV and CardDAV, and rules need a server that runs
+        // them, which a later version brings to these accounts.
+        (Provider::Imap, Missing::Calendar) => {
+            gettext("{provider}'s calendar comes in a later version.")
+        }
+        (Provider::Imap, Missing::Contacts) => {
+            gettext("{provider}'s contacts come in a later version.")
+        }
+        (Provider::Imap, Missing::Rules | Missing::AutoReply) => {
+            gettext("Rules and automatic replies need a server that runs them.")
+        }
+        (_, Missing::Calendar) => gettext("{provider} has no calendar that other apps can reach."),
+        (_, Missing::Contacts) => {
+            gettext("{provider} keeps no contacts that other apps can reach.")
+        }
+        (_, Missing::Rules) => gettext("{provider} has no rules that other apps can change."),
+        (_, Missing::AutoReply) => {
             gettext("{provider} has no automatic reply that other apps can change.")
         }
-        Missing::DeleteForever => {
+        (_, Missing::DeleteForever) => {
             gettext("{provider} cannot delete mail for good. Delete moves it to the Trash.")
         }
-        Missing::Categories => gettext("{provider} does not sort the inbox into categories."),
+        (_, Missing::Categories) => gettext("{provider} does not sort the inbox into categories."),
     };
-    fill(&template, &[("provider", provider.name())])
+    fill(&template, &[("provider", account.provider_name())])
 }
 
-/// The lines Preferences shows for what accounts lack that no other row
-/// covers: rules, the automatic reply and deleting for good, each as the
-/// account's address and the reason. The contacts and calendar rows carry
-/// their own reason, and the category bar needs none: it is not there.
+/// The lines Preferences shows under Not Available: everything an
+/// account lacks but the category bar, which needs no line because it is
+/// not there, each as the account's address and the reason. An IMAP
+/// account gives rules and the automatic reply one reason, shown once.
 pub fn missing_lines(accounts: &[(Account, Offers)]) -> Vec<(String, String)> {
-    accounts
+    let mut lines: Vec<(String, String)> = accounts
         .iter()
         .flat_map(|(account, offers)| {
             offers
                 .missing()
                 .into_iter()
-                .filter(|m| {
-                    matches!(m, Missing::Rules | Missing::AutoReply | Missing::DeleteForever)
-                })
-                .map(|m| (account.email.clone(), reason(account.provider, m)))
+                .filter(|m| *m != Missing::Categories)
+                .map(|m| (account.email.clone(), reason(account, m)))
         })
-        .collect()
+        .collect();
+    lines.dedup();
+    lines
+}
+
+/// What a screen reader calls a Not Available row. One account can have
+/// several rows under the same address, so the name carries the reason.
+pub fn missing_name(address: &str, reason: &str) -> String {
+    fill(
+        &gettext("{address}: {reason}"),
+        &[("address", address), ("reason", reason)],
+    )
+}
+
+/// Whether the app asks the server which addresses `account` sends as.
+/// Gmail keeps send-as addresses with their names. An IMAP server keeps
+/// neither, and asking it would replace the name the person typed when
+/// adding the account with none.
+pub fn reads_send_as(account: &Account) -> bool {
+    account.provider == Provider::Gmail
 }
 
 #[cfg(test)]
 mod tests {
-    use mailrs_domain::Provider;
+    use mailrs_domain::{Account, AccountState, Provider};
     use mailrs_sync::{Missing, Offers};
 
     use super::{offers_for, reason};
+
+    fn gmail() -> Account {
+        Account {
+            id: 1,
+            email: "me@gmail.com".into(),
+            state: AccountState::Ok,
+            provider: Provider::Gmail,
+            provider_name: None,
+        }
+    }
+
+    fn fastmail() -> Account {
+        Account {
+            id: 2,
+            email: "dana@fastmail.com".into(),
+            state: AccountState::Ok,
+            provider: Provider::Imap,
+            provider_name: Some("Fastmail".into()),
+        }
+    }
 
     #[test]
     fn each_missing_service_says_why_and_names_the_provider() {
@@ -236,9 +287,31 @@ mod tests {
             Missing::DeleteForever,
             Missing::Categories,
         ] {
-            let said = reason(Provider::Gmail, missing);
+            let said = reason(&gmail(), missing);
             assert!(said.starts_with("Gmail "), "{said}");
             assert!(said.ends_with('.'), "{said}");
+        }
+    }
+
+    #[test]
+    fn an_imap_account_says_its_calendar_and_contacts_come_later() {
+        assert_eq!(
+            reason(&fastmail(), Missing::Calendar),
+            "Fastmail's calendar comes in a later version."
+        );
+        assert_eq!(
+            reason(&fastmail(), Missing::Contacts),
+            "Fastmail's contacts come in a later version."
+        );
+    }
+
+    #[test]
+    fn an_imap_account_says_rules_need_a_server_that_runs_them() {
+        for missing in [Missing::Rules, Missing::AutoReply] {
+            assert_eq!(
+                reason(&fastmail(), missing),
+                "Rules and automatic replies need a server that runs them."
+            );
         }
     }
 
@@ -413,36 +486,70 @@ mod tests {
         );
     }
 
-    use mailrs_domain::{Account, AccountState};
-
     use super::missing_lines;
 
     #[test]
     fn preferences_names_what_each_account_lacks_and_nothing_for_gmail() {
-        let gmail = Account {
-            id: 1,
-            email: "me@gmail.com".into(),
-            state: AccountState::Ok,
-            provider: Provider::Gmail,
-        };
         let bare = Account {
             id: 2,
             email: "me@example.com".into(),
-            ..gmail.clone()
+            ..gmail()
         };
         let lacking = Offers {
             rules: false,
             auto_reply: false,
             ..Offers::EVERYTHING
         };
-        let lines = missing_lines(&[(gmail, Offers::EVERYTHING), (bare, lacking)]);
+        let lines = missing_lines(&[(gmail(), Offers::EVERYTHING), (bare.clone(), lacking)]);
         assert_eq!(
             lines,
             [
-                ("me@example.com".to_string(), reason(Provider::Gmail, Missing::Rules)),
-                ("me@example.com".to_string(), reason(Provider::Gmail, Missing::AutoReply)),
+                ("me@example.com".to_string(), reason(&bare, Missing::Rules)),
+                ("me@example.com".to_string(), reason(&bare, Missing::AutoReply)),
             ]
         );
+    }
+
+    #[test]
+    fn preferences_lists_what_an_imap_account_lacks_once_each() {
+        let imap = Offers {
+            labels: false,
+            categories: false,
+            calendar: false,
+            contacts: false,
+            rules: false,
+            auto_reply: false,
+            ..Offers::EVERYTHING
+        };
+        let lines = missing_lines(&[(fastmail(), imap)]);
+        let said: Vec<&str> = lines.iter().map(|(_, line)| line.as_str()).collect();
+        assert_eq!(
+            said,
+            [
+                "Fastmail's calendar comes in a later version.",
+                "Fastmail's contacts come in a later version.",
+                "Rules and automatic replies need a server that runs them.",
+            ]
+        );
+    }
+
+    #[test]
+    fn each_not_available_row_is_named_for_its_account_and_its_reason() {
+        assert_eq!(
+            super::missing_name(
+                "dana@fastmail.example",
+                "Fastmail's calendar comes in a later version."
+            ),
+            "dana@fastmail.example: Fastmail's calendar comes in a later version."
+        );
+    }
+
+    use super::reads_send_as;
+
+    #[test]
+    fn only_gmail_is_asked_which_addresses_it_sends_as() {
+        assert!(reads_send_as(&gmail()));
+        assert!(!reads_send_as(&fastmail()));
     }
 
     #[test]

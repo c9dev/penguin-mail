@@ -11,12 +11,14 @@ use adw::prelude::*;
 use gtk::{gio, glib};
 use mailrs_domain::translate::{fill, fill_plural, gettext, with_reason};
 use mailrs_domain::{
-    Account, AccountId, AccountState, ChangeEvent, Label, MessageBody, Role, Target, ThreadSummary,
+    Account, AccountId, AccountState, ChangeEvent, Label, MessageBody, Provider, Role, Target,
+    ThreadSummary,
 };
 use mailrs_sync::{
     History, Listing, Loaded, MailAction, Offers, Permitted, Scope, TriageAction, View,
 };
 
+use super::add_account::{Done, Opening};
 use super::confirm::{Tone, confirm};
 use super::contact_card;
 use super::conversation::{Action, ConversationView};
@@ -118,6 +120,9 @@ pub struct MainWindow {
     list: Rc<ThreadList>,
     conversation: Rc<ConversationView>,
     first_account: gtk::Button,
+    /// The welcome page's Use Another Provider, off while Google's
+    /// browser flow runs.
+    first_other: gtk::Button,
     /// The mailbox on screen, the one a search goes back to, the inbox
     /// category, and what the thread list loads next.
     screen: RefCell<OnScreen>,
@@ -402,12 +407,23 @@ impl MainWindow {
                 .sync_create()
                 .build();
 
-            let w = weak.clone();
-            let (first_page, first_account) = welcome::first_account_page(move || {
-                if let Some(win) = w.upgrade() {
-                    win.authorize(None);
-                }
-            });
+            let (w, o) = (weak.clone(), weak.clone());
+            let welcome::FirstAccount {
+                page: first_page,
+                google: first_account,
+                other: first_other,
+            } = welcome::first_account_page(
+                move || {
+                    if let Some(win) = w.upgrade() {
+                        win.authorize(None);
+                    }
+                },
+                move || {
+                    if let Some(win) = o.upgrade() {
+                        win.present_add_account(Opening::Other);
+                    }
+                },
+            );
             let (s, w) = (Rc::downgrade(app), weak.clone());
             let assistant = super::assistant::AssistantPane::new(
                 Rc::clone(&app.core),
@@ -530,6 +546,7 @@ impl MainWindow {
                 list,
                 conversation,
                 first_account,
+                first_other,
                 screen: RefCell::new(OnScreen::new(app.settings_with(|s| s.default_category))),
                 counts: RefCell::new(on_screen::Counts::default()),
                 accounts_read: RefCell::new(None),
@@ -612,17 +629,19 @@ impl MainWindow {
         let weak = Rc::downgrade(&window);
         window.list.banner.connect_button_clicked(move |_| {
             let Some(win) = weak.upgrade() else { return };
-            let email = win
+            let account = win
                 .accounts()
                 .into_iter()
-                .find(|a| a.state == AccountState::NeedsReauth)
-                .map(|a| a.email.clone());
-            win.authorize(email);
+                .find(|a| a.state == AccountState::NeedsReauth);
+            match account {
+                Some(account) => win.sign_in_again(account),
+                None => win.authorize(None),
+            }
         });
         let weak = Rc::downgrade(&window);
         window.sidebar.add_account.connect_clicked(move |_| {
             if let Some(win) = weak.upgrade() {
-                win.authorize(None);
+                win.add_account();
             }
         });
         if let Some(filter) = app.filter() {
@@ -2008,6 +2027,61 @@ impl MainWindow {
         self.authorize_with(expected, &[]);
     }
 
+    /// Asks which kind of account to add, then adds it.
+    pub(super) fn add_account(self: &Rc<Self>) {
+        self.present_add_account(Opening::Pick);
+    }
+
+    fn present_add_account(self: &Rc<Self>, opening: Opening) {
+        let weak = Rc::downgrade(self);
+        super::add_account::present(&self.core, &self.window, opening, move |done| {
+            let Some(win) = weak.upgrade() else { return };
+            match done {
+                Done::Google(expected) => win.authorize(expected),
+                Done::Added { account, name } => win.imap_added(&account, name),
+                Done::SignedInAgain(account) => {
+                    win.toast(&fill(
+                        &gettext("{account} is signed in again."),
+                        &[("account", &account.email)],
+                    ));
+                    win.refresh_accounts(Reload::Yes);
+                }
+            }
+        });
+    }
+
+    /// Signs `account` in again the way it signed in first: Google's
+    /// browser flow, or step 2 of Another Provider with its servers.
+    fn sign_in_again(self: &Rc<Self>, account: Account) {
+        match account.provider {
+            Provider::Gmail => self.authorize(Some(account.email)),
+            Provider::Imap => self.present_add_account(Opening::Again(account)),
+        }
+    }
+
+    /// An IMAP account signed in. The name the person typed is what their
+    /// mail goes out under, kept as the account's one send-as address,
+    /// since the server keeps no name.
+    fn imap_added(self: &Rc<Self>, account: &Account, name: Option<String>) {
+        if let (Some(app), Some(name)) = (self.app.upgrade(), name) {
+            app.change_settings(Change::SendAsAddresses {
+                account: account.email.clone(),
+                addresses: vec![crate::compose::SendAsAddress {
+                    email: account.email.clone(),
+                    name: Some(name),
+                    signature: String::new(),
+                    default: true,
+                }],
+                at: mailrs_sync::now_millis(),
+            });
+        }
+        self.toast(&fill(
+            &gettext("Added {account}. Downloading mail…"),
+            &[("account", &account.email)],
+        ));
+        self.refresh_accounts(Reload::Yes);
+    }
+
     /// Runs the consent flow, asking Google for `extra` permissions on top
     /// of the ones sign-in always requests.
     fn authorize_with(self: &Rc<Self>, expected: Option<String>, extra: &'static [&'static str]) {
@@ -2029,6 +2103,7 @@ impl MainWindow {
         self.first_account.set_sensitive(false);
         self.first_account
             .set_label(&gettext("Waiting for Your Browser…"));
+        self.first_other.set_sensitive(false);
         self.sidebar.add_account.set_sensitive(false);
         self.toast(&gettext("Continue in your browser"));
         let this = Rc::clone(self);
@@ -2050,6 +2125,7 @@ impl MainWindow {
             this.first_account.set_sensitive(true);
             this.first_account
                 .set_label(&gettext("Sign In with Google"));
+            this.first_other.set_sensitive(true);
             this.sidebar.add_account.set_sensitive(true);
         });
     }
@@ -2195,7 +2271,7 @@ impl MainWindow {
         );
         with_account(
             "account-reconnect",
-            Box::new(|win, account| win.authorize(Some(account.email))),
+            Box::new(|win, account| win.sign_in_again(account)),
         );
         with_account(
             "account-rules",
@@ -2834,6 +2910,7 @@ mod tests {
             email: format!("{id}@example.com"),
             state: AccountState::Ok,
             provider: mailrs_domain::Provider::Gmail,
+            provider_name: None,
         };
         let label = |account_id| Label {
             account_id,

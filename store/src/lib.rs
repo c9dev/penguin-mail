@@ -21,6 +21,7 @@ pub mod query;
 pub mod reminders;
 pub mod remote_refs;
 mod schema;
+pub mod servers;
 pub mod templates;
 pub mod threading;
 pub mod threads;

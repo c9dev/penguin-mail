@@ -7,10 +7,10 @@ fn migrations_run_once_and_record_the_version() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("mail.db");
     let conn = open_connection(&path).unwrap();
-    assert_eq!(schema_version(&conn).unwrap(), 31);
+    assert_eq!(schema_version(&conn).unwrap(), 32);
     drop(conn);
     let conn = open_connection(&path).unwrap();
-    assert_eq!(schema_version(&conn).unwrap(), 31);
+    assert_eq!(schema_version(&conn).unwrap(), 32);
 }
 
 #[test]
@@ -147,4 +147,47 @@ fn a_new_account_is_served_by_gmail() {
         (found.id, found.provider),
         (id, mailrs_domain::Provider::Gmail)
     );
+}
+
+#[test]
+fn an_imap_account_keeps_its_provider_and_its_name() {
+    let conn = open_in_memory().unwrap();
+    let id = accounts::insert_imap_account(&conn, "dana@fastmail.com", "Fastmail", 5)
+        .unwrap()
+        .expect("nobody else holds the address");
+    let found = accounts::account_by_email(&conn, "dana@fastmail.com")
+        .unwrap()
+        .unwrap();
+    assert_eq!(found.id, id);
+    assert_eq!(found.provider, mailrs_domain::Provider::Imap);
+    assert_eq!(found.provider_name(), "Fastmail");
+    assert_eq!(found.state, AccountState::Bootstrapping);
+}
+
+#[test]
+fn a_gmail_account_is_never_taken_over_by_an_imap_one() {
+    let conn = open_in_memory().unwrap();
+    accounts::insert_account(&conn, "me@gmail.com", 0).unwrap();
+    assert_eq!(
+        accounts::insert_imap_account(&conn, "me@gmail.com", "Gmail", 1).unwrap(),
+        None
+    );
+    let found = accounts::account_by_email(&conn, "me@gmail.com")
+        .unwrap()
+        .unwrap();
+    assert_eq!(found.provider, mailrs_domain::Provider::Gmail);
+    assert_eq!(found.provider_name, None);
+}
+
+#[test]
+fn adding_an_imap_address_again_keeps_one_account_under_the_new_name() {
+    let conn = open_in_memory().unwrap();
+    let first = accounts::insert_imap_account(&conn, "me@example.org", "example.org", 1)
+        .unwrap();
+    let again = accounts::insert_imap_account(&conn, "me@example.org", "Fastmail", 2)
+        .unwrap();
+    assert_eq!(first, again);
+    let all = accounts::list_accounts(&conn).unwrap();
+    assert_eq!(all.len(), 1);
+    assert_eq!(all[0].provider_name(), "Fastmail");
 }

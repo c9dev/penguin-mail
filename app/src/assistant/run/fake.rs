@@ -579,6 +579,7 @@ impl Harness {
             email: ME.into(),
             state: AccountState::Ok,
             provider: mailrs_domain::Provider::Gmail,
+            provider_name: None,
         }];
         let mut labels = HashMap::from([(account_id, known)]);
         let mut other = None;
@@ -612,6 +613,7 @@ impl Harness {
                 email: YOU.into(),
                 state: AccountState::Ok,
                 provider: mailrs_domain::Provider::Gmail,
+                provider_name: None,
             });
             labels.insert(id, vec![]);
             other = Some((id, gmail));

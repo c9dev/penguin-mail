@@ -318,3 +318,7 @@ flowboxchild:focus-visible > .recipient-chip {
 .pgp-card.unchecked > image { color: var(--warning-color); }
 .pgp-card.bad > image { color: var(--error-color); }
 .pgp-card.bad { background: alpha(var(--error-bg-color), 0.16); }
+
+/* Add Account's links to a provider's pages line up under the words they
+   follow, where a link button's own padding would push them in. */
+.account-note button.link { padding: 2px 0; min-height: 0; }

@@ -102,6 +102,9 @@ pub enum SyncError {
     /// never answered it. Gmail takes no part in that request.
     #[error("{}", one_click(.0))]
     OneClick(OneClickError),
+    /// The keyring would not read or keep an IMAP account's password.
+    #[error(transparent)]
+    Password(#[from] crate::passwords::PasswordError),
 }
 
 /// Lets `?` take a Gmail error where a sync error is due.

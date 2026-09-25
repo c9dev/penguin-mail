@@ -2,6 +2,7 @@
 //! GObject subclass, because list rows need a widget type to recycle.
 
 pub mod about;
+pub mod add_account;
 pub mod assistant;
 pub mod assistant_mcp_prefs;
 pub mod assistant_prefs;

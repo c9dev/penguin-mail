@@ -205,6 +205,7 @@ async fn list_trash(h: &super::Harness) -> Vec<String> {
         email: "me@example.com".into(),
         state: AccountState::Ok,
         provider: mailrs_domain::Provider::Gmail,
+        provider_name: None,
     }]);
     let trash = Mailbox::Folder {
         account_id: None,

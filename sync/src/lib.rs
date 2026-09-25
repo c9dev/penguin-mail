@@ -19,6 +19,7 @@ pub mod newsletters;
 mod one_click;
 mod ops;
 pub mod outbox;
+pub mod passwords;
 pub mod raw_cache;
 pub mod sign_in;
 pub mod services;
@@ -49,7 +50,7 @@ pub use actions::{
 pub use api::{AccountClient, DraftRef, GmailApi, SavedDraft};
 pub use backoff::{MOST_TRIES, backoff_delay, poll_offset, retry_delay, with_jitter};
 pub use calendar::Calendar;
-pub use connect::connect_account;
+pub use connect::{connect_account, connect_imap, server_of, servers_for};
 pub use contacts::{Card, ContactBook, Refreshed};
 pub use engine::{EngineConfig, SyncEngine};
 pub use error::{BackendError, SyncError};

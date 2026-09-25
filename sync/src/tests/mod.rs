@@ -20,6 +20,7 @@ mod quota;
 mod search;
 mod senders;
 mod settings;
+mod stored_listing;
 mod structure;
 mod thread_open;
 mod triage;

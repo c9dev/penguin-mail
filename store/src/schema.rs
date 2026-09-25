@@ -454,6 +454,29 @@ DELETE FROM bodies WHERE EXISTS (
 );
 DELETE FROM attachments;
 "#,
+    // IMAP accounts. `provider_name` is who runs the server as the person
+    // knows them, such as Fastmail; a Gmail account leaves it empty. Each
+    // IMAP account has one incoming and one outgoing server. The password
+    // lives in the keyring and never here, and `pinned_certificate` waits
+    // for a server with a certificate of its own, such as Proton Mail
+    // Bridge.
+    r#"
+ALTER TABLE accounts ADD COLUMN provider_name TEXT;
+CREATE TABLE account_servers (
+    account_id         INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    role               TEXT NOT NULL CHECK (role IN ('imap', 'smtp')),
+    host               TEXT NOT NULL,
+    port               INTEGER NOT NULL,
+    security           TEXT NOT NULL CHECK (security IN ('tls', 'starttls')),
+    user_name          TEXT NOT NULL,
+    pinned_certificate BLOB,
+    PRIMARY KEY (account_id, role)
+);
+-- An IMAP folder's listing looks up its stored messages by location.
+-- Gmail rows carry no mailbox, so the index leaves them out.
+CREATE INDEX remote_refs_by_location ON remote_refs(account_id, mailbox, uidvalidity, uid)
+    WHERE mailbox IS NOT NULL;
+"#,
 ];
 
 /// How long the copy taken before a migration stays once the store has

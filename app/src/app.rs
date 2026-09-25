@@ -510,11 +510,15 @@ impl App {
     }
 
     /// Asks Gmail which addresses each of `accounts` may send as and keeps
-    /// the answer, skipping an account asked within the day. Composers
-    /// open on what was stored last time, so this never holds a window up.
+    /// the answer, skipping an account asked within the day and one whose
+    /// server keeps no send-as addresses. Composers open on what was
+    /// stored last time, so this never holds a window up.
     fn refresh_send_as(self: &Rc<Self>, accounts: &[Account]) {
         let now = mailrs_sync::now_millis();
         for account in accounts {
+            if !crate::offered::reads_send_as(account) {
+                continue;
+            }
             if !self.settings_with(|s| s.send_as_due(&account.email, now)) {
                 continue;
             }

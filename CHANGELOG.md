@@ -5,6 +5,14 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ## Unreleased
 
+### New
+
+- Add a mail account from Fastmail, iCloud, Yahoo or any other provider
+  with IMAP: choose Add Account, then Another Provider, and type your
+  address and password. Penguin Mail finds the servers, says when the
+  provider wants an app password, and offers gmail.com when you type
+  gmial.com.
+
 ### Improved
 
 - With Claude Opus 5 or newer, translating a message and reading an unsubscribe

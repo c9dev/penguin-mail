@@ -14,6 +14,7 @@ fake = ["dep:base64", "dep:mail-parser"]
 [dependencies]
 # Only the fake encodes or decodes base64 outside a test.
 base64 = { workspace = true, optional = true }
+mailrs-discover.workspace = true
 mailrs-domain.workspace = true
 mailrs-gmail.workspace = true
 mailrs-imap.workspace = true
@@ -23,6 +24,7 @@ async-channel.workspace = true
 chrono.workspace = true
 dirs.workspace = true
 futures.workspace = true
+keyring.workspace = true
 mail-builder.workspace = true
 # Reads what the fake sends into its Sent copy; only the fake needs it.
 mail-parser = { workspace = true, optional = true }
@@ -38,7 +40,6 @@ tracing.workspace = true
 [dev-dependencies]
 base64.workspace = true
 mail-parser.workspace = true
-mailrs-discover.workspace = true
 tempfile.workspace = true
 # `start_paused` lets a test watch a retry wait out Gmail's Retry-After
 # without waiting itself.

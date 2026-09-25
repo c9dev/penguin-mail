@@ -567,3 +567,92 @@ fn bodies_with_files_named_by_gmail_handles_are_fetched_again() {
         .unwrap();
     assert_eq!(files, 0);
 }
+
+/// Migration 32 adds IMAP's columns and table. A Gmail account from
+/// before it stays a Gmail account with no provider name, and the store
+/// is copied first, as before every migration of a store with mail.
+#[test]
+fn a_gmail_account_from_before_imap_stays_as_it_was() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("mail.db");
+    let conn = open_with(&path, &MIGRATIONS[..31]).unwrap();
+    conn.execute_batch("INSERT INTO accounts (id, email, added_at) VALUES (1, 'me@gmail.com', 0);")
+        .unwrap();
+    drop(conn);
+
+    let conn = open_with(&path, &MIGRATIONS[..32]).unwrap();
+    assert_eq!(schema_version(&conn).unwrap(), 32);
+    let (provider, name): (String, Option<String>) = conn
+        .query_row(
+            "SELECT provider, provider_name FROM accounts WHERE id = 1",
+            [],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .unwrap();
+    assert_eq!((provider.as_str(), name), ("gmail", None));
+    assert!(dir.path().join("mail.db.before-32").exists());
+}
+
+/// A message's location is `remote_refs(account_id, mailbox, uidvalidity,
+/// uid)`: an IMAP account looks up a mailbox's stored messages by that
+/// tuple on every listing, so it needs an index rather than a table scan.
+#[test]
+fn migration_32_indexes_remote_refs_by_location() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("mail.db");
+    let conn = open_with(&path, &MIGRATIONS[..32]).unwrap();
+    let indexed_columns = |index: &str| -> Vec<String> {
+        conn.prepare(&format!("PRAGMA index_info({index})"))
+            .unwrap()
+            .query_map([], |row| row.get::<_, String>(2))
+            .unwrap()
+            .collect::<rusqlite::Result<_>>()
+            .unwrap()
+    };
+    let indexes: Vec<String> = conn
+        .prepare("SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = 'remote_refs'")
+        .unwrap()
+        .query_map([], |row| row.get(0))
+        .unwrap()
+        .collect::<rusqlite::Result<_>>()
+        .unwrap();
+    assert!(
+        indexes
+            .iter()
+            .any(|index| indexed_columns(index)
+                == ["account_id", "mailbox", "uidvalidity", "uid"]),
+        "remote_refs has no index on (account_id, mailbox, uidvalidity, uid): {indexes:?}"
+    );
+}
+
+/// A Gmail message has no mailbox in `remote_refs`, so the location index
+/// leaves its rows out: a Gmail account writes nothing to it. A lookup by
+/// mailbox still finds the index, since `mailbox = ?` rules out NULL.
+#[test]
+fn the_location_index_leaves_gmail_rows_out_and_still_serves_a_listing() {
+    let dir = tempfile::tempdir().unwrap();
+    let conn = open_with(&dir.path().join("mail.db"), &MIGRATIONS[..32]).unwrap();
+    let partial: bool = conn
+        .query_row(
+            "SELECT partial FROM pragma_index_list('remote_refs') \
+             WHERE name = 'remote_refs_by_location'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap();
+    assert!(partial, "the location index covers Gmail rows too");
+    let plan: Vec<String> = conn
+        .prepare(
+            "EXPLAIN QUERY PLAN SELECT message_id FROM remote_refs \
+             WHERE account_id = ?1 AND mailbox = ?2 AND uidvalidity = ?3",
+        )
+        .unwrap()
+        .query_map([1, 2, 3], |row| row.get(3))
+        .unwrap()
+        .collect::<rusqlite::Result<_>>()
+        .unwrap();
+    assert!(
+        plan.iter().any(|step| step.contains("remote_refs_by_location")),
+        "{plan:?}"
+    );
+}

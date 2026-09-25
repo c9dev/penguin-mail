@@ -101,6 +101,22 @@ pub struct Account {
     /// existed was a Gmail account.
     #[serde(default)]
     pub provider: Provider,
+    /// Who runs the account's server as the person knows them, such as
+    /// "Fastmail". Only an IMAP account has one; a Gmail account's name
+    /// comes from its provider.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub provider_name: Option<String>,
+}
+
+impl Account {
+    /// Who serves the account's mail, in the words the window and the
+    /// assistant use: "Gmail", or the provider an IMAP account was added
+    /// under. A brand, so it is not translated.
+    pub fn provider_name(&self) -> &str {
+        self.provider_name
+            .as_deref()
+            .unwrap_or(self.provider.name())
+    }
 }
 
 /// Which Google client an account signed in with. A refresh token only
@@ -664,6 +680,29 @@ pub(crate) mod tests {
             Some(Category::Social),
             "Forums reads as Social"
         );
+    }
+
+    #[test]
+    fn an_account_names_who_serves_it() {
+        let gmail = crate::Account {
+            id: 1,
+            email: "me@gmail.com".into(),
+            state: crate::AccountState::Ok,
+            provider: crate::Provider::Gmail,
+            provider_name: None,
+        };
+        let fastmail = crate::Account {
+            provider: crate::Provider::Imap,
+            provider_name: Some("Fastmail".into()),
+            ..gmail.clone()
+        };
+        let unnamed = crate::Account {
+            provider: crate::Provider::Imap,
+            ..gmail.clone()
+        };
+        assert_eq!(gmail.provider_name(), "Gmail");
+        assert_eq!(fastmail.provider_name(), "Fastmail");
+        assert_eq!(unnamed.provider_name(), "IMAP");
     }
 }
 

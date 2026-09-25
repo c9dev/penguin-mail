@@ -32,19 +32,21 @@ pub enum CheckError {
 }
 
 /// Signs in to `imap` and `smtp` with `password`, trying the user names
-/// each server's rule allows for `address`, and returns what worked. IMAP
-/// goes first, and SMTP is not tried when IMAP turns the account away.
+/// each server's rule allows for its login (`imap_login`, `smtp_login`),
+/// and returns what worked. The two logins are the address unless the
+/// person typed a user name for that server. IMAP goes first, and SMTP is
+/// not tried when IMAP turns the account away.
 pub async fn check(
     imap: &Server,
     smtp: &Server,
-    address: &str,
+    imap_login: &str,
+    smtp_login: &str,
     password: &str,
 ) -> Result<Checked, CheckError> {
     let smtp_dial = SmtpTls::new(smtp).map_err(CheckError::Smtp)?;
     check_with(
-        (&TlsDial::new(imap.clone()), imap.user_name),
-        (&smtp_dial, smtp.user_name),
-        address,
+        (&TlsDial::new(imap.clone()), imap.user_name, imap_login),
+        (&smtp_dial, smtp.user_name, smtp_login),
         password,
     )
     .await
@@ -53,9 +55,8 @@ pub async fn check(
 /// [`check`] with the dialers given, so a test can hand it scripted
 /// servers.
 async fn check_with<I, S>(
-    imap: (&I, UserName),
-    smtp: (&S, UserName),
-    address: &str,
+    (imap, imap_rule, imap_login): (&I, UserName, &str),
+    (smtp, smtp_rule, smtp_login): (&S, UserName, &str),
     password: &str,
 ) -> Result<Checked, CheckError>
 where
@@ -63,10 +64,10 @@ where
     S: Dial + Clone,
     S::Stream: Sync,
 {
-    let (imap_user, capabilities) = sign_in_imap(imap, address, password)
+    let (imap_user, capabilities) = sign_in_imap((imap, imap_rule), imap_login, password)
         .await
         .map_err(CheckError::Imap)?;
-    let smtp_user = sign_in_smtp(smtp, &imap_user, address, password)
+    let smtp_user = sign_in_smtp((smtp, smtp_rule), &imap_user, smtp_login, password)
         .await
         .map_err(CheckError::Smtp)?;
     Ok(Checked {
@@ -201,7 +202,13 @@ mod tests {
             security: Security::Tls,
             user_name: UserName::Address,
         };
-        sendable(super::check(&server, &server, "ann@example.com", "pw"));
+        sendable(super::check(
+            &server,
+            &server,
+            "ann@example.com",
+            "ann@example.com",
+            "pw",
+        ));
     }
 
     /// Dials a new scripted server each time, built by `make`, and counts
@@ -271,9 +278,8 @@ mod tests {
         let imap = Servers::new(|| imap_taking("ann"));
         let smtp = Servers::new(|| smtp_taking("ann@me.com"));
         let checked = check_with(
-            (&imap, UserName::LocalPartFirst),
-            (&smtp, UserName::LocalPartFirst),
-            "ann@me.com",
+            (&imap, UserName::LocalPartFirst, "ann@me.com"),
+            (&smtp, UserName::LocalPartFirst, "ann@me.com"),
             "pw",
         )
         .await
@@ -289,9 +295,8 @@ mod tests {
         let imap = Servers::new(|| imap_taking("nobody"));
         let smtp = Servers::new(|| smtp_taking("ann@me.com"));
         let err = check_with(
-            (&imap, UserName::LocalPartFirst),
-            (&smtp, UserName::Address),
-            "ann@me.com",
+            (&imap, UserName::LocalPartFirst, "ann@me.com"),
+            (&smtp, UserName::Address, "ann@me.com"),
             "pw",
         )
         .await
@@ -316,9 +321,8 @@ mod tests {
         let imap = Servers::new(|| imap_taking("ann"));
         let smtp = Servers::new(no_auth);
         let err = check_with(
-            (&imap, UserName::LocalPartFirst),
-            (&smtp, UserName::LocalPartFirst),
-            "ann@me.com",
+            (&imap, UserName::LocalPartFirst, "ann@me.com"),
+            (&smtp, UserName::LocalPartFirst, "ann@me.com"),
             "pw",
         )
         .await
@@ -358,9 +362,8 @@ mod tests {
             for imap in [by_login, by_plain] {
                 let smtp = Servers::new(|| smtp_taking("ann@me.com"));
                 let err = check_with(
-                    (&imap, UserName::LocalPartFirst),
-                    (&smtp, UserName::Address),
-                    "ann@me.com",
+                    (&imap, UserName::LocalPartFirst, "ann@me.com"),
+                    (&smtp, UserName::Address, "ann@me.com"),
                     password,
                 )
                 .await
@@ -387,15 +390,32 @@ mod tests {
         let imap = Servers::new(|| imap_taking("ann@me.com"));
         let smtp = Servers::new(|| smtp_taking("ann@me.com"));
         let checked = check_with(
-            (&imap, UserName::Address),
-            (&smtp, UserName::LocalPartFirst),
-            "ann@me.com",
+            (&imap, UserName::Address, "ann@me.com"),
+            (&smtp, UserName::LocalPartFirst, "ann@me.com"),
             "pw",
         )
         .await
         .unwrap();
         assert_eq!(checked.smtp_user, "ann@me.com");
         assert_eq!(smtp.dials(), 1);
+    }
+
+    /// A user name typed for each server in Server Settings goes to that
+    /// server alone.
+    #[tokio::test]
+    async fn each_server_signs_in_with_the_name_typed_for_it() {
+        let imap = Servers::new(|| imap_taking("d.santos"));
+        let smtp = Servers::new(|| smtp_taking("dana@example.org"));
+        let checked = check_with(
+            (&imap, UserName::Address, "d.santos"),
+            (&smtp, UserName::Address, "dana@example.org"),
+            "pw",
+        )
+        .await
+        .unwrap();
+        assert_eq!(checked.imap_user, "d.santos");
+        assert_eq!(checked.smtp_user, "dana@example.org");
+        assert_eq!((imap.dials(), smtp.dials()), (1, 1));
     }
 
     /// A stream that counts itself while it lives.

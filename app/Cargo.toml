@@ -12,6 +12,7 @@ name = "penguin-mail"
 path = "src/main.rs"
 
 [dependencies]
+mailrs-discover.workspace = true
 mailrs-domain.workspace = true
 mailrs-gmail.workspace = true
 mailrs-imap.workspace = true
