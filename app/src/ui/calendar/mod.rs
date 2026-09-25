@@ -153,6 +153,15 @@ pub struct CalendarView {
     reads: Cell<u64>,
     sidebar_read: Cell<u64>,
     list_read: Cell<u64>,
+    /// The earliest day the narrow list already holds. `load_earlier`
+    /// reads back from here and moves it once the read comes back.
+    list_first: Cell<NaiveDate>,
+    /// Set once `load_earlier` has read down to `range::earliest_kept_day`,
+    /// so a further scroll to the top asks nothing more.
+    list_exhausted: Cell<bool>,
+    /// Set while an earlier-days read is in flight, so a second scroll
+    /// to the top before it answers does not start another one.
+    list_loading: Cell<bool>,
     search_read: Cell<u64>,
     /// An event to open once the page that holds it has been read.
     pending_open: RefCell<Option<EventKey>>,
@@ -417,6 +426,9 @@ impl CalendarView {
                 reads: Cell::new(0),
                 sidebar_read: Cell::new(0),
                 list_read: Cell::new(0),
+                list_first: Cell::new(today),
+                list_exhausted: Cell::new(false),
+                list_loading: Cell::new(false),
                 search_read: Cell::new(0),
                 pending_open: RefCell::new(None),
                 switching: Cell::new(false),
@@ -1103,14 +1115,15 @@ impl CalendarView {
 
     // ---- The list, the search and the popovers ---------------------------
 
-    /// Reads the narrow list's days.
+    /// Reads the narrow list's first window, replacing whatever it held.
     fn fill_list(self: &Rc<Self>) {
         let read = self.next_read();
         self.list_read.set(read);
-        let (first, count) = shown::list_days(self.day.get());
-        let (from, _) = Range::around(ViewKind::Day, first).span(&chrono::Local);
-        let (_, to) =
-            Range::around(ViewKind::Day, first + Days::new(u64::from(count - 1))).span(&chrono::Local);
+        let (first, last) = range::agenda_window(self.day.get());
+        self.list_first.set(first);
+        self.list_exhausted.set(false);
+        self.list_loading.set(false);
+        let (from, to) = day_span(first, last);
         let accounts = self.account_ids();
         let weak = Rc::downgrade(self);
         let core = Rc::clone(&self.core);
@@ -1125,13 +1138,59 @@ impl CalendarView {
             match found {
                 Ok(found) => {
                     let show_declined = (view.settings)().show_declined_events;
-                    let found: Vec<Occurrence> = found
-                        .into_iter()
-                        .filter(|o| shown::keep(o, show_declined))
-                        .collect();
-                    ensure_tints(found.iter().filter_map(|o| o.event.color.as_deref()));
+                    let found = keep_agenda_events(found, show_declined, first, last);
                     view.list
                         .show(&found, &view.calendars.borrow(), &chrono::Local);
+                }
+                Err(err) => tracing::warn!(%err, "could not read the calendar"),
+            }
+        });
+    }
+
+    /// Loads the 30 days before what the narrow list already holds, once
+    /// the reader scrolls to its top. Keeps what the list holds bounded
+    /// by loading in these steps rather than all at once, and stops at
+    /// `range::earliest_kept_day`: the copy's own first read went back no
+    /// further than a year, so nothing earlier could ever be there
+    /// (reconcile.md Task 7 item 1).
+    fn load_earlier(self: &Rc<Self>) {
+        if self.list_loading.get() || self.list_exhausted.get() {
+            return;
+        }
+        let cutoff = range::earliest_kept_day(chrono::Local::now().date_naive());
+        let last = self.list_first.get() - Days::new(1);
+        if last < cutoff {
+            self.list_exhausted.set(true);
+            self.list.show_no_earlier();
+            return;
+        }
+        let first = range::earlier(self.list_first.get()).max(cutoff);
+        self.list_loading.set(true);
+        let read = self.list_read.get();
+        let (from, to) = day_span(first, last);
+        let accounts = self.account_ids();
+        let weak = Rc::downgrade(self);
+        let core = Rc::clone(&self.core);
+        glib::spawn_future_local(async move {
+            let found = core
+                .read(move |c| store::occurrences(c, &accounts, from, to, CalendarScope::Shown))
+                .await;
+            let Some(view) = weak.upgrade() else { return };
+            view.list_loading.set(false);
+            if view.list_read.get() != read {
+                return;
+            }
+            match found {
+                Ok(found) => {
+                    let show_declined = (view.settings)().show_declined_events;
+                    let found = keep_agenda_events(found, show_declined, first, last);
+                    view.list
+                        .prepend(&found, &view.calendars.borrow(), &chrono::Local);
+                    view.list_first.set(first);
+                    if first <= cutoff {
+                        view.list_exhausted.set(true);
+                        view.list.show_no_earlier();
+                    }
                 }
                 Err(err) => tracing::warn!(%err, "could not read the calendar"),
             }
@@ -1144,6 +1203,12 @@ impl CalendarView {
             if let Some(view) = weak.upgrade() {
                 let anchor = view.list.widget.clone().upcast::<gtk::Widget>();
                 view.show_event(&anchor, o);
+            }
+        });
+        let weak = Rc::downgrade(self);
+        self.list.connect_scrolled_to_top(move || {
+            if let Some(view) = weak.upgrade() {
+                view.load_earlier();
             }
         });
         let weak = Rc::downgrade(self);
@@ -1401,6 +1466,39 @@ impl PageView {
             }
         }
     }
+}
+
+/// Local midnight of `first` to local midnight after `last`, for a read
+/// covering whole days.
+fn day_span(first: NaiveDate, last: NaiveDate) -> (EpochMillis, EpochMillis) {
+    let (from, _) = Range::around(ViewKind::Day, first).span(&chrono::Local);
+    let (_, to) = Range::around(ViewKind::Day, last).span(&chrono::Local);
+    (from, to)
+}
+
+/// Drops a declined event unless `show_declined` keeps it, warms the
+/// tint stylesheet for any colour among what is left, and logs once
+/// when `found` came back full: `MOST_EVENTS` may have cut the read to
+/// `first`..`last` short (Memory item 1).
+fn keep_agenda_events(
+    found: Vec<Occurrence>,
+    show_declined: bool,
+    first: NaiveDate,
+    last: NaiveDate,
+) -> Vec<Occurrence> {
+    if found.len() >= MOST_EVENTS {
+        tracing::info!(
+            %first,
+            %last,
+            "the calendar list holds more events than one read shows"
+        );
+    }
+    let found: Vec<Occurrence> = found
+        .into_iter()
+        .filter(|o| shown::keep(o, show_declined))
+        .collect();
+    ensure_tints(found.iter().filter_map(|o| o.event.color.as_deref()));
+    found
 }
 
 /// "MON TUE WED …" over the month grid.

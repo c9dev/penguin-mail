@@ -24,13 +24,38 @@ use mailrs_domain::{AccountId, EpochMillis};
 use super::tint;
 use super::words;
 
-/// One row's data: the occurrence and the date heading its section
-/// shares, computed once in [`Agenda::show`] so neither the row factory
-/// nor the header factory needs the zone again.
+/// One row's data: the occurrence, the local date it groups under, and
+/// the heading its section shares, computed once in [`Agenda::show`] or
+/// [`Agenda::prepend`] so neither the row factory nor the header
+/// factory needs the zone again. `date` is kept on the row, rather than
+/// alongside it, so [`AgendaModel::prepend_rows`] can recompute every
+/// section boundary after splicing old and new rows together.
 #[derive(Debug, Clone)]
 struct Row {
     occurrence: Occurrence,
+    date: NaiveDate,
     heading: String,
+}
+
+/// Turns `occurrences` into rows in the order the agenda always shows
+/// them: earliest date first, an all-day occurrence before a timed one
+/// on the same date, then by start time. Shared by [`Agenda::show`],
+/// which replaces every row, and [`Agenda::prepend`], which adds rows
+/// before them (Task 7).
+fn sorted_rows(occurrences: &[Occurrence], zone: &chrono::Local) -> Vec<Row> {
+    let mut dated: Vec<(NaiveDate, Occurrence)> = occurrences
+        .iter()
+        .map(|o| (agenda_date(o, zone), o.clone()))
+        .collect();
+    dated.sort_by_key(|(date, o)| (*date, !o.event.all_day, o.start));
+    dated
+        .into_iter()
+        .map(|(date, occurrence)| Row {
+            heading: words::full_date_words(date),
+            date,
+            occurrence,
+        })
+        .collect()
 }
 
 /// The local date a row groups under: an all-day occurrence by its own
@@ -135,6 +160,29 @@ mod model {
             self.imp().sections.replace(sections);
             self.items_changed(0, old, new);
             self.sections_changed(0, new);
+        }
+
+        /// Inserts `items` (already sorted, oldest first) before the
+        /// model's own first row and recomputes every section boundary,
+        /// since the new rows' last date could be the same as what was
+        /// the first section's (Task 7). Answers how many rows it
+        /// inserted, 0 for an empty `items`, which leaves the model
+        /// untouched rather than firing a no-op change.
+        pub(super) fn prepend_rows(&self, mut items: Vec<Row>) -> u32 {
+            let inserted = items.len() as u32;
+            if inserted == 0 {
+                return 0;
+            }
+            let mut rest = self.imp().items.take();
+            items.append(&mut rest);
+            let dates: Vec<NaiveDate> = items.iter().map(|row| row.date).collect();
+            let sections = sections_of(&dates);
+            let new_len = items.len() as u32;
+            self.imp().items.replace(items);
+            self.imp().sections.replace(sections);
+            self.items_changed(0, 0, inserted);
+            self.sections_changed(0, new_len);
+            inserted
         }
     }
 }
@@ -290,14 +338,23 @@ fn calendar_of<'a>(
 }
 
 type Activated = dyn Fn(&Occurrence);
+type ScrolledToTop = dyn Fn();
 
 pub struct Agenda {
     pub widget: gtk::ScrolledWindow,
     model: AgendaModel,
+    /// Kept to scroll it after [`Agenda::prepend`] (Task 7): the row
+    /// that was first before the insert is asked to stay first.
+    list_view: gtk::ListView,
+    /// The dim line [`Agenda::show_no_earlier`] reveals once loading has
+    /// reached `FIRST_READ_BACK` before today, above the list's own
+    /// first row so it reads as part of the same scrolling content.
+    no_earlier: gtk::Label,
     /// Shared with the row factory, which reads each dot's colour from it
     /// as a row scrolls into view.
     calendars: Rc<RefCell<HashMap<(AccountId, String), Calendar>>>,
     activated: Rc<RefCell<Option<Box<Activated>>>>,
+    scrolled_to_top: Rc<RefCell<Option<Box<ScrolledToTop>>>>,
 }
 
 impl Agenda {
@@ -379,16 +436,42 @@ impl Agenda {
             }
         });
 
+        // The dim line sits above the list inside the same scrolled
+        // content, so it reads as the true top of the agenda rather than
+        // a banner that stays on screen once shown.
+        let no_earlier = gtk::Label::builder()
+            .label(gettext("Nothing earlier on this computer"))
+            .css_classes(["dim-label", "caption"])
+            .margin_top(10)
+            .margin_bottom(10)
+            .visible(false)
+            .build();
+        let content = gtk::Box::builder().orientation(gtk::Orientation::Vertical).build();
+        content.append(&no_earlier);
+        content.append(&list_view);
+
         let widget = gtk::ScrolledWindow::builder()
             .hscrollbar_policy(gtk::PolicyType::Never)
-            .child(&list_view)
+            .child(&content)
             .build();
+        let scrolled_to_top: Rc<RefCell<Option<Box<ScrolledToTop>>>> = Rc::new(RefCell::new(None));
+        let top_slot = Rc::clone(&scrolled_to_top);
+        widget.connect_edge_reached(move |_, position| {
+            if position == gtk::PositionType::Top
+                && let Some(f) = top_slot.borrow().as_ref()
+            {
+                f();
+            }
+        });
 
         Rc::new(Agenda {
             widget,
             model,
+            list_view,
+            no_earlier,
             calendars,
             activated,
+            scrolled_to_top,
         })
     }
 
@@ -402,29 +485,56 @@ impl Agenda {
         zone: &chrono::Local,
     ) {
         *self.calendars.borrow_mut() = calendars.clone();
-        let mut dated: Vec<(NaiveDate, Occurrence)> = occurrences
-            .iter()
-            .map(|o| (agenda_date(o, zone), o.clone()))
-            .collect();
-        dated.sort_by_key(|(date, o)| (*date, !o.event.all_day, o.start));
-        let dates: Vec<NaiveDate> = dated.iter().map(|(date, _)| *date).collect();
+        self.no_earlier.set_visible(false);
+        let rows = sorted_rows(occurrences, zone);
+        let dates: Vec<NaiveDate> = rows.iter().map(|row| row.date).collect();
         let sections = sections_of(&dates);
-        let rows: Vec<Row> = dated
-            .into_iter()
-            .map(|(date, occurrence)| Row {
-                heading: words::full_date_words(date),
-                occurrence,
-            })
-            .collect();
         self.model.set_rows(rows, sections);
         // A new list starts at its first heading, not wherever the last
         // one was scrolled to.
         self.widget.vadjustment().set_value(0.0);
     }
 
+    /// Inserts `occurrences` before the agenda's earliest row and
+    /// scrolls so the row that was first stays first: `ListView::scroll_to`
+    /// with its new index, once GTK has laid the inserted rows out
+    /// (reconcile.md Task 7 item 2). `occurrences` must run entirely
+    /// before the earliest date already shown. `calendars` is merged in
+    /// rather than replacing what `show` set, since a widened window can
+    /// meet a calendar the first read never had to draw.
+    pub fn prepend(
+        &self,
+        occurrences: &[Occurrence],
+        calendars: &HashMap<(AccountId, String), Calendar>,
+        zone: &chrono::Local,
+    ) {
+        self.calendars
+            .borrow_mut()
+            .extend(calendars.iter().map(|(k, v)| (k.clone(), v.clone())));
+        let rows = sorted_rows(occurrences, zone);
+        let inserted = self.model.prepend_rows(rows);
+        if inserted > 0 {
+            self.list_view.scroll_to(inserted, gtk::ListScrollFlags::NONE, None);
+        }
+    }
+
+    /// Reveals the dim line saying the copy holds nothing earlier, once
+    /// loading has reached `FIRST_READ_BACK` before today. `show` hides
+    /// it again, for the range change that follows leaving List mode
+    /// and coming back.
+    pub fn show_no_earlier(&self) {
+        self.no_earlier.set_visible(true);
+    }
+
     /// Runs `f` with the occurrence a row was activated for.
     pub fn connect_event_activated(&self, f: impl Fn(&Occurrence) + 'static) {
         self.activated.replace(Some(Box::new(f)));
+    }
+
+    /// Runs `f` when the agenda is scrolled to its top, so the caller
+    /// loads earlier days (Task 7).
+    pub fn connect_scrolled_to_top(&self, f: impl Fn() + 'static) {
+        self.scrolled_to_top.replace(Some(Box::new(f)));
     }
 }
 

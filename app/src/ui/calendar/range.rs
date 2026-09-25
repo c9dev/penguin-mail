@@ -5,6 +5,17 @@
 use chrono::{Datelike, Days, Months, NaiveDate, TimeZone};
 use mailrs_domain::EpochMillis;
 use mailrs_domain::translate::{date_locale, fill, gettext};
+use mailrs_sync::calendar_copy::FIRST_READ_BACK;
+
+/// A day in milliseconds, for turning [`FIRST_READ_BACK`] into a day
+/// count.
+const DAY_MS: EpochMillis = 24 * 60 * 60 * 1000;
+
+/// How many days the narrow agenda's first window covers.
+const AGENDA_WINDOW: u64 = 60;
+
+/// How many earlier days one scroll-to-top load adds (Task 7).
+const AGENDA_STEP: u64 = 30;
 
 /// Which grid the calendar page shows. Kept in [`crate::settings`], not
 /// here, so settings never has to import from `ui`.
@@ -142,6 +153,26 @@ impl Range {
     }
 }
 
+/// The narrow agenda's first window: `today` and the 59 days after it,
+/// 60 in all (Task 7 step 1).
+pub fn agenda_window(today: NaiveDate) -> (NaiveDate, NaiveDate) {
+    (today, today + Days::new(AGENDA_WINDOW - 1))
+}
+
+/// The next earlier day the narrow agenda loads once the reader scrolls
+/// to the top of what it already holds: 30 days before `first`.
+pub fn earlier(first: NaiveDate) -> NaiveDate {
+    first - Days::new(AGENDA_STEP)
+}
+
+/// The earliest day the local copy could hold events for, counting back
+/// from `today` by [`FIRST_READ_BACK`]. The copy keeps no record of
+/// when its first read ran, so this is as close as the agenda can get
+/// to knowing where its data runs out (reconcile.md Task 7 item 1).
+pub fn earliest_kept_day(today: NaiveDate) -> NaiveDate {
+    today - Days::new((FIRST_READ_BACK / DAY_MS) as u64)
+}
+
 /// The Monday on or before `day`.
 fn monday_of(day: NaiveDate) -> NaiveDate {
     day - Days::new(u64::from(day.weekday().num_days_from_monday()))
@@ -224,6 +255,24 @@ mod tests {
             (bold.as_str(), dim.as_str(), tag.as_str()),
             ("September", "2026", "")
         );
+    }
+
+    #[test]
+    fn the_agenda_window_covers_sixty_days_from_today() {
+        assert_eq!(
+            agenda_window(d(2026, 9, 23)),
+            (d(2026, 9, 23), d(2026, 11, 21))
+        );
+    }
+
+    #[test]
+    fn earlier_steps_back_thirty_days() {
+        assert_eq!(earlier(d(2026, 9, 23)), d(2026, 8, 24));
+    }
+
+    #[test]
+    fn the_earliest_kept_day_is_a_year_before_today() {
+        assert_eq!(earliest_kept_day(d(2026, 9, 23)), d(2025, 9, 23));
     }
 
     #[test]
