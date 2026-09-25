@@ -1168,6 +1168,8 @@ impl CalendarView {
         self.list_loading.set(true);
         let read = self.list_read.get();
         let (from, to) = day_span(first, last);
+        // `to` is where the list's earlier reads began.
+        let listed_from = to;
         let accounts = self.account_ids();
         let weak = Rc::downgrade(self);
         let core = Rc::clone(&self.core);
@@ -1183,6 +1185,7 @@ impl CalendarView {
             match found {
                 Ok(found) => {
                     let show_declined = (view.settings)().show_declined_events;
+                    let found = shown::not_yet_listed(found, listed_from);
                     let found = keep_agenda_events(found, show_declined, first, last);
                     view.list
                         .prepend(&found, &view.calendars.borrow(), &chrono::Local);

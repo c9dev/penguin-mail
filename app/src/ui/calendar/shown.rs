@@ -143,6 +143,15 @@ fn date_of<Z: TimeZone>(at: EpochMillis, all_day: bool, zone: &Z) -> Option<Naiv
     })
 }
 
+/// What a read of the days before the narrow list leaves to add: the
+/// occurrences that end by `listed_from`, where the list's own reads
+/// begin. The store returns every occurrence that overlaps a read, so
+/// one that runs on into the listed days came back with those days
+/// already, and adding it again would list it twice.
+pub fn not_yet_listed(found: Vec<Occurrence>, listed_from: EpochMillis) -> Vec<Occurrence> {
+    found.into_iter().filter(|o| o.end <= listed_from).collect()
+}
+
 #[cfg(test)]
 mod tests {
     use std::sync::Arc;
@@ -169,6 +178,25 @@ mod tests {
             .unwrap()
             .and_utc()
             .timestamp_millis()
+    }
+
+    #[test]
+    fn an_earlier_read_drops_an_event_that_runs_into_the_listed_days() {
+        // The list starts on the 25th; Lisbon offsite runs 24 to 25 and
+        // came back with the first read already.
+        let listed_from = lisbon(2026, 9, 25, 0, 0);
+        let offsite = occurrence(true, utc_midnight(d(2026, 9, 24)), utc_midnight(d(2026, 9, 26)), None);
+        let workshop = occurrence(false, lisbon(2026, 9, 24, 11, 0), lisbon(2026, 9, 24, 13, 0), None);
+        let kept = not_yet_listed(vec![offsite, workshop.clone()], listed_from);
+        assert_eq!(kept.len(), 1);
+        assert_eq!(kept[0].start, workshop.start);
+    }
+
+    #[test]
+    fn an_earlier_read_keeps_an_event_that_ends_as_the_list_begins() {
+        let listed_from = lisbon(2026, 9, 25, 0, 0);
+        let late = occurrence(false, lisbon(2026, 9, 24, 23, 0), listed_from, None);
+        assert_eq!(not_yet_listed(vec![late], listed_from).len(), 1);
     }
 
     fn occurrence(all_day: bool, start: i64, end: i64, my_answer: Option<Answer>) -> Occurrence {
