@@ -19,6 +19,7 @@ use mailrs_domain::translate::gettext;
 use super::MainWindow;
 use crate::compose::ReplyKind;
 use crate::offered::Filing;
+use crate::settings::Space;
 use crate::ui::conversation::{Action, ConversationView};
 use crate::ui::thread_list::MENU_KEYS;
 
@@ -40,6 +41,9 @@ pub(super) enum Place {
     /// The message on screen, whose keys the page answers rather than
     /// GTK: they open the menu of the message with the focus.
     Page,
+    /// The calendar page, which installs its keys itself and answers
+    /// them only while it shows and no field has the focus.
+    Calendar,
 }
 
 impl Place {
@@ -135,6 +139,11 @@ const fn page(trigger: &'static str) -> Key {
     key(trigger, "", Place::Page)
 }
 
+/// A key the calendar page answers itself.
+const fn calendar(trigger: &'static str) -> Key {
+    key(trigger, "", Place::Calendar)
+}
+
 impl Key {
     const fn hidden(self) -> Key {
         Key {
@@ -196,14 +205,16 @@ pub(super) enum Section {
     Reading,
     Organizing,
     Writing,
+    Calendar,
     General,
 }
 
 impl Section {
-    const ALL: [Section; 4] = [
+    const ALL: [Section; 5] = [
         Section::Reading,
         Section::Organizing,
         Section::Writing,
+        Section::Calendar,
         Section::General,
     ];
 
@@ -212,6 +223,7 @@ impl Section {
             Section::Reading => gettext("Reading"),
             Section::Organizing => gettext("Organizing"),
             Section::Writing => gettext("Writing"),
+            Section::Calendar => gettext("Calendar"),
             Section::General => gettext("General"),
         }
     }
@@ -491,6 +503,41 @@ pub(super) static SHORTCUTS: &[Shortcut] = &[
         keys: &[composer("<Control>s")],
     },
     Shortcut {
+        section: Section::Calendar,
+        description: || gettext("Show mail"),
+        keys: &[main("<Alt>1", "win.show-mail")],
+    },
+    Shortcut {
+        section: Section::Calendar,
+        description: || gettext("Show the calendar"),
+        keys: &[main("<Alt>2", "win.show-calendar")],
+    },
+    Shortcut {
+        section: Section::Calendar,
+        description: || gettext("Go to today"),
+        keys: &[calendar("t")],
+    },
+    Shortcut {
+        section: Section::Calendar,
+        description: || gettext("Day, week or month"),
+        keys: &[calendar("d"), calendar("w"), calendar("m")],
+    },
+    Shortcut {
+        section: Section::Calendar,
+        description: || gettext("Previous or next"),
+        keys: &[calendar("Left"), calendar("Right")],
+    },
+    Shortcut {
+        section: Section::Calendar,
+        description: || gettext("Open the event"),
+        keys: &[calendar("Return")],
+    },
+    Shortcut {
+        section: Section::Calendar,
+        description: || gettext("Search the calendar"),
+        keys: &[calendar("<Control>f")],
+    },
+    Shortcut {
         section: Section::General,
         description: || gettext("Preferences"),
         keys: &[main("<Control>comma", "win.preferences")],
@@ -528,6 +575,82 @@ fn keys() -> impl Iterator<Item = &'static Key> {
 /// The letter key a press in the main window stands for, if any.
 pub(super) fn letter_for(pressed: gdk::Key, modifiers: gdk::ModifierType) -> Option<&'static Key> {
     keys().find(|key| key.letter && key.pressed(pressed, modifiers))
+}
+
+/// What a key on the calendar page asks the calendar to do.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum CalendarKey {
+    Today,
+    Day,
+    Week,
+    Month,
+    Previous,
+    Next,
+    Search,
+}
+
+/// The calendar's own key a press stands for, if any. Enter is listed in
+/// the dialog but answers nothing here: a focused event block is a
+/// button, and GTK activates it on Enter.
+pub(super) fn calendar_key(pressed: gdk::Key, modifiers: gdk::ModifierType) -> Option<CalendarKey> {
+    let key = keys().find(|k| k.place == Place::Calendar && k.pressed(pressed, modifiers))?;
+    Some(match key.trigger {
+        "t" => CalendarKey::Today,
+        "d" => CalendarKey::Day,
+        "w" => CalendarKey::Week,
+        "m" => CalendarKey::Month,
+        "Left" => CalendarKey::Previous,
+        "Right" => CalendarKey::Next,
+        "<Control>f" => CalendarKey::Search,
+        _ => return None,
+    })
+}
+
+/// What a main window action does while one space shows.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum Route {
+    /// Runs as it always does.
+    Run,
+    /// Goes to the calendar instead: Ctrl+F and the search keys search
+    /// the calendar while it shows.
+    Calendar,
+    /// Does nothing, since it would act on a conversation the calendar
+    /// hides.
+    Skip,
+}
+
+/// The main window's actions that act on the conversation or the list,
+/// beyond [`VIEW_ACTIONS`]. While the calendar shows, neither is on
+/// screen, so these give way rather than touch mail nobody can see.
+const MAIL_ONLY: &[&str] = &[
+    "mute",
+    "label",
+    "undo",
+    "remind-custom",
+    "remind-at",
+    "toggle-vip",
+    "open-window",
+    "select-all",
+    "next-conversation",
+    "previous-conversation",
+    "clear-selection",
+    "flag-color",
+];
+
+/// Where a main window action goes while `space` shows. The chords are
+/// global, so without this Ctrl+R would answer a conversation the
+/// calendar hides.
+pub(super) fn route(space: Space, name: &str) -> Route {
+    match space {
+        Space::Mail => Route::Run,
+        Space::Calendar if matches!(name, "find" | "search") => Route::Calendar,
+        Space::Calendar
+            if MAIL_ONLY.contains(&name) || VIEW_ACTIONS.iter().any(|(n, _)| *n == name) =>
+        {
+            Route::Skip
+        }
+        Space::Calendar => Route::Run,
+    }
 }
 
 /// A controller holding every chord that works in `window`.
@@ -585,6 +708,8 @@ pub(super) type ViewRun = fn(&Rc<MainWindow>, &Rc<ConversationView>);
 pub(super) static MAIN_ACTIONS: &[(&str, WindowRun)] = &[
     ("compose", |win| win.compose_new()),
     ("search", |win| win.list.open_search()),
+    ("show-mail", |win| win.show_space(Space::Mail)),
+    ("show-calendar", |win| win.show_space(Space::Calendar)),
     ("hide-my-email", |win| win.show_hide_my_email(None)),
     ("check", |win| {
         win.core.poke_all();
@@ -691,8 +816,16 @@ impl MainWindow {
             let action = gio::SimpleAction::new(name, None);
             let (win, target) = (Rc::downgrade(self), Rc::downgrade(view));
             action.connect_activate(move |_, _| {
-                if let (Some(win), Some(view)) = (win.upgrade(), target.upgrade()) {
-                    run(&win, &view);
+                let (Some(win), Some(view)) = (win.upgrade(), target.upgrade()) else {
+                    return;
+                };
+                // A separate window shows its conversation whatever the
+                // main window shows.
+                let own = Rc::ptr_eq(&view, &win.conversation);
+                match own.then(|| route(win.space(), name)) {
+                    None | Some(Route::Run) => run(&win, &view),
+                    Some(Route::Calendar) => win.calendar.focus_search(),
+                    Some(Route::Skip) => {}
                 }
             });
             group.add_action(&action);
@@ -749,8 +882,11 @@ impl MainWindow {
             let action = gio::SimpleAction::new(name, None);
             let weak = Rc::downgrade(self);
             action.connect_activate(move |_, _| {
-                if let Some(win) = weak.upgrade() {
-                    run(&win);
+                let Some(win) = weak.upgrade() else { return };
+                match route(win.space(), name) {
+                    Route::Run => run(&win),
+                    Route::Calendar => win.calendar.focus_search(),
+                    Route::Skip => {}
                 }
             });
             self.actions.add_action(&action);
@@ -762,12 +898,19 @@ impl MainWindow {
     /// Runs the letter key a press stands for, unless you are typing, the
     /// window shows something other than mail, or the key has nothing to
     /// do. Says whether the press was used.
+    ///
+    /// This runs in the capture phase, ahead of the calendar page's own
+    /// keys, so the calendar check here is what lets `m` reach the
+    /// calendar rather than mute a conversation it hides.
     pub(super) fn letter_pressed(
         self: &Rc<Self>,
         pressed: gdk::Key,
         modifiers: gdk::ModifierType,
     ) -> glib::Propagation {
-        if self.typing() || self.stack.visible_child_name().as_deref() != Some("mail") {
+        if self.typing()
+            || self.stack.visible_child_name().as_deref() != Some("mail")
+            || self.space() != Space::Mail
+        {
             return glib::Propagation::Proceed;
         }
         let Some(key) = letter_for(pressed, modifiers) else {
@@ -792,12 +935,13 @@ impl MainWindow {
 mod tests {
     use super::*;
 
-    const PLACES: [Place; 5] = [
+    const PLACES: [Place; 6] = [
         Place::Main,
         Place::Conversation,
         Place::Composer,
         Place::List,
         Place::Page,
+        Place::Calendar,
     ];
 
     /// The main window's actions that take an argument, which
@@ -860,7 +1004,10 @@ mod tests {
             if key.place.reaches(Place::Conversation) {
                 assert!(known(&view), "no conversation action for {}", key.trigger);
             }
-            if matches!(key.place, Place::Composer | Place::List | Place::Page) {
+            if matches!(
+                key.place,
+                Place::Composer | Place::List | Place::Page | Place::Calendar
+            ) {
                 assert!(key.action.is_empty() && !key.letter);
             }
         }
@@ -873,6 +1020,80 @@ mod tests {
             .map(|k| k.trigger)
             .collect();
         assert_eq!(listed, MENU_KEYS);
+    }
+
+    /// The key and modifiers a trigger in the table stands for, the way
+    /// a press would arrive.
+    fn press_of(trigger: &str) -> (gdk::Key, gdk::ModifierType) {
+        let (control, name) = strip(trigger, "<Control>");
+        let key = gdk::Key::from_name(name).expect("a key name GDK knows");
+        let modifiers = match control {
+            true => gdk::ModifierType::CONTROL_MASK,
+            false => gdk::ModifierType::empty(),
+        };
+        (key, modifiers)
+    }
+
+    #[test]
+    fn the_calendar_answers_each_key_the_dialog_lists_for_it() {
+        let mut answered = Vec::new();
+        for key in keys().filter(|k| k.place == Place::Calendar) {
+            let (pressed, modifiers) = press_of(key.trigger);
+            let command = calendar_key(pressed, modifiers);
+            // A focused event block is a button, and GTK activates a
+            // button on Enter, so the calendar leaves Enter alone.
+            if key.trigger == "Return" {
+                assert_eq!(command, None);
+                continue;
+            }
+            let command = command.unwrap_or_else(|| panic!("nothing answers {}", key.trigger));
+            assert!(!answered.contains(&command), "{} repeats {command:?}", key.trigger);
+            answered.push(command);
+        }
+        assert_eq!(answered.len(), 7);
+    }
+
+    #[test]
+    fn a_calendar_letter_ignores_alt_and_control() {
+        assert_eq!(calendar_key(gdk::Key::t, gdk::ModifierType::empty()), Some(CalendarKey::Today));
+        assert_eq!(calendar_key(gdk::Key::t, gdk::ModifierType::CONTROL_MASK), None);
+        assert_eq!(calendar_key(gdk::Key::_1, gdk::ModifierType::ALT_MASK), None);
+        assert_eq!(calendar_key(gdk::Key::e, gdk::ModifierType::empty()), None);
+    }
+
+    #[test]
+    fn mail_actions_run_only_while_the_mail_shows() {
+        for (name, _) in VIEW_ACTIONS {
+            assert_eq!(route(Space::Mail, name), Route::Run, "{name}");
+        }
+        for name in ["archive", "trash", "reply", "toggle-read", "print", "flag-color", "label"] {
+            assert_eq!(route(Space::Calendar, name), Route::Skip, "{name}");
+        }
+    }
+
+    #[test]
+    fn find_and_search_reach_the_calendar_while_it_shows() {
+        assert_eq!(route(Space::Calendar, "find"), Route::Calendar);
+        assert_eq!(route(Space::Calendar, "search"), Route::Calendar);
+        assert_eq!(route(Space::Mail, "find"), Route::Run);
+    }
+
+    #[test]
+    fn window_actions_run_in_either_space() {
+        for name in ["compose", "preferences", "assistant", "check", "go-mailbox", "show-mail"] {
+            assert_eq!(route(Space::Calendar, name), Route::Run, "{name}");
+        }
+    }
+
+    #[test]
+    fn every_view_action_but_find_stops_in_the_calendar() {
+        for (name, _) in VIEW_ACTIONS {
+            let expected = match *name {
+                "find" => Route::Calendar,
+                _ => Route::Skip,
+            };
+            assert_eq!(route(Space::Calendar, name), expected, "{name}");
+        }
     }
 
     #[test]
@@ -909,6 +1130,8 @@ mod tests {
             "<Control>plus <Control>minus"
         );
         assert_eq!(line("Search"), "slash <Control><Alt>f");
+        assert_eq!(line("Day, week or month"), "d w m");
+        assert_eq!(line("Show the calendar"), "<Alt>2");
     }
 
     #[test]

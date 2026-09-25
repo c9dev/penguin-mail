@@ -1,7 +1,7 @@
 //! `MonthGrid`, the month view: 42 date cells in a fixed 6×7 grid, each
 //! holding a few compact [`EventBlock`]s and, once it is crowded, an "N
-//! more" button that opens the day (the mockup calls this the agenda,
-//! and Task 6 decides what "open the day" shows).
+//! more" button that lists the whole day in a popover, as the spec's
+//! Month section asks. The day's own number opens that day in Day view.
 
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
@@ -12,7 +12,7 @@ use chrono::{Datelike, Days, NaiveDate};
 use mailrs_domain::calendar::{Calendar, Occurrence};
 use mailrs_domain::{AccountId, EpochMillis};
 
-use super::block::EventBlock;
+use super::block::{EventBlock, EventKey, key_of};
 use super::layout;
 use super::range::{Range, ViewKind};
 use super::words;
@@ -33,6 +33,7 @@ type Shown = (
 
 type DayActivated = dyn Fn(NaiveDate);
 type EventActivated = dyn Fn(&MonthGrid, &Occurrence, &gtk::Widget);
+type MoreClicked = dyn Fn(&MonthGrid, &[Occurrence], &gtk::Widget);
 
 pub struct MonthGrid {
     pub widget: gtk::Grid,
@@ -41,6 +42,10 @@ pub struct MonthGrid {
     shown: RefCell<Option<Shown>>,
     day_activated: RefCell<Option<Box<DayActivated>>>,
     event_activated: RefCell<Option<Box<EventActivated>>>,
+    more_clicked: RefCell<Option<Box<MoreClicked>>>,
+    /// Each block on screen by the event it draws, so the view can point
+    /// a popover at one it opens by name. Cleared on every rebuild.
+    blocks: RefCell<Vec<(EventKey, gtk::Widget)>>,
 }
 
 impl MonthGrid {
@@ -48,7 +53,7 @@ impl MonthGrid {
         let widget = gtk::Grid::builder()
             .row_homogeneous(true)
             .column_homogeneous(true)
-            .css_classes(["calendar-card", "month-grid"])
+            .css_classes(["month-grid"])
             .build();
         let mut cells = Vec::with_capacity(42);
         for row in 0..6i32 {
@@ -69,6 +74,8 @@ impl MonthGrid {
             shown: RefCell::new(None),
             day_activated: RefCell::new(None),
             event_activated: RefCell::new(None),
+            more_clicked: RefCell::new(None),
+            blocks: RefCell::new(Vec::new()),
         })
     }
 
@@ -98,8 +105,7 @@ impl MonthGrid {
         }
     }
 
-    /// Runs `f` with the date a day's own number, or its "N more" button,
-    /// was activated for.
+    /// Runs `f` with the date a day's own number was activated for.
     pub fn connect_day_activated(&self, f: impl Fn(NaiveDate) + 'static) {
         self.day_activated.replace(Some(Box::new(f)));
     }
@@ -113,6 +119,24 @@ impl MonthGrid {
         self.event_activated.replace(Some(Box::new(f)));
     }
 
+    /// Runs `f` when a crowded day's "N more" button is clicked, with
+    /// every occurrence of that day and the button to point a popover at.
+    pub fn connect_more_clicked(
+        &self,
+        f: impl Fn(&MonthGrid, &[Occurrence], &gtk::Widget) + 'static,
+    ) {
+        self.more_clicked.replace(Some(Box::new(f)));
+    }
+
+    /// The block drawing `key`, when the month shows it.
+    pub fn block_of(&self, key: &EventKey) -> Option<gtk::Widget> {
+        self.blocks
+            .borrow()
+            .iter()
+            .find(|(k, _)| k == key)
+            .map(|(_, widget)| widget.clone())
+    }
+
     fn rebuild(self: &Rc<Self>) {
         let Some((range, occurrences, calendars)) = self.shown.borrow().clone() else {
             return;
@@ -121,6 +145,7 @@ impl MonthGrid {
         let month = range.month();
         let rows_that_fit = self.rows_that_fit.get();
         let days: Vec<NaiveDate> = (0..42u64).map(|i| range.first + Days::new(i)).collect();
+        let mut blocks = Vec::new();
 
         for (index, &day) in days.iter().enumerate() {
             let cell = &self.cells[index];
@@ -141,18 +166,21 @@ impl MonthGrid {
                 let block = EventBlock::new(o, colour, name, true, &chrono::Local);
                 connect_event(self, &block.widget, (*o).clone());
                 cell.append(&block.widget);
+                blocks.push((key_of(o), block.widget.upcast()));
             }
             if hidden > 0 {
-                let label = words::month_more_words(hidden, day);
                 let more = gtk::Button::builder()
                     .css_classes(["flat", "month-more"])
-                    .label(&label)
+                    .label(words::more_count_words(hidden))
+                    .halign(gtk::Align::Start)
                     .build();
-                crate::ui::name(&more, &label);
-                connect_day(self, &more, day);
+                crate::ui::name(&more, &words::month_more_words(hidden, day));
+                let whole_day: Vec<Occurrence> = in_day.iter().map(|o| (*o).clone()).collect();
+                connect_more(self, &more, whole_day);
                 cell.append(&more);
             }
         }
+        self.blocks.replace(blocks);
     }
 }
 
@@ -216,6 +244,16 @@ fn connect_day(grid: &Rc<MonthGrid>, button: &gtk::Button, day: NaiveDate) {
         let Some(grid) = weak.upgrade() else { return };
         if let Some(f) = grid.day_activated.borrow().as_ref() {
             f(day);
+        }
+    });
+}
+
+fn connect_more(grid: &Rc<MonthGrid>, button: &gtk::Button, day: Vec<Occurrence>) {
+    let weak = Rc::downgrade(grid);
+    button.connect_clicked(move |button| {
+        let Some(grid) = weak.upgrade() else { return };
+        if let Some(f) = grid.more_clicked.borrow().as_ref() {
+            f(&grid, &day, button.upcast_ref());
         }
     });
 }

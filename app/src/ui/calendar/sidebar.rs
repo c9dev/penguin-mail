@@ -3,7 +3,7 @@
 //! row says is worked out in pure functions ([`sidebar_accounts`]) so
 //! Task 0's Grant Access story, not a widget, decides it.
 
-use std::cell::Cell;
+use std::cell::{Cell, RefCell};
 use std::collections::HashSet;
 use std::rc::Rc;
 
@@ -79,6 +79,28 @@ fn monday_of(day: NaiveDate) -> NaiveDate {
     day - Days::new(u64::from(day.weekday().num_days_from_monday()))
 }
 
+/// The 1st of the month `step` months from the one `month` falls in, for
+/// the mini month's arrows. Counted from the month shown, not from the
+/// grid's first cell, which sits in the month before whenever the 1st is
+/// not a Monday.
+fn adjacent_month(month: NaiveDate, step: i32) -> NaiveDate {
+    let first = month.with_day(1).unwrap_or(month);
+    let moved = match step >= 0 {
+        true => first.checked_add_months(chrono::Months::new(step.unsigned_abs())),
+        false => first.checked_sub_months(chrono::Months::new(step.unsigned_abs())),
+    };
+    moved.unwrap_or(first)
+}
+
+/// How many weeks the mini month shows for the month starting on
+/// `first`: only those holding one of its days, as the mockup draws
+/// September 2026 in five rows.
+fn weeks_shown(first: NaiveDate) -> usize {
+    let last = adjacent_month(first, 1) - Days::new(1);
+    let days = (last - monday_of(first)).num_days() as usize + 1;
+    days.div_ceil(7)
+}
+
 /// "M", "T", "W", … for the mini month's weekday row, from a known
 /// Monday so the locale's own weekday names decide the letter.
 fn weekday_initials() -> Vec<String> {
@@ -114,18 +136,25 @@ struct MiniDay {
 pub struct CalendarSidebar {
     pub widget: gtk::Box,
     month_title: gtk::Label,
+    /// The 1st of the month the mini month shows, which its arrows step
+    /// from.
+    month: Rc<Cell<NaiveDate>>,
     days: Vec<MiniDay>,
     calendar_list: gtk::Box,
+    /// What the calendar list was last built from. A redraw that would
+    /// build the same rows leaves them, and the focus on one of them,
+    /// where they are.
+    listed: RefCell<Vec<SidebarAccount>>,
     on_date: Rc<OnDate>,
     on_shown: Rc<OnShown>,
     on_grant: Rc<OnGrant>,
 }
 
 impl CalendarSidebar {
-    /// `on_date` runs for a day cell and for the mini month's own
-    /// Previous/Next Month arrows, which the window answers by asking
-    /// for that month's busy days and calling `show` again: the sidebar
-    /// keeps no month of its own between calls.
+    /// `on_date` runs for a day cell, and for the mini month's own
+    /// Previous/Next Month arrows with the 1st of that month. The view
+    /// goes to the date and calls `show` again, so the grid and the mini
+    /// month always show the same month.
     pub fn new(
         on_date: impl Fn(NaiveDate) + 'static,
         on_shown: impl Fn(AccountId, String, bool) + 'static,
@@ -141,32 +170,35 @@ impl CalendarSidebar {
             .build();
 
         let month_title = gtk::Label::builder()
-            .css_classes(["heading"])
+            .css_classes(["mini-month-title"])
             .hexpand(true)
             .xalign(0.0)
             .build();
         let previous = gtk::Button::builder()
             .icon_name("go-previous-symbolic")
-            .css_classes(["flat"])
+            .css_classes(["flat", "dim-label"])
             .build();
         let next = gtk::Button::builder()
             .icon_name("go-next-symbolic")
-            .css_classes(["flat"])
+            .css_classes(["flat", "dim-label"])
             .build();
         crate::ui::name(&previous, &gettext("Previous Month"));
         crate::ui::name(&next, &gettext("Next Month"));
-        let header = gtk::Box::builder().spacing(4).build();
+        let header = gtk::Box::builder().spacing(0).css_classes(["mini-month-header"]).build();
         header.append(&month_title);
         header.append(&previous);
         header.append(&next);
         widget.append(&header);
 
-        let weekdays = gtk::Grid::builder().column_homogeneous(true).build();
+        let weekdays = gtk::Grid::builder()
+            .column_homogeneous(true)
+            .margin_top(4)
+            .build();
         for (column, initial) in weekday_initials().into_iter().enumerate() {
             weekdays.attach(
                 &gtk::Label::builder()
                     .label(&initial)
-                    .css_classes(["dim-label", "caption"])
+                    .css_classes(["mini-month-weekday"])
                     .build(),
                 column as i32,
                 0,
@@ -177,7 +209,8 @@ impl CalendarSidebar {
         widget.append(&weekdays);
 
         let mini = gtk::Grid::builder()
-            .row_homogeneous(true)
+            .row_spacing(4)
+            .valign(gtk::Align::Start)
             .column_homogeneous(true)
             .css_classes(["mini-month"])
             .build();
@@ -189,18 +222,21 @@ impl CalendarSidebar {
         for row in 0..6i32 {
             for column in 0..7i32 {
                 let number = gtk::Label::new(None);
+                // The dot hangs under the number without taking a line of
+                // its own, so each day is the mockup's 26 pixels tall.
                 let dot = gtk::Box::builder()
                     .css_classes(["dot"])
                     .halign(gtk::Align::Center)
+                    .valign(gtk::Align::End)
+                    .margin_bottom(2)
+                    .can_target(false)
                     .build();
-                let inner = gtk::Box::builder()
-                    .orientation(gtk::Orientation::Vertical)
-                    .spacing(2)
+                let inner = gtk::Overlay::builder().child(&number).build();
+                inner.add_overlay(&dot);
+                let button = gtk::Button::builder()
+                    .child(&inner)
                     .halign(gtk::Align::Center)
                     .build();
-                inner.append(&number);
-                inner.append(&dot);
-                let button = gtk::Button::builder().child(&inner).build();
                 mini.attach(&button, column, row, 1, 1);
                 let date = Rc::new(Cell::new(placeholder));
                 days.push(MiniDay {
@@ -215,15 +251,18 @@ impl CalendarSidebar {
 
         let calendar_list = gtk::Box::builder()
             .orientation(gtk::Orientation::Vertical)
-            .spacing(4)
+            .spacing(0)
+            .margin_top(8)
             .build();
         widget.append(&calendar_list);
 
         let sidebar = Rc::new(CalendarSidebar {
             widget,
             month_title,
+            month: Rc::new(Cell::new(placeholder)),
             days,
             calendar_list,
+            listed: RefCell::new(Vec::new()),
             on_date,
             on_shown,
             on_grant,
@@ -234,22 +273,18 @@ impl CalendarSidebar {
             let date = Rc::clone(&day.date);
             day.button.connect_clicked(move |_| on_date(date.get()));
         }
-        {
+        for (button, step) in [(&previous, -1), (&next, 1)] {
             let on_date = Rc::clone(&sidebar.on_date);
-            let first_day = Rc::clone(&sidebar.days[0].date);
-            previous.connect_clicked(move |_| on_date(first_day.get() - chrono::Months::new(1)));
-        }
-        {
-            let on_date = Rc::clone(&sidebar.on_date);
-            let first_day = Rc::clone(&sidebar.days[0].date);
-            next.connect_clicked(move |_| on_date(first_day.get() + chrono::Months::new(1)));
+            let month = Rc::clone(&sidebar.month);
+            button.connect_clicked(move |_| on_date(adjacent_month(month.get(), step)));
         }
 
         sidebar
     }
 
-    /// Redraws the mini month around `month` and rebuilds the calendar
-    /// list from `accounts` ([`sidebar_accounts`]'s own output).
+    /// Redraws the mini month around `month`, and rebuilds the calendar
+    /// list from `accounts` ([`sidebar_accounts`]'s own output) when it
+    /// differs from the list on screen.
     pub fn show(
         &self,
         month: NaiveDate,
@@ -257,14 +292,44 @@ impl CalendarSidebar {
         busy_days: &HashSet<NaiveDate>,
         accounts: &[SidebarAccount],
     ) {
+        self.show_month(month, today, busy_days);
+        if *self.listed.borrow() != accounts {
+            self.rebuild_calendar_list(accounts);
+            self.listed.replace(accounts.to_vec());
+        }
+    }
+
+    /// Records that the person showed or hid a calendar with its own
+    /// check, which already says so, so the next `show` finds nothing
+    /// new to rebuild.
+    pub fn note_shown(&self, account_id: AccountId, calendar_id: &str, shown: bool) {
+        for account in self.listed.borrow_mut().iter_mut() {
+            if account.id != account_id {
+                continue;
+            }
+            if let CalendarReach::Calendars(calendars) | CalendarReach::PrimaryOnly(calendars) =
+                &mut account.reach
+            {
+                for calendar in calendars.iter_mut().filter(|c| c.id == calendar_id) {
+                    calendar.shown = shown;
+                }
+            }
+        }
+    }
+
+    /// Redraws the mini month around `month` alone.
+    pub fn show_month(&self, month: NaiveDate, today: NaiveDate, busy_days: &HashSet<NaiveDate>) {
         let first_of_month = month.with_day(1).unwrap_or(month);
+        self.month.set(first_of_month);
         self.month_title.set_label(
             &first_of_month
                 .format_localized(&gettext("%B %Y"), date_locale())
                 .to_string(),
         );
         let first_shown = monday_of(first_of_month);
+        let weeks = weeks_shown(first_of_month);
         for (index, day) in self.days.iter().enumerate() {
+            day.button.set_visible(index / 7 < weeks);
             let date = first_shown + Days::new(index as u64);
             day.date.set(date);
             day.number.set_label(&date.day().to_string());
@@ -274,8 +339,6 @@ impl CalendarSidebar {
                 .set_css_classes(&mini_day_classes(date, today, first_of_month));
             crate::ui::name(&day.button, &words::mini_day_words(date, has_events));
         }
-
-        self.rebuild_calendar_list(accounts);
     }
 
     fn rebuild_calendar_list(&self, accounts: &[SidebarAccount]) {
@@ -285,9 +348,10 @@ impl CalendarSidebar {
         for account in accounts {
             let heading = gtk::Label::builder()
                 .label(&account.address)
-                .css_classes(["dim-label", "caption"])
+                .css_classes(["calendar-account"])
                 .xalign(0.0)
-                .margin_top(8)
+                .margin_top(14)
+                .margin_bottom(12)
                 .build();
             self.calendar_list.append(&heading);
             match &account.reach {
@@ -326,7 +390,10 @@ impl CalendarSidebar {
     }
 
     fn calendar_row(&self, account_id: AccountId, calendar: &Calendar) -> gtk::Box {
-        let row = gtk::Box::builder().spacing(8).build();
+        let row = gtk::Box::builder()
+            .spacing(8)
+            .css_classes(["calendar-row"])
+            .build();
         let check = gtk::CheckButton::builder()
             .active(calendar.shown)
             .css_classes(["calendar-check", &tint::css_class(&calendar.color)])
@@ -341,6 +408,7 @@ impl CalendarSidebar {
         }
         let label = gtk::Label::builder()
             .label(&calendar.name)
+            .css_classes(["calendar-name"])
             .hexpand(true)
             .xalign(0.0)
             .ellipsize(gtk::pango::EllipsizeMode::End)
@@ -350,6 +418,7 @@ impl CalendarSidebar {
         row.append(&label);
         if !calendar.access.can_write() {
             let lock = gtk::Image::from_icon_name("changes-prevent-symbolic");
+            lock.add_css_class("calendar-lock");
             lock.set_pixel_size(12);
             row.append(&lock);
         }
@@ -439,6 +508,27 @@ mod tests {
             shown: true,
             ..Calendar::default()
         }
+    }
+
+    #[test]
+    fn the_mini_month_shows_only_the_weeks_that_hold_the_month() {
+        let d = |y, m, day| NaiveDate::from_ymd_opt(y, m, day).unwrap();
+        // September 2026 starts on a Tuesday and ends on a Wednesday.
+        assert_eq!(weeks_shown(d(2026, 9, 1)), 5);
+        // August 2026 starts on a Saturday: six weeks.
+        assert_eq!(weeks_shown(d(2026, 8, 1)), 6);
+        // February 2027 starts on a Monday and has 28 days.
+        assert_eq!(weeks_shown(d(2027, 2, 1)), 4);
+    }
+
+    #[test]
+    fn the_mini_month_arrows_reach_the_first_of_the_next_and_previous_month() {
+        let d = |y, m, day| NaiveDate::from_ymd_opt(y, m, day).unwrap();
+        // The grid of October 2026 starts on Monday 28 September, which
+        // must not pull the arrows a month further back.
+        assert_eq!(adjacent_month(d(2026, 10, 14), -1), d(2026, 9, 1));
+        assert_eq!(adjacent_month(d(2026, 10, 31), 1), d(2026, 11, 1));
+        assert_eq!(adjacent_month(d(2026, 12, 5), 1), d(2027, 1, 1));
     }
 
     #[test]

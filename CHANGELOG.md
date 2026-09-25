@@ -7,6 +7,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### New
 
+- A calendar beside the mail: switch to it at the top of the sidebar or
+  with Alt+2 to see your Google calendars by day, week or month, answer
+  an invitation from its event, and search your events.
 - Add a mail account from Fastmail, iCloud, Yahoo or any other provider
   with IMAP: choose Add Account, then Another Provider, and type your
   address and password. Penguin Mail finds the servers, says when the

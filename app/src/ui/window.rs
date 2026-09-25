@@ -19,6 +19,7 @@ use mailrs_sync::{
 };
 
 use super::add_account::{Done, Opening};
+use super::calendar::{CalendarView, Hooks};
 use super::confirm::{Tone, confirm};
 use super::contact_card;
 use super::conversation::{Action, ConversationView};
@@ -69,6 +70,7 @@ mod reveal;
 mod scheduled;
 mod senders;
 mod shortcuts;
+mod spaces;
 mod thread;
 mod translation;
 mod triage;
@@ -125,7 +127,15 @@ pub struct MainWindow {
     about: RefCell<Option<Rc<crate::ui::about::About>>>,
     stack: gtk::Stack,
     split: adw::OverlaySplitView,
+    /// The mail's list and conversation, or the calendar, beside the
+    /// sidebar (ruling R7): inside `split`, so the sidebar and its Mail /
+    /// Calendar switch stay on screen with either.
+    spaces: gtk::Stack,
     nav: adw::NavigationSplitView,
+    pub calendar: Rc<CalendarView>,
+    /// Whether the accounts have been read once, when the window goes
+    /// back to the space it showed last.
+    space_restored: Cell<bool>,
     sidebar: Rc<Sidebar>,
     list: Rc<ThreadList>,
     conversation: Rc<ConversationView>,
@@ -414,9 +424,47 @@ impl MainWindow {
                 .max_sidebar_width(420.0)
                 .sidebar_width_fraction(0.34)
                 .build();
+            let (t, g) = (weak.clone(), weak.clone());
+            let (read_settings, change_settings) = (Rc::downgrade(app), Rc::downgrade(app));
+            let calendar = CalendarView::new(
+                Rc::clone(&app.core),
+                move || {
+                    read_settings
+                        .upgrade()
+                        .map(|a| a.settings())
+                        .unwrap_or_default()
+                },
+                Hooks {
+                    toast: Box::new(move |text| {
+                        if let Some(win) = t.upgrade() {
+                            win.toast(text);
+                        }
+                    }),
+                    change: Box::new(move |change| {
+                        if let Some(app) = change_settings.upgrade() {
+                            app.change_settings(change);
+                        }
+                    }),
+                    grant: Box::new(move |account_id| {
+                        if let Some(win) = g.upgrade() {
+                            win.grant_access(account_id);
+                        }
+                    }),
+                },
+            );
+            // Each space asks for its own width only, so the calendar's
+            // header never widens the mail's minimum, or the other way.
+            let spaces = gtk::Stack::builder()
+                .transition_type(gtk::StackTransitionType::Crossfade)
+                .transition_duration(150)
+                .hhomogeneous(false)
+                .vhomogeneous(false)
+                .build();
+            spaces.add_named(&nav, Some("mail"));
+            spaces.add_named(&calendar.page, Some("calendar"));
             let split = adw::OverlaySplitView::builder()
                 .sidebar(&sidebar.page)
-                .content(&nav)
+                .content(&spaces)
                 .min_sidebar_width(220.0)
                 .max_sidebar_width(290.0)
                 .sidebar_width_fraction(0.22)
@@ -427,6 +475,15 @@ impl MainWindow {
                 .build();
             split
                 .bind_property("show-sidebar", &list.sidebar_button, "active")
+                .bidirectional()
+                .sync_create()
+                .build();
+            split
+                .bind_property("collapsed", &calendar.sidebar_button, "visible")
+                .sync_create()
+                .build();
+            split
+                .bind_property("show-sidebar", &calendar.sidebar_button, "active")
                 .bidirectional()
                 .sync_create()
                 .build();
@@ -491,6 +548,11 @@ impl MainWindow {
                 .bidirectional()
                 .sync_create()
                 .build();
+            assistant_split
+                .bind_property("show-sidebar", &calendar.assistant_button, "active")
+                .bidirectional()
+                .sync_create()
+                .build();
             let stack = gtk::Stack::builder()
                 .transition_type(gtk::StackTransitionType::Crossfade)
                 .build();
@@ -544,8 +606,22 @@ impl MainWindow {
             narrow.add_setter(&assistant_split, "collapsed", Some(&true.to_value()));
             medium.add_setter(&assistant_split, "collapsed", Some(&true.to_value()));
             let (on, off) = (Rc::clone(&conversation), Rc::clone(&conversation));
-            narrow.connect_apply(move |_| on.set_compact(true));
-            narrow.connect_unapply(move |_| off.set_compact(false));
+            let (calendar_on, calendar_off) = (Rc::clone(&calendar), Rc::clone(&calendar));
+            narrow.connect_apply(move |_| {
+                on.set_compact(true);
+                calendar_on.set_narrow(true);
+                calendar_on.set_compact(true);
+            });
+            narrow.connect_unapply(move |_| {
+                off.set_compact(false);
+                calendar_off.set_narrow(false);
+                calendar_off.set_compact(false);
+            });
+            // The window applies one breakpoint at a time, so going from
+            // narrow to medium unapplies narrow before this applies.
+            let (calendar_on, calendar_off) = (Rc::clone(&calendar), Rc::clone(&calendar));
+            medium.connect_apply(move |_| calendar_on.set_compact(true));
+            medium.connect_unapply(move |_| calendar_off.set_compact(false));
             window.add_breakpoint(wide);
             window.add_breakpoint(medium);
             window.add_breakpoint(narrow);
@@ -569,7 +645,10 @@ impl MainWindow {
                 about: RefCell::new(None),
                 stack,
                 split,
+                spaces,
                 nav,
+                calendar,
+                space_restored: Cell::new(false),
                 sidebar,
                 list,
                 conversation,
@@ -648,6 +727,7 @@ impl MainWindow {
         });
         window.install_menu();
         window.install_keys();
+        window.install_spaces();
         let weak = Rc::downgrade(&window);
         window.list.search_button.connect_toggled(move |button| {
             let Some(win) = weak.upgrade() else { return };
@@ -902,6 +982,7 @@ impl MainWindow {
         // trip of its own and settles with everything else above.
         let accounts: Vec<Account> = data.iter().map(|(a, _)| a.clone()).collect();
         self.rebuild_grant_banners(&accounts, &app.consent());
+        self.accounts_for_calendar(&accounts);
     }
 
     /// Brings the Grant Access banners in line with `accounts` and
@@ -2375,6 +2456,7 @@ impl MainWindow {
         let weak = Rc::downgrade(self);
         remind_at.connect_activate(move |_, parameter| {
             if let (Some(win), Some(at)) = (weak.upgrade(), parameter.and_then(|p| p.get::<i64>()))
+                && win.runs_here("remind-at")
             {
                 win.remind(at);
             }
@@ -2388,6 +2470,9 @@ impl MainWindow {
             else {
                 return;
             };
+            if !win.runs_here("flag-color") {
+                return;
+            }
             win.flag(name.parse().ok());
         });
         self.actions.add_action(&flag_color);
@@ -2397,6 +2482,8 @@ impl MainWindow {
             if let (Some(win), Some(position)) =
                 (weak.upgrade(), parameter.and_then(|p| p.get::<i32>()))
             {
+                // A mailbox opens in the mail, whichever space showed.
+                win.show_space(crate::settings::Space::Mail);
                 win.go_to_mailbox(position as usize);
             }
         });
@@ -2511,6 +2598,15 @@ impl MainWindow {
 
     fn install_menu(&self) {
         let menu = gio::Menu::new();
+        // Shown only while the calendar is: the action is off in Mail.
+        let calendar = gio::Menu::new();
+        let declined = gio::MenuItem::new(
+            Some(&gettext("Show Declined Events")),
+            Some("win.show-declined-events"),
+        );
+        declined.set_attribute_value("hidden-when", Some(&"action-disabled".to_variant()));
+        calendar.append_item(&declined);
+        menu.append_section(None, &calendar);
         let first = gio::Menu::new();
         first.append(Some(&gettext("Check for Mail")), Some("win.check"));
         first.append(Some(&gettext("Add Account…")), Some("win.add-account"));

@@ -7,7 +7,7 @@
 use chrono::{DateTime, TimeZone, Utc};
 use gtk::pango;
 use gtk::prelude::*;
-use mailrs_domain::EpochMillis;
+use mailrs_domain::{AccountId, EpochMillis};
 use mailrs_domain::calendar::{Event, Occurrence};
 use mailrs_domain::invitation::Answer;
 use mailrs_domain::translate::{date_locale, fill, gettext};
@@ -20,6 +20,15 @@ use crate::ui::calendar::tint;
 const COMPACT_MS: EpochMillis = 45 * 60_000;
 
 /// The button GTK draws one occurrence of an event as.
+/// Which event a block draws: its account, calendar and id. The view
+/// finds a block by it to point a popover at an event it opens by name.
+pub type EventKey = (AccountId, String, String);
+
+/// The key of the event `o` is an occurrence of.
+pub fn key_of(o: &Occurrence) -> EventKey {
+    (o.account_id, o.event.calendar.clone(), o.event.id.clone())
+}
+
 pub struct EventBlock {
     pub widget: gtk::Button,
 }
@@ -64,6 +73,10 @@ impl EventBlock {
         } else {
             let clock = time_label(o, compact, zone);
             if compact {
+                button.add_css_class("compact");
+                // One line centred on a block that may be shorter than
+                // the line, as the mockup's 15-minute Stand-up is.
+                text.set_valign(gtk::Align::Center);
                 title.set_hexpand(true);
                 let row = gtk::Box::new(gtk::Orientation::Horizontal, 4);
                 row.append(&title);
@@ -75,7 +88,7 @@ impl EventBlock {
             }
         }
 
-        let content = gtk::Box::new(gtk::Orientation::Horizontal, 6);
+        let content = gtk::Box::new(gtk::Orientation::Horizontal, 7);
         content.append(&bar);
         content.append(&text);
 

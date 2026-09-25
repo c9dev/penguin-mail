@@ -922,6 +922,9 @@ impl App {
                             "calendar permission missing"
                         );
                     }
+                    if let Some(window) = this.window() {
+                        window.calendar_refreshed(&refreshed);
+                    }
                 }
                 Err(err) => tracing::warn!(%err, "could not read the calendars"),
             }
