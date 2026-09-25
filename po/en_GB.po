@@ -5978,23 +5978,23 @@ msgstr "Promotions"
 msgid "Social"
 msgstr "Social"
 
-#: domain/src/invitation.rs:68
+#: domain/src/invitation.rs:69
 msgid "Yes"
 msgstr "Yes"
 
-#: domain/src/invitation.rs:69
+#: domain/src/invitation.rs:70
 msgid "No"
 msgstr "No"
 
-#: domain/src/invitation.rs:70 domain/src/invitation.rs:79
+#: domain/src/invitation.rs:71 domain/src/invitation.rs:80
 msgid "Maybe"
 msgstr "Maybe"
 
-#: domain/src/invitation.rs:77
+#: domain/src/invitation.rs:78
 msgid "Going"
 msgstr "Going"
 
-#: domain/src/invitation.rs:78
+#: domain/src/invitation.rs:79
 msgid "Not going"
 msgstr "Not going"
 
