@@ -708,9 +708,11 @@ pub async fn seed(db: &Db, now: EpochMillis) -> std::result::Result<DemoMail, Sy
         fake.keep_sent_copies(account_id);
         if index == 2 {
             // Shows the Grant Access banner: this account was never asked
-            // for the contacts scope, the way an account added before
-            // Task 0 shipped never was.
-            fake.withhold(mailrs_gmail::CONTACTS_SCOPE);
+            // for the settings scope, the way an account added before
+            // Task 0 shipped never was. gmail.settings.basic covers
+            // nothing else and nothing covers it, so withholding it alone
+            // is unambiguous.
+            fake.withhold(mailrs_gmail::SETTINGS_SCOPE);
         }
         let mine: Vec<&Sample> = samples.iter().filter(|s| s.account == index).collect();
         for sample in &mine {
