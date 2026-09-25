@@ -4,7 +4,7 @@
 //! `EventBlock` rather than `EventCard` because `EventCard` already
 //! names the invitation card a message shows (`CONTEXT.md`).
 
-use chrono::{DateTime, TimeZone, Utc};
+use chrono::{DateTime, NaiveDate, TimeZone, Utc};
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
 use gtk::{gdk, glib, graphene, gsk, pango};
@@ -46,12 +46,14 @@ impl EventBlock {
     /// `calendar_colour` and `calendar_name` come from the calendar
     /// `o.event.calendar` names; `compact` puts the time beside the
     /// title rather than under it, which [`is_compact`] decides from the
-    /// occurrence's own length.
+    /// occurrence's own length. `day` is the day a view of several days
+    /// shows the block under, which its spoken name then says.
     pub fn new(
         o: &Occurrence,
         calendar_colour: &str,
         calendar_name: &str,
         compact: bool,
+        day: Option<NaiveDate>,
         zone: &chrono::Local,
     ) -> EventBlock {
         let event = &o.event;
@@ -117,7 +119,7 @@ impl EventBlock {
 
         button.set_child(Some(&content));
 
-        let name = accessible_name(o, calendar_name, zone);
+        let name = accessible_name(o, calendar_name, day, zone);
         ui::describe(&button, &name, &description(event));
         button.set_tooltip_text(Some(&name));
 
@@ -321,22 +323,36 @@ where
     time.upcast()
 }
 
-/// What a screen reader says for the block: the title, the time and the
-/// calendar, or "all day" in place of the time for an all-day event.
-fn accessible_name<Z: TimeZone>(o: &Occurrence, calendar_name: &str, zone: &Z) -> String
+/// What a screen reader says for the block: the title, the day when a
+/// view shows several, the time and the calendar, or "all day" in place
+/// of the time for an all-day event. Without the day, a week's five
+/// Stand-ups would read alike.
+fn accessible_name<Z: TimeZone>(
+    o: &Occurrence,
+    calendar_name: &str,
+    day: Option<NaiveDate>,
+    zone: &Z,
+) -> String
 where
     Z::Offset: std::fmt::Display,
 {
+    let title = match day {
+        Some(day) => fill(
+            &gettext("{title}, {day}"),
+            &[("title", &o.event.title), ("day", &super::words::day_words(day))],
+        ),
+        None => o.event.title.clone(),
+    };
     if o.event.all_day {
         fill(
             &gettext("{title}, all day, {calendar}"),
-            &[("title", &o.event.title), ("calendar", calendar_name)],
+            &[("title", &title), ("calendar", calendar_name)],
         )
     } else {
         fill(
             &gettext("{title}, {start} to {end}, {calendar}"),
             &[
-                ("title", &o.event.title),
+                ("title", &title),
                 ("start", &clock(o.start, zone)),
                 ("end", &clock(o.end, zone)),
                 ("calendar", calendar_name),
@@ -421,8 +437,42 @@ mod tests {
             end: 16 * 3_600_000,
         };
         assert_eq!(
-            accessible_name(&o, "Design team", &Utc),
+            accessible_name(&o, "Design team", None, &Utc),
             "Quarterly review, 15:00 to 16:00, Design team"
+        );
+    }
+
+    #[test]
+    fn a_block_in_a_week_names_its_day() {
+        mailrs_domain::translate::set_date_locale("en_US");
+        let event = std::sync::Arc::new(event(false, None));
+        let o = Occurrence {
+            account_id: 1,
+            event,
+            start: 15 * 3_600_000,
+            end: 16 * 3_600_000,
+        };
+        let monday = chrono::NaiveDate::from_ymd_opt(2026, 9, 21).unwrap();
+        assert_eq!(
+            accessible_name(&o, "Design team", Some(monday), &Utc),
+            "Quarterly review, Monday 21, 15:00 to 16:00, Design team"
+        );
+    }
+
+    #[test]
+    fn an_all_day_block_in_a_week_names_its_day() {
+        mailrs_domain::translate::set_date_locale("en_US");
+        let event = std::sync::Arc::new(event(true, None));
+        let o = Occurrence {
+            account_id: 1,
+            event,
+            start: 0,
+            end: 24 * 3_600_000,
+        };
+        let monday = chrono::NaiveDate::from_ymd_opt(2026, 9, 21).unwrap();
+        assert_eq!(
+            accessible_name(&o, "Family", Some(monday), &Utc),
+            "Quarterly review, Monday 21, all day, Family"
         );
     }
 
@@ -437,7 +487,7 @@ mod tests {
             end: 24 * 3_600_000,
         };
         assert_eq!(
-            accessible_name(&o, "Family", &Utc),
+            accessible_name(&o, "Family", None, &Utc),
             "Quarterly review, all day, Family"
         );
     }

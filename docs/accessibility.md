@@ -98,13 +98,24 @@ buttons that act on it.
 
 ## The calendar from the keyboard
 
-Tab moves from one event to the next, day by day and earliest first,
-then to a day's "N more" button when one is there, and Enter opens the
-event with the focus. T goes to today; D, W and M switch to Day, Week
-and Month; Left and Right step to the previous or next range; Ctrl+F
-opens the calendar's own search bar, which wins over the main window's
-search while the calendar shows. Every one of these gives way while a
-text field, such as search, has the focus.
+In Day and Week, Tab passes the day headings first, each of which opens
+its day, then the all-day row, then the events, day by day and earliest
+first. A "N more" button sits among a day's events at the hour it
+starts. Enter opens the event with the focus, and the popover starts on
+your current answer when you are a guest. Escape closes it and gives
+the focus back to the event. Tab reaches only the range on screen: the
+ranges either side, kept ready for a swipe, are hidden from the
+keyboard and from screen readers. In a week or a month each event
+names its day, such as "Stand-up, Monday 21, 09:30 to 09:45, Work".
+
+T goes to today; D, W and M switch to Day, Week and Month; Left and
+Right step to the previous or next range. After a change of view or
+range, the focus goes to the first event on screen, or to Today when
+there is none. Ctrl+F opens the calendar's own search bar, which wins
+over the main window's search while the calendar shows. Every one of
+these gives way while a text field, such as search, has the focus. The
+main menu's Assistant item, and Ctrl+J, open the assistant in either
+space.
 
 ## Checking it
 

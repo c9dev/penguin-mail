@@ -360,13 +360,13 @@ impl CalendarSidebar {
                 CalendarReach::Calendars(calendars) => {
                     for calendar in calendars {
                         self.calendar_list
-                            .append(&self.calendar_row(account.id, calendar));
+                            .append(&self.calendar_row(account.id, &account.address, calendar));
                     }
                 }
                 CalendarReach::PrimaryOnly(calendars) => {
                     for calendar in calendars {
                         self.calendar_list
-                            .append(&self.calendar_row(account.id, calendar));
+                            .append(&self.calendar_row(account.id, &account.address, calendar));
                     }
                     self.calendar_list.append(&self.grant_row(
                         account.id,
@@ -391,7 +391,7 @@ impl CalendarSidebar {
         }
     }
 
-    fn calendar_row(&self, account_id: AccountId, calendar: &Calendar) -> gtk::Box {
+    fn calendar_row(&self, account_id: AccountId, address: &str, calendar: &Calendar) -> gtk::Box {
         let row = gtk::Box::builder()
             .spacing(8)
             .css_classes(["calendar-row"])
@@ -400,14 +400,13 @@ impl CalendarSidebar {
             .active(calendar.shown)
             .css_classes(["calendar-check", &tint::css_class(&calendar.color)])
             .build();
-        crate::ui::name(&check, &calendar.name);
-        if !calendar.access.can_write() {
-            crate::ui::describe(
-                &check,
-                &calendar.name,
-                &gettext("You can only read this calendar"),
-            );
-        }
+        // Two accounts can each have a calendar called Personal; the
+        // account address tells them apart.
+        let detail = match calendar.access.can_write() {
+            true => address.to_string(),
+            false => format!("{address}. {}", gettext("You can only read this calendar")),
+        };
+        crate::ui::describe(&check, &calendar.name, &detail);
         let label = gtk::Label::builder()
             .label(&calendar.name)
             .css_classes(["calendar-name"])

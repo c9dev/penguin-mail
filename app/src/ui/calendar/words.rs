@@ -17,6 +17,12 @@ pub fn full_date_words(date: NaiveDate) -> String {
         .to_string()
 }
 
+/// "Monday 21": a day of the week on screen, which needs no month.
+pub fn day_words(date: NaiveDate) -> String {
+    date.format_localized(&gettext("%A %-d"), date_locale())
+        .to_string()
+}
+
 /// "10:00" in `zone`'s local time, the pattern the rest of the app clocks
 /// a moment with.
 pub fn clock_words<Z: TimeZone>(at: EpochMillis, zone: &Z) -> String
@@ -70,9 +76,7 @@ where
 /// different month.
 fn all_day_range_words(first: NaiveDate, last: NaiveDate) -> String {
     let first_words = if first.year() == last.year() && first.month() == last.month() {
-        first
-            .format_localized(&gettext("%A %-d"), date_locale())
-            .to_string()
+        day_words(first)
     } else {
         full_date_words(first)
     };

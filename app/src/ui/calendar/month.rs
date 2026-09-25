@@ -175,7 +175,7 @@ impl MonthGrid {
             let (shown, hidden) = layout::month_fit(in_day.len(), rows_that_fit);
             for o in &in_day[..shown] {
                 let (colour, name) = calendar_of(o, &calendars);
-                let block = EventBlock::new(o, colour, name, true, &chrono::Local);
+                let block = EventBlock::new(o, colour, name, true, Some(day), &chrono::Local);
                 connect_event(self, &block.widget, (*o).clone());
                 cell.append(&block.widget);
                 blocks.push((key_of(o), block.widget.upcast()));
