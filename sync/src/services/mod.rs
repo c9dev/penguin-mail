@@ -398,6 +398,10 @@ impl AccountServices {
             contacts: self.contacts.is_some(),
             rules: self.rules.is_some(),
             auto_reply: self.auto_reply.is_some(),
+            // Gmail searches in its own syntax and IMAP with SEARCH. POP3,
+            // in part 6, keeps no mail on the server to search, and adds a
+            // capability for it then.
+            search: true,
         }
     }
 }
@@ -417,6 +421,9 @@ pub struct Offers {
     pub contacts: bool,
     pub rules: bool,
     pub auto_reply: bool,
+    /// The server searches past the mail kept on this computer. The
+    /// window reads nothing of it yet, since every account so far can.
+    pub search: bool,
 }
 
 impl Offers {
@@ -430,6 +437,7 @@ impl Offers {
         contacts: true,
         rules: true,
         auto_reply: true,
+        search: true,
     };
 
     /// What the account lacks, in the order Preferences lists it.
@@ -845,6 +853,17 @@ mod tests {
         services.calendar = None;
         services.rules = None;
         assert_eq!(services.offers().missing(), [Missing::Calendar, Missing::Rules]);
+    }
+
+    #[test]
+    fn gmail_and_imap_both_search_on_the_server() {
+        let gmail = AccountServices::fake(Arc::new(FakeGmail::new()));
+        assert!(gmail.offers().search);
+        let imap = AccountServices::fake_imap(
+            Arc::new(crate::fake::FakeImap::new()),
+            Arc::new(crate::fake::FakeSmtp::default()),
+        );
+        assert!(imap.offers().search);
     }
 
     #[tokio::test]
