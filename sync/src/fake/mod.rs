@@ -179,6 +179,13 @@ pub struct FakeState {
     /// Play Google forgetting every sync token: a read with one answers
     /// `ExpiredSyncToken`.
     pub expire_calendar_tokens: bool,
+    /// Play Google's answer to a write on an event already deleted: 410
+    /// Gone, which the client reads as `ExpiredSyncToken`, rather than
+    /// the 404 the fake gives otherwise.
+    pub deleted_answers_gone: bool,
+    /// Calendars Google no longer has. Every write to one answers
+    /// `NotFound`.
+    pub deleted_calendars: Vec<String>,
     /// The OAuth scopes the account has not granted. A call that needs one
     /// answers `MissingScope`, as Google does until the user says yes.
     /// Change it through [`FakeGmail::withhold`] and [`FakeGmail::grant`].
@@ -359,6 +366,8 @@ impl FakeGmail {
                 calendar_events: Vec::new(),
                 calendar_log: Vec::new(),
                 expire_calendar_tokens: false,
+                deleted_answers_gone: false,
+                deleted_calendars: Vec::new(),
                 withheld: BTreeSet::new(),
                 calendar_off: None,
                 clock: None,
@@ -665,6 +674,22 @@ impl FakeGmail {
             s.calendar_log.push((event.calendar.clone(), event.id.clone(), false));
             s.calendar_events.push(event);
         });
+    }
+
+    /// Google's answer to a write on an event it does not hold.
+    fn deleted(&self) -> GmailError {
+        match self.with(|s| s.deleted_answers_gone) {
+            true => GmailError::ExpiredSyncToken,
+            false => GmailError::NotFound,
+        }
+    }
+
+    /// Google's answer to a write on a calendar it no longer has.
+    fn calendar_held(&self, calendar: &str) -> Result<(), GmailError> {
+        match self.with(|s| s.deleted_calendars.iter().any(|c| c == calendar)) {
+            true => Err(GmailError::NotFound),
+            false => Ok(()),
+        }
     }
 
     /// The series an occurrence id (`<series>_<start>`) names on `calendar`,
@@ -1261,6 +1286,7 @@ impl GmailApi for FakeGmail {
     ) -> Result<calendar::Event, GmailError> {
         self.call(if create { "calendar.events.insert" } else { "calendar.events.patch" }, 0).await?;
         self.calendar_open()?;
+        self.calendar_held(&event.calendar)?;
         let held = self.with(|s| {
             s.calendar_events.iter().find(|e| e.calendar == event.calendar && e.id == event.id).cloned()
         });
@@ -1269,7 +1295,7 @@ impl GmailApi for FakeGmail {
             // An occurrence of a series has an id before anyone changes
             // it; the first change makes it an event of its own.
             (None, false) if self.series_of(&event.calendar, &event.id).is_some() => {}
-            (None, false) => return Err(GmailError::NotFound),
+            (None, false) => return Err(self.deleted()),
             _ => {}
         }
         if let (Some(held), Some(etag)) = (&held, etag)
@@ -1295,6 +1321,7 @@ impl GmailApi for FakeGmail {
     async fn remove_event(&self, calendar: &str, id: &str, etag: Option<&str>) -> Result<(), GmailError> {
         self.call("calendar.events.delete", 0).await?;
         self.calendar_open()?;
+        self.calendar_held(calendar)?;
         let held = self.with(|s| s.calendar_events.iter().find(|e| e.calendar == calendar && e.id == id).cloned());
         match (held, etag) {
             // Deleting one occurrence of a series leaves a cancelled
@@ -1313,7 +1340,7 @@ impl GmailApi for FakeGmail {
                     });
                     Ok(())
                 }
-                None => Err(GmailError::NotFound),
+                None => Err(self.deleted()),
             },
             (Some(held), Some(etag)) if held.etag != etag => Err(GmailError::Changed),
             _ => {

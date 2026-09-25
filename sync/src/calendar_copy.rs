@@ -424,13 +424,12 @@ impl<A: Accounts> CalendarCopy<A> {
                     self.db.write(move |c| store::dequeue(c, seq)).await?;
                 }
                 (store::ChangeKind::Save, Err(BackendError::NotFound)) => {
-                    // The event went elsewhere; a version this row's
-                    // etag no longer names (reconcile.md Task 6 item 3:
-                    // this used to hit the catch-all `Err` arm, which
-                    // stopped the whole send and stuck every change
-                    // behind it for good).
-                    turned_down
-                        .push(self.take_theirs(&calendar, &change, Some("deleted elsewhere".to_string())).await?);
+                    turned_down.push(self.drop_gone(&change, "deleted elsewhere").await?);
+                }
+                (store::ChangeKind::Create, Err(BackendError::NotFound)) => {
+                    // A new event's id cannot be missing, so it is the
+                    // calendar that went: its rows in the queue outlive it.
+                    turned_down.push(self.drop_gone(&change, "the calendar is gone").await?);
                 }
                 (store::ChangeKind::Create, Err(BackendError::Changed)) => {
                     // The create reached Google and its answer was lost,
@@ -446,10 +445,35 @@ impl<A: Accounts> CalendarCopy<A> {
                 (_, Err(BackendError::Refused(reason))) => {
                     turned_down.push(self.take_theirs(&calendar, &change, Some(reason)).await?);
                 }
-                (_, Err(err)) => return Err(err.into()),
+                (_, Err(err)) if holds_the_queue(&err) => return Err(err.into()),
+                // Any other answer will come again for this change, so it
+                // leaves the queue rather than hold every change behind it.
+                (_, Err(err)) => {
+                    turned_down.push(self.take_theirs(&calendar, &change, Some(err.to_string())).await?);
+                }
             }
         }
         Ok(turned_down)
+    }
+
+    /// Drops a change whose event, or whose calendar, the provider no
+    /// longer has, and takes the event off the copy.
+    async fn drop_gone(&self, change: &store::QueuedChange, reason: &str) -> Result<TurnedDown, SyncError> {
+        let account_id = change.account_id;
+        let (seq, cal, id) = (change.seq, change.calendar.clone(), change.event.clone());
+        self.db
+            .write(move |c| {
+                store::dequeue(c, seq)?;
+                store::remove_events(c, account_id, &cal, std::slice::from_ref(&id))
+            })
+            .await?;
+        Ok(TurnedDown {
+            account_id,
+            calendar: change.calendar.clone(),
+            event: change.event.clone(),
+            title: change.body.as_ref().map(|b| b.title.clone()).unwrap_or_default(),
+            reason: Some(reason.to_string()),
+        })
     }
 
     /// Drops a refused change and puts the provider's version of its
@@ -502,6 +526,21 @@ impl<A: Accounts> CalendarCopy<A> {
             .ok_or(SyncError::UnknownAccount(account_id))?
             .email)
     }
+}
+
+/// Whether a failed send should stop and keep the change for the next
+/// one: the network or the rate limit may pass, and a sign-in, a
+/// permission or an API switched off concerns the account, not the
+/// change, so dropping the change would lose it for nothing.
+fn holds_the_queue(err: &BackendError) -> bool {
+    err.is_transient()
+        || matches!(
+            err,
+            BackendError::NeedsReauth
+                | BackendError::NeedsPermission
+                | BackendError::ApiDisabled { .. }
+                | BackendError::Unsupported
+        )
 }
 
 /// The lone calendar an account keeps once `calendar.events` is granted
