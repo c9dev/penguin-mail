@@ -5925,33 +5925,33 @@ msgstr "Is unread"
 msgid "Is flagged"
 msgstr "Is flagged"
 
-#: sync/src/account/writes.rs:590
+#: sync/src/account/writes.rs:670
 msgid "Gmail is busy. Still working on {conversations}."
 msgstr "Gmail is busy. Still working on {conversations}."
 
-#: sync/src/account/writes.rs:605
+#: sync/src/account/writes.rs:685
 msgid "Gmail is busy, so {action} did not go through for {conversations}. Try again in a moment."
 msgstr "Gmail is busy, so {action} did not go through for {conversations}. Try again in a moment."
 
-#: sync/src/account/writes.rs:614
+#: sync/src/account/writes.rs:694
 msgid "Gmail stayed busy for {waited}, so {action} did not go through for {conversations}."
 msgstr "Gmail stayed busy for {waited}, so {action} did not go through for {conversations}."
 
-#: sync/src/account/writes.rs:621
+#: sync/src/account/writes.rs:701
 msgid "{action} failed: {reason}"
 msgstr "{action} failed: {reason}"
 
-#: sync/src/account/writes.rs:639
+#: sync/src/account/writes.rs:719
 msgid "a moment"
 msgstr "a moment"
 
-#: sync/src/account/writes.rs:641
+#: sync/src/account/writes.rs:721
 msgid "{count} second"
 msgid_plural "{count} seconds"
 msgstr[0] "{count} second"
 msgstr[1] "{count} seconds"
 
-#: sync/src/account/writes.rs:646
+#: sync/src/account/writes.rs:726
 msgid "a minute"
 msgstr "a minute"
 
@@ -6100,51 +6100,51 @@ msgstr "This smart mailbox has no conditions"
 msgid "Results for {account} come from the mail on this computer alone"
 msgstr "Results for {account} come from the mail on this computer alone"
 
-#: sync/src/mailbox.rs:948
+#: sync/src/mailbox.rs:951
 msgid "Could not load mail for {account}: {reason}"
 msgstr "Could not load mail for {account}: {reason}"
 
-#: sync/src/mailbox.rs:1066
+#: sync/src/mailbox.rs:1072
 msgid "Returns {when}"
 msgstr "Returns {when}"
 
-#: sync/src/mailbox.rs:1109 sync/src/mailbox.rs:1180
+#: sync/src/mailbox.rs:1115 sync/src/mailbox.rs:1186
 msgid "No recipients"
 msgstr "No recipients"
 
-#: sync/src/mailbox.rs:1112 sync/src/mailbox.rs:1183
+#: sync/src/mailbox.rs:1118 sync/src/mailbox.rs:1189
 msgid "To {recipients}"
 msgstr "To {recipients}"
 
-#: sync/src/mailbox.rs:1145
+#: sync/src/mailbox.rs:1151
 msgid "{count} unread"
 msgid_plural "{count} unread"
 msgstr[0] "{count} unread"
 msgstr[1] "{count} unread"
 
-#: sync/src/mailbox.rs:1155
+#: sync/src/mailbox.rs:1161
 msgid "Sent yesterday, no reply yet"
 msgstr "Sent yesterday, no reply yet"
 
-#: sync/src/mailbox.rs:1157
+#: sync/src/mailbox.rs:1163
 msgid "Sent {days} day ago, no reply yet"
 msgid_plural "Sent {days} days ago, no reply yet"
 msgstr[0] "Sent {days} day ago, no reply yet"
 msgstr[1] "Sent {days} days ago, no reply yet"
 
-#: sync/src/mailbox.rs:1195
+#: sync/src/mailbox.rs:1201
 msgid "Sends {when}"
 msgstr "Sends {when}"
 
-#: sync/src/mailbox.rs:1199
+#: sync/src/mailbox.rs:1205
 msgid "Not sent"
 msgstr "Not sent"
 
-#: sync/src/mailbox.rs:1206
+#: sync/src/mailbox.rs:1212
 msgid "{problem}. Trying again {when}"
 msgstr "{problem}. Trying again {when}"
 
-#: sync/src/mailbox.rs:1213
+#: sync/src/mailbox.rs:1219
 msgid "{problem}. Penguin Mail stopped trying"
 msgstr "{problem}. Penguin Mail stopped trying"
 
