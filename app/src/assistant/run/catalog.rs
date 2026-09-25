@@ -802,7 +802,7 @@ pub(super) fn catalog<A: Accounts>() -> Vec<MailTool<A>> {
         MailTool {
             name: "delete_forever",
             label: || gettext("Deleting mail forever"),
-            description: "Erases conversations from Gmail for good. Nothing brings them back, so use organize with trash unless the user asked for this. The user approves it first.",
+            description: "Erases conversations for good from their account's mail server. Nothing brings them back, so use organize with trash unless the user asked for this. The user approves it first.",
             input: || json!({"targets": targets()}),
             required: &["targets"],
             run: Run::AsksFirst(|t, input| Box::pin(t.delete_forever(input))),

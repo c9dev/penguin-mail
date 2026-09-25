@@ -730,6 +730,14 @@ async fn delete_draft_asks_then_removes_it_from_gmail_and_the_list() {
     assert_eq!(h.asked().relisted, 1);
 }
 
+#[test]
+fn the_delete_draft_question_names_the_accounts_provider() {
+    assert_eq!(
+        super::super::writing::discard_question("Fern swap", "Fastmail"),
+        "Delete the draft “Fern swap”? Fastmail cannot bring it back."
+    );
+}
+
 #[tokio::test]
 async fn deleting_a_draft_that_is_waiting_to_go_out_points_at_cancel_send() {
     let h = with_draft(&fern_swap()).await;

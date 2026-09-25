@@ -901,6 +901,23 @@ async fn categorize_sender_asks_then_moves_their_mail_and_sorts_the_rest() {
     assert_eq!(h.asked().categories_moved, 1);
 }
 
+#[test]
+fn the_categorize_question_names_the_accounts_provider() {
+    let account = mailrs_domain::Account {
+        id: 1,
+        email: ME.into(),
+        state: mailrs_domain::AccountState::Ok,
+        provider: mailrs_domain::Provider::Gmail,
+        provider_name: None,
+    };
+    assert_eq!(
+        super::categorize_question("The Kite Shop", "Social", &account),
+        format!(
+            "Move mail from The Kite Shop to Social in {ME}, and add a Gmail rule for their future mail?"
+        )
+    );
+}
+
 #[tokio::test]
 async fn categorize_sender_without_the_settings_permission_moves_the_mail_and_says_so() {
     let h = harness().await;

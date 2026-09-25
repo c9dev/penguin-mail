@@ -116,6 +116,18 @@ async fn delete_forever_asks_then_erases() {
     assert_eq!(h.asked().relisted, 1, "the list drops the erased rows");
 }
 
+#[test]
+fn the_delete_forever_question_names_the_accounts_provider() {
+    assert_eq!(
+        super::super::mail::erase_question(1, "Fastmail"),
+        "Delete 1 conversation forever? Fastmail cannot bring it back."
+    );
+    assert_eq!(
+        super::super::mail::erase_question(3, "Fastmail"),
+        "Delete 3 conversations forever? Fastmail cannot bring them back."
+    );
+}
+
 #[tokio::test]
 async fn delete_forever_asks_for_the_permission_it_lacks() {
     let h = harness().await;

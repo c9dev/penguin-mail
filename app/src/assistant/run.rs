@@ -1554,17 +1554,7 @@ impl<A: Accounts> Tools<A> {
         let key = required(input, "category")?;
         let category = named_category(&key)?;
         let who = text(input, "name").unwrap_or_else(|| email.clone());
-        let question = fill(
-            &gettext(
-                "Move mail from {sender} to {category} in {account}, and add a Gmail \
-                 rule for their future mail?",
-            ),
-            &[
-                ("sender", &who),
-                ("category", &category.name()),
-                ("account", &account.email),
-            ],
-        );
+        let question = categorize_question(&who, &category.name(), &account);
         Ok(Plan::ask(question, async move {
             let mail = Arc::clone(&self.modules.mail);
             let (account_id, asked) = (account.id, email.clone());
@@ -1755,4 +1745,22 @@ fn report(outcome: &Outcome) -> ToolResult {
             .collect();
     }
     Ok(result)
+}
+
+/// The question before the assistant moves `sender`'s mail into
+/// `category` in `account` and adds a rule on the account's server for
+/// the mail still to come.
+fn categorize_question(sender: &str, category: &str, account: &Account) -> String {
+    fill(
+        &gettext(
+            "Move mail from {sender} to {category} in {account}, and add a {provider} \
+             rule for their future mail?",
+        ),
+        &[
+            ("sender", sender),
+            ("category", category),
+            ("account", &account.email),
+            ("provider", account.provider_name()),
+        ],
+    )
 }

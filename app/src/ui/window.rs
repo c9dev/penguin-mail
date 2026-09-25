@@ -1302,7 +1302,7 @@ impl MainWindow {
         scope: press::Scope,
         press: Press,
     ) -> bool {
-        let accounts = press::reached(&reach.targets, |id| self.offers(id));
+        let accounts = press::reached(&reach.targets, |id| self.account(id), |id| self.offers(id));
         let plan = press::plan(Pressed {
             press,
             reach,
@@ -1357,8 +1357,8 @@ impl MainWindow {
 
     /// Words the trash button of `view` for `mailbox`: the folder's own
     /// words, or what Delete calls off in a mailbox of queued mail. In a
-    /// Trash the button shows only while every account in `accounts`, the
-    /// ones an action on `view` reaches, can delete mail for good.
+    /// Trash the button shows while any account in `accounts`, the ones an
+    /// action on `view` reaches, can delete mail for good.
     pub(super) fn word_buttons(
         &self,
         view: &ConversationView,
@@ -1389,12 +1389,13 @@ impl MainWindow {
         }
     }
 
-    /// Whether the server of every account in `accounts` can delete mail
-    /// for good.
+    /// Whether the server of any account in `accounts` can delete mail for
+    /// good. Delete Forever then erases the mail of the accounts that can,
+    /// and its question names the others.
     fn erases(&self, accounts: impl IntoIterator<Item = AccountId>) -> bool {
         accounts
             .into_iter()
-            .all(|id| self.offers(id).delete_forever)
+            .any(|id| self.offers(id).delete_forever)
     }
 
     /// Erases the targets. Nothing reverses this, so the toast offers no

@@ -174,13 +174,7 @@ impl<A: Accounts> Tools<A> {
         if let Some(answer) = self.unavailable(&account, Missing::DeleteForever) {
             return Ok(Plan::without_asking(async move { Ok(answer) }));
         }
-        let count = targets.len();
-        let question = fill_plural(
-            "Delete {count} conversation forever? Gmail cannot bring it back.",
-            "Delete {count} conversations forever? Gmail cannot bring them back.",
-            count,
-            &[("count", &count.to_string())],
-        );
+        let question = erase_question(targets.len(), account.provider_name());
         Ok(Plan::ask(question, self.erase(account, targets)))
     }
 
@@ -362,4 +356,15 @@ impl<A: Accounts> Tools<A> {
         }
         Ok(result)
     }
+}
+
+/// The question before the assistant erases `count` conversations from an
+/// account on `provider`.
+pub(super) fn erase_question(count: usize, provider: &str) -> String {
+    fill_plural(
+        "Delete {count} conversation forever? {provider} cannot bring it back.",
+        "Delete {count} conversations forever? {provider} cannot bring them back.",
+        count,
+        &[("count", &count.to_string()), ("provider", provider)],
+    )
 }
