@@ -1,6 +1,6 @@
 # Penguin Mail privacy policy
 
-Last updated: 24 September 2026
+Last updated: 25 September 2026
 
 Penguin Mail is a desktop email client for Gmail, published by Pivotd
 (https://pivotd.com). It runs on your own computer. This policy explains what
@@ -11,18 +11,17 @@ it accesses, where that data goes, and how it is protected.
 You grant access through Google's own sign-in page. Adding an account asks
 for every permission Penguin Mail uses, in one visit:
 
-- `gmail.modify`, to read your messages, labels and drafts so it can show
-  them; to change labels, so you can archive, star, and mark mail read or
-  unread; to move messages to the Trash; and to save drafts and send the
-  messages you write.
-- `https://mail.google.com/`, to erase mail permanently when you choose
-  Delete Forever in the Trash.
+- `https://mail.google.com/`, to read your messages, labels and drafts so
+  it can show them; to change labels, so you can archive, star, and mark
+  mail read or unread; to move messages to the Trash; to save drafts and
+  send the messages you write; and to erase mail permanently when you
+  choose Delete Forever in the Trash.
 - `gmail.settings.basic`, to read and change your automatic reply, your
   signature, and your Gmail filters, when you change them in Penguin Mail.
-- `contacts.readonly`, to show your contacts' names and photos and suggest
-  recipients, once you turn contacts on in Preferences.
-- `contacts`, to write a contact to Google Contacts, when you ask the
-  assistant to add or change one.
+- `contacts`, to show your contacts' names and photos and suggest
+  recipients, once you turn contacts on in Preferences, and to write a
+  contact to Google Contacts when you ask the assistant to add or change
+  one.
 - `calendar.events`, to read your calendars, mark your answer to a
   meeting invitation, and let the assistant read and change events.
 - `calendar.calendarlist.readonly`, to read the list of your calendars, so

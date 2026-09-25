@@ -16,28 +16,33 @@ use crate::GmailError;
 use crate::calendar::{CALENDAR_LIST_SCOPE, CALENDAR_SCOPE};
 use crate::people::{CONTACTS_SCOPE, CONTACTS_WRITE_SCOPE};
 
-/// Read, send, and organize mail.
+/// Read, send, and organize mail. Sign-in no longer asks for this one on
+/// its own: [`DELETE_SCOPE`] covers it. [`Granted::has`] still checks it,
+/// so an account that signed in before this change and kept only this
+/// narrower grant still reads and sends mail.
 pub const GMAIL_SCOPE: &str = "https://www.googleapis.com/auth/gmail.modify";
 /// Read and change the automatic reply and signatures.
 pub const SETTINGS_SCOPE: &str = "https://www.googleapis.com/auth/gmail.settings.basic";
 /// Erase mail so that Gmail cannot bring it back. It covers the whole
 /// mailbox, which is far more than [`GMAIL_SCOPE`] does, but sign-in asks
-/// for it anyway: leaving it out would mean asking again the first time
-/// somebody deletes mail from the Trash, and the owner decided every scope
-/// goes in one consent.
+/// for it instead of the narrower one: leaving it out would mean asking
+/// again the first time somebody deletes mail from the Trash, and the
+/// owner decided every scope goes in one consent.
 pub const DELETE_SCOPE: &str = "https://mail.google.com/";
 pub const GOOGLE_AUTH_URL: &str = "https://accounts.google.com/o/oauth2/v2/auth";
 pub const GOOGLE_TOKEN_URL: &str = "https://oauth2.googleapis.com/token";
 
-/// Every scope sign-in asks Google for, in one consent: mail, settings,
-/// delete, the two contacts scopes, and the two calendar scopes. A person
-/// may untick any of them on Google's screen; [`Granted`] says which the
-/// token still carries.
-pub const SIGN_IN_SCOPES: [&str; 7] = [
-    GMAIL_SCOPE,
-    SETTINGS_SCOPE,
+/// Every scope sign-in asks Google for, in one consent: [`DELETE_SCOPE`]
+/// (mail, and deleting it for good), settings, [`CONTACTS_WRITE_SCOPE`]
+/// (contacts, and changing them), and the two calendar scopes. Google's
+/// verification team asks for least privilege, so this leaves out
+/// [`GMAIL_SCOPE`] and [`crate::people::CONTACTS_SCOPE`]: each is already
+/// covered by the wider scope in the list. A person may untick any of
+/// these on Google's screen; [`Granted`] says which the token still
+/// carries.
+pub const SIGN_IN_SCOPES: [&str; 5] = [
     DELETE_SCOPE,
-    CONTACTS_SCOPE,
+    SETTINGS_SCOPE,
     CONTACTS_WRITE_SCOPE,
     CALENDAR_SCOPE,
     CALENDAR_LIST_SCOPE,
