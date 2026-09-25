@@ -1277,8 +1277,7 @@ impl GmailApi for FakeGmail {
     }
 
     /// A create answers 409 when the id is already on the calendar and a
-    /// change answers `NotFound` when it is not, as Google does
-    /// (reconcile.md Task 4 item 6).
+    /// change answers `NotFound` when it is not, as Google does.
     async fn put_event(
         &self,
         event: &calendar::Event,

@@ -115,7 +115,7 @@ async fn a_calendar_that_left_the_list_leaves_the_store() {
     assert!(stored(&h, "team", "c").await.is_none());
 }
 
-/// Ruling R2: an account that granted `calendar.events` but not the list
+/// An account that granted `calendar.events` but not the list
 /// scope still has a primary calendar, addressed by the account's own
 /// address, which `calendar.events` allows on its own. The owner's own
 /// account is one of these, so the copy must not come out empty for it.
@@ -166,7 +166,7 @@ async fn without_any_calendar_permission_the_account_is_left_alone() {
     assert!(h.db.read(move |c| store::synced(c, account)).await.unwrap(), "a grant reads at once");
 }
 
-/// reconcile.md Task 5 item 4: recording `last_list` only after a
+/// Recording `last_list` only after a
 /// successful call meant a refused list was asked for again on every
 /// tick. It now waits `LIST_EVERY` whether the call succeeded or not.
 #[tokio::test]
@@ -183,9 +183,9 @@ async fn a_missing_list_permission_asks_at_most_every_half_hour() {
     assert_eq!(calls(), before + 1);
 }
 
-/// Spec section 3: a calendar the person hid is read at the slow, tray
+/// A calendar the person hid is read at the slow, tray
 /// cadence even while the window is open, rather than every minute like
-/// the calendars they look at (reconcile.md Task 5 item 5).
+/// the calendars they look at.
 #[tokio::test]
 async fn a_hidden_calendar_is_read_only_every_five_minutes() {
     let h = harness().await;
@@ -223,8 +223,7 @@ async fn the_cadence_is_a_minute_open_and_five_in_the_tray() {
 }
 
 /// The provider-neutrality rule: an account whose provider offers no
-/// calendar, IMAP today, is skipped without an error or a wasted call
-/// (reconcile.md Task 5 item 2).
+/// calendar, IMAP today, is skipped without an error or a wasted call.
 #[tokio::test]
 async fn an_account_without_a_calendar_is_skipped_quietly() {
     let h = imap_harness().await;
@@ -237,7 +236,7 @@ async fn an_account_without_a_calendar_is_skipped_quietly() {
     assert!(!h.db.read(move |c| store::synced(c, account)).await.unwrap());
 }
 
-/// reconcile.md Task 5 item 3: one account's trouble, such as one not yet
+/// One account's trouble, such as one not yet
 /// running, used to abort `refresh_due` with `?` before it reached any
 /// account after it.
 #[tokio::test]
@@ -253,7 +252,7 @@ async fn an_account_that_is_not_running_leaves_the_rest_to_be_read() {
     assert!(stored(&h, "primary", "a").await.is_some());
 }
 
-/// reconcile.md Task 5 item 8: the app ticks every 15 s and a first read
+/// The app ticks every 15 s and a first read
 /// of a large calendar can take longer, so a second `refresh_due` while
 /// one is already under way leaves every account alone rather than
 /// reading it twice. The second account's own cadence has never been
@@ -385,7 +384,7 @@ fn a_new_id_is_one_google_accepts() {
     assert!(id.chars().all(|c| c.is_ascii_digit() || ('a'..='v').contains(&c)));
 }
 
-/// reconcile.md Task 6 item 6. Google saw the create; only the answer
+/// Google saw the create; only the answer
 /// telling us so was lost. `send` must ask what changed rather than
 /// asking to create the id a second time.
 #[tokio::test]
@@ -405,7 +404,7 @@ async fn a_create_whose_answer_was_lost_is_not_sent_twice() {
     assert!(stored(&h, "primary", &id).await.is_some());
 }
 
-/// The bug reconcile.md Task 6 item 2 names: `send` used to infer a
+/// `send` once inferred a
 /// create from an empty etag. A row `enqueue` marked `Save` (because an
 /// edit is already queued for the event, ruling out a create) must still
 /// go out as a change even when its etag column is empty, or a second
@@ -428,8 +427,7 @@ async fn a_queued_save_with_no_etag_is_not_sent_as_a_create() {
     assert_eq!(stored(&h, "primary", "a").await.unwrap().title, "Edited");
 }
 
-/// The bug reconcile.md Task 6 item 3 names: a `Save` that meets a 404
-/// used to hit the catch-all `Err` arm, which stopped the whole send and
+/// A `Save` that meets a 404 once hit the catch-all `Err` arm, which stopped the whole send and
 /// left every change behind it stuck for good.
 #[tokio::test]
 async fn an_edit_to_an_event_deleted_elsewhere_leaves_the_queue() {
@@ -457,7 +455,7 @@ async fn an_edit_to_an_event_deleted_elsewhere_leaves_the_queue() {
     assert!(h.db.read(move |c| store::queued(c, account)).await.unwrap().is_empty());
 }
 
-/// reconcile.md Task 6 item 4: an edit that lands while the first is
+/// An edit that lands while the first is
 /// still waiting on Google must not be lost, and must not be sent
 /// against the etag it started with once the first one changed it.
 #[tokio::test]

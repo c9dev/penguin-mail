@@ -652,8 +652,8 @@ async fn a_change_page_maps_events_and_names_the_deleted_ones() {
     assert_eq!(event.rules, vec!["RRULE:FREQ=WEEKLY;BYDAY=WE".to_string()]);
     assert_eq!(event.conference.as_deref(), Some("https://meet.google.com/abc-defg-hij"));
     assert_eq!(event.my_answer, Some(Answer::Maybe));
-    // Google writes an all-day holiday with no transparency, which still
-    // takes the day: reconcile.md Task 3 item 3.
+    // Google writes an all-day holiday with no transparency, so its own
+    // flag says busy; `Event::blocks_time` is what leaves the day open.
     assert!(page.events[1].busy);
 }
 

@@ -45,7 +45,8 @@ pub fn list_accounts(conn: &Connection) -> Result<Vec<Account>> {
 }
 
 /// The account by id, such as `CalendarCopy` reads to name a Google
-/// account's primary calendar by its own address (ruling R2).
+/// account's primary calendar by its own address when the calendar list
+/// is out of reach.
 pub fn account(conn: &Connection, id: AccountId) -> Result<Option<Account>> {
     let row: Option<(AccountId, String, String, String, Option<String>)> = conn
         .query_row(

@@ -130,11 +130,10 @@ impl<A: Accounts> Invitations<A> {
 
     /// What else the user has on while this event runs, by title. Once the
     /// local copy has read the account, this reads it straight, on
-    /// calendars the account owns only (ruling R3), and never remembers
-    /// the answer: a store read costs nothing, and remembering it would
-    /// hide a refresh that landed while the message stayed open
-    /// (reconcile.md Task 9 item 3). Before that, one call to Google,
-    /// the answer kept for as long as the message stays open, and
+    /// calendars the account owns only, and never remembers the answer: a
+    /// store read costs nothing, and remembering it would hide a refresh
+    /// that landed while the message stayed open. Before that, one call to
+    /// Google, the answer kept for as long as the message stays open, and
     /// nothing at all without the calendar permission: a clash is worth
     /// saying, not worth a permission prompt of its own.
     ///

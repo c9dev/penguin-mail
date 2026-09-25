@@ -18,8 +18,7 @@ use crate::Result;
 /// A day, in milliseconds.
 const DAY: EpochMillis = 24 * 60 * 60 * 1000;
 
-/// The longest range [`occurrences`] answers whole. Memory item 1: the
-/// query clones a whole event into every occurrence it returns, so a
+/// The longest range [`occurrences`] answers whole. The query clones a whole event into every occurrence it returns, so a
 /// range with no bound could hold a year of a daily series' guests and
 /// descriptions for however far ahead the caller asked.
 const MAX_RANGE: EpochMillis = 366 * DAY;
@@ -36,7 +35,8 @@ pub enum CalendarScope {
     /// Every calendar, hidden or not.
     All,
     /// Calendars the account can write to, for the clash line and free
-    /// time (ruling R3), whether or not the person hid them.
+    /// time, whether or not the person hid them. A calendar the account
+    /// only reads is someone else's time.
     Owned,
 }
 
@@ -306,8 +306,7 @@ pub fn occurrences(
         // The changed-occurrence branch below has no upper bound of its
         // own on how far back a moved or cancelled occurrence's original
         // start may sit; this is its lower bound, so a series' oldest
-        // occurrence does not load on every call (reconcile.md Task 2
-        // item 4, Memory item 2).
+        // occurrence does not load on every call.
         let longest: EpochMillis = conn.query_row(
             "SELECT COALESCE(MAX(ends_at - starts_at), 0) FROM events WHERE account_id = ?1 AND rules <> ''",
             params![account_id],
@@ -430,7 +429,7 @@ impl ChangeKind {
 
 /// One change waiting for the provider. Named apart from the glossary's
 /// "Queued message" (`mailrs_store::outbox::Queued`), which is something
-/// else (reconcile.md Task 2 item 6).
+/// else.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct QueuedChange {
     pub seq: i64,
@@ -446,7 +445,7 @@ pub struct QueuedChange {
 
 /// Queues a change for the provider. One row holds the latest change for
 /// an event, so an event edited several times offline queues one body
-/// rather than one row per edit (reconcile.md Task 2 item 8):
+/// rather than one row per edit:
 /// - a Save meeting an unsent Create or Save replaces that row's body;
 /// - a Remove meeting an unsent Create drops the row: the provider never
 ///   heard of the event, so there is nothing left to tell it;
@@ -529,7 +528,7 @@ fn read_change(row: &Row, account_id: AccountId) -> rusqlite::Result<QueuedChang
 }
 
 /// The ids of a calendar's events with an unsent change, without loading
-/// every queued body (reconcile.md Task 2 item 9).
+/// every queued body.
 pub fn pending_ids(conn: &Connection, account_id: AccountId, calendar: &str) -> Result<HashSet<String>> {
     let mut stmt =
         conn.prepare("SELECT event FROM calendar_changes WHERE account_id = ?1 AND calendar = ?2")?;
@@ -734,11 +733,10 @@ mod tests {
         );
     }
 
-    /// reconcile.md Task 2 item 4: the query's `WHERE` used to `AND` every
-    /// branch with `e.starts_at < ?3`, so a changed occurrence moved past
-    /// the range end never entered the SQL result, never masked the
-    /// series' own date for it, and the original showed as if nothing had
-    /// moved it.
+    /// The query's `WHERE` once put `e.starts_at < ?3` on every branch, so
+    /// a changed occurrence moved past the range end never entered the
+    /// result, never masked the series' own date for it, and the original
+    /// showed as if nothing had moved it.
     #[test]
     fn a_changed_occurrence_moved_past_the_range_still_hides_its_original() {
         let (conn, id) = store();
@@ -775,8 +773,7 @@ mod tests {
         assert_eq!(occurrences(&conn, &[id], MONDAY, MONDAY + DAY, CalendarScope::All).unwrap().len(), 1);
     }
 
-    /// reconcile.md Task 2 item 5: `CalendarScope::Owned` is what the clash line
-    /// and free time need (ruling R3), so a calendar the account can only
+    /// `CalendarScope::Owned` is what the clash line and free time need, so a calendar the account can only
     /// read never counts toward either.
     #[test]
     fn an_owned_reach_leaves_out_a_calendar_the_account_only_reads() {
@@ -789,7 +786,7 @@ mod tests {
         assert_eq!(occurrences(&conn, &[id], MONDAY, MONDAY + DAY, CalendarScope::All).unwrap().len(), 1);
     }
 
-    /// Memory item 1: `occurrences` clones a whole event into every row it
+    /// `occurrences` clones a whole event into every row it
     /// returns, so a range with no bound could hold a year of a daily
     /// series' guests and descriptions. A request for more than a year is
     /// clamped rather than answered whole.
@@ -810,7 +807,7 @@ mod tests {
         assert_eq!(starts(&found), vec![("within".into(), MONDAY + 300 * DAY)]);
     }
 
-    /// Memory item 1: the live path caps a listing at `MOST_EVENTS` (500);
+    /// The live path caps a listing at `MOST_EVENTS` (500);
     /// the local copy's range query does the same, so a very active series
     /// cannot hand back thousands of clones of itself.
     #[test]
@@ -854,7 +851,7 @@ mod tests {
         assert_eq!(queued(&conn, id).unwrap().len(), 1);
     }
 
-    /// reconcile.md Task 2 item 8: an event edited twice before a send
+    /// An event edited twice before a send
     /// queues one change, its latest body, not one row per edit.
     #[test]
     fn two_edits_before_a_send_queue_one_change() {
@@ -868,7 +865,7 @@ mod tests {
         assert_eq!(held[0].body.as_ref().map(|e| e.title.as_str()), Some("Lunch with Ana"));
     }
 
-    /// reconcile.md Task 2 item 8: removing an event this computer made
+    /// Removing an event this computer made
     /// and never sent takes the create off the queue instead of asking
     /// the provider to delete something it never heard of.
     #[test]
@@ -880,7 +877,7 @@ mod tests {
         assert!(queued(&conn, id).unwrap().is_empty());
     }
 
-    /// reconcile.md Task 2 item 8: removing an event with an unsent edit
+    /// Removing an event with an unsent edit
     /// turns that edit into the removal, rather than queueing both.
     #[test]
     fn removing_an_edited_event_turns_the_queued_edit_into_the_removal() {
@@ -894,7 +891,7 @@ mod tests {
         assert!(held[0].body.is_none());
     }
 
-    /// reconcile.md Task 2 item 9: a caller that only needs to know which
+    /// A caller that only needs to know which
     /// ids are pending should not have to load every queued body to learn
     /// it.
     #[test]
@@ -906,7 +903,7 @@ mod tests {
         assert_eq!(ids, HashSet::from(["lunch".to_string()]));
     }
 
-    /// reconcile.md Task 2 item 10: a page-at-a-time read marks each row
+    /// A page-at-a-time read marks each row
     /// it writes with `seen_at`; sweeping after the last page drops a row
     /// no later page repeated, but never one a queued change still owns.
     #[test]
@@ -929,7 +926,7 @@ mod tests {
         assert!(synced(&conn, id).unwrap());
     }
 
-    /// reconcile.md Task 6 item 4: a change whose row nobody touched while
+    /// A change whose row nobody touched while
     /// it was in flight comes off the queue once it goes out.
     #[test]
     fn finishing_an_untouched_change_takes_it_off_the_queue() {

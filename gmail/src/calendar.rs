@@ -830,9 +830,9 @@ pub fn google_event(calendar: &str, item: &Value, me: Option<&str>) -> calendar:
         place: text("location"),
         description: text("description"),
         color: item.get("colorId").and_then(Value::as_str).and_then(event_color).map(str::to_string),
-        // Ruling: `busy` means transparency only. Declined and all-day
-        // events keep the busy value Google sent, so a queued edit never
-        // marks them free on the way back out (reconcile.md Task 3 item 3).
+        // `busy` holds transparency alone. Declined and all-day events keep
+        // the busy value Google sent, so a queued edit never marks them
+        // free on the way back out.
         busy: item.get("transparency").and_then(Value::as_str) != Some("transparent"),
         status: Status::parse(&text("status")),
         private: matches!(item.get("visibility").and_then(Value::as_str), Some("private" | "confidential")),

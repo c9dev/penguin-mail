@@ -4,10 +4,10 @@
 //!
 //! Once the local copy has read an account's primary calendar at least
 //! once (`mailrs_store::calendar::synced`), every read here comes from
-//! it: no network call, no quota spent, every calendar named (ruling R3).
+//! it: no network call, no quota spent, every calendar named.
 //! A write goes into the copy's queue and [`crate::calendar_copy::CalendarCopy::send`]
 //! is asked to send it right away rather than waiting for the next timer
-//! tick (ruling R7), without making the caller wait on the network round
+//! tick, without making the caller wait on the network round
 //! trip. Before the first read, or for a provider the copy cannot yet
 //! reach, every call goes straight to the provider, as it always has.
 //!
@@ -44,8 +44,8 @@ impl<A: Accounts> Calendar<A> {
     }
 
     /// Every event that overlaps `from` to `to`, in the order they start,
-    /// on every calendar the account keeps (ruling R3: the caller names
-    /// each one, so only the clash line and free time narrow it down).
+    /// on every calendar the account keeps. The caller names each one, so
+    /// only the clash line and free time narrow it down.
     pub async fn events(
         &self,
         account_id: AccountId,
@@ -58,8 +58,7 @@ impl<A: Accounts> Calendar<A> {
     /// The stretches of at least `length` inside `windows` that no busy
     /// event on a calendar the account owns touches, earliest first. A
     /// calendar the account only reads or is only told free/busy about
-    /// never counts (ruling R3): it is not this account's time to give
-    /// away.
+    /// never counts: it is not this account's time to give away.
     pub async fn free(
         &self,
         account_id: AccountId,
@@ -255,9 +254,8 @@ impl<A: Accounts> Calendar<A> {
         })
     }
 
-    /// The calendar Google lists as `primary == true` (reconcile.md Task
-    /// 9 item 10: the fixture id `primary` is a test convenience, not
-    /// what a real account's primary calendar is called). A `synced`
+    /// The calendar Google lists as `primary == true`. A real account's
+    /// primary calendar is named by its address, not `primary`. A `synced`
     /// account always has one; the fallback only guards a caller that
     /// races `synced` against a calendar list still being written.
     async fn primary_calendar(&self, account_id: AccountId) -> Result<model::Calendar, SyncError> {
@@ -270,7 +268,7 @@ impl<A: Accounts> Calendar<A> {
     }
 
     /// Sends the account's queue right away rather than leaving a change
-    /// made here to wait for the next tick (ruling R7). Spawned rather
+    /// made here to wait for the next tick. Spawned rather
     /// than awaited, so the assistant's own answer does not wait on the
     /// network round trip; a failed send just leaves the change queued
     /// for the next tick, as any other network failure does.

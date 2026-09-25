@@ -12,7 +12,7 @@
 //! reads it whole again, which replaces what the store held for it.
 //!
 //! An account that granted `calendar.events` but not the list scope
-//! (ruling R2) still gets its primary calendar, addressed by the
+//! still gets its primary calendar, addressed by the
 //! account's own address, which needs no list permission; stage 2 asks
 //! for the list scope so a shared or subscribed calendar joins it. An
 //! account without `calendar.events` costs one list call and one read,
@@ -52,7 +52,7 @@ pub struct Refreshed {
 
 /// A change made here that the provider turned down. The copy now holds
 /// the provider's version, so the window can say what happened. Named
-/// apart from the glossary's Clash, which avoids "conflict" (ruling R6).
+/// apart from the glossary's Clash, which avoids "conflict".
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TurnedDown {
     pub account_id: AccountId,
@@ -85,8 +85,7 @@ pub struct CalendarCopy<A: Accounts> {
     refused: Mutex<HashMap<AccountId, EpochMillis>>,
     /// Held for the length of one `refresh_due` pass, so a tick that is
     /// still reading a large calendar is never joined by a second one
-    /// reading and, once Task 6 lands, sending the same change twice
-    /// (reconcile.md Task 5 item 8). `send` waits on it instead of
+    /// reading it again and sending the same change twice. `send` waits on it instead of
     /// walking past it, since a person's own edit should still go out.
     running: tokio::sync::Mutex<()>,
 }
@@ -147,7 +146,7 @@ impl<A: Accounts> CalendarCopy<A> {
             }
             // Queued changes go out before the account is read, so an
             // edit made here shows up in what comes back rather than
-            // waiting for the read after it (Task 6 Interfaces). Calls
+            // waiting for the read after it. Calls
             // the version that assumes the run lock is already held,
             // since `send`'s own lock is not reentrant.
             match self.send_locked(account_id).await {
@@ -165,8 +164,7 @@ impl<A: Accounts> CalendarCopy<A> {
                 Ok(Permitted::NeedsPermission) => total.needs_permission.push(account_id),
                 // One account's trouble, such as one not yet running, one
                 // signed out or one just removed, must not stop the
-                // accounts after it from being read (reconcile.md Task 5
-                // item 3).
+                // accounts after it from being read.
                 Err(err) => {
                     tracing::warn!(account = account_id, %err, "could not refresh the calendar copy");
                 }
@@ -185,7 +183,7 @@ impl<A: Accounts> CalendarCopy<A> {
             return Ok(Permitted::Done(Refreshed::default()));
         };
         // Nobody waits on a refresh; it runs behind the person's own
-        // calls (reconcile.md Task 5 item 7).
+        // calls.
         crate::background(self.refresh_calendars(&calendar, account_id, now)).await
     }
 
@@ -206,8 +204,7 @@ impl<A: Accounts> CalendarCopy<A> {
             .is_none_or(|last| now - last >= LIST_EVERY);
         if list_due {
             // Recorded before the call, so a refusal still waits
-            // LIST_EVERY instead of asking again on the very next tick
-            // (reconcile.md Task 5 item 4).
+            // LIST_EVERY instead of asking again on the very next tick.
             self.last_list.lock().expect("copy poisoned").insert(account_id, now);
             match calendar.calendars().await {
                 Ok(list) => {
@@ -296,8 +293,8 @@ impl<A: Accounts> CalendarCopy<A> {
                     Ok(got) => got,
                     Err(BackendError::NeedsPermission) => return Ok(Permitted::NeedsPermission),
                     // Only the call that reads changes can say the server
-                    // lost its place (ruling R1); elsewhere a 404 means an
-                    // event is gone.
+                    // lost its place; elsewhere a 404 means an event is
+                    // gone.
                     Err(BackendError::StateLost) if !retried => {
                         retried = true;
                         token = None;
@@ -342,8 +339,8 @@ impl<A: Accounts> CalendarCopy<A> {
     /// `Create` only when it carries no stored etag and nothing is
     /// already queued for it, so a brand-new event edited twice before a
     /// send is created once and changed the second time, never created
-    /// twice (reconcile.md Task 6 item 2: `send` used to infer a create
-    /// from an empty etag instead).
+    /// twice. An empty etag alone would not say that: an event already
+    /// queued as a create has none either.
     pub async fn save(&self, account_id: AccountId, mut event: Event) -> Result<(), SyncError> {
         event.pending = true;
         let now = crate::now_millis();
@@ -416,11 +413,12 @@ impl<A: Accounts> CalendarCopy<A> {
     }
 
     /// Sends the account's queue in order, waiting behind a refresh
-    /// already under way (Task 5 item 8), since a person's own edit
-    /// should still go out. A change the provider turns down leaves the
-    /// queue and comes back as a `TurnedDown`, with the provider's
-    /// version in the copy. A network failure stops the send and leaves
-    /// that change and the rest queued for next time.
+    /// already under way, since a person's own edit should still go out.
+    /// A change the provider turns down leaves the queue and comes back as
+    /// a `TurnedDown`, with the provider's version in the copy. A failure
+    /// that may pass, such as the network going, or one about the whole
+    /// account stops the send and leaves that change and the rest queued
+    /// for next time.
     pub async fn send(&self, account_id: AccountId) -> Result<Vec<TurnedDown>, SyncError> {
         let _run = self.running.lock().await;
         self.send_locked(account_id).await
@@ -572,7 +570,7 @@ impl<A: Accounts> CalendarCopy<A> {
     }
 
     /// The account's own address, which names its primary calendar when
-    /// the list scope is missing (ruling R2).
+    /// the list scope is missing.
     async fn address(&self, account_id: AccountId) -> Result<String, SyncError> {
         Ok(self
             .db
