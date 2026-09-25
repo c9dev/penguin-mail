@@ -228,9 +228,23 @@ impl<A: Accounts> CalendarCopy<A> {
                     continue;
                 }
             }
-            match self.read_calendar(calendar, account_id, &entry.id, now).await? {
-                Permitted::Done(count) => refreshed.events += count,
-                Permitted::NeedsPermission => {
+            match self.read_calendar(calendar, account_id, &entry.id, now).await {
+                Ok(Permitted::Done(count)) => refreshed.events += count,
+                // One calendar's trouble must not leave the calendars after
+                // it unread. A calendar removed elsewhere answers 404 until
+                // the list is read again, so that is read on the next tick.
+                Err(SyncError::Backend(BackendError::NotFound)) => {
+                    tracing::info!(account = account_id, calendar = entry.id, "a calendar is gone; reading the list again");
+                    self.last_list.lock().expect("copy poisoned").remove(&account_id);
+                }
+                // The network or the rate limit would stop every other
+                // calendar the same way.
+                Err(SyncError::Backend(err)) if err.is_transient() => return Err(err.into()),
+                Err(err) if !matches!(err, SyncError::Store(_)) => {
+                    tracing::warn!(account = account_id, calendar = entry.id, %err, "could not read a calendar");
+                }
+                Err(err) => return Err(err),
+                Ok(Permitted::NeedsPermission) => {
                     // Google cannot say which scope a refusal is for, so
                     // the list call alone could not tell a missing list
                     // scope from a missing calendar.events. This read

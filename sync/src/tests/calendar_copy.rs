@@ -665,3 +665,27 @@ async fn a_delete_made_while_the_create_is_in_flight_wins() {
     assert!(h.fake.with(|s| s.calendar_events.iter().all(|e| e.id != id)), "the delete reached Google");
     assert!(queue(&h).await.is_empty());
 }
+
+/// A calendar removed elsewhere answers 404 until the list is read again.
+/// The calendars after it are still read, and the list is read again on
+/// the next refresh rather than half an hour later.
+#[tokio::test]
+async fn a_calendar_that_fails_to_read_leaves_the_rest_to_be_read() {
+    let h = harness().await;
+    h.fake.with(|s| s.calendars = vec![calendar("primary", true), calendar("archive", false), calendar("team", false)]);
+    let copy = copy(&h);
+    copy.refresh(h.account_id, NOW).await.unwrap();
+    h.fake.with(|s| {
+        s.calendars.retain(|c| c.id != "archive");
+        s.deleted_calendars.push("archive".into());
+    });
+    h.fake.put_calendar_event(event("team", "c"));
+
+    copy.refresh(h.account_id, NOW + READ_EVERY_OPEN).await.unwrap();
+    assert!(stored(&h, "team", "c").await.is_some(), "the calendar after the failing one is read");
+
+    copy.refresh(h.account_id, NOW + 2 * READ_EVERY_OPEN).await.unwrap();
+    let account = h.account_id;
+    let left = h.db.read(move |c| store::calendars(c, account)).await.unwrap();
+    assert!(left.iter().all(|c| c.id != "archive"), "the list is read again at once");
+}
