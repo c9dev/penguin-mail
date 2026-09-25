@@ -191,6 +191,27 @@ async fn a_watch_that_keeps_failing_waits_longer_each_time() {
     );
 }
 
+#[tokio::test(start_paused = true)]
+async fn a_server_that_floods_every_idle_is_watched_less_and_less_often() {
+    let h = imap_harness().await;
+    h.bootstrap().await;
+    let mail = h.sync.services().mail.clone();
+    let mut waits = Vec::new();
+    for _ in 0..3 {
+        h.imap.overflow_next_idle();
+        let start = tokio::time::Instant::now();
+        mail.watch().await;
+        waits.push(start.elapsed());
+    }
+
+    assert!(
+        waits[0] < Duration::from_secs(1),
+        "the first drop wakes the engine at once: {waits:?}"
+    );
+    assert!(waits[1] >= Duration::from_secs(60), "{waits:?}");
+    assert!(waits[2] > waits[1], "{waits:?}");
+}
+
 #[tokio::test]
 async fn new_mail_arrives_by_idle_without_waiting_for_a_poll() {
     let dir = tempfile::tempdir().unwrap();

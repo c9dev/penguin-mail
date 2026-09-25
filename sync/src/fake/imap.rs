@@ -72,7 +72,7 @@ pub struct ImapState {
     /// Errors aimed at one method, such as `select`: each answers the next
     /// call to that method and no other.
     pub aimed: Vec<(String, ImapError)>,
-    /// The next IDLE ends at once as `Woke::Changed`, as the real client
+    /// The next IDLE ends at once as `Woke::Dropped`, as the real client
     /// answers when the server sends more during an IDLE than the guard
     /// lets through and the connection is dropped.
     pub overflow_idle: bool,
@@ -386,7 +386,7 @@ impl FakeImap {
         self.with(|s| s.aimed.push((method.to_string(), err)));
     }
 
-    /// The next IDLE ends at once as `Woke::Changed`, as when the guard
+    /// The next IDLE ends at once as `Woke::Dropped`, as when the guard
     /// stops an IDLE that brought more than its budget.
     pub fn overflow_next_idle(&self) {
         self.with(|s| s.overflow_idle = true);
@@ -952,7 +952,7 @@ impl ImapApi for FakeImap {
             Ok((!std::mem::take(&mut s.overflow_idle)).then_some(start))
         })?;
         let Some(start) = start else {
-            return Ok(Woke::Changed);
+            return Ok(Woke::Dropped);
         };
         let deadline = tokio::time::Instant::now() + limit;
         loop {
@@ -2105,12 +2105,12 @@ mod tests {
     }
 
     #[tokio::test(start_paused = true)]
-    async fn an_idle_past_its_budget_wakes_at_once_as_changed() {
+    async fn an_idle_past_its_budget_wakes_at_once_as_dropped() {
         let fake = FakeImap::new();
         fake.overflow_next_idle();
         assert_eq!(
             fake.idle("INBOX", Duration::from_secs(600)).await,
-            Ok(Woke::Changed)
+            Ok(Woke::Dropped)
         );
         assert_eq!(fake.calls_to("idle"), 1);
     }
