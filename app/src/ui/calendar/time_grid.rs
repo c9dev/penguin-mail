@@ -235,6 +235,20 @@ mod imp {
             obj.set_accessible_role(gtk::AccessibleRole::Group);
             obj.set_overflow(gtk::Overflow::Hidden);
             obj.set_hexpand(true);
+            // The hour labels never change, so they are built once and
+            // outlive every `show`. A label `show` built afresh would come
+            // back visible under the all-day row, where `set_scroll_top`
+            // had hidden the one before it.
+            let mut children = self.children.borrow_mut();
+            for hour in 0..24 {
+                let label = gtk::Label::builder()
+                    .label(super::hour_text(hour))
+                    .css_classes(["hour-label"])
+                    .xalign(1.0)
+                    .build();
+                label.set_parent(&*obj);
+                children.push((label.upcast(), Placement::Hour(hour)));
+            }
         }
 
         fn dispose(&self) {
@@ -488,10 +502,10 @@ impl TimeGrid {
         TimeGrid::default()
     }
 
-    /// Rebuilds every child from the timed occurrences of `occurrences`
-    /// clipped to `days`: one [`EventBlock`] per placed occurrence, a
-    /// "+N" card per overflow, and the hour labels down the gutter. An
-    /// all-day occurrence is left for [`AllDayStrip`].
+    /// Rebuilds the cards from the timed occurrences of `occurrences`
+    /// clipped to `days`: one [`EventBlock`] per placed occurrence and a
+    /// "+N" card per overflow. The hour labels stay. An all-day
+    /// occurrence is left for [`AllDayStrip`].
     pub fn show(
         &self,
         days: &[NaiveDate],
@@ -501,9 +515,6 @@ impl TimeGrid {
         zone: &chrono::Local,
     ) {
         let imp = self.imp();
-        for (child, _) in imp.children.borrow_mut().drain(..) {
-            child.unparent();
-        }
         imp.days.replace(days.to_vec());
         imp.now.set(now);
 
@@ -584,17 +595,10 @@ impl TimeGrid {
             children.extend(in_day.into_iter().map(|(w, p, _)| (w, p)));
         }
 
-        for hour in 0..24 {
-            let label = gtk::Label::builder()
-                .label(hour_text(hour))
-                .css_classes(["hour-label"])
-                .xalign(1.0)
-                .build();
-            label.set_parent(self);
-            children.push((label.upcast(), imp::Placement::Hour(hour)));
+        let removed = swap_cards(&mut imp.children.borrow_mut(), children);
+        for child in removed {
+            child.unparent();
         }
-
-        imp.children.replace(children);
         imp.blocks.replace(blocks);
         self.queue_resize();
     }
@@ -642,6 +646,18 @@ impl TimeGrid {
     pub fn scroll_to_hour(&self, hour: f64) -> f64 {
         hour * f64::from(HOUR)
     }
+}
+
+/// Puts `cards` in place of the cards among `children`, ahead of the
+/// hour labels, which stay as they are. Returns the cards it took out,
+/// for the caller to unparent.
+fn swap_cards<W>(children: &mut Vec<(W, imp::Placement)>, cards: Vec<(W, imp::Placement)>) -> Vec<W> {
+    let (hours, old): (Vec<_>, Vec<_>) = std::mem::take(children)
+        .into_iter()
+        .partition(|(_, placement)| matches!(placement, imp::Placement::Hour(_)));
+    children.extend(cards);
+    children.extend(hours);
+    old.into_iter().map(|(widget, _)| widget).collect()
 }
 
 fn connect_activated(grid: &TimeGrid, card: &gtk::Button, occurrence: Occurrence) {
@@ -905,6 +921,26 @@ mod tests {
         let days = [d(2026, 9, 24), d(2026, 9, 25)];
         let now = at(&lisbon, 2026, 9, 25, 0, 30);
         assert_eq!(now_column(now, &days, &lisbon), Some((1, 0.5)));
+    }
+
+    fn card(column: usize) -> imp::Placement {
+        imp::Placement::Card {
+            column,
+            columns: 7,
+            lane: 0,
+            lanes: 1,
+            top: 9.0,
+            bottom: 10.0,
+        }
+    }
+
+    #[test]
+    fn a_new_show_replaces_the_cards_and_keeps_the_hour_labels() {
+        let mut children = vec![("old", card(0)), ("08:00", imp::Placement::Hour(8))];
+        let removed = swap_cards(&mut children, vec![("new", card(1))]);
+        assert_eq!(removed, vec!["old"]);
+        let names: Vec<&str> = children.iter().map(|(name, _)| *name).collect();
+        assert_eq!(names, vec!["new", "08:00"]);
     }
 
     #[test]
