@@ -210,9 +210,12 @@ pub(super) fn read_listing(listed: &[Listed]) -> (Vec<Folder>, Vec<RemoteMailbox
         .map(|(folder, l)| RemoteMailbox {
             id: folder.id.clone(),
             name: display_name(&l.name, l.delimiter),
-            kind: match folder.role.is_some() || folder.flagged {
-                true => MailboxKind::System,
-                false => MailboxKind::Folder,
+            kind: if folder.role.is_some() || folder.flagged {
+                MailboxKind::System
+            } else if folder.parent_only {
+                MailboxKind::Group
+            } else {
+                MailboxKind::Folder
             },
             role: folder.role,
             color: None,
@@ -358,7 +361,7 @@ mod tests {
     }
 
     #[test]
-    fn a_noselect_parent_lists_as_a_folder_that_holds_no_mail() {
+    fn a_noselect_parent_lists_as_a_group_that_holds_no_mail() {
         let (folders, remote) = read_listing(&[
             listed("INBOX", '/', None),
             parent("Archive", '/'),
@@ -366,7 +369,8 @@ mod tests {
         ]);
         assert!(folders[1].parent_only);
         assert_eq!(folders[1].role, None, "a parent holds no mail to archive");
-        assert_eq!(remote[1].kind, MailboxKind::Folder);
+        assert_eq!(remote[1].kind, MailboxKind::Group);
+        assert_eq!(remote[2].kind, MailboxKind::Folder);
         assert_eq!(remote[2].name, "Archive/2025");
     }
 

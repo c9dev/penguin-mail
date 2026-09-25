@@ -329,21 +329,22 @@ impl Sidebar {
                 };
                 self.add_mailbox(mailbox, &folder.name(), folder.icon(), 1);
             }
-            let mut user: Vec<&Label> = labels
-                .iter()
-                .filter(|l| l.kind == LabelKind::User)
-                .collect();
-            user.sort_by_key(|l| l.name.to_lowercase());
-            for label in user {
-                // Gmail nests labels with slashes: "Work/Clients" sits under "Work".
-                let depth = 1 + label.name.matches('/').count() as u32;
-                let leaf = label.name.rsplit('/').next().unwrap_or(&label.name);
+            // Gmail nests labels with slashes, and an IMAP server's folder
+            // names reach the store with slashes too: "Work/Clients" sits
+            // under "Work".
+            for entry in label_rows(labels) {
+                let label = entry.label;
                 let mailbox = Mailbox::Label {
                     account_id: account.id,
                     label_id: label.id.clone(),
                     name: label.name.replace('/', " › "),
                 };
-                let row = self.add_mailbox(mailbox, leaf, "penguin-mail-tag-symbolic", depth);
+                if !entry.opens {
+                    self.add_group(mailbox, entry.leaf, entry.depth);
+                    continue;
+                }
+                let row =
+                    self.add_mailbox(mailbox, entry.leaf, "penguin-mail-tag-symbolic", entry.depth);
                 if let Some(color) = label.color.as_deref().and_then(css_hex)
                     && let Some(icon) = row.child().and_then(|c| c.first_child())
                 {
@@ -369,6 +370,27 @@ impl Sidebar {
     /// Adds a mailbox row. `depth` indents it: 0 for the unified views, 1
     /// for an account's mailboxes, and one more per level of label nesting.
     fn add_mailbox(&self, mailbox: Mailbox, name: &str, icon: &str, depth: u32) -> gtk::ListBoxRow {
+        self.add_row(mailbox, name, icon, depth, true)
+    }
+
+    /// Adds a row for a group, a server folder that holds only other
+    /// folders. It indents and closes with its account like a mailbox, so
+    /// the folders under it nest, but nothing selects or opens it and it
+    /// takes no dropped mail.
+    fn add_group(&self, mailbox: Mailbox, name: &str, depth: u32) {
+        let row = self.add_row(mailbox, name, "folder-symbolic", depth, false);
+        row.set_tooltip_text(Some(&gettext("Holds folders, not mail")));
+    }
+
+    /// Adds a row. `opens` is false for a row that only groups others.
+    fn add_row(
+        &self,
+        mailbox: Mailbox,
+        name: &str,
+        icon: &str,
+        depth: u32,
+        opens: bool,
+    ) -> gtk::ListBoxRow {
         let content = gtk::Box::builder()
             .spacing(12)
             .margin_start(18 * depth as i32)
@@ -391,8 +413,10 @@ impl Sidebar {
         let row = gtk::ListBoxRow::builder()
             .child(&content)
             .visible(!hidden_until_used(&mailbox))
+            .selectable(opens)
+            .activatable(opens)
             .build();
-        if takes_mail(&mailbox) {
+        if opens && takes_mail(&mailbox) {
             let target = gtk::DropTarget::new(glib::Type::STRING, gdk::DragAction::MOVE);
             let (on_drop, dest) = (Rc::clone(&self.on_drop), mailbox.clone());
             target.connect_drop(move |_, value, _, _| {
@@ -617,6 +641,36 @@ fn takes_mail(mailbox: &Mailbox) -> bool {
         | Mailbox::Set { .. }
         | Mailbox::Smart(_) => false,
     }
+}
+
+/// One of an account's own labels or folders as the sidebar lists it.
+#[derive(Debug, PartialEq, Eq)]
+struct LabelRow<'a> {
+    label: &'a Label,
+    /// The part of the name after the last slash.
+    leaf: &'a str,
+    /// 1 at the top, one more for each slash in the name.
+    depth: u32,
+    /// False for a group, which holds only other folders.
+    opens: bool,
+}
+
+/// An account's labels and folders by name, ignoring case, with the
+/// groups that hold folders, so "Work/Clients" sits under "Work" even
+/// where the server keeps no mail in "Work".
+fn label_rows(labels: &[Label]) -> Vec<LabelRow<'_>> {
+    let mut rows: Vec<LabelRow<'_>> = labels
+        .iter()
+        .filter(|l| matches!(l.kind, LabelKind::User | LabelKind::Group))
+        .map(|label| LabelRow {
+            label,
+            leaf: label.name.rsplit('/').next().unwrap_or(&label.name),
+            depth: 1 + label.name.matches('/').count() as u32,
+            opens: label.kind == LabelKind::User,
+        })
+        .collect();
+    rows.sort_by_key(|row| row.label.name.to_lowercase());
+    rows
 }
 
 /// Rename and Delete on a right click or long press of a label row.
@@ -860,7 +914,7 @@ mod tests {
     use mailrs_domain::{Account, AccountState, Provider};
 
     use super::status_of;
-    use super::{Mailbox, Standard, heading_row_name, mailbox_row_name, takes_mail};
+    use super::{Label, LabelKind, LabelRow, Mailbox, Standard, heading_row_name, label_rows, mailbox_row_name, takes_mail};
 
     use super::{Offers, account_settings};
 
@@ -956,5 +1010,30 @@ mod tests {
             assert!(!takes_mail(&Mailbox::Unified(which)), "{which:?}");
             assert!(!takes_mail(&Mailbox::Standard { account_id: 1, which }), "{which:?}");
         }
+    }
+
+    #[test]
+    fn a_group_nests_its_folders_but_opens_nothing() {
+        let label = |name: &str, kind| Label {
+            account_id: 1,
+            id: name.to_string(),
+            name: name.to_string(),
+            kind,
+            color: None,
+        };
+        let labels = [
+            label("Work/Clients", LabelKind::User),
+            label("INBOX", LabelKind::System),
+            label("Work", LabelKind::Group),
+            label("receipts", LabelKind::User),
+        ];
+        let rows: Vec<(&str, u32, bool)> = label_rows(&labels)
+            .iter()
+            .map(|row: &LabelRow<'_>| (row.leaf, row.depth, row.opens))
+            .collect();
+        assert_eq!(
+            rows,
+            [("receipts", 1, true), ("Work", 1, false), ("Clients", 2, true)]
+        );
     }
 }

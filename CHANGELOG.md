@@ -17,6 +17,10 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 - With Claude Opus 5 or newer, translating a message and reading an unsubscribe
   page take less time, because those quick jobs no longer think at length.
+- Archiving on a mail server with no Archive folder makes one, and a
+  message says so. Folders that only hold other folders show in the
+  sidebar with their folders under them; you cannot open them or drop
+  mail on them.
 
 ### Fixed
 

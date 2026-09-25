@@ -225,6 +225,15 @@ fn toast_title(text: &str) -> glib::GString {
     glib::markup_escape_text(text)
 }
 
+/// The toast line when archiving made the account's Archive folder,
+/// because its server had none.
+fn archive_made_line(provider: &str, name: &str) -> String {
+    fill(
+        &gettext("Made a folder called “{name}” on {provider} for archived mail"),
+        &[("name", name), ("provider", provider)],
+    )
+}
+
 /// The colour a flag toast names.
 fn flagged_message(color: mailrs_domain::FlagColor) -> String {
     use mailrs_domain::FlagColor;
@@ -736,8 +745,14 @@ impl MainWindow {
             // minute. Say so, or the window looks stuck and the reader
             // presses Delete again.
             ChangeEvent::WaitingOnGmail { message, .. } => self.toast(message),
-            // The LabelsChanged sent with it redraws the sidebar.
-            ChangeEvent::ArchiveMade { .. } => {}
+            // The first archive on a server without an Archive folder made
+            // one. Say so once; the LabelsChanged sent with it redraws the
+            // sidebar.
+            ChangeEvent::ArchiveMade { account_id, name } => {
+                if let Some(account) = self.account(*account_id) {
+                    self.toast(&archive_made_line(account.provider_name(), name));
+                }
+            }
         }
     }
 
@@ -2974,6 +2989,14 @@ mod tests {
     fn a_toast_shows_an_ampersand_in_a_label_name_as_written() {
         assert_eq!(toast_title("Moved to R&D"), "Moved to R&amp;D");
         assert_eq!(toast_title("Archived"), "Archived");
+    }
+
+    #[test]
+    fn the_archive_line_names_the_folder_and_the_provider() {
+        assert_eq!(
+            archive_made_line("Fastmail", "Archive"),
+            "Made a folder called “Archive” on Fastmail for archived mail"
+        );
     }
 
     #[test]

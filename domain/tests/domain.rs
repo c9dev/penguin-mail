@@ -15,7 +15,7 @@ fn unknown_account_state_is_rejected() {
 
 #[test]
 fn label_kind_round_trips_through_strings() {
-    for kind in [LabelKind::System, LabelKind::User] {
+    for kind in [LabelKind::System, LabelKind::User, LabelKind::Group] {
         assert_eq!(kind.as_str().parse::<LabelKind>(), Ok(kind));
     }
 }
