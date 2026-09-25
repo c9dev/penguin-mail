@@ -98,6 +98,13 @@ so no other server sees your mail.
 
 Gmail runs all four, so they work with your computer off.
 
+### Calendar
+
+- **A calendar beside your mail.** Every calendar on every account, by
+  day, week, month or a scrolling list, read from this computer.
+  Answer Yes, Maybe or No on an invitation from its event, and search
+  across every account's events.
+
 ### Security and privacy
 
 - **OpenPGP and S/MIME through your own GnuPG.** A signed message names its

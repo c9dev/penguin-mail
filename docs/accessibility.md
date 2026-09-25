@@ -96,6 +96,16 @@ A queued message opens in the conversation pane like any other, with a
 card above it that says when it goes or why it has not gone, with
 buttons that act on it.
 
+## The calendar from the keyboard
+
+Tab moves from one event to the next, day by day and earliest first,
+then to a day's "N more" button when one is there, and Enter opens the
+event with the focus. T goes to today; D, W and M switch to Day, Week
+and Month; Left and Right step to the previous or next range; Ctrl+F
+opens the calendar's own search bar, which wins over the main window's
+search while the calendar shows. Every one of these gives way while a
+text field, such as search, has the focus.
+
 ## Checking it
 
 ```
