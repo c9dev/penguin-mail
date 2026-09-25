@@ -424,7 +424,7 @@ impl MainWindow {
                 .max_sidebar_width(420.0)
                 .sidebar_width_fraction(0.34)
                 .build();
-            let (t, g) = (weak.clone(), weak.clone());
+            let (t, g, n) = (weak.clone(), weak.clone(), weak.clone());
             let (read_settings, change_settings) = (Rc::downgrade(app), Rc::downgrade(app));
             let calendar = CalendarView::new(
                 Rc::clone(&app.core),
@@ -448,6 +448,11 @@ impl MainWindow {
                     grant: Box::new(move |account_id| {
                         if let Some(win) = g.upgrade() {
                             win.grant_access(account_id);
+                        }
+                    }),
+                    needs_permission: Box::new(move |account_id| {
+                        if let Some(win) = n.upgrade() {
+                            win.ask_permission(account_id, Permission::Calendar, Occasion::Needed);
                         }
                     }),
                 },
