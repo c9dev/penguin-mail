@@ -100,9 +100,20 @@ pub fn answers_words(guests: &[Guest]) -> String {
     )
 }
 
-/// Who organized the event, for the popover's organizer line.
-pub fn organizer_words(name: &str) -> String {
-    fill(&gettext("Organized by {name}"), &[("name", name)])
+/// The popover's people line, as the mockup writes it: who organized the
+/// event and how many guests said yes, "Rita Lopes, organizer · 4 of 6
+/// said yes", either half alone when the other is missing.
+pub fn people_words(organizer: Option<&str>, guests: &[Guest]) -> String {
+    let organizer = organizer.map(|name| fill(&gettext("{name}, organizer"), &[("name", name)]));
+    let answers = (!guests.is_empty()).then(|| answers_words(guests));
+    match (organizer, answers) {
+        (Some(organizer), Some(answers)) => fill(
+            &gettext("{organizer} · {answers}"),
+            &[("organizer", &organizer), ("answers", &answers)],
+        ),
+        (Some(one), None) | (None, Some(one)) => one,
+        (None, None) => String::new(),
+    }
 }
 
 /// "and 3 more", for the popover's guest list once it passes five names.
@@ -136,6 +147,17 @@ pub fn is_meet(link: &str) -> bool {
 pub fn maps_url(place: &str) -> String {
     let query: String = url::form_urlencoded::byte_serialize(place.as_bytes()).collect();
     format!("https://www.openstreetmap.org/search?query={query}")
+}
+
+/// What a crowded month day's button shows: "3 more". Its spoken name is
+/// [`month_more_words`], which names the day as well.
+pub fn more_count_words(count: usize) -> String {
+    fill_plural(
+        "{count} more",
+        "{count} more",
+        count,
+        &[("count", &count.to_string())],
+    )
 }
 
 /// The month view's "N more" button, named with the day it opens since up
@@ -281,6 +303,11 @@ mod tests {
     }
 
     #[test]
+    fn a_crowded_month_day_shows_a_short_count() {
+        assert_eq!(more_count_words(3), "3 more");
+    }
+
+    #[test]
     fn month_more_words_names_the_day_and_takes_a_plural() {
         mailrs_domain::translate::set_date_locale("en_US");
         assert_eq!(
@@ -312,7 +339,21 @@ mod tests {
     }
 
     #[test]
-    fn organizer_words_names_who_organized_it() {
-        assert_eq!(organizer_words("Priya Raman"), "Organized by Priya Raman");
+    fn the_people_line_names_the_organizer_and_the_yes_count() {
+        let guests = [
+            Guest { answer: Some(Answer::Yes), ..Default::default() },
+            Guest { answer: None, ..Default::default() },
+        ];
+        assert_eq!(
+            people_words(Some("Rita Lopes"), &guests),
+            "Rita Lopes, organizer · 1 of 2 said yes"
+        );
+    }
+
+    #[test]
+    fn the_people_line_without_an_organizer_counts_the_answers() {
+        let guests = [Guest { answer: Some(Answer::Yes), ..Default::default() }];
+        assert_eq!(people_words(None, &guests), "1 of 1 said yes");
+        assert_eq!(people_words(Some("Rita Lopes"), &[]), "Rita Lopes, organizer");
     }
 }

@@ -290,14 +290,14 @@ fn calendar_of<'a>(
 }
 
 type Activated = dyn Fn(&Occurrence);
-type ScrolledToTop = dyn Fn();
 
 pub struct Agenda {
     pub widget: gtk::ScrolledWindow,
     model: AgendaModel,
-    calendars: RefCell<HashMap<(AccountId, String), Calendar>>,
+    /// Shared with the row factory, which reads each dot's colour from it
+    /// as a row scrolls into view.
+    calendars: Rc<RefCell<HashMap<(AccountId, String), Calendar>>>,
     activated: Rc<RefCell<Option<Box<Activated>>>>,
-    scrolled_to_top: Rc<RefCell<Option<Box<ScrolledToTop>>>>,
 }
 
 impl Agenda {
@@ -383,22 +383,12 @@ impl Agenda {
             .hscrollbar_policy(gtk::PolicyType::Never)
             .child(&list_view)
             .build();
-        let scrolled_to_top: Rc<RefCell<Option<Box<ScrolledToTop>>>> = Rc::new(RefCell::new(None));
-        let top_slot = Rc::clone(&scrolled_to_top);
-        widget.connect_edge_reached(move |_, position| {
-            if position == gtk::PositionType::Top
-                && let Some(f) = top_slot.borrow().as_ref()
-            {
-                f();
-            }
-        });
 
         Rc::new(Agenda {
             widget,
             model,
-            calendars: RefCell::new(HashMap::new()),
+            calendars,
             activated,
-            scrolled_to_top,
         })
     }
 
@@ -427,17 +417,14 @@ impl Agenda {
             })
             .collect();
         self.model.set_rows(rows, sections);
+        // A new list starts at its first heading, not wherever the last
+        // one was scrolled to.
+        self.widget.vadjustment().set_value(0.0);
     }
 
     /// Runs `f` with the occurrence a row was activated for.
     pub fn connect_event_activated(&self, f: impl Fn(&Occurrence) + 'static) {
         self.activated.replace(Some(Box::new(f)));
-    }
-
-    /// Runs `f` when the agenda is scrolled to its top, so the caller
-    /// loads earlier days.
-    pub fn connect_scrolled_to_top(&self, f: impl Fn() + 'static) {
-        self.scrolled_to_top.replace(Some(Box::new(f)));
     }
 }
 

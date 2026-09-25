@@ -33,6 +33,9 @@ pub fn css_class(colour: &str) -> String {
 /// for the bar and the unanswered border, and the event block's tinted
 /// background at 14 % in light mode and 24 % in dark, through CSS
 /// `color-mix` so libadwaita's own background variable does the mixing.
+/// Dark is the `calendar-dark` class the view puts on its page while
+/// libadwaita is dark: `prefers-color-scheme` never matched in an app
+/// stylesheet on the GTK this was checked on (4.22).
 /// A colour [`css_class`] cannot read writes no rule; the fixed
 /// `.cal-accent` rule in `app/data/style.css` already covers it.
 pub fn stylesheet(colours: &[String]) -> String {
@@ -48,7 +51,7 @@ pub fn stylesheet(colours: &[String]) -> String {
             css,
             ".{class} {{ --cal-colour: #{hex}; }}\n\
              .event-block.{class} {{ background-color: color-mix(in srgb, #{hex} 14%, var(--view-bg-color)); }}\n\
-             @media (prefers-color-scheme: dark) {{ .event-block.{class} {{ background-color: color-mix(in srgb, #{hex} 24%, var(--view-bg-color)); }} }}\n"
+             .calendar-dark .event-block.{class} {{ background-color: color-mix(in srgb, #{hex} 24%, var(--view-bg-color)); }}\n"
         );
     }
     css
@@ -75,7 +78,10 @@ mod tests {
     fn each_colour_gets_a_light_and_a_dark_rule() {
         let css = stylesheet(&["#3584e4".into()]);
         assert!(css.contains(".cal-3584e4"));
-        assert!(css.contains("@media (prefers-color-scheme: dark)"));
+        // The page carries `calendar-dark` while libadwaita is dark; GTK's
+        // own dark media query does not reach an app stylesheet here.
+        assert!(css.contains(".calendar-dark .event-block.cal-3584e4"));
+        assert!(css.contains("24%"));
     }
 
     #[test]

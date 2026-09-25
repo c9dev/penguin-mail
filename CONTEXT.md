@@ -170,6 +170,8 @@ Terms the code and its docs use for Gmail mail. The `domain` crate holds the cod
 
 **Agenda**: the calendar page's flat list of upcoming occurrences, a heading per date then a row per occurrence, in place of a grid. `mailrs::ui::calendar::agenda::Agenda`, a `gtk::ListView` over a model that also answers `gtk::SectionModel` for the date headings, so a widget exists only for the rows on screen; loading earlier days grows the same list rather than opening a new one. The Calendar entry's "_Avoid_: agenda" is about naming a calendar, not this list. _Avoid_: timeline, list view (that is any widget of the kind).
 
+**Space**: what the window shows beside the sidebar, the mail or the calendar, picked with the switch at the top of the sidebar (Alt+1, Alt+2) and remembered for the next start. The sidebar stays on screen in both and shows the mailboxes or the calendar's own sidebar. `mailrs::settings::Space`; the window holds the two in a stack named `spaces`. While the calendar shows, mail's keys and chords leave the hidden conversation alone. _Avoid_: mode, tab, page (a page is one screen of a navigation view).
+
 **Change queue**: calendar edits made here that the provider has not taken yet, sent in order; a change the provider turns down leaves the queue and the provider's version stays. `mailrs_store::calendar::QueuedChange`. _Avoid_: outbox (that is mail's).
 
 **Turned down**: a change made here that the provider refused when the queue tried to send it, such as an event changed elsewhere first or a calendar gone read-only; the local copy takes the provider's version in its place. `mailrs_sync::calendar_copy::TurnedDown`. _Avoid_: conflict, rejected change.

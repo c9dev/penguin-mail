@@ -9,7 +9,6 @@ pub mod assistant_prefs;
 pub mod assistant_skills_prefs;
 pub mod assistant_web_prefs;
 pub mod autocomplete;
-#[allow(dead_code, reason = "the window starts using the calendar in Task 6")]
 pub mod calendar;
 pub mod composer;
 pub mod confirm;

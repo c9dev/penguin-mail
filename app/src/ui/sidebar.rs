@@ -41,6 +41,13 @@ pub struct Sidebar {
     pub page: adw::ToolbarView,
     pub header: adw::HeaderBar,
     pub add_account: gtk::Button,
+    /// Switches between the mail and the calendar. Its toggles are named
+    /// `mail` and `calendar`; it hides while no account offers a
+    /// calendar, and "Mailboxes" shows in its place (ruling R9).
+    pub switch: adw::ToggleGroup,
+    title: adw::WindowTitle,
+    /// The mailbox list, or the calendar's own sidebar.
+    content: gtk::Stack,
     list: gtk::ListBox,
     scroller: gtk::ScrolledWindow,
     /// Colours for label icons, rewritten on each rebuild.
@@ -70,9 +77,35 @@ impl Sidebar {
             .vexpand(true)
             .child(&list)
             .build();
+        let title = adw::WindowTitle::new(&gettext("Mailboxes"), "");
+        let switch = adw::ToggleGroup::builder()
+            .css_classes(["round", "space-switch"])
+            .valign(gtk::Align::Center)
+            .visible(false)
+            .build();
+        for (name, label, icon) in [
+            ("mail", gettext("Mail"), "mail-unread-symbolic"),
+            ("calendar", gettext("Calendar"), "x-office-calendar-symbolic"),
+        ] {
+            let content = adw::ButtonContent::builder()
+                .icon_name(icon)
+                .label(&label)
+                .build();
+            switch.add(
+                adw::Toggle::builder()
+                    .name(name)
+                    .label(&label)
+                    .child(&content)
+                    .build(),
+            );
+        }
+        switch.set_active_name(Some("mail"));
+        let titles = gtk::Box::new(gtk::Orientation::Horizontal, 0);
+        titles.append(&title);
+        titles.append(&switch);
         let header = adw::HeaderBar::builder()
             .show_end_title_buttons(false)
-            .title_widget(&adw::WindowTitle::new(&gettext("Mailboxes"), ""))
+            .title_widget(&titles)
             .build();
         let add_account = gtk::Button::builder()
             .child(
@@ -88,15 +121,23 @@ impl Sidebar {
             .margin_top(6)
             .margin_bottom(6)
             .build();
+        let content = gtk::Stack::builder()
+            .transition_type(gtk::StackTransitionType::Crossfade)
+            .transition_duration(150)
+            .build();
+        content.add_named(&scroller, Some("mail"));
         let page = adw::ToolbarView::new();
         page.add_top_bar(&header);
-        page.set_content(Some(&scroller));
+        page.set_content(Some(&content));
         page.add_bottom_bar(&add_account);
 
         let sidebar = Rc::new(Sidebar {
             page,
             header,
             add_account,
+            switch,
+            title,
+            content,
             list,
             scroller: scroller.clone(),
             label_css: {
@@ -153,6 +194,26 @@ impl Sidebar {
             }
         });
         sidebar
+    }
+
+    /// Shows the switch, or "Mailboxes" in its place.
+    pub fn set_switch_visible(&self, visible: bool) {
+        self.switch.set_visible(visible);
+        self.title.set_visible(!visible);
+    }
+
+    /// Puts the calendar's own sidebar, `content`, in place of the
+    /// mailbox list. Add Account stays below it.
+    pub fn show_calendar(&self, content: &gtk::Widget) {
+        if self.content.child_by_name("calendar").is_none() {
+            self.content.add_named(content, Some("calendar"));
+        }
+        self.content.set_visible_child_name("calendar");
+    }
+
+    /// Puts the mailbox list back.
+    pub fn show_mail(&self) {
+        self.content.set_visible_child_name("mail");
     }
 
     fn is_expanded(&self, account_id: AccountId) -> bool {

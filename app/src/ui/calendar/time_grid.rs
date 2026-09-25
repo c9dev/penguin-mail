@@ -17,17 +17,21 @@ use mailrs_domain::calendar::{Calendar, Occurrence};
 use mailrs_domain::translate::{date_locale, fill_plural, gettext};
 use mailrs_domain::{AccountId, EpochMillis};
 
-use super::block::{self, EventBlock};
+use super::block::{self, EventBlock, EventKey};
 use super::layout;
 use super::range::{Range, ViewKind};
 
 /// Width of the hour-label gutter down the left edge, shared with
-/// `AllDayStrip` so the day columns of both widgets line up.
-pub const GUTTER: f32 = 62.0;
-/// Height of one hour's row.
-pub const HOUR: f32 = 52.0;
-/// Height of one row of the all-day strip.
-pub const ALL_DAY_ROW: f32 = 30.0;
+/// `AllDayStrip` so the day columns of both widgets line up. The values
+/// here are the approved mockup's (`calendar-mockup/mockups.py`).
+pub const GUTTER: f32 = 60.0;
+/// Height of one hour's row: 08:00 to 20:00 fill a 900-pixel window.
+pub const HOUR: f32 = 62.0;
+/// How far one all-day lane sits below the one above it.
+pub const ALL_DAY_ROW: f32 = 28.0;
+/// Height of an all-day card, and the space above the first lane.
+const ALL_DAY_CARD: f32 = 24.0;
+const ALL_DAY_PAD: f32 = 5.0;
 /// Space a card keeps from the hour lines and from its neighbours; also
 /// the gap between two cards sharing a lane split.
 const CARD_INSET: f32 = 3.0;
@@ -72,9 +76,15 @@ fn all_day_rect(
     let span = (end_day.saturating_sub(start_day)).max(1) as f32;
     let x = GUTTER + start_day as f32 * column_width + CARD_INSET;
     let width = span * column_width - 2.0 * CARD_INSET;
-    let y = lane as f32 * ALL_DAY_ROW + CARD_INSET / 2.0;
-    let height = ALL_DAY_ROW - CARD_INSET;
-    (x, y, width, height)
+    let y = ALL_DAY_PAD + lane as f32 * ALL_DAY_ROW;
+    (x, y, width, ALL_DAY_CARD)
+}
+
+/// The strip's height for `rows` lanes: one lane makes the mockup's
+/// 34-pixel row.
+fn all_day_height(rows: usize) -> f32 {
+    let rows = rows.max(1) as f32;
+    2.0 * ALL_DAY_PAD + ALL_DAY_CARD + (rows - 1.0) * ALL_DAY_ROW
 }
 
 /// `days`' first and last index an all-day occurrence covers, clipped to
@@ -123,6 +133,15 @@ fn more_button(count: usize) -> gtk::Button {
     button
 }
 
+/// The colour of the hour and day lines: the text colour at the strength
+/// that gives the mockup's `#ececef` on white and `#2c2c31` on its dark
+/// view.
+fn hairline(text: &gtk::gdk::RGBA) -> gtk::gdk::RGBA {
+    let mut line = *text;
+    line.set_alpha(text.alpha() * 0.08);
+    line
+}
+
 /// "09:00" at `hour`, in the pattern the rest of the app clocks a moment
 /// with; the date is a placeholder, only the hour and minute are read.
 fn hour_text(hour: u32) -> String {
@@ -169,9 +188,9 @@ mod imp {
     }
 
     type Activated = dyn Fn(&super::TimeGrid, &Occurrence, &gtk::Widget);
-    type MoreClicked = dyn Fn(&super::TimeGrid, &[Occurrence]);
+    type MoreClicked = dyn Fn(&super::TimeGrid, &[Occurrence], &gtk::Widget);
     type StripActivated = dyn Fn(&super::AllDayStrip, &Occurrence, &gtk::Widget);
-    type StripMoreClicked = dyn Fn(&super::AllDayStrip, &[Occurrence]);
+    type StripMoreClicked = dyn Fn(&super::AllDayStrip, &[Occurrence], &gtk::Widget);
     /// A strip card's start day, end day (exclusive) and lane.
     type StripPlacement = (usize, usize, usize);
 
@@ -181,8 +200,12 @@ mod imp {
         pub days: RefCell<Vec<NaiveDate>>,
         pub now: Cell<EpochMillis>,
         pub now_timer: RefCell<Option<glib::SourceId>>,
+        /// How far the parent scrolled window has scrolled the grid.
+        pub scroll_top: Cell<f64>,
         pub activated: RefCell<Option<Box<Activated>>>,
         pub more_clicked: RefCell<Option<Box<MoreClicked>>>,
+        /// Each block by the event it draws, cleared on every `show`.
+        pub blocks: RefCell<Vec<(EventKey, gtk::Widget)>>,
     }
 
     #[glib::object_subclass]
@@ -205,6 +228,7 @@ mod imp {
             if let Some(source) = self.now_timer.take() {
                 source.remove();
             }
+            self.blocks.borrow_mut().clear();
             for (child, _) in self.children.borrow_mut().drain(..) {
                 child.unparent();
             }
@@ -233,11 +257,13 @@ mod imp {
                         top,
                         bottom,
                     } => super::rect(column, columns, lane, lanes, top, bottom, width as f32),
+                    // Right-aligned 10 pixels short of the gutter's edge and
+                    // centred on its hairline, as the mockup sets them.
                     Placement::Hour(hour) => (
                         0.0,
-                        hour as f32 * super::HOUR - 7.0,
-                        super::GUTTER - 6.0,
-                        14.0,
+                        hour as f32 * super::HOUR - 8.0,
+                        super::GUTTER - 10.0,
+                        16.0,
                     ),
                 };
                 child.allocate(
@@ -257,10 +283,15 @@ mod imp {
             let columns = days.len().max(1);
             let column_width = (width - super::GUTTER) / columns as f32;
 
-            let mut hairline = widget.color();
-            hairline.set_alpha(hairline.alpha() * 0.15);
+            let hairline = super::hairline(&widget.color());
+            let top = self.scroll_top.get() as f32;
             for hour in 0..=24 {
                 let y = hour as f32 * super::HOUR;
+                // The line at the scrolled window's top edge would double
+                // the border above the grid.
+                if (y - top).abs() < 1.0 {
+                    continue;
+                }
                 snapshot.append_color(
                     &hairline,
                     &graphene::Rect::new(super::GUTTER, y, width - super::GUTTER, 1.0),
@@ -279,8 +310,8 @@ mod imp {
                 let accent = adw::StyleManager::default().accent_color_rgba();
                 let x = super::GUTTER + column as f32 * column_width;
                 snapshot.append_color(&accent, &graphene::Rect::new(x, y - 1.0, column_width, 2.0));
-                let dot_bounds = graphene::Rect::new(x - 2.25, y - 2.25, 4.5, 4.5);
-                let dot = gsk::RoundedRect::from_rect(dot_bounds, 2.25);
+                let dot_bounds = graphene::Rect::new(x - 4.5, y - 4.5, 9.0, 9.0);
+                let dot = gsk::RoundedRect::from_rect(dot_bounds, 4.5);
                 snapshot.push_rounded_clip(&dot);
                 snapshot.append_color(&accent, &dot_bounds);
                 snapshot.pop();
@@ -341,6 +372,7 @@ mod imp {
         pub rows: Cell<usize>,
         pub activated: RefCell<Option<Box<StripActivated>>>,
         pub more_clicked: RefCell<Option<Box<StripMoreClicked>>>,
+        pub blocks: RefCell<Vec<(EventKey, gtk::Widget)>>,
     }
 
     #[glib::object_subclass]
@@ -356,9 +388,11 @@ mod imp {
             let obj = self.obj();
             obj.set_accessible_role(gtk::AccessibleRole::Group);
             obj.set_hexpand(true);
+            obj.add_css_class("all-day-strip");
         }
 
         fn dispose(&self) {
+            self.blocks.borrow_mut().clear();
             for (child, _) in self.children.borrow_mut().drain(..) {
                 child.unparent();
             }
@@ -369,8 +403,7 @@ mod imp {
         fn measure(&self, orientation: gtk::Orientation, _for_size: i32) -> (i32, i32, i32, i32) {
             match orientation {
                 gtk::Orientation::Vertical => {
-                    let height =
-                        (self.rows.get().max(1) as f32 * super::ALL_DAY_ROW).round() as i32;
+                    let height = super::all_day_height(self.rows.get()).round() as i32;
                     (height, height, -1, -1)
                 }
                 _ => (0, 0, -1, -1),
@@ -390,6 +423,22 @@ mod imp {
                     Some(gsk::Transform::new().translate(&graphene::Point::new(x, y))),
                 );
             }
+        }
+
+        /// The day lines run on through the all-day row, as in the
+        /// mockup, under the cards.
+        fn snapshot(&self, snapshot: &gtk::Snapshot) {
+            let widget = self.obj();
+            let days = self.days.get().max(1);
+            let width = widget.width() as f32;
+            let height = widget.height() as f32;
+            let column_width = (width - super::GUTTER) / days as f32;
+            let hairline = super::hairline(&widget.color());
+            for day in 1..days {
+                let x = super::GUTTER + day as f32 * column_width;
+                snapshot.append_color(&hairline, &graphene::Rect::new(x, 0.0, 1.0, height));
+            }
+            self.parent_snapshot(snapshot);
         }
     }
 }
@@ -467,6 +516,7 @@ impl TimeGrid {
         }
 
         let mut children = Vec::new();
+        let mut blocks = Vec::new();
         for (column, (&day, pieces)) in days.iter().zip(by_day.iter()).enumerate() {
             let Some(midnight) = day.and_hms_opt(0, 0, 0) else {
                 continue;
@@ -484,6 +534,7 @@ impl TimeGrid {
                 let card = EventBlock::new(o, colour, name, compact, zone).widget;
                 connect_activated(self, &card, o.clone());
                 card.set_parent(self);
+                blocks.push((block::key_of(o), card.clone().upcast()));
                 let top = layout::wall_offset(start, midnight, zone);
                 let bottom = layout::wall_offset(end, midnight, zone);
                 in_day.push((
@@ -531,12 +582,14 @@ impl TimeGrid {
             let label = gtk::Label::builder()
                 .label(hour_text(hour))
                 .css_classes(["hour-label"])
+                .xalign(1.0)
                 .build();
             label.set_parent(self);
             children.push((label.upcast(), imp::Placement::Hour(hour)));
         }
 
         imp.children.replace(children);
+        imp.blocks.replace(blocks);
         self.queue_resize();
     }
 
@@ -549,9 +602,33 @@ impl TimeGrid {
         self.imp().activated.replace(Some(Box::new(f)));
     }
 
-    /// Runs `f` when a "+N" card is clicked, with the occurrences it hid.
-    pub fn connect_more_clicked(&self, f: impl Fn(&TimeGrid, &[Occurrence]) + 'static) {
+    /// Runs `f` when a "+N" card is clicked, with the occurrences it hid
+    /// and the card to point a popover at.
+    pub fn connect_more_clicked(
+        &self,
+        f: impl Fn(&TimeGrid, &[Occurrence], &gtk::Widget) + 'static,
+    ) {
         self.imp().more_clicked.replace(Some(Box::new(f)));
+    }
+
+    /// The block drawing `key`, when the grid shows it.
+    pub fn block_of(&self, key: &EventKey) -> Option<gtk::Widget> {
+        find_block(&self.imp().blocks.borrow(), key)
+    }
+
+    /// Hides the hour label the scrolled window's top edge would cut in
+    /// half, and the hour line along that edge, `top` being how far the
+    /// grid is scrolled: at 08:00 the line meets the all-day row's border
+    /// and the mockup draws one line and names no hour there.
+    pub fn set_scroll_top(&self, top: f64) {
+        self.imp().scroll_top.set(top);
+        self.queue_draw();
+        for (child, placement) in self.imp().children.borrow().iter() {
+            if let imp::Placement::Hour(hour) = placement {
+                let y = f64::from(*hour) * f64::from(HOUR);
+                child.set_child_visible(y - top >= 8.0 || y < top - 8.0);
+            }
+        }
     }
 
     /// The y an hour sits at, for the parent `gtk::ScrolledWindow` to
@@ -573,12 +650,19 @@ fn connect_activated(grid: &TimeGrid, card: &gtk::Button, occurrence: Occurrence
 
 fn connect_more_clicked(grid: &TimeGrid, button: &gtk::Button, hidden: Vec<Occurrence>) {
     let weak = grid.downgrade();
-    button.connect_clicked(move |_| {
+    button.connect_clicked(move |button| {
         let Some(grid) = weak.upgrade() else { return };
         if let Some(f) = grid.imp().more_clicked.borrow().as_ref() {
-            f(&grid, &hidden);
+            f(&grid, &hidden, button.upcast_ref());
         }
     });
+}
+
+fn find_block(blocks: &[(EventKey, gtk::Widget)], key: &EventKey) -> Option<gtk::Widget> {
+    blocks
+        .iter()
+        .find(|(k, _)| k == key)
+        .map(|(_, widget)| widget.clone())
 }
 
 glib::wrapper! {
@@ -628,6 +712,7 @@ impl AllDayStrip {
         let (placed, more) = layout::lanes(&spans);
 
         let mut children = Vec::new();
+        let mut blocks = Vec::new();
         let mut rows = 0usize;
         for p in placed {
             let (occ_index, start, end) = spanning[p.index];
@@ -636,6 +721,7 @@ impl AllDayStrip {
             let card = EventBlock::new(o, colour, name, true, &chrono::Local).widget;
             connect_activated_strip(self, &card, o.clone());
             card.set_parent(self);
+            blocks.push((block::key_of(o), card.clone().upcast()));
             children.push((card.upcast(), (start, end, p.lane)));
             rows = rows.max(p.lane + 1);
         }
@@ -658,7 +744,13 @@ impl AllDayStrip {
         imp.days.set(days.len());
         imp.rows.set(rows);
         imp.children.replace(children);
+        imp.blocks.replace(blocks);
         self.queue_resize();
+    }
+
+    /// The block drawing `key`, when the strip shows it.
+    pub fn block_of(&self, key: &EventKey) -> Option<gtk::Widget> {
+        find_block(&self.imp().blocks.borrow(), key)
     }
 
     pub fn connect_event_activated(
@@ -668,7 +760,10 @@ impl AllDayStrip {
         self.imp().activated.replace(Some(Box::new(f)));
     }
 
-    pub fn connect_more_clicked(&self, f: impl Fn(&AllDayStrip, &[Occurrence]) + 'static) {
+    pub fn connect_more_clicked(
+        &self,
+        f: impl Fn(&AllDayStrip, &[Occurrence], &gtk::Widget) + 'static,
+    ) {
         self.imp().more_clicked.replace(Some(Box::new(f)));
     }
 }
@@ -685,10 +780,10 @@ fn connect_activated_strip(strip: &AllDayStrip, card: &gtk::Button, occurrence: 
 
 fn connect_more_clicked_strip(strip: &AllDayStrip, button: &gtk::Button, hidden: Vec<Occurrence>) {
     let weak = strip.downgrade();
-    button.connect_clicked(move |_| {
+    button.connect_clicked(move |button| {
         let Some(strip) = weak.upgrade() else { return };
         if let Some(f) = strip.imp().more_clicked.borrow().as_ref() {
-            f(&strip, &hidden);
+            f(&strip, &hidden, button.upcast_ref());
         }
     });
 }
@@ -699,16 +794,24 @@ mod tests {
 
     #[test]
     fn a_card_in_the_second_of_two_lanes_takes_the_right_half_of_its_column() {
-        let r = rect(1, 7, 1, 2, 10.0, 11.5, 62.0 + 7.0 * 100.0);
-        assert_eq!((r.0, r.2), (213.5, 45.5));
-        assert_eq!((r.1, r.3), (521.5, 75.0));
+        let r = rect(1, 7, 1, 2, 10.0, 11.5, 60.0 + 7.0 * 100.0);
+        assert_eq!((r.0, r.2), (211.5, 45.5));
+        assert_eq!((r.1, r.3), (621.5, 90.0));
     }
 
     #[test]
     fn an_all_day_card_spans_its_days_minus_the_inset() {
-        let (x, y, w, h) = all_day_rect(1, 3, 0, 7, 62.0 + 7.0 * 100.0);
-        assert_eq!((x, w), (165.0, 194.0));
-        assert_eq!((y, h), (1.5, 27.0));
+        let (x, y, w, h) = all_day_rect(1, 3, 0, 7, 60.0 + 7.0 * 100.0);
+        assert_eq!((x, w), (163.0, 194.0));
+        assert_eq!((y, h), (5.0, 24.0));
+    }
+
+    #[test]
+    fn a_second_all_day_lane_sits_four_pixels_under_the_first() {
+        let (_, y, _, h) = all_day_rect(0, 1, 1, 7, 760.0);
+        assert_eq!((y, h), (33.0, 24.0));
+        assert_eq!(all_day_height(2), 62.0);
+        assert_eq!(all_day_height(1), 34.0);
     }
 
     fn d(y: i32, m: u32, day: u32) -> NaiveDate {
