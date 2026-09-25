@@ -52,6 +52,9 @@ pub struct App {
     /// this one copy.
     accounts: RefCell<Vec<Account>>,
     labels: RefCell<HashMap<AccountId, Vec<Label>>>,
+    /// Each account's consent, read in the same pass as `accounts` so the
+    /// Grant Access banner never waits on a round trip of its own.
+    consent: RefCell<HashMap<AccountId, accounts::Consent>>,
     names: RefCell<HashMap<AccountId, String>>,
     tray: Arc<Mutex<Option<ksni::Handle<MailTray>>>>,
     /// What somebody picked on a new-mail notification.
@@ -122,6 +125,7 @@ impl App {
             filter: RefCell::new(None),
             accounts: RefCell::new(Vec::new()),
             labels: RefCell::new(HashMap::new()),
+            consent: RefCell::new(HashMap::new()),
             names: RefCell::new(HashMap::new()),
             tray: Arc::new(Mutex::new(None)),
             chosen,
@@ -607,9 +611,14 @@ impl App {
     }
 
     /// Reads the accounts and their labels from the store and keeps them.
-    /// Hands back each account with its labels, for the sidebar.
+    /// Hands back each account with its labels, for the sidebar. Reads
+    /// every account's consent in the same pass, so the Grant Access
+    /// banner reads it from `consent` rather than a round trip of its
+    /// own: a late one, arriving after the window looks settled, has
+    /// shown up as a stray unnamed control to a screen reader already
+    /// walking the page.
     pub async fn reload_accounts(self: &Rc<Self>) -> anyhow::Result<Vec<(Account, Vec<Label>)>> {
-        let loaded = self
+        let (loaded, consent) = self
             .core
             .read(|c| {
                 let mut out: Vec<(Account, Vec<Label>)> = Vec::new();
@@ -617,12 +626,14 @@ impl App {
                     let account_labels = labels::list_labels(c, account.id)?;
                     out.push((account, account_labels));
                 }
-                Ok(out)
+                let consent = accounts::all_consent(c)?;
+                Ok((out, consent))
             })
             .await?;
         let known: Vec<AccountId> = self.accounts.borrow().iter().map(|a| a.id).collect();
         *self.accounts.borrow_mut() = loaded.iter().map(|(a, _)| a.clone()).collect();
         *self.labels.borrow_mut() = loaded.iter().map(|(a, l)| (a.id, l.clone())).collect();
+        *self.consent.borrow_mut() = consent;
         // A settings change that touches the accounts reloads them too, and
         // only an account this run has not seen needs Gmail asked about it.
         let arrived: Vec<Account> = loaded
@@ -634,12 +645,10 @@ impl App {
         Ok(loaded)
     }
 
-    /// Every account's consent, for the Grant Access banner: whether it
-    /// was ever asked for every scope, and which scopes it granted.
-    pub async fn all_consent(
-        self: &Rc<Self>,
-    ) -> anyhow::Result<std::collections::HashMap<AccountId, accounts::Consent>> {
-        self.core.read(accounts::all_consent).await
+    /// Every account's consent, as `reload_accounts` last read it: whether
+    /// it was ever asked for every scope, and which scopes it granted.
+    pub fn consent(&self) -> HashMap<AccountId, accounts::Consent> {
+        self.consent.borrow().clone()
     }
 
     /// Finds a display name and the send-as addresses for each account
