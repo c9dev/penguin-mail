@@ -224,6 +224,24 @@ async fn a_label_change_a_folder_account_cannot_make_says_why() {
     assert!(h.asked().questions.is_empty());
 }
 
+/// A remove-only change stays refused, since it would otherwise move the
+/// whole thread rather than take mail out of one folder; the refusal
+/// names organize's archive as the way to do that instead.
+#[tokio::test]
+async fn a_remove_only_change_on_a_folder_account_points_to_organize() {
+    let h = folder_account().await;
+    let answer = h
+        .run("label", json!({"targets": [target("t1")], "remove": ["Kites"]}))
+        .await
+        .unwrap();
+    assert_eq!(
+        answer["unavailable"],
+        "dana@example.com files mail in folders, one folder per message. To take mail out of \
+         a folder, archive it with organize; to move it, name one folder in `add` and none in \
+         `remove`."
+    );
+}
+
 #[tokio::test]
 async fn send_later_schedules_a_new_message_once_the_user_agrees() {
     let h = harness().await;

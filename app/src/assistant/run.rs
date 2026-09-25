@@ -1131,8 +1131,9 @@ impl<A: Accounts> Tools<A> {
         }
         let ([name], []) = (add, remove) else {
             return unavailable(format!(
-                "{email} files mail in folders, one folder per message. Name one folder in `add` \
-                 and none in `remove` to move the mail there."
+                "{email} files mail in folders, one folder per message. To take mail out of a \
+                 folder, archive it with organize; to move it, name one folder in `add` and \
+                 none in `remove`."
             ));
         };
         let folder = self

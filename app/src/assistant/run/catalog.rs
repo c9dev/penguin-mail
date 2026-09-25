@@ -309,7 +309,7 @@ pub(super) fn catalog<A: Accounts>() -> Vec<MailTool<A>> {
         MailTool {
             name: "label",
             label: || gettext("Changing labels"),
-            description: "Adds or removes labels on conversations, by label name. When add names a label an account lacks, the user decides whether to create it; if they decline, only mail in accounts that have the label gets it. On an account that files mail in folders, name one folder in add and leave remove empty to move the mail there; any other combination is refused.",
+            description: "Adds or removes labels on conversations, by label name. When add names a label an account lacks, the user decides whether to create it; if they decline, only mail in accounts that have the label gets it. On an account that files mail in folders, name one folder in add and leave remove empty to move the mail there; any other combination is refused. To take mail out of a folder on such an account, archive it with organize instead.",
             input: || {
                 json!({
                     "targets": targets(),
