@@ -20,7 +20,7 @@ use mailrs_mime::Parts;
 use super::{
     AutoReplyService, Backfill, CalendarService, Changes, ContactsService, Found, Google,
     IdentityService, Imap, KeywordsPage, MailBackend, MailCapabilities, RawMessage, Relocated,
-    RemoteRef, RulesService, SearchQuery, SendAsAddress, SyncState, Unapplied, Want,
+    RemoteRef, RulesService, SearchQuery, SendAsAddress, SyncState, Unapplied, Want, Withheld,
 };
 use crate::api::{AccountClient, DraftRef, SavedDraft};
 #[cfg(any(test, feature = "fake"))]
@@ -118,6 +118,22 @@ pub enum AnyIdentities {
     Imap(Imap<ImapClient, SmtpClient>),
     #[cfg(any(test, feature = "fake"))]
     FakeImap(Imap<FakeImap, FakeSmtp>),
+}
+
+impl AnyMail {
+    /// What Google's account withholds, read from the scopes it granted.
+    /// An IMAP account withholds nothing: it grants Google nothing to
+    /// begin with.
+    pub fn withheld(&self) -> Withheld {
+        match self {
+            AnyMail::Google(adapter) => adapter.withheld(),
+            #[cfg(any(test, feature = "fake"))]
+            AnyMail::Fake(adapter) => adapter.withheld(),
+            AnyMail::Imap(_) => Withheld::NONE,
+            #[cfg(any(test, feature = "fake"))]
+            AnyMail::FakeImap(_) => Withheld::NONE,
+        }
+    }
 }
 
 impl MailBackend for AnyMail {

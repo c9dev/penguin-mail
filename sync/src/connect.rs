@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use mailrs_discover::{Security, Server, UserName};
 use mailrs_domain::{Account, AccountState};
-use mailrs_gmail::{GmailClient, GmailError, OAuthClient, TokenStore};
+use mailrs_gmail::{Granted, GmailClient, GmailError, OAuthClient, TokenStore};
 use mailrs_imap::{ImapClient, Login, SmtpClient};
 use mailrs_store::servers::{self, Saved, Servers};
 use mailrs_store::{Db, accounts};
@@ -10,21 +10,40 @@ use mailrs_store::{Db, accounts};
 use crate::passwords::{PasswordError, PasswordStore};
 use crate::{AccountClient, AccountServices, BackendError, ImapSettings, SyncError};
 
-/// A Gmail client for `account`, built from its refresh token in `tokens`.
-/// Fails with `NeedsReauth` when no token is stored.
+/// A Gmail client for `account`, built from its refresh token in `tokens`
+/// and seeded with the scopes `db` last recorded for it. Fails with
+/// `NeedsReauth` when no token is stored. A later refresh that reports a
+/// different set of scopes saves them back to `db` in the background,
+/// off the runtime a caller is waiting on.
 pub async fn connect_account(
     oauth: OAuthClient,
     tokens: Arc<dyn TokenStore>,
     account: &Account,
+    db: &Db,
 ) -> Result<AccountClient, SyncError> {
     let email = account.email.clone();
     let stored = tokio::task::spawn_blocking(move || tokens.load(&email))
         .await
         .map_err(|e| GmailError::Keyring(e.to_string()))??;
     let refresh_token = stored.ok_or(GmailError::NeedsReauth)?;
+    let id = account.id;
+    let consent = db.read(move |c| accounts::consent(c, id)).await?;
+    let granted = consent.granted.as_deref().map(Granted::parse);
+    let db = db.clone();
+    let client = GmailClient::for_account(oauth, refresh_token, &account.email)
+        .with_granted(granted)
+        .on_granted(move |granted| {
+            let scope = granted.to_scope();
+            let db = db.clone();
+            tokio::spawn(async move {
+                if let Err(err) = db.write(move |c| accounts::set_granted(c, id, &scope)).await {
+                    tracing::warn!(account = id, %err, "could not save the granted scopes");
+                }
+            });
+        });
     Ok(AccountClient {
         account_id: account.id,
-        client: GmailClient::for_account(oauth, refresh_token, &account.email),
+        client,
     })
 }
 

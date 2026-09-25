@@ -40,8 +40,9 @@ use mailrs_gmail::model::{Header, Message, MessagePart, PartBody};
 use mailrs_gmail::{
     AccountQuota, Answered, BATCH_LIMIT, Busy, CALENDAR_LIST_SCOPE, CALENDAR_SCOPE, CONTACTS_SCOPE,
     CONTACTS_WRITE_SCOPE, ConnectionsPage, ContactFields, DELETE_SCOPE, Event, EventFields,
-    GmailError, Guest, HistoryChange, HistoryPage, LabelColor, MessagePage, MessageRef, Person,
-    Priority, Profile, QuotaLimiter, RemoteLabel, SETTINGS_SCOPE, SendAs, Series, cost, limiter,
+    GmailError, Granted, Guest, HistoryChange, HistoryPage, LabelColor, MessagePage, MessageRef,
+    Person, Priority, Profile, QuotaLimiter, RemoteLabel, SETTINGS_SCOPE, SendAs, Series, cost,
+    limiter,
 };
 
 use crate::api::{DraftRef, GmailApi, SavedDraft};
@@ -800,6 +801,22 @@ impl FakeState {
 impl GmailApi for FakeGmail {
     fn quota(&self) -> Option<&AccountQuota> {
         self.quota.as_deref()
+    }
+
+    /// Every scope sign-in asks for, less whatever a test withheld. Tests
+    /// use this to see how the app reacts to a scope the person unticked,
+    /// without going through a real consent flow.
+    fn granted(&self) -> Option<Granted> {
+        Some(self.with(|s| {
+            Granted::parse(
+                &mailrs_gmail::SIGN_IN_SCOPES
+                    .iter()
+                    .filter(|scope| !s.withheld.contains(*scope))
+                    .copied()
+                    .collect::<Vec<_>>()
+                    .join(" "),
+            )
+        }))
     }
 
     async fn profile(&self) -> Result<Profile, GmailError> {

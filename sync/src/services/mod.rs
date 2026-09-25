@@ -389,6 +389,13 @@ impl AccountServices {
         self.mail.capabilities()
     }
 
+    /// What the account's own consent leaves off, read from its mail
+    /// adapter: an IMAP account withholds nothing, since it grants
+    /// nothing to Google to begin with.
+    pub fn withheld(&self) -> Withheld {
+        self.mail.withheld()
+    }
+
     pub fn offers(&self) -> Offers {
         let caps = self.capabilities();
         Offers {
@@ -404,6 +411,36 @@ impl AccountServices {
             // capability for it then.
             search: true,
         }
+    }
+}
+
+/// What the person left unticked on Google's consent screen, once per
+/// scope Penguin Mail asks for. `true` means the account never granted
+/// it, so the feature it serves turns off with a reason rather than
+/// failing as an error. `NONE` fits an account whose grants are not
+/// known yet, so nothing turns off before the first read says otherwise.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct Withheld {
+    pub settings: bool,
+    pub delete: bool,
+    pub contacts: bool,
+    pub change_contacts: bool,
+    pub calendar: bool,
+    pub calendar_list: bool,
+}
+
+impl Withheld {
+    pub const NONE: Withheld = Withheld {
+        settings: false,
+        delete: false,
+        contacts: false,
+        change_contacts: false,
+        calendar: false,
+        calendar_list: false,
+    };
+
+    pub fn is_empty(self) -> bool {
+        self == Withheld::NONE
     }
 }
 
