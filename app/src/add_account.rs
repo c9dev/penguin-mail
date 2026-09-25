@@ -435,37 +435,6 @@ fn refused(mut line: String, said: &str, proposal: &Proposal) -> Failure {
     Failure { line, links }
 }
 
-/// `line` and each of `links` on a line of its own, as Pango markup for a
-/// label. Everything is escaped, since a server's words arrive from the
-/// network.
-pub fn markup(line: &str, links: &[Link]) -> String {
-    let mut out = escape(line);
-    for link in links {
-        out.push('\n');
-        out.push_str(&format!(
-            "<a href=\"{}\">{}</a>",
-            escape(&link.url),
-            escape(&link.label)
-        ));
-    }
-    out
-}
-
-fn escape(text: &str) -> String {
-    let mut out = String::with_capacity(text.len());
-    for c in text.chars() {
-        match c {
-            '&' => out.push_str("&amp;"),
-            '<' => out.push_str("&lt;"),
-            '>' => out.push_str("&gt;"),
-            '"' => out.push_str("&quot;"),
-            '\'' => out.push_str("&#39;"),
-            c => out.push(c),
-        }
-    }
-    out
-}
-
 /// What Server Settings holds for one server.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Typed {
@@ -974,22 +943,6 @@ mod tests {
         assert_eq!(
             failure(&demo, &fastmail()).line,
             "Demo mode cannot add real accounts."
-        );
-    }
-
-    #[test]
-    fn the_servers_words_cannot_turn_into_markup() {
-        let said = markup(
-            "The server said: <b>no</b> & bye",
-            &[Link {
-                label: "Help".into(),
-                url: "https://example.org/?a=1&b=\"2\"".into(),
-            }],
-        );
-        assert_eq!(
-            said,
-            "The server said: &lt;b&gt;no&lt;/b&gt; &amp; bye\n\
-             <a href=\"https://example.org/?a=1&amp;b=&quot;2&quot;\">Help</a>"
         );
     }
 

@@ -44,6 +44,7 @@ app/src/templates.rs
 app/src/translation.rs
 app/src/tray.rs
 app/src/ui/about.rs
+app/src/ui/add_account.rs
 app/src/ui/assistant.rs
 app/src/ui/assistant_mcp_prefs.rs
 app/src/ui/assistant_prefs.rs

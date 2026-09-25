@@ -580,7 +580,7 @@ pub(super) static MAIN_ACTIONS: &[(&str, WindowRun)] = &[
         win.reload_folder();
         win.toast(&gettext("Checking for mail"));
     }),
-    ("add-account", |win| win.authorize(None)),
+    ("add-account", |win| win.add_account()),
     ("shortcuts", |win| win.show_shortcuts()),
     ("mute", |win| win.toggle_mute()),
     ("label", |win| win.conversation.label_button.popup()),

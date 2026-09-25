@@ -11,6 +11,7 @@ use std::sync::Mutex;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use anyhow::{Context, Result, anyhow, bail};
+use mailrs_discover::{Found, Net, RealNet, Security, SrvRecord};
 use mailrs_domain::{Account, AccountId, AccountState, ChangeEvent, Provider, Target};
 use mailrs_gmail::{
     GMAIL_API_BASE, KeyringTokenStore, TokenStore, authorize, built_in_client,
@@ -21,13 +22,14 @@ use mailrs_store::{Db, StoreError, accounts};
 use mailrs_sync::config::{Config, config_path, data_dir, migrate_old_dirs};
 use mailrs_sync::lock::{LockError, SyncLock};
 use mailrs_sync::passwords::{KeyringPasswords, MemoryPasswords, PasswordStore, Passwords};
-use mailrs_sync::sign_in::{account_client, signed_in};
+use mailrs_sync::sign_in::{NewImap, account_client, imap_signed_in, signed_in};
 use mailrs_sync::{
     AccountServices, AccountSettings, AccountSync, Accounts, BackendError, ContactBook, Failure,
     History, Invitations, MailAction, MailActions, Mailboxes, OneClick, Outbox, Outcome,
-    SyncEngine, SyncError, Undone, connect_account, connect_imap, now_millis,
+    SyncEngine, SyncError, Undone, connect_account, connect_imap, now_millis, servers_for,
 };
 
+use crate::add_account::Attempt;
 use crate::assistant::run::{Background, Modules};
 use crate::demo::{self, DemoGmail};
 use mailrs_domain::translate::{fill, gettext};
@@ -662,6 +664,62 @@ impl Core {
         .await
     }
 
+    /// The servers for `address`, found the way discovery goes: the
+    /// provider table, then DNS, the domain's own files and a probe. The
+    /// demo reads the table alone, so it sends nothing anywhere.
+    pub async fn discover(&self, address: String) -> Result<Found> {
+        let demo = self.demo;
+        self.call(async move {
+            let found = match demo {
+                true => mailrs_discover::find(&Offline, &address).await,
+                false => mailrs_discover::find(&RealNet::new()?, &address).await,
+            };
+            Ok::<_, anyhow::Error>(found)
+        })
+        .await
+    }
+
+    /// Signs in to an IMAP account: tries the login on both servers, then
+    /// keeps the account, its servers and its password, and starts
+    /// syncing it. Nothing is kept when the login fails. An account
+    /// signing in again keeps its mail and starts over with the new
+    /// password.
+    pub async fn sign_in_imap(&self, attempt: Attempt) -> Result<Account> {
+        if self.demo {
+            bail!(gettext("Demo mode cannot add real accounts."));
+        }
+        let engine = self
+            .engine
+            .current()
+            .ok_or_else(|| anyhow!("sync is not running"))?;
+        let (db, passwords) = (self.db.clone(), Arc::clone(&self.passwords));
+        let window_days = self.config.borrow().engine_config().window_days;
+        self.call(async move {
+            let Attempt {
+                address,
+                provider_name,
+                imap,
+                smtp,
+                login_as,
+                password,
+            } = attempt;
+            // `check` reports which server refused, as a `CheckError` the
+            // dialog reads back out of the `anyhow::Error`.
+            let checked = mailrs_imap::check(&imap, &smtp, &login_as, &password).await?;
+            let new = NewImap {
+                address,
+                provider_name,
+                servers: servers_for(&imap, &checked.imap_user, &smtp, &checked.smtp_user),
+                password,
+            };
+            let account = imap_signed_in(&db, Arc::clone(&passwords), new, now_millis()).await?;
+            let services = connect_imap(&db, passwords, &account, window_days).await?;
+            engine.start_account(account.id, services);
+            Ok::<_, anyhow::Error>(account)
+        })
+        .await
+    }
+
     /// Stops syncing an account and deletes its local mail and what signs
     /// it in: a Google account's refresh token, an IMAP account's password.
     pub async fn remove_account(&self, account: Account) -> Result<()> {
@@ -730,6 +788,28 @@ async fn needs_sign_in(events: &async_channel::Sender<ChangeEvent>, account_id: 
     let _ = events
         .send(ChangeEvent::AccountStateChanged { account_id, state })
         .await;
+}
+
+/// A network that answers nothing, for the demo: discovery then finds
+/// what the provider table knows and sends nothing anywhere.
+struct Offline;
+
+impl Net for Offline {
+    async fn mx(&self, _domain: &str) -> Vec<String> {
+        Vec::new()
+    }
+
+    async fn srv(&self, _name: &str) -> Vec<SrvRecord> {
+        Vec::new()
+    }
+
+    async fn get(&self, _url: &str) -> Option<String> {
+        None
+    }
+
+    async fn reaches(&self, _host: &str, _port: u16, _security: Security) -> bool {
+        false
+    }
 }
 
 #[cfg(test)]
