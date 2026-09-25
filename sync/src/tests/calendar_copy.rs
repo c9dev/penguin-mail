@@ -8,7 +8,7 @@ use mailrs_domain::calendar::{Access, Calendar, Event};
 use mailrs_store::calendar as store;
 
 use super::{Connected, Harness, harness, imap_harness};
-use crate::calendar_copy::{CalendarCopy, LIST_EVERY, READ_EVERY_OPEN, READ_EVERY_TRAY};
+use crate::calendar_copy::{CalendarCopy, LIST_EVERY, READ_EVERY_OPEN, READ_EVERY_TRAY, new_event_id};
 use crate::settings::Permitted;
 
 const NOW: i64 = 1_790_000_000_000;
@@ -268,4 +268,202 @@ async fn a_refresh_already_running_leaves_a_second_one_alone() {
     };
     let (first, ()) = tokio::join!(first, second);
     assert_eq!(first.unwrap().events, 2, "both accounts are read once the first pass finishes");
+}
+
+#[tokio::test]
+async fn a_saved_event_shows_at_once_and_goes_out_on_send() {
+    let h = harness().await;
+    h.fake.with(|s| s.calendars = vec![calendar("primary", true)]);
+    let copy = copy(&h);
+    copy.refresh(h.account_id, NOW).await.unwrap();
+    let id = new_event_id();
+    copy.save(h.account_id, event("primary", &id)).await.unwrap();
+    assert!(stored(&h, "primary", &id).await.unwrap().pending);
+    assert!(copy.send(h.account_id).await.unwrap().is_empty());
+    let held = stored(&h, "primary", &id).await.unwrap();
+    assert!(!held.pending);
+    assert_eq!(held.etag, "\"1\"");
+    assert!(h.fake.with(|s| s.calendar_events.iter().any(|e| e.id == id)));
+}
+
+#[tokio::test]
+async fn an_edit_that_meets_a_newer_version_keeps_googles() {
+    let h = harness().await;
+    h.fake.with(|s| s.calendars = vec![calendar("primary", true)]);
+    h.fake.put_calendar_event(event("primary", "a"));
+    let copy = copy(&h);
+    copy.refresh(h.account_id, NOW).await.unwrap();
+    let mut mine = stored(&h, "primary", "a").await.unwrap();
+    mine.title = "Mine".into();
+    copy.save(h.account_id, mine).await.unwrap();
+    // Someone changes it on their phone before the queue sends.
+    h.fake.put_calendar_event(Event { title: "Theirs".into(), ..event("primary", "a") });
+    let turned_down = copy.send(h.account_id).await.unwrap();
+    assert_eq!(turned_down.len(), 1);
+    assert_eq!(turned_down[0].reason, None);
+    assert_eq!(stored(&h, "primary", "a").await.unwrap().title, "Theirs");
+    let account = h.account_id;
+    assert!(h.db.read(move |c| store::queued(c, account)).await.unwrap().is_empty());
+}
+
+#[tokio::test]
+async fn a_network_failure_keeps_the_rest_of_the_queue_in_order() {
+    let h = harness().await;
+    h.fake.with(|s| s.calendars = vec![calendar("primary", true)]);
+    let copy = copy(&h);
+    copy.refresh(h.account_id, NOW).await.unwrap();
+    copy.save(h.account_id, event("primary", "one")).await.unwrap();
+    copy.save(h.account_id, event("primary", "two")).await.unwrap();
+    h.fake.fail_next(mailrs_gmail::GmailError::Network("gone".into()));
+    assert!(copy.send(h.account_id).await.is_err());
+    let account = h.account_id;
+    let held = h.db.read(move |c| store::queued(c, account)).await.unwrap();
+    assert_eq!(held.iter().map(|q| q.event.as_str()).collect::<Vec<_>>(), vec!["one", "two"]);
+    copy.send(h.account_id).await.unwrap();
+    assert!(h.db.read(move |c| store::queued(c, account)).await.unwrap().is_empty());
+}
+
+#[tokio::test]
+async fn a_removed_event_leaves_at_once_and_on_google_after_send() {
+    let h = harness().await;
+    h.fake.with(|s| s.calendars = vec![calendar("primary", true)]);
+    h.fake.put_calendar_event(event("primary", "a"));
+    let copy = copy(&h);
+    copy.refresh(h.account_id, NOW).await.unwrap();
+    copy.remove(h.account_id, "primary", "a").await.unwrap();
+    assert!(stored(&h, "primary", "a").await.is_none());
+    copy.send(h.account_id).await.unwrap();
+    assert!(h.fake.with(|s| s.calendar_events.is_empty()));
+}
+
+#[tokio::test]
+async fn a_queued_change_survives_a_refresh_that_runs_before_it_is_sent() {
+    let h = harness().await;
+    h.fake.with(|s| s.calendars = vec![calendar("primary", true)]);
+    h.fake.put_calendar_event(event("primary", "a"));
+    let copy = copy(&h);
+    copy.refresh(h.account_id, NOW).await.unwrap();
+    let mut mine = stored(&h, "primary", "a").await.unwrap();
+    mine.title = "Mine".into();
+    copy.save(h.account_id, mine).await.unwrap();
+    h.fake.with(|s| s.expire_calendar_tokens = true);
+    copy.refresh(h.account_id, NOW + READ_EVERY_OPEN).await.unwrap();
+    assert_eq!(stored(&h, "primary", "a").await.unwrap().title, "Mine");
+}
+
+#[test]
+fn a_new_id_is_one_google_accepts() {
+    let id = new_event_id();
+    assert_eq!(id.len(), 32);
+    assert!(id.chars().all(|c| c.is_ascii_digit() || ('a'..='v').contains(&c)));
+}
+
+/// reconcile.md Task 6 item 6. Google saw the create; only the answer
+/// telling us so was lost. `send` must ask what changed rather than
+/// asking to create the id a second time.
+#[tokio::test]
+async fn a_create_whose_answer_was_lost_is_not_sent_twice() {
+    let h = harness().await;
+    h.fake.with(|s| s.calendars = vec![calendar("primary", true)]);
+    let copy = copy(&h);
+    copy.refresh(h.account_id, NOW).await.unwrap();
+    let id = new_event_id();
+    copy.save(h.account_id, event("primary", &id)).await.unwrap();
+    // The create reached Google, but this computer never heard back.
+    h.fake.put_calendar_event(event("primary", &id));
+    let turned_down = copy.send(h.account_id).await.unwrap();
+    assert!(turned_down.is_empty());
+    let account = h.account_id;
+    assert!(h.db.read(move |c| store::queued(c, account)).await.unwrap().is_empty());
+    assert!(stored(&h, "primary", &id).await.is_some());
+}
+
+/// The bug reconcile.md Task 6 item 2 names: `send` used to infer a
+/// create from an empty etag. A row `enqueue` marked `Save` (because an
+/// edit is already queued for the event, ruling out a create) must still
+/// go out as a change even when its etag column is empty, or a second
+/// edit to a brand-new event would try to create it again and meet a
+/// refusal instead of just updating it.
+#[tokio::test]
+async fn a_queued_save_with_no_etag_is_not_sent_as_a_create() {
+    let h = harness().await;
+    h.fake.with(|s| s.calendars = vec![calendar("primary", true)]);
+    h.fake.put_calendar_event(event("primary", "a"));
+    let copy = copy(&h);
+    copy.refresh(h.account_id, NOW).await.unwrap();
+    let mut edited = event("primary", "a");
+    edited.title = "Edited".into();
+    let account_id = h.account_id;
+    h.db.write(move |c| store::enqueue(c, account_id, store::ChangeKind::Save, &edited)).await.unwrap();
+    assert!(copy.send(h.account_id).await.unwrap().is_empty());
+    assert_eq!(h.fake.usage().calls_to("calendar.events.insert"), 0);
+    assert_eq!(h.fake.usage().calls_to("calendar.events.patch"), 1);
+    assert_eq!(stored(&h, "primary", "a").await.unwrap().title, "Edited");
+}
+
+/// The bug reconcile.md Task 6 item 3 names: a `Save` that meets a 404
+/// used to hit the catch-all `Err` arm, which stopped the whole send and
+/// left every change behind it stuck for good.
+#[tokio::test]
+async fn an_edit_to_an_event_deleted_elsewhere_leaves_the_queue() {
+    let h = harness().await;
+    h.fake.with(|s| s.calendars = vec![calendar("primary", true)]);
+    h.fake.put_calendar_event(event("primary", "a"));
+    h.fake.put_calendar_event(event("primary", "b"));
+    let copy = copy(&h);
+    copy.refresh(h.account_id, NOW).await.unwrap();
+    let mut mine = stored(&h, "primary", "a").await.unwrap();
+    mine.title = "Mine".into();
+    copy.save(h.account_id, mine).await.unwrap();
+    let mut second = stored(&h, "primary", "b").await.unwrap();
+    second.title = "Second".into();
+    copy.save(h.account_id, second).await.unwrap();
+    // Someone deletes "a" elsewhere before the queue sends.
+    h.fake.drop_calendar_event("primary", "a");
+    let turned_down = copy.send(h.account_id).await.unwrap();
+    assert_eq!(turned_down.len(), 1);
+    assert_eq!(turned_down[0].reason.as_deref(), Some("deleted elsewhere"));
+    assert!(stored(&h, "primary", "a").await.is_none());
+    // The change behind it in the queue still went out.
+    assert_eq!(stored(&h, "primary", "b").await.unwrap().title, "Second");
+    let account = h.account_id;
+    assert!(h.db.read(move |c| store::queued(c, account)).await.unwrap().is_empty());
+}
+
+/// reconcile.md Task 6 item 4: an edit that lands while the first is
+/// still waiting on Google must not be lost, and must not be sent
+/// against the etag it started with once the first one changed it.
+#[tokio::test]
+async fn an_edit_during_a_send_goes_out_against_the_new_version() {
+    let h = harness().await;
+    h.fake.with(|s| s.calendars = vec![calendar("primary", true)]);
+    h.fake.put_calendar_event(event("primary", "a"));
+    let copy = copy(&h);
+    copy.refresh(h.account_id, NOW).await.unwrap();
+    let mut mine = stored(&h, "primary", "a").await.unwrap();
+    mine.title = "Mine".into();
+    copy.save(h.account_id, mine.clone()).await.unwrap();
+
+    let mut held = h.fake.hold("calendar.events.patch");
+    let account_id = h.account_id;
+    let send = copy.send(account_id);
+    let race = async {
+        held.entered().await;
+        let mut again = mine.clone();
+        again.title = "Mine again".into();
+        copy.save(account_id, again).await.unwrap();
+        held.release();
+    };
+    let (result, ()) = tokio::join!(send, race);
+    assert!(result.unwrap().is_empty());
+
+    let account = h.account_id;
+    let queued = h.db.read(move |c| store::queued(c, account)).await.unwrap();
+    assert_eq!(queued.len(), 1, "the edit that landed mid-send is still queued, not lost");
+    assert_eq!(queued[0].body.as_ref().map(|e| e.title.as_str()), Some("Mine again"));
+    let on_google = h.fake.with(|s| s.calendar_events.iter().find(|e| e.id == "a").cloned()).unwrap();
+    assert_eq!(queued[0].etag.as_deref(), Some(on_google.etag.as_str()), "targets the version just written");
+
+    assert!(copy.send(h.account_id).await.unwrap().is_empty(), "the merged edit goes out with no conflict");
+    assert_eq!(stored(&h, "primary", "a").await.unwrap().title, "Mine again");
 }

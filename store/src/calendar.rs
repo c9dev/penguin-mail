@@ -502,6 +502,40 @@ pub fn dequeue(conn: &Connection, seq: i64) -> Result<()> {
     Ok(())
 }
 
+/// Settles a change that just went out. Usually its row is done and comes
+/// off the queue; but `enqueue` only ever touches an unsent row's body,
+/// never its `seq`, so an edit that lands while the provider is still
+/// answering collapses onto the very row `send` is about to remove.
+/// Deleting it by `seq` regardless would take that edit down with it. So
+/// this compares the row's current body with `attempted`, the body this
+/// call actually sent: unchanged, the row is done and comes off; changed,
+/// the row stays, its `etag` moved to `new_etag` and a `Create` demoted
+/// to `Save` (reconcile.md Task 6 item 4), so what is left targets the
+/// version this call just wrote rather than the one it started against.
+/// Answers whether the row was removed, so the caller knows whether to
+/// also store the provider's answer: one with a newer edit still queued
+/// keeps what that edit wrote instead.
+pub fn finish_change(conn: &Connection, seq: i64, attempted: &Event, new_etag: &str) -> Result<bool> {
+    let current: Option<Option<String>> = conn
+        .query_row("SELECT body FROM calendar_changes WHERE seq = ?1", params![seq], |row| row.get(0))
+        .optional()?;
+    match current {
+        None => Ok(true),
+        Some(body) if body.as_deref() == Some(json(attempted).as_str()) => {
+            conn.execute("DELETE FROM calendar_changes WHERE seq = ?1", params![seq])?;
+            Ok(true)
+        }
+        Some(_) => {
+            conn.execute(
+                "UPDATE calendar_changes SET etag = ?2, \
+                 kind = CASE kind WHEN 'create' THEN 'save' ELSE kind END WHERE seq = ?1",
+                params![seq, new_etag],
+            )?;
+            Ok(false)
+        }
+    }
+}
+
 fn json<T: serde::Serialize>(value: &T) -> String {
     serde_json::to_string(value).unwrap_or_default()
 }
@@ -814,5 +848,40 @@ mod tests {
         assert!(!synced(&conn, id).unwrap());
         set_token(&conn, id, "primary", Some("t"), 1).unwrap();
         assert!(synced(&conn, id).unwrap());
+    }
+
+    /// reconcile.md Task 6 item 4: a change whose row nobody touched while
+    /// it was in flight comes off the queue once it goes out.
+    #[test]
+    fn finishing_an_untouched_change_takes_it_off_the_queue() {
+        let (conn, id) = store();
+        let lunch = event("primary", "lunch", MONDAY, 1);
+        enqueue(&conn, id, ChangeKind::Create, &lunch).unwrap();
+        let seq = queued(&conn, id).unwrap()[0].seq;
+        assert!(finish_change(&conn, seq, &lunch, "\"2\"").unwrap());
+        assert!(queued(&conn, id).unwrap().is_empty());
+    }
+
+    /// A newer edit can collapse onto the row `send` is mid-way through
+    /// sending, since `enqueue` only ever touches an unsent row's body,
+    /// never its `seq`. Finishing that row must not take the newer edit
+    /// down with it: it stays queued, its etag moved to the version the
+    /// send just wrote and, for a create, demoted to a save, since the
+    /// id now exists.
+    #[test]
+    fn finishing_a_change_a_newer_edit_collapsed_onto_keeps_the_edit_queued() {
+        let (conn, id) = store();
+        let lunch = event("primary", "lunch", MONDAY, 1);
+        enqueue(&conn, id, ChangeKind::Create, &lunch).unwrap();
+        let seq = queued(&conn, id).unwrap()[0].seq;
+        let mut renamed = lunch.clone();
+        renamed.title = "Lunch with Ana".into();
+        enqueue(&conn, id, ChangeKind::Save, &renamed).unwrap();
+        assert!(!finish_change(&conn, seq, &lunch, "\"2\"").unwrap());
+        let held = queued(&conn, id).unwrap();
+        assert_eq!(held.len(), 1);
+        assert_eq!(held[0].kind, ChangeKind::Save, "a create demotes to a save once the id exists");
+        assert_eq!(held[0].etag.as_deref(), Some("\"2\""));
+        assert_eq!(held[0].body.as_ref().map(|e| e.title.as_str()), Some("Lunch with Ana"));
     }
 }

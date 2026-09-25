@@ -19,7 +19,7 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
-use mailrs_domain::calendar::{Access, Calendar};
+use mailrs_domain::calendar::{Access, Calendar, Event};
 use mailrs_domain::{AccountId, EpochMillis};
 use mailrs_store::Db;
 use mailrs_store::calendar as store;
@@ -43,6 +43,35 @@ pub struct Refreshed {
     /// Accounts whose calendars the provider would not hand over until
     /// the person grants the permission.
     pub needs_permission: Vec<AccountId>,
+    /// Changes the provider turned down while the queue went out ahead of
+    /// this read (`send`, called once per account before it is read).
+    pub turned_down: Vec<TurnedDown>,
+}
+
+/// A change made here that the provider turned down. The copy now holds
+/// the provider's version, so the window can say what happened. Named
+/// apart from the glossary's Clash, which avoids "conflict" (ruling R6).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TurnedDown {
+    pub account_id: AccountId,
+    pub calendar: String,
+    pub event: String,
+    pub title: String,
+    /// `None` when the event changed elsewhere first; otherwise the
+    /// provider's reason, such as the calendar turning read-only.
+    pub reason: Option<String>,
+}
+
+/// An id for an event made on this computer. Google takes a client's own
+/// id when it is 5 to 1024 characters of base 32 hex, which lets the copy
+/// store the event under the id it will keep.
+pub fn new_event_id() -> String {
+    const DIGITS: &[u8] = b"0123456789abcdefghijklmnopqrstuv";
+    let mut id = String::from("pm");
+    for _ in 0..30 {
+        id.push(DIGITS[rand::random_range(0..DIGITS.len())] as char);
+    }
+    id
 }
 
 pub struct CalendarCopy<A: Accounts> {
@@ -85,6 +114,17 @@ impl<A: Accounts> CalendarCopy<A> {
         let every = if window_open { READ_EVERY_OPEN } else { READ_EVERY_TRAY };
         let mut total = Refreshed::default();
         for &account_id in accounts {
+            // Queued changes go out before the account is read, so an
+            // edit made here shows up in what comes back rather than
+            // waiting for the read after it (Task 6 Interfaces). Calls
+            // the version that assumes the run lock is already held,
+            // since `send`'s own lock is not reentrant.
+            match self.send_locked(account_id).await {
+                Ok(turned_down) => total.turned_down.extend(turned_down),
+                Err(err) => {
+                    tracing::warn!(account = account_id, %err, "could not send the calendar queue");
+                }
+            }
             let last = self.last_read.lock().expect("copy poisoned").get(&account_id).copied();
             if last.is_some_and(|last| now - last < every) {
                 continue;
@@ -238,6 +278,174 @@ impl<A: Accounts> CalendarCopy<A> {
             tracing::warn!(account = account_id, calendar = id, "gave up reading a calendar after {PAGE_LIMIT} pages");
             return Ok(Permitted::Done(count));
         }
+    }
+
+    /// Stores `event` as waiting and queues it for the provider. The view
+    /// shows it at once; `send` mails it out. `event` queues as a
+    /// `Create` only when it carries no stored etag and nothing is
+    /// already queued for it, so a brand-new event edited twice before a
+    /// send is created once and changed the second time, never created
+    /// twice (reconcile.md Task 6 item 2: `send` used to infer a create
+    /// from an empty etag instead).
+    pub async fn save(&self, account_id: AccountId, mut event: Event) -> Result<(), SyncError> {
+        event.pending = true;
+        let now = crate::now_millis();
+        self.db
+            .write(move |c| {
+                let already_queued = store::pending_ids(c, account_id, &event.calendar)?.contains(&event.id);
+                let kind = if event.etag.is_empty() && !already_queued {
+                    store::ChangeKind::Create
+                } else {
+                    store::ChangeKind::Save
+                };
+                store::save_events(c, account_id, std::slice::from_ref(&event), now)?;
+                store::enqueue(c, account_id, kind, &event)
+            })
+            .await?;
+        Ok(())
+    }
+
+    /// Takes the event off the copy and queues its removal.
+    pub async fn remove(&self, account_id: AccountId, calendar: &str, id: &str) -> Result<(), SyncError> {
+        let (calendar, id) = (calendar.to_string(), id.to_string());
+        self.db
+            .write(move |c| {
+                let held = store::event(c, account_id, &calendar, &id)?.unwrap_or_else(|| Event {
+                    calendar: calendar.clone(),
+                    id: id.clone(),
+                    ..Event::default()
+                });
+                store::remove_events(c, account_id, &calendar, std::slice::from_ref(&id))?;
+                store::enqueue(c, account_id, store::ChangeKind::Remove, &held)
+            })
+            .await?;
+        Ok(())
+    }
+
+    /// Sends the account's queue in order, waiting behind a refresh
+    /// already under way (Task 5 item 8), since a person's own edit
+    /// should still go out. A change the provider turns down leaves the
+    /// queue and comes back as a `TurnedDown`, with the provider's
+    /// version in the copy. A network failure stops the send and leaves
+    /// that change and the rest queued for next time.
+    pub async fn send(&self, account_id: AccountId) -> Result<Vec<TurnedDown>, SyncError> {
+        let _run = self.running.lock().await;
+        self.send_locked(account_id).await
+    }
+
+    /// `send`'s body, for a caller that already holds `running`:
+    /// `refresh_due` takes it once for the whole pass and calls this
+    /// directly, since the lock is not reentrant.
+    async fn send_locked(&self, account_id: AccountId) -> Result<Vec<TurnedDown>, SyncError> {
+        let Some(calendar) = self.calendar(account_id)? else {
+            return Ok(Vec::new());
+        };
+        let queue = self.db.read(move |c| store::queued(c, account_id)).await?;
+        let mut turned_down = Vec::new();
+        for change in queue {
+            let seq = change.seq;
+            let create = change.kind == store::ChangeKind::Create;
+            let answer = match change.kind {
+                store::ChangeKind::Remove => calendar
+                    .remove_event(&change.calendar, &change.event, change.etag.as_deref())
+                    .await
+                    .map(|()| None),
+                store::ChangeKind::Create | store::ChangeKind::Save => {
+                    let Some(body) = change.body.clone() else {
+                        // A row `enqueue` gives a Create or Save always
+                        // carries a body; one that does not has nothing
+                        // left to send.
+                        self.db.write(move |c| store::dequeue(c, seq)).await?;
+                        continue;
+                    };
+                    calendar.put_event(&body, change.etag.as_deref(), create).await.map(Some)
+                }
+            };
+            match (change.kind, answer) {
+                (_, Ok(Some(mut sent))) => {
+                    sent.pending = false;
+                    let attempted = change.body.clone().expect("a create or save always has a body");
+                    let new_etag = sent.etag.clone();
+                    self.db
+                        .write(move |c| {
+                            // A newer edit that landed while this one was
+                            // in flight keeps the row queued, so its body
+                            // is not lost; only an untouched row's answer
+                            // is worth storing (reconcile.md Task 6 item
+                            // 4).
+                            if store::finish_change(c, seq, &attempted, &new_etag)? {
+                                store::save_events(c, account_id, &[sent], crate::now_millis())?;
+                            }
+                            Ok(())
+                        })
+                        .await?;
+                }
+                (_, Ok(None)) => {
+                    self.db.write(move |c| store::dequeue(c, seq)).await?;
+                }
+                (store::ChangeKind::Remove, Err(BackendError::NotFound)) => {
+                    // Gone already; the removal is done.
+                    self.db.write(move |c| store::dequeue(c, seq)).await?;
+                }
+                (store::ChangeKind::Save, Err(BackendError::NotFound)) => {
+                    // The event went elsewhere; a version this row's
+                    // etag no longer names (reconcile.md Task 6 item 3:
+                    // this used to hit the catch-all `Err` arm, which
+                    // stopped the whole send and stuck every change
+                    // behind it for good).
+                    turned_down
+                        .push(self.take_theirs(&calendar, &change, Some("deleted elsewhere".to_string())).await?);
+                }
+                (store::ChangeKind::Create, Err(BackendError::Changed)) => {
+                    // The create reached Google and its answer was lost,
+                    // so the id already exists. Nothing to report; read
+                    // the calendar again so the copy picks up Google's
+                    // version.
+                    self.db.write(move |c| store::dequeue(c, seq)).await?;
+                    self.read_calendar(&calendar, account_id, &change.calendar, crate::now_millis()).await?;
+                }
+                (_, Err(BackendError::Changed)) => {
+                    turned_down.push(self.take_theirs(&calendar, &change, None).await?);
+                }
+                (_, Err(BackendError::Refused(reason))) => {
+                    turned_down.push(self.take_theirs(&calendar, &change, Some(reason)).await?);
+                }
+                (_, Err(err)) => return Err(err.into()),
+            }
+        }
+        Ok(turned_down)
+    }
+
+    /// Drops a refused change and puts the provider's version of its
+    /// event in the copy, or takes the event out when the provider has
+    /// none.
+    async fn take_theirs(
+        &self,
+        calendar: &AnyCalendar,
+        change: &store::QueuedChange,
+        reason: Option<String>,
+    ) -> Result<TurnedDown, SyncError> {
+        let account_id = change.account_id;
+        let title = change.body.as_ref().map(|b| b.title.clone()).unwrap_or_default();
+        // The next read carries Google's version; forget the token so it
+        // reads the calendar whole and cannot miss it.
+        let (seq, cal, id) = (change.seq, change.calendar.clone(), change.event.clone());
+        self.db
+            .write(move |c| {
+                store::dequeue(c, seq)?;
+                store::remove_events(c, account_id, &cal, std::slice::from_ref(&id))?;
+                store::set_token(c, account_id, &cal, None, 0)
+            })
+            .await?;
+        let now = crate::now_millis();
+        self.read_calendar(calendar, account_id, &change.calendar, now).await?;
+        Ok(TurnedDown {
+            account_id,
+            calendar: change.calendar.clone(),
+            event: change.event.clone(),
+            title,
+            reason,
+        })
     }
 
     fn calendar(&self, account_id: AccountId) -> Result<Option<AnyCalendar>, SyncError> {
