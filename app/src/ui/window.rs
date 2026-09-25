@@ -15,7 +15,7 @@ use mailrs_domain::{
     ThreadSummary,
 };
 use mailrs_sync::{
-    History, Listing, Loaded, MailAction, Offers, Permitted, Scope, TriageAction, View,
+    History, Listing, Loaded, MailAction, Offers, Permitted, Scope, TriageAction, View, Withheld,
 };
 
 use super::add_account::{Done, Opening};
@@ -107,6 +107,10 @@ pub struct MainWindow {
     toasts: adw::ToastOverlay,
     /// Says a release is available, installing, waiting to restart, or failed.
     update_banner: adw::Banner,
+    /// One banner per account whose own consent leaves something out; see
+    /// [`crate::permission::wants_banner`]. Rebuilt whenever the accounts
+    /// are read again.
+    grant_banners: gtk::Box,
     /// The main menu's update entry: Check for Updates, or what to do with
     /// the one that is waiting.
     update_menu: gio::Menu,
@@ -489,8 +493,10 @@ impl MainWindow {
             // An update's banner spans the whole window, above the panes,
             // since it is about the app and not the mail on screen.
             let update_banner = adw::Banner::builder().revealed(false).build();
+            let grant_banners = gtk::Box::new(gtk::Orientation::Vertical, 0);
             let content = gtk::Box::new(gtk::Orientation::Vertical, 0);
             content.append(&update_banner);
+            content.append(&grant_banners);
             content.append(&stack);
             stack.set_vexpand(true);
             let toasts = adw::ToastOverlay::new();
@@ -551,6 +557,7 @@ impl MainWindow {
                 core: Rc::clone(&app.core),
                 toasts,
                 update_banner,
+                grant_banners,
                 update_menu: gio::Menu::new(),
                 about: RefCell::new(None),
                 stack,
@@ -821,6 +828,9 @@ impl MainWindow {
         self.stack.set_visible_child_name(page);
         let live: HashSet<AccountId> = data.iter().map(|(a, _)| a.id).collect();
         self.followed.borrow_mut().retain(|id, _| live.contains(id));
+        let consent = app.all_consent().await.unwrap_or_default();
+        let accounts: Vec<Account> = data.iter().map(|(a, _)| a.clone()).collect();
+        self.rebuild_grant_banners(&accounts, &consent);
         // A label deleted elsewhere, by the assistant or in the browser,
         // leaves the window on a mailbox that is no longer there, so the
         // inbox takes over as it does for a signed-out account.
@@ -883,6 +893,44 @@ impl MainWindow {
             }
         }
         self.refresh_counts();
+    }
+
+    /// Rebuilds the Grant Access banners from `accounts` and `consent`:
+    /// one per account whose own scopes leave something out and that has
+    /// never been asked for everything. The banner opens the browser
+    /// only when its button is pressed; nothing here does at start or
+    /// from the tray.
+    fn rebuild_grant_banners(
+        self: &Rc<Self>,
+        accounts: &[Account],
+        consent: &HashMap<AccountId, mailrs_store::accounts::Consent>,
+    ) {
+        while let Some(child) = self.grant_banners.first_child() {
+            self.grant_banners.remove(&child);
+        }
+        for account in accounts {
+            let withheld = self.withheld(account.id);
+            let asked = consent.get(&account.id).and_then(|c| c.asked.as_deref());
+            if !crate::permission::wants_banner(withheld, asked) {
+                continue;
+            }
+            tracing::debug!(
+                account = %account.email,
+                missing = ?crate::permission::withheld_permissions(withheld),
+                "showing the Grant Access banner"
+            );
+            let banner = adw::Banner::builder()
+                .title(fill(
+                    &gettext("{account} has not granted everything Penguin Mail uses"),
+                    &[("account", &account.email)],
+                ))
+                .button_label(gettext("Grant Access"))
+                .revealed(true)
+                .build();
+            let (this, account_id) = (Rc::clone(self), account.id);
+            banner.connect_button_clicked(move |_| this.grant_access(account_id));
+            self.grant_banners.append(&banner);
+        }
     }
 
     /// What the sidebar and the category switcher show. Two grouped
@@ -1520,15 +1568,25 @@ impl MainWindow {
         glib::spawn_future_local(async move {
             let email = &account.email;
             if permission::ask(&this.window, account_id, email, permission, occasion).await {
-                this.grant(account.email, permission);
+                this.grant(account.email);
             }
         });
     }
 
-    /// Sends `email` through consent for `permission`, once the person has
-    /// chosen Grant Access.
-    fn grant(self: &Rc<Self>, email: String, permission: Permission) {
-        self.authorize_with(Some(email), permission.scopes());
+    /// Sends `email` through consent again, once the person has chosen
+    /// Grant Access. The consent asks for every scope Penguin Mail uses,
+    /// so this is the one path a permission or the banner needs.
+    fn grant(self: &Rc<Self>, email: String) {
+        self.authorize_with(Some(email));
+    }
+
+    /// [`MainWindow::grant`] for an account known only by its id: the one
+    /// path the Grant Access banner, the calendar sidebar row and the
+    /// Preferences rows all end at.
+    pub fn grant_access(self: &Rc<Self>, account_id: AccountId) {
+        if let Some(account) = self.account(account_id) {
+            self.grant(account.email);
+        }
     }
 
     /// Says an API is switched off in the Google Cloud project Penguin Mail
@@ -2086,7 +2144,7 @@ impl MainWindow {
     // ---- Accounts ----------------------------------------------------------
 
     fn authorize(self: &Rc<Self>, expected: Option<String>) {
-        self.authorize_with(expected, &[]);
+        self.authorize_with(expected);
     }
 
     /// Asks which kind of account to add, then adds it.
@@ -2144,9 +2202,9 @@ impl MainWindow {
         self.refresh_accounts(Reload::Yes);
     }
 
-    /// Runs the consent flow, asking Google for `extra` permissions on top
-    /// of the ones sign-in always requests.
-    fn authorize_with(self: &Rc<Self>, expected: Option<String>, extra: &'static [&'static str]) {
+    /// Runs the consent flow, asking Google for every scope Penguin Mail
+    /// uses in one visit.
+    fn authorize_with(self: &Rc<Self>, expected: Option<String>) {
         // Without the build's Google client the browser would open for
         // nothing, so say why at once. The demo goes on to its own message.
         if !self.core.demo && !self.core.built_with_google_sign_in() {
@@ -2170,7 +2228,7 @@ impl MainWindow {
         self.toast(&gettext("Continue in your browser"));
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
-            match this.core.authorize_account(urls, expected, extra).await {
+            match this.core.authorize_account(urls, expected).await {
                 Ok(account) => {
                     this.toast(&fill(
                         &gettext("Added {account}. Downloading mail…"),
@@ -2225,6 +2283,13 @@ impl MainWindow {
     pub(super) fn offers(&self, account_id: AccountId) -> Offers {
         let running = self.core.account(account_id);
         crate::offered::offers_for(running.as_ref().map(|sync| sync.services()))
+    }
+
+    /// What `account_id`'s own consent left withheld, or nothing while it
+    /// has not started.
+    pub(super) fn withheld(&self, account_id: AccountId) -> Withheld {
+        let running = self.core.account(account_id);
+        crate::offered::withheld_for(running.as_ref().map(|sync| sync.services()))
     }
 
     fn labels(&self) -> HashMap<AccountId, Vec<Label>> {
@@ -2650,10 +2715,17 @@ impl MainWindow {
             return;
         };
         let accounts = app.accounts();
+        let weak = Rc::downgrade(self);
         super::preferences::present(
             &app,
             &accounts,
             |id| self.offers(id),
+            |id| self.withheld(id),
+            move |id| {
+                if let Some(win) = weak.upgrade() {
+                    win.grant_access(id);
+                }
+            },
             &self.window,
             signature_of.as_deref(),
         );
@@ -2664,7 +2736,7 @@ impl MainWindow {
         let (grant, email) = (Rc::downgrade(self), account.email.clone());
         super::rules::present(&self.core, &account, labels, &self.window, move || {
             if let Some(win) = grant.upgrade() {
-                win.grant(email.clone(), Permission::Settings);
+                win.grant(email.clone());
             }
         });
     }
@@ -2675,10 +2747,17 @@ impl MainWindow {
             return;
         };
         let accounts = app.accounts();
+        let weak = Rc::downgrade(self);
         super::preferences::present_page(
             &app,
             &accounts,
             |id| self.offers(id),
+            |id| self.withheld(id),
+            move |id| {
+                if let Some(win) = weak.upgrade() {
+                    win.grant_access(id);
+                }
+            },
             &self.window,
             page,
         );
@@ -2693,7 +2772,7 @@ impl MainWindow {
             &self.window,
             move || {
                 if let Some(win) = grant.upgrade() {
-                    win.grant(email.clone(), Permission::Settings);
+                    win.grant(email.clone());
                 }
             },
             move |text| {

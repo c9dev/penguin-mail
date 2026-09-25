@@ -4,38 +4,55 @@
 use std::rc::Rc;
 
 use adw::prelude::*;
-use mailrs_domain::Account;
-use mailrs_domain::translate::gettext;
-use mailrs_sync::{Missing, Offers};
+use mailrs_domain::translate::{fill, gettext};
+use mailrs_domain::{Account, AccountId};
+use mailrs_sync::{Missing, Offers, Withheld};
 
 use crate::app::App;
 use crate::offered::reason;
 use crate::settings::{Change, Settings};
 
-/// The page for `accounts`, each with what its server offers.
+/// The page for `accounts`, each with what its server offers and what its
+/// own consent withheld. `grant` runs the consent flow again for one
+/// account's Grant Access button.
 pub fn page(
     app: &Rc<App>,
     settings: &Settings,
     accounts: &[(Account, Offers)],
+    withheld: impl Fn(AccountId) -> Withheld,
+    grant: impl Fn(AccountId) + Clone + 'static,
 ) -> adw::PreferencesPage {
     let page = adw::PreferencesPage::builder()
         .title(gettext("Contacts & Calendar"))
         .icon_name("x-office-address-book-symbolic")
         .name("contacts")
         .build();
-    page.add(&contacts(app, settings, accounts));
-    page.add(&calendar(accounts));
+    page.add(&contacts(app, settings, accounts, &withheld, grant.clone()));
+    page.add(&calendar(accounts, &withheld, grant));
     page
 }
 
-/// One switch per account. Each asks Google for that account's permission
-/// the first time it is turned on, so an account the person never switched
-/// on is never asked about. An account whose server keeps no contacts has
-/// its switch off and says why.
+/// What one account's contacts switch shows.
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum ContactsRow {
+    /// A switch, on as the person set it.
+    Switch,
+    /// The person unticked the contacts scope on Google's consent
+    /// screen, or it has never been asked: a Grant Access row.
+    Withheld,
+    /// The server keeps no contacts to read.
+    NotOffered(String),
+}
+
+/// One switch per account. A withheld account gets a Grant Access row
+/// instead of a switch, since it has nothing to switch on yet. An
+/// account whose server keeps no contacts has its row say why.
 fn contacts(
     app: &Rc<App>,
     settings: &Settings,
     accounts: &[(Account, Offers)],
+    withheld: &impl Fn(AccountId) -> Withheld,
+    grant: impl Fn(AccountId) + Clone + 'static,
 ) -> adw::PreferencesGroup {
     let group = adw::PreferencesGroup::builder()
         .title(gettext("Google Contacts"))
@@ -54,51 +71,101 @@ fn contacts(
         );
     }
     for (account, offers) in accounts {
-        let (subtitle, offered) = contacts_row(account, *offers);
-        let row = adw::SwitchRow::builder()
-            .title(&account.email)
-            .subtitle(subtitle)
-            .active(offered && settings.reads_contacts(&account.email))
-            .sensitive(offered)
-            .build();
-        let weak = Rc::downgrade(app);
-        let email = account.email.clone();
-        row.connect_active_notify(move |row| {
-            if let Some(app) = weak.upgrade() {
-                app.change_settings(Change::AccountContacts {
-                    email: email.clone(),
-                    on: row.is_active(),
-                });
+        match contacts_row(account, *offers, withheld(account.id)) {
+            ContactsRow::Withheld => {
+                group.add(&grant_access_row(account, grant.clone()));
             }
-        });
-        group.add(&row);
+            ContactsRow::NotOffered(reason) => {
+                let row = adw::SwitchRow::builder()
+                    .title(&account.email)
+                    .subtitle(reason)
+                    .active(false)
+                    .sensitive(false)
+                    .build();
+                group.add(&row);
+            }
+            ContactsRow::Switch => {
+                let row = adw::SwitchRow::builder()
+                    .title(&account.email)
+                    .active(settings.reads_contacts(&account.email))
+                    .build();
+                let weak = Rc::downgrade(app);
+                let email = account.email.clone();
+                row.connect_active_notify(move |row| {
+                    if let Some(app) = weak.upgrade() {
+                        app.change_settings(Change::AccountContacts {
+                            email: email.clone(),
+                            on: row.is_active(),
+                        });
+                    }
+                });
+                group.add(&row);
+            }
+        }
     }
     group
 }
 
+/// The subtitle of `account`'s contacts switch, and whether the switch
+/// works: it does not on a server that keeps no contacts, and then the
+/// subtitle says why.
+fn contacts_row(account: &Account, offers: Offers, withheld: Withheld) -> ContactsRow {
+    if !offers.contacts {
+        return ContactsRow::NotOffered(reason(account, Missing::Contacts));
+    }
+    if withheld.contacts {
+        return ContactsRow::Withheld;
+    }
+    ContactsRow::Switch
+}
+
+/// What one account's calendar row shows in Preferences.
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum CalendarRow {
+    /// The account can be added to GNOME Online Accounts.
+    Available,
+    /// The person unticked the calendar scope, or it has never been
+    /// asked: a Grant Access row.
+    Withheld,
+    /// The server has no calendar to read.
+    NotOffered(String),
+}
+
 /// Which accounts GNOME knows, since that is what puts their meetings in
-/// GNOME Calendar and the clock. Answering an invitation needs nothing here:
-/// Google asks for the calendar permission the first time. An account
-/// whose server has no calendar gets a row that says why instead.
-fn calendar(accounts: &[(Account, Offers)]) -> adw::PreferencesGroup {
+/// GNOME Calendar and the clock. Answering an invitation needs nothing
+/// here: sign-in already asked for the calendar permission. An account
+/// whose server has no calendar, or whose own consent withheld it, gets
+/// a row that says so instead.
+fn calendar(
+    accounts: &[(Account, Offers)],
+    withheld: &impl Fn(AccountId) -> Withheld,
+    grant: impl Fn(AccountId) + Clone + 'static,
+) -> adw::PreferencesGroup {
     let group = adw::PreferencesGroup::builder()
         .title(gettext("Calendar"))
         .description(gettext(
             "Answering a meeting invitation records your answer in that account's Google \
-             Calendar, and Google asks your permission the first time. To see the meetings \
-             in GNOME Calendar and the clock, add the account to GNOME Online Accounts.",
+             Calendar. To see the meetings in GNOME Calendar and the clock, add the account \
+             to GNOME Online Accounts.",
         ))
         .build();
     let mut online_accounts = true;
     for (account, offers) in accounts {
-        if let Some(lack) = calendar_lack(account, *offers) {
-            group.add(
-                &adw::ActionRow::builder()
-                    .title(&account.email)
-                    .subtitle(lack)
-                    .build(),
-            );
-            continue;
+        match calendar_lack(account, *offers, withheld(account.id)) {
+            CalendarRow::NotOffered(lack) => {
+                group.add(
+                    &adw::ActionRow::builder()
+                        .title(&account.email)
+                        .subtitle(lack)
+                        .build(),
+                );
+                continue;
+            }
+            CalendarRow::Withheld => {
+                group.add(&grant_access_row(account, grant.clone()));
+                continue;
+            }
+            CalendarRow::Available => {}
         }
         if !online_accounts {
             continue;
@@ -120,7 +187,7 @@ fn calendar(accounts: &[(Account, Offers)]) -> adw::PreferencesGroup {
                 .build();
             crate::ui::name(
                 &add,
-                &mailrs_domain::translate::fill(
+                &fill(
                     &gettext("Add {account} to GNOME Online Accounts"),
                     &[("account", &account.email)],
                 ),
@@ -137,27 +204,47 @@ fn calendar(accounts: &[(Account, Offers)]) -> adw::PreferencesGroup {
     group
 }
 
-/// The subtitle of `account`'s contacts switch, and whether the switch
-/// works: it does not on a server that keeps no contacts, and then the
-/// subtitle says why.
-fn contacts_row(account: &Account, offers: Offers) -> (String, bool) {
-    match offers.contacts {
-        true => (gettext("Google asks your permission the first time"), true),
-        false => (reason(account, Missing::Contacts), false),
+/// Why `account`'s calendar row is not the Online Accounts row: the
+/// server has none, or the person's own consent withheld it.
+fn calendar_lack(account: &Account, offers: Offers, withheld: Withheld) -> CalendarRow {
+    if !offers.calendar {
+        return CalendarRow::NotOffered(reason(account, Missing::Calendar));
     }
+    if withheld.calendar || withheld.calendar_list {
+        return CalendarRow::Withheld;
+    }
+    CalendarRow::Available
 }
 
-/// Why `account` has no calendar, when its server has none.
-fn calendar_lack(account: &Account, offers: Offers) -> Option<String> {
-    (!offers.calendar).then(|| reason(account, Missing::Calendar))
+/// A row for a withheld account: the reason below its address and a
+/// Grant Access button that runs `grant`, named so a screen reader tells
+/// several such rows apart.
+fn grant_access_row(account: &Account, grant: impl Fn(AccountId) + 'static) -> adw::ActionRow {
+    let row = adw::ActionRow::builder()
+        .title(&account.email)
+        .subtitle(gettext("Not allowed when you signed in"))
+        .build();
+    let button = gtk::Button::builder()
+        .label(gettext("Grant Access"))
+        .valign(gtk::Align::Center)
+        .css_classes(["flat"])
+        .build();
+    crate::ui::name(
+        &button,
+        &fill(&gettext("Grant Access for {account}"), &[("account", &account.email)]),
+    );
+    let account_id = account.id;
+    button.connect_clicked(move |_| grant(account_id));
+    row.add_suffix(&button);
+    row
 }
 
 #[cfg(test)]
 mod tests {
     use mailrs_domain::{Account, AccountState, Provider};
-    use mailrs_sync::{Missing, Offers};
+    use mailrs_sync::{Missing, Offers, Withheld};
 
-    use super::{calendar_lack, contacts_row};
+    use super::{CalendarRow, ContactsRow, calendar_lack, contacts_row};
     use crate::offered::reason;
 
     fn account() -> Account {
@@ -171,12 +258,15 @@ mod tests {
     }
 
     #[test]
-    fn a_gmail_account_switches_its_contacts_as_before() {
+    fn a_granted_account_switches_its_contacts_as_before() {
         assert_eq!(
-            contacts_row(&account(), Offers::EVERYTHING),
-            ("Google asks your permission the first time".to_string(), true)
+            contacts_row(&account(), Offers::EVERYTHING, Withheld::NONE),
+            ContactsRow::Switch
         );
-        assert_eq!(calendar_lack(&account(), Offers::EVERYTHING), None);
+        assert_eq!(
+            calendar_lack(&account(), Offers::EVERYTHING, Withheld::NONE),
+            CalendarRow::Available
+        );
     }
 
     #[test]
@@ -187,12 +277,31 @@ mod tests {
             ..Offers::EVERYTHING
         };
         assert_eq!(
-            contacts_row(&account(), bare),
-            (reason(&account(), Missing::Contacts), false)
+            contacts_row(&account(), bare, Withheld::NONE),
+            ContactsRow::NotOffered(reason(&account(), Missing::Contacts))
         );
         assert_eq!(
-            calendar_lack(&account(), bare),
-            Some(reason(&account(), Missing::Calendar))
+            calendar_lack(&account(), bare, Withheld::NONE),
+            CalendarRow::NotOffered(reason(&account(), Missing::Calendar))
+        );
+    }
+
+    #[test]
+    fn a_withheld_account_gets_a_grant_access_row() {
+        let withheld_contacts = Withheld { contacts: true, ..Withheld::NONE };
+        assert_eq!(
+            contacts_row(&account(), Offers::EVERYTHING, withheld_contacts),
+            ContactsRow::Withheld
+        );
+        let withheld_calendar = Withheld { calendar: true, ..Withheld::NONE };
+        assert_eq!(
+            calendar_lack(&account(), Offers::EVERYTHING, withheld_calendar),
+            CalendarRow::Withheld
+        );
+        let withheld_list = Withheld { calendar_list: true, ..Withheld::NONE };
+        assert_eq!(
+            calendar_lack(&account(), Offers::EVERYTHING, withheld_list),
+            CalendarRow::Withheld
         );
     }
 }

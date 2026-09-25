@@ -3,13 +3,20 @@
 
 use mailrs_domain::translate::{fill, gettext};
 use mailrs_domain::{Account, AccountId, Provider};
-use mailrs_sync::{AccountServices, Mailbox, Missing, Offers};
+use mailrs_sync::{AccountServices, Mailbox, Missing, Offers, Withheld};
 
 /// What an account offers. An account that is not running yet has no
 /// services to ask, and the window assumes it offers everything until it
 /// starts, so nothing flickers away.
 pub fn offers_for(services: Option<&AccountServices>) -> Offers {
     services.map_or(Offers::EVERYTHING, AccountServices::offers)
+}
+
+/// What an account's own consent left withheld. An account that is not
+/// running yet has no services to ask, and nothing is withheld until a
+/// read of its grants says otherwise.
+pub fn withheld_for(services: Option<&AccountServices>) -> Withheld {
+    services.map_or(Withheld::NONE, AccountServices::withheld)
 }
 
 /// Whether the category bar shows over `mailbox`: the person has
@@ -329,7 +336,7 @@ mod tests {
     use mailrs_domain::{Account, AccountState, Provider};
     use mailrs_sync::{Missing, Offers};
 
-    use super::{offers_for, reason};
+    use super::{offers_for, reason, withheld_for};
 
     fn gmail() -> Account {
         Account {
@@ -392,6 +399,11 @@ mod tests {
     #[test]
     fn an_account_that_is_not_running_yet_hides_nothing() {
         assert_eq!(offers_for(None), Offers::EVERYTHING);
+    }
+
+    #[test]
+    fn an_account_that_is_not_running_yet_withholds_nothing() {
+        assert_eq!(withheld_for(None), mailrs_sync::Withheld::NONE);
     }
 
     use mailrs_sync::Mailbox;

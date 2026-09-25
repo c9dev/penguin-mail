@@ -7,8 +7,8 @@ use std::rc::Rc;
 use adw::prelude::*;
 use gtk::glib;
 use mailrs_domain::{Account, AccountId};
-use mailrs_sync::Offers;
 use mailrs_sync::config::SyncConfig;
+use mailrs_sync::{Offers, Withheld};
 
 use crate::app::App;
 use crate::autostart;
@@ -20,12 +20,16 @@ use crate::settings::{
 use crate::ui::window::Notice;
 use mailrs_domain::translate::{fill, fill_plural, gettext, with_reason};
 
-/// Shows Preferences for `accounts`, each with what its server `offers`.
-/// With `signature_of`, opens on that account's signature.
+/// Shows Preferences for `accounts`, each with what its server `offers`
+/// and what its own consent `withheld`. `grant` runs the consent flow
+/// again for one account's Grant Access button. With `signature_of`,
+/// opens on that account's signature.
 pub fn present(
     app: &Rc<App>,
     accounts: &[Account],
     offers: impl Fn(AccountId) -> Offers,
+    withheld: impl Fn(AccountId) -> Withheld,
+    grant: impl Fn(AccountId) + Clone + 'static,
     parent: &impl IsA<gtk::Widget>,
     signature_of: Option<&str>,
 ) -> adw::PreferencesDialog {
@@ -40,7 +44,7 @@ pub fn present(
     dialog.add(&general_page(app, &settings, &missing_lines(&offered)));
     let writing = writing_page(app, &settings, accounts, signature_of, &dialog);
     dialog.add(&writing);
-    dialog.add(&super::contacts_prefs::page(app, &settings, &offered));
+    dialog.add(&super::contacts_prefs::page(app, &settings, &offered, withheld, grant));
     if signature_of.is_some() {
         dialog.set_visible_page(&writing);
     }
@@ -63,10 +67,12 @@ pub fn present_page(
     app: &Rc<App>,
     accounts: &[Account],
     offers: impl Fn(AccountId) -> Offers,
+    withheld: impl Fn(AccountId) -> Withheld,
+    grant: impl Fn(AccountId) + Clone + 'static,
     parent: &impl IsA<gtk::Widget>,
     page: &str,
 ) {
-    present(app, accounts, offers, parent, None).set_visible_page_name(page);
+    present(app, accounts, offers, withheld, grant, parent, None).set_visible_page_name(page);
 }
 
 /// The General page. `missing` holds an address and a reason for each

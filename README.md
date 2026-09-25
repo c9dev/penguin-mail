@@ -38,8 +38,8 @@ so no other server sees your mail.
 - **Gmail search** with its full query syntax, across one account or all,
   with suggestions for subjects, people and labels as you type.
 - **Junk, Trash and All Mail**, for every account or one, read live from
-  Gmail. Delete Forever asks Google for that permission the first time you
-  use it, never at sign-in, and asks you to confirm each time.
+  Gmail. Delete Forever asks you to confirm each time, and needs the
+  permission signing in already asked for.
 
 ### Writing
 
