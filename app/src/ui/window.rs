@@ -828,9 +828,6 @@ impl MainWindow {
         self.stack.set_visible_child_name(page);
         let live: HashSet<AccountId> = data.iter().map(|(a, _)| a.id).collect();
         self.followed.borrow_mut().retain(|id, _| live.contains(id));
-        let consent = app.all_consent().await.unwrap_or_default();
-        let accounts: Vec<Account> = data.iter().map(|(a, _)| a.clone()).collect();
-        self.rebuild_grant_banners(&accounts, &consent);
         // A label deleted elsewhere, by the assistant or in the browser,
         // leaves the window on a mailbox that is no longer there, so the
         // inbox takes over as it does for a signed-out account.
@@ -893,6 +890,12 @@ impl MainWindow {
             }
         }
         self.refresh_counts();
+        // Read last: it only fills banners above the mailboxes, so a slow
+        // read here must never hold up the gating and the sidebar rebuild
+        // above, which a screen reader can already be walking.
+        let consent = app.all_consent().await.unwrap_or_default();
+        let accounts: Vec<Account> = data.iter().map(|(a, _)| a.clone()).collect();
+        self.rebuild_grant_banners(&accounts, &consent);
     }
 
     /// Rebuilds the Grant Access banners from `accounts` and `consent`:

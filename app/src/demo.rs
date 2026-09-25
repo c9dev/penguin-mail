@@ -706,6 +706,12 @@ pub async fn seed(db: &Db, now: EpochMillis) -> std::result::Result<DemoMail, Sy
             .await?;
         let fake = Arc::new(account.gmail());
         fake.keep_sent_copies(account_id);
+        if index == 2 {
+            // Shows the Grant Access banner: this account was never asked
+            // for the contacts scope, the way an account added before
+            // Task 0 shipped never was.
+            fake.withhold(mailrs_gmail::CONTACTS_SCOPE);
+        }
         let mine: Vec<&Sample> = samples.iter().filter(|s| s.account == index).collect();
         for sample in &mine {
             sample.put_in(&fake, account_id, now);
