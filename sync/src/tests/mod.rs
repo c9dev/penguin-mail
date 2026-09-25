@@ -348,6 +348,26 @@ impl ImapHarness {
             .next()
     }
 
+    /// The account as the app finds it after a restart: the same store
+    /// and server, and an adapter that has asked the server nothing yet.
+    pub fn restarted(&self) -> AccountSync {
+        let services = AccountServices::fake_imap_with(
+            Arc::clone(&self.imap),
+            Arc::clone(&self.smtp),
+            fake_settings(),
+        );
+        if let AnyMail::FakeImap(adapter) = &services.mail {
+            adapter.look_at_every_mailbox();
+        }
+        AccountSync::new(
+            self.account_id,
+            services,
+            self.db.clone(),
+            async_channel::unbounded().0,
+        )
+        .with_retry_max(Duration::from_millis(10))
+    }
+
     /// Whether the adapter still follows `mailbox`.
     pub fn is_followed(&self, mailbox: &str) -> bool {
         match &self.sync.services().mail {

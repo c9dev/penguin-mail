@@ -247,8 +247,8 @@ impl AccountSync {
         // may not hold yet. Fetch those first so there is something to change.
         self.ensure_threads(&threads).await?;
 
-        let (to_server, kept_here) =
-            split_keywords(ops, self.services.mail.capabilities().keywords);
+        let stored = self.keywords_stored(&wanted, ops).await;
+        let (to_server, kept_here) = split_keywords(ops, &stored);
         let (ids, applied) = {
             let (wanted, ops, roles) = (wanted.clone(), ops.to_vec(), self.roles());
             self.db
@@ -325,6 +325,76 @@ impl AccountSync {
         }
         relocated?;
         Ok(applied)
+    }
+
+    /// The keywords the server stores for a write of `ops` on the messages
+    /// `wanted` names. On a folder server each mailbox's PERMANENTFLAGS
+    /// decide, so a keyword goes to the server only when every mailbox the
+    /// messages sit in, and the one a move takes them to, stores it.
+    /// Where the server cannot say, the account's own answer stands.
+    async fn keywords_stored(
+        &self,
+        wanted: &BTreeMap<String, Option<BTreeSet<String>>>,
+        ops: &[MailOp],
+    ) -> Vec<&'static str> {
+        let mail = &self.services.mail;
+        let fallback = mail.capabilities().keywords.to_vec();
+        if !self.renames() || !ops.iter().any(|op| matches!(op, MailOp::SetKeyword { .. })) {
+            return fallback;
+        }
+        match self.keywords_in_mailboxes(wanted, ops).await {
+            Ok(Some(stored)) => stored,
+            Ok(None) => fallback,
+            Err(err) => {
+                tracing::warn!(account = self.account_id, error = %err, "could not read which keywords the server stores");
+                fallback
+            }
+        }
+    }
+
+    /// The keywords every mailbox the write touches stores, or `None`
+    /// when it names no mailbox.
+    async fn keywords_in_mailboxes(
+        &self,
+        wanted: &BTreeMap<String, Option<BTreeSet<String>>>,
+        ops: &[MailOp],
+    ) -> Result<Option<Vec<&'static str>>, SyncError> {
+        let (account_id, wanted) = (self.account_id, wanted.clone());
+        let ids = self
+            .db
+            .read(move |c| {
+                let mut ids = Vec::new();
+                for (thread, only) in &wanted {
+                    for message in messages::thread_messages(c, account_id, thread)? {
+                        if only.as_ref().is_none_or(|named| named.contains(&message.id)) {
+                            ids.push(message.id);
+                        }
+                    }
+                }
+                Ok(ids)
+            })
+            .await?;
+        let roles = self.roles();
+        let mut touched: BTreeSet<String> = self
+            .remotes(&ids)
+            .await?
+            .iter()
+            .filter_map(|name| Location::parse(name).map(|at| at.mailbox))
+            .collect();
+        touched.extend(ops.iter().filter_map(|op| match op {
+            MailOp::MoveToMailbox(id) => Some(id.clone()),
+            MailOp::MoveToRole(role) => roles.get(role).cloned(),
+            _ => None,
+        }));
+        let mut stored: Option<Vec<&'static str>> = None;
+        for mailbox in &touched {
+            let here = self.services.mail.keywords_stored(mailbox).await?;
+            stored = Some(match stored {
+                None => here.to_vec(),
+                Some(so_far) => so_far.into_iter().filter(|k| here.contains(k)).collect(),
+            });
+        }
+        Ok(stored)
     }
 
     /// Sends `ops` over the messages `ids` names, which the server knows

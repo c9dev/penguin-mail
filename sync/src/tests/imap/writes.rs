@@ -1,5 +1,7 @@
 use mailrs_domain::{ChangeEvent, MailSet, Role, Target};
 use mailrs_imap::{ImapError, UidSet};
+use mailrs_domain::Membership;
+use mailrs_store::messages::{self, Change};
 use mailrs_store::{bodies, mailboxes};
 
 use super::{days_ago, message, offering};
@@ -304,6 +306,38 @@ async fn keywords_the_server_refuses_stay_on_this_computer() {
         h.stored("INBOX/1001/1").await.unwrap().is_muted(),
         "a sync leaves it alone"
     );
+}
+
+#[tokio::test]
+async fn a_mute_right_after_a_restart_reaches_a_server_that_stores_it() {
+    let (h, thread) = one_message_on(FakeImap::new()).await;
+    let sync = h.restarted();
+
+    sync.triage_thread(&thread, &TriageAction::Mute).await.unwrap();
+    h.imap.remote_flag("Archive", 1, "\\Seen", true);
+    sync.incremental().await.unwrap();
+
+    let flags = h.imap.message("Archive", 1).unwrap().flags;
+    assert!(flags.iter().any(|f| f.eq_ignore_ascii_case("$muted")), "{flags:?}");
+    assert!(h.stored("INBOX/1001/1").await.unwrap().is_muted());
+}
+
+#[tokio::test]
+async fn a_flag_report_leaves_a_keyword_kept_on_this_computer() {
+    let (h, _) = one_message_on(FakeImap::new()).await;
+    let account_id = h.account_id;
+    h.db.write(move |c| {
+        let id = "INBOX/1001/1".to_string();
+        messages::apply(c, account_id, &[Change::of(&id, Membership::Keyword("$muted".into()), true)])?;
+        messages::mark_local(c, account_id, &[id], "$muted")
+    })
+    .await
+    .unwrap();
+
+    h.imap.remote_flag("INBOX", 1, "\\Seen", true);
+    h.sync.incremental().await.unwrap();
+
+    assert!(h.stored("INBOX/1001/1").await.unwrap().is_muted());
 }
 
 #[tokio::test]

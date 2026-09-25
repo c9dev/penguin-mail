@@ -281,6 +281,10 @@ impl MailBackend for AnyMail {
         forward_all!(AnyMail, self, uidvalidity(mailbox))
     }
 
+    async fn keywords_stored(&self, mailbox: &str) -> Result<&'static [&'static str], BackendError> {
+        forward_all!(AnyMail, self, keywords_stored(mailbox))
+    }
+
     async fn keywords_in(
         &self,
         mailbox: &str,

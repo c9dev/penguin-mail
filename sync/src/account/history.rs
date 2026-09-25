@@ -142,10 +142,16 @@ impl AccountSync {
                                 batch.push(placing.upsert(account_id, meta, generation));
                             }
                         }
+                        // A keyword kept on this computer is not the
+                        // server's to take away.
                         RemoteChange::Lost { id, memberships } => {
-                            batch.extend(
-                                memberships.iter().map(|m| Change::of(id, m.clone(), false)),
-                            );
+                            batch.extend(memberships.iter().map(|m| match m {
+                                Membership::Keyword(keyword) => Change::KeywordGone {
+                                    message_id: id.clone(),
+                                    keyword: keyword.clone(),
+                                },
+                                other => Change::of(id, other.clone(), false),
+                            }));
                         }
                         // The server's set is tested one stored UID at a
                         // time, never walked: one range can name four

@@ -555,6 +555,15 @@ pub trait MailBackend: Send + Sync + 'static {
         mailbox: &str,
     ) -> impl Future<Output = Result<Option<u32>, BackendError>> + Send;
 
+    /// The keywords the server stores on messages in `mailbox`. On IMAP
+    /// each mailbox's PERMANENTFLAGS decide, read with a SELECT the first
+    /// time this session asks; a server that stores the same everywhere
+    /// answers [`MailCapabilities::keywords`].
+    fn keywords_stored(
+        &self,
+        mailbox: &str,
+    ) -> impl Future<Output = Result<&'static [&'static str], BackendError>> + Send;
+
     /// One page of the sync window, newest first: the last `days` days of
     /// mail and everything in the inbox. `cursor` is the page before's
     /// `next`. Answers `BackendError::StateLost` when the server no longer
