@@ -3083,6 +3083,14 @@ msgstr "Brave Search API Key (Saved)"
 msgid "Brave Search API Key"
 msgstr "Brave Search API Key"
 
+#: app/src/ui/calendar/agenda.rs:246 app/src/ui/calendar/words.rs:52
+msgid "All day"
+msgstr "All day"
+
+#: app/src/ui/calendar/agenda.rs:264
+msgid "{title}, {when}, {calendar}"
+msgstr "{title}, {when}, {calendar}"
+
 #: app/src/ui/calendar/block.rs:87
 msgid "Waiting to be saved"
 msgstr "Waiting to be saved"
@@ -3111,11 +3119,19 @@ msgstr "{title}, all day, {calendar}"
 msgid "{title}, {start} to {end}, {calendar}"
 msgstr "{title}, {start} to {end}, {calendar}"
 
-#: app/src/ui/calendar/range.rs:91
+#: app/src/ui/calendar/popover.rs:119
+msgid "Open in Maps"
+msgstr "Open in Maps"
+
+#: app/src/ui/calendar/popover.rs:162 app/src/ui/invitation.rs:188
+msgid "Answer"
+msgstr "Answer"
+
+#: app/src/ui/calendar/range.rs:91 app/src/ui/calendar/words.rs:74
 msgid "%A %-d"
 msgstr "%A %-d"
 
-#: app/src/ui/calendar/range.rs:94
+#: app/src/ui/calendar/range.rs:94 app/src/ui/calendar/sidebar.rs:263
 msgid "%B %Y"
 msgstr "%B %Y"
 
@@ -3123,7 +3139,7 @@ msgstr "%B %Y"
 msgid "%B"
 msgstr "%B"
 
-#: app/src/ui/calendar/range.rs:106
+#: app/src/ui/calendar/range.rs:106 app/src/ui/calendar/words.rs:80
 msgid "{first} – {last}"
 msgstr "{first} – {last}"
 
@@ -3139,11 +3155,87 @@ msgstr "%Y"
 msgid "W{week}"
 msgstr "W{week}"
 
+#: app/src/ui/calendar/sidebar.rs:89
+msgid "%a"
+msgstr "%a"
+
+#: app/src/ui/calendar/sidebar.rs:156
+msgid "Previous Month"
+msgstr "Previous Month"
+
+#: app/src/ui/calendar/sidebar.rs:157
+msgid "Next Month"
+msgstr "Next Month"
+
+#: app/src/ui/calendar/sidebar.rs:307
+msgid "Grant Access to show shared calendars"
+msgstr "Grant Access to show shared calendars"
+
+#: app/src/ui/calendar/sidebar.rs:313
+msgid "Penguin Mail cannot see this account's calendars"
+msgstr "Penguin Mail cannot see this account's calendars"
+
+#: app/src/ui/calendar/sidebar.rs:317 app/src/ui/contacts_prefs.rs:228
+#: app/src/ui/permission.rs:41 app/src/ui/permission.rs:64
+#: app/src/ui/window.rs:951
+msgid "Grant Access"
+msgstr "Grant Access"
+
+#: app/src/ui/calendar/sidebar.rs:339
+msgid "You can only read this calendar"
+msgstr "You can only read this calendar"
+
+#: app/src/ui/calendar/sidebar.rs:378 app/src/ui/contacts_prefs.rs:234
+msgid "Grant Access for {account}"
+msgstr "Grant Access for {account}"
+
 #: app/src/ui/calendar/time_grid.rs:107
 msgid "{count} more event"
 msgid_plural "{count} more events"
 msgstr[0] "{count} more event"
 msgstr[1] "{count} more events"
+
+#: app/src/ui/calendar/words.rs:16
+msgid "%A %-d %B"
+msgstr "%A %-d %B"
+
+#: app/src/ui/calendar/words.rs:58
+msgid "{date} · {start}–{end}"
+msgstr "{date} · {start}–{end}"
+
+#: app/src/ui/calendar/words.rs:96
+msgid "{yes} of {count} said yes"
+msgid_plural "{yes} of {count} said yes"
+msgstr[0] "{yes} of {count} said yes"
+msgstr[1] "{yes} of {count} said yes"
+
+#: app/src/ui/calendar/words.rs:105
+msgid "Organized by {name}"
+msgstr "Organised by {name}"
+
+#: app/src/ui/calendar/words.rs:111
+msgid "and {count} more"
+msgid_plural "and {count} more"
+msgstr[0] "and {count} more"
+msgstr[1] "and {count} more"
+
+#: app/src/ui/calendar/words.rs:122
+msgid "Join with Google Meet"
+msgstr "Join with Google Meet"
+
+#: app/src/ui/calendar/words.rs:124
+msgid "Join Call"
+msgstr "Join Call"
+
+#: app/src/ui/calendar/words.rs:145
+msgid "{count} more event on {date}"
+msgid_plural "{count} more events on {date}"
+msgstr[0] "{count} more event on {date}"
+msgstr[1] "{count} more events on {date}"
+
+#: app/src/ui/calendar/words.rs:160
+msgid "{date}, has events"
+msgstr "{date}, has events"
 
 #: app/src/ui/composer/mod.rs:204 app/src/ui/conversation.rs:1561
 msgid "Choose a Time…"
@@ -3593,15 +3685,6 @@ msgstr "Add {account} to GNOME Online Accounts"
 msgid "Not allowed when you signed in"
 msgstr "Not allowed when you signed in"
 
-#: app/src/ui/contacts_prefs.rs:228 app/src/ui/permission.rs:41
-#: app/src/ui/permission.rs:64 app/src/ui/window.rs:951
-msgid "Grant Access"
-msgstr "Grant Access"
-
-#: app/src/ui/contacts_prefs.rs:234
-msgid "Grant Access for {account}"
-msgstr "Grant Access for {account}"
-
 #: app/src/ui/conversation.rs:319
 msgid "No Conversation Selected"
 msgstr "No Conversation Selected"
@@ -3982,10 +4065,6 @@ msgstr "It is on your clipboard. Mail sent to it gets the Hide My Email label in
 #: app/src/ui/hide_my_email.rs:474
 msgid "Address Created"
 msgstr "Address Created"
-
-#: app/src/ui/invitation.rs:188
-msgid "Answer"
-msgstr "Answer"
 
 #: app/src/ui/invitation.rs:201
 msgid "What the answer covers"

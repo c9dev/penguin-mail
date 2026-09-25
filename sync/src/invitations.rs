@@ -20,11 +20,14 @@ mod mail;
 
 use std::sync::{Arc, Mutex};
 
+use mailrs_domain::calendar::Occurrence;
 use mailrs_domain::invitation::{self, Answer, Invitation, Method, Scope, When};
 use mailrs_domain::{AccountId, Address, EpochMillis};
 use mailrs_gmail::Answered;
+use mailrs_store::calendar as calendar_store;
 use mailrs_store::{Db, invitations as store};
 
+use crate::settings::Permitted;
 use crate::{AccountSync, Accounts, BackendError, CalendarService, SyncError};
 
 /// What a message does to an event the user already has. `None` alongside
@@ -376,6 +379,51 @@ impl<A: Accounts> Invitations<A> {
                 .await?;
         }
         Ok(sent)
+    }
+
+    /// Answers `occurrence`'s event from the calendar view. Unlike
+    /// [`Self::answer`], the occurrence came from an event the local copy
+    /// already read off Google's calendar, so one call there is the whole
+    /// answer: it tells the organizer and marks the account's own
+    /// calendar, and nothing else needs to be sent. Per ruling R3 the
+    /// whole series answers, never one occurrence, since Google's guest
+    /// answer call takes the series' own id and no occurrence. Once
+    /// Google has it, the copy's event and the invitation card (if the
+    /// message ever opened one) are updated to match, so both read the
+    /// same answer.
+    pub async fn answer_event(
+        &self,
+        account_id: AccountId,
+        occurrence: &Occurrence,
+        answer: Answer,
+    ) -> Result<Permitted<()>, SyncError> {
+        let sync = self.sync(account_id)?;
+        let calendar = sync
+            .services()
+            .calendar
+            .as_ref()
+            .ok_or(SyncError::Backend(BackendError::Unsupported))?;
+        let event = &occurrence.event;
+        let me = event
+            .guests
+            .iter()
+            .find(|guest| guest.me)
+            .map(|guest| guest.email.as_str())
+            .unwrap_or_default();
+        match calendar.answer_invitation(&event.uid, me, answer, None).await {
+            Ok(_) => {}
+            Err(BackendError::NeedsPermission) => return Ok(Permitted::NeedsPermission),
+            Err(err) => return Err(err.into()),
+        }
+        let (calendar_id, event_id, uid) =
+            (event.calendar.clone(), event.id.clone(), event.uid.clone());
+        self.db
+            .write(move |c| {
+                calendar_store::set_my_answer(c, account_id, &calendar_id, &event_id, answer)?;
+                store::answer(c, account_id, &uid, answer)
+            })
+            .await?;
+        Ok(Permitted::Done(()))
     }
 
     /// Answers the invitation in message `message_id` as the account

@@ -3156,6 +3156,14 @@ msgstr ""
 msgid "Brave Search API Key"
 msgstr ""
 
+#: app/src/ui/calendar/agenda.rs:246 app/src/ui/calendar/words.rs:52
+msgid "All day"
+msgstr ""
+
+#: app/src/ui/calendar/agenda.rs:264
+msgid "{title}, {when}, {calendar}"
+msgstr ""
+
 #: app/src/ui/calendar/block.rs:87
 msgid "Waiting to be saved"
 msgstr ""
@@ -3184,11 +3192,19 @@ msgstr ""
 msgid "{title}, {start} to {end}, {calendar}"
 msgstr ""
 
-#: app/src/ui/calendar/range.rs:91
+#: app/src/ui/calendar/popover.rs:119
+msgid "Open in Maps"
+msgstr ""
+
+#: app/src/ui/calendar/popover.rs:162 app/src/ui/invitation.rs:188
+msgid "Answer"
+msgstr ""
+
+#: app/src/ui/calendar/range.rs:91 app/src/ui/calendar/words.rs:74
 msgid "%A %-d"
 msgstr ""
 
-#: app/src/ui/calendar/range.rs:94
+#: app/src/ui/calendar/range.rs:94 app/src/ui/calendar/sidebar.rs:263
 msgid "%B %Y"
 msgstr ""
 
@@ -3196,7 +3212,7 @@ msgstr ""
 msgid "%B"
 msgstr ""
 
-#: app/src/ui/calendar/range.rs:106
+#: app/src/ui/calendar/range.rs:106 app/src/ui/calendar/words.rs:80
 msgid "{first} – {last}"
 msgstr ""
 
@@ -3212,11 +3228,87 @@ msgstr ""
 msgid "W{week}"
 msgstr ""
 
+#: app/src/ui/calendar/sidebar.rs:89
+msgid "%a"
+msgstr ""
+
+#: app/src/ui/calendar/sidebar.rs:156
+msgid "Previous Month"
+msgstr ""
+
+#: app/src/ui/calendar/sidebar.rs:157
+msgid "Next Month"
+msgstr ""
+
+#: app/src/ui/calendar/sidebar.rs:307
+msgid "Grant Access to show shared calendars"
+msgstr ""
+
+#: app/src/ui/calendar/sidebar.rs:313
+msgid "Penguin Mail cannot see this account's calendars"
+msgstr ""
+
+#: app/src/ui/calendar/sidebar.rs:317 app/src/ui/contacts_prefs.rs:228
+#: app/src/ui/permission.rs:41 app/src/ui/permission.rs:64
+#: app/src/ui/window.rs:951
+msgid "Grant Access"
+msgstr ""
+
+#: app/src/ui/calendar/sidebar.rs:339
+msgid "You can only read this calendar"
+msgstr ""
+
+#: app/src/ui/calendar/sidebar.rs:378 app/src/ui/contacts_prefs.rs:234
+msgid "Grant Access for {account}"
+msgstr ""
+
 #: app/src/ui/calendar/time_grid.rs:107
 msgid "{count} more event"
 msgid_plural "{count} more events"
 msgstr[0] ""
 msgstr[1] ""
+
+#: app/src/ui/calendar/words.rs:16
+msgid "%A %-d %B"
+msgstr ""
+
+#: app/src/ui/calendar/words.rs:58
+msgid "{date} · {start}–{end}"
+msgstr ""
+
+#: app/src/ui/calendar/words.rs:96
+msgid "{yes} of {count} said yes"
+msgid_plural "{yes} of {count} said yes"
+msgstr[0] ""
+msgstr[1] ""
+
+#: app/src/ui/calendar/words.rs:105
+msgid "Organized by {name}"
+msgstr ""
+
+#: app/src/ui/calendar/words.rs:111
+msgid "and {count} more"
+msgid_plural "and {count} more"
+msgstr[0] ""
+msgstr[1] ""
+
+#: app/src/ui/calendar/words.rs:122
+msgid "Join with Google Meet"
+msgstr ""
+
+#: app/src/ui/calendar/words.rs:124
+msgid "Join Call"
+msgstr ""
+
+#: app/src/ui/calendar/words.rs:145
+msgid "{count} more event on {date}"
+msgid_plural "{count} more events on {date}"
+msgstr[0] ""
+msgstr[1] ""
+
+#: app/src/ui/calendar/words.rs:160
+msgid "{date}, has events"
+msgstr ""
 
 #: app/src/ui/composer/mod.rs:204 app/src/ui/conversation.rs:1561
 msgid "Choose a Time…"
@@ -3674,15 +3766,6 @@ msgstr ""
 msgid "Not allowed when you signed in"
 msgstr ""
 
-#: app/src/ui/contacts_prefs.rs:228 app/src/ui/permission.rs:41
-#: app/src/ui/permission.rs:64 app/src/ui/window.rs:951
-msgid "Grant Access"
-msgstr ""
-
-#: app/src/ui/contacts_prefs.rs:234
-msgid "Grant Access for {account}"
-msgstr ""
-
 #: app/src/ui/conversation.rs:319
 msgid "No Conversation Selected"
 msgstr ""
@@ -4072,10 +4155,6 @@ msgstr ""
 
 #: app/src/ui/hide_my_email.rs:474
 msgid "Address Created"
-msgstr ""
-
-#: app/src/ui/invitation.rs:188
-msgid "Answer"
 msgstr ""
 
 #: app/src/ui/invitation.rs:201
