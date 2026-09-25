@@ -41,8 +41,8 @@ where
 /// When an occurrence runs, for the popover's time line: the date and the
 /// clock for a timed event, "All day" for one that lasts a single day,
 /// or the first and last day for one that spans several. An all-day
-/// event is dated from its own UTC date, never converted to local time
-/// (reconcile.md, "Every task" item 8).
+/// event is dated from its own UTC date, never converted to local time,
+/// which would move it a day west of UTC.
 pub fn when_words<Z: TimeZone>(o: &Occurrence, zone: &Z) -> String
 where
     Z::Offset: std::fmt::Display,

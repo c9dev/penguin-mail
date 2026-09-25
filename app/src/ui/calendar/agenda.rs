@@ -5,8 +5,8 @@
 //! A `gtk::ListView` over `AgendaModel`, a `gio::ListStore`-like model
 //! that also implements `gtk::SectionModel`, gives GTK the date headings
 //! with a widget only for the rows on screen; a `gtk::ListBox` would
-//! build a widget tree for every day loaded, and Task 7 loads up to a
-//! year (reconcile.md Task 5 item 10, Memory item 6).
+//! build a widget tree for every day loaded, and scrolling up loads as
+//! much as a year.
 
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -41,7 +41,7 @@ struct Row {
 /// them: earliest date first, an all-day occurrence before a timed one
 /// on the same date, then by start time. Shared by [`Agenda::show`],
 /// which replaces every row, and [`Agenda::prepend`], which adds rows
-/// before them (Task 7).
+/// before them.
 fn sorted_rows(occurrences: &[Occurrence], zone: &chrono::Local) -> Vec<Row> {
     let mut dated: Vec<(NaiveDate, Occurrence)> = occurrences
         .iter()
@@ -59,8 +59,9 @@ fn sorted_rows(occurrences: &[Occurrence], zone: &chrono::Local) -> Vec<Row> {
 }
 
 /// The local date a row groups under: an all-day occurrence by its own
-/// UTC date, a timed one by local wall time (reconcile.md, "Every task"
-/// item 8).
+/// UTC date, a timed one by local wall time. An all-day event's
+/// midnights are UTC's, and read in local time west of UTC they would
+/// land on the day before.
 fn agenda_date<Z: TimeZone>(o: &Occurrence, zone: &Z) -> NaiveDate {
     let start: EpochMillis = o.start;
     let utc = chrono::DateTime::<chrono::Utc>::from_timestamp_millis(start).unwrap_or_default();
@@ -165,7 +166,7 @@ mod model {
         /// Inserts `items` (already sorted, oldest first) before the
         /// model's own first row and recomputes every section boundary,
         /// since the new rows' last date could be the same as what was
-        /// the first section's (Task 7). Answers how many rows it
+        /// the first section's. Answers how many rows it
         /// inserted, 0 for an empty `items`, which leaves the model
         /// untouched rather than firing a no-op change.
         pub(super) fn prepend_rows(&self, mut items: Vec<Row>) -> u32 {
@@ -343,7 +344,7 @@ type ScrolledToTop = dyn Fn();
 pub struct Agenda {
     pub widget: gtk::ScrolledWindow,
     model: AgendaModel,
-    /// Kept to scroll it after [`Agenda::prepend`] (Task 7): the row
+    /// Kept to scroll it after [`Agenda::prepend`]: the row
     /// that was first before the insert is asked to stay first.
     list_view: gtk::ListView,
     /// The dim line [`Agenda::show_no_earlier`] reveals once loading has
@@ -497,9 +498,9 @@ impl Agenda {
 
     /// Inserts `occurrences` before the agenda's earliest row and
     /// scrolls so the row that was first stays first: `ListView::scroll_to`
-    /// with its new index, once GTK has laid the inserted rows out
-    /// (reconcile.md Task 7 item 2). `occurrences` must run entirely
-    /// before the earliest date already shown. `calendars` is merged in
+    /// with its new index, once GTK has laid the inserted rows out.
+    /// `occurrences` must run entirely before the earliest date already
+    /// shown, which `shown::not_yet_listed` makes true. `calendars` is merged in
     /// rather than replacing what `show` set, since a widened window can
     /// meet a calendar the first read never had to draw.
     pub fn prepend(
@@ -532,7 +533,7 @@ impl Agenda {
     }
 
     /// Runs `f` when the agenda is scrolled to its top, so the caller
-    /// loads earlier days (Task 7).
+    /// loads earlier days.
     pub fn connect_scrolled_to_top(&self, f: impl Fn() + 'static) {
         self.scrolled_to_top.replace(Some(Box::new(f)));
     }

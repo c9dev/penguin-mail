@@ -385,7 +385,7 @@ impl<A: Accounts> Invitations<A> {
     /// [`Self::answer`], the occurrence came from an event the local copy
     /// already read off Google's calendar, so one call there is the whole
     /// answer: it tells the organizer and marks the account's own
-    /// calendar, and nothing else needs to be sent. Per ruling R3 the
+    /// calendar, and nothing else needs to be sent. The
     /// whole series answers, never one occurrence, since Google's guest
     /// answer call takes the series' own id and no occurrence. Once
     /// Google has it, the copy's event and the invitation card (if the

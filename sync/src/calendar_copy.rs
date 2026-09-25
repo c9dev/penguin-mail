@@ -13,8 +13,8 @@
 //!
 //! An account that granted `calendar.events` but not the list scope
 //! still gets its primary calendar, addressed by the
-//! account's own address, which needs no list permission; stage 2 asks
-//! for the list scope so a shared or subscribed calendar joins it. An
+//! account's own address, which needs no list permission; sign-in asks
+//! for the list scope too, so a shared or subscribed calendar joins it. An
 //! account without `calendar.events` costs one list call and one read,
 //! then nothing until half an hour passes or the person signs it in again.
 

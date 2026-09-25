@@ -7,7 +7,8 @@
 //! the sidebar content the window swaps in for the mailbox list. The
 //! grids read the local copy through [`Core::read`] and hold only the
 //! ranges they show: the one on screen and one either side, which an
-//! `adw::Carousel` slides between (ruling R1).
+//! `adw::Carousel` slides between, so a swipe follows the fingers and
+//! settles on a neighbour.
 
 pub mod agenda;
 pub mod block;
@@ -152,7 +153,7 @@ pub struct CalendarView {
     accounts: RefCell<Vec<CalendarAccount>>,
     calendars: RefCell<Calendars>,
     /// Counts every read, so each can tell whether a newer one replaced
-    /// it (reconcile.md, "Every task" item 9).
+    /// it: an answer can come back after the person moved on.
     reads: Cell<u64>,
     sidebar_read: Cell<u64>,
     list_read: Cell<u64>,
@@ -671,7 +672,8 @@ impl CalendarView {
 
     /// The accounts the calendar reads, read again whenever the window
     /// reads its accounts, which it does when one starts: an account's
-    /// reason line arrives then (Provider neutrality).
+    /// reason line, such as a provider with no calendar yet, arrives
+    /// then.
     pub fn set_accounts(self: &Rc<Self>, accounts: Vec<CalendarAccount>) {
         self.accounts.replace(accounts);
         self.reload();
@@ -739,8 +741,8 @@ impl CalendarView {
         crate::ui::name(&self.next, &forward);
         self.previous.set_tooltip_text(Some(&back));
         self.next.set_tooltip_text(Some(&forward));
-        // Task 7 loads the list's earlier days as it scrolls, so it has
-        // no arrows of its own.
+        // The list loads its earlier days as it scrolls, so it has no
+        // arrows of its own.
         self.arrows.set_visible(showing != Showing::List);
         if !self.search_open() {
             self.views.set_visible_child_name(match showing {
@@ -1255,8 +1257,7 @@ impl CalendarView {
     /// the reader scrolls to its top. Keeps what the list holds bounded
     /// by loading in these steps rather than all at once, and stops at
     /// `range::earliest_kept_day`: the copy's own first read went back no
-    /// further than a year, so nothing earlier could ever be there
-    /// (reconcile.md Task 7 item 1).
+    /// further than a year, so nothing earlier could ever be there.
     fn load_earlier(self: &Rc<Self>) {
         if self.list_loading.get() || self.list_exhausted.get() {
             return;
@@ -1428,7 +1429,8 @@ impl CalendarView {
         self.more.popup();
     }
 
-    /// Sends a guest's answer for the whole series (ruling R3), then
+    /// Sends a guest's answer for the whole series, as Google keeps one
+    /// answer per series, then
     /// reads the copy again so the block shows it.
     fn answer(self: &Rc<Self>, o: Occurrence, answer: Answer) {
         let account_id = o.account_id;
@@ -1612,7 +1614,7 @@ fn day_span(first: NaiveDate, last: NaiveDate) -> (EpochMillis, EpochMillis) {
 /// Drops a declined event unless `show_declined` keeps it, warms the
 /// tint stylesheet for any colour among what is left, and logs once
 /// when `found` came back full: `MOST_EVENTS` may have cut the read to
-/// `first`..`last` short (Memory item 1).
+/// `first`..`last` short.
 fn keep_agenda_events(
     found: Vec<Occurrence>,
     show_declined: bool,
@@ -1712,7 +1714,7 @@ fn scroll_when_ready(scroller: &gtk::ScrolledWindow, y: f64) {
 
 thread_local! {
     /// The one stylesheet of calendar colours for the run, and the
-    /// colours it holds (Memory item 5): rebuilt only when a colour it
+    /// colours it holds: rebuilt only when a colour it
     /// lacks turns up, and never one provider per reload or per window.
     static TINTS: RefCell<Option<(gtk::CssProvider, BTreeSet<String>)>> =
         const { RefCell::new(None) };

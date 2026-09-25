@@ -325,7 +325,7 @@ async fn an_answer_from_the_calendar_marks_the_copy_and_the_card() {
     assert_eq!(
         h.fake.with(|s| s.answered_occurrences.last().copied()),
         Some(None),
-        "the whole series answers, never one occurrence (ruling R3)"
+        "the whole series answers, never one occurrence"
     );
 
     let stored = h

@@ -101,7 +101,7 @@ fn all_day_height(rows: usize) -> f32 {
 /// the days on screen; `None` when it falls entirely outside them.
 /// `event.end` is UTC midnight after the last day, so the last day shown
 /// is the one before it; both come from the event's own UTC date, never
-/// converted to local time (reconcile.md, "Every task" item 8).
+/// converted to local time, which would move them a day west of UTC.
 fn all_day_span(o: &Occurrence, days: &[NaiveDate]) -> Option<(usize, usize)> {
     let (&first, &last) = (days.first()?, days.last()?);
     let start_date = utc_date(o.start)?;

@@ -720,7 +720,7 @@ pub async fn seed(db: &Db, now: EpochMillis) -> std::result::Result<DemoMail, Sy
         if index == 2 {
             // Shows the Grant Access banner: this account was never asked
             // for the settings scope, the way an account added before
-            // Task 0 shipped never was. gmail.settings.basic covers
+            // sign-in asked for every scope at once never was. gmail.settings.basic covers
             // nothing else and nothing covers it, so withholding it alone
             // is unambiguous.
             fake.withhold(mailrs_gmail::SETTINGS_SCOPE);
@@ -1058,9 +1058,9 @@ fn account1_events(now: EpochMillis) -> Vec<CalendarEvent> {
     });
 
     // The sprint planning series the sample mail's update moved, and its
-    // moved occurrence, on the primary calendar (item 15: not "Design
+    // moved occurrence, on the primary calendar rather than "Design
     // team", so it agrees with the invitation reaching the guest's own
-    // calendar).
+    // calendar.
     let (rule, starts) = planning_series(now);
     let sprint_start = *starts.first().unwrap_or(&at_week(monday, 2, 10, 0));
     events.push(CalendarEvent {

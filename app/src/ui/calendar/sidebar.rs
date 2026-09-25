@@ -1,7 +1,7 @@
 //! `CalendarSidebar`: the mini month a person jumps around with, and the
 //! calendar list they show or hide calendars from. What each account's
 //! row says is worked out in pure functions ([`sidebar_accounts`]) so
-//! Task 0's Grant Access story, not a widget, decides it.
+//! the account's offers and consent, not a widget, decide it.
 
 use std::cell::{Cell, RefCell};
 use std::collections::HashSet;
@@ -18,8 +18,7 @@ use super::tint;
 use super::words;
 
 /// How far an account's calendars reach into the sidebar, worked out
-/// from what its provider offers and what its own consent withheld
-/// (reconcile.md Task 5 item 11).
+/// from what its provider offers and what its own consent withheld.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CalendarReach {
     /// Every calendar the account offers.
@@ -47,8 +46,8 @@ pub struct SidebarAccount {
 /// consent, and the calendars the local copy actually holds for it. An
 /// account not yet started passes `Offers::EVERYTHING`/`Withheld::NONE`
 /// (`offered::offers_for`/`withheld_for`), so it reads as `Calendars`
-/// until a read says otherwise, matching Provider neutrality's "before
-/// an account starts" rule.
+/// until a read says otherwise, as every other feature treats an
+/// account before it starts.
 pub fn sidebar_accounts(
     accounts: &[(Account, Offers, Withheld, Vec<Calendar>)],
 ) -> Vec<SidebarAccount> {
@@ -432,9 +431,8 @@ impl CalendarSidebar {
     }
 
     /// A Grant Access button, named "Grant Access for {account}" when
-    /// `account` is given, so several such rows read apart (reconcile.md
-    /// Task 5 item 11, following `app/src/ui/contacts_prefs.rs`'s
-    /// `grant_access_row`).
+    /// `account` is given, so several such rows read apart, as
+    /// `app/src/ui/contacts_prefs.rs`'s `grant_access_row` does.
     fn grant_row(&self, account_id: AccountId, label: &str, account: Option<&str>) -> gtk::Button {
         let button = gtk::Button::builder()
             .label(label)
