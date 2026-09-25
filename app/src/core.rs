@@ -699,12 +699,14 @@ impl Core {
                 provider_name,
                 imap,
                 smtp,
-                login_as,
+                imap_login,
+                smtp_login,
                 password,
             } = attempt;
             // `check` reports which server refused, as a `CheckError` the
             // dialog reads back out of the `anyhow::Error`.
-            let checked = mailrs_imap::check(&imap, &smtp, &login_as, &password).await?;
+            let checked =
+                mailrs_imap::check(&imap, &smtp, &imap_login, &smtp_login, &password).await?;
             let new = NewImap {
                 address,
                 provider_name,

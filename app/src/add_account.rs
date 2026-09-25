@@ -79,6 +79,91 @@ impl Address {
     }
 }
 
+/// `address` with its domain corrected, when the domain is one typing
+/// slip from one the provider table lists: a letter added, dropped,
+/// changed, or two next to each other swapped. A domain the table lists
+/// itself is never corrected, since ymail.com is one letter from
+/// gmail.com and both are real. Where two listed domains are one slip
+/// away, the table's order picks, which puts a provider's main domain
+/// first.
+pub fn suggestion(address: &Address) -> Option<Address> {
+    let typed = address.domain.as_str();
+    if mailrs_discover::listed_domains().any(|domain| domain == typed) {
+        return None;
+    }
+    let domain = mailrs_discover::listed_domains().find(|domain| one_slip_apart(typed, domain))?;
+    Some(Address {
+        local: address.local.clone(),
+        domain: domain.to_string(),
+    })
+}
+
+/// Whether one insertion, deletion, substitution or swap of two
+/// neighbours turns `a` into `b`.
+fn one_slip_apart(a: &str, b: &str) -> bool {
+    let (a, b): (Vec<char>, Vec<char>) = (a.chars().collect(), b.chars().collect());
+    if a == b {
+        return false;
+    }
+    let (short, long) = if a.len() <= b.len() {
+        (&a, &b)
+    } else {
+        (&b, &a)
+    };
+    match long.len() - short.len() {
+        0 => {
+            let differ: Vec<usize> = (0..a.len()).filter(|&i| a[i] != b[i]).collect();
+            match differ[..] {
+                [_] => true,
+                [i, j] => j == i + 1 && a[i] == b[j] && a[j] == b[i],
+                _ => false,
+            }
+        }
+        1 => {
+            let at = (0..short.len())
+                .find(|&i| short[i] != long[i])
+                .unwrap_or(short.len());
+            short[at..] == long[at + 1..]
+        }
+        _ => false,
+    }
+}
+
+/// The line step 1 shows above the button that takes the suggestion.
+pub fn did_you_mean(suggested: &Address) -> String {
+    fill(
+        &gettext("Did you mean {address}?"),
+        &[("address", &suggested.full())],
+    )
+}
+
+/// What Continue on step 1 does with what was typed.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Continue {
+    /// Look this address up.
+    Look(Address),
+    /// Offer this address in place of the one typed, and look nothing up.
+    Suggest(Address),
+    /// Stay on step 1 and say this.
+    Say(String),
+}
+
+/// Continue for `typed`. `declined` is the address whose suggestion step
+/// 1 already showed: continuing with it unchanged means the person kept
+/// it, so it is looked up as typed.
+pub fn on_continue(typed: &str, declined: Option<&Address>) -> Continue {
+    let Some(address) = Address::parse(typed) else {
+        return Continue::Say(not_an_address());
+    };
+    if declined == Some(&address) {
+        return Continue::Look(address);
+    }
+    match suggestion(&address) {
+        Some(better) => Continue::Suggest(better),
+        None => Continue::Look(address),
+    }
+}
+
 /// What step 1 says when the address is not a whole one.
 pub fn not_an_address() -> String {
     gettext("Type the whole address, such as dana@example.com.")
@@ -93,10 +178,12 @@ pub struct Proposal {
     pub info: Option<ProviderInfo>,
     pub imap: Server,
     pub smtp: Server,
-    /// The user name typed in Server Settings, sent as typed to both
-    /// servers. `None` logs in with the address, the way each server's
-    /// user name rule says.
-    pub user: Option<String>,
+    /// The user name typed in Server Settings for the incoming server,
+    /// sent as typed. `None` logs in with the address, the way the
+    /// server's user name rule says.
+    pub imap_user: Option<String>,
+    /// The same for the outgoing server.
+    pub smtp_user: Option<String>,
     /// The person must say yes to these host names before the password
     /// goes out: discovery guessed them, or found them outside the domain.
     pub confirm: bool,
@@ -113,6 +200,9 @@ pub enum Next {
     Password(Proposal),
     /// Stay on step 1 and say this.
     Say(String),
+    /// Stay on step 1, say this, and take Server Settings away: the
+    /// provider lets no other mail app in, so no server would help.
+    Closed(String),
     /// A Google Workspace domain: the Google sign-in serves it.
     Google,
     /// Nothing found: Server Settings, filled with a guess, under a line.
@@ -134,19 +224,19 @@ pub fn after_discovery(found: Found, address: &Address) -> Next {
         Verdict::Unreachable {
             provider,
             reason: Unreachable::NoImap,
-        } => Next::Say(fill(
+        } => Next::Closed(fill(
             &gettext("{provider} has no IMAP, so other mail apps cannot reach it."),
             &[("provider", &provider)],
         )),
         Verdict::Unreachable {
             provider,
             reason: Unreachable::NotYet,
-        } => Next::Say(fill(
+        } => Next::Closed(fill(
             &gettext("Penguin Mail cannot reach {provider} yet."),
             &[("provider", &provider)],
         )),
         Verdict::Google => Next::Google,
-        Verdict::Microsoft => Next::Say(gettext(
+        Verdict::Microsoft => Next::Closed(gettext(
             "Microsoft accounts come in a later version of Penguin Mail.",
         )),
         Verdict::NothingFound => nothing_found(address),
@@ -172,7 +262,8 @@ fn proposal_from(candidate: Candidate, remaining: Vec<Candidate>, address: &Addr
         info: candidate.provider,
         imap: candidate.imap,
         smtp: candidate.smtp,
-        user: None,
+        imap_user: None,
+        smtp_user: None,
         confirm: candidate.confirm,
         remaining,
     }
@@ -192,7 +283,8 @@ pub fn guess(address: &Address) -> Proposal {
         info: None,
         imap: server(format!("imap.{}", address.domain), 993),
         smtp: server(format!("smtp.{}", address.domain), 465),
-        user: None,
+        imap_user: None,
+        smtp_user: None,
         confirm: false,
         remaining: Vec::new(),
     }
@@ -250,10 +342,31 @@ pub fn password_title(proposal: &Proposal) -> String {
     }
 }
 
-/// Whether Sign In can go: there is a password, and the person said yes
-/// to servers Penguin Mail guessed.
-pub fn can_sign_in(password: &str, proposal: &Proposal, confirmed: bool) -> bool {
-    !password.is_empty() && (confirmed || !proposal.confirm)
+/// Whether Sign In can go: there is a password, the person said yes
+/// to servers Penguin Mail guessed, and no sign-in is on its way.
+pub fn can_sign_in(password: &str, proposal: &Proposal, confirmed: bool, running: bool) -> bool {
+    !running && !password.is_empty() && (confirmed || !proposal.confirm)
+}
+
+/// Whether a sign-in is on its way. Sign In and Enter in the password
+/// both start one, and a second run beside the first would send the
+/// password twice and race it to the keyring.
+#[derive(Default)]
+pub struct Running(Cell<bool>);
+
+impl Running {
+    /// Starts a run, or says no while one is on its way.
+    pub fn begin(&self) -> bool {
+        !self.0.replace(true)
+    }
+
+    pub fn end(&self) {
+        self.0.set(false);
+    }
+
+    pub fn is_on(&self) -> bool {
+        self.0.get()
+    }
 }
 
 /// One server as the confirmation shows it.
@@ -271,11 +384,13 @@ pub struct Attempt {
     pub provider_name: String,
     pub imap: Server,
     pub smtp: Server,
-    /// What `mailrs_imap::check` signs in with: the user name typed in
-    /// Server Settings, else the address. Each server's `user_name` rule
-    /// turns it into the names to try, and a typed name comes with the
-    /// `Address` rule on both, so it goes as typed.
-    pub login_as: String,
+    /// What `mailrs_imap::check` signs in to the incoming server with:
+    /// the user name typed for it in Server Settings, else the address.
+    /// The server's `user_name` rule turns it into the names to try, and a
+    /// typed name comes with the `Address` rule, so it goes as typed.
+    pub imap_login: String,
+    /// The same for the outgoing server.
+    pub smtp_login: String,
     pub password: String,
 }
 
@@ -287,7 +402,8 @@ pub fn attempt(address: &Address, proposal: &Proposal, password: &str) -> Attemp
         provider_name: proposal.provider_name.clone(),
         imap: proposal.imap.clone(),
         smtp: proposal.smtp.clone(),
-        login_as: proposal.user.clone().unwrap_or_else(|| address.full()),
+        imap_login: proposal.imap_user.clone().unwrap_or_else(|| address.full()),
+        smtp_login: proposal.smtp_user.clone().unwrap_or_else(|| address.full()),
         password: password.to_string(),
     }
 }
@@ -298,8 +414,9 @@ pub fn attempt(address: &Address, proposal: &Proposal, password: &str) -> Attemp
 pub enum Outcome {
     /// Try this candidate next, with the same password. It carries its
     /// own `confirm`, so a candidate the person must still say yes to is
-    /// never tried silently.
-    TryNext(Proposal),
+    /// never tried silently. Boxed, since a proposal is several times the
+    /// size of a failure.
+    TryNext(Box<Proposal>),
     /// Show this and wait for another try.
     Failed(Failure),
 }
@@ -322,9 +439,11 @@ pub fn after_failure(err: &anyhow::Error, tried: &Proposal, address: &Address) -
         .then(|| tried.remaining.split_first())
         .flatten();
     match next {
-        Some((candidate, rest)) => {
-            Outcome::TryNext(proposal_from(candidate.clone(), rest.to_vec(), address))
-        }
+        Some((candidate, rest)) => Outcome::TryNext(Box::new(proposal_from(
+            candidate.clone(),
+            rest.to_vec(),
+            address,
+        ))),
         None => Outcome::Failed(failure(err, tried)),
     }
 }
@@ -376,9 +495,18 @@ pub fn failure(err: &anyhow::Error, proposal: &Proposal) -> Failure {
             &gettext("The server's certificate does not match {host}."),
             &[("host", host)],
         )),
-        ImapError::Network(reason) | ImapError::TooManyConnections { text: reason } => only(fill(
+        ImapError::Network(reason) => only(fill(
             &gettext("Could not reach {host}: {reason}"),
             &[("host", host), ("reason", reason)],
+        )),
+        // The server answered, so it is reachable and the password may be
+        // right; it holds a few connections per account and this one was
+        // over the limit.
+        ImapError::TooManyConnections { .. } => only(fill(
+            &gettext(
+                "{host} answered but turned down another connection. Try again in a few minutes.",
+            ),
+            &[("host", host)],
         )),
         ImapError::Protocol(reason) | ImapError::Refused(reason) | ImapError::NoMailbox(reason) => {
             could_not_sign_in(reason)
@@ -441,6 +569,42 @@ pub struct Typed {
     pub host: String,
     pub port: u16,
     pub security: Security,
+    /// The user name typed for this server, as typed.
+    pub user: String,
+}
+
+/// Which of the two servers a Server Settings group edits.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Role {
+    Incoming,
+    Outgoing,
+}
+
+/// The port a server of `role` listens on for `security` unless its
+/// provider says otherwise: 993 and 143 for IMAP, 465 and 587 for
+/// submission (RFC 8314).
+fn default_port(role: Role, security: Security) -> u16 {
+    match (role, security) {
+        (Role::Incoming, Security::Tls) => 993,
+        (Role::Incoming, Security::StartTls) => 143,
+        (Role::Outgoing, Security::Tls) => 465,
+        (Role::Outgoing, Security::StartTls) => 587,
+    }
+}
+
+/// The port after the Security row switched to `now`. A port that still
+/// holds the other choice's default moves to this one's; a port the
+/// person typed stays.
+pub fn port_after_switch(role: Role, port: u16, now: Security) -> u16 {
+    let other = match now {
+        Security::Tls => Security::StartTls,
+        Security::StartTls => Security::Tls,
+    };
+    if port == default_port(role, other) {
+        default_port(role, now)
+    } else {
+        port
+    }
 }
 
 /// The choices the Security row offers. Nothing here reaches a server
@@ -469,14 +633,19 @@ pub fn security_at(index: u32) -> Security {
     }
 }
 
-/// Server Settings as a proposal, or the line saying what to fix. A
-/// blank user name leaves the servers' own rule for it, and servers the
-/// person typed need no second yes or fallback candidate.
+/// Server Settings as a proposal for `address`, or the line saying what
+/// to fix. A blank incoming user name leaves the server's own rule for
+/// it, and a blank outgoing one takes the incoming one. Servers the
+/// person typed need no second yes or fallback candidate. The provider
+/// found for the address keeps naming the account only while both hosts
+/// are still its own: another host is a server the person chose, so the
+/// account takes the address's domain and none of the table's rules,
+/// such as its server filing sent mail, carry over to it.
 pub fn typed_servers(
     imap: &Typed,
     smtp: &Typed,
-    user: &str,
     before: &Proposal,
+    address: &Address,
 ) -> Result<Proposal, String> {
     let host = |typed: &Typed, missing: String| -> Result<String, String> {
         let host = typed.host.trim().trim_end_matches('.').to_lowercase();
@@ -496,65 +665,72 @@ pub fn typed_servers(
     };
     let imap_host = host(imap, gettext("Type the incoming server's name."))?;
     let smtp_host = host(smtp, gettext("Type the outgoing server's name."))?;
-    let user = user.trim();
-    let server = |host: String, typed: &Typed, rule: UserName| Server {
+    let typed_user = |typed: &Typed| {
+        let user = typed.user.trim();
+        (!user.is_empty()).then(|| user.to_string())
+    };
+    let imap_user = typed_user(imap);
+    let smtp_user = typed_user(smtp).or_else(|| imap_user.clone());
+    let server = |host: String, typed: &Typed, user: &Option<String>, rule: UserName| Server {
         host,
         port: typed.port,
         security: typed.security,
-        user_name: if user.is_empty() {
-            rule
-        } else {
+        user_name: if user.is_some() {
             UserName::Address
+        } else {
+            rule
         },
     };
+    let same_hosts = imap_host == before.imap.host && smtp_host == before.smtp.host;
+    let (provider_name, info) = if same_hosts {
+        (before.provider_name.clone(), before.info.clone())
+    } else {
+        (address.domain.clone(), None)
+    };
     Ok(Proposal {
-        provider_name: before.provider_name.clone(),
-        info: before.info.clone(),
-        imap: server(imap_host, imap, before.imap.user_name),
-        smtp: server(smtp_host, smtp, before.smtp.user_name),
-        user: (!user.is_empty()).then(|| user.to_string()),
+        provider_name,
+        info,
+        imap: server(imap_host, imap, &imap_user, before.imap.user_name),
+        smtp: server(smtp_host, smtp, &smtp_user, before.smtp.user_name),
+        imap_user,
+        smtp_user,
         confirm: false,
         remaining: Vec::new(),
     })
 }
 
 /// Step 2 for an account signing in again, from the servers it kept and
-/// the user name each took last time. `mailrs_imap::check` signs in with
-/// one name, so each kept name becomes the rule that gives it back from
-/// the address: the address itself, or its part before @ (iCloud's IMAP
-/// server takes that while its SMTP server takes the address). A name
-/// neither rule gives, typed in Server Settings, goes to both servers as
-/// typed, as the form sent it. There is no discovery to fall back to, so
-/// nothing waits in `remaining`.
+/// the user name each took last time. Each kept name becomes the rule
+/// that gives it back from the address where one does: the address
+/// itself, or its part before @ (iCloud's IMAP server takes that while
+/// its SMTP server takes the address). A name no rule gives, typed in
+/// Server Settings, goes to that server as typed again. There is no
+/// discovery to fall back to, so nothing waits in `remaining`.
 pub fn saved_proposal(account: &Account, saved: &Servers) -> Proposal {
     let local = account.email.rsplit_once('@').map(|(local, _)| local);
-    let rule = |kept: &Saved| {
-        if kept.user_name == account.email {
-            Some(UserName::Address)
+    // `server_of` gives the server the `Address` rule, which sends a
+    // typed name as it is.
+    let restore = |kept: &Saved| {
+        let mut server = mailrs_sync::server_of(kept);
+        let user = if kept.user_name == account.email {
+            None
         } else if Some(kept.user_name.as_str()) == local {
-            Some(UserName::LocalPartFirst)
+            server.user_name = UserName::LocalPartFirst;
+            None
         } else {
-            None
-        }
+            Some(kept.user_name.clone())
+        };
+        (server, user)
     };
-    let mut imap = mailrs_sync::server_of(&saved.imap);
-    let mut smtp = mailrs_sync::server_of(&saved.smtp);
-    let user = match (rule(&saved.imap), rule(&saved.smtp)) {
-        (Some(imap_rule), Some(smtp_rule)) => {
-            imap.user_name = imap_rule;
-            smtp.user_name = smtp_rule;
-            None
-        }
-        // `server_of` already gives both servers the `Address` rule, so
-        // the typed name goes as it is.
-        _ => Some(saved.imap.user_name.clone()),
-    };
+    let (imap, imap_user) = restore(&saved.imap);
+    let (smtp, smtp_user) = restore(&saved.smtp);
     Proposal {
         provider_name: account.provider_name().to_string(),
         info: mailrs_discover::provider_named(account.provider_name()),
         imap,
         smtp,
-        user,
+        imap_user,
+        smtp_user,
         confirm: false,
         remaining: Vec::new(),
     }
@@ -759,7 +935,7 @@ mod tests {
         });
         assert_eq!(
             after_discovery(tuta, &dana()),
-            Next::Say("Tuta has no IMAP, so other mail apps cannot reach it.".into())
+            Next::Closed("Tuta has no IMAP, so other mail apps cannot reach it.".into())
         );
     }
 
@@ -771,7 +947,7 @@ mod tests {
         });
         assert_eq!(
             after_discovery(proton, &dana()),
-            Next::Say("Penguin Mail cannot reach Proton Mail yet.".into())
+            Next::Closed("Penguin Mail cannot reach Proton Mail yet.".into())
         );
     }
 
@@ -783,7 +959,7 @@ mod tests {
         );
         assert_eq!(
             after_discovery(verdict(Verdict::Microsoft), &dana()),
-            Next::Say("Microsoft accounts come in a later version of Penguin Mail.".into())
+            Next::Closed("Microsoft accounts come in a later version of Penguin Mail.".into())
         );
     }
 
@@ -833,27 +1009,31 @@ mod tests {
             confirm: true,
             ..fastmail()
         };
-        assert!(!can_sign_in("", &fastmail(), false));
-        assert!(can_sign_in("pw", &fastmail(), false));
-        assert!(!can_sign_in("pw", &guessed, false));
-        assert!(can_sign_in("pw", &guessed, true));
+        assert!(!can_sign_in("", &fastmail(), false, false));
+        assert!(can_sign_in("pw", &fastmail(), false, false));
+        assert!(!can_sign_in("pw", &guessed, false, false));
+        assert!(can_sign_in("pw", &guessed, true, false));
     }
 
     #[test]
     fn the_password_goes_as_typed_and_the_address_logs_in() {
         let tried = attempt(&dana(), &fastmail(), " abcd efgh ");
         assert_eq!(tried.password, " abcd efgh ");
-        assert_eq!(tried.login_as, "Dana@fastmail.com");
+        assert_eq!(tried.imap_login, "Dana@fastmail.com");
+        assert_eq!(tried.smtp_login, "Dana@fastmail.com");
         assert_eq!(tried.provider_name, "Fastmail");
     }
 
     #[test]
     fn a_user_name_typed_in_server_settings_is_who_logs_in() {
         let typed = Proposal {
-            user: Some("dana".into()),
+            imap_user: Some("dana".into()),
+            smtp_user: Some("dana@fastmail.com".into()),
             ..fastmail()
         };
-        assert_eq!(attempt(&dana(), &typed, "pw").login_as, "dana");
+        let tried = attempt(&dana(), &typed, "pw");
+        assert_eq!(tried.imap_login, "dana");
+        assert_eq!(tried.smtp_login, "dana@fastmail.com");
     }
 
     #[test]
@@ -952,6 +1132,7 @@ mod tests {
             host: " IMAP.Example.org ".into(),
             port: 993,
             security: Security::Tls,
+            user: "  ".into(),
         };
         let empty = Typed {
             host: "  ".into(),
@@ -962,22 +1143,22 @@ mod tests {
             ..ok.clone()
         };
         assert_eq!(
-            typed_servers(&empty, &ok, "", &fastmail()),
+            typed_servers(&empty, &ok, &fastmail(), &dana()),
             Err("Type the incoming server's name.".into())
         );
         assert_eq!(
-            typed_servers(&ok, &empty, "", &fastmail()),
+            typed_servers(&ok, &empty, &fastmail(), &dana()),
             Err("Type the outgoing server's name.".into())
         );
         assert_eq!(
-            typed_servers(&url, &ok, "", &fastmail()),
+            typed_servers(&url, &ok, &fastmail(), &dana()),
             Err("https://mail.example.org is not a server name.".into())
         );
-        let proposal = typed_servers(&ok, &ok, "  ", &fastmail()).unwrap();
+        let proposal = typed_servers(&ok, &ok, &fastmail(), &dana()).unwrap();
         assert_eq!(proposal.imap.host, "imap.example.org");
-        assert_eq!(proposal.user, None);
+        assert_eq!(proposal.imap_user, None);
+        assert_eq!(proposal.smtp_user, None);
         assert!(!proposal.confirm);
-        assert_eq!(proposal.provider_name, "Fastmail");
     }
 
     #[test]
@@ -1023,7 +1204,8 @@ mod tests {
         // address: the part before @ for IMAP, the whole address for SMTP.
         assert_eq!(proposal.imap.user_name, UserName::LocalPartFirst);
         assert_eq!(proposal.smtp.user_name, UserName::Address);
-        assert_eq!(proposal.user, None);
+        assert_eq!(proposal.imap_user, None);
+        assert_eq!(proposal.smtp_user, None);
         assert!(!proposal.confirm);
         assert_eq!(
             again_line(&account),
@@ -1034,7 +1216,8 @@ mod tests {
     #[test]
     fn a_user_name_typed_in_server_settings_is_kept_for_signing_in_again() {
         let proposal = saved_proposal(&icloud_account(), &kept("d.santos", "d.santos"));
-        assert_eq!(proposal.user.as_deref(), Some("d.santos"));
+        assert_eq!(proposal.imap_user.as_deref(), Some("d.santos"));
+        assert_eq!(proposal.smtp_user.as_deref(), Some("d.santos"));
         assert_eq!(proposal.imap.user_name, UserName::Address);
         assert_eq!(proposal.smtp.user_name, UserName::Address);
     }
@@ -1128,8 +1311,8 @@ mod tests {
             panic!("expected the second candidate");
         };
         assert!(second.confirm);
-        assert!(!can_sign_in("pw", &second, false));
-        assert!(can_sign_in("pw", &second, true));
+        assert!(!can_sign_in("pw", &second, false, false));
+        assert!(can_sign_in("pw", &second, true, false));
     }
 
     #[test]
@@ -1142,5 +1325,191 @@ mod tests {
             after_failure(&blocked, &single, &address),
             Outcome::Failed(_)
         ));
+    }
+
+    fn typed(host: &str, port: u16, user: &str) -> Typed {
+        Typed {
+            host: host.into(),
+            port,
+            security: Security::Tls,
+            user: user.into(),
+        }
+    }
+
+    #[test]
+    fn sign_in_waits_while_a_sign_in_runs() {
+        assert!(!can_sign_in("pw", &fastmail(), false, true));
+    }
+
+    #[test]
+    fn two_sign_ins_never_run_at_once() {
+        let running = Running::default();
+        assert!(running.begin());
+        assert!(!running.begin(), "a second run started while one ran");
+        assert!(running.is_on());
+        running.end();
+        assert!(!running.is_on());
+        assert!(running.begin());
+    }
+
+    #[test]
+    fn the_found_provider_stays_while_its_hosts_do() {
+        let found = fastmail();
+        let same = typed_servers(
+            &typed("imap.example.org", 143, ""),
+            &typed("SMTP.example.org", 587, ""),
+            &found,
+            &dana(),
+        )
+        .unwrap();
+        assert_eq!(same.provider_name, "Fastmail");
+        assert_eq!(same.info, Some(fastmail_info()));
+    }
+
+    #[test]
+    fn a_typed_host_names_the_account_after_its_domain_and_drops_the_tables_rules() {
+        let found = fastmail();
+        let moved = typed_servers(
+            &typed("mail.example.net", 993, ""),
+            &typed("smtp.example.org", 465, ""),
+            &found,
+            &dana(),
+        )
+        .unwrap();
+        assert_eq!(moved.provider_name, "fastmail.com");
+        assert_eq!(moved.info, None);
+    }
+
+    #[test]
+    fn each_server_takes_the_user_name_typed_for_it() {
+        let proposal = typed_servers(
+            &typed("imap.example.org", 993, " d.santos "),
+            &typed("smtp.example.org", 465, "dana@example.org"),
+            &fastmail(),
+            &dana(),
+        )
+        .unwrap();
+        assert_eq!(proposal.imap_user.as_deref(), Some("d.santos"));
+        assert_eq!(proposal.smtp_user.as_deref(), Some("dana@example.org"));
+        assert_eq!(proposal.imap.user_name, UserName::Address);
+        assert_eq!(proposal.smtp.user_name, UserName::Address);
+    }
+
+    #[test]
+    fn an_empty_outgoing_user_name_is_the_incoming_one() {
+        let proposal = typed_servers(
+            &typed("imap.example.org", 993, "d.santos"),
+            &typed("smtp.example.org", 465, ""),
+            &fastmail(),
+            &dana(),
+        )
+        .unwrap();
+        assert_eq!(proposal.smtp_user.as_deref(), Some("d.santos"));
+        let tried = attempt(&dana(), &proposal, "pw");
+        assert_eq!(tried.smtp_login, "d.santos");
+    }
+
+    #[test]
+    fn a_name_typed_for_one_server_is_kept_for_that_server_alone() {
+        let proposal = saved_proposal(&icloud_account(), &kept("d.santos", "dana@icloud.com"));
+        assert_eq!(proposal.imap_user.as_deref(), Some("d.santos"));
+        assert_eq!(proposal.imap.user_name, UserName::Address);
+        assert_eq!(proposal.smtp_user, None);
+        assert_eq!(proposal.smtp.user_name, UserName::Address);
+    }
+
+    #[test]
+    fn switching_security_moves_a_default_port_to_the_other_default() {
+        use Role::{Incoming, Outgoing};
+        assert_eq!(port_after_switch(Incoming, 993, Security::StartTls), 143);
+        assert_eq!(port_after_switch(Incoming, 143, Security::Tls), 993);
+        assert_eq!(port_after_switch(Outgoing, 465, Security::StartTls), 587);
+        assert_eq!(port_after_switch(Outgoing, 587, Security::Tls), 465);
+    }
+
+    #[test]
+    fn switching_security_keeps_a_port_the_person_chose() {
+        assert_eq!(
+            port_after_switch(Role::Incoming, 1143, Security::StartTls),
+            1143
+        );
+        assert_eq!(port_after_switch(Role::Outgoing, 2525, Security::Tls), 2525);
+        // Already the new mode's default: nothing to move.
+        assert_eq!(port_after_switch(Role::Outgoing, 465, Security::Tls), 465);
+    }
+
+    #[test]
+    fn too_many_connections_says_the_server_answered_and_to_try_later() {
+        let busy = anyhow::Error::new(CheckError::Imap(ImapError::TooManyConnections {
+            text: "[LIMIT] Too many simultaneous connections".into(),
+        }));
+        assert_eq!(
+            failure(&busy, &fastmail()).line,
+            "imap.example.org answered but turned down another connection. Try again in a few minutes."
+        );
+    }
+
+    fn suggested(typed: &str) -> Option<String> {
+        suggestion(&Address::parse(typed).unwrap()).map(|address| address.full())
+    }
+
+    #[test]
+    fn a_domain_one_edit_from_a_listed_one_gets_a_suggestion() {
+        // A swap, a missing letter, and a swap in a longer name.
+        assert_eq!(
+            suggested("dana@gmial.com").as_deref(),
+            Some("dana@gmail.com")
+        );
+        assert_eq!(
+            suggested("dana@gmail.co").as_deref(),
+            Some("dana@gmail.com")
+        );
+        assert_eq!(
+            suggested("dana@hotmial.com").as_deref(),
+            Some("dana@hotmail.com")
+        );
+        // A letter too many, and one wrong letter.
+        assert_eq!(
+            suggested("dana@fastmaill.com").as_deref(),
+            Some("dana@fastmail.com")
+        );
+        assert_eq!(
+            suggested("dana@yahoo.cim").as_deref(),
+            Some("dana@yahoo.com")
+        );
+    }
+
+    #[test]
+    fn a_listed_domain_is_never_corrected() {
+        // ymail.com is one letter from gmail.com, and both are real.
+        assert_eq!(suggested("dana@ymail.com"), None);
+        assert_eq!(suggested("dana@gmail.com"), None);
+    }
+
+    #[test]
+    fn a_domain_far_from_every_listed_one_gets_no_suggestion() {
+        assert_eq!(suggested("dana@example.org"), None);
+    }
+
+    #[test]
+    fn continue_offers_the_suggestion_once_and_then_looks_the_typo_up() {
+        let Continue::Suggest(better) = on_continue("dana@gmial.com", None) else {
+            panic!("expected a suggestion");
+        };
+        assert_eq!(better.full(), "dana@gmail.com");
+        assert_eq!(did_you_mean(&better), "Did you mean dana@gmail.com?");
+        let declined = Address::parse("dana@gmial.com").unwrap();
+        assert_eq!(
+            on_continue("dana@gmial.com", Some(&declined)),
+            Continue::Look(declined.clone())
+        );
+        assert_eq!(
+            on_continue("dana@example.org", None),
+            Continue::Look(Address::parse("dana@example.org").unwrap())
+        );
+        assert_eq!(
+            on_continue("dana", None),
+            Continue::Say("Type the whole address, such as dana@example.com.".into())
+        );
     }
 }

@@ -122,6 +122,15 @@ pub fn provider_named(name: &str) -> Option<ProviderInfo> {
     Table::built_in().by_name(name).map(Entry::info)
 }
 
+/// Every address domain the built-in table lists, in the table's order,
+/// which puts a provider's main domain before its regional ones.
+pub fn listed_domains() -> impl Iterator<Item = &'static str> {
+    Table::built_in()
+        .entries
+        .iter()
+        .flat_map(|entry| entry.domains.iter().map(String::as_str))
+}
+
 impl Entry {
     /// The provider's name, password kind, links and sent-copy rule.
     pub(crate) fn info(&self) -> ProviderInfo {

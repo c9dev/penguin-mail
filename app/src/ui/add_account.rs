@@ -14,8 +14,14 @@ use mailrs_domain::Account;
 use mailrs_domain::translate::gettext;
 use mailrs_store::servers;
 
-use crate::add_account::{self, Address, Asking, Choice, Next, Outcome, Proposal, Typed};
+use crate::add_account::{
+    self, Address, Asking, Choice, Continue, Next, Outcome, Proposal, Role, Running, Typed,
+};
 use crate::core::Core;
+
+/// The dialog's height, enough for Server Settings to show both servers
+/// and the Sign-In group without scrolling on a 768-pixel screen.
+const RAISED_HEIGHT: i32 = 680;
 
 /// Where the dialog opens.
 pub enum Opening {
@@ -87,6 +93,9 @@ struct Dialog {
     window: adw::Dialog,
     nav: adw::NavigationView,
     asking: Asking,
+    /// Whether a sign-in is on its way, so Sign In and Enter cannot start
+    /// a second one beside it.
+    running: Running,
     done: Box<dyn Fn(Done)>,
     /// The account signing in again, when that is why the dialog opened.
     again: Option<Account>,
@@ -94,6 +103,9 @@ struct Dialog {
     typed: RefCell<Option<Address>>,
     /// What step 2 signs in to.
     proposal: RefCell<Option<Proposal>>,
+    /// The address step 1 offered a correction for, so a second Continue
+    /// with it unchanged looks it up as typed.
+    declined: RefCell<Option<Address>>,
     first: FirstStep,
     second: SecondStep,
     manual: ManualStep,
@@ -105,6 +117,10 @@ struct FirstStep {
     look: gtk::Button,
     looking: gtk::Box,
     said: gtk::Label,
+    /// "Did you mean …?" and the button that takes the correction.
+    suggest: gtk::Box,
+    suggest_line: gtk::Label,
+    take: gtk::Button,
     servers: adw::ActionRow,
 }
 
@@ -131,20 +147,21 @@ struct ManualStep {
     content: adw::PreferencesPage,
     imap: ServerRows,
     smtp: ServerRows,
-    user: adw::EntryRow,
     problem: gtk::Label,
     use_them: gtk::Button,
 }
 
-/// The three rows Server Settings gives each server.
+/// The three rows Server Settings gives each server, and its user name,
+/// which sits with the other one in the Sign-In group.
 struct ServerRows {
     host: adw::EntryRow,
     port: adw::SpinRow,
     security: adw::ToggleGroup,
+    user: adw::EntryRow,
 }
 
 impl ServerRows {
-    fn new(group: &adw::PreferencesGroup) -> ServerRows {
+    fn new(role: Role, group: &adw::PreferencesGroup, user: adw::EntryRow) -> ServerRows {
         let host = entry(&gettext("Server"));
         host.set_input_purpose(gtk::InputPurpose::Url);
         let port = adw::SpinRow::with_range(1.0, 65535.0, 1.0);
@@ -167,14 +184,27 @@ impl ServerRows {
         group.add(&host);
         group.add(&port);
         group.add(&security_row);
+        // A port still on the other choice's usual number follows the
+        // switch; one the person typed stays.
+        let follows = port.clone();
+        security.connect_active_notify(move |security| {
+            let now = add_account::security_at(security.active());
+            let port = follows.value() as u16;
+            let moved = add_account::port_after_switch(role, port, now);
+            if moved != port {
+                follows.set_value(f64::from(moved));
+            }
+        });
         ServerRows {
             host,
             port,
             security,
+            user,
         }
     }
 
-    fn fill(&self, server: &Server) {
+    fn fill(&self, server: &Server, user: Option<&str>) {
+        self.user.set_text(user.unwrap_or_default());
         self.host.set_text(&server.host);
         self.port.set_value(f64::from(server.port));
         self.security
@@ -186,6 +216,7 @@ impl ServerRows {
             host: self.host.text().to_string(),
             port: self.port.value() as u16,
             security: add_account::security_at(self.security.active()),
+            user: self.user.text().to_string(),
         }
     }
 }
@@ -308,7 +339,7 @@ impl Dialog {
         let window = adw::Dialog::builder()
             .title(gettext("Add Account"))
             .content_width(460)
-            .content_height(560)
+            .content_height(RAISED_HEIGHT)
             .child(&nav)
             .build();
         Rc::new(Dialog {
@@ -316,10 +347,12 @@ impl Dialog {
             window,
             nav,
             asking: Asking::default(),
+            running: Running::default(),
             done,
             again,
             typed: RefCell::new(None),
             proposal: RefCell::new(None),
+            declined: RefCell::new(None),
             first: first_step(),
             second: second_step(),
             manual: manual_step(),
@@ -344,6 +377,8 @@ impl Dialog {
         self.first.address.connect_entry_activated(move |_| look());
         let changed = on(Dialog::address_changed);
         self.first.address.connect_changed(move |_| changed());
+        let take = on(Dialog::take_suggestion);
+        self.first.take.connect_clicked(move |_| take());
         let manual = on(Dialog::manual_from_address);
         self.first.servers.connect_activated(move |_| manual());
         let manual = on(Dialog::manual_from_password);
@@ -413,8 +448,12 @@ impl Dialog {
 
     /// Step 1's Continue: looks the address up, or says why it cannot.
     fn look(self: &Rc<Self>) {
-        let Some(address) = Address::parse(&self.first.address.text()) else {
-            return self.say(&add_account::not_an_address());
+        let typed = self.first.address.text();
+        let declined = self.declined.borrow().clone();
+        let address = match add_account::on_continue(&typed, declined.as_ref()) {
+            Continue::Look(address) => address,
+            Continue::Suggest(better) => return self.suggest(&typed, &better),
+            Continue::Say(said) => return self.say(&said),
         };
         let ticket = self.asking.ask();
         self.first.said.set_visible(false);
@@ -438,6 +477,10 @@ impl Dialog {
             match next {
                 Next::Password(proposal) => this.show_password(proposal),
                 Next::Say(said) => this.say(&said),
+                Next::Closed(said) => {
+                    this.first.servers.set_visible(false);
+                    this.say(&said);
+                }
                 Next::Google => this.finish(Done::Google(Some(address.full()))),
                 Next::Manual { proposal, line } => this.show_manual(&proposal, Some(&line)),
             }
@@ -452,12 +495,38 @@ impl Dialog {
         self.first.address.grab_focus();
     }
 
+    /// Offers `better` in place of the address typed, and looks nothing
+    /// up: the typed domain may belong to someone who would then see the
+    /// lookups. Continue again with the address unchanged keeps it.
+    fn suggest(&self, typed: &str, better: &Address) {
+        self.declined.replace(Address::parse(typed));
+        self.first
+            .suggest_line
+            .set_text(&add_account::did_you_mean(better));
+        self.first.suggest.set_visible(true);
+        self.first.address.grab_focus();
+    }
+
+    /// Puts the suggested address in the field, which hides the
+    /// suggestion, and leaves the cursor at its end for Continue.
+    fn take_suggestion(self: &Rc<Self>) {
+        let typed = self.first.address.text();
+        let Some(better) = Address::parse(&typed).and_then(|a| add_account::suggestion(&a)) else {
+            return;
+        };
+        self.first.address.set_text(&better.full());
+        self.first.address.grab_focus();
+        self.first.address.set_position(-1);
+    }
+
     /// Whatever step 1 said, or is still looking up, was about another
     /// address.
     fn address_changed(self: &Rc<Self>) {
         self.asking.forget();
         self.proposal.replace(None);
         self.first.said.set_visible(false);
+        self.first.suggest.set_visible(false);
+        self.first.servers.set_visible(true);
         self.first.looking.set_visible(false);
         self.first.look.set_sensitive(true);
     }
@@ -523,6 +592,7 @@ impl Dialog {
                 &self.second.password.text(),
                 proposal,
                 self.second.confirmed.is_active(),
+                self.running.is_on(),
             )
         });
         self.second.sign_in.set_sensitive(ready);
@@ -535,11 +605,14 @@ impl Dialog {
     fn sign_in(self: &Rc<Self>) {
         let address = self.typed.borrow().clone();
         let proposal = self.proposal.borrow().clone();
-        let (Some(address), Some(mut proposal)) = (address, proposal) else {
+        let (Some(address), Some(proposal)) = (address, proposal) else {
             return;
         };
         let password = self.second.password.text().to_string();
-        if !add_account::can_sign_in(&password, &proposal, self.second.confirmed.is_active()) {
+        let confirmed = self.second.confirmed.is_active();
+        if !add_account::can_sign_in(&password, &proposal, confirmed, self.running.is_on())
+            || !self.running.begin()
+        {
             return;
         }
         let name = Some(self.second.name.text().trim().to_string())
@@ -550,51 +623,68 @@ impl Dialog {
         self.second.sign_in.set_label(&gettext("Signing In…"));
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
-            loop {
-                let attempt = add_account::attempt(&address, &proposal, &password);
-                let signed = this.core.sign_in_imap(attempt).await;
-                let err = match signed {
-                    // The account is kept whether or not the dialog is
-                    // still open, so the window hears about it either way.
-                    Ok(account) => {
-                        this.second.sign_in.set_label(&gettext("Sign In"));
-                        return this.finish(match this.again {
-                            Some(_) => Done::SignedInAgain(account),
-                            None => Done::Added { account, name },
-                        });
-                    }
-                    Err(err) => err,
-                };
-                if !this.asking.wants(ticket) {
-                    tracing::info!(error = %err, "a sign-in failed after its dialog moved on");
+            this.try_candidates(address, proposal, password, name, ticket)
+                .await;
+            // Every way out of the run ends here, so Sign In comes back
+            // whether the run signed in, failed or lost its dialog.
+            this.running.end();
+            this.second.sign_in.set_label(&gettext("Sign In"));
+            this.update_sign_in();
+        });
+    }
+
+    /// Signs in to `proposal`, then to discovery's other candidates while
+    /// the failure says nothing about the password.
+    async fn try_candidates(
+        self: &Rc<Self>,
+        address: Address,
+        mut proposal: Proposal,
+        password: String,
+        name: Option<String>,
+        ticket: add_account::Ticket,
+    ) {
+        loop {
+            let attempt = add_account::attempt(&address, &proposal, &password);
+            let signed = self.core.sign_in_imap(attempt).await;
+            let err = match signed {
+                // The account is kept whether or not the dialog is
+                // still open, so the window hears about it either way.
+                Ok(account) => {
+                    return self.finish(match self.again {
+                        Some(_) => Done::SignedInAgain(account),
+                        None => Done::Added { account, name },
+                    });
+                }
+                Err(err) => err,
+            };
+            if !self.asking.wants(ticket) {
+                tracing::info!(error = %err, "a sign-in failed after its dialog moved on");
+                return;
+            }
+            match add_account::after_failure(&err, &proposal, &address) {
+                Outcome::TryNext(next) if !next.confirm => {
+                    self.show_hosts(&next);
+                    self.proposal.replace(Some((*next).clone()));
+                    proposal = *next;
+                }
+                Outcome::TryNext(next) => {
+                    // Say why the first servers failed above the
+                    // guessed ones that now wait for a yes.
+                    let failure = add_account::failure(&err, &proposal);
+                    self.show_password(*next);
+                    self.show_failure(&failure);
                     return;
                 }
-                match add_account::after_failure(&err, &proposal, &address) {
-                    Outcome::TryNext(next) if !next.confirm => {
-                        this.show_hosts(&next);
-                        this.proposal.replace(Some(next.clone()));
-                        proposal = next;
-                    }
-                    Outcome::TryNext(next) => {
-                        // Say why the first servers failed above the
-                        // guessed ones that now wait for a yes.
-                        let failure = add_account::failure(&err, &proposal);
-                        this.show_password(next);
-                        this.show_failure(&failure);
-                        return;
-                    }
-                    Outcome::Failed(failure) => {
-                        this.show_failure(&failure);
-                        return;
-                    }
+                Outcome::Failed(failure) => {
+                    self.show_failure(&failure);
+                    return;
                 }
             }
-        });
+        }
     }
 
     fn show_failure(self: &Rc<Self>, failure: &add_account::Failure) {
         let second = &self.second;
-        second.sign_in.set_label(&gettext("Sign In"));
         // A failure with pages to try carries the app password page
         // itself where one is due, and two lines offering it would be one
         // too many.
@@ -635,11 +725,16 @@ impl Dialog {
     fn show_manual(self: &Rc<Self>, proposal: &Proposal, said: Option<&str>) {
         let manual = &self.manual;
         manual.content.set_description(said.unwrap_or_default());
-        manual.imap.fill(&proposal.imap);
-        manual.smtp.fill(&proposal.smtp);
+        // An outgoing name that only repeats the incoming one stays empty,
+        // which the form reads as the same.
+        let smtp_user = proposal
+            .smtp_user
+            .as_deref()
+            .filter(|user| Some(*user) != proposal.imap_user.as_deref());
         manual
-            .user
-            .set_text(proposal.user.as_deref().unwrap_or_default());
+            .imap
+            .fill(&proposal.imap, proposal.imap_user.as_deref());
+        manual.smtp.fill(&proposal.smtp, smtp_user);
         manual.problem.set_visible(false);
         self.proposal.replace(Some(proposal.clone()));
         self.nav.push(&manual.page);
@@ -647,12 +742,15 @@ impl Dialog {
 
     fn use_manual(self: &Rc<Self>) {
         let before = self.proposal.borrow().clone();
-        let Some(before) = before else { return };
+        let address = self.typed.borrow().clone();
+        let (Some(before), Some(address)) = (before, address) else {
+            return;
+        };
         let typed = add_account::typed_servers(
             &self.manual.imap.typed(),
             &self.manual.smtp.typed(),
-            &self.manual.user.text(),
             &before,
+            &address,
         );
         match typed {
             Ok(proposal) => {
@@ -709,10 +807,27 @@ fn first_step() -> FirstStep {
         .build();
     looking.append(&looking_line);
     let said = line(None);
+    let suggest_line = gtk::Label::builder()
+        .wrap(true)
+        .xalign(0.0)
+        .hexpand(true)
+        .build();
+    let take = gtk::Button::builder()
+        .label(gettext("Use This Address"))
+        .valign(gtk::Align::Center)
+        .build();
+    let suggest = gtk::Box::builder()
+        .spacing(12)
+        .margin_top(12)
+        .visible(false)
+        .build();
+    suggest.append(&suggest_line);
+    suggest.append(&take);
     let group = adw::PreferencesGroup::new();
     group.add(&address);
     group.add(&looking);
     group.add(&said);
+    group.add(&suggest);
     let servers = server_settings_row();
     let more = adw::PreferencesGroup::new();
     more.add(&servers);
@@ -731,6 +846,9 @@ fn first_step() -> FirstStep {
         look,
         looking,
         said,
+        suggest,
+        suggest_line,
+        take,
         servers,
     }
 }
@@ -798,20 +916,33 @@ fn second_step() -> SecondStep {
 }
 
 fn manual_step() -> ManualStep {
+    let imap_user = entry(&gettext("Incoming User Name"));
+    let smtp_user = entry(&gettext("Outgoing User Name"));
+    // The title leaves the field once the cursor is in it, so the
+    // placeholder says what an empty outgoing name does.
+    if let Some(text) = smtp_user
+        .delegate()
+        .and_then(|editable| editable.downcast::<gtk::Text>().ok())
+    {
+        text.set_placeholder_text(Some(&gettext("Same as incoming")));
+    }
     let incoming = adw::PreferencesGroup::builder()
         .title(gettext("Incoming Mail"))
         .build();
-    let imap = ServerRows::new(&incoming);
+    let imap = ServerRows::new(Role::Incoming, &incoming, imap_user);
     let outgoing = adw::PreferencesGroup::builder()
         .title(gettext("Outgoing Mail"))
         .build();
-    let smtp = ServerRows::new(&outgoing);
-    let user = entry(&gettext("User Name"));
+    let smtp = ServerRows::new(Role::Outgoing, &outgoing, smtp_user);
     let problem = line(Some("error"));
     let login = adw::PreferencesGroup::builder()
-        .description(gettext("Leave it empty to sign in with your address."))
+        .title(gettext("Sign-In"))
+        .description(gettext(
+            "Leave them empty to sign in with your address. An empty outgoing name takes the incoming one.",
+        ))
         .build();
-    login.add(&user);
+    login.add(&imap.user);
+    login.add(&smtp.user);
     login.add(&problem);
     let content = adw::PreferencesPage::new();
     content.add(&incoming);
@@ -828,7 +959,6 @@ fn manual_step() -> ManualStep {
         content,
         imap,
         smtp,
-        user,
         problem,
         use_them,
     }
