@@ -15,8 +15,10 @@ use mailrs_gmail::{
 };
 use mailrs_store::threads::{self, ThreadFilter};
 use mailrs_store::{Db, accounts, messages};
+use mailrs_sync::passwords::{KeyringPasswords, PasswordStore};
 use mailrs_sync::{
-    AccountServices, AccountSync, SyncEngine, TriageAction, connect_account, export, now_millis,
+    AccountServices, AccountSync, BackendError, SyncEngine, SyncError, TriageAction,
+    connect_account, connect_imap, export, now_millis,
 };
 
 use mailrs_sync::config::{Config, config_path, data_dir, migrate_old_dirs, secure_dirs};
@@ -179,6 +181,10 @@ fn token_store() -> Arc<dyn TokenStore> {
     Arc::new(KeyringTokenStore::new())
 }
 
+fn passwords() -> Arc<KeyringPasswords> {
+    Arc::new(KeyringPasswords::new())
+}
+
 async fn add_account(db: &Db) -> Result<()> {
     // Every sign-in, first or again, goes through the build's client.
     let oauth = built_in_client()
@@ -226,13 +232,22 @@ async fn list_accounts(db: &Db) -> Result<()> {
 
 async fn remove_account(db: &Db, email: &str) -> Result<()> {
     let account = find_account(db, email).await?;
-    db.write(move |c| accounts::delete_account(c, account.id))
-        .await?;
-    let (tokens, owned) = (token_store(), email.to_string());
-    tokio::task::spawn_blocking(move || tokens.delete(&owned)).await??;
-    println!(
-        "Removed {email}. Revoke Google's side at https://myaccount.google.com/permissions if you want."
-    );
+    let id = account.id;
+    db.write(move |c| accounts::delete_account(c, id)).await?;
+    match account.provider {
+        Provider::Gmail => {
+            let (tokens, owned) = (token_store(), email.to_string());
+            tokio::task::spawn_blocking(move || tokens.delete(&owned)).await??;
+            println!(
+                "Removed {email}. Revoke Google's side at https://myaccount.google.com/permissions if you want."
+            );
+        }
+        Provider::Imap => {
+            let passwords = passwords();
+            tokio::task::spawn_blocking(move || passwords.delete(id)).await??;
+            println!("Removed {email} and its password.");
+        }
+    }
     Ok(())
 }
 
@@ -252,24 +267,30 @@ async fn run_sync(db: &Db, dir: &Path, config: &Config) -> Result<()> {
     if all.is_empty() {
         bail!("no accounts; run `penguin-mail-cli account add` first");
     }
-    let (engine, events) = SyncEngine::new(db.clone(), config.engine_config());
-    let tokens = token_store();
+    let engine_config = config.engine_config();
+    let window_days = engine_config.window_days;
+    let (engine, events) = SyncEngine::new(db.clone(), engine_config);
+    let (tokens, passwords) = (token_store(), passwords());
     for account in &all {
-        let oauth = match oauth_for(db, config, account).await {
-            Ok(oauth) => oauth,
-            Err(err) => {
-                eprintln!("{err}");
-                continue;
-            }
-        };
         let connected = match account.provider {
-            Provider::Gmail => connect_account(oauth, Arc::clone(&tokens), account)
+            Provider::Gmail => match oauth_for(db, config, account).await {
+                Ok(oauth) => connect_account(oauth, Arc::clone(&tokens), account)
+                    .await
+                    .map(AccountServices::google)
+                    .map_err(anyhow::Error::from),
+                Err(err) => {
+                    eprintln!("{err}");
+                    continue;
+                }
+            },
+            Provider::Imap => connect_imap(db, Arc::clone(&passwords), account, window_days)
                 .await
-                .map(AccountServices::google),
-            Provider::Imap => {
-                eprintln!("{}: IMAP accounts cannot sync from here yet", account.email);
-                continue;
-            }
+                .map_err(|err| match err {
+                    SyncError::Backend(BackendError::NeedsReauth) => {
+                        anyhow!("needs to sign in again in Penguin Mail")
+                    }
+                    err => err.into(),
+                }),
         };
         match connected {
             Ok(services) => engine.start_account(account.id, services),
@@ -575,17 +596,15 @@ async fn triage(
 /// A one-off sync handle for commands that do not run the engine.
 async fn account_sync(db: &Db, config: &Config, email: &str) -> Result<AccountSync> {
     let account = find_account(db, email).await?;
-    let oauth = oauth_for(db, config, &account).await?;
+    let engine = config.engine_config();
     let services = match account.provider {
         Provider::Gmail => {
+            let oauth = oauth_for(db, config, &account).await?;
             AccountServices::google(connect_account(oauth, token_store(), &account).await?)
         }
-        Provider::Imap => {
-            bail!("{} is an IMAP account, which this command cannot open yet", account.email)
-        }
+        Provider::Imap => connect_imap(db, passwords(), &account, engine.window_days).await?,
     };
     let (events, _) = async_channel::unbounded();
-    let engine = config.engine_config();
     Ok(
         AccountSync::new(account.id, services, db.clone(), events)
             .with_limits(engine.window_days, engine.body_cache_bytes),

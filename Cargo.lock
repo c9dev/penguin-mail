@@ -2432,6 +2432,7 @@ dependencies = [
  "chrono",
  "dirs",
  "futures",
+ "keyring",
  "mail-builder",
  "mail-parser",
  "mailrs-discover",

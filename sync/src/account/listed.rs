@@ -64,7 +64,16 @@ impl AccountSync {
         query: &SearchQuery,
         limit: usize,
     ) -> Result<Vec<RemoteRef>, SyncError> {
-        let found = self.services.mail.search(query, limit).await?;
+        let found = match query {
+            // A server that reads no Gmail syntax lists folders and smart
+            // mailboxes from the store's copy: sync already holds that
+            // mail, and a server search would cost a round trip per
+            // mailbox for the same answer.
+            SearchQuery::Tree(tree) if !self.services.capabilities().native_search => {
+                self.stored_matches(tree, limit).await?
+            }
+            _ => self.services.mail.search(query, limit).await?,
+        };
         self.keep_hits(&found);
         Ok(found)
     }

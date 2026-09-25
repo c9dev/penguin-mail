@@ -1,10 +1,16 @@
-//! Which Google client an account signs in with.
+//! Which Google client an account signs in with, and keeping an IMAP
+//! account that just signed in.
 
+use std::sync::Arc;
+
+use mailrs_domain::translate::{fill, gettext};
 use mailrs_domain::{Account, AccountState, EpochMillis, SignInClient};
 use mailrs_gmail::OAuthClient;
+use mailrs_store::servers::{self, Servers};
 use mailrs_store::{Db, StoreError, accounts};
 
 use crate::config::Config;
+use crate::passwords::{PasswordError, PasswordStore};
 
 /// The client `account` signs in with, from what the store recorded for
 /// it. An account with no client left, such as an own account whose
@@ -41,6 +47,88 @@ pub async fn signed_in(db: &Db, email: &str, now: EpochMillis) -> Result<Account
             .ok_or(StoreError::Sqlite(rusqlite::Error::QueryReturnedNoRows))
     })
     .await
+}
+
+/// An IMAP account a person just signed in to: the address, who serves
+/// it, the servers that took the login, and the password. It has no
+/// `Debug`, so the password cannot reach a log line.
+pub struct NewImap {
+    pub address: String,
+    pub provider_name: String,
+    pub servers: Servers,
+    pub password: String,
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum ImapSignInError {
+    /// The address belongs to an account another provider serves.
+    #[error("{}", taken(.address, .provider))]
+    Taken { address: String, provider: String },
+    #[error(transparent)]
+    Store(#[from] StoreError),
+    #[error(transparent)]
+    Password(#[from] PasswordError),
+}
+
+fn taken(address: &str, provider: &str) -> String {
+    fill(
+        &gettext("{address} is already in Penguin Mail as a {provider} account."),
+        &[("address", address), ("provider", provider)],
+    )
+}
+
+/// Keeps an IMAP account whose login worked: adds it, or finds the one
+/// already here for the address, with its servers and its password. An
+/// account signing in again keeps its mail and stops needing a sign-in.
+/// When the keyring will not take the password, a new account goes
+/// again, so nothing is left that could never start.
+pub async fn imap_signed_in<P: PasswordStore + 'static>(
+    db: &Db,
+    passwords: Arc<P>,
+    new: NewImap,
+    now: EpochMillis,
+) -> Result<Account, ImapSignInError> {
+    let NewImap {
+        address,
+        provider_name,
+        servers,
+        password,
+    } = new;
+    let email = address.clone();
+    let kept = db
+        .write(move |c| {
+            let before = accounts::account_by_email(c, &email)?;
+            let Some(id) = accounts::insert_imap_account(c, &email, &provider_name, now)? else {
+                let holder = before.map(|a| a.provider_name().to_string());
+                return Ok(Err(holder.unwrap_or_default()));
+            };
+            servers::save(c, id, &servers)?;
+            // Signing in again is what ends Needs Sign-In; the engine
+            // reports every other state itself once the account runs.
+            if before.as_ref().is_some_and(|a| a.state == AccountState::NeedsReauth) {
+                accounts::set_state(c, id, AccountState::Ok)?;
+            }
+            Ok(Ok((id, before.is_none())))
+        })
+        .await?;
+    let (id, fresh) = kept.map_err(|provider| ImapSignInError::Taken {
+        address: address.clone(),
+        provider,
+    })?;
+    let saved = tokio::task::spawn_blocking(move || passwords.save(id, &password))
+        .await
+        .map_err(|err| PasswordError::Keyring(err.to_string()))?;
+    if let Err(err) = saved {
+        if fresh {
+            db.write(move |c| accounts::delete_account(c, id)).await?;
+        }
+        return Err(err.into());
+    }
+    db.read(move |c| accounts::account_by_email(c, &address))
+        .await?
+        .ok_or(ImapSignInError::Store(StoreError::Sqlite(
+            rusqlite::Error::QueryReturnedNoRows,
+        )))
 }
 
 /// The client for an account that signed in with `client`. A built-in

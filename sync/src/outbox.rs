@@ -442,6 +442,9 @@ fn worth_retrying(err: &SyncError) -> bool {
         SyncError::NotAnAddress(_) => false,
         // The outbox sends nothing to a list's server.
         SyncError::OneClick(_) => false,
+        // The keyring's own trouble, not the message's; it usually clears
+        // on its own, as a locked keyring does once the person unlocks it.
+        SyncError::Password(_) => true,
     }
 }
 

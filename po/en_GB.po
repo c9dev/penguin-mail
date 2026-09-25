@@ -961,27 +961,27 @@ msgstr "Choose a time in the future"
 msgid "On {date}, {sender} wrote:"
 msgstr "On {date}, {sender} wrote:"
 
-#: app/src/core.rs:165
+#: app/src/core.rs:169
 msgid "Another copy of Penguin Mail, or penguin-mail-cli sync, is syncing your mail. Stop it, then open Penguin Mail again."
 msgstr "Another copy of Penguin Mail, or penguin-mail-cli sync, is syncing your mail. Stop it, then open Penguin Mail again."
 
-#: app/src/core.rs:180
+#: app/src/core.rs:184
 msgid "Penguin Mail could not update its mail store, and kept the old one."
 msgstr "Penguin Mail could not update its mail store, and kept the old one."
 
-#: app/src/core.rs:592
+#: app/src/core.rs:618
 msgid "Demo mode cannot add real accounts."
 msgstr "Demo mode cannot add real accounts."
 
-#: app/src/core.rs:596
+#: app/src/core.rs:622
 msgid "This copy of Penguin Mail was built without Google sign-in. Get a release from github.com/c9dev/penguin-mail/releases."
 msgstr "This copy of Penguin Mail was built without Google sign-in. Get a release from github.com/c9dev/penguin-mail/releases."
 
-#: app/src/core.rs:614
+#: app/src/core.rs:640
 msgid "Gave up waiting for the browser after five minutes."
 msgstr "Gave up waiting for the browser after five minutes."
 
-#: app/src/core.rs:622
+#: app/src/core.rs:648
 msgid "You signed in as {account}. Choose {wanted} to reconnect that account."
 msgstr "You signed in as {account}. Choose {wanted} to reconnect that account."
 
@@ -5983,15 +5983,15 @@ msgid_plural "{accounts} will get new labels."
 msgstr[0] "{accounts} will get a new label."
 msgstr[1] "{accounts} will get new labels."
 
-#: sync/src/error.rs:116
+#: sync/src/error.rs:119
 msgid "Gmail keeps “{name}” for its own label. Choose another name."
 msgstr "Gmail keeps “{name}” for its own label. Choose another name."
 
-#: sync/src/error.rs:124
+#: sync/src/error.rs:127
 msgid "{host} refused the request to unsubscribe (HTTP {status})"
 msgstr "{host} refused the request to unsubscribe (HTTP {status})"
 
-#: sync/src/error.rs:128
+#: sync/src/error.rs:131
 msgid "could not reach {host}"
 msgstr "could not reach {host}"
 
@@ -6148,9 +6148,17 @@ msgstr "{problem}. Trying again {when}"
 msgid "{problem}. Penguin Mail stopped trying"
 msgstr "{problem}. Penguin Mail stopped trying"
 
+#: sync/src/passwords.rs:19
+msgid "The keyring refused: {reason}"
+msgstr "The keyring refused: {reason}"
+
 #: sync/src/services/imap/outgoing.rs:85
 msgid "The message names nobody to send it to."
 msgstr "The message names nobody to send it to."
+
+#: sync/src/sign_in.rs:75
+msgid "{address} is already in Penguin Mail as a {provider} account."
+msgstr "{address} is already in Penguin Mail as a {provider} account."
 
 #: sync/src/triage.rs:45
 msgid "Mark read"

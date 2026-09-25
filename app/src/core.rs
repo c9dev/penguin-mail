@@ -13,18 +13,19 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use anyhow::{Context, Result, anyhow, bail};
 use mailrs_domain::{Account, AccountId, AccountState, ChangeEvent, Provider, Target};
 use mailrs_gmail::{
-    GMAIL_API_BASE, KeyringTokenStore, OAuthClient, TokenStore, authorize, built_in_client,
+    GMAIL_API_BASE, KeyringTokenStore, TokenStore, authorize, built_in_client,
 };
 use mailrs_pgp::{Pgp, PgpError};
 use mailrs_smime::{Smime, SmimeError};
 use mailrs_store::{Db, StoreError, accounts};
 use mailrs_sync::config::{Config, config_path, data_dir, migrate_old_dirs};
 use mailrs_sync::lock::{LockError, SyncLock};
+use mailrs_sync::passwords::{KeyringPasswords, MemoryPasswords, PasswordStore, Passwords};
 use mailrs_sync::sign_in::{account_client, signed_in};
 use mailrs_sync::{
-    AccountServices, AccountSettings, AccountSync, Accounts, ContactBook, Failure, History,
-    Invitations, MailAction, MailActions, Mailboxes, OneClick, Outbox, Outcome, SyncEngine, Undone,
-    connect_account, now_millis,
+    AccountServices, AccountSettings, AccountSync, Accounts, BackendError, ContactBook, Failure,
+    History, Invitations, MailAction, MailActions, Mailboxes, OneClick, Outbox, Outcome,
+    SyncEngine, SyncError, Undone, connect_account, connect_imap, now_millis,
 };
 
 use crate::assistant::run::{Background, Modules};
@@ -109,6 +110,9 @@ pub struct Core {
     /// one does not start gpg again. Memory only.
     pub verdicts: RefCell<crate::protection::remembered::Verdicts>,
     tokens: Arc<dyn TokenStore>,
+    /// IMAP passwords: the keyring, or memory in the demo, which never
+    /// touches the person's keyring.
+    passwords: Arc<Passwords>,
     events_tx: async_channel::Sender<ChangeEvent>,
     pub events: async_channel::Receiver<ChangeEvent>,
     in_flight: Arc<AtomicUsize>,
@@ -239,6 +243,10 @@ impl Core {
             smime: Smime::find().ok(),
             verdicts: RefCell::default(),
             tokens: Arc::new(KeyringTokenStore::new()),
+            passwords: Arc::new(match demo {
+                true => Passwords::Memory(MemoryPasswords::default()),
+                false => Passwords::Keyring(KeyringPasswords::new()),
+            }),
             events_tx,
             events,
             in_flight: Arc::new(AtomicUsize::new(0)),
@@ -296,40 +304,58 @@ impl Core {
                 }
             }
         });
-        let (db, tokens, demo, events) = (
+        let (db, tokens, passwords, demo, events) = (
             self.db.clone(),
             Arc::clone(&self.tokens),
+            Arc::clone(&self.passwords),
             self.demo_gmail.clone(),
             self.events_tx.clone(),
         );
+        let window_days = config.engine_config().window_days;
         self.runtime.spawn(async move {
             let Ok(all) = db.read(accounts::list_accounts).await else { return };
             for account in all {
-                // The demo's accounts talk to the sample mailbox and need
-                // no Google client.
-                let oauth = if demo.is_some() {
-                    None
-                } else {
-                    match account_client(&db, &config, built_in_client(), &account).await {
-                        Ok(Some(oauth)) => Some(oauth),
-                        // The store now says the account needs a new
-                        // sign-in; the sidebar hears it here, since the
-                        // engine never runs the account to report it.
-                        Ok(None) => {
-                            tracing::warn!(account = %account.email, "no Google client for this account");
-                            let state = AccountState::NeedsReauth;
-                            let _ = events
-                                .send(ChangeEvent::AccountStateChanged { account_id: account.id, state })
-                                .await;
-                            continue;
+                let started = match (demo.as_deref(), account.provider) {
+                    // The demo's accounts talk to their sample servers and
+                    // need no Google client and no password.
+                    (Some(demo), _) => demo
+                        .account(account.id)
+                        .map(AccountServices::fake)
+                        .ok_or_else(|| anyhow!("the demo has no mailbox for {}", account.email)),
+                    (None, Provider::Gmail) => {
+                        match account_client(&db, &config, built_in_client(), &account).await {
+                            Ok(Some(oauth)) => connect_account(oauth, Arc::clone(&tokens), &account)
+                                .await
+                                .map(AccountServices::google)
+                                .map_err(Into::into),
+                            // The store now says the account needs a new
+                            // sign-in; the sidebar hears it here, since the
+                            // engine never runs the account to report it.
+                            Ok(None) => {
+                                tracing::warn!(account = %account.email, "no Google client for this account");
+                                needs_sign_in(&events, account.id).await;
+                                continue;
+                            }
+                            Err(err) => {
+                                tracing::warn!(account = %account.email, error = %err, "could not read the account's Google client");
+                                continue;
+                            }
                         }
-                        Err(err) => {
-                            tracing::warn!(account = %account.email, error = %err, "could not read the account's Google client");
-                            continue;
+                    }
+                    (None, Provider::Imap) => {
+                        match connect_imap(&db, Arc::clone(&passwords), &account, window_days).await {
+                            // No password in the keyring, or no servers: the
+                            // store says so already, and the sidebar hears it
+                            // here for the same reason as above.
+                            Err(SyncError::Backend(BackendError::NeedsReauth)) => {
+                                needs_sign_in(&events, account.id).await;
+                                continue;
+                            }
+                            started => started.map_err(Into::into),
                         }
                     }
                 };
-                match connect(demo.as_deref(), oauth, Arc::clone(&tokens), &account).await {
+                match started {
                     Ok(services) => engine.start_account(account.id, services),
                     Err(err) => tracing::warn!(account = %account.email, error = %err, "could not start syncing"),
                 }
@@ -629,14 +655,15 @@ impl Core {
             let store = Arc::clone(&tokens);
             tokio::task::spawn_blocking(move || store.save(&email, &refresh)).await??;
             let account = signed_in(&db, &authorized.email, now_millis()).await?;
-            let services = connect(None, Some(oauth), tokens, &account).await?;
+            let services = AccountServices::google(connect_account(oauth, tokens, &account).await?);
             engine.start_account(account.id, services);
             Ok::<_, anyhow::Error>(account)
         })
         .await
     }
 
-    /// Stops syncing an account and deletes its local mail and refresh token.
+    /// Stops syncing an account and deletes its local mail and what signs
+    /// it in: a Google account's refresh token, an IMAP account's password.
     pub async fn remove_account(&self, account: Account) -> Result<()> {
         if let Some(engine) = self.engine.current() {
             engine.stop_account(account.id);
@@ -644,12 +671,26 @@ impl Core {
         // Nothing is left to reverse the account's actions through, and
         // its mail goes with it.
         self.actions.forget_account(account.id);
-        let (db, tokens, demo) = (self.db.clone(), Arc::clone(&self.tokens), self.demo);
+        let (db, tokens, passwords, demo) = (
+            self.db.clone(),
+            Arc::clone(&self.tokens),
+            Arc::clone(&self.passwords),
+            self.demo,
+        );
         self.call(async move {
             db.write(move |c| accounts::delete_account(c, account.id))
                 .await?;
             if !demo {
-                tokio::task::spawn_blocking(move || tokens.delete(&account.email)).await??;
+                match account.provider {
+                    Provider::Gmail => {
+                        tokio::task::spawn_blocking(move || tokens.delete(&account.email))
+                            .await??
+                    }
+                    Provider::Imap => {
+                        tokio::task::spawn_blocking(move || passwords.delete(account.id))
+                            .await??
+                    }
+                }
             }
             Ok::<_, anyhow::Error>(())
         })
@@ -682,32 +723,13 @@ fn contact_photo_dir(demo: bool, data_dir: &std::path::Path) -> PathBuf {
         .join("contact-photos")
 }
 
-/// The services for one account: the sample mailbox in demo mode, or
-/// Google signed in with the account's refresh token.
-async fn connect(
-    demo: Option<&DemoGmail>,
-    oauth: Option<OAuthClient>,
-    tokens: Arc<dyn TokenStore>,
-    account: &Account,
-) -> Result<AccountServices> {
-    if let Some(demo) = demo {
-        let mailbox = demo
-            .account(account.id)
-            .ok_or_else(|| anyhow!("the demo has no mailbox for {}", account.email))?;
-        return Ok(AccountServices::fake(mailbox));
-    }
-    match account.provider {
-        Provider::Gmail => {
-            let oauth =
-                oauth.ok_or_else(|| anyhow!("Penguin Mail has no OAuth client configured yet"))?;
-            Ok(AccountServices::google(
-                connect_account(oauth, tokens, account).await?,
-            ))
-        }
-        Provider::Imap => {
-            bail!("{} is an IMAP account, which this copy cannot start", account.email)
-        }
-    }
+/// Tells the window that `account_id` needs a new sign-in, for an account
+/// the engine never starts and so never reports on.
+async fn needs_sign_in(events: &async_channel::Sender<ChangeEvent>, account_id: AccountId) {
+    let state = AccountState::NeedsReauth;
+    let _ = events
+        .send(ChangeEvent::AccountStateChanged { account_id, state })
+        .await;
 }
 
 #[cfg(test)]

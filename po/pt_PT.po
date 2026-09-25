@@ -1028,7 +1028,7 @@ msgstr "Escolha uma hora no futuro"
 msgid "On {date}, {sender} wrote:"
 msgstr "A {date}, {sender} escreveu:"
 
-#: app/src/core.rs:165
+#: app/src/core.rs:169
 msgid ""
 "Another copy of Penguin Mail, or penguin-mail-cli sync, is syncing your "
 "mail. Stop it, then open Penguin Mail again."
@@ -1036,17 +1036,17 @@ msgstr ""
 "Outra cópia do Penguin Mail, ou o penguin-mail-cli sync, está a sincronizar "
 "o seu correio. Pare esse processo e volte a abrir o Penguin Mail."
 
-#: app/src/core.rs:180
+#: app/src/core.rs:184
 msgid "Penguin Mail could not update its mail store, and kept the old one."
 msgstr ""
 "O Penguin Mail não conseguiu atualizar o arquivo de correio e manteve o "
 "anterior."
 
-#: app/src/core.rs:592
+#: app/src/core.rs:618
 msgid "Demo mode cannot add real accounts."
 msgstr "O modo de demonstração não adiciona contas reais."
 
-#: app/src/core.rs:596
+#: app/src/core.rs:622
 msgid ""
 "This copy of Penguin Mail was built without Google sign-in. Get a release "
 "from github.com/c9dev/penguin-mail/releases."
@@ -1054,11 +1054,11 @@ msgstr ""
 "Esta cópia do Penguin Mail foi compilada sem início de sessão Google. "
 "Obtenha uma versão em github.com/c9dev/penguin-mail/releases."
 
-#: app/src/core.rs:614
+#: app/src/core.rs:640
 msgid "Gave up waiting for the browser after five minutes."
 msgstr "Desistiu de esperar pelo navegador ao fim de cinco minutos."
 
-#: app/src/core.rs:622
+#: app/src/core.rs:648
 msgid "You signed in as {account}. Choose {wanted} to reconnect that account."
 msgstr ""
 "Iniciou sessão como {account}. Escolha {wanted} para voltar a ligar essa "
@@ -6390,15 +6390,15 @@ msgid_plural "{accounts} will get new labels."
 msgstr[0] "Etiqueta nova em: {accounts}."
 msgstr[1] "Etiquetas novas em: {accounts}."
 
-#: sync/src/error.rs:116
+#: sync/src/error.rs:119
 msgid "Gmail keeps “{name}” for its own label. Choose another name."
 msgstr "O Gmail reserva “{name}” para uma etiqueta sua. Escolha outro nome."
 
-#: sync/src/error.rs:124
+#: sync/src/error.rs:127
 msgid "{host} refused the request to unsubscribe (HTTP {status})"
 msgstr "{host} recusou o pedido para cancelar a subscrição (HTTP {status})"
 
-#: sync/src/error.rs:128
+#: sync/src/error.rs:131
 msgid "could not reach {host}"
 msgstr "não foi possível contactar {host}"
 
@@ -6505,7 +6505,8 @@ msgstr "Esta caixa inteligente não tem condições"
 
 #: sync/src/mailbox.rs:939
 msgid "Results for {account} come from the mail on this computer alone"
-msgstr "Os resultados de {account} vêm apenas do correio guardado neste computador"
+msgstr ""
+"Os resultados de {account} vêm apenas do correio guardado neste computador"
 
 #: sync/src/mailbox.rs:948
 msgid "Could not load mail for {account}: {reason}"
@@ -6555,9 +6556,17 @@ msgstr "{problem}. Nova tentativa {when}"
 msgid "{problem}. Penguin Mail stopped trying"
 msgstr "{problem}. O Penguin Mail deixou de tentar"
 
+#: sync/src/passwords.rs:19
+msgid "The keyring refused: {reason}"
+msgstr "O porta-chaves recusou: {reason}"
+
 #: sync/src/services/imap/outgoing.rs:85
 msgid "The message names nobody to send it to."
 msgstr "A mensagem não indica a quem a enviar."
+
+#: sync/src/sign_in.rs:75
+msgid "{address} is already in Penguin Mail as a {provider} account."
+msgstr "{address} já está no Penguin Mail como conta {provider}."
 
 #: sync/src/triage.rs:45
 msgid "Mark read"

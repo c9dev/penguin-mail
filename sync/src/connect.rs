@@ -1,9 +1,14 @@
 use std::sync::Arc;
 
-use mailrs_domain::Account;
+use mailrs_discover::{Security, Server, UserName};
+use mailrs_domain::{Account, AccountState};
 use mailrs_gmail::{GmailClient, GmailError, OAuthClient, TokenStore};
+use mailrs_imap::{ImapClient, Login, SmtpClient};
+use mailrs_store::servers::{self, Saved, Servers};
+use mailrs_store::{Db, accounts};
 
-use crate::{AccountClient, SyncError};
+use crate::passwords::{PasswordError, PasswordStore};
+use crate::{AccountClient, AccountServices, BackendError, ImapSettings, SyncError};
 
 /// A Gmail client for `account`, built from its refresh token in `tokens`.
 /// Fails with `NeedsReauth` when no token is stored.
@@ -21,4 +26,91 @@ pub async fn connect_account(
         account_id: account.id,
         client: GmailClient::for_account(oauth, refresh_token, &account.email),
     })
+}
+
+/// The services for an IMAP account, from the servers the store keeps
+/// for it and the password in `passwords`. Without either, the account
+/// needs to sign in again: the store records that before this answers
+/// `NeedsReauth`, since the engine never runs the account to say so.
+/// Nothing here connects; the clients log in when sync first asks. The
+/// provider's sent-copy rule comes from the provider table at each start,
+/// so a corrected table reaches accounts added before the correction.
+pub async fn connect_imap<P: PasswordStore + 'static>(
+    db: &Db,
+    passwords: Arc<P>,
+    account: &Account,
+    window_days: i64,
+) -> Result<AccountServices, SyncError> {
+    let id = account.id;
+    let saved = db.read(move |c| servers::load(c, id)).await?;
+    let password = tokio::task::spawn_blocking(move || passwords.load(id))
+        .await
+        .map_err(|err| PasswordError::Keyring(err.to_string()))??;
+    let (Some(saved), Some(password)) = (saved, password) else {
+        db.write(move |c| accounts::set_state(c, id, AccountState::NeedsReauth))
+            .await?;
+        return Err(BackendError::NeedsReauth.into());
+    };
+    // A custom server is not in the provider table, and Sent then gets a
+    // copy of each message from the app, which is right for a server
+    // nobody has checked.
+    let files_sent_mail = mailrs_discover::provider_named(account.provider_name())
+        .is_some_and(|provider| provider.files_sent_mail);
+    let imap = ImapClient::new(
+        server_of(&saved.imap),
+        Login::new(saved.imap.user_name.as_str(), password.as_str()),
+    );
+    // Building the SMTP client refuses only a host name lettre cannot
+    // use, which a saved server never has; the error still reaches the
+    // log through the engine rather than a panic.
+    let smtp = SmtpClient::new(
+        &server_of(&saved.smtp),
+        &Login::new(saved.smtp.user_name.as_str(), password),
+    )
+    .map_err(BackendError::from)?;
+    Ok(AccountServices::imap(
+        imap,
+        smtp,
+        ImapSettings {
+            address: account.email.clone(),
+            provider_name: account.provider_name().to_string(),
+            files_sent_mail,
+            window_days,
+        },
+    ))
+}
+
+/// The servers to keep for an account that logged in as `imap_user` on
+/// `imap` and as `smtp_user` on `smtp`. The two can differ: iCloud's IMAP
+/// server takes the part before @ and its SMTP server the whole address.
+/// The store keeps the user name that worked rather than the rule that
+/// found it, so the next start sends the same one.
+pub fn servers_for(imap: &Server, imap_user: &str, smtp: &Server, smtp_user: &str) -> Servers {
+    let saved = |server: &Server, user: &str| Saved {
+        host: server.host.clone(),
+        port: server.port,
+        security: match server.security {
+            Security::Tls => servers::Security::Tls,
+            Security::StartTls => servers::Security::StartTls,
+        },
+        user_name: user.to_string(),
+    };
+    Servers {
+        imap: saved(imap, imap_user),
+        smtp: saved(smtp, smtp_user),
+    }
+}
+
+/// A server as the clients take it, from what the store keeps. The login
+/// carries the user name, so the rule for finding one no longer matters.
+pub fn server_of(saved: &Saved) -> Server {
+    Server {
+        host: saved.host.clone(),
+        port: saved.port,
+        security: match saved.security {
+            servers::Security::Tls => Security::Tls,
+            servers::Security::StartTls => Security::StartTls,
+        },
+        user_name: UserName::Address,
+    }
 }
