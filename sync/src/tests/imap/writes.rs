@@ -8,7 +8,7 @@ use super::{days_ago, message, offering};
 use crate::fake::{FakeImap, raw_message};
 use crate::services::ImapApi;
 use crate::tests::{ImapHarness, fake_settings, imap_harness, imap_harness_on};
-use crate::{MailBackend, TriageAction};
+use crate::{BackendError, MailBackend, TriageAction};
 
 /// An account on `imap` holding one unread message from Ann in the Inbox,
 /// loaded, with the thread it sits in.
@@ -446,4 +446,42 @@ async fn archiving_on_a_server_without_an_archive_makes_one_once() {
         })
         .collect();
     assert_eq!(made, ["Archive"], "said once, for the first archive only");
+}
+
+/// A failure toast names a folder as the person reads it, not by the
+/// server's raw wire name, which is modified UTF-7.
+#[tokio::test]
+async fn a_failed_move_names_the_folder_its_person_reads() {
+    let imap = FakeImap::new();
+    // Modified UTF-7 for "Entwürfe".
+    imap.add_mailbox("Entw&APw-rfe", None);
+    imap.deliver_flagged("INBOX", &message("a", "Kites", ""), &[], days_ago(1));
+    let h = imap_harness_on(imap, fake_settings()).await;
+    h.bootstrap().await;
+    h.sync.refresh_labels().await.unwrap();
+    let thread = h.thread_of("INBOX/1001/1").await.expect("threaded");
+
+    h.imap
+        .fail_on("move", ImapError::Refused("NO no room".into()));
+    let err = h
+        .sync
+        .triage_thread(&thread, &TriageAction::MoveTo("Entw&APw-rfe".into()))
+        .await
+        .unwrap_err();
+    assert!(matches!(
+        err,
+        crate::SyncError::Backend(BackendError::Refused(_))
+    ));
+
+    let told: Vec<String> = h
+        .drain()
+        .into_iter()
+        .filter_map(|e| match e {
+            ChangeEvent::WriteFailed { message, .. } => Some(message),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(told.len(), 1);
+    assert!(told[0].contains("Entwürfe"), "{}", told[0]);
+    assert!(!told[0].contains("&APw-"), "{}", told[0]);
 }

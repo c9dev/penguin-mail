@@ -290,9 +290,11 @@ impl<A: Accounts> MailActions<A> {
             .map(|(t, _)| t.clone())
             .collect();
         if let Err(err) = self.keep_locally(ready, &action, &mut undo).await {
+            let accounts: BTreeSet<AccountId> = targets.iter().map(|t| t.account_id).collect();
+            let words = self.words_for(&action, accounts).await;
             let error = fill(
                 &gettext("{action} failed: {reason}"),
-                &[("action", &action.describe()), ("reason", &err.to_string())],
+                &[("action", &words), ("reason", &err.to_string())],
             );
             for result in results.iter_mut().filter(|r| r.is_ok()) {
                 *result = Err(error.clone());
@@ -412,9 +414,13 @@ impl<A: Accounts> MailActions<A> {
                     }
                 }
                 Err(err) => {
+                    let accounts = BTreeSet::from([batch[0].account_id]);
+                    let words = self
+                        .words_for(&MailAction::Triage(triage.clone()), accounts)
+                        .await;
                     let message = fill(
                         &gettext("{action} failed: {reason}"),
-                        &[("action", &triage.describe()), ("reason", &err.to_string())],
+                        &[("action", &words), ("reason", &err.to_string())],
                     );
                     for index in members {
                         results[index] = Err(message.clone());

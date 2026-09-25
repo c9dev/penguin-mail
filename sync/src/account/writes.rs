@@ -8,7 +8,7 @@ use futures::StreamExt;
 use mailrs_domain::translate::{fill, fill_plural, gettext};
 use mailrs_domain::{Applied, ChangeEvent, Location, Memberships, Role, Target};
 use mailrs_store::messages::Change;
-use mailrs_store::{mailboxes, messages, reminders, remote_refs, threads};
+use mailrs_store::{labels, mailboxes, messages, reminders, remote_refs, threads};
 
 use super::{AccountSync, FETCH_CONCURRENCY};
 use crate::ops::{Roles, drop_protected, local_changes, ops_for, reverse_changes, split_keywords};
@@ -203,7 +203,42 @@ impl AccountSync {
     ) -> Result<Vec<Applied>, SyncError> {
         let mail = &self.services.mail;
         let ops = ops_for(action, &mail.capabilities(), &self.roles(), |id| mail.set_of(id))?;
-        self.change_all(targets, &ops, &action.describe()).await
+        let what = self.describe_named(action).await;
+        self.change_all(targets, &ops, &what).await
+    }
+
+    /// `action` in words, each server mailbox it names given by the name
+    /// the store holds for it, or by its id where the store holds none.
+    /// On IMAP that id is the server's raw mailbox name, in modified
+    /// UTF-7, which a toast must never show as it is.
+    async fn describe_named(&self, action: &TriageAction) -> String {
+        let names_one = matches!(
+            action,
+            TriageAction::AddLabel(_) | TriageAction::RemoveLabel(_) | TriageAction::MoveTo(_)
+        );
+        if !names_one {
+            return action.describe();
+        }
+        let account_id = self.account_id;
+        let read = self
+            .db
+            .read(move |c| {
+                let mut names: BTreeMap<String, String> = BTreeMap::new();
+                for label in labels::list_labels(c, account_id)? {
+                    names.entry(label.id).or_insert(label.name);
+                }
+                Ok(names)
+            })
+            .await;
+        match read {
+            Ok(names) => {
+                action.describe_named(|id| names.get(id).cloned().unwrap_or_else(|| id.to_string()))
+            }
+            Err(err) => {
+                tracing::warn!(account = self.account_id, error = %err, "could not read mailbox names for a toast");
+                action.describe()
+            }
+        }
     }
 
     /// The server's id for each role's mailbox.
