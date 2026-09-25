@@ -59,6 +59,11 @@ pub type Events = Invitations<RunningEngine>;
 /// Holds the messages waiting to go out and sends them when it can. See
 /// `mailrs_sync::Outbox`.
 pub type Waiting = Outbox<RunningEngine>;
+/// Keeps the local copy of every account's calendars fresh. See
+/// `mailrs_sync::calendar_copy::CalendarCopy`. Built over `RunningEngine`,
+/// not `SyncEngine`, like every other module here: a changed sync setting
+/// replaces the engine, and a copy holding the old one would go stale.
+pub type CalendarCopy = mailrs_sync::calendar_copy::CalendarCopy<RunningEngine>;
 
 /// The engine that runs now. Changing the sync settings replaces it, so mail
 /// actions look accounts up here rather than keep one engine.
@@ -98,6 +103,7 @@ pub struct Core {
     contacts: Arc<Contacts>,
     invitations: Arc<Events>,
     calendar: Arc<mailrs_sync::Calendar<RunningEngine>>,
+    calendar_copy: Arc<CalendarCopy>,
     outbox: Arc<Waiting>,
     /// The sync settings and, for accounts added through the old setup
     /// page, their own Google client.
@@ -244,6 +250,7 @@ impl Core {
         let invitations = Arc::new(Invitations::new(Arc::clone(&engine), db.clone()));
         let outbox = Arc::new(Outbox::new(Arc::clone(&engine), db.clone()));
         let calendar = Arc::new(mailrs_sync::Calendar::new(Arc::clone(&engine)));
+        let calendar_copy = Arc::new(CalendarCopy::new(Arc::clone(&engine), db.clone()));
         let core = Rc::new(Core {
             runtime,
             db,
@@ -256,6 +263,7 @@ impl Core {
             contacts,
             invitations,
             calendar,
+            calendar_copy,
             outbox,
             config: RefCell::new(config),
             pgp: Pgp::find().ok(),
@@ -543,6 +551,12 @@ impl Core {
         Arc::clone(&self.outbox)
     }
 
+    /// The local copy of every account's calendars, kept fresh on a
+    /// timer. See `mailrs_sync::calendar_copy::CalendarCopy`.
+    pub fn calendar_copy(&self) -> Arc<CalendarCopy> {
+        Arc::clone(&self.calendar_copy)
+    }
+
     /// The modules the assistant's tools work through.
     pub fn modules(&self) -> Modules<RunningEngine> {
         Modules {
@@ -616,6 +630,12 @@ impl Core {
         }
     }
 
+    /// Whether the computer has a network, as `set_network` last said.
+    /// Always true in the demo, which never talks to a real network.
+    pub fn network(&self) -> bool {
+        self.network.get()
+    }
+
     /// Tells sync whether the main window is open, so an account looks at
     /// mailboxes other than its inbox less often while only the tray runs.
     pub fn set_window_open(&self, open: bool) {
@@ -623,6 +643,11 @@ impl Core {
         if let Some(engine) = self.engine.current() {
             engine.set_window_open(open);
         }
+    }
+
+    /// Whether the main window is open, as `set_window_open` last said.
+    pub fn window_open(&self) -> bool {
+        self.window_open.get()
     }
 
     /// Drops the Gmail search the last folder or search listing kept, so

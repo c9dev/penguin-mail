@@ -218,7 +218,7 @@ msgstr ""
 msgid "Penguin Mail needs the password for {address} again."
 msgstr ""
 
-#: app/src/app.rs:301
+#: app/src/app.rs:303
 msgid ""
 "Your preferences could not be read, so Penguin Mail started from the "
 "defaults. The old file is kept as {file}."
@@ -1092,31 +1092,31 @@ msgstr ""
 msgid "On {date}, {sender} wrote:"
 msgstr ""
 
-#: app/src/core.rs:191
+#: app/src/core.rs:197
 msgid ""
 "Another copy of Penguin Mail, or penguin-mail-cli sync, is syncing your "
 "mail. Stop it, then open Penguin Mail again."
 msgstr ""
 
-#: app/src/core.rs:203
+#: app/src/core.rs:209
 msgid "Penguin Mail could not update its mail store, and kept the old one."
 msgstr ""
 
-#: app/src/core.rs:648 app/src/core.rs:717
+#: app/src/core.rs:673 app/src/core.rs:742
 msgid "Demo mode cannot add real accounts."
 msgstr ""
 
-#: app/src/core.rs:652
+#: app/src/core.rs:677
 msgid ""
 "This copy of Penguin Mail was built without Google sign-in. Get a release "
 "from github.com/c9dev/penguin-mail/releases."
 msgstr ""
 
-#: app/src/core.rs:670
+#: app/src/core.rs:695
 msgid "Gave up waiting for the browser after five minutes."
 msgstr ""
 
-#: app/src/core.rs:678
+#: app/src/core.rs:703
 msgid "You signed in as {account}. Choose {wanted} to reconnect that account."
 msgstr ""
 
