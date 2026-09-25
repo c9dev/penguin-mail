@@ -8,7 +8,8 @@ use mailrs_gmail::convert::message_meta;
 use mailrs_gmail::model::Message;
 use mailrs_gmail::{
     AccountQuota, Answered, Busy, ConnectionsPage, ContactFields, Event, EventFields, GmailClient,
-    GmailError, HistoryPage, LabelColor, MessagePage, Person, Profile, RemoteLabel, SendAs, Series,
+    GmailError, Granted, HistoryPage, LabelColor, MessagePage, Person, Profile, RemoteLabel,
+    SendAs, Series,
 };
 
 /// Gmail operations for one account.
@@ -18,6 +19,13 @@ pub trait GmailApi: Send + Sync + 'static {
     /// and a mail action waiting out a 429 marks itself on it. A fake
     /// nobody paces answers `None`, and then nothing waits for anything.
     fn quota(&self) -> Option<&AccountQuota> {
+        None
+    }
+
+    /// The scopes this account is believed to have granted, or `None`
+    /// while that is not known yet. A caller that does not track consent
+    /// answers `None`, which reads as "nothing withheld".
+    fn granted(&self) -> Option<Granted> {
         None
     }
 
@@ -328,6 +336,10 @@ pub struct AccountClient {
 impl GmailApi for AccountClient {
     fn quota(&self) -> Option<&AccountQuota> {
         Some(self.client.quota())
+    }
+
+    fn granted(&self) -> Option<Granted> {
+        self.client.granted()
     }
 
     async fn profile(&self) -> Result<Profile, GmailError> {
