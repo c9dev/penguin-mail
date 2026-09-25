@@ -34,10 +34,21 @@ click through Google's "unverified app" notice once per account.
 
 ## Data Access
 
-| Field | Value |
+Add the five scopes Penguin Mail asks for at sign-in. Google compares this
+list with what the app asks for, so keep them the same.
+
+| Scope | What Penguin Mail does with it |
 |---|---|
-| Scope | `https://mail.google.com/` |
-| Justification | Only asked during verification. If you need one: "Penguin Mail is a desktop mail client. It reads messages to display them, changes labels to archive, star, and mark mail read, moves messages to trash, saves drafts, sends mail the user writes, and erases mail for good when the user chooses Delete Forever. Mail is stored only on the user's computer." |
+| `https://mail.google.com/` | Reads, sends, labels, archives and drafts mail, and erases mail for good when you choose Delete Forever or Empty Trash |
+| `https://www.googleapis.com/auth/gmail.settings.basic` | Manages filters for Rules and Hide My Email, turns the automatic reply on and off, and reads your send-as addresses |
+| `https://www.googleapis.com/auth/contacts` | Reads your contacts to complete addresses, and saves or edits a contact when you ask |
+| `https://www.googleapis.com/auth/calendar.events` | Shows your events, answers invitations, and creates or changes events when you ask |
+| `https://www.googleapis.com/auth/calendar.calendarlist.readonly` | Lists your calendars with their names and colors |
+
+Google asks for a justification only during verification. If you need one:
+"Penguin Mail is a desktop mail client. It uses each scope for the feature
+named above, only on the user's request or to show the user their own data.
+Mail, contacts and calendars are stored only on the user's computer."
 
 ## Clients
 
