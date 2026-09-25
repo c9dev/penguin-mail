@@ -1,10 +1,11 @@
-//! Sample mail for `penguin-mail --demo`: three accounts and a few weeks of
+//! Sample mail for `penguin-mail --demo`: four accounts and a few weeks of
 //! conversations. Every address uses a reserved `.example` domain.
 //!
-//! Each account gets a `FakeGmail` holding this mail, and sync's own first
-//! sync against it fills a throwaway store, so the demo opens on a full
-//! inbox that holds what a real account's store would. From there the demo
-//! runs the same code as a real account.
+//! Three accounts get a `FakeGmail` holding their mail, and the fourth, on
+//! Fastmail, gets a `FakeImap`, so the demo shows a folder account too.
+//! Sync's own first sync against each fills a throwaway store, so the demo
+//! opens on a full inbox that holds what a real account's store would.
+//! From there the demo runs the same code as a real account.
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -13,9 +14,10 @@ use mailrs_domain::{
     AccountId, Address, Attachment, EpochMillis, MessageBody, MessageMeta, Provenance,
 };
 use mailrs_gmail::{LabelColor, RemoteLabel, SendAs};
-use mailrs_store::{Db, Result, accounts, address_book, invitations};
-use mailrs_sync::fake::{FakeGmail, fill_store};
-use mailrs_sync::{AccountServices, AccountSync, SyncError};
+use mailrs_store::servers::{self, Saved, Security, Servers};
+use mailrs_store::{Db, Result, StoreError, accounts, address_book, invitations};
+use mailrs_sync::fake::{FakeGmail, FakeImap, FakeSmtp, fill_store};
+use mailrs_sync::{AccountServices, AccountSync, DEFAULT_WINDOW_DAYS, ImapSettings, SyncError};
 use rusqlite::Connection;
 
 mod pages;
@@ -631,24 +633,48 @@ fn samples() -> Vec<Sample> {
     ]
 }
 
-/// Gmail for demo mode: one in-memory mailbox per sample account. The demo
-/// keeps them for as long as the app runs, so rules, hidden addresses, and
-/// automatic replies made in the demo survive a sync restart.
-pub struct DemoGmail(HashMap<AccountId, Arc<FakeGmail>>);
+/// What the demo's accounts talk to: an in-memory Gmail for each Gmail
+/// sample account and an in-memory IMAP server for the Fastmail one. The
+/// demo keeps them for as long as the app runs, so rules, hidden
+/// addresses, and automatic replies made in the demo survive a sync
+/// restart.
+pub struct DemoMail(HashMap<AccountId, DemoServer>);
 
-impl DemoGmail {
-    pub fn account(&self, account_id: AccountId) -> Option<Arc<FakeGmail>> {
-        self.0.get(&account_id).cloned()
+enum DemoServer {
+    Gmail(Arc<FakeGmail>),
+    Imap(Arc<FakeImap>, Arc<FakeSmtp>),
+}
+
+impl DemoMail {
+    /// A demo account's services, built the way a real account's are.
+    pub fn services(&self, account_id: AccountId) -> Option<AccountServices> {
+        Some(match self.0.get(&account_id)? {
+            DemoServer::Gmail(gmail) => AccountServices::fake(Arc::clone(gmail)),
+            DemoServer::Imap(imap, smtp) => AccountServices::fake_imap_with(
+                Arc::clone(imap),
+                Arc::clone(smtp),
+                fastmail_settings(),
+            ),
+        })
+    }
+
+    /// The Gmail behind a demo Gmail account.
+    #[cfg(test)]
+    fn gmail(&self, account_id: AccountId) -> Option<Arc<FakeGmail>> {
+        match self.0.get(&account_id)? {
+            DemoServer::Gmail(gmail) => Some(Arc::clone(gmail)),
+            DemoServer::Imap(..) => None,
+        }
     }
 }
 
 /// Adds the demo accounts to an empty store, puts the samples in each
-/// one's Gmail, and lets sync fill the store from there. Each body the
-/// store can hold is read once through sync's cache, so opening a sample
-/// asks Gmail nothing and the invitation cards have their events.
-pub async fn seed(db: &Db, now: EpochMillis) -> std::result::Result<DemoGmail, SyncError> {
+/// one's server, and lets sync fill the store from there. Each Gmail body
+/// the store can hold is read once through sync's cache, so opening a
+/// sample asks Gmail nothing and the invitation cards have their events.
+pub async fn seed(db: &Db, now: EpochMillis) -> std::result::Result<DemoMail, SyncError> {
     let samples = samples();
-    let mut gmail = HashMap::new();
+    let mut mail = HashMap::new();
     for (index, account) in ACCOUNTS.iter().enumerate() {
         let email = account.email;
         let account_id = db
@@ -679,9 +705,228 @@ pub async fn seed(db: &Db, now: EpochMillis) -> std::result::Result<DemoGmail, S
         if index == 0 {
             queue_samples(db, account_id, now).await?;
         }
-        gmail.insert(account_id, fake);
+        mail.insert(account_id, DemoServer::Gmail(fake));
     }
-    Ok(DemoGmail(gmail))
+    let (account_id, server) = seed_fastmail(db, now).await?;
+    mail.insert(account_id, server);
+    Ok(DemoMail(mail))
+}
+
+/// The demo's fourth account, on an IMAP server rather than Gmail, so
+/// screenshots and the accessibility walk cover a folder account: Move to
+/// Folder, the Not Available lines, no category bar.
+const FASTMAIL: &str = "dana@fastmail.example";
+
+/// The folders the demo's IMAP server has beyond the six `FakeImap::new`
+/// starts with (INBOX, Sent, Drafts, Trash, Junk and Archive, each with
+/// its special use): three of the person's own, one inside another. The
+/// fake separates levels with `/`, and a parent comes before its child.
+const FOLDERS: [&str; 3] = ["Receipts", "Projects", "Projects/Garden"];
+
+/// One message on the demo's IMAP server. Header names stay ASCII, as
+/// mail on the wire has them; the text can be anything.
+struct Letter {
+    mailbox: &'static str,
+    id: &'static str,
+    from: (&'static str, &'static str),
+    to: (&'static str, &'static str),
+    subject: &'static str,
+    minutes_ago: i64,
+    seen: bool,
+    flagged: bool,
+    /// The letter this one answers, named in In-Reply-To and References.
+    replies_to: Option<&'static str>,
+    text: &'static str,
+}
+
+const INES: (&str, &str) = ("Ines Duarte", "ines@allotment.example");
+const DANA: (&str, &str) = (DISPLAY_NAME, FASTMAIL);
+
+fn letters() -> [Letter; 6] {
+    [
+        Letter {
+            mailbox: "INBOX",
+            id: "allotment-1",
+            from: INES,
+            to: DANA,
+            subject: "Allotment rota for October",
+            minutes_ago: 9 * HOUR,
+            seen: true,
+            flagged: false,
+            replies_to: None,
+            text: "Hi all,\n\nThe October rota is up on the shed door. Dana, you have the first two Saturdays. Could you check the water butts while you are there?\n\nInês",
+        },
+        Letter {
+            mailbox: "INBOX",
+            id: "allotment-2",
+            from: ("Tomas Silva", "tomas@allotment.example"),
+            to: DANA,
+            subject: "Re: Allotment rota for October",
+            minutes_ago: 5 * HOUR,
+            seen: false,
+            flagged: false,
+            replies_to: Some("allotment-1"),
+            text: "I can swap the 18th with anyone who wants it. The pumpkins will need picking that week.\n\nTomás",
+        },
+        Letter {
+            mailbox: "Sent",
+            id: "butts-1",
+            from: DANA,
+            to: INES,
+            subject: "Water butts",
+            minutes_ago: 3 * DAY,
+            seen: true,
+            flagged: false,
+            replies_to: None,
+            text: "Inês,\n\nThe left water butt has a crack near the tap. I'll bring a new one on Saturday.\n\nDana",
+        },
+        Letter {
+            mailbox: "Receipts",
+            id: "order-1",
+            from: ("Alder Books", "orders@alderbooks.example"),
+            to: DANA,
+            subject: "Your order has shipped",
+            minutes_ago: 2 * DAY,
+            seen: true,
+            flagged: false,
+            replies_to: None,
+            text: "Your copy of The Overstory left our shop today and should reach you by Thursday.\n\nAlder Books",
+        },
+        Letter {
+            mailbox: "Projects/Garden",
+            id: "seeds-1",
+            from: ("Hollin Seeds", "hello@hollinseeds.example"),
+            to: DANA,
+            subject: "Seed catalogue for spring",
+            minutes_ago: 6 * DAY,
+            seen: true,
+            flagged: false,
+            replies_to: None,
+            text: "Our spring catalogue is out, with twelve new tomatoes and a broad bean that shrugs off frost.\n\nHollin Seeds",
+        },
+        Letter {
+            mailbox: "Archive",
+            id: "fair-1",
+            from: INES,
+            to: DANA,
+            subject: "Photos from the harvest fair",
+            minutes_ago: 9 * DAY,
+            seen: true,
+            flagged: true,
+            replies_to: None,
+            text: "Dana,\n\nThe photos from the fair are in the shared album. The marrow picture is the best one.\n\nInês",
+        },
+    ]
+}
+
+impl Letter {
+    fn at(&self, now: EpochMillis) -> EpochMillis {
+        now - self.minutes_ago * 60 * 1000
+    }
+
+    fn flags(&self) -> Vec<&'static str> {
+        let mut flags = Vec::new();
+        if self.seen {
+            flags.push("\\Seen");
+        }
+        if self.flagged {
+            flags.push("\\Flagged");
+        }
+        flags
+    }
+
+    /// The message as the server holds it.
+    fn raw(&self, now: EpochMillis) -> Vec<u8> {
+        let date = chrono::DateTime::from_timestamp_millis(self.at(now))
+            .unwrap_or_default()
+            .to_rfc2822();
+        let answers = self
+            .replies_to
+            .map(|id| {
+                format!(
+                    "In-Reply-To: <{id}@fastmail.example>\r\nReferences: <{id}@fastmail.example>\r\n"
+                )
+            })
+            .unwrap_or_default();
+        format!(
+            "From: {} <{}>\r\nTo: {} <{}>\r\nSubject: {}\r\nDate: {date}\r\n\
+             Message-ID: <{}@fastmail.example>\r\n{answers}MIME-Version: 1.0\r\n\
+             Content-Type: text/plain; charset=utf-8\r\nContent-Transfer-Encoding: 8bit\r\n\r\n{}\r\n",
+            self.from.0, self.from.1, self.to.0, self.to.1, self.subject, self.id, self.text,
+        )
+        .into_bytes()
+    }
+}
+
+/// The demo's Fastmail account as its adapter sees it: its own address,
+/// and Fastmail's sent-copy rule from the provider table, as a real
+/// Fastmail account reads it at start.
+fn fastmail_settings() -> ImapSettings {
+    ImapSettings {
+        address: FASTMAIL.to_string(),
+        provider_name: "Fastmail".to_string(),
+        files_sent_mail: mailrs_discover::provider_named("Fastmail")
+            .is_some_and(|provider| provider.files_sent_mail),
+        window_days: DEFAULT_WINDOW_DAYS,
+    }
+}
+
+/// The servers the demo's Fastmail account keeps, so Sign In Again has
+/// something to open on. Nothing connects to them.
+fn fastmail_servers() -> Servers {
+    let saved = |host: &str, port| Saved {
+        host: host.to_string(),
+        port,
+        security: Security::Tls,
+        user_name: FASTMAIL.to_string(),
+    };
+    Servers {
+        imap: saved("imap.fastmail.example", 993),
+        smtp: saved("smtp.fastmail.example", 465),
+    }
+}
+
+/// Adds the Fastmail account, fills its IMAP server with the letters,
+/// and lets sync fill the store from it.
+async fn seed_fastmail(
+    db: &Db,
+    now: EpochMillis,
+) -> std::result::Result<(AccountId, DemoServer), SyncError> {
+    let account_id = db
+        .write(move |c| {
+            // The store is new, so nothing else holds the address.
+            let id = accounts::insert_imap_account(c, FASTMAIL, "Fastmail", now)?.ok_or(
+                StoreError::Corrupt {
+                    column: "accounts.provider",
+                    value: FASTMAIL.to_string(),
+                },
+            )?;
+            servers::save(c, id, &fastmail_servers())?;
+            Ok(id)
+        })
+        .await?;
+    let imap = Arc::new(FakeImap::new());
+    for name in FOLDERS {
+        imap.add_mailbox(name, None);
+    }
+    for letter in letters() {
+        // The fake delivers mail unread, as a server does; the flags a
+        // letter carries go on after, as another client would set them.
+        let uid = imap.deliver(letter.mailbox, letter.raw(now), letter.at(now));
+        for flag in letter.flags() {
+            imap.remote_flag(letter.mailbox, uid, flag, true);
+        }
+    }
+    let smtp = Arc::new(FakeSmtp::default());
+    let (events, _) = async_channel::unbounded();
+    let sync = AccountSync::new(
+        account_id,
+        AccountServices::fake_imap_with(Arc::clone(&imap), Arc::clone(&smtp), fastmail_settings()),
+        db.clone(),
+        events,
+    );
+    fill_store(&sync).await?;
+    Ok((account_id, DemoServer::Imap(imap, smtp)))
 }
 
 /// Puts two messages in the first account's outbox, so the Outbox and
@@ -1305,11 +1550,11 @@ mod tests {
 
     use super::*;
 
-    /// A demo store, its Gmail, and the time it was seeded at. The fake
+    /// A demo store, its mail, and the time it was seeded at. The fake
     /// searches by the clock, so the samples hang off the real time.
     struct Demo {
         db: Db,
-        gmail: DemoGmail,
+        mail: DemoMail,
         now: EpochMillis,
         _dir: tempfile::TempDir,
     }
@@ -1318,10 +1563,10 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let db = Db::open(&dir.path().join("demo.db")).unwrap();
         let now = now_millis();
-        let gmail = seed(&db, now).await.unwrap();
+        let mail = seed(&db, now).await.unwrap();
         Demo {
             db,
-            gmail,
+            mail,
             now,
             _dir: dir,
         }
@@ -1338,6 +1583,15 @@ mod tests {
                 .id
         }
 
+        async fn fastmail(&self) -> AccountId {
+            self.db
+                .read(|c| accounts::account_by_email(c, FASTMAIL))
+                .await
+                .unwrap()
+                .expect("the Fastmail account is stored")
+                .id
+        }
+
         async fn threads(&self, filter: ThreadFilter) -> Vec<mailrs_domain::ThreadSummary> {
             self.db
                 .read(move |c| threads::list_threads(c, &filter, 0, 100))
@@ -1347,8 +1601,8 @@ mod tests {
 
         /// Ids a search brings back from one account's demo Gmail.
         async fn found(&self, account: AccountId, query: &str) -> Vec<String> {
-            self.gmail
-                .account(account)
+            self.mail
+                .gmail(account)
                 .expect("the account has a mailbox")
                 .list_messages(query, None, mailrs_sync::ID_PAGE_SIZE)
                 .await
@@ -1358,6 +1612,62 @@ mod tests {
                 .map(|m| m.id)
                 .collect()
         }
+    }
+
+    #[tokio::test]
+    async fn the_fourth_account_is_fastmail_on_imap_and_files_in_folders() {
+        let demo = demo().await;
+        let id = demo.fastmail().await;
+        let account = demo
+            .db
+            .read(|c| accounts::account_by_email(c, FASTMAIL))
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(account.provider, mailrs_domain::Provider::Imap);
+        assert_eq!(account.provider_name(), "Fastmail");
+        let offers = demo
+            .mail
+            .services(id)
+            .expect("the account has a server")
+            .offers();
+        assert!(!offers.labels);
+        assert!(!offers.categories);
+        assert!(!offers.calendar && !offers.contacts && !offers.rules && !offers.auto_reply);
+    }
+
+    #[tokio::test]
+    async fn the_fastmail_folders_and_mail_reach_the_store() {
+        let demo = demo().await;
+        let id = demo.fastmail().await;
+        let names: Vec<String> = demo
+            .db
+            .read(move |c| mailrs_store::mailboxes::listed(c, id))
+            .await
+            .unwrap()
+            .into_iter()
+            .map(|mailbox| mailbox.name)
+            .collect();
+        assert!(names.iter().any(|name| name == "Receipts"), "{names:?}");
+        // The reply names the first message in In-Reply-To, so local
+        // threading puts the two in one conversation.
+        let inbox = demo
+            .threads(ThreadFilter::account(id, MailSet::Role(Role::Inbox)))
+            .await;
+        assert_eq!(inbox.len(), 1);
+        assert_eq!(inbox[0].message_count, 2);
+    }
+
+    #[tokio::test]
+    async fn the_fastmail_servers_are_kept_for_signing_in_again() {
+        let demo = demo().await;
+        let id = demo.fastmail().await;
+        let kept = demo
+            .db
+            .read(move |c| mailrs_store::servers::load(c, id))
+            .await
+            .unwrap();
+        assert_eq!(kept, Some(fastmail_servers()));
     }
 
     #[tokio::test]
@@ -1407,14 +1717,17 @@ mod tests {
             .into_iter()
             .map(|f| f.thread_id)
             .collect();
-        assert_eq!(waiting, ["t-invoice", "t-lease"]);
+        // Fastmail's Water butts message, sent to Inês three days ago with
+        // no reply, waits too: the follow-up query reads any account's Sent
+        // mailbox by role, not only Gmail's.
+        assert_eq!(waiting, ["Sent/1002/1", "t-invoice", "t-lease"]);
     }
 
     #[tokio::test]
     async fn a_sent_reply_lands_in_sent_and_in_its_conversation() {
         let demo = demo().await;
         let work = demo.account(1).await;
-        let fake = demo.gmail.account(work).unwrap();
+        let fake = demo.mail.gmail(work).unwrap();
         let (events, _) = async_channel::unbounded();
         let sync = AccountSync::new(
             work,
@@ -1534,7 +1847,7 @@ mod tests {
         assert_eq!(threads[0].id, "t-hike");
         let accounts_seen: std::collections::HashSet<_> =
             threads.iter().map(|t| t.account_id).collect();
-        assert_eq!(accounts_seen.len(), 3);
+        assert_eq!(accounts_seen.len(), 4);
         assert_eq!(
             demo.threads(ThreadFilter::unified(MailSet::Role(Role::Drafts)))
                 .await
@@ -1592,7 +1905,7 @@ mod tests {
     async fn attachments_and_the_sample_draft_come_from_the_demo_gmail() {
         let demo = demo().await;
         let work = demo.account(1).await;
-        let api = demo.gmail.account(work).expect("the account has a mailbox");
+        let api = demo.mail.gmail(work).expect("the account has a mailbox");
         let listed = api.list_drafts().await.unwrap();
         assert_eq!(listed.len(), 1);
         assert_eq!(listed[0].draft_id, DRAFT_ID);

@@ -1088,21 +1088,21 @@ msgstr ""
 msgid "Penguin Mail could not update its mail store, and kept the old one."
 msgstr ""
 
-#: app/src/core.rs:620 app/src/core.rs:689
+#: app/src/core.rs:619 app/src/core.rs:688
 msgid "Demo mode cannot add real accounts."
 msgstr ""
 
-#: app/src/core.rs:624
+#: app/src/core.rs:623
 msgid ""
 "This copy of Penguin Mail was built without Google sign-in. Get a release "
 "from github.com/c9dev/penguin-mail/releases."
 msgstr ""
 
-#: app/src/core.rs:642
+#: app/src/core.rs:641
 msgid "Gave up waiting for the browser after five minutes."
 msgstr ""
 
-#: app/src/core.rs:650
+#: app/src/core.rs:649
 msgid "You signed in as {account}. Choose {wanted} to reconnect that account."
 msgstr ""
 

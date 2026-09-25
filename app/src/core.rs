@@ -31,7 +31,7 @@ use mailrs_sync::{
 
 use crate::add_account::Attempt;
 use crate::assistant::run::{Background, Modules};
-use crate::demo::{self, DemoGmail};
+use crate::demo::{self, DemoMail};
 use mailrs_domain::translate::{fill, gettext};
 
 /// The store could not be updated to this version, and the copy taken
@@ -89,8 +89,8 @@ pub struct Core {
     runtime: tokio::runtime::Runtime,
     pub db: Db,
     pub demo: bool,
-    /// The sample accounts' Gmail, in demo mode only.
-    demo_gmail: Option<Arc<DemoGmail>>,
+    /// The sample accounts' servers, in demo mode only.
+    demo_mail: Option<Arc<DemoMail>>,
     engine: Arc<RunningEngine>,
     actions: Arc<Actions>,
     lists: Arc<Lists>,
@@ -201,7 +201,7 @@ impl Core {
                 Err(err) => return Err(err.into()),
             }
         };
-        let demo_gmail = if demo {
+        let demo_mail = if demo {
             let seeded = runtime.block_on(demo::seed(&db, now_millis()))?;
             Some(Arc::new(seeded))
         } else {
@@ -231,7 +231,7 @@ impl Core {
             runtime,
             db,
             demo,
-            demo_gmail,
+            demo_mail,
             engine,
             actions,
             lists,
@@ -310,7 +310,7 @@ impl Core {
             self.db.clone(),
             Arc::clone(&self.tokens),
             Arc::clone(&self.passwords),
-            self.demo_gmail.clone(),
+            self.demo_mail.clone(),
             self.events_tx.clone(),
         );
         let window_days = config.engine_config().window_days;
@@ -321,8 +321,7 @@ impl Core {
                     // The demo's accounts talk to their sample servers and
                     // need no Google client and no password.
                     (Some(demo), _) => demo
-                        .account(account.id)
-                        .map(AccountServices::fake)
+                        .services(account.id)
                         .ok_or_else(|| anyhow!("the demo has no mailbox for {}", account.email)),
                     (None, Provider::Gmail) => {
                         match account_client(&db, &config, built_in_client(), &account).await {
