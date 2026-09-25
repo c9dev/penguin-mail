@@ -6,9 +6,12 @@ mod history;
 mod labels;
 mod listed;
 mod outbox;
+mod refs;
 mod threads;
 mod window;
 mod writes;
+
+pub use listed::Searched;
 
 use std::collections::BTreeSet;
 use std::sync::{Arc, Mutex, PoisonError};
@@ -103,16 +106,18 @@ impl AccountSync {
     }
 
     /// The message as the server holds it, from the raw cache or from one
-    /// fetch, which fills the cache when the message is under the limit
-    /// by its bytes or by the size the store holds for it.
+    /// fetch by the server's current name for it, which fills the cache
+    /// when the message is under the limit by its bytes or by the size the
+    /// store holds for it.
     pub(crate) async fn raw(&self, message_id: &str) -> Result<Arc<Vec<u8>>, SyncError> {
         if let Some(bytes) = self.cached_raw(message_id) {
             return Ok(bytes);
         }
+        let name = self.remote(message_id).await?;
         let fetched = self
             .services
             .mail
-            .fetch_raw(&[message_id.to_string()])
+            .fetch_raw(&[name])
             .await?
             .into_iter()
             .next()

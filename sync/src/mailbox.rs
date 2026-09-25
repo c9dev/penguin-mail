@@ -890,7 +890,8 @@ impl<A: Accounts> Mailboxes<A> {
     }
 
     /// Fetches metadata up to the `wanted`th id of every account, listing
-    /// the ids first for an account that has none yet.
+    /// the ids first for an account that has none yet. An account whose
+    /// server did not run the search says so once, when it is listed.
     async fn fetch_page(
         &self,
         listing: &mut RemoteListing,
@@ -909,10 +910,13 @@ impl<A: Accounts> Mailboxes<A> {
                 let query = listing.query.clone();
                 async move {
                     let Some(sync) = sync else {
-                        return Ok(page);
+                        return Ok((page, false));
                     };
+                    let mut store_only = false;
                     if !page.listed {
-                        page.ids = sync.search_ids(&query, limit).await?;
+                        let found = sync.search_listing(&query, limit).await?;
+                        page.ids = found.refs;
+                        store_only = found.store_only;
                         page.listed = true;
                     }
                     let take = wanted.min(page.ids.len());
@@ -921,13 +925,24 @@ impl<A: Accounts> Mailboxes<A> {
                         page.metas.extend(next);
                         page.fetched = take;
                     }
-                    Ok(page)
+                    Ok((page, store_only))
                 }
             });
-        let results: Vec<Result<RemotePage, SyncError>> = futures::future::join_all(loads).await;
+        let results: Vec<Result<(RemotePage, bool), SyncError>> =
+            futures::future::join_all(loads).await;
         for (account, result) in targets.iter().zip(results) {
             match result {
-                Ok(page) => listing.pages.push(page),
+                Ok((page, store_only)) => {
+                    if store_only {
+                        listing.notices.push(fill(
+                            &gettext(
+                                "Results for {account} come from the mail on this computer alone",
+                            ),
+                            &[("account", &account.email)],
+                        ));
+                    }
+                    listing.pages.push(page);
+                }
                 Err(err) => {
                     listing.notices.push(fill(
                         &gettext("Could not load mail for {account}: {reason}"),

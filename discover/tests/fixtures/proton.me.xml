@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<clientConfig version="1.1">
+  <emailProvider id="protonmail.com">
+    <domain>protonmail.com</domain>
+    <displayName>ProtonMail</displayName>
+    <displayShortName>ProtonMail</displayShortName>
+    <incomingServer type="imap">
+      <hostname>127.0.0.1</hostname>
+      <port>1143</port>
+      <socketType>STARTTLS</socketType>
+      <authentication>password-cleartext</authentication>
+      <username>%EMAILADDRESS%</username>
+    </incomingServer>
+    <outgoingServer type="smtp">
+      <hostname>127.0.0.1</hostname>
+      <port>1025</port>
+      <socketType>STARTTLS</socketType>
+      <authentication>password-cleartext</authentication>
+      <username>%EMAILADDRESS%</username>
+    </outgoingServer>
+    <documentation url="https://protonmail.com/support">
+      <descr lang="en">Support page</descr>
+    </documentation>
+  </emailProvider>
+</clientConfig>

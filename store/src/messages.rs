@@ -340,6 +340,24 @@ pub fn set_unsubscribe(
     Ok(())
 }
 
+/// Marks `keyword` on each of `ids` as kept on this computer: the server
+/// cannot store it, so no sync sends it back or takes it away.
+pub fn mark_local(
+    conn: &Connection,
+    account_id: AccountId,
+    ids: &[String],
+    keyword: &str,
+) -> Result<()> {
+    let mut stmt = conn.prepare_cached(
+        "UPDATE message_keywords SET local = 1 \
+         WHERE account_id = ?1 AND message_id = ?2 AND keyword = ?3",
+    )?;
+    for id in ids {
+        stmt.execute(params![account_id, id, keyword])?;
+    }
+    Ok(())
+}
+
 /// Replaces what a stored message is in and carries. A keyword marked
 /// local stays, since the server never sent it and would not send it back.
 fn replace_memberships(

@@ -111,4 +111,5 @@ sync/src/actions.rs
 sync/src/actions/labelling.rs
 sync/src/error.rs
 sync/src/mailbox.rs
+sync/src/services/imap/outgoing.rs
 sync/src/triage.rs

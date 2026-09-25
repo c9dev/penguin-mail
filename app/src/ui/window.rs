@@ -716,6 +716,8 @@ impl MainWindow {
             // minute. Say so, or the window looks stuck and the reader
             // presses Delete again.
             ChangeEvent::WaitingOnGmail { message, .. } => self.toast(message),
+            // The LabelsChanged sent with it redraws the sidebar.
+            ChangeEvent::ArchiveMade { .. } => {}
         }
     }
 

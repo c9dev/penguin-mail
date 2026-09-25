@@ -40,7 +40,7 @@ mod tests;
 pub const WAIT_CEILING: std::time::Duration = std::time::Duration::from_secs(60);
 
 pub use account::{
-    AccountSync, DEFAULT_BODY_CACHE_BYTES, DEFAULT_WINDOW_DAYS, FETCH_CONCURRENCY,
+    AccountSync, DEFAULT_BODY_CACHE_BYTES, DEFAULT_WINDOW_DAYS, FETCH_CONCURRENCY, Searched,
 };
 pub use actions::{
     Accounts, Categorized, Failure, History, MailAction, MailActions, NewLabels, Outcome, Returned,
@@ -66,9 +66,10 @@ pub use outbox::{Cancelled, Drained, Outbox, Posted};
 pub use services::{
     AccountServices, AnyAutoReply, Backfill, Found, ID_PAGE_SIZE, LIST_PAGE_SIZE, RawMessage,
     RemoteRef, SearchQuery, Want, AnyCalendar, AnyContacts, AnyIdentities, AnyMail, AnyRules,
-    AutoReplyService, CalendarService, ContactsService, Google, IdentityService, MailBackend,
-    MailCapabilities, Missing, Offers, Priority, RemoteChange, RulesService, SendAsAddress,
-    SyncState, Unapplied, Changes, RAW_LIMIT, background,
+    AutoReplyService, CalendarService, ContactsService, Google, Imap, ImapApi, ImapSettings,
+    IdentityService, KeywordsOf, KeywordsPage, MailBackend, MailCapabilities, Missing, Offers,
+    Priority, Relocated, RemoteChange,
+    RulesService, SendAsAddress, SyncState, Unapplied, Changes, RAW_LIMIT, Submit, background,
 };
 pub use settings::{AccountSettings, AutomaticReply, HIDE_MY_EMAIL_LABEL, Permitted};
 pub use triage::TriageAction;

@@ -1,0 +1,29 @@
+[package]
+name = "mailrs-imap"
+version.workspace = true
+license.workspace = true
+repository.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+mailrs-discover.workspace = true
+mailrs-domain.workspace = true
+mailrs-mime.workspace = true
+async-imap.workspace = true
+base64.workspace = true
+chrono.workspace = true
+lettre.workspace = true
+mail-parser.workspace = true
+rustls.workspace = true
+rustls-platform-verifier.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+tokio-rustls.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+
+[dev-dependencies]
+# `start_paused` lets a test wait out an IDLE or a stale connection
+# without waiting itself.
+tokio = { workspace = true, features = ["test-util"] }
