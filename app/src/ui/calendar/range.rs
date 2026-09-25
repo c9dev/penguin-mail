@@ -14,7 +14,7 @@ const DAY_MS: EpochMillis = 24 * 60 * 60 * 1000;
 /// How many days the narrow agenda's first window covers.
 const AGENDA_WINDOW: u64 = 60;
 
-/// How many earlier days one scroll-to-top load adds (Task 7).
+/// How many earlier days one scroll-to-top load adds.
 const AGENDA_STEP: u64 = 30;
 
 /// Which grid the calendar page shows. Kept in [`crate::settings`], not
@@ -154,7 +154,7 @@ impl Range {
 }
 
 /// The narrow agenda's first window: `today` and the 59 days after it,
-/// 60 in all (Task 7 step 1).
+/// 60 in all.
 pub fn agenda_window(today: NaiveDate) -> (NaiveDate, NaiveDate) {
     (today, today + Days::new(AGENDA_WINDOW - 1))
 }
@@ -168,7 +168,7 @@ pub fn earlier(first: NaiveDate) -> NaiveDate {
 /// The earliest day the local copy could hold events for, counting back
 /// from `today` by [`FIRST_READ_BACK`]. The copy keeps no record of
 /// when its first read ran, so this is as close as the agenda can get
-/// to knowing where its data runs out (reconcile.md Task 7 item 1).
+/// to knowing where its data runs out.
 pub fn earliest_kept_day(today: NaiveDate) -> NaiveDate {
     today - Days::new((FIRST_READ_BACK / DAY_MS) as u64)
 }

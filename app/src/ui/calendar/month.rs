@@ -1,7 +1,7 @@
 //! `MonthGrid`, the month view: 42 date cells in a fixed 6×7 grid, each
 //! holding a few compact [`EventBlock`]s and, once it is crowded, an "N
-//! more" button that lists the whole day in a popover, as the spec's
-//! Month section asks. The day's own number opens that day in Day view.
+//! more" button that lists the whole day in a popover. The day's own
+//! number opens that day in Day view.
 
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
@@ -19,9 +19,9 @@ use super::time_grid::focused_key;
 use super::words;
 
 /// Rows a cell keeps for events before folding the rest into "N more",
-/// until [`MonthGrid::set_rows`] answers a narrower window's breakpoint.
-/// Reconcile.md Task 5 item 8: a fixed rule rather than measuring the
-/// grid's own allocation.
+/// until [`MonthGrid::set_rows`] answers a shorter window's breakpoint:
+/// a fixed rule, since measuring the grid's own allocation to decide
+/// what it holds would lay it out twice.
 const DEFAULT_ROWS: usize = 4;
 
 /// What `show` was last called with, kept so [`MonthGrid::set_rows`] can
@@ -83,8 +83,7 @@ impl MonthGrid {
     /// Rebuilds every cell: `range` is the six-week `ViewKind::Month`
     /// range around the month shown; a day outside that month is
     /// dimmed. An all-day occurrence places by its own UTC date, a timed
-    /// one by local wall time, matching every other calendar view
-    /// (reconcile.md, "Every task" item 8).
+    /// one by local wall time, matching every other calendar view.
     pub fn show(
         self: &Rc<Self>,
         range: Range,
@@ -97,7 +96,7 @@ impl MonthGrid {
     }
 
     /// Answers the window's breakpoint: 3 rows below 720sp window height,
-    /// 4 at or above it (reconcile.md Task 5 item 8). Redraws at once
+    /// 4 at or above it. Redraws at once
     /// when a month is already shown.
     pub fn set_rows(self: &Rc<Self>, rows: usize) {
         self.rows_that_fit.set(rows.max(2));
@@ -215,7 +214,7 @@ fn day_occurrences(occurrences: &[Occurrence], day: NaiveDate) -> Vec<&Occurrenc
 }
 
 /// The date button a cell opens its day with: the number visible, the
-/// full date spoken (reconcile.md Task 5 item 9), today in the accent
+/// full date spoken, since "24" alone says nothing, today in the accent
 /// pill and a day outside `month` dimmed.
 fn day_heading(day: NaiveDate, today: NaiveDate, month: NaiveDate) -> gtk::Button {
     let label = gtk::Label::builder()

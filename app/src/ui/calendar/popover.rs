@@ -1,10 +1,10 @@
 //! `EventPopover`, the small window an event block opens: what it is,
 //! when it runs, where, who else is coming, and Yes/Maybe/No for a
-//! guest. One popover serves the whole view (reconcile.md Task 5 item
-//! 4): parenting a popover to a block a reload later destroys would
-//! leave it dangling, so the view keeps one, parented to itself, and
-//! points it at whichever block was pressed with `set_pointing_to`.
-//! Edit and Delete wait for stage 3 (reconcile.md item 3).
+//! guest. One popover serves the whole view: parenting a popover to a
+//! block a reload later destroys would leave it dangling, so the view
+//! keeps one, parented to itself, and points it at whichever block was
+//! pressed with `set_pointing_to`. It has no Edit or Delete yet, since
+//! the calendar cannot change events yet.
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -19,12 +19,12 @@ use super::shown::{self, Refocus};
 use super::tint;
 use super::words;
 
-/// Guest names past this many collapse into "and N more" (the brief's
-/// "collapsed after 5").
+/// Guest names past this many collapse into "and N more", so a meeting
+/// of forty does not fill the tooltip.
 const MOST_GUESTS_SHOWN: usize = 5;
 
-/// The order the mockup answers in: Yes, Maybe, No (reconcile.md Task 5
-/// item 7; `Answer::ALL` orders Yes, No, Maybe, for the invitation card).
+/// The order the approved design answers in: Yes, Maybe, No.
+/// `Answer::ALL` orders Yes, No, Maybe, for the invitation card.
 const ANSWER_ORDER: [Answer; 3] = [Answer::Yes, Answer::Maybe, Answer::No];
 
 /// Whether the account is a guest worth asking: it holds a guest row of
@@ -265,8 +265,8 @@ impl EventPopover {
 
     /// Shows the popover for `o`, pointed at `anchor` (the block or "N
     /// more" button pressed). `on_answer` runs when a guest picks Yes,
-    /// Maybe or No; it covers the whole series (ruling R3), which the
-    /// caller's `on_answer` (Task 6) sends through
+    /// Maybe or No; it covers the whole series, since Google answers a
+    /// series by its uid, and the caller sends it through
     /// `Invitations::answer_event`.
     pub fn show(
         self: &Rc<Self>,
@@ -379,8 +379,8 @@ impl EventPopover {
 }
 
 /// Opens `link` in the browser, only when it is `https:`: a calendar
-/// event's link is whatever the organizer typed (reconcile.md Task 5
-/// item 5).
+/// event's link is whatever the organizer typed, and a `file:` or
+/// custom scheme must not open from a click on a meeting.
 fn open(link: &str, from: &impl IsA<gtk::Widget>) {
     if !link.starts_with("https://") {
         return;

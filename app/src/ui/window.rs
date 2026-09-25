@@ -128,8 +128,8 @@ pub struct MainWindow {
     stack: gtk::Stack,
     split: adw::OverlaySplitView,
     /// The mail's list and conversation, or the calendar, beside the
-    /// sidebar (ruling R7): inside `split`, so the sidebar and its Mail /
-    /// Calendar switch stay on screen with either.
+    /// sidebar: inside `split`, so the sidebar and its Mail / Calendar
+    /// switch stay on screen with either.
     spaces: gtk::Stack,
     nav: adw::NavigationSplitView,
     pub calendar: Rc<CalendarView>,

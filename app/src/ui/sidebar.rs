@@ -43,7 +43,8 @@ pub struct Sidebar {
     pub add_account: gtk::Button,
     /// Switches between the mail and the calendar. Its toggles are named
     /// `mail` and `calendar`; it hides while no account offers a
-    /// calendar, and "Mailboxes" shows in its place (ruling R9).
+    /// calendar, and "Mailboxes" shows in its place, since a switch to a
+    /// calendar that cannot show anything would only mislead.
     pub switch: adw::ToggleGroup,
     title: adw::WindowTitle,
     /// The mailbox list, or the calendar's own sidebar.
