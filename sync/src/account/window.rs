@@ -279,6 +279,7 @@ impl AccountSync {
     /// it works: anything Gmail changes after the fetch has a history id
     /// past the cursor and reaches the store through the next replay.
     pub async fn reconcile_inbox(&self) -> Result<(), SyncError> {
+        let _moves = self.hold_moves().await;
         let account_id = self.account_id;
         let cursor = self
             .db

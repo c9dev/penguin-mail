@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use mailrs_domain::query::{Query, Term};
-use mailrs_domain::{MailSet, Role};
+use mailrs_domain::{Folder, MailSet, Role};
 use mailrs_store::accounts;
 
 use super::{days_ago, message};
@@ -195,4 +195,84 @@ async fn a_typed_search_the_server_cannot_run_lists_from_this_computer_and_says_
         listing.notices,
         ["Results for me@example.com come from the mail on this computer alone"]
     );
+}
+
+/// Mailboxes over the harness's one account, and the scope that signs it
+/// in.
+async fn listings(h: &crate::tests::ImapHarness) -> (Mailboxes<Connected>, Scope) {
+    let signed_in = h.db.read(accounts::list_accounts).await.unwrap();
+    let lists = Mailboxes::new(
+        Arc::new(Connected(HashMap::from([(
+            h.account_id,
+            Arc::clone(&h.sync),
+        )]))),
+        h.db.clone(),
+    );
+    (lists, Scope::over(signed_in))
+}
+
+/// IMAP has no key for "in no Inbox, Sent, Drafts, Junk or Trash", so the
+/// server cannot run this folder's query. The listing ends with what it
+/// has rather than asking the account again and again.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_folder_the_server_cannot_search_ends_its_listing() {
+    let h = imap_harness().await;
+    h.bootstrap().await;
+    let (lists, scope) = listings(&h).await;
+    let archive = Mailbox::Folder {
+        account_id: Some(h.account_id),
+        folder: Folder::Archive,
+    };
+    let view = View {
+        now: crate::now_millis(),
+        ..View::default()
+    };
+
+    let listing = tokio::time::timeout(
+        std::time::Duration::from_secs(5),
+        lists.list(&archive, &scope, &view, Loaded::nothing()),
+    )
+    .await
+    .expect("the listing ends");
+
+    assert!(listing.is_ok());
+}
+
+/// An account whose search fails is listed once, with a notice, and not
+/// asked again and again for the rest of the page.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn an_account_whose_listing_fails_is_asked_once() {
+    let h = imap_harness().await;
+    h.imap.deliver_flagged(
+        "Archive",
+        &message("old", "Kites of 2025", ""),
+        &["\\Seen"],
+        days_ago(400),
+    );
+    h.bootstrap().await;
+    for _ in 0..50 {
+        h.imap
+            .fail_on("headers", mailrs_imap::ImapError::Network("reset".into()));
+    }
+    let (lists, scope) = listings(&h).await;
+    let search = Mailbox::Search {
+        query: "kites".into(),
+        account_id: None,
+    };
+    let view = View {
+        now: crate::now_millis(),
+        ..View::default()
+    };
+
+    let listing = tokio::time::timeout(
+        std::time::Duration::from_secs(5),
+        lists.list(&search, &scope, &view, Loaded::nothing()),
+    )
+    .await
+    .expect("the listing ends")
+    .unwrap();
+
+    assert_eq!(h.imap.calls_to("headers"), 1, "{:?}", h.imap.calls());
+    assert!(listing.rows.is_empty());
+    assert_eq!(listing.notices.len(), 1, "{:?}", listing.notices);
 }

@@ -438,6 +438,14 @@ impl<G: GmailApi> MailBackend for Google<G> {
     async fn uidvalidity(&self, _mailbox: &str) -> Result<Option<u32>, BackendError> {
         Ok(None)
     }
+
+    /// Gmail stores the same keywords whatever the label.
+    async fn keywords_stored(
+        &self,
+        _mailbox: &str,
+    ) -> Result<&'static [&'static str], BackendError> {
+        Ok(self.capabilities().keywords)
+    }
 }
 
 /// A Gmail label as a server mailbox. Gmail lists its keyword and category

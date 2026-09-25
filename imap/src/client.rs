@@ -293,7 +293,7 @@ impl<D: Dial> ImapClient<D> {
     ///
     /// A server that sends more during one IDLE than the guard lets
     /// through loses the connection, and the answer is
-    /// [`Woke::Changed`]: whatever it reported is lost with the
+    /// [`Woke::Dropped`]: whatever it reported is lost with the
     /// connection, and a sync of the mailbox finds it. Any other failure
     /// is an error, so a SELECT the guard refuses never reads as news.
     pub async fn idle(&self, mailbox: &str, limit: Duration) -> Result<Woke, ImapError> {
@@ -333,7 +333,7 @@ impl<D: Dial> ImapClient<D> {
                 *slot = Some(conn);
                 Ok(woke)
             }
-            Err(ImapError::Protocol(why)) if why == PAST_BUDGET => Ok(Woke::Changed),
+            Err(ImapError::Protocol(why)) if why == PAST_BUDGET => Ok(Woke::Dropped),
             Err(err) => Err(err),
         }
     }
@@ -731,13 +731,13 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn an_idle_past_its_budget_drops_the_connection_and_asks_for_a_sync() {
+    async fn an_idle_past_its_budget_drops_the_connection_and_says_so() {
         let (client, scripts) = client(vec![
             (GREETING, flooding_idler()),
             (GREETING, lister(log(), false)),
         ]);
         let woke = client.idle("INBOX", Duration::from_secs(60)).await;
-        assert_eq!(woke, Ok(Woke::Changed));
+        assert_eq!(woke, Ok(Woke::Dropped));
         assert_eq!(
             client.idle("INBOX", Duration::from_secs(60)).await,
             Ok(Woke::Changed)

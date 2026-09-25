@@ -1,5 +1,7 @@
+use mailrs_domain::Membership;
 use mailrs_domain::{ChangeEvent, MailSet, Role, Target};
-use mailrs_imap::UidSet;
+use mailrs_imap::{ImapError, UidSet};
+use mailrs_store::messages::{self, Change};
 use mailrs_store::{bodies, mailboxes};
 
 use super::{days_ago, message, offering};
@@ -58,11 +60,101 @@ async fn archiving_moves_the_message_and_its_remote_ref_follows() {
 }
 
 #[tokio::test]
+async fn a_look_at_the_server_during_a_move_keeps_the_moved_message() {
+    let (h, thread) = one_message_on(FakeImap::new()).await;
+    let hold = h.imap.hold_next_move();
+    let sync = std::sync::Arc::clone(&h.sync);
+    let archiving =
+        tokio::spawn(async move { sync.triage_thread(&thread, &TriageAction::Archive).await });
+    hold.reached().await;
+
+    // IDLE wakes on the move's own expunge, so a look can start while the
+    // write has not yet recorded where the message went.
+    let sync = std::sync::Arc::clone(&h.sync);
+    let looking = tokio::spawn(async move { sync.incremental().await });
+    // Give the look time to finish while the move is held, which it does
+    // when nothing makes it wait for the write.
+    for _ in 0..40 {
+        if looking.is_finished() {
+            break;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(5)).await;
+    }
+    hold.release();
+    archiving.await.unwrap().unwrap();
+    looking.await.unwrap().unwrap();
+    h.sync.incremental().await.unwrap();
+
+    assert_eq!(h.ids().await, ["INBOX/1001/1"]);
+    assert_eq!(
+        h.location("INBOX/1001/1").await.as_deref(),
+        Some("Archive/1006/1")
+    );
+}
+
+#[tokio::test]
+async fn a_refused_write_rolls_back_even_when_its_moves_cannot_be_recorded() {
+    let h = imap_harness().await;
+    h.imap
+        .deliver_flagged("INBOX", &message("a", "Kites", ""), &[], days_ago(2));
+    h.imap
+        .deliver_flagged("Sent", &message("b", "Moss", ""), &[], days_ago(1));
+    h.bootstrap().await;
+    // Made elsewhere since the mailboxes were last listed.
+    h.imap.add_mailbox("Projects", None);
+    let ids = ["INBOX/1001/1", "Sent/1002/1"];
+    let mut targets = Vec::new();
+    for id in ids {
+        let thread = h.thread_of(id).await.unwrap();
+        targets.push(Target::thread(h.account_id, thread));
+    }
+    // The first run moves; the second is refused, and the listing that
+    // would record the new mailbox fails too.
+    let hold = h.imap.hold_next_move();
+    let sync = std::sync::Arc::clone(&h.sync);
+    let moving = tokio::spawn(async move {
+        let to = TriageAction::MoveTo("Projects".into());
+        sync.triage_all(&targets, &to).await
+    });
+    hold.reached().await;
+    h.imap
+        .fail_on("move", ImapError::Refused("NO no room".into()));
+    h.imap.fail_on("list", ImapError::Network("reset".into()));
+    hold.release();
+    assert!(moving.await.unwrap().is_err());
+
+    for id in ids {
+        let at = h.location(id).await.unwrap();
+        let (mailbox, _) = at.split_once('/').unwrap();
+        assert_eq!(
+            h.stored(id).await.unwrap().held.mailboxes,
+            [mailbox],
+            "{id} sits in the store where it sits on the server"
+        );
+    }
+}
+
+#[tokio::test]
 async fn with_move_but_no_uidplus_the_new_place_is_found_by_message_id() {
     let (h, thread) = one_message_on(offering(|c| c.uidplus = false)).await;
 
     archive(&h, &thread).await;
 
+    assert_eq!(
+        h.location("INBOX/1001/1").await.as_deref(),
+        Some("Archive/1006/1")
+    );
+}
+
+#[tokio::test]
+async fn a_move_whose_search_failed_searches_again_without_moving_again() {
+    let (h, thread) = one_message_on(offering(|c| c.uidplus = false)).await;
+    h.imap
+        .fail_on("search Archive", ImapError::Network("reset".into()));
+
+    archive(&h, &thread).await;
+
+    assert_eq!(h.imap.calls_to("move"), 1);
     assert_eq!(
         h.location("INBOX/1001/1").await.as_deref(),
         Some("Archive/1006/1")
@@ -216,6 +308,47 @@ async fn keywords_the_server_refuses_stay_on_this_computer() {
         h.stored("INBOX/1001/1").await.unwrap().is_muted(),
         "a sync leaves it alone"
     );
+}
+
+#[tokio::test]
+async fn a_mute_right_after_a_restart_reaches_a_server_that_stores_it() {
+    let (h, thread) = one_message_on(FakeImap::new()).await;
+    let sync = h.restarted();
+
+    sync.triage_thread(&thread, &TriageAction::Mute)
+        .await
+        .unwrap();
+    h.imap.remote_flag("Archive", 1, "\\Seen", true);
+    sync.incremental().await.unwrap();
+
+    let flags = h.imap.message("Archive", 1).unwrap().flags;
+    assert!(
+        flags.iter().any(|f| f.eq_ignore_ascii_case("$muted")),
+        "{flags:?}"
+    );
+    assert!(h.stored("INBOX/1001/1").await.unwrap().is_muted());
+}
+
+#[tokio::test]
+async fn a_flag_report_leaves_a_keyword_kept_on_this_computer() {
+    let (h, _) = one_message_on(FakeImap::new()).await;
+    let account_id = h.account_id;
+    h.db.write(move |c| {
+        let id = "INBOX/1001/1".to_string();
+        messages::apply(
+            c,
+            account_id,
+            &[Change::of(&id, Membership::Keyword("$muted".into()), true)],
+        )?;
+        messages::mark_local(c, account_id, &[id], "$muted")
+    })
+    .await
+    .unwrap();
+
+    h.imap.remote_flag("INBOX", 1, "\\Seen", true);
+    h.sync.incremental().await.unwrap();
+
+    assert!(h.stored("INBOX/1001/1").await.unwrap().is_muted());
 }
 
 #[tokio::test]

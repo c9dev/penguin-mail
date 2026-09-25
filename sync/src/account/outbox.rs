@@ -65,12 +65,12 @@ impl AccountSync {
     }
 
     /// The id of the sent message carrying the same `Message-ID` header as
-    /// `raw`, when Gmail holds one. A send whose answer never came back
-    /// may still have gone out, and this is how a retry finds out before
-    /// sending the message a second time. One search, 5 quota units. A
-    /// draft carries the same header as the message it becomes, so the
-    /// search asks for sent mail alone. Bytes without the header answer
-    /// `None`.
+    /// `raw`, when the server holds one. A send whose answer never came
+    /// back may still have gone out, and this is how a retry finds out
+    /// before sending the message a second time. One search: 5 quota units
+    /// on Gmail, a SEARCH of the Sent mailbox on IMAP. A draft carries the
+    /// same header as the message it becomes, so the search asks for sent
+    /// mail alone. Bytes without the header answer `None`.
     pub async fn sent_copy(&self, raw: &[u8]) -> Result<Option<String>, SyncError> {
         let Some(id) = message_id_header(raw) else {
             return Ok(None);
@@ -82,8 +82,10 @@ impl AccountSync {
         Ok(Some(stored_id(&found, &resolved).unwrap_or(found)))
     }
 
-    /// Saves a draft in Gmail, replacing `draft_id` when given. If that
-    /// draft was deleted elsewhere, creates a new one.
+    /// Saves a draft on the server, replacing `draft_id` when given. If
+    /// that draft was deleted elsewhere, creates a new one. On IMAP the new
+    /// copy goes into Drafts before the old one goes, so a failure leaves
+    /// two drafts rather than none.
     pub async fn save_draft(
         &self,
         raw: Vec<u8>,

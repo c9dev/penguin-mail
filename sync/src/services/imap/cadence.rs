@@ -90,11 +90,15 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
     /// ends this wait. A watch that fails waits and ends, so the look it
     /// wakes is the poll; repeated failures wait longer each time, so a
     /// server that keeps refusing or dropping IDLE is asked less and less
-    /// rather than in a busy loop. A success, including one that answers
-    /// `Changed` at once because the guard dropped the connection past its
-    /// budget, forgets any failures before it: the reconnect the next
-    /// look makes is itself the recovery.
+    /// rather than in a busy loop. An IDLE the guard dropped past its
+    /// budget ends the watch at once, so the engine syncs what the server
+    /// reported, and counts as a failure: the next watch waits before it
+    /// issues IDLE again. A change or a timeout forgets the failures.
     pub(super) async fn watch_inbox(&self) {
+        let pause = self.known().idle_pause.take();
+        if let Some(pause) = pause {
+            tokio::time::sleep(pause).await;
+        }
         let idle = match self.capabilities_now().await {
             Ok(capabilities) => capabilities.idle,
             Err(err) => {
@@ -111,11 +115,22 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
             .unwrap_or_else(|| "INBOX".into());
         loop {
             match self.api.idle(&inbox, IDLE_FOR).await {
+                Ok(Woke::Dropped) => {
+                    let mut known = self.known();
+                    known.idle_failures = known.idle_failures.saturating_add(1);
+                    let wait = watch_retry(known.idle_failures - 1);
+                    known.idle_pause = Some(wait);
+                    tracing::warn!(
+                        ?wait,
+                        "the server sent more during IDLE than the client takes; syncing, then waiting before the next IDLE"
+                    );
+                    return;
+                }
                 Ok(woke) => {
                     self.known().idle_failures = 0;
                     match woke {
-                        Woke::Changed => return,
                         Woke::TimedOut => continue,
+                        Woke::Changed | Woke::Dropped => return,
                     }
                 }
                 Err(err) => {

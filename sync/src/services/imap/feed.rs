@@ -36,32 +36,32 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
             return self.feed_start().await;
         };
         let mut state = ImapState::read(since)?;
-        self.known()
-            .followed
-            .extend(state.mailboxes.keys().cloned());
+        {
+            let mut known = self.known();
+            known.follow_renames(&mut state);
+            known.followed.extend(state.mailboxes.keys().cloned());
+        }
         let capabilities = self.capabilities_now().await?;
         let (due, slow) = self.due().await?;
         let mut changes = Vec::new();
         for mailbox in due {
             // A window listing done for this mailbox already, such as a
             // person following it, left where it stood right then, so
-            // mail that arrived since counts as a change here too; a
-            // mailbox neither the state nor a listing has met before
-            // starts fresh, with nothing to compare against yet.
-            let known = state
-                .mailboxes
-                .get(&mailbox)
-                .copied()
-                .or_else(|| self.known().recent.remove(&mailbox));
-            let kept = match known {
+            // mail that arrived since counts as a change here too. That
+            // starting point goes only once a look has gone past it. A
+            // mailbox neither the state nor a listing has met before, such
+            // as an Archive another client made, brings its window as new.
+            let recent = self.known().recent.get(&mailbox).copied();
+            let kept = match state.mailboxes.get(&mailbox).copied().or(recent) {
                 Some(kept) => {
                     self.mailbox_changes(&mailbox, kept, &capabilities, &mut changes)
                         .await
                 }
-                None => self.kept_now(&mailbox).await,
+                None => self.first_look(&mailbox, &mut changes).await,
             };
             match kept {
                 Ok(kept) => {
+                    self.known().recent.remove(&mailbox);
                     state.mailboxes.insert(mailbox, kept);
                 }
                 // A server refuses to select a mailbox deleted elsewhere,
@@ -101,6 +101,36 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
             changes: Vec::new(),
             state: state.written(),
         })
+    }
+
+    /// The window of a mailbox the feed meets for the first time, as new
+    /// mail in `changes`, and where the listing left the mailbox. Mail the
+    /// store holds already resolves to its stored message.
+    async fn first_look(
+        &self,
+        mailbox: &str,
+        changes: &mut Vec<RemoteChange>,
+    ) -> Result<Kept, BackendError> {
+        let selected = self.select(mailbox, None).await?;
+        let top = self.top_uid(mailbox, &selected).await?;
+        let today = chrono::Local::now().date_naive();
+        let keys = window_keys(mailbox, self.settings.window_days, today);
+        let mut uids = Vec::new();
+        self.search_windows(mailbox, (1, top), &keys, |found| uids.extend(found))
+            .await?;
+        changes.extend(uids.into_iter().map(|uid| {
+            let id = Location {
+                mailbox: mailbox.to_string(),
+                uidvalidity: selected.uidvalidity,
+                uid,
+            }
+            .to_string();
+            RemoteChange::Added {
+                thread_id: id.clone(),
+                id,
+            }
+        }));
+        Ok(Kept::of(&selected, top))
     }
 
     /// Where `mailbox` stands now.

@@ -4,7 +4,7 @@
 //! listing named it.
 
 use mailrs_domain::{AccountId, MailboxKind, RemoteMailbox, Role};
-use rusqlite::{Connection, params};
+use rusqlite::{Connection, OptionalExtension, params};
 
 use crate::{Result, StoreError};
 
@@ -26,6 +26,50 @@ pub fn upsert(conn: &Connection, account_id: AccountId, mailbox: &RemoteMailbox)
         mailbox.hidden,
     ])?;
     Ok(())
+}
+
+/// Stores `to` as the mailbox `from` became when the server renamed it.
+/// The mail filed under `from` stays filed, now under `to`: the row keeps
+/// its key when `to` is new to the store, and when a row for `to` exists
+/// already its mail joins that row and the old one goes.
+pub fn rename(
+    conn: &Connection,
+    account_id: AccountId,
+    from: &str,
+    to: &RemoteMailbox,
+) -> Result<()> {
+    if from != to.id {
+        let key = |id: &str| -> Result<Option<i64>> {
+            Ok(conn
+                .prepare_cached("SELECT key FROM mailboxes WHERE account_id = ?1 AND id = ?2")?
+                .query_row(params![account_id, id], |row| row.get(0))
+                .optional()?)
+        };
+        match (key(from)?, key(&to.id)?) {
+            (Some(_), None) => {
+                conn.execute(
+                    "UPDATE mailboxes SET id = ?3 WHERE account_id = ?1 AND id = ?2",
+                    params![account_id, from, to.id],
+                )?;
+            }
+            (Some(old), Some(new)) => {
+                for table in ["message_mailboxes", "thread_mailboxes"] {
+                    conn.execute(
+                        &format!(
+                            "UPDATE OR IGNORE {table} SET mailbox = ?2 \
+                             WHERE account_id = ?1 AND mailbox = ?3"
+                        ),
+                        params![account_id, new, old],
+                    )?;
+                }
+                // What the new row held already stays; the old row's
+                // copies of it go with the row.
+                delete(conn, account_id, from)?;
+            }
+            (None, _) => {}
+        }
+    }
+    upsert(conn, account_id, to)
 }
 
 /// Makes `listed` the account's whole list, as a bootstrap does. A mailbox

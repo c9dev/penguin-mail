@@ -265,6 +265,11 @@ async fn run_account(
     // the same second afterwards, so each one takes its own place in the
     // cycle from its second poll on.
     let mut stagger = poll_offset(sync.account_id(), config.poll_interval);
+    // One watch runs across the loop's turns and starts again only when it
+    // ends. A watch made anew at each turn would drop a waiting IDLE at
+    // every poll and poke, and with it the connection. Gmail's never ends.
+    let mail = &sync.services().mail;
+    let mut watch = Box::pin(mail.watch());
     loop {
         if !network.load(Ordering::SeqCst) {
             if reported != Some(AccountState::Offline) {
@@ -316,7 +321,10 @@ async fn run_account(
                     _ = poke.notified() => next_poll = Instant::now(),
                     // A server that says when the Inbox changes wakes the
                     // loop at once. Gmail never does.
-                    () = sync.services().mail.watch() => next_poll = Instant::now(),
+                    () = &mut watch => {
+                        next_poll = Instant::now();
+                        watch.set(mail.watch());
+                    }
                 }
             }
             Err(err) => match classify(&err) {

@@ -66,6 +66,13 @@ pub enum Change {
     MarkWhole {
         thread_id: String,
     },
+    /// The server no longer gives the message `keyword`, as a sync reads
+    /// it. A keyword kept on this computer (marked local) stays: the server
+    /// never had it to take away.
+    KeywordGone {
+        message_id: String,
+        keyword: String,
+    },
 }
 
 impl Change {
@@ -116,6 +123,10 @@ impl Change {
                 category,
                 on,
             } => Some((message_id, Membership::Category(category.clone()), *on)),
+            Change::KeywordGone {
+                message_id,
+                keyword,
+            } => Some((message_id, Membership::Keyword(keyword.clone()), false)),
             _ => None,
         }
     }
@@ -179,6 +190,10 @@ pub fn apply(conn: &Connection, account_id: AccountId, changes: &[Change]) -> Re
                 touched.threads.insert(thread_id.clone());
             }
             Change::MarkWhole { thread_id } => whole.push(thread_id),
+            Change::KeywordGone {
+                message_id,
+                keyword,
+            } if kept_local(conn, account_id, message_id, keyword)? => {}
             other => {
                 let Some((message_id, membership, on)) = other.membership() else {
                     continue;
@@ -356,6 +371,21 @@ pub fn mark_local(
         stmt.execute(params![account_id, id, keyword])?;
     }
     Ok(())
+}
+
+/// Whether message `message_id` carries `keyword` on this computer alone.
+fn kept_local(
+    conn: &Connection,
+    account_id: AccountId,
+    message_id: &str,
+    keyword: &str,
+) -> Result<bool> {
+    Ok(conn
+        .prepare_cached(
+            "SELECT 1 FROM message_keywords \
+             WHERE account_id = ?1 AND message_id = ?2 AND keyword = ?3 AND local = 1",
+        )?
+        .exists(params![account_id, message_id, keyword])?)
 }
 
 /// Replaces what a stored message is in and carries. A keyword marked

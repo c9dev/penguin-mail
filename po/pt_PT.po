@@ -6448,11 +6448,11 @@ msgstr "Está por ler"
 msgid "Is flagged"
 msgstr "Está marcada"
 
-#: sync/src/account/writes.rs:590
+#: sync/src/account/writes.rs:670
 msgid "Gmail is busy. Still working on {conversations}."
 msgstr "O Gmail está ocupado. Ainda a trabalhar em {conversations}."
 
-#: sync/src/account/writes.rs:605
+#: sync/src/account/writes.rs:685
 msgid ""
 "Gmail is busy, so {action} did not go through for {conversations}. Try again "
 "in a moment."
@@ -6460,7 +6460,7 @@ msgstr ""
 "O Gmail está ocupado, por isso {action} não chegou a acontecer em "
 "{conversations}. Tente de novo daqui a pouco."
 
-#: sync/src/account/writes.rs:614
+#: sync/src/account/writes.rs:694
 msgid ""
 "Gmail stayed busy for {waited}, so {action} did not go through for "
 "{conversations}."
@@ -6468,21 +6468,21 @@ msgstr ""
 "O Gmail esteve ocupado durante {waited}, por isso {action} não chegou a "
 "acontecer em {conversations}."
 
-#: sync/src/account/writes.rs:621
+#: sync/src/account/writes.rs:701
 msgid "{action} failed: {reason}"
 msgstr "{action} falhou: {reason}"
 
-#: sync/src/account/writes.rs:639
+#: sync/src/account/writes.rs:719
 msgid "a moment"
 msgstr "um momento"
 
-#: sync/src/account/writes.rs:641
+#: sync/src/account/writes.rs:721
 msgid "{count} second"
 msgid_plural "{count} seconds"
 msgstr[0] "{count} segundo"
 msgstr[1] "{count} segundos"
 
-#: sync/src/account/writes.rs:646
+#: sync/src/account/writes.rs:726
 msgid "a minute"
 msgstr "um minuto"
 
@@ -6633,51 +6633,51 @@ msgid "Results for {account} come from the mail on this computer alone"
 msgstr ""
 "Os resultados de {account} vêm apenas do correio guardado neste computador"
 
-#: sync/src/mailbox.rs:948
+#: sync/src/mailbox.rs:951
 msgid "Could not load mail for {account}: {reason}"
 msgstr "Não foi possível carregar o correio de {account}: {reason}"
 
-#: sync/src/mailbox.rs:1066
+#: sync/src/mailbox.rs:1072
 msgid "Returns {when}"
 msgstr "Volta {when}"
 
-#: sync/src/mailbox.rs:1109 sync/src/mailbox.rs:1180
+#: sync/src/mailbox.rs:1115 sync/src/mailbox.rs:1186
 msgid "No recipients"
 msgstr "Sem destinatários"
 
-#: sync/src/mailbox.rs:1112 sync/src/mailbox.rs:1183
+#: sync/src/mailbox.rs:1118 sync/src/mailbox.rs:1189
 msgid "To {recipients}"
 msgstr "Para {recipients}"
 
-#: sync/src/mailbox.rs:1145
+#: sync/src/mailbox.rs:1151
 msgid "{count} unread"
 msgid_plural "{count} unread"
 msgstr[0] "{count} por ler"
 msgstr[1] "{count} por ler"
 
-#: sync/src/mailbox.rs:1155
+#: sync/src/mailbox.rs:1161
 msgid "Sent yesterday, no reply yet"
 msgstr "Enviada ontem, ainda sem resposta"
 
-#: sync/src/mailbox.rs:1157
+#: sync/src/mailbox.rs:1163
 msgid "Sent {days} day ago, no reply yet"
 msgid_plural "Sent {days} days ago, no reply yet"
 msgstr[0] "Enviada há {days} dia, ainda sem resposta"
 msgstr[1] "Enviada há {days} dias, ainda sem resposta"
 
-#: sync/src/mailbox.rs:1195
+#: sync/src/mailbox.rs:1201
 msgid "Sends {when}"
 msgstr "Envia {when}"
 
-#: sync/src/mailbox.rs:1199
+#: sync/src/mailbox.rs:1205
 msgid "Not sent"
 msgstr "Não enviada"
 
-#: sync/src/mailbox.rs:1206
+#: sync/src/mailbox.rs:1212
 msgid "{problem}. Trying again {when}"
 msgstr "{problem}. Nova tentativa {when}"
 
-#: sync/src/mailbox.rs:1213
+#: sync/src/mailbox.rs:1219
 msgid "{problem}. Penguin Mail stopped trying"
 msgstr "{problem}. O Penguin Mail deixou de tentar"
 

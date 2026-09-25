@@ -139,7 +139,7 @@ fn term_key(term: &Term, today: NaiveDate) -> Result<Option<String>, Unsayable> 
             "LARGER {}",
             u32::try_from((*bytes).max(0)).unwrap_or(u32::MAX)
         )),
-        Term::In(MailSet::Keyword(keyword)) => Some(keyword_key(keyword)),
+        Term::In(MailSet::Keyword(keyword)) => Some(keyword_key(keyword)?),
         // One SEARCH looks in one mailbox, so a mailbox below the top level
         // has no key, and IMAP has none for an attachment or a category.
         Term::HasAttachment
@@ -150,12 +150,19 @@ fn term_key(term: &Term, today: NaiveDate) -> Result<Option<String>, Unsayable> 
     })
 }
 
-/// A keyword as its SEARCH key: IMAP's own key for a system flag.
-fn keyword_key(keyword: &str) -> String {
+/// A keyword as its SEARCH key: IMAP's own key for a system flag. IMAP
+/// sends a keyword as an atom, so one with a space, a character outside
+/// ASCII or one of `(){%*"\]` has no key; the client would refuse it, as
+/// it refuses such a flag.
+fn keyword_key(keyword: &str) -> Result<String, Unsayable> {
     let flag = flag_of(keyword);
-    match flag.strip_prefix('\\') {
-        Some(system) => system.to_ascii_uppercase(),
-        None => format!("KEYWORD {keyword}"),
+    if let Some(system) = flag.strip_prefix('\\') {
+        return Ok(system.to_ascii_uppercase());
+    }
+    let bad = |c: char| !c.is_ascii_graphic() || "(){%*\"\\]".contains(c);
+    match keyword.is_empty() || keyword.chars().any(bad) {
+        true => Err(Unsayable),
+        false => Ok(format!("KEYWORD {keyword}")),
     }
 }
 
@@ -415,5 +422,20 @@ mod tests {
         ]);
         assert_eq!(print(&two_places, today()), Err(Unsayable));
         assert_eq!(print(&Query::Or(vec![]), today()), Err(Unsayable));
+    }
+
+    #[test]
+    fn a_keyword_that_is_not_an_imap_atom_is_unsayable() {
+        for keyword in [
+            "two words",
+            "caf\u{e9}",
+            "a\"quote",
+            "(paren",
+            "back\\slash",
+            "",
+        ] {
+            let query = term(Term::In(MailSet::Keyword(keyword.into())));
+            assert_eq!(print(&query, today()), Err(Unsayable), "{keyword:?}");
+        }
     }
 }

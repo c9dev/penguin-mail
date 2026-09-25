@@ -111,14 +111,79 @@ struct Known {
     /// Every look covers every synced mailbox, for tests that should not
     /// wait for the slow poll.
     every_look: bool,
+    /// Mailboxes renamed since the feed last read its state, old name and
+    /// new, the latest [`RENAMES_KEPT`]. The feed moves each one's place
+    /// in the state to its new name.
+    renamed: VecDeque<(String, String)>,
+    /// The last run a move took whose new places the Message-ID search
+    /// failed to find. The retry of that run searches again rather than
+    /// moving messages that have left. One run at most.
+    unfound: Option<writes::Unfound>,
     /// IDLE attempts on the Inbox that failed in a row, so a server that
-    /// keeps refusing or dropping it is watched less and less often. A
-    /// success, including one the guard ends early, resets it.
+    /// keeps refusing or dropping it is watched less and less often. An
+    /// IDLE the guard ends past its budget counts as a failure; a change
+    /// or a timeout resets it.
     idle_failures: u32,
+    /// How long the next watch waits before it issues IDLE, set when the
+    /// guard dropped the last one. The drop itself wakes the engine at
+    /// once; the wait comes before the next IDLE.
+    idle_pause: Option<Duration>,
 }
 
 /// The most messages [`Known::unreadable`] remembers.
 const UNREADABLE_KEPT: usize = 256;
+
+/// The most renames [`Known::renamed`] holds between two looks.
+const RENAMES_KEPT: usize = 64;
+
+/// `name` after the server renamed `from` to `to`: an IMAP RENAME takes
+/// the mailboxes nested under `from` along. `None` when the rename left
+/// `name` as it was.
+fn renamed_name(name: &str, from: &str, to: &str, delimiter: Option<char>) -> Option<String> {
+    if name == from {
+        return Some(to.to_string());
+    }
+    let delimiter = delimiter?;
+    let rest = name.strip_prefix(from)?.strip_prefix(delimiter)?;
+    Some(format!("{to}{delimiter}{rest}"))
+}
+
+impl Known {
+    /// Follows the server's rename of `from` to `to` in what the adapter
+    /// keeps by mailbox name.
+    fn rename(&mut self, from: &str, to: &str) {
+        let delimiter = self.delimiter;
+        let moved = |name: &String| renamed_name(name, from, to, delimiter);
+        self.followed = std::mem::take(&mut self.followed)
+            .into_iter()
+            .map(|name| moved(&name).unwrap_or(name))
+            .collect();
+        self.recent = std::mem::take(&mut self.recent)
+            .into_iter()
+            .map(|(name, kept)| (moved(&name).unwrap_or(name), kept))
+            .collect();
+        self.keywords.retain(|name, _| moved(name).is_none());
+        if self.renamed.len() == RENAMES_KEPT {
+            self.renamed.pop_front();
+        }
+        self.renamed.push_back((from.to_string(), to.to_string()));
+    }
+
+    /// Moves each renamed mailbox's place in `state` to its new name, so
+    /// the feed goes on from where it left the mailbox.
+    fn follow_renames(&mut self, state: &mut state::ImapState) {
+        for (from, to) in std::mem::take(&mut self.renamed) {
+            let names: Vec<String> = state.mailboxes.keys().cloned().collect();
+            for name in names {
+                if let Some(new) = renamed_name(&name, &from, &to, self.delimiter)
+                    && let Some(kept) = state.mailboxes.remove(&name)
+                {
+                    state.mailboxes.insert(new, kept);
+                }
+            }
+        }
+    }
+}
 
 // By hand, since a derive would ask for `I: Clone` and `S: Clone` and the
 // clients are shared rather than copied.
@@ -358,6 +423,18 @@ impl<I: ImapApi, S: Submit> MailBackend for Imap<I, S> {
         Ok(Some(self.select(mailbox, None).await?.uidvalidity))
     }
 
+    async fn keywords_stored(
+        &self,
+        mailbox: &str,
+    ) -> Result<&'static [&'static str], BackendError> {
+        let known = self.known().keywords.get(mailbox).copied();
+        if let Some(keywords) = known {
+            return Ok(keywords);
+        }
+        self.select(mailbox, None).await?;
+        Ok(self.stored_keywords(mailbox))
+    }
+
     async fn backfill(&self, days: i64, cursor: Option<&str>) -> Result<Backfill, BackendError> {
         self.backfill_page(days, cursor).await
     }
@@ -482,5 +559,19 @@ impl<I: ImapApi, S: Submit> IdentityService for Imap<I, S> {
             signature: String::new(),
             default: true,
         }])
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::renamed_name;
+
+    #[test]
+    fn a_rename_takes_the_nested_mailboxes_along_and_nothing_else() {
+        let rename = |name| renamed_name(name, "Projects", "Work", Some('/'));
+        assert_eq!(rename("Projects").as_deref(), Some("Work"));
+        assert_eq!(rename("Projects/2026").as_deref(), Some("Work/2026"));
+        assert_eq!(rename("Projects2026"), None);
+        assert_eq!(rename("INBOX"), None);
     }
 }
