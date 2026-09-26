@@ -29,9 +29,13 @@ pub const GUTTER: f32 = 60.0;
 pub const HOUR: f32 = 62.0;
 /// How far one all-day lane sits below the one above it.
 pub const ALL_DAY_ROW: f32 = 28.0;
-/// Height of an all-day card, and the space above the first lane.
+/// Height of an all-day card, and the space above the first lane and
+/// below the last. The mockup puts a card 5 px under the rule above it,
+/// which is 4 px into the strip under that 1 px rule, and 34 px from rule
+/// to rule, which leaves 5 px below.
 const ALL_DAY_CARD: f32 = 24.0;
-const ALL_DAY_PAD: f32 = 5.0;
+const ALL_DAY_PAD: f32 = 4.0;
+const ALL_DAY_PAD_BELOW: f32 = 5.0;
 /// Space a card keeps from the hour lines and from its neighbours; also
 /// the gap between two cards sharing a lane split.
 const CARD_INSET: f32 = 3.0;
@@ -90,11 +94,31 @@ fn title_lines(top: f64, bottom: f64) -> i32 {
     (((height - ABOVE_AND_BELOW) / TITLE_LINE).floor() as i32).max(1)
 }
 
-/// The strip's height for `rows` lanes: one lane makes the mockup's
-/// 34-pixel row.
+/// Whether the label of `hour` shows while the grid is scrolled to `top`
+/// with `height` of it on screen. The edges of the scrolled window would
+/// cut a label on the top line or the bottom line in half, and the
+/// mockup names neither, so both go; the bottom one needs its whole
+/// height clear, since the card's rounded foot clips it sooner.
+fn hour_label_shown(hour: u32, top: f64, height: f64) -> bool {
+    let y = f64::from(hour) * f64::from(HOUR);
+    let bottom = top + height;
+    let clear_of_top = y - top >= 8.0 || y < top - 8.0;
+    let clear_of_bottom = bottom - y >= 16.0 || y > bottom + 8.0;
+    clear_of_top && clear_of_bottom
+}
+
+/// How far to scroll the grid to open at `hour`: one pixel past the
+/// hour's line, which the 1 px rule above the grid then stands for, as
+/// the mockup draws it.
+fn scroll_for_hour(hour: f64) -> f64 {
+    hour * f64::from(HOUR) + 1.0
+}
+
+/// The strip's height for `rows` lanes: one lane and the rule under it
+/// make the mockup's 34-pixel row.
 fn all_day_height(rows: usize) -> f32 {
     let rows = rows.max(1) as f32;
-    2.0 * ALL_DAY_PAD + ALL_DAY_CARD + (rows - 1.0) * ALL_DAY_ROW
+    ALL_DAY_PAD + ALL_DAY_CARD + ALL_DAY_PAD_BELOW + (rows - 1.0) * ALL_DAY_ROW
 }
 
 /// `days`' first and last index an all-day occurrence covers, clipped to
@@ -654,17 +678,17 @@ impl TimeGrid {
         focused_key(&self.imp().blocks.borrow())
     }
 
-    /// Hides the hour label the scrolled window's top edge would cut in
-    /// half, and the hour line along that edge, `top` being how far the
-    /// grid is scrolled: at 08:00 the line meets the all-day row's border
-    /// and the mockup draws one line and names no hour there.
-    pub fn set_scroll_top(&self, top: f64) {
+    /// Hides the hour labels [`hour_label_shown`] leaves out, and the
+    /// hour line along the top edge, `top` being how far the grid is
+    /// scrolled and `height` how much of it shows: at 08:00 the line
+    /// meets the all-day row's border and the mockup draws one line and
+    /// names no hour there.
+    pub fn set_view(&self, top: f64, height: f64) {
         self.imp().scroll_top.set(top);
         self.queue_draw();
         for (child, placement) in self.imp().children.borrow().iter() {
             if let imp::Placement::Hour(hour) = placement {
-                let y = f64::from(*hour) * f64::from(HOUR);
-                child.set_child_visible(y - top >= 8.0 || y < top - 8.0);
+                child.set_child_visible(hour_label_shown(*hour, top, height));
             }
         }
     }
@@ -672,7 +696,7 @@ impl TimeGrid {
     /// The y an hour sits at, for the parent `gtk::ScrolledWindow` to
     /// scroll its adjustment to.
     pub fn scroll_to_hour(&self, hour: f64) -> f64 {
-        hour * f64::from(HOUR)
+        scroll_for_hour(hour)
     }
 }
 
@@ -872,15 +896,20 @@ mod tests {
     fn an_all_day_card_spans_its_days_minus_the_inset() {
         let (x, y, w, h) = all_day_rect(1, 3, 0, 7, 60.0 + 7.0 * 100.0);
         assert_eq!((x, w), (163.0, 194.0));
-        assert_eq!((y, h), (5.0, 24.0));
+        assert_eq!((y, h), (4.0, 24.0));
     }
 
     #[test]
     fn a_second_all_day_lane_sits_four_pixels_under_the_first() {
         let (_, y, _, h) = all_day_rect(0, 1, 1, 7, 760.0);
-        assert_eq!((y, h), (33.0, 24.0));
-        assert_eq!(all_day_height(2), 62.0);
-        assert_eq!(all_day_height(1), 34.0);
+        assert_eq!((y, h), (32.0, 24.0));
+        assert_eq!(all_day_height(2), 61.0);
+    }
+
+    #[test]
+    fn one_all_day_lane_and_its_rule_make_the_mockup_s_34_pixel_row() {
+        // The rule under the row is a separate 1 px widget.
+        assert_eq!(all_day_height(1) + 1.0, 34.0);
     }
 
     fn d(y: i32, m: u32, day: u32) -> NaiveDate {
@@ -1003,6 +1032,29 @@ mod tests {
     #[test]
     fn a_short_block_keeps_its_title_on_one_line() {
         assert_eq!(title_lines(9.0, 9.75), 1);
+    }
+
+    #[test]
+    fn the_first_hour_line_sits_under_the_all_day_rule() {
+        // The mockup draws 08:00 on the rule under the all-day row, so
+        // 09:00 comes one hour, not one hour and a pixel, below it.
+        assert_eq!(scroll_for_hour(8.0), 8.0 * f64::from(HOUR) + 1.0);
+    }
+
+    #[test]
+    fn no_hour_is_named_on_the_line_under_the_all_day_row() {
+        let top = scroll_for_hour(8.0);
+        assert!(!hour_label_shown(8, top, 751.0));
+        assert!(hour_label_shown(9, top, 751.0));
+    }
+
+    #[test]
+    fn no_hour_is_named_on_the_line_the_card_ends_on() {
+        // 751 px from 08:00 shows down to 20:00, whose line meets the
+        // card's foot; the mockup names 19:00 last.
+        let top = scroll_for_hour(8.0);
+        assert!(hour_label_shown(19, top, 751.0));
+        assert!(!hour_label_shown(20, top, 751.0));
     }
 
     #[test]
