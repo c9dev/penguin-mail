@@ -131,8 +131,11 @@ row it can scroll to and presses every button that opens a menu, then
 opens each submenu, and reads the items of each menu it sees. It
 reaches the menus of the main window this way, but not the message
 menu, which the page opens, nor the composer's menus. It also switches
-to the calendar, walks it, opens an event's popover, and reports its
-own line of controls apart from the mail walk's. `--here` reads
+to the calendar and walks Day, Week, Month and the list a narrow
+window shows, opens an invitation's popover in Week and a crowded day's
+"N more" list in Month, reads the main menu there, Show Declined Events
+included, and reports the calendar's own line of controls apart from
+the mail walk's. `--here` reads
 the copy already on your screen instead, which is how to check a dialog
 or the composer: open it, then run the script.
 
