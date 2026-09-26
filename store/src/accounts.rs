@@ -206,6 +206,68 @@ pub fn start_generation(conn: &Connection, id: AccountId, state: &str) -> Result
     )?)
 }
 
+/// What Google has told this account about its own consent. `granted` is
+/// the space-joined scopes the last token refresh or exchange reported;
+/// `asked` is what the last sign-in or Grant Access asked Google for.
+/// Either is `None` while it is not known: `granted` until the account's
+/// next refresh, `asked` for an account that has never been through a
+/// consent asking for every scope.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct Consent {
+    pub granted: Option<String>,
+    pub asked: Option<String>,
+}
+
+pub fn consent(conn: &Connection, id: AccountId) -> Result<Consent> {
+    Ok(conn.query_row(
+        "SELECT granted_scopes, asked_scopes FROM accounts WHERE id = ?1",
+        params![id],
+        |row| {
+            Ok(Consent {
+                granted: row.get(0)?,
+                asked: row.get(1)?,
+            })
+        },
+    )?)
+}
+
+/// Every account's consent, keyed by id. The window's Grant Access
+/// banner reads this once for every account rather than once per
+/// account.
+pub fn all_consent(
+    conn: &Connection,
+) -> Result<std::collections::HashMap<AccountId, Consent>> {
+    let mut stmt = conn.prepare("SELECT id, granted_scopes, asked_scopes FROM accounts")?;
+    let rows = stmt.query_map([], |row| {
+        Ok((
+            row.get::<_, AccountId>(0)?,
+            Consent {
+                granted: row.get(1)?,
+                asked: row.get(2)?,
+            },
+        ))
+    })?;
+    Ok(rows.collect::<rusqlite::Result<_>>()?)
+}
+
+/// Records the scopes a token refresh or exchange reported for `id`.
+pub fn set_granted(conn: &Connection, id: AccountId, scope: &str) -> Result<()> {
+    conn.execute(
+        "UPDATE accounts SET granted_scopes = ?2 WHERE id = ?1",
+        params![id, scope],
+    )?;
+    Ok(())
+}
+
+/// Records the scopes the last consent for `id` asked Google for.
+pub fn set_asked(conn: &Connection, id: AccountId, scope: &str) -> Result<()> {
+    conn.execute(
+        "UPDATE accounts SET asked_scopes = ?2 WHERE id = ?1",
+        params![id, scope],
+    )?;
+    Ok(())
+}
+
 fn to_account(
     id: AccountId,
     email: String,
@@ -232,4 +294,39 @@ fn to_account(
         provider,
         provider_name,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::open_in_memory;
+
+    use super::*;
+
+    #[test]
+    fn consent_round_trips() {
+        let conn = open_in_memory().unwrap();
+        let id = insert_account(&conn, "me@example.com", 0).unwrap();
+        assert_eq!(consent(&conn, id).unwrap(), Consent::default());
+        set_granted(&conn, id, "gmail.modify settings").unwrap();
+        set_asked(&conn, id, "gmail.modify settings calendar.events").unwrap();
+        assert_eq!(
+            consent(&conn, id).unwrap(),
+            Consent {
+                granted: Some("gmail.modify settings".into()),
+                asked: Some("gmail.modify settings calendar.events".into()),
+            }
+        );
+    }
+
+    #[test]
+    fn all_consent_reads_every_account_in_one_query() {
+        let conn = open_in_memory().unwrap();
+        let a = insert_account(&conn, "a@example.com", 0).unwrap();
+        let b = insert_account(&conn, "b@example.com", 0).unwrap();
+        set_granted(&conn, a, "gmail.modify").unwrap();
+        let every = all_consent(&conn).unwrap();
+        assert_eq!(every.len(), 2);
+        assert_eq!(every[&a].granted.as_deref(), Some("gmail.modify"));
+        assert_eq!(every[&b], Consent::default());
+    }
 }

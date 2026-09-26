@@ -7,6 +7,10 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### New
 
+- A calendar beside the mail: switch to it at the top of the sidebar or
+  with Alt+2 to see your Google calendars by day, week or month, or as
+  a scrolling list on a narrow window. Answer an invitation from its
+  event and search your events.
 - Add a mail account from Fastmail, iCloud, Yahoo or any other provider
   with IMAP: choose Add Account, then Another Provider, and type your
   address and password. Penguin Mail finds the servers, says when the
@@ -18,6 +22,11 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Improved
 
+- Adding a Google account asks for every permission Penguin Mail uses
+  in one visit to Google, and anything you leave unticked says why it
+  is off, with Grant Access where you would use it. An account added
+  earlier shows a bar above its mail that names what it lacks, until
+  you go through Google's screen once more.
 - The assistant and the invitation card read your Google calendars from
   this computer, so they answer without the network. A change the
   assistant makes waits there until Google takes it, and moving or

@@ -78,7 +78,8 @@ pub use services::{
     AutoReplyService, CalendarService, ContactsService, Google, Imap, ImapApi, ImapSettings,
     IdentityService, KeywordsOf, KeywordsPage, MailBackend, MailCapabilities, Missing, Offers,
     Priority, Relocated, RemoteChange,
-    RulesService, SendAsAddress, SyncState, Unapplied, Changes, RAW_LIMIT, Submit, background,
+    RulesService, SendAsAddress, SyncState, Unapplied, Changes, RAW_LIMIT, Submit, Withheld,
+    background,
 };
 pub use settings::{AccountSettings, AutomaticReply, HIDE_MY_EMAIL_LABEL, Permitted};
 pub use triage::TriageAction;

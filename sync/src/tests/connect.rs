@@ -13,9 +13,14 @@ use crate::{
 
 #[tokio::test]
 async fn connecting_needs_a_stored_refresh_token() {
+    let (db, _dir) = store().await;
+    let id = db
+        .write(|c| accounts::insert_account(c, "me@example.com", 0))
+        .await
+        .unwrap();
     let tokens: Arc<dyn TokenStore> = Arc::new(MemoryTokenStore::default());
     let account = Account {
-        id: 1,
+        id,
         email: "me@example.com".into(),
         state: AccountState::Ok,
         provider: mailrs_domain::Provider::Gmail,
@@ -23,12 +28,41 @@ async fn connecting_needs_a_stored_refresh_token() {
     };
     let oauth = OAuthClient::new("cid", "secret");
     assert!(matches!(
-        connect_account(oauth.clone(), Arc::clone(&tokens), &account).await,
+        connect_account(oauth.clone(), Arc::clone(&tokens), &account, &db).await,
         Err(SyncError::Backend(crate::BackendError::NeedsReauth))
     ));
     tokens.save("me@example.com", "rt").unwrap();
-    let client = connect_account(oauth, tokens, &account).await.unwrap();
+    let client = connect_account(oauth, tokens, &account, &db).await.unwrap();
     assert_eq!(client.account_id, 1);
+}
+
+/// A refresh token loaded for an account whose store row already holds
+/// scopes seeds the client, so [`AccountServices::withheld`] reads the
+/// right answer before the first call, rather than everything until one
+/// refresh has happened.
+#[tokio::test]
+async fn a_stored_grant_seeds_the_client() {
+    let (db, _dir) = store().await;
+    let tokens: Arc<dyn TokenStore> = Arc::new(MemoryTokenStore::default());
+    tokens.save("me@example.com", "rt").unwrap();
+    let id = db
+        .write(|c| accounts::insert_account(c, "me@example.com", 0))
+        .await
+        .unwrap();
+    db.write(move |c| {
+        accounts::set_granted(
+            c,
+            id,
+            "https://www.googleapis.com/auth/gmail.modify \
+             https://www.googleapis.com/auth/gmail.settings.basic",
+        )
+    })
+    .await
+    .unwrap();
+    let account = account(&db, "me@example.com").await;
+    let oauth = OAuthClient::new("cid", "secret");
+    let client = connect_account(oauth, tokens, &account, &db).await.unwrap();
+    assert!(client.client.granted().unwrap().reads_mail());
 }
 
 fn fastmail() -> Servers {

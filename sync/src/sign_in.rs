@@ -38,9 +38,23 @@ pub async fn account_client(
 /// sign-in uses that client, so an own account that signs in again moves
 /// over to it. An address another provider's account holds is refused,
 /// so Google services never start on an IMAP account's row.
-pub async fn signed_in(db: &Db, email: &str, now: EpochMillis) -> Result<Account, SignInError> {
+///
+/// `granted` is the scopes Google's token answer said it carries, and
+/// `asked` the ones this consent asked for: every [`mailrs_gmail::SIGN_IN_SCOPES`]
+/// entry, joined with spaces. Both go on the account row so a later
+/// feature can tell a scope the person unticked from one nobody has
+/// asked for yet.
+pub async fn signed_in(
+    db: &Db,
+    email: &str,
+    now: EpochMillis,
+    granted: Option<&str>,
+    asked: &str,
+) -> Result<Account, SignInError> {
     let address = email.to_string();
     let email = address.clone();
+    let granted = granted.map(str::to_string);
+    let asked = asked.to_string();
     db.write(move |c| {
         if let Some(held) = accounts::account_by_email(c, &email)?
             && held.provider != Provider::Gmail
@@ -49,6 +63,10 @@ pub async fn signed_in(db: &Db, email: &str, now: EpochMillis) -> Result<Account
         }
         let id = accounts::insert_account(c, &email, now)?;
         accounts::set_sign_in_client(c, id, SignInClient::BuiltIn)?;
+        if let Some(granted) = &granted {
+            accounts::set_granted(c, id, granted)?;
+        }
+        accounts::set_asked(c, id, &asked)?;
         // The row was written a line above in the same transaction.
         accounts::account_by_email(c, &email)?
             .ok_or(StoreError::Sqlite(rusqlite::Error::QueryReturnedNoRows))
@@ -321,15 +339,20 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn a_new_sign_in_records_the_built_in_client() {
+    async fn a_new_sign_in_records_the_built_in_client_and_its_consent() {
         let (_dir, db) = store();
-        let added = signed_in(&db, "new@example.com", 0).await.unwrap();
+        let added = signed_in(&db, "new@example.com", 0, Some("gmail.modify"), "gmail.modify settings")
+            .await
+            .unwrap();
         let id = added.id;
         let kind = db
             .read(move |c| accounts::sign_in_client(c, id))
             .await
             .unwrap();
         assert_eq!(kind, SignInClient::BuiltIn);
+        let consent = db.read(move |c| mailrs_store::accounts::consent(c, id)).await.unwrap();
+        assert_eq!(consent.granted.as_deref(), Some("gmail.modify"));
+        assert_eq!(consent.asked.as_deref(), Some("gmail.modify settings"));
     }
 
     #[tokio::test]
@@ -338,7 +361,7 @@ mod tests {
         db.write(|c| accounts::insert_imap_account(c, "dana@fastmail.com", "Fastmail", 0))
             .await
             .unwrap();
-        let refused = signed_in(&db, "dana@fastmail.com", 0)
+        let refused = signed_in(&db, "dana@fastmail.com", 0, None, "")
             .await
             .expect_err("an IMAP account holds the address");
         assert_eq!(
@@ -357,7 +380,7 @@ mod tests {
     async fn signing_an_own_account_in_again_moves_it_to_the_built_in_client() {
         let (_dir, db) = store();
         let own = account(&db, "own@example.com", SignInClient::Own).await;
-        let again = signed_in(&db, "own@example.com", 0).await.unwrap();
+        let again = signed_in(&db, "own@example.com", 0, None, "").await.unwrap();
         assert_eq!(again.id, own.id);
         let id = own.id;
         let kind = db

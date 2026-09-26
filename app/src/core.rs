@@ -14,7 +14,8 @@ use anyhow::{Context, Result, anyhow, bail};
 use mailrs_discover::{Found, Net, RealNet, Security, SrvRecord};
 use mailrs_domain::{Account, AccountId, AccountState, ChangeEvent, Provider, Target};
 use mailrs_gmail::{
-    GMAIL_API_BASE, KeyringTokenStore, TokenStore, authorize, built_in_client,
+    GMAIL_API_BASE, GmailError, Granted, KeyringTokenStore, SIGN_IN_SCOPES, TokenStore, authorize,
+    built_in_client,
 };
 use mailrs_pgp::{Pgp, PgpError};
 use mailrs_smime::{Smime, SmimeError};
@@ -357,10 +358,12 @@ impl Core {
                         .ok_or_else(|| anyhow!("the demo has no mailbox for {}", account.email)),
                     (None, Provider::Gmail) => {
                         match account_client(&db, &config, built_in_client(), &account).await {
-                            Ok(Some(oauth)) => connect_account(oauth, Arc::clone(&tokens), &account)
-                                .await
-                                .map(AccountServices::google)
-                                .map_err(Into::into),
+                            Ok(Some(oauth)) => {
+                                connect_account(oauth, Arc::clone(&tokens), &account, &db)
+                                    .await
+                                    .map(AccountServices::google)
+                                    .map_err(Into::into)
+                            }
                             // The store now says the account needs a new
                             // sign-in; the sidebar hears it here, since the
                             // engine never runs the account to report it.
@@ -662,16 +665,15 @@ impl Core {
 
     /// Runs the browser consent flow, stores the refresh token, and starts
     /// syncing the account. `urls` receives the consent URL to open. When
-    /// `expected` is set, the user must pick that account. `extra` names
-    /// permissions to ask for beyond the ones sign-in always requests, such
-    /// as `DELETE_SCOPE`; an account that already granted them keeps them.
+    /// `expected` is set, the user must pick that account. The consent asks
+    /// for every scope Penguin Mail uses in one visit; Google keeps what
+    /// the account already granted, so signing in again asks nothing new.
     /// Every sign-in, first or again, goes through the build's client and
     /// records it for the account.
     pub async fn authorize_account(
         &self,
         urls: async_channel::Sender<String>,
         expected: Option<String>,
-        extra: &[&'static str],
     ) -> Result<Account> {
         if self.demo {
             bail!(gettext("Demo mode cannot add real accounts."));
@@ -687,10 +689,9 @@ impl Core {
             .current()
             .ok_or_else(|| anyhow!("sync is not running"))?;
         let (db, tokens) = (self.db.clone(), Arc::clone(&self.tokens));
-        let extra = extra.to_vec();
         let calendar_copy = self.calendar_copy();
         self.call(async move {
-            let flow = authorize(&oauth, GMAIL_API_BASE, &extra, move |url: &str| {
+            let flow = authorize(&oauth, GMAIL_API_BASE, move |url: &str| {
                 let _ = urls.try_send(url.to_string());
             });
             let authorized = tokio::time::timeout(std::time::Duration::from_secs(300), flow)
@@ -699,7 +700,14 @@ impl Core {
                     anyhow!(gettext(
                         "Gave up waiting for the browser after five minutes."
                     ))
-                })??;
+                })?
+                .map_err(|err| match err {
+                    GmailError::MailNotGranted => anyhow!(gettext(
+                        "Penguin Mail cannot work without access to your mail. Sign in \
+                         again and leave the Gmail permission ticked.",
+                    )),
+                    err => err.into(),
+                })?;
             if let Some(expected) = expected
                 && !expected.eq_ignore_ascii_case(&authorized.email)
             {
@@ -714,8 +722,14 @@ impl Core {
             let (email, refresh) = (authorized.email.clone(), authorized.refresh_token.clone());
             let store = Arc::clone(&tokens);
             tokio::task::spawn_blocking(move || store.save(&email, &refresh)).await??;
-            let account = signed_in(&db, &authorized.email, now_millis()).await?;
-            let services = AccountServices::google(connect_account(oauth, tokens, &account).await?);
+            let granted = authorized.granted.as_ref().map(Granted::to_scope);
+            let asked = SIGN_IN_SCOPES.join(" ");
+            let account =
+                signed_in(&db, &authorized.email, now_millis(), granted.as_deref(), &asked)
+                    .await?;
+            let services = AccountServices::google(
+                connect_account(oauth, tokens, &account, &db).await?,
+            );
             engine.start_account(account.id, services);
             // The sign-in may have granted the calendar permission, so the
             // copy stops waiting out an earlier refusal.

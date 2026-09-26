@@ -139,6 +139,31 @@ async fn without_any_calendar_permission_the_refresh_says_so() {
     assert!(matches!(done, Permitted::NeedsPermission));
 }
 
+/// The scopes the store already knows about say the calendar is
+/// withheld before any call goes out, so the refresh costs nothing.
+#[tokio::test]
+async fn an_account_that_withheld_the_calendar_costs_no_call() {
+    let h = harness().await;
+    h.fake.withhold(mailrs_gmail::CALENDAR_SCOPE);
+    let done = copy(&h).refresh(h.account_id, NOW).await.unwrap();
+    assert!(matches!(done, Permitted::NeedsPermission));
+    assert_eq!(h.fake.usage().calls_to("calendar.calendarList.list"), 0);
+}
+
+/// The list scope alone is withheld, so the refresh skips straight to
+/// the primary calendar rather than listing first and catching the
+/// refusal.
+#[tokio::test]
+async fn an_account_that_withheld_the_list_reads_its_primary_without_listing() {
+    let h = harness().await;
+    h.fake.withhold(mailrs_gmail::CALENDAR_LIST_SCOPE);
+    h.fake.put_calendar_event(event("me@example.com", "a"));
+    let done = copy(&h).refresh(h.account_id, NOW).await.unwrap();
+    assert!(matches!(done, Permitted::Done(ref r) if r.events == 1), "{done:?}");
+    assert_eq!(h.fake.usage().calls_to("calendar.calendarList.list"), 0);
+    assert!(stored(&h, "me@example.com", "a").await.is_some());
+}
+
 /// Google cannot say which calendar scope a refusal is for, so the first
 /// refresh finds out with one list call and one read. After that the
 /// account costs nothing until half an hour passes or the person grants
@@ -166,21 +191,18 @@ async fn without_any_calendar_permission_the_account_is_left_alone() {
     assert!(h.db.read(move |c| store::synced(c, account)).await.unwrap(), "a grant reads at once");
 }
 
-/// Recording `last_list` only after a
-/// successful call meant a refused list was asked for again on every
-/// tick. It now waits `LIST_EVERY` whether the call succeeded or not.
+/// A withheld list scope is known from the store already, so every
+/// refresh fills the primary calendar without spending a call, not just
+/// the first: there is no refusal left to wait out.
 #[tokio::test]
-async fn a_missing_list_permission_asks_at_most_every_half_hour() {
+async fn a_withheld_list_permission_never_costs_a_call() {
     let h = harness().await;
     h.fake.withhold(mailrs_gmail::CALENDAR_LIST_SCOPE);
     let copy = copy(&h);
     copy.refresh(h.account_id, NOW).await.unwrap();
-    let calls = || h.fake.usage().calls_to("calendar.calendarList.list");
-    let before = calls();
     copy.refresh(h.account_id, NOW + READ_EVERY_OPEN).await.unwrap();
-    assert_eq!(calls(), before, "a refusal still waits half an hour");
     copy.refresh(h.account_id, NOW + LIST_EVERY).await.unwrap();
-    assert_eq!(calls(), before + 1);
+    assert_eq!(h.fake.usage().calls_to("calendar.calendarList.list"), 0);
 }
 
 /// A calendar the person hid is read at the slow, tray

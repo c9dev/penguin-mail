@@ -63,7 +63,8 @@ pgp/      OpenPGP mail through the person's own gpg
 smime/    S/MIME mail through their gpgsm
 ai/       model providers, tool calls, the Claude Code bridge
 cli/      penguin-mail-cli
-app/      the GTK 4 and libadwaita app
+app/      the GTK 4 and libadwaita app, with the calendar view in
+          app/src/ui/calendar/
 ```
 
 Windows and dialogs stay thin. Archiving, flagging, listing a mailbox and

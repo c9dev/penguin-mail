@@ -117,6 +117,13 @@ pub struct Settings {
     /// The newest release already announced in a notification, so each one
     /// is announced once.
     pub announced_update: Option<String>,
+    /// Which space the window opened on last: mail or the calendar.
+    pub space: Space,
+    /// The grid the calendar shows: a day, a week or a month.
+    pub calendar_view: CalendarView,
+    /// Show events the person said No to, faded and struck through,
+    /// rather than leaving them out.
+    pub show_declined_events: bool,
     /// Before contacts were chosen per account, one switch for all of them.
     /// True folds into `contact_accounts` as every account the first time
     /// the accounts load, and goes back to false.
@@ -453,6 +460,9 @@ impl Default for Settings {
             check_for_updates: true,
             last_update_check: None,
             announced_update: None,
+            space: Space::Mail,
+            calendar_view: CalendarView::Week,
+            show_declined_events: false,
         }
     }
 }
@@ -638,6 +648,27 @@ impl Choice for ColorScheme {
             ColorScheme::Dark => gettext("Dark"),
         }
     }
+}
+
+/// What the window shows beside the sidebar: the mail or the calendar.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Space {
+    #[default]
+    Mail,
+    Calendar,
+}
+
+/// Which grid the calendar page shows. Lives here, not in `ui`, because
+/// settings imports nothing from it; `ui::calendar::range` uses this type
+/// as its `ViewKind`.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum CalendarView {
+    Day,
+    #[default]
+    Week,
+    Month,
 }
 
 /// How often each account checks Gmail, in seconds. These say "every so
@@ -924,6 +955,30 @@ mod tests {
             let read: Settings = serde_json::from_str(&written).expect("and come back");
             assert_eq!(read.default_category, category, "{category:?}");
         }
+    }
+
+    #[test]
+    fn a_file_from_before_the_calendar_opens_on_mail_and_the_week() {
+        let read: Settings = toml::from_str("threading = false\n").expect("an old file reads");
+        assert_eq!(
+            (read.space, read.calendar_view, read.show_declined_events),
+            (Space::Mail, CalendarView::Week, false)
+        );
+    }
+
+    #[test]
+    fn the_calendar_choices_survive_the_settings_file() {
+        let mut settings = Settings::default();
+        Change::Space(Space::Calendar).apply(&mut settings);
+        Change::CalendarView(CalendarView::Month).apply(&mut settings);
+        Change::ShowDeclinedEvents(true).apply(&mut settings);
+        let written = toml::to_string(&settings).expect("settings serialise");
+        assert!(written.contains("space = \"calendar\""), "{written}");
+        let read: Settings = toml::from_str(&written).expect("and come back");
+        assert_eq!(
+            (read.space, read.calendar_view, read.show_declined_events),
+            (Space::Calendar, CalendarView::Month, true)
+        );
     }
 
     #[test]

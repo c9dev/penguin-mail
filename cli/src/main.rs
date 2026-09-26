@@ -11,7 +11,8 @@ use anyhow::{Context, Result, anyhow, bail};
 use clap::{Parser, Subcommand};
 use mailrs_domain::{Account, AccountId, ChangeEvent, EpochMillis, MailSet, Provider};
 use mailrs_gmail::{
-    GMAIL_API_BASE, KeyringTokenStore, OAuthClient, TokenStore, authorize, built_in_client,
+    GMAIL_API_BASE, Granted, KeyringTokenStore, OAuthClient, SIGN_IN_SCOPES, TokenStore, authorize,
+    built_in_client,
 };
 use mailrs_store::threads::{self, ThreadFilter};
 use mailrs_store::{Db, accounts, messages};
@@ -196,7 +197,7 @@ async fn add_account(db: &Db) -> Result<()> {
     // Every sign-in, first or again, goes through the build's client.
     let oauth = built_in_client()
         .ok_or_else(|| anyhow!("This copy of Penguin Mail was built without Google sign-in."))?;
-    let flow = authorize(&oauth, GMAIL_API_BASE, &[], |url| {
+    let flow = authorize(&oauth, GMAIL_API_BASE, |url| {
         println!(
             "Opening your browser for Google's consent screen. If it does not open, visit:\n\n{url}\n"
         );
@@ -212,7 +213,14 @@ async fn add_account(db: &Db) -> Result<()> {
     let tokens = token_store();
     let (email, refresh) = (authorized.email.clone(), authorized.refresh_token.clone());
     tokio::task::spawn_blocking(move || tokens.save(&email, &refresh)).await??;
-    let account = signed_in(db, &authorized.email, now_millis()).await?;
+    let account = signed_in(
+        db,
+        &authorized.email,
+        now_millis(),
+        authorized.granted.as_ref().map(Granted::to_scope).as_deref(),
+        &SIGN_IN_SCOPES.join(" "),
+    )
+    .await?;
     println!(
         "Added {} as account {}. Run `penguin-mail-cli sync` to download mail.",
         account.email, account.id
@@ -281,7 +289,7 @@ async fn run_sync(db: &Db, dir: &Path, config: &Config) -> Result<()> {
     for account in &all {
         let connected = match account.provider {
             Provider::Gmail => match oauth_for(db, config, account).await {
-                Ok(oauth) => connect_account(oauth, Arc::clone(&tokens), account)
+                Ok(oauth) => connect_account(oauth, Arc::clone(&tokens), account, db)
                     .await
                     .map(AccountServices::google)
                     .map_err(anyhow::Error::from),
@@ -607,7 +615,7 @@ async fn account_sync(db: &Db, config: &Config, email: &str) -> Result<AccountSy
     let services = match account.provider {
         Provider::Gmail => {
             let oauth = oauth_for(db, config, &account).await?;
-            AccountServices::google(connect_account(oauth, token_store(), &account).await?)
+            AccountServices::google(connect_account(oauth, token_store(), &account, db).await?)
         }
         Provider::Imap => connect_imap(db, passwords(), &account, engine.window_days).await?,
     };
