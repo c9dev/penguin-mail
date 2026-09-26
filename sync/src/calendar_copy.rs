@@ -13,8 +13,8 @@
 //!
 //! An account that granted `calendar.events` but not the list scope
 //! still gets its primary calendar, addressed by the
-//! account's own address, which needs no list permission; stage 2 asks
-//! for the list scope so a shared or subscribed calendar joins it. An
+//! account's own address, which needs no list permission; sign-in asks
+//! for the list scope too, so a shared or subscribed calendar joins it. An
 //! account without `calendar.events` costs one list call and one read,
 //! then nothing until half an hour passes or the person signs it in again.
 
@@ -196,6 +196,19 @@ impl<A: Accounts> CalendarCopy<A> {
         if self.refused_lately(account_id, now) {
             return Ok(Permitted::NeedsPermission);
         }
+        let withheld = self
+            .accounts
+            .services(account_id)
+            .ok_or(SyncError::UnknownAccount(account_id))?
+            .withheld();
+        // The person unticked the calendar scope itself: nothing here is
+        // reachable, so this costs no call and touches no stored row.
+        // Recording the refusal makes the next tick wait LIST_EVERY too,
+        // the same cadence a refusal Google itself answered gets below.
+        if withheld.calendar {
+            self.refused.lock().expect("copy poisoned").insert(account_id, now);
+            return Ok(Permitted::NeedsPermission);
+        }
         let list_due = self
             .last_list
             .lock()
@@ -206,16 +219,26 @@ impl<A: Accounts> CalendarCopy<A> {
             // Recorded before the call, so a refusal still waits
             // LIST_EVERY instead of asking again on the very next tick.
             self.last_list.lock().expect("copy poisoned").insert(account_id, now);
-            match calendar.calendars().await {
-                Ok(list) => {
-                    self.db.write(move |c| store::save_calendars(c, account_id, &list)).await?;
+            if withheld.calendar_list {
+                // The list scope alone is missing: the primary calendar
+                // needs no list call, so skip straight to it.
+                let address = self.address(account_id).await?;
+                let fallback = vec![primary_fallback(&address)];
+                self.db.write(move |c| store::save_calendars(c, account_id, &fallback)).await?;
+            } else {
+                match calendar.calendars().await {
+                    Ok(list) => {
+                        self.db.write(move |c| store::save_calendars(c, account_id, &list)).await?;
+                    }
+                    Err(BackendError::NeedsPermission) => {
+                        let address = self.address(account_id).await?;
+                        let fallback = vec![primary_fallback(&address)];
+                        self.db
+                            .write(move |c| store::save_calendars(c, account_id, &fallback))
+                            .await?;
+                    }
+                    Err(err) => return Err(err.into()),
                 }
-                Err(BackendError::NeedsPermission) => {
-                    let address = self.address(account_id).await?;
-                    let fallback = vec![primary_fallback(&address)];
-                    self.db.write(move |c| store::save_calendars(c, account_id, &fallback)).await?;
-                }
-                Err(err) => return Err(err.into()),
             }
         }
         self.last_read.lock().expect("copy poisoned").insert(account_id, now);

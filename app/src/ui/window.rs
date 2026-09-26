@@ -15,10 +15,11 @@ use mailrs_domain::{
     ThreadSummary,
 };
 use mailrs_sync::{
-    History, Listing, Loaded, MailAction, Offers, Permitted, Scope, TriageAction, View,
+    History, Listing, Loaded, MailAction, Offers, Permitted, Scope, TriageAction, View, Withheld,
 };
 
 use super::add_account::{Done, Opening};
+use super::calendar::{CalendarView, Hooks};
 use super::confirm::{Tone, confirm};
 use super::contact_card;
 use super::conversation::{Action, ConversationView};
@@ -69,6 +70,7 @@ mod reveal;
 mod scheduled;
 mod senders;
 mod shortcuts;
+mod spaces;
 mod thread;
 mod translation;
 mod triage;
@@ -107,6 +109,16 @@ pub struct MainWindow {
     toasts: adw::ToastOverlay,
     /// Says a release is available, installing, waiting to restart, or failed.
     update_banner: adw::Banner,
+    /// One bar per account whose own consent leaves something out, at the
+    /// top of the mail list; see [`crate::permission::wants_banner`].
+    /// Rebuilt whenever the accounts are read again.
+    grant_banners: gtk::Box,
+    /// The banner `grant_banners` holds for each account that wants one,
+    /// so a later rebuild changes only what changed rather than tearing
+    /// every banner down and putting it back: a screen reader can be
+    /// mid-walk when the accounts are read again, and a banner that
+    /// blinks out and back shifts every row below it for a moment.
+    grant_banner_widgets: RefCell<HashMap<AccountId, adw::Banner>>,
     /// The main menu's update entry: Check for Updates, or what to do with
     /// the one that is waiting.
     update_menu: gio::Menu,
@@ -115,7 +127,15 @@ pub struct MainWindow {
     about: RefCell<Option<Rc<crate::ui::about::About>>>,
     stack: gtk::Stack,
     split: adw::OverlaySplitView,
+    /// The mail's list and conversation, or the calendar, beside the
+    /// sidebar: inside `split`, so the sidebar and its Mail / Calendar
+    /// switch stay on screen with either.
+    spaces: gtk::Stack,
     nav: adw::NavigationSplitView,
+    pub calendar: Rc<CalendarView>,
+    /// Whether the accounts have been read once, when the window goes
+    /// back to the space it showed last.
+    space_restored: Cell<bool>,
     sidebar: Rc<Sidebar>,
     list: Rc<ThreadList>,
     conversation: Rc<ConversationView>,
@@ -404,9 +424,52 @@ impl MainWindow {
                 .max_sidebar_width(420.0)
                 .sidebar_width_fraction(0.34)
                 .build();
+            let (t, g, n) = (weak.clone(), weak.clone(), weak.clone());
+            let (read_settings, change_settings) = (Rc::downgrade(app), Rc::downgrade(app));
+            let calendar = CalendarView::new(
+                Rc::clone(&app.core),
+                move || {
+                    read_settings
+                        .upgrade()
+                        .map(|a| a.settings())
+                        .unwrap_or_default()
+                },
+                Hooks {
+                    toast: Box::new(move |text| {
+                        if let Some(win) = t.upgrade() {
+                            win.toast(text);
+                        }
+                    }),
+                    change: Box::new(move |change| {
+                        if let Some(app) = change_settings.upgrade() {
+                            app.change_settings(change);
+                        }
+                    }),
+                    grant: Box::new(move |account_id| {
+                        if let Some(win) = g.upgrade() {
+                            win.grant_access(account_id);
+                        }
+                    }),
+                    needs_permission: Box::new(move |account_id| {
+                        if let Some(win) = n.upgrade() {
+                            win.ask_permission(account_id, Permission::Calendar, Occasion::Needed);
+                        }
+                    }),
+                },
+            );
+            // Each space asks for its own width only, so the calendar's
+            // header never widens the mail's minimum, or the other way.
+            let spaces = gtk::Stack::builder()
+                .transition_type(gtk::StackTransitionType::Crossfade)
+                .transition_duration(150)
+                .hhomogeneous(false)
+                .vhomogeneous(false)
+                .build();
+            spaces.add_named(&nav, Some("mail"));
+            spaces.add_named(&calendar.page, Some("calendar"));
             let split = adw::OverlaySplitView::builder()
                 .sidebar(&sidebar.page)
-                .content(&nav)
+                .content(&spaces)
                 .min_sidebar_width(220.0)
                 .max_sidebar_width(290.0)
                 .sidebar_width_fraction(0.22)
@@ -417,6 +480,15 @@ impl MainWindow {
                 .build();
             split
                 .bind_property("show-sidebar", &list.sidebar_button, "active")
+                .bidirectional()
+                .sync_create()
+                .build();
+            split
+                .bind_property("collapsed", &calendar.sidebar_button, "visible")
+                .sync_create()
+                .build();
+            split
+                .bind_property("show-sidebar", &calendar.sidebar_button, "active")
                 .bidirectional()
                 .sync_create()
                 .build();
@@ -489,6 +561,7 @@ impl MainWindow {
             // An update's banner spans the whole window, above the panes,
             // since it is about the app and not the mail on screen.
             let update_banner = adw::Banner::builder().revealed(false).build();
+            let grant_banners = list.grant_bars.clone();
             let content = gtk::Box::new(gtk::Orientation::Vertical, 0);
             content.append(&update_banner);
             content.append(&stack);
@@ -532,8 +605,22 @@ impl MainWindow {
             narrow.add_setter(&assistant_split, "collapsed", Some(&true.to_value()));
             medium.add_setter(&assistant_split, "collapsed", Some(&true.to_value()));
             let (on, off) = (Rc::clone(&conversation), Rc::clone(&conversation));
-            narrow.connect_apply(move |_| on.set_compact(true));
-            narrow.connect_unapply(move |_| off.set_compact(false));
+            let (calendar_on, calendar_off) = (Rc::clone(&calendar), Rc::clone(&calendar));
+            narrow.connect_apply(move |_| {
+                on.set_compact(true);
+                calendar_on.set_narrow(true);
+                calendar_on.set_compact(true);
+            });
+            narrow.connect_unapply(move |_| {
+                off.set_compact(false);
+                calendar_off.set_narrow(false);
+                calendar_off.set_compact(false);
+            });
+            // The window applies one breakpoint at a time, so going from
+            // narrow to medium unapplies narrow before this applies.
+            let (calendar_on, calendar_off) = (Rc::clone(&calendar), Rc::clone(&calendar));
+            medium.connect_apply(move |_| calendar_on.set_compact(true));
+            medium.connect_unapply(move |_| calendar_off.set_compact(false));
             window.add_breakpoint(wide);
             window.add_breakpoint(medium);
             window.add_breakpoint(narrow);
@@ -551,11 +638,16 @@ impl MainWindow {
                 core: Rc::clone(&app.core),
                 toasts,
                 update_banner,
+                grant_banners,
+                grant_banner_widgets: RefCell::new(HashMap::new()),
                 update_menu: gio::Menu::new(),
                 about: RefCell::new(None),
                 stack,
                 split,
+                spaces,
                 nav,
+                calendar,
+                space_restored: Cell::new(false),
                 sidebar,
                 list,
                 conversation,
@@ -634,6 +726,7 @@ impl MainWindow {
         });
         window.install_menu();
         window.install_keys();
+        window.install_spaces();
         let weak = Rc::downgrade(&window);
         window.list.search_button.connect_toggled(move |button| {
             let Some(win) = weak.upgrade() else { return };
@@ -883,6 +976,67 @@ impl MainWindow {
             }
         }
         self.refresh_counts();
+        // app.reload_accounts already read every account's consent in the
+        // same pass as the accounts themselves, so this costs no round
+        // trip of its own and settles with everything else above.
+        let accounts: Vec<Account> = data.iter().map(|(a, _)| a.clone()).collect();
+        self.rebuild_grant_banners(&accounts, &app.consent());
+        self.accounts_for_calendar(&accounts);
+    }
+
+    /// Brings the Grant Access banners in line with `accounts` and
+    /// `consent`: one per account whose own scopes leave something out
+    /// and that has never been asked for everything. Only accounts whose
+    /// answer changed gain or lose a banner; one that already has the
+    /// right banner keeps the same widget, so a later call from an
+    /// unrelated account starting or stopping never shifts what is
+    /// already on screen. The banner opens the browser only when its
+    /// button is pressed; nothing here does at start or from the tray.
+    fn rebuild_grant_banners(
+        self: &Rc<Self>,
+        accounts: &[Account],
+        consent: &HashMap<AccountId, mailrs_store::accounts::Consent>,
+    ) {
+        let wanted: Vec<&Account> = accounts
+            .iter()
+            .filter(|account| {
+                let withheld = self.withheld(account.id);
+                let asked = consent.get(&account.id).and_then(|c| c.asked.as_deref());
+                crate::permission::wants_banner(withheld, asked)
+            })
+            .collect();
+        let wanted_ids: HashSet<AccountId> = wanted.iter().map(|a| a.id).collect();
+        let mut widgets = self.grant_banner_widgets.borrow_mut();
+        widgets.retain(|id, banner| {
+            let keep = wanted_ids.contains(id);
+            if !keep {
+                self.grant_banners.remove(banner);
+            }
+            keep
+        });
+        for account in wanted {
+            let missing = crate::permission::withheld_permissions(self.withheld(account.id));
+            if let Some(banner) = widgets.get(&account.id) {
+                // The same widget stays; only its words follow what is
+                // still missing.
+                banner.set_title(&crate::permission::grant_bar_title(&account.email, &missing));
+                continue;
+            }
+            tracing::info!(
+                account = %account.email,
+                ?missing,
+                "showing the Grant Access banner"
+            );
+            let banner = adw::Banner::builder()
+                .title(crate::permission::grant_bar_title(&account.email, &missing))
+                .button_label(gettext("Grant Access"))
+                .revealed(true)
+                .build();
+            let (this, account_id) = (Rc::clone(self), account.id);
+            banner.connect_button_clicked(move |_| this.grant_access(account_id));
+            self.grant_banners.append(&banner);
+            widgets.insert(account.id, banner);
+        }
     }
 
     /// What the sidebar and the category switcher show. Two grouped
@@ -1520,15 +1674,25 @@ impl MainWindow {
         glib::spawn_future_local(async move {
             let email = &account.email;
             if permission::ask(&this.window, account_id, email, permission, occasion).await {
-                this.grant(account.email, permission);
+                this.grant(account.email);
             }
         });
     }
 
-    /// Sends `email` through consent for `permission`, once the person has
-    /// chosen Grant Access.
-    fn grant(self: &Rc<Self>, email: String, permission: Permission) {
-        self.authorize_with(Some(email), permission.scopes());
+    /// Sends `email` through consent again, once the person has chosen
+    /// Grant Access. The consent asks for every scope Penguin Mail uses,
+    /// so this is the one path a permission or the banner needs.
+    fn grant(self: &Rc<Self>, email: String) {
+        self.authorize_with(Some(email));
+    }
+
+    /// [`MainWindow::grant`] for an account known only by its id: the one
+    /// path the Grant Access banner, the calendar sidebar row and the
+    /// Preferences rows all end at.
+    pub fn grant_access(self: &Rc<Self>, account_id: AccountId) {
+        if let Some(account) = self.account(account_id) {
+            self.grant(account.email);
+        }
     }
 
     /// Says an API is switched off in the Google Cloud project Penguin Mail
@@ -2086,7 +2250,7 @@ impl MainWindow {
     // ---- Accounts ----------------------------------------------------------
 
     fn authorize(self: &Rc<Self>, expected: Option<String>) {
-        self.authorize_with(expected, &[]);
+        self.authorize_with(expected);
     }
 
     /// Asks which kind of account to add, then adds it.
@@ -2144,9 +2308,9 @@ impl MainWindow {
         self.refresh_accounts(Reload::Yes);
     }
 
-    /// Runs the consent flow, asking Google for `extra` permissions on top
-    /// of the ones sign-in always requests.
-    fn authorize_with(self: &Rc<Self>, expected: Option<String>, extra: &'static [&'static str]) {
+    /// Runs the consent flow, asking Google for every scope Penguin Mail
+    /// uses in one visit.
+    fn authorize_with(self: &Rc<Self>, expected: Option<String>) {
         // Without the build's Google client the browser would open for
         // nothing, so say why at once. The demo goes on to its own message.
         if !self.core.demo && !self.core.built_with_google_sign_in() {
@@ -2170,7 +2334,7 @@ impl MainWindow {
         self.toast(&gettext("Continue in your browser"));
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
-            match this.core.authorize_account(urls, expected, extra).await {
+            match this.core.authorize_account(urls, expected).await {
                 Ok(account) => {
                     this.toast(&fill(
                         &gettext("Added {account}. Downloading mail…"),
@@ -2225,6 +2389,13 @@ impl MainWindow {
     pub(super) fn offers(&self, account_id: AccountId) -> Offers {
         let running = self.core.account(account_id);
         crate::offered::offers_for(running.as_ref().map(|sync| sync.services()))
+    }
+
+    /// What `account_id`'s own consent left withheld, or nothing while it
+    /// has not started.
+    pub(super) fn withheld(&self, account_id: AccountId) -> Withheld {
+        let running = self.core.account(account_id);
+        crate::offered::withheld_for(running.as_ref().map(|sync| sync.services()))
     }
 
     fn labels(&self) -> HashMap<AccountId, Vec<Label>> {
@@ -2285,6 +2456,7 @@ impl MainWindow {
         let weak = Rc::downgrade(self);
         remind_at.connect_activate(move |_, parameter| {
             if let (Some(win), Some(at)) = (weak.upgrade(), parameter.and_then(|p| p.get::<i64>()))
+                && win.runs_here("remind-at")
             {
                 win.remind(at);
             }
@@ -2298,6 +2470,9 @@ impl MainWindow {
             else {
                 return;
             };
+            if !win.runs_here("flag-color") {
+                return;
+            }
             win.flag(name.parse().ok());
         });
         self.actions.add_action(&flag_color);
@@ -2307,6 +2482,8 @@ impl MainWindow {
             if let (Some(win), Some(position)) =
                 (weak.upgrade(), parameter.and_then(|p| p.get::<i32>()))
             {
+                // A mailbox opens in the mail, whichever space showed.
+                win.show_space(crate::settings::Space::Mail);
                 win.go_to_mailbox(position as usize);
             }
         });
@@ -2421,7 +2598,21 @@ impl MainWindow {
 
     fn install_menu(&self) {
         let menu = gio::Menu::new();
+        // Shown only while the calendar is: the action is off in Mail.
+        let calendar = gio::Menu::new();
+        let declined = gio::MenuItem::new(
+            Some(&gettext("Show Declined Events")),
+            Some("win.show-declined-events"),
+        );
+        declined.set_attribute_value("hidden-when", Some(&"action-disabled".to_variant()));
+        calendar.append_item(&declined);
+        menu.append_section(None, &calendar);
         let first = gio::Menu::new();
+        // The calendar's header has no room for the assistant's button,
+        // so the menu both spaces share offers it, with its key.
+        let assistant = gio::MenuItem::new(Some(&gettext("Assistant")), Some("win.assistant"));
+        assistant.set_attribute_value("accel", Some(&"<Control>j".to_variant()));
+        first.append_item(&assistant);
         first.append(Some(&gettext("Check for Mail")), Some("win.check"));
         first.append(Some(&gettext("Add Account…")), Some("win.add-account"));
         first.append(Some(&gettext("New Smart Mailbox…")), Some("win.smart-new"));
@@ -2650,10 +2841,17 @@ impl MainWindow {
             return;
         };
         let accounts = app.accounts();
+        let weak = Rc::downgrade(self);
         super::preferences::present(
             &app,
             &accounts,
             |id| self.offers(id),
+            |id| self.withheld(id),
+            move |id| {
+                if let Some(win) = weak.upgrade() {
+                    win.grant_access(id);
+                }
+            },
             &self.window,
             signature_of.as_deref(),
         );
@@ -2664,7 +2862,7 @@ impl MainWindow {
         let (grant, email) = (Rc::downgrade(self), account.email.clone());
         super::rules::present(&self.core, &account, labels, &self.window, move || {
             if let Some(win) = grant.upgrade() {
-                win.grant(email.clone(), Permission::Settings);
+                win.grant(email.clone());
             }
         });
     }
@@ -2675,10 +2873,17 @@ impl MainWindow {
             return;
         };
         let accounts = app.accounts();
+        let weak = Rc::downgrade(self);
         super::preferences::present_page(
             &app,
             &accounts,
             |id| self.offers(id),
+            |id| self.withheld(id),
+            move |id| {
+                if let Some(win) = weak.upgrade() {
+                    win.grant_access(id);
+                }
+            },
             &self.window,
             page,
         );
@@ -2693,7 +2898,7 @@ impl MainWindow {
             &self.window,
             move || {
                 if let Some(win) = grant.upgrade() {
-                    win.grant(email.clone(), Permission::Settings);
+                    win.grant(email.clone());
                 }
             },
             move |text| {

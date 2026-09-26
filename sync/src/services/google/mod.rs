@@ -19,8 +19,9 @@ use mailrs_domain::mailbox::keyword;
 use mailrs_domain::{EpochMillis, Filter, MailSet, MailboxKind, RemoteMailbox, Role, Vacation};
 use mailrs_gmail::labels as gmail;
 use mailrs_gmail::{
-    Answered, Busy, ConnectionsPage, ContactFields, Event, EventFields, GmailError, LabelColor,
-    Person, RemoteLabel, SendAs, Series, limiter, structure,
+    Answered, Busy, CALENDAR_LIST_SCOPE, CALENDAR_SCOPE, CONTACTS_SCOPE, CONTACTS_WRITE_SCOPE,
+    ConnectionsPage, ContactFields, DELETE_SCOPE, Event, EventFields, GmailError, Granted,
+    LabelColor, Person, RemoteLabel, SETTINGS_SCOPE, SendAs, Series, limiter, structure,
 };
 use mailrs_mime::Parts;
 use mailrs_mime::html::html_to_text;
@@ -28,7 +29,7 @@ use mailrs_mime::html::html_to_text;
 use super::{
     AutoReplyService, Backfill, CalendarService, Changes, ContactsService, Found, IdentityService,
     KeywordsPage, MailBackend, MailCapabilities, Priority, RawMessage, Relocated, RemoteRef,
-    RulesService, SearchQuery, SendAsAddress, SyncState, Unapplied, Want, priority,
+    RulesService, SearchQuery, SendAsAddress, SyncState, Unapplied, Want, Withheld, priority,
 };
 use crate::api::{DraftRef, GmailApi, SavedDraft};
 use crate::{BackendError, MailOp};
@@ -149,6 +150,31 @@ async fn paced<T>(call: impl Future<Output = T>) -> T {
     match priority() {
         Priority::Background => limiter::background(call).await,
         Priority::Foreground => call.await,
+    }
+}
+
+impl<G: GmailApi> Google<G> {
+    /// What this account's own client believes Google withholds.
+    pub fn withheld(&self) -> Withheld {
+        withheld(self.gmail.granted().as_ref())
+    }
+}
+
+/// What `granted` leaves out, by the scope table CONTEXT.md's Withheld
+/// permission entry gives. `None` means the account's grants are not
+/// known yet, and then nothing is withheld: an account still starting
+/// offers everything until a read says otherwise.
+pub fn withheld(granted: Option<&Granted>) -> Withheld {
+    let Some(granted) = granted else {
+        return Withheld::NONE;
+    };
+    Withheld {
+        settings: !granted.has(SETTINGS_SCOPE),
+        delete: !granted.has(DELETE_SCOPE),
+        contacts: !granted.has(CONTACTS_SCOPE),
+        change_contacts: !granted.has(CONTACTS_WRITE_SCOPE),
+        calendar: !granted.has(CALENDAR_SCOPE),
+        calendar_list: !granted.has(CALENDAR_LIST_SCOPE),
     }
 }
 
@@ -661,13 +687,18 @@ mod tests {
     use std::sync::Arc;
     use std::time::Duration;
 
-    use mailrs_gmail::{AccountQuota, GmailError, SendAs, limiter};
+    use mailrs_gmail::{
+        AccountQuota, CALENDAR_LIST_SCOPE, CALENDAR_SCOPE, CONTACTS_SCOPE, CONTACTS_WRITE_SCOPE,
+        DELETE_SCOPE, GMAIL_SCOPE, GmailError, Granted, SETTINGS_SCOPE, SIGN_IN_SCOPES, SendAs,
+        limiter,
+    };
 
-    use super::{Google, paced};
+    use super::{Google, paced, withheld};
     use crate::BackendError;
     use crate::fake::FakeGmail;
     use crate::services::{
-        AutoReplyService, IdentityService, MailBackend, MailCapabilities, SendAsAddress, background,
+        AutoReplyService, IdentityService, MailBackend, MailCapabilities, SendAsAddress, Withheld,
+        background,
     };
 
     fn google() -> (Arc<FakeGmail>, Google<FakeGmail>) {
@@ -758,6 +789,62 @@ mod tests {
         assert_eq!(
             background(asked()).await,
             mailrs_gmail::Priority::Background
+        );
+    }
+
+    #[test]
+    fn withheld_follows_the_granted_scopes() {
+        assert_eq!(withheld(None), Withheld::NONE, "an unknown grant withholds nothing");
+        let everything = Granted::parse(&SIGN_IN_SCOPES.join(" "));
+        assert_eq!(withheld(Some(&everything)), Withheld::NONE);
+        let no_calendar = Granted::parse(&format!(
+            "{GMAIL_SCOPE} {SETTINGS_SCOPE} {DELETE_SCOPE} {CALENDAR_LIST_SCOPE}"
+        ));
+        assert_eq!(
+            withheld(Some(&no_calendar)),
+            Withheld {
+                contacts: true,
+                change_contacts: true,
+                calendar: true,
+                ..Withheld::NONE
+            }
+        );
+        let delete_only = Granted::parse(DELETE_SCOPE);
+        assert!(
+            !withheld(Some(&delete_only)).delete,
+            "mail.google.com covers gmail.modify and is delete's own scope"
+        );
+        assert!(withheld(Some(&delete_only)).settings, "settings is asked for on its own");
+    }
+
+    /// An account that signed in before the five-scope trim may still
+    /// carry `gmail.modify` and `contacts.readonly` on their own, never
+    /// re-asked. Reading mail and reading contacts stay withheld=false
+    /// for such a grant; writing contacts and deleting mail, which those
+    /// narrower scopes never covered, stay withheld=true.
+    #[test]
+    fn withheld_reads_an_old_grant_that_predates_the_five_scope_trim() {
+        let old = Granted::parse(&format!(
+            "{GMAIL_SCOPE} {SETTINGS_SCOPE} {CONTACTS_SCOPE} {CALENDAR_SCOPE} {CALENDAR_LIST_SCOPE}"
+        ));
+        assert!(old.reads_mail(), "gmail.modify alone still reads mail");
+        assert_eq!(
+            withheld(Some(&old)),
+            Withheld { delete: true, change_contacts: true, ..Withheld::NONE },
+            "contacts.readonly reads contacts but neither narrower scope writes or deletes"
+        );
+    }
+
+    /// A person who signs in after the trim and unticks one of the five
+    /// boxes withholds only the feature that scope serves.
+    #[test]
+    fn withheld_reads_a_scope_the_person_unticked_from_the_new_five() {
+        let unticked_calendar_list = Granted::parse(&format!(
+            "{DELETE_SCOPE} {SETTINGS_SCOPE} {CONTACTS_WRITE_SCOPE} {CALENDAR_SCOPE}"
+        ));
+        assert_eq!(
+            withheld(Some(&unticked_calendar_list)),
+            Withheld { calendar_list: true, ..Withheld::NONE }
         );
     }
 }

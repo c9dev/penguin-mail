@@ -50,6 +50,16 @@ app/src/ui/assistant_mcp_prefs.rs
 app/src/ui/assistant_prefs.rs
 app/src/ui/assistant_skills_prefs.rs
 app/src/ui/assistant_web_prefs.rs
+app/src/ui/calendar/agenda.rs
+app/src/ui/calendar/block.rs
+app/src/ui/calendar/mod.rs
+app/src/ui/calendar/month.rs
+app/src/ui/calendar/popover.rs
+app/src/ui/calendar/range.rs
+app/src/ui/calendar/shown.rs
+app/src/ui/calendar/sidebar.rs
+app/src/ui/calendar/time_grid.rs
+app/src/ui/calendar/words.rs
 app/src/ui/composer/mod.rs
 app/src/ui/composer/recipients.rs
 app/src/ui/composer/spell.rs
@@ -98,6 +108,7 @@ app/src/ui/window/reveal.rs
 app/src/ui/window/scheduled.rs
 app/src/ui/window/senders.rs
 app/src/ui/window/shortcuts.rs
+app/src/ui/window/spaces.rs
 app/src/unsubscribe_page.rs
 app/src/unsubscribe_page/webkit.rs
 app/src/update/mod.rs

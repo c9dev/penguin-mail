@@ -3,13 +3,35 @@
 
 use mailrs_domain::translate::{fill, gettext};
 use mailrs_domain::{Account, AccountId, Provider};
-use mailrs_sync::{AccountServices, Mailbox, Missing, Offers};
+use mailrs_sync::{AccountServices, Mailbox, Missing, Offers, Withheld};
 
 /// What an account offers. An account that is not running yet has no
 /// services to ask, and the window assumes it offers everything until it
 /// starts, so nothing flickers away.
 pub fn offers_for(services: Option<&AccountServices>) -> Offers {
     services.map_or(Offers::EVERYTHING, AccountServices::offers)
+}
+
+/// What an account's own consent left withheld. An account that is not
+/// running yet has no services to ask, and nothing is withheld until a
+/// read of its grants says otherwise.
+pub fn withheld_for(services: Option<&AccountServices>) -> Withheld {
+    services.map_or(Withheld::NONE, AccountServices::withheld)
+}
+
+/// Whether the sidebar offers the Mail / Calendar switch. `started` holds
+/// what each running account offers; `waiting` says some account has not
+/// started yet. Once one running account offers a calendar the switch
+/// shows. Until the accounts have started nobody knows, so the switch
+/// follows the space the window opened on last, which keeps it from
+/// blinking away and back for someone who uses the calendar.
+pub fn shows_space_switch(
+    started: &[Offers],
+    waiting: bool,
+    remembered: crate::settings::Space,
+) -> bool {
+    started.iter().any(|offers| offers.calendar)
+        || (waiting && remembered == crate::settings::Space::Calendar)
 }
 
 /// Whether the category bar shows over `mailbox`: the person has
@@ -329,7 +351,30 @@ mod tests {
     use mailrs_domain::{Account, AccountState, Provider};
     use mailrs_sync::{Missing, Offers};
 
-    use super::{offers_for, reason};
+    use super::{offers_for, reason, shows_space_switch, withheld_for};
+    use crate::settings::Space;
+
+    const NO_CALENDAR: Offers = Offers {
+        calendar: false,
+        ..Offers::EVERYTHING
+    };
+
+    #[test]
+    fn the_switch_shows_once_a_started_account_offers_a_calendar() {
+        assert!(shows_space_switch(&[NO_CALENDAR, Offers::EVERYTHING], false, Space::Mail));
+    }
+
+    #[test]
+    fn the_switch_hides_when_no_started_account_offers_a_calendar() {
+        assert!(!shows_space_switch(&[NO_CALENDAR], false, Space::Calendar));
+        assert!(!shows_space_switch(&[], false, Space::Calendar));
+    }
+
+    #[test]
+    fn before_the_accounts_start_the_switch_follows_the_last_space() {
+        assert!(shows_space_switch(&[NO_CALENDAR], true, Space::Calendar));
+        assert!(!shows_space_switch(&[], true, Space::Mail));
+    }
 
     fn gmail() -> Account {
         Account {
@@ -392,6 +437,11 @@ mod tests {
     #[test]
     fn an_account_that_is_not_running_yet_hides_nothing() {
         assert_eq!(offers_for(None), Offers::EVERYTHING);
+    }
+
+    #[test]
+    fn an_account_that_is_not_running_yet_withholds_nothing() {
+        assert_eq!(withheld_for(None), mailrs_sync::Withheld::NONE);
     }
 
     use mailrs_sync::Mailbox;

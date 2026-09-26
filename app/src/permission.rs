@@ -11,10 +11,8 @@ use std::collections::HashSet;
 
 use mailrs_domain::AccountId;
 use mailrs_domain::translate::{fill, gettext};
-use mailrs_gmail::{
-    CALENDAR_LIST_SCOPE, CALENDAR_SCOPE, CONTACTS_SCOPE, CONTACTS_WRITE_SCOPE, DELETE_SCOPE,
-    SETTINGS_SCOPE,
-};
+use mailrs_gmail::SIGN_IN_SCOPES;
+use mailrs_sync::Withheld;
 
 /// A Google permission sign-in leaves out, or one a caller can find
 /// missing. CONTEXT.md describes each.
@@ -62,22 +60,6 @@ impl Permission {
         Permission::ChangeContacts,
         Permission::Calendar,
     ];
-
-    /// The scopes the consent flow asks Google for on top of sign-in's.
-    /// Sign-in already asks for the settings scope and the consent URL
-    /// drops a repeat, so asking for it again gives the same URL.
-    pub fn scopes(self) -> &'static [&'static str] {
-        match self {
-            Permission::Settings => &[SETTINGS_SCOPE],
-            Permission::Delete => &[DELETE_SCOPE],
-            Permission::Contacts => &[CONTACTS_SCOPE],
-            Permission::ChangeContacts => &[CONTACTS_WRITE_SCOPE],
-            // The list scope lets the calendar view show shared and
-            // subscribed calendars; Google rates it sensitive, not
-            // restricted.
-            Permission::Calendar => &[CALENDAR_SCOPE, CALENDAR_LIST_SCOPE],
-        }
-    }
 
     /// What the permission lets Penguin Mail do, to finish "needs
     /// permission to" in what the assistant tells the model. The model
@@ -173,6 +155,63 @@ impl Asked {
     }
 }
 
+/// The permissions `withheld` says the person did not grant, in the
+/// order Preferences lists them. Calendar and the calendar list share
+/// one permission, so either withheld field names it once.
+pub fn withheld_permissions(withheld: Withheld) -> Vec<Permission> {
+    [
+        (withheld.settings, Permission::Settings),
+        (withheld.delete, Permission::Delete),
+        (withheld.contacts, Permission::Contacts),
+        (withheld.change_contacts, Permission::ChangeContacts),
+        (withheld.calendar || withheld.calendar_list, Permission::Calendar),
+    ]
+    .into_iter()
+    .filter_map(|(missing, permission)| missing.then_some(permission))
+    .collect()
+}
+
+impl Permission {
+    /// What the permission lets Penguin Mail do, in words that finish
+    /// "has not allowed Penguin Mail to".
+    fn allows(self) -> String {
+        match self {
+            Permission::Settings => gettext("change Gmail settings"),
+            Permission::Delete => gettext("delete mail for good"),
+            Permission::Contacts => gettext("read contacts"),
+            Permission::ChangeContacts => gettext("add and change contacts"),
+            Permission::Calendar => gettext("use the calendar"),
+        }
+    }
+}
+
+/// What an account's Grant Access bar says: the account and each
+/// feature its consent left out.
+pub fn grant_bar_title(account: &str, missing: &[Permission]) -> String {
+    let allows: Vec<String> = missing.iter().map(|p| p.allows()).collect();
+    let allows: Vec<&str> = allows.iter().map(String::as_str).collect();
+    fill(
+        &gettext("{account} has not allowed Penguin Mail to {missing}"),
+        &[("account", account), ("missing", &crate::protection::joined(&allows))],
+    )
+}
+
+/// Whether the account's Grant Access banner shows: something is
+/// withheld, and `asked` (the account's `asked_scopes` row) does not
+/// already cover every [`SIGN_IN_SCOPES`] entry. An account asked for
+/// everything and unticked a box gets no banner; the feature it lacks
+/// says so where it lives instead.
+pub fn wants_banner(withheld: Withheld, asked: Option<&str>) -> bool {
+    if withheld.is_empty() {
+        return false;
+    }
+    let Some(asked) = asked else {
+        return true;
+    };
+    let asked: HashSet<&str> = asked.split_whitespace().collect();
+    !SIGN_IN_SCOPES.iter().all(|scope| asked.contains(scope))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -180,9 +219,28 @@ mod tests {
     const OCCASIONS: [Occasion; 2] = [Occasion::Needed, Occasion::Offer];
 
     #[test]
-    fn every_permission_names_the_account_and_a_scope() {
+    fn the_grant_bar_names_each_missing_feature() {
+        assert_eq!(
+            grant_bar_title(
+                "d.reyes@uni.example",
+                &[Permission::Settings, Permission::Delete, Permission::Calendar]
+            ),
+            "d.reyes@uni.example has not allowed Penguin Mail to change Gmail settings, \
+             delete mail for good and use the calendar"
+        );
+    }
+
+    #[test]
+    fn the_grant_bar_names_one_missing_feature_alone() {
+        assert_eq!(
+            grant_bar_title("a@example.com", &[Permission::Contacts]),
+            "a@example.com has not allowed Penguin Mail to read contacts"
+        );
+    }
+
+    #[test]
+    fn every_permission_names_the_account() {
         for permission in Permission::ALL {
-            assert!(!permission.scopes().is_empty(), "{permission:?}");
             assert!(!permission.purpose().is_empty(), "{permission:?}");
             for occasion in OCCASIONS {
                 let words = permission.wording(occasion, "ana@example.com");
@@ -195,21 +253,6 @@ mod tests {
                 assert!(!words.body.contains('{'), "{}", words.body);
             }
         }
-    }
-
-    #[test]
-    fn each_permission_asks_for_its_own_scope() {
-        let mut seen = HashSet::new();
-        for permission in Permission::ALL {
-            for scope in permission.scopes() {
-                assert!(seen.insert(*scope), "{scope} asked twice");
-            }
-        }
-        assert_eq!(Permission::Delete.scopes(), &[DELETE_SCOPE]);
-        assert_eq!(
-            Permission::Calendar.scopes(),
-            &[CALENDAR_SCOPE, CALENDAR_LIST_SCOPE]
-        );
     }
 
     #[test]
@@ -240,5 +283,54 @@ mod tests {
         // A tool that cannot work without the permission still asks after
         // the offer was declined.
         assert!(asked.should_ask(one, Permission::Calendar, Occasion::Needed));
+    }
+
+    #[test]
+    fn withheld_scopes_name_their_permissions() {
+        assert_eq!(withheld_permissions(Withheld::NONE), []);
+        assert_eq!(
+            withheld_permissions(Withheld { settings: true, ..Withheld::NONE }),
+            [Permission::Settings]
+        );
+        // Calendar and the calendar list share one permission, either way.
+        assert_eq!(
+            withheld_permissions(Withheld { calendar: true, ..Withheld::NONE }),
+            [Permission::Calendar]
+        );
+        assert_eq!(
+            withheld_permissions(Withheld { calendar_list: true, ..Withheld::NONE }),
+            [Permission::Calendar]
+        );
+        assert_eq!(
+            withheld_permissions(Withheld {
+                delete: true,
+                contacts: true,
+                ..Withheld::NONE
+            }),
+            [Permission::Delete, Permission::Contacts]
+        );
+    }
+
+    #[test]
+    fn a_banner_shows_for_an_account_never_asked_for_everything() {
+        let some_withheld = Withheld { calendar: true, ..Withheld::NONE };
+        assert!(wants_banner(some_withheld, None), "an old account asked for far less");
+        let old_asked = "https://www.googleapis.com/auth/gmail.modify \
+                          https://www.googleapis.com/auth/gmail.settings.basic";
+        assert!(wants_banner(some_withheld, Some(old_asked)));
+    }
+
+    #[test]
+    fn no_banner_once_the_account_was_asked_and_chose() {
+        let asked = SIGN_IN_SCOPES.join(" ");
+        let some_withheld = Withheld { calendar: true, ..Withheld::NONE };
+        assert!(
+            !wants_banner(some_withheld, Some(&asked)),
+            "a consent that asked for everything got its answer already"
+        );
+        assert!(
+            !wants_banner(Withheld::NONE, Some(&asked)),
+            "nothing withheld needs no banner either"
+        );
     }
 }

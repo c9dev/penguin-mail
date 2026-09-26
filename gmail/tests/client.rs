@@ -1,7 +1,11 @@
 use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use mailrs_gmail::{GmailClient, GmailError, HistoryChange, OAuthClient, authorize};
+use mailrs_gmail::{
+    GMAIL_SCOPE, GmailClient, GmailError, Granted, HistoryChange, OAuthClient, SETTINGS_SCOPE,
+    authorize,
+};
 use serde_json::json;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use wiremock::matchers::{body_json, body_string_contains, header, method, path, query_param};
@@ -79,6 +83,43 @@ async fn a_401_refreshes_once_and_retries() {
         .mount(&server)
         .await;
     assert!(client(&server).profile().await.is_ok());
+}
+
+#[tokio::test]
+async fn a_refresh_that_grants_less_tells_the_hook() {
+    let server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/token"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "access_token": "at-1", "expires_in": 3600,
+            "scope": format!("{GMAIL_SCOPE} {SETTINGS_SCOPE}"),
+        })))
+        .expect(1)
+        .mount(&server)
+        .await;
+    Mock::given(method("GET"))
+        .and(path(format!("{API}/profile")))
+        .respond_with(
+            ResponseTemplate::new(200)
+                .set_body_json(json!({"emailAddress": "me@example.com", "historyId": "1"})),
+        )
+        .mount(&server)
+        .await;
+    let told: Arc<Mutex<Option<Granted>>> = Arc::new(Mutex::new(None));
+    let seen = Arc::clone(&told);
+    let client = client(&server)
+        .with_granted(Some(Granted::parse(
+            "https://www.googleapis.com/auth/gmail.modify \
+             https://www.googleapis.com/auth/gmail.settings.basic \
+             https://www.googleapis.com/auth/calendar.events",
+        )))
+        .on_granted(move |granted| {
+            *seen.lock().unwrap() = Some(granted.clone());
+        });
+    client.profile().await.unwrap();
+    let smaller = Granted::parse(&format!("{GMAIL_SCOPE} {SETTINGS_SCOPE}"));
+    assert_eq!(*told.lock().unwrap(), Some(smaller.clone()));
+    assert_eq!(client.granted(), Some(smaller));
 }
 
 #[tokio::test]
@@ -398,7 +439,7 @@ async fn authorize_runs_the_consent_flow() {
         .await;
 
     let api = format!("{}{API}", server.uri());
-    let authorized = authorize(&oauth(&server), &api, &[], |consent_url| {
+    let authorized = authorize(&oauth(&server), &api, |consent_url| {
         let url = url::Url::parse(consent_url).unwrap();
         let q: HashMap<String, String> = url.query_pairs().into_owned().collect();
         let redirect = q["redirect_uri"].trim_start_matches("http://").to_string();

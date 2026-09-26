@@ -322,3 +322,250 @@ flowboxchild:focus-visible > .recipient-chip {
 /* Add Account's links to a provider's pages line up under the words they
    follow, where a link button's own padding would push them in. */
 .account-note button.link { padding: 2px 0; min-height: 0; }
+
+/* Calendar. The grid is a card on the window background; hairlines only
+   at hour marks; events are tinted cards with a bar of their colour. The
+   per-colour tints come from ui/calendar/tint.rs. Sizes, weights and
+   strengths are the approved mockup's (calendar-mockup/mockups.py), in em
+   of the 11 pt interface font: 21 px is 1.43em, 13 px 0.89em, 12.5 px
+   0.85em, 11 px 0.75em. Its dimmed text is the text colour at 64 %, its
+   faint text at 40 %. */
+.cal-accent { --cal-colour: var(--accent-bg-color); }
+.calendar-card {
+  background: var(--view-bg-color);
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, currentColor 15%, transparent);
+}
+
+/* One 1 px rule under the day headings and under the all-day row, and
+   no shade where the hours scroll under it: the mockup draws neither. */
+.calendar-card separator {
+  min-height: 1px;
+  min-width: 1px;
+  background: color-mix(in srgb, currentColor 13%, transparent);
+}
+.time-scroller > undershoot.top,
+.time-scroller > undershoot.bottom { background: none; box-shadow: none; }
+
+/* The header: "September 2026 W39", a Today pill, the arrows in one
+   pill, and the view switch. */
+.range-title { margin: 0 10px 0 16px; }
+.calendar-compact .range-title { margin: 0 4px 0 2px; }
+.calendar-compact toggle-group.view-switch > toggle { min-width: 0; }
+.range-title .bold { font-weight: 800; font-size: 1.43em; }
+.range-title .dim { font-size: 1.43em; font-weight: 400; opacity: 0.4; }
+.range-title .week { font-size: 0.85em; font-weight: 700; opacity: 0.4; }
+button.calendar-today {
+  min-height: 30px;
+  padding: 0 14px;
+  border-radius: 15px;
+  font-weight: 700;
+  font-size: 0.89em;
+}
+.calendar-arrows {
+  background: color-mix(in srgb, currentColor 10%, transparent);
+  border-radius: 16px;
+  padding: 0 2px;
+}
+.calendar-arrows > button { min-height: 32px; min-width: 34px; padding: 0; border-radius: 16px; }
+.calendar-arrows > separator { margin: 8px 0; }
+/* The view switch and the sidebar's Mail / Calendar switch: 13 px
+   labels, the unchosen ones dimmed at weight 600. */
+toggle-group.view-switch > toggle,
+toggle-group.space-switch > toggle { font-size: 0.89em; font-weight: 600; }
+/* The mockup's switch is a 204 x 32 pill of three 64 px toggles. */
+toggle-group.view-switch > toggle { min-width: 64px; padding-left: 0; padding-right: 0; }
+toggle-group.space-switch > toggle { -gtk-icon-size: 14px; padding-left: 12px; padding-right: 12px; }
+toggle-group.view-switch > toggle:not(:checked),
+toggle-group.space-switch > toggle:not(:checked) { color: color-mix(in srgb, currentColor 64%, transparent); }
+/* The chosen toggle is the view colour on the pill, white in light and
+   the darker #1e1e21 in dark, where libadwaita would lighten it. */
+toggle-group.view-switch > toggle:checked,
+toggle-group.space-switch > toggle:checked { font-weight: 700; background: var(--view-bg-color); }
+
+/* An event block is a button so a press answers at once; GTK's own
+   button rules would otherwise add a background, a border and a shadow
+   on top of the tint. The bar sits 1 px in and 3 px from the top and
+   bottom; the title starts 11 px in. */
+button.event-block {
+  border-radius: 8px;
+  padding: 3px 2px 3px 1px;
+  background-color: color-mix(in srgb, var(--accent-bg-color) 14%, var(--view-bg-color));
+  box-shadow: none;
+  min-height: 0;
+  border: none;
+}
+button.event-block:hover {
+  background-color: color-mix(in srgb, var(--accent-bg-color) 22%, var(--view-bg-color));
+}
+button.event-block:active {
+  background-color: color-mix(in srgb, var(--accent-bg-color) 28%, var(--view-bg-color));
+}
+.calendar-dark button.event-block:hover {
+  background-color: color-mix(in srgb, var(--accent-bg-color) 32%, var(--view-bg-color));
+}
+.event-block .bar { min-width: 4px; border-radius: 2px; background: var(--cal-colour); }
+.event-block .title { font-weight: 700; font-size: 0.85em; margin-top: 3px; }
+.event-block .time {
+  font-weight: 500;
+  font-size: 0.75em;
+  opacity: 0.64;
+  font-feature-settings: "tnum";
+}
+/* Under 45 minutes the block is too short for two lines, so the title
+   and the time share one line, the time against the right edge. */
+button.event-block.compact { padding-top: 0; padding-bottom: 0; padding-right: 7px; }
+button.event-block.compact .bar { margin: 3px 0; }
+button.event-block.compact .title { font-size: 0.82em; margin-top: 0; }
+/* An invitation not answered yet: no tint and no bar. The block strokes
+   its dashed outline itself (block.rs), since a CSS dashed border cannot
+   draw the mockup's 5 and 4 pattern. tint.rs leaves these blocks out of
+   its fills, which would otherwise win. */
+button.event-block.unanswered,
+.calendar-dark button.event-block.unanswered { background: var(--view-bg-color); }
+button.event-block.unanswered:hover,
+.calendar-dark button.event-block.unanswered:hover {
+  background: color-mix(in srgb, var(--cal-colour) 8%, var(--view-bg-color));
+}
+.event-block.unanswered .bar { background: transparent; }
+.event-block.declined { opacity: 0.5; }
+.event-block.declined .title { text-decoration: line-through; }
+.event-block:focus-visible { outline: 2px solid var(--accent-color); outline-offset: 1px; }
+.all-day-strip button.event-block { border-radius: 6px; }
+
+/* "Mon" and "All-day" stay title case in the string a screen reader
+   reads; the small capitals are drawn, not spoken. */
+.day-heading .weekday {
+  font-size: 0.75em;
+  font-weight: 600;
+  letter-spacing: 0.6px;
+  opacity: 0.64;
+  text-transform: uppercase;
+}
+.day-heading .date { font-weight: 800; font-size: 0.95em; }
+button.day-heading { min-height: 26px; padding: 0 14px; border-radius: 13px; }
+.day-heading.today {
+  background: color-mix(in srgb, var(--accent-bg-color) 18%, transparent);
+  border-radius: 999px;
+  color: var(--accent-color);
+}
+.day-heading.today .weekday { font-weight: 700; opacity: 1; }
+.hour-label {
+  font-size: 0.75em;
+  font-weight: 500;
+  opacity: 0.4;
+  font-feature-settings: "tnum";
+}
+.all-day-label {
+  font-size: 0.65em;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  opacity: 0.4;
+  text-transform: uppercase;
+}
+
+/* The mini month: 13 px numbers at weight 500, today a filled accent
+   square with rounded corners, a faint dot under a day with events. */
+.mini-month-title { font-weight: 800; font-size: 0.99em; }
+.mini-month-weekday { font-size: 0.78em; font-weight: 700; opacity: 0.4; }
+.mini-month button {
+  min-width: 28px;
+  min-height: 26px;
+  padding: 0;
+  border-radius: 8px;
+  font-size: 0.89em;
+  font-weight: 500;
+}
+.mini-month button.today {
+  background: var(--accent-bg-color);
+  color: var(--accent-fg-color);
+  font-weight: 800;
+}
+.mini-month button.outside { opacity: 0.4; }
+.mini-month .dot { min-width: 4px; min-height: 4px; border-radius: 99px; background: currentColor; opacity: 0.4; }
+.mini-month button.today .dot,
+.mini-month button.outside .dot { opacity: 0; }
+.mini-month-header button { min-width: 24px; min-height: 24px; padding: 0; }
+.mini-month-header button label { font-size: 1.36em; font-weight: 400; }
+.calendar-row { min-height: 28px; }
+.calendar-lock { opacity: 0.4; }
+.mini-month { margin-top: -2px; }
+checkbutton.calendar-check:not(:checked) + label { opacity: 0.64; }
+.calendar-account { font-size: 0.78em; font-weight: 700; opacity: 0.4; }
+.calendar-name { font-size: 0.92em; font-weight: 500; }
+/* The indicator is the checkbutton's `check` child, not the row itself,
+   or the circle would wrap the calendar's name too. A 15 px dot, filled
+   with a white tick when shown, a ring in its colour when hidden. */
+checkbutton.calendar-check > check {
+  min-width: 12px;
+  min-height: 12px;
+  padding: 0;
+  -gtk-icon-size: 10px;
+  border-radius: 99px;
+  border: 1.6px solid var(--cal-colour);
+  background: transparent;
+  box-shadow: none;
+}
+checkbutton.calendar-check > check:checked {
+  background: var(--cal-colour);
+  color: white;
+}
+/* The month view: each of the 42 cells is a small card; a day outside
+   the month shown reads quieter. */
+.month-cell { padding: 4px; border-top: 1px solid color-mix(in srgb, currentColor 8%, transparent); }
+.month-grid > .month-cell:not(:nth-child(7n)) {
+  border-right: 1px solid color-mix(in srgb, currentColor 8%, transparent);
+}
+/* A month cell holds one line per event, all-day or timed alike. */
+.month-cell button.event-block { padding-top: 1px; padding-bottom: 1px; }
+.month-cell button.event-block .title { font-size: 0.82em; margin-top: 0; }
+.day-heading.dimmed { opacity: 0.4; }
+.month-more { font-size: 0.75em; font-weight: 600; padding: 2px 4px; min-height: 0; }
+/* The agenda: a coloured dot per row, tinted the way an event block's
+   bar is, and a heading row per date. */
+.agenda-row { padding: 0 4px; }
+.agenda-dot {
+  min-width: 8px;
+  min-height: 8px;
+  border-radius: 99px;
+  background: var(--cal-colour, var(--accent-bg-color));
+}
+.agenda-heading { font-weight: 800; opacity: 0.75; }
+/* The event popover: 16 px corners, a 4 px bar beside the title and
+   the time, 13 px rows, and 34 px buttons with 10 px corners. */
+popover.event-popover > contents { border-radius: 16px; padding: 0; }
+.popover-bar { min-width: 4px; border-radius: 2px; background: var(--cal-colour); }
+.popover-title { font-weight: 800; font-size: 1.16em; }
+.popover-when { font-size: 0.85em; font-weight: 500; opacity: 0.64; }
+popover.event-popover label { font-size: 0.89em; }
+popover.event-popover .popover-title { font-size: 1.16em; }
+popover.event-popover .popover-when { font-size: 0.85em; }
+/* GTK adds a button's own padding to its min-height; the mockup's
+   buttons are 34 px in all. */
+button.popover-join, button.popover-answer {
+  min-height: 34px;
+  padding-top: 0;
+  padding-bottom: 0;
+  border-radius: 10px;
+  font-weight: 700;
+}
+/* The mockup's popover is the view colour in light, #36363c in dark, and
+   its unchosen buttons the pill colour, #e3e3e7 and #3a3a40. */
+popover.event-popover > contents { background: var(--view-bg-color); }
+.calendar-dark popover.event-popover > contents { background: #36363c; }
+popover.event-popover button.popover-join,
+popover.event-popover button.popover-answer:not(.suggested-action) { background: #e3e3e7; }
+.calendar-dark popover.event-popover button.popover-join,
+.calendar-dark popover.event-popover button.popover-answer:not(.suggested-action) { background: #3a3a40; }
+/* The place row is a button only so it can open the map; it reads as
+   the rows around it. */
+popover.event-popover button.popover-place { min-height: 0; padding: 0; margin: 0 -4px; padding: 0 4px; font-weight: 400; }
+button.popover-answer.suggested-action { background: var(--accent-bg-color); color: var(--accent-fg-color); }
+popover.event-popover button.popover-join:hover,
+popover.event-popover button.popover-answer:not(.suggested-action):hover {
+  background: color-mix(in srgb, currentColor 8%, #e3e3e7);
+}
+.calendar-dark popover.event-popover button.popover-join:hover,
+.calendar-dark popover.event-popover button.popover-answer:not(.suggested-action):hover {
+  background: color-mix(in srgb, currentColor 8%, #3a3a40);
+}

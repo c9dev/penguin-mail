@@ -3,8 +3,9 @@ use std::collections::HashMap;
 use base64::Engine;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use mailrs_gmail::{
-    CALENDAR_SCOPE, DELETE_SCOPE, GMAIL_SCOPE, GmailError, LoopbackListener, OAuthClient, Pkce,
-    SETTINGS_SCOPE, parse_redirect,
+    CALENDAR_LIST_SCOPE, CALENDAR_SCOPE, CONTACTS_SCOPE, CONTACTS_WRITE_SCOPE, DELETE_SCOPE,
+    GMAIL_SCOPE, GmailError, Granted, LoopbackListener, OAuthClient, Pkce, SETTINGS_SCOPE,
+    SIGN_IN_SCOPES, parse_redirect,
 };
 use serde_json::json;
 use sha2::{Digest, Sha256};
@@ -34,18 +35,15 @@ fn pkce_challenge_is_the_sha256_of_the_verifier() {
 fn authorize_url_carries_pkce_and_offline_access() {
     let client = OAuthClient::new("cid", "secret");
     let pkce = Pkce::generate();
-    let url = url::Url::parse(
-        &client
-            .authorize_url("http://127.0.0.1:5000", &pkce, "st", &[])
-            .unwrap(),
-    )
-    .unwrap();
+    let url =
+        url::Url::parse(&client.authorize_url("http://127.0.0.1:5000", &pkce, "st").unwrap())
+            .unwrap();
     let q: HashMap<String, String> = url.query_pairs().into_owned().collect();
     assert_eq!(url.host_str(), Some("accounts.google.com"));
     assert_eq!(q["client_id"], "cid");
     assert_eq!(q["redirect_uri"], "http://127.0.0.1:5000");
     assert_eq!(q["response_type"], "code");
-    assert_eq!(q["scope"], format!("{GMAIL_SCOPE} {SETTINGS_SCOPE}"));
+    assert_eq!(q["scope"], SIGN_IN_SCOPES.join(" "));
     assert_eq!(q["include_granted_scopes"], "true");
     assert_eq!(q["code_challenge"], pkce.challenge);
     assert_eq!(q["code_challenge_method"], "S256");
@@ -54,37 +52,45 @@ fn authorize_url_carries_pkce_and_offline_access() {
     assert_eq!(q["prompt"], "consent");
 }
 
+/// The owner decided every scope goes in one consent: sign-in no longer
+/// asks for settings alone and leaves the rest for later, one at a time.
 #[test]
-fn only_an_asked_for_extra_scope_joins_the_consent_url() {
+fn sign_in_asks_for_every_scope_at_once() {
     let client = OAuthClient::new("cid", "secret");
     let pkce = Pkce::generate();
-    let scope = |extra: &[&str]| -> String {
-        let url = url::Url::parse(
-            &client
-                .authorize_url("http://127.0.0.1:5000", &pkce, "st", extra)
-                .unwrap(),
-        )
-        .unwrap();
-        url.query_pairs()
-            .into_owned()
-            .collect::<HashMap<String, String>>()["scope"]
-            .clone()
-    };
-    assert!(!scope(&[]).contains(DELETE_SCOPE), "sign-in leaves it out");
-    assert_eq!(
-        scope(&[DELETE_SCOPE]),
-        format!("{GMAIL_SCOPE} {SETTINGS_SCOPE} {DELETE_SCOPE}")
-    );
-    assert!(
-        !scope(&[]).contains(CALENDAR_SCOPE),
-        "answering an invitation is asked for when somebody answers one"
-    );
-    assert_eq!(
-        scope(&[CALENDAR_SCOPE]),
-        format!("{GMAIL_SCOPE} {SETTINGS_SCOPE} {CALENDAR_SCOPE}")
-    );
-    // Asking twice for a scope sign-in already covers changes nothing.
-    assert_eq!(scope(&[SETTINGS_SCOPE]), scope(&[]));
+    let url =
+        url::Url::parse(&client.authorize_url("http://127.0.0.1:5000", &pkce, "st").unwrap())
+            .unwrap();
+    let scope = url
+        .query_pairs()
+        .into_owned()
+        .collect::<HashMap<String, String>>()["scope"]
+        .clone();
+    assert_eq!(scope, SIGN_IN_SCOPES.join(" "));
+    for asked in [DELETE_SCOPE, SETTINGS_SCOPE, CONTACTS_WRITE_SCOPE, CALENDAR_SCOPE] {
+        assert!(scope.contains(asked), "{asked} missing from {scope}");
+    }
+}
+
+/// Google's verification team asks for least privilege: `mail.google.com`
+/// already covers `gmail.modify`, and `contacts` already covers
+/// `contacts.readonly`, so sign-in leaves both narrower scopes out.
+#[test]
+fn sign_in_asks_for_five_scopes_not_seven() {
+    assert_eq!(SIGN_IN_SCOPES.len(), 5);
+    let scope = SIGN_IN_SCOPES.join(" ");
+    for asked in [
+        DELETE_SCOPE,
+        SETTINGS_SCOPE,
+        CONTACTS_WRITE_SCOPE,
+        CALENDAR_SCOPE,
+        CALENDAR_LIST_SCOPE,
+    ] {
+        assert!(scope.contains(asked), "{asked} missing from {scope}");
+    }
+    for covered in [GMAIL_SCOPE, CONTACTS_SCOPE] {
+        assert!(!SIGN_IN_SCOPES.contains(&covered), "{covered} should no longer be asked");
+    }
 }
 
 #[test]
@@ -195,6 +201,64 @@ async fn refresh_returns_a_new_access_token() {
         client_for(&server).refresh("rt").await.unwrap().token,
         "at-2"
     );
+}
+
+#[tokio::test]
+async fn an_exchange_keeps_the_scopes_google_granted() {
+    let server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/token"))
+        .and(body_string_contains("grant_type=authorization_code"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "access_token": "at", "expires_in": 3599, "refresh_token": "rt",
+            "scope": format!("{GMAIL_SCOPE} {SETTINGS_SCOPE}"),
+        })))
+        .mount(&server)
+        .await;
+    let tokens = client_for(&server)
+        .exchange_code("c1", "http://127.0.0.1:1", &Pkce::generate())
+        .await
+        .unwrap();
+    assert_eq!(
+        tokens.access.granted,
+        Some(Granted::parse(&format!("{GMAIL_SCOPE} {SETTINGS_SCOPE}")))
+    );
+}
+
+#[tokio::test]
+async fn a_refresh_keeps_the_scopes_google_granted() {
+    let server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/token"))
+        .and(body_string_contains("grant_type=refresh_token"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "access_token": "at-2", "expires_in": 3599,
+            "scope": format!("{GMAIL_SCOPE} {SETTINGS_SCOPE} {CALENDAR_SCOPE}"),
+        })))
+        .mount(&server)
+        .await;
+    let token = client_for(&server).refresh("rt").await.unwrap();
+    assert_eq!(
+        token.granted,
+        Some(Granted::parse(&format!(
+            "{GMAIL_SCOPE} {SETTINGS_SCOPE} {CALENDAR_SCOPE}"
+        )))
+    );
+}
+
+#[tokio::test]
+async fn a_token_answer_without_a_scope_leaves_it_unknown() {
+    let server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/token"))
+        .respond_with(
+            ResponseTemplate::new(200)
+                .set_body_json(json!({"access_token": "at-2", "expires_in": 3599})),
+        )
+        .mount(&server)
+        .await;
+    let token = client_for(&server).refresh("rt").await.unwrap();
+    assert_eq!(token.granted, None);
 }
 
 #[tokio::test]

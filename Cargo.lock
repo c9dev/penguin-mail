@@ -2233,6 +2233,7 @@ dependencies = [
  "async-channel 2.5.0",
  "base64 0.23.1",
  "chrono",
+ "chrono-tz",
  "futures",
  "gettext-rs",
  "gtk4",

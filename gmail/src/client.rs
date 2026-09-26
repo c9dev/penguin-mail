@@ -20,7 +20,7 @@ use crate::model::{
     AttachmentBody, Draft, DraftList, GmailFilter, HistoryList, LabelColor, LabelList, Message,
     MessagePage, Profile, RemoteLabel, SendAs, SendAsList, Thread, VacationSettings,
 };
-use crate::oauth::{AccessToken, LoopbackListener, OAuthClient, Pkce, random_token};
+use crate::oauth::{AccessToken, Granted, LoopbackListener, OAuthClient, Pkce, random_token};
 use crate::people::{self, ConnectionsPage, ContactFields, Person};
 
 pub const GMAIL_API_BASE: &str = "https://gmail.googleapis.com/gmail/v1/users/me";
@@ -73,6 +73,10 @@ pub mod cost {
     pub const CONTACT_WRITE: u32 = 5;
 }
 
+/// What runs when a refresh reports a different set of scopes than
+/// [`GmailClient`] held. See the field's own doc for what it must not do.
+type GrantedHook = std::sync::Arc<dyn Fn(&Granted) + Send + Sync>;
+
 /// A Gmail client for one account.
 pub struct GmailClient {
     oauth: OAuthClient,
@@ -85,6 +89,14 @@ pub struct GmailClient {
     pub(crate) calendar_base_url: String,
     access: Mutex<Option<AccessToken>>,
     quota: std::sync::Arc<AccountQuota>,
+    /// The scopes this account is believed to have granted: seeded from
+    /// the store and updated whenever a refresh reports a different set.
+    granted: std::sync::Mutex<Option<Granted>>,
+    /// Runs when [`GmailClient::bearer`] finds a refresh reporting a
+    /// different set of scopes than `granted` held, with the refresh lock
+    /// still taken. It must only hand the value on, never await anything
+    /// that itself waits on this client.
+    on_granted: Option<GrantedHook>,
 }
 
 impl GmailClient {
@@ -101,6 +113,8 @@ impl GmailClient {
             calendar_base_url: crate::calendar::CALENDAR_API_BASE.to_string(),
             access: Mutex::new(None),
             quota,
+            granted: std::sync::Mutex::new(None),
+            on_granted: None,
         }
     }
 
@@ -133,6 +147,34 @@ impl GmailClient {
             access: Mutex::new(Some(token)),
             ..self
         }
+    }
+
+    /// Seeds the scopes this account is believed to have granted, from
+    /// what the store kept. `None` when they are not known yet: an
+    /// account that has never refreshed since the upgrade that added
+    /// this, or one just added, for which [`crate::authorize`] already
+    /// checked mail was granted.
+    pub fn with_granted(self, granted: Option<Granted>) -> Self {
+        GmailClient {
+            granted: std::sync::Mutex::new(granted),
+            ..self
+        }
+    }
+
+    /// Runs `f` whenever a refresh reports a set of scopes different from
+    /// the one this client held. See the field's own doc for what `f`
+    /// must not do.
+    pub fn on_granted(self, f: impl Fn(&Granted) + Send + Sync + 'static) -> Self {
+        GmailClient {
+            on_granted: Some(std::sync::Arc::new(f)),
+            ..self
+        }
+    }
+
+    /// The scopes this client currently believes the account has
+    /// granted, or `None` while that is not known.
+    pub fn granted(&self) -> Option<Granted> {
+        self.granted.lock().expect("client poisoned").clone()
     }
 
     pub async fn profile(&self) -> Result<Profile, GmailError> {
@@ -745,6 +787,21 @@ impl GmailClient {
             return Ok(token.token.clone());
         }
         let fresh = self.oauth.refresh(&self.refresh_token).await?;
+        if let Some(granted) = &fresh.granted {
+            let changed = {
+                let mut held = self.granted.lock().expect("client poisoned");
+                let changed = held.as_ref() != Some(granted);
+                if changed {
+                    *held = Some(granted.clone());
+                }
+                changed
+            };
+            if changed
+                && let Some(hook) = &self.on_granted
+            {
+                hook(granted);
+            }
+        }
         let token = fresh.token.clone();
         *cached = Some(fresh);
         Ok(token)
@@ -906,24 +963,33 @@ pub async fn one_click_unsubscribe(url: &str) -> Result<(), OneClickError> {
 pub struct Authorized {
     pub email: String,
     pub refresh_token: String,
+    /// The scopes Google's token answer said it granted. `None` when the
+    /// answer carried no `scope` field.
+    pub granted: Option<Granted>,
 }
 
-/// Runs the consent flow for one account. `open_browser` receives Google's
-/// consent URL; the flow finishes when the browser redirects back. `extra`
-/// names permissions to ask for on top of the ones sign-in always requests.
+/// Runs the consent flow for one account, asking for every
+/// [`crate::SIGN_IN_SCOPES`] entry in one visit. `open_browser` receives
+/// Google's consent URL; the flow finishes when the browser redirects
+/// back. Fails with [`GmailError::MailNotGranted`] when the person
+/// unticked mail itself, before asking Gmail for anything that would only
+/// answer 403.
 pub async fn authorize(
     oauth: &OAuthClient,
     api_base: &str,
-    extra: &[&str],
     open_browser: impl FnOnce(&str),
 ) -> Result<Authorized, GmailError> {
     let listener = LoopbackListener::bind().await?;
     let redirect_uri = listener.redirect_uri.clone();
     let pkce = Pkce::generate();
     let state = random_token(16);
-    open_browser(&oauth.authorize_url(&redirect_uri, &pkce, &state, extra)?);
+    open_browser(&oauth.authorize_url(&redirect_uri, &pkce, &state)?);
     let code = listener.wait_for_code(&state).await?;
     let tokens = oauth.exchange_code(&code, &redirect_uri, &pkce).await?;
+    if tokens.access.granted.as_ref().is_some_and(|g| !g.reads_mail()) {
+        return Err(GmailError::MailNotGranted);
+    }
+    let granted = tokens.access.granted.clone();
     let client = GmailClient::new(oauth.clone(), tokens.refresh_token.clone())
         .with_base_url(api_base)
         .with_access_token(tokens.access);
@@ -931,6 +997,7 @@ pub async fn authorize(
     Ok(Authorized {
         email: profile.email_address,
         refresh_token: tokens.refresh_token,
+        granted,
     })
 }
 

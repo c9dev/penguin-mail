@@ -6,10 +6,11 @@
 //! An occurrence someone changed is a row of its own that names its
 //! series and the start it replaces.
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use mailrs_domain::calendar::{self as model, Access, Calendar, Event, Guest, Occurrence, Status};
+use mailrs_domain::invitation::Answer;
 use mailrs_domain::{AccountId, EpochMillis};
 use rusqlite::{Connection, OptionalExtension, Row, params};
 
@@ -229,6 +230,37 @@ pub fn remove_events(conn: &Connection, account_id: AccountId, calendar: &str, i
     Ok(())
 }
 
+/// The rows `set_my_answer` changes: event `id`, and every other row of
+/// the account that shares its uid, such as a moved occurrence stored
+/// apart from its series. An empty uid matches nothing but the event.
+const SAME_EVENT: &str = "account_id = ?1 AND ((calendar = ?2 AND id = ?3) OR (uid <> '' AND uid = \
+     (SELECT uid FROM events WHERE account_id = ?1 AND calendar = ?2 AND id = ?3)))";
+
+/// Records the account's own answer to event `id`, for an answer given
+/// from the calendar view: `my_answer` on the event, and the answer of
+/// the guest row marked `me`. The provider answers a whole series by its
+/// uid, so every row of the account with that uid takes the answer too;
+/// a changed occurrence would otherwise keep its old answer, and its
+/// dashed outline, until the next read.
+pub fn set_my_answer(
+    conn: &Connection,
+    account_id: AccountId,
+    calendar: &str,
+    id: &str,
+    answer: Answer,
+) -> Result<()> {
+    conn.execute(
+        &format!("UPDATE event_guests SET answer = ?4 WHERE account_id = ?1 AND me = 1 AND (calendar, event) IN \
+             (SELECT calendar, id FROM events WHERE {SAME_EVENT})"),
+        params![account_id, calendar, id, answer.as_str()],
+    )?;
+    conn.execute(
+        &format!("UPDATE events SET my_answer = ?4 WHERE {SAME_EVENT}"),
+        params![account_id, calendar, id, answer.as_str()],
+    )?;
+    Ok(())
+}
+
 /// Drops a calendar's rows a whole read did not repeat: every row still
 /// marked `seen_at` before `before`, save for one a queued change still
 /// owns, which the read must not drop out from under an unsent edit.
@@ -346,6 +378,87 @@ pub fn occurrences(
     found.sort_by(|a, b| (a.start, &a.event.title).cmp(&(b.start, &b.event.title)));
     found.truncate(MOST_EVENTS);
     Ok(found)
+}
+
+/// Events whose title, place, description or a guest's name or address
+/// holds `text`, matched with full Unicode folding through
+/// [`crate::query::FOLD`] rather than SQLite's ASCII-only `lower`. Each
+/// match becomes its next occurrence at or after `from`, within a year
+/// ahead; or its last occurrence within a year before `from` when none
+/// is ahead; or the event's own span. A series and one of its changed
+/// occurrences share a uid and can both match a search on their shared
+/// title; only the earlier coming one of the pair stays. Coming events
+/// sort earliest first, then past ones latest first. Reading stops at
+/// [`MOST_EVENTS`] rows per account before ranking, so a word every
+/// event shares cannot make a search load a whole large calendar.
+pub fn search(
+    conn: &Connection,
+    accounts: &[AccountId],
+    text: &str,
+    from: EpochMillis,
+    reach: CalendarScope,
+    limit: usize,
+) -> Result<Vec<Occurrence>> {
+    let calendar_filter = match reach {
+        CalendarScope::Shown => "AND c.shown = 1",
+        CalendarScope::All => "",
+        CalendarScope::Owned => "AND c.access = 'owner'",
+    };
+    let fold = crate::query::FOLD;
+    let needle = text.to_lowercase();
+    // The best-ranked occurrence for one (account, calendar, uid) group,
+    // so a series and its own changed occurrence collapse to one result.
+    // `past` and `rank` are the sort key: coming events (`past` false)
+    // before past ones, earliest coming or latest past first.
+    type Ranked = (bool, EpochMillis, AccountId, Event, EpochMillis, EpochMillis);
+    let mut ranked: HashMap<(AccountId, String, String), Ranked> = HashMap::new();
+    for &account_id in accounts {
+        let mut stmt = conn.prepare(&format!(
+            "SELECT DISTINCT {COLUMNS} FROM events e \
+             JOIN calendars c ON c.account_id = e.account_id AND c.id = e.calendar \
+             LEFT JOIN event_guests g ON g.account_id = e.account_id AND g.calendar = e.calendar AND g.event = e.id \
+             WHERE e.account_id = ?1 {calendar_filter} AND e.status <> 'cancelled' AND ( \
+               instr({fold}(e.title), ?2) > 0 OR instr({fold}(e.place), ?2) > 0 \
+               OR instr({fold}(e.description), ?2) > 0 OR instr({fold}(g.email), ?2) > 0 \
+               OR instr({fold}(coalesce(g.name, '')), ?2) > 0) \
+             LIMIT {MOST_EVENTS}"
+        ))?;
+        let events: Vec<Event> =
+            stmt.query_map(params![account_id, needle], read_event)?.collect::<rusqlite::Result<_>>()?;
+        for event in events {
+            let (start, end) = next_showing(&event, from);
+            let past = start < from;
+            let rank = if past { -start } else { start };
+            let key = (account_id, event.calendar.clone(), event.uid.clone());
+            let keep = ranked.get(&key).is_none_or(|(p, r, ..)| (past, rank) < (*p, *r));
+            if keep {
+                ranked.insert(key, (past, rank, account_id, event, start, end));
+            }
+        }
+    }
+    let mut found: Vec<Ranked> = ranked.into_values().collect();
+    found.sort_by_key(|(past, rank, ..)| (*past, *rank));
+    found.truncate(limit);
+    let mut occurrences = Vec::with_capacity(found.len());
+    for (_, _, account_id, mut event, start, end) in found {
+        event.guests = guests(conn, account_id, &event.calendar, &event.id)?;
+        occurrences.push(Occurrence { account_id, event: Arc::new(event), start, end });
+    }
+    Ok(occurrences)
+}
+
+/// The event's next occurrence at or after `from`, within a year ahead;
+/// else its last occurrence within a year before `from`; else the
+/// event's own span. `MAX_RANGE` keeps each expansion to a year, so a
+/// long-running daily series cannot make a search walk its whole run.
+fn next_showing(event: &Event, from: EpochMillis) -> (EpochMillis, EpochMillis) {
+    if let Some(&showing) = model::expand(event, from, from + MAX_RANGE).first() {
+        return showing;
+    }
+    if let Some(&showing) = model::expand(event, from.saturating_sub(MAX_RANGE), from).last() {
+        return showing;
+    }
+    (event.start, event.end)
 }
 
 fn guests(conn: &Connection, account_id: AccountId, calendar: &str, event: &str) -> Result<Vec<Guest>> {
@@ -606,7 +719,6 @@ mod tests {
     use super::*;
     use crate::accounts;
     use mailrs_domain::calendar::{Access, Calendar, Event, Guest, Status};
-    use mailrs_domain::invitation::Answer;
 
     const HOUR: EpochMillis = 60 * 60 * 1000;
     const DAY: EpochMillis = 24 * HOUR;
@@ -650,6 +762,66 @@ mod tests {
 
     fn starts(found: &[Occurrence]) -> Vec<(String, EpochMillis)> {
         found.iter().map(|o| (o.event.id.clone(), o.start)).collect()
+    }
+
+    #[test]
+    fn set_my_answer_marks_the_event_and_the_guest_who_is_me() {
+        let (conn, id) = store();
+        let mut standup = event("primary", "standup", MONDAY + 9 * HOUR, 1);
+        standup.guests = vec![
+            Guest { email: "me@example.com".into(), me: true, ..Guest::default() },
+            Guest { email: "priya@example.com".into(), organizer: true, ..Guest::default() },
+        ];
+        save_events(&conn, id, &[standup], 0).unwrap();
+
+        set_my_answer(&conn, id, "primary", "standup", Answer::Yes).unwrap();
+
+        let found = super::event(&conn, id, "primary", "standup").unwrap().unwrap();
+        assert_eq!(found.my_answer, Some(Answer::Yes));
+        assert_eq!(found.guests.iter().find(|g| g.me).and_then(|g| g.answer), Some(Answer::Yes));
+        assert_eq!(
+            found.guests.iter().find(|g| g.organizer).and_then(|g| g.answer),
+            None,
+            "only the guest marked me changes"
+        );
+    }
+
+    #[test]
+    fn set_my_answer_marks_every_row_of_the_series() {
+        let (conn, id) = store();
+        let me = || vec![Guest { email: "me@example.com".into(), me: true, ..Guest::default() }];
+        let mut series = event("primary", "planning", MONDAY + 10 * HOUR, 1);
+        series.guests = me();
+        let mut moved = event("primary", "planning_moved", MONDAY + 11 * HOUR, 1);
+        moved.uid = series.uid.clone();
+        moved.series = Some("planning".into());
+        moved.guests = me();
+        let mut other = event("primary", "lunch", MONDAY + 12 * HOUR, 1);
+        other.guests = me();
+        save_events(&conn, id, &[series, moved, other], 0).unwrap();
+
+        set_my_answer(&conn, id, "primary", "planning", Answer::Maybe).unwrap();
+
+        let moved = super::event(&conn, id, "primary", "planning_moved").unwrap().unwrap();
+        assert_eq!(moved.my_answer, Some(Answer::Maybe));
+        assert_eq!(moved.guests[0].answer, Some(Answer::Maybe));
+        let other = super::event(&conn, id, "primary", "lunch").unwrap().unwrap();
+        assert_eq!(other.my_answer, None, "another event keeps its own answer");
+    }
+
+    #[test]
+    fn set_my_answer_leaves_events_with_no_uid_alone() {
+        let (conn, id) = store();
+        let mut first = event("primary", "first", MONDAY + 10 * HOUR, 1);
+        first.uid = String::new();
+        let mut second = event("primary", "second", MONDAY + 12 * HOUR, 1);
+        second.uid = String::new();
+        save_events(&conn, id, &[first, second], 0).unwrap();
+
+        set_my_answer(&conn, id, "primary", "first", Answer::Yes).unwrap();
+
+        let second = super::event(&conn, id, "primary", "second").unwrap().unwrap();
+        assert_eq!(second.my_answer, None);
     }
 
     #[test]
@@ -818,6 +990,76 @@ mod tests {
         save_events(&conn, id, &[standup], 0).unwrap();
         let found = occurrences(&conn, &[id], MONDAY, MONDAY + 30 * DAY, CalendarScope::Shown).unwrap();
         assert_eq!(found.len(), 500);
+    }
+
+    #[test]
+    fn search_finds_by_title_place_and_guest() {
+        let (conn, id) = store();
+        let mut lunch = event("primary", "lunch", MONDAY + 12 * HOUR, 1);
+        lunch.place = "Café Império".into();
+        let mut review = event("team", "review", MONDAY + DAY, 1);
+        review.guests = vec![Guest { email: "rita@c9dev.pt".into(), name: Some("Rita Lopes".into()), ..Guest::default() }];
+        let mut standup = event("team", "standup", MONDAY + 2 * DAY, 1);
+        standup.guests = vec![Guest { email: "elia@c9dev.pt".into(), name: Some("Élia Constante".into()), ..Guest::default() }];
+        save_events(&conn, id, &[lunch, review, standup], 0).unwrap();
+        let ids = |text: &str| {
+            search(&conn, &[id], text, MONDAY, CalendarScope::Shown, 10)
+                .unwrap()
+                .into_iter()
+                .map(|o| o.event.id.clone())
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(ids("império"), vec!["lunch"]);
+        assert_eq!(ids("RITA"), vec!["review"]);
+        assert_eq!(ids("ÉLIA"), vec!["standup"], "penguin_fold folds beyond ASCII, so a search for the upper case still finds Élia");
+        assert!(ids("nothing").is_empty());
+    }
+
+    #[test]
+    fn a_search_stops_at_the_requested_limit() {
+        let (conn, id) = store();
+        let events: Vec<Event> =
+            (0..5).map(|n| event("primary", &format!("standup{n}"), MONDAY + n * HOUR, 1)).collect();
+        save_events(&conn, id, &events, 0).unwrap();
+        let found = search(&conn, &[id], "standup", MONDAY, CalendarScope::Shown, 3).unwrap();
+        assert_eq!(found.len(), 3);
+    }
+
+    /// The live path caps a search at `MOST_EVENTS` (500) event rows per
+    /// account before ranking, so a word every event shares cannot make a
+    /// search load a whole large calendar.
+    #[test]
+    fn a_search_reads_at_most_500_rows_per_account() {
+        let (conn, id) = store();
+        let events: Vec<Event> =
+            (0..510).map(|n| event("primary", &format!("standup{n}"), MONDAY + n * HOUR, 1)).collect();
+        save_events(&conn, id, &events, 0).unwrap();
+        let found = search(&conn, &[id], "standup", MONDAY, CalendarScope::Shown, 1000).unwrap();
+        assert_eq!(found.len(), 500);
+    }
+
+    #[test]
+    fn a_series_and_its_changed_occurrence_count_as_one_result() {
+        let (conn, id) = store();
+        let mut standup = event("primary", "standup", MONDAY + 9 * HOUR, 1);
+        standup.rules = vec!["RRULE:FREQ=DAILY;COUNT=5".into()];
+        let mut moved = event("primary", "standup_tue", MONDAY + DAY + 11 * HOUR, 1);
+        moved.uid = standup.uid.clone();
+        moved.series = Some("standup".into());
+        moved.original_start = Some(MONDAY + DAY + 9 * HOUR);
+        save_events(&conn, id, &[standup, moved], 0).unwrap();
+        let found = search(&conn, &[id], "standup", MONDAY, CalendarScope::Shown, 10).unwrap();
+        assert_eq!(found.len(), 1);
+        assert_eq!(found[0].start, MONDAY + 9 * HOUR, "the earliest coming occurrence wins");
+    }
+
+    #[test]
+    fn a_search_reads_shown_calendars_only() {
+        let (conn, id) = store();
+        save_events(&conn, id, &[event("team", "hidden-lunch", MONDAY + HOUR, 1)], 0).unwrap();
+        set_shown(&conn, id, "team", false).unwrap();
+        assert!(search(&conn, &[id], "hidden-lunch", MONDAY, CalendarScope::Shown, 10).unwrap().is_empty());
+        assert_eq!(search(&conn, &[id], "hidden-lunch", MONDAY, CalendarScope::All, 10).unwrap().len(), 1);
     }
 
     #[test]

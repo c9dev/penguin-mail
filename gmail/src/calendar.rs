@@ -2,13 +2,13 @@
 //! the user has on, and the events on the primary calendar that the
 //! assistant lists, creates, changes and deletes.
 //!
-//! The Gmail permission an account grants at sign-in says nothing about
-//! calendars, so Google turns every call here down until the account
-//! grants [`CALENDAR_SCOPE`] as well. The refusal arrives as
-//! [`GmailError::MissingScope`], the same one erasing mail gives, and the
-//! window asks the user for the permission the first time somebody presses
-//! Yes, No or Maybe. Anyone who says no to the permission still has the
-//! links Google puts in the message itself.
+//! Sign-in asks for [`CALENDAR_SCOPE`] along with every other scope in
+//! one consent. A person who leaves it unticked makes Google turn every
+//! call here down; the refusal arrives as [`GmailError::MissingScope`],
+//! the same one erasing mail gives, and the window offers to ask again
+//! the first time somebody presses Yes, No or Maybe. Anyone who says no
+//! to the permission still has the links Google puts in the message
+//! itself.
 //!
 //! The calls run against the Calendar API, not Gmail, so they spend
 //! nothing from the account's Gmail budget.
@@ -22,8 +22,8 @@ use serde_json::{Value, json};
 use crate::client::GmailClient;
 use crate::error::GmailError;
 
-/// Read and change the events on the account's calendars. Sign-in leaves
-/// it out; the window asks for it when somebody answers an invitation.
+/// Read and change the events on the account's calendars. Sign-in asks
+/// for it along with every other scope, in one consent.
 pub const CALENDAR_SCOPE: &str = "https://www.googleapis.com/auth/calendar.events";
 
 /// List the calendars on the account, so the calendar view can show

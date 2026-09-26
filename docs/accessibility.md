@@ -96,6 +96,27 @@ A queued message opens in the conversation pane like any other, with a
 card above it that says when it goes or why it has not gone, with
 buttons that act on it.
 
+## The calendar from the keyboard
+
+In Day and Week, Tab passes the day headings first, each of which opens
+its day, then the all-day row, then the events, day by day and earliest
+first. A "N more" button sits among a day's events at the hour it
+starts. Enter opens the event with the focus, and the popover starts on
+your current answer when you are a guest. Escape closes it and gives
+the focus back to the event. Tab reaches only the range on screen: the
+ranges either side, kept ready for a swipe, are hidden from the
+keyboard and from screen readers. In a week or a month each event
+names its day, such as "Stand-up, Monday 21, 09:30 to 09:45, Work".
+
+T goes to today; D, W and M switch to Day, Week and Month; Left and
+Right step to the previous or next range. After a change of view or
+range, the focus goes to the first event on screen, or to Today when
+there is none. Ctrl+F opens the calendar's own search bar, which wins
+over the main window's search while the calendar shows. Every one of
+these gives way while a text field, such as search, has the focus. The
+main menu's Assistant item, and Ctrl+J, open the assistant in either
+space.
+
 ## Checking it
 
 ```
@@ -109,7 +130,12 @@ is open, so on the hidden display the script also right-clicks every
 row it can scroll to and presses every button that opens a menu, then
 opens each submenu, and reads the items of each menu it sees. It
 reaches the menus of the main window this way, but not the message
-menu, which the page opens, nor the composer's menus. `--here` reads
+menu, which the page opens, nor the composer's menus. It also switches
+to the calendar and walks Day, Week, Month and the list a narrow
+window shows, opens an invitation's popover in Week and a crowded day's
+"N more" list in Month, reads the main menu there, Show Declined Events
+included, and reports the calendar's own line of controls apart from
+the mail walk's. `--here` reads
 the copy already on your screen instead, which is how to check a dialog
 or the composer: open it, then run the script.
 

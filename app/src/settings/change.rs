@@ -62,6 +62,11 @@ pub enum Change {
         email: String,
         on: bool,
     },
+    /// The space the window shows, remembered for the next start.
+    Space(super::Space),
+    /// The grid the calendar shows.
+    CalendarView(super::CalendarView),
+    ShowDeclinedEvents(bool),
     /// Folds the old one switch for every account into the per-account
     /// list: all of `emails` when it was on.
     AllContacts(Vec<String>),
@@ -259,6 +264,9 @@ impl Change {
                 }
             }
             Change::FlagColor(color) => settings.flag_color = color,
+            Change::Space(space) => settings.space = space,
+            Change::CalendarView(view) => settings.calendar_view = view,
+            Change::ShowDeclinedEvents(on) => settings.show_declined_events = on,
             Change::Signature { email, text } => settings.set_signature(&email, &text),
             Change::ToggleVip { email, name } => {
                 settings.toggle_vip(&email, &name);
@@ -512,6 +520,9 @@ settable! {
         ai,
         // The updater's own record of what it announced.
         announced_update,
+        // Where the window was and what the calendar showed are the
+        // window's memory of the person's own clicks.
+        calendar_view,
         // How the assistant's pane lays out its own turns belongs with the
         // rest of its settings, on the AI page.
         assistant_allowed_tools,
@@ -557,9 +568,13 @@ settable! {
         send_as,
         // When Gmail last answered is the app's own bookkeeping.
         send_as_checked,
+        // Hiding declined events is the person's own view of the calendar,
+        // and so is which space the window opened on.
+        show_declined_events,
         sign_by_default,
         signatures,
         smart_mailboxes,
+        space,
         spell_languages,
         spell_words,
         suggest_follow_ups,
@@ -737,6 +752,9 @@ impl Effects {
             check_for_updates,
             last_update_check,
             announced_update,
+            space,
+            calendar_view,
+            show_declined_events,
         } = after;
         // These leave the window as it is. The flag colour, the delay before
         // Send commits, and the rest are read when they are needed, so
@@ -781,6 +799,11 @@ impl Effects {
             check_for_updates,
             last_update_check,
             announced_update,
+            // The calendar changes its own view as the person picks one,
+            // and the setting only remembers the pick for the next start.
+            space,
+            calendar_view,
+            show_declined_events,
         );
         let smart_changed = *smart_mailboxes != before.smart_mailboxes;
         let colors_changed = *account_colors != before.account_colors;
@@ -970,6 +993,9 @@ mod tests {
             Change::AssistantDetailsExpanded(true),
             Change::UpdateChecked(1_700_000_000),
             Change::UpdateAnnounced("0.2.0".into()),
+            Change::Space(crate::settings::Space::Calendar),
+            Change::CalendarView(crate::settings::CalendarView::Day),
+            Change::ShowDeclinedEvents(true),
             Change::SkillEnabled {
                 id: "claude-code/pdf".into(),
                 on: true,

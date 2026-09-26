@@ -10,6 +10,12 @@ pub enum GmailError {
     /// The account never granted a scope this call needs.
     #[error("Penguin Mail needs more access to this account; grant it and try again")]
     MissingScope,
+    /// The consent screen came back without [`crate::GMAIL_SCOPE`] or the
+    /// wider [`crate::DELETE_SCOPE`], so the app cannot read or send mail
+    /// for this account at all. Sign-in refuses before it asks Gmail for
+    /// anything else.
+    #[error("the account did not allow access to its mail")]
+    MailNotGranted,
     /// The Google Cloud project behind the OAuth client has this API
     /// switched off. Google refuses before any question of permission, so
     /// only turning it on at `enable_url` helps.

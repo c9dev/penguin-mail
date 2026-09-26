@@ -23,6 +23,7 @@ here=${1:-}
 walk=$(mktemp)
 trap 'rm -f "$walk"' EXIT
 cat > "$walk" <<'PYTHON'
+import re
 import sys
 import time
 
@@ -52,14 +53,16 @@ ACTS = {
 found = []
 
 
-def walk(node, path):
-    """Records every control under `node`, and says whether a named
-    control was found in there.
+def walk(node, path, sink=None):
+    """Records every control under `node` into `sink` (`found` by
+    default), and says whether a named control was found in there.
 
     A control that holds another named control is a wrapper rather than
     something a person acts on, and wanting a name of its own would be
     asking for the same words twice: a list view puts every row inside a
     list item of its own, and the row is what carries the name."""
+    if sink is None:
+        sink = found
     try:
         role = node.get_role_name()
         name = (node.get_name() or "").strip()
@@ -70,10 +73,10 @@ def walk(node, path):
     wraps = False
     for index in range(node.get_child_count()):
         child = node.get_child_at_index(index)
-        if child is not None and walk(child, here):
+        if child is not None and walk(child, here, sink):
             wraps = True
     if role in ACTS and (name or not wraps):
-        found.append((role, name, " > ".join(here[-4:])))
+        sink.append((role, name, " > ".join(here[-4:])))
     return (role in ACTS and bool(name)) or wraps
 
 
@@ -165,6 +168,15 @@ class Input:
             self.x11.XFlush(self.display)
             time.sleep(0.05)
 
+    def click(self, x, y):
+        self.xtst.XTestFakeMotionEvent(self.display, -1, x, y, 0)
+        self.x11.XFlush(self.display)
+        time.sleep(0.1)
+        for pressed in (1, 0):
+            self.xtst.XTestFakeButtonEvent(self.display, 1, pressed, 0)
+            self.x11.XFlush(self.display)
+            time.sleep(0.05)
+
     def scroll_down(self, x, y):
         self.xtst.XTestFakeMotionEvent(self.display, -1, x, y, 0)
         for _ in range(8):
@@ -172,6 +184,22 @@ class Input:
                 self.xtst.XTestFakeButtonEvent(self.display, 5, pressed, 0)
             self.x11.XFlush(self.display)
             time.sleep(0.02)
+
+    def resize(self, width, height):
+        """Sizes every top-level window, as a window manager would; the
+        hidden display has none."""
+        import ctypes
+
+        self.x11.XDefaultRootWindow.restype = ctypes.c_ulong
+        root = self.x11.XDefaultRootWindow(self.display)
+        root_ret, parent = ctypes.c_ulong(), ctypes.c_ulong()
+        children = ctypes.POINTER(ctypes.c_ulong)()
+        count = ctypes.c_uint()
+        self.x11.XQueryTree(self.display, ctypes.c_ulong(root), ctypes.byref(root_ret),
+                            ctypes.byref(parent), ctypes.byref(children), ctypes.byref(count))
+        for index in range(count.value):
+            self.x11.XMoveResizeWindow(self.display, ctypes.c_ulong(children[index]), 0, 0, width, height)
+        self.x11.XFlush(self.display)
 
     def escape(self):
         code = self.x11.XKeysymToKeycode(self.display, 0xFF1B)
@@ -259,14 +287,18 @@ def visit(opener, open_menu, keys):
     return True
 
 
-def in_view(node, x, y):
-    """Whether the point lies inside every scrolled view that holds
-    `node`, in window coordinates."""
+def in_view(node, row):
+    """Whether the whole of `row`, a box in window coordinates, lies inside
+    every scrolled view that holds `node`. Only its middle is clicked, but
+    the extents the accessibility bus reports sit some pixels off from where
+    the row is drawn, so a row cut off at the foot of its list can have its
+    middle in the list by the numbers and the click below it."""
     parent = node.get_parent()
     while parent is not None:
         if parent.get_role_name() == "scroll pane":
             box = parent.get_component_iface().get_extents(Atspi.CoordType.WINDOW)
-            if not (box.x <= x < box.x + box.width and box.y <= y < box.y + box.height):
+            if not (box.x <= row.x and row.x + row.width <= box.x + box.width
+                    and box.y <= row.y and row.y + row.height <= box.y + box.height):
                 return False
         parent = parent.get_parent()
     return True
@@ -293,7 +325,7 @@ def rows_in_view(bounds):
             # there lands on whatever covers it, and at the foot of the
             # sidebar that opens the window menu GTK draws when no window
             # manager is running, which is GTK's and not the app's.
-            if in_view(row, x, y):
+            if in_view(row, box):
                 yield name, x, y
 
 
@@ -348,14 +380,192 @@ def open_menus():
     print("%d menus opened" % opened)
 
 
+def walk_calendar(keys):
+    """Switches to the Calendar space and walks each of its views, Day,
+    Week, Month and the narrow List, into a list of its own, so `found`'s
+    own count stays what the mail walk left it. In Week it opens the
+    popover of an invitation on the range on screen, so Join and Yes,
+    Maybe and No are walked; in Month it opens a crowded day's "N more"
+    list. It also reads the main menu while the calendar shows, since
+    Show Declined Events is there only then.
+
+    Reports the calendar's own line and gives back how many of its
+    controls came back with no name, which the exit status adds to the
+    mail walk's own count."""
+
+    def find_first(predicate):
+        for app in penguins()[0]:
+            for n in nodes(app):
+                try:
+                    role = n.get_role_name()
+                    name = (n.get_name() or "").strip()
+                except Exception:
+                    continue
+                if predicate(role, name):
+                    return n
+        return None
+
+    def on_screen(node):
+        try:
+            return node.get_state_set().contains(Atspi.StateType.SHOWING)
+        except Exception:
+            return False
+
+    def activate(node):
+        # A libadwaita toggle may carry no AT-SPI action, unlike a plain
+        # button; click its centre instead, the way a row's menu opens.
+        try:
+            action = node.get_action_iface()
+        except Exception:
+            action = None
+        if action is not None:
+            try:
+                if action.do_action(0):
+                    return True
+            except Exception:
+                pass
+        try:
+            box = node.get_component_iface().get_extents(Atspi.CoordType.WINDOW)
+        except Exception:
+            return False
+        keys.click(box.x + box.width // 2, box.y + box.height // 2)
+        return True
+
+    def total_nodes():
+        try:
+            return sum(1 for app in penguins()[0] for _ in nodes(app))
+        except Exception:
+            return -1
+
+    def settle():
+        """Waits for the tree to hold still after a view changed: its
+        pages fill from the store a moment after they appear."""
+        before = -1
+        for _ in range(20):
+            time.sleep(0.5)
+            now = total_nodes()
+            if now == before and now > 0:
+                return
+            before = now
+
+    calendar_found = []
+
+    def walk_view(view):
+        for app in penguins()[0]:
+            walk(app, [view], calendar_found)
+
+    def button_named(pattern):
+        return find_first(
+            lambda role, name: role in ("button", "push button") and re.search(pattern, name)
+        )
+
+    # Libadwaita's own toggles arrive as either "toggle button" or "radio
+    # button", so the switch is found by its name and any acted-on role.
+    toggle = find_first(lambda role, name: role in ACTS and name == "Calendar")
+    if toggle is None or not activate(toggle):
+        print("No 'Calendar' toggle to switch spaces.", file=sys.stderr)
+        sys.exit(2)
+    # A plain gtk::Button arrives as "button" here, not "push button";
+    # both spellings are in ACTS for the same reason the mail walk needs
+    # them (see the comment there).
+    today = None
+    if wait_until(lambda: button_named(r"^Today$") is not None, 5.0):
+        today = button_named(r"^Today$")
+    if today is None:
+        print("The calendar page never reached the accessibility bus.", file=sys.stderr)
+        sys.exit(2)
+    # Nothing gives the hidden display's window the keyboard until
+    # something in it is clicked; Today is safe to press.
+    box = today.get_component_iface().get_extents(Atspi.CoordType.WINDOW)
+    keys.click(box.x + box.width // 2, box.y + box.height // 2)
+    settle()
+
+    def show_view(view):
+        switch = find_first(lambda role, name: role in ACTS and name == view)
+        if switch is None or not activate(switch):
+            print("No %r in the view switch." % view, file=sys.stderr)
+            sys.exit(2)
+        settle()
+
+    for view in ("Day", "Week", "Month"):
+        show_view(view)
+        walk_view(view)
+        if view == "Week":
+            # An invitation on the range on screen: its popover holds the
+            # answer buttons. The ranges either side are hidden from the
+            # bus, so the first match is one a person can see.
+            invitation = find_first(
+                lambda role, name: role in ("button", "push button")
+                and name.startswith("Quarterly review,")
+            )
+            if invitation is None or not on_screen(invitation):
+                print("No invitation on the week on screen to open.", file=sys.stderr)
+                sys.exit(2)
+            activate(invitation)
+            if not wait_until(lambda: button_named(r"^Maybe$") is not None, 5.0):
+                print("The invitation's popover showed no answers.", file=sys.stderr)
+                sys.exit(2)
+            time.sleep(0.2)
+            walk_view("Week popover")
+            keys.escape()
+            settle()
+        if view == "Month":
+            more = button_named(r"^\d+ more events? on ")
+            if more is None:
+                print("No crowded day in the month to open.", file=sys.stderr)
+                sys.exit(2)
+            before = total_nodes()
+            activate(more)
+            wait_until(lambda: total_nodes() != before, 5.0)
+            time.sleep(0.3)
+            walk_view("Month more")
+            keys.escape()
+            settle()
+
+    # The narrow window shows the list in place of Week and Month.
+    show_view("Week")
+    keys.resize(600, 900)
+    if not wait_until(lambda: find_first(lambda role, name: role in ACTS and name == "List") is not None, 5.0):
+        print("A narrow window never offered the list.", file=sys.stderr)
+        sys.exit(2)
+    settle()
+    walk_view("List")
+    keys.resize(1400, 900)
+    settle()
+
+    # The main menu, while the calendar shows, which adds Show Declined
+    # Events to it. `record` files its items with the mail walk's menus.
+    menu = find_first(lambda role, name: role == "toggle button" and name == "Main Menu")
+
+    def press_menu():
+        action = menu.get_action_iface() if menu is not None else None
+        return action is not None and action.do_action(0)
+
+    if menu is None or not visit("button 'Main Menu' in the calendar", press_menu, keys):
+        print("The main menu would not open in the calendar.", file=sys.stderr)
+        sys.exit(2)
+    if not any(name == "Show Declined Events" for _, name, _ in found):
+        print("The main menu in the calendar had no Show Declined Events.", file=sys.stderr)
+        sys.exit(2)
+
+    unnamed = [row for row in calendar_found if not row[1]]
+    print("calendar: %d controls in four views and two popovers, %d unnamed"
+          % (len(calendar_found), len(unnamed)))
+    for role, _, path in unnamed:
+        print("  %s" % path)
+    return len(unnamed)
+
+
+calendar_unnamed = 0
 if sys.argv[1:] == ["--menus"]:
     open_menus()
+    calendar_unnamed = walk_calendar(Input())
 
 unnamed = [row for row in found if not row[1]]
 print("%d controls, %d named, %d unnamed" % (len(found), len(found) - len(unnamed), len(unnamed)))
 for role, _, path in unnamed:
     print("  %s" % path)
-sys.exit(1 if unnamed else 0)
+sys.exit(1 if (unnamed or calendar_unnamed) else 0)
 PYTHON
 
 if [ "$here" = --here ]; then

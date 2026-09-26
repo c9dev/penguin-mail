@@ -38,8 +38,8 @@ so no other server sees your mail.
 - **Gmail search** with its full query syntax, across one account or all,
   with suggestions for subjects, people and labels as you type.
 - **Junk, Trash and All Mail**, for every account or one, read live from
-  Gmail. Delete Forever asks Google for that permission the first time you
-  use it, never at sign-in, and asks you to confirm each time.
+  Gmail. Delete Forever asks you to confirm each time, and needs the
+  permission signing in already asked for.
 
 ### Writing
 
@@ -97,6 +97,13 @@ so no other server sees your mail.
   it, so this stops lazy spam, not a determined sender.
 
 Gmail runs all four, so they work with your computer off.
+
+### Calendar
+
+- **A calendar beside your mail.** Every calendar on every account, by
+  day, week, month or a scrolling list, read from this computer.
+  Answer Yes, Maybe or No on an invitation from its event, and search
+  across every account's events.
 
 ### Security and privacy
 

@@ -1,6 +1,6 @@
 # Penguin Mail privacy policy
 
-Last updated: 24 September 2026
+Last updated: 25 September 2026
 
 Penguin Mail is a desktop email client for Gmail, published by Pivotd
 (https://pivotd.com). It runs on your own computer. This policy explains what
@@ -8,27 +8,30 @@ it accesses, where that data goes, and how it is protected.
 
 ## What Penguin Mail accesses
 
-You grant access through Google's own sign-in page. When you add an account,
-Penguin Mail asks for two permissions:
+You grant access through Google's own sign-in page. Adding an account asks
+for every permission Penguin Mail uses, in one visit:
 
-- `gmail.modify`, to read your messages, labels and drafts so it can show
-  them; to change labels, so you can archive, star, and mark mail read or
-  unread; to move messages to the Trash; and to save drafts and send the
-  messages you write.
+- `https://mail.google.com/`, to read your messages, labels and drafts so
+  it can show them; to change labels, so you can archive, star, and mark
+  mail read or unread; to move messages to the Trash; to save drafts and
+  send the messages you write; and to erase mail permanently when you
+  choose Delete Forever in the Trash.
 - `gmail.settings.basic`, to read and change your automatic reply, your
   signature, and your Gmail filters, when you change them in Penguin Mail.
+- `contacts`, to show your contacts' names and photos and suggest
+  recipients, once you turn contacts on in Preferences, and to write a
+  contact to Google Contacts when you ask the assistant to add or change
+  one.
+- `calendar.events`, to read your calendars, mark your answer to a
+  meeting invitation, and let the assistant read and change events.
+- `calendar.calendarlist.readonly`, to read the list of your calendars, so
+  Penguin Mail can show more than the primary one.
 
-Four more permissions are asked for only when you first use the feature
-that needs them, and never at sign-in:
-
-- `https://mail.google.com/`, when you first choose Delete Forever in the
-  Trash, which erases mail permanently.
-- `contacts.readonly`, when you turn on contacts in Preferences, to show
-  your contacts' names and photos and suggest recipients.
-- `contacts`, when you first ask the assistant to add or change a
-  contact, to write that contact to Google Contacts.
-- `calendar.events`, when you first answer a meeting invitation, to record
-  your answer in Google Calendar.
+You may leave any of these unticked on Google's screen. Penguin Mail then
+turns off the feature that needs it and says why where you would use that
+feature, with a Grant Access button that asks Google again. An account
+added before Penguin Mail asked for all of them at once gets a bar at the
+top of its mail list that names what it lacks and offers the same button.
 
 ## Where your data goes
 
