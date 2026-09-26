@@ -174,13 +174,14 @@ impl CalendarSidebar {
             .xalign(0.0)
             .build();
         // The mockup draws the month arrows as the glyphs ‹ and ›, lighter
-        // than the header's arrows; their names still say what they do.
+        // than the header's arrows. Each glyph is a child label, since GTK
+        // names a button after its own label, over the names below.
         let previous = gtk::Button::builder()
-            .label("‹")
+            .child(&gtk::Label::new(Some("‹")))
             .css_classes(["flat", "dim-label"])
             .build();
         let next = gtk::Button::builder()
-            .label("›")
+            .child(&gtk::Label::new(Some("›")))
             .css_classes(["flat", "dim-label"])
             .build();
         crate::ui::name(&previous, &gettext("Previous Month"));

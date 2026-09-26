@@ -2394,7 +2394,7 @@ msgid_plural "{count} unread messages"
 msgstr[0] "{count} unread message"
 msgstr[1] "{count} unread messages"
 
-#: app/src/tray.rs:60 app/src/ui/sidebar.rs:639
+#: app/src/tray.rs:60 app/src/ui/sidebar.rs:640
 msgid "{account}, {count} unread message"
 msgid_plural "{account}, {count} unread messages"
 msgstr[0] "{account}, {count} unread message"
@@ -2414,7 +2414,7 @@ msgstr "Open Penguin Mail"
 msgid "New Message"
 msgstr "New Message"
 
-#: app/src/tray.rs:159 app/src/ui/sidebar.rs:905 app/src/ui/window.rs:2616
+#: app/src/tray.rs:159 app/src/ui/sidebar.rs:906 app/src/ui/window.rs:2616
 msgid "Check for Mail"
 msgstr "Check for Mail"
 
@@ -2522,7 +2522,7 @@ msgid "Server Settings"
 msgstr "Server Settings"
 
 #: app/src/ui/add_account.rs:343 app/src/ui/add_account.rs:436
-#: app/src/ui/sidebar.rs:114
+#: app/src/ui/sidebar.rs:115
 msgid "Add Account"
 msgstr "Add Account"
 
@@ -3110,96 +3110,96 @@ msgstr "Brave Search API Key (Saved)"
 msgid "Brave Search API Key"
 msgstr "Brave Search API Key"
 
-#: app/src/ui/calendar/agenda.rs:294 app/src/ui/calendar/words.rs:58
+#: app/src/ui/calendar/agenda.rs:295 app/src/ui/calendar/words.rs:58
 msgid "All day"
 msgstr "All day"
 
-#: app/src/ui/calendar/agenda.rs:312
+#: app/src/ui/calendar/agenda.rs:313
 msgid "{title}, {when}, {calendar}"
 msgstr "{title}, {when}, {calendar}"
 
-#: app/src/ui/calendar/agenda.rs:443
+#: app/src/ui/calendar/agenda.rs:444
 msgid "Nothing earlier on this computer"
 msgstr "Nothing earlier on this computer"
 
-#: app/src/ui/calendar/block.rs:258
+#: app/src/ui/calendar/block.rs:259
 msgid "Waiting to be sent"
 msgstr "Waiting to be sent"
 
-#: app/src/ui/calendar/block.rs:261 app/src/ui/calendar/popover.rs:330
+#: app/src/ui/calendar/block.rs:262 app/src/ui/calendar/popover.rs:330
 msgid "Not answered yet"
 msgstr "Not answered yet"
 
-#: app/src/ui/calendar/block.rs:262
+#: app/src/ui/calendar/block.rs:263
 msgid "Declined"
 msgstr "Declined"
 
-#: app/src/ui/calendar/block.rs:307
+#: app/src/ui/calendar/block.rs:308
 msgid "{start}–{end}"
 msgstr "{start}–{end}"
 
-#: app/src/ui/calendar/block.rs:341
+#: app/src/ui/calendar/block.rs:342
 msgid "{title}, {day}"
 msgstr "{title}, {day}"
 
-#: app/src/ui/calendar/block.rs:348
+#: app/src/ui/calendar/block.rs:349
 msgid "{title}, all day, {calendar}"
 msgstr "{title}, all day, {calendar}"
 
-#: app/src/ui/calendar/block.rs:353
+#: app/src/ui/calendar/block.rs:354
 msgid "{title}, {start} to {end}, {calendar}"
 msgstr "{title}, {start} to {end}, {calendar}"
 
-#: app/src/ui/calendar/mod.rs:246
+#: app/src/ui/calendar/mod.rs:247
 msgid "View"
 msgstr "View"
 
-#: app/src/ui/calendar/mod.rs:254
+#: app/src/ui/calendar/mod.rs:255
 msgid "New Event"
 msgstr "New Event"
 
-#: app/src/ui/calendar/mod.rs:257 app/src/ui/calendar/mod.rs:259
+#: app/src/ui/calendar/mod.rs:258 app/src/ui/calendar/mod.rs:260
 msgid "Search the Calendar (Ctrl+F)"
 msgstr "Search the Calendar (Ctrl+F)"
 
-#: app/src/ui/calendar/mod.rs:262 app/src/ui/calendar/mod.rs:265
+#: app/src/ui/calendar/mod.rs:263 app/src/ui/calendar/mod.rs:266
 msgid "Show Calendars"
 msgstr "Show Calendars"
 
-#: app/src/ui/calendar/mod.rs:281 app/src/ui/calendar/mod.rs:283
+#: app/src/ui/calendar/mod.rs:282 app/src/ui/calendar/mod.rs:284
 msgid "Search the Calendar"
 msgstr "Search the Calendar"
 
-#: app/src/ui/calendar/mod.rs:707
+#: app/src/ui/calendar/mod.rs:709
 msgid "List"
 msgstr "List"
 
-#: app/src/ui/calendar/mod.rs:708
+#: app/src/ui/calendar/mod.rs:710
 msgid "Day"
 msgstr "Day"
 
-#: app/src/ui/calendar/mod.rs:709
+#: app/src/ui/calendar/mod.rs:711
 msgid "Week"
 msgstr "Week"
 
-#: app/src/ui/calendar/mod.rs:710
+#: app/src/ui/calendar/mod.rs:712
 msgid "Month"
 msgstr "Month"
 
-#: app/src/ui/calendar/mod.rs:896
+#: app/src/ui/calendar/mod.rs:898
 msgid "All-day events"
 msgstr "All-day events"
 
-#: app/src/ui/calendar/mod.rs:898
+#: app/src/ui/calendar/mod.rs:900
 msgid "All-day"
 msgstr "All-day"
 
-#: app/src/ui/calendar/mod.rs:1168 app/src/ui/calendar/mod.rs:1650
-#: app/src/ui/calendar/sidebar.rs:111
+#: app/src/ui/calendar/mod.rs:1170 app/src/ui/calendar/mod.rs:1652
+#: app/src/ui/calendar/sidebar.rs:110
 msgid "%a"
 msgstr "%a"
 
-#: app/src/ui/calendar/mod.rs:1447
+#: app/src/ui/calendar/mod.rs:1449
 msgid "Could not send your answer: {reason}"
 msgstr "Could not send your answer: {reason}"
 
@@ -3286,7 +3286,7 @@ msgstr "Grant Access"
 msgid "You can only read this calendar"
 msgstr "You can only read this calendar"
 
-#: app/src/ui/calendar/sidebar.rs:448 app/src/ui/contacts_prefs.rs:234
+#: app/src/ui/calendar/sidebar.rs:447 app/src/ui/contacts_prefs.rs:234
 msgid "Grant Access for {account}"
 msgstr "Grant Access for {account}"
 
@@ -3357,7 +3357,7 @@ msgid "Choose a Time…"
 msgstr "Choose a Time…"
 
 #: app/src/ui/composer/mod.rs:216 app/src/ui/composer/mod.rs:1260
-#: app/src/ui/sidebar.rs:353
+#: app/src/ui/sidebar.rs:354
 msgid "Send Later"
 msgstr "Send Later"
 
@@ -3744,7 +3744,7 @@ msgstr "Other email"
 msgid "Phone"
 msgstr "Phone"
 
-#: app/src/ui/contact_card.rs:156 app/src/ui/sidebar.rs:321
+#: app/src/ui/contact_card.rs:156 app/src/ui/sidebar.rs:322
 msgid "Remove from VIPs"
 msgstr "Remove from VIPs"
 
@@ -3772,7 +3772,7 @@ msgstr "Penguin Mail can read an account's contacts: names, email addresses, pho
 msgid "No accounts yet"
 msgstr "No accounts yet"
 
-#: app/src/ui/contacts_prefs.rs:145 app/src/ui/sidebar.rs:88
+#: app/src/ui/contacts_prefs.rs:145 app/src/ui/sidebar.rs:89
 #: app/src/ui/window/shortcuts.rs:226
 msgid "Calendar"
 msgstr "Calendar"
@@ -3895,7 +3895,7 @@ msgid "More Actions"
 msgstr "More Actions"
 
 #: app/src/ui/conversation.rs:459 app/src/ui/queued.rs:60
-#: app/src/ui/sidebar.rs:687
+#: app/src/ui/sidebar.rs:688
 msgid "Edit…"
 msgstr "Edit…"
 
@@ -3920,7 +3920,7 @@ msgstr "Flag or Unflag"
 msgid "Mark Read or Unread"
 msgstr "Mark Read or Unread"
 
-#: app/src/ui/conversation.rs:489 app/src/ui/sidebar.rs:359
+#: app/src/ui/conversation.rs:489 app/src/ui/sidebar.rs:360
 #: app/src/ui/window/reminders.rs:25 app/src/ui/window/reminders.rs:30
 msgid "Remind Me"
 msgstr "Remind Me"
@@ -4804,123 +4804,123 @@ msgstr "Rule added"
 msgid "Could not add the rule: {reason}"
 msgstr "Could not add the rule: {reason}"
 
-#: app/src/ui/sidebar.rs:80
+#: app/src/ui/sidebar.rs:81
 msgid "Mailboxes"
 msgstr "Mailboxes"
 
-#: app/src/ui/sidebar.rs:87 app/src/ui/thread_list.rs:267
+#: app/src/ui/sidebar.rs:88 app/src/ui/thread_list.rs:267
 msgid "Mail"
 msgstr "Mail"
 
-#: app/src/ui/sidebar.rs:311 app/src/ui/sidebar.rs:313
+#: app/src/ui/sidebar.rs:312 app/src/ui/sidebar.rs:314
 msgid "VIPs"
 msgstr "VIPs"
 
-#: app/src/ui/sidebar.rs:347
+#: app/src/ui/sidebar.rs:348
 msgid "Outbox"
 msgstr "Outbox"
 
-#: app/src/ui/sidebar.rs:365
+#: app/src/ui/sidebar.rs:366
 msgid "Follow Up"
 msgstr "Follow Up"
 
-#: app/src/ui/sidebar.rs:378
+#: app/src/ui/sidebar.rs:379
 msgid "Smart Mailboxes"
 msgstr "Smart Mailboxes"
 
-#: app/src/ui/sidebar.rs:389 app/src/ui/smart_editor.rs:43
+#: app/src/ui/sidebar.rs:390 app/src/ui/smart_editor.rs:43
 msgid "Accounts"
 msgstr "Accounts"
 
-#: app/src/ui/sidebar.rs:468
+#: app/src/ui/sidebar.rs:469
 msgid "Holds folders, not mail"
 msgstr "Holds folders, not mail"
 
-#: app/src/ui/sidebar.rs:595 app/src/ui/sidebar.rs:979
+#: app/src/ui/sidebar.rs:596 app/src/ui/sidebar.rs:980
 msgid "Show or hide this account's mailboxes"
 msgstr "Show or hide this account's mailboxes"
 
-#: app/src/ui/sidebar.rs:617
+#: app/src/ui/sidebar.rs:618
 msgid "{mailbox}, {count} unread message"
 msgid_plural "{mailbox}, {count} unread messages"
 msgstr[0] "{mailbox}, {count} unread message"
 msgstr[1] "{mailbox}, {count} unread messages"
 
-#: app/src/ui/sidebar.rs:623
+#: app/src/ui/sidebar.rs:624
 msgid "{mailbox}, {count} message"
 msgid_plural "{mailbox}, {count} messages"
 msgstr[0] "{mailbox}, {count} message"
 msgstr[1] "{mailbox}, {count} messages"
 
-#: app/src/ui/sidebar.rs:689 app/src/ui/sidebar.rs:923
+#: app/src/ui/sidebar.rs:690 app/src/ui/sidebar.rs:924
 msgid "Move Up"
 msgstr "Move Up"
 
-#: app/src/ui/sidebar.rs:690 app/src/ui/sidebar.rs:924
+#: app/src/ui/sidebar.rs:691 app/src/ui/sidebar.rs:925
 msgid "Move Down"
 msgstr "Move Down"
 
-#: app/src/ui/sidebar.rs:693 app/src/ui/sidebar.rs:794
+#: app/src/ui/sidebar.rs:694 app/src/ui/sidebar.rs:795
 msgid "Delete…"
 msgstr "Delete…"
 
-#: app/src/ui/sidebar.rs:783 app/src/ui/sidebar.rs:912
+#: app/src/ui/sidebar.rs:784 app/src/ui/sidebar.rs:913
 msgid "Rename…"
 msgstr "Rename…"
 
-#: app/src/ui/sidebar.rs:793 app/src/ui/sidebar.rs:922
+#: app/src/ui/sidebar.rs:794 app/src/ui/sidebar.rs:923
 msgid "Color"
 msgstr "Colour"
 
-#: app/src/ui/sidebar.rs:830
+#: app/src/ui/sidebar.rs:831
 msgid "Automatic Reply…"
 msgstr "Automatic Reply…"
 
-#: app/src/ui/sidebar.rs:831
+#: app/src/ui/sidebar.rs:832
 msgid "Signature…"
 msgstr "Signature…"
 
-#: app/src/ui/sidebar.rs:832
+#: app/src/ui/sidebar.rs:833
 msgid "Rules…"
 msgstr "Rules…"
 
-#: app/src/ui/sidebar.rs:833 app/src/ui/window.rs:2619
+#: app/src/ui/sidebar.rs:834 app/src/ui/window.rs:2619
 msgid "Hide My Email…"
 msgstr "Hide My Email…"
 
-#: app/src/ui/sidebar.rs:927
+#: app/src/ui/sidebar.rs:928
 msgid "Sign In Again…"
 msgstr "Sign In Again…"
 
-#: app/src/ui/sidebar.rs:930
+#: app/src/ui/sidebar.rs:931
 msgid "Remove Account…"
 msgstr "Remove Account…"
 
-#: app/src/ui/sidebar.rs:937
+#: app/src/ui/sidebar.rs:938
 msgid "Account options"
 msgstr "Account options"
 
-#: app/src/ui/sidebar.rs:942
+#: app/src/ui/sidebar.rs:943
 msgid "Options for {account}"
 msgstr "Options for {account}"
 
-#: app/src/ui/sidebar.rs:990
+#: app/src/ui/sidebar.rs:991
 msgid "Sign in again to keep syncing"
 msgstr "Sign in again to keep syncing"
 
-#: app/src/ui/sidebar.rs:992
+#: app/src/ui/sidebar.rs:993
 msgid "Offline"
 msgstr "Offline"
 
-#: app/src/ui/sidebar.rs:996
+#: app/src/ui/sidebar.rs:997
 msgid "{provider} is not responding; retrying"
 msgstr "{provider} is not responding; retrying"
 
-#: app/src/ui/sidebar.rs:1001
+#: app/src/ui/sidebar.rs:1002
 msgid "Downloading mail"
 msgstr "Downloading mail"
 
-#: app/src/ui/sidebar.rs:1005
+#: app/src/ui/sidebar.rs:1006
 msgid "Syncing stopped after an error; restart Penguin Mail to try again"
 msgstr "Syncing stopped after an error; restart Penguin Mail to try again"
 

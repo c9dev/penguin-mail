@@ -182,7 +182,9 @@ impl MonthGrid {
             if hidden > 0 {
                 let more = gtk::Button::builder()
                     .css_classes(["flat", "month-more"])
-                    .label(words::more_count_words(hidden))
+                    // A child label rather than the button's own: GTK names
+                    // a button after its own label, over the name below.
+                    .child(&gtk::Label::new(Some(&words::more_count_words(hidden))))
                     .halign(gtk::Align::Start)
                     .build();
                 crate::ui::name(&more, &words::month_more_words(hidden, day));

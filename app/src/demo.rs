@@ -952,6 +952,7 @@ fn account0_events(now: EpochMillis) -> Vec<CalendarEvent> {
         timed_event("primary", "lunch-with-ana", "Lunch with Ana", at_week(monday, 1, 13, 0), at_week(monday, 1, 14, 0)),
         timed_event("primary", "dentist", "Dentist", at_week(monday, 2, 11, 0), at_week(monday, 2, 12, 0)),
         timed_event("primary", "gym", "Gym", at_week(monday, 1, 16, 0), at_week(monday, 1, 17, 0)),
+        timed_event("primary", "yoga", "Yoga", at_week(monday, 9, 18, 30), at_week(monday, 9, 19, 30)),
         timed_event(
             FAMILY,
             "swimming-lessons",
@@ -1041,6 +1042,12 @@ fn account1_events(now: EpochMillis) -> Vec<CalendarEvent> {
             at_week(monday, 3, 13, 0),
         ),
         timed_event(DESIGN_TEAM, "retro", "Retro", at_week(monday, 4, 16, 30), at_week(monday, 4, 17, 30)),
+        // Next Wednesday is busier than a month cell holds, so the month
+        // shows an "N more" button to open. It sits outside the week the
+        // mockup draws.
+        timed_event("primary", "sprint-review", "Sprint review", at_week(monday, 9, 11, 0), at_week(monday, 9, 12, 0)),
+        timed_event(DESIGN_TEAM, "design-sync", "Design sync", at_week(monday, 9, 14, 0), at_week(monday, 9, 15, 0)),
+        timed_event("primary", "hiring-panel", "Hiring panel", at_week(monday, 9, 16, 0), at_week(monday, 9, 17, 0)),
     ];
     let (offsite_start, offsite_end) = all_day_utc(monday.date_naive() + chrono::Duration::days(3), 2);
     events.push(CalendarEvent {

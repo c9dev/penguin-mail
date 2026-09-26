@@ -114,7 +114,7 @@ impl EventBlock {
             // The clock the block draws in its top right corner; the
             // title stops short of it.
             block.imp().pending.set(true);
-            text.set_margin_end(14);
+            text.set_margin_end(16);
         }
 
         button.set_child(Some(&content));
@@ -191,10 +191,11 @@ mod imp {
             }
             if self.pending.get() {
                 // A clock of radius 5.5 and 1.4 px lines, 14 px in from
-                // the top right corner, in the dimmed text colour.
+                // the top right corner, in the dimmed text colour; centred
+                // on a block of one line, which is too short for that.
                 let mut dim = widget.color();
                 dim.set_alpha(dim.alpha() * 0.64);
-                let (x, y) = (width - 14.0, 14.0);
+                let (x, y) = (width - 14.0, 14.0_f32.min(height / 2.0));
                 let path = gsk::PathBuilder::new();
                 path.add_circle(&graphene::Point::new(x, y), 5.5);
                 path.move_to(x, y);
