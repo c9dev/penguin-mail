@@ -419,8 +419,8 @@ button.event-block.compact .bar { margin: 3px 0; }
 button.event-block.compact .title { font-size: 0.82em; margin-top: 0; }
 /* An invitation not answered yet: no tint and no bar. The block strokes
    its dashed outline itself (block.rs), since a CSS dashed border cannot
-   draw the mockup's 5 and 4 pattern. These rules outrank the tint rules
-   tint.rs writes, which would fill it. */
+   draw the mockup's 5 and 4 pattern. tint.rs leaves these blocks out of
+   its fills, which would otherwise win. */
 button.event-block.unanswered,
 .calendar-dark button.event-block.unanswered { background: var(--view-bg-color); }
 button.event-block.unanswered:hover,

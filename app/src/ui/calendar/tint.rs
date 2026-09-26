@@ -38,6 +38,12 @@ pub fn css_class(colour: &str) -> String {
 /// stylesheet on the GTK this was checked on (4.22).
 /// A colour [`css_class`] cannot read writes no rule; the fixed
 /// `.cal-accent` rule in `app/data/style.css` already covers it.
+///
+/// GTK looks this provider up before the app's stylesheet, at the same
+/// priority, and the first provider that sets a property wins whatever
+/// its selector's weight. So an invitation not answered yet is left out
+/// here, and keeps the view colour the stylesheet gives it, and the
+/// hover tints live here too.
 pub fn stylesheet(colours: &[String]) -> String {
     let mut css = String::new();
     let mut written = HashSet::new();
@@ -50,8 +56,10 @@ pub fn stylesheet(colours: &[String]) -> String {
         let _ = write!(
             css,
             ".{class} {{ --cal-colour: #{hex}; }}\n\
-             .event-block.{class} {{ background-color: color-mix(in srgb, #{hex} 14%, var(--view-bg-color)); }}\n\
-             .calendar-dark .event-block.{class} {{ background-color: color-mix(in srgb, #{hex} 24%, var(--view-bg-color)); }}\n"
+             .event-block.{class}:not(.unanswered) {{ background-color: color-mix(in srgb, #{hex} 14%, var(--view-bg-color)); }}\n\
+             .event-block.{class}:not(.unanswered):hover {{ background-color: color-mix(in srgb, #{hex} 22%, var(--view-bg-color)); }}\n\
+             .calendar-dark .event-block.{class}:not(.unanswered) {{ background-color: color-mix(in srgb, #{hex} 24%, var(--view-bg-color)); }}\n\
+             .calendar-dark .event-block.{class}:not(.unanswered):hover {{ background-color: color-mix(in srgb, #{hex} 32%, var(--view-bg-color)); }}\n"
         );
     }
     css
@@ -82,6 +90,17 @@ mod tests {
         // own dark media query does not reach an app stylesheet here.
         assert!(css.contains(".calendar-dark .event-block.cal-3584e4"));
         assert!(css.contains("24%"));
+    }
+
+    #[test]
+    fn an_unanswered_block_keeps_the_view_colour() {
+        // This provider is looked up before app/data/style.css, so its
+        // fill would win over the unanswered rule there whatever the
+        // selectors' weight.
+        let css = stylesheet(&["#9141ac".into()]);
+        for rule in css.lines().filter(|line| line.contains("background-color")) {
+            assert!(rule.contains(":not(.unanswered)"), "{rule}");
+        }
     }
 
     #[test]
