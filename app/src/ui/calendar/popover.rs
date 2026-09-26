@@ -144,6 +144,7 @@ impl EventPopover {
         let join = gtk::Button::builder()
             .css_classes(["popover-join"])
             .hexpand(true)
+            .margin_top(5)
             .build();
 
         let answer_box = gtk::Box::builder()
@@ -164,10 +165,12 @@ impl EventPopover {
             })
             .collect();
 
+        // The mockup's rows sit 26 px apart, the first 31 px under the
+        // time, and Join 22 px under the last.
         let rows = gtk::Box::builder()
             .orientation(gtk::Orientation::Vertical)
-            .spacing(6)
-            .margin_top(8)
+            .spacing(9)
+            .margin_top(1)
             .build();
         rows.append(&calendar_row);
         rows.append(&place_row);

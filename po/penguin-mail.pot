@@ -3199,7 +3199,7 @@ msgstr ""
 msgid "Waiting to be sent"
 msgstr ""
 
-#: app/src/ui/calendar/block.rs:262 app/src/ui/calendar/popover.rs:330
+#: app/src/ui/calendar/block.rs:262 app/src/ui/calendar/popover.rs:333
 msgid "Not answered yet"
 msgstr ""
 
@@ -3243,36 +3243,36 @@ msgstr ""
 msgid "Search the Calendar"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:709
+#: app/src/ui/calendar/mod.rs:712
 msgid "List"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:710
+#: app/src/ui/calendar/mod.rs:713
 msgid "Day"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:711
+#: app/src/ui/calendar/mod.rs:714
 msgid "Week"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:712
+#: app/src/ui/calendar/mod.rs:715
 msgid "Month"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:898
+#: app/src/ui/calendar/mod.rs:901
 msgid "All-day events"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:900
+#: app/src/ui/calendar/mod.rs:903
 msgid "All-day"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:1170 app/src/ui/calendar/mod.rs:1652
+#: app/src/ui/calendar/mod.rs:1177 app/src/ui/calendar/mod.rs:1659
 #: app/src/ui/calendar/sidebar.rs:110
 msgid "%a"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:1449
+#: app/src/ui/calendar/mod.rs:1456
 msgid "Could not send your answer: {reason}"
 msgstr ""
 
@@ -3280,12 +3280,12 @@ msgstr ""
 msgid "Open in Maps"
 msgstr ""
 
-#: app/src/ui/calendar/popover.rs:154 app/src/ui/calendar/popover.rs:332
+#: app/src/ui/calendar/popover.rs:155 app/src/ui/calendar/popover.rs:335
 #: app/src/ui/invitation.rs:188
 msgid "Answer"
 msgstr ""
 
-#: app/src/ui/calendar/popover.rs:342
+#: app/src/ui/calendar/popover.rs:345
 msgid "Your answer"
 msgstr ""
 
@@ -3363,7 +3363,7 @@ msgstr ""
 msgid "Grant Access for {account}"
 msgstr ""
 
-#: app/src/ui/calendar/time_grid.rs:140
+#: app/src/ui/calendar/time_grid.rs:164
 msgid "{count} more event"
 msgid_plural "{count} more events"
 msgstr[0] ""

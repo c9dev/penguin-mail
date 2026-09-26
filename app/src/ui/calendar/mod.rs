@@ -324,7 +324,10 @@ impl CalendarView {
             .css_classes(["calendar-card"])
             .margin_start(10)
             .margin_end(10)
-            .margin_top(8)
+            // The header bar stands 3 px taller than the mockup's 48, so
+            // the card keeps 5 px under it where the mockup keeps 8, and
+            // its top edge lands at the mockup's 56.
+            .margin_top(5)
             .margin_bottom(10)
             .overflow(gtk::Overflow::Hidden)
             .build();
@@ -892,7 +895,7 @@ impl CalendarView {
             .homogeneous(true)
             .margin_start(GUTTER as i32)
             .margin_top(11)
-            .margin_bottom(11)
+            .margin_bottom(10)
             .build();
         let strip = AllDayStrip::new();
         crate::ui::name(&strip, &gettext("All-day events"));
@@ -917,7 +920,11 @@ impl CalendarView {
         let label_edge = grid.clone();
         scroller
             .vadjustment()
-            .connect_value_changed(move |adjustment| label_edge.set_scroll_top(adjustment.value()));
+            .connect_value_changed(move |a| label_edge.set_view(a.value(), a.page_size()));
+        let label_edge = grid.clone();
+        scroller
+            .vadjustment()
+            .connect_changed(move |a| label_edge.set_view(a.value(), a.page_size()));
         let root = gtk::Box::builder()
             .orientation(gtk::Orientation::Vertical)
             .build();

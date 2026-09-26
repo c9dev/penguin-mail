@@ -3126,7 +3126,7 @@ msgstr "Nothing earlier on this computer"
 msgid "Waiting to be sent"
 msgstr "Waiting to be sent"
 
-#: app/src/ui/calendar/block.rs:262 app/src/ui/calendar/popover.rs:330
+#: app/src/ui/calendar/block.rs:262 app/src/ui/calendar/popover.rs:333
 msgid "Not answered yet"
 msgstr "Not answered yet"
 
@@ -3170,36 +3170,36 @@ msgstr "Show Calendars"
 msgid "Search the Calendar"
 msgstr "Search the Calendar"
 
-#: app/src/ui/calendar/mod.rs:709
+#: app/src/ui/calendar/mod.rs:712
 msgid "List"
 msgstr "List"
 
-#: app/src/ui/calendar/mod.rs:710
+#: app/src/ui/calendar/mod.rs:713
 msgid "Day"
 msgstr "Day"
 
-#: app/src/ui/calendar/mod.rs:711
+#: app/src/ui/calendar/mod.rs:714
 msgid "Week"
 msgstr "Week"
 
-#: app/src/ui/calendar/mod.rs:712
+#: app/src/ui/calendar/mod.rs:715
 msgid "Month"
 msgstr "Month"
 
-#: app/src/ui/calendar/mod.rs:898
+#: app/src/ui/calendar/mod.rs:901
 msgid "All-day events"
 msgstr "All-day events"
 
-#: app/src/ui/calendar/mod.rs:900
+#: app/src/ui/calendar/mod.rs:903
 msgid "All-day"
 msgstr "All-day"
 
-#: app/src/ui/calendar/mod.rs:1170 app/src/ui/calendar/mod.rs:1652
+#: app/src/ui/calendar/mod.rs:1177 app/src/ui/calendar/mod.rs:1659
 #: app/src/ui/calendar/sidebar.rs:110
 msgid "%a"
 msgstr "%a"
 
-#: app/src/ui/calendar/mod.rs:1449
+#: app/src/ui/calendar/mod.rs:1456
 msgid "Could not send your answer: {reason}"
 msgstr "Could not send your answer: {reason}"
 
@@ -3207,12 +3207,12 @@ msgstr "Could not send your answer: {reason}"
 msgid "Open in Maps"
 msgstr "Open in Maps"
 
-#: app/src/ui/calendar/popover.rs:154 app/src/ui/calendar/popover.rs:332
+#: app/src/ui/calendar/popover.rs:155 app/src/ui/calendar/popover.rs:335
 #: app/src/ui/invitation.rs:188
 msgid "Answer"
 msgstr "Answer"
 
-#: app/src/ui/calendar/popover.rs:342
+#: app/src/ui/calendar/popover.rs:345
 msgid "Your answer"
 msgstr "Your answer"
 
@@ -3290,7 +3290,7 @@ msgstr "You can only read this calendar"
 msgid "Grant Access for {account}"
 msgstr "Grant Access for {account}"
 
-#: app/src/ui/calendar/time_grid.rs:140
+#: app/src/ui/calendar/time_grid.rs:164
 msgid "{count} more event"
 msgid_plural "{count} more events"
 msgstr[0] "{count} more event"

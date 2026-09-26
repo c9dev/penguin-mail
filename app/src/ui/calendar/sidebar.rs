@@ -418,7 +418,7 @@ impl CalendarSidebar {
         row.append(&check);
         row.append(&label);
         if !calendar.access.can_write() {
-            let lock = gtk::Image::from_icon_name("changes-prevent-symbolic");
+            let lock = gtk::Image::from_icon_name("penguin-mail-lock-symbolic");
             lock.add_css_class("calendar-lock");
             lock.set_pixel_size(12);
             row.append(&lock);
