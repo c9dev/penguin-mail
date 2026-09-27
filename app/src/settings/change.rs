@@ -38,6 +38,8 @@ pub enum Change {
         button: crate::notify::Button,
         show: bool,
     },
+    /// Notifications before calendar events.
+    EventReminders(bool),
     UndoSend(UndoSend),
     /// The address new messages come from; `None` means the first account.
     DefaultAccount(Option<String>),
@@ -234,6 +236,7 @@ impl Change {
             Change::NotificationButton { button, show } => {
                 settings.show_notification_button(button, show)
             }
+            Change::EventReminders(on) => settings.event_reminders = on,
             Change::UndoSend(delay) => settings.undo_send = delay,
             Change::DefaultAccount(email) => settings.default_account = email,
             Change::InboxCategories(on) => settings.inbox_categories = on,
@@ -509,6 +512,7 @@ settable! {
         Notifications => notifications,
         NotificationPreviews => notification_previews,
         NotifyVipsOnly => notify_vips_only,
+        EventReminders => event_reminders,
         UndoSend => undo_send,
         DefaultAccount => default_account,
         ComposeFormat => compose_format,
@@ -724,6 +728,7 @@ impl Effects {
             vips,
             notify_vips_only,
             notification_buttons,
+            event_reminders,
             smart_mailboxes,
             account_order,
             account_colors,
@@ -770,6 +775,9 @@ impl Effects {
             flag_color,
             notify_vips_only,
             notification_buttons,
+            // The reminder scheduler reads this on each check, at most a
+            // minute away.
+            event_reminders,
             hidden_addresses,
             // The composer reads these when it opens, so a refreshed alias
             // list or a newly kept word changes nothing already on screen.
@@ -1397,6 +1405,18 @@ mod tests {
                 .unwrap()
                 .change(&json!(null)),
             Ok(Change::DefaultAccount(None))
+        );
+    }
+
+    #[test]
+    fn turning_event_reminders_off_changes_nothing_on_screen() {
+        let mut settings = Settings::default();
+        let effects = Change::EventReminders(false).apply(&mut settings);
+        assert!(!settings.event_reminders);
+        assert!(effects.is_empty(), "the scheduler reads the switch on its next check");
+        assert_eq!(
+            Setting::named("event_reminders").unwrap().change(&json!(true)),
+            Ok(Change::EventReminders(true))
         );
     }
 

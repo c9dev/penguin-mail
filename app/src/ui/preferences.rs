@@ -219,6 +219,21 @@ fn general_page(
     notifications.add(&previews);
     notifications.add(&actions);
     page.add(&notifications);
+    // Its own group rather than a row under the mail switches: turning
+    // new-mail notifications off leaves event reminders alone.
+    let calendar = adw::PreferencesGroup::builder()
+        .title(gettext("Calendar"))
+        .build();
+    calendar.add(&switch(
+        app,
+        &gettext("Event Reminders"),
+        Some(&gettext(
+            "A notification before each event, at the times the event or its calendar sets",
+        )),
+        settings.event_reminders,
+        Change::EventReminders,
+    ));
+    page.add(&calendar);
     if !missing.is_empty() {
         let unavailable = adw::PreferencesGroup::builder()
             .title(gettext("Not Available"))

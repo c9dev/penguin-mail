@@ -2835,6 +2835,14 @@ impl MainWindow {
         self.show_preferences_for(None);
     }
 
+    /// Switches to the calendar and opens one occurrence's popover. A
+    /// click on a reminder lands here, and so will Show in Calendar on
+    /// an invitation.
+    pub(crate) fn show_event(&self, account_id: AccountId, calendar: &str, id: &str) {
+        let _ = WidgetExt::activate_action(&self.window, "win.show-calendar", None);
+        self.calendar.open(account_id, calendar, id);
+    }
+
     /// Opens Preferences, on the signature of `signature_of` when given.
     fn show_preferences_for(self: &Rc<Self>, signature_of: Option<String>) {
         let Some(app) = self.app.upgrade() else {

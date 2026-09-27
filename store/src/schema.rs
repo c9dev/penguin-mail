@@ -568,6 +568,25 @@ CREATE TABLE calendar_changes (
 ALTER TABLE accounts ADD COLUMN granted_scopes TEXT;
 ALTER TABLE accounts ADD COLUMN asked_scopes TEXT;
 "#,
+    // Event reminders already put up on this computer, and when a snoozed
+    // one comes back. A row outlives the idle restart, so a reminder goes
+    // up once per occurrence. There is no foreign key to `events`: a
+    // calendar read whole again deletes and re-inserts its events, and
+    // the rows must stay through that or every reminder would go up
+    // twice. `ends_at` lets old rows go a day after their event ends.
+    r#"
+CREATE TABLE event_reminders_shown (
+    account_id    INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    calendar      TEXT NOT NULL,
+    event         TEXT NOT NULL,
+    starts_at     INTEGER NOT NULL,
+    minutes       INTEGER NOT NULL,
+    ends_at       INTEGER NOT NULL,
+    shown_at      INTEGER NOT NULL,
+    snoozed_until INTEGER,
+    PRIMARY KEY (account_id, calendar, event, starts_at, minutes)
+);
+"#,
 ];
 
 /// How long the copy taken before a migration stays once the store has

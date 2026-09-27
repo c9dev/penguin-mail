@@ -19,6 +19,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   and a message says so; opening a folder lists its mail right away.
   Folders that only hold other folders show in the sidebar with their
   folders under them; you cannot open them or drop mail on them.
+- Calendar events remind you with a notification before they start, with
+  Join for video calls and Snooze for five minutes. Preferences can turn
+  them off.
 
 ### Improved
 
