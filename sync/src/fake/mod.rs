@@ -1391,6 +1391,18 @@ impl GmailApi for FakeGmail {
             (Some(held), Some(etag)) if held.etag != etag => Err(GmailError::Changed),
             _ => {
                 self.drop_calendar_event(calendar, id);
+                // Google cancels a series' changed occurrences with it,
+                // and the change feed hands each out as cancelled.
+                let changed: Vec<calendar::Event> = self.with(|s| {
+                    s.calendar_events
+                        .iter()
+                        .filter(|e| e.calendar == calendar && e.series.as_deref() == Some(id))
+                        .cloned()
+                        .collect()
+                });
+                for occurrence in changed {
+                    self.put_calendar_event(calendar::Event { status: calendar::Status::Cancelled, ..occurrence });
+                }
                 Ok(())
             }
         }

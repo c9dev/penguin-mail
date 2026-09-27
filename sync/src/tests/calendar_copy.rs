@@ -1032,6 +1032,34 @@ async fn a_held_change_waits_for_commit() {
     assert!(on_google(&h, "standup").is_none());
 }
 
+/// Google cancels a series' changed occurrences along with the series,
+/// so a moved Tuesday does not outlive the delete on Google or in the
+/// copy read back from it.
+#[tokio::test]
+async fn deleting_a_series_cancels_its_changed_occurrences_on_google() {
+    let h = harness().await;
+    let tuesday_id = occurrence_id(&standup(), NOW + DAY);
+    h.fake.put_calendar_event(Event {
+        id: tuesday_id.clone(),
+        rules: Vec::new(),
+        series: Some("standup".into()),
+        original_start: Some(NOW + DAY),
+        start: NOW + DAY + HOUR,
+        end: NOW + DAY + 2 * HOUR,
+        ..standup()
+    });
+    let copy = read_series(&h).await;
+    let tuesday = on_day(&h, 1).await.remove(0);
+    let steps = copy.delete_steps(h.account_id, &tuesday, Some(RepeatScope::All)).await.unwrap();
+    held(copy.apply(h.account_id, steps).await.unwrap());
+    assert!(copy.send(h.account_id).await.unwrap().is_empty());
+
+    assert!(on_google(&h, "standup").is_none());
+    assert_eq!(on_google(&h, &tuesday_id).map(|e| e.status), Some(Status::Cancelled));
+    copy.refresh(h.account_id, NOW + READ_EVERY_OPEN).await.unwrap();
+    assert!(on_day(&h, 1).await.is_empty());
+}
+
 /// A series with a moved Tuesday, deleted whole and then taken back: every
 /// row returns as it was, the changed occurrence and its guests included.
 #[tokio::test]
