@@ -693,3 +693,58 @@ fn only_an_inbox_counts_unread_and_takes_categories() {
     assert_eq!(mine.account(), Some(1));
     assert_eq!(unified.account(), None);
 }
+
+/// Each mailbox names the place its mail sits in, where it has one, so a
+/// move on a folder account carries only what sits there. A list drawn
+/// from anywhere names none, and the roles decide.
+#[test]
+fn a_mailbox_names_the_place_its_mail_is_moved_from() {
+    use crate::MovedFrom;
+    use mailrs_domain::{MailSet, Role};
+    let inbox = MailSet::Role(Role::Inbox);
+    let work = MailSet::Mailbox("Work".into());
+    let cases = [
+        (Mailbox::Unified(Standard::Inbox), MovedFrom::every(inbox.clone())),
+        (
+            Mailbox::Standard { account_id: 1, which: Standard::Inbox },
+            MovedFrom::one(1, inbox),
+        ),
+        (
+            Mailbox::Standard { account_id: 1, which: Standard::Sent },
+            MovedFrom::one(1, MailSet::Role(Role::Sent)),
+        ),
+        (Mailbox::Unified(Standard::Flagged), MovedFrom::nowhere()),
+        (Mailbox::Standard { account_id: 1, which: Standard::Muted }, MovedFrom::nowhere()),
+        (
+            Mailbox::Label { account_id: 1, label_id: "Work".into(), name: "Work".into() },
+            MovedFrom::one(1, work.clone()),
+        ),
+        (
+            Mailbox::Set { account_id: 1, set: work.clone(), name: "Work".into() },
+            MovedFrom::one(1, work),
+        ),
+        (
+            Mailbox::Set { account_id: 1, set: MailSet::Unseen, name: "Unread".into() },
+            MovedFrom::nowhere(),
+        ),
+        (
+            Mailbox::Folder { account_id: Some(1), folder: Folder::Trash },
+            MovedFrom::one(1, MailSet::Role(Role::Trash)),
+        ),
+        (
+            Mailbox::Folder { account_id: None, folder: Folder::Junk },
+            MovedFrom::every(MailSet::Role(Role::Junk)),
+        ),
+        // Archive and All Mail list what sits outside some roles, which
+        // on a folder server spans every ordinary folder.
+        (Mailbox::Folder { account_id: Some(1), folder: Folder::Archive }, MovedFrom::nowhere()),
+        (Mailbox::Folder { account_id: None, folder: Folder::AllMail }, MovedFrom::nowhere()),
+        (Mailbox::Search { query: "kites".into(), account_id: Some(1) }, MovedFrom::nowhere()),
+        // Remind Me put what this list shows in the Archive.
+        (Mailbox::Reminders, MovedFrom::every(MailSet::Role(Role::Archive))),
+        (Mailbox::Flag(FlagColor::Red), MovedFrom::nowhere()),
+    ];
+    for (mailbox, from) in cases {
+        assert_eq!(mailbox.moved_from(), from, "{mailbox:?}");
+    }
+}

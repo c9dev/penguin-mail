@@ -14,7 +14,7 @@ use ksni::TrayMethods;
 use mailrs_domain::translate::{fill, gettext};
 use mailrs_domain::{Account, AccountId, Address, ChangeEvent, Label, MailSet, Role};
 use mailrs_store::{accounts, labels, messages, threads};
-use mailrs_sync::History;
+use mailrs_sync::{History, MovedFrom};
 
 use crate::compose::Identity;
 use crate::core::Core;
@@ -1112,7 +1112,7 @@ impl App {
         };
         let outcome = self
             .core
-            .act(vec![target], action.clone(), History::Record)
+            .act(vec![target], action.clone(), History::Record, MovedFrom::nowhere())
             .await;
         self.tell_window(Notice::MailChanged {
             action: &action,

@@ -159,7 +159,8 @@ impl<A: Accounts> Tools<A> {
     pub(super) async fn mute(&self, input: &Value) -> ToolResult {
         let targets = self.parse_targets(input)?;
         let muted = flag(input, "mute").unwrap_or(true);
-        report(&self.act(targets, MailAction::Mute { muted }).await)
+        let from = self.moved_from(input)?;
+        report(&self.act_from(targets, MailAction::Mute { muted }, from).await)
     }
 
     pub(super) async fn delete_forever<'a>(&'a self, input: &'a Value) -> Result<Plan<'a>, String> {

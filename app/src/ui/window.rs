@@ -15,7 +15,8 @@ use mailrs_domain::{
     ThreadSummary,
 };
 use mailrs_sync::{
-    History, Listing, Loaded, MailAction, Offers, Permitted, Scope, TriageAction, View, Withheld,
+    History, Listing, Loaded, MailAction, MovedFrom, Offers, Permitted, Scope, TriageAction, View,
+    Withheld,
 };
 
 use super::add_account::{Done, Opening};
@@ -1762,8 +1763,8 @@ impl MainWindow {
         });
     }
 
-    /// Runs `action` on the targets. With `History::Record`, the toast says
-    /// what changed, `message` in place of the usual text, and offers Undo.
+    /// Runs `action` on the targets, as mail picked from no one place. See
+    /// [`Self::perform_from`].
     fn perform(
         self: &Rc<Self>,
         targets: Vec<Target>,
@@ -1771,12 +1772,26 @@ impl MainWindow {
         history: History,
         message: Option<String>,
     ) {
+        self.perform_from(targets, action, history, message, MovedFrom::nowhere());
+    }
+
+    /// Runs `action` on the targets, picked from `from`. With
+    /// `History::Record`, the toast says what changed, `message` in place
+    /// of the usual text, and offers Undo.
+    fn perform_from(
+        self: &Rc<Self>,
+        targets: Vec<Target>,
+        action: MailAction,
+        history: History,
+        message: Option<String>,
+        from: MovedFrom,
+    ) {
         if targets.is_empty() {
             return;
         }
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
-            let outcome = this.core.act(targets, action.clone(), history).await;
+            let outcome = this.core.act(targets, action.clone(), history, from).await;
             this.after_mail(Cause::Did(&action, history), &outcome, None);
             if let Some(error) = outcome.first_error() {
                 return this.toast(error);
@@ -3059,14 +3074,21 @@ impl PressEffects for Pressing {
         Box::pin(async move { asked.ask(&parent).await })
     }
 
-    fn act(&self, targets: Vec<Target>, action: MailAction, history: History, words: Option<String>) {
+    fn act(
+        &self,
+        targets: Vec<Target>,
+        action: MailAction,
+        history: History,
+        words: Option<String>,
+        from: MovedFrom,
+    ) {
         // A colour picked here becomes the one the flag button uses next.
         if let MailAction::Flag(Some(color)) = action
             && let Some(app) = self.window.app.upgrade()
         {
             app.change_settings(Change::FlagColor(color));
         }
-        self.window.perform(targets, action, history, words);
+        self.window.perform_from(targets, action, history, words, from);
     }
 
     fn erase(&self, targets: Vec<Target>) {

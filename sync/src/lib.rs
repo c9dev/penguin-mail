@@ -70,7 +70,7 @@ pub use mailbox::{
 };
 pub use newsletters::Newsletters;
 pub use one_click::OneClick;
-pub use ops::MailOp;
+pub use ops::{MailOp, MovedFrom};
 pub use outbox::{Cancelled, Drained, Outbox, Posted};
 pub use services::{
     AccountServices, AnyAutoReply, Backfill, Found, ID_PAGE_SIZE, LIST_PAGE_SIZE, RawMessage,
