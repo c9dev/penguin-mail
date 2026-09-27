@@ -318,7 +318,8 @@ impl AccountSync {
                         }
                     }
                     let held = messages::memberships_of(c, account_id, &ids)?;
-                    let ids = drop_protected(ids, &whole_thread, &held, &ops, &roles, from.as_deref());
+                    let ids =
+                        drop_protected(ids, &whole_thread, &held, &ops, &roles, from.as_deref());
                     let none = Memberships::default();
                     let changes: Vec<Change> = ids
                         .iter()

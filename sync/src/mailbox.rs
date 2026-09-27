@@ -215,10 +215,11 @@ impl Mailbox {
 
     /// The place this mailbox's mail sits in, which a move on a folder
     /// account takes it out of: a folder, or a role mailbox such as the
-    /// Inbox or the Trash, in its account or in every account. Mail listed
-    /// by a mark, a search, a smart mailbox or what waits sits anywhere,
-    /// and so do Archive and All Mail, which list what lies outside some
-    /// roles; those name no place.
+    /// Inbox or the Trash, in its account or in every account; the Remind
+    /// Me list names the Archive, where Remind Me put its mail. Mail
+    /// listed by a mark, a search, a smart mailbox or what waits to go out
+    /// sits anywhere, and so does Archive and All Mail's, which list what
+    /// lies outside some roles; those name no place.
     pub fn moved_from(&self) -> MovedFrom {
         let place = |set: MailSet| match set {
             MailSet::Role(_) | MailSet::Mailbox(_) => Some(set),
@@ -243,10 +244,11 @@ impl Mailbox {
                 };
                 (*account_id, role.map(MailSet::Role))
             }
+            // Remind Me put the mail this list shows in the Archive.
+            Mailbox::Reminders => (None, Some(MailSet::Role(Role::Archive))),
             Mailbox::Search { .. }
             | Mailbox::Scheduled
             | Mailbox::Outbox
-            | Mailbox::Reminders
             | Mailbox::FollowUp
             | Mailbox::Flag(_)
             | Mailbox::Vips { .. }

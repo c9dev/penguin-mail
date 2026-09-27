@@ -18,7 +18,12 @@ async fn work_and_travel() -> (ImapHarness, String, HashMap<&'static str, String
     let imap = FakeImap::new();
     imap.add_mailbox("Work", None);
     imap.add_mailbox("Travel", None);
-    imap.deliver_flagged("Work", &raw_message("w", "Kites", days_ago(3), None), &[], days_ago(3));
+    imap.deliver_flagged(
+        "Work",
+        &raw_message("w", "Kites", days_ago(3), None),
+        &[],
+        days_ago(3),
+    );
     imap.deliver_flagged(
         "Travel",
         &raw_message("t", "Re: Kites", days_ago(2), Some("w")),
@@ -62,7 +67,10 @@ async fn work_and_travel() -> (ImapHarness, String, HashMap<&'static str, String
 
 fn actions(h: &ImapHarness) -> MailActions<Connected> {
     MailActions::new(
-        Arc::new(Connected(HashMap::from([(h.account_id, Arc::clone(&h.sync))]))),
+        Arc::new(Connected(HashMap::from([(
+            h.account_id,
+            Arc::clone(&h.sync),
+        )]))),
         h.db.clone(),
         crate::OneClick::Fake(Arc::default()),
     )
@@ -81,7 +89,9 @@ async fn on_server(h: &ImapHarness, id: &str) -> String {
 
 async fn run(h: &ImapHarness, thread: &str, action: MailAction, from: MovedFrom) {
     let target = Target::thread(h.account_id, thread);
-    let outcome = actions(h).run_from(&[target], action, History::Record, &from).await;
+    let outcome = actions(h)
+        .run_from(&[target], action, History::Record, &from)
+        .await;
     assert!(outcome.failed.is_empty(), "{outcome:?}");
 }
 
@@ -94,7 +104,11 @@ async fn archiving_from_work_leaves_the_message_in_travel_alone() {
 
     assert_eq!(places(&h, &ids["work"]).await, ["Archive"]);
     assert_eq!(on_server(&h, &ids["work"]).await, "Archive");
-    assert_eq!(places(&h, &ids["travel"]).await, ["Travel"], "Travel keeps its message");
+    assert_eq!(
+        places(&h, &ids["travel"]).await,
+        ["Travel"],
+        "Travel keeps its message"
+    );
     assert_eq!(on_server(&h, &ids["travel"]).await, "Travel");
     assert_eq!(places(&h, &ids["sent"]).await, ["Sent"]);
 }
@@ -105,12 +119,22 @@ async fn archiving_from_work_leaves_the_message_in_travel_alone() {
 async fn archiving_from_a_search_keeps_the_role_rule() {
     let (h, thread, ids) = work_and_travel().await;
 
-    run(&h, &thread, MailAction::Triage(TriageAction::Archive), MovedFrom::nowhere()).await;
+    run(
+        &h,
+        &thread,
+        MailAction::Triage(TriageAction::Archive),
+        MovedFrom::nowhere(),
+    )
+    .await;
 
     assert_eq!(places(&h, &ids["work"]).await, ["Archive"]);
     assert_eq!(places(&h, &ids["travel"]).await, ["Archive"]);
     assert_eq!(on_server(&h, &ids["travel"]).await, "Archive");
-    assert_eq!(places(&h, &ids["sent"]).await, ["Sent"], "the reply stays in Sent");
+    assert_eq!(
+        places(&h, &ids["sent"]).await,
+        ["Sent"],
+        "the reply stays in Sent"
+    );
 }
 
 /// Remind Me from Work archives the Work message alone, and the reminder
@@ -133,7 +157,11 @@ async fn a_reminder_moves_only_what_it_set_aside() {
 
     assert_eq!(back.len(), 1);
     assert_eq!(places(&h, &ids["work"]).await, ["INBOX"]);
-    assert_eq!(places(&h, &ids["travel"]).await, ["Travel"], "Travel keeps its message");
+    assert_eq!(
+        places(&h, &ids["travel"]).await,
+        ["Travel"],
+        "Travel keeps its message"
+    );
     assert_eq!(on_server(&h, &ids["travel"]).await, "Travel");
 }
 
@@ -147,10 +175,20 @@ async fn taking_mail_out_of_a_folder_moves_only_what_sits_in_it() {
         remove: vec![MailSet::Mailbox("Travel".into())],
     };
 
-    run(&h, &thread, MailAction::Triage(remove), MovedFrom::nowhere()).await;
+    run(
+        &h,
+        &thread,
+        MailAction::Triage(remove),
+        MovedFrom::nowhere(),
+    )
+    .await;
 
     assert_eq!(places(&h, &ids["travel"]).await, ["Archive"]);
-    assert_eq!(places(&h, &ids["work"]).await, ["Work"], "Work keeps its message");
+    assert_eq!(
+        places(&h, &ids["work"]).await,
+        ["Work"],
+        "Work keeps its message"
+    );
     assert_eq!(on_server(&h, &ids["work"]).await, "Work");
 }
 
@@ -175,7 +213,13 @@ async fn archiving_from_every_inbox_takes_only_the_inbox_message() {
     assert_eq!(h.thread_of(&inbox).await.as_deref(), Some(thread.as_str()));
 
     let every_inbox = MovedFrom::every(MailSet::Role(Role::Inbox));
-    run(&h, &thread, MailAction::Triage(TriageAction::Archive), every_inbox).await;
+    run(
+        &h,
+        &thread,
+        MailAction::Triage(TriageAction::Archive),
+        every_inbox,
+    )
+    .await;
 
     assert_eq!(places(&h, &inbox).await, ["Archive"]);
     assert_eq!(places(&h, &ids["work"]).await, ["Work"]);
@@ -191,8 +235,44 @@ async fn calling_a_reminder_off_brings_back_only_what_it_set_aside() {
     let at = crate::now_millis() + 60_000;
     run(&h, &thread, MailAction::Remind { at }, from).await;
 
-    run(&h, &thread, MailAction::CancelReminder, MovedFrom::nowhere()).await;
+    run(
+        &h,
+        &thread,
+        MailAction::CancelReminder,
+        MovedFrom::nowhere(),
+    )
+    .await;
 
     assert_eq!(places(&h, &ids["work"]).await, ["INBOX"]);
-    assert_eq!(places(&h, &ids["travel"]).await, ["Travel"], "Travel keeps its message");
+    assert_eq!(
+        places(&h, &ids["travel"]).await,
+        ["Travel"],
+        "Travel keeps its message"
+    );
+}
+
+/// Mute from Work archives the Work message alone, and Unmute, from the
+/// Muted list that shows mail from anywhere, brings back what Mute
+/// archived.
+#[tokio::test]
+async fn unmuting_brings_back_only_what_mute_set_aside() {
+    let (h, thread, ids) = work_and_travel().await;
+    let from = MovedFrom::one(h.account_id, MailSet::Mailbox("Work".into()));
+    run(&h, &thread, MailAction::Mute { muted: true }, from).await;
+    assert_eq!(places(&h, &ids["work"]).await, ["Archive"]);
+
+    run(
+        &h,
+        &thread,
+        MailAction::Mute { muted: false },
+        MovedFrom::nowhere(),
+    )
+    .await;
+
+    assert_eq!(places(&h, &ids["work"]).await, ["INBOX"]);
+    assert_eq!(
+        places(&h, &ids["travel"]).await,
+        ["Travel"],
+        "Travel keeps its message"
+    );
 }

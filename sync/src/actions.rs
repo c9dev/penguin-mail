@@ -278,10 +278,13 @@ impl<A: Accounts> MailActions<A> {
         let resolved = self.resolve(targets, &action).await;
         // The label change goes first: it fetches threads the store lacks,
         // which gives a reminder its subject.
-        // Remind Me moved the mail to the Archive, so calling a reminder
-        // off takes it back out of there, whatever list shows it.
+        // Remind Me and Mute moved the mail to the Archive, so calling a
+        // reminder off or unmuting takes it back out of there, whatever
+        // list shows it.
         let from = match action {
-            MailAction::CancelReminder => MovedFrom::every(MailSet::Role(Role::Archive)),
+            MailAction::CancelReminder | MailAction::Mute { muted: false } => {
+                MovedFrom::every(MailSet::Role(Role::Archive))
+            }
             _ => from.clone(),
         };
         let triaged = self.triage_grouped(targets, &resolved, &from).await;

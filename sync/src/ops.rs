@@ -228,7 +228,8 @@ pub fn drop_protected(
     }
     let none = Memberships::default();
     let mailboxes = |id: &String| &held.get(id).unwrap_or(&none).mailboxes;
-    let sits_in_source = |id: &String| from.is_some_and(|from| mailboxes(id).iter().any(|m| m == from));
+    let sits_in_source =
+        |id: &String| from.is_some_and(|from| mailboxes(id).iter().any(|m| m == from));
     let with_source: HashSet<&String> = whole_thread
         .iter()
         .filter(|(id, _)| sits_in_source(id))
@@ -876,7 +877,10 @@ mod tests {
         places
             .iter()
             .map(|(id, mailbox)| {
-                let held = Memberships { mailboxes: vec![mailbox.to_string()], ..Memberships::default() };
+                let held = Memberships {
+                    mailboxes: vec![mailbox.to_string()],
+                    ..Memberships::default()
+                };
                 (id.to_string(), held)
             })
             .collect()
@@ -967,8 +971,9 @@ mod tests {
     #[test]
     fn a_source_resolves_by_role_or_by_mailbox() {
         let roles = folder_roles();
-        assert_eq!(source_mailbox(&MailSet::Role(Role::Inbox), &roles).as_deref(), Some("INBOX"));
-        assert_eq!(source_mailbox(&MailSet::Mailbox("Work".into()), &roles).as_deref(), Some("Work"));
+        let source = |set: MailSet| source_mailbox(&set, &roles);
+        assert_eq!(source(MailSet::Role(Role::Inbox)).as_deref(), Some("INBOX"));
+        assert_eq!(source(MailSet::Mailbox("Work".into())).as_deref(), Some("Work"));
         assert_eq!(source_mailbox(&MailSet::Role(Role::Junk), &roles), None, "no Junk here");
         assert_eq!(source_mailbox(&MailSet::flagged(), &roles), None, "a mark is no place");
     }

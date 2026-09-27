@@ -740,7 +740,8 @@ fn a_mailbox_names_the_place_its_mail_is_moved_from() {
         (Mailbox::Folder { account_id: Some(1), folder: Folder::Archive }, MovedFrom::nowhere()),
         (Mailbox::Folder { account_id: None, folder: Folder::AllMail }, MovedFrom::nowhere()),
         (Mailbox::Search { query: "kites".into(), account_id: Some(1) }, MovedFrom::nowhere()),
-        (Mailbox::Reminders, MovedFrom::nowhere()),
+        // Remind Me put what this list shows in the Archive.
+        (Mailbox::Reminders, MovedFrom::every(MailSet::Role(Role::Archive))),
         (Mailbox::Flag(FlagColor::Red), MovedFrom::nowhere()),
     ];
     for (mailbox, from) in cases {

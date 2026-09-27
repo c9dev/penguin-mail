@@ -37,7 +37,8 @@ impl<A: Accounts> MailActions<A> {
             // is what sits there, not what the thread has in other folders.
             let target = Target::thread(item.account_id, &item.thread_id);
             let archive = MailSet::Role(Role::Archive);
-            if let Err(err) = sync.triage_all(std::slice::from_ref(&target), &back, Some(&archive)).await {
+            let returning = sync.triage_all(std::slice::from_ref(&target), &back, Some(&archive));
+            if let Err(err) = returning.await {
                 tracing::warn!(error = %err, "a reminder could not return its conversation; will retry");
                 continue;
             }
