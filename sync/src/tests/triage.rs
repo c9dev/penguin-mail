@@ -225,7 +225,7 @@ async fn a_few_messages_and_many_leave_the_trash_the_same_way() {
         h.bootstrap_all().await;
 
         h.sync
-            .triage_all(&targets, &TriageAction::Untrash)
+            .triage_all(&targets, &TriageAction::Untrash, None)
             .await
             .unwrap();
 
@@ -271,7 +271,7 @@ async fn one_message_can_be_triaged_alone() {
     };
     let changed = h
         .sync
-        .triage_all(&[target], &TriageAction::MarkRead)
+        .triage_all(&[target], &TriageAction::MarkRead, None)
         .await
         .unwrap();
     assert_eq!(

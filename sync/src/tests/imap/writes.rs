@@ -153,7 +153,7 @@ async fn a_refused_write_rolls_back_even_when_its_moves_cannot_be_recorded() {
     let sync = std::sync::Arc::clone(&h.sync);
     let moving = tokio::spawn(async move {
         let to = TriageAction::MoveTo("Projects".into());
-        sync.triage_all(&targets, &to).await
+        sync.triage_all(&targets, &to, None).await
     });
     hold.reached().await;
     h.imap
@@ -271,12 +271,12 @@ async fn undo_brings_the_message_back_to_the_inbox_under_the_same_id() {
     let target = Target::thread(h.account_id, &thread);
     let applied = h
         .sync
-        .triage_all(std::slice::from_ref(&target), &TriageAction::Archive)
+        .triage_all(std::slice::from_ref(&target), &TriageAction::Archive, None)
         .await
         .unwrap();
 
     h.sync
-        .change_all(&[target], &crate::ops::undo_ops(&applied[0]), "Undo")
+        .change_all(&[target], &crate::ops::undo_ops(&applied[0]), "Undo", None)
         .await
         .unwrap();
 
