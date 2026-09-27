@@ -35,6 +35,7 @@ const BLOCK_REMOTE_RULES: &str = r#"[
 mod composing;
 mod hidden;
 mod photos;
+mod reminders;
 mod sending;
 
 pub use composing::Signature;
@@ -93,6 +94,11 @@ pub struct App {
     /// Which languages a dictionary is installed for, read once.
     installed_dictionaries: RefCell<Option<Vec<String>>>,
     scheduler_running: Cell<bool>,
+    /// The timer for the next event reminder check. Each check replaces
+    /// it with one set for the next reminder due, at most a minute away.
+    reminder_wake: RefCell<Option<glib::SourceId>>,
+    /// A reminder check is reading or posting; another waits for it.
+    reminders_running: Cell<bool>,
     /// Finds and installs newer releases. None in the demo and in a cargo
     /// build, which never update.
     updater: Option<Rc<crate::update::Updater>>,
@@ -152,6 +158,8 @@ impl App {
             dictionaries: RefCell::new(HashMap::new()),
             installed_dictionaries: RefCell::new(None),
             scheduler_running: Cell::new(false),
+            reminder_wake: RefCell::new(None),
+            reminders_running: Cell::new(false),
             updater: crate::update::Updater::for_this_copy(core_demo).map(Rc::new),
             _hold: gio_app.hold(),
         });
@@ -182,6 +190,7 @@ impl App {
         });
         app.load_accounts();
         app.start_scheduler();
+        app.start_event_reminders();
         app.watch_contacts();
         app.watch_calendars();
         app.start_update_checks();
@@ -924,6 +933,11 @@ impl App {
                     }
                     if let Some(window) = this.window() {
                         window.calendar_refreshed(&refreshed);
+                    }
+                    // A change read from Google may bring a reminder
+                    // closer than the next minute's check.
+                    if refreshed.events > 0 {
+                        this.check_event_reminders();
                     }
                 }
                 Err(err) => tracing::warn!(%err, "could not read the calendars"),

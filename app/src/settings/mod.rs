@@ -46,6 +46,9 @@ pub struct Settings {
     /// The buttons a new-mail notification carries, in the order it shows
     /// them. Empty leaves a notification with nothing but its body to click.
     pub notification_buttons: Vec<crate::notify::Button>,
+    /// Put up a notification before calendar events, at the times each
+    /// event or its calendar sets.
+    pub event_reminders: bool,
     pub smart_mailboxes: Vec<mailrs_domain::SmartMailbox>,
     /// Account addresses in sidebar order; accounts not listed follow.
     pub account_order: Vec<String>,
@@ -432,6 +435,7 @@ impl Default for Settings {
             vips: BTreeMap::new(),
             notify_vips_only: false,
             notification_buttons: crate::notify::Button::ALL.to_vec(),
+            event_reminders: true,
             smart_mailboxes: Vec::new(),
             account_order: Vec::new(),
             account_colors: BTreeMap::new(),
@@ -1017,6 +1021,17 @@ mod tests {
         assert!(!partial.threading);
         assert_eq!(partial.mark_read, MarkRead::AfterDelay);
         assert!(partial.notifications, "missing keys take their defaults");
+    }
+
+    #[test]
+    fn event_reminders_are_on_unless_the_file_says_otherwise() {
+        assert!(Settings::default().event_reminders);
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("settings.toml");
+        std::fs::write(&path, "threading = false\n").unwrap();
+        assert!(Settings::load(&path).event_reminders, "a file from before this change");
+        std::fs::write(&path, "event_reminders = false\n").unwrap();
+        assert!(!Settings::load(&path).event_reminders);
     }
 
     #[test]

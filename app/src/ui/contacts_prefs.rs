@@ -144,9 +144,9 @@ fn calendar(
     let group = adw::PreferencesGroup::builder()
         .title(gettext("Calendar"))
         .description(gettext(
-            "Answering a meeting invitation records your answer in that account's Google \
-             Calendar. To see the meetings in GNOME Calendar and the clock, add the account \
-             to GNOME Online Accounts.",
+            "Penguin Mail shows each account's meetings and reminds you before they start. \
+             To see them in GNOME Calendar and the clock too, add the account to GNOME \
+             Online Accounts.",
         ))
         .build();
     let mut online_accounts = true;

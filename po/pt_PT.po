@@ -245,7 +245,7 @@ msgstr "Escreva o nome do servidor de saída."
 msgid "Penguin Mail needs the password for {address} again."
 msgstr "O Penguin Mail precisa de novo da palavra-passe de {address}."
 
-#: app/src/app.rs:307
+#: app/src/app.rs:316
 msgid ""
 "Your preferences could not be read, so Penguin Mail started from the "
 "defaults. The old file is kept as {file}."
@@ -1203,17 +1203,67 @@ msgstr ""
 "Iniciou sessão como {account}. Escolha {wanted} para voltar a ligar essa "
 "conta."
 
-#: app/src/format.rs:35
+#: app/src/event_reminders/notice.rs:31
+msgid "Join"
+msgstr "Participar"
+
+#: app/src/event_reminders/notice.rs:32
+msgid "Snooze 5 Minutes"
+msgstr "Adiar 5 minutos"
+
+#: app/src/event_reminders/notice.rs:61
+msgid "(no title)"
+msgstr "(sem título)"
+
+#: app/src/event_reminders/notice.rs:90
+msgid "{when}, all day"
+msgstr "{when}, todo o dia"
+
+#: app/src/event_reminders/notice.rs:96
+msgid "Now"
+msgstr "Agora"
+
+#: app/src/event_reminders/notice.rs:99
+msgid "Started {count} minute ago"
+msgid_plural "Started {count} minutes ago"
+msgstr[0] "Começou há {count} minuto"
+msgstr[1] "Começou há {count} minutos"
+
+#: app/src/event_reminders/notice.rs:106
+msgid "In {count} minute"
+msgid_plural "In {count} minutes"
+msgstr[0] "Daqui a {count} minuto"
+msgstr[1] "Daqui a {count} minutos"
+
+#: app/src/event_reminders/notice.rs:109
+msgid "In {count} hour"
+msgid_plural "In {count} hours"
+msgstr[0] "Daqui a {count} hora"
+msgstr[1] "Daqui a {count} horas"
+
+#: app/src/event_reminders/notice.rs:114
+msgid "{when}, {start} to {end}"
+msgstr "{when}, das {start} às {end}"
+
+#: app/src/event_reminders/notice.rs:144
 msgid "%H:%M"
 msgstr "%H:%M"
+
+#: app/src/event_reminders/notice.rs:154
+msgid "Today"
+msgstr "Hoje"
+
+#: app/src/event_reminders/notice.rs:155
+msgid "Tomorrow"
+msgstr "Amanhã"
+
+#: app/src/event_reminders/notice.rs:159
+msgid "%A %-d %B"
+msgstr "%A %-d de %B"
 
 #: app/src/format.rs:36 app/src/format.rs:222
 msgid "Yesterday"
 msgstr "Ontem"
-
-#: app/src/format.rs:37 app/src/format.rs:221
-msgid "Tomorrow"
-msgstr "Amanhã"
 
 #: app/src/format.rs:38 app/src/format.rs:223
 msgid "%A"
@@ -1315,10 +1365,6 @@ msgstr "%-d de %B"
 msgid "%-d %B %Y"
 msgstr "%-d de %B de %Y"
 
-#: app/src/format.rs:220
-msgid "Today"
-msgstr "Hoje"
-
 #: app/src/format.rs:224
 msgid "%A, %-d %B"
 msgstr "%A, %-d de %B"
@@ -1367,7 +1413,7 @@ msgstr "Roxo"
 msgid "Slate"
 msgstr "Ardósia"
 
-#: app/src/main.rs:56
+#: app/src/main.rs:57
 msgid ""
 "Usage: penguin-mail [--background] [--demo] [--compose [mailto:ADDRESS]]\n"
 "\n"
@@ -1387,15 +1433,15 @@ msgstr ""
 "  --compose      abre uma mensagem nova, para ENDEREÇO quando indicado\n"
 "  mailto:...     o mesmo que --compose mailto:..."
 
-#: app/src/main.rs:122
+#: app/src/main.rs:123
 msgid "penguin-mail: unknown option {option}"
 msgstr "penguin-mail: opção desconhecida {option}"
 
-#: app/src/main.rs:245
+#: app/src/main.rs:246
 msgid "Penguin Mail Could Not Start"
 msgstr "O Penguin Mail não conseguiu arrancar"
 
-#: app/src/main.rs:250 app/src/ui/about.rs:148
+#: app/src/main.rs:251 app/src/ui/about.rs:148
 msgid "Report a Problem"
 msgstr "Comunicar um problema"
 
@@ -2270,181 +2316,181 @@ msgstr "Para {person}"
 msgid "In {label}"
 msgstr "Em {label}"
 
-#: app/src/settings/mod.rs:172 app/src/settings/mod.rs:347
-#: app/src/settings/mod.rs:625 app/src/ui/assistant_mcp_prefs.rs:184
+#: app/src/settings/mod.rs:175 app/src/settings/mod.rs:350
+#: app/src/settings/mod.rs:629 app/src/ui/assistant_mcp_prefs.rs:184
 msgid "Off"
 msgstr "Desligado"
 
-#: app/src/settings/mod.rs:173
+#: app/src/settings/mod.rs:176
 msgid "Local server"
 msgstr "Servidor local"
 
-#: app/src/settings/mod.rs:174
+#: app/src/settings/mod.rs:177
 msgid "Anthropic API"
 msgstr "API da Anthropic"
 
-#: app/src/settings/mod.rs:175
+#: app/src/settings/mod.rs:178
 msgid "Claude subscription"
 msgstr "Subscrição do Claude"
 
 #. The calendar's header has no room for the assistant's button,
 #. so the menu both spaces share offers it, with its key.
-#: app/src/settings/mod.rs:200 app/src/ui/assistant.rs:99
+#: app/src/settings/mod.rs:203 app/src/ui/assistant.rs:99
 #: app/src/ui/window.rs:2613
 msgid "Assistant"
 msgstr "Assistente"
 
-#: app/src/settings/mod.rs:201
+#: app/src/settings/mod.rs:204
 msgid "Translation"
 msgstr "Tradução"
 
 #. The assistant's running label says "Unsubscribing" too, and
 #. means the act rather than the feature, which Portuguese
 #. words differently.
-#: app/src/settings/mod.rs:205
+#: app/src/settings/mod.rs:208
 msgctxt "ai feature"
 msgid "Unsubscribing"
 msgstr "Cancelar subscrições"
 
-#: app/src/settings/mod.rs:211
+#: app/src/settings/mod.rs:214
 msgid "Answers questions and acts on your mail"
 msgstr "Responde a perguntas e trata do seu correio"
 
-#: app/src/settings/mod.rs:212
+#: app/src/settings/mod.rs:215
 msgid "Translates a message when you ask"
 msgstr "Traduz uma mensagem quando o pede"
 
-#: app/src/settings/mod.rs:214
+#: app/src/settings/mod.rs:217
 msgid "Reads a newsletter's unsubscribe page when the rules cannot"
 msgstr ""
 "Lê a página de cancelamento de subscrição de uma newsletter quando as regras "
 "não chegam"
 
-#: app/src/settings/mod.rs:252
+#: app/src/settings/mod.rs:255
 msgid "Same as the Assistant"
 msgstr "O mesmo do assistente"
 
-#: app/src/settings/mod.rs:348
+#: app/src/settings/mod.rs:351
 msgid "Claude's own only"
 msgstr "Apenas a do próprio Claude"
 
-#: app/src/settings/mod.rs:349
+#: app/src/settings/mod.rs:352
 msgid "Brave Search"
 msgstr "Brave Search"
 
-#: app/src/settings/mod.rs:350
+#: app/src/settings/mod.rs:353
 msgid "SearXNG"
 msgstr "SearXNG"
 
-#: app/src/settings/mod.rs:484
+#: app/src/settings/mod.rs:488
 msgid "Rich text"
 msgstr "Texto formatado"
 
-#: app/src/settings/mod.rs:485
+#: app/src/settings/mod.rs:489
 msgid "Markdown"
 msgstr "Markdown"
 
-#: app/src/settings/mod.rs:532
+#: app/src/settings/mod.rs:536
 msgid "When opened"
 msgstr "Ao abrir"
 
-#: app/src/settings/mod.rs:533
+#: app/src/settings/mod.rs:537
 msgid "After 2 seconds"
 msgstr "Ao fim de 2 segundos"
 
-#: app/src/settings/mod.rs:534
+#: app/src/settings/mod.rs:538
 msgid "Only when I choose"
 msgstr "Apenas quando eu escolher"
 
-#: app/src/settings/mod.rs:550
+#: app/src/settings/mod.rs:554
 msgid "Ask each time"
 msgstr "Perguntar de cada vez"
 
-#: app/src/settings/mod.rs:551
+#: app/src/settings/mod.rs:555
 msgid "Always load"
 msgstr "Carregar sempre"
 
-#: app/src/settings/mod.rs:585
+#: app/src/settings/mod.rs:589
 msgid "Small"
 msgstr "Pequeno"
 
-#: app/src/settings/mod.rs:586
+#: app/src/settings/mod.rs:590
 msgid "Default"
 msgstr "Predefinido"
 
-#: app/src/settings/mod.rs:587
+#: app/src/settings/mod.rs:591
 msgid "Large"
 msgstr "Grande"
 
-#: app/src/settings/mod.rs:588
+#: app/src/settings/mod.rs:592
 msgid "Larger"
 msgstr "Maior"
 
-#: app/src/settings/mod.rs:626
+#: app/src/settings/mod.rs:630
 msgid "5 seconds"
 msgstr "5 segundos"
 
-#: app/src/settings/mod.rs:627
+#: app/src/settings/mod.rs:631
 msgid "10 seconds"
 msgstr "10 segundos"
 
-#: app/src/settings/mod.rs:628
+#: app/src/settings/mod.rs:632
 msgid "20 seconds"
 msgstr "20 segundos"
 
-#: app/src/settings/mod.rs:629
+#: app/src/settings/mod.rs:633
 msgid "30 seconds"
 msgstr "30 segundos"
 
-#: app/src/settings/mod.rs:646
+#: app/src/settings/mod.rs:650
 msgid "Follow system"
 msgstr "Seguir o sistema"
 
-#: app/src/settings/mod.rs:647
+#: app/src/settings/mod.rs:651
 msgid "Light"
 msgstr "Claro"
 
-#: app/src/settings/mod.rs:648
+#: app/src/settings/mod.rs:652
 msgid "Dark"
 msgstr "Escuro"
 
-#: app/src/settings/mod.rs:679
+#: app/src/settings/mod.rs:683
 msgid "Every second"
 msgid_plural "Every {count} seconds"
 msgstr[0] "A cada segundo"
 msgstr[1] "A cada {count} segundos"
 
-#: app/src/settings/mod.rs:687
+#: app/src/settings/mod.rs:691
 msgid "Every minute"
 msgid_plural "Every {count} minutes"
 msgstr[0] "A cada minuto"
 msgstr[1] "A cada {count} minutos"
 
-#: app/src/settings/mod.rs:704
+#: app/src/settings/mod.rs:708
 msgid "2 weeks"
 msgstr "2 semanas"
 
-#: app/src/settings/mod.rs:705
+#: app/src/settings/mod.rs:709
 msgid "30 days"
 msgstr "30 dias"
 
-#: app/src/settings/mod.rs:706
+#: app/src/settings/mod.rs:710
 msgid "90 days"
 msgstr "90 dias"
 
-#: app/src/settings/mod.rs:707
+#: app/src/settings/mod.rs:711
 msgid "1 year"
 msgstr "1 ano"
 
-#: app/src/settings/mod.rs:714
+#: app/src/settings/mod.rs:718
 msgid "256 MB"
 msgstr "256 MB"
 
-#: app/src/settings/mod.rs:715
+#: app/src/settings/mod.rs:719
 msgid "1 GB"
 msgstr "1 GB"
 
-#: app/src/settings/mod.rs:716
+#: app/src/settings/mod.rs:720
 msgid "4 GB"
 msgstr "4 GB"
 
@@ -2613,7 +2659,7 @@ msgstr "Novidades da versão {version}"
 
 #: app/src/tray.rs:170 app/src/ui/about.rs:87 app/src/ui/about.rs:194
 #: app/src/ui/about.rs:202 app/src/ui/about.rs:209
-#: app/src/ui/preferences.rs:698 app/src/update/mod.rs:108
+#: app/src/ui/preferences.rs:713 app/src/update/mod.rs:108
 msgid "Check for Updates"
 msgstr "Procurar atualizações"
 
@@ -3555,10 +3601,6 @@ msgid_plural "{count} more events"
 msgstr[0] "mais {count} evento"
 msgstr[1] "mais {count} eventos"
 
-#: app/src/ui/calendar/words.rs:16
-msgid "%A %-d %B"
-msgstr "%A %-d de %B"
-
 #: app/src/ui/calendar/words.rs:64
 msgid "{date} · {start}–{end}"
 msgstr "{date} · {start}–{end}"
@@ -4045,20 +4087,20 @@ msgstr ""
 msgid "No accounts yet"
 msgstr "Ainda não há contas"
 
-#: app/src/ui/contacts_prefs.rs:145 app/src/ui/sidebar.rs:89
-#: app/src/ui/window/shortcuts.rs:226
+#: app/src/ui/contacts_prefs.rs:145 app/src/ui/preferences.rs:225
+#: app/src/ui/sidebar.rs:89 app/src/ui/window/shortcuts.rs:226
 msgid "Calendar"
 msgstr "Calendário"
 
 #: app/src/ui/contacts_prefs.rs:147
 msgid ""
-"Answering a meeting invitation records your answer in that account's Google "
-"Calendar. To see the meetings in GNOME Calendar and the clock, add the "
-"account to GNOME Online Accounts."
+"Penguin Mail shows each account's meetings and reminds you before they "
+"start. To see them in GNOME Calendar and the clock too, add the account to "
+"GNOME Online Accounts."
 msgstr ""
-"Responder a um convite para uma reunião regista a resposta no Google "
-"Calendar dessa conta. Para ver as reuniões no Calendário do GNOME e no "
-"relógio, adicione a conta às contas online do GNOME."
+"O Penguin Mail mostra as reuniões de cada conta e lembra-o antes de "
+"começarem. Para as ver também no Calendário do GNOME e no relógio, adicione "
+"a conta às contas online do GNOME."
 
 #: app/src/ui/contacts_prefs.rs:181
 msgid "In GNOME Online Accounts"
@@ -4751,101 +4793,112 @@ msgstr "Botões"
 msgid "What a notification offers besides opening the conversation"
 msgstr "O que uma notificação oferece além de abrir a conversa"
 
-#: app/src/ui/preferences.rs:224
+#: app/src/ui/preferences.rs:229
+msgid "Event Reminders"
+msgstr "Lembretes de eventos"
+
+#: app/src/ui/preferences.rs:231
+msgid ""
+"A notification before each event, at the times the event or its calendar sets"
+msgstr ""
+"Uma notificação antes de cada evento, às horas definidas no evento ou no "
+"seu calendário"
+
+#: app/src/ui/preferences.rs:239
 msgid "Not Available"
 msgstr "Indisponível"
 
-#: app/src/ui/preferences.rs:247 app/src/ui/window/shortcuts.rs:225
+#: app/src/ui/preferences.rs:262 app/src/ui/window/shortcuts.rs:225
 msgid "Writing"
 msgstr "Escrita"
 
-#: app/src/ui/preferences.rs:252
+#: app/src/ui/preferences.rs:267
 msgid "No Accounts Yet"
 msgstr "Ainda não há contas"
 
-#: app/src/ui/preferences.rs:254
+#: app/src/ui/preferences.rs:269
 msgid "Add an account to choose a sender and write signatures."
 msgstr "Adicione uma conta para escolher um remetente e escrever assinaturas."
 
-#: app/src/ui/preferences.rs:263
+#: app/src/ui/preferences.rs:278
 msgid "New Messages"
 msgstr "Mensagens novas"
 
-#: app/src/ui/preferences.rs:273
+#: app/src/ui/preferences.rs:288
 msgid "Send New Messages From"
 msgstr "Enviar mensagens novas de"
 
-#: app/src/ui/preferences.rs:275
+#: app/src/ui/preferences.rs:290
 msgid "Replies always come from the account that received the message"
 msgstr "As respostas saem sempre da conta que recebeu a mensagem"
 
-#: app/src/ui/preferences.rs:292
+#: app/src/ui/preferences.rs:307
 msgid "New Messages Start As"
 msgstr "As mensagens novas começam como"
 
-#: app/src/ui/preferences.rs:294
+#: app/src/ui/preferences.rs:309
 msgid "Rich text styles the words themselves; Markdown shows its marks"
 msgstr ""
 "O texto formatado estiliza as próprias palavras; o Markdown mostra as marcas"
 
-#: app/src/ui/preferences.rs:301
+#: app/src/ui/preferences.rs:316
 msgid "Undo Send"
 msgstr "Anular o envio"
 
-#: app/src/ui/preferences.rs:303
+#: app/src/ui/preferences.rs:318
 msgid "How long you can take a message back after sending it"
 msgstr "Durante quanto tempo pode recuperar uma mensagem depois de a enviar"
 
-#: app/src/ui/preferences.rs:310
+#: app/src/ui/preferences.rs:325
 msgid "Check for Missing Attachments"
 msgstr "Procurar anexos em falta"
 
-#: app/src/ui/preferences.rs:312
+#: app/src/ui/preferences.rs:327
 msgid "Ask before sending a message that promises a file and carries none"
 msgstr ""
 "Perguntar antes de enviar uma mensagem que promete um ficheiro e não leva "
 "nenhum"
 
-#: app/src/ui/preferences.rs:320
+#: app/src/ui/preferences.rs:335
 msgid "Signatures"
 msgstr "Assinaturas"
 
-#: app/src/ui/preferences.rs:322
+#: app/src/ui/preferences.rs:337
 msgid ""
 "Added below new messages and above quoted text in replies. Markdown works."
 msgstr ""
 "Acrescentada abaixo das mensagens novas e acima do texto citado nas "
 "respostas. O Markdown funciona."
 
-#: app/src/ui/preferences.rs:344
+#: app/src/ui/preferences.rs:359
 msgid "Signature for {account}"
 msgstr "Assinatura de {account}"
 
-#: app/src/ui/preferences.rs:357
+#: app/src/ui/preferences.rs:372
 msgid "Import from Gmail"
 msgstr "Importar do Gmail"
 
-#: app/src/ui/preferences.rs:374
+#: app/src/ui/preferences.rs:389
 msgid "This account is not syncing yet"
 msgstr "Esta conta ainda não está a sincronizar"
 
-#: app/src/ui/preferences.rs:389
+#: app/src/ui/preferences.rs:404
 msgid "Imported the signature from Gmail"
 msgstr "Assinatura importada do Gmail"
 
-#: app/src/ui/preferences.rs:393
+#: app/src/ui/preferences.rs:408
 msgid "Gmail has no signature for this account"
 msgstr "O Gmail não tem assinatura para esta conta"
 
-#: app/src/ui/preferences.rs:396
+#: app/src/ui/preferences.rs:411
 msgid "Could not import: {reason}"
 msgstr "Não foi possível importar: {reason}"
 
-#: app/src/ui/preferences.rs:442
+#: app/src/ui/preferences.rs:457
 msgid "Signing and Encryption"
 msgstr "Assinatura e encriptação"
 
-#: app/src/ui/preferences.rs:444
+#: app/src/ui/preferences.rs:459
 msgid ""
 "Penguin Mail signs and encrypts through GnuPG, which holds your keys and "
 "asks for your passphrase itself."
@@ -4853,47 +4906,47 @@ msgstr ""
 "O Penguin Mail assina e encripta através do GnuPG, que guarda as suas chaves "
 "e pede a frase-passe por si."
 
-#: app/src/ui/preferences.rs:449
+#: app/src/ui/preferences.rs:464
 msgid "Your OpenPGP Keys"
 msgstr "As suas chaves OpenPGP"
 
-#: app/src/ui/preferences.rs:450
+#: app/src/ui/preferences.rs:465
 msgid "Asking gpg…"
 msgstr "A perguntar ao gpg…"
 
-#: app/src/ui/preferences.rs:454
+#: app/src/ui/preferences.rs:469
 msgid "Your S/MIME Certificates"
 msgstr "Os seus certificados S/MIME"
 
-#: app/src/ui/preferences.rs:455
+#: app/src/ui/preferences.rs:470
 msgid "Asking gpgsm…"
 msgstr "A perguntar ao gpgsm…"
 
-#: app/src/ui/preferences.rs:462
+#: app/src/ui/preferences.rs:477
 msgid "Sign My Messages by Default"
 msgstr "Assinar as minhas mensagens por predefinição"
 
-#: app/src/ui/preferences.rs:463
+#: app/src/ui/preferences.rs:478
 msgid "New messages open with Sign turned on"
 msgstr "As mensagens novas abrem com Assinar ligado"
 
-#: app/src/ui/preferences.rs:469
+#: app/src/ui/preferences.rs:484
 msgid "Encrypt When I Can"
 msgstr "Encriptar sempre que puder"
 
-#: app/src/ui/preferences.rs:471
+#: app/src/ui/preferences.rs:486
 msgid "Turn Encrypt on as soon as every recipient has a key or a certificate"
 msgstr "Ligar Encriptar assim que cada destinatário tiver chave ou certificado"
 
-#: app/src/ui/preferences.rs:494
+#: app/src/ui/preferences.rs:509
 msgid "gpg could not be asked: {reason}"
 msgstr "Não foi possível perguntar ao gpg: {reason}"
 
-#: app/src/ui/preferences.rs:513
+#: app/src/ui/preferences.rs:528
 msgid "gpgsm could not be asked: {reason}"
 msgstr "Não foi possível perguntar ao gpgsm: {reason}"
 
-#: app/src/ui/preferences.rs:522
+#: app/src/ui/preferences.rs:537
 msgid ""
 "Penguin Mail signs and encrypts through {programs}, which holds your keys "
 "and asks for your passphrase itself."
@@ -4901,11 +4954,11 @@ msgstr ""
 "O Penguin Mail assina e encripta através do {programs}, que guarda as suas "
 "chaves e pede a frase-passe por si."
 
-#: app/src/ui/preferences.rs:553
+#: app/src/ui/preferences.rs:568
 msgid "Spelling"
 msgstr "Ortografia"
 
-#: app/src/ui/preferences.rs:556
+#: app/src/ui/preferences.rs:571
 msgid ""
 "No dictionaries are installed, so Penguin Mail is not checking spelling. "
 "Install a Hunspell dictionary, such as hunspell-en-us or hunspell-pt-pt, and "
@@ -4915,115 +4968,115 @@ msgstr ""
 "a ortografia. Instale um dicionário Hunspell, como o hunspell-pt-pt ou o "
 "hunspell-en-us, e reabra o editor."
 
-#: app/src/ui/preferences.rs:562
+#: app/src/ui/preferences.rs:577
 msgid "Dictionaries found: {languages}."
 msgstr "Dicionários encontrados: {languages}."
 
-#: app/src/ui/preferences.rs:575
+#: app/src/ui/preferences.rs:590
 msgid "Follow the System Language ({language})"
 msgstr "Seguir o idioma do sistema ({language})"
 
-#: app/src/ui/preferences.rs:602
+#: app/src/ui/preferences.rs:617
 msgid "Check Spelling In"
 msgstr "Verificar a ortografia em"
 
-#: app/src/ui/preferences.rs:626
+#: app/src/ui/preferences.rs:641
 msgid "Sync"
 msgstr "Sincronização"
 
-#: app/src/ui/preferences.rs:632
+#: app/src/ui/preferences.rs:647
 msgid "Checking"
 msgstr "Verificação"
 
-#: app/src/ui/preferences.rs:638
+#: app/src/ui/preferences.rs:653
 msgid "Check for New Mail"
 msgstr "Procurar correio novo"
 
-#: app/src/ui/preferences.rs:647
+#: app/src/ui/preferences.rs:662
 msgid "Storage"
 msgstr "Armazenamento"
 
-#: app/src/ui/preferences.rs:652
+#: app/src/ui/preferences.rs:667
 msgid "Keep Mail on This Computer For"
 msgstr "Guardar o correio neste computador por"
 
-#: app/src/ui/preferences.rs:654
+#: app/src/ui/preferences.rs:669
 msgid "Everything in your inbox stays too, and older mail remains searchable"
 msgstr ""
 "Tudo o que está na caixa de entrada também fica, e o correio mais antigo "
 "continua pesquisável"
 
-#: app/src/ui/preferences.rs:663
+#: app/src/ui/preferences.rs:678
 msgid "Message Cache"
 msgstr "Cache de mensagens"
 
-#: app/src/ui/preferences.rs:665
+#: app/src/ui/preferences.rs:680
 msgid "Bodies of mail you have read, kept for opening offline"
 msgstr "O corpo do correio que já leu, guardado para abrir sem ligação"
 
-#: app/src/ui/preferences.rs:674
+#: app/src/ui/preferences.rs:689
 msgid "Startup"
 msgstr "Arranque"
 
-#: app/src/ui/preferences.rs:677
+#: app/src/ui/preferences.rs:692
 msgid "Start in the Tray at Login"
 msgstr "Arrancar na área de notificação ao iniciar sessão"
 
-#: app/src/ui/preferences.rs:691
+#: app/src/ui/preferences.rs:706
 msgid "Not available in demo mode"
 msgstr "Indisponível no modo de demonstração"
 
-#: app/src/ui/preferences.rs:699
+#: app/src/ui/preferences.rs:714
 msgid "Look for a new release once a day"
 msgstr "Procurar uma versão nova uma vez por dia"
 
-#: app/src/ui/preferences.rs:706
+#: app/src/ui/preferences.rs:721
 msgid "Updates"
 msgstr "Atualizações"
 
-#: app/src/ui/preferences.rs:720
+#: app/src/ui/preferences.rs:735
 msgid "Senders Who May Load Images"
 msgstr "Remetentes que podem carregar imagens"
 
-#: app/src/ui/preferences.rs:721 app/src/ui/preferences.rs:729
+#: app/src/ui/preferences.rs:736 app/src/ui/preferences.rs:744
 msgid "Nobody yet"
 msgstr "Ainda ninguém"
 
-#: app/src/ui/preferences.rs:731
+#: app/src/ui/preferences.rs:746
 msgid "{count} sender"
 msgid_plural "{count} senders"
 msgstr[0] "{count} remetente"
 msgstr[1] "{count} remetentes"
 
-#: app/src/ui/preferences.rs:741
+#: app/src/ui/preferences.rs:756
 msgid "Anyone at this domain"
 msgstr "Qualquer pessoa deste domínio"
 
-#: app/src/ui/preferences.rs:743
+#: app/src/ui/preferences.rs:758
 msgid "This address"
 msgstr "Este endereço"
 
-#: app/src/ui/preferences.rs:748
+#: app/src/ui/preferences.rs:763
 msgid "Stop Loading Images from This Sender"
 msgstr "Deixar de carregar imagens deste remetente"
 
-#: app/src/ui/preferences.rs:755
+#: app/src/ui/preferences.rs:770
 msgid "Stop loading images from {sender}"
 msgstr "Deixar de carregar imagens de {sender}"
 
-#: app/src/ui/preferences.rs:830
+#: app/src/ui/preferences.rs:845
 msgid "Follow System"
 msgstr "Seguir o sistema"
 
-#: app/src/ui/preferences.rs:834
+#: app/src/ui/preferences.rs:849
 msgid "Language"
 msgstr "Idioma"
 
-#: app/src/ui/preferences.rs:835
+#: app/src/ui/preferences.rs:850
 msgid "Penguin Mail shows a new language after a restart"
 msgstr "O Penguin Mail mostra o novo idioma depois de reiniciar"
 
-#: app/src/ui/preferences.rs:907
+#: app/src/ui/preferences.rs:922
 msgid "No signature"
 msgstr "Sem assinatura"
 
@@ -5908,15 +5961,15 @@ msgstr "Atalhos de teclado"
 msgid "Main Menu"
 msgstr "Menu principal"
 
-#: app/src/ui/window.rs:2916
+#: app/src/ui/window.rs:2924
 msgid "Open a message from the person first"
 msgstr "Abra primeiro uma mensagem dessa pessoa"
 
-#: app/src/ui/window.rs:2987
+#: app/src/ui/window.rs:2995
 msgid "Penguin Mail shows the new language after a restart"
 msgstr "O Penguin Mail mostra o novo idioma depois de reiniciar"
 
-#: app/src/ui/window.rs:2989 app/src/update/mod.rs:130
+#: app/src/ui/window.rs:2997 app/src/update/mod.rs:130
 msgid "Restart"
 msgstr "Reiniciar"
 
