@@ -207,11 +207,9 @@ pub fn mini_day_words(date: NaiveDate, has_events: bool) -> String {
 }
 
 /// The reminder times the editor offers, in minutes before the start.
-#[allow(dead_code, reason = "the editor's reminder row calls it in Task 8")]
 pub const REMINDER_CHOICES: [u32; 9] = [0, 5, 10, 15, 30, 60, 120, 1440, 10080];
 
 /// "10 minutes before", in the largest whole unit that divides the time.
-#[allow(dead_code, reason = "the editor's reminder row calls it in Task 8")]
 pub fn reminder_words(minutes: u32) -> String {
     let count = |n: u32| n.to_string();
     match minutes {
@@ -250,7 +248,6 @@ pub fn reminder_words(minutes: u32) -> String {
 /// msgid used both ways). A custom repeat is said the way the invitation
 /// card says a rule, `in_words`, so the two phrasings never drift apart
 /// (ruling R6).
-#[allow(dead_code, reason = "the editor's repeat row calls it in Task 8")]
 pub fn repeat_words(repeat: &Repeat) -> String {
     let once = |one: &str, many: &str| fill_plural(one, many, 1, &[("count", "1")]);
     match repeat {
@@ -323,7 +320,6 @@ fn byday_code(day: chrono::Weekday) -> &'static str {
 }
 
 /// What a guest answered, in a word.
-#[allow(dead_code, reason = "the editor's guest row calls it in Task 8")]
 pub fn answer_words(guest: &Guest) -> String {
     if guest.organizer {
         return gettext("Organizer");
@@ -541,7 +537,7 @@ mod tests {
             days: vec![Weekday::Wed, Weekday::Mon],
             ends: Ends::On(NaiveDate::from_ymd_opt(2026, 12, 31).unwrap()),
         });
-        // in_words's own wording (reconcile.md Task 5 correction 5): no
+        // The invitation card's own wording: no
         // comma before "until", and the end date's own year is always
         // taken as the start year, so it never shows.
         assert_eq!(repeat_words(&two_weeks), "Every 2 weeks on Monday and Wednesday until 31 December");

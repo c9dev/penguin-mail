@@ -122,7 +122,6 @@ pub fn banded(top: f64, height: f64, day: f64) -> f64 {
 /// Where N puts a new hour-long event: after the event with the focus,
 /// else at the time last clicked, else at the next quarter hour when the
 /// range holds now, else at `morning` (09:00 on the range's first day).
-#[allow(dead_code, reason = "the view calls it in Task 8")]
 pub fn new_slot(
     focused: Option<(EpochMillis, EpochMillis)>,
     cursor: Option<EpochMillis>,
