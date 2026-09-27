@@ -474,6 +474,7 @@ impl Editor {
     fn repeat_group(self: &Rc<Self>) -> adw::PreferencesGroup {
         let group = adw::PreferencesGroup::new();
         let row = adw::ComboRow::builder().title(gettext("Repeats")).build();
+        crate::ui::name_combo_row_items(&row);
         let names: Vec<String> = REPEAT_PRESETS
             .iter()
             .map(words::repeat_words)
@@ -545,6 +546,7 @@ impl Editor {
         every.set_title(&gettext("Every"));
         every.set_value(f64::from(state.every));
         let unit = adw::ComboRow::new();
+        crate::ui::name_combo_row_items(&unit);
         unit.set_title(&gettext("Unit"));
         unit.set_model(Some(&unit_model(state.every)));
         unit.set_selected(frequency_index(state.frequency));
@@ -744,6 +746,7 @@ impl Editor {
         let draft = self.draft.borrow();
         if draft.is_new() {
             let row = adw::ComboRow::builder().title(gettext("Calendar")).build();
+            crate::ui::name_combo_row_items(&row);
             let names: Vec<String> = choices
                 .writable
                 .iter()
@@ -1019,6 +1022,7 @@ impl Editor {
         let row = adw::ComboRow::builder()
             .title(words::reminder_words(reminder.minutes))
             .build();
+        crate::ui::name_combo_row_items(&row);
         let values = reminder_choice_values(reminder.minutes);
         let names: Vec<String> = values.iter().map(|m| words::reminder_words(*m)).collect();
         let refs: Vec<&str> = names.iter().map(String::as_str).collect();
@@ -1118,6 +1122,7 @@ impl Editor {
             .title(gettext("Time zone"))
             .enable_search(true)
             .build();
+        crate::ui::name_combo_row_items(&zone_row);
         zone_row.set_visible(!all_day);
         zone_row.set_sensitive(!limited);
         let weak = Rc::downgrade(self);
@@ -1182,6 +1187,7 @@ impl Editor {
         more.add_row(&private);
 
         let colour_row = adw::ComboRow::builder().title(gettext("Colour")).build();
+        crate::ui::name_combo_row_items(&colour_row);
         let names: Vec<String> = std::iter::once(gettext("Calendar colour"))
             .chain(colour_names())
             .collect();
@@ -1474,6 +1480,9 @@ fn calendar_item_widget() -> gtk::Box {
         .can_focus(false)
         .can_target(false)
         .build();
+    // Decorative: the row's own name already says which calendar it is,
+    // so a screen reader gets nothing more from a dot it cannot press.
+    dot.set_accessible_role(gtk::AccessibleRole::Presentation);
     let names = gtk::Box::builder()
         .orientation(gtk::Orientation::Vertical)
         .valign(gtk::Align::Center)

@@ -118,10 +118,14 @@ T goes to today; D, W and M switch to Day, Week and Month; Left and
 Right step to the previous or next range. After a change of view or
 range, the focus goes to the first event on screen, or to Today when
 there is none. Ctrl+F opens the calendar's own search bar, which wins
-over the main window's search while the calendar shows. Every one of
-these gives way while a text field, such as search, has the focus. The
-main menu's Assistant item, and Ctrl+J, open the assistant in either
-space.
+over the main window's search while the calendar shows. N opens quick
+create at the focused slot in Day or Week, or at nine in the morning on
+the focused day in Month; the narrow list has no grid to point quick
+create at, so N opens the editor there instead. It does nothing while
+no calendar takes new events, the same as the New Event button beside
+the header. Every one of these gives way while a text field, such as
+search, has the focus. The main menu's Assistant item, and Ctrl+J, open
+the assistant in either space.
 
 A double click opens the popover on its first click and the editor on
 its second, for an event the account may change as a whole; on any
@@ -153,10 +157,12 @@ menu, which the page opens, nor the composer's menus. It also switches
 to the calendar and walks Day, Week, Month and the list a narrow
 window shows, opens an invitation's popover in Week and a crowded day's
 "N more" list in Month, reads the main menu there, Show Declined Events
-included, and reports the calendar's own line of controls apart from
-the mail walk's. `--here` reads
-the copy already on your screen instead, which is how to check a dialog
-or the composer: open it, then run the script.
+included, opens the New Event button and the editor it shows, expands
+its More section, walks it, then opens the Repeats row's Custom Repeat
+page and walks that too before closing the editor, and reports the
+calendar's own line of controls apart from the mail walk's. `--here`
+reads the copy already on your screen instead, which is how to check a
+dialog or the composer: open it, then run the script.
 
 ## What the keyboard cannot reach
 

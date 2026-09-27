@@ -42,6 +42,7 @@ pub mod window;
 use std::cell::RefCell;
 use std::rc::Rc;
 
+use adw::prelude::ComboRowExt;
 use gtk::prelude::*;
 use gtk::{gio, glib};
 use mailrs_domain::translate::gettext;
@@ -204,6 +205,83 @@ fn name_model_buttons(widget: &gtk::Widget) {
         name_model_buttons(&item);
         child = item.next_sibling();
     }
+}
+
+/// Names every row a `ComboRow` shows after the text it shows, both the
+/// popup's rows and the one that stands for the current choice in the
+/// closed row, each time either can have changed.
+///
+/// `AdwComboRow` builds its own rows from its model, each a `list item`
+/// wrapping a plain `GtkLabel`: the label carries the word a person
+/// reads, and the row that wraps it carries none, so a screen reader
+/// says nothing for a row it has not read the name of yet. This runs
+/// once the row is realized, again on every pick (the closed row is
+/// rebound to a new word then), and once more, an idle turn after the
+/// popup maps, for a row the popup had not yet realized while closed
+/// (a long list such as a time zone's does this).
+pub fn name_combo_row_items(row: &adw::ComboRow) {
+    fn name_all(widget: &gtk::Widget) {
+        name_listed_rows(widget);
+        if let Some(popup) = listed_popup(widget) {
+            popup.connect_map(|popup| {
+                let popup = popup.clone();
+                glib::idle_add_local_once(move || name_listed_rows(popup.upcast_ref()));
+            });
+        }
+    }
+    let widget = row.clone().upcast::<gtk::Widget>();
+    if widget.is_realized() {
+        name_all(&widget);
+    }
+    widget.connect_realize(name_all);
+    row.connect_selected_notify(|row| name_listed_rows(row.upcast_ref::<gtk::Widget>()));
+}
+
+/// The `GtkPopover` a `ComboRow` shows its rows in, found by walking its
+/// children rather than by a property, since it keeps none public.
+fn listed_popup(widget: &gtk::Widget) -> Option<gtk::Popover> {
+    if let Some(popover) = widget.downcast_ref::<gtk::Popover>() {
+        return Some(popover.clone());
+    }
+    let mut child = widget.first_child();
+    while let Some(node) = child {
+        if let Some(popover) = listed_popup(&node) {
+            return Some(popover);
+        }
+        child = node.next_sibling();
+    }
+    None
+}
+
+/// Names every `list item` under `widget`, after the first label found
+/// inside it. Naming a row already named costs nothing, so this does
+/// not first check for one.
+fn name_listed_rows(widget: &gtk::Widget) {
+    if widget.accessible_role() == gtk::AccessibleRole::ListItem
+        && let Some(spoken) = listed_label(widget)
+    {
+        name(widget, &spoken);
+    }
+    let mut child = widget.first_child();
+    while let Some(node) = child {
+        name_listed_rows(&node);
+        child = node.next_sibling();
+    }
+}
+
+/// The text of the first `GtkLabel` under `widget`.
+fn listed_label(widget: &gtk::Widget) -> Option<String> {
+    if let Some(label) = widget.downcast_ref::<gtk::Label>() {
+        return Some(label.text().to_string());
+    }
+    let mut child = widget.first_child();
+    while let Some(node) = child {
+        if let Some(text) = listed_label(&node) {
+            return Some(text);
+        }
+        child = node.next_sibling();
+    }
+    None
 }
 
 /// A menu item's words as shown: an underscore marks the key after it
