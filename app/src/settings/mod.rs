@@ -127,6 +127,9 @@ pub struct Settings {
     /// Show events the person said No to, faded and struck through,
     /// rather than leaving them out.
     pub show_declined_events: bool,
+    /// The address of the account the last new event went on. A new
+    /// event goes on that account's primary calendar.
+    pub last_calendar_account: Option<String>,
     /// Before contacts were chosen per account, one switch for all of them.
     /// True folds into `contact_accounts` as every account the first time
     /// the accounts load, and goes back to false.
@@ -467,6 +470,7 @@ impl Default for Settings {
             space: Space::Mail,
             calendar_view: CalendarView::Week,
             show_declined_events: false,
+            last_calendar_account: None,
         }
     }
 }

@@ -184,6 +184,16 @@ pub fn refocus(had_focus: bool, has_event: bool) -> Option<Refocus> {
     }
 }
 
+/// Whether a carousel step that lands on a page still reading owes it
+/// the focus, rather than moving the focus to Today at once: true when
+/// the old page held the focus and the page it steps onto has no event
+/// yet, since its read may simply not have answered. Landing on a page
+/// that already has an event, or that never held the focus, decides at
+/// once through [`refocus`] instead.
+pub fn owed_after_step(had_focus: bool, has_event: bool) -> bool {
+    had_focus && !has_event
+}
+
 /// Where the focus goes when the event popover closes: back to the event
 /// it came from while that is still on screen, else to Today, so the
 /// calendar's keys still answer.
@@ -283,6 +293,13 @@ mod tests {
     #[test]
     fn a_new_page_leaves_the_focus_alone_when_it_was_elsewhere() {
         assert_eq!(refocus(false, true), None);
+    }
+
+    #[test]
+    fn a_step_onto_a_page_still_reading_owes_the_focus() {
+        assert!(owed_after_step(true, false));
+        assert!(!owed_after_step(true, true), "an event already there decides at once");
+        assert!(!owed_after_step(false, false), "focus that was elsewhere is not owed anything");
     }
 
     #[test]
