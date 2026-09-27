@@ -12,7 +12,7 @@
 
 use mailrs_domain::translate::{fill, fill_plural, gettext};
 use mailrs_domain::{Account, AccountId, FlagColor, Target};
-use mailrs_sync::{History, MailAction, Offers, TriageAction};
+use mailrs_sync::{History, MailAction, MovedFrom, Offers, TriageAction};
 
 use super::aftermath;
 use super::reach::Reach;
@@ -195,6 +195,9 @@ pub(super) enum Step {
 pub(super) struct Plan {
     pub targets: Vec<Target>,
     pub step: Step,
+    /// The place the targets were picked from, which a move on a folder
+    /// account takes only the thread's messages out of.
+    pub from: MovedFrom,
 }
 
 impl Plan {
@@ -215,10 +218,14 @@ pub(super) fn plan(pressed: Pressed) -> Plan {
         accounts,
     } = pressed;
     let mut targets = reach.targets;
+    // What the list shows is where the mail was picked from, a drag's
+    // rows included.
+    let from = reach.mailbox.moved_from();
     if targets.is_empty() {
         return Plan {
             targets,
             step: Step::Nothing,
+            from,
         };
     }
     let mailbox = &reach.mailbox;
@@ -305,7 +312,11 @@ pub(super) fn plan(pressed: Pressed) -> Plan {
         Press::DismissFollowUp => act(MailAction::DismissFollowUp, History::Record, None),
         Press::Drop(to) => dropped(&targets, mailbox, &to, &accounts, act),
     };
-    Plan { targets, step }
+    Plan {
+        targets,
+        step,
+        from,
+    }
 }
 
 /// What dropping `targets`, listed in `from`, on `to` comes to. `accounts`
@@ -448,8 +459,16 @@ pub(super) trait PressEffects {
     fn move_on(&self);
     /// Asks `question`; true on the verb.
     fn confirm(&self, question: Question) -> Answer<'_, bool>;
-    /// Runs the action, with an Undo toast when `history` records it.
-    fn act(&self, targets: Vec<Target>, action: MailAction, history: History, words: Option<String>);
+    /// Runs the action, with an Undo toast when `history` records it, on
+    /// mail picked from `from`.
+    fn act(
+        &self,
+        targets: Vec<Target>,
+        action: MailAction,
+        history: History,
+        words: Option<String>,
+        from: MovedFrom,
+    );
     /// Erases the targets.
     fn erase(&self, targets: Vec<Target>);
     /// Calls off what a mailbox of queued mail holds.
@@ -460,7 +479,11 @@ pub(super) trait PressEffects {
 /// Makes `plan` happen: the move on first, so the next row opens without
 /// waiting on Gmail, then the action.
 pub(super) async fn carry_out(plan: Plan, effects: &dyn PressEffects) {
-    let Plan { targets, step } = plan;
+    let Plan {
+        targets,
+        step,
+        from,
+    } = plan;
     match step {
         Step::Nothing => {}
         Step::Refuse(reason) => effects.toast(reason),
@@ -474,7 +497,7 @@ pub(super) async fn carry_out(plan: Plan, effects: &dyn PressEffects) {
             if move_on {
                 effects.move_on();
             }
-            effects.act(targets, action, history, words);
+            effects.act(targets, action, history, words, from);
             if let Some(said) = said {
                 effects.toast(said);
             }
@@ -955,6 +978,8 @@ mod tests {
     struct Window {
         yes: bool,
         did: RefCell<Vec<String>>,
+        /// The place each action was told its mail came from.
+        from: RefCell<Vec<MovedFrom>>,
     }
 
     impl Window {
@@ -962,6 +987,7 @@ mod tests {
             Window {
                 yes,
                 did: RefCell::new(Vec::new()),
+                from: RefCell::new(Vec::new()),
             }
         }
 
@@ -980,8 +1006,16 @@ mod tests {
             Box::pin(std::future::ready(self.yes))
         }
 
-        fn act(&self, targets: Vec<Target>, action: MailAction, _: History, _: Option<String>) {
+        fn act(
+            &self,
+            targets: Vec<Target>,
+            action: MailAction,
+            _: History,
+            _: Option<String>,
+            from: MovedFrom,
+        ) {
             self.did(format!("act {action:?} on {}", targets.len()));
+            self.from.borrow_mut().push(from);
         }
 
         fn erase(&self, targets: Vec<Target>) {
@@ -1001,6 +1035,42 @@ mod tests {
         let window = Window::answering(yes);
         carry_out(plan(pressed), &window).await;
         window.did.into_inner()
+    }
+
+    /// Mail archived from a folder goes out with that folder as where it
+    /// was moved from, so a folder account leaves the thread's other
+    /// folders alone.
+    #[tokio::test]
+    async fn an_action_hears_the_folder_its_mail_was_picked_from() {
+        let window = Window::answering(true);
+        let pressed = pressed(Press::Button(Button::Archive), label("Work"), Scope::Shown);
+        carry_out(plan(pressed), &window).await;
+        assert_eq!(
+            *window.from.borrow(),
+            [MovedFrom::one(1, MailSet::Mailbox("Work".into()))]
+        );
+    }
+
+    /// A drag carries mail out of the list it was dragged from.
+    #[test]
+    fn a_drop_moves_mail_from_the_list_it_was_dragged_from() {
+        let dropped = pressed(
+            Press::Drop(folder(Folder::Trash)),
+            label("Work"),
+            Scope::Carried { open: false },
+        );
+        assert_eq!(plan(dropped).from, MovedFrom::one(1, MailSet::Mailbox("Work".into())));
+    }
+
+    /// A search result sits anywhere, so its action names no place.
+    #[test]
+    fn a_search_names_no_place_to_move_from() {
+        let search = Mailbox::Search {
+            query: "kites".into(),
+            account_id: None,
+        };
+        let archived = pressed(Press::Button(Button::Archive), search, Scope::Shown);
+        assert_eq!(plan(archived).from, MovedFrom::nowhere());
     }
 
     #[tokio::test]

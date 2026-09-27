@@ -203,6 +203,11 @@ pub struct FakeState {
     /// The search text of each `users.messages.list` call, oldest first,
     /// so a test can hold the app to the searches it sent before.
     pub searched: Vec<String>,
+    /// Set by `regress_history_id`: a second or later page of one
+    /// `history.list` listing reports a historyId behind the first page's,
+    /// as a replica lagging behind the others would answer. Off by
+    /// default, when every page reports the one historyId the mailbox has.
+    pub regress_history_id: bool,
 }
 
 /// Reads a sent message's bytes, or answers `None` to keep no copy.
@@ -376,6 +381,7 @@ impl FakeGmail {
                 calendar_off: None,
                 clock: None,
                 searched: Vec::new(),
+                regress_history_id: false,
             }),
         }
     }
@@ -478,6 +484,14 @@ impl FakeGmail {
             s.history_id += 1;
             s.history_floor = s.history_id;
         });
+    }
+
+    /// Makes a later page of a `history.list` listing report an older
+    /// historyId than the page before it, as a replica lagging behind the
+    /// others would. Needs three or more pending changes to force a
+    /// second page at the fake's page size.
+    pub fn regress_history_id(&self) {
+        self.with(|s| s.regress_history_id = true);
     }
 
     /// Paces calls through `quota`, the way the real client does, and
@@ -906,10 +920,19 @@ impl GmailApi for FakeGmail {
                 .and_then(|t| t.parse::<usize>().ok())
                 .unwrap_or(0);
             let end = (offset + s.page_size).min(pending.len());
+            // A later page normally carries the same historyId as the
+            // first, since one field speaks for the whole mailbox. A test
+            // that asked for a regression sees a lagging replica instead:
+            // each page after the first reports less than the one before.
+            let history_id = if s.regress_history_id && offset > 0 {
+                s.history_id.saturating_sub(offset as u64)
+            } else {
+                s.history_id
+            };
             Ok(HistoryPage {
                 changes: pending[offset.min(end)..end].to_vec(),
                 next_page_token: (end < pending.len()).then(|| end.to_string()),
-                history_id: s.history_id,
+                history_id,
             })
         })
     }

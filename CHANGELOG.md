@@ -44,11 +44,18 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Fixed
 
+- The Flatpak keeps its Google sign-in, IMAP passwords and AI keys in
+  its own encrypted store instead of the desktop's shared keyring, which
+  it no longer opens for every app to read; sign in again once to move
+  an existing account over.
 - `penguin-mail --demo` removes its sample store when it closes, and clears what earlier demo runs left in the temporary folder, which often lives in memory.
 - The message after Undo names the label, such as Receipts, where it
   showed a code such as Label_5.
 - Archiving or moving a whole conversation on an IMAP account no longer
   pulls your own reply out of Sent, or an old message out of Trash.
+- Archiving, deleting or moving a conversation on an IMAP account moves
+  only its messages in the folder you are looking at. A message filed
+  in another folder stays there.
 - An account set up manually under a listed provider, such as Fastmail,
   shows that provider's name and rules instead of its bare domain.
 

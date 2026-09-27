@@ -18,7 +18,7 @@ use mailrs_domain::{
 use mailrs_store::threads::ThreadFilter;
 use mailrs_store::{Db, flags, follow_ups, outbox, reminders, threads};
 
-use crate::{Accounts, SearchQuery, SyncError};
+use crate::{Accounts, MovedFrom, SearchQuery, SyncError};
 
 /// Rows in one page of a stored mailbox.
 pub const PAGE: usize = 500;
@@ -210,6 +210,54 @@ impl Mailbox {
             | Mailbox::Label { account_id, .. }
             | Mailbox::Set { account_id, .. } => Some(*account_id),
             Mailbox::Search { account_id, .. } | Mailbox::Folder { account_id, .. } => *account_id,
+        }
+    }
+
+    /// The place this mailbox's mail sits in, which a move on a folder
+    /// account takes it out of: a folder, or a role mailbox such as the
+    /// Inbox or the Trash, in its account or in every account; the Remind
+    /// Me list names the Archive, where Remind Me put its mail. Mail
+    /// listed by a mark, a search, a smart mailbox or what waits to go out
+    /// sits anywhere, and so does Archive and All Mail's, which list what
+    /// lies outside some roles; those name no place.
+    pub fn moved_from(&self) -> MovedFrom {
+        let place = |set: MailSet| match set {
+            MailSet::Role(_) | MailSet::Mailbox(_) => Some(set),
+            MailSet::Keyword(_) | MailSet::Unseen | MailSet::Category(_) => None,
+        };
+        let (account_id, set) = match self {
+            Mailbox::Unified(which) => (None, place(which.set())),
+            Mailbox::Standard { account_id, which } => (Some(*account_id), place(which.set())),
+            Mailbox::Label {
+                account_id,
+                label_id,
+                ..
+            } => (Some(*account_id), Some(MailSet::Mailbox(label_id.clone()))),
+            Mailbox::Set {
+                account_id, set, ..
+            } => (Some(*account_id), place(set.clone())),
+            Mailbox::Folder { account_id, folder } => {
+                let role = match folder {
+                    Folder::Junk => Some(Role::Junk),
+                    Folder::Trash => Some(Role::Trash),
+                    Folder::Archive | Folder::AllMail => None,
+                };
+                (*account_id, role.map(MailSet::Role))
+            }
+            // Remind Me put the mail this list shows in the Archive.
+            Mailbox::Reminders => (None, Some(MailSet::Role(Role::Archive))),
+            Mailbox::Search { .. }
+            | Mailbox::Scheduled
+            | Mailbox::Outbox
+            | Mailbox::FollowUp
+            | Mailbox::Flag(_)
+            | Mailbox::Vips { .. }
+            | Mailbox::Smart(_) => (None, None),
+        };
+        match (account_id, set) {
+            (_, None) => MovedFrom::nowhere(),
+            (Some(account_id), Some(set)) => MovedFrom::one(account_id, set),
+            (None, Some(set)) => MovedFrom::every(set),
         }
     }
 

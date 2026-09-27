@@ -68,5 +68,8 @@ wiremock.workspace = true
 # is the .deb or the tarball.
 [features]
 packaging-rpm = []
-packaging-flatpak = []
+# Also moves the Google refresh tokens, the IMAP passwords and the
+# assistant's API keys and MCP tokens from the desktop keyring to the
+# Secret portal; see gmail/src/secret_portal.rs.
+packaging-flatpak = ["mailrs-gmail/packaging-flatpak", "mailrs-sync/packaging-flatpak"]
 packaging-snap = []

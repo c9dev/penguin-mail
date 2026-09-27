@@ -10,7 +10,7 @@ use std::time::Duration;
 use serde_json::{Value, json};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::process::{Child, ChildStdin, Command};
-use tokio::sync::{mpsc, oneshot};
+use tokio::sync::{mpsc, oneshot, watch};
 use tokio::task::JoinHandle;
 
 use super::Failure;
@@ -32,6 +32,9 @@ pub(super) struct Stdio {
     next_id: AtomicI64,
     closed: Arc<AtomicBool>,
     stderr: Arc<Mutex<VecDeque<String>>>,
+    /// True once the server's stderr has closed, so an error can wait for
+    /// its last lines before quoting them.
+    stderr_done: watch::Receiver<bool>,
     tasks: Vec<JoinHandle<()>>,
 }
 
@@ -59,7 +62,7 @@ impl Stdio {
         let pending: Pending = Arc::default();
         let closed = Arc::new(AtomicBool::new(false));
         let stderr = Arc::new(Mutex::new(VecDeque::new()));
-        let (logged, stderr_done) = oneshot::channel();
+        let (logged, stderr_done) = watch::channel(false);
 
         let reader = tokio::spawn(read_stdout(
             label.to_string(),
@@ -69,7 +72,7 @@ impl Stdio {
                 stdin: Arc::clone(&stdin),
                 closed: Arc::clone(&closed),
                 notifications,
-                stderr_done,
+                stderr_done: stderr_done.clone(),
             },
         ));
         let logger = tokio::spawn(read_stderr(
@@ -85,6 +88,7 @@ impl Stdio {
             next_id: AtomicI64::new(1),
             closed,
             stderr,
+            stderr_done,
             tasks: vec![reader, logger],
         })
     }
@@ -154,7 +158,12 @@ impl Stdio {
             Ok(()) => pipe.flush().await,
             Err(e) => Err(e),
         };
-        written.map_err(|_| self.exited())
+        match written {
+            Ok(()) => Ok(()),
+            // The pipe breaks as the server exits, often before its last
+            // stderr line has been read, so wait for that line first.
+            Err(_) => Err(self.exited_after_last_words().await),
+        }
     }
 
     fn forget(&self, id: i64) {
@@ -162,6 +171,13 @@ impl Stdio {
             .lock()
             .expect("the pending map lock is never poisoned")
             .remove(&id);
+    }
+
+    /// [`Self::exited`], once stderr has closed or [`LAST_WORDS`] has passed.
+    async fn exited_after_last_words(&self) -> Failure {
+        let mut done = self.stderr_done.clone();
+        let _ = tokio::time::timeout(LAST_WORDS, done.wait_for(|closed| *closed)).await;
+        self.exited()
     }
 
     /// Why the server stopped answering, with the last thing it logged.
@@ -216,7 +232,7 @@ struct Output {
     closed: Arc<AtomicBool>,
     notifications: mpsc::UnboundedSender<Value>,
     /// Fires once stderr has closed, so an error can quote its last lines.
-    stderr_done: oneshot::Receiver<()>,
+    stderr_done: watch::Receiver<bool>,
 }
 
 async fn read_stdout(label: String, stdout: BufReader<tokio::process::ChildStdout>, out: Output) {
@@ -225,7 +241,7 @@ async fn read_stdout(label: String, stdout: BufReader<tokio::process::ChildStdou
         stdin,
         closed,
         notifications,
-        stderr_done,
+        mut stderr_done,
     } = out;
     let mut lines = stdout.lines();
     while let Ok(Some(line)) = lines.next_line().await {
@@ -275,7 +291,7 @@ async fn read_stdout(label: String, stdout: BufReader<tokio::process::ChildStdou
     // it is gone should hear why too. The wait is generous because it only
     // delays an error: a second was short enough that a loaded machine
     // reported the exit with nothing to explain it.
-    let _ = tokio::time::timeout(LAST_WORDS, stderr_done).await;
+    let _ = tokio::time::timeout(LAST_WORDS, stderr_done.wait_for(|closed| *closed)).await;
     closed.store(true, Ordering::SeqCst);
     // Dropping every waiting sender tells each caller the server is gone.
     pending
@@ -288,7 +304,7 @@ async fn read_stderr(
     label: String,
     stderr: BufReader<tokio::process::ChildStderr>,
     kept: Arc<Mutex<VecDeque<String>>>,
-    done: oneshot::Sender<()>,
+    done: watch::Sender<bool>,
 ) {
     let mut lines = stderr.lines();
     while let Ok(Some(line)) = lines.next_line().await {
@@ -299,5 +315,5 @@ async fn read_stderr(
         }
         kept.push_back(line);
     }
-    let _ = done.send(());
+    let _ = done.send(true);
 }

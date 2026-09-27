@@ -3,9 +3,10 @@
 use std::sync::Arc;
 
 use chrono::{Duration, Local};
-use mailrs_domain::{Attachment, MessageBody};
+use mailrs_domain::{Attachment, Label, LabelKind, MessageBody};
 use mailrs_gmail::labels as gmail;
-use mailrs_store::{address_book, templates};
+use mailrs_store::{address_book, messages, templates};
+use mailrs_sync::fake::{FakeImap, raw_message};
 use mailrs_sync::{AccountServices, MailAction, MailCapabilities, TriageAction};
 use serde_json::json;
 
@@ -250,6 +251,149 @@ async fn a_remove_only_change_on_a_folder_account_points_to_organize() {
          a folder, archive it with organize; to move it, name one folder in `add` and none in \
          `remove`."
     );
+}
+
+/// A folder account holding one conversation: Ann's message in Work and
+/// her follow-up filed alone in Travel, with Later an empty folder. The
+/// desk knows the three folders as labels. Gives the harness, the thread,
+/// and the stored ids of the Work and Travel messages.
+async fn work_and_travel() -> (Harness, String, String, String) {
+    let day = 24 * 60 * 60 * 1000;
+    let now = mailrs_sync::now_millis();
+    let imap = Arc::new(FakeImap::new());
+    for folder in ["Work", "Travel", "Later"] {
+        imap.add_mailbox(folder, None);
+    }
+    imap.deliver_flagged(
+        "Work",
+        &raw_message("w", "Kites", now - 2 * day, None),
+        &[],
+        now - 2 * day,
+    );
+    imap.deliver_flagged(
+        "Travel",
+        &raw_message("t", "Re: Kites", now - day, Some("w")),
+        &[],
+        now - day,
+    );
+    let h = Harness::on_imap(imap).await;
+    let sync = h.sync();
+    for folder in ["Work", "Travel"] {
+        sync.follow_mailbox(folder).await.expect("the folder syncs");
+    }
+    let folder = |name: &str| Label {
+        account_id: h.account_id,
+        id: name.into(),
+        name: name.into(),
+        kind: LabelKind::User,
+        color: None,
+    };
+    h.desk
+        .0
+        .borrow_mut()
+        .labels
+        .insert(h.account_id, vec![folder("Work"), folder("Travel"), folder("Later")]);
+    let account_id = h.account_id;
+    let stored = h
+        .db
+        .read(move |c| {
+            let mut stmt = c.prepare("SELECT thread_id, id FROM messages WHERE account_id = ?1")?;
+            let rows = stmt
+                .query_map([account_id], |row| Ok((row.get(0)?, row.get(1)?)))?
+                .collect::<rusqlite::Result<Vec<(String, String)>>>()?;
+            Ok(rows)
+        })
+        .await
+        .expect("the store reads");
+    let id_in = |folder: &str| {
+        stored
+            .iter()
+            .find(|(_, id)| id.starts_with(&format!("{folder}/")))
+            .cloned()
+            .unwrap_or_else(|| panic!("a message in {folder}: {stored:?}"))
+    };
+    let ((thread, work), (other, travel)) = (id_in("Work"), id_in("Travel"));
+    assert_eq!(thread, other, "the follow-up threads with Ann's message");
+    (h, thread, work, travel)
+}
+
+/// The mailboxes the store holds message `id` in.
+async fn places(h: &Harness, id: &str) -> Vec<String> {
+    let (account_id, id) = (h.account_id, id.to_string());
+    h.db.read(move |c| messages::by_ids(c, account_id, &[id]))
+        .await
+        .expect("the store reads")
+        .pop()
+        .expect("stored")
+        .held
+        .mailboxes
+}
+
+/// The model archives what it listed from Work, as the window does when
+/// the person archives from Work: the follow-up in Travel stays there.
+#[tokio::test]
+async fn organizing_mail_listed_from_a_folder_moves_only_what_sits_there() {
+    let (h, thread, work, travel) = work_and_travel().await;
+
+    h.ok(
+        "organize",
+        json!({
+            "targets": [target(&thread)],
+            "action": "archive",
+            "from": {"mailbox": "label", "label": "Work"}
+        }),
+    )
+    .await;
+
+    assert_eq!(places(&h, &work).await, ["Archive"]);
+    assert_eq!(places(&h, &travel).await, ["Travel"]);
+}
+
+/// Mail found with no one folder behind it keeps the role rule, and the
+/// whole conversation goes.
+#[tokio::test]
+async fn organizing_mail_from_nowhere_in_particular_moves_the_whole_thread() {
+    let (h, thread, work, travel) = work_and_travel().await;
+
+    h.ok("organize", json!({"targets": [target(&thread)], "action": "archive"}))
+        .await;
+
+    assert_eq!(places(&h, &work).await, ["Archive"]);
+    assert_eq!(places(&h, &travel).await, ["Archive"]);
+}
+
+#[tokio::test]
+async fn moving_mail_listed_from_a_folder_leaves_the_threads_other_folders_alone() {
+    let (h, thread, work, travel) = work_and_travel().await;
+
+    h.ok(
+        "label",
+        json!({
+            "targets": [target(&thread)],
+            "add": ["Later"],
+            "from": {"mailbox": "label", "label": "Work"}
+        }),
+    )
+    .await;
+
+    assert_eq!(places(&h, &work).await, ["Later"]);
+    assert_eq!(places(&h, &travel).await, ["Travel"]);
+}
+
+#[tokio::test]
+async fn a_folder_the_account_lacks_is_named_back() {
+    let (h, thread, _, _) = work_and_travel().await;
+    let answer = h
+        .run(
+            "organize",
+            json!({
+                "targets": [target(&thread)],
+                "action": "archive",
+                "from": {"mailbox": "label", "label": "Boats"}
+            }),
+        )
+        .await;
+    assert_eq!(answer, Err("There is no label called Boats.".into()));
 }
 
 #[tokio::test]

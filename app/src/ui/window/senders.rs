@@ -262,6 +262,8 @@ impl MainWindow {
             return self.toast(&gettext("Open a message from the sender to block"));
         };
         let (account_id, email) = (target.account_id, sender.email.clone());
+        // Read now: the list on screen may change while the question is up.
+        let from = self.mailbox_of(&view).moved_from();
         let question = confirm(
             &fill(&gettext("Block {sender}?"), &[("sender", sender.display())]),
             &fill(
@@ -294,11 +296,12 @@ impl MainWindow {
                     if view.is_showing(&target) {
                         view.clear();
                     }
-                    this.perform(
+                    this.perform_from(
                         vec![target],
                         MailAction::Triage(TriageAction::Trash),
                         History::Record,
                         Some(fill(&gettext("Blocked {sender}"), &[("sender", &email)])),
+                        from,
                     );
                 }
                 Ok(Permitted::NeedsPermission) => {

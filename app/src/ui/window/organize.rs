@@ -253,7 +253,10 @@ impl MainWindow {
     /// label by that name gets one only if the person says so; otherwise
     /// only the mail in accounts that hold the name gets it.
     fn label_by_name(self: &Rc<Self>, name: String) {
-        let targets = self.reach(&self.conversation).targets;
+        let reach = self.reach(&self.conversation);
+        // On a folder account the label is a folder the mail moves into,
+        // out of the list it was picked from.
+        let (targets, from) = (reach.targets, reach.mailbox.moved_from());
         if targets.is_empty() {
             return;
         }
@@ -270,7 +273,7 @@ impl MainWindow {
             create,
         };
         if plan.is_empty() {
-            return self.perform(targets, label(true), History::Record, None);
+            return self.perform_from(targets, label(true), History::Record, None, from);
         }
         let kept = plan.kept(&targets);
         let emails: HashMap<AccountId, String> = self
@@ -288,7 +291,7 @@ impl MainWindow {
             let create = question.ask(&this.window).await;
             let targets = if create { targets } else { kept };
             let action = label(create);
-            this.perform(targets, action, History::Record, None);
+            this.perform_from(targets, action, History::Record, None, from);
         });
     }
 

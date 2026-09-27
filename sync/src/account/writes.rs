@@ -6,12 +6,15 @@ use std::time::Duration;
 
 use futures::StreamExt;
 use mailrs_domain::translate::{fill, fill_plural, gettext};
-use mailrs_domain::{Applied, ChangeEvent, Location, Memberships, Role, Target};
+use mailrs_domain::{Applied, ChangeEvent, Location, MailSet, Memberships, Role, Target};
 use mailrs_store::messages::Change;
 use mailrs_store::{labels, mailboxes, messages, reminders, remote_refs, threads};
 
 use super::{AccountSync, FETCH_CONCURRENCY};
-use crate::ops::{Roles, drop_protected, local_changes, ops_for, reverse_changes, split_keywords};
+use crate::ops::{
+    Roles, drop_protected, local_changes, moved_out_of, ops_for, reverse_changes, source_mailbox,
+    split_keywords,
+};
 use crate::services::{Relocated, Unapplied};
 use crate::{
     BackendError, MailBackend, MailOp, SyncError, TriageAction, backoff_delay, with_jitter,
@@ -30,7 +33,7 @@ impl AccountSync {
         thread_id: &str,
         action: &TriageAction,
     ) -> Result<(), SyncError> {
-        self.triage_all(&[Target::thread(self.account_id, thread_id)], action)
+        self.triage_all(&[Target::thread(self.account_id, thread_id)], action, None)
             .await
             .map(drop)
     }
@@ -195,16 +198,21 @@ impl AccountSync {
     }
 
     /// Applies `action` to every target at once, as the operations
-    /// `ops_for` makes of it for this account. See [`Self::change_all`].
+    /// `ops_for` makes of it for this account. `from` is the place the
+    /// person picked the mail from, if one; an action that takes mail out
+    /// of a place names its own. See [`Self::change_all`].
     pub async fn triage_all(
         &self,
         targets: &[Target],
         action: &TriageAction,
+        from: Option<&MailSet>,
     ) -> Result<Vec<Applied>, SyncError> {
         let mail = &self.services.mail;
-        let ops = ops_for(action, &mail.capabilities(), &self.roles(), |id| mail.set_of(id))?;
+        let set_of = |id: &str| mail.set_of(id);
+        let ops = ops_for(action, &mail.capabilities(), &self.roles(), set_of)?;
+        let from = moved_out_of(action, set_of).or_else(|| from.cloned());
         let what = self.describe_named(action).await;
-        self.change_all(targets, &ops, &what).await
+        self.change_all(targets, &ops, &what, from.as_ref()).await
     }
 
     /// `action` in words, each server mailbox it names given by the name
@@ -265,11 +273,16 @@ impl AccountSync {
     /// On success it returns what each message gained and lost, which is
     /// what Undo reverses: a message that already had what the change
     /// gives, or lacked what it takes, changed less than the action names.
+    ///
+    /// `from` is the place the mail was moved out of. On a folder account
+    /// a whole thread moved from there carries only its messages there;
+    /// with none, the roles decide ([`drop_protected`]).
     pub async fn change_all(
         &self,
         targets: &[Target],
         ops: &[MailOp],
         what: &str,
+        from: Option<&MailSet>,
     ) -> Result<Vec<Applied>, SyncError> {
         if targets.is_empty() {
             return Ok(Vec::new());
@@ -286,10 +299,11 @@ impl AccountSync {
         let (to_server, kept_here) = split_keywords(ops, &stored);
         let (ids, applied) = {
             let (wanted, ops, roles) = (wanted.clone(), ops.to_vec(), self.roles());
+            let from = from.and_then(|set| source_mailbox(set, &roles));
             self.db
                 .write(move |c| {
                     let mut ids = Vec::new();
-                    let mut whole_thread = BTreeSet::new();
+                    let mut whole_thread = HashMap::new();
                     for (thread, only) in &wanted {
                         for message in messages::thread_messages(c, account_id, thread)? {
                             if only
@@ -297,14 +311,15 @@ impl AccountSync {
                                 .is_none_or(|named| named.contains(&message.id))
                             {
                                 if only.is_none() {
-                                    whole_thread.insert(message.id.clone());
+                                    whole_thread.insert(message.id.clone(), thread.clone());
                                 }
                                 ids.push(message.id);
                             }
                         }
                     }
                     let held = messages::memberships_of(c, account_id, &ids)?;
-                    let ids = drop_protected(ids, &whole_thread, &held, &ops, &roles);
+                    let ids =
+                        drop_protected(ids, &whole_thread, &held, &ops, &roles, from.as_deref());
                     let none = Memberships::default();
                     let changes: Vec<Change> = ids
                         .iter()

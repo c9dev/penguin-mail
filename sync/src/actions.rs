@@ -13,8 +13,8 @@ use mailrs_store::{Db, flags, follow_ups, labels, messages, threads};
 
 use crate::ops::undo_ops;
 use crate::{
-    AccountServices, AccountSync, BackendError, MailBackend, MailOp, OneClick, Permitted,
-    SyncEngine, SyncError, TriageAction,
+    AccountServices, AccountSync, BackendError, MailBackend, MailOp, MovedFrom, OneClick,
+    Permitted, SyncEngine, SyncError, TriageAction,
 };
 
 mod categorize;
@@ -249,10 +249,24 @@ impl<A: Accounts> MailActions<A> {
         }
     }
 
-    /// Runs `action` on each target, carrying on past failures. With
-    /// `History::Record` and at least one change, it goes on top of the
-    /// undo stack, and the next undo is the one that reverses it.
+    /// Runs `action` on each target, carrying on past failures, as mail
+    /// picked from no one place, such as a search. With `History::Record`
+    /// and at least one change, it goes on top of the undo stack, and the
+    /// next undo is the one that reverses it.
     pub async fn run(&self, targets: &[Target], action: MailAction, history: History) -> Outcome {
+        self.run_from(targets, action, history, &MovedFrom::nowhere()).await
+    }
+
+    /// Runs `action` as [`Self::run`] does, on mail the person picked from
+    /// `from`. On a folder account a whole conversation moved from there
+    /// carries only its messages there.
+    pub async fn run_from(
+        &self,
+        targets: &[Target],
+        action: MailAction,
+        history: History,
+        from: &MovedFrom,
+    ) -> Outcome {
         let mut outcome = Outcome::default();
         let mut undo = Undo {
             action: action.clone(),
@@ -264,7 +278,16 @@ impl<A: Accounts> MailActions<A> {
         let resolved = self.resolve(targets, &action).await;
         // The label change goes first: it fetches threads the store lacks,
         // which gives a reminder its subject.
-        let triaged = self.triage_grouped(targets, &resolved).await;
+        // Remind Me and Mute moved the mail to the Archive, so calling a
+        // reminder off or unmuting takes it back out of there, whatever
+        // list shows it.
+        let from = match action {
+            MailAction::CancelReminder | MailAction::Mute { muted: false } => {
+                MovedFrom::every(MailSet::Role(Role::Archive))
+            }
+            _ => from.clone(),
+        };
+        let triaged = self.triage_grouped(targets, &resolved, &from).await;
 
         let mut results: Vec<Result<(), String>> = Vec::with_capacity(targets.len());
         for (index, target) in targets.iter().enumerate() {
@@ -394,12 +417,14 @@ impl<A: Accounts> MailActions<A> {
         &self,
         targets: &[Target],
         resolved: &[Result<Option<TriageAction>, String>],
+        from: &MovedFrom,
     ) -> Vec<Result<Vec<Applied>, String>> {
         let mut results: Vec<Result<Vec<Applied>, String>> = vec![Ok(Vec::new()); targets.len()];
         for (triage, members) in group_by_account(targets, resolved) {
             let batch: Vec<Target> = members.iter().map(|i| targets[*i].clone()).collect();
-            let done = match self.sync(batch[0].account_id) {
-                Ok(sync) => sync.triage_all(&batch, &triage).await,
+            let account_id = batch[0].account_id;
+            let done = match self.sync(account_id) {
+                Ok(sync) => sync.triage_all(&batch, &triage, from.of(account_id)).await,
                 Err(err) => Err(err),
             };
             match done {
@@ -652,7 +677,7 @@ impl<A: Accounts> MailActions<A> {
         for ((account_id, ops), (messages, owners)) in groups {
             let done = match self.sync(account_id) {
                 Ok(sync) => sync
-                    .change_all(&messages, &ops, &gettext("Change labels"))
+                    .change_all(&messages, &ops, &gettext("Change labels"), None)
                     .await
                     .map(drop),
                 Err(err) => Err(err),

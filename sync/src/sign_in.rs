@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use mailrs_domain::translate::{fill, gettext};
 use mailrs_domain::{Account, AccountId, AccountState, EpochMillis, Provider, SignInClient};
-use mailrs_gmail::OAuthClient;
+use mailrs_gmail::{OAuthClient, TokenStore};
 use mailrs_store::servers::{self, Servers};
 use mailrs_store::{Db, StoreError, accounts};
 
@@ -76,6 +76,28 @@ pub async fn signed_in(
     .map_err(|provider| SignInError::Taken { address, provider })
 }
 
+/// [`signed_in`], then the account's refresh token into `tokens`. The
+/// token goes in only once the store has taken the address, so a sign-in
+/// refused because an IMAP account holds it leaves nothing in the keyring.
+#[allow(clippy::too_many_arguments)]
+pub async fn google_signed_in(
+    db: &Db,
+    tokens: Arc<dyn TokenStore>,
+    email: &str,
+    refresh_token: &str,
+    now: EpochMillis,
+    granted: Option<&str>,
+    asked: &str,
+) -> Result<Account, SignInError> {
+    let account = signed_in(db, email, now, granted, asked).await?;
+    let (email, refresh) = (email.to_string(), refresh_token.to_string());
+    tokio::task::spawn_blocking(move || tokens.save(&email, &refresh))
+        .await
+        .map_err(|e| SignInError::Token(e.to_string()))?
+        .map_err(|e| SignInError::Token(e.to_string()))?;
+    Ok(account)
+}
+
 #[derive(Debug, thiserror::Error)]
 pub enum SignInError {
     /// The address belongs to an account another provider serves.
@@ -83,6 +105,9 @@ pub enum SignInError {
     Taken { address: String, provider: String },
     #[error(transparent)]
     Store(#[from] StoreError),
+    /// The keyring refused the refresh token.
+    #[error("{0}")]
+    Token(String),
 }
 
 /// An IMAP account a person just signed in to: the address, who serves
@@ -229,7 +254,7 @@ pub fn client_for(
 #[cfg(test)]
 mod tests {
     use mailrs_domain::{Account, AccountState, SignInClient};
-    use mailrs_gmail::client_from;
+    use mailrs_gmail::{MemoryTokenStore, TokenStore, client_from};
     use mailrs_store::{Db, accounts};
 
     use super::*;
@@ -374,6 +399,26 @@ mod tests {
             .unwrap()
             .unwrap();
         assert_eq!(kept.provider, mailrs_domain::Provider::Imap);
+    }
+
+    /// The bug this pins: a refused Google sign-in had already put its
+    /// refresh token in the keyring, where nothing read it again.
+    #[tokio::test]
+    async fn a_refused_google_sign_in_keeps_no_token() {
+        let (_dir, db) = store();
+        db.write(|c| accounts::insert_imap_account(c, "dana@fastmail.com", "Fastmail", 0))
+            .await
+            .unwrap();
+        let tokens: Arc<dyn TokenStore> = Arc::new(MemoryTokenStore::default());
+        google_signed_in(&db, Arc::clone(&tokens), "dana@fastmail.com", "refresh", 0, None, "")
+            .await
+            .expect_err("an IMAP account holds the address");
+        assert_eq!(tokens.load("dana@fastmail.com").unwrap(), None);
+
+        google_signed_in(&db, Arc::clone(&tokens), "dana@gmail.com", "refresh", 0, None, "")
+            .await
+            .unwrap();
+        assert_eq!(tokens.load("dana@gmail.com").unwrap().as_deref(), Some("refresh"));
     }
 
     #[tokio::test]

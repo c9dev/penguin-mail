@@ -18,7 +18,7 @@ use mailrs_domain::{
 };
 use mailrs_gmail::RemoteLabel;
 use mailrs_store::{Db, accounts, messages};
-use mailrs_sync::fake::{FakeGmail, FakeOneClick, fill_store};
+use mailrs_sync::fake::{FakeGmail, FakeImap, FakeOneClick, FakeSmtp, fill_store};
 use mailrs_sync::{
     AccountServices, AccountSettings, AccountSync, Accounts, Calendar, ContactBook, Invitations,
     MailAction, MailActions, Mailboxes, OneClick, Outcome, View,
@@ -522,6 +522,24 @@ impl Harness {
         edit: impl FnOnce(&Arc<FakeGmail>, &mut AccountServices),
     ) -> Harness {
         Harness::connect(Vec::new(), None, edit).await
+    }
+
+    /// One account on `imap`, a server that files mail in folders, loaded
+    /// as a first sync loads it. Its folders reach the desk's labels only
+    /// when the test puts them there.
+    pub async fn on_imap(imap: Arc<FakeImap>) -> Harness {
+        Harness::with_services(|_, services| {
+            *services = AccountServices::fake_imap(imap, Arc::new(FakeSmtp::default()));
+        })
+        .await
+    }
+
+    /// The sync handle of the fixture account.
+    pub fn sync(&self) -> Arc<AccountSync> {
+        self.effects
+            .connected
+            .account(self.account_id)
+            .expect("the fixture account is connected")
     }
 
     async fn connect(
