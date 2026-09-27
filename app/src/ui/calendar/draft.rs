@@ -171,13 +171,13 @@ impl Draft {
     /// the rest (ruling R9): the rest of `base` goes out unchanged.
     pub fn to_event(&self, new_id: &str, meet_request: &str) -> Event {
         let mut event = self.base.clone().unwrap_or_else(|| Event { id: new_id.to_string(), ..Event::default() });
-        if let Some(base) = &self.base {
-            if limited(base) {
-                event.reminders = self.reminders.clone();
-                event.color = self.color.clone();
-                event.busy = self.busy;
-                return event;
-            }
+        if let Some(base) = &self.base
+            && limited(base)
+        {
+            event.reminders = self.reminders.clone();
+            event.color = self.color.clone();
+            event.busy = self.busy;
+            return event;
         }
         event.calendar = self.calendar.clone();
         event.title = self.title.trim().to_string();
@@ -408,12 +408,12 @@ mod tests {
 
     #[test]
     fn a_kept_rule_stays_when_the_series_moves() {
-        // Two weekdays in one BYDAY is not a rule the named choices read,
-        // so `Repeat::read` keeps it as `Kept` (Task 2 correction 3).
+        // BYSETPOS is not a rule the menu or the Custom page can say, so
+        // `Repeat::read` keeps it whole as `Kept`.
         let mut event = weekly();
-        Arc::make_mut(&mut event.event).rules = vec!["RRULE:FREQ=WEEKLY;BYDAY=MO,WE".into()];
+        Arc::make_mut(&mut event.event).rules = vec!["RRULE:FREQ=MONTHLY;BYDAY=MO,TU;BYSETPOS=-1".into()];
         let mut draft = Draft::open(&event, &event.event.rules, Lisbon);
-        assert_eq!(draft.repeat, Repeat::Kept("RRULE:FREQ=WEEKLY;BYDAY=MO,WE".into()));
+        assert_eq!(draft.repeat, Repeat::Kept("RRULE:FREQ=MONTHLY;BYDAY=MO,TU;BYSETPOS=-1".into()));
         draft.set_span(at(24, 15, 0), at(24, 16, 0));
         assert!(!draft.rule_changed());
         assert_eq!(draft.to_event("pmnew", "pmmeet").rules, event.event.rules, "a kept rule ignores the move");

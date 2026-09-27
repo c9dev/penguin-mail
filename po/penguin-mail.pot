@@ -3183,7 +3183,7 @@ msgstr ""
 msgid "Brave Search API Key"
 msgstr ""
 
-#: app/src/ui/calendar/agenda.rs:295 app/src/ui/calendar/words.rs:58
+#: app/src/ui/calendar/agenda.rs:295 app/src/ui/calendar/words.rs:60
 msgid "All day"
 msgstr ""
 
@@ -3223,56 +3223,56 @@ msgstr ""
 msgid "{title}, {start} to {end}, {calendar}"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:247
+#: app/src/ui/calendar/mod.rs:251
 msgid "View"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:255
+#: app/src/ui/calendar/mod.rs:259
 msgid "New Event"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:258 app/src/ui/calendar/mod.rs:260
+#: app/src/ui/calendar/mod.rs:262 app/src/ui/calendar/mod.rs:264
 msgid "Search the Calendar (Ctrl+F)"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:263 app/src/ui/calendar/mod.rs:266
+#: app/src/ui/calendar/mod.rs:267 app/src/ui/calendar/mod.rs:270
 msgid "Show Calendars"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:282 app/src/ui/calendar/mod.rs:284
+#: app/src/ui/calendar/mod.rs:286 app/src/ui/calendar/mod.rs:288
 msgid "Search the Calendar"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:712
+#: app/src/ui/calendar/mod.rs:716
 msgid "List"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:713
+#: app/src/ui/calendar/mod.rs:717
 msgid "Day"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:714
+#: app/src/ui/calendar/mod.rs:718
 msgid "Week"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:715
+#: app/src/ui/calendar/mod.rs:719
 msgid "Month"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:901
+#: app/src/ui/calendar/mod.rs:905
 msgid "All-day events"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:903
+#: app/src/ui/calendar/mod.rs:907
 msgid "All-day"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:1177 app/src/ui/calendar/mod.rs:1659
+#: app/src/ui/calendar/mod.rs:1181 app/src/ui/calendar/mod.rs:1663
 #: app/src/ui/calendar/sidebar.rs:110
 msgid "%a"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:1456
+#: app/src/ui/calendar/mod.rs:1460
 msgid "Could not send your answer: {reason}"
 msgstr ""
 
@@ -3289,7 +3289,7 @@ msgstr ""
 msgid "Your answer"
 msgstr ""
 
-#: app/src/ui/calendar/range.rs:102 app/src/ui/calendar/words.rs:22
+#: app/src/ui/calendar/range.rs:102 app/src/ui/calendar/words.rs:24
 msgid "%A %-d"
 msgstr ""
 
@@ -3301,7 +3301,7 @@ msgstr ""
 msgid "%B"
 msgstr ""
 
-#: app/src/ui/calendar/range.rs:117 app/src/ui/calendar/words.rs:84
+#: app/src/ui/calendar/range.rs:117 app/src/ui/calendar/words.rs:86
 msgid "{first} – {last}"
 msgstr ""
 
@@ -3369,60 +3369,108 @@ msgid_plural "{count} more events"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/calendar/words.rs:16
+#: app/src/ui/calendar/words.rs:18
 msgid "%A %-d %B"
 msgstr ""
 
-#: app/src/ui/calendar/words.rs:64
+#: app/src/ui/calendar/words.rs:66
 msgid "{date} · {start}–{end}"
 msgstr ""
 
-#: app/src/ui/calendar/words.rs:100
+#: app/src/ui/calendar/words.rs:102
 msgid "{yes} of {count} said yes"
 msgid_plural "{yes} of {count} said yes"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/calendar/words.rs:111
+#: app/src/ui/calendar/words.rs:113
 msgid "{name}, organizer"
 msgstr ""
 
-#: app/src/ui/calendar/words.rs:115
+#: app/src/ui/calendar/words.rs:117
 msgid "{organizer} · {answers}"
 msgstr ""
 
-#: app/src/ui/calendar/words.rs:126
+#: app/src/ui/calendar/words.rs:128
 msgid "and {count} more"
 msgid_plural "and {count} more"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/calendar/words.rs:137
+#: app/src/ui/calendar/words.rs:139
 msgid "Join with Google Meet"
 msgstr ""
 
-#: app/src/ui/calendar/words.rs:139
+#: app/src/ui/calendar/words.rs:141
 msgid "Join Call"
 msgstr ""
 
-#: app/src/ui/calendar/words.rs:151
+#: app/src/ui/calendar/words.rs:153
 msgid "Open {place} in Maps"
 msgstr ""
 
-#: app/src/ui/calendar/words.rs:166
+#: app/src/ui/calendar/words.rs:168
 msgid "{count} more"
 msgid_plural "{count} more"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/calendar/words.rs:177
+#: app/src/ui/calendar/words.rs:179
 msgid "{count} more event on {date}"
 msgid_plural "{count} more events on {date}"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/calendar/words.rs:192
+#: app/src/ui/calendar/words.rs:194
 msgid "{date}, has events"
+msgstr ""
+
+#: app/src/ui/calendar/words.rs:209
+msgid "At the start"
+msgstr ""
+
+#: app/src/ui/calendar/words.rs:211
+msgid "{count} week before"
+msgid_plural "{count} weeks before"
+msgstr[0] ""
+msgstr[1] ""
+
+#: app/src/ui/calendar/words.rs:217
+msgid "{count} day before"
+msgid_plural "{count} days before"
+msgstr[0] ""
+msgstr[1] ""
+
+#: app/src/ui/calendar/words.rs:223
+msgid "{count} hour before"
+msgid_plural "{count} hours before"
+msgstr[0] ""
+msgstr[1] ""
+
+#: app/src/ui/calendar/words.rs:229
+msgid "{count} minute before"
+msgid_plural "{count} minutes before"
+msgstr[0] ""
+msgstr[1] ""
+
+#: app/src/ui/calendar/words.rs:248
+msgid "Never"
+msgstr ""
+
+#: app/src/ui/calendar/words.rs:250
+msgid "Every weekday"
+msgstr ""
+
+#: app/src/ui/calendar/words.rs:254
+msgid "A rule set in another app"
+msgstr ""
+
+#: app/src/ui/calendar/words.rs:320
+msgid "Organizer"
+msgstr ""
+
+#: app/src/ui/calendar/words.rs:322
+msgid "No answer yet"
 msgstr ""
 
 #: app/src/ui/composer/mod.rs:204 app/src/ui/conversation.rs:1561
@@ -6450,158 +6498,158 @@ msgstr ""
 msgid "Not going"
 msgstr ""
 
-#: domain/src/invitation/recurrence.rs:24
+#: domain/src/invitation/recurrence.rs:28
 msgid "Every day"
 msgid_plural "Every {count} days"
 msgstr[0] ""
 msgstr[1] ""
 
-#: domain/src/invitation/recurrence.rs:26
+#: domain/src/invitation/recurrence.rs:30
 msgid "Every week"
 msgid_plural "Every {count} weeks"
 msgstr[0] ""
 msgstr[1] ""
 
-#: domain/src/invitation/recurrence.rs:28
+#: domain/src/invitation/recurrence.rs:32
 msgid "Every {days}"
 msgstr ""
 
-#: domain/src/invitation/recurrence.rs:30
+#: domain/src/invitation/recurrence.rs:34
 msgid "{every} on {days}"
 msgstr ""
 
-#: domain/src/invitation/recurrence.rs:38
+#: domain/src/invitation/recurrence.rs:42
 msgid "Every month"
 msgid_plural "Every {count} months"
 msgstr[0] ""
 msgstr[1] ""
 
-#: domain/src/invitation/recurrence.rs:45
+#: domain/src/invitation/recurrence.rs:49
 msgid "{every} on {day}"
 msgstr ""
 
-#: domain/src/invitation/recurrence.rs:51
+#: domain/src/invitation/recurrence.rs:55
 msgid "Every year"
 msgid_plural "Every {count} years"
 msgstr[0] ""
 msgstr[1] ""
 
-#: domain/src/invitation/recurrence.rs:52
+#: domain/src/invitation/recurrence.rs:56
 msgid "Every hour"
 msgid_plural "Every {count} hours"
 msgstr[0] ""
 msgstr[1] ""
 
-#: domain/src/invitation/recurrence.rs:63
+#: domain/src/invitation/recurrence.rs:67
 msgid "{every} until {day}"
 msgstr ""
 
-#: domain/src/invitation/recurrence.rs:68
+#: domain/src/invitation/recurrence.rs:72
 msgid "once"
 msgstr ""
 
-#: domain/src/invitation/recurrence.rs:70
+#: domain/src/invitation/recurrence.rs:74
 msgid "{count} time"
 msgid_plural "{count} times"
 msgstr[0] ""
 msgstr[1] ""
 
-#: domain/src/invitation/recurrence.rs:77
+#: domain/src/invitation/recurrence.rs:81
 msgid "{every}, {repeats}"
 msgstr ""
 
-#: domain/src/invitation/recurrence.rs:100
+#: domain/src/invitation/recurrence.rs:104
 msgid "{every}, no end date"
 msgstr ""
 
-#: domain/src/invitation/recurrence.rs:115
+#: domain/src/invitation/recurrence.rs:119
 msgid "{every}, none left"
 msgstr ""
 
-#: domain/src/invitation/recurrence.rs:117
+#: domain/src/invitation/recurrence.rs:121
 msgid "{every}, {count} left"
 msgid_plural "{every}, {count} left"
 msgstr[0] ""
 msgstr[1] ""
 
-#: domain/src/invitation/recurrence.rs:196
+#: domain/src/invitation/recurrence.rs:200
 msgid "{days} and {last}"
 msgstr ""
 
-#: domain/src/invitation/recurrence.rs:204
+#: domain/src/invitation/recurrence.rs:208
 msgid "Monday"
 msgstr ""
 
-#: domain/src/invitation/recurrence.rs:205
+#: domain/src/invitation/recurrence.rs:209
 msgid "Tuesday"
 msgstr ""
 
-#: domain/src/invitation/recurrence.rs:206
+#: domain/src/invitation/recurrence.rs:210
 msgid "Wednesday"
 msgstr ""
 
-#: domain/src/invitation/recurrence.rs:207
+#: domain/src/invitation/recurrence.rs:211
 msgid "Thursday"
 msgstr ""
 
-#: domain/src/invitation/recurrence.rs:208
+#: domain/src/invitation/recurrence.rs:212
 msgid "Friday"
 msgstr ""
 
-#: domain/src/invitation/recurrence.rs:209
+#: domain/src/invitation/recurrence.rs:213
 msgid "Saturday"
 msgstr ""
 
-#: domain/src/invitation/recurrence.rs:210
+#: domain/src/invitation/recurrence.rs:214
 msgid "Sunday"
 msgstr ""
 
-#: domain/src/invitation/recurrence.rs:220
+#: domain/src/invitation/recurrence.rs:224
 msgid "the last day"
 msgstr ""
 
-#: domain/src/invitation/recurrence.rs:229
+#: domain/src/invitation/recurrence.rs:233
 msgid "the last {weekday}"
 msgstr ""
 
-#: domain/src/invitation/recurrence.rs:231
+#: domain/src/invitation/recurrence.rs:235
 msgid "the {nth} {weekday}"
 msgstr ""
 
-#: domain/src/invitation/recurrence.rs:240
+#: domain/src/invitation/recurrence.rs:244
 msgid "first"
 msgstr ""
 
-#: domain/src/invitation/recurrence.rs:241
+#: domain/src/invitation/recurrence.rs:245
 msgid "second"
 msgstr ""
 
-#: domain/src/invitation/recurrence.rs:242
+#: domain/src/invitation/recurrence.rs:246
 msgid "third"
 msgstr ""
 
-#: domain/src/invitation/recurrence.rs:243
+#: domain/src/invitation/recurrence.rs:247
 msgid "fourth"
 msgstr ""
 
-#: domain/src/invitation/recurrence.rs:244
+#: domain/src/invitation/recurrence.rs:248
 msgid "fifth"
 msgstr ""
 
-#: domain/src/invitation/recurrence.rs:257
 #: domain/src/invitation/recurrence.rs:261
+#: domain/src/invitation/recurrence.rs:265
 msgid "the {day}th"
 msgstr ""
 
-#: domain/src/invitation/recurrence.rs:258
+#: domain/src/invitation/recurrence.rs:262
 msgid "the {day}st"
 msgstr ""
 
-#: domain/src/invitation/recurrence.rs:259
+#: domain/src/invitation/recurrence.rs:263
 msgid "the {day}nd"
 msgstr ""
 
-#: domain/src/invitation/recurrence.rs:260
+#: domain/src/invitation/recurrence.rs:264
 msgid "the {day}rd"
 msgstr ""
 
