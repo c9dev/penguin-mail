@@ -122,9 +122,11 @@ weekdays unless you ask for other hours or the weekend. Google tells the
 guests about every event the assistant adds, changes or deletes.
 
 Once this computer has read an account's calendar, the tools answer from
-that copy rather than asking Google, and an event the assistant makes or
-changes waits in a short queue before it reaches Google, shown as
-pending until it does.
+that copy rather than asking Google, and an event the assistant makes,
+changes or deletes waits in a short queue before it reaches Google, shown
+as pending until it does. One date of a repeating event goes through the
+same queue and changes alone. Without the network the change waits and
+goes out once the connection returns.
 
 Signing in already asked for the calendar permission; a calendar tool
 that finds it withheld says so instead of failing silently, and the

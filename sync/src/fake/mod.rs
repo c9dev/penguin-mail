@@ -180,6 +180,8 @@ pub struct FakeState {
     /// Play Google forgetting every sync token: a read with one answers
     /// `ExpiredSyncToken`.
     pub expire_calendar_tokens: bool,
+    /// Play the network being down: every call fails until it is cleared.
+    pub offline: bool,
     /// Play Google's answer to a write on an event already deleted: 410
     /// Gone, which the client reads as `ExpiredSyncToken`, rather than
     /// the 404 the fake gives otherwise.
@@ -367,6 +369,7 @@ impl FakeGmail {
                 calendar_events: Vec::new(),
                 calendar_log: Vec::new(),
                 expire_calendar_tokens: false,
+                offline: false,
                 deleted_answers_gone: false,
                 deleted_calendars: Vec::new(),
                 withheld: BTreeSet::new(),
@@ -606,6 +609,9 @@ impl FakeGmail {
                     0 => return Err(s.planned.remove(at).err),
                     _ => s.planned[at].skip -= 1,
                 }
+            }
+            if s.offline {
+                return Err(GmailError::Network("offline".into()));
             }
             s.failures.pop_front().map_or(Ok(()), Err)
         })

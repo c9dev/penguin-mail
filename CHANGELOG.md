@@ -29,8 +29,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   you go through Google's screen once more.
 - The assistant and the invitation card read your Google calendars from
   this computer, so they answer without the network. A change the
-  assistant makes waits there until Google takes it, and moving or
-  cancelling one meeting of a repeating series leaves the others alone.
+  assistant makes waits there until Google takes it, even one to a
+  single meeting of a repeating series, which leaves the others alone.
 - With Claude Opus 5 or newer, translating a message and reading an unsubscribe
   page take less time, because those quick jobs no longer think at length.
 
