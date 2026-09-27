@@ -1138,6 +1138,13 @@ impl ConversationView {
         self.card.set_series(uid, line);
     }
 
+    /// Where the event on the card sits on the calendar, which puts Show
+    /// in Calendar on the card. The card keeps it only while it still
+    /// shows the invitation `uid` names.
+    pub fn found_on_calendar(&self, uid: &str, spot: mailrs_sync::Spot) {
+        self.card.set_on_calendar(uid, spot);
+    }
+
     /// Offers to add the account to GNOME Online Accounts on the card.
     pub fn offer_gnome(&self) {
         self.card.offer_gnome();

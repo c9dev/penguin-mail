@@ -14,7 +14,7 @@ use mailrs_domain::invitation::Invitation;
 use mailrs_domain::{AccountId, FlagColor, MessageBody, MessageMeta, Target, ThreadSummary};
 use mailrs_store::outbox::Queued;
 use mailrs_store::{messages, threads, unsubscribes};
-use mailrs_sync::{History, MailAction, Opened, TriageAction, now_millis};
+use mailrs_sync::{History, MailAction, Opened, Spot, TriageAction, now_millis};
 
 use super::pictures::Pictures;
 use super::{BODY_FETCHES, MainWindow, read_cached_body};
@@ -408,6 +408,24 @@ impl Effects for Ports {
         })
     }
 
+    fn on_calendar(
+        &self,
+        account_id: AccountId,
+        invitation: Invitation,
+    ) -> Answer<'_, Result<Option<Spot>, String>> {
+        let invitations = self.core.invitations();
+        Box::pin(async move {
+            self.core
+                .call(async move {
+                    invitations
+                        .on_calendar(account_id, &invitation, now_millis())
+                        .await
+                })
+                .await
+                .map_err(|err| err.to_string())
+        })
+    }
+
     fn flag_color(
         &self,
         account_id: AccountId,
@@ -510,6 +528,10 @@ impl Effects for Ports {
 
     fn series_known(&self, uid: String, line: String) {
         self.view.series_known(&uid, line);
+    }
+
+    fn on_calendar_known(&self, uid: String, spot: Spot) {
+        self.view.found_on_calendar(&uid, spot);
     }
 
     fn start_engines(&self) {

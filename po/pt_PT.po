@@ -3854,6 +3854,10 @@ msgstr "Resposta"
 msgid "Your answer"
 msgstr "A sua resposta"
 
+#: app/src/ui/calendar/popover.rs:216 app/src/ui/calendar/popover.rs:223
+msgid "Open the invitation in Mail"
+msgstr "Abrir o convite no Mail"
+
 #: app/src/ui/calendar/quick.rs:49
 msgid "Add title"
 msgstr "Adicionar título"
@@ -4952,6 +4956,10 @@ msgstr "Propor outra hora"
 #: app/src/ui/invitation.rs:230
 msgid "Add to Calendar"
 msgstr "Adicionar ao calendário"
+
+#: app/src/ui/invitation.rs:244
+msgid "Show in Calendar"
+msgstr "Mostrar no calendário"
 
 #: app/src/ui/invitation.rs:267
 msgid ""
