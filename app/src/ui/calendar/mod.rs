@@ -12,7 +12,6 @@
 
 pub mod agenda;
 pub mod block;
-#[allow(dead_code, reason = "editing an existing event, in a later task, calls the rest")]
 pub mod draft;
 pub mod drag;
 pub mod editor;
@@ -281,6 +280,7 @@ impl CalendarView {
         let new_event = gtk::Button::builder()
             .icon_name("list-add-symbolic")
             .css_classes(["suggested-action", "circular", "new-event"])
+            .valign(gtk::Align::Center)
             .build();
         crate::ui::name_with_shortcut(&new_event, &gettext("New Event (N)"));
         let search_button = gtk::ToggleButton::builder()
@@ -1750,6 +1750,7 @@ impl CalendarView {
                 .await;
             match held {
                 Ok(Permitted::Done(held)) => {
+                    this.focus_past(&key_of(&o));
                     this.reload();
                     this.offer_undo(fill(&gettext("Deleted “{title}”"), &[("title", &o.event.title)]), held);
                 }
@@ -1757,6 +1758,28 @@ impl CalendarView {
                 Err(err) => (this.hooks.toast)(&with_reason(&gettext("Could not delete the event: {reason}"), &err, &[])),
             }
         });
+    }
+
+    /// Moves the keyboard focus off `key`'s block, which a delete is about
+    /// to take away, onto the next event in Tab order, or the one before
+    /// it for the last event. The reload that follows keeps the focus on
+    /// that event by its key. A block without the focus is left alone.
+    fn focus_past(&self, key: &EventKey) {
+        let Some(root) = self.page.root() else { return };
+        let Some(page) = self.pages.borrow().get(1).cloned() else { return };
+        let view = page.view.borrow();
+        if view.focused_key().as_ref() != Some(key) {
+            return;
+        }
+        let Some(block) = view.block_of(key) else { return };
+        for direction in [gtk::DirectionType::TabForward, gtk::DirectionType::TabBackward] {
+            block.grab_focus();
+            root.child_focus(direction);
+            if view.focused_key().is_some_and(|k| k != *key) {
+                return;
+            }
+        }
+        block.grab_focus();
     }
 
     /// A 10-second toast with Undo for a held change. Undo puts the rows

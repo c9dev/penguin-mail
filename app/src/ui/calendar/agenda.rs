@@ -206,6 +206,9 @@ mod row {
             pub time: OnceCell<gtk::Label>,
             pub title: OnceCell<gtk::Label>,
             pub place: OnceCell<gtk::Label>,
+            /// The occurrence the row draws now, for the Delete key and N
+            /// while the row's list item holds the focus.
+            pub occurrence: RefCell<Option<Occurrence>>,
         }
 
         #[glib::object_subclass]
@@ -281,11 +284,17 @@ mod row {
     }
 
     impl AgendaRow {
+        /// The occurrence the row draws now.
+        pub(super) fn occurrence(&self) -> Option<Occurrence> {
+            self.imp().occurrence.borrow().clone()
+        }
+
         /// Fills every label from `row`'s occurrence, using `calendars`
         /// for the dot's colour and the accessible name's calendar name.
         pub(super) fn fill(&self, row: &Row, calendars: &HashMap<(AccountId, String), Calendar>) {
             let imp = self.imp();
             let o = &row.occurrence;
+            imp.occurrence.replace(Some(o.clone()));
             let (colour, calendar_name) = calendar_of(o, calendars);
 
             let dot = imp.dot.get().expect("built in constructed");
@@ -538,13 +547,28 @@ impl Agenda {
         self.scrolled_to_top.replace(Some(Box::new(f)));
     }
 
-    /// The occurrence of the row with the keyboard focus. Always `None`:
-    /// GTK's `ListView` gives the keyboard focus to a row's own wrapper
-    /// rather than to the widget the factory built, so this list has
-    /// nothing of its own to ask. The New Event button falls back to the
-    /// time last clicked, or to now, while the narrow list shows it in
-    /// place of a grid.
+    /// The occurrence of the row with the keyboard focus. GTK's
+    /// `ListView` gives the focus to the list item it wraps each row in,
+    /// so the row is that widget's child rather than the focus itself.
     pub fn focused(&self) -> Option<Occurrence> {
+        let focus = self.list_view.root()?.focus()?;
+        if !focus.is_ancestor(&self.list_view) {
+            return None;
+        }
+        let mut current = Some(focus);
+        while let Some(widget) = current {
+            if widget == *self.list_view.upcast_ref::<gtk::Widget>() {
+                return None;
+            }
+            let row = widget
+                .downcast_ref::<AgendaRow>()
+                .cloned()
+                .or_else(|| widget.first_child().and_downcast::<AgendaRow>());
+            if let Some(row) = row {
+                return row.occurrence();
+            }
+            current = widget.parent();
+        }
         None
     }
 }
