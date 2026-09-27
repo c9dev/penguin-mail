@@ -1632,7 +1632,7 @@ impl CalendarView {
             .unwrap_or_default();
         let weak = Rc::downgrade(self);
         let occurrence = o.clone();
-        let editable = self.can_edit_whole(o);
+        let editable = self.editing(o) == draft::Editing::Whole;
         let (edit_o, delete_o) = (o.clone(), o.clone());
         let edit_view = Rc::downgrade(self);
         let delete_view = Rc::downgrade(self);
@@ -1664,39 +1664,54 @@ impl CalendarView {
         );
     }
 
-    /// Whether the account may change `o`'s event as a whole: its
-    /// calendar is writable and the account is not merely a guest of
-    /// someone else's event (ruling R9). Gates Edit and Delete in the
-    /// popover, a double click or Enter opening the editor, and the
-    /// Delete key.
-    fn can_edit_whole(&self, o: &Occurrence) -> bool {
-        self.calendars
+    /// What the view lets a person do to `o`: see [`draft::editing`].
+    /// Gates Edit and Delete in the popover, a double click or Enter
+    /// opening the editor, and the Delete key.
+    fn editing(&self, o: &Occurrence) -> draft::Editing {
+        let access = self
+            .calendars
             .borrow()
             .get(&(o.account_id, o.event.calendar.clone()))
-            .is_some_and(|c| c.access.can_write())
-            && !draft::limited(&o.event)
+            .map_or(Access::Reader, |c| c.access);
+        let (offers, withheld) = self
+            .accounts
+            .borrow()
+            .iter()
+            .find(|(a, _, _)| a.id == o.account_id)
+            .map_or((false, true), |(_, offers, withheld)| {
+                (offers.calendar, withheld.calendar)
+            });
+        draft::editing(&o.event, access, offers, withheld)
     }
 
     /// The Delete key: takes the focused event off the grid at once and
-    /// offers Undo, for an event the account may change as a whole.
+    /// offers Undo, for an event the account may change as a whole, or
+    /// asks for the calendar permission the account withheld (R8).
     pub fn delete_focused(self: &Rc<Self>) {
-        if let Some(o) = self.focused().filter(|o| self.can_edit_whole(o)) {
-            self.delete(&o);
+        let Some(o) = self.focused() else { return };
+        match self.editing(&o) {
+            draft::Editing::Whole => self.delete(&o),
+            draft::Editing::NeedsPermission => (self.hooks.needs_permission)(o.account_id),
+            draft::Editing::Guest | draft::Editing::None => {}
         }
     }
 
-    /// A double click or Enter on a block. For an event the account may
-    /// change as a whole, this opens the editor over the popover a
-    /// single click already opened; otherwise it opens the popover, same
-    /// as Enter did before this event had no Edit to open instead.
+    /// A double click or Enter on a block. The editor opens over the
+    /// popover a single click already opened, limited to reminders,
+    /// colour and busy on someone else's event (R1, R9). An account that
+    /// withheld the calendar permission is asked for it instead (R8), and
+    /// an event nobody here may change opens its popover.
     fn edit_or_show(self: &Rc<Self>, o: &Occurrence, anchor: Option<&gtk::Widget>) {
-        if self.can_edit_whole(o) {
-            self.open_editor(o);
-        } else if let Some(anchor) = anchor {
-            self.show_event(anchor, o);
+        match self.editing(o) {
+            draft::Editing::Whole | draft::Editing::Guest => self.open_editor(o),
+            draft::Editing::NeedsPermission => (self.hooks.needs_permission)(o.account_id),
+            draft::Editing::None => {
+                if let Some(anchor) = anchor {
+                    self.show_event(anchor, o);
+                }
+            }
         }
     }
-
 
     /// Reads the series `o` belongs to, and asks the editor over it: its
     /// own rules, or a changed occurrence's series row's.
@@ -1890,7 +1905,8 @@ impl CalendarView {
     /// (ruling R8).
     fn writable(&self) -> Vec<(AccountId, String, Calendar)> {
         let accounts = self.accounts.borrow();
-        self.calendars
+        let mut writable = self
+            .calendars
             .borrow()
             .iter()
             .filter(|(_, c)| c.access.can_write())
@@ -1900,7 +1916,10 @@ impl CalendarView {
                     .find(|(a, offers, withheld)| a.id == *account_id && offers.calendar && !withheld.calendar)
                     .map(|(a, _, _)| (*account_id, a.email.clone(), c.clone()))
             })
-            .collect()
+            .collect::<Vec<_>>();
+        let order: Vec<AccountId> = accounts.iter().map(|(a, _, _)| a.id).collect();
+        draft::sort_writable(&mut writable, &order);
+        writable
     }
 
     /// Insensitive, with why, while no calendar takes new events: an
@@ -2059,10 +2078,7 @@ impl CalendarView {
         let core = Rc::clone(&self.core);
         glib::spawn_future_local(async move {
             let occurrence = draft.occurrence.clone();
-            let offered = occurrence
-                .as_ref()
-                .map(|o| series::scopes(&o.event, draft.rule_changed()))
-                .unwrap_or_default();
+            let offered = draft.scopes();
             let scope = if offered.is_empty() {
                 None
             } else {

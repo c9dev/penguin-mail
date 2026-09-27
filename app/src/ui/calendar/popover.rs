@@ -33,13 +33,6 @@ const MOST_GUESTS_SHOWN: usize = 5;
 /// `Answer::ALL` orders Yes, No, Maybe, for the invitation card.
 const ANSWER_ORDER: [Answer; 3] = [Answer::Yes, Answer::Maybe, Answer::No];
 
-/// Whether the account is a guest worth asking: it holds a guest row of
-/// its own and did not organize the event, mirroring `block::answer_state`'s
-/// "unanswered" guard.
-fn is_guest(guests: &[Guest]) -> bool {
-    guests.iter().any(|guest| guest.me && !guest.organizer)
-}
-
 /// Who organized the event, by name where a guest row gives one,
 /// otherwise the bare organizer address the event carries.
 fn organizer_name(event: &Event) -> Option<String> {
@@ -143,6 +136,7 @@ impl EventPopover {
             .css_classes(["flat"])
             .valign(gtk::Align::Start)
             .visible(false)
+            .tooltip_text(gettext("Edit"))
             .build();
         crate::ui::name(&edit_button, &gettext("Edit"));
         let delete_button = gtk::Button::builder()
@@ -150,6 +144,7 @@ impl EventPopover {
             .css_classes(["flat"])
             .valign(gtk::Align::Start)
             .visible(false)
+            .tooltip_text(gettext("Delete"))
             .build();
         crate::ui::name(&delete_button, &gettext("Delete"));
         head.append(&edit_button);
@@ -432,7 +427,7 @@ impl EventPopover {
             crate::ui::describe(&self.people_label, &people, &guests);
         }
 
-        let guest = is_guest(&event.guests);
+        let guest = super::draft::limited(event);
         self.answer_box.set_visible(guest);
         // The current answer is filled; with none yet, Yes is, as the
         // mockup draws an invitation still waiting. A screen reader hears

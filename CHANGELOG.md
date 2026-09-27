@@ -26,7 +26,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   one, drag across a day to sketch one out, drag a block to move or
   stretch it, or open an event and press the pencil or the trash icon.
   Deleting or dragging offers Undo, and changing or deleting one date of
-  a repeating event asks which occurrences it covers first.
+  a repeating event asks which occurrences it covers first. Double-click
+  an invitation to change its reminders, color and busy status.
 
 ### Improved
 
