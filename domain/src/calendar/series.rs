@@ -154,6 +154,7 @@ fn whole(series: &Event, picked: Picked, edited: Event) -> Event {
     let length = edited.end - edited.start;
     let delta = edited.start - picked.start;
     let start = series.start + delta;
+    let same_rule = edited.rules == series.rules;
     Event {
         calendar: series.calendar.clone(),
         id: series.id.clone(),
@@ -163,7 +164,15 @@ fn whole(series: &Event, picked: Picked, edited: Event) -> Event {
         end: start + length,
         series: None,
         original_start: None,
-        rules: shift_dates(&edited.rules, series, delta),
+        rules: shift_dates(
+            &if same_rule {
+                follow_weekday(&edited.rules, series, picked.start, edited.start)
+            } else {
+                edited.rules.clone()
+            },
+            series,
+            delta,
+        ),
         ..edited
     }
 }
@@ -181,7 +190,7 @@ fn split(
         ..series.clone()
     };
     let rules = if edited.rules == series.rules {
-        from(series, cut)
+        follow_weekday(&from(series, cut), series, picked.start, edited.start)
     } else {
         edited.rules.clone()
     };
@@ -197,6 +206,39 @@ fn split(
     let mut steps = vec![Step::Save(old), Step::Save(new)];
     steps.extend(later(changed, cut));
     steps
+}
+
+/// `rules` moved to the weekday `to` falls on, for a weekly series
+/// whose `BYDAY` names the day `from` falls on. The editor rebuilds a
+/// plain weekly rule itself; one with an interval, a count or an end,
+/// which every series a split ended carries, comes here unchanged and
+/// would keep the old day. A move by whole weeks changes nothing.
+fn follow_weekday(rules: &[String], series: &Event, from: EpochMillis, to: EpochMillis) -> Vec<String> {
+    let zone: Tz = if series.all_day {
+        chrono_tz::UTC
+    } else {
+        series.zone.parse().unwrap_or(chrono_tz::UTC)
+    };
+    let day = |at: EpochMillis| {
+        DateTime::<Utc>::from_timestamp_millis(at)
+            .unwrap_or_default()
+            .with_timezone(&zone)
+            .date_naive()
+    };
+    let days = (day(to) - day(from)).num_days().rem_euclid(7);
+    if days == 0 || !super::repeat::names_weekdays(rules, day(series.start), zone) {
+        return rules.to_vec();
+    }
+    rules
+        .iter()
+        .map(|line| {
+            if super::is_rule_line(line) {
+                super::repeat::later_weekdays(line, days)
+            } else {
+                line.clone()
+            }
+        })
+        .collect()
 }
 
 /// Removals for the changed occurrences at or after `cut`, which would
@@ -795,5 +837,81 @@ mod tests {
                 id: "standup".into()
             }]
         );
+    }
+
+    /// A weekly series from Monday 21 September, with its fourth
+    /// occurrence, Monday 12 October, dragged to Tuesday 13.
+    fn mondays_moved_to_tuesday(rule: &str) -> (Event, Picked, Event) {
+        let series = standup(&[rule]);
+        let picked = Picked {
+            original_start: lisbon(10, 12, 9, 0),
+            start: lisbon(10, 12, 9, 0),
+        };
+        let edited = moved(&series, picked, 24);
+        (series, picked, edited)
+    }
+
+    #[test]
+    fn all_events_moves_a_counted_weekly_rule_to_the_new_weekday() {
+        let (series, picked, edited) =
+            mondays_moved_to_tuesday("RRULE:FREQ=WEEKLY;BYDAY=MO;COUNT=10");
+        let steps = change(&series, &[], picked, edited, RepeatScope::All, "new");
+        let saved = saved(&steps);
+        assert_eq!(saved[0].start, lisbon(9, 22, 9, 0));
+        assert_eq!(
+            saved[0].rules,
+            vec!["RRULE:FREQ=WEEKLY;BYDAY=TU;COUNT=10".to_string()]
+        );
+    }
+
+    #[test]
+    fn following_moves_a_counted_weekly_rule_to_the_new_weekday() {
+        let (series, picked, edited) =
+            mondays_moved_to_tuesday("RRULE:FREQ=WEEKLY;BYDAY=MO;COUNT=10");
+        let steps = change(&series, &[], picked, edited, RepeatScope::Following, "new");
+        let saved = saved(&steps);
+        assert_eq!(
+            saved[0].rules,
+            vec!["RRULE:FREQ=WEEKLY;BYDAY=MO;UNTIL=20261012T075959Z".to_string()]
+        );
+        // Three Mondays went before the cut, so seven are left.
+        assert_eq!(
+            saved[1].rules,
+            vec!["RRULE:FREQ=WEEKLY;BYDAY=TU;COUNT=7".to_string()]
+        );
+    }
+
+    #[test]
+    fn all_events_moves_a_series_an_earlier_split_ended() {
+        let (series, picked, edited) =
+            mondays_moved_to_tuesday("RRULE:FREQ=WEEKLY;BYDAY=MO;UNTIL=20261102T075959Z");
+        let steps = change(&series, &[], picked, edited, RepeatScope::All, "new");
+        assert_eq!(
+            saved(&steps)[0].rules,
+            vec!["RRULE:FREQ=WEEKLY;BYDAY=TU;UNTIL=20261102T075959Z".to_string()]
+        );
+    }
+
+    #[test]
+    fn all_events_moves_every_listed_day_of_a_weekly_rule_with_an_interval() {
+        let (series, picked, edited) =
+            mondays_moved_to_tuesday("RRULE:FREQ=WEEKLY;INTERVAL=2;BYDAY=MO,SU");
+        let steps = change(&series, &[], picked, edited, RepeatScope::All, "new");
+        assert_eq!(
+            saved(&steps)[0].rules,
+            vec!["RRULE:FREQ=WEEKLY;INTERVAL=2;BYDAY=TU,MO".to_string()]
+        );
+    }
+
+    #[test]
+    fn a_weekly_rule_moved_by_a_whole_week_keeps_its_days() {
+        let series = standup(&["RRULE:FREQ=WEEKLY;BYDAY=MO;COUNT=10"]);
+        let picked = Picked {
+            original_start: lisbon(10, 12, 9, 0),
+            start: lisbon(10, 12, 9, 0),
+        };
+        let edited = moved(&series, picked, 7 * 24);
+        let steps = change(&series, &[], picked, edited, RepeatScope::All, "new");
+        assert_eq!(saved(&steps)[0].rules, series.rules);
     }
 }

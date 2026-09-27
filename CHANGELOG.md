@@ -26,7 +26,11 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   one, drag across a day to sketch one out, drag a block to move or
   stretch it, or open an event and press the pencil or the trash icon.
   Deleting or dragging offers Undo, and changing or deleting one date of
-  a repeating event asks which occurrences it covers first.
+  a repeating event asks which occurrences it covers first. Moving a
+  repeating event to another weekday moves its other dates with it, and
+  setting it to not repeat leaves only the one you changed. When Google
+  turns down part of a change to several dates of a repeating event, the
+  event goes back to how it was and a message says why.
 
 ### Improved
 

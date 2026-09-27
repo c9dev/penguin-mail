@@ -200,9 +200,11 @@ impl Draft {
 
     /// The rules to write. They stay as they came unless the person picked
     /// another repeat, or moved a weekly, monthly or yearly series to
-    /// another day, whose rule names the day it falls on. A `Kept` choice
-    /// (a rule from another app, or several `RRULE` lines) never rebuilds:
-    /// it holds what it was opened with whatever day the series moves to.
+    /// another day, whose rule names the day it falls on. A `Custom` rule
+    /// keeps its text here, so its count or end survives; the series change
+    /// moves its weekdays. A `Kept` choice (a rule from another app, or
+    /// several `RRULE` lines) never rebuilds: it holds what it was opened
+    /// with whatever day the series moves to.
     fn rules(&self) -> Vec<String> {
         let zone: Tz = self.zone.parse().unwrap_or(self.view_zone);
         let day = local_day(self.start, zone);
