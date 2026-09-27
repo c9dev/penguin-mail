@@ -1124,8 +1124,9 @@ fn account1_events(now: EpochMillis) -> Vec<CalendarEvent> {
     // "Design crit" overlapping it, so the card reads "You have Design
     // crit then."
     let sent = chrono::DateTime::from_timestamp_millis(now).unwrap_or_default();
-    let design_review_start = next_tuesday(sent.with_timezone(&chrono::Local)).timestamp_millis();
-    let until = design_review_start + 8 * 7 * 24 * 60 * 60_000;
+    let start = next_tuesday(sent.with_timezone(&chrono::Local));
+    let design_review_start = start.timestamp_millis();
+    let until = eight_weeks_later(start);
     events.push(CalendarEvent {
         calendar: "primary".into(),
         id: "design-review".into(),
@@ -2079,6 +2080,21 @@ fn next_weekday(
         .unwrap_or(from)
 }
 
+/// The instant eight weeks after `start`, at the same local wall-clock
+/// time, as an epoch timestamp. Lisbon's clocks fall back within an
+/// eight-week span, so adding eight weeks of milliseconds lands an hour
+/// before the real occurrence at that wall-clock time; going through
+/// the date and re-anchoring to the zone, as [`next_weekday`] does,
+/// keeps a series' `UNTIL` on the same Tuesday its `RRULE` would land on.
+fn eight_weeks_later(start: chrono::DateTime<chrono::Local>) -> EpochMillis {
+    use chrono::{TimeZone, Timelike};
+    let day = start.date_naive() + chrono::Days::new(8 * 7);
+    day.and_hms_opt(start.hour(), start.minute(), start.second())
+        .and_then(|at| chrono::Local.from_local_datetime(&at).earliest())
+        .unwrap_or(start)
+        .timestamp_millis()
+}
+
 #[cfg(test)]
 mod tests {
     use mailrs_domain::{Folder, MailSet, Role};
@@ -2402,6 +2418,26 @@ mod tests {
         assert_eq!(held.sequence, 0);
         assert_eq!(held.summary, "Sprint planning");
         assert_eq!(held.starts_at, Some(planning_was(now).timestamp_millis()));
+    }
+
+    #[tokio::test]
+    async fn the_sample_invitation_is_on_the_work_calendar() {
+        let demo = demo().await;
+        let (work, now) = (demo.account(1).await, demo.now);
+        let day = 24 * 60 * 60 * 1_000;
+        let found = demo
+            .db
+            .read(move |c| mailrs_store::calendar::with_uid(c, work, INVITE_UID, now - 30 * day, now + 90 * day))
+            .await
+            .unwrap();
+        let first = found.first().expect("the design review is on the calendar");
+        let sent = chrono::DateTime::from_timestamp_millis(now).unwrap().with_timezone(&chrono::Local);
+        assert_eq!(first.start, next_tuesday(sent).timestamp_millis());
+        assert_eq!(first.event.title, "Offline editor design review");
+        assert_eq!(first.event.my_answer, None);
+        // UNTIL is eight weeks after the first start, on a Tuesday at the
+        // same time, and iCalendar counts it: nine Tuesdays.
+        assert_eq!(found.len(), 9);
     }
 
     #[tokio::test]
