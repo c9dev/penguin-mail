@@ -552,16 +552,23 @@ impl<A: Accounts> CalendarCopy<A> {
                     sent.pending = false;
                     let attempted = change.body.clone().expect("a create or save always has a body");
                     let new_etag = sent.etag.clone();
-                    self.db
+                    let waiting = self
+                        .db
                         .write(move |c| {
                             // An edit or a delete made while this change
                             // was in flight wins over the answer.
                             if store::finish_change(c, account_id, seq, &attempted, &new_etag)? {
                                 store::save_events(c, account_id, &[sent], crate::now_millis())?;
                             }
-                            Ok(())
+                            store::first_waiting_on(c, seq)
                         })
                         .await?;
+                    // A change waiting on this one that the send already
+                    // walked past, because it sat earlier in the queue,
+                    // goes out now.
+                    if let Some(first) = waiting {
+                        after = after.min(first - 1);
+                    }
                 }
                 // Gone already or not, the removal is done.
                 (_, Ok(None)) | (store::ChangeKind::Remove, Err(BackendError::NotFound)) => {
@@ -600,6 +607,7 @@ impl<A: Accounts> CalendarCopy<A> {
         self.db
             .write(move |c| {
                 store::dequeue(c, seq)?;
+                drop_waiting(c, account_id, seq)?;
                 store::remove_events(c, account_id, &cal, std::slice::from_ref(&id))
             })
             .await?;
@@ -629,6 +637,9 @@ impl<A: Accounts> CalendarCopy<A> {
         self.db
             .write(move |c| {
                 store::dequeue(c, seq)?;
+                for calendar in drop_waiting(c, account_id, seq)? {
+                    store::set_token(c, account_id, &calendar, None, 0)?;
+                }
                 store::remove_events(c, account_id, &cal, std::slice::from_ref(&id))?;
                 store::set_token(c, account_id, &cal, None, 0)
             })
@@ -805,14 +816,17 @@ impl<A: Accounts> CalendarCopy<A> {
 
     /// Queues a held change's steps and releases its rows to reads. A new
     /// event goes out as a create; an occurrence, which has no etag before
-    /// its first change, as a change of that occurrence.
+    /// its first change, as a change of that occurrence. The steps after
+    /// the first wait on it: a split's new series and its removals go out
+    /// only once Google took the cut, and are dropped if it turns it down.
     async fn queue_held(&self, held: Held) -> Result<(), SyncError> {
         let _release = Release { held: &self.held, keys: held.keys() };
         let Held { account_id, steps, before, .. } = held;
         self.db
             .write(move |c| {
-                for step in &steps {
-                    match step {
+                let mut lead = None;
+                for (index, step) in steps.iter().enumerate() {
+                    let seq = match step {
                         Step::Save(event) => {
                             let queued = store::pending_ids(c, account_id, &event.calendar)?.contains(&event.id);
                             let kind = if event.etag.is_empty() && event.series.is_none() && !queued {
@@ -821,11 +835,13 @@ impl<A: Accounts> CalendarCopy<A> {
                                 store::ChangeKind::Save
                             };
                             let event = Event { pending: true, ..event.clone() };
-                            store::enqueue(c, account_id, kind, &event)?;
+                            store::enqueue_after(c, account_id, kind, &event, lead)?
                         }
                         // The cancelled row stays in the copy; the provider
                         // gets a delete of that occurrence.
-                        Step::Cancel(event) => store::enqueue(c, account_id, store::ChangeKind::Remove, event)?,
+                        Step::Cancel(event) => {
+                            store::enqueue_after(c, account_id, store::ChangeKind::Remove, event, lead)?
+                        }
                         Step::Remove { calendar, id } => {
                             let prior = before
                                 .iter()
@@ -836,8 +852,11 @@ impl<A: Accounts> CalendarCopy<A> {
                                     id: id.clone(),
                                     ..Event::default()
                                 });
-                            store::enqueue(c, account_id, store::ChangeKind::Remove, &prior)?;
+                            store::enqueue_after(c, account_id, store::ChangeKind::Remove, &prior, lead)?
                         }
+                    };
+                    if index == 0 {
+                        lead = seq;
                     }
                 }
                 store::clear_holding(c, account_id)?;
@@ -943,6 +962,20 @@ impl<A: Accounts> CalendarCopy<A> {
 /// in the series, and a plain one starts where the series put it.
 fn picked(occurrence: &Occurrence) -> Picked {
     Picked { original_start: occurrence.event.original_start.unwrap_or(occurrence.start), start: occurrence.start }
+}
+
+/// Drops the changes waiting on the row `seq`, which the provider turned
+/// down, and takes their events off the copy: a split's new series never
+/// reached the provider, and the next whole read of each calendar
+/// answered brings back what the provider still holds. Answers those
+/// calendars.
+fn drop_waiting(c: &rusqlite::Connection, account_id: AccountId, seq: i64) -> mailrs_store::Result<HashSet<String>> {
+    let mut calendars = HashSet::new();
+    for (calendar, id) in store::drop_waiting_on(c, seq)? {
+        store::remove_events(c, account_id, &calendar, std::slice::from_ref(&id))?;
+        calendars.insert(calendar);
+    }
+    Ok(calendars)
 }
 
 /// Whether a failed send should stop and keep the change for the next

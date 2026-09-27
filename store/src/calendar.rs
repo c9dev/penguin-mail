@@ -589,6 +589,9 @@ pub struct QueuedChange {
     /// computer made, which the provider has never seen.
     pub etag: Option<String>,
     pub body: Option<Event>,
+    /// The `seq` of the change this one goes out after, while that one is
+    /// still queued. See [`enqueue_after`].
+    pub waits_on: Option<i64>,
 }
 
 /// Queues a change for the provider. One row holds the latest change for
@@ -601,6 +604,20 @@ pub struct QueuedChange {
 /// - a Remove meeting an unsent Remove changes nothing;
 /// - a Save meeting an unsent Remove turns that row into the Save.
 pub fn enqueue(conn: &Connection, account_id: AccountId, kind: ChangeKind, event: &Event) -> Result<()> {
+    enqueue_after(conn, account_id, kind, event, None).map(drop)
+}
+
+/// [`enqueue`], with the change held back until the row `waits_on` names
+/// has left the queue, and dropped unsent when that row is turned down
+/// (see [`drop_waiting_on`]). Answers the `seq` of the row that now holds
+/// the change, or `None` when the change cancelled an unsent create.
+pub fn enqueue_after(
+    conn: &Connection,
+    account_id: AccountId,
+    kind: ChangeKind,
+    event: &Event,
+    waits_on: Option<i64>,
+) -> Result<Option<i64>> {
     let existing: Option<(i64, String)> = conn
         .query_row(
             "SELECT seq, kind FROM calendar_changes WHERE account_id = ?1 AND calendar = ?2 AND event = ?3",
@@ -613,21 +630,21 @@ pub fn enqueue(conn: &Connection, account_id: AccountId, kind: ChangeKind, event
         match (kind, existing_kind.as_str()) {
             (ChangeKind::Remove, "create") => {
                 conn.execute("DELETE FROM calendar_changes WHERE seq = ?1", params![seq])?;
-                return Ok(());
+                return Ok(None);
             }
             (ChangeKind::Remove, "save") => {
                 conn.execute(
                     "UPDATE calendar_changes SET kind = 'remove', body = NULL WHERE seq = ?1",
                     params![seq],
                 )?;
-                return Ok(());
+                return waited(conn, seq, waits_on);
             }
             (ChangeKind::Save, "create") | (ChangeKind::Save, "save") => {
                 conn.execute("UPDATE calendar_changes SET body = ?2 WHERE seq = ?1", params![seq, json(event)])?;
-                return Ok(());
+                return waited(conn, seq, waits_on);
             }
             // The removal already covers the event.
-            (ChangeKind::Remove, "remove") => return Ok(()),
+            (ChangeKind::Remove, "remove") => return waited(conn, seq, waits_on),
             // The provider still holds the event, since its removal never
             // went out, so the edit changes it against the same version.
             (ChangeKind::Save, "remove") => {
@@ -635,7 +652,7 @@ pub fn enqueue(conn: &Connection, account_id: AccountId, kind: ChangeKind, event
                     "UPDATE calendar_changes SET kind = 'save', body = ?2 WHERE seq = ?1",
                     params![seq, json(event)],
                 )?;
-                return Ok(());
+                return waited(conn, seq, waits_on);
             }
             _ => {}
         }
@@ -647,15 +664,44 @@ pub fn enqueue(conn: &Connection, account_id: AccountId, kind: ChangeKind, event
         ChangeKind::Remove => None,
     };
     conn.execute(
-        "INSERT INTO calendar_changes (account_id, calendar, event, kind, etag, body) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
-        params![account_id, event.calendar, event.id, kind.as_str(), etag, body],
+        "INSERT INTO calendar_changes (account_id, calendar, event, kind, etag, body, waits_on) \
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+        params![account_id, event.calendar, event.id, kind.as_str(), etag, body, waits_on],
     )?;
-    Ok(())
+    Ok(Some(conn.last_insert_rowid()))
+}
+
+/// Marks the row `seq` as waiting on `waits_on`, when given, and answers
+/// `seq`.
+fn waited(conn: &Connection, seq: i64, waits_on: Option<i64>) -> Result<Option<i64>> {
+    if let Some(lead) = waits_on {
+        conn.execute("UPDATE calendar_changes SET waits_on = ?2 WHERE seq = ?1", params![seq, lead])?;
+    }
+    Ok(Some(seq))
+}
+
+/// Drops, unsent, the changes waiting on the row `seq`, whose own change
+/// the provider turned down, and answers the calendar and event of each.
+pub fn drop_waiting_on(conn: &Connection, seq: i64) -> Result<Vec<(String, String)>> {
+    let mut stmt = conn.prepare("DELETE FROM calendar_changes WHERE waits_on = ?1 RETURNING calendar, event")?;
+    let rows = stmt.query_map(params![seq], |row| Ok((row.get(0)?, row.get(1)?)))?;
+    Ok(rows.collect::<rusqlite::Result<_>>()?)
+}
+
+/// The first change still waiting on the row `seq`, once that row has
+/// gone out, so a send that already walked past it can go back.
+pub fn first_waiting_on(conn: &Connection, seq: i64) -> Result<Option<i64>> {
+    Ok(conn.query_row(
+        "SELECT MIN(seq) FROM calendar_changes WHERE waits_on = ?1",
+        params![seq],
+        |row| row.get(0),
+    )?)
 }
 
 pub fn queued(conn: &Connection, account_id: AccountId) -> Result<Vec<QueuedChange>> {
     let mut stmt = conn.prepare(
-        "SELECT seq, calendar, event, kind, etag, body FROM calendar_changes WHERE account_id = ?1 ORDER BY seq",
+        "SELECT seq, calendar, event, kind, etag, body, waits_on FROM calendar_changes \
+         WHERE account_id = ?1 ORDER BY seq",
     )?;
     let rows = stmt.query_map(params![account_id], |row| read_change(row, account_id))?;
     Ok(rows.collect::<rusqlite::Result<_>>()?)
@@ -664,12 +710,15 @@ pub fn queued(conn: &Connection, account_id: AccountId) -> Result<Vec<QueuedChan
 /// The account's first queued change after `after`, as it stands now. A
 /// send reads each change just before it goes out, so a change deleted
 /// or edited since the send began goes out as it is now or not at all,
-/// and one queued during the send still goes out in the same send.
+/// and one queued during the send still goes out in the same send. A
+/// change waiting on a row still queued is passed over.
 pub fn next_change(conn: &Connection, account_id: AccountId, after: i64) -> Result<Option<QueuedChange>> {
     Ok(conn
         .query_row(
-            "SELECT seq, calendar, event, kind, etag, body FROM calendar_changes \
-             WHERE account_id = ?1 AND seq > ?2 ORDER BY seq LIMIT 1",
+            "SELECT seq, calendar, event, kind, etag, body, waits_on FROM calendar_changes c \
+             WHERE account_id = ?1 AND seq > ?2 \
+             AND (waits_on IS NULL OR NOT EXISTS (SELECT 1 FROM calendar_changes w WHERE w.seq = c.waits_on)) \
+             ORDER BY seq LIMIT 1",
             params![account_id, after],
             |row| read_change(row, account_id),
         )
@@ -685,6 +734,7 @@ fn read_change(row: &Row, account_id: AccountId) -> rusqlite::Result<QueuedChang
         kind: ChangeKind::parse(&row.get::<_, String>(3)?),
         etag: row.get(4)?,
         body: row.get::<_, Option<String>>(5)?.and_then(|b| serde_json::from_str(&b).ok()),
+        waits_on: row.get(6)?,
     })
 }
 

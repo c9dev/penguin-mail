@@ -599,6 +599,14 @@ CREATE TABLE calendar_holds (
     steps      TEXT NOT NULL
 );
 "#,
+    // The queued change a change goes out after: a series split in two
+    // queues the cut of the old series first, and the new series and the
+    // removals of later changed occurrences wait on the cut's `seq`. When
+    // Google turns the cut down, the rows waiting on it are dropped
+    // unsent, so the new series never reaches its guests.
+    r#"
+ALTER TABLE calendar_changes ADD COLUMN waits_on INTEGER;
+"#,
 ];
 
 /// How long the copy taken before a migration stays once the store has
