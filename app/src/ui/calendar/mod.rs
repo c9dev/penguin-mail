@@ -199,8 +199,10 @@ pub struct CalendarView {
     /// Counts `open`'s reads, so a newer one, or a move to another range,
     /// drops an older answer.
     open_read: Cell<u64>,
-    /// An event to open once the page that holds it has been read.
-    pending_open: RefCell<Option<EventKey>>,
+    /// An occurrence to open once the page that holds it has been read:
+    /// the event and the occurrence's own start, since every occurrence
+    /// of an unsplit series shares one row and one id.
+    pending_open: RefCell<Option<(EventKey, EpochMillis)>>,
     /// Set while the view changes its own switch, so the switch's signal
     /// does not echo the change back.
     switching: Cell<bool>,
@@ -642,10 +644,13 @@ impl CalendarView {
         }
     }
 
-    /// Goes to the day of an event the store holds and opens its
-    /// popover, as the toast about a change the provider turned down
-    /// does. Nothing happens when the store no longer has the event.
-    pub fn open(self: &Rc<Self>, account_id: AccountId, calendar: &str, id: &str) {
+    /// Goes to the day `start` falls on and opens that occurrence's
+    /// popover once the range has drawn, as the toast about a change the
+    /// provider turned down does. `start` is the occurrence's own start,
+    /// not the series' first one: an invitation to next Tuesday's design
+    /// review names that Tuesday, not the series' beginning. Nothing
+    /// happens when the store no longer has the event.
+    pub fn open(self: &Rc<Self>, account_id: AccountId, calendar: &str, id: &str, start: EpochMillis) {
         let (calendar, id) = (calendar.to_string(), id.to_string());
         let key: EventKey = (account_id, calendar.clone(), id.clone());
         let read = self.next_read();
@@ -665,14 +670,23 @@ impl CalendarView {
             }
             match read {
                 Ok(Some(event)) => {
-                    let day = date_of(event.start, event.all_day);
-                    view.pending_open.replace(Some(key));
+                    let day = date_of(start, event.all_day);
+                    view.pending_open.replace(Some((key, start)));
                     view.go_to(day);
                 }
                 Ok(None) => {}
                 Err(err) => tracing::warn!(%err, "could not read the event to open"),
             }
         });
+    }
+
+    /// The pending target, in the flat shape [`shown::keep`] matches
+    /// against.
+    fn pending(&self) -> Option<(AccountId, String, String, EpochMillis)> {
+        self.pending_open
+            .borrow()
+            .clone()
+            .map(|((account_id, calendar, id), start)| (account_id, calendar, id, start))
     }
 
     /// Answers the window's narrow breakpoint: a list in place of Week
@@ -1303,9 +1317,10 @@ impl CalendarView {
 
     fn show_page(self: &Rc<Self>, page: &Rc<Page>, found: Vec<Occurrence>) {
         let show_declined = (self.settings)().show_declined_events;
+        let pending = self.pending();
         let found: Vec<Occurrence> = found
             .into_iter()
-            .filter(|o| shown::keep(o, show_declined))
+            .filter(|o| shown::keep(o, show_declined, pending.as_ref()))
             .collect();
         ensure_tints(found.iter().filter_map(|o| o.event.color.as_deref()));
         let range = page.range.get();
@@ -1370,14 +1385,16 @@ impl CalendarView {
     }
 
     /// The block and occurrence of the event waiting to open, when
-    /// `found` holds it.
+    /// `found` holds it. Matches the occurrence's start too, not only
+    /// its key, since every occurrence of an unsplit series shares the
+    /// same key.
     fn pending_block(
         &self,
         found: &[Occurrence],
         block_of: impl Fn(&EventKey) -> Option<gtk::Widget>,
     ) -> Option<(gtk::Widget, Occurrence)> {
-        let key = self.pending_open.borrow().clone()?;
-        let o = found.iter().find(|o| key_of(o) == key)?;
+        let (key, start) = self.pending_open.borrow().clone()?;
+        let o = found.iter().find(|o| key_of(o) == key && o.start == start)?;
         Some((block_of(&key)?, o.clone()))
     }
 
@@ -1468,7 +1485,9 @@ impl CalendarView {
             match found {
                 Ok(found) => {
                     let show_declined = (view.settings)().show_declined_events;
-                    let found = keep_agenda_events(found, show_declined, first, last);
+                    let pending = view.pending();
+                    let found =
+                        keep_agenda_events(found, show_declined, pending.as_ref(), first, last);
                     view.list
                         .show(&found, &view.calendars.borrow(), &chrono::Local);
                 }
@@ -1514,8 +1533,10 @@ impl CalendarView {
             match found {
                 Ok(found) => {
                     let show_declined = (view.settings)().show_declined_events;
+                    let pending = view.pending();
                     let found = shown::not_yet_listed(found, listed_from);
-                    let found = keep_agenda_events(found, show_declined, first, last);
+                    let found =
+                        keep_agenda_events(found, show_declined, pending.as_ref(), first, last);
                     view.list
                         .prepend(&found, &view.calendars.borrow(), &chrono::Local);
                     view.list_first.set(first);
@@ -1556,7 +1577,7 @@ impl CalendarView {
         self.results.connect_event_activated(move |o| {
             let Some(view) = weak.upgrade() else { return };
             view.search_bar.set_search_mode(false);
-            view.pending_open.replace(Some(key_of(o)));
+            view.pending_open.replace(Some((key_of(o), o.start)));
             view.go_to(date_of(o.start, o.event.all_day));
         });
     }
@@ -2277,9 +2298,10 @@ impl CalendarView {
             })
             .collect();
         let show_declined = (self.settings)().show_declined_events;
+        let pending = self.pending();
         let kept: Vec<Occurrence> = busy
             .iter()
-            .filter(|o| shown::keep(o, show_declined))
+            .filter(|o| shown::keep(o, show_declined, pending.as_ref()))
             .cloned()
             .collect();
         let busy_days = shown::busy_days(&kept, mini.first, mini.days, &chrono::Local);
@@ -2350,13 +2372,14 @@ fn day_span(first: NaiveDate, last: NaiveDate) -> (EpochMillis, EpochMillis) {
     (from, to)
 }
 
-/// Drops a declined event unless `show_declined` keeps it, warms the
-/// tint stylesheet for any colour among what is left, and logs once
-/// when `found` came back full: `MOST_EVENTS` may have cut the read to
-/// `first`..`last` short.
+/// Drops a declined event unless `show_declined` keeps it or `pending`
+/// names it, warms the tint stylesheet for any colour among what is
+/// left, and logs once when `found` came back full: `MOST_EVENTS` may
+/// have cut the read to `first`..`last` short.
 fn keep_agenda_events(
     found: Vec<Occurrence>,
     show_declined: bool,
+    pending: Option<&(AccountId, String, String, EpochMillis)>,
     first: NaiveDate,
     last: NaiveDate,
 ) -> Vec<Occurrence> {
@@ -2369,7 +2392,7 @@ fn keep_agenda_events(
     }
     let found: Vec<Occurrence> = found
         .into_iter()
-        .filter(|o| shown::keep(o, show_declined))
+        .filter(|o| shown::keep(o, show_declined, pending))
         .collect();
     ensure_tints(found.iter().filter_map(|o| o.event.color.as_deref()));
     found

@@ -11,8 +11,8 @@ use adw::prelude::*;
 use gtk::{gio, glib};
 use mailrs_domain::translate::{fill, fill_plural, gettext, with_reason};
 use mailrs_domain::{
-    Account, AccountId, AccountState, ChangeEvent, Label, MessageBody, Provider, Role, Target,
-    ThreadSummary,
+    Account, AccountId, AccountState, ChangeEvent, EpochMillis, Label, MessageBody, Provider,
+    Role, Target, ThreadSummary,
 };
 use mailrs_sync::{
     History, Listing, Loaded, MailAction, MovedFrom, Offers, Permitted, Scope, TriageAction, View,
@@ -2873,10 +2873,17 @@ impl MainWindow {
 
     /// Switches to the calendar and opens one occurrence's popover. A
     /// click on a reminder lands here, and so will Show in Calendar on
-    /// an invitation.
-    pub(crate) fn show_event(&self, account_id: AccountId, calendar: &str, id: &str) {
+    /// an invitation. `start` is that occurrence's own start, not
+    /// necessarily the series' first.
+    pub(crate) fn show_event(
+        &self,
+        account_id: AccountId,
+        calendar: &str,
+        id: &str,
+        start: EpochMillis,
+    ) {
         let _ = WidgetExt::activate_action(&self.window, "win.show-calendar", None);
-        self.calendar.open(account_id, calendar, id);
+        self.calendar.open(account_id, calendar, id, start);
     }
 
     /// Opens Preferences, on the signature of `signature_of` when given.

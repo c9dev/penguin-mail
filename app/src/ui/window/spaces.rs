@@ -221,16 +221,18 @@ impl MainWindow {
                 turned_down.calendar.clone(),
                 turned_down.event.clone(),
             );
-            let still_there = this
+            let event = this
                 .core
                 .read(move |c| store::event(c, account_id, &calendar, &id))
                 .await
-                .is_ok_and(|event| event.is_some());
+                .ok()
+                .flatten();
             let toast = adw::Toast::builder()
                 .title(toast_title(&turned_down_words(&turned_down)))
                 .timeout(8)
                 .build();
-            if still_there {
+            if let Some(event) = event {
+                let start = event.start;
                 toast.set_button_label(Some(&gettext("Show Event")));
                 let weak = Rc::downgrade(&this);
                 toast.connect_button_clicked(move |_| {
@@ -240,6 +242,7 @@ impl MainWindow {
                         turned_down.account_id,
                         &turned_down.calendar,
                         &turned_down.event,
+                        start,
                     );
                 });
             }
