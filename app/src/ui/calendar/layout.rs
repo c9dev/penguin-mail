@@ -2,7 +2,7 @@
 //! hours: lanes for overlapping events, which day columns a span
 //! crosses, and how a month cell folds a crowded day into "N more".
 
-use chrono::{DateTime, NaiveDateTime, TimeZone, Utc};
+use chrono::{DateTime, NaiveDate, NaiveDateTime, TimeZone, Utc};
 use mailrs_domain::EpochMillis;
 
 /// The most lanes an hour's events share before the rest fold into a
@@ -151,6 +151,17 @@ pub fn wall_offset<Z: TimeZone>(at: EpochMillis, day_start_local: NaiveDateTime,
     (local - day_start_local).num_seconds() as f64 / 3600.0
 }
 
+/// The instant at `hours` of wall clock on `day` in `tz`, the inverse of
+/// [`wall_offset`]. An hour the clock repeats gives its first pass; one
+/// the clock skips gives the first instant after the gap.
+pub fn instant_at<Z: TimeZone>(day: NaiveDate, hours: f64, tz: &Z) -> EpochMillis {
+    let minutes = (hours * 60.0).round() as i64;
+    let wall = day.and_hms_opt(0, 0, 0).expect("midnight exists") + chrono::Duration::minutes(minutes);
+    (0..=8)
+        .find_map(|quarter| tz.from_local_datetime(&(wall + chrono::Duration::minutes(15 * quarter))).earliest())
+        .map_or(0, |at| at.timestamp_millis())
+}
+
 /// How many of a month cell's `count` events fit in `rows_that_fit`
 /// before a "N more" line, keeping the last row for that line once the
 /// cell is crowded.
@@ -262,6 +273,26 @@ mod tests {
             .unwrap()
             .timestamp_millis();
         assert_eq!(wall_offset(noon, midnight, &tz), 12.0);
+    }
+
+    #[test]
+    fn a_wall_clock_time_turns_back_into_the_instant() {
+        use chrono::TimeZone;
+        let tz = chrono_tz::Europe::Lisbon;
+        let day = chrono::NaiveDate::from_ymd_opt(2026, 10, 25).unwrap();
+        let noon = tz.from_local_datetime(&day.and_hms_opt(12, 0, 0).unwrap()).single().unwrap().timestamp_millis();
+        assert_eq!(instant_at(day, 12.0, &tz), noon);
+        assert_eq!(wall_offset(instant_at(day, 15.25, &tz), day.and_hms_opt(0, 0, 0).unwrap(), &tz), 15.25);
+    }
+
+    #[test]
+    fn a_time_the_clock_skips_lands_after_the_gap() {
+        use chrono::TimeZone;
+        let tz = chrono_tz::Europe::Lisbon;
+        // On 29 March 2026 Lisbon jumps from 01:00 to 02:00.
+        let day = chrono::NaiveDate::from_ymd_opt(2026, 3, 29).unwrap();
+        let two = chrono::Utc.with_ymd_and_hms(2026, 3, 29, 1, 0, 0).unwrap().timestamp_millis();
+        assert_eq!(instant_at(day, 1.5, &tz), two);
     }
 
     #[test]

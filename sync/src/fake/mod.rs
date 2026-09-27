@@ -180,6 +180,8 @@ pub struct FakeState {
     /// Play Google forgetting every sync token: a read with one answers
     /// `ExpiredSyncToken`.
     pub expire_calendar_tokens: bool,
+    /// Play the network being down: every call fails until it is cleared.
+    pub offline: bool,
     /// Play Google's answer to a write on an event already deleted: 410
     /// Gone, which the client reads as `ExpiredSyncToken`, rather than
     /// the 404 the fake gives otherwise.
@@ -187,6 +189,9 @@ pub struct FakeState {
     /// Calendars Google no longer has. Every read of one and every write
     /// to one answers `NotFound`.
     pub deleted_calendars: Vec<String>,
+    /// Play Google turning down every new event, as it does a body it
+    /// cannot take: a create answers 400 with Google's reason.
+    pub refuse_new_events: bool,
     /// The OAuth scopes the account has not granted. A call that needs one
     /// answers `MissingScope`, as Google does until the user says yes.
     /// Change it through [`FakeGmail::withhold`] and [`FakeGmail::grant`].
@@ -372,8 +377,10 @@ impl FakeGmail {
                 calendar_events: Vec::new(),
                 calendar_log: Vec::new(),
                 expire_calendar_tokens: false,
+                offline: false,
                 deleted_answers_gone: false,
                 deleted_calendars: Vec::new(),
+                refuse_new_events: false,
                 withheld: BTreeSet::new(),
                 calendar_off: None,
                 clock: None,
@@ -620,6 +627,9 @@ impl FakeGmail {
                     0 => return Err(s.planned.remove(at).err),
                     _ => s.planned[at].skip -= 1,
                 }
+            }
+            if s.offline {
+                return Err(GmailError::Network("offline".into()));
             }
             s.failures.pop_front().map_or(Ok(()), Err)
         })
@@ -1330,6 +1340,12 @@ impl GmailApi for FakeGmail {
         let held = self.with(|s| {
             s.calendar_events.iter().find(|e| e.calendar == event.calendar && e.id == event.id).cloned()
         });
+        if create && self.with(|s| s.refuse_new_events) {
+            return Err(GmailError::Http {
+                status: 400,
+                body: r#"{"error":{"code":400,"message":"Invalid recurrence rule."}}"#.into(),
+            });
+        }
         match (&held, create) {
             (Some(_), true) => return Err(GmailError::Http { status: 409, body: "duplicate".into() }),
             // An occurrence of a series has an id before anyone changes
@@ -1385,6 +1401,18 @@ impl GmailApi for FakeGmail {
             (Some(held), Some(etag)) if held.etag != etag => Err(GmailError::Changed),
             _ => {
                 self.drop_calendar_event(calendar, id);
+                // Google cancels a series' changed occurrences with it,
+                // and the change feed hands each out as cancelled.
+                let changed: Vec<calendar::Event> = self.with(|s| {
+                    s.calendar_events
+                        .iter()
+                        .filter(|e| e.calendar == calendar && e.series.as_deref() == Some(id))
+                        .cloned()
+                        .collect()
+                });
+                for occurrence in changed {
+                    self.put_calendar_event(calendar::Event { status: calendar::Status::Cancelled, ..occurrence });
+                }
                 Ok(())
             }
         }

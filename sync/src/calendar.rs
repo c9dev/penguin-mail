@@ -23,6 +23,7 @@ use std::sync::Arc;
 
 use chrono::{DateTime, NaiveDate};
 use mailrs_domain::calendar as model;
+use mailrs_domain::calendar::series::{RepeatScope, Step};
 use mailrs_domain::invitation::Answer;
 use mailrs_domain::{AccountId, EpochMillis};
 use mailrs_gmail::{Event, EventFields, EventTime};
@@ -110,10 +111,10 @@ impl<A: Accounts> Calendar<A> {
     /// When the copy holds a row for `id` the change goes into the
     /// queue, the same way `create` does. An occurrence id
     /// (`<series>_<start>`) names one occurrence of a series in the copy:
-    /// that change goes to the provider at once, for that occurrence
-    /// alone, since the queue holds whole events. Any other id, such as
-    /// one the live path gave before the copy's first read, goes straight
-    /// to the provider.
+    /// the change queues as a changed occurrence, for that occurrence
+    /// alone, as the window's "This event only" does. Any other id, such
+    /// as one the live path gave before the copy's first read, goes
+    /// straight to the provider.
     pub async fn update(
         &self,
         account_id: AccountId,
@@ -133,9 +134,26 @@ impl<A: Accounts> Calendar<A> {
                 event.pending = true;
                 return Ok(Permitted::Done(event));
             }
-            if let Some(mut one) = self.occurrence(account_id, id).await? {
-                apply_fields(&mut one, fields);
-                return self.copy.put_occurrence(account_id, &one).await;
+            if let Some(occurrence) = self.occurrence(account_id, id).await? {
+                let mut edited = model::Event {
+                    start: occurrence.start,
+                    end: occurrence.end,
+                    ..model::Event::clone(&occurrence.event)
+                };
+                apply_fields(&mut edited, fields);
+                let steps = self
+                    .copy
+                    .change_steps(account_id, &occurrence, edited, Some(RepeatScope::This))
+                    .await?;
+                let saved = steps.iter().find_map(|step| match step {
+                    Step::Save(event) => Some(model::Event { pending: true, ..event.clone() }),
+                    _ => None,
+                });
+                if let Permitted::NeedsPermission = self.copy.apply(account_id, steps).await? {
+                    return Ok(Permitted::NeedsPermission);
+                }
+                self.send_soon(account_id);
+                return Ok(Permitted::Done(saved.expect("one occurrence changes in one save")));
             }
         }
         match calendar.update_event(id, fields).await {
@@ -146,9 +164,9 @@ impl<A: Accounts> Calendar<A> {
     }
 
     /// Takes event `id` off the calendar and tells its guests, through
-    /// the queue when the copy holds it, straight to the provider for one
-    /// occurrence of a series or an id the copy does not know (see
-    /// [`Self::update`]).
+    /// the queue when the copy holds it or it names one occurrence of a
+    /// series, which the queue cancels alone; straight to the provider for
+    /// an id the copy does not know (see [`Self::update`]).
     pub async fn delete(
         &self,
         account_id: AccountId,
@@ -165,8 +183,13 @@ impl<A: Accounts> Calendar<A> {
                 self.send_soon(account_id);
                 return Ok(Permitted::Done(()));
             }
-            if let Some(one) = self.occurrence(account_id, id).await? {
-                return self.copy.remove_occurrence(account_id, &one.calendar, id).await;
+            if let Some(occurrence) = self.occurrence(account_id, id).await? {
+                let steps = self.copy.delete_steps(account_id, &occurrence, Some(RepeatScope::This)).await?;
+                if let Permitted::NeedsPermission = self.copy.apply(account_id, steps).await? {
+                    return Ok(Permitted::NeedsPermission);
+                }
+                self.send_soon(account_id);
+                return Ok(Permitted::Done(()));
             }
         }
         permitted(calendar.delete_event(id).await)
@@ -196,12 +219,10 @@ impl<A: Accounts> Calendar<A> {
     }
 
     /// The occurrence an occurrence id names (`<series>_<start>`, as
-    /// [`model::Occurrence::id`] writes it), as an event of its own on the
-    /// series' calendar: the series' details at that occurrence's time,
-    /// under the occurrence id, with no rules. `None` when `id` is not in
-    /// that form, names no series in the copy, or names a start the series
-    /// never reaches.
-    async fn occurrence(&self, account_id: AccountId, id: &str) -> Result<Option<model::Event>, SyncError> {
+    /// [`model::Occurrence::id`] writes it), with the series as its event.
+    /// `None` when `id` is not in that form, names no series in the copy,
+    /// or names a start the series never reaches.
+    async fn occurrence(&self, account_id: AccountId, id: &str) -> Result<Option<model::Occurrence>, SyncError> {
         let Some((series_id, start)) = model::split_occurrence_id(id) else {
             return Ok(None);
         };
@@ -215,18 +236,8 @@ impl<A: Accounts> Calendar<A> {
         if !model::expand(&series, start, start + 1).iter().any(|&(at, _)| at == start) {
             return Ok(None);
         }
-        let length = series.end - series.start;
-        Ok(Some(model::Event {
-            id: id.to_string(),
-            etag: String::new(),
-            start,
-            end: start + length,
-            rules: Vec::new(),
-            series: Some(series.id.clone()),
-            original_start: Some(start),
-            pending: false,
-            ..series
-        }))
+        let end = start + (series.end - series.start);
+        Ok(Some(model::Occurrence { account_id, event: Arc::new(series), start, end }))
     }
 
     async fn synced(&self, account_id: AccountId) -> Result<bool, SyncError> {

@@ -101,21 +101,44 @@ buttons that act on it.
 In Day and Week, Tab passes the day headings first, each of which opens
 its day, then the all-day row, then the events, day by day and earliest
 first. A "N more" button sits among a day's events at the hour it
-starts. Enter opens the event with the focus, and the popover starts on
-your current answer when you are a guest. Escape closes it and gives
-the focus back to the event. Tab reaches only the range on screen: the
-ranges either side, kept ready for a swipe, are hidden from the
-keyboard and from screen readers. In a week or a month each event
-names its day, such as "Stand-up, Monday 21, 09:30 to 09:45, Work".
+starts. Space opens the event with the focus, and the popover starts on
+your current answer when you are a guest; Enter opens the editor
+instead, for an event the account may change as a whole, and otherwise
+opens the popover, same as Space. Escape closes the popover and gives
+the focus back to the event; the popover no longer auto-hides, so a
+press anywhere else in the window closes it the same way. Delete (and
+the numeric keypad's own Delete) takes the focused event off the grid
+at once and offers Undo, for an event the account may change as a
+whole. Tab reaches only the range on screen: the ranges either side,
+kept ready for a swipe, are hidden from the keyboard and from screen
+readers. In a week or a month each event names its day, such as
+"Stand-up, Monday 21, 09:30 to 09:45, Work".
 
 T goes to today; D, W and M switch to Day, Week and Month; Left and
 Right step to the previous or next range. After a change of view or
 range, the focus goes to the first event on screen, or to Today when
 there is none. Ctrl+F opens the calendar's own search bar, which wins
-over the main window's search while the calendar shows. Every one of
-these gives way while a text field, such as search, has the focus. The
-main menu's Assistant item, and Ctrl+J, open the assistant in either
-space.
+over the main window's search while the calendar shows. N opens quick
+create at the focused slot in Day or Week, or at nine in the morning on
+the focused day in Month; the narrow list has no grid to point quick
+create at, so N opens the editor there instead. It does nothing while
+no calendar takes new events, the same as the New Event button beside
+the header. Every one of these gives way while a text field, such as
+search, has the focus. The main menu's Assistant item, and Ctrl+J, open
+the assistant in either space.
+
+A double click opens the popover on its first click and the editor on
+its second, for an event the account may change as a whole; on any
+other event the second click does nothing more, since the popover
+already answers it. Edit and Delete sit as two icons in the popover's
+title row, for the same events; an invitation the account only
+answers, such as the mockup draws, has neither.
+
+In Day and Week, a drag of a card has a keyboard path beside it: with
+the focus on a card the account may move, Shift+Up and Shift+Down move
+it a quarter hour earlier or later, and Shift+Alt+Up and Shift+Alt+Down
+shorten or lengthen it by the same step. A card that offers this says so
+in the line read after its name.
 
 ## Checking it
 
@@ -134,10 +157,12 @@ menu, which the page opens, nor the composer's menus. It also switches
 to the calendar and walks Day, Week, Month and the list a narrow
 window shows, opens an invitation's popover in Week and a crowded day's
 "N more" list in Month, reads the main menu there, Show Declined Events
-included, and reports the calendar's own line of controls apart from
-the mail walk's. `--here` reads
-the copy already on your screen instead, which is how to check a dialog
-or the composer: open it, then run the script.
+included, opens the New Event button and the editor it shows, expands
+its More section, walks it, then opens the Repeats row's Custom Repeat
+page and walks that too before closing the editor, and reports the
+calendar's own line of controls apart from the mail walk's. `--here`
+reads the copy already on your screen instead, which is how to check a
+dialog or the composer: open it, then run the script.
 
 ## What the keyboard cannot reach
 

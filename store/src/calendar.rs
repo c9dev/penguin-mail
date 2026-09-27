@@ -9,6 +9,7 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
+use mailrs_domain::calendar::series::Step;
 use mailrs_domain::calendar::{self as model, Access, Calendar, Event, Guest, Occurrence, Status};
 use mailrs_domain::invitation::Answer;
 use mailrs_domain::{AccountId, EpochMillis};
@@ -293,6 +294,37 @@ pub fn event(conn: &Connection, account_id: AccountId, calendar: &str, id: &str)
     }
 }
 
+/// A series' changed and cancelled occurrences with their guests, earliest
+/// original start first.
+pub fn changed_occurrences(
+    conn: &Connection,
+    account_id: AccountId,
+    calendar: &str,
+    series: &str,
+) -> Result<Vec<Event>> {
+    let mut stmt = conn.prepare(&format!(
+        "SELECT {COLUMNS} FROM events e WHERE e.account_id = ?1 AND e.calendar = ?2 AND e.series = ?3 \
+         ORDER BY e.original_start"
+    ))?;
+    let mut found: Vec<Event> =
+        stmt.query_map(params![account_id, calendar, series], read_event)?.collect::<rusqlite::Result<_>>()?;
+    for event in &mut found {
+        event.guests = guests(conn, account_id, calendar, &event.id)?;
+    }
+    Ok(found)
+}
+
+/// Marks an event as matching the provider again once its queued change
+/// went out. A cancelled occurrence needs this: its row stays in the copy
+/// after its removal went out, and would otherwise show as waiting.
+pub fn settle(conn: &Connection, account_id: AccountId, calendar: &str, id: &str) -> Result<()> {
+    conn.execute(
+        "UPDATE events SET pending = 0 WHERE account_id = ?1 AND calendar = ?2 AND id = ?3",
+        params![account_id, calendar, id],
+    )?;
+    Ok(())
+}
+
 /// Finds an event by its id alone, when which calendar holds it is not
 /// known: the primary calendar first, then a calendar the account owns,
 /// then any other. The same id can show on more than one calendar at
@@ -509,6 +541,9 @@ fn read_event(row: &Row) -> rusqlite::Result<Event> {
         original_start: row.get(22)?,
         pending: row.get(23)?,
         guests: Vec::new(),
+        // A Meet request lives only in a queued write, never in a row
+        // the store reads back.
+        meet_request: None,
     })
 }
 
@@ -554,6 +589,24 @@ pub struct QueuedChange {
     /// computer made, which the provider has never seen.
     pub etag: Option<String>,
     pub body: Option<Event>,
+    /// The `seq` of the change this one goes out after, while that one is
+    /// still queued. See [`enqueue_after`].
+    pub waits_on: Option<i64>,
+    /// The old series as it was before a split, on the new series' row,
+    /// to put back if the provider turns this row down.
+    pub restores: Option<Event>,
+}
+
+/// A queued change dropped unsent because a change it waited on was
+/// turned down.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Dropped {
+    /// The row is gone; the event's copy row should go too.
+    Gone { calendar: String, event: String },
+    /// A waiting step had folded into an earlier change of this event,
+    /// which is queued again as it was: `body` is that change's event, or
+    /// `None` for a removal.
+    Kept { calendar: String, event: String, body: Option<Box<Event>> },
 }
 
 /// Queues a change for the provider. One row holds the latest change for
@@ -563,7 +616,26 @@ pub struct QueuedChange {
 /// - a Remove meeting an unsent Create drops the row: the provider never
 ///   heard of the event, so there is nothing left to tell it;
 /// - a Remove meeting an unsent Save turns that row into the Remove.
+/// - a Remove meeting an unsent Remove changes nothing;
+/// - a Save meeting an unsent Remove turns that row into the Save.
 pub fn enqueue(conn: &Connection, account_id: AccountId, kind: ChangeKind, event: &Event) -> Result<()> {
+    enqueue_after(conn, account_id, kind, event, None, None).map(drop)
+}
+
+/// [`enqueue`], with the change held back until the row `waits_on` names
+/// has left the queue, and dropped unsent when that row is turned down
+/// (see [`drop_waiting_on`]). `restores` is kept on the row for the
+/// sender to put back if the provider turns it down. Answers the `seq`
+/// of the row that now holds the change, or `None` when the change
+/// cancelled an unsent create.
+pub fn enqueue_after(
+    conn: &Connection,
+    account_id: AccountId,
+    kind: ChangeKind,
+    event: &Event,
+    waits_on: Option<i64>,
+    restores: Option<&Event>,
+) -> Result<Option<i64>> {
     let existing: Option<(i64, String)> = conn
         .query_row(
             "SELECT seq, kind FROM calendar_changes WHERE account_id = ?1 AND calendar = ?2 AND event = ?3",
@@ -571,23 +643,52 @@ pub fn enqueue(conn: &Connection, account_id: AccountId, kind: ChangeKind, event
             |row| Ok((row.get(0)?, row.get(1)?)),
         )
         .optional()?;
+    // A waiting step that folds into an earlier change keeps that change,
+    // so dropping the step can put it back.
+    if let (Some((seq, _)), Some(_)) = (&existing, waits_on) {
+        conn.execute(
+            "UPDATE calendar_changes SET prior_kind = kind, prior_body = body \
+             WHERE seq = ?1 AND prior_kind IS NULL",
+            params![seq],
+        )?;
+    }
+    let restores = restores.map(json);
+    let waited = |seq: i64| -> Result<Option<i64>> {
+        conn.execute(
+            "UPDATE calendar_changes SET waits_on = COALESCE(?2, waits_on), restores = COALESCE(?3, restores) \
+             WHERE seq = ?1",
+            params![seq, waits_on, restores],
+        )?;
+        Ok(Some(seq))
+    };
 
     if let Some((seq, existing_kind)) = existing {
         match (kind, existing_kind.as_str()) {
             (ChangeKind::Remove, "create") => {
                 conn.execute("DELETE FROM calendar_changes WHERE seq = ?1", params![seq])?;
-                return Ok(());
+                return Ok(None);
             }
             (ChangeKind::Remove, "save") => {
                 conn.execute(
                     "UPDATE calendar_changes SET kind = 'remove', body = NULL WHERE seq = ?1",
                     params![seq],
                 )?;
-                return Ok(());
+                return waited(seq);
             }
             (ChangeKind::Save, "create") | (ChangeKind::Save, "save") => {
                 conn.execute("UPDATE calendar_changes SET body = ?2 WHERE seq = ?1", params![seq, json(event)])?;
-                return Ok(());
+                return waited(seq);
+            }
+            // The removal already covers the event.
+            (ChangeKind::Remove, "remove") => return waited(seq),
+            // The provider still holds the event, since its removal never
+            // went out, so the edit changes it against the same version.
+            (ChangeKind::Save, "remove") => {
+                conn.execute(
+                    "UPDATE calendar_changes SET kind = 'save', body = ?2 WHERE seq = ?1",
+                    params![seq, json(event)],
+                )?;
+                return waited(seq);
             }
             _ => {}
         }
@@ -599,15 +700,69 @@ pub fn enqueue(conn: &Connection, account_id: AccountId, kind: ChangeKind, event
         ChangeKind::Remove => None,
     };
     conn.execute(
-        "INSERT INTO calendar_changes (account_id, calendar, event, kind, etag, body) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
-        params![account_id, event.calendar, event.id, kind.as_str(), etag, body],
+        "INSERT INTO calendar_changes (account_id, calendar, event, kind, etag, body, waits_on, restores) \
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+        params![account_id, event.calendar, event.id, kind.as_str(), etag, body, waits_on, restores],
     )?;
-    Ok(())
+    Ok(Some(conn.last_insert_rowid()))
+}
+
+/// A row's `prior_kind` and `prior_body`.
+type Prior = (Option<String>, Option<String>);
+
+/// Drops, unsent, the changes waiting on the row `seq`, whose own change
+/// the provider turned down, and the ones waiting on those in turn. A
+/// row a waiting step folded into goes back to the change it held
+/// before, and stays queued.
+pub fn drop_waiting_on(conn: &Connection, seq: i64) -> Result<Vec<Dropped>> {
+    let mut dropped = Vec::new();
+    let mut leads = vec![seq];
+    while let Some(lead) = leads.pop() {
+        let waiting: Vec<(i64, String, String, Prior)> = {
+            let mut stmt = conn.prepare(
+                "SELECT seq, calendar, event, prior_kind, prior_body FROM calendar_changes WHERE waits_on = ?1",
+            )?;
+            let rows = stmt.query_map(params![lead], |row| {
+                Ok((row.get(0)?, row.get(1)?, row.get(2)?, (row.get(3)?, row.get(4)?)))
+            })?;
+            rows.collect::<rusqlite::Result<_>>()?
+        };
+        for (seq, calendar, event, (prior_kind, prior_body)) in waiting {
+            leads.push(seq);
+            match prior_kind {
+                Some(kind) => {
+                    conn.execute(
+                        "UPDATE calendar_changes SET kind = ?2, body = ?3, waits_on = NULL, restores = NULL, \
+                         prior_kind = NULL, prior_body = NULL WHERE seq = ?1",
+                        params![seq, kind, prior_body],
+                    )?;
+                    let body = prior_body.and_then(|b| serde_json::from_str(&b).ok());
+                    dropped.push(Dropped::Kept { calendar, event, body });
+                }
+                None => {
+                    conn.execute("DELETE FROM calendar_changes WHERE seq = ?1", params![seq])?;
+                    dropped.push(Dropped::Gone { calendar, event });
+                }
+            }
+        }
+    }
+    Ok(dropped)
+}
+
+/// The first change still waiting on the row `seq`, once that row has
+/// gone out, so a send that already walked past it can go back.
+pub fn first_waiting_on(conn: &Connection, seq: i64) -> Result<Option<i64>> {
+    Ok(conn.query_row(
+        "SELECT MIN(seq) FROM calendar_changes WHERE waits_on = ?1",
+        params![seq],
+        |row| row.get(0),
+    )?)
 }
 
 pub fn queued(conn: &Connection, account_id: AccountId) -> Result<Vec<QueuedChange>> {
     let mut stmt = conn.prepare(
-        "SELECT seq, calendar, event, kind, etag, body FROM calendar_changes WHERE account_id = ?1 ORDER BY seq",
+        "SELECT seq, calendar, event, kind, etag, body, waits_on, restores FROM calendar_changes \
+         WHERE account_id = ?1 ORDER BY seq",
     )?;
     let rows = stmt.query_map(params![account_id], |row| read_change(row, account_id))?;
     Ok(rows.collect::<rusqlite::Result<_>>()?)
@@ -616,12 +771,15 @@ pub fn queued(conn: &Connection, account_id: AccountId) -> Result<Vec<QueuedChan
 /// The account's first queued change after `after`, as it stands now. A
 /// send reads each change just before it goes out, so a change deleted
 /// or edited since the send began goes out as it is now or not at all,
-/// and one queued during the send still goes out in the same send.
+/// and one queued during the send still goes out in the same send. A
+/// change waiting on a row still queued is passed over.
 pub fn next_change(conn: &Connection, account_id: AccountId, after: i64) -> Result<Option<QueuedChange>> {
     Ok(conn
         .query_row(
-            "SELECT seq, calendar, event, kind, etag, body FROM calendar_changes \
-             WHERE account_id = ?1 AND seq > ?2 ORDER BY seq LIMIT 1",
+            "SELECT seq, calendar, event, kind, etag, body, waits_on, restores FROM calendar_changes c \
+             WHERE account_id = ?1 AND seq > ?2 \
+             AND (waits_on IS NULL OR NOT EXISTS (SELECT 1 FROM calendar_changes w WHERE w.seq = c.waits_on)) \
+             ORDER BY seq LIMIT 1",
             params![account_id, after],
             |row| read_change(row, account_id),
         )
@@ -637,6 +795,8 @@ fn read_change(row: &Row, account_id: AccountId) -> rusqlite::Result<QueuedChang
         kind: ChangeKind::parse(&row.get::<_, String>(3)?),
         etag: row.get(4)?,
         body: row.get::<_, Option<String>>(5)?.and_then(|b| serde_json::from_str(&b).ok()),
+        waits_on: row.get(6)?,
+        restores: row.get::<_, Option<String>>(7)?.and_then(|b| serde_json::from_str(&b).ok()),
     })
 }
 
@@ -649,9 +809,76 @@ pub fn pending_ids(conn: &Connection, account_id: AccountId, calendar: &str) -> 
     Ok(rows.collect::<rusqlite::Result<_>>()?)
 }
 
+/// The ids of a calendar's events with an unsent removal. A read keeps a
+/// series' changed occurrences out while the series waits to be removed.
+pub fn removing_ids(conn: &Connection, account_id: AccountId, calendar: &str) -> Result<HashSet<String>> {
+    let mut stmt = conn.prepare(
+        "SELECT event FROM calendar_changes WHERE account_id = ?1 AND calendar = ?2 AND kind = 'remove'",
+    )?;
+    let rows = stmt.query_map(params![account_id, calendar], |row| row.get(0))?;
+    Ok(rows.collect::<rusqlite::Result<_>>()?)
+}
+
+/// Settles a removal that went out: the row comes off the queue and the
+/// event, a cancelled occurrence still in the copy, stops waiting. An
+/// edit made while the removal was in flight turned the row into a save,
+/// which stays queued, and the event keeps waiting for it.
+pub fn finish_removal(conn: &Connection, account_id: AccountId, seq: i64) -> Result<()> {
+    let removed: Option<(String, String)> = conn
+        .query_row(
+            "DELETE FROM calendar_changes WHERE seq = ?1 AND kind = 'remove' RETURNING calendar, event",
+            params![seq],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .optional()?;
+    if let Some((calendar, id)) = removed {
+        settle(conn, account_id, &calendar, &id)?;
+    }
+    Ok(())
+}
+
 pub fn dequeue(conn: &Connection, seq: i64) -> Result<()> {
     conn.execute("DELETE FROM calendar_changes WHERE seq = ?1", params![seq])?;
     Ok(())
+}
+
+/// Persists the steps of a change waiting on its Undo toast, replacing
+/// any row already there: only one change is held at a time. A crash or
+/// a quit before the toast closes leaves this row for the next start to
+/// queue, since no toast survives to close over it.
+pub fn save_holding(conn: &Connection, account_id: AccountId, steps: &[Step], before: &[Event]) -> Result<()> {
+    conn.execute(
+        "INSERT INTO calendar_holds (account_id, steps, before) VALUES (?1, ?2, ?3) \
+         ON CONFLICT (account_id) DO UPDATE SET steps = excluded.steps, before = excluded.before",
+        params![account_id, json(steps), json(before)],
+    )?;
+    Ok(())
+}
+
+/// Drops the account's persisted held change, once it is queued or taken
+/// back.
+pub fn clear_holding(conn: &Connection, account_id: AccountId) -> Result<()> {
+    conn.execute("DELETE FROM calendar_holds WHERE account_id = ?1", params![account_id])?;
+    Ok(())
+}
+
+/// A held change persisted for the next start: its account, its steps
+/// and the rows they replaced.
+pub type Holding = (AccountId, Vec<Step>, Vec<Event>);
+
+/// Every held change still persisted from a run that stopped before its
+/// Undo toast closed, read once at start so it can be queued.
+pub fn holdings(conn: &Connection) -> Result<Vec<Holding>> {
+    let mut stmt = conn.prepare("SELECT account_id, steps, before FROM calendar_holds")?;
+    let rows = stmt.query_map([], |row| {
+        Ok((row.get::<_, AccountId>(0)?, row.get::<_, String>(1)?, row.get::<_, Option<String>>(2)?))
+    })?;
+    let mut found = Vec::new();
+    for row in rows {
+        let (account_id, steps, before) = row?;
+        found.push((account_id, parse(&steps), before.as_deref().map(parse).unwrap_or_default()));
+    }
+    Ok(found)
 }
 
 /// Settles a change that just went out, and answers whether the
@@ -704,7 +931,7 @@ pub fn finish_change(
     }
 }
 
-fn json<T: serde::Serialize>(value: &T) -> String {
+fn json<T: serde::Serialize + ?Sized>(value: &T) -> String {
     serde_json::to_string(value).unwrap_or_default()
 }
 
@@ -1230,5 +1457,114 @@ mod tests {
         let second = next_change(&conn, id, first.seq).unwrap().unwrap();
         assert_eq!(second.event, "two");
         assert!(next_change(&conn, id, second.seq).unwrap().is_none());
+    }
+
+    #[test]
+    fn a_series_lists_its_changed_occurrences() {
+        let (conn, id) = store();
+        let mut standup = event("primary", "standup", MONDAY + 9 * HOUR, 1);
+        standup.rules = vec!["RRULE:FREQ=DAILY;COUNT=3".into()];
+        let mut moved = event("primary", "standup_tue", MONDAY + DAY + 11 * HOUR, 1);
+        moved.series = Some("standup".into());
+        moved.original_start = Some(MONDAY + DAY + 9 * HOUR);
+        moved.pending = true;
+        moved.guests = vec![Guest { email: "ann@example.com".into(), ..Guest::default() }];
+        save_events(&conn, id, &[standup, moved], 1).unwrap();
+        let found = changed_occurrences(&conn, id, "primary", "standup").unwrap();
+        assert_eq!(found.iter().map(|e| e.id.as_str()).collect::<Vec<_>>(), vec!["standup_tue"]);
+        assert_eq!(found[0].guests.len(), 1, "with its guests");
+        settle(&conn, id, "primary", "standup_tue").unwrap();
+        assert!(!super::event(&conn, id, "primary", "standup_tue").unwrap().unwrap().pending);
+    }
+
+    /// A cancelled occurrence can be removed twice before a send, once by
+    /// the window and once by the assistant, and each row goes out once.
+    #[test]
+    fn a_second_removal_of_one_event_queues_nothing_more() {
+        let (conn, id) = store();
+        let lunch = event("primary", "lunch", MONDAY, 1);
+        enqueue(&conn, id, ChangeKind::Remove, &lunch).unwrap();
+        enqueue(&conn, id, ChangeKind::Remove, &lunch).unwrap();
+        assert_eq!(queued(&conn, id).unwrap().len(), 1);
+    }
+
+    /// The provider still holds an event whose removal has not gone out,
+    /// so an edit after it changes the event instead of queueing a second
+    /// row behind the removal.
+    #[test]
+    fn an_edit_after_an_unsent_removal_takes_its_place() {
+        let (conn, id) = store();
+        let lunch = event("primary", "lunch", MONDAY, 1);
+        enqueue(&conn, id, ChangeKind::Remove, &lunch).unwrap();
+        let edited = Event { title: "Late lunch".into(), ..lunch };
+        enqueue(&conn, id, ChangeKind::Save, &edited).unwrap();
+        let held = queued(&conn, id).unwrap();
+        assert_eq!(held.len(), 1);
+        assert_eq!(held[0].kind, ChangeKind::Save);
+        assert_eq!(held[0].etag.as_deref(), Some("\"1\""));
+        assert_eq!(held[0].body.as_ref().map(|e| e.title.as_str()), Some("Late lunch"));
+    }
+
+    /// A held change persists so a crash or a quit before its Undo toast
+    /// closes still has it to queue at the next start.
+    #[test]
+    fn a_held_change_survives_to_the_next_start() {
+        let (conn, id) = store();
+        let dentist = event("primary", "dentist", MONDAY, 1);
+        let moved = Event { title: "Moved".into(), ..dentist.clone() };
+        save_holding(&conn, id, &[Step::Save(moved.clone())], std::slice::from_ref(&dentist)).unwrap();
+
+        assert_eq!(holdings(&conn).unwrap(), vec![(id, vec![Step::Save(moved)], vec![dentist])]);
+    }
+
+    /// Only one change is held at a time, so holding another replaces the
+    /// persisted row rather than adding a second one.
+    #[test]
+    fn holding_another_change_replaces_the_persisted_one() {
+        let (conn, id) = store();
+        let remove = |event: &str| vec![Step::Remove { calendar: "primary".into(), id: event.into() }];
+        save_holding(&conn, id, &remove("a"), &[]).unwrap();
+        save_holding(&conn, id, &remove("b"), &[]).unwrap();
+
+        assert_eq!(holdings(&conn).unwrap(), vec![(id, remove("b"), Vec::new())]);
+    }
+
+    /// Queuing or reverting a held change clears its persisted row, so a
+    /// later start does not queue it a second time.
+    #[test]
+    fn clearing_a_held_change_drops_its_persisted_row() {
+        let (conn, id) = store();
+        save_holding(&conn, id, &[Step::Remove { calendar: "primary".into(), id: "a".into() }], &[]).unwrap();
+
+        clear_holding(&conn, id).unwrap();
+
+        assert!(holdings(&conn).unwrap().is_empty());
+    }
+
+    #[test]
+    fn a_finished_removal_settles_its_cancelled_occurrence() {
+        let (conn, id) = store();
+        let mut cancelled = event("primary", "standup_tue", MONDAY, 1);
+        cancelled.pending = true;
+        save_events(&conn, id, std::slice::from_ref(&cancelled), 1).unwrap();
+        enqueue(&conn, id, ChangeKind::Remove, &cancelled).unwrap();
+        assert_eq!(removing_ids(&conn, id, "primary").unwrap(), HashSet::from(["standup_tue".to_string()]));
+        let seq = queued(&conn, id).unwrap()[0].seq;
+        finish_removal(&conn, id, seq).unwrap();
+        assert!(queued(&conn, id).unwrap().is_empty());
+        assert!(!super::event(&conn, id, "primary", "standup_tue").unwrap().unwrap().pending);
+    }
+
+    /// The edit landed on the removal's row while the removal was on its
+    /// way, so finishing the removal must leave the edit queued.
+    #[test]
+    fn finishing_a_removal_an_edit_replaced_keeps_the_edit() {
+        let (conn, id) = store();
+        let lunch = event("primary", "lunch", MONDAY, 1);
+        enqueue(&conn, id, ChangeKind::Remove, &lunch).unwrap();
+        let seq = queued(&conn, id).unwrap()[0].seq;
+        enqueue(&conn, id, ChangeKind::Save, &lunch).unwrap();
+        finish_removal(&conn, id, seq).unwrap();
+        assert_eq!(queued(&conn, id).unwrap()[0].kind, ChangeKind::Save);
     }
 }

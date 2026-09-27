@@ -251,6 +251,10 @@ impl Core {
         let invitations = Arc::new(Invitations::new(Arc::clone(&engine), db.clone()));
         let outbox = Arc::new(Outbox::new(Arc::clone(&engine), db.clone()));
         let calendar_copy = Arc::new(CalendarCopy::new(Arc::clone(&engine), db.clone()));
+        // A change still waiting on its Undo toast when the app last
+        // stopped has no toast left to close over it, so this run queues
+        // it before anything reads or sends the account it belongs to.
+        runtime.block_on(calendar_copy.recover_holds())?;
         let calendar = Arc::new(mailrs_sync::Calendar::new(
             Arc::clone(&engine),
             db.clone(),

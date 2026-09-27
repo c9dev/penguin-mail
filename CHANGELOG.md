@@ -22,6 +22,16 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - Calendar events remind you with a notification before they start, with
   Join for video calls and Snooze for five minutes. Preferences can turn
   them off.
+- Make, move and delete calendar events: press New Event or N to add
+  one, drag across a day to sketch one out, drag a block to move or
+  stretch it, or open an event and press the pencil or the trash icon.
+  Deleting or dragging offers Undo, and changing or deleting one date of
+  a repeating event asks which occurrences it covers first. Moving a
+  repeating event to another weekday moves its other dates with it, and
+  setting it to not repeat leaves only the one you changed. When Google
+  turns down part of a change to several dates of a repeating event, the
+  event goes back to how it was and a message says why. Double-click an
+  invitation to change its reminders, color and busy status.
 
 ### Improved
 
@@ -32,8 +42,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   you go through Google's screen once more.
 - The assistant and the invitation card read your Google calendars from
   this computer, so they answer without the network. A change the
-  assistant makes waits there until Google takes it, and moving or
-  cancelling one meeting of a repeating series leaves the others alone.
+  assistant makes waits there until Google takes it, even one to a
+  single meeting of a repeating series, which leaves the others alone.
 - With Claude Opus 5 or newer, translating a message and reading an unsubscribe
   page take less time, because those quick jobs no longer think at length.
 

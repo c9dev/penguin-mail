@@ -334,7 +334,7 @@ const DAY: i64 = 24 * HOUR;
 
 /// A daily stand-up at 09:00 UTC, Monday to Friday of that week, on
 /// Google and read into the copy.
-async fn synced_standup(h: &Harness) -> Calendar<Connected> {
+async fn synced_standup(h: &Harness) -> (Calendar<Connected>, Arc<CalendarCopy<Connected>>) {
     h.fake.with(|s| s.calendars = vec![primary()]);
     h.fake.put_calendar_event(Ev {
         calendar: "primary".into(),
@@ -350,7 +350,7 @@ async fn synced_standup(h: &Harness) -> Calendar<Connected> {
     });
     let (calendar, copy) = calendar_with_copy(h);
     copy.refresh(h.account_id, MONDAY).await.unwrap();
-    calendar
+    (calendar, copy)
 }
 
 async fn week_starts(calendar: &Calendar<Connected>, h: &Harness) -> Vec<i64> {
@@ -372,13 +372,14 @@ fn series_on_google(h: &Harness) -> Ev {
 #[tokio::test]
 async fn moving_one_occurrence_of_a_series_moves_only_that_one() {
     let h = harness().await;
-    let calendar = synced_standup(&h).await;
+    let (calendar, copy) = synced_standup(&h).await;
     let before = series_on_google(&h);
     let thursday = thursday_id(&calendar, &h).await;
     assert_eq!(thursday, "standup_20261022T090000Z");
 
     let ten = MONDAY + 3 * DAY + 10 * HOUR;
     calendar.update(h.account_id, &thursday, &event("Stand-up", ten, ten + 15 * MINUTE)).await.unwrap().done().unwrap();
+    assert!(copy.send(h.account_id).await.unwrap().is_empty());
 
     assert_eq!(
         week_starts(&calendar, &h).await,
@@ -392,17 +393,45 @@ async fn moving_one_occurrence_of_a_series_moves_only_that_one() {
 #[tokio::test]
 async fn cancelling_one_occurrence_of_a_series_cancels_only_that_one() {
     let h = harness().await;
-    let calendar = synced_standup(&h).await;
+    let (calendar, copy) = synced_standup(&h).await;
     let before = series_on_google(&h);
     let thursday = thursday_id(&calendar, &h).await;
 
     calendar.delete(h.account_id, &thursday).await.unwrap().done().unwrap();
+    assert!(copy.send(h.account_id).await.unwrap().is_empty());
 
     assert_eq!(
         week_starts(&calendar, &h).await,
         vec![MONDAY + 9 * HOUR, MONDAY + DAY + 9 * HOUR, MONDAY + 2 * DAY + 9 * HOUR, MONDAY + 4 * DAY + 9 * HOUR]
     );
     assert_eq!(series_on_google(&h), before, "the series itself is untouched");
+}
+
+/// Moving one date of a series with the network down waits in the queue
+/// like any other change, shows at once, and reaches Google once the
+/// network is back.
+#[tokio::test]
+async fn an_occurrence_edited_offline_goes_out_when_the_network_returns() {
+    let h = harness().await;
+    let (calendar, copy) = synced_standup(&h).await;
+    let thursday = thursday_id(&calendar, &h).await;
+    h.fake.with(|s| s.offline = true);
+
+    let ten = MONDAY + 3 * DAY + 10 * HOUR;
+    let moved = calendar.update(h.account_id, &thursday, &event("Stand-up", ten, ten + 15 * MINUTE)).await;
+    let moved = moved.unwrap().done().unwrap();
+    assert!(moved.pending);
+    assert!(week_starts(&calendar, &h).await.contains(&ten), "the copy shows it at once");
+    let cancelled = calendar.delete(h.account_id, "standup_20261023T090000Z").await;
+    cancelled.unwrap().done().unwrap();
+    assert!(copy.send(h.account_id).await.is_err(), "still offline");
+
+    h.fake.with(|s| s.offline = false);
+    assert!(copy.send(h.account_id).await.unwrap().is_empty());
+    let on_google = |id: &str| h.fake.with(|s| s.calendar_events.iter().find(|e| e.id == id).cloned());
+    assert_eq!(on_google(&thursday).map(|e| e.start), Some(ten));
+    let friday = on_google("standup_20261023T090000Z").expect("a cancelled occurrence");
+    assert_eq!(friday.status, mailrs_domain::calendar::Status::Cancelled);
 }
 
 /// Free time counts what the clash line counts: an event the account

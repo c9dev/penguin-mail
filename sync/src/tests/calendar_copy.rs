@@ -4,7 +4,8 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use mailrs_domain::calendar::{Access, Calendar, Event};
+use mailrs_domain::calendar::series::{RepeatScope, Step};
+use mailrs_domain::calendar::{Access, Calendar, Event, Occurrence, Status, occurrence_id};
 use mailrs_store::calendar as store;
 
 use super::{Connected, Harness, harness, imap_harness};
@@ -781,4 +782,676 @@ async fn a_whole_read_holds_one_page_at_a_time() {
         .unwrap();
     assert_eq!(held, 750, "each page went to the store before the next was asked for");
     assert_eq!(h.db.read(move |c| store::token(c, account, "primary")).await.unwrap(), None);
+}
+
+// Series edits, and changes held while their Undo toast is up.
+
+const HOUR: i64 = 3_600_000;
+const DAY: i64 = 24 * HOUR;
+
+fn standup() -> Event {
+    Event { rules: vec!["RRULE:FREQ=DAILY;COUNT=5".into()], ..event("primary", "standup") }
+}
+
+async fn read_series(h: &Harness) -> CalendarCopy<Connected> {
+    h.fake.with(|s| s.calendars = vec![calendar("primary", true)]);
+    h.fake.put_calendar_event(standup());
+    let copy = copy(h);
+    copy.refresh(h.account_id, NOW).await.unwrap();
+    copy
+}
+
+/// The occurrences whose start falls on day `day` after `NOW`.
+async fn on_day(h: &Harness, day: i64) -> Vec<Occurrence> {
+    let account = h.account_id;
+    let from = NOW + day * DAY;
+    h.db.read(move |c| store::occurrences(c, &[account], from, from + DAY, store::CalendarScope::Shown))
+        .await
+        .unwrap()
+}
+
+fn on_google(h: &Harness, id: &str) -> Option<Event> {
+    h.fake.with(|s| s.calendar_events.iter().find(|e| e.id == id).cloned())
+}
+
+fn held<T>(answer: Permitted<T>) -> T {
+    answer.done().expect("the account may change its calendar")
+}
+
+#[tokio::test]
+async fn moving_one_occurrence_goes_out_as_a_patch_of_that_occurrence() {
+    let h = harness().await;
+    let copy = read_series(&h).await;
+    let tuesday = on_day(&h, 1).await.remove(0);
+    let edited = Event { start: tuesday.start + HOUR, end: tuesday.end + HOUR, ..Event::clone(&tuesday.event) };
+    let steps = copy.change_steps(h.account_id, &tuesday, edited, Some(RepeatScope::This)).await.unwrap();
+    held(copy.apply(h.account_id, steps).await.unwrap());
+    assert_eq!(on_day(&h, 1).await[0].start, NOW + DAY + HOUR);
+    assert_eq!(queue(&h).await[0].kind, store::ChangeKind::Save, "never a create");
+    assert!(copy.send(h.account_id).await.unwrap().is_empty());
+    let id = occurrence_id(&standup(), NOW + DAY);
+    let sent = on_google(&h, &id).unwrap();
+    assert_eq!(sent.series.as_deref(), Some("standup"));
+    assert_eq!(sent.start, NOW + DAY + HOUR);
+    assert_eq!(h.fake.with(|s| s.calendar_events.len()), 2, "no second series was made");
+    assert_eq!(on_google(&h, "standup").unwrap().rules, standup().rules);
+}
+
+#[tokio::test]
+async fn this_and_following_splits_the_series_on_google() {
+    let h = harness().await;
+    let copy = read_series(&h).await;
+    let third = on_day(&h, 2).await.remove(0);
+    let edited = Event { title: "Longer stand-up".into(), ..Event::clone(&third.event) };
+    let edited = Event { start: third.start, end: third.end, ..edited };
+    let steps = copy.change_steps(h.account_id, &third, edited, Some(RepeatScope::Following)).await.unwrap();
+    held(copy.apply(h.account_id, steps).await.unwrap());
+    assert!(copy.send(h.account_id).await.unwrap().is_empty());
+    let events = h.fake.with(|s| s.calendar_events.clone());
+    let old = events.iter().find(|e| e.id == "standup").unwrap();
+    assert!(old.rules[0].contains("UNTIL="), "{:?}", old.rules);
+    let new = events.iter().find(|e| e.title == "Longer stand-up").unwrap();
+    assert_eq!(new.rules, vec!["RRULE:FREQ=DAILY;COUNT=3".to_string()]);
+    assert_eq!(on_day(&h, 1).await[0].event.title, "standup");
+    assert_eq!(on_day(&h, 3).await[0].event.title, "Longer stand-up");
+    assert!(queue(&h).await.is_empty());
+}
+
+/// A guest answered after the copy last read the series, so Google turns
+/// the cut down with 412. The new half and the removals queued behind it
+/// must not go out, or the tail shows twice and its guests are invited
+/// to a copy, and the copy goes back to Google's series.
+#[tokio::test]
+async fn a_split_whose_cut_is_turned_down_sends_nothing_after_it() {
+    let h = harness().await;
+    let moved_id = occurrence_id(&standup(), NOW + 3 * DAY);
+    h.fake.put_calendar_event(Event {
+        id: moved_id.clone(),
+        rules: Vec::new(),
+        series: Some("standup".into()),
+        original_start: Some(NOW + 3 * DAY),
+        start: NOW + 3 * DAY + HOUR,
+        end: NOW + 3 * DAY + 2 * HOUR,
+        title: "Moved".into(),
+        ..standup()
+    });
+    let copy = read_series(&h).await;
+    let third = on_day(&h, 2).await.remove(0);
+    let edited = Event { title: "Longer stand-up".into(), ..Event::clone(&third.event) };
+    let edited = Event { start: third.start, end: third.end, ..edited };
+    let steps = copy.change_steps(h.account_id, &third, edited, Some(RepeatScope::Following)).await.unwrap();
+    assert_eq!(steps.len(), 3, "the cut, the new half and the moved occurrence's removal: {steps:?}");
+    let new_id = steps.iter().map(Step::key).map(|(_, id)| id).find(|id| id != "standup" && id != &moved_id).unwrap();
+    held(copy.apply(h.account_id, steps).await.unwrap());
+    // The guest's answer moves the series' etag on Google.
+    h.fake.put_calendar_event(on_google(&h, "standup").unwrap());
+
+    let turned_down = copy.send(h.account_id).await.unwrap();
+
+    assert_eq!(turned_down.len(), 1, "{turned_down:?}");
+    assert!(on_google(&h, &new_id).is_none(), "the new half was never created");
+    assert_eq!(on_google(&h, &moved_id).unwrap().title, "Moved", "the moved occurrence stays");
+    assert_eq!(on_google(&h, "standup").unwrap().rules, standup().rules);
+    assert!(queue(&h).await.is_empty());
+    assert!(stored(&h, "primary", &new_id).await.is_none(), "the copy drops the new half");
+    let day_three: Vec<String> = on_day(&h, 3).await.iter().map(|o| o.event.title.clone()).collect();
+    assert_eq!(day_three, vec!["Moved".to_string()]);
+    let day_two: Vec<String> = on_day(&h, 2).await.iter().map(|o| o.event.title.clone()).collect();
+    assert_eq!(day_two, vec!["standup".to_string()]);
+}
+
+/// The moved occurrence already had an unsent edit, so its removal folds
+/// into that row, which sits ahead of the cut in the queue. It still
+/// waits for the cut: nothing goes out when the cut is turned down, and
+/// it goes out in the same send when the cut is taken.
+#[tokio::test]
+async fn a_removal_queued_ahead_of_its_cut_waits_for_it() {
+    for refused in [true, false] {
+        let h = harness().await;
+        let moved_id = occurrence_id(&standup(), NOW + 3 * DAY);
+        let moved = Event {
+            id: moved_id.clone(),
+            rules: Vec::new(),
+            series: Some("standup".into()),
+            original_start: Some(NOW + 3 * DAY),
+            start: NOW + 3 * DAY + HOUR,
+            end: NOW + 3 * DAY + 2 * HOUR,
+            title: "Moved".into(),
+            ..standup()
+        };
+        h.fake.put_calendar_event(moved);
+        let copy = read_series(&h).await;
+        let mut edited = stored(&h, "primary", &moved_id).await.unwrap();
+        edited.title = "Moved again".into();
+        copy.save(h.account_id, edited).await.unwrap();
+        let third = on_day(&h, 2).await.remove(0);
+        let edited = Event { title: "Longer stand-up".into(), ..Event::clone(&third.event) };
+        let edited = Event { start: third.start, end: third.end, ..edited };
+        let steps = copy.change_steps(h.account_id, &third, edited, Some(RepeatScope::Following)).await.unwrap();
+        held(copy.apply(h.account_id, steps).await.unwrap());
+        assert_eq!(queue(&h).await[0].event, moved_id, "the removal kept the earlier row's place");
+        if refused {
+            h.fake.put_calendar_event(on_google(&h, "standup").unwrap());
+        }
+
+        copy.send(h.account_id).await.unwrap();
+
+        if refused {
+            // The removal folded into the edit's row, and the edit goes out.
+            assert_eq!(on_google(&h, &moved_id).unwrap().title, "Moved again");
+            assert_eq!(stored(&h, "primary", &moved_id).await.unwrap().title, "Moved again");
+        } else {
+            assert!(on_google(&h, &moved_id).is_none());
+        }
+        assert!(queue(&h).await.is_empty(), "refused: {refused}");
+    }
+}
+
+/// A "this and following" split whose cut Google takes, then whose new
+/// half it turns down: the tail of the series would be gone. The cut
+/// series gets its rules back, the moved occurrence after the cut is
+/// kept, and the person hears why.
+async fn split_with_new_half_refused(h: &Harness, copy: &CalendarCopy<Connected>, restart: bool) {
+    let moved_id = occurrence_id(&standup(), NOW + 3 * DAY);
+    let third = on_day(h, 2).await.remove(0);
+    let edited = Event { title: "Longer stand-up".into(), ..Event::clone(&third.event) };
+    let edited = Event { start: third.start, end: third.end, ..edited };
+    let steps = copy.change_steps(h.account_id, &third, edited, Some(RepeatScope::Following)).await.unwrap();
+    let new_id = steps.iter().map(Step::key).map(|(_, id)| id).find(|id| id != "standup" && id != &moved_id).unwrap();
+    h.fake.with(|s| s.refuse_new_events = true);
+    let turned_down = if restart {
+        held(copy.hold(h.account_id, steps).await.unwrap());
+        let next_run = self::copy(h);
+        next_run.recover_holds().await.unwrap();
+        next_run.send(h.account_id).await.unwrap()
+    } else {
+        held(copy.apply(h.account_id, steps).await.unwrap());
+        copy.send(h.account_id).await.unwrap()
+    };
+
+    assert_eq!(turned_down.len(), 1, "{turned_down:?}");
+    assert!(turned_down[0].reason.as_deref().unwrap_or_default().contains("Invalid recurrence rule."));
+    assert!(on_google(h, &new_id).is_none());
+    assert_eq!(on_google(h, "standup").unwrap().rules, standup().rules, "the series repeats as before");
+    assert_eq!(on_google(h, &moved_id).unwrap().title, "Moved", "the moved occurrence stays");
+    assert!(queue(h).await.is_empty());
+    assert!(stored(h, "primary", &new_id).await.is_none());
+    for (day, title) in [(2, "standup"), (3, "Moved"), (4, "standup")] {
+        let titles: Vec<String> = on_day(h, day).await.iter().map(|o| o.event.title.clone()).collect();
+        assert_eq!(titles, vec![title.to_string()], "day {day}");
+    }
+}
+
+async fn series_with_a_moved_occurrence(h: &Harness) -> CalendarCopy<Connected> {
+    h.fake.put_calendar_event(Event {
+        id: occurrence_id(&standup(), NOW + 3 * DAY),
+        rules: Vec::new(),
+        series: Some("standup".into()),
+        original_start: Some(NOW + 3 * DAY),
+        start: NOW + 3 * DAY + HOUR,
+        end: NOW + 3 * DAY + 2 * HOUR,
+        title: "Moved".into(),
+        ..standup()
+    });
+    read_series(h).await
+}
+
+#[tokio::test]
+async fn a_split_whose_new_half_is_turned_down_puts_the_series_back() {
+    let h = harness().await;
+    let copy = series_with_a_moved_occurrence(&h).await;
+    split_with_new_half_refused(&h, &copy, false).await;
+}
+
+#[tokio::test]
+async fn a_split_recovered_after_a_restart_still_puts_the_series_back() {
+    let h = harness().await;
+    let copy = series_with_a_moved_occurrence(&h).await;
+    split_with_new_half_refused(&h, &copy, true).await;
+}
+
+#[tokio::test]
+async fn all_events_changes_the_series_itself() {
+    let h = harness().await;
+    let copy = read_series(&h).await;
+    let third = on_day(&h, 2).await.remove(0);
+    let edited = Event { title: "Team stand-up".into(), ..Event::clone(&third.event) };
+    let edited = Event { start: third.start + HOUR, end: third.end + HOUR, ..edited };
+    let steps = copy.change_steps(h.account_id, &third, edited, Some(RepeatScope::All)).await.unwrap();
+    held(copy.apply(h.account_id, steps).await.unwrap());
+    assert!(copy.send(h.account_id).await.unwrap().is_empty());
+    let series = on_google(&h, "standup").unwrap();
+    assert_eq!((series.title.as_str(), series.start), ("Team stand-up", NOW + HOUR));
+    assert_eq!(series.rules, standup().rules);
+    assert_eq!(h.fake.with(|s| s.calendar_events.len()), 1);
+    assert_eq!(on_day(&h, 0).await[0].start, NOW + HOUR);
+}
+
+/// The stand-up as Rita organizes it and this account attends, skipping
+/// the fourth day and adding a sixth.
+fn attended_standup() -> Event {
+    use mailrs_domain::calendar::Guest;
+    Event {
+        guests: vec![
+            Guest { email: "rita@example.com".into(), organizer: true, ..Guest::default() },
+            Guest { email: "me@example.com".into(), me: true, ..Guest::default() },
+        ],
+        rules: vec![
+            "RRULE:FREQ=DAILY;COUNT=5".into(),
+            "EXDATE:20260924T141320Z".into(),
+            "RDATE:20260928T141320Z".into(),
+        ],
+        ..standup()
+    }
+}
+
+/// A guest opens the third day, changes their reminders, colour and busy,
+/// and saves under `scope`. The editor hands over the event it opened,
+/// which for an occurrence nobody changed is the series, starting on the
+/// first day.
+async fn guest_saves_the_third_day(h: &Harness, scope: RepeatScope) {
+    use mailrs_domain::calendar::{Reminder, ReminderMethod};
+    h.fake.with(|s| s.calendars = vec![calendar("primary", true)]);
+    h.fake.put_calendar_event(attended_standup());
+    let copy = copy(h);
+    copy.refresh(h.account_id, NOW).await.unwrap();
+    let third = on_day(h, 2).await.remove(0);
+    let edited = Event {
+        reminders: Some(vec![Reminder { minutes: 30, method: ReminderMethod::Notification }]),
+        color: Some("#f4511e".into()),
+        busy: false,
+        ..Event::clone(&third.event)
+    };
+    let steps = copy.change_steps(h.account_id, &third, edited, Some(scope)).await.unwrap();
+    held(copy.apply(h.account_id, steps).await.unwrap());
+    assert!(copy.send(h.account_id).await.unwrap().is_empty());
+    assert!(queue(h).await.is_empty());
+}
+
+/// Every day of the copy starts where it did: the first three, the
+/// fourth skipped, the fifth, and the added one.
+async fn every_day_keeps_its_time(h: &Harness) {
+    for day in [0, 1, 2, 4, 7] {
+        let shown = on_day(h, day).await;
+        assert_eq!(shown.len(), 1, "day {day}");
+        assert_eq!((shown[0].start, shown[0].end), (NOW + day * DAY, NOW + day * DAY + HOUR), "day {day}");
+    }
+    assert!(on_day(h, 3).await.is_empty(), "the skipped day stays skipped");
+}
+
+#[tokio::test]
+async fn a_guests_change_to_one_occurrence_moves_nothing() {
+    let h = harness().await;
+    guest_saves_the_third_day(&h, RepeatScope::This).await;
+    let series = on_google(&h, "standup").unwrap();
+    assert_eq!((series.start, series.end, &series.rules), (NOW, NOW + HOUR, &attended_standup().rules));
+    let one = on_google(&h, &occurrence_id(&attended_standup(), NOW + 2 * DAY)).unwrap();
+    assert_eq!((one.start, one.end), (NOW + 2 * DAY, NOW + 2 * DAY + HOUR));
+    assert_eq!((one.color.as_deref(), one.busy), (Some("#f4511e"), false));
+    every_day_keeps_its_time(&h).await;
+    assert!(!on_day(&h, 2).await[0].event.busy);
+}
+
+#[tokio::test]
+async fn a_guests_change_to_all_events_moves_nothing() {
+    let h = harness().await;
+    guest_saves_the_third_day(&h, RepeatScope::All).await;
+    let series = on_google(&h, "standup").unwrap();
+    assert_eq!((series.start, series.end, &series.rules), (NOW, NOW + HOUR, &attended_standup().rules));
+    assert_eq!((series.color.as_deref(), series.busy), (Some("#f4511e"), false));
+    assert_eq!(h.fake.with(|s| s.calendar_events.len()), 1, "no occurrence or series was made");
+    every_day_keeps_its_time(&h).await;
+    assert!(!on_day(&h, 0).await[0].event.busy);
+}
+
+#[tokio::test]
+async fn cancelling_one_occurrence_leaves_a_gap_and_tells_google() {
+    let h = harness().await;
+    let copy = read_series(&h).await;
+    let tuesday = on_day(&h, 1).await.remove(0);
+    let steps = copy.delete_steps(h.account_id, &tuesday, Some(RepeatScope::This)).await.unwrap();
+    assert!(matches!(steps.as_slice(), [Step::Cancel(_)]));
+    held(copy.apply(h.account_id, steps).await.unwrap());
+    assert!(on_day(&h, 1).await.is_empty());
+    copy.send(h.account_id).await.unwrap();
+    assert!(queue(&h).await.is_empty());
+    let id = occurrence_id(&standup(), NOW + DAY);
+    assert!(!stored(&h, "primary", &id).await.unwrap().pending, "the row settles once the removal went out");
+    assert_eq!(on_google(&h, &id).unwrap().status, Status::Cancelled);
+    // The next read brings Google's cancelled occurrence, and the gap stays.
+    copy.refresh(h.account_id, NOW + READ_EVERY_OPEN).await.unwrap();
+    assert!(on_day(&h, 1).await.is_empty());
+}
+
+#[tokio::test]
+async fn a_new_event_held_then_committed_is_created_on_google() {
+    let h = harness().await;
+    let copy = read_series(&h).await;
+    let id = new_event_id();
+    let lunch = Event { id: id.clone(), title: "Lunch".into(), ..event("primary", &id) };
+    let held_change = held(copy.hold(h.account_id, vec![Step::Save(lunch)]).await.unwrap());
+    copy.commit(held_change).await.unwrap();
+    assert_eq!(queue(&h).await[0].kind, store::ChangeKind::Create);
+    assert!(copy.send(h.account_id).await.unwrap().is_empty());
+    assert_eq!(on_google(&h, &id).unwrap().title, "Lunch");
+    assert!(!stored(&h, "primary", &id).await.unwrap().pending);
+}
+
+/// An occurrence id holds `_`, which Google refuses in a new event's id,
+/// so an occurrence saved without a change of its own still goes out as
+/// a change of that occurrence.
+#[tokio::test]
+async fn saving_an_unchanged_occurrence_queues_a_change_not_a_create() {
+    let h = harness().await;
+    let copy = read_series(&h).await;
+    let id = occurrence_id(&standup(), NOW + DAY);
+    let one = Event {
+        id: id.clone(),
+        rules: Vec::new(),
+        series: Some("standup".into()),
+        original_start: Some(NOW + DAY),
+        start: NOW + DAY,
+        end: NOW + DAY + HOUR,
+        title: "Tuesday".into(),
+        ..standup()
+    };
+    copy.save(h.account_id, one).await.unwrap();
+    assert_eq!(queue(&h).await[0].kind, store::ChangeKind::Save);
+    assert!(copy.send(h.account_id).await.unwrap().is_empty());
+    assert_eq!(on_google(&h, &id).unwrap().title, "Tuesday");
+}
+
+#[tokio::test]
+async fn a_held_change_waits_for_commit() {
+    let h = harness().await;
+    let copy = read_series(&h).await;
+    let held_change = held(
+        copy.hold(h.account_id, vec![Step::Remove { calendar: "primary".into(), id: "standup".into() }])
+            .await
+            .unwrap(),
+    );
+    assert!(on_day(&h, 0).await.is_empty(), "it leaves the grid at once");
+    assert!(queue(&h).await.is_empty(), "and reaches the queue only on commit");
+    copy.commit(held_change).await.unwrap();
+    assert_eq!(queue(&h).await.len(), 1);
+    copy.send(h.account_id).await.unwrap();
+    assert!(on_google(&h, "standup").is_none());
+}
+
+/// Google cancels a series' changed occurrences along with the series,
+/// so a moved Tuesday does not outlive the delete on Google or in the
+/// copy read back from it.
+#[tokio::test]
+async fn deleting_a_series_cancels_its_changed_occurrences_on_google() {
+    let h = harness().await;
+    let tuesday_id = occurrence_id(&standup(), NOW + DAY);
+    h.fake.put_calendar_event(Event {
+        id: tuesday_id.clone(),
+        rules: Vec::new(),
+        series: Some("standup".into()),
+        original_start: Some(NOW + DAY),
+        start: NOW + DAY + HOUR,
+        end: NOW + DAY + 2 * HOUR,
+        ..standup()
+    });
+    let copy = read_series(&h).await;
+    let tuesday = on_day(&h, 1).await.remove(0);
+    let steps = copy.delete_steps(h.account_id, &tuesday, Some(RepeatScope::All)).await.unwrap();
+    held(copy.apply(h.account_id, steps).await.unwrap());
+    assert!(copy.send(h.account_id).await.unwrap().is_empty());
+
+    assert!(on_google(&h, "standup").is_none());
+    assert_eq!(on_google(&h, &tuesday_id).map(|e| e.status), Some(Status::Cancelled));
+    copy.refresh(h.account_id, NOW + READ_EVERY_OPEN).await.unwrap();
+    assert!(on_day(&h, 1).await.is_empty());
+}
+
+/// A series with a moved Tuesday, deleted whole and then taken back: every
+/// row returns as it was, the changed occurrence and its guests included.
+#[tokio::test]
+async fn a_held_delete_can_be_taken_back() {
+    let h = harness().await;
+    h.fake.put_calendar_event(Event {
+        id: occurrence_id(&standup(), NOW + DAY),
+        rules: Vec::new(),
+        series: Some("standup".into()),
+        original_start: Some(NOW + DAY),
+        start: NOW + DAY + HOUR,
+        end: NOW + DAY + 2 * HOUR,
+        guests: vec![mailrs_domain::calendar::Guest { email: "ann@example.com".into(), ..Default::default() }],
+        ..standup()
+    });
+    let copy = read_series(&h).await;
+    let tuesday_id = occurrence_id(&standup(), NOW + DAY);
+    let (series_before, tuesday_before) =
+        (stored(&h, "primary", "standup").await.unwrap(), stored(&h, "primary", &tuesday_id).await.unwrap());
+    let tuesday = on_day(&h, 1).await.remove(0);
+    let steps = copy.delete_steps(h.account_id, &tuesday, Some(RepeatScope::All)).await.unwrap();
+    let held_change = held(copy.hold(h.account_id, steps).await.unwrap());
+    assert!(stored(&h, "primary", "standup").await.is_none());
+    assert!(stored(&h, "primary", &tuesday_id).await.is_none());
+    copy.revert(held_change).await.unwrap();
+    assert_eq!(stored(&h, "primary", "standup").await.unwrap(), series_before);
+    assert_eq!(stored(&h, "primary", &tuesday_id).await.unwrap(), tuesday_before);
+    assert!(queue(&h).await.is_empty());
+}
+
+#[tokio::test]
+async fn a_held_edit_can_be_taken_back() {
+    let h = harness().await;
+    let copy = read_series(&h).await;
+    let before = stored(&h, "primary", "standup").await.unwrap();
+    let third = on_day(&h, 2).await.remove(0);
+    let edited = Event { title: "Longer stand-up".into(), ..Event::clone(&third.event) };
+    let steps = copy.change_steps(h.account_id, &third, edited, Some(RepeatScope::Following)).await.unwrap();
+    let new_id = steps.iter().map(Step::key).map(|(_, id)| id).find(|id| id != "standup").unwrap();
+    let held_change = held(copy.hold(h.account_id, steps).await.unwrap());
+    copy.revert(held_change).await.unwrap();
+    assert_eq!(stored(&h, "primary", "standup").await.unwrap(), before);
+    assert!(stored(&h, "primary", &new_id).await.is_none(), "the new half goes");
+    assert_eq!(on_day(&h, 3).await[0].event.title, "standup");
+}
+
+#[tokio::test]
+async fn a_held_move_survives_a_refresh_before_the_toast_closes() {
+    let h = harness().await;
+    let copy = read_series(&h).await;
+    let mut mine = stored(&h, "primary", "standup").await.unwrap();
+    mine.title = "Mine".into();
+    let held_change = held(copy.hold(h.account_id, vec![Step::Save(mine)]).await.unwrap());
+    // Google forgot the token, so the refresh reads the calendar whole.
+    h.fake.with(|s| s.expire_calendar_tokens = true);
+    copy.refresh(h.account_id, NOW + READ_EVERY_OPEN).await.unwrap();
+    assert_eq!(stored(&h, "primary", "standup").await.unwrap().title, "Mine");
+    copy.commit(held_change).await.unwrap();
+    h.fake.with(|s| s.expire_calendar_tokens = false);
+    copy.send(h.account_id).await.unwrap();
+    assert_eq!(on_google(&h, "standup").unwrap().title, "Mine");
+}
+
+/// Deleting a series takes its changed occurrences off the copy too. A
+/// whole read during the toast skips the held series, and must skip its
+/// changed occurrences with it, or they would stand alone on the grid.
+#[tokio::test]
+async fn a_held_series_delete_keeps_its_changed_occurrences_off_the_grid() {
+    let h = harness().await;
+    h.fake.put_calendar_event(Event {
+        id: occurrence_id(&standup(), NOW + DAY),
+        rules: Vec::new(),
+        series: Some("standup".into()),
+        original_start: Some(NOW + DAY),
+        start: NOW + DAY + HOUR,
+        end: NOW + DAY + 2 * HOUR,
+        ..standup()
+    });
+    let copy = read_series(&h).await;
+    let held_change = held(
+        copy.hold(h.account_id, vec![Step::Remove { calendar: "primary".into(), id: "standup".into() }])
+            .await
+            .unwrap(),
+    );
+    h.fake.with(|s| s.expire_calendar_tokens = true);
+    copy.refresh(h.account_id, NOW + READ_EVERY_OPEN).await.unwrap();
+    assert!(on_day(&h, 1).await.is_empty(), "{:?}", on_day(&h, 1).await);
+    // Committed and not yet sent, the removal still keeps them off.
+    copy.commit(held_change).await.unwrap();
+    copy.refresh(h.account_id, NOW + 2 * READ_EVERY_OPEN).await.unwrap();
+    assert!(on_day(&h, 1).await.is_empty());
+}
+
+/// Only one Undo toast shows at a time, so holding a second change
+/// commits the first. Undo or commit on the first afterwards does nothing.
+#[tokio::test]
+async fn a_new_held_change_commits_the_one_before() {
+    let h = harness().await;
+    h.fake.with(|s| s.calendars = vec![calendar("primary", true)]);
+    h.fake.put_calendar_event(event("primary", "a"));
+    h.fake.put_calendar_event(event("primary", "b"));
+    let copy = copy(&h);
+    copy.refresh(h.account_id, NOW).await.unwrap();
+    let remove = |id: &str| vec![Step::Remove { calendar: "primary".into(), id: id.into() }];
+    let first = held(copy.hold(h.account_id, remove("a")).await.unwrap());
+    let second = held(copy.hold(h.account_id, remove("b")).await.unwrap());
+    assert_eq!(queue(&h).await.iter().map(|q| q.event.as_str()).collect::<Vec<_>>(), vec!["a"]);
+    copy.revert(first.clone()).await.unwrap();
+    assert!(stored(&h, "primary", "a").await.is_none(), "too late to take it back");
+    copy.commit(first).await.unwrap();
+    assert_eq!(queue(&h).await.len(), 1, "and it is not queued twice");
+    copy.commit(second).await.unwrap();
+    assert_eq!(queue(&h).await.len(), 2);
+}
+
+/// A hold whose write fails leaves nothing held, so later reads still
+/// bring the provider's changes to the events it named.
+#[tokio::test]
+async fn a_hold_that_fails_leaves_reads_alone() {
+    let h = harness().await;
+    h.fake.with(|s| s.calendars = vec![calendar("primary", true)]);
+    h.fake.put_calendar_event(event("primary", "a"));
+    let copy = copy(&h);
+    copy.refresh(h.account_id, NOW).await.unwrap();
+    let mine = Event { title: "Mine".into(), ..stored(&h, "primary", "a").await.unwrap() };
+    // No calendar "gone" is stored, so its row breaks the foreign key.
+    let steps = vec![Step::Save(mine), Step::Save(event("gone", "b"))];
+    assert!(copy.hold(h.account_id, steps).await.is_err());
+    assert_eq!(stored(&h, "primary", "a").await.unwrap().title, "a", "nothing was written");
+    h.fake.put_calendar_event(Event { title: "Theirs".into(), ..event("primary", "a") });
+    copy.refresh(h.account_id, NOW + READ_EVERY_OPEN).await.unwrap();
+    assert_eq!(stored(&h, "primary", "a").await.unwrap().title, "Theirs");
+}
+
+/// Two edits to one date made offline queue one change, which goes out
+/// once the network is back.
+#[tokio::test]
+async fn editing_one_occurrence_twice_offline_queues_one_change() {
+    let h = harness().await;
+    let copy = read_series(&h).await;
+    for title in ["First", "Second"] {
+        let tuesday = on_day(&h, 1).await.remove(0);
+        let edited = Event { title: title.into(), ..Event::clone(&tuesday.event) };
+        let edited = Event { start: tuesday.start, end: tuesday.end, ..edited };
+        let steps = copy.change_steps(h.account_id, &tuesday, edited, Some(RepeatScope::This)).await.unwrap();
+        held(copy.apply(h.account_id, steps).await.unwrap());
+    }
+    assert_eq!(queue(&h).await.len(), 1);
+    h.fake.fail_next(mailrs_gmail::GmailError::Network("gone".into()));
+    assert!(copy.send(h.account_id).await.is_err());
+    assert_eq!(queue(&h).await.len(), 1);
+    assert!(copy.send(h.account_id).await.unwrap().is_empty());
+    let id = occurrence_id(&standup(), NOW + DAY);
+    assert_eq!(on_google(&h, &id).unwrap().title, "Second");
+    assert!(queue(&h).await.is_empty());
+}
+
+#[tokio::test]
+async fn an_account_without_a_calendar_takes_no_edit() {
+    let h = imap_harness().await;
+    let connected = HashMap::from([(h.account_id, Arc::clone(&h.sync))]);
+    let copy = CalendarCopy::new(Arc::new(Connected(connected)), h.db.clone());
+    let steps = vec![Step::Save(event("primary", "a"))];
+    let answer = copy.hold(h.account_id, steps.clone()).await;
+    assert!(
+        matches!(answer, Err(crate::SyncError::Backend(crate::BackendError::Unsupported))),
+        "{answer:?}"
+    );
+    let answer = copy.apply(h.account_id, steps).await;
+    assert!(matches!(answer, Err(crate::SyncError::Backend(crate::BackendError::Unsupported))));
+}
+
+#[tokio::test]
+async fn an_account_that_withheld_the_calendar_is_asked_for_it() {
+    let h = harness().await;
+    let copy = read_series(&h).await;
+    h.fake.withhold(mailrs_gmail::CALENDAR_SCOPE);
+    let remove = vec![Step::Remove { calendar: "primary".into(), id: "standup".into() }];
+    assert!(matches!(copy.hold(h.account_id, remove.clone()).await.unwrap(), Permitted::NeedsPermission));
+    assert!(matches!(copy.apply(h.account_id, remove).await.unwrap(), Permitted::NeedsPermission));
+    assert!(stored(&h, "primary", "standup").await.is_some());
+    assert!(queue(&h).await.is_empty());
+}
+
+/// A change held under its Undo toast must survive the app quitting or
+/// crashing: nothing commits it, nothing reverts it, and yet the next
+/// start still queues it, since no toast survived to offer Undo over it.
+#[tokio::test]
+async fn a_held_change_survives_a_crash_and_is_queued_at_the_next_start() {
+    let h = harness().await;
+    let first_run = read_series(&h).await;
+    held(
+        first_run
+            .hold(h.account_id, vec![Step::Remove { calendar: "primary".into(), id: "standup".into() }])
+            .await
+            .unwrap(),
+    );
+    assert!(queue(&h).await.is_empty(), "not queued until committed or recovered");
+    // The run ends here with no clean shutdown, as a crash would: no
+    // commit, no revert, only what `hold` already wrote to the store.
+    drop(first_run);
+
+    let next_run = copy(&h);
+    next_run.recover_holds().await.unwrap();
+    assert_eq!(queue(&h).await.len(), 1, "the held change is queued at the next start");
+    next_run.send(h.account_id).await.unwrap();
+    assert!(on_google(&h, "standup").is_none());
+}
+
+/// Recovering twice, such as a second call before the window opens,
+/// queues the change once.
+#[tokio::test]
+async fn recovering_holds_a_second_time_queues_nothing_more() {
+    let h = harness().await;
+    let first_run = read_series(&h).await;
+    held(
+        first_run
+            .hold(h.account_id, vec![Step::Remove { calendar: "primary".into(), id: "standup".into() }])
+            .await
+            .unwrap(),
+    );
+    drop(first_run);
+
+    let next_run = copy(&h);
+    next_run.recover_holds().await.unwrap();
+    next_run.recover_holds().await.unwrap();
+    assert_eq!(queue(&h).await.len(), 1);
+}
+
+/// The view polls `still_waiting` while its toast is up, to close it
+/// without an Undo that would do nothing once an assistant edit, made
+/// through `apply`, commits the change waiting before it.
+#[tokio::test]
+async fn still_waiting_says_no_once_an_apply_commits_the_change_before_it() {
+    let h = harness().await;
+    h.fake.with(|s| s.calendars = vec![calendar("primary", true)]);
+    h.fake.put_calendar_event(event("primary", "a"));
+    let copy = copy(&h);
+    copy.refresh(h.account_id, NOW).await.unwrap();
+    let removed = held(
+        copy.hold(h.account_id, vec![Step::Remove { calendar: "primary".into(), id: "a".into() }])
+            .await
+            .unwrap(),
+    );
+    assert!(copy.still_waiting(&removed));
+    // The assistant's own edit, elsewhere, made through `apply`.
+    held(copy.apply(h.account_id, vec![Step::Save(event("primary", "b"))]).await.unwrap());
+    assert!(!copy.still_waiting(&removed), "apply committed it, same as holding a new change would");
 }

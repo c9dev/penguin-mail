@@ -69,6 +69,8 @@ pub enum Change {
     /// The grid the calendar shows.
     CalendarView(super::CalendarView),
     ShowDeclinedEvents(bool),
+    /// The account a new event went on.
+    LastCalendarAccount(String),
     /// Folds the old one switch for every account into the per-account
     /// list: all of `emails` when it was on.
     AllContacts(Vec<String>),
@@ -270,6 +272,7 @@ impl Change {
             Change::Space(space) => settings.space = space,
             Change::CalendarView(view) => settings.calendar_view = view,
             Change::ShowDeclinedEvents(on) => settings.show_declined_events = on,
+            Change::LastCalendarAccount(email) => settings.last_calendar_account = Some(email),
             Change::Signature { email, text } => settings.set_signature(&email, &text),
             Change::ToggleVip { email, name } => {
                 settings.toggle_vip(&email, &name);
@@ -527,6 +530,7 @@ settable! {
         // Where the window was and what the calendar showed are the
         // window's memory of the person's own clicks.
         calendar_view,
+        last_calendar_account,
         // How the assistant's pane lays out its own turns belongs with the
         // rest of its settings, on the AI page.
         assistant_allowed_tools,
@@ -760,6 +764,7 @@ impl Effects {
             space,
             calendar_view,
             show_declined_events,
+            last_calendar_account,
         } = after;
         // These leave the window as it is. The flag colour, the delay before
         // Send commits, and the rest are read when they are needed, so
@@ -812,6 +817,9 @@ impl Effects {
             space,
             calendar_view,
             show_declined_events,
+            // The New Event button remembers this by itself, for the
+            // next new event; nothing on screen reads it.
+            last_calendar_account,
         );
         let smart_changed = *smart_mailboxes != before.smart_mailboxes;
         let colors_changed = *account_colors != before.account_colors;
@@ -983,6 +991,14 @@ mod tests {
     }
 
     #[test]
+    fn the_account_a_new_event_went_on_is_remembered_quietly() {
+        let mut settings = Settings::default();
+        let effects = Change::LastCalendarAccount("me@work.pt".into()).apply(&mut settings);
+        assert_eq!(settings.last_calendar_account.as_deref(), Some("me@work.pt"));
+        assert!(effects.is_empty());
+    }
+
+    #[test]
     fn small_preferences_need_no_reload() {
         // The list the module's comment calls quiet, checked one by one.
         let quiet = [
@@ -1012,6 +1028,7 @@ mod tests {
                 id: "claude-code/pdf".into(),
                 on: true,
             },
+            Change::LastCalendarAccount("me@work.pt".into()),
         ];
         for change in quiet {
             let named = format!("{change:?}");

@@ -3,8 +3,14 @@
 //! guest. One popover serves the whole view: parenting a popover to a
 //! block a reload later destroys would leave it dangling, so the view
 //! keeps one, parented to itself, and points it at whichever block was
-//! pressed with `set_pointing_to`. It has no Edit or Delete yet, since
-//! the calendar cannot change events yet.
+//! pressed with `set_pointing_to`. Edit and Delete sit in the title row
+//! for an event the account may change as a whole; an invitation, which
+//! the mockup draws, gets neither (ruling R1).
+//!
+//! The popover does not auto-hide: a second click of a double click must
+//! reach the card behind it rather than be swallowed as the click that
+//! dismisses the popover. `new` closes it on Escape and on a press
+//! anywhere else in the window instead.
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -26,13 +32,6 @@ const MOST_GUESTS_SHOWN: usize = 5;
 /// The order the approved design answers in: Yes, Maybe, No.
 /// `Answer::ALL` orders Yes, No, Maybe, for the invitation card.
 const ANSWER_ORDER: [Answer; 3] = [Answer::Yes, Answer::Maybe, Answer::No];
-
-/// Whether the account is a guest worth asking: it holds a guest row of
-/// its own and did not organize the event, mirroring `block::answer_state`'s
-/// "unanswered" guard.
-fn is_guest(guests: &[Guest]) -> bool {
-    guests.iter().any(|guest| guest.me && !guest.organizer)
-}
 
 /// Who organized the event, by name where a guest row gives one,
 /// otherwise the bare organizer address the event carries.
@@ -57,6 +56,7 @@ fn guest_names(guests: &[Guest], limit: usize) -> (Vec<String>, usize) {
 }
 
 type OnAnswer = dyn Fn(Answer);
+type OnEdit = dyn Fn();
 
 pub struct EventPopover {
     popover: gtk::Popover,
@@ -64,6 +64,10 @@ pub struct EventPopover {
     bar: gtk::Box,
     title: gtk::Label,
     when: gtk::Label,
+    edit_button: gtk::Button,
+    delete_button: gtk::Button,
+    on_edit: RefCell<Option<Box<OnEdit>>>,
+    on_delete: RefCell<Option<Box<OnEdit>>>,
     calendar_label: gtk::Label,
     place_row: gtk::Button,
     place_label: gtk::Label,
@@ -80,6 +84,10 @@ pub struct EventPopover {
     /// The block the popover points at, which takes the focus back when
     /// it closes.
     anchor: glib::WeakRef<gtk::Widget>,
+    /// The window root and the gesture watching for a press outside the
+    /// popover, added once the popover is realized and removed when it
+    /// is not, since the root does not exist before then.
+    root_press: RefCell<Option<(gtk::Root, gtk::GestureClick)>>,
 }
 
 impl EventPopover {
@@ -117,6 +125,30 @@ impl EventPopover {
         heading.append(&title);
         heading.append(&when);
         head.append(&heading);
+
+        // Edit and Delete, right of the title, flat and icon-only, so a
+        // popover that has them does not grow past the mockup's width.
+        // Only an event the account may change as a whole gets them
+        // (ruling R1); `show` hides whichever `on_edit` or `on_delete`
+        // comes in `None`.
+        let edit_button = gtk::Button::builder()
+            .icon_name("document-edit-symbolic")
+            .css_classes(["flat"])
+            .valign(gtk::Align::Start)
+            .visible(false)
+            .tooltip_text(gettext("Edit"))
+            .build();
+        crate::ui::name(&edit_button, &gettext("Edit"));
+        let delete_button = gtk::Button::builder()
+            .icon_name("user-trash-symbolic")
+            .css_classes(["flat"])
+            .valign(gtk::Align::Start)
+            .visible(false)
+            .tooltip_text(gettext("Delete"))
+            .build();
+        crate::ui::name(&delete_button, &gettext("Delete"));
+        head.append(&edit_button);
+        head.append(&delete_button);
 
         let calendar_label = gtk::Label::builder().xalign(0.0).build();
         let calendar_row = icon_row("penguin-mail-calendar-symbolic", &calendar_label);
@@ -199,8 +231,23 @@ impl EventPopover {
             .has_arrow(true)
             .position(gtk::PositionType::Right)
             .child(&content)
+            // A popover that auto-hides takes the second click of a
+            // double click for itself, so the card never sees it. `new`
+            // closes this one on Escape and on a press elsewhere instead.
+            .autohide(false)
             .build();
         popover.set_parent(parent);
+
+        let keys = gtk::EventControllerKey::new();
+        let p = popover.clone();
+        keys.connect_key_pressed(move |_, key, _, _| {
+            if key == gdk::Key::Escape {
+                p.popdown();
+                return glib::Propagation::Stop;
+            }
+            glib::Propagation::Proceed
+        });
+        popover.add_controller(keys);
 
         let this = Rc::new(EventPopover {
             popover,
@@ -208,6 +255,10 @@ impl EventPopover {
             bar,
             title,
             when,
+            edit_button,
+            delete_button,
+            on_edit: RefCell::new(None),
+            on_delete: RefCell::new(None),
             calendar_label,
             place_row,
             place_label,
@@ -220,6 +271,7 @@ impl EventPopover {
             answer_buttons,
             on_answer: RefCell::new(None),
             anchor: glib::WeakRef::new(),
+            root_press: RefCell::new(None),
         });
 
         // A popover gives the focus back to nothing when it closes, which
@@ -262,6 +314,53 @@ impl EventPopover {
                 this.popover.popdown();
             });
         }
+        let weak = Rc::downgrade(&this);
+        this.edit_button.connect_clicked(move |_| {
+            let Some(this) = weak.upgrade() else { return };
+            this.popover.popdown();
+            if let Some(f) = this.on_edit.borrow_mut().take() {
+                f();
+            }
+        });
+        let weak = Rc::downgrade(&this);
+        this.delete_button.connect_clicked(move |_| {
+            let Some(this) = weak.upgrade() else { return };
+            this.popover.popdown();
+            if let Some(f) = this.on_delete.borrow_mut().take() {
+                f();
+            }
+        });
+
+        // A press anywhere else in the window closes the popover, since
+        // it no longer auto-hides. Installed once, on the root the
+        // popover's own realize finds, rather than per `show`.
+        let outside = gtk::GestureClick::builder().propagation_phase(gtk::PropagationPhase::Capture).build();
+        let weak = Rc::downgrade(&this);
+        outside.connect_pressed(move |gesture, _, x, y| {
+            let Some(this) = weak.upgrade() else { return };
+            let Some(widget) = gesture.widget() else { return };
+            let inside = widget
+                .pick(x, y, gtk::PickFlags::DEFAULT)
+                .is_some_and(|w| w.is_ancestor(&this.popover) || w == *this.popover.upcast_ref::<gtk::Widget>());
+            if !inside {
+                this.popover.popdown();
+            }
+        });
+        let weak = Rc::downgrade(&this);
+        this.popover.connect_realize(move |popover| {
+            let Some(this) = weak.upgrade() else { return };
+            if let Some(root) = popover.root() {
+                root.add_controller(outside.clone());
+                this.root_press.replace(Some((root, outside.clone())));
+            }
+        });
+        let weak = Rc::downgrade(&this);
+        this.popover.connect_unrealize(move |_| {
+            let Some(this) = weak.upgrade() else { return };
+            if let Some((root, outside)) = this.root_press.borrow_mut().take() {
+                root.remove_controller(&outside);
+            }
+        });
 
         this
     }
@@ -277,6 +376,8 @@ impl EventPopover {
         o: &Occurrence,
         calendar: &mailrs_domain::calendar::Calendar,
         on_answer: impl Fn(Answer) + 'static,
+        on_edit: Option<Box<dyn Fn()>>,
+        on_delete: Option<Box<dyn Fn()>>,
     ) {
         let event = &o.event;
         let colour = event.color.as_deref().unwrap_or(calendar.color.as_str());
@@ -285,6 +386,11 @@ impl EventPopover {
         self.title.set_label(&event.title);
         self.when.set_label(&words::when_words(o, &chrono::Local));
         self.calendar_label.set_label(&calendar.name);
+
+        self.edit_button.set_visible(on_edit.is_some());
+        self.delete_button.set_visible(on_delete.is_some());
+        self.on_edit.replace(on_edit);
+        self.on_delete.replace(on_delete);
 
         let place_visible = !event.place.is_empty();
         self.place_row.set_visible(place_visible);
@@ -321,7 +427,7 @@ impl EventPopover {
             crate::ui::describe(&self.people_label, &people, &guests);
         }
 
-        let guest = is_guest(&event.guests);
+        let guest = super::draft::limited(event);
         self.answer_box.set_visible(guest);
         // The current answer is filled; with none yet, Yes is, as the
         // mockup draws an invitation still waiting. A screen reader hears
@@ -365,9 +471,13 @@ impl EventPopover {
         // current answer; anyone else starts on the first row they can
         // press.
         let first = first.or_else(|| {
-            [self.place_row.clone().upcast::<gtk::Widget>(), self.join.clone().upcast()]
-                .into_iter()
-                .find(|w| w.is_visible())
+            [
+                self.place_row.clone().upcast::<gtk::Widget>(),
+                self.join.clone().upcast(),
+                self.edit_button.clone().upcast(),
+            ]
+            .into_iter()
+            .find(|w| w.is_visible())
         });
         if let Some(first) = first {
             first.grab_focus();

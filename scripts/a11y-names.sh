@@ -548,8 +548,75 @@ def walk_calendar(keys):
         print("The main menu in the calendar had no Show Declined Events.", file=sys.stderr)
         sys.exit(2)
 
+    # New Event, the editor and its Custom Repeat page. The button stays
+    # put across every view visited above, so this comes last rather than
+    # once per view.
+    new_event = button_named(r"^New Event$")
+    if new_event is None or not activate(new_event):
+        print("No 'New Event' button on the calendar page.", file=sys.stderr)
+        sys.exit(2)
+    if not wait_until(
+        lambda: find_first(
+            lambda role, name: role not in ("button", "push button") and name == "New Event"
+        )
+        is not None,
+        5.0,
+    ):
+        print("The New Event dialog never reached the accessibility bus.", file=sys.stderr)
+        sys.exit(2)
+    settle()
+    more = find_first(lambda role, name: role in ACTS and name == "More")
+    if more is None or not activate(more):
+        print("No 'More' row in the editor.", file=sys.stderr)
+        sys.exit(2)
+    settle()
+    walk_view("Editor")
+    repeats = find_first(lambda role, name: role in ACTS and name.startswith("Repeats"))
+    if repeats is None or not activate(repeats):
+        print("No 'Repeats' row in the editor.", file=sys.stderr)
+        sys.exit(2)
+    # The choices are a dropdown's own rows: each is a nameless "list
+    # item" wrapping a "label", not a button, so it is found and read by
+    # that label's text.
+    if not wait_until(
+        lambda: find_first(lambda role, name: role == "label" and name == "Custom…") is not None,
+        5.0,
+    ):
+        print("The Repeats row offered no 'Custom…' choice.", file=sys.stderr)
+        sys.exit(2)
+    # The popover keeps settling a moment after the label lands, and its
+    # row offers only a scroll-to action, which `activate` would call
+    # and call the row picked; picking one takes a real click.
+    time.sleep(0.5)
+    custom_label = find_first(lambda role, name: role == "label" and name == "Custom…")
+    custom_row = custom_label
+    while custom_row is not None and custom_row.get_role_name() != "list item":
+        custom_row = custom_row.get_parent()
+    if custom_row is None:
+        print("No 'list item' row held the 'Custom…' choice.", file=sys.stderr)
+        sys.exit(2)
+    box = custom_row.get_component_iface().get_extents(Atspi.CoordType.WINDOW)
+    keys.click(box.x + box.width // 2, box.y + box.height // 2)
+    if not wait_until(
+        lambda: find_first(lambda role, name: name == "Custom Repeat") is not None, 5.0
+    ):
+        print("The Custom Repeat page never showed.", file=sys.stderr)
+        sys.exit(2)
+    settle()
+    walk_view("Custom Repeat")
+    back = button_named(r"^Back$")
+    if back is None or not activate(back):
+        print("No back button on the Custom Repeat page.", file=sys.stderr)
+        sys.exit(2)
+    settle()
+    cancel = button_named(r"^Cancel$")
+    if cancel is None or not activate(cancel):
+        print("No 'Cancel' button in the editor.", file=sys.stderr)
+        sys.exit(2)
+    settle()
+
     unnamed = [row for row in calendar_found if not row[1]]
-    print("calendar: %d controls in four views and two popovers, %d unnamed"
+    print("calendar: %d controls in four views, two popovers, the editor and its Custom page, %d unnamed"
           % (len(calendar_found), len(unnamed)))
     for role, _, path in unnamed:
         print("  %s" % path)

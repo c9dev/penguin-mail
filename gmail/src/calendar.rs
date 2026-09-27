@@ -290,15 +290,23 @@ impl GmailClient {
     ) -> Result<calendar::Event, GmailError> {
         let base = format!("{}/calendars/{}/events", self.calendar_base_url, encode(&event.calendar));
         let body = event_json(event, create);
+        // Google reads conferenceData only when told which version of it
+        // the body speaks.
+        let mut query = vec![("sendUpdates", "all")];
+        if event.meet_request.is_some() {
+            query.push(("conferenceDataVersion", "1"));
+        }
         let answer: Value = if create {
-            self.call_at(&base, |url| {
-                self.http().post(url).query(&[("sendUpdates", "all")]).json(&body)
-            })
-            .await?
+            self.call_at(&base, |url| self.http().post(url).query(&query).json(&body)).await?
         } else {
+            // An occurrence goes out as a PATCH on its own id, which
+            // changes that occurrence alone. A 404 there means the event
+            // is gone and a 400 turns the edit down; no retry follows,
+            // since a PUT would clear the fields this body leaves out,
+            // such as the Meet link and attachments.
             let url = format!("{base}/{}", encode(&event.id));
             self.call_at(&url, |url| {
-                let mut request = self.http().patch(url).query(&[("sendUpdates", "all")]).json(&body);
+                let mut request = self.http().patch(url).query(&query).json(&body);
                 if let Some(etag) = etag {
                     request = request.header("If-Match", etag);
                 }
@@ -829,7 +837,7 @@ pub fn google_event(calendar: &str, item: &Value, me: Option<&str>) -> calendar:
         title: text("summary"),
         place: text("location"),
         description: text("description"),
-        color: item.get("colorId").and_then(Value::as_str).and_then(event_color).map(str::to_string),
+        color: item.get("colorId").and_then(Value::as_str).and_then(calendar::event_color).map(str::to_string),
         // `busy` holds transparency alone. Declined and all-day events keep
         // the busy value Google sent, so a queued edit never marks them
         // free on the way back out.
@@ -863,6 +871,9 @@ pub fn google_event(calendar: &str, item: &Value, me: Option<&str>) -> calendar:
         series: item.get("recurringEventId").and_then(Value::as_str).map(str::to_string),
         original_start: item.get("originalStartTime").map(|t| when(Some(t)).0),
         pending: false,
+        // A Meet request is something Penguin Mail asks for on a write;
+        // Google's answer never needs to say one is still pending here.
+        meet_request: None,
     }
 }
 
@@ -886,27 +897,46 @@ fn when(time: Option<&Value>) -> (EpochMillis, String, bool) {
     (day, "UTC".into(), true)
 }
 
-/// Google's eleven event colours, by the id an event carries.
-fn event_color(id: &str) -> Option<&'static str> {
-    Some(match id {
-        "1" => "#7986cb",
-        "2" => "#33b679",
-        "3" => "#8e24aa",
-        "4" => "#e67c73",
-        "5" => "#f6bf26",
-        "6" => "#f4511e",
-        "7" => "#039be5",
-        "8" => "#616161",
-        "9" => "#3f51b5",
-        "10" => "#0b8043",
-        "11" => "#d50000",
-        _ => return None,
-    })
+/// A guest's change to someone else's event: only the fields that are
+/// the guest's own. The time, rules and guests belong to the organizer,
+/// and a guest's PATCH that carried them could move the series for every
+/// guest, since it goes out with `sendUpdates=all`.
+fn own_fields_json(event: &calendar::Event) -> Value {
+    let mut body = json!({ "transparency": transparency(event) });
+    own_fields_into(&mut body, event, false);
+    body
+}
+
+fn transparency(event: &calendar::Event) -> &'static str {
+    if event.busy { "opaque" } else { "transparent" }
+}
+
+/// The reminders and colour, which every change writes.
+fn own_fields_into(body: &mut Value, event: &calendar::Event, create: bool) {
+    if let Some(reminders) = &event.reminders {
+        body["reminders"] = json!({
+            "useDefault": false,
+            "overrides": reminders.iter().map(|r| json!({
+                "method": match r.method { ReminderMethod::Email => "email", ReminderMethod::Notification => "popup" },
+                "minutes": r.minutes,
+            })).collect::<Vec<_>>(),
+        });
+    }
+    match event.color.as_deref().and_then(calendar::color_id) {
+        Some(id) => body["colorId"] = json!(id),
+        // A patch with no colour clears the event's own, so it takes the
+        // calendar's again. A new event has nothing to clear.
+        None if !create => body["colorId"] = Value::Null,
+        None => {}
+    }
 }
 
 /// What Penguin Mail writes on an event. Fields the model does not hold
 /// are left out, so a patch keeps whatever Google has for them.
 fn event_json(event: &calendar::Event, create: bool) -> Value {
+    if !create && event.limited() {
+        return own_fields_json(event);
+    }
     let time = |at: EpochMillis| {
         if event.all_day {
             let day = chrono::DateTime::from_timestamp_millis(at).map(|d| d.format("%Y-%m-%d").to_string());
@@ -921,12 +951,12 @@ fn event_json(event: &calendar::Event, create: bool) -> Value {
         }
     };
     let mut body = json!({
+        "transparency": transparency(event),
         "summary": event.title,
         "location": event.place,
         "description": event.description,
         "start": time(event.start),
         "end": time(event.end),
-        "transparency": if event.busy { "opaque" } else { "transparent" },
         "visibility": if event.private { "private" } else { "default" },
         "attendees": event.guests.iter().map(|g| {
             let mut guest = json!({ "email": g.email });
@@ -939,18 +969,20 @@ fn event_json(event: &calendar::Event, create: bool) -> Value {
             guest
         }).collect::<Vec<_>>(),
     });
-    // Google refuses a recurrence rule on a changed occurrence, and an
-    // event that does not repeat carries no rule to send.
-    if !event.rules.is_empty() && event.series.is_none() {
+    // Google refuses a recurrence rule on a changed occurrence. A patch
+    // that leaves recurrence out keeps the rule Google has, so a series
+    // saved with no rules must say so with an empty list. A new event
+    // with no rules has nothing to say.
+    if event.series.is_none() && !(create && event.rules.is_empty()) {
         body["recurrence"] = json!(event.rules);
     }
-    if let Some(reminders) = &event.reminders {
-        body["reminders"] = json!({
-            "useDefault": false,
-            "overrides": reminders.iter().map(|r| json!({
-                "method": match r.method { ReminderMethod::Email => "email", ReminderMethod::Notification => "popup" },
-                "minutes": r.minutes,
-            })).collect::<Vec<_>>(),
+    own_fields_into(&mut body, event, create);
+    if let Some(request) = &event.meet_request {
+        body["conferenceData"] = json!({
+            "createRequest": {
+                "requestId": request,
+                "conferenceSolutionKey": {"type": "hangoutsMeet"},
+            }
         });
     }
     if create {

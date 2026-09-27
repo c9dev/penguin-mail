@@ -2485,6 +2485,7 @@ dependencies = [
  "icalendar",
  "rrule",
  "serde",
+ "serde_json",
  "tracing",
 ]
 

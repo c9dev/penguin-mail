@@ -4,6 +4,8 @@
 //! `EventBlock` rather than `EventCard` because `EventCard` already
 //! names the invitation card a message shows (`CONTEXT.md`).
 
+use std::rc::Rc;
+
 use chrono::{DateTime, NaiveDate, TimeZone, Utc};
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
@@ -47,7 +49,9 @@ impl EventBlock {
     /// `o.event.calendar` names; `compact` puts the time beside the
     /// title rather than under it, which [`is_compact`] decides from the
     /// occurrence's own length. `day` is the day a view of several days
-    /// shows the block under, which its spoken name then says.
+    /// shows the block under, which its spoken name then says. `on_edit`
+    /// runs on a double click or Enter, which opens the editor over the
+    /// popover a single click or Space still opens.
     pub fn new(
         o: &Occurrence,
         calendar_colour: &str,
@@ -55,6 +59,7 @@ impl EventBlock {
         compact: bool,
         day: Option<NaiveDate>,
         zone: &chrono::Local,
+        on_edit: Rc<dyn Fn()>,
     ) -> EventBlock {
         let event = &o.event;
         let colour = event.color.as_deref().unwrap_or(calendar_colour);
@@ -122,6 +127,32 @@ impl EventBlock {
         let name = accessible_name(o, calendar_name, day, zone);
         ui::describe(&button, &name, &description(event));
         button.set_tooltip_text(Some(&name));
+
+        // A popover that does not auto-hide takes the second click of a
+        // double click for itself (`popover.rs`), so this gesture is what
+        // notices it, over the button's own single-click activation.
+        let double = gtk::GestureClick::builder().button(gdk::BUTTON_PRIMARY).build();
+        let on_double = Rc::clone(&on_edit);
+        double.connect_pressed(move |_, n_press, _, _| {
+            if n_press == 2 {
+                on_double();
+            }
+        });
+        button.add_controller(double);
+
+        // GTK activates a button on Enter from its own key binding, in
+        // the bubble phase, so a capture-phase controller is what sees
+        // Enter first; Space still falls through to activate the button.
+        let keys = gtk::EventControllerKey::new();
+        keys.set_propagation_phase(gtk::PropagationPhase::Capture);
+        keys.connect_key_pressed(move |_, key, _, modifiers| match key {
+            gdk::Key::Return | gdk::Key::KP_Enter if modifiers.is_empty() => {
+                on_edit();
+                glib::Propagation::Stop
+            }
+            _ => glib::Propagation::Proceed,
+        });
+        button.add_controller(keys);
 
         EventBlock { widget: button, title }
     }
@@ -254,7 +285,7 @@ fn answer_state(event: &Event) -> AnswerState {
 /// outline, the strike-through or the loading icon already say to a
 /// sighted reader. A pending change takes the word over an answer state,
 /// since it is the account's own event most of the time a card is both.
-fn description(event: &Event) -> String {
+pub(super) fn description(event: &Event) -> String {
     if event.pending {
         return gettext("Waiting to be sent");
     }

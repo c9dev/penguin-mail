@@ -529,8 +529,23 @@ pub(super) static SHORTCUTS: &[Shortcut] = &[
     },
     Shortcut {
         section: Section::Calendar,
-        description: || gettext("Open the event"),
+        description: || gettext("Edit the event"),
         keys: &[calendar("Return")],
+    },
+    Shortcut {
+        section: Section::Calendar,
+        description: || gettext("Show the event"),
+        keys: &[calendar("space")],
+    },
+    Shortcut {
+        section: Section::Calendar,
+        description: || gettext("Delete the event, with Undo"),
+        keys: &[calendar("Delete"), calendar("KP_Delete").hidden()],
+    },
+    Shortcut {
+        section: Section::Calendar,
+        description: || gettext("New event"),
+        keys: &[calendar("n")],
     },
     Shortcut {
         section: Section::Calendar,
@@ -587,6 +602,8 @@ pub(super) enum CalendarKey {
     Previous,
     Next,
     Search,
+    Delete,
+    NewEvent,
 }
 
 /// The calendar's own key a press stands for, if any. Enter is listed in
@@ -602,6 +619,8 @@ pub(super) fn calendar_key(pressed: gdk::Key, modifiers: gdk::ModifierType) -> O
         "Left" => CalendarKey::Previous,
         "Right" => CalendarKey::Next,
         "<Control>f" => CalendarKey::Search,
+        "Delete" | "KP_Delete" => CalendarKey::Delete,
+        "n" => CalendarKey::NewEvent,
         _ => return None,
     })
 }
@@ -1045,16 +1064,23 @@ mod tests {
             let (pressed, modifiers) = press_of(key.trigger);
             let command = calendar_key(pressed, modifiers);
             // A focused event block is a button, and GTK activates a
-            // button on Enter, so the calendar leaves Enter alone.
-            if key.trigger == "Return" {
+            // button on Enter or Space, so the calendar leaves both
+            // alone: `EventBlock`'s own capture-phase controller answers
+            // Enter, and Space still falls through to the button.
+            if key.trigger == "Return" || key.trigger == "space" {
                 assert_eq!(command, None);
                 continue;
             }
             let command = command.unwrap_or_else(|| panic!("nothing answers {}", key.trigger));
+            // A hidden key is an alias for the line's shown one, such as
+            // KP_Delete for Delete, so it may repeat that command.
+            if !key.shown {
+                continue;
+            }
             assert!(!answered.contains(&command), "{} repeats {command:?}", key.trigger);
             answered.push(command);
         }
-        assert_eq!(answered.len(), 7);
+        assert_eq!(answered.len(), 9);
     }
 
     #[test]

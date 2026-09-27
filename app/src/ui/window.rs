@@ -246,7 +246,7 @@ const RELEASES: &str = "https://github.com/c9dev/penguin-mail/releases";
 
 /// A toast's title as Pango markup. A toast reads its title as markup, so
 /// a label called "R&D" would otherwise show nothing at all.
-fn toast_title(text: &str) -> glib::GString {
+pub(crate) fn toast_title(text: &str) -> glib::GString {
     glib::markup_escape_text(text)
 }
 
@@ -425,8 +425,9 @@ impl MainWindow {
                 .max_sidebar_width(420.0)
                 .sidebar_width_fraction(0.34)
                 .build();
-            let (t, g, n) = (weak.clone(), weak.clone(), weak.clone());
+            let (t, g, n, a) = (weak.clone(), weak.clone(), weak.clone(), weak.clone());
             let (read_settings, change_settings) = (Rc::downgrade(app), Rc::downgrade(app));
+            let (contacts_app, push_app) = (Rc::downgrade(app), Rc::downgrade(app));
             let calendar = CalendarView::new(
                 Rc::clone(&app.core),
                 move || {
@@ -454,6 +455,22 @@ impl MainWindow {
                     needs_permission: Box::new(move |account_id| {
                         if let Some(win) = n.upgrade() {
                             win.ask_permission(account_id, Permission::Calendar, Occasion::Needed);
+                        }
+                    }),
+                    add_toast: Box::new(move |toast| {
+                        if let Some(win) = a.upgrade() {
+                            win.toasts.add_toast(toast);
+                        }
+                    }),
+                    contacts: Box::new(move || {
+                        contacts_app
+                            .upgrade()
+                            .map(|app| app.contacts())
+                            .unwrap_or_default()
+                    }),
+                    push: Box::new(move |account_id| {
+                        if let Some(app) = push_app.upgrade() {
+                            app.push_calendar(account_id);
                         }
                     }),
                 },
@@ -2605,6 +2622,10 @@ impl MainWindow {
             {
                 win.conversation.stop_rendering();
                 win.previews.forget_decrypted();
+                // A held calendar change whose Undo toast is still up
+                // must not vanish with the window: nothing else would
+                // queue it (AGENTS.md "Late answers", carried from Task 4).
+                win.calendar.commit_all_now();
                 app.forget_window(&win);
             }
             glib::Propagation::Proceed
