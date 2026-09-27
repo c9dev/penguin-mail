@@ -18,10 +18,12 @@
 //! account without `calendar.events` costs one list call and one read,
 //! then nothing until half an hour passes or the person signs it in again.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 
-use mailrs_domain::calendar::{Access, Calendar, Event};
+use mailrs_domain::calendar::series::{self, Picked, RepeatScope, Step};
+use mailrs_domain::calendar::{Access, Calendar, Event, Occurrence};
 use mailrs_domain::{AccountId, EpochMillis};
 use mailrs_store::Db;
 use mailrs_store::calendar as store;
@@ -88,6 +90,87 @@ pub struct CalendarCopy<A: Accounts> {
     /// reading it again and sending the same change twice. `send` waits on it instead of
     /// walking past it, since a person's own edit should still go out.
     running: tokio::sync::Mutex<()>,
+    /// The rows of held changes, which a read leaves alone as it leaves
+    /// queued ones. One entry per step, so two changes touching one row
+    /// each release only their own.
+    held: Mutex<Vec<HeldKey>>,
+    /// The one held change whose Undo toast is up. Holding another commits
+    /// it first. Locked for the whole of `hold`, `commit` and `revert`, so
+    /// two of them never interleave their writes.
+    waiting: tokio::sync::Mutex<Option<Held>>,
+    /// Numbers each held change, so a commit or revert of one that was
+    /// already committed can tell.
+    serial: AtomicU64,
+}
+
+/// A change written to the copy and not queued yet, while its Undo toast
+/// is up. Undo reverts it; the toast closing commits it. Only one waits at
+/// a time: holding another commits it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Held {
+    pub account_id: AccountId,
+    pub steps: Vec<Step>,
+    /// Each row the steps touched, as it was, with a removed series'
+    /// changed occurrences.
+    before: Vec<Event>,
+    serial: u64,
+}
+
+impl Held {
+    fn keys(&self) -> Vec<HeldKey> {
+        held_keys(self.account_id, &self.steps)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct HeldKey {
+    account_id: AccountId,
+    calendar: String,
+    id: String,
+    /// The step takes the event off, so a read keeps its changed
+    /// occurrences out too.
+    removal: bool,
+}
+
+fn held_keys(account_id: AccountId, steps: &[Step]) -> Vec<HeldKey> {
+    steps
+        .iter()
+        .map(|step| {
+            let (calendar, id) = step.key();
+            HeldKey { account_id, calendar, id, removal: matches!(step, Step::Remove { .. }) }
+        })
+        .collect()
+}
+
+/// Releases a held change's keys when dropped, whether its write worked,
+/// failed, or its caller went away part way.
+struct Release<'a> {
+    held: &'a Mutex<Vec<HeldKey>>,
+    keys: Vec<HeldKey>,
+}
+
+impl Release<'_> {
+    fn new(held: &Mutex<Vec<HeldKey>>, keys: Vec<HeldKey>) -> Release<'_> {
+        held.lock().expect("copy poisoned").extend(keys.iter().cloned());
+        Release { held, keys }
+    }
+
+    /// Keeps the keys held after this guard goes, for a change that stays
+    /// waiting on its toast.
+    fn keep(mut self) {
+        self.keys.clear();
+    }
+}
+
+impl Drop for Release<'_> {
+    fn drop(&mut self) {
+        let mut held = self.held.lock().expect("copy poisoned");
+        for key in &self.keys {
+            if let Some(at) = held.iter().position(|k| k == key) {
+                held.swap_remove(at);
+            }
+        }
+    }
 }
 
 impl<A: Accounts> CalendarCopy<A> {
@@ -99,6 +182,9 @@ impl<A: Accounts> CalendarCopy<A> {
             last_read: Mutex::new(HashMap::new()),
             refused: Mutex::new(HashMap::new()),
             running: tokio::sync::Mutex::new(()),
+            held: Mutex::new(Vec::new()),
+            waiting: tokio::sync::Mutex::new(None),
+            serial: AtomicU64::new(0),
         }
     }
 
@@ -329,12 +415,23 @@ impl<A: Accounts> CalendarCopy<A> {
                 count += got.events.len() + got.removed.len();
                 let (mut events, mut removed, next_sync) = (got.events, got.removed, got.next_sync);
                 let calendar_id = id.to_string();
+                // Taken before the write, since the lock must not be held
+                // across an await.
+                let (held, held_removals) = self.held_in(account_id, id);
                 self.db
                     .write(move |c| {
-                        // An event with a change of ours still queued
-                        // keeps our version until the queue sends it.
-                        let pending = store::pending_ids(c, account_id, &calendar_id)?;
-                        events.retain(|e| !pending.contains(&e.id));
+                        // An event with a change of ours still queued or
+                        // held keeps our version until the queue sends it.
+                        let mut pending = store::pending_ids(c, account_id, &calendar_id)?;
+                        pending.extend(held);
+                        // A series on its way out takes its changed
+                        // occurrences with it; a read must not bring them
+                        // back to stand alone.
+                        let mut removing = store::removing_ids(c, account_id, &calendar_id)?;
+                        removing.extend(held_removals);
+                        events.retain(|e| {
+                            !pending.contains(&e.id) && !e.series.as_ref().is_some_and(|s| removing.contains(s))
+                        });
                         removed.retain(|e| !pending.contains(e));
                         store::save_events(c, account_id, &events, mark)?;
                         store::remove_events(c, account_id, &calendar_id, &removed)?;
@@ -359,8 +456,8 @@ impl<A: Accounts> CalendarCopy<A> {
 
     /// Stores `event` as waiting and queues it for the provider. The view
     /// shows it at once; `send` mails it out. `event` queues as a
-    /// `Create` only when it carries no stored etag and nothing is
-    /// already queued for it, so a brand-new event edited twice before a
+    /// `Create` only when it carries no stored etag, is no occurrence of a
+    /// series, and nothing is already queued for it, so a brand-new event edited twice before a
     /// send is created once and changed the second time, never created
     /// twice. An empty etag alone would not say that: an event already
     /// queued as a create has none either.
@@ -370,7 +467,9 @@ impl<A: Accounts> CalendarCopy<A> {
         self.db
             .write(move |c| {
                 let already_queued = store::pending_ids(c, account_id, &event.calendar)?.contains(&event.id);
-                let kind = if event.etag.is_empty() && !already_queued {
+                // An occurrence has no etag before its first change, and
+                // its id, which holds `_`, is not one a create may use.
+                let kind = if event.etag.is_empty() && event.series.is_none() && !already_queued {
                     store::ChangeKind::Create
                 } else {
                     store::ChangeKind::Save
@@ -397,42 +496,6 @@ impl<A: Accounts> CalendarCopy<A> {
             })
             .await?;
         Ok(())
-    }
-
-    /// Changes one occurrence of a series on the provider, then reads its
-    /// calendar again so the copy shows the occurrence moved. `event`
-    /// carries the occurrence id. The queue holds whole events
-    /// only, so this goes to the provider at once and waits for it.
-    pub async fn put_occurrence(&self, account_id: AccountId, event: &Event) -> Result<Permitted<Event>, SyncError> {
-        let _run = self.running.lock().await;
-        let calendar = self.calendar(account_id)?.ok_or(SyncError::Backend(BackendError::Unsupported))?;
-        let sent = match calendar.put_event(event, None, false).await {
-            Ok(sent) => sent,
-            Err(BackendError::NeedsPermission) => return Ok(Permitted::NeedsPermission),
-            Err(err) => return Err(err.into()),
-        };
-        self.read_calendar(&calendar, account_id, &event.calendar, crate::now_millis()).await?;
-        Ok(Permitted::Done(sent))
-    }
-
-    /// Cancels one occurrence of a series on the provider, then reads its
-    /// calendar again so the occurrence leaves the copy. An occurrence the
-    /// provider no longer has is already gone, which is what was asked.
-    pub async fn remove_occurrence(
-        &self,
-        account_id: AccountId,
-        calendar_id: &str,
-        id: &str,
-    ) -> Result<Permitted<()>, SyncError> {
-        let _run = self.running.lock().await;
-        let calendar = self.calendar(account_id)?.ok_or(SyncError::Backend(BackendError::Unsupported))?;
-        match calendar.remove_event(calendar_id, id, None).await {
-            Ok(()) | Err(BackendError::NotFound) => {}
-            Err(BackendError::NeedsPermission) => return Ok(Permitted::NeedsPermission),
-            Err(err) => return Err(err.into()),
-        }
-        self.read_calendar(&calendar, account_id, calendar_id, crate::now_millis()).await?;
-        Ok(Permitted::Done(()))
     }
 
     /// Sends the account's queue in order, waiting behind a refresh
@@ -500,12 +563,9 @@ impl<A: Accounts> CalendarCopy<A> {
                         })
                         .await?;
                 }
-                (_, Ok(None)) => {
-                    self.db.write(move |c| store::dequeue(c, seq)).await?;
-                }
-                (store::ChangeKind::Remove, Err(BackendError::NotFound)) => {
-                    // Gone already; the removal is done.
-                    self.db.write(move |c| store::dequeue(c, seq)).await?;
+                // Gone already or not, the removal is done.
+                (_, Ok(None)) | (store::ChangeKind::Remove, Err(BackendError::NotFound)) => {
+                    self.db.write(move |c| store::finish_removal(c, account_id, seq)).await?;
                 }
                 (store::ChangeKind::Save, Err(BackendError::NotFound)) => {
                     turned_down.push(self.drop_gone(&change, "deleted elsewhere").await?);
@@ -584,6 +644,247 @@ impl<A: Accounts> CalendarCopy<A> {
         })
     }
 
+    /// Writes `steps` to the copy, marked waiting, and queues nothing. A
+    /// change held before and still waiting is committed first, since only
+    /// one Undo toast shows at a time. An account with no calendar answers
+    /// `Unsupported`, and one whose calendar permission is withheld
+    /// `NeedsPermission`, so the queue never takes a change it cannot send.
+    pub async fn hold(&self, account_id: AccountId, steps: Vec<Step>) -> Result<Permitted<Held>, SyncError> {
+        if self.calendar(account_id)?.is_none() {
+            return Err(SyncError::Backend(BackendError::Unsupported));
+        }
+        if self.withheld(account_id)? {
+            return Ok(Permitted::NeedsPermission);
+        }
+        let mut waiting = self.waiting.lock().await;
+        if let Some(prior) = waiting.take() {
+            self.queue_held(prior).await?;
+        }
+        let keys = held_keys(account_id, &steps);
+        let release = Release::new(&self.held, keys);
+        let mut touched: Vec<(String, String)> = Vec::new();
+        for step in &steps {
+            let key = step.key();
+            if !touched.contains(&key) {
+                touched.push(key);
+            }
+        }
+        let removals: HashSet<(String, String)> = steps
+            .iter()
+            .filter(|s| matches!(s, Step::Remove { .. }))
+            .map(Step::key)
+            .collect();
+        let (keys, writes) = (touched, steps.clone());
+        let now = crate::now_millis();
+        let before = self
+            .db
+            .write(move |c| {
+                let mut before = Vec::new();
+                for key in &keys {
+                    let (calendar, id) = key;
+                    before.extend(store::event(c, account_id, calendar, id)?);
+                    // Removing a series takes its changed occurrences off
+                    // the copy too, so Undo must have them to put back.
+                    if removals.contains(key) {
+                        before.extend(store::changed_occurrences(c, account_id, calendar, id)?);
+                    }
+                }
+                for step in &writes {
+                    match step {
+                        Step::Save(event) | Step::Cancel(event) => {
+                            let event = Event { pending: true, ..event.clone() };
+                            store::save_events(c, account_id, std::slice::from_ref(&event), now)?;
+                        }
+                        Step::Remove { calendar, id } => {
+                            store::remove_events(c, account_id, calendar, std::slice::from_ref(id))?;
+                        }
+                    }
+                }
+                Ok(before)
+            })
+            .await?;
+        release.keep();
+        let serial = self.serial.fetch_add(1, Ordering::Relaxed);
+        let held = Held { account_id, steps, before, serial };
+        *waiting = Some(held.clone());
+        Ok(Permitted::Done(held))
+    }
+
+    /// Queues what `held` wrote, for the next send. A change already
+    /// committed, because another was held after it, stays as it is.
+    pub async fn commit(&self, held: Held) -> Result<(), SyncError> {
+        let mut waiting = self.waiting.lock().await;
+        let Some(held) = waiting.take_if(|w| w.serial == held.serial) else {
+            return Ok(());
+        };
+        self.queue_held(held).await
+    }
+
+    /// Puts back every row `held` touched, as it was, and queues nothing.
+    /// A change already committed, because another was held after it,
+    /// stays committed.
+    pub async fn revert(&self, held: Held) -> Result<(), SyncError> {
+        let mut waiting = self.waiting.lock().await;
+        let Some(held) = waiting.take_if(|w| w.serial == held.serial) else {
+            return Ok(());
+        };
+        let _release = Release { held: &self.held, keys: held.keys() };
+        let Held { account_id, steps, before, .. } = held;
+        let now = crate::now_millis();
+        self.db
+            .write(move |c| {
+                // A row the change made, such as a new series or a first
+                // changed occurrence, has no earlier version to put back.
+                // `remove_events` would also take a series' changed
+                // occurrences, which a save leaves alone, so only a row
+                // missing from `before` goes this way.
+                for step in &steps {
+                    let (calendar, id) = step.key();
+                    if !before.iter().any(|e| e.calendar == calendar && e.id == id) {
+                        store::remove_events(c, account_id, &calendar, std::slice::from_ref(&id))?;
+                    }
+                }
+                store::save_events(c, account_id, &before, now)
+            })
+            .await?;
+        Ok(())
+    }
+
+    /// Writes `steps` and queues them at once, for a change with no Undo
+    /// toast, such as one the assistant makes. Like `hold`, it commits a
+    /// change still waiting on its toast first.
+    pub async fn apply(&self, account_id: AccountId, steps: Vec<Step>) -> Result<Permitted<()>, SyncError> {
+        match self.hold(account_id, steps).await? {
+            Permitted::Done(held) => self.commit(held).await.map(Permitted::Done),
+            Permitted::NeedsPermission => Ok(Permitted::NeedsPermission),
+        }
+    }
+
+    /// Commits the change still waiting on its Undo toast, if any: for the
+    /// window closing or the app quitting.
+    pub async fn commit_waiting(&self) -> Result<(), SyncError> {
+        let mut waiting = self.waiting.lock().await;
+        match waiting.take() {
+            Some(held) => self.queue_held(held).await,
+            None => Ok(()),
+        }
+    }
+
+    /// Queues a held change's steps and releases its rows to reads. A new
+    /// event goes out as a create; an occurrence, which has no etag before
+    /// its first change, as a change of that occurrence.
+    async fn queue_held(&self, held: Held) -> Result<(), SyncError> {
+        let _release = Release { held: &self.held, keys: held.keys() };
+        let Held { account_id, steps, before, .. } = held;
+        self.db
+            .write(move |c| {
+                for step in &steps {
+                    match step {
+                        Step::Save(event) => {
+                            let queued = store::pending_ids(c, account_id, &event.calendar)?.contains(&event.id);
+                            let kind = if event.etag.is_empty() && event.series.is_none() && !queued {
+                                store::ChangeKind::Create
+                            } else {
+                                store::ChangeKind::Save
+                            };
+                            let event = Event { pending: true, ..event.clone() };
+                            store::enqueue(c, account_id, kind, &event)?;
+                        }
+                        // The cancelled row stays in the copy; the provider
+                        // gets a delete of that occurrence.
+                        Step::Cancel(event) => store::enqueue(c, account_id, store::ChangeKind::Remove, event)?,
+                        Step::Remove { calendar, id } => {
+                            let prior = before
+                                .iter()
+                                .find(|e| &e.calendar == calendar && &e.id == id)
+                                .cloned()
+                                .unwrap_or_else(|| Event {
+                                    calendar: calendar.clone(),
+                                    id: id.clone(),
+                                    ..Event::default()
+                                });
+                            store::enqueue(c, account_id, store::ChangeKind::Remove, &prior)?;
+                        }
+                    }
+                }
+                Ok(())
+            })
+            .await?;
+        Ok(())
+    }
+
+    /// The writes that make `edited` true of `occurrence`, and of the
+    /// others in its series that `scope` covers. A one-off event, or no
+    /// scope, saves the event as it is.
+    pub async fn change_steps(
+        &self,
+        account_id: AccountId,
+        occurrence: &Occurrence,
+        edited: Event,
+        scope: Option<RepeatScope>,
+    ) -> Result<Vec<Step>, SyncError> {
+        let Some(scope) = scope.filter(|_| series::in_series(&occurrence.event)) else {
+            return Ok(vec![Step::Save(edited)]);
+        };
+        let Some((whole, changed)) = self.series_of(account_id, &occurrence.event).await? else {
+            return Ok(vec![Step::Save(edited)]);
+        };
+        Ok(series::change(&whole, &changed, picked(occurrence), edited, scope, &new_event_id()))
+    }
+
+    /// The writes that delete `occurrence`, and the others `scope` covers.
+    pub async fn delete_steps(
+        &self,
+        account_id: AccountId,
+        occurrence: &Occurrence,
+        scope: Option<RepeatScope>,
+    ) -> Result<Vec<Step>, SyncError> {
+        let alone = || {
+            vec![Step::Remove { calendar: occurrence.event.calendar.clone(), id: occurrence.event.id.clone() }]
+        };
+        let Some(scope) = scope.filter(|_| series::in_series(&occurrence.event)) else {
+            return Ok(alone());
+        };
+        let Some((whole, changed)) = self.series_of(account_id, &occurrence.event).await? else {
+            return Ok(alone());
+        };
+        Ok(series::delete(&whole, &changed, picked(occurrence), scope))
+    }
+
+    /// The series `event` belongs to, and its changed occurrences.
+    async fn series_of(&self, account_id: AccountId, event: &Event) -> Result<Option<(Event, Vec<Event>)>, SyncError> {
+        let calendar = event.calendar.clone();
+        let id = event.series.clone().unwrap_or_else(|| event.id.clone());
+        Ok(self
+            .db
+            .read(move |c| {
+                Ok(match store::event(c, account_id, &calendar, &id)? {
+                    Some(whole) => Some((whole, store::changed_occurrences(c, account_id, &calendar, &id)?)),
+                    None => None,
+                })
+            })
+            .await?)
+    }
+
+    /// The ids on one calendar that held changes write, and those they
+    /// remove.
+    fn held_in(&self, account_id: AccountId, calendar: &str) -> (Vec<String>, Vec<String>) {
+        let held = self.held.lock().expect("copy poisoned");
+        let mine = held.iter().filter(|k| k.account_id == account_id && k.calendar == calendar);
+        let ids = mine.clone().map(|k| k.id.clone()).collect();
+        let removals = mine.filter(|k| k.removal).map(|k| k.id.clone()).collect();
+        (ids, removals)
+    }
+
+    fn withheld(&self, account_id: AccountId) -> Result<bool, SyncError> {
+        Ok(self
+            .accounts
+            .services(account_id)
+            .ok_or(SyncError::UnknownAccount(account_id))?
+            .withheld()
+            .calendar)
+    }
+
     fn calendar(&self, account_id: AccountId) -> Result<Option<AnyCalendar>, SyncError> {
         Ok(self
             .accounts
@@ -602,6 +903,12 @@ impl<A: Accounts> CalendarCopy<A> {
             .ok_or(SyncError::UnknownAccount(account_id))?
             .email)
     }
+}
+
+/// The occurrence a person picked: a changed occurrence knows its place
+/// in the series, and a plain one starts where the series put it.
+fn picked(occurrence: &Occurrence) -> Picked {
+    Picked { original_start: occurrence.event.original_start.unwrap_or(occurrence.start), start: occurrence.start }
 }
 
 /// Whether a failed send should stop and keep the change for the next
