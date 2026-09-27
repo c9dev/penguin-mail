@@ -923,16 +923,12 @@ impl CalendarView {
     }
 
     // ---- Moving events ---------------------------------------------------
-    //
-    // `writable`, `edit`, `quick_create_at` and `save_draft` are Task 8's,
-    // below under "Making events"; `moved`, `series_rules` and `can_move`
-    // are this task's own.
 
     /// A drag moved or stretched `o` on `grid`. The write goes through
     /// the draft, so a weekly series moved to another day moves its day
-    /// in the rule. `grid` is unused here; Task 10's repeat question
-    /// calls `grid.spring_back()` on a cancel once it lands (E10, Task 9
-    /// correction 7).
+    /// in the rule. The card stays where it landed until the write is
+    /// held; a Cancel of the repeat question or a failed write springs
+    /// it back on `grid`.
     pub(super) fn moved(
         self: &Rc<Self>,
         grid: &TimeGrid,
@@ -1165,6 +1161,8 @@ impl CalendarView {
         });
         let weak = Rc::downgrade(self);
         grid.set_can_move(move |o| weak.upgrade().is_some_and(|view| view.can_move(o)));
+        let weak = Rc::downgrade(self);
+        grid.set_can_select(move || weak.upgrade().is_some_and(|view| !view.writable().is_empty()));
         let carousel = self.carousel.clone();
         grid.connect_carousel_interactive(move |on| carousel.set_interactive(on));
         GridPage {
@@ -2006,7 +2004,17 @@ impl CalendarView {
     /// window (the list has no grid to point at), for a month day off
     /// screen, or a grid range that does not hold `start`; the caller
     /// opens the editor instead.
-    fn quick_anchor(&self, start: EpochMillis, end: EpochMillis) -> Option<(gtk::Widget, gdk::Rectangle)> {
+    ///
+    /// On the time grid, the grid first scrolls so the slot shows: an
+    /// evening slot sits below the hours a page opens on. The rect is
+    /// then given in the scrolled window's coordinates, which the
+    /// scroll does not move, clamped to what shows, and the popover
+    /// opens toward the wider side of the grid.
+    fn quick_anchor(
+        &self,
+        start: EpochMillis,
+        end: EpochMillis,
+    ) -> Option<(gtk::Widget, gdk::Rectangle, gtk::PositionType)> {
         if self.narrow.get() {
             return None;
         }
@@ -2016,11 +2024,27 @@ impl CalendarView {
             PageView::Grid(grid) => {
                 let rect = grid.grid.slot_rect(start, end)?;
                 grid.grid.show_ghost(Some((start, end)));
-                Some((grid.grid.clone().upcast(), rect))
+                let adjustment = grid.scroller.vadjustment();
+                let (top, height) = (f64::from(rect.y()), f64::from(rect.height()));
+                let value = quick::reveal(
+                    top,
+                    top + height,
+                    adjustment.value(),
+                    adjustment.page_size(),
+                    adjustment.upper(),
+                );
+                adjustment.set_value(value);
+                let (y, height) = quick::clamp_span(top - value, height, adjustment.page_size());
+                let shown = gdk::Rectangle::new(rect.x(), y.round() as i32, rect.width(), height.round().max(1.0) as i32);
+                let middle = f64::from(rect.x()) + f64::from(rect.width()) / 2.0;
+                let side = quick::side(middle, f64::from(grid.grid.width()));
+                Some((grid.scroller.clone().upcast(), shown, side))
             }
             PageView::Month(month) => {
                 let rect = month.day_rect(date_of(start, false))?;
-                Some((month.widget(), rect))
+                let middle = f64::from(rect.x()) + f64::from(rect.width()) / 2.0;
+                let side = quick::side(middle, f64::from(month.widget().width()));
+                Some((month.widget(), rect, side))
             }
         }
     }
@@ -2028,8 +2052,12 @@ impl CalendarView {
     /// Opens quick create for `start` to `end`, marking the span with a
     /// ghost card on the time grid when it points at one.
     pub(super) fn quick_create_at(self: &Rc<Self>, start: EpochMillis, end: EpochMillis) {
-        let Some(draft) = self.fresh_draft(start, end) else { return };
-        let Some((anchor, rect)) = self.quick_anchor(start, end) else {
+        let Some(draft) = self.fresh_draft(start, end) else {
+            self.clear_ghost();
+            return;
+        };
+        let Some((anchor, rect, side)) = self.quick_anchor(start, end) else {
+            self.clear_ghost();
             return self.edit(draft);
         };
         let calendar = self
@@ -2044,6 +2072,7 @@ impl CalendarView {
         self.quick.show(
             &anchor,
             &rect,
+            side,
             &when,
             &calendar,
             // `Draft` has private fields, so no struct update from here.

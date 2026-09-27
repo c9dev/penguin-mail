@@ -286,6 +286,7 @@ mod imp {
     type Moved = dyn Fn(&super::TimeGrid, &Occurrence, EpochMillis, EpochMillis);
     type Selected = dyn Fn(EpochMillis, EpochMillis);
     type CanMove = dyn Fn(&Occurrence) -> bool;
+    type CanSelect = dyn Fn() -> bool;
     type CarouselInteractive = dyn Fn(bool);
     /// A strip card's start day, end day (exclusive) and lane.
     type StripPlacement = (usize, usize, usize);
@@ -324,6 +325,10 @@ mod imp {
         /// answers `false` starts no drag. `None` starts none either,
         /// which is only true before the view has set one.
         pub can_move: RefCell<Option<Box<CanMove>>>,
+        /// Says whether a drag across empty time may start: with no
+        /// calendar to take a new event, it would mark a span nothing
+        /// opens for.
+        pub can_select: RefCell<Option<Box<CanSelect>>>,
         /// Turns the ancestor carousel's own swipe off while a drag holds
         /// the grid, so a sideways touch drag does not page the range.
         pub carousel_interactive: RefCell<Option<Box<CarouselInteractive>>>,
@@ -446,9 +451,23 @@ mod imp {
                 snapshot.append_color(&hairline, &graphene::Rect::new(x, 0.0, 1.0, height));
             }
 
-            // Every parented child draws itself, in the order `show`
-            // added it.
-            self.parent_snapshot(snapshot);
+            // Every child draws in the order `show` added it, but a card
+            // being dragged draws last, so it passes over the cards it
+            // crosses rather than under the ones added after it.
+            let raised = self
+                .dragging
+                .borrow()
+                .as_ref()
+                .and_then(|d| d.card.as_ref().map(|(w, _)| w.clone()));
+            let mut children = Vec::new();
+            let mut child = widget.first_child();
+            while let Some(c) = child {
+                child = c.next_sibling();
+                children.push(c);
+            }
+            for child in super::draw_order(&children, raised.as_ref()) {
+                widget.snapshot_child(&child, snapshot);
+            }
 
             if let Some((column, y)) = self.now_line(&days) {
                 let accent = adw::StyleManager::default().accent_color_rgba();
@@ -990,8 +1009,8 @@ impl TimeGrid {
     // ---- Dragging --------------------------------------------------
 
     /// Runs `f` when a drag of a card ends at a new span, settled: the
-    /// grid it happened on (E10; a page holds this weakly across the
-    /// repeat question and acts on it only while still on screen), the
+    /// grid it happened on (a page holds it weakly across the repeat
+    /// question and acts on it only while it is still on screen), the
     /// occurrence, and its new start and end.
     pub fn connect_moved(
         &self,
@@ -1012,6 +1031,11 @@ impl TimeGrid {
         self.imp().can_move.replace(Some(Box::new(f)));
     }
 
+    /// Says whether a drag across empty time may start.
+    pub fn set_can_select(&self, f: impl Fn() -> bool + 'static) {
+        self.imp().can_select.replace(Some(Box::new(f)));
+    }
+
     /// Runs `f(false)` once a drag of a card holds the grid and `f(true)`
     /// once it lets go, so the view can turn the ancestor carousel's own
     /// swipe off: it allows touch drags, and a sideways one across a
@@ -1020,8 +1044,8 @@ impl TimeGrid {
         self.imp().carousel_interactive.replace(Some(Box::new(f)));
     }
 
-    /// Returns the last dragged card to its own place, with no write, for
-    /// a cancelled repeat question.
+    /// Returns the card that landed on a new span to its own place, with
+    /// no write, for a cancelled repeat question or a failed write.
     pub fn spring_back(&self) {
         let imp = self.imp();
         let Some((widget, from)) = imp
@@ -1148,7 +1172,10 @@ impl TimeGrid {
                 samples: VecDeque::new(),
                 started: false,
             }));
-        } else if x >= f64::from(GUTTER) && y >= 0.0 {
+        } else if x >= f64::from(GUTTER)
+            && y >= 0.0
+            && imp.can_select.borrow().as_ref().is_some_and(|f| f())
+        {
             imp.dragging.replace(Some(Dragging {
                 card: None,
                 grab: None,
@@ -1275,10 +1302,12 @@ impl TimeGrid {
                 let weak = self.downgrade();
                 self.settle_to(current_rect, target, velocity_y, move || {
                     let Some(grid) = weak.upgrade() else { return };
-                    grid.finish_settle();
-                    if !unchanged
-                        && let Some(f) = grid.imp().moved.borrow().as_ref()
-                    {
+                    if unchanged {
+                        grid.finish_settle();
+                        return;
+                    }
+                    grid.land();
+                    if let Some(f) = grid.imp().moved.borrow().as_ref() {
                         f(&grid, &occurrence, start, end);
                     }
                 });
@@ -1351,6 +1380,30 @@ impl TimeGrid {
         self.imp().settle.replace(Some(spring));
     }
 
+    /// Lets go of a card that settled on a new span while the view asks
+    /// the repeat question and writes the change. The card stays drawn
+    /// where it landed: the next `show`, after the write, places it
+    /// from the copy, and [`Self::spring_back`] returns it on a Cancel
+    /// or a failed write.
+    fn land(&self) {
+        let imp = self.imp();
+        let card = imp
+            .dragging
+            .borrow()
+            .as_ref()
+            .and_then(|d| d.card.as_ref().map(|(w, _)| w.clone()));
+        let Some(card) = card else {
+            self.finish_settle();
+            return;
+        };
+        card.remove_css_class("dragging");
+        imp.settle.take();
+        self.set_cursor_from_name(None);
+        if let Some(f) = imp.carousel_interactive.borrow().as_ref() {
+            f(true);
+        }
+    }
+
     /// Clears the drag once its settle has landed: the class, the
     /// cursor, and the carousel's own swipe.
     fn finish_settle(&self) {
@@ -1403,6 +1456,17 @@ impl TimeGrid {
         }
         glib::Propagation::Stop
     }
+}
+
+/// The order `children` draw in: their own, with `raised` moved to the
+/// end so it draws over the rest.
+fn draw_order<W: Clone + PartialEq>(children: &[W], raised: Option<&W>) -> Vec<W> {
+    children
+        .iter()
+        .filter(|c| Some(*c) != raised)
+        .chain(raised.filter(|r| children.contains(r)))
+        .cloned()
+        .collect()
 }
 
 /// Puts `cards` in place of the cards among `children`, ahead of the
@@ -1804,6 +1868,16 @@ mod tests {
         let top = scroll_for_hour(8.0);
         assert!(hour_label_shown(19, top, 751.0));
         assert!(!hour_label_shown(20, top, 751.0));
+    }
+
+    #[test]
+    fn a_dragged_card_draws_after_every_other_child() {
+        assert_eq!(draw_order(&["a", "b", "c", "d"], Some(&"b")), ["a", "c", "d", "b"]);
+    }
+
+    #[test]
+    fn with_no_drag_the_children_draw_in_their_own_order() {
+        assert_eq!(draw_order(&["a", "b", "c"], None), ["a", "b", "c"]);
     }
 
     #[test]
