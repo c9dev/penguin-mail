@@ -10,6 +10,12 @@ rust-version.workspace = true
 name = "penguin-mail-cli"
 path = "src/main.rs"
 
+[features]
+# Reaches secrets through the Secret portal instead of the desktop
+# keyring; the Flatpak build turns this on, since `penguin-mail-cli`
+# ships inside it beside `penguin-mail`.
+packaging-flatpak = ["mailrs-gmail/packaging-flatpak", "mailrs-sync/packaging-flatpak"]
+
 [dependencies]
 mailrs-domain.workspace = true
 mailrs-gmail.workspace = true

@@ -10,6 +10,8 @@ pub mod model;
 mod oauth;
 pub mod people;
 pub mod query;
+#[cfg(feature = "packaging-flatpak")]
+pub mod secret_portal;
 pub mod structure;
 mod token_store;
 

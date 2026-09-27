@@ -6,12 +6,18 @@ repository.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 
+[features]
+# Reaches secrets through the Secret portal instead of the desktop
+# keyring; only a Flatpak build turns this on.
+packaging-flatpak = ["dep:oo7"]
+
 [dependencies]
 mailrs-domain.workspace = true
 mailrs-mime.workspace = true
 base64.workspace = true
 chrono.workspace = true
 keyring.workspace = true
+oo7 = { workspace = true, optional = true }
 rand.workspace = true
 reqwest.workspace = true
 serde.workspace = true
