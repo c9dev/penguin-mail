@@ -3611,6 +3611,54 @@ msgstr[1] "mais {count} eventos a {date}"
 msgid "{date}, has events"
 msgstr "{date}, tem eventos"
 
+#: app/src/ui/calendar/words.rs:203
+msgid "At the start"
+msgstr "No início"
+
+#: app/src/ui/calendar/words.rs:210
+msgid "{count} week before"
+msgid_plural "{count} weeks before"
+msgstr[0] "{count} semana antes"
+msgstr[1] "{count} semanas antes"
+
+#: app/src/ui/calendar/words.rs:216
+msgid "{count} day before"
+msgid_plural "{count} days before"
+msgstr[0] "{count} dia antes"
+msgstr[1] "{count} dias antes"
+
+#: app/src/ui/calendar/words.rs:222
+msgid "{count} hour before"
+msgid_plural "{count} hours before"
+msgstr[0] "{count} hora antes"
+msgstr[1] "{count} horas antes"
+
+#: app/src/ui/calendar/words.rs:228
+msgid "{count} minute before"
+msgid_plural "{count} minutes before"
+msgstr[0] "{count} minuto antes"
+msgstr[1] "{count} minutos antes"
+
+#: app/src/ui/calendar/words.rs:243
+msgid "Never"
+msgstr "Nunca"
+
+#: app/src/ui/calendar/words.rs:245
+msgid "Every weekday"
+msgstr "Todos os dias úteis"
+
+#: app/src/ui/calendar/words.rs:249
+msgid "A rule set in another app"
+msgstr "Uma regra definida noutra aplicação"
+
+#: app/src/ui/calendar/words.rs:313
+msgid "Organizer"
+msgstr "Organizador"
+
+#: app/src/ui/calendar/words.rs:317
+msgid "No answer yet"
+msgstr "Ainda sem resposta"
+
 #: app/src/ui/composer/mod.rs:204 app/src/ui/conversation.rs:1561
 msgid "Choose a Time…"
 msgstr "Escolher uma hora…"

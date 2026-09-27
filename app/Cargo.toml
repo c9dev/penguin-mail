@@ -55,9 +55,11 @@ tracing-subscriber.workspace = true
 # The web source checks a page's host before it downloads anything.
 url.workspace = true
 webkit.workspace = true
+# The editor's draft keeps the zone it opened in, at run time, not only
+# under tests.
+chrono-tz.workspace = true
 
 [dev-dependencies]
-chrono-tz.workspace = true
 mail-parser.workspace = true
 tempfile.workspace = true
 wiremock.workspace = true
