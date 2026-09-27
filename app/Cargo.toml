@@ -58,7 +58,6 @@ url.workspace = true
 webkit.workspace = true
 # The editor's draft keeps the zone it opened in, at run time, not only
 # under tests.
-chrono-tz.workspace = true
 
 [dev-dependencies]
 mail-parser.workspace = true
