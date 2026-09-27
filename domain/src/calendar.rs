@@ -14,10 +14,17 @@ use serde::{Deserialize, Serialize};
 use crate::invitation;
 use crate::{AccountId, EpochMillis};
 
+pub mod repeat;
+
 /// Most occurrences one expansion returns. A daily series over a month
 /// view is 42; this is far above any range the window asks for, and it
 /// stops a rule with no end from running on.
 const MOST_OCCURRENCES: u16 = 1000;
+
+/// Whether `line` is an `RRULE`, as opposed to `EXDATE` or `RDATE`.
+pub(crate) fn is_rule_line(line: &str) -> bool {
+    line.to_ascii_uppercase().starts_with("RRULE")
+}
 
 /// What the account may do with a calendar.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
