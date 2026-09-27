@@ -414,6 +414,10 @@ msgstr "{first} a {last}"
 msgid "Add “{title}” to the calendar for {account}, {when}?"
 msgstr "Adicionar “{title}” ao calendário de {account}, {when}?"
 
+#: app/src/assistant/run/calendar.rs:466
+msgid "Add “{title}” to the calendar “{calendar}” for {account}, {when}?"
+msgstr "Adicionar “{title}” ao calendário “{calendar}” de {account}, {when}?"
+
 #: app/src/assistant/run/calendar.rs:372
 msgid "Google sends an invitation to {guests}."
 msgstr "A Google envia um convite a {guests}."
@@ -717,6 +721,10 @@ msgstr "A procurar um contacto"
 #: app/src/assistant/run/catalog.rs:1023
 msgid "Reading the calendar"
 msgstr "A ler o calendário"
+
+#: app/src/assistant/run/catalog.rs:1055
+msgid "Listing the calendars"
+msgstr "A listar os calendários"
 
 #: app/src/assistant/run/catalog.rs:1037
 msgid "Finding free time"
