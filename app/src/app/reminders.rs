@@ -141,7 +141,8 @@ impl App {
             self.gio.add_action(&action);
         };
         add(notice::SHOW_EVENT, |app, key| {
-            app.show_window().show_event(key.account_id, &key.calendar, &key.event);
+            app.show_window()
+                .show_event(key.account_id, &key.calendar, &key.event, key.start);
         });
         add(notice::JOIN_EVENT, |app, key| app.join_event(key));
         add(notice::SNOOZE_REMINDER, |app, key| app.snooze_reminder(key));

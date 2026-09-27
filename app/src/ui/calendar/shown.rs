@@ -6,10 +6,10 @@
 use std::collections::HashSet;
 
 use chrono::{DateTime, Days, Months, NaiveDate, TimeZone, Utc};
-use mailrs_domain::EpochMillis;
 use mailrs_domain::calendar::Occurrence;
 use mailrs_domain::invitation::Answer;
 use mailrs_domain::translate::gettext;
+use mailrs_domain::{AccountId, EpochMillis};
 
 pub use super::range::ViewKind;
 
@@ -98,9 +98,23 @@ pub fn stepped(kind: ViewKind, day: NaiveDate, by: i32) -> NaiveDate {
 }
 
 /// Whether an occurrence shows: one the person declined stays out unless
-/// they asked to see declined events.
-pub fn keep(o: &Occurrence, show_declined: bool) -> bool {
-    show_declined || o.event.my_answer != Some(Answer::No)
+/// they asked to see declined events, or `pending` names it. `pending`
+/// is the account, calendar, event id and start of the occurrence Show
+/// in Calendar (or a reminder, or a turned-down toast) asked the view to
+/// open, drawn even declined so the popover has something to point at.
+pub fn keep(
+    o: &Occurrence,
+    show_declined: bool,
+    pending: Option<&(AccountId, String, String, EpochMillis)>,
+) -> bool {
+    show_declined
+        || o.event.my_answer != Some(Answer::No)
+        || pending.is_some_and(|(account_id, calendar, id, start)| {
+            *account_id == o.account_id
+                && *calendar == o.event.calendar
+                && *id == o.event.id
+                && *start == o.start
+        })
 }
 
 /// The days among `count` days from `first` that hold an event, for the
@@ -404,9 +418,37 @@ mod tests {
     fn a_declined_event_stays_out_unless_asked_for() {
         let declined = occurrence(false, 0, 1, Some(Answer::No));
         let maybe = occurrence(false, 0, 1, Some(Answer::Maybe));
-        assert!(!keep(&declined, false));
-        assert!(keep(&declined, true));
-        assert!(keep(&maybe, false));
+        assert!(!keep(&declined, false, None));
+        assert!(keep(&declined, true, None));
+        assert!(keep(&maybe, false, None));
+    }
+
+    #[test]
+    fn a_declined_event_being_opened_stays_drawn() {
+        let declined = occurrence(false, 1_000, 2_000, Some(Answer::No));
+        let pending = (
+            declined.account_id,
+            declined.event.calendar.clone(),
+            declined.event.id.clone(),
+            declined.start,
+        );
+        assert!(
+            keep(&declined, false, Some(&pending)),
+            "the occurrence being opened is drawn even when declined"
+        );
+
+        const WEEK: EpochMillis = 7 * 24 * 3_600_000;
+        let later = occurrence(false, 1_000 + WEEK, 2_000 + WEEK, Some(Answer::No));
+        assert!(
+            !keep(&later, false, Some(&pending)),
+            "a later occurrence of the same series is not the one being opened"
+        );
+
+        let other_account = Occurrence { account_id: declined.account_id + 1, ..declined };
+        assert!(
+            !keep(&other_account, false, Some(&pending)),
+            "the same event on another account is not the one being opened"
+        );
     }
 
     #[test]
