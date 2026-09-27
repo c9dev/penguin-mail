@@ -589,3 +589,13 @@ popover.event-popover button.popover-answer:not(.suggested-action):hover {
 .calendar-dark popover.event-popover button.popover-answer:not(.suggested-action):hover {
   background: color-mix(in srgb, currentColor 8%, #3a3a40);
 }
+/* "Open the invitation in Mail": an icon-and-text link, not a filled
+   pill, in the accent colour, the way the place row reads as a row
+   rather than a button. */
+popover.event-popover button.popover-open-mail {
+  min-height: 0;
+  padding: 4px 4px 0 4px;
+  margin: 0 -4px;
+  font-weight: 700;
+  color: var(--accent-color);
+}

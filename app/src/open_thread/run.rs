@@ -30,7 +30,7 @@ use std::rc::Rc;
 use mailrs_domain::invitation::{Invitation, Method};
 use mailrs_domain::{AccountId, FlagColor, MessageBody, MessageMeta, Target, ThreadSummary};
 use mailrs_store::outbox::Queued;
-use mailrs_sync::{Opened, outbox_id};
+use mailrs_sync::{Opened, Spot, outbox_id};
 
 use super::{Cleaned, InlineImage, OpenThread, Unsent};
 use crate::protection::Read;
@@ -181,6 +181,13 @@ pub trait Effects {
         account_id: AccountId,
         invitation: Invitation,
     ) -> Answer<'_, Result<Option<String>, String>>;
+    /// Where the invitation's event sits in the calendar's copy on this
+    /// computer, or `None` when the copy does not hold it.
+    fn on_calendar(
+        &self,
+        account_id: AccountId,
+        invitation: Invitation,
+    ) -> Answer<'_, Result<Option<Spot>, String>>;
     /// The flag colour the store holds for the thread.
     fn flag_color(
         &self,
@@ -224,6 +231,8 @@ pub trait Effects {
     fn clashes(&self, uid: String, busy: Vec<String>);
     /// Puts how the series runs on the card, under the time.
     fn series_known(&self, uid: String, line: String);
+    /// Puts Show in Calendar on the card, for the event at `spot`.
+    fn on_calendar_known(&self, uid: String, spot: Spot);
     /// Starts the engine run for a signed or encrypted message.
     fn start_engines(&self);
     fn translation_card(&self, card: Card);
@@ -675,6 +684,7 @@ impl ThreadRun {
                 change: opened.change,
                 answer: opened.answer,
                 me: self.desk.me(account_id),
+                on_calendar: None,
             }),
             Err(err) => {
                 tracing::info!(error = %err, "could not read the invitation");
@@ -692,6 +702,20 @@ impl ThreadRun {
                 .await
             {
                 wanted.on_screen(|effects| effects.series_known(uid, line));
+            }
+        }
+        // An answered invitation is still worth finding on the calendar;
+        // only a cancellation has nothing there to show.
+        if let Some(showing) = showing.as_ref().filter(|s| !s.invitation.cancelled()) {
+            let (uid, invitation) = (showing.invitation.uid.clone(), showing.invitation.clone());
+            if let Some(Some(spot)) = wanted
+                .ask(
+                    |effects| effects.on_calendar(account_id, invitation),
+                    "could not look for the event on the calendar",
+                )
+                .await
+            {
+                wanted.on_screen(|effects| effects.on_calendar_known(uid, spot));
             }
         }
         let Some(showing) = showing.filter(waiting_on_an_answer) else {

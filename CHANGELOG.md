@@ -34,6 +34,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   invitation to change its reminders, color and busy status.
 - The assistant can tell you which calendars you have and put an event
   on the one you name, such as "the Family calendar".
+- Show in Calendar on an invitation opens the calendar on that day, with
+  the event's details open. Its popover offers Open the invitation in
+  Mail back to the message it arrived in.
 
 ### Improved
 
@@ -68,6 +71,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - `penguin-mail --demo`'s sample design review keeps its ninth weekly
   occurrence on the calendar; it used to drop off a week early once the
   clocks went back.
+- `penguin-mail --demo`'s sample invitation keeps its series ending on
+  the same time of day it started; the clocks going back used to move
+  it an hour earlier.
 
 ## 0.3.0 (2026-09-24)
 

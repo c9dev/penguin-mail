@@ -9,6 +9,7 @@
 
 use std::rc::Rc;
 
+use gtk::prelude::WidgetExt;
 use gtk::{gio, glib};
 use mailrs_domain::invitation::{Answer, Invitation, Scope, When};
 use mailrs_domain::{AccountId, EpochMillis};
@@ -62,6 +63,7 @@ impl MainWindow {
             Action::Answer(answer, scope) => self.answer_invitation(view, answer, scope),
             Action::Propose(proposal) => self.propose_time(view, proposal),
             Action::AddToCalendar => self.add_to_calendar(view),
+            Action::ShowInCalendar => self.show_in_calendar(view),
             Action::OnlineAccounts { open } => self.answer_gnome_offer(view, open),
         }
     }
@@ -238,6 +240,19 @@ impl MainWindow {
                 }
             },
         );
+    }
+
+    /// Switches the main window to the calendar on the day of the event
+    /// the card shows, with its popover open. A conversation in a window
+    /// of its own raises the main window for it.
+    fn show_in_calendar(self: &Rc<Self>, view: &Rc<ConversationView>) {
+        let Some(Some(spot)) = view.with_invitation(|showing| showing.on_calendar.clone()) else {
+            return;
+        };
+        self.present();
+        let _ = WidgetExt::activate_action(&self.window, "win.show-calendar", None);
+        self.calendar
+            .open(spot.account_id, &spot.calendar, &spot.id, spot.start);
     }
 }
 

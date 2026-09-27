@@ -425,7 +425,13 @@ impl MainWindow {
                 .max_sidebar_width(420.0)
                 .sidebar_width_fraction(0.34)
                 .build();
-            let (t, g, n, a) = (weak.clone(), weak.clone(), weak.clone(), weak.clone());
+            let (t, g, n, a, m) = (
+                weak.clone(),
+                weak.clone(),
+                weak.clone(),
+                weak.clone(),
+                weak.clone(),
+            );
             let (read_settings, change_settings) = (Rc::downgrade(app), Rc::downgrade(app));
             let (contacts_app, push_app) = (Rc::downgrade(app), Rc::downgrade(app));
             let calendar = CalendarView::new(
@@ -471,6 +477,12 @@ impl MainWindow {
                     push: Box::new(move |account_id| {
                         if let Some(app) = push_app.upgrade() {
                             app.push_calendar(account_id);
+                        }
+                    }),
+                    open_mail: Box::new(move |account_id, thread_id| {
+                        if let Some(win) = m.upgrade() {
+                            win.show_space(crate::settings::Space::Mail);
+                            win.reveal(account_id, thread_id, Reveal::Read);
                         }
                     }),
                 },
