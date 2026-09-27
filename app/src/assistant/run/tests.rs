@@ -1182,7 +1182,9 @@ fn sample(name: &str, later: &str) -> Option<Value> {
         "rename_label" => json!({"account": ME, "label": "Kites", "new_name": "Kite flying"}),
         "recolor_label" => json!({"account": ME, "label": "Kites", "color": "green"}),
         "delete_label" => json!({"account": ME, "label": "Kites"}),
-        "list_smart_mailboxes" | "list_image_senders" | "list_newsletters" => json!({}),
+        "list_smart_mailboxes" | "list_image_senders" | "list_newsletters" | "list_calendars" => {
+            json!({})
+        }
         "save_template" => json!({"name": "Thanks", "body": "Thank you."}),
         "create_contact" => json!({"name": "Priya Shah", "emails": ["priya@example.org"]}),
         "allow_images" => json!({"sender": "ann@example.com"}),

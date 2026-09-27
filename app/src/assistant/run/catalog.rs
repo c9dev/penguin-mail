@@ -1051,14 +1051,23 @@ pub(super) fn catalog<A: Accounts>() -> Vec<MailTool<A>> {
             run: Run::Now(|t, input| Box::pin(t.find_free_time(input))),
         },
         MailTool {
+            name: "list_calendars",
+            label: || gettext("Listing the calendars"),
+            description: "Lists the calendars on every account, or on one: each calendar's id, name, colour, whether it is the account's primary, whether the user can add events to it, and whether the calendar view shows it. create_event takes a calendar by its name or id.",
+            input: || json!({"account": account("One account's calendars. Leave it out for every account.")}),
+            required: &[],
+            run: Run::Now(|t, input| Box::pin(t.list_calendars(input))),
+        },
+        MailTool {
             name: "create_event",
             label: || gettext("Adding an event"),
-            description: "Puts an event on an account's calendar and invites its guests. Give start and end as local times, or both as days for an all-day event. The user approves it first.",
+            description: "Puts an event on one of an account's calendars, the primary unless `calendar` names another, and invites its guests. Give start and end as local times, or both as days for an all-day event. The user approves it first.",
             input: || {
                 json!({
                     "title": {"type": "string"},
                     "start": {"type": "string", "description": "Local time as YYYY-MM-DDTHH:MM, or the first day as YYYY-MM-DD."},
                     "end": {"type": "string", "description": "Local time as YYYY-MM-DDTHH:MM, or the last day as YYYY-MM-DD."},
+                    "calendar": {"type": "string", "description": "The calendar to put it on, by the name or id list_calendars gave. Only a calendar the user can add events to. Defaults to the account's primary calendar."},
                     "attendees": {"type": "array", "items": {"type": "string"}, "description": "Guests' addresses. The calendar's server emails each an invitation."},
                     "location": {"type": "string"},
                     "description": {"type": "string"},
