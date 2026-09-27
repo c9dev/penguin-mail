@@ -16,9 +16,9 @@ use adw::prelude::*;
 use gtk::{gio, glib};
 use mailrs_domain::calendar::Calendar;
 use mailrs_domain::{AccountId, EpochMillis};
+use mailrs_store::accounts;
 use mailrs_store::calendar::{self, CalendarScope};
 use mailrs_store::event_reminders::{self as shown_log, Key};
-use mailrs_store::accounts;
 use mailrs_sync::now_millis;
 
 use super::App;

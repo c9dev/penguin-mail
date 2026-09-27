@@ -3899,9 +3899,9 @@ msgstr ""
 
 #: app/src/ui/contacts_prefs.rs:147
 msgid ""
-"Answering a meeting invitation records your answer in that account's Google "
-"Calendar. To see the meetings in GNOME Calendar and the clock, add the "
-"account to GNOME Online Accounts."
+"Penguin Mail shows each account's meetings and reminds you before they "
+"start. To see them in GNOME Calendar and the clock too, add the account to "
+"GNOME Online Accounts."
 msgstr ""
 
 #: app/src/ui/contacts_prefs.rs:181
