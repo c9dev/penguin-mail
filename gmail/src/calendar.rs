@@ -299,65 +299,22 @@ impl GmailClient {
         let answer: Value = if create {
             self.call_at(&base, |url| self.http().post(url).query(&query).json(&body)).await?
         } else {
+            // An occurrence goes out as a PATCH on its own id, which
+            // changes that occurrence alone. A 404 there means the event
+            // is gone and a 400 turns the edit down; no retry follows,
+            // since a PUT would clear the fields this body leaves out,
+            // such as the Meet link and attachments.
             let url = format!("{base}/{}", encode(&event.id));
-            let patched: Result<Value, GmailError> = self
-                .call_at(&url, |url| {
-                    let mut request = self.http().patch(url).query(&query).json(&body);
-                    if let Some(etag) = etag {
-                        request = request.header("If-Match", etag);
-                    }
-                    request
-                })
-                .await;
-            match patched {
-                Ok(answer) => answer,
-                // Google's recurring-event guide lets a PATCH addressed at
-                // an occurrence's own id change that occurrence alone, and
-                // that is the path most accounts take (ruling R2). An
-                // account that refuses it needs the id events.instances
-                // actually hands out for that occurrence, replaced whole
-                // with PUT.
-                Err(err) if event.series.is_some() && refuses_occurrence_patch(&err) => {
-                    self.put_occurrence_by_instance(&base, event, etag, &query, &body).await?
+            self.call_at(&url, |url| {
+                let mut request = self.http().patch(url).query(&query).json(&body);
+                if let Some(etag) = etag {
+                    request = request.header("If-Match", etag);
                 }
-                Err(err) => return Err(err),
-            }
+                request
+            })
+            .await?
         };
         Ok(google_event(&event.calendar, &answer, None))
-    }
-
-    /// Finds the occurrence `event` names through `events.instances`, by
-    /// the original start it replaces, and replaces it whole with PUT.
-    /// The fallback [`GmailClient::put_event`] takes when Google refuses a
-    /// PATCH addressed straight at the occurrence's own id.
-    async fn put_occurrence_by_instance(
-        &self,
-        base: &str,
-        event: &calendar::Event,
-        etag: Option<&str>,
-        query: &[(&str, &str)],
-        body: &Value,
-    ) -> Result<Value, GmailError> {
-        let series = event.series.as_deref().unwrap_or(&event.id);
-        let original = event.original_start.unwrap_or(event.start);
-        let at = chrono::DateTime::from_timestamp_millis(original).map(|d| d.to_rfc3339()).unwrap_or_default();
-        let instances: EventList = self
-            .call_at(&format!("{base}/{}/instances", encode(series)), |url| {
-                self.http().get(url).query(&[("originalStart", at.as_str()), ("maxResults", "1")])
-            })
-            .await?;
-        let Some(id) = instances.items.first().and_then(|i| i.get("id")).and_then(Value::as_str) else {
-            return Err(GmailError::NotFound);
-        };
-        let url = format!("{base}/{}", encode(id));
-        self.call_at(&url, |url| {
-            let mut request = self.http().put(url).query(query).json(body);
-            if let Some(etag) = etag {
-                request = request.header("If-Match", etag);
-            }
-            request
-        })
-        .await
     }
 
     /// Deletes an event and tells its guests.
@@ -797,16 +754,6 @@ fn is_me(guest: &Value, me: &str) -> bool {
         .get("email")
         .and_then(Value::as_str)
         .is_some_and(|email| email.eq_ignore_ascii_case(me))
-}
-
-/// Whether a PATCH addressed at an occurrence's own id failed because
-/// Google will not take a direct write there, rather than for some other
-/// reason. Only these two warrant asking `events.instances` for another
-/// id and trying again with PUT; every other refusal, such as an etag
-/// conflict or a missing scope, means something else went wrong and must
-/// reach the caller unchanged.
-fn refuses_occurrence_patch(err: &GmailError) -> bool {
-    matches!(err, GmailError::NotFound) || matches!(err, GmailError::Http { status: 400, .. })
 }
 
 /// A calendar or event id in a URL path. Ids hold `@` and `#`, which

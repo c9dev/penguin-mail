@@ -817,40 +817,8 @@ async fn an_event_colour_goes_out_as_googles_colour_id() {
     client(&server).put_event(&plain, None, false).await.unwrap();
 }
 
-#[tokio::test]
-async fn a_refused_occurrence_patch_falls_back_to_instances_and_put() {
-    let server = MockServer::start().await;
-    mount_token(&server).await;
-    Mock::given(method("PATCH"))
-        .and(path(format!("{CALENDAR}/calendars/work/events/standup_20260923T080000Z")))
-        .respond_with(ResponseTemplate::new(404))
-        .expect(1)
-        .mount(&server)
-        .await;
-    Mock::given(method("GET"))
-        .and(path(format!("{CALENDAR}/calendars/work/events/standup/instances")))
-        .and(query_param("originalStart", "2026-09-23T08:00:00+00:00"))
-        .respond_with(ResponseTemplate::new(200).set_body_json(json!({"items": [
-            {"id": "standup_20260923T080000Z", "recurringEventId": "standup"}
-        ]})))
-        .expect(1)
-        .mount(&server)
-        .await;
-    Mock::given(method("PUT"))
-        .and(path(format!("{CALENDAR}/calendars/work/events/standup_20260923T080000Z")))
-        .respond_with(|request: &Request| {
-            let body: Value = serde_json::from_slice(&request.body).unwrap();
-            assert!(body.get("recurrence").is_none(), "Google refuses a rule on one occurrence");
-            ResponseTemplate::new(200).set_body_json(json!({
-                "id": "standup_20260923T080000Z", "etag": "\"2\"", "recurringEventId": "standup",
-                "originalStartTime": {"dateTime": "2026-09-23T08:00:00Z"},
-                "start": body["start"], "end": body["end"]
-            }))
-        })
-        .expect(1)
-        .mount(&server)
-        .await;
-    let event = mailrs_domain::calendar::Event {
+fn moved_standup() -> mailrs_domain::calendar::Event {
+    mailrs_domain::calendar::Event {
         calendar: "work".into(),
         id: "standup_20260923T080000Z".into(),
         zone: "Europe/Lisbon".into(),
@@ -859,14 +827,52 @@ async fn a_refused_occurrence_patch_falls_back_to_instances_and_put() {
         series: Some("standup".into()),
         original_start: Some(1_790_150_400_000),
         ..Default::default()
-    };
-    let made = client(&server).put_event(&event, None, false).await.unwrap();
-    assert_eq!(made.etag, "\"2\"");
-    assert_eq!(made.series.as_deref(), Some("standup"));
+    }
+}
+
+/// Answers any GET or PUT with a 500, so a test sees a retry that should
+/// not happen as a failure of its own.
+async fn refuse_any_retry(server: &MockServer) {
+    for verb in ["GET", "PUT"] {
+        Mock::given(method(verb)).respond_with(ResponseTemplate::new(500)).expect(0).mount(server).await;
+    }
 }
 
 #[tokio::test]
-async fn an_occurrence_patch_refused_for_a_stale_etag_does_not_fall_back_to_put() {
+async fn an_occurrence_patch_answered_404_means_the_event_is_gone() {
+    let server = MockServer::start().await;
+    mount_token(&server).await;
+    Mock::given(method("PATCH"))
+        .and(path(format!("{CALENDAR}/calendars/work/events/standup_20260923T080000Z")))
+        .respond_with(ResponseTemplate::new(404))
+        .expect(1)
+        .mount(&server)
+        .await;
+    refuse_any_retry(&server).await;
+    let err = client(&server).put_event(&moved_standup(), None, false).await.unwrap_err();
+    assert!(matches!(err, GmailError::NotFound), "got {err:?}");
+}
+
+#[tokio::test]
+async fn an_occurrence_patch_answered_400_turns_the_edit_down_with_googles_reason() {
+    let server = MockServer::start().await;
+    mount_token(&server).await;
+    Mock::given(method("PATCH"))
+        .and(path(format!("{CALENDAR}/calendars/work/events/standup_20260923T080000Z")))
+        .respond_with(ResponseTemplate::new(400).set_body_json(json!({
+            "error": {"code": 400, "message": "The specified time range is empty."}
+        })))
+        .expect(1)
+        .mount(&server)
+        .await;
+    refuse_any_retry(&server).await;
+    let err = client(&server).put_event(&moved_standup(), None, false).await.unwrap_err();
+    assert!(matches!(err, GmailError::Http { status: 400, .. }), "got {err:?}");
+    assert!(err.to_string().contains("The specified time range is empty."));
+}
+
+#[tokio::test]
+async fn an_occurrence_patch_refused_for_a_stale_etag_says_changed() {
     let server = MockServer::start().await;
     mount_token(&server).await;
     Mock::given(method("PATCH"))
@@ -884,5 +890,5 @@ async fn an_occurrence_patch_refused_for_a_stale_etag_does_not_fall_back_to_put(
         ..Default::default()
     };
     let err = client(&server).put_event(&event, Some("\"1\""), false).await.unwrap_err();
-    assert!(matches!(err, GmailError::Changed), "an etag conflict is not Google refusing the id");
+    assert!(matches!(err, GmailError::Changed), "got {err:?}");
 }
