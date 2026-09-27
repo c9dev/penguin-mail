@@ -3467,6 +3467,30 @@ msgstr "Novo evento"
 msgid "Edit Event"
 msgstr "Editar evento"
 
+#: app/src/ui/calendar/mod.rs:277 app/src/ui/calendar/mod.rs:1555
+msgid "New Event (N)"
+msgstr "Novo evento (N)"
+
+#: app/src/ui/calendar/mod.rs:1557
+msgid "None of your calendars take new events"
+msgstr "Nenhum dos seus calendários aceita eventos novos"
+
+#: app/src/ui/calendar/mod.rs:1738
+msgid "Could not save the event: {reason}"
+msgstr "Não foi possível guardar o evento: {reason}"
+
+#: app/src/ui/calendar/quick.rs:49
+msgid "Add title"
+msgstr "Adicionar título"
+
+#: app/src/ui/calendar/quick.rs:65
+msgid "More Details"
+msgstr "Mais detalhes"
+
+#: app/src/ui/window/shortcuts.rs:537
+msgid "New event"
+msgstr "Novo evento"
+
 #: app/src/ui/calendar/editor.rs:165
 msgid "Custom Repeat"
 msgstr "Repetição personalizada"

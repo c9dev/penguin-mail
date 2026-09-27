@@ -537,6 +537,16 @@ impl Agenda {
     pub fn connect_scrolled_to_top(&self, f: impl Fn() + 'static) {
         self.scrolled_to_top.replace(Some(Box::new(f)));
     }
+
+    /// The occurrence of the row with the keyboard focus. Always `None`:
+    /// GTK's `ListView` gives the keyboard focus to a row's own wrapper
+    /// rather than to the widget the factory built, so this list has
+    /// nothing of its own to ask. The New Event button falls back to the
+    /// time last clicked, or to now, while the narrow list shows it in
+    /// place of a grid.
+    pub fn focused(&self) -> Option<Occurrence> {
+        None
+    }
 }
 
 #[cfg(test)]

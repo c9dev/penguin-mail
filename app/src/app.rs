@@ -899,6 +899,28 @@ impl App {
         });
     }
 
+    /// Sends one account's queued calendar changes now rather than at
+    /// the next tick, then reloads the calendar so pending marks clear.
+    /// Offline, the queue waits for the network to return.
+    pub fn push_calendar(self: &Rc<Self>, account_id: AccountId) {
+        if !self.core.network() {
+            return;
+        }
+        let this = Rc::clone(self);
+        glib::spawn_future_local(async move {
+            let copy = this.core.calendar_copy();
+            let sent = this.core.call(async move { copy.send(account_id).await }).await;
+            let Some(window) = this.window() else { return };
+            match sent {
+                Ok(turned_down) => window.calendar_refreshed(&mailrs_sync::calendar_copy::Refreshed {
+                    turned_down,
+                    ..mailrs_sync::calendar_copy::Refreshed::default()
+                }),
+                Err(err) => tracing::info!(%err, "calendar changes wait for the next try"),
+            }
+        });
+    }
+
     /// Keeps the calendar copy fresh. Runs on a short timer; the copy
     /// reads an account only when its minute (window open) or five
     /// minutes (tray only) are up, so most ticks cost nothing. Nothing

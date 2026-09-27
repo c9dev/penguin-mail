@@ -154,6 +154,7 @@ impl MainWindow {
             CalendarKey::Previous => calendar.step(-1),
             CalendarKey::Next => calendar.step(1),
             CalendarKey::Search => calendar.focus_search(),
+            CalendarKey::NewEvent => calendar.quick_create(),
         }
         glib::Propagation::Stop
     }
