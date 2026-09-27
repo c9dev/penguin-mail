@@ -63,7 +63,7 @@ pub use contacts::{Card, ContactBook, Refreshed};
 pub use engine::{EngineConfig, SyncEngine};
 pub use error::{BackendError, SyncError};
 pub use hidden::HiddenAddress;
-pub use invitations::{Change, Invitations, Opened, Sent, Told};
+pub use invitations::{Change, Invitations, Opened, Sent, Spot, Told};
 pub use mailbox::{
     Changed, Counts, Empty, Listing, Loaded, Mailbox, Mailboxes, PAGE, Scope, View, outbox_id,
     outbox_row, summarize_search, waiting_line,

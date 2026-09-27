@@ -388,27 +388,65 @@ pub fn occurrences(
         ))?;
         let events: Vec<Event> =
             stmt.query_map(params![account_id, from, to, longest], read_event)?.collect::<rusqlite::Result<_>>()?;
-        // What each changed occurrence replaces: (calendar, series, original start).
-        let replaced: HashSet<(String, String, EpochMillis)> = events
-            .iter()
-            .filter_map(|e| Some((e.calendar.clone(), e.series.clone()?, e.original_start?)))
-            .collect();
-        for mut event in events {
-            if event.status == Status::Cancelled {
-                continue;
-            }
-            event.guests = guests(conn, account_id, &event.calendar, &event.id)?;
-            let event = Arc::new(event);
-            for (start, end) in model::expand(&event, from, to) {
-                if replaced.contains(&(event.calendar.clone(), event.id.clone(), start)) {
-                    continue;
-                }
-                found.push(Occurrence { account_id, event: Arc::clone(&event), start, end });
-            }
-        }
+        found.extend(expand_rows(conn, account_id, events, from, to)?);
     }
     found.sort_by(|a, b| (a.start, &a.event.title).cmp(&(b.start, &b.event.title)));
     found.truncate(MOST_EVENTS);
+    Ok(found)
+}
+
+/// Turns one account's rows into their occurrences between `from` and
+/// `to`: a series gives one per repeat, a changed or cancelled occurrence
+/// takes the place of the one it names, and a cancelled row gives nothing.
+fn expand_rows(
+    conn: &Connection,
+    account_id: AccountId,
+    events: Vec<Event>,
+    from: EpochMillis,
+    to: EpochMillis,
+) -> Result<Vec<Occurrence>> {
+    // What each changed occurrence replaces: (calendar, series, original start).
+    let replaced: HashSet<(String, String, EpochMillis)> = events
+        .iter()
+        .filter_map(|e| Some((e.calendar.clone(), e.series.clone()?, e.original_start?)))
+        .collect();
+    let mut found = Vec::new();
+    for mut event in events {
+        if event.status == Status::Cancelled {
+            continue;
+        }
+        event.guests = guests(conn, account_id, &event.calendar, &event.id)?;
+        let event = Arc::new(event);
+        for (start, end) in model::expand(&event, from, to) {
+            if replaced.contains(&(event.calendar.clone(), event.id.clone(), start)) {
+                continue;
+            }
+            found.push(Occurrence { account_id, event: Arc::clone(&event), start, end });
+        }
+    }
+    Ok(found)
+}
+
+/// The occurrences between `from` and `to` of the events whose iCalendar
+/// UID is `uid`, on the account's shown calendars, earliest first. A
+/// series and the occurrences someone changed share one UID, so the
+/// answer holds the series with its changes in place. Show in Calendar
+/// uses this to find the event an invitation names.
+pub fn with_uid(
+    conn: &Connection,
+    account_id: AccountId,
+    uid: &str,
+    from: EpochMillis,
+    to: EpochMillis,
+) -> Result<Vec<Occurrence>> {
+    let mut stmt = conn.prepare(&format!(
+        "SELECT {COLUMNS} FROM events e JOIN calendars c ON c.account_id = e.account_id AND c.id = e.calendar \
+         WHERE e.account_id = ?1 AND c.shown = 1 AND lower(e.uid) = lower(?2)"
+    ))?;
+    let events: Vec<Event> =
+        stmt.query_map(params![account_id, uid], read_event)?.collect::<rusqlite::Result<_>>()?;
+    let mut found = expand_rows(conn, account_id, events, from, to)?;
+    found.sort_by(|a, b| (a.start, &a.event.title).cmp(&(b.start, &b.event.title)));
     Ok(found)
 }
 
@@ -1566,5 +1604,36 @@ mod tests {
         enqueue(&conn, id, ChangeKind::Save, &lunch).unwrap();
         finish_removal(&conn, id, seq).unwrap();
         assert_eq!(queued(&conn, id).unwrap()[0].kind, ChangeKind::Save);
+    }
+
+    #[test]
+    fn the_events_of_one_uid_come_back_as_occurrences() {
+        let (conn, id) = store();
+        let mut standup = event("primary", "standup", MONDAY + 9 * HOUR, 1);
+        standup.rules = vec!["RRULE:FREQ=DAILY;COUNT=3".into()];
+        // Google gives a changed occurrence the UID of its series.
+        let mut moved = event("primary", "standup_tue", MONDAY + DAY + 11 * HOUR, 1);
+        moved.uid = standup.uid.clone();
+        moved.series = Some("standup".into());
+        moved.original_start = Some(MONDAY + DAY + 9 * HOUR);
+        let lunch = event("primary", "lunch", MONDAY + 12 * HOUR, 1);
+        save_events(&conn, id, &[standup, moved, lunch], 0).unwrap();
+        let found = with_uid(&conn, id, "STANDUP@example.com", MONDAY, MONDAY + 7 * DAY).unwrap();
+        assert_eq!(
+            starts(&found),
+            vec![
+                ("standup".into(), MONDAY + 9 * HOUR),
+                ("standup_tue".into(), MONDAY + DAY + 11 * HOUR),
+                ("standup".into(), MONDAY + 2 * DAY + 9 * HOUR),
+            ]
+        );
+    }
+
+    #[test]
+    fn a_uid_on_a_hidden_calendar_finds_nothing() {
+        let (conn, id) = store();
+        save_events(&conn, id, &[event("team", "retro", MONDAY + 9 * HOUR, 1)], 0).unwrap();
+        set_shown(&conn, id, "team", false).unwrap();
+        assert!(with_uid(&conn, id, "retro@example.com", MONDAY, MONDAY + DAY).unwrap().is_empty());
     }
 }
