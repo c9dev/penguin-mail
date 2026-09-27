@@ -3,4 +3,5 @@
 //! touches GTK, the store or a clock; `app/src/app/reminders.rs` does
 //! that around them.
 
+pub mod notice;
 pub mod plan;
