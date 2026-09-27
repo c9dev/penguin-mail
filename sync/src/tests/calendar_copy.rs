@@ -936,9 +936,78 @@ async fn a_removal_queued_ahead_of_its_cut_waits_for_it() {
 
         copy.send(h.account_id).await.unwrap();
 
-        assert_eq!(on_google(&h, &moved_id).is_some(), refused, "refused: {refused}");
+        if refused {
+            // The removal folded into the edit's row, and the edit goes out.
+            assert_eq!(on_google(&h, &moved_id).unwrap().title, "Moved again");
+            assert_eq!(stored(&h, "primary", &moved_id).await.unwrap().title, "Moved again");
+        } else {
+            assert!(on_google(&h, &moved_id).is_none());
+        }
         assert!(queue(&h).await.is_empty(), "refused: {refused}");
     }
+}
+
+/// A "this and following" split whose cut Google takes, then whose new
+/// half it turns down: the tail of the series would be gone. The cut
+/// series gets its rules back, the moved occurrence after the cut is
+/// kept, and the person hears why.
+async fn split_with_new_half_refused(h: &Harness, copy: &CalendarCopy<Connected>, restart: bool) {
+    let moved_id = occurrence_id(&standup(), NOW + 3 * DAY);
+    let third = on_day(h, 2).await.remove(0);
+    let edited = Event { title: "Longer stand-up".into(), ..Event::clone(&third.event) };
+    let edited = Event { start: third.start, end: third.end, ..edited };
+    let steps = copy.change_steps(h.account_id, &third, edited, Some(RepeatScope::Following)).await.unwrap();
+    let new_id = steps.iter().map(Step::key).map(|(_, id)| id).find(|id| id != "standup" && id != &moved_id).unwrap();
+    h.fake.with(|s| s.refuse_new_events = true);
+    let turned_down = if restart {
+        held(copy.hold(h.account_id, steps).await.unwrap());
+        let next_run = self::copy(h);
+        next_run.recover_holds().await.unwrap();
+        next_run.send(h.account_id).await.unwrap()
+    } else {
+        held(copy.apply(h.account_id, steps).await.unwrap());
+        copy.send(h.account_id).await.unwrap()
+    };
+
+    assert_eq!(turned_down.len(), 1, "{turned_down:?}");
+    assert!(turned_down[0].reason.as_deref().unwrap_or_default().contains("Invalid recurrence rule."));
+    assert!(on_google(h, &new_id).is_none());
+    assert_eq!(on_google(h, "standup").unwrap().rules, standup().rules, "the series repeats as before");
+    assert_eq!(on_google(h, &moved_id).unwrap().title, "Moved", "the moved occurrence stays");
+    assert!(queue(h).await.is_empty());
+    assert!(stored(h, "primary", &new_id).await.is_none());
+    for (day, title) in [(2, "standup"), (3, "Moved"), (4, "standup")] {
+        let titles: Vec<String> = on_day(h, day).await.iter().map(|o| o.event.title.clone()).collect();
+        assert_eq!(titles, vec![title.to_string()], "day {day}");
+    }
+}
+
+async fn series_with_a_moved_occurrence(h: &Harness) -> CalendarCopy<Connected> {
+    h.fake.put_calendar_event(Event {
+        id: occurrence_id(&standup(), NOW + 3 * DAY),
+        rules: Vec::new(),
+        series: Some("standup".into()),
+        original_start: Some(NOW + 3 * DAY),
+        start: NOW + 3 * DAY + HOUR,
+        end: NOW + 3 * DAY + 2 * HOUR,
+        title: "Moved".into(),
+        ..standup()
+    });
+    read_series(h).await
+}
+
+#[tokio::test]
+async fn a_split_whose_new_half_is_turned_down_puts_the_series_back() {
+    let h = harness().await;
+    let copy = series_with_a_moved_occurrence(&h).await;
+    split_with_new_half_refused(&h, &copy, false).await;
+}
+
+#[tokio::test]
+async fn a_split_recovered_after_a_restart_still_puts_the_series_back() {
+    let h = harness().await;
+    let copy = series_with_a_moved_occurrence(&h).await;
+    split_with_new_half_refused(&h, &copy, true).await;
 }
 
 #[tokio::test]

@@ -547,6 +547,7 @@ impl<A: Accounts> CalendarCopy<A> {
                     .map(Some)
                 }
             };
+            let turned_before = turned_down.len();
             match (change.kind, answer) {
                 (_, Ok(Some(mut sent))) => {
                     sent.pending = false;
@@ -572,7 +573,16 @@ impl<A: Accounts> CalendarCopy<A> {
                 }
                 // Gone already or not, the removal is done.
                 (_, Ok(None)) | (store::ChangeKind::Remove, Err(BackendError::NotFound)) => {
-                    self.db.write(move |c| store::finish_removal(c, account_id, seq)).await?;
+                    let waiting = self
+                        .db
+                        .write(move |c| {
+                            store::finish_removal(c, account_id, seq)?;
+                            store::first_waiting_on(c, seq)
+                        })
+                        .await?;
+                    if let Some(first) = waiting {
+                        after = after.min(first - 1);
+                    }
                 }
                 (store::ChangeKind::Save, Err(BackendError::NotFound)) => {
                     turned_down.push(self.drop_gone(&change, "deleted elsewhere").await?);
@@ -594,6 +604,15 @@ impl<A: Accounts> CalendarCopy<A> {
                 (_, Err(err)) => {
                     turned_down.push(self.take_theirs(&calendar, &change, Some(err.to_string())).await?);
                 }
+            }
+            // A change turned down can put back an earlier edit that a
+            // step waiting on it had folded into, in a row this send has
+            // already walked past, or queue the old series' rules. Walk
+            // the queue again so they go out now. A row behind `after`
+            // has left, still waits, or holds an edit made while it was in
+            // flight, which may go out again now.
+            if turned_down.len() > turned_before {
+                after = 0;
             }
         }
         Ok(turned_down)
@@ -634,6 +653,7 @@ impl<A: Accounts> CalendarCopy<A> {
         // The next read carries Google's version; forget the token so it
         // reads the calendar whole and cannot miss it.
         let (seq, cal, id) = (change.seq, change.calendar.clone(), change.event.clone());
+        let restores = change.restores.clone();
         self.db
             .write(move |c| {
                 store::dequeue(c, seq)?;
@@ -641,6 +661,16 @@ impl<A: Accounts> CalendarCopy<A> {
                     store::set_token(c, account_id, &calendar, None, 0)?;
                 }
                 store::remove_events(c, account_id, &cal, std::slice::from_ref(&id))?;
+                // Google took the cut and turned the new series down, so
+                // the old series ends where the new one should have
+                // begun. Its rules go back, against the version the cut
+                // left, and the dates after the cut come back.
+                if let Some(old) = restores {
+                    let now = store::event(c, account_id, &old.calendar, &old.id)?.unwrap_or_else(|| old.clone());
+                    let whole = Event { rules: old.rules, pending: true, ..now };
+                    store::save_events(c, account_id, std::slice::from_ref(&whole), crate::now_millis())?;
+                    store::enqueue(c, account_id, store::ChangeKind::Save, &whole)?;
+                }
                 store::set_token(c, account_id, &cal, None, 0)
             })
             .await?;
@@ -714,7 +744,7 @@ impl<A: Accounts> CalendarCopy<A> {
                 // Persisted in the same transaction as the rows above, so
                 // a crash or a quit before the Undo toast closes still
                 // has this change to queue at the next start.
-                store::save_holding(c, account_id, &writes)?;
+                store::save_holding(c, account_id, &writes, &before)?;
                 Ok(before)
             })
             .await?;
@@ -804,28 +834,32 @@ impl<A: Accounts> CalendarCopy<A> {
     /// start, before the first read or send touches an account.
     pub async fn recover_holds(&self) -> Result<(), SyncError> {
         let found = self.db.read(store::holdings).await?;
-        for (account_id, steps) in found {
+        for (account_id, steps, before) in found {
             if steps.is_empty() {
                 continue;
             }
             let serial = self.serial.fetch_add(1, Ordering::Relaxed);
-            self.queue_held(Held { account_id, steps, before: Vec::new(), serial }).await?;
+            self.queue_held(Held { account_id, steps, before, serial }).await?;
         }
         Ok(())
     }
 
     /// Queues a held change's steps and releases its rows to reads. A new
     /// event goes out as a create; an occurrence, which has no etag before
-    /// its first change, as a change of that occurrence. The steps after
-    /// the first wait on it: a split's new series and its removals go out
-    /// only once Google took the cut, and are dropped if it turns it down.
+    /// its first change, as a change of that occurrence. Each step waits
+    /// on the one before it, so a split's new series goes out only once
+    /// Google took the cut, and its removals only once Google took the new
+    /// series; a step turned down drops the steps after it. The new series
+    /// carries the old one as it was, to put back if Google takes the cut
+    /// and turns the new series down.
     async fn queue_held(&self, held: Held) -> Result<(), SyncError> {
         let _release = Release { held: &self.held, keys: held.keys() };
         let Held { account_id, steps, before, .. } = held;
+        let cut_from = cut_series(&steps, &before).cloned();
         self.db
             .write(move |c| {
                 let mut lead = None;
-                for (index, step) in steps.iter().enumerate() {
+                for step in &steps {
                     let seq = match step {
                         Step::Save(event) => {
                             let queued = store::pending_ids(c, account_id, &event.calendar)?.contains(&event.id);
@@ -835,12 +869,13 @@ impl<A: Accounts> CalendarCopy<A> {
                                 store::ChangeKind::Save
                             };
                             let event = Event { pending: true, ..event.clone() };
-                            store::enqueue_after(c, account_id, kind, &event, lead)?
+                            let restores = cut_from.as_ref().filter(|_| kind == store::ChangeKind::Create);
+                            store::enqueue_after(c, account_id, kind, &event, lead, restores)?
                         }
                         // The cancelled row stays in the copy; the provider
                         // gets a delete of that occurrence.
                         Step::Cancel(event) => {
-                            store::enqueue_after(c, account_id, store::ChangeKind::Remove, event, lead)?
+                            store::enqueue_after(c, account_id, store::ChangeKind::Remove, event, lead, None)?
                         }
                         Step::Remove { calendar, id } => {
                             let prior = before
@@ -852,12 +887,10 @@ impl<A: Accounts> CalendarCopy<A> {
                                     id: id.clone(),
                                     ..Event::default()
                                 });
-                            store::enqueue_after(c, account_id, store::ChangeKind::Remove, &prior, lead)?
+                            store::enqueue_after(c, account_id, store::ChangeKind::Remove, &prior, lead, None)?
                         }
                     };
-                    if index == 0 {
-                        lead = seq;
-                    }
+                    lead = seq.or(lead);
                 }
                 store::clear_holding(c, account_id)?;
                 Ok(())
@@ -967,15 +1000,37 @@ fn picked(occurrence: &Occurrence) -> Picked {
 /// Drops the changes waiting on the row `seq`, which the provider turned
 /// down, and takes their events off the copy: a split's new series never
 /// reached the provider, and the next whole read of each calendar
-/// answered brings back what the provider still holds. Answers those
-/// calendars.
+/// answered brings back what the provider still holds. An earlier edit a
+/// dropped step had folded into stays queued and shows again. Answers
+/// the calendars touched.
 fn drop_waiting(c: &rusqlite::Connection, account_id: AccountId, seq: i64) -> mailrs_store::Result<HashSet<String>> {
     let mut calendars = HashSet::new();
-    for (calendar, id) in store::drop_waiting_on(c, seq)? {
-        store::remove_events(c, account_id, &calendar, std::slice::from_ref(&id))?;
-        calendars.insert(calendar);
+    for dropped in store::drop_waiting_on(c, seq)? {
+        match dropped {
+            store::Dropped::Gone { calendar, event } => {
+                store::remove_events(c, account_id, &calendar, std::slice::from_ref(&event))?;
+                calendars.insert(calendar);
+            }
+            store::Dropped::Kept { body: Some(body), .. } => {
+                let body = Event { pending: true, ..*body };
+                store::save_events(c, account_id, std::slice::from_ref(&body), crate::now_millis())?;
+            }
+            store::Dropped::Kept { body: None, .. } => {}
+        }
     }
     Ok(calendars)
+}
+
+/// The series as it was before `steps` cut it short, when they split it:
+/// the first step saves an event `before` holds with other rules.
+fn cut_series<'a>(steps: &[Step], before: &'a [Event]) -> Option<&'a Event> {
+    let Some(Step::Save(cut)) = steps.first() else {
+        return None;
+    };
+    before
+        .iter()
+        .find(|e| e.calendar == cut.calendar && e.id == cut.id)
+        .filter(|old| !old.rules.is_empty() && old.rules != cut.rules)
 }
 
 /// Whether a failed send should stop and keep the change for the next

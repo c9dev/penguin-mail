@@ -189,6 +189,9 @@ pub struct FakeState {
     /// Calendars Google no longer has. Every read of one and every write
     /// to one answers `NotFound`.
     pub deleted_calendars: Vec<String>,
+    /// Play Google turning down every new event, as it does a body it
+    /// cannot take: a create answers 400 with Google's reason.
+    pub refuse_new_events: bool,
     /// The OAuth scopes the account has not granted. A call that needs one
     /// answers `MissingScope`, as Google does until the user says yes.
     /// Change it through [`FakeGmail::withhold`] and [`FakeGmail::grant`].
@@ -377,6 +380,7 @@ impl FakeGmail {
                 offline: false,
                 deleted_answers_gone: false,
                 deleted_calendars: Vec::new(),
+                refuse_new_events: false,
                 withheld: BTreeSet::new(),
                 calendar_off: None,
                 clock: None,
@@ -1336,6 +1340,12 @@ impl GmailApi for FakeGmail {
         let held = self.with(|s| {
             s.calendar_events.iter().find(|e| e.calendar == event.calendar && e.id == event.id).cloned()
         });
+        if create && self.with(|s| s.refuse_new_events) {
+            return Err(GmailError::Http {
+                status: 400,
+                body: r#"{"error":{"code":400,"message":"Invalid recurrence rule."}}"#.into(),
+            });
+        }
         match (&held, create) {
             (Some(_), true) => return Err(GmailError::Http { status: 409, body: "duplicate".into() }),
             // An occurrence of a series has an id before anyone changes

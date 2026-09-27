@@ -29,8 +29,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   a repeating event asks which occurrences it covers first. Moving a
   repeating event to another weekday moves its other dates with it, and
   setting it to not repeat leaves only the one you changed. When Google
-  turns down a change to several dates of a repeating event, none of it
-  goes out and the calendar shows the event as Google has it.
+  turns down part of a change to several dates of a repeating event, the
+  event goes back to how it was and a message says why.
 
 ### Improved
 
