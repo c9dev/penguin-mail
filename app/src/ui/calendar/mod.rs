@@ -12,6 +12,8 @@
 
 pub mod agenda;
 pub mod block;
+#[allow(dead_code, reason = "the editor widget starts using it in Task 8")]
+pub mod draft;
 pub mod layout;
 pub mod month;
 pub mod popover;

@@ -5,8 +5,10 @@
 
 use chrono::{DateTime, Datelike, Days, NaiveDate, TimeZone, Utc};
 use mailrs_domain::EpochMillis;
+use mailrs_domain::calendar::repeat::{Custom, Ends, Frequency, Repeat};
 use mailrs_domain::calendar::{Guest, Occurrence};
 use mailrs_domain::invitation::Answer;
+use mailrs_domain::invitation::recurrence::in_words;
 use mailrs_domain::translate::{date_locale, fill, fill_plural, gettext};
 
 /// A day as a person reads it, with no year: "Wednesday 23 September".
@@ -195,6 +197,131 @@ pub fn mini_day_words(date: NaiveDate, has_events: bool) -> String {
     }
 }
 
+/// The reminder times the editor offers, in minutes before the start.
+#[allow(dead_code, reason = "the editor's reminder row calls it in Task 8")]
+pub const REMINDER_CHOICES: [u32; 9] = [0, 5, 10, 15, 30, 60, 120, 1440, 10080];
+
+/// "10 minutes before", in the largest whole unit that divides the time.
+#[allow(dead_code, reason = "the editor's reminder row calls it in Task 8")]
+pub fn reminder_words(minutes: u32) -> String {
+    let count = |n: u32| n.to_string();
+    match minutes {
+        0 => gettext("At the start"),
+        m if m % 10080 == 0 => fill_plural(
+            "{count} week before",
+            "{count} weeks before",
+            (m / 10080) as usize,
+            &[("count", &count(m / 10080))],
+        ),
+        m if m % 1440 == 0 => fill_plural(
+            "{count} day before",
+            "{count} days before",
+            (m / 1440) as usize,
+            &[("count", &count(m / 1440))],
+        ),
+        m if m % 60 == 0 => fill_plural(
+            "{count} hour before",
+            "{count} hours before",
+            (m / 60) as usize,
+            &[("count", &count(m / 60))],
+        ),
+        m => fill_plural(
+            "{count} minute before",
+            "{count} minutes before",
+            m as usize,
+            &[("count", &count(m))],
+        ),
+    }
+}
+
+/// The repeat menu's line for `repeat`. The four fixed choices are said
+/// through `fill_plural` with a count of one, since "Every day" and its
+/// three companions already exist in the template as the singular of a
+/// plural the invitation card counts with (`update-po.sh` refuses one
+/// msgid used both ways). A custom repeat is said the way the invitation
+/// card says a rule, `in_words`, so the two phrasings never drift apart
+/// (ruling R6).
+#[allow(dead_code, reason = "the editor's repeat row calls it in Task 8")]
+pub fn repeat_words(repeat: &Repeat) -> String {
+    let once = |one: &str, many: &str| fill_plural(one, many, 1, &[("count", "1")]);
+    match repeat {
+        Repeat::Never => gettext("Never"),
+        Repeat::EveryDay => once("Every day", "Every {count} days"),
+        Repeat::EveryWeekday => gettext("Every weekday"),
+        Repeat::EveryWeek => once("Every week", "Every {count} weeks"),
+        Repeat::EveryMonth => once("Every month", "Every {count} months"),
+        Repeat::EveryYear => once("Every year", "Every {count} years"),
+        Repeat::Kept(_) => gettext("A rule set in another app"),
+        Repeat::Custom(custom) => custom_words(custom),
+    }
+}
+
+/// A custom repeat's line, read the way `in_words` reads an invitation's
+/// `RRULE`. `repeat_words` has no day to hand `Repeat::rule`, but a
+/// custom choice needs none: its own fields already carry everything a
+/// rule needs (the weekdays, unlike a plain "every week", are explicit).
+fn custom_words(custom: &Custom) -> String {
+    let rule = custom_rule_value(custom);
+    // No event dates it against, so the end date's own year is always
+    // "the start year", which keeps a bare rule from carrying a year.
+    let start_year = match custom.ends {
+        Ends::On(last) => Some(last.year()),
+        Ends::Never | Ends::After(_) => None,
+    };
+    in_words(&rule, start_year).unwrap_or_default()
+}
+
+/// The bare `RRULE` value `custom` names, as `in_words` reads one off an
+/// invitation's `RRULE` property (no leading `RRULE:`).
+fn custom_rule_value(custom: &Custom) -> String {
+    let mut parts = vec![format!(
+        "FREQ={}",
+        match custom.frequency {
+            Frequency::Daily => "DAILY",
+            Frequency::Weekly => "WEEKLY",
+            Frequency::Monthly => "MONTHLY",
+            Frequency::Yearly => "YEARLY",
+        }
+    )];
+    if custom.every > 1 {
+        parts.push(format!("INTERVAL={}", custom.every));
+    }
+    if custom.frequency == Frequency::Weekly && !custom.days.is_empty() {
+        let mut days = custom.days.clone();
+        days.sort_by_key(chrono::Weekday::num_days_from_monday);
+        let codes: Vec<&str> = days.iter().copied().map(byday_code).collect();
+        parts.push(format!("BYDAY={}", codes.join(",")));
+    }
+    match custom.ends {
+        Ends::Never => {}
+        Ends::On(last) => parts.push(format!("UNTIL={}", last.format("%Y%m%d"))),
+        Ends::After(times) => parts.push(format!("COUNT={times}")),
+    }
+    parts.join(";")
+}
+
+/// The two-letter `BYDAY` code for a weekday.
+fn byday_code(day: chrono::Weekday) -> &'static str {
+    match day {
+        chrono::Weekday::Mon => "MO",
+        chrono::Weekday::Tue => "TU",
+        chrono::Weekday::Wed => "WE",
+        chrono::Weekday::Thu => "TH",
+        chrono::Weekday::Fri => "FR",
+        chrono::Weekday::Sat => "SA",
+        chrono::Weekday::Sun => "SU",
+    }
+}
+
+/// What a guest answered, in a word.
+#[allow(dead_code, reason = "the editor's guest row calls it in Task 8")]
+pub fn answer_words(guest: &Guest) -> String {
+    if guest.organizer {
+        return gettext("Organizer");
+    }
+    guest.answer.map_or_else(|| gettext("No answer yet"), Answer::said)
+}
+
 fn utc(at: EpochMillis) -> Option<DateTime<Utc>> {
     DateTime::<Utc>::from_timestamp_millis(at)
 }
@@ -373,5 +500,54 @@ mod tests {
         let guests = [Guest { answer: Some(Answer::Yes), ..Default::default() }];
         assert_eq!(people_words(None, &guests), "1 of 1 said yes");
         assert_eq!(people_words(Some("Rita Lopes"), &[]), "Rita Lopes, organizer");
+    }
+
+    #[test]
+    fn reminders_read_in_the_largest_whole_unit() {
+        let said: Vec<String> = [0, 1, 10, 60, 90, 120, 1440, 2880, 10080].into_iter().map(reminder_words).collect();
+        assert_eq!(
+            said,
+            [
+                "At the start",
+                "1 minute before",
+                "10 minutes before",
+                "1 hour before",
+                "90 minutes before",
+                "2 hours before",
+                "1 day before",
+                "2 days before",
+                "1 week before",
+            ]
+        );
+    }
+
+    #[test]
+    fn a_repeat_reads_as_a_short_sentence() {
+        use chrono::Weekday;
+        mailrs_domain::translate::set_date_locale("en_US");
+        assert_eq!(repeat_words(&Repeat::EveryWeekday), "Every weekday");
+        let two_weeks = Repeat::Custom(Custom {
+            every: 2,
+            frequency: Frequency::Weekly,
+            days: vec![Weekday::Wed, Weekday::Mon],
+            ends: Ends::On(NaiveDate::from_ymd_opt(2026, 12, 31).unwrap()),
+        });
+        // in_words's own wording (reconcile.md Task 5 correction 5): no
+        // comma before "until", and the end date's own year is always
+        // taken as the start year, so it never shows.
+        assert_eq!(repeat_words(&two_weeks), "Every 2 weeks on Monday and Wednesday until 31 December");
+        let five = Repeat::Custom(Custom { every: 1, frequency: Frequency::Daily, days: vec![], ends: Ends::After(5) });
+        assert_eq!(repeat_words(&five), "Every day, 5 times");
+        assert_eq!(repeat_words(&Repeat::Kept("RRULE:FREQ=MONTHLY;BYDAY=1MO".into())), "A rule set in another app");
+    }
+
+    #[test]
+    fn a_guest_answer_reads_as_a_word() {
+        let guest = |answer, organizer| Guest { email: "ana@example.com".into(), answer, organizer, ..Guest::default() };
+        assert_eq!(answer_words(&guest(Some(Answer::Yes), false)), "Going");
+        assert_eq!(answer_words(&guest(Some(Answer::No), false)), "Not going");
+        assert_eq!(answer_words(&guest(Some(Answer::Maybe), false)), "Maybe");
+        assert_eq!(answer_words(&guest(None, false)), "No answer yet");
+        assert_eq!(answer_words(&guest(Some(Answer::Yes), true)), "Organizer");
     }
 }

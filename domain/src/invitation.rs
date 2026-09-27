@@ -10,7 +10,7 @@
 //! Nothing here fails loudly. A part that is not an invitation, or that is
 //! cut off halfway, gives back `None`.
 
-mod recurrence;
+pub mod recurrence;
 mod reply;
 mod zone;
 

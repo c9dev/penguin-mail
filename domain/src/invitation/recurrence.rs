@@ -15,7 +15,11 @@ use crate::translate::{date_locale, fill, fill_plural, gettext};
 /// The rule in words, or `None` when it names no frequency this
 /// understands. `start_year` is the year the event starts in: an end date
 /// in that same year needs no year of its own.
-pub(crate) fn in_words(rule: &str, start_year: Option<i32>) -> Option<String> {
+///
+/// Public so the calendar editor's `repeat_words` can say a custom
+/// repeat the same way the invitation card does, rather than a second
+/// copy of the same phrasing (calendar stage 3, ruling R6).
+pub fn in_words(rule: &str, start_year: Option<i32>) -> Option<String> {
     let parts = parts(rule);
     let every = interval(&parts);
     let count = [("count", every.to_string())];
