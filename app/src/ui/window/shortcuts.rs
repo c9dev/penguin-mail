@@ -544,6 +544,11 @@ pub(super) static SHORTCUTS: &[Shortcut] = &[
     },
     Shortcut {
         section: Section::Calendar,
+        description: || gettext("New event"),
+        keys: &[calendar("n")],
+    },
+    Shortcut {
+        section: Section::Calendar,
         description: || gettext("Search the calendar"),
         keys: &[calendar("<Control>f")],
     },
@@ -598,6 +603,7 @@ pub(super) enum CalendarKey {
     Next,
     Search,
     Delete,
+    NewEvent,
 }
 
 /// The calendar's own key a press stands for, if any. Enter is listed in
@@ -614,6 +620,7 @@ pub(super) fn calendar_key(pressed: gdk::Key, modifiers: gdk::ModifierType) -> O
         "Right" => CalendarKey::Next,
         "<Control>f" => CalendarKey::Search,
         "Delete" | "KP_Delete" => CalendarKey::Delete,
+        "n" => CalendarKey::NewEvent,
         _ => return None,
     })
 }
@@ -1073,7 +1080,7 @@ mod tests {
             assert!(!answered.contains(&command), "{} repeats {command:?}", key.trigger);
             answered.push(command);
         }
-        assert_eq!(answered.len(), 8);
+        assert_eq!(answered.len(), 9);
     }
 
     #[test]

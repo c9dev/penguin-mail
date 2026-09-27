@@ -130,6 +130,12 @@ already answers it. Edit and Delete sit as two icons in the popover's
 title row, for the same events; an invitation the account only
 answers, such as the mockup draws, has neither.
 
+In Day and Week, a drag of a card has a keyboard path beside it: with
+the focus on a card the account may move, Shift+Up and Shift+Down move
+it a quarter hour earlier or later, and Shift+Alt+Up and Shift+Alt+Down
+shorten or lengthen it by the same step. A card that offers this says so
+in the line read after its name.
+
 ## Checking it
 
 ```

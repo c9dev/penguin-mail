@@ -285,7 +285,7 @@ fn answer_state(event: &Event) -> AnswerState {
 /// outline, the strike-through or the loading icon already say to a
 /// sighted reader. A pending change takes the word over an answer state,
 /// since it is the account's own event most of the time a card is both.
-fn description(event: &Event) -> String {
+pub(super) fn description(event: &Event) -> String {
     if event.pending {
         return gettext("Waiting to be sent");
     }

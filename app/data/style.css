@@ -369,6 +369,9 @@ button.calendar-today {
 }
 .calendar-arrows > button { min-height: 32px; min-width: 34px; padding: 0; border-radius: 16px; }
 .calendar-arrows > separator { margin: 8px 0; }
+/* The New Event button: a 32 px accent circle with a plain "+", the
+   mockup's own size (mockups.py). */
+.new-event { min-width: 32px; min-height: 32px; padding: 0; }
 /* The view switch and the sidebar's Mail / Calendar switch: 13 px
    labels, the unchosen ones dimmed at weight 600. */
 toggle-group.view-switch > toggle,
@@ -432,6 +435,18 @@ button.event-block.unanswered:hover,
 .event-block.declined .title { text-decoration: line-through; }
 .event-block:focus-visible { outline: 2px solid var(--accent-color); outline-offset: 1px; }
 .all-day-strip button.event-block { border-radius: 6px; }
+/* The card a drag holds: lifted above the others while the pointer or
+   the settle spring carries it. With animations off the spring lands it
+   in place at once (R10), so no separate no-motion rule is needed. */
+.event-block.dragging {
+  box-shadow: 0 6px 18px color-mix(in srgb, black 22%, transparent);
+}
+/* The span a drag across empty time or N marks while quick create's
+   popover is open. */
+.event-block.ghost {
+  background: color-mix(in srgb, var(--accent-bg-color) 22%, var(--view-bg-color));
+  border: 1.5px dashed var(--accent-bg-color);
+}
 
 /* "Mon" and "All-day" stay title case in the string a screen reader
    reads; the small capitals are drawn, not spoken. */
@@ -510,6 +525,8 @@ checkbutton.calendar-check > check:checked {
   background: var(--cal-colour);
   color: white;
 }
+/* Quick create's plain colour dot, beside the calendar's name. */
+.checked-dot { min-width: 10px; min-height: 10px; border-radius: 99px; background: var(--cal-colour); }
 /* The month view: each of the 42 cells is a small card; a day outside
    the month shown reads quieter. */
 .month-cell { padding: 4px; border-top: 1px solid color-mix(in srgb, currentColor 8%, transparent); }

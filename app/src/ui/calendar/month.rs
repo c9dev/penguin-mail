@@ -9,13 +9,14 @@ use std::rc::Rc;
 
 use adw::prelude::*;
 use chrono::{Datelike, Days, NaiveDate};
+use gtk::gdk;
 use mailrs_domain::calendar::{Calendar, Occurrence};
 use mailrs_domain::{AccountId, EpochMillis};
 
 use super::block::{EventBlock, EventKey, key_of};
 use super::layout;
 use super::range::{Range, ViewKind};
-use super::time_grid::focused_key;
+use super::time_grid::{focused_key, focused_occurrence};
 use super::words;
 
 /// Rows a cell keeps for events before folding the rest into "N more",
@@ -50,9 +51,10 @@ pub struct MonthGrid {
     more_clicked: RefCell<Option<Box<MoreClicked>>>,
     /// Each block on screen by the event it draws, so the view can point
     /// a popover at one it opens by name. Cleared on every rebuild.
-    blocks: RefCell<Vec<(EventKey, gtk::Widget)>>,
-    /// Each block with the occurrence it draws, for [`MonthGrid::focused`].
-    occurrences: RefCell<Vec<(gtk::Widget, Occurrence)>>,
+    blocks: RefCell<Vec<(EventKey, Occurrence, gtk::Widget)>>,
+    /// The range last shown, kept so [`MonthGrid::day_rect`] and
+    /// [`MonthGrid::focused_day`] can find a day among its cells.
+    days: RefCell<Vec<NaiveDate>>,
 }
 
 impl MonthGrid {
@@ -84,7 +86,7 @@ impl MonthGrid {
             event_edited: RefCell::new(None),
             more_clicked: RefCell::new(None),
             blocks: RefCell::new(Vec::new()),
-            occurrences: RefCell::new(Vec::new()),
+            days: RefCell::new(Vec::new()),
         })
     }
 
@@ -147,19 +149,53 @@ impl MonthGrid {
         self.blocks
             .borrow()
             .iter()
-            .find(|(k, _)| k == key)
-            .map(|(_, widget)| widget.clone())
+            .find(|(k, _, _)| k == key)
+            .map(|(_, _, widget)| widget.clone())
     }
 
     /// The first event block in day order, and the event of the block
     /// that has the keyboard focus, for the view to put the focus back
     /// after it rebuilds the month.
     pub fn first_block(&self) -> Option<gtk::Widget> {
-        self.blocks.borrow().first().map(|(_, widget)| widget.clone())
+        self.blocks.borrow().first().map(|(_, _, widget)| widget.clone())
     }
 
     pub fn focused_key(&self) -> Option<EventKey> {
         focused_key(&self.blocks.borrow())
+    }
+
+    /// The occurrence whose block has the keyboard focus.
+    pub fn focused(&self) -> Option<Occurrence> {
+        focused_occurrence(&self.blocks.borrow())
+    }
+
+    /// The date of the day heading or the card that has the keyboard
+    /// focus, for N to start a new event on.
+    pub fn focused_day(&self) -> Option<NaiveDate> {
+        let focus = self.widget.root().and_then(|root| root.focus())?;
+        self.cells
+            .iter()
+            .position(|cell| focus.is_ancestor(cell))
+            .and_then(|index| self.days.borrow().get(index).copied())
+    }
+
+    /// The widget itself, for quick create to point its popover at.
+    pub fn widget(&self) -> gtk::Widget {
+        self.widget.clone().upcast()
+    }
+
+    /// The cell's own bounds in the grid's coordinates, for quick
+    /// create's popover to point at. `None` when `day` is not among the
+    /// six weeks the month last showed.
+    pub fn day_rect(&self, day: NaiveDate) -> Option<gdk::Rectangle> {
+        let index = self.days.borrow().iter().position(|&d| d == day)?;
+        let bounds = self.cells.get(index)?.compute_bounds(&self.widget)?;
+        Some(gdk::Rectangle::new(
+            bounds.x().round() as i32,
+            bounds.y().round() as i32,
+            bounds.width().round().max(1.0) as i32,
+            bounds.height().round().max(1.0) as i32,
+        ))
     }
 
     fn rebuild(self: &Rc<Self>) {
@@ -170,8 +206,8 @@ impl MonthGrid {
         let month = range.month();
         let rows_that_fit = self.rows_that_fit.get();
         let days: Vec<NaiveDate> = (0..42u64).map(|i| range.first + Days::new(i)).collect();
+        self.days.replace(days.clone());
         let mut blocks = Vec::new();
-        let mut focusable = Vec::new();
 
         for (index, &day) in days.iter().enumerate() {
             let cell = &self.cells[index];
@@ -193,8 +229,7 @@ impl MonthGrid {
                 let block = EventBlock::new(o, colour, name, true, Some(day), &chrono::Local, on_edit);
                 connect_event(self, &block.widget, (*o).clone());
                 cell.append(&block.widget);
-                focusable.push((block.widget.clone().upcast::<gtk::Widget>(), (*o).clone()));
-                blocks.push((key_of(o), block.widget.upcast()));
+                blocks.push((key_of(o), (*o).clone(), block.widget.clone().upcast()));
             }
             if hidden > 0 {
                 let more = gtk::Button::builder()
@@ -211,13 +246,6 @@ impl MonthGrid {
             }
         }
         self.blocks.replace(blocks);
-        self.occurrences.replace(focusable);
-    }
-
-    /// The occurrence of the block that has the keyboard focus, for the
-    /// Delete key.
-    pub fn focused(&self) -> Option<Occurrence> {
-        self.occurrences.borrow().iter().find(|(widget, _)| widget.has_focus()).map(|(_, o)| o.clone())
     }
 }
 
