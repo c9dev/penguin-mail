@@ -847,6 +847,60 @@ async fn an_event_colour_goes_out_as_googles_colour_id() {
     client(&server).put_event(&plain, None, false).await.unwrap();
 }
 
+/// A guest's change, as the series change hands it over: every field as
+/// Google has it, and the guest's reminders, colour and busy.
+fn attended(id: &str, series: Option<&str>) -> mailrs_domain::calendar::Event {
+    use mailrs_domain::calendar::{Guest, Reminder, ReminderMethod};
+    mailrs_domain::calendar::Event {
+        calendar: "work".into(),
+        id: id.into(),
+        title: "Stand-up".into(),
+        zone: "Europe/Lisbon".into(),
+        start: 1_790_150_400_000,
+        end: 1_790_151_300_000,
+        rules: if series.is_none() { vec!["RRULE:FREQ=DAILY;COUNT=10".into()] } else { Vec::new() },
+        series: series.map(str::to_string),
+        guests: vec![
+            Guest { email: "rita@example.com".into(), organizer: true, ..Guest::default() },
+            Guest { email: "me@example.com".into(), me: true, ..Guest::default() },
+        ],
+        reminders: Some(vec![Reminder { minutes: 30, method: ReminderMethod::Notification }]),
+        color: Some("#f4511e".into()),
+        busy: false,
+        ..Default::default()
+    }
+}
+
+#[tokio::test]
+async fn a_guests_change_patches_only_reminders_colour_and_busy() {
+    let server = MockServer::start().await;
+    mount_token(&server).await;
+    for id in ["standup_20260923T080000Z", "standup"] {
+        Mock::given(method("PATCH"))
+            .and(path(format!("{CALENDAR}/calendars/work/events/{id}")))
+            .and(query_param("sendUpdates", "all"))
+            .respond_with(move |request: &Request| {
+                let body: Value = serde_json::from_slice(&request.body).unwrap();
+                assert_eq!(
+                    body,
+                    json!({
+                        "transparency": "transparent",
+                        "colorId": "6",
+                        "reminders": {"useDefault": false, "overrides": [{"method": "popup", "minutes": 30}]},
+                    }),
+                    "a guest's PATCH carries no time, rule or guest list",
+                );
+                ResponseTemplate::new(200).set_body_json(json!({"id": id, "etag": "\"8\""}))
+            })
+            .expect(1)
+            .mount(&server)
+            .await;
+    }
+    let gmail = client(&server);
+    gmail.put_event(&attended("standup_20260923T080000Z", Some("standup")), None, false).await.unwrap();
+    gmail.put_event(&attended("standup", None), Some("\"7\""), false).await.unwrap();
+}
+
 fn moved_standup() -> mailrs_domain::calendar::Event {
     mailrs_domain::calendar::Event {
         calendar: "work".into(),

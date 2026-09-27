@@ -897,9 +897,46 @@ fn when(time: Option<&Value>) -> (EpochMillis, String, bool) {
     (day, "UTC".into(), true)
 }
 
+/// A guest's change to someone else's event: only the fields that are
+/// the guest's own. The time, rules and guests belong to the organizer,
+/// and a guest's PATCH that carried them could move the series for every
+/// guest, since it goes out with `sendUpdates=all`.
+fn own_fields_json(event: &calendar::Event) -> Value {
+    let mut body = json!({ "transparency": transparency(event) });
+    own_fields_into(&mut body, event, false);
+    body
+}
+
+fn transparency(event: &calendar::Event) -> &'static str {
+    if event.busy { "opaque" } else { "transparent" }
+}
+
+/// The reminders and colour, which every change writes.
+fn own_fields_into(body: &mut Value, event: &calendar::Event, create: bool) {
+    if let Some(reminders) = &event.reminders {
+        body["reminders"] = json!({
+            "useDefault": false,
+            "overrides": reminders.iter().map(|r| json!({
+                "method": match r.method { ReminderMethod::Email => "email", ReminderMethod::Notification => "popup" },
+                "minutes": r.minutes,
+            })).collect::<Vec<_>>(),
+        });
+    }
+    match event.color.as_deref().and_then(calendar::color_id) {
+        Some(id) => body["colorId"] = json!(id),
+        // A patch with no colour clears the event's own, so it takes the
+        // calendar's again. A new event has nothing to clear.
+        None if !create => body["colorId"] = Value::Null,
+        None => {}
+    }
+}
+
 /// What Penguin Mail writes on an event. Fields the model does not hold
 /// are left out, so a patch keeps whatever Google has for them.
 fn event_json(event: &calendar::Event, create: bool) -> Value {
+    if !create && event.limited() {
+        return own_fields_json(event);
+    }
     let time = |at: EpochMillis| {
         if event.all_day {
             let day = chrono::DateTime::from_timestamp_millis(at).map(|d| d.format("%Y-%m-%d").to_string());
@@ -914,12 +951,12 @@ fn event_json(event: &calendar::Event, create: bool) -> Value {
         }
     };
     let mut body = json!({
+        "transparency": transparency(event),
         "summary": event.title,
         "location": event.place,
         "description": event.description,
         "start": time(event.start),
         "end": time(event.end),
-        "transparency": if event.busy { "opaque" } else { "transparent" },
         "visibility": if event.private { "private" } else { "default" },
         "attendees": event.guests.iter().map(|g| {
             let mut guest = json!({ "email": g.email });
@@ -939,22 +976,7 @@ fn event_json(event: &calendar::Event, create: bool) -> Value {
     if event.series.is_none() && !(create && event.rules.is_empty()) {
         body["recurrence"] = json!(event.rules);
     }
-    if let Some(reminders) = &event.reminders {
-        body["reminders"] = json!({
-            "useDefault": false,
-            "overrides": reminders.iter().map(|r| json!({
-                "method": match r.method { ReminderMethod::Email => "email", ReminderMethod::Notification => "popup" },
-                "minutes": r.minutes,
-            })).collect::<Vec<_>>(),
-        });
-    }
-    match event.color.as_deref().and_then(calendar::color_id) {
-        Some(id) => body["colorId"] = json!(id),
-        // A patch with no colour clears the event's own, so it takes the
-        // calendar's again. A new event has nothing to clear.
-        None if !create => body["colorId"] = Value::Null,
-        None => {}
-    }
+    own_fields_into(&mut body, event, create);
     if let Some(request) = &event.meet_request {
         body["conferenceData"] = json!({
             "createRequest": {

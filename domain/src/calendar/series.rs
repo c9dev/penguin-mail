@@ -79,6 +79,9 @@ pub fn change(
     scope: RepeatScope,
     new_id: &str,
 ) -> Vec<Step> {
+    if series.limited() {
+        return vec![Step::Save(own_fields(series, changed, picked, &edited, scope))];
+    }
     match scope {
         RepeatScope::This => vec![Step::Save(one(series, changed, picked, edited))],
         RepeatScope::Following if picked.original_start > series.start => {
@@ -94,15 +97,7 @@ pub fn change(
 pub fn delete(series: &Event, changed: &[Event], picked: Picked, scope: RepeatScope) -> Vec<Step> {
     match scope {
         RepeatScope::This => {
-            let length = series.end - series.start;
-            let shown = held(changed, picked.original_start)
-                .cloned()
-                .unwrap_or_else(|| Event {
-                    start: picked.start,
-                    end: picked.start + length,
-                    ..series.clone()
-                });
-            let mut gone = one(series, changed, picked, shown);
+            let mut gone = one(series, changed, picked, shown(series, changed, picked));
             gone.status = Status::Cancelled;
             vec![Step::Cancel(gone)]
         }
@@ -119,6 +114,44 @@ pub fn delete(series: &Event, changed: &[Event], picked: Picked, scope: RepeatSc
             id: series.id.clone(),
         }],
     }
+}
+
+/// A guest's change: their reminders, colour and busy on the picked
+/// occurrence or on the series, every other field as Google holds it. The
+/// editor hands a guest the event it opened, which for an occurrence
+/// nobody changed is the series with the first occurrence's times, so
+/// nothing else is taken from `edited`. A guest is never offered "This
+/// and following", which would start a series of their own; it covers
+/// the series here, as All does.
+fn own_fields(
+    series: &Event,
+    changed: &[Event],
+    picked: Picked,
+    edited: &Event,
+    scope: RepeatScope,
+) -> Event {
+    let target = match scope {
+        RepeatScope::This => one(series, changed, picked, shown(series, changed, picked)),
+        RepeatScope::Following | RepeatScope::All => series.clone(),
+    };
+    Event {
+        reminders: edited.reminders.clone(),
+        color: edited.color.clone(),
+        busy: edited.busy,
+        ..target
+    }
+}
+
+/// The picked occurrence as it shows: its changed occurrence, or the
+/// series at the picked time.
+fn shown(series: &Event, changed: &[Event], picked: Picked) -> Event {
+    held(changed, picked.original_start)
+        .cloned()
+        .unwrap_or_else(|| Event {
+            start: picked.start,
+            end: picked.start + (series.end - series.start),
+            ..series.clone()
+        })
 }
 
 fn held(changed: &[Event], original_start: EpochMillis) -> Option<&Event> {
@@ -913,5 +946,101 @@ mod tests {
         let edited = moved(&series, picked, 7 * 24);
         let steps = change(&series, &[], picked, edited, RepeatScope::All, "new");
         assert_eq!(saved(&steps)[0].rules, series.rules);
+    }
+
+    /// Stand-up as Rita organizes it and this account attends, skipping
+    /// Wednesday and adding a Saturday.
+    fn attended() -> Event {
+        use crate::calendar::Guest;
+        Event {
+            guests: vec![
+                Guest { email: "rita@example.com".into(), organizer: true, ..Guest::default() },
+                Guest { email: "me@example.com".into(), me: true, ..Guest::default() },
+            ],
+            ..standup(&[
+                "RRULE:FREQ=DAILY;COUNT=10",
+                "EXDATE;TZID=Europe/Lisbon:20260923T090000",
+                "RDATE;TZID=Europe/Lisbon:20261003T090000",
+            ])
+        }
+    }
+
+    /// What the limited editor hands over: the event it opened with, and
+    /// only the guest's own fields changed.
+    fn own_fields_changed(opened: &Event) -> Event {
+        use crate::calendar::{Reminder, ReminderMethod};
+        Event {
+            reminders: Some(vec![Reminder { minutes: 30, method: ReminderMethod::Notification }]),
+            color: Some("#f4511e".into()),
+            busy: false,
+            ..opened.clone()
+        }
+    }
+
+    fn keeps_only_own_fields_changed(saved: &Event, before: &Event) {
+        assert_eq!(saved.color.as_deref(), Some("#f4511e"));
+        assert!(!saved.busy);
+        assert_eq!(saved.reminders.as_ref().map(Vec::len), Some(1));
+        let restored = Event {
+            reminders: before.reminders.clone(),
+            color: before.color.clone(),
+            busy: before.busy,
+            ..saved.clone()
+        };
+        assert_eq!(&restored, before, "only reminders, colour and busy change");
+    }
+
+    #[test]
+    fn a_guest_changing_a_middle_occurrence_keeps_its_time_and_id() {
+        let series = attended();
+        // The editor opens Thursday on the series itself, whose start is
+        // Monday's.
+        let steps = change(&series, &[], thursday(), own_fields_changed(&series), RepeatScope::This, "new");
+        let [Step::Save(saved)] = steps.as_slice() else { panic!("one save: {steps:?}") };
+        let expected = Event {
+            id: occurrence_id(&series, thursday().original_start),
+            etag: String::new(),
+            start: thursday().start,
+            end: thursday().start + (series.end - series.start),
+            rules: Vec::new(),
+            series: Some("standup".into()),
+            original_start: Some(thursday().original_start),
+            ..series.clone()
+        };
+        keeps_only_own_fields_changed(saved, &expected);
+    }
+
+    #[test]
+    fn a_guest_changing_all_events_keeps_the_series_times_and_dates() {
+        let series = attended();
+        let steps = change(&series, &[], thursday(), own_fields_changed(&series), RepeatScope::All, "new");
+        let [Step::Save(saved)] = steps.as_slice() else { panic!("one save: {steps:?}") };
+        keeps_only_own_fields_changed(saved, &series);
+    }
+
+    #[test]
+    fn a_guest_changing_an_occurrence_someone_moved_keeps_it_where_it_went() {
+        let series = attended();
+        let moved = Event {
+            id: occurrence_id(&series, thursday().original_start),
+            etag: "\"3\"".into(),
+            title: "Stand-up, late".into(),
+            start: lisbon(9, 24, 11, 0),
+            end: lisbon(9, 24, 11, 15),
+            rules: Vec::new(),
+            series: Some("standup".into()),
+            original_start: Some(thursday().original_start),
+            ..series.clone()
+        };
+        let picked = Picked { original_start: thursday().original_start, start: moved.start };
+        let changed = [moved.clone()];
+        let this = change(&series, &changed, picked, own_fields_changed(&moved), RepeatScope::This, "new");
+        let [Step::Save(saved)] = this.as_slice() else { panic!("one save: {this:?}") };
+        keeps_only_own_fields_changed(saved, &moved);
+        // All events, opened on the moved occurrence, leaves the series'
+        // rules and times alone.
+        let all = change(&series, &changed, picked, own_fields_changed(&moved), RepeatScope::All, "new");
+        let [Step::Save(saved)] = all.as_slice() else { panic!("one save: {all:?}") };
+        keeps_only_own_fields_changed(saved, &series);
     }
 }

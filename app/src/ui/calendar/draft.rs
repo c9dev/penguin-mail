@@ -184,8 +184,10 @@ impl Draft {
     /// and the event has none yet.
     ///
     /// On someone else's event the account is only a guest of ([`limited`]),
-    /// so Google takes only the guest's own fields and refuses or ignores
-    /// the rest (ruling R9): the rest of `base` goes out unchanged.
+    /// only the guest's reminders, colour and busy change (ruling R9). For
+    /// an occurrence nobody changed, `base` is the series with its first
+    /// occurrence's times; `series::change` takes only those three fields
+    /// from it, and the PATCH carries nothing else.
     pub fn to_event(&self, new_id: &str, meet_request: &str) -> Event {
         let mut event = self.base.clone().unwrap_or_else(|| Event { id: new_id.to_string(), ..Event::default() });
         if let Some(base) = &self.base
@@ -275,7 +277,7 @@ pub fn default_calendar(writable: &[(AccountId, String, Calendar)], last: Option
 /// guest. The editor then leaves the time, place and guests to them
 /// (ruling R9), and the popover asks this account for an answer.
 pub fn limited(event: &Event) -> bool {
-    event.guests.iter().any(|g| g.me && !g.organizer)
+    event.limited()
 }
 
 /// What a person may do to an event from the calendar view.

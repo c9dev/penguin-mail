@@ -195,6 +195,13 @@ impl Event {
             && self.status != Status::Cancelled
             && self.my_answer != Some(invitation::Answer::No)
     }
+
+    /// Whether someone else organizes the event and the account is only a
+    /// guest. The account then changes only its own reminders, colour and
+    /// busy, and leaves the time, place, rules and guests to the organizer.
+    pub fn limited(&self) -> bool {
+        self.guests.iter().any(|g| g.me && !g.organizer)
+    }
 }
 
 /// Google's eleven event colours, by the id an event carries. An event

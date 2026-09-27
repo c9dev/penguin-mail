@@ -1027,6 +1027,83 @@ async fn all_events_changes_the_series_itself() {
     assert_eq!(on_day(&h, 0).await[0].start, NOW + HOUR);
 }
 
+/// The stand-up as Rita organizes it and this account attends, skipping
+/// the fourth day and adding a sixth.
+fn attended_standup() -> Event {
+    use mailrs_domain::calendar::Guest;
+    Event {
+        guests: vec![
+            Guest { email: "rita@example.com".into(), organizer: true, ..Guest::default() },
+            Guest { email: "me@example.com".into(), me: true, ..Guest::default() },
+        ],
+        rules: vec![
+            "RRULE:FREQ=DAILY;COUNT=5".into(),
+            "EXDATE:20260924T141320Z".into(),
+            "RDATE:20260928T141320Z".into(),
+        ],
+        ..standup()
+    }
+}
+
+/// A guest opens the third day, changes their reminders, colour and busy,
+/// and saves under `scope`. The editor hands over the event it opened,
+/// which for an occurrence nobody changed is the series, starting on the
+/// first day.
+async fn guest_saves_the_third_day(h: &Harness, scope: RepeatScope) {
+    use mailrs_domain::calendar::{Reminder, ReminderMethod};
+    h.fake.with(|s| s.calendars = vec![calendar("primary", true)]);
+    h.fake.put_calendar_event(attended_standup());
+    let copy = copy(h);
+    copy.refresh(h.account_id, NOW).await.unwrap();
+    let third = on_day(h, 2).await.remove(0);
+    let edited = Event {
+        reminders: Some(vec![Reminder { minutes: 30, method: ReminderMethod::Notification }]),
+        color: Some("#f4511e".into()),
+        busy: false,
+        ..Event::clone(&third.event)
+    };
+    let steps = copy.change_steps(h.account_id, &third, edited, Some(scope)).await.unwrap();
+    held(copy.apply(h.account_id, steps).await.unwrap());
+    assert!(copy.send(h.account_id).await.unwrap().is_empty());
+    assert!(queue(h).await.is_empty());
+}
+
+/// Every day of the copy starts where it did: the first three, the
+/// fourth skipped, the fifth, and the added one.
+async fn every_day_keeps_its_time(h: &Harness) {
+    for day in [0, 1, 2, 4, 7] {
+        let shown = on_day(h, day).await;
+        assert_eq!(shown.len(), 1, "day {day}");
+        assert_eq!((shown[0].start, shown[0].end), (NOW + day * DAY, NOW + day * DAY + HOUR), "day {day}");
+    }
+    assert!(on_day(h, 3).await.is_empty(), "the skipped day stays skipped");
+}
+
+#[tokio::test]
+async fn a_guests_change_to_one_occurrence_moves_nothing() {
+    let h = harness().await;
+    guest_saves_the_third_day(&h, RepeatScope::This).await;
+    let series = on_google(&h, "standup").unwrap();
+    assert_eq!((series.start, series.end, &series.rules), (NOW, NOW + HOUR, &attended_standup().rules));
+    let one = on_google(&h, &occurrence_id(&attended_standup(), NOW + 2 * DAY)).unwrap();
+    assert_eq!((one.start, one.end), (NOW + 2 * DAY, NOW + 2 * DAY + HOUR));
+    assert_eq!((one.color.as_deref(), one.busy), (Some("#f4511e"), false));
+    every_day_keeps_its_time(&h).await;
+    assert!(!on_day(&h, 2).await[0].event.busy);
+}
+
+#[tokio::test]
+async fn a_guests_change_to_all_events_moves_nothing() {
+    let h = harness().await;
+    guest_saves_the_third_day(&h, RepeatScope::All).await;
+    let series = on_google(&h, "standup").unwrap();
+    assert_eq!((series.start, series.end, &series.rules), (NOW, NOW + HOUR, &attended_standup().rules));
+    assert_eq!((series.color.as_deref(), series.busy), (Some("#f4511e"), false));
+    assert_eq!(h.fake.with(|s| s.calendar_events.len()), 1, "no occurrence or series was made");
+    every_day_keeps_its_time(&h).await;
+    assert!(!on_day(&h, 0).await[0].event.busy);
+}
+
 #[tokio::test]
 async fn cancelling_one_occurrence_leaves_a_gap_and_tells_google() {
     let h = harness().await;
