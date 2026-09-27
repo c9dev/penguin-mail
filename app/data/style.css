@@ -369,9 +369,12 @@ button.calendar-today {
 }
 .calendar-arrows > button { min-height: 32px; min-width: 34px; padding: 0; border-radius: 16px; }
 .calendar-arrows > separator { margin: 8px 0; }
-/* The New Event button: a 32 px accent circle with a plain "+", the
-   mockup's own size (mockups.py). */
-.new-event { min-width: 32px; min-height: 32px; padding: 0; }
+/* The New Event button: a 32 px accent circle with a plain "+", 12 px
+   right of the view switch, the mockup's own size and gap (mockups.py).
+   The header bar spaces its children 6 px apart, so the margin adds the
+   other 6; with no vertical margin the bar cannot stretch it into an
+   ellipse. */
+button.new-event { min-width: 32px; min-height: 32px; padding: 0; margin: 0 0 0 6px; }
 /* The view switch and the sidebar's Mail / Calendar switch: 13 px
    labels, the unchosen ones dimmed at weight 600. */
 toggle-group.view-switch > toggle,
