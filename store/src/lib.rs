@@ -9,6 +9,7 @@ pub mod contacts;
 mod db;
 pub mod drafts;
 mod error;
+pub mod event_reminders;
 pub mod flags;
 pub mod follow_ups;
 pub mod image_senders;
