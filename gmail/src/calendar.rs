@@ -290,23 +290,74 @@ impl GmailClient {
     ) -> Result<calendar::Event, GmailError> {
         let base = format!("{}/calendars/{}/events", self.calendar_base_url, encode(&event.calendar));
         let body = event_json(event, create);
+        // Google reads conferenceData only when told which version of it
+        // the body speaks.
+        let mut query = vec![("sendUpdates", "all")];
+        if event.meet_request.is_some() {
+            query.push(("conferenceDataVersion", "1"));
+        }
         let answer: Value = if create {
-            self.call_at(&base, |url| {
-                self.http().post(url).query(&[("sendUpdates", "all")]).json(&body)
-            })
-            .await?
+            self.call_at(&base, |url| self.http().post(url).query(&query).json(&body)).await?
         } else {
             let url = format!("{base}/{}", encode(&event.id));
-            self.call_at(&url, |url| {
-                let mut request = self.http().patch(url).query(&[("sendUpdates", "all")]).json(&body);
-                if let Some(etag) = etag {
-                    request = request.header("If-Match", etag);
+            let patched: Result<Value, GmailError> = self
+                .call_at(&url, |url| {
+                    let mut request = self.http().patch(url).query(&query).json(&body);
+                    if let Some(etag) = etag {
+                        request = request.header("If-Match", etag);
+                    }
+                    request
+                })
+                .await;
+            match patched {
+                Ok(answer) => answer,
+                // Google's recurring-event guide lets a PATCH addressed at
+                // an occurrence's own id change that occurrence alone, and
+                // that is the path most accounts take (ruling R2). An
+                // account that refuses it needs the id events.instances
+                // actually hands out for that occurrence, replaced whole
+                // with PUT.
+                Err(err) if event.series.is_some() && refuses_occurrence_patch(&err) => {
+                    self.put_occurrence_by_instance(&base, event, etag, &query, &body).await?
                 }
-                request
-            })
-            .await?
+                Err(err) => return Err(err),
+            }
         };
         Ok(google_event(&event.calendar, &answer, None))
+    }
+
+    /// Finds the occurrence `event` names through `events.instances`, by
+    /// the original start it replaces, and replaces it whole with PUT.
+    /// The fallback [`GmailClient::put_event`] takes when Google refuses a
+    /// PATCH addressed straight at the occurrence's own id.
+    async fn put_occurrence_by_instance(
+        &self,
+        base: &str,
+        event: &calendar::Event,
+        etag: Option<&str>,
+        query: &[(&str, &str)],
+        body: &Value,
+    ) -> Result<Value, GmailError> {
+        let series = event.series.as_deref().unwrap_or(&event.id);
+        let original = event.original_start.unwrap_or(event.start);
+        let at = chrono::DateTime::from_timestamp_millis(original).map(|d| d.to_rfc3339()).unwrap_or_default();
+        let instances: EventList = self
+            .call_at(&format!("{base}/{}/instances", encode(series)), |url| {
+                self.http().get(url).query(&[("originalStart", at.as_str()), ("maxResults", "1")])
+            })
+            .await?;
+        let Some(id) = instances.items.first().and_then(|i| i.get("id")).and_then(Value::as_str) else {
+            return Err(GmailError::NotFound);
+        };
+        let url = format!("{base}/{}", encode(id));
+        self.call_at(&url, |url| {
+            let mut request = self.http().put(url).query(query).json(body);
+            if let Some(etag) = etag {
+                request = request.header("If-Match", etag);
+            }
+            request
+        })
+        .await
     }
 
     /// Deletes an event and tells its guests.
@@ -748,6 +799,16 @@ fn is_me(guest: &Value, me: &str) -> bool {
         .is_some_and(|email| email.eq_ignore_ascii_case(me))
 }
 
+/// Whether a PATCH addressed at an occurrence's own id failed because
+/// Google will not take a direct write there, rather than for some other
+/// reason. Only these two warrant asking `events.instances` for another
+/// id and trying again with PUT; every other refusal, such as an etag
+/// conflict or a missing scope, means something else went wrong and must
+/// reach the caller unchanged.
+fn refuses_occurrence_patch(err: &GmailError) -> bool {
+    matches!(err, GmailError::NotFound) || matches!(err, GmailError::Http { status: 400, .. })
+}
+
 /// A calendar or event id in a URL path. Ids hold `@` and `#`, which
 /// `byte_serialize` turns into `%40` and `%23`; it also turns a space
 /// into `+`, which a URL path would read back as a literal plus, so that
@@ -829,7 +890,7 @@ pub fn google_event(calendar: &str, item: &Value, me: Option<&str>) -> calendar:
         title: text("summary"),
         place: text("location"),
         description: text("description"),
-        color: item.get("colorId").and_then(Value::as_str).and_then(event_color).map(str::to_string),
+        color: item.get("colorId").and_then(Value::as_str).and_then(calendar::event_color).map(str::to_string),
         // `busy` holds transparency alone. Declined and all-day events keep
         // the busy value Google sent, so a queued edit never marks them
         // free on the way back out.
@@ -863,6 +924,9 @@ pub fn google_event(calendar: &str, item: &Value, me: Option<&str>) -> calendar:
         series: item.get("recurringEventId").and_then(Value::as_str).map(str::to_string),
         original_start: item.get("originalStartTime").map(|t| when(Some(t)).0),
         pending: false,
+        // A Meet request is something Penguin Mail asks for on a write;
+        // Google's answer never needs to say one is still pending here.
+        meet_request: None,
     }
 }
 
@@ -884,24 +948,6 @@ fn when(time: Option<&Value>) -> (EpochMillis, String, bool) {
         .map(|d| d.and_utc().timestamp_millis())
         .unwrap_or(0);
     (day, "UTC".into(), true)
-}
-
-/// Google's eleven event colours, by the id an event carries.
-fn event_color(id: &str) -> Option<&'static str> {
-    Some(match id {
-        "1" => "#7986cb",
-        "2" => "#33b679",
-        "3" => "#8e24aa",
-        "4" => "#e67c73",
-        "5" => "#f6bf26",
-        "6" => "#f4511e",
-        "7" => "#039be5",
-        "8" => "#616161",
-        "9" => "#3f51b5",
-        "10" => "#0b8043",
-        "11" => "#d50000",
-        _ => return None,
-    })
 }
 
 /// What Penguin Mail writes on an event. Fields the model does not hold
@@ -951,6 +997,21 @@ fn event_json(event: &calendar::Event, create: bool) -> Value {
                 "method": match r.method { ReminderMethod::Email => "email", ReminderMethod::Notification => "popup" },
                 "minutes": r.minutes,
             })).collect::<Vec<_>>(),
+        });
+    }
+    match event.color.as_deref().and_then(calendar::color_id) {
+        Some(id) => body["colorId"] = json!(id),
+        // A patch with no colour clears the event's own, so it takes the
+        // calendar's again. A new event has nothing to clear.
+        None if !create => body["colorId"] = Value::Null,
+        None => {}
+    }
+    if let Some(request) = &event.meet_request {
+        body["conferenceData"] = json!({
+            "createRequest": {
+                "requestId": request,
+                "conferenceSolutionKey": {"type": "hangoutsMeet"},
+            }
         });
     }
     if create {

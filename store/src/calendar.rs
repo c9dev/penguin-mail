@@ -509,6 +509,9 @@ fn read_event(row: &Row) -> rusqlite::Result<Event> {
         original_start: row.get(22)?,
         pending: row.get(23)?,
         guests: Vec::new(),
+        // A Meet request lives only in a queued write, never in a row
+        // the store reads back.
+        meet_request: None,
     })
 }
 

@@ -8,7 +8,7 @@ use mailrs_gmail::{
     Answered, EventFields, EventTime, GmailClient, GmailError, OAuthClient, Series,
 };
 use serde_json::{Value, json};
-use wiremock::matchers::{body_json, method, path, query_param};
+use wiremock::matchers::{body_json, body_partial_json, header, method, path, query_param};
 use wiremock::{Mock, MockServer, Request, ResponseTemplate};
 
 const CALENDAR: &str = "/calendar/v3";
@@ -719,4 +719,170 @@ async fn a_new_event_goes_out_with_its_own_id() {
     let made = client(&server).put_event(&event, None, true).await.unwrap();
     assert_eq!(made.etag, "\"1\"");
     assert_eq!(made.title, "Lunch");
+}
+
+#[tokio::test]
+async fn asking_for_a_meet_link_sends_a_create_request() {
+    let server = MockServer::start().await;
+    mount_token(&server).await;
+    Mock::given(method("POST"))
+        .and(path(format!("{CALENDAR}/calendars/work/events")))
+        .and(query_param("conferenceDataVersion", "1"))
+        .and(query_param("sendUpdates", "all"))
+        .respond_with(|request: &Request| {
+            let body: Value = serde_json::from_slice(&request.body).unwrap();
+            assert_eq!(body.pointer("/conferenceData/createRequest/requestId"), Some(&json!("req0123")));
+            assert_eq!(
+                body.pointer("/conferenceData/createRequest/conferenceSolutionKey/type"),
+                Some(&json!("hangoutsMeet"))
+            );
+            ResponseTemplate::new(200).set_body_json(json!({
+                "id": body["id"], "etag": "\"1\"", "summary": body["summary"],
+                "start": body["start"], "end": body["end"],
+                "hangoutLink": "https://meet.google.com/abc-defg-hij"
+            }))
+        })
+        .mount(&server)
+        .await;
+    let event = mailrs_domain::calendar::Event {
+        calendar: "work".into(),
+        id: "pm0123abcd".into(),
+        title: "Planning".into(),
+        start: 1_790_000_000_000,
+        end: 1_790_003_600_000,
+        zone: "Europe/Lisbon".into(),
+        meet_request: Some("req0123".into()),
+        ..Default::default()
+    };
+    let made = client(&server).put_event(&event, None, true).await.unwrap();
+    assert_eq!(made.conference.as_deref(), Some("https://meet.google.com/abc-defg-hij"));
+}
+
+#[tokio::test]
+async fn a_changed_occurrence_goes_out_as_a_patch_without_a_rule() {
+    let server = MockServer::start().await;
+    mount_token(&server).await;
+    Mock::given(method("PATCH"))
+        .and(path(format!("{CALENDAR}/calendars/work/events/standup_20260923T080000Z")))
+        .respond_with(|request: &Request| {
+            let body: Value = serde_json::from_slice(&request.body).unwrap();
+            assert!(body.get("recurrence").is_none(), "Google refuses a rule on one occurrence");
+            assert!(body.get("id").is_none());
+            assert!(request.headers.get("If-Match").is_none());
+            ResponseTemplate::new(200).set_body_json(json!({
+                "id": "standup_20260923T080000Z", "etag": "\"1\"", "recurringEventId": "standup",
+                "originalStartTime": {"dateTime": "2026-09-23T08:00:00Z"},
+                "start": body["start"], "end": body["end"]
+            }))
+        })
+        .mount(&server)
+        .await;
+    let event = mailrs_domain::calendar::Event {
+        calendar: "work".into(),
+        id: "standup_20260923T080000Z".into(),
+        zone: "Europe/Lisbon".into(),
+        start: 1_790_154_000_000,
+        end: 1_790_154_900_000,
+        series: Some("standup".into()),
+        original_start: Some(1_790_150_400_000),
+        ..Default::default()
+    };
+    let made = client(&server).put_event(&event, None, false).await.unwrap();
+    assert_eq!(made.series.as_deref(), Some("standup"));
+}
+
+#[tokio::test]
+async fn an_event_colour_goes_out_as_googles_colour_id() {
+    let server = MockServer::start().await;
+    mount_token(&server).await;
+    Mock::given(method("PATCH"))
+        .and(path(format!("{CALENDAR}/calendars/work/events/a")))
+        .and(body_partial_json(json!({"colorId": "6"})))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({"id": "a", "colorId": "6"})))
+        .expect(1)
+        .mount(&server)
+        .await;
+    Mock::given(method("PATCH"))
+        .and(path(format!("{CALENDAR}/calendars/work/events/b")))
+        .and(body_partial_json(json!({"colorId": null})))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({"id": "b"})))
+        .expect(1)
+        .mount(&server)
+        .await;
+    let base = mailrs_domain::calendar::Event { calendar: "work".into(), zone: "UTC".into(), ..Default::default() };
+    let tangerine = mailrs_domain::calendar::Event { id: "a".into(), color: Some("#F4511E".into()), ..base.clone() };
+    let made = client(&server).put_event(&tangerine, None, false).await.unwrap();
+    assert_eq!(made.color.as_deref(), Some("#f4511e"));
+    let plain = mailrs_domain::calendar::Event { id: "b".into(), color: None, ..base };
+    client(&server).put_event(&plain, None, false).await.unwrap();
+}
+
+#[tokio::test]
+async fn a_refused_occurrence_patch_falls_back_to_instances_and_put() {
+    let server = MockServer::start().await;
+    mount_token(&server).await;
+    Mock::given(method("PATCH"))
+        .and(path(format!("{CALENDAR}/calendars/work/events/standup_20260923T080000Z")))
+        .respond_with(ResponseTemplate::new(404))
+        .expect(1)
+        .mount(&server)
+        .await;
+    Mock::given(method("GET"))
+        .and(path(format!("{CALENDAR}/calendars/work/events/standup/instances")))
+        .and(query_param("originalStart", "2026-09-23T08:00:00+00:00"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({"items": [
+            {"id": "standup_20260923T080000Z", "recurringEventId": "standup"}
+        ]})))
+        .expect(1)
+        .mount(&server)
+        .await;
+    Mock::given(method("PUT"))
+        .and(path(format!("{CALENDAR}/calendars/work/events/standup_20260923T080000Z")))
+        .respond_with(|request: &Request| {
+            let body: Value = serde_json::from_slice(&request.body).unwrap();
+            assert!(body.get("recurrence").is_none(), "Google refuses a rule on one occurrence");
+            ResponseTemplate::new(200).set_body_json(json!({
+                "id": "standup_20260923T080000Z", "etag": "\"2\"", "recurringEventId": "standup",
+                "originalStartTime": {"dateTime": "2026-09-23T08:00:00Z"},
+                "start": body["start"], "end": body["end"]
+            }))
+        })
+        .expect(1)
+        .mount(&server)
+        .await;
+    let event = mailrs_domain::calendar::Event {
+        calendar: "work".into(),
+        id: "standup_20260923T080000Z".into(),
+        zone: "Europe/Lisbon".into(),
+        start: 1_790_150_400_000,
+        end: 1_790_151_300_000,
+        series: Some("standup".into()),
+        original_start: Some(1_790_150_400_000),
+        ..Default::default()
+    };
+    let made = client(&server).put_event(&event, None, false).await.unwrap();
+    assert_eq!(made.etag, "\"2\"");
+    assert_eq!(made.series.as_deref(), Some("standup"));
+}
+
+#[tokio::test]
+async fn an_occurrence_patch_refused_for_a_stale_etag_does_not_fall_back_to_put() {
+    let server = MockServer::start().await;
+    mount_token(&server).await;
+    Mock::given(method("PATCH"))
+        .and(path(format!("{CALENDAR}/calendars/work/events/standup_20260923T080000Z")))
+        .and(header("If-Match", "\"1\""))
+        .respond_with(ResponseTemplate::new(412))
+        .mount(&server)
+        .await;
+    let event = mailrs_domain::calendar::Event {
+        calendar: "work".into(),
+        id: "standup_20260923T080000Z".into(),
+        zone: "Europe/Lisbon".into(),
+        series: Some("standup".into()),
+        original_start: Some(1_790_150_400_000),
+        ..Default::default()
+    };
+    let err = client(&server).put_event(&event, Some("\"1\""), false).await.unwrap_err();
+    assert!(matches!(err, GmailError::Changed), "an etag conflict is not Google refusing the id");
 }
