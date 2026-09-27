@@ -7,7 +7,7 @@
 use chrono::{NaiveDate, NaiveTime, TimeZone};
 use chrono::Duration;
 use chrono_tz::Tz;
-use mailrs_domain::calendar::repeat::{self, Repeat};
+use mailrs_domain::calendar::repeat::Repeat;
 use mailrs_domain::calendar::{Calendar, Event, Guest, Occurrence, Reminder};
 use mailrs_domain::{AccountId, EpochMillis};
 
@@ -214,9 +214,17 @@ impl Draft {
             return Vec::new();
         };
         std::iter::once(rule)
-            .chain(self.opened.rules.iter().filter(|l| !repeat::is_rule_line(l)).cloned())
+            .chain(self.opened.rules.iter().filter(|l| !is_rule_line(l)).cloned())
             .collect()
     }
+}
+
+/// Whether `line` is an `RRULE` line, as opposed to an `EXDATE` or
+/// `RDATE`. Mirrors `mailrs_domain::calendar::is_rule_line`, which stays
+/// `pub(crate)` there; the check is one line, so a copy beats a new seam
+/// for it.
+fn is_rule_line(line: &str) -> bool {
+    line.to_ascii_uppercase().starts_with("RRULE")
 }
 
 /// The zone the desktop is set to, for a new draft nothing else names one
