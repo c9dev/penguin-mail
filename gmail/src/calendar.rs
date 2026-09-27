@@ -932,9 +932,11 @@ fn event_json(event: &calendar::Event, create: bool) -> Value {
             guest
         }).collect::<Vec<_>>(),
     });
-    // Google refuses a recurrence rule on a changed occurrence, and an
-    // event that does not repeat carries no rule to send.
-    if !event.rules.is_empty() && event.series.is_none() {
+    // Google refuses a recurrence rule on a changed occurrence. A patch
+    // that leaves recurrence out keeps the rule Google has, so a series
+    // saved with no rules must say so with an empty list. A new event
+    // with no rules has nothing to say.
+    if event.series.is_none() && !(create && event.rules.is_empty()) {
         body["recurrence"] = json!(event.rules);
     }
     if let Some(reminders) = &event.reminders {

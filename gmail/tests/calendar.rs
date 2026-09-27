@@ -792,6 +792,36 @@ async fn a_changed_occurrence_goes_out_as_a_patch_without_a_rule() {
 }
 
 #[tokio::test]
+async fn a_series_saved_without_rules_stops_repeating_on_google() {
+    let server = MockServer::start().await;
+    mount_token(&server).await;
+    Mock::given(method("PATCH"))
+        .and(path(format!("{CALENDAR}/calendars/work/events/standup")))
+        .respond_with(|request: &Request| {
+            let body: Value = serde_json::from_slice(&request.body).unwrap();
+            // A PATCH that leaves recurrence out keeps Google's rule.
+            assert_eq!(body.get("recurrence"), Some(&json!([])));
+            ResponseTemplate::new(200).set_body_json(json!({
+                "id": "standup", "etag": "\"8\"",
+                "start": body["start"], "end": body["end"]
+            }))
+        })
+        .expect(1)
+        .mount(&server)
+        .await;
+    let event = mailrs_domain::calendar::Event {
+        calendar: "work".into(),
+        id: "standup".into(),
+        zone: "Europe/Lisbon".into(),
+        start: 1_790_150_400_000,
+        end: 1_790_151_300_000,
+        ..Default::default()
+    };
+    let made = client(&server).put_event(&event, Some("\"7\""), false).await.unwrap();
+    assert!(made.rules.is_empty());
+}
+
+#[tokio::test]
 async fn an_event_colour_goes_out_as_googles_colour_id() {
     let server = MockServer::start().await;
     mount_token(&server).await;
