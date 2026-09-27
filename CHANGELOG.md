@@ -39,6 +39,10 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Fixed
 
+- The Flatpak keeps its Google sign-in, IMAP passwords and AI keys in
+  its own encrypted store instead of the desktop's shared keyring, which
+  it no longer opens for every app to read; sign in again once to move
+  an existing account over.
 - `penguin-mail --demo` removes its sample store when it closes, and clears what earlier demo runs left in the temporary folder, which often lives in memory.
 - The message after Undo names the label, such as Receipts, where it
   showed a code such as Label_5.

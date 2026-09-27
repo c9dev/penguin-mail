@@ -28,7 +28,9 @@ pub trait PasswordStore: Send + Sync {
     fn delete(&self, account_id: AccountId) -> Result<(), PasswordError>;
 }
 
-/// Passwords in the desktop keyring through Secret Service.
+/// Passwords under one service name: the desktop keyring through Secret
+/// Service outside a Flatpak, and, in a Flatpak build, the Secret
+/// portal's own encrypted store instead, which no other app can read.
 pub struct KeyringPasswords {
     service: String,
 }
@@ -44,6 +46,7 @@ impl KeyringPasswords {
         }
     }
 
+    #[cfg(not(feature = "packaging-flatpak"))]
     fn entry(&self, account_id: AccountId) -> Result<keyring::Entry, PasswordError> {
         keyring::Entry::new(&self.service, &user(account_id)).map_err(keyring_error)
     }
@@ -61,6 +64,7 @@ fn user(account_id: AccountId) -> String {
     account_id.to_string()
 }
 
+#[cfg(not(feature = "packaging-flatpak"))]
 impl PasswordStore for KeyringPasswords {
     fn load(&self, account_id: AccountId) -> Result<Option<String>, PasswordError> {
         match self.entry(account_id)?.get_password() {
@@ -84,8 +88,27 @@ impl PasswordStore for KeyringPasswords {
     }
 }
 
+#[cfg(not(feature = "packaging-flatpak"))]
 fn keyring_error(err: keyring::Error) -> PasswordError {
     PasswordError::Keyring(err.to_string())
+}
+
+#[cfg(feature = "packaging-flatpak")]
+impl PasswordStore for KeyringPasswords {
+    fn load(&self, account_id: AccountId) -> Result<Option<String>, PasswordError> {
+        mailrs_gmail::secret_portal::load(&self.service, &user(account_id))
+            .map_err(PasswordError::Keyring)
+    }
+
+    fn save(&self, account_id: AccountId, password: &str) -> Result<(), PasswordError> {
+        mailrs_gmail::secret_portal::save(&self.service, &user(account_id), password)
+            .map_err(PasswordError::Keyring)
+    }
+
+    fn delete(&self, account_id: AccountId) -> Result<(), PasswordError> {
+        mailrs_gmail::secret_portal::delete(&self.service, &user(account_id))
+            .map_err(PasswordError::Keyring)
+    }
 }
 
 /// Passwords in memory, for tests and the demo, which must never reach

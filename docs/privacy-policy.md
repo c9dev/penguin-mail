@@ -92,11 +92,13 @@ top of its mail list that names what it lacks and offers the same button.
 - **In transit.** Every connection to Google uses HTTPS with TLS. Sign-in
   uses OAuth 2.0 with PKCE through your web browser, so Penguin Mail never
   sees your Google password.
-- **Sign-in tokens.** Google's refresh tokens, any assistant API keys, and
-  the tokens of MCP servers you add are stored in your desktop's keyring
-  (GNOME Keyring or another Secret Service), which encrypts them with your
-  login password. Short-lived
-  access tokens are kept in memory only and never written to disk.
+- **Sign-in tokens.** Google's refresh tokens, an IMAP account's password,
+  any assistant API keys, and the tokens of MCP servers you add are stored
+  in your desktop's keyring (GNOME Keyring or another Secret Service),
+  which encrypts them with your login password. The Flatpak keeps them in
+  its own encrypted store instead, through the Secret portal, so no other
+  app on your desktop can read them. Short-lived access tokens are kept in
+  memory only and never written to disk.
 - **Files on disk.** The folders Penguin Mail keeps its data in are readable
   by your user account alone, and its configuration file is written the
   same way. Penguin Mail does not add its own encryption to the local mail

@@ -43,7 +43,9 @@ window_days = 30
 body_cache_mb = 1024
 ```
 
-Penguin Mail keeps your refresh tokens in the GNOME keyring, not in this file.
+Penguin Mail keeps your refresh tokens in the GNOME keyring, not in this
+file. The Flatpak keeps them in its own store instead, through the Secret
+portal; see "Which package" below.
 
 ## Building your own copy
 
@@ -107,9 +109,15 @@ updates come from and whether skills run.
 - **GnuPG.** The Flatpak reaches two places for signing and encryption:
   `~/.gnupg`, read and written, and the gpg-agent socket folder under
   `$XDG_RUNTIME_DIR/gnupg`, read-only, so your own agent and pinentry
-  handle passphrases. It also talks to the Secret Service, the tray and
-  the notification daemon, and writes to Downloads; the manifest says why
-  for each. The snap reaches `~/.gnupg` through a `personal-files` plug.
+  handle passphrases. It also talks to the tray and the notification
+  daemon, and writes to Downloads; the manifest says why for each. The
+  snap reaches `~/.gnupg` through a `personal-files` plug.
+- **Secrets.** Outside a sandbox, Google's refresh tokens, an IMAP
+  password, and the assistant's API keys and MCP tokens sit in the
+  desktop's keyring, service `mailrs` or `penguin-mail-imap`. The
+  Flatpak keeps them in its own encrypted file instead, through the
+  Secret portal, so no other app on the desktop can read them; the snap
+  still uses the desktop's keyring, the same as the .deb.
 - **Skills.** A skill's scripts run under bubblewrap, which cannot start
   inside Flatpak's or a strict snap's sandbox. Running them without one
   would hand a skill your mail and keys, so both packages turn skills off
@@ -131,7 +139,12 @@ updates come from and whether skills run.
 | Refresh tokens | GNOME keyring, service `mailrs`, one entry per address | |
 
 The keyring service keeps the app's old name, mailrs, so accounts added
-before the rename stay signed in.
+before the rename stay signed in. The Flatpak keeps refresh tokens, IMAP
+passwords and AI keys in its own file through the Secret portal instead;
+see "Which package" above. A Flatpak installed before this file moved
+those secrets there cannot read what it left in the desktop's keyring, so
+its accounts ask you to sign in again once, and any IMAP password or AI
+key needs typing in again too.
 
 The Flatpak keeps its config and mail under
 `~/.var/app/io.github.c9dev.PenguinMail/`, in `config/penguin-mail` and
