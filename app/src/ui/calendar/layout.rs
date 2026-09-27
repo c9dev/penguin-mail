@@ -154,7 +154,6 @@ pub fn wall_offset<Z: TimeZone>(at: EpochMillis, day_start_local: NaiveDateTime,
 /// The instant at `hours` of wall clock on `day` in `tz`, the inverse of
 /// [`wall_offset`]. An hour the clock repeats gives its first pass; one
 /// the clock skips gives the first instant after the gap.
-#[allow(dead_code, reason = "the view starts using it in Task 9")]
 pub fn instant_at<Z: TimeZone>(day: NaiveDate, hours: f64, tz: &Z) -> EpochMillis {
     let minutes = (hours * 60.0).round() as i64;
     let wall = day.and_hms_opt(0, 0, 0).expect("midnight exists") + chrono::Duration::minutes(minutes);

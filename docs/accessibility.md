@@ -117,6 +117,12 @@ these gives way while a text field, such as search, has the focus. The
 main menu's Assistant item, and Ctrl+J, open the assistant in either
 space.
 
+In Day and Week, a drag of a card has a keyboard path beside it: with
+the focus on a card the account may move, Shift+Up and Shift+Down move
+it a quarter hour earlier or later, and Shift+Alt+Up and Shift+Alt+Down
+shorten or lengthen it by the same step. A card that offers this says so
+in the line read after its name.
+
 ## Checking it
 
 ```

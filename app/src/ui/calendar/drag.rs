@@ -11,7 +11,10 @@
 //! stage 2 never wrote one (it took `adw::Carousel` instead), so this is
 //! their first use.
 
+use std::collections::VecDeque;
+
 use mailrs_domain::EpochMillis;
+use mailrs_domain::calendar::{Access, Occurrence, Status};
 
 pub const STEP_MINUTES: i64 = 15;
 const STEP: EpochMillis = STEP_MINUTES * 60_000;
@@ -119,6 +122,7 @@ pub fn banded(top: f64, height: f64, day: f64) -> f64 {
 /// Where N puts a new hour-long event: after the event with the focus,
 /// else at the time last clicked, else at the next quarter hour when the
 /// range holds now, else at `morning` (09:00 on the range's first day).
+#[allow(dead_code, reason = "the view calls it in Task 8")]
 pub fn new_slot(
     focused: Option<(EpochMillis, EpochMillis)>,
     cursor: Option<EpochMillis>,
@@ -133,6 +137,45 @@ pub fn new_slot(
         (None, None) => morning,
     };
     (start, start + HOUR)
+}
+
+/// The release velocity in pixels per second, from the first and last of
+/// the last few pointer samples, each `(frame-clock time in
+/// microseconds, y)`. Zero with fewer than two, or two at the same time.
+pub fn velocity(samples: &VecDeque<(i64, f64)>) -> f64 {
+    let (Some(&(t0, y0)), Some(&(t1, y1))) = (samples.front(), samples.back()) else {
+        return 0.0;
+    };
+    let seconds = (t1 - t0) as f64 / 1_000_000.0;
+    if seconds <= 0.0 { 0.0 } else { (y1 - y0) / seconds }
+}
+
+/// The event's span moved by `steps` quarter hours, keeping its length:
+/// the keyboard path Shift+Up and Shift+Down offer beside the drag,
+/// for whoever cannot make the drag's gesture.
+pub fn nudge(start: EpochMillis, end: EpochMillis, steps: i64) -> (EpochMillis, EpochMillis) {
+    let delta = steps * STEP;
+    (start + delta, end + delta)
+}
+
+/// The event stretched by `steps` quarter hours at its end, never below
+/// `SHORTEST`: the keyboard path Shift+Alt+Up and Shift+Alt+Down offer
+/// beside the drag's stretch of a card's bottom edge.
+pub fn stretch(start: EpochMillis, end: EpochMillis, steps: i64) -> (EpochMillis, EpochMillis) {
+    (start, (end + steps * STEP).max(start + SHORTEST))
+}
+
+/// Whether a drag may move `o`: the calendar must be one the account can
+/// write to, the account must offer a calendar and not have withheld it,
+/// and the event must not be all-day, a guest's own event (R9), or
+/// already leaving through a queued removal.
+pub fn can_move(o: &Occurrence, access: Access, offers_calendar: bool, withheld_calendar: bool) -> bool {
+    access.can_write()
+        && offers_calendar
+        && !withheld_calendar
+        && !o.event.all_day
+        && !super::draft::limited(&o.event)
+        && o.event.status != Status::Cancelled
 }
 
 #[cfg(test)]
@@ -223,5 +266,68 @@ mod tests {
         assert_eq!(new_slot(None, Some(15 * H), 30 * H, range, morning), (15 * H, 16 * H));
         assert_eq!(new_slot(None, None, 30 * H + 5 * M, range, morning), (30 * H + 15 * M, 31 * H + 15 * M));
         assert_eq!(new_slot(None, None, 9 * 24 * H, range, morning), (9 * H, 10 * H));
+    }
+
+    #[test]
+    fn the_release_velocity_reads_pixels_per_second_from_the_first_and_last_sample() {
+        let mut samples = std::collections::VecDeque::new();
+        samples.push_back((0, 100.0));
+        samples.push_back((250_000, 130.0));
+        // 30 px in a quarter second is 120 px/s.
+        assert_eq!(velocity(&samples), 120.0);
+        assert_eq!(velocity(&std::collections::VecDeque::new()), 0.0);
+        let mut one = std::collections::VecDeque::new();
+        one.push_back((0, 5.0));
+        assert_eq!(velocity(&one), 0.0);
+    }
+
+    fn timed(all_day: bool, status: mailrs_domain::calendar::Status) -> Occurrence {
+        use mailrs_domain::calendar::Event;
+        use std::sync::Arc;
+        Occurrence {
+            account_id: 1,
+            event: Arc::new(Event { all_day, status, ..Event::default() }),
+            start: 0,
+            end: H,
+        }
+    }
+
+    #[test]
+    fn only_a_writable_offered_granted_timed_event_may_be_dragged() {
+        use mailrs_domain::calendar::Status;
+        let o = timed(false, Status::Confirmed);
+        assert!(can_move(&o, Access::Owner, true, false));
+        assert!(!can_move(&o, Access::Reader, true, false), "a read-only calendar starts no drag");
+        assert!(!can_move(&o, Access::Owner, false, false), "an account with no calendar offer starts no drag");
+        assert!(!can_move(&o, Access::Owner, true, true), "a withheld calendar permission starts no drag");
+        assert!(!can_move(&timed(true, Status::Confirmed), Access::Owner, true, false), "an all-day event does not drag on the time grid");
+        assert!(!can_move(&timed(false, Status::Cancelled), Access::Owner, true, false), "a cancelled occurrence, on its way out, starts no drag");
+    }
+
+    #[test]
+    fn shift_up_and_down_nudge_an_event_by_whole_quarter_hours() {
+        assert_eq!(nudge(10 * H, 11 * H, 1), (10 * H + 15 * M, 11 * H + 15 * M));
+        assert_eq!(nudge(10 * H, 11 * H, -2), (10 * H - 30 * M, 11 * H - 30 * M));
+    }
+
+    #[test]
+    fn shift_alt_up_and_down_stretch_an_event_s_end_never_below_the_shortest() {
+        assert_eq!(stretch(10 * H, 11 * H, 1), (10 * H, 11 * H + 15 * M));
+        assert_eq!(stretch(10 * H, 10 * H + SHORTEST, -4), (10 * H, 10 * H + SHORTEST));
+    }
+
+    #[test]
+    fn a_guest_s_own_event_cannot_be_dragged() {
+        use mailrs_domain::calendar::{Event, Guest};
+        use std::sync::Arc;
+        let event = Event {
+            guests: vec![
+                Guest { email: "ana@example.com".into(), organizer: true, ..Guest::default() },
+                Guest { email: "me@example.com".into(), me: true, ..Guest::default() },
+            ],
+            ..Event::default()
+        };
+        let o = Occurrence { account_id: 1, event: Arc::new(event), start: 0, end: H };
+        assert!(!can_move(&o, Access::Owner, true, false));
     }
 }

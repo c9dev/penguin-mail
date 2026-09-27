@@ -3914,6 +3914,14 @@ msgid_plural "{count} more events"
 msgstr[0] "mais {count} evento"
 msgstr[1] "mais {count} eventos"
 
+#: app/src/ui/calendar/time_grid.rs:216
+msgid "Shift+Up or Shift+Down moves it; Shift+Alt+Up or Shift+Alt+Down changes when it ends."
+msgstr "Shift+Up ou Shift+Down move-o; Shift+Alt+Up ou Shift+Alt+Down altera quando termina."
+
+#: app/src/ui/calendar/time_grid.rs:221
+msgid "{base} {hint}"
+msgstr "{base} {hint}"
+
 #: app/src/ui/calendar/words.rs:66
 msgid "{date} · {start}–{end}"
 msgstr "{date} · {start}–{end}"
