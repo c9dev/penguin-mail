@@ -7260,6 +7260,244 @@ msgstr "Marcar como não sendo spam"
 msgid "Move to {folder}"
 msgstr "Mover para {folder}"
 
+#: app/src/ui/calendar/editor.rs:85
+msgid "Edit Event"
+msgstr "Editar evento"
+
+#: app/src/ui/calendar/editor.rs:146
+msgid "Custom Repeat"
+msgstr "Repetição personalizada"
+
+#: app/src/ui/calendar/editor.rs:221
+msgid "{organizer} organizes this event, so its time, place and guests stay as they set them."
+msgstr "{organizer} organiza este evento, por isso a hora, o local e os convidados ficam como os definiu."
+
+#: app/src/ui/calendar/editor.rs:250
+msgid "Title"
+msgstr "Título"
+
+#: app/src/ui/calendar/editor.rs:289
+msgid "Start date"
+msgstr "Data de início"
+
+#: app/src/ui/calendar/editor.rs:298
+msgid "Start time"
+msgstr "Hora de início"
+
+#: app/src/ui/calendar/editor.rs:316
+msgid "End date"
+msgstr "Data de fim"
+
+#: app/src/ui/calendar/editor.rs:334
+msgid "End time"
+msgstr "Hora de fim"
+
+#: app/src/ui/calendar/editor.rs:346
+msgid "Starts"
+msgstr "Início"
+
+#: app/src/ui/calendar/editor.rs:349
+msgid "Ends"
+msgstr "Fim"
+
+#: app/src/ui/calendar/editor.rs:424
+msgid "Repeats"
+msgstr "Repetição"
+
+#: app/src/ui/calendar/editor.rs:425
+msgid "Custom…"
+msgstr "Personalizar…"
+
+#: app/src/ui/calendar/editor.rs:484
+msgid "Every"
+msgstr "A cada"
+
+#: app/src/ui/calendar/editor.rs:487
+msgid "Unit"
+msgstr "Unidade"
+
+#: app/src/ui/calendar/editor.rs:491
+msgid "On"
+msgstr "Nos dias"
+
+#: app/src/ui/calendar/editor.rs:536
+msgid "Stops"
+msgstr "Termina"
+
+#: app/src/ui/calendar/editor.rs:543
+msgid "On a date"
+msgstr "Numa data"
+
+#: app/src/ui/calendar/editor.rs:544
+msgid "After"
+msgstr "Depois de"
+
+#: app/src/ui/calendar/editor.rs:553
+msgid "End date of the repeat"
+msgstr "Data de fim da repetição"
+
+#: app/src/ui/calendar/editor.rs:570
+msgid "Number of times"
+msgstr "Número de vezes"
+
+#: app/src/ui/calendar/editor.rs:1050
+msgid "day"
+msgid_plural "days"
+msgstr[0] "dia"
+msgstr[1] "dias"
+
+#: app/src/ui/calendar/editor.rs:1051
+msgid "week"
+msgid_plural "weeks"
+msgstr[0] "semana"
+msgstr[1] "semanas"
+
+#: app/src/ui/calendar/editor.rs:1052
+msgid "month"
+msgid_plural "months"
+msgstr[0] "mês"
+msgstr[1] "meses"
+
+#: app/src/ui/calendar/editor.rs:1053
+msgid "year"
+msgid_plural "years"
+msgstr[0] "ano"
+msgstr[1] "anos"
+
+#: app/src/ui/calendar/editor.rs:567
+msgid "time"
+msgid_plural "times"
+msgstr[0] "vez"
+msgstr[1] "vezes"
+
+#: app/src/ui/calendar/editor.rs:720
+msgid "Place"
+msgstr "Local"
+
+#: app/src/ui/calendar/editor.rs:734
+msgid "Guests"
+msgstr "Convidados"
+
+#: app/src/ui/calendar/editor.rs:735
+msgid "Add guests"
+msgstr "Adicionar convidados"
+
+#: app/src/ui/calendar/editor.rs:762
+msgid "Not an address: {text}"
+msgstr "Não é um endereço: {text}"
+
+#: app/src/ui/calendar/editor.rs:786
+msgid "{address} · {answer}"
+msgstr "{address} · {answer}"
+
+#: app/src/ui/calendar/editor.rs:790
+msgid "Remove {guest}"
+msgstr "Remover {guest}"
+
+#: app/src/ui/calendar/editor.rs:809
+msgid "Reminders"
+msgstr "Lembretes"
+
+#: app/src/ui/calendar/editor.rs:831
+msgid "The calendar's default"
+msgstr "A predefinição do calendário"
+
+#: app/src/ui/calendar/editor.rs:839
+msgid "Add Reminder"
+msgstr "Adicionar lembrete"
+
+#: app/src/ui/calendar/editor.rs:862
+msgid "By email"
+msgstr "Por email"
+
+#: app/src/ui/calendar/editor.rs:865
+msgid "Remove reminder"
+msgstr "Remover lembrete"
+
+#: app/src/ui/calendar/editor.rs:896
+msgid "Notes"
+msgstr "Notas"
+
+#: app/src/ui/calendar/editor.rs:915
+msgid "More"
+msgstr "Mais"
+
+#: app/src/ui/calendar/editor.rs:919
+msgid "Time zone"
+msgstr "Fuso horário"
+
+#: app/src/ui/calendar/editor.rs:951
+msgid "Show as busy"
+msgstr "Mostrar como ocupado"
+
+#: app/src/ui/calendar/editor.rs:961
+msgid "Private"
+msgstr "Privado"
+
+#: app/src/ui/calendar/editor.rs:962
+msgid "Only people who can change this calendar see the details"
+msgstr "Só quem pode alterar este calendário vê os detalhes"
+
+#: app/src/ui/calendar/editor.rs:974
+msgid "Colour"
+msgstr "Cor"
+
+#: app/src/ui/calendar/editor.rs:975
+msgid "Calendar colour"
+msgstr "Cor do calendário"
+
+#: app/src/ui/calendar/editor.rs:1082
+msgid "Lavender"
+msgstr "Lavanda"
+
+#: app/src/ui/calendar/editor.rs:1083
+msgid "Sage"
+msgstr "Salva"
+
+#: app/src/ui/calendar/editor.rs:1084
+msgid "Grape"
+msgstr "Uva"
+
+#: app/src/ui/calendar/editor.rs:1085
+msgid "Flamingo"
+msgstr "Flamingo"
+
+#: app/src/ui/calendar/editor.rs:1086
+msgid "Banana"
+msgstr "Banana"
+
+#: app/src/ui/calendar/editor.rs:1087
+msgid "Tangerine"
+msgstr "Tangerina"
+
+#: app/src/ui/calendar/editor.rs:1088
+msgid "Peacock"
+msgstr "Pavão"
+
+#: app/src/ui/calendar/editor.rs:1089
+msgid "Graphite"
+msgstr "Grafite"
+
+#: app/src/ui/calendar/editor.rs:1090
+msgid "Blueberry"
+msgstr "Mirtilo"
+
+#: app/src/ui/calendar/editor.rs:1091
+msgid "Basil"
+msgstr "Manjericão"
+
+#: app/src/ui/calendar/editor.rs:1092
+msgid "Tomato"
+msgstr "Tomate"
+
+#: app/src/ui/calendar/editor.rs:1003
+msgid "Google Meet"
+msgstr "Google Meet"
+
+#: app/src/ui/calendar/editor.rs:1007
+msgid "Add Google Meet"
+msgstr "Adicionar Google Meet"
+
 #~ msgid "Waiting to be saved"
 #~ msgstr "À espera de ser guardado"
 

@@ -16,6 +16,8 @@ pub mod block;
 pub mod draft;
 #[allow(dead_code, reason = "the view starts using it in Task 8")]
 pub mod drag;
+#[allow(dead_code, reason = "the view calls it in Task 8")]
+pub mod editor;
 pub mod layout;
 pub mod month;
 pub mod popover;
