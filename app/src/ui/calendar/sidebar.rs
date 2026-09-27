@@ -11,8 +11,8 @@ use adw::prelude::*;
 use chrono::{Datelike, Days, NaiveDate};
 use mailrs_domain::calendar::Calendar;
 use mailrs_domain::translate::{date_locale, fill, gettext};
-use mailrs_domain::{Account, AccountId};
-use mailrs_sync::{Missing, Offers, Withheld};
+use mailrs_domain::{Account, AccountId, EpochMillis};
+use mailrs_sync::{Missing, Offers, Waiting, Withheld};
 
 use super::tint;
 use super::words;
@@ -120,6 +120,13 @@ fn weekday_initials() -> Vec<String> {
 type OnDate = dyn Fn(NaiveDate);
 type OnShown = dyn Fn(AccountId, String, bool);
 type OnGrant = dyn Fn(AccountId);
+/// Opens the occurrence a "Waiting for your answer" card names: the
+/// account, the calendar, the event's id and the occurrence's own start,
+/// exactly what `CalendarView::open` takes.
+type OnOpenWaiting = dyn Fn(AccountId, String, String, EpochMillis);
+/// Opens a "Waiting for your answer" card's "Open mail" door: the
+/// account and the thread its invitation arrived in.
+type OnOpenMail = dyn Fn(AccountId, String);
 
 /// One mini month day button, and the labels `show` fills each redraw.
 /// `date` is shared with the button's own click closure through an `Rc`,
@@ -144,9 +151,18 @@ pub struct CalendarSidebar {
     /// build the same rows leaves them, and the focus on one of them,
     /// where they are.
     listed: RefCell<Vec<SidebarAccount>>,
+    /// The "Waiting for your answer" section at the sidebar's foot,
+    /// hidden while nothing is waiting.
+    waiting_section: gtk::Box,
+    waiting_list: gtk::ListBox,
+    /// What the waiting list was last built from, read by its own
+    /// `row-activated` handler to say which occurrence a card opens, and
+    /// compared before a redraw to leave unchanged rows where they are.
+    waiting_shown: Rc<RefCell<Vec<Waiting>>>,
     on_date: Rc<OnDate>,
     on_shown: Rc<OnShown>,
     on_grant: Rc<OnGrant>,
+    on_open_mail: Rc<OnOpenMail>,
 }
 
 impl CalendarSidebar {
@@ -158,10 +174,14 @@ impl CalendarSidebar {
         on_date: impl Fn(NaiveDate) + 'static,
         on_shown: impl Fn(AccountId, String, bool) + 'static,
         on_grant: impl Fn(AccountId) + 'static,
+        on_open_waiting: impl Fn(AccountId, String, String, EpochMillis) + 'static,
+        on_open_mail: impl Fn(AccountId, String) + 'static,
     ) -> Rc<CalendarSidebar> {
         let on_date: Rc<OnDate> = Rc::new(on_date);
         let on_shown: Rc<OnShown> = Rc::new(on_shown);
         let on_grant: Rc<OnGrant> = Rc::new(on_grant);
+        let on_open_waiting: Rc<OnOpenWaiting> = Rc::new(on_open_waiting);
+        let on_open_mail: Rc<OnOpenMail> = Rc::new(on_open_mail);
 
         let widget = gtk::Box::builder()
             .orientation(gtk::Orientation::Vertical)
@@ -258,6 +278,35 @@ impl CalendarSidebar {
             .build();
         widget.append(&calendar_list);
 
+        let waiting_heading = gtk::Label::builder()
+            .label(gettext("Waiting for your answer"))
+            .css_classes(["waiting-heading"])
+            .xalign(0.0)
+            .build();
+        let waiting_list = gtk::ListBox::builder()
+            .selection_mode(gtk::SelectionMode::None)
+            .css_classes(["waiting-list"])
+            .build();
+        let waiting_section = gtk::Box::builder()
+            .orientation(gtk::Orientation::Vertical)
+            .spacing(8)
+            .margin_top(20)
+            .visible(false)
+            .build();
+        waiting_section.append(&waiting_heading);
+        waiting_section.append(&waiting_list);
+        widget.append(&waiting_section);
+        let waiting_shown: Rc<RefCell<Vec<Waiting>>> = Rc::new(RefCell::new(Vec::new()));
+        waiting_list.connect_row_activated({
+            let (shown, open_waiting) = (Rc::clone(&waiting_shown), Rc::clone(&on_open_waiting));
+            move |_, row| {
+                let Some(w) = shown.borrow().get(row.index() as usize).cloned() else {
+                    return;
+                };
+                open_waiting(w.account_id, w.calendar, w.id, w.start);
+            }
+        });
+
         let sidebar = Rc::new(CalendarSidebar {
             widget,
             month_title,
@@ -265,9 +314,13 @@ impl CalendarSidebar {
             days,
             calendar_list,
             listed: RefCell::new(Vec::new()),
+            waiting_section,
+            waiting_list,
+            waiting_shown,
             on_date,
             on_shown,
             on_grant,
+            on_open_mail,
         });
 
         for day in &sidebar.days {
@@ -299,6 +352,89 @@ impl CalendarSidebar {
             self.rebuild_calendar_list(accounts);
             self.listed.replace(accounts.to_vec());
         }
+    }
+
+    /// Redraws the "Waiting for your answer" section from `waiting`
+    /// ([`mailrs_sync::Invitations::waiting_for_answer`]'s own order),
+    /// hiding the section while nothing is waiting. Rebuilt only when
+    /// the rows differ from what is already shown, so a screen reader
+    /// mid-walk keeps its place, as [`Self::show`] does for the calendar
+    /// list.
+    pub fn show_waiting(&self, waiting: &[Waiting]) {
+        if self.waiting_shown.borrow().as_slice() == waiting {
+            return;
+        }
+        while let Some(child) = self.waiting_list.first_child() {
+            self.waiting_list.remove(&child);
+        }
+        for w in waiting {
+            self.waiting_list.append(&self.waiting_row(w));
+        }
+        self.waiting_section.set_visible(!waiting.is_empty());
+        self.waiting_shown.replace(waiting.to_vec());
+    }
+
+    /// One "Waiting for your answer" card: the mail icon, the title, and
+    /// the day and time with an "Open mail" door beside it, shown only
+    /// when the store still holds the message the invitation arrived in
+    /// (ruling R2: the door hides alone, not the card).
+    fn waiting_row(&self, w: &Waiting) -> gtk::ListBoxRow {
+        let icon = gtk::Image::from_icon_name("mail-unread-symbolic");
+        icon.add_css_class("waiting-icon");
+        icon.set_pixel_size(16);
+        let title = gtk::Label::builder()
+            .label(&w.title)
+            .css_classes(["waiting-title"])
+            .xalign(0.0)
+            .ellipsize(gtk::pango::EllipsizeMode::End)
+            .single_line_mode(true)
+            .build();
+        let when_row = gtk::Box::builder().spacing(4).build();
+        when_row.append(
+            &gtk::Label::builder()
+                .label(words::waiting_when_words(w.start, w.all_day, &chrono::Local))
+                .css_classes(["waiting-when", "dim-label"])
+                .xalign(0.0)
+                .build(),
+        );
+        if let Some(thread_id) = &w.thread_id {
+            when_row.append(&gtk::Label::builder().label("·").css_classes(["waiting-when", "dim-label"]).build());
+            let mail_button = gtk::Button::builder()
+                .label(gettext("Open mail"))
+                .css_classes(["flat", "waiting-mail-link"])
+                .valign(gtk::Align::Center)
+                .build();
+            crate::ui::name(&mail_button, &words::waiting_mail_name(&w.title));
+            let (on_open_mail, account_id, thread_id) =
+                (Rc::clone(&self.on_open_mail), w.account_id, thread_id.clone());
+            mail_button.connect_clicked(move |_| on_open_mail(account_id, thread_id.clone()));
+            when_row.append(&mail_button);
+        }
+        let text = gtk::Box::builder()
+            .orientation(gtk::Orientation::Vertical)
+            .valign(gtk::Align::Center)
+            .hexpand(true)
+            .spacing(2)
+            .build();
+        text.append(&title);
+        text.append(&when_row);
+        let content = gtk::Box::builder()
+            .spacing(8)
+            .margin_start(10)
+            .margin_end(10)
+            .margin_top(8)
+            .margin_bottom(8)
+            .valign(gtk::Align::Center)
+            .build();
+        content.append(&icon);
+        content.append(&text);
+        let row = gtk::ListBoxRow::builder()
+            .child(&content)
+            .css_classes(["waiting-card"])
+            .activatable(true)
+            .build();
+        crate::ui::describe(&row, &w.title, &words::waiting_card_detail(w.start, w.all_day, &chrono::Local));
+        row
     }
 
     /// Records that the person showed or hid a calendar with its own

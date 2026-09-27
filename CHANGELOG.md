@@ -34,6 +34,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   invitation to change its reminders, color and busy status.
 - The assistant can tell you which calendars you have and put an event
   on the one you name, such as "the Family calendar".
+- The calendar sidebar lists invitations you have not answered yet: open
+  one to see it on the calendar, or open its mail when you still have
+  it.
 
 ### Improved
 
