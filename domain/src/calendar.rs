@@ -362,7 +362,7 @@ pub fn series_end(event: &Event) -> Option<EpochMillis> {
 /// Whether `line` is an `RRULE` line, as opposed to an `EXDATE` or
 /// `RDATE`. [`series`] tests it too, to tell a rule to rewrite from a
 /// date list to filter.
-pub(crate) fn is_rule_line(line: &str) -> bool {
+pub fn is_rule_line(line: &str) -> bool {
     line.to_ascii_uppercase().starts_with("RRULE")
 }
 
