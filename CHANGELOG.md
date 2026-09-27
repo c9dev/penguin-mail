@@ -63,6 +63,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   in another folder stays there.
 - An account set up manually under a listed provider, such as Fastmail,
   shows that provider's name and rules instead of its bare domain.
+- `penguin-mail --demo`'s sample design review keeps its ninth weekly
+  occurrence on the calendar; it used to drop off a week early once the
+  clocks went back.
 
 ## 0.3.0 (2026-09-24)
 
