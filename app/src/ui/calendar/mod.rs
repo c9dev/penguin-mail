@@ -12,7 +12,6 @@
 
 pub mod agenda;
 pub mod block;
-#[allow(dead_code, reason = "editing an existing event, in a later task, calls the rest")]
 pub mod draft;
 pub mod drag;
 pub mod editor;
@@ -281,6 +280,7 @@ impl CalendarView {
         let new_event = gtk::Button::builder()
             .icon_name("list-add-symbolic")
             .css_classes(["suggested-action", "circular", "new-event"])
+            .valign(gtk::Align::Center)
             .build();
         crate::ui::name_with_shortcut(&new_event, &gettext("New Event (N)"));
         let search_button = gtk::ToggleButton::builder()
@@ -923,16 +923,12 @@ impl CalendarView {
     }
 
     // ---- Moving events ---------------------------------------------------
-    //
-    // `writable`, `edit`, `quick_create_at` and `save_draft` are Task 8's,
-    // below under "Making events"; `moved`, `series_rules` and `can_move`
-    // are this task's own.
 
     /// A drag moved or stretched `o` on `grid`. The write goes through
     /// the draft, so a weekly series moved to another day moves its day
-    /// in the rule. `grid` is unused here; Task 10's repeat question
-    /// calls `grid.spring_back()` on a cancel once it lands (E10, Task 9
-    /// correction 7).
+    /// in the rule. The card stays where it landed until the write is
+    /// held; a Cancel of the repeat question or a failed write springs
+    /// it back on `grid`.
     pub(super) fn moved(
         self: &Rc<Self>,
         grid: &TimeGrid,
@@ -1165,6 +1161,8 @@ impl CalendarView {
         });
         let weak = Rc::downgrade(self);
         grid.set_can_move(move |o| weak.upgrade().is_some_and(|view| view.can_move(o)));
+        let weak = Rc::downgrade(self);
+        grid.set_can_select(move || weak.upgrade().is_some_and(|view| !view.writable().is_empty()));
         let carousel = self.carousel.clone();
         grid.connect_carousel_interactive(move |on| carousel.set_interactive(on));
         GridPage {
@@ -1632,7 +1630,7 @@ impl CalendarView {
             .unwrap_or_default();
         let weak = Rc::downgrade(self);
         let occurrence = o.clone();
-        let editable = self.can_edit_whole(o);
+        let editable = self.editing(o) == draft::Editing::Whole;
         let (edit_o, delete_o) = (o.clone(), o.clone());
         let edit_view = Rc::downgrade(self);
         let delete_view = Rc::downgrade(self);
@@ -1664,39 +1662,54 @@ impl CalendarView {
         );
     }
 
-    /// Whether the account may change `o`'s event as a whole: its
-    /// calendar is writable and the account is not merely a guest of
-    /// someone else's event (ruling R9). Gates Edit and Delete in the
-    /// popover, a double click or Enter opening the editor, and the
-    /// Delete key.
-    fn can_edit_whole(&self, o: &Occurrence) -> bool {
-        self.calendars
+    /// What the view lets a person do to `o`: see [`draft::editing`].
+    /// Gates Edit and Delete in the popover, a double click or Enter
+    /// opening the editor, and the Delete key.
+    fn editing(&self, o: &Occurrence) -> draft::Editing {
+        let access = self
+            .calendars
             .borrow()
             .get(&(o.account_id, o.event.calendar.clone()))
-            .is_some_and(|c| c.access.can_write())
-            && !draft::limited(&o.event)
+            .map_or(Access::Reader, |c| c.access);
+        let (offers, withheld) = self
+            .accounts
+            .borrow()
+            .iter()
+            .find(|(a, _, _)| a.id == o.account_id)
+            .map_or((false, true), |(_, offers, withheld)| {
+                (offers.calendar, withheld.calendar)
+            });
+        draft::editing(&o.event, access, offers, withheld)
     }
 
     /// The Delete key: takes the focused event off the grid at once and
-    /// offers Undo, for an event the account may change as a whole.
+    /// offers Undo, for an event the account may change as a whole, or
+    /// asks for the calendar permission the account withheld (R8).
     pub fn delete_focused(self: &Rc<Self>) {
-        if let Some(o) = self.focused().filter(|o| self.can_edit_whole(o)) {
-            self.delete(&o);
+        let Some(o) = self.focused() else { return };
+        match self.editing(&o) {
+            draft::Editing::Whole => self.delete(&o),
+            draft::Editing::NeedsPermission => (self.hooks.needs_permission)(o.account_id),
+            draft::Editing::Guest | draft::Editing::None => {}
         }
     }
 
-    /// A double click or Enter on a block. For an event the account may
-    /// change as a whole, this opens the editor over the popover a
-    /// single click already opened; otherwise it opens the popover, same
-    /// as Enter did before this event had no Edit to open instead.
+    /// A double click or Enter on a block. The editor opens over the
+    /// popover a single click already opened, limited to reminders,
+    /// colour and busy on someone else's event (R1, R9). An account that
+    /// withheld the calendar permission is asked for it instead (R8), and
+    /// an event nobody here may change opens its popover.
     fn edit_or_show(self: &Rc<Self>, o: &Occurrence, anchor: Option<&gtk::Widget>) {
-        if self.can_edit_whole(o) {
-            self.open_editor(o);
-        } else if let Some(anchor) = anchor {
-            self.show_event(anchor, o);
+        match self.editing(o) {
+            draft::Editing::Whole | draft::Editing::Guest => self.open_editor(o),
+            draft::Editing::NeedsPermission => (self.hooks.needs_permission)(o.account_id),
+            draft::Editing::None => {
+                if let Some(anchor) = anchor {
+                    self.show_event(anchor, o);
+                }
+            }
         }
     }
-
 
     /// Reads the series `o` belongs to, and asks the editor over it: its
     /// own rules, or a changed occurrence's series row's.
@@ -1737,6 +1750,7 @@ impl CalendarView {
                 .await;
             match held {
                 Ok(Permitted::Done(held)) => {
+                    this.focus_past(&key_of(&o));
                     this.reload();
                     this.offer_undo(fill(&gettext("Deleted “{title}”"), &[("title", &o.event.title)]), held);
                 }
@@ -1744,6 +1758,28 @@ impl CalendarView {
                 Err(err) => (this.hooks.toast)(&with_reason(&gettext("Could not delete the event: {reason}"), &err, &[])),
             }
         });
+    }
+
+    /// Moves the keyboard focus off `key`'s block, which a delete is about
+    /// to take away, onto the next event in Tab order, or the one before
+    /// it for the last event. The reload that follows keeps the focus on
+    /// that event by its key. A block without the focus is left alone.
+    fn focus_past(&self, key: &EventKey) {
+        let Some(root) = self.page.root() else { return };
+        let Some(page) = self.pages.borrow().get(1).cloned() else { return };
+        let view = page.view.borrow();
+        if view.focused_key().as_ref() != Some(key) {
+            return;
+        }
+        let Some(block) = view.block_of(key) else { return };
+        for direction in [gtk::DirectionType::TabForward, gtk::DirectionType::TabBackward] {
+            block.grab_focus();
+            root.child_focus(direction);
+            if view.focused_key().is_some_and(|k| k != *key) {
+                return;
+            }
+        }
+        block.grab_focus();
     }
 
     /// A 10-second toast with Undo for a held change. Undo puts the rows
@@ -1890,7 +1926,8 @@ impl CalendarView {
     /// (ruling R8).
     fn writable(&self) -> Vec<(AccountId, String, Calendar)> {
         let accounts = self.accounts.borrow();
-        self.calendars
+        let mut writable = self
+            .calendars
             .borrow()
             .iter()
             .filter(|(_, c)| c.access.can_write())
@@ -1900,7 +1937,10 @@ impl CalendarView {
                     .find(|(a, offers, withheld)| a.id == *account_id && offers.calendar && !withheld.calendar)
                     .map(|(a, _, _)| (*account_id, a.email.clone(), c.clone()))
             })
-            .collect()
+            .collect::<Vec<_>>();
+        let order: Vec<AccountId> = accounts.iter().map(|(a, _, _)| a.id).collect();
+        draft::sort_writable(&mut writable, &order);
+        writable
     }
 
     /// Insensitive, with why, while no calendar takes new events: an
@@ -1987,7 +2027,17 @@ impl CalendarView {
     /// window (the list has no grid to point at), for a month day off
     /// screen, or a grid range that does not hold `start`; the caller
     /// opens the editor instead.
-    fn quick_anchor(&self, start: EpochMillis, end: EpochMillis) -> Option<(gtk::Widget, gdk::Rectangle)> {
+    ///
+    /// On the time grid, the grid first scrolls so the slot shows: an
+    /// evening slot sits below the hours a page opens on. The rect is
+    /// then given in the scrolled window's coordinates, which the
+    /// scroll does not move, clamped to what shows, and the popover
+    /// opens toward the wider side of the grid.
+    fn quick_anchor(
+        &self,
+        start: EpochMillis,
+        end: EpochMillis,
+    ) -> Option<(gtk::Widget, gdk::Rectangle, gtk::PositionType)> {
         if self.narrow.get() {
             return None;
         }
@@ -1997,11 +2047,27 @@ impl CalendarView {
             PageView::Grid(grid) => {
                 let rect = grid.grid.slot_rect(start, end)?;
                 grid.grid.show_ghost(Some((start, end)));
-                Some((grid.grid.clone().upcast(), rect))
+                let adjustment = grid.scroller.vadjustment();
+                let (top, height) = (f64::from(rect.y()), f64::from(rect.height()));
+                let value = quick::reveal(
+                    top,
+                    top + height,
+                    adjustment.value(),
+                    adjustment.page_size(),
+                    adjustment.upper(),
+                );
+                adjustment.set_value(value);
+                let (y, height) = quick::clamp_span(top - value, height, adjustment.page_size());
+                let shown = gdk::Rectangle::new(rect.x(), y.round() as i32, rect.width(), height.round().max(1.0) as i32);
+                let middle = f64::from(rect.x()) + f64::from(rect.width()) / 2.0;
+                let side = quick::side(middle, f64::from(grid.grid.width()));
+                Some((grid.scroller.clone().upcast(), shown, side))
             }
             PageView::Month(month) => {
                 let rect = month.day_rect(date_of(start, false))?;
-                Some((month.widget(), rect))
+                let middle = f64::from(rect.x()) + f64::from(rect.width()) / 2.0;
+                let side = quick::side(middle, f64::from(month.widget().width()));
+                Some((month.widget(), rect, side))
             }
         }
     }
@@ -2009,8 +2075,12 @@ impl CalendarView {
     /// Opens quick create for `start` to `end`, marking the span with a
     /// ghost card on the time grid when it points at one.
     pub(super) fn quick_create_at(self: &Rc<Self>, start: EpochMillis, end: EpochMillis) {
-        let Some(draft) = self.fresh_draft(start, end) else { return };
-        let Some((anchor, rect)) = self.quick_anchor(start, end) else {
+        let Some(draft) = self.fresh_draft(start, end) else {
+            self.clear_ghost();
+            return;
+        };
+        let Some((anchor, rect, side)) = self.quick_anchor(start, end) else {
+            self.clear_ghost();
             return self.edit(draft);
         };
         let calendar = self
@@ -2025,6 +2095,7 @@ impl CalendarView {
         self.quick.show(
             &anchor,
             &rect,
+            side,
             &when,
             &calendar,
             // `Draft` has private fields, so no struct update from here.
@@ -2059,10 +2130,7 @@ impl CalendarView {
         let core = Rc::clone(&self.core);
         glib::spawn_future_local(async move {
             let occurrence = draft.occurrence.clone();
-            let offered = occurrence
-                .as_ref()
-                .map(|o| series::scopes(&o.event, draft.rule_changed()))
-                .unwrap_or_default();
+            let offered = draft.scopes();
             let scope = if offered.is_empty() {
                 None
             } else {

@@ -8,7 +8,8 @@ use chrono::{NaiveDate, NaiveTime, TimeZone};
 use chrono::Duration;
 use chrono_tz::Tz;
 use mailrs_domain::calendar::repeat::Repeat;
-use mailrs_domain::calendar::{Calendar, Event, Guest, Occurrence, Reminder};
+use mailrs_domain::calendar::series::{self, RepeatScope};
+use mailrs_domain::calendar::{Access, Calendar, Event, Guest, Occurrence, Reminder};
 use mailrs_domain::{AccountId, EpochMillis};
 
 const DAY: EpochMillis = 86_400_000;
@@ -162,6 +163,22 @@ impl Draft {
         self.repeat != self.opened.repeat
     }
 
+    /// The answers the repeat question offers for this draft. A guest
+    /// changes only their own copy of someone else's series, so "This and
+    /// following", which would start a new series they organize, is not
+    /// among them.
+    pub fn scopes(&self) -> Vec<RepeatScope> {
+        let Some(o) = &self.occurrence else {
+            return Vec::new();
+        };
+        let offered = series::scopes(&o.event, self.rule_changed());
+        if self.base.as_ref().is_some_and(limited) {
+            offered.into_iter().filter(|s| *s != RepeatScope::Following).collect()
+        } else {
+            offered
+        }
+    }
+
     /// The event the draft stands for. A new one takes `new_id`; a Meet
     /// link is asked for under `meet_request` when the person turned it on
     /// and the event has none yet.
@@ -256,10 +273,56 @@ pub fn default_calendar(writable: &[(AccountId, String, Calendar)], last: Option
 
 /// Whether someone else organizes the event and the account is only a
 /// guest. The editor then leaves the time, place and guests to them
-/// (ruling R9). Mirrors the popover's own guard, which is due to call
-/// this once the editor wires it in (calendar stage 3 Task 8 or later).
+/// (ruling R9), and the popover asks this account for an answer.
 pub fn limited(event: &Event) -> bool {
     event.guests.iter().any(|g| g.me && !g.organizer)
+}
+
+/// What a person may do to an event from the calendar view.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Editing {
+    /// Change or delete the whole event: the popover shows Edit and
+    /// Delete, and a double click opens the editor.
+    Whole,
+    /// Someone else organizes it: a double click opens the editor
+    /// limited to reminders, colour and busy (R9), and the popover shows
+    /// neither Edit nor Delete (R1).
+    Guest,
+    /// The account withheld the calendar permission: a double click, Enter
+    /// or Delete asks for it, and the popover shows neither (R8).
+    NeedsPermission,
+    /// A read-only calendar, or an account with no calendar at all.
+    None,
+}
+
+/// What the view lets a person do to `event`, from its calendar's
+/// access and what the account's provider offers and its consent
+/// withheld.
+pub fn editing(event: &Event, access: Access, offers_calendar: bool, withheld_calendar: bool) -> Editing {
+    if !offers_calendar || !access.can_write() {
+        Editing::None
+    } else if withheld_calendar {
+        Editing::NeedsPermission
+    } else if limited(event) {
+        Editing::Guest
+    } else {
+        Editing::Whole
+    }
+}
+
+/// Puts the calendars a new event may go on in the order the sidebar
+/// lists accounts, each account's primary calendar first and the rest
+/// by name, so the default and the editor's list stay the same from run
+/// to run whatever order the map they came from held.
+pub fn sort_writable(writable: &mut [(AccountId, String, Calendar)], account_order: &[AccountId]) {
+    let rank = |account: &AccountId| account_order.iter().position(|a| a == account).unwrap_or(usize::MAX);
+    writable.sort_by(|(a, _, x), (b, _, y)| {
+        rank(a)
+            .cmp(&rank(b))
+            .then(y.primary.cmp(&x.primary))
+            .then_with(|| x.name.to_lowercase().cmp(&y.name.to_lowercase()))
+            .then_with(|| x.id.cmp(&y.id))
+    });
 }
 
 /// The quarter hours of a day, with `current` among them when it falls
@@ -282,7 +345,7 @@ mod tests {
     use super::*;
     use chrono::{NaiveDate, TimeZone};
     use chrono_tz::Europe::Lisbon;
-    use mailrs_domain::calendar::{Access, Reminder, ReminderMethod};
+    use mailrs_domain::calendar::{Reminder, ReminderMethod};
     use mailrs_domain::invitation::Answer;
 
     fn at(d: u32, h: u32, m: u32) -> EpochMillis {
@@ -479,6 +542,65 @@ mod tests {
         assert_eq!(saved.reminders, draft.reminders);
         assert_eq!(saved.color, draft.color);
         assert!(!saved.busy);
+    }
+
+    fn invitation() -> Occurrence {
+        let mut event = Event::clone(&weekly().event);
+        event.guests = vec![
+            Guest { email: "ana@example.com".into(), organizer: true, answer: Some(Answer::Yes), ..Guest::default() },
+            Guest { email: "me@example.com".into(), me: true, ..Guest::default() },
+        ];
+        Occurrence { account_id: 1, start: event.start, end: event.end, event: Arc::new(event) }
+    }
+
+    #[test]
+    fn an_owner_on_a_writable_calendar_edits_the_whole_event() {
+        assert_eq!(editing(&weekly().event, Access::Owner, true, false), Editing::Whole);
+    }
+
+    #[test]
+    fn a_guest_on_a_writable_calendar_gets_the_limited_editor() {
+        assert_eq!(editing(&invitation().event, Access::Owner, true, false), Editing::Guest);
+    }
+
+    #[test]
+    fn a_withheld_calendar_permission_asks_for_it_instead_of_editing() {
+        assert_eq!(editing(&weekly().event, Access::Owner, true, true), Editing::NeedsPermission);
+        assert_eq!(editing(&invitation().event, Access::Owner, true, true), Editing::NeedsPermission);
+    }
+
+    #[test]
+    fn a_read_only_calendar_or_an_account_with_no_calendar_edits_nothing() {
+        assert_eq!(editing(&weekly().event, Access::Reader, true, false), Editing::None);
+        assert_eq!(editing(&weekly().event, Access::Owner, false, false), Editing::None);
+    }
+
+    #[test]
+    fn a_guest_is_never_offered_this_and_following() {
+        let draft = Draft::open(&invitation(), &invitation().event.rules, Lisbon);
+        assert_eq!(draft.scopes(), vec![RepeatScope::This, RepeatScope::All]);
+    }
+
+    #[test]
+    fn an_owner_is_offered_every_scope() {
+        let draft = Draft::open(&weekly(), &weekly().event.rules, Lisbon);
+        assert_eq!(draft.scopes(), vec![RepeatScope::This, RepeatScope::Following, RepeatScope::All]);
+        assert!(fresh().scopes().is_empty(), "a new event asks nothing");
+    }
+
+    #[test]
+    fn writable_calendars_sort_by_account_then_primary_then_name() {
+        let named = |id: &str, name: &str, primary: bool| Calendar { id: id.into(), name: name.into(), primary, ..personal() };
+        let mut writable = vec![
+            (2, "me@work.pt".to_string(), named("team", "Design team", false)),
+            (1, "me@example.com".to_string(), named("family", "Family", false)),
+            (2, "me@work.pt".to_string(), named("me@work.pt", "Work", true)),
+            (1, "me@example.com".to_string(), named("birthdays", "Birthdays", false)),
+            (1, "me@example.com".to_string(), named("me@example.com", "Personal", true)),
+        ];
+        sort_writable(&mut writable, &[1, 2]);
+        let order: Vec<&str> = writable.iter().map(|(_, _, c)| c.name.as_str()).collect();
+        assert_eq!(order, ["Personal", "Birthdays", "Family", "Work", "Design team"]);
     }
 
     #[test]

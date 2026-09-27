@@ -54,6 +54,7 @@ struct Editor {
     /// Once the person has picked a time zone of their own, a calendar
     /// change stops moving it for them.
     zone_touched: Cell<bool>,
+    title_row: RefCell<Option<adw::EntryRow>>,
     repeat_row: RefCell<Option<adw::ComboRow>>,
     /// The Repeats row's selected index the draft actually holds, put
     /// back when the Custom page is left without pressing Done.
@@ -113,6 +114,7 @@ pub fn open(
         end_time: RefCell::new(None),
         quiet: Cell::new(false),
         zone_touched: Cell::new(false),
+        title_row: RefCell::new(None),
         repeat_row: RefCell::new(None),
         repeat_confirmed: Cell::new(repeat_confirmed),
         repeat_quiet: Cell::new(false),
@@ -208,6 +210,14 @@ pub fn open(
 
     dialog.set_default_widget(Some(&save));
     dialog.present(Some(parent));
+    // The dialog gives the focus to its first control, Cancel, once it
+    // shows; Title takes it instead, so typing names the event and Enter
+    // saves. A guest's Title is insensitive, so the focus stays put.
+    if let Some(row) = editor.title_row.borrow().as_ref()
+        && row.is_sensitive()
+    {
+        dialog.set_focus(Some(row));
+    }
 }
 
 impl Editor {
@@ -235,7 +245,8 @@ impl Editor {
         page.add(&place_group);
         page.add(&self.guests_group_widget(contacts));
         page.add(&self.reminders_group_widget(choices));
-        page.add(&self.notes_group());
+        let notes_group = self.notes_group();
+        page.add(&notes_group);
         page.add(&self.more_group());
         if limited {
             let organizer = self.organizer_words();
@@ -247,6 +258,7 @@ impl Editor {
             )));
             repeat_group.set_sensitive(false);
             place_group.set_sensitive(false);
+            notes_group.set_sensitive(false);
             if let Some(group) = self.guests_group.borrow().as_ref() {
                 group.set_sensitive(false);
             }
@@ -289,13 +301,7 @@ impl Editor {
             }
         });
         group.add(&row);
-        let page = self.dialog.child().and_downcast::<adw::NavigationView>();
-        if let Some(page) = page.as_ref().and_then(|nav| nav.find_page("form")) {
-            let row = row.clone();
-            page.connect_shown(move |_| {
-                row.grab_focus();
-            });
-        }
+        self.title_row.replace(Some(row));
         group
     }
 
@@ -747,12 +753,17 @@ impl Editor {
         if draft.is_new() {
             let row = adw::ComboRow::builder().title(gettext("Calendar")).build();
             crate::ui::name_combo_row_items(&row);
-            let names: Vec<String> = choices
+            // The model holds each entry's key, and the factory finds the
+            // entry from the item it is handed. The closed row is a list
+            // item too, and its position is not the selected index, so a
+            // lookup by position showed one calendar while the draft held
+            // another (libadwaita-dialog-traps).
+            let keys: Vec<String> = choices
                 .writable
                 .iter()
-                .map(|(_, _, c)| c.name.clone())
+                .map(|(account, _, c)| calendar_key(*account, &c.id))
                 .collect();
-            let refs: Vec<&str> = names.iter().map(String::as_str).collect();
+            let refs: Vec<&str> = keys.iter().map(String::as_str).collect();
             row.set_model(Some(&gtk::StringList::new(&refs)));
             let entries = Rc::new(choices.writable.clone());
             let factory = gtk::SignalListItemFactory::new();
@@ -767,7 +778,10 @@ impl Editor {
                 let Some(item) = item.downcast_ref::<gtk::ListItem>() else {
                     return;
                 };
-                let Some((_, address, calendar)) = bind_entries.get(item.position() as usize)
+                let Some(key) = item.item().and_downcast::<gtk::StringObject>() else {
+                    return;
+                };
+                let Some((_, address, calendar)) = calendar_entry(&bind_entries, &key.string())
                 else {
                     return;
                 };
@@ -1186,9 +1200,9 @@ impl Editor {
         });
         more.add_row(&private);
 
-        let colour_row = adw::ComboRow::builder().title(gettext("Colour")).build();
+        let colour_row = adw::ComboRow::builder().title(gettext("Color")).build();
         crate::ui::name_combo_row_items(&colour_row);
-        let names: Vec<String> = std::iter::once(gettext("Calendar colour"))
+        let names: Vec<String> = std::iter::once(gettext("Calendar color"))
             .chain(colour_names())
             .collect();
         let refs: Vec<&str> = names.iter().map(String::as_str).collect();
@@ -1238,8 +1252,7 @@ impl Editor {
             row.set_sensitive(!limited);
             // A Meet request on a patch of one occurrence would add the
             // link to that occurrence alone; offering it there would read
-            // as changing the whole series (reconcile.md Task 7
-            // correction 7 / Task 3 correction 8).
+            // as changing the whole series.
             row.set_visible(!in_series);
             let weak = Rc::downgrade(self);
             row.connect_active_notify(move |row| {
@@ -1462,6 +1475,23 @@ fn local_time(at: EpochMillis, zone: Tz) -> NaiveTime {
         .time()
 }
 
+/// The key the Calendar row's model holds for a calendar: its account
+/// and id, which together name it, since two accounts can share a
+/// calendar id.
+fn calendar_key(account: AccountId, id: &str) -> String {
+    format!("{account}\u{1f}{id}")
+}
+
+/// The entry `key` names among the Calendar row's choices.
+fn calendar_entry<'a>(
+    entries: &'a [(AccountId, String, Calendar)],
+    key: &str,
+) -> Option<&'a (AccountId, String, Calendar)> {
+    entries
+        .iter()
+        .find(|(account, _, c)| calendar_key(*account, &c.id) == key)
+}
+
 /// The Calendar row's per-item widget: a colour swatch and a two-line
 /// label, filled in by [`fill_calendar_item`]. Built once per list item
 /// and reused as the item scrolls, the way `gtk::SignalListItemFactory`
@@ -1530,4 +1560,35 @@ fn fill_calendar_item(item: &gtk::Widget, calendar: &Calendar, address: &str) {
             &[("name", &calendar.name), ("address", address)],
         ),
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn calendar(id: &str, name: &str) -> Calendar {
+        Calendar { id: id.into(), name: name.into(), ..Calendar::default() }
+    }
+
+    fn entries() -> Vec<(AccountId, String, Calendar)> {
+        vec![
+            (1, "me@example.com".into(), calendar("me@example.com", "Personal")),
+            (2, "me@work.pt".into(), calendar("team", "Design team")),
+            (1, "me@example.com".into(), calendar("family", "Family")),
+        ]
+    }
+
+    #[test]
+    fn a_calendar_row_item_finds_its_entry_by_key_not_by_position() {
+        let entries = entries();
+        let key = calendar_key(1, "family");
+        let (account, _, found) = calendar_entry(&entries, &key).expect("the key names an entry");
+        assert_eq!((*account, found.name.as_str()), (1, "Family"));
+    }
+
+    #[test]
+    fn the_same_calendar_id_on_two_accounts_keeps_two_keys() {
+        assert_ne!(calendar_key(1, "team"), calendar_key(2, "team"));
+        assert!(calendar_entry(&entries(), &calendar_key(1, "team")).is_none());
+    }
 }

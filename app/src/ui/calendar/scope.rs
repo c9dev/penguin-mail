@@ -6,7 +6,7 @@ use mailrs_domain::calendar::series::RepeatScope;
 use mailrs_domain::translate::gettext;
 
 /// Asks which occurrences a change to a repeating event covers, offering
-/// only the choices in `offered` (Task 1's `series::scopes`). `None` for
+/// only the choices in `offered` (from `series::scopes`). `None` for
 /// Cancel or for the dialog closing another way. A delete still goes
 /// through Undo, so this is a choice, not a confirmation, even while
 /// `deleting` colours the responses to say so.

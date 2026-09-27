@@ -146,15 +146,17 @@ impl Quick {
         this
     }
 
-    /// Shows the popover for `when` to `end`, pointed at `rect` in
+    /// Shows the popover for `when` to `end`, on `side` of `rect` in
     /// `anchor`'s own coordinates: `anchor` is the time grid or the
     /// month grid, translated into the card's coordinates, which is
     /// where the popover itself is parented. `on_save` runs with the
     /// title on Enter or Save; `on_more` on More Details.
+    #[expect(clippy::too_many_arguments, reason = "each is a separate part of what the popover shows")]
     pub fn show(
         self: &Rc<Self>,
         anchor: &gtk::Widget,
         rect: &gdk::Rectangle,
+        side: gtk::PositionType,
         when: &str,
         calendar: &Calendar,
         on_save: impl Fn(String) + 'static,
@@ -181,6 +183,7 @@ impl Quick {
             );
             self.popover.set_pointing_to(Some(&translated));
         }
+        self.popover.set_position(side);
         self.popover.popup();
         self.title.grab_focus();
     }
@@ -189,5 +192,72 @@ impl Quick {
     /// it.
     pub fn hide(&self) {
         self.popover.popdown();
+    }
+}
+
+/// The scroll that shows a slot from `top` to `bottom` in a view `page`
+/// tall scrolled to `value`, over content `upper` tall: `value` itself
+/// when the slot already shows, else the slot in the middle of the view,
+/// within the content's ends.
+pub fn reveal(top: f64, bottom: f64, value: f64, page: f64, upper: f64) -> f64 {
+    if top >= value && bottom <= value + page {
+        return value;
+    }
+    let middle = (top + bottom) / 2.0 - page / 2.0;
+    middle.min(upper - page).max(0.0)
+}
+
+/// The side of its slot quick create opens on: the right, unless the
+/// slot's middle `x` sits in the right half of a grid `width` wide,
+/// where the popover would run out of the window.
+pub fn side(x: f64, width: f64) -> gtk::PositionType {
+    if x > width / 2.0 {
+        gtk::PositionType::Left
+    } else {
+        gtk::PositionType::Right
+    }
+}
+
+/// The part of a span from `y`, `height` tall, that falls inside a view
+/// `page` tall, at least one pixel, so the popover's arrow points at
+/// what shows.
+pub fn clamp_span(y: f64, height: f64, page: f64) -> (f64, f64) {
+    let top = y.clamp(0.0, (page - 1.0).max(0.0));
+    let bottom = (y + height).min(page).max(top + 1.0);
+    (top, bottom - top)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_slot_already_on_screen_leaves_the_scroll_alone() {
+        assert_eq!(reveal(600.0, 650.0, 400.0, 500.0, 1800.0), 400.0);
+    }
+
+    #[test]
+    fn a_slot_below_the_view_scrolls_it_to_the_middle() {
+        // An evening slot at 21:15 with the grid showing 08:00 to 18:00.
+        assert_eq!(reveal(1275.0, 1335.0, 480.0, 600.0, 1440.0), 840.0);
+    }
+
+    #[test]
+    fn a_reveal_never_scrolls_past_either_end() {
+        assert_eq!(reveal(1400.0, 1440.0, 0.0, 600.0, 1440.0), 840.0);
+        assert_eq!(reveal(0.0, 60.0, 700.0, 600.0, 1440.0), 0.0);
+    }
+
+    #[test]
+    fn the_popover_opens_toward_the_wider_side_of_the_grid() {
+        assert_eq!(side(200.0, 1000.0), gtk::PositionType::Right);
+        assert_eq!(side(800.0, 1000.0), gtk::PositionType::Left);
+    }
+
+    #[test]
+    fn the_rect_a_popover_points_at_stays_inside_the_view() {
+        assert_eq!(clamp_span(-30.0, 60.0, 500.0), (0.0, 30.0));
+        assert_eq!(clamp_span(480.0, 60.0, 500.0), (480.0, 20.0));
+        assert_eq!(clamp_span(100.0, 60.0, 500.0), (100.0, 60.0));
     }
 }

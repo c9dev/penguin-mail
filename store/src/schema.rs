@@ -591,8 +591,8 @@ CREATE TABLE event_reminders_shown (
     // `calendar_changes`. Only one change is held at a time, so
     // `account_id` alone is the key; a crash or a quit before the toast
     // closes leaves the row for the next start to queue, since no toast
-    // survives to close over it. `steps` is Task 1's `series::Step`, as
-    // JSON.
+    // survives to close over it. `steps` holds the change's
+    // `series::Step`s as JSON.
     r#"
 CREATE TABLE calendar_holds (
     account_id INTEGER PRIMARY KEY REFERENCES accounts(id) ON DELETE CASCADE,
