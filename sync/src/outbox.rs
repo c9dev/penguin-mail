@@ -436,6 +436,9 @@ fn worth_retrying(err: &SyncError) -> bool {
         // The account is still connecting.
         SyncError::UnknownAccount(_) => true,
         SyncError::NoLabel(_) | SyncError::ReservedLabel(_) => false,
+        // A mail action never names a calendar, so the outbox never
+        // meets this one; the same id fails the same way regardless.
+        SyncError::NoCalendar(_) => false,
         // The bytes could not be written at all, so the same draft
         // would fail the same way on every try.
         SyncError::Mime(_) => false,

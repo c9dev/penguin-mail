@@ -9,7 +9,8 @@ use mailrs_gmail::{EventFields, EventTime, GmailError};
 use super::{Connected, Harness, harness};
 use crate::CalendarService;
 use crate::Permitted;
-use crate::calendar::{Calendar, at, free_slots, instant};
+use crate::SyncError;
+use crate::calendar::{Calendar, NoPick, at, free_slots, instant, writable_named};
 use crate::calendar_copy::CalendarCopy;
 
 const HOUR: i64 = 60 * 60 * 1000;
@@ -91,7 +92,7 @@ async fn an_event_is_made_listed_moved_and_deleted() {
     let calendar = calendar(&h);
 
     let made = calendar
-        .create(h.account_id, &event("Kite day", NINE, NINE + HOUR))
+        .create(h.account_id, None, &event("Kite day", NINE, NINE + HOUR))
         .await
         .unwrap()
         .done()
@@ -154,6 +155,7 @@ async fn free_time_reads_the_calendar_once_for_every_window() {
     calendar
         .create(
             h.account_id,
+            None,
             &event("Design crit", NINE + HOUR, NINE + 2 * HOUR),
         )
         .await
@@ -208,7 +210,7 @@ async fn a_missing_permission_is_an_answer_and_a_switched_off_api_an_error() {
         enable_url: "https://console.example/calendar".into(),
     });
     let err = calendar
-        .create(h.account_id, &event("Kite day", NINE, NINE + HOUR))
+        .create(h.account_id, None, &event("Kite day", NINE, NINE + HOUR))
         .await
         .unwrap_err();
     assert!(
@@ -265,6 +267,7 @@ async fn an_event_the_assistant_makes_waits_in_the_queue() {
     let made = calendar
         .create(
             h.account_id,
+            None,
             &EventFields {
                 summary: Some("Dentist".into()),
                 start: crate::calendar::at(1_790_000_000_000),
@@ -473,7 +476,7 @@ async fn a_new_event_on_a_calendar_of_unknown_zone_names_no_zone() {
     h.fake.withhold(mailrs_gmail::CALENDAR_LIST_SCOPE);
     let (calendar, copy) = calendar_with_copy(&h);
     copy.refresh(h.account_id, NINE).await.unwrap();
-    calendar.create(h.account_id, &event("Dentist", NINE, NINE + HOUR)).await.unwrap().done().unwrap();
+    calendar.create(h.account_id, None, &event("Dentist", NINE, NINE + HOUR)).await.unwrap().done().unwrap();
     copy.send(h.account_id).await.unwrap();
     let sent = h.fake.with(|s| s.calendar_events.iter().find(|e| e.title == "Dentist").cloned()).expect("sent");
     assert_eq!(sent.zone, "");
@@ -501,4 +504,112 @@ async fn moving_an_event_by_its_start_alone_keeps_its_length() {
     let only_start = EventFields { start: at(NINE + 5 * HOUR), ..EventFields::default() };
     let moved = calendar.update(h.account_id, "a", &only_start).await.unwrap().done().unwrap();
     assert_eq!((moved.start, moved.end), (NINE + 5 * HOUR, NINE + 6 * HOUR));
+}
+
+fn cal(id: &str, name: &str, access: Access) -> Cal {
+    Cal {
+        id: id.into(),
+        name: name.into(),
+        color: "#3584e4".into(),
+        access,
+        zone: "UTC".into(),
+        primary: id == "primary",
+        shown: true,
+        reminders: Vec::new(),
+    }
+}
+
+fn family() -> Vec<Cal> {
+    vec![
+        cal("primary", "Personal", Access::Owner),
+        cal("family", "Family", Access::Writer),
+        cal("holidays", "Holidays in Portugal", Access::Reader),
+    ]
+}
+
+fn recital() -> EventFields {
+    EventFields {
+        summary: Some("Piano recital".into()),
+        start: crate::calendar::at(1_790_000_000_000),
+        end: crate::calendar::at(1_790_003_600_000),
+        ..EventFields::default()
+    }
+}
+
+#[test]
+fn a_calendar_is_named_in_any_case_or_by_its_id() {
+    let list = family();
+    assert_eq!(writable_named(&list, "family").map(|c| c.id.as_str()), Ok("family"));
+    assert_eq!(writable_named(&list, "  FAMILY ").map(|c| c.id.as_str()), Ok("family"));
+    assert_eq!(writable_named(&list, "primary").map(|c| c.id.as_str()), Ok("primary"));
+}
+
+#[test]
+fn a_read_only_or_unknown_calendar_is_no_pick() {
+    let list = family();
+    assert_eq!(
+        writable_named(&list, "holidays in portugal"),
+        Err(NoPick::ReadOnly("Holidays in Portugal".into()))
+    );
+    assert_eq!(writable_named(&list, "holidays"), Err(NoPick::ReadOnly("Holidays in Portugal".into())));
+    assert_eq!(writable_named(&list, "Work"), Err(NoPick::Unknown));
+}
+
+#[test]
+fn two_calendars_with_one_name_want_the_id() {
+    let mut list = family();
+    list.push(cal("family2", "family", Access::Owner));
+    assert_eq!(writable_named(&list, "Family"), Err(NoPick::Several));
+    assert_eq!(writable_named(&list, "family2").map(|c| c.id.as_str()), Ok("family2"));
+}
+
+#[tokio::test]
+async fn the_calendar_list_comes_from_the_copy_once_it_is_read() {
+    let h = harness().await;
+    h.fake.with(|s| s.calendars = family());
+    let (calendar, copy) = calendar_with_copy(&h);
+    copy.refresh(h.account_id, 1_790_000_000_000).await.unwrap();
+    // Google forgets them; the copy still has them.
+    h.fake.with(|s| s.calendars.clear());
+    let listed = calendar.calendars(h.account_id).await.unwrap();
+    assert!(matches!(listed, Permitted::Done(ref list) if list.len() == 3));
+}
+
+#[tokio::test]
+async fn before_the_copy_is_read_the_list_comes_from_google() {
+    let h = harness().await;
+    h.fake.with(|s| s.calendars = family());
+    let (calendar, _copy) = calendar_with_copy(&h);
+    let listed = calendar.calendars(h.account_id).await.unwrap();
+    assert!(matches!(listed, Permitted::Done(ref list) if list.len() == 3));
+}
+
+#[tokio::test]
+async fn without_the_permission_the_list_says_so() {
+    let h = harness().await;
+    h.fake.withhold(mailrs_gmail::CALENDAR_LIST_SCOPE);
+    let (calendar, _copy) = calendar_with_copy(&h);
+    assert!(matches!(calendar.calendars(h.account_id).await.unwrap(), Permitted::NeedsPermission));
+}
+
+#[tokio::test]
+async fn a_new_event_lands_on_the_calendar_named() {
+    let h = harness().await;
+    h.fake.with(|s| s.calendars = family());
+    let (calendar, _copy) = calendar_with_copy(&h);
+    // The copy has never been read; naming a calendar reads it first.
+    let made = calendar.create(h.account_id, Some("family"), &recital()).await.unwrap();
+    let Permitted::Done(made) = made else { panic!("the permission is there") };
+    assert_eq!(made.calendar, "family");
+    assert!(made.pending, "it waits in the queue");
+}
+
+#[tokio::test]
+async fn a_read_only_calendar_takes_no_new_event() {
+    let h = harness().await;
+    h.fake.with(|s| s.calendars = family());
+    let (calendar, copy) = calendar_with_copy(&h);
+    copy.refresh(h.account_id, 1_790_000_000_000).await.unwrap();
+    let refused = calendar.create(h.account_id, Some("holidays"), &recital()).await;
+    assert!(matches!(refused, Err(SyncError::NoCalendar(ref id)) if id == "holidays"));
 }

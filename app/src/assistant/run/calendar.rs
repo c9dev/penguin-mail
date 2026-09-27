@@ -378,7 +378,7 @@ impl<A: Accounts> Tools<A> {
             let account_id = account.id;
             let made = self
                 .permitted(&account, Permission::Calendar, async move {
-                    calendar.create(account_id, &fields).await
+                    calendar.create(account_id, None, &fields).await
                 })
                 .await?;
             let names = self.calendar_names(account_id).await?;
