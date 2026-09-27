@@ -14,6 +14,9 @@ use serde::{Deserialize, Serialize};
 use crate::invitation;
 use crate::{AccountId, EpochMillis};
 
+pub mod repeat;
+pub mod series;
+
 /// Most occurrences one expansion returns. A daily series over a month
 /// view is 42; this is far above any range the window asks for, and it
 /// stops a rule with no end from running on.
@@ -174,6 +177,11 @@ pub struct Event {
     pub original_start: Option<EpochMillis>,
     /// A change made here waits in the queue for the provider.
     pub pending: bool,
+    /// A Google Meet link to ask for with the next write, named by a
+    /// request id so a retry does not make two. Only the queue body
+    /// carries it; the store does not keep it.
+    #[serde(default)]
+    pub meet_request: Option<String>,
 }
 
 impl Event {
@@ -187,6 +195,37 @@ impl Event {
             && self.status != Status::Cancelled
             && self.my_answer != Some(invitation::Answer::No)
     }
+}
+
+/// Google's eleven event colours, by the id an event carries. An event
+/// takes one of these or its calendar's colour; the editor offers them.
+/// The palette is built in rather than read from Google (`colors.get`
+/// needs a scope this app does not ask for) and matches what Google's
+/// own web app shows.
+pub const EVENT_COLORS: [(&str, &str); 11] = [
+    ("1", "#7986cb"),
+    ("2", "#33b679"),
+    ("3", "#8e24aa"),
+    ("4", "#e67c73"),
+    ("5", "#f6bf26"),
+    ("6", "#f4511e"),
+    ("7", "#039be5"),
+    ("8", "#616161"),
+    ("9", "#3f51b5"),
+    ("10", "#0b8043"),
+    ("11", "#d50000"),
+];
+
+/// The `#rrggbb` for one of Google's colour ids, or `None` for an id
+/// Google has not defined.
+pub fn event_color(id: &str) -> Option<&'static str> {
+    EVENT_COLORS.iter().find(|(i, _)| *i == id).map(|(_, hex)| *hex)
+}
+
+/// The colour id for a hex value in [`EVENT_COLORS`], read without
+/// regard to case, or `None` when the palette holds no such colour.
+pub fn color_id(hex: &str) -> Option<&'static str> {
+    EVENT_COLORS.iter().find(|(_, h)| h.eq_ignore_ascii_case(hex)).map(|(id, _)| *id)
 }
 
 /// One showing of an event on the grid. `event` is shared rather than
@@ -211,12 +250,22 @@ impl Occurrence {
         if self.event.rules.is_empty() {
             return self.event.id.clone();
         }
-        let Some(start) = DateTime::<Utc>::from_timestamp_millis(self.start) else {
-            return self.event.id.clone();
-        };
-        let form = if self.event.all_day { "%Y%m%d" } else { "%Y%m%dT%H%M%SZ" };
-        format!("{}_{}", self.event.id, start.format(form))
+        occurrence_id(&self.event, self.start)
     }
+}
+
+/// Google's id for one occurrence: the series id, an underscore and the
+/// original start in UTC, as a date for an all-day series and as a
+/// timestamp for a timed one. [`Occurrence::id`] calls this with the
+/// start `expand` gave it; a changed occurrence not yet shown, such as
+/// one [`series`] is about to write, has none to give and passes the
+/// original start it does have instead.
+pub fn occurrence_id(series: &Event, original_start: EpochMillis) -> String {
+    let Some(start) = DateTime::<Utc>::from_timestamp_millis(original_start) else {
+        return series.id.clone();
+    };
+    let form = if series.all_day { "%Y%m%d" } else { "%Y%m%dT%H%M%SZ" };
+    format!("{}_{}", series.id, start.format(form))
 }
 
 /// Splits an occurrence id, as [`Occurrence::id`] writes one, into the
@@ -295,7 +344,7 @@ pub fn series_end(event: &Event) -> Option<EpochMillis> {
     let Some(set) = rule_set(event) else {
         return Some(event.end);
     };
-    let rule = event.rules.iter().find(|line| line.to_ascii_uppercase().starts_with("RRULE"))?;
+    let rule = event.rules.iter().find(|line| is_rule_line(line))?;
     let upper = rule.to_ascii_uppercase();
     if !upper.contains("COUNT=") && !upper.contains("UNTIL=") {
         return None;
@@ -308,6 +357,19 @@ pub fn series_end(event: &Event) -> Option<EpochMillis> {
         return None;
     }
     result.dates.last().map(|start| start.timestamp_millis() + length)
+}
+
+/// Whether `line` is an `RRULE` line, as opposed to an `EXDATE` or
+/// `RDATE`. [`series`] tests it too, to tell a rule to rewrite from a
+/// date list to filter.
+pub(crate) fn is_rule_line(line: &str) -> bool {
+    line.to_ascii_uppercase().starts_with("RRULE")
+}
+
+/// Whether `line` lists dates to skip or add: `EXDATE` or `RDATE`.
+pub(crate) fn is_date_line(line: &str) -> bool {
+    let upper = line.to_ascii_uppercase();
+    upper.starts_with("EXDATE") || upper.starts_with("RDATE")
 }
 
 fn zone(event: &Event) -> rrule::Tz {
@@ -371,8 +433,7 @@ fn until_in_utc(rule: &str) -> String {
 /// Widening each bare date to UTC midnight, as [`until_in_utc`] does for
 /// `UNTIL`, gives the same day in every zone.
 fn dates_in_utc(line: &str) -> String {
-    let upper = line.to_ascii_uppercase();
-    if !upper.starts_with("EXDATE") && !upper.starts_with("RDATE") {
+    if !is_date_line(line) {
         return line.to_string();
     }
     let Some((head, values)) = line.split_once(':') else {
@@ -605,5 +666,25 @@ mod tests {
         assert!(!Access::Reader.can_write());
         assert!(!Access::FreeBusy.can_write());
         assert_eq!(Access::parse("freeBusyReader"), Access::FreeBusy);
+    }
+
+    #[test]
+    fn a_colour_and_its_google_id_go_both_ways() {
+        for (id, hex) in EVENT_COLORS {
+            assert_eq!(event_color(id), Some(hex));
+            assert_eq!(color_id(hex), Some(id));
+        }
+        assert_eq!(color_id("#E67C73"), Some("4"));
+        assert_eq!(color_id("#123456"), None);
+    }
+
+    #[test]
+    fn a_queued_body_from_before_meet_requests_still_reads() {
+        let old = r#"{"calendar":"work","id":"a","uid":"","etag":"","start":0,"end":0,"zone":"UTC",
+            "all_day":false,"title":"","place":"","description":"","color":null,"busy":true,
+            "status":"Confirmed","private":false,"organizer":null,"guests":[],"my_answer":null,
+            "reminders":null,"conference":null,"rules":[],"series":null,"original_start":null,"pending":true}"#;
+        let event: Event = serde_json::from_str(old).unwrap();
+        assert_eq!(event.meet_request, None);
     }
 }
