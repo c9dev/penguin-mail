@@ -14,7 +14,6 @@ pub mod agenda;
 pub mod block;
 #[allow(dead_code, reason = "the editor widget starts using it in Task 8")]
 pub mod draft;
-#[allow(dead_code, reason = "the view starts using it in Task 8")]
 pub mod drag;
 #[allow(dead_code, reason = "the view calls it in Task 8")]
 pub mod editor;
@@ -35,7 +34,8 @@ use std::rc::{Rc, Weak};
 use adw::prelude::*;
 use chrono::{DateTime, Datelike, Days, NaiveDate, Utc};
 use gtk::{gdk, glib};
-use mailrs_domain::calendar::{Calendar, Occurrence};
+use mailrs_domain::calendar::series;
+use mailrs_domain::calendar::{Access, Calendar, Occurrence};
 use mailrs_domain::invitation::Answer;
 use mailrs_domain::translate::{date_locale, gettext, with_reason};
 use mailrs_domain::{Account, AccountId, EpochMillis};
@@ -45,8 +45,10 @@ use mailrs_sync::{Offers, Withheld};
 
 use crate::core::Core;
 use crate::settings::{Change, Settings};
+use crate::ui::autocomplete::Contacts;
 use agenda::Agenda;
 use block::{EventKey, key_of};
+use draft::Draft;
 use month::MonthGrid;
 use popover::EventPopover;
 use range::{Range, ViewKind};
@@ -866,6 +868,157 @@ impl CalendarView {
         }
     }
 
+    // ---- Making and moving events ---------------------------------------
+    //
+    // `moved` is this task's own (Task 9's Files name it). `writable`,
+    // `can_move`, `edit`, `quick_create_at` and `save_draft` are Task 8's
+    // named methods, bridged here in a minimal form so a drag's own
+    // wiring compiles and can be tried in this task's worktree; Task 8's
+    // fuller versions (the person's own contacts, the lightweight
+    // quick-create popover rather than the full editor, remembering the
+    // account used, the account's own toast wording) replace these at
+    // the merge. See "Departures from the brief" in this task's report.
+
+    /// A drag moved or stretched `o` on `grid`. The write goes through
+    /// the draft, so a weekly series moved to another day moves its day
+    /// in the rule. `grid` is unused here; Task 10's repeat question
+    /// calls `grid.spring_back()` on a cancel once it lands (E10, Task 9
+    /// correction 7).
+    pub(super) fn moved(
+        self: &Rc<Self>,
+        _grid: &TimeGrid,
+        o: &Occurrence,
+        start: EpochMillis,
+        end: EpochMillis,
+    ) {
+        let weak = Rc::downgrade(self);
+        let o = o.clone();
+        glib::spawn_future_local(async move {
+            let Some(this) = weak.upgrade() else { return };
+            let rules = this.series_rules(&o).await;
+            let mut draft = Draft::open(&o, &rules, draft::local_zone());
+            draft.set_span(start, end);
+            this.save_draft(draft);
+        });
+    }
+
+    /// The rules of the series `o` belongs to: its own, or for a changed
+    /// occurrence the series row's.
+    pub(super) async fn series_rules(&self, o: &Occurrence) -> Vec<String> {
+        let Some(series_id) = o.event.series.clone() else {
+            return o.event.rules.clone();
+        };
+        let (account, calendar) = (o.account_id, o.event.calendar.clone());
+        self.core
+            .read(move |c| Ok(store::event(c, account, &calendar, &series_id)?.map(|e| e.rules)))
+            .await
+            .ok()
+            .flatten()
+            .unwrap_or_default()
+    }
+
+    /// Whether a drag may move `o`: its calendar must be one the
+    /// account can write to, the account must offer a calendar and not
+    /// have withheld it, and the event itself must allow it (not
+    /// all-day, not a guest's own event, not on its way out).
+    fn can_move(&self, o: &Occurrence) -> bool {
+        let access = self
+            .calendars
+            .borrow()
+            .get(&(o.account_id, o.event.calendar.clone()))
+            .map_or(Access::Reader, |c| c.access);
+        let (offers, withheld) = self
+            .accounts
+            .borrow()
+            .iter()
+            .find(|(a, _, _)| a.id == o.account_id)
+            .map_or((false, true), |(_, offers, withheld)| {
+                (offers.calendar, withheld.calendar)
+            });
+        drag::can_move(o, access, offers, withheld)
+    }
+
+    /// The calendars any account may create or change an event on.
+    fn writable(&self) -> Vec<(AccountId, String, Calendar)> {
+        let accounts = self.accounts.borrow();
+        self.calendars
+            .borrow()
+            .iter()
+            .filter(|(_, c)| c.access.can_write())
+            .filter_map(|(&(account_id, _), c)| {
+                accounts
+                    .iter()
+                    .find(|(a, offers, withheld)| {
+                        a.id == account_id && offers.calendar && !withheld.calendar
+                    })
+                    .map(|(a, _, _)| (account_id, a.email.clone(), c.clone()))
+            })
+            .collect()
+    }
+
+    /// The editor on `draft`.
+    pub(super) fn edit(self: &Rc<Self>, draft: Draft) {
+        let choices = editor::Choices {
+            writable: self.writable(),
+            calendars: self.calendars.borrow().clone(),
+        };
+        let contacts: Contacts = Rc::new(RefCell::new(Rc::new(Vec::new())));
+        let this = Rc::clone(self);
+        editor::open(&self.page, draft, choices, contacts, move |draft| {
+            this.save_draft(draft);
+        });
+    }
+
+    /// Opens the editor on a new event at `start` to `end`, on the
+    /// calendar the drag's account last used, or the first writable one.
+    pub(super) fn quick_create_at(self: &Rc<Self>, start: EpochMillis, end: EpochMillis) {
+        let writable = self.writable();
+        let Some((account_id, calendar)) = draft::default_calendar(&writable, None) else {
+            return;
+        };
+        let draft = Draft::new(account_id, &calendar, start, end, draft::local_zone());
+        self.edit(draft);
+    }
+
+    /// Writes a new or changed event. A change to a series covers every
+    /// occurrence until Task 10 adds the question that asks which.
+    pub fn save_draft(self: &Rc<Self>, draft: Draft) {
+        let core = Rc::clone(&self.core);
+        let weak = Rc::downgrade(self);
+        glib::spawn_future_local(async move {
+            let account_id = draft.account_id;
+            let occurrence = draft.occurrence.clone();
+            let event = draft.to_event(
+                &mailrs_sync::calendar_copy::new_event_id(),
+                &mailrs_sync::calendar_copy::new_event_id(),
+            );
+            let copy = core.calendar_copy();
+            let scope = occurrence
+                .as_ref()
+                .filter(|o| series::in_series(&o.event))
+                .map(|_| series::RepeatScope::All);
+            let written = core
+                .call(async move {
+                    let steps = match &occurrence {
+                        Some(o) => copy.change_steps(account_id, o, event, scope).await?,
+                        None => vec![series::Step::Save(event)],
+                    };
+                    copy.apply(account_id, steps).await
+                })
+                .await;
+            let Some(view) = weak.upgrade() else { return };
+            match written {
+                Ok(Permitted::Done(())) => view.reload(),
+                Ok(Permitted::NeedsPermission) => (view.hooks.needs_permission)(account_id),
+                Err(err) => (view.hooks.toast)(&with_reason(
+                    &gettext("Could not save the event: {reason}"),
+                    &err,
+                    &[],
+                )),
+            }
+        });
+    }
+
     /// A page's widgets for the current kind.
     fn page_view(self: &Rc<Self>) -> PageView {
         match self.kind.get() {
@@ -964,6 +1117,22 @@ impl CalendarView {
                 view.show_more(anchor, hidden);
             }
         });
+        let weak = Rc::downgrade(self);
+        grid.connect_moved(move |grid, o, start, end| {
+            if let Some(view) = weak.upgrade() {
+                view.moved(grid, o, start, end);
+            }
+        });
+        let weak = Rc::downgrade(self);
+        grid.connect_selected(move |start, end| {
+            if let Some(view) = weak.upgrade() {
+                view.quick_create_at(start, end);
+            }
+        });
+        let weak = Rc::downgrade(self);
+        grid.set_can_move(move |o| weak.upgrade().is_some_and(|view| view.can_move(o)));
+        let carousel = self.carousel.clone();
+        grid.connect_carousel_interactive(move |on| carousel.set_interactive(on));
         GridPage {
             root,
             headings,

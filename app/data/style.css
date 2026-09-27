@@ -432,6 +432,18 @@ button.event-block.unanswered:hover,
 .event-block.declined .title { text-decoration: line-through; }
 .event-block:focus-visible { outline: 2px solid var(--accent-color); outline-offset: 1px; }
 .all-day-strip button.event-block { border-radius: 6px; }
+/* The card a drag holds: lifted above the others while the pointer or
+   the settle spring carries it. With animations off the spring lands it
+   in place at once (R10), so no separate no-motion rule is needed. */
+.event-block.dragging {
+  box-shadow: 0 6px 18px color-mix(in srgb, black 22%, transparent);
+}
+/* The span a drag across empty time marks out, before release opens the
+   editor on it. */
+.event-block.ghost {
+  border: 1px dashed var(--accent-color);
+  background-color: color-mix(in srgb, var(--accent-bg-color) 30%, transparent);
+}
 
 /* "Mon" and "All-day" stay title case in the string a screen reader
    reads; the small capitals are drawn, not spoken. */
