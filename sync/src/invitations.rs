@@ -101,6 +101,22 @@ pub struct ApiOff {
     pub enable_url: String,
 }
 
+/// Where the event an invitation names sits in the calendar's copy on
+/// this computer: the account, the calendar, the event's id, and the
+/// start of the occurrence to open. Show in Calendar opens it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Spot {
+    pub account_id: AccountId,
+    pub calendar: String,
+    pub id: String,
+    pub start: EpochMillis,
+}
+
+/// How far either side of the time it wants Show in Calendar looks. The
+/// copy holds a year back from its first read, so a little over a year
+/// covers everything it could hold near that time.
+const LOOK_AROUND: EpochMillis = 400 * 24 * 60 * 60 * 1_000;
+
 /// How long an event with no end of its own is taken to run for, when
 /// asking what else it clashes with. An organizer who leaves `DTEND` out
 /// means a meeting, not a day.
@@ -250,6 +266,55 @@ impl<A: Accounts> Invitations<A> {
             Err(err) => return Err(err.into()),
         };
         Ok(series.and_then(|series| invitation.series_in_words(&series.rule, series.left)))
+    }
+
+    /// Where the event this invitation names sits in the calendar's copy,
+    /// for the card's Show in Calendar. For an invitation to one
+    /// occurrence, that occurrence, wherever the organizer moved it;
+    /// otherwise the first occurrence that has not ended by the
+    /// invitation's start or by `now`, whichever is later.
+    ///
+    /// Reads the store and nothing else. `None` for a cancellation, for an
+    /// account whose copy has never been read, and for an event on no
+    /// calendar the person shows.
+    pub async fn on_calendar(
+        &self,
+        account_id: AccountId,
+        invitation: &Invitation,
+        now: EpochMillis,
+    ) -> Result<Option<Spot>, SyncError> {
+        if invitation.cancelled() || invitation.uid.trim().is_empty() {
+            return Ok(None);
+        }
+        let sync = self.sync(account_id)?;
+        // Without a calendar there is nowhere for the event to sit.
+        if !sync.services().offers().calendar {
+            return Ok(None);
+        }
+        let occurrence = invitation.occurrence.as_ref().and_then(|o| o.at);
+        let from = invitation
+            .when
+            .as_ref()
+            .and_then(When::starts_at)
+            .filter(|at| *at > now)
+            .unwrap_or(now);
+        let around = occurrence.unwrap_or(from);
+        let uid = invitation.uid.clone();
+        let found = self
+            .db
+            .read(move |c| {
+                if !mailrs_store::calendar::synced(c, account_id)? {
+                    return Ok(Vec::new());
+                }
+                mailrs_store::calendar::with_uid(c, account_id, &uid, around - LOOK_AROUND, around + LOOK_AROUND)
+            })
+            .await?;
+        Ok(pick(found, occurrence, from).map(|o| Spot {
+            account_id,
+            calendar: o.event.calendar.clone(),
+            id: o.event.id.clone(),
+            start: o.start,
+        }))
     }
 
     /// What the last look said, when it was about this same invitation.
@@ -536,6 +601,27 @@ impl<A: Accounts> Invitations<A> {
             .account(account_id)
             .ok_or(SyncError::UnknownAccount(account_id))
     }
+}
+
+/// The occurrence Show in Calendar opens. For an invitation to one
+/// occurrence, the one that replaced it or starts at it, else the nearest;
+/// otherwise the first that has not ended by `from`, or the last one when
+/// every occurrence has.
+fn pick(found: Vec<Occurrence>, occurrence: Option<EpochMillis>, from: EpochMillis) -> Option<Occurrence> {
+    if let Some(at) = occurrence {
+        let exact = found.iter().position(|o| {
+            o.event.original_start == Some(at) || (o.event.original_start.is_none() && o.start == at)
+        });
+        return match exact {
+            Some(index) => found.into_iter().nth(index),
+            None => found.into_iter().min_by_key(|o| (o.start - at).abs()),
+        };
+    }
+    let (ended, ahead): (Vec<_>, Vec<_>) = found.into_iter().partition(|o| o.end <= from);
+    ahead
+        .into_iter()
+        .min_by_key(|o| o.start)
+        .or_else(|| ended.into_iter().max_by_key(|o| o.start))
 }
 
 /// The organizer to write to, if the invitation names one worth writing
