@@ -10,6 +10,7 @@ mod contacts;
 mod core;
 mod demo;
 mod diff;
+mod event_reminders;
 mod exe;
 mod format;
 mod goa;
