@@ -252,8 +252,12 @@ async fn a_command_that_does_not_exist_fails_to_start() {
 
 #[tokio::test]
 async fn a_server_that_exits_says_what_it_printed() {
-    let Err(McpError::Unreachable(why)) = McpClient::connect("crash", fake("crash")).await else {
-        panic!("a server that exits cannot connect");
+    // The whole result goes into the message: this test failed once under
+    // a loaded gate, and the old message dropped what connect returned.
+    let why = match McpClient::connect("crash", fake("crash")).await {
+        Err(McpError::Unreachable(why)) => why,
+        Err(other) => panic!("a server that exits is unreachable, not {other:?}"),
+        Ok(_) => panic!("a server that exits cannot connect"),
     };
     assert!(why.contains("boom: no config file"), "{why}");
 }
