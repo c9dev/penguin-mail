@@ -27,7 +27,7 @@ use mailrs_sync::mailbox::Standard;
 use mailrs_sync::{
     AccountSettings, AccountSync, Accounts, AutomaticReply, BackendError, Calendar, Categorized, Failure,
     History, Invitations, Loaded, MailAction, MailActions, MailBackend, Mailbox, Mailboxes, Missing,
-    NewLabels, Outcome, Permitted, Scope, SyncError, TriageAction, View,
+    MovedFrom, NewLabels, Outcome, Permitted, Scope, SyncError, TriageAction, View,
 };
 use serde_json::{Value, json};
 
@@ -1014,12 +1014,13 @@ impl<A: Accounts> Tools<A> {
     /// the rest, and a handful in the Trash is easy to see and fetch back.
     async fn organize<'a>(&'a self, input: &'a Value) -> Result<Plan<'a>, String> {
         let targets = self.parse_targets(input)?;
+        let from = self.moved_from(input)?;
         let key = required(input, "action")?;
         let organize = Organize::named(&key).ok_or_else(|| format!("Unknown action {key}."))?;
         let color: Option<FlagColor> = text(input, "color").and_then(|c| c.parse().ok());
         let action = organize.action(color.unwrap_or_else(|| self.desk.settings().flag_color));
         let count = targets.len();
-        let change = async move { report(&self.act(targets, action).await) };
+        let change = async move { report(&self.act_from(targets, action, from).await) };
         if organize == Organize::Trash && count > 25 {
             return Ok(Plan::ask(
                 fill_plural(
@@ -1034,12 +1035,39 @@ impl<A: Accounts> Tools<A> {
         Ok(Plan::without_asking(change))
     }
 
-    /// Runs a mail action that Ctrl+Z can undo, then updates the window.
+    /// The place the conversations a tool call names were listed from,
+    /// read from its `from`, which names a mailbox as `list_mail` takes
+    /// one. A move on a folder account then carries only the messages
+    /// there, as the window's does. No `from` names no place.
+    fn moved_from(&self, input: &Value) -> Result<MovedFrom, String> {
+        let Some(from) = input.get("from").filter(|from| !from.is_null()) else {
+            return Ok(MovedFrom::nowhere());
+        };
+        let name = required(from, "mailbox")?;
+        match self.named_mailboxes(&name, from, None)? {
+            Named::Found(mailboxes) => Ok(mailboxes
+                .iter()
+                .fold(MovedFrom::nowhere(), |all, mailbox| all.and(mailbox.moved_from()))),
+            Named::Unavailable(answer) => Err(answer["unavailable"]
+                .as_str()
+                .unwrap_or("That mailbox cannot be read now.")
+                .to_string()),
+        }
+    }
+
+    /// Runs a mail action that Ctrl+Z can undo, then updates the window,
+    /// on mail picked from no one place.
     async fn act(&self, targets: Vec<Target>, action: MailAction) -> Outcome {
+        self.act_from(targets, action, MovedFrom::nowhere()).await
+    }
+
+    /// Runs a mail action that Ctrl+Z can undo on mail listed from `from`,
+    /// then updates the window.
+    async fn act_from(&self, targets: Vec<Target>, action: MailAction, from: MovedFrom) -> Outcome {
         let mail = Arc::clone(&self.modules.mail);
         let (given, asked) = (targets.clone(), action.clone());
         let outcome = self
-            .away(async move { mail.run(&given, asked, History::Record).await })
+            .away(async move { mail.run_from(&given, asked, History::Record, &from).await })
             .await
             .unwrap_or_else(|err| Outcome {
                 done: vec![],
@@ -1060,6 +1088,7 @@ impl<A: Accounts> Tools<A> {
     /// labels only the mail in accounts that hold the names already.
     async fn label(&self, input: &Value) -> ToolResult {
         let targets = self.parse_targets(input)?;
+        let from = self.moved_from(input)?;
         let names = |key: &str| -> Vec<String> {
             input
                 .get(key)
@@ -1077,7 +1106,7 @@ impl<A: Accounts> Tools<A> {
             .map(|t| t.account_id)
             .find(|id| !self.offers(*id).labels);
         if let Some(account_id) = in_folders {
-            return self.move_by_label(targets, account_id, &add, &remove).await;
+            return self.move_by_label(targets, account_id, &add, &remove, from).await;
         }
         let plan = NewLabels::plan(&targets, &add, &remove, |account_id| {
             self.labels_of(account_id)
@@ -1101,7 +1130,7 @@ impl<A: Accounts> Tools<A> {
             remove,
             create,
         };
-        let mut result = report(&self.act(targets, action).await)?;
+        let mut result = report(&self.act_from(targets, action, from).await)?;
         if !create {
             result["declined"] = json!(
                 "The user declined new labels, so mail in accounts without them was left alone."
@@ -1113,14 +1142,16 @@ impl<A: Accounts> Tools<A> {
     /// Labelling on an account that files in folders, where `account_id`
     /// is one. A message there sits in one folder, and adding a label
     /// would copy it, so one name to add and none to remove moves the
-    /// mail into that folder. Anything else is out of reach, and the
-    /// answer says why. The answers are model-facing, in English.
+    /// mail into that folder, out of `from`. Anything else is out of
+    /// reach, and the answer says why. The answers are model-facing, in
+    /// English.
     async fn move_by_label(
         &self,
         targets: Vec<Target>,
         account_id: AccountId,
         add: &[String],
         remove: &[String],
+        from: MovedFrom,
     ) -> ToolResult {
         let email = self.email_of(account_id);
         let unavailable = |why: String| Ok(json!({"unavailable": why}));
@@ -1144,7 +1175,7 @@ impl<A: Accounts> Tools<A> {
             return unavailable(format!("{email} has no folder called {name}."));
         };
         let action = MailAction::Triage(TriageAction::MoveTo(folder.id));
-        report(&self.act(targets, action).await)
+        report(&self.act_from(targets, action, from).await)
     }
 
     /// The question before labelling makes new labels. `partly` says a "no"
@@ -1179,7 +1210,9 @@ impl<A: Accounts> Tools<A> {
     async fn remind(&self, input: &Value) -> ToolResult {
         let targets = self.parse_targets(input)?;
         let when = future_instant(&required(input, "at")?)?;
-        let mut result = report(&self.act(targets, MailAction::Remind { at: when }).await)?;
+        let from = self.moved_from(input)?;
+        let remind = MailAction::Remind { at: when };
+        let mut result = report(&self.act_from(targets, remind, from).await)?;
         result["returns"] = json!(crate::format::future_date(when, Local::now()));
         Ok(result)
     }

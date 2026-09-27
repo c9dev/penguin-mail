@@ -397,7 +397,12 @@ impl<A: Accounts> Tools<A> {
         );
         let targets: Vec<Target> = named.into_iter().map(|(t, _)| t).collect();
         Ok(Plan::ask(question, async move {
-            let mut result = report(&self.act(targets, MailAction::Remind { at }).await)?;
+            // What waits for a reminder sits in the Archive, where Remind
+            // Me put it; moving the hour leaves the thread's other
+            // folders alone.
+            let archive = MovedFrom::every(MailSet::Role(Role::Archive));
+            let remind = MailAction::Remind { at };
+            let mut result = report(&self.act_from(targets, remind, archive).await)?;
             result["returns"] = json!(when);
             Ok(result)
         }))

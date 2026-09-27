@@ -150,6 +150,20 @@ fn targets() -> Value {
     })
 }
 
+/// Where the targets were listed from, for a tool that can move mail.
+fn from() -> Value {
+    json!({
+        "type": "object",
+        "description": "The mailbox the targets were listed from, as given to list_mail. On an account that files mail in folders, a conversation then moves only its messages in that mailbox and leaves the ones in other folders where they are. Leave it out after search_mail. Without it the whole conversation moves, except copies in Sent, Drafts, Trash and Junk.",
+        "properties": {
+            "mailbox": {"type": "string", "enum": MailboxName::ALL.map(MailboxName::key)},
+            "label": {"type": "string", "description": "The label's or folder's name, when mailbox is \"label\"."}
+        },
+        "required": ["mailbox"],
+        "additionalProperties": false
+    })
+}
+
 fn account(description: &str) -> Value {
     json!({"type": "string", "description": description})
 }
@@ -299,6 +313,7 @@ pub(super) fn catalog<A: Accounts>() -> Vec<MailTool<A>> {
             input: || {
                 json!({
                     "targets": targets(),
+                    "from": from(),
                     "action": {"type": "string", "enum": Organize::ALL.map(Organize::key)},
                     "color": {"type": "string", "enum": colors(), "description": "Flag color, for action \"flag\". Defaults to red."}
                 })
@@ -313,6 +328,7 @@ pub(super) fn catalog<A: Accounts>() -> Vec<MailTool<A>> {
             input: || {
                 json!({
                     "targets": targets(),
+                    "from": from(),
                     "add": {"type": "array", "items": {"type": "string"}},
                     "remove": {"type": "array", "items": {"type": "string"}}
                 })
@@ -327,6 +343,7 @@ pub(super) fn catalog<A: Accounts>() -> Vec<MailTool<A>> {
             input: || {
                 json!({
                     "targets": targets(),
+                    "from": from(),
                     "at": {"type": "string", "description": "Local date and time, as YYYY-MM-DDTHH:MM."}
                 })
             },
@@ -793,6 +810,7 @@ pub(super) fn catalog<A: Accounts>() -> Vec<MailTool<A>> {
             input: || {
                 json!({
                     "targets": targets(),
+                    "from": from(),
                     "mute": {"type": "boolean", "description": "False unmutes. Defaults to true."}
                 })
             },
