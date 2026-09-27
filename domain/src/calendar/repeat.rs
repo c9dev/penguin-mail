@@ -206,6 +206,42 @@ impl Repeat {
     }
 }
 
+/// Whether `rules` repeat weekly on days they list, the kind of series
+/// whose `BYDAY` has to follow the series to another weekday.
+pub(crate) fn names_weekdays(rules: &[String], day: NaiveDate, zone: Tz) -> bool {
+    match Repeat::read(rules, day, zone) {
+        Repeat::EveryWeek => true,
+        Repeat::Custom(custom) => custom.frequency == Frequency::Weekly && !custom.days.is_empty(),
+        _ => false,
+    }
+}
+
+/// `line` with each weekday its `BYDAY` lists moved `days` later, and
+/// every other part, such as `INTERVAL`, `COUNT` or `UNTIL`, as written.
+pub(crate) fn later_weekdays(line: &str, days: i64) -> String {
+    let Some((head, body)) = line.split_once(':') else {
+        return line.to_string();
+    };
+    let parts: Vec<String> = body
+        .split(';')
+        .map(|part| match part.split_once('=') {
+            Some((key, value)) if key.eq_ignore_ascii_case("BYDAY") => {
+                let moved: Option<Vec<&str>> = value
+                    .split(',')
+                    .map(|c| {
+                        let from = day_of(&c.to_ascii_uppercase())?;
+                        let to = (i64::from(from.num_days_from_monday()) + days).rem_euclid(7);
+                        Some(code(Weekday::try_from(u8::try_from(to).ok()?).ok()?))
+                    })
+                    .collect();
+                moved.map_or_else(|| part.to_string(), |m| format!("{key}={}", m.join(",")))
+            }
+            _ => part.to_string(),
+        })
+        .collect();
+    format!("{head}:{}", parts.join(";"))
+}
+
 /// The last day an `UNTIL` covers, in the event's zone.
 fn until_day(value: &str, zone: Tz) -> Option<NaiveDate> {
     if value.len() == 8 {
