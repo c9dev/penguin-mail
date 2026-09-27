@@ -23,7 +23,7 @@ use mailrs_store::{Db, StoreError, accounts};
 use mailrs_sync::config::{Config, config_path, data_dir, migrate_old_dirs};
 use mailrs_sync::lock::{LockError, SyncLock};
 use mailrs_sync::passwords::{KeyringPasswords, MemoryPasswords, PasswordStore, Passwords};
-use mailrs_sync::sign_in::{NewImap, account_client, imap_signed_in, signed_in};
+use mailrs_sync::sign_in::{NewImap, account_client, google_signed_in, imap_signed_in};
 use mailrs_sync::{
     AccountServices, AccountSettings, AccountSync, Accounts, BackendError, ContactBook, Failure,
     History, Invitations, MailAction, MailActions, Mailboxes, OneClick, Outbox, Outcome,
@@ -719,14 +719,18 @@ impl Core {
                     &[("account", &authorized.email), ("wanted", &expected)],
                 ));
             }
-            let (email, refresh) = (authorized.email.clone(), authorized.refresh_token.clone());
-            let store = Arc::clone(&tokens);
-            tokio::task::spawn_blocking(move || store.save(&email, &refresh)).await??;
             let granted = authorized.granted.as_ref().map(Granted::to_scope);
             let asked = SIGN_IN_SCOPES.join(" ");
-            let account =
-                signed_in(&db, &authorized.email, now_millis(), granted.as_deref(), &asked)
-                    .await?;
+            let account = google_signed_in(
+                &db,
+                Arc::clone(&tokens),
+                &authorized.email,
+                &authorized.refresh_token,
+                now_millis(),
+                granted.as_deref(),
+                &asked,
+            )
+            .await?;
             let services = AccountServices::google(
                 connect_account(oauth, tokens, &account, &db).await?,
             );

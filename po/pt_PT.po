@@ -1173,7 +1173,7 @@ msgstr ""
 "O Penguin Mail não conseguiu atualizar o arquivo de correio e manteve o "
 "anterior."
 
-#: app/src/core.rs:679 app/src/core.rs:764
+#: app/src/core.rs:679 app/src/core.rs:768
 msgid "Demo mode cannot add real accounts."
 msgstr "O modo de demonstração não adiciona contas reais."
 
@@ -4801,8 +4801,8 @@ msgstr "Lembretes de eventos"
 msgid ""
 "A notification before each event, at the times the event or its calendar sets"
 msgstr ""
-"Uma notificação antes de cada evento, às horas definidas no evento ou no "
-"seu calendário"
+"Uma notificação antes de cada evento, às horas definidas no evento ou no seu "
+"calendário"
 
 #: app/src/ui/preferences.rs:239
 msgid "Not Available"
@@ -7221,7 +7221,7 @@ msgstr "O porta-chaves recusou: {reason}"
 msgid "The message names nobody to send it to."
 msgstr "A mensagem não indica a quem a enviar."
 
-#: sync/src/sign_in.rs:111
+#: sync/src/sign_in.rs:136
 msgid "{address} is already in Penguin Mail as a {provider} account."
 msgstr "{address} já está no Penguin Mail como conta {provider}."
 

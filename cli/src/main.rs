@@ -25,7 +25,7 @@ use mailrs_sync::{
 use mailrs_sync::config::{Config, config_path, data_dir, migrate_old_dirs, secure_dirs};
 use mailrs_sync::lock::{LockError, SyncLock};
 use mailrs_sync::mailbox::Standard;
-use mailrs_sync::sign_in::{account_client, signed_in};
+use mailrs_sync::sign_in::{account_client, google_signed_in};
 
 /// How long `account add` waits for the browser.
 const CONSENT_TIMEOUT: Duration = Duration::from_secs(300);
@@ -210,12 +210,11 @@ async fn add_account(db: &Db) -> Result<()> {
     let authorized = tokio::time::timeout(CONSENT_TIMEOUT, flow)
         .await
         .context("gave up waiting for the browser after five minutes")??;
-    let tokens = token_store();
-    let (email, refresh) = (authorized.email.clone(), authorized.refresh_token.clone());
-    tokio::task::spawn_blocking(move || tokens.save(&email, &refresh)).await??;
-    let account = signed_in(
+    let account = google_signed_in(
         db,
+        token_store(),
         &authorized.email,
+        &authorized.refresh_token,
         now_millis(),
         authorized.granted.as_ref().map(Granted::to_scope).as_deref(),
         &SIGN_IN_SCOPES.join(" "),
