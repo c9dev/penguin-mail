@@ -11,7 +11,8 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use mailrs_domain::calendar::{
-    Access, Calendar as CalendarModel, Event as CalendarEvent, Guest as CalendarGuest, Status as CalendarStatus,
+    Access, Calendar as CalendarModel, Event as CalendarEvent, Guest as CalendarGuest, Reminder, ReminderMethod,
+    Status as CalendarStatus,
 };
 use mailrs_domain::invitation::Answer;
 use mailrs_domain::{
@@ -820,7 +821,9 @@ fn demo_calendars(index: usize) -> Vec<CalendarModel> {
                 zone: LISBON.into(),
                 primary: true,
                 shown: true,
-                reminders: Vec::new(),
+                // A common choice on Google's side; lets a run of the
+                // demo show a reminder for the call with Rita below.
+                reminders: vec![Reminder { minutes: 10, method: ReminderMethod::Notification }],
             },
             CalendarModel {
                 id: FAMILY.into(),
@@ -998,6 +1001,22 @@ fn account0_events(now: EpochMillis) -> Vec<CalendarEvent> {
         busy: false,
         status: CalendarStatus::Confirmed,
         rules: vec!["RRULE:FREQ=YEARLY".into()],
+        ..CalendarEvent::default()
+    });
+    // Ten to fifteen minutes after the demo starts, so a run of it puts
+    // a reminder up within five minutes.
+    let call = now - now.rem_euclid(5 * 60_000) + 15 * 60_000;
+    events.push(CalendarEvent {
+        calendar: "primary".into(),
+        id: "democallrita".into(),
+        uid: "democallrita@google.com".into(),
+        start: call,
+        end: call + 30 * 60_000,
+        zone: LISBON.into(),
+        title: "Call with Rita".into(),
+        busy: true,
+        status: CalendarStatus::Confirmed,
+        conference: Some("https://meet.google.com/pmd-demo-call".into()),
         ..CalendarEvent::default()
     });
     events
