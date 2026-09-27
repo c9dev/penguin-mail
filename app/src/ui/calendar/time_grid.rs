@@ -299,16 +299,16 @@ mod imp {
         pub activated: RefCell<Option<Box<Activated>>>,
         pub more_clicked: RefCell<Option<Box<MoreClicked>>>,
         /// Each block by the event it draws, cleared on every `show`.
-        pub blocks: RefCell<Vec<(EventKey, gtk::Widget)>>,
-        /// The occurrence each block of `blocks` draws, by the same key,
-        /// so a drag's press finds the occurrence a `pick` landed on.
-        pub occurrences: RefCell<HashMap<EventKey, Occurrence>>,
+        pub blocks: RefCell<Vec<(EventKey, Occurrence, gtk::Widget)>>,
+        /// The time last clicked on empty grid, snapped to a quarter
+        /// hour, for the slot the New Event button and N start from.
+        pub cursor: Cell<Option<EpochMillis>>,
+        /// The span a drag across empty time or N marks while quick
+        /// create's popover is open, and the widget drawing it.
+        pub ghost: RefCell<Option<(gtk::Widget, (EpochMillis, EpochMillis))>>,
         /// Each day's span, in the order `days` shows them, from the last
         /// `show`; a drag clamps its card to the one under the pointer.
         pub bounds: RefCell<Vec<(EpochMillis, EpochMillis)>>,
-        /// The ghost card of a drag across empty time, one widget per day
-        /// it crosses, gone once the drag ends or the ghost is cleared.
-        pub ghosts: RefCell<Vec<(gtk::Widget, Placement)>>,
         /// The card being dragged, and where it is drawn now.
         pub dragging: RefCell<Option<super::Dragging>>,
         /// The spring that settles a released card.
@@ -352,6 +352,19 @@ mod imp {
                 label.set_parent(&*obj);
                 children.push((label.upcast(), Placement::Hour(hour)));
             }
+            drop(children);
+            // A press on empty time remembers where, for the New Event
+            // button and N; a press on a card leaves it alone, since the
+            // grid is not the widget the pick lands on then.
+            let click = gtk::GestureClick::new();
+            click.set_button(gdk::BUTTON_PRIMARY);
+            let weak = obj.downgrade();
+            click.connect_pressed(move |_, _, x, y| {
+                if let Some(grid) = weak.upgrade() {
+                    grid.note_cursor(x, y);
+                }
+            });
+            obj.add_controller(click);
         }
 
         fn dispose(&self) {
@@ -359,12 +372,9 @@ mod imp {
                 source.remove();
             }
             self.blocks.borrow_mut().clear();
-            self.occurrences.borrow_mut().clear();
             self.dragging.take();
             self.settle.take();
-            for (child, _) in self.ghosts.borrow_mut().drain(..) {
-                child.unparent();
-            }
+            self.ghost.take();
             for (child, _) in self.children.borrow_mut().drain(..) {
                 child.unparent();
             }
@@ -393,10 +403,6 @@ mod imp {
                     // Placed below from `dragging.rect`, not its own slot.
                     continue;
                 }
-                let (x, y, w, h) = placement_pixels(*placement, width as f32);
-                allocate_at(child, x, y, w, h, baseline);
-            }
-            for (child, placement) in self.ghosts.borrow().iter() {
                 let (x, y, w, h) = placement_pixels(*placement, width as f32);
                 allocate_at(child, x, y, w, h, baseline);
             }
@@ -489,6 +495,21 @@ mod imp {
             let (column, hours) = super::now_column(self.now.get(), days, &chrono::Local)?;
             Some((column, hours as f32 * super::HOUR))
         }
+
+        /// The column holding `start`'s local day, and `start` and `end`
+        /// as wall-clock hours from that day's midnight. `None` when
+        /// `start` falls on a day the grid does not show.
+        pub(super) fn span_placement(&self, start: EpochMillis, end: EpochMillis) -> Option<(usize, f64, f64)> {
+            let days = self.days.borrow();
+            let day = chrono::DateTime::<chrono::Utc>::from_timestamp_millis(start)?
+                .with_timezone(&chrono::Local)
+                .date_naive();
+            let column = days.iter().position(|&d| d == day)?;
+            let midnight = day.and_hms_opt(0, 0, 0)?;
+            let top = super::layout::wall_offset(start, midnight, &chrono::Local);
+            let bottom = super::layout::wall_offset(end, midnight, &chrono::Local);
+            Some((column, top, bottom))
+        }
     }
 
     #[derive(Default)]
@@ -498,7 +519,7 @@ mod imp {
         pub rows: Cell<usize>,
         pub activated: RefCell<Option<Box<StripActivated>>>,
         pub more_clicked: RefCell<Option<Box<StripMoreClicked>>>,
-        pub blocks: RefCell<Vec<(EventKey, gtk::Widget)>>,
+        pub blocks: RefCell<Vec<(EventKey, Occurrence, gtk::Widget)>>,
     }
 
     #[glib::object_subclass]
@@ -705,7 +726,6 @@ impl TimeGrid {
 
         let mut children = Vec::new();
         let mut blocks = Vec::new();
-        let mut occurrence_of = HashMap::new();
         for (column, (&day, pieces)) in days.iter().zip(by_day.iter()).enumerate() {
             let Some(midnight) = day.and_hms_opt(0, 0, 0) else {
                 continue;
@@ -731,8 +751,7 @@ impl TimeGrid {
                 if imp.can_move.borrow().as_ref().is_some_and(|f| f(o)) {
                     describe_draggable(&card, o);
                 }
-                blocks.push((block::key_of(o), card.clone().upcast()));
-                occurrence_of.insert(block::key_of(o), o.clone());
+                blocks.push((block::key_of(o), o.clone(), card.clone().upcast()));
                 in_day.push((
                     card.upcast(),
                     imp::Placement::Card {
@@ -779,7 +798,6 @@ impl TimeGrid {
             child.unparent();
         }
         imp.blocks.replace(blocks);
-        imp.occurrences.replace(occurrence_of);
         // A reload rebuilds every card, so a drag or a settle in flight
         // would otherwise hold a widget that just lost its parent.
         imp.settle.take();
@@ -789,7 +807,112 @@ impl TimeGrid {
         {
             f(true);
         }
+        // A refill silently dropped the ghost among the removed cards;
+        // put it back in the same span, unless the span has left the
+        // days now shown.
+        if let Some((_, span)) = imp.ghost.borrow().clone() {
+            self.show_ghost(Some(span));
+        }
         self.queue_resize();
+    }
+
+    /// The time last clicked on empty grid, for the New Event button and
+    /// N to start a new event at.
+    pub fn cursor(&self) -> Option<EpochMillis> {
+        self.imp().cursor.get()
+    }
+
+    /// The occurrence whose block has the keyboard focus.
+    pub fn focused(&self) -> Option<Occurrence> {
+        focused_occurrence(&self.imp().blocks.borrow())
+    }
+
+    /// Where `start` to `end` sits in the grid's own coordinates, for
+    /// quick create's popover to point at: the column holding `start`,
+    /// as a card in lane 0 of 1. `None` when `start` falls outside the
+    /// days shown.
+    pub fn slot_rect(&self, start: EpochMillis, end: EpochMillis) -> Option<gdk::Rectangle> {
+        let width = self.width();
+        if width <= 0 {
+            return None;
+        }
+        let (column, top, bottom) = self.imp().span_placement(start, end)?;
+        let days = self.imp().days.borrow().len();
+        let (x, y, w, h) = rect(column, days, 0, 1, top, bottom, width as f32);
+        Some(gdk::Rectangle::new(
+            x.round() as i32,
+            y.round() as i32,
+            w.round().max(1.0) as i32,
+            h.round().max(1.0) as i32,
+        ))
+    }
+
+    /// Marks (or clears) the span a drag across empty time or N covers
+    /// with a dashed ghost card, while quick create's popover is open.
+    pub fn show_ghost(&self, span: Option<(EpochMillis, EpochMillis)>) {
+        let imp = self.imp();
+        if let Some((widget, _)) = imp.ghost.take() {
+            imp.children.borrow_mut().retain(|(w, _)| w != &widget);
+            // `show`'s own refill may already have unparented it among
+            // the cards it swapped out.
+            if widget.parent().is_some() {
+                widget.unparent();
+            }
+        }
+        let Some(span) = span else {
+            self.queue_resize();
+            return;
+        };
+        let Some((column, top, bottom)) = imp.span_placement(span.0, span.1) else {
+            return;
+        };
+        let ghost = gtk::Box::builder()
+            .css_classes(["event-block", "ghost"])
+            .can_target(false)
+            .build();
+        let widget: gtk::Widget = ghost.upcast();
+        widget.set_parent(self);
+        imp.children.borrow_mut().push((
+            widget.clone(),
+            imp::Placement::Card {
+                column,
+                columns: imp.days.borrow().len(),
+                lane: 0,
+                lanes: 1,
+                top,
+                bottom,
+            },
+        ));
+        imp.ghost.replace(Some((widget, span)));
+        self.queue_resize();
+    }
+
+    /// A press at `x`, `y` on empty time, outside every card: the time it
+    /// falls on, snapped to a whole quarter hour. Left alone when the
+    /// press landed on a card, which the pick then answers with rather
+    /// than the grid itself.
+    fn note_cursor(&self, x: f64, y: f64) {
+        if self
+            .pick(x, y, gtk::PickFlags::DEFAULT)
+            .is_some_and(|picked| picked.upcast_ref::<gtk::Widget>() != self.upcast_ref::<gtk::Widget>())
+        {
+            return;
+        }
+        let imp = self.imp();
+        let days = imp.days.borrow();
+        let width = self.width() as f32;
+        let columns = days.len().max(1);
+        let column_width = (width - GUTTER) / columns as f32;
+        if column_width <= 0.0 || days.is_empty() {
+            return;
+        }
+        let column = (((x as f32 - GUTTER) / column_width).floor() as i64)
+            .clamp(0, days.len() as i64 - 1) as usize;
+        let day = days[column];
+        drop(days);
+        let hours = y / f64::from(HOUR);
+        let at = layout::instant_at(day, hours, &chrono::Local);
+        imp.cursor.set(Some(drag::selection(at, at).0));
     }
 
     /// Runs `f` when a card's own button is clicked, with the widget to
@@ -884,43 +1007,6 @@ impl TimeGrid {
         self.imp().carousel_interactive.replace(Some(Box::new(f)));
     }
 
-    /// Shows a ghost card for a drag across empty time, replacing any
-    /// shown before; `None` clears it. Task 8's quick create keeps it up
-    /// until its popover closes.
-    pub fn show_ghost(&self, span: Option<(EpochMillis, EpochMillis)>) {
-        let imp = self.imp();
-        for (widget, _) in imp.ghosts.borrow_mut().drain(..) {
-            widget.unparent();
-        }
-        let Some((start, end)) = span else {
-            self.queue_allocate();
-            return;
-        };
-        let days = imp.days.borrow();
-        let bounds = imp.bounds.borrow();
-        let mut ghosts = Vec::new();
-        for (column, day_start, day_end) in layout::clip_to_days(start, end, &bounds) {
-            let Some(midnight) = days.get(column).and_then(|d| d.and_hms_opt(0, 0, 0)) else {
-                continue;
-            };
-            let top = layout::wall_offset(day_start, midnight, &chrono::Local);
-            let bottom = layout::wall_offset(day_end, midnight, &chrono::Local);
-            let widget: gtk::Widget = gtk::Box::builder()
-                .css_classes(["event-block", "ghost"])
-                .build()
-                .upcast();
-            widget.set_parent(self);
-            ghosts.push((
-                widget,
-                imp::Placement::Card { column, columns: days.len(), lane: 0, lanes: 1, top, bottom },
-            ));
-        }
-        drop(days);
-        drop(bounds);
-        imp.ghosts.replace(ghosts);
-        self.queue_allocate();
-    }
-
     /// Returns the last dragged card to its own place, with no write, for
     /// a cancelled repeat question.
     pub fn spring_back(&self) {
@@ -959,11 +1045,10 @@ impl TimeGrid {
                 .blocks
                 .borrow()
                 .iter()
-                .find(|(_, w)| *w == current)
-                .map(|(key, w)| (key.clone(), w.clone()));
-            if let Some((key, widget)) = found {
-                let o = self.imp().occurrences.borrow().get(&key)?.clone();
-                return Some((widget, o));
+                .find(|(_, _, w)| *w == current)
+                .map(|(_, o, w)| (w.clone(), o.clone()));
+            if let Some(found) = found {
+                return Some(found);
             }
             if current == root {
                 return None;
@@ -1289,10 +1374,7 @@ impl TimeGrid {
             _ => return glib::Propagation::Proceed,
         };
         let imp = self.imp();
-        let Some(o) = self
-            .focused_key()
-            .and_then(|key| imp.occurrences.borrow().get(&key).cloned())
-        else {
+        let Some(o) = self.focused() else {
             return glib::Propagation::Proceed;
         };
         if !imp.can_move.borrow().as_ref().is_some_and(|f| f(&o)) {
@@ -1343,18 +1425,26 @@ fn connect_more_clicked(grid: &TimeGrid, button: &gtk::Button, hidden: Vec<Occur
 }
 
 /// The event whose block among `blocks` has the keyboard focus.
-pub fn focused_key(blocks: &[(EventKey, gtk::Widget)]) -> Option<EventKey> {
+pub fn focused_key(blocks: &[(EventKey, Occurrence, gtk::Widget)]) -> Option<EventKey> {
     blocks
         .iter()
-        .find(|(_, widget)| widget.has_focus())
-        .map(|(key, _)| key.clone())
+        .find(|(_, _, widget)| widget.has_focus())
+        .map(|(key, _, _)| key.clone())
 }
 
-fn find_block(blocks: &[(EventKey, gtk::Widget)], key: &EventKey) -> Option<gtk::Widget> {
+/// The occurrence whose block among `blocks` has the keyboard focus.
+pub fn focused_occurrence(blocks: &[(EventKey, Occurrence, gtk::Widget)]) -> Option<Occurrence> {
     blocks
         .iter()
-        .find(|(k, _)| k == key)
-        .map(|(_, widget)| widget.clone())
+        .find(|(_, _, widget)| widget.has_focus())
+        .map(|(_, o, _)| o.clone())
+}
+
+fn find_block(blocks: &[(EventKey, Occurrence, gtk::Widget)], key: &EventKey) -> Option<gtk::Widget> {
+    blocks
+        .iter()
+        .find(|(k, _, _)| k == key)
+        .map(|(_, _, widget)| widget.clone())
 }
 
 glib::wrapper! {
@@ -1414,7 +1504,7 @@ impl AllDayStrip {
             let card = EventBlock::new(o, colour, name, true, named_day, &chrono::Local).widget;
             connect_activated_strip(self, &card, o.clone());
             card.set_parent(self);
-            blocks.push((block::key_of(o), card.clone().upcast()));
+            blocks.push((block::key_of(o), o.clone(), card.clone().upcast()));
             children.push((card.upcast(), (start, end, p.lane)));
             rows = rows.max(p.lane + 1);
         }
@@ -1454,6 +1544,11 @@ impl AllDayStrip {
     /// The event whose block has the keyboard focus.
     pub fn focused_key(&self) -> Option<EventKey> {
         focused_key(&self.imp().blocks.borrow())
+    }
+
+    /// The occurrence whose block has the keyboard focus.
+    pub fn focused(&self) -> Option<Occurrence> {
+        focused_occurrence(&self.imp().blocks.borrow())
     }
 
     pub fn connect_event_activated(

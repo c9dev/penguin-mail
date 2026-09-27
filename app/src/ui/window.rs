@@ -424,8 +424,9 @@ impl MainWindow {
                 .max_sidebar_width(420.0)
                 .sidebar_width_fraction(0.34)
                 .build();
-            let (t, g, n) = (weak.clone(), weak.clone(), weak.clone());
+            let (t, g, n, a) = (weak.clone(), weak.clone(), weak.clone(), weak.clone());
             let (read_settings, change_settings) = (Rc::downgrade(app), Rc::downgrade(app));
+            let (contacts_app, push_app) = (Rc::downgrade(app), Rc::downgrade(app));
             let calendar = CalendarView::new(
                 Rc::clone(&app.core),
                 move || {
@@ -453,6 +454,22 @@ impl MainWindow {
                     needs_permission: Box::new(move |account_id| {
                         if let Some(win) = n.upgrade() {
                             win.ask_permission(account_id, Permission::Calendar, Occasion::Needed);
+                        }
+                    }),
+                    add_toast: Box::new(move |toast| {
+                        if let Some(win) = a.upgrade() {
+                            win.toasts.add_toast(toast);
+                        }
+                    }),
+                    contacts: Box::new(move || {
+                        contacts_app
+                            .upgrade()
+                            .map(|app| app.contacts())
+                            .unwrap_or_default()
+                    }),
+                    push: Box::new(move |account_id| {
+                        if let Some(app) = push_app.upgrade() {
+                            app.push_calendar(account_id);
                         }
                     }),
                 },

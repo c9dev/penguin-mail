@@ -40,19 +40,19 @@ where
         .unwrap_or_default()
 }
 
-/// When an occurrence runs, for the popover's time line: the date and the
-/// clock for a timed event, "All day" for one that lasts a single day,
-/// or the first and last day for one that spans several. An all-day
-/// event is dated from its own UTC date, never converted to local time,
-/// which would move it a day west of UTC.
-pub fn when_words<Z: TimeZone>(o: &Occurrence, zone: &Z) -> String
+/// When a span runs, for the popover's time line and quick create's time
+/// label: the date and the clock for a timed span, "All day" for one
+/// that lasts a single day, or the first and last day for one that spans
+/// several. An all-day span is dated from its own UTC date, never
+/// converted to local time, which would move it a day west of UTC.
+pub fn span_words<Z: TimeZone>(start: EpochMillis, end: EpochMillis, all_day: bool, zone: &Z) -> String
 where
     Z::Offset: std::fmt::Display,
 {
-    if o.event.all_day {
+    if all_day {
         let (Some(first), Some(last)) = (
-            utc_date(o.start),
-            utc_date(o.end).and_then(|d| d.checked_sub_days(Days::new(1))),
+            utc_date(start),
+            utc_date(end).and_then(|d| d.checked_sub_days(Days::new(1))),
         ) else {
             return String::new();
         };
@@ -65,12 +65,21 @@ where
         fill(
             &gettext("{date} · {start}–{end}"),
             &[
-                ("date", &full_date_words(local_date(o.start, zone))),
-                ("start", &clock_words(o.start, zone)),
-                ("end", &clock_words(o.end, zone)),
+                ("date", &full_date_words(local_date(start, zone))),
+                ("start", &clock_words(start, zone)),
+                ("end", &clock_words(end, zone)),
             ],
         )
     }
+}
+
+/// [`span_words`] of an occurrence's own start, end and all-day flag, for
+/// the popover's time line.
+pub fn when_words<Z: TimeZone>(o: &Occurrence, zone: &Z) -> String
+where
+    Z::Offset: std::fmt::Display,
+{
+    span_words(o.start, o.end, o.event.all_day, zone)
 }
 
 /// "Thursday 24 – Friday 25 September": the last day always carries its
