@@ -3632,12 +3632,8 @@ msgstr "Privado"
 msgid "Only people who can change this calendar see the details"
 msgstr "Só quem pode alterar este calendário vê os detalhes"
 
-#: app/src/ui/calendar/editor.rs:1189
-msgid "Colour"
-msgstr "Cor"
-
 #: app/src/ui/calendar/editor.rs:1191
-msgid "Calendar colour"
+msgid "Calendar color"
 msgstr "Cor do calendário"
 
 #: app/src/ui/calendar/editor.rs:1228
