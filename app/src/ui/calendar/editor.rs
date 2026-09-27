@@ -147,18 +147,6 @@ pub fn open(
         .child(&toolbar)
         .build();
     nav.add(&form_page);
-    // The Title field takes the focus each time the form shows, so Enter
-    // saves rather than pressing Cancel, the first button in the header.
-    // A guest's Title is insensitive and cannot take it; the focus then
-    // stays where the dialog puts it.
-    let weak = Rc::downgrade(&editor);
-    form_page.connect_shown(move |_| {
-        if let Some(this) = weak.upgrade()
-            && let Some(row) = this.title_row.borrow().as_ref()
-        {
-            row.grab_focus();
-        }
-    });
 
     // The Custom Repeat page is built once, here, and kept in the
     // NavigationView for the dialog's whole life (`nav.add`, never
@@ -222,6 +210,14 @@ pub fn open(
 
     dialog.set_default_widget(Some(&save));
     dialog.present(Some(parent));
+    // The dialog gives the focus to its first control, Cancel, once it
+    // shows; Title takes it instead, so typing names the event and Enter
+    // saves. A guest's Title is insensitive, so the focus stays put.
+    if let Some(row) = editor.title_row.borrow().as_ref()
+        && row.is_sensitive()
+    {
+        dialog.set_focus(Some(row));
+    }
 }
 
 impl Editor {
