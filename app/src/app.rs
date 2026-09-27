@@ -166,6 +166,19 @@ impl App {
         app.install_actions();
         app.listen();
         app.listen_for_notifications(picked);
+        // The tray's Quit and a session logout can end the process
+        // through the application without ever calling `App::quit`, so
+        // this is the one signal every way out fires. `Holding::drain`
+        // makes a second call, from the window's own close request, a
+        // no-op.
+        let weak = Rc::downgrade(&app);
+        gio_app.connect_shutdown(move |_| {
+            if let Some(app) = weak.upgrade()
+                && let Some(window) = app.window()
+            {
+                window.calendar.commit_all_now();
+            }
+        });
         if !app.core.demo {
             app.watch_for_tray_host();
         }
@@ -941,6 +954,28 @@ impl App {
                     }
                 }
                 Err(err) => tracing::warn!(%err, "could not read the calendars"),
+            }
+        });
+    }
+
+    /// Sends one account's queued calendar changes now rather than at
+    /// the next tick, then reloads the calendar so a pending mark clears
+    /// without waiting a minute. Offline, the queue waits for the
+    /// network to return, same as any other tick.
+    pub fn push_calendar(self: &Rc<Self>, account_id: AccountId) {
+        if !self.core.network() {
+            return;
+        }
+        let this = Rc::clone(self);
+        glib::spawn_future_local(async move {
+            let copy = this.core.calendar_copy();
+            match this.core.call(async move { copy.send(account_id).await }).await {
+                Ok(_turned_down) => {
+                    if let Some(window) = this.window() {
+                        window.calendar.reload();
+                    }
+                }
+                Err(err) => tracing::info!(%err, "calendar changes wait for the next try"),
             }
         });
     }

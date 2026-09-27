@@ -22,6 +22,10 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - Calendar events remind you with a notification before they start, with
   Join for video calls and Snooze for five minutes. Preferences can turn
   them off.
+- Edit or delete a calendar event you can change: open it and press the
+  pencil or the trash icon, or double-click it. Deleting offers Undo,
+  and changing or deleting one date of a repeating event asks which
+  occurrences it covers first.
 
 ### Improved
 

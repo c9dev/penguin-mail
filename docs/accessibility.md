@@ -101,12 +101,18 @@ buttons that act on it.
 In Day and Week, Tab passes the day headings first, each of which opens
 its day, then the all-day row, then the events, day by day and earliest
 first. A "N more" button sits among a day's events at the hour it
-starts. Enter opens the event with the focus, and the popover starts on
-your current answer when you are a guest. Escape closes it and gives
-the focus back to the event. Tab reaches only the range on screen: the
-ranges either side, kept ready for a swipe, are hidden from the
-keyboard and from screen readers. In a week or a month each event
-names its day, such as "Stand-up, Monday 21, 09:30 to 09:45, Work".
+starts. Space opens the event with the focus, and the popover starts on
+your current answer when you are a guest; Enter opens the editor
+instead, for an event the account may change as a whole, and otherwise
+opens the popover, same as Space. Escape closes the popover and gives
+the focus back to the event; the popover no longer auto-hides, so a
+press anywhere else in the window closes it the same way. Delete (and
+the numeric keypad's own Delete) takes the focused event off the grid
+at once and offers Undo, for an event the account may change as a
+whole. Tab reaches only the range on screen: the ranges either side,
+kept ready for a swipe, are hidden from the keyboard and from screen
+readers. In a week or a month each event names its day, such as
+"Stand-up, Monday 21, 09:30 to 09:45, Work".
 
 T goes to today; D, W and M switch to Day, Week and Month; Left and
 Right step to the previous or next range. After a change of view or
@@ -116,6 +122,13 @@ over the main window's search while the calendar shows. Every one of
 these gives way while a text field, such as search, has the focus. The
 main menu's Assistant item, and Ctrl+J, open the assistant in either
 space.
+
+A double click opens the popover on its first click and the editor on
+its second, for an event the account may change as a whole; on any
+other event the second click does nothing more, since the popover
+already answers it. Edit and Delete sit as two icons in the popover's
+title row, for the same events; an invitation the account only
+answers, such as the mockup draws, has neither.
 
 ## Checking it
 

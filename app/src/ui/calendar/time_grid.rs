@@ -235,8 +235,10 @@ mod imp {
     }
 
     type Activated = dyn Fn(&super::TimeGrid, &Occurrence, &gtk::Widget);
+    type Edited = dyn Fn(&super::TimeGrid, &Occurrence);
     type MoreClicked = dyn Fn(&super::TimeGrid, &[Occurrence], &gtk::Widget);
     type StripActivated = dyn Fn(&super::AllDayStrip, &Occurrence, &gtk::Widget);
+    type StripEdited = dyn Fn(&super::AllDayStrip, &Occurrence);
     type StripMoreClicked = dyn Fn(&super::AllDayStrip, &[Occurrence], &gtk::Widget);
     /// A strip card's start day, end day (exclusive) and lane.
     type StripPlacement = (usize, usize, usize);
@@ -250,9 +252,14 @@ mod imp {
         /// How far the parent scrolled window has scrolled the grid.
         pub scroll_top: Cell<f64>,
         pub activated: RefCell<Option<Box<Activated>>>,
+        /// Runs on a double click or Enter on a card, over the popover a
+        /// single click or Space opens.
+        pub edited: RefCell<Option<Box<Edited>>>,
         pub more_clicked: RefCell<Option<Box<MoreClicked>>>,
         /// Each block by the event it draws, cleared on every `show`.
         pub blocks: RefCell<Vec<(EventKey, gtk::Widget)>>,
+        /// Each card with the occurrence it draws, for [`super::TimeGrid::focused`].
+        pub occurrences: RefCell<Vec<(gtk::Widget, Occurrence)>>,
     }
 
     #[glib::object_subclass]
@@ -425,8 +432,11 @@ mod imp {
         pub days: Cell<usize>,
         pub rows: Cell<usize>,
         pub activated: RefCell<Option<Box<StripActivated>>>,
+        pub edited: RefCell<Option<Box<StripEdited>>>,
         pub more_clicked: RefCell<Option<Box<StripMoreClicked>>>,
         pub blocks: RefCell<Vec<(EventKey, gtk::Widget)>>,
+        /// Each card with the occurrence it draws, for [`super::AllDayStrip::focused`].
+        pub occurrences: RefCell<Vec<(gtk::Widget, Occurrence)>>,
     }
 
     #[glib::object_subclass]
@@ -568,6 +578,7 @@ impl TimeGrid {
 
         let mut children = Vec::new();
         let mut blocks = Vec::new();
+        let mut focusable = Vec::new();
         for (column, (&day, pieces)) in days.iter().zip(by_day.iter()).enumerate() {
             let Some(midnight) = day.and_hms_opt(0, 0, 0) else {
                 continue;
@@ -585,12 +596,14 @@ impl TimeGrid {
                 let top = layout::wall_offset(start, midnight, zone);
                 let bottom = layout::wall_offset(end, midnight, zone);
                 let named_day = (days.len() > 1).then_some(day);
-                let event_block = EventBlock::new(o, colour, name, compact, named_day, zone);
+                let on_edit = edit_closure(self, o.clone());
+                let event_block = EventBlock::new(o, colour, name, compact, named_day, zone, on_edit);
                 event_block.set_title_lines(title_lines(top, bottom));
                 let card = event_block.widget;
                 connect_activated(self, &card, o.clone());
                 card.set_parent(self);
                 blocks.push((block::key_of(o), card.clone().upcast()));
+                focusable.push((card.clone().upcast::<gtk::Widget>(), o.clone()));
                 in_day.push((
                     card.upcast(),
                     imp::Placement::Card {
@@ -637,7 +650,19 @@ impl TimeGrid {
             child.unparent();
         }
         imp.blocks.replace(blocks);
+        imp.occurrences.replace(focusable);
         self.queue_resize();
+    }
+
+    /// The occurrence of the card that has the keyboard focus, for the
+    /// Delete key.
+    pub fn focused(&self) -> Option<Occurrence> {
+        self.imp()
+            .occurrences
+            .borrow()
+            .iter()
+            .find(|(widget, _)| widget.has_focus())
+            .map(|(_, o)| o.clone())
     }
 
     /// Runs `f` when a card's own button is clicked, with the widget to
@@ -647,6 +672,12 @@ impl TimeGrid {
         f: impl Fn(&TimeGrid, &Occurrence, &gtk::Widget) + 'static,
     ) {
         self.imp().activated.replace(Some(Box::new(f)));
+    }
+
+    /// Runs `f` on a card's double click or Enter, which opens the
+    /// editor over the popover a single click or Space opens.
+    pub fn connect_event_edited(&self, f: impl Fn(&TimeGrid, &Occurrence) + 'static) {
+        self.imp().edited.replace(Some(Box::new(f)));
     }
 
     /// Runs `f` when a "+N" card is clicked, with the occurrences it hid
@@ -722,6 +753,18 @@ fn connect_activated(grid: &TimeGrid, card: &gtk::Button, occurrence: Occurrence
     });
 }
 
+/// The closure a card's double click or Enter runs, which reports
+/// `occurrence` through [`TimeGrid::connect_event_edited`].
+fn edit_closure(grid: &TimeGrid, occurrence: Occurrence) -> std::rc::Rc<dyn Fn()> {
+    let weak = grid.downgrade();
+    std::rc::Rc::new(move || {
+        let Some(grid) = weak.upgrade() else { return };
+        if let Some(f) = grid.imp().edited.borrow().as_ref() {
+            f(&grid, &occurrence);
+        }
+    })
+}
+
 fn connect_more_clicked(grid: &TimeGrid, button: &gtk::Button, hidden: Vec<Occurrence>) {
     let weak = grid.downgrade();
     button.connect_clicked(move |button| {
@@ -795,16 +838,19 @@ impl AllDayStrip {
 
         let mut children = Vec::new();
         let mut blocks = Vec::new();
+        let mut focusable = Vec::new();
         let mut rows = 0usize;
         for p in placed {
             let (occ_index, start, end) = spanning[p.index];
             let o = &occurrences[occ_index];
             let (colour, name) = calendar_of(o, calendars);
             let named_day = (days.len() > 1).then(|| days[start]);
-            let card = EventBlock::new(o, colour, name, true, named_day, &chrono::Local).widget;
+            let on_edit = edit_closure_strip(self, o.clone());
+            let card = EventBlock::new(o, colour, name, true, named_day, &chrono::Local, on_edit).widget;
             connect_activated_strip(self, &card, o.clone());
             card.set_parent(self);
             blocks.push((block::key_of(o), card.clone().upcast()));
+            focusable.push((card.clone().upcast::<gtk::Widget>(), o.clone()));
             children.push((card.upcast(), (start, end, p.lane)));
             rows = rows.max(p.lane + 1);
         }
@@ -828,7 +874,19 @@ impl AllDayStrip {
         imp.rows.set(rows);
         imp.children.replace(children);
         imp.blocks.replace(blocks);
+        imp.occurrences.replace(focusable);
         self.queue_resize();
+    }
+
+    /// The occurrence of the card that has the keyboard focus, for the
+    /// Delete key.
+    pub fn focused(&self) -> Option<Occurrence> {
+        self.imp()
+            .occurrences
+            .borrow()
+            .iter()
+            .find(|(widget, _)| widget.has_focus())
+            .map(|(_, o)| o.clone())
     }
 
     /// The block drawing `key`, when the strip shows it.
@@ -853,6 +911,12 @@ impl AllDayStrip {
         self.imp().activated.replace(Some(Box::new(f)));
     }
 
+    /// Runs `f` on a card's double click or Enter, which opens the
+    /// editor over the popover a single click or Space opens.
+    pub fn connect_event_edited(&self, f: impl Fn(&AllDayStrip, &Occurrence) + 'static) {
+        self.imp().edited.replace(Some(Box::new(f)));
+    }
+
     pub fn connect_more_clicked(
         &self,
         f: impl Fn(&AllDayStrip, &[Occurrence], &gtk::Widget) + 'static,
@@ -869,6 +933,18 @@ fn connect_activated_strip(strip: &AllDayStrip, card: &gtk::Button, occurrence: 
             f(&strip, &occurrence, button.upcast_ref());
         }
     });
+}
+
+/// The closure a strip card's double click or Enter runs, which reports
+/// `occurrence` through [`AllDayStrip::connect_event_edited`].
+fn edit_closure_strip(strip: &AllDayStrip, occurrence: Occurrence) -> std::rc::Rc<dyn Fn()> {
+    let weak = strip.downgrade();
+    std::rc::Rc::new(move || {
+        let Some(strip) = weak.upgrade() else { return };
+        if let Some(f) = strip.imp().edited.borrow().as_ref() {
+            f(&strip, &occurrence);
+        }
+    })
 }
 
 fn connect_more_clicked_strip(strip: &AllDayStrip, button: &gtk::Button, hidden: Vec<Occurrence>) {

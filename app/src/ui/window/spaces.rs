@@ -154,6 +154,7 @@ impl MainWindow {
             CalendarKey::Previous => calendar.step(-1),
             CalendarKey::Next => calendar.step(1),
             CalendarKey::Search => calendar.focus_search(),
+            CalendarKey::Delete => calendar.delete_focused(),
         }
         glib::Propagation::Stop
     }

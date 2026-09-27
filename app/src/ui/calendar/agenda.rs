@@ -537,6 +537,13 @@ impl Agenda {
     pub fn connect_scrolled_to_top(&self, f: impl Fn() + 'static) {
         self.scrolled_to_top.replace(Some(Box::new(f)));
     }
+
+    /// The occurrence of the row that has the keyboard focus, for the
+    /// Delete key. `None` for now: the list virtualises its rows, and
+    /// nothing here yet answers which one the focus landed on.
+    pub fn focused(&self) -> Option<Occurrence> {
+        None
+    }
 }
 
 #[cfg(test)]

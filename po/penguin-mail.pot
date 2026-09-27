@@ -218,7 +218,7 @@ msgstr ""
 msgid "Penguin Mail needs the password for {address} again."
 msgstr ""
 
-#: app/src/app.rs:316
+#: app/src/app.rs:329
 msgid ""
 "Your preferences could not be read, so Penguin Mail started from the "
 "defaults. The old file is kept as {file}."
@@ -1102,27 +1102,27 @@ msgstr ""
 msgid "Penguin Mail could not update its mail store, and kept the old one."
 msgstr ""
 
-#: app/src/core.rs:679 app/src/core.rs:764
+#: app/src/core.rs:683 app/src/core.rs:768
 msgid "Demo mode cannot add real accounts."
 msgstr ""
 
-#: app/src/core.rs:683
+#: app/src/core.rs:687
 msgid ""
 "This copy of Penguin Mail was built without Google sign-in. Get a release "
 "from github.com/c9dev/penguin-mail/releases."
 msgstr ""
 
-#: app/src/core.rs:701
+#: app/src/core.rs:705
 msgid "Gave up waiting for the browser after five minutes."
 msgstr ""
 
-#: app/src/core.rs:706
+#: app/src/core.rs:710
 msgid ""
 "Penguin Mail cannot work without access to your mail. Sign in again and "
 "leave the Gmail permission ticked."
 msgstr ""
 
-#: app/src/core.rs:716
+#: app/src/core.rs:720
 msgid "You signed in as {account}. Choose {wanted} to reconnect that account."
 msgstr ""
 
@@ -1371,10 +1371,10 @@ msgstr ""
 msgid "Mark as Read"
 msgstr ""
 
-#: app/src/notify.rs:51 app/src/ui/conversation.rs:461
-#: app/src/ui/hide_my_email.rs:288 app/src/ui/queued.rs:58
-#: app/src/ui/templates.rs:149 app/src/ui/window/arrange.rs:92
-#: app/src/ui/window/organize.rs:142
+#: app/src/notify.rs:51 app/src/ui/calendar/popover.rs:154
+#: app/src/ui/conversation.rs:461 app/src/ui/hide_my_email.rs:288
+#: app/src/ui/queued.rs:58 app/src/ui/templates.rs:149
+#: app/src/ui/window/arrange.rs:92 app/src/ui/window/organize.rs:142
 msgid "Delete"
 msgstr ""
 
@@ -1397,7 +1397,7 @@ msgstr ""
 msgid "From {senders}"
 msgstr ""
 
-#: app/src/notify.rs:195 app/src/ui/window.rs:2227
+#: app/src/notify.rs:195 app/src/ui/window.rs:2237
 msgid "Open"
 msgstr ""
 
@@ -1974,7 +1974,7 @@ msgstr ""
 msgid "Could not save: {reason}"
 msgstr ""
 
-#: app/src/protection/draft.rs:200 app/src/ui/window.rs:2145
+#: app/src/protection/draft.rs:200 app/src/ui/window.rs:2155
 msgid "Could not open the draft: {reason}"
 msgstr ""
 
@@ -2203,7 +2203,7 @@ msgstr ""
 #. The calendar's header has no room for the assistant's button,
 #. so the menu both spaces share offers it, with its key.
 #: app/src/settings/mod.rs:203 app/src/ui/assistant.rs:99
-#: app/src/ui/window.rs:2613
+#: app/src/ui/window.rs:2627
 msgid "Assistant"
 msgstr ""
 
@@ -2500,7 +2500,7 @@ msgstr ""
 msgid "New Message"
 msgstr ""
 
-#: app/src/tray.rs:159 app/src/ui/sidebar.rs:906 app/src/ui/window.rs:2616
+#: app/src/tray.rs:159 app/src/ui/sidebar.rs:906 app/src/ui/window.rs:2630
 msgid "Check for Mail"
 msgstr ""
 
@@ -2518,8 +2518,8 @@ msgstr ""
 msgid "Check for Updates"
 msgstr ""
 
-#: app/src/tray.rs:175 app/src/ui/window.rs:2628
-#: app/src/ui/window/shortcuts.rs:565
+#: app/src/tray.rs:175 app/src/ui/window.rs:2642
+#: app/src/ui/window/shortcuts.rs:575
 msgid "Quit"
 msgstr ""
 
@@ -2545,7 +2545,7 @@ msgstr ""
 msgid "License"
 msgstr ""
 
-#: app/src/ui/about.rs:170 app/src/ui/window.rs:2627
+#: app/src/ui/about.rs:170 app/src/ui/window.rs:2641
 msgid "About Penguin Mail"
 msgstr ""
 
@@ -2633,7 +2633,7 @@ msgid "Signing In…"
 msgstr ""
 
 #: app/src/ui/add_account.rs:634 app/src/ui/add_account.rs:903
-#: app/src/ui/window.rs:963
+#: app/src/ui/window.rs:973
 msgid "Sign In"
 msgstr ""
 
@@ -2823,7 +2823,7 @@ msgstr ""
 msgid "Use {server}"
 msgstr ""
 
-#: app/src/ui/assistant_mcp_prefs.rs:111
+#: app/src/ui/assistant_mcp_prefs.rs:111 app/src/ui/calendar/popover.rs:147
 msgid "Edit"
 msgstr ""
 
@@ -2832,7 +2832,7 @@ msgid "Edit {server}"
 msgstr ""
 
 #: app/src/ui/assistant_mcp_prefs.rs:121 app/src/ui/composer/mod.rs:1413
-#: app/src/ui/composer/recipients.rs:304 app/src/ui/window.rs:2425
+#: app/src/ui/composer/recipients.rs:304 app/src/ui/window.rs:2435
 msgid "Remove"
 msgstr ""
 
@@ -2915,11 +2915,11 @@ msgid "Add"
 msgstr ""
 
 #: app/src/ui/assistant_mcp_prefs.rs:347 app/src/ui/calendar/editor.rs:95
-#: app/src/ui/composer/mod.rs:1245 app/src/ui/composer/mod.rs:1314
-#: app/src/ui/composer/mod.rs:1632 app/src/ui/composer/mod.rs:1926
-#: app/src/ui/confirm.rs:29 app/src/ui/smart_editor.rs:150
-#: app/src/ui/templates.rs:239 app/src/ui/unsubscribe.rs:95
-#: app/src/ui/vacation.rs:45 app/src/ui/when.rs:52
+#: app/src/ui/calendar/scope.rs:17 app/src/ui/composer/mod.rs:1245
+#: app/src/ui/composer/mod.rs:1314 app/src/ui/composer/mod.rs:1632
+#: app/src/ui/composer/mod.rs:1926 app/src/ui/confirm.rs:29
+#: app/src/ui/smart_editor.rs:150 app/src/ui/templates.rs:239
+#: app/src/ui/unsubscribe.rs:95 app/src/ui/vacation.rs:45 app/src/ui/when.rs:52
 #: app/src/ui/window/arrange.rs:132 app/src/ui/window/images.rs:101
 #: app/src/ui/window/organize.rs:56 app/src/ui/window/organize.rs:105
 msgid "Cancel"
@@ -3245,35 +3245,35 @@ msgstr ""
 msgid "Nothing earlier on this computer"
 msgstr ""
 
-#: app/src/ui/calendar/block.rs:259
+#: app/src/ui/calendar/block.rs:290
 msgid "Waiting to be sent"
 msgstr ""
 
-#: app/src/ui/calendar/block.rs:262 app/src/ui/calendar/popover.rs:333
+#: app/src/ui/calendar/block.rs:293 app/src/ui/calendar/popover.rs:444
 msgid "Not answered yet"
 msgstr ""
 
-#: app/src/ui/calendar/block.rs:263
+#: app/src/ui/calendar/block.rs:294
 msgid "Declined"
 msgstr ""
 
-#: app/src/ui/calendar/block.rs:308
+#: app/src/ui/calendar/block.rs:339
 msgid "{start}–{end}"
 msgstr ""
 
-#: app/src/ui/calendar/block.rs:342
+#: app/src/ui/calendar/block.rs:373
 msgid "{title}, {day}"
 msgstr ""
 
-#: app/src/ui/calendar/block.rs:349
+#: app/src/ui/calendar/block.rs:380
 msgid "{title}, all day, {calendar}"
 msgstr ""
 
-#: app/src/ui/calendar/block.rs:354
+#: app/src/ui/calendar/block.rs:385
 msgid "{title}, {start} to {end}, {calendar}"
 msgstr ""
 
-#: app/src/ui/calendar/editor.rs:86 app/src/ui/calendar/mod.rs:261
+#: app/src/ui/calendar/editor.rs:86 app/src/ui/calendar/mod.rs:289
 msgid "New Event"
 msgstr ""
 
@@ -3560,65 +3560,90 @@ msgstr ""
 msgid "{name}, {address}"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:253
+#: app/src/ui/calendar/mod.rs:281
 msgid "View"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:264 app/src/ui/calendar/mod.rs:266
+#: app/src/ui/calendar/mod.rs:292 app/src/ui/calendar/mod.rs:294
 msgid "Search the Calendar (Ctrl+F)"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:269 app/src/ui/calendar/mod.rs:272
+#: app/src/ui/calendar/mod.rs:297 app/src/ui/calendar/mod.rs:300
 msgid "Show Calendars"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:288 app/src/ui/calendar/mod.rs:290
+#: app/src/ui/calendar/mod.rs:316 app/src/ui/calendar/mod.rs:318
 msgid "Search the Calendar"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:718
+#: app/src/ui/calendar/mod.rs:749
 msgid "List"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:719
+#: app/src/ui/calendar/mod.rs:750
 msgid "Day"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:720
+#: app/src/ui/calendar/mod.rs:751
 msgid "Week"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:721
+#: app/src/ui/calendar/mod.rs:752
 msgid "Month"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:907
+#: app/src/ui/calendar/mod.rs:944
 msgid "All-day events"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:909
+#: app/src/ui/calendar/mod.rs:946
 msgid "All-day"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:1183 app/src/ui/calendar/mod.rs:1665
+#: app/src/ui/calendar/mod.rs:1232 app/src/ui/calendar/mod.rs:2081
 #: app/src/ui/calendar/sidebar.rs:110
 msgid "%a"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:1462
+#: app/src/ui/calendar/mod.rs:1639
+msgid "Could not save the event: {reason}"
+msgstr ""
+
+#: app/src/ui/calendar/mod.rs:1672
+msgid "Deleted “{title}”"
+msgstr ""
+
+#: app/src/ui/calendar/mod.rs:1675
+msgid "Could not delete the event: {reason}"
+msgstr ""
+
+#: app/src/ui/calendar/mod.rs:1713
+msgid "Moved “{title}”"
+msgstr ""
+
+#: app/src/ui/calendar/mod.rs:1721
+msgid "Could not move the event: {reason}"
+msgstr ""
+
+#: app/src/ui/calendar/mod.rs:1743 app/src/ui/window.rs:1803
+#: app/src/ui/window/scheduled.rs:21 app/src/ui/window/shortcuts.rs:444
+msgid "Undo"
+msgstr ""
+
+#: app/src/ui/calendar/mod.rs:1869
 msgid "Could not send your answer: {reason}"
 msgstr ""
 
-#: app/src/ui/calendar/popover.rs:135
+#: app/src/ui/calendar/popover.rs:172
 msgid "Open in Maps"
 msgstr ""
 
-#: app/src/ui/calendar/popover.rs:155 app/src/ui/calendar/popover.rs:335
+#: app/src/ui/calendar/popover.rs:192 app/src/ui/calendar/popover.rs:446
 #: app/src/ui/invitation.rs:188
 msgid "Answer"
 msgstr ""
 
-#: app/src/ui/calendar/popover.rs:345
+#: app/src/ui/calendar/popover.rs:456
 msgid "Your answer"
 msgstr ""
 
@@ -3648,6 +3673,26 @@ msgstr ""
 
 #: app/src/ui/calendar/range.rs:184
 msgid "W{week}"
+msgstr ""
+
+#: app/src/ui/calendar/scope.rs:15
+msgid "Change a repeating event"
+msgstr ""
+
+#: app/src/ui/calendar/scope.rs:15
+msgid "Delete a repeating event"
+msgstr ""
+
+#: app/src/ui/calendar/scope.rs:20
+msgid "This event only"
+msgstr ""
+
+#: app/src/ui/calendar/scope.rs:21
+msgid "This and following events"
+msgstr ""
+
+#: app/src/ui/calendar/scope.rs:22
+msgid "All events"
 msgstr ""
 
 #: app/src/ui/calendar/shown.rs:78
@@ -3684,7 +3729,7 @@ msgstr ""
 
 #: app/src/ui/calendar/sidebar.rs:383 app/src/ui/contacts_prefs.rs:228
 #: app/src/ui/permission.rs:41 app/src/ui/permission.rs:64
-#: app/src/ui/window.rs:1032
+#: app/src/ui/window.rs:1042
 msgid "Grant Access"
 msgstr ""
 
@@ -4591,7 +4636,7 @@ msgstr ""
 msgid "Allow Hide My Email"
 msgstr ""
 
-#: app/src/ui/hide_my_email.rs:329 app/src/ui/window.rs:2710
+#: app/src/ui/hide_my_email.rs:329 app/src/ui/window.rs:2724
 msgid "Add an account first"
 msgstr ""
 
@@ -5360,7 +5405,7 @@ msgstr ""
 msgid "Rules…"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:834 app/src/ui/window.rs:2619
+#: app/src/ui/sidebar.rs:834 app/src/ui/window.rs:2633
 msgid "Hide My Email…"
 msgstr ""
 
@@ -5720,7 +5765,7 @@ msgstr ""
 msgid "%a, %-d %b %Y"
 msgstr ""
 
-#: app/src/ui/welcome.rs:20 app/src/ui/window.rs:2353
+#: app/src/ui/welcome.rs:20 app/src/ui/window.rs:2363
 msgid "Sign In with Google"
 msgstr ""
 
@@ -5909,137 +5954,132 @@ msgstr[1] ""
 msgid "Penguin Mail (Demo)"
 msgstr ""
 
-#: app/src/ui/window.rs:906
+#: app/src/ui/window.rs:916
 msgid "Could not read accounts: {reason}"
 msgstr ""
 
-#: app/src/ui/window.rs:960
+#: app/src/ui/window.rs:970
 msgid "Sign in again to keep {account} syncing"
 msgstr ""
 
-#: app/src/ui/window.rs:1633
+#: app/src/ui/window.rs:1643
 msgid "Could not delete the mail: {reason}"
 msgstr ""
 
-#: app/src/ui/window.rs:1703
+#: app/src/ui/window.rs:1713
 msgid "Turn On the {service}"
 msgstr ""
 
-#: app/src/ui/window.rs:1706
+#: app/src/ui/window.rs:1716
 msgid ""
 "The Google Cloud project Penguin Mail signs in with has the {service} "
 "switched off, so Google refuses before it can ask for your permission. Turn "
 "it on, wait a minute, and try again."
 msgstr ""
 
-#: app/src/ui/window.rs:1712
+#: app/src/ui/window.rs:1722
 msgid "Open Google Cloud"
 msgstr ""
 
-#: app/src/ui/window.rs:1793 app/src/ui/window/scheduled.rs:21
-#: app/src/ui/window/shortcuts.rs:444
-msgid "Undo"
-msgstr ""
-
-#: app/src/ui/window.rs:1814
+#: app/src/ui/window.rs:1824
 msgid "Nothing to undo"
 msgstr ""
 
-#: app/src/ui/window.rs:1820
+#: app/src/ui/window.rs:1830
 msgid "{action} undone"
 msgstr ""
 
-#: app/src/ui/window.rs:2092
+#: app/src/ui/window.rs:2102
 msgid "Could not include {file}: {reason}"
 msgstr ""
 
-#: app/src/ui/window.rs:2203
+#: app/src/ui/window.rs:2213
 msgid "Downloading {file}…"
 msgstr ""
 
-#: app/src/ui/window.rs:2224 app/src/ui/window/attachments.rs:229
+#: app/src/ui/window.rs:2234 app/src/ui/window/attachments.rs:229
 msgid "Saved {file} to Downloads"
 msgstr ""
 
-#: app/src/ui/window.rs:2242 app/src/ui/window/attachments.rs:234
+#: app/src/ui/window.rs:2252 app/src/ui/window/attachments.rs:234
 msgid "Could not save {file}: {reason}"
 msgstr ""
 
-#: app/src/ui/window.rs:2270
+#: app/src/ui/window.rs:2280
 msgid "{account} is signed in again."
 msgstr ""
 
-#: app/src/ui/window.rs:2305 app/src/ui/window.rs:2340
+#: app/src/ui/window.rs:2315 app/src/ui/window.rs:2350
 msgid "Added {account}. Downloading mail…"
 msgstr ""
 
-#: app/src/ui/window.rs:2331
+#: app/src/ui/window.rs:2341
 msgid "Waiting for Your Browser…"
 msgstr ""
 
-#: app/src/ui/window.rs:2334
+#: app/src/ui/window.rs:2344
 msgid "Continue in your browser"
 msgstr ""
 
-#: app/src/ui/window.rs:2364
+#: app/src/ui/window.rs:2374
 msgid "This copy of Penguin Mail was built without Google sign-in."
 msgstr ""
 
-#: app/src/ui/window.rs:2366
+#: app/src/ui/window.rs:2376
 msgid "Get a Release"
 msgstr ""
 
-#: app/src/ui/window.rs:2418
+#: app/src/ui/window.rs:2428
 msgid "Remove {account}?"
 msgstr ""
 
-#: app/src/ui/window.rs:2422
+#: app/src/ui/window.rs:2432
 msgid ""
 "Its downloaded mail and saved sign-in are deleted from this computer. "
 "Nothing changes in Gmail."
 msgstr ""
 
-#: app/src/ui/window.rs:2438
+#: app/src/ui/window.rs:2448
 msgid "Removed {account}"
 msgstr ""
 
-#: app/src/ui/window.rs:2440
+#: app/src/ui/window.rs:2450
 msgid "Could not remove {account}: {reason}"
 msgstr ""
 
-#: app/src/ui/window.rs:2604
+#: app/src/ui/window.rs:2618
 msgid "Show Declined Events"
 msgstr ""
 
-#: app/src/ui/window.rs:2617
+#: app/src/ui/window.rs:2631
 msgid "Add Account…"
 msgstr ""
 
-#: app/src/ui/window.rs:2618
+#: app/src/ui/window.rs:2632
 msgid "New Smart Mailbox…"
 msgstr ""
 
-#: app/src/ui/window.rs:2625 app/src/ui/window/shortcuts.rs:542
+#: app/src/ui/window.rs:2639 app/src/ui/window/shortcuts.rs:552
 msgid "Preferences"
 msgstr ""
 
-#: app/src/ui/window.rs:2626
+#: app/src/ui/window.rs:2640
 msgid "Keyboard Shortcuts"
 msgstr ""
 
-#: app/src/ui/window.rs:2634 app/src/ui/window.rs:2636
+#: app/src/ui/window.rs:2648 app/src/ui/window.rs:2650
 msgid "Main Menu"
 msgstr ""
 
-#: app/src/ui/window.rs:2924
+#: app/src/ui/window.rs:2938
 msgid "Open a message from the person first"
 msgstr ""
 
-#: app/src/ui/window.rs:2995
+#: app/src/ui/window.rs:3009
 msgid "Penguin Mail shows the new language after a restart"
 msgstr ""
 
-#: app/src/ui/window.rs:2997 app/src/update/mod.rs:130
+#: app/src/ui/window.rs:3011 app/src/update/mod.rs:130
 msgid "Restart"
 msgstr ""
 
@@ -6677,26 +6717,34 @@ msgid "Previous or next"
 msgstr ""
 
 #: app/src/ui/window/shortcuts.rs:532
-msgid "Open the event"
+msgid "Edit the event"
 msgstr ""
 
 #: app/src/ui/window/shortcuts.rs:537
-msgid "Search the calendar"
+msgid "Show the event"
+msgstr ""
+
+#: app/src/ui/window/shortcuts.rs:542
+msgid "Delete the event, with Undo"
 msgstr ""
 
 #: app/src/ui/window/shortcuts.rs:547
-msgid "Keyboard shortcuts"
-msgstr ""
-
-#: app/src/ui/window/shortcuts.rs:552
-msgid "Show or hide the assistant"
+msgid "Search the calendar"
 msgstr ""
 
 #: app/src/ui/window/shortcuts.rs:557
+msgid "Keyboard shortcuts"
+msgstr ""
+
+#: app/src/ui/window/shortcuts.rs:562
+msgid "Show or hide the assistant"
+msgstr ""
+
+#: app/src/ui/window/shortcuts.rs:567
 msgid "Close window"
 msgstr ""
 
-#: app/src/ui/window/shortcuts.rs:721
+#: app/src/ui/window/shortcuts.rs:733
 msgid "Checking for mail"
 msgstr ""
 
@@ -6708,7 +6756,7 @@ msgstr ""
 msgid "Your change to “{title}” was not saved: {reason}"
 msgstr ""
 
-#: app/src/ui/window/spaces.rs:232
+#: app/src/ui/window/spaces.rs:233
 msgid "Show Event"
 msgstr ""
 
