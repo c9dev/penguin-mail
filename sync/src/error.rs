@@ -93,6 +93,10 @@ pub enum SyncError {
     UnknownAccount(AccountId),
     #[error("there is no label called {0}")]
     NoLabel(String),
+    /// A new event named a calendar the account cannot write to, or one
+    /// the copy does not hold.
+    #[error("there is no calendar {0} to put the event on")]
+    NoCalendar(String),
     #[error("could not write the message: {0}")]
     Mime(String),
     #[error("{0} is not an email address")]
