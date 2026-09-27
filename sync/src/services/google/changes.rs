@@ -45,7 +45,11 @@ impl<G: GmailApi> Google<G> {
         };
         let start = GmailState::read(since)?.history_id;
         let mut changes = Vec::new();
-        let mut latest;
+        // A page's historyId can lag the one before it, as a reply from a
+        // replica behind the others would. Keep the highest seen rather
+        // than the last page's, so a lagging final page cannot push the
+        // saved cursor behind history already read and kept.
+        let mut latest = start;
         let mut page_token: Option<String> = None;
         loop {
             let page = match paced(self.gmail.history(start, page_token.as_deref())).await {
@@ -57,7 +61,7 @@ impl<G: GmailApi> Google<G> {
                 Err(err) => return Err(err.into()),
             };
             changes.extend(page.changes.into_iter().flat_map(neutral));
-            latest = page.history_id;
+            latest = latest.max(page.history_id);
             match page.next_page_token {
                 Some(token) => page_token = Some(token),
                 None => break,
@@ -187,5 +191,50 @@ mod tests {
                 .await,
             Err(BackendError::StateLost)
         ));
+    }
+
+    #[tokio::test]
+    async fn a_later_page_reporting_an_older_history_id_does_not_move_the_saved_cursor_back() {
+        let (gmail, google) = google();
+        gmail.seed(meta("a", "t1", 0, &[]));
+        gmail.seed(meta("b", "t2", 0, &[]));
+        gmail.seed(meta("c", "t3", 0, &[]));
+        let start = google.changes(None).await.unwrap().state;
+        // Three changes at the fake's page size of two force a second
+        // page, which `regress_history_id` then answers with a historyId
+        // behind the first page's, as a lagging replica would.
+        gmail.remote_relabel("a", &["INBOX"], &[]);
+        gmail.remote_relabel("b", &["INBOX"], &[]);
+        gmail.remote_relabel("c", &["INBOX"], &[]);
+        gmail.regress_history_id();
+
+        let found = google.changes(Some(&start)).await.unwrap();
+
+        assert_eq!(
+            found.changes,
+            [
+                RemoteChange::Gained {
+                    id: "a".into(),
+                    thread_id: "t1".into(),
+                    memberships: vec![Membership::Mailbox("INBOX".into())],
+                },
+                RemoteChange::Gained {
+                    id: "b".into(),
+                    thread_id: "t2".into(),
+                    memberships: vec![Membership::Mailbox("INBOX".into())],
+                },
+                RemoteChange::Gained {
+                    id: "c".into(),
+                    thread_id: "t3".into(),
+                    memberships: vec![Membership::Mailbox("INBOX".into())],
+                },
+            ],
+            "no change from any page, including the one behind an older historyId, goes missing"
+        );
+        assert_eq!(
+            found.state,
+            SyncState::new("{\"history_id\":103}"),
+            "the saved cursor holds the highest historyId seen, not the last page's lower one"
+        );
     }
 }
