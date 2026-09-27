@@ -587,6 +587,18 @@ CREATE TABLE event_reminders_shown (
     PRIMARY KEY (account_id, calendar, event, starts_at, minutes)
 );
 "#,
+    // A held change waiting on its Undo toast, not yet in
+    // `calendar_changes`. Only one change is held at a time, so
+    // `account_id` alone is the key; a crash or a quit before the toast
+    // closes leaves the row for the next start to queue, since no toast
+    // survives to close over it. `steps` is Task 1's `series::Step`, as
+    // JSON.
+    r#"
+CREATE TABLE calendar_holds (
+    account_id INTEGER PRIMARY KEY REFERENCES accounts(id) ON DELETE CASCADE,
+    steps      TEXT NOT NULL
+);
+"#,
 ];
 
 /// How long the copy taken before a migration stays once the store has

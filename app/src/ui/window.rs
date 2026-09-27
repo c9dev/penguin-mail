@@ -245,7 +245,7 @@ const RELEASES: &str = "https://github.com/c9dev/penguin-mail/releases";
 
 /// A toast's title as Pango markup. A toast reads its title as markup, so
 /// a label called "R&D" would otherwise show nothing at all.
-fn toast_title(text: &str) -> glib::GString {
+pub(crate) fn toast_title(text: &str) -> glib::GString {
     glib::markup_escape_text(text)
 }
 
@@ -2607,6 +2607,10 @@ impl MainWindow {
             {
                 win.conversation.stop_rendering();
                 win.previews.forget_decrypted();
+                // A held calendar change whose Undo toast is still up
+                // must not vanish with the window: nothing else would
+                // queue it (AGENTS.md "Late answers", carried from Task 4).
+                win.calendar.commit_all_now();
                 app.forget_window(&win);
             }
             glib::Propagation::Proceed

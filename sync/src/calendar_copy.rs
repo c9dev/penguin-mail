@@ -700,6 +700,10 @@ impl<A: Accounts> CalendarCopy<A> {
                         }
                     }
                 }
+                // Persisted in the same transaction as the rows above, so
+                // a crash or a quit before the Undo toast closes still
+                // has this change to queue at the next start.
+                store::save_holding(c, account_id, &writes)?;
                 Ok(before)
             })
             .await?;
@@ -744,10 +748,23 @@ impl<A: Accounts> CalendarCopy<A> {
                         store::remove_events(c, account_id, &calendar, std::slice::from_ref(&id))?;
                     }
                 }
-                store::save_events(c, account_id, &before, now)
+                store::save_events(c, account_id, &before, now)?;
+                store::clear_holding(c, account_id)?;
+                Ok(())
             })
             .await?;
         Ok(())
+    }
+
+    /// Whether `held` is still the one change waiting on its Undo toast.
+    /// A hold, commit or revert already under way answers `true`, so as
+    /// not to say a change already gone before its own write lands. The
+    /// view polls this while a toast is up: an assistant edit made
+    /// through [`apply`](Self::apply) commits the change waiting before
+    /// it, same as holding a new one does, and the view then closes its
+    /// toast instead of leaving an Undo that would do nothing.
+    pub fn still_waiting(&self, held: &Held) -> bool {
+        self.waiting.try_lock().map(|w| w.as_ref().is_some_and(|w| w.serial == held.serial)).unwrap_or(true)
     }
 
     /// Writes `steps` and queues them at once, for a change with no Undo
@@ -768,6 +785,22 @@ impl<A: Accounts> CalendarCopy<A> {
             Some(held) => self.queue_held(held).await,
             None => Ok(()),
         }
+    }
+
+    /// Queues every change a hold left waiting when this run last
+    /// stopped: no Undo toast survived a crash or a quit to close over
+    /// it, so there is nothing left to revert, only to send. Call once at
+    /// start, before the first read or send touches an account.
+    pub async fn recover_holds(&self) -> Result<(), SyncError> {
+        let found = self.db.read(store::holdings).await?;
+        for (account_id, steps) in found {
+            if steps.is_empty() {
+                continue;
+            }
+            let serial = self.serial.fetch_add(1, Ordering::Relaxed);
+            self.queue_held(Held { account_id, steps, before: Vec::new(), serial }).await?;
+        }
+        Ok(())
     }
 
     /// Queues a held change's steps and releases its rows to reads. A new
@@ -807,6 +840,7 @@ impl<A: Accounts> CalendarCopy<A> {
                         }
                     }
                 }
+                store::clear_holding(c, account_id)?;
                 Ok(())
             })
             .await?;

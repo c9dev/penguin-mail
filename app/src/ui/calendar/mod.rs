@@ -16,11 +16,13 @@ pub mod block;
 pub mod draft;
 pub mod drag;
 pub mod editor;
+pub mod holding;
 pub mod layout;
 pub mod month;
 pub mod popover;
 pub mod quick;
 pub mod range;
+pub mod scope;
 pub mod shown;
 pub mod sidebar;
 pub mod time_grid;
@@ -37,10 +39,11 @@ use gtk::{gdk, glib};
 use mailrs_domain::calendar::series;
 use mailrs_domain::calendar::{Access, Calendar, Occurrence};
 use mailrs_domain::invitation::Answer;
-use mailrs_domain::translate::{date_locale, gettext, with_reason};
+use mailrs_domain::translate::{date_locale, fill, gettext, with_reason};
 use mailrs_domain::{Account, AccountId, EpochMillis};
 use mailrs_store::calendar::{self as store, CalendarScope};
 use mailrs_sync::Permitted;
+use mailrs_sync::calendar_copy::Held;
 use mailrs_sync::{Offers, Withheld};
 
 use crate::core::Core;
@@ -49,6 +52,7 @@ use crate::ui::autocomplete::Contacts;
 use agenda::Agenda;
 use block::{EventKey, key_of};
 use draft::Draft;
+use holding::Holding;
 use month::MonthGrid;
 use popover::EventPopover;
 use quick::Quick;
@@ -77,13 +81,13 @@ pub struct Hooks {
     /// that kind does before a browser opens.
     pub needs_permission: Box<dyn Fn(AccountId)>,
     /// Shows a toast with a button, such as Undo.
-    #[allow(dead_code, reason = "the Undo toast added in a later task calls it")]
     pub add_toast: Box<dyn Fn(adw::Toast)>,
     /// The suggestions the guests field completes from.
     pub contacts: Box<dyn Fn() -> Contacts>,
     /// Sends the account's queued calendar changes now, then reloads.
     pub push: Box<dyn Fn(AccountId)>,
 }
+
 
 /// An account as the calendar reads it: who it is, what its provider
 /// offers, and what its consent withheld.
@@ -209,6 +213,11 @@ pub struct CalendarView {
     /// focus, so the page that replaces it takes the focus once its
     /// events arrive.
     refocus_owed: Cell<bool>,
+    /// The one change waiting on its Undo toast, if any (R4).
+    holding: RefCell<Holding<Held>>,
+    /// The toast that change's Undo is on, so a new one can dismiss it
+    /// (R4) and its own watcher can tell it apart from a later toast.
+    toast_up: RefCell<Option<adw::Toast>>,
 }
 
 impl CalendarView {
@@ -471,6 +480,8 @@ impl CalendarView {
                 switching: Cell::new(false),
                 arranging: Cell::new(false),
                 refocus_owed: Cell::new(false),
+                holding: RefCell::new(Holding::new()),
+                toast_up: RefCell::new(None),
             }
         });
 
@@ -924,19 +935,67 @@ impl CalendarView {
     /// correction 7).
     pub(super) fn moved(
         self: &Rc<Self>,
-        _grid: &TimeGrid,
+        grid: &TimeGrid,
         o: &Occurrence,
         start: EpochMillis,
         end: EpochMillis,
     ) {
-        let weak = Rc::downgrade(self);
+        let this = Rc::clone(self);
+        let grid_weak = grid.downgrade();
         let o = o.clone();
         glib::spawn_future_local(async move {
-            let Some(this) = weak.upgrade() else { return };
             let rules = this.series_rules(&o).await;
             let mut draft = Draft::open(&o, &rules, draft::local_zone());
             draft.set_span(start, end);
-            this.save_draft(draft);
+            let offered = series::scopes(&o.event, false);
+            let scope = if offered.is_empty() {
+                None
+            } else {
+                match scope::ask(&this.page, false, &offered).await {
+                    Some(scope) => Some(scope),
+                    None => {
+                        if let Some(grid) = grid_weak.upgrade() {
+                            grid.spring_back();
+                        }
+                        return;
+                    }
+                }
+            };
+            let event = draft.to_event(
+                &mailrs_sync::calendar_copy::new_event_id(),
+                &mailrs_sync::calendar_copy::new_event_id(),
+            );
+            let copy = this.core.calendar_copy();
+            let (account_id, occurrence) = (o.account_id, o.clone());
+            let held = this
+                .core
+                .call(async move {
+                    let steps = copy.change_steps(account_id, &occurrence, event, scope).await?;
+                    copy.hold(account_id, steps).await
+                })
+                .await;
+            match held {
+                Ok(Permitted::Done(held)) => {
+                    this.reload();
+                    this.offer_undo(fill(&gettext("Moved “{title}”"), &[("title", &o.event.title)]), held);
+                }
+                Ok(Permitted::NeedsPermission) => {
+                    if let Some(grid) = grid_weak.upgrade() {
+                        grid.spring_back();
+                    }
+                    (this.hooks.needs_permission)(account_id);
+                }
+                Err(err) => {
+                    if let Some(grid) = grid_weak.upgrade() {
+                        grid.spring_back();
+                    }
+                    (this.hooks.toast)(&with_reason(
+                        &gettext("Could not move the event: {reason}"),
+                        &err,
+                        &[],
+                    ));
+                }
+            }
         });
     }
 
@@ -992,6 +1051,12 @@ impl CalendarView {
                 month.connect_event_activated(move |_, o, anchor| {
                     if let Some(view) = weak.upgrade() {
                         view.show_event(anchor, o);
+                    }
+                });
+                let weak = Rc::downgrade(self);
+                month.connect_event_edited(move |month, o| {
+                    if let Some(view) = weak.upgrade() {
+                        view.edit_or_show(o, month.block_of(&key_of(o)).as_ref());
                     }
                 });
                 let weak = Rc::downgrade(self);
@@ -1057,6 +1122,12 @@ impl CalendarView {
             }
         });
         let weak = Rc::downgrade(self);
+        grid.connect_event_edited(move |grid, o| {
+            if let Some(view) = weak.upgrade() {
+                view.edit_or_show(o, grid.block_of(&key_of(o)).as_ref());
+            }
+        });
+        let weak = Rc::downgrade(self);
         grid.connect_more_clicked(move |_, hidden, anchor| {
             if let Some(view) = weak.upgrade() {
                 view.show_more(anchor, hidden);
@@ -1066,6 +1137,12 @@ impl CalendarView {
         strip.connect_event_activated(move |_, o, anchor| {
             if let Some(view) = weak.upgrade() {
                 view.show_event(anchor, o);
+            }
+        });
+        let weak = Rc::downgrade(self);
+        strip.connect_event_edited(move |strip, o| {
+            if let Some(view) = weak.upgrade() {
+                view.edit_or_show(o, strip.block_of(&key_of(o)).as_ref());
             }
         });
         let weak = Rc::downgrade(self);
@@ -1542,7 +1619,10 @@ impl CalendarView {
         });
     }
 
-    /// Opens the popover for `o`, pointed at `anchor`.
+    /// Opens the popover for `o`, pointed at `anchor`. Edit and Delete
+    /// show only for an event the account may change as a whole: the
+    /// mockup's invitation popover, on someone else's event, stays as
+    /// drawn (ruling R1, R9).
     fn show_event(self: &Rc<Self>, anchor: &gtk::Widget, o: &Occurrence) {
         let calendar = self
             .calendars
@@ -1552,11 +1632,209 @@ impl CalendarView {
             .unwrap_or_default();
         let weak = Rc::downgrade(self);
         let occurrence = o.clone();
-        self.popover.show(anchor, o, &calendar, move |answer| {
-            if let Some(view) = weak.upgrade() {
-                view.answer(occurrence.clone(), answer);
+        let editable = self.can_edit_whole(o);
+        let (edit_o, delete_o) = (o.clone(), o.clone());
+        let edit_view = Rc::downgrade(self);
+        let delete_view = Rc::downgrade(self);
+        let on_edit: Option<Box<dyn Fn()>> = editable.then(|| {
+            Box::new(move || {
+                if let Some(view) = edit_view.upgrade() {
+                    view.open_editor(&edit_o);
+                }
+            }) as Box<dyn Fn()>
+        });
+        let on_delete: Option<Box<dyn Fn()>> = editable.then(|| {
+            Box::new(move || {
+                if let Some(view) = delete_view.upgrade() {
+                    view.delete(&delete_o);
+                }
+            }) as Box<dyn Fn()>
+        });
+        self.popover.show(
+            anchor,
+            o,
+            &calendar,
+            move |answer| {
+                if let Some(view) = weak.upgrade() {
+                    view.answer(occurrence.clone(), answer);
+                }
+            },
+            on_edit,
+            on_delete,
+        );
+    }
+
+    /// Whether the account may change `o`'s event as a whole: its
+    /// calendar is writable and the account is not merely a guest of
+    /// someone else's event (ruling R9). Gates Edit and Delete in the
+    /// popover, a double click or Enter opening the editor, and the
+    /// Delete key.
+    fn can_edit_whole(&self, o: &Occurrence) -> bool {
+        self.calendars
+            .borrow()
+            .get(&(o.account_id, o.event.calendar.clone()))
+            .is_some_and(|c| c.access.can_write())
+            && !draft::limited(&o.event)
+    }
+
+    /// The Delete key: takes the focused event off the grid at once and
+    /// offers Undo, for an event the account may change as a whole.
+    pub fn delete_focused(self: &Rc<Self>) {
+        if let Some(o) = self.focused().filter(|o| self.can_edit_whole(o)) {
+            self.delete(&o);
+        }
+    }
+
+    /// A double click or Enter on a block. For an event the account may
+    /// change as a whole, this opens the editor over the popover a
+    /// single click already opened; otherwise it opens the popover, same
+    /// as Enter did before this event had no Edit to open instead.
+    fn edit_or_show(self: &Rc<Self>, o: &Occurrence, anchor: Option<&gtk::Widget>) {
+        if self.can_edit_whole(o) {
+            self.open_editor(o);
+        } else if let Some(anchor) = anchor {
+            self.show_event(anchor, o);
+        }
+    }
+
+
+    /// Reads the series `o` belongs to, and asks the editor over it: its
+    /// own rules, or a changed occurrence's series row's.
+    pub fn open_editor(self: &Rc<Self>, o: &Occurrence) {
+        let this = Rc::clone(self);
+        let o = o.clone();
+        glib::spawn_future_local(async move {
+            let rules = this.series_rules(&o).await;
+            let draft = Draft::open(&o, &rules, draft::local_zone());
+            this.edit(draft);
+        });
+    }
+
+    /// Deletes `o` at once and offers Undo. An occurrence of a series
+    /// asks which occurrences the delete covers first; a delete still
+    /// goes through Undo either way.
+    pub fn delete(self: &Rc<Self>, o: &Occurrence) {
+        let this = Rc::clone(self);
+        let o = o.clone();
+        glib::spawn_future_local(async move {
+            let offered = series::scopes(&o.event, false);
+            let scope = if offered.is_empty() {
+                None
+            } else {
+                match scope::ask(&this.page, true, &offered).await {
+                    Some(scope) => Some(scope),
+                    None => return,
+                }
+            };
+            let copy = this.core.calendar_copy();
+            let (account_id, occurrence) = (o.account_id, o.clone());
+            let held = this
+                .core
+                .call(async move {
+                    let steps = copy.delete_steps(account_id, &occurrence, scope).await?;
+                    copy.hold(account_id, steps).await
+                })
+                .await;
+            match held {
+                Ok(Permitted::Done(held)) => {
+                    this.reload();
+                    this.offer_undo(fill(&gettext("Deleted “{title}”"), &[("title", &o.event.title)]), held);
+                }
+                Ok(Permitted::NeedsPermission) => (this.hooks.needs_permission)(account_id),
+                Err(err) => (this.hooks.toast)(&with_reason(&gettext("Could not delete the event: {reason}"), &err, &[])),
             }
         });
+    }
+
+    /// A 10-second toast with Undo for a held change. Undo puts the rows
+    /// back; the toast closing any other way queues the change. Only one
+    /// toast shows at a time (R4): holding another dismisses this one,
+    /// whose own `dismissed` handler queues it.
+    fn offer_undo(self: &Rc<Self>, said: String, held: Held) {
+        if let Some(toast) = self.toast_up.borrow_mut().take() {
+            toast.dismiss();
+        }
+        let id = self.holding.borrow_mut().hold(held);
+        let toast = adw::Toast::builder()
+            .title(crate::ui::window::toast_title(&said))
+            .button_label(gettext("Undo"))
+            .timeout(10)
+            .build();
+        let weak = Rc::downgrade(self);
+        toast.connect_button_clicked(move |_| {
+            if let Some(view) = weak.upgrade() {
+                view.undo_held(id);
+            }
+        });
+        let weak = Rc::downgrade(self);
+        toast.connect_dismissed(move |_| {
+            if let Some(view) = weak.upgrade() {
+                view.toast_up.borrow_mut().take();
+                view.commit_held(id);
+            }
+        });
+        self.toast_up.replace(Some(toast.clone()));
+        (self.hooks.add_toast)(toast);
+        self.watch_held(id);
+    }
+
+    /// Polls whether `id` is still the copy's own waiting change, closing
+    /// the toast at once if an assistant edit, made through `apply`,
+    /// committed it first: an Undo that would do nothing is worse than
+    /// none. Stops once the toast has gone, however it went.
+    fn watch_held(self: &Rc<Self>, id: u64) {
+        let weak = Rc::downgrade(self);
+        glib::timeout_add_local(std::time::Duration::from_millis(500), move || {
+            let Some(view) = weak.upgrade() else { return glib::ControlFlow::Break };
+            let holding = view.holding.borrow();
+            let Some(held) = holding.peek(id) else { return glib::ControlFlow::Break };
+            if view.core.calendar_copy().still_waiting(held) {
+                return glib::ControlFlow::Continue;
+            }
+            drop(holding);
+            if let Some(toast) = view.toast_up.borrow_mut().take() {
+                toast.dismiss();
+            }
+            glib::ControlFlow::Break
+        });
+    }
+
+    fn undo_held(self: &Rc<Self>, id: u64) {
+        let Some(held) = self.holding.borrow_mut().take(id) else { return };
+        let this = Rc::clone(self);
+        glib::spawn_future_local(async move {
+            let copy = this.core.calendar_copy();
+            if let Err(err) = this.core.call(async move { copy.revert(held).await }).await {
+                tracing::warn!(%err, "could not take a calendar change back");
+            }
+            this.reload();
+        });
+    }
+
+    fn commit_held(self: &Rc<Self>, id: u64) {
+        let Some(held) = self.holding.borrow_mut().take(id) else { return };
+        let account_id = held.account_id;
+        let this = Rc::clone(self);
+        glib::spawn_future_local(async move {
+            let copy = this.core.calendar_copy();
+            match this.core.call(async move { copy.commit(held).await }).await {
+                Ok(()) => (this.hooks.push)(account_id),
+                Err(err) => tracing::warn!(%err, "could not queue a calendar change"),
+            }
+        });
+    }
+
+    /// Queues every held change before the window closes or the app
+    /// quits, so a delete or a move whose toast was still up is not
+    /// lost. Blocks on the store: the main loop may not run again.
+    pub fn commit_all_now(&self) {
+        let held = self.holding.borrow_mut().drain();
+        let copy = self.core.calendar_copy();
+        for one in held {
+            if let Err(err) = self.core.runtime().block_on(copy.commit(one)) {
+                tracing::warn!(%err, "could not queue a calendar change on the way out");
+            }
+        }
     }
 
     /// Lists `occurrences` in a popover pointed at `anchor`: the events a
@@ -1653,10 +1931,7 @@ impl CalendarView {
             return self.list.focused();
         }
         let page = self.pages.borrow().get(1)?.clone();
-        match &*page.view.borrow() {
-            PageView::Grid(grid) => grid.grid.focused().or_else(|| grid.strip.focused()),
-            PageView::Month(month) => month.focused(),
-        }
+        page.view.borrow().focused()
     }
 
     /// The focused day heading or card in the month page now on screen,
@@ -1777,24 +2052,33 @@ impl CalendarView {
         editor::open(&self.page, draft, choices, contacts, move |draft| this.save_draft(draft));
     }
 
-    /// Writes a new or changed event. A change to a series covers every
-    /// occurrence until a later task asks which ones first.
+    /// Writes a new or changed event. A change to an occurrence of a
+    /// series asks which occurrences it covers first.
     pub fn save_draft(self: &Rc<Self>, draft: Draft) {
         let weak = Rc::downgrade(self);
         let core = Rc::clone(&self.core);
         glib::spawn_future_local(async move {
+            let occurrence = draft.occurrence.clone();
+            let offered = occurrence
+                .as_ref()
+                .map(|o| series::scopes(&o.event, draft.rule_changed()))
+                .unwrap_or_default();
+            let scope = if offered.is_empty() {
+                None
+            } else {
+                let Some(view) = weak.upgrade() else { return };
+                match scope::ask(&view.page, false, &offered).await {
+                    Some(scope) => Some(scope),
+                    None => return,
+                }
+            };
             let event = draft.to_event(
                 &mailrs_sync::calendar_copy::new_event_id(),
                 &mailrs_sync::calendar_copy::new_event_id(),
             );
             let account_id = draft.account_id;
             let is_new = draft.is_new();
-            let occurrence = draft.occurrence.clone();
             let copy = core.calendar_copy();
-            let scope = occurrence
-                .as_ref()
-                .filter(|o| series::in_series(&o.event))
-                .map(|_| series::RepeatScope::All);
             let written = core
                 .call(async move {
                     let steps = match &occurrence {
@@ -1962,6 +2246,15 @@ impl PageView {
         match self {
             PageView::Grid(grid) => grid.grid.focused_key().or_else(|| grid.strip.focused_key()),
             PageView::Month(month) => month.focused_key(),
+        }
+    }
+
+    /// The occurrence of the block that has the keyboard focus, for the
+    /// Delete key.
+    fn focused(&self) -> Option<Occurrence> {
+        match self {
+            PageView::Grid(grid) => grid.grid.focused().or_else(|| grid.strip.focused()),
+            PageView::Month(month) => month.focused(),
         }
     }
 

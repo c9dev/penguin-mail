@@ -9,6 +9,7 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
+use mailrs_domain::calendar::series::Step;
 use mailrs_domain::calendar::{self as model, Access, Calendar, Event, Guest, Occurrence, Status};
 use mailrs_domain::invitation::Answer;
 use mailrs_domain::{AccountId, EpochMillis};
@@ -729,6 +730,39 @@ pub fn dequeue(conn: &Connection, seq: i64) -> Result<()> {
     Ok(())
 }
 
+/// Persists the steps of a change waiting on its Undo toast, replacing
+/// any row already there: only one change is held at a time. A crash or
+/// a quit before the toast closes leaves this row for the next start to
+/// queue, since no toast survives to close over it.
+pub fn save_holding(conn: &Connection, account_id: AccountId, steps: &[Step]) -> Result<()> {
+    conn.execute(
+        "INSERT INTO calendar_holds (account_id, steps) VALUES (?1, ?2) \
+         ON CONFLICT (account_id) DO UPDATE SET steps = excluded.steps",
+        params![account_id, json(steps)],
+    )?;
+    Ok(())
+}
+
+/// Drops the account's persisted held change, once it is queued or taken
+/// back.
+pub fn clear_holding(conn: &Connection, account_id: AccountId) -> Result<()> {
+    conn.execute("DELETE FROM calendar_holds WHERE account_id = ?1", params![account_id])?;
+    Ok(())
+}
+
+/// Every held change still persisted from a run that stopped before its
+/// Undo toast closed, read once at start so it can be queued.
+pub fn holdings(conn: &Connection) -> Result<Vec<(AccountId, Vec<Step>)>> {
+    let mut stmt = conn.prepare("SELECT account_id, steps FROM calendar_holds")?;
+    let rows = stmt.query_map([], |row| Ok((row.get::<_, AccountId>(0)?, row.get::<_, String>(1)?)))?;
+    let mut found = Vec::new();
+    for row in rows {
+        let (account_id, steps) = row?;
+        found.push((account_id, parse(&steps)));
+    }
+    Ok(found)
+}
+
 /// Settles a change that just went out, and answers whether the
 /// provider's answer belongs in the copy.
 ///
@@ -779,7 +813,7 @@ pub fn finish_change(
     }
 }
 
-fn json<T: serde::Serialize>(value: &T) -> String {
+fn json<T: serde::Serialize + ?Sized>(value: &T) -> String {
     serde_json::to_string(value).unwrap_or_default()
 }
 
@@ -1351,6 +1385,41 @@ mod tests {
         assert_eq!(held[0].kind, ChangeKind::Save);
         assert_eq!(held[0].etag.as_deref(), Some("\"1\""));
         assert_eq!(held[0].body.as_ref().map(|e| e.title.as_str()), Some("Late lunch"));
+    }
+
+    /// A held change persists so a crash or a quit before its Undo toast
+    /// closes still has it to queue at the next start.
+    #[test]
+    fn a_held_change_survives_to_the_next_start() {
+        let (conn, id) = store();
+        let dentist = event("primary", "dentist", MONDAY, 1);
+        save_holding(&conn, id, &[Step::Save(dentist.clone())]).unwrap();
+
+        assert_eq!(holdings(&conn).unwrap(), vec![(id, vec![Step::Save(dentist)])]);
+    }
+
+    /// Only one change is held at a time, so holding another replaces the
+    /// persisted row rather than adding a second one.
+    #[test]
+    fn holding_another_change_replaces_the_persisted_one() {
+        let (conn, id) = store();
+        let remove = |event: &str| vec![Step::Remove { calendar: "primary".into(), id: event.into() }];
+        save_holding(&conn, id, &remove("a")).unwrap();
+        save_holding(&conn, id, &remove("b")).unwrap();
+
+        assert_eq!(holdings(&conn).unwrap(), vec![(id, remove("b"))]);
+    }
+
+    /// Queuing or reverting a held change clears its persisted row, so a
+    /// later start does not queue it a second time.
+    #[test]
+    fn clearing_a_held_change_drops_its_persisted_row() {
+        let (conn, id) = store();
+        save_holding(&conn, id, &[Step::Remove { calendar: "primary".into(), id: "a".into() }]).unwrap();
+
+        clear_holding(&conn, id).unwrap();
+
+        assert!(holdings(&conn).unwrap().is_empty());
     }
 
     #[test]

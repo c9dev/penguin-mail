@@ -1131,3 +1131,69 @@ async fn an_account_that_withheld_the_calendar_is_asked_for_it() {
     assert!(stored(&h, "primary", "standup").await.is_some());
     assert!(queue(&h).await.is_empty());
 }
+
+/// A change held under its Undo toast must survive the app quitting or
+/// crashing: nothing commits it, nothing reverts it, and yet the next
+/// start still queues it, since no toast survived to offer Undo over it.
+#[tokio::test]
+async fn a_held_change_survives_a_crash_and_is_queued_at_the_next_start() {
+    let h = harness().await;
+    let first_run = read_series(&h).await;
+    held(
+        first_run
+            .hold(h.account_id, vec![Step::Remove { calendar: "primary".into(), id: "standup".into() }])
+            .await
+            .unwrap(),
+    );
+    assert!(queue(&h).await.is_empty(), "not queued until committed or recovered");
+    // The run ends here with no clean shutdown, as a crash would: no
+    // commit, no revert, only what `hold` already wrote to the store.
+    drop(first_run);
+
+    let next_run = copy(&h);
+    next_run.recover_holds().await.unwrap();
+    assert_eq!(queue(&h).await.len(), 1, "the held change is queued at the next start");
+    next_run.send(h.account_id).await.unwrap();
+    assert!(on_google(&h, "standup").is_none());
+}
+
+/// Recovering twice, such as a second call before the window opens,
+/// queues the change once.
+#[tokio::test]
+async fn recovering_holds_a_second_time_queues_nothing_more() {
+    let h = harness().await;
+    let first_run = read_series(&h).await;
+    held(
+        first_run
+            .hold(h.account_id, vec![Step::Remove { calendar: "primary".into(), id: "standup".into() }])
+            .await
+            .unwrap(),
+    );
+    drop(first_run);
+
+    let next_run = copy(&h);
+    next_run.recover_holds().await.unwrap();
+    next_run.recover_holds().await.unwrap();
+    assert_eq!(queue(&h).await.len(), 1);
+}
+
+/// The view polls `still_waiting` while its toast is up, to close it
+/// without an Undo that would do nothing once an assistant edit, made
+/// through `apply`, commits the change waiting before it.
+#[tokio::test]
+async fn still_waiting_says_no_once_an_apply_commits_the_change_before_it() {
+    let h = harness().await;
+    h.fake.with(|s| s.calendars = vec![calendar("primary", true)]);
+    h.fake.put_calendar_event(event("primary", "a"));
+    let copy = copy(&h);
+    copy.refresh(h.account_id, NOW).await.unwrap();
+    let removed = held(
+        copy.hold(h.account_id, vec![Step::Remove { calendar: "primary".into(), id: "a".into() }])
+            .await
+            .unwrap(),
+    );
+    assert!(copy.still_waiting(&removed));
+    // The assistant's own edit, elsewhere, made through `apply`.
+    held(copy.apply(h.account_id, vec![Step::Save(event("primary", "b"))]).await.unwrap());
+    assert!(!copy.still_waiting(&removed), "apply committed it, same as holding a new change would");
+}

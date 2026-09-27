@@ -35,6 +35,7 @@ type Shown = (
 
 type DayActivated = dyn Fn(NaiveDate);
 type EventActivated = dyn Fn(&MonthGrid, &Occurrence, &gtk::Widget);
+type EventEdited = dyn Fn(&MonthGrid, &Occurrence);
 type MoreClicked = dyn Fn(&MonthGrid, &[Occurrence], &gtk::Widget);
 
 pub struct MonthGrid {
@@ -44,6 +45,9 @@ pub struct MonthGrid {
     shown: RefCell<Option<Shown>>,
     day_activated: RefCell<Option<Box<DayActivated>>>,
     event_activated: RefCell<Option<Box<EventActivated>>>,
+    /// Runs on a block's double click or Enter, over the popover a
+    /// single click or Space opens.
+    event_edited: RefCell<Option<Box<EventEdited>>>,
     more_clicked: RefCell<Option<Box<MoreClicked>>>,
     /// Each block on screen by the event it draws, so the view can point
     /// a popover at one it opens by name. Cleared on every rebuild.
@@ -79,6 +83,7 @@ impl MonthGrid {
             shown: RefCell::new(None),
             day_activated: RefCell::new(None),
             event_activated: RefCell::new(None),
+            event_edited: RefCell::new(None),
             more_clicked: RefCell::new(None),
             blocks: RefCell::new(Vec::new()),
             days: RefCell::new(Vec::new()),
@@ -122,6 +127,12 @@ impl MonthGrid {
         f: impl Fn(&MonthGrid, &Occurrence, &gtk::Widget) + 'static,
     ) {
         self.event_activated.replace(Some(Box::new(f)));
+    }
+
+    /// Runs `f` on a block's double click or Enter, which opens the
+    /// editor over the popover a single click or Space opens.
+    pub fn connect_event_edited(&self, f: impl Fn(&MonthGrid, &Occurrence) + 'static) {
+        self.event_edited.replace(Some(Box::new(f)));
     }
 
     /// Runs `f` when a crowded day's "N more" button is clicked, with
@@ -214,7 +225,8 @@ impl MonthGrid {
             let (shown, hidden) = layout::month_fit(in_day.len(), rows_that_fit);
             for o in &in_day[..shown] {
                 let (colour, name) = calendar_of(o, &calendars);
-                let block = EventBlock::new(o, colour, name, true, Some(day), &chrono::Local);
+                let on_edit = edit_closure(self, (*o).clone());
+                let block = EventBlock::new(o, colour, name, true, Some(day), &chrono::Local, on_edit);
                 connect_event(self, &block.widget, (*o).clone());
                 cell.append(&block.widget);
                 blocks.push((key_of(o), (*o).clone(), block.widget.clone().upcast()));
@@ -319,4 +331,16 @@ fn connect_event(grid: &Rc<MonthGrid>, button: &gtk::Button, occurrence: Occurre
             f(&grid, &occurrence, button.upcast_ref());
         }
     });
+}
+
+/// The closure a block's double click or Enter runs, which reports
+/// `occurrence` through [`MonthGrid::connect_event_edited`].
+fn edit_closure(grid: &Rc<MonthGrid>, occurrence: Occurrence) -> Rc<dyn Fn()> {
+    let weak = Rc::downgrade(grid);
+    Rc::new(move || {
+        let Some(grid) = weak.upgrade() else { return };
+        if let Some(f) = grid.event_edited.borrow().as_ref() {
+            f(&grid, &occurrence);
+        }
+    })
 }

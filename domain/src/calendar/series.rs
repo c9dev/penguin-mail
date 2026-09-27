@@ -6,6 +6,7 @@
 
 use chrono::{DateTime, NaiveDate, NaiveDateTime, TimeZone, Utc};
 use chrono_tz::Tz;
+use serde::{Deserialize, Serialize};
 
 use super::{Event, Status, expand};
 use crate::EpochMillis;
@@ -26,8 +27,10 @@ pub struct Picked {
     pub start: EpochMillis,
 }
 
-/// One write to the copy and the queue.
-#[derive(Debug, Clone, PartialEq, Eq)]
+/// One write to the copy and the queue. Held changes persist a `Vec<Step>`
+/// as JSON (`mailrs_store::calendar::save_holding`), so a crash or a quit
+/// before the Undo toast closes still queues it at the next start.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Step {
     /// Store the event and send it whole.
     Save(Event),

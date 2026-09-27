@@ -166,6 +166,19 @@ impl App {
         app.install_actions();
         app.listen();
         app.listen_for_notifications(picked);
+        // The tray's Quit and a session logout can end the process
+        // through the application without ever calling `App::quit`, so
+        // this is the one signal every way out fires. `Holding::drain`
+        // makes a second call, from the window's own close request, a
+        // no-op.
+        let weak = Rc::downgrade(&app);
+        gio_app.connect_shutdown(move |_| {
+            if let Some(app) = weak.upgrade()
+                && let Some(window) = app.window()
+            {
+                window.calendar.commit_all_now();
+            }
+        });
         if !app.core.demo {
             app.watch_for_tray_host();
         }
