@@ -14,3 +14,6 @@ icalendar.workspace = true
 rrule.workspace = true
 serde.workspace = true
 tracing.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true

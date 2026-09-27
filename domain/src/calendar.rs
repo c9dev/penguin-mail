@@ -177,6 +177,11 @@ pub struct Event {
     pub original_start: Option<EpochMillis>,
     /// A change made here waits in the queue for the provider.
     pub pending: bool,
+    /// A Google Meet link to ask for with the next write, named by a
+    /// request id so a retry does not make two. Only the queue body
+    /// carries it; the store does not keep it.
+    #[serde(default)]
+    pub meet_request: Option<String>,
 }
 
 impl Event {
@@ -190,6 +195,37 @@ impl Event {
             && self.status != Status::Cancelled
             && self.my_answer != Some(invitation::Answer::No)
     }
+}
+
+/// Google's eleven event colours, by the id an event carries. An event
+/// takes one of these or its calendar's colour; the editor offers them.
+/// The palette is built in rather than read from Google (`colors.get`
+/// needs a scope this app does not ask for) and matches what Google's
+/// own web app shows.
+pub const EVENT_COLORS: [(&str, &str); 11] = [
+    ("1", "#7986cb"),
+    ("2", "#33b679"),
+    ("3", "#8e24aa"),
+    ("4", "#e67c73"),
+    ("5", "#f6bf26"),
+    ("6", "#f4511e"),
+    ("7", "#039be5"),
+    ("8", "#616161"),
+    ("9", "#3f51b5"),
+    ("10", "#0b8043"),
+    ("11", "#d50000"),
+];
+
+/// The `#rrggbb` for one of Google's colour ids, or `None` for an id
+/// Google has not defined.
+pub fn event_color(id: &str) -> Option<&'static str> {
+    EVENT_COLORS.iter().find(|(i, _)| *i == id).map(|(_, hex)| *hex)
+}
+
+/// The colour id for a hex value in [`EVENT_COLORS`], read without
+/// regard to case, or `None` when the palette holds no such colour.
+pub fn color_id(hex: &str) -> Option<&'static str> {
+    EVENT_COLORS.iter().find(|(_, h)| h.eq_ignore_ascii_case(hex)).map(|(id, _)| *id)
 }
 
 /// One showing of an event on the grid. `event` is shared rather than
@@ -630,5 +666,25 @@ mod tests {
         assert!(!Access::Reader.can_write());
         assert!(!Access::FreeBusy.can_write());
         assert_eq!(Access::parse("freeBusyReader"), Access::FreeBusy);
+    }
+
+    #[test]
+    fn a_colour_and_its_google_id_go_both_ways() {
+        for (id, hex) in EVENT_COLORS {
+            assert_eq!(event_color(id), Some(hex));
+            assert_eq!(color_id(hex), Some(id));
+        }
+        assert_eq!(color_id("#E67C73"), Some("4"));
+        assert_eq!(color_id("#123456"), None);
+    }
+
+    #[test]
+    fn a_queued_body_from_before_meet_requests_still_reads() {
+        let old = r#"{"calendar":"work","id":"a","uid":"","etag":"","start":0,"end":0,"zone":"UTC",
+            "all_day":false,"title":"","place":"","description":"","color":null,"busy":true,
+            "status":"Confirmed","private":false,"organizer":null,"guests":[],"my_answer":null,
+            "reminders":null,"conference":null,"rules":[],"series":null,"original_start":null,"pending":true}"#;
+        let event: Event = serde_json::from_str(old).unwrap();
+        assert_eq!(event.meet_request, None);
     }
 }
