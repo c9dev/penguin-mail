@@ -75,7 +75,7 @@ export LANG=en_US.UTF-8 LANGUAGE=en_US LC_ALL=en_US.UTF-8
 
 driver=$PWD/scripts/screenshots.py
 app=$PWD/target/debug/penguin-mail
-out=$PWD/docs/screenshots
+out=${OUT:-$PWD/docs/screenshots}
 inside="
 $launcher --launch-immediately &
 sleep 1

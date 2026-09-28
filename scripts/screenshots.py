@@ -80,23 +80,30 @@ def focus(window):
     time.sleep(0.3)
 
 
-def capture(window, name):
+def capture(window, name, nudge=True, whole_screen=False):
     # GTK redraws only what changed, and on this display that sometimes
     # leaves a stray glyph behind where bold text turned regular. A width
     # nudge makes it draw the whole window again.
     geometry = window.get_geometry()
-    window.configure(width=geometry.width + 1)
-    xdisplay.sync()
-    time.sleep(0.8)
-    window.configure(width=geometry.width)
-    xdisplay.sync()
+    if nudge:
+        window.configure(width=geometry.width + 1)
+        xdisplay.sync()
+        time.sleep(0.8)
+        window.configure(width=geometry.width)
+        xdisplay.sync()
     time.sleep(1.5)
     path = os.path.join(OUT, name + ".png")
     # Without the time chunks, a shot whose pixels did not change writes
     # the same bytes as before.
+    # A popover is a window of its own on X11, which a shot of the main
+    # window leaves out. The screen holds it, cropped to the window's size.
+    geometry = window.get_geometry()
+    if whole_screen:
+        target = ["-window", "root", "-crop", "%dx%d+0+0" % (geometry.width, geometry.height), "+repage"]
+    else:
+        target = ["-window", str(window.id)]
     subprocess.run(
-        ["import", "-window", str(window.id), "-strip",
-         "-define", "png:exclude-chunks=date,time", path],
+        ["import", *target, "-strip", "-define", "png:exclude-chunks=date,time", path],
         check=True,
     )
     print("saved", path)
@@ -141,6 +148,31 @@ def type_text(text):
         xdisplay.sync()
         time.sleep(0.02)
     time.sleep(0.3)
+
+
+def scroll_down(x, y, clicks, button=5):
+    """Turns the wheel down over a point, one notch a click. Button 4 turns
+    it up."""
+    xtest.fake_input(xdisplay, X.MotionNotify, x=x, y=y)
+    xdisplay.sync()
+    time.sleep(0.2)
+    for _ in range(clicks):
+        xtest.fake_input(xdisplay, X.ButtonPress, button)
+        xtest.fake_input(xdisplay, X.ButtonRelease, button)
+        xdisplay.sync()
+        time.sleep(0.08)
+    time.sleep(0.5)
+
+
+def click(x, y):
+    """Presses the left button at a point on the screen."""
+    xtest.fake_input(xdisplay, X.MotionNotify, x=x, y=y)
+    xdisplay.sync()
+    time.sleep(0.2)
+    xtest.fake_input(xdisplay, X.ButtonPress, 1)
+    xtest.fake_input(xdisplay, X.ButtonRelease, 1)
+    xdisplay.sync()
+    time.sleep(0.5)
 
 
 def park_pointer():
@@ -309,6 +341,7 @@ def settings_file(extra):
 
 def launch(settings="", env=None, args=("--demo",)):
     environment = dict(os.environ)
+    environment["MAILRS_DEMO_FULL_CONSENT"] = "1"
     environment["MAILRS_SETTINGS"] = settings_file(settings)
     environment.update(env or {})
     log = open(os.path.join(SANDBOX, "app.log"), "a")
@@ -321,13 +354,30 @@ def settle(seconds=3):
     time.sleep(seconds)
 
 
+def hide_nudge():
+    """Closes the bar that offers to review unanswered sent mail, so the
+    list starts at its first row. It returns on the next launch. A window
+    that opens on another space has no such bar, so a miss is not an
+    error."""
+    deadline = time.time() + 6
+    while time.time() < deadline:
+        node = app_node()
+        for hit in find_all(node, "button", "Hide Until Next Launch") if node else []:
+            if showing(hit):
+                Atspi.Action.do_action(hit, 0)
+                time.sleep(0.6)
+                return
+        time.sleep(0.5)
+
+
 def main_window():
     window = window_titled("Penguin Mail")
-    resize(window, 1320, 840)
+    resize(window, 1440, 900)
     # The window is on the bus a moment after it maps, and the mailboxes
     # fill a moment after that.
-    find("list item", contains="Saturday hike?", patience=90)
+    find("list item", contains="Q4 roadmap review", patience=90)
     focus(window)
+    hide_nudge()
     settle(2)
     return window
 
@@ -340,13 +390,13 @@ DARK = 'color_scheme = "dark"\n'
 def inbox():
     run = launch(env={"MAILRS_DEMO_OPEN": "t-roadmap"})
     window = main_window()
-    settle(3)
+    settle(5)
     capture(window, "inbox")
     return run
 
 
 def dark():
-    run = launch(DARK, env={"MAILRS_DEMO_OPEN": "t-bank"})
+    run = launch(DARK, env={"MAILRS_DEMO_OPEN": "t-roadmap"})
     window = main_window()
     # WebKit draws the HTML a beat after the conversation opens.
     settle(5)
@@ -355,10 +405,15 @@ def dark():
 
 
 def phone():
-    run = launch(env={"MAILRS_DEMO_OPEN": "t-thesis"})
+    run = launch()
     window = main_window()
+    # A conversation opened before the window narrows is laid out for the
+    # wide window and cut short at the narrow one, so narrow first.
     resize(window, 400, 800)
-    settle(4)
+    settle(3)
+    # The third row, the roadmap reply, whose quoted history is folded.
+    click(200, 350)
+    settle(6)
     capture(window, "phone")
     return run
 
@@ -367,6 +422,7 @@ def preferences():
     run = launch(env={"MAILRS_DEMO_ACTION": "preferences"})
     window = main_window()
     find("page tab", name="General")
+    act("page tab", contains="Calendar")
     settle(2)
     capture(window, "preferences")
     return run
@@ -386,19 +442,19 @@ def welcome():
 
 
 def composer():
-    run = launch(DARK, env={"MAILRS_DEMO_OPEN": "t-hike", "MAILRS_DEMO_COMPOSE": "reply"})
+    run = launch(env={"MAILRS_DEMO_OPEN": "t-roadmap", "MAILRS_DEMO_COMPOSE": "reply"})
     main_window()
-    window = window_titled("Re: Saturday hike?")
+    window = window_titled("Re: Q4 roadmap review")
     focus(window)
     time.sleep(2)
-    type_text("Count me in. I'll bring the trail map and a flask of coffee.")
+    type_text("Thanks, Priya. I checked Jonas's estimate: last-write-wins is fine for October, and I can support it.")
     settle(2)
     capture(window, "composer")
     return run
 
 
 def selection():
-    run = launch(DARK)
+    run = launch()
     window = main_window()
     select_rows(2, 3, 5)
     settle(2)
@@ -407,19 +463,20 @@ def selection():
 
 
 def flags():
-    run = launch(DARK, env={"MAILRS_DEMO_OPEN": "t-hike"})
+    run = launch(env={"MAILRS_DEMO_OPEN": "t-hike"})
     window = main_window()
     find("label", name="Saturday hike?")
     time.sleep(2)
     # Ctrl+Alt+5 is the fifth colour, blue.
     key("ctrl+alt+5")
-    settle(2)
+    # The confirmation toast stays a few seconds; the shot waits it out.
+    settle(10)
     capture(window, "flags")
     return run
 
 
 def vips():
-    run = launch(DARK, env={"MAILRS_DEMO_OPEN": "t-hike", "MAILRS_DEMO_ACTION": "toggle-vip"})
+    run = launch(env={"MAILRS_DEMO_OPEN": "t-hike", "MAILRS_DEMO_ACTION": "toggle-vip"})
     window = main_window()
     find("label", contains="to VIPs")
     settle(1)
@@ -428,7 +485,7 @@ def vips():
 
 
 def automatic_reply():
-    run = launch(DARK, env={"MAILRS_DEMO_ACTION": "account-vacation(int64 1)"})
+    run = launch(env={"MAILRS_DEMO_ACTION": "account-vacation(int64 1)"})
     window = main_window()
     find("dialog", name="Automatic Reply")
     act("switch", name="Send Automatic Replies")
@@ -441,7 +498,7 @@ def automatic_reply():
 
 
 def rules():
-    run = launch(DARK, env={"MAILRS_DEMO_ACTION": "account-rules(int64 1)"})
+    run = launch(env={"MAILRS_DEMO_ACTION": "account-rules(int64 1)"})
     window = main_window()
     act("button", name="New Rule")
     fill("text", "From", "hello@trailnotes.example")
@@ -449,13 +506,14 @@ def rules():
     act("switch", name="Mark as Read")
     act("button", name="Create")
     find(contains="hello@trailnotes.example", role="list item")
-    settle(2)
+    # The "Rule added" toast stays a few seconds; the shot waits it out.
+    settle(10)
     capture(window, "rules")
     return run
 
 
 def hide_my_email():
-    run = launch(DARK, env={"MAILRS_DEMO_ACTION": "account-hide-my-email(int64 1)"})
+    run = launch(env={"MAILRS_DEMO_ACTION": "account-hide-my-email(int64 1)"})
     window = main_window()
     fill("text", "Where Did You Use It?", "Bike shop")
     act("button", name="Create")
@@ -467,7 +525,7 @@ def hide_my_email():
 
 
 def send_later():
-    run = launch(DARK, env={"MAILRS_DEMO_ACTION": "compose"})
+    run = launch(env={"MAILRS_DEMO_ACTION": "compose"})
     main_window()
     composer = window_titled("New Message")
     focus(composer)
@@ -499,11 +557,11 @@ from scripted_model import MODEL, QUESTION, scripted_model  # noqa: E402
 
 
 def assistant():
-    settings = DARK + '[ai]\nprovider = "local"\nbase_url = "%s"\nlocal_model = "%s"\n' % (
+    settings = '[ai]\nprovider = "local"\nbase_url = "%s"\nlocal_model = "%s"\n' % (
         scripted_model(),
         MODEL,
     )
-    run = launch(settings, env={"MAILRS_DEMO_ACTION": "assistant"})
+    run = launch(settings, env={"MAILRS_DEMO_OPEN": "t-roadmap", "MAILRS_DEMO_ACTION": "assistant"})
     window = main_window()
     time.sleep(1)
     # The assistant action puts the cursor in the pane's question field.
@@ -515,7 +573,7 @@ def assistant():
 
 
 def categories():
-    run = launch(DARK)
+    run = launch()
     window = main_window()
     act("radio button", contains="Promotions")
     time.sleep(2)
@@ -525,7 +583,85 @@ def categories():
     return run
 
 
+def to_calendar(view="Week"):
+    act("radio button", contains="Calendar, ")
+    find("radio button", name=view)
+    act("radio button", name=view)
+    time.sleep(1.5)
+
+
+def invitation():
+    run = launch(env={"MAILRS_DEMO_OPEN": "t-design-review"})
+    window = main_window()
+    settle(5)
+    dump("invitation")
+    capture(window, "invitation")
+    return run
+
+
+def calendar_week():
+    run = launch()
+    window = main_window()
+    to_calendar("Week")
+    # The grid opens at the current hour, which on the machine that takes
+    # the shot can be the middle of the night. Scroll to the working day.
+    scroll_down(900, 500, 4)
+    settle(2)
+    dump("week")
+    capture(window, "calendar-week")
+    return run
+
+
+def calendar_month():
+    run = launch()
+    window = main_window()
+    to_calendar("Month")
+    settle(2)
+    capture(window, "calendar-month")
+    return run
+
+
+def calendar_agenda():
+    run = launch()
+    window = main_window()
+    resize(window, 1600, 1000)
+    to_calendar("Agenda")
+    # The list opens a little way down; the shot starts at its top.
+    scroll_down(900, 500, 10, button=4)
+    settle(2)
+    capture(window, "calendar-agenda")
+    return run
+
+
+def event_popover():
+    run = launch()
+    window = main_window()
+    to_calendar("Week")
+    act("button", name="Next Week")
+    time.sleep(1.5)
+    scroll_down(900, 500, 4)
+    act("button", contains="Offline editor design review, Tuesday 6")
+    settle(2)
+    dump("popover")
+    capture(window, "event-popover", nudge=False, whole_screen=True)
+    return run
+
+
+def explore():
+    run = launch(env={"MAILRS_DEMO_OPEN": "t-roadmap"})
+    window = main_window()
+    settle(4)
+    capture(window, "explore-mail")
+    return run
+
+
 SHOTS = {
+    "explore": explore,
+    "invitation": invitation,
+    "calendar-week": calendar_week,
+    "calendar-month": calendar_month,
+    "calendar-agenda": calendar_agenda,
+    "event-popover": event_popover,
     "inbox": inbox,
     "dark": dark,
     "composer": composer,
