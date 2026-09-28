@@ -1,0 +1,49 @@
+# Maintainer: Pivotd <penguin@pivotd.com>
+#
+# Not published. This is the PKGBUILD an AUR "-bin" package for Penguin
+# Mail would use: it takes the .pkg.tar.zst scripts/package-arch.sh
+# already built for the GitHub release and lifts its files into a fresh
+# package, rather than compiling anything itself. Publishing it means
+# pushing it to a git checkout of ssh://aur@aur.archlinux.org/penguin-mail-bin.git,
+# which needs an AUR account of its own; see README.md for the rest of
+# what publishing would take.
+#
+# Bump pkgver (and reset pkgrel to 1) for each release this should track.
+pkgname=penguin-mail-bin
+pkgver=0.3.0
+pkgrel=1
+pkgdesc="Gmail client for GNOME (prebuilt binaries from the GitHub release)"
+arch=('x86_64')
+url="https://github.com/c9dev/penguin-mail"
+license=('GPL-3.0-or-later')
+provides=('penguin-mail')
+conflicts=('penguin-mail')
+depends=('gtk4' 'libadwaita' 'webkitgtk-6.0' 'gnupg' 'hicolor-icon-theme')
+optdepends=('gnome-shell-extension-appindicator: tray icon on GNOME Shell'
+            'bubblewrap: run assistant skill scripts')
+# desktop-file-utils is not listed: see scripts/package-arch.sh, which
+# builds the same package from source.
+options=('!debug')
+
+# SHA256SUMS.sig is the release's SHA256SUMS.asc under a name source()
+# recognises as a detached signature, so makepkg checks it against
+# validpgpkeys below before anything in prepare() runs. That only proves
+# SHA256SUMS itself is genuine; prepare() then checks the package against
+# the now-trusted sums, since the package carries no signature of its own.
+source=("penguin-mail-$pkgver-1-x86_64.pkg.tar.zst::https://github.com/c9dev/penguin-mail/releases/download/v$pkgver/penguin-mail-$pkgver-1-x86_64.pkg.tar.zst"
+        "SHA256SUMS::https://github.com/c9dev/penguin-mail/releases/download/v$pkgver/SHA256SUMS"
+        "SHA256SUMS.sig::https://github.com/c9dev/penguin-mail/releases/download/v$pkgver/SHA256SUMS.asc")
+sha256sums=('SKIP' 'SKIP' 'SKIP')
+validpgpkeys=('FE3C3B6E699AF939DC4670DCF3A853035C3E2B8E')
+
+prepare() {
+    sha256sum --ignore-missing -c SHA256SUMS
+}
+
+package() {
+    # The download is already a pacman package tree; lift its files
+    # straight into this one instead of rebuilding them. Its own
+    # .PKGINFO, .BUILDINFO and .MTREE belong to that build, not this one.
+    bsdtar -xf "penguin-mail-$pkgver-1-x86_64.pkg.tar.zst" -C "$pkgdir" \
+        --exclude .PKGINFO --exclude .BUILDINFO --exclude .MTREE
+}

@@ -1,14 +1,17 @@
 //! The kind of package this binary was built for, chosen at build time with
-//! a cargo feature: `packaging-rpm`, `packaging-flatpak` or
-//! `packaging-snap`, and none for the .deb, the tarball and a build from
-//! source. It decides who installs new versions and whether skill
+//! a cargo feature: `packaging-rpm`, `packaging-arch`, `packaging-flatpak`
+//! or `packaging-snap`, and none for the .deb, the tarball and a build
+//! from source. It decides who installs new versions and whether skill
 //! scripts can run.
 
 use mailrs_domain::translate::gettext;
 
 #[cfg(any(
+    all(feature = "packaging-rpm", feature = "packaging-arch"),
     all(feature = "packaging-rpm", feature = "packaging-flatpak"),
     all(feature = "packaging-rpm", feature = "packaging-snap"),
+    all(feature = "packaging-arch", feature = "packaging-flatpak"),
+    all(feature = "packaging-arch", feature = "packaging-snap"),
     all(feature = "packaging-flatpak", feature = "packaging-snap"),
 ))]
 compile_error!("a build is for one kind of package; pick one packaging-* feature");
@@ -18,6 +21,7 @@ pub enum Packaging {
     /// The .deb, the tarball, or `scripts/install.sh`.
     Native,
     Rpm,
+    Arch,
     Flatpak,
     Snap,
 }
@@ -26,12 +30,15 @@ pub enum Packaging {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UpdatedBy {
     Dnf,
+    Pacman,
     Flathub,
     SnapStore,
 }
 
 pub const BUILT_FOR: Packaging = if cfg!(feature = "packaging-rpm") {
     Packaging::Rpm
+} else if cfg!(feature = "packaging-arch") {
+    Packaging::Arch
 } else if cfg!(feature = "packaging-flatpak") {
     Packaging::Flatpak
 } else if cfg!(feature = "packaging-snap") {
@@ -53,6 +60,7 @@ impl Packaging {
         let (updated_by, sandbox) = match self {
             Packaging::Native => (None, None),
             Packaging::Rpm => (Some(UpdatedBy::Dnf), None),
+            Packaging::Arch => (Some(UpdatedBy::Pacman), None),
             Packaging::Flatpak => (Some(UpdatedBy::Flathub), Some("Flatpak")),
             Packaging::Snap => (Some(UpdatedBy::SnapStore), Some("Snap")),
         };
@@ -87,6 +95,7 @@ impl UpdatedBy {
     pub fn line(self) -> String {
         match self {
             UpdatedBy::Dnf => gettext("Updates come from dnf"),
+            UpdatedBy::Pacman => gettext("Updates come from pacman"),
             UpdatedBy::Flathub => gettext("Updates come from Flathub"),
             UpdatedBy::SnapStore => gettext("Updates come from the Snap Store"),
         }
@@ -98,8 +107,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn the_rpm_and_the_store_packages_leave_updates_to_someone_else() {
+    fn the_rpm_arch_and_store_packages_leave_updates_to_someone_else() {
         assert_eq!(Packaging::Rpm.updated_by(), Some(UpdatedBy::Dnf));
+        assert_eq!(Packaging::Arch.updated_by(), Some(UpdatedBy::Pacman));
         assert_eq!(Packaging::Flatpak.updated_by(), Some(UpdatedBy::Flathub));
         assert_eq!(Packaging::Snap.updated_by(), Some(UpdatedBy::SnapStore));
         assert_eq!(Packaging::Native.updated_by(), None);
@@ -109,6 +119,7 @@ mod tests {
     fn skills_run_only_outside_another_sandbox() {
         assert!(Packaging::Native.runs_skills());
         assert!(Packaging::Rpm.runs_skills());
+        assert!(Packaging::Arch.runs_skills());
         assert!(!Packaging::Flatpak.runs_skills());
         assert!(!Packaging::Snap.runs_skills());
     }
@@ -117,6 +128,7 @@ mod tests {
     fn a_plain_build_is_native() {
         if !cfg!(any(
             feature = "packaging-rpm",
+            feature = "packaging-arch",
             feature = "packaging-flatpak",
             feature = "packaging-snap"
         )) {
@@ -127,6 +139,7 @@ mod tests {
     #[test]
     fn each_updater_names_itself() {
         assert_eq!(UpdatedBy::Dnf.line(), "Updates come from dnf");
+        assert_eq!(UpdatedBy::Pacman.line(), "Updates come from pacman");
         assert_eq!(UpdatedBy::Flathub.line(), "Updates come from Flathub");
         assert_eq!(
             UpdatedBy::SnapStore.line(),

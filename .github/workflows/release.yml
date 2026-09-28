@@ -189,6 +189,51 @@ jobs:
           path: dist/*.rpm
           if-no-files-found: error
 
+  arch:
+    name: Build the Arch package
+    needs: version
+    runs-on: ubuntu-latest
+    # Arch has no numbered releases to pin to the way Fedora does: pacman
+    # and the libraries it installs move together, so "latest" is the same
+    # container as building on an up-to-date Arch install.
+    container: archlinux:latest
+    timeout-minutes: 90
+    env:
+      CARGO_TERM_COLOR: always
+      VERSION: ${{ needs.version.outputs.version }}
+    steps:
+      - name: Install git
+        run: pacman -Syu --noconfirm --needed git ca-certificates
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install build dependencies
+        run: scripts/ci-deps.sh
+      - name: Put cargo on PATH
+        run: echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+      # Nothing on main builds on Arch, so only a trial run from main
+      # saves this cache where a later tag can read it.
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          shared-key: archlinux
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - name: Build and pack
+        env:
+          PENGUIN_MAIL_GOOGLE_CLIENT_ID: ${{ secrets.PENGUIN_MAIL_GOOGLE_CLIENT_ID }}
+          PENGUIN_MAIL_GOOGLE_CLIENT_SECRET: ${{ secrets.PENGUIN_MAIL_GOOGLE_CLIENT_SECRET }}
+          PENGUIN_MAIL_MICROSOFT_CLIENT_ID: ${{ secrets.PENGUIN_MAIL_MICROSOFT_CLIENT_ID }}
+        run: scripts/package-arch.sh "$VERSION" dist
+      # Installs the package the way a person would and starts it on a
+      # virtual display, which catches a Depends the PKGBUILD forgot.
+      - name: Install and start it
+        run: |
+          pacman -U --noconfirm "dist/penguin-mail-$VERSION-1-x86_64.pkg.tar.zst"
+          penguin-mail --version
+          scripts/smoke-start.sh /usr/bin/penguin-mail
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: penguin-mail-${{ needs.version.outputs.version }}-arch
+          path: dist/*.pkg.tar.zst
+          if-no-files-found: error
+
   snap:
     name: Build the snap
     needs: version
@@ -241,7 +286,7 @@ jobs:
 
   publish:
     name: Publish the release
-    needs: [version, ci, build, rpm]
+    needs: [version, ci, build, rpm, arch]
     # Only a pushed tag publishes. A trial run from the Actions tab builds
     # everything and publishes nothing, whichever ref it ran on.
     if: github.event_name == 'push' && github.ref_type == 'tag'
@@ -275,7 +320,7 @@ jobs:
           fi
           cd dist
           rm -f SHA256SUMS SHA256SUMS.asc
-          sha256sum -- *.deb *.rpm *.tar.gz *.zip > SHA256SUMS
+          sha256sum -- *.deb *.rpm *.pkg.tar.zst *.tar.gz *.zip > SHA256SUMS
           cat SHA256SUMS
           signing=$(mktemp -d)
           trap 'gpgconf --homedir "$signing" --kill all; rm -rf "$signing"' EXIT
@@ -295,6 +340,7 @@ jobs:
           files: |
             dist/*.deb
             dist/*.rpm
+            dist/*.pkg.tar.zst
             dist/*.tar.gz
             dist/*.zip
             dist/SHA256SUMS
