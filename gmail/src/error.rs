@@ -43,6 +43,14 @@ pub enum GmailError {
     OAuth(String),
     #[error("keyring error: {0}")]
     Keyring(String),
+    /// A file to upload is no longer where it was picked. The path names
+    /// where it was.
+    #[error("the file is no longer at {0}")]
+    FileMissing(String),
+    /// A file to upload could not be read for another reason, such as
+    /// its permissions.
+    #[error("could not read the file: {0}")]
+    File(String),
 }
 
 /// Why a one-click unsubscribe request failed. The request goes to the

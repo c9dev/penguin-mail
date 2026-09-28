@@ -112,6 +112,39 @@ pub struct Guest {
     pub me: bool,
 }
 
+/// A file linked to an event: a Google Drive file, or a file on this
+/// computer that goes to Drive before the event's next write reaches the
+/// provider.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Attachment {
+    pub title: String,
+    /// Where the file opens. Empty while the file waits to upload.
+    pub file_url: String,
+    pub mime_type: String,
+    /// Google's icon for the file, kept so a write can send the list back
+    /// as it came. The app draws its own icon by mime type and never
+    /// loads this one.
+    pub icon_link: String,
+    /// Drive's id for the file. Empty while the file waits to upload.
+    pub file_id: String,
+    /// The path of a file on this computer that waits to upload, for one
+    /// attached while the upload could not run. The queue uploads it
+    /// before it sends the event. If the file has moved by then, the
+    /// event goes out without it and the window says so.
+    #[serde(default)]
+    pub waiting: Option<String>,
+}
+
+impl Attachment {
+    /// The link a click opens: `file_url` when it is `https`, and `None`
+    /// for anything else, such as a file still waiting to upload.
+    pub fn link(&self) -> Option<&str> {
+        let url = self.file_url.trim();
+        let scheme = url.get(..8)?;
+        (scheme.eq_ignore_ascii_case("https://") && url.len() > 8).then_some(url)
+    }
+}
+
 /// Who hears about a write to an event: its guests, by mail from the
 /// provider, or nobody. A new event and a change that adds guests tell
 /// them, since that mail is their invitation; a move or a delete tells
@@ -343,6 +376,12 @@ pub struct Event {
     /// location or a birthday.
     #[serde(default)]
     pub kind: Kind,
+    /// Files linked to the event. `None` when the copy has not read
+    /// them, as for a row stored before Penguin Mail read attachments or
+    /// a change queued then: a write leaves the provider's list alone,
+    /// since sending an empty one would take every file off the event.
+    #[serde(default)]
+    pub attachments: Option<Vec<Attachment>>,
 }
 
 impl Event {
@@ -854,6 +893,38 @@ mod tests {
             "reminders":null,"conference":null,"rules":[],"series":null,"original_start":null,"pending":true}"#;
         let event: Event = serde_json::from_str(old).unwrap();
         assert_eq!(event.meet_request, None);
+    }
+
+    #[test]
+    fn a_body_queued_before_attachments_leaves_them_unknown() {
+        let old = r#"{"calendar":"work","id":"a","uid":"","etag":"","start":0,"end":0,"zone":"UTC",
+            "all_day":false,"title":"","place":"","description":"","color":null,"busy":true,
+            "status":"Confirmed","private":false,"organizer":null,"guests":[],"my_answer":null,
+            "reminders":null,"conference":null,"rules":[],"series":null,"original_start":null,"pending":true}"#;
+        let event: Event = serde_json::from_str(old).unwrap();
+        assert_eq!(event.attachments, None);
+    }
+
+    fn linked(url: &str) -> Attachment {
+        Attachment { file_url: url.into(), ..Attachment::default() }
+    }
+
+    #[test]
+    fn an_attachment_opens_an_https_link() {
+        let file = linked("https://drive.google.com/file/d/1abc/view");
+        assert_eq!(file.link(), Some("https://drive.google.com/file/d/1abc/view"));
+    }
+
+    #[test]
+    fn an_attachment_opens_nothing_but_https() {
+        for url in ["http://example.com/a", "file:///etc/passwd", "javascript:alert(1)", "", "https://"] {
+            assert_eq!(linked(url).link(), None, "{url}");
+        }
+    }
+
+    #[test]
+    fn an_attachment_link_reads_the_scheme_in_any_case() {
+        assert_eq!(linked("HTTPS://docs.google.com/d").link(), Some("HTTPS://docs.google.com/d"));
     }
 
     #[test]

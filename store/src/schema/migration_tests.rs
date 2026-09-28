@@ -752,3 +752,33 @@ fn migration_39_reads_every_calendar_whole_again() {
     let events: i64 = conn.query_row("SELECT COUNT(*) FROM events", [], |row| row.get(0)).unwrap();
     assert_eq!(events, 1);
 }
+
+/// Migration 46 gives events their attachments. A row stored before it
+/// reads them as unknown, so a write of that row leaves Google's files
+/// alone, and every calendar's token goes so the next read fills them in.
+#[test]
+fn migration_46_leaves_attachments_unknown_until_a_whole_read() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("mail.db");
+    let conn = open_with(&path, &MIGRATIONS[..45]).unwrap();
+    conn.execute_batch(
+        "INSERT INTO accounts (id, email, added_at) VALUES (1, 'me@gmail.com', 0);
+         INSERT INTO calendars (account_id, id, name, color, access, zone, is_primary, sync_token, synced_at) \
+             VALUES (1, 'primary', 'Me', '#fff', 'owner', 'Europe/Lisbon', 1, 't9', 5);
+         INSERT INTO events (account_id, calendar, id, uid, etag, starts_at, ends_at, zone, all_day, \
+             title, place, description, busy, status, private, rules, pending, seen_at) \
+             VALUES (1, 'primary', 'a', 'a@google.com', '\"1\"', 0, 1, 'UTC', 0, 'Review', '', '', 1, \
+             'confirmed', 0, '', 0, 5);",
+    )
+    .unwrap();
+    drop(conn);
+
+    let conn = open_with(&path, MIGRATIONS).unwrap();
+    assert_eq!(schema_version(&conn).unwrap(), 46);
+    let token: Option<String> = conn
+        .query_row("SELECT sync_token FROM calendars WHERE id = 'primary'", [], |row| row.get(0))
+        .unwrap();
+    assert_eq!(token, None);
+    let event = crate::calendar::event(&conn, 1, "primary", "a").unwrap().unwrap();
+    assert_eq!(event.attachments, None);
+}

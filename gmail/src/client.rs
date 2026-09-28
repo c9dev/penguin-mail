@@ -87,6 +87,9 @@ pub struct GmailClient {
     /// Answering an invitation goes to the Calendar API, which is another
     /// server behind the same access token. See `crate::calendar`.
     pub(crate) calendar_base_url: String,
+    /// Drive's upload endpoint, for files an event links to. See
+    /// `crate::drive`.
+    pub(crate) drive_upload_base_url: String,
     access: Mutex<Option<AccessToken>>,
     quota: std::sync::Arc<AccountQuota>,
     /// The scopes this account is believed to have granted: seeded from
@@ -111,6 +114,7 @@ impl GmailClient {
             base_url: GMAIL_API_BASE.to_string(),
             people_url: people::PEOPLE_API_BASE.to_string(),
             calendar_base_url: crate::calendar::CALENDAR_API_BASE.to_string(),
+            drive_upload_base_url: crate::drive::DRIVE_UPLOAD_BASE.to_string(),
             access: Mutex::new(None),
             quota,
             granted: std::sync::Mutex::new(None),

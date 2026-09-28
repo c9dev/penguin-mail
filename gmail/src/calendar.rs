@@ -349,7 +349,10 @@ impl GmailClient {
         let body = event_json(event, create);
         // Google reads conferenceData only when told which version of it
         // the body speaks.
-        let mut query = vec![("sendUpdates", send_updates(notify))];
+        // Without supportsAttachments Google ignores a change to the
+        // attachments, so every write says it, whether the body carries
+        // them or not.
+        let mut query = vec![("sendUpdates", send_updates(notify)), ("supportsAttachments", "true")];
         if event.meet_request.is_some() {
             query.push(("conferenceDataVersion", "1"));
         }
@@ -1035,7 +1038,40 @@ pub fn google_event(calendar: &str, item: &Value, me: Option<&str>, calendar_zon
         // Google's answer never needs to say one is still pending here.
         meet_request: None,
         kind: kind_of(item),
+        // Google leaves the key off an event with no files, so an event
+        // read here always knows its list, empty or not.
+        attachments: Some(attachments_of(item)),
     }
+}
+
+/// The files linked to Google's event.
+fn attachments_of(item: &Value) -> Vec<calendar::Attachment> {
+    let text = |file: &Value, key: &str| file.get(key).and_then(Value::as_str).unwrap_or_default().to_string();
+    item.get("attachments")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .map(|file| calendar::Attachment {
+            title: text(file, "title"),
+            file_url: text(file, "fileUrl"),
+            mime_type: text(file, "mimeType"),
+            icon_link: text(file, "iconLink"),
+            file_id: text(file, "fileId"),
+            waiting: None,
+        })
+        .collect()
+}
+
+/// The attachments as a write sends them. Google fills `fileId` and
+/// `iconLink` for a Drive file itself (the reference calls the id
+/// read-only), so only the link, title and type go out. A file still
+/// waiting to upload has no link yet and stays out.
+fn attachments_json(list: &[calendar::Attachment]) -> Value {
+    json!(list
+        .iter()
+        .filter(|file| file.waiting.is_none() && !file.file_url.is_empty())
+        .map(|file| json!({"fileUrl": file.file_url, "title": file.title, "mimeType": file.mime_type}))
+        .collect::<Vec<_>>())
 }
 
 /// What sort of entry Google's event is, from its `eventType` and the
@@ -1212,6 +1248,11 @@ fn event_json(event: &calendar::Event, create: bool) -> Value {
         body["recurrence"] = json!(event.rules);
     }
     own_fields_into(&mut body, event, create);
+    // An unread list stays off the body: a PATCH without the key keeps
+    // Google's files, and an empty list would take them all off.
+    if let Some(list) = &event.attachments {
+        body["attachments"] = attachments_json(list);
+    }
     if let Some(request) = &event.meet_request {
         body["conferenceData"] = json!({
             "createRequest": {

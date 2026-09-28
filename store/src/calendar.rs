@@ -221,9 +221,10 @@ pub fn save_events(conn: &Connection, account_id: AccountId, events: &[Event], s
         conn.execute(
             "INSERT OR REPLACE INTO events (account_id, calendar, id, uid, etag, starts_at, ends_at, zone, \
              all_day, title, place, description, color, busy, status, private, organizer, my_answer, \
-             reminders, conference, rules, series_end, series, original_start, pending, seen_at, sequence, kind) \
+             reminders, conference, rules, series_end, series, original_start, pending, seen_at, sequence, kind, \
+             attachments) \
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, \
-             ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27, ?28)",
+             ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27, ?28, ?29)",
             params![
                 account_id,
                 event.calendar,
@@ -253,6 +254,7 @@ pub fn save_events(conn: &Connection, account_id: AccountId, events: &[Event], s
                 seen_at,
                 event.sequence,
                 (event.kind != Kind::Event).then(|| json(&event.kind)),
+                event.attachments.as_ref().map(json),
             ],
         )?;
         conn.execute(
@@ -362,7 +364,8 @@ pub fn sweep(conn: &Connection, account_id: AccountId, calendar: &str, before: E
 
 const COLUMNS: &str = "e.account_id, e.calendar, e.id, e.uid, e.etag, e.starts_at, e.ends_at, e.zone, \
     e.all_day, e.title, e.place, e.description, e.color, e.busy, e.status, e.private, e.organizer, \
-    e.my_answer, e.reminders, e.conference, e.rules, e.series, e.original_start, e.pending, e.sequence, e.kind";
+    e.my_answer, e.reminders, e.conference, e.rules, e.series, e.original_start, e.pending, e.sequence, e.kind, \
+    e.attachments";
 
 pub fn event(conn: &Connection, account_id: AccountId, calendar: &str, id: &str) -> Result<Option<Event>> {
     let found = conn
@@ -768,6 +771,7 @@ fn read_event(row: &Row) -> rusqlite::Result<Event> {
         // the store reads back.
         meet_request: None,
         kind: row.get::<_, Option<String>>(25)?.map(|k| parse(&k)).unwrap_or_default(),
+        attachments: row.get::<_, Option<String>>(26)?.map(|a| parse(&a)),
     })
 }
 
@@ -1430,6 +1434,30 @@ mod tests {
         assert_eq!(read("away"), away);
         assert_eq!(read("where"), Kind::WorkingLocation(Workplace::Office("Lisbon HQ".into())));
         assert_eq!(read("plain"), Kind::Event);
+    }
+
+    #[test]
+    fn the_copy_keeps_an_events_attachments() {
+        let (conn, account) = store();
+        let file = mailrs_domain::calendar::Attachment {
+            title: "Agenda.pdf".into(),
+            file_url: "https://drive.google.com/file/d/1abc/view".into(),
+            mime_type: "application/pdf".into(),
+            icon_link: "https://drive-thirdparty.googleusercontent.com/16/type/application/pdf".into(),
+            file_id: "1abc".into(),
+            waiting: None,
+        };
+        let waiting = mailrs_domain::calendar::Attachment {
+            title: "Notes.txt".into(),
+            mime_type: "text/plain".into(),
+            waiting: Some("/home/me/Notes.txt".into()),
+            ..Default::default()
+        };
+        let with = Event { attachments: Some(vec![file, waiting]), ..event("primary", "a", 0, 1) };
+        let without = Event { attachments: Some(Vec::new()), ..event("primary", "b", 0, 1) };
+        save_events(&conn, account, &[with.clone(), without], 0).unwrap();
+        assert_eq!(super::event(&conn, account, "primary", "a").unwrap().unwrap().attachments, with.attachments);
+        assert_eq!(super::event(&conn, account, "primary", "b").unwrap().unwrap().attachments, Some(Vec::new()));
     }
 
     #[test]

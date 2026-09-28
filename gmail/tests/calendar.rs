@@ -1558,3 +1558,132 @@ async fn an_imported_event_goes_out_under_its_uid_with_no_guests() {
     // event beside the one the UID already matches, and it invites nobody.
     assert!(body.get("id").is_none() && body.get("attendees").is_none());
 }
+
+fn drive_file(title: &str, mime: &str, id: &str) -> mailrs_domain::calendar::Attachment {
+    mailrs_domain::calendar::Attachment {
+        title: title.into(),
+        file_url: format!("https://drive.google.com/file/d/{id}/view"),
+        mime_type: mime.into(),
+        icon_link: "https://drive-thirdparty.googleusercontent.com/16/type/application/pdf".into(),
+        file_id: id.into(),
+        waiting: None,
+    }
+}
+
+#[test]
+fn an_event_reads_its_attachments() {
+    let item = json!({
+        "id": "ev", "start": {"dateTime": "2026-09-23T08:00:00Z"}, "end": {"dateTime": "2026-09-23T09:00:00Z"},
+        "attachments": [{
+            "fileUrl": "https://drive.google.com/file/d/1abc/view",
+            "title": "Agenda.pdf",
+            "mimeType": "application/pdf",
+            "iconLink": "https://drive-thirdparty.googleusercontent.com/16/type/application/pdf",
+            "fileId": "1abc"
+        }]
+    });
+    let event = mailrs_gmail::google_event("work", &item, None, "UTC");
+    assert_eq!(event.attachments, Some(vec![drive_file("Agenda.pdf", "application/pdf", "1abc")]));
+}
+
+#[test]
+fn an_event_without_attachments_reads_an_empty_list() {
+    let item = json!({"id": "ev", "start": {"date": "2026-09-23"}, "end": {"date": "2026-09-24"}});
+    let event = mailrs_gmail::google_event("work", &item, None, "UTC");
+    assert_eq!(event.attachments, Some(Vec::new()));
+}
+
+#[tokio::test]
+async fn a_change_sends_the_attachments_back_with_supports_attachments() {
+    let server = MockServer::start().await;
+    mount_token(&server).await;
+    Mock::given(method("PATCH"))
+        .and(path(format!("{CALENDAR}/calendars/work/events/review")))
+        .and(query_param("supportsAttachments", "true"))
+        .and(body_partial_json(json!({"attachments": [
+            {"fileUrl": "https://drive.google.com/file/d/1abc/view", "title": "Agenda.pdf", "mimeType": "application/pdf"},
+            {"fileUrl": "https://drive.google.com/file/d/2def/view", "title": "Budget", "mimeType": "application/vnd.google-apps.spreadsheet"}
+        ]})))
+        .respond_with(|request: &Request| {
+            let body: Value = serde_json::from_slice(&request.body).unwrap();
+            // Google sets fileId and iconLink itself for a Drive file.
+            assert!(body["attachments"][0].get("fileId").is_none());
+            ResponseTemplate::new(200).set_body_json(json!({
+                "id": "review", "etag": "\"9\"", "start": body["start"], "end": body["end"],
+                "attachments": body["attachments"]
+            }))
+        })
+        .expect(1)
+        .mount(&server)
+        .await;
+    let event = mailrs_domain::calendar::Event {
+        calendar: "work".into(),
+        id: "review".into(),
+        zone: "UTC".into(),
+        start: 1_790_150_400_000,
+        end: 1_790_151_300_000,
+        attachments: Some(vec![
+            drive_file("Agenda.pdf", "application/pdf", "1abc"),
+            drive_file("Budget", "application/vnd.google-apps.spreadsheet", "2def"),
+        ]),
+        ..Default::default()
+    };
+    let made = client(&server).put_event(&event, Some("\"8\""), false, Notify::Guests).await.unwrap();
+    assert_eq!(made.attachments.map(|a| a.len()), Some(2));
+}
+
+#[tokio::test]
+async fn a_change_with_unknown_attachments_leaves_googles_list_alone() {
+    let server = MockServer::start().await;
+    mount_token(&server).await;
+    Mock::given(method("PATCH"))
+        .and(path(format!("{CALENDAR}/calendars/work/events/review")))
+        .and(query_param("supportsAttachments", "true"))
+        .respond_with(|request: &Request| {
+            let body: Value = serde_json::from_slice(&request.body).unwrap();
+            assert!(body.get("attachments").is_none(), "an unread list must not go out as empty");
+            ResponseTemplate::new(200).set_body_json(json!({"id": "review", "start": body["start"], "end": body["end"]}))
+        })
+        .expect(1)
+        .mount(&server)
+        .await;
+    let event = mailrs_domain::calendar::Event {
+        calendar: "work".into(),
+        id: "review".into(),
+        zone: "UTC".into(),
+        start: 1_790_150_400_000,
+        end: 1_790_151_300_000,
+        attachments: None,
+        ..Default::default()
+    };
+    client(&server).put_event(&event, None, false, Notify::Guests).await.unwrap();
+}
+
+#[tokio::test]
+async fn a_new_event_goes_out_with_its_attachments() {
+    let server = MockServer::start().await;
+    mount_token(&server).await;
+    Mock::given(method("POST"))
+        .and(path(format!("{CALENDAR}/calendars/work/events")))
+        .and(query_param("supportsAttachments", "true"))
+        .and(body_partial_json(json!({"attachments": [
+            {"fileUrl": "https://drive.google.com/file/d/1abc/view", "title": "Agenda.pdf", "mimeType": "application/pdf"}
+        ]})))
+        .respond_with(|request: &Request| {
+            let body: Value = serde_json::from_slice(&request.body).unwrap();
+            ResponseTemplate::new(200).set_body_json(json!({"id": body["id"], "start": body["start"], "end": body["end"]}))
+        })
+        .expect(1)
+        .mount(&server)
+        .await;
+    let event = mailrs_domain::calendar::Event {
+        calendar: "work".into(),
+        id: "pmnew0123".into(),
+        zone: "UTC".into(),
+        start: 1_790_150_400_000,
+        end: 1_790_151_300_000,
+        attachments: Some(vec![drive_file("Agenda.pdf", "application/pdf", "1abc")]),
+        ..Default::default()
+    };
+    client(&server).put_event(&event, None, true, Notify::Guests).await.unwrap();
+}

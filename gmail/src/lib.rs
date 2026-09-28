@@ -4,6 +4,7 @@ pub mod calendar;
 mod calendar_list;
 mod client;
 pub mod convert;
+pub mod drive;
 mod error;
 pub mod labels;
 pub mod limiter;
@@ -25,6 +26,7 @@ pub use client::{
     Authorized, BATCH_LIMIT, GMAIL_API_BASE, GmailClient, authorize, cost, one_click_unsubscribe,
 };
 pub use convert::{HistoryChange, HistoryPage};
+pub use drive::DRIVE_UPLOAD_BASE;
 pub use error::{GmailError, OneClickError};
 pub use limiter::{AccountQuota, Priority, QuotaLimiter, QuotaPool, Waiting};
 pub use model::{
