@@ -1787,7 +1787,12 @@ impl CalendarView {
     /// toast shows at a time (R4): holding another dismisses this one,
     /// whose own `dismissed` handler queues it.
     fn offer_undo(self: &Rc<Self>, said: String, held: Held) {
-        if let Some(toast) = self.toast_up.borrow_mut().take() {
+        // Take the toast out in a statement of its own: `dismiss` runs the
+        // toast's dismissed handler at once, which borrows `toast_up`
+        // again, and a borrow held across the call panics inside a GTK
+        // signal handler, which aborts the app.
+        let before = self.toast_up.borrow_mut().take();
+        if let Some(toast) = before {
             toast.dismiss();
         }
         let id = self.holding.borrow_mut().hold(held);
@@ -1828,7 +1833,10 @@ impl CalendarView {
                 return glib::ControlFlow::Continue;
             }
             drop(holding);
-            if let Some(toast) = view.toast_up.borrow_mut().take() {
+            // As in `offer_undo`: no borrow of `toast_up` may span the
+            // dismissed handler that `dismiss` runs.
+            let up = view.toast_up.borrow_mut().take();
+            if let Some(toast) = up {
                 toast.dismiss();
             }
             glib::ControlFlow::Break

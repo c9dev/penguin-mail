@@ -49,6 +49,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Fixed
 
+- Moving or changing a second calendar event while the first one's Undo is still showing no longer closes Penguin Mail.
 - The Flatpak keeps its Google sign-in, IMAP passwords and AI keys in
   its own encrypted store instead of the desktop's shared keyring, which
   it no longer opens for every app to read; sign in again once to move
