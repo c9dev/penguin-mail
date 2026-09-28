@@ -96,6 +96,7 @@ app/src/ui/window/arrange.rs
 app/src/ui/window/assistant.rs
 app/src/ui/window/attachments.rs
 app/src/ui/window/categories.rs
+app/src/ui/window/categories/chip.rs
 app/src/ui/window/detached.rs
 app/src/ui/window/export.rs
 app/src/ui/window/followup.rs

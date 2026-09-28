@@ -602,11 +602,6 @@ impl MainWindow {
                     split.set_show_sidebar(false);
                 }
             });
-            assistant_split
-                .bind_property("show-sidebar", &list.assistant_button, "active")
-                .bidirectional()
-                .sync_create()
-                .build();
             let stack = gtk::Stack::builder()
                 .transition_type(gtk::StackTransitionType::Crossfade)
                 .build();

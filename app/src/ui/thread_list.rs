@@ -39,8 +39,10 @@ pub struct ThreadList {
     pub page: adw::NavigationPage,
     pub sidebar_button: gtk::ToggleButton,
     pub search_button: gtk::ToggleButton,
-    /// Shows or hides the assistant pane.
-    pub assistant_button: gtk::ToggleButton,
+    /// Where `CategoryBar::install_categories` puts the chips, right under
+    /// the header and above the banners, so a sign-in or Grant Access
+    /// banner never lands between the header and the chips.
+    pub categories_slot: gtk::Box,
     pub banner: adw::Banner,
     /// The Grant Access bars, one for each account that still wants
     /// one; the window fills it. They sit on the mail list, since the
@@ -213,7 +215,11 @@ impl ThreadList {
             .build();
         search_bar.connect_entry(&search_entry);
 
+        // "All Inboxes" leads the list column, with the unread count and
+        // category under it; the header no longer centres it, so it sits
+        // where the chips and the rows start.
         let title = adw::WindowTitle::new(&gettext("All Inboxes"), "");
+        title.add_css_class("list-header-title");
         let sidebar_button = gtk::ToggleButton::builder()
             .icon_name("sidebar-show-symbolic")
             .tooltip_text(gettext("Show Mailboxes"))
@@ -233,10 +239,6 @@ impl ThreadList {
             .bidirectional()
             .sync_create()
             .build();
-        let assistant_button = gtk::ToggleButton::builder()
-            .icon_name("penguin-mail-sparkle-symbolic")
-            .tooltip_text(gettext("Assistant (Ctrl+J)"))
-            .build();
         // The tooltips already say what these do; the spoken name takes
         // the words and leaves the keys to a property of their own.
         super::name(&search_entry, &gettext("Search mail"));
@@ -244,20 +246,21 @@ impl ThreadList {
         for button in [
             compose_button.upcast_ref::<gtk::Widget>(),
             search_button.upcast_ref(),
-            assistant_button.upcast_ref(),
         ] {
             let tip = button.tooltip_text().unwrap_or_default();
             super::name_with_shortcut(button, &tip);
         }
-        let header = adw::HeaderBar::builder().title_widget(&title).build();
+        let header = adw::HeaderBar::builder().show_title(false).build();
         header.pack_start(&sidebar_button);
-        header.pack_end(&assistant_button);
+        header.pack_start(&title);
         header.pack_end(&compose_button);
         header.pack_end(&search_button);
 
+        let categories_slot = gtk::Box::new(gtk::Orientation::Vertical, 0);
         let banner = adw::Banner::builder().revealed(false).build();
         let toolbar = adw::ToolbarView::new();
         toolbar.add_top_bar(&header);
+        toolbar.add_top_bar(&categories_slot);
         toolbar.add_top_bar(&search_bar);
         toolbar.add_top_bar(&banner);
         let grant_bars = gtk::Box::new(gtk::Orientation::Vertical, 0);
@@ -273,7 +276,7 @@ impl ThreadList {
             page,
             sidebar_button,
             search_button,
-            assistant_button,
+            categories_slot,
             banner,
             grant_bars,
             search_entry,
