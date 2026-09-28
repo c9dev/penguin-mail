@@ -14,6 +14,7 @@ mod writes;
 pub use listed::Searched;
 
 use std::collections::BTreeSet;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, PoisonError};
 use std::time::{Duration, Instant};
 
@@ -60,6 +61,9 @@ pub struct AccountSync {
     /// look that can delete mail. A look in between would read a moved
     /// message's old place as expunged and delete it.
     moving: tokio::sync::Mutex<()>,
+    /// Counts the changes to this account's mail, so a search kept to
+    /// list a folder can tell it no longer says what the folder holds.
+    mail_changes: AtomicU64,
 }
 
 /// How long a finished history replay speaks for the whole mailbox. The
@@ -89,6 +93,7 @@ impl AccountSync {
             hits: Mutex::default(),
             raw: Arc::new(Mutex::new(RawCache::new(RAW_CACHE_BYTES))),
             moving: tokio::sync::Mutex::new(()),
+            mail_changes: AtomicU64::new(0),
         }
     }
 
@@ -223,7 +228,27 @@ impl AccountSync {
         Ok(())
     }
 
+    /// How many times this account's mail has changed. Only the count
+    /// moving matters: a listing taken at one count is out of date at the
+    /// next.
+    pub fn mail_changes(&self) -> u64 {
+        self.mail_changes.load(Ordering::Acquire)
+    }
+
+    /// Marks the account's mail changed. Every event that names changed or
+    /// new mail does this, and so does a write once the server has it,
+    /// since a search the server answered between the two missed it.
+    fn mail_changed(&self) {
+        self.mail_changes.fetch_add(1, Ordering::AcqRel);
+    }
+
     fn emit(&self, event: ChangeEvent) {
+        if matches!(
+            event,
+            ChangeEvent::ThreadsChanged { .. } | ChangeEvent::NewMail { .. }
+        ) {
+            self.mail_changed();
+        }
         // The channel is unbounded, so this only fails when nobody listens.
         let _ = self.events.try_send(event);
     }

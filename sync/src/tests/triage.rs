@@ -252,7 +252,7 @@ async fn trash_sends_its_labels_as_a_batch_would() {
         .unwrap();
     assert_eq!(
         h.fake.with(|s| s.remote_writes.clone()),
-        ["modify a +TRASH -INBOX"]
+        ["modify a +TRASH -INBOX,SPAM"]
     );
     assert_eq!(h.labels_of("a").await, ["TRASH"]);
 }

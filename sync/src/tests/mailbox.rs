@@ -604,6 +604,48 @@ async fn a_gmail_mailbox_has_no_row_by_row_refresh() {
     );
 }
 
+/// The window keeps one `Mailboxes` and lists a folder again whenever it
+/// comes back on screen. A kept Gmail search answers only while the mail
+/// it listed stays as it was: mail trashed since must show in the Trash
+/// and leave the folder it came from.
+#[tokio::test]
+async fn a_folder_lists_again_once_its_mail_changes() {
+    let h = seeded().await;
+    let lists = lists(&h);
+    let folder = |folder| Mailbox::Folder {
+        account_id: None,
+        folder,
+    };
+    let (trash, archive) = (folder(Folder::Trash), folder(Folder::Archive));
+    let scope = scope(&h);
+    let list = async |mailbox: &Mailbox| {
+        let listed = lists.list(mailbox, &scope, &view(), Loaded::nothing()).await;
+        ids(&listed.expect("the folder lists"))
+    };
+    assert!(list(&trash).await.is_empty());
+    assert_eq!(list(&archive).await, ["t4"]);
+
+    // Nothing changed, so the folder answers from the search it kept.
+    let searches = h.fake.with(|s| s.searched.len());
+    assert_eq!(list(&archive).await, ["t4"]);
+    assert_eq!(h.fake.with(|s| s.searched.len()), searches);
+
+    h.sync
+        .triage_thread("t4", &crate::TriageAction::Trash)
+        .await
+        .unwrap();
+    assert!(list(&archive).await.is_empty(), "t4 left the Archive");
+    assert_eq!(list(&trash).await, ["t4"], "t4 landed in the Trash");
+
+    // Junked from the Trash, it leaves the Trash for the Junk folder.
+    h.sync
+        .triage_thread("t4", &crate::TriageAction::Junk)
+        .await
+        .unwrap();
+    assert!(list(&trash).await.is_empty(), "t4 left the Trash");
+    assert_eq!(list(&folder(Folder::Junk)).await, ["t4"], "t4 landed in Junk");
+}
+
 #[tokio::test]
 async fn counts_cover_the_sidebar_and_the_categories() {
     let h = seeded().await;

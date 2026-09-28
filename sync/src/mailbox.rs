@@ -541,6 +541,10 @@ pub struct Counts {
 struct RemoteListing {
     query: SearchQuery,
     accounts: Vec<AccountId>,
+    /// Each account's count of mail changes when the search went out. A
+    /// change since, such as mail trashed from this folder or into it,
+    /// leaves the search answering for mail as it was.
+    changes: Vec<Option<u64>>,
     at: Instant,
     /// Per account: the ids the search returned, newest first, and the
     /// metadata fetched so far.
@@ -562,8 +566,11 @@ struct RemotePage {
 impl RemoteListing {
     /// Whether this is still the search the caller wants, and recent
     /// enough to answer from.
-    fn answers(&self, query: &SearchQuery, accounts: &[AccountId]) -> bool {
-        self.query == *query && self.accounts == accounts && self.at.elapsed() < REMOTE_FRESH
+    fn answers(&self, query: &SearchQuery, accounts: &[AccountId], changes: &[Option<u64>]) -> bool {
+        self.query == *query
+            && self.accounts == accounts
+            && self.changes == changes
+            && self.at.elapsed() < REMOTE_FRESH
     }
 
     /// Whether every account has metadata for its first `wanted` ids, or
@@ -896,17 +903,24 @@ impl<A: Accounts> Mailboxes<A> {
         let limit = view.limit.unwrap_or(REMOTE_LIMIT);
         let targets = scope.searched(only);
         let ids: Vec<AccountId> = targets.iter().map(|a| a.id).collect();
+        // Read before the search goes out, so a change made while it runs
+        // leaves the next listing asking again.
+        let changes: Vec<Option<u64>> = ids
+            .iter()
+            .map(|id| self.accounts.account(*id).map(|sync| sync.mail_changes()))
+            .collect();
 
         let kept = {
             let mut held = self.remote.lock().expect("remote listing poisoned");
             match held.take() {
-                Some(listing) if listing.answers(query, &ids) => Some(listing),
+                Some(listing) if listing.answers(query, &ids, &changes) => Some(listing),
                 _ => None,
             }
         };
         let mut listing = kept.unwrap_or_else(|| RemoteListing {
             query: query.clone(),
             accounts: ids,
+            changes,
             at: Instant::now(),
             pages: Vec::new(),
             notices: Vec::new(),

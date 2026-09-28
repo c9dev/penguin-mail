@@ -62,10 +62,11 @@ pub enum Splice<T> {
     Stale,
     /// Put these rows in place of the named ones.
     Put(T),
-    /// A remote mailbox cannot re-read threads. Drop the ones that left
-    /// it and leave the rest alone.
+    /// A folder cannot re-read threads. Drop the ones that left it and
+    /// leave the rest alone.
     Prune,
-    /// The mailbox could not say; list it again.
+    /// The mailbox could not say; list it again. A smart mailbox or a
+    /// search cannot tell which rows still match without searching again.
     Reload,
 }
 
@@ -212,13 +213,13 @@ impl<R> ListFeed<R> {
     }
 
     /// The threads a splice re-read arrived. `fresh` is nothing when the
-    /// mailbox cannot re-read threads on their own, and `remote` says the
-    /// mailbox lists through Gmail.
-    pub fn spliced<T>(&self, ticket: Ticket, fresh: Option<T>, remote: bool) -> Splice<T> {
+    /// mailbox cannot re-read threads on their own, and `prunes` says the
+    /// mailbox is a folder, which can drop the rows that left it.
+    pub fn spliced<T>(&self, ticket: Ticket, fresh: Option<T>, prunes: bool) -> Splice<T> {
         match fresh {
             _ if !self.current(ticket) => Splice::Stale,
             Some(rows) => Splice::Put(rows),
-            None if remote => Splice::Prune,
+            None if prunes => Splice::Prune,
             None => Splice::Reload,
         }
     }
