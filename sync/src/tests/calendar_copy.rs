@@ -1725,3 +1725,23 @@ async fn an_out_of_office_for_new_invitations_leaves_an_accepted_meeting_alone()
     copy.refresh(h.account_id, NOW + READ_EVERY_OPEN).await.unwrap();
     assert_eq!(stored(&h, "primary", "review").await.unwrap().my_answer, Some(Answer::Yes));
 }
+
+#[tokio::test]
+async fn an_out_of_office_google_refuses_says_which_accounts_may_make_one() {
+    use mailrs_domain::calendar::Declines;
+    let h = harness().await;
+    h.fake.with(|s| {
+        s.calendars = vec![calendar("primary", true)];
+        s.refuse_status_entries = true;
+    });
+    let copy = copy(&h);
+    copy.refresh(h.account_id, NOW).await.unwrap();
+    let id = new_event_id();
+    copy.save(h.account_id, out_of_office(&id, Declines::All)).await.unwrap();
+    let turned_down = copy.send(h.account_id).await.unwrap();
+    assert_eq!(turned_down.len(), 1);
+    let reason = turned_down[0].reason.clone().unwrap_or_default();
+    assert!(reason.starts_with("Google Calendar offers out of office and focus time only on some work and school accounts"), "{reason}");
+    assert!(reason.contains("Status events are not supported for this user."), "Google's own words stay: {reason}");
+    assert!(stored(&h, "primary", &id).await.is_none(), "the entry leaves the copy");
+}

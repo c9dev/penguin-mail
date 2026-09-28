@@ -198,6 +198,9 @@ pub struct FakeState {
     /// Play Google turning down every new event, as it does a body it
     /// cannot take: a create answers 400 with Google's reason.
     pub refuse_new_events: bool,
+    /// Refuse a new out-of-office or focus-time entry, as Google does on
+    /// an account that is not on Google Workspace.
+    pub refuse_status_entries: bool,
     /// Play Google turning down every move to another calendar, as it
     /// does for an event this account may not move: a move answers 400.
     pub refuse_moves: bool,
@@ -392,6 +395,7 @@ impl FakeGmail {
                 deleted_answers_gone: false,
                 deleted_calendars: Vec::new(),
                 refuse_new_events: false,
+                refuse_status_entries: false,
                 refuse_moves: false,
                 withheld: BTreeSet::new(),
                 calendar_off: None,
@@ -1381,6 +1385,14 @@ impl GmailApi for FakeGmail {
         let held = self.with(|s| {
             s.calendar_events.iter().find(|e| e.calendar == event.calendar && e.id == event.id).cloned()
         });
+        if create && event.kind.decline().is_some() && self.with(|s| s.refuse_status_entries) {
+            // Google's own words for this refusal are not documented; the
+            // message stands in for whatever it says.
+            return Err(GmailError::Http {
+                status: 400,
+                body: r#"{"error":{"code":400,"message":"Status events are not supported for this user."}}"#.into(),
+            });
+        }
         if create && self.with(|s| s.refuse_new_events) {
             return Err(GmailError::Http {
                 status: 400,
