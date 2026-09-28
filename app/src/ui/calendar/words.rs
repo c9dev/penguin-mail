@@ -88,6 +88,40 @@ where
     span_words(o.start, o.end, o.event.all_day, zone)
 }
 
+/// A month bar's spoken name: the title, the days the whole event
+/// covers, and its calendar. The bar in each week row says the whole
+/// span, so a reader on its second row still hears where it began.
+pub fn bar_words<Z: TimeZone>(o: &Occurrence, calendar: &str, zone: &Z) -> String
+where
+    Z::Offset: std::fmt::Display,
+{
+    let title = &o.event.title;
+    if o.event.all_day {
+        fill(
+            &gettext("{title}, {days}, all day, {calendar}"),
+            &[
+                ("title", title),
+                ("days", &span_words(o.start, o.end, true, zone)),
+                ("calendar", calendar),
+            ],
+        )
+    } else {
+        let at = |instant: EpochMillis| {
+            fill(
+                &gettext("{date} {time}"),
+                &[
+                    ("date", &full_date_words(local_date(instant, zone))),
+                    ("time", &clock_words(instant, zone)),
+                ],
+            )
+        };
+        fill(
+            &gettext("{title}, {start} to {end}, {calendar}"),
+            &[("title", title), ("start", &at(o.start)), ("end", &at(o.end)), ("calendar", calendar)],
+        )
+    }
+}
+
 /// The agenda row's time column: "All day", or the start and end clock
 /// with no date, which the row's own heading already carries.
 pub fn agenda_span_words<Z: TimeZone>(o: &Occurrence, zone: &Z) -> String
@@ -636,6 +670,30 @@ mod tests {
             .timestamp_millis();
         let o = occurrence(false, start, end);
         assert_eq!(when_words(&o, &Utc), "Wednesday 23 September · 15:00–16:00");
+    }
+
+    #[test]
+    fn a_bar_names_the_days_an_all_day_event_covers() {
+        mailrs_domain::translate::set_date_locale("en_US");
+        let mut o = occurrence(true, midnight(d(2026, 10, 2)), midnight(d(2026, 10, 5)));
+        Arc::make_mut(&mut o.event).title = "Lisbon offsite".into();
+        assert_eq!(
+            bar_words(&o, "Work", &Utc),
+            "Lisbon offsite, Friday 2 – Sunday 4 October, all day, Work"
+        );
+    }
+
+    #[test]
+    fn a_bar_names_both_days_and_clocks_of_a_timed_event() {
+        mailrs_domain::translate::set_date_locale("en_US");
+        let start = Utc.with_ymd_and_hms(2026, 10, 2, 22, 0, 0).unwrap().timestamp_millis();
+        let end = Utc.with_ymd_and_hms(2026, 10, 3, 2, 0, 0).unwrap().timestamp_millis();
+        let mut o = occurrence(false, start, end);
+        Arc::make_mut(&mut o.event).title = "Night shift".into();
+        assert_eq!(
+            bar_words(&o, "Work", &Utc),
+            "Night shift, Friday 2 October 22:00 to Saturday 3 October 02:00, Work"
+        );
     }
 
     #[test]

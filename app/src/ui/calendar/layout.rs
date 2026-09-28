@@ -1,6 +1,7 @@
 //! Where events land once a grid has to share their width or their
 //! hours: lanes for overlapping events, which day columns a span
-//! crosses, and how a month cell folds a crowded day into "N more".
+//! crosses, and how the month shares its height between week rows and
+//! folds a crowded day into "N more".
 
 use chrono::{DateTime, NaiveDate, NaiveDateTime, TimeZone, Utc};
 use mailrs_domain::EpochMillis;
@@ -168,18 +169,6 @@ pub fn instant_at<Z: TimeZone>(day: NaiveDate, hours: f64, tz: &Z) -> EpochMilli
     (0..=8)
         .find_map(|quarter| tz.from_local_datetime(&(wall + chrono::Duration::minutes(15 * quarter))).earliest())
         .map_or(0, |at| at.timestamp_millis())
-}
-
-/// How many of a month cell's `count` events fit in `rows_that_fit`
-/// before a "N more" line, keeping the last row for that line once the
-/// cell is crowded.
-pub fn month_fit(count: usize, rows_that_fit: usize) -> (usize, usize) {
-    if count <= rows_that_fit {
-        (count, 0)
-    } else {
-        let shown = rows_that_fit - 1;
-        (shown, count - shown)
-    }
 }
 
 /// The piece of a span of days that one week row of the month draws.
@@ -441,13 +430,6 @@ mod tests {
         let day = chrono::NaiveDate::from_ymd_opt(2026, 3, 29).unwrap();
         let two = chrono::Utc.with_ymd_and_hms(2026, 3, 29, 1, 0, 0).unwrap().timestamp_millis();
         assert_eq!(instant_at(day, 1.5, &tz), two);
-    }
-
-    #[test]
-    fn a_month_cell_keeps_a_row_for_the_more_line() {
-        assert_eq!(month_fit(2, 3), (2, 0));
-        assert_eq!(month_fit(3, 3), (3, 0));
-        assert_eq!(month_fit(5, 3), (2, 3));
     }
 
     fn seg(week: usize, start: usize, end: usize, squared_start: bool, squared_end: bool) -> Segment {

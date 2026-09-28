@@ -186,7 +186,6 @@ pub struct CalendarView {
     /// Below the width where the sidebar folds away, the header keeps
     /// the range's bold part only.
     compact: Cell<bool>,
-    month_rows: Cell<usize>,
     accounts: RefCell<Vec<CalendarAccount>>,
     calendars: RefCell<Calendars>,
     /// Counts every read, so each can tell whether a newer one replaced
@@ -380,17 +379,11 @@ impl CalendarView {
             .build();
         card.append(&views);
 
-        // The month grid keeps fewer rows of events per day once the card
-        // is short, which a breakpoint on the card's own height decides.
-        let bin = adw::BreakpointBin::builder()
+        let bin = adw::Bin::builder()
             .child(&card)
             .width_request(300)
             .height_request(240)
             .build();
-        let short = adw::Breakpoint::new(
-            adw::BreakpointCondition::parse("max-height: 660sp").expect("valid breakpoint"),
-        );
-        bin.add_breakpoint(short.clone());
 
         let bottom_slot = adw::Bin::builder()
             .halign(gtk::Align::Center)
@@ -492,7 +485,6 @@ impl CalendarView {
                 }),
                 narrow: Cell::new(false),
                 compact: Cell::new(false),
-                month_rows: Cell::new(4),
                 accounts: RefCell::new(Vec::new()),
                 calendars: RefCell::new(HashMap::new()),
                 reads: Cell::new(0),
@@ -562,17 +554,6 @@ impl CalendarView {
         view.carousel.connect_page_changed(move |_, index| {
             if let Some(view) = weak.upgrade() {
                 view.settled_on(index);
-            }
-        });
-        let (apply, unapply) = (Rc::downgrade(&view), Rc::downgrade(&view));
-        short.connect_apply(move |_| {
-            if let Some(view) = apply.upgrade() {
-                view.set_month_rows(3);
-            }
-        });
-        short.connect_unapply(move |_| {
-            if let Some(view) = unapply.upgrade() {
-                view.set_month_rows(4);
             }
         });
         // The tints are stronger in dark mode (tint.rs), and the rules key
@@ -1157,7 +1138,6 @@ impl CalendarView {
         match self.effective_kind() {
             ViewKind::Month => {
                 let month = MonthGrid::new();
-                month.set_rows(self.month_rows.get());
                 let weak = Rc::downgrade(self);
                 month.connect_day_activated(move |day| {
                     if let Some(view) = weak.upgrade() {
@@ -1599,15 +1579,6 @@ impl CalendarView {
         } else {
             self.set_kind(ViewKind::Day);
             self.read_sidebar(false);
-        }
-    }
-
-    fn set_month_rows(&self, rows: usize) {
-        self.month_rows.set(rows);
-        for page in self.pages.borrow().iter() {
-            if let PageView::Month(month) = &*page.view.borrow() {
-                month.set_rows(rows);
-            }
         }
     }
 
