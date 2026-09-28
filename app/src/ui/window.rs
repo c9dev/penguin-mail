@@ -780,6 +780,7 @@ impl MainWindow {
         });
         window.install_follow_ups();
         window.install_categories();
+        window.offer_summary();
         window.install_undo_send();
         let labels_of = Rc::downgrade(&window);
         super::search_suggest::attach(&window.list.search_entry, app.contacts(), move || {
@@ -1450,6 +1451,7 @@ impl MainWindow {
     pub(super) fn act(self: &Rc<Self>, view: &Rc<ConversationView>, action: Action) {
         match action {
             Action::Invitation(action) => self.invitation_action(view, action),
+            Action::Summarize => self.summarize(view),
             Action::Reply(kind) => self.reply(view, kind),
             Action::EditDraft => self.edit_draft_from(view),
             Action::Archive
@@ -2768,6 +2770,24 @@ impl MainWindow {
         }
     }
 
+    /// Opens the assistant beside the mail if it is closed, and asks it to
+    /// summarize the conversation on screen, as the suggestion in an empty
+    /// chat does.
+    fn summarize(self: &Rc<Self>, view: &Rc<ConversationView>) {
+        if view.detached() {
+            return;
+        }
+        self.assistant_split.set_show_sidebar(true);
+        self.assistant.ask(gettext("Summarize this conversation"));
+    }
+
+    /// Offers Summarize above the conversation while the assistant has a
+    /// model to answer with.
+    fn offer_summary(&self) {
+        let offered = self.settings_with(|s| crate::assistant::offers_summary(&s.ai));
+        self.conversation.offer_summary(offered);
+    }
+
     /// True when the focus is in the message itself, where Ctrl+A selects text.
     fn reading_text(&self) -> bool {
         GtkWindowExt::focus(&self.window).is_some_and(|focus| {
@@ -3100,7 +3120,10 @@ impl MainWindow {
             Effect::Categories => {
                 self.change_screen(|screen| Some(screen.categories_changed()));
             }
-            Effect::Assistant => self.assistant.refresh(),
+            Effect::Assistant => {
+                self.assistant.refresh();
+                self.offer_summary();
+            }
             Effect::TextSize => {
                 for view in self.views() {
                     view.set_zoom(settings.text_size.zoom());

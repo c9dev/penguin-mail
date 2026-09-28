@@ -437,6 +437,7 @@ impl FakeWindow {
         let theme = Theme {
             dark: false,
             accent: "#3584e4".to_string(),
+            summarize: false,
         };
         self.with(
             |screen| match screen.open.as_mut().map(|open| open.page(&theme)) {

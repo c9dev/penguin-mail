@@ -53,6 +53,9 @@ pub enum Action {
     /// The event card asked for something: an answer, or a hand-off to the
     /// desktop calendar.
     Invitation(invitation::Action),
+    /// The Summarize pill above the thread: ask the assistant to sum up
+    /// the conversation on screen.
+    Summarize,
     Reply(ReplyKind),
     EditDraft,
     Archive,
@@ -292,6 +295,8 @@ pub struct ConversationView {
     held: RefCell<Vec<(Address, webkit::URISchemeRequest)>>,
     compact: Cell<bool>,
     detached: Cell<bool>,
+    /// Whether the head of the page offers Summarize.
+    summarize: Cell<bool>,
     /// This view, for the answers WebKit gives later.
     this: Weak<ConversationView>,
 }
@@ -686,6 +691,7 @@ impl ConversationView {
             held: RefCell::new(Vec::new()),
             compact: Cell::new(false),
             detached: Cell::new(false),
+            summarize: Cell::new(false),
             this: this.clone(),
         });
 
@@ -961,6 +967,14 @@ impl ConversationView {
     /// thread list and so no row selection to act on.
     pub fn detached(&self) -> bool {
         self.detached.get()
+    }
+
+    /// Offers Summarize above the thread, or takes it away. The head of
+    /// the page changes, so the page loads again.
+    pub fn offer_summary(&self, offered: bool) {
+        if self.summarize.replace(offered) != offered {
+            self.render(false);
+        }
     }
 
     /// The window this conversation is in, which a dialog raised from it
@@ -1449,6 +1463,8 @@ impl ConversationView {
         let theme = Theme {
             dark: style.is_dark(),
             accent: style.accent_color_rgba().to_str().to_string(),
+            // A conversation in its own window has no assistant beside it.
+            summarize: self.summarize.get() && !self.detached.get(),
         };
         let page = open.page(&theme);
         let background = if theme.dark {
@@ -1755,6 +1771,8 @@ impl ConversationView {
             }
         } else if let Some(address) = uri.strip_prefix("mailrs:contact/") {
             actions(Action::ShowContact(address.to_string()));
+        } else if uri == "mailrs:summarize" {
+            actions(Action::Summarize);
         } else if let Some(address) = uri.strip_prefix("mailto:") {
             actions(Action::Mailto(
                 address.split('?').next().unwrap_or(address).to_string(),

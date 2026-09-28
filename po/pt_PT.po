@@ -2163,6 +2163,14 @@ msgstr "Não foi possível carregar esta mensagem: {reason}"
 msgid "to {recipients}"
 msgstr "para {recipients}"
 
+#: app/src/render.rs:137
+msgid "Summarize"
+msgstr "Resumir"
+
+#: app/src/render.rs:317
+msgid "Details"
+msgstr "Detalhes"
+
 #: app/src/render.rs:324
 msgid "from"
 msgstr "de"
