@@ -33,6 +33,7 @@ pub mod words;
 use std::cell::{Cell, RefCell};
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::rc::{Rc, Weak};
+use std::sync::Arc;
 
 use adw::prelude::*;
 use chrono::{DateTime, Datelike, Days, NaiveDate, Utc};
@@ -181,6 +182,14 @@ pub struct CalendarView {
     search_bar: gtk::SearchBar,
     search_entry: gtk::SearchEntry,
     views: gtk::Stack,
+    /// The quiet pill over the bottom of the grid or list that says older
+    /// events are loading, or cannot load while offline.
+    older_note: gtk::Box,
+    older_spinner: gtk::Spinner,
+    older_label: gtk::Label,
+    /// Counts the asks for older events, so an answer that comes back
+    /// after the person moved on leaves the note to the newer ask.
+    older_read: Cell<u64>,
     carousel: adw::Carousel,
     pages: RefCell<Vec<Rc<Page>>>,
     list: Rc<Agenda>,
@@ -223,7 +232,7 @@ pub struct CalendarView {
     /// The earliest day the narrow list already holds. `load_earlier`
     /// reads back from here and moves it once the read comes back.
     list_first: Cell<NaiveDate>,
-    /// Set once `load_earlier` has read down to `range::earliest_kept_day`,
+    /// Set once `load_earlier` has read down to `range::earliest_agenda_day`,
     /// so a further scroll to the top asks nothing more.
     list_exhausted: Cell<bool>,
     /// Set while an earlier-days read is in flight, so a second scroll
@@ -272,6 +281,18 @@ pub struct CalendarView {
     /// offline line's own "last updated" time. `None` before the first
     /// one this run.
     last_synced: Cell<Option<chrono::NaiveTime>>,
+}
+
+/// What an ask for older events came to.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum Older {
+    /// The copy already reaches back far enough, or the ask failed in a
+    /// way the person cannot act on; the view has what there is.
+    Held,
+    /// A fetch ran, so the view may lack events it has not drawn yet.
+    Loaded,
+    /// A fetch was due and the computer has no network.
+    Offline,
 }
 
 /// Whether pressing Refresh should start a calendar sync now: never
@@ -447,7 +468,24 @@ impl CalendarView {
             .margin_bottom(10)
             .overflow(gtk::Overflow::Hidden)
             .build();
-        card.append(&views);
+        let older_spinner = gtk::Spinner::new();
+        let older_label = gtk::Label::new(None);
+        let older_note = gtk::Box::builder()
+            .orientation(gtk::Orientation::Horizontal)
+            .spacing(8)
+            .css_classes(["older-note"])
+            .halign(gtk::Align::Center)
+            .valign(gtk::Align::End)
+            .margin_bottom(14)
+            .can_target(false)
+            .visible(false)
+            .build();
+        older_note.append(&older_spinner);
+        older_note.append(&older_label);
+        crate::ui::name(&older_spinner, &gettext("Loading older events"));
+        let over_views = gtk::Overlay::builder().child(&views).build();
+        over_views.add_overlay(&older_note);
+        card.append(&over_views);
 
         let bin = adw::Bin::builder()
             .child(&card)
@@ -540,6 +578,10 @@ impl CalendarView {
                 search_bar,
                 search_entry,
                 views,
+                older_note,
+                older_spinner,
+                older_label,
+                older_read: Cell::new(0),
                 carousel,
                 pages: RefCell::new(Vec::new()),
                 list,
@@ -780,6 +822,99 @@ impl CalendarView {
         self.show_range();
         self.fill_all();
         self.read_sidebar(false);
+        self.reach_current();
+    }
+
+    /// The start of what the view shows now, which the copy has to reach:
+    /// the range's first day, or for the list its first day.
+    fn wanted_from(&self) -> EpochMillis {
+        let day = match self.showing() {
+            Showing::List => range::agenda_window(self.day.get()).0,
+            _ => return Range::around(self.effective_kind(), self.day.get()).span(&chrono::Local).0,
+        };
+        day_span(day, day).0
+    }
+
+    /// Makes sure the copy holds what the view shows now, fetching an
+    /// older range from Google when the person went back further than the
+    /// copy reaches, and draws it again once it arrives.
+    fn reach_current(self: &Rc<Self>) {
+        let from = self.wanted_from();
+        let weak = Rc::downgrade(self);
+        glib::spawn_future_local(async move {
+            let Some(view) = weak.upgrade() else { return };
+            if view.reach_back(from).await == Older::Loaded && view.wanted_from() == from {
+                view.fill_all();
+            }
+        });
+    }
+
+    /// Asks the copy for the events back to `from`, with the note over
+    /// the view saying so while it waits. `Loaded` means a fetch ran, so
+    /// what the view drew before may lack events; `Offline` means one was
+    /// due and could not run.
+    async fn reach_back(self: &Rc<Self>, from: EpochMillis) -> Older {
+        let ask = self.older_read.get() + 1;
+        self.older_read.set(ask);
+        let accounts = self.account_ids();
+        let copy = self.core.calendar_copy();
+        let missing = {
+            let (copy, accounts) = (Arc::clone(&copy), accounts.clone());
+            self.core.call(async move { copy.older_missing(&accounts, from).await }).await
+        };
+        match missing {
+            Ok(true) => {}
+            Ok(false) => {
+                self.show_older_note(ask, None);
+                return Older::Held;
+            }
+            Err(err) => {
+                tracing::warn!(%err, "could not tell whether the copy reaches back far enough");
+                self.show_older_note(ask, None);
+                return Older::Held;
+            }
+        }
+        if !self.core.network() {
+            self.show_older_note(ask, Some(Older::Offline));
+            return Older::Offline;
+        }
+        self.show_older_note(ask, Some(Older::Loaded));
+        let read = self.core.call(async move { copy.reach_back(&accounts, from).await }).await;
+        match read {
+            Ok(_) => {
+                self.show_older_note(ask, None);
+                Older::Loaded
+            }
+            Err(err) => {
+                let offline = err
+                    .downcast_ref::<mailrs_sync::SyncError>()
+                    .is_some_and(|e| matches!(e, mailrs_sync::SyncError::Backend(b) if b.is_transient()));
+                if offline {
+                    self.show_older_note(ask, Some(Older::Offline));
+                    return Older::Offline;
+                }
+                tracing::warn!(%err, "could not fetch older calendar events");
+                self.show_older_note(ask, None);
+                Older::Held
+            }
+        }
+    }
+
+    /// Shows, changes or hides the note over the view, unless a newer ask
+    /// for older events has taken it over. `Loaded` stands for the loading
+    /// line and `Offline` for the offline one.
+    fn show_older_note(&self, ask: u64, saying: Option<Older>) {
+        if self.older_read.get() != ask {
+            return;
+        }
+        let offline = saying == Some(Older::Offline);
+        self.older_spinner.set_visible(!offline);
+        self.older_spinner.set_spinning(saying == Some(Older::Loaded));
+        self.older_label.set_label(&match offline {
+            true => gettext("Older events can't load while offline"),
+            false => gettext("Loading older events"),
+        });
+        self.older_note.set_visible(saying.is_some());
     }
 
     /// Shows a day, a week or a month, around the day the view is on.
@@ -796,6 +931,7 @@ impl CalendarView {
         self.rebuild_pages();
         self.show_range();
         self.fill_all();
+        self.reach_current();
         // The mini month's band follows the grid: a week, a month, or
         // none for a single day.
         self.read_sidebar(false);
@@ -911,6 +1047,7 @@ impl CalendarView {
         if self.showing() == Showing::List {
             self.fill_list();
         }
+        self.reach_current();
     }
 
     /// Puts the focus in the page, on Today, so the calendar's keys
@@ -1544,6 +1681,7 @@ impl CalendarView {
         self.fill(&recycled);
         self.show_range();
         self.read_sidebar(false);
+        self.reach_current();
     }
 
     /// Reads every page again, and the list when it shows.
@@ -1812,13 +1950,13 @@ impl CalendarView {
     /// Loads the 30 days before what the narrow list already holds, once
     /// the reader scrolls to its top. Keeps what the list holds bounded
     /// by loading in these steps rather than all at once, and stops at
-    /// `range::earliest_kept_day`: the copy's own first read went back no
-    /// further than a year, so nothing earlier could ever be there.
+    /// `range::earliest_agenda_day`, fetching the months the copy lacks
+    /// from the provider as it goes.
     fn load_earlier(self: &Rc<Self>) {
         if self.list_loading.get() || self.list_exhausted.get() {
             return;
         }
-        let cutoff = range::earliest_kept_day(chrono::Local::now().date_naive());
+        let cutoff = range::earliest_agenda_day(chrono::Local::now().date_naive());
         let last = self.list_first.get() - Days::new(1);
         if last < cutoff {
             self.list_exhausted.set(true);
@@ -1835,6 +1973,17 @@ impl CalendarView {
         let weak = Rc::downgrade(self);
         let core = Rc::clone(&self.core);
         glib::spawn_future_local(async move {
+            // The copy may not reach this far back yet; fetch the months
+            // it lacks before reading, or the list would grow by days that
+            // look empty. Offline, the list stays where it is, so the
+            // next scroll to the top asks again.
+            let Some(view) = weak.upgrade() else { return };
+            let reached = view.reach_back(from).await;
+            if reached == Older::Offline {
+                view.list_loading.set(false);
+                return;
+            }
+            drop(view);
             let found = core
                 .read(move |c| store::occurrences(c, &accounts, from, to, CalendarScope::Shown))
                 .await;
