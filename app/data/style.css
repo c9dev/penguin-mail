@@ -1,3 +1,30 @@
+/* Dark mode. `@media (prefers-color-scheme: dark)` never matches an app
+   stylesheet on GTK 4.22 (gtk4-css-support skill), so every dark rule
+   below keys off `.app-dark` instead: `ui::window::track_dark_class`
+   puts that class on each toplevel window (the main window and every
+   conversation window of its own) from `adw::StyleManager::is_dark()`,
+   and keeps it current on `connect_dark_notify`.
+
+   The mail redesign's mockup (docs/superpowers/specs/calendar-mockup/,
+   mockups.py) draws with a small set of surfaces. Each later task in
+   the redesign writes its rules with these values rather than picking
+   its own:
+   - pill: #e3e3e7 light, #3a3a40 dark (capsules, chips, answer buttons,
+     window controls). About 12 to 13 % of the text colour, not 8 %.
+   - line: #ececef light, #2c2c31 dark (hairlines, about 5 %).
+   - line2: #dedee3 light, #39393f dark (capsule separators, card
+     borders).
+   - text: dim is the text at 64 % opacity, faint at 40 %. libadwaita's
+     `dim-label` is 55 %, which is neither.
+   - accent tints: the sidebar's selected row, 18 % light and 28 % dark
+     over the sidebar shade; the selected thread, 16 % and 26 %; the
+     Undo Send pill, 16 % over the sidebar; the Summarize pill, 12 %
+     over the view. The calendar event's own tint stays 14 % and 24 %,
+     set in `calendar::tint`.
+   - type: 11.5px = 0.78em, 12.5px = 0.85em, 13px = 0.89em,
+     13.5px = 0.92em, 14px = 0.95em, 17px = 1.16em, at the calendar
+     CSS's 1em = 14.67px (an 11pt interface font). */
+
 /* The composer's signing button, when the message goes out signed or
    encrypted. Its icon carries the accent so the state reads at a glance. */
 .protected image { color: var(--accent-color); }
@@ -407,7 +434,7 @@ button.event-block:hover {
 button.event-block:active {
   background-color: color-mix(in srgb, var(--accent-bg-color) 28%, var(--view-bg-color));
 }
-.calendar-dark button.event-block:hover {
+.app-dark button.event-block:hover {
   background-color: color-mix(in srgb, var(--accent-bg-color) 32%, var(--view-bg-color));
 }
 .event-block .bar { min-width: 4px; border-radius: 2px; background: var(--cal-colour); }
@@ -428,9 +455,9 @@ button.event-block.compact .title { font-size: 0.82em; margin-top: 0; }
    draw the mockup's 5 and 4 pattern. tint.rs leaves these blocks out of
    its fills, which would otherwise win. */
 button.event-block.unanswered,
-.calendar-dark button.event-block.unanswered { background: var(--view-bg-color); }
+.app-dark button.event-block.unanswered { background: var(--view-bg-color); }
 button.event-block.unanswered:hover,
-.calendar-dark button.event-block.unanswered:hover {
+.app-dark button.event-block.unanswered:hover {
   background: color-mix(in srgb, var(--cal-colour) 8%, var(--view-bg-color));
 }
 .event-block.unanswered .bar { background: transparent; }
@@ -604,11 +631,11 @@ button.popover-join, button.popover-answer {
 /* The mockup's popover is the view colour in light, #36363c in dark, and
    its unchosen buttons the pill colour, #e3e3e7 and #3a3a40. */
 popover.event-popover > contents { background: var(--view-bg-color); }
-.calendar-dark popover.event-popover > contents { background: #36363c; }
+.app-dark popover.event-popover > contents { background: #36363c; }
 popover.event-popover button.popover-join,
 popover.event-popover button.popover-answer:not(.suggested-action) { background: #e3e3e7; }
-.calendar-dark popover.event-popover button.popover-join,
-.calendar-dark popover.event-popover button.popover-answer:not(.suggested-action) { background: #3a3a40; }
+.app-dark popover.event-popover button.popover-join,
+.app-dark popover.event-popover button.popover-answer:not(.suggested-action) { background: #3a3a40; }
 /* The place row is a button only so it can open the map; it reads as
    the rows around it. */
 popover.event-popover button.popover-place { min-height: 0; padding: 0; margin: 0 -4px; padding: 0 4px; font-weight: 400; }
@@ -617,8 +644,8 @@ popover.event-popover button.popover-join:hover,
 popover.event-popover button.popover-answer:not(.suggested-action):hover {
   background: color-mix(in srgb, currentColor 8%, #e3e3e7);
 }
-.calendar-dark popover.event-popover button.popover-join:hover,
-.calendar-dark popover.event-popover button.popover-answer:not(.suggested-action):hover {
+.app-dark popover.event-popover button.popover-join:hover,
+.app-dark popover.event-popover button.popover-answer:not(.suggested-action):hover {
   background: color-mix(in srgb, currentColor 8%, #3a3a40);
 }
 /* "Open the invitation in Mail": an icon-and-text link, not a filled

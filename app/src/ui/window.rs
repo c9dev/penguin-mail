@@ -176,6 +176,37 @@ pub struct MainWindow {
     followed: RefCell<HashMap<AccountId, HashSet<String>>>,
 }
 
+/// The class that marks a toplevel window dark. `@media
+/// (prefers-color-scheme: dark)` never matches this app's own
+/// stylesheet on GTK 4.22 (the gtk4-css-support skill confirms it), so
+/// every dark rule in `app/data/style.css` and `calendar::tint` keys off
+/// this class instead of that query.
+pub(super) const DARK_CLASS: &str = "app-dark";
+
+/// Puts [`DARK_CLASS`] on `window` while libadwaita is dark, and keeps it
+/// current for as long as the window lives: on the main window here, and
+/// on each conversation window of its own in `window/detached.rs`.
+pub(super) fn track_dark_class(window: &adw::Window) {
+    let style = adw::StyleManager::default();
+    let target = window.downgrade();
+    let mark = move |style: &adw::StyleManager| {
+        let Some(window) = target.upgrade() else { return };
+        match style.is_dark() {
+            true => window.add_css_class(DARK_CLASS),
+            false => window.remove_css_class(DARK_CLASS),
+        }
+    };
+    mark(&style);
+    // The style manager lives as long as the process; the handler goes
+    // with the window it marks.
+    let handler = RefCell::new(Some(style.connect_dark_notify(mark)));
+    window.connect_destroy(move |_| {
+        if let Some(handler) = handler.take() {
+            adw::StyleManager::default().disconnect(handler);
+        }
+    });
+}
+
 /// The toast after erasing.
 fn deleted_forever_message(count: usize, threaded: bool) -> String {
     let number = count.to_string();
@@ -654,6 +685,7 @@ impl MainWindow {
             // reach the application's own actions. The update banner, menu
             // entry and About button all run app.* actions.
             window.insert_action_group("app", Some(&app.gio));
+            track_dark_class(&window);
             MainWindow {
                 window,
                 actions,
