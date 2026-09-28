@@ -10,6 +10,7 @@ pub mod assistant_skills_prefs;
 pub mod assistant_web_prefs;
 pub mod autocomplete;
 pub mod calendar;
+pub mod card_place;
 pub mod composer;
 pub mod confirm;
 pub mod contact_card;
