@@ -15,7 +15,8 @@ use gtk::prelude::*;
 
 use super::richbuffer::{self, Anchors};
 use crate::compose::{
-    LineChange, LinePrefix, OutgoingAttachment, markdown_to_html, signature_change, toggle_prefix,
+    LineChange, LinePrefix, OutgoingAttachment, Unfolding, markdown_to_html, signature_change,
+    toggle_prefix,
 };
 use crate::richtext::{Block, BlockKind, RichBody, Style};
 use crate::settings::ComposeFormat;
@@ -48,6 +49,9 @@ pub struct Editor {
     /// True while the editor changes the buffer itself, so its own edits
     /// are not styled as typing.
     busy: Cell<bool>,
+    /// Where the history the writer unfolded starts in the buffer, and
+    /// its blocks, to style them again after a Redo.
+    history_start: RefCell<Option<(gtk::TextMark, RichBody)>>,
     /// The first and last line an edit touched since the buffer last
     /// settled, so the upkeep after it looks at those and no others.
     touched: Cell<Option<(i32, i32)>>,
@@ -72,6 +76,7 @@ impl Editor {
             typing: RefCell::new(None),
             inserted: RefCell::new(Vec::new()),
             busy: Cell::new(false),
+            history_start: RefCell::new(None),
             touched: Cell::new(None),
             #[cfg(test)]
             looked_at: Cell::new(0),
@@ -106,6 +111,14 @@ impl Editor {
             if let Some(editor) = weak.upgrade() {
                 editor.after_edit();
             }
+        });
+        // After GTK's own handler, once the text is back.
+        let weak = Rc::downgrade(self);
+        self.buffer.connect_local("redo", true, move |_| {
+            if let Some(editor) = weak.upgrade() {
+                editor.restyle_history();
+            }
+            None
         });
         let weak = Rc::downgrade(self);
         self.buffer.connect_cursor_position_notify(move |_| {
@@ -463,6 +476,101 @@ impl Editor {
             ComposeFormat::Markdown => self.buffer.insert_at_cursor(&body.to_markdown()),
         }
         self.buffer.end_user_action();
+        self.busy.set(false);
+    }
+
+    /// Adds the history the writer unfolded at the end of the body, one
+    /// blank line under their words, as one step of Undo. It makes the same
+    /// body `compose::unfolded_markdown` and `compose::unfolded_rich` make,
+    /// so an unfolded quote left alone goes out as a folded one would. The
+    /// cursor stays where it was.
+    pub fn append_history(&self, history: &Unfolding) {
+        let buffer = &self.buffer;
+        let cursor = buffer.create_mark(None, &buffer.iter_at_mark(&buffer.get_insert()), true);
+        self.busy.set(true);
+        buffer.begin_user_action();
+        // The blank lines and spaces that end the body go, as the trim in
+        // `unfolded_markdown` drops them.
+        let mut cut = buffer.end_iter();
+        loop {
+            let mut before = cut;
+            if !before.backward_char() || !before.char().is_whitespace() {
+                break;
+            }
+            cut = before;
+        }
+        let mut end = buffer.end_iter();
+        buffer.delete(&mut cut, &mut end);
+        // Where the history starts. It stays left of anything inserted at
+        // that spot, the blank lines an Undo puts back included, so the
+        // text after it is the history and nothing else.
+        let start = buffer.create_mark(None, &cut, true);
+        let old = self
+            .history_start
+            .replace(Some((start, history.rich.clone())));
+        if let Some((old, _)) = old {
+            buffer.delete_mark(&old);
+        }
+        match self.format.get() {
+            ComposeFormat::Rich => {
+                buffer.place_cursor(&buffer.end_iter());
+                // The first empty block ends the writer's own line, the
+                // second is the blank line above the history.
+                let mut blocks = vec![Block::default(), Block::default()];
+                blocks.extend(history.rich.blocks.iter().cloned());
+                richbuffer::insert(buffer, &RichBody { blocks });
+            }
+            ComposeFormat::Markdown => {
+                let mut at = buffer.end_iter();
+                let first = at.line();
+                buffer.insert(&mut at, &format!("\n\n{}", history.markdown));
+                style_quotes(buffer, first, buffer.line_count());
+            }
+        }
+        buffer.end_user_action();
+        self.busy.set(false);
+        buffer.place_cursor(&buffer.iter_at_mark(&cursor));
+        buffer.delete_mark(&cursor);
+    }
+
+    /// Whether the history [`Editor::append_history`] added is still in
+    /// the body: `false` once an Undo has taken it back out, `true` again
+    /// after a Redo. `None` when nothing was unfolded here. The composer
+    /// asks after each Undo and Redo, so the quote goes back to its fold
+    /// rather than out of the message.
+    pub fn history_present(&self) -> Option<bool> {
+        let start = self.history_start.borrow().as_ref()?.0.clone();
+        let buffer = &self.buffer;
+        let from = buffer.iter_at_mark(&start);
+        let text = buffer.text(&from, &buffer.end_iter(), false);
+        Some(!text.trim().is_empty())
+    }
+
+    /// Gives the unfolded history its line kinds back after a Redo put its
+    /// text back. GTK's undo history holds text and not tags, so the quote
+    /// would otherwise return as plain paragraphs and go out that way.
+    fn restyle_history(&self) {
+        if self.history_present() != Some(true) {
+            return;
+        }
+        let Some((start, rich)) = self.history_start.borrow().clone() else {
+            return;
+        };
+        let buffer = &self.buffer;
+        let line = buffer.iter_at_mark(&start).line();
+        self.busy.set(true);
+        match self.format.get() {
+            // Line one of what went in ends the writer's line and line two
+            // is blank; the history's blocks follow.
+            ComposeFormat::Rich => {
+                for (index, block) in rich.blocks.iter().enumerate() {
+                    richbuffer::set_kind(buffer, line + 2 + index as i32, block.kind);
+                }
+            }
+            ComposeFormat::Markdown => {
+                style_quotes(buffer, line, buffer.line_count());
+            }
+        }
         self.busy.set(false);
     }
 
@@ -842,6 +950,79 @@ pub(super) mod checks {
         a_new_signature_leaves_the_cursor_and_undo_alone();
         a_keystroke_looks_at_its_own_lines_only();
         the_body_is_read_once_for_a_draft();
+        an_unfolded_quote_lands_where_the_folded_one_would_go();
+    }
+
+    fn an_unfolded_quote_lands_where_the_folded_one_would_go() {
+        use crate::compose::{unfolded_markdown, unfolded_rich};
+
+        let quoted = "On Monday, Ann wrote:\n> hi\n>\n> there";
+        let history = Unfolding {
+            markdown: quoted.into(),
+            rich: RichBody::from_markdown(quoted),
+        };
+        for typed in ["Thanks.\n\n-- \nDana\n\n", "\n\n", ""] {
+            for format in [ComposeFormat::Rich, ComposeFormat::Markdown] {
+                let view = gtk::TextView::new();
+                let editor = Editor::new(&view, format);
+                editor.fill(typed, None, &[]);
+                cursor_at(&editor, 3);
+                let cursor = editor
+                    .buffer
+                    .iter_at_mark(&editor.buffer.get_insert())
+                    .offset();
+                let before = editor.written();
+                editor.append_history(&history);
+                let after = editor.written();
+                match format {
+                    ComposeFormat::Markdown => assert_eq!(
+                        after.markdown,
+                        unfolded_markdown(&before.markdown, quoted),
+                        "{typed:?}"
+                    ),
+                    ComposeFormat::Rich => assert_eq!(
+                        after.rich,
+                        Some(unfolded_rich(before.rich.as_ref().unwrap(), &history.rich)),
+                        "{typed:?}"
+                    ),
+                }
+                // The cursor stays among the words. In a body of blank lines
+                // it sat in what the trim took, and goes to the top.
+                let now = editor.buffer.iter_at_mark(&editor.buffer.get_insert());
+                let wanted = if typed.trim().is_empty() { 0 } else { cursor };
+                assert_eq!(now.offset(), wanted, "{format:?} {typed:?}");
+                assert_eq!(editor.history_present(), Some(true), "{format:?} {typed:?}");
+                // One Undo takes the whole quote back out, and says so, for
+                // the composer to fold it again.
+                editor.buffer.undo();
+                assert_eq!(editor.written().markdown, before.markdown, "{format:?} {typed:?}");
+                assert_eq!(editor.history_present(), Some(false), "{format:?} {typed:?}");
+                // Folded again, the reply sends as it did before the unfold.
+                let folded = |written: &Written| {
+                    let mut draft = crate::compose::Draft::new(
+                        1,
+                        mailrs_domain::Address {
+                            name: None,
+                            email: "dana@example.com".into(),
+                        },
+                    );
+                    draft.markdown = written.markdown.clone();
+                    draft.rich = written.rich.clone();
+                    draft.quoted = Some(quoted.to_string());
+                    let raw = crate::compose::build_mime(&draft, 0, "id@example.com").unwrap();
+                    let parsed = mail_parser::MessageParser::default().parse(&raw).unwrap();
+                    (
+                        parsed.body_text(0).map(|t| t.to_string()),
+                        parsed.body_html(0).map(|h| h.to_string()),
+                    )
+                };
+                assert_eq!(folded(&editor.written()), folded(&before), "{format:?} {typed:?}");
+                // Redo puts it back in the body.
+                editor.buffer.redo();
+                assert_eq!(editor.written().markdown, after.markdown, "{format:?} {typed:?}");
+                assert_eq!(editor.history_present(), Some(true), "{format:?} {typed:?}");
+            }
+        }
     }
 
     /// A long quoted reply: a line to write on, and 3,000 quoted lines.

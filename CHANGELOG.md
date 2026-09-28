@@ -7,6 +7,10 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### New
 
+- A reply or a forward opens with the quoted message folded behind a
+  "•••" button under your words, as in Gmail, and still sends with it.
+  Click "•••" to read it, and in a reply to trim it, or × to send
+  without it.
 - Fold an account's calendars away by clicking its address in the
   calendar sidebar. The list stays folded the next time you open the app.
 - Right-click a calendar, or use its "⋮" button, to hide it from the list
