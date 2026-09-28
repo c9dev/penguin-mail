@@ -49,6 +49,22 @@ type EventActivated = dyn Fn(&MonthGrid, &Occurrence, &gtk::Widget);
 type EventEdited = dyn Fn(&MonthGrid, &Occurrence);
 type MoreClicked = dyn Fn(&MonthGrid, &[Occurrence], &gtk::Widget);
 type RowsChanged = dyn Fn(Vec<usize>);
+type Moved = dyn Fn(&MonthGrid, &Occurrence, super::drag::Landing);
+type CanMove = dyn Fn(&Occurrence) -> bool;
+type CarouselInteractive = dyn Fn(bool);
+
+/// A drag of an event in Month, from the press on.
+struct MonthDrag {
+    occurrence: Occurrence,
+    /// Every block drawing it: a bar over two week rows is two.
+    blocks: Vec<gtk::Widget>,
+    /// The cell the press landed in.
+    from: usize,
+    started: bool,
+    /// Where a release now would land it: `None` off the grid, where
+    /// the drag lets go of nothing, or back on the cell it came from.
+    landing: Option<super::drag::Landing>,
+}
 
 /// Where a bar, a chip or an "N more" button sits: its week row, its
 /// columns (`end` exclusive), its line, and which ends carry on.
@@ -83,6 +99,9 @@ mod imp {
         pub(super) line: Cell<i32>,
         pub(super) heading: Cell<i32>,
         pub(super) rows_changed: RefCell<Option<Box<RowsChanged>>>,
+        /// Each week row's height from the last allocation, for finding
+        /// the cell under the pointer.
+        pub(super) heights: RefCell<Vec<i32>>,
     }
 
     #[glib::object_subclass]
@@ -174,6 +193,7 @@ mod imp {
                 allocate_at(item, mirrored(left, w), y as f32, w, (line - LINE_GAP) as f32, baseline);
             }
 
+            self.heights.replace(heights.clone());
             let rows: Vec<usize> = heights.iter().map(|&h| layout::week_rows(h, heading, line)).collect();
             let folds: Vec<Option<usize>> =
                 rows.iter().zip(&needs).map(|(&r, &n)| (r < n).then_some(r)).collect();
@@ -290,6 +310,10 @@ pub struct MonthGrid {
     /// The cell index a press landed on empty background of, from
     /// `press_cell` to `release_cell`.
     pressed_cell: Cell<Option<usize>>,
+    can_move: RefCell<Option<Box<CanMove>>>,
+    moved: RefCell<Option<Box<Moved>>>,
+    carousel_interactive: RefCell<Option<Box<CarouselInteractive>>>,
+    dragging: RefCell<Option<MonthDrag>>,
 }
 
 impl MonthGrid {
@@ -318,6 +342,10 @@ impl MonthGrid {
             item_days: RefCell::new(Vec::new()),
             days: RefCell::new(Vec::new()),
             pressed_cell: Cell::new(None),
+            can_move: RefCell::new(None),
+            moved: RefCell::new(None),
+            carousel_interactive: RefCell::new(None),
+            dragging: RefCell::new(None),
         });
 
         // An allocation runs inside GTK's layout pass, where adding and
@@ -350,10 +378,22 @@ impl MonthGrid {
             .button(gdk::BUTTON_PRIMARY)
             .propagation_phase(gtk::PropagationPhase::Capture)
             .build();
+        // A press on an event the view lets a drag move starts one,
+        // which claims the sequence once it passes GTK's own threshold,
+        // so a shorter press stays a click for the event's popover.
         let weak = Rc::downgrade(&this);
         drag.connect_drag_begin(move |_, x, y| {
             if let Some(grid) = weak.upgrade() {
                 grid.press_cell(x, y);
+                grid.press_event(x, y);
+            }
+        });
+        let weak = Rc::downgrade(&this);
+        drag.connect_drag_update(move |gesture, dx, dy| {
+            let Some(grid) = weak.upgrade() else { return };
+            let threshold = gtk::Settings::default().map_or(8, |s| s.gtk_dnd_drag_threshold()) as f64;
+            if grid.drag_event(gesture, dx, dy, threshold) {
+                gesture.set_state(gtk::EventSequenceState::Claimed);
             }
         });
         let weak = Rc::downgrade(&this);
@@ -361,6 +401,7 @@ impl MonthGrid {
             let Some(grid) = weak.upgrade() else { return };
             let threshold = gtk::Settings::default().map_or(8, |s| s.gtk_dnd_drag_threshold()) as f64;
             grid.release_cell(dx, dy, threshold);
+            grid.drop_event();
         });
         this.widget.add_controller(drag);
         this
@@ -418,6 +459,156 @@ impl MonthGrid {
         let Some(&day) = self.days.borrow().get(index) else { return };
         if let Some(f) = self.day_clicked.borrow().as_ref() {
             f(day);
+        }
+    }
+
+    /// Runs `f` when a drag of an event ends on another day: the event
+    /// keeps its time and length and takes that day's date.
+    pub fn connect_moved(&self, f: impl Fn(&MonthGrid, &Occurrence, super::drag::Landing) + 'static) {
+        self.moved.replace(Some(Box::new(f)));
+    }
+
+    /// Says which occurrences a drag may move.
+    pub fn set_can_move(&self, f: impl Fn(&Occurrence) -> bool + 'static) {
+        self.can_move.replace(Some(Box::new(f)));
+    }
+
+    /// Runs `f(false)` once a drag holds the month and `f(true)` once it
+    /// lets go, so the swipe between months cannot page under it.
+    pub fn connect_carousel_interactive(&self, f: impl Fn(bool) + 'static) {
+        self.carousel_interactive.replace(Some(Box::new(f)));
+    }
+
+    /// Takes away the marks a drag left, for a Cancel or a failed write:
+    /// the event was never drawn anywhere but its own day.
+    pub fn spring_back(&self) {
+        self.dragging.take();
+        self.mark(None, &[]);
+    }
+
+    /// The cell under `(x, y)`, in the grid's own coordinates.
+    fn cell_at(&self, x: f64, y: f64) -> Option<usize> {
+        let rtl = self.widget.direction() == gtk::TextDirection::Rtl;
+        let heights = self.widget.imp().heights.borrow();
+        super::drag::month_day_at(x, y, f64::from(self.widget.width()), &heights, rtl)
+    }
+
+    /// Starts a drag when the press landed on an event a drag may move.
+    fn press_event(&self, x: f64, y: f64) {
+        let picked = self.widget.pick(x, y, gtk::PickFlags::DEFAULT);
+        let found = picked.and_then(|picked| {
+            self.blocks
+                .borrow()
+                .iter()
+                .find(|(_, _, w)| &picked == w || picked.is_ancestor(w))
+                .map(|(_, o, _)| o.clone())
+        });
+        let drag = found.and_then(|occurrence| {
+            let allowed = self.can_move.borrow().as_ref().is_some_and(|f| f(&occurrence));
+            let from = self.cell_at(x, y)?;
+            allowed.then(|| {
+                let key = key_of(&occurrence);
+                let blocks = self
+                    .blocks
+                    .borrow()
+                    .iter()
+                    .filter(|(k, o, _)| *k == key && o.start == occurrence.start)
+                    .map(|(_, _, w)| w.clone())
+                    .collect();
+                MonthDrag { occurrence, blocks, from, started: false, landing: None }
+            })
+        });
+        self.dragging.replace(drag);
+    }
+
+    /// The pointer moved by `(dx, dy)` from the press. Returns whether a
+    /// drag of an event has started, so the gesture can claim the
+    /// sequence.
+    fn drag_event(&self, gesture: &gtk::GestureDrag, dx: f64, dy: f64, threshold: f64) -> bool {
+        let taken = self
+            .dragging
+            .borrow()
+            .as_ref()
+            .map(|d| (d.started, d.occurrence.clone(), d.from, d.blocks.clone()));
+        let Some((started, o, from, blocks)) = taken else { return false };
+        if !started {
+            if super::drag::is_click(dx, dy, threshold) {
+                return false;
+            }
+            if let Some(d) = self.dragging.borrow_mut().as_mut() {
+                d.started = true;
+            }
+            // The press never became a click on the cell under it.
+            self.pressed_cell.set(None);
+            for block in &blocks {
+                block.add_css_class("dragging");
+            }
+            self.widget.set_cursor_from_name(Some("grabbing"));
+            if let Some(f) = self.carousel_interactive.borrow().as_ref() {
+                f(false);
+            }
+        }
+        let Some((x, y)) = gesture.start_point() else { return true };
+        let to = self.cell_at(x + dx, y + dy);
+        let landing = to.and_then(|to| {
+            let zone = o.event.zone.parse().unwrap_or_else(|_| super::draft::local_zone());
+            let days = to as i64 - from as i64;
+            let (start, end) = super::drag::by_days(o.start, o.end, o.event.all_day, days, zone);
+            (days != 0).then_some(super::drag::Landing { start, end, all_day: o.event.all_day })
+        });
+        if let Some(d) = self.dragging.borrow_mut().as_mut() {
+            d.landing = landing;
+        }
+        // The days the event would cover there, or none off the grid.
+        let covered = to.map(|_| {
+            let first = self.days.borrow().first().copied();
+            let (start, end) = landing.map_or((o.start, o.end), |l| (l.start, l.end));
+            let moved = Occurrence { start, end, ..o.clone() };
+            let (a, b) = first.map_or((0, 0), |first| grid_days(&moved, first, &chrono::Local));
+            (a.max(0) as usize)..(b.clamp(0, (WEEKS * 7) as i64) as usize)
+        });
+        self.mark(covered, &blocks);
+        true
+    }
+
+    /// The release: a drag that lands on another day goes to the view,
+    /// which asks before it writes; one that ends off the grid or back
+    /// on its own day puts everything back.
+    fn drop_event(&self) {
+        let taken = self.dragging.borrow().as_ref().map(|d| (d.started, d.landing, d.occurrence.clone()));
+        let Some((started, landing, o)) = taken else { return };
+        if !started {
+            self.dragging.take();
+            return;
+        }
+        self.widget.set_cursor_from_name(None);
+        if let Some(f) = self.carousel_interactive.borrow().as_ref() {
+            f(true);
+        }
+        match landing {
+            Some(landing) => {
+                if let Some(f) = self.moved.borrow().as_ref() {
+                    f(self, &o, landing);
+                }
+            }
+            None => self.spring_back(),
+        }
+    }
+
+    /// Marks the cells in `covered` as where the dragged event would go,
+    /// and `dragging` as the blocks it leaves; clears every other mark.
+    fn mark(&self, covered: Option<std::ops::Range<usize>>, dragging: &[gtk::Widget]) {
+        for (index, cell) in self.cells.iter().enumerate() {
+            if covered.as_ref().is_some_and(|c| c.contains(&index)) {
+                cell.add_css_class("drop-target");
+            } else {
+                cell.remove_css_class("drop-target");
+            }
+        }
+        for (_, _, block) in self.blocks.borrow().iter() {
+            if !dragging.contains(block) {
+                block.remove_css_class("dragging");
+            }
         }
     }
 

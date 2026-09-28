@@ -22,7 +22,7 @@ pub const STEP_MINUTES: i64 = 15;
 const STEP: EpochMillis = STEP_MINUTES * 60_000;
 /// The shortest event a drag makes.
 pub const SHORTEST: EpochMillis = STEP;
-/// How far up from a card's bottom edge a press stretches it.
+/// How far in from a card's top or bottom edge a press resizes it.
 pub const END_HANDLE: f64 = 8.0;
 const HOUR: EpochMillis = 3_600_000;
 
@@ -31,6 +31,8 @@ const HOUR: EpochMillis = 3_600_000;
 pub enum Handle {
     /// The body moves the event.
     Body,
+    /// The top edge moves its start.
+    Start,
     /// The bottom edge moves its end.
     End,
 }
@@ -48,7 +50,7 @@ pub struct Grab {
 impl Grab {
     pub fn new(handle: Handle, start: EpochMillis, end: EpochMillis, pointer: EpochMillis) -> Grab {
         let edge = match handle {
-            Handle::Body => start,
+            Handle::Body | Handle::Start => start,
             Handle::End => end,
         };
         Grab { handle, start, end, offset: pointer - edge }
@@ -60,6 +62,7 @@ impl Grab {
         let edge = pointer - self.offset;
         match self.handle {
             Handle::Body => (edge, edge + (self.end - self.start)),
+            Handle::Start => (edge.min(self.end - SHORTEST), self.end),
             Handle::End => (self.start, edge.max(self.start + SHORTEST)),
         }
     }
@@ -76,6 +79,10 @@ impl Grab {
                 let start = snap(start, STEP_MINUTES).clamp(day.0, latest);
                 (start, start + length)
             }
+            Handle::Start => {
+                let latest = end - SHORTEST;
+                (snap(start, STEP_MINUTES).clamp(day.0.min(latest), latest), end)
+            }
             Handle::End => (start, snap(end, STEP_MINUTES).clamp(start + SHORTEST, day.1.max(start + SHORTEST))),
         }
     }
@@ -83,7 +90,14 @@ impl Grab {
 
 /// Which part of a card `y` points at, `height` being the card's.
 pub fn handle_at(y: f64, height: f64) -> Handle {
-    if y >= height - END_HANDLE.min(height / 3.0) { Handle::End } else { Handle::Body }
+    let edge = END_HANDLE.min(height / 3.0);
+    if y >= height - edge {
+        Handle::End
+    } else if y < edge {
+        Handle::Start
+    } else {
+        Handle::Body
+    }
 }
 
 /// The span a drag across empty time from `a` to `b` covers: whole
@@ -203,6 +217,132 @@ pub fn stretch(start: EpochMillis, end: EpochMillis, steps: i64) -> (EpochMillis
     (start, (end + steps * STEP).max(start + SHORTEST))
 }
 
+/// The event stretched by `steps` quarter hours at its start, never
+/// closer to its end than `SHORTEST`: the keyboard path Ctrl+Shift+Up
+/// and Ctrl+Shift+Down offer beside the drag of a card's top edge.
+pub fn stretch_start(start: EpochMillis, end: EpochMillis, steps: i64) -> (EpochMillis, EpochMillis) {
+    ((start + steps * STEP).min(end - SHORTEST), end)
+}
+
+/// The index of the Month cell under `(x, y)`, counted from the top left
+/// of six week rows of seven cells: `width` split in seven equal columns,
+/// numbered from the right in a right-to-left locale, and rows as tall as
+/// `weeks` says. `None` off the grid, where a drag lets go of nothing.
+pub fn month_day_at(x: f64, y: f64, width: f64, weeks: &[i32], rtl: bool) -> Option<usize> {
+    if width <= 0.0 || !(0.0..width).contains(&x) || y < 0.0 {
+        return None;
+    }
+    let column = ((x / width * 7.0).floor() as usize).min(6);
+    let column = if rtl { 6 - column } else { column };
+    let mut top = 0.0;
+    for (week, &height) in weeks.iter().enumerate() {
+        let bottom = top + f64::from(height);
+        if y < bottom {
+            return Some(week * 7 + column);
+        }
+        top = bottom;
+    }
+    None
+}
+
+/// The event moved `days` days: an all-day event by whole UTC days, as
+/// its dates are UTC dates, and a timed one at the same wall-clock time
+/// in `zone` ([`nudge_days`]).
+pub fn by_days(start: EpochMillis, end: EpochMillis, all_day: bool, days: i64, zone: Tz) -> (EpochMillis, EpochMillis) {
+    nudge_days(start, end, days, if all_day { Tz::UTC } else { zone })
+}
+
+/// The end of an all-day bar a drag took hold of.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Edge {
+    Start,
+    End,
+}
+
+const DAY: EpochMillis = 24 * HOUR;
+
+/// Which end of an all-day card `x` points at, `width` being the
+/// card's: the same reach in from each end as a timed card's edges.
+pub fn edge_at(x: f64, width: f64) -> Option<Edge> {
+    let reach = END_HANDLE.min(width / 3.0);
+    if x < reach {
+        Some(Edge::Start)
+    } else if x >= width - reach {
+        Some(Edge::End)
+    } else {
+        None
+    }
+}
+
+/// An all-day bar with its `edge` moved `days` days, never shorter than
+/// one day.
+pub fn resize_days(start: EpochMillis, end: EpochMillis, edge: Edge, days: i64) -> (EpochMillis, EpochMillis) {
+    match edge {
+        Edge::Start => ((start + days * DAY).min(end - DAY), end),
+        Edge::End => (start, (end + days * DAY).max(start + DAY)),
+    }
+}
+
+/// The span of an event made all-day on `day`: UTC midnight to the next,
+/// the way an all-day event keeps its dates.
+pub fn all_day_on(day: NaiveDate) -> (EpochMillis, EpochMillis) {
+    let midnight = day.and_hms_opt(0, 0, 0).map_or(0, |t| t.and_utc().timestamp_millis());
+    (midnight, midnight + DAY)
+}
+
+/// The span of an all-day event dropped among the hours at `at`: an hour
+/// from the nearest quarter hour.
+pub fn timed_at(at: EpochMillis) -> (EpochMillis, EpochMillis) {
+    let start = snap(at, STEP_MINUTES);
+    (start, start + HOUR)
+}
+
+/// Where a drag lands an event: its new span, and whether it is all-day
+/// there, which a drop between the all-day row and the hours changes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Landing {
+    pub start: EpochMillis,
+    pub end: EpochMillis,
+    pub all_day: bool,
+}
+
+/// What a key does to the event the time grid has focused.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum GridKey {
+    /// Shift+Up or Shift+Down: move it by quarter hours.
+    Move(i64),
+    /// Ctrl+Shift+Up or Ctrl+Shift+Down: move its start.
+    Start(i64),
+    /// Shift+Alt+Up or Shift+Alt+Down: move its end.
+    End(i64),
+    /// Shift+Left or Shift+Right: move it by days.
+    Days(i64),
+}
+
+/// The change `key` with `modifiers` makes to the focused event, when it
+/// is one of the grid's own keys, which all hold Shift.
+pub fn grid_key(key: gtk::gdk::Key, modifiers: gtk::gdk::ModifierType) -> Option<GridKey> {
+    use gtk::gdk::{Key, ModifierType};
+    if !modifiers.contains(ModifierType::SHIFT_MASK) {
+        return None;
+    }
+    let alt = modifiers.contains(ModifierType::ALT_MASK);
+    let control = modifiers.contains(ModifierType::CONTROL_MASK);
+    let steps = match key {
+        Key::Up => -1,
+        Key::Down => 1,
+        Key::Left if !alt && !control => return Some(GridKey::Days(-1)),
+        Key::Right if !alt && !control => return Some(GridKey::Days(1)),
+        _ => return None,
+    };
+    match (alt, control) {
+        (false, false) => Some(GridKey::Move(steps)),
+        (true, false) => Some(GridKey::End(steps)),
+        (false, true) => Some(GridKey::Start(steps)),
+        (true, true) => None,
+    }
+}
+
 /// The event's span moved `days` calendar days in `zone`, keeping its
 /// wall-clock time: the keyboard path Shift+Left and Shift+Right offer,
 /// for a move between days the grid has no drag gesture for. Moving the
@@ -278,13 +418,12 @@ impl Nudges {
 
 /// Whether a drag may move `o`: the calendar must be one the account can
 /// write to, the account must offer a calendar and not have withheld it,
-/// and the event must not be all-day, a guest's own event, or
-/// already leaving through a queued removal.
+/// and the event must not be a guest's own event or already leaving
+/// through a queued removal.
 pub fn can_move(o: &Occurrence, access: Access, offers_calendar: bool, withheld_calendar: bool) -> bool {
     access.can_write()
         && offers_calendar
         && !withheld_calendar
-        && !o.event.all_day
         && !super::draft::limited(&o.event)
         && o.event.status != Status::Cancelled
 }
@@ -437,14 +576,14 @@ mod tests {
     }
 
     #[test]
-    fn only_a_writable_offered_granted_timed_event_may_be_dragged() {
+    fn only_a_writable_offered_granted_event_may_be_dragged() {
         use mailrs_domain::calendar::Status;
         let o = timed(false, Status::Confirmed);
         assert!(can_move(&o, Access::Owner, true, false));
         assert!(!can_move(&o, Access::Reader, true, false), "a read-only calendar starts no drag");
         assert!(!can_move(&o, Access::Owner, false, false), "an account with no calendar offer starts no drag");
         assert!(!can_move(&o, Access::Owner, true, true), "a withheld calendar permission starts no drag");
-        assert!(!can_move(&timed(true, Status::Confirmed), Access::Owner, true, false), "an all-day event does not drag on the time grid");
+        assert!(can_move(&timed(true, Status::Confirmed), Access::Owner, true, false), "an all-day event drags in the all-day row and Month");
         assert!(!can_move(&timed(false, Status::Cancelled), Access::Owner, true, false), "a cancelled occurrence, on its way out, starts no drag");
     }
 
@@ -513,6 +652,136 @@ mod tests {
         assert_eq!(local.date_naive(), NaiveDate::from_ymd_opt(2026, 10, 25).unwrap());
         assert_eq!(local.time(), chrono::NaiveTime::from_hms_opt(10, 0, 0).unwrap());
         assert_eq!(moved_end - moved_start, H, "the event's own length stays the same");
+    }
+
+    #[test]
+    fn the_top_edge_of_a_card_moves_its_start() {
+        assert_eq!(handle_at(3.0, 52.0), Handle::Start);
+        assert_eq!(handle_at(9.0, 52.0), Handle::Body);
+        // A short card keeps its middle third for moving.
+        assert_eq!(handle_at(5.0, 18.0), Handle::Start);
+        assert_eq!(handle_at(8.0, 18.0), Handle::Body);
+    }
+
+    #[test]
+    fn dragging_the_top_edge_moves_the_start_and_keeps_the_end() {
+        let grab = Grab::new(Handle::Start, 10 * H, 11 * H, 10 * H + 2 * M);
+        assert_eq!(grab.follow(9 * H + 2 * M), (9 * H, 11 * H));
+        // 09:22 snaps to 09:15; the end stays at 11:00.
+        assert_eq!(grab.settle(9 * H + 24 * M, (0, 24 * H)), (9 * H + 15 * M, 11 * H));
+    }
+
+    #[test]
+    fn the_top_edge_stops_a_quarter_hour_before_the_end() {
+        let grab = Grab::new(Handle::Start, 10 * H, 11 * H, 10 * H);
+        assert_eq!(grab.follow(12 * H), (11 * H - SHORTEST, 11 * H));
+        assert_eq!(grab.settle(12 * H, (0, 24 * H)), (11 * H - SHORTEST, 11 * H));
+    }
+
+    #[test]
+    fn the_top_edge_stops_at_the_top_of_the_day() {
+        let grab = Grab::new(Handle::Start, 10 * H, 11 * H, 10 * H);
+        assert_eq!(grab.settle(-2 * H, (0, 24 * H)), (0, 11 * H));
+    }
+
+    #[test]
+    fn control_shift_up_and_down_move_the_start_never_past_the_shortest() {
+        assert_eq!(stretch_start(10 * H, 11 * H, -1), (10 * H - 15 * M, 11 * H));
+        assert_eq!(stretch_start(10 * H, 11 * H, 8), (11 * H - SHORTEST, 11 * H));
+    }
+
+    #[test]
+    fn a_pointer_over_the_month_finds_its_day() {
+        // Seven 100 px columns; week rows of 120, 80 and 100 px.
+        let weeks = [120, 80, 100];
+        assert_eq!(month_day_at(50.0, 10.0, 700.0, &weeks, false), Some(0));
+        assert_eq!(month_day_at(650.0, 130.0, 700.0, &weeks, false), Some(13));
+        assert_eq!(month_day_at(250.0, 299.0, 700.0, &weeks, false), Some(16));
+    }
+
+    #[test]
+    fn a_right_to_left_month_counts_its_columns_from_the_right() {
+        assert_eq!(month_day_at(50.0, 10.0, 700.0, &[120], true), Some(6));
+    }
+
+    #[test]
+    fn a_pointer_off_the_month_finds_no_day() {
+        let weeks = [120, 80];
+        assert_eq!(month_day_at(-1.0, 10.0, 700.0, &weeks, false), None);
+        assert_eq!(month_day_at(700.0, 10.0, 700.0, &weeks, false), None);
+        assert_eq!(month_day_at(50.0, 200.0, 700.0, &weeks, false), None);
+        assert_eq!(month_day_at(50.0, -3.0, 700.0, &weeks, false), None);
+    }
+
+    fn utc_day(y: i32, m: u32, d: u32) -> EpochMillis {
+        NaiveDate::from_ymd_opt(y, m, d).unwrap().and_hms_opt(0, 0, 0).unwrap().and_utc().timestamp_millis()
+    }
+
+    #[test]
+    fn an_all_day_event_moves_by_whole_utc_days() {
+        let (start, end) = (utc_day(2026, 10, 1), utc_day(2026, 10, 3));
+        let lisbon = chrono_tz::Europe::Lisbon;
+        assert_eq!(by_days(start, end, true, 3, lisbon), (utc_day(2026, 10, 4), utc_day(2026, 10, 6)));
+    }
+
+    #[test]
+    fn a_timed_event_moved_across_a_clock_change_keeps_its_wall_time() {
+        let lisbon = chrono_tz::Europe::Lisbon;
+        let start = lisbon.with_ymd_and_hms(2026, 10, 23, 10, 0, 0).unwrap().timestamp_millis();
+        let (moved, _) = by_days(start, start + H, false, 3, lisbon);
+        let after = lisbon.with_ymd_and_hms(2026, 10, 26, 10, 0, 0).unwrap().timestamp_millis();
+        assert_eq!(moved, after);
+    }
+
+    #[test]
+    fn a_bar_s_end_stretches_by_whole_days() {
+        let (start, end) = (utc_day(2026, 10, 1), utc_day(2026, 10, 3));
+        assert_eq!(resize_days(start, end, Edge::End, 2), (start, utc_day(2026, 10, 5)));
+        assert_eq!(resize_days(start, end, Edge::Start, -1), (utc_day(2026, 9, 30), end));
+    }
+
+    #[test]
+    fn either_end_of_an_all_day_card_resizes_it() {
+        assert_eq!(edge_at(3.0, 140.0), Some(Edge::Start));
+        assert_eq!(edge_at(70.0, 140.0), None);
+        assert_eq!(edge_at(135.0, 140.0), Some(Edge::End));
+    }
+
+    #[test]
+    fn a_bar_never_shrinks_below_one_day() {
+        let (start, end) = (utc_day(2026, 10, 1), utc_day(2026, 10, 3));
+        assert_eq!(resize_days(start, end, Edge::End, -5), (start, utc_day(2026, 10, 2)));
+        assert_eq!(resize_days(start, end, Edge::Start, 4), (utc_day(2026, 10, 2), end));
+    }
+
+    #[test]
+    fn a_timed_event_dropped_on_the_all_day_row_covers_that_day() {
+        let day = NaiveDate::from_ymd_opt(2026, 10, 1).unwrap();
+        assert_eq!(all_day_on(day), (utc_day(2026, 10, 1), utc_day(2026, 10, 2)));
+    }
+
+    #[test]
+    fn an_all_day_event_dropped_in_the_hours_lasts_an_hour_from_the_quarter_hour() {
+        assert_eq!(timed_at(14 * H + 8 * M), (14 * H + 15 * M, 15 * H + 15 * M));
+        assert_eq!(timed_at(14 * H + 7 * M), (14 * H, 15 * H));
+    }
+
+    #[test]
+    fn the_grid_keys_move_resize_and_carry_the_focused_event() {
+        use gtk::gdk::{Key, ModifierType as M};
+        let shift = M::SHIFT_MASK;
+        assert_eq!(grid_key(Key::Up, shift), Some(GridKey::Move(-1)));
+        assert_eq!(grid_key(Key::Down, shift | M::ALT_MASK), Some(GridKey::End(1)));
+        assert_eq!(grid_key(Key::Up, shift | M::CONTROL_MASK), Some(GridKey::Start(-1)));
+        assert_eq!(grid_key(Key::Right, shift), Some(GridKey::Days(1)));
+    }
+
+    #[test]
+    fn the_grid_keys_want_shift() {
+        use gtk::gdk::{Key, ModifierType as M};
+        assert_eq!(grid_key(Key::Up, M::empty()), None);
+        assert_eq!(grid_key(Key::Up, M::CONTROL_MASK), None);
+        assert_eq!(grid_key(Key::Up, M::SHIFT_MASK | M::CONTROL_MASK | M::ALT_MASK), None);
     }
 
     #[test]

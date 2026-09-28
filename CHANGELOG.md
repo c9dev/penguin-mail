@@ -89,6 +89,13 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Improved
 
+- Resize an event from its top edge as well as its bottom in Day and
+  Week, or change its start with Ctrl+Shift+Up and Ctrl+Shift+Down.
+- Drag an event to another day in Month. It keeps its time and length.
+- Drag an all-day event to another day in Week, or stretch it from
+  either end.
+- Drop an event on the all-day row to make it all-day, or drag an
+  all-day event into the hours to give it an hour at that time.
 - An invitation's card now sits inside its message, under the sender and
   above the text, and scrolls with it.
 - The mailboxes sit in their own rounded panel under Favorites,
@@ -159,6 +166,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 ### Fixed
 - A message with a wide space character, such as some bank and shop
   receipts, opens again instead of leaving the reading pane stuck.
+- Events side by side in a narrow week lane stay inside their blocks. A
+  title that does not fit ends in "…", and the time shortens to the
+  start, or leaves, when the lane has no room for it.
 - In dark mode, a reply with quoted text shows on the dark page instead of
   in a white box.
 - Picking a contact from the suggestions in an event's Guests field adds

@@ -589,6 +589,11 @@ pub(super) static SHORTCUTS: &[Shortcut] = &[
     },
     Shortcut {
         section: Section::Calendar,
+        description: || gettext("Change when the focused event starts"),
+        keys: &[calendar_grid("<Control><Shift>Up"), calendar_grid("<Control><Shift>Down")],
+    },
+    Shortcut {
+        section: Section::Calendar,
         description: || gettext("Refresh the calendar"),
         keys: &[calendar("F5"), calendar("<Control>r")],
     },
@@ -1102,12 +1107,20 @@ mod tests {
     /// The key and modifiers a trigger in the table stands for, the way
     /// a press would arrive.
     fn press_of(trigger: &str) -> (gdk::Key, gdk::ModifierType) {
-        let (control, name) = strip(trigger, "<Control>");
+        let mut modifiers = gdk::ModifierType::empty();
+        let mut name = trigger;
+        for (prefix, mask) in [
+            ("<Control>", gdk::ModifierType::CONTROL_MASK),
+            ("<Shift>", gdk::ModifierType::SHIFT_MASK),
+            ("<Alt>", gdk::ModifierType::ALT_MASK),
+        ] {
+            let (had, rest) = strip(name, prefix);
+            if had {
+                modifiers |= mask;
+                name = rest;
+            }
+        }
         let key = gdk::Key::from_name(name).expect("a key name GDK knows");
-        let modifiers = match control {
-            true => gdk::ModifierType::CONTROL_MASK,
-            false => gdk::ModifierType::empty(),
-        };
         (key, modifiers)
     }
 
@@ -1134,11 +1147,21 @@ mod tests {
             // F5 and Ctrl+R both refresh the calendar, on purpose, each
             // its own shown key.
             if command != CalendarKey::Refresh {
-                assert!(!answered.contains(&command), "{} repeats {command:?}", key.trigger);
+                assert!(!answered.contains(&format!("{command:?}")), "{} repeats {command:?}", key.trigger);
             }
+            answered.push(format!("{command:?}"));
+        }
+        // The time grid answers its own keys, each a different change to
+        // the focused event.
+        for key in keys().filter(|k| k.place == Place::CalendarGrid) {
+            let (pressed, modifiers) = press_of(key.trigger);
+            let command = crate::ui::calendar::drag::grid_key(pressed, modifiers)
+                .unwrap_or_else(|| panic!("nothing answers {}", key.trigger));
+            let command = format!("{command:?}");
+            assert!(!answered.contains(&command), "{} repeats {command}", key.trigger);
             answered.push(command);
         }
-        assert_eq!(answered.len(), 13);
+        assert_eq!(answered.len(), 21);
     }
 
     #[test]

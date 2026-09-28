@@ -1148,35 +1148,30 @@ impl CalendarView {
     // ---- Moving events ---------------------------------------------------
 
     /// A drag, or a run of keyboard nudges once the keyboard rests, moved
-    /// or stretched `o` on `grid`. The move is confirmed first, in one dialog that also asks which
-    /// occurrences of a series it covers and whether the guests get an
-    /// update. The write goes through the draft, so a weekly series moved
-    /// to another day moves its day in the rule. The card stays where it
-    /// landed until the write is held; a Cancel or a failed write springs
-    /// it back on `grid`.
-    pub(super) fn moved(
-        self: &Rc<Self>,
-        grid: &TimeGrid,
-        o: &Occurrence,
-        start: EpochMillis,
-        end: EpochMillis,
-    ) {
+    /// or resized `o`, in the time grid, the all-day row or Month, to
+    /// `landing`, which may also make it all-day or timed. The move is
+    /// confirmed first, in one dialog that also asks which occurrences of
+    /// a series it covers and whether the guests get an update. The write
+    /// goes through the draft, so a weekly series moved to another day
+    /// moves its day in the rule. The card stays where it landed until
+    /// the write is held; a Cancel or a failed write runs `spring_back`,
+    /// which the view the drag happened in hands over holding that view
+    /// weakly, so it acts only while the view is still on screen.
+    pub(super) fn moved(self: &Rc<Self>, spring_back: Rc<dyn Fn()>, o: &Occurrence, landing: drag::Landing) {
         let this = Rc::clone(self);
-        let grid_weak = grid.downgrade();
         let o = o.clone();
+        let drag::Landing { start, end, all_day } = landing;
         glib::spawn_future_local(async move {
             let rules = this.series_rules(&o).await;
             let mut draft = Draft::open(&o, &rules, draft::local_zone());
-            draft.set_span(start, end);
+            draft.land(start, end, all_day);
             let offered = series::scopes(&o.event, false);
-            let when = words::span_words(start, end, o.event.all_day, &draft::local_zone());
+            let when = words::landing_words(start, end, all_day, &draft::local_zone());
             let answer = match scope::question(scope::Action::Move, &offered, &o.event.guests, scope::Change::default()) {
                 Some(question) => match scope::ask(&this.page, &question, &o.event, Some(&when)).await {
                     Some(answer) => answer,
                     None => {
-                        if let Some(grid) = grid_weak.upgrade() {
-                            grid.spring_back();
-                        }
+                        spring_back();
                         return;
                     }
                 },
@@ -1198,19 +1193,18 @@ impl CalendarView {
                 .await;
             match held {
                 Ok(Permitted::Done(held)) => {
+                    // A drop from the all-day row marked its hour in the
+                    // grid, which a refill keeps for quick create.
+                    this.clear_ghost();
                     this.reload();
                     this.offer_undo(fill(&gettext("Moved “{title}”"), &[("title", &o.event.title)]), held);
                 }
                 Ok(Permitted::NeedsPermission) => {
-                    if let Some(grid) = grid_weak.upgrade() {
-                        grid.spring_back();
-                    }
+                    spring_back();
                     (this.hooks.needs_permission)(account_id);
                 }
                 Err(err) => {
-                    if let Some(grid) = grid_weak.upgrade() {
-                        grid.spring_back();
-                    }
+                    spring_back();
                     (this.hooks.toast)(&with_reason(
                         &gettext("Could not move the event: {reason}"),
                         &err,
@@ -1238,8 +1232,8 @@ impl CalendarView {
 
     /// Whether a drag may move `o`: its calendar must be one the
     /// account can write to, the account must offer a calendar and not
-    /// have withheld it, and the event itself must allow it (not
-    /// all-day, not a guest's own event, not on its way out).
+    /// have withheld it, and the event itself must allow it (not a
+    /// guest's own event, not on its way out).
     fn can_move(&self, o: &Occurrence) -> bool {
         let access = self
             .calendars
@@ -1292,6 +1286,22 @@ impl CalendarView {
                         view.show_more(anchor, day);
                     }
                 });
+                let weak = Rc::downgrade(self);
+                let month_weak = Rc::downgrade(&month);
+                month.connect_moved(move |_, o, landing| {
+                    let Some(view) = weak.upgrade() else { return };
+                    let month = month_weak.clone();
+                    let spring_back = Rc::new(move || {
+                        if let Some(month) = month.upgrade() {
+                            month.spring_back();
+                        }
+                    });
+                    view.moved(spring_back, o, landing);
+                });
+                let weak = Rc::downgrade(self);
+                month.set_can_move(move |o| weak.upgrade().is_some_and(|view| view.can_move(o)));
+                let carousel = self.carousel.clone();
+                month.connect_carousel_interactive(move |on| carousel.set_interactive(on));
                 PageView::Month(month)
             }
             ViewKind::Day | ViewKind::Week => PageView::Grid(self.grid_page()),
@@ -1379,9 +1389,15 @@ impl CalendarView {
             }
         });
         let weak = Rc::downgrade(self);
-        grid.connect_moved(move |grid, o, start, end| {
+        grid.connect_moved(move |grid, o, landing| {
             if let Some(view) = weak.upgrade() {
-                view.moved(grid, o, start, end);
+                let grid = grid.downgrade();
+                let spring_back = Rc::new(move || {
+                    if let Some(grid) = grid.upgrade() {
+                        grid.spring_back();
+                    }
+                });
+                view.moved(spring_back, o, landing);
             }
         });
         let weak = Rc::downgrade(self);
@@ -1391,11 +1407,28 @@ impl CalendarView {
             }
         });
         let weak = Rc::downgrade(self);
+        strip.connect_moved(move |strip, o, landing| {
+            if let Some(view) = weak.upgrade() {
+                let strip = strip.downgrade();
+                let spring_back = Rc::new(move || {
+                    if let Some(strip) = strip.upgrade() {
+                        strip.spring_back();
+                    }
+                });
+                view.moved(spring_back, o, landing);
+            }
+        });
+        grid.set_strip(&strip);
+        let weak = Rc::downgrade(self);
+        strip.set_can_move(move |o| weak.upgrade().is_some_and(|view| view.can_move(o)));
+        let weak = Rc::downgrade(self);
         grid.set_can_move(move |o| weak.upgrade().is_some_and(|view| view.can_move(o)));
         let weak = Rc::downgrade(self);
         grid.set_can_select(move || weak.upgrade().is_some_and(|view| !view.writable().is_empty()));
         let carousel = self.carousel.clone();
         grid.connect_carousel_interactive(move |on| carousel.set_interactive(on));
+        let carousel = self.carousel.clone();
+        strip.connect_carousel_interactive(move |on| carousel.set_interactive(on));
         GridPage {
             root,
             headings,

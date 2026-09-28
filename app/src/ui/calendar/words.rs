@@ -79,6 +79,20 @@ where
     }
 }
 
+/// Where a move puts an event, for the question before it is written:
+/// [`span_words`], with the date on an event of one whole day, whose
+/// span alone reads "All day" and would not say which day it moves to.
+pub fn landing_words<Z: TimeZone>(start: EpochMillis, end: EpochMillis, all_day: bool, zone: &Z) -> String
+where
+    Z::Offset: std::fmt::Display,
+{
+    let one_day = utc_date(start).zip(utc_date(end)).is_some_and(|(first, next)| first.succ_opt() == Some(next));
+    match (all_day, utc_date(start)) {
+        (true, Some(day)) if one_day => fill(&gettext("{date} · All day"), &[("date", &full_date_words(day))]),
+        _ => span_words(start, end, all_day, zone),
+    }
+}
+
 /// [`span_words`] of an occurrence's own start, end and all-day flag, for
 /// the popover's time line.
 pub fn when_words<Z: TimeZone>(o: &Occurrence, zone: &Z) -> String
@@ -712,6 +726,20 @@ mod tests {
             bar_words(&o, "Work", &Utc),
             "Night shift, Friday 2 October 22:00 to Saturday 3 October 02:00, Work"
         );
+    }
+
+    #[test]
+    fn a_move_to_one_whole_day_names_the_day() {
+        mailrs_domain::translate::set_date_locale("en_US");
+        let (start, end) = (midnight(d(2026, 9, 29)), midnight(d(2026, 9, 30)));
+        assert_eq!(landing_words(start, end, true, &Utc), "Tuesday 29 September · All day");
+    }
+
+    #[test]
+    fn a_move_to_several_days_or_to_a_time_reads_as_the_popover_does() {
+        mailrs_domain::translate::set_date_locale("en_US");
+        let (start, end) = (midnight(d(2026, 10, 2)), midnight(d(2026, 10, 5)));
+        assert_eq!(landing_words(start, end, true, &Utc), span_words(start, end, true, &Utc));
     }
 
     #[test]

@@ -172,6 +172,18 @@ impl Draft {
         self.end = end.max(start);
     }
 
+    /// Where a drag landed the event: `start` to `end`, all-day or not.
+    /// Unlike [`Draft::set_all_day`], the span is the drop's own. An
+    /// event that stops being all-day leaves the "UTC" zone all-day
+    /// events are written in for the zone the reader sees it in.
+    pub fn land(&mut self, start: EpochMillis, end: EpochMillis, all_day: bool) {
+        if self.all_day && !all_day && self.zone.parse::<Tz>().is_ok_and(|z| z == Tz::UTC) {
+            self.zone = self.view_zone.name().to_string();
+        }
+        self.all_day = all_day;
+        self.set_span(start, end);
+    }
+
     /// An all-day event runs from midnight UTC of its first day to
     /// midnight UTC after its last, whatever zone the reader is in. Leaving
     /// all day starts the first day at 09:00 for an hour.
@@ -801,6 +813,27 @@ mod tests {
         assert!(!draft.can_save());
         draft.title = "Dentist".into();
         assert!(draft.can_save());
+    }
+
+    #[test]
+    fn a_timed_event_dropped_on_the_all_day_row_is_written_all_day_in_utc() {
+        let mut draft = Draft::open(&weekly(), &weekly().event.rules, Lisbon);
+        draft.land(utc_midnight(24), utc_midnight(25), true);
+        let event = draft.to_event("new", "meet");
+        assert_eq!((event.all_day, event.start, event.end, event.zone.as_str()), (true, utc_midnight(24), utc_midnight(25), "UTC"));
+    }
+
+    #[test]
+    fn an_all_day_event_dropped_in_the_hours_takes_the_viewer_s_zone() {
+        let mut o = weekly();
+        let mut event = (*o.event).clone();
+        (event.all_day, event.zone, event.rules) = (true, "UTC".into(), Vec::new());
+        o.event = Arc::new(event);
+        (o.start, o.end) = (utc_midnight(24), utc_midnight(25));
+        let mut draft = Draft::open(&o, &[], Lisbon);
+        draft.land(at(24, 14, 0), at(24, 15, 0), false);
+        let event = draft.to_event("new", "meet");
+        assert_eq!((event.all_day, event.start, event.end, event.zone.as_str()), (false, at(24, 14, 0), at(24, 15, 0), "Europe/Lisbon"));
     }
 
     #[test]
