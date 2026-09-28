@@ -155,6 +155,23 @@ impl Draft {
         self.all_day = on;
     }
 
+    /// Adds each address in `text`, as the Guests field holds it, that is
+    /// not on the list yet. Answers the parts that are not addresses. The
+    /// editor runs this on Enter and again on Save, since picking a
+    /// suggestion only writes the address into the field, and a Save that
+    /// ignored the field left the guest uninvited.
+    pub fn add_guests(&mut self, text: &str) -> Vec<String> {
+        let mut refused = Vec::new();
+        for address in crate::compose::parse_recipients(text) {
+            if !crate::compose::is_address(&address.email) {
+                refused.push(address.email);
+            } else if !self.guests.iter().any(|g| g.email.eq_ignore_ascii_case(&address.email)) {
+                self.guests.push(Guest { email: address.email, name: address.name, ..Guest::default() });
+            }
+        }
+        refused
+    }
+
     pub fn can_save(&self) -> bool {
         !self.title.trim().is_empty()
     }
@@ -395,6 +412,33 @@ mod tests {
             ..Event::default()
         };
         Occurrence { account_id: 1, start: event.start, end: event.end, event: Arc::new(event) }
+    }
+
+    #[test]
+    fn an_address_picked_from_the_suggestions_becomes_a_guest() {
+        let mut draft = fresh();
+        let refused = draft.add_guests("Ann Lee <ann@example.com>, ");
+        assert!(refused.is_empty());
+        assert_eq!(draft.guests.len(), 1);
+        assert_eq!(draft.guests[0].email, "ann@example.com");
+        assert_eq!(draft.guests[0].name.as_deref(), Some("Ann Lee"));
+    }
+
+    #[test]
+    fn a_guest_already_on_the_list_is_not_added_twice() {
+        let mut draft = fresh();
+        draft.add_guests("ann@example.com");
+        draft.add_guests("ANN@example.com, bo@example.com");
+        let emails: Vec<&str> = draft.guests.iter().map(|g| g.email.as_str()).collect();
+        assert_eq!(emails, ["ann@example.com", "bo@example.com"]);
+    }
+
+    #[test]
+    fn text_that_is_not_an_address_comes_back_and_adds_nothing() {
+        let mut draft = fresh();
+        let refused = draft.add_guests("ann@example.com, bob");
+        assert_eq!(refused, ["bob"]);
+        assert_eq!(draft.guests.len(), 1, "the valid address still joins");
     }
 
     #[test]
