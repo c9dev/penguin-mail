@@ -487,7 +487,9 @@ impl<A: Accounts> CalendarCopy<A> {
         Ok(())
     }
 
-    /// Takes the event off the copy and queues its removal.
+    /// Takes the event off the copy and queues its removal, which tells
+    /// the guests unless the account is only a guest itself
+    /// ([`calendar::removal_notify`]).
     pub async fn remove(&self, account_id: AccountId, calendar: &str, id: &str) -> Result<(), SyncError> {
         let (calendar, id) = (calendar.to_string(), id.to_string());
         self.db
@@ -498,7 +500,8 @@ impl<A: Accounts> CalendarCopy<A> {
                     ..Event::default()
                 });
                 store::remove_events(c, account_id, &calendar, std::slice::from_ref(&id))?;
-                store::enqueue(c, account_id, store::ChangeKind::Remove, &held)
+                let notify = calendar::removal_notify(&held, Notify::Guests);
+                store::enqueue_after(c, account_id, store::ChangeKind::Remove, &held, None, None, notify).map(drop)
             })
             .await?;
         Ok(())

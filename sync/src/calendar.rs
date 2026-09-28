@@ -261,7 +261,8 @@ impl<A: Accounts> Calendar<A> {
             }
             if let Some(occurrence) = self.occurrence(account_id, id).await? {
                 let steps = self.copy.delete_steps(account_id, &occurrence, Some(RepeatScope::This)).await?;
-                if let Permitted::NeedsPermission = self.copy.apply(account_id, steps).await? {
+                let notify = model::removal_notify(&occurrence.event, model::Notify::Guests);
+                if let Permitted::NeedsPermission = self.copy.apply_with(account_id, steps, notify).await? {
                     return Ok(Permitted::NeedsPermission);
                 }
                 self.send_soon(account_id);
