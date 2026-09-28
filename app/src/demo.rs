@@ -246,7 +246,12 @@ fn samples() -> Vec<Sample> {
             subject: "Re: Q4 roadmap review",
             minutes_ago: 38,
             labels: &["INBOX", "UNREAD", "IMPORTANT"],
-            text: "Dana, can you sanity-check Jonas's estimate before Friday? If last-write-wins is acceptable to support, I'm happy to commit to October.\n\nOn Tue, Jonas Weber wrote:\n> October is possible if we cut sync conflict resolution down to\n> last-write-wins for the first release.\n\n-- \nPriya Raman\nHead of Product, Fernwood",
+            text: "Dana, can you sanity-check Jonas's estimate before Friday? If last-write-wins is acceptable to support, I'm happy to commit to October.\n\n-- \nPriya Raman\nHead of Product, Fernwood\n\nOn Tue, 22 Sept 2026 at 14:10, Jonas Weber <jonas@fernwood.example> wrote:\n> Left my comments. Short version: October is possible if we cut sync\n> conflict resolution down to last-write-wins for the first release.\n>\n> > Could you each leave comments by Thursday?\n>\n> Jonas",
+            // A reply as Gmail writes it, so the page has quoted history to
+            // fold away.
+            html: Some(
+                r#"<div dir="ltr">Dana, can you sanity-check Jonas's estimate before Friday? If last-write-wins is acceptable to support, I'm happy to commit to October.<br><br><div class="gmail_signature">Priya Raman<br>Head of Product, Fernwood</div></div><br><div class="gmail_quote gmail_quote_container"><div dir="ltr" class="gmail_attr">On Tue, 22 Sept 2026 at 14:10, Jonas Weber &lt;<a href="mailto:jonas@fernwood.example">jonas@fernwood.example</a>&gt; wrote:<br></div><blockquote class="gmail_quote" style="margin:0px 0px 0px 0.8ex;border-left:1px solid rgb(204,204,204);padding-left:1ex"><div dir="ltr">Left my comments. Short version: October is possible if we cut sync conflict resolution down to last-write-wins for the first release.<br><br><blockquote class="gmail_quote" style="margin:0px 0px 0px 0.8ex;border-left:1px solid rgb(204,204,204);padding-left:1ex">Could you each leave comments by Thursday?</blockquote><br>Jonas</div></blockquote></div>"#,
+            ),
             ..PLAIN
         },
         Sample {
@@ -1035,14 +1040,24 @@ fn account0_events(now: EpochMillis) -> Vec<CalendarEvent> {
         conference: Some("https://meet.google.com/pmd-demo-call".into()),
         ..CalendarEvent::default()
     });
+    // Five to ten minutes after the demo starts, sooner than the call
+    // with Rita above, so the next-event card at the foot of the mail
+    // sidebar has something to show whenever the demo starts. Coloured
+    // like the mockup's own card (blue) rather than Personal's orange,
+    // so the screenshot reads the same way.
+    let soon = now - now.rem_euclid(5 * 60_000) + 10 * 60_000;
+    events.push(CalendarEvent {
+        color: Some("#3584e4".into()),
+        ..timed_event("primary", "demo-next-event", "Sprint planning", soon, soon + 30 * 60_000)
+    });
     events
 }
 
 /// The second demo account's week: the weekday Stand-up and the rest of
 /// its own doings on Work, the Design team's own meetings, and, on the
 /// Work calendar, the two invitation-linked events under the same UIDs
-/// the sample mail carries, plus "Design crit" so the design review's
-/// card shows a clash. The invitations' events sit there alone, so the
+/// the sample mail carries, with lunch and a retro either side of the
+/// design review for its card's day strip. The invitations' events sit there alone, so the
 /// week holds no second "Sprint planning". Titles, times and calendars
 /// otherwise follow the approved mockup (`calendar-mockup/mockups.py`),
 /// for the week it draws (Monday to Sunday).
@@ -1136,9 +1151,9 @@ fn account1_events(now: EpochMillis) -> Vec<CalendarEvent> {
         ..CalendarEvent::default()
     });
 
-    // The design review invitation's own event, still unanswered, and
-    // "Design crit" overlapping it, so the card reads "You have Design
-    // crit then."
+    // The design review invitation's own event, still unanswered, with
+    // lunch before it and the retro after, so the card's day strip reads
+    // as the mockup draws it: the hour free, a neighbour on each side.
     let sent = chrono::DateTime::from_timestamp_millis(now).unwrap_or_default();
     let start = next_tuesday(sent.with_timezone(&chrono::Local));
     let design_review_start = start.timestamp_millis();
@@ -1155,6 +1170,8 @@ fn account1_events(now: EpochMillis) -> Vec<CalendarEvent> {
         end: design_review_start + 45 * 60_000,
         zone: LISBON.into(),
         title: "Offline editor design review".into(),
+        // Purple, as the mockup's card draws the meeting's bar.
+        color: Some("#9141ac".into()),
         place: "Meeting Room 2, Fernwood HQ".into(),
         description: "Agenda in the deck. Bring questions about conflict resolution.".into(),
         busy: true,
@@ -1179,16 +1196,26 @@ fn account1_events(now: EpochMillis) -> Vec<CalendarEvent> {
         ..CalendarEvent::default()
     });
     events.push(CalendarEvent {
-        calendar: "primary".into(),
-        id: "design-crit".into(),
-        uid: "design-crit@local".into(),
-        start: design_review_start + 15 * 60_000,
-        end: design_review_start + 75 * 60_000,
-        zone: LISBON.into(),
-        title: "Design crit".into(),
-        busy: true,
-        status: CalendarStatus::Confirmed,
-        ..CalendarEvent::default()
+        color: Some("#e8660c".into()),
+        ..timed_event(
+            "primary",
+            "lunch-with-ana",
+            "Lunch with Ana",
+            design_review_start - 120 * 60_000,
+            design_review_start - 60 * 60_000,
+        )
+    });
+    // On Work in the Design team's purple: the strip, like the clash
+    // line, counts only the calendars the account owns.
+    events.push(CalendarEvent {
+        color: Some("#9141ac".into()),
+        ..timed_event(
+            "primary",
+            "design-retro",
+            "Retro",
+            design_review_start + 90 * 60_000,
+            design_review_start + 150 * 60_000,
+        )
     });
 
     // Quarterly review, on the Design team calendar, still waiting for an
@@ -2272,7 +2299,7 @@ mod tests {
             "{events:?}"
         );
         assert!(
-            events.iter().any(|(title, calendar, _)| title == "Design crit" && calendar == "primary"),
+            events.iter().any(|(title, calendar, _)| title == "Lunch with Ana" && calendar == "primary"),
             "{events:?}"
         );
         assert_eq!(

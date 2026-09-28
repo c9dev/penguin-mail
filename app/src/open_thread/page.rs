@@ -16,19 +16,21 @@
 
 use std::collections::HashMap;
 use std::hash::{DefaultHasher, Hash, Hasher};
+use std::ops::Range;
 
 use mailrs_domain::{AccountId, MessageBody, MessageMeta};
 
 use super::{OpenThread, inline};
+use crate::quoted;
 use crate::render::{self, BodyState, Head, MessageView, Sanitized, TAIL, Theme};
 use crate::sanitize::sanitize_html;
 use crate::translation::{Body, Prose};
 
 /// A message body after cleaning, with a mark of the HTML and the picture
-/// addresses it was made with, and what two scans of the cleaned HTML
+/// addresses it was made with, and what three scans of the cleaned HTML
 /// found. A different mark means the body needs cleaning again. The scans each
-/// read the whole body in lower case, so they run once, with the
-/// cleaning, rather than on every draw.
+/// read the whole body, so they run once, with the cleaning, rather than
+/// on every draw.
 #[derive(Debug, Clone)]
 pub struct Cleaned {
     mark: u64,
@@ -38,6 +40,8 @@ pub struct Cleaned {
     remote: bool,
     /// Whether it chooses its own colours, and so keeps its white page.
     paints: bool,
+    /// The quoted history at its end, which the page folds away.
+    history: Option<Range<usize>>,
 }
 
 impl Cleaned {
@@ -56,6 +60,7 @@ fn clean(source: &str, pictures: &str) -> Cleaned {
         mark: body_mark(source, pictures),
         remote: loads_remote(&lower),
         paints: paints_itself(&lower),
+        history: quoted::history_in_html(&html),
         html,
     }
 }
@@ -214,6 +219,13 @@ impl OpenThread {
         page
     }
 
+    /// Puts the event card in the message `message_id` names, or takes it
+    /// out of the page with `None`. The next [`Self::page`] patches the
+    /// articles that gain or lose the card's place.
+    pub fn take_invitation_place(&mut self, message_id: Option<String>) {
+        self.invitation_at = message_id;
+    }
+
     /// Forgets what the page on screen holds, so the next [`Self::page`]
     /// is the whole document: WebKit's process went away, or a patch could
     /// not be applied.
@@ -302,7 +314,9 @@ impl OpenThread {
             .map(|cleaned| Sanitized {
                 html: &cleaned.html,
                 paints: cleaned.paints,
+                history: cleaned.history.clone(),
             }),
+            event_slot: self.invitation_at.as_deref() == Some(meta.id.as_str()),
         }
     }
 
@@ -468,6 +482,7 @@ mod tests {
         Theme {
             dark: false,
             accent: "#3584e4".to_string(),
+            summarize: false,
         }
     }
 
@@ -492,6 +507,38 @@ mod tests {
         let mut open = thread("<p>Kites</p>");
         assert!(whole(open.page(&theme())).contains("<p>Kites</p>"));
         assert!(patched(open.page(&theme())).is_empty());
+    }
+
+    /// The card's place is in the article, so putting the card up or
+    /// taking it down replaces that article and keeps the reader's place.
+    #[test]
+    fn the_card_s_place_patches_the_message_that_carries_it() {
+        let mut open = thread("<p>Kites</p>");
+        let mut second = open.messages[0].clone();
+        second.id = "m2".to_string();
+        open.messages.push(second);
+        open.page(&theme());
+        open.take_invitation_place(Some("m2".to_string()));
+        let page = open.page(&theme());
+        let Page::Patch(patch) = page else {
+            panic!("a whole page for the card's place");
+        };
+        assert_eq!(patch.len(), 1);
+        assert_eq!(patch[0].message_id, "m2");
+        assert!(patch[0].html.contains("class=\"event-slot\""));
+        open.take_invitation_place(None);
+        assert_eq!(patched(open.page(&theme())), ["m2"]);
+    }
+
+    #[test]
+    fn offering_summarize_loads_the_page_whole() {
+        let mut open = thread("<p>Kites</p>");
+        open.page(&theme());
+        let offered = Theme {
+            summarize: true,
+            ..theme()
+        };
+        assert!(whole(open.page(&offered)).contains("mailrs:summarize"));
     }
 
     #[test]
@@ -648,6 +695,23 @@ mod tests {
         open.take_cleaned(HashMap::from([("m1".to_string(), made)]));
         let page = whole(open.page(&theme()));
         assert!(page.contains("body html\""), "{page}");
+    }
+
+    /// Cleaning finds the quoted history, and the page folds it behind a
+    /// button that says what it hides.
+    #[test]
+    fn a_reply_s_quoted_history_is_folded_on_the_page() {
+        let mut open = thread(
+            "<div dir=\"ltr\">Monday works.</div><div class=\"gmail_quote\">\
+             <div class=\"gmail_attr\">On Friday, Ann wrote:</div>\
+             <blockquote class=\"gmail_quote\">Lunch?</blockquote></div>",
+        );
+        let page = whole(open.page(&theme()));
+        let fold = page.find("<details class=\"trimmed\">").expect("a fold");
+        let named = "<summary title=\"Show trimmed content\" aria-label=\"Show trimmed content\">";
+        assert!(page[fold..].contains(named), "{page}");
+        assert!(page.find("Monday works.") < Some(fold), "{page}");
+        assert!(page[fold..].find("Lunch?") < page[fold..].find("</details>"), "{page}");
     }
 
     #[test]

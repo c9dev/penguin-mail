@@ -80,7 +80,7 @@ async fn an_answer_keeps_every_other_guest_as_google_has_them() {
         .await;
 
     let answered = client(&server)
-        .answer_invitation(UID, "me@example.com", Answer::No, None)
+        .answer_invitation(UID, "me@example.com", Answer::No, None, None)
         .await
         .unwrap();
     assert_eq!(answered, Answered::Done);
@@ -107,7 +107,7 @@ async fn a_guest_google_left_off_the_list_is_added() {
         .await;
 
     client(&server)
-        .answer_invitation(UID, "me@example.com", Answer::Maybe, None)
+        .answer_invitation(UID, "me@example.com", Answer::Maybe, None, None)
         .await
         .unwrap();
     assert_eq!(
@@ -123,7 +123,7 @@ async fn an_event_that_is_on_no_calendar_is_not_answered() {
     mount_search(&server, json!({"items": []})).await;
     assert_eq!(
         client(&server)
-            .answer_invitation(UID, "me@example.com", Answer::Yes, None)
+            .answer_invitation(UID, "me@example.com", Answer::Yes, None, None)
             .await
             .unwrap(),
         Answered::NotOnCalendar
@@ -144,7 +144,7 @@ async fn a_missing_calendar_permission_is_reported_as_such() {
         .await;
     assert!(matches!(
         client(&server)
-            .answer_invitation(UID, "me@example.com", Answer::Yes, None)
+            .answer_invitation(UID, "me@example.com", Answer::Yes, None, None)
             .await,
         Err(GmailError::MissingScope)
     ));
@@ -235,7 +235,8 @@ async fn answering_one_occurrence_looks_its_instance_up_first() {
                 UID,
                 "me@example.com",
                 Answer::Yes,
-                Some("2026-03-10T09:00:00+00:00")
+                Some("2026-03-10T09:00:00+00:00"),
+                None
             )
             .await
             .unwrap(),
@@ -273,7 +274,7 @@ async fn answering_a_series_found_by_one_of_its_occurrences_answers_the_series()
         .await;
 
     client(&server)
-        .answer_invitation(UID, "me@example.com", Answer::No, None)
+        .answer_invitation(UID, "me@example.com", Answer::No, None, None)
         .await
         .unwrap();
     assert!(patched.lock().unwrap().ends_with(EVENT));
@@ -1256,6 +1257,28 @@ async fn a_note_goes_out_as_the_guests_own_comment() {
 
     client(&server)
         .answer_event("primary", INSTANCE, "me@example.com", Answer::Maybe, Some("Running ten minutes late"))
+        .await
+        .unwrap();
+}
+
+#[tokio::test]
+async fn an_answer_found_by_its_uid_carries_the_note_too() {
+    let server = MockServer::start().await;
+    mount_token(&server).await;
+    mount_search(&server, found()).await;
+    Mock::given(method("PATCH"))
+        .and(path(format!("{CALENDAR}/calendars/primary/events/{EVENT}")))
+        .and(body_partial_json(json!({"attendees": [
+            {"email": "priya@fernwood.example"},
+            {"email": "me@example.com", "responseStatus": "accepted", "comment": "See you there"},
+            {"email": "jonas@fernwood.example"}
+        ]})))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({"id": EVENT})))
+        .expect(1)
+        .mount(&server)
+        .await;
+    client(&server)
+        .answer_invitation(UID, "me@example.com", Answer::Yes, None, Some("See you there"))
         .await
         .unwrap();
 }

@@ -326,11 +326,12 @@ impl CalendarService for AnyCalendar {
         me: &str,
         answer: Answer,
         occurrence: Option<EpochMillis>,
+        note: Option<&str>,
     ) -> Result<Answered, BackendError> {
         forward!(
             AnyCalendar,
             self,
-            answer_invitation(ical_uid, me, answer, occurrence)
+            answer_invitation(ical_uid, me, answer, occurrence, note)
         )
     }
 

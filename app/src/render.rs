@@ -4,10 +4,12 @@
 
 use std::collections::HashMap;
 use std::fmt::Write;
+use std::ops::Range;
 
 use mailrs_domain::{Address, MessageBody, MessageMeta, Provenance};
 
 use crate::format::{color_for, full_date, header_date, human_size, initials};
+use crate::quoted;
 use mailrs_domain::translate::{fill, fill_plural, gettext};
 
 /// How long a message's fold takes to open or close.
@@ -18,6 +20,9 @@ pub struct Theme {
     pub dark: bool,
     /// CSS colour of the desktop accent.
     pub accent: String,
+    /// Whether the head offers Summarize, which asks the assistant. A
+    /// change of it changes the head, so the page loads whole.
+    pub summarize: bool,
 }
 
 pub enum BodyState<'a> {
@@ -37,15 +42,22 @@ pub struct MessageView<'a> {
     /// its text. Cleaning a long message costs milliseconds, so whoever
     /// builds the page keeps the result and passes it in here.
     pub sanitized: Option<Sanitized<'a>>,
+    /// Whether this message carries the invitation on the event card. Its
+    /// article then keeps an empty place between the header and the body,
+    /// which the card, a widget of the window, is laid over.
+    pub event_slot: bool,
 }
 
 /// A body's cleaned HTML, and whether it chooses its own colours. Mail
 /// that does is written for a white page and keeps one; mail that does not
 /// takes the window's colours.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct Sanitized<'a> {
     pub html: &'a str,
     pub paints: bool,
+    /// The quoted history at the end of `html`, which the page folds away
+    /// behind a button.
+    pub history: Option<Range<usize>>,
 }
 
 /// What the top of the page says about the thread as a whole.
@@ -128,9 +140,17 @@ pub fn head(conversation: &Head, theme: &Theme) -> String {
         count,
         &[("count", &count.to_string())],
     );
+    let offer = if theme.summarize {
+        format!(
+            "<a class=\"summarize\" href=\"mailrs:summarize\">{}</a>",
+            escape(&gettext("Summarize"))
+        )
+    } else {
+        String::new()
+    };
     let _ = write!(
         html,
-        "<header class=\"thread\"><h1>{}</h1><p>{}</p></header>",
+        "<header class=\"thread\"><div class=\"headline\"><h1>{}</h1>{offer}</div><p>{}</p></header>",
         escape(&subject),
         escape(&many),
     );
@@ -232,6 +252,20 @@ fn render_message(
     // page at zero height rather than dropping them, so the two states
     // have something to move between.
     html.push_str("<div class=\"fold\"><div class=\"folded\">");
+    // The event card is a widget of the window laid over this place, so
+    // the page holds no copy of it. The view sets its height to the
+    // card's through `--event-card`. The mockup puts the card 20 px under
+    // the header and the text 24 px under the card; the body's own top
+    // margin collapses into the place's. The place takes the focus in the
+    // page's order and hands it to the card, so Tab runs header, card,
+    // body, and a screen reader meets the card's name where it sits.
+    if view.event_slot {
+        let _ = write!(
+            html,
+            "<div class=\"event-slot\" tabindex=\"0\" role=\"group\" aria-label=\"{}\"></div>",
+            escape(&gettext("Invitation"))
+        );
+    }
     render_body(html, view);
     html.push_str("</div></div></article>");
 }
@@ -253,20 +287,33 @@ fn render_body(html: &mut String, view: &MessageView) {
             let _ = write!(html, "<div class=\"body status\">{}</div>", escape(&said));
         }
         BodyState::Loaded(body) => {
-            if let Some(clean) = view.sanitized {
+            if let Some(clean) = &view.sanitized {
                 let _ = write!(
                     html,
-                    "<div class=\"body html{plain}\"><template shadowrootmode=\"open\"><style>{HTML_BODY_CSS}</style>\
-                     <div class=\"root\">{html}</div></template></div>",
-                    html = clean.html,
+                    "<div class=\"body html{plain}\"><template shadowrootmode=\"open\"><style>{HTML_BODY_CSS}{TRIMMED_CSS}</style>\
+                     <div class=\"root\">",
                     plain = if clean.paints { "" } else { " plain" },
                 );
+                match &clean.history {
+                    Some(history) => {
+                        html.push_str(&clean.html[..history.start]);
+                        fold_history(html, &clean.html[history.clone()]);
+                        html.push_str(&clean.html[history.end..]);
+                    }
+                    None => html.push_str(clean.html),
+                }
+                html.push_str("</div></template></div>");
             } else {
-                let _ = write!(
-                    html,
-                    "<div class=\"body text\">{}</div>",
-                    render_text(body.text.as_deref().unwrap_or(""))
-                );
+                let text = body.text.as_deref().unwrap_or("");
+                html.push_str("<div class=\"body text\">");
+                match quoted::history_in_text(text) {
+                    Some(at) => {
+                        html.push_str(&render_text(&text[..at]));
+                        fold_history(html, &render_text(&text[at..]));
+                    }
+                    None => html.push_str(&render_text(text)),
+                }
+                html.push_str("</div>");
             }
             render_attachments(html, &view.meta.id, body, view.thumbnails);
         }
@@ -276,14 +323,15 @@ fn render_body(html: &mut String, view: &MessageView) {
 /// The recipients line, and under it everything the headers say about
 /// where the message came from.
 ///
-/// It is a `<details>` element, so the arrow opens and closes it with no
+/// It is a `<details>` element, so Details opens and closes it with no
 /// JavaScript: the page carries none, and a link that opened a panel
 /// would cost a round trip through the app and a redraw.
 fn render_details(html: &mut String, meta: &MessageMeta, me: &[String], view: &MessageView) {
     let to = escape(&fill(
-        &gettext("to {recipients}"),
+        &gettext("To: {recipients}"),
         &[("recipients", &recipients(meta, me))],
     ));
+    let more = escape(&gettext("Details"));
     // Who it is from, who it went to, when, and about what: all of that
     // comes off the metadata every message already has, so the panel opens
     // on any message. The three lines below it need headers that arrive
@@ -297,7 +345,8 @@ fn render_details(html: &mut String, meta: &MessageMeta, me: &[String], view: &M
     let provenance = provenance.unwrap_or(&empty);
     let _ = write!(
         html,
-        "<details class=\"line to\"><summary>{to}</summary><table class=\"details\">"
+        "<details class=\"line to\"><summary><span class=\"recipients\">{to}</span>\
+         <span class=\"more\">{more}</span></summary><table class=\"details\">"
     );
     let mut row = |name: String, value: String| {
         let _ = write!(html, "<tr><th>{}</th><td>{value}</td></tr>", escape(&name));
@@ -518,6 +567,18 @@ fn label(address: &Address, me: &[String]) -> String {
     }
 }
 
+/// Puts the quoted history behind a button, the way Gmail trims it. A
+/// `<details>` element opens and shuts with a click, Enter or Space, and
+/// tells a screen reader which it is, with no script in the page.
+fn fold_history(html: &mut String, history: &str) {
+    let name = escape(&gettext("Show trimmed content"));
+    let _ = write!(
+        html,
+        "<details class=\"trimmed\"><summary title=\"{name}\" aria-label=\"{name}\">•••</summary>\
+         {history}</details>"
+    );
+}
+
 /// Plain text as HTML: quoted lines become nested blockquotes, a `-- `
 /// line starts a dimmed signature, and web addresses become links.
 pub fn render_text(text: &str) -> String {
@@ -609,13 +670,31 @@ color:#1d1d20;overflow-wrap:anywhere;overflow-x:auto}\
 img{max-width:100% !important;height:auto !important}\
 table{max-width:100% !important}td,th{overflow-wrap:anywhere}a{color:#1c71d8}";
 
+/// The button that shows the quoted history, drawn in the page's colours
+/// and, on mail that keeps its white page, in the grey Gmail uses. It sits
+/// in the page for a text body and in the shadow root for an HTML one.
+const TRIMMED_CSS: &str = "details.trimmed{margin:10px 0 0}\
+details.trimmed[open]>summary{margin-bottom:10px}\
+details.trimmed>summary{display:inline-block;list-style:none;padding:0 7px;height:12px;border-radius:6px;\
+background:#e8eaed;color:#5f6368;font:700 11px/10px sans-serif;letter-spacing:1px;cursor:pointer;\
+user-select:none;white-space:nowrap;vertical-align:middle;transition:background-color 120ms ease}\
+details.trimmed>summary::-webkit-details-marker{display:none}\
+details.trimmed>summary:hover{background:#dadce0}\
+details.trimmed>summary:focus-visible{outline:2px solid #1c71d8;outline-offset:2px}\
+:host(.plain) details.trimmed>summary,.text details.trimmed>summary{\
+background:color-mix(in srgb,var(--fg) 12%,transparent);color:var(--dim)}\
+:host(.plain) details.trimmed>summary:hover,.text details.trimmed>summary:hover{\
+background:color-mix(in srgb,var(--fg) 20%,transparent)}\
+:host(.plain) details.trimmed>summary:focus-visible,.text details.trimmed>summary:focus-visible{\
+outline-color:var(--accent)}";
+
 fn page_css(theme: &Theme) -> String {
     // A message sits on a surface a step away from the page: lighter in a
     // dark window, darker in a light one, so an open message reads as a
     // sheet rather than as more page.
     let (bg, fg, dim, card, line, hover, surface) = if theme.dark {
         (
-            "#222226",
+            "#1e1e21",
             "#ffffff",
             "rgba(255,255,255,0.58)",
             "rgba(255,255,255,0.08)",
@@ -637,18 +716,29 @@ fn page_css(theme: &Theme) -> String {
     format!(
         ":root{{color-scheme:{scheme};--bg:{bg};--fg:{fg};--dim:{dim};--card:{card};--line:{line};--hover:{hover};--surface:{surface};--accent:{accent}}}\
 html{{background:var(--bg)}}\
-body{{margin:0 auto;max-width:980px;padding:28px 36px 64px;color:var(--fg);\
+body{{margin:0 auto;max-width:980px;padding:20px 36px 64px;color:var(--fg);\
 font:15px/1.5 \"Adwaita Sans\",Cantarell,system-ui,sans-serif;-webkit-font-smoothing:antialiased}}\
-.thread h1{{font-size:24px;line-height:1.25;font-weight:750;letter-spacing:-0.01em;margin:0}}\
-.thread p{{margin:4px 0 18px;color:var(--dim);font-size:13px}}\
+.thread h1{{font-size:22px;line-height:1.25;font-weight:800;letter-spacing:-0.01em;margin:0}}\
+.thread .headline{{display:flex;align-items:flex-start;gap:12px}}\
+.thread .headline h1{{flex:1;min-width:0}}\
+.thread p{{margin:4px 0 4px;color:var(--dim);font-size:12.5px}}\
+.summarize{{flex:none;display:inline-flex;align-items:center;gap:6px;padding:5px 12px;margin:7px 0 -10px;line-height:20px;\
+border-radius:999px;background:color-mix(in srgb,var(--accent) 12%,var(--bg));color:var(--accent);\
+font-size:13px;font-weight:700;text-decoration:none;transition:background-color 120ms ease}}\
+.summarize::before{{content:\"\";width:16px;height:16px;background:var(--accent);\
+-webkit-mask:url(\"{SPARKLE}\") center/contain no-repeat}}\
+.summarize:hover{{background:color-mix(in srgb,var(--accent) 18%,var(--bg))}}\
+.summarize:active{{transform:scale(0.97)}}\
+.summarize:focus-visible{{outline:2px solid var(--accent);outline-offset:2px}}\
 .message{{border-top:1px solid var(--line);padding:16px 12px 18px;margin:0 -12px;border-radius:12px}}\
+.thread+.message{{border-top-color:transparent}}\
 .message.collapsed:hover{{background:var(--hover)}}\
 .header{{position:relative;display:grid;grid-template-columns:40px minmax(0,1fr) auto auto;\
 column-gap:12px;align-items:center;color:inherit}}\
-.chev{{width:16px;height:16px;justify-self:end;background:var(--dim);opacity:0;\
+.chev{{grid-column:3;grid-row:1;width:16px;height:16px;margin-right:-6px;background:var(--dim);opacity:0;\
 -webkit-mask:url(\"{CHEV}\") center/14px no-repeat;\
 transition:transform 200ms cubic-bezier(0.23,1,0.32,1),opacity 120ms ease}}\
-.message:hover .chev,.expanded .chev,.toggle:focus-visible~.chev{{opacity:.7}}\
+.message:hover .chev,.toggle:focus-visible~.chev{{opacity:.7}}\
 .expanded .chev{{transform:rotate(180deg)}}\
 .toggle:focus-visible{{outline:2px solid var(--accent);outline-offset:-3px;border-radius:12px}}\
 .toggle{{position:absolute;inset:0}}\
@@ -656,21 +746,19 @@ transition:transform 200ms cubic-bezier(0.23,1,0.32,1),opacity 120ms ease}}\
 justify-content:center;overflow:hidden;color:#fff;font-weight:700;font-size:15px;letter-spacing:0.02em;text-decoration:none}}\
 .avatar img{{width:100%;height:100%;object-fit:cover}}\
 .who{{position:relative;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}\
-.name{{font-weight:700;color:inherit;text-decoration:none}}\
+.name{{font-weight:800;color:inherit;text-decoration:none}}\
 .name:hover{{text-decoration:underline}}\
 .unread .name::before{{content:'';display:inline-block;width:8px;height:8px;border-radius:50%;\
 background:var(--accent);margin-right:7px;vertical-align:1px}}\
-.address{{color:var(--dim);font-size:13px;margin-left:8px}}\
-.date{{color:var(--dim);font-size:13px;white-space:nowrap}}\
-.line{{grid-column:2 / span 2;color:var(--dim);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}\
+.address{{color:var(--dim);font-size:12.5px;font-weight:500;margin-left:8px}}\
+.date{{grid-column:4;grid-row:1;color:var(--dim);font-size:12.5px;white-space:nowrap}}\
+.line{{grid-column:2 / -1;color:var(--dim);font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}\
 details.to{{overflow:visible;white-space:normal}}\
-details.to>summary{{list-style:none;cursor:default;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;\
-width:fit-content;max-width:100%;padding-right:16px;position:relative}}\
+details.to>summary{{list-style:none;cursor:default;display:flex;gap:12px;align-items:baseline;position:relative}}\
 details.to>summary::-webkit-details-marker{{display:none}}\
-details.to>summary::after{{content:\"\";position:absolute;right:2px;top:.45em;width:0;height:0;\
-border:4px solid transparent;border-top-color:var(--dim)}}\
-details.to[open]>summary::after{{top:.2em;border-top-color:transparent;border-bottom-color:var(--dim)}}\
-details.to>summary:hover{{color:var(--fg)}}\
+details.to .recipients{{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}\
+details.to>summary:hover .recipients{{color:var(--fg)}}\
+details.to .more{{flex:none;color:var(--accent);font-weight:700;cursor:pointer}}\
 table.details{{margin:8px 0 2px;border-collapse:collapse;font-size:13px;line-height:1.45}}\
 table.details th{{text-align:right;font-weight:normal;color:var(--dim);padding:1px 10px 1px 0;\
 vertical-align:top;white-space:nowrap}}\
@@ -687,15 +775,18 @@ opacity 180ms cubic-bezier(0.23,1,0.32,1)}}\
 .message{{transition:background-color 120ms ease}}\
 .attachment,.attachment .get{{transition:background-color 120ms ease,opacity 120ms ease}}\
 @media (prefers-reduced-motion:reduce){{.fold,.message{{transition:none}}}}\
+.event-slot{{height:var(--event-card,0px);margin:20px 0 24px;outline:none}}\
+@media print{{.event-slot{{display:none}}}}\
 .body{{margin:14px 0 2px 52px}}\
 .text{{white-space:pre-wrap;overflow-wrap:anywhere}}\
-.body.text,.body.status,.html{{background:var(--surface);border-radius:12px;padding:14px;\
+.body.text{{margin-left:0}}\
+.body.status,.html{{background:var(--surface);border-radius:12px;padding:14px;\
 border:1px solid var(--line);overflow:hidden;margin-left:0}}\
 .html{{background:#fff}}\
 .html.plain{{background:var(--surface)}}\
 .status{{color:var(--dim);font-style:italic}}\
 blockquote.quote{{margin:6px 0;padding:0 0 0 12px;border-left:3px solid color-mix(in srgb,var(--accent) 45%,transparent);color:var(--dim)}}\
-.signature{{color:var(--dim)}}\
+.signature{{color:var(--dim)}}{trimmed}\
 a{{color:var(--accent)}}\
 .attachments{{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 0 52px}}\
 .attachment{{display:inline-flex;align-items:center;border-radius:10px;background:var(--card);\
@@ -711,9 +802,10 @@ color:inherit;text-decoration:none;min-width:0}}\
 .attachment .get:hover{{opacity:1;background:var(--accent)}}\
 .thumb{{width:32px;height:32px;flex:none;border-radius:5px;object-fit:cover;background:var(--card)}}\
 .clip{{width:16px;height:16px;flex:none;background:var(--dim);-webkit-mask:url(\"{CLIP}\") center/contain no-repeat}}\
-@media (max-width:560px){{body{{padding:18px 14px 40px}}.body,.attachments{{margin-left:0}}.thread h1{{font-size:21px}}\
+@media (max-width:560px){{body{{padding:18px 14px 40px}}.body,.attachments{{margin-left:0}}.thread h1{{font-size:20px}}\
 .address{{display:none}}.message{{padding:14px 8px 16px;margin:0 -8px}}.chev{{display:none}}}}",
         fold = FOLD_MS,
+        trimmed = TRIMMED_CSS,
         scheme = if theme.dark { "dark" } else { "light" },
         accent = theme.accent,
     )
@@ -728,6 +820,11 @@ const CHEV: &str = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/s
 
 const DOWN: &str = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'>\
 <path fill='black' d='M7.5 1.5h1v8.3l3-3 .7.7-4.2 4.2-4.2-4.2.7-.7 3 3V1.5zM3 13h10v1H3z'/></svg>";
+
+/// The sparkle on the Summarize pill, drawn as the mockup draws it.
+const SPARKLE: &str = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'>\
+<path fill='none' stroke='black' stroke-width='1.6' stroke-linejoin='round' \
+d='M8 2 9.3 6.7 14 8 9.3 9.3 8 14 6.7 9.3 2 8 6.7 6.7Z'/></svg>";
 
 #[cfg(test)]
 mod tests {
@@ -777,7 +874,33 @@ mod tests {
         Theme {
             dark: false,
             accent: "#3584e4".into(),
+            summarize: false,
         }
+    }
+
+    /// Ruling R8: a plain-text body sits on the page as the mockup draws
+    /// it, starting at the avatar's column; HTML and status lines keep
+    /// their sheet.
+    #[test]
+    fn a_plain_text_body_has_no_sheet() {
+        let html = page("s", vec![]);
+        let rules: Vec<&str> = html
+            .split('}')
+            .filter(|rule| {
+                rule.split('{')
+                    .next()
+                    .is_some_and(|selectors| selectors.split(',').any(|s| s.trim() == ".body.text"))
+            })
+            .collect();
+        assert_eq!(rules.len(), 1, "{rules:?}");
+        for word in ["background", "border", "padding"] {
+            assert!(!rules[0].contains(word), "{rules:?}");
+        }
+        assert!(rules[0].contains("margin-left:0"), "{rules:?}");
+        assert!(
+            html.contains(".body.status,.html{background:var(--surface)"),
+            "HTML and status bodies keep the sheet"
+        );
     }
 
     fn page(subject: &str, views: Vec<MessageView>) -> String {
@@ -823,6 +946,7 @@ mod tests {
                 body: BodyState::Loaded(&body),
                 expanded: false,
                 thumbnails: &no_thumbs,
+                event_slot: false,
                 sanitized: None,
             }],
         );
@@ -843,7 +967,12 @@ mod tests {
             expanded: true,
             thumbnails: &no_thumbs,
             // Both fixtures are already clean.
-            sanitized: body.html.as_deref().map(|html| Sanitized { html, paints }),
+            event_slot: false,
+            sanitized: body.html.as_deref().map(|html| Sanitized {
+                html,
+                paints,
+                history: None,
+            }),
         };
         let html = page(
             "Kites",
@@ -889,6 +1018,7 @@ mod tests {
                 body: BodyState::Loaded(&body),
                 expanded: true,
                 thumbnails: &no_thumbs,
+                event_slot: false,
                 sanitized: None,
             }],
         );
@@ -909,6 +1039,7 @@ mod tests {
             body: BodyState::Loaded(&body),
             expanded: false,
             thumbnails: &no_thumbs,
+            event_slot: false,
             sanitized: None,
         };
         let initials = page("Hi", vec![view()]);
@@ -950,6 +1081,7 @@ mod tests {
                     body: BodyState::Loaded(&body),
                     expanded: false,
                     thumbnails: &no_thumbs,
+                    event_slot: false,
                     sanitized: None,
                 },
                 MessageView {
@@ -957,6 +1089,7 @@ mod tests {
                     body: BodyState::Loaded(&body),
                     expanded: true,
                     thumbnails: &no_thumbs,
+                    event_slot: false,
                     sanitized: None,
                 },
             ],
@@ -986,8 +1119,69 @@ mod tests {
                 && html.contains("href=\"mailrs:toggle/m2\"")
         );
         assert!(html.contains("message expanded unread"));
-        assert!(html.contains("to me, Bob Smith"));
+        assert!(html.contains("To: me, Bob Smith"));
         assert!(html.contains("2 messages"));
+    }
+
+    /// The event card is a widget laid over the page, so the page keeps
+    /// room for it in the message that carries the invitation: after the
+    /// header, before the body, inside the fold so it closes with them.
+    #[test]
+    fn the_message_with_the_invitation_keeps_a_place_for_its_card() {
+        let first = meta("m1", "Ann", &[]);
+        let second = meta("m2", "Ann", &[]);
+        let body = MessageBody {
+            text: Some("the body".into()),
+            ..Default::default()
+        };
+        let no_thumbs = HashMap::new();
+        let view = |meta, event_slot| MessageView {
+            meta,
+            body: BodyState::Loaded(&body),
+            expanded: true,
+            thumbnails: &no_thumbs,
+            sanitized: None,
+            event_slot,
+        };
+        let html = page("Hello", vec![view(&first, false), view(&second, true)]);
+        assert_eq!(html.matches("class=\"event-slot\"").count(), 1);
+        let second_starts = html.find("id=\"m-m2\"").expect("the second article");
+        let slot = html.find("class=\"event-slot\"").expect("the slot");
+        let folded = second_starts
+            + html[second_starts..]
+                .find("<div class=\"folded\">")
+                .expect("the fold");
+        let body = second_starts
+            + html[second_starts..]
+                .find("<div class=\"body")
+                .expect("the body");
+        assert!(
+            folded < slot && slot < body,
+            "the place sits in the fold, before the body"
+        );
+    }
+
+    /// The card's buttons are widgets outside the page, so the keyboard
+    /// reaches them through the place: it takes the focus in the page's
+    /// own order and hands it to the card.
+    #[test]
+    fn the_place_for_the_card_takes_the_focus_under_the_card_s_name() {
+        let m = meta("m1", "Ann", &[]);
+        let no_thumbs = HashMap::new();
+        let html = page(
+            "Hello",
+            vec![MessageView {
+                meta: &m,
+                body: BodyState::Loading,
+                expanded: true,
+                thumbnails: &no_thumbs,
+                sanitized: None,
+                event_slot: true,
+            }],
+        );
+        assert!(html.contains(
+            "<div class=\"event-slot\" tabindex=\"0\" role=\"group\" aria-label=\"Invitation\"></div>"
+        ));
     }
 
     #[test]
@@ -1005,9 +1199,11 @@ mod tests {
                 body: BodyState::Loaded(&body),
                 expanded: true,
                 thumbnails: &no_thumbs,
+                event_slot: false,
                 sanitized: Some(Sanitized {
                     html: "<p>Hi</p>",
                     paints: false,
+                    history: None,
                 }),
             }],
         );
@@ -1050,6 +1246,7 @@ mod tests {
                 body: BodyState::Loaded(&body),
                 expanded: true,
                 thumbnails: &no_thumbs,
+                event_slot: false,
                 sanitized: None,
             }],
         );
@@ -1091,6 +1288,7 @@ mod tests {
                 body: BodyState::Loaded(&body),
                 expanded: true,
                 thumbnails: &no_thumbs,
+                event_slot: false,
                 sanitized: None,
             }],
         );
@@ -1135,6 +1333,7 @@ mod tests {
                 body: BodyState::Loading,
                 expanded: true,
                 thumbnails: &thumbs,
+                event_slot: false,
                 sanitized: None,
             }],
         );
@@ -1172,6 +1371,7 @@ mod tests {
                 body: BodyState::Loaded(&body),
                 expanded: true,
                 thumbnails: &no_thumbs,
+                event_slot: false,
                 sanitized: None,
             }],
         );
@@ -1198,6 +1398,7 @@ mod tests {
                 body: BodyState::Loaded(&body),
                 expanded: true,
                 thumbnails: &no_thumbs,
+                event_slot: false,
                 sanitized: None,
             }],
         );
@@ -1225,6 +1426,7 @@ mod tests {
                 body: BodyState::Loaded(&body),
                 expanded: true,
                 thumbnails: &no_thumbs,
+                event_slot: false,
                 sanitized: None,
             }],
         );
@@ -1256,6 +1458,7 @@ mod tests {
                 body: BodyState::Loaded(&body),
                 expanded: true,
                 thumbnails: &no_thumbs,
+                event_slot: false,
                 sanitized: None,
             }],
         );
@@ -1286,6 +1489,7 @@ mod tests {
                 body: BodyState::Loaded(&body),
                 expanded: true,
                 thumbnails: &no_thumbs,
+                event_slot: false,
                 sanitized: None,
             }],
         );
@@ -1303,6 +1507,7 @@ mod tests {
                 body: BodyState::Loading,
                 expanded: true,
                 thumbnails: &no_thumbs,
+                event_slot: false,
                 sanitized: None,
             }],
         );
@@ -1314,6 +1519,7 @@ mod tests {
                 body: BodyState::Failed("offline <now>"),
                 expanded: true,
                 thumbnails: &no_thumbs,
+                event_slot: false,
                 sanitized: None,
             }],
         );
@@ -1336,6 +1542,35 @@ mod tests {
         assert!(html.contains("<blockquote class=\"quote\">On Monday you wrote:\n<blockquote class=\"quote\">deeper</blockquote>back</blockquote>"), "{html}");
         assert!(
             html.contains("<div class=\"signature\">-- \nAnn &lt;ann@example.com&gt;</div>"),
+            "{html}"
+        );
+    }
+
+    #[test]
+    fn a_plain_text_reply_folds_its_quoted_history() {
+        let m = meta("m1", "Ann", &[]);
+        let body = MessageBody {
+            text: Some("Monday works.\n\nOn Friday, Ann wrote:\n> Lunch?\n".into()),
+            ..Default::default()
+        };
+        let no_thumbs = HashMap::new();
+        let html = page(
+            "x",
+            vec![MessageView {
+                meta: &m,
+                body: BodyState::Loaded(&body),
+                expanded: true,
+                thumbnails: &no_thumbs,
+                event_slot: false,
+                sanitized: None,
+            }],
+        );
+        assert!(
+            html.contains(
+                "Monday works.<details class=\"trimmed\"><summary title=\"Show trimmed content\" \
+                 aria-label=\"Show trimmed content\">•••</summary>On Friday, Ann wrote:\n\
+                 <blockquote class=\"quote\">Lunch?</blockquote></details>"
+            ),
             "{html}"
         );
     }
@@ -1391,7 +1626,57 @@ mod tests {
         let dark = page_css(&Theme {
             dark: true,
             accent: "#fff".into(),
+            summarize: false,
         });
-        assert!(dark.contains("color-scheme:dark") && dark.contains("#222226"));
+        assert!(dark.contains("color-scheme:dark") && dark.contains("#1e1e21"));
+    }
+
+    #[test]
+    fn the_head_offers_summarize_only_when_asked() {
+        let head = |summarize| {
+            super::head(
+                &Head {
+                    subject: "Rent",
+                    count: 2,
+                    allow_remote: false,
+                },
+                &Theme {
+                    summarize,
+                    ..theme()
+                },
+            )
+        };
+        assert!(
+            head(true).contains("<a class=\"summarize\" href=\"mailrs:summarize\">Summarize</a>")
+        );
+        assert!(!head(false).contains("mailrs:summarize"));
+        assert!(
+            head(true).contains("<h1>Rent</h1>"),
+            "the subject stays the page's heading"
+        );
+    }
+
+    #[test]
+    fn the_message_header_says_to_whom_and_offers_details() {
+        let m = meta("m1", "Ann", &[]);
+        let thumbs = HashMap::new();
+        let html = page(
+            "x",
+            vec![MessageView {
+                meta: &m,
+                body: BodyState::Loading,
+                expanded: true,
+                thumbnails: &thumbs,
+                sanitized: None,
+                event_slot: false,
+            }],
+        );
+        assert!(
+            html.contains(
+                "<summary><span class=\"recipients\">To: me, Bob Smith</span>\
+                 <span class=\"more\">Details</span></summary>"
+            ),
+            "{html}"
+        );
     }
 }

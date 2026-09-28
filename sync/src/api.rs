@@ -216,13 +216,14 @@ pub trait GmailApi: Send + Sync + 'static {
     /// error.
     /// `occurrence` is the start of the one occurrence to answer, for an
     /// invitation to a single occurrence of a repeating event; `None`
-    /// answers the series.
+    /// answers the series. `note` goes to the organizer with the answer.
     fn answer_invitation(
         &self,
         ical_uid: &str,
         me: &str,
         answer: Answer,
         occurrence: Option<EpochMillis>,
+        note: Option<&str>,
     ) -> impl Future<Output = Result<Answered, GmailError>> + Send;
 
     /// What the account's calendar already holds between `from` and `to`.
@@ -523,10 +524,11 @@ impl GmailApi for AccountClient {
         me: &str,
         answer: Answer,
         occurrence: Option<EpochMillis>,
+        note: Option<&str>,
     ) -> Result<Answered, GmailError> {
         let occurrence = occurrence.and_then(rfc3339);
         self.client
-            .answer_invitation(ical_uid, me, answer, occurrence.as_deref())
+            .answer_invitation(ical_uid, me, answer, occurrence.as_deref(), note)
             .await
     }
 

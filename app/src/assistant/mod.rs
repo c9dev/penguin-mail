@@ -161,6 +161,39 @@ pub fn model_for(ai: &AiSettings, feature: Feature) -> Result<ProviderConfig, St
     }
 }
 
+/// Whether the assistant has a model to answer with, as far as the
+/// settings say: a connection other than Off, and for a local server a
+/// model named. The keyring is not read, so asking costs nothing; a
+/// missing key shows in the pane when the question goes.
+pub fn offers_summary(ai: &AiSettings) -> bool {
+    match ai.resolved(Feature::Assistant) {
+        (AiProvider::Off, _) => false,
+        (AiProvider::Local, model) => !model.trim().is_empty(),
+        _ => true,
+    }
+}
+
+/// Whether a header bar's assistant toggle should show, and whether it
+/// should show pressed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct AssistantToggle {
+    /// Shown under the same condition Summarize offers itself
+    /// ([`offers_summary`]): hidden while the assistant is off in
+    /// Preferences.
+    pub visible: bool,
+    /// Pressed while the assistant's panel is open.
+    pub pressed: bool,
+}
+
+/// The reading pane's and the calendar's assistant toggle, from the
+/// assistant's settings and whether its panel is open now.
+pub fn assistant_toggle(ai: &AiSettings, panel_open: bool) -> AssistantToggle {
+    AssistantToggle {
+        visible: offers_summary(ai),
+        pressed: panel_open,
+    }
+}
+
 /// The `claude` command, from `PATH` or its usual install places.
 pub fn find_claude() -> Option<PathBuf> {
     let on_path = std::env::var_os("PATH").and_then(|paths| {
@@ -260,5 +293,51 @@ mod tests {
     fn a_local_server_needs_a_model_name() {
         let problem = model_for(&local("  "), Feature::Assistant).expect_err("no model");
         assert!(problem.contains("local server"), "{problem}");
+    }
+
+    #[test]
+    fn summarize_waits_for_an_assistant_with_a_model() {
+        let mut ai = crate::settings::AiSettings::default();
+        assert!(!offers_summary(&ai), "the assistant starts off");
+        ai.provider = crate::settings::AiProvider::Local;
+        assert!(!offers_summary(&ai), "a local server with no model named");
+        ai.local_model = "qwen3".into();
+        assert!(offers_summary(&ai));
+        ai.provider = crate::settings::AiProvider::Anthropic;
+        assert!(offers_summary(&ai));
+    }
+
+    #[test]
+    fn the_assistant_toggle_hides_while_the_assistant_is_off() {
+        let ai = crate::settings::AiSettings::default();
+        assert_eq!(
+            assistant_toggle(&ai, false),
+            AssistantToggle {
+                visible: false,
+                pressed: false
+            }
+        );
+    }
+
+    #[test]
+    fn the_assistant_toggle_shows_and_follows_the_panel_once_the_assistant_has_a_model() {
+        let ai = crate::settings::AiSettings {
+            provider: crate::settings::AiProvider::Anthropic,
+            ..Default::default()
+        };
+        assert_eq!(
+            assistant_toggle(&ai, false),
+            AssistantToggle {
+                visible: true,
+                pressed: false
+            }
+        );
+        assert_eq!(
+            assistant_toggle(&ai, true),
+            AssistantToggle {
+                visible: true,
+                pressed: true
+            }
+        );
     }
 }

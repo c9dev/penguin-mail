@@ -70,6 +70,7 @@ impl MainWindow {
             .default_height(760)
             .content(&view.page)
             .build();
+        super::track_dark_class(&window);
         let actions = self.install_window_actions(&window, &view, &mailbox, summary.account_id);
         self.detached.borrow_mut().push(Detached {
             view: Rc::downgrade(&view),
@@ -229,6 +230,7 @@ fn show_source(parent: &adw::Window, subject: &str, raw: Vec<u8>) {
         .transient_for(parent)
         .content(&toolbar)
         .build();
+    super::track_dark_class(&window);
     let name: String = subject
         .chars()
         .map(|c| {

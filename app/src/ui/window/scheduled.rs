@@ -1,29 +1,166 @@
 //! The Send Later mailbox and the window's part in Undo Send.
 
+use std::collections::HashMap;
 use std::rc::Rc;
+use std::time::Duration;
 
+use adw::prelude::*;
 use gtk::glib;
 
+use mailrs_domain::EpochMillis;
+use mailrs_domain::translate::gettext;
+use mailrs_store::outbox::Queued;
+use mailrs_sync::now_millis;
+
+use super::undo_send::{self, Surface, Waiting};
 use super::{MainWindow, Target};
 use crate::ui::Mailbox;
 use crate::ui::conversation::ConversationView;
-use mailrs_domain::translate::gettext;
-use mailrs_store::outbox::Queued;
 
 use crate::app::Signature;
 use crate::compose::Draft;
 
+/// Undo Send as the window holds it: the sends waiting out their delay,
+/// what calls each one back, and the toast that stands in for the pill
+/// while the sidebar is away.
+#[derive(Default)]
+pub(super) struct UndoSends {
+    waiting: Waiting,
+    undo: HashMap<u64, Box<dyn Fn()>>,
+    toast: Option<adw::Toast>,
+    ticking: bool,
+}
+
 impl MainWindow {
-    /// Shows "Sending…" with an Undo button for `seconds`.
-    pub(super) fn offer_undo_send(&self, seconds: u32, on_undo: impl Fn() + 'static) {
+    /// Starts Undo Send for one message: the pill at the foot of the
+    /// sidebar counts down its `seconds`, or a toast does while the
+    /// sidebar is collapsed or hidden. `on_undo` calls the send back.
+    pub(super) fn offer_undo_send(self: &Rc<Self>, seconds: u32, on_undo: impl Fn() + 'static) {
+        {
+            let mut sends = self.undo_sends.borrow_mut();
+            let id = sends.waiting.add(now_millis(), seconds);
+            sends.undo.insert(id, Box::new(on_undo));
+        }
+        // A new send changes how long the toast should stay, so a toast
+        // already up gives way to one for all of them.
+        self.drop_undo_toast();
+        self.place_undo_send();
+        self.tick_undo_send();
+    }
+
+    /// Calls back the newest waiting send, from the pill or the toast.
+    pub(super) fn call_back_send(self: &Rc<Self>) {
+        let undo = {
+            let mut sends = self.undo_sends.borrow_mut();
+            let Some(id) = sends.waiting.newest() else {
+                return;
+            };
+            sends.waiting.remove(id);
+            // A clicked toast dismisses itself; the sends still waiting
+            // get a new one from place_undo_send.
+            sends.toast = None;
+            sends.undo.remove(&id)
+        };
+        if let Some(undo) = undo {
+            undo();
+        }
+        self.place_undo_send();
+    }
+
+    /// Puts the countdown where it belongs now: the pill while the sidebar
+    /// is beside the list, a toast otherwise, and neither once nothing
+    /// waits.
+    pub(super) fn place_undo_send(self: &Rc<Self>) {
+        let left = self.undo_sends.borrow().waiting.left(now_millis());
+        let Some(left) = left else {
+            self.sidebar.hide_undo();
+            self.drop_undo_toast();
+            return;
+        };
+        match undo_send::surface(self.split.is_collapsed(), self.split.shows_sidebar()) {
+            Surface::Pill => {
+                self.drop_undo_toast();
+                self.sidebar.show_undo(&undo_send::countdown(left));
+            }
+            Surface::Toast => {
+                self.sidebar.hide_undo();
+                if self.undo_sends.borrow().toast.is_none() {
+                    self.raise_undo_toast(left);
+                }
+            }
+        }
+    }
+
+    /// "Sending…" with Undo, up for as long as the longest wait lasts.
+    fn raise_undo_toast(self: &Rc<Self>, left: EpochMillis) {
         let toast = adw::Toast::builder()
             .title(gettext("Sending…"))
             .button_label(gettext("Undo"))
-            .timeout(seconds)
+            .timeout(((left + 999) / 1_000).max(1) as u32)
             .priority(adw::ToastPriority::High)
             .build();
-        toast.connect_button_clicked(move |_| on_undo());
-        self.toasts.add_toast(toast);
+        let weak = Rc::downgrade(self);
+        toast.connect_button_clicked(move |_| {
+            if let Some(win) = weak.upgrade() {
+                win.call_back_send();
+            }
+        });
+        self.toasts.add_toast(toast.clone());
+        self.undo_sends.borrow_mut().toast = Some(toast);
+    }
+
+    fn drop_undo_toast(&self) {
+        let toast = self.undo_sends.borrow_mut().toast.take();
+        if let Some(toast) = toast {
+            toast.dismiss();
+        }
+    }
+
+    /// Counts the pill down four times a second while anything waits, and
+    /// stops once nothing does. The label changes only when its words do.
+    fn tick_undo_send(self: &Rc<Self>) {
+        if std::mem::replace(&mut self.undo_sends.borrow_mut().ticking, true) {
+            return;
+        }
+        let weak = Rc::downgrade(self);
+        glib::timeout_add_local(Duration::from_millis(250), move || {
+            let Some(win) = weak.upgrade() else {
+                return glib::ControlFlow::Break;
+            };
+            let still = {
+                let mut sends = win.undo_sends.borrow_mut();
+                for id in sends.waiting.tick(now_millis()) {
+                    sends.undo.remove(&id);
+                }
+                sends.ticking = !sends.waiting.is_empty();
+                sends.ticking
+            };
+            win.place_undo_send();
+            if still {
+                glib::ControlFlow::Continue
+            } else {
+                glib::ControlFlow::Break
+            }
+        });
+    }
+
+    /// Wires the pill, and moves the countdown between the pill and a
+    /// toast as the sidebar comes and goes.
+    pub(super) fn install_undo_send(self: &Rc<Self>) {
+        let weak = Rc::downgrade(self);
+        self.sidebar.undo.button.connect_clicked(move |_| {
+            if let Some(win) = weak.upgrade() {
+                win.call_back_send();
+            }
+        });
+        for property in ["collapsed", "show-sidebar"] {
+            let weak = Rc::downgrade(self);
+            self.split.connect_notify_local(Some(property), move |_, _| {
+                if let Some(win) = weak.upgrade() {
+                    win.place_undo_send();
+                }
+            });
+        }
     }
 
     /// Refreshes counts, the list when it shows one of the mailboxes that

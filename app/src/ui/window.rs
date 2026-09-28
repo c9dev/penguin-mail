@@ -44,6 +44,7 @@ use on_screen::{OnScreen, Redraw};
 use press::{Press, PressEffects, Pressed, Question};
 use reach::Reach;
 
+mod across;
 mod aftermath;
 mod arrange;
 mod assistant;
@@ -75,6 +76,7 @@ mod spaces;
 mod thread;
 mod translation;
 mod triage;
+mod undo_send;
 
 pub use notice::Notice;
 
@@ -185,6 +187,58 @@ pub struct MainWindow {
     /// follow, so a reload does not fetch a folder's window again: the
     /// slow poll covers it from here. Cleared for an account that stops.
     followed: RefCell<HashMap<AccountId, HashSet<String>>>,
+    /// Undo Send: the sends waiting out their delay, and what calls each
+    /// one back.
+    undo_sends: RefCell<scheduled::UndoSends>,
+    /// The event the next-event card shows, so a click on it knows where
+    /// to open the calendar. `None` while the card is hidden.
+    next_up: RefCell<Option<crate::ui::calendar::next::NextUp>>,
+    /// The next-event reads under way; only the newest writes the card.
+    next_reads: across::Reads,
+}
+
+/// The class that marks a toplevel window dark. `@media
+/// (prefers-color-scheme: dark)` never matches this app's own
+/// stylesheet on GTK 4.22 (the gtk4-css-support skill confirms it), so
+/// every dark rule in `app/data/style.css` and `calendar::tint` keys off
+/// this class instead of that query.
+pub(super) const DARK_CLASS: &str = "app-dark";
+/// Marks a window that takes the mockup's window, sidebar and view
+/// colours in place of libadwaita's (style.css).
+const SURFACES_CLASS: &str = "app-surfaces";
+
+/// Puts [`DARK_CLASS`] on `window` while libadwaita is dark, and keeps it
+/// current for as long as the window lives. Every toplevel `adw::Window`
+/// this app opens calls this once, right after building it, so the
+/// mockup's window, sidebar and view colours reach it: the main window
+/// and each detached conversation (`window/detached.rs`), the composer
+/// (`composer/mod.rs`), the attachment preview
+/// (`window/attachments.rs`), the message-source viewer
+/// (`window/detached.rs`), and the startup-failure window (`main.rs`).
+/// An `adw::Dialog` such as Preferences or an alert needs no separate
+/// call: it is presented inside its parent window's own tree, so it
+/// inherits these colours through the CSS custom properties already set
+/// there.
+pub(crate) fn track_dark_class(window: &adw::Window) {
+    window.add_css_class(SURFACES_CLASS);
+    let style = adw::StyleManager::default();
+    let target = window.downgrade();
+    let mark = move |style: &adw::StyleManager| {
+        let Some(window) = target.upgrade() else { return };
+        match style.is_dark() {
+            true => window.add_css_class(DARK_CLASS),
+            false => window.remove_css_class(DARK_CLASS),
+        }
+    };
+    mark(&style);
+    // The style manager lives as long as the process; the handler goes
+    // with the window it marks.
+    let handler = RefCell::new(Some(style.connect_dark_notify(mark)));
+    window.connect_destroy(move |_| {
+        if let Some(handler) = handler.take() {
+            adw::StyleManager::default().disconnect(handler);
+        }
+    });
 }
 
 /// The toast after erasing.
@@ -429,12 +483,19 @@ impl MainWindow {
                 }
             });
             list.set_row_menu(&conversation.thread_menu());
+            // `.mail-columns` lets style.css put the list column on the
+            // window colour, as the mockup draws it, rather than the
+            // sidebar shade an `AdwNavigationSplitView` pane takes by
+            // default.
             let nav = adw::NavigationSplitView::builder()
                 .sidebar(&list.page)
                 .content(&conversation.page)
+                .css_classes(["mail-columns"])
                 .min_sidebar_width(300.0)
                 .max_sidebar_width(420.0)
-                .sidebar_width_fraction(0.34)
+                // The mockup's list is 392 px of the 1,184 left beside
+                // the sidebar in a 1,440 px window.
+                .sidebar_width_fraction(0.331)
                 .build();
             let (t, g, n, a, m) = (weak.clone(), weak.clone(), weak.clone(), weak.clone(), weak.clone());
             let (read_settings, change_settings) = (Rc::downgrade(app), Rc::downgrade(app));
@@ -516,9 +577,10 @@ impl MainWindow {
             let split = adw::OverlaySplitView::builder()
                 .sidebar(&sidebar.page)
                 .content(&spaces)
-                .min_sidebar_width(220.0)
-                .max_sidebar_width(290.0)
-                .sidebar_width_fraction(0.22)
+                .css_classes(["inset-sidebar"])
+                .min_sidebar_width(256.0)
+                .max_sidebar_width(256.0)
+                .sidebar_width_fraction(0.178)
                 .build();
             split
                 .bind_property("collapsed", &list.sidebar_button, "visible")
@@ -594,11 +656,6 @@ impl MainWindow {
                     split.set_show_sidebar(false);
                 }
             });
-            assistant_split
-                .bind_property("show-sidebar", &list.assistant_button, "active")
-                .bidirectional()
-                .sync_create()
-                .build();
             let stack = gtk::Stack::builder()
                 .transition_type(gtk::StackTransitionType::Crossfade)
                 .build();
@@ -677,6 +734,7 @@ impl MainWindow {
             // reach the application's own actions. The update banner, menu
             // entry and About button all run app.* actions.
             window.insert_action_group("app", Some(&app.gio));
+            track_dark_class(&window);
             MainWindow {
                 window,
                 actions,
@@ -712,6 +770,9 @@ impl MainWindow {
                 detached: RefCell::new(Vec::new()),
                 previews: previews::Previews::default(),
                 followed: RefCell::new(HashMap::new()),
+                undo_sends: RefCell::new(scheduled::UndoSends::default()),
+                next_up: RefCell::new(None),
+                next_reads: across::Reads::default(),
             }
         });
         if window.core.demo {
@@ -729,6 +790,28 @@ impl MainWindow {
                     button.set_popover(Some(&win.label_popover()));
                 }
             });
+        // Both header buttons run the same toggle_assistant path as
+        // Ctrl+J and the menu (R12); the panel's own show-sidebar keeps
+        // them in the pressed state it puts on screen, whatever opened
+        // or closed it.
+        let weak = Rc::downgrade(&window);
+        window.conversation.assistant_toggle.connect_clicked(move |_| {
+            if let Some(win) = weak.upgrade() {
+                win.toggle_assistant();
+            }
+        });
+        let weak = Rc::downgrade(&window);
+        window.calendar.assistant_toggle.connect_clicked(move |_| {
+            if let Some(win) = weak.upgrade() {
+                win.toggle_assistant();
+            }
+        });
+        let weak = Rc::downgrade(&window);
+        window.assistant_split.connect_show_sidebar_notify(move |_| {
+            if let Some(win) = weak.upgrade() {
+                win.sync_assistant_toggle();
+            }
+        });
         let weak = Rc::downgrade(&window);
         window.list.connect_open(move |row| {
             if let Some(win) = weak.upgrade() {
@@ -754,6 +837,10 @@ impl MainWindow {
         });
         window.install_follow_ups();
         window.install_categories();
+        window.offer_summary();
+        window.sync_assistant_toggle();
+        window.install_undo_send();
+        window.install_next_event();
         let labels_of = Rc::downgrade(&window);
         super::search_suggest::attach(&window.list.search_entry, app.contacts(), move || {
             let Some(win) = labels_of.upgrade() else {
@@ -790,12 +877,6 @@ impl MainWindow {
             match account {
                 Some(account) => win.sign_in_again(account),
                 None => win.authorize(None),
-            }
-        });
-        let weak = Rc::downgrade(&window);
-        window.sidebar.add_account.connect_clicked(move |_| {
-            if let Some(win) = weak.upgrade() {
-                win.add_account();
             }
         });
         if let Some(filter) = app.filter() {
@@ -1429,6 +1510,7 @@ impl MainWindow {
     pub(super) fn act(self: &Rc<Self>, view: &Rc<ConversationView>, action: Action) {
         match action {
             Action::Invitation(action) => self.invitation_action(view, action),
+            Action::Summarize => self.summarize(view),
             Action::Reply(kind) => self.reply(view, kind),
             Action::EditDraft => self.edit_draft_from(view),
             Action::Archive
@@ -2391,7 +2473,6 @@ impl MainWindow {
         self.first_account
             .set_label(&gettext("Waiting for Your Browser…"));
         self.first_other.set_sensitive(false);
-        self.sidebar.add_account.set_sensitive(false);
         self.toast(&gettext("Continue in your browser"));
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
@@ -2413,7 +2494,6 @@ impl MainWindow {
             this.first_account
                 .set_label(&gettext("Sign In with Google"));
             this.first_other.set_sensitive(true);
-            this.sidebar.add_account.set_sensitive(true);
         });
     }
 
@@ -2676,8 +2756,8 @@ impl MainWindow {
         calendar.append_item(&declined);
         menu.append_section(None, &calendar);
         let first = gio::Menu::new();
-        // The calendar's header has no room for the assistant's button,
-        // so the menu both spaces share offers it, with its key.
+        // The header in both spaces carries a button for this now (R12);
+        // the menu item stays too, so Ctrl+J shows here as well.
         let assistant = gio::MenuItem::new(Some(&gettext("Assistant")), Some("win.assistant"));
         assistant.set_attribute_value("accel", Some(&"<Control>j".to_variant()));
         first.append_item(&assistant);
@@ -2750,6 +2830,46 @@ impl MainWindow {
         if show {
             self.assistant.focus();
         }
+    }
+
+    /// Opens the assistant beside the mail if it is closed, and asks it to
+    /// summarize the conversation on screen, as the suggestion in an empty
+    /// chat does.
+    fn summarize(self: &Rc<Self>, view: &Rc<ConversationView>) {
+        if view.detached() {
+            return;
+        }
+        self.assistant_split.set_show_sidebar(true);
+        self.assistant.ask(gettext("Summarize this conversation"));
+    }
+
+    /// Offers Summarize above the conversation while the assistant has a
+    /// model to answer with.
+    fn offer_summary(&self) {
+        let offered = self.settings_with(|s| crate::assistant::offers_summary(&s.ai));
+        self.conversation.offer_summary(offered);
+    }
+
+    /// Shows or hides the assistant toggle in the reading pane's and the
+    /// calendar's headers, and keeps it pressed with the panel (R12). The
+    /// calendar's own header narrows while the panel takes room beside
+    /// it, the same way it does at the window's compact width.
+    fn sync_assistant_toggle(&self) {
+        let panel_open = self.assistant_split.shows_sidebar();
+        let state =
+            self.settings_with(|s| crate::assistant::assistant_toggle(&s.ai, panel_open));
+        for button in [
+            &self.conversation.assistant_toggle,
+            &self.calendar.assistant_toggle,
+        ] {
+            button.set_visible(state.visible);
+            button.set_active(state.pressed);
+        }
+        // Collapsed, the panel floats over the calendar rather than
+        // pushing it, so the card keeps its own width and needs no
+        // narrowing.
+        self.calendar
+            .set_assistant_beside(state.pressed && !self.assistant_split.is_collapsed());
     }
 
     /// True when the focus is in the message itself, where Ctrl+A selects text.
@@ -3090,7 +3210,11 @@ impl MainWindow {
             Effect::Categories => {
                 self.change_screen(|screen| Some(screen.categories_changed()));
             }
-            Effect::Assistant => self.assistant.refresh(),
+            Effect::Assistant => {
+                self.assistant.refresh();
+                self.offer_summary();
+                self.sync_assistant_toggle();
+            }
             Effect::TextSize => {
                 for view in self.views() {
                     view.set_zoom(settings.text_size.zoom());

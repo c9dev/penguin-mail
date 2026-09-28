@@ -29,7 +29,7 @@ use serde::{Deserialize, Serialize};
 use crate::translate::gettext;
 use crate::{Address, EpochMillis, UnknownVariant};
 
-pub use reply::{Scope, counter, reply};
+pub use reply::{Scope, counter, reply, reply_with_note};
 use zone::Zones;
 
 /// What the sender wants done with the event.

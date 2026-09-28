@@ -91,6 +91,9 @@ pub struct OpenThread {
     /// Set when the pane shows a queued message rather than a Gmail
     /// thread: what it says above the message, and which buttons.
     pub queued: Option<Unsent>,
+    /// The message the event card sits in, which keeps a place for it in
+    /// the page. `None` while the card is down.
+    invitation_at: Option<String>,
     /// The cleaned HTML of each body the page draws, by message id.
     cleaned: HashMap<String, page::Cleaned>,
     /// What the page on screen holds, or `None` before the first draw.
@@ -141,6 +144,7 @@ impl OpenThread {
             flag_color: None,
             translations: HashMap::new(),
             queued: None,
+            invitation_at: None,
             cleaned: HashMap::new(),
             drawn: None,
         }
@@ -550,6 +554,7 @@ mod tests {
             flag_color: None,
             translations: HashMap::new(),
             queued: None,
+            invitation_at: None,
             cleaned: HashMap::new(),
             drawn: None,
         }

@@ -39,8 +39,10 @@ pub struct ThreadList {
     pub page: adw::NavigationPage,
     pub sidebar_button: gtk::ToggleButton,
     pub search_button: gtk::ToggleButton,
-    /// Shows or hides the assistant pane.
-    pub assistant_button: gtk::ToggleButton,
+    /// Where `CategoryBar::install_categories` puts the chips, right under
+    /// the header and above the banners, so a sign-in or Grant Access
+    /// banner never lands between the header and the chips.
+    pub categories_slot: gtk::Box,
     pub banner: adw::Banner,
     /// The Grant Access bars, one for each account that still wants
     /// one; the window fills it. They sit on the mail list, since the
@@ -48,7 +50,9 @@ pub struct ThreadList {
     pub grant_bars: gtk::Box,
     pub search_entry: gtk::SearchEntry,
     search_bar: gtk::SearchBar,
-    title: adw::WindowTitle,
+    /// "All Inboxes", and under it the unread count and category.
+    title: gtk::Label,
+    subtitle: gtk::Label,
     stack: gtk::Stack,
     empty: adw::StatusPage,
     store: gio::ListStore,
@@ -213,7 +217,29 @@ impl ThreadList {
             .build();
         search_bar.connect_entry(&search_entry);
 
-        let title = adw::WindowTitle::new(&gettext("All Inboxes"), "");
+        // "All Inboxes" leads the list column, with the unread count and
+        // category under it, both flush left where the chips and the rows
+        // start. `adw::WindowTitle` centres its two labels on each other
+        // and in the bar, so two plain labels stand in for it.
+        let title = gtk::Label::builder()
+            .label(gettext("All Inboxes"))
+            .xalign(0.0)
+            .ellipsize(gtk::pango::EllipsizeMode::End)
+            .css_classes(["title"])
+            .build();
+        let subtitle = gtk::Label::builder()
+            .xalign(0.0)
+            .ellipsize(gtk::pango::EllipsizeMode::End)
+            .visible(false)
+            .css_classes(["subtitle"])
+            .build();
+        let titles = gtk::Box::builder()
+            .orientation(gtk::Orientation::Vertical)
+            .valign(gtk::Align::Start)
+            .css_classes(["list-header-title"])
+            .build();
+        titles.append(&title);
+        titles.append(&subtitle);
         let sidebar_button = gtk::ToggleButton::builder()
             .icon_name("sidebar-show-symbolic")
             .tooltip_text(gettext("Show Mailboxes"))
@@ -233,10 +259,6 @@ impl ThreadList {
             .bidirectional()
             .sync_create()
             .build();
-        let assistant_button = gtk::ToggleButton::builder()
-            .icon_name("penguin-mail-sparkle-symbolic")
-            .tooltip_text(gettext("Assistant (Ctrl+J)"))
-            .build();
         // The tooltips already say what these do; the spoken name takes
         // the words and leaves the keys to a property of their own.
         super::name(&search_entry, &gettext("Search mail"));
@@ -244,20 +266,21 @@ impl ThreadList {
         for button in [
             compose_button.upcast_ref::<gtk::Widget>(),
             search_button.upcast_ref(),
-            assistant_button.upcast_ref(),
         ] {
             let tip = button.tooltip_text().unwrap_or_default();
             super::name_with_shortcut(button, &tip);
         }
-        let header = adw::HeaderBar::builder().title_widget(&title).build();
+        let header = adw::HeaderBar::builder().show_title(false).build();
         header.pack_start(&sidebar_button);
-        header.pack_end(&assistant_button);
+        header.pack_start(&titles);
         header.pack_end(&compose_button);
         header.pack_end(&search_button);
 
+        let categories_slot = gtk::Box::new(gtk::Orientation::Vertical, 0);
         let banner = adw::Banner::builder().revealed(false).build();
         let toolbar = adw::ToolbarView::new();
         toolbar.add_top_bar(&header);
+        toolbar.add_top_bar(&categories_slot);
         toolbar.add_top_bar(&search_bar);
         toolbar.add_top_bar(&banner);
         let grant_bars = gtk::Box::new(gtk::Orientation::Vertical, 0);
@@ -273,12 +296,13 @@ impl ThreadList {
             page,
             sidebar_button,
             search_button,
-            assistant_button,
+            categories_slot,
             banner,
             grant_bars,
             search_entry,
             search_bar,
             title,
+            subtitle,
             stack,
             empty,
             store,
@@ -310,8 +334,9 @@ impl ThreadList {
     }
 
     pub fn set_title(&self, title: &str, subtitle: &str) {
-        self.title.set_title(title);
-        self.title.set_subtitle(subtitle);
+        self.title.set_label(title);
+        self.subtitle.set_label(subtitle);
+        self.subtitle.set_visible(!subtitle.is_empty());
         self.page.set_title(title);
     }
 

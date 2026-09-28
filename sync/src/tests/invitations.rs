@@ -235,6 +235,7 @@ async fn an_answer_reaches_the_calendar_and_comes_back_on_reopening() {
             &me(),
             Answer::Maybe,
             Scope::Series,
+            None,
             1_000,
         )
         .await
@@ -425,6 +426,7 @@ async fn a_newer_version_asks_again() {
             &me(),
             Answer::Yes,
             Scope::Series,
+            None,
             1_000,
         )
         .await
@@ -455,6 +457,7 @@ async fn an_event_on_no_calendar_is_answered_by_mail_to_the_organizer() {
             &me(),
             Answer::Yes,
             Scope::Series,
+            None,
             1_000,
         )
         .await
@@ -517,6 +520,7 @@ async fn an_invitation_with_no_organizer_has_nobody_to_answer() {
             &me(),
             Answer::Yes,
             Scope::Series,
+            None,
             1_000,
         )
         .await
@@ -553,6 +557,7 @@ async fn a_calendar_api_switched_off_still_reaches_the_organizer() {
             &me(),
             Answer::Yes,
             Scope::Series,
+            None,
             1_000,
         )
         .await
@@ -579,6 +584,7 @@ async fn a_missing_calendar_permission_still_reaches_the_organizer() {
             &me(),
             Answer::No,
             Scope::Series,
+            None,
             1_000,
         )
         .await
@@ -595,6 +601,7 @@ async fn a_missing_calendar_permission_still_reaches_the_organizer() {
             &me(),
             Answer::Yes,
             Scope::Series,
+            None,
             2_000,
         )
         .await
@@ -753,7 +760,7 @@ async fn google_hears_which_occurrence_an_answer_is_for() {
 
     for (scope, named) in [(Scope::Occurrence, Some(OCCURRENCE)), (Scope::Series, None)] {
         invitations
-            .answer(h.account_id, &invitation, &me(), Answer::Yes, scope, 1_000)
+            .answer(h.account_id, &invitation, &me(), Answer::Yes, scope, None, 1_000)
             .await
             .unwrap();
         assert_eq!(
@@ -776,6 +783,7 @@ async fn a_mailed_reply_names_the_occurrence_it_answers() {
             &me(),
             Answer::No,
             Scope::Occurrence,
+            None,
             1_000,
         )
         .await
@@ -790,6 +798,7 @@ async fn a_mailed_reply_names_the_occurrence_it_answers() {
             &me(),
             Answer::No,
             Scope::Series,
+            None,
             2_000,
         )
         .await
@@ -1339,7 +1348,7 @@ async fn an_answer_on_the_card_stops_the_event_waiting() {
     let invitation = read(&invite(0, "20300310T090000Z"));
 
     let sent = invitations(&h)
-        .answer(h.account_id, &invitation, &me(), Answer::Yes, Scope::Series, MARCH)
+        .answer(h.account_id, &invitation, &me(), Answer::Yes, Scope::Series, None, MARCH)
         .await
         .unwrap();
 
@@ -1355,7 +1364,7 @@ async fn an_answer_to_one_occurrence_leaves_the_rest_of_the_series_waiting() {
     h.fake.with(|s| s.calendar.insert(UID.into(), None));
 
     invitations(&h)
-        .answer(h.account_id, &to_the_tenth(), &me(), Answer::Yes, Scope::Occurrence, MARCH)
+        .answer(h.account_id, &to_the_tenth(), &me(), Answer::Yes, Scope::Occurrence, None, MARCH)
         .await
         .unwrap();
 

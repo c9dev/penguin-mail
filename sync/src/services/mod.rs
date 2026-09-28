@@ -742,13 +742,15 @@ pub trait MailBackend: Send + Sync + 'static {
 pub trait CalendarService: Send + Sync + 'static {
     /// Answers the event `ical_uid` names as `me`, and lets the server
     /// tell the organizer. `occurrence` is the start of the one occurrence
-    /// to answer; `None` answers the series.
+    /// to answer; `None` answers the series. `note` goes to the organizer
+    /// with the answer.
     fn answer_invitation(
         &self,
         ical_uid: &str,
         me: &str,
         answer: Answer,
         occurrence: Option<EpochMillis>,
+        note: Option<&str>,
     ) -> impl Future<Output = Result<Answered, BackendError>> + Send;
 
     /// What the calendar already holds between `from` and `to`.

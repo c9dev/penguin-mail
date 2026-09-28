@@ -188,7 +188,7 @@ async fn the_mail_card_answers_through_the_same_queue() {
     let me = Address { name: None, email: "me@example.com".into() };
 
     let sent = invitations(&h)
-        .answer(h.account_id, &invitation, &me, Answer::Yes, Scope::Series, NOW)
+        .answer(h.account_id, &invitation, &me, Answer::Yes, Scope::Series, Some("See you there".into()), NOW)
         .await
         .unwrap();
     assert_eq!(sent.told, Told::Calendar);
@@ -201,8 +201,28 @@ async fn the_mail_card_answers_through_the_same_queue() {
     copy.send(h.account_id).await.unwrap();
     assert_eq!(
         h.fake.with(|s| s.answered_events.clone()),
-        [("primary".to_string(), "standup".to_string(), Answer::Yes, None)]
+        [("primary".to_string(), "standup".to_string(), Answer::Yes, Some("See you there".to_string()))]
     );
+}
+
+#[tokio::test]
+async fn a_note_on_an_answer_by_mail_goes_out_as_a_comment() {
+    let h = harness().await;
+    let invitation = mailrs_domain::invitation::read(
+        "BEGIN:VCALENDAR\r\nMETHOD:REQUEST\r\nBEGIN:VEVENT\r\nUID:elsewhere@example.com\r\n\
+         SEQUENCE:0\r\nSUMMARY:Review\r\nDTSTART:20261010T090000Z\r\n\
+         ATTENDEE;PARTSTAT=NEEDS-ACTION:mailto:me@example.com\r\n\
+         ORGANIZER:mailto:priya@example.com\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n",
+    )
+    .unwrap();
+    let me = Address { name: None, email: "me@example.com".into() };
+    let sent = invitations(&h)
+        .answer(h.account_id, &invitation, &me, Answer::No, Scope::Series, Some("On holiday".into()), NOW)
+        .await
+        .unwrap();
+    assert_eq!(sent.told, Told::Organizer);
+    let message = super::invitations::sent_message(&h);
+    assert!(message.contains("COMMENT:On holiday\r\n"), "{message}");
 }
 
 #[tokio::test]

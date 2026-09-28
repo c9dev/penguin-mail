@@ -475,6 +475,7 @@ impl<A: Accounts> Invitations<A> {
     /// so the card and the calendar cannot disagree about how an answer
     /// goes out; the caller sends the queue. Only an event the copy lacks
     /// asks Google by its UID here.
+    #[expect(clippy::too_many_arguments, reason = "each is part of what the organizer is told")]
     pub async fn answer(
         &self,
         account_id: AccountId,
@@ -482,8 +483,10 @@ impl<A: Accounts> Invitations<A> {
         me: &Address,
         answer: Answer,
         scope: Scope,
+        note: Option<String>,
         now: EpochMillis,
     ) -> Result<Sent, SyncError> {
+        let note = note.map(|n| n.trim().to_string()).filter(|n| !n.is_empty());
         let sync = self.sync(account_id)?;
         let mut sent = Sent {
             told: Told::Nobody,
@@ -499,7 +502,7 @@ impl<A: Accounts> Invitations<A> {
         if let Some(reach) = reach
             && let Some(found) = self.held_on_calendar(account_id, invitation, now).await?
         {
-            self.queue_answer(account_id, &found, reach, answer, None, me.email.clone())
+            self.queue_answer(account_id, &found, reach, answer, note, me.email.clone())
                 .await?;
             sent.told = Told::Calendar;
             return Ok(sent);
@@ -516,7 +519,7 @@ impl<A: Accounts> Invitations<A> {
         // it does when the calendar does not hold the event.
         if let (Some(occurrence), Some(calendar)) = (google, sync.services().calendar.as_ref()) {
             match calendar
-                .answer_invitation(&invitation.uid, &me.email, answer, occurrence)
+                .answer_invitation(&invitation.uid, &me.email, answer, occurrence, note.as_deref())
                 .await
             {
                 Ok(Answered::Done) => sent.told = Told::Calendar,
@@ -539,7 +542,7 @@ impl<A: Accounts> Invitations<A> {
         }
         if sent.told == Told::Nobody {
             sent.told = self
-                .mail_reply(&sync, invitation, me, answer, scope, now)
+                .mail_reply(&sync, invitation, me, answer, scope, note.as_deref(), now)
                 .await?;
         }
         if sent.told != Told::Nobody {
@@ -697,7 +700,7 @@ impl<A: Accounts> Invitations<A> {
             None => Scope::Series,
         };
         let sent = self
-            .answer(account_id, &invitation, &me, answer, scope, now)
+            .answer(account_id, &invitation, &me, answer, scope, None, now)
             .await?;
         Ok(Some((invitation, sent)))
     }
@@ -768,6 +771,7 @@ impl<A: Accounts> Invitations<A> {
 
     /// Mails the organizer the reply. An invitation that names no
     /// organizer has nobody to send it to, and says so.
+    #[expect(clippy::too_many_arguments, reason = "each is part of what the organizer is told")]
     async fn mail_reply(
         &self,
         sync: &AccountSync,
@@ -775,6 +779,7 @@ impl<A: Accounts> Invitations<A> {
         me: &Address,
         answer: Answer,
         scope: Scope,
+        note: Option<&str>,
         now: EpochMillis,
     ) -> Result<Told, SyncError> {
         let Some(organizer) = organizer_of(invitation) else {
@@ -786,7 +791,7 @@ impl<A: Accounts> Invitations<A> {
             &mail::reply_subject(answer, &invitation.summary),
             &mail::reply_prose(me, answer, &invitation.summary),
             "REPLY",
-            &invitation::reply(invitation, me, answer, scope, now),
+            &invitation::reply_with_note(invitation, me, answer, scope, note, now),
             now,
         )
         .map_err(SyncError::Mime)?;

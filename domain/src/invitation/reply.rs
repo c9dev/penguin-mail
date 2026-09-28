@@ -48,9 +48,26 @@ pub fn reply(
     scope: Scope,
     now: EpochMillis,
 ) -> String {
+    reply_with_note(invitation, me, answer, scope, None, now)
+}
+
+/// [`reply`], with the words the user added to the answer. RFC 5546 lets
+/// a reply carry them as `COMMENT`, which Outlook and Google show the
+/// organizer beside the answer.
+pub fn reply_with_note(
+    invitation: &Invitation,
+    me: &Address,
+    answer: Answer,
+    scope: Scope,
+    note: Option<&str>,
+    now: EpochMillis,
+) -> String {
     let mut out = object(invitation, me, "REPLY", answer.partstat(), scope, now);
     if let Some(when) = &invitation.when {
         times(&mut out, when);
+    }
+    if let Some(note) = note.map(str::trim).filter(|n| !n.is_empty()) {
+        line(&mut out, &format!("COMMENT:{}", escape(note)));
     }
     // 2.0 is iTIP's "the request was handled". Exchange files a reply
     // without one, and reports one that carries it as handled rather than

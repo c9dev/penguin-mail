@@ -44,7 +44,7 @@ impl MainWindow {
     /// its own window alike.
     pub(super) fn invitation_action(self: &Rc<Self>, view: &Rc<ConversationView>, action: Action) {
         match action {
-            Action::Answer(answer, scope) => self.answer_invitation(view, answer, scope),
+            Action::Answer(answer, scope, note) => self.answer_invitation(view, answer, scope, note),
             Action::Propose(proposal) => self.propose_time(view, proposal),
             Action::AddToCalendar => self.add_to_calendar(view),
             Action::ShowInCalendar => self.show_in_calendar(view),
@@ -58,6 +58,7 @@ impl MainWindow {
         view: &Rc<ConversationView>,
         answer: Answer,
         scope: Scope,
+        note: Option<String>,
     ) {
         let account_id = view.read(|open| open.account_id);
         let found =
@@ -83,7 +84,7 @@ impl MainWindow {
                 .core
                 .call(async move {
                     invitations
-                        .answer(account_id, &invitation, &me, answer, scope, now_millis())
+                        .answer(account_id, &invitation, &me, answer, scope, note, now_millis())
                         .await
                 })
                 .await;

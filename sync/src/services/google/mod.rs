@@ -507,10 +507,11 @@ impl<G: GmailApi> CalendarService for Google<G> {
         me: &str,
         answer: Answer,
         occurrence: Option<EpochMillis>,
+        note: Option<&str>,
     ) -> Result<Answered, BackendError> {
         Ok(paced(
             self.gmail
-                .answer_invitation(ical_uid, me, answer, occurrence),
+                .answer_invitation(ical_uid, me, answer, occurrence, note),
         )
         .await?)
     }

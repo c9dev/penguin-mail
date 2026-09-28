@@ -376,13 +376,15 @@ impl GmailClient {
     /// repeating event. Without it the answer covers the series, which is
     /// what a single event and "all events" both want. Naming an
     /// occurrence costs a third call, since Google numbers the occurrences
-    /// of a series itself and the id it gives one is not the UID.
+    /// of a series itself and the id it gives one is not the UID. `note`
+    /// goes on the account's guest entry as its comment.
     pub async fn answer_invitation(
         &self,
         ical_uid: &str,
         me: &str,
         answer: Answer,
         occurrence: Option<&str>,
+        note: Option<&str>,
     ) -> Result<Answered, GmailError> {
         let list: EventList = self
             .call_at(
@@ -402,7 +404,7 @@ impl GmailClient {
         let Some(id) = self.event_to_answer(&event, occurrence).await? else {
             return Ok(Answered::NotOnCalendar);
         };
-        let guests = answered(&event, me, answer, None);
+        let guests = answered(&event, me, answer, note);
         let url = format!("{}/calendars/primary/events/{id}", self.calendar_base_url);
         let _: Value = self
             .call_at(&url, |url| {

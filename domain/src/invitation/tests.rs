@@ -773,3 +773,19 @@ fn a_one_off_event_on_the_calendar_names_no_occurrence() {
     };
     assert_eq!(from_occurrence(&one_off, 0).occurrence, None);
 }
+
+#[test]
+fn a_reply_with_a_note_carries_it_as_a_comment() {
+    let invitation = read(&google_invite()).unwrap();
+    let object = reply_with_note(
+        &invitation,
+        &me(),
+        Answer::Maybe,
+        Scope::Series,
+        Some("Running late, one; two"),
+        1_780_000_000_000,
+    );
+    assert!(properties(&object).contains(&r"COMMENT:Running late\, one\; two".to_string()), "{object}");
+    let plain = reply(&invitation, &me(), Answer::Maybe, Scope::Series, 1_780_000_000_000);
+    assert!(!plain.contains("COMMENT"));
+}

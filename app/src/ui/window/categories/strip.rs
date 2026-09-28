@@ -9,7 +9,7 @@ use std::cell::{Cell, RefCell};
 
 use adw::prelude::*;
 use gtk::subclass::prelude::*;
-use gtk::{glib, graphene, gsk};
+use gtk::glib;
 
 mod imp {
     use super::*;
@@ -80,13 +80,10 @@ mod imp {
             }
             let (min, natural, _, _) = group.measure(gtk::Orientation::Horizontal, height);
             let own = natural.min(width).max(min);
-            let x = ((width - own) / 2).max(0) as f32;
-            group.allocate(
-                own,
-                height,
-                baseline,
-                Some(gsk::Transform::new().translate(&graphene::Point::new(x, 0.0))),
-            );
+            // The chips sit flush at the row's start, under the list
+            // header's title, rather than centred: `own` only bounds how
+            // much of the width the group actually takes.
+            group.allocate(own, height, baseline, None);
         }
     }
 

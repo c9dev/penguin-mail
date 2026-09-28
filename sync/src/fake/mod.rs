@@ -1164,6 +1164,7 @@ impl GmailApi for FakeGmail {
         _me: &str,
         answer: Answer,
         occurrence: Option<EpochMillis>,
+        _note: Option<&str>,
     ) -> Result<Answered, GmailError> {
         // The Calendar API spends none of the Gmail budget, so this call
         // is priced at nothing and only the failure queue applies.

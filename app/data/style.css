@@ -1,3 +1,49 @@
+/* Dark mode. `@media (prefers-color-scheme: dark)` never matches an app
+   stylesheet on GTK 4.22 (gtk4-css-support skill), so every dark rule
+   below keys off `.app-dark` instead: `ui::window::track_dark_class`
+   puts that class on each toplevel window (the main window and every
+   conversation window of its own) from `adw::StyleManager::is_dark()`,
+   and keeps it current on `connect_dark_notify`.
+
+   The mail redesign's mockup (docs/superpowers/specs/calendar-mockup/,
+   mockups.py) draws with a small set of surfaces. Each later task in
+   the redesign writes its rules with these values rather than picking
+   its own:
+   - pill: #e3e3e7 light, #3a3a40 dark (capsules, chips, answer buttons,
+     window controls). About 12 to 13 % of the text colour, not 8 %.
+   - line: #ececef light, #2c2c31 dark (hairlines, about 5 %).
+   - line2: #dedee3 light, #39393f dark (capsule separators, card
+     borders).
+   - text: dim is the text at 64 % opacity, faint at 40 %. libadwaita's
+     `dim-label` is 55 %, which is neither.
+   - accent tints: the sidebar's selected row, 18 % light and 28 % dark
+     over the sidebar shade; the selected thread, 16 % and 26 %; the
+     Undo Send pill, 16 % over the sidebar; the Summarize pill, 12 %
+     over the view. The calendar event's own tint stays 14 % and 24 %,
+     set in `calendar::tint`.
+   - type: 11.5px = 0.78em, 12.5px = 0.85em, 13px = 0.89em,
+     13.5px = 0.92em, 14px = 0.95em, 17px = 1.16em, at the calendar
+     CSS's 1em = 14.67px (an 11pt interface font). */
+
+/* The mockup's window, sidebar and view colours (mockups.py's THEMES),
+   in place of libadwaita's, on the windows `ui::window::track_dark_class`
+   marks. Redefining the variables carries them into the calendar,
+   popovers and dialogs as well. */
+window.app-surfaces {
+  --window-bg-color: #f6f6f7;
+  --sidebar-bg-color: #ebebed;
+  --view-bg-color: #ffffff;
+}
+window.app-surfaces.app-dark {
+  --window-bg-color: #242428;
+  --sidebar-bg-color: #2e2e33;
+  --view-bg-color: #1e1e21;
+}
+
+/* The reading pane's toolbar sits on the view colour, as the pane under
+   it does in the mockup, not on the window colour of a header bar. */
+headerbar.conversation-header { background: var(--view-bg-color); box-shadow: none; }
+
 /* The composer's signing button, when the message goes out signed or
    encrypted. Its icon carries the accent so the state reads at a glance. */
 .protected image { color: var(--accent-color); }
@@ -13,43 +59,78 @@ row.account-heading { transition: background-color 120ms ease, color 120ms ease;
 .navigation-sidebar > row:selected,
 .thread-list > row:selected { transition-duration: 90ms; }
 
-/* Thread list */
-.thread-list > row { padding: 0; }
-.thread-row { padding: 9px 12px 10px 6px; }
+/* Thread list. A selected conversation is a card tinted with the accent,
+   88 px tall on a 92 px pitch, 10 px in from the list's sides with 12 px
+   corners; libadwaita's row background is dropped so the tint shows.
+   Every other row draws a hairline under its text, from the text's start
+   to 16 px short of the list's end; the row above a selected card keeps
+   its line, 2 px clear of the card, and the card itself has none. */
+.thread-list > row { padding: 0; margin: 2px 10px; border-radius: 12px; }
+.thread-list > row:selected { background-color: alpha(var(--accent-bg-color), 0.16); }
+.app-dark .thread-list > row:selected { background-color: alpha(var(--accent-bg-color), 0.26); }
+.thread-row { padding: 0 12px 0 6px; }
+/* Dot 8 px, centred 22 px from the list's start and 20 px below the
+   row's top; avatar 34 px centred 52 px in; text from 80 px. */
 .thread-row .unread-dot {
-  min-width: 8px; min-height: 8px; border-radius: 999px; margin: 7px 0 0 0;
+  min-width: 8px; min-height: 8px; border-radius: 999px; margin: 16px 0 0 2px;
   background: transparent;
 }
 .thread-row.unread .unread-dot { background: var(--accent-bg-color); }
+.thread-row .thread-avatar { margin: 9px 0 0 9px; }
+.thread-row .thread-text {
+  padding: 9px 0 10px 0; margin-left: 11px;
+  border-bottom: 1px solid alpha(currentColor, 0.05);
+}
+.thread-list > row:selected .thread-text { border-bottom-color: transparent; }
 .thread-row .from { font-weight: 600; }
 .thread-row.unread .from { font-weight: 800; }
+/* The sender's address beside the name, styled as the mockup's secondary
+   text (R4): it lets a person spot a look-alike name. */
 .thread-row .subject { font-weight: 500; }
 .thread-row.unread .subject { font-weight: 700; }
 .thread-row .snippet { opacity: 0.6; font-size: 0.93em; }
 .thread-row .date { opacity: 0.6; font-size: 0.86em; font-feature-settings: "tnum"; }
-.thread-row .unread.date { opacity: 1; color: var(--accent-color); font-weight: 600; }
+.thread-row .unread.date { opacity: 1; color: var(--accent-color); font-weight: 700; }
 .thread-row .count {
   font-size: 0.78em; font-weight: 700; padding: 0 6px; border-radius: 999px;
   background: alpha(currentColor, 0.1); opacity: 0.8;
 }
 .thread-row .marker { opacity: 0.55; }
 .thread-row .starred.marker { opacity: 1; }
+.thread-row .invite.marker { color: var(--accent-color); opacity: 1; }
 
 /* Sidebar */
-.mailbox-row .count { opacity: 0.55; font-size: 0.88em; font-feature-settings: "tnum"; }
-.mailbox-row .count.unread { opacity: 1; font-weight: 700; color: var(--accent-color); }
+/* 12.5 px, weight 700, in the dim colour (mockups.py's `side_row`: every
+   count is bold, not only an unread one); an unread count takes the
+   accent instead. */
+.mailbox-row .count {
+  opacity: 0.64;
+  font-size: 0.85em;
+  font-weight: 700;
+  font-feature-settings: "tnum";
+}
+.mailbox-row .count.unread { opacity: 1; color: var(--accent-color); }
 /* An account row is a row like any other: same height, same hover, same
    gap to its neighbour. The heading above the accounts separates them
    from the unified mailboxes, so the rows themselves need no margin, and
-   padding here would sit under the hover highlight anyway. */
-.sidebar-heading { padding: 0 6px 0 4px; }
+   padding here would sit under the hover highlight anyway. 10 px on the
+   left lands the colour dot at the mockup's 26 px into the card, since
+   `.mailboxes > row` below already puts the row itself 8 px in. */
+.sidebar-heading { padding: 0 6px 0 10px; }
 /* Except after an open account, whose mailboxes would otherwise run into
    the next account's heading. The margin sits outside the hover highlight. */
 row.account-heading.after-open { margin-top: 12px; }
 .sidebar-heading label.heading { font-size: 0.8em; opacity: 0.6; }
-.sidebar-heading .email { font-size: 0.86em; font-weight: 700; }
+/* 13 px, weight 600, as ruling R3 keeps the account row to a dot and an
+   address: no chevron, and the options button only on hover or focus. */
+.sidebar-heading .email { font-size: 0.89em; font-weight: 600; }
 .sidebar-heading button { min-height: 22px; min-width: 22px; padding: 2px; }
 .sidebar-heading .count { font-size: 0.82em; font-weight: 700; color: var(--accent-color); }
+/* `GtkMenuButton`'s own CSS node is not named `button`, so the class
+   alone selects it. */
+.account-options { opacity: 0; transition: opacity 120ms ease; }
+row.account-heading:hover .account-options,
+.account-options:focus-visible { opacity: 1; }
 
 .account-dot { min-width: 8px; min-height: 8px; border-radius: 999px; }
 .account-0 { background: #3584e4; } .account-1 { background: #2190a4; } .account-2 { background: #3a944a; }
@@ -176,7 +257,93 @@ flowboxchild:focus-visible > .recipient-chip {
 .flag-gray { color: #6f8396; }
 .flag-swatch { padding: 6px; min-width: 20px; min-height: 20px; }
 .thread-row .vip.marker { color: #e5a50a; opacity: 1; }
-.sidebar-section { margin: 14px 6px 4px 4px; }
+/* The VIPs star and the Flagged row keep Apple Mail's own colours. */
+.sidebar-vip { color: #e5a50a; }
+
+/* A2: the inset sidebar card, its sections and the tinted selection.
+   `Sidebar::page` carries `.sidebar-card`, and both spaces' splits carry
+   `.inset-sidebar`, so this reaches the calendar's own sidebar too. */
+.inset-sidebar > .sidebar-pane { background: var(--window-bg-color); border: none; box-shadow: none; }
+.sidebar-card { background: var(--sidebar-bg-color); border-radius: 12px; }
+/* `adw::ToolbarView` wraps its top bars in its own box, so a `>` child
+   selector on `.sidebar-card` never reaches the header bar underneath. */
+.sidebar-card headerbar { background: none; box-shadow: none; }
+/* The mail list is the sidebar pane of window.rs's own inner split, which
+   would otherwise take the sidebar shade meant for `Sidebar::page` alone;
+   the mockup draws the list column on the window colour. */
+.mail-columns > .sidebar-pane { background: var(--window-bg-color); }
+
+/* The headings between the sections: 11.5 px, weight 700, faint (40 %).
+   The calendar sidebar's own account headings share this size, weight
+   and colour (`calendar::sidebar::rebuild_calendar_list`); only a mail
+   section's heading is drawn in spaced capitals, since an account's own
+   address is not a title to shout. 10 px of left margin lands the mail
+   heading's text at the mockup's 26 px into the card, since
+   `.mailboxes > row` below puts the row 8 px in already. */
+.sidebar-section {
+  font-size: 0.78em;
+  font-weight: 700;
+  color: alpha(currentColor, 0.4);
+}
+.mailboxes > row > .sidebar-section {
+  /* 5 px under, and the row under the heading adds its own 2 px. */
+  margin: 16px 8px 5px 10px;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+.mailboxes > row:first-child > .sidebar-section { margin-top: 12px; }
+
+/* Row type: 14 px names, 700 when selected. */
+.mailbox-row > label { font-size: 0.95em; font-weight: 500; }
+.mailboxes > row:selected .mailbox-row > label { font-weight: 700; }
+/* Rows 32 px tall on a 34 px pitch, as mockups.py's `side_row` draws
+   them: 7 px above and below the label, and 2 px under each row. */
+.mailbox-row { min-height: 16px; padding: 7px 14px 7px 0; }
+
+/* The selected mailbox is a rounded card tinted with the accent, 8 px in
+   from each side of the card: 18 % in light mode, 28 % in dark, over the
+   sidebar shade (mockups.py's `tint + 0.04`, not the calendar event's
+   14 %/24 %). Its icon, name and count take the accent colour. */
+.mailboxes > row { margin: 0 8px 2px; padding: 0; min-height: 0; border-radius: 9px; }
+.mailboxes > row:selected {
+  background-color: alpha(var(--accent-bg-color), 0.18);
+  color: var(--accent-color);
+}
+.mailboxes > row:selected image { color: var(--accent-color); }
+.mailboxes > row:selected .mailbox-row .count { opacity: 1; color: var(--accent-color); }
+.app-dark .mailboxes > row:selected { background-color: alpha(var(--accent-bg-color), 0.28); }
+
+/* A6/B2: the foot of the sidebar, shared by both spaces since it is
+   `Sidebar::page`'s own bottom bar, and hidden whole (`Sidebar::sync_foot`)
+   while it holds neither the next-event card nor the Undo Send pill, so
+   an empty run leaves no border or band under the mailbox list. `foot`'s
+   14 px spacing (sidebar.rs) matches the mockup's own gap from the
+   next-event card's bottom edge to the pill's top (mockups.py's
+   `ny + 58` to `uy`, both `H`-relative: 14 px apart); 10 px of side
+   padding here lands both the card and the pill at the mockup's inset
+   from the sidebar card's own edge. The mockup gives no value for the
+   gap above the card, so the top padding is 6 px. The pill sits 12 px
+   above the card's bottom edge (mockups.py's `uy + 36` to `H - 8`). It
+   is 36 px tall, fully rounded, tinted 16 % with the accent over the
+   sidebar shade. */
+.sidebar-foot { padding: 6px 10px 12px; }
+/* A flat bottom bar draws a shadow line while the list scrolls under it;
+   the mockup's foot sits on the card's own shade with no line. */
+.sidebar-card > .bottom-bar,
+toolbarview.sidebar-card.undershoot-bottom > .bottom-bar { box-shadow: none; border: none; }
+.undo-pill {
+  min-height: 36px;
+  padding: 0 16px;
+  border-radius: 999px;
+  background: alpha(var(--accent-bg-color), 0.16);
+  color: var(--accent-color);
+  font-size: 0.92em;
+  font-weight: 700;
+  transition: background-color 120ms ease;
+}
+.undo-pill:hover { background: alpha(var(--accent-bg-color), 0.22); }
+.undo-pill:active { background: alpha(var(--accent-bg-color), 0.3); }
+.undo-pill .undo-left { font-size: 0.85em; font-weight: 600; font-feature-settings: "tnum"; }
 
 /* The assistant pane. */
 .assistant-pane { background: var(--sidebar-bg-color); }
@@ -216,29 +383,54 @@ flowboxchild:focus-visible > .recipient-chip {
 .assistant-suggestion { padding: 6px 10px; border-radius: 10px; }
 .assistant-confirm label { font-weight: 600; }
 
-/* Inbox categories: the switcher above an inbox's thread list. */
-/* min-width counts the content alone, so 24px is the icon's box and the
-   padding brings the toggle to 34px with the icon centred. */
-.category-bar > toggle { min-width: 24px; min-height: 30px; padding-left: 5px; padding-right: 5px; }
-/* The switcher reads as one strip, so drop the dividers between the icons. */
-.category-bar > separator { background: none; }
-.category-bar .category-name { margin-left: 5px; margin-right: 2px; }
-/* The chosen category leads; the rest sit back a little. */
-.category-bar > toggle image { opacity: 0.75; transition: opacity 160ms cubic-bezier(0.23, 1, 0.32, 1); }
-.category-bar > toggle:checked image, .category-bar > toggle:hover image { opacity: 1; }
-/* The unread count rides the icon's top right corner. */
-.category-bar .category-count {
-  min-width: 9px;
-  padding: 0 2px;
+/* Inbox categories as a row of chips. The chosen one is a filled accent
+   pill with its icon and name; the others are neutral pills in the
+   `pill` surface with their icon, and the unread count as a small
+   accent badge riding the pill's top end corner. */
+toggle-group.category-chips { background: none; padding: 0; box-shadow: none; }
+.category-chips > separator { min-width: 6px; background: none; }
+.category-chips > toggle {
+  min-width: 44px;
+  min-height: 30px;
+  padding: 0;
+  border-radius: 15px;
+  background: #e3e3e7;
+  box-shadow: none;
+  transition: background-color 120ms ease;
+}
+.app-dark .category-chips > toggle { background: #3a3a40; }
+.category-chips > toggle:hover { background: color-mix(in srgb, currentColor 8%, #e3e3e7); }
+.app-dark .category-chips > toggle:hover { background: color-mix(in srgb, currentColor 8%, #3a3a40); }
+.category-chips > toggle:checked { background: var(--accent-bg-color); color: var(--accent-fg-color); }
+.category-chips .category-chip { padding: 0 14px; min-height: 30px; }
+.category-chips .category-name { margin-left: 6px; font-weight: 700; font-size: 0.89em; }
+/* The mockup's badge rides the pill's top end corner and rises 3px
+   above it, but `CategoryStrip` clips its own bounds to a frame
+   (strip.rs, "Clip it") for the narrow-window fold, which crops that
+   3px off a badge drawn there. Kept inside the pill instead; see the
+   report's "known differences". */
+.category-chips .category-count {
+  min-width: 14px;
+  min-height: 14px;
+  margin: 1px 2px 0 0;
   border-radius: 99px;
-  font-size: 0.6em;
-  font-weight: 700;
+  font-size: 0.65em;
+  font-weight: 800;
   font-feature-settings: "tnum";
   color: var(--accent-fg-color);
   background: var(--accent-bg-color);
   transition: opacity 160ms cubic-bezier(0.23, 1, 0.32, 1);
 }
-.category-bar .category-count.no-mail { opacity: 0; }
+.category-chips > toggle:checked .category-count { opacity: 0; }
+.category-chips .category-count.no-mail { opacity: 0; }
+
+/* The list header's title, packed at the header's start instead of
+   centred: "All Inboxes" leads, the unread count and category sit under
+   it, dim. The margins set the title's centre at y 24 of the window and
+   the subtitle's baseline at 47, as mockups.py draws them. */
+.list-header-title { margin: 8px 0 -7px 2px; }
+.list-header-title .title { font-size: 1.16em; font-weight: 800; }
+.list-header-title .subtitle { font-size: 0.85em; font-weight: 500; opacity: 0.64; }
 
 /* Follow Up: the banner above All Inboxes. */
 .follow-up-banner {
@@ -247,31 +439,42 @@ flowboxchild:focus-visible > .recipient-chip {
 }
 .follow-up-banner > image { color: var(--accent-color); }
 
-/* The event card above an invitation, after Apple Mail's. */
+/* The event card, laid over the place the page keeps for it inside the
+   invitation's message. The page gives the room around it, so the area
+   adds none and shows the page through. */
 .invitation-area {
-  padding: 12px 16px 4px 16px;
-  background: var(--view-bg-color);
+  padding: 0;
+  background: none;
 }
- /* Adwaita's card style draws the surface; this adds the room inside. */
-.invitation-card { padding: 14px 16px; border-radius: 12px; }
-.invitation-tile {
-  min-width: 52px;
-  padding: 6px 4px 8px 4px;
-  border-radius: 10px;
-  background: alpha(var(--accent-bg-color), 0.14);
+/* The event card as the mockup draws it: its window colour with a
+   `line2` border, a bar in the calendar's colour beside the title, and
+   every line after it in one column 12 px right of the bar. */
+.invitation-card {
+  padding: 18px 34px 18px 18px;
+  border-radius: 14px;
+  background: #f6f6f7;
+  border: 1px solid #dedee3;
 }
-.invitation-month {
-  font-size: 0.72em;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  color: var(--accent-color);
+.app-dark .invitation-card { background: #242428; border-color: #39393f; }
+.invitation-bar {
+  min-width: 4px;
+  min-height: 44px;
+  border-radius: 2px;
+  background: var(--cal-colour);
 }
-.invitation-day {
-  font-size: 1.6em;
-  font-weight: 300;
-  line-height: 1;
+.invitation-title { font-size: 1.23em; font-weight: 800; }
+.invitation-when { font-size: 0.89em; font-weight: 500; opacity: 0.64; margin-top: 5px; }
+.invitation-meta { font-size: 0.85em; font-weight: 500; opacity: 0.64; }
+.invitation-meta-row { margin-top: 8px; }
+/* The guest count reads as part of the line it sits in, and opens the
+   guest list. */
+menubutton.invitation-guests > button {
+  padding: 0;
+  min-height: 0;
+  font-size: 0.85em;
+  font-weight: 500;
+  opacity: 0.64;
 }
-.invitation-when { font-weight: 600; }
 .invitation-news {
   padding: 6px 10px;
   border-radius: 8px;
@@ -286,7 +489,77 @@ flowboxchild:focus-visible > .recipient-chip {
   background: alpha(var(--error-bg-color), 0.16);
 }
 /* Something else is already in the hour this invitation asks for. */
-.invitation-clash { color: var(--warning-color); font-weight: 600; }
+.invitation-clash { color: var(--warning-color); font-size: 0.85em; font-weight: 600; margin-top: 6px; }
+/* The answers as separate pills, 88 by 34, the one given (or Yes, before
+   any) filled in the accent; Show in Calendar a pill at the row's end. */
+.invitation-answering { margin-top: 34px; }
+button.invitation-answer,
+button.invitation-pill {
+  min-height: 34px;
+  padding: 0 14px;
+  border-radius: 10px;
+  background: #e3e3e7;
+  box-shadow: none;
+  font-size: 0.92em;
+  font-weight: 700;
+}
+button.invitation-answer { min-width: 88px; padding: 0; }
+.app-dark button.invitation-answer,
+.app-dark button.invitation-pill { background: #3a3a40; }
+button.invitation-answer:hover,
+button.invitation-pill:hover { background: color-mix(in srgb, currentColor 8%, #e3e3e7); }
+.app-dark button.invitation-answer:hover,
+.app-dark button.invitation-pill:hover { background: color-mix(in srgb, currentColor 8%, #3a3a40); }
+button.invitation-answer.suggested-action,
+.app-dark button.invitation-answer.suggested-action {
+  background: var(--accent-bg-color);
+  color: var(--accent-fg-color);
+}
+button.invitation-pill buttoncontent > box { border-spacing: 8px; }
+
+/* The day strip on the event card: the hours around the meeting, the
+   account's other events as tinted blocks, this one dashed, hairlines on
+   the hours. */
+.day-strip { margin-top: 8px; }
+.strip-heading {
+  font-size: 0.72em;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  opacity: 0.4;
+}
+.strip-verdict { font-size: 0.78em; font-weight: 700; }
+.strip-verdict.free { color: #2ec27e; }
+.strip-verdict.clash { color: var(--warning-color); }
+.strip-grid {
+  border-radius: 10px;
+  background: var(--view-bg-color);
+  border: 1px solid #ececef;
+}
+.app-dark .strip-grid { border-color: #2c2c31; }
+.strip-cell.hour { border-left: 1px solid #ececef; }
+.app-dark .strip-cell.hour { border-left-color: #2c2c31; }
+.strip-hour {
+  font-size: 0.68em;
+  font-weight: 500;
+  opacity: 0.4;
+  margin: 3px 0 3px 4px;
+  font-feature-settings: "tnum";
+}
+.strip-block {
+  margin: 4px 2px 0 2px;
+  min-height: 28px;
+  padding: 0 8px 0 1px;
+  border-radius: 7px;
+}
+.strip-block.first { margin-top: 6px; }
+.strip-block.event-block .bar { min-width: 3px; margin: 3px 0; border-radius: 1.5px; }
+.strip-block label { font-size: 0.78em; font-weight: 700; }
+/* The dashed block strokes its outline on its content box
+   (invitation/outline.rs), so it takes no padding; its title keeps the
+   room instead. */
+.strip-block.unanswered { background: var(--view-bg-color); padding: 0; }
+.strip-block.unanswered label { margin: 0 8px; }
 
 /* The message is in another language: which one, where its words would go
    to be translated, and the button that sends them. */
@@ -350,8 +623,10 @@ flowboxchild:focus-visible > .recipient-chip {
 /* The header: "September 2026 W39", a Today pill, the arrows in one
    pill, and the view switch. */
 .range-title { margin: 0 10px 0 16px; }
-.calendar-compact .range-title { margin: 0 4px 0 2px; }
-.calendar-compact toggle-group.view-switch > toggle { min-width: 0; }
+.calendar-compact .range-title,
+.assistant-beside .range-title { margin: 0 4px 0 2px; }
+.calendar-compact toggle-group.view-switch > toggle,
+.assistant-beside toggle-group.view-switch > toggle { min-width: 0; }
 .range-title .bold { font-weight: 800; font-size: 1.43em; }
 .range-title .dim { font-size: 1.43em; font-weight: 400; opacity: 0.4; }
 .range-title .week { font-size: 0.85em; font-weight: 700; opacity: 0.4; }
@@ -363,10 +638,11 @@ button.calendar-today {
   font-size: 0.89em;
 }
 .calendar-arrows {
-  background: color-mix(in srgb, currentColor 10%, transparent);
+  background-color: #e3e3e7;
   border-radius: 16px;
   padding: 0 2px;
 }
+.app-dark .calendar-arrows { background-color: #3a3a40; }
 .calendar-arrows > button { min-height: 32px; min-width: 34px; padding: 0; border-radius: 16px; }
 .calendar-arrows > separator { margin: 8px 0; }
 /* The New Event button: a 32 px accent circle with a plain "+", 12 px
@@ -381,7 +657,9 @@ toggle-group.view-switch > toggle,
 toggle-group.space-switch > toggle { font-size: 0.89em; font-weight: 600; }
 /* The mockup's switch is a 204 x 32 pill of three 64 px toggles. */
 toggle-group.view-switch > toggle { min-width: 64px; padding-left: 0; padding-right: 0; }
-toggle-group.space-switch > toggle { -gtk-icon-size: 14px; padding-left: 12px; padding-right: 12px; }
+toggle-group.space-switch > toggle { -gtk-icon-size: 14px; padding: 0 12px; min-height: 28px; }
+/* The mockup's Mail / Calendar pill is 32 px tall: 28 px toggles, 2 px in. */
+toggle-group.space-switch { padding: 2px; }
 toggle-group.view-switch > toggle:not(:checked),
 toggle-group.space-switch > toggle:not(:checked) { color: color-mix(in srgb, currentColor 64%, transparent); }
 /* The chosen toggle is the view colour on the pill, white in light and
@@ -407,7 +685,7 @@ button.event-block:hover {
 button.event-block:active {
   background-color: color-mix(in srgb, var(--accent-bg-color) 28%, var(--view-bg-color));
 }
-.calendar-dark button.event-block:hover {
+.app-dark button.event-block:hover {
   background-color: color-mix(in srgb, var(--accent-bg-color) 32%, var(--view-bg-color));
 }
 .event-block .bar { min-width: 4px; border-radius: 2px; background: var(--cal-colour); }
@@ -428,9 +706,9 @@ button.event-block.compact .title { font-size: 0.82em; margin-top: 0; }
    draw the mockup's 5 and 4 pattern. tint.rs leaves these blocks out of
    its fills, which would otherwise win. */
 button.event-block.unanswered,
-.calendar-dark button.event-block.unanswered { background: var(--view-bg-color); }
+.app-dark button.event-block.unanswered { background: var(--view-bg-color); }
 button.event-block.unanswered:hover,
-.calendar-dark button.event-block.unanswered:hover {
+.app-dark button.event-block.unanswered:hover {
   background: color-mix(in srgb, var(--cal-colour) 8%, var(--view-bg-color));
 }
 .event-block.unanswered .bar { background: transparent; }
@@ -510,7 +788,6 @@ button.day-heading { min-height: 26px; padding: 0 14px; border-radius: 13px; }
 .calendar-lock { opacity: 0.4; }
 .mini-month { margin-top: -2px; }
 checkbutton.calendar-check:not(:checked) + label { opacity: 0.64; }
-.calendar-account { font-size: 0.78em; font-weight: 700; opacity: 0.4; }
 .calendar-name { font-size: 0.92em; font-weight: 500; }
 /* The indicator is the checkbutton's `check` child, not the row itself,
    or the circle would wrap the calendar's name too. A 15 px dot, filled
@@ -614,11 +891,11 @@ button.popover-join, button.popover-answer {
 /* The mockup's popover is the view colour in light, #36363c in dark, and
    its unchosen buttons the pill colour, #e3e3e7 and #3a3a40. */
 popover.event-popover > contents { background: var(--view-bg-color); }
-.calendar-dark popover.event-popover > contents { background: #36363c; }
+.app-dark popover.event-popover > contents { background: #36363c; }
 popover.event-popover button.popover-join,
 popover.event-popover button.popover-answer:not(.suggested-action) { background: #e3e3e7; }
-.calendar-dark popover.event-popover button.popover-join,
-.calendar-dark popover.event-popover button.popover-answer:not(.suggested-action) { background: #3a3a40; }
+.app-dark popover.event-popover button.popover-join,
+.app-dark popover.event-popover button.popover-answer:not(.suggested-action) { background: #3a3a40; }
 /* The place row is a button only so it can open the map; it reads as
    the rows around it. */
 popover.event-popover button.popover-place { min-height: 0; padding: 0; margin: 0 -4px; padding: 0 4px; font-weight: 400; }
@@ -627,8 +904,8 @@ popover.event-popover button.popover-join:hover,
 popover.event-popover button.popover-answer:not(.suggested-action):hover {
   background: color-mix(in srgb, currentColor 8%, #e3e3e7);
 }
-.calendar-dark popover.event-popover button.popover-join:hover,
-.calendar-dark popover.event-popover button.popover-answer:not(.suggested-action):hover {
+.app-dark popover.event-popover button.popover-join:hover,
+.app-dark popover.event-popover button.popover-answer:not(.suggested-action):hover {
   background: color-mix(in srgb, currentColor 8%, #3a3a40);
 }
 /* "Open the invitation in Mail": an icon-and-text link, not a filled
@@ -641,6 +918,85 @@ popover.event-popover button.popover-open-mail {
   font-weight: 700;
   color: var(--accent-color);
 }
+
+/* The assistant toggle in the reading pane's and the calendar's headers
+   (R12): a plain flat circular button like More or the calendar's own
+   icon buttons until the panel is open, when its sparkle turns the
+   accent colour a symbolic icon takes from its foreground. */
+.assistant-toggle:checked { color: var(--accent-color); }
+
+/* The conversation header's buttons, grouped into capsules the way the
+   mockup draws them (calendar-mockup/mockups.py, capsule()): replying,
+   filing, Move, then the flag, each a 32 px pill of 34 px buttons with
+   16 px corners. The calendar's view arrows are the same pill
+   (.calendar-arrows above), so this shares its colour rather than
+   picking a second alpha that could drift from it. */
+.toolbar-capsule,
+.calendar-arrows {
+  background-color: #e3e3e7;
+  border-radius: 16px;
+}
+.app-dark .toolbar-capsule,
+.app-dark .calendar-arrows {
+  background-color: #3a3a40;
+}
+.toolbar-capsule {
+  padding: 2px;
+}
+.toolbar-capsule > button,
+.toolbar-capsule > menubutton > button,
+.toolbar-capsule > splitbutton > button,
+.toolbar-capsule > splitbutton > menubutton > button {
+  min-height: 28px;
+  min-width: 34px;
+  padding: 0;
+  border-radius: 16px;
+}
+/* A hairline between two buttons, in `line2`, 9 to 23 px of the pill's
+   32 (25 % to 75 % of a 28 px button sitting 2 px into it). */
+.toolbar-capsule > * + * {
+  background-image: linear-gradient(
+    to bottom, transparent 25%, #dedee3 25%, #dedee3 75%, transparent 75%);
+  background-size: 1px 100%;
+  background-repeat: no-repeat;
+  background-position: left center;
+}
+.app-dark .toolbar-capsule > * + * {
+  background-image: linear-gradient(
+    to bottom, transparent 25%, #39393f 25%, #39393f 75%, transparent 75%);
+}
+/* A pressed segment rises out of the pill as the view colour, in both
+   modes: the mockup draws no dark-mode alpha for it, and the calendar's
+   chosen view-switch toggle already reads this way
+   (toggle-group.view-switch > toggle:checked, above). */
+.toolbar-capsule > button:active,
+.toolbar-capsule > button:checked,
+.toolbar-capsule > menubutton > button:active,
+.toolbar-capsule > menubutton > button:checked,
+.toolbar-capsule > splitbutton > button:active,
+.toolbar-capsule > splitbutton > menubutton > button:active,
+.toolbar-capsule > splitbutton > menubutton > button:checked {
+  background-color: var(--view-bg-color);
+}
+
+/* B2: the next event, at the foot of the mail sidebar above Undo Send.
+   A small raised card, the mockup's `lift` shadow, with the event's
+   colour down its start edge. Sizes are the mockup's own (11.5 px =
+   0.78em, 13.5 px = 0.92em); dim text is the text colour at 64 %, as
+   the calendar CSS above already has it. */
+/* 58 px tall as drawn: 10 px above and below the 38 px colour bar. The
+   bar sits 8 px in, the text 20 px in, and the icon 18 px from the end. */
+.next-event {
+  min-height: 38px;
+  padding: 10px 8px;
+  border-radius: 12px;
+  background: var(--view-bg-color);
+  box-shadow: 0 1px 2px alpha(black, 0.1);
+}
+.next-event .bar { min-width: 3.5px; border-radius: 2px; background: var(--cal-colour); }
+.next-event .when { font-size: 0.78em; font-weight: 600; opacity: 0.64; }
+.next-event .what { font-size: 0.92em; font-weight: 700; }
+.next-event image { opacity: 0.55; margin-right: 10px; }
 /* "Show more" and "Show all": a small text link under the notes or the
    guest list, not a filled pill. */
 popover.event-popover button.popover-more {

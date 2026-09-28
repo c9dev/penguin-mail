@@ -31,10 +31,12 @@ use mailrs_domain::translate::{fill, fill_plural, gettext};
 use mailrs_domain::{Category, FlagColor, Folder, MessageMeta, Target};
 use webkit::prelude::*;
 
+use super::card_place::Host as CardHost;
 use super::find::FindBar;
 use super::invitation::{self, EventCard, Showing};
 use super::pgp::PgpCard;
 use super::queued::QueuedCard;
+use super::toolbar::{self, Holds};
 use super::translation::TranslationCard;
 use super::{name, name_with_shortcut};
 use crate::compose::ReplyKind;
@@ -51,6 +53,9 @@ pub enum Action {
     /// The event card asked for something: an answer, or a hand-off to the
     /// desktop calendar.
     Invitation(invitation::Action),
+    /// The Summarize pill above the thread: ask the assistant to sum up
+    /// the conversation on screen.
+    Summarize,
     Reply(ReplyKind),
     EditDraft,
     Archive,
@@ -190,10 +195,32 @@ struct Buttons {
     more: gtk::MenuButton,
 }
 
+/// The widget behind one slot of the header bar.
+fn slot_widget(buttons: &Buttons, labels: &gtk::MenuButton, slot: toolbar::Slot) -> gtk::Widget {
+    use toolbar::Slot;
+    match slot {
+        Slot::Reply => buttons.reply.clone().upcast(),
+        Slot::ReplyAll => buttons.reply_all.clone().upcast(),
+        Slot::Forward => buttons.forward.clone().upcast(),
+        Slot::Edit => buttons.edit.clone().upcast(),
+        Slot::Archive => buttons.archive.clone().upcast(),
+        Slot::Trash => buttons.trash.clone().upcast(),
+        Slot::Junk => buttons.junk.clone().upcast(),
+        Slot::Read => buttons.read.clone().upcast(),
+        Slot::Flag => buttons.star.clone().upcast(),
+        Slot::Labels => labels.clone().upcast(),
+    }
+}
+
 pub struct ConversationView {
     pub page: adw::NavigationPage,
     /// Applies or removes labels; the window fills its popover.
     pub label_button: gtk::MenuButton,
+    /// Opens or closes the assistant beside the mail. The window wires
+    /// it to the assistant panel's own toggle path (R12) and hides it
+    /// with `set_detached`, since a conversation of its own has no
+    /// assistant panel to open.
+    pub assistant_toggle: gtk::ToggleButton,
     many: adw::StatusPage,
     many_read: gtk::Button,
     many_star: gtk::Button,
@@ -204,14 +231,16 @@ pub struct ConversationView {
     webview: webkit::WebView,
     content: webkit::UserContentManager,
     banner: adw::Banner,
-    /// The event card above the message, shown when the open message
-    /// carries an invitation.
+    /// The event card, shown inside the message that carries an
+    /// invitation.
     pub card: Rc<EventCard>,
+    /// Lays the card over its place in the page.
+    card_host: Rc<CardHost>,
     /// The card above that, shown when gpg has something to say about the
     /// message.
     seal: Rc<PgpCard>,
-    /// The card between the event card and the message, shown when the
-    /// message is in a language the interface is not in.
+    /// The card above the message, shown when the message is in a
+    /// language the interface is not in.
     pub translate: Rc<TranslationCard>,
     /// The card at the top, shown for a queued message: when it goes, or
     /// why it has not gone, and what the person can do about it.
@@ -239,6 +268,9 @@ pub struct ConversationView {
     /// Remind Me times, recomputed whenever a conversation opens.
     remind: gio::Menu,
     buttons: Buttons,
+    /// One linked box per capsule of the header bar, in the order of
+    /// `toolbar::CAPSULES`.
+    capsules: Vec<gtk::Box>,
     /// The menu for one message. One popover serves the whole thread: the
     /// model changes with the message the menu was asked for.
     menu: gtk::PopoverMenu,
@@ -268,6 +300,8 @@ pub struct ConversationView {
     held: RefCell<Vec<(Address, webkit::URISchemeRequest)>>,
     compact: Cell<bool>,
     detached: Cell<bool>,
+    /// Whether the head of the page offers Summarize.
+    summarize: Cell<bool>,
     /// This view, for the answers WebKit gives later.
     this: Weak<ConversationView>,
 }
@@ -390,9 +424,11 @@ impl ConversationView {
         web_box.append(&list_banner);
         web_box.append(&banner);
         web_box.append(&seal.widget);
-        web_box.append(&card.widget);
         web_box.append(&translate.widget);
-        web_box.append(&webview);
+        // The event card sits inside the message that carries the
+        // invitation, laid over the place the page keeps for it.
+        let card_host = CardHost::new(&webview, &content, &card.widget);
+        web_box.append(&card_host.overlay);
         let stack = gtk::Stack::builder()
             .transition_type(gtk::StackTransitionType::Crossfade)
             .build();
@@ -451,6 +487,16 @@ impl ConversationView {
                 more
             },
         };
+        // The window binds this to the assistant panel's own open state
+        // (R12); a conversation of its own has none, so it starts hidden
+        // and stays that way (set_detached).
+        let assistant_toggle = gtk::ToggleButton::builder()
+            .icon_name("penguin-mail-sparkle-symbolic")
+            .tooltip_text(gettext("Assistant (Ctrl+J)"))
+            .css_classes(["assistant-toggle"])
+            .visible(false)
+            .build();
+        name_with_shortcut(&assistant_toggle, &gettext("Assistant (Ctrl+J)"));
         let more = gio::Menu::new();
         // Only the Outbox turns these three on, and GTK leaves an item whose
         // action is off out of the menu rather than greying it.
@@ -530,31 +576,52 @@ impl ConversationView {
         let remind = remind_menu.clone();
         let header = adw::HeaderBar::builder()
             .title_widget(&gtk::Label::new(None))
+            .css_classes(["conversation-header"])
             .build();
         let label_button = gtk::MenuButton::builder()
-            .icon_name("penguin-mail-tag-symbolic")
+            .icon_name(Filing::Labels.icon())
             .tooltip_text(Filing::Labels.tooltip())
+            .always_show_arrow(true)
             .build();
         name_with_shortcut(&label_button, &Filing::Labels.tooltip());
-        for widget in [
-            buttons.archive.upcast_ref::<gtk::Widget>(),
-            buttons.trash.upcast_ref(),
-            buttons.junk.upcast_ref(),
-            buttons.read.upcast_ref(),
-            buttons.star.upcast_ref(),
-        ] {
-            header.pack_start(widget);
-        }
-        header.pack_start(&label_button);
+        // The capsules run from the start of the bar in the order the
+        // mockup gives them; More stays a round button at the end.
+        let capsules: Vec<gtk::Box> = toolbar::CAPSULES
+            .iter()
+            .enumerate()
+            .map(|(index, slots)| {
+                let draft = slots.contains(&toolbar::Slot::Edit);
+                // GTK's own "linked" box style gives grouped buttons a
+                // background of its own, which fights the capsule's flat
+                // buttons over one pill; the capsule draws its pill and
+                // its separators itself, so it skips "linked".
+                let capsule = gtk::Box::builder()
+                    .css_classes([if draft { "draft-capsule" } else { "toolbar-capsule" }])
+                    .valign(gtk::Align::Center)
+                    .build();
+                for &slot in slots.iter() {
+                    let widget = slot_widget(&buttons, &label_button, slot);
+                    // Edit Draft keeps its suggested look; the rest sit
+                    // flat inside the capsule's one pill.
+                    if !draft {
+                        widget.add_css_class("flat");
+                    }
+                    capsule.append(&widget);
+                }
+                // The header bar already spaces its packed children 6 px
+                // apart (style.css's note on button.new-event), so the
+                // margins here make up the rest of the mockup's 16 px
+                // from the pane's start and 10 px between capsules.
+                if index == 0 {
+                    capsule.set_margin_start(10);
+                }
+                capsule.set_margin_end(4);
+                header.pack_start(&capsule);
+                capsule
+            })
+            .collect();
         header.pack_end(&buttons.more);
-        for widget in [
-            &buttons.reply,
-            &buttons.reply_all,
-            &buttons.forward,
-            &buttons.edit,
-        ] {
-            header.pack_end(widget);
-        }
+        header.pack_end(&assistant_toggle);
         let menu_popover = gtk::PopoverMenu::from_model(None::<&gio::Menu>);
         super::name_menu_items(&menu_popover);
         menu_popover.set_has_arrow(false);
@@ -601,6 +668,7 @@ impl ConversationView {
         let view = Rc::new_cyclic(|this| ConversationView {
             page,
             label_button,
+            assistant_toggle,
             many,
             many_read,
             many_star,
@@ -612,6 +680,7 @@ impl ConversationView {
             content,
             banner,
             card,
+            card_host,
             seal,
             translate,
             queued,
@@ -625,6 +694,7 @@ impl ConversationView {
             thread_menu,
             remind,
             buttons,
+            capsules,
             menu: menu_popover,
             menu_at: Cell::new((0, 0)),
             menu_popover: RefCell::new(None),
@@ -639,10 +709,11 @@ impl ConversationView {
             held: RefCell::new(Vec::new()),
             compact: Cell::new(false),
             detached: Cell::new(false),
+            summarize: Cell::new(false),
             this: this.clone(),
         });
 
-        view.set_buttons_shown(false);
+        view.apply_toolbar(Holds::Nothing);
         VIEWS.with(|views| {
             let mut views = views.borrow_mut();
             views.retain(|view| view.strong_count() > 0);
@@ -844,6 +915,7 @@ impl ConversationView {
     pub fn set_filing(&self, filing: Filing) {
         let tip = filing.tooltip();
         self.label_button.set_tooltip_text(Some(&tip));
+        self.label_button.set_icon_name(filing.icon());
         name_with_shortcut(&self.label_button, &tip);
         self.mark_menu.remove(3);
         self.mark_menu
@@ -906,6 +978,7 @@ impl ConversationView {
     /// For a conversation in its own window: labels stay in the main window.
     pub fn set_detached(&self) {
         self.label_button.set_visible(false);
+        self.assistant_toggle.set_visible(false);
         self.detached.set(true);
     }
 
@@ -913,6 +986,14 @@ impl ConversationView {
     /// thread list and so no row selection to act on.
     pub fn detached(&self) -> bool {
         self.detached.get()
+    }
+
+    /// Offers Summarize above the thread, or takes it away. The head of
+    /// the page changes, so the page loads again.
+    pub fn offer_summary(&self, offered: bool) {
+        if self.summarize.replace(offered) != offered {
+            self.render(false);
+        }
     }
 
     /// The window this conversation is in, which a dialog raised from it
@@ -1060,12 +1141,7 @@ impl ConversationView {
         self.seal.hide();
         self.translate.hide();
         self.queued.hide();
-        self.set_buttons_shown(true);
-        let b = &self.buttons;
-        for button in [&b.reply, &b.reply_all, &b.forward, &b.edit] {
-            button.set_visible(false);
-        }
-        b.more.set_visible(false);
+        self.apply_toolbar(Holds::Many);
     }
 
     /// Stops the WebKit process that draws mail. It holds about 80 MB, and
@@ -1109,7 +1185,7 @@ impl ConversationView {
         *self.open.borrow_mut() = None;
         self.refuse_held();
         self.stack.set_visible_child_name("empty");
-        self.set_buttons_shown(false);
+        self.apply_toolbar(Holds::Nothing);
         self.banner.set_revealed(false);
         self.list_banner.set_revealed(false);
         self.show_invitation(None);
@@ -1118,12 +1194,20 @@ impl ConversationView {
         self.queued.hide();
     }
 
-    /// Puts an invitation above the message, or takes the card away when
-    /// the message carries none.
+    /// Puts an invitation on the card, inside the message that carries it,
+    /// or takes the card away when the thread carries none. The page keeps
+    /// the card's place in that message, so it is patched too.
     pub fn show_invitation(&self, showing: Option<Showing>) {
+        let at = showing.as_ref().map(|showing| showing.message_id.clone());
         match showing {
             Some(showing) => self.card.show(showing),
             None => self.card.hide(),
+        }
+        if self
+            .change(|open| open.take_invitation_place(at))
+            .is_some()
+        {
+            self.render(false);
         }
     }
 
@@ -1143,6 +1227,13 @@ impl ConversationView {
     /// shows the invitation `uid` names.
     pub fn found_on_calendar(&self, uid: &str, spot: mailrs_sync::Spot) {
         self.card.set_on_calendar(uid, spot);
+    }
+
+    /// The hours around the event on the card, from the calendar's copy.
+    /// The card keeps them only while it still shows the invitation `uid`
+    /// names.
+    pub fn strip_arrived(&self, uid: &str, strip: &crate::ui::invitation::strip::Strip) {
+        self.card.set_strip(uid, strip);
     }
 
     /// Offers Grant Access for the calendar on the card.
@@ -1398,10 +1489,13 @@ impl ConversationView {
         let theme = Theme {
             dark: style.is_dark(),
             accent: style.accent_color_rgba().to_str().to_string(),
+            // A conversation in its own window has no assistant beside it.
+            summarize: self.summarize.get() && !self.detached.get(),
         };
         let page = open.page(&theme);
         let background = if theme.dark {
-            gdk::RGBA::new(0.133, 0.133, 0.149, 1.0)
+            // #1e1e21, the view colour style.css sets for dark windows.
+            gdk::RGBA::new(30.0 / 255.0, 30.0 / 255.0, 33.0 / 255.0, 1.0)
         } else {
             gdk::RGBA::WHITE
         };
@@ -1420,7 +1514,10 @@ impl ConversationView {
                 self.waiting.borrow_mut().clear();
                 let load = self.loads.get() + 1;
                 self.loads.set(load);
-                let html = document.html(&format!(" data-load=\"{load}\""));
+                let html = document.html(&format!(
+                    " data-load=\"{load}\"{}",
+                    self.card_host.root_style()
+                ));
                 self.webview.load_html(&html, None);
             }
             Page::Patch(patch) if patch.is_empty() => {}
@@ -1573,23 +1670,20 @@ impl ConversationView {
         // A queued message is not in Gmail yet, so the mail buttons have
         // nothing to act on. The card above it carries what does.
         if let Some(unsent) = &open.queued {
-            self.set_buttons_shown(false);
+            self.apply_toolbar(Holds::Nothing);
             self.list_banner.set_revealed(false);
             self.queued.show(unsent);
             return;
         }
         self.queued.hide();
         self.refresh_remind_menu();
-        self.set_buttons_shown(true);
-        let draft = open.is_draft();
-        let full = !self.compact.get();
-        self.buttons.reply.set_visible(!draft);
-        self.buttons.reply_all.set_visible(!draft && full);
-        self.buttons.forward.set_visible(!draft && full);
-        self.buttons.more.set_visible(!draft);
+        self.apply_toolbar(if open.is_draft() {
+            Holds::Draft
+        } else {
+            Holds::Message
+        });
         self.list_banner
             .set_revealed(!open.unsubscribed && open.list_unsubscribe().is_some());
-        self.buttons.edit.set_visible(draft);
         let starred = open.starred();
         let star = &self.buttons.star;
         star.set_icon_name(if starred {
@@ -1630,29 +1724,42 @@ impl ConversationView {
     /// On phone widths, secondary actions move into the "more" menu.
     pub fn set_compact(&self, compact: bool) {
         self.compact.set(compact);
+        if self.showing_many() {
+            return self.apply_toolbar(Holds::Many);
+        }
         let open = self.open.borrow();
         match open.as_ref() {
             Some(open) => self.update_buttons(open),
-            None => self.set_buttons_shown(false),
+            None => self.apply_toolbar(Holds::Nothing),
         }
     }
 
-    /// Shows the thread actions, or hides them all when nothing is open.
-    fn set_buttons_shown(&self, shown: bool) {
-        let b = &self.buttons;
-        let full = shown && !self.compact.get();
-        for button in [&b.archive, &b.trash, &b.reply] {
-            button.set_visible(shown);
+    /// Shows the header buttons `holds` calls for, and each capsule while
+    /// it holds a button that shows.
+    fn apply_toolbar(&self, holds: Holds) {
+        let on = toolbar::On {
+            holds,
+            compact: self.compact.get(),
+            detached: self.detached.get(),
+        };
+        for slot in toolbar::Slot::ALL {
+            slot_widget(&self.buttons, &self.label_button, slot)
+                .set_visible(toolbar::shows(slot, on));
         }
-        for button in [&b.junk, &b.read, &b.reply_all, &b.forward] {
-            button.set_visible(full);
+        for (capsule, slots) in self.capsules.iter().zip(toolbar::CAPSULES) {
+            capsule.set_visible(slots.iter().any(|&slot| toolbar::shows(slot, on)));
         }
-        b.star.set_visible(full);
-        self.label_button.set_visible(full && !self.detached.get());
-        b.more.set_visible(shown);
-        if !shown {
-            b.edit.set_visible(false);
-        }
+        // A capsule shown here always agrees with toolbar::groups, which
+        // decides the same thing in the abstract and is what the tests
+        // check; this catches the two falling out of step. `get_visible`
+        // reads each capsule's own flag: `is_visible` would read false
+        // while the header or a parent is hidden and fail inside a signal
+        // handler, which cannot unwind.
+        debug_assert_eq!(
+            self.capsules.iter().filter(|c| c.get_visible()).count(),
+            toolbar::groups(on).len()
+        );
+        self.buttons.more.set_visible(toolbar::more_shows(on));
     }
 
     fn follow(&self, uri: &str, actions: &Rc<dyn Fn(Action)>) {
@@ -1694,6 +1801,8 @@ impl ConversationView {
             }
         } else if let Some(address) = uri.strip_prefix("mailrs:contact/") {
             actions(Action::ShowContact(address.to_string()));
+        } else if uri == "mailrs:summarize" {
+            actions(Action::Summarize);
         } else if let Some(address) = uri.strip_prefix("mailto:") {
             actions(Action::Mailto(
                 address.split('?').next().unwrap_or(address).to_string(),

@@ -220,8 +220,12 @@ impl CalendarSidebar {
         let content = gtk::Box::builder()
             .orientation(gtk::Orientation::Vertical)
             .spacing(10)
-            .margin_start(12)
-            .margin_end(12)
+            // The redesign's sidebar card (`Sidebar::page`, A2) sits 8 px
+            // in from the window, and these 18 px inside it put the mini
+            // month's title and the calendar list at x 26 of the window,
+            // where calendar_mock.py draws them.
+            .margin_start(18)
+            .margin_end(18)
             .margin_top(6)
             .margin_bottom(12)
             .build();
@@ -355,10 +359,14 @@ impl CalendarSidebar {
             .build();
         content.append(&calendar_list);
 
+        // calendar_mock.py sets the heading's text at x 26 of the window,
+        // like the mini month, and the cards from 18 to 238; the section
+        // sits 10 px into the card, so the heading takes 8 more.
         let waiting_heading = gtk::Label::builder()
             .label(gettext("Waiting for your answer"))
             .css_classes(["waiting-heading"])
             .xalign(0.0)
+            .margin_start(8)
             .build();
         let waiting_list = gtk::ListBox::builder()
             .selection_mode(gtk::SelectionMode::None)
@@ -376,11 +384,12 @@ impl CalendarSidebar {
             .build();
         let waiting_section = gtk::Box::builder()
             .orientation(gtk::Orientation::Vertical)
-            .spacing(8)
-            .margin_start(12)
-            .margin_end(12)
+            .spacing(10)
+            .margin_start(10)
+            .margin_end(10)
             .margin_top(12)
-            .margin_bottom(12)
+            // The mockup leaves 36 px under the last card.
+            .margin_bottom(36)
             .visible(false)
             .build();
         waiting_section.append(&waiting_heading);
@@ -609,7 +618,11 @@ impl CalendarSidebar {
         for account in accounts {
             let heading = gtk::Label::builder()
                 .label(&account.address)
-                .css_classes(["calendar-account"])
+                // A2's heading class (`app/data/style.css`) sets the
+                // size, weight and faint colour every sidebar heading
+                // shares; an account's address stays sentence case, so it
+                // takes none of that rule's capitals.
+                .css_classes(["sidebar-section"])
                 .xalign(0.0)
                 .margin_top(14)
                 .margin_bottom(12)
