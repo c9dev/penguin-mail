@@ -77,6 +77,11 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   Escape there throws the whole edit away.
 - With Claude Opus 5 or newer, translating a message and reading an unsubscribe
   page take less time, because those quick jobs no longer think at length.
+- The Day, Week and Month grids shade the hours and days outside your
+  working hours, which you set in Preferences next to Event Reminders.
+  The assistant's free-time tool now looks inside the same hours.
+- The week starts on the day your locale expects, and every time the
+  calendar shows follows your desktop's clock, 12-hour or 24-hour.
 
 ### Fixed
 
