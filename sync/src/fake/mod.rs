@@ -739,6 +739,32 @@ impl FakeGmail {
         Some((held, start))
     }
 
+    /// Declines, as Google does for an out-of-office or focus-time entry
+    /// set to decline every meeting, each one-off meeting on `calendar`
+    /// that overlaps `span` and that the account attends as a guest, with
+    /// `message` as the account's comment. Each declined meeting takes a
+    /// new version, so the next read of the calendar brings it back
+    /// declined. A series is left alone: Google would decline its
+    /// occurrences one by one, which no test here needs.
+    fn decline_during(&self, calendar: &str, (from, to): (EpochMillis, EpochMillis), message: &str) {
+        let declined: Vec<calendar::Event> = self.with(|s| {
+            s.calendar_events
+                .iter()
+                .filter(|e| e.calendar == calendar && e.rules.is_empty() && e.start < to && e.end > from)
+                .filter(|e| e.limited() && e.my_answer != Some(Answer::No))
+                .cloned()
+                .collect()
+        });
+        for mut event in declined {
+            tracing::debug!(id = %event.id, %message, "the fake declines a meeting");
+            event.my_answer = Some(Answer::No);
+            for guest in event.guests.iter_mut().filter(|g| g.me) {
+                guest.answer = Some(Answer::No);
+            }
+            self.put_calendar_event(event);
+        }
+    }
+
     /// Removes an event from a calendar, as someone deleting it elsewhere
     /// would, and records it in the change log a sync token reads from.
     pub fn drop_calendar_event(&self, calendar: &str, id: &str) {
@@ -1379,7 +1405,12 @@ impl GmailApi for FakeGmail {
         if stored.uid.is_empty() {
             stored.uid = format!("{}@google.com", stored.id);
         }
+        let decline = stored.kind.decline().filter(|d| d.meetings == calendar::Declines::All).cloned();
+        let (calendar, span) = (stored.calendar.clone(), (stored.start, stored.end));
         self.put_calendar_event(stored);
+        if let Some(decline) = decline {
+            self.decline_during(&calendar, span, &decline.message);
+        }
         Ok(self.with(|s| {
             s.calendar_events
                 .iter()

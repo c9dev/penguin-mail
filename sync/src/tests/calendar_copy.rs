@@ -1652,3 +1652,76 @@ async fn an_organizers_removal_keeps_their_choice_about_the_guests() {
     copy.send(h.account_id).await.unwrap();
     assert_eq!(notices(&h), [("review".to_string(), Notify::Guests)]);
 }
+
+fn out_of_office(id: &str, declines: mailrs_domain::calendar::Declines) -> Event {
+    use mailrs_domain::calendar::{Decline, Kind};
+    Event {
+        title: "Out of office".into(),
+        start: NOW - 3_600_000,
+        end: NOW + 8 * 3_600_000,
+        kind: Kind::OutOfOffice(Decline { meetings: declines, message: "Back on Monday".into() }),
+        ..event("primary", id)
+    }
+}
+
+/// A meeting Rita organizes and this account said yes to, inside the
+/// out-of-office hours `out_of_office` covers.
+fn accepted_meeting() -> Event {
+    use mailrs_domain::calendar::Guest;
+    use mailrs_domain::invitation::Answer;
+    Event {
+        uid: "review@google.com".into(),
+        guests: vec![
+            Guest { email: "rita@example.com".into(), organizer: true, answer: Some(Answer::Yes), ..Guest::default() },
+            Guest { email: "me@example.com".into(), me: true, answer: Some(Answer::Yes), ..Guest::default() },
+        ],
+        my_answer: Some(Answer::Yes),
+        ..event("primary", "review")
+    }
+}
+
+#[tokio::test]
+async fn an_out_of_office_made_here_reaches_google_with_its_type() {
+    use mailrs_domain::calendar::Declines;
+    let h = harness().await;
+    h.fake.with(|s| s.calendars = vec![calendar("primary", true)]);
+    let copy = copy(&h);
+    copy.refresh(h.account_id, NOW).await.unwrap();
+    let id = new_event_id();
+    copy.save(h.account_id, out_of_office(&id, Declines::All)).await.unwrap();
+    assert!(copy.send(h.account_id).await.unwrap().is_empty());
+    assert_eq!(on_google(&h, &id).unwrap().kind, out_of_office(&id, Declines::All).kind);
+    assert_eq!(stored(&h, "primary", &id).await.unwrap().kind, out_of_office(&id, Declines::All).kind);
+}
+
+#[tokio::test]
+async fn a_meeting_google_declines_for_an_out_of_office_shows_declined() {
+    use mailrs_domain::calendar::Declines;
+    use mailrs_domain::invitation::Answer;
+    let h = harness().await;
+    h.fake.with(|s| s.calendars = vec![calendar("primary", true)]);
+    h.fake.put_calendar_event(accepted_meeting());
+    let copy = copy(&h);
+    copy.refresh(h.account_id, NOW).await.unwrap();
+    copy.save(h.account_id, out_of_office(&new_event_id(), Declines::All)).await.unwrap();
+    copy.send(h.account_id).await.unwrap();
+    copy.refresh(h.account_id, NOW + READ_EVERY_OPEN).await.unwrap();
+    let meeting = stored(&h, "primary", "review").await.unwrap();
+    assert_eq!(meeting.my_answer, Some(Answer::No));
+    assert!(!meeting.blocks_time(), "a declined meeting leaves the hour free");
+}
+
+#[tokio::test]
+async fn an_out_of_office_for_new_invitations_leaves_an_accepted_meeting_alone() {
+    use mailrs_domain::calendar::Declines;
+    use mailrs_domain::invitation::Answer;
+    let h = harness().await;
+    h.fake.with(|s| s.calendars = vec![calendar("primary", true)]);
+    h.fake.put_calendar_event(accepted_meeting());
+    let copy = copy(&h);
+    copy.refresh(h.account_id, NOW).await.unwrap();
+    copy.save(h.account_id, out_of_office(&new_event_id(), Declines::New)).await.unwrap();
+    copy.send(h.account_id).await.unwrap();
+    copy.refresh(h.account_id, NOW + READ_EVERY_OPEN).await.unwrap();
+    assert_eq!(stored(&h, "primary", "review").await.unwrap().my_answer, Some(Answer::Yes));
+}
