@@ -15,6 +15,7 @@ pub mod block;
 pub mod draft;
 pub mod drag;
 pub mod editor;
+pub mod header;
 pub mod holding;
 pub mod layout;
 pub mod month;
@@ -52,6 +53,7 @@ use crate::ui::autocomplete::Contacts;
 use agenda::Agenda;
 use block::{EventKey, key_of};
 use draft::Draft;
+use header::{Extra, HeaderRoom};
 use holding::Holding;
 use month::MonthGrid;
 use popover::EventPopover;
@@ -169,6 +171,9 @@ pub struct CalendarView {
     next: gtk::Button,
     switch: adw::ToggleGroup,
     switch_slot: adw::Bin,
+    /// Holds the header bar and decides which of its extras fit.
+    header_room: HeaderRoom,
+    search_button: gtk::ToggleButton,
     bottom_slot: adw::Bin,
     /// The orange "+" button: the editor on a new event at the slot.
     /// Hidden while no calendar takes new events.
@@ -202,10 +207,6 @@ pub struct CalendarView {
     /// Below the width where the sidebar folds away, the header keeps
     /// the range's bold part only.
     compact: Cell<bool>,
-    /// The assistant's panel is open beside the calendar (R12), which
-    /// narrows the header the same way `compact` does, whatever the
-    /// window's own width.
-    assistant_beside: Cell<bool>,
     accounts: RefCell<Vec<CalendarAccount>>,
     calendars: RefCell<Calendars>,
     /// The calendars the person took off the sidebar's list, by account
@@ -375,14 +376,22 @@ impl CalendarView {
         header.pack_start(&title);
         header.pack_start(&today_button);
         header.pack_start(&arrows);
-        // The assistant toggle sits at the header's outer right edge. Its
-        // own panel opening beside the calendar narrows the header the
-        // same way the window's compact width does (set_assistant_beside,
-        // style.css's .assistant-beside), so the switch still has room.
+        // The assistant toggle sits at the header's outer right edge.
         header.pack_end(&assistant_toggle);
         header.pack_end(&search_button);
         header.pack_end(&new_event);
         header.pack_end(&switch_slot);
+        // When the room runs short the header drops its extras rather
+        // than squeeze the view switch. The title's parts sit 8 px apart
+        // and the bar's packed children 6.
+        let header_room = HeaderRoom::new(
+            &header,
+            [
+                (title_week.clone().upcast(), 8),
+                (title_dim.clone().upcast(), 8),
+                (search_button.clone().upcast(), 6),
+            ],
+        );
 
         let search_entry = gtk::SearchEntry::builder()
             .hexpand(true)
@@ -453,7 +462,7 @@ impl CalendarView {
             .build();
 
         let page = adw::ToolbarView::new();
-        page.add_top_bar(&header);
+        page.add_top_bar(&header_room);
         page.add_top_bar(&search_bar);
         page.set_content(Some(&bin));
         page.add_bottom_bar(&bottom_slot);
@@ -524,6 +533,8 @@ impl CalendarView {
                 next,
                 switch,
                 switch_slot,
+                header_room: header_room.clone(),
+                search_button: search_button.clone(),
                 bottom_slot,
                 new_event: new_event.clone(),
                 search_bar,
@@ -547,7 +558,6 @@ impl CalendarView {
                 }),
                 narrow: Cell::new(false),
                 compact: Cell::new(false),
-                assistant_beside: Cell::new(false),
                 accounts: RefCell::new(Vec::new()),
                 calendars: RefCell::new(HashMap::new()),
                 hidden: RefCell::new(HashSet::new()),
@@ -653,6 +663,12 @@ impl CalendarView {
         });
         view.connect_search();
         view.connect_lists();
+        let weak = Rc::downgrade(&view);
+        view.header_room.connect_change(move || {
+            if let Some(view) = weak.upgrade() {
+                view.show_extras();
+            }
+        });
         view.calendar_sidebar
             .set_folded((view.settings)().folded_calendar_accounts.into_iter().collect());
 
@@ -903,10 +919,10 @@ impl CalendarView {
         self.today_button.grab_focus();
     }
 
-    /// Answers the window's medium breakpoint, where the sidebar folds
-    /// away: the header drops the year and the week number so the rest
-    /// still fits, and the view switch drops Week, the widest grid, so
-    /// its three labels stop crowding each other.
+    /// Answers the window's medium breakpoint: the view switch drops
+    /// Week, the widest grid, which has no room to show its seven days.
+    /// The header drops its own extras as its room runs short
+    /// (`header::HeaderRoom`).
     pub fn set_compact(&self, compact: bool) {
         self.compact.set(compact);
         match compact {
@@ -917,19 +933,14 @@ impl CalendarView {
         self.show_range();
     }
 
-    /// Answers the assistant's panel opening beside the calendar (R12):
-    /// the header narrows the same way `set_compact` does, at any window
-    /// width, since the panel takes room from the same card.
-    pub fn set_assistant_beside(&self, beside: bool) {
-        if beside == self.assistant_beside.get() {
-            return;
-        }
-        self.assistant_beside.set(beside);
-        match beside {
-            true => self.page.add_css_class("assistant-beside"),
-            false => self.page.remove_css_class("assistant-beside"),
-        }
-        self.show_range();
+    /// The narrowest the calendar can go, the header with its extras
+    /// gone or the card, whichever is wider, and then the window's
+    /// buttons in the header (`ui::header_least`). The grid inside the
+    /// card reflows to any width.
+    pub fn least_width(&self) -> (i32, i32) {
+        let (header, buttons) = crate::ui::header_least(&self.header_room);
+        let card = self.page.content().map_or(0, |c| c.width_request());
+        (header.max(card), buttons)
     }
 
     /// Opens the search and puts the cursor in it.
@@ -1007,6 +1018,15 @@ impl CalendarView {
         self.switching.set(false);
     }
 
+    /// Shows the header's extras it has room for and hides the rest.
+    fn show_extras(&self) {
+        let room = &self.header_room;
+        self.title_dim.set_visible(room.keeps(Extra::Year));
+        self.title_week
+            .set_visible(!self.title_week.label().is_empty() && room.keeps(Extra::Week));
+        self.search_button.set_visible(room.keeps(Extra::Search));
+    }
+
     /// Brings the header and the visible view in line with the range.
     fn show_range(&self) {
         let showing = self.showing();
@@ -1019,9 +1039,8 @@ impl CalendarView {
         self.title_bold.set_label(&bold);
         self.title_dim.set_label(&dim);
         self.title_week.set_label(&week);
-        let roomy = !self.compact.get() && !self.narrow.get() && !self.assistant_beside.get();
-        self.title_dim.set_visible(roomy);
-        self.title_week.set_visible(!week.is_empty() && roomy);
+        self.header_room.want(Extra::Week, !week.is_empty());
+        self.show_extras();
         let (back, forward) = shown::arrow_names(showing);
         crate::ui::name(&self.previous, &back);
         crate::ui::name(&self.next, &forward);

@@ -100,6 +100,10 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   either end.
 - Drop an event on the all-day row to make it all-day, or drag an
   all-day event into the hours to give it an hour at that time.
+- Event reminders, the first day of the week and working hours now sit in
+  the Calendar section of Preferences, on the Contacts & Calendar page.
+- The Labels button in the reading pane has the same shape as the Flag
+  button beside it, an icon and an arrow in one pill.
 - An invitation's card now sits inside its message, under the sender and
   above the text, and scrolls with it.
 - The mailboxes sit in their own rounded panel under Favorites,
@@ -259,6 +263,12 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Fixed
 
+- The assistant's panel no longer runs off the right edge of a smaller
+  window. The mailboxes fold away to make room for it, and in a window
+  too narrow for both, the panel slides over the mail instead.
+- The calendar's Day, Week and Month switch keeps its full width on a
+  smaller screen. The week number, the year and the search button make
+  way for it instead.
 - The assistant stays closed when a narrowed window grows wide again,
   where it used to open by itself.
 - Always Allow on a skill's command allows that one command. It used
