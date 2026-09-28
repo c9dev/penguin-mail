@@ -35,7 +35,7 @@ pub struct QueuedEdit {
 /// since nothing of it has left this computer. Answers whether anything
 /// is left to send.
 pub fn enqueue_edit(conn: &Connection, account_id: AccountId, calendar: &str, edit: &ListEdit) -> Result<bool> {
-    if *edit == ListEdit::Delete {
+    if edit.removes() {
         let unsent = queued_edits(conn, account_id)?.iter().any(|q| q.calendar == calendar && q.edit.adds());
         if unsent {
             conn.execute(
@@ -215,7 +215,7 @@ pub fn save_calendar_list(conn: &Connection, account_id: AccountId, list: &[Cale
         calendars(conn, account_id)?.into_iter().map(|c| (c.id.clone(), c)).collect();
     let mut kept: Vec<Calendar> = Vec::with_capacity(list.len());
     for calendar in list {
-        if waiting(&calendar.id, |e| *e == ListEdit::Delete) {
+        if waiting(&calendar.id, ListEdit::removes) {
             continue;
         }
         let mut calendar = calendar.clone();
@@ -237,7 +237,7 @@ pub fn save_calendar_list(conn: &Connection, account_id: AccountId, list: &[Cale
     }
     save_calendars(conn, account_id, &kept)?;
     for calendar in list {
-        if waiting(&calendar.id, |e| matches!(e, ListEdit::Hide { .. } | ListEdit::Delete)) {
+        if waiting(&calendar.id, |e| matches!(e, ListEdit::Hide { .. }) || e.removes()) {
             continue;
         }
         let before: Option<Option<bool>> = conn
@@ -276,6 +276,31 @@ pub fn event_count(conn: &Connection, account_id: AccountId, calendar: &str) -> 
         |row| row.get(0),
     )?;
     Ok(usize::try_from(count).unwrap_or(0))
+}
+
+/// Queues a hide for each calendar the person took off the list here
+/// while Google's own list still shows it: hides made before the account
+/// could change its list. Call it only once the account may. Each goes
+/// out once, since Google's flag agrees after the send. A calendar whose
+/// flag the copy has not read yet waits for that read. Answers how many
+/// it queued.
+pub fn queue_local_hides(conn: &Connection, account_id: AccountId) -> Result<usize> {
+    let ids: Vec<String> = {
+        let mut stmt = conn.prepare(
+            "SELECT id FROM calendars WHERE account_id = ?1 AND NOT listed AND provider_hidden = 0",
+        )?;
+        stmt.query_map(params![account_id], |row| row.get(0))?.collect::<rusqlite::Result<_>>()?
+    };
+    let queued = queued_edits(conn, account_id)?;
+    let mut count = 0;
+    for id in ids {
+        if queued.iter().any(|q| q.calendar == id && matches!(q.edit, ListEdit::Hide { .. })) {
+            continue;
+        }
+        enqueue_edit(conn, account_id, &id, &ListEdit::Hide { hidden: true })?;
+        count += 1;
+    }
+    Ok(count)
 }
 
 /// Whether the person took the calendar off the sidebar's list.
@@ -347,6 +372,49 @@ mod tests {
         enqueue_edit(&conn, id, "new:a", &ListEdit::Rename { name: "Bouldering".into() }).unwrap();
         assert!(!enqueue_edit(&conn, id, "new:a", &ListEdit::Delete).unwrap());
         assert!(queued_edits(&conn, id).unwrap().is_empty());
+    }
+
+    #[test]
+    fn unsubscribing_before_the_provider_has_it_drops_its_edits_unsent() {
+        let (conn, id) = store();
+        enqueue_edit(&conn, id, "en.uk#holiday@group.v.calendar.google.com", &ListEdit::Add).unwrap();
+        assert!(!enqueue_edit(&conn, id, "en.uk#holiday@group.v.calendar.google.com", &ListEdit::Unsubscribe).unwrap());
+        assert!(queued_edits(&conn, id).unwrap().is_empty());
+    }
+
+    #[test]
+    fn a_read_does_not_bring_back_a_calendar_whose_unsubscribe_waits() {
+        let (conn, id) = store();
+        remove_calendar(&conn, id, "team").unwrap();
+        enqueue_edit(&conn, id, "team", &ListEdit::Unsubscribe).unwrap();
+        save_calendar_list(&conn, id, &[calendar("primary", true), calendar("team", false)]).unwrap();
+        assert_eq!(ids(&conn, id), vec!["primary".to_string()]);
+    }
+
+    /// A calendar hidden here while the account could only read its list
+    /// still shows on Google. Once the account may change the list, that
+    /// hide goes out, once.
+    #[test]
+    fn a_hide_made_only_here_is_queued_for_the_provider_once() {
+        let (conn, id) = store();
+        set_listed(&conn, id, "team", false).unwrap();
+        assert_eq!(queue_local_hides(&conn, id).unwrap(), 1);
+        assert_eq!(queued_edits(&conn, id).unwrap()[0].edit, ListEdit::Hide { hidden: true });
+        assert_eq!(queue_local_hides(&conn, id).unwrap(), 0, "a hide already waiting is not queued twice");
+        let seq = queued_edits(&conn, id).unwrap()[0].seq;
+        finish_edit(&conn, seq).unwrap();
+        set_provider_hidden(&conn, id, "team", true).unwrap();
+        assert_eq!(queue_local_hides(&conn, id).unwrap(), 0, "Google's flag agrees now");
+    }
+
+    #[test]
+    fn a_calendar_the_provider_has_not_read_yet_queues_no_hide() {
+        let conn = crate::open_in_memory().unwrap();
+        let id = accounts::insert_account(&conn, "me@example.com", 0).unwrap();
+        // A copy saved before the provider's flag was kept knows no flag.
+        save_calendars(&conn, id, &[calendar("team", false)]).unwrap();
+        set_listed(&conn, id, "team", false).unwrap();
+        assert_eq!(queue_local_hides(&conn, id).unwrap(), 0);
     }
 
     #[test]

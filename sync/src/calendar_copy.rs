@@ -325,8 +325,17 @@ impl<A: Accounts> CalendarCopy<A> {
             } else {
                 match calendar.calendars().await {
                     Ok(list) => {
+                        let everywhere = !withheld.change_calendar_list;
                         self.db
-                            .write(move |c| mailrs_store::calendar_list::save_calendar_list(c, account_id, &list))
+                            .write(move |c| {
+                                mailrs_store::calendar_list::save_calendar_list(c, account_id, &list)?;
+                                // Hides made before the account could change
+                                // its list go to Google now, once.
+                                if everywhere {
+                                    mailrs_store::calendar_list::queue_local_hides(c, account_id)?;
+                                }
+                                Ok(())
+                            })
                             .await?;
                     }
                     Err(BackendError::NeedsPermission) => {

@@ -108,6 +108,23 @@ impl<A: Accounts> CalendarCopy<A> {
         Ok(Permitted::Done(()))
     }
 
+    /// Takes a calendar the account does not own off its list, on every
+    /// device: a subscription, a holiday calendar or a shared one.
+    pub async fn unsubscribe(&self, account_id: AccountId, calendar: &str) -> Result<Permitted<()>, SyncError> {
+        let held = self.owned(account_id, calendar, |allows| allows.unsubscribe).await?;
+        if self.withheld_all(account_id)?.change_calendar_list {
+            return Ok(Permitted::NeedsPermission);
+        }
+        let id = held.id;
+        self.db
+            .write(move |c| {
+                store_list::remove_calendar(c, account_id, &id)?;
+                store_list::enqueue_edit(c, account_id, &id, &ListEdit::Unsubscribe).map(drop)
+            })
+            .await?;
+        Ok(Permitted::Done(()))
+    }
+
     /// Colours a calendar, or with `None` gives it back the provider's
     /// colour. With the list permission the colour goes to the provider
     /// and shows on every device; without it, it stays on this computer.
@@ -246,8 +263,8 @@ impl<A: Accounts> CalendarCopy<A> {
                         })
                         .await?;
                 }
-                // Gone already or not, the calendar is deleted.
-                Err(BackendError::NotFound) if queued.edit == ListEdit::Delete => {
+                // Gone already or not, the calendar is off the list.
+                Err(BackendError::NotFound) if queued.edit.removes() => {
                     self.db.write(move |c| store_list::finish_edit(c, seq)).await?;
                 }
                 Err(err) if holds_the_queue(&err) => return Err(err.into()),
@@ -320,6 +337,10 @@ fn edit_title(edit: &ListEdit) -> String {
     match edit {
         ListEdit::Create { name, .. } | ListEdit::Rename { name } => name.clone(),
         ListEdit::Subscribe { url } => list::subscription_name(url),
-        ListEdit::Delete | ListEdit::Recolor { .. } | ListEdit::Hide { .. } | ListEdit::Add => String::new(),
+        ListEdit::Delete
+        | ListEdit::Unsubscribe
+        | ListEdit::Recolor { .. }
+        | ListEdit::Hide { .. }
+        | ListEdit::Add => String::new(),
     }
 }

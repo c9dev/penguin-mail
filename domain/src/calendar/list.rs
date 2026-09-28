@@ -25,6 +25,9 @@ pub enum ListEdit {
     Rename { name: String },
     /// Deletes a calendar the account owns, with every event on it.
     Delete,
+    /// Takes a calendar the account does not own off its list, on every
+    /// device: a subscription, a holiday calendar or one shared with it.
+    Unsubscribe,
     /// A new colour, `#rrggbb`, on every device the account uses.
     Recolor { color: String },
     /// Hides the calendar from the account's list, or shows it again, on
@@ -54,14 +57,23 @@ pub struct Allows {
     pub rename: bool,
     /// Delete it: a calendar the account owns, other than its primary.
     pub delete: bool,
+    /// Take it off the list: a calendar the account does not own.
+    pub unsubscribe: bool,
 }
 
 /// What a person may change about `calendar`. A subscribed calendar, a
 /// holiday calendar and one shared by someone else are read or written
-/// but not owned, so they take neither.
+/// but not owned, so they take neither, and are unsubscribed from instead.
 pub fn allows(calendar: &Calendar) -> Allows {
     let owned = calendar.access == Access::Owner;
-    Allows { rename: owned, delete: owned && !calendar.primary }
+    Allows { rename: owned, delete: owned && !calendar.primary, unsubscribe: !owned && !calendar.primary }
+}
+
+impl ListEdit {
+    /// Whether this edit takes the calendar off the list.
+    pub fn removes(&self) -> bool {
+        matches!(self, ListEdit::Delete | ListEdit::Unsubscribe)
+    }
 }
 
 /// Whether `id` names a calendar made on this computer that the provider
@@ -106,25 +118,34 @@ mod tests {
 
     #[test]
     fn an_owned_calendar_can_be_renamed_and_deleted() {
-        assert_eq!(allows(&calendar(Access::Owner, false)), Allows { rename: true, delete: true });
+        assert_eq!(allows(&calendar(Access::Owner, false)), Allows { rename: true, delete: true, unsubscribe: false });
     }
 
     #[test]
     fn the_primary_calendar_can_be_renamed_but_not_deleted() {
-        assert_eq!(allows(&calendar(Access::Owner, true)), Allows { rename: true, delete: false });
+        assert_eq!(allows(&calendar(Access::Owner, true)), Allows { rename: true, delete: false, unsubscribe: false });
     }
 
     #[test]
     fn a_subscribed_calendar_takes_neither() {
         // Google lists a calendar subscribed by address, and a holiday
         // calendar, as `reader`.
-        assert_eq!(allows(&calendar(Access::Reader, false)), Allows { rename: false, delete: false });
+        assert_eq!(allows(&calendar(Access::Reader, false)), Allows { rename: false, delete: false, unsubscribe: true });
     }
 
     #[test]
     fn a_calendar_shared_for_writing_is_still_someone_elses() {
-        assert_eq!(allows(&calendar(Access::Writer, false)), Allows { rename: false, delete: false });
-        assert_eq!(allows(&calendar(Access::FreeBusy, false)), Allows { rename: false, delete: false });
+        assert_eq!(allows(&calendar(Access::Writer, false)), Allows { rename: false, delete: false, unsubscribe: true });
+        assert_eq!(allows(&calendar(Access::FreeBusy, false)), Allows { rename: false, delete: false, unsubscribe: true });
+    }
+
+    #[test]
+    fn a_calendar_the_account_does_not_own_can_be_unsubscribed() {
+        for access in [Access::Reader, Access::Writer, Access::FreeBusy] {
+            assert!(allows(&calendar(access, false)).unsubscribe, "{access:?}");
+        }
+        assert!(!allows(&calendar(Access::Owner, false)).unsubscribe, "an owned calendar is deleted instead");
+        assert!(!allows(&calendar(Access::Owner, true)).unsubscribe);
     }
 
     #[test]

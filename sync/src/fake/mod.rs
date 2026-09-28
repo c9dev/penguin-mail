@@ -1566,6 +1566,7 @@ impl GmailApi for FakeGmail {
             ListEdit::Create { .. } => ("calendar.calendars.insert", CALENDARS_SCOPE),
             ListEdit::Rename { .. } => ("calendar.calendars.patch", CALENDARS_SCOPE),
             ListEdit::Delete => ("calendar.calendars.delete", CALENDARS_SCOPE),
+            ListEdit::Unsubscribe => ("calendar.calendarList.delete", CALENDAR_LIST_WRITE_SCOPE),
             ListEdit::Recolor { .. } | ListEdit::Hide { .. } => ("calendar.calendarList.patch", CALENDAR_LIST_WRITE_SCOPE),
             ListEdit::Subscribe { .. } | ListEdit::Add => ("calendar.calendarList.insert", CALENDAR_LIST_WRITE_SCOPE),
         };
@@ -1640,6 +1641,11 @@ impl GmailApi for FakeGmail {
                     s.calendars.retain(|c| c.id != id);
                     s.calendar_events.retain(|e| e.calendar != id);
                 });
+                Ok(None)
+            }
+            ListEdit::Unsubscribe => {
+                held.ok_or(GmailError::NotFound)?;
+                self.with(|s| s.calendars.retain(|c| c.id != id));
                 Ok(None)
             }
             ListEdit::Recolor { color } => {

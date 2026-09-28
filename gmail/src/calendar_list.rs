@@ -39,10 +39,24 @@ impl GmailClient {
                 let url = format!("{}/calendars/{}", self.calendar_base_url, encode(id));
                 let body = json!({ "summary": name });
                 let _: Value = self.call_at(&url, |url| self.http().patch(url).json(&body)).await?;
-                Ok(None)
+                // Google lists a calendar under the account's own name for
+                // it, `summaryOverride`, when one is set, so the new name
+                // shows only once that goes. `null` deletes the field in a
+                // PATCH; an empty string would set an empty name. The
+                // rename stands without the list permission.
+                match self.patch_list_entry(id, json!({ "summaryOverride": null })).await {
+                    Ok(entry) => Ok(Some(entry)),
+                    Err(GmailError::MissingScope) => Ok(None),
+                    Err(err) => Err(err),
+                }
             }
             ListEdit::Delete => {
                 let url = format!("{}/calendars/{}", self.calendar_base_url, encode(id));
+                self.call_at_empty(&url, |url| self.http().delete(url)).await?;
+                Ok(None)
+            }
+            ListEdit::Unsubscribe => {
+                let url = format!("{}/users/me/calendarList/{}", self.calendar_base_url, encode(id));
                 self.call_at_empty(&url, |url| self.http().delete(url)).await?;
                 Ok(None)
             }

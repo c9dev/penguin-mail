@@ -333,3 +333,65 @@ async fn a_calendar_still_waiting_to_be_made_is_not_read() {
     copy.refresh(h.account_id, NOW + LIST_EVERY).await.unwrap();
     assert_eq!(h.fake.usage().calls_to("calendar.events.list") - before, 2, "primary and team only");
 }
+
+#[tokio::test]
+async fn unsubscribing_takes_a_holiday_calendar_off_here_and_on_google() {
+    let h = harness().await;
+    h.fake.with(|s| {
+        s.calendars = vec![
+            calendar("primary", true),
+            Calendar { access: Access::Reader, ..calendar(HOLIDAYS, false) },
+        ]
+    });
+    let copy = copy(&h);
+    copy.refresh(h.account_id, NOW).await.unwrap();
+    done(copy.unsubscribe(h.account_id, HOLIDAYS).await);
+    assert!(stored(&h, HOLIDAYS).await.is_none());
+    copy.send(h.account_id).await.unwrap();
+    assert!(at_google(&h, HOLIDAYS).is_none());
+    copy.refresh(h.account_id, NOW + LIST_EVERY).await.unwrap();
+    assert!(stored(&h, HOLIDAYS).await.is_none());
+}
+
+#[tokio::test]
+async fn an_owned_calendar_is_deleted_not_unsubscribed() {
+    let h = harness().await;
+    let copy = read(&h).await;
+    let answer = copy.unsubscribe(h.account_id, "team").await;
+    assert!(matches!(answer, Err(SyncError::Backend(BackendError::Unsupported))));
+}
+
+#[tokio::test]
+async fn without_the_list_permission_unsubscribing_asks_for_it() {
+    let h = harness().await;
+    h.fake.withhold(mailrs_gmail::CALENDAR_LIST_WRITE_SCOPE);
+    h.fake.with(|s| s.calendars = vec![calendar("primary", true), Calendar { access: Access::Reader, ..calendar("feed", false) }]);
+    let copy = copy(&h);
+    copy.refresh(h.account_id, NOW).await.unwrap();
+    assert!(matches!(copy.unsubscribe(h.account_id, "feed").await, Ok(Permitted::NeedsPermission)));
+    assert!(stored(&h, "feed").await.is_some());
+}
+
+/// An account on the old read-only grant hid a calendar here. Once it
+/// grants the list, the next read sends that hide to Google, once, and
+/// after that the two agree.
+#[tokio::test]
+async fn a_hide_made_before_the_grant_reaches_google_once_it_is_granted() {
+    let h = harness().await;
+    h.fake.withhold(mailrs_gmail::CALENDAR_LIST_WRITE_SCOPE);
+    let copy = read(&h).await;
+    done(copy.list_calendar(h.account_id, "team", false).await);
+    copy.refresh(h.account_id, NOW + LIST_EVERY).await.unwrap();
+    assert!(queued(&h).await.is_empty(), "without the grant the hide stays here");
+
+    h.fake.grant(mailrs_gmail::CALENDAR_LIST_WRITE_SCOPE);
+    copy.permission_changed(h.account_id);
+    copy.refresh(h.account_id, NOW + 2 * LIST_EVERY).await.unwrap();
+    assert_eq!(queued(&h).await, vec![ListEdit::Hide { hidden: true }]);
+    copy.send(h.account_id).await.unwrap();
+    assert!(at_google(&h, "team").unwrap().hidden);
+
+    copy.refresh(h.account_id, NOW + 3 * LIST_EVERY).await.unwrap();
+    assert!(queued(&h).await.is_empty(), "the hide went out once");
+    assert_eq!(listed(&h, "team").await, Some(false));
+}

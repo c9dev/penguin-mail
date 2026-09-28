@@ -127,8 +127,12 @@ async fn a_dark_colour_goes_out_with_white_text() {
     assert_eq!(answered.map(|c| c.color), Some("#3f51b5".into()));
 }
 
+/// A rename changes the calendar's own name and clears the account's
+/// own name for it on the list, which Google shows over the new one.
+/// `null` deletes a field in a PATCH; an empty string would set an empty
+/// override.
 #[tokio::test]
-async fn renaming_patches_the_calendar_itself() {
+async fn renaming_patches_the_calendar_and_clears_the_list_name() {
     let server = MockServer::start().await;
     mount_token(&server).await;
     Mock::given(method("PATCH"))
@@ -138,8 +142,53 @@ async fn renaming_patches_the_calendar_itself() {
         .expect(1)
         .mount(&server)
         .await;
+    Mock::given(method("PATCH"))
+        .and(path(format!("{CALENDAR}/users/me/calendarList/work")))
+        .and(body_json(json!({"summaryOverride": null})))
+        .respond_with(ResponseTemplate::new(200).set_body_json(entry("work", "Office", "#3f51b5")))
+        .expect(1)
+        .mount(&server)
+        .await;
+    let edit = ListEdit::Rename { name: "Office".into() };
+    let renamed = client(&server).edit_calendar_list("work", &edit).await.unwrap();
+    assert_eq!(renamed.map(|c| c.name), Some("Office".into()));
+}
+
+/// An account that granted the calendars but not the list keeps the
+/// rename; only the override stays.
+#[tokio::test]
+async fn a_rename_without_the_list_permission_still_renames() {
+    let server = MockServer::start().await;
+    mount_token(&server).await;
+    Mock::given(method("PATCH"))
+        .and(path(format!("{CALENDAR}/calendars/work")))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({"id": "work", "summary": "Office"})))
+        .expect(1)
+        .mount(&server)
+        .await;
+    Mock::given(method("PATCH"))
+        .and(path(format!("{CALENDAR}/users/me/calendarList/work")))
+        .respond_with(ResponseTemplate::new(403).set_body_json(json!({
+            "error": {"code": 403, "status": "PERMISSION_DENIED",
+                      "details": [{"reason": "ACCESS_TOKEN_SCOPE_INSUFFICIENT"}]}
+        })))
+        .mount(&server)
+        .await;
     let edit = ListEdit::Rename { name: "Office".into() };
     assert_eq!(client(&server).edit_calendar_list("work", &edit).await.unwrap(), None);
+}
+
+#[tokio::test]
+async fn unsubscribing_takes_the_calendar_off_the_list() {
+    let server = MockServer::start().await;
+    mount_token(&server).await;
+    Mock::given(method("DELETE"))
+        .and(path(format!("{CALENDAR}/users/me/calendarList/en.portuguese%23holiday%40group.v.calendar.google.com")))
+        .respond_with(ResponseTemplate::new(204))
+        .expect(1)
+        .mount(&server)
+        .await;
+    assert_eq!(client(&server).edit_calendar_list(HOLIDAYS, &ListEdit::Unsubscribe).await.unwrap(), None);
 }
 
 #[tokio::test]
