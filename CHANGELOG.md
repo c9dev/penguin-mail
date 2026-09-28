@@ -61,6 +61,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   the card offers Grant Access, so the event can show in Calendar.
 - With Claude Opus 5 or newer, translating a message and reading an unsubscribe
   page take less time, because those quick jobs no longer think at length.
+- The buttons above a conversation sit in rounded groups: replying,
+  filing, moving and flagging.
 
 ### Fixed
 

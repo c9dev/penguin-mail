@@ -35,6 +35,7 @@ use super::find::FindBar;
 use super::invitation::{self, EventCard, Showing};
 use super::pgp::PgpCard;
 use super::queued::QueuedCard;
+use super::toolbar::{self, Holds};
 use super::translation::TranslationCard;
 use super::{name, name_with_shortcut};
 use crate::compose::ReplyKind;
@@ -190,6 +191,23 @@ struct Buttons {
     more: gtk::MenuButton,
 }
 
+/// The widget behind one slot of the header bar.
+fn slot_widget(buttons: &Buttons, labels: &gtk::MenuButton, slot: toolbar::Slot) -> gtk::Widget {
+    use toolbar::Slot;
+    match slot {
+        Slot::Reply => buttons.reply.clone().upcast(),
+        Slot::ReplyAll => buttons.reply_all.clone().upcast(),
+        Slot::Forward => buttons.forward.clone().upcast(),
+        Slot::Edit => buttons.edit.clone().upcast(),
+        Slot::Archive => buttons.archive.clone().upcast(),
+        Slot::Trash => buttons.trash.clone().upcast(),
+        Slot::Junk => buttons.junk.clone().upcast(),
+        Slot::Read => buttons.read.clone().upcast(),
+        Slot::Flag => buttons.star.clone().upcast(),
+        Slot::Labels => labels.clone().upcast(),
+    }
+}
+
 pub struct ConversationView {
     pub page: adw::NavigationPage,
     /// Applies or removes labels; the window fills its popover.
@@ -239,6 +257,9 @@ pub struct ConversationView {
     /// Remind Me times, recomputed whenever a conversation opens.
     remind: gio::Menu,
     buttons: Buttons,
+    /// One linked box per capsule of the header bar, in the order of
+    /// `toolbar::CAPSULES`.
+    capsules: Vec<gtk::Box>,
     /// The menu for one message. One popover serves the whole thread: the
     /// model changes with the message the menu was asked for.
     menu: gtk::PopoverMenu,
@@ -532,29 +553,48 @@ impl ConversationView {
             .title_widget(&gtk::Label::new(None))
             .build();
         let label_button = gtk::MenuButton::builder()
-            .icon_name("penguin-mail-tag-symbolic")
+            .icon_name(Filing::Labels.icon())
             .tooltip_text(Filing::Labels.tooltip())
+            .always_show_arrow(true)
             .build();
         name_with_shortcut(&label_button, &Filing::Labels.tooltip());
-        for widget in [
-            buttons.archive.upcast_ref::<gtk::Widget>(),
-            buttons.trash.upcast_ref(),
-            buttons.junk.upcast_ref(),
-            buttons.read.upcast_ref(),
-            buttons.star.upcast_ref(),
-        ] {
-            header.pack_start(widget);
-        }
-        header.pack_start(&label_button);
+        // The capsules run from the start of the bar in the order the
+        // mockup gives them; More stays a round button at the end.
+        let capsules: Vec<gtk::Box> = toolbar::CAPSULES
+            .iter()
+            .enumerate()
+            .map(|(index, slots)| {
+                let draft = slots.contains(&toolbar::Slot::Edit);
+                // GTK's own "linked" box style gives grouped buttons a
+                // background of its own, which fights the capsule's flat
+                // buttons over one pill; the capsule draws its pill and
+                // its separators itself, so it skips "linked".
+                let capsule = gtk::Box::builder()
+                    .css_classes([if draft { "draft-capsule" } else { "toolbar-capsule" }])
+                    .valign(gtk::Align::Center)
+                    .build();
+                for &slot in slots.iter() {
+                    let widget = slot_widget(&buttons, &label_button, slot);
+                    // Edit Draft keeps its suggested look; the rest sit
+                    // flat inside the capsule's one pill.
+                    if !draft {
+                        widget.add_css_class("flat");
+                    }
+                    capsule.append(&widget);
+                }
+                // The header bar already spaces its packed children 6 px
+                // apart (style.css's note on button.new-event), so the
+                // margins here make up the rest of the mockup's 16 px
+                // from the pane's start and 10 px between capsules.
+                if index == 0 {
+                    capsule.set_margin_start(10);
+                }
+                capsule.set_margin_end(4);
+                header.pack_start(&capsule);
+                capsule
+            })
+            .collect();
         header.pack_end(&buttons.more);
-        for widget in [
-            &buttons.reply,
-            &buttons.reply_all,
-            &buttons.forward,
-            &buttons.edit,
-        ] {
-            header.pack_end(widget);
-        }
         let menu_popover = gtk::PopoverMenu::from_model(None::<&gio::Menu>);
         super::name_menu_items(&menu_popover);
         menu_popover.set_has_arrow(false);
@@ -625,6 +665,7 @@ impl ConversationView {
             thread_menu,
             remind,
             buttons,
+            capsules,
             menu: menu_popover,
             menu_at: Cell::new((0, 0)),
             menu_popover: RefCell::new(None),
@@ -642,7 +683,7 @@ impl ConversationView {
             this: this.clone(),
         });
 
-        view.set_buttons_shown(false);
+        view.apply_toolbar(Holds::Nothing);
         VIEWS.with(|views| {
             let mut views = views.borrow_mut();
             views.retain(|view| view.strong_count() > 0);
@@ -844,6 +885,7 @@ impl ConversationView {
     pub fn set_filing(&self, filing: Filing) {
         let tip = filing.tooltip();
         self.label_button.set_tooltip_text(Some(&tip));
+        self.label_button.set_icon_name(filing.icon());
         name_with_shortcut(&self.label_button, &tip);
         self.mark_menu.remove(3);
         self.mark_menu
@@ -1060,12 +1102,7 @@ impl ConversationView {
         self.seal.hide();
         self.translate.hide();
         self.queued.hide();
-        self.set_buttons_shown(true);
-        let b = &self.buttons;
-        for button in [&b.reply, &b.reply_all, &b.forward, &b.edit] {
-            button.set_visible(false);
-        }
-        b.more.set_visible(false);
+        self.apply_toolbar(Holds::Many);
     }
 
     /// Stops the WebKit process that draws mail. It holds about 80 MB, and
@@ -1109,7 +1146,7 @@ impl ConversationView {
         *self.open.borrow_mut() = None;
         self.refuse_held();
         self.stack.set_visible_child_name("empty");
-        self.set_buttons_shown(false);
+        self.apply_toolbar(Holds::Nothing);
         self.banner.set_revealed(false);
         self.list_banner.set_revealed(false);
         self.show_invitation(None);
@@ -1573,23 +1610,20 @@ impl ConversationView {
         // A queued message is not in Gmail yet, so the mail buttons have
         // nothing to act on. The card above it carries what does.
         if let Some(unsent) = &open.queued {
-            self.set_buttons_shown(false);
+            self.apply_toolbar(Holds::Nothing);
             self.list_banner.set_revealed(false);
             self.queued.show(unsent);
             return;
         }
         self.queued.hide();
         self.refresh_remind_menu();
-        self.set_buttons_shown(true);
-        let draft = open.is_draft();
-        let full = !self.compact.get();
-        self.buttons.reply.set_visible(!draft);
-        self.buttons.reply_all.set_visible(!draft && full);
-        self.buttons.forward.set_visible(!draft && full);
-        self.buttons.more.set_visible(!draft);
+        self.apply_toolbar(if open.is_draft() {
+            Holds::Draft
+        } else {
+            Holds::Message
+        });
         self.list_banner
             .set_revealed(!open.unsubscribed && open.list_unsubscribe().is_some());
-        self.buttons.edit.set_visible(draft);
         let starred = open.starred();
         let star = &self.buttons.star;
         star.set_icon_name(if starred {
@@ -1630,29 +1664,39 @@ impl ConversationView {
     /// On phone widths, secondary actions move into the "more" menu.
     pub fn set_compact(&self, compact: bool) {
         self.compact.set(compact);
+        if self.showing_many() {
+            return self.apply_toolbar(Holds::Many);
+        }
         let open = self.open.borrow();
         match open.as_ref() {
             Some(open) => self.update_buttons(open),
-            None => self.set_buttons_shown(false),
+            None => self.apply_toolbar(Holds::Nothing),
         }
     }
 
-    /// Shows the thread actions, or hides them all when nothing is open.
-    fn set_buttons_shown(&self, shown: bool) {
-        let b = &self.buttons;
-        let full = shown && !self.compact.get();
-        for button in [&b.archive, &b.trash, &b.reply] {
-            button.set_visible(shown);
+    /// Shows the header buttons `holds` calls for, and each capsule while
+    /// it holds a button that shows.
+    fn apply_toolbar(&self, holds: Holds) {
+        let on = toolbar::On {
+            holds,
+            compact: self.compact.get(),
+            detached: self.detached.get(),
+        };
+        for slot in toolbar::Slot::ALL {
+            slot_widget(&self.buttons, &self.label_button, slot)
+                .set_visible(toolbar::shows(slot, on));
         }
-        for button in [&b.junk, &b.read, &b.reply_all, &b.forward] {
-            button.set_visible(full);
+        for (capsule, slots) in self.capsules.iter().zip(toolbar::CAPSULES) {
+            capsule.set_visible(slots.iter().any(|&slot| toolbar::shows(slot, on)));
         }
-        b.star.set_visible(full);
-        self.label_button.set_visible(full && !self.detached.get());
-        b.more.set_visible(shown);
-        if !shown {
-            b.edit.set_visible(false);
-        }
+        // A capsule shown here always agrees with toolbar::groups, which
+        // decides the same thing in the abstract and is what the tests
+        // check; this catches the two falling out of step.
+        debug_assert_eq!(
+            self.capsules.iter().filter(|c| c.is_visible()).count(),
+            toolbar::groups(on).len()
+        );
+        self.buttons.more.set_visible(toolbar::more_shows(on));
     }
 
     fn follow(&self, uri: &str, actions: &Rc<dyn Fn(Action)>) {

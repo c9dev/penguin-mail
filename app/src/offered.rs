@@ -184,6 +184,17 @@ impl Filing {
         }
     }
 
+    /// The header button's icon: the tag Gmail's labels wear, since mail
+    /// there can carry several at once, or the plain folder icon once
+    /// every account in question keeps mail in one place at a time.
+    /// `ui::sidebar::label_icon` draws the same choice for a sidebar row.
+    pub fn icon(self) -> &'static str {
+        match self {
+            Filing::Labels => "penguin-mail-tag-symbolic",
+            Filing::Folders => "folder-symbolic",
+        }
+    }
+
     pub fn new_item(self) -> String {
         match self {
             Filing::Labels => gettext("New Label…"),
