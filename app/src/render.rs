@@ -18,8 +18,11 @@ pub const FOLD_MS: u32 = 240;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Theme {
     pub dark: bool,
-    /// CSS colour of the desktop accent.
+    /// CSS colour of the desktop accent, for fills, dots and outlines.
     pub accent: String,
+    /// The accent as libadwaita limits it for text, dark enough on a
+    /// light page and light enough on a dark one.
+    pub accent_text: String,
     /// Whether the head offers Summarize, which asks the assistant. A
     /// change of it changes the head, so the page loads whole.
     pub summarize: bool,
@@ -682,7 +685,7 @@ pub fn escape(s: &str) -> String {
 /// missing.
 const HTML_BODY_CSS: &str = "@font-face{font-family:Helvetica;src:local(\"Liberation Sans\"),local(\"Arimo\"),local(\"Helvetica\")}\
 :host{all:initial;display:block;contain:content}\
-:host(.plain) .root{color:var(--fg)}:host(.plain) a{color:var(--accent)}\
+:host(.plain) .root{color:var(--fg)}:host(.plain) a{color:var(--accent-text)}\
 .root{font:14px/1.5 -apple-system,\"Adwaita Sans\",Cantarell,\"Segoe UI\",Roboto,Helvetica,Arial,sans-serif;\
 color:#1d1d20;overflow-wrap:break-word;overflow-x:auto;container-type:inline-size}\
 img{max-width:100cqw !important;height:auto !important}\
@@ -732,7 +735,7 @@ fn page_css(theme: &Theme) -> String {
         )
     };
     format!(
-        ":root{{color-scheme:{scheme};--bg:{bg};--fg:{fg};--dim:{dim};--card:{card};--line:{line};--hover:{hover};--surface:{surface};--accent:{accent}}}\
+        ":root{{color-scheme:{scheme};--bg:{bg};--fg:{fg};--dim:{dim};--card:{card};--line:{line};--hover:{hover};--surface:{surface};--accent:{accent};--accent-text:{accent_text}}}\
 html{{background:var(--bg)}}\
 body{{margin:0 auto;max-width:980px;padding:20px 36px 64px;color:var(--fg);\
 font:15px/1.5 \"Adwaita Sans\",Cantarell,system-ui,sans-serif;-webkit-font-smoothing:antialiased}}\
@@ -741,9 +744,9 @@ font:15px/1.5 \"Adwaita Sans\",Cantarell,system-ui,sans-serif;-webkit-font-smoot
 .thread .headline h1{{flex:1;min-width:0}}\
 .thread p{{margin:4px 0 4px;color:var(--dim);font-size:12.5px}}\
 .summarize{{flex:none;display:inline-flex;align-items:center;gap:6px;padding:5px 12px;margin:7px 0 -10px;line-height:20px;\
-border-radius:999px;background:color-mix(in srgb,var(--accent) 12%,var(--bg));color:var(--accent);\
+border-radius:999px;background:color-mix(in srgb,var(--accent) 12%,var(--bg));color:var(--accent-text);\
 font-size:13px;font-weight:700;text-decoration:none;transition:background-color 120ms ease}}\
-.summarize::before{{content:\"\";width:16px;height:16px;background:var(--accent);\
+.summarize::before{{content:\"\";width:16px;height:16px;background:var(--accent-text);\
 -webkit-mask:url(\"{SPARKLE}\") center/contain no-repeat}}\
 .summarize:hover{{background:color-mix(in srgb,var(--accent) 18%,var(--bg))}}\
 .summarize:active{{transform:scale(0.97)}}\
@@ -776,7 +779,7 @@ details.to>summary{{list-style:none;cursor:default;display:flex;gap:12px;align-i
 details.to>summary::-webkit-details-marker{{display:none}}\
 details.to .recipients{{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}\
 details.to>summary:hover .recipients{{color:var(--fg)}}\
-details.to .more{{flex:none;color:var(--accent);font-weight:700;cursor:pointer}}\
+details.to .more{{flex:none;color:var(--accent-text);font-weight:700;cursor:pointer}}\
 table.details{{margin:8px 0 2px;border-collapse:collapse;font-size:13px;line-height:1.45}}\
 table.details th{{text-align:right;font-weight:normal;color:var(--dim);padding:1px 10px 1px 0;\
 vertical-align:top;white-space:nowrap}}\
@@ -805,7 +808,7 @@ border:1px solid var(--line);overflow:hidden;margin-left:0}}\
 .status{{color:var(--dim);font-style:italic}}\
 blockquote.quote{{margin:6px 0;padding:0 0 0 12px;border-left:3px solid color-mix(in srgb,var(--accent) 45%,transparent);color:var(--dim)}}\
 .signature{{color:var(--dim)}}{trimmed}\
-a{{color:var(--accent)}}\
+a{{color:var(--accent-text)}}\
 .attachments{{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 0 52px}}\
 .attachment{{display:inline-flex;align-items:center;border-radius:10px;background:var(--card);\
 color:inherit;text-decoration:none;font-size:13px;max-width:340px;overflow:hidden}}\
@@ -826,6 +829,7 @@ color:inherit;text-decoration:none;min-width:0}}\
         trimmed = TRIMMED_CSS,
         scheme = if theme.dark { "dark" } else { "light" },
         accent = theme.accent,
+        accent_text = theme.accent_text,
     )
 }
 
@@ -928,6 +932,7 @@ mod tests {
         Theme {
             dark: false,
             accent: "#3584e4".into(),
+            accent_text: "#1a5fb4".into(),
             summarize: false,
         }
     }
@@ -1675,11 +1680,32 @@ mod tests {
         assert!(allowed.contains("img-src data: mailrs-cid: https: http:"));
     }
 
+    /// The desktop accent is a fill colour. Text in it (links, "and N
+    /// more", the Summarize label) takes the accent libadwaita limits for
+    /// text, while dots and outlines keep the fill.
+    #[test]
+    fn accent_text_uses_the_text_accent_and_shapes_the_fill() {
+        let css = page_css(&Theme {
+            accent: "#ed5b00".into(),
+            accent_text: "#b62200".into(),
+            ..theme()
+        });
+        assert!(css.contains("--accent:#ed5b00;--accent-text:#b62200"));
+        for text in [
+            "a{color:var(--accent-text)}",
+            "color:var(--accent-text);font-weight:700;cursor:pointer",
+            "background:color-mix(in srgb,var(--accent) 12%,var(--bg));color:var(--accent-text)",
+        ] {
+            assert!(css.contains(text), "missing {text}");
+        }
+    }
+
     #[test]
     fn the_dark_theme_changes_the_page_colours() {
         let dark = page_css(&Theme {
             dark: true,
             accent: "#fff".into(),
+            accent_text: "#fff".into(),
             summarize: false,
         });
         assert!(dark.contains("color-scheme:dark") && dark.contains("#1e1e21"));

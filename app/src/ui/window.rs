@@ -207,6 +207,9 @@ pub(super) const DARK_CLASS: &str = "app-dark";
 /// Marks a window that takes the mockup's window, sidebar and view
 /// colours in place of libadwaita's (style.css).
 const SURFACES_CLASS: &str = "app-surfaces";
+/// Marks a window while the desktop accent is orange, so style.css can
+/// give filled controls the darker orange that holds white text at AA.
+const ACCENT_ORANGE_CLASS: &str = "accent-orange";
 
 /// Puts [`DARK_CLASS`] on `window` while libadwaita is dark, and keeps it
 /// current for as long as the window lives. Every toplevel `adw::Window`
@@ -232,11 +235,23 @@ pub(crate) fn track_dark_class(window: &adw::Window) {
         }
     };
     mark(&style);
-    // The style manager lives as long as the process; the handler goes
-    // with the window it marks.
-    let handler = RefCell::new(Some(style.connect_dark_notify(mark)));
+    let target = window.downgrade();
+    let mark_accent = move |style: &adw::StyleManager| {
+        let Some(window) = target.upgrade() else { return };
+        match style.accent_color() == adw::AccentColor::Orange {
+            true => window.add_css_class(ACCENT_ORANGE_CLASS),
+            false => window.remove_css_class(ACCENT_ORANGE_CLASS),
+        }
+    };
+    mark_accent(&style);
+    // The style manager lives as long as the process; the handlers go
+    // with the window they mark.
+    let handlers = RefCell::new(vec![
+        style.connect_dark_notify(mark),
+        style.connect_accent_color_notify(mark_accent),
+    ]);
     window.connect_destroy(move |_| {
-        if let Some(handler) = handler.take() {
+        for handler in handlers.take() {
             adw::StyleManager::default().disconnect(handler);
         }
     });

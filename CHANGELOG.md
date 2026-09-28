@@ -119,6 +119,10 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Improved
 
+- With an orange accent, buttons and pills that carry white text, such as
+  Yes on an invitation and the chosen inbox category, are darker so the
+  text reads clearly. Links and small accent text in mail follow the
+  contrast the desktop sets for text.
 - The calendar goes back as far as you look. Go to an older week, month
   or date, or scroll the Agenda up, and the events of that time load from
   Google once and stay on this computer. While they load, a small note says

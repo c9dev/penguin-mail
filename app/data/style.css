@@ -33,12 +33,23 @@ window.app-surfaces {
   --window-bg-color: #f6f6f7;
   --sidebar-bg-color: #ebebed;
   --view-bg-color: #ffffff;
+  --accent-fill: var(--accent-bg-color);
 }
 window.app-surfaces.app-dark {
   --window-bg-color: #242428;
   --sidebar-bg-color: #2e2e33;
   --view-bg-color: #1e1e21;
 }
+
+/* Filled controls that carry white text (the drag count, the chosen
+   category, the answer to an invitation) take --accent-fill, not
+   --accent-bg-color. libadwaita's orange, #ed5b00, holds white at 3.4:1,
+   under AA. The orange fill is that colour scaled by 0.874 in OKLab, the
+   step from the mockups' #e8660c to #c1550a, and holds 4.8:1, in dark
+   mode too. Shapes, icons, bars and tints keep --accent-bg-color, and
+   text in the accent keeps --accent-color, which libadwaita already
+   limits to a readable lightness. `accent_contrast.rs` checks this. */
+window.accent-orange { --accent-fill: #c64b00; }
 
 /* The reading pane's toolbar sits on the view colour, as the pane under
    it does in the mockup, not on the window colour of a header bar. */
@@ -247,7 +258,7 @@ flowboxchild:focus-visible > .recipient-chip {
 
 /* Dragging mail: a count badge, and the mailbox under the pointer lit up. */
 .drag-badge {
-  background: var(--accent-bg-color);
+  background: var(--accent-fill);
   color: var(--accent-fg-color);
   border-radius: 999px;
   padding: 3px 10px;
@@ -413,7 +424,7 @@ toggle-group.category-chips { background: none; padding: 0; box-shadow: none; }
 .app-dark .category-chips > toggle { background: #3a3a40; }
 .category-chips > toggle:hover { background: color-mix(in srgb, currentColor 8%, #e3e3e7); }
 .app-dark .category-chips > toggle:hover { background: color-mix(in srgb, currentColor 8%, #3a3a40); }
-.category-chips > toggle:checked { background: var(--accent-bg-color); color: var(--accent-fg-color); }
+.category-chips > toggle:checked { background: var(--accent-fill); color: var(--accent-fg-color); }
 .category-chips .category-chip { padding: 0 14px; min-height: 30px; }
 .category-chips .category-name { margin-left: 6px; font-weight: 700; font-size: 0.89em; }
 /* The mockup's badge rides the pill's top end corner and rises 3px
@@ -430,7 +441,7 @@ toggle-group.category-chips { background: none; padding: 0; box-shadow: none; }
   font-weight: 800;
   font-feature-settings: "tnum";
   color: var(--accent-fg-color);
-  background: var(--accent-bg-color);
+  background: var(--accent-fill);
   transition: opacity 160ms cubic-bezier(0.23, 1, 0.32, 1);
 }
 .category-chips > toggle:checked .category-count { opacity: 0; }
@@ -524,7 +535,7 @@ button.invitation-pill:hover { background: color-mix(in srgb, currentColor 8%, #
 .app-dark button.invitation-pill:hover { background: color-mix(in srgb, currentColor 8%, #3a3a40); }
 button.invitation-answer.suggested-action,
 .app-dark button.invitation-answer.suggested-action {
-  background: var(--accent-bg-color);
+  background: var(--accent-fill);
   color: var(--accent-fg-color);
 }
 button.invitation-pill buttoncontent > box { border-spacing: 8px; }
@@ -1008,7 +1019,7 @@ popover.event-popover button.popover-answer:not(.suggested-action) { background:
 /* The place row is a button only so it can open the map; it reads as
    the rows around it. */
 popover.event-popover button.popover-place { min-height: 0; padding: 0; margin: 0 -4px; padding: 0 4px; font-weight: 400; }
-button.popover-answer.suggested-action { background: var(--accent-bg-color); color: var(--accent-fg-color); }
+button.popover-answer.suggested-action { background: var(--accent-fill); color: var(--accent-fg-color); }
 popover.event-popover button.popover-join:hover,
 popover.event-popover button.popover-answer:not(.suggested-action):hover {
   background: color-mix(in srgb, currentColor 8%, #e3e3e7);

@@ -1,5 +1,7 @@
 //! Penguin Mail: a Gmail client for the GNOME desktop.
 
+#[cfg(test)]
+mod accent_contrast;
 mod add_account;
 mod app;
 mod assistant;
