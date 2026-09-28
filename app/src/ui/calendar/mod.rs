@@ -36,7 +36,7 @@ use adw::prelude::*;
 use chrono::{DateTime, Datelike, Days, NaiveDate, Utc};
 use gtk::{gdk, glib};
 use mailrs_domain::calendar::series;
-use mailrs_domain::calendar::{Access, Calendar, Notify, Occurrence};
+use mailrs_domain::calendar::{Access, Calendar, Occurrence};
 use mailrs_domain::invitation::Answer;
 use mailrs_domain::translate::{date_locale, fill, gettext, with_reason};
 use mailrs_domain::{Account, AccountId, EpochMillis};
@@ -984,8 +984,8 @@ impl CalendarView {
 
     // ---- Moving events ---------------------------------------------------
 
-    /// A drag or a keyboard nudge moved or stretched `o` on `grid`. The
-    /// move is confirmed first, in one dialog that also asks which
+    /// A drag, or a run of keyboard nudges once the keyboard rests, moved
+    /// or stretched `o` on `grid`. The move is confirmed first, in one dialog that also asks which
     /// occurrences of a series it covers and whether the guests get an
     /// update. The write goes through the draft, so a weekly series moved
     /// to another day moves its day in the rule. The card stays where it
@@ -1007,7 +1007,7 @@ impl CalendarView {
             draft.set_span(start, end);
             let offered = series::scopes(&o.event, false);
             let when = words::span_words(start, end, o.event.all_day, &draft::local_zone());
-            let answer = match scope::question(scope::Action::Move, &offered, &o.event.guests, false) {
+            let answer = match scope::question(scope::Action::Move, &offered, &o.event.guests, scope::Change::default()) {
                 Some(question) => match scope::ask(&this.page, &question, &o.event, Some(&when)).await {
                     Some(answer) => answer,
                     None => {
@@ -1017,7 +1017,7 @@ impl CalendarView {
                         return;
                     }
                 },
-                None => scope::Answer { scope: None, notify: Notify::Guests },
+                None => scope::unasked(scope::Action::Move, scope::Change::default()),
             };
             let scope = answer.scope;
             let event = draft.to_event(
@@ -1878,12 +1878,12 @@ impl CalendarView {
         let o = o.clone();
         glib::spawn_future_local(async move {
             let offered = series::scopes(&o.event, false);
-            let answer = match scope::question(scope::Action::Delete, &offered, &o.event.guests, false) {
+            let answer = match scope::question(scope::Action::Delete, &offered, &o.event.guests, scope::Change::default()) {
                 Some(question) => match scope::ask(&this.page, &question, &o.event, None).await {
                     Some(answer) => answer,
                     None => return,
                 },
-                None => scope::Answer { scope: None, notify: Notify::Guests },
+                None => scope::unasked(scope::Action::Delete, scope::Change::default()),
             };
             let copy = this.core.calendar_copy();
             let (account_id, occurrence) = (o.account_id, o.clone());
@@ -2277,10 +2277,13 @@ impl CalendarView {
         editor::open(&self.page, draft, choices, contacts, move |draft| this.save_draft(draft));
     }
 
-    /// Writes a new or changed event. A new time is confirmed first, and a
-    /// change to an occurrence of a series asks which occurrences it
-    /// covers, in one dialog that also asks whether the guests of a moved
-    /// meeting get an update.
+    /// Writes a new or changed event. A new time is confirmed first, and
+    /// so is a change the guests of a meeting would see; a change to an
+    /// occurrence of a series asks which occurrences it covers. All of it
+    /// is one dialog, so the person answers at most once per Save. When
+    /// the save moved the event and changed more, the dialog's Cancel
+    /// turns only the new time down: the other edits go out at the old
+    /// time.
     pub fn save_draft(self: &Rc<Self>, draft: Draft) {
         let weak = Rc::downgrade(self);
         let core = Rc::clone(&self.core);
@@ -2288,8 +2291,26 @@ impl CalendarView {
             let occurrence = draft.occurrence.clone();
             let offered = draft.scopes();
             let action = if draft.moved() { scope::Action::Move } else { scope::Action::Edit };
-            let adds = draft.base.as_ref().is_some_and(|base| scope::adds_guests(&base.guests, &draft.guests));
-            let asked = match (&draft.base, scope::question(action, &offered, &draft.guests, adds)) {
+            let before = draft.before();
+            let change = match &before {
+                Some(before) => {
+                    let rest = draft.without_move();
+                    scope::Change {
+                        seen: draft::reaches_guests(before, &draft),
+                        adds_guests: scope::adds_guests(&before.guests, &draft.guests),
+                        more_than_time: action == scope::Action::Move && rest != *before,
+                        rest_seen: draft::reaches_guests(before, &rest),
+                    }
+                }
+                // A new event's guests get their invitation.
+                None => scope::Change { seen: true, ..scope::Change::default() },
+            };
+            // A guest the edit removed still hears of it.
+            let guests = match &before {
+                Some(before) if scope::has_other_guests(&before.guests) => before.guests.clone(),
+                _ => draft.guests.clone(),
+            };
+            let asked = match (&draft.base, scope::question(action, &offered, &guests, change)) {
                 (Some(base), Some(question)) => {
                     let Some(view) = weak.upgrade() else { return };
                     let when = words::span_words(draft.start, draft.end, draft.all_day, &draft::local_zone());
@@ -2299,8 +2320,9 @@ impl CalendarView {
                         None => return,
                     }
                 }
-                _ => scope::Answer { scope: None, notify: Notify::Guests },
+                _ => scope::unasked(action, change),
             };
+            let draft = if asked.keep_time { draft.without_move() } else { draft };
             let (scope, notify) = (asked.scope, asked.notify);
             let event = draft.to_event(
                 &mailrs_sync::calendar_copy::new_event_id(),
