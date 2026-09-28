@@ -1864,8 +1864,12 @@ impl CalendarView {
     }
 
     /// Reads the series `o` belongs to, and asks the editor over it: its
-    /// own rules, or a changed occurrence's series row's.
+    /// own rules, or a changed occurrence's series row's. Closes the
+    /// event popover first, a no-op when it is not the popover's own
+    /// Edit button asking (that already closed it), so a double click
+    /// never leaves it open behind the editor.
     pub fn open_editor(self: &Rc<Self>, o: &Occurrence) {
+        self.popover.hide();
         let this = Rc::clone(self);
         let o = o.clone();
         glib::spawn_future_local(async move {
