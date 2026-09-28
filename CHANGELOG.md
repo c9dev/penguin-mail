@@ -45,6 +45,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - Show in Calendar on an invitation opens the calendar on that day, with
   the event's details open. Its popover offers Open the invitation in
   Mail back to the message it arrived in.
+- A Summarize button above a conversation asks the assistant for a
+  summary, when the assistant is set up.
 
 ### Improved
 
@@ -83,6 +85,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   filing, moving and flagging.
 - Undo Send sits at the foot of the sidebar with the seconds left. In a
   window too narrow for the sidebar it stays a toast.
+- The message header is shorter: who sent it, who it went to, and
+  Details for the rest.
 
 ### Fixed
 

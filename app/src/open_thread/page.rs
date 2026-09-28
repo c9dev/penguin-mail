@@ -450,6 +450,7 @@ mod tests {
         Theme {
             dark: false,
             accent: "#3584e4".to_string(),
+            summarize: false,
         }
     }
 
@@ -495,6 +496,17 @@ mod tests {
         assert!(patch[0].html.contains("class=\"event-slot\""));
         open.take_invitation_place(None);
         assert_eq!(patched(open.page(&theme())), ["m2"]);
+    }
+
+    #[test]
+    fn offering_summarize_loads_the_page_whole() {
+        let mut open = thread("<p>Kites</p>");
+        open.page(&theme());
+        let offered = Theme {
+            summarize: true,
+            ..theme()
+        };
+        assert!(whole(open.page(&offered)).contains("mailrs:summarize"));
     }
 
     #[test]

@@ -18,6 +18,9 @@ pub struct Theme {
     pub dark: bool,
     /// CSS colour of the desktop accent.
     pub accent: String,
+    /// Whether the head offers Summarize, which asks the assistant. A
+    /// change of it changes the head, so the page loads whole.
+    pub summarize: bool,
 }
 
 pub enum BodyState<'a> {
@@ -132,9 +135,17 @@ pub fn head(conversation: &Head, theme: &Theme) -> String {
         count,
         &[("count", &count.to_string())],
     );
+    let offer = if theme.summarize {
+        format!(
+            "<a class=\"summarize\" href=\"mailrs:summarize\">{}</a>",
+            escape(&gettext("Summarize"))
+        )
+    } else {
+        String::new()
+    };
     let _ = write!(
         html,
-        "<header class=\"thread\"><h1>{}</h1><p>{}</p></header>",
+        "<header class=\"thread\"><div class=\"headline\"><h1>{}</h1>{offer}</div><p>{}</p></header>",
         escape(&subject),
         escape(&many),
     );
@@ -294,14 +305,15 @@ fn render_body(html: &mut String, view: &MessageView) {
 /// The recipients line, and under it everything the headers say about
 /// where the message came from.
 ///
-/// It is a `<details>` element, so the arrow opens and closes it with no
+/// It is a `<details>` element, so Details opens and closes it with no
 /// JavaScript: the page carries none, and a link that opened a panel
 /// would cost a round trip through the app and a redraw.
 fn render_details(html: &mut String, meta: &MessageMeta, me: &[String], view: &MessageView) {
     let to = escape(&fill(
-        &gettext("to {recipients}"),
+        &gettext("To: {recipients}"),
         &[("recipients", &recipients(meta, me))],
     ));
+    let more = escape(&gettext("Details"));
     // Who it is from, who it went to, when, and about what: all of that
     // comes off the metadata every message already has, so the panel opens
     // on any message. The three lines below it need headers that arrive
@@ -315,7 +327,8 @@ fn render_details(html: &mut String, meta: &MessageMeta, me: &[String], view: &M
     let provenance = provenance.unwrap_or(&empty);
     let _ = write!(
         html,
-        "<details class=\"line to\"><summary>{to}</summary><table class=\"details\">"
+        "<details class=\"line to\"><summary><span class=\"recipients\">{to}</span>\
+         <span class=\"more\">{more}</span></summary><table class=\"details\">"
     );
     let mut row = |name: String, value: String| {
         let _ = write!(html, "<tr><th>{}</th><td>{value}</td></tr>", escape(&name));
@@ -655,18 +668,29 @@ fn page_css(theme: &Theme) -> String {
     format!(
         ":root{{color-scheme:{scheme};--bg:{bg};--fg:{fg};--dim:{dim};--card:{card};--line:{line};--hover:{hover};--surface:{surface};--accent:{accent}}}\
 html{{background:var(--bg)}}\
-body{{margin:0 auto;max-width:980px;padding:28px 36px 64px;color:var(--fg);\
+body{{margin:0 auto;max-width:980px;padding:14px 36px 64px;color:var(--fg);\
 font:15px/1.5 \"Adwaita Sans\",Cantarell,system-ui,sans-serif;-webkit-font-smoothing:antialiased}}\
-.thread h1{{font-size:24px;line-height:1.25;font-weight:750;letter-spacing:-0.01em;margin:0}}\
-.thread p{{margin:4px 0 18px;color:var(--dim);font-size:13px}}\
+.thread h1{{font-size:22px;line-height:1.25;font-weight:800;letter-spacing:-0.01em;margin:0}}\
+.thread .headline{{display:flex;align-items:flex-start;gap:12px}}\
+.thread .headline h1{{flex:1;min-width:0}}\
+.thread p{{margin:4px 0 4px;color:var(--dim);font-size:12.5px}}\
+.summarize{{flex:none;display:inline-flex;align-items:center;gap:6px;padding:5px 12px;margin:7px 0 -10px;line-height:20px;\
+border-radius:999px;background:color-mix(in srgb,var(--accent) 12%,var(--bg));color:var(--accent);\
+font-size:13px;font-weight:700;text-decoration:none;transition:background-color 120ms ease}}\
+.summarize::before{{content:\"\";width:16px;height:16px;background:var(--accent);\
+-webkit-mask:url(\"{SPARKLE}\") center/contain no-repeat}}\
+.summarize:hover{{background:color-mix(in srgb,var(--accent) 18%,var(--bg))}}\
+.summarize:active{{transform:scale(0.97)}}\
+.summarize:focus-visible{{outline:2px solid var(--accent);outline-offset:2px}}\
 .message{{border-top:1px solid var(--line);padding:16px 12px 18px;margin:0 -12px;border-radius:12px}}\
+.thread+.message{{border-top-color:transparent}}\
 .message.collapsed:hover{{background:var(--hover)}}\
 .header{{position:relative;display:grid;grid-template-columns:40px minmax(0,1fr) auto auto;\
 column-gap:12px;align-items:center;color:inherit}}\
-.chev{{width:16px;height:16px;justify-self:end;background:var(--dim);opacity:0;\
+.chev{{grid-column:3;grid-row:1;width:16px;height:16px;margin-right:-6px;background:var(--dim);opacity:0;\
 -webkit-mask:url(\"{CHEV}\") center/14px no-repeat;\
 transition:transform 200ms cubic-bezier(0.23,1,0.32,1),opacity 120ms ease}}\
-.message:hover .chev,.expanded .chev,.toggle:focus-visible~.chev{{opacity:.7}}\
+.message:hover .chev,.toggle:focus-visible~.chev{{opacity:.7}}\
 .expanded .chev{{transform:rotate(180deg)}}\
 .toggle:focus-visible{{outline:2px solid var(--accent);outline-offset:-3px;border-radius:12px}}\
 .toggle{{position:absolute;inset:0}}\
@@ -674,21 +698,19 @@ transition:transform 200ms cubic-bezier(0.23,1,0.32,1),opacity 120ms ease}}\
 justify-content:center;overflow:hidden;color:#fff;font-weight:700;font-size:15px;letter-spacing:0.02em;text-decoration:none}}\
 .avatar img{{width:100%;height:100%;object-fit:cover}}\
 .who{{position:relative;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}\
-.name{{font-weight:700;color:inherit;text-decoration:none}}\
+.name{{font-weight:800;color:inherit;text-decoration:none}}\
 .name:hover{{text-decoration:underline}}\
 .unread .name::before{{content:'';display:inline-block;width:8px;height:8px;border-radius:50%;\
 background:var(--accent);margin-right:7px;vertical-align:1px}}\
-.address{{color:var(--dim);font-size:13px;margin-left:8px}}\
-.date{{color:var(--dim);font-size:13px;white-space:nowrap}}\
-.line{{grid-column:2 / span 2;color:var(--dim);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}\
+.address{{color:var(--dim);font-size:12.5px;font-weight:500;margin-left:8px}}\
+.date{{grid-column:4;grid-row:1;color:var(--dim);font-size:12.5px;white-space:nowrap}}\
+.line{{grid-column:2 / -1;color:var(--dim);font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}\
 details.to{{overflow:visible;white-space:normal}}\
-details.to>summary{{list-style:none;cursor:default;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;\
-width:fit-content;max-width:100%;padding-right:16px;position:relative}}\
+details.to>summary{{list-style:none;cursor:default;display:flex;gap:12px;align-items:baseline;position:relative}}\
 details.to>summary::-webkit-details-marker{{display:none}}\
-details.to>summary::after{{content:\"\";position:absolute;right:2px;top:.45em;width:0;height:0;\
-border:4px solid transparent;border-top-color:var(--dim)}}\
-details.to[open]>summary::after{{top:.2em;border-top-color:transparent;border-bottom-color:var(--dim)}}\
-details.to>summary:hover{{color:var(--fg)}}\
+details.to .recipients{{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}\
+details.to>summary:hover .recipients{{color:var(--fg)}}\
+details.to .more{{flex:none;color:var(--accent);font-weight:700;cursor:pointer}}\
 table.details{{margin:8px 0 2px;border-collapse:collapse;font-size:13px;line-height:1.45}}\
 table.details th{{text-align:right;font-weight:normal;color:var(--dim);padding:1px 10px 1px 0;\
 vertical-align:top;white-space:nowrap}}\
@@ -731,7 +753,7 @@ color:inherit;text-decoration:none;min-width:0}}\
 .attachment .get:hover{{opacity:1;background:var(--accent)}}\
 .thumb{{width:32px;height:32px;flex:none;border-radius:5px;object-fit:cover;background:var(--card)}}\
 .clip{{width:16px;height:16px;flex:none;background:var(--dim);-webkit-mask:url(\"{CLIP}\") center/contain no-repeat}}\
-@media (max-width:560px){{body{{padding:18px 14px 40px}}.body,.attachments{{margin-left:0}}.thread h1{{font-size:21px}}\
+@media (max-width:560px){{body{{padding:18px 14px 40px}}.body,.attachments{{margin-left:0}}.thread h1{{font-size:20px}}\
 .address{{display:none}}.message{{padding:14px 8px 16px;margin:0 -8px}}.chev{{display:none}}}}",
         fold = FOLD_MS,
         scheme = if theme.dark { "dark" } else { "light" },
@@ -748,6 +770,11 @@ const CHEV: &str = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/s
 
 const DOWN: &str = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'>\
 <path fill='black' d='M7.5 1.5h1v8.3l3-3 .7.7-4.2 4.2-4.2-4.2.7-.7 3 3V1.5zM3 13h10v1H3z'/></svg>";
+
+/// The sparkle on the Summarize pill, drawn as the mockup draws it.
+const SPARKLE: &str = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'>\
+<path fill='none' stroke='black' stroke-width='1.6' stroke-linejoin='round' \
+d='M8 2 9.3 6.7 14 8 9.3 9.3 8 14 6.7 9.3 2 8 6.7 6.7Z'/></svg>";
 
 #[cfg(test)]
 mod tests {
@@ -797,6 +824,7 @@ mod tests {
         Theme {
             dark: false,
             accent: "#3584e4".into(),
+            summarize: false,
         }
     }
 
@@ -1012,7 +1040,7 @@ mod tests {
                 && html.contains("href=\"mailrs:toggle/m2\"")
         );
         assert!(html.contains("message expanded unread"));
-        assert!(html.contains("to me, Bob Smith"));
+        assert!(html.contains("To: me, Bob Smith"));
         assert!(html.contains("2 messages"));
     }
 
@@ -1489,7 +1517,57 @@ mod tests {
         let dark = page_css(&Theme {
             dark: true,
             accent: "#fff".into(),
+            summarize: false,
         });
         assert!(dark.contains("color-scheme:dark") && dark.contains("#222226"));
+    }
+
+    #[test]
+    fn the_head_offers_summarize_only_when_asked() {
+        let head = |summarize| {
+            super::head(
+                &Head {
+                    subject: "Rent",
+                    count: 2,
+                    allow_remote: false,
+                },
+                &Theme {
+                    summarize,
+                    ..theme()
+                },
+            )
+        };
+        assert!(
+            head(true).contains("<a class=\"summarize\" href=\"mailrs:summarize\">Summarize</a>")
+        );
+        assert!(!head(false).contains("mailrs:summarize"));
+        assert!(
+            head(true).contains("<h1>Rent</h1>"),
+            "the subject stays the page's heading"
+        );
+    }
+
+    #[test]
+    fn the_message_header_says_to_whom_and_offers_details() {
+        let m = meta("m1", "Ann", &[]);
+        let thumbs = HashMap::new();
+        let html = page(
+            "x",
+            vec![MessageView {
+                meta: &m,
+                body: BodyState::Loading,
+                expanded: true,
+                thumbnails: &thumbs,
+                sanitized: None,
+                event_slot: false,
+            }],
+        );
+        assert!(
+            html.contains(
+                "<summary><span class=\"recipients\">To: me, Bob Smith</span>\
+                 <span class=\"more\">Details</span></summary>"
+            ),
+            "{html}"
+        );
     }
 }
