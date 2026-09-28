@@ -55,7 +55,9 @@ app/src/ui/calendar/agenda.rs
 app/src/ui/calendar/block.rs
 app/src/ui/calendar/draft.rs
 app/src/ui/calendar/editor.rs
+app/src/ui/calendar/holidays.rs
 app/src/ui/calendar/kinds.rs
+app/src/ui/calendar/manage.rs
 app/src/ui/calendar/mod.rs
 app/src/ui/calendar/month.rs
 app/src/ui/calendar/next.rs

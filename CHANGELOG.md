@@ -18,8 +18,16 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - Fold an account's calendars away by clicking its address in the
   calendar sidebar. The list stays folded the next time you open the app.
 - Right-click a calendar, or use its "⋮" button, to hide it from the list
-  and the grid, or to give it a color of your own. Both stay on this
-  computer. Hidden Calendars at the foot of the list brings one back.
+  and the grid, or to give it a color of your own. Hidden Calendars at the
+  foot of the list brings one back.
+- Make a calendar of your own with Add Calendar at the foot of the
+  calendar list, and rename or delete one you own from its "⋮" menu. A
+  color or a hidden calendar now changes in Google Calendar too, so your
+  phone shows the same. Each change shows at once and reaches Google when
+  you are next online.
+- Subscribe to a calendar someone publishes by pasting its https or webcal
+  address, or add public holidays from Holiday Calendars, Portugal first.
+  Both stay read-only here and show on every device.
 - The Mail and Calendar switch shows how much unread mail waits while
   you are in the calendar, and how many invitations wait for your answer
   while you are in mail.

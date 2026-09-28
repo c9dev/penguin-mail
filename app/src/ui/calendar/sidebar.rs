@@ -11,6 +11,7 @@ use adw::prelude::*;
 use chrono::{Datelike, Days, NaiveDate};
 use gtk::{gdk, gio, glib};
 use mailrs_domain::calendar::Calendar;
+use mailrs_domain::calendar::list;
 use mailrs_domain::translate::{date_locale, fill, fill_plural, gettext};
 use mailrs_domain::{Account, AccountId, EpochMillis};
 use mailrs_sync::{Missing, Offers, Waiting, Withheld};
@@ -107,9 +108,45 @@ pub fn shows_heading(account: &SidebarAccount) -> bool {
 }
 
 /// Whether `change` alters what the next-event card at the foot of the
-/// mail sidebar shows: which calendars count, or their colour.
+/// mail sidebar shows: which calendars count, or their colour. A choice
+/// that opens a dialog changes nothing yet.
 pub fn redraws_next_event(change: &ListChange) -> bool {
-    !matches!(change, ListChange::Folded { .. })
+    matches!(change, ListChange::Shown { .. } | ListChange::Listed { .. } | ListChange::Color { .. })
+}
+
+/// One item of a calendar row's menu.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RowItem {
+    Hide,
+    Color,
+    Rename,
+    Delete,
+}
+
+/// What a calendar row's menu offers: hiding and a colour for every
+/// calendar, and renaming and deleting for one the account owns
+/// ([`list::allows`]). Whether the account granted the permission for
+/// them is asked when the person picks one, so an item that needs it
+/// says why rather than going missing.
+pub fn row_menu(calendar: &Calendar) -> Vec<RowItem> {
+    let allows = list::allows(calendar);
+    let mut items = vec![RowItem::Hide, RowItem::Color];
+    if allows.rename {
+        items.push(RowItem::Rename);
+    }
+    if allows.delete {
+        items.push(RowItem::Delete);
+    }
+    items
+}
+
+/// The accounts Add Calendar offers, with their addresses: every one
+/// whose calendars the sidebar lists.
+pub fn adding_accounts(rows: &[SidebarAccount]) -> Vec<(AccountId, String)> {
+    rows.iter()
+        .filter(|row| matches!(row.reach, CalendarReach::Calendars(_) | CalendarReach::PrimaryOnly(_)))
+        .map(|row| (row.id, row.address.clone()))
+        .collect()
 }
 
 /// How many calendars every account together took off the list.
@@ -267,8 +304,18 @@ fn weekday_initials() -> Vec<String> {
 const WAITING_CARD: i32 = 42;
 const WAITING_GAP: i32 = 8;
 
-/// What the person changed in the calendar list. Every choice here stays
-/// on this computer: the account may only read Google's calendar list.
+/// What Add Calendar adds.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AddKind {
+    /// A new calendar the account owns.
+    New,
+    /// A calendar someone publishes at an address.
+    Subscribe,
+    /// A public holiday calendar.
+    Holidays,
+}
+
+/// What the person chose in the calendar list.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ListChange {
     /// Ticked or unticked a calendar's check.
@@ -279,6 +326,12 @@ pub enum ListChange {
     Color { account: AccountId, calendar: String, color: Option<String> },
     /// Folded an account's calendars under its heading, or opened them.
     Folded { address: String, folded: bool },
+    /// Asked to rename a calendar, which opens a dialog.
+    Rename { account: AccountId, calendar: String },
+    /// Asked to delete a calendar, which asks first.
+    Delete { account: AccountId, calendar: String },
+    /// Asked to add a calendar to an account, which opens a dialog.
+    Add { account: AccountId, kind: AddKind },
 }
 
 type OnDate = dyn Fn(NaiveDate);
@@ -839,6 +892,10 @@ impl CalendarSidebar {
             self.calendar_list.append(&self.heading(&account.address, folded, &revealer));
             self.calendar_list.append(&revealer);
         }
+        let adding = adding_accounts(accounts);
+        if !adding.is_empty() {
+            self.calendar_list.append(&add_menu(&adding));
+        }
         if hidden_count(accounts) > 0 {
             self.calendar_list.append(&hidden_menu(accounts));
         }
@@ -943,7 +1000,7 @@ impl CalendarSidebar {
         }
         let options = gtk::MenuButton::builder()
             .icon_name("view-more-symbolic")
-            .menu_model(&calendar_menu(account_id, &calendar.id))
+            .menu_model(&calendar_menu(account_id, calendar))
             .css_classes(["flat", "circular", "calendar-options"])
             .valign(gtk::Align::Center)
             .tooltip_text(gettext("Calendar options"))
@@ -1023,23 +1080,85 @@ fn list_actions(on_change: &Rc<OnChange>) -> gio::SimpleActionGroup {
         actions.add_action(&action);
     }
     let color = gio::SimpleAction::new("color", Some(glib::VariantTy::new("(xss)").expect("a valid type")));
-    let on_change = Rc::clone(on_change);
+    let on_color = Rc::clone(on_change);
     color.connect_activate(move |_, target| {
         if let Some((account, calendar, color)) = target.and_then(|t| t.get::<(AccountId, String, String)>()) {
             let color = (!color.is_empty()).then_some(color);
-            on_change(ListChange::Color { account, calendar, color });
+            on_color(ListChange::Color { account, calendar, color });
         }
     });
     actions.add_action(&color);
+    for name in ["rename", "delete"] {
+        let action = gio::SimpleAction::new(name, Some(glib::VariantTy::new("(xs)").expect("a valid type")));
+        let on_change = Rc::clone(on_change);
+        action.connect_activate(move |action, target| {
+            if let Some((account, calendar)) = target.and_then(|t| t.get::<(AccountId, String)>()) {
+                on_change(match action.name().as_str() {
+                    "rename" => ListChange::Rename { account, calendar },
+                    _ => ListChange::Delete { account, calendar },
+                });
+            }
+        });
+        actions.add_action(&action);
+    }
+    for (name, kind) in [("new", AddKind::New), ("subscribe", AddKind::Subscribe), ("holidays", AddKind::Holidays)] {
+        let action = gio::SimpleAction::new(name, Some(glib::VariantTy::INT64));
+        let on_change = Rc::clone(on_change);
+        action.connect_activate(move |_, target| {
+            if let Some(account) = target.and_then(|t| t.get::<AccountId>()) {
+                on_change(ListChange::Add { account, kind });
+            }
+        });
+        actions.add_action(&action);
+    }
     actions
 }
 
-/// A calendar row's menu: Hide from the List, and Color with Gmail's
-/// label colours and the calendar's own colour back.
-fn calendar_menu(account_id: AccountId, calendar: &str) -> gio::Menu {
+/// Add Calendar at the foot of the list: a new calendar, a subscription
+/// and the holiday calendars, under each account's address when more
+/// than one account can take them.
+fn add_menu(accounts: &[(AccountId, String)]) -> gtk::MenuButton {
+    let menu = gio::Menu::new();
+    for (account, address) in accounts {
+        let section = gio::Menu::new();
+        for (label, action) in [
+            (gettext("New Calendar…"), "calendars.new"),
+            (gettext("Subscribe to Calendar…"), "calendars.subscribe"),
+            (gettext("Holiday Calendars…"), "calendars.holidays"),
+        ] {
+            let item = gio::MenuItem::new(Some(&label), None);
+            item.set_action_and_target_value(Some(action), Some(&account.to_variant()));
+            section.append_item(&item);
+        }
+        let heading = (accounts.len() > 1).then_some(address.as_str());
+        menu.append_section(heading, &section);
+    }
+    let content = gtk::Box::builder().spacing(6).build();
+    content.append(&gtk::Image::builder().icon_name("list-add-symbolic").pixel_size(14).build());
+    content.append(&gtk::Label::builder().label(gettext("Add Calendar")).css_classes(["calendar-name"]).build());
+    let button = gtk::MenuButton::builder()
+        .child(&content)
+        .menu_model(&menu)
+        .css_classes(["flat", "add-calendar"])
+        .halign(gtk::Align::Start)
+        .margin_top(12)
+        .build();
+    crate::ui::name(&button, &gettext("Add Calendar"));
+    crate::ui::name_menu_items_of(&button);
+    button
+}
+
+/// A calendar row's menu ([`row_menu`]): Hide from the List, Color with
+/// Gmail's label colours and the calendar's own colour back, and for a
+/// calendar the account owns, Rename and Delete in a section of their
+/// own.
+fn calendar_menu(account_id: AccountId, calendar: &Calendar) -> gio::Menu {
+    let items = row_menu(calendar);
+    let target = (account_id, calendar.id.as_str()).to_variant();
+    let calendar = calendar.id.as_str();
     let menu = gio::Menu::new();
     let hide = gio::MenuItem::new(Some(&gettext("Hide from the List")), None);
-    hide.set_action_and_target_value(Some("calendars.hide"), Some(&(account_id, calendar).to_variant()));
+    hide.set_action_and_target_value(Some("calendars.hide"), Some(&target));
     menu.append_item(&hide);
     let colors = gio::Menu::new();
     for (index, (hex, _)) in crate::ui::LABEL_COLORS.iter().enumerate() {
@@ -1059,6 +1178,20 @@ fn calendar_menu(account_id: AccountId, calendar: &str) -> gio::Menu {
     original.append_item(&entry);
     colors.append_section(None, &original);
     menu.append_submenu(Some(&gettext("Color")), &colors);
+    let owned = gio::Menu::new();
+    for (item, label, action) in [
+        (RowItem::Rename, gettext("Rename…"), "calendars.rename"),
+        (RowItem::Delete, gettext("Delete…"), "calendars.delete"),
+    ] {
+        if items.contains(&item) {
+            let entry = gio::MenuItem::new(Some(&label), None);
+            entry.set_action_and_target_value(Some(action), Some(&target));
+            owned.append_item(&entry);
+        }
+    }
+    if owned.n_items() > 0 {
+        menu.append_section(None, &owned);
+    }
     menu
 }
 
@@ -1367,6 +1500,55 @@ mod tests {
         assert!(redraws_next_event(&ListChange::Listed { account, calendar: calendar.clone(), listed: false }));
         assert!(redraws_next_event(&ListChange::Shown { account, calendar, shown: false }));
         assert!(!redraws_next_event(&ListChange::Folded { address: "dana@example.com".into(), folded: true }));
+    }
+
+    #[test]
+    fn an_owned_calendar_can_be_renamed_and_deleted_from_its_menu() {
+        assert_eq!(
+            row_menu(&calendar("team")),
+            [RowItem::Hide, RowItem::Color, RowItem::Rename, RowItem::Delete]
+        );
+    }
+
+    #[test]
+    fn the_primary_calendar_is_renamed_but_never_deleted() {
+        let primary = Calendar { primary: true, ..calendar("primary") };
+        assert_eq!(row_menu(&primary), [RowItem::Hide, RowItem::Color, RowItem::Rename]);
+    }
+
+    #[test]
+    fn a_subscribed_or_shared_calendar_offers_only_hiding_and_colour() {
+        for access in [Access::Reader, Access::Writer, Access::FreeBusy] {
+            let other = Calendar { access, ..calendar("fixtures") };
+            assert_eq!(row_menu(&other), [RowItem::Hide, RowItem::Color], "{access:?}");
+        }
+    }
+
+    #[test]
+    fn calendars_are_added_to_accounts_that_have_a_calendar() {
+        let rows = sidebar_accounts(&[
+            (account(1, "dana@example.com"), Offers::EVERYTHING, Withheld::NONE, vec![calendar("primary")]),
+            (
+                account(2, "old@example.com"),
+                Offers::EVERYTHING,
+                Withheld { calendar_list: true, ..Withheld::NONE },
+                vec![calendar("primary")],
+            ),
+            (account(3, "no@example.com"), Offers::EVERYTHING, Withheld { calendar: true, ..Withheld::NONE }, vec![]),
+            (imap(4, "imap@example.com"), Offers { calendar: false, ..Offers::EVERYTHING }, Withheld::NONE, vec![]),
+        ]);
+        assert_eq!(
+            adding_accounts(&rows),
+            [(1, "dana@example.com".to_string()), (2, "old@example.com".to_string())]
+        );
+    }
+
+    #[test]
+    fn a_choice_that_only_opens_a_dialog_redraws_nothing() {
+        let (account, calendar) = (1, "team".to_string());
+        assert!(!redraws_next_event(&ListChange::Rename { account, calendar: calendar.clone() }));
+        assert!(!redraws_next_event(&ListChange::Delete { account, calendar }));
+        assert!(!redraws_next_event(&ListChange::Add { account, kind: AddKind::Holidays }));
     }
 
     fn d(y: i32, m: u32, day: u32) -> NaiveDate {

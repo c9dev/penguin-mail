@@ -266,6 +266,18 @@ pub fn save_calendar_list(conn: &Connection, account_id: AccountId, list: &[Cale
     Ok(())
 }
 
+/// How many events the copy holds on a calendar, a series counted once
+/// and its changed occurrences not at all, for the question before a
+/// delete.
+pub fn event_count(conn: &Connection, account_id: AccountId, calendar: &str) -> Result<usize> {
+    let count: i64 = conn.query_row(
+        "SELECT COUNT(*) FROM events WHERE account_id = ?1 AND calendar = ?2 AND series IS NULL",
+        params![account_id, calendar],
+        |row| row.get(0),
+    )?;
+    Ok(usize::try_from(count).unwrap_or(0))
+}
+
 /// Whether the person took the calendar off the sidebar's list.
 pub fn listed(conn: &Connection, account_id: AccountId, calendar: &str) -> Result<Option<bool>> {
     Ok(conn
@@ -458,6 +470,22 @@ mod tests {
         refresh_calendar(&conn, id, &answered).unwrap();
         assert_eq!(one(&conn, id, "feed").name, "Fixtures");
         assert_eq!(listed(&conn, id, "feed").unwrap(), Some(false), "the person's choice stays");
+    }
+
+    #[test]
+    fn a_series_counts_once_among_a_calendars_events() {
+        let (conn, id) = store();
+        let one = |id_: &str, series: Option<&str>| Event {
+            calendar: "team".into(),
+            id: id_.into(),
+            series: series.map(str::to_string),
+            start: 1,
+            end: 2,
+            ..Event::default()
+        };
+        save_events(&conn, id, &[one("retro", None), one("standup", None), one("standup_1", Some("standup"))], 0)
+            .unwrap();
+        assert_eq!(event_count(&conn, id, "team").unwrap(), 2);
     }
 
     #[test]
