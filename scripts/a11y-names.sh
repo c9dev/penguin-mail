@@ -10,7 +10,9 @@
 # anything is unnamed, so a build machine can hold the line.
 #
 # On the hidden display it also opens every menu it can reach, since a
-# menu is in the accessible tree only while it is open.
+# menu is in the accessible tree only while it is open, opens a
+# conversation to read its message view and invitation card, and walks
+# the calendar.
 #
 # The hidden display needs Xvfb, dbus-run-session, at-spi2-core, python3
 # with the GObject bindings, and the XTest library to click and type:
@@ -53,6 +55,38 @@ ACTS = {
 found = []
 
 
+def webkit_key_text(node, role, name):
+    """Whether `node` is the text view WebKit keeps inside every web view.
+    WebKitGTK parents a GtkTextView to the view, unseen at 0 x 0, to turn
+    key bindings such as Ctrl+C and Ctrl+A into editing commands, and it
+    reaches the bus as an editable, multi-line "text" with no name. Nobody
+    can land on it, and hiding the widget would take copy away from the
+    message view, so the walk skips it. The match is narrow: that role,
+    no name, no size, no children, and a sibling holding the web page's
+    "filler", which only a web view has."""
+    if role != "text" or name or node.get_child_count():
+        return False
+    try:
+        box = node.get_component_iface().get_extents(Atspi.CoordType.WINDOW)
+        states = node.get_state_set()
+        parent = node.get_parent()
+    except Exception:
+        return False
+    if box.width or box.height or parent is None:
+        return False
+    if not (states.contains(Atspi.StateType.EDITABLE) and states.contains(Atspi.StateType.MULTI_LINE)):
+        return False
+    for index in range(parent.get_child_count()):
+        sibling = parent.get_child_at_index(index)
+        if sibling is None or sibling == node:
+            continue
+        for inner in range(sibling.get_child_count()):
+            child = sibling.get_child_at_index(inner)
+            if child is not None and child.get_role_name() == "filler":
+                return True
+    return False
+
+
 def walk(node, path, sink=None):
     """Records every control under `node` into `sink` (`found` by
     default), and says whether a named control was found in there.
@@ -68,6 +102,8 @@ def walk(node, path, sink=None):
         name = (node.get_name() or "").strip()
     except Exception:
         # A window that closed mid-walk takes its children with it.
+        return False
+    if webkit_key_text(node, role, name):
         return False
     here = path + ["%s %r" % (role, name) if name else role]
     wraps = False
@@ -380,6 +416,76 @@ def open_menus():
     print("%d menus opened" % opened)
 
 
+def walk_conversation(keys):
+    """Opens the design review invitation, or the first conversation in
+    the list when that one is not there, and walks the conversation pane
+    once its message view has loaded, into a list of its own like the
+    calendar's. The walk above ran before any conversation was open, so
+    without this nothing in the message view, the invitation card among
+    it, was ever read.
+
+    Reports the conversation's own line and gives back how many of its
+    controls came back with no name."""
+
+    def rows():
+        for app in penguins()[0]:
+            for n in nodes(app):
+                try:
+                    if n.get_role_name() == "list item":
+                        yield n, (n.get_name() or "").strip()
+                except Exception:
+                    continue
+
+    def pane():
+        for app in penguins()[0]:
+            for n in nodes(app):
+                try:
+                    if n.get_role_name() == "grouping" and (n.get_name() or "").strip() == "Conversation":
+                        return n
+                except Exception:
+                    continue
+        return None
+
+    def page_loaded():
+        conversation = pane()
+        return conversation is not None and any(
+            n.get_role_name() == "document web" for n in nodes(conversation)
+        )
+
+    frame = next(n for app in penguins()[0] for n in nodes(app) if n.get_role_name() == "frame")
+    bounds = frame.get_component_iface().get_extents(Atspi.CoordType.WINDOW)
+    def clickable(row):
+        box = row.get_component_iface().get_extents(Atspi.CoordType.WINDOW)
+        x, y = box.x + box.width // 2, box.y + box.height // 2
+        if box.width > 0 and 0 < x < bounds.width and 0 < y < bounds.height and in_view(row, box):
+            return x, y
+        return None
+
+    # The menu walk's right clicks may have left some other conversation
+    # open; the invitation is the one worth reading, for its card.
+    invitation = [row for row, name in rows() if "Offline editor design review" in name]
+    others = [row for row, name in rows() if name] if not page_loaded() else []
+    for row in invitation + others:
+        spot = clickable(row)
+        if spot is not None:
+            # A click selects the row, which opens it in the pane; Enter
+            # would open it in a window of its own.
+            keys.click(*spot)
+            break
+    if not wait_until(page_loaded, 20.0):
+        print("No conversation opened with its message view.", file=sys.stderr)
+        sys.exit(2)
+    # The page reaches the bus a moment before its own contents do.
+    time.sleep(2)
+    conversation_found = []
+    walk(pane(), ["Conversation"], conversation_found)
+    unnamed = [row for row in conversation_found if not row[1]]
+    print("conversation: %d controls, %d unnamed" % (len(conversation_found), len(unnamed)))
+    for role, _, path in unnamed:
+        print("  %s" % path)
+    return len(unnamed)
+
+
 def walk_calendar(keys):
     """Switches to the Calendar space and walks each of its views, Day,
     Week, Month and the narrow List, into a list of its own, so `found`'s
@@ -623,16 +729,17 @@ def walk_calendar(keys):
     return len(unnamed)
 
 
-calendar_unnamed = 0
+calendar_unnamed = conversation_unnamed = 0
 if sys.argv[1:] == ["--menus"]:
     open_menus()
+    conversation_unnamed = walk_conversation(Input())
     calendar_unnamed = walk_calendar(Input())
 
 unnamed = [row for row in found if not row[1]]
 print("%d controls, %d named, %d unnamed" % (len(found), len(found) - len(unnamed), len(unnamed)))
 for role, _, path in unnamed:
     print("  %s" % path)
-sys.exit(1 if (unnamed or calendar_unnamed) else 0)
+sys.exit(1 if (unnamed or calendar_unnamed or conversation_unnamed) else 0)
 PYTHON
 
 if [ "$here" = --here ]; then
