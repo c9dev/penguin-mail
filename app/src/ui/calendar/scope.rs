@@ -125,10 +125,10 @@ pub fn send_check(question: &Question) -> bool {
     question.keeps && question.ask_guests
 }
 
-/// The response Escape and closing the dialog give.
-pub fn close_response(question: &Question) -> &'static str {
-    if question.keeps { "keep" } else { "cancel" }
-}
+/// The response Escape and closing the dialog give. It is Cancel even
+/// when the buttons read "Keep Old Time", so Escape throws the whole
+/// edit away rather than saving part of it.
+pub const CLOSE_RESPONSE: &str = "cancel";
 
 fn scope_id(scope: RepeatScope) -> &'static str {
     match scope {
@@ -248,8 +248,8 @@ fn heading(question: &Question, title: &str) -> String {
 
 /// Asks `question` about `event` over `parent`. `when` is the new time
 /// of a move, in words. `None` for Cancel or the dialog closing another
-/// way; a move then springs back and nothing is written. When the
-/// question [`keeps`](Question::keeps), closing it keeps the old time.
+/// way; a move then springs back and nothing is written, also when the
+/// question [`keeps`](Question::keeps).
 pub async fn ask(parent: &impl IsA<gtk::Widget>, question: &Question, event: &Event, when: Option<&str>) -> Option<Answer> {
     let mut body: Vec<String> = when.map(str::to_string).into_iter().collect();
     if question.keeps {
@@ -272,7 +272,7 @@ pub async fn ask(parent: &impl IsA<gtk::Widget>, question: &Question, event: &Ev
         }
     }
     dialog.set_default_response(Some(default_response(question)));
-    dialog.set_close_response(close_response(question));
+    dialog.set_close_response(CLOSE_RESPONSE);
     // The occurrences as options, and the guests choice as a check, when
     // the buttons already carry another choice, so one dialog asks all.
     let extra = gtk::Box::new(gtk::Orientation::Vertical, 6);
@@ -475,7 +475,7 @@ mod tests {
         assert!(q.keeps);
         assert_eq!(ids(&q), ["keep", "go"]);
         assert_eq!(responses(&q)[0].label, "Keep Old Time");
-        assert_eq!(close_response(&q), "keep");
+        assert_eq!(answer(&q, CLOSE_RESPONSE, None, true), None, "Escape throws the whole edit away");
         assert_eq!(answer(&q, "keep", None, true), Some(Answer { scope: None, notify: Notify::Nobody, keep_time: true }));
         assert_eq!(answer(&q, "go", None, true), Some(Answer { scope: None, notify: Notify::Guests, keep_time: false }));
     }
@@ -511,6 +511,6 @@ mod tests {
     fn a_move_alone_still_cancels() {
         let q = question(Action::Move, &[], &[me()], seen()).unwrap();
         assert!(!q.keeps);
-        assert_eq!(close_response(&q), "cancel");
+        assert_eq!(answer(&q, CLOSE_RESPONSE, None, true), None);
     }
 }

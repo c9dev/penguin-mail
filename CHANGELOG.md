@@ -69,7 +69,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - Pressing Shift and an arrow key several times asks once, about the
   whole move. Changing the title, place, notes or guests of a meeting
   asks whether to tell the guests, and Keep Old Time in the editor's
-  move question saves your other changes at the time the event had.
+  move question saves your other changes at the time the event had;
+  Escape there throws the whole edit away.
 - With Claude Opus 5 or newer, translating a message and reading an unsubscribe
   page take less time, because those quick jobs no longer think at length.
 
