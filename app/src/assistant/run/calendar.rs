@@ -410,20 +410,23 @@ impl<A: Accounts> Tools<A> {
                 calendar.calendars(account_id).await
             })
             .await?;
+        let (email, wanted) = (&account.email, wanted.trim());
         let takes = list
             .iter()
             .filter(|c| c.access.can_write())
             .map(|c| c.name.as_str())
-            .collect::<Vec<_>>()
-            .join(", ");
-        let (email, wanted) = (&account.email, wanted.trim());
+            .collect::<Vec<_>>();
+        let takes = match takes.is_empty() {
+            true => format!("No calendar on {email} takes new events."),
+            false => format!("Calendars that take events: {}.", takes.join(", ")),
+        };
         match writable_named(&list, wanted) {
             Ok(found) => Ok(found.clone()),
             Err(NoPick::ReadOnly(name)) => Err(format!(
-                "“{name}” on {email} is read-only. Calendars that take events: {takes}."
+                "“{name}” on {email} is read-only. {takes}"
             )),
             Err(NoPick::Unknown) => Err(format!(
-                "{email} has no calendar called “{wanted}”. Calendars that take events: {takes}."
+                "{email} has no calendar called “{wanted}”. {takes}"
             )),
             Err(NoPick::Several) => Err(format!(
                 "{email} has more than one calendar called “{wanted}”. Give the id list_calendars shows instead."
