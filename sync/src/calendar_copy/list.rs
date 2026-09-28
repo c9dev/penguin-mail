@@ -296,6 +296,7 @@ impl<A: Accounts> CalendarCopy<A> {
                         event: String::new(),
                         title: title.unwrap_or_else(|| edit_title(&queued.edit)),
                         reason: Some(reason),
+                        left_out: None,
                     });
                 }
             }

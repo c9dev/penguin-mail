@@ -404,6 +404,48 @@ pub fn changed_occurrences(
     Ok(found)
 }
 
+/// Puts the files the queue uploaded in place of the waiting files they
+/// came from, found by path, and drops the waiting files at the `missing`
+/// paths: in queued change `seq`'s body, and in the copy's row of the
+/// event, so a later edit starts from the uploaded files and a retry of
+/// the change never uploads them twice.
+pub fn settle_uploads(
+    conn: &Connection,
+    account_id: AccountId,
+    seq: i64,
+    calendar: &str,
+    id: &str,
+    uploaded: &[(String, model::Attachment)],
+    missing: &[String],
+) -> Result<()> {
+    let body: Option<Option<String>> = conn
+        .query_row("SELECT body FROM calendar_changes WHERE seq = ?1", params![seq], |row| row.get(0))
+        .optional()?;
+    if let Some(body) = body.flatten() {
+        let mut event: Event = parse(&body);
+        if let Some(files) = &mut event.attachments {
+            model::settle_uploads(files, uploaded, missing);
+            conn.execute("UPDATE calendar_changes SET body = ?2 WHERE seq = ?1", params![seq, json(&event)])?;
+        }
+    }
+    let row: Option<Option<String>> = conn
+        .query_row(
+            "SELECT attachments FROM events WHERE account_id = ?1 AND calendar = ?2 AND id = ?3",
+            params![account_id, calendar, id],
+            |row| row.get(0),
+        )
+        .optional()?;
+    if let Some(Some(text)) = row {
+        let mut files: Vec<model::Attachment> = parse(&text);
+        model::settle_uploads(&mut files, uploaded, missing);
+        conn.execute(
+            "UPDATE events SET attachments = ?4 WHERE account_id = ?1 AND calendar = ?2 AND id = ?3",
+            params![account_id, calendar, id, json(&files)],
+        )?;
+    }
+    Ok(())
+}
+
 /// Marks an event as matching the provider again once its queued change
 /// went out. A cancelled occurrence needs this: its row stays in the copy
 /// after its removal went out, and would otherwise show as waiting.

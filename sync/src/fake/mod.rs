@@ -189,6 +189,8 @@ pub struct FakeState {
     pub expire_calendar_tokens: bool,
     /// Play the network being down: every call fails until it is cleared.
     pub offline: bool,
+    /// Every file uploaded to Drive, by name, with its bytes.
+    pub drive_files: Vec<(String, Vec<u8>)>,
     /// Play Google's answer to a write on an event already deleted: 410
     /// Gone, which the client reads as `ExpiredSyncToken`, rather than
     /// the 404 the fake gives otherwise.
@@ -398,6 +400,7 @@ impl FakeGmail {
                 calendar_notices: Vec::new(),
                 expire_calendar_tokens: false,
                 offline: false,
+                drive_files: Vec::new(),
                 deleted_answers_gone: false,
                 deleted_calendars: Vec::new(),
                 refuse_new_events: false,
@@ -1471,6 +1474,11 @@ impl GmailApi for FakeGmail {
         }
         let mut stored = event.clone();
         stored.pending = false;
+        // A write that leaves the attachments out keeps Google's, as a
+        // PATCH without the key does.
+        if stored.attachments.is_none() {
+            stored.attachments = held.as_ref().map(|h| h.attachments.clone().unwrap_or_default());
+        }
         if stored.uid.is_empty() {
             stored.uid = format!("{}@google.com", stored.id);
         }
@@ -1487,6 +1495,39 @@ impl GmailApi for FakeGmail {
                 .cloned()
                 .expect("just stored")
         }))
+    }
+
+    /// Keeps the file's bytes in `drive_files` and answers a Drive link
+    /// numbered by its place there.
+    async fn upload_to_drive(
+        &self,
+        path: &std::path::Path,
+        name: &str,
+        mime_type: &str,
+        sent: std::sync::Arc<std::sync::atomic::AtomicU64>,
+    ) -> Result<calendar::Attachment, GmailError> {
+        let bytes = match tokio::fs::read(path).await {
+            Ok(bytes) => bytes,
+            Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
+                return Err(GmailError::FileMissing(path.display().to_string()));
+            }
+            Err(err) => return Err(GmailError::File(err.to_string())),
+        };
+        self.call("drive.files.create", 0).await?;
+        self.needs(mailrs_gmail::DRIVE_FILE_SCOPE)?;
+        sent.store(bytes.len() as u64, std::sync::atomic::Ordering::SeqCst);
+        let id = self.with(|s| {
+            s.drive_files.push((name.to_string(), bytes));
+            format!("drive{}", s.drive_files.len())
+        });
+        Ok(calendar::Attachment {
+            title: name.to_string(),
+            file_url: format!("https://drive.google.com/file/d/{id}/view"),
+            mime_type: mime_type.to_string(),
+            icon_link: String::new(),
+            file_id: id,
+            waiting: None,
+        })
     }
 
     async fn remove_event(

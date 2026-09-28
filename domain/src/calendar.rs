@@ -145,6 +145,18 @@ impl Attachment {
     }
 }
 
+/// `files` with each waiting file the queue uploaded in its place, found
+/// by the path it waited at, and the waiting files at the `missing` paths
+/// left out.
+pub fn settle_uploads(files: &mut Vec<Attachment>, uploaded: &[(String, Attachment)], missing: &[String]) {
+    files.retain(|file| !file.waiting.as_ref().is_some_and(|path| missing.contains(path)));
+    for file in files.iter_mut() {
+        if let Some(done) = file.waiting.as_ref().and_then(|path| uploaded.iter().find(|(p, _)| p == path)) {
+            *file = done.1.clone();
+        }
+    }
+}
+
 /// Who hears about a write to an event: its guests, by mail from the
 /// provider, or nobody. A new event and a change that adds guests tell
 /// them, since that mail is their invitation; a move or a delete tells

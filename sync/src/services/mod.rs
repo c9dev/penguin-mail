@@ -434,6 +434,9 @@ pub struct Withheld {
     /// Changing the account's calendar list: a calendar's colour and
     /// whether it is hidden on every device, and subscribing to one.
     pub change_calendar_list: bool,
+    /// Putting files in the account's Drive, which attaching a file from
+    /// this computer to an event needs. Reading attachments does not.
+    pub drive: bool,
 }
 
 impl Withheld {
@@ -446,6 +449,7 @@ impl Withheld {
         calendar_list: false,
         calendars: false,
         change_calendar_list: false,
+        drive: false,
     };
 
     pub fn is_empty(self) -> bool {
@@ -856,6 +860,17 @@ pub trait CalendarService: Send + Sync + 'static {
         &self,
         event: &model::Event,
     ) -> impl Future<Output = Result<model::Event, BackendError>> + Send;
+
+    /// Uploads a file waiting on this computer (`file.waiting` names its
+    /// path) to the provider's file store, and answers it as an
+    /// attachment an event can link to. `sent` counts the bytes as they go
+    /// out. A file no longer at its path answers
+    /// `BackendError::FileMissing`.
+    fn upload_attachment(
+        &self,
+        file: &model::Attachment,
+        sent: std::sync::Arc<std::sync::atomic::AtomicU64>,
+    ) -> impl Future<Output = Result<model::Attachment, BackendError>> + Send;
 
     /// Moves `event` from its calendar to `destination` on the same
     /// account, a series with its changed occurrences, and mails its
