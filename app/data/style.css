@@ -485,6 +485,7 @@ button.day-heading { min-height: 26px; padding: 0 14px; border-radius: 13px; }
 /* The mini month: 13 px numbers at weight 500, today a filled accent
    square with rounded corners, a faint dot under a day with events. */
 .mini-month-title { font-weight: 800; font-size: 0.99em; }
+.list-fade { background: linear-gradient(to bottom, alpha(var(--sidebar-bg-color), 0), var(--sidebar-bg-color)); }
 .mini-month-weekday { font-size: 0.78em; font-weight: 700; opacity: 0.4; }
 .mini-month button {
   min-width: 28px;

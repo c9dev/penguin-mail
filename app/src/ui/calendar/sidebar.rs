@@ -214,13 +214,37 @@ impl CalendarSidebar {
             .margin_top(6)
             .margin_bottom(12)
             .build();
-        widget.append(
-            &gtk::ScrolledWindow::builder()
-                .hscrollbar_policy(gtk::PolicyType::Never)
-                .vexpand(true)
-                .child(&content)
-                .build(),
-        );
+        let scroller = gtk::ScrolledWindow::builder()
+            .hscrollbar_policy(gtk::PolicyType::Never)
+            .vexpand(true)
+            .child(&content)
+            .build();
+        // The pinned Waiting section below cuts the list at whatever pixel
+        // is left, often through a line of text. A short fade in the
+        // sidebar's own colour marks that more sits below instead. GTK's
+        // CSS has no mask-image, so the fade is a strip laid over the
+        // scroller's foot, shown only while the list runs past it.
+        let fade = gtk::Box::builder()
+            .css_classes(["list-fade"])
+            .height_request(24)
+            .valign(gtk::Align::End)
+            .can_target(false)
+            .can_focus(false)
+            .accessible_role(gtk::AccessibleRole::Presentation)
+            .build();
+        let overlay = gtk::Overlay::builder().child(&scroller).vexpand(true).build();
+        overlay.add_overlay(&fade);
+        let adjustment = scroller.vadjustment();
+        let show_fade = {
+            let fade = fade.clone();
+            move |a: &gtk::Adjustment| {
+                fade.set_visible(more_below(a.value(), a.page_size(), a.upper()));
+            }
+        };
+        show_fade(&adjustment);
+        adjustment.connect_changed(show_fade.clone());
+        adjustment.connect_value_changed(show_fade);
+        widget.append(&overlay);
 
         let month_title = gtk::Label::builder()
             .css_classes(["mini-month-title"])
@@ -816,5 +840,24 @@ mod tests {
             (account(3, "d.reyes@uni.example"), Offers::EVERYTHING, withheld),
         ];
         assert_eq!(waiting_accounts(&accounts), vec![1]);
+    }
+}
+
+/// Whether a scrolled list still has content below what shows, with a
+/// pixel of slack so a list that just fits gets no fade.
+fn more_below(value: f64, page: f64, upper: f64) -> bool {
+    value + page < upper - 1.0
+}
+
+#[cfg(test)]
+mod fade_tests {
+    use super::more_below;
+
+    #[test]
+    fn the_fade_shows_only_while_the_list_runs_past_its_foot() {
+        assert!(more_below(0.0, 400.0, 520.0), "the list is cut");
+        assert!(!more_below(120.0, 400.0, 520.0), "scrolled to the end");
+        assert!(!more_below(0.0, 400.0, 400.5), "a list that just fits");
+        assert!(!more_below(0.0, 400.0, 300.0), "a short list");
     }
 }
