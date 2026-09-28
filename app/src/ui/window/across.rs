@@ -4,6 +4,7 @@
 //! sidebar. Both read the calendar's copy from the store and draw what
 //! the plain modules in `ui::calendar` decide.
 
+use std::cell::Cell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
@@ -16,6 +17,26 @@ use mailrs_sync::now_millis;
 use super::MainWindow;
 use crate::settings::Space;
 use crate::ui::calendar::next;
+
+/// Counts the next-event reads, so that when two overlap, as the minute
+/// timer and a calendar sync can, an older read that ends last cannot
+/// put back an event the newer one dropped.
+#[derive(Debug, Default)]
+pub(super) struct Reads(Cell<u64>);
+
+impl Reads {
+    /// Starts a read and returns its number.
+    fn start(&self) -> u64 {
+        let n = self.0.get() + 1;
+        self.0.set(n);
+        n
+    }
+
+    /// Whether the read numbered `n` is the last one started.
+    fn is_newest(&self, n: u64) -> bool {
+        self.0.get() == n
+    }
+}
 
 impl MainWindow {
     /// Starts the next-event card: read now, then each minute, and again
@@ -51,6 +72,7 @@ impl MainWindow {
             return;
         };
         let this = Rc::clone(self);
+        let read_number = self.next_reads.start();
         glib::spawn_future_local(async move {
             let read = this
                 .core
@@ -77,6 +99,9 @@ impl MainWindow {
                     Ok((found, colours))
                 })
                 .await;
+            if !this.next_reads.is_newest(read_number) {
+                return;
+            }
             let (found, colours) = match read {
                 Ok(read) => read,
                 Err(err) => {
@@ -106,5 +131,26 @@ impl MainWindow {
         let o = up.occurrence();
         self.show_space(Space::Calendar);
         self.calendar.open(o.account_id, &o.event.calendar, &o.event.id, o.start);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Reads;
+
+    #[test]
+    fn only_the_newest_read_may_write() {
+        let reads = Reads::default();
+        let older = reads.start();
+        let newer = reads.start();
+        assert!(!reads.is_newest(older));
+        assert!(reads.is_newest(newer));
+    }
+
+    #[test]
+    fn a_lone_read_may_write() {
+        let reads = Reads::default();
+        let only = reads.start();
+        assert!(reads.is_newest(only));
     }
 }

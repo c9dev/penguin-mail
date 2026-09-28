@@ -193,6 +193,8 @@ pub struct MainWindow {
     /// The event the next-event card shows, so a click on it knows where
     /// to open the calendar. `None` while the card is hidden.
     next_up: RefCell<Option<crate::ui::calendar::next::NextUp>>,
+    /// The next-event reads under way; only the newest writes the card.
+    next_reads: across::Reads,
 }
 
 /// The class that marks a toplevel window dark. `@media
@@ -743,6 +745,7 @@ impl MainWindow {
                 followed: RefCell::new(HashMap::new()),
                 undo_sends: RefCell::new(scheduled::UndoSends::default()),
                 next_up: RefCell::new(None),
+                next_reads: across::Reads::default(),
             }
         });
         if window.core.demo {
