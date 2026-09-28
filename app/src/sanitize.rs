@@ -1,14 +1,21 @@
 //! Cleans email HTML for display. Layout survives: tables, inline styles,
 //! `<style>` blocks, and images. Anything that runs code, submits data, or
 //! navigates by itself is removed. Remote loads are blocked separately, by
-//! the WebView's content filter, so this module does not parse CSS.
+//! the WebView's content filter, so this module reads CSS only to find
+//! rules and selectors, never to judge a value.
 //!
 //! The conversation page puts each cleaned body in its own shadow root, so
 //! an email's `<style>` cannot restyle the page around it.
 //!
 //! Mail is shown on a white card, so an email's dark mode rules would put
-//! its pale text on white. [`drop_dark_rules`] takes those rules out and
-//! leaves the light ones, which is what the sender designed for.
+//! its pale text on white. [`restyle`] takes those rules out and leaves the
+//! light ones, which is what the sender designed for.
+//!
+//! The shadow root has no `<html>` or `<body>` of the message's own, so the
+//! cleaner puts two elements in their place, as Gmail does: the styles on
+//! those tags move onto them, and the message's `html` and `body` selectors
+//! point at them. GitHub, for one, sets its font and line height on
+//! `<body>`.
 
 use std::borrow::Cow;
 use std::collections::HashSet;
@@ -41,6 +48,7 @@ const LAYOUT_ATTRIBUTES: [&str; 17] = [
 /// the escaped `Content-ID`, the address the conversation view serves that
 /// picture at; with no `pictures` it loses its source.
 pub fn sanitize_html(html: &str, pictures: Option<&str>) -> String {
+    let root = Root::read(html, pictures);
     let pictures = pictures.map(str::to_string);
     let mut builder = Builder::default();
     builder
@@ -62,7 +70,271 @@ pub fn sanitize_html(html: &str, pictures: Option<&str>) -> String {
         .attribute_filter(move |element, attribute, value| {
             filter_url(pictures.as_deref(), element, attribute, value)
         });
-    name_images(&drop_dark_rules(&builder.clean(html).to_string()))
+    let (styled, rewrote) = restyle(&builder.clean(html).to_string());
+    name_images(&root.wrap(&styled, rewrote))
+}
+
+/// The class of the element that stands in for a message's `<html>`.
+const HTML_CLASS: &str = "mailrs-html";
+/// The class of the element that stands in for a message's `<body>`.
+const BODY_CLASS: &str = "mailrs-body";
+
+/// What a message's `<html>` and `<body>` tags ask of the page: their
+/// styles, and the color `link` gives to links. Values go into a `style`
+/// attribute this module writes and escapes, so they reach no further
+/// than the styles the cleaner already keeps on any other element.
+#[derive(Debug, Default)]
+struct Root {
+    html: String,
+    body: String,
+    link: Option<String>,
+}
+
+impl Root {
+    fn read(source: &str, pictures: Option<&str>) -> Root {
+        let mut root = Root::default();
+        if let Some(attributes) = tag_attributes(source, "html") {
+            root.html = value(&attributes, "style").trim().to_string();
+        }
+        let Some(attributes) = tag_attributes(source, "body") else {
+            return root;
+        };
+        // The old attributes are hints a browser lays under the author's
+        // CSS, so they come first and the `style` attribute overrides them.
+        let mut body = Vec::new();
+        if let Some(color) = color(value(&attributes, "bgcolor")) {
+            body.push(format!("background-color:{color}"));
+        }
+        if let Some(color) = color(value(&attributes, "text")) {
+            body.push(format!("color:{color}"));
+        }
+        if let Some(address) = background(pictures, value(&attributes, "background")) {
+            body.push(format!("background-image:url('{address}')"));
+        }
+        let style = value(&attributes, "style").trim();
+        if !style.is_empty() {
+            body.push(style.to_string());
+        }
+        root.body = body.join(";");
+        root.link = color(value(&attributes, "link"));
+        root
+    }
+
+    /// `html` inside the two stand-ins, or as it was when the message
+    /// gave them nothing to carry and no rule points at them.
+    fn wrap(&self, html: &str, rewrote: bool) -> String {
+        if self.html.is_empty() && self.body.is_empty() && self.link.is_none() && !rewrote {
+            return html.to_string();
+        }
+        let mut out = String::with_capacity(html.len() + self.html.len() + self.body.len() + 120);
+        // Zero weight and first in the body, so the sender's own rules
+        // for links win over it, as they would over the attribute.
+        if let Some(link) = &self.link {
+            out.push_str(&format!(
+                "<style>:where(.{BODY_CLASS}) a{{color:{link}}}</style>"
+            ));
+        }
+        for (class, style) in [(HTML_CLASS, &self.html), (BODY_CLASS, &self.body)] {
+            out.push_str(&format!("<div class=\"{class}\""));
+            if !style.is_empty() {
+                out.push_str(&format!(" style=\"{}\"", escape_attribute(style)));
+            }
+            out.push('>');
+        }
+        out.push_str(html);
+        out.push_str("</div></div>");
+        out
+    }
+}
+
+/// The value of attribute `name`, or nothing.
+fn value<'a>(attributes: &'a [(String, String)], name: &str) -> &'a str {
+    attributes
+        .iter()
+        .find(|(n, _)| n == name)
+        .map_or("", |(_, v)| v.as_str())
+}
+
+/// A color an old attribute names, when it is a plain name or a hex
+/// value. Anything else, such as a value that tries to add declarations
+/// of its own, is dropped. Three or six hex digits without `#` get one,
+/// as a browser reads them.
+fn color(value: &str) -> Option<String> {
+    let value = value.trim();
+    let bare = value.strip_prefix('#').unwrap_or(value);
+    if bare.is_empty() || bare.len() > 20 || !bare.chars().all(|c| c.is_ascii_alphanumeric()) {
+        return None;
+    }
+    let hex = matches!(bare.len(), 3 | 6) && bare.chars().all(|c| c.is_ascii_hexdigit());
+    Some(if value.starts_with('#') || hex {
+        format!("#{bare}")
+    } else {
+        bare.to_string()
+    })
+}
+
+/// A body's `background` picture, when its address is one the cleaner
+/// lets a picture have, quoted for a CSS string.
+fn background(pictures: Option<&str>, value: &str) -> Option<String> {
+    let value = value.trim();
+    if value.is_empty() {
+        return None;
+    }
+    let address = filter_url(pictures, "img", "src", value)?;
+    let lower = address.to_ascii_lowercase();
+    let allowed = ["http://", "https://", "data:image/"]
+        .iter()
+        .any(|scheme| lower.starts_with(scheme))
+        || pictures.is_some_and(|p| lower.starts_with(&p.to_ascii_lowercase()));
+    allowed.then(|| {
+        address
+            .chars()
+            .filter(|c| !c.is_control())
+            .flat_map(|c| match c {
+                '\\' | '\'' => vec!['\\', c],
+                c => vec![c],
+            })
+            .collect()
+    })
+}
+
+/// The attributes of the first `<name>` tag in `source`, names in lower
+/// case and values with their character references decoded, or nothing
+/// when there is no such tag. The first of two attributes with one name
+/// counts, as in a browser.
+fn tag_attributes(source: &str, name: &str) -> Option<Vec<(String, String)>> {
+    // Compared in place rather than on a lower-case copy, since a long
+    // newsletter would cost a copy of itself for each tag looked up.
+    let bytes = source.as_bytes();
+    let start = source.match_indices('<').find_map(|(at, _)| {
+        let after = at + 1 + name.len();
+        let word = bytes.get(at + 1..after)?;
+        let ends = bytes
+            .get(after)
+            .is_some_and(|b| b.is_ascii_whitespace() || matches!(b, b'>' | b'/'));
+        (ends && word.eq_ignore_ascii_case(name.as_bytes())).then_some(after)
+    })?;
+    let tag = &source[start..];
+    let bytes = tag.as_bytes();
+    let mut attributes: Vec<(String, String)> = Vec::new();
+    let mut at = 0;
+    loop {
+        while bytes
+            .get(at)
+            .is_some_and(|b| b.is_ascii_whitespace() || *b == b'/')
+        {
+            at += 1;
+        }
+        if bytes.get(at).is_none_or(|b| *b == b'>') {
+            break;
+        }
+        let name_start = at;
+        while bytes
+            .get(at)
+            .is_some_and(|b| !b.is_ascii_whitespace() && !matches!(b, b'=' | b'>' | b'/'))
+        {
+            at += 1;
+        }
+        if at == name_start {
+            // A stray `=`.
+            at += 1;
+            continue;
+        }
+        let name = tag[name_start..at].to_ascii_lowercase();
+        while bytes.get(at).is_some_and(u8::is_ascii_whitespace) {
+            at += 1;
+        }
+        let mut value = String::new();
+        if bytes.get(at) == Some(&b'=') {
+            at += 1;
+            while bytes.get(at).is_some_and(u8::is_ascii_whitespace) {
+                at += 1;
+            }
+            let end = match bytes.get(at) {
+                Some(&quote) if quote == b'"' || quote == b'\'' => {
+                    at += 1;
+                    let end = tag[at..].find(quote as char).map_or(tag.len(), |i| at + i);
+                    value = decode(&tag[at..end]);
+                    (end + 1).min(tag.len())
+                }
+                _ => {
+                    let end = tag[at..]
+                        .find(|c: char| c.is_ascii_whitespace() || c == '>')
+                        .map_or(tag.len(), |i| at + i);
+                    value = decode(&tag[at..end]);
+                    end
+                }
+            };
+            at = end;
+        }
+        if !attributes.iter().any(|(n, _)| *n == name) {
+            attributes.push((name, value));
+        }
+    }
+    Some(attributes)
+}
+
+/// `value` with its character references decoded: the named ones mail
+/// puts in attributes, and numeric ones. Others stay as written.
+fn decode(value: &str) -> String {
+    if !value.contains('&') {
+        return value.to_string();
+    }
+    let mut out = String::with_capacity(value.len());
+    let mut rest = value;
+    while let Some(at) = rest.find('&') {
+        out.push_str(&rest[..at]);
+        rest = &rest[at..];
+        let decoded = rest[1..]
+            .find(';')
+            .filter(|end| *end <= 10)
+            .and_then(|end| {
+                let name = &rest[1..=end];
+                let c = match name {
+                    "quot" => Some('"'),
+                    "amp" => Some('&'),
+                    "apos" => Some('\''),
+                    "lt" => Some('<'),
+                    "gt" => Some('>'),
+                    "nbsp" => Some('\u{a0}'),
+                    _ => name.strip_prefix('#').and_then(|number| {
+                        match number.strip_prefix(['x', 'X']) {
+                            Some(hex) => u32::from_str_radix(hex, 16).ok(),
+                            None => number.parse().ok(),
+                        }
+                        .and_then(char::from_u32)
+                    }),
+                }?;
+                Some((c, end + 2))
+            });
+        match decoded {
+            Some((c, used)) => {
+                out.push(c);
+                rest = &rest[used..];
+            }
+            None => {
+                out.push('&');
+                rest = &rest[1..];
+            }
+        }
+    }
+    out.push_str(rest);
+    out
+}
+
+/// `value` escaped for a double-quoted attribute.
+fn escape_attribute(value: &str) -> String {
+    let mut out = String::with_capacity(value.len());
+    for c in value.chars() {
+        match c {
+            '&' => out.push_str("&amp;"),
+            '"' => out.push_str("&quot;"),
+            '<' => out.push_str("&lt;"),
+            '>' => out.push_str("&gt;"),
+            c => out.push(c),
+        }
+    }
+    out
 }
 
 /// Gives every picture without a description an empty one.
@@ -99,13 +371,18 @@ fn has_alt(tag: &str) -> bool {
     })
 }
 
-/// Removes `@media` blocks that only apply in dark mode, and the
-/// `color-scheme` declarations that ask for one, from a message's `<style>`
-/// blocks. Everything outside those blocks stays as it was.
-fn drop_dark_rules(html: &str) -> String {
-    if !html.contains("prefers-color-scheme") && !html.contains("color-scheme") {
-        return html.to_string();
+/// Rewrites a message's `<style>` blocks: takes out the `@media` blocks
+/// that only apply in dark mode and the `color-scheme` declarations that
+/// ask for one, and points `html` and `body` selectors at the elements
+/// that stand in for those tags. Everything else stays as it was. Also
+/// says whether any selector changed.
+fn restyle(html: &str) -> (String, bool) {
+    if !html.contains("<style") {
+        return (html.to_string(), false);
     }
+    // `prefers-color-scheme` contains this too.
+    let dark = html.contains("color-scheme");
+    let mut rewrote = false;
     let mut out = String::with_capacity(html.len());
     let mut rest = html;
     while let Some(start) = rest.find("<style") {
@@ -117,11 +394,128 @@ fn drop_dark_rules(html: &str) -> String {
             .map(|i| open + i)
             .unwrap_or(rest.len());
         out.push_str(&rest[..open]);
-        out.push_str(&clean_css(&rest[open..end]));
+        let css = &rest[open..end];
+        let css = if dark {
+            Cow::Owned(clean_css(css))
+        } else {
+            Cow::Borrowed(css)
+        };
+        let (css, hit) = point_at_stand_ins(&css);
+        rewrote |= hit;
+        out.push_str(&css);
         rest = &rest[end..];
     }
     out.push_str(rest);
-    out
+    (out, rewrote)
+}
+
+/// A stylesheet with its `html` and `body` selectors pointed at the
+/// stand-ins, and whether any changed. It reads selectors at the top and
+/// inside grouping rules such as `@media`, and copies declaration blocks
+/// and other at-rules, such as `@font-face`, as they are.
+fn point_at_stand_ins(css: &str) -> (String, bool) {
+    let mut out = String::with_capacity(css.len() + 32);
+    let mut changed = false;
+    let mut rest = css;
+    loop {
+        let Some(stop) = rest.find(['{', '}', ';']) else {
+            out.push_str(rest);
+            break;
+        };
+        if rest.as_bytes()[stop] != b'{' {
+            out.push_str(&rest[..=stop]);
+            rest = &rest[stop + 1..];
+            continue;
+        }
+        let prelude = &rest[..stop];
+        let head = prelude.trim_start().to_ascii_lowercase();
+        if head.starts_with('@') && holds_rules(&head) {
+            out.push_str(&rest[..=stop]);
+            rest = &rest[stop + 1..];
+            continue;
+        }
+        if head.starts_with('@') {
+            out.push_str(prelude);
+        } else {
+            let (selector, hit) = point_selector(prelude);
+            changed |= hit;
+            out.push_str(&selector);
+        }
+        let block = &rest[stop..];
+        let after = skip_block(block).unwrap_or_default();
+        out.push_str(&block[..block.len() - after.len()]);
+        rest = after;
+    }
+    (out, changed)
+}
+
+/// Whether an at-rule's block holds rules with selectors, rather than
+/// declarations or keyframes.
+fn holds_rules(head: &str) -> bool {
+    [
+        "@media",
+        "@supports",
+        "@document",
+        "@-moz-document",
+        "@layer",
+        "@container",
+        "@scope",
+    ]
+    .iter()
+    .any(|name| {
+        head.strip_prefix(name).is_some_and(|after| {
+            after.is_empty() || !after.starts_with(|c: char| c.is_ascii_alphanumeric() || c == '-')
+        })
+    })
+}
+
+/// A selector list with each `html` and `body` type selector replaced by
+/// its stand-in's class. A word that is part of a class, an id, a longer
+/// name such as `tbody`, or an attribute selector stays.
+fn point_selector(selector: &str) -> (String, bool) {
+    let bytes = selector.as_bytes();
+    let mut out = String::with_capacity(selector.len() + 16);
+    let mut copied = 0;
+    let mut changed = false;
+    let mut in_brackets = false;
+    let mut at = 0;
+    while at < bytes.len() {
+        match bytes[at] {
+            b'[' => in_brackets = true,
+            b']' => in_brackets = false,
+            _ => {}
+        }
+        let starts_word = bytes[at].is_ascii_alphabetic()
+            && (at == 0
+                || bytes[at - 1].is_ascii_whitespace()
+                || matches!(bytes[at - 1], b',' | b'>' | b'+' | b'~' | b'('));
+        if in_brackets || !starts_word {
+            at += 1;
+            continue;
+        }
+        let end = bytes[at..]
+            .iter()
+            .position(|b| !(b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_')))
+            .map_or(bytes.len(), |i| at + i);
+        let word = &selector[at..end];
+        let class = if word.eq_ignore_ascii_case("body") {
+            Some(BODY_CLASS)
+        } else if word.eq_ignore_ascii_case("html") {
+            Some(HTML_CLASS)
+        } else {
+            None
+        };
+        if let Some(class) = class {
+            out.push_str(&selector[copied..at]);
+            out.push('.');
+            out.push_str(class);
+            copied = end;
+            changed = true;
+        }
+        at = end;
+    }
+    out.push_str(&selector[copied..]);
+    (out, changed)
 }
 
 /// One stylesheet without its dark mode rules.
@@ -479,3 +873,137 @@ mod tests {
     }
 }
 
+#[cfg(test)]
+mod body_tests {
+    use super::sanitize_html;
+
+    fn clean(html: &str) -> String {
+        sanitize_html(html, None)
+    }
+
+    /// The `style` attribute of the element with `class`, as written.
+    fn style_of<'a>(html: &'a str, class: &str) -> &'a str {
+        let open = format!("<div class=\"{class}\" style=\"");
+        let from = html
+            .find(&open)
+            .map(|at| at + open.len())
+            .unwrap_or_else(|| panic!("no {class}: {html}"));
+        let to = html[from..].find('"').map_or(html.len(), |end| from + end);
+        &html[from..to]
+    }
+
+    /// GitHub puts its font, size and line height on `<body>`. The cleaner
+    /// dropped the tag and the page's own font showed instead.
+    #[test]
+    fn the_body_tag_s_styles_move_to_the_wrapper() {
+        let out = clean(include_str!("demo/github-ci.html"));
+        let body = style_of(&out, "mailrs-body");
+        assert!(
+            body.contains("font-family: -apple-system,BlinkMacSystemFont,Segoe UI,Helvetica"),
+            "{body}"
+        );
+        assert!(
+            body.contains("font-size: 14px; line-height: 1.5; margin: 0;"),
+            "{body}"
+        );
+        let html = style_of(&out, "mailrs-html");
+        assert!(html.contains("font-family: sans-serif"), "{html}");
+        assert!(out.contains("<div class=\"mailrs-html\""), "{out}");
+    }
+
+    /// The old attributes are hints a browser lays under the sender's CSS,
+    /// so they come first and the `style` attribute overrides them.
+    #[test]
+    fn body_attributes_come_before_the_sender_s_own_style() {
+        let out = clean(
+            "<html><body bgcolor=\"f4f4f4\" text=\"#333\" style=\"color:#111\"><p>Hi</p></body></html>",
+        );
+        assert_eq!(
+            style_of(&out, "mailrs-body"),
+            "background-color:#f4f4f4;color:#333;color:#111",
+            "{out}"
+        );
+    }
+
+    /// `link` colors links, under the sender's own rules for them.
+    #[test]
+    fn the_link_attribute_colors_links_before_the_sender_s_rules() {
+        let out = clean(
+            "<html><head><style>a{color:#c00}</style></head><body link=\"#0a0\"><a href=\"https://example.com/\">x</a></body></html>",
+        );
+        let hint = out.find(":where(.mailrs-body) a{color:#0a0}").expect(&out);
+        let own = out.find("a{color:#c00}").expect(&out);
+        assert!(hint < own, "{out}");
+    }
+
+    #[test]
+    fn a_body_background_keeps_only_addresses_the_cleaner_allows() {
+        let out = clean("<body background=\"https://example.com/paper.png\"><p>x</p></body>");
+        assert!(
+            style_of(&out, "mailrs-body")
+                .contains("background-image:url('https://example.com/paper.png')"),
+            "{out}"
+        );
+        let out = clean("<body background=\"javascript:alert(1)\"><p>x</p></body>");
+        assert!(
+            !out.contains("javascript") && !out.contains("url("),
+            "{out}"
+        );
+    }
+
+    #[test]
+    fn a_body_attribute_cannot_break_out_of_its_style() {
+        let out = clean(
+            "<body style='x\"><script>alert(1)</script>' text=\"red;background:url(https://evil.example/)\" \
+             link=\"red}</style><script>bad()</script>\"><p>x</p></body>",
+        );
+        assert!(
+            !out.contains("<script") && !out.contains("evil") && !out.contains("bad()"),
+            "{out}"
+        );
+        assert!(
+            !out.contains(":where"),
+            "a link color that is not a color is dropped: {out}"
+        );
+    }
+
+    #[test]
+    fn quoted_values_in_the_body_style_stay_quoted() {
+        let out = clean("<body style=\"font-family:&quot;Segoe UI&quot;,Arial\"><p>x</p></body>");
+        assert_eq!(
+            style_of(&out, "mailrs-body"),
+            "font-family:&quot;Segoe UI&quot;,Arial",
+            "{out}"
+        );
+    }
+
+    /// A message's `body` and `html` rules would match nothing in the
+    /// page's shadow root, so they point at the wrappers instead.
+    #[test]
+    fn body_and_html_selectors_point_at_the_wrappers() {
+        let out = clean(
+            "<style>body{margin:0}html body .x,BODY>p{color:red}tbody td{padding:1px}\
+             @media (max-width:600px){body{font-size:12px}}.a{background:url(body.png)}\
+             @font-face{font-family:body}</style><p>x</p>",
+        );
+        for kept in [
+            ".mailrs-body{margin:0}",
+            ".mailrs-html .mailrs-body .x,.mailrs-body>p{color:red}",
+            "tbody td{padding:1px}",
+            "@media (max-width:600px){.mailrs-body{font-size:12px}}",
+            ".a{background:url(body.png)}",
+            "@font-face{font-family:body}",
+        ] {
+            assert!(out.contains(kept), "{kept} in {out}");
+        }
+        assert!(
+            out.starts_with("<div class=\"mailrs-html\"><div class=\"mailrs-body\">"),
+            "{out}"
+        );
+    }
+
+    #[test]
+    fn mail_with_nothing_on_its_body_is_not_wrapped() {
+        assert_eq!(clean("<html><body><p>Hi</p></body></html>"), "<p>Hi</p>");
+    }
+}

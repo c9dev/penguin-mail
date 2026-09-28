@@ -570,6 +570,24 @@ fn samples() -> Vec<Sample> {
             ..PLAIN
         },
         Sample {
+            account: 1,
+            thread: "t-ci",
+            id: "ci-1",
+            from: ("Fernwood CI", "notifications@github.example"),
+            to: &[ME],
+            subject: "[fernwood/kite-app] Run failed: CI - main (0a1b2c3)",
+            // Old enough to stay below the threads that the demo's tests
+            // and the store screenshots expect at the top.
+            minutes_ago: 11 * DAY,
+            labels: &["INBOX"],
+            text: "CI workflow run failed for main branch\n\nCI / Tests\nFailed in 6 minutes and 43 seconds",
+            // A notification in GitHub's shape: its font and line height
+            // sit on <body>, and the annotation count beside its icon is
+            // a table cell inside a link.
+            html: Some(include_str!("demo/github-ci.html")),
+            ..PLAIN
+        },
+        Sample {
             account: 2,
             thread: "t-seminar",
             id: "seminar-1",
