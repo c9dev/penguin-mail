@@ -244,6 +244,24 @@ impl Host {
                 holder.set_can_focus(true);
             }
         });
+        // A click on the title or the strip takes no focus, so no focus
+        // leave comes to set the flag back, and the next Tab from the end
+        // of the page would visit the card again. Once the click is over,
+        // and a button in it has had its chance to take the focus, the
+        // flag goes unless the focus sits inside the card. A click a
+        // button claims cancels this gesture rather than releasing it,
+        // and `end` comes either way.
+        let holder = host.holder.downgrade();
+        press.connect_end(move |_, _| {
+            let holder = holder.clone();
+            glib::idle_add_local_once(move || {
+                if let Some(holder) = holder.upgrade()
+                    && !holder.state_flags().contains(gtk::StateFlags::FOCUS_WITHIN)
+                {
+                    holder.set_can_focus(false);
+                }
+            });
+        });
         host.holder.add_controller(press);
 
         let keys = gtk::EventControllerKey::new();
