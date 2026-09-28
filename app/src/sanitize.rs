@@ -46,6 +46,9 @@ pub fn sanitize_html(html: &str, pictures: Option<&str>) -> String {
     builder
         .add_tags(&EXTRA_TAGS)
         .rm_clean_content_tags(&["style"])
+        // A title names the page in a browser tab; its words are not part
+        // of the message.
+        .add_clean_content_tags(&["title"])
         .add_generic_attributes(&LAYOUT_ATTRIBUTES)
         // The marks other clients put on quoted history, which the page
         // folds away (see `crate::quoted`). Each body sits in its own
@@ -326,6 +329,18 @@ mod dark_tests {
 
 #[cfg(test)]
 mod tests {
+    /// A newsletter's `<title>` names the message in a browser tab. Its
+    /// words once showed as a stray line above the message, because the
+    /// cleaner dropped the tag and kept its text.
+    #[test]
+    fn a_title_s_words_stay_out_of_the_message() {
+        let html = "<html><head><title>[c9dev/penguin-mail] Run failed</title></head>\
+                    <body><p>Body</p></body></html>";
+        let clean = sanitize_html(html, None);
+        assert!(!clean.contains("Run failed"), "{clean}");
+        assert!(clean.contains("<p>Body</p>"), "{clean}");
+    }
+
     use super::sanitize_html;
 
     fn clean(html: &str) -> String {
@@ -463,3 +478,4 @@ mod tests {
         assert_eq!(out.matches("alt=").count(), 1, "{out}");
     }
 }
+

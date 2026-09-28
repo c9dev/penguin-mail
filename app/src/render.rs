@@ -663,12 +663,17 @@ pub fn escape(s: &str) -> String {
 
 /// Styles for an HTML body inside its shadow root. Most email HTML assumes
 /// dark text on white, so the body keeps that in both themes.
+///
+/// Long words break only where nothing else fits (`break-word`), since
+/// `anywhere` let a table column shrink to one letter and set "Status"
+/// down the page a letter per line. Tables get a `max-width` without
+/// `!important`, so a newsletter's own 600 px card still wins.
 const HTML_BODY_CSS: &str = ":host{all:initial;display:block;contain:content}\
 :host(.plain) .root{color:var(--fg)}:host(.plain) a{color:var(--accent)}\
 .root{font:14px/1.5 -apple-system,\"Adwaita Sans\",Cantarell,\"Segoe UI\",Roboto,Helvetica,Arial,sans-serif;\
-color:#1d1d20;overflow-wrap:anywhere;overflow-x:auto}\
+color:#1d1d20;overflow-wrap:break-word;overflow-x:auto}\
 img{max-width:100% !important;height:auto !important}\
-table{max-width:100% !important}td,th{overflow-wrap:anywhere}a{color:#1c71d8}";
+table{max-width:100%}a{color:#1c71d8}";
 
 /// The button that shows the quoted history, drawn in the page's colours
 /// and, on mail that keeps its white page, in the grey Gmail uses. It sits
@@ -828,6 +833,14 @@ d='M8 2 9.3 6.7 14 8 9.3 9.3 8 14 6.7 9.3 2 8 6.7 6.7Z'/></svg>";
 
 #[cfg(test)]
 mod tests {
+    /// Mail keeps its own layout: no column squeezed to a letter a line,
+    /// and a newsletter's own width limit is not overridden.
+    #[test]
+    fn a_body_keeps_its_columns_and_its_own_width() {
+        assert!(!HTML_BODY_CSS.contains("anywhere"), "{HTML_BODY_CSS}");
+        assert!(HTML_BODY_CSS.contains("table{max-width:100%}"), "{HTML_BODY_CSS}");
+    }
+
     use std::collections::HashMap;
 
     use mailrs_domain::{Address, Attachment, MessageBody, MessageMeta};

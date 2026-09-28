@@ -182,6 +182,11 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   it last updated, instead of leaving you guessing.
 
 ### Fixed
+- Newsletters keep their own layout: a narrow table column no longer
+  breaks a word one letter per line, and a message designed at a set
+  width keeps it.
+- The page title some mail carries no longer shows as a stray line above
+  the message.
 - A message with a wide space character, such as some bank and shop
   receipts, opens again instead of leaving the reading pane stuck.
 - Events side by side in a narrow week lane stay inside their blocks. A
