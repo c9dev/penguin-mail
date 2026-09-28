@@ -67,6 +67,7 @@ mod pictures;
 mod press;
 mod previews;
 mod reach;
+mod room;
 mod reminders;
 mod reveal;
 mod scheduled;
@@ -675,7 +676,41 @@ impl MainWindow {
             let stack = gtk::Stack::builder()
                 .transition_type(gtk::StackTransitionType::Crossfade)
                 .build();
-            stack.add_named(&assistant_split, Some("mail"));
+            let room = {
+                let least = |widget: &gtk::Widget| widget.measure(gtk::Orientation::Horizontal, -1).0;
+                let mailboxes = sidebar.page.clone().upcast::<gtk::Widget>().downgrade();
+                let list_page = list.page.clone().upcast::<gtk::Widget>().downgrade();
+                let panel = assistant.page.clone().upcast::<gtk::Widget>().downgrade();
+                let sidebar_least = split.min_sidebar_width() as i32;
+                let (columns, reading, days) =
+                    (nav.downgrade(), Rc::downgrade(&conversation), Rc::downgrade(&calendar));
+                // The window's buttons show in one header at a time, so
+                // the widest seen stands for them wherever they are.
+                let buttons = Cell::new(0);
+                // The space needs the wider of the mail and the calendar,
+                // so switching between them leaves the panes where they
+                // are. The mail needs its list beside the conversation's
+                // bar of buttons, or the wider of the two once they stack.
+                arranged_room(&split, &assistant_split, move || {
+                    let list = list_page.upgrade().map_or(0, |w| least(&w));
+                    let (collapsed, list) = columns.upgrade().map_or((false, list), |nav| {
+                        (nav.is_collapsed(), list.max(nav.min_sidebar_width() as i32))
+                    });
+                    let (bar, bar_buttons) =
+                        reading.upgrade().map_or((0, 0), |view| view.least_width());
+                    let mail = if collapsed { list.max(bar) } else { list + bar };
+                    let (calendar, calendar_buttons) =
+                        days.upgrade().map_or((0, 0), |view| view.least_width());
+                    buttons.set(buttons.get().max(bar_buttons).max(calendar_buttons));
+                    room::Needs {
+                        mailboxes: mailboxes.upgrade().map_or(0, |w| least(&w)).max(sidebar_least),
+                        space: mail.max(calendar),
+                        controls: buttons.get(),
+                        panel: panel.upgrade().map_or(0, |w| least(&w)).max(room::PANEL_LEAST),
+                    }
+                })
+            };
+            stack.add_named(&room, Some("mail"));
             stack.add_named(&first_page, Some("first-account"));
             // An update's banner spans the whole window, above the panes,
             // since it is about the app and not the mail on screen.
@@ -699,30 +734,17 @@ impl MainWindow {
                 .height_request(480)
                 .content(&toasts)
                 .build();
-            // The assistant sits beside the mail only while the window has
-            // room for both: the mailboxes, the list and the conversation
-            // need about 720sp between them, and the assistant 320sp. Below
-            // that it slides over the mail instead. Beside the mail in a
-            // narrower window, libadwaita cuts off the right edge of the
-            // open assistant, and squeezes the closed one below its minimum
-            // width.
-            let wide = adw::Breakpoint::new(
-                adw::BreakpointCondition::parse("max-width: 1100sp").expect("valid breakpoint"),
-            );
-            wide.add_setter(&assistant_split, "collapsed", Some(&true.to_value()));
+            // Whether the mailboxes fold and the assistant slides over the
+            // space follow from the widths the panes need (room.rs), not
+            // from fixed breakpoints: those drifted from what the panes
+            // needed, and libadwaita clips a pane that does not fit.
             let medium = adw::Breakpoint::new(
                 adw::BreakpointCondition::parse("max-width: 960sp").expect("valid breakpoint"),
             );
-            medium.add_setter(&split, "collapsed", Some(&true.to_value()));
-            medium.add_setter(&split, "show-sidebar", Some(&false.to_value()));
             let narrow = adw::Breakpoint::new(
                 adw::BreakpointCondition::parse("max-width: 620sp").expect("valid breakpoint"),
             );
-            narrow.add_setter(&split, "collapsed", Some(&true.to_value()));
-            narrow.add_setter(&split, "show-sidebar", Some(&false.to_value()));
             narrow.add_setter(&nav, "collapsed", Some(&true.to_value()));
-            narrow.add_setter(&assistant_split, "collapsed", Some(&true.to_value()));
-            medium.add_setter(&assistant_split, "collapsed", Some(&true.to_value()));
             let (on, off) = (Rc::clone(&conversation), Rc::clone(&conversation));
             let (calendar_on, calendar_off) = (Rc::clone(&calendar), Rc::clone(&calendar));
             narrow.connect_apply(move |_| {
@@ -740,7 +762,6 @@ impl MainWindow {
             let (calendar_on, calendar_off) = (Rc::clone(&calendar), Rc::clone(&calendar));
             medium.connect_apply(move |_| calendar_on.set_compact(true));
             medium.connect_unapply(move |_| calendar_off.set_compact(false));
-            window.add_breakpoint(wide);
             window.add_breakpoint(medium);
             window.add_breakpoint(narrow);
 
@@ -822,9 +843,12 @@ impl MainWindow {
             }
         });
         let weak = Rc::downgrade(&window);
-        window.assistant_split.connect_show_sidebar_notify(move |_| {
+        window.assistant_split.connect_show_sidebar_notify(move |split| {
             if let Some(win) = weak.upgrade() {
                 win.sync_assistant_toggle();
+            }
+            if let Some(room) = split.parent().and_downcast::<room::Room>() {
+                room.rearrange();
             }
         });
         let weak = Rc::downgrade(&window);
@@ -2872,9 +2896,7 @@ impl MainWindow {
     }
 
     /// Shows or hides the assistant toggle in the reading pane's and the
-    /// calendar's headers, and keeps it pressed with the panel (R12). The
-    /// calendar's own header narrows while the panel takes room beside
-    /// it, the same way it does at the window's compact width.
+    /// calendar's headers, and keeps it pressed with the panel (R12).
     fn sync_assistant_toggle(&self) {
         let panel_open = self.assistant_split.shows_sidebar();
         let state =
@@ -2886,11 +2908,6 @@ impl MainWindow {
             button.set_visible(state.visible);
             button.set_active(state.pressed);
         }
-        // Collapsed, the panel floats over the calendar rather than
-        // pushing it, so the card keeps its own width and needs no
-        // narrowing.
-        self.calendar
-            .set_assistant_beside(state.pressed && !self.assistant_split.is_collapsed());
     }
 
     /// True when the focus is in the message itself, where Ctrl+A selects text.
@@ -3485,6 +3502,38 @@ fn still_there(mailbox: &Mailbox, data: &[(Account, Vec<Label>)]) -> bool {
             .account()
             .is_none_or(|id| data.iter().any(|(a, _)| a.id == id)),
     }
+}
+
+/// Wraps the assistant's split view in a [`room::Room`] that folds the
+/// mailboxes and lays the assistant over the space as the window's width
+/// requires, from what `needs` measures.
+fn arranged_room(
+    split: &adw::OverlaySplitView,
+    assistant_split: &adw::OverlaySplitView,
+    needs: impl Fn() -> room::Needs + 'static,
+) -> room::Room {
+    let open = assistant_split.downgrade();
+    let decide = move |width: i32| {
+        let panel_open = open.upgrade().is_some_and(|s| s.shows_sidebar());
+        room::arrange(width, panel_open, needs())
+    };
+    let (split_weak, assistant_weak) = (split.downgrade(), assistant_split.downgrade());
+    let apply = move |arranged: room::Arrangement| {
+        if let Some(split) = split_weak.upgrade()
+            && split.is_collapsed() != arranged.mailboxes_fold
+        {
+            split.set_collapsed(arranged.mailboxes_fold);
+            split.set_show_sidebar(!arranged.mailboxes_fold);
+        }
+        if let Some(assistant) = assistant_weak.upgrade() {
+            let width = f64::from(arranged.panel_width);
+            assistant.set_max_sidebar_width(width.max(assistant.min_sidebar_width()));
+            assistant.set_min_sidebar_width(width);
+            assistant.set_max_sidebar_width(width);
+            assistant.set_collapsed(arranged.panel_overlays);
+        }
+    };
+    room::Room::new(assistant_split, decide, apply)
 }
 
 #[cfg(test)]

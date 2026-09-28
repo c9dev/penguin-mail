@@ -223,6 +223,9 @@ pub struct ConversationView {
     /// with `set_detached`, since a conversation of its own has no
     /// assistant panel to open.
     pub assistant_toggle: gtk::ToggleButton,
+    /// The bar of buttons above the conversation, the widest part the
+    /// pane cannot shrink.
+    header: adw::HeaderBar,
     many: adw::StatusPage,
     many_read: gtk::Button,
     many_star: gtk::Button,
@@ -675,6 +678,7 @@ impl ConversationView {
             page,
             label_button,
             assistant_toggle,
+            header: header.clone(),
             many,
             many_read,
             many_star,
@@ -928,6 +932,13 @@ impl ConversationView {
             child = widget.next_sibling();
         }
         None
+    }
+
+    /// The narrowest the pane can go, its bar of buttons, without and
+    /// then with the window's buttons (`ui::header_least`). The message
+    /// itself reflows to any width.
+    pub fn least_width(&self) -> (i32, i32) {
+        crate::ui::header_least(&self.header)
     }
 
     /// Words the Labels button and its menu item for how the accounts in

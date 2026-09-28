@@ -249,6 +249,12 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Fixed
 
+- The assistant's panel no longer runs off the right edge of a smaller
+  window. The mailboxes fold away to make room for it, and in a window
+  too narrow for both, the panel slides over the mail instead.
+- The calendar's Day, Week and Month switch keeps its full width on a
+  smaller screen. The week number, the year and the search button make
+  way for it instead.
 - The assistant stays closed when a narrowed window grows wide again,
   where it used to open by itself.
 - Always Allow on a skill's command allows that one command. It used
