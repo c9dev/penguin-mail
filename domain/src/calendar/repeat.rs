@@ -171,6 +171,28 @@ fn days_text(days: &[Weekday]) -> String {
 }
 
 impl Repeat {
+    /// What this choice becomes once the event's start date moves to
+    /// `new_day`, for the Repeats row to carry the person's choice
+    /// across a start date they change after picking it. Every choice
+    /// but `MonthlyByDay` means the same thing whatever the date, so it
+    /// carries over untouched (`EveryWeek`'s own weekday, for one,
+    /// already follows the day it is asked to write a rule for, in
+    /// [`Repeat::rule`]). A `MonthlyByDay` is a fact about a date, not a
+    /// rule of its own: its ordinal and weekday are worked out again for
+    /// `new_day` ([`ordinal_of`]), and its "last" ordinal (-1) falls
+    /// back to the plain one when `new_day` no longer falls in its
+    /// month's last week ([`in_last_week`]), since "the last Tuesday"
+    /// would otherwise name a Tuesday that is not `new_day`'s own.
+    pub fn carried(&self, new_day: NaiveDate) -> Repeat {
+        match self {
+            Repeat::MonthlyByDay(-1, _) if in_last_week(new_day) => {
+                Repeat::MonthlyByDay(-1, new_day.weekday())
+            }
+            Repeat::MonthlyByDay(_, _) => Repeat::MonthlyByDay(ordinal_of(new_day), new_day.weekday()),
+            other => other.clone(),
+        }
+    }
+
     /// The `RRULE` line for a series whose first occurrence falls on `day`
     /// in `zone`, or `None` for one that does not repeat.
     pub fn rule(&self, day: NaiveDate, zone: Tz, all_day: bool) -> Option<String> {
@@ -598,5 +620,57 @@ mod tests {
         let rules = vec!["RRULE:FREQ=MONTHLY;BYDAY=2TU".to_string()];
         let second_tuesday = NaiveDate::from_ymd_opt(2026, 9, 8).unwrap();
         assert!(names_weekdays(&rules, second_tuesday, Lisbon));
+    }
+
+    #[test]
+    fn a_plain_choice_carries_to_a_new_date_unchanged() {
+        let new_day = NaiveDate::from_ymd_opt(2026, 10, 5).unwrap();
+        for repeat in [
+            Repeat::Never,
+            Repeat::EveryDay,
+            Repeat::EveryWeekday,
+            Repeat::EveryWeek,
+            Repeat::EveryMonth,
+            Repeat::EveryYear,
+        ] {
+            assert_eq!(repeat.carried(new_day), repeat);
+        }
+    }
+
+    #[test]
+    fn a_monthly_ordinal_choice_follows_the_new_date_s_own_position() {
+        // 23 September 2026, the fourth Wednesday, moved to 5 October
+        // 2026, the first Monday of its own month.
+        let choice = Repeat::MonthlyByDay(4, Weekday::Wed);
+        let new_day = NaiveDate::from_ymd_opt(2026, 10, 5).unwrap();
+        assert_eq!(choice.carried(new_day), Repeat::MonthlyByDay(1, Weekday::Mon));
+    }
+
+    #[test]
+    fn the_last_choice_stays_last_while_the_new_date_is_still_in_the_last_week() {
+        // The last Wednesday of September moved to 30 October, the last
+        // Friday of October: still in the last week, so "last" survives,
+        // and the weekday follows the new date, not the old one.
+        let choice = Repeat::MonthlyByDay(-1, Weekday::Wed);
+        let new_day = NaiveDate::from_ymd_opt(2026, 10, 30).unwrap();
+        assert_eq!(choice.carried(new_day), Repeat::MonthlyByDay(-1, Weekday::Fri));
+    }
+
+    #[test]
+    fn the_last_choice_falls_back_to_the_plain_ordinal_off_the_last_week() {
+        // The last Wednesday of September moved to 7 October, the first
+        // Wednesday of October: "last" no longer applies to this date.
+        let choice = Repeat::MonthlyByDay(-1, Weekday::Wed);
+        let new_day = NaiveDate::from_ymd_opt(2026, 10, 7).unwrap();
+        assert_eq!(choice.carried(new_day), Repeat::MonthlyByDay(1, Weekday::Wed));
+    }
+
+    #[test]
+    fn custom_and_kept_choices_carry_to_a_new_date_unchanged() {
+        let new_day = NaiveDate::from_ymd_opt(2026, 10, 5).unwrap();
+        let custom = custom(2, Frequency::Weekly, &[Weekday::Mon], Ends::Never);
+        assert_eq!(custom.carried(new_day), custom);
+        let kept = Repeat::Kept("RRULE:FREQ=MONTHLY;BYDAY=1MO,3MO".into());
+        assert_eq!(kept.carried(new_day), kept);
     }
 }
