@@ -56,7 +56,7 @@ fn guests_shown(guests: &[Guest], limit: usize) -> (&[Guest], usize) {
     }
 }
 
-type OnAnswer = dyn Fn(Answer);
+type OnAnswer = dyn Fn(Answer, Option<String>);
 type OnEdit = dyn Fn();
 
 pub struct EventPopover {
@@ -104,6 +104,13 @@ pub struct EventPopover {
     answer_box: gtk::Box,
     answer_buttons: Vec<(Answer, gtk::Button)>,
     on_answer: RefCell<Option<Rc<OnAnswer>>>,
+    /// "Add a note", under the answer buttons: words the organizer reads
+    /// with the answer. Emptied each time the popover opens.
+    note: gtk::Entry,
+    /// "Propose a New Time", for a guest of a timed event with an
+    /// organizer to ask.
+    propose_row: gtk::Button,
+    on_propose: RefCell<Option<Box<dyn Fn()>>>,
     /// "Open the invitation in Mail", shown only for an event this popover
     /// has found the mail for.
     mail_row: gtk::Button,
@@ -267,6 +274,26 @@ impl EventPopover {
             })
             .collect();
 
+        let note = gtk::Entry::builder()
+            .placeholder_text(gettext("Add a note"))
+            .max_length(500)
+            .css_classes(["popover-note"])
+            .build();
+        crate::ui::describe(&note, &gettext("Note with your answer"), &gettext("The organizer reads it with your answer"));
+
+        let propose_label = gtk::Label::builder()
+            .xalign(0.0)
+            .wrap(true)
+            .hexpand(true)
+            .label(gettext("Propose a New Time"))
+            .build();
+        let propose_row = gtk::Button::builder()
+            .child(&row_with_icon("penguin-mail-calendar-symbolic", &propose_label, false))
+            .css_classes(["flat", "popover-open-mail"])
+            .visible(false)
+            .build();
+        crate::ui::name(&propose_row, &gettext("Propose a New Time"));
+
         // "Open the invitation in Mail", under the answer row, only for
         // an event that arrived by mail; an icon-and-text link
         // rather than a filled pill, as the mockup draws it.
@@ -312,6 +339,8 @@ impl EventPopover {
             rows.upcast_ref(),
             join.upcast_ref(),
             answer_box.upcast_ref(),
+            note.upcast_ref(),
+            propose_row.upcast_ref(),
             mail_row.upcast_ref(),
         ] {
             content.append(widget);
@@ -368,6 +397,9 @@ impl EventPopover {
             answer_box,
             answer_buttons,
             on_answer: RefCell::new(None),
+            note,
+            propose_row,
+            on_propose: RefCell::new(None),
             mail_row,
             on_mail: RefCell::new(None),
             showing: RefCell::new(None),
@@ -430,8 +462,9 @@ impl EventPopover {
                 // Cloned out so the borrow ends before the callback runs,
                 // which may open the popover again and replace it.
                 let f = this.on_answer.borrow().clone();
+                let note = Some(this.note.text().trim().to_string()).filter(|n| !n.is_empty());
                 if let Some(f) = f {
-                    f(answer);
+                    f(answer, note);
                 }
                 this.popover.popdown();
             });
@@ -450,6 +483,15 @@ impl EventPopover {
             let Some(this) = weak.upgrade() else { return };
             this.popover.popdown();
             let f = this.on_delete.borrow_mut().take();
+            if let Some(f) = f {
+                f();
+            }
+        });
+        let weak = Rc::downgrade(&this);
+        this.propose_row.connect_clicked(move |_| {
+            let Some(this) = weak.upgrade() else { return };
+            this.popover.popdown();
+            let f = this.on_propose.borrow_mut().take();
             if let Some(f) = f {
                 f();
             }
@@ -501,15 +543,18 @@ impl EventPopover {
 
     /// Shows the popover for `o`, pointed at `anchor` (the block or "N
     /// more" button pressed). `on_answer` runs when a guest picks Yes,
-    /// Maybe or No; it covers the whole series, since Google answers a
-    /// series by its uid, and the caller sends it through
-    /// `Invitations::answer_event`.
+    /// Maybe or No, with the note they wrote; the caller asks which
+    /// occurrences it covers and sends it through
+    /// `Invitations::answer_event`. `on_propose`, when given, puts
+    /// "Propose a New Time" under the answers.
+    #[expect(clippy::too_many_arguments, reason = "each is a separate door the popover opens")]
     pub fn show(
         self: &Rc<Self>,
         anchor: &gtk::Widget,
         o: &Occurrence,
         calendar: &mailrs_domain::calendar::Calendar,
-        on_answer: impl Fn(Answer) + 'static,
+        on_answer: impl Fn(Answer, Option<String>) + 'static,
+        on_propose: Option<Box<dyn Fn()>>,
         on_edit: Option<Box<dyn Fn()>>,
         on_delete: Option<(draft::Removal, Box<dyn Fn()>)>,
     ) {
@@ -591,6 +636,10 @@ impl EventPopover {
 
         let guest = draft::limited(event);
         self.answer_box.set_visible(guest);
+        self.note.set_visible(guest);
+        self.note.set_text("");
+        self.propose_row.set_visible(guest && on_propose.is_some());
+        self.on_propose.replace(on_propose);
         // The current answer is filled; with none yet, Yes is, as the
         // mockup draws an invitation still waiting. A screen reader hears
         // which one is the answer, or that there is none yet.

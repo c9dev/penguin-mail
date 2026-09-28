@@ -17,6 +17,9 @@ pub enum Action {
     /// Any other change in the editor.
     Edit,
     Delete,
+    /// A guest's Yes, Maybe or No. Only the organizer hears of it, so
+    /// it asks which occurrences it covers and nothing about the guests.
+    Answer,
 }
 
 /// What the dialog asks. Built by [`question`], which answers `None`
@@ -96,11 +99,11 @@ pub fn adds_guests(before: &[Guest], after: &[Guest]) -> bool {
 /// their invitation.
 pub fn question(action: Action, scopes: &[RepeatScope], guests: &[Guest], change: Change) -> Option<Question> {
     let seen = action != Action::Edit || change.seen;
-    let guests_hear = has_other_guests(guests) && seen;
+    let guests_hear = action != Action::Answer && has_other_guests(guests) && seen;
     let ask_guests = guests_hear && !change.adds_guests;
     let needed = match action {
         Action::Move => true,
-        Action::Delete | Action::Edit => !scopes.is_empty() || ask_guests,
+        Action::Delete | Action::Edit | Action::Answer => !scopes.is_empty() || ask_guests,
     };
     needed.then(|| Question {
         action,
@@ -179,6 +182,7 @@ pub fn responses(question: &Question) -> Vec<Response> {
             Action::Move => gettext("Move"),
             Action::Edit => gettext("Save"),
             Action::Delete => gettext("Delete"),
+            Action::Answer => gettext("Send"),
         };
         out.push(Response { id: "go", label, look: doing });
     }
@@ -243,6 +247,8 @@ fn heading(question: &Question, title: &str) -> String {
         (Action::Delete, false) => gettext("Delete a repeating event"),
         (Action::Edit, true) => fill(&gettext("Save changes to “{title}”?"), &[("title", title)]),
         (Action::Edit, false) => gettext("Change a repeating event"),
+        (Action::Answer, true) => fill(&gettext("Answer “{title}”?"), &[("title", title)]),
+        (Action::Answer, false) => gettext("Answer a repeating event"),
     }
 }
 
@@ -370,6 +376,20 @@ mod tests {
         assert!(!scope_options(&q));
         assert_eq!(ids(&q), ["cancel", "this", "following", "all"]);
         assert_eq!(answer(&q, "all", None, true), Some(Answer { scope: Some(RepeatScope::All), notify: Notify::Guests, keep_time: false }));
+    }
+
+    #[test]
+    fn answering_a_repeating_invitation_offers_this_event_or_all_events() {
+        let q = question(Action::Answer, &[RepeatScope::This, RepeatScope::All], &[ann()], Change::default()).unwrap();
+        assert_eq!(ids(&q), ["cancel", "this", "all"]);
+        assert!(!q.ask_guests, "only the organizer hears an answer");
+        assert_eq!(answer(&q, "this", None, true).and_then(|a| a.scope), Some(RepeatScope::This));
+        assert_eq!(answer(&q, "all", None, true).and_then(|a| a.scope), Some(RepeatScope::All));
+    }
+
+    #[test]
+    fn answering_a_one_off_invitation_asks_nothing() {
+        assert_eq!(question(Action::Answer, &[], &[ann()], Change::default()), None);
     }
 
     #[test]

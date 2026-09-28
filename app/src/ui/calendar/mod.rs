@@ -93,6 +93,9 @@ pub struct Hooks {
     /// Starts a calendar sync for every account now, the same pass the
     /// timer runs every 15 seconds. The Refresh action's own trigger.
     pub refresh: Box<dyn Fn()>,
+    /// Asks the organizer of an event the account is a guest of for
+    /// another time, through the invitation card's own Propose New Time.
+    pub propose: Box<dyn Fn(AccountId, Occurrence)>,
 }
 
 
@@ -1870,15 +1873,29 @@ impl CalendarView {
             }) as Box<dyn Fn()>;
             (b.removal, run)
         });
+        // A proposal moves a meeting's time, so a whole-day event and one
+        // with nobody to ask get no door to it.
+        let proposable = !o.event.all_day
+            && (o.event.organizer.is_some() || o.event.guests.iter().any(|g| g.organizer && !g.me));
+        let propose_view = Rc::downgrade(self);
+        let propose_o = o.clone();
+        let on_propose = proposable.then(|| {
+            Box::new(move || {
+                if let Some(view) = propose_view.upgrade() {
+                    (view.hooks.propose)(propose_o.account_id, propose_o.clone());
+                }
+            }) as Box<dyn Fn()>
+        });
         self.popover.show(
             anchor,
             o,
             &calendar,
-            move |answer| {
+            move |answer, note| {
                 if let Some(view) = weak.upgrade() {
-                    view.answer(occurrence.clone(), answer);
+                    view.answer(occurrence.clone(), answer, note);
                 }
             },
+            on_propose,
             on_edit,
             on_delete,
         );
@@ -2184,21 +2201,35 @@ impl CalendarView {
         self.more.popup();
     }
 
-    /// Sends a guest's answer for the whole series, as Google keeps one
-    /// answer per series, then
-    /// reads the copy again so the block shows it.
-    fn answer(self: &Rc<Self>, o: Occurrence, answer: Answer) {
+    /// Sends a guest's answer, with `note` for the organizer. An
+    /// occurrence of a series first asks whether the answer covers this
+    /// event or all of them, as Google Calendar does. The answer goes into
+    /// the calendar's queue, so the block shows it at once and it goes out
+    /// now or once the network is back.
+    fn answer(self: &Rc<Self>, o: Occurrence, answer: Answer, note: Option<String>) {
         let account_id = o.account_id;
         let invitations = self.core.invitations();
         let weak = Rc::downgrade(self);
         let core = Rc::clone(&self.core);
+        let page = self.page.clone();
         glib::spawn_future_local(async move {
+            let offered = series::answer_scopes(&o.event);
+            let scope = match scope::question(scope::Action::Answer, &offered, &[], scope::Change::default()) {
+                Some(question) => match scope::ask(&page, &question, &o.event, None).await {
+                    Some(picked) => picked.scope.unwrap_or(RepeatScope::All),
+                    None => return,
+                },
+                None => RepeatScope::All,
+            };
             let sent = core
-                .call(async move { invitations.answer_event(account_id, &o, answer).await })
+                .call(async move { invitations.answer_event(account_id, &o, answer, scope, note).await })
                 .await;
             let Some(view) = weak.upgrade() else { return };
             match sent {
-                Ok(Permitted::Done(())) => view.reload(),
+                Ok(Permitted::Done(())) => {
+                    view.reload();
+                    (view.hooks.push)(account_id);
+                }
                 Ok(Permitted::NeedsPermission) => (view.hooks.needs_permission)(account_id),
                 Err(err) => (view.hooks.toast)(&with_reason(
                     &gettext("Could not send your answer: {reason}"),
@@ -2207,6 +2238,12 @@ impl CalendarView {
                 )),
             }
         });
+    }
+
+    /// Sends the account's queued calendar changes now, for an answer the
+    /// invitation card queued.
+    pub fn push(&self, account_id: AccountId) {
+        (self.hooks.push)(account_id);
     }
 
     // ---- Making events ---------------------------------------------------
