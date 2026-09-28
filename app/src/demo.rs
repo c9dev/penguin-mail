@@ -1077,8 +1077,8 @@ fn account1_events(now: EpochMillis) -> Vec<CalendarEvent> {
             at_week(monday, 3, 13, 0),
         ),
         timed_event(DESIGN_TEAM, "retro", "Retro", at_week(monday, 4, 16, 30), at_week(monday, 4, 17, 30)),
-        // Next Wednesday is busier than a month cell holds, so the month
-        // shows an "N more" button to open. It sits outside the week the
+        // Next Wednesday is the busiest day, so a short window folds it
+        // into an "N more" button in Month. It sits outside the week the
         // mockup draws.
         timed_event("primary", "sprint-review", "Sprint review", at_week(monday, 9, 11, 0), at_week(monday, 9, 12, 0)),
         timed_event(DESIGN_TEAM, "design-sync", "Design sync", at_week(monday, 9, 14, 0), at_week(monday, 9, 15, 0)),
