@@ -1210,6 +1210,13 @@ impl ConversationView {
         self.card.set_on_calendar(uid, spot);
     }
 
+    /// The hours around the event on the card, from the calendar's copy.
+    /// The card keeps them only while it still shows the invitation `uid`
+    /// names.
+    pub fn strip_arrived(&self, uid: &str, strip: &crate::ui::invitation::strip::Strip) {
+        self.card.set_strip(uid, strip);
+    }
+
     /// Offers Grant Access for the calendar on the card.
     pub fn offer_calendar_access(&self) {
         self.card.offer_calendar_access();

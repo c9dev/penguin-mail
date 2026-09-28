@@ -10,8 +10,9 @@ use std::collections::HashMap;
 use std::rc::{Rc, Weak};
 
 use gtk::glib;
-use mailrs_domain::invitation::Invitation;
-use mailrs_domain::{AccountId, FlagColor, MessageBody, MessageMeta, Target, ThreadSummary};
+use mailrs_domain::invitation::{Invitation, When};
+use mailrs_domain::{AccountId, EpochMillis, FlagColor, MessageBody, MessageMeta, Target, ThreadSummary};
+use mailrs_store::calendar::CalendarScope;
 use mailrs_store::outbox::Queued;
 use mailrs_store::{messages, threads, unsubscribes};
 use mailrs_sync::{History, MailAction, Opened, Spot, TriageAction, now_millis};
@@ -28,6 +29,7 @@ use crate::settings::MarkRead;
 use crate::translation::{self, Language, Prose, Translation};
 use crate::ui::conversation::ConversationView;
 use crate::ui::invitation::Showing;
+use crate::ui::invitation::strip::{self, Strip};
 use crate::wanted::Screen;
 
 impl MainWindow {
@@ -456,6 +458,59 @@ impl Effects for Ports {
         })
     }
 
+    fn strip(
+        &self,
+        account_id: AccountId,
+        invitation: Invitation,
+        at: Option<EpochMillis>,
+    ) -> Answer<'_, Result<Option<Strip>, String>> {
+        Box::pin(async move {
+            let Some(When::At { starts_at, ends_at }) = invitation.when else {
+                return Ok(None);
+            };
+            // An invitation with no end runs an hour, as the clash line
+            // assumes. A series keeps its length on the occurrence the
+            // calendar found.
+            let length = ends_at.unwrap_or(starts_at + 3_600_000) - starts_at;
+            let start = at.unwrap_or(starts_at);
+            let end = start + length;
+            let Some(span) = strip::window(start, &chrono::Local) else {
+                return Ok(None);
+            };
+            let read = (span.0.min(start), span.1.max(end));
+            let found = self
+                .core
+                .read(move |c| {
+                    if !mailrs_store::calendar::synced(c, account_id)? {
+                        return Ok(None);
+                    }
+                    let around = mailrs_store::calendar::occurrences(
+                        c,
+                        &[account_id],
+                        read.0,
+                        read.1,
+                        CalendarScope::Owned,
+                    )?;
+                    let colours: HashMap<String, String> =
+                        mailrs_store::calendar::calendars(c, account_id)?
+                            .into_iter()
+                            .map(|calendar| (calendar.id, calendar.color))
+                            .collect();
+                    Ok(Some((around, colours)))
+                })
+                .await
+                .map_err(|err| err.to_string())?;
+            Ok(found.map(|(around, colours)| {
+                let asked = strip::Asked {
+                    uid: &invitation.uid,
+                    start,
+                    end,
+                };
+                strip::build(&asked, span, &around, &colours, &chrono::Local)
+            }))
+        })
+    }
+
     fn flag_color(
         &self,
         account_id: AccountId,
@@ -562,6 +617,10 @@ impl Effects for Ports {
 
     fn on_calendar_known(&self, uid: String, spot: Spot) {
         self.view.found_on_calendar(&uid, spot);
+    }
+
+    fn strip_known(&self, uid: String, strip: Strip) {
+        self.view.strip_arrived(&uid, &strip);
     }
 
     fn start_engines(&self) {

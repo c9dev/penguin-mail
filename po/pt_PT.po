@@ -7741,6 +7741,32 @@ msgstr "Marcar como não sendo spam"
 msgid "Move to {folder}"
 msgstr "Mover para {folder}"
 
+msgid "Your morning"
+msgstr "A sua manhã"
+
+msgid "Your afternoon"
+msgstr "A sua tarde"
+
+msgid "Your evening"
+msgstr "A sua noite"
+
+msgid "Nothing else at that hour"
+msgstr "Nada mais a essa hora"
+
+msgid "Clashes with {event}"
+msgstr "Coincide com {event}"
+
+msgid "Clashes with {event} and {other}"
+msgstr "Coincide com {event} e {other}"
+
+msgid "Clashes with {event} and {count} more"
+msgid_plural "Clashes with {event} and {count} more"
+msgstr[0] "Coincide com {event} e mais {count}"
+msgstr[1] "Coincide com {event} e mais {count}"
+
+msgid "This meeting"
+msgstr "Esta reunião"
+
 #~ msgid "to {recipients}"
 #~ msgstr "para {recipients}"
 

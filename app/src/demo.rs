@@ -1025,8 +1025,8 @@ fn account0_events(now: EpochMillis) -> Vec<CalendarEvent> {
 /// The second demo account's week: the weekday Stand-up and the rest of
 /// its own doings on Work, the Design team's own meetings, and, on the
 /// Work calendar, the two invitation-linked events under the same UIDs
-/// the sample mail carries, plus "Design crit" so the design review's
-/// card shows a clash. The invitations' events sit there alone, so the
+/// the sample mail carries, with lunch and a retro either side of the
+/// design review for its card's day strip. The invitations' events sit there alone, so the
 /// week holds no second "Sprint planning". Titles, times and calendars
 /// otherwise follow the approved mockup (`calendar-mockup/mockups.py`),
 /// for the week it draws (Monday to Sunday).
@@ -1120,9 +1120,9 @@ fn account1_events(now: EpochMillis) -> Vec<CalendarEvent> {
         ..CalendarEvent::default()
     });
 
-    // The design review invitation's own event, still unanswered, and
-    // "Design crit" overlapping it, so the card reads "You have Design
-    // crit then."
+    // The design review invitation's own event, still unanswered, with
+    // lunch before it and the retro after, so the card's day strip reads
+    // as the mockup draws it: the hour free, a neighbour on each side.
     let sent = chrono::DateTime::from_timestamp_millis(now).unwrap_or_default();
     let start = next_tuesday(sent.with_timezone(&chrono::Local));
     let design_review_start = start.timestamp_millis();
@@ -1139,6 +1139,8 @@ fn account1_events(now: EpochMillis) -> Vec<CalendarEvent> {
         end: design_review_start + 45 * 60_000,
         zone: LISBON.into(),
         title: "Offline editor design review".into(),
+        // Purple, as the mockup's card draws the meeting's bar.
+        color: Some("#9141ac".into()),
         place: "Meeting Room 2, Fernwood HQ".into(),
         description: "Agenda in the deck. Bring questions about conflict resolution.".into(),
         busy: true,
@@ -1163,16 +1165,26 @@ fn account1_events(now: EpochMillis) -> Vec<CalendarEvent> {
         ..CalendarEvent::default()
     });
     events.push(CalendarEvent {
-        calendar: "primary".into(),
-        id: "design-crit".into(),
-        uid: "design-crit@local".into(),
-        start: design_review_start + 15 * 60_000,
-        end: design_review_start + 75 * 60_000,
-        zone: LISBON.into(),
-        title: "Design crit".into(),
-        busy: true,
-        status: CalendarStatus::Confirmed,
-        ..CalendarEvent::default()
+        color: Some("#e8660c".into()),
+        ..timed_event(
+            "primary",
+            "lunch-with-ana",
+            "Lunch with Ana",
+            design_review_start - 120 * 60_000,
+            design_review_start - 60 * 60_000,
+        )
+    });
+    // On Work in the Design team's purple: the strip, like the clash
+    // line, counts only the calendars the account owns.
+    events.push(CalendarEvent {
+        color: Some("#9141ac".into()),
+        ..timed_event(
+            "primary",
+            "design-retro",
+            "Retro",
+            design_review_start + 90 * 60_000,
+            design_review_start + 150 * 60_000,
+        )
     });
 
     // Quarterly review, on the Design team calendar, still waiting for an
@@ -2253,7 +2265,7 @@ mod tests {
             "{events:?}"
         );
         assert!(
-            events.iter().any(|(title, calendar, _)| title == "Design crit" && calendar == "primary"),
+            events.iter().any(|(title, calendar, _)| title == "Lunch with Ana" && calendar == "primary"),
             "{events:?}"
         );
         assert_eq!(
