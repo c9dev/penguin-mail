@@ -13,9 +13,10 @@ use gtk::{gdk, glib, graphene, gsk, pango};
 use mailrs_domain::{AccountId, EpochMillis};
 use mailrs_domain::calendar::{Event, Occurrence};
 use mailrs_domain::invitation::Answer;
-use mailrs_domain::translate::{date_locale, fill, gettext};
+use mailrs_domain::translate::{fill, gettext};
 
 use crate::ui;
+use crate::ui::calendar::drag;
 use crate::ui::calendar::tint;
 
 /// An occurrence under this many milliseconds puts its time on the
@@ -128,13 +129,20 @@ impl EventBlock {
         ui::describe(&button, &name, &description(event));
         button.set_tooltip_text(Some(&name));
 
-        // A popover that does not auto-hide takes the second click of a
-        // double click for itself (`popover.rs`), so this gesture is what
-        // notices it, over the button's own single-click activation.
-        let double = gtk::GestureClick::builder().button(gdk::BUTTON_PRIMARY).build();
+        // Capture phase, so this sees the second press before the
+        // button's own click gesture does, and claims it: unclaimed, that
+        // second press still completes an ordinary click once it
+        // releases, firing the button's own `clicked` a second time and
+        // reopening the popover the first click already showed, behind
+        // the editor this gesture is about to open.
+        let double = gtk::GestureClick::builder()
+            .button(gdk::BUTTON_PRIMARY)
+            .propagation_phase(gtk::PropagationPhase::Capture)
+            .build();
         let on_double = Rc::clone(&on_edit);
-        double.connect_pressed(move |_, n_press, _, _| {
-            if n_press == 2 {
+        double.connect_pressed(move |gesture, n_press, _, _| {
+            if drag::opens_editor(n_press) {
+                gesture.set_state(gtk::EventSequenceState::Claimed);
                 on_double();
             }
         });
@@ -296,18 +304,14 @@ pub(super) fn description(event: &Event) -> String {
     }
 }
 
-/// "10:00" in `zone`'s local time, the same pattern the rest of the app
-/// clocks a moment with.
+/// "10:00" or "10:00 AM" in `zone`'s local time, in the clock
+/// [`crate::clock_format::current`] names.
 fn clock<Z: TimeZone>(at: EpochMillis, zone: &Z) -> String
 where
     Z::Offset: std::fmt::Display,
 {
     DateTime::<Utc>::from_timestamp_millis(at)
-        .map(|utc| {
-            utc.with_timezone(zone)
-                .format_localized(&gettext("%H:%M"), date_locale())
-                .to_string()
-        })
+        .map(|utc| crate::clock_format::time_text(utc.with_timezone(zone).time()))
         .unwrap_or_default()
 }
 

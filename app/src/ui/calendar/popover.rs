@@ -4,8 +4,9 @@
 //! block a reload later destroys would leave it dangling, so the view
 //! keeps one, parented to itself, and points it at whichever block was
 //! pressed with `set_pointing_to`. Edit and Delete sit in the title row
-//! for an event the account may change as a whole; an invitation, which
-//! the mockup draws, gets neither.
+//! for an event the account may change as a whole. An invitation gets
+//! Edit, for the guest's own reminders, colour and busy, and Remove,
+//! which takes it off this account's calendar alone.
 //!
 //! The popover does not auto-hide: a second click of a double click must
 //! reach the card behind it rather than be swallowed as the click that
@@ -22,12 +23,13 @@ use mailrs_domain::calendar::{Event, Guest, Occurrence};
 use mailrs_domain::invitation::Answer;
 use mailrs_domain::translate::gettext;
 
+use super::draft;
 use super::shown::{self, Refocus};
 use super::tint;
 use super::words;
 
-/// Guest names past this many collapse into "and N more", so a meeting
-/// of forty does not fill the tooltip.
+/// Guests past this many collapse behind "Show all", so a meeting of
+/// forty does not fill the popover.
 const MOST_GUESTS_SHOWN: usize = 5;
 
 /// The order the approved design answers in: Yes, Maybe, No.
@@ -43,16 +45,14 @@ fn organizer_name(event: &Event) -> Option<String> {
     event.organizer.clone()
 }
 
-/// Up to `limit` guest names, and how many more there are past it.
-fn guest_names(guests: &[Guest], limit: usize) -> (Vec<String>, usize) {
-    let names: Vec<String> = guests
-        .iter()
-        .map(|guest| guest.name.clone().unwrap_or_else(|| guest.email.clone()))
-        .collect();
-    if names.len() > limit {
-        (names[..limit].to_vec(), names.len() - limit)
+/// Up to `limit` of `guests`, and how many more there are past it, for
+/// the popover's own list: the first few show, and a "Show all" button
+/// covers the rest.
+fn guests_shown(guests: &[Guest], limit: usize) -> (&[Guest], usize) {
+    if guests.len() > limit {
+        (&guests[..limit], guests.len() - limit)
     } else {
-        (names, 0)
+        (guests, 0)
     }
 }
 
@@ -65,6 +65,9 @@ pub struct EventPopover {
     bar: gtk::Box,
     title: gtk::Label,
     when: gtk::Label,
+    /// "Weekly on Wednesday", under the time; empty and hidden for an
+    /// event that does not repeat.
+    repeat_label: gtk::Label,
     edit_button: gtk::Button,
     delete_button: gtk::Button,
     on_edit: RefCell<Option<Box<OnEdit>>>,
@@ -73,10 +76,29 @@ pub struct EventPopover {
     place_row: gtk::Button,
     place_label: gtk::Label,
     place_url: RefCell<String>,
-    /// Who organized the event and how many said yes; the guests' names
-    /// are its tooltip.
+    /// The notes as clickable text, under the place; hidden for an
+    /// event with none. Shows [`words::notes_collapsed`] until
+    /// `notes_more` is pressed, then the notes whole.
+    notes_label: gtk::Label,
+    /// "Show more", under the notes; visible only once
+    /// [`words::notes_need_more`] says the notes overflow the cap.
+    notes_more: gtk::Button,
+    /// The occurrence's own notes, already turned to text, kept so
+    /// `notes_more`'s handler can show them whole without `show` having
+    /// run again.
+    notes: RefCell<String>,
+    /// Who organized the event and how many said yes; `guests_box`
+    /// below it lists each one's own answer.
     people_row: gtk::Box,
     people_label: gtk::Label,
+    /// One row per guest, up to [`MOST_GUESTS_SHOWN`] until
+    /// `guests_more` is pressed.
+    guests_box: gtk::Box,
+    /// "Show all", under `guests_box`; visible only past the cap.
+    guests_more: gtk::Button,
+    /// The occurrence's own guests, kept so `guests_more`'s handler can
+    /// rebuild the list in full without `show` having run again.
+    guests: RefCell<Vec<Guest>>,
     join: gtk::Button,
     conference_url: RefCell<Option<String>>,
     answer_box: gtk::Box,
@@ -124,6 +146,12 @@ impl EventPopover {
             .wrap(true)
             .css_classes(["popover-when"])
             .build();
+        let repeat_label = gtk::Label::builder()
+            .xalign(0.0)
+            .wrap(true)
+            .css_classes(["popover-when"])
+            .visible(false)
+            .build();
         // The bar runs beside both the title and the time, as the
         // mockup draws it.
         let heading = gtk::Box::builder()
@@ -133,13 +161,13 @@ impl EventPopover {
             .build();
         heading.append(&title);
         heading.append(&when);
+        heading.append(&repeat_label);
         head.append(&heading);
 
         // Edit and Delete, right of the title, flat and icon-only, so a
         // popover that has them does not grow past the mockup's width.
-        // Only an event the account may change as a whole gets them;
-        // `show` hides whichever `on_edit` or `on_delete`
-        // comes in `None`.
+        // `show` hides whichever `on_edit` or `on_delete` comes in
+        // `None`, and names the second Remove for a guest.
         let edit_button = gtk::Button::builder()
             .icon_name("document-edit-symbolic")
             .css_classes(["flat"])
@@ -176,11 +204,44 @@ impl EventPopover {
             .tooltip_text(gettext("Open in Maps"))
             .build();
 
+        // The notes sit under the place, indented level with the other
+        // rows' own text, with no icon of their own.
+        let notes_label = gtk::Label::builder()
+            .xalign(0.0)
+            .wrap(true)
+            .wrap_mode(pango::WrapMode::WordChar)
+            .use_markup(true)
+            .visible(false)
+            .margin_start(24)
+            .build();
+        let notes_more = gtk::Button::builder()
+            .label(gettext("Show more"))
+            .css_classes(["flat", "popover-more"])
+            .halign(gtk::Align::Start)
+            .margin_start(24)
+            .visible(false)
+            .build();
+        crate::ui::name(&notes_more, &gettext("Show more of the notes"));
+
         let people_label = gtk::Label::builder()
             .xalign(0.0)
             .wrap(true)
             .build();
         let people_row = icon_row("penguin-mail-people-symbolic", &people_label);
+        // Each row carries its own answer icon, level with the people
+        // row's own, so the list needs no extra indent of its own.
+        let guests_box = gtk::Box::builder()
+            .orientation(gtk::Orientation::Vertical)
+            .spacing(6)
+            .build();
+        let guests_more = gtk::Button::builder()
+            .label(gettext("Show all"))
+            .css_classes(["flat", "popover-more"])
+            .halign(gtk::Align::Start)
+            .margin_start(24)
+            .visible(false)
+            .build();
+        crate::ui::name(&guests_more, &gettext("Show all guests"));
 
         let join = gtk::Button::builder()
             .css_classes(["popover-join"])
@@ -231,7 +292,11 @@ impl EventPopover {
             .build();
         rows.append(&calendar_row);
         rows.append(&place_row);
+        rows.append(&notes_label);
+        rows.append(&notes_more);
         rows.append(&people_row);
+        rows.append(&guests_box);
+        rows.append(&guests_more);
 
         let content = gtk::Box::builder()
             .orientation(gtk::Orientation::Vertical)
@@ -281,6 +346,7 @@ impl EventPopover {
             bar,
             title,
             when,
+            repeat_label,
             edit_button,
             delete_button,
             on_edit: RefCell::new(None),
@@ -289,8 +355,14 @@ impl EventPopover {
             place_row,
             place_label,
             place_url: RefCell::new(String::new()),
+            notes_label,
+            notes_more,
+            notes: RefCell::new(String::new()),
             people_row,
             people_label,
+            guests_box,
+            guests_more,
+            guests: RefCell::new(Vec::new()),
             join,
             conference_url: RefCell::new(None),
             answer_box,
@@ -324,6 +396,24 @@ impl EventPopover {
         this.place_row.connect_clicked(move |button| {
             let Some(this) = weak.upgrade() else { return };
             open(&this.place_url.borrow(), button);
+        });
+        // A link in the notes opens the same way the place and Join
+        // rows do, not through GTK's own URI opener, which would skip
+        // the `https:` check every other link in the popover keeps to.
+        this.notes_label.connect_activate_link(|label, link| {
+            open(link, label);
+            glib::Propagation::Stop
+        });
+        let weak = Rc::downgrade(&this);
+        this.notes_more.connect_clicked(move |button| {
+            let Some(this) = weak.upgrade() else { return };
+            this.notes_label.set_markup(&words::notes_markup(&this.notes.borrow()));
+            button.set_visible(false);
+        });
+        let weak = Rc::downgrade(&this);
+        this.guests_more.connect_clicked(move |_| {
+            let Some(this) = weak.upgrade() else { return };
+            this.rebuild_guests(usize::MAX);
         });
         let weak = Rc::downgrade(&this);
         this.join.connect_clicked(move |button| {
@@ -421,7 +511,7 @@ impl EventPopover {
         calendar: &mailrs_domain::calendar::Calendar,
         on_answer: impl Fn(Answer) + 'static,
         on_edit: Option<Box<dyn Fn()>>,
-        on_delete: Option<Box<dyn Fn()>>,
+        on_delete: Option<(draft::Removal, Box<dyn Fn()>)>,
     ) {
         let event = &o.event;
         // The mail lookup this event's uid started, if any, is for the
@@ -436,12 +526,23 @@ impl EventPopover {
             .set_css_classes(&["popover-bar", &tint::css_class(colour)]);
         self.title.set_label(&event.title);
         self.when.set_label(&words::when_words(o, &chrono::Local));
+        let zone: chrono_tz::Tz = event.zone.parse().unwrap_or_else(|_| draft::local_zone());
+        let repeats = words::series_words(&event.rules, o.start, zone);
+        self.repeat_label.set_visible(repeats.is_some());
+        self.repeat_label.set_label(repeats.as_deref().unwrap_or_default());
         self.calendar_label.set_label(&calendar.name);
 
         self.edit_button.set_visible(on_edit.is_some());
         self.delete_button.set_visible(on_delete.is_some());
+        let removal = on_delete.as_ref().map_or(draft::Removal::Event, |(removal, _)| *removal);
+        let delete_words = match removal {
+            draft::Removal::Event => gettext("Delete"),
+            draft::Removal::OwnCopy => gettext("Remove from My Calendar"),
+        };
+        self.delete_button.set_tooltip_text(Some(&delete_words));
+        crate::ui::name(&self.delete_button, &delete_words);
         self.on_edit.replace(on_edit);
-        self.on_delete.replace(on_delete);
+        self.on_delete.replace(on_delete.map(|(_, run)| run));
 
         let place_visible = !event.place.is_empty();
         self.place_row.set_visible(place_visible);
@@ -450,6 +551,16 @@ impl EventPopover {
             self.place_url.replace(words::maps_url(&event.place));
             crate::ui::name(&self.place_row, &words::open_place_words(&event.place));
         }
+
+        let notes = mailrs_mime::notes::text(&event.description);
+        let notes_visible = !notes.is_empty();
+        self.notes_label.set_visible(notes_visible);
+        let overflows = notes_visible && words::notes_need_more(&notes);
+        if notes_visible {
+            self.notes_label.set_markup(&words::notes_markup(&words::notes_collapsed(&notes)));
+        }
+        self.notes.replace(notes);
+        self.notes_more.set_visible(overflows);
 
         let organizer = organizer_name(event);
         let people = words::people_words(organizer.as_deref(), &event.guests);
@@ -466,19 +577,10 @@ impl EventPopover {
         }
         self.conference_url.replace(conference.map(str::to_string));
 
-        let (names, more) = guest_names(&event.guests, MOST_GUESTS_SHOWN);
-        let mut guests = names.join(", ");
-        if more > 0 {
-            guests.push_str(", ");
-            guests.push_str(&words::more_guests_words(more));
-        }
-        self.people_row
-            .set_tooltip_text((!guests.is_empty()).then_some(guests.as_str()));
-        if !guests.is_empty() {
-            crate::ui::describe(&self.people_label, &people, &guests);
-        }
+        self.guests.replace(event.guests.clone());
+        self.rebuild_guests(MOST_GUESTS_SHOWN);
 
-        let guest = super::draft::limited(event);
+        let guest = draft::limited(event);
         self.answer_box.set_visible(guest);
         // The current answer is filled; with none yet, Yes is, as the
         // mockup draws an invitation still waiting. A screen reader hears
@@ -535,6 +637,28 @@ impl EventPopover {
         }
     }
 
+    /// Rebuilds `guests_box` from `self.guests`, showing up to `limit`
+    /// of them and a "Show all" button for the rest; `guests_more`'s own
+    /// handler calls this again with `usize::MAX` to reveal the whole
+    /// list.
+    fn rebuild_guests(&self, limit: usize) {
+        while let Some(child) = self.guests_box.first_child() {
+            self.guests_box.remove(&child);
+        }
+        let guests = self.guests.borrow();
+        let (shown, more) = guests_shown(&guests, limit);
+        for guest in shown {
+            self.guests_box.append(&guest_row(guest));
+        }
+        self.guests_more.set_visible(more > 0);
+        if more > 0 {
+            // The button reads "Show all"; a screen reader also hears how
+            // many are still hidden, in the same words the tooltip used
+            // to give before this list replaced it.
+            crate::ui::describe(&self.guests_more, &gettext("Show all guests"), &words::more_guests_words(more));
+        }
+    }
+
     /// Closes the popover, such as when the view's range changes under
     /// it.
     pub fn hide(&self) {
@@ -570,6 +694,26 @@ fn icon_row(icon: &str, label: &gtk::Label) -> gtk::Box {
     row_with_icon(icon, label, true)
 }
 
+/// One guest's own row in the popover's list: their answer as a dim
+/// icon, and their name, or their address when they gave none, with the
+/// organizer marked (`words::guest_name_words`). The icon carries no
+/// name of its own; the row's own accessible name and description
+/// cover both.
+fn guest_row(guest: &Guest) -> gtk::Box {
+    let name = words::guest_name_words(guest);
+    let label = gtk::Label::builder()
+        .xalign(0.0)
+        .hexpand(true)
+        .ellipsize(pango::EllipsizeMode::End)
+        .single_line_mode(true)
+        .label(&name)
+        .build();
+    let row = row_with_icon(words::answer_icon(guest.answer), &label, true);
+    row.set_accessible_role(gtk::AccessibleRole::Group);
+    crate::ui::describe(&row, &name, &words::guest_answer_words(guest));
+    row
+}
+
 /// A row of an icon and `label`. The detail rows dim their icon; the
 /// link into Mail keeps its icon in the link's accent colour, as the
 /// mockup draws it.
@@ -583,4 +727,54 @@ fn row_with_icon(icon: &str, label: &gtk::Label, dim: bool) -> gtk::Box {
     label.set_hexpand(true);
     row.append(label);
     row
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn guest(email: &str) -> Guest {
+        Guest { email: email.to_string(), ..Guest::default() }
+    }
+
+    #[test]
+    fn guests_shown_gives_every_guest_under_the_cap() {
+        let guests = vec![guest("a@example.com"), guest("b@example.com")];
+        let (shown, more) = guests_shown(&guests, 5);
+        assert_eq!(shown.len(), 2);
+        assert_eq!(more, 0);
+    }
+
+    #[test]
+    fn guests_shown_caps_the_list_and_counts_the_rest() {
+        let guests: Vec<Guest> = (0..7).map(|n| guest(&format!("{n}@example.com"))).collect();
+        let (shown, more) = guests_shown(&guests, 5);
+        assert_eq!(shown.len(), 5);
+        assert_eq!(shown[0].email, "0@example.com");
+        assert_eq!(shown[4].email, "4@example.com");
+        assert_eq!(more, 2);
+    }
+
+    #[test]
+    fn organizer_name_prefers_the_marked_guest_over_the_bare_organizer_field() {
+        let event = Event {
+            organizer: Some("bare@example.com".to_string()),
+            guests: vec![Guest {
+                name: Some("Rita Lopes".to_string()),
+                organizer: true,
+                ..Guest::default()
+            }],
+            ..Event::default()
+        };
+        assert_eq!(organizer_name(&event), Some("Rita Lopes".to_string()));
+    }
+
+    #[test]
+    fn organizer_name_falls_back_to_the_bare_field_with_no_guest_marked() {
+        let event = Event {
+            organizer: Some("bare@example.com".to_string()),
+            ..Event::default()
+        };
+        assert_eq!(organizer_name(&event), Some("bare@example.com".to_string()));
+    }
 }

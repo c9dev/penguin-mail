@@ -21,8 +21,8 @@ const AGENDA_STEP: u64 = 30;
 /// here, so settings never has to import from `ui`.
 pub use crate::settings::CalendarView as ViewKind;
 
-/// The days one view of the calendar shows: a single day, a
-/// Monday-to-Sunday week, or a six-week month grid.
+/// The days one view of the calendar shows: a single day, a week running
+/// from the locale's own first weekday, or a six-week month grid.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Range {
     pub kind: ViewKind,
@@ -31,9 +31,10 @@ pub struct Range {
 }
 
 impl Range {
-    /// The range of `kind` that holds `day`. A week runs Monday to
-    /// Sunday; a month is the six weeks (42 days) starting on the
-    /// Monday on or before the 1st, so every row is a full week.
+    /// The range of `kind` that holds `day`. A week runs from the
+    /// locale's own first weekday to the day before it comes round
+    /// again; a month is the six weeks (42 days) starting on that same
+    /// weekday on or before the 1st, so every row is a full week.
     pub fn around(kind: ViewKind, day: NaiveDate) -> Range {
         match kind {
             ViewKind::Day => Range {
@@ -43,14 +44,14 @@ impl Range {
             },
             ViewKind::Week => Range {
                 kind,
-                first: monday_of(day),
+                first: week_start_of(day),
                 days: 7,
             },
             ViewKind::Month => {
                 let first_of_month = day.with_day(1).unwrap_or(day);
                 Range {
                     kind,
-                    first: monday_of(first_of_month),
+                    first: week_start_of(first_of_month),
                     days: 42,
                 }
             }
@@ -173,9 +174,10 @@ pub fn earliest_kept_day(today: NaiveDate) -> NaiveDate {
     today - Days::new((FIRST_READ_BACK / DAY_MS) as u64)
 }
 
-/// The Monday on or before `day`.
-fn monday_of(day: NaiveDate) -> NaiveDate {
-    day - Days::new(u64::from(day.weekday().num_days_from_monday()))
+/// The first day, on or before `day`, of the week the locale's own first
+/// weekday starts.
+fn week_start_of(day: NaiveDate) -> NaiveDate {
+    mailrs_domain::calendar::week::week_start_on_or_before(day, crate::locale_time::first_weekday())
 }
 
 /// The ISO week tag a range's title carries, such as "W39".
@@ -209,6 +211,7 @@ mod tests {
 
     #[test]
     fn a_week_runs_monday_to_sunday() {
+        crate::locale_time::set_first_weekday_for_test(chrono::Weekday::Mon);
         let week = Range::around(ViewKind::Week, d(2026, 9, 23));
         assert_eq!((week.first, week.days), (d(2026, 9, 21), 7));
         assert_eq!(week.next().first, d(2026, 9, 28));
@@ -216,7 +219,15 @@ mod tests {
     }
 
     #[test]
+    fn a_week_follows_the_locales_own_first_weekday() {
+        crate::locale_time::set_first_weekday_for_test(chrono::Weekday::Sun);
+        let week = Range::around(ViewKind::Week, d(2026, 9, 23));
+        assert_eq!((week.first, week.days), (d(2026, 9, 20), 7));
+    }
+
+    #[test]
     fn a_month_is_six_weeks_from_the_monday_before_the_first() {
+        crate::locale_time::set_first_weekday_for_test(chrono::Weekday::Mon);
         let month = Range::around(ViewKind::Month, d(2026, 9, 23));
         assert_eq!((month.first, month.days), (d(2026, 8, 31), 42));
         assert_eq!(month.month(), d(2026, 9, 1));
@@ -226,6 +237,7 @@ mod tests {
 
     #[test]
     fn the_week_title_names_the_month_the_year_and_the_week() {
+        crate::locale_time::set_first_weekday_for_test(chrono::Weekday::Mon);
         let (bold, dim, tag) = Range::around(ViewKind::Week, d(2026, 9, 23)).title();
         assert_eq!(
             (bold.as_str(), dim.as_str(), tag.as_str()),
@@ -235,6 +247,7 @@ mod tests {
 
     #[test]
     fn a_week_across_two_months_names_both() {
+        crate::locale_time::set_first_weekday_for_test(chrono::Weekday::Mon);
         let (bold, _, _) = Range::around(ViewKind::Week, d(2026, 10, 1)).title();
         assert_eq!(bold, "Sep – Oct");
     }
@@ -250,6 +263,7 @@ mod tests {
 
     #[test]
     fn the_month_title_carries_no_week_tag() {
+        crate::locale_time::set_first_weekday_for_test(chrono::Weekday::Mon);
         let (bold, dim, tag) = Range::around(ViewKind::Month, d(2026, 9, 23)).title();
         assert_eq!(
             (bold.as_str(), dim.as_str(), tag.as_str()),

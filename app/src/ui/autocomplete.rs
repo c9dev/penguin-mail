@@ -1,5 +1,6 @@
-//! Recipient suggestions under the composer's address fields. Typing shows
-//! matching correspondents; arrows move, Enter or Tab picks, Esc closes.
+//! Recipient suggestions under the composer's address fields and the event
+//! editor's Guests field. Typing shows matching correspondents; arrows
+//! move, Enter or Tab picks, Esc closes.
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -14,6 +15,10 @@ use crate::contacts::{current_token, suggest};
 /// Shared, replaceable list of people to suggest.
 pub type Contacts = Rc<RefCell<Rc<Vec<Suggestion>>>>;
 
+/// Runs with the field's text once a suggestion is picked, in place of
+/// the field showing it.
+type OnPick = dyn Fn(&str);
+
 const SHOWN: usize = 6;
 
 struct Completion {
@@ -22,10 +27,24 @@ struct Completion {
     list: gtk::ListBox,
     contacts: Contacts,
     shown: RefCell<Vec<Suggestion>>,
+    on_pick: Option<Box<OnPick>>,
 }
 
-/// Adds suggestions to `entry`.
+/// Adds suggestions to `entry`. A pick writes the address into the
+/// field, followed by a comma, for the field to read.
 pub fn attach(entry: &gtk::Entry, contacts: Contacts) {
+    attach_with(entry, contacts, None);
+}
+
+/// Adds suggestions to `entry`, and hands the field's text with the
+/// picked address in it to `on_pick` instead of writing it, for a field
+/// that turns an address into something else at once, such as the event
+/// editor's guest list.
+pub fn attach_picking(entry: &gtk::Entry, contacts: Contacts, on_pick: impl Fn(&str) + 'static) {
+    attach_with(entry, contacts, Some(Box::new(on_pick)));
+}
+
+fn attach_with(entry: &gtk::Entry, contacts: Contacts, on_pick: Option<Box<OnPick>>) {
     let list = gtk::ListBox::builder()
         .selection_mode(gtk::SelectionMode::Single)
         .css_classes(["navigation-sidebar"])
@@ -53,6 +72,7 @@ pub fn attach(entry: &gtk::Entry, contacts: Contacts) {
         list,
         contacts,
         shown: RefCell::new(Vec::new()),
+        on_pick,
     });
 
     let weak = Rc::downgrade(&completion);
@@ -157,25 +177,31 @@ impl Completion {
         self.list.select_row(self.list.row_at_index(next).as_ref());
     }
 
-    /// Replaces what is being typed with suggestion `index`.
+    /// Replaces what is being typed with suggestion `index`, or hands the
+    /// result to `on_pick`.
     fn accept(&self, index: usize) {
         let Some(contact) = self.shown.borrow().get(index).cloned() else {
             return;
         };
-        let text = self.entry.text().to_string();
-        let (start, _) = current_token(&text);
-        let head = text[..start].trim_end();
-        let chosen = format_recipients(&[contact.address()]);
-        let joined = if head.is_empty() {
-            format!("{chosen}, ")
-        } else {
-            format!("{head} {chosen}, ")
-        };
+        let joined = picked_text(&self.entry.text(), &format_recipients(&[contact.address()]));
         self.popover.popdown();
-        self.entry.set_text(&joined);
-        self.entry.set_position(-1);
+        match &self.on_pick {
+            Some(on_pick) => on_pick(&joined),
+            None => {
+                self.entry.set_text(&joined);
+                self.entry.set_position(-1);
+            }
+        }
         self.entry.grab_focus_without_selecting();
     }
+}
+
+/// The field's text once `chosen`, a formatted address, replaces the word
+/// being typed in `text`, followed by a comma for the next one.
+pub fn picked_text(text: &str, chosen: &str) -> String {
+    let (start, _) = current_token(text);
+    let head = text[..start].trim_end();
+    if head.is_empty() { format!("{chosen}, ") } else { format!("{head} {chosen}, ") }
 }
 
 /// Whether typing goes to `entry`. Its inner text widget holds the focus.
@@ -213,4 +239,22 @@ fn row(contact: &Suggestion) -> gtk::ListBoxRow {
         .child(&content)
         .can_focus(false)
         .build()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_pick_replaces_the_word_being_typed() {
+        assert_eq!(picked_text("Lo", "Love <love@example.com>"), "Love <love@example.com>, ");
+    }
+
+    #[test]
+    fn a_pick_keeps_the_addresses_before_it() {
+        assert_eq!(
+            picked_text("ann@example.com, Lo", "Love <love@example.com>"),
+            "ann@example.com, Love <love@example.com>, "
+        );
+    }
 }

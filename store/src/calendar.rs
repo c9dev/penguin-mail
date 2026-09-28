@@ -559,6 +559,12 @@ fn next_after(
         .find(|(start, _)| !replaced.contains(start)))
 }
 
+/// The SQL function that reads an event description the way the editor's
+/// Notes field does, turning Google's HTML into the words it shows
+/// (`mailrs_mime::notes::text`), so a search matches "bread" split by a
+/// `<b>` and never matches a `<br>` tag as the word "br".
+pub const NOTES_TEXT: &str = "penguin_notes_text";
+
 /// Events whose title, place, description or a guest's name or address
 /// holds `text`, matched with full Unicode folding through
 /// [`crate::query::FOLD`] rather than SQLite's ASCII-only `lower`. Each
@@ -567,9 +573,16 @@ fn next_after(
 /// is ahead; or the event's own span. A series and one of its changed
 /// occurrences share a uid and can both match a search on their shared
 /// title; only the earlier coming one of the pair stays. Coming events
-/// sort earliest first, then past ones latest first. Reading stops at
-/// [`MOST_EVENTS`] rows per account before ranking, so a word every
-/// event shares cannot make a search load a whole large calendar.
+/// sort earliest first, then past ones latest first.
+///
+/// Reading stops at [`MOST_EVENTS`] rows per account, so a word every
+/// event shares cannot make a search load a whole large calendar; the
+/// SQL keeps the rows the cap should not drop, ordered ahead of the
+/// rest: a still-running series (its stored span may be its first
+/// occurrence, long past, so any series counts as coming) or an event
+/// whose own span has not ended, soonest first, then past events, most
+/// recent first. The final ranking above still re-sorts what the cap
+/// let through by each match's true next occurrence.
 pub fn search(
     conn: &Connection,
     accounts: &[AccountId],
@@ -584,6 +597,7 @@ pub fn search(
         CalendarScope::Owned => "AND c.access = 'owner'",
     };
     let fold = crate::query::FOLD;
+    let notes_text = NOTES_TEXT;
     let needle = text.to_lowercase();
     // The best-ranked occurrence for one (account, calendar, uid) group,
     // so a series and its own changed occurrence collapse to one result.
@@ -598,12 +612,15 @@ pub fn search(
              LEFT JOIN event_guests g ON g.account_id = e.account_id AND g.calendar = e.calendar AND g.event = e.id \
              WHERE e.account_id = ?1 {calendar_filter} AND e.status <> 'cancelled' AND ( \
                instr({fold}(e.title), ?2) > 0 OR instr({fold}(e.place), ?2) > 0 \
-               OR instr({fold}(e.description), ?2) > 0 OR instr({fold}(g.email), ?2) > 0 \
+               OR instr({fold}({notes_text}(e.description)), ?2) > 0 OR instr({fold}(g.email), ?2) > 0 \
                OR instr({fold}(coalesce(g.name, '')), ?2) > 0) \
+             ORDER BY \
+               CASE WHEN e.rules <> '' OR e.ends_at >= ?3 THEN 0 ELSE 1 END, \
+               CASE WHEN e.rules <> '' OR e.ends_at >= ?3 THEN e.starts_at ELSE -e.starts_at END \
              LIMIT {MOST_EVENTS}"
         ))?;
         let events: Vec<Event> =
-            stmt.query_map(params![account_id, needle], read_event)?.collect::<rusqlite::Result<_>>()?;
+            stmt.query_map(params![account_id, needle, from], read_event)?.collect::<rusqlite::Result<_>>()?;
         for event in events {
             let (start, end) = next_showing(&event, from);
             let past = start < from;
@@ -702,6 +719,8 @@ pub enum ChangeKind {
     /// Change an event the provider already knows to match the body.
     Save,
     Remove,
+    /// Move the event from the row's calendar to the one its body names.
+    Move,
 }
 
 impl ChangeKind {
@@ -710,6 +729,7 @@ impl ChangeKind {
             ChangeKind::Create => "create",
             ChangeKind::Save => "save",
             ChangeKind::Remove => "remove",
+            ChangeKind::Move => "move",
         }
     }
 
@@ -717,6 +737,7 @@ impl ChangeKind {
         match word {
             "create" => ChangeKind::Create,
             "remove" => ChangeKind::Remove,
+            "move" => ChangeKind::Move,
             _ => ChangeKind::Save,
         }
     }
@@ -735,6 +756,8 @@ pub struct QueuedChange {
     /// The version the change was made against; `None` for an event this
     /// computer made, which the provider has never seen.
     pub etag: Option<String>,
+    /// The event to write. For a move, the event as it was, with the
+    /// calendar it moves to; `calendar` above is the one it leaves.
     pub body: Option<Event>,
     /// The `seq` of the change this one goes out after, while that one is
     /// still queued. See [`enqueue_after`].
@@ -790,7 +813,8 @@ pub fn enqueue_after(
 ) -> Result<Option<i64>> {
     let existing: Option<(i64, String, Option<String>)> = conn
         .query_row(
-            "SELECT seq, kind, notify FROM calendar_changes WHERE account_id = ?1 AND calendar = ?2 AND event = ?3",
+            "SELECT seq, kind, notify FROM calendar_changes \
+             WHERE account_id = ?1 AND calendar = ?2 AND event = ?3 AND kind != 'move'",
             params![account_id, event.calendar, event.id],
             |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
         )
@@ -853,7 +877,7 @@ pub fn enqueue_after(
 
     let etag = (!event.etag.is_empty()).then_some(event.etag.as_str());
     let body = match kind {
-        ChangeKind::Create | ChangeKind::Save => Some(json(event)),
+        ChangeKind::Create | ChangeKind::Save | ChangeKind::Move => Some(json(event)),
         ChangeKind::Remove => None,
     };
     conn.execute(
@@ -862,6 +886,50 @@ pub fn enqueue_after(
         params![account_id, event.calendar, event.id, kind.as_str(), etag, body, waits_on, restores, notify.stored()],
     )?;
     Ok(Some(conn.last_insert_rowid()))
+}
+
+/// Queues moving `event`, as it stands on `from`, to the calendar it
+/// names, after the row `waits_on`. The row sits under `from`, so a read
+/// of that calendar leaves the event and a series' changed occurrences
+/// alone until the move goes out. An unsent create of the event on `from`
+/// needs no move, since the provider never heard of it: the row goes, and
+/// the save that follows the move creates the event where it now lives.
+/// Answers the `seq` of the move's row, or `None` for that create.
+pub fn enqueue_move(
+    conn: &Connection,
+    account_id: AccountId,
+    from: &str,
+    event: &Event,
+    waits_on: Option<i64>,
+    notify: Notify,
+) -> Result<Option<i64>> {
+    let dropped = conn.execute(
+        "DELETE FROM calendar_changes WHERE account_id = ?1 AND calendar = ?2 AND event = ?3 AND kind = 'create'",
+        params![account_id, from, event.id],
+    )?;
+    if dropped > 0 {
+        return Ok(None);
+    }
+    let etag = (!event.etag.is_empty()).then_some(event.etag.as_str());
+    conn.execute(
+        "INSERT INTO calendar_changes (account_id, calendar, event, kind, etag, body, waits_on, notify) \
+         VALUES (?1, ?2, ?3, 'move', ?4, ?5, ?6, ?7)",
+        params![account_id, from, event.id, etag, json(event), waits_on, notify.stored()],
+    )?;
+    Ok(Some(conn.last_insert_rowid()))
+}
+
+/// Settles a move that went out: the row comes off the queue, and the
+/// changes of the event waiting on it go out against `new_etag`, the
+/// version the move left. Answers whether one waits, in which case its
+/// own answer, not the move's, belongs in the copy.
+pub fn finish_move(conn: &Connection, seq: i64, id: &str, new_etag: &str) -> Result<bool> {
+    conn.execute("DELETE FROM calendar_changes WHERE seq = ?1", params![seq])?;
+    let waiting = conn.execute(
+        "UPDATE calendar_changes SET etag = ?3 WHERE waits_on = ?1 AND event = ?2",
+        params![seq, id, new_etag],
+    )?;
+    Ok(waiting > 0)
 }
 
 /// Whether the guests hear of a change that folds into one already
@@ -981,11 +1049,12 @@ pub fn pending_ids(conn: &Connection, account_id: AccountId, calendar: &str) -> 
     Ok(rows.collect::<rusqlite::Result<_>>()?)
 }
 
-/// The ids of a calendar's events with an unsent removal. A read keeps a
-/// series' changed occurrences out while the series waits to be removed.
+/// The ids of a calendar's events with an unsent removal or move away. A
+/// read keeps a series' changed occurrences out while the series waits
+/// to leave.
 pub fn removing_ids(conn: &Connection, account_id: AccountId, calendar: &str) -> Result<HashSet<String>> {
     let mut stmt = conn.prepare(
-        "SELECT event FROM calendar_changes WHERE account_id = ?1 AND calendar = ?2 AND kind = 'remove'",
+        "SELECT event FROM calendar_changes WHERE account_id = ?1 AND calendar = ?2 AND kind IN ('remove', 'move')",
     )?;
     let rows = stmt.query_map(params![account_id, calendar], |row| row.get(0))?;
     Ok(rows.collect::<rusqlite::Result<_>>()?)
@@ -1431,6 +1500,34 @@ mod tests {
         assert!(ids("nothing").is_empty());
     }
 
+    /// Google keeps a description as HTML once someone has edited it in
+    /// its own editor, and an inline tag such as `<b>` splits a word
+    /// across two runs of text with nothing between them. Reading the
+    /// description as words, the way the editor's Notes field does
+    /// (`mailrs_mime::notes::text`), joins the runs back into "bread".
+    #[test]
+    fn search_finds_a_word_an_inline_tag_splits() {
+        let (conn, id) = store();
+        let mut planning = event("primary", "planning", MONDAY + 3 * DAY, 1);
+        planning.description = "Br<b>ead</b> for the team".into();
+        save_events(&conn, id, &[planning], 0).unwrap();
+        let found = search(&conn, &[id], "bread", MONDAY, CalendarScope::Shown, 10).unwrap();
+        assert_eq!(found.len(), 1, "a word an inline tag splits must still match once its tags are read as text");
+    }
+
+    /// A `<br>` line break must not itself read as the word "br": the
+    /// tag never reaches the reader as text, only the line break it
+    /// stands for.
+    #[test]
+    fn search_does_not_match_a_br_tag_as_the_word_br() {
+        let (conn, id) = store();
+        let mut sync = event("primary", "sync", MONDAY + 4 * DAY, 1);
+        sync.description = "Notes<br>more notes".into();
+        save_events(&conn, id, &[sync], 0).unwrap();
+        let found = search(&conn, &[id], "br", MONDAY, CalendarScope::Shown, 10).unwrap();
+        assert!(found.is_empty(), "the <br> tag's own name must not match a search for it");
+    }
+
     #[test]
     fn a_search_stops_at_the_requested_limit() {
         let (conn, id) = store();
@@ -1452,6 +1549,25 @@ mod tests {
         save_events(&conn, id, &events, 0).unwrap();
         let found = search(&conn, &[id], "standup", MONDAY, CalendarScope::Shown, 1000).unwrap();
         assert_eq!(found.len(), 500);
+    }
+
+    /// A word every event shares still surfaces what is coming up: the
+    /// row cap must keep the events that matter rather than whichever
+    /// 500 the table scan reaches first. 500 old matches are saved
+    /// before 5 upcoming ones, so an unordered `LIMIT` would fill the
+    /// cap from the old rows alone and never reach the new ones.
+    #[test]
+    fn a_search_keeps_upcoming_events_when_500_past_ones_already_matched() {
+        let (conn, id) = store();
+        let past: Vec<Event> =
+            (0..500).map(|n| event("primary", &format!("standup-old{n}"), MONDAY - (500 - n) * DAY, 1)).collect();
+        save_events(&conn, id, &past, 0).unwrap();
+        let soon: Vec<Event> =
+            (0..5).map(|n| event("primary", &format!("standup-soon{n}"), MONDAY + (n + 1) * DAY, 1)).collect();
+        save_events(&conn, id, &soon, 0).unwrap();
+        let found = search(&conn, &[id], "standup", MONDAY, CalendarScope::Shown, 505).unwrap();
+        let kept_soon = found.iter().filter(|o| o.event.id.starts_with("standup-soon")).count();
+        assert_eq!(kept_soon, 5, "every upcoming match must survive the cap, not just whichever 500 rows came first");
     }
 
     #[test]

@@ -92,6 +92,14 @@ pub fn selection(a: EpochMillis, b: EpochMillis) -> (EpochMillis, EpochMillis) {
     (start, end.max(start + SHORTEST))
 }
 
+/// `at`, kept inside `day`: where a drag across empty time lands when
+/// the pointer strays above the grid's first hour or below its last, or
+/// sideways into another day's column, which stays the day the drag
+/// began in rather than the one the pointer wandered into.
+pub fn clamp_to_day(at: EpochMillis, day: (EpochMillis, EpochMillis)) -> EpochMillis {
+    at.clamp(day.0, day.1)
+}
+
 /// Whether a press that has moved `dx`, `dy` pixels from where it
 /// landed still counts as a click rather than a drag: under
 /// `threshold`, GTK's own tolerance for a press that wanders before
@@ -100,6 +108,14 @@ pub fn selection(a: EpochMillis, b: EpochMillis) -> (EpochMillis, EpochMillis) {
 /// the press, however still the pointer sits by release.
 pub fn is_click(dx: f64, dy: f64, threshold: f64) -> bool {
     dx.hypot(dy) < threshold
+}
+
+/// Whether a press with this `n_press` count opens the editor: the
+/// second press of a double click, over the popover the first press
+/// already opened through the card's own `clicked` signal. A third
+/// press and beyond opens nothing more.
+pub fn opens_editor(n_press: i32) -> bool {
+    n_press == 2
 }
 
 /// Half an hour long.
@@ -297,6 +313,25 @@ mod tests {
         assert!(is_click(2.0, 1.0, 8.0));
         assert!(!is_click(6.0, 6.0, 8.0), "8.49 px of travel passes an 8 px threshold");
         assert!(is_click(0.0, 0.0, 8.0));
+    }
+
+    #[test]
+    fn a_drag_across_empty_time_stays_inside_the_day_it_began_in() {
+        let day = (0, 24 * H);
+        // Past the grid's bottom edge, a day and a half in: clamped to
+        // that day's own midnight, not spilled into the next one.
+        assert_eq!(clamp_to_day(day.1 + 12 * H, day), day.1);
+        // Above the grid's top edge.
+        assert_eq!(clamp_to_day(-3 * H, day), day.0);
+        // Already inside the day: untouched.
+        assert_eq!(clamp_to_day(17 * H + 30 * M, day), 17 * H + 30 * M);
+    }
+
+    #[test]
+    fn only_the_second_press_opens_the_editor() {
+        assert!(!opens_editor(1), "the first press leaves the popover the button's own click opens");
+        assert!(opens_editor(2));
+        assert!(!opens_editor(3), "a third press opens nothing more");
     }
 
     #[test]

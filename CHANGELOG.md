@@ -11,6 +11,13 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   a small "•••" button, as in Gmail; click it to read them in place.
 - An invitation's card shows the hours around the meeting from your
   calendar and says whether anything else is on then.
+- Remove an invitation from your calendar with Remove in its popover or
+  the Delete key. The organizer sees that you declined, and nobody else
+  gets mail about it. Edit in the same popover changes your own
+  reminders, color and busy or free.
+- Move an event to another of your calendars: pick it in the editor's
+  Calendar row and save. A new event from a quick drag can go on any of
+  your calendars too.
 - Penguin Mail comes as a package for Arch Linux: download the
   `.pkg.tar.zst` from the releases page and install it with
   `sudo pacman -U`.
@@ -53,6 +60,10 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   summary, when the assistant is set up.
 - The next event on your calendar shows at the foot of the mail sidebar
   from three hours before it starts; a click opens it in the calendar.
+- An event's popover shows its notes under the place, as readable text
+  with clickable links, and a repeating event says when, such as
+  "Weekly on Wednesday". Its guest list shows every guest's own answer
+  and marks the organizer, with Show all past a few names.
 
 ### Improved
 
@@ -95,9 +106,34 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   Details for the rest.
 - A sparkle button beside More opens the assistant from the reading
   pane, and the calendar's header carries the same button.
+- The Day, Week and Month grids shade the hours and days outside your
+  working hours, which you set in Preferences next to Event Reminders.
+  The assistant's free-time tool now looks inside the same hours.
+- The week starts on the day your locale expects, and every time the
+  calendar shows follows your desktop's clock, 12-hour or 24-hour.
 
 ### Fixed
+- In dark mode, a reply with quoted text shows on the dark page instead of
+  in a white box.
 
+- Picking a contact from the suggestions in an event's Guests field adds
+  the guest at once and empties the field, with a gap above it; the start
+  and end times now stand as tall as the dates beside them.
+- Calendar search keeps the events that matter even when a common word
+  matches hundreds of past ones: upcoming events first, then the most
+  recent past ones, instead of whichever rows happened to load first.
+- Calendar search matches an event's notes as the text they show, not
+  Google's HTML tags: a `<br>` no longer matches a search for "br", and
+  a word a tag splits still matches.
+- The assistant's calendar tools read an event's notes as the text they
+  show, not Google's HTML tags.
+- Calendar search results and the "N more" popover show each event's
+  end time and calendar, not just when it starts.
+- At 700 pixels wide, the calendar's Day, Week and Month switch no
+  longer squeezes its labels into each other; Week gives way to Month
+  until the window is wide enough for all three.
+- The month view's "N more" popover lets a long event title use the
+  room it has before cutting it short.
 - An event's notes from Google Calendar show as readable text in the
   editor instead of HTML tags, and their links still work after you
   save.
@@ -134,6 +170,11 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   Mailboxes and Accounts, and the one you are in is tinted with your
   accent colour. Send Later, Remind Me and Follow Up stay listed when
   empty, so the rows below them no longer jump.
+- Dragging across empty time on the calendar stays in the day and column
+  where it started, instead of scrolling the grid and offering to create
+  an event that ran off the end of the wrong day.
+- Double-clicking a calendar event opens its editor, instead of leaving
+  only its popover open.
 
 ## 0.3.0 (2026-09-24)
 

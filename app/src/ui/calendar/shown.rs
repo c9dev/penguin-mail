@@ -26,24 +26,29 @@ pub enum Showing {
 
 /// The view a window gets for the grid the person picked. A narrow
 /// window has no room for seven columns, so a week or a month becomes the
-/// list; a day still fits.
-pub fn showing(kind: ViewKind, narrow: bool) -> Showing {
-    match (kind, narrow) {
-        (ViewKind::Day, _) => Showing::Day,
-        (_, true) => Showing::List,
-        (ViewKind::Week, false) => Showing::Week,
-        (ViewKind::Month, false) => Showing::Month,
+/// list; a day still fits. A window with room for a month but not the
+/// header's Day, Week and Month labels together (`compact`, with the
+/// sidebar already folded) shows Month in place of Week, the wider of
+/// the two grids.
+pub fn showing(kind: ViewKind, narrow: bool, compact: bool) -> Showing {
+    match (kind, narrow, compact) {
+        (ViewKind::Day, _, _) => Showing::Day,
+        (_, true, _) => Showing::List,
+        (ViewKind::Week, false, true) => Showing::Month,
+        (ViewKind::Week, false, false) => Showing::Week,
+        (ViewKind::Month, false, _) => Showing::Month,
     }
 }
 
 /// The view switch's toggles by name, in the order they sit, and whether
-/// each one is offered: List and Day in a narrow window, Day, Week and
-/// Month in a wide one.
-pub fn offered(narrow: bool) -> [(&'static str, bool); 4] {
+/// each one is offered: List and Day in a narrow window; Day and Month
+/// alone once the header has no room left for Week too (`compact`); Day,
+/// Week and Month in a wide one.
+pub fn offered(narrow: bool, compact: bool) -> [(&'static str, bool); 4] {
     [
         ("list", narrow),
         ("day", true),
-        ("week", !narrow),
+        ("week", !narrow && !compact),
         ("month", !narrow),
     ]
 }
@@ -343,21 +348,31 @@ mod tests {
 
     #[test]
     fn a_wide_window_shows_the_grid_it_was_asked_for() {
-        assert_eq!(showing(ViewKind::Week, false), Showing::Week);
-        assert_eq!(showing(ViewKind::Month, false), Showing::Month);
-        assert_eq!(showing(ViewKind::Day, false), Showing::Day);
+        assert_eq!(showing(ViewKind::Week, false, false), Showing::Week);
+        assert_eq!(showing(ViewKind::Month, false, false), Showing::Month);
+        assert_eq!(showing(ViewKind::Day, false, false), Showing::Day);
     }
 
     #[test]
     fn a_narrow_window_lists_in_place_of_the_week_and_the_month() {
-        assert_eq!(showing(ViewKind::Week, true), Showing::List);
-        assert_eq!(showing(ViewKind::Month, true), Showing::List);
-        assert_eq!(showing(ViewKind::Day, true), Showing::Day);
+        assert_eq!(showing(ViewKind::Week, true, false), Showing::List);
+        assert_eq!(showing(ViewKind::Month, true, false), Showing::List);
+        assert_eq!(showing(ViewKind::Day, true, false), Showing::Day);
+    }
+
+    /// At 700px the sidebar has folded (`compact`) but the window is not
+    /// narrow enough for List: Week, the widest grid, gives way to
+    /// Month, which still fits.
+    #[test]
+    fn a_compact_but_not_narrow_window_shows_month_in_place_of_week() {
+        assert_eq!(showing(ViewKind::Week, false, true), Showing::Month);
+        assert_eq!(showing(ViewKind::Month, false, true), Showing::Month);
+        assert_eq!(showing(ViewKind::Day, false, true), Showing::Day);
     }
 
     #[test]
     fn a_narrow_switch_offers_list_and_day() {
-        let on: Vec<&str> = offered(true)
+        let on: Vec<&str> = offered(true, false)
             .into_iter()
             .filter(|(_, on)| *on)
             .map(|(name, _)| name)
@@ -367,7 +382,7 @@ mod tests {
 
     #[test]
     fn a_wide_switch_offers_day_week_and_month() {
-        let on: Vec<&str> = offered(false)
+        let on: Vec<&str> = offered(false, false)
             .into_iter()
             .filter(|(_, on)| *on)
             .map(|(name, _)| name)
@@ -375,12 +390,24 @@ mod tests {
         assert_eq!(on, ["day", "week", "month"]);
     }
 
+    /// The switch that overlapped at 700px now drops Week rather than
+    /// squeeze three labels into the room compact leaves it.
+    #[test]
+    fn a_compact_switch_drops_week() {
+        let on: Vec<&str> = offered(false, true)
+            .into_iter()
+            .filter(|(_, on)| *on)
+            .map(|(name, _)| name)
+            .collect();
+        assert_eq!(on, ["day", "month"]);
+    }
+
     #[test]
     fn each_view_names_the_toggle_that_shows_it() {
         for view in [Showing::Day, Showing::Week, Showing::Month, Showing::List] {
             let name = toggle_name(view);
             assert!(
-                offered(view == Showing::List)
+                offered(view == Showing::List, false)
                     .iter()
                     .any(|(n, on)| *n == name && *on)
             );

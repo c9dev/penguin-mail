@@ -3,13 +3,23 @@
 //! reads, the map link a place opens, and the date words several widgets
 //! share so a reader sees the same phrasing everywhere.
 
+use std::fmt::Write as _;
+
 use chrono::{DateTime, Datelike, Days, NaiveDate, TimeZone, Utc};
+use chrono_tz::Tz;
 use mailrs_domain::EpochMillis;
 use mailrs_domain::calendar::repeat::{Custom, Ends, Frequency, Repeat};
 use mailrs_domain::calendar::{Guest, Occurrence};
 use mailrs_domain::invitation::Answer;
 use mailrs_domain::invitation::recurrence::in_words;
 use mailrs_domain::translate::{date_locale, fill, fill_plural, gettext};
+
+/// Past this many of the notes' own lines, or this many characters on
+/// one line the label would still wrap over several screen lines, the
+/// popover's notes row shows a "Show more" button and
+/// [`notes_collapsed`] cuts the rest from what it shows first.
+const MOST_NOTE_LINES: usize = 4;
+const MOST_NOTE_CHARS: usize = 220;
 
 /// A day as a person reads it, with no year: "Wednesday 23 September".
 /// Shared by the agenda's date headings, the popover's time line, the
@@ -25,18 +35,14 @@ pub fn day_words(date: NaiveDate) -> String {
         .to_string()
 }
 
-/// "10:00" in `zone`'s local time, the pattern the rest of the app clocks
-/// a moment with.
+/// "10:00" or "10:00 AM" in `zone`'s local time, in the clock
+/// [`crate::clock_format::current`] names.
 pub fn clock_words<Z: TimeZone>(at: EpochMillis, zone: &Z) -> String
 where
     Z::Offset: std::fmt::Display,
 {
     utc(at)
-        .map(|at| {
-            at.with_timezone(zone)
-                .format_localized(&gettext("%H:%M"), date_locale())
-                .to_string()
-        })
+        .map(|at| crate::clock_format::time_text(at.with_timezone(zone).time()))
         .unwrap_or_default()
 }
 
@@ -80,6 +86,34 @@ where
     Z::Offset: std::fmt::Display,
 {
     span_words(o.start, o.end, o.event.all_day, zone)
+}
+
+/// The agenda row's time column: "All day", or the start and end clock
+/// with no date, which the row's own heading already carries.
+pub fn agenda_span_words<Z: TimeZone>(o: &Occurrence, zone: &Z) -> String
+where
+    Z::Offset: std::fmt::Display,
+{
+    if o.event.all_day {
+        gettext("All day")
+    } else {
+        fill(
+            &gettext("{start}–{end}"),
+            &[("start", &clock_words(o.start, zone)), ("end", &clock_words(o.end, zone))],
+        )
+    }
+}
+
+/// The agenda row's dimmed second line: the place and the calendar name
+/// together when both are known, whichever one is known alone, or
+/// nothing when neither is.
+pub fn agenda_subtitle_words(place: &str, calendar: &str) -> String {
+    match (place.is_empty(), calendar.is_empty()) {
+        (false, false) => fill(&gettext("{place} · {calendar}"), &[("place", place), ("calendar", calendar)]),
+        (false, true) => place.to_string(),
+        (true, false) => calendar.to_string(),
+        (true, true) => String::new(),
+    }
 }
 
 /// "Thursday 24 – Friday 25 September": the last day always carries its
@@ -378,12 +412,130 @@ fn byday_code(day: chrono::Weekday) -> &'static str {
     }
 }
 
-/// What a guest answered, in a word.
+/// What a guest answered, in a word. The editor's own guest list reads
+/// the organizer this way, so the answer never shows once it has said
+/// who ran the meeting; the popover's guest list marks the two apart
+/// instead ([`guest_name_words`], [`guest_answer_words`]).
 pub fn answer_words(guest: &Guest) -> String {
     if guest.organizer {
         return gettext("Organizer");
     }
+    guest_answer_words(guest)
+}
+
+/// What a guest answered, ignoring whether they organized the event:
+/// "Going", "Not going", "Maybe", or "No answer yet". The popover's
+/// guest list marks the organizer beside their name instead
+/// ([`guest_name_words`]), so their own answer still reads here.
+pub fn guest_answer_words(guest: &Guest) -> String {
     guest.answer.map_or_else(|| gettext("No answer yet"), Answer::said)
+}
+
+/// The symbolic icon a guest's answer shows in the popover's list: a
+/// check for yes, a question mark for maybe, a cross for no, and a
+/// loading ring for nobody has answered yet.
+pub fn answer_icon(answer: Option<Answer>) -> &'static str {
+    match answer {
+        Some(Answer::Yes) => "object-select-symbolic",
+        Some(Answer::Maybe) => "dialog-question-symbolic",
+        Some(Answer::No) => "process-stop-symbolic",
+        None => "content-loading-symbolic",
+    }
+}
+
+/// A guest row's own name: their name, or their address when they gave
+/// none, with ", organizer" added for whoever organized the event, the
+/// same words the summary line already gives the organizer
+/// ([`people_words`]).
+pub fn guest_name_words(guest: &Guest) -> String {
+    let shown = guest.name.clone().unwrap_or_else(|| guest.email.clone());
+    if guest.organizer {
+        fill(&gettext("{name}, organizer"), &[("name", &shown)])
+    } else {
+        shown
+    }
+}
+
+/// Whether the notes need a "Show more" button: past a few of their own
+/// lines, or a single line long enough that the label would still wrap
+/// it over several screen lines.
+pub fn notes_need_more(notes: &str) -> bool {
+    notes.lines().count() > MOST_NOTE_LINES || notes.chars().count() > MOST_NOTE_CHARS
+}
+
+/// The notes cut down to what the popover's collapsed row shows: its
+/// first few lines, cut again to a character count past which one of
+/// those lines would still wrap the label over several screen lines of
+/// its own. The notes come back whole when [`notes_need_more`] is
+/// false, so "Show more" only ever reveals text this did not already
+/// show.
+pub fn notes_collapsed(notes: &str) -> String {
+    if !notes_need_more(notes) {
+        return notes.to_string();
+    }
+    let lines: String = notes.lines().take(MOST_NOTE_LINES).collect::<Vec<_>>().join("\n");
+    if lines.chars().count() <= MOST_NOTE_CHARS {
+        return lines;
+    }
+    let cut: String = lines.chars().take(MOST_NOTE_CHARS).collect();
+    format!("{}…", cut.trim_end())
+}
+
+/// The notes as Pango markup for the popover's label: the text escaped,
+/// with each `http` or `https` address turned into a link a click can
+/// open. [`mailrs_mime::notes::text`] has already turned Google's HTML
+/// into these lines; this only makes the addresses left in them
+/// clickable.
+pub fn notes_markup(notes: &str) -> String {
+    let mut out = String::with_capacity(notes.len());
+    let mut rest = notes;
+    while let Some(start) = find_url(rest) {
+        out.push_str(&escape_markup(&rest[..start]));
+        let candidate = &rest[start..];
+        let end = candidate
+            .find(|c: char| c.is_whitespace())
+            .unwrap_or(candidate.len());
+        // Punctuation after the address ends the sentence, not the link.
+        let url = candidate[..end].trim_end_matches(['.', ',', ';', ':', '!', '?', ')', ']']);
+        let escaped = escape_markup(url);
+        let _ = write!(out, "<a href=\"{escaped}\">{escaped}</a>");
+        rest = &candidate[url.len()..];
+    }
+    out.push_str(&escape_markup(rest));
+    out
+}
+
+/// `text` with the characters Pango markup reads as tags written as
+/// references, so plain text the notes carry never opens a tag of its
+/// own.
+fn escape_markup(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    for c in text.chars() {
+        match c {
+            '&' => out.push_str("&amp;"),
+            '<' => out.push_str("&lt;"),
+            '>' => out.push_str("&gt;"),
+            '"' => out.push_str("&quot;"),
+            c => out.push(c),
+        }
+    }
+    out
+}
+
+/// Where the next `http://` or `https://` address starts in `s`, if any.
+fn find_url(s: &str) -> Option<usize> {
+    [s.find("https://"), s.find("http://")].into_iter().flatten().min()
+}
+
+/// Whether the occurrence repeats, in the editor's own words ("Weekly
+/// on Wednesday", "Every weekday"), or `None` for one that does not, so
+/// the popover's row only shows for a series. `zone` is the event's own
+/// zone when it names one the day starts from, matching
+/// [`Repeat::read`], which the editor's own draft calls the same way.
+pub fn series_words(rules: &[String], start: EpochMillis, zone: Tz) -> Option<String> {
+    let day = local_date(start, &zone);
+    let repeat = Repeat::read(rules, day, zone);
+    (repeat != Repeat::Never).then(|| repeat_words(&repeat))
 }
 
 fn utc(at: EpochMillis) -> Option<DateTime<Utc>> {
@@ -444,6 +596,41 @@ mod tests {
             .timestamp_millis();
         let o = occurrence(false, start, end);
         assert_eq!(when_words(&o, &Utc), "Wednesday 23 September · 15:00–16:00");
+    }
+
+    #[test]
+    fn an_agenda_row_times_a_timed_occurrence_with_no_date() {
+        mailrs_domain::translate::set_date_locale("en_US");
+        let start = Utc.with_ymd_and_hms(2026, 9, 23, 15, 0, 0).unwrap().timestamp_millis();
+        let end = Utc.with_ymd_and_hms(2026, 9, 23, 16, 0, 0).unwrap().timestamp_millis();
+        let o = occurrence(false, start, end);
+        assert_eq!(agenda_span_words(&o, &Utc), "15:00–16:00");
+    }
+
+    #[test]
+    fn an_agenda_row_times_an_all_day_occurrence_as_all_day() {
+        let o = occurrence(true, midnight(d(2026, 9, 23)), midnight(d(2026, 9, 24)));
+        assert_eq!(agenda_span_words(&o, &Utc), "All day");
+    }
+
+    #[test]
+    fn an_agenda_subtitle_joins_the_place_and_the_calendar() {
+        assert_eq!(agenda_subtitle_words("Room 5", "Work"), "Room 5 · Work");
+    }
+
+    #[test]
+    fn an_agenda_subtitle_with_no_place_is_just_the_calendar() {
+        assert_eq!(agenda_subtitle_words("", "Work"), "Work");
+    }
+
+    #[test]
+    fn an_agenda_subtitle_with_no_calendar_is_just_the_place() {
+        assert_eq!(agenda_subtitle_words("Room 5", ""), "Room 5");
+    }
+
+    #[test]
+    fn an_agenda_subtitle_with_neither_is_empty() {
+        assert_eq!(agenda_subtitle_words("", ""), "");
     }
 
     #[test]
@@ -613,6 +800,94 @@ mod tests {
         assert_eq!(answer_words(&guest(Some(Answer::Maybe), false)), "Maybe");
         assert_eq!(answer_words(&guest(None, false)), "No answer yet");
         assert_eq!(answer_words(&guest(Some(Answer::Yes), true)), "Organizer");
+    }
+
+    #[test]
+    fn guest_answer_words_reads_the_answer_even_for_the_organizer() {
+        let guest = |answer| Guest { email: "ana@example.com".into(), answer, organizer: true, ..Guest::default() };
+        assert_eq!(guest_answer_words(&guest(Some(Answer::Yes))), "Going");
+        assert_eq!(guest_answer_words(&guest(None)), "No answer yet");
+    }
+
+    #[test]
+    fn answer_icon_names_a_symbolic_icon_for_each_answer() {
+        assert_eq!(answer_icon(Some(Answer::Yes)), "object-select-symbolic");
+        assert_eq!(answer_icon(Some(Answer::Maybe)), "dialog-question-symbolic");
+        assert_eq!(answer_icon(Some(Answer::No)), "process-stop-symbolic");
+        assert_eq!(answer_icon(None), "content-loading-symbolic");
+    }
+
+    #[test]
+    fn guest_name_words_marks_the_organizer_and_falls_back_to_the_address() {
+        let named = Guest { name: Some("Rita Lopes".into()), organizer: true, ..Guest::default() };
+        assert_eq!(guest_name_words(&named), "Rita Lopes, organizer");
+        let unnamed = Guest { email: "ana@example.com".into(), ..Guest::default() };
+        assert_eq!(guest_name_words(&unnamed), "ana@example.com");
+    }
+
+    #[test]
+    fn notes_need_more_reads_true_past_the_line_cap() {
+        assert!(!notes_need_more("Room 5\nDial in: 555-0100"));
+        assert!(notes_need_more("One\nTwo\nThree\nFour\nFive"));
+    }
+
+    #[test]
+    fn notes_need_more_reads_true_for_one_very_long_line() {
+        assert!(notes_need_more(&"word ".repeat(60)));
+    }
+
+    #[test]
+    fn notes_collapsed_gives_the_notes_whole_under_the_cap() {
+        assert_eq!(notes_collapsed("Room 5\nDial in: 555-0100"), "Room 5\nDial in: 555-0100");
+    }
+
+    #[test]
+    fn notes_collapsed_cuts_to_the_first_few_lines() {
+        assert_eq!(notes_collapsed("One\nTwo\nThree\nFour\nFive\nSix"), "One\nTwo\nThree\nFour");
+    }
+
+    #[test]
+    fn notes_collapsed_cuts_one_very_long_line_to_the_character_cap() {
+        let long = "word ".repeat(60);
+        let collapsed = notes_collapsed(&long);
+        assert!(collapsed.ends_with('…'));
+        assert!(collapsed.chars().count() <= MOST_NOTE_CHARS + 1);
+    }
+
+    #[test]
+    fn notes_markup_escapes_plain_text() {
+        assert_eq!(notes_markup("Tom & Jerry <3"), "Tom &amp; Jerry &lt;3");
+    }
+
+    #[test]
+    fn notes_markup_links_an_address_and_keeps_trailing_punctuation_out() {
+        assert_eq!(
+            notes_markup("Dial in at https://meet.example.com/room, then wait."),
+            "Dial in at <a href=\"https://meet.example.com/room\">https://meet.example.com/room</a>, then wait."
+        );
+    }
+
+    #[test]
+    fn notes_markup_escapes_an_address_that_itself_needs_escaping() {
+        assert_eq!(
+            notes_markup("https://example.com/a?b=1&c=2"),
+            "<a href=\"https://example.com/a?b=1&amp;c=2\">https://example.com/a?b=1&amp;c=2</a>"
+        );
+    }
+
+    #[test]
+    fn series_words_names_a_weekly_repeat() {
+        mailrs_domain::translate::set_date_locale("en_US");
+        let rules = vec!["RRULE:FREQ=WEEKLY;BYDAY=MO,WE".to_string()];
+        assert_eq!(
+            series_words(&rules, wednesday_at(15), Tz::UTC),
+            Some("Every Monday and Wednesday".to_string())
+        );
+    }
+
+    #[test]
+    fn series_words_gives_none_for_an_event_that_does_not_repeat() {
+        assert_eq!(series_words(&[], wednesday_at(15), Tz::UTC), None);
     }
 
     fn wednesday_at(hour: u32) -> EpochMillis {

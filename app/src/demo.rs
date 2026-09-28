@@ -1204,7 +1204,9 @@ fn account1_events(now: EpochMillis) -> Vec<CalendarEvent> {
 
     // Quarterly review, on the Design team calendar, still waiting for an
     // answer, as the mockup's popover draws it: dashed on the grid, four
-    // of its six guests already said yes.
+    // of its six guests already said yes. The agenda runs past the
+    // popover's own line cap, so the demo also shows "Show more" and,
+    // with six guests, "Show all".
     let quarterly_start = at_week(monday, 2, 15, 0);
     events.push(CalendarEvent {
         calendar: DESIGN_TEAM.into(),
@@ -1215,6 +1217,7 @@ fn account1_events(now: EpochMillis) -> Vec<CalendarEvent> {
         zone: LISBON.into(),
         title: "Quarterly review".into(),
         place: "Room 2.04, Rua Augusta 24".into(),
+        description: "Agenda:\n1. Roadmap review\n2. Budget for next quarter\n3. Hiring plan\n4. Open questions\n\nPre-read: https://docs.example.com/quarterly-review".into(),
         busy: true,
         status: CalendarStatus::Confirmed,
         organizer: Some("rita@fernwood.example".into()),

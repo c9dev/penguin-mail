@@ -69,6 +69,8 @@ pub enum Change {
     /// The grid the calendar shows.
     CalendarView(super::CalendarView),
     ShowDeclinedEvents(bool),
+    /// The hours and days meetings usually run in.
+    WorkingHours(mailrs_domain::calendar::hours::WorkingHours),
     /// The account a new event went on.
     LastCalendarAccount(String),
     /// Folds the old one switch for every account into the per-account
@@ -269,6 +271,7 @@ impl Change {
             Change::Space(space) => settings.space = space,
             Change::CalendarView(view) => settings.calendar_view = view,
             Change::ShowDeclinedEvents(on) => settings.show_declined_events = on,
+            Change::WorkingHours(hours) => settings.working_hours = hours,
             Change::LastCalendarAccount(email) => settings.last_calendar_account = Some(email),
             Change::Signature { email, text } => settings.set_signature(&email, &text),
             Change::ToggleVip { email, name } => {
@@ -575,6 +578,11 @@ settable! {
         spell_words,
         suggest_follow_ups,
         vips,
+        // Working hours shade the grid and bound the assistant's own
+        // free-time tool; a tool that could widen its own bound would
+        // make the two hard to reason about together, so this stays a
+        // choice the person makes in Preferences.
+        working_hours,
     }
 }
 
@@ -751,6 +759,7 @@ impl Effects {
             space,
             calendar_view,
             show_declined_events,
+            working_hours,
             last_calendar_account,
         } = after;
         // These leave the window as it is. The flag colour, the delay before
@@ -801,6 +810,9 @@ impl Effects {
             space,
             calendar_view,
             show_declined_events,
+            // The grid and the free-time tool read this as they need it,
+            // so changing it saves the file and stops there too.
+            working_hours,
             // The New Event button remembers this by itself, for the
             // next new event; nothing on screen reads it.
             last_calendar_account,

@@ -157,7 +157,7 @@ pub fn event_when(when: &When, now: DateTime<Local>) -> String {
                 return String::new();
             };
             let day = event_day(start.date_naive(), now);
-            let from = start.format("%H:%M").to_string();
+            let from = crate::clock_format::time_text(start.time());
             match ends_at.and_then(local) {
                 None => fill(
                     &gettext("{day} · {start}"),
@@ -171,8 +171,17 @@ pub fn event_when(when: &When, now: DateTime<Local>) -> String {
                         ("start", &from),
                         (
                             "end",
-                            &end.format_localized(&gettext("%-d %b %H:%M"), date_locale())
-                                .to_string(),
+                            &fill(
+                                &gettext("{date} {time}"),
+                                &[
+                                    (
+                                        "date",
+                                        &end.format_localized(&gettext("%-d %b"), date_locale())
+                                            .to_string(),
+                                    ),
+                                    ("time", &crate::clock_format::time_text(end.time())),
+                                ],
+                            ),
                         ),
                     ],
                 ),
@@ -181,7 +190,7 @@ pub fn event_when(when: &When, now: DateTime<Local>) -> String {
                     &[
                         ("day", &day),
                         ("start", &from),
-                        ("end", &end.format("%H:%M").to_string()),
+                        ("end", &crate::clock_format::time_text(end.time())),
                     ],
                 ),
             }
@@ -239,7 +248,7 @@ pub fn event_moved_from(was: EpochMillis, all_day: bool, now: DateTime<Local>) -
     } else {
         fill(
             &gettext("{day} {time}"),
-            &[("day", &day), ("time", &start.format("%H:%M").to_string())],
+            &[("day", &day), ("time", &crate::clock_format::time_text(start.time()))],
         )
     }
 }

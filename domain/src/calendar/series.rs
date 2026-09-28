@@ -40,6 +40,10 @@ pub enum Step {
     /// Take the event, and a series' changed occurrence, off the copy and
     /// the provider.
     Remove { calendar: String, id: String },
+    /// Move the event, a series with its changed occurrences, from one of
+    /// the account's calendars to another. The steps after it write the
+    /// event on `to`.
+    Move { from: String, to: String, id: String },
 }
 
 impl Step {
@@ -47,9 +51,30 @@ impl Step {
     pub fn key(&self) -> (String, String) {
         match self {
             Step::Save(e) | Step::Cancel(e) => (e.calendar.clone(), e.id.clone()),
-            Step::Remove { calendar, id } => (calendar.clone(), id.clone()),
+            Step::Remove { calendar, id } | Step::Move { to: calendar, id, .. } => (calendar.clone(), id.clone()),
         }
     }
+}
+
+/// `steps`, written on `to` instead of `from`, after a move of the event
+/// `id` there. Staying on `from` leaves them as they are. Google moves a
+/// series whole, so `id` is the series' own id even when the person
+/// opened one occurrence.
+pub fn to_calendar(steps: Vec<Step>, from: &str, to: &str, id: &str) -> Vec<Step> {
+    if from == to {
+        return steps;
+    }
+    let there = |event: Event| {
+        if event.calendar == from { Event { calendar: to.to_string(), ..event } } else { event }
+    };
+    let mut moved = vec![Step::Move { from: from.to_string(), to: to.to_string(), id: id.to_string() }];
+    moved.extend(steps.into_iter().map(|step| match step {
+        Step::Save(event) => Step::Save(there(event)),
+        Step::Cancel(event) => Step::Cancel(there(event)),
+        Step::Remove { calendar, id } if calendar == from => Step::Remove { calendar: to.to_string(), id },
+        other => other,
+    }));
+    moved
 }
 
 /// A series, or a changed occurrence of one.
@@ -1068,5 +1093,31 @@ mod tests {
         let all = change(&series, &changed, picked, own_fields_changed(&moved), RepeatScope::All, "new");
         let [Step::Save(saved)] = all.as_slice() else { panic!("one save: {all:?}") };
         keeps_only_own_fields_changed(saved, &series);
+    }
+
+    #[test]
+    fn a_move_to_another_calendar_goes_first_and_the_edit_follows_it_there() {
+        let series = standup(&["RRULE:FREQ=DAILY;COUNT=5"]);
+        let edited = Event { title: "Stand-up, renamed".into(), ..series.clone() };
+        let steps = change(&series, &[], thursday(), edited, RepeatScope::All, "new");
+        let moved = to_calendar(steps, &series.calendar, "home", &series.id);
+        let [Step::Move { from, to, id }, Step::Save(saved)] = moved.as_slice() else {
+            panic!("a move, then the save: {moved:?}")
+        };
+        assert_eq!((from.as_str(), to.as_str(), id.as_str()), (series.calendar.as_str(), "home", "standup"));
+        assert_eq!((saved.calendar.as_str(), saved.title.as_str()), ("home", "Stand-up, renamed"));
+    }
+
+    #[test]
+    fn a_move_writes_where_the_event_lands() {
+        let step = Step::Move { from: "work".into(), to: "home".into(), id: "standup".into() };
+        assert_eq!(step.key(), ("home".to_string(), "standup".to_string()));
+    }
+
+    #[test]
+    fn staying_on_the_same_calendar_moves_nothing() {
+        let series = standup(&[]);
+        let steps = vec![Step::Save(series.clone())];
+        assert_eq!(to_calendar(steps.clone(), &series.calendar, &series.calendar, &series.id), steps);
     }
 }

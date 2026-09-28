@@ -1,6 +1,7 @@
 //! `Quick`, the small popover a drag across empty time or N opens: the
 //! time, a title field with the cursor in it, the calendar it goes on,
-//! and More Details for the editor. Enter saves.
+//! which a menu button changes, and More Details for the editor. Enter
+//! saves.
 //!
 //! One popover serves the whole view, parented to the calendar's card
 //! the way the event popover is (`popover.rs`'s own doc comment): a
@@ -8,18 +9,35 @@
 //! `show` last pointed at, but never the card. `show` repositions and
 //! refills the one popover rather than building a new one each time.
 
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 use adw::prelude::*;
-use gtk::{gdk, graphene};
+use gtk::{gdk, gio, glib, graphene};
+use mailrs_domain::AccountId;
 use mailrs_domain::calendar::Calendar;
-use mailrs_domain::translate::gettext;
+use mailrs_domain::translate::{fill, gettext};
 
 use super::tint;
 use crate::ui::name;
 
-type OnTitle = dyn Fn(String);
+/// Runs with the title and the index of the calendar picked among the
+/// choices `show` was given.
+type OnTitle = dyn Fn(String, usize);
+
+/// The words the calendar menu shows for each choice: its name, and the
+/// account's address after it once the choices span more than one
+/// account, where two may share a name such as "Personal".
+pub fn choice_labels(choices: &[(AccountId, String, Calendar)]) -> Vec<String> {
+    let several = choices.iter().any(|(a, _, _)| Some(a) != choices.first().map(|(a, _, _)| a));
+    choices
+        .iter()
+        .map(|(_, address, calendar)| match several {
+            true => format!("{} ({address})", calendar.name),
+            false => calendar.name.clone(),
+        })
+        .collect()
+}
 
 pub struct Quick {
     pub popover: gtk::Popover,
@@ -30,6 +48,13 @@ pub struct Quick {
     title: gtk::Entry,
     dot: gtk::Box,
     calendar_label: gtk::Label,
+    /// Opens the menu of calendars; the dot and the name are its child.
+    calendar_button: gtk::MenuButton,
+    /// The `quick.calendar` action the menu's items pick with.
+    pick: gio::SimpleAction,
+    /// The calendars the menu offers, from the last `show`.
+    choices: RefCell<Vec<(AccountId, String, Calendar)>>,
+    picked: Cell<usize>,
     save: gtk::Button,
     more: gtk::Button,
     on_save: RefCell<Option<Box<OnTitle>>>,
@@ -61,6 +86,15 @@ impl Quick {
         let where_to = gtk::Box::builder().spacing(6).build();
         where_to.append(&dot);
         where_to.append(&calendar_label);
+        let calendar_button = gtk::MenuButton::builder()
+            .child(&where_to)
+            .css_classes(["flat"])
+            .halign(gtk::Align::Start)
+            .always_show_arrow(true)
+            .build();
+        let pick = gio::SimpleAction::new_stateful("calendar", Some(glib::VariantTy::INT32), &0i32.to_variant());
+        let actions = gio::SimpleActionGroup::new();
+        actions.add_action(&pick);
         let more = gtk::Button::builder()
             .label(gettext("More Details"))
             .css_classes(["flat"])
@@ -87,7 +121,7 @@ impl Quick {
         for child in [
             time.upcast_ref::<gtk::Widget>(),
             title.upcast_ref(),
-            where_to.upcast_ref(),
+            calendar_button.upcast_ref(),
             buttons.upcast_ref(),
         ] {
             content.append(child);
@@ -98,6 +132,7 @@ impl Quick {
             .position(gtk::PositionType::Right)
             .build();
         popover.set_parent(parent);
+        popover.insert_action_group("quick", Some(&actions));
 
         let this = Rc::new(Quick {
             popover,
@@ -106,12 +141,24 @@ impl Quick {
             title,
             dot,
             calendar_label,
+            calendar_button,
+            pick,
+            choices: RefCell::new(Vec::new()),
+            picked: Cell::new(0),
             save,
             more,
             on_save: RefCell::new(None),
             on_more: RefCell::new(None),
         });
 
+        let weak = Rc::downgrade(&this);
+        this.pick.connect_activate(move |action, target| {
+            let Some(this) = weak.upgrade() else { return };
+            let Some(index) = target.and_then(i32::from_variant) else { return };
+            action.set_state(&index.to_variant());
+            this.show_calendar(index as usize);
+            this.title.grab_focus();
+        });
         let (t, s) = (this.title.clone(), this.save.clone());
         t.connect_changed(move |t| s.set_sensitive(!t.text().trim().is_empty()));
         let weak = Rc::downgrade(&this);
@@ -121,7 +168,7 @@ impl Quick {
             if !text.is_empty() {
                 this.popover.popdown();
                 if let Some(f) = this.on_save.borrow().as_ref() {
-                    f(text);
+                    f(text, this.picked.get());
                 }
             }
         });
@@ -131,7 +178,7 @@ impl Quick {
             let text = this.title.text().trim().to_string();
             this.popover.popdown();
             if let Some(f) = this.on_save.borrow().as_ref() {
-                f(text);
+                f(text, this.picked.get());
             }
         });
         let weak = Rc::downgrade(&this);
@@ -140,7 +187,7 @@ impl Quick {
             let text = this.title.text().to_string();
             this.popover.popdown();
             if let Some(f) = this.on_more.borrow().as_ref() {
-                f(text);
+                f(text, this.picked.get());
             }
         });
         this
@@ -149,8 +196,10 @@ impl Quick {
     /// Shows the popover for `when` to `end`, on `side` of `rect` in
     /// `anchor`'s own coordinates: `anchor` is the time grid or the
     /// month grid, translated into the card's coordinates, which is
-    /// where the popover itself is parented. `on_save` runs with the
-    /// title on Enter or Save; `on_more` on More Details.
+    /// where the popover itself is parented. The calendar menu offers
+    /// `choices`, starting on the one at `current`. `on_save` runs with
+    /// the title and the calendar picked on Enter or Save; `on_more` on
+    /// More Details.
     #[expect(clippy::too_many_arguments, reason = "each is a separate part of what the popover shows")]
     pub fn show(
         self: &Rc<Self>,
@@ -158,14 +207,25 @@ impl Quick {
         rect: &gdk::Rectangle,
         side: gtk::PositionType,
         when: &str,
-        calendar: &Calendar,
-        on_save: impl Fn(String) + 'static,
-        on_more: impl Fn(String) + 'static,
+        choices: Vec<(AccountId, String, Calendar)>,
+        current: usize,
+        on_save: impl Fn(String, usize) + 'static,
+        on_more: impl Fn(String, usize) + 'static,
     ) {
         self.time.set_label(when);
-        self.dot
-            .set_css_classes(&["checked-dot", &tint::css_class(&calendar.color)]);
-        self.calendar_label.set_label(&calendar.name);
+        let menu = gio::Menu::new();
+        for (index, label) in choice_labels(&choices).iter().enumerate() {
+            menu.append(Some(label), Some(&format!("quick.calendar({index})")));
+        }
+        self.calendar_button.set_menu_model(Some(&menu));
+        // One calendar leaves nothing to pick, so the row reads as the
+        // plain line it was.
+        let several = choices.len() > 1;
+        self.calendar_button.set_sensitive(several);
+        self.calendar_button.set_always_show_arrow(several);
+        self.choices.replace(choices);
+        self.pick.set_state(&(current as i32).to_variant());
+        self.show_calendar(current);
         self.title.set_text("");
         self.save.set_sensitive(false);
         self.on_save.replace(Some(Box::new(on_save)));
@@ -186,6 +246,20 @@ impl Quick {
         self.popover.set_position(side);
         self.popover.popup();
         self.title.grab_focus();
+    }
+
+    /// Shows the calendar at `index` among the choices as the one picked.
+    fn show_calendar(&self, index: usize) {
+        let choices = self.choices.borrow();
+        let Some((_, _, calendar)) = choices.get(index) else { return };
+        self.picked.set(index);
+        self.dot
+            .set_css_classes(&["checked-dot", &tint::css_class(&calendar.color)]);
+        self.calendar_label.set_label(&calendar.name);
+        name(
+            &self.calendar_button,
+            &fill(&gettext("Calendar: {name}"), &[("name", &calendar.name)]),
+        );
     }
 
     /// Closes the popover, such as when the view's range changes under
@@ -259,5 +333,21 @@ mod tests {
         assert_eq!(clamp_span(-30.0, 60.0, 500.0), (0.0, 30.0));
         assert_eq!(clamp_span(480.0, 60.0, 500.0), (480.0, 20.0));
         assert_eq!(clamp_span(100.0, 60.0, 500.0), (100.0, 60.0));
+    }
+
+    fn entry(account: AccountId, address: &str, id: &str, name: &str) -> (AccountId, String, Calendar) {
+        (account, address.into(), Calendar { id: id.into(), name: name.into(), ..Calendar::default() })
+    }
+
+    #[test]
+    fn one_accounts_calendars_go_by_their_names() {
+        let choices = [entry(1, "me@example.com", "me@example.com", "Personal"), entry(1, "me@example.com", "team", "Team")];
+        assert_eq!(choice_labels(&choices), ["Personal", "Team"]);
+    }
+
+    #[test]
+    fn calendars_of_several_accounts_carry_their_address() {
+        let choices = [entry(1, "me@example.com", "me@example.com", "Personal"), entry(2, "me@work.pt", "me@work.pt", "Personal")];
+        assert_eq!(choice_labels(&choices), ["Personal (me@example.com)", "Personal (me@work.pt)"]);
     }
 }

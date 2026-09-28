@@ -820,6 +820,9 @@ list.waiting-list > row.waiting-card:last-child { margin-bottom: 0; }
 .month-cell button.event-block { padding-top: 1px; padding-bottom: 1px; }
 .month-cell button.event-block .title { font-size: 0.82em; margin-top: 0; }
 .day-heading.dimmed { opacity: 0.4; }
+/* A day outside working hours (a weekend, by default): the mockup shades
+   nothing here, so this stays as subtle as the hairline above it. */
+.month-cell.shaded { background: color-mix(in srgb, currentColor 4%, transparent); }
 .month-more { font-size: 0.75em; font-weight: 600; padding: 2px 4px; min-height: 0; }
 /* The agenda: a coloured dot per row, tinted the way an event block's
    bar is, and a heading row per date. */
@@ -955,3 +958,12 @@ popover.event-popover button.popover-open-mail {
 .next-event .when { font-size: 0.78em; font-weight: 600; opacity: 0.64; }
 .next-event .what { font-size: 0.92em; font-weight: 700; }
 .next-event image { opacity: 0.55; }
+/* "Show more" and "Show all": a small text link under the notes or the
+   guest list, not a filled pill. */
+popover.event-popover button.popover-more {
+  min-height: 0;
+  padding: 0;
+  font-size: 0.85em;
+  font-weight: 700;
+  color: var(--accent-color);
+}

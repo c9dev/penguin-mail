@@ -2573,6 +2573,7 @@ dependencies = [
  "chrono",
  "mailrs-domain",
  "mailrs-gmail",
+ "mailrs-mime",
  "rusqlite",
  "serde",
  "serde_json",

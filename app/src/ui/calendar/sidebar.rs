@@ -85,10 +85,11 @@ pub fn waiting_accounts(accounts: &[(Account, Offers, Withheld)]) -> Vec<Account
         .collect()
 }
 
-/// The Monday on or before `day`, the mini month's own copy of
-/// `range::monday_of` (private there).
-fn monday_of(day: NaiveDate) -> NaiveDate {
-    day - Days::new(u64::from(day.weekday().num_days_from_monday()))
+/// The first day, on or before `day`, of the week the locale's own first
+/// weekday starts: the mini month's own copy of `range::week_start_of`
+/// (private there).
+fn week_start_of(day: NaiveDate) -> NaiveDate {
+    mailrs_domain::calendar::week::week_start_on_or_before(day, crate::locale_time::first_weekday())
 }
 
 /// The 1st of the month `step` months from the one `month` falls in, for
@@ -109,17 +110,19 @@ fn adjacent_month(month: NaiveDate, step: i32) -> NaiveDate {
 /// September 2026 in five rows.
 fn weeks_shown(first: NaiveDate) -> usize {
     let last = adjacent_month(first, 1) - Days::new(1);
-    let days = (last - monday_of(first)).num_days() as usize + 1;
+    let days = (last - week_start_of(first)).num_days() as usize + 1;
     days.div_ceil(7)
 }
 
-/// "M", "T", "W", … for the mini month's weekday row, from a known
-/// Monday so the locale's own weekday names decide the letter.
+/// "M", "T", "W", … for the mini month's weekday row, starting on the
+/// locale's own first weekday, from a known Monday so the locale's own
+/// weekday names decide the letter.
 fn weekday_initials() -> Vec<String> {
     let monday = NaiveDate::from_ymd_opt(2024, 1, 1).expect("2024-01-01 is a Monday");
-    (0..7u64)
-        .map(|i| {
-            (monday + Days::new(i))
+    mailrs_domain::calendar::week::week_columns(crate::locale_time::first_weekday())
+        .into_iter()
+        .map(|day| {
+            (monday + Days::new(u64::from(day.num_days_from_monday())))
                 .format_localized(&gettext("%a"), date_locale())
                 .to_string()
                 .chars()
@@ -547,7 +550,7 @@ impl CalendarSidebar {
                 .format_localized(&gettext("%B %Y"), date_locale())
                 .to_string(),
         );
-        let first_shown = monday_of(first_of_month);
+        let first_shown = week_start_of(first_of_month);
         let weeks = weeks_shown(first_of_month);
         for (index, day) in self.days.iter().enumerate() {
             day.button.set_visible(index / 7 < weeks);
@@ -735,6 +738,7 @@ mod tests {
 
     #[test]
     fn the_mini_month_shows_only_the_weeks_that_hold_the_month() {
+        crate::locale_time::set_first_weekday_for_test(chrono::Weekday::Mon);
         let d = |y, m, day| NaiveDate::from_ymd_opt(y, m, day).unwrap();
         // September 2026 starts on a Tuesday and ends on a Wednesday.
         assert_eq!(weeks_shown(d(2026, 9, 1)), 5);
@@ -742,6 +746,14 @@ mod tests {
         assert_eq!(weeks_shown(d(2026, 8, 1)), 6);
         // February 2027 starts on a Monday and has 28 days.
         assert_eq!(weeks_shown(d(2027, 2, 1)), 4);
+    }
+
+    #[test]
+    fn the_weekday_row_starts_on_the_locales_own_first_weekday() {
+        crate::locale_time::set_first_weekday_for_test(chrono::Weekday::Sun);
+        assert_eq!(weekday_initials(), vec!["S", "M", "T", "W", "T", "F", "S"]);
+        crate::locale_time::set_first_weekday_for_test(chrono::Weekday::Mon);
+        assert_eq!(weekday_initials(), vec!["M", "T", "W", "T", "F", "S", "S"]);
     }
 
     #[test]

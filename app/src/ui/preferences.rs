@@ -1,11 +1,14 @@
 //! The Preferences dialog. Changes save as they happen; sync options apply
 //! when the dialog closes, so the engine restarts once.
 
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 use adw::prelude::*;
+use chrono::Timelike;
 use gtk::glib;
+use mailrs_domain::calendar::hours::WorkingHours;
+use mailrs_domain::translate::date_locale;
 use mailrs_domain::{Account, AccountId};
 use mailrs_sync::config::SyncConfig;
 use mailrs_sync::{Offers, Withheld};
@@ -233,6 +236,7 @@ fn general_page(
         settings.event_reminders,
         Change::EventReminders,
     ));
+    calendar.add(&working_hours_row(app, settings.working_hours));
     page.add(&calendar);
     if !missing.is_empty() {
         let unavailable = adw::PreferencesGroup::builder()
@@ -798,6 +802,171 @@ fn allowed_image_senders(app: &Rc<App>) -> adw::ExpanderRow {
             shown.add_row(&item);
         }
     });
+    row
+}
+
+/// The seven weekdays in `Settings::working_hours.days`' own storage
+/// order, Monday first. Preferences shows the week starting on Monday
+/// whatever the desktop's own locale does: this is a settings row, not
+/// the calendar's own grid, and the storage order it edits is fixed.
+const WEEK_MONDAY_FIRST: [chrono::Weekday; 7] = [
+    chrono::Weekday::Mon,
+    chrono::Weekday::Tue,
+    chrono::Weekday::Wed,
+    chrono::Weekday::Thu,
+    chrono::Weekday::Fri,
+    chrono::Weekday::Sat,
+    chrono::Weekday::Sun,
+];
+
+/// `day` in `pattern`'s words: `Weekday` carries no date of its own, so
+/// this pairs it with a known Monday, the way
+/// `ui::calendar::sidebar::weekday_initials` names the mini month's
+/// weekday row.
+fn weekday_words(day: chrono::Weekday, pattern: &str) -> String {
+    let monday = chrono::NaiveDate::from_ymd_opt(2024, 1, 1).expect("2024-01-01 is a Monday");
+    (monday + chrono::Days::new(u64::from(day.num_days_from_monday())))
+        .format_localized(pattern, date_locale())
+        .to_string()
+}
+
+/// "09:00–18:00, Monday to Friday": [`WorkingHours`]'s hours and days in
+/// words, for the row's subtitle.
+fn working_hours_words(hours: &WorkingHours) -> String {
+    let time = fill(
+        &gettext("{start}–{end}"),
+        &[
+            ("start", &crate::clock_format::time_text(hours.start_time())),
+            ("end", &crate::clock_format::time_text(hours.end_time())),
+        ],
+    );
+    let days = match hours.days {
+        [true, true, true, true, true, false, false] => gettext("Monday to Friday"),
+        [true, true, true, true, true, true, true] => gettext("Every day of the week"),
+        [false, false, false, false, false, false, false] => gettext("No days"),
+        _ => WEEK_MONDAY_FIRST
+            .iter()
+            .zip(hours.days)
+            .filter(|(_, worked)| *worked)
+            .map(|(&day, _)| weekday_words(day, &gettext("%a")))
+            .collect::<Vec<_>>()
+            .join(&gettext(", ")),
+    };
+    fill(&gettext("{time}, {days}"), &[("time", &time), ("days", &days)])
+}
+
+/// A drop-down of the day's 24 whole hours, in the clock
+/// [`crate::clock_format::current`] names, `current`'s own hour selected.
+fn hour_dropdown(current: chrono::NaiveTime) -> gtk::DropDown {
+    let labels: Vec<String> = (0..24)
+        .map(|hour| {
+            crate::clock_format::time_text(chrono::NaiveTime::from_hms_opt(hour, 0, 0).unwrap_or_default())
+        })
+        .collect();
+    let refs: Vec<&str> = labels.iter().map(String::as_str).collect();
+    let drop = gtk::DropDown::builder()
+        .model(&gtk::StringList::new(&refs))
+        .valign(gtk::Align::Center)
+        .build();
+    drop.set_selected(current.hour());
+    drop
+}
+
+/// The "Working Hours" row: an expander with the current hours and days
+/// in words, and an "Hours" and a "Days" row under it to change them.
+fn working_hours_row(
+    app: &Rc<App>,
+    hours: WorkingHours,
+) -> adw::ExpanderRow {
+    let row = adw::ExpanderRow::builder()
+        .title(gettext("Working Hours"))
+        .subtitle(working_hours_words(&hours))
+        .build();
+
+    let stored = Rc::new(Cell::new(hours));
+    let weak_row = row.downgrade();
+    let commit = {
+        let app = Rc::clone(app);
+        let stored = Rc::clone(&stored);
+        move || {
+            let hours = stored.get();
+            if let Some(row) = weak_row.upgrade() {
+                row.set_subtitle(&working_hours_words(&hours));
+            }
+            app.change_settings(Change::WorkingHours(hours));
+        }
+    };
+
+    let times = adw::ActionRow::builder().title(gettext("Hours")).build();
+    let time_box = gtk::Box::builder()
+        .orientation(gtk::Orientation::Horizontal)
+        .spacing(6)
+        .valign(gtk::Align::Center)
+        .build();
+    let start = hour_dropdown(hours.start_time());
+    crate::ui::name(&start, &gettext("Starts"));
+    let end = hour_dropdown(hours.end_time());
+    crate::ui::name(&end, &gettext("Ends"));
+    {
+        let stored = Rc::clone(&stored);
+        let commit = commit.clone();
+        start.connect_selected_notify(move |drop| {
+            let mut hours = stored.get();
+            hours.start_minutes = drop.selected() as u16 * 60;
+            stored.set(hours);
+            commit();
+        });
+    }
+    {
+        let stored = Rc::clone(&stored);
+        let commit = commit.clone();
+        end.connect_selected_notify(move |drop| {
+            let mut hours = stored.get();
+            hours.end_minutes = drop.selected() as u16 * 60;
+            stored.set(hours);
+            commit();
+        });
+    }
+    time_box.append(&start);
+    time_box.append(&gtk::Label::new(Some(&gettext("–"))));
+    time_box.append(&end);
+    times.add_suffix(&time_box);
+    row.add_row(&times);
+
+    let days_row = adw::ActionRow::builder().title(gettext("Days")).build();
+    let days_box = gtk::Box::builder()
+        .orientation(gtk::Orientation::Horizontal)
+        .css_classes(["linked"])
+        .valign(gtk::Align::Center)
+        .build();
+    for (index, day) in WEEK_MONDAY_FIRST.into_iter().enumerate() {
+        let initial = weekday_words(day, &gettext("%a"))
+            .chars()
+            .next()
+            .map(|c| c.to_string())
+            .unwrap_or_default();
+        let button = gtk::ToggleButton::builder()
+            .label(&initial)
+            .active(hours.days[index])
+            .valign(gtk::Align::Center)
+            .build();
+        crate::ui::name(
+            &button,
+            &weekday_words(day, &gettext("%A")),
+        );
+        let stored = Rc::clone(&stored);
+        let commit = commit.clone();
+        button.connect_toggled(move |button| {
+            let mut hours = stored.get();
+            hours.days[index] = button.is_active();
+            stored.set(hours);
+            commit();
+        });
+        days_box.append(&button);
+    }
+    days_row.add_suffix(&days_box);
+    row.add_row(&days_row);
+
     row
 }
 

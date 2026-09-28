@@ -141,7 +141,7 @@ where
 {
     zone.timestamp_millis_opt(at)
         .single()
-        .map(|t| t.format_localized(&gettext("%H:%M"), date_locale()).to_string())
+        .map(|t| crate::clock_format::time_text(t.time()))
         .unwrap_or_default()
 }
 

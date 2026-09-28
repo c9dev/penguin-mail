@@ -32,6 +32,7 @@ type Shown = (
     Range,
     Vec<Occurrence>,
     HashMap<(AccountId, String), Calendar>,
+    mailrs_domain::calendar::hours::WorkingHours,
 );
 
 type DayActivated = dyn Fn(NaiveDate);
@@ -136,9 +137,10 @@ impl MonthGrid {
         range: Range,
         occurrences: &[Occurrence],
         calendars: &HashMap<(AccountId, String), Calendar>,
+        working_hours: mailrs_domain::calendar::hours::WorkingHours,
     ) {
         self.shown
-            .replace(Some((range, occurrences.to_vec(), calendars.clone())));
+            .replace(Some((range, occurrences.to_vec(), calendars.clone(), working_hours)));
         self.rebuild();
     }
 
@@ -275,7 +277,7 @@ impl MonthGrid {
     }
 
     fn rebuild(self: &Rc<Self>) {
-        let Some((range, occurrences, calendars)) = self.shown.borrow().clone() else {
+        let Some((range, occurrences, calendars, working_hours)) = self.shown.borrow().clone() else {
             return;
         };
         let today = chrono::Local::now().date_naive();
@@ -289,6 +291,10 @@ impl MonthGrid {
             let cell = &self.cells[index];
             while let Some(child) = cell.first_child() {
                 cell.remove(&child);
+            }
+            cell.set_css_classes(&["month-cell"]);
+            if !working_hours.is_working_day(day.weekday()) {
+                cell.add_css_class("shaded");
             }
 
             let day_button = day_heading(day, today, month);

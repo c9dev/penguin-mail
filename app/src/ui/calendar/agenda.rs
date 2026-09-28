@@ -1,6 +1,7 @@
 //! `Agenda`, the flat list of upcoming occurrences: a date heading per
-//! day, then a row per occurrence: a colour dot, the time or "All day",
-//! the title, and the place dimmed.
+//! day, then a row per occurrence: a colour dot, its start and end time
+//! or "All day", the title, and the place and calendar name dimmed
+//! below it.
 //!
 //! A `gtk::ListView` over `AgendaModel`, a `gio::ListStore`-like model
 //! that also implements `gtk::SectionModel`, gives GTK the date headings
@@ -235,7 +236,9 @@ mod row {
                     .build();
                 let time = gtk::Label::builder()
                     .css_classes(["dim-label", "caption"])
-                    .width_chars(5)
+                    // Wide enough for "10:00–11:30" without wrapping;
+                    // "All day" and a single "10:00" both fall short of it.
+                    .width_chars(11)
                     .xalign(0.0)
                     .valign(gtk::Align::Center)
                     .build();
@@ -290,7 +293,8 @@ mod row {
         }
 
         /// Fills every label from `row`'s occurrence, using `calendars`
-        /// for the dot's colour and the accessible name's calendar name.
+        /// for the dot's colour and the calendar name shown below the
+        /// title and read out in the accessible name.
         pub(super) fn fill(&self, row: &Row, calendars: &HashMap<(AccountId, String), Calendar>) {
             let imp = self.imp();
             let o = &row.occurrence;
@@ -300,23 +304,19 @@ mod row {
             let dot = imp.dot.get().expect("built in constructed");
             dot.set_css_classes(&["agenda-dot", &tint::css_class(colour)]);
 
-            let when = if o.event.all_day {
-                gettext("All day")
-            } else {
-                words::clock_words(o.start, &chrono::Local)
-            };
             imp.time
                 .get()
                 .expect("built in constructed")
-                .set_label(&when);
+                .set_label(&words::agenda_span_words(o, &chrono::Local));
             imp.title
                 .get()
                 .expect("built in constructed")
                 .set_label(&o.event.title);
 
+            let subtitle = words::agenda_subtitle_words(&o.event.place, calendar_name);
             let place = imp.place.get().expect("built in constructed");
-            place.set_visible(!o.event.place.is_empty());
-            place.set_label(&o.event.place);
+            place.set_visible(!subtitle.is_empty());
+            place.set_label(&subtitle);
 
             let name = mailrs_domain::translate::fill(
                 &gettext("{title}, {when}, {calendar}"),

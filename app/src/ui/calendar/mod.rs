@@ -36,8 +36,8 @@ use std::rc::{Rc, Weak};
 use adw::prelude::*;
 use chrono::{DateTime, Datelike, Days, NaiveDate, Utc};
 use gtk::{gdk, glib};
-use mailrs_domain::calendar::series;
-use mailrs_domain::calendar::{Access, Calendar, Occurrence};
+use mailrs_domain::calendar::series::{self, RepeatScope};
+use mailrs_domain::calendar::{Access, Calendar, Guest, Occurrence};
 use mailrs_domain::invitation::Answer;
 use mailrs_domain::translate::{date_locale, fill, gettext, with_reason};
 use mailrs_domain::{Account, AccountId, EpochMillis};
@@ -177,6 +177,9 @@ pub struct CalendarView {
     /// What the "N more" popover was opened from, for the event popover
     /// that replaces it.
     more_anchor: RefCell<Option<gtk::Widget>>,
+    /// Watches GNOME's `clock-format` for as long as the page lives;
+    /// `None` where its schema is not installed.
+    clock_watch: RefCell<Option<gtk::gio::Settings>>,
     /// The day the view is on; every range is the one around it.
     day: Cell<NaiveDate>,
     kind: Cell<ViewKind>,
@@ -428,7 +431,14 @@ impl CalendarView {
         let popover = EventPopover::new(&card, &today_button);
         let more_list = Agenda::new();
         more_list.widget.set_propagate_natural_height(true);
+        // A ScrolledWindow keeps its minimum width unless told to grow
+        // with its rows, so a long title fell back to that minimum and
+        // ellipsized after about a dozen characters. Growing with the
+        // rows, up to a sensible width, lets a title use the room
+        // before it ellipsizes.
+        more_list.widget.set_propagate_natural_width(true);
         more_list.widget.set_min_content_width(280);
+        more_list.widget.set_max_content_width(420);
         more_list.widget.set_max_content_height(360);
         let more = gtk::Popover::builder().child(&more_list.widget).build();
         more.set_parent(&card);
@@ -497,6 +507,7 @@ impl CalendarView {
                 more_list,
                 quick,
                 more_anchor: RefCell::new(None),
+                clock_watch: RefCell::new(None),
                 day: Cell::new(today),
                 kind: Cell::new(kind),
                 before_day: Cell::new(match kind {
@@ -593,6 +604,16 @@ impl CalendarView {
         // `app-dark` class the toplevel window carries
         // (`ui::window::track_dark_class`), which reaches this page
         // whichever window it sits in.
+        // Redraws in the new clock as soon as the person flips GNOME's own
+        // setting, not only the next time they navigate. Kept in
+        // `clock_watch` for as long as the view lives, which is what
+        // keeps the watch itself alive.
+        let weak = Rc::downgrade(&view);
+        *view.clock_watch.borrow_mut() = crate::clock_format::watch(move || {
+            if let Some(view) = weak.upgrade() {
+                view.show_range();
+            }
+        });
         let weak = Rc::downgrade(&view);
         view.more.connect_closed(move |_| {
             let Some(view) = weak.upgrade() else { return };
@@ -695,7 +716,7 @@ impl CalendarView {
         };
         match target {
             Some(holder) => self.carousel.scroll_to(&holder, true),
-            None => self.go_to(shown::stepped(self.kind.get(), self.day.get(), by)),
+            None => self.go_to(shown::stepped(self.effective_kind(), self.day.get(), by)),
         }
     }
 
@@ -774,13 +795,15 @@ impl CalendarView {
 
     /// Answers the window's medium breakpoint, where the sidebar folds
     /// away: the header drops the year and the week number so the rest
-    /// still fits.
+    /// still fits, and the view switch drops Week, the widest grid, so
+    /// its three labels stop crowding each other.
     pub fn set_compact(&self, compact: bool) {
         self.compact.set(compact);
         match compact {
             true => self.page.add_css_class("calendar-compact"),
             false => self.page.remove_css_class("calendar-compact"),
         }
+        self.build_switch();
         self.show_range();
     }
 
@@ -816,7 +839,23 @@ impl CalendarView {
 
     /// What the view shows now.
     fn showing(&self) -> Showing {
-        shown::showing(self.kind.get(), self.narrow.get())
+        shown::showing(self.kind.get(), self.narrow.get(), self.compact.get())
+    }
+
+    /// The grid actually on screen: the kind the person picked, unless
+    /// the breakpoint replaced it. List draws Month's grid behind its
+    /// own agenda page (unused while List is on screen, but built all
+    /// the same); a compact window without room for Week draws Month in
+    /// its place. Every page built from the current range, and anything
+    /// that steps by or matches against it, follows this rather than the
+    /// raw [`kind`](Self::kind), so what such code does lines up with
+    /// what the reader sees.
+    fn effective_kind(&self) -> ViewKind {
+        match self.showing() {
+            Showing::Day => ViewKind::Day,
+            Showing::Week => ViewKind::Week,
+            Showing::Month | Showing::List => ViewKind::Month,
+        }
     }
 
     fn account_ids(&self) -> Vec<AccountId> {
@@ -836,7 +875,7 @@ impl CalendarView {
     fn build_switch(&self) {
         self.switching.set(true);
         self.switch.remove_all();
-        for (name, on) in shown::offered(self.narrow.get()) {
+        for (name, on) in shown::offered(self.narrow.get(), self.compact.get()) {
             if !on {
                 continue;
             }
@@ -859,11 +898,8 @@ impl CalendarView {
         self.switching.set(true);
         self.switch.set_active_name(Some(shown::toggle_name(showing)));
         self.switching.set(false);
-        let range = match showing {
-            Showing::List => Range::around(ViewKind::Month, self.day.get()),
-            _ => Range::around(self.kind.get(), self.day.get()),
-        };
         // The list names its month the way a month's title does.
+        let range = Range::around(self.effective_kind(), self.day.get());
         let (bold, dim, week) = range.title();
         self.title_bold.set_label(&bold);
         self.title_dim.set_label(&dim);
@@ -906,7 +942,7 @@ impl CalendarView {
         for page in &old {
             self.carousel.remove(&page.holder);
         }
-        let current = Range::around(self.kind.get(), self.day.get());
+        let current = Range::around(self.effective_kind(), self.day.get());
         let mut pages = Vec::with_capacity(3);
         for range in [current.previous(), current, current.next()] {
             let page = Rc::new(Page {
@@ -991,7 +1027,7 @@ impl CalendarView {
         self.more.popdown();
         self.quick.hide();
         self.clear_ghost();
-        let current = Range::around(self.kind.get(), self.day.get());
+        let current = Range::around(self.effective_kind(), self.day.get());
         let pages = self.pages.borrow().clone();
         for (page, range) in pages.iter().zip([current.previous(), current, current.next()]) {
             if page.range.get() != range {
@@ -1118,9 +1154,9 @@ impl CalendarView {
         drag::can_move(o, access, offers, withheld)
     }
 
-    /// A page's widgets for the current kind.
+    /// A page's widgets for the grid actually on screen.
     fn page_view(self: &Rc<Self>) -> PageView {
-        match self.kind.get() {
+        match self.effective_kind() {
             ViewKind::Month => {
                 let month = MonthGrid::new();
                 month.set_rows(self.month_rows.get());
@@ -1297,7 +1333,7 @@ impl CalendarView {
         let had_focus = self.holds_focus(&pages[1]);
         let arrived = &pages[if by < 0 { 0 } else { 2 }];
         self.day
-            .set(shown::stepped(self.kind.get(), self.day.get(), by));
+            .set(shown::stepped(self.effective_kind(), self.day.get(), by));
         // Keep the day inside the range the carousel landed on, which a
         // month step with a clamped date can otherwise miss.
         let range = arrived.range.get();
@@ -1396,7 +1432,8 @@ impl CalendarView {
     }
 
     fn show_page(self: &Rc<Self>, page: &Rc<Page>, found: Vec<Occurrence>) {
-        let show_declined = (self.settings)().show_declined_events;
+        let settings = (self.settings)();
+        let show_declined = settings.show_declined_events;
         let pending = self.pending();
         let found: Vec<Occurrence> = found
             .into_iter()
@@ -1426,7 +1463,7 @@ impl CalendarView {
                 self.fill_headings(&grid.headings, &days);
                 grid.strip.show(&days, &found, &calendars);
                 let now = chrono::Local::now().timestamp_millis();
-                grid.grid.show(&days, &found, &calendars, now, &chrono::Local);
+                grid.grid.show(&days, &found, &calendars, now, &chrono::Local, settings.working_hours);
                 let block = self.pending_block(&found, |key, start| {
                     grid.grid
                         .block_at(key, start)
@@ -1455,7 +1492,7 @@ impl CalendarView {
                 (block, scroll)
             }
             PageView::Month(month) => {
-                month.show(range, &found, &calendars);
+                month.show(range, &found, &calendars, settings.working_hours);
                 let block = self.pending_block(&found, |key, start| month.block_at(key, start));
                 (block, None)
             }
@@ -1755,9 +1792,8 @@ impl CalendarView {
     }
 
     /// Opens the popover for `o`, pointed at `anchor`. Edit and Delete
-    /// show only for an event the account may change as a whole: the
-    /// mockup's invitation popover, on someone else's event, stays as
-    /// drawn.
+    /// show for an event the account may change as a whole; a guest gets
+    /// Edit, limited to their own parts, and Remove.
     fn show_event(self: &Rc<Self>, anchor: &gtk::Widget, o: &Occurrence) {
         let calendar = self
             .calendars
@@ -1767,23 +1803,24 @@ impl CalendarView {
             .unwrap_or_default();
         let weak = Rc::downgrade(self);
         let occurrence = o.clone();
-        let editable = self.editing(o) == draft::Editing::Whole;
+        let buttons = self.editing(o).popover();
         let (edit_o, delete_o) = (o.clone(), o.clone());
         let edit_view = Rc::downgrade(self);
         let delete_view = Rc::downgrade(self);
-        let on_edit: Option<Box<dyn Fn()>> = editable.then(|| {
+        let on_edit: Option<Box<dyn Fn()>> = buttons.filter(|b| b.edit).map(|_| {
             Box::new(move || {
                 if let Some(view) = edit_view.upgrade() {
                     view.open_editor(&edit_o);
                 }
             }) as Box<dyn Fn()>
         });
-        let on_delete: Option<Box<dyn Fn()>> = editable.then(|| {
-            Box::new(move || {
+        let on_delete = buttons.map(|b| {
+            let run = Box::new(move || {
                 if let Some(view) = delete_view.upgrade() {
                     view.delete(&delete_o);
                 }
-            }) as Box<dyn Fn()>
+            }) as Box<dyn Fn()>;
+            (b.removal, run)
         });
         self.popover.show(
             anchor,
@@ -1859,14 +1896,15 @@ impl CalendarView {
     }
 
     /// The Delete key: takes the focused event off the grid at once and
-    /// offers Undo, for an event the account may change as a whole, or
-    /// asks for the calendar permission the account withheld.
+    /// offers Undo, for an event the account may change as a whole or a
+    /// guest's own copy of an invitation, or asks for the calendar
+    /// permission the account withheld.
     pub fn delete_focused(self: &Rc<Self>) {
         let Some(o) = self.focused() else { return };
         match self.editing(&o) {
-            draft::Editing::Whole => self.delete(&o),
+            draft::Editing::Whole | draft::Editing::Guest => self.delete(&o),
             draft::Editing::NeedsPermission => (self.hooks.needs_permission)(o.account_id),
-            draft::Editing::Guest | draft::Editing::None => {}
+            draft::Editing::None => {}
         }
     }
 
@@ -1888,8 +1926,12 @@ impl CalendarView {
     }
 
     /// Reads the series `o` belongs to, and asks the editor over it: its
-    /// own rules, or a changed occurrence's series row's.
+    /// own rules, or a changed occurrence's series row's. Closes the
+    /// event popover first, a no-op when it is not the popover's own
+    /// Edit button asking (that already closed it), so a double click
+    /// never leaves it open behind the editor.
     pub fn open_editor(self: &Rc<Self>, o: &Occurrence) {
+        self.popover.hide();
         let this = Rc::clone(self);
         let o = o.clone();
         glib::spawn_future_local(async move {
@@ -1902,13 +1944,20 @@ impl CalendarView {
     /// Deletes `o` at once and offers Undo. An occurrence of a series asks
     /// which occurrences the delete covers first, and a meeting whether
     /// the guests get a cancellation, in one dialog; a delete still goes
-    /// through Undo either way.
+    /// through Undo either way. A guest's delete removes only their own
+    /// copy, never asks about the other guests, and is never offered
+    /// "This and following", which would cut a series they do not run.
     pub fn delete(self: &Rc<Self>, o: &Occurrence) {
         let this = Rc::clone(self);
         let o = o.clone();
         glib::spawn_future_local(async move {
-            let offered = series::scopes(&o.event, false);
-            let answer = match scope::question(scope::Action::Delete, &offered, &o.event.guests, scope::Change::default()) {
+            let guest = draft::limited(&o.event);
+            let mut offered = series::scopes(&o.event, false);
+            if guest {
+                offered.retain(|s| *s != RepeatScope::Following);
+            }
+            let guests: &[Guest] = if guest { &[] } else { &o.event.guests };
+            let answer = match scope::question(scope::Action::Delete, &offered, guests, scope::Change::default()) {
                 Some(question) => match scope::ask(&this.page, &question, &o.event, None).await {
                     Some(answer) => answer,
                     None => return,
@@ -1919,16 +1968,17 @@ impl CalendarView {
             let (account_id, occurrence) = (o.account_id, o.clone());
             let held = this
                 .core
-                .call(async move {
-                    let steps = copy.delete_steps(account_id, &occurrence, answer.scope).await?;
-                    copy.hold_with(account_id, steps, answer.notify).await
-                })
+                .call(async move { copy.hold_removal(account_id, &occurrence, answer.scope, answer.notify).await })
                 .await;
             match held {
                 Ok(Permitted::Done(held)) => {
                     this.focus_past(&key_of(&o));
                     this.reload();
-                    this.offer_undo(fill(&gettext("Deleted “{title}”"), &[("title", &o.event.title)]), held);
+                    let said = match guest {
+                        true => gettext("Removed “{title}” from your calendar"),
+                        false => gettext("Deleted “{title}”"),
+                    };
+                    this.offer_undo(fill(&said, &[("title", &o.event.title)]), held);
                 }
                 Ok(Permitted::NeedsPermission) => (this.hooks.needs_permission)(account_id),
                 Err(err) => (this.hooks.toast)(&with_reason(&gettext("Could not delete the event: {reason}"), &err, &[])),
@@ -2172,7 +2222,7 @@ impl CalendarView {
     /// else at the time last clicked, else near now, else the range's
     /// first morning.
     fn slot(&self) -> (EpochMillis, EpochMillis) {
-        let range = Range::around(self.kind.get(), self.day.get());
+        let range = Range::around(self.effective_kind(), self.day.get());
         let span = range.span(&chrono::Local);
         let morning = layout::instant_at(range.first, 9.0, &chrono::Local);
         let focused = self.focused().map(|o| (o.start, o.end));
@@ -2195,7 +2245,7 @@ impl CalendarView {
     /// the focused day in Month. The narrow agenda has no grid to point
     /// at, so [`Self::quick_create_at`] opens the editor instead.
     pub fn quick_create(self: &Rc<Self>) {
-        match self.kind.get() {
+        match self.effective_kind() {
             ViewKind::Month => {
                 let day = self.focused_day().unwrap_or_else(|| chrono::Local::now().date_naive());
                 self.quick_create_on_day(day);
@@ -2277,32 +2327,37 @@ impl CalendarView {
             self.clear_ghost();
             return self.edit(draft);
         };
-        let calendar = self
-            .calendars
-            .borrow()
-            .get(&(draft.account_id, draft.calendar.clone()))
-            .cloned()
-            .unwrap_or_default();
+        let choices = self.writable();
+        let current = choices
+            .iter()
+            .position(|(a, _, c)| *a == draft.account_id && c.id == draft.calendar)
+            .unwrap_or(0);
         let when = words::span_words(start, end, false, &chrono::Local);
         let (save_view, more_view) = (Rc::clone(self), Rc::clone(self));
-        let (save_draft, more_draft) = (draft.clone(), draft);
+        let picked = Rc::new(choices.clone());
+        let (save_picked, more_picked) = (Rc::clone(&picked), picked);
+        // A calendar picked in the popover starts the draft again on it,
+        // so its zone and reminders follow, as the editor's choice does.
+        let on = move |choices: &[(AccountId, String, Calendar)], index: usize, title: String| {
+            let mut draft = match choices.get(index) {
+                Some((account, _, calendar)) if index != current => {
+                    Draft::new(*account, calendar, start, end, draft::local_zone())
+                }
+                _ => draft.clone(),
+            };
+            draft.title = title;
+            draft
+        };
+        let on_more = on.clone();
         self.quick.show(
             &anchor,
             &rect,
             side,
             &when,
-            &calendar,
-            // `Draft` has private fields, so no struct update from here.
-            move |title| {
-                let mut draft = save_draft.clone();
-                draft.title = title;
-                save_view.save_draft(draft);
-            },
-            move |title| {
-                let mut draft = more_draft.clone();
-                draft.title = title;
-                more_view.edit(draft);
-            },
+            choices,
+            current,
+            move |title, index| save_view.save_draft(on(&save_picked, index, title)),
+            move |title, index| more_view.edit(on_more(&more_picked, index, title)),
         );
     }
 
@@ -2601,7 +2656,8 @@ fn keep_agenda_events(
     found
 }
 
-/// "MON TUE WED …" over the month grid.
+/// "MON TUE WED …" over the month grid, starting on the locale's own
+/// first weekday.
 fn weekday_row() -> gtk::Box {
     let row = gtk::Box::builder()
         .homogeneous(true)
@@ -2610,10 +2666,10 @@ fn weekday_row() -> gtk::Box {
         .css_classes(["day-heading"])
         .build();
     let monday = NaiveDate::from_ymd_opt(2024, 1, 1).expect("2024-01-01 is a Monday");
-    for i in 0..7u64 {
+    for day in mailrs_domain::calendar::week::week_columns(crate::locale_time::first_weekday()) {
         let label = gtk::Label::builder()
             .label(
-                (monday + Days::new(i))
+                (monday + Days::new(u64::from(day.num_days_from_monday())))
                     .format_localized(&gettext("%a"), date_locale())
                     .to_string(),
             )

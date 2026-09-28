@@ -83,10 +83,36 @@ fn loads_remote(lower: &str) -> bool {
 /// read against it. Mail that does not, which is most of what a person
 /// writes, takes the window's own colours instead of sitting in a white
 /// slab in a dark window.
+///
+/// A quote's own grey and a border's colour don't count: a reply's
+/// quoted history carries them in every mail client, and it is still a
+/// note.
 fn paints_itself(lower: &str) -> bool {
-    ["bgcolor=", "background", "color:", "color=", "<table"]
-        .iter()
-        .any(|mark| lower.contains(mark))
+    let lower = without_quote_tags(lower);
+    let text_colour = ["color:", "color="].iter().any(|mark| {
+        lower
+            .match_indices(mark)
+            .any(|(at, _)| !lower[..at].ends_with('-'))
+    });
+    text_colour
+        || ["bgcolor=", "background", "<table"]
+            .iter()
+            .any(|mark| lower.contains(mark))
+}
+
+/// `lower` with each `<blockquote ...>` opening tag cut down to its name,
+/// so the style a quote carries is left out of [`paints_itself`].
+fn without_quote_tags(lower: &str) -> String {
+    let mut out = String::with_capacity(lower.len());
+    let mut rest = lower;
+    while let Some(at) = rest.find("<blockquote") {
+        out.push_str(&rest[..at]);
+        out.push_str("<blockquote>");
+        rest = &rest[at..];
+        rest = rest.find('>').map_or("", |end| &rest[end + 1..]);
+    }
+    out.push_str(rest);
+    out
 }
 
 /// HTML bodies waiting to be cleaned, each with the start of its picture
@@ -696,6 +722,21 @@ mod tests {
             "mailrs-cid:1/m1/0/",
         );
         assert!(!note.paints && sale.paints);
+    }
+
+    /// A reply's quoted history is grey text with a border, as Penguin
+    /// Mail and Gmail both write it. That is a note, not a newsletter, so
+    /// it keeps the window's colours in the dark.
+    #[test]
+    fn a_quote_s_own_grey_does_not_make_mail_paint_itself() {
+        for reply in [
+            "<p>hey</p><blockquote style=\"margin:0 0 0 0.8ex;border-left:2px solid #ccc;padding-left:1ex;color:#555\"><p>test body</p></blockquote>",
+            "<div>hey</div><blockquote class=\"gmail_quote\" style=\"border-left-width:1px;border-left-style:solid;border-left-color:rgb(204,204,204);padding-left:1ex\">test body</blockquote>",
+        ] {
+            assert!(!clean(reply, "mailrs-cid:1/m1/0/").paints, "{reply}");
+        }
+        let red = clean("<p style=\"color:#c00\">Due today</p>", "mailrs-cid:1/m1/0/");
+        assert!(red.paints, "a colour the writer chose still keeps the sheet");
     }
 
     /// A remote picture a sender left inside a comment never reaches the

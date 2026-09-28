@@ -122,6 +122,7 @@ app/src/unsubscribe_page.rs
 app/src/unsubscribe_page/webkit.rs
 app/src/update/mod.rs
 app/src/update/signature.rs
+domain/src/calendar/clock.rs
 domain/src/category.rs
 domain/src/invitation.rs
 domain/src/invitation/recurrence.rs
