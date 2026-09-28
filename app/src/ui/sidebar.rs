@@ -330,13 +330,19 @@ impl Sidebar {
             );
         }
         switch.set_active_name(Some("mail"));
-        let titles = gtk::Box::new(gtk::Orientation::Horizontal, 0);
+        // 8 px past the header's own padding puts the switch 14 px into
+        // the card, as mockups.py's `sidebar_shell` draws it.
+        let titles = gtk::Box::builder().margin_start(8).build();
         titles.append(&title);
         titles.append(&switch);
+        // At the start rather than as the title: a title widget is centred
+        // in the room beside the menu button, 8 px right of where the
+        // mockup puts the switch.
         let header = adw::HeaderBar::builder()
             .show_end_title_buttons(false)
-            .title_widget(&titles)
+            .show_title(false)
             .build();
+        header.pack_start(&titles);
         let content = gtk::Stack::builder()
             .transition_type(gtk::StackTransitionType::Crossfade)
             .transition_duration(150)

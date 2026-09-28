@@ -634,7 +634,9 @@ toggle-group.view-switch > toggle,
 toggle-group.space-switch > toggle { font-size: 0.89em; font-weight: 600; }
 /* The mockup's switch is a 204 x 32 pill of three 64 px toggles. */
 toggle-group.view-switch > toggle { min-width: 64px; padding-left: 0; padding-right: 0; }
-toggle-group.space-switch > toggle { -gtk-icon-size: 14px; padding-left: 12px; padding-right: 12px; }
+toggle-group.space-switch > toggle { -gtk-icon-size: 14px; padding: 0 12px; min-height: 28px; }
+/* The mockup's Mail / Calendar pill is 32 px tall: 28 px toggles, 2 px in. */
+toggle-group.space-switch { padding: 2px; }
 toggle-group.view-switch > toggle:not(:checked),
 toggle-group.space-switch > toggle:not(:checked) { color: color-mix(in srgb, currentColor 64%, transparent); }
 /* The chosen toggle is the view colour on the pill, white in light and
