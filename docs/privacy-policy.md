@@ -1,6 +1,6 @@
 # Penguin Mail privacy policy
 
-Last updated: 25 September 2026
+Last updated: 28 September 2026
 
 Penguin Mail is a desktop email client for Gmail, published by Pivotd
 (https://pivotd.com). It runs on your own computer. This policy explains what
@@ -24,8 +24,16 @@ for every permission Penguin Mail uses, in one visit:
   one.
 - `calendar.events`, to read your calendars, mark your answer to a
   meeting invitation, and let the assistant read and change events.
-- `calendar.calendarlist.readonly`, to read the list of your calendars, so
-  Penguin Mail can show more than the primary one.
+- `calendar.calendarlist`, to read the list of your calendars, so Penguin
+  Mail can show more than the primary one; to change a calendar's color or
+  hide it, when you do so in Penguin Mail; and to subscribe to a calendar
+  by its address or to a public holiday calendar, when you ask.
+- `calendar.calendars`, to make, rename and delete a calendar you own,
+  when you ask.
+- `drive.file`, which reaches only files Penguin Mail itself puts in your
+  Google Drive, never any other file there. Penguin Mail does not use it
+  yet; it is asked for now so that sending a large attachment through
+  Drive later needs no second visit to Google's screen.
 
 You may leave any of these unticked on Google's screen. Penguin Mail then
 turns off the feature that needs it and says why where you would use that

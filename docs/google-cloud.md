@@ -34,7 +34,7 @@ click through Google's "unverified app" notice once per account.
 
 ## Data Access
 
-Add the five scopes Penguin Mail asks for at sign-in. Google compares this
+Add the seven scopes Penguin Mail asks for at sign-in. Google compares this
 list with what the app asks for, so keep them the same.
 
 | Scope | What Penguin Mail does with it |
@@ -43,7 +43,9 @@ list with what the app asks for, so keep them the same.
 | `https://www.googleapis.com/auth/gmail.settings.basic` | Manages filters for Rules and Hide My Email, turns the automatic reply on and off, and reads your send-as addresses |
 | `https://www.googleapis.com/auth/contacts` | Reads your contacts to complete addresses, and saves or edits a contact when you ask |
 | `https://www.googleapis.com/auth/calendar.events` | Shows your events, answers invitations, and creates or changes events when you ask |
-| `https://www.googleapis.com/auth/calendar.calendarlist.readonly` | Lists your calendars with their names and colors |
+| `https://www.googleapis.com/auth/calendar.calendarlist` | Lists your calendars with their names and colors, changes a calendar's color or hides it, and subscribes to a calendar by its address or to a holiday calendar |
+| `https://www.googleapis.com/auth/calendar.calendars` | Makes, renames and deletes calendars you own |
+| `https://www.googleapis.com/auth/drive.file` | Reserved for sending large attachments through Google Drive; touches only files Penguin Mail puts there |
 
 Google asks for a justification only during verification. If you need one:
 "Penguin Mail is a desktop mail client. It uses each scope for the feature
