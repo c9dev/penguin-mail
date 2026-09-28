@@ -246,7 +246,12 @@ fn samples() -> Vec<Sample> {
             subject: "Re: Q4 roadmap review",
             minutes_ago: 38,
             labels: &["INBOX", "UNREAD", "IMPORTANT"],
-            text: "Dana, can you sanity-check Jonas's estimate before Friday? If last-write-wins is acceptable to support, I'm happy to commit to October.\n\nOn Tue, Jonas Weber wrote:\n> October is possible if we cut sync conflict resolution down to\n> last-write-wins for the first release.\n\n-- \nPriya Raman\nHead of Product, Fernwood",
+            text: "Dana, can you sanity-check Jonas's estimate before Friday? If last-write-wins is acceptable to support, I'm happy to commit to October.\n\n-- \nPriya Raman\nHead of Product, Fernwood\n\nOn Tue, 22 Sept 2026 at 14:10, Jonas Weber <jonas@fernwood.example> wrote:\n> Left my comments. Short version: October is possible if we cut sync\n> conflict resolution down to last-write-wins for the first release.\n>\n> > Could you each leave comments by Thursday?\n>\n> Jonas",
+            // A reply as Gmail writes it, so the page has quoted history to
+            // fold away.
+            html: Some(
+                r#"<div dir="ltr">Dana, can you sanity-check Jonas's estimate before Friday? If last-write-wins is acceptable to support, I'm happy to commit to October.<br><br><div class="gmail_signature">Priya Raman<br>Head of Product, Fernwood</div></div><br><div class="gmail_quote gmail_quote_container"><div dir="ltr" class="gmail_attr">On Tue, 22 Sept 2026 at 14:10, Jonas Weber &lt;<a href="mailto:jonas@fernwood.example">jonas@fernwood.example</a>&gt; wrote:<br></div><blockquote class="gmail_quote" style="margin:0px 0px 0px 0.8ex;border-left:1px solid rgb(204,204,204);padding-left:1ex"><div dir="ltr">Left my comments. Short version: October is possible if we cut sync conflict resolution down to last-write-wins for the first release.<br><br><blockquote class="gmail_quote" style="margin:0px 0px 0px 0.8ex;border-left:1px solid rgb(204,204,204);padding-left:1ex">Could you each leave comments by Thursday?</blockquote><br>Jonas</div></blockquote></div>"#,
+            ),
             ..PLAIN
         },
         Sample {

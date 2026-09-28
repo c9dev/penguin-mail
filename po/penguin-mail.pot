@@ -1344,7 +1344,7 @@ msgstr ""
 msgid "Slate"
 msgstr ""
 
-#: app/src/main.rs:57
+#: app/src/main.rs:58
 msgid ""
 "Usage: penguin-mail [--background] [--demo] [--compose [mailto:ADDRESS]]\n"
 "\n"
@@ -1355,15 +1355,15 @@ msgid ""
 "  mailto:...     the same as --compose mailto:..."
 msgstr ""
 
-#: app/src/main.rs:123
+#: app/src/main.rs:124
 msgid "penguin-mail: unknown option {option}"
 msgstr ""
 
-#: app/src/main.rs:246
+#: app/src/main.rs:247
 msgid "Penguin Mail Could Not Start"
 msgstr ""
 
-#: app/src/main.rs:251 app/src/ui/about.rs:148
+#: app/src/main.rs:252 app/src/ui/about.rs:148
 msgid "Report a Problem"
 msgstr ""
 
@@ -1991,134 +1991,138 @@ msgstr ""
 msgid "Could not open the draft: {reason}"
 msgstr ""
 
-#: app/src/render.rs:133
+#: app/src/render.rs:138
 msgid "{count} message"
 msgid_plural "{count} messages"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/render.rs:141
+#: app/src/render.rs:146
 msgid "Summarize"
 msgstr ""
 
-#: app/src/render.rs:183 app/src/ui/thread_row.rs:299
+#: app/src/render.rs:188 app/src/ui/thread_row.rs:299
 msgid "Unknown sender"
 msgstr ""
 
-#: app/src/render.rs:195
+#: app/src/render.rs:200
 msgid "Show or hide this message"
 msgstr ""
 
-#: app/src/render.rs:197 app/src/ui/contact_card.rs:43
+#: app/src/render.rs:202 app/src/ui/contact_card.rs:43
 msgid "Contact"
 msgstr ""
 
-#: app/src/render.rs:202
+#: app/src/render.rs:207
 msgid "Contact card for {person}"
 msgstr ""
 
-#: app/src/render.rs:261 app/src/ui/invitation.rs:383
+#: app/src/render.rs:266 app/src/ui/invitation.rs:383
 #: app/src/ui/thread_row.rs:122
 msgid "Invitation"
 msgstr ""
 
-#: app/src/render.rs:274
+#: app/src/render.rs:279
 msgid "Loading…"
 msgstr ""
 
-#: app/src/render.rs:279
+#: app/src/render.rs:284
 msgid "This message could not be loaded: {reason}"
 msgstr ""
 
-#: app/src/render.rs:316
+#: app/src/render.rs:334
 msgid "Details"
 msgstr ""
 
-#: app/src/render.rs:337
+#: app/src/render.rs:355
 msgid "from"
 msgstr ""
 
-#: app/src/render.rs:348
+#: app/src/render.rs:366
 msgid "to"
 msgstr ""
 
-#: app/src/render.rs:350
+#: app/src/render.rs:368
 msgid "cc"
 msgstr ""
 
-#: app/src/render.rs:352
+#: app/src/render.rs:370
 msgid "date"
 msgstr ""
 
-#: app/src/render.rs:353
+#: app/src/render.rs:371
 msgid "subject"
 msgstr ""
 
-#: app/src/render.rs:355
+#: app/src/render.rs:373
 msgid "mailed-by"
 msgstr ""
 
-#: app/src/render.rs:358
+#: app/src/render.rs:376
 msgid "signed-by"
 msgstr ""
 
-#: app/src/render.rs:362
+#: app/src/render.rs:380
 msgid "security"
 msgstr ""
 
-#: app/src/render.rs:364
+#: app/src/render.rs:382
 msgid "Standard encryption (TLS)"
 msgstr ""
 
-#: app/src/render.rs:369
+#: app/src/render.rs:387
 msgid "Not encrypted in transit"
 msgstr ""
 
-#: app/src/render.rs:406 app/src/ui/composer/mod.rs:1377
+#: app/src/render.rs:424 app/src/ui/composer/mod.rs:1377
 msgid "{count} attachment"
 msgid_plural "{count} attachments"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/render.rs:438
+#: app/src/render.rs:456
 msgid "Quick Look"
 msgstr ""
 
-#: app/src/render.rs:439 app/src/ui/window/attachments.rs:319
+#: app/src/render.rs:457 app/src/ui/window/attachments.rs:319
 #: app/src/ui/window/attachments.rs:325
 msgid "Save to Downloads"
 msgstr ""
 
-#: app/src/render.rs:441
+#: app/src/render.rs:459
 msgid "Open {file}, {size}"
 msgstr ""
 
-#: app/src/render.rs:448
+#: app/src/render.rs:466
 msgid "Save {file} to Downloads"
 msgstr ""
 
-#: app/src/render.rs:455
+#: app/src/render.rs:473
 msgid "Save All ({count})"
 msgid_plural "Save All ({count})"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/render.rs:466
+#: app/src/render.rs:484
 msgid "Save every attachment to a folder"
 msgstr ""
 
-#: app/src/render.rs:530
+#: app/src/render.rs:548
 msgid "undisclosed recipients"
 msgstr ""
 
-#: app/src/render.rs:533
+#: app/src/render.rs:551
 msgid "{named}, and {count} other"
 msgid_plural "{named}, and {count} others"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/render.rs:546
+#: app/src/render.rs:564
 msgid "me"
+msgstr ""
+
+#: app/src/render.rs:574
+msgid "Show trimmed content"
 msgstr ""
 
 #: app/src/rules.rs:72

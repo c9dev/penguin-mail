@@ -24,6 +24,7 @@ mod open_thread;
 mod packaging;
 mod permission;
 mod pgp;
+mod quoted;
 mod protection;
 mod render;
 mod richtext;

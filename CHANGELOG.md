@@ -7,6 +7,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### New
 
+- The earlier messages quoted under a reply or forward fold away behind
+  a small "•••" button, as in Gmail; click it to read them in place.
 - An invitation's card shows the hours around the meeting from your
   calendar and says whether anything else is on then.
 - Penguin Mail comes as a package for Arch Linux: download the
