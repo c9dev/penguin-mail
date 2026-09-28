@@ -405,6 +405,10 @@ impl CalendarService for AnyCalendar {
         forward!(AnyCalendar, self, remove_event(calendar, id, etag, notify))
     }
 
+    async fn import_event(&self, event: &model::Event) -> Result<model::Event, BackendError> {
+        forward!(AnyCalendar, self, import_event(event))
+    }
+
     async fn move_event(
         &self,
         event: &model::Event,

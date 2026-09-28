@@ -307,6 +307,15 @@ pub trait GmailApi: Send + Sync + 'static {
         notify: calendar::Notify,
     ) -> impl Future<Output = Result<(), GmailError>> + Send;
 
+    /// Imports `event` into its calendar under its iCalendar UID and
+    /// invites nobody. Importing a UID the calendar already holds updates
+    /// that event, so a file added twice is still one event. Answers the
+    /// event as the calendar holds it.
+    fn import_event(
+        &self,
+        event: &calendar::Event,
+    ) -> impl Future<Output = Result<calendar::Event, GmailError>> + Send;
+
     /// Moves `event` from its calendar to `destination`, and mails its
     /// guests when `notify` says so. Answers the event on `destination`.
     fn move_event(
@@ -617,6 +626,10 @@ impl GmailApi for AccountClient {
         notify: calendar::Notify,
     ) -> Result<(), GmailError> {
         self.client.remove_event(calendar, id, etag, notify).await
+    }
+
+    async fn import_event(&self, event: &calendar::Event) -> Result<calendar::Event, GmailError> {
+        self.client.import_event(event).await
     }
 
     async fn move_event(

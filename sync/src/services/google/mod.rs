@@ -591,6 +591,10 @@ impl<G: GmailApi> CalendarService for Google<G> {
         paced(self.gmail.remove_event(calendar, id, etag, notify)).await.map_err(calendar_write_error)
     }
 
+    async fn import_event(&self, event: &model::Event) -> Result<model::Event, BackendError> {
+        paced(self.gmail.import_event(event)).await.map_err(calendar_write_error)
+    }
+
     async fn move_event(
         &self,
         event: &model::Event,

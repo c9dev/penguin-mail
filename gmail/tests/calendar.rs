@@ -1474,3 +1474,46 @@ async fn an_edit_of_an_out_of_office_leaves_its_type_alone() {
         .await
         .unwrap();
 }
+
+#[tokio::test]
+async fn an_imported_event_goes_out_under_its_uid_with_no_guests() {
+    let server = MockServer::start().await;
+    mount_token(&server).await;
+    let sent = std::sync::Arc::new(std::sync::Mutex::new(Value::Null));
+    let seen = std::sync::Arc::clone(&sent);
+    Mock::given(method("POST"))
+        .and(path(format!("{CALENDAR}/calendars/work/events/import")))
+        .respond_with(move |request: &Request| {
+            *seen.lock().unwrap() = request.body_json().unwrap();
+            ResponseTemplate::new(200).set_body_json(json!({
+                "id": "gen1", "iCalUID": "ticket-4471@rail.example", "summary": "Coach 4",
+                "start": {"dateTime": "2026-11-05T08:30:00Z", "timeZone": "Europe/Lisbon"},
+                "end": {"dateTime": "2026-11-05T11:30:00Z", "timeZone": "Europe/Lisbon"}
+            }))
+        })
+        .expect(1)
+        .mount(&server)
+        .await;
+    let event = mailrs_domain::calendar::Event {
+        calendar: "work".into(),
+        uid: "ticket-4471@rail.example".into(),
+        title: "Coach 4".into(),
+        zone: "Europe/Lisbon".into(),
+        start: 1_793_867_400_000,
+        end: 1_793_878_200_000,
+        guests: vec![guest("ann@example.com")],
+        rules: vec!["RRULE:FREQ=WEEKLY;COUNT=4".into()],
+        ..Default::default()
+    };
+
+    let made = client(&server).import_event(&event).await.unwrap();
+
+    assert_eq!((made.id.as_str(), made.uid.as_str()), ("gen1", "ticket-4471@rail.example"));
+    let body = sent.lock().unwrap().clone();
+    assert_eq!(body["iCalUID"], "ticket-4471@rail.example");
+    assert_eq!(body["start"]["timeZone"], "Europe/Lisbon");
+    assert_eq!(body["recurrence"], json!(["RRULE:FREQ=WEEKLY;COUNT=4"]));
+    // The import names no id of its own, or Google would file a second
+    // event beside the one the UID already matches, and it invites nobody.
+    assert!(body.get("id").is_none() && body.get("attendees").is_none());
+}

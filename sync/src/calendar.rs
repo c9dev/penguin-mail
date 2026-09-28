@@ -31,7 +31,8 @@ use mailrs_store::Db;
 use mailrs_store::calendar as store;
 
 use crate::calendar_copy::{CalendarCopy, new_event_id};
-use crate::{Accounts, AnyCalendar, BackendError, CalendarService, Permitted, SyncError};
+use crate::{Accounts, AnyCalendar, BackendError, CalendarService, Permitted, Spot, SyncError};
+use mailrs_domain::invitation::Invitation;
 
 /// Why no calendar answers to a name.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -72,6 +73,20 @@ pub fn writable_named<'a>(
         ([], None) => Err(NoPick::Unknown),
         _ => Err(NoPick::Several),
     }
+}
+
+/// Where the events of a calendar file went.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Added {
+    /// The name of the calendar they went on, for the card's line. Empty
+    /// when the account gave no calendar list to name it from.
+    pub calendar: String,
+    /// Where each event sits, in the order the file listed them, for
+    /// Show in Calendar.
+    pub spots: Vec<Spot>,
+    /// Events the file lists that could not go: no UID to match on, or no
+    /// start time.
+    pub skipped: usize,
 }
 
 pub struct Calendar<A: Accounts> {
@@ -142,6 +157,69 @@ impl<A: Accounts> Calendar<A> {
             Some(list) => Ok(Permitted::Done(list)),
             None => permitted(self.calendar(account_id)?.calendars().await),
         }
+    }
+
+    /// Adds the events of a calendar file to `calendar`, or the primary
+    /// calendar when it names none. Straight to the provider, not through
+    /// the queue: the person pressed Add to Calendar and the card says
+    /// where the event went, so a failure has to reach them now. The
+    /// provider matches each event on its UID, so the same file added
+    /// again updates what the first time made. Once the copy is reading
+    /// the account the events go into it too, and Show in Calendar works
+    /// at once.
+    ///
+    /// A calendar the account cannot write to, or one it does not have,
+    /// is `SyncError::NoCalendar`.
+    pub async fn import(
+        &self,
+        account_id: AccountId,
+        calendar: Option<&str>,
+        events: &[Invitation],
+    ) -> Result<Permitted<Added>, SyncError> {
+        let service = self.calendar(account_id)?;
+        let target = match self.target(account_id, calendar).await {
+            // A copy never read holds no calendars, so a named one is
+            // looked up on the provider.
+            Err(SyncError::NoCalendar(_)) if calendar.is_some() && !self.synced(account_id).await? => {
+                let listed = match self.calendars(account_id).await? {
+                    Permitted::Done(listed) => listed,
+                    Permitted::NeedsPermission => return Ok(Permitted::NeedsPermission),
+                };
+                let id = calendar.unwrap_or_default();
+                match listed.into_iter().find(|c| c.id == id && c.access.can_write()) {
+                    Some(found) => found,
+                    None => return Err(SyncError::NoCalendar(id.to_string())),
+                }
+            }
+            other => other?,
+        };
+        let mut saved = Vec::new();
+        let mut skipped = 0;
+        for invitation in events {
+            let Some(event) = invitation.to_event(&target.id, &target.zone) else {
+                skipped += 1;
+                continue;
+            };
+            match service.import_event(&event).await {
+                Ok(made) => saved.push(made),
+                Err(BackendError::NeedsPermission) => return Ok(Permitted::NeedsPermission),
+                Err(err) => return Err(err.into()),
+            }
+        }
+        if self.synced(account_id).await? {
+            let (rows, now) = (saved.clone(), crate::now_millis());
+            self.db.write(move |c| store::save_events(c, account_id, &rows, now)).await?;
+        }
+        let spots = saved
+            .iter()
+            .map(|event| Spot {
+                account_id,
+                calendar: event.calendar.clone(),
+                id: event.id.clone(),
+                start: event.start,
+            })
+            .collect();
+        Ok(Permitted::Done(Added { calendar: target.name, spots, skipped }))
     }
 
     /// Puts a new event on `calendar`, or the primary calendar when it

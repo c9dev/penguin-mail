@@ -325,6 +325,29 @@ impl GmailClient {
         Ok(google_event(&event.calendar, &answer, None, &event.zone))
     }
 
+    /// Imports `event` into its calendar under its own iCalendar UID, for
+    /// a file the person chose to keep (`events.import`). Google matches
+    /// on the UID, so importing the same file again updates the copy the
+    /// first import made instead of adding a second one. No id goes out
+    /// and no guest is invited: the import is a private copy, and mail on
+    /// the person's behalf about somebody else's event would surprise
+    /// everyone on it.
+    pub async fn import_event(&self, event: &calendar::Event) -> Result<calendar::Event, GmailError> {
+        let url = format!("{}/calendars/{}/events/import", self.calendar_base_url, encode(&event.calendar));
+        let mut body = event_json(event, true);
+        if let Some(fields) = body.as_object_mut() {
+            for key in ["id", "attendees", "conferenceData"] {
+                fields.remove(key);
+            }
+            fields.insert("iCalUID".to_string(), json!(event.uid));
+            if event.sequence > 0 {
+                fields.insert("sequence".to_string(), json!(event.sequence));
+            }
+        }
+        let answer: Value = self.call_at(&url, |url| self.http().post(url).json(&body)).await?;
+        Ok(google_event(&event.calendar, &answer, None, &event.zone))
+    }
+
     /// Deletes an event, and mails its guests the cancellation when
     /// `notify` says so.
     pub async fn remove_event(
