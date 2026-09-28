@@ -60,6 +60,12 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Fixed
 
+- Archive, Junk, Trash, All Mail, smart mailboxes and searches show mail
+  you delete, junk, archive or move as soon as you open them, and no
+  longer bring back mail that left them.
+- Marking a Gmail message as junk from the Trash moves it to Junk, and
+  deleting one from Junk moves it to the Trash, instead of leaving it
+  in neither.
 - Moving or changing a second calendar event while the first one's Undo is still showing no longer closes Penguin Mail.
 - The Flatpak keeps its Google sign-in, IMAP passwords and AI keys in
   its own encrypted store instead of the desktop's shared keyring, which
