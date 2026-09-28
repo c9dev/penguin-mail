@@ -146,6 +146,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   it last updated, instead of leaving you guessing.
 
 ### Fixed
+- A message with a wide space character, such as some bank and shop
+  receipts, opens again instead of leaving the reading pane stuck.
 - In dark mode, a reply with quoted text shows on the dark page instead of
   in a white box.
 - Picking a contact from the suggestions in an event's Guests field adds

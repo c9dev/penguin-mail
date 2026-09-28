@@ -12,6 +12,10 @@ use std::ops::Range;
 /// escapes every `<` in text, so a scan by hand is enough and costs one
 /// pass over the body.
 pub fn history_in_html(html: &str) -> Option<Range<usize>> {
+    unfolded_on_panic(|| html_history(html))
+}
+
+fn html_history(html: &str) -> Option<Range<usize>> {
     let tree = Tree::parse(html);
     let first = tree.nodes.iter().find(|n| tree.visible(n))?.start;
     let last = tree.nodes.iter().rev().find(|n| tree.visible(n))?.start;
@@ -48,6 +52,22 @@ pub fn history_in_html(html: &str) -> Option<Range<usize>> {
 /// in a colon, or a forwarded message's marker line. None when the writer
 /// wrote nothing above it.
 pub fn history_in_text(text: &str) -> Option<usize> {
+    unfolded_on_panic(|| text_history(text))
+}
+
+/// Runs a search for quoted history, and folds nothing if it panics.
+/// Folding is an extra: a fault in it must leave the message readable,
+/// where a panic here once kept a receipt from opening at all, even after
+/// a restart, because the window cleans a body again on its own thread
+/// when the worker's try fails.
+fn unfolded_on_panic<T>(find: impl FnOnce() -> Option<T> + std::panic::UnwindSafe) -> Option<T> {
+    std::panic::catch_unwind(find).unwrap_or_else(|_| {
+        tracing::warn!("finding a message's quoted history failed; showing it unfolded");
+        None
+    })
+}
+
+fn text_history(text: &str) -> Option<usize> {
     let mut starts = Vec::new();
     let mut at = 0;
     for line in text.split_inclusive('\n') {
@@ -329,7 +349,9 @@ impl<'a> Tree<'a> {
             return Some(Kind::Header);
         }
         let from = ["From:", "De:"].iter().any(|w| words.starts_with(w));
-        let head = &self.html[node.start..node.end.min(node.start + 1200)];
+        // 1200 bytes can end inside a character, such as a receipt's
+        // figure space, so the cut moves back to where that one starts.
+        let head = &self.html[node.start..self.html.floor_char_boundary(node.end.min(node.start + 1200))];
         let sent = ["Sent:", "Enviado:", "Enviada:", "Date:", "Data:"]
             .iter()
             .any(|w| head.contains(w));
@@ -604,6 +626,28 @@ mod tests {
             ),
             None
         );
+    }
+
+    /// Whatever goes wrong in a search, the message still opens, unfolded.
+    #[test]
+    fn a_search_that_panics_folds_nothing() {
+        let found: Option<usize> = unfolded_on_panic(|| panic!("a fault in the search"));
+        assert_eq!(found, None);
+        assert_eq!(unfolded_on_panic(|| Some(3)), Some(3));
+    }
+
+    /// A receipt full of figure spaces (U+2007, three bytes each) once
+    /// cut the header check in the middle of one and panicked, so the
+    /// message never opened, on this computer or after a restart.
+    #[test]
+    fn a_wide_character_where_the_header_check_stops_does_not_panic() {
+        let spaces = "\u{2007}".repeat(600);
+        let html = format!("<p>Your receipt</p><div>From: Accounts{spaces}</div>");
+        // The header check reads 1200 bytes from the <div>. With these
+        // lengths that lands inside a figure space.
+        let div = html.find("<div>").expect("a div");
+        assert!(!html.is_char_boundary(div + 1200));
+        assert_eq!(history_in_html(&html), None);
     }
 
     #[test]
