@@ -384,12 +384,24 @@ impl CalendarService for AnyCalendar {
         forward!(AnyCalendar, self, event_changes(calendar, token, page, from))
     }
 
-    async fn put_event(&self, event: &model::Event, etag: Option<&str>, create: bool) -> Result<model::Event, BackendError> {
-        forward!(AnyCalendar, self, put_event(event, etag, create))
+    async fn put_event(
+        &self,
+        event: &model::Event,
+        etag: Option<&str>,
+        create: bool,
+        notify: model::Notify,
+    ) -> Result<model::Event, BackendError> {
+        forward!(AnyCalendar, self, put_event(event, etag, create, notify))
     }
 
-    async fn remove_event(&self, calendar: &str, id: &str, etag: Option<&str>) -> Result<(), BackendError> {
-        forward!(AnyCalendar, self, remove_event(calendar, id, etag))
+    async fn remove_event(
+        &self,
+        calendar: &str,
+        id: &str,
+        etag: Option<&str>,
+        notify: model::Notify,
+    ) -> Result<(), BackendError> {
+        forward!(AnyCalendar, self, remove_event(calendar, id, etag, notify))
     }
 }
 

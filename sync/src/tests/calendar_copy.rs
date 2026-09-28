@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use mailrs_domain::calendar::series::{RepeatScope, Step};
-use mailrs_domain::calendar::{Access, Calendar, Event, Occurrence, Status, occurrence_id};
+use mailrs_domain::calendar::{Access, Calendar, Event, Notify, Occurrence, Status, occurrence_id};
 use mailrs_store::calendar as store;
 
 use super::{Connected, Harness, harness, imap_harness};
@@ -1454,4 +1454,64 @@ async fn still_waiting_says_no_once_an_apply_commits_the_change_before_it() {
     // The assistant's own edit, elsewhere, made through `apply`.
     held(copy.apply(h.account_id, vec![Step::Save(event("primary", "b"))]).await.unwrap());
     assert!(!copy.still_waiting(&removed), "apply committed it, same as holding a new change would");
+}
+
+fn with_guest(calendar: &str, id: &str) -> Event {
+    Event {
+        guests: vec![mailrs_domain::calendar::Guest { email: "ann@example.com".into(), ..Default::default() }],
+        ..event(calendar, id)
+    }
+}
+
+fn notices(h: &Harness) -> Vec<(String, Notify)> {
+    h.fake.with(|s| s.calendar_notices.clone())
+}
+
+#[tokio::test]
+async fn a_new_event_with_a_guest_reaches_google_with_invitations_on() {
+    let h = harness().await;
+    h.fake.with(|s| s.calendars = vec![calendar("primary", true)]);
+    let copy = copy(&h);
+    copy.refresh(h.account_id, NOW).await.unwrap();
+    let id = new_event_id();
+    held(copy.apply(h.account_id, vec![Step::Save(with_guest("primary", &id))]).await.unwrap());
+    copy.send(h.account_id).await.unwrap();
+
+    assert_eq!(on_google(&h, &id).unwrap().guests[0].email, "ann@example.com");
+    assert_eq!(notices(&h), [(id, Notify::Guests)]);
+}
+
+#[tokio::test]
+async fn a_move_kept_from_the_guests_goes_out_with_updates_off() {
+    let h = harness().await;
+    h.fake.with(|s| s.calendars = vec![calendar("primary", true)]);
+    h.fake.put_calendar_event(with_guest("primary", "review"));
+    let copy = copy(&h);
+    copy.refresh(h.account_id, NOW).await.unwrap();
+    let moved = Event { start: NOW + 3_600_000, end: NOW + 7_200_000, ..stored(&h, "primary", "review").await.unwrap() };
+    held(copy.apply_with(h.account_id, vec![Step::Save(moved)], Notify::Nobody).await.unwrap());
+    copy.send(h.account_id).await.unwrap();
+
+    assert_eq!(notices(&h), [("review".to_string(), Notify::Nobody)]);
+}
+
+/// The choice rides the held change through a crash before its Undo
+/// toast closes, and goes out with it at the next start.
+#[tokio::test]
+async fn a_quiet_delete_held_through_a_restart_stays_quiet() {
+    let h = harness().await;
+    h.fake.with(|s| s.calendars = vec![calendar("primary", true)]);
+    h.fake.put_calendar_event(with_guest("primary", "review"));
+    let first_run = copy(&h);
+    first_run.refresh(h.account_id, NOW).await.unwrap();
+    let remove = vec![Step::Remove { calendar: "primary".into(), id: "review".into() }];
+    held(first_run.hold_with(h.account_id, remove, Notify::Nobody).await.unwrap());
+    drop(first_run);
+
+    let next_run = copy(&h);
+    next_run.recover_holds().await.unwrap();
+    next_run.send(h.account_id).await.unwrap();
+
+    assert!(on_google(&h, "review").is_none());
+    assert_eq!(notices(&h), [("review".to_string(), Notify::Nobody)]);
 }

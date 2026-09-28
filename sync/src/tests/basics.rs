@@ -61,6 +61,7 @@ fn triage_actions_parse_and_map_to_operations() {
         [
             crate::MailOp::AddToMailbox("TRASH".into()),
             crate::MailOp::RemoveFromMailbox("INBOX".into()),
+            crate::MailOp::RemoveFromMailbox("SPAM".into()),
         ]
     );
     assert_eq!(

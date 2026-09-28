@@ -120,7 +120,7 @@ impl<F: FnMut(Piece<'_>)> TokenSink for Sink<F> {
 }
 
 /// Tags whose content a reader never sees.
-fn hidden(name: &str) -> bool {
+pub(crate) fn hidden(name: &str) -> bool {
     matches!(
         name,
         "head" | "title" | "style" | "script" | "noscript" | "template"
@@ -128,7 +128,7 @@ fn hidden(name: &str) -> bool {
 }
 
 /// Tags that start and end a line of their own.
-fn block(name: &str) -> bool {
+pub(crate) fn block(name: &str) -> bool {
     matches!(
         name,
         "div"

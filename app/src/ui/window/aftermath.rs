@@ -57,8 +57,9 @@ pub(super) struct Aftermath {
     pub drop_rows: bool,
     /// Ask which changed rows have left the Gmail folder on screen.
     pub prune: bool,
-    /// Forget what Gmail answered and list the folder or smart mailbox on
-    /// screen again. Mail put back can add rows only a fresh search shows.
+    /// Forget what the server answered and list the folder, smart mailbox
+    /// or search on screen again. Mail moved or put back can add rows only
+    /// a fresh search shows.
     pub relist_remote: bool,
     /// Read the counts, the list and the open conversations again.
     pub refresh: bool,
@@ -93,7 +94,8 @@ impl Aftermath {
         match cause {
             Cause::Did(action, history) => Aftermath {
                 prune: history == History::Record,
-                relist_remote: history == History::Skip,
+                relist_remote: history == History::Skip
+                    || (history == History::Record && relists(action, mailbox)),
                 refresh: matches!(action, MailAction::Flag(_)),
                 flag: match action {
                     MailAction::Flag(color) => Flag::Paint(*color),
@@ -125,6 +127,37 @@ impl Aftermath {
                 ..Aftermath::NOTHING
             },
         }
+    }
+}
+
+/// Whether `mailbox`, which lists through a server search, has to search
+/// again after `action`. Pruning takes rows out of a folder but cannot add
+/// the mail an action moved into it, and a smart mailbox or a search has
+/// no way to tell which rows still match without asking again.
+fn relists(action: &MailAction, mailbox: &Mailbox) -> bool {
+    match mailbox {
+        Mailbox::Folder { .. } => moves_mail(action) && !leaves(action, mailbox),
+        Mailbox::Smart(_) | Mailbox::Search { .. } => true,
+        _ => false,
+    }
+}
+
+/// Whether `action` can put mail in a place it was not, rather than only
+/// mark it.
+fn moves_mail(action: &MailAction) -> bool {
+    match action {
+        MailAction::Triage(triage) => !matches!(
+            triage,
+            TriageAction::MarkRead
+                | TriageAction::MarkUnread
+                | TriageAction::Star
+                | TriageAction::Unstar
+        ),
+        MailAction::Remind { .. }
+        | MailAction::CancelReminder
+        | MailAction::Mute { .. }
+        | MailAction::Label { .. } => true,
+        MailAction::Flag(_) | MailAction::DismissFollowUp => false,
     }
 }
 
@@ -363,6 +396,51 @@ mod tests {
                 ..Aftermath::NOTHING
             }
         );
+    }
+
+    #[test]
+    fn mail_moved_into_the_folder_on_screen_lists_it_again() {
+        let triage = |action| MailAction::Triage(action);
+        let did = |action: &MailAction, mailbox| {
+            Aftermath::of(Cause::Did(action, History::Record), &mailbox, &done())
+        };
+        // Trashed from another window while the Trash is on screen: only
+        // a fresh listing shows it, since pruning only takes rows away.
+        let trashed = did(&triage(TriageAction::Trash), folder(Folder::Trash));
+        assert!(trashed.relist_remote);
+        let archived = did(&triage(TriageAction::Archive), folder(Folder::AllMail));
+        assert!(archived.relist_remote);
+        // Mail that left the folder goes row by row, with no new search.
+        let junked = did(&triage(TriageAction::Junk), folder(Folder::Trash));
+        assert!(junked.prune && !junked.relist_remote);
+        // Marks and a store mailbox cost no search.
+        let read = did(&triage(TriageAction::MarkRead), folder(Folder::Trash));
+        assert!(!read.relist_remote);
+        assert!(!did(&triage(TriageAction::Trash), inbox()).relist_remote);
+    }
+
+    #[test]
+    fn a_smart_mailbox_or_a_search_lists_again_after_any_change() {
+        let smart = Mailbox::Smart(mailrs_domain::SmartMailbox {
+            id: "s1".into(),
+            name: "Ann".into(),
+            account: None,
+            match_all: true,
+            conditions: vec![],
+        });
+        let search = Mailbox::Search {
+            query: "kites".into(),
+            account_id: None,
+        };
+        for mailbox in [smart, search] {
+            for action in [
+                MailAction::Triage(TriageAction::Trash),
+                MailAction::Triage(TriageAction::MarkRead),
+            ] {
+                let after = Aftermath::of(Cause::Did(&action, History::Record), &mailbox, &done());
+                assert!(after.relist_remote, "{mailbox:?} after {action:?}");
+            }
+        }
     }
 
     #[test]

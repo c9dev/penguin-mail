@@ -47,6 +47,17 @@ pub struct Dragging {
     pub started: bool,
 }
 
+/// A run of keyboard nudges on one card, moved on screen and not yet
+/// asked about.
+pub struct Nudging {
+    pub card: gtk::Widget,
+    /// The occurrence as it was before the first press.
+    pub occurrence: Occurrence,
+    pub run: drag::Nudges,
+    /// Where the card sat before the first press, for a Cancel.
+    pub placement: imp::Placement,
+}
+
 /// Width of the hour-label gutter down the left edge, shared with
 /// `AllDayStrip` so the day columns of both widgets line up. The values
 /// here are the approved mockup's (`calendar-mockup/mockups.py`).
@@ -66,12 +77,20 @@ const ALL_DAY_PAD_BELOW: f32 = 5.0;
 /// the gap between two cards sharing a lane split.
 const CARD_INSET: f32 = 3.0;
 const LANE_GAP: f32 = 3.0;
+/// The shortest a timed event's card ever draws, however briefly the
+/// event itself runs, so a five-minute meeting still keeps its title
+/// readable: the same height stage 2 gave an all-day card
+/// ([`ALL_DAY_CARD`]), which the mockup already treats as legible.
+const MIN_HEIGHT: f32 = ALL_DAY_CARD;
 
 /// Where one card sits in pixels, from `column`'s share of `width`
 /// (`GUTTER` plus `columns` equal shares), split into `lanes` at `lane`,
-/// running from `top_hours` to `bottom_hours` down the column. Returns a
-/// plain tuple rather than `graphene::Rect` so the test below needs no
-/// display; `size_allocate` builds the `Rect` from it.
+/// running from `top_hours` to `bottom_hours` down the column. The
+/// height never draws under [`MIN_HEIGHT`]: the card's top stays at its
+/// event's real start, so a short event only runs further down than it
+/// truly does, never up past it. Returns a plain tuple rather than
+/// `graphene::Rect` so the test below needs no display; `size_allocate`
+/// builds the `Rect` from it.
 pub fn rect(
     column: usize,
     columns: usize,
@@ -88,8 +107,33 @@ pub fn rect(
     let x =
         GUTTER + column as f32 * column_width + CARD_INSET + lane as f32 * (lane_width + LANE_GAP);
     let y = top_hours as f32 * HOUR + CARD_INSET / 2.0;
-    let height = (bottom_hours - top_hours) as f32 * HOUR - CARD_INSET;
+    let height = ((bottom_hours - top_hours) as f32 * HOUR - CARD_INSET).max(MIN_HEIGHT);
     (x, y, lane_width, height)
+}
+
+/// The milliseconds [`MIN_HEIGHT`] pixels are at `hour_px` pixels an
+/// hour, with `card_inset` trimmed off each card: how long an event
+/// must run before its card is tall enough to draw at its own length
+/// rather than the minimum. Two events shorter than this, close enough
+/// together, would draw over each other once both stretch to the
+/// minimum; [`stretch_for_lanes`] uses it to give them separate lanes
+/// instead.
+fn min_duration(min_height: f32, card_inset: f32, hour_px: f32) -> EpochMillis {
+    let hours = f64::from((min_height + card_inset) / hour_px);
+    (hours * 3_600_000.0).round() as EpochMillis
+}
+
+/// `spans`, each stretched to run at least `min` from its own start:
+/// not what the cards draw (their real length still decides that; see
+/// [`rect`]'s own floor), but what lane assignment reasons about, so two
+/// short events close enough together that their minimum-height cards
+/// would touch take separate lanes rather than sharing one and drawing
+/// on top of each other.
+fn stretch_for_lanes(
+    spans: &[(EpochMillis, EpochMillis)],
+    min: EpochMillis,
+) -> Vec<(EpochMillis, EpochMillis)> {
+    spans.iter().map(|&(start, end)| (start, end.max(start + min))).collect()
 }
 
 /// Where one all-day card sits: `start_day` to `end_day` (exclusive) of
@@ -320,6 +364,12 @@ mod imp {
         /// The spring that settles a released card.
         pub settle: RefCell<Option<adw::SpringAnimation>>,
         pub moved: RefCell<Option<Box<Moved>>>,
+        /// Keyboard nudges waiting for the keyboard to rest.
+        pub nudging: RefCell<Option<super::Nudging>>,
+        pub nudge_timer: RefCell<Option<glib::SourceId>>,
+        /// A nudged card the view is asking about, and where
+        /// [`super::TimeGrid::spring_back`] returns it on a Cancel.
+        pub nudged: RefCell<Option<(gtk::Widget, Placement)>>,
         pub selected: RefCell<Option<Box<Selected>>>,
         /// Says which occurrences a drag may move; a card whose predicate
         /// answers `false` starts no drag. `None` starts none either,
@@ -381,6 +431,11 @@ mod imp {
             if let Some(source) = self.now_timer.take() {
                 source.remove();
             }
+            if let Some(source) = self.nudge_timer.take() {
+                source.remove();
+            }
+            self.nudging.take();
+            self.nudged.take();
             self.blocks.borrow_mut().clear();
             self.dragging.take();
             self.settle.take();
@@ -757,7 +812,8 @@ impl TimeGrid {
             };
             let spans: Vec<(EpochMillis, EpochMillis)> =
                 pieces.iter().map(|&(_, s, e)| (s, e)).collect();
-            let (placed, more) = layout::lanes(&spans);
+            let min = min_duration(MIN_HEIGHT, CARD_INSET, HOUR);
+            let (placed, more) = layout::lanes(&stretch_for_lanes(&spans, min));
 
             let mut in_day: Vec<(gtk::Widget, imp::Placement, f64)> = Vec::new();
             for p in placed {
@@ -839,6 +895,11 @@ impl TimeGrid {
         if let Some((_, span)) = imp.ghost.borrow().clone() {
             self.show_ghost(Some(span));
         }
+        // The old cards are gone. A card being asked about comes back from
+        // the copy; one still being nudged moves to its new widget, so a
+        // sync landing between two presses does not undo them.
+        imp.nudged.take();
+        self.carry_nudges();
         self.queue_resize();
     }
 
@@ -1053,6 +1114,11 @@ impl TimeGrid {
     /// no write, for a cancelled repeat question or a failed write.
     pub fn spring_back(&self) {
         let imp = self.imp();
+        let nudged = imp.nudged.take();
+        if let Some((card, placement)) = nudged {
+            self.set_placement(&card, placement);
+            return;
+        }
         let Some((widget, from)) = imp
             .dragging
             .borrow()
@@ -1205,7 +1271,7 @@ impl TimeGrid {
             None => return false,
             Some(state) => state.started,
         };
-        if !already_started && dx.hypot(dy) < threshold {
+        if !already_started && drag::is_click(dx, dy, threshold) {
             return false;
         }
         if !already_started {
@@ -1273,9 +1339,12 @@ impl TimeGrid {
         true
     }
 
-    /// The release. A drag that never started leaves the card's own
-    /// click to open the popover, as before; one that did settles the
-    /// card on the spring, or emits `selected` for empty time.
+    /// The release. A drag on a card that never started leaves its own
+    /// click to open the popover, as before. On empty time, a press that
+    /// never started emits `selected` for the half hour it landed on,
+    /// the same click quick create opens from; one that did emits it for
+    /// the span dragged. A card drag past the threshold settles it on
+    /// the spring instead.
     fn end(&self, dx: f64, dy: f64) {
         let imp = self.imp();
         let taken = imp.dragging.borrow().as_ref().map(|d| {
@@ -1286,6 +1355,12 @@ impl TimeGrid {
         };
         if !started {
             imp.dragging.replace(None);
+            if card.is_none() {
+                let click = drag::click_slot(from);
+                if let Some(f) = imp.selected.borrow().as_ref() {
+                    f(click.0, click.1);
+                }
+            }
             return;
         }
         let (x, y) = (press.0 + dx, press.1 + dy);
@@ -1434,7 +1509,9 @@ impl TimeGrid {
     /// The keyboard path beside the drag: Shift+Up or Shift+Down moves
     /// the focused card by a quarter hour, Shift+Alt+Up or
     /// Shift+Alt+Down changes when it ends. Neither writes anything the
-    /// card's own predicate refuses.
+    /// card's own predicate refuses. The card moves at once; the view
+    /// hears of the total move once the keyboard rests (`drag::Nudges`),
+    /// so a run of presses asks one question.
     fn nudge_focused(&self, keyval: gdk::Key, state: gdk::ModifierType) -> glib::Propagation {
         if !state.contains(gdk::ModifierType::SHIFT_MASK) {
             return glib::Propagation::Proceed;
@@ -1451,15 +1528,133 @@ impl TimeGrid {
         if !imp.can_move.borrow().as_ref().is_some_and(|f| f(&o)) {
             return glib::Propagation::Proceed;
         }
-        let (start, end) = if state.contains(gdk::ModifierType::ALT_MASK) {
-            drag::stretch(o.start, o.end, steps)
-        } else {
-            drag::nudge(o.start, o.end, steps)
+        let Some(card) = self.block_at(&block::key_of(&o), o.start) else {
+            return glib::Propagation::Proceed;
         };
-        if let Some(f) = imp.moved.borrow().as_ref() {
-            f(self, &o, start, end);
+        // A run on another card is asked about before this one starts.
+        let other = imp.nudging.borrow().as_ref().is_some_and(|n| n.card != card);
+        if other {
+            if let Some(source) = imp.nudge_timer.take() {
+                source.remove();
+            }
+            self.ask_nudges();
+        }
+        let now = glib::monotonic_time() / 1_000;
+        let span = imp.nudging.borrow().as_ref().map_or((o.start, o.end), |n| n.run.to);
+        let to = if state.contains(gdk::ModifierType::ALT_MASK) {
+            drag::stretch(span.0, span.1, steps)
+        } else {
+            drag::nudge(span.0, span.1, steps)
+        };
+        let placement = self.placement_of(&card);
+        {
+            let mut nudging = imp.nudging.borrow_mut();
+            match nudging.as_mut() {
+                Some(n) => n.run.press(to, now),
+                None => {
+                    let Some(placement) = placement else {
+                        return glib::Propagation::Proceed;
+                    };
+                    let mut run = drag::Nudges::start((o.start, o.end), now);
+                    run.press(to, now);
+                    *nudging = Some(Nudging { card: card.clone(), occurrence: o, run, placement });
+                }
+            }
+        }
+        self.place_nudged(&card, to);
+        if imp.nudge_timer.borrow().is_none() {
+            self.wait_for_nudges(drag::NUDGE_QUIET);
         }
         glib::Propagation::Stop
+    }
+
+    /// Checks the run again after `wait` milliseconds. One timer serves
+    /// the whole run: when it fires early because another press came, it
+    /// waits out what [`drag::Nudges::wait`] says is left.
+    fn wait_for_nudges(&self, wait: i64) {
+        let weak = self.downgrade();
+        let millis = u64::try_from(wait).unwrap_or(0);
+        let source = glib::timeout_add_local_once(std::time::Duration::from_millis(millis), move || {
+            let Some(grid) = weak.upgrade() else { return };
+            // The source has fired and is gone; forget it without removing it.
+            grid.imp().nudge_timer.take();
+            let now = glib::monotonic_time() / 1_000;
+            let left = grid.imp().nudging.borrow().as_ref().map(|n| n.run.wait(now));
+            match left {
+                Some(0) => grid.ask_nudges(),
+                Some(left) => grid.wait_for_nudges(left),
+                None => {}
+            }
+        });
+        self.imp().nudge_timer.replace(Some(source));
+    }
+
+    /// Hands the finished run to the view as one move. A run that ended
+    /// where it began asks nothing.
+    fn ask_nudges(&self) {
+        let imp = self.imp();
+        let taken = imp.nudging.take();
+        let Some(n) = taken else { return };
+        if !n.run.moved() {
+            self.set_placement(&n.card, n.placement);
+            return;
+        }
+        imp.nudged.replace(Some((n.card.clone(), n.placement)));
+        let (start, end) = n.run.to;
+        if let Some(f) = imp.moved.borrow().as_ref() {
+            f(self, &n.occurrence, start, end);
+        }
+    }
+
+    /// Moves a run of nudges from a card a `show` removed to the card
+    /// that draws the same occurrence now, or drops the run when the
+    /// occurrence has left the grid.
+    fn carry_nudges(&self) {
+        let imp = self.imp();
+        let pending = imp
+            .nudging
+            .borrow()
+            .as_ref()
+            .map(|n| (block::key_of(&n.occurrence), n.occurrence.start, n.run.to));
+        let Some((key, start, to)) = pending else { return };
+        let card = self.block_at(&key, start);
+        let placement = card.as_ref().and_then(|c| self.placement_of(c));
+        match card.zip(placement) {
+            Some((card, placement)) => {
+                if let Some(n) = imp.nudging.borrow_mut().as_mut() {
+                    n.card = card.clone();
+                    n.placement = placement;
+                }
+                self.place_nudged(&card, to);
+            }
+            None => {
+                imp.nudging.take();
+                if let Some(source) = imp.nudge_timer.take() {
+                    source.remove();
+                }
+            }
+        }
+    }
+
+    /// `card`'s placement from the last `show`, or after a nudge.
+    fn placement_of(&self, card: &gtk::Widget) -> Option<imp::Placement> {
+        self.imp().children.borrow().iter().find(|(w, _)| w == card).map(|(_, p)| *p)
+    }
+
+    fn set_placement(&self, card: &gtk::Widget, placement: imp::Placement) {
+        if let Some((_, p)) = self.imp().children.borrow_mut().iter_mut().find(|(w, _)| w == card) {
+            *p = placement;
+        }
+        self.queue_allocate();
+    }
+
+    /// Draws `card` at `start` to `end`, in its own lane. A span that
+    /// leaves the days shown keeps the card where it last was.
+    fn place_nudged(&self, card: &gtk::Widget, (start, end): (EpochMillis, EpochMillis)) {
+        let Some((column, top, bottom)) = self.imp().span_placement(start, end) else { return };
+        let Some(imp::Placement::Card { columns, lane, lanes, .. }) = self.placement_of(card) else { return };
+        let placement = imp::Placement::Card { column, columns, lane, lanes, top, bottom };
+        self.set_placement(card, placement);
     }
 }
 
@@ -1727,6 +1922,58 @@ mod tests {
         let r = rect(1, 7, 1, 2, 10.0, 11.5, 60.0 + 7.0 * 100.0);
         assert_eq!((r.0, r.2), (211.5, 45.5));
         assert_eq!((r.1, r.3), (621.5, 90.0));
+    }
+
+    #[test]
+    fn a_five_minute_event_still_draws_a_readable_card() {
+        let (_, _, _, height) = rect(0, 1, 0, 1, 9.0, 9.0 + 5.0 / 60.0, 800.0);
+        assert_eq!(height, MIN_HEIGHT);
+    }
+
+    #[test]
+    fn an_hour_long_event_is_well_above_the_minimum_and_keeps_its_own_height() {
+        let (_, _, _, height) = rect(0, 1, 0, 1, 9.0, 10.0, 800.0);
+        assert_eq!(height, HOUR - CARD_INSET);
+    }
+
+    #[test]
+    fn the_card_s_top_never_moves_to_make_room_for_the_minimum() {
+        let (_, top, _, _) = rect(0, 1, 0, 1, 9.0, 9.0 + 5.0 / 60.0, 800.0);
+        assert_eq!(top, 9.0 * HOUR + CARD_INSET / 2.0);
+    }
+
+    #[test]
+    fn min_duration_is_how_long_an_event_runs_before_its_card_clears_the_floor() {
+        let min = min_duration(24.0, 3.0, 62.0);
+        // 27 px at 62 px an hour is 26 minutes 8 seconds, rounded to the
+        // millisecond.
+        assert_eq!(min, 1_567_742);
+    }
+
+    #[test]
+    fn two_short_events_close_together_take_separate_lanes() {
+        // Two five-minute events ten minutes apart do not overlap in
+        // real time, but once both stretch to the minimum card height
+        // they would draw on top of each other in one lane.
+        let five_min = 5 * 60_000;
+        let ten_min = 10 * 60_000;
+        let spans = [(0, five_min), (ten_min, ten_min + five_min)];
+        let stretched = stretch_for_lanes(&spans, 20 * 60_000);
+        let (placed, _) = layout::lanes(&stretched);
+        assert_eq!(placed[0].lane, 0);
+        assert_eq!(placed[1].lane, 1);
+        assert_eq!(placed[0].lanes, 2);
+    }
+
+    #[test]
+    fn events_well_apart_share_a_lane_even_after_stretching() {
+        let five_min = 5 * 60_000;
+        let spans = [(0, five_min), (30 * 60_000, 30 * 60_000 + five_min)];
+        let stretched = stretch_for_lanes(&spans, 20 * 60_000);
+        let (placed, _) = layout::lanes(&stretched);
+        assert_eq!(placed[0].lane, 0);
+        assert_eq!(placed[1].lane, 0);
+        assert_eq!(placed[0].lanes, 1);
     }
 
     #[test]

@@ -10,7 +10,7 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use mailrs_domain::calendar::series::Step;
-use mailrs_domain::calendar::{self as model, Access, Calendar, Event, Guest, Occurrence, Status};
+use mailrs_domain::calendar::{self as model, Access, Calendar, Event, Guest, Notify, Occurrence, Status};
 use mailrs_domain::invitation::Answer;
 use mailrs_domain::{AccountId, EpochMillis};
 use rusqlite::{Connection, OptionalExtension, Row, params};
@@ -742,6 +742,8 @@ pub struct QueuedChange {
     /// The old series as it was before a split, on the new series' row,
     /// to put back if the provider turns this row down.
     pub restores: Option<Event>,
+    /// Whether the provider mails the guests about this change.
+    pub notify: Notify,
 }
 
 /// A queued change dropped unsent because a change it waited on was
@@ -766,15 +768,17 @@ pub enum Dropped {
 /// - a Remove meeting an unsent Remove changes nothing;
 /// - a Save meeting an unsent Remove turns that row into the Save.
 pub fn enqueue(conn: &Connection, account_id: AccountId, kind: ChangeKind, event: &Event) -> Result<()> {
-    enqueue_after(conn, account_id, kind, event, None, None).map(drop)
+    enqueue_after(conn, account_id, kind, event, None, None, Notify::Guests).map(drop)
 }
 
 /// [`enqueue`], with the change held back until the row `waits_on` names
 /// has left the queue, and dropped unsent when that row is turned down
 /// (see [`drop_waiting_on`]). `restores` is kept on the row for the
-/// sender to put back if the provider turns it down. Answers the `seq`
-/// of the row that now holds the change, or `None` when the change
-/// cancelled an unsent create.
+/// sender to put back if the provider turns it down. `notify` says
+/// whether the provider mails the guests; see [`folded_notify`] for a
+/// change that folds into one already queued. Answers the `seq` of the
+/// row that now holds the change, or `None` when the change cancelled an
+/// unsent create.
 pub fn enqueue_after(
     conn: &Connection,
     account_id: AccountId,
@@ -782,14 +786,20 @@ pub fn enqueue_after(
     event: &Event,
     waits_on: Option<i64>,
     restores: Option<&Event>,
+    notify: Notify,
 ) -> Result<Option<i64>> {
-    let existing: Option<(i64, String)> = conn
+    let existing: Option<(i64, String, Option<String>)> = conn
         .query_row(
-            "SELECT seq, kind FROM calendar_changes WHERE account_id = ?1 AND calendar = ?2 AND event = ?3",
+            "SELECT seq, kind, notify FROM calendar_changes WHERE account_id = ?1 AND calendar = ?2 AND event = ?3",
             params![account_id, event.calendar, event.id],
-            |row| Ok((row.get(0)?, row.get(1)?)),
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
         )
         .optional()?;
+    if let Some((seq, queued_kind, queued)) = &existing {
+        let folded = folded_notify(ChangeKind::parse(queued_kind), Notify::from_stored(queued.as_deref()), kind, notify);
+        conn.execute("UPDATE calendar_changes SET notify = ?2 WHERE seq = ?1", params![seq, folded.stored()])?;
+    }
+    let existing = existing.map(|(seq, kind, _)| (seq, kind));
     // A waiting step that folds into an earlier change keeps that change,
     // so dropping the step can put it back.
     if let (Some((seq, _)), Some(_)) = (&existing, waits_on) {
@@ -847,11 +857,25 @@ pub fn enqueue_after(
         ChangeKind::Remove => None,
     };
     conn.execute(
-        "INSERT INTO calendar_changes (account_id, calendar, event, kind, etag, body, waits_on, restores) \
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
-        params![account_id, event.calendar, event.id, kind.as_str(), etag, body, waits_on, restores],
+        "INSERT INTO calendar_changes (account_id, calendar, event, kind, etag, body, waits_on, restores, notify) \
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+        params![account_id, event.calendar, event.id, kind.as_str(), etag, body, waits_on, restores, notify.stored()],
     )?;
     Ok(Some(conn.last_insert_rowid()))
+}
+
+/// Whether the guests hear of a change that folds into one already
+/// queued for the same event. A delete replacing an unsent edit, or an
+/// edit replacing an unsent delete, goes out as the newer change asked,
+/// since the guests never heard of the one it replaces. Two edits, or an
+/// edit onto an unsent create, tell the guests if either did: the
+/// earlier one may be what invites them.
+fn folded_notify(queued_kind: ChangeKind, queued: Notify, kind: ChangeKind, notify: Notify) -> Notify {
+    if (queued_kind == ChangeKind::Remove) == (kind == ChangeKind::Remove) {
+        queued.and(notify)
+    } else {
+        notify
+    }
 }
 
 /// A row's `prior_kind` and `prior_body`.
@@ -908,7 +932,7 @@ pub fn first_waiting_on(conn: &Connection, seq: i64) -> Result<Option<i64>> {
 
 pub fn queued(conn: &Connection, account_id: AccountId) -> Result<Vec<QueuedChange>> {
     let mut stmt = conn.prepare(
-        "SELECT seq, calendar, event, kind, etag, body, waits_on, restores FROM calendar_changes \
+        "SELECT seq, calendar, event, kind, etag, body, waits_on, restores, notify FROM calendar_changes \
          WHERE account_id = ?1 ORDER BY seq",
     )?;
     let rows = stmt.query_map(params![account_id], |row| read_change(row, account_id))?;
@@ -923,7 +947,7 @@ pub fn queued(conn: &Connection, account_id: AccountId) -> Result<Vec<QueuedChan
 pub fn next_change(conn: &Connection, account_id: AccountId, after: i64) -> Result<Option<QueuedChange>> {
     Ok(conn
         .query_row(
-            "SELECT seq, calendar, event, kind, etag, body, waits_on, restores FROM calendar_changes c \
+            "SELECT seq, calendar, event, kind, etag, body, waits_on, restores, notify FROM calendar_changes c \
              WHERE account_id = ?1 AND seq > ?2 \
              AND (waits_on IS NULL OR NOT EXISTS (SELECT 1 FROM calendar_changes w WHERE w.seq = c.waits_on)) \
              ORDER BY seq LIMIT 1",
@@ -944,6 +968,7 @@ fn read_change(row: &Row, account_id: AccountId) -> rusqlite::Result<QueuedChang
         body: row.get::<_, Option<String>>(5)?.and_then(|b| serde_json::from_str(&b).ok()),
         waits_on: row.get(6)?,
         restores: row.get::<_, Option<String>>(7)?.and_then(|b| serde_json::from_str(&b).ok()),
+        notify: Notify::from_stored(row.get::<_, Option<String>>(8)?.as_deref()),
     })
 }
 
@@ -993,11 +1018,18 @@ pub fn dequeue(conn: &Connection, seq: i64) -> Result<()> {
 /// any row already there: only one change is held at a time. A crash or
 /// a quit before the toast closes leaves this row for the next start to
 /// queue, since no toast survives to close over it.
-pub fn save_holding(conn: &Connection, account_id: AccountId, steps: &[Step], before: &[Event]) -> Result<()> {
+pub fn save_holding(
+    conn: &Connection,
+    account_id: AccountId,
+    steps: &[Step],
+    before: &[Event],
+    notify: Notify,
+) -> Result<()> {
     conn.execute(
-        "INSERT INTO calendar_holds (account_id, steps, before) VALUES (?1, ?2, ?3) \
-         ON CONFLICT (account_id) DO UPDATE SET steps = excluded.steps, before = excluded.before",
-        params![account_id, json(steps), json(before)],
+        "INSERT INTO calendar_holds (account_id, steps, before, notify) VALUES (?1, ?2, ?3, ?4) \
+         ON CONFLICT (account_id) DO UPDATE SET steps = excluded.steps, before = excluded.before, \
+         notify = excluded.notify",
+        params![account_id, json(steps), json(before), notify.stored()],
     )?;
     Ok(())
 }
@@ -1009,21 +1041,31 @@ pub fn clear_holding(conn: &Connection, account_id: AccountId) -> Result<()> {
     Ok(())
 }
 
-/// A held change persisted for the next start: its account, its steps
-/// and the rows they replaced.
-pub type Holding = (AccountId, Vec<Step>, Vec<Event>);
+/// A held change persisted for the next start: its account, its steps,
+/// the rows they replaced, and whether the guests hear of it.
+pub type Holding = (AccountId, Vec<Step>, Vec<Event>, Notify);
 
 /// Every held change still persisted from a run that stopped before its
 /// Undo toast closed, read once at start so it can be queued.
 pub fn holdings(conn: &Connection) -> Result<Vec<Holding>> {
-    let mut stmt = conn.prepare("SELECT account_id, steps, before FROM calendar_holds")?;
+    let mut stmt = conn.prepare("SELECT account_id, steps, before, notify FROM calendar_holds")?;
     let rows = stmt.query_map([], |row| {
-        Ok((row.get::<_, AccountId>(0)?, row.get::<_, String>(1)?, row.get::<_, Option<String>>(2)?))
+        Ok((
+            row.get::<_, AccountId>(0)?,
+            row.get::<_, String>(1)?,
+            row.get::<_, Option<String>>(2)?,
+            row.get::<_, Option<String>>(3)?,
+        ))
     })?;
     let mut found = Vec::new();
     for row in rows {
-        let (account_id, steps, before) = row?;
-        found.push((account_id, parse(&steps), before.as_deref().map(parse).unwrap_or_default()));
+        let (account_id, steps, before, notify) = row?;
+        found.push((
+            account_id,
+            parse(&steps),
+            before.as_deref().map(parse).unwrap_or_default(),
+            Notify::from_stored(notify.as_deref()),
+        ));
     }
     Ok(found)
 }
@@ -1092,7 +1134,7 @@ mod tests {
 
     use super::*;
     use crate::accounts;
-    use mailrs_domain::calendar::{Access, Calendar, Event, Guest, Status};
+    use mailrs_domain::calendar::{Access, Calendar, Event, Guest, Notify, Status};
 
     const HOUR: EpochMillis = 60 * 60 * 1000;
     const DAY: EpochMillis = 24 * HOUR;
@@ -1659,9 +1701,57 @@ mod tests {
         let (conn, id) = store();
         let dentist = event("primary", "dentist", MONDAY, 1);
         let moved = Event { title: "Moved".into(), ..dentist.clone() };
-        save_holding(&conn, id, &[Step::Save(moved.clone())], std::slice::from_ref(&dentist)).unwrap();
+        save_holding(&conn, id, &[Step::Save(moved.clone())], std::slice::from_ref(&dentist), Notify::Guests).unwrap();
 
-        assert_eq!(holdings(&conn).unwrap(), vec![(id, vec![Step::Save(moved)], vec![dentist])]);
+        assert_eq!(holdings(&conn).unwrap(), vec![(id, vec![Step::Save(moved)], vec![dentist], Notify::Guests)]);
+    }
+
+    /// A move the person chose to keep from the guests stays quiet when a
+    /// restart queues it.
+    #[test]
+    fn a_held_change_keeps_the_choice_not_to_tell_the_guests() {
+        let (conn, id) = store();
+        let remove = vec![Step::Remove { calendar: "primary".into(), id: "dentist".into() }];
+        save_holding(&conn, id, &remove, &[], Notify::Nobody).unwrap();
+
+        assert_eq!(holdings(&conn).unwrap()[0].3, Notify::Nobody);
+    }
+
+    #[test]
+    fn a_queued_change_keeps_the_choice_not_to_tell_the_guests() {
+        let (conn, id) = store();
+        let lunch = event("primary", "lunch", MONDAY, 1);
+        enqueue_after(&conn, id, ChangeKind::Save, &lunch, None, None, Notify::Nobody).unwrap();
+        enqueue(&conn, id, ChangeKind::Remove, &event("primary", "dinner", MONDAY, 1)).unwrap();
+
+        let notices: Vec<Notify> = queued(&conn, id).unwrap().iter().map(|q| q.notify).collect();
+        assert_eq!(notices, [Notify::Nobody, Notify::Guests]);
+    }
+
+    /// The guests of an event made here hear of it through the create; a
+    /// quiet move folded onto that unsent create must not swallow their
+    /// invitation.
+    #[test]
+    fn a_quiet_move_folded_onto_an_unsent_create_still_invites_the_guests() {
+        let (conn, id) = store();
+        let lunch = event("primary", "lunch", MONDAY, 1);
+        enqueue(&conn, id, ChangeKind::Create, &lunch).unwrap();
+        enqueue_after(&conn, id, ChangeKind::Save, &lunch, None, None, Notify::Nobody).unwrap();
+
+        assert_eq!(queued(&conn, id).unwrap()[0].notify, Notify::Guests);
+    }
+
+    /// The guests never heard of an unsent edit, so the delete that
+    /// replaces it goes out as the person chose.
+    #[test]
+    fn a_quiet_delete_of_an_unsent_edit_stays_quiet() {
+        let (conn, id) = store();
+        let lunch = event("primary", "lunch", MONDAY, 1);
+        enqueue(&conn, id, ChangeKind::Save, &lunch).unwrap();
+        enqueue_after(&conn, id, ChangeKind::Remove, &lunch, None, None, Notify::Nobody).unwrap();
+
+        let held = queued(&conn, id).unwrap();
+        assert_eq!((held[0].kind, held[0].notify), (ChangeKind::Remove, Notify::Nobody));
     }
 
     /// Only one change is held at a time, so holding another replaces the
@@ -1670,10 +1760,10 @@ mod tests {
     fn holding_another_change_replaces_the_persisted_one() {
         let (conn, id) = store();
         let remove = |event: &str| vec![Step::Remove { calendar: "primary".into(), id: event.into() }];
-        save_holding(&conn, id, &remove("a"), &[]).unwrap();
-        save_holding(&conn, id, &remove("b"), &[]).unwrap();
+        save_holding(&conn, id, &remove("a"), &[], Notify::Guests).unwrap();
+        save_holding(&conn, id, &remove("b"), &[], Notify::Guests).unwrap();
 
-        assert_eq!(holdings(&conn).unwrap(), vec![(id, remove("b"), Vec::new())]);
+        assert_eq!(holdings(&conn).unwrap(), vec![(id, remove("b"), Vec::new(), Notify::Guests)]);
     }
 
     /// Queuing or reverting a held change clears its persisted row, so a
@@ -1681,7 +1771,8 @@ mod tests {
     #[test]
     fn clearing_a_held_change_drops_its_persisted_row() {
         let (conn, id) = store();
-        save_holding(&conn, id, &[Step::Remove { calendar: "primary".into(), id: "a".into() }], &[]).unwrap();
+        save_holding(&conn, id, &[Step::Remove { calendar: "primary".into(), id: "a".into() }], &[], Notify::Guests)
+            .unwrap();
 
         clear_holding(&conn, id).unwrap();
 

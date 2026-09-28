@@ -128,9 +128,10 @@ and running it again pushes that commit.
 
 The tag starts the release workflow:
 
-- It builds the `.deb`, tarball and zip on Ubuntu 26.04 and the rpm on
-  Fedora 43, starts the rpm on a hidden display, and publishes them with
-  the changelog once CI has passed on the tagged commit.
+- It builds the `.deb`, tarball and zip on Ubuntu 26.04, the rpm on
+  Fedora 43, and the Arch package in an archlinux container, starts each
+  installed copy on a hidden display, and publishes them with the
+  changelog once CI has passed on the tagged commit.
 - The release's `SHA256SUMS` goes out signed as `SHA256SUMS.asc`, with the
   `APT_SIGNING_KEY` secret that also signs the repositories.
 - It builds the snap and sends it to the Snap Store's edge channel once the

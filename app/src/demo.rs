@@ -1126,7 +1126,11 @@ fn account1_events(now: EpochMillis) -> Vec<CalendarEvent> {
     let sent = chrono::DateTime::from_timestamp_millis(now).unwrap_or_default();
     let start = next_tuesday(sent.with_timezone(&chrono::Local));
     let design_review_start = start.timestamp_millis();
-    let until = eight_weeks_later(start);
+    // The event is kept in Lisbon's zone, so its repeats fall at Lisbon's
+    // wall-clock time; UNTIL has to be worked out there too, not in the
+    // machine's zone, or on a UTC machine the clock change on 25 October
+    // moves the last Tuesday past it.
+    let until = eight_weeks_later(start.with_timezone(&chrono_tz::Europe::Lisbon));
     events.push(CalendarEvent {
         calendar: "primary".into(),
         id: "design-review".into(),

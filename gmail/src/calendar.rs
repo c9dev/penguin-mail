@@ -14,7 +14,7 @@
 //! nothing from the account's Gmail budget.
 
 use mailrs_domain::EpochMillis;
-use mailrs_domain::calendar::{self, Access, EventPage, Guest as CalendarGuest, Reminder, ReminderMethod, Status};
+use mailrs_domain::calendar::{self, Access, EventPage, Guest as CalendarGuest, Notify, Reminder, ReminderMethod, Status};
 use mailrs_domain::invitation::Answer;
 use serde::Deserialize;
 use serde_json::{Value, json};
@@ -268,31 +268,36 @@ impl GmailClient {
             next_sync: answer.get("nextSyncToken").and_then(Value::as_str).map(str::to_string),
             ..EventPage::default()
         };
+        // Google leaves `timeZone` off an event that keeps the calendar's
+        // zone, and names that zone once, at the top of the listing.
+        let zone = answer.get("timeZone").and_then(Value::as_str).unwrap_or("UTC");
         for item in answer.get("items").and_then(Value::as_array).into_iter().flatten() {
             let cancelled = item.get("status").and_then(Value::as_str) == Some("cancelled");
             let occurrence = item.get("recurringEventId").is_some();
             match (cancelled, occurrence, item.get("id").and_then(Value::as_str)) {
                 (true, false, Some(id)) => out.removed.push(id.to_string()),
-                _ => out.events.push(google_event(calendar, item, None)),
+                _ => out.events.push(google_event(calendar, item, None, zone)),
             }
         }
         Ok(out)
     }
 
     /// Creates `event` under its own id when `create`, or changes it to
-    /// match, and tells the guests. `etag` makes Google refuse the change
-    /// with [`GmailError::Changed`] when the event moved on since.
+    /// match, and mails the guests when `notify` says so. `etag` makes
+    /// Google refuse the change with [`GmailError::Changed`] when the
+    /// event moved on since.
     pub async fn put_event(
         &self,
         event: &calendar::Event,
         etag: Option<&str>,
         create: bool,
+        notify: Notify,
     ) -> Result<calendar::Event, GmailError> {
         let base = format!("{}/calendars/{}/events", self.calendar_base_url, encode(&event.calendar));
         let body = event_json(event, create);
         // Google reads conferenceData only when told which version of it
         // the body speaks.
-        let mut query = vec![("sendUpdates", "all")];
+        let mut query = vec![("sendUpdates", send_updates(notify))];
         if event.meet_request.is_some() {
             query.push(("conferenceDataVersion", "1"));
         }
@@ -314,14 +319,24 @@ impl GmailClient {
             })
             .await?
         };
-        Ok(google_event(&event.calendar, &answer, None))
+        // The answer is the event alone, without the calendar's zone, so an
+        // event Google gives no zone of its own keeps the one it went out
+        // with.
+        Ok(google_event(&event.calendar, &answer, None, &event.zone))
     }
 
-    /// Deletes an event and tells its guests.
-    pub async fn remove_event(&self, calendar: &str, id: &str, etag: Option<&str>) -> Result<(), GmailError> {
+    /// Deletes an event, and mails its guests the cancellation when
+    /// `notify` says so.
+    pub async fn remove_event(
+        &self,
+        calendar: &str,
+        id: &str,
+        etag: Option<&str>,
+        notify: Notify,
+    ) -> Result<(), GmailError> {
         let url = format!("{}/calendars/{}/events/{}", self.calendar_base_url, encode(calendar), encode(id));
         self.call_at_empty(&url, |url| {
-            let mut request = self.http().delete(url).query(&[("sendUpdates", "all")]);
+            let mut request = self.http().delete(url).query(&[("sendUpdates", send_updates(notify))]);
             if let Some(etag) = etag {
                 request = request.header("If-Match", etag);
             }
@@ -801,11 +816,13 @@ fn reminders(list: Option<&Value>) -> Vec<Reminder> {
 }
 
 /// Google's event as the neutral model has it. `me` names the account
-/// for guests Google did not mark with `self`.
-pub fn google_event(calendar: &str, item: &Value, me: Option<&str>) -> calendar::Event {
+/// for guests Google did not mark with `self`. `calendar_zone` is the zone
+/// of the calendar the event is on, which a timed event without a
+/// `timeZone` of its own keeps.
+pub fn google_event(calendar: &str, item: &Value, me: Option<&str>, calendar_zone: &str) -> calendar::Event {
     let text = |key: &str| item.get(key).and_then(Value::as_str).unwrap_or_default().to_string();
-    let (start, zone, all_day) = when(item.get("start"));
-    let (end, _, _) = when(item.get("end"));
+    let (start, zone, all_day) = when(item.get("start"), calendar_zone);
+    let (end, _, _) = when(item.get("end"), calendar_zone);
     let guests: Vec<CalendarGuest> = item
         .get("attendees")
         .and_then(Value::as_array)
@@ -869,7 +886,7 @@ pub fn google_event(calendar: &str, item: &Value, me: Option<&str>) -> calendar:
             .map(str::to_string)
             .collect(),
         series: item.get("recurringEventId").and_then(Value::as_str).map(str::to_string),
-        original_start: item.get("originalStartTime").map(|t| when(Some(t)).0),
+        original_start: item.get("originalStartTime").map(|t| when(Some(t), calendar_zone).0),
         pending: false,
         // A Meet request is something Penguin Mail asks for on a write;
         // Google's answer never needs to say one is still pending here.
@@ -877,12 +894,30 @@ pub fn google_event(calendar: &str, item: &Value, me: Option<&str>) -> calendar:
     }
 }
 
+/// Google's `sendUpdates` for a write. Without the parameter Google
+/// mails nobody, so a new event with guests must say `all` or they never
+/// hear of it.
+fn send_updates(notify: Notify) -> &'static str {
+    match notify {
+        Notify::Guests => "all",
+        Notify::Nobody => "none",
+    }
+}
+
 /// An event time as an instant, its zone, and whether it is a whole day.
-fn when(time: Option<&Value>) -> (EpochMillis, String, bool) {
+/// A time without a `timeZone` is in `calendar_zone`: Google's `dateTime`
+/// carries only an offset, which says nothing about summer time.
+fn when(time: Option<&Value>, calendar_zone: &str) -> (EpochMillis, String, bool) {
     let Some(time) = time else {
         return (0, "UTC".into(), false);
     };
-    let zone = time.get("timeZone").and_then(Value::as_str).unwrap_or("UTC").to_string();
+    let fallback = if calendar_zone.is_empty() { "UTC" } else { calendar_zone };
+    let zone = time
+        .get("timeZone")
+        .and_then(Value::as_str)
+        .filter(|zone| !zone.is_empty())
+        .unwrap_or(fallback)
+        .to_string();
     if let Some(at) = time.get("dateTime").and_then(Value::as_str) {
         let at = chrono::DateTime::parse_from_rfc3339(at).map(|a| a.timestamp_millis()).unwrap_or(0);
         return (at, zone, false);

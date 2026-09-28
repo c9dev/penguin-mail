@@ -357,6 +357,7 @@ impl AccountSync {
         // rollback below run for the messages the server never took.
         let relocated = self.relocate(&ids, &names, progress.moved).await;
         drop(moves);
+        self.mail_changed();
         if let Err(err) = written {
             let back: Vec<Change> = applied
                 .iter()

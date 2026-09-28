@@ -23,7 +23,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 
 use mailrs_domain::calendar::series::{self, Picked, RepeatScope, Step};
-use mailrs_domain::calendar::{Access, Calendar, Event, Occurrence};
+use mailrs_domain::calendar::{Access, Calendar, Event, Notify, Occurrence};
 use mailrs_domain::{AccountId, EpochMillis};
 use mailrs_store::Db;
 use mailrs_store::calendar as store;
@@ -113,6 +113,8 @@ pub struct Held {
     /// Each row the steps touched, as it was, with a removed series'
     /// changed occurrences.
     before: Vec<Event>,
+    /// Whether the provider mails the guests about every step.
+    notify: Notify,
     serial: u64,
 }
 
@@ -525,7 +527,7 @@ impl<A: Accounts> CalendarCopy<A> {
             let create = change.kind == store::ChangeKind::Create;
             let answer = match change.kind {
                 store::ChangeKind::Remove => calendar
-                    .remove_event(&change.calendar, &change.event, change.etag.as_deref())
+                    .remove_event(&change.calendar, &change.event, change.etag.as_deref(), change.notify)
                     .await
                     .map(|()| None),
                 store::ChangeKind::Create | store::ChangeKind::Save => {
@@ -536,12 +538,14 @@ impl<A: Accounts> CalendarCopy<A> {
                         self.db.write(move |c| store::dequeue(c, seq)).await?;
                         continue;
                     };
-                    match calendar.put_event(&body, change.etag.as_deref(), create).await {
+                    match calendar.put_event(&body, change.etag.as_deref(), create, change.notify).await {
                         // The id is one this computer made, so a 409 means an
                         // earlier send of this create reached Google and its
                         // answer was lost. An edit made since sits in the
                         // body, so it goes out as a change.
-                        Err(BackendError::Changed) if create => calendar.put_event(&body, None, false).await,
+                        Err(BackendError::Changed) if create => {
+                            calendar.put_event(&body, None, false, change.notify).await
+                        }
                         other => other,
                     }
                     .map(Some)
@@ -690,7 +694,20 @@ impl<A: Accounts> CalendarCopy<A> {
     /// one Undo toast shows at a time. An account with no calendar answers
     /// `Unsupported`, and one whose calendar permission is withheld
     /// `NeedsPermission`, so the queue never takes a change it cannot send.
+    /// The guests hear of it; [`Self::hold_with`] lets the person say no.
     pub async fn hold(&self, account_id: AccountId, steps: Vec<Step>) -> Result<Permitted<Held>, SyncError> {
+        self.hold_with(account_id, steps, Notify::Guests).await
+    }
+
+    /// [`Self::hold`], with the person's choice of whether the provider
+    /// mails the guests. The choice stays with the change through Undo, a
+    /// restart and the queue.
+    pub async fn hold_with(
+        &self,
+        account_id: AccountId,
+        steps: Vec<Step>,
+        notify: Notify,
+    ) -> Result<Permitted<Held>, SyncError> {
         if self.calendar(account_id)?.is_none() {
             return Err(SyncError::Backend(BackendError::Unsupported));
         }
@@ -744,13 +761,13 @@ impl<A: Accounts> CalendarCopy<A> {
                 // Persisted in the same transaction as the rows above, so
                 // a crash or a quit before the Undo toast closes still
                 // has this change to queue at the next start.
-                store::save_holding(c, account_id, &writes, &before)?;
+                store::save_holding(c, account_id, &writes, &before, notify)?;
                 Ok(before)
             })
             .await?;
         release.keep();
         let serial = self.serial.fetch_add(1, Ordering::Relaxed);
-        let held = Held { account_id, steps, before, serial };
+        let held = Held { account_id, steps, before, notify, serial };
         *waiting = Some(held.clone());
         Ok(Permitted::Done(held))
     }
@@ -812,7 +829,18 @@ impl<A: Accounts> CalendarCopy<A> {
     /// toast, such as one the assistant makes. Like `hold`, it commits a
     /// change still waiting on its toast first.
     pub async fn apply(&self, account_id: AccountId, steps: Vec<Step>) -> Result<Permitted<()>, SyncError> {
-        match self.hold(account_id, steps).await? {
+        self.apply_with(account_id, steps, Notify::Guests).await
+    }
+
+    /// [`Self::apply`], with the person's choice of whether the provider
+    /// mails the guests.
+    pub async fn apply_with(
+        &self,
+        account_id: AccountId,
+        steps: Vec<Step>,
+        notify: Notify,
+    ) -> Result<Permitted<()>, SyncError> {
+        match self.hold_with(account_id, steps, notify).await? {
             Permitted::Done(held) => self.commit(held).await.map(Permitted::Done),
             Permitted::NeedsPermission => Ok(Permitted::NeedsPermission),
         }
@@ -834,12 +862,12 @@ impl<A: Accounts> CalendarCopy<A> {
     /// start, before the first read or send touches an account.
     pub async fn recover_holds(&self) -> Result<(), SyncError> {
         let found = self.db.read(store::holdings).await?;
-        for (account_id, steps, before) in found {
+        for (account_id, steps, before, notify) in found {
             if steps.is_empty() {
                 continue;
             }
             let serial = self.serial.fetch_add(1, Ordering::Relaxed);
-            self.queue_held(Held { account_id, steps, before, serial }).await?;
+            self.queue_held(Held { account_id, steps, before, notify, serial }).await?;
         }
         Ok(())
     }
@@ -854,7 +882,7 @@ impl<A: Accounts> CalendarCopy<A> {
     /// and turns the new series down.
     async fn queue_held(&self, held: Held) -> Result<(), SyncError> {
         let _release = Release { held: &self.held, keys: held.keys() };
-        let Held { account_id, steps, before, .. } = held;
+        let Held { account_id, steps, before, notify, .. } = held;
         let cut_from = cut_series(&steps, &before).cloned();
         self.db
             .write(move |c| {
@@ -870,12 +898,12 @@ impl<A: Accounts> CalendarCopy<A> {
                             };
                             let event = Event { pending: true, ..event.clone() };
                             let restores = cut_from.as_ref().filter(|_| kind == store::ChangeKind::Create);
-                            store::enqueue_after(c, account_id, kind, &event, lead, restores)?
+                            store::enqueue_after(c, account_id, kind, &event, lead, restores, notify)?
                         }
                         // The cancelled row stays in the copy; the provider
                         // gets a delete of that occurrence.
                         Step::Cancel(event) => {
-                            store::enqueue_after(c, account_id, store::ChangeKind::Remove, event, lead, None)?
+                            store::enqueue_after(c, account_id, store::ChangeKind::Remove, event, lead, None, notify)?
                         }
                         Step::Remove { calendar, id } => {
                             let prior = before
@@ -887,7 +915,7 @@ impl<A: Accounts> CalendarCopy<A> {
                                     id: id.clone(),
                                     ..Event::default()
                                 });
-                            store::enqueue_after(c, account_id, store::ChangeKind::Remove, &prior, lead, None)?
+                            store::enqueue_after(c, account_id, store::ChangeKind::Remove, &prior, lead, None, notify)?
                         }
                     };
                     lead = seq.or(lead);

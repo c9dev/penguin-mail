@@ -617,6 +617,20 @@ ALTER TABLE calendar_changes ADD COLUMN prior_body TEXT;
 ALTER TABLE calendar_changes ADD COLUMN restores TEXT;
 ALTER TABLE calendar_holds ADD COLUMN before TEXT;
 "#,
+    // Whether the provider mails the guests about a queued or held
+    // change. NULL tells them, as every change did before the person
+    // could choose; 'nobody' keeps a move or a delete from them.
+    r#"
+ALTER TABLE calendar_changes ADD COLUMN notify TEXT;
+ALTER TABLE calendar_holds ADD COLUMN notify TEXT;
+"#,
+    // Events Google sent without a zone of their own were filed in UTC
+    // rather than their calendar's zone. A change read brings back only
+    // what changed, so every calendar is read whole once more; the rows
+    // stay until that read replaces them.
+    r#"
+UPDATE calendars SET sync_token = NULL;
+"#,
 ];
 
 /// How long the copy taken before a migration stays once the store has

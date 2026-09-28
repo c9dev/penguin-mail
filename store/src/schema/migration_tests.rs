@@ -676,7 +676,7 @@ fn a_store_from_before_the_calendar_opens_with_no_calendars() {
     drop(conn);
 
     let conn = open_with(&path, MIGRATIONS).unwrap();
-    assert_eq!(schema_version(&conn).unwrap(), 37);
+    assert_eq!(schema_version(&conn).unwrap(), MIGRATIONS.len() as i64);
     for table in ["calendars", "events", "calendar_changes"] {
         let count: i64 = conn
             .query_row(&format!("SELECT COUNT(*) FROM {table}"), [], |row| row.get(0))
@@ -709,7 +709,7 @@ fn migration_34_leaves_every_account_s_scopes_unknown() {
     drop(conn);
 
     let conn = open_with(&path, MIGRATIONS).unwrap();
-    assert_eq!(schema_version(&conn).unwrap(), 37);
+    assert_eq!(schema_version(&conn).unwrap(), MIGRATIONS.len() as i64);
     let (granted, asked): (Option<String>, Option<String>) = conn
         .query_row(
             "SELECT granted_scopes, asked_scopes FROM accounts WHERE id = 1",
@@ -719,4 +719,36 @@ fn migration_34_leaves_every_account_s_scopes_unknown() {
         .unwrap();
     assert_eq!(granted, None);
     assert_eq!(asked, None);
+}
+
+/// Migration 39 forgets every calendar's sync token. Events Google sent
+/// without a zone of their own were stored in UTC, and a change read
+/// never brings an unchanged event back, so only a whole read files them
+/// in their calendar's zone. The events stay until that read replaces
+/// them.
+#[test]
+fn migration_39_reads_every_calendar_whole_again() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("mail.db");
+    let conn = open_with(&path, &MIGRATIONS[..38]).unwrap();
+    conn.execute_batch(
+        "INSERT INTO accounts (id, email, added_at) VALUES (1, 'me@gmail.com', 0);
+         INSERT INTO calendars (account_id, id, name, color, access, zone, is_primary, sync_token, synced_at) \
+             VALUES (1, 'primary', 'Me', '#fff', 'owner', 'Europe/Lisbon', 1, 't9', 5);
+         INSERT INTO events (account_id, calendar, id, uid, etag, starts_at, ends_at, zone, all_day, \
+             title, place, description, busy, status, private, rules, pending, seen_at) \
+             VALUES (1, 'primary', 'a', 'a@google.com', '\"1\"', 0, 1, 'UTC', 0, 'Dentist', '', '', 1, \
+             'confirmed', 0, '', 0, 5);",
+    )
+    .unwrap();
+    drop(conn);
+
+    let conn = open_with(&path, MIGRATIONS).unwrap();
+    assert_eq!(schema_version(&conn).unwrap(), MIGRATIONS.len() as i64);
+    let token: Option<String> = conn
+        .query_row("SELECT sync_token FROM calendars WHERE id = 'primary'", [], |row| row.get(0))
+        .unwrap();
+    assert_eq!(token, None);
+    let events: i64 = conn.query_row("SELECT COUNT(*) FROM events", [], |row| row.get(0)).unwrap();
+    assert_eq!(events, 1);
 }

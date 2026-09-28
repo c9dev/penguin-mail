@@ -7,6 +7,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### New
 
+- Penguin Mail comes as a package for Arch Linux: download the
+  `.pkg.tar.zst` from the releases page and install it with
+  `sudo pacman -U`.
 - A calendar beside the mail: switch to it at the top of the sidebar or
   with Alt+2 to see your Google calendars by day, week or month, or as
   a scrolling list on a narrow window. Answer an invitation from its
@@ -23,8 +26,10 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   Join for video calls and Snooze for five minutes. Preferences can turn
   them off.
 - Make, move and delete calendar events: press New Event or N to add
-  one, drag across a day to sketch one out, drag a block to move or
-  stretch it, or open an event and press the pencil or the trash icon.
+  one, click an empty slot or day, drag across a day to sketch one out,
+  drag a block to move or stretch it, or open an event and press the
+  pencil or the trash icon. A short event keeps a readable card however
+  briefly it runs.
   Deleting or dragging offers Undo, and changing or deleting one date of
   a repeating event asks which occurrences it covers first. Moving a
   repeating event to another weekday moves its other dates with it, and
@@ -61,6 +66,17 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - An invitation no longer asks you to add the account to GNOME Online
   Accounts. When Penguin Mail lacks permission to read that calendar,
   the card offers Grant Access, so the event can show in Calendar.
+- Moving an event, by dragging it, with Shift and an arrow key, or with
+  a new time in the editor, asks first, and you can Cancel to leave it
+  where it was. When the event has guests, the same question asks
+  whether to send them an update; deleting one asks whether to send
+  them a cancellation. A repeating event asks which dates it covers in
+  that same question.
+- Pressing Shift and an arrow key several times asks once, about the
+  whole move. Changing the title, place, notes or guests of a meeting
+  asks whether to tell the guests, and Keep Old Time in the editor's
+  move question saves your other changes at the time the event had;
+  Escape there throws the whole edit away.
 - With Claude Opus 5 or newer, translating a message and reading an unsubscribe
   page take less time, because those quick jobs no longer think at length.
 - The buttons above a conversation sit in rounded groups: replying,
@@ -70,6 +86,20 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Fixed
 
+- An event's notes from Google Calendar show as readable text in the
+  editor instead of HTML tags, and their links still work after you
+  save.
+- A Google event made outside Google Calendar shows at its real time
+  and zone in the editor, not in UTC, and saving it keeps that zone.
+- Dragging a weekday event to another day with All events keeps it on Monday to Friday, even after the series was split with This and following.
+- A guest you add to an event gets Google's invitation, even when you
+  pick them from the suggestions and press Save without pressing Enter.
+- Archive, Junk, Trash, All Mail, smart mailboxes and searches show mail
+  you delete, junk, archive or move as soon as you open them, and no
+  longer bring back mail that left them.
+- Marking a Gmail message as junk from the Trash moves it to Junk, and
+  deleting one from Junk moves it to the Trash, instead of leaving it
+  in neither.
 - Moving or changing a second calendar event while the first one's Undo is still showing no longer closes Penguin Mail.
 - The Flatpak keeps its Google sign-in, IMAP passwords and AI keys in
   its own encrypted store instead of the desktop's shared keyring, which

@@ -87,25 +87,28 @@ cargo run --release -p mailrs-cli -- triage you@gmail.com <thread-id> archive
 ## Which package
 
 Every package is the same app, built with a cargo feature that says what
-kind it is (`packaging-rpm`, `packaging-flatpak`, `packaging-snap`, or
-none for the .deb and the tarball). The feature decides where
-updates come from and whether skills run.
+kind it is (`packaging-rpm`, `packaging-arch`, `packaging-flatpak`,
+`packaging-snap`, or none for the .deb and the tarball). The feature
+decides where updates come from and whether skills run.
 
-| | .deb | rpm | Flatpak | Snap |
-|---|---|---|---|---|
-| Updates | Install in the app, or the apt repository | the dnf repository | Flathub | Snap Store |
-| GnuPG | system | system | runtime's `gpg`, on `~/.gnupg` | snap's `gpg`, on `~/.gnupg` |
-| Assistant skills | yes | yes | no | no |
-| Claude Code, MCP servers run as a command | yes | yes | no | no |
-| Tray icon | yes | yes | yes | yes |
-| Start at login | autostart file | autostart file | Background portal | snapd autostart |
+| | .deb | rpm | Arch | Flatpak | Snap |
+|---|---|---|---|---|---|
+| Updates | Install in the app, or the apt repository | the dnf repository | pacman, by hand | Flathub | Snap Store |
+| GnuPG | system | system | system | runtime's `gpg`, on `~/.gnupg` | snap's `gpg`, on `~/.gnupg` |
+| Assistant skills | yes | yes | yes | no | no |
+| Claude Code, MCP servers run as a command | yes | yes | yes | no | no |
+| Tray icon | yes | yes | yes | yes | yes |
+| Start at login | autostart file | autostart file | autostart file | Background portal | snapd autostart |
 
 - **Updates.** The .deb checks GitHub once a day and offers Install,
   which downloads the new .deb and installs it through apt; `apt upgrade`
   brings the same version from the apt repository. The tarball updates
   itself the same way, into its own folder. The rpm leaves updates to
-  dnf, and the Flatpak and the snap to their store; Preferences and the
-  About window say which.
+  dnf, and the Arch package to pacman, though there is no Arch
+  repository yet, so that means downloading and installing the new
+  `.pkg.tar.zst` by hand; see `packaging/aur/PKGBUILD` for what an AUR
+  package would add. The Flatpak and the snap leave updates to their
+  store. Preferences and the About window say which applies.
 - **GnuPG.** The Flatpak reaches two places for signing and encryption:
   `~/.gnupg`, read and written, and the gpg-agent socket folder under
   `$XDG_RUNTIME_DIR/gnupg`, read-only, so your own agent and pinentry

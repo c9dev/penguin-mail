@@ -83,6 +83,17 @@ pub use notice::Notice;
 /// call and an account may spend 250 units a second.
 pub(super) const BODY_FETCHES: usize = 10;
 
+/// What the thread list shows while a server search lists the mailbox.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Waiting {
+    /// A mailbox just put on screen: its rows are not there yet.
+    Spinner,
+    /// The mailbox on screen listed again after a change: its rows stay
+    /// until the new ones replace them, rather than blinking out after
+    /// every action.
+    KeepRows,
+}
+
 /// Whether a refresh should list the mailbox again. Listing a folder or a
 /// search means a Gmail search for every account on screen, so the window
 /// asks for one only when the rows themselves can have changed.
@@ -1213,13 +1224,14 @@ impl MainWindow {
                 .show_names(self.screen.borrow().category());
         }
         if let Some(ticket) = redraw.list {
-            self.list_first_page(ticket);
+            self.list_first_page(ticket, Waiting::Spinner);
         }
     }
 
-    /// Fetches a folder or a smart mailbox that lives only in Gmail again.
+    /// Lists a folder, a smart mailbox or a search, which the server
+    /// answers, again.
     fn reload_folder(self: &Rc<Self>) {
-        if matches!(self.shown(), Mailbox::Folder { .. } | Mailbox::Smart(_)) {
+        if self.shown().is_remote() {
             self.reload_list();
         }
     }
@@ -1227,12 +1239,12 @@ impl MainWindow {
     /// Loads the first page of the mailbox on screen.
     fn reload_list(self: &Rc<Self>) {
         let ticket = self.screen.borrow_mut().feed().reload();
-        self.list_first_page(ticket);
+        self.list_first_page(ticket, Waiting::KeepRows);
     }
 
     /// Lists the first page under `ticket`, which the feed dropped all
     /// earlier requests for.
-    fn list_first_page(self: &Rc<Self>, ticket: Ticket) {
+    fn list_first_page(self: &Rc<Self>, ticket: Ticket, waiting: Waiting) {
         let mailbox = self.shown().clone();
         if let Some(account_id) = mailbox.account()
             && let Some((account_id, server_mailbox)) = follows(&mailbox, self.offers(account_id))
@@ -1240,7 +1252,7 @@ impl MainWindow {
         {
             self.follow_mailbox(account_id, server_mailbox);
         }
-        if mailbox.is_remote() {
+        if mailbox.is_remote() && waiting == Waiting::Spinner {
             self.list.show_loading();
         }
         let (scope, view) = (self.scope(), self.view());
@@ -1342,8 +1354,8 @@ impl MainWindow {
                 .call(async move { lists.changed(&mailbox, &named, &view).await })
                 .await
                 .unwrap_or(None);
-            let remote = this.shown().is_remote();
-            let splice = this.screen.borrow_mut().feed().spliced(ticket, fresh, remote);
+            let prunes = this.shown().folder().is_some();
+            let splice = this.screen.borrow_mut().feed().spliced(ticket, fresh, prunes);
             match splice {
                 Splice::Stale => {}
                 Splice::Put(fresh) => {
@@ -1352,10 +1364,10 @@ impl MainWindow {
                     this.follow_selection();
                     this.list.set_title(&title, &fresh.subtitle);
                 }
-                // A folder or a search lists through Gmail, and nothing
-                // that changed elsewhere changes its rows. Drop the rows
-                // that left the folder and leave the rest alone, rather
-                // than paying for the whole search again.
+                // A folder lists through the server. The store says which
+                // changed rows left it, so they go at once; mail moved into
+                // it shows once the action that moved it is done (see
+                // `Aftermath`), when the server has it.
                 Splice::Prune => {
                     let targets = changed
                         .iter()

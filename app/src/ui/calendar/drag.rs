@@ -92,6 +92,27 @@ pub fn selection(a: EpochMillis, b: EpochMillis) -> (EpochMillis, EpochMillis) {
     (start, end.max(start + SHORTEST))
 }
 
+/// Whether a press that has moved `dx`, `dy` pixels from where it
+/// landed still counts as a click rather than a drag: under
+/// `threshold`, GTK's own tolerance for a press that wanders before
+/// release. The caller latches the answer once it turns `false`, so a
+/// gesture that ever leaves the threshold stays a drag for the rest of
+/// the press, however still the pointer sits by release.
+pub fn is_click(dx: f64, dy: f64, threshold: f64) -> bool {
+    dx.hypot(dy) < threshold
+}
+
+/// Half an hour long.
+const HALF_HOUR: EpochMillis = 30 * 60_000;
+
+/// The slot a single click on empty time opens quick create at: the
+/// half hour `at` falls in, so a click near the bottom of a slot does
+/// not open the one below it.
+pub fn click_slot(at: EpochMillis) -> (EpochMillis, EpochMillis) {
+    let start = at.div_euclid(HALF_HOUR) * HALF_HOUR;
+    (start, start + HALF_HOUR)
+}
+
 /// `at` rounded to the nearest multiple of `step_minutes`, a tie going up.
 pub fn snap(at: EpochMillis, step_minutes: i64) -> EpochMillis {
     let step = step_minutes * 60_000;
@@ -164,6 +185,48 @@ pub fn stretch(start: EpochMillis, end: EpochMillis, steps: i64) -> (EpochMillis
     (start, (end + steps * STEP).max(start + SHORTEST))
 }
 
+/// How long the keyboard must rest after the last Shift+arrow before the
+/// calendar asks about the run of nudges, in milliseconds.
+pub const NUDGE_QUIET: i64 = 1_000;
+
+/// A run of keyboard nudges on one card. Each press moves the card on
+/// screen at once; the calendar asks one question for the total move
+/// once the presses stop, and a Cancel puts the card back at `from`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Nudges {
+    /// Where the card was before the first press.
+    pub from: (EpochMillis, EpochMillis),
+    /// Where the presses so far have put it.
+    pub to: (EpochMillis, EpochMillis),
+    /// When the last press came, in milliseconds on a monotonic clock.
+    last_press: i64,
+}
+
+impl Nudges {
+    /// A run that has not moved the card yet, started at `now`.
+    pub fn start(from: (EpochMillis, EpochMillis), now: i64) -> Nudges {
+        Nudges { from, to: from, last_press: now }
+    }
+
+    /// One more press, which put the card at `to`.
+    pub fn press(&mut self, to: (EpochMillis, EpochMillis), now: i64) {
+        self.to = to;
+        self.last_press = now;
+    }
+
+    /// How long to wait from `now` before asking: zero once the keyboard
+    /// has rested for [`NUDGE_QUIET`] since the last press.
+    pub fn wait(&self, now: i64) -> i64 {
+        (self.last_press + NUDGE_QUIET - now).max(0)
+    }
+
+    /// Whether the run ends somewhere else than it began. Nudging down
+    /// and back up again leaves nothing to ask.
+    pub fn moved(&self) -> bool {
+        self.from != self.to
+    }
+}
+
 /// Whether a drag may move `o`: the calendar must be one the account can
 /// write to, the account must offer a calendar and not have withheld it,
 /// and the event must not be all-day, a guest's own event, or
@@ -227,6 +290,20 @@ mod tests {
     fn a_drag_across_empty_time_covers_whole_quarter_hours() {
         assert_eq!(selection(10 * H + 50 * M, 10 * H + 5 * M), (10 * H, 11 * H));
         assert_eq!(selection(10 * H + 3 * M, 10 * H + 4 * M), (10 * H, 10 * H + SHORTEST));
+    }
+
+    #[test]
+    fn a_press_under_the_threshold_is_a_click() {
+        assert!(is_click(2.0, 1.0, 8.0));
+        assert!(!is_click(6.0, 6.0, 8.0), "8.49 px of travel passes an 8 px threshold");
+        assert!(is_click(0.0, 0.0, 8.0));
+    }
+
+    #[test]
+    fn a_click_opens_the_half_hour_it_falls_in() {
+        assert_eq!(click_slot(10 * H + 12 * M), (10 * H, 10 * H + 30 * M));
+        assert_eq!(click_slot(10 * H + 31 * M), (10 * H + 30 * M, 11 * H));
+        assert_eq!(click_slot(10 * H), (10 * H, 10 * H + 30 * M));
     }
 
     #[test]
@@ -301,6 +378,34 @@ mod tests {
         assert!(!can_move(&o, Access::Owner, true, true), "a withheld calendar permission starts no drag");
         assert!(!can_move(&timed(true, Status::Confirmed), Access::Owner, true, false), "an all-day event does not drag on the time grid");
         assert!(!can_move(&timed(false, Status::Cancelled), Access::Owner, true, false), "a cancelled occurrence, on its way out, starts no drag");
+    }
+
+    #[test]
+    fn a_run_of_nudges_asks_one_second_after_the_last_press() {
+        let mut run = Nudges::start((10 * H, 11 * H), 0);
+        run.press(nudge(10 * H, 11 * H, 1), 0);
+        run.press(nudge(10 * H + 15 * M, 11 * H + 15 * M, 1), 600);
+        assert_eq!(run.wait(1_000), 600, "the second press starts the wait again");
+        assert_eq!(run.wait(1_600), 0);
+        assert_eq!(run.wait(5_000), 0);
+    }
+
+    #[test]
+    fn a_run_of_nudges_adds_up_and_remembers_where_it_began() {
+        let mut run = Nudges::start((10 * H, 11 * H), 0);
+        run.press((10 * H + 15 * M, 11 * H + 15 * M), 100);
+        run.press((10 * H + 30 * M, 11 * H + 30 * M), 200);
+        assert_eq!(run.from, (10 * H, 11 * H));
+        assert_eq!(run.to, (10 * H + 30 * M, 11 * H + 30 * M));
+        assert!(run.moved());
+    }
+
+    #[test]
+    fn nudging_down_and_back_up_leaves_nothing_to_ask() {
+        let mut run = Nudges::start((10 * H, 11 * H), 0);
+        run.press((10 * H + 15 * M, 11 * H + 15 * M), 100);
+        run.press((10 * H, 11 * H), 200);
+        assert!(!run.moved());
     }
 
     #[test]

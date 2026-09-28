@@ -20,7 +20,7 @@ use chrono::{Datelike, NaiveDate, NaiveTime, Timelike, Weekday};
 use chrono_tz::{TZ_VARIANTS, Tz};
 use gtk::glib;
 use mailrs_domain::calendar::repeat::{Custom, Ends, Frequency, Repeat};
-use mailrs_domain::calendar::{self, Calendar, EVENT_COLORS, Guest, Reminder, ReminderMethod};
+use mailrs_domain::calendar::{self, Calendar, EVENT_COLORS, Reminder, ReminderMethod};
 use mailrs_domain::translate::{date_locale, fill, gettext, ngettext};
 use mailrs_domain::{AccountId, EpochMillis};
 
@@ -28,7 +28,6 @@ use super::draft::{self, Draft};
 use super::layout;
 use super::tint;
 use super::words::{self, REMINDER_CHOICES};
-use crate::compose::{is_address, parse_recipients};
 use crate::ui;
 use crate::ui::autocomplete::{self, Contacts};
 
@@ -62,6 +61,8 @@ struct Editor {
     repeat_quiet: Cell<bool>,
     guests_group: RefCell<Option<adw::PreferencesGroup>>,
     guest_rows: RefCell<Vec<adw::ActionRow>>,
+    /// The field new guests are typed into, read again on Save.
+    guest_entry: RefCell<Option<gtk::Entry>>,
     reminders_group: RefCell<Option<adw::PreferencesGroup>>,
     /// The calendar's own reminders, shown while `draft.reminders` is
     /// `None`. Follows the calendar row on a new event.
@@ -120,6 +121,7 @@ pub fn open(
         repeat_quiet: Cell::new(false),
         guests_group: RefCell::new(None),
         guest_rows: RefCell::new(Vec::new()),
+        guest_entry: RefCell::new(None),
         reminders_group: RefCell::new(None),
         reminders_default: RefCell::new(Vec::new()),
         reminder_rows: RefCell::new(Vec::new()),
@@ -194,6 +196,16 @@ pub fn open(
     let weak = Rc::downgrade(&editor);
     save.connect_clicked(move |_| {
         let Some(this) = weak.upgrade() else { return };
+        // An address still in the Guests field, such as one picked from
+        // the suggestions, joins the guests; text that is not an address
+        // keeps the dialog open with the field marked.
+        let entry = this.guest_entry.borrow().clone();
+        if let Some(entry) = entry
+            && !this.take_typed_guests(&entry)
+        {
+            entry.grab_focus();
+            return;
+        }
         let draft = this.draft.borrow().clone();
         if draft.can_save() {
             this.dialog.close();
@@ -864,50 +876,44 @@ impl Editor {
         autocomplete::attach(&entry, contacts);
         let weak = Rc::downgrade(self);
         entry.connect_activate(move |entry| {
-            let Some(this) = weak.upgrade() else { return };
-            let mut invalid = Vec::new();
-            let mut added = false;
-            for address in parse_recipients(&entry.text()) {
-                if is_address(&address.email) {
-                    let mut draft = this.draft.borrow_mut();
-                    if !draft
-                        .guests
-                        .iter()
-                        .any(|g| g.email.eq_ignore_ascii_case(&address.email))
-                    {
-                        draft.guests.push(Guest {
-                            email: address.email.clone(),
-                            name: address.name.clone(),
-                            ..Guest::default()
-                        });
-                        added = true;
-                    }
-                } else {
-                    invalid.push(address.email.clone());
-                }
-            }
-            if invalid.is_empty() {
-                entry.set_text("");
-                entry.remove_css_class("error");
-                entry.set_tooltip_text(None);
-            } else {
-                let text = invalid.join(", ");
-                entry.set_text(&text);
-                entry.add_css_class("error");
-                entry.set_tooltip_text(Some(&fill(
-                    &gettext("Not an address: {text}"),
-                    &[("text", &text)],
-                )));
-            }
-            if added {
-                this.rebuild_guests();
-                this.refresh_save();
+            if let Some(this) = weak.upgrade() {
+                this.take_typed_guests(entry);
             }
         });
         group.add(&entry);
+        self.guest_entry.replace(Some(entry));
         *self.guests_group.borrow_mut() = Some(group.clone());
         self.rebuild_guests();
         group
+    }
+
+    /// Adds the addresses the Guests field holds and empties it, or leaves
+    /// the parts that are not addresses in it, marked. Answers whether the
+    /// field is clear. The borrow of the draft ends before any widget
+    /// changes, since `set_text` runs the field's own handlers.
+    fn take_typed_guests(self: &Rc<Self>, entry: &gtk::Entry) -> bool {
+        let text = entry.text();
+        if text.trim().is_empty() {
+            return true;
+        }
+        let before = self.draft.borrow().guests.len();
+        let refused = self.draft.borrow_mut().add_guests(&text);
+        let added = self.draft.borrow().guests.len() > before;
+        if refused.is_empty() {
+            entry.set_text("");
+            entry.remove_css_class("error");
+            entry.set_tooltip_text(None);
+        } else {
+            let text = refused.join(", ");
+            entry.set_text(&text);
+            entry.add_css_class("error");
+            entry.set_tooltip_text(Some(&fill(&gettext("Not an address: {text}"), &[("text", &text)])));
+        }
+        if added {
+            self.rebuild_guests();
+            self.refresh_save();
+        }
+        refused.is_empty()
     }
 
     /// Rebuilds every guest row from `draft.guests`, replacing whatever
