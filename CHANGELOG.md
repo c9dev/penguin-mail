@@ -60,6 +60,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Fixed
 
+- Dragging a weekday event to another day with All events keeps it on Monday to Friday, even after the series was split with This and following.
 - Moving or changing a second calendar event while the first one's Undo is still showing no longer closes Penguin Mail.
 - The Flatpak keeps its Google sign-in, IMAP passwords and AI keys in
   its own encrypted store instead of the desktop's shared keyring, which

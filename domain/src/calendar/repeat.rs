@@ -207,11 +207,16 @@ impl Repeat {
 }
 
 /// Whether `rules` repeat weekly on days they list, the kind of series
-/// whose `BYDAY` has to follow the series to another weekday.
+/// whose `BYDAY` has to follow the series to another weekday. A series on
+/// every weekday keeps Monday to Friday wherever one occurrence moves,
+/// whether it reads as "Every weekday" or, carrying the end a split gave
+/// it, as a custom repeat on those five days.
 pub(crate) fn names_weekdays(rules: &[String], day: NaiveDate, zone: Tz) -> bool {
     match Repeat::read(rules, day, zone) {
         Repeat::EveryWeek => true,
-        Repeat::Custom(custom) => custom.frequency == Frequency::Weekly && !custom.days.is_empty(),
+        Repeat::Custom(custom) => {
+            custom.frequency == Frequency::Weekly && !custom.days.is_empty() && custom.days != WEEKDAYS
+        }
         _ => false,
     }
 }
