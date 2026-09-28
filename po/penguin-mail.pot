@@ -3260,31 +3260,31 @@ msgstr ""
 msgid "Nothing earlier on this computer"
 msgstr ""
 
-#: app/src/ui/calendar/block.rs:290
+#: app/src/ui/calendar/block.rs:298
 msgid "Waiting to be sent"
 msgstr ""
 
-#: app/src/ui/calendar/block.rs:293 app/src/ui/calendar/popover.rs:490
+#: app/src/ui/calendar/block.rs:301 app/src/ui/calendar/popover.rs:490
 msgid "Not answered yet"
 msgstr ""
 
-#: app/src/ui/calendar/block.rs:294
+#: app/src/ui/calendar/block.rs:302
 msgid "Declined"
 msgstr ""
 
-#: app/src/ui/calendar/block.rs:339
+#: app/src/ui/calendar/block.rs:347
 msgid "{start}–{end}"
 msgstr ""
 
-#: app/src/ui/calendar/block.rs:373
+#: app/src/ui/calendar/block.rs:381
 msgid "{title}, {day}"
 msgstr ""
 
-#: app/src/ui/calendar/block.rs:380
+#: app/src/ui/calendar/block.rs:388
 msgid "{title}, all day, {calendar}"
 msgstr ""
 
-#: app/src/ui/calendar/block.rs:385
+#: app/src/ui/calendar/block.rs:393
 msgid "{title}, {start} to {end}, {calendar}"
 msgstr ""
 
@@ -3580,7 +3580,7 @@ msgstr ""
 msgid "View"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:299 app/src/ui/calendar/mod.rs:2113
+#: app/src/ui/calendar/mod.rs:299 app/src/ui/calendar/mod.rs:2117
 msgid "New Event (N)"
 msgstr ""
 
@@ -3628,33 +3628,33 @@ msgstr ""
 msgid "All-day"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:1503 app/src/ui/calendar/mod.rs:2593
+#: app/src/ui/calendar/mod.rs:1503 app/src/ui/calendar/mod.rs:2597
 #: app/src/ui/calendar/sidebar.rs:123 app/src/ui/calendar/words.rs:220
 msgid "%a"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:1907
+#: app/src/ui/calendar/mod.rs:1911
 msgid "Deleted “{title}”"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:1910
+#: app/src/ui/calendar/mod.rs:1914
 msgid "Could not delete the event: {reason}"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:1954 app/src/ui/window.rs:1842
+#: app/src/ui/calendar/mod.rs:1958 app/src/ui/window.rs:1842
 #: app/src/ui/window/scheduled.rs:21 app/src/ui/window/shortcuts.rs:444
 msgid "Undo"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:2073
+#: app/src/ui/calendar/mod.rs:2077
 msgid "Could not send your answer: {reason}"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:2115
+#: app/src/ui/calendar/mod.rs:2119
 msgid "None of your calendars take new events"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:2370
+#: app/src/ui/calendar/mod.rs:2374
 msgid "Could not save the event: {reason}"
 msgstr ""
 
@@ -3829,19 +3829,19 @@ msgstr ""
 msgid "Grant Access for {account}"
 msgstr ""
 
-#: app/src/ui/calendar/time_grid.rs:234
+#: app/src/ui/calendar/time_grid.rs:236
 msgid "{count} more event"
 msgid_plural "{count} more events"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/calendar/time_grid.rs:260
+#: app/src/ui/calendar/time_grid.rs:262
 msgid ""
 "Shift+Up or Shift+Down moves it; Shift+Alt+Up or Shift+Alt+Down changes when "
 "it ends."
 msgstr ""
 
-#: app/src/ui/calendar/time_grid.rs:265
+#: app/src/ui/calendar/time_grid.rs:267
 msgid "{base} {hint}"
 msgstr ""
 
