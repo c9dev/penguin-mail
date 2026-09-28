@@ -120,6 +120,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 ### Improved
 - Penguin Mail now describes itself as mail and calendar for Linux, in
   the About window and in app stores.
+
+- A new icon and logo.
 - The page your browser shows after you sign in to Google says so with the
   Penguin Mail icon, in light or dark, and says how to try again if you
   didn't allow access.

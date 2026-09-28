@@ -402,6 +402,11 @@ impl LoopbackListener {
 /// when sign-in hands back. It is inline, so the page loads nothing.
 const APP_ICON: &str = include_str!("../../app/data/icons/scalable/apps/io.github.c9dev.PenguinMail.svg");
 
+/// "Penguin Mail" in Manrope Bold, as outlines, so the page shows the
+/// brand's lettering without loading or bundling the font. It takes its
+/// colour from the page.
+const WORDMARK: &str = include_str!("wordmark.svg");
+
 /// The status line and page the browser shows when a sign-in hands back
 /// to the app. The words are fixed ones: nothing from the redirect's
 /// address reaches the page, so a crafted address cannot write into it.
@@ -429,8 +434,8 @@ fn finished_page(outcome: &Option<Result<String, GmailError>>) -> (&'static str,
         None => ("404 Not Found", "none", gettext("Nothing here"), String::new()),
     };
     let glyph = match mark {
-        "ok" => "<path d=\"M7 12.5l3.2 3.2L17 9\"/>",
-        "no" => "<path d=\"M8 8l8 8M16 8l-8 8\"/>",
+        "ok" => "<path d=\"M7.5 12.4l3 3L16.5 9\"/>",
+        "no" => "<path d=\"M8.5 8.5l7 7M15.5 8.5l-7 7\"/>",
         _ => "",
     };
     let badge = if glyph.is_empty() {
@@ -438,42 +443,51 @@ fn finished_page(outcome: &Option<Result<String, GmailError>>) -> (&'static str,
     } else {
         format!(
             "<svg class=\"badge {mark}\" viewBox=\"0 0 24 24\" aria-hidden=\"true\">\
-             <circle cx=\"12\" cy=\"12\" r=\"12\"/>{glyph}</svg>"
+             <circle cx=\"12\" cy=\"12\" r=\"11\"/>{glyph}</svg>"
         )
     };
     let page = format!(
         "<!doctype html><html><meta charset=utf-8>\
 <meta name=viewport content=\"width=device-width,initial-scale=1\">\
 <title>{title}</title><style>{css}</style>\
-<main><div class=\"icon\" aria-hidden=\"true\">{icon}{badge}</div>\
+<main><div class=\"icon\" aria-hidden=\"true\">{icon}{badge}</div>{wordmark}\
 <h1>{heading}</h1><p>{detail}</p></main></html>",
         title = html_escape(&heading),
         css = FINISHED_CSS,
-        // The icon file has a fixed 256 px size and no viewBox, so it is
-        // given one here to scale to the page's 96 px instead of cropping.
-        icon = APP_ICON.replacen("width=\"256\" height=\"256\"", "viewBox=\"0 0 256 256\"", 1),
+        // The page sizes the icon in CSS. The file's own 128 px size would
+        // take precedence in some browsers and crop it, so only its viewBox
+        // stays.
+        icon = APP_ICON.replacen(" width=\"128\" height=\"128\"", "", 1),
+        wordmark = WORDMARK.trim_end(),
         heading = html_escape(&heading),
         detail = html_escape(&detail),
     );
     (status, page)
 }
 
-/// The page's look: the app's colours, centred, light or dark with the
-/// system.
-const FINISHED_CSS: &str = ":root{color-scheme:light dark;--bg:#faf9f7;--card:#ffffff;--fg:#1d1d20;\
---dim:#5e5c64;--line:rgba(0,0,0,.08);--ok:#26a269;--no:#c01c28}\
-@media (prefers-color-scheme: dark){:root{--bg:#1e1e21;--card:#2a2a2e;--fg:#ffffff;\
---dim:rgba(255,255,255,.66);--line:rgba(255,255,255,.08);--ok:#33d17a;--no:#ed333b}}\
+/// The page's look, in the brand's colours: ink on paper, or paper on ink
+/// when the system is dark, with orange for the rule under the wordmark.
+/// The badges' greens and reds keep 4.5:1 against their glyph and 3:1
+/// against the card.
+const FINISHED_CSS: &str = ":root{color-scheme:light dark;--bg:#fbf7f0;--card:#fffdf9;--fg:#2a2623;\
+--dim:#6b635b;--line:rgba(42,38,35,.10);--accent:#e8660c;--ok:#2f7a4a;--no:#b42a22;--glyph:#fbf7f0;\
+--shadow:rgba(42,38,35,.08)}\
+@media (prefers-color-scheme: dark){:root{--bg:#2a2623;--card:#34302c;--fg:#fbf7f0;\
+--dim:#b8aea3;--line:rgba(251,247,240,.08);--ok:#86c99a;--no:#f0a092;--glyph:#2a2623;\
+--shadow:rgba(0,0,0,.25)}}\
 *{box-sizing:border-box}html,body{height:100%}\
 body{margin:0;display:grid;place-items:center;background:var(--bg);color:var(--fg);\
 font:15px/1.5 \"Adwaita Sans\",Cantarell,system-ui,-apple-system,\"Segoe UI\",Roboto,sans-serif}\
 main{width:min(420px,calc(100% - 32px));padding:40px 36px 36px;text-align:center;background:var(--card);\
-border:1px solid var(--line);border-radius:24px;box-shadow:0 12px 40px rgba(0,0,0,.10)}\
-.icon{position:relative;width:96px;height:96px;margin:0 auto 20px}.icon>svg:first-child{width:96px;height:96px}\
-.badge{position:absolute;right:-6px;bottom:-4px;width:34px;height:34px;fill:var(--ok);\
-stroke:#fff;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;\
-filter:drop-shadow(0 2px 4px rgba(0,0,0,.2))}.badge.no{fill:var(--no)}\
-.badge path{fill:none}h1{margin:0 0 8px;font-size:22px;font-weight:800;letter-spacing:-.01em}\
+border:1px solid var(--line);border-radius:24px;box-shadow:0 12px 40px var(--shadow)}\
+.icon{position:relative;width:96px;height:96px;margin:0 auto 14px}.icon>svg:first-child{width:96px;height:96px}\
+.badge{position:absolute;right:-8px;bottom:0;width:34px;height:34px}\
+.badge circle{fill:var(--ok);stroke:var(--card);stroke-width:2}.badge.no circle{fill:var(--no)}\
+.badge path{fill:none;stroke:var(--glyph);stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}\
+.wordmark{display:block;height:22px;margin:0 auto;fill:var(--fg)}\
+h1::before{content:\"\";display:block;width:28px;height:3px;\
+margin:18px auto 20px;border-radius:2px;background:var(--accent)}\
+h1{margin:0 0 8px;font-size:22px;font-weight:800;letter-spacing:-.01em}\
 p{margin:0;color:var(--dim)}\
 @media (prefers-reduced-motion: no-preference){main{animation:rise .35s ease-out both}\
 @keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}}";
@@ -555,8 +569,34 @@ mod finished_page_tests {
         assert!(html.contains("Signed in to Penguin Mail"), "{html}");
         assert!(html.contains("close this tab"), "{html}");
         assert!(html.contains("<svg"), "the page carries the app icon: {html}");
-        assert!(html.contains("viewBox=\"0 0 256 256\""), "the icon scales rather than crops: {html}");
         assert!(html.contains("prefers-color-scheme: dark"), "{html}");
+    }
+
+    #[test]
+    fn the_icon_scales_rather_than_crops() {
+        let (_, html) = finished_page(&Some(Ok("code".into())));
+        let icon = &html[html.find("<div class=\"icon\"").expect("an icon box")..];
+        let tag = &icon[icon.find("<svg").expect("the icon")..];
+        let tag = &tag[..tag.find('>').expect("a whole tag")];
+        assert!(tag.contains("viewBox="), "{tag}");
+        assert!(!tag.contains("width="), "a fixed size would crop it at 96 px: {tag}");
+    }
+
+    #[test]
+    fn the_page_carries_the_outlined_wordmark() {
+        let (_, html) = finished_page(&Some(Ok("code".into())));
+        let mark = &html[html.find("<svg class=\"wordmark\"").expect("a wordmark: {html}")..];
+        let mark = &mark[..mark.find("</svg>").expect("a whole svg")];
+        assert!(mark.contains("<path d=\"M"), "the letters are outlines: {mark}");
+        assert!(!mark.contains("<text"), "no font needed: {mark}");
+    }
+
+    #[test]
+    fn the_page_wears_the_brand_paper_and_ink() {
+        let (_, html) = finished_page(&Some(Ok("code".into())));
+        for colour in ["#fbf7f0", "#2a2623", "#e8660c"] {
+            assert!(html.contains(colour), "{colour} in {html}");
+        }
     }
 
     #[test]

@@ -17,6 +17,7 @@
     <file>icons/scalable/actions/penguin-mail-cake-symbolic.svg</file>
     <file>icons/scalable/apps/io.github.c9dev.PenguinMail.svg</file>
     <file>icons/scalable/apps/io.github.c9dev.PenguinMail-symbolic.svg</file>
+    <file>icons/16x16/apps/io.github.c9dev.PenguinMail.svg</file>
     <file>style.css</file>
   </gresource>
 </gresources>
