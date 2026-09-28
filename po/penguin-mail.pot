@@ -1308,39 +1308,39 @@ msgstr ""
 msgid "{day} {time}"
 msgstr ""
 
-#: app/src/format.rs:317
+#: app/src/format.rs:300
 msgid "Blue"
 msgstr ""
 
-#: app/src/format.rs:318
+#: app/src/format.rs:301
 msgid "Teal"
 msgstr ""
 
-#: app/src/format.rs:319
+#: app/src/format.rs:302
 msgid "Green"
 msgstr ""
 
-#: app/src/format.rs:320
+#: app/src/format.rs:303
 msgid "Yellow"
 msgstr ""
 
-#: app/src/format.rs:321
+#: app/src/format.rs:304
 msgid "Orange"
 msgstr ""
 
-#: app/src/format.rs:322
+#: app/src/format.rs:305
 msgid "Red"
 msgstr ""
 
-#: app/src/format.rs:323
+#: app/src/format.rs:306
 msgid "Pink"
 msgstr ""
 
-#: app/src/format.rs:324
+#: app/src/format.rs:307
 msgid "Purple"
 msgstr ""
 
-#: app/src/format.rs:325
+#: app/src/format.rs:308
 msgid "Slate"
 msgstr ""
 
@@ -2017,7 +2017,7 @@ msgstr ""
 msgid "Contact card for {person}"
 msgstr ""
 
-#: app/src/render.rs:261 app/src/ui/invitation.rs:299
+#: app/src/render.rs:261 app/src/ui/invitation.rs:383
 #: app/src/ui/thread_row.rs:122
 msgid "Invitation"
 msgstr ""
@@ -3671,7 +3671,7 @@ msgid "Open in Maps"
 msgstr ""
 
 #: app/src/ui/calendar/popover.rs:196 app/src/ui/calendar/popover.rs:492
-#: app/src/ui/invitation.rs:200
+#: app/src/ui/invitation.rs:244
 msgid "Answer"
 msgstr ""
 
@@ -3824,7 +3824,7 @@ msgid "Penguin Mail cannot see this account's calendars"
 msgstr ""
 
 #: app/src/ui/calendar/sidebar.rs:606 app/src/ui/contacts_prefs.rs:228
-#: app/src/ui/invitation.rs:287 app/src/ui/permission.rs:41
+#: app/src/ui/invitation.rs:348 app/src/ui/permission.rs:41
 #: app/src/ui/permission.rs:64 app/src/ui/window.rs:1100
 msgid "Grant Access"
 msgstr ""
@@ -3857,13 +3857,14 @@ msgstr ""
 msgid "{date} · {start}–{end}"
 msgstr ""
 
-#: app/src/ui/calendar/words.rs:111
+#: app/src/ui/calendar/words.rs:111 app/src/ui/invitation.rs:902
 msgid "{yes} of {count} said yes"
 msgid_plural "{yes} of {count} said yes"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/calendar/words.rs:122
+#. The calendar's popover words its people line the same way.
+#: app/src/ui/calendar/words.rs:122 app/src/ui/invitation.rs:870
 msgid "{name}, organizer"
 msgstr ""
 
@@ -3961,7 +3962,7 @@ msgstr ""
 msgid "No answer yet"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:204 app/src/ui/conversation.rs:1638
+#: app/src/ui/composer/mod.rs:204 app/src/ui/conversation.rs:1645
 msgid "Choose a Time…"
 msgstr ""
 
@@ -4474,7 +4475,7 @@ msgid "Mark as Unread (Ctrl+Shift+U)"
 msgstr ""
 
 #: app/src/ui/conversation.rs:456 app/src/ui/conversation.rs:460
-#: app/src/ui/conversation.rs:1678
+#: app/src/ui/conversation.rs:1685
 msgid "Flag (Ctrl+Shift+L)"
 msgstr ""
 
@@ -4616,23 +4617,23 @@ msgid_plural "{count} Messages Selected"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/conversation.rs:1677
+#: app/src/ui/conversation.rs:1684
 msgid "Unflag (Ctrl+Shift+L)"
 msgstr ""
 
-#: app/src/ui/conversation.rs:1690
+#: app/src/ui/conversation.rs:1697
 msgid "Mark as Read (U)"
 msgstr ""
 
-#: app/src/ui/conversation.rs:1691
+#: app/src/ui/conversation.rs:1698
 msgid "Mark as Unread (U)"
 msgstr ""
 
-#: app/src/ui/conversation.rs:1861
+#: app/src/ui/conversation.rs:1868
 msgid "{color} (Ctrl+Alt+{number})"
 msgstr ""
 
-#: app/src/ui/conversation.rs:1878 app/src/ui/window/message_menu.rs:250
+#: app/src/ui/conversation.rs:1885 app/src/ui/window/message_menu.rs:250
 msgid "Clear Flag"
 msgstr ""
 
@@ -4800,136 +4801,166 @@ msgstr ""
 msgid "Address Created"
 msgstr ""
 
-#: app/src/ui/invitation.rs:213
+#: app/src/ui/invitation.rs:260
 msgid "What the answer covers"
 msgstr ""
 
-#: app/src/ui/invitation.rs:215
+#: app/src/ui/invitation.rs:262
 msgid "This Event"
 msgstr ""
 
-#: app/src/ui/invitation.rs:220
+#: app/src/ui/invitation.rs:267
 msgid "All Events"
 msgstr ""
 
-#: app/src/ui/invitation.rs:232
+#: app/src/ui/invitation.rs:279
 msgid "Propose New Time"
 msgstr ""
 
-#: app/src/ui/invitation.rs:242
+#: app/src/ui/invitation.rs:292 app/src/ui/invitation.rs:297
 msgid "Add to Calendar"
 msgstr ""
 
-#: app/src/ui/invitation.rs:246
+#: app/src/ui/invitation.rs:302 app/src/ui/invitation.rs:308
 msgid "Show in Calendar"
 msgstr ""
 
-#: app/src/ui/invitation.rs:284
+#: app/src/ui/invitation.rs:345
 msgid "Penguin Mail needs permission to show this event in Calendar."
 msgstr ""
 
-#: app/src/ui/invitation.rs:493
+#: app/src/ui/invitation.rs:658 app/src/ui/invitation/strip.rs:168
 msgid "Untitled event"
 msgstr ""
 
-#: app/src/ui/invitation.rs:568
+#: app/src/ui/invitation.rs:732
 msgid "Pick a Time…"
 msgstr ""
 
-#: app/src/ui/invitation.rs:609
+#: app/src/ui/invitation.rs:777
 msgid "No reply yet"
 msgstr ""
 
-#: app/src/ui/invitation.rs:654
+#: app/src/ui/invitation.rs:823
 msgid "Half an Hour Later"
 msgstr ""
 
-#: app/src/ui/invitation.rs:657
+#: app/src/ui/invitation.rs:826
 msgid "An Hour Later"
 msgstr ""
 
-#: app/src/ui/invitation.rs:659
+#: app/src/ui/invitation.rs:828
 msgid "Same Time Tomorrow"
 msgstr ""
 
-#: app/src/ui/invitation.rs:663
+#: app/src/ui/invitation.rs:832
 msgid "Same Time Next Week"
 msgstr ""
 
-#: app/src/ui/invitation.rs:678
+#: app/src/ui/invitation.rs:847
 msgid "You have {event} then"
 msgstr ""
 
-#: app/src/ui/invitation.rs:680
+#: app/src/ui/invitation.rs:849
 msgid "You have {event} and {other} then"
 msgstr ""
 
-#: app/src/ui/invitation.rs:684
+#: app/src/ui/invitation.rs:853
 msgid "You have {event} and {count} more then"
 msgid_plural "You have {event} and {count} more then"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/invitation.rs:698
+#: app/src/ui/invitation.rs:866
 msgid "Reply to the invitation from {organizer}"
 msgstr ""
 
-#: app/src/ui/invitation.rs:701
-msgid "Invitation from {organizer}"
-msgstr ""
-
-#: app/src/ui/invitation.rs:721
+#: app/src/ui/invitation.rs:965
 msgid "You"
 msgstr ""
 
-#: app/src/ui/invitation.rs:747
+#: app/src/ui/invitation.rs:991
 msgid "{count} yes"
 msgid_plural "{count} yes"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/invitation.rs:755
+#: app/src/ui/invitation.rs:999
 msgid "{count} no"
 msgid_plural "{count} no"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/invitation.rs:763
+#: app/src/ui/invitation.rs:1007
 msgid "{count} maybe"
 msgid_plural "{count} maybe"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/invitation.rs:771
+#: app/src/ui/invitation.rs:1015
 msgid "{count} awaiting"
 msgid_plural "{count} awaiting"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/invitation.rs:779
+#: app/src/ui/invitation.rs:1023
 msgid "{count} guest"
 msgid_plural "{count} guests"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/invitation.rs:785
+#: app/src/ui/invitation.rs:1029
 msgid "{guests} · {answers}"
 msgstr ""
 
-#: app/src/ui/invitation.rs:795
+#: app/src/ui/invitation.rs:1039
 msgid "This meeting moved from {when}"
 msgstr ""
 
-#: app/src/ui/invitation.rs:798
+#: app/src/ui/invitation.rs:1042
 msgid "The organizer changed this meeting"
 msgstr ""
 
-#: app/src/ui/invitation.rs:799
+#: app/src/ui/invitation.rs:1043
 msgid "The organizer canceled this meeting"
 msgstr ""
 
-#: app/src/ui/invitation.rs:800
+#: app/src/ui/invitation.rs:1044
 msgid "This meeting is canceled"
+msgstr ""
+
+#: app/src/ui/invitation/strip.rs:63
+msgid "Your morning"
+msgstr ""
+
+#: app/src/ui/invitation/strip.rs:64
+msgid "Your afternoon"
+msgstr ""
+
+#: app/src/ui/invitation/strip.rs:65
+msgid "Your evening"
+msgstr ""
+
+#: app/src/ui/invitation/strip.rs:96 app/src/ui/invitation/strip.rs:100
+msgid "Nothing else at that hour"
+msgstr ""
+
+#: app/src/ui/invitation/strip.rs:101
+msgid "Clashes with {event}"
+msgstr ""
+
+#: app/src/ui/invitation/strip.rs:103
+msgid "Clashes with {event} and {other}"
+msgstr ""
+
+#: app/src/ui/invitation/strip.rs:107
+msgid "Clashes with {event} and {count} more"
+msgid_plural "Clashes with {event} and {count} more"
+msgstr[0] ""
+msgstr[1] ""
+
+#: app/src/ui/invitation/strip.rs:207
+msgid "This meeting"
 msgstr ""
 
 #: app/src/ui/mod.rs:344
