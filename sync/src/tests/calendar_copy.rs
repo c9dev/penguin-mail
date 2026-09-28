@@ -1744,6 +1744,8 @@ async fn an_out_of_office_google_refuses_says_which_accounts_may_make_one() {
     assert!(reason.starts_with("Google Calendar offers out of office and focus time only on some work and school accounts"), "{reason}");
     assert!(reason.contains("Status events are not supported for this user."), "Google's own words stay: {reason}");
     assert!(stored(&h, "primary", &id).await.is_none(), "the entry leaves the copy");
+}
+
 // ---- Going back further than the first read ----------------------------
 
 const YEAR: i64 = 365 * 24 * 60 * 60_000;
