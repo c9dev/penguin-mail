@@ -10,11 +10,11 @@ use std::cell::{Cell, RefCell};
 use std::collections::{HashMap, VecDeque};
 
 use adw::prelude::*;
-use chrono::{Days, NaiveDate, TimeZone};
+use chrono::{Datelike, Days, NaiveDate, TimeZone};
 use gtk::subclass::prelude::*;
 use gtk::{gdk, glib, graphene, gsk};
 use mailrs_domain::calendar::{Calendar, Occurrence};
-use mailrs_domain::translate::{date_locale, fill, fill_plural, gettext};
+use mailrs_domain::translate::{fill, fill_plural, gettext};
 use mailrs_domain::{AccountId, EpochMillis};
 
 use super::block::{self, EventBlock, EventKey};
@@ -278,16 +278,22 @@ fn hairline(text: &gtk::gdk::RGBA) -> gtk::gdk::RGBA {
     line
 }
 
-/// "09:00" at `hour`, in the pattern the rest of the app clocks a moment
-/// with; the date is a placeholder, only the hour and minute are read.
+/// The wash over an hour outside working hours: the same text colour a
+/// wash elsewhere in the app uses (`.assistant-step title:hover` in
+/// `style.css`), light enough on both a light and a dark surface that it
+/// reads as a shade rather than a fill, since the mockup itself shades
+/// nothing here.
+fn shade(text: &gtk::gdk::RGBA) -> gtk::gdk::RGBA {
+    let mut wash = *text;
+    wash.set_alpha(text.alpha() * 0.05);
+    wash
+}
+
+/// "09:00" or "9:00 AM" at `hour`, in the clock
+/// [`crate::clock_format::current`] names.
 fn hour_text(hour: u32) -> String {
-    chrono::Utc
-        .with_ymd_and_hms(1970, 1, 1, hour, 0, 0)
-        .single()
-        .map(|at| {
-            at.format_localized(&gettext("%H:%M"), date_locale())
-                .to_string()
-        })
+    chrono::NaiveTime::from_hms_opt(hour, 0, 0)
+        .map(crate::clock_format::time_text)
         .unwrap_or_default()
 }
 
@@ -341,6 +347,8 @@ mod imp {
     pub struct TimeGrid {
         pub children: RefCell<Vec<(gtk::Widget, Placement)>>,
         pub days: RefCell<Vec<NaiveDate>>,
+        /// The hours to shade outside of, from the last `show`.
+        pub working_hours: Cell<mailrs_domain::calendar::hours::WorkingHours>,
         pub now: Cell<EpochMillis>,
         pub now_timer: RefCell<Option<glib::SourceId>>,
         /// How far the parent scrolled window has scrolled the grid.
@@ -488,6 +496,17 @@ mod imp {
             let days = self.days.borrow();
             let columns = days.len().max(1);
             let column_width = (width - super::GUTTER) / columns as f32;
+
+            let shade = super::shade(&widget.color());
+            let working_hours = self.working_hours.get();
+            for (column, &day) in days.iter().enumerate() {
+                let x = super::GUTTER + column as f32 * column_width;
+                for (start, end) in working_hours.shaded_hour_ranges(day.weekday()) {
+                    let y = start as f32 * super::HOUR;
+                    let range_height = (end - start) as f32 * super::HOUR;
+                    snapshot.append_color(&shade, &graphene::Rect::new(x, y, column_width, range_height));
+                }
+            }
 
             let hairline = super::hairline(&widget.color());
             let top = self.scroll_top.get() as f32;
@@ -786,10 +805,12 @@ impl TimeGrid {
         calendars: &HashMap<(AccountId, String), Calendar>,
         now: EpochMillis,
         zone: &chrono::Local,
+        working_hours: mailrs_domain::calendar::hours::WorkingHours,
     ) {
         let imp = self.imp();
         imp.days.replace(days.to_vec());
         imp.now.set(now);
+        imp.working_hours.set(working_hours);
 
         let bounds: Vec<(EpochMillis, EpochMillis)> = days
             .iter()

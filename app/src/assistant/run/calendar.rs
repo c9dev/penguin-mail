@@ -9,7 +9,7 @@
 
 use std::collections::HashMap;
 
-use chrono::{DateTime, Datelike, Local, NaiveDate, NaiveTime, TimeZone, Utc, Weekday};
+use chrono::{DateTime, Datelike, Local, NaiveDate, NaiveTime, TimeZone, Utc};
 use mailrs_domain::calendar as model;
 use mailrs_domain::invitation::Answer;
 use mailrs_gmail::{EventFields, EventTime};
@@ -293,6 +293,7 @@ impl<A: Accounts> Tools<A> {
             .and_then(Value::as_u64)
             .ok_or("`minutes` is missing")?
             .clamp(5, 24 * 60) as i64;
+        let working_hours = self.desk.settings().working_hours;
         let hour = |key: &str, fallback: NaiveTime| -> Result<NaiveTime, String> {
             match text(input, key) {
                 None => Ok(fallback),
@@ -300,14 +301,8 @@ impl<A: Accounts> Tools<A> {
                     .map_err(|_| format!("Could not read the time of day {value}; use HH:MM.")),
             }
         };
-        let starts = hour(
-            "day_starts",
-            NaiveTime::from_hms_opt(9, 0, 0).unwrap_or_default(),
-        )?;
-        let ends = hour(
-            "day_ends",
-            NaiveTime::from_hms_opt(18, 0, 0).unwrap_or_default(),
-        )?;
+        let starts = hour("day_starts", working_hours.start_time())?;
+        let ends = hour("day_ends", working_hours.end_time())?;
         if ends <= starts {
             return Err("`day_ends` must come after `day_starts`.".into());
         }
@@ -316,8 +311,7 @@ impl<A: Accounts> Tools<A> {
         let (first, last) = (day_of(from)?, day_of(to)?);
         let mut day = first;
         while day <= last && (day - first).num_days() < MOST_DAYS {
-            let rest = matches!(day.weekday(), Weekday::Sat | Weekday::Sun);
-            if weekends || !rest {
+            if weekends || working_hours.is_working_day(day.weekday()) {
                 let open = on_day(day, starts)?.max(from);
                 let close = on_day(day, ends)?.min(to);
                 if close > open {

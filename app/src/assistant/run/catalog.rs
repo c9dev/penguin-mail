@@ -1041,9 +1041,9 @@ pub(super) fn catalog<A: Accounts>() -> Vec<MailTool<A>> {
                     "from": {"type": "string", "description": "Local time as YYYY-MM-DDTHH:MM, or a day as YYYY-MM-DD."},
                     "to": {"type": "string", "description": "Local time as YYYY-MM-DDTHH:MM, or a day as YYYY-MM-DD, which counts in full."},
                     "minutes": {"type": "integer", "minimum": 5, "maximum": 1440, "description": "How long the free stretch must be."},
-                    "day_starts": {"type": "string", "description": "HH:MM. Defaults to 09:00."},
-                    "day_ends": {"type": "string", "description": "HH:MM. Defaults to 18:00."},
-                    "weekends": {"type": "boolean", "description": "Include Saturdays and Sundays. Defaults to false."},
+                    "day_starts": {"type": "string", "description": "HH:MM. Defaults to the working hours set in Preferences."},
+                    "day_ends": {"type": "string", "description": "HH:MM. Defaults to the working hours set in Preferences."},
+                    "weekends": {"type": "boolean", "description": "Include days outside the working days set in Preferences. Defaults to false."},
                     "account": account("The calendar's account. Defaults to the default account.")
                 })
             },

@@ -14,8 +14,11 @@ use serde::{Deserialize, Serialize};
 use crate::invitation;
 use crate::{AccountId, EpochMillis};
 
+pub mod clock;
+pub mod hours;
 pub mod repeat;
 pub mod series;
+pub mod week;
 
 /// Most occurrences one expansion returns. A daily series over a month
 /// view is 42; this is far above any range the window asks for, and it

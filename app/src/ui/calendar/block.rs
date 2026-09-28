@@ -13,7 +13,7 @@ use gtk::{gdk, glib, graphene, gsk, pango};
 use mailrs_domain::{AccountId, EpochMillis};
 use mailrs_domain::calendar::{Event, Occurrence};
 use mailrs_domain::invitation::Answer;
-use mailrs_domain::translate::{date_locale, fill, gettext};
+use mailrs_domain::translate::{fill, gettext};
 
 use crate::ui;
 use crate::ui::calendar::drag;
@@ -304,18 +304,14 @@ pub(super) fn description(event: &Event) -> String {
     }
 }
 
-/// "10:00" in `zone`'s local time, the same pattern the rest of the app
-/// clocks a moment with.
+/// "10:00" or "10:00 AM" in `zone`'s local time, in the clock
+/// [`crate::clock_format::current`] names.
 fn clock<Z: TimeZone>(at: EpochMillis, zone: &Z) -> String
 where
     Z::Offset: std::fmt::Display,
 {
     DateTime::<Utc>::from_timestamp_millis(at)
-        .map(|utc| {
-            utc.with_timezone(zone)
-                .format_localized(&gettext("%H:%M"), date_locale())
-                .to_string()
-        })
+        .map(|utc| crate::clock_format::time_text(utc.with_timezone(zone).time()))
         .unwrap_or_default()
 }
 

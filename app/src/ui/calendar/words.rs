@@ -35,18 +35,14 @@ pub fn day_words(date: NaiveDate) -> String {
         .to_string()
 }
 
-/// "10:00" in `zone`'s local time, the pattern the rest of the app clocks
-/// a moment with.
+/// "10:00" or "10:00 AM" in `zone`'s local time, in the clock
+/// [`crate::clock_format::current`] names.
 pub fn clock_words<Z: TimeZone>(at: EpochMillis, zone: &Z) -> String
 where
     Z::Offset: std::fmt::Display,
 {
     utc(at)
-        .map(|at| {
-            at.with_timezone(zone)
-                .format_localized(&gettext("%H:%M"), date_locale())
-                .to_string()
-        })
+        .map(|at| crate::clock_format::time_text(at.with_timezone(zone).time()))
         .unwrap_or_default()
 }
 

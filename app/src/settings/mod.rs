@@ -123,6 +123,11 @@ pub struct Settings {
     /// Show events the person said No to, faded and struck through,
     /// rather than leaving them out.
     pub show_declined_events: bool,
+    /// The hours meetings usually run in, and the days they run on: the
+    /// Day and Week grid shades what falls outside them, Month shades a
+    /// day that is not one of them, and the assistant's free-time tool
+    /// defaults to them. Defaults to 09:00 to 18:00, Monday to Friday.
+    pub working_hours: mailrs_domain::calendar::hours::WorkingHours,
     /// The address of the account the last new event went on. A new
     /// event goes on that account's primary calendar.
     pub last_calendar_account: Option<String>,
@@ -465,6 +470,7 @@ impl Default for Settings {
             space: Space::Mail,
             calendar_view: CalendarView::Week,
             show_declined_events: false,
+            working_hours: mailrs_domain::calendar::hours::WorkingHours::default(),
             last_calendar_account: None,
         }
     }

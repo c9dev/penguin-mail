@@ -1445,21 +1445,9 @@ fn format_date(day: NaiveDate) -> String {
         .to_string()
 }
 
-fn format_time(time: NaiveTime) -> String {
-    // Neither `NaiveTime` nor `NaiveDateTime` has `format_localized`;
-    // pairing the time with a fixed date and a zone costs nothing, since
-    // `%H:%M` names no month or weekday.
-    NaiveDate::from_ymd_opt(2000, 1, 1)
-        .expect("a real date")
-        .and_time(time)
-        .and_utc()
-        .format_localized(&gettext("%H:%M"), date_locale())
-        .to_string()
-}
-
 fn time_dropdown(current: NaiveTime) -> gtk::DropDown {
     let times = draft::time_choices(current);
-    let names: Vec<String> = times.iter().map(|t| format_time(*t)).collect();
+    let names: Vec<String> = times.iter().map(|&t| crate::clock_format::time_text(t)).collect();
     let refs: Vec<&str> = names.iter().map(String::as_str).collect();
     // Centred like the date button beside it: a drop-down left to fill
     // stretches to the row's full height and stands taller than the button.
@@ -1481,12 +1469,12 @@ fn selected_time(drop: &gtk::DropDown) -> Option<NaiveTime> {
         .selected_item()
         .and_downcast::<gtk::StringObject>()?
         .string();
-    NaiveTime::parse_from_str(&text, "%H:%M").ok()
+    crate::clock_format::parse_time_text(&text)
 }
 
 fn select_time(drop: &gtk::DropDown, time: NaiveTime) {
     let times = draft::time_choices(time);
-    let names: Vec<String> = times.iter().map(|t| format_time(*t)).collect();
+    let names: Vec<String> = times.iter().map(|&t| crate::clock_format::time_text(t)).collect();
     let refs: Vec<&str> = names.iter().map(String::as_str).collect();
     drop.set_model(Some(&gtk::StringList::new(&refs)));
     if let Some(i) = times.iter().position(|t| *t == time) {

@@ -173,6 +173,9 @@ pub struct CalendarView {
     /// What the "N more" popover was opened from, for the event popover
     /// that replaces it.
     more_anchor: RefCell<Option<gtk::Widget>>,
+    /// Watches GNOME's `clock-format` for as long as the page lives;
+    /// `None` where its schema is not installed.
+    clock_watch: RefCell<Option<gtk::gio::Settings>>,
     /// The day the view is on; every range is the one around it.
     day: Cell<NaiveDate>,
     kind: Cell<ViewKind>,
@@ -480,6 +483,7 @@ impl CalendarView {
                 more_list,
                 quick,
                 more_anchor: RefCell::new(None),
+                clock_watch: RefCell::new(None),
                 day: Cell::new(today),
                 kind: Cell::new(kind),
                 before_day: Cell::new(match kind {
@@ -589,6 +593,16 @@ impl CalendarView {
         view.page.connect_destroy(move |_| {
             if let Some(handler) = handler.take() {
                 adw::StyleManager::default().disconnect(handler);
+            }
+        });
+        // Redraws in the new clock as soon as the person flips GNOME's own
+        // setting, not only the next time they navigate. Kept in
+        // `clock_watch` for as long as the view lives, which is what
+        // keeps the watch itself alive.
+        let weak = Rc::downgrade(&view);
+        *view.clock_watch.borrow_mut() = crate::clock_format::watch(move || {
+            if let Some(view) = weak.upgrade() {
+                view.show_range();
             }
         });
         let weak = Rc::downgrade(&view);
@@ -1394,7 +1408,8 @@ impl CalendarView {
     }
 
     fn show_page(self: &Rc<Self>, page: &Rc<Page>, found: Vec<Occurrence>) {
-        let show_declined = (self.settings)().show_declined_events;
+        let settings = (self.settings)();
+        let show_declined = settings.show_declined_events;
         let pending = self.pending();
         let found: Vec<Occurrence> = found
             .into_iter()
@@ -1424,7 +1439,7 @@ impl CalendarView {
                 self.fill_headings(&grid.headings, &days);
                 grid.strip.show(&days, &found, &calendars);
                 let now = chrono::Local::now().timestamp_millis();
-                grid.grid.show(&days, &found, &calendars, now, &chrono::Local);
+                grid.grid.show(&days, &found, &calendars, now, &chrono::Local, settings.working_hours);
                 let block = self.pending_block(&found, |key, start| {
                     grid.grid
                         .block_at(key, start)
@@ -1453,7 +1468,7 @@ impl CalendarView {
                 (block, scroll)
             }
             PageView::Month(month) => {
-                month.show(range, &found, &calendars);
+                month.show(range, &found, &calendars, settings.working_hours);
                 let block = self.pending_block(&found, |key, start| month.block_at(key, start));
                 (block, None)
             }
@@ -2617,7 +2632,8 @@ fn keep_agenda_events(
     found
 }
 
-/// "MON TUE WED …" over the month grid.
+/// "MON TUE WED …" over the month grid, starting on the locale's own
+/// first weekday.
 fn weekday_row() -> gtk::Box {
     let row = gtk::Box::builder()
         .homogeneous(true)
@@ -2626,10 +2642,10 @@ fn weekday_row() -> gtk::Box {
         .css_classes(["day-heading"])
         .build();
     let monday = NaiveDate::from_ymd_opt(2024, 1, 1).expect("2024-01-01 is a Monday");
-    for i in 0..7u64 {
+    for day in mailrs_domain::calendar::week::week_columns(crate::locale_time::first_weekday()) {
         let label = gtk::Label::builder()
             .label(
-                (monday + Days::new(i))
+                (monday + Days::new(u64::from(day.num_days_from_monday())))
                     .format_localized(&gettext("%a"), date_locale())
                     .to_string(),
             )
