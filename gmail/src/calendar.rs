@@ -927,6 +927,7 @@ pub fn google_event(calendar: &str, item: &Value, me: Option<&str>, calendar_zon
         organizer: item.pointer("/organizer/email").and_then(Value::as_str).map(str::to_string),
         my_answer: guests.iter().find(|g| g.me).and_then(|g| g.answer),
         guests,
+        sequence: item.get("sequence").and_then(Value::as_i64).unwrap_or(0),
         reminders: overrides.then(|| reminders(item.pointer("/reminders/overrides"))),
         conference: item
             .get("hangoutLink")

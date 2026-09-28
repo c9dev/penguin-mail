@@ -706,8 +706,9 @@ impl<A: Accounts> Invitations<A> {
     /// own guest entry, and whether an answer or proposal names that
     /// occurrence or the whole event: what the card holds for a message,
     /// built for an event the person opened in the calendar, so
-    /// [`Self::propose`] serves both. The sequence comes from the last
-    /// invitation mail read for the event, 0 when none was.
+    /// [`Self::propose`] serves both. The sequence is the newer of the
+    /// last invitation mail read for the event and the calendar's copy,
+    /// since an organizer may set aside a proposal for an older version.
     pub async fn for_event(
         &self,
         account_id: AccountId,
@@ -717,7 +718,8 @@ impl<A: Accounts> Invitations<A> {
         let sequence = self
             .db
             .read(move |c| Ok(store::saved(c, account_id, &uid)?.map_or(0, |saved| saved.sequence)))
-            .await?;
+            .await?
+            .max(occurrence.event.sequence);
         let invitation = invitation::from_occurrence(occurrence, sequence);
         let me = occurrence
             .event

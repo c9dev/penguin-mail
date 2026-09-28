@@ -631,6 +631,13 @@ ALTER TABLE calendar_holds ADD COLUMN notify TEXT;
     r#"
 UPDATE calendars SET sync_token = NULL;
 "#,
+    // The organizer's version of each event (Google's `sequence`), which a
+    // proposal for another time names. The rows already stored carry 0
+    // until a whole read of each calendar replaces them.
+    r#"
+ALTER TABLE events ADD COLUMN sequence INTEGER NOT NULL DEFAULT 0;
+UPDATE calendars SET sync_token = NULL;
+"#,
 ];
 
 /// How long the copy taken before a migration stays once the store has

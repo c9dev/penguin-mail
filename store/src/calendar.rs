@@ -165,9 +165,9 @@ pub fn save_events(conn: &Connection, account_id: AccountId, events: &[Event], s
         conn.execute(
             "INSERT OR REPLACE INTO events (account_id, calendar, id, uid, etag, starts_at, ends_at, zone, \
              all_day, title, place, description, color, busy, status, private, organizer, my_answer, \
-             reminders, conference, rules, series_end, series, original_start, pending, seen_at) \
+             reminders, conference, rules, series_end, series, original_start, pending, seen_at, sequence) \
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, \
-             ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26)",
+             ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27)",
             params![
                 account_id,
                 event.calendar,
@@ -195,6 +195,7 @@ pub fn save_events(conn: &Connection, account_id: AccountId, events: &[Event], s
                 event.original_start,
                 event.pending,
                 seen_at,
+                event.sequence,
             ],
         )?;
         conn.execute(
@@ -304,7 +305,7 @@ pub fn sweep(conn: &Connection, account_id: AccountId, calendar: &str, before: E
 
 const COLUMNS: &str = "e.account_id, e.calendar, e.id, e.uid, e.etag, e.starts_at, e.ends_at, e.zone, \
     e.all_day, e.title, e.place, e.description, e.color, e.busy, e.status, e.private, e.organizer, \
-    e.my_answer, e.reminders, e.conference, e.rules, e.series, e.original_start, e.pending";
+    e.my_answer, e.reminders, e.conference, e.rules, e.series, e.original_start, e.pending, e.sequence";
 
 pub fn event(conn: &Connection, account_id: AccountId, calendar: &str, id: &str) -> Result<Option<Event>> {
     let found = conn
@@ -704,6 +705,7 @@ fn read_event(row: &Row) -> rusqlite::Result<Event> {
         series: row.get(21)?,
         original_start: row.get(22)?,
         pending: row.get(23)?,
+        sequence: row.get(24)?,
         guests: Vec::new(),
         // A Meet request lives only in a queued write, never in a row
         // the store reads back.
@@ -1352,6 +1354,14 @@ mod tests {
 
     fn starts(found: &[Occurrence]) -> Vec<(String, EpochMillis)> {
         found.iter().map(|o| (o.event.id.clone(), o.start)).collect()
+    }
+
+    #[test]
+    fn the_copy_keeps_the_organizers_version_of_an_event() {
+        let (conn, id) = store();
+        let review = Event { sequence: 3, ..event("primary", "review", MONDAY, 1) };
+        save_events(&conn, id, &[review], 0).unwrap();
+        assert_eq!(super::event(&conn, id, "primary", "review").unwrap().unwrap().sequence, 3);
     }
 
     #[test]

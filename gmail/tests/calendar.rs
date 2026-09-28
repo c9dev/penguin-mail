@@ -624,7 +624,7 @@ async fn a_change_page_maps_events_and_names_the_deleted_ones() {
         .respond_with(ResponseTemplate::new(200).set_body_json(json!({
             "items": [
                 {"id": "a", "iCalUID": "a@google.com", "etag": "\"3\"", "status": "confirmed",
-                 "summary": "Sprint planning",
+                 "summary": "Sprint planning", "sequence": 3,
                  "start": {"dateTime": "2026-09-23T10:00:00+01:00", "timeZone": "Europe/Lisbon"},
                  "end": {"dateTime": "2026-09-23T11:30:00+01:00", "timeZone": "Europe/Lisbon"},
                  "recurrence": ["RRULE:FREQ=WEEKLY;BYDAY=WE"],
@@ -652,6 +652,7 @@ async fn a_change_page_maps_events_and_names_the_deleted_ones() {
     assert_eq!(event.rules, vec!["RRULE:FREQ=WEEKLY;BYDAY=WE".to_string()]);
     assert_eq!(event.conference.as_deref(), Some("https://meet.google.com/abc-defg-hij"));
     assert_eq!(event.my_answer, Some(Answer::Maybe));
+    assert_eq!(event.sequence, 3, "the organizer's version, which a proposal must name");
     // Google writes an all-day holiday with no transparency, so its own
     // flag says busy; `Event::blocks_time` is what leaves the day open.
     assert!(page.events[1].busy);
