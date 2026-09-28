@@ -230,6 +230,18 @@ flowboxchild:focus-visible > .recipient-chip {
 }
 .attachment-row button { min-height: 22px; min-width: 22px; padding: 0; }
 
+/* The composer's fold under a reply: the reading pane's "•••" pill. */
+.trimmed-pill {
+  min-height: 14px; min-width: 0; padding: 0 7px; border-radius: 7px;
+  background: alpha(var(--view-fg-color), 0.12);
+  color: alpha(var(--view-fg-color), 0.7);
+  font-weight: 700; font-size: 11px; letter-spacing: 1px;
+  box-shadow: none;
+}
+.trimmed-pill:hover { background: alpha(var(--view-fg-color), 0.2); }
+.trimmed-pill label { margin-top: -3px; }
+.trimmed-drop { min-height: 22px; min-width: 22px; padding: 0; }
+
 /* Welcome */
 .welcome-card { margin-top: 12px; }
 

@@ -26,8 +26,8 @@ use super::autocomplete::Contacts;
 use super::{labelled_by, name, name_with_shortcut, roving};
 use crate::attachcheck::Promise;
 use crate::compose::{
-    Asking, Built, Draft, Gate, OutgoingAttachment, SendWhen, build, format_recipients, gate,
-    is_address, new_message_id, opening_identity,
+    Asking, Built, Draft, Forwarded, Gate, OutgoingAttachment, SendWhen, build, format_recipients,
+    gate, html_to_send, is_address, new_message_id, opening_identity,
 };
 use crate::core::Core;
 use crate::format::{future_date, human_size, send_later_presets};
@@ -70,6 +70,18 @@ pub enum Remembered {
 
 type ComposerAction = Box<dyn Fn(&Rc<Composer>)>;
 
+/// The space above and below the words in the body.
+const BODY_MARGIN: i32 = 18;
+/// The room under the last line for the "•••" row, and the gap above it.
+const HISTORY_ROOM: i32 = 40;
+const HISTORY_GAP: i32 = 12;
+
+/// A history the writer dropped, held for the toast's Undo.
+enum Folded {
+    Quote(String),
+    Forward(Box<Forwarded>),
+}
+
 /// What the answer to "can this message be encrypted?" depends on.
 ///
 /// The check is memoised, so everything `show_keys` reads has to be in
@@ -107,8 +119,12 @@ pub struct Composer {
     preview: webkit::WebView,
     /// The attachment rows and the box that holds them.
     files: gtk::Box,
-    /// The strip naming the message this draft forwards.
-    forwarded: gtk::Box,
+    /// The "•••" button and its ×, under the last line of the body while
+    /// the quote or the forwarded message is folded.
+    history: gtk::Box,
+    drop_history: gtk::Button,
+    /// Set while a move of `history` waits for the body's layout.
+    placing: Cell<bool>,
     send: adw::SplitButton,
     /// Sign and Encrypt, which this computer's gpg and gpgsm answer for.
     /// Both stay out of the window when there is neither to run. One pair
@@ -361,8 +377,8 @@ impl Composer {
 
         let body = gtk::TextView::builder()
             .wrap_mode(gtk::WrapMode::WordChar)
-            .top_margin(18)
-            .bottom_margin(18)
+            .top_margin(BODY_MARGIN)
+            .bottom_margin(BODY_MARGIN)
             .left_margin(20)
             .right_margin(20)
             .accepts_tab(false)
@@ -394,14 +410,27 @@ impl Composer {
             .margin_top(6)
             .visible(false)
             .build();
-        let forwarded = gtk::Box::builder()
-            .spacing(8)
-            .margin_start(12)
-            .margin_end(12)
-            .margin_top(8)
-            .css_classes(["attachment-row"])
+        // The text view holds the row in its own coordinates, so it sits
+        // under the last line and scrolls with the words.
+        let history = gtk::Box::builder()
+            .spacing(6)
             .visible(false)
             .build();
+        let unfold = gtk::Button::builder()
+            .child(&gtk::Label::new(Some("•••")))
+            .tooltip_text(gettext("Show trimmed content"))
+            .css_classes(["trimmed-pill"])
+            .valign(gtk::Align::Center)
+            .build();
+        name(&unfold, &gettext("Show trimmed content"));
+        let drop_history = gtk::Button::builder()
+            .icon_name("window-close-symbolic")
+            .css_classes(["flat", "circular", "trimmed-drop"])
+            .valign(gtk::Align::Center)
+            .build();
+        history.append(&unfold);
+        history.append(&drop_history);
+        body.add_overlay(&history, 0, 0);
         // One stop on the Tab chain between the fields and the body; the
         // arrow keys move along it. See `roving::toolbar`.
         let format_bar = gtk::Box::builder()
@@ -422,7 +451,6 @@ impl Composer {
         content.append(&format_bar);
         content.append(&line());
         content.append(&stack);
-        content.append(&forwarded);
         content.append(&files);
         let toolbar = adw::ToolbarView::new();
         toolbar.add_top_bar(&header);
@@ -463,7 +491,9 @@ impl Composer {
             stack,
             preview,
             files,
-            forwarded,
+            history,
+            drop_history,
+            placing: Cell::new(false),
             send,
             sign,
             encrypt,
@@ -495,10 +525,11 @@ impl Composer {
         });
         composer.fill_body();
         composer.refresh_files();
-        composer.refresh_forwarded();
         composer.update_title();
         composer.show_more(composer.more_button.is_active());
         composer.wire(&attach, &preview_toggle);
+        composer.wire_history(&unfold);
+        composer.refresh_history();
         composer.fill_format_bar(&format_bar);
         composer.accept_images();
         composer.check_send();
@@ -842,9 +873,17 @@ impl Composer {
         }
     }
 
-    /// The body as HTML, with the message it forwards under it.
+    /// The body as HTML, with the folded quote or the message it forwards
+    /// under it, as it goes out.
     fn html(&self) -> String {
-        let mut html = self.editor.html();
+        let quoted = self.base.borrow().quoted.clone();
+        let mut html = match quoted {
+            Some(quoted) => {
+                let written = self.editor.written();
+                html_to_send(&written.markdown, written.rich.as_ref(), Some(&quoted))
+            }
+            None => self.editor.html(),
+        };
         if let Some(forwarded) = &self.base.borrow().forwarded {
             html.push_str(&forwarded.to_html());
         }
@@ -852,66 +891,151 @@ impl Composer {
     }
 
     fn is_blank(&self) -> bool {
+        let base = self.base.borrow();
         self.to.is_empty()
             && self.subject.text().trim().is_empty()
             && self.editor.is_empty()
             && self.attachments.borrow().is_empty()
-            && self.base.borrow().forwarded.is_none()
+            && base.forwarded.is_none()
+            && base.quoted.is_none()
     }
 
-    /// The strip under the body naming the message this draft forwards,
-    /// with a way to drop it. It is hidden when nothing is forwarded.
-    fn refresh_forwarded(self: &Rc<Self>) {
-        while let Some(child) = self.forwarded.first_child() {
-            self.forwarded.remove(&child);
-        }
-        let label = {
-            let base = self.base.borrow();
-            base.forwarded.as_ref().map(|f| {
-                let who = if f.from.is_empty() {
-                    gettext("a message")
-                } else {
-                    f.from.clone()
-                };
-                match f.subject.trim() {
-                    "" => fill(&gettext("Forwarding {sender}"), &[("sender", &who)]),
-                    subject => fill(
-                        &gettext("Forwarding “{subject}” from {sender}"),
-                        &[("subject", subject), ("sender", &who)],
-                    ),
-                }
-            })
-        };
-        let Some(text) = label else {
-            self.forwarded.set_visible(false);
-            return;
-        };
-        self.forwarded.set_visible(true);
-        self.forwarded
-            .append(&gtk::Image::from_icon_name("mail-forward-symbolic"));
-        self.forwarded.append(
-            &gtk::Label::builder()
-                .label(&text)
-                .ellipsize(gtk::pango::EllipsizeMode::End)
-                .hexpand(true)
-                .xalign(0.0)
-                .build(),
-        );
-        let drop = gtk::Button::builder()
-            .icon_name("window-close-symbolic")
-            .tooltip_text(gettext("Do Not Forward the Original"))
-            .css_classes(["flat", "circular"])
-            .build();
-        name(&drop, &gettext("Do Not Forward the Original"));
+    /// "•••" puts the history in the body; × drops it, with Undo on a
+    /// toast. The row follows the last line as the body grows, shrinks or
+    /// wraps anew.
+    fn wire_history(self: &Rc<Self>, unfold: &gtk::Button) {
         let weak = Rc::downgrade(self);
-        drop.connect_clicked(move |_| {
+        unfold.connect_clicked(move |_| {
             if let Some(c) = weak.upgrade() {
-                c.base.borrow_mut().forwarded = None;
-                c.dirty.set(true);
-                c.refresh_forwarded();
+                c.unfold_history();
             }
         });
-        self.forwarded.append(&drop);
+        let weak = Rc::downgrade(self);
+        self.drop_history.connect_clicked(move |_| {
+            if let Some(c) = weak.upgrade() {
+                c.drop_history();
+            }
+        });
+        let weak = Rc::downgrade(self);
+        self.body.buffer().connect_changed(move |_| {
+            if let Some(c) = weak.upgrade() {
+                c.place_history_soon();
+            }
+        });
+        let adjustments = [self.body.vadjustment(), self.body.hadjustment()];
+        for adjustment in adjustments.into_iter().flatten() {
+            let weak = Rc::downgrade(self);
+            adjustment.connect_changed(move |_| {
+                if let Some(c) = weak.upgrade() {
+                    c.place_history_soon();
+                }
+            });
+        }
+    }
+
+    /// Shows the row when something is folded, and names its × for what
+    /// it drops.
+    fn refresh_history(self: &Rc<Self>) {
+        let folded = {
+            let base = self.base.borrow();
+            match (&base.quoted, &base.forwarded) {
+                (Some(_), _) => Some(gettext("Remove Quoted Text")),
+                (None, Some(_)) => Some(gettext("Do Not Forward the Original")),
+                (None, None) => None,
+            }
+        };
+        match folded {
+            Some(label) => {
+                self.drop_history.set_tooltip_text(Some(&label));
+                name(&self.drop_history, &label);
+                self.history.set_visible(true);
+                self.body.set_bottom_margin(BODY_MARGIN + HISTORY_ROOM);
+                self.place_history_soon();
+            }
+            None => {
+                self.history.set_visible(false);
+                self.body.set_bottom_margin(BODY_MARGIN);
+            }
+        }
+    }
+
+    /// Puts the folded history into the body, under the writer's words.
+    fn unfold_history(self: &Rc<Self>) {
+        let unfolding = self.base.borrow_mut().take_history();
+        let Some(unfolding) = unfolding else { return };
+        self.editor.append_history(&unfolding);
+        self.dirty.set(true);
+        self.refresh_history();
+        // The button that had the focus is gone; the body takes it.
+        self.body.grab_focus();
+    }
+
+    /// Drops the folded history, so the message goes without it, and
+    /// offers it back on a toast.
+    fn drop_history(self: &Rc<Self>) {
+        let dropped = {
+            let mut base = self.base.borrow_mut();
+            match base.quoted.take() {
+                Some(quoted) => Some(Folded::Quote(quoted)),
+                None => base.forwarded.take().map(Folded::Forward),
+            }
+        };
+        let Some(dropped) = dropped else { return };
+        self.dirty.set(true);
+        self.refresh_history();
+        self.body.grab_focus();
+        let title = match dropped {
+            Folded::Quote(_) => gettext("Quoted text removed"),
+            Folded::Forward(_) => gettext("Forwarded message removed"),
+        };
+        let toast = adw::Toast::builder()
+            .title(title)
+            .button_label(gettext("Undo"))
+            .build();
+        let kept = RefCell::new(Some(dropped));
+        let weak = Rc::downgrade(self);
+        toast.connect_button_clicked(move |_| {
+            let (Some(c), Some(back)) = (weak.upgrade(), kept.take()) else {
+                return;
+            };
+            {
+                let mut base = c.base.borrow_mut();
+                match back {
+                    Folded::Quote(quoted) => base.quoted = Some(quoted),
+                    Folded::Forward(forwarded) => base.forwarded = Some(forwarded),
+                }
+            }
+            c.dirty.set(true);
+            c.refresh_history();
+        });
+        self.toasts.add_toast(toast);
+    }
+
+    /// Moves the row under the last line once the body has laid its lines
+    /// out again, which happens after the change that asked for it.
+    fn place_history_soon(self: &Rc<Self>) {
+        if !self.history.is_visible() || self.placing.replace(true) {
+            return;
+        }
+        let weak = Rc::downgrade(self);
+        glib::idle_add_local_full(glib::Priority::LOW, move || {
+            if let Some(c) = weak.upgrade() {
+                c.placing.set(false);
+                c.place_history();
+            }
+            glib::ControlFlow::Break
+        });
+    }
+
+    fn place_history(&self) {
+        if !self.history.is_visible() {
+            return;
+        }
+        let buffer = self.body.buffer();
+        let start = self.body.iter_location(&buffer.start_iter());
+        let end = self.body.iter_location(&buffer.end_iter());
+        self.body
+            .move_overlay(&self.history, start.x(), end.y() + end.height() + HISTORY_GAP);
     }
 
     fn identity(&self) -> Option<&Identity> {

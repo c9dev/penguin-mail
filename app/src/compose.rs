@@ -672,11 +672,30 @@ pub struct Unfolding {
 
 impl Draft {
     /// Puts the folded quote, or else the forwarded message, into the body
-    /// under the writer's words, and gives back what went in so the editor
-    /// can add the same. From here on the history is part of the body and
-    /// the writer can trim it. `None` when nothing was folded.
+    /// under the writer's words, and gives back what went in. From here on
+    /// the history is part of the body and the writer can trim it. `None`
+    /// when nothing was folded.
+    ///
+    /// The composer does this in two halves, since its editor holds the
+    /// body: [`Draft::take_history`], then `Editor::append_history`, which
+    /// its own check holds to the same result.
+    #[cfg(test)]
     pub fn unfold(&mut self) -> Option<Unfolding> {
-        let history = match self.quoted.take() {
+        let history = self.take_history()?;
+        self.markdown = unfolded_markdown(&self.markdown, &history.markdown);
+        self.rich = self
+            .rich
+            .as_ref()
+            .map(|rich| unfolded_rich(rich, &history.rich));
+        Some(history)
+    }
+
+    /// Takes the folded quote, or else the forwarded message, out of the
+    /// draft in the form the editor adds under the writer's words. The
+    /// composer calls this when the writer unfolds the history, since its
+    /// editor holds the body rather than the draft.
+    pub fn take_history(&mut self) -> Option<Unfolding> {
+        Some(match self.quoted.take() {
             Some(quoted) => Unfolding {
                 rich: RichBody::from_markdown(&quoted),
                 markdown: quoted,
@@ -688,13 +707,7 @@ impl Draft {
                     rich,
                 }
             }
-        };
-        self.markdown = unfolded_markdown(&self.markdown, &history.markdown);
-        self.rich = self
-            .rich
-            .as_ref()
-            .map(|rich| unfolded_rich(rich, &history.rich));
-        Some(history)
+        })
     }
 }
 
@@ -1345,9 +1358,35 @@ enum Purpose {
 /// and the quote apart, with [`QUOTE_MARK`] between them, so reopening it
 /// can fold the quote again.
 fn written(draft: &Draft, purpose: Purpose) -> (String, String) {
-    let (mut text, mut html) = match (&draft.rich, draft.quoted.as_deref()) {
+    let (mut text, mut html) = written_body(
+        &draft.markdown,
+        draft.rich.as_ref(),
+        draft.quoted.as_deref(),
+        purpose,
+    );
+    if let Some(forwarded) = &draft.forwarded {
+        text.push_str(&forwarded.to_plain());
+        html.push_str(&forwarded.to_html());
+    }
+    (text, html)
+}
+
+/// The HTML a message goes out with for these words and this folded
+/// quote, without anything forwarded. The composer's preview shows it.
+pub fn html_to_send(markdown: &str, rich: Option<&RichBody>, quoted: Option<&str>) -> String {
+    written_body(markdown, rich, quoted, Purpose::Send).1
+}
+
+/// [`written`] without the forwarded message.
+fn written_body(
+    markdown: &str,
+    rich: Option<&RichBody>,
+    quoted: Option<&str>,
+    purpose: Purpose,
+) -> (String, String) {
+    match (rich, quoted) {
         (Some(rich), None) => (rich.to_plain(), rich.to_html()),
-        (None, None) => (draft.markdown.clone(), markdown_to_html(&draft.markdown)),
+        (None, None) => (markdown.to_string(), markdown_to_html(markdown)),
         (Some(rich), Some(quoted)) => {
             let history = RichBody::from_markdown(quoted);
             let whole = unfolded_rich(rich, &history);
@@ -1358,23 +1397,18 @@ fn written(draft: &Draft, purpose: Purpose) -> (String, String) {
             (whole.to_plain(), html)
         }
         (None, Some(quoted)) => {
-            let whole = unfolded_markdown(&draft.markdown, quoted);
+            let whole = unfolded_markdown(markdown, quoted);
             let html = match purpose {
                 Purpose::Send => markdown_to_html(&whole),
                 Purpose::Keep => format!(
                     "{}{QUOTE_MARK}{}",
-                    markdown_to_html(&draft.markdown),
+                    markdown_to_html(markdown),
                     markdown_to_html(quoted)
                 ),
             };
             (whole, html)
         }
-    };
-    if let Some(forwarded) = &draft.forwarded {
-        text.push_str(&forwarded.to_plain());
-        html.push_str(&forwarded.to_html());
     }
-    (text, html)
 }
 
 /// Everything about the message but its body: who it is from and to, what
