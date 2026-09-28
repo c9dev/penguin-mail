@@ -108,6 +108,11 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - `penguin-mail --demo`'s sample invitation keeps its series ending on
   the same time of day it started; the clocks going back used to move
   it an hour earlier.
+- Dragging across empty time on the calendar stays in the day and column
+  where it started, instead of scrolling the grid and offering to create
+  an event that ran off the end of the wrong day.
+- Double-clicking a calendar event opens its editor, instead of leaving
+  only its popover open.
 
 ## 0.3.0 (2026-09-24)
 
