@@ -49,6 +49,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   Mail back to the message it arrived in.
 - A Summarize button above a conversation asks the assistant for a
   summary, when the assistant is set up.
+- The next event on your calendar shows at the foot of the mail sidebar
+  from three hours before it starts; a click opens it in the calendar.
 
 ### Improved
 

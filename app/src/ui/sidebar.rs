@@ -77,30 +77,129 @@ impl UndoPill {
         UndoPill { revealer, button, left }
     }
 
-    /// Shows the pill with `left` ("0:07") at its end.
-    pub fn show(&self, left: &str) {
+    /// Shows the pill with `left` ("0:07") at its end. Private: go
+    /// through `Sidebar::show_undo`, which keeps the shared foot in
+    /// step.
+    fn show(&self, left: &str) {
         if self.left.label() != left {
             self.left.set_label(left);
         }
         self.revealer.set_reveal_child(true);
     }
 
-    pub fn hide(&self) {
+    /// Private: go through `Sidebar::hide_undo`.
+    fn hide(&self) {
         self.revealer.set_reveal_child(false);
+    }
+}
+
+/// The next event, at the foot of the mail sidebar above Undo Send. A
+/// click opens it in the calendar.
+pub struct NextEvent {
+    pub revealer: gtk::Revealer,
+    pub button: gtk::Button,
+    bar: gtk::Box,
+    when: gtk::Label,
+    what: gtk::Label,
+    /// The tint rule for the event's colour, which gives the bar its
+    /// colour through `--cal-colour`.
+    css: gtk::CssProvider,
+}
+
+impl NextEvent {
+    fn new() -> NextEvent {
+        let bar = gtk::Box::builder().css_classes(["bar"]).build();
+        let when = gtk::Label::builder().xalign(0.0).css_classes(["when"]).build();
+        let what = gtk::Label::builder()
+            .xalign(0.0)
+            .ellipsize(pango::EllipsizeMode::End)
+            .css_classes(["what"])
+            .build();
+        let lines = gtk::Box::builder()
+            .orientation(gtk::Orientation::Vertical)
+            .hexpand(true)
+            .build();
+        lines.append(&when);
+        lines.append(&what);
+        let content = gtk::Box::builder().spacing(8).build();
+        content.append(&bar);
+        content.append(&lines);
+        content.append(&gtk::Image::from_icon_name("x-office-calendar-symbolic"));
+        let button = gtk::Button::builder()
+            .child(&content)
+            .css_classes(["next-event"])
+            .tooltip_text(gettext("Show in Calendar"))
+            .build();
+        let revealer = gtk::Revealer::builder()
+            .transition_type(gtk::RevealerTransitionType::Crossfade)
+            .transition_duration(200)
+            .child(&button)
+            .build();
+        let css = gtk::CssProvider::new();
+        if let Some(display) = gdk::Display::default() {
+            gtk::style_context_add_provider_for_display(&display, &css, gtk::STYLE_PROVIDER_PRIORITY_APPLICATION);
+        }
+        NextEvent { revealer, button, bar, when, what, css }
+    }
+
+    /// Shows the card with its two lines and the event's colour.
+    /// Private: go through `Sidebar::show_next`, which keeps the shared
+    /// foot in step.
+    fn show(&self, words: &crate::ui::calendar::next::Words, colour: &str) {
+        use crate::ui::calendar::{next, tint};
+        if self.when.label() != words.when {
+            self.when.set_label(&words.when);
+        }
+        if self.what.label() != words.what {
+            self.what.set_label(&words.what);
+        }
+        self.bar.set_css_classes(&["bar", tint::css_class(colour).as_str()]);
+        self.css.load_from_string(&tint::stylesheet(&[colour.to_string()]));
+        super::name(&self.button, &next::spoken(words));
+        self.revealer.set_reveal_child(true);
+    }
+
+    /// Private: go through `Sidebar::hide_next`.
+    fn hide(&self) {
+        self.revealer.set_reveal_child(false);
+    }
+}
+
+/// Whether the sidebar's shared bottom bar should show at all: while
+/// either the next-event card is on screen or the Undo Send pill has
+/// something to show. Free of GTK types, so a plain test can check the
+/// rule without starting the toolkit; `Sidebar::sync_foot` is the only
+/// caller and supplies the two widgets' real state.
+fn foot_shows(next_on_screen: bool, undo_on_screen: bool) -> bool {
+    next_on_screen || undo_on_screen
+}
+
+#[cfg(test)]
+mod foot_tests {
+    use super::foot_shows;
+
+    #[test]
+    fn the_foot_shows_when_either_the_card_or_the_pill_shows() {
+        assert!(!foot_shows(false, false));
+        assert!(foot_shows(true, false));
+        assert!(foot_shows(false, true));
+        assert!(foot_shows(true, true));
     }
 }
 
 pub struct Sidebar {
     pub page: adw::ToolbarView,
     pub header: adw::HeaderBar,
-    /// Undo Send, and room above it for the next event (Task B2), at the
-    /// foot of the card. Ruling R9 leaves Add Account out of it; the main
-    /// menu and the welcome page still open the same picker.
+    /// The next event, above Undo Send at the foot of the card. Belongs
+    /// to the Mail space only; hidden while the calendar shows.
+    pub next: NextEvent,
+    /// Undo Send, below the next-event card, at the foot of the card.
+    /// Ruling R9 leaves Add Account out of it; the main menu and the
+    /// welcome page still open the same picker.
     pub undo: UndoPill,
-    /// Read by no code in this task; Task B2 prepends the next-event card
-    /// to it.
-    #[expect(dead_code, reason = "Task B2 reads this field")]
-    pub foot: gtk::Box,
+    /// The bottom bar `next` and `undo` sit in, shared by both spaces.
+    /// `sync_foot` hides it whole while it holds neither.
+    foot: gtk::Box,
     /// Switches between the mail and the calendar. Its toggles are named
     /// `mail` and `calendar`; it hides while no account offers a
     /// calendar, and "Mailboxes" shows in its place, since a switch to a
@@ -184,18 +283,21 @@ impl Sidebar {
             .build();
         page.add_top_bar(&header);
         page.set_content(Some(&content));
+        let next = NextEvent::new();
         let undo = UndoPill::new();
         let foot = gtk::Box::builder()
             .orientation(gtk::Orientation::Vertical)
             .spacing(14)
             .css_classes(["sidebar-foot"])
             .build();
+        foot.append(&next.revealer);
         foot.append(&undo.revealer);
         page.add_bottom_bar(&foot);
 
         let sidebar = Rc::new(Sidebar {
             page,
             header,
+            next,
             undo,
             foot,
             switch,
@@ -256,6 +358,8 @@ impl Sidebar {
                 sidebar.apply_expansion();
             }
         });
+        // Neither the next event nor Undo Send has anything to show yet.
+        sidebar.sync_foot();
         sidebar
     }
 
@@ -266,17 +370,63 @@ impl Sidebar {
     }
 
     /// Puts the calendar's own sidebar, `content`, in place of the
-    /// mailbox list. The foot, shared by both spaces, stays below it.
+    /// mailbox list. The foot, shared by both spaces, stays below it, but
+    /// the next-event card belongs to Mail alone: the calendar shows the
+    /// same event on its own page.
     pub fn show_calendar(&self, content: &gtk::Widget) {
         if self.content.child_by_name("calendar").is_none() {
             self.content.add_named(content, Some("calendar"));
         }
         self.content.set_visible_child_name("calendar");
+        self.next.revealer.set_visible(false);
+        self.sync_foot();
     }
 
     /// Puts the mailbox list back.
     pub fn show_mail(&self) {
         self.content.set_visible_child_name("mail");
+        self.next.revealer.set_visible(true);
+        self.sync_foot();
+    }
+
+    /// Shows the next-event card and keeps the shared foot in step.
+    pub fn show_next(&self, words: &crate::ui::calendar::next::Words, colour: &str) {
+        self.next.show(words, colour);
+        self.sync_foot();
+    }
+
+    /// Takes the next-event card away and keeps the shared foot in step.
+    pub fn hide_next(&self) {
+        self.next.hide();
+        self.sync_foot();
+    }
+
+    /// Shows the Undo Send pill and keeps the shared foot in step.
+    pub fn show_undo(&self, left: &str) {
+        self.undo.show(left);
+        self.sync_foot();
+    }
+
+    /// Takes the Undo Send pill away and keeps the shared foot in step.
+    pub fn hide_undo(&self) {
+        self.undo.hide();
+        self.sync_foot();
+    }
+
+    /// Shows the foot (the border and the padding round it, `.sidebar-foot`)
+    /// only while it holds something: with no next event and no message
+    /// waiting out Undo Send, the card and the pill both sit at zero
+    /// height, but the bar's own border and padding would otherwise
+    /// still draw as an empty band under the mailbox list.
+    fn sync_foot(&self) {
+        // `get_visible`, not `is_visible`: the latter also asks whether
+        // every ancestor is visible, and `next.revealer` sits inside
+        // `foot`, so once `foot` itself is hidden `is_visible` would
+        // read false for the card forever after, whatever `show_mail`
+        // sets. `get_visible` reads the card's own flag alone.
+        let next_on_screen = self.next.revealer.get_visible() && self.next.revealer.reveals_child();
+        let undo_on_screen = self.undo.revealer.reveals_child();
+        self.foot.set_visible(foot_shows(next_on_screen, undo_on_screen));
     }
 
     fn is_expanded(&self, account_id: AccountId) -> bool {

@@ -18,6 +18,7 @@ pub mod editor;
 pub mod holding;
 pub mod layout;
 pub mod month;
+pub mod next;
 pub mod popover;
 pub mod quick;
 pub mod range;

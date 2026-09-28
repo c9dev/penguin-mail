@@ -292,14 +292,20 @@ flowboxchild:focus-visible > .recipient-chip {
 .mailboxes > row:selected .mailbox-row .count { opacity: 1; color: var(--accent-color); }
 .app-dark .mailboxes > row:selected { background-color: alpha(var(--accent-bg-color), 0.28); }
 
-/* A6: the foot of the sidebar, shared by both spaces since it is
-   `Sidebar::page`'s own bottom bar. 10 px of padding lands the pill and
-   the room above it for B2's next-event card at the mockup's 10 px in
-   from the card; 6 px below leaves the pill's own 12 px gap to the
-   card's edge, the rest coming from `AdwToolbarView`'s own bottom
+/* A6/B2: the foot of the sidebar, shared by both spaces since it is
+   `Sidebar::page`'s own bottom bar, and hidden whole (`Sidebar::sync_foot`)
+   while it holds neither the next-event card nor the Undo Send pill, so
+   an empty run leaves no border or band under the mailbox list. `foot`'s
+   14 px spacing (sidebar.rs) matches the mockup's own gap from the
+   next-event card's bottom edge to the pill's top (mockups.py's
+   `ny + 58` to `uy`, both `H`-relative: 14 px apart); 10 px of side
+   padding here lands both the card and the pill at the mockup's inset
+   from the sidebar card's own edge. The mockup gives no value for the
+   gap above the card, so the top padding matches the 6 px below the
+   pill, which leaves that much room to `AdwToolbarView`'s own bottom
    inset. The pill is 36 px tall (mockups.py's `uy`), fully rounded,
    tinted 16 % with the accent over the sidebar shade. */
-.sidebar-foot { padding: 0 10px 6px 10px; }
+.sidebar-foot { padding: 6px 10px; }
 .undo-pill {
   min-height: 36px;
   padding: 0 16px;
@@ -925,3 +931,19 @@ popover.event-popover button.popover-open-mail {
 .toolbar-capsule > splitbutton > menubutton > button:checked {
   background-color: var(--view-bg-color);
 }
+
+/* B2: the next event, at the foot of the mail sidebar above Undo Send.
+   A small raised card, the mockup's `lift` shadow, with the event's
+   colour down its start edge. Sizes are the mockup's own (11.5 px =
+   0.78em, 13.5 px = 0.92em); dim text is the text colour at 64 %, as
+   the calendar CSS above already has it. */
+.next-event {
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: var(--view-bg-color);
+  box-shadow: 0 1px 2px alpha(black, 0.1);
+}
+.next-event .bar { min-width: 3.5px; border-radius: 2px; background: var(--cal-colour); }
+.next-event .when { font-size: 0.78em; font-weight: 600; opacity: 0.64; }
+.next-event .what { font-size: 0.92em; font-weight: 700; }
+.next-event image { opacity: 0.55; }
