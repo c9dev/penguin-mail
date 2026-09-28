@@ -191,6 +191,9 @@ pub struct FakeState {
     pub offline: bool,
     /// Every file uploaded to Drive, by name, with its bytes.
     pub drive_files: Vec<(String, Vec<u8>)>,
+    /// Every reader added to a Drive file: the file's id, the address,
+    /// and how many calendar writes had reached the fake by then.
+    pub drive_shares: Vec<(String, String, usize)>,
     /// Play Google's answer to a write on an event already deleted: 410
     /// Gone, which the client reads as `ExpiredSyncToken`, rather than
     /// the 404 the fake gives otherwise.
@@ -401,6 +404,7 @@ impl FakeGmail {
                 expire_calendar_tokens: false,
                 offline: false,
                 drive_files: Vec::new(),
+                drive_shares: Vec::new(),
                 deleted_answers_gone: false,
                 deleted_calendars: Vec::new(),
                 refuse_new_events: false,
@@ -1479,6 +1483,16 @@ impl GmailApi for FakeGmail {
         if stored.attachments.is_none() {
             stored.attachments = held.as_ref().map(|h| h.attachments.clone().unwrap_or_default());
         }
+        // Google keeps the linked files and nothing only this computer
+        // knows: a file still waiting never reaches it.
+        if let Some(files) = &mut stored.attachments {
+            files.retain(|file| file.waiting.is_none());
+            for file in files.iter_mut() {
+                file.share = None;
+                file.shared_with.clear();
+                file.problem = None;
+            }
+        }
         if stored.uid.is_empty() {
             stored.uid = format!("{}@google.com", stored.id);
         }
@@ -1526,8 +1540,18 @@ impl GmailApi for FakeGmail {
             mime_type: mime_type.to_string(),
             icon_link: String::new(),
             file_id: id,
-            waiting: None,
+            ..calendar::Attachment::default()
         })
+    }
+
+    async fn share_file(&self, file_id: &str, email: &str) -> Result<(), GmailError> {
+        self.call("drive.permissions.create", 0).await?;
+        self.needs(mailrs_gmail::DRIVE_FILE_SCOPE)?;
+        self.with(|s| {
+            let writes = s.calendar_notices.len();
+            s.drive_shares.push((file_id.to_string(), email.to_string(), writes));
+        });
+        Ok(())
     }
 
     async fn remove_event(

@@ -337,6 +337,10 @@ pub trait GmailApi: Send + Sync + 'static {
         sent: std::sync::Arc<std::sync::atomic::AtomicU64>,
     ) -> impl Future<Output = Result<calendar::Attachment, GmailError>> + Send;
 
+    /// Makes `email` a reader of the Drive file `file_id`, one the app
+    /// uploaded, without Drive mailing them.
+    fn share_file(&self, file_id: &str, email: &str) -> impl Future<Output = Result<(), GmailError>> + Send;
+
     /// Moves `event` from its calendar to `destination`, and mails its
     /// guests when `notify` says so. Answers the event on `destination`.
     fn move_event(
@@ -681,6 +685,10 @@ impl GmailApi for AccountClient {
         sent: std::sync::Arc<std::sync::atomic::AtomicU64>,
     ) -> Result<calendar::Attachment, GmailError> {
         self.client.upload_to_drive(path, name, mime_type, sent).await
+    }
+
+    async fn share_file(&self, file_id: &str, email: &str) -> Result<(), GmailError> {
+        self.client.share_file(file_id, email).await
     }
 
     async fn move_event(

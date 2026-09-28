@@ -872,6 +872,10 @@ pub trait CalendarService: Send + Sync + 'static {
         sent: std::sync::Arc<std::sync::atomic::AtomicU64>,
     ) -> impl Future<Output = Result<model::Attachment, BackendError>> + Send;
 
+    /// Lets `email` open the file `file_id` the app uploaded, without the
+    /// provider mailing them.
+    fn share_file(&self, file_id: &str, email: &str) -> impl Future<Output = Result<(), BackendError>> + Send;
+
     /// Moves `event` from its calendar to `destination` on the same
     /// account, a series with its changed occurrences, and mails its
     /// guests when `notify` says so. Answers the event on `destination`.

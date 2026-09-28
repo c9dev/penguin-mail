@@ -133,6 +133,33 @@ pub struct Attachment {
     /// event goes out without it and the window says so.
     #[serde(default)]
     pub waiting: Option<String>,
+    /// For a file Penguin Mail uploaded, whether the event's guests may
+    /// open it: Drive makes each one a reader when the event is saved.
+    /// `None` for a file someone else attached, which `drive.file` cannot
+    /// share. Kept on this computer only.
+    #[serde(default)]
+    pub share: Option<bool>,
+    /// The guests already made readers of the file, so a save shares it
+    /// with the ones added since and asks Drive nothing for the rest.
+    #[serde(default)]
+    pub shared_with: Vec<String>,
+    /// Why a waiting file did not upload when the queue tried. The event
+    /// went out without it, and the file stays here until the person
+    /// grants access or takes it off.
+    #[serde(default)]
+    pub problem: Option<UploadProblem>,
+}
+
+/// Why a file waiting to upload stayed behind.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum UploadProblem {
+    /// The account has not granted Drive. The queue tries again once it
+    /// does.
+    NeedsAccess,
+    /// The file is no longer at its path, or cannot be read.
+    NotFound,
+    /// Drive turned it down, for the reason given.
+    Refused(String),
 }
 
 impl Attachment {
@@ -145,16 +172,38 @@ impl Attachment {
     }
 }
 
-/// `files` with each waiting file the queue uploaded in its place, found
-/// by the path it waited at, and the waiting files at the `missing` paths
-/// left out.
-pub fn settle_uploads(files: &mut Vec<Attachment>, uploaded: &[(String, Attachment)], missing: &[String]) {
-    files.retain(|file| !file.waiting.as_ref().is_some_and(|path| missing.contains(path)));
-    for file in files.iter_mut() {
-        if let Some(done) = file.waiting.as_ref().and_then(|path| uploaded.iter().find(|(p, _)| p == path)) {
-            *file = done.1.clone();
+/// `fresh`, a list the provider just sent, with what this computer knows
+/// of the files that the provider does not: whether each file the app
+/// uploaded is shared and with whom, found by Drive id, and the files
+/// `held` still has waiting to upload, which the provider has never seen.
+pub fn keep_local(fresh: &mut Vec<Attachment>, held: &[Attachment]) {
+    for file in fresh.iter_mut() {
+        if let Some(old) = held.iter().find(|old| !old.file_id.is_empty() && old.file_id == file.file_id) {
+            file.share = old.share;
+            file.shared_with = old.shared_with.clone();
         }
     }
+    for old in held.iter().filter(|old| old.waiting.is_some()) {
+        if !fresh.iter().any(|file| file.waiting == old.waiting) {
+            fresh.push(old.clone());
+        }
+    }
+}
+
+/// The addresses among `guests` to make readers of `file`: every guest
+/// but the account itself that the file is not shared with yet, and none
+/// when the file is not one the app uploaded, still waits, or the person
+/// turned sharing off.
+pub fn to_share<'a>(file: &Attachment, guests: &'a [Guest]) -> Vec<&'a str> {
+    if file.share != Some(true) || file.file_id.is_empty() || file.waiting.is_some() {
+        return Vec::new();
+    }
+    guests
+        .iter()
+        .filter(|guest| !guest.me && !guest.email.is_empty())
+        .filter(|guest| !file.shared_with.iter().any(|done| done.eq_ignore_ascii_case(&guest.email)))
+        .map(|guest| guest.email.as_str())
+        .collect()
 }
 
 /// Who hears about a write to an event: its guests, by mail from the
@@ -932,6 +981,64 @@ mod tests {
         for url in ["http://example.com/a", "file:///etc/passwd", "javascript:alert(1)", "", "https://"] {
             assert_eq!(linked(url).link(), None, "{url}");
         }
+    }
+
+    fn ours(id: &str, share: bool, shared_with: &[&str]) -> Attachment {
+        Attachment {
+            title: id.into(),
+            file_url: format!("https://drive.google.com/file/d/{id}/view"),
+            file_id: id.into(),
+            share: Some(share),
+            shared_with: shared_with.iter().map(|s| s.to_string()).collect(),
+            ..Attachment::default()
+        }
+    }
+
+    fn waiting_at(path: &str) -> Attachment {
+        Attachment { title: path.into(), waiting: Some(path.into()), ..Attachment::default() }
+    }
+
+    #[test]
+    fn a_provider_read_keeps_what_this_computer_knows_of_its_files() {
+        let held = vec![ours("1abc", false, &["ana@example.com"]), waiting_at("/home/me/Notes.txt")];
+        let mut fresh = vec![Attachment { share: None, ..ours("1abc", true, &[]) }, linked("https://x.example/other")];
+        keep_local(&mut fresh, &held);
+        assert_eq!(fresh[0].share, Some(false));
+        assert_eq!(fresh[0].shared_with, ["ana@example.com"]);
+        assert_eq!(fresh[1].share, None, "a file nobody here uploaded stays unshared");
+        assert_eq!(fresh[2], waiting_at("/home/me/Notes.txt"), "a waiting file outlives the read");
+        assert_eq!(fresh.len(), 3);
+    }
+
+    #[test]
+    fn a_provider_read_that_dropped_a_file_does_not_bring_it_back() {
+        let mut fresh = Vec::new();
+        keep_local(&mut fresh, &[ours("1abc", true, &[])]);
+        assert!(fresh.is_empty());
+    }
+
+    fn guest(email: &str, me: bool) -> Guest {
+        Guest { email: email.into(), me, ..Guest::default() }
+    }
+
+    #[test]
+    fn a_shared_file_goes_to_each_guest_not_yet_given_it() {
+        let guests = [guest("me@example.com", true), guest("ana@example.com", false), guest("bo@example.com", false)];
+        assert_eq!(to_share(&ours("1abc", true, &["ANA@example.com"]), &guests), ["bo@example.com"]);
+    }
+
+    #[test]
+    fn a_file_is_not_shared_when_the_person_said_no() {
+        let guests = [guest("ana@example.com", false)];
+        assert!(to_share(&ours("1abc", false, &[]), &guests).is_empty());
+    }
+
+    #[test]
+    fn a_file_someone_else_attached_is_not_shared() {
+        let guests = [guest("ana@example.com", false)];
+        let theirs = Attachment { share: None, ..ours("1abc", true, &[]) };
+        assert!(to_share(&theirs, &guests).is_empty());
+        assert!(to_share(&Attachment { share: Some(true), ..waiting_at("/tmp/a") }, &guests).is_empty());
     }
 
     #[test]

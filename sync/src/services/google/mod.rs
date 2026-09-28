@@ -622,6 +622,10 @@ impl<G: GmailApi> CalendarService for Google<G> {
         Ok(self.gmail.upload_to_drive(path, &file.title, &file.mime_type, sent).await?)
     }
 
+    async fn share_file(&self, file_id: &str, email: &str) -> Result<(), BackendError> {
+        Ok(self.gmail.share_file(file_id, email).await?)
+    }
+
     async fn move_event(
         &self,
         event: &model::Event,

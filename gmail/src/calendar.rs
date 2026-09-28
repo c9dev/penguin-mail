@@ -1057,7 +1057,9 @@ fn attachments_of(item: &Value) -> Vec<calendar::Attachment> {
             mime_type: text(file, "mimeType"),
             icon_link: text(file, "iconLink"),
             file_id: text(file, "fileId"),
-            waiting: None,
+            // What only this computer knows of a file comes back when the
+            // store keeps it (`mailrs_domain::calendar::keep_local`).
+            ..calendar::Attachment::default()
         })
         .collect()
 }

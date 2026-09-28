@@ -667,6 +667,7 @@ impl<A: Accounts> CalendarCopy<A> {
         // The list goes first: an event below may sit on a calendar made
         // here, which has Google's id only once its creation went out.
         let mut turned_down = self.send_list(&calendar, account_id).await?;
+        self.retry_waiting_for_access(account_id).await?;
         let mut after = 0;
         while let Some(change) = self.db.read(move |c| store::next_change(c, account_id, after)).await? {
             let seq = change.seq;
@@ -711,7 +712,7 @@ impl<A: Accounts> CalendarCopy<A> {
                         self.db.write(move |c| store::dequeue(c, seq)).await?;
                         continue;
                     };
-                    match self.upload_waiting(&calendar, &change, body).await? {
+                    match self.prepare_attachments(&calendar, &change, body).await? {
                         Err(err) => Err(err),
                         Ok((body, missing)) => {
                             attempted = Some(body.clone());

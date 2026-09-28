@@ -1566,7 +1566,7 @@ fn drive_file(title: &str, mime: &str, id: &str) -> mailrs_domain::calendar::Att
         mime_type: mime.into(),
         icon_link: "https://drive-thirdparty.googleusercontent.com/16/type/application/pdf".into(),
         file_id: id.into(),
-        waiting: None,
+        ..Default::default()
     }
 }
 

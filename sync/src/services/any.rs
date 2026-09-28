@@ -427,6 +427,10 @@ impl CalendarService for AnyCalendar {
         forward!(AnyCalendar, self, upload_attachment(file, sent))
     }
 
+    async fn share_file(&self, file_id: &str, email: &str) -> Result<(), BackendError> {
+        forward!(AnyCalendar, self, share_file(file_id, email))
+    }
+
     async fn move_event(
         &self,
         event: &model::Event,
