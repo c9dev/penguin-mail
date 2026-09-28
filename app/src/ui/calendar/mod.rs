@@ -58,7 +58,7 @@ use popover::EventPopover;
 use quick::Quick;
 use range::{Range, ViewKind};
 use shown::{Refocus, Showing};
-use sidebar::CalendarSidebar;
+use sidebar::{CalendarSidebar, ListChange};
 use time_grid::{AllDayStrip, GUTTER, TimeGrid};
 
 /// The most results a search lists.
@@ -94,6 +94,9 @@ pub struct Hooks {
     /// Starts a calendar sync for every account now, the same pass the
     /// timer runs every 15 seconds. The Refresh action's own trigger.
     pub refresh: Box<dyn Fn()>,
+    /// Hears how many invitations "Waiting for your answer" lists, each
+    /// time it is read again, for the Calendar toggle's badge.
+    pub waiting: Box<dyn Fn(usize)>,
 }
 
 
@@ -459,7 +462,7 @@ impl CalendarView {
         let quick = Quick::new(&card);
 
         let view = Rc::new_cyclic(|weak: &Weak<CalendarView>| {
-            let (on_date, on_shown, on_grant, on_open_waiting, on_open_mail) =
+            let (on_date, on_change, on_grant, on_open_waiting, on_open_mail) =
                 (weak.clone(), weak.clone(), weak.clone(), weak.clone(), weak.clone());
             let calendar_sidebar = CalendarSidebar::new(
                 move |day| {
@@ -467,9 +470,9 @@ impl CalendarView {
                         view.go_to(day);
                     }
                 },
-                move |account, calendar, shown| {
-                    if let Some(view) = on_shown.upgrade() {
-                        view.set_shown(account, calendar, shown);
+                move |change| {
+                    if let Some(view) = on_change.upgrade() {
+                        view.list_changed(change);
                     }
                 },
                 move |account| {
@@ -633,6 +636,8 @@ impl CalendarView {
         });
         view.connect_search();
         view.connect_lists();
+        view.calendar_sidebar
+            .set_folded((view.settings)().folded_calendar_accounts.into_iter().collect());
 
         view.build_switch();
         view.rebuild_pages();
@@ -725,7 +730,10 @@ impl CalendarView {
                 return;
             }
             match waiting {
-                Ok(waiting) => view.calendar_sidebar.show_waiting(&waiting),
+                Ok(waiting) => {
+                    view.calendar_sidebar.show_waiting(&waiting);
+                    (view.hooks.waiting)(waiting.len());
+                }
                 Err(err) => tracing::warn!(%err, "could not read what is waiting for an answer"),
             }
         });
@@ -755,6 +763,9 @@ impl CalendarView {
         self.rebuild_pages();
         self.show_range();
         self.fill_all();
+        // The mini month's band follows the grid: a week, a month, or
+        // none for a single day.
+        self.read_sidebar(false);
     }
 
     pub fn today(self: &Rc<Self>) {
@@ -2545,6 +2556,42 @@ impl CalendarView {
 
     // ---- The sidebar ----------------------------------------------------
 
+    /// Does what the person chose in the calendar list. Hiding a
+    /// calendar and its colour go to the store alone, since the account
+    /// may only read Google's calendar list; both then read the list and
+    /// the ranges again.
+    fn list_changed(self: &Rc<Self>, change: ListChange) {
+        match change {
+            ListChange::Shown { account, calendar, shown } => self.set_shown(account, calendar, shown),
+            ListChange::Listed { account, calendar, listed } => {
+                self.write_calendar(move |c| store::set_listed(c, account, &calendar, listed))
+            }
+            ListChange::Color { account, calendar, color } => {
+                self.write_calendar(move |c| store::set_own_color(c, account, &calendar, color.as_deref()))
+            }
+            ListChange::Folded { address, folded } => {
+                (self.hooks.change)(Change::CalendarAccountFolded { email: address, folded })
+            }
+        }
+    }
+
+    /// Writes one choice about a calendar to the store, then reloads.
+    fn write_calendar(
+        self: &Rc<Self>,
+        write: impl FnOnce(&rusqlite::Connection) -> mailrs_store::Result<()> + Send + 'static,
+    ) {
+        let weak = Rc::downgrade(self);
+        let core = Rc::clone(&self.core);
+        glib::spawn_future_local(async move {
+            let saved = core.write(write).await;
+            let Some(view) = weak.upgrade() else { return };
+            match saved {
+                Ok(()) => view.reload(),
+                Err(err) => tracing::warn!(%err, "could not save the calendar list"),
+            }
+        });
+    }
+
     /// Shows or hides one calendar, then reads the ranges again.
     fn set_shown(self: &Rc<Self>, account_id: AccountId, calendar: String, shown: bool) {
         self.calendar_sidebar.note_shown(account_id, &calendar, shown);
@@ -2588,7 +2635,7 @@ impl CalendarView {
                 .read(move |c| {
                     let mut calendars = Vec::with_capacity(accounts.len());
                     for &id in &accounts {
-                        calendars.push((id, store::calendars(c, id)?));
+                        calendars.push((id, store::calendars(c, id)?, store::unlisted(c, id)?));
                     }
                     let busy = store::occurrences(c, &accounts, from, to, CalendarScope::Shown)?;
                     Ok((calendars, busy))
@@ -2610,12 +2657,12 @@ impl CalendarView {
 
     fn show_sidebar(
         &self,
-        calendars: Vec<(AccountId, Vec<Calendar>)>,
+        calendars: Vec<(AccountId, Vec<Calendar>, Vec<String>)>,
         busy: &[Occurrence],
         mini: Range,
     ) {
         let mut by_key: Calendars = HashMap::new();
-        for (account, list) in &calendars {
+        for (account, list, _) in &calendars {
             for calendar in list {
                 by_key.insert((*account, calendar.id.clone()), calendar.clone());
             }
@@ -2630,8 +2677,8 @@ impl CalendarView {
             .map(|(account, offers, withheld)| {
                 let list = calendars
                     .iter()
-                    .find(|(id, _)| *id == account.id)
-                    .map(|(_, list)| list.clone())
+                    .find(|(id, _, _)| *id == account.id)
+                    .map(|(_, list, _)| list.clone())
                     .unwrap_or_default();
                 (account.clone(), *offers, *withheld, list)
             })
@@ -2645,12 +2692,17 @@ impl CalendarView {
             .collect();
         let busy_days = shown::busy_days(&kept, mini.first, mini.days, &chrono::Local);
         let today = chrono::Local::now().date_naive();
-        self.calendar_sidebar.show(
-            self.day.get(),
-            today,
-            &busy_days,
-            &sidebar::sidebar_accounts(&rows),
-        );
+        let unlisted = calendars
+            .into_iter()
+            .map(|(account, _, ids)| (account, ids.into_iter().collect()))
+            .collect();
+        let accounts = sidebar::take_off_the_list(sidebar::sidebar_accounts(&rows), &unlisted);
+        let day = self.day.get();
+        let band = match self.showing() {
+            Showing::List => None,
+            _ => sidebar::in_view(self.effective_kind(), day),
+        };
+        self.calendar_sidebar.show(day, band, today, &busy_days, &accounts);
     }
 }
 

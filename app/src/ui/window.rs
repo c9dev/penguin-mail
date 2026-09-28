@@ -556,6 +556,14 @@ impl MainWindow {
                             app.refresh_calendars();
                         }
                     }),
+                    waiting: Box::new({
+                        let sidebar = Rc::downgrade(&sidebar);
+                        move |count| {
+                            if let Some(sidebar) = sidebar.upgrade() {
+                                sidebar.set_waiting(count as i64);
+                            }
+                        }
+                    }),
                 },
             );
             // Each space asks for its own width only, so the calendar's
@@ -1185,6 +1193,12 @@ impl MainWindow {
                 .await;
             if let Ok(counts) = counted {
                 this.sidebar.set_counts(&counts.mailboxes);
+                let unread = counts
+                    .mailboxes
+                    .get(&Mailbox::Unified(crate::ui::Standard::Inbox))
+                    .copied()
+                    .unwrap_or(0);
+                this.sidebar.set_unread(unread);
                 let waiting = counts
                     .mailboxes
                     .get(&Mailbox::FollowUp)

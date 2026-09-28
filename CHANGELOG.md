@@ -7,6 +7,17 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### New
 
+- Fold an account's calendars away by clicking its address in the
+  calendar sidebar. The list stays folded the next time you open the app.
+- Right-click a calendar, or use its "⋮" button, to hide it from the list
+  and the grid, or to give it a color of your own. Both stay on this
+  computer. Hidden Calendars at the foot of the list brings one back.
+- The Mail and Calendar switch shows how much unread mail waits while
+  you are in the calendar, and how many invitations wait for your answer
+  while you are in mail.
+- The mini month marks the day the calendar shows and, in Week or Month,
+  the days in view. Click a day there to go to it.
+
 - The earlier messages quoted under a reply or forward fold away behind
   a small "•••" button, as in Gmail; click it to read them in place.
 - An invitation's card shows the hours around the meeting from your

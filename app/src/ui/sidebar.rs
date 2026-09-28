@@ -276,6 +276,12 @@ pub struct Sidebar {
     /// calendar, and "Mailboxes" shows in its place, since a switch to a
     /// calendar that cannot show anything would only mislead.
     pub switch: adw::ToggleGroup,
+    /// The badge on the Mail toggle and on the Calendar one.
+    badges: [(Space, gtk::Label); 2],
+    /// Unread mail in the unified inbox, for the Mail toggle's badge.
+    unread: Cell<i64>,
+    /// Invitations waiting for an answer, for the Calendar toggle's.
+    waiting: Cell<i64>,
     title: adw::WindowTitle,
     /// The mailbox list, or the calendar's own sidebar.
     content: gtk::Stack,
@@ -314,22 +320,33 @@ impl Sidebar {
             .valign(gtk::Align::Center)
             .visible(false)
             .build();
-        for (name, label, icon) in [
-            ("mail", gettext("Mail"), "mail-unread-symbolic"),
-            ("calendar", gettext("Calendar"), "x-office-calendar-symbolic"),
-        ] {
+        let badges = [
+            (Space::Mail, "mail", gettext("Mail"), "mail-unread-symbolic"),
+            (Space::Calendar, "calendar", gettext("Calendar"), "x-office-calendar-symbolic"),
+        ]
+        .map(|(space, name, label, icon)| {
             let content = adw::ButtonContent::builder()
                 .icon_name(icon)
                 .label(&label)
                 .build();
-            switch.add(
-                adw::Toggle::builder()
-                    .name(name)
-                    .label(&label)
-                    .child(&content)
-                    .build(),
-            );
-        }
+            // Each toggle counts what waits in the other space, in a small
+            // accent pill after its name, while that space is away.
+            let badge = gtk::Label::builder()
+                .css_classes(["space-badge"])
+                .valign(gtk::Align::Center)
+                .visible(false)
+                .build();
+            let child = gtk::Box::builder().spacing(6).build();
+            child.append(&content);
+            child.append(&badge);
+            let toggle = adw::Toggle::builder()
+                .name(name)
+                .label(&label)
+                .child(&child)
+                .build();
+            switch.add(toggle);
+            (space, badge)
+        });
         switch.set_active_name(Some("mail"));
         // 8 px past the header's own padding puts the switch 14 px into
         // the card, as mockups.py's `sidebar_shell` draws it.
@@ -379,6 +396,9 @@ impl Sidebar {
             foot,
             mail_showing: Cell::new(true),
             switch,
+            badges,
+            unread: Cell::new(0),
+            waiting: Cell::new(0),
             title,
             content,
             list,
@@ -468,6 +488,7 @@ impl Sidebar {
         self.content.set_visible_child_name("calendar");
         self.mail_showing.set(false);
         self.sync_foot();
+        self.sync_badges();
     }
 
     /// Puts the mailbox list back.
@@ -475,6 +496,43 @@ impl Sidebar {
         self.content.set_visible_child_name("mail");
         self.mail_showing.set(true);
         self.sync_foot();
+        self.sync_badges();
+    }
+
+    /// Unread mail in the unified inbox changed.
+    pub fn set_unread(&self, count: i64) {
+        self.unread.set(count);
+        self.sync_badges();
+    }
+
+    /// The number of invitations waiting for an answer changed.
+    pub fn set_waiting(&self, count: i64) {
+        self.waiting.set(count);
+        self.sync_badges();
+    }
+
+    /// Puts each toggle's count on its badge, and in its name, so a
+    /// screen reader hears "Mail, 12 unread" where the eye sees the pill.
+    fn sync_badges(&self) {
+        let on_screen = if self.mail_showing.get() { Space::Mail } else { Space::Calendar };
+        let badges = space_badges(on_screen, self.unread.get(), self.waiting.get());
+        // An `adw::Toggle` is not a widget, and the group points each of
+        // its buttons' `LabelledBy` at the toggle's content, which wins
+        // over a label set later. The buttons are the group's radio
+        // children, in the toggles' own order.
+        let buttons = std::iter::successors(self.switch.first_child(), |child| child.next_sibling())
+            .filter(|child| child.accessible_role() == gtk::AccessibleRole::Radio);
+        for ((space, badge), button) in self.badges.iter().zip(buttons) {
+            let count = match space {
+                Space::Mail => badges.mail,
+                Space::Calendar => badges.calendar,
+            };
+            let text = badge_text(count);
+            badge.set_label(text.as_deref().unwrap_or_default());
+            badge.set_visible(text.is_some());
+            button.reset_relation(gtk::AccessibleRelation::LabelledBy);
+            super::name(&button, &toggle_name(*space, count));
+        }
     }
 
     /// Shows the next-event card and keeps the shared foot in step.
