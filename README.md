@@ -12,7 +12,7 @@ Mail and calendar for Linux, written in Rust.
 [![Rust 1.98](https://img.shields.io/badge/rust-1.98-orange?logo=rust)](https://www.rust-lang.org)
 [![GTK 4 and libadwaita 1.8](https://img.shields.io/badge/GTK_4-libadwaita_1.8-4a86cf?logo=gnome)](https://gnome.pages.gitlab.gnome.org/libadwaita/)
 
-[Watch the tour](https://youtu.be/0PyJCsw1FSE) · [Install](#install) · [Features](#features) · [Screenshots](#screenshots) · [Changelog](CHANGELOG.md)
+[Website](https://penguin-mail.com) · [Watch the tour](https://youtu.be/0PyJCsw1FSE) · [Install](#install) · [Features](#features) · [Screenshots](#screenshots) · [Changelog](CHANGELOG.md)
 
 </div>
 

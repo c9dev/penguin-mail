@@ -37,7 +37,7 @@ scripts/stage.sh "$tree"
 build="$work/build"
 mkdir -p "$build"
 cat > "$build/PKGBUILD" <<PKGBUILD
-# Maintainer: Pivotd <penguin@pivotd.com>
+# Maintainer: Pivotd <support@penguin-mail.com>
 pkgname=penguin-mail
 pkgver=$version
 pkgrel=1

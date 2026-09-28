@@ -3,10 +3,10 @@
 Last updated: 29 September 2026
 
 Penguin Mail is a mail and calendar app for Linux, published by Pivotd
-(https://pivotd.com). It works with Google accounts, through Google's APIs,
-and with other mail providers over IMAP and SMTP. It runs on your own
-computer. This policy explains what it accesses, where that data goes, and
-how it is protected.
+(https://pivotd.com), at https://penguin-mail.com. It works with Google
+accounts, through Google's APIs, and with other mail providers over IMAP and
+SMTP. It runs on your own computer. This policy explains what it accesses,
+where that data goes, and how it is protected.
 
 ## What Penguin Mail accesses in a Google account
 
@@ -158,4 +158,4 @@ models.
 
 ## Contact
 
-Questions about this policy: penguin@pivotd.com.
+Questions about this policy: support@penguin-mail.com.
