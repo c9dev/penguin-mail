@@ -4,10 +4,12 @@
 
 use std::collections::HashMap;
 use std::fmt::Write;
+use std::ops::Range;
 
 use mailrs_domain::{Address, MessageBody, MessageMeta, Provenance};
 
 use crate::format::{color_for, full_date, header_date, human_size, initials};
+use crate::quoted;
 use mailrs_domain::translate::{fill, fill_plural, gettext};
 
 /// How long a message's fold takes to open or close.
@@ -49,10 +51,13 @@ pub struct MessageView<'a> {
 /// A body's cleaned HTML, and whether it chooses its own colours. Mail
 /// that does is written for a white page and keeps one; mail that does not
 /// takes the window's colours.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct Sanitized<'a> {
     pub html: &'a str,
     pub paints: bool,
+    /// The quoted history at the end of `html`, which the page folds away
+    /// behind a button.
+    pub history: Option<Range<usize>>,
 }
 
 /// What the top of the page says about the thread as a whole.
@@ -282,20 +287,33 @@ fn render_body(html: &mut String, view: &MessageView) {
             let _ = write!(html, "<div class=\"body status\">{}</div>", escape(&said));
         }
         BodyState::Loaded(body) => {
-            if let Some(clean) = view.sanitized {
+            if let Some(clean) = &view.sanitized {
                 let _ = write!(
                     html,
-                    "<div class=\"body html{plain}\"><template shadowrootmode=\"open\"><style>{HTML_BODY_CSS}</style>\
-                     <div class=\"root\">{html}</div></template></div>",
-                    html = clean.html,
+                    "<div class=\"body html{plain}\"><template shadowrootmode=\"open\"><style>{HTML_BODY_CSS}{TRIMMED_CSS}</style>\
+                     <div class=\"root\">",
                     plain = if clean.paints { "" } else { " plain" },
                 );
+                match &clean.history {
+                    Some(history) => {
+                        html.push_str(&clean.html[..history.start]);
+                        fold_history(html, &clean.html[history.clone()]);
+                        html.push_str(&clean.html[history.end..]);
+                    }
+                    None => html.push_str(clean.html),
+                }
+                html.push_str("</div></template></div>");
             } else {
-                let _ = write!(
-                    html,
-                    "<div class=\"body text\">{}</div>",
-                    render_text(body.text.as_deref().unwrap_or(""))
-                );
+                let text = body.text.as_deref().unwrap_or("");
+                html.push_str("<div class=\"body text\">");
+                match quoted::history_in_text(text) {
+                    Some(at) => {
+                        html.push_str(&render_text(&text[..at]));
+                        fold_history(html, &render_text(&text[at..]));
+                    }
+                    None => html.push_str(&render_text(text)),
+                }
+                html.push_str("</div>");
             }
             render_attachments(html, &view.meta.id, body, view.thumbnails);
         }
@@ -549,6 +567,18 @@ fn label(address: &Address, me: &[String]) -> String {
     }
 }
 
+/// Puts the quoted history behind a button, the way Gmail trims it. A
+/// `<details>` element opens and shuts with a click, Enter or Space, and
+/// tells a screen reader which it is, with no script in the page.
+fn fold_history(html: &mut String, history: &str) {
+    let name = escape(&gettext("Show trimmed content"));
+    let _ = write!(
+        html,
+        "<details class=\"trimmed\"><summary title=\"{name}\" aria-label=\"{name}\">•••</summary>\
+         {history}</details>"
+    );
+}
+
 /// Plain text as HTML: quoted lines become nested blockquotes, a `-- `
 /// line starts a dimmed signature, and web addresses become links.
 pub fn render_text(text: &str) -> String {
@@ -639,6 +669,24 @@ const HTML_BODY_CSS: &str = ":host{all:initial;display:block;contain:content}\
 color:#1d1d20;overflow-wrap:anywhere;overflow-x:auto}\
 img{max-width:100% !important;height:auto !important}\
 table{max-width:100% !important}td,th{overflow-wrap:anywhere}a{color:#1c71d8}";
+
+/// The button that shows the quoted history, drawn in the page's colours
+/// and, on mail that keeps its white page, in the grey Gmail uses. It sits
+/// in the page for a text body and in the shadow root for an HTML one.
+const TRIMMED_CSS: &str = "details.trimmed{margin:10px 0 0}\
+details.trimmed[open]>summary{margin-bottom:10px}\
+details.trimmed>summary{display:inline-block;list-style:none;padding:0 7px;height:12px;border-radius:6px;\
+background:#e8eaed;color:#5f6368;font:700 11px/10px sans-serif;letter-spacing:1px;cursor:pointer;\
+user-select:none;white-space:nowrap;vertical-align:middle;transition:background-color 120ms ease}\
+details.trimmed>summary::-webkit-details-marker{display:none}\
+details.trimmed>summary:hover{background:#dadce0}\
+details.trimmed>summary:focus-visible{outline:2px solid #1c71d8;outline-offset:2px}\
+:host(.plain) details.trimmed>summary,.text details.trimmed>summary{\
+background:color-mix(in srgb,var(--fg) 12%,transparent);color:var(--dim)}\
+:host(.plain) details.trimmed>summary:hover,.text details.trimmed>summary:hover{\
+background:color-mix(in srgb,var(--fg) 20%,transparent)}\
+:host(.plain) details.trimmed>summary:focus-visible,.text details.trimmed>summary:focus-visible{\
+outline-color:var(--accent)}";
 
 fn page_css(theme: &Theme) -> String {
     // A message sits on a surface a step away from the page: lighter in a
@@ -737,7 +785,7 @@ border:1px solid var(--line);overflow:hidden;margin-left:0}}\
 .html.plain{{background:var(--surface)}}\
 .status{{color:var(--dim);font-style:italic}}\
 blockquote.quote{{margin:6px 0;padding:0 0 0 12px;border-left:3px solid color-mix(in srgb,var(--accent) 45%,transparent);color:var(--dim)}}\
-.signature{{color:var(--dim)}}\
+.signature{{color:var(--dim)}}{trimmed}\
 a{{color:var(--accent)}}\
 .attachments{{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 0 52px}}\
 .attachment{{display:inline-flex;align-items:center;border-radius:10px;background:var(--card);\
@@ -756,6 +804,7 @@ color:inherit;text-decoration:none;min-width:0}}\
 @media (max-width:560px){{body{{padding:18px 14px 40px}}.body,.attachments{{margin-left:0}}.thread h1{{font-size:20px}}\
 .address{{display:none}}.message{{padding:14px 8px 16px;margin:0 -8px}}.chev{{display:none}}}}",
         fold = FOLD_MS,
+        trimmed = TRIMMED_CSS,
         scheme = if theme.dark { "dark" } else { "light" },
         accent = theme.accent,
     )
@@ -893,7 +942,11 @@ mod tests {
             thumbnails: &no_thumbs,
             // Both fixtures are already clean.
             event_slot: false,
-            sanitized: body.html.as_deref().map(|html| Sanitized { html, paints }),
+            sanitized: body.html.as_deref().map(|html| Sanitized {
+                html,
+                paints,
+                history: None,
+            }),
         };
         let html = page(
             "Kites",
@@ -1124,6 +1177,7 @@ mod tests {
                 sanitized: Some(Sanitized {
                     html: "<p>Hi</p>",
                     paints: false,
+                    history: None,
                 }),
             }],
         );
@@ -1462,6 +1516,35 @@ mod tests {
         assert!(html.contains("<blockquote class=\"quote\">On Monday you wrote:\n<blockquote class=\"quote\">deeper</blockquote>back</blockquote>"), "{html}");
         assert!(
             html.contains("<div class=\"signature\">-- \nAnn &lt;ann@example.com&gt;</div>"),
+            "{html}"
+        );
+    }
+
+    #[test]
+    fn a_plain_text_reply_folds_its_quoted_history() {
+        let m = meta("m1", "Ann", &[]);
+        let body = MessageBody {
+            text: Some("Monday works.\n\nOn Friday, Ann wrote:\n> Lunch?\n".into()),
+            ..Default::default()
+        };
+        let no_thumbs = HashMap::new();
+        let html = page(
+            "x",
+            vec![MessageView {
+                meta: &m,
+                body: BodyState::Loaded(&body),
+                expanded: true,
+                thumbnails: &no_thumbs,
+                event_slot: false,
+                sanitized: None,
+            }],
+        );
+        assert!(
+            html.contains(
+                "Monday works.<details class=\"trimmed\"><summary title=\"Show trimmed content\" \
+                 aria-label=\"Show trimmed content\">•••</summary>On Friday, Ann wrote:\n\
+                 <blockquote class=\"quote\">Lunch?</blockquote></details>"
+            ),
             "{html}"
         );
     }

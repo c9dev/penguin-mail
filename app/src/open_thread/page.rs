@@ -16,19 +16,21 @@
 
 use std::collections::HashMap;
 use std::hash::{DefaultHasher, Hash, Hasher};
+use std::ops::Range;
 
 use mailrs_domain::{AccountId, MessageBody, MessageMeta};
 
 use super::{OpenThread, inline};
+use crate::quoted;
 use crate::render::{self, BodyState, Head, MessageView, Sanitized, TAIL, Theme};
 use crate::sanitize::sanitize_html;
 use crate::translation::{Body, Prose};
 
 /// A message body after cleaning, with a mark of the HTML and the picture
-/// addresses it was made with, and what two scans of the cleaned HTML
+/// addresses it was made with, and what three scans of the cleaned HTML
 /// found. A different mark means the body needs cleaning again. The scans each
-/// read the whole body in lower case, so they run once, with the
-/// cleaning, rather than on every draw.
+/// read the whole body, so they run once, with the cleaning, rather than
+/// on every draw.
 #[derive(Debug, Clone)]
 pub struct Cleaned {
     mark: u64,
@@ -38,6 +40,8 @@ pub struct Cleaned {
     remote: bool,
     /// Whether it chooses its own colours, and so keeps its white page.
     paints: bool,
+    /// The quoted history at its end, which the page folds away.
+    history: Option<Range<usize>>,
 }
 
 impl Cleaned {
@@ -56,6 +60,7 @@ fn clean(source: &str, pictures: &str) -> Cleaned {
         mark: body_mark(source, pictures),
         remote: loads_remote(&lower),
         paints: paints_itself(&lower),
+        history: quoted::history_in_html(&html),
         html,
     }
 }
@@ -283,6 +288,7 @@ impl OpenThread {
             .map(|cleaned| Sanitized {
                 html: &cleaned.html,
                 paints: cleaned.paints,
+                history: cleaned.history.clone(),
             }),
             event_slot: self.invitation_at.as_deref() == Some(meta.id.as_str()),
         }
@@ -663,6 +669,23 @@ mod tests {
         open.take_cleaned(HashMap::from([("m1".to_string(), made)]));
         let page = whole(open.page(&theme()));
         assert!(page.contains("body html\""), "{page}");
+    }
+
+    /// Cleaning finds the quoted history, and the page folds it behind a
+    /// button that says what it hides.
+    #[test]
+    fn a_reply_s_quoted_history_is_folded_on_the_page() {
+        let mut open = thread(
+            "<div dir=\"ltr\">Monday works.</div><div class=\"gmail_quote\">\
+             <div class=\"gmail_attr\">On Friday, Ann wrote:</div>\
+             <blockquote class=\"gmail_quote\">Lunch?</blockquote></div>",
+        );
+        let page = whole(open.page(&theme()));
+        let fold = page.find("<details class=\"trimmed\">").expect("a fold");
+        let named = "<summary title=\"Show trimmed content\" aria-label=\"Show trimmed content\">";
+        assert!(page[fold..].contains(named), "{page}");
+        assert!(page.find("Monday works.") < Some(fold), "{page}");
+        assert!(page[fold..].find("Lunch?") < page[fold..].find("</details>"), "{page}");
     }
 
     #[test]
