@@ -31,7 +31,9 @@ pub struct Dragging {
     pub card: Option<(gtk::Widget, Occurrence)>,
     /// `None` for a drag across empty time.
     pub grab: Option<Grab>,
-    /// The day column the pointer is over now.
+    /// The day column the pointer is over now, for a card, which may
+    /// move to another day. Fixed at the column the press landed in for
+    /// a drag across empty time, which never leaves it.
     pub column: usize,
     /// Where the card is drawn, in the grid's own coordinates, while the
     /// pointer or the settle spring holds it.
@@ -1292,10 +1294,10 @@ impl TimeGrid {
             }
         }
 
-        let (press, card, grab, from) = {
+        let (press, card, grab, from, origin_column) = {
             let dragging = imp.dragging.borrow();
             let state = dragging.as_ref().expect("checked above");
-            (state.press, state.card.clone(), state.grab, state.from)
+            (state.press, state.card.clone(), state.grab, state.from, state.column)
         };
         let (x, y) = (press.0 + dx, press.1 + dy);
         let column = self.column_at(x);
@@ -1325,9 +1327,14 @@ impl TimeGrid {
                 }
             }
             _ => {
-                self.show_ghost(Some(drag::selection(from, self.time_at(column, y))));
+                // The column stays the one the drag began in: a drag
+                // across empty time never crosses into another day's
+                // column, only the day it started in, clamped to it, so
+                // the ghost and the span `end` reports later always
+                // agree.
+                let to = drag::clamp_to_day(self.time_at(origin_column, y), self.day_span(origin_column));
+                self.show_ghost(Some(drag::selection(from, to)));
                 if let Some(state) = imp.dragging.borrow_mut().as_mut() {
-                    state.column = column;
                     state.samples.push_back((now, y));
                     if state.samples.len() > 4 {
                         state.samples.pop_front();
@@ -1348,9 +1355,9 @@ impl TimeGrid {
     fn end(&self, dx: f64, dy: f64) {
         let imp = self.imp();
         let taken = imp.dragging.borrow().as_ref().map(|d| {
-            (d.started, d.card.clone(), d.grab, d.from, d.press, d.rect, d.samples.clone())
+            (d.started, d.card.clone(), d.grab, d.column, d.from, d.press, d.rect, d.samples.clone())
         });
-        let Some((started, card, grab, from, press, current_rect, samples)) = taken else {
+        let Some((started, card, grab, origin_column, from, press, current_rect, samples)) = taken else {
             return;
         };
         if !started {
@@ -1394,7 +1401,10 @@ impl TimeGrid {
             }
             None => {
                 imp.dragging.replace(None);
-                let selection = drag::selection(from, self.time_at(column, y));
+                // Same column and clamp as `update`, so the span this
+                // reports matches the ghost the person watched settle.
+                let to = drag::clamp_to_day(self.time_at(origin_column, y), self.day_span(origin_column));
+                let selection = drag::selection(from, to);
                 if let Some(f) = imp.selected.borrow().as_ref() {
                     f(selection.0, selection.1);
                 }
