@@ -51,7 +51,7 @@ msgcat --use-first --sort-by-file -o "$work/joined.pot" "$work"/[123]-*.pot
 # msgcat needs a header on its inputs; ours replaces it, so drop theirs.
 sed '1,/^$/d' "$work/joined.pot" > "$work/merged.pot"
 cat > "$work/header.pot" <<HEADER
-# Penguin Mail, a Gmail client for the GNOME desktop.
+# Penguin Mail, mail and calendar for Linux.
 # This file is distributed under the same licence as Penguin Mail.
 #
 msgid ""

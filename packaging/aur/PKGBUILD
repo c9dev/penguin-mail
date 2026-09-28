@@ -12,7 +12,7 @@
 pkgname=penguin-mail-bin
 pkgver=0.3.0
 pkgrel=1
-pkgdesc="Gmail client for GNOME (prebuilt binaries from the GitHub release)"
+pkgdesc="Mail and calendar for Linux (prebuilt binaries from the GitHub release)"
 arch=('x86_64')
 url="https://github.com/c9dev/penguin-mail"
 license=('GPL-3.0-or-later')

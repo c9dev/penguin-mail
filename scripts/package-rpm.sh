@@ -40,7 +40,7 @@ cat > "$work/SPECS/penguin-mail.spec" <<SPEC
 Name:           penguin-mail
 Version:        $version
 Release:        1
-Summary:        Gmail client for GNOME
+Summary:        Mail and calendar for Linux
 License:        GPL-3.0-or-later
 URL:            https://github.com/c9dev/penguin-mail
 ExclusiveArch:  x86_64

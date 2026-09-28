@@ -40,7 +40,7 @@ browser and the older clients because it is both nicer to use and more capable.
 
 A GNOME desktop on Linux (Ubuntu 26.04 is the target), with the app living in the tray and syncing in the
 background. Installed from the project's apt repository, the Snap Store (pending review), a release tarball, or a
-Flatpak bundle; Flathub is on hold. Several Gmail accounts at once today; IMAP and SMTP, Microsoft, and CalDAV are
+Flatpak bundle; Flathub is on hold. Gmail and IMAP and SMTP accounts today; Microsoft, CalDAV and POP3 are
 planned (`docs/superpowers/specs/2026-09-22-other-providers-overview.md`). Screen readers and keyboard-only use are
 supported and checked.
 

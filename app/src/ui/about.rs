@@ -74,8 +74,7 @@ impl About {
 
         let comments = gtk::Label::builder()
             .label(gettext(
-                "A fast, private Gmail client for the GNOME desktop. Mail stays on your \
-                 computer and your own Google Cloud project.",
+                "Mail and calendar for Linux. Your mail stays on your computer.",
             ))
             .wrap(true)
             .justify(gtk::Justification::Center)

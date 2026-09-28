@@ -79,7 +79,7 @@ Recommends: gnupg, gpgsm, gnome-shell-extension-appindicator
 Section: mail
 Priority: optional
 Homepage: https://github.com/c9dev/penguin-mail
-Description: Gmail client for GNOME
+Description: Mail and calendar for Linux
  Reads, sorts and sends mail for several Gmail accounts, keeps them in
  sync from the system tray, and signs and encrypts with OpenPGP or S/MIME.
 CONTROL

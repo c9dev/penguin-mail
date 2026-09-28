@@ -1,6 +1,6 @@
 # Penguin Mail
 
-A Gmail client for GNOME in Rust: GTK4, libadwaita, WebKitGTK 6, a tray
+Mail and calendar for Linux, in Rust: GTK4, libadwaita, WebKitGTK 6, a tray
 icon, several accounts synced into SQLite. Targets Ubuntu 26.04 and Rust
 1.98. The crate map is in `CONTRIBUTING.md` under "How it is built"; the words
 the code uses are in `CONTEXT.md`. Read both before changing behaviour.

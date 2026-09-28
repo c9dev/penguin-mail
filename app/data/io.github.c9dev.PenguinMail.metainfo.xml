@@ -6,20 +6,22 @@
   <project_license>GPL-3.0-or-later</project_license>
 
   <name>Penguin Mail</name>
-  <summary>Read and write Gmail from all your accounts</summary>
+  <summary>Mail and calendar for Linux</summary>
   <developer id="io.github.c9dev">
     <name translate="no">Pivotd</name>
   </developer>
 
   <description>
     <p>
-      Penguin Mail keeps several Gmail accounts in sync from the system tray,
-      shows them in one inbox or one at a time, and keeps your mail on your own
-      computer. It talks to Google directly, so no other server sees your
-      mail.
+      Penguin Mail reads Gmail accounts and any IMAP and SMTP account, such as
+      Fastmail, iCloud and Yahoo, and finds the server settings for you. It
+      syncs from the system tray, shows your accounts in one inbox or one at a
+      time, and keeps your mail on your own computer.
     </p>
     <ul>
       <li>One inbox for every account, with Gmail's categories, labels and search</li>
+      <li>A calendar with Google Calendar: Day, Week, Month and Agenda views, invitations answered in the mail, and reminders</li>
+      <li>Contacts</li>
       <li>A composer that shows formatting as you write, with Undo Send and Send Later</li>
       <li>Flags in seven colors, VIPs, smart mailboxes and reminders</li>
       <li>Gmail's rules, automatic replies and plus addresses, changed from the app</li>
@@ -29,6 +31,8 @@
     </ul>
     <p>
       Adding a Gmail account takes one sign-in with Google in your browser.
+      Penguin Mail is built with GTK and libadwaita and fits best on GNOME, but
+      it runs on any Linux desktop.
     </p>
   </description>
 
