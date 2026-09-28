@@ -103,6 +103,42 @@ pub struct Guest {
     pub me: bool,
 }
 
+/// Who hears about a write to an event: its guests, by mail from the
+/// provider, or nobody. A new event and a change that adds guests tell
+/// them, since that mail is their invitation; a move or a delete tells
+/// them unless the person said not to.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub enum Notify {
+    #[default]
+    Guests,
+    Nobody,
+}
+
+impl Notify {
+    /// The choice for two writes of one event folded into one queued
+    /// change: telling the guests wins, since the earlier write may have
+    /// been the one that invited them.
+    pub fn and(self, other: Notify) -> Notify {
+        if self == Notify::Guests || other == Notify::Guests { Notify::Guests } else { Notify::Nobody }
+    }
+
+    /// How the store keeps it: `None` for [`Notify::Guests`], which every
+    /// row queued before the choice existed means.
+    pub fn stored(self) -> Option<&'static str> {
+        match self {
+            Notify::Guests => None,
+            Notify::Nobody => Some("nobody"),
+        }
+    }
+
+    pub fn from_stored(value: Option<&str>) -> Notify {
+        match value {
+            Some("nobody") => Notify::Nobody,
+            _ => Notify::Guests,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Status {
     #[default]
@@ -693,5 +729,19 @@ mod tests {
             "reminders":null,"conference":null,"rules":[],"series":null,"original_start":null,"pending":true}"#;
         let event: Event = serde_json::from_str(old).unwrap();
         assert_eq!(event.meet_request, None);
+    }
+
+    #[test]
+    fn folding_a_quiet_write_onto_one_that_tells_the_guests_still_tells_them() {
+        assert_eq!(Notify::Guests.and(Notify::Nobody), Notify::Guests);
+        assert_eq!(Notify::Nobody.and(Notify::Guests), Notify::Guests);
+        assert_eq!(Notify::Nobody.and(Notify::Nobody), Notify::Nobody);
+    }
+
+    #[test]
+    fn a_row_stored_before_the_choice_existed_tells_the_guests() {
+        assert_eq!(Notify::from_stored(None), Notify::Guests);
+        assert_eq!(Notify::from_stored(Notify::Nobody.stored()), Notify::Nobody);
+        assert_eq!(Notify::Guests.stored(), None);
     }
 }

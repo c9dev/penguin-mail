@@ -676,7 +676,7 @@ fn a_store_from_before_the_calendar_opens_with_no_calendars() {
     drop(conn);
 
     let conn = open_with(&path, MIGRATIONS).unwrap();
-    assert_eq!(schema_version(&conn).unwrap(), 37);
+    assert_eq!(schema_version(&conn).unwrap(), MIGRATIONS.len() as i64);
     for table in ["calendars", "events", "calendar_changes"] {
         let count: i64 = conn
             .query_row(&format!("SELECT COUNT(*) FROM {table}"), [], |row| row.get(0))
@@ -709,7 +709,7 @@ fn migration_34_leaves_every_account_s_scopes_unknown() {
     drop(conn);
 
     let conn = open_with(&path, MIGRATIONS).unwrap();
-    assert_eq!(schema_version(&conn).unwrap(), 37);
+    assert_eq!(schema_version(&conn).unwrap(), MIGRATIONS.len() as i64);
     let (granted, asked): (Option<String>, Option<String>) = conn
         .query_row(
             "SELECT granted_scopes, asked_scopes FROM accounts WHERE id = 1",

@@ -617,6 +617,13 @@ ALTER TABLE calendar_changes ADD COLUMN prior_body TEXT;
 ALTER TABLE calendar_changes ADD COLUMN restores TEXT;
 ALTER TABLE calendar_holds ADD COLUMN before TEXT;
 "#,
+    // Whether the provider mails the guests about a queued or held
+    // change. NULL tells them, as every change did before the person
+    // could choose; 'nobody' keeps a move or a delete from them.
+    r#"
+ALTER TABLE calendar_changes ADD COLUMN notify TEXT;
+ALTER TABLE calendar_holds ADD COLUMN notify TEXT;
+"#,
 ];
 
 /// How long the copy taken before a migration stays once the store has

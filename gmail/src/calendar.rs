@@ -14,7 +14,7 @@
 //! nothing from the account's Gmail budget.
 
 use mailrs_domain::EpochMillis;
-use mailrs_domain::calendar::{self, Access, EventPage, Guest as CalendarGuest, Reminder, ReminderMethod, Status};
+use mailrs_domain::calendar::{self, Access, EventPage, Guest as CalendarGuest, Notify, Reminder, ReminderMethod, Status};
 use mailrs_domain::invitation::Answer;
 use serde::Deserialize;
 use serde_json::{Value, json};
@@ -280,19 +280,21 @@ impl GmailClient {
     }
 
     /// Creates `event` under its own id when `create`, or changes it to
-    /// match, and tells the guests. `etag` makes Google refuse the change
-    /// with [`GmailError::Changed`] when the event moved on since.
+    /// match, and mails the guests when `notify` says so. `etag` makes
+    /// Google refuse the change with [`GmailError::Changed`] when the
+    /// event moved on since.
     pub async fn put_event(
         &self,
         event: &calendar::Event,
         etag: Option<&str>,
         create: bool,
+        notify: Notify,
     ) -> Result<calendar::Event, GmailError> {
         let base = format!("{}/calendars/{}/events", self.calendar_base_url, encode(&event.calendar));
         let body = event_json(event, create);
         // Google reads conferenceData only when told which version of it
         // the body speaks.
-        let mut query = vec![("sendUpdates", "all")];
+        let mut query = vec![("sendUpdates", send_updates(notify))];
         if event.meet_request.is_some() {
             query.push(("conferenceDataVersion", "1"));
         }
@@ -317,11 +319,18 @@ impl GmailClient {
         Ok(google_event(&event.calendar, &answer, None))
     }
 
-    /// Deletes an event and tells its guests.
-    pub async fn remove_event(&self, calendar: &str, id: &str, etag: Option<&str>) -> Result<(), GmailError> {
+    /// Deletes an event, and mails its guests the cancellation when
+    /// `notify` says so.
+    pub async fn remove_event(
+        &self,
+        calendar: &str,
+        id: &str,
+        etag: Option<&str>,
+        notify: Notify,
+    ) -> Result<(), GmailError> {
         let url = format!("{}/calendars/{}/events/{}", self.calendar_base_url, encode(calendar), encode(id));
         self.call_at_empty(&url, |url| {
-            let mut request = self.http().delete(url).query(&[("sendUpdates", "all")]);
+            let mut request = self.http().delete(url).query(&[("sendUpdates", send_updates(notify))]);
             if let Some(etag) = etag {
                 request = request.header("If-Match", etag);
             }
@@ -874,6 +883,16 @@ pub fn google_event(calendar: &str, item: &Value, me: Option<&str>) -> calendar:
         // A Meet request is something Penguin Mail asks for on a write;
         // Google's answer never needs to say one is still pending here.
         meet_request: None,
+    }
+}
+
+/// Google's `sendUpdates` for a write. Without the parameter Google
+/// mails nobody, so a new event with guests must say `all` or they never
+/// hear of it.
+fn send_updates(notify: Notify) -> &'static str {
+    match notify {
+        Notify::Guests => "all",
+        Notify::Nobody => "none",
     }
 }
 
