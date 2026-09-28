@@ -97,6 +97,10 @@ pub enum SyncError {
     /// the copy does not hold.
     #[error("there is no calendar {0} to put the event on")]
     NoCalendar(String),
+    /// A change to a birthday or a working location, which Google's own
+    /// apps make and change, named by its title.
+    #[error("{}", made_in_google(.0))]
+    MadeInGoogle(String),
     #[error("could not write the message: {0}")]
     Mime(String),
     #[error("{0} is not an email address")]
@@ -125,6 +129,13 @@ fn reserved_label(name: &str) -> String {
     fill(
         &gettext("Gmail keeps “{name}” for its own label. Choose another name."),
         &[("name", name)],
+    )
+}
+
+fn made_in_google(title: &str) -> String {
+    fill(
+        &gettext("Google Calendar makes “{title}” itself, so only Google Calendar can change it."),
+        &[("title", title)],
     )
 }
 

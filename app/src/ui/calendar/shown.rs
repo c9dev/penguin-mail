@@ -125,9 +125,10 @@ pub fn stepped(kind: ViewKind, day: NaiveDate, by: i32) -> NaiveDate {
     moved.unwrap_or(day)
 }
 
-/// Whether an occurrence shows: one the person declined stays out unless
-/// they asked to see declined events, or `pending` names it. `pending`
-/// is the account, calendar, event id and start of the occurrence Show
+/// Whether an occurrence shows as an event: a working location never
+/// does, and one the person declined stays out unless they asked to see
+/// declined events, or `pending` names it. `pending` is the account,
+/// calendar, event id and start of the occurrence Show
 /// in Calendar (or a reminder, or a turned-down toast) asked the view to
 /// open, drawn even declined so the popover has something to point at.
 pub fn keep(
@@ -135,6 +136,11 @@ pub fn keep(
     show_declined: bool,
     pending: Option<&(AccountId, String, String, EpochMillis)>,
 ) -> bool {
+    // A working location is a word under its day's heading, never a
+    // block, a list row or a dot.
+    if !super::kinds::on_grid(&o.event.kind) {
+        return false;
+    }
     show_declined
         || o.event.my_answer != Some(Answer::No)
         || pending.is_some_and(|(account_id, calendar, id, start)| {
@@ -509,6 +515,14 @@ mod tests {
         assert_eq!(stepped(ViewKind::Day, d(2026, 9, 23), -1), d(2026, 9, 22));
         assert_eq!(stepped(ViewKind::Month, d(2026, 1, 31), 1), d(2026, 2, 28));
         assert_eq!(stepped(ViewKind::Month, d(2026, 3, 15), -2), d(2026, 1, 15));
+    }
+
+    #[test]
+    fn a_working_location_is_never_drawn_as_an_event() {
+        use mailrs_domain::calendar::{Kind, Workplace};
+        let mut home = occurrence(true, 0, 1, None);
+        Arc::make_mut(&mut home.event).kind = Kind::WorkingLocation(Workplace::Home);
+        assert!(!keep(&home, true, None), "it shows under the day's heading instead");
     }
 
     #[test]

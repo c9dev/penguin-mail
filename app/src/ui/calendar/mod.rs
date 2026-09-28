@@ -17,6 +17,7 @@ pub mod drag;
 pub mod editor;
 pub mod header;
 pub mod holding;
+pub mod kinds;
 pub mod layout;
 pub mod month;
 pub mod next;
@@ -1601,20 +1602,23 @@ impl CalendarView {
         let settings = (self.settings)();
         let show_declined = settings.show_declined_events;
         let pending = self.pending();
+        let range = page.range.get();
+        let days: Vec<NaiveDate> = (0..range.days)
+            .map(|i| range.first + Days::new(u64::from(i)))
+            .collect();
+        // Working locations leave `found` below, so their words under each
+        // day's heading come from the whole read.
+        let places = kinds::workplaces(&found, &days, &chrono::Local);
         let found: Vec<Occurrence> = found
             .into_iter()
             .filter(|o| shown::keep(o, show_declined, pending.as_ref()))
             .collect();
         ensure_tints(found.iter().filter_map(|o| o.event.color.as_deref()));
-        let range = page.range.get();
         // A refill replaces every block; the one with the focus comes
         // back by its event.
         let had_focus = self.holds_focus(page);
         let focused = page.view.borrow().focused_key();
         let calendars = self.calendars.borrow().clone();
-        let days: Vec<NaiveDate> = (0..range.days)
-            .map(|i| range.first + Days::new(u64::from(i)))
-            .collect();
         let view = page.view.borrow();
         let block = match &*view {
             PageView::Grid(grid) => {
@@ -1626,7 +1630,7 @@ impl CalendarView {
                     .filter(|part| !part.is_empty())
                     .collect();
                 crate::ui::name(&grid.grid, &title.join(" "));
-                self.fill_headings(&grid.headings, &days);
+                self.fill_headings(&grid.headings, &days, &places);
                 grid.strip.show(&days, &found, &calendars);
                 let now = chrono::Local::now().timestamp_millis();
                 grid.grid.show(&days, &found, &calendars, now, &chrono::Local, settings.working_hours);
@@ -1658,7 +1662,7 @@ impl CalendarView {
                 (block, scroll)
             }
             PageView::Month(month) => {
-                month.show(range, &found, &calendars, settings.working_hours);
+                month.show(range, &found, &places, &calendars, settings.working_hours);
                 let block = self.pending_block(&found, |key, start| month.block_at(key, start));
                 (block, None)
             }
@@ -1717,14 +1721,16 @@ impl CalendarView {
         Some((block_at(&key, start)?, o.clone()))
     }
 
-    /// The day headings over a grid: "MON 21", today's in a pill. Each
-    /// opens its day.
-    fn fill_headings(self: &Rc<Self>, headings: &gtk::Box, days: &[NaiveDate]) {
+    /// The day headings over a grid: "MON 21", today's in a pill, and
+    /// under it where the person works that day, from `places`, which
+    /// runs parallel to `days`. Each opens its day.
+    fn fill_headings(self: &Rc<Self>, headings: &gtk::Box, days: &[NaiveDate], places: &[Option<String>]) {
         while let Some(child) = headings.first_child() {
             headings.remove(&child);
         }
         let today = chrono::Local::now().date_naive();
-        for &day in days {
+        for (index, &day) in days.iter().enumerate() {
+            let place = places.get(index).cloned().flatten();
             let weekday = gtk::Label::builder()
                 .label(
                     day.format_localized(&gettext("%a"), date_locale())
@@ -1739,6 +1745,9 @@ impl CalendarView {
             let inner = gtk::Box::builder().spacing(8).build();
             inner.append(&weekday);
             inner.append(&date);
+            if let Some(place) = &place {
+                inner.append(&place_label(place));
+            }
             let button = gtk::Button::builder()
                 .child(&inner)
                 .css_classes(["flat", "day-heading"])
@@ -1748,7 +1757,7 @@ impl CalendarView {
             if day == today {
                 button.add_css_class("today");
             }
-            crate::ui::name(&button, &words::full_date_words(day));
+            crate::ui::name(&button, &kinds::heading_words(&words::full_date_words(day), place.as_deref()));
             let weak = Rc::downgrade(self);
             button.connect_clicked(move |_| {
                 if let Some(view) = weak.upgrade() {
@@ -2942,6 +2951,19 @@ fn day_span(first: NaiveDate, last: NaiveDate) -> (EpochMillis, EpochMillis) {
     let (from, _) = Range::around(ViewKind::Day, first).span(&chrono::Local);
     let (_, to) = Range::around(ViewKind::Day, last).span(&chrono::Local);
     (from, to)
+}
+
+/// The word under a day's heading that says where the person works:
+/// "Home", "Office", or the building's name, cut short with an ellipsis
+/// in a narrow column. The heading's own name speaks it.
+pub(crate) fn place_label(place: &str) -> gtk::Label {
+    gtk::Label::builder()
+        .label(place)
+        .css_classes(["day-place"])
+        .ellipsize(gtk::pango::EllipsizeMode::End)
+        .max_width_chars(12)
+        .tooltip_text(place)
+        .build()
 }
 
 /// Drops a declined event unless `show_declined` keeps it or `pending`

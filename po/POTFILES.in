@@ -53,7 +53,9 @@ app/src/ui/assistant_skills_prefs.rs
 app/src/ui/assistant_web_prefs.rs
 app/src/ui/calendar/agenda.rs
 app/src/ui/calendar/block.rs
+app/src/ui/calendar/draft.rs
 app/src/ui/calendar/editor.rs
+app/src/ui/calendar/kinds.rs
 app/src/ui/calendar/mod.rs
 app/src/ui/calendar/month.rs
 app/src/ui/calendar/next.rs
@@ -132,6 +134,7 @@ domain/src/translate.rs
 sync/src/account/writes.rs
 sync/src/actions.rs
 sync/src/actions/labelling.rs
+sync/src/calendar_copy.rs
 sync/src/error.rs
 sync/src/mailbox.rs
 sync/src/passwords.rs

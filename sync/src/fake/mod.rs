@@ -198,6 +198,9 @@ pub struct FakeState {
     /// Play Google turning down every new event, as it does a body it
     /// cannot take: a create answers 400 with Google's reason.
     pub refuse_new_events: bool,
+    /// Refuse a new out-of-office or focus-time entry, as Google does on
+    /// an account that is not on Google Workspace.
+    pub refuse_status_entries: bool,
     /// Play Google turning down every move to another calendar, as it
     /// does for an event this account may not move: a move answers 400.
     pub refuse_moves: bool,
@@ -392,6 +395,7 @@ impl FakeGmail {
                 deleted_answers_gone: false,
                 deleted_calendars: Vec::new(),
                 refuse_new_events: false,
+                refuse_status_entries: false,
                 refuse_moves: false,
                 withheld: BTreeSet::new(),
                 calendar_off: None,
@@ -737,6 +741,32 @@ impl FakeGmail {
             s.calendar_events.iter().find(|e| e.calendar == calendar && e.id == series && !e.rules.is_empty()).cloned()
         })?;
         Some((held, start))
+    }
+
+    /// Declines, as Google does for an out-of-office or focus-time entry
+    /// set to decline every meeting, each one-off meeting on `calendar`
+    /// that overlaps `span` and that the account attends as a guest, with
+    /// `message` as the account's comment. Each declined meeting takes a
+    /// new version, so the next read of the calendar brings it back
+    /// declined. A series is left alone: Google would decline its
+    /// occurrences one by one, which no test here needs.
+    fn decline_during(&self, calendar: &str, (from, to): (EpochMillis, EpochMillis), message: &str) {
+        let declined: Vec<calendar::Event> = self.with(|s| {
+            s.calendar_events
+                .iter()
+                .filter(|e| e.calendar == calendar && e.rules.is_empty() && e.start < to && e.end > from)
+                .filter(|e| e.limited() && e.my_answer != Some(Answer::No))
+                .cloned()
+                .collect()
+        });
+        for mut event in declined {
+            tracing::debug!(id = %event.id, %message, "the fake declines a meeting");
+            event.my_answer = Some(Answer::No);
+            for guest in event.guests.iter_mut().filter(|g| g.me) {
+                guest.answer = Some(Answer::No);
+            }
+            self.put_calendar_event(event);
+        }
     }
 
     /// Removes an event from a calendar, as someone deleting it elsewhere
@@ -1355,6 +1385,14 @@ impl GmailApi for FakeGmail {
         let held = self.with(|s| {
             s.calendar_events.iter().find(|e| e.calendar == event.calendar && e.id == event.id).cloned()
         });
+        if create && event.kind.decline().is_some() && self.with(|s| s.refuse_status_entries) {
+            // Google's own words for this refusal are not documented; the
+            // message stands in for whatever it says.
+            return Err(GmailError::Http {
+                status: 400,
+                body: r#"{"error":{"code":400,"message":"Status events are not supported for this user."}}"#.into(),
+            });
+        }
         if create && self.with(|s| s.refuse_new_events) {
             return Err(GmailError::Http {
                 status: 400,
@@ -1379,7 +1417,12 @@ impl GmailApi for FakeGmail {
         if stored.uid.is_empty() {
             stored.uid = format!("{}@google.com", stored.id);
         }
+        let decline = stored.kind.decline().filter(|d| d.meetings == calendar::Declines::All).cloned();
+        let (calendar, span) = (stored.calendar.clone(), (stored.start, stored.end));
         self.put_calendar_event(stored);
+        if let Some(decline) = decline {
+            self.decline_during(&calendar, span, &decline.message);
+        }
         Ok(self.with(|s| {
             s.calendar_events
                 .iter()
