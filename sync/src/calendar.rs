@@ -204,6 +204,7 @@ impl<A: Accounts> Calendar<A> {
                 self.db.read(move |c| store::find_event(c, account_id, &id)).await?
             };
             if let Some(mut event) = found {
+                made_here(&event)?;
                 apply_fields(&mut event, fields);
                 self.copy.save(account_id, event.clone()).await?;
                 self.send_soon(account_id);
@@ -211,6 +212,7 @@ impl<A: Accounts> Calendar<A> {
                 return Ok(Permitted::Done(event));
             }
             if let Some(occurrence) = self.occurrence(account_id, id).await? {
+                made_here(&occurrence.event)?;
                 let mut edited = model::Event {
                     start: occurrence.start,
                     end: occurrence.end,
@@ -255,11 +257,13 @@ impl<A: Accounts> Calendar<A> {
                 self.db.read(move |c| store::find_event(c, account_id, &id)).await?
             };
             if let Some(event) = found {
+                made_here(&event)?;
                 self.copy.remove(account_id, &event.calendar, id).await?;
                 self.send_soon(account_id);
                 return Ok(Permitted::Done(()));
             }
             if let Some(occurrence) = self.occurrence(account_id, id).await? {
+                made_here(&occurrence.event)?;
                 let steps = self.copy.delete_steps(account_id, &occurrence, Some(RepeatScope::This)).await?;
                 let notify = model::removal_notify(&occurrence.event, model::Notify::Guests);
                 if let Permitted::NeedsPermission = self.copy.apply_with(account_id, steps, notify).await? {
@@ -394,6 +398,17 @@ impl<A: Accounts> Calendar<A> {
             .calendar
             .ok_or(SyncError::Backend(BackendError::Unsupported))
     }
+}
+
+/// Refuses a change to a birthday or a working location, which only
+/// Google's own apps make and change, before it reaches the queue. Google
+/// would turn most such changes down, and a birthday's Undo would then
+/// have nothing to undo.
+fn made_here(event: &model::Event) -> Result<(), SyncError> {
+    if event.kind.made_elsewhere() {
+        return Err(SyncError::MadeInGoogle(event.title.clone()));
+    }
+    Ok(())
 }
 
 /// A calendar answer with the missing permission turned into a value the
