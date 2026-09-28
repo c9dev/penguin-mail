@@ -464,6 +464,32 @@ mod tests {
         assert_eq!(event.rules[1], "EXDATE;TZID=Europe/Lisbon:20260930T150000", "excluded dates stay");
     }
 
+    /// Wednesday 23 September's occurrence of a stand-up that runs Monday
+    /// to Friday from Monday 21.
+    fn weekdays() -> Occurrence {
+        let series = Event {
+            id: "standup".into(),
+            start: at(21, 9, 30),
+            end: at(21, 9, 45),
+            title: "Stand-up".into(),
+            rules: vec!["RRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR".into()],
+            ..Event::clone(&weekly().event)
+        };
+        Occurrence { account_id: 1, start: at(23, 9, 30), end: at(23, 9, 45), event: Arc::new(series) }
+    }
+
+    #[test]
+    fn moving_an_occurrence_of_a_weekday_series_keeps_every_weekday_in_the_rule() {
+        let o = weekdays();
+        for (start, end) in [(at(23, 10, 30), at(23, 10, 45)), (at(24, 9, 30), at(24, 9, 45))] {
+            let mut draft = Draft::open(&o, &o.event.rules, Lisbon);
+            assert_eq!(draft.repeat, Repeat::EveryWeekday);
+            draft.set_span(start, end);
+            assert_eq!(draft.to_event("pmnew", "pmmeet").rules, o.event.rules);
+            assert_eq!(draft.scopes(), vec![RepeatScope::This, RepeatScope::Following, RepeatScope::All]);
+        }
+    }
+
     #[test]
     fn a_new_repeat_replaces_the_rule_and_keeps_excluded_dates() {
         let mut draft = Draft::open(&weekly(), &weekly().event.rules, Lisbon);
