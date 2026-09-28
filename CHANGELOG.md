@@ -26,8 +26,10 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   Join for video calls and Snooze for five minutes. Preferences can turn
   them off.
 - Make, move and delete calendar events: press New Event or N to add
-  one, drag across a day to sketch one out, drag a block to move or
-  stretch it, or open an event and press the pencil or the trash icon.
+  one, click an empty slot or day, drag across a day to sketch one out,
+  drag a block to move or stretch it, or open an event and press the
+  pencil or the trash icon. A short event keeps a readable card however
+  briefly it runs.
   Deleting or dragging offers Undo, and changing or deleting one date of
   a repeating event asks which occurrences it covers first. Moving a
   repeating event to another weekday moves its other dates with it, and

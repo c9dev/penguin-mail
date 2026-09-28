@@ -1,7 +1,8 @@
 //! `MonthGrid`, the month view: 42 date cells in a fixed 6×7 grid, each
 //! holding a few compact [`EventBlock`]s and, once it is crowded, an "N
 //! more" button that lists the whole day in a popover. The day's own
-//! number opens that day in Day view.
+//! number opens that day in Day view; a click on the rest of the cell
+//! opens quick create there.
 
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
@@ -34,6 +35,7 @@ type Shown = (
 );
 
 type DayActivated = dyn Fn(NaiveDate);
+type DayClicked = dyn Fn(NaiveDate);
 type EventActivated = dyn Fn(&MonthGrid, &Occurrence, &gtk::Widget);
 type EventEdited = dyn Fn(&MonthGrid, &Occurrence);
 type MoreClicked = dyn Fn(&MonthGrid, &[Occurrence], &gtk::Widget);
@@ -44,6 +46,10 @@ pub struct MonthGrid {
     rows_that_fit: Cell<usize>,
     shown: RefCell<Option<Shown>>,
     day_activated: RefCell<Option<Box<DayActivated>>>,
+    /// Runs when a press on a cell's own empty background releases
+    /// without becoming a drag: quick create opens on its day, the way
+    /// N opens it on the focused one.
+    day_clicked: RefCell<Option<Box<DayClicked>>>,
     event_activated: RefCell<Option<Box<EventActivated>>>,
     /// Runs on a block's double click or Enter, over the popover a
     /// single click or Space opens.
@@ -55,6 +61,9 @@ pub struct MonthGrid {
     /// The range last shown, kept so [`MonthGrid::day_rect`] and
     /// [`MonthGrid::focused_day`] can find a day among its cells.
     days: RefCell<Vec<NaiveDate>>,
+    /// The cell index a press landed on empty background of, from
+    /// `press_cell` to `release_cell`.
+    pressed_cell: Cell<Option<usize>>,
 }
 
 impl MonthGrid {
@@ -76,18 +85,46 @@ impl MonthGrid {
                 cells.push(cell);
             }
         }
-        Rc::new(MonthGrid {
+        let this = Rc::new(MonthGrid {
             widget,
             cells,
             rows_that_fit: Cell::new(DEFAULT_ROWS),
             shown: RefCell::new(None),
             day_activated: RefCell::new(None),
+            day_clicked: RefCell::new(None),
             event_activated: RefCell::new(None),
             event_edited: RefCell::new(None),
             more_clicked: RefCell::new(None),
             blocks: RefCell::new(Vec::new()),
             days: RefCell::new(Vec::new()),
-        })
+            pressed_cell: Cell::new(None),
+        });
+
+        // A press on a cell's own background remembers the cell, for a
+        // release that never became a drag to open quick create on; a
+        // press on the day heading, an event or "N more" leaves it
+        // alone, since each already answers its own click. Capture
+        // phase, the same reason the time grid's own drag takes it: this
+        // never claims the sequence, so the swipe between months is
+        // still free to.
+        let drag = gtk::GestureDrag::builder()
+            .button(gdk::BUTTON_PRIMARY)
+            .propagation_phase(gtk::PropagationPhase::Capture)
+            .build();
+        let weak = Rc::downgrade(&this);
+        drag.connect_drag_begin(move |_, x, y| {
+            if let Some(grid) = weak.upgrade() {
+                grid.press_cell(x, y);
+            }
+        });
+        let weak = Rc::downgrade(&this);
+        drag.connect_drag_end(move |_, dx, dy| {
+            let Some(grid) = weak.upgrade() else { return };
+            let threshold = gtk::Settings::default().map_or(8, |s| s.gtk_dnd_drag_threshold()) as f64;
+            grid.release_cell(dx, dy, threshold);
+        });
+        this.widget.add_controller(drag);
+        this
     }
 
     /// Rebuilds every cell: `range` is the six-week `ViewKind::Month`
@@ -118,6 +155,40 @@ impl MonthGrid {
     /// Runs `f` with the date a day's own number was activated for.
     pub fn connect_day_activated(&self, f: impl Fn(NaiveDate) + 'static) {
         self.day_activated.replace(Some(Box::new(f)));
+    }
+
+    /// Runs `f` with the date of a click on a cell's own empty
+    /// background: not its heading, an event, or "N more", each of
+    /// which answers its own click instead.
+    pub fn connect_day_clicked(&self, f: impl Fn(NaiveDate) + 'static) {
+        self.day_clicked.replace(Some(Box::new(f)));
+    }
+
+    /// Remembers which cell, if any, a press landed on its own empty
+    /// background, for `release_cell` to open quick create on if the
+    /// press never becomes a drag.
+    fn press_cell(&self, x: f64, y: f64) {
+        let picked = self.widget.pick(x, y, gtk::PickFlags::DEFAULT);
+        self.pressed_cell.set(
+            self.cells
+                .iter()
+                .position(|cell| picked.as_ref().is_some_and(|w| w == cell.upcast_ref::<gtk::Widget>())),
+        );
+    }
+
+    /// The release after `press_cell`. Under `threshold`, the press
+    /// counts as a click and opens quick create on its cell's day; past
+    /// it, the press was a drag, such as the swipe between months, which
+    /// this leaves alone.
+    fn release_cell(&self, dx: f64, dy: f64, threshold: f64) {
+        let Some(index) = self.pressed_cell.take() else { return };
+        if !super::drag::is_click(dx, dy, threshold) {
+            return;
+        }
+        let Some(&day) = self.days.borrow().get(index) else { return };
+        if let Some(f) = self.day_clicked.borrow().as_ref() {
+            f(day);
+        }
     }
 
     /// Runs `f` when a block's own button is clicked, with the widget to
