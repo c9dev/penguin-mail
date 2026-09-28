@@ -326,11 +326,12 @@ impl CalendarService for AnyCalendar {
         me: &str,
         answer: Answer,
         occurrence: Option<EpochMillis>,
+        note: Option<&str>,
     ) -> Result<Answered, BackendError> {
         forward!(
             AnyCalendar,
             self,
-            answer_invitation(ical_uid, me, answer, occurrence)
+            answer_invitation(ical_uid, me, answer, occurrence, note)
         )
     }
 
@@ -411,6 +412,17 @@ impl CalendarService for AnyCalendar {
         notify: model::Notify,
     ) -> Result<model::Event, BackendError> {
         forward!(AnyCalendar, self, move_event(event, destination, notify))
+    }
+
+    async fn answer_event(
+        &self,
+        calendar: &str,
+        id: &str,
+        me: &str,
+        answer: Answer,
+        note: Option<&str>,
+    ) -> Result<model::Event, BackendError> {
+        forward!(AnyCalendar, self, answer_event(calendar, id, me, answer, note))
     }
 }
 

@@ -9,6 +9,7 @@ use chrono_tz::Tz;
 use serde::{Deserialize, Serialize};
 
 use super::{Event, Status, expand};
+use crate::invitation::Answer;
 use crate::EpochMillis;
 
 /// Which occurrences of a series a change covers.
@@ -91,6 +92,32 @@ pub fn scopes(event: &Event, rule_changed: bool) -> Vec<RepeatScope> {
         (true, true) => vec![RepeatScope::Following, RepeatScope::All],
         (true, false) => vec![RepeatScope::This, RepeatScope::Following, RepeatScope::All],
     }
+}
+
+/// What a guest's Yes, Maybe or No may cover, as Google Calendar asks it:
+/// "This event" or "All events" for an occurrence of a series, and
+/// nothing to ask for a one-off event. "This and following" would start a
+/// series of the guest's own, so it is never offered.
+pub fn answer_scopes(event: &Event) -> Vec<RepeatScope> {
+    match in_series(event) {
+        true => vec![RepeatScope::This, RepeatScope::All],
+        false => Vec::new(),
+    }
+}
+
+/// The row a guest's answer writes to the copy. `This` answers the picked
+/// occurrence alone, as a changed occurrence of its own, which is how
+/// Google keeps it; any other scope answers the series.
+pub fn answered(series: &Event, changed: &[Event], picked: Picked, scope: RepeatScope, answer: Answer) -> Event {
+    let mut row = match scope {
+        RepeatScope::This => one(series, changed, picked, shown(series, changed, picked)),
+        RepeatScope::Following | RepeatScope::All => series.clone(),
+    };
+    row.my_answer = Some(answer);
+    for guest in row.guests.iter_mut().filter(|g| g.me) {
+        guest.answer = Some(answer);
+    }
+    row
 }
 
 /// The writes that make `edited` true of the picked occurrence and the
@@ -612,6 +639,69 @@ mod tests {
             scopes(&standup(&["RRULE:FREQ=DAILY"]), true),
             vec![RepeatScope::Following, RepeatScope::All]
         );
+    }
+
+    fn invited(rules: &[&str]) -> Event {
+        Event {
+            guests: vec![
+                super::super::Guest { email: "priya@example.com".into(), organizer: true, ..Default::default() },
+                super::super::Guest { email: "me@example.com".into(), me: true, ..Default::default() },
+            ],
+            ..standup(rules)
+        }
+    }
+
+    #[test]
+    fn an_answer_to_a_series_offers_this_event_or_all_events() {
+        assert!(answer_scopes(&invited(&[])).is_empty());
+        assert_eq!(
+            answer_scopes(&invited(&["RRULE:FREQ=DAILY"])),
+            vec![RepeatScope::This, RepeatScope::All]
+        );
+        let changed = Event { series: Some("standup".into()), ..invited(&[]) };
+        assert_eq!(answer_scopes(&changed), vec![RepeatScope::This, RepeatScope::All]);
+    }
+
+    #[test]
+    fn answering_this_event_writes_the_occurrence_as_a_change_of_its_own() {
+        let series = invited(&["RRULE:FREQ=DAILY"]);
+        let one = answered(&series, &[], thursday(), RepeatScope::This, Answer::No);
+        assert_eq!(
+            (one.id.as_str(), one.series.as_deref(), one.original_start, one.start, one.etag.as_str()),
+            ("standup_20260924T080000Z", Some("standup"), Some(thursday().original_start), thursday().start, "")
+        );
+        assert!(one.rules.is_empty());
+        assert_eq!(one.my_answer, Some(Answer::No));
+        let me = one.guests.iter().find(|g| g.me).unwrap();
+        assert_eq!(me.answer, Some(Answer::No));
+        let priya = one.guests.iter().find(|g| g.organizer).unwrap();
+        assert_eq!(priya.answer, None);
+    }
+
+    #[test]
+    fn answering_a_changed_occurrence_keeps_its_id_and_version() {
+        let series = invited(&["RRULE:FREQ=DAILY"]);
+        let changed = Event {
+            id: "standup_20260924T080000Z".into(),
+            etag: "\"9\"".into(),
+            series: Some("standup".into()),
+            original_start: Some(thursday().original_start),
+            start: thursday().start + 3_600_000,
+            end: thursday().start + 4_500_000,
+            rules: Vec::new(),
+            ..series.clone()
+        };
+        let one = answered(&series, std::slice::from_ref(&changed), thursday(), RepeatScope::This, Answer::Maybe);
+        assert_eq!((one.etag.as_str(), one.start), ("\"9\"", changed.start));
+        assert_eq!(one.my_answer, Some(Answer::Maybe));
+    }
+
+    #[test]
+    fn answering_all_events_answers_the_series() {
+        let series = invited(&["RRULE:FREQ=DAILY"]);
+        let whole = answered(&series, &[], thursday(), RepeatScope::All, Answer::Yes);
+        assert_eq!((whole.id.as_str(), whole.series.as_deref(), whole.start), ("standup", None, series.start));
+        assert_eq!(whole.my_answer, Some(Answer::Yes));
     }
 
     #[test]

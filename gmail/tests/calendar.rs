@@ -80,7 +80,7 @@ async fn an_answer_keeps_every_other_guest_as_google_has_them() {
         .await;
 
     let answered = client(&server)
-        .answer_invitation(UID, "me@example.com", Answer::No, None)
+        .answer_invitation(UID, "me@example.com", Answer::No, None, None)
         .await
         .unwrap();
     assert_eq!(answered, Answered::Done);
@@ -107,7 +107,7 @@ async fn a_guest_google_left_off_the_list_is_added() {
         .await;
 
     client(&server)
-        .answer_invitation(UID, "me@example.com", Answer::Maybe, None)
+        .answer_invitation(UID, "me@example.com", Answer::Maybe, None, None)
         .await
         .unwrap();
     assert_eq!(
@@ -123,7 +123,7 @@ async fn an_event_that_is_on_no_calendar_is_not_answered() {
     mount_search(&server, json!({"items": []})).await;
     assert_eq!(
         client(&server)
-            .answer_invitation(UID, "me@example.com", Answer::Yes, None)
+            .answer_invitation(UID, "me@example.com", Answer::Yes, None, None)
             .await
             .unwrap(),
         Answered::NotOnCalendar
@@ -144,7 +144,7 @@ async fn a_missing_calendar_permission_is_reported_as_such() {
         .await;
     assert!(matches!(
         client(&server)
-            .answer_invitation(UID, "me@example.com", Answer::Yes, None)
+            .answer_invitation(UID, "me@example.com", Answer::Yes, None, None)
             .await,
         Err(GmailError::MissingScope)
     ));
@@ -235,7 +235,8 @@ async fn answering_one_occurrence_looks_its_instance_up_first() {
                 UID,
                 "me@example.com",
                 Answer::Yes,
-                Some("2026-03-10T09:00:00+00:00")
+                Some("2026-03-10T09:00:00+00:00"),
+                None
             )
             .await
             .unwrap(),
@@ -273,7 +274,7 @@ async fn answering_a_series_found_by_one_of_its_occurrences_answers_the_series()
         .await;
 
     client(&server)
-        .answer_invitation(UID, "me@example.com", Answer::No, None)
+        .answer_invitation(UID, "me@example.com", Answer::No, None, None)
         .await
         .unwrap();
     assert!(patched.lock().unwrap().ends_with(EVENT));
@@ -624,7 +625,7 @@ async fn a_change_page_maps_events_and_names_the_deleted_ones() {
         .respond_with(ResponseTemplate::new(200).set_body_json(json!({
             "items": [
                 {"id": "a", "iCalUID": "a@google.com", "etag": "\"3\"", "status": "confirmed",
-                 "summary": "Sprint planning",
+                 "summary": "Sprint planning", "sequence": 3,
                  "start": {"dateTime": "2026-09-23T10:00:00+01:00", "timeZone": "Europe/Lisbon"},
                  "end": {"dateTime": "2026-09-23T11:30:00+01:00", "timeZone": "Europe/Lisbon"},
                  "recurrence": ["RRULE:FREQ=WEEKLY;BYDAY=WE"],
@@ -652,6 +653,7 @@ async fn a_change_page_maps_events_and_names_the_deleted_ones() {
     assert_eq!(event.rules, vec!["RRULE:FREQ=WEEKLY;BYDAY=WE".to_string()]);
     assert_eq!(event.conference.as_deref(), Some("https://meet.google.com/abc-defg-hij"));
     assert_eq!(event.my_answer, Some(Answer::Maybe));
+    assert_eq!(event.sequence, 3, "the organizer's version, which a proposal must name");
     // Google writes an all-day holiday with no transparency, so its own
     // flag says busy; `Event::blocks_time` is what leaves the day open.
     assert!(page.events[1].busy);
@@ -1163,4 +1165,120 @@ async fn a_guests_removal_is_one_quiet_delete_and_no_answer() {
     };
     let notify = mailrs_domain::calendar::removal_notify(&invitation, Notify::Guests);
     client(&server).remove_event(&invitation.calendar, &invitation.id, None, notify).await.unwrap();
+}
+
+/// One occurrence of a weekly series, by the id Google gives it before
+/// anyone changes it: the series id and the original start in UTC.
+const INSTANCE: &str = "standup_20261020T090000Z";
+
+fn instance() -> Value {
+    json!({
+        "id": INSTANCE,
+        "recurringEventId": "standup",
+        "iCalUID": UID,
+        "summary": "Stand-up",
+        "originalStartTime": {"dateTime": "2026-10-20T09:00:00Z"},
+        "start": {"dateTime": "2026-10-20T09:00:00Z", "timeZone": "UTC"},
+        "end": {"dateTime": "2026-10-20T09:15:00Z", "timeZone": "UTC"},
+        "attendees": [
+            {"email": "priya@fernwood.example", "responseStatus": "accepted", "organizer": true,
+             "comment": "Bring the numbers"},
+            {"email": "me@example.com", "responseStatus": "needsAction", "self": true},
+            {"email": "jonas@fernwood.example", "responseStatus": "tentative", "optional": true}
+        ]
+    })
+}
+
+async fn mount_instance(server: &MockServer) {
+    Mock::given(method("GET"))
+        .and(path(format!("{CALENDAR}/calendars/primary/events/{INSTANCE}")))
+        .respond_with(ResponseTemplate::new(200).set_body_json(instance()))
+        .expect(1)
+        .mount(server)
+        .await;
+}
+
+#[tokio::test]
+async fn answering_one_occurrence_patches_that_instance_alone() {
+    let server = MockServer::start().await;
+    mount_token(&server).await;
+    mount_instance(&server).await;
+    let mut answered = instance();
+    answered["etag"] = json!("\"2\"");
+    answered["attendees"][1]["responseStatus"] = json!("declined");
+    Mock::given(method("PATCH"))
+        .and(path(format!("{CALENDAR}/calendars/primary/events/{INSTANCE}")))
+        .and(query_param("sendUpdates", "all"))
+        .and(body_json(json!({"attendees": [
+            {"email": "priya@fernwood.example", "responseStatus": "accepted", "organizer": true,
+             "comment": "Bring the numbers"},
+            {"email": "me@example.com", "responseStatus": "declined", "self": true},
+            {"email": "jonas@fernwood.example", "responseStatus": "tentative", "optional": true}
+        ]})))
+        .respond_with(ResponseTemplate::new(200).set_body_json(answered))
+        .expect(1)
+        .mount(&server)
+        .await;
+    // The series itself is never written.
+    Mock::given(method("PATCH"))
+        .and(path(format!("{CALENDAR}/calendars/primary/events/standup")))
+        .respond_with(ResponseTemplate::new(200))
+        .expect(0)
+        .mount(&server)
+        .await;
+
+    let event = client(&server)
+        .answer_event("primary", INSTANCE, "me@example.com", Answer::No, None)
+        .await
+        .unwrap();
+    assert_eq!(
+        (event.id.as_str(), event.series.as_deref(), event.etag.as_str(), event.my_answer),
+        (INSTANCE, Some("standup"), "\"2\"", Some(Answer::No))
+    );
+}
+
+#[tokio::test]
+async fn a_note_goes_out_as_the_guests_own_comment() {
+    let server = MockServer::start().await;
+    mount_token(&server).await;
+    mount_instance(&server).await;
+    Mock::given(method("PATCH"))
+        .and(path(format!("{CALENDAR}/calendars/primary/events/{INSTANCE}")))
+        .and(body_partial_json(json!({"attendees": [
+            {"email": "priya@fernwood.example", "comment": "Bring the numbers"},
+            {"email": "me@example.com", "responseStatus": "tentative",
+             "comment": "Running ten minutes late"},
+            {"email": "jonas@fernwood.example"}
+        ]})))
+        .respond_with(ResponseTemplate::new(200).set_body_json(instance()))
+        .expect(1)
+        .mount(&server)
+        .await;
+
+    client(&server)
+        .answer_event("primary", INSTANCE, "me@example.com", Answer::Maybe, Some("Running ten minutes late"))
+        .await
+        .unwrap();
+}
+
+#[tokio::test]
+async fn an_answer_found_by_its_uid_carries_the_note_too() {
+    let server = MockServer::start().await;
+    mount_token(&server).await;
+    mount_search(&server, found()).await;
+    Mock::given(method("PATCH"))
+        .and(path(format!("{CALENDAR}/calendars/primary/events/{EVENT}")))
+        .and(body_partial_json(json!({"attendees": [
+            {"email": "priya@fernwood.example"},
+            {"email": "me@example.com", "responseStatus": "accepted", "comment": "See you there"},
+            {"email": "jonas@fernwood.example"}
+        ]})))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({"id": EVENT})))
+        .expect(1)
+        .mount(&server)
+        .await;
+    client(&server)
+        .answer_invitation(UID, "me@example.com", Answer::Yes, None, Some("See you there"))
+        .await
+        .unwrap();
 }

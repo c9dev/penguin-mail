@@ -12,7 +12,8 @@ use std::rc::Rc;
 use gtk::prelude::WidgetExt;
 use gtk::{gio, glib};
 use mailrs_domain::invitation::{Answer, Invitation, Scope, When};
-use mailrs_domain::{AccountId, EpochMillis};
+use mailrs_domain::calendar::Occurrence;
+use mailrs_domain::{AccountId, Address, EpochMillis};
 use mailrs_sync::{Told, now_millis};
 
 use super::MainWindow;
@@ -43,7 +44,7 @@ impl MainWindow {
     /// its own window alike.
     pub(super) fn invitation_action(self: &Rc<Self>, view: &Rc<ConversationView>, action: Action) {
         match action {
-            Action::Answer(answer, scope) => self.answer_invitation(view, answer, scope),
+            Action::Answer(answer, scope, note) => self.answer_invitation(view, answer, scope, note),
             Action::Propose(proposal) => self.propose_time(view, proposal),
             Action::AddToCalendar => self.add_to_calendar(view),
             Action::ShowInCalendar => self.show_in_calendar(view),
@@ -57,6 +58,7 @@ impl MainWindow {
         view: &Rc<ConversationView>,
         answer: Answer,
         scope: Scope,
+        note: Option<String>,
     ) {
         let account_id = view.read(|open| open.account_id);
         let found =
@@ -82,7 +84,7 @@ impl MainWindow {
                 .core
                 .call(async move {
                     invitations
-                        .answer(account_id, &invitation, &me, answer, scope, now_millis())
+                        .answer(account_id, &invitation, &me, answer, scope, note, now_millis())
                         .await
                 })
                 .await;
@@ -102,11 +104,12 @@ impl MainWindow {
                             this.toast(&replied(answer, told));
                         }
                     }
-                    // An answer Google took is already in the calendar's
-                    // copy, so the event's block and "Waiting for your
-                    // answer" show it now.
+                    // An answer on the calendar is already in its copy, so
+                    // the event's block and "Waiting for your answer" show
+                    // it now; the queue sends it on.
                     if sent.told == Told::Calendar {
                         this.calendar.reload();
+                        this.calendar.push(account_id);
                     }
                     // The answer reached the organizer either way; the
                     // permission is what puts the event on the user's own
@@ -138,12 +141,50 @@ impl MainWindow {
         };
         let scope = view.invitation_scope();
         let uid = invitation.uid.clone();
+        let view = Rc::clone(view);
+        self.propose(account_id, invitation, me, scope, proposal, move |went| {
+            view.invitation_went(&uid, Some(went));
+        });
+    }
+
+    /// Propose a New Time from the calendar's event popover: the same
+    /// question and the same mail as the card's, for the invitation the
+    /// event stands for.
+    pub(super) fn propose_for_event(self: &Rc<Self>, account_id: AccountId, occurrence: Occurrence) {
+        let invitations = self.core.invitations();
+        let this = Rc::clone(self);
+        glib::spawn_future_local(async move {
+            let found = this
+                .core
+                .call(async move { invitations.for_event(account_id, &occurrence).await })
+                .await;
+            match found {
+                Ok((invitation, me, scope)) => {
+                    this.propose(account_id, invitation, me, scope, Proposal::Pick, |_| {})
+                }
+                Err(err) => this.failed(&gettext("Could not send your proposal: {reason}"), &err),
+            }
+        });
+    }
+
+    /// Asks for the time when `proposal` leaves it open, mails the
+    /// organizer the proposal, and hands `went` the line that says where
+    /// it went. The card and the calendar both come here.
+    fn propose(
+        self: &Rc<Self>,
+        account_id: AccountId,
+        invitation: Invitation,
+        me: Address,
+        scope: Scope,
+        proposal: Proposal,
+        went: impl Fn(String) + 'static,
+    ) {
         let organizer = invitation
             .organizer
             .as_ref()
             .map(|who| who.display().to_string());
         let invitations = self.core.invitations();
-        let (this, view) = (Rc::clone(self), Rc::clone(view));
+        let this = Rc::clone(self);
         glib::spawn_future_local(async move {
             let starts_at = match proposal {
                 Proposal::At(at) => Some(at),
@@ -180,16 +221,13 @@ impl MainWindow {
                     "This invitation names no organizer, so there is nobody to ask",
                 )),
                 Ok(_) => {
-                    view.invitation_went(
-                        &uid,
-                        Some(match &organizer {
-                            Some(organizer) => fill(
-                                &gettext("Proposed a new time to {organizer}"),
-                                &[("organizer", organizer)],
-                            ),
-                            None => gettext("Proposed a new time"),
-                        }),
-                    );
+                    went(match &organizer {
+                        Some(organizer) => fill(
+                            &gettext("Proposed a new time to {organizer}"),
+                            &[("organizer", organizer)],
+                        ),
+                        None => gettext("Proposed a new time"),
+                    });
                     this.toast(&gettext("New time proposed. The organizer decides."));
                 }
                 Err(err) => this.failed(&gettext("Could not send your proposal: {reason}"), &err),

@@ -492,7 +492,7 @@ menubutton.invitation-guests > button {
 .invitation-clash { color: var(--warning-color); font-size: 0.85em; font-weight: 600; margin-top: 6px; }
 /* The answers as separate pills, 88 by 34, the one given (or Yes, before
    any) filled in the accent; Show in Calendar a pill at the row's end. */
-.invitation-actions { margin-top: 34px; }
+.invitation-answering { margin-top: 34px; }
 button.invitation-answer,
 button.invitation-pill {
   min-height: 34px;

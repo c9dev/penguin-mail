@@ -194,9 +194,9 @@ pub fn save_events(conn: &Connection, account_id: AccountId, events: &[Event], s
         conn.execute(
             "INSERT OR REPLACE INTO events (account_id, calendar, id, uid, etag, starts_at, ends_at, zone, \
              all_day, title, place, description, color, busy, status, private, organizer, my_answer, \
-             reminders, conference, rules, series_end, series, original_start, pending, seen_at) \
+             reminders, conference, rules, series_end, series, original_start, pending, seen_at, sequence) \
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, \
-             ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26)",
+             ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27)",
             params![
                 account_id,
                 event.calendar,
@@ -224,6 +224,7 @@ pub fn save_events(conn: &Connection, account_id: AccountId, events: &[Event], s
                 event.original_start,
                 event.pending,
                 seen_at,
+                event.sequence,
             ],
         )?;
         conn.execute(
@@ -333,7 +334,7 @@ pub fn sweep(conn: &Connection, account_id: AccountId, calendar: &str, before: E
 
 const COLUMNS: &str = "e.account_id, e.calendar, e.id, e.uid, e.etag, e.starts_at, e.ends_at, e.zone, \
     e.all_day, e.title, e.place, e.description, e.color, e.busy, e.status, e.private, e.organizer, \
-    e.my_answer, e.reminders, e.conference, e.rules, e.series, e.original_start, e.pending";
+    e.my_answer, e.reminders, e.conference, e.rules, e.series, e.original_start, e.pending, e.sequence";
 
 pub fn event(conn: &Connection, account_id: AccountId, calendar: &str, id: &str) -> Result<Option<Event>> {
     let found = conn
@@ -733,6 +734,7 @@ fn read_event(row: &Row) -> rusqlite::Result<Event> {
         series: row.get(21)?,
         original_start: row.get(22)?,
         pending: row.get(23)?,
+        sequence: row.get(24)?,
         guests: Vec::new(),
         // A Meet request lives only in a queued write, never in a row
         // the store reads back.
@@ -750,6 +752,12 @@ pub enum ChangeKind {
     Remove,
     /// Move the event from the row's calendar to the one its body names.
     Move,
+    /// The account's answer to an invitation, as a guest, on the row's
+    /// event: a series' own id answers every occurrence, an occurrence's
+    /// id that one alone. It carries a [`QueuedAnswer`] and no body, and
+    /// goes out apart from any edit of the same event, since an edit
+    /// never writes the guest list of an event the account only attends.
+    Answer,
 }
 
 impl ChangeKind {
@@ -759,6 +767,7 @@ impl ChangeKind {
             ChangeKind::Save => "save",
             ChangeKind::Remove => "remove",
             ChangeKind::Move => "move",
+            ChangeKind::Answer => "answer",
         }
     }
 
@@ -767,6 +776,7 @@ impl ChangeKind {
             "create" => ChangeKind::Create,
             "remove" => ChangeKind::Remove,
             "move" => ChangeKind::Move,
+            "answer" => ChangeKind::Answer,
             _ => ChangeKind::Save,
         }
     }
@@ -796,6 +806,21 @@ pub struct QueuedChange {
     pub restores: Option<Event>,
     /// Whether the provider mails the guests about this change.
     pub notify: Notify,
+    /// What an [`ChangeKind::Answer`] row says; `None` on any other.
+    pub answer: Option<QueuedAnswer>,
+}
+
+/// A guest's answer waiting for the provider.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct QueuedAnswer {
+    /// The account's address, which finds its own entry on the guest list.
+    pub me: String,
+    pub answer: Answer,
+    /// The note the organizer reads with the answer. `None` leaves any
+    /// earlier note as the provider holds it.
+    pub note: Option<String>,
+    /// The event's title, for saying which answer the provider turned down.
+    pub title: String,
 }
 
 /// A queued change dropped unsent because a change it waited on was
@@ -843,7 +868,7 @@ pub fn enqueue_after(
     let existing: Option<(i64, String, Option<String>)> = conn
         .query_row(
             "SELECT seq, kind, notify FROM calendar_changes \
-             WHERE account_id = ?1 AND calendar = ?2 AND event = ?3 AND kind != 'move'",
+             WHERE account_id = ?1 AND calendar = ?2 AND event = ?3 AND kind NOT IN ('move', 'answer')",
             params![account_id, event.calendar, event.id],
             |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
         )
@@ -907,7 +932,7 @@ pub fn enqueue_after(
     let etag = (!event.etag.is_empty()).then_some(event.etag.as_str());
     let body = match kind {
         ChangeKind::Create | ChangeKind::Save | ChangeKind::Move => Some(json(event)),
-        ChangeKind::Remove => None,
+        ChangeKind::Remove | ChangeKind::Answer => None,
     };
     conn.execute(
         "INSERT INTO calendar_changes (account_id, calendar, event, kind, etag, body, waits_on, restores, notify) \
@@ -915,6 +940,80 @@ pub fn enqueue_after(
         params![account_id, event.calendar, event.id, kind.as_str(), etag, body, waits_on, restores, notify.stored()],
     )?;
     Ok(Some(conn.last_insert_rowid()))
+}
+
+/// Queues the account's answer to event `id` on `calendar`. An answer
+/// still unsent for the same event takes the new one in its place, so
+/// the organizer hears the last word once; its note stays unless the new
+/// answer brings one.
+pub fn enqueue_answer(
+    conn: &Connection,
+    account_id: AccountId,
+    calendar: &str,
+    id: &str,
+    answer: &QueuedAnswer,
+) -> Result<()> {
+    let existing: Option<(i64, Option<String>)> = conn
+        .query_row(
+            "SELECT seq, body FROM calendar_changes \
+             WHERE account_id = ?1 AND calendar = ?2 AND event = ?3 AND kind = 'answer'",
+            params![account_id, calendar, id],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .optional()?;
+    match existing {
+        Some((seq, body)) => {
+            let earlier = body.and_then(|b| serde_json::from_str::<QueuedAnswer>(&b).ok());
+            let merged = QueuedAnswer {
+                note: answer.note.clone().or_else(|| earlier.and_then(|e| e.note)),
+                ..answer.clone()
+            };
+            conn.execute("UPDATE calendar_changes SET body = ?2 WHERE seq = ?1", params![seq, json(&merged)])?;
+        }
+        None => {
+            conn.execute(
+                "INSERT INTO calendar_changes (account_id, calendar, event, kind, body) \
+                 VALUES (?1, ?2, ?3, 'answer', ?4)",
+                params![account_id, calendar, id, json(answer)],
+            )?;
+        }
+    }
+    Ok(())
+}
+
+/// Settles an answer the provider took: the row comes off, the event's
+/// copy takes `new_etag`, and an edit of the event queued behind the
+/// answer moves to that version too. The answer is the only change
+/// between the two versions, and an edit never writes the guest list, so
+/// the edit still says what the person meant. The event stops showing as
+/// waiting once nothing else is queued for it.
+pub fn finish_answer(
+    conn: &Connection,
+    account_id: AccountId,
+    seq: i64,
+    calendar: &str,
+    id: &str,
+    new_etag: &str,
+) -> Result<()> {
+    conn.execute("DELETE FROM calendar_changes WHERE seq = ?1", params![seq])?;
+    conn.execute(
+        "UPDATE calendar_changes SET etag = ?4 \
+         WHERE account_id = ?1 AND calendar = ?2 AND event = ?3 AND kind = 'save'",
+        params![account_id, calendar, id, new_etag],
+    )?;
+    conn.execute(
+        "UPDATE events SET etag = ?4 WHERE account_id = ?1 AND calendar = ?2 AND id = ?3",
+        params![account_id, calendar, id, new_etag],
+    )?;
+    let still_queued: bool = conn.query_row(
+        "SELECT EXISTS (SELECT 1 FROM calendar_changes WHERE account_id = ?1 AND calendar = ?2 AND event = ?3)",
+        params![account_id, calendar, id],
+        |row| row.get(0),
+    )?;
+    if !still_queued {
+        settle(conn, account_id, calendar, id)?;
+    }
+    Ok(())
 }
 
 /// Queues moving `event`, as it stands on `from`, to the calendar it
@@ -1055,14 +1154,22 @@ pub fn next_change(conn: &Connection, account_id: AccountId, after: i64) -> Resu
 }
 
 fn read_change(row: &Row, account_id: AccountId) -> rusqlite::Result<QueuedChange> {
+    let kind = ChangeKind::parse(&row.get::<_, String>(3)?);
+    let body = row.get::<_, Option<String>>(5)?;
+    // An answer's body is the answer, which must not be read as an event.
+    let (body, answer) = match kind {
+        ChangeKind::Answer => (None, body.and_then(|b| serde_json::from_str(&b).ok())),
+        _ => (body.and_then(|b| serde_json::from_str(&b).ok()), None),
+    };
     Ok(QueuedChange {
         seq: row.get(0)?,
         account_id,
         calendar: row.get(1)?,
         event: row.get(2)?,
-        kind: ChangeKind::parse(&row.get::<_, String>(3)?),
+        kind,
         etag: row.get(4)?,
-        body: row.get::<_, Option<String>>(5)?.and_then(|b| serde_json::from_str(&b).ok()),
+        body,
+        answer,
         waits_on: row.get(6)?,
         restores: row.get::<_, Option<String>>(7)?.and_then(|b| serde_json::from_str(&b).ok()),
         notify: Notify::from_stored(row.get::<_, Option<String>>(8)?.as_deref()),
@@ -1276,6 +1383,14 @@ mod tests {
 
     fn starts(found: &[Occurrence]) -> Vec<(String, EpochMillis)> {
         found.iter().map(|o| (o.event.id.clone(), o.start)).collect()
+    }
+
+    #[test]
+    fn the_copy_keeps_the_organizers_version_of_an_event() {
+        let (conn, id) = store();
+        let review = Event { sequence: 3, ..event("primary", "review", MONDAY, 1) };
+        save_events(&conn, id, &[review], 0).unwrap();
+        assert_eq!(super::event(&conn, id, "primary", "review").unwrap().unwrap().sequence, 3);
     }
 
     #[test]
@@ -1729,6 +1844,64 @@ mod tests {
         assert_eq!(held.len(), 1);
         assert_eq!(held[0].kind, ChangeKind::Remove);
         assert!(held[0].body.is_none());
+    }
+
+    fn going(answer: Answer, note: Option<&str>) -> QueuedAnswer {
+        QueuedAnswer {
+            me: "me@example.com".into(),
+            answer,
+            note: note.map(str::to_string),
+            title: "Stand-up".into(),
+        }
+    }
+
+    /// Answering twice before a send queues the latest answer once, and
+    /// a note given with the first stays unless the second brings one.
+    #[test]
+    fn two_answers_before_a_send_queue_the_latest_one() {
+        let (conn, id) = store();
+        enqueue_answer(&conn, id, "primary", "standup_20261020T090000Z", &going(Answer::Yes, Some("Late"))).unwrap();
+        enqueue_answer(&conn, id, "primary", "standup_20261020T090000Z", &going(Answer::Maybe, None)).unwrap();
+        let held = queued(&conn, id).unwrap();
+        assert_eq!(held.len(), 1);
+        assert_eq!(held[0].kind, ChangeKind::Answer);
+        assert_eq!(held[0].answer, Some(going(Answer::Maybe, Some("Late"))));
+        assert!(held[0].body.is_none());
+    }
+
+    /// An answer and an edit of the same event go out as two writes: the
+    /// edit's body carries no answer, and the answer patches no edit.
+    #[test]
+    fn an_edit_after_an_answer_queues_apart_from_it() {
+        let (conn, id) = store();
+        let standup = event("primary", "standup", MONDAY, 1);
+        enqueue_answer(&conn, id, "primary", "standup", &going(Answer::No, None)).unwrap();
+        enqueue(&conn, id, ChangeKind::Save, &standup).unwrap();
+        let kinds: Vec<ChangeKind> = queued(&conn, id).unwrap().iter().map(|q| q.kind).collect();
+        assert_eq!(kinds, vec![ChangeKind::Answer, ChangeKind::Save]);
+    }
+
+    /// Google gives the event a new version for the answer, so an edit
+    /// queued behind it goes out against that version, not a stale one.
+    #[test]
+    fn a_sent_answer_moves_the_edit_behind_it_to_the_new_version() {
+        let (conn, id) = store();
+        let standup = Event { pending: true, ..event("primary", "standup", MONDAY, 1) };
+        save_events(&conn, id, std::slice::from_ref(&standup), 0).unwrap();
+        enqueue_answer(&conn, id, "primary", "standup", &going(Answer::No, None)).unwrap();
+        let answer_seq = queued(&conn, id).unwrap()[0].seq;
+        finish_answer(&conn, id, answer_seq, "primary", "standup", "\"2\"").unwrap();
+        assert!(queued(&conn, id).unwrap().is_empty());
+        let row = super::event(&conn, id, "primary", "standup").unwrap().unwrap();
+        assert_eq!((row.etag.as_str(), row.pending), ("\"2\"", false));
+
+        enqueue_answer(&conn, id, "primary", "standup", &going(Answer::Yes, None)).unwrap();
+        enqueue(&conn, id, ChangeKind::Save, &row).unwrap();
+        let answer_seq = queued(&conn, id).unwrap()[0].seq;
+        finish_answer(&conn, id, answer_seq, "primary", "standup", "\"3\"").unwrap();
+        let held = queued(&conn, id).unwrap();
+        assert_eq!(held.len(), 1);
+        assert_eq!(held[0].etag.as_deref(), Some("\"3\""));
     }
 
     /// A caller that only needs to know which

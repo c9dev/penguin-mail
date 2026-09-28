@@ -376,13 +376,15 @@ impl GmailClient {
     /// repeating event. Without it the answer covers the series, which is
     /// what a single event and "all events" both want. Naming an
     /// occurrence costs a third call, since Google numbers the occurrences
-    /// of a series itself and the id it gives one is not the UID.
+    /// of a series itself and the id it gives one is not the UID. `note`
+    /// goes on the account's guest entry as its comment.
     pub async fn answer_invitation(
         &self,
         ical_uid: &str,
         me: &str,
         answer: Answer,
         occurrence: Option<&str>,
+        note: Option<&str>,
     ) -> Result<Answered, GmailError> {
         let list: EventList = self
             .call_at(
@@ -402,7 +404,7 @@ impl GmailClient {
         let Some(id) = self.event_to_answer(&event, occurrence).await? else {
             return Ok(Answered::NotOnCalendar);
         };
-        let guests = answered(&event, me, answer);
+        let guests = answered(&event, me, answer, note);
         let url = format!("{}/calendars/primary/events/{id}", self.calendar_base_url);
         let _: Value = self
             .call_at(&url, |url| {
@@ -413,6 +415,40 @@ impl GmailClient {
             })
             .await?;
         Ok(Answered::Done)
+    }
+
+    /// Answers event `id` on `calendar` as `me`, for an event the calendar
+    /// copy already holds, and lets Google tell the organizer. `id` is the
+    /// series' own id to answer every occurrence, or one occurrence's id
+    /// (`<series>_<start in UTC>`) to answer that one alone: Google keeps
+    /// the answer on that occurrence as a change of its own and leaves the
+    /// rest of the series as it was. `note` becomes the guest's
+    /// `comment`, which the organizer reads beside the answer; `None`
+    /// leaves any earlier note as Google holds it.
+    ///
+    /// Two calls: a read, since a patch replaces the whole guest list and
+    /// the other guests must go back as Google holds them, then the patch.
+    /// Answers the event as Google now holds it.
+    pub async fn answer_event(
+        &self,
+        calendar: &str,
+        id: &str,
+        me: &str,
+        answer: Answer,
+        note: Option<&str>,
+    ) -> Result<calendar::Event, GmailError> {
+        let url = format!("{}/calendars/{}/events/{}", self.calendar_base_url, encode(calendar), encode(id));
+        let event: Value = self.call_at(&url, |url| self.http().get(url)).await?;
+        let guests = answered(&event, me, answer, note);
+        let written: Value = self
+            .call_at(&url, |url| {
+                self.http()
+                    .patch(url)
+                    .query(&[("sendUpdates", "all")])
+                    .json(&json!({ "attendees": guests }))
+            })
+            .await?;
+        Ok(google_event(calendar, &written, Some(me), ""))
     }
 
     /// Which event the answer goes on: the series, or the one occurrence
@@ -759,7 +795,7 @@ fn busy_of(event: &Value) -> Busy {
 /// The event's guest list with this account's answer changed and every
 /// other guest left as Google has them. A patch replaces the whole list,
 /// so sending back less would drop the others.
-fn answered(event: &Value, me: &str, answer: Answer) -> Vec<Value> {
+fn answered(event: &Value, me: &str, answer: Answer, note: Option<&str>) -> Vec<Value> {
     let mut guests: Vec<Value> = event
         .get("attendees")
         .and_then(Value::as_array)
@@ -773,10 +809,17 @@ fn answered(event: &Value, me: &str, answer: Answer) -> Vec<Value> {
         found = true;
         if let Some(fields) = guest.as_object_mut() {
             fields.insert("responseStatus".into(), json!(answer.response_status()));
+            if let Some(note) = note {
+                fields.insert("comment".into(), json!(note));
+            }
         }
     }
     if !found {
-        guests.push(json!({ "email": me, "responseStatus": answer.response_status() }));
+        let mut guest = json!({ "email": me, "responseStatus": answer.response_status() });
+        if let Some(note) = note {
+            guest["comment"] = json!(note);
+        }
+        guests.push(guest);
     }
     guests
 }
@@ -886,6 +929,7 @@ pub fn google_event(calendar: &str, item: &Value, me: Option<&str>, calendar_zon
         organizer: item.pointer("/organizer/email").and_then(Value::as_str).map(str::to_string),
         my_answer: guests.iter().find(|g| g.me).and_then(|g| g.answer),
         guests,
+        sequence: item.get("sequence").and_then(Value::as_i64).unwrap_or(0),
         reminders: overrides.then(|| reminders(item.pointer("/reminders/overrides"))),
         conference: item
             .get("hangoutLink")

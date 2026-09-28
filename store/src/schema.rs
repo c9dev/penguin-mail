@@ -637,6 +637,13 @@ UPDATE calendars SET sync_token = NULL;
     r#"
 CREATE INDEX invitations_by_message ON invitations(account_id, message_id);
 "#,
+    // The organizer's version of each event (Google's `sequence`), which a
+    // proposal for another time names. The rows already stored carry 0
+    // until a whole read of each calendar replaces them.
+    r#"
+ALTER TABLE events ADD COLUMN sequence INTEGER NOT NULL DEFAULT 0;
+UPDATE calendars SET sync_token = NULL;
+"#,
     // Two choices the person makes about a calendar on this computer
     // alone, since the account may only read Google's calendar list:
     // whether the sidebar lists it, and a colour of their own in place

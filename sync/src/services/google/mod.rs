@@ -507,10 +507,11 @@ impl<G: GmailApi> CalendarService for Google<G> {
         me: &str,
         answer: Answer,
         occurrence: Option<EpochMillis>,
+        note: Option<&str>,
     ) -> Result<Answered, BackendError> {
         Ok(paced(
             self.gmail
-                .answer_invitation(ical_uid, me, answer, occurrence),
+                .answer_invitation(ical_uid, me, answer, occurrence, note),
         )
         .await?)
     }
@@ -597,6 +598,17 @@ impl<G: GmailApi> CalendarService for Google<G> {
         notify: model::Notify,
     ) -> Result<model::Event, BackendError> {
         paced(self.gmail.move_event(event, destination, notify)).await.map_err(calendar_write_error)
+    }
+
+    async fn answer_event(
+        &self,
+        calendar: &str,
+        id: &str,
+        me: &str,
+        answer: Answer,
+        note: Option<&str>,
+    ) -> Result<model::Event, BackendError> {
+        paced(self.gmail.answer_event(calendar, id, me, answer, note)).await.map_err(calendar_write_error)
     }
 }
 

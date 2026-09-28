@@ -216,13 +216,14 @@ pub trait GmailApi: Send + Sync + 'static {
     /// error.
     /// `occurrence` is the start of the one occurrence to answer, for an
     /// invitation to a single occurrence of a repeating event; `None`
-    /// answers the series.
+    /// answers the series. `note` goes to the organizer with the answer.
     fn answer_invitation(
         &self,
         ical_uid: &str,
         me: &str,
         answer: Answer,
         occurrence: Option<EpochMillis>,
+        note: Option<&str>,
     ) -> impl Future<Output = Result<Answered, GmailError>> + Send;
 
     /// What the account's calendar already holds between `from` and `to`.
@@ -313,6 +314,19 @@ pub trait GmailApi: Send + Sync + 'static {
         event: &calendar::Event,
         destination: &str,
         notify: calendar::Notify,
+    ) -> impl Future<Output = Result<calendar::Event, GmailError>> + Send;
+
+    /// Answers event `id` on `calendar` as the guest `me`, a series by its
+    /// own id or one occurrence by its occurrence id, with `note` as the
+    /// guest's comment, and lets Google tell the organizer. Answers the
+    /// event as Google now holds it.
+    fn answer_event(
+        &self,
+        calendar: &str,
+        id: &str,
+        me: &str,
+        answer: Answer,
+        note: Option<&str>,
     ) -> impl Future<Output = Result<calendar::Event, GmailError>> + Send;
 }
 
@@ -510,10 +524,11 @@ impl GmailApi for AccountClient {
         me: &str,
         answer: Answer,
         occurrence: Option<EpochMillis>,
+        note: Option<&str>,
     ) -> Result<Answered, GmailError> {
         let occurrence = occurrence.and_then(rfc3339);
         self.client
-            .answer_invitation(ical_uid, me, answer, occurrence.as_deref())
+            .answer_invitation(ical_uid, me, answer, occurrence.as_deref(), note)
             .await
     }
 
@@ -611,6 +626,17 @@ impl GmailApi for AccountClient {
         notify: calendar::Notify,
     ) -> Result<calendar::Event, GmailError> {
         self.client.move_event(event, destination, notify).await
+    }
+
+    async fn answer_event(
+        &self,
+        calendar: &str,
+        id: &str,
+        me: &str,
+        answer: Answer,
+        note: Option<&str>,
+    ) -> Result<calendar::Event, GmailError> {
+        self.client.answer_event(calendar, id, me, answer, note).await
     }
 
     async fn create_label(&self, name: &str) -> Result<RemoteLabel, GmailError> {

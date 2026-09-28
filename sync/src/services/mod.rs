@@ -742,13 +742,15 @@ pub trait MailBackend: Send + Sync + 'static {
 pub trait CalendarService: Send + Sync + 'static {
     /// Answers the event `ical_uid` names as `me`, and lets the server
     /// tell the organizer. `occurrence` is the start of the one occurrence
-    /// to answer; `None` answers the series.
+    /// to answer; `None` answers the series. `note` goes to the organizer
+    /// with the answer.
     fn answer_invitation(
         &self,
         ical_uid: &str,
         me: &str,
         answer: Answer,
         occurrence: Option<EpochMillis>,
+        note: Option<&str>,
     ) -> impl Future<Output = Result<Answered, BackendError>> + Send;
 
     /// What the calendar already holds between `from` and `to`.
@@ -834,6 +836,20 @@ pub trait CalendarService: Send + Sync + 'static {
         event: &model::Event,
         destination: &str,
         notify: model::Notify,
+    ) -> impl Future<Output = Result<model::Event, BackendError>> + Send;
+
+    /// Answers event `id` on `calendar` as the guest `me`: a series'
+    /// own id answers every occurrence, an occurrence's id that one
+    /// alone. `note` goes with the answer for the organizer to read;
+    /// `None` leaves an earlier one as it was. Answers the event as the
+    /// server now holds it.
+    fn answer_event(
+        &self,
+        calendar: &str,
+        id: &str,
+        me: &str,
+        answer: Answer,
+        note: Option<&str>,
     ) -> impl Future<Output = Result<model::Event, BackendError>> + Send;
 }
 

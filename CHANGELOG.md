@@ -22,6 +22,13 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   a small "•••" button, as in Gmail; click it to read them in place.
 - An invitation's card shows the hours around the meeting from your
   calendar and says whether anything else is on then.
+- Answer one occurrence of a repeating invitation: after Yes, Maybe or
+  No in the calendar, choose This event only or All events. An answer
+  given offline goes out once you are back online, even after a restart.
+- Add a note to your answer, in the event popover or on the invitation
+  in your mail. The organizer reads it next to your Yes, Maybe or No.
+- Propose a New Time from the calendar's event popover, the same way as
+  from the invitation in your mail.
 - Remove an invitation from your calendar with Remove in its popover or
   the Delete key. The organizer sees that you declined, and nobody else
   gets mail about it. Edit in the same popover changes your own
