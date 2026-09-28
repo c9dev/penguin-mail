@@ -189,19 +189,20 @@ uses a tool from outside the app, and it is off until you pick a model.
 
 ## Install
 
-Penguin Mail runs on Linux, x86_64. The .deb and the rpm need GTK 4.20,
-libadwaita 1.8 and WebKitGTK 6.0 from your distribution, as Ubuntu 26.04
-and Fedora 43 have; the snap brings its own. Penguin Mail is not on
-Flathub yet. The tray icon needs a StatusNotifier host, which Ubuntu's
-AppIndicator extension provides.
+Penguin Mail runs on Linux, x86_64. The .deb, the rpm and the Arch
+package need GTK 4.20, libadwaita 1.8 and WebKitGTK 6.0 from your
+distribution, as Ubuntu 26.04, Fedora 43 and Arch's own repositories
+have; the snap brings its own. Penguin Mail is not on Flathub yet. The
+tray icon needs a StatusNotifier host, which Ubuntu's AppIndicator
+extension provides.
 
-| | .deb | rpm | Snap |
-|---|---|---|---|
-| Updates | Install in the app, or `apt upgrade` | `dnf upgrade` | Snap Store |
-| GnuPG | the system's | the system's | the snap's, on your `~/.gnupg` |
-| Assistant skills | yes | yes | no |
-| Claude Code, and MCP servers you run as a command | yes | yes | no |
-| Tray icon | yes | yes | yes |
+| | .deb | rpm | Arch | Snap |
+|---|---|---|---|---|
+| Updates | Install in the app, or `apt upgrade` | `dnf upgrade` | Download the new `.pkg.tar.zst` | Snap Store |
+| GnuPG | the system's | the system's | the system's | the snap's, on your `~/.gnupg` |
+| Assistant skills | yes | yes | yes | no |
+| Claude Code, and MCP servers you run as a command | yes | yes | yes | no |
+| Tray icon | yes | yes | yes | yes |
 
 Skills are off in the snap because a skill's scripts run in a sandbox of
 their own, which cannot start inside the one the snap runs in. That
@@ -274,6 +275,23 @@ sudo dnf install penguin-mail
 dnf asks you to accept the key the first time. `sudo dnf upgrade` brings
 each new version, and the `.rpm` on the releases page adds the repository
 too.
+
+### On Arch
+
+Download the `.pkg.tar.zst` from the
+[latest release](https://github.com/c9dev/penguin-mail/releases/latest) and
+install it, replacing `X.Y.Z` with the version:
+
+```sh
+sudo pacman -U ./penguin-mail-X.Y.Z-1-x86_64.pkg.tar.zst
+```
+
+pacman pulls in the libraries it needs. There is no Penguin Mail
+repository for Arch yet, so a new release means downloading and
+installing its `.pkg.tar.zst` again.
+[packaging/aur/PKGBUILD](packaging/aur/PKGBUILD) is a ready AUR package
+once someone publishes it, which would bring updates through an AUR
+helper instead.
 
 ### From the Snap Store
 

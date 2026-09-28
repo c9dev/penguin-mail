@@ -7,6 +7,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### New
 
+- Penguin Mail comes as a package for Arch Linux: download the
+  `.pkg.tar.zst` from the releases page and install it with
+  `sudo pacman -U`.
 - A calendar beside the mail: switch to it at the top of the sidebar or
   with Alt+2 to see your Google calendars by day, week or month, or as
   a scrolling list on a narrow window. Answer an invitation from its
