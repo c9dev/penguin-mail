@@ -3575,7 +3575,7 @@ msgstr ""
 msgid "View"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:299 app/src/ui/calendar/mod.rs:2104
+#: app/src/ui/calendar/mod.rs:299 app/src/ui/calendar/mod.rs:2110
 msgid "New Event (N)"
 msgstr ""
 
@@ -3615,41 +3615,41 @@ msgstr ""
 msgid "Could not move the event: {reason}"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:1138
+#: app/src/ui/calendar/mod.rs:1144
 msgid "All-day events"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:1140
+#: app/src/ui/calendar/mod.rs:1146
 msgid "All-day"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:1494 app/src/ui/calendar/mod.rs:2544
+#: app/src/ui/calendar/mod.rs:1500 app/src/ui/calendar/mod.rs:2560
 #: app/src/ui/calendar/sidebar.rs:123 app/src/ui/calendar/words.rs:220
 msgid "%a"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:1898
+#: app/src/ui/calendar/mod.rs:1904
 msgid "Deleted “{title}”"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:1901
+#: app/src/ui/calendar/mod.rs:1907
 msgid "Could not delete the event: {reason}"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:1945 app/src/ui/window.rs:1830
+#: app/src/ui/calendar/mod.rs:1951 app/src/ui/window.rs:1830
 #: app/src/ui/window/scheduled.rs:21 app/src/ui/window/shortcuts.rs:444
 msgid "Undo"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:2064
+#: app/src/ui/calendar/mod.rs:2070
 msgid "Could not send your answer: {reason}"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:2106
+#: app/src/ui/calendar/mod.rs:2112
 msgid "None of your calendars take new events"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:2321
+#: app/src/ui/calendar/mod.rs:2337
 msgid "Could not save the event: {reason}"
 msgstr ""
 
@@ -3780,19 +3780,19 @@ msgstr ""
 msgid "Grant Access for {account}"
 msgstr ""
 
-#: app/src/ui/calendar/time_grid.rs:190
+#: app/src/ui/calendar/time_grid.rs:223
 msgid "{count} more event"
 msgid_plural "{count} more events"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/calendar/time_grid.rs:216
+#: app/src/ui/calendar/time_grid.rs:249
 msgid ""
 "Shift+Up or Shift+Down moves it; Shift+Alt+Up or Shift+Alt+Down changes when "
 "it ends."
 msgstr ""
 
-#: app/src/ui/calendar/time_grid.rs:221
+#: app/src/ui/calendar/time_grid.rs:254
 msgid "{base} {hint}"
 msgstr ""
 

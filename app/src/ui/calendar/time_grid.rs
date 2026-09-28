@@ -66,12 +66,20 @@ const ALL_DAY_PAD_BELOW: f32 = 5.0;
 /// the gap between two cards sharing a lane split.
 const CARD_INSET: f32 = 3.0;
 const LANE_GAP: f32 = 3.0;
+/// The shortest a timed event's card ever draws, however briefly the
+/// event itself runs, so a five-minute meeting still keeps its title
+/// readable: the same height stage 2 gave an all-day card
+/// ([`ALL_DAY_CARD`]), which the mockup already treats as legible.
+const MIN_HEIGHT: f32 = ALL_DAY_CARD;
 
 /// Where one card sits in pixels, from `column`'s share of `width`
 /// (`GUTTER` plus `columns` equal shares), split into `lanes` at `lane`,
-/// running from `top_hours` to `bottom_hours` down the column. Returns a
-/// plain tuple rather than `graphene::Rect` so the test below needs no
-/// display; `size_allocate` builds the `Rect` from it.
+/// running from `top_hours` to `bottom_hours` down the column. The
+/// height never draws under [`MIN_HEIGHT`]: the card's top stays at its
+/// event's real start, so a short event only runs further down than it
+/// truly does, never up past it. Returns a plain tuple rather than
+/// `graphene::Rect` so the test below needs no display; `size_allocate`
+/// builds the `Rect` from it.
 pub fn rect(
     column: usize,
     columns: usize,
@@ -88,8 +96,33 @@ pub fn rect(
     let x =
         GUTTER + column as f32 * column_width + CARD_INSET + lane as f32 * (lane_width + LANE_GAP);
     let y = top_hours as f32 * HOUR + CARD_INSET / 2.0;
-    let height = (bottom_hours - top_hours) as f32 * HOUR - CARD_INSET;
+    let height = ((bottom_hours - top_hours) as f32 * HOUR - CARD_INSET).max(MIN_HEIGHT);
     (x, y, lane_width, height)
+}
+
+/// The milliseconds [`MIN_HEIGHT`] pixels are at `hour_px` pixels an
+/// hour, with `card_inset` trimmed off each card: how long an event
+/// must run before its card is tall enough to draw at its own length
+/// rather than the minimum. Two events shorter than this, close enough
+/// together, would draw over each other once both stretch to the
+/// minimum; [`stretch_for_lanes`] uses it to give them separate lanes
+/// instead.
+fn min_duration(min_height: f32, card_inset: f32, hour_px: f32) -> EpochMillis {
+    let hours = f64::from((min_height + card_inset) / hour_px);
+    (hours * 3_600_000.0).round() as EpochMillis
+}
+
+/// `spans`, each stretched to run at least `min` from its own start:
+/// not what the cards draw (their real length still decides that; see
+/// [`rect`]'s own floor), but what lane assignment reasons about, so two
+/// short events close enough together that their minimum-height cards
+/// would touch take separate lanes rather than sharing one and drawing
+/// on top of each other.
+fn stretch_for_lanes(
+    spans: &[(EpochMillis, EpochMillis)],
+    min: EpochMillis,
+) -> Vec<(EpochMillis, EpochMillis)> {
+    spans.iter().map(|&(start, end)| (start, end.max(start + min))).collect()
 }
 
 /// Where one all-day card sits: `start_day` to `end_day` (exclusive) of
@@ -757,7 +790,8 @@ impl TimeGrid {
             };
             let spans: Vec<(EpochMillis, EpochMillis)> =
                 pieces.iter().map(|&(_, s, e)| (s, e)).collect();
-            let (placed, more) = layout::lanes(&spans);
+            let min = min_duration(MIN_HEIGHT, CARD_INSET, HOUR);
+            let (placed, more) = layout::lanes(&stretch_for_lanes(&spans, min));
 
             let mut in_day: Vec<(gtk::Widget, imp::Placement, f64)> = Vec::new();
             for p in placed {
@@ -1205,7 +1239,7 @@ impl TimeGrid {
             None => return false,
             Some(state) => state.started,
         };
-        if !already_started && dx.hypot(dy) < threshold {
+        if !already_started && drag::is_click(dx, dy, threshold) {
             return false;
         }
         if !already_started {
@@ -1273,9 +1307,12 @@ impl TimeGrid {
         true
     }
 
-    /// The release. A drag that never started leaves the card's own
-    /// click to open the popover, as before; one that did settles the
-    /// card on the spring, or emits `selected` for empty time.
+    /// The release. A drag on a card that never started leaves its own
+    /// click to open the popover, as before. On empty time, a press that
+    /// never started emits `selected` for the half hour it landed on,
+    /// the same click quick create opens from; one that did emits it for
+    /// the span dragged. A card drag past the threshold settles it on
+    /// the spring instead.
     fn end(&self, dx: f64, dy: f64) {
         let imp = self.imp();
         let taken = imp.dragging.borrow().as_ref().map(|d| {
@@ -1286,6 +1323,12 @@ impl TimeGrid {
         };
         if !started {
             imp.dragging.replace(None);
+            if card.is_none() {
+                let click = drag::click_slot(from);
+                if let Some(f) = imp.selected.borrow().as_ref() {
+                    f(click.0, click.1);
+                }
+            }
             return;
         }
         let (x, y) = (press.0 + dx, press.1 + dy);
@@ -1727,6 +1770,58 @@ mod tests {
         let r = rect(1, 7, 1, 2, 10.0, 11.5, 60.0 + 7.0 * 100.0);
         assert_eq!((r.0, r.2), (211.5, 45.5));
         assert_eq!((r.1, r.3), (621.5, 90.0));
+    }
+
+    #[test]
+    fn a_five_minute_event_still_draws_a_readable_card() {
+        let (_, _, _, height) = rect(0, 1, 0, 1, 9.0, 9.0 + 5.0 / 60.0, 800.0);
+        assert_eq!(height, MIN_HEIGHT);
+    }
+
+    #[test]
+    fn an_hour_long_event_is_well_above_the_minimum_and_keeps_its_own_height() {
+        let (_, _, _, height) = rect(0, 1, 0, 1, 9.0, 10.0, 800.0);
+        assert_eq!(height, HOUR - CARD_INSET);
+    }
+
+    #[test]
+    fn the_card_s_top_never_moves_to_make_room_for_the_minimum() {
+        let (_, top, _, _) = rect(0, 1, 0, 1, 9.0, 9.0 + 5.0 / 60.0, 800.0);
+        assert_eq!(top, 9.0 * HOUR + CARD_INSET / 2.0);
+    }
+
+    #[test]
+    fn min_duration_is_how_long_an_event_runs_before_its_card_clears_the_floor() {
+        let min = min_duration(24.0, 3.0, 62.0);
+        // 27 px at 62 px an hour is 26 minutes 8 seconds, rounded to the
+        // millisecond.
+        assert_eq!(min, 1_567_742);
+    }
+
+    #[test]
+    fn two_short_events_close_together_take_separate_lanes() {
+        // Two five-minute events ten minutes apart do not overlap in
+        // real time, but once both stretch to the minimum card height
+        // they would draw on top of each other in one lane.
+        let five_min = 5 * 60_000;
+        let ten_min = 10 * 60_000;
+        let spans = [(0, five_min), (ten_min, ten_min + five_min)];
+        let stretched = stretch_for_lanes(&spans, 20 * 60_000);
+        let (placed, _) = layout::lanes(&stretched);
+        assert_eq!(placed[0].lane, 0);
+        assert_eq!(placed[1].lane, 1);
+        assert_eq!(placed[0].lanes, 2);
+    }
+
+    #[test]
+    fn events_well_apart_share_a_lane_even_after_stretching() {
+        let five_min = 5 * 60_000;
+        let spans = [(0, five_min), (30 * 60_000, 30 * 60_000 + five_min)];
+        let stretched = stretch_for_lanes(&spans, 20 * 60_000);
+        let (placed, _) = layout::lanes(&stretched);
+        assert_eq!(placed[0].lane, 0);
+        assert_eq!(placed[1].lane, 0);
+        assert_eq!(placed[0].lanes, 1);
     }
 
     #[test]

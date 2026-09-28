@@ -92,6 +92,27 @@ pub fn selection(a: EpochMillis, b: EpochMillis) -> (EpochMillis, EpochMillis) {
     (start, end.max(start + SHORTEST))
 }
 
+/// Whether a press that has moved `dx`, `dy` pixels from where it
+/// landed still counts as a click rather than a drag: under
+/// `threshold`, GTK's own tolerance for a press that wanders before
+/// release. The caller latches the answer once it turns `false`, so a
+/// gesture that ever leaves the threshold stays a drag for the rest of
+/// the press, however still the pointer sits by release.
+pub fn is_click(dx: f64, dy: f64, threshold: f64) -> bool {
+    dx.hypot(dy) < threshold
+}
+
+/// Half an hour long.
+const HALF_HOUR: EpochMillis = 30 * 60_000;
+
+/// The slot a single click on empty time opens quick create at: the
+/// half hour `at` falls in, so a click near the bottom of a slot does
+/// not open the one below it.
+pub fn click_slot(at: EpochMillis) -> (EpochMillis, EpochMillis) {
+    let start = at.div_euclid(HALF_HOUR) * HALF_HOUR;
+    (start, start + HALF_HOUR)
+}
+
 /// `at` rounded to the nearest multiple of `step_minutes`, a tie going up.
 pub fn snap(at: EpochMillis, step_minutes: i64) -> EpochMillis {
     let step = step_minutes * 60_000;
@@ -227,6 +248,20 @@ mod tests {
     fn a_drag_across_empty_time_covers_whole_quarter_hours() {
         assert_eq!(selection(10 * H + 50 * M, 10 * H + 5 * M), (10 * H, 11 * H));
         assert_eq!(selection(10 * H + 3 * M, 10 * H + 4 * M), (10 * H, 10 * H + SHORTEST));
+    }
+
+    #[test]
+    fn a_press_under_the_threshold_is_a_click() {
+        assert!(is_click(2.0, 1.0, 8.0));
+        assert!(!is_click(6.0, 6.0, 8.0), "8.49 px of travel passes an 8 px threshold");
+        assert!(is_click(0.0, 0.0, 8.0));
+    }
+
+    #[test]
+    fn a_click_opens_the_half_hour_it_falls_in() {
+        assert_eq!(click_slot(10 * H + 12 * M), (10 * H, 10 * H + 30 * M));
+        assert_eq!(click_slot(10 * H + 31 * M), (10 * H + 30 * M, 11 * H));
+        assert_eq!(click_slot(10 * H), (10 * H, 10 * H + 30 * M));
     }
 
     #[test]

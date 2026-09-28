@@ -1104,6 +1104,12 @@ impl CalendarView {
                     }
                 });
                 let weak = Rc::downgrade(self);
+                month.connect_day_clicked(move |day| {
+                    if let Some(view) = weak.upgrade() {
+                        view.quick_create_on_day(day);
+                    }
+                });
+                let weak = Rc::downgrade(self);
                 month.connect_event_activated(move |_, o, anchor| {
                     if let Some(view) = weak.upgrade() {
                         view.show_event(anchor, o);
@@ -2162,15 +2168,25 @@ impl CalendarView {
     /// the focused day in Month. The narrow agenda has no grid to point
     /// at, so [`Self::quick_create_at`] opens the editor instead.
     pub fn quick_create(self: &Rc<Self>) {
-        let (start, end) = match self.kind.get() {
+        match self.kind.get() {
             ViewKind::Month => {
                 let day = self.focused_day().unwrap_or_else(|| chrono::Local::now().date_naive());
-                let nine = layout::instant_at(day, 9.0, &chrono::Local);
-                (nine, nine + 3_600_000)
+                self.quick_create_on_day(day);
             }
-            _ => self.slot(),
-        };
-        self.quick_create_at(start, end);
+            _ => {
+                let (start, end) = self.slot();
+                self.quick_create_at(start, end);
+            }
+        }
+    }
+
+    /// Quick create on `day` in Month view, at the same 09:00 default N
+    /// opens: a click on a cell's own empty background and N on the
+    /// focused day both land here, since a month cell has no time of day
+    /// of its own to click.
+    pub(super) fn quick_create_on_day(self: &Rc<Self>, day: NaiveDate) {
+        let nine = layout::instant_at(day, 9.0, &chrono::Local);
+        self.quick_create_at(nine, nine + 3_600_000);
     }
 
     /// The widget to point quick create's popover at, and the slot's
