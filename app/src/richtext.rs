@@ -84,7 +84,7 @@ impl Block {
         self.spans.iter().map(|s| s.text.as_str()).collect()
     }
 
-    fn is_blank(&self) -> bool {
+    pub fn is_blank(&self) -> bool {
         self.spans
             .iter()
             .all(|s| s.image.is_none() && s.text.trim().is_empty())
