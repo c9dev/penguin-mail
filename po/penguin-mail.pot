@@ -7961,34 +7961,34 @@ msgstr ""
 msgid "Is flagged"
 msgstr ""
 
-#: gmail/src/oauth.rs:414
+#: gmail/src/oauth.rs:419
 msgid "Signed in to Penguin Mail"
 msgstr ""
 
-#: gmail/src/oauth.rs:415
+#: gmail/src/oauth.rs:420
 msgid "You can close this tab and go back to Penguin Mail."
 msgstr ""
 
-#: gmail/src/oauth.rs:420
+#: gmail/src/oauth.rs:425
 msgid "You didn't allow access"
 msgstr ""
 
-#: gmail/src/oauth.rs:421
+#: gmail/src/oauth.rs:426
 msgid ""
 "Penguin Mail has not been signed in. To try again, go back to Penguin Mail "
 "and press Grant Access."
 msgstr ""
 
-#: gmail/src/oauth.rs:426
+#: gmail/src/oauth.rs:431
 msgid "Sign-in didn't finish"
 msgstr ""
 
-#: gmail/src/oauth.rs:427
+#: gmail/src/oauth.rs:432
 msgid ""
 "Go back to Penguin Mail to see why and try again. You can close this tab."
 msgstr ""
 
-#: gmail/src/oauth.rs:429
+#: gmail/src/oauth.rs:434
 msgid "Nothing here"
 msgstr ""
 
