@@ -14,13 +14,15 @@ use crate::settings::{Change, Settings};
 
 /// The page for `accounts`, each with what its server offers and what its
 /// own consent withheld. `grant` runs the consent flow again for one
-/// account's Grant Access button.
+/// account's Grant Access button. `calendar_rows`, the calendar's own
+/// settings, open the Calendar section.
 pub fn page(
     app: &Rc<App>,
     settings: &Settings,
     accounts: &[(Account, Offers)],
     withheld: impl Fn(AccountId) -> Withheld,
     grant: impl Fn(AccountId) + Clone + 'static,
+    calendar_rows: &[gtk::Widget],
 ) -> adw::PreferencesPage {
     let page = adw::PreferencesPage::builder()
         .title(gettext("Contacts & Calendar"))
@@ -28,7 +30,7 @@ pub fn page(
         .name("contacts")
         .build();
     page.add(&contacts(app, settings, accounts, &withheld, grant.clone()));
-    page.add(&calendar(accounts, &withheld, grant));
+    page.add(&calendar(accounts, &withheld, grant, calendar_rows));
     page
 }
 
@@ -135,11 +137,13 @@ enum CalendarRow {
 /// GNOME Calendar and the clock. Answering an invitation needs nothing
 /// here: sign-in already asked for the calendar permission. An account
 /// whose server has no calendar, or whose own consent withheld it, gets
-/// a row that says so instead.
+/// a row that says so instead. `settings_rows`, the calendar's own
+/// settings, sit above the accounts.
 fn calendar(
     accounts: &[(Account, Offers)],
     withheld: &impl Fn(AccountId) -> Withheld,
     grant: impl Fn(AccountId) + Clone + 'static,
+    settings_rows: &[gtk::Widget],
 ) -> adw::PreferencesGroup {
     let group = adw::PreferencesGroup::builder()
         .title(gettext("Calendar"))
@@ -149,6 +153,10 @@ fn calendar(
              Online Accounts.",
         ))
         .build();
+    // The calendar's own settings come first, above the accounts.
+    for row in settings_rows {
+        group.add(row);
+    }
     let mut online_accounts = true;
     for (account, offers) in accounts {
         match calendar_lack(account, *offers, withheld(account.id)) {

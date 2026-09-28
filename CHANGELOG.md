@@ -89,6 +89,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Improved
 
+- Event reminders, the first day of the week and working hours now sit in
+  the Calendar section of Preferences, on the Contacts & Calendar page.
 - An invitation's card now sits inside its message, under the sender and
   above the text, and scrolls with it.
 - The mailboxes sit in their own rounded panel under Favorites,
