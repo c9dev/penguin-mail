@@ -1760,7 +1760,9 @@ msgstr "Permitir que o Penguin Mail faça a gestão dos seus calendários"
 msgid ""
 "Making, renaming and deleting calendars, and subscribing to one, needs one "
 "more permission for {account}. Google asks you to confirm in your browser."
-msgstr "Criar, mudar o nome e eliminar calendários, e subscrever um, precisa de mais uma permissão para {account}. A Google pede-lhe que confirme no navegador."
+msgstr ""
+"Criar, mudar o nome e eliminar calendários, e subscrever um, precisa de mais "
+"uma permissão para {account}. A Google pede-lhe que confirme no navegador."
 
 #: app/src/permission.rs:195
 msgid "change Gmail settings"
@@ -4056,7 +4058,9 @@ msgstr ""
 msgid ""
 "The calendar is deleted from Google Calendar on every device. This cannot be "
 "undone."
-msgstr "O calendário é eliminado do Google Calendar em todos os dispositivos. Não é possível desfazer."
+msgstr ""
+"O calendário é eliminado do Google Calendar em todos os dispositivos. Não é "
+"possível desfazer."
 
 #: app/src/ui/calendar/manage.rs:37
 msgid ""
@@ -4065,8 +4069,12 @@ msgid ""
 msgid_plural ""
 "The calendar and its {count} events are deleted from Google Calendar on "
 "every device. This cannot be undone."
-msgstr[0] "O calendário e o seu {count} evento são eliminados do Google Calendar em todos os dispositivos. Não é possível desfazer."
-msgstr[1] "O calendário e os seus {count} eventos são eliminados do Google Calendar em todos os dispositivos. Não é possível desfazer."
+msgstr[0] ""
+"O calendário e o seu {count} evento são eliminados do Google Calendar em "
+"todos os dispositivos. Não é possível desfazer."
+msgstr[1] ""
+"O calendário e os seus {count} eventos são eliminados do Google Calendar em "
+"todos os dispositivos. Não é possível desfazer."
 
 #: app/src/ui/calendar/manage.rs:72
 msgid "Could not change the calendar list: {reason}"
@@ -4111,7 +4119,8 @@ msgstr "Novo calendário"
 #: app/src/ui/calendar/manage.rs:213
 msgid ""
 "A calendar of your own on {account}, in Google Calendar on every device."
-msgstr "Um calendário seu em {account}, no Google Calendar em todos os dispositivos."
+msgstr ""
+"Um calendário seu em {account}, no Google Calendar em todos os dispositivos."
 
 #: app/src/ui/calendar/manage.rs:244 app/src/ui/hide_my_email.rs:357
 #: app/src/ui/rules.rs:307 app/src/ui/smart_editor.rs:146
@@ -4133,7 +4142,10 @@ msgid ""
 "Enter the address of a published calendar, starting with https or webcal. "
 "Google Calendar fetches it from then on and shows it on every device. You "
 "can read it but not change it."
-msgstr "Introduza o endereço de um calendário publicado, começado por https ou webcal. O Google Calendar passa a obtê-lo e mostra-o em todos os dispositivos. Pode lê-lo, mas não alterá-lo."
+msgstr ""
+"Introduza o endereço de um calendário publicado, começado por https ou "
+"webcal. O Google Calendar passa a obtê-lo e mostra-o em todos os "
+"dispositivos. Pode lê-lo, mas não alterá-lo."
 
 #: app/src/ui/calendar/manage.rs:285
 msgid "Calendar address"
@@ -8203,7 +8215,7 @@ msgid_plural "{accounts} will get new labels."
 msgstr[0] "Etiqueta nova em: {accounts}."
 msgstr[1] "Etiquetas novas em: {accounts}."
 
-#: sync/src/calendar_copy.rs:1274
+#: sync/src/calendar_copy.rs:1279
 msgid ""
 "Google Calendar offers out of office and focus time only on some work and "
 "school accounts ({reason})"
