@@ -414,7 +414,7 @@ pub struct Agenda {
     /// that was first before the insert is asked to stay first.
     list_view: gtk::ListView,
     /// The dim line [`Agenda::show_no_earlier`] reveals once loading has
-    /// reached `FIRST_READ_BACK` before today, above the list's own
+    /// reached the earliest day the agenda loads, above the list's own
     /// first row so it reads as part of the same scrolling content.
     no_earlier: gtk::Label,
     /// Shared with the row factory, which reads each dot's colour from it
@@ -629,7 +629,7 @@ impl Agenda {
     }
 
     /// Reveals the dim line saying the copy holds nothing earlier, once
-    /// loading has reached `FIRST_READ_BACK` before today. `show` hides
+    /// loading has reached `range::earliest_agenda_day`. `show` hides
     /// it again, for the range change that follows leaving List mode
     /// and coming back.
     pub fn show_no_earlier(&self) {

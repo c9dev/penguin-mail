@@ -286,6 +286,16 @@ pub trait GmailApi: Send + Sync + 'static {
         from: EpochMillis,
     ) -> impl Future<Output = Result<calendar::EventPage, GmailError>> + Send;
 
+    /// One page of the events of `calendar` that overlap `from` to `to`,
+    /// a read apart from the sync token.
+    fn event_range(
+        &self,
+        calendar: &str,
+        from: EpochMillis,
+        to: EpochMillis,
+        page: Option<&str>,
+    ) -> impl Future<Output = Result<calendar::EventPage, GmailError>> + Send;
+
     /// Creates `event` under its own id when `create`, or changes it to
     /// match, and mails its guests when `notify` says so. `etag` makes the
     /// server refuse the change with `GmailError::Changed` when the event
@@ -597,6 +607,17 @@ impl GmailApi for AccountClient {
     ) -> Result<calendar::EventPage, GmailError> {
         let from = rfc3339(from).unwrap_or_default();
         self.client.event_changes(calendar, token, page, &from).await
+    }
+
+    async fn event_range(
+        &self,
+        calendar: &str,
+        from: EpochMillis,
+        to: EpochMillis,
+        page: Option<&str>,
+    ) -> Result<calendar::EventPage, GmailError> {
+        let (from, to) = (rfc3339(from).unwrap_or_default(), rfc3339(to).unwrap_or_default());
+        self.client.event_range(calendar, &from, &to, page).await
     }
 
     async fn put_event(

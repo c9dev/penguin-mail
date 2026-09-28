@@ -622,6 +622,18 @@ button.invitation-pill buttoncontent > box { border-spacing: 8px; }
   border: 1px solid color-mix(in srgb, currentColor 15%, transparent);
 }
 
+/* The note over the bottom of the grid while older events load or cannot:
+   a small pill, quiet, that never takes a click. */
+.older-note {
+  background: color-mix(in srgb, var(--view-bg-color) 90%, currentColor 10%);
+  border: 1px solid color-mix(in srgb, currentColor 15%, transparent);
+  border-radius: 999px;
+  padding: 5px 14px;
+  font-size: 0.85em;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.14);
+}
+.older-note label { opacity: 0.72; }
+
 /* One 1 px rule under the day headings and under the all-day row, and
    no shade where the hours scroll under it: the mockup draws neither. */
 .calendar-card separator {

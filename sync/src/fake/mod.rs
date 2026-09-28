@@ -1327,7 +1327,7 @@ impl GmailApi for FakeGmail {
         calendar: &str,
         token: Option<&str>,
         page: Option<&str>,
-        _from: EpochMillis,
+        from_ms: EpochMillis,
     ) -> Result<calendar::EventPage, GmailError> {
         self.call("calendar.events.list", 0).await?;
         self.calendar_open()?;
@@ -1353,8 +1353,14 @@ impl GmailApi for FakeGmail {
                 }
                 None => {
                     let from: usize = page.and_then(|p| p.parse().ok()).unwrap_or(0);
-                    let all: Vec<calendar::Event> =
-                        s.calendar_events.iter().filter(|e| e.calendar == calendar).cloned().collect();
+                    // Google bounds a whole read by `timeMin`: an event that
+                    // ended before it is not sent.
+                    let all: Vec<calendar::Event> = s
+                        .calendar_events
+                        .iter()
+                        .filter(|e| e.calendar == calendar && overlaps(e, from_ms, EpochMillis::MAX))
+                        .cloned()
+                        .collect();
                     let slice: Vec<calendar::Event> = all.iter().skip(from).take(s.page_size).cloned().collect();
                     let next = from + slice.len();
                     let more = next < all.len();
@@ -1367,6 +1373,36 @@ impl GmailApi for FakeGmail {
                 }
             }
         })
+    }
+
+    /// The events that overlap `from` to `to`, one page of `page_size` at a
+    /// time. It leaves the change log and the tokens alone, as Google's
+    /// bounded read does: a later change read still says only what changed.
+    async fn event_range(
+        &self,
+        calendar: &str,
+        from: EpochMillis,
+        to: EpochMillis,
+        page: Option<&str>,
+    ) -> Result<calendar::EventPage, GmailError> {
+        self.call("calendar.events.list", 0).await?;
+        self.calendar_open()?;
+        self.calendar_held(calendar)?;
+        Ok(self.with(|s| {
+            let start: usize = page.and_then(|p| p.parse().ok()).unwrap_or(0);
+            let all: Vec<&calendar::Event> = s
+                .calendar_events
+                .iter()
+                .filter(|e| e.calendar == calendar && overlaps(e, from, to))
+                .collect();
+            let slice: Vec<calendar::Event> = all.iter().skip(start).take(s.page_size).map(|e| (*e).clone()).collect();
+            let next = start + slice.len();
+            calendar::EventPage {
+                events: slice,
+                next_page: (next < all.len()).then(|| next.to_string()),
+                ..calendar::EventPage::default()
+            }
+        }))
     }
 
     /// A create answers 409 when the id is already on the calendar and a
@@ -1805,6 +1841,13 @@ impl GmailApi for FakeGmail {
 }
 
 /// Writes the fields a contact change names over `person`, as Google does.
+/// Whether Google would send `event` for a read bounded by `from` and
+/// `to`: it overlaps them, or it is a series that began before `to` and
+/// may repeat into them.
+fn overlaps(event: &calendar::Event, from: EpochMillis, to: EpochMillis) -> bool {
+    event.start < to && (event.end >= from || !event.rules.is_empty())
+}
+
 fn fill_person(person: &mut Person, fields: &ContactFields) {
     if let Some(name) = &fields.name {
         person.name = Some(name.clone()).filter(|n| !n.is_empty());

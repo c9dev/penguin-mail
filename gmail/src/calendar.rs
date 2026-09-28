@@ -205,6 +205,28 @@ impl EventFields {
     }
 }
 
+/// Reads one page of an events listing: events, the ids of those deleted
+/// outright, and the page and sync tokens when Google sent them.
+fn event_page(calendar: &str, answer: &Value) -> EventPage {
+    let mut out = EventPage {
+        next_page: answer.get("nextPageToken").and_then(Value::as_str).map(str::to_string),
+        next_sync: answer.get("nextSyncToken").and_then(Value::as_str).map(str::to_string),
+        ..EventPage::default()
+    };
+    // Google leaves `timeZone` off an event that keeps the calendar's
+    // zone, and names that zone once, at the top of the listing.
+    let zone = answer.get("timeZone").and_then(Value::as_str).unwrap_or("UTC");
+    for item in answer.get("items").and_then(Value::as_array).into_iter().flatten() {
+        let cancelled = item.get("status").and_then(Value::as_str) == Some("cancelled");
+        let occurrence = item.get("recurringEventId").is_some();
+        match (cancelled, occurrence, item.get("id").and_then(Value::as_str)) {
+            (true, false, Some(id)) => out.removed.push(id.to_string()),
+            _ => out.events.push(google_event(calendar, item, None, zone)),
+        }
+    }
+    out
+}
+
 impl GmailClient {
     /// Points the calendar calls at another server. Tests use this.
     pub fn with_calendar_base_url(mut self, base_url: impl Into<String>) -> Self {
@@ -263,23 +285,39 @@ impl GmailClient {
                 self.http().get(url).query(&query)
             })
             .await?;
-        let mut out = EventPage {
-            next_page: answer.get("nextPageToken").and_then(Value::as_str).map(str::to_string),
-            next_sync: answer.get("nextSyncToken").and_then(Value::as_str).map(str::to_string),
-            ..EventPage::default()
-        };
-        // Google leaves `timeZone` off an event that keeps the calendar's
-        // zone, and names that zone once, at the top of the listing.
-        let zone = answer.get("timeZone").and_then(Value::as_str).unwrap_or("UTC");
-        for item in answer.get("items").and_then(Value::as_array).into_iter().flatten() {
-            let cancelled = item.get("status").and_then(Value::as_str) == Some("cancelled");
-            let occurrence = item.get("recurringEventId").is_some();
-            match (cancelled, occurrence, item.get("id").and_then(Value::as_str)) {
-                (true, false, Some(id)) => out.removed.push(id.to_string()),
-                _ => out.events.push(google_event(calendar, item, None, zone)),
-            }
-        }
-        Ok(out)
+        Ok(event_page(calendar, &answer))
+    }
+
+    /// One page of the events of `calendar` that overlap `time_min` to
+    /// `time_max` (RFC 3339), for a range older than the copy reaches. It
+    /// is a read of its own: no sync token goes with it, since Google
+    /// refuses one beside `timeMin` and `timeMax`. Google may still send a
+    /// `nextSyncToken` on the last page; it belongs to this range's filter,
+    /// so the caller must not keep it. Series come whole and cancelled events come marked, as in
+    /// [`Self::event_changes`].
+    pub async fn event_range(
+        &self,
+        calendar: &str,
+        time_min: &str,
+        time_max: &str,
+        page: Option<&str>,
+    ) -> Result<EventPage, GmailError> {
+        let url = format!("{}/calendars/{}/events", self.calendar_base_url, encode(calendar));
+        let answer: Value = self
+            .call_at(&url, |url| {
+                let mut query = vec![
+                    ("showDeleted", "true"),
+                    ("maxResults", "250"),
+                    ("timeMin", time_min),
+                    ("timeMax", time_max),
+                ];
+                if let Some(page) = page {
+                    query.push(("pageToken", page));
+                }
+                self.http().get(url).query(&query)
+            })
+            .await?;
+        Ok(event_page(calendar, &answer))
     }
 
     /// Creates `event` under its own id when `create`, or changes it to

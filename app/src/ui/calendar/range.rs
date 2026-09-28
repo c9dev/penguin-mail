@@ -5,11 +5,9 @@
 use chrono::{Datelike, Days, Months, NaiveDate, TimeZone};
 use mailrs_domain::EpochMillis;
 use mailrs_domain::translate::{date_locale, fill, gettext};
-use mailrs_sync::calendar_copy::FIRST_READ_BACK;
 
-/// A day in milliseconds, for turning [`FIRST_READ_BACK`] into a day
-/// count.
-const DAY_MS: EpochMillis = 24 * 60 * 60 * 1000;
+/// How many months back the agenda keeps loading.
+const AGENDA_BACK_MONTHS: u32 = 120;
 
 /// How many days the agenda's first window covers.
 const AGENDA_WINDOW: u64 = 60;
@@ -189,12 +187,11 @@ pub fn earlier(first: NaiveDate) -> NaiveDate {
     first - Days::new(AGENDA_STEP)
 }
 
-/// The earliest day the local copy could hold events for, counting back
-/// from `today` by [`FIRST_READ_BACK`]. The copy keeps no record of
-/// when its first read ran, so this is as close as the agenda can get
-/// to knowing where its data runs out.
-pub fn earliest_kept_day(today: NaiveDate) -> NaiveDate {
-    today - Days::new((FIRST_READ_BACK / DAY_MS) as u64)
+/// The earliest day the agenda loads: ten years before `today`. The copy
+/// fetches older months from Google as the list scrolls up, so this only
+/// stops a list that could otherwise scroll back for ever.
+pub fn earliest_agenda_day(today: NaiveDate) -> NaiveDate {
+    today - Months::new(AGENDA_BACK_MONTHS)
 }
 
 /// The first day, on or before `day`, of the week
@@ -334,8 +331,8 @@ mod tests {
     }
 
     #[test]
-    fn the_earliest_kept_day_is_a_year_before_today() {
-        assert_eq!(earliest_kept_day(d(2026, 9, 23)), d(2025, 9, 23));
+    fn the_agenda_stops_loading_ten_years_before_today() {
+        assert_eq!(earliest_agenda_day(d(2026, 9, 23)), d(2016, 9, 23));
     }
 
     #[test]

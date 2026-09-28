@@ -1051,7 +1051,27 @@ fn account0_events(now: EpochMillis) -> Vec<CalendarEvent> {
         color: Some("#3584e4".into()),
         ..timed_event("primary", "demo-next-event", "Sprint planning", soon, soon + 30 * 60_000)
     });
+    events.extend(two_years_ago(now));
     events
+}
+
+/// A few events in the week two years back, which the copy's first read
+/// (a year back) leaves out. Going there fetches them from the demo's
+/// Google, as it does from the real one.
+fn two_years_ago(now: EpochMillis) -> Vec<CalendarEvent> {
+    let back = chrono::DateTime::from_timestamp_millis(now)
+        .unwrap_or_default()
+        .with_timezone(&chrono::Local)
+        .checked_sub_months(chrono::Months::new(24))
+        .map_or(now, |at| at.timestamp_millis());
+    let monday = week_monday(back);
+    vec![
+        timed_event("primary", "old-planning", "Quarter planning", at_week(monday, 0, 10, 0), at_week(monday, 0, 12, 0)),
+        timed_event("primary", "old-lunch", "Lunch with Rui", at_week(monday, 1, 13, 0), at_week(monday, 1, 14, 0)),
+        timed_event("primary", "old-review", "Design review", at_week(monday, 2, 15, 0), at_week(monday, 2, 16, 30)),
+        timed_event(FAMILY, "old-recital", "Piano recital", at_week(monday, 3, 18, 0), at_week(monday, 3, 19, 30)),
+        timed_event("primary", "old-run", "Morning run", at_week(monday, 4, 7, 30), at_week(monday, 4, 8, 30)),
+    ]
 }
 
 /// The second demo account's week: the weekday Stand-up and the rest of

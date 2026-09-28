@@ -103,6 +103,11 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Improved
 
+- The calendar goes back as far as you look. Go to an older week, month
+  or date, or scroll the Agenda up, and the events of that time load from
+  Google once and stay on this computer. While they load, a small note says
+  so, and offline it says older events can't load, instead of showing an
+  empty week.
 - Resize an event from its top edge as well as its bottom in Day and
   Week, or change its start with Ctrl+Shift+Up and Ctrl+Shift+Down.
 - Drag an event to another day in Month. It keeps its time and length.

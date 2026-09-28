@@ -806,6 +806,17 @@ pub trait CalendarService: Send + Sync + 'static {
         from: EpochMillis,
     ) -> impl Future<Output = Result<model::EventPage, BackendError>> + Send;
 
+    /// One page of the events of `calendar` that overlap `from` to `to`,
+    /// for a range older than the copy reaches. It is a read apart from
+    /// the sync token and leaves the token alone.
+    fn event_range(
+        &self,
+        calendar: &str,
+        from: EpochMillis,
+        to: EpochMillis,
+        page: Option<&str>,
+    ) -> impl Future<Output = Result<model::EventPage, BackendError>> + Send;
+
     /// Creates `event` under its own id when `create`, or changes it to
     /// match, and mails its guests when `notify` says so. `etag` refuses
     /// the write with `BackendError::Changed` when the event moved on

@@ -3698,104 +3698,112 @@ msgid ""
 "Working location. Google Calendar sets it, so you can only change it there."
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:341
+#: app/src/ui/calendar/mod.rs:362
 msgid "View"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:349 app/src/ui/calendar/mod.rs:2450
+#: app/src/ui/calendar/mod.rs:370 app/src/ui/calendar/mod.rs:2599
 msgid "New Event (N)"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:352 app/src/ui/calendar/mod.rs:354
+#: app/src/ui/calendar/mod.rs:373 app/src/ui/calendar/mod.rs:375
 msgid "Search the Calendar (Ctrl+F)"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:357 app/src/ui/calendar/mod.rs:360
+#: app/src/ui/calendar/mod.rs:378 app/src/ui/calendar/mod.rs:381
 msgid "Show Calendars"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:366 app/src/ui/calendar/mod.rs:370
+#: app/src/ui/calendar/mod.rs:387 app/src/ui/calendar/mod.rs:391
 #: app/src/ui/conversation.rs:500 app/src/ui/conversation.rs:504
 msgid "Assistant (Ctrl+J)"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:399 app/src/ui/calendar/mod.rs:401
+#: app/src/ui/calendar/mod.rs:420 app/src/ui/calendar/mod.rs:422
 msgid "Search the Calendar"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:813 app/src/ui/window/shortcuts.rs:567
+#: app/src/ui/calendar/mod.rs:486 app/src/ui/calendar/mod.rs:916
+msgid "Loading older events"
+msgstr ""
+
+#: app/src/ui/calendar/mod.rs:915
+msgid "Older events can't load while offline"
+msgstr ""
+
+#: app/src/ui/calendar/mod.rs:949 app/src/ui/window/shortcuts.rs:567
 msgid "Go to date"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:1010
+#: app/src/ui/calendar/mod.rs:1147
 msgid "List"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:1011
+#: app/src/ui/calendar/mod.rs:1148
 msgid "Day"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:1012
+#: app/src/ui/calendar/mod.rs:1149
 msgid "Week"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:1013
+#: app/src/ui/calendar/mod.rs:1150
 msgid "Agenda"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:1014
+#: app/src/ui/calendar/mod.rs:1151
 msgid "Month"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:1232
+#: app/src/ui/calendar/mod.rs:1369
 msgid "Moved “{title}”"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:1241
+#: app/src/ui/calendar/mod.rs:1378
 msgid "Could not move the event: {reason}"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:1351
+#: app/src/ui/calendar/mod.rs:1488
 msgid "All-day events"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:1353
+#: app/src/ui/calendar/mod.rs:1490
 msgid "All-day"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:1736 app/src/ui/calendar/mod.rs:3009
+#: app/src/ui/calendar/mod.rs:1874 app/src/ui/calendar/mod.rs:3158
 #: app/src/ui/calendar/sidebar.rs:255 app/src/ui/calendar/words.rs:320
 #: app/src/ui/preferences.rs:864 app/src/ui/preferences.rs:976
 msgid "%a"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:2206
+#: app/src/ui/calendar/mod.rs:2355
 msgid "Removed “{title}” from your calendar"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:2207
+#: app/src/ui/calendar/mod.rs:2356
 msgid "Deleted “{title}”"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:2212
+#: app/src/ui/calendar/mod.rs:2361
 msgid "Could not delete the event: {reason}"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:2256 app/src/ui/composer/mod.rs:1096
+#: app/src/ui/calendar/mod.rs:2405 app/src/ui/composer/mod.rs:1096
 #: app/src/ui/window.rs:1981 app/src/ui/window/scheduled.rs:98
 #: app/src/ui/window/shortcuts.rs:454
 msgid "Undo"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:2398
+#: app/src/ui/calendar/mod.rs:2547
 msgid "Could not send your answer: {reason}"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:2452
+#: app/src/ui/calendar/mod.rs:2601
 msgid "None of your calendars take new events"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:2713
+#: app/src/ui/calendar/mod.rs:2862
 msgid "Could not save the event: {reason}"
 msgstr ""
 
@@ -3900,31 +3908,31 @@ msgstr ""
 msgid "Calendar: {name}"
 msgstr ""
 
-#: app/src/ui/calendar/range.rs:110 app/src/ui/calendar/words.rs:34
+#: app/src/ui/calendar/range.rs:108 app/src/ui/calendar/words.rs:34
 msgid "%A %-d"
 msgstr ""
 
-#: app/src/ui/calendar/range.rs:113 app/src/ui/calendar/sidebar.rs:770
+#: app/src/ui/calendar/range.rs:111 app/src/ui/calendar/sidebar.rs:770
 msgid "%B %Y"
 msgstr ""
 
-#: app/src/ui/calendar/range.rs:121 app/src/ui/calendar/range.rs:152
+#: app/src/ui/calendar/range.rs:119 app/src/ui/calendar/range.rs:150
 msgid "%B"
 msgstr ""
 
-#: app/src/ui/calendar/range.rs:125 app/src/ui/calendar/words.rs:177
+#: app/src/ui/calendar/range.rs:123 app/src/ui/calendar/words.rs:177
 msgid "{first} – {last}"
 msgstr ""
 
-#: app/src/ui/calendar/range.rs:131 app/src/ui/calendar/range.rs:137
+#: app/src/ui/calendar/range.rs:129 app/src/ui/calendar/range.rs:135
 msgid "%b"
 msgstr ""
 
-#: app/src/ui/calendar/range.rs:144 app/src/ui/calendar/range.rs:155
+#: app/src/ui/calendar/range.rs:142 app/src/ui/calendar/range.rs:153
 msgid "%Y"
 msgstr ""
 
-#: app/src/ui/calendar/range.rs:209
+#: app/src/ui/calendar/range.rs:206
 msgid "W{week}"
 msgstr ""
 
@@ -7613,7 +7621,7 @@ msgid_plural "{accounts} will get new labels."
 msgstr[0] ""
 msgstr[1] ""
 
-#: sync/src/calendar_copy.rs:1266
+#: sync/src/calendar_copy.rs:1401
 msgid ""
 "Google Calendar offers out of office and focus time only on some work and "
 "school accounts ({reason})"
