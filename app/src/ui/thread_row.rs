@@ -20,6 +20,9 @@ mod imp {
         pub account: OnceCell<gtk::Box>,
         pub vip: OnceCell<gtk::Image>,
         pub from: OnceCell<gtk::Label>,
+        /// The sender's address beside their name (ruling R4), so a
+        /// look-alike display name does not hide the real address.
+        pub address: OnceCell<gtk::Label>,
         pub clip: OnceCell<gtk::Image>,
         pub mute: OnceCell<gtk::Image>,
         pub star: OnceCell<gtk::Image>,
@@ -27,6 +30,9 @@ mod imp {
         pub subject: OnceCell<gtk::Label>,
         pub count: OnceCell<gtk::Label>,
         pub snippet: OnceCell<gtk::Label>,
+        /// The calendar mark beside the subject, on while an open message
+        /// of the thread carried a live invitation.
+        pub invite: OnceCell<gtk::Image>,
         /// Opens the row's menu: at a point for a click, over the whole
         /// row for a key.
         pub menu: RefCell<Option<super::OpenMenu>>,
@@ -44,7 +50,10 @@ mod imp {
             self.parent_constructed();
             let row = self.obj();
             row.set_orientation(gtk::Orientation::Horizontal);
-            row.set_spacing(8);
+            // The dot, the avatar and the text sit at exact offsets from
+            // the mockup (22, 52, 80 px), each carried on its own CSS
+            // margin, so the row sets no spacing of its own.
+            row.set_spacing(0);
             row.add_css_class("thread-row");
             // A box says nothing out loud whatever name it is given, so
             // the row takes the role its place in the list calls for.
@@ -59,11 +68,13 @@ mod imp {
                 .show_initials(true)
                 .valign(gtk::Align::Start)
                 .visible(false)
+                .css_classes(["thread-avatar"])
                 .build();
             let content = gtk::Box::builder()
                 .orientation(gtk::Orientation::Vertical)
                 .spacing(2)
                 .hexpand(true)
+                .css_classes(["thread-text"])
                 .build();
 
             let top = gtk::Box::new(gtk::Orientation::Horizontal, 6);
@@ -76,7 +87,14 @@ mod imp {
             vip.add_css_class("vip");
             vip.set_tooltip_text(Some(&gettext("VIP")));
             let from = text_label("from");
-            from.set_hexpand(true);
+            // The address rides beside the name (ruling R4), both inside
+            // the box that takes the row's spare width so either can
+            // ellipsize before the other's date and markers are pushed off.
+            let address = text_label("address");
+            let namebox = gtk::Box::new(gtk::Orientation::Horizontal, 6);
+            namebox.set_hexpand(true);
+            namebox.append(&from);
+            namebox.append(&address);
             let clip = marker("mail-attachment-symbolic");
             let mute = marker("audio-volume-muted-symbolic");
             mute.set_tooltip_text(Some(&gettext("Muted")));
@@ -87,7 +105,7 @@ mod imp {
             for widget in [
                 account.upcast_ref::<gtk::Widget>(),
                 vip.upcast_ref(),
-                from.upcast_ref(),
+                namebox.upcast_ref(),
                 clip.upcast_ref(),
                 mute.upcast_ref(),
                 star.upcast_ref(),
@@ -99,11 +117,15 @@ mod imp {
             let middle = gtk::Box::new(gtk::Orientation::Horizontal, 6);
             let subject = text_label("subject");
             subject.set_hexpand(true);
+            let invite = marker("x-office-calendar-symbolic");
+            invite.add_css_class("invite");
+            invite.set_tooltip_text(Some(&gettext("Invitation")));
             let count = gtk::Label::builder()
                 .css_classes(["count"])
                 .valign(gtk::Align::Center)
                 .build();
             middle.append(&subject);
+            middle.append(&invite);
             middle.append(&count);
 
             let snippet = text_label("snippet");
@@ -123,11 +145,13 @@ mod imp {
             let _ = self.account.set(account);
             let _ = self.vip.set(vip);
             let _ = self.from.set(from);
+            let _ = self.address.set(address);
             let _ = self.clip.set(clip);
             let _ = self.mute.set(mute);
             let _ = self.star.set(star);
             let _ = self.date.set(date);
             let _ = self.subject.set(subject);
+            let _ = self.invite.set(invite);
             let _ = self.count.set(count);
             let _ = self.snippet.set(snippet);
         }
@@ -207,6 +231,18 @@ fn flag_class(color: FlagColor) -> &'static str {
     FLAG_CLASSES[FlagColor::ALL.iter().position(|c| *c == color).unwrap_or(0)]
 }
 
+/// What the row says out loud. The dot, the bold and the calendar mark
+/// are on screen, so the words say them too.
+fn spoken(unread: bool, invitation: bool, sender: &str, subject: &str, snippet: &str) -> String {
+    let pattern = match (unread, invitation) {
+        (true, true) => gettext("Unread invitation, {sender}, {subject}, {snippet}"),
+        (true, false) => gettext("Unread, {sender}, {subject}, {snippet}"),
+        (false, true) => gettext("Invitation, {sender}, {subject}, {snippet}"),
+        (false, false) => gettext("{sender}, {subject}, {snippet}"),
+    };
+    fill(&pattern, &[("sender", sender), ("subject", subject), ("snippet", snippet)])
+}
+
 /// What opens a row's menu, at the point a click landed on, or over the
 /// whole row for `None`.
 pub type OpenMenu = Rc<dyn Fn(Option<(f64, f64)>)>;
@@ -264,6 +300,12 @@ impl ThreadRow {
         } else {
             thread.from.clone()
         });
+        let address = get(&imp.address);
+        let show_address = !thread.from_email.is_empty() && thread.from_email != thread.from;
+        address.set_visible(show_address);
+        if show_address {
+            address.set_label(&thread.from_email);
+        }
         let date = get(&imp.date);
         date.set_label(&relative_date(thread.last_message_at, Local::now()));
         if thread.unread {
@@ -297,6 +339,10 @@ impl ThreadRow {
             .get()
             .expect("mute mark exists")
             .set_visible(thread.muted);
+        imp.invite
+            .get()
+            .expect("invitation mark exists")
+            .set_visible(thread.invitation);
         let account = imp.account.get().expect("account dot exists");
         account.set_visible(show_account);
         let wanted =
@@ -307,18 +353,32 @@ impl ThreadRow {
             }
             account.add_css_class(wanted);
         }
-        let pattern = match thread.unread {
-            true => gettext("Unread, {sender}, {subject}, {snippet}"),
-            false => gettext("{sender}, {subject}, {snippet}"),
-        };
-        let described = fill(
-            &pattern,
-            &[
-                ("sender", &thread.from),
-                ("subject", &thread.subject),
-                ("snippet", &thread.snippet),
-            ],
+        let described = spoken(
+            thread.unread,
+            thread.invitation,
+            &thread.from,
+            &thread.subject,
+            &thread.snippet,
         );
         self.update_property(&[gtk::accessible::Property::Label(&described)]);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::spoken;
+
+    #[test]
+    fn a_row_says_what_its_marks_show() {
+        assert_eq!(spoken(false, false, "Ann", "Rent", "Due Friday"), "Ann, Rent, Due Friday");
+        assert_eq!(spoken(true, false, "Ann", "Rent", "Due Friday"), "Unread, Ann, Rent, Due Friday");
+        assert_eq!(
+            spoken(false, true, "Priya", "Design review", "Wednesday"),
+            "Invitation, Priya, Design review, Wednesday"
+        );
+        assert_eq!(
+            spoken(true, true, "Priya", "Design review", "Wednesday"),
+            "Unread invitation, Priya, Design review, Wednesday"
+        );
     }
 }

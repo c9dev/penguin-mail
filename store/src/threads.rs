@@ -961,7 +961,11 @@ fn count(conn: &Connection, sql: &Sql) -> Result<i64> {
 
 const COLUMNS: &str = "t.account_id, t.id, t.last_message_at, t.subject, t.snippet, t.from_display, \
                        t.message_count, t.unread, t.starred, t.has_attachments, t.flag_color, \
-                       t.from_email, t.muted";
+                       t.from_email, t.muted, \
+                       EXISTS (SELECT 1 FROM invitations i JOIN messages im \
+                               ON im.account_id = i.account_id AND im.id = i.message_id \
+                               WHERE i.account_id = t.account_id AND im.thread_id = t.id \
+                               AND i.cancelled = 0)";
 
 fn flag_color(row: &Row<'_>, index: usize) -> rusqlite::Result<Option<FlagColor>> {
     Ok(row
@@ -985,6 +989,7 @@ fn to_summary(row: &Row<'_>) -> rusqlite::Result<ThreadSummary> {
         flag_color: flag_color(row, 10)?,
         from_email: row.get(11)?,
         muted: row.get(12)?,
+        invitation: row.get(13)?,
     })
 }
 
@@ -1071,7 +1076,9 @@ const MESSAGE_COLUMNS: &str = "m.account_id, m.thread_id, m.id, m.date, m.subjec
      (SELECT f.color FROM flags f WHERE f.account_id = m.account_id AND f.message_id = m.id), \
      COALESCE(m.from_addr, ''), \
      EXISTS (SELECT 1 FROM message_keywords z WHERE z.account_id = m.account_id AND z.message_id = m.id \
-             AND z.keyword = '$muted')";
+             AND z.keyword = '$muted'), \
+     EXISTS (SELECT 1 FROM invitations i WHERE i.account_id = m.account_id \
+             AND i.message_id = m.id AND i.cancelled = 0)";
 
 fn to_message_row(row: &Row<'_>) -> rusqlite::Result<ThreadSummary> {
     Ok(ThreadSummary {
@@ -1089,6 +1096,7 @@ fn to_message_row(row: &Row<'_>) -> rusqlite::Result<ThreadSummary> {
         flag_color: flag_color(row, 10)?,
         from_email: row.get(11)?,
         muted: row.get(12)?,
+        invitation: row.get(13)?,
     })
 }
 

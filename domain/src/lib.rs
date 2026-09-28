@@ -386,6 +386,11 @@ pub struct ThreadSummary {
     /// Address of the newest message's sender, for marking VIPs.
     #[serde(default)]
     pub from_email: String,
+    /// A message of the thread carried an invitation that is still on.
+    /// The store learns it when the message is opened, since the list's
+    /// metadata does not say whether a message has a calendar part.
+    #[serde(default)]
+    pub invitation: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

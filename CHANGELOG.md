@@ -43,6 +43,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Improved
 
+- The conversation you are reading is a tinted card in the list, and an
+  invitation you have opened shows a calendar mark on its row.
 - Adding a Google account asks for every permission Penguin Mail uses
   in one visit to Google, and anything you leave unticked says why it
   is off, with Grant Access where you would use it. An account added
