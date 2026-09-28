@@ -3567,7 +3567,7 @@ msgstr ""
 msgid "View"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:285 app/src/ui/calendar/mod.rs:1953
+#: app/src/ui/calendar/mod.rs:285 app/src/ui/calendar/mod.rs:1961
 msgid "New Event (N)"
 msgstr ""
 
@@ -3615,7 +3615,7 @@ msgstr ""
 msgid "All-day"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:1394 app/src/ui/calendar/mod.rs:2391
+#: app/src/ui/calendar/mod.rs:1394 app/src/ui/calendar/mod.rs:2399
 #: app/src/ui/calendar/sidebar.rs:110
 msgid "%a"
 msgstr ""
@@ -3628,20 +3628,20 @@ msgstr ""
 msgid "Could not delete the event: {reason}"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:1796 app/src/ui/window.rs:1825
+#: app/src/ui/calendar/mod.rs:1801 app/src/ui/window.rs:1825
 #: app/src/ui/window/scheduled.rs:21 app/src/ui/window/shortcuts.rs:444
 msgid "Undo"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:1912
+#: app/src/ui/calendar/mod.rs:1920
 msgid "Could not send your answer: {reason}"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:1955
+#: app/src/ui/calendar/mod.rs:1963
 msgid "None of your calendars take new events"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:2170
+#: app/src/ui/calendar/mod.rs:2178
 msgid "Could not save the event: {reason}"
 msgstr ""
 
