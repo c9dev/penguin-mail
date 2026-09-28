@@ -3574,6 +3574,10 @@ msgstr "Número de vezes"
 msgid "Calendar"
 msgstr "Calendário"
 
+#: app/src/ui/sidebar.rs:67
+msgid "Stop the message from going out"
+msgstr "Impedir que a mensagem saia"
+
 #: app/src/ui/calendar/editor.rs:843
 msgid "Place"
 msgstr "Local"
@@ -5270,7 +5274,8 @@ msgid "Rich text styles the words themselves; Markdown shows its marks"
 msgstr ""
 "O texto formatado estiliza as próprias palavras; o Markdown mostra as marcas"
 
-#: app/src/ui/preferences.rs:316
+#: app/src/ui/preferences.rs:316 app/src/ui/sidebar.rs:58
+#: app/src/ui/sidebar.rs:71
 msgid "Undo Send"
 msgstr "Anular o envio"
 

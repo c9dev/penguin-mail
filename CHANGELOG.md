@@ -63,6 +63,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   page take less time, because those quick jobs no longer think at length.
 - The buttons above a conversation sit in rounded groups: replying,
   filing, moving and flagging.
+- Undo Send sits at the foot of the sidebar with the seconds left. In a
+  window too narrow for the sidebar it stays a toast.
 
 ### Fixed
 

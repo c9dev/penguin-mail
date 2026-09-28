@@ -292,6 +292,28 @@ flowboxchild:focus-visible > .recipient-chip {
 .mailboxes > row:selected .mailbox-row .count { opacity: 1; color: var(--accent-color); }
 .app-dark .mailboxes > row:selected { background-color: alpha(var(--accent-bg-color), 0.28); }
 
+/* A6: the foot of the sidebar, shared by both spaces since it is
+   `Sidebar::page`'s own bottom bar. 10 px of padding lands the pill and
+   the room above it for B2's next-event card at the mockup's 10 px in
+   from the card; 6 px below leaves the pill's own 12 px gap to the
+   card's edge, the rest coming from `AdwToolbarView`'s own bottom
+   inset. The pill is 36 px tall (mockups.py's `uy`), fully rounded,
+   tinted 16 % with the accent over the sidebar shade. */
+.sidebar-foot { padding: 0 10px 6px 10px; }
+.undo-pill {
+  min-height: 36px;
+  padding: 0 16px;
+  border-radius: 999px;
+  background: alpha(var(--accent-bg-color), 0.16);
+  color: var(--accent-color);
+  font-size: 0.92em;
+  font-weight: 700;
+  transition: background-color 120ms ease;
+}
+.undo-pill:hover { background: alpha(var(--accent-bg-color), 0.22); }
+.undo-pill:active { background: alpha(var(--accent-bg-color), 0.3); }
+.undo-pill .undo-left { font-size: 0.85em; font-weight: 600; font-feature-settings: "tnum"; }
+
 /* The assistant pane. */
 .assistant-pane { background: var(--sidebar-bg-color); }
 .assistant-bubble { padding: 8px 12px; border-radius: 14px; }
