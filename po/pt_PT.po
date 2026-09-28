@@ -3788,6 +3788,11 @@ msgstr "Pesquisar no calendário (Ctrl+F)"
 msgid "Show Calendars"
 msgstr "Mostrar os calendários"
 
+#: app/src/ui/calendar/mod.rs:324 app/src/ui/calendar/mod.rs:328
+#: app/src/ui/conversation.rs:495 app/src/ui/conversation.rs:499
+msgid "Assistant (Ctrl+J)"
+msgstr "Assistente (Ctrl+J)"
+
 #: app/src/ui/calendar/mod.rs:327 app/src/ui/calendar/mod.rs:329
 msgid "Search the Calendar"
 msgstr "Pesquisar no calendário"

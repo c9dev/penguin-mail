@@ -760,6 +760,28 @@ impl MainWindow {
                     button.set_popover(Some(&win.label_popover()));
                 }
             });
+        // Both header buttons run the same toggle_assistant path as
+        // Ctrl+J and the menu (R12); the panel's own show-sidebar keeps
+        // them in the pressed state it puts on screen, whatever opened
+        // or closed it.
+        let weak = Rc::downgrade(&window);
+        window.conversation.assistant_toggle.connect_clicked(move |_| {
+            if let Some(win) = weak.upgrade() {
+                win.toggle_assistant();
+            }
+        });
+        let weak = Rc::downgrade(&window);
+        window.calendar.assistant_toggle.connect_clicked(move |_| {
+            if let Some(win) = weak.upgrade() {
+                win.toggle_assistant();
+            }
+        });
+        let weak = Rc::downgrade(&window);
+        window.assistant_split.connect_show_sidebar_notify(move |_| {
+            if let Some(win) = weak.upgrade() {
+                win.sync_assistant_toggle();
+            }
+        });
         let weak = Rc::downgrade(&window);
         window.list.connect_open(move |row| {
             if let Some(win) = weak.upgrade() {
@@ -786,6 +808,7 @@ impl MainWindow {
         window.install_follow_ups();
         window.install_categories();
         window.offer_summary();
+        window.sync_assistant_toggle();
         window.install_undo_send();
         window.install_next_event();
         let labels_of = Rc::downgrade(&window);
@@ -2700,8 +2723,8 @@ impl MainWindow {
         calendar.append_item(&declined);
         menu.append_section(None, &calendar);
         let first = gio::Menu::new();
-        // The calendar's header has no room for the assistant's button,
-        // so the menu both spaces share offers it, with its key.
+        // The header in both spaces carries a button for this now (R12);
+        // the menu item stays too, so Ctrl+J shows here as well.
         let assistant = gio::MenuItem::new(Some(&gettext("Assistant")), Some("win.assistant"));
         assistant.set_attribute_value("accel", Some(&"<Control>j".to_variant()));
         first.append_item(&assistant);
@@ -2792,6 +2815,28 @@ impl MainWindow {
     fn offer_summary(&self) {
         let offered = self.settings_with(|s| crate::assistant::offers_summary(&s.ai));
         self.conversation.offer_summary(offered);
+    }
+
+    /// Shows or hides the assistant toggle in the reading pane's and the
+    /// calendar's headers, and keeps it pressed with the panel (R12). The
+    /// calendar's own header narrows while the panel takes room beside
+    /// it, the same way it does at the window's compact width.
+    fn sync_assistant_toggle(&self) {
+        let panel_open = self.assistant_split.shows_sidebar();
+        let state =
+            self.settings_with(|s| crate::assistant::assistant_toggle(&s.ai, panel_open));
+        for button in [
+            &self.conversation.assistant_toggle,
+            &self.calendar.assistant_toggle,
+        ] {
+            button.set_visible(state.visible);
+            button.set_active(state.pressed);
+        }
+        // Collapsed, the panel floats over the calendar rather than
+        // pushing it, so the card keeps its own width and needs no
+        // narrowing.
+        self.calendar
+            .set_assistant_beside(state.pressed && !self.assistant_split.is_collapsed());
     }
 
     /// True when the focus is in the message itself, where Ctrl+A selects text.
@@ -3129,6 +3174,7 @@ impl MainWindow {
             Effect::Assistant => {
                 self.assistant.refresh();
                 self.offer_summary();
+                self.sync_assistant_toggle();
             }
             Effect::TextSize => {
                 for view in self.views() {

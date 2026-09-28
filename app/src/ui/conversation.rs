@@ -216,6 +216,11 @@ pub struct ConversationView {
     pub page: adw::NavigationPage,
     /// Applies or removes labels; the window fills its popover.
     pub label_button: gtk::MenuButton,
+    /// Opens or closes the assistant beside the mail. The window wires
+    /// it to the assistant panel's own toggle path (R12) and hides it
+    /// with `set_detached`, since a conversation of its own has no
+    /// assistant panel to open.
+    pub assistant_toggle: gtk::ToggleButton,
     many: adw::StatusPage,
     many_read: gtk::Button,
     many_star: gtk::Button,
@@ -482,6 +487,16 @@ impl ConversationView {
                 more
             },
         };
+        // The window binds this to the assistant panel's own open state
+        // (R12); a conversation of its own has none, so it starts hidden
+        // and stays that way (set_detached).
+        let assistant_toggle = gtk::ToggleButton::builder()
+            .icon_name("penguin-mail-sparkle-symbolic")
+            .tooltip_text(gettext("Assistant (Ctrl+J)"))
+            .css_classes(["assistant-toggle"])
+            .visible(false)
+            .build();
+        name_with_shortcut(&assistant_toggle, &gettext("Assistant (Ctrl+J)"));
         let more = gio::Menu::new();
         // Only the Outbox turns these three on, and GTK leaves an item whose
         // action is off out of the menu rather than greying it.
@@ -605,6 +620,7 @@ impl ConversationView {
             })
             .collect();
         header.pack_end(&buttons.more);
+        header.pack_end(&assistant_toggle);
         let menu_popover = gtk::PopoverMenu::from_model(None::<&gio::Menu>);
         super::name_menu_items(&menu_popover);
         menu_popover.set_has_arrow(false);
@@ -651,6 +667,7 @@ impl ConversationView {
         let view = Rc::new_cyclic(|this| ConversationView {
             page,
             label_button,
+            assistant_toggle,
             many,
             many_read,
             many_star,
@@ -960,6 +977,7 @@ impl ConversationView {
     /// For a conversation in its own window: labels stay in the main window.
     pub fn set_detached(&self) {
         self.label_button.set_visible(false);
+        self.assistant_toggle.set_visible(false);
         self.detached.set(true);
     }
 
