@@ -859,6 +859,10 @@ list.waiting-list > row.waiting-card:last-child { margin-bottom: 0; }
 /* A day outside working hours (a weekend, by default): the mockup shades
    nothing here, so this stays as subtle as the hairline above it. */
 .month-cell.shaded { background: color-mix(in srgb, currentColor 4%, transparent); }
+/* The days an event dragged in Month would cover, and the event it
+   leaves behind while the pointer holds it. */
+.month-cell.drop-target { background: color-mix(in srgb, var(--accent-bg-color) 18%, transparent); }
+.month-grid button.event-block.dragging { opacity: 0.55; }
 .month-more { font-size: 0.75em; font-weight: 600; padding: 2px 4px; min-height: 0; }
 /* The agenda: a coloured dot per row, tinted the way an event block's
    bar is, and a heading row per date. */

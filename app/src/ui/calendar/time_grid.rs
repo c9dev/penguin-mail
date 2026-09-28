@@ -48,6 +48,25 @@ pub struct Dragging {
     /// microseconds, y)`, the last four.
     pub samples: VecDeque<(i64, f64)>,
     pub started: bool,
+    /// The all-day row's day column the card is over, once the pointer
+    /// has carried it up out of the hours.
+    pub over_strip: Option<usize>,
+}
+
+/// A drag of a card in the all-day row, from the press on.
+pub struct StripDrag {
+    pub card: gtk::Widget,
+    pub occurrence: Occurrence,
+    /// `None` moves the whole event; an edge moves that end by days.
+    pub edge: Option<drag::Edge>,
+    /// Where the card sat before the drag.
+    pub placement: (usize, usize, usize),
+    pub press: (f64, f64),
+    pub press_column: usize,
+    pub started: bool,
+    /// Where a release now would land the event, `None` where it would
+    /// change nothing.
+    pub landing: Option<drag::Landing>,
 }
 
 /// A run of keyboard nudges on one card, moved on screen and not yet
@@ -200,9 +219,14 @@ fn all_day_height(rows: usize) -> f32 {
 /// is the one before it; both come from the event's own UTC date, never
 /// converted to local time, which would move them a day west of UTC.
 fn all_day_span(o: &Occurrence, days: &[NaiveDate]) -> Option<(usize, usize)> {
+    all_day_columns(o.start, o.end, days)
+}
+
+/// [`all_day_span`] for an all-day span from `start` to `end`.
+fn all_day_columns(start: EpochMillis, end: EpochMillis, days: &[NaiveDate]) -> Option<(usize, usize)> {
     let (&first, &last) = (days.first()?, days.last()?);
-    let start_date = utc_date(o.start)?;
-    let end_date = utc_date(o.end)?.checked_sub_days(Days::new(1))?;
+    let start_date = utc_date(start)?;
+    let end_date = utc_date(end)?.checked_sub_days(Days::new(1))?;
     if end_date < first || start_date > last {
         return None;
     }
@@ -336,11 +360,12 @@ mod imp {
     type StripActivated = dyn Fn(&super::AllDayStrip, &Occurrence, &gtk::Widget);
     type StripEdited = dyn Fn(&super::AllDayStrip, &Occurrence);
     type StripMoreClicked = dyn Fn(&super::AllDayStrip, &[Occurrence], &gtk::Widget);
-    type Moved = dyn Fn(&super::TimeGrid, &Occurrence, EpochMillis, EpochMillis);
+    type Moved = dyn Fn(&super::TimeGrid, &Occurrence, drag::Landing);
     type Selected = dyn Fn(EpochMillis, EpochMillis);
     type CanMove = dyn Fn(&Occurrence) -> bool;
     type CanSelect = dyn Fn() -> bool;
     type CarouselInteractive = dyn Fn(bool);
+    type StripMoved = dyn Fn(&super::AllDayStrip, &Occurrence, drag::Landing);
     /// A strip card's start day, end day (exclusive) and lane.
     type StripPlacement = (usize, usize, usize);
 
@@ -393,6 +418,11 @@ mod imp {
         /// Turns the ancestor carousel's own swipe off while a drag holds
         /// the grid, so a sideways touch drag does not page the range.
         pub carousel_interactive: RefCell<Option<Box<CarouselInteractive>>>,
+        /// The height of the part of the grid its scrolled window shows.
+        pub view_height: Cell<f64>,
+        /// The all-day row above the hours, which a card dragged up out of
+        /// them lands in as an all-day event.
+        pub strip: glib::WeakRef<super::AllDayStrip>,
     }
 
     #[glib::object_subclass]
@@ -622,6 +652,21 @@ mod imp {
         pub edited: RefCell<Option<Box<StripEdited>>>,
         pub more_clicked: RefCell<Option<Box<StripMoreClicked>>>,
         pub blocks: RefCell<Vec<(EventKey, Occurrence, gtk::Widget)>>,
+        /// The days shown, in column order.
+        pub dates: RefCell<Vec<NaiveDate>>,
+        pub can_move: RefCell<Option<Box<CanMove>>>,
+        pub moved: RefCell<Option<Box<StripMoved>>>,
+        pub carousel_interactive: RefCell<Option<Box<CarouselInteractive>>>,
+        pub dragging: RefCell<Option<super::StripDrag>>,
+        /// A card the view is asking about after a drag, and where
+        /// [`super::AllDayStrip::spring_back`] returns it on a Cancel.
+        pub landed: RefCell<Option<(gtk::Widget, StripPlacement)>>,
+        /// The mark a timed card dragged up out of the hours shows on the
+        /// day it would land on.
+        pub ghost: RefCell<Option<(gtk::Widget, StripPlacement)>>,
+        /// The hours below, which a card dragged down out of this row
+        /// lands in as a timed event.
+        pub grid: glib::WeakRef<super::TimeGrid>,
     }
 
     #[glib::object_subclass]
@@ -642,6 +687,11 @@ mod imp {
 
         fn dispose(&self) {
             self.blocks.borrow_mut().clear();
+            self.dragging.take();
+            self.landed.take();
+            if let Some((ghost, _)) = self.ghost.take() {
+                ghost.unparent();
+            }
             for (child, _) in self.children.borrow_mut().drain(..) {
                 child.unparent();
             }
@@ -661,7 +711,8 @@ mod imp {
 
         fn size_allocate(&self, width: i32, _height: i32, baseline: i32) {
             let days = self.days.get();
-            for (child, placement) in self.children.borrow().iter() {
+            let ghost = self.ghost.borrow().clone();
+            for (child, placement) in self.children.borrow().iter().chain(ghost.iter()) {
                 let (start_day, end_day, lane) = *placement;
                 let (x, y, w, h) =
                     super::all_day_rect(start_day, end_day, lane, days, width as f32);
@@ -780,6 +831,25 @@ impl TimeGrid {
             }
         });
         grid.add_controller(drag);
+
+        // The resize cursor over a card's top or bottom edge says a press
+        // there changes one end of the event rather than moving it.
+        let hover = gtk::EventControllerMotion::new();
+        let weak = grid.downgrade();
+        hover.connect_motion(move |_, x, y| {
+            if let Some(grid) = weak.upgrade() {
+                grid.hover(x, y);
+            }
+        });
+        let weak = grid.downgrade();
+        hover.connect_leave(move |_| {
+            if let Some(grid) = weak.upgrade()
+                && grid.imp().dragging.borrow().is_none()
+            {
+                grid.set_cursor_from_name(None);
+            }
+        });
+        grid.add_controller(hover);
 
         // The keyboard path a mouse drag has no equivalent for
         // otherwise: Shift+Up and Shift+Down move the focused card by a
@@ -1082,6 +1152,7 @@ impl TimeGrid {
     /// names no hour there.
     pub fn set_view(&self, top: f64, height: f64) {
         self.imp().scroll_top.set(top);
+        self.imp().view_height.set(height);
         self.queue_draw();
         for (child, placement) in self.imp().children.borrow().iter() {
             if let imp::Placement::Hour(hour) = placement {
@@ -1101,11 +1172,8 @@ impl TimeGrid {
     /// Runs `f` when a drag of a card ends at a new span, settled: the
     /// grid it happened on (a page holds it weakly across the repeat
     /// question and acts on it only while it is still on screen), the
-    /// occurrence, and its new start and end.
-    pub fn connect_moved(
-        &self,
-        f: impl Fn(&TimeGrid, &Occurrence, EpochMillis, EpochMillis) + 'static,
-    ) {
+    /// occurrence, and where it landed.
+    pub fn connect_moved(&self, f: impl Fn(&TimeGrid, &Occurrence, drag::Landing) + 'static) {
         self.imp().moved.replace(Some(Box::new(f)));
     }
 
@@ -1134,10 +1202,31 @@ impl TimeGrid {
         self.imp().carousel_interactive.replace(Some(Box::new(f)));
     }
 
+    /// Pairs the grid with the all-day row above it, for a card dragged
+    /// between them.
+    pub fn set_strip(&self, strip: &AllDayStrip) {
+        self.imp().strip.set(Some(strip));
+        strip.imp().grid.set(Some(self));
+    }
+
+    /// The time at `(x, y)` in `from`'s coordinates, when that point is
+    /// on the part of the grid its scrolled window shows.
+    pub fn time_under(&self, from: &impl IsA<gtk::Widget>, x: f64, y: f64) -> Option<EpochMillis> {
+        let point = from.compute_point(self, &graphene::Point::new(x as f32, y as f32))?;
+        let (x, y) = (f64::from(point.x()), f64::from(point.y()));
+        let top = self.imp().scroll_top.get();
+        let shown = top..top + self.imp().view_height.get();
+        let inside = x >= f64::from(GUTTER) && x < f64::from(self.width()) && shown.contains(&y);
+        inside.then(|| self.time_at(self.column_at(x), y))
+    }
+
     /// Returns the card that landed on a new span to its own place, with
     /// no write, for a cancelled repeat question or a failed write.
     pub fn spring_back(&self) {
         let imp = self.imp();
+        if let Some(strip) = imp.strip.upgrade() {
+            strip.show_ghost(None);
+        }
         let nudged = imp.nudged.take();
         if let Some((card, placement)) = nudged {
             self.set_placement(&card, placement);
@@ -1169,24 +1258,7 @@ impl TimeGrid {
     /// walks up from the picked widget to the card it belongs to, the
     /// way a click on a label or the bar inside it still finds the card.
     fn pick_card(&self, x: f64, y: f64) -> Option<(gtk::Widget, Occurrence)> {
-        let root: gtk::Widget = self.clone().upcast();
-        let mut current = self.pick(x, y, gtk::PickFlags::DEFAULT)?;
-        loop {
-            let found = self
-                .imp()
-                .blocks
-                .borrow()
-                .iter()
-                .find(|(_, _, w)| *w == current)
-                .map(|(_, o, w)| (w.clone(), o.clone()));
-            if let Some(found) = found {
-                return Some(found);
-            }
-            if current == root {
-                return None;
-            }
-            current = current.parent()?;
-        }
+        pick_block(self.upcast_ref(), &self.imp().blocks.borrow(), x, y)
     }
 
     /// The day column under `x`, clamped to the days shown.
@@ -1238,6 +1310,24 @@ impl TimeGrid {
             .unwrap_or((1, 0, 1))
     }
 
+    /// Shows the resize cursor while the pointer is over the top or bottom
+    /// edge of a card a drag may change, and no cursor of its own
+    /// elsewhere. A drag in progress keeps the cursor it set.
+    fn hover(&self, x: f64, y: f64) {
+        if self.imp().dragging.borrow().is_some() {
+            return;
+        }
+        let edge = self.pick_card(x, y).is_some_and(|(widget, o)| {
+            let allowed = self.imp().can_move.borrow().as_ref().is_some_and(|f| f(&o));
+            let rect = widget.compute_bounds(self);
+            allowed
+                && rect.is_some_and(|r| {
+                    drag::handle_at(y - f64::from(r.y()), f64::from(r.height())) != Handle::Body
+                })
+        });
+        self.set_cursor_from_name(edge.then_some("ns-resize"));
+    }
+
     /// The press: picks the card under `(x, y)`, when the view allows a
     /// drag of it, or records the point for a drag across empty time.
     fn begin(&self, x: f64, y: f64) {
@@ -1266,6 +1356,7 @@ impl TimeGrid {
                 press: (x, y),
                 samples: VecDeque::new(),
                 started: false,
+                over_strip: None,
             }));
         } else if x >= f64::from(GUTTER)
             && y >= 0.0
@@ -1280,6 +1371,7 @@ impl TimeGrid {
                 press: (x, y),
                 samples: VecDeque::new(),
                 started: false,
+                over_strip: None,
             }));
         } else {
             imp.dragging.replace(None);
@@ -1299,16 +1391,16 @@ impl TimeGrid {
             return false;
         }
         if !already_started {
-            let (card, is_end) = {
+            let (card, is_edge) = {
                 let mut dragging = imp.dragging.borrow_mut();
                 let state = dragging.as_mut().expect("checked above");
                 state.started = true;
-                (state.card.clone(), state.grab.map(|g| g.handle) == Some(Handle::End))
+                (state.card.clone(), state.grab.is_some_and(|g| g.handle != Handle::Body))
             };
             if let Some((widget, _)) = &card {
                 widget.add_css_class("dragging");
             }
-            self.set_cursor_from_name(Some(if is_end { "ns-resize" } else { "grabbing" }));
+            self.set_cursor_from_name(Some(if is_edge { "ns-resize" } else { "grabbing" }));
             if card.is_some()
                 && let Some(f) = imp.carousel_interactive.borrow().as_ref()
             {
@@ -1322,8 +1414,29 @@ impl TimeGrid {
             (state.press, state.card.clone(), state.grab, state.from, state.column)
         };
         let (x, y) = (press.0 + dx, press.1 + dy);
-        let column = self.column_at(x);
+        // An edge changes one end of the event on its own day; only the
+        // body carries it to another day's column.
+        let column = match grab {
+            Some(grab) if grab.handle != Handle::Body => origin_column,
+            _ => self.column_at(x),
+        };
         let now = self.frame_clock().map_or(0, |c| c.frame_time());
+
+        // A card carried up out of the hours over the all-day row lands
+        // there as an all-day event, on the day under the pointer.
+        let over_strip = match (&card, grab) {
+            (Some(_), Some(grab)) if grab.handle == Handle::Body => self.strip_column(x, y),
+            _ => None,
+        };
+        if let Some(strip) = imp.strip.upgrade() {
+            strip.show_ghost(over_strip);
+        }
+        if let Some(state) = imp.dragging.borrow_mut().as_mut() {
+            state.over_strip = over_strip;
+        }
+        if over_strip.is_some() {
+            return true;
+        }
 
         match (&card, grab) {
             (Some((widget, _)), Some(grab)) => {
@@ -1368,6 +1481,17 @@ impl TimeGrid {
         true
     }
 
+    /// The all-day row's day column under `(x, y)`, in the grid's own
+    /// coordinates, when the pointer is over that row.
+    fn strip_column(&self, x: f64, y: f64) -> Option<usize> {
+        let strip = self.imp().strip.upgrade()?;
+        let point = self.compute_point(&strip, &graphene::Point::new(x as f32, y as f32))?;
+        let inside = point.x() >= GUTTER
+            && point.x() < strip.width() as f32
+            && (0.0..strip.height() as f32).contains(&point.y());
+        inside.then(|| self.column_at(x))
+    }
+
     /// The release. A drag on a card that never started leaves its own
     /// click to open the popover, as before. On empty time, a press that
     /// never started emits `selected` for the half hour it landed on,
@@ -1382,6 +1506,23 @@ impl TimeGrid {
         let Some((started, card, grab, origin_column, from, press, current_rect, samples)) = taken else {
             return;
         };
+        let over_strip = imp.dragging.borrow().as_ref().and_then(|d| d.over_strip);
+        if let (true, Some(column), Some((_, occurrence))) = (started, over_strip, &card) {
+            let day = imp.days.borrow().get(column).copied();
+            let Some(day) = day else {
+                self.spring_back();
+                return;
+            };
+            let (start, end) = drag::all_day_on(day);
+            // The card stays where the pointer left the hours until the
+            // write is held, as a card dropped among them does; a Cancel
+            // springs it back to its own place.
+            self.land();
+            if let Some(f) = imp.moved.borrow().as_ref() {
+                f(self, occurrence, drag::Landing { start, end, all_day: true });
+            }
+            return;
+        }
         if !started {
             imp.dragging.replace(None);
             if card.is_none() {
@@ -1393,7 +1534,10 @@ impl TimeGrid {
             return;
         }
         let (x, y) = (press.0 + dx, press.1 + dy);
-        let column = self.column_at(x);
+        let column = match grab {
+            Some(grab) if grab.handle != Handle::Body => origin_column,
+            _ => self.column_at(x),
+        };
         let velocity_y = drag::velocity(&samples);
         match card {
             Some((widget, occurrence)) => {
@@ -1417,7 +1561,7 @@ impl TimeGrid {
                     }
                     grid.land();
                     if let Some(f) = grid.imp().moved.borrow().as_ref() {
-                        f(&grid, &occurrence, start, end);
+                        f(&grid, &occurrence, drag::Landing { start, end, all_day: false });
                     }
                 });
             }
@@ -1538,29 +1682,18 @@ impl TimeGrid {
         }
     }
 
-    /// The keyboard path beside the drag: Shift+Up or Shift+Down moves
-    /// the focused card by a quarter hour, Shift+Alt+Up or
-    /// Shift+Alt+Down changes when it ends, and Shift+Left or Shift+Right
-    /// moves it a whole day, in the event's own zone
-    /// (`drag::nudge_days`), for a move between days the grid has no
-    /// drag gesture for. Neither writes anything the card's own
+    /// The keyboard path beside the drag ([`drag::grid_key`]): Shift+Up
+    /// or Shift+Down moves the focused card by a quarter hour,
+    /// Ctrl+Shift+Up or Ctrl+Shift+Down changes when it starts,
+    /// Shift+Alt+Up or Shift+Alt+Down when it ends, and Shift+Left or
+    /// Shift+Right moves it a whole day, in the event's own zone
+    /// (`drag::nudge_days`). None writes anything the card's own
     /// predicate refuses. The card moves at once; the view hears of the
     /// total move once the keyboard rests (`drag::Nudges`), so a run of
     /// presses asks one question.
     fn nudge_focused(&self, keyval: gdk::Key, state: gdk::ModifierType) -> glib::Propagation {
-        if !state.contains(gdk::ModifierType::SHIFT_MASK) {
+        let Some(action) = drag::grid_key(keyval, state) else {
             return glib::Propagation::Proceed;
-        }
-        enum Axis {
-            Time(i64),
-            Day(i64),
-        }
-        let axis = match keyval {
-            gdk::Key::Up => Axis::Time(-1),
-            gdk::Key::Down => Axis::Time(1),
-            gdk::Key::Left => Axis::Day(-1),
-            gdk::Key::Right => Axis::Day(1),
-            _ => return glib::Propagation::Proceed,
         };
         let imp = self.imp();
         let Some(o) = self.focused() else {
@@ -1582,12 +1715,11 @@ impl TimeGrid {
         }
         let now = glib::monotonic_time() / 1_000;
         let span = imp.nudging.borrow().as_ref().map_or((o.start, o.end), |n| n.run.to);
-        let to = match axis {
-            Axis::Time(steps) if state.contains(gdk::ModifierType::ALT_MASK) => {
-                drag::stretch(span.0, span.1, steps)
-            }
-            Axis::Time(steps) => drag::nudge(span.0, span.1, steps),
-            Axis::Day(steps) => {
+        let to = match action {
+            drag::GridKey::Move(steps) => drag::nudge(span.0, span.1, steps),
+            drag::GridKey::Start(steps) => drag::stretch_start(span.0, span.1, steps),
+            drag::GridKey::End(steps) => drag::stretch(span.0, span.1, steps),
+            drag::GridKey::Days(steps) => {
                 let zone: Tz = o.event.zone.parse().unwrap_or(Tz::UTC);
                 drag::nudge_days(span.0, span.1, steps, zone)
             }
@@ -1648,7 +1780,7 @@ impl TimeGrid {
         imp.nudged.replace(Some((n.card.clone(), n.placement)));
         let (start, end) = n.run.to;
         if let Some(f) = imp.moved.borrow().as_ref() {
-            f(self, &n.occurrence, start, end);
+            f(self, &n.occurrence, drag::Landing { start, end, all_day: false });
         }
     }
 
@@ -1701,6 +1833,27 @@ impl TimeGrid {
         let Some(imp::Placement::Card { columns, lane, lanes, .. }) = self.placement_of(card) else { return };
         let placement = imp::Placement::Card { column, columns, lane, lanes, top, bottom };
         self.set_placement(card, placement);
+    }
+}
+
+/// The block a `pick` of `root` at `(x, y)` lands on, and its
+/// occurrence: walks up from the picked widget to the block it belongs
+/// to, the way a click on a label or the bar inside it still finds it.
+fn pick_block(
+    root: &gtk::Widget,
+    blocks: &[(EventKey, Occurrence, gtk::Widget)],
+    x: f64,
+    y: f64,
+) -> Option<(gtk::Widget, Occurrence)> {
+    let mut current = root.pick(x, y, gtk::PickFlags::DEFAULT)?;
+    loop {
+        if let Some((_, o, w)) = blocks.iter().find(|(_, _, w)| *w == current) {
+            return Some((w.clone(), o.clone()));
+        }
+        if &current == root {
+            return None;
+        }
+        current = current.parent()?;
     }
 }
 
@@ -1810,7 +1963,252 @@ impl Default for AllDayStrip {
 
 impl AllDayStrip {
     pub fn new() -> AllDayStrip {
-        AllDayStrip::default()
+        let strip = AllDayStrip::default();
+        // The same capture-phase drag as the hours use: it claims the
+        // sequence only past GTK's own threshold, so a press that goes no
+        // further stays a click for the card.
+        let drag = gtk::GestureDrag::builder()
+            .button(gdk::BUTTON_PRIMARY)
+            .propagation_phase(gtk::PropagationPhase::Capture)
+            .build();
+        let weak = strip.downgrade();
+        drag.connect_drag_begin(move |_, x, y| {
+            if let Some(strip) = weak.upgrade() {
+                strip.begin(x, y);
+            }
+        });
+        let weak = strip.downgrade();
+        drag.connect_drag_update(move |gesture, dx, dy| {
+            let Some(strip) = weak.upgrade() else { return };
+            let threshold = gtk::Settings::default().map_or(8, |s| s.gtk_dnd_drag_threshold()) as f64;
+            if strip.update(dx, dy, threshold) {
+                gesture.set_state(gtk::EventSequenceState::Claimed);
+            }
+        });
+        let weak = strip.downgrade();
+        drag.connect_drag_end(move |_, _, _| {
+            if let Some(strip) = weak.upgrade() {
+                strip.end();
+            }
+        });
+        strip.add_controller(drag);
+
+        let hover = gtk::EventControllerMotion::new();
+        let weak = strip.downgrade();
+        hover.connect_motion(move |_, x, y| {
+            if let Some(strip) = weak.upgrade() {
+                strip.hover(x, y);
+            }
+        });
+        let weak = strip.downgrade();
+        hover.connect_leave(move |_| {
+            if let Some(strip) = weak.upgrade()
+                && strip.imp().dragging.borrow().is_none()
+            {
+                strip.set_cursor_from_name(None);
+            }
+        });
+        strip.add_controller(hover);
+        strip
+    }
+
+    /// Runs `f` when a drag of a card ends somewhere new: moved or
+    /// resized by whole days, or carried down into the hours.
+    pub fn connect_moved(&self, f: impl Fn(&AllDayStrip, &Occurrence, drag::Landing) + 'static) {
+        self.imp().moved.replace(Some(Box::new(f)));
+    }
+
+    /// Says which occurrences a drag may move.
+    pub fn set_can_move(&self, f: impl Fn(&Occurrence) -> bool + 'static) {
+        self.imp().can_move.replace(Some(Box::new(f)));
+    }
+
+    /// Runs `f(false)` once a drag holds the row and `f(true)` once it
+    /// lets go, as [`TimeGrid::connect_carousel_interactive`] does.
+    pub fn connect_carousel_interactive(&self, f: impl Fn(bool) + 'static) {
+        self.imp().carousel_interactive.replace(Some(Box::new(f)));
+    }
+
+    /// Returns a card a drag landed somewhere new to its own place, and
+    /// takes away the mark a drag left in the hours, for a Cancel or a
+    /// failed write.
+    pub fn spring_back(&self) {
+        let landed = self.imp().landed.take();
+        if let Some((card, placement)) = landed {
+            self.set_placement(&card, placement);
+        }
+        if let Some(grid) = self.imp().grid.upgrade() {
+            grid.show_ghost(None);
+        }
+    }
+
+    /// Marks `column` as the day a timed card dragged up out of the hours
+    /// would land on, or clears the mark.
+    pub fn show_ghost(&self, column: Option<usize>) {
+        let imp = self.imp();
+        let current = imp.ghost.borrow().as_ref().map(|(_, (start, _, _))| *start);
+        if current == column {
+            return;
+        }
+        if let Some((ghost, _)) = imp.ghost.take() {
+            ghost.unparent();
+        }
+        if let Some(column) = column {
+            let ghost = gtk::Box::builder()
+                .css_classes(["event-block", "ghost"])
+                .can_target(false)
+                .build();
+            ghost.set_parent(self);
+            imp.ghost.replace(Some((ghost.upcast(), (column, column + 1, 0))));
+        }
+        self.queue_resize();
+    }
+
+    /// The day column under `x`, clamped to the days shown.
+    fn column_at(&self, x: f64) -> usize {
+        let days = self.imp().days.get().max(1);
+        let column_width = (f64::from(self.width() as f32) - f64::from(GUTTER)) / days as f64;
+        let column = if column_width > 0.0 { ((x - f64::from(GUTTER)) / column_width).floor() } else { 0.0 };
+        column.clamp(0.0, days as f64 - 1.0) as usize
+    }
+
+    fn placement_of(&self, card: &gtk::Widget) -> Option<(usize, usize, usize)> {
+        self.imp().children.borrow().iter().find(|(w, _)| w == card).map(|(_, p)| *p)
+    }
+
+    fn set_placement(&self, card: &gtk::Widget, placement: (usize, usize, usize)) {
+        if let Some((_, p)) = self.imp().children.borrow_mut().iter_mut().find(|(w, _)| w == card) {
+            *p = placement;
+        }
+        self.queue_allocate();
+    }
+
+    /// The card under `(x, y)` a drag may change, with the end of it the
+    /// pointer is over, if either.
+    fn grab_at(&self, x: f64, y: f64) -> Option<(gtk::Widget, Occurrence, Option<drag::Edge>)> {
+        let (widget, o) = pick_block(self.upcast_ref(), &self.imp().blocks.borrow(), x, y)?;
+        let allowed = self.imp().can_move.borrow().as_ref().is_some_and(|f| f(&o));
+        if !allowed {
+            return None;
+        }
+        let bounds = widget.compute_bounds(self)?;
+        let edge = drag::edge_at(x - f64::from(bounds.x()), f64::from(bounds.width()));
+        Some((widget, o, edge))
+    }
+
+    /// Shows the resize cursor over either end of a card a drag may
+    /// resize.
+    fn hover(&self, x: f64, y: f64) {
+        if self.imp().dragging.borrow().is_some() {
+            return;
+        }
+        let edge = self.grab_at(x, y).is_some_and(|(_, _, edge)| edge.is_some());
+        self.set_cursor_from_name(edge.then_some("ew-resize"));
+    }
+
+    fn begin(&self, x: f64, y: f64) {
+        let grabbed = self.grab_at(x, y);
+        let drag = grabbed.and_then(|(card, occurrence, edge)| {
+            let placement = self.placement_of(&card)?;
+            Some(StripDrag {
+                card,
+                occurrence,
+                edge,
+                placement,
+                press: (x, y),
+                press_column: self.column_at(x),
+                started: false,
+                landing: None,
+            })
+        });
+        self.imp().dragging.replace(drag);
+    }
+
+    /// The pointer moved by `(dx, dy)` from the press. Returns whether
+    /// the drag has started, as [`TimeGrid`]'s own does.
+    fn update(&self, dx: f64, dy: f64, threshold: f64) -> bool {
+        let imp = self.imp();
+        let taken = imp.dragging.borrow().as_ref().map(|d| {
+            (d.started, d.card.clone(), d.occurrence.clone(), d.edge, d.placement, d.press, d.press_column)
+        });
+        let Some((started, card, o, edge, placement, press, press_column)) = taken else {
+            return false;
+        };
+        if !started {
+            if drag::is_click(dx, dy, threshold) {
+                return false;
+            }
+            if let Some(d) = imp.dragging.borrow_mut().as_mut() {
+                d.started = true;
+            }
+            card.add_css_class("dragging");
+            self.set_cursor_from_name(Some(if edge.is_some() { "ew-resize" } else { "grabbing" }));
+            if let Some(f) = imp.carousel_interactive.borrow().as_ref() {
+                f(false);
+            }
+        }
+        let (x, y) = (press.0 + dx, press.1 + dy);
+        let grid = imp.grid.upgrade();
+        // Carried down into the hours, the event lands there as a timed
+        // one, an hour long from the quarter hour under the pointer.
+        let into_hours = match (&grid, edge) {
+            (Some(grid), None) if y >= f64::from(self.height()) => grid.time_under(self, x, y),
+            _ => None,
+        };
+        if let Some(grid) = &grid {
+            grid.show_ghost(into_hours.map(drag::timed_at));
+        }
+        let (landing, shown) = match into_hours {
+            Some(at) => {
+                let (start, end) = drag::timed_at(at);
+                (Some(drag::Landing { start, end, all_day: false }), placement)
+            }
+            None => {
+                let days = self.column_at(x) as i64 - press_column as i64;
+                let (start, end) = match edge {
+                    None => drag::by_days(o.start, o.end, true, days, Tz::UTC),
+                    Some(edge) => drag::resize_days(o.start, o.end, edge, days),
+                };
+                let columns = all_day_columns(start, end, &imp.dates.borrow());
+                let shown = columns.map_or(placement, |(first, last)| (first, last, placement.2));
+                let moved = (start, end) != (o.start, o.end);
+                (moved.then_some(drag::Landing { start, end, all_day: true }), shown)
+            }
+        };
+        if let Some(d) = imp.dragging.borrow_mut().as_mut() {
+            d.landing = landing;
+        }
+        self.set_placement(&card, shown);
+        true
+    }
+
+    /// The release: hands a drag that lands somewhere new to the view,
+    /// which asks before it writes, and puts any other back.
+    fn end(&self) {
+        let imp = self.imp();
+        let Some(d) = imp.dragging.take() else { return };
+        if !d.started {
+            return;
+        }
+        d.card.remove_css_class("dragging");
+        self.set_cursor_from_name(None);
+        if let Some(f) = imp.carousel_interactive.borrow().as_ref() {
+            f(true);
+        }
+        match d.landing {
+            Some(landing) => {
+                imp.landed.replace(Some((d.card.clone(), d.placement)));
+                if let Some(f) = imp.moved.borrow().as_ref() {
+                    f(self, &d.occurrence, landing);
+                }
+            }
+            None => {
+                self.set_placement(&d.card, d.placement);
+                if let Some(grid) = imp.grid.upgrade() {
+                    grid.show_ghost(None);
+                }
+            }
+        }
     }
 
     /// Rebuilds every card from the all-day occurrences of `occurrences`
@@ -1825,6 +2223,11 @@ impl AllDayStrip {
         let imp = self.imp();
         for (child, _) in imp.children.borrow_mut().drain(..) {
             child.unparent();
+        }
+        imp.dates.replace(days.to_vec());
+        imp.landed.take();
+        if let Some((ghost, _)) = imp.ghost.take() {
+            ghost.unparent();
         }
 
         let mut spanning: Vec<(usize, usize, usize)> = Vec::new(); // (occurrence index, start day, end day)
