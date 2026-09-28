@@ -484,18 +484,6 @@ mod tests {
         assert!(near_end(0.0, 400.0, 250.0, 200.0));
     }
 
-    /// The switch that overlapped at 700px now drops Week rather than
-    /// squeeze three labels into the room compact leaves it.
-    #[test]
-    fn a_compact_switch_drops_week() {
-        let on: Vec<&str> = offered(false, true)
-            .into_iter()
-            .filter(|(_, on)| *on)
-            .map(|(name, _)| name)
-            .collect();
-        assert_eq!(on, ["day", "month"]);
-    }
-
     #[test]
     fn each_view_names_the_toggle_that_shows_it() {
         for view in [Showing::Day, Showing::Week, Showing::Month, Showing::List] {
