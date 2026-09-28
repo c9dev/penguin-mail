@@ -1,19 +1,7 @@
-# European Portuguese translation of Penguin Mail.
-# This file is distributed under the same licence as Penguin Mail.
-#
 msgid ""
 msgstr ""
-"Project-Id-Version: penguin-mail 0.1.0\n"
 "Report-Msgid-Bugs-To: https://github.com/c9dev/penguin-mail/issues\n"
-"PO-Revision-Date: 2026-09-20 12:00+0100\n"
-"Last-Translator: David Santos <g0shed@gmail.com>\n"
-"Language-Team: Portuguese (Portugal)\n"
-"Language: pt_PT\n"
-"MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
-"Content-Transfer-Encoding: 8bit\n"
-"X-Language-Name: Português (Portugal)\n"
-"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 #: app/data/io.github.c9dev.PenguinMail.desktop:5
 msgid "Read and write Gmail from all your accounts"
@@ -8283,6 +8271,41 @@ msgstr "Está por ler"
 msgid "Is flagged"
 msgstr "Está marcada"
 
+#: gmail/src/oauth.rs:414
+msgid "Signed in to Penguin Mail"
+msgstr "Sessão iniciada no Penguin Mail"
+
+#: gmail/src/oauth.rs:415
+msgid "You can close this tab and go back to Penguin Mail."
+msgstr "Pode fechar este separador e voltar ao Penguin Mail."
+
+#: gmail/src/oauth.rs:420
+msgid "You didn't allow access"
+msgstr "Não permitiu o acesso"
+
+#: gmail/src/oauth.rs:421
+msgid ""
+"Penguin Mail has not been signed in. To try again, go back to Penguin Mail "
+"and press Grant Access."
+msgstr ""
+"O Penguin Mail não iniciou sessão. Para tentar de novo, volte ao Penguin "
+"Mail e carregue em Conceder acesso."
+
+#: gmail/src/oauth.rs:426
+msgid "Sign-in didn't finish"
+msgstr "O início de sessão não terminou"
+
+#: gmail/src/oauth.rs:427
+msgid ""
+"Go back to Penguin Mail to see why and try again. You can close this tab."
+msgstr ""
+"Volte ao Penguin Mail para ver porquê e tentar de novo. Pode fechar este "
+"separador."
+
+#: gmail/src/oauth.rs:429
+msgid "Nothing here"
+msgstr "Nada aqui"
+
 #: sync/src/account/writes.rs:730
 msgid "{provider} is busy. Still working on {conversations}."
 msgstr "{provider} está ocupado. Ainda a trabalhar em {conversations}."
@@ -8589,6 +8612,11 @@ msgstr "Marcar como não sendo spam"
 #: sync/src/triage.rs:70
 msgid "Move to {folder}"
 msgstr "Mover para {folder}"
+
+#, fuzzy
+#~| msgid "Open"
+#~ msgid "en"
+#~ msgstr "Abrir"
 
 #~ msgid ""
 #~ "Usage: penguin-mail [--background] [--demo] [--compose [mailto:ADDRESS]]\n"

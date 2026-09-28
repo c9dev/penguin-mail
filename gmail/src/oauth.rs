@@ -385,20 +385,7 @@ impl LoopbackListener {
             let mut buf = vec![0u8; 8192];
             let n = stream.read(&mut buf).await.map_err(io_error)?;
             let outcome = parse_redirect(&String::from_utf8_lossy(&buf[..n]), expected_state);
-            let (status, message) = match &outcome {
-                Some(Ok(_)) => (
-                    "200 OK",
-                    "Penguin Mail is authorized. You can close this tab.",
-                ),
-                Some(Err(_)) => (
-                    "400 Bad Request",
-                    "Authorization failed. The terminal has the details.",
-                ),
-                None => ("404 Not Found", "Not found."),
-            };
-            let body = format!(
-                "<!doctype html><meta charset=utf-8><title>Penguin Mail</title><p>{message}</p>"
-            );
+            let (status, body) = finished_page(&outcome);
             let response = format!(
                 "HTTP/1.1 {status}\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
                 body.len()
@@ -409,6 +396,93 @@ impl LoopbackListener {
             }
         }
     }
+}
+
+/// The app's own icon, drawn at the top of the page the browser shows
+/// when sign-in hands back. It is inline, so the page loads nothing.
+const APP_ICON: &str = include_str!("../../app/data/icons/scalable/apps/io.github.c9dev.PenguinMail.svg");
+
+/// The status line and page the browser shows when a sign-in hands back
+/// to the app. The words are fixed ones: nothing from the redirect's
+/// address reaches the page, so a crafted address cannot write into it.
+fn finished_page(outcome: &Option<Result<String, GmailError>>) -> (&'static str, String) {
+    use mailrs_domain::translate::gettext;
+    let (status, mark, heading, detail) = match outcome {
+        Some(Ok(_)) => (
+            "200 OK",
+            "ok",
+            gettext("Signed in to Penguin Mail"),
+            gettext("You can close this tab and go back to Penguin Mail."),
+        ),
+        Some(Err(GmailError::OAuth(reason))) if reason.ends_with("access_denied") => (
+            "400 Bad Request",
+            "no",
+            gettext("You didn't allow access"),
+            gettext("Penguin Mail has not been signed in. To try again, go back to Penguin Mail and press Grant Access."),
+        ),
+        Some(Err(_)) => (
+            "400 Bad Request",
+            "no",
+            gettext("Sign-in didn't finish"),
+            gettext("Go back to Penguin Mail to see why and try again. You can close this tab."),
+        ),
+        None => ("404 Not Found", "none", gettext("Nothing here"), String::new()),
+    };
+    let glyph = match mark {
+        "ok" => "<path d=\"M7 12.5l3.2 3.2L17 9\"/>",
+        "no" => "<path d=\"M8 8l8 8M16 8l-8 8\"/>",
+        _ => "",
+    };
+    let badge = if glyph.is_empty() {
+        String::new()
+    } else {
+        format!(
+            "<svg class=\"badge {mark}\" viewBox=\"0 0 24 24\" aria-hidden=\"true\">\
+             <circle cx=\"12\" cy=\"12\" r=\"12\"/>{glyph}</svg>"
+        )
+    };
+    let page = format!(
+        "<!doctype html><html><meta charset=utf-8>\
+<meta name=viewport content=\"width=device-width,initial-scale=1\">\
+<title>{title}</title><style>{css}</style>\
+<main><div class=\"icon\" aria-hidden=\"true\">{icon}{badge}</div>\
+<h1>{heading}</h1><p>{detail}</p></main></html>",
+        title = html_escape(&heading),
+        css = FINISHED_CSS,
+        // The icon file has a fixed 256 px size and no viewBox, so it is
+        // given one here to scale to the page's 96 px instead of cropping.
+        icon = APP_ICON.replacen("width=\"256\" height=\"256\"", "viewBox=\"0 0 256 256\"", 1),
+        heading = html_escape(&heading),
+        detail = html_escape(&detail),
+    );
+    (status, page)
+}
+
+/// The page's look: the app's colours, centred, light or dark with the
+/// system.
+const FINISHED_CSS: &str = ":root{color-scheme:light dark;--bg:#faf9f7;--card:#ffffff;--fg:#1d1d20;\
+--dim:#5e5c64;--line:rgba(0,0,0,.08);--ok:#26a269;--no:#c01c28}\
+@media (prefers-color-scheme: dark){:root{--bg:#1e1e21;--card:#2a2a2e;--fg:#ffffff;\
+--dim:rgba(255,255,255,.66);--line:rgba(255,255,255,.08);--ok:#33d17a;--no:#ed333b}}\
+*{box-sizing:border-box}html,body{height:100%}\
+body{margin:0;display:grid;place-items:center;background:var(--bg);color:var(--fg);\
+font:15px/1.5 \"Adwaita Sans\",Cantarell,system-ui,-apple-system,\"Segoe UI\",Roboto,sans-serif}\
+main{width:min(420px,calc(100% - 32px));padding:40px 36px 36px;text-align:center;background:var(--card);\
+border:1px solid var(--line);border-radius:24px;box-shadow:0 12px 40px rgba(0,0,0,.10)}\
+.icon{position:relative;width:96px;height:96px;margin:0 auto 20px}.icon>svg:first-child{width:96px;height:96px}\
+.badge{position:absolute;right:-6px;bottom:-4px;width:34px;height:34px;fill:var(--ok);\
+stroke:#fff;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;\
+filter:drop-shadow(0 2px 4px rgba(0,0,0,.2))}.badge.no{fill:var(--no)}\
+.badge path{fill:none}h1{margin:0 0 8px;font-size:22px;font-weight:800;letter-spacing:-.01em}\
+p{margin:0;color:var(--dim)}\
+@media (prefers-reduced-motion: no-preference){main{animation:rise .35s ease-out both}\
+@keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}}";
+
+fn html_escape(text: &str) -> String {
+    text.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
 }
 
 fn io_error(err: std::io::Error) -> GmailError {
@@ -469,3 +543,47 @@ mod build_client_tests {
         assert!(!shown.contains("id.apps.googleusercontent.com"));
     }
 }
+
+#[cfg(test)]
+mod finished_page_tests {
+    use super::*;
+
+    #[test]
+    fn a_granted_sign_in_says_it_worked_and_what_to_do_next() {
+        let (status, html) = finished_page(&Some(Ok("code".into())));
+        assert_eq!(status, "200 OK");
+        assert!(html.contains("Signed in to Penguin Mail"), "{html}");
+        assert!(html.contains("close this tab"), "{html}");
+        assert!(html.contains("<svg"), "the page carries the app icon: {html}");
+        assert!(html.contains("viewBox=\"0 0 256 256\""), "the icon scales rather than crops: {html}");
+        assert!(html.contains("prefers-color-scheme: dark"), "{html}");
+    }
+
+    #[test]
+    fn declining_access_says_so_and_how_to_try_again() {
+        let declined = Some(Err(GmailError::OAuth("Google returned access_denied".into())));
+        let (status, html) = finished_page(&declined);
+        assert_eq!(status, "400 Bad Request");
+        assert!(html.contains("didn't allow access"), "{html}");
+        assert!(!html.contains("terminal"), "{html}");
+    }
+
+    #[test]
+    fn a_failed_sign_in_never_echoes_what_the_address_carried() {
+        let odd = Some(Err(GmailError::OAuth("Google returned <script>x</script>".into())));
+        let (_, html) = finished_page(&odd);
+        assert!(html.contains("Sign-in didn't finish"), "{html}");
+        assert!(!html.contains("<script>"), "{html}");
+    }
+
+    #[test]
+    fn the_page_loads_nothing_from_the_network() {
+        let (_, html) = finished_page(&Some(Ok("code".into())));
+        // The icon's own gradients are `url(#id)`, inside the page.
+        for load in ["<link", "<script", "<img", "url(http", "url(//", "src="] {
+            assert!(!html.contains(load), "{load} in {html}");
+        }
+    }
+}
+
+

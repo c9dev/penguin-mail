@@ -1,6 +1,3 @@
-# Every file holding words a person reads. scripts/update-po.sh rebuilds
-# the template from the crate roots and warns when this list has drifted
-# from what it found.
 app/data/io.github.c9dev.PenguinMail.desktop
 app/data/io.github.c9dev.PenguinMail.metainfo.xml
 app/src/add_account.rs
@@ -8,12 +5,12 @@ app/src/app.rs
 app/src/app/sending.rs
 app/src/app/updates.rs
 app/src/assistant/mod.rs
-app/src/assistant/run.rs
 app/src/assistant/run/calendar.rs
 app/src/assistant/run/catalog.rs
 app/src/assistant/run/mail.rs
 app/src/assistant/run/manage.rs
 app/src/assistant/run/queue.rs
+app/src/assistant/run.rs
 app/src/assistant/run/unsubscribe.rs
 app/src/assistant/run/writing.rs
 app/src/assistant/sources/mcp/mod.rs
@@ -34,8 +31,8 @@ app/src/open_thread/run/translation.rs
 app/src/packaging.rs
 app/src/permission.rs
 app/src/pgp.rs
-app/src/protection.rs
 app/src/protection/draft.rs
+app/src/protection.rs
 app/src/render.rs
 app/src/rules.rs
 app/src/search.rs
@@ -46,9 +43,9 @@ app/src/translation.rs
 app/src/tray.rs
 app/src/ui/about.rs
 app/src/ui/add_account.rs
-app/src/ui/assistant.rs
 app/src/ui/assistant_mcp_prefs.rs
 app/src/ui/assistant_prefs.rs
+app/src/ui/assistant.rs
 app/src/ui/assistant_skills_prefs.rs
 app/src/ui/assistant_web_prefs.rs
 app/src/ui/calendar/agenda.rs
@@ -99,13 +96,12 @@ app/src/ui/unsubscribe.rs
 app/src/ui/vacation.rs
 app/src/ui/welcome.rs
 app/src/ui/when.rs
-app/src/ui/window.rs
 app/src/ui/window/across.rs
 app/src/ui/window/arrange.rs
 app/src/ui/window/assistant.rs
 app/src/ui/window/attachments.rs
-app/src/ui/window/categories.rs
 app/src/ui/window/categories/chip.rs
+app/src/ui/window/categories.rs
 app/src/ui/window/detached.rs
 app/src/ui/window/export.rs
 app/src/ui/window/followup.rs
@@ -119,6 +115,7 @@ app/src/ui/window/outbox.rs
 app/src/ui/window/press.rs
 app/src/ui/window/reminders.rs
 app/src/ui/window/reveal.rs
+app/src/ui/window.rs
 app/src/ui/window/scheduled.rs
 app/src/ui/window/senders.rs
 app/src/ui/window/shortcuts.rs
@@ -129,14 +126,17 @@ app/src/update/mod.rs
 app/src/update/signature.rs
 domain/src/calendar/clock.rs
 domain/src/category.rs
-domain/src/invitation.rs
 domain/src/invitation/recurrence.rs
+domain/src/invitation.rs
 domain/src/lib.rs
 domain/src/smart.rs
 domain/src/translate.rs
+# Every file holding words a person reads. scripts/update-po.sh rebuilds
+# from what it found.
+gmail/src/oauth.rs
 sync/src/account/writes.rs
-sync/src/actions.rs
 sync/src/actions/labelling.rs
+sync/src/actions.rs
 sync/src/calendar_copy.rs
 sync/src/error.rs
 sync/src/mailbox.rs
@@ -144,3 +144,4 @@ sync/src/passwords.rs
 sync/src/services/imap/outgoing.rs
 sync/src/sign_in.rs
 sync/src/triage.rs
+# the template from the crate roots and warns when this list has drifted

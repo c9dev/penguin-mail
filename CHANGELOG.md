@@ -118,6 +118,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   Ctrl+R.
 
 ### Improved
+- The page your browser shows after you sign in to Google says so with the
+  Penguin Mail icon, in light or dark, and says how to try again if you
+  didn't allow access.
 
 - With an orange accent, buttons and pills that carry white text, such as
   Yes on an invitation and the chosen inbox category, are darker so the
