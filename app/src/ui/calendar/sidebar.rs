@@ -209,8 +209,11 @@ impl CalendarSidebar {
         let content = gtk::Box::builder()
             .orientation(gtk::Orientation::Vertical)
             .spacing(10)
-            .margin_start(12)
-            .margin_end(12)
+            // The redesign's sidebar card (`Sidebar::page`, A2) already
+            // takes 8 px from the window; these 10 more put the mini
+            // month's title and grid at the mockup's 18 px, not 20.
+            .margin_start(10)
+            .margin_end(10)
             .margin_top(6)
             .margin_bottom(12)
             .build();
@@ -566,7 +569,11 @@ impl CalendarSidebar {
         for account in accounts {
             let heading = gtk::Label::builder()
                 .label(&account.address)
-                .css_classes(["calendar-account"])
+                // A2's heading class (`app/data/style.css`) sets the
+                // size, weight and faint colour every sidebar heading
+                // shares; an account's address stays sentence case, so it
+                // takes none of that rule's capitals.
+                .css_classes(["sidebar-section"])
                 .xalign(0.0)
                 .margin_top(14)
                 .margin_bottom(12)

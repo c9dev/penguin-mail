@@ -5620,6 +5620,10 @@ msgstr "Regra adicionada"
 msgid "Could not add the rule: {reason}"
 msgstr "Não foi possível adicionar a regra: {reason}"
 
+#: app/src/ui/sidebar/sections.rs:25
+msgid "Favorites"
+msgstr "Favoritos"
+
 #: app/src/ui/sidebar.rs:81
 msgid "Mailboxes"
 msgstr "Caixas de correio"

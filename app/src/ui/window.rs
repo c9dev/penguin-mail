@@ -449,9 +449,14 @@ impl MainWindow {
                 }
             });
             list.set_row_menu(&conversation.thread_menu());
+            // `.mail-columns` lets style.css put the list column on the
+            // window colour, as the mockup draws it, rather than the
+            // sidebar shade an `AdwNavigationSplitView` pane takes by
+            // default.
             let nav = adw::NavigationSplitView::builder()
                 .sidebar(&list.page)
                 .content(&conversation.page)
+                .css_classes(["mail-columns"])
                 .min_sidebar_width(300.0)
                 .max_sidebar_width(420.0)
                 .sidebar_width_fraction(0.34)
@@ -524,9 +529,10 @@ impl MainWindow {
             let split = adw::OverlaySplitView::builder()
                 .sidebar(&sidebar.page)
                 .content(&spaces)
-                .min_sidebar_width(220.0)
-                .max_sidebar_width(290.0)
-                .sidebar_width_fraction(0.22)
+                .css_classes(["inset-sidebar"])
+                .min_sidebar_width(256.0)
+                .max_sidebar_width(256.0)
+                .sidebar_width_fraction(0.178)
                 .build();
             split
                 .bind_property("collapsed", &list.sidebar_button, "visible")
