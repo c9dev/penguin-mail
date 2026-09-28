@@ -162,6 +162,8 @@ Terms the code and its docs use for Gmail mail. The `domain` crate holds the cod
 
 **Working hours**: the stretch of the day, and the weekdays, a person keeps meetings in: 09:00 to 18:00, Monday to Friday, unless Preferences says otherwise. `mailrs_domain::calendar::hours::WorkingHours`, kept in `Settings::working_hours`. The Day and Week grid shades what falls outside it, Month shades a day that is not one of its weekdays, and it is what "free time" means unless a search says otherwise. _Avoid_: business hours, office hours.
 
+**Week start**: which day the Week grid, the Month grid and the mini month begin on: the locale's own first weekday, or a fixed Monday or Sunday from Preferences' Week Starts On row. `mailrs_domain::calendar::week::WeekStart`, kept in `Settings::week_start`; `mailrs_domain::calendar::week::week_start` turns it and the locale's own answer into the weekday a grid actually starts on, and `mailrs::locale_time::week_start_weekday` is the one function every grid calls for it. _Avoid_: first day of the week, start of week.
+
 **Calendar**: one calendar on an account, as the calendar view lists it: its name, colour, whether the account may write to it, and whether the view shows it. `mailrs_domain::calendar::Calendar`. _Avoid_: agenda, schedule.
 
 **Local copy** (calendar): the account's calendars and events kept in the store and read from there, fresh within a minute while the window is open. `mailrs_sync::calendar_copy::CalendarCopy`, ticked from the app's own timer as the address book is, not from the mail engine's loop; `docs/adr/0001-calendar-local-copy.md` records why. _Avoid_: cache, mirror.

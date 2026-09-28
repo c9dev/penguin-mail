@@ -90,6 +90,9 @@ pub struct Hooks {
     /// door and the event popover's "Open the invitation in Mail" link
     /// both call this.
     pub open_mail: Box<dyn Fn(AccountId, String)>,
+    /// Starts a calendar sync for every account now, the same pass the
+    /// timer runs every 15 seconds. The Refresh action's own trigger.
+    pub refresh: Box<dyn Fn()>,
 }
 
 
@@ -234,6 +237,24 @@ pub struct CalendarView {
     /// The toast that change's Undo is on, so a new one can dismiss it
     /// and its own watcher can tell it apart from a later toast.
     toast_up: RefCell<Option<adw::Toast>>,
+    /// Set while a Refresh press has a calendar sync started, so a
+    /// second press before it answers does not start another one.
+    refreshing: Cell<bool>,
+    /// Whether the last calendar sync attempt came back with an error,
+    /// for the offline line under the mini month.
+    sync_failed: Cell<bool>,
+    /// The clock time of the last calendar sync that succeeded, for the
+    /// offline line's own "last updated" time. `None` before the first
+    /// one this run.
+    last_synced: Cell<Option<chrono::NaiveTime>>,
+}
+
+/// Whether pressing Refresh should start a calendar sync now: never
+/// while one it started is still running, so two presses in a row, or a
+/// press while the timer's own pass is in flight, do not queue a second
+/// one.
+fn should_refresh(already_refreshing: bool) -> bool {
+    !already_refreshing
 }
 
 impl CalendarView {
@@ -511,6 +532,9 @@ impl CalendarView {
                 refocus_owed: Cell::new(false),
                 holding: RefCell::new(Holding::new()),
                 toast_up: RefCell::new(None),
+                refreshing: Cell::new(false),
+                sync_failed: Cell::new(false),
+                last_synced: Cell::new(None),
             }
         });
 
@@ -631,6 +655,61 @@ impl CalendarView {
     pub fn reload(self: &Rc<Self>) {
         self.read_sidebar(true);
         self.refresh_waiting();
+    }
+
+    /// Redraws the Week and Month grids and the mini month after the
+    /// "Week Starts On" choice changes, so an open calendar reflects it
+    /// at once rather than at the next navigation.
+    pub fn week_start_changed(self: &Rc<Self>) {
+        self.calendar_sidebar.week_start_changed();
+        self.rebuild_pages();
+        self.show_range();
+        self.fill_all();
+        self.read_sidebar(false);
+    }
+
+    /// The Refresh action: starts a calendar sync for every account,
+    /// unless one it started is still running.
+    pub fn refresh_now(self: &Rc<Self>) {
+        if !should_refresh(self.refreshing.get()) {
+            return;
+        }
+        self.refreshing.set(true);
+        (self.hooks.refresh)();
+    }
+
+    /// What `App::refresh_calendars` calls once its pass over every
+    /// account ends, whatever it found, so the next press can start
+    /// another one.
+    pub fn refresh_done(&self) {
+        self.refreshing.set(false);
+    }
+
+    /// What a calendar sync attempt found, for the offline line: `ok`
+    /// clears any earlier failure and remembers when it succeeded; a
+    /// failure marks the last attempt as failed without losing the
+    /// earlier time.
+    pub fn synced(&self, ok: bool) {
+        self.sync_failed.set(!ok);
+        if ok {
+            self.last_synced.set(Some(chrono::Local::now().time()));
+        }
+        self.show_offline_line();
+    }
+
+    /// Redraws the offline line after the computer's own network state
+    /// changes, without waiting for the next sync attempt.
+    pub fn network_changed(&self) {
+        self.show_offline_line();
+    }
+
+    /// Shows or hides "Offline, last updated 14:32" under the mini
+    /// month: nothing while the account is online and its last sync
+    /// succeeded, [`words::offline_line`] decides the rest.
+    fn show_offline_line(&self) {
+        let last = self.last_synced.get().map(crate::clock_format::time_text);
+        let text = words::offline_line(self.core.network(), self.sync_failed.get(), last.as_deref());
+        self.calendar_sidebar.set_offline_line(text.as_deref());
     }
 
     /// Reads "Waiting for your answer" again, and nothing else: after an
@@ -2663,8 +2742,8 @@ fn keep_agenda_events(
     found
 }
 
-/// "MON TUE WED …" over the month grid, starting on the locale's own
-/// first weekday.
+/// "MON TUE WED …" over the month grid, starting on
+/// [`crate::locale_time::week_start_weekday`].
 fn weekday_row() -> gtk::Box {
     let row = gtk::Box::builder()
         .homogeneous(true)
@@ -2673,7 +2752,7 @@ fn weekday_row() -> gtk::Box {
         .css_classes(["day-heading"])
         .build();
     let monday = NaiveDate::from_ymd_opt(2024, 1, 1).expect("2024-01-01 is a Monday");
-    for day in mailrs_domain::calendar::week::week_columns(crate::locale_time::first_weekday()) {
+    for day in mailrs_domain::calendar::week::week_columns(crate::locale_time::week_start_weekday()) {
         let label = gtk::Label::builder()
             .label(
                 (monday + Days::new(u64::from(day.num_days_from_monday())))
@@ -2818,4 +2897,19 @@ fn ensure_tints<'a>(colours: impl IntoIterator<Item = &'a str>) {
             provider.load_from_string(&tint::stylesheet(&all));
         }
     });
+}
+
+#[cfg(test)]
+mod refresh_tests {
+    use super::should_refresh;
+
+    #[test]
+    fn a_first_press_starts_a_refresh() {
+        assert!(should_refresh(false));
+    }
+
+    #[test]
+    fn a_press_while_one_is_already_running_does_not_start_a_second() {
+        assert!(!should_refresh(true));
+    }
 }

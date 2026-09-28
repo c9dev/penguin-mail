@@ -56,6 +56,10 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   with clickable links, and a repeating event says when, such as
   "Weekly on Wednesday". Its guest list shows every guest's own answer
   and marks the organizer, with Show all past a few names.
+- Preferences has a Week Starts On choice, next to Working Hours:
+  Automatic follows your locale, or pick Monday or Sunday yourself.
+- Refresh syncs your calendars now, from the calendar's menu, F5, or
+  Ctrl+R.
 
 ### Improved
 
@@ -101,11 +105,12 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   calendar key, including the ones that move or resize an event.
 - The event popover names the event's own time zone beside the time
   when it differs from your desktop's, such as "09:00 New York".
+- Offline, or when a calendar sync fails, the sidebar says so and when
+  it last updated, instead of leaving you guessing.
 
 ### Fixed
 - In dark mode, a reply with quoted text shows on the dark page instead of
   in a white box.
-
 - Picking a contact from the suggestions in an event's Guests field adds
   the guest at once and empties the field, with a gap above it; the start
   and end times now stand as tall as the dates beside them.

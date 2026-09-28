@@ -21,8 +21,9 @@ const AGENDA_STEP: u64 = 30;
 /// here, so settings never has to import from `ui`.
 pub use crate::settings::CalendarView as ViewKind;
 
-/// The days one view of the calendar shows: a single day, a week running
-/// from the locale's own first weekday, or a six-week month grid.
+/// The days one view of the calendar shows: a single day, a week
+/// running from [`crate::locale_time::week_start_weekday`], or a
+/// six-week month grid.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Range {
     pub kind: ViewKind,
@@ -31,10 +32,11 @@ pub struct Range {
 }
 
 impl Range {
-    /// The range of `kind` that holds `day`. A week runs from the
-    /// locale's own first weekday to the day before it comes round
-    /// again; a month is the six weeks (42 days) starting on that same
-    /// weekday on or before the 1st, so every row is a full week.
+    /// The range of `kind` that holds `day`. A week runs from
+    /// [`crate::locale_time::week_start_weekday`] to the day before it
+    /// comes round again; a month is the six weeks (42 days) starting on
+    /// that same weekday on or before the 1st, so every row is a full
+    /// week.
     pub fn around(kind: ViewKind, day: NaiveDate) -> Range {
         match kind {
             ViewKind::Day => Range {
@@ -174,10 +176,10 @@ pub fn earliest_kept_day(today: NaiveDate) -> NaiveDate {
     today - Days::new((FIRST_READ_BACK / DAY_MS) as u64)
 }
 
-/// The first day, on or before `day`, of the week the locale's own first
-/// weekday starts.
+/// The first day, on or before `day`, of the week
+/// [`crate::locale_time::week_start_weekday`] starts.
 fn week_start_of(day: NaiveDate) -> NaiveDate {
-    mailrs_domain::calendar::week::week_start_on_or_before(day, crate::locale_time::first_weekday())
+    mailrs_domain::calendar::week::week_start_on_or_before(day, crate::locale_time::week_start_weekday())
 }
 
 /// The ISO week tag a range's title carries, such as "W39".
@@ -223,6 +225,15 @@ mod tests {
         crate::locale_time::set_first_weekday_for_test(chrono::Weekday::Sun);
         let week = Range::around(ViewKind::Week, d(2026, 9, 23));
         assert_eq!((week.first, week.days), (d(2026, 9, 20), 7));
+    }
+
+    #[test]
+    fn the_week_starts_on_setting_overrides_the_locale() {
+        crate::locale_time::set_first_weekday_for_test(chrono::Weekday::Sun);
+        crate::locale_time::set_week_start_setting(mailrs_domain::calendar::week::WeekStart::Monday);
+        let week = Range::around(ViewKind::Week, d(2026, 9, 23));
+        assert_eq!((week.first, week.days), (d(2026, 9, 21), 7));
+        crate::locale_time::set_week_start_setting(mailrs_domain::calendar::week::WeekStart::Automatic);
     }
 
     #[test]

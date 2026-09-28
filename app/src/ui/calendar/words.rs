@@ -240,6 +240,24 @@ pub fn mini_day_words(date: NaiveDate, has_events: bool) -> String {
     }
 }
 
+/// "Offline, last updated 14:32" under the calendar sidebar's mini
+/// month, or nothing while the account is online and its last sync
+/// succeeded. `online` says whether the computer has a network now,
+/// `sync_failed` whether the last calendar sync attempt came back with
+/// an error, and `last_synced` the last successful sync's own clock
+/// time, already through [`crate::clock_format::time_text`]. Offline
+/// and a failed sync read the same word, "Offline", since neither can
+/// promise the calendar is current.
+pub fn offline_line(online: bool, sync_failed: bool, last_synced: Option<&str>) -> Option<String> {
+    if online && !sync_failed {
+        return None;
+    }
+    Some(match last_synced {
+        Some(time) => fill(&gettext("Offline, last updated {time}"), &[("time", time)]),
+        None => gettext("Offline"),
+    })
+}
+
 /// "Wed 15:00": the day and time the calendar sidebar's "Waiting for
 /// your answer" card shows, short since the card has no room for the
 /// full weekday. An all-day occurrence gives just the day, since it has
@@ -994,6 +1012,32 @@ mod tests {
     fn zone_city_reads_the_last_segment_of_a_zone_id() {
         assert_eq!(zone_city(Tz::America__New_York), "New York");
         assert_eq!(zone_city(Tz::Europe__Lisbon), "Lisbon");
+    }
+
+    #[test]
+    fn nothing_shows_while_online_and_the_last_sync_succeeded() {
+        assert_eq!(offline_line(true, false, Some("14:32")), None);
+    }
+
+    #[test]
+    fn offline_names_the_last_time_it_synced() {
+        assert_eq!(
+            offline_line(false, false, Some("14:32")),
+            Some("Offline, last updated 14:32".to_string())
+        );
+    }
+
+    #[test]
+    fn offline_with_nothing_synced_yet_says_just_offline() {
+        assert_eq!(offline_line(false, false, None), Some("Offline".to_string()));
+    }
+
+    #[test]
+    fn a_failed_sync_shows_the_line_even_while_online() {
+        assert_eq!(
+            offline_line(true, true, Some("09:00")),
+            Some("Offline, last updated 09:00".to_string())
+        );
     }
 
     #[test]

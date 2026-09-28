@@ -81,13 +81,7 @@ impl MainWindow {
                 self.calendar.take_focus();
             }
         }
-        if let Some(action) = self
-            .actions
-            .lookup_action("show-declined-events")
-            .and_downcast::<gio::SimpleAction>()
-        {
-            action.set_enabled(space == Space::Calendar);
-        }
+        self.set_calendar_only_actions_enabled(space == Space::Calendar);
         if let Some(app) = self.app.upgrade()
             && app.settings_with(|s| s.space) != space
         {
@@ -128,8 +122,19 @@ impl MainWindow {
             }
             win.calendar.reload();
         });
-        declined.set_enabled(false);
         self.actions.add_action(&declined);
+        self.set_calendar_only_actions_enabled(false);
+    }
+
+    /// Enables or disables the actions that make sense only while the
+    /// calendar shows: "Refresh" in its menu, and "Show Declined
+    /// Events".
+    fn set_calendar_only_actions_enabled(&self, enabled: bool) {
+        for name in ["show-declined-events", "refresh-calendar"] {
+            if let Some(action) = self.actions.lookup_action(name).and_downcast::<gio::SimpleAction>() {
+                action.set_enabled(enabled);
+            }
+        }
     }
 
     /// A key on the calendar page. Letters give way while a field has the
@@ -158,6 +163,7 @@ impl MainWindow {
             CalendarKey::NewEvent => calendar.quick_create(),
             CalendarKey::GoToDate => calendar.go_to_date(),
             CalendarKey::Undo => calendar.undo_last_held(),
+            CalendarKey::Refresh => calendar.refresh_now(),
         }
         glib::Propagation::Stop
     }
