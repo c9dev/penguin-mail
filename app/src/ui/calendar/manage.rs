@@ -80,6 +80,7 @@ impl CalendarView {
             }
             ListChange::Rename { account, calendar } => self.ask_rename(account, &calendar),
             ListChange::Delete { account, calendar } => self.ask_delete(account, &calendar),
+            ListChange::Unsubscribe { account, calendar } => self.ask_unsubscribe(account, &calendar),
             ListChange::Add { account, kind } => match kind {
                 AddKind::New => self.ask_new(account),
                 AddKind::Subscribe => self.ask_subscribe(account),
@@ -198,6 +199,32 @@ impl CalendarView {
                 copy.delete_calendar(account, &id).await
             });
             (this.hooks.toast)(&fill(&gettext("Deleted “{calendar}”"), &[("calendar", &held.name)]));
+        });
+    }
+
+    fn ask_unsubscribe(self: &Rc<Self>, account: AccountId, calendar: &str) {
+        let Some(held) = self.calendar_of(account, calendar) else { return };
+        if self.withheld_of(account).change_calendar_list {
+            return (self.hooks.needs_manage_permission)(account);
+        }
+        let this = Rc::clone(self);
+        glib::spawn_future_local(async move {
+            let question = confirm(
+                &fill(&gettext("Unsubscribe from “{calendar}”?"), &[("calendar", &held.name)]),
+                &gettext(
+                    "It leaves your calendar list in Google Calendar on every device. You can \
+                     subscribe to it again later.",
+                ),
+                &gettext("Unsubscribe"),
+                Tone::Destructive,
+            );
+            if !question.ask(&this.page).await {
+                return;
+            }
+            let (copy, id) = (this.core.calendar_copy(), held.id.clone());
+            this.run_list_edit(account, true, gettext("Could not unsubscribe: {reason}"), async move {
+                copy.unsubscribe(account, &id).await
+            });
         });
     }
 

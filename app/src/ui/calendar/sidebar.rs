@@ -121,11 +121,13 @@ pub enum RowItem {
     Color,
     Rename,
     Delete,
+    Unsubscribe,
 }
 
 /// What a calendar row's menu offers: hiding and a colour for every
 /// calendar, and renaming and deleting for one the account owns
-/// ([`list::allows`]). Whether the account granted the permission for
+/// ([`list::allows`]), and unsubscribing for one it does not own.
+/// Whether the account granted the permission for
 /// them is asked when the person picks one, so an item that needs it
 /// says why rather than going missing.
 pub fn row_menu(calendar: &Calendar) -> Vec<RowItem> {
@@ -136,6 +138,9 @@ pub fn row_menu(calendar: &Calendar) -> Vec<RowItem> {
     }
     if allows.delete {
         items.push(RowItem::Delete);
+    }
+    if allows.unsubscribe {
+        items.push(RowItem::Unsubscribe);
     }
     items
 }
@@ -330,6 +335,8 @@ pub enum ListChange {
     Rename { account: AccountId, calendar: String },
     /// Asked to delete a calendar, which asks first.
     Delete { account: AccountId, calendar: String },
+    /// Asked to unsubscribe from a calendar, which asks first.
+    Unsubscribe { account: AccountId, calendar: String },
     /// Asked to add a calendar to an account, which opens a dialog.
     Add { account: AccountId, kind: AddKind },
 }
@@ -1088,13 +1095,14 @@ fn list_actions(on_change: &Rc<OnChange>) -> gio::SimpleActionGroup {
         }
     });
     actions.add_action(&color);
-    for name in ["rename", "delete"] {
+    for name in ["rename", "delete", "unsubscribe"] {
         let action = gio::SimpleAction::new(name, Some(glib::VariantTy::new("(xs)").expect("a valid type")));
         let on_change = Rc::clone(on_change);
         action.connect_activate(move |action, target| {
             if let Some((account, calendar)) = target.and_then(|t| t.get::<(AccountId, String)>()) {
                 on_change(match action.name().as_str() {
                     "rename" => ListChange::Rename { account, calendar },
+                    "unsubscribe" => ListChange::Unsubscribe { account, calendar },
                     _ => ListChange::Delete { account, calendar },
                 });
             }
@@ -1182,6 +1190,7 @@ fn calendar_menu(account_id: AccountId, calendar: &Calendar) -> gio::Menu {
     for (item, label, action) in [
         (RowItem::Rename, gettext("Rename…"), "calendars.rename"),
         (RowItem::Delete, gettext("Delete…"), "calendars.delete"),
+        (RowItem::Unsubscribe, gettext("Unsubscribe…"), "calendars.unsubscribe"),
     ] {
         if items.contains(&item) {
             let entry = gio::MenuItem::new(Some(&label), None);
@@ -1517,10 +1526,10 @@ mod tests {
     }
 
     #[test]
-    fn a_subscribed_or_shared_calendar_offers_only_hiding_and_colour() {
+    fn a_subscribed_or_shared_calendar_offers_unsubscribe_in_place_of_delete() {
         for access in [Access::Reader, Access::Writer, Access::FreeBusy] {
             let other = Calendar { access, ..calendar("fixtures") };
-            assert_eq!(row_menu(&other), [RowItem::Hide, RowItem::Color], "{access:?}");
+            assert_eq!(row_menu(&other), [RowItem::Hide, RowItem::Color, RowItem::Unsubscribe], "{access:?}");
         }
     }
 

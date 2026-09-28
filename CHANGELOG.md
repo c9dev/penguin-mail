@@ -27,7 +27,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   you are next online.
 - Subscribe to a calendar someone publishes by pasting its https or webcal
   address, or add public holidays from Holiday Calendars, Portugal first.
-  Both stay read-only here and show on every device.
+  Both stay read-only here and show on every device, and Unsubscribe in
+  the calendar's "⋮" menu takes one off again.
 - The Mail and Calendar switch shows how much unread mail waits while
   you are in the calendar, and how many invitations wait for your answer
   while you are in mail.
