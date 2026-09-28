@@ -78,8 +78,8 @@ pub fn save_calendars(conn: &Connection, account_id: AccountId, list: &[Calendar
 
 pub fn calendars(conn: &Connection, account_id: AccountId) -> Result<Vec<Calendar>> {
     let mut stmt = conn.prepare(
-        "SELECT id, name, color, access, zone, is_primary, shown, reminders FROM calendars \
-         WHERE account_id = ?1 ORDER BY is_primary DESC, name",
+        "SELECT id, name, COALESCE(own_color, color), access, zone, is_primary, shown, reminders \
+         FROM calendars WHERE account_id = ?1 ORDER BY is_primary DESC, name",
     )?;
     let rows = stmt.query_map(params![account_id], |row| {
         Ok(Calendar {
@@ -100,6 +100,35 @@ pub fn set_shown(conn: &Connection, account_id: AccountId, calendar: &str, shown
     conn.execute(
         "UPDATE calendars SET shown = ?3 WHERE account_id = ?1 AND id = ?2",
         params![account_id, calendar, shown],
+    )?;
+    Ok(())
+}
+
+/// Takes a calendar off the sidebar's list, or puts it back. A calendar
+/// off the list is off the grid too, so this sets its shown flag with
+/// it, and one put back shows again.
+pub fn set_listed(conn: &Connection, account_id: AccountId, calendar: &str, listed: bool) -> Result<()> {
+    conn.execute(
+        "UPDATE calendars SET listed = ?3, shown = ?3 WHERE account_id = ?1 AND id = ?2",
+        params![account_id, calendar, listed],
+    )?;
+    Ok(())
+}
+
+/// The ids of the account's calendars the person took off the list.
+pub fn unlisted(conn: &Connection, account_id: AccountId) -> Result<Vec<String>> {
+    let mut stmt = conn.prepare("SELECT id FROM calendars WHERE account_id = ?1 AND NOT listed ORDER BY name")?;
+    let rows = stmt.query_map(params![account_id], |row| row.get(0))?;
+    Ok(rows.collect::<rusqlite::Result<_>>()?)
+}
+
+/// A colour of the person's own for a calendar, `#rrggbb`, which
+/// [`calendars`] gives in place of the provider's. `None` goes back to
+/// the provider's colour.
+pub fn set_own_color(conn: &Connection, account_id: AccountId, calendar: &str, color: Option<&str>) -> Result<()> {
+    conn.execute(
+        "UPDATE calendars SET own_color = ?3 WHERE account_id = ?1 AND id = ?2",
+        params![account_id, calendar, color],
     )?;
     Ok(())
 }
@@ -1428,6 +1457,43 @@ mod tests {
         set_shown(&conn, id, "team", false).unwrap();
         assert!(occurrences(&conn, &[id], MONDAY, MONDAY + DAY, CalendarScope::Shown).unwrap().is_empty());
         assert_eq!(occurrences(&conn, &[id], MONDAY, MONDAY + DAY, CalendarScope::All).unwrap().len(), 1);
+    }
+
+    #[test]
+    fn a_calendar_taken_off_the_list_leaves_the_range_too() {
+        let (conn, id) = store();
+        save_events(&conn, id, &[event("team", "retro", MONDAY + 9 * HOUR, 1)], 0).unwrap();
+        set_listed(&conn, id, "team", false).unwrap();
+        assert_eq!(unlisted(&conn, id).unwrap(), vec!["team".to_string()]);
+        assert!(occurrences(&conn, &[id], MONDAY, MONDAY + DAY, CalendarScope::Shown).unwrap().is_empty());
+    }
+
+    #[test]
+    fn a_calendar_put_back_on_the_list_shows_again() {
+        let (conn, id) = store();
+        set_listed(&conn, id, "team", false).unwrap();
+        set_listed(&conn, id, "team", true).unwrap();
+        assert!(unlisted(&conn, id).unwrap().is_empty());
+        let team = calendars(&conn, id).unwrap().into_iter().find(|c| c.id == "team").unwrap();
+        assert!(team.shown);
+    }
+
+    #[test]
+    fn a_colour_chosen_here_outlasts_the_next_read_of_the_calendar_list() {
+        let (conn, id) = store();
+        set_own_color(&conn, id, "team", Some("#16a766")).unwrap();
+        save_calendars(&conn, id, &[calendar("primary", true), calendar("team", false)]).unwrap();
+        let team = calendars(&conn, id).unwrap().into_iter().find(|c| c.id == "team").unwrap();
+        assert_eq!(team.color, "#16a766");
+    }
+
+    #[test]
+    fn the_original_colour_comes_back_when_the_own_one_goes() {
+        let (conn, id) = store();
+        set_own_color(&conn, id, "team", Some("#16a766")).unwrap();
+        set_own_color(&conn, id, "team", None).unwrap();
+        let team = calendars(&conn, id).unwrap().into_iter().find(|c| c.id == "team").unwrap();
+        assert_eq!(team.color, "#3584e4");
     }
 
     /// `CalendarScope::Owned` is what the clash line and free time need, so a calendar the account can only
