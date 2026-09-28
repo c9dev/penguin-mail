@@ -98,6 +98,8 @@ pub struct NextEvent {
     /// The tint rule for the event's colour, which gives the bar its
     /// colour through `--cal-colour`.
     css: gtk::CssProvider,
+    /// The colour `css` holds, so an unchanged one is not loaded again.
+    colour: RefCell<String>,
 }
 
 impl NextEvent {
@@ -133,7 +135,15 @@ impl NextEvent {
         if let Some(display) = gdk::Display::default() {
             gtk::style_context_add_provider_for_display(&display, &css, gtk::STYLE_PROVIDER_PRIORITY_APPLICATION);
         }
-        NextEvent { revealer, button, bar, when, what, css }
+        NextEvent {
+            revealer,
+            button,
+            bar,
+            when,
+            what,
+            css,
+            colour: RefCell::default(),
+        }
     }
 
     /// Sets the card's two lines and the event's colour. Private: go
@@ -147,8 +157,13 @@ impl NextEvent {
         if self.what.label() != words.what {
             self.what.set_label(&words.what);
         }
-        self.bar.set_css_classes(&["bar", tint::css_class(colour).as_str()]);
-        self.css.load_from_string(&tint::stylesheet(&[colour.to_string()]));
+        // Loading a provider on the display restyles every widget in every
+        // window, and this runs once a minute, so it loads only a new colour.
+        if *self.colour.borrow() != colour {
+            self.bar.set_css_classes(&["bar", tint::css_class(colour).as_str()]);
+            self.css.load_from_string(&tint::stylesheet(&[colour.to_string()]));
+            colour.clone_into(&mut self.colour.borrow_mut());
+        }
         super::name(&self.button, &next::spoken(words));
     }
 }
