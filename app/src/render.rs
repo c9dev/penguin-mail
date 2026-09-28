@@ -716,7 +716,7 @@ fn page_css(theme: &Theme) -> String {
     format!(
         ":root{{color-scheme:{scheme};--bg:{bg};--fg:{fg};--dim:{dim};--card:{card};--line:{line};--hover:{hover};--surface:{surface};--accent:{accent}}}\
 html{{background:var(--bg)}}\
-body{{margin:0 auto;max-width:980px;padding:14px 36px 64px;color:var(--fg);\
+body{{margin:0 auto;max-width:980px;padding:20px 36px 64px;color:var(--fg);\
 font:15px/1.5 \"Adwaita Sans\",Cantarell,system-ui,sans-serif;-webkit-font-smoothing:antialiased}}\
 .thread h1{{font-size:22px;line-height:1.25;font-weight:800;letter-spacing:-0.01em;margin:0}}\
 .thread .headline{{display:flex;align-items:flex-start;gap:12px}}\

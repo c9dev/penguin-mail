@@ -484,7 +484,9 @@ impl MainWindow {
                 .css_classes(["mail-columns"])
                 .min_sidebar_width(300.0)
                 .max_sidebar_width(420.0)
-                .sidebar_width_fraction(0.34)
+                // The mockup's list is 392 px of the 1,184 left beside
+                // the sidebar in a 1,440 px window.
+                .sidebar_width_fraction(0.331)
                 .build();
             let (t, g, n, a, m) = (weak.clone(), weak.clone(), weak.clone(), weak.clone(), weak.clone());
             let (read_settings, change_settings) = (Rc::downgrade(app), Rc::downgrade(app));
