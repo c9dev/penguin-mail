@@ -125,6 +125,8 @@
         </ul>
         <p>Fixed</p>
         <ul>
+          <li>The assistant's panel no longer runs off the right edge of a smaller window. The mailboxes fold away to make room for it, and in a window too narrow for both, the panel slides over the mail instead.</li>
+          <li>The calendar's Day, Week and Month switch keeps its full width on a smaller screen. The week number, the year and the search button make way for it instead.</li>
           <li>The assistant stays closed when a narrowed window grows wide again, where it used to open by itself.</li>
           <li>Always Allow on a skill's command allows that one command. It used to let the skill run any command without asking, and Penguin Mail forgets any Always Allow saved that way.</li>
           <li>An S/MIME message whose certificate could not be checked for revocation is checked again when you open it next, so the card no longer says "could not check" until you restart.</li>
