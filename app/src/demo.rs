@@ -1019,6 +1019,16 @@ fn account0_events(now: EpochMillis) -> Vec<CalendarEvent> {
         conference: Some("https://meet.google.com/pmd-demo-call".into()),
         ..CalendarEvent::default()
     });
+    // Five to ten minutes after the demo starts, sooner than the call
+    // with Rita above, so the next-event card at the foot of the mail
+    // sidebar has something to show whenever the demo starts. Coloured
+    // like the mockup's own card (blue) rather than Personal's orange,
+    // so the screenshot reads the same way.
+    let soon = now - now.rem_euclid(5 * 60_000) + 10 * 60_000;
+    events.push(CalendarEvent {
+        color: Some("#3584e4".into()),
+        ..timed_event("primary", "demo-next-event", "Sprint planning", soon, soon + 30 * 60_000)
+    });
     events
 }
 

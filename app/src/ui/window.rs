@@ -44,6 +44,7 @@ use on_screen::{OnScreen, Redraw};
 use press::{Press, PressEffects, Pressed, Question};
 use reach::Reach;
 
+mod across;
 mod aftermath;
 mod arrange;
 mod assistant;
@@ -189,6 +190,9 @@ pub struct MainWindow {
     /// Undo Send: the sends waiting out their delay, and what calls each
     /// one back.
     undo_sends: RefCell<scheduled::UndoSends>,
+    /// The event the next-event card shows, so a click on it knows where
+    /// to open the calendar. `None` while the card is hidden.
+    next_up: RefCell<Option<crate::ui::calendar::next::NextUp>>,
 }
 
 /// The class that marks a toplevel window dark. `@media
@@ -738,6 +742,7 @@ impl MainWindow {
                 previews: previews::Previews::default(),
                 followed: RefCell::new(HashMap::new()),
                 undo_sends: RefCell::new(scheduled::UndoSends::default()),
+                next_up: RefCell::new(None),
             }
         });
         if window.core.demo {
@@ -782,6 +787,7 @@ impl MainWindow {
         window.install_categories();
         window.offer_summary();
         window.install_undo_send();
+        window.install_next_event();
         let labels_of = Rc::downgrade(&window);
         super::search_suggest::attach(&window.list.search_entry, app.contacts(), move || {
             let Some(win) = labels_of.upgrade() else {

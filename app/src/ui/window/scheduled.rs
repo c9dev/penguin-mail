@@ -73,17 +73,17 @@ impl MainWindow {
     pub(super) fn place_undo_send(self: &Rc<Self>) {
         let left = self.undo_sends.borrow().waiting.left(now_millis());
         let Some(left) = left else {
-            self.sidebar.undo.hide();
+            self.sidebar.hide_undo();
             self.drop_undo_toast();
             return;
         };
         match undo_send::surface(self.split.is_collapsed(), self.split.shows_sidebar()) {
             Surface::Pill => {
                 self.drop_undo_toast();
-                self.sidebar.undo.show(&undo_send::countdown(left));
+                self.sidebar.show_undo(&undo_send::countdown(left));
             }
             Surface::Toast => {
-                self.sidebar.undo.hide();
+                self.sidebar.hide_undo();
                 if self.undo_sends.borrow().toast.is_none() {
                     self.raise_undo_toast(left);
                 }

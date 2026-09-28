@@ -7741,6 +7741,30 @@ msgstr "Marcar como não sendo spam"
 msgid "Move to {folder}"
 msgstr "Mover para {folder}"
 
+#: app/src/ui/calendar/next.rs:90
+msgid "{title} · {start}"
+msgstr "{title} · {start}"
+
+#: app/src/ui/calendar/next.rs:94
+msgid "Now · until {end}"
+msgstr "Agora · até às {end}"
+
+#: app/src/ui/calendar/next.rs:101
+msgid "Next · in {minutes} min"
+msgstr "A seguir · daqui a {minutes} min"
+
+#: app/src/ui/calendar/next.rs:102
+msgid "Next · in {hours} h"
+msgstr "A seguir · daqui a {hours} h"
+
+#: app/src/ui/calendar/next.rs:104
+msgid "Next · in {hours} h {minutes} min"
+msgstr "A seguir · daqui a {hours} h {minutes} min"
+
+#: app/src/ui/calendar/next.rs:115
+msgid "{when}: {what}"
+msgstr "{when}: {what}"
+
 #~ msgid "to {recipients}"
 #~ msgstr "para {recipients}"
 
