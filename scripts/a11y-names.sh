@@ -11,7 +11,8 @@
 #
 # On the hidden display it also opens every menu it can reach, since a
 # menu is in the accessible tree only while it is open, opens a
-# conversation to read its message view and invitation card, and walks
+# conversation to read its message view and invitation card, opens a
+# reply and a forward in the composer with their history shown, and walks
 # the calendar.
 #
 # The hidden display needs Xvfb, dbus-run-session, at-spi2-core, python3
@@ -739,17 +740,115 @@ def walk_calendar(keys):
     return len(unnamed)
 
 
-calendar_unnamed = conversation_unnamed = 0
+def walk_composer():
+    """Answers the open conversation with Reply and with Forward, and walks
+    each composer twice: with its history folded behind the "•••" button,
+    and after that button has put a reply's quote in the body or shown the
+    forwarded message under the editor, in a web view of its own. Each
+    composer closes without saving before the next step.
+
+    Reports the composer's own line and gives back how many of its
+    controls came back with no name, counting as one each a history
+    button or a forwarded page that could not be found by its name."""
+
+    def named(role, name, under=None):
+        for node in nodes(under) if under is not None else (
+            n for app in penguins()[0] for n in nodes(app)
+        ):
+            try:
+                if node.get_role_name() == role and (node.get_name() or "").strip() == name:
+                    return node
+            except Exception:
+                continue
+        return None
+
+    def frame_starting(prefix):
+        for app in penguins()[0]:
+            for index in range(app.get_child_count()):
+                window = app.get_child_at_index(index)
+                try:
+                    if window is not None and (window.get_name() or "").startswith(prefix):
+                        return window
+                except Exception:
+                    continue
+        return None
+
+    def press(node):
+        node.get_action_iface().do_action(0)
+
+    def close(window, prefix):
+        # The header's close button, then Discard when the composer asks
+        # whether to keep a draft.
+        button = named("button", "Close", window)
+        if button is None:
+            print("The composer has no Close button by name.", file=sys.stderr)
+            return False
+        press(button)
+        wait_until(lambda: named("button", "Discard", window) is not None, 3.0)
+        discard = named("button", "Discard", window)
+        if discard is not None:
+            press(discard)
+        return wait_until(lambda: frame_starting(prefix) is None, 5.0)
+
+    composer_found = []
+    missing = 0
+    for action, prefix, drop in (
+        ("Reply", "Re:", "Remove Quoted Text"),
+        ("Forward", "Fwd:", "Do Not Forward the Original"),
+    ):
+        button = named("button", action)
+        if button is None:
+            print("No %s button in the open conversation." % action, file=sys.stderr)
+            missing += 1
+            continue
+        press(button)
+        if not wait_until(lambda: frame_starting(prefix) is not None, 20.0):
+            print("%s opened no composer." % action, file=sys.stderr)
+            missing += 1
+            continue
+        window = frame_starting(prefix)
+        wait_until(lambda: named("button", "Show trimmed content", window) is not None, 10.0)
+        pill = named("button", "Show trimmed content", window)
+        if pill is None or named("button", drop, window) is None:
+            print("The %s composer showed no folded history by name." % action, file=sys.stderr)
+            missing += 1
+        walk(window, ["Composer %s, folded" % action], composer_found)
+        if pill is not None:
+            press(pill)
+            if action == "Reply":
+                wait_until(lambda: named("button", "Show trimmed content", window) is None, 5.0)
+            else:
+                # The page reaches the bus a moment after its box does.
+                def shown():
+                    group = named("grouping", "Forwarded Message", window)
+                    return group is not None and named("document web", "Forwarded Message", group) is not None
+                if not wait_until(shown, 15.0):
+                    print("The forwarded message showed no named page.", file=sys.stderr)
+                    missing += 1
+            walk(window, ["Composer %s, unfolded" % action], composer_found)
+        if not close(window, prefix):
+            print("The %s composer would not close." % action, file=sys.stderr)
+            missing += 1
+    unnamed = [row for row in composer_found if not row[1]]
+    print("composer: %d controls in a reply and a forward, folded and unfolded, %d unnamed"
+          % (len(composer_found), len(unnamed)))
+    for role, _, path in unnamed:
+        print("  %s" % path)
+    return len(unnamed) + missing
+
+
+calendar_unnamed = conversation_unnamed = composer_unnamed = 0
 if sys.argv[1:] == ["--menus"]:
     open_menus()
     conversation_unnamed = walk_conversation(Input())
+    composer_unnamed = walk_composer()
     calendar_unnamed = walk_calendar(Input())
 
 unnamed = [row for row in found if not row[1]]
 print("%d controls, %d named, %d unnamed" % (len(found), len(found) - len(unnamed), len(unnamed)))
 for role, _, path in unnamed:
     print("  %s" % path)
-sys.exit(1 if (unnamed or calendar_unnamed or conversation_unnamed) else 0)
+sys.exit(1 if (unnamed or calendar_unnamed or conversation_unnamed or composer_unnamed) else 0)
 PYTHON
 
 if [ "$here" = --here ]; then

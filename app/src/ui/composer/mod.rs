@@ -459,11 +459,16 @@ impl Composer {
         content.append(&format_bar);
         content.append(&line());
         content.append(&stack);
+        // WebKit's view reaches the accessibility bus as a nameless panel
+        // whatever label it is given, so the box around it carries the name
+        // a screen reader announces, and the page's title names the page.
         let forward_box = gtk::Box::builder()
             .orientation(gtk::Orientation::Vertical)
+            .accessible_role(gtk::AccessibleRole::Group)
             .height_request(280)
             .visible(false)
             .build();
+        name(&forward_box, &gettext("Forwarded Message"));
         forward_box.append(&line());
         content.append(&forward_box);
         content.append(&files);
@@ -757,7 +762,7 @@ impl Composer {
         preview_toggle.connect_toggled(move |toggle| {
             let Some(c) = weak.upgrade() else { return };
             if toggle.is_active() {
-                let html = c.page(&c.with_inline_images(c.html()));
+                let html = c.page(&gettext("Preview"), &c.with_inline_images(c.html()));
                 c.preview.load_html(&html, None);
                 c.stack.set_visible_child_name("preview");
             } else {
@@ -1043,12 +1048,12 @@ impl Composer {
                 settings.set_enable_javascript(false);
                 let page = webkit::WebView::builder().settings(&settings).build();
                 page.set_vexpand(true);
-                name(&page, &gettext("Forwarded Message"));
                 self.forward_box.append(&page);
                 self.forward_page.replace(Some(page.clone()));
                 page
             });
-            page.load_html(&self.page(&self.with_inline_images(html)), None);
+            let body = self.with_inline_images(html);
+            page.load_html(&self.page(&gettext("Forwarded Message"), &body), None);
         }
         self.forward_box.set_visible(shown);
         self.unfold
@@ -1056,11 +1061,13 @@ impl Composer {
     }
 
     /// `body` as a page for the preview and the forwarded message, drawn
-    /// dark when the app is.
-    fn page(&self, body: &str) -> String {
+    /// dark when the app is. `title` is the name a screen reader gives the
+    /// page.
+    fn page(&self, title: &str, body: &str) -> String {
         let dark = adw::StyleManager::default().is_dark();
         format!(
-            "<!doctype html><html><head><meta charset=\"utf-8\"><style>body{{margin:24px;{}}}</style></head><body>{}</body></html>",
+            "<!doctype html><html><head><meta charset=\"utf-8\"><title>{}</title><style>body{{margin:24px;{}}}</style></head><body>{}</body></html>",
+            crate::richtext::escape(title),
             if dark { "background:#1e1e1e;filter:invert(0.92) hue-rotate(180deg)" } else { "background:#fff" },
             body
         )
