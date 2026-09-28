@@ -686,6 +686,15 @@ CREATE TABLE calendar_list_changes (
 );
 ALTER TABLE calendars ADD COLUMN provider_hidden INTEGER;
 "#,
+    // The files linked to each event, as JSON, NULL while the copy has not
+    // read them. A write of a row with NULL leaves Google's list alone, as
+    // Google's guide asks of a client that starts sending attachments with
+    // events it already keeps. Emptying the tokens makes the next read take
+    // each calendar whole, so the rows already stored learn theirs.
+    r#"
+ALTER TABLE events ADD COLUMN attachments TEXT;
+UPDATE calendars SET sync_token = NULL;
+"#,
 ];
 
 /// How long the copy taken before a migration stays once the store has

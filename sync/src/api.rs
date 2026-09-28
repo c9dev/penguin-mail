@@ -326,6 +326,21 @@ pub trait GmailApi: Send + Sync + 'static {
         event: &calendar::Event,
     ) -> impl Future<Output = Result<calendar::Event, GmailError>> + Send;
 
+    /// Uploads the file at `path` to the account's Drive as `name`, and
+    /// answers it as an event attachment. `sent` counts the bytes as they
+    /// go out.
+    fn upload_to_drive(
+        &self,
+        path: &std::path::Path,
+        name: &str,
+        mime_type: &str,
+        sent: std::sync::Arc<std::sync::atomic::AtomicU64>,
+    ) -> impl Future<Output = Result<calendar::Attachment, GmailError>> + Send;
+
+    /// Makes `email` a reader of the Drive file `file_id`, one the app
+    /// uploaded, without Drive mailing them.
+    fn share_file(&self, file_id: &str, email: &str) -> impl Future<Output = Result<(), GmailError>> + Send;
+
     /// Moves `event` from its calendar to `destination`, and mails its
     /// guests when `notify` says so. Answers the event on `destination`.
     fn move_event(
@@ -660,6 +675,20 @@ impl GmailApi for AccountClient {
 
     async fn import_event(&self, event: &calendar::Event) -> Result<calendar::Event, GmailError> {
         self.client.import_event(event).await
+    }
+
+    async fn upload_to_drive(
+        &self,
+        path: &std::path::Path,
+        name: &str,
+        mime_type: &str,
+        sent: std::sync::Arc<std::sync::atomic::AtomicU64>,
+    ) -> Result<calendar::Attachment, GmailError> {
+        self.client.upload_to_drive(path, name, mime_type, sent).await
+    }
+
+    async fn share_file(&self, file_id: &str, email: &str) -> Result<(), GmailError> {
+        self.client.share_file(file_id, email).await
     }
 
     async fn move_event(

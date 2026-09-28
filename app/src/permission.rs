@@ -32,6 +32,9 @@ pub enum Permission {
     /// account's calendar list: colours and hiding on every device, and
     /// subscribing.
     ManageCalendars,
+    /// Putting files in the account's Google Drive (`drive.file`), which
+    /// attaching a file from this computer to an event needs.
+    Drive,
 }
 
 /// Why the window asks for a permission, which decides how often it asks.
@@ -57,13 +60,14 @@ pub struct Wording {
 
 impl Permission {
     #[cfg(test)]
-    pub const ALL: [Permission; 6] = [
+    pub const ALL: [Permission; 7] = [
         Permission::Settings,
         Permission::Delete,
         Permission::Contacts,
         Permission::ChangeContacts,
         Permission::Calendar,
         Permission::ManageCalendars,
+        Permission::Drive,
     ];
 
     /// What the permission lets Penguin Mail do, to finish "needs
@@ -77,6 +81,7 @@ impl Permission {
             Permission::ChangeContacts => "add and change contacts",
             Permission::Calendar => "use the calendar",
             Permission::ManageCalendars => "manage calendars",
+            Permission::Drive => "add files to Google Drive",
         }
     }
 
@@ -137,6 +142,14 @@ impl Permission {
                      browser.",
                 ),
             ),
+            (Permission::Drive, _) => (
+                gettext("Allow Penguin Mail to Add Files to Google Drive"),
+                gettext(
+                    "Attaching a file from this computer to an event puts it in Google Drive for \
+                     {account}. Penguin Mail can reach only the files it adds there. Google asks \
+                     you to confirm in your browser.",
+                ),
+            ),
         };
         Wording {
             heading,
@@ -181,6 +194,7 @@ pub fn withheld_permissions(withheld: Withheld) -> Vec<Permission> {
         (withheld.change_contacts, Permission::ChangeContacts),
         (withheld.calendar || withheld.calendar_list, Permission::Calendar),
         (withheld.calendars || withheld.change_calendar_list, Permission::ManageCalendars),
+        (withheld.drive, Permission::Drive),
     ]
     .into_iter()
     .filter_map(|(missing, permission)| missing.then_some(permission))
@@ -198,6 +212,7 @@ impl Permission {
             Permission::ChangeContacts => gettext("add and change contacts"),
             Permission::Calendar => gettext("use the calendar"),
             Permission::ManageCalendars => gettext("manage calendars"),
+            Permission::Drive => gettext("add files to Google Drive"),
         }
     }
 }
@@ -382,10 +397,10 @@ mod tests {
         let withheld = mailrs_sync::withheld_by_grant(Some(&granted));
         assert!(!withheld.calendar && !withheld.calendar_list, "every calendar still reads");
         assert!(wants_banner(withheld, consent.asked.as_deref()));
-        assert_eq!(withheld_permissions(withheld), [Permission::ManageCalendars]);
+        assert_eq!(withheld_permissions(withheld), [Permission::ManageCalendars, Permission::Drive]);
         assert_eq!(
             grant_bar_title("ana@example.com", &withheld_permissions(withheld)),
-            "ana@example.com has not allowed Penguin Mail to manage calendars"
+            "ana@example.com has not allowed Penguin Mail to manage calendars and add files to Google Drive"
         );
     }
 
@@ -411,6 +426,22 @@ mod tests {
         ] {
             assert_eq!(withheld_permissions(withheld), [Permission::ManageCalendars]);
         }
+    }
+
+    #[test]
+    fn a_withheld_drive_names_its_own_permission() {
+        assert_eq!(withheld_permissions(Withheld { drive: true, ..Withheld::NONE }), [Permission::Drive]);
+    }
+
+    #[test]
+    fn asking_for_drive_says_what_it_reaches() {
+        let wording = Permission::Drive.wording(Occasion::Needed, "ana@example.com");
+        assert_eq!(wording.heading, "Allow Penguin Mail to Add Files to Google Drive");
+        assert_eq!(
+            wording.body,
+            "Attaching a file from this computer to an event puts it in Google Drive for ana@example.com. \
+             Penguin Mail can reach only the files it adds there. Google asks you to confirm in your browser."
+        );
     }
 
     const IMAP: Offers = Offers { calendar: false, ..Offers::EVERYTHING };

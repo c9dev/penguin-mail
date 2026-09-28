@@ -7,6 +7,17 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### New
 
+- Events show their attached files, such as Google Drive documents, in the
+  event popover and the editor. Click one to open it in the browser.
+- Attach a file from this computer to an event with Attach File… in the
+  editor. It uploads to your Google Drive with a progress bar you can
+  cancel, large files included, and the event's guests can open it unless
+  you untick sharing. A file attached while offline uploads when you are
+  back online. Removing a file takes it off the event and leaves it in
+  Drive.
+- A file that cannot upload, for want of Drive access or because it moved,
+  no longer holds up your other calendar changes. It shows "Waiting for
+  access" or "File not found" in the editor, with Grant Access or Remove.
 - A calendar file that is not an invitation, such as a train ticket or a
   booking, now shows an event card in the message with Add to Calendar.
   Pick the calendar, and for a file with several events, which of them to

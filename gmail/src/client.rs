@@ -87,6 +87,11 @@ pub struct GmailClient {
     /// Answering an invitation goes to the Calendar API, which is another
     /// server behind the same access token. See `crate::calendar`.
     pub(crate) calendar_base_url: String,
+    /// Drive's upload endpoint, for files an event links to. See
+    /// `crate::drive`.
+    pub(crate) drive_upload_base_url: String,
+    /// Drive's own API, for sharing a file the app uploaded.
+    pub(crate) drive_base_url: String,
     access: Mutex<Option<AccessToken>>,
     quota: std::sync::Arc<AccountQuota>,
     /// The scopes this account is believed to have granted: seeded from
@@ -111,6 +116,8 @@ impl GmailClient {
             base_url: GMAIL_API_BASE.to_string(),
             people_url: people::PEOPLE_API_BASE.to_string(),
             calendar_base_url: crate::calendar::CALENDAR_API_BASE.to_string(),
+            drive_upload_base_url: crate::drive::DRIVE_UPLOAD_BASE.to_string(),
+            drive_base_url: crate::drive::DRIVE_API_BASE.to_string(),
             access: Mutex::new(None),
             quota,
             granted: std::sync::Mutex::new(None),
@@ -747,6 +754,29 @@ impl GmailClient {
         self.oauth.http()
     }
 
+    /// The account's access token, refreshed when it is about to run out.
+    pub(crate) async fn token(&self) -> Result<String, GmailError> {
+        self.bearer().await
+    }
+
+    /// Sends the request `build` makes with the account's token and hands
+    /// back the answer whatever its status, for a caller that reads more
+    /// than success and failure, such as Drive's 308 during a resumable
+    /// upload. A 401 refreshes the token and sends once more.
+    pub(crate) async fn send_any(&self, build: impl Fn() -> RequestBuilder) -> Result<Response, GmailError> {
+        let mut retried = false;
+        loop {
+            let token = self.bearer().await?;
+            let response = build().bearer_auth(&token).send().await?;
+            if response.status() == StatusCode::UNAUTHORIZED && !retried {
+                retried = true;
+                *self.access.lock().await = None;
+                continue;
+            }
+            return Ok(response);
+        }
+    }
+
     /// Sends a request to a full URL and decodes the JSON reply. Calls
     /// outside Gmail go through here, so they ask the account's Gmail
     /// budget for nothing: the Calendar API counts against a budget of its
@@ -884,7 +914,7 @@ fn metadata_query() -> Vec<(&'static str, &'static str)> {
     query
 }
 
-async fn error_from_response(response: Response) -> GmailError {
+pub(crate) async fn error_from_response(response: Response) -> GmailError {
     let status = response.status().as_u16();
     let retry_after = response
         .headers()

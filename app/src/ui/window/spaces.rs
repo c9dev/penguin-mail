@@ -18,6 +18,12 @@ use crate::ui::calendar::range::ViewKind;
 
 /// What a toast says about a change the provider turned down.
 fn turned_down_words(turned_down: &TurnedDown) -> String {
+    if let Some(file) = &turned_down.left_out {
+        return fill(
+            &gettext("“{title}” was saved without “{file}”, which moved or was deleted before it could upload"),
+            &[("title", &turned_down.title), ("file", file)],
+        );
+    }
     match &turned_down.reason {
         None => fill(
             &gettext("Your change to “{title}” was not saved because it changed elsewhere"),
@@ -274,7 +280,17 @@ mod tests {
             event: "e1".into(),
             title: "Dentist".into(),
             reason: reason.map(str::to_string),
+            left_out: None,
         }
+    }
+
+    #[test]
+    fn a_file_that_moved_before_its_upload_is_named_with_the_event() {
+        let left = TurnedDown { left_out: Some("Notes.txt".into()), ..turned_down(None) };
+        assert_eq!(
+            turned_down_words(&left),
+            "“Dentist” was saved without “Notes.txt”, which moved or was deleted before it could upload"
+        );
     }
 
     #[test]

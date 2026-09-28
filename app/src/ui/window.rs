@@ -519,6 +519,7 @@ impl MainWindow {
             let refresh_app = Rc::downgrade(app);
             let p = weak.clone();
             let manage_weak = weak.clone();
+            let drive_weak = weak.clone();
             let calendar = CalendarView::new(
                 Rc::clone(&app.core),
                 move || {
@@ -551,6 +552,11 @@ impl MainWindow {
                     needs_manage_permission: Box::new(move |account_id| {
                         if let Some(win) = manage_weak.upgrade() {
                             win.ask_permission(account_id, Permission::ManageCalendars, Occasion::Needed);
+                        }
+                    }),
+                    needs_drive_permission: Box::new(move |account_id| {
+                        if let Some(win) = drive_weak.upgrade() {
+                            win.ask_permission(account_id, Permission::Drive, Occasion::Needed);
                         }
                     }),
                     add_toast: Box::new(move |toast| {

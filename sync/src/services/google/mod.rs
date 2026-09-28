@@ -21,7 +21,7 @@ use mailrs_gmail::labels as gmail;
 use mailrs_gmail::{
     Answered, Busy, CALENDAR_LIST_SCOPE, CALENDAR_LIST_WRITE_SCOPE, CALENDAR_SCOPE, CALENDARS_SCOPE,
     CONTACTS_SCOPE, CONTACTS_WRITE_SCOPE,
-    ConnectionsPage, ContactFields, DELETE_SCOPE, Event, EventFields, GmailError, Granted,
+    ConnectionsPage, ContactFields, DELETE_SCOPE, DRIVE_FILE_SCOPE, Event, EventFields, GmailError, Granted,
     LabelColor, Person, RemoteLabel, SETTINGS_SCOPE, SendAs, Series, limiter, structure,
 };
 use mailrs_mime::Parts;
@@ -178,6 +178,7 @@ pub fn withheld(granted: Option<&Granted>) -> Withheld {
         calendar_list: !granted.has(CALENDAR_LIST_SCOPE),
         calendars: !granted.has(CALENDARS_SCOPE),
         change_calendar_list: !granted.has(CALENDAR_LIST_WRITE_SCOPE),
+        drive: !granted.has(DRIVE_FILE_SCOPE),
     }
 }
 
@@ -608,6 +609,23 @@ impl<G: GmailApi> CalendarService for Google<G> {
         paced(self.gmail.import_event(event)).await.map_err(calendar_write_error)
     }
 
+    async fn upload_attachment(
+        &self,
+        file: &model::Attachment,
+        sent: std::sync::Arc<std::sync::atomic::AtomicU64>,
+    ) -> Result<model::Attachment, BackendError> {
+        let Some(path) = &file.waiting else {
+            // Already uploaded: nothing to send.
+            return Ok(file.clone());
+        };
+        let path = std::path::Path::new(path);
+        Ok(self.gmail.upload_to_drive(path, &file.title, &file.mime_type, sent).await?)
+    }
+
+    async fn share_file(&self, file_id: &str, email: &str) -> Result<(), BackendError> {
+        Ok(self.gmail.share_file(file_id, email).await?)
+    }
+
     async fn move_event(
         &self,
         event: &model::Event,
@@ -741,7 +759,7 @@ mod tests {
     use std::time::Duration;
 
     use mailrs_gmail::{
-        AccountQuota, CALENDAR_LIST_SCOPE, CALENDAR_SCOPE, CALENDARS_SCOPE, CONTACTS_SCOPE,
+        AccountQuota, CALENDAR_LIST_SCOPE, CALENDAR_LIST_WRITE_SCOPE, CALENDAR_SCOPE, CALENDARS_SCOPE, CONTACTS_SCOPE,
         CONTACTS_WRITE_SCOPE, DELETE_SCOPE, DRIVE_FILE_SCOPE, GMAIL_SCOPE, GmailError, Granted, SETTINGS_SCOPE, SIGN_IN_SCOPES, SendAs,
         limiter,
     };
@@ -861,6 +879,7 @@ mod tests {
                 calendar: true,
                 calendars: true,
                 change_calendar_list: true,
+                drive: true,
                 ..Withheld::NONE
             }
         );
@@ -890,6 +909,7 @@ mod tests {
                 change_contacts: true,
                 calendars: true,
                 change_calendar_list: true,
+                drive: true,
                 ..Withheld::NONE
             },
             "contacts.readonly reads contacts but neither narrower scope writes or deletes"
@@ -919,7 +939,19 @@ mod tests {
         ));
         assert_eq!(
             withheld(Some(&five)),
-            Withheld { calendars: true, change_calendar_list: true, ..Withheld::NONE }
+            Withheld { calendars: true, change_calendar_list: true, drive: true, ..Withheld::NONE }
         );
+    }
+
+    /// An account that signed in before attachments used Drive, or
+    /// unticked it, withholds putting files in Drive and nothing else:
+    /// reading an event's attachments needs only the calendar.
+    #[test]
+    fn withheld_reads_a_grant_without_drive() {
+        let no_drive = Granted::parse(&format!(
+            "{DELETE_SCOPE} {SETTINGS_SCOPE} {CONTACTS_WRITE_SCOPE} {CALENDAR_SCOPE} {CALENDAR_LIST_WRITE_SCOPE} \
+             {CALENDARS_SCOPE}"
+        ));
+        assert_eq!(withheld(Some(&no_drive)), Withheld { drive: true, ..Withheld::NONE });
     }
 }

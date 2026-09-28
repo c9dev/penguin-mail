@@ -35,6 +35,7 @@ use crate::calendar_reach::missing_range;
 use crate::settings::Permitted;
 use crate::{Accounts, AnyCalendar, BackendError, CalendarService, SyncError};
 
+mod attach;
 mod list;
 
 pub use list::new_calendar_id;
@@ -72,6 +73,10 @@ pub struct TurnedDown {
     /// `None` when the event changed elsewhere first; otherwise the
     /// provider's reason, such as the calendar turning read-only.
     pub reason: Option<String>,
+    /// The title of a file attached while offline that had moved before
+    /// the queue could upload it. The change itself went out, without the
+    /// file; `reason` is then `None`.
+    pub left_out: Option<String>,
 }
 
 /// An id for an event made on this computer. Google takes a client's own
@@ -662,6 +667,7 @@ impl<A: Accounts> CalendarCopy<A> {
         // The list goes first: an event below may sit on a calendar made
         // here, which has Google's id only once its creation went out.
         let mut turned_down = self.send_list(&calendar, account_id).await?;
+        self.retry_waiting_for_access(account_id).await?;
         let mut after = 0;
         while let Some(change) = self.db.read(move |c| store::next_change(c, account_id, after)).await? {
             let seq = change.seq;
@@ -685,6 +691,10 @@ impl<A: Accounts> CalendarCopy<A> {
                 continue;
             }
             let create = change.kind == store::ChangeKind::Create;
+            // The body as it went out, once the queue has uploaded its
+            // waiting files, and the files that had moved.
+            let mut attempted = change.body.clone();
+            let mut left_out = Vec::new();
             let answer = match change.kind {
                 store::ChangeKind::Remove => calendar
                     .remove_event(&change.calendar, &change.event, change.etag.as_deref(), change.notify)
@@ -702,24 +712,32 @@ impl<A: Accounts> CalendarCopy<A> {
                         self.db.write(move |c| store::dequeue(c, seq)).await?;
                         continue;
                     };
-                    match calendar.put_event(&body, change.etag.as_deref(), create, change.notify).await {
-                        // The id is one this computer made, so a 409 means an
-                        // earlier send of this create reached Google and its
-                        // answer was lost. An edit made since sits in the
-                        // body, so it goes out as a change.
-                        Err(BackendError::Changed) if create => {
-                            calendar.put_event(&body, None, false, change.notify).await
+                    match self.prepare_attachments(&calendar, &change, body).await? {
+                        Err(err) => Err(err),
+                        Ok((body, missing)) => {
+                            attempted = Some(body.clone());
+                            left_out = missing;
+                            match calendar.put_event(&body, change.etag.as_deref(), create, change.notify).await {
+                                // The id is one this computer made, so a 409
+                                // means an earlier send of this create reached
+                                // Google and its answer was lost. An edit made
+                                // since sits in the body, so it goes out as a
+                                // change.
+                                Err(BackendError::Changed) if create => {
+                                    calendar.put_event(&body, None, false, change.notify).await
+                                }
+                                other => other,
+                            }
+                            .map(Some)
                         }
-                        other => other,
                     }
-                    .map(Some)
                 }
             };
             let turned_before = turned_down.len();
             match (change.kind, answer) {
                 (_, Ok(Some(mut sent))) => {
                     sent.pending = false;
-                    let attempted = change.body.clone().expect("a create or save always has a body");
+                    let attempted = attempted.clone().expect("a create or save always has a body");
                     let new_etag = sent.etag.clone();
                     let waiting = self
                         .db
@@ -738,6 +756,14 @@ impl<A: Accounts> CalendarCopy<A> {
                     if let Some(first) = waiting {
                         after = after.min(first - 1);
                     }
+                    turned_down.extend(left_out.drain(..).map(|file| TurnedDown {
+                        account_id,
+                        calendar: change.calendar.clone(),
+                        event: change.event.clone(),
+                        title: title_of(&change),
+                        reason: None,
+                        left_out: Some(file),
+                    }));
                 }
                 // Gone already or not, the removal is done.
                 (_, Ok(None)) | (store::ChangeKind::Remove, Err(BackendError::NotFound)) => {
@@ -895,6 +921,7 @@ impl<A: Accounts> CalendarCopy<A> {
             event: change.event.clone(),
             title: title_of(change),
             reason: Some(reason.to_string()),
+            left_out: None,
         })
     }
 
@@ -942,6 +969,7 @@ impl<A: Accounts> CalendarCopy<A> {
             event: change.event.clone(),
             title,
             reason,
+            left_out: None,
         })
     }
 
