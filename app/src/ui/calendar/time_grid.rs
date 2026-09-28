@@ -47,6 +47,17 @@ pub struct Dragging {
     pub started: bool,
 }
 
+/// A run of keyboard nudges on one card, moved on screen and not yet
+/// asked about.
+pub struct Nudging {
+    pub card: gtk::Widget,
+    /// The occurrence as it was before the first press.
+    pub occurrence: Occurrence,
+    pub run: drag::Nudges,
+    /// Where the card sat before the first press, for a Cancel.
+    pub placement: imp::Placement,
+}
+
 /// Width of the hour-label gutter down the left edge, shared with
 /// `AllDayStrip` so the day columns of both widgets line up. The values
 /// here are the approved mockup's (`calendar-mockup/mockups.py`).
@@ -353,6 +364,12 @@ mod imp {
         /// The spring that settles a released card.
         pub settle: RefCell<Option<adw::SpringAnimation>>,
         pub moved: RefCell<Option<Box<Moved>>>,
+        /// Keyboard nudges waiting for the keyboard to rest.
+        pub nudging: RefCell<Option<super::Nudging>>,
+        pub nudge_timer: RefCell<Option<glib::SourceId>>,
+        /// A nudged card the view is asking about, and where
+        /// [`super::TimeGrid::spring_back`] returns it on a Cancel.
+        pub nudged: RefCell<Option<(gtk::Widget, Placement)>>,
         pub selected: RefCell<Option<Box<Selected>>>,
         /// Says which occurrences a drag may move; a card whose predicate
         /// answers `false` starts no drag. `None` starts none either,
@@ -414,6 +431,11 @@ mod imp {
             if let Some(source) = self.now_timer.take() {
                 source.remove();
             }
+            if let Some(source) = self.nudge_timer.take() {
+                source.remove();
+            }
+            self.nudging.take();
+            self.nudged.take();
             self.blocks.borrow_mut().clear();
             self.dragging.take();
             self.settle.take();
@@ -873,6 +895,11 @@ impl TimeGrid {
         if let Some((_, span)) = imp.ghost.borrow().clone() {
             self.show_ghost(Some(span));
         }
+        // The old cards are gone. A card being asked about comes back from
+        // the copy; one still being nudged moves to its new widget, so a
+        // sync landing between two presses does not undo them.
+        imp.nudged.take();
+        self.carry_nudges();
         self.queue_resize();
     }
 
@@ -1087,6 +1114,11 @@ impl TimeGrid {
     /// no write, for a cancelled repeat question or a failed write.
     pub fn spring_back(&self) {
         let imp = self.imp();
+        let nudged = imp.nudged.take();
+        if let Some((card, placement)) = nudged {
+            self.set_placement(&card, placement);
+            return;
+        }
         let Some((widget, from)) = imp
             .dragging
             .borrow()
@@ -1477,7 +1509,9 @@ impl TimeGrid {
     /// The keyboard path beside the drag: Shift+Up or Shift+Down moves
     /// the focused card by a quarter hour, Shift+Alt+Up or
     /// Shift+Alt+Down changes when it ends. Neither writes anything the
-    /// card's own predicate refuses.
+    /// card's own predicate refuses. The card moves at once; the view
+    /// hears of the total move once the keyboard rests (`drag::Nudges`),
+    /// so a run of presses asks one question.
     fn nudge_focused(&self, keyval: gdk::Key, state: gdk::ModifierType) -> glib::Propagation {
         if !state.contains(gdk::ModifierType::SHIFT_MASK) {
             return glib::Propagation::Proceed;
@@ -1494,15 +1528,133 @@ impl TimeGrid {
         if !imp.can_move.borrow().as_ref().is_some_and(|f| f(&o)) {
             return glib::Propagation::Proceed;
         }
-        let (start, end) = if state.contains(gdk::ModifierType::ALT_MASK) {
-            drag::stretch(o.start, o.end, steps)
-        } else {
-            drag::nudge(o.start, o.end, steps)
+        let Some(card) = self.block_at(&block::key_of(&o), o.start) else {
+            return glib::Propagation::Proceed;
         };
-        if let Some(f) = imp.moved.borrow().as_ref() {
-            f(self, &o, start, end);
+        // A run on another card is asked about before this one starts.
+        let other = imp.nudging.borrow().as_ref().is_some_and(|n| n.card != card);
+        if other {
+            if let Some(source) = imp.nudge_timer.take() {
+                source.remove();
+            }
+            self.ask_nudges();
+        }
+        let now = glib::monotonic_time() / 1_000;
+        let span = imp.nudging.borrow().as_ref().map_or((o.start, o.end), |n| n.run.to);
+        let to = if state.contains(gdk::ModifierType::ALT_MASK) {
+            drag::stretch(span.0, span.1, steps)
+        } else {
+            drag::nudge(span.0, span.1, steps)
+        };
+        let placement = self.placement_of(&card);
+        {
+            let mut nudging = imp.nudging.borrow_mut();
+            match nudging.as_mut() {
+                Some(n) => n.run.press(to, now),
+                None => {
+                    let Some(placement) = placement else {
+                        return glib::Propagation::Proceed;
+                    };
+                    let mut run = drag::Nudges::start((o.start, o.end), now);
+                    run.press(to, now);
+                    *nudging = Some(Nudging { card: card.clone(), occurrence: o, run, placement });
+                }
+            }
+        }
+        self.place_nudged(&card, to);
+        if imp.nudge_timer.borrow().is_none() {
+            self.wait_for_nudges(drag::NUDGE_QUIET);
         }
         glib::Propagation::Stop
+    }
+
+    /// Checks the run again after `wait` milliseconds. One timer serves
+    /// the whole run: when it fires early because another press came, it
+    /// waits out what [`drag::Nudges::wait`] says is left.
+    fn wait_for_nudges(&self, wait: i64) {
+        let weak = self.downgrade();
+        let millis = u64::try_from(wait).unwrap_or(0);
+        let source = glib::timeout_add_local_once(std::time::Duration::from_millis(millis), move || {
+            let Some(grid) = weak.upgrade() else { return };
+            // The source has fired and is gone; forget it without removing it.
+            grid.imp().nudge_timer.take();
+            let now = glib::monotonic_time() / 1_000;
+            let left = grid.imp().nudging.borrow().as_ref().map(|n| n.run.wait(now));
+            match left {
+                Some(0) => grid.ask_nudges(),
+                Some(left) => grid.wait_for_nudges(left),
+                None => {}
+            }
+        });
+        self.imp().nudge_timer.replace(Some(source));
+    }
+
+    /// Hands the finished run to the view as one move. A run that ended
+    /// where it began asks nothing.
+    fn ask_nudges(&self) {
+        let imp = self.imp();
+        let taken = imp.nudging.take();
+        let Some(n) = taken else { return };
+        if !n.run.moved() {
+            self.set_placement(&n.card, n.placement);
+            return;
+        }
+        imp.nudged.replace(Some((n.card.clone(), n.placement)));
+        let (start, end) = n.run.to;
+        if let Some(f) = imp.moved.borrow().as_ref() {
+            f(self, &n.occurrence, start, end);
+        }
+    }
+
+    /// Moves a run of nudges from a card a `show` removed to the card
+    /// that draws the same occurrence now, or drops the run when the
+    /// occurrence has left the grid.
+    fn carry_nudges(&self) {
+        let imp = self.imp();
+        let pending = imp
+            .nudging
+            .borrow()
+            .as_ref()
+            .map(|n| (block::key_of(&n.occurrence), n.occurrence.start, n.run.to));
+        let Some((key, start, to)) = pending else { return };
+        let card = self.block_at(&key, start);
+        let placement = card.as_ref().and_then(|c| self.placement_of(c));
+        match card.zip(placement) {
+            Some((card, placement)) => {
+                if let Some(n) = imp.nudging.borrow_mut().as_mut() {
+                    n.card = card.clone();
+                    n.placement = placement;
+                }
+                self.place_nudged(&card, to);
+            }
+            None => {
+                imp.nudging.take();
+                if let Some(source) = imp.nudge_timer.take() {
+                    source.remove();
+                }
+            }
+        }
+    }
+
+    /// `card`'s placement from the last `show`, or after a nudge.
+    fn placement_of(&self, card: &gtk::Widget) -> Option<imp::Placement> {
+        self.imp().children.borrow().iter().find(|(w, _)| w == card).map(|(_, p)| *p)
+    }
+
+    fn set_placement(&self, card: &gtk::Widget, placement: imp::Placement) {
+        if let Some((_, p)) = self.imp().children.borrow_mut().iter_mut().find(|(w, _)| w == card) {
+            *p = placement;
+        }
+        self.queue_allocate();
+    }
+
+    /// Draws `card` at `start` to `end`, in its own lane. A span that
+    /// leaves the days shown keeps the card where it last was.
+    fn place_nudged(&self, card: &gtk::Widget, (start, end): (EpochMillis, EpochMillis)) {
+        let Some((column, top, bottom)) = self.imp().span_placement(start, end) else { return };
+        let Some(imp::Placement::Card { columns, lane, lanes, .. }) = self.placement_of(card) else { return };
+        let placement = imp::Placement::Card { column, columns, lane, lanes, top, bottom };
+        self.set_placement(card, placement);
     }
 }
 

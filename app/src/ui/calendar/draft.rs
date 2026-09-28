@@ -117,6 +117,30 @@ impl Draft {
         self.occurrence.as_ref().is_some_and(|o| (o.start, o.end) != (self.start, self.end))
     }
 
+    /// The draft as the editor opened it, for telling what changed.
+    /// `None` for a new event.
+    pub fn before(&self) -> Option<Draft> {
+        // `open` reads only the occurrence, the series rules and the zone,
+        // all of which the draft keeps, so opening again gives back the
+        // draft the editor started from.
+        let o = self.occurrence.as_ref()?;
+        Some(Draft::open(o, &self.opened.rules, self.view_zone))
+    }
+
+    /// This draft with the time it opened with: the other edits stay.
+    /// What an editor save writes when the person turns the new time
+    /// down in the confirmation.
+    pub fn without_move(&self) -> Draft {
+        let mut kept = self.clone();
+        if let Some(before) = self.before() {
+            kept.start = before.start;
+            kept.end = before.end;
+            kept.all_day = before.all_day;
+            kept.zone = before.zone;
+        }
+        kept
+    }
+
     pub fn is_new(&self) -> bool {
         self.base.is_none()
     }
@@ -262,6 +286,22 @@ impl Draft {
             .chain(self.opened.rules.iter().filter(|l| !mailrs_domain::calendar::is_rule_line(l)).cloned())
             .collect()
     }
+}
+
+/// Whether going from `before` to `after` changes something the guests
+/// see: the title, the time, the place, the notes, the guest list, the
+/// Meet link or the repeat. Reminders, colour, busy or free and privacy
+/// are the account's own, and Google sends nobody mail about them.
+pub fn reaches_guests(before: &Draft, after: &Draft) -> bool {
+    // The save trims the title and the place, so compare what it writes.
+    before.title.trim() != after.title.trim()
+        || (before.start, before.end, before.all_day) != (after.start, after.end, after.all_day)
+        || before.zone != after.zone
+        || before.place.trim() != after.place.trim()
+        || before.notes != after.notes
+        || before.guests != after.guests
+        || (after.add_meet && !before.add_meet)
+        || before.repeat != after.repeat
 }
 
 /// The zone the desktop is set to, for a new draft nothing else names one
@@ -445,6 +485,130 @@ mod tests {
         let refused = draft.add_guests("ann@example.com, bob");
         assert_eq!(refused, ["bob"]);
         assert_eq!(draft.guests.len(), 1, "the valid address still joins");
+    }
+
+    fn opened() -> Draft {
+        Draft::open(&weekly(), &weekly().event.rules, Lisbon)
+    }
+
+    fn reaches(change: impl FnOnce(&mut Draft)) -> bool {
+        let before = opened();
+        let mut after = before.clone();
+        change(&mut after);
+        reaches_guests(&before, &after)
+    }
+
+    #[test]
+    fn the_guests_see_a_new_title() {
+        assert!(reaches(|d| d.title = "Planning".into()));
+    }
+
+    #[test]
+    fn the_guests_do_not_see_spaces_the_save_trims() {
+        assert!(!reaches(|d| d.title = "Review ".into()));
+    }
+
+    #[test]
+    fn the_guests_see_a_new_start() {
+        assert!(reaches(|d| d.set_start(at(23, 16, 0))));
+    }
+
+    #[test]
+    fn the_guests_see_a_new_end() {
+        assert!(reaches(|d| d.set_end(at(23, 17, 0))));
+    }
+
+    #[test]
+    fn the_guests_see_the_event_become_all_day() {
+        assert!(reaches(|d| d.set_all_day(true)));
+    }
+
+    #[test]
+    fn the_guests_see_a_new_time_zone() {
+        assert!(reaches(|d| d.zone = "Europe/Madrid".into()));
+    }
+
+    #[test]
+    fn the_guests_see_a_new_place() {
+        assert!(reaches(|d| d.place = "Room 4".into()));
+    }
+
+    #[test]
+    fn the_guests_see_new_notes() {
+        assert!(reaches(|d| d.notes = "Bring the numbers".into()));
+    }
+
+    #[test]
+    fn the_guests_see_a_guest_added() {
+        assert!(reaches(|d| {
+            d.add_guests("ann@example.com");
+        }));
+    }
+
+    #[test]
+    fn the_guests_see_a_guest_removed() {
+        let mut before = opened();
+        before.add_guests("ann@example.com, bo@example.com");
+        let mut after = before.clone();
+        after.guests.pop();
+        assert!(reaches_guests(&before, &after));
+    }
+
+    #[test]
+    fn the_guests_see_a_meet_link_asked_for() {
+        assert!(reaches(|d| d.add_meet = true));
+    }
+
+    #[test]
+    fn the_guests_see_a_new_repeat() {
+        assert!(reaches(|d| d.repeat = Repeat::EveryDay));
+    }
+
+    #[test]
+    fn the_guests_do_not_see_the_reminders() {
+        assert!(!reaches(|d| d.reminders = Some(Vec::new())));
+    }
+
+    #[test]
+    fn the_guests_do_not_see_the_colour() {
+        assert!(!reaches(|d| d.color = Some("#e8660c".into())));
+    }
+
+    #[test]
+    fn the_guests_do_not_see_busy_or_free() {
+        assert!(!reaches(|d| d.busy = false));
+    }
+
+    #[test]
+    fn the_guests_do_not_see_privacy() {
+        assert!(!reaches(|d| d.private = true));
+    }
+
+    #[test]
+    fn a_save_with_no_change_reaches_nobody() {
+        assert!(!reaches(|_| {}));
+    }
+
+    #[test]
+    fn the_draft_remembers_how_it_opened() {
+        let mut draft = opened();
+        draft.title = "Planning".into();
+        assert_eq!(draft.before(), Some(opened()));
+        assert_eq!(fresh().before(), None);
+    }
+
+    #[test]
+    fn turning_down_the_new_time_keeps_the_other_edits() {
+        let mut draft = opened();
+        draft.title = "Planning".into();
+        draft.place = "Room 4".into();
+        draft.set_all_day(true);
+        let kept = draft.without_move();
+        assert!(!kept.moved());
+        assert!(!kept.all_day);
+        assert_eq!((kept.start, kept.end), (at(23, 15, 0), at(23, 16, 0)));
+        assert_eq!(kept.title, "Planning");
+        assert_eq!(kept.place, "Room 4");
     }
 
     #[test]

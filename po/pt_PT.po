@@ -1466,7 +1466,7 @@ msgid "Mark as Read"
 msgstr "Marcar como lida"
 
 #: app/src/notify.rs:51 app/src/ui/calendar/popover.rs:156
-#: app/src/ui/calendar/popover.rs:158 app/src/ui/calendar/scope.rs:125
+#: app/src/ui/calendar/popover.rs:158 app/src/ui/calendar/scope.rs:181
 #: app/src/ui/conversation.rs:461 app/src/ui/hide_my_email.rs:288
 #: app/src/ui/queued.rs:58 app/src/ui/templates.rs:149
 #: app/src/ui/window/arrange.rs:92 app/src/ui/window/organize.rs:142
@@ -3078,7 +3078,7 @@ msgid "Test"
 msgstr "Testar"
 
 #: app/src/ui/assistant_mcp_prefs.rs:341 app/src/ui/calendar/editor.rs:93
-#: app/src/ui/calendar/quick.rs:69 app/src/ui/calendar/scope.rs:124
+#: app/src/ui/calendar/quick.rs:69 app/src/ui/calendar/scope.rs:180
 #: app/src/ui/composer/mod.rs:1926 app/src/ui/smart_editor.rs:144
 #: app/src/ui/templates.rs:233 app/src/ui/vacation.rs:41
 #: app/src/ui/window/arrange.rs:132
@@ -3090,7 +3090,7 @@ msgid "Add"
 msgstr "Adicionar"
 
 #: app/src/ui/assistant_mcp_prefs.rs:347 app/src/ui/calendar/editor.rs:97
-#: app/src/ui/calendar/scope.rs:105 app/src/ui/composer/mod.rs:1245
+#: app/src/ui/calendar/scope.rs:161 app/src/ui/composer/mod.rs:1245
 #: app/src/ui/composer/mod.rs:1314 app/src/ui/composer/mod.rs:1632
 #: app/src/ui/composer/mod.rs:1926 app/src/ui/confirm.rs:29
 #: app/src/ui/smart_editor.rs:150 app/src/ui/templates.rs:239
@@ -3816,7 +3816,7 @@ msgstr "Eventos de dia inteiro"
 msgid "All-day"
 msgstr "Dia inteiro"
 
-#: app/src/ui/calendar/mod.rs:1503 app/src/ui/calendar/mod.rs:2571
+#: app/src/ui/calendar/mod.rs:1503 app/src/ui/calendar/mod.rs:2593
 #: app/src/ui/calendar/sidebar.rs:123 app/src/ui/calendar/words.rs:220
 msgid "%a"
 msgstr "%a"
@@ -3842,7 +3842,7 @@ msgstr "Não foi possível enviar a sua resposta: {reason}"
 msgid "None of your calendars take new events"
 msgstr "Nenhum dos seus calendários aceita eventos novos"
 
-#: app/src/ui/calendar/mod.rs:2348
+#: app/src/ui/calendar/mod.rs:2370
 msgid "Could not save the event: {reason}"
 msgstr "Não foi possível guardar o evento: {reason}"
 
@@ -3899,55 +3899,68 @@ msgstr "%Y"
 msgid "W{week}"
 msgstr "S{week}"
 
-#: app/src/ui/calendar/scope.rs:95
+#: app/src/ui/calendar/scope.rs:143
 msgid "This event only"
 msgstr "Só este evento"
 
-#: app/src/ui/calendar/scope.rs:96
+#: app/src/ui/calendar/scope.rs:144
 msgid "This and following events"
 msgstr "Este e os seguintes"
 
-#: app/src/ui/calendar/scope.rs:97
+#: app/src/ui/calendar/scope.rs:145
 msgid "All events"
 msgstr "Todos os eventos"
 
-#: app/src/ui/calendar/scope.rs:109
-msgid "Don't send"
-msgstr "Não enviar"
+#: app/src/ui/calendar/scope.rs:155
+msgid "Keep Old Time"
+msgstr "Manter a hora antiga"
 
-#: app/src/ui/calendar/scope.rs:113
-msgid "Send a cancellation to the guests"
-msgstr "Enviar um cancelamento aos convidados"
-
-#: app/src/ui/calendar/scope.rs:115
-msgid "Send an update to the guests"
-msgstr "Enviar uma atualização aos convidados"
-
-#: app/src/ui/calendar/scope.rs:123
+#: app/src/ui/calendar/scope.rs:156 app/src/ui/calendar/scope.rs:179
 msgid "Move"
 msgstr "Mover"
 
-#: app/src/ui/calendar/scope.rs:167
+#: app/src/ui/calendar/scope.rs:165
+msgid "Don't send"
+msgstr "Não enviar"
+
+#: app/src/ui/calendar/scope.rs:169
+msgid "Send a cancellation to the guests"
+msgstr "Enviar um cancelamento aos convidados"
+
+#: app/src/ui/calendar/scope.rs:171 app/src/ui/calendar/scope.rs:293
+msgid "Send an update to the guests"
+msgstr "Enviar uma atualização aos convidados"
+
+#: app/src/ui/calendar/scope.rs:240
 msgid "Move “{title}”?"
 msgstr "Mover “{title}”?"
 
-#: app/src/ui/calendar/scope.rs:168
+#: app/src/ui/calendar/scope.rs:241
 msgid "Delete “{title}”?"
 msgstr "Eliminar “{title}”?"
 
-#: app/src/ui/calendar/scope.rs:169
+#: app/src/ui/calendar/scope.rs:242
 msgid "Move a repeating event"
 msgstr "Mover um evento repetido"
 
-#: app/src/ui/calendar/scope.rs:170
+#: app/src/ui/calendar/scope.rs:243
 msgid "Delete a repeating event"
 msgstr "Eliminar um evento repetido"
 
-#: app/src/ui/calendar/scope.rs:171
+#: app/src/ui/calendar/scope.rs:244
+msgid "Save changes to “{title}”?"
+msgstr "Guardar as alterações em “{title}”?"
+
+#: app/src/ui/calendar/scope.rs:245
 msgid "Change a repeating event"
 msgstr "Alterar um evento repetido"
 
-#: app/src/ui/calendar/scope.rs:181
+#: app/src/ui/calendar/scope.rs:256
+msgid "Keep Old Time saves your other changes at the time the event had."
+msgstr ""
+"Manter a hora antiga guarda as outras alterações na hora que o evento tinha."
+
+#: app/src/ui/calendar/scope.rs:259
 msgid "The new guests get their invitation, and the others get an update."
 msgstr "Os novos convidados recebem o convite e os restantes uma atualização."
 
@@ -4005,13 +4018,13 @@ msgstr "Só pode ler este calendário"
 msgid "Grant Access for {account}"
 msgstr "Conceder acesso a {account}"
 
-#: app/src/ui/calendar/time_grid.rs:223
+#: app/src/ui/calendar/time_grid.rs:234
 msgid "{count} more event"
 msgid_plural "{count} more events"
 msgstr[0] "mais {count} evento"
 msgstr[1] "mais {count} eventos"
 
-#: app/src/ui/calendar/time_grid.rs:249
+#: app/src/ui/calendar/time_grid.rs:260
 msgid ""
 "Shift+Up or Shift+Down moves it; Shift+Alt+Up or Shift+Alt+Down changes when "
 "it ends."
@@ -4019,7 +4032,7 @@ msgstr ""
 "Shift+Up ou Shift+Down move-o; Shift+Alt+Up ou Shift+Alt+Down altera quando "
 "termina."
 
-#: app/src/ui/calendar/time_grid.rs:254
+#: app/src/ui/calendar/time_grid.rs:265
 msgid "{base} {hint}"
 msgstr "{base} {hint}"
 
