@@ -195,6 +195,9 @@ pub struct FakeState {
     /// Play Google turning down every new event, as it does a body it
     /// cannot take: a create answers 400 with Google's reason.
     pub refuse_new_events: bool,
+    /// Play Google turning down every move to another calendar, as it
+    /// does for an event this account may not move: a move answers 400.
+    pub refuse_moves: bool,
     /// The OAuth scopes the account has not granted. A call that needs one
     /// answers `MissingScope`, as Google does until the user says yes.
     /// Change it through [`FakeGmail::withhold`] and [`FakeGmail::grant`].
@@ -385,6 +388,7 @@ impl FakeGmail {
                 deleted_answers_gone: false,
                 deleted_calendars: Vec::new(),
                 refuse_new_events: false,
+                refuse_moves: false,
                 withheld: BTreeSet::new(),
                 calendar_off: None,
                 clock: None,
@@ -1429,6 +1433,51 @@ impl GmailApi for FakeGmail {
                 Ok(())
             }
         }
+    }
+
+    /// Moves the event and a series' changed occurrences, as Google does,
+    /// so the old calendar's change feed hands each out as deleted and the
+    /// new one's as new.
+    async fn move_event(
+        &self,
+        event: &calendar::Event,
+        destination: &str,
+        notify: calendar::Notify,
+    ) -> Result<calendar::Event, GmailError> {
+        self.call("calendar.events.move", 0).await?;
+        self.calendar_open()?;
+        self.with(|s| s.calendar_notices.push((event.id.clone(), notify)));
+        self.calendar_held(&event.calendar)?;
+        self.calendar_held(destination)?;
+        if self.with(|s| s.refuse_moves) {
+            return Err(GmailError::Http {
+                status: 400,
+                body: r#"{"error":{"code":400,"message":"Cannot change the organizer of an instance."}}"#.into(),
+            });
+        }
+        let moving: Vec<calendar::Event> = self.with(|s| {
+            s.calendar_events
+                .iter()
+                .filter(|e| {
+                    e.calendar == event.calendar && (e.id == event.id || e.series.as_deref() == Some(event.id.as_str()))
+                })
+                .cloned()
+                .collect()
+        });
+        if !moving.iter().any(|e| e.id == event.id) {
+            return Err(self.deleted());
+        }
+        for held in moving {
+            self.drop_calendar_event(&held.calendar, &held.id);
+            self.put_calendar_event(calendar::Event { calendar: destination.to_string(), ..held });
+        }
+        Ok(self.with(|s| {
+            s.calendar_events
+                .iter()
+                .find(|e| e.calendar == destination && e.id == event.id)
+                .cloned()
+                .expect("just moved")
+        }))
     }
 
     async fn create_label(&self, name: &str) -> Result<RemoteLabel, GmailError> {

@@ -1100,3 +1100,67 @@ async fn a_written_event_without_a_zone_in_the_answer_keeps_its_own() {
     let saved = client(&server).put_event(&event, None, false, Notify::Nobody).await.unwrap();
     assert_eq!(saved.zone, "Europe/Lisbon");
 }
+
+/// Moving an event to another calendar is Google's `events.move`: a POST
+/// on the event under its old calendar, naming the new one, with the
+/// person's choice of whether the guests hear of it. The answer is the
+/// event on its new calendar.
+#[tokio::test]
+async fn moving_an_event_to_another_calendar_posts_to_its_move() {
+    let server = MockServer::start().await;
+    mount_token(&server).await;
+    Mock::given(method("POST"))
+        .and(path(format!("{CALENDAR}/calendars/work/events/review/move")))
+        .and(query_param("destination", "home@example.com"))
+        .and(query_param("sendUpdates", "none"))
+        .respond_with(
+            ResponseTemplate::new(200).set_body_json(json!({
+                "id": "review",
+                "etag": "\"7\"",
+                "summary": "Review",
+                "start": {"dateTime": "2026-10-01T09:00:00Z", "timeZone": "Europe/Lisbon"},
+                "end": {"dateTime": "2026-10-01T10:00:00Z", "timeZone": "Europe/Lisbon"}
+            })),
+        )
+        .expect(1)
+        .mount(&server)
+        .await;
+    let review = mailrs_domain::calendar::Event {
+        calendar: "work".into(),
+        id: "review".into(),
+        zone: "Europe/Lisbon".into(),
+        ..Default::default()
+    };
+    let moved = client(&server).move_event(&review, "home@example.com", Notify::Nobody).await.unwrap();
+    assert_eq!((moved.calendar.as_str(), moved.etag.as_str()), ("home@example.com", "\"7\""));
+}
+
+/// A guest who removes an invitation deletes only their own copy. Google
+/// marks them as having declined, so nothing answers No first, and the
+/// delete goes out with updates off: the organizer hears only what
+/// Google itself tells them.
+#[tokio::test]
+async fn a_guests_removal_is_one_quiet_delete_and_no_answer() {
+    let server = MockServer::start().await;
+    mount_token(&server).await;
+    Mock::given(method("DELETE"))
+        .and(path(format!("{CALENDAR}/calendars/primary/events/{EVENT}")))
+        .and(query_param("sendUpdates", "none"))
+        .respond_with(ResponseTemplate::new(204))
+        .expect(1)
+        .mount(&server)
+        .await;
+    Mock::given(method("PATCH")).respond_with(ResponseTemplate::new(200)).expect(0).mount(&server).await;
+    Mock::given(method("GET")).respond_with(ResponseTemplate::new(200)).expect(0).mount(&server).await;
+    let invitation = mailrs_domain::calendar::Event {
+        calendar: "primary".into(),
+        id: EVENT.into(),
+        guests: vec![
+            mailrs_domain::calendar::Guest { email: "priya@fernwood.example".into(), organizer: true, ..guest("priya@fernwood.example") },
+            mailrs_domain::calendar::Guest { me: true, ..guest("me@example.com") },
+        ],
+        ..Default::default()
+    };
+    let notify = mailrs_domain::calendar::removal_notify(&invitation, Notify::Guests);
+    client(&server).remove_event(&invitation.calendar, &invitation.id, None, notify).await.unwrap();
+}

@@ -35,8 +35,8 @@ use std::rc::{Rc, Weak};
 use adw::prelude::*;
 use chrono::{DateTime, Datelike, Days, NaiveDate, Utc};
 use gtk::{gdk, glib};
-use mailrs_domain::calendar::series;
-use mailrs_domain::calendar::{Access, Calendar, Occurrence};
+use mailrs_domain::calendar::series::{self, RepeatScope};
+use mailrs_domain::calendar::{Access, Calendar, Guest, Occurrence};
 use mailrs_domain::invitation::Answer;
 use mailrs_domain::translate::{date_locale, fill, gettext, with_reason};
 use mailrs_domain::{Account, AccountId, EpochMillis};
@@ -1753,9 +1753,8 @@ impl CalendarView {
     }
 
     /// Opens the popover for `o`, pointed at `anchor`. Edit and Delete
-    /// show only for an event the account may change as a whole: the
-    /// mockup's invitation popover, on someone else's event, stays as
-    /// drawn.
+    /// show for an event the account may change as a whole; a guest gets
+    /// Edit, limited to their own parts, and Remove.
     fn show_event(self: &Rc<Self>, anchor: &gtk::Widget, o: &Occurrence) {
         let calendar = self
             .calendars
@@ -1765,23 +1764,24 @@ impl CalendarView {
             .unwrap_or_default();
         let weak = Rc::downgrade(self);
         let occurrence = o.clone();
-        let editable = self.editing(o) == draft::Editing::Whole;
+        let buttons = self.editing(o).popover();
         let (edit_o, delete_o) = (o.clone(), o.clone());
         let edit_view = Rc::downgrade(self);
         let delete_view = Rc::downgrade(self);
-        let on_edit: Option<Box<dyn Fn()>> = editable.then(|| {
+        let on_edit: Option<Box<dyn Fn()>> = buttons.filter(|b| b.edit).map(|_| {
             Box::new(move || {
                 if let Some(view) = edit_view.upgrade() {
                     view.open_editor(&edit_o);
                 }
             }) as Box<dyn Fn()>
         });
-        let on_delete: Option<Box<dyn Fn()>> = editable.then(|| {
-            Box::new(move || {
+        let on_delete = buttons.map(|b| {
+            let run = Box::new(move || {
                 if let Some(view) = delete_view.upgrade() {
                     view.delete(&delete_o);
                 }
-            }) as Box<dyn Fn()>
+            }) as Box<dyn Fn()>;
+            (b.removal, run)
         });
         self.popover.show(
             anchor,
@@ -1857,14 +1857,15 @@ impl CalendarView {
     }
 
     /// The Delete key: takes the focused event off the grid at once and
-    /// offers Undo, for an event the account may change as a whole, or
-    /// asks for the calendar permission the account withheld.
+    /// offers Undo, for an event the account may change as a whole or a
+    /// guest's own copy of an invitation, or asks for the calendar
+    /// permission the account withheld.
     pub fn delete_focused(self: &Rc<Self>) {
         let Some(o) = self.focused() else { return };
         match self.editing(&o) {
-            draft::Editing::Whole => self.delete(&o),
+            draft::Editing::Whole | draft::Editing::Guest => self.delete(&o),
             draft::Editing::NeedsPermission => (self.hooks.needs_permission)(o.account_id),
-            draft::Editing::Guest | draft::Editing::None => {}
+            draft::Editing::None => {}
         }
     }
 
@@ -1904,13 +1905,20 @@ impl CalendarView {
     /// Deletes `o` at once and offers Undo. An occurrence of a series asks
     /// which occurrences the delete covers first, and a meeting whether
     /// the guests get a cancellation, in one dialog; a delete still goes
-    /// through Undo either way.
+    /// through Undo either way. A guest's delete removes only their own
+    /// copy, never asks about the other guests, and is never offered
+    /// "This and following", which would cut a series they do not run.
     pub fn delete(self: &Rc<Self>, o: &Occurrence) {
         let this = Rc::clone(self);
         let o = o.clone();
         glib::spawn_future_local(async move {
-            let offered = series::scopes(&o.event, false);
-            let answer = match scope::question(scope::Action::Delete, &offered, &o.event.guests, scope::Change::default()) {
+            let guest = draft::limited(&o.event);
+            let mut offered = series::scopes(&o.event, false);
+            if guest {
+                offered.retain(|s| *s != RepeatScope::Following);
+            }
+            let guests: &[Guest] = if guest { &[] } else { &o.event.guests };
+            let answer = match scope::question(scope::Action::Delete, &offered, guests, scope::Change::default()) {
                 Some(question) => match scope::ask(&this.page, &question, &o.event, None).await {
                     Some(answer) => answer,
                     None => return,
@@ -1921,16 +1929,17 @@ impl CalendarView {
             let (account_id, occurrence) = (o.account_id, o.clone());
             let held = this
                 .core
-                .call(async move {
-                    let steps = copy.delete_steps(account_id, &occurrence, answer.scope).await?;
-                    copy.hold_with(account_id, steps, answer.notify).await
-                })
+                .call(async move { copy.hold_removal(account_id, &occurrence, answer.scope, answer.notify).await })
                 .await;
             match held {
                 Ok(Permitted::Done(held)) => {
                     this.focus_past(&key_of(&o));
                     this.reload();
-                    this.offer_undo(fill(&gettext("Deleted “{title}”"), &[("title", &o.event.title)]), held);
+                    let said = match guest {
+                        true => gettext("Removed “{title}” from your calendar"),
+                        false => gettext("Deleted “{title}”"),
+                    };
+                    this.offer_undo(fill(&said, &[("title", &o.event.title)]), held);
                 }
                 Ok(Permitted::NeedsPermission) => (this.hooks.needs_permission)(account_id),
                 Err(err) => (this.hooks.toast)(&with_reason(&gettext("Could not delete the event: {reason}"), &err, &[])),
@@ -2279,32 +2288,37 @@ impl CalendarView {
             self.clear_ghost();
             return self.edit(draft);
         };
-        let calendar = self
-            .calendars
-            .borrow()
-            .get(&(draft.account_id, draft.calendar.clone()))
-            .cloned()
-            .unwrap_or_default();
+        let choices = self.writable();
+        let current = choices
+            .iter()
+            .position(|(a, _, c)| *a == draft.account_id && c.id == draft.calendar)
+            .unwrap_or(0);
         let when = words::span_words(start, end, false, &chrono::Local);
         let (save_view, more_view) = (Rc::clone(self), Rc::clone(self));
-        let (save_draft, more_draft) = (draft.clone(), draft);
+        let picked = Rc::new(choices.clone());
+        let (save_picked, more_picked) = (Rc::clone(&picked), picked);
+        // A calendar picked in the popover starts the draft again on it,
+        // so its zone and reminders follow, as the editor's choice does.
+        let on = move |choices: &[(AccountId, String, Calendar)], index: usize, title: String| {
+            let mut draft = match choices.get(index) {
+                Some((account, _, calendar)) if index != current => {
+                    Draft::new(*account, calendar, start, end, draft::local_zone())
+                }
+                _ => draft.clone(),
+            };
+            draft.title = title;
+            draft
+        };
+        let on_more = on.clone();
         self.quick.show(
             &anchor,
             &rect,
             side,
             &when,
-            &calendar,
-            // `Draft` has private fields, so no struct update from here.
-            move |title| {
-                let mut draft = save_draft.clone();
-                draft.title = title;
-                save_view.save_draft(draft);
-            },
-            move |title| {
-                let mut draft = more_draft.clone();
-                draft.title = title;
-                more_view.edit(draft);
-            },
+            choices,
+            current,
+            move |title, index| save_view.save_draft(on(&save_picked, index, title)),
+            move |title, index| more_view.edit(on_more(&more_picked, index, title)),
         );
     }
 

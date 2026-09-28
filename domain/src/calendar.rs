@@ -139,6 +139,15 @@ impl Notify {
     }
 }
 
+/// Whether the provider mails anyone about taking `event` off the
+/// calendar, given what the person `asked`. A guest's removal deletes
+/// only their own copy, and Google marks them as having declined, so it
+/// goes out quiet: a cancellation from a guest would reach every other
+/// guest of a meeting they do not run.
+pub fn removal_notify(event: &Event, asked: Notify) -> Notify {
+    if event.limited() { Notify::Nobody } else { asked }
+}
+
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Status {
     #[default]

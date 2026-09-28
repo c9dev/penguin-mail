@@ -613,3 +613,30 @@ async fn a_read_only_calendar_takes_no_new_event() {
     let refused = calendar.create(h.account_id, Some("holidays"), &recital()).await;
     assert!(matches!(refused, Err(SyncError::NoCalendar(ref id)) if id == "holidays"));
 }
+
+/// An assistant asked to delete an invitation removes the account's own
+/// copy as the window's Remove does: quiet, with no cancellation sent to
+/// the other guests of a meeting someone else runs.
+#[tokio::test]
+async fn the_assistant_removes_an_invitation_quietly() {
+    use mailrs_domain::calendar::{Guest, Notify};
+    let h = harness().await;
+    h.fake.with(|s| s.calendars = vec![primary()]);
+    h.fake.put_calendar_event(Ev {
+        calendar: primary().id,
+        id: "review".into(),
+        start: 1_790_000_000_000,
+        end: 1_790_003_600_000,
+        zone: "UTC".into(),
+        guests: vec![
+            Guest { email: "rita@example.com".into(), organizer: true, ..Guest::default() },
+            Guest { email: "me@example.com".into(), me: true, ..Guest::default() },
+        ],
+        ..Ev::default()
+    });
+    let (calendar, copy) = calendar_with_copy(&h);
+    copy.refresh(h.account_id, 1_790_000_000_000).await.unwrap();
+    calendar.delete(h.account_id, "review").await.unwrap();
+    copy.send(h.account_id).await.unwrap();
+    assert_eq!(h.fake.with(|s| s.calendar_notices.clone()), [("review".to_string(), Notify::Nobody)]);
+}

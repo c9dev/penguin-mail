@@ -147,6 +147,11 @@ impl Draft {
         self.base.is_none()
     }
 
+    /// Whether the person picked another calendar for an existing event.
+    pub fn changes_calendar(&self) -> bool {
+        self.base.as_ref().is_some_and(|base| base.calendar != self.calendar)
+    }
+
     /// Moves the start and takes the end along, keeping the length.
     pub fn set_start(&mut self, at: EpochMillis) {
         let length = self.end - self.start;
@@ -189,9 +194,9 @@ impl Draft {
 
     /// Adds each address in `text`, as the Guests field holds it, that is
     /// not on the list yet. Answers the parts that are not addresses. The
-    /// editor runs this on Enter and again on Save, since picking a
-    /// suggestion only writes the address into the field, and a Save that
-    /// ignored the field left the guest uninvited.
+    /// editor runs this on Enter, on a picked suggestion and again on
+    /// Save, since a Save that ignored the field left a typed guest
+    /// uninvited.
     pub fn add_guests(&mut self, text: &str) -> Vec<String> {
         let mut refused = Vec::new();
         for address in crate::compose::parse_recipients(text) {
@@ -202,6 +207,14 @@ impl Draft {
             }
         }
         refused
+    }
+
+    /// Adds the guests in `text`, as [`Self::add_guests`] does, and
+    /// answers what the Guests field keeps: the parts that are not
+    /// addresses, or nothing. Enter, a picked suggestion and Save all come
+    /// here, so a pick adds its guest at once.
+    pub fn take_guests(&mut self, text: &str) -> String {
+        self.add_guests(text).join(", ")
     }
 
     pub fn can_save(&self) -> bool {
@@ -216,11 +229,17 @@ impl Draft {
     /// changes only their own copy of someone else's series, so "This and
     /// following", which would start a new series they organize, is not
     /// among them.
+    ///
+    /// Google moves a series to another calendar whole, so a new calendar
+    /// leaves only "All events".
     pub fn scopes(&self) -> Vec<RepeatScope> {
         let Some(o) = &self.occurrence else {
             return Vec::new();
         };
         let offered = series::scopes(&o.event, self.rule_changed());
+        if self.changes_calendar() {
+            return offered.into_iter().filter(|s| *s == RepeatScope::All).collect();
+        }
         if self.base.as_ref().is_some_and(limited) {
             offered.into_iter().filter(|s| *s != RepeatScope::Following).collect()
         } else {
@@ -296,8 +315,9 @@ impl Draft {
 
 /// Whether going from `before` to `after` changes something the guests
 /// see: the title, the time, the place, the notes, the guest list, the
-/// Meet link or the repeat. Reminders, colour, busy or free and privacy
-/// are the account's own, and Google sends nobody mail about them.
+/// Meet link, the repeat, or the calendar, whose owner becomes the
+/// organizer. Reminders, colour, busy or free and privacy are the
+/// account's own, and Google sends nobody mail about them.
 pub fn reaches_guests(before: &Draft, after: &Draft) -> bool {
     // The save trims the title and the place, so compare what it writes.
     before.title.trim() != after.title.trim()
@@ -308,6 +328,7 @@ pub fn reaches_guests(before: &Draft, after: &Draft) -> bool {
         || before.guests != after.guests
         || (after.add_meet && !before.add_meet)
         || before.repeat != after.repeat
+        || before.calendar != after.calendar
 }
 
 /// The zone the desktop is set to, for a new draft nothing else names one
@@ -350,21 +371,90 @@ pub fn limited(event: &Event) -> bool {
     event.limited()
 }
 
+/// One part of the editor's form.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Part {
+    Title,
+    When,
+    Repeat,
+    Calendar,
+    Place,
+    Guests,
+    Reminders,
+    Notes,
+    Zone,
+    Busy,
+    Private,
+    Color,
+    Meet,
+}
+
+/// Whether the editor lets the person change `part` of `event`, `None`
+/// for a new one. A guest owns only their reminders, the colour and busy
+/// or free on their copy; Google leaves the rest, the calendar included,
+/// to the organizer, so the editor shows it read-only.
+pub fn may_change(event: Option<&Event>, part: Part) -> bool {
+    !event.is_some_and(limited) || matches!(part, Part::Reminders | Part::Busy | Part::Color)
+}
+
+/// The calendars the editor's Calendar row offers: any the person can
+/// write to for a new event, and for an existing one those of its own
+/// account, since a move between accounts is a copy and a delete that
+/// Google does not do in one call.
+pub fn calendar_choices<'a>(
+    draft: &Draft,
+    writable: &'a [(AccountId, String, Calendar)],
+) -> Vec<&'a (AccountId, String, Calendar)> {
+    writable
+        .iter()
+        .filter(|(account, _, _)| draft.is_new() || *account == draft.account_id)
+        .collect()
+}
+
+/// What taking an event off the calendar does.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Removal {
+    /// Delete it for everyone, which the popover calls Delete.
+    Event,
+    /// Take it off this account's calendar alone, which the popover calls
+    /// Remove. Google marks the guest as having declined.
+    OwnCopy,
+}
+
+/// The buttons the event popover shows beside the title.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Popover {
+    pub edit: bool,
+    pub removal: Removal,
+}
+
 /// What a person may do to an event from the calendar view.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Editing {
     /// Change or delete the whole event: the popover shows Edit and
     /// Delete, and a double click opens the editor.
     Whole,
-    /// Someone else organizes it: a double click opens the editor
-    /// limited to reminders, colour and busy, and the popover shows
-    /// neither Edit nor Delete, as the mockup's invitation popover does.
+    /// Someone else organizes it: Edit and a double click open the
+    /// editor limited to reminders, colour and busy, and the popover's
+    /// Remove takes it off this account's calendar alone.
     Guest,
     /// The account withheld the calendar permission: a double click, Enter
     /// or Delete asks for it, and the popover shows neither.
     NeedsPermission,
     /// A read-only calendar, or an account with no calendar at all.
     None,
+}
+
+impl Editing {
+    /// The popover's Edit and Delete or Remove, `None` when it shows
+    /// neither.
+    pub fn popover(self) -> Option<Popover> {
+        match self {
+            Editing::Whole => Some(Popover { edit: true, removal: Removal::Event }),
+            Editing::Guest => Some(Popover { edit: true, removal: Removal::OwnCopy }),
+            Editing::NeedsPermission | Editing::None => None,
+        }
+    }
 }
 
 /// What the view lets a person do to `event`, from its calendar's
@@ -908,5 +998,97 @@ mod tests {
         assert_eq!(odd.len(), 97);
         assert!(odd.windows(2).all(|w| w[0] < w[1]));
         assert!(odd.contains(&NaiveTime::from_hms_opt(10, 7, 0).unwrap()));
+    }
+
+    const EVERY_PART: [Part; 13] = [
+        Part::Title,
+        Part::When,
+        Part::Repeat,
+        Part::Calendar,
+        Part::Place,
+        Part::Guests,
+        Part::Reminders,
+        Part::Notes,
+        Part::Zone,
+        Part::Busy,
+        Part::Private,
+        Part::Color,
+        Part::Meet,
+    ];
+
+    #[test]
+    fn a_guest_changes_only_their_reminders_colour_and_busy() {
+        let invitation = invitation();
+        let changeable: Vec<Part> =
+            EVERY_PART.into_iter().filter(|p| may_change(Some(&invitation.event), *p)).collect();
+        assert_eq!(changeable, [Part::Reminders, Part::Busy, Part::Color]);
+    }
+
+    #[test]
+    fn the_organizer_changes_every_part() {
+        let weekly = weekly();
+        assert!(EVERY_PART.into_iter().all(|p| may_change(Some(&weekly.event), p)));
+        assert!(EVERY_PART.into_iter().all(|p| may_change(None, p)), "a new event");
+    }
+
+    #[test]
+    fn a_guest_gets_edit_and_remove_in_the_popover() {
+        assert_eq!(Editing::Guest.popover(), Some(Popover { edit: true, removal: Removal::OwnCopy }));
+        assert_eq!(Editing::Whole.popover(), Some(Popover { edit: true, removal: Removal::Event }));
+        assert_eq!(Editing::NeedsPermission.popover(), None);
+        assert_eq!(Editing::None.popover(), None);
+    }
+
+    #[test]
+    fn a_series_moving_to_another_calendar_moves_whole() {
+        let weekly = weekly();
+        let mut draft = Draft::open(&weekly, &weekly.event.rules, Lisbon);
+        assert_eq!(draft.scopes().len(), 3);
+        draft.calendar = "team".into();
+        assert!(draft.changes_calendar());
+        assert_eq!(draft.scopes(), [RepeatScope::All]);
+    }
+
+    #[test]
+    fn a_new_calendar_reaches_the_guests() {
+        let weekly = weekly();
+        let before = Draft::open(&weekly, &weekly.event.rules, Lisbon);
+        let mut after = before.clone();
+        after.calendar = "team".into();
+        assert!(reaches_guests(&before, &after));
+    }
+
+    #[test]
+    fn the_calendar_choice_offers_only_the_events_own_account() {
+        let team = Calendar { id: "team".into(), primary: false, ..personal() };
+        let work = Calendar { id: "me@work.pt".into(), ..personal() };
+        let writable = vec![
+            (1, "me@example.com".to_string(), personal()),
+            (1, "me@example.com".to_string(), team),
+            (2, "me@work.pt".to_string(), work),
+        ];
+        let weekly = weekly();
+        let draft = Draft::open(&weekly, &weekly.event.rules, Lisbon);
+        let offered: Vec<&str> = calendar_choices(&draft, &writable).iter().map(|(_, _, c)| c.id.as_str()).collect();
+        assert_eq!(offered, ["me@example.com", "team"]);
+        assert_eq!(calendar_choices(&fresh(), &writable).len(), 3, "a new event may go on any account");
+    }
+
+    #[test]
+    fn picking_a_suggestion_adds_the_guest_and_empties_the_field() {
+        let mut draft = fresh();
+        let text = crate::ui::autocomplete::picked_text("Lo", "Love ❤️ <me.vhtavares@gmail.com>");
+        assert_eq!(draft.take_guests(&text), "");
+        assert_eq!(draft.guests.len(), 1);
+        assert_eq!(draft.guests[0].name.as_deref(), Some("Love ❤️"));
+    }
+
+    #[test]
+    fn a_pick_after_unparsed_text_keeps_only_that_text_in_the_field() {
+        let mut draft = fresh();
+        let text = crate::ui::autocomplete::picked_text("ann@example.com, typo, Lo", "Love <love@example.com>");
+        assert_eq!(draft.take_guests(&text), "typo");
+        let emails: Vec<&str> = draft.guests.iter().map(|g| g.email.as_str()).collect();
+        assert_eq!(emails, ["ann@example.com", "love@example.com"]);
     }
 }

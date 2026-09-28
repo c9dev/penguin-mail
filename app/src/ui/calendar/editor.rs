@@ -24,7 +24,7 @@ use mailrs_domain::calendar::{self, Calendar, EVENT_COLORS, Reminder, ReminderMe
 use mailrs_domain::translate::{date_locale, fill, gettext, ngettext};
 use mailrs_domain::{AccountId, EpochMillis};
 
-use super::draft::{self, Draft};
+use super::draft::{self, Draft, Part};
 use super::layout;
 use super::tint;
 use super::words::{self, REMINDER_CHOICES};
@@ -237,14 +237,15 @@ impl Editor {
         self.save.set_sensitive(self.draft.borrow().can_save());
     }
 
-    /// The form page's content, in the spec's order.
+    /// Whether the person may change `part` of the event
+    /// ([`draft::may_change`]).
+    fn may(&self, part: Part) -> bool {
+        draft::may_change(self.draft.borrow().base.as_ref(), part)
+    }
+
+    /// The form page's content, in the spec's order. Each part a guest
+    /// may not change shows read-only.
     fn form(self: &Rc<Self>, choices: &Choices, contacts: Contacts) -> adw::PreferencesPage {
-        let limited = self
-            .draft
-            .borrow()
-            .base
-            .as_ref()
-            .is_some_and(draft::limited);
         let page = adw::PreferencesPage::new();
         let title_group = self.title_group();
         let when_group = self.when_group();
@@ -260,20 +261,20 @@ impl Editor {
         let notes_group = self.notes_group();
         page.add(&notes_group);
         page.add(&self.more_group());
-        if limited {
+        title_group.set_sensitive(self.may(Part::Title));
+        when_group.set_sensitive(self.may(Part::When));
+        repeat_group.set_sensitive(self.may(Part::Repeat));
+        place_group.set_sensitive(self.may(Part::Place));
+        notes_group.set_sensitive(self.may(Part::Notes));
+        if let Some(group) = self.guests_group.borrow().as_ref() {
+            group.set_sensitive(self.may(Part::Guests));
+        }
+        if !self.may(Part::When) {
             let organizer = self.organizer_words();
-            title_group.set_sensitive(false);
-            when_group.set_sensitive(false);
             when_group.set_description(Some(&fill(
                 &gettext("{organizer} organizes this event, so its time, place and guests stay as they set them."),
                 &[("organizer", &organizer)],
             )));
-            repeat_group.set_sensitive(false);
-            place_group.set_sensitive(false);
-            notes_group.set_sensitive(false);
-            if let Some(group) = self.guests_group.borrow().as_ref() {
-                group.set_sensitive(false);
-            }
         }
         page
     }
@@ -759,10 +760,20 @@ impl Editor {
 
     // ---- Calendar ----
 
+    /// A choice of calendar for a new event, or for an existing one among
+    /// its own account's writable calendars, where saving another one
+    /// moves the event. A guest's calendar, or one missing from the
+    /// choices, shows as a label.
     fn calendar_group(self: &Rc<Self>, choices: &Choices) -> adw::PreferencesGroup {
         let group = adw::PreferencesGroup::new();
         let draft = self.draft.borrow();
-        if draft.is_new() {
+        let offered: Vec<(AccountId, String, Calendar)> =
+            draft::calendar_choices(&draft, &choices.writable).into_iter().cloned().collect();
+        let current = offered
+            .iter()
+            .position(|(a, _, c)| *a == draft.account_id && c.id == draft.calendar);
+        let choose = draft.is_new() || (self.may(Part::Calendar) && current.is_some());
+        if choose {
             let row = adw::ComboRow::builder().title(gettext("Calendar")).build();
             crate::ui::name_combo_row_items(&row);
             // The model holds each entry's key, and the factory finds the
@@ -770,14 +781,13 @@ impl Editor {
             // item too, and its position is not the selected index, so a
             // lookup by position showed one calendar while the draft held
             // another (libadwaita-dialog-traps).
-            let keys: Vec<String> = choices
-                .writable
+            let keys: Vec<String> = offered
                 .iter()
                 .map(|(account, _, c)| calendar_key(*account, &c.id))
                 .collect();
             let refs: Vec<&str> = keys.iter().map(String::as_str).collect();
             row.set_model(Some(&gtk::StringList::new(&refs)));
-            let entries = Rc::new(choices.writable.clone());
+            let entries = Rc::new(offered);
             let factory = gtk::SignalListItemFactory::new();
             factory.connect_setup(move |_, item| {
                 let Some(item) = item.downcast_ref::<gtk::ListItem>() else {
@@ -802,13 +812,10 @@ impl Editor {
                 }
             });
             row.set_factory(Some(&factory));
-            if let Some(i) = choices
-                .writable
-                .iter()
-                .position(|(a, _, c)| *a == draft.account_id && c.id == draft.calendar)
-            {
+            if let Some(i) = current {
                 row.set_selected(i as u32);
             }
+            let is_new = draft.is_new();
             drop(draft);
             let weak = Rc::downgrade(self);
             row.connect_selected_notify(move |row| {
@@ -822,7 +829,9 @@ impl Editor {
                     let mut draft = this.draft.borrow_mut();
                     draft.account_id = account_id;
                     draft.calendar = calendar.id.clone();
-                    if !this.zone_touched.get() && calendar.zone.parse::<Tz>().is_ok() {
+                    // An existing event keeps its own zone wherever it
+                    // moves; only a new one takes its calendar's.
+                    if is_new && !this.zone_touched.get() && calendar.zone.parse::<Tz>().is_ok() {
                         draft.zone = calendar.zone.clone();
                     }
                 }
@@ -873,7 +882,13 @@ impl Editor {
             .placeholder_text(gettext("Add guests"))
             .build();
         ui::name(&entry, &gettext("Add guests"));
-        autocomplete::attach(&entry, contacts);
+        let weak = Rc::downgrade(self);
+        let picking = entry.downgrade();
+        autocomplete::attach_picking(&entry, contacts, move |text| {
+            if let (Some(this), Some(entry)) = (weak.upgrade(), picking.upgrade()) {
+                this.take_guests(&entry, text);
+            }
+        });
         let weak = Rc::downgrade(self);
         entry.connect_activate(move |entry| {
             if let Some(this) = weak.upgrade() {
@@ -892,28 +907,33 @@ impl Editor {
     /// field is clear. The borrow of the draft ends before any widget
     /// changes, since `set_text` runs the field's own handlers.
     fn take_typed_guests(self: &Rc<Self>, entry: &gtk::Entry) -> bool {
-        let text = entry.text();
+        self.take_guests(entry, &entry.text())
+    }
+
+    /// [`Self::take_typed_guests`] for `text`, which a picked suggestion
+    /// hands over before the field shows it.
+    fn take_guests(self: &Rc<Self>, entry: &gtk::Entry, text: &str) -> bool {
         if text.trim().is_empty() {
             return true;
         }
         let before = self.draft.borrow().guests.len();
-        let refused = self.draft.borrow_mut().add_guests(&text);
+        let left = self.draft.borrow_mut().take_guests(text);
         let added = self.draft.borrow().guests.len() > before;
-        if refused.is_empty() {
-            entry.set_text("");
+        let clear = left.is_empty();
+        entry.set_text(&left);
+        entry.set_position(-1);
+        if clear {
             entry.remove_css_class("error");
             entry.set_tooltip_text(None);
         } else {
-            let text = refused.join(", ");
-            entry.set_text(&text);
             entry.add_css_class("error");
-            entry.set_tooltip_text(Some(&fill(&gettext("Not an address: {text}"), &[("text", &text)])));
+            entry.set_tooltip_text(Some(&fill(&gettext("Not an address: {text}"), &[("text", &left)])));
         }
         if added {
             self.rebuild_guests();
             self.refresh_save();
         }
-        refused.is_empty()
+        clear
     }
 
     /// Rebuilds every guest row from `draft.guests`, replacing whatever
@@ -965,6 +985,12 @@ impl Editor {
             group.add(&row);
             rows.push(row);
         }
+        // The group puts its rows in a boxed list and the field after it,
+        // with nothing between the two. The 12 pixels are what libadwaita
+        // leaves between separate boxed rows (`.boxed-list-separate`).
+        if let Some(entry) = self.guest_entry.borrow().as_ref() {
+            entry.set_margin_top(if rows.is_empty() { 0 } else { 12 });
+        }
         *self.guest_rows.borrow_mut() = rows;
     }
 
@@ -973,6 +999,7 @@ impl Editor {
     fn reminders_group_widget(self: &Rc<Self>, choices: &Choices) -> adw::PreferencesGroup {
         let group = adw::PreferencesGroup::builder()
             .title(gettext("Reminders"))
+            .sensitive(self.may(Part::Reminders))
             .build();
         let draft = self.draft.borrow();
         let calendar_default = choices
@@ -1130,12 +1157,6 @@ impl Editor {
     fn more_group(self: &Rc<Self>) -> adw::PreferencesGroup {
         let group = adw::PreferencesGroup::new();
         let more = adw::ExpanderRow::builder().title(gettext("More")).build();
-        let limited = self
-            .draft
-            .borrow()
-            .base
-            .as_ref()
-            .is_some_and(draft::limited);
         let all_day = self.draft.borrow().all_day;
 
         let zone_row = adw::ComboRow::builder()
@@ -1144,7 +1165,7 @@ impl Editor {
             .build();
         crate::ui::name_combo_row_items(&zone_row);
         zone_row.set_visible(!all_day);
-        zone_row.set_sensitive(!limited);
+        zone_row.set_sensitive(self.may(Part::Zone));
         let weak = Rc::downgrade(self);
         let built = Cell::new(false);
         let zone_row_for_expand = zone_row.clone();
@@ -1181,6 +1202,7 @@ impl Editor {
         let busy = adw::SwitchRow::builder()
             .title(gettext("Show as busy"))
             .active(self.draft.borrow().busy)
+            .sensitive(self.may(Part::Busy))
             .build();
         let weak = Rc::downgrade(self);
         busy.connect_active_notify(move |row| {
@@ -1196,7 +1218,7 @@ impl Editor {
                 "Only people who can change this calendar see the details",
             ))
             .active(self.draft.borrow().private)
-            .sensitive(!limited)
+            .sensitive(self.may(Part::Private))
             .build();
         let weak = Rc::downgrade(self);
         private.connect_active_notify(move |row| {
@@ -1206,7 +1228,10 @@ impl Editor {
         });
         more.add_row(&private);
 
-        let colour_row = adw::ComboRow::builder().title(gettext("Color")).build();
+        let colour_row = adw::ComboRow::builder()
+            .title(gettext("Color"))
+            .sensitive(self.may(Part::Color))
+            .build();
         crate::ui::name_combo_row_items(&colour_row);
         let names: Vec<String> = std::iter::once(gettext("Calendar color"))
             .chain(colour_names())
@@ -1248,14 +1273,14 @@ impl Editor {
                 .title(gettext("Google Meet"))
                 .subtitle(link)
                 .build();
-            row.set_sensitive(!limited);
+            row.set_sensitive(self.may(Part::Meet));
             more.add_row(&row);
         } else {
             let row = adw::SwitchRow::builder()
                 .title(gettext("Add Google Meet"))
                 .active(self.draft.borrow().add_meet)
                 .build();
-            row.set_sensitive(!limited);
+            row.set_sensitive(self.may(Part::Meet));
             // A Meet request on a patch of one occurrence would add the
             // link to that occurrence alone; offering it there would read
             // as changing the whole series.
@@ -1269,6 +1294,9 @@ impl Editor {
             more.add_row(&row);
         }
 
+        // A guest opens the editor for busy and the colour, which sit
+        // here, so the rows start open for them.
+        more.set_expanded(!self.may(Part::Title));
         group.add(&more);
         group
     }
@@ -1433,9 +1461,12 @@ fn time_dropdown(current: NaiveTime) -> gtk::DropDown {
     let times = draft::time_choices(current);
     let names: Vec<String> = times.iter().map(|t| format_time(*t)).collect();
     let refs: Vec<&str> = names.iter().map(String::as_str).collect();
+    // Centred like the date button beside it: a drop-down left to fill
+    // stretches to the row's full height and stands taller than the button.
     let drop = gtk::DropDown::builder()
         .model(&gtk::StringList::new(&refs))
         .enable_search(true)
+        .valign(gtk::Align::Center)
         .build();
     if let Some(i) = times.iter().position(|t| *t == current) {
         drop.set_selected(i as u32);

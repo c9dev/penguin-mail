@@ -4,8 +4,9 @@
 //! block a reload later destroys would leave it dangling, so the view
 //! keeps one, parented to itself, and points it at whichever block was
 //! pressed with `set_pointing_to`. Edit and Delete sit in the title row
-//! for an event the account may change as a whole; an invitation, which
-//! the mockup draws, gets neither.
+//! for an event the account may change as a whole. An invitation gets
+//! Edit, for the guest's own reminders, colour and busy, and Remove,
+//! which takes it off this account's calendar alone.
 //!
 //! The popover does not auto-hide: a second click of a double click must
 //! reach the card behind it rather than be swallowed as the click that
@@ -165,9 +166,8 @@ impl EventPopover {
 
         // Edit and Delete, right of the title, flat and icon-only, so a
         // popover that has them does not grow past the mockup's width.
-        // Only an event the account may change as a whole gets them;
-        // `show` hides whichever `on_edit` or `on_delete`
-        // comes in `None`.
+        // `show` hides whichever `on_edit` or `on_delete` comes in
+        // `None`, and names the second Remove for a guest.
         let edit_button = gtk::Button::builder()
             .icon_name("document-edit-symbolic")
             .css_classes(["flat"])
@@ -511,7 +511,7 @@ impl EventPopover {
         calendar: &mailrs_domain::calendar::Calendar,
         on_answer: impl Fn(Answer) + 'static,
         on_edit: Option<Box<dyn Fn()>>,
-        on_delete: Option<Box<dyn Fn()>>,
+        on_delete: Option<(draft::Removal, Box<dyn Fn()>)>,
     ) {
         let event = &o.event;
         // The mail lookup this event's uid started, if any, is for the
@@ -534,8 +534,15 @@ impl EventPopover {
 
         self.edit_button.set_visible(on_edit.is_some());
         self.delete_button.set_visible(on_delete.is_some());
+        let removal = on_delete.as_ref().map_or(draft::Removal::Event, |(removal, _)| *removal);
+        let delete_words = match removal {
+            draft::Removal::Event => gettext("Delete"),
+            draft::Removal::OwnCopy => gettext("Remove from My Calendar"),
+        };
+        self.delete_button.set_tooltip_text(Some(&delete_words));
+        crate::ui::name(&self.delete_button, &delete_words);
         self.on_edit.replace(on_edit);
-        self.on_delete.replace(on_delete);
+        self.on_delete.replace(on_delete.map(|(_, run)| run));
 
         let place_visible = !event.place.is_empty();
         self.place_row.set_visible(place_visible);

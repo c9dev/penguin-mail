@@ -719,6 +719,8 @@ pub enum ChangeKind {
     /// Change an event the provider already knows to match the body.
     Save,
     Remove,
+    /// Move the event from the row's calendar to the one its body names.
+    Move,
 }
 
 impl ChangeKind {
@@ -727,6 +729,7 @@ impl ChangeKind {
             ChangeKind::Create => "create",
             ChangeKind::Save => "save",
             ChangeKind::Remove => "remove",
+            ChangeKind::Move => "move",
         }
     }
 
@@ -734,6 +737,7 @@ impl ChangeKind {
         match word {
             "create" => ChangeKind::Create,
             "remove" => ChangeKind::Remove,
+            "move" => ChangeKind::Move,
             _ => ChangeKind::Save,
         }
     }
@@ -752,6 +756,8 @@ pub struct QueuedChange {
     /// The version the change was made against; `None` for an event this
     /// computer made, which the provider has never seen.
     pub etag: Option<String>,
+    /// The event to write. For a move, the event as it was, with the
+    /// calendar it moves to; `calendar` above is the one it leaves.
     pub body: Option<Event>,
     /// The `seq` of the change this one goes out after, while that one is
     /// still queued. See [`enqueue_after`].
@@ -807,7 +813,8 @@ pub fn enqueue_after(
 ) -> Result<Option<i64>> {
     let existing: Option<(i64, String, Option<String>)> = conn
         .query_row(
-            "SELECT seq, kind, notify FROM calendar_changes WHERE account_id = ?1 AND calendar = ?2 AND event = ?3",
+            "SELECT seq, kind, notify FROM calendar_changes \
+             WHERE account_id = ?1 AND calendar = ?2 AND event = ?3 AND kind != 'move'",
             params![account_id, event.calendar, event.id],
             |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
         )
@@ -870,7 +877,7 @@ pub fn enqueue_after(
 
     let etag = (!event.etag.is_empty()).then_some(event.etag.as_str());
     let body = match kind {
-        ChangeKind::Create | ChangeKind::Save => Some(json(event)),
+        ChangeKind::Create | ChangeKind::Save | ChangeKind::Move => Some(json(event)),
         ChangeKind::Remove => None,
     };
     conn.execute(
@@ -879,6 +886,50 @@ pub fn enqueue_after(
         params![account_id, event.calendar, event.id, kind.as_str(), etag, body, waits_on, restores, notify.stored()],
     )?;
     Ok(Some(conn.last_insert_rowid()))
+}
+
+/// Queues moving `event`, as it stands on `from`, to the calendar it
+/// names, after the row `waits_on`. The row sits under `from`, so a read
+/// of that calendar leaves the event and a series' changed occurrences
+/// alone until the move goes out. An unsent create of the event on `from`
+/// needs no move, since the provider never heard of it: the row goes, and
+/// the save that follows the move creates the event where it now lives.
+/// Answers the `seq` of the move's row, or `None` for that create.
+pub fn enqueue_move(
+    conn: &Connection,
+    account_id: AccountId,
+    from: &str,
+    event: &Event,
+    waits_on: Option<i64>,
+    notify: Notify,
+) -> Result<Option<i64>> {
+    let dropped = conn.execute(
+        "DELETE FROM calendar_changes WHERE account_id = ?1 AND calendar = ?2 AND event = ?3 AND kind = 'create'",
+        params![account_id, from, event.id],
+    )?;
+    if dropped > 0 {
+        return Ok(None);
+    }
+    let etag = (!event.etag.is_empty()).then_some(event.etag.as_str());
+    conn.execute(
+        "INSERT INTO calendar_changes (account_id, calendar, event, kind, etag, body, waits_on, notify) \
+         VALUES (?1, ?2, ?3, 'move', ?4, ?5, ?6, ?7)",
+        params![account_id, from, event.id, etag, json(event), waits_on, notify.stored()],
+    )?;
+    Ok(Some(conn.last_insert_rowid()))
+}
+
+/// Settles a move that went out: the row comes off the queue, and the
+/// changes of the event waiting on it go out against `new_etag`, the
+/// version the move left. Answers whether one waits, in which case its
+/// own answer, not the move's, belongs in the copy.
+pub fn finish_move(conn: &Connection, seq: i64, id: &str, new_etag: &str) -> Result<bool> {
+    conn.execute("DELETE FROM calendar_changes WHERE seq = ?1", params![seq])?;
+    let waiting = conn.execute(
+        "UPDATE calendar_changes SET etag = ?3 WHERE waits_on = ?1 AND event = ?2",
+        params![seq, id, new_etag],
+    )?;
+    Ok(waiting > 0)
 }
 
 /// Whether the guests hear of a change that folds into one already
@@ -998,11 +1049,12 @@ pub fn pending_ids(conn: &Connection, account_id: AccountId, calendar: &str) -> 
     Ok(rows.collect::<rusqlite::Result<_>>()?)
 }
 
-/// The ids of a calendar's events with an unsent removal. A read keeps a
-/// series' changed occurrences out while the series waits to be removed.
+/// The ids of a calendar's events with an unsent removal or move away. A
+/// read keeps a series' changed occurrences out while the series waits
+/// to leave.
 pub fn removing_ids(conn: &Connection, account_id: AccountId, calendar: &str) -> Result<HashSet<String>> {
     let mut stmt = conn.prepare(
-        "SELECT event FROM calendar_changes WHERE account_id = ?1 AND calendar = ?2 AND kind = 'remove'",
+        "SELECT event FROM calendar_changes WHERE account_id = ?1 AND calendar = ?2 AND kind IN ('remove', 'move')",
     )?;
     let rows = stmt.query_map(params![account_id, calendar], |row| row.get(0))?;
     Ok(rows.collect::<rusqlite::Result<_>>()?)

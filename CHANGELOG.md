@@ -7,6 +7,13 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### New
 
+- Remove an invitation from your calendar with Remove in its popover or
+  the Delete key. The organizer sees that you declined, and nobody else
+  gets mail about it. Edit in the same popover changes your own
+  reminders, color and busy or free.
+- Move an event to another of your calendars: pick it in the editor's
+  Calendar row and save. A new event from a quick drag can go on any of
+  your calendars too.
 - Penguin Mail comes as a package for Arch Linux: download the
   `.pkg.tar.zst` from the releases page and install it with
   `sudo pacman -U`.
@@ -82,6 +89,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - In dark mode, a reply with quoted text shows on the dark page instead of
   in a white box.
 
+- Picking a contact from the suggestions in an event's Guests field adds
+  the guest at once and empties the field, with a gap above it; the start
+  and end times now stand as tall as the dates beside them.
 - Calendar search keeps the events that matter even when a common word
   matches hundreds of past ones: upcoming events first, then the most
   recent past ones, instead of whichever rows happened to load first.
