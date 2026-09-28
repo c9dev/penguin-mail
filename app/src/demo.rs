@@ -2087,11 +2087,12 @@ fn next_weekday(
 /// before the real occurrence at that wall-clock time; going through
 /// the date and re-anchoring to the zone, as [`next_weekday`] does,
 /// keeps a series' `UNTIL` on the same Tuesday its `RRULE` would land on.
-fn eight_weeks_later(start: chrono::DateTime<chrono::Local>) -> EpochMillis {
-    use chrono::{TimeZone, Timelike};
-    let day = start.date_naive() + chrono::Days::new(8 * 7);
-    day.and_hms_opt(start.hour(), start.minute(), start.second())
-        .and_then(|at| chrono::Local.from_local_datetime(&at).earliest())
+fn eight_weeks_later<Z: chrono::TimeZone>(start: chrono::DateTime<Z>) -> EpochMillis {
+    use chrono::Timelike;
+    let local = start.naive_local();
+    let day = local.date() + chrono::Days::new(8 * 7);
+    day.and_hms_opt(local.hour(), local.minute(), local.second())
+        .and_then(|at| start.timezone().from_local_datetime(&at).earliest())
         .unwrap_or(start)
         .timestamp_millis()
 }
@@ -2442,28 +2443,15 @@ mod tests {
     }
 
     #[test]
-    fn the_invitation_ics_keeps_its_until_at_the_same_local_hour_across_a_dst_change() {
-        use chrono::{TimeZone, Timelike};
-        // Eight weeks after this seed lands past Lisbon's autumn clock
-        // change, so a fixed-millisecond span would drift the wall-clock
-        // hour by one (the rrule-until-dst trap); walking the date and
-        // re-anchoring to the zone keeps UNTIL at 14:00, the same hour
-        // DTSTART names.
-        let seed = chrono::Local
-            .with_ymd_and_hms(2026, 9, 27, 12, 0, 0)
-            .unwrap()
-            .timestamp_millis();
-        let ics = invitation_ics(seed);
-        let until = ics
-            .lines()
-            .find_map(|line| line.strip_prefix("RRULE:"))
-            .and_then(|rule| rule.split(';').find_map(|part| part.strip_prefix("UNTIL=")))
-            .expect("the rule carries an UNTIL");
-        let until = chrono::NaiveDateTime::parse_from_str(until, "%Y%m%dT%H%M%SZ")
-            .expect("UNTIL parses")
-            .and_utc()
-            .with_timezone(&chrono::Local);
-        assert_eq!(until.hour(), 14, "UNTIL drifted to {until}");
+    fn a_series_until_keeps_its_local_hour_across_lisbon_s_clock_change() {
+        use chrono::TimeZone;
+        // Pinned to Lisbon rather than the machine's zone, so the test
+        // crosses a clock change on a UTC machine too: the clocks go back
+        // on 25 October 2026, between these two Tuesdays.
+        let lisbon = chrono_tz::Europe::Lisbon;
+        let start = lisbon.with_ymd_and_hms(2026, 9, 29, 14, 0, 0).unwrap();
+        let eighth = lisbon.with_ymd_and_hms(2026, 11, 24, 14, 0, 0).unwrap();
+        assert_eq!(eight_weeks_later(start), eighth.timestamp_millis());
     }
 
     #[tokio::test]
