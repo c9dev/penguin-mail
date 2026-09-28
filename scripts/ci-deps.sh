@@ -31,8 +31,18 @@ elif command -v dnf >/dev/null; then
         gettext rpm-build rpm-sign appstream desktop-file-utils \
         gnupg2 gnupg2-smime openssl \
         xorg-x11-server-Xvfb dbus-daemon
+elif command -v pacman >/dev/null; then
+    # -Syu, not -Sy: Arch is rolling, and installing packages against a
+    # database older than what is already on disk is the partial upgrade
+    # pacman's own wiki warns against.
+    pacman -Syu --noconfirm --needed \
+        base-devel git curl \
+        gtk4 libadwaita webkitgtk-6.0 glib2 \
+        gettext appstream desktop-file-utils \
+        gnupg openssl \
+        xorg-server-xvfb dbus at-spi2-core python-gobject libxtst zip
 else
-    echo "ci-deps.sh knows apt and dnf only" >&2
+    echo "ci-deps.sh knows apt, dnf and pacman only" >&2
     exit 1
 fi
 
