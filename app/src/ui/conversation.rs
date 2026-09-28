@@ -576,6 +576,7 @@ impl ConversationView {
         let remind = remind_menu.clone();
         let header = adw::HeaderBar::builder()
             .title_widget(&gtk::Label::new(None))
+            .css_classes(["conversation-header"])
             .build();
         let label_button = gtk::MenuButton::builder()
             .icon_name(Filing::Labels.icon())
@@ -1493,7 +1494,8 @@ impl ConversationView {
         };
         let page = open.page(&theme);
         let background = if theme.dark {
-            gdk::RGBA::new(0.133, 0.133, 0.149, 1.0)
+            // #1e1e21, the view colour style.css sets for dark windows.
+            gdk::RGBA::new(30.0 / 255.0, 30.0 / 255.0, 33.0 / 255.0, 1.0)
         } else {
             gdk::RGBA::WHITE
         };

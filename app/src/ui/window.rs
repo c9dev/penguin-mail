@@ -203,11 +203,15 @@ pub struct MainWindow {
 /// every dark rule in `app/data/style.css` and `calendar::tint` keys off
 /// this class instead of that query.
 pub(super) const DARK_CLASS: &str = "app-dark";
+/// Marks a window that takes the mockup's window, sidebar and view
+/// colours in place of libadwaita's (style.css).
+const SURFACES_CLASS: &str = "app-surfaces";
 
 /// Puts [`DARK_CLASS`] on `window` while libadwaita is dark, and keeps it
 /// current for as long as the window lives: on the main window here, and
 /// on each conversation window of its own in `window/detached.rs`.
 pub(super) fn track_dark_class(window: &adw::Window) {
+    window.add_css_class(SURFACES_CLASS);
     let style = adw::StyleManager::default();
     let target = window.downgrade();
     let mark = move |style: &adw::StyleManager| {

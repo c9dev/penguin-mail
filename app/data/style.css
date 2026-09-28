@@ -25,6 +25,25 @@
      13.5px = 0.92em, 14px = 0.95em, 17px = 1.16em, at the calendar
      CSS's 1em = 14.67px (an 11pt interface font). */
 
+/* The mockup's window, sidebar and view colours (mockups.py's THEMES),
+   in place of libadwaita's, on the windows `ui::window::track_dark_class`
+   marks. Redefining the variables carries them into the calendar,
+   popovers and dialogs as well. */
+window.app-surfaces {
+  --window-bg-color: #f6f6f7;
+  --sidebar-bg-color: #ebebed;
+  --view-bg-color: #ffffff;
+}
+window.app-surfaces.app-dark {
+  --window-bg-color: #242428;
+  --sidebar-bg-color: #2e2e33;
+  --view-bg-color: #1e1e21;
+}
+
+/* The reading pane's toolbar sits on the view colour, as the pane under
+   it does in the mockup, not on the window colour of a header bar. */
+headerbar.conversation-header { background: var(--view-bg-color); box-shadow: none; }
+
 /* The composer's signing button, when the message goes out signed or
    encrypted. Its icon carries the accent so the state reads at a glance. */
 .protected image { color: var(--accent-color); }

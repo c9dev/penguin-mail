@@ -694,7 +694,7 @@ fn page_css(theme: &Theme) -> String {
     // sheet rather than as more page.
     let (bg, fg, dim, card, line, hover, surface) = if theme.dark {
         (
-            "#222226",
+            "#1e1e21",
             "#ffffff",
             "rgba(255,255,255,0.58)",
             "rgba(255,255,255,0.08)",
@@ -1628,7 +1628,7 @@ mod tests {
             accent: "#fff".into(),
             summarize: false,
         });
-        assert!(dark.contains("color-scheme:dark") && dark.contains("#222226"));
+        assert!(dark.contains("color-scheme:dark") && dark.contains("#1e1e21"));
     }
 
     #[test]
