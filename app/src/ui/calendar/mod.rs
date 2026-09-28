@@ -133,7 +133,7 @@ pub struct CalendarView {
     /// The page the window puts beside the sidebar.
     pub page: adw::ToolbarView,
     /// What the sidebar shows while the calendar is on screen.
-    pub sidebar: gtk::ScrolledWindow,
+    pub sidebar: gtk::Box,
     /// Shows the sidebar when the window is too narrow to keep it open.
     pub sidebar_button: gtk::ToggleButton,
     core: Rc<Core>,
@@ -186,6 +186,9 @@ pub struct CalendarView {
     /// it: an answer can come back after the person moved on.
     reads: Cell<u64>,
     sidebar_read: Cell<u64>,
+    /// The latest "Waiting for your answer" read, counted apart from the
+    /// sidebar's so neither drops the other's answer.
+    waiting_read: Cell<u64>,
     list_read: Cell<u64>,
     /// The earliest day the narrow list already holds. `load_earlier`
     /// reads back from here and moves it once the read comes back.
@@ -434,15 +437,7 @@ impl CalendarView {
                     }
                 },
             );
-            calendar_sidebar.widget.set_margin_start(12);
-            calendar_sidebar.widget.set_margin_end(12);
-            calendar_sidebar.widget.set_margin_top(6);
-            calendar_sidebar.widget.set_margin_bottom(12);
-            let sidebar = gtk::ScrolledWindow::builder()
-                .hscrollbar_policy(gtk::PolicyType::Never)
-                .vexpand(true)
-                .child(&calendar_sidebar.widget)
-                .build();
+            let sidebar = calendar_sidebar.widget.clone();
             CalendarView {
                 page,
                 sidebar,
@@ -487,6 +482,7 @@ impl CalendarView {
                 calendars: RefCell::new(HashMap::new()),
                 reads: Cell::new(0),
                 sidebar_read: Cell::new(0),
+                waiting_read: Cell::new(0),
                 list_read: Cell::new(0),
                 list_first: Cell::new(today),
                 list_exhausted: Cell::new(false),
@@ -609,6 +605,36 @@ impl CalendarView {
     /// copy changed.
     pub fn reload(self: &Rc<Self>) {
         self.read_sidebar(true);
+        self.refresh_waiting();
+    }
+
+    /// Reads "Waiting for your answer" again, and nothing else: after an
+    /// invitation's message is saved, which may give a card its "Open
+    /// mail" door, and after an answer. It leaves the pages and the
+    /// open popover alone, so it can run while the view opens an event.
+    pub fn refresh_waiting(self: &Rc<Self>) {
+        let read = self.waiting_read.get() + 1;
+        self.waiting_read.set(read);
+        let accounts = sidebar::waiting_accounts(&self.accounts.borrow());
+        let now = chrono::Local::now().timestamp_millis();
+        let weak = Rc::downgrade(self);
+        let core = Rc::clone(&self.core);
+        let invitations = self.core.invitations();
+        glib::spawn_future_local(async move {
+            // `Db::read`'s `spawn_blocking` needs the tokio runtime, which
+            // `call` gives it and the GTK loop does not.
+            let waiting = core
+                .call(async move { invitations.waiting_for_answer(&accounts, now).await })
+                .await;
+            let Some(view) = weak.upgrade() else { return };
+            if view.waiting_read.get() != read {
+                return;
+            }
+            match waiting {
+                Ok(waiting) => view.calendar_sidebar.show_waiting(&waiting),
+                Err(err) => tracing::warn!(%err, "could not read what is waiting for an answer"),
+            }
+        });
     }
 
     /// Moves the view to the range around `day`.
@@ -2305,11 +2331,8 @@ impl CalendarView {
         let accounts = self.account_ids();
         let mini = Range::around(ViewKind::Month, self.day.get());
         let (from, to) = mini.span(&chrono::Local);
-        let now = chrono::Local::now().timestamp_millis();
         let weak = Rc::downgrade(self);
         let core = Rc::clone(&self.core);
-        let waiting_accounts = accounts.clone();
-        let invitations = self.core.invitations();
         glib::spawn_future_local(async move {
             let found = core
                 .read(move |c| {
@@ -2321,17 +2344,6 @@ impl CalendarView {
                     Ok((calendars, busy))
                 })
                 .await;
-            // IMAP and withheld accounts have no calendars table of their
-            // own, so passing every account here adds nothing for them,
-            // the same way `store::occurrences` above already does. The
-            // read runs on the tokio runtime through `call`, as every
-            // other `Invitations` method the window calls does, since
-            // `Db::read`'s `spawn_blocking` needs one and the GTK loop
-            // gives it none.
-            let waiting = core
-                .call(async move { invitations.waiting_for_answer(&waiting_accounts, now).await })
-                .await
-                .map_err(|err| err.to_string());
             let Some(view) = weak.upgrade() else { return };
             if view.sidebar_read.get() != read {
                 return;
@@ -2339,10 +2351,6 @@ impl CalendarView {
             match found {
                 Ok((calendars, busy)) => view.show_sidebar(calendars, &busy, mini),
                 Err(err) => tracing::warn!(%err, "could not read the calendars"),
-            }
-            match waiting {
-                Ok(waiting) => view.calendar_sidebar.show_waiting(&waiting),
-                Err(err) => tracing::warn!(%err, "could not read what is waiting for an answer"),
             }
             if view.fill_owed.replace(false) {
                 view.fill_all();

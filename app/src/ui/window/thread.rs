@@ -365,14 +365,22 @@ impl Effects for Ports {
     ) -> Answer<'_, Result<Option<Opened>, String>> {
         let invitations = self.core.invitations();
         Box::pin(async move {
-            self.core
+            let opened = self
+                .core
                 .call(async move {
                     invitations
                         .open(account_id, &message_id, &ics, now_millis())
                         .await
                 })
                 .await
-                .map_err(|err| err.to_string())
+                .map_err(|err| err.to_string());
+            // Opening saved the message the invitation came in, which is
+            // what gives its "Waiting for your answer" card an "Open mail"
+            // door.
+            if let (Ok(Some(_)), Some(win)) = (&opened, self.window()) {
+                win.calendar.refresh_waiting();
+            }
+            opened
         })
     }
 

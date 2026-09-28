@@ -79,13 +79,6 @@ impl MainWindow {
                 // The calendar's letters answer only inside its page, and
                 // the list that had the focus is gone.
                 self.calendar.take_focus();
-                // "Waiting for your answer" only refreshes on a copy
-                // change or a sent answer, so a message opened since the
-                // last one would show no "Open mail" until the person
-                // left Calendar and came back; reading it again here,
-                // each time they do, keeps it caught up without a second
-                // trigger to wire from the mail side.
-                self.calendar.reload();
             }
         }
         if let Some(action) = self

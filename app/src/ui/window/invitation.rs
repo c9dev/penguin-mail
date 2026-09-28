@@ -119,6 +119,12 @@ impl MainWindow {
                             this.toast(&replied(answer, told));
                         }
                     }
+                    // An answer Google took is already in the calendar's
+                    // copy, so the event's block and "Waiting for your
+                    // answer" show it now.
+                    if sent.told == Told::Calendar {
+                        this.calendar.reload();
+                    }
                     // The answer reached the organizer either way; the
                     // permission is what puts the event on the user's own
                     // calendar, so it comes as an offer.
