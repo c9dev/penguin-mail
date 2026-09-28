@@ -795,10 +795,8 @@ impl MainWindow {
             window.sidebar.start_expanded.set(Some(true));
         }
         let weak = Rc::downgrade(&window);
-        window
-            .conversation
-            .label_button
-            .set_create_popup_func(move |button| {
+        if let Some(arrow) = window.conversation.label_arrow() {
+            arrow.set_create_popup_func(move |button| {
                 if let Some(win) = weak.upgrade() {
                     let reach = win.reach(&win.conversation);
                     let accounts = reach.targets.iter().map(|t| t.account_id);
@@ -806,6 +804,7 @@ impl MainWindow {
                     button.set_popover(Some(&win.label_popover()));
                 }
             });
+        }
         // Both header buttons run the same toggle_assistant path as
         // Ctrl+J and the menu (R12); the panel's own show-sidebar keeps
         // them in the pressed state it puts on screen, whatever opened

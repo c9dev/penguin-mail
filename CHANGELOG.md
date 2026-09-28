@@ -91,6 +91,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 - Event reminders, the first day of the week and working hours now sit in
   the Calendar section of Preferences, on the Contacts & Calendar page.
+- The Labels button in the reading pane has the same shape as the Flag
+  button beside it, an icon and an arrow in one pill.
 - An invitation's card now sits inside its message, under the sender and
   above the text, and scrolls with it.
 - The mailboxes sit in their own rounded panel under Favorites,
