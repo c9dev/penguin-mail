@@ -86,6 +86,11 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   show, not Google's HTML tags.
 - Calendar search results and the "N more" popover show each event's
   end time and calendar, not just when it starts.
+- At 700 pixels wide, the calendar's Day, Week and Month switch no
+  longer squeezes its labels into each other; Week gives way to Month
+  until the window is wide enough for all three.
+- The month view's "N more" popover lets a long event title use the
+  room it has before cutting it short.
 - An event's notes from Google Calendar show as readable text in the
   editor instead of HTML tags, and their links still work after you
   save.
