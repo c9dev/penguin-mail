@@ -1269,6 +1269,8 @@ impl Editor {
             entry.set_margin_top(if rows.is_empty() { 0 } else { 12 });
         }
         *self.guest_rows.borrow_mut() = rows;
+        // Whether a file says the guests can open it follows the list.
+        self.rebuild_files();
     }
 
     // ---- Reminders ----
@@ -1466,13 +1468,49 @@ impl Editor {
         for row in old {
             group.remove(&row);
         }
-        let (files, can_attach) = {
+        let (files, can_attach, has_guests, account) = {
             let draft = self.draft.borrow();
-            (draft.attachments.clone(), draft.can_attach())
+            (draft.attachments.clone(), draft.can_attach(), draft.has_other_guests(), draft.account_id)
         };
         let mut rows = Vec::new();
         for (index, file) in files.iter().enumerate() {
             let row = attachments::row(file);
+            let sharing = attachments::share_note(file, has_guests).filter(|_| can_attach);
+            if let Some(words) = &sharing
+                && file.waiting.is_none()
+            {
+                row.set_subtitle(words);
+            }
+            if file.problem == Some(calendar::UploadProblem::NeedsAccess) {
+                let grant = gtk::Button::builder()
+                    .label(gettext("Grant Access"))
+                    .css_classes(["flat"])
+                    .valign(gtk::Align::Center)
+                    .build();
+                ui::name(&grant, &fill(&gettext("Grant access to upload {file}"), &[("file", &attachments::title(file))]));
+                let weak = Rc::downgrade(self);
+                grant.connect_clicked(move |_| {
+                    if let Some(this) = weak.upgrade() {
+                        (this.attaching.ask)(account);
+                    }
+                });
+                row.add_suffix(&grant);
+            }
+            if sharing.is_some() {
+                let share = gtk::CheckButton::builder()
+                    .active(file.share == Some(true))
+                    .valign(gtk::Align::Center)
+                    .tooltip_text(gettext("Share with guests"))
+                    .build();
+                ui::name(&share, &fill(&gettext("Share {file} with the guests"), &[("file", &attachments::title(file))]));
+                let weak = Rc::downgrade(self);
+                share.connect_toggled(move |share| {
+                    let Some(this) = weak.upgrade() else { return };
+                    this.draft.borrow_mut().set_share(index, share.is_active());
+                    this.rebuild_files();
+                });
+                row.add_suffix(&share);
+            }
             if can_attach {
                 let remove = gtk::Button::builder()
                     .icon_name("window-close-symbolic")
@@ -1566,6 +1604,7 @@ impl Editor {
                 title: info.display_name().to_string(),
                 mime_type: mime,
                 waiting: Some(path.display().to_string()),
+                share: Some(true),
                 ..Attachment::default()
             };
             this.start_upload(account, waiting, u64::try_from(info.size()).unwrap_or(0));

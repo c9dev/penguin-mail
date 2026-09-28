@@ -362,6 +362,23 @@ impl Draft {
         }
     }
 
+    /// Whether the guests may open the file at `index`, one the app
+    /// uploaded. A file someone else attached stays as it is: the app
+    /// cannot share it.
+    pub fn set_share(&mut self, index: usize, share: bool) {
+        if let Some(file) = self.attachments.get_mut(index)
+            && file.share.is_some()
+        {
+            file.share = Some(share);
+        }
+    }
+
+    /// Whether anyone but the account itself is invited, the people an
+    /// uploaded file is shared with.
+    pub fn has_other_guests(&self) -> bool {
+        self.guests.iter().any(|guest| !guest.me)
+    }
+
     pub fn can_save(&self) -> bool {
         !self.title.trim().is_empty()
     }
@@ -825,6 +842,30 @@ mod tests {
         let draft = Draft::open(&occurrence, &occurrence.event.rules, Lisbon);
         assert!(!draft.can_attach());
         assert_eq!(draft.to_event("pmnew", "pmmeet").attachments, Some(vec![agenda()]));
+    }
+
+    #[test]
+    fn unticking_sharing_keeps_the_file_to_the_organizer() {
+        let ours = mailrs_domain::calendar::Attachment { share: Some(true), ..agenda() };
+        let mut draft = with_attachments(Some(vec![ours]));
+        draft.set_share(0, false);
+        assert_eq!(draft.to_event("pmnew", "pmmeet").attachments.unwrap()[0].share, Some(false));
+    }
+
+    #[test]
+    fn sharing_stays_off_a_file_someone_else_attached() {
+        let mut draft = with_attachments(Some(vec![agenda()]));
+        draft.set_share(0, true);
+        assert_eq!(draft.attachments[0].share, None);
+    }
+
+    #[test]
+    fn only_guests_other_than_the_account_count_for_sharing() {
+        let mut draft = fresh();
+        draft.guests = vec![Guest { email: "me@example.com".into(), me: true, ..Guest::default() }];
+        assert!(!draft.has_other_guests());
+        draft.add_guests("ana@example.com");
+        assert!(draft.has_other_guests());
     }
 
     #[test]

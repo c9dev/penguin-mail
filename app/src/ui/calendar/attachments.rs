@@ -6,7 +6,7 @@
 
 use adw::prelude::*;
 use gtk::gio;
-use mailrs_domain::calendar::Attachment;
+use mailrs_domain::calendar::{Attachment, UploadProblem};
 use mailrs_domain::translate::{fill, gettext};
 
 use crate::ui;
@@ -82,10 +82,26 @@ pub fn title(file: &Attachment) -> String {
         .unwrap_or_else(|| gettext("Untitled file"))
 }
 
-/// The second line of a row: when a file still waiting to upload goes.
-/// `None` for a file on Drive.
+/// The second line of a row for a file still waiting to upload: when it
+/// goes, or why it did not. `None` for a file on Drive.
 pub fn note(file: &Attachment) -> Option<String> {
-    file.waiting.is_some().then(|| gettext("Uploads when you are back online"))
+    file.waiting.as_ref()?;
+    Some(match &file.problem {
+        None => gettext("Uploads when you are back online"),
+        Some(UploadProblem::NeedsAccess) => gettext("Waiting for access"),
+        Some(UploadProblem::NotFound) => gettext("File not found"),
+        Some(UploadProblem::Refused(reason)) => fill(&gettext("Could not upload: {reason}"), &[("reason", reason)]),
+    })
+}
+
+/// Whether the event's guests can open `file`, for a file the app uploaded
+/// on an event with guests. `None` otherwise.
+pub fn share_note(file: &Attachment, has_guests: bool) -> Option<String> {
+    match (file.share, has_guests) {
+        (Some(true), true) => Some(gettext("Guests can open this file")),
+        (Some(false), true) => Some(gettext("Not shared with the guests")),
+        _ => None,
+    }
 }
 
 /// Opens `file` in the browser when its link is `https`. Anything else,
@@ -231,6 +247,46 @@ mod tests {
     fn a_refused_upload_says_why() {
         let refused = SyncError::Backend(BackendError::Refused("the file is too large".into()));
         assert_eq!(uploaded(Err(refused)), Uploaded::Failed("refused: the file is too large".into()));
+    }
+
+    fn stuck(problem: UploadProblem) -> Attachment {
+        Attachment { waiting: Some("/home/me/Plan.odp".into()), problem: Some(problem), ..named("Plan.odp", "") }
+    }
+
+    #[test]
+    fn a_file_waiting_for_drive_access_says_so() {
+        assert_eq!(note(&stuck(UploadProblem::NeedsAccess)).as_deref(), Some("Waiting for access"));
+    }
+
+    #[test]
+    fn a_file_that_moved_says_it_is_not_found() {
+        assert_eq!(note(&stuck(UploadProblem::NotFound)).as_deref(), Some("File not found"));
+    }
+
+    #[test]
+    fn a_file_drive_refused_says_why() {
+        let refused = stuck(UploadProblem::Refused("the file is too large".into()));
+        assert_eq!(note(&refused).as_deref(), Some("Could not upload: the file is too large"));
+    }
+
+    fn uploaded_by_us(share: bool) -> Attachment {
+        Attachment { share: Some(share), file_id: "1abc".into(), ..named("Plan.odp", "") }
+    }
+
+    #[test]
+    fn a_shared_file_tells_the_organizer_the_guests_can_open_it() {
+        assert_eq!(share_note(&uploaded_by_us(true), true).as_deref(), Some("Guests can open this file"));
+    }
+
+    #[test]
+    fn an_unshared_file_says_the_guests_cannot() {
+        assert_eq!(share_note(&uploaded_by_us(false), true).as_deref(), Some("Not shared with the guests"));
+    }
+
+    #[test]
+    fn sharing_says_nothing_without_guests_or_for_someone_elses_file() {
+        assert_eq!(share_note(&uploaded_by_us(true), false), None);
+        assert_eq!(share_note(&named("Plan.odp", ""), true), None);
     }
 
     #[test]

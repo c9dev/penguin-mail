@@ -977,7 +977,7 @@ fn drive_file(title: &str, mime_type: &str, id: &str) -> mailrs_domain::calendar
         mime_type: mime_type.into(),
         icon_link: String::new(),
         file_id: id.into(),
-        waiting: None,
+        ..mailrs_domain::calendar::Attachment::default()
     }
 }
 
@@ -1026,8 +1026,30 @@ fn account0_events(now: EpochMillis) -> Vec<CalendarEvent> {
     let monday = week_monday(now);
     let mut events = vec![
         CalendarEvent {
+            organizer: Some(ACCOUNTS[0].email.into()),
+            my_answer: Some(Answer::Yes),
+            guests: vec![
+                CalendarGuest {
+                    email: ACCOUNTS[0].email.into(),
+                    organizer: true,
+                    me: true,
+                    answer: Some(Answer::Yes),
+                    ..CalendarGuest::default()
+                },
+                CalendarGuest {
+                    email: "ana.reyes@example.com".into(),
+                    name: Some("Ana Reyes".into()),
+                    answer: Some(Answer::Yes),
+                    ..CalendarGuest::default()
+                },
+            ],
             attachments: Some(vec![
-                drive_file("Restaurant menu.pdf", "application/pdf", "pmdemo-menu"),
+                // Uploaded from this computer, so the guests can open it.
+                mailrs_domain::calendar::Attachment {
+                    share: Some(true),
+                    shared_with: vec!["ana.reyes@example.com".into()],
+                    ..drive_file("Restaurant menu.pdf", "application/pdf", "pmdemo-menu")
+                },
                 drive_file("Summer trip budget", "application/vnd.google-apps.spreadsheet", "pmdemo-budget"),
             ]),
             ..timed_event("primary", "lunch-with-ana", "Lunch with Ana", at_week(monday, 1, 13, 0), at_week(monday, 1, 14, 0))

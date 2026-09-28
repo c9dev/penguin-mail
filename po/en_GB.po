@@ -2275,11 +2275,11 @@ msgstr "Markdown"
 msgid "Automatic"
 msgstr "Automatic"
 
-#: app/src/settings/mod.rs:524 app/src/ui/calendar/editor.rs:1868
+#: app/src/settings/mod.rs:524 app/src/ui/calendar/editor.rs:1907
 msgid "Monday"
 msgstr "Monday"
 
-#: app/src/settings/mod.rs:525 app/src/ui/calendar/editor.rs:1874
+#: app/src/settings/mod.rs:525 app/src/ui/calendar/editor.rs:1913
 msgid "Sunday"
 msgstr "Sunday"
 
@@ -2846,7 +2846,7 @@ msgstr "Edit"
 msgid "Edit {server}"
 msgstr "Edit {server}"
 
-#: app/src/ui/assistant_mcp_prefs.rs:121 app/src/ui/calendar/editor.rs:1481
+#: app/src/ui/assistant_mcp_prefs.rs:121 app/src/ui/calendar/editor.rs:1519
 #: app/src/ui/composer/mod.rs:1641 app/src/ui/composer/recipients.rs:304
 #: app/src/ui/window.rs:2638
 msgid "Remove"
@@ -3241,15 +3241,35 @@ msgstr "Nothing earlier on this computer"
 msgid "Untitled file"
 msgstr "Untitled file"
 
-#: app/src/ui/calendar/attachments.rs:88
+#: app/src/ui/calendar/attachments.rs:90
 msgid "Uploads when you are back online"
 msgstr "Uploads when you are back online"
 
+#: app/src/ui/calendar/attachments.rs:91
+msgid "Waiting for access"
+msgstr "Waiting for access"
+
+#: app/src/ui/calendar/attachments.rs:92
+msgid "File not found"
+msgstr "File not found"
+
+#: app/src/ui/calendar/attachments.rs:93
+msgid "Could not upload: {reason}"
+msgstr "Could not upload: {reason}"
+
 #: app/src/ui/calendar/attachments.rs:101
+msgid "Guests can open this file"
+msgstr "Guests can open this file"
+
+#: app/src/ui/calendar/attachments.rs:102
+msgid "Not shared with the guests"
+msgstr "Not shared with the guests"
+
+#: app/src/ui/calendar/attachments.rs:117
 msgid "Open {file} in the browser"
 msgstr "Open {file} in the browser"
 
-#: app/src/ui/calendar/attachments.rs:116 app/src/ui/calendar/popover.rs:775
+#: app/src/ui/calendar/attachments.rs:132 app/src/ui/calendar/popover.rs:775
 msgid "Open in Browser"
 msgstr "Open in Browser"
 
@@ -3473,193 +3493,212 @@ msgstr "{address} · {answer}"
 msgid "Remove {guest}"
 msgstr "Remove {guest}"
 
-#: app/src/ui/calendar/editor.rs:1278
+#: app/src/ui/calendar/editor.rs:1280
 msgid "Reminders"
 msgstr "Reminders"
 
-#: app/src/ui/calendar/editor.rs:1306
+#: app/src/ui/calendar/editor.rs:1308
 msgid "The calendar's default"
 msgstr "The calendar's default"
 
-#: app/src/ui/calendar/editor.rs:1322
+#: app/src/ui/calendar/editor.rs:1324
 msgid "Add Reminder"
 msgstr "Add Reminder"
 
-#: app/src/ui/calendar/editor.rs:1358
+#: app/src/ui/calendar/editor.rs:1360
 msgid "By email"
 msgstr "By email"
 
-#: app/src/ui/calendar/editor.rs:1365
+#: app/src/ui/calendar/editor.rs:1367
 msgid "Remove reminder"
 msgstr "Remove reminder"
 
-#: app/src/ui/calendar/editor.rs:1409 app/src/ui/calendar/editor.rs:1420
+#: app/src/ui/calendar/editor.rs:1411 app/src/ui/calendar/editor.rs:1422
 msgid "Notes"
 msgstr "Notes"
 
-#: app/src/ui/calendar/editor.rs:1435
+#: app/src/ui/calendar/editor.rs:1437
 msgid "Attachments"
 msgstr "Attachments"
 
-#: app/src/ui/calendar/editor.rs:1440 app/src/ui/calendar/editor.rs:1446
+#: app/src/ui/calendar/editor.rs:1442 app/src/ui/calendar/editor.rs:1448
 msgid "Attach File…"
 msgstr "Attach File…"
 
-#: app/src/ui/calendar/editor.rs:1483 app/src/ui/composer/mod.rs:1645
+#: app/src/ui/calendar/editor.rs:1486 app/src/ui/calendar/sidebar.rs:884
+#: app/src/ui/contacts_prefs.rs:236 app/src/ui/invitation.rs:446
+#: app/src/ui/permission.rs:41 app/src/ui/permission.rs:64
+#: app/src/ui/window.rs:1225
+msgid "Grant Access"
+msgstr "Grant Access"
+
+#: app/src/ui/calendar/editor.rs:1490
+msgid "Grant access to upload {file}"
+msgstr "Grant access to upload {file}"
+
+#: app/src/ui/calendar/editor.rs:1503
+msgid "Share with guests"
+msgstr "Share with guests"
+
+#: app/src/ui/calendar/editor.rs:1505
+msgid "Share {file} with the guests"
+msgstr "Share {file} with the guests"
+
+#: app/src/ui/calendar/editor.rs:1521 app/src/ui/composer/mod.rs:1645
 msgid "Remove {file}"
 msgstr "Remove {file}"
 
-#: app/src/ui/calendar/editor.rs:1516
+#: app/src/ui/calendar/editor.rs:1554
 msgid "Cancel Upload"
 msgstr "Cancel Upload"
 
-#: app/src/ui/calendar/editor.rs:1518
+#: app/src/ui/calendar/editor.rs:1556
 msgid "Cancel upload of {file}"
 msgstr "Cancel upload of {file}"
 
-#: app/src/ui/calendar/editor.rs:1543
+#: app/src/ui/calendar/editor.rs:1581
 msgid "Attach File"
 msgstr "Attach File"
 
-#: app/src/ui/calendar/editor.rs:1557
+#: app/src/ui/calendar/editor.rs:1595
 msgid "Penguin Mail can attach only a file saved on this computer."
 msgstr "Penguin Mail can attach only a file saved on this computer."
 
-#: app/src/ui/calendar/editor.rs:1584
+#: app/src/ui/calendar/editor.rs:1623
 msgid "Uploading {file}"
 msgstr "Uploading {file}"
 
-#: app/src/ui/calendar/editor.rs:1615
+#: app/src/ui/calendar/editor.rs:1654
 msgid "Could not attach {file}: {reason}"
 msgstr "Could not attach {file}: {reason}"
 
-#: app/src/ui/calendar/editor.rs:1658
+#: app/src/ui/calendar/editor.rs:1697
 msgid "More"
 msgstr "More"
 
-#: app/src/ui/calendar/editor.rs:1662
+#: app/src/ui/calendar/editor.rs:1701
 msgid "Time zone"
 msgstr "Time zone"
 
-#: app/src/ui/calendar/editor.rs:1702
+#: app/src/ui/calendar/editor.rs:1741
 msgid "Show as busy"
 msgstr "Show as busy"
 
-#: app/src/ui/calendar/editor.rs:1716
+#: app/src/ui/calendar/editor.rs:1755
 msgid "Private"
 msgstr "Private"
 
-#: app/src/ui/calendar/editor.rs:1718
+#: app/src/ui/calendar/editor.rs:1757
 msgid "Only people who can change this calendar see the details"
 msgstr "Only people who can change this calendar see the details"
 
-#: app/src/ui/calendar/editor.rs:1732 app/src/ui/calendar/manage.rs:250
+#: app/src/ui/calendar/editor.rs:1771 app/src/ui/calendar/manage.rs:250
 #: app/src/ui/calendar/sidebar.rs:1188 app/src/ui/sidebar.rs:1230
 #: app/src/ui/sidebar.rs:1357
 msgid "Color"
 msgstr "Colour"
 
-#: app/src/ui/calendar/editor.rs:1736
+#: app/src/ui/calendar/editor.rs:1775
 msgid "Calendar color"
 msgstr "Calendar colour"
 
-#: app/src/ui/calendar/editor.rs:1773
+#: app/src/ui/calendar/editor.rs:1812
 msgid "Google Meet"
 msgstr "Google Meet"
 
-#: app/src/ui/calendar/editor.rs:1780
+#: app/src/ui/calendar/editor.rs:1819
 msgid "Add Google Meet"
 msgstr "Add Google Meet"
 
-#: app/src/ui/calendar/editor.rs:1853
+#: app/src/ui/calendar/editor.rs:1892
 msgid "day"
 msgid_plural "days"
 msgstr[0] "day"
 msgstr[1] "days"
 
-#: app/src/ui/calendar/editor.rs:1854
+#: app/src/ui/calendar/editor.rs:1893
 msgid "week"
 msgid_plural "weeks"
 msgstr[0] "week"
 msgstr[1] "weeks"
 
-#: app/src/ui/calendar/editor.rs:1855
+#: app/src/ui/calendar/editor.rs:1894
 msgid "month"
 msgid_plural "months"
 msgstr[0] "month"
 msgstr[1] "months"
 
-#: app/src/ui/calendar/editor.rs:1856
+#: app/src/ui/calendar/editor.rs:1895
 msgid "year"
 msgid_plural "years"
 msgstr[0] "year"
 msgstr[1] "years"
 
-#: app/src/ui/calendar/editor.rs:1869
+#: app/src/ui/calendar/editor.rs:1908
 msgid "Tuesday"
 msgstr "Tuesday"
 
-#: app/src/ui/calendar/editor.rs:1870
+#: app/src/ui/calendar/editor.rs:1909
 msgid "Wednesday"
 msgstr "Wednesday"
 
-#: app/src/ui/calendar/editor.rs:1871
+#: app/src/ui/calendar/editor.rs:1910
 msgid "Thursday"
 msgstr "Thursday"
 
-#: app/src/ui/calendar/editor.rs:1872
+#: app/src/ui/calendar/editor.rs:1911
 msgid "Friday"
 msgstr "Friday"
 
-#: app/src/ui/calendar/editor.rs:1873
+#: app/src/ui/calendar/editor.rs:1912
 msgid "Saturday"
 msgstr "Saturday"
 
-#: app/src/ui/calendar/editor.rs:1885
+#: app/src/ui/calendar/editor.rs:1924
 msgid "Lavender"
 msgstr "Lavender"
 
-#: app/src/ui/calendar/editor.rs:1886
+#: app/src/ui/calendar/editor.rs:1925
 msgid "Sage"
 msgstr "Sage"
 
-#: app/src/ui/calendar/editor.rs:1887
+#: app/src/ui/calendar/editor.rs:1926
 msgid "Grape"
 msgstr "Grape"
 
-#: app/src/ui/calendar/editor.rs:1888
+#: app/src/ui/calendar/editor.rs:1927
 msgid "Flamingo"
 msgstr "Flamingo"
 
-#: app/src/ui/calendar/editor.rs:1889
+#: app/src/ui/calendar/editor.rs:1928
 msgid "Banana"
 msgstr "Banana"
 
-#: app/src/ui/calendar/editor.rs:1890
+#: app/src/ui/calendar/editor.rs:1929
 msgid "Tangerine"
 msgstr "Tangerine"
 
-#: app/src/ui/calendar/editor.rs:1891
+#: app/src/ui/calendar/editor.rs:1930
 msgid "Peacock"
 msgstr "Peacock"
 
-#: app/src/ui/calendar/editor.rs:1892
+#: app/src/ui/calendar/editor.rs:1931
 msgid "Graphite"
 msgstr "Graphite"
 
-#: app/src/ui/calendar/editor.rs:1893
+#: app/src/ui/calendar/editor.rs:1932
 msgid "Blueberry"
 msgstr "Blueberry"
 
-#: app/src/ui/calendar/editor.rs:1894
+#: app/src/ui/calendar/editor.rs:1933
 msgid "Basil"
 msgstr "Basil"
 
-#: app/src/ui/calendar/editor.rs:1895
+#: app/src/ui/calendar/editor.rs:1934
 msgid "Tomato"
 msgstr "Tomato"
 
-#: app/src/ui/calendar/editor.rs:2088 app/src/ui/composer/recipients.rs:47
+#: app/src/ui/calendar/editor.rs:2127 app/src/ui/composer/recipients.rs:47
 msgid "{name}, {address}"
 msgstr "{name}, {address}"
 
@@ -4322,12 +4361,6 @@ msgstr "Grant Access to show shared calendars"
 #: app/src/ui/calendar/sidebar.rs:880
 msgid "Penguin Mail cannot see this account's calendars"
 msgstr "Penguin Mail cannot see this account's calendars"
-
-#: app/src/ui/calendar/sidebar.rs:884 app/src/ui/contacts_prefs.rs:236
-#: app/src/ui/invitation.rs:446 app/src/ui/permission.rs:41
-#: app/src/ui/permission.rs:64 app/src/ui/window.rs:1225
-msgid "Grant Access"
-msgstr "Grant Access"
 
 #: app/src/ui/calendar/sidebar.rs:943
 msgid "Show or hide this account's calendars"
@@ -7918,7 +7951,7 @@ msgid_plural "{accounts} will get new labels."
 msgstr[0] "{accounts} will get a new label."
 msgstr[1] "{accounts} will get new labels."
 
-#: sync/src/calendar_copy.rs:1450
+#: sync/src/calendar_copy.rs:1451
 msgid "Google Calendar offers out of office and focus time only on some work and school accounts ({reason})"
 msgstr "Google Calendar offers out of office and focus time only on some work and school accounts ({reason})"
 
