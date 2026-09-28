@@ -1,12 +1,14 @@
 # Penguin Mail privacy policy
 
-Last updated: 28 September 2026
+Last updated: 29 September 2026
 
-Penguin Mail is a desktop email client for Gmail, published by Pivotd
-(https://pivotd.com). It runs on your own computer. This policy explains what
-it accesses, where that data goes, and how it is protected.
+Penguin Mail is a mail and calendar app for Linux, published by Pivotd
+(https://pivotd.com). It works with Google accounts, through Google's APIs,
+and with other mail providers over IMAP and SMTP. It runs on your own
+computer. This policy explains what it accesses, where that data goes, and
+how it is protected.
 
-## What Penguin Mail accesses
+## What Penguin Mail accesses in a Google account
 
 You grant access through Google's own sign-in page. Adding an account asks
 for every permission Penguin Mail uses, in one visit:
@@ -22,18 +24,21 @@ for every permission Penguin Mail uses, in one visit:
   recipients, once you turn contacts on in Preferences, and to write a
   contact to Google Contacts when you ask the assistant to add or change
   one.
-- `calendar.events`, to read your calendars, mark your answer to a
-  meeting invitation, and let the assistant read and change events.
+- `calendar.events`, to read your calendars and show your events; to make,
+  change and delete events when you do so in Penguin Mail; to mark your
+  answer to a meeting invitation; to add the events in a calendar file you
+  open; to link a file you attach to an event; and to let the assistant
+  read and change events when you ask it.
 - `calendar.calendarlist`, to read the list of your calendars, so Penguin
   Mail can show more than the primary one; to change a calendar's color or
   hide it, when you do so in Penguin Mail; and to subscribe to a calendar
   by its address or to a public holiday calendar, when you ask.
 - `calendar.calendars`, to make, rename and delete a calendar you own,
   when you ask.
-- `drive.file`, which reaches only files Penguin Mail itself puts in your
-  Google Drive, never any other file there. Penguin Mail does not use it
-  yet; it is asked for now so that sending a large attachment through
-  Drive later needs no second visit to Google's screen.
+- `drive.file`, to upload a file you attach to a calendar event to your
+  Google Drive, and to share that file with the event's guests when you
+  leave sharing on. It reaches only the files Penguin Mail itself put in
+  your Drive, never any other file there.
 
 You may leave any of these unticked on Google's screen. Penguin Mail then
 turns off the feature that needs it and says why where you would use that
@@ -49,7 +54,8 @@ top of its mail list that names what it lacks and offers the same button.
 - Penguin Mail has no server of its own. No data is sent to Pivotd or to any
   third party, and Penguin Mail contains no analytics, tracking or
   advertising.
-- Penguin Mail connects to Google's Gmail, People and Calendar APIs, and to
+- Penguin Mail connects to Google's Gmail, People, Calendar and Drive APIs,
+  and to
   GitHub once a day to check for a new version of the app. The update check
   sends nothing about you or your mail.
 - When you choose to load remote images in a message, your computer fetches
@@ -66,12 +72,17 @@ top of its mail list that names what it lacks and offers the same button.
   asks the same of the company that receives the domain's mail, and tries
   to connect to the usual mail server names at the domain. It sends your
   password only to the servers you then sign in to.
-- Penguin Mail has two AI features, the assistant and translation. Each is
-  off until you choose a model for it, and each sends what it reads to the
-  model chosen for it, which may run on your own computer or at Anthropic.
-  The assistant sends the messages it reads to answer your request, and
-  only when you ask it something. Translation sends the message you asked
-  to translate, and only when you press Translate. With a model running on
+- Penguin Mail has three AI features: the assistant, translation, and help
+  with unsubscribe pages. Each is off until you choose a model for it, and
+  each sends what it reads to the model chosen for it, which may run on
+  your own computer or at Anthropic. The assistant sends the messages it
+  reads to answer your request, and only when you ask it something.
+  Translation sends the message you asked to translate, and only when you
+  press Translate. Unsubscribe help sends a newsletter's unsubscribe page,
+  its address, title, visible text and form fields, together with the
+  address the newsletter was sent to, and only when you press Unsubscribe
+  and Penguin Mail's own rules cannot read that page. It never sends the
+  message itself. With a model running on
   your own computer, your mail stays on your computer. With the Anthropic
   API or Claude Code, it goes to Anthropic, under Anthropic's terms.
   Penguin Mail does not use your data to train or improve any AI model.
