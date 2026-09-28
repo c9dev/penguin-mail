@@ -1082,7 +1082,7 @@ impl CalendarView {
                 let weak = Rc::downgrade(self);
                 month.connect_event_edited(move |month, o| {
                     if let Some(view) = weak.upgrade() {
-                        view.edit_or_show(o, month.block_of(&key_of(o)).as_ref());
+                        view.edit_or_show(o, month.block_at(&key_of(o), o.start).as_ref());
                     }
                 });
                 let weak = Rc::downgrade(self);
@@ -1150,7 +1150,7 @@ impl CalendarView {
         let weak = Rc::downgrade(self);
         grid.connect_event_edited(move |grid, o| {
             if let Some(view) = weak.upgrade() {
-                view.edit_or_show(o, grid.block_of(&key_of(o)).as_ref());
+                view.edit_or_show(o, grid.block_at(&key_of(o), o.start).as_ref());
             }
         });
         let weak = Rc::downgrade(self);
@@ -1168,7 +1168,7 @@ impl CalendarView {
         let weak = Rc::downgrade(self);
         strip.connect_event_edited(move |strip, o| {
             if let Some(view) = weak.upgrade() {
-                view.edit_or_show(o, strip.block_of(&key_of(o)).as_ref());
+                view.edit_or_show(o, strip.block_at(&key_of(o), o.start).as_ref());
             }
         });
         let weak = Rc::downgrade(self);
@@ -1369,13 +1369,15 @@ impl CalendarView {
                     let y = grid.grid.scroll_to_hour(hour);
                     scroll_when_ready(&grid.scroller, y);
                 }
-                self.pending_block(&found, |key| {
-                    grid.grid.block_of(key).or_else(|| grid.strip.block_of(key))
+                self.pending_block(&found, |key, start| {
+                    grid.grid
+                        .block_at(key, start)
+                        .or_else(|| grid.strip.block_at(key, start))
                 })
             }
             PageView::Month(month) => {
                 month.show(range, &found, &calendars);
-                self.pending_block(&found, |key| month.block_of(key))
+                self.pending_block(&found, |key, start| month.block_at(key, start))
             }
         };
         let is_current = self
@@ -1401,17 +1403,17 @@ impl CalendarView {
     }
 
     /// The block and occurrence of the event waiting to open, when
-    /// `found` holds it. Matches the occurrence's start too, not only
-    /// its key, since every occurrence of an unsplit series shares the
-    /// same key.
+    /// `found` holds it. Matches the occurrence's start as well as its
+    /// key, since every occurrence of an unsplit series shares the same
+    /// key and a page can show several.
     fn pending_block(
         &self,
         found: &[Occurrence],
-        block_of: impl Fn(&EventKey) -> Option<gtk::Widget>,
+        block_at: impl Fn(&EventKey, EpochMillis) -> Option<gtk::Widget>,
     ) -> Option<(gtk::Widget, Occurrence)> {
         let (key, start) = self.pending_open.borrow().clone()?;
         let o = found.iter().find(|o| key_of(o) == key && o.start == start)?;
-        Some((block_of(&key)?, o.clone()))
+        Some((block_at(&key, start)?, o.clone()))
     }
 
     /// The day headings over a grid: "MON 21", today's in a pill. Each
