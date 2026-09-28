@@ -111,6 +111,12 @@ impl Draft {
         }
     }
 
+    /// Whether the person gave the occurrence they opened another time,
+    /// which the calendar confirms before writing.
+    pub fn moved(&self) -> bool {
+        self.occurrence.as_ref().is_some_and(|o| (o.start, o.end) != (self.start, self.end))
+    }
+
     pub fn is_new(&self) -> bool {
         self.base.is_none()
     }
@@ -439,6 +445,23 @@ mod tests {
         let refused = draft.add_guests("ann@example.com, bob");
         assert_eq!(refused, ["bob"]);
         assert_eq!(draft.guests.len(), 1, "the valid address still joins");
+    }
+
+    #[test]
+    fn a_new_time_on_an_opened_occurrence_is_a_move() {
+        let mut draft = Draft::open(&weekly(), &weekly().event.rules, Lisbon);
+        assert!(!draft.moved());
+        draft.title = "Renamed".into();
+        assert!(!draft.moved(), "a new title is no move");
+        draft.set_start(at(23, 16, 0));
+        assert!(draft.moved());
+    }
+
+    #[test]
+    fn a_new_event_is_never_a_move() {
+        let mut draft = fresh();
+        draft.set_start(at(24, 9, 0));
+        assert!(!draft.moved());
     }
 
     #[test]

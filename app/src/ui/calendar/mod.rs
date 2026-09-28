@@ -36,7 +36,7 @@ use adw::prelude::*;
 use chrono::{DateTime, Datelike, Days, NaiveDate, Utc};
 use gtk::{gdk, glib};
 use mailrs_domain::calendar::series;
-use mailrs_domain::calendar::{Access, Calendar, Occurrence};
+use mailrs_domain::calendar::{Access, Calendar, Notify, Occurrence};
 use mailrs_domain::invitation::Answer;
 use mailrs_domain::translate::{date_locale, fill, gettext, with_reason};
 use mailrs_domain::{Account, AccountId, EpochMillis};
@@ -984,10 +984,12 @@ impl CalendarView {
 
     // ---- Moving events ---------------------------------------------------
 
-    /// A drag moved or stretched `o` on `grid`. The write goes through
-    /// the draft, so a weekly series moved to another day moves its day
-    /// in the rule. The card stays where it landed until the write is
-    /// held; a Cancel of the repeat question or a failed write springs
+    /// A drag or a keyboard nudge moved or stretched `o` on `grid`. The
+    /// move is confirmed first, in one dialog that also asks which
+    /// occurrences of a series it covers and whether the guests get an
+    /// update. The write goes through the draft, so a weekly series moved
+    /// to another day moves its day in the rule. The card stays where it
+    /// landed until the write is held; a Cancel or a failed write springs
     /// it back on `grid`.
     pub(super) fn moved(
         self: &Rc<Self>,
@@ -1004,19 +1006,20 @@ impl CalendarView {
             let mut draft = Draft::open(&o, &rules, draft::local_zone());
             draft.set_span(start, end);
             let offered = series::scopes(&o.event, false);
-            let scope = if offered.is_empty() {
-                None
-            } else {
-                match scope::ask(&this.page, false, &offered).await {
-                    Some(scope) => Some(scope),
+            let when = words::span_words(start, end, o.event.all_day, &draft::local_zone());
+            let answer = match scope::question(scope::Action::Move, &offered, &o.event.guests, false) {
+                Some(question) => match scope::ask(&this.page, &question, &o.event, Some(&when)).await {
+                    Some(answer) => answer,
                     None => {
                         if let Some(grid) = grid_weak.upgrade() {
                             grid.spring_back();
                         }
                         return;
                     }
-                }
+                },
+                None => scope::Answer { scope: None, notify: Notify::Guests },
             };
+            let scope = answer.scope;
             let event = draft.to_event(
                 &mailrs_sync::calendar_copy::new_event_id(),
                 &mailrs_sync::calendar_copy::new_event_id(),
@@ -1027,7 +1030,7 @@ impl CalendarView {
                 .core
                 .call(async move {
                     let steps = copy.change_steps(account_id, &occurrence, event, scope).await?;
-                    copy.hold(account_id, steps).await
+                    copy.hold_with(account_id, steps, answer.notify).await
                 })
                 .await;
             match held {
@@ -1866,29 +1869,29 @@ impl CalendarView {
         });
     }
 
-    /// Deletes `o` at once and offers Undo. An occurrence of a series
-    /// asks which occurrences the delete covers first; a delete still
-    /// goes through Undo either way.
+    /// Deletes `o` at once and offers Undo. An occurrence of a series asks
+    /// which occurrences the delete covers first, and a meeting whether
+    /// the guests get a cancellation, in one dialog; a delete still goes
+    /// through Undo either way.
     pub fn delete(self: &Rc<Self>, o: &Occurrence) {
         let this = Rc::clone(self);
         let o = o.clone();
         glib::spawn_future_local(async move {
             let offered = series::scopes(&o.event, false);
-            let scope = if offered.is_empty() {
-                None
-            } else {
-                match scope::ask(&this.page, true, &offered).await {
-                    Some(scope) => Some(scope),
+            let answer = match scope::question(scope::Action::Delete, &offered, &o.event.guests, false) {
+                Some(question) => match scope::ask(&this.page, &question, &o.event, None).await {
+                    Some(answer) => answer,
                     None => return,
-                }
+                },
+                None => scope::Answer { scope: None, notify: Notify::Guests },
             };
             let copy = this.core.calendar_copy();
             let (account_id, occurrence) = (o.account_id, o.clone());
             let held = this
                 .core
                 .call(async move {
-                    let steps = copy.delete_steps(account_id, &occurrence, scope).await?;
-                    copy.hold(account_id, steps).await
+                    let steps = copy.delete_steps(account_id, &occurrence, answer.scope).await?;
+                    copy.hold_with(account_id, steps, answer.notify).await
                 })
                 .await;
             match held {
@@ -2274,23 +2277,31 @@ impl CalendarView {
         editor::open(&self.page, draft, choices, contacts, move |draft| this.save_draft(draft));
     }
 
-    /// Writes a new or changed event. A change to an occurrence of a
-    /// series asks which occurrences it covers first.
+    /// Writes a new or changed event. A new time is confirmed first, and a
+    /// change to an occurrence of a series asks which occurrences it
+    /// covers, in one dialog that also asks whether the guests of a moved
+    /// meeting get an update.
     pub fn save_draft(self: &Rc<Self>, draft: Draft) {
         let weak = Rc::downgrade(self);
         let core = Rc::clone(&self.core);
         glib::spawn_future_local(async move {
             let occurrence = draft.occurrence.clone();
             let offered = draft.scopes();
-            let scope = if offered.is_empty() {
-                None
-            } else {
-                let Some(view) = weak.upgrade() else { return };
-                match scope::ask(&view.page, false, &offered).await {
-                    Some(scope) => Some(scope),
-                    None => return,
+            let action = if draft.moved() { scope::Action::Move } else { scope::Action::Edit };
+            let adds = draft.base.as_ref().is_some_and(|base| scope::adds_guests(&base.guests, &draft.guests));
+            let asked = match (&draft.base, scope::question(action, &offered, &draft.guests, adds)) {
+                (Some(base), Some(question)) => {
+                    let Some(view) = weak.upgrade() else { return };
+                    let when = words::span_words(draft.start, draft.end, draft.all_day, &draft::local_zone());
+                    let when = (action == scope::Action::Move).then_some(when);
+                    match scope::ask(&view.page, &question, base, when.as_deref()).await {
+                        Some(answer) => answer,
+                        None => return,
+                    }
                 }
+                _ => scope::Answer { scope: None, notify: Notify::Guests },
             };
+            let (scope, notify) = (asked.scope, asked.notify);
             let event = draft.to_event(
                 &mailrs_sync::calendar_copy::new_event_id(),
                 &mailrs_sync::calendar_copy::new_event_id(),
@@ -2304,7 +2315,7 @@ impl CalendarView {
                         Some(o) => copy.change_steps(account_id, o, event, scope).await?,
                         None => vec![series::Step::Save(event)],
                     };
-                    copy.apply(account_id, steps).await
+                    copy.apply_with(account_id, steps, notify).await
                 })
                 .await;
             let Some(view) = weak.upgrade() else { return };

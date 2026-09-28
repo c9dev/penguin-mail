@@ -55,11 +55,19 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - An invitation no longer asks you to add the account to GNOME Online
   Accounts. When Penguin Mail lacks permission to read that calendar,
   the card offers Grant Access, so the event can show in Calendar.
+- Moving an event, by dragging it, with Shift and an arrow key, or with
+  a new time in the editor, asks first, and you can Cancel to leave it
+  where it was. When the event has guests, the same question asks
+  whether to send them an update; deleting one asks whether to send
+  them a cancellation. A repeating event asks which dates it covers in
+  that same question.
 - With Claude Opus 5 or newer, translating a message and reading an unsubscribe
   page take less time, because those quick jobs no longer think at length.
 
 ### Fixed
 
+- A guest you add to an event gets Google's invitation, even when you
+  pick them from the suggestions and press Save without pressing Enter.
 - Moving or changing a second calendar event while the first one's Undo is still showing no longer closes Penguin Mail.
 - The Flatpak keeps its Google sign-in, IMAP passwords and AI keys in
   its own encrypted store instead of the desktop's shared keyring, which
