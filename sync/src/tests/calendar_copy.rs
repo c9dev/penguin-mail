@@ -1515,3 +1515,140 @@ async fn a_quiet_delete_held_through_a_restart_stays_quiet() {
     assert!(on_google(&h, "review").is_none());
     assert_eq!(notices(&h), [("review".to_string(), Notify::Nobody)]);
 }
+
+/// The review on the primary calendar, opened in the editor.
+async fn review_on_primary(h: &Harness) -> (CalendarCopy<Connected>, Occurrence) {
+    h.fake.with(|s| s.calendars = vec![calendar("primary", true), calendar("team", false)]);
+    h.fake.put_calendar_event(with_guest("primary", "review"));
+    let copy = copy(h);
+    copy.refresh(h.account_id, NOW).await.unwrap();
+    let opened = on_day(h, 0).await.remove(0);
+    (copy, opened)
+}
+
+/// The editor's save of the review, moved to the team calendar and
+/// renamed.
+async fn move_review_to_team(h: &Harness, copy: &CalendarCopy<Connected>, opened: &Occurrence) -> Vec<Step> {
+    let edited = Event { calendar: "team".into(), title: "Review, renamed".into(), ..Event::clone(&opened.event) };
+    copy.change_steps(h.account_id, opened, edited, None).await.unwrap()
+}
+
+#[tokio::test]
+async fn a_new_calendar_goes_out_as_a_move_then_the_edit() {
+    let h = harness().await;
+    let (copy, opened) = review_on_primary(&h).await;
+    let steps = move_review_to_team(&h, &copy, &opened).await;
+    held(copy.apply_with(h.account_id, steps, Notify::Nobody).await.unwrap());
+    assert!(stored(&h, "primary", "review").await.is_none(), "it leaves the old calendar at once");
+    assert_eq!(stored(&h, "team", "review").await.unwrap().title, "Review, renamed");
+
+    assert!(copy.send(h.account_id).await.unwrap().is_empty());
+    let there = on_google(&h, "review").unwrap();
+    assert_eq!((there.calendar.as_str(), there.title.as_str()), ("team", "Review, renamed"));
+    assert_eq!(h.fake.usage().calls_to("calendar.events.move"), 1);
+    assert!(notices(&h).iter().all(|(_, n)| *n == Notify::Nobody), "{:?}", notices(&h));
+    assert!(queue(&h).await.is_empty());
+}
+
+#[tokio::test]
+async fn a_queued_move_keeps_the_event_off_its_old_calendar_through_a_read() {
+    let h = harness().await;
+    let (copy, opened) = review_on_primary(&h).await;
+    let steps = move_review_to_team(&h, &copy, &opened).await;
+    held(copy.apply(h.account_id, steps).await.unwrap());
+    // Offline: the move waits, and a read of both calendars happens first.
+    copy.refresh(h.account_id, NOW + READ_EVERY_OPEN).await.unwrap();
+    assert!(stored(&h, "primary", "review").await.is_none());
+    assert!(stored(&h, "team", "review").await.is_some());
+}
+
+#[tokio::test]
+async fn a_held_move_survives_a_restart() {
+    let h = harness().await;
+    let (first_run, opened) = review_on_primary(&h).await;
+    let steps = move_review_to_team(&h, &first_run, &opened).await;
+    held(first_run.hold(h.account_id, steps).await.unwrap());
+    drop(first_run);
+
+    let next_run = copy(&h);
+    next_run.recover_holds().await.unwrap();
+    next_run.send(h.account_id).await.unwrap();
+    assert_eq!(on_google(&h, "review").unwrap().calendar, "team");
+    assert!(queue(&h).await.is_empty());
+}
+
+#[tokio::test]
+async fn undo_puts_a_moved_event_back_on_its_calendar() {
+    let h = harness().await;
+    let (copy, opened) = review_on_primary(&h).await;
+    let steps = move_review_to_team(&h, &copy, &opened).await;
+    let change = held(copy.hold(h.account_id, steps).await.unwrap());
+    copy.revert(change).await.unwrap();
+    assert!(stored(&h, "team", "review").await.is_none());
+    assert_eq!(stored(&h, "primary", "review").await.unwrap().title, "review");
+    assert!(queue(&h).await.is_empty());
+}
+
+#[tokio::test]
+async fn a_move_google_turns_down_leaves_the_event_where_it_was() {
+    let h = harness().await;
+    let (copy, opened) = review_on_primary(&h).await;
+    let steps = move_review_to_team(&h, &copy, &opened).await;
+    held(copy.apply(h.account_id, steps).await.unwrap());
+    h.fake.drop_calendar_event("primary", "review");
+    h.fake.put_calendar_event(Event { etag: "\"9\"".into(), ..with_guest("primary", "review") });
+    h.fake.with(|s| s.refuse_moves = true);
+
+    let turned = copy.send(h.account_id).await.unwrap();
+    assert_eq!(turned.len(), 1, "{turned:?}");
+    assert!(stored(&h, "team", "review").await.is_none());
+    assert!(stored(&h, "primary", "review").await.is_some());
+    assert!(queue(&h).await.is_empty());
+}
+
+/// Rita organizes the review and this account is a guest.
+fn invitation(calendar: &str, id: &str) -> Event {
+    use mailrs_domain::calendar::Guest;
+    Event {
+        guests: vec![
+            Guest { email: "rita@example.com".into(), organizer: true, ..Guest::default() },
+            Guest { email: "me@example.com".into(), me: true, ..Guest::default() },
+        ],
+        organizer: Some("rita@example.com".into()),
+        ..event(calendar, id)
+    }
+}
+
+#[tokio::test]
+async fn a_guests_removal_deletes_their_copy_quietly_and_answers_nothing() {
+    let h = harness().await;
+    h.fake.with(|s| s.calendars = vec![calendar("primary", true)]);
+    h.fake.put_calendar_event(invitation("primary", "review"));
+    let copy = copy(&h);
+    copy.refresh(h.account_id, NOW).await.unwrap();
+    let opened = on_day(&h, 0).await.remove(0);
+    // The person was asked nothing about the guests; a guest's removal
+    // is quiet whatever the caller passes.
+    let change = held(copy.hold_removal(h.account_id, &opened, None, Notify::Guests).await.unwrap());
+    assert!(stored(&h, "primary", "review").await.is_none());
+    copy.commit(change).await.unwrap();
+    copy.send(h.account_id).await.unwrap();
+
+    assert!(on_google(&h, "review").is_none());
+    assert_eq!(notices(&h), [("review".to_string(), Notify::Nobody)]);
+    assert_eq!(h.fake.usage().calls_to("calendar.events.patch"), 0, "no answer of No went first");
+}
+
+#[tokio::test]
+async fn an_organizers_removal_keeps_their_choice_about_the_guests() {
+    let h = harness().await;
+    h.fake.with(|s| s.calendars = vec![calendar("primary", true)]);
+    h.fake.put_calendar_event(with_guest("primary", "review"));
+    let copy = copy(&h);
+    copy.refresh(h.account_id, NOW).await.unwrap();
+    let opened = on_day(&h, 0).await.remove(0);
+    let change = held(copy.hold_removal(h.account_id, &opened, None, Notify::Guests).await.unwrap());
+    copy.commit(change).await.unwrap();
+    copy.send(h.account_id).await.unwrap();
+    assert_eq!(notices(&h), [("review".to_string(), Notify::Guests)]);
+}

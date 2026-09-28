@@ -345,6 +345,28 @@ impl GmailClient {
         .await
     }
 
+    /// Moves `event` from its calendar to `destination` (Google's
+    /// `events.move`), and mails its guests when `notify` says so. Google
+    /// moves a series whole, its changed occurrences with it. The answer
+    /// is the event as it now stands on `destination`; one Google gives no
+    /// zone of its own keeps the zone it had.
+    pub async fn move_event(
+        &self,
+        event: &calendar::Event,
+        destination: &str,
+        notify: Notify,
+    ) -> Result<calendar::Event, GmailError> {
+        let url = format!(
+            "{}/calendars/{}/events/{}/move",
+            self.calendar_base_url,
+            encode(&event.calendar),
+            encode(&event.id)
+        );
+        let query = [("destination", destination), ("sendUpdates", send_updates(notify))];
+        let answer: Value = self.call_at(&url, |url| self.http().post(url).query(&query)).await?;
+        Ok(google_event(destination, &answer, None, &event.zone))
+    }
+
     /// Answers the event `ical_uid` names as `me`, and lets Google tell the
     /// organizer. Two calls: one to find the event Google made from the
     /// invitation, one to change this account's answer on it.

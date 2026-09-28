@@ -403,6 +403,15 @@ impl CalendarService for AnyCalendar {
     ) -> Result<(), BackendError> {
         forward!(AnyCalendar, self, remove_event(calendar, id, etag, notify))
     }
+
+    async fn move_event(
+        &self,
+        event: &model::Event,
+        destination: &str,
+        notify: model::Notify,
+    ) -> Result<model::Event, BackendError> {
+        forward!(AnyCalendar, self, move_event(event, destination, notify))
+    }
 }
 
 impl ContactsService for AnyContacts {

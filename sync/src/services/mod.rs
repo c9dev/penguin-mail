@@ -825,6 +825,16 @@ pub trait CalendarService: Send + Sync + 'static {
         etag: Option<&str>,
         notify: model::Notify,
     ) -> impl Future<Output = Result<(), BackendError>> + Send;
+
+    /// Moves `event` from its calendar to `destination` on the same
+    /// account, a series with its changed occurrences, and mails its
+    /// guests when `notify` says so. Answers the event on `destination`.
+    fn move_event(
+        &self,
+        event: &model::Event,
+        destination: &str,
+        notify: model::Notify,
+    ) -> impl Future<Output = Result<model::Event, BackendError>> + Send;
 }
 
 /// The account's address book.
