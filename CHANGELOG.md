@@ -11,6 +11,10 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   "•••" button under your words, as in Gmail, and still sends with it.
   Click "•••" to read it, and in a reply to trim it, or × to send
   without it.
+- The calendar has an Agenda view beside Day, Week and Month, on the A key.
+  It lists the coming days in a centered column, with today at the top,
+  earlier days above and more days loading as you scroll down. A narrow
+  window still shows this list in place of Week and Month.
 - Fold an account's calendars away by clicking its address in the
   calendar sidebar. The list stays folded the next time you open the app.
 - Right-click a calendar, or use its "⋮" button, to hide it from the list

@@ -156,6 +156,7 @@ impl MainWindow {
             CalendarKey::Day => calendar.set_kind(ViewKind::Day),
             CalendarKey::Week => calendar.set_kind(ViewKind::Week),
             CalendarKey::Month => calendar.set_kind(ViewKind::Month),
+            CalendarKey::Agenda => calendar.set_kind(ViewKind::Agenda),
             CalendarKey::Previous => calendar.step(-1),
             CalendarKey::Next => calendar.step(1),
             CalendarKey::Search => calendar.focus_search(),

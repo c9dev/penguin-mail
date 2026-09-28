@@ -229,6 +229,11 @@ pub struct CalendarView {
     /// Set while an earlier-days read is in flight, so a second scroll
     /// to the top before it answers does not start another one.
     list_loading: Cell<bool>,
+    /// The latest day the list already holds, `None` until its first
+    /// read answers. `load_later` reads on from here.
+    list_last: Cell<Option<NaiveDate>>,
+    /// Set while a later-days read is in flight.
+    list_later_loading: Cell<bool>,
     search_read: Cell<u64>,
     /// Set by a sidebar read that should fill the pages once it answers.
     /// A newer read drops the older one's answer, so the flag carries
@@ -465,16 +470,16 @@ impl CalendarView {
 
         let popover = EventPopover::new(&card, &today_button);
         let more_list = Agenda::new();
-        more_list.widget.set_propagate_natural_height(true);
+        more_list.scrolled.set_propagate_natural_height(true);
         // A ScrolledWindow keeps its minimum width unless told to grow
         // with its rows, so a long title fell back to that minimum and
         // ellipsized after about a dozen characters. Growing with the
         // rows, up to a sensible width, lets a title use the room
         // before it ellipsizes.
-        more_list.widget.set_propagate_natural_width(true);
-        more_list.widget.set_min_content_width(280);
-        more_list.widget.set_max_content_width(420);
-        more_list.widget.set_max_content_height(360);
+        more_list.scrolled.set_propagate_natural_width(true);
+        more_list.scrolled.set_min_content_width(280);
+        more_list.scrolled.set_max_content_width(420);
+        more_list.scrolled.set_max_content_height(360);
         let more = gtk::Popover::builder().child(&more_list.widget).build();
         more.set_parent(&card);
         let quick = Quick::new(&card);
@@ -548,7 +553,7 @@ impl CalendarView {
                 day: Cell::new(today),
                 kind: Cell::new(kind),
                 before_day: Cell::new(match kind {
-                    ViewKind::Day => ViewKind::Week,
+                    ViewKind::Day | ViewKind::Agenda => ViewKind::Week,
                     other => other,
                 }),
                 narrow: Cell::new(false),
@@ -563,6 +568,8 @@ impl CalendarView {
                 list_first: Cell::new(today),
                 list_exhausted: Cell::new(false),
                 list_loading: Cell::new(false),
+                list_last: Cell::new(None),
+                list_later_loading: Cell::new(false),
                 search_read: Cell::new(0),
                 fill_owed: Cell::new(false),
                 open_read: Cell::new(0),
@@ -777,7 +784,7 @@ impl CalendarView {
 
     /// Shows a day, a week or a month, around the day the view is on.
     pub fn set_kind(self: &Rc<Self>, kind: ViewKind) {
-        if kind != ViewKind::Day {
+        if !matches!(kind, ViewKind::Day | ViewKind::Agenda) {
             self.before_day.set(kind);
         }
         if kind == self.kind.get() {
@@ -956,6 +963,11 @@ impl CalendarView {
         shown::showing(self.kind.get(), self.narrow.get(), self.compact.get())
     }
 
+    /// The name of the switch entry that marks what is on screen.
+    fn active_toggle(&self) -> &'static str {
+        shown::active_toggle(self.kind.get(), self.narrow.get(), self.compact.get())
+    }
+
     /// The grid actually on screen: the kind the person picked, unless
     /// the breakpoint replaced it. List draws Month's grid behind its
     /// own agenda page (unused while List is on screen, but built all
@@ -997,12 +1009,12 @@ impl CalendarView {
                 "list" => gettext("List"),
                 "day" => gettext("Day"),
                 "week" => gettext("Week"),
+                "agenda" => gettext("Agenda"),
                 _ => gettext("Month"),
             };
             self.switch.add(adw::Toggle::builder().name(name).label(&label).build());
         }
-        self.switch
-            .set_active_name(Some(shown::toggle_name(self.showing())));
+        self.switch.set_active_name(Some(self.active_toggle()));
         self.switching.set(false);
     }
 
@@ -1019,7 +1031,7 @@ impl CalendarView {
     fn show_range(&self) {
         let showing = self.showing();
         self.switching.set(true);
-        self.switch.set_active_name(Some(shown::toggle_name(showing)));
+        self.switch.set_active_name(Some(self.active_toggle()));
         self.switching.set(false);
         // The list names its month the way a month's title does.
         let range = Range::around(self.effective_kind(), self.day.get());
@@ -1273,7 +1285,7 @@ impl CalendarView {
     /// A page's widgets for the grid actually on screen.
     fn page_view(self: &Rc<Self>) -> PageView {
         match self.effective_kind() {
-            ViewKind::Month => {
+            ViewKind::Month | ViewKind::Agenda => {
                 let month = MonthGrid::new();
                 let weak = Rc::downgrade(self);
                 month.connect_day_activated(move |day| {
@@ -1768,6 +1780,8 @@ impl CalendarView {
         self.list_first.set(first);
         self.list_exhausted.set(false);
         self.list_loading.set(false);
+        self.list_last.set(None);
+        self.list_later_loading.set(false);
         let (from, to) = day_span(first, last);
         let accounts = self.account_ids();
         let weak = Rc::downgrade(self);
@@ -1788,6 +1802,7 @@ impl CalendarView {
                         keep_agenda_events(found, show_declined, pending.as_ref(), first, last);
                     view.list
                         .show(&found, &view.calendars.borrow(), &chrono::Local);
+                    view.list_last.set(Some(last));
                 }
                 Err(err) => tracing::warn!(%err, "could not read the calendar"),
             }
@@ -1848,7 +1863,52 @@ impl CalendarView {
         });
     }
 
+    /// Reads the 30 days after what the list holds once the reader
+    /// scrolls near its end, up to `range::latest_agenda_day`.
+    fn load_later(self: &Rc<Self>) {
+        let Some(held_to) = self.list_last.get() else { return };
+        if self.list_later_loading.get() {
+            return;
+        }
+        let today = chrono::Local::now().date_naive();
+        let Some((first, last)) = range::agenda_later(held_to, today) else { return };
+        self.list_later_loading.set(true);
+        let read = self.list_read.get();
+        let (from, to) = day_span(first, last);
+        let accounts = self.account_ids();
+        let weak = Rc::downgrade(self);
+        let core = Rc::clone(&self.core);
+        glib::spawn_future_local(async move {
+            let found = core
+                .read(move |c| store::occurrences(c, &accounts, from, to, CalendarScope::Shown))
+                .await;
+            let Some(view) = weak.upgrade() else { return };
+            if view.list_read.get() != read {
+                return;
+            }
+            view.list_later_loading.set(false);
+            match found {
+                Ok(found) => {
+                    let show_declined = (view.settings)().show_declined_events;
+                    let pending = view.pending();
+                    let found =
+                        keep_agenda_events(found, show_declined, pending.as_ref(), first, last);
+                    view.list
+                        .append(&found, first, &view.calendars.borrow(), &chrono::Local);
+                    view.list_last.set(Some(last));
+                }
+                Err(err) => tracing::warn!(%err, "could not read the calendar"),
+            }
+        });
+    }
+
     fn connect_lists(self: &Rc<Self>) {
+        let weak = Rc::downgrade(self);
+        self.list.connect_near_end(400.0, move || {
+            if let Some(view) = weak.upgrade() {
+                view.load_later();
+            }
+        });
         let weak = Rc::downgrade(self);
         self.list.connect_event_activated(move |o| {
             if let Some(view) = weak.upgrade() {

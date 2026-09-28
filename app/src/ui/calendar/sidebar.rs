@@ -123,7 +123,7 @@ pub fn hidden_count(rows: &[SidebarAccount]) -> usize {
 /// selected day already marks it.
 pub fn in_view(kind: ViewKind, day: NaiveDate) -> Option<(NaiveDate, NaiveDate)> {
     match kind {
-        ViewKind::Day => None,
+        ViewKind::Day | ViewKind::Agenda => None,
         ViewKind::Week => {
             let range = Range::around(kind, day);
             Some((range.first, range.first + Days::new(u64::from(range.days) - 1)))
