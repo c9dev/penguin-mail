@@ -33,7 +33,6 @@ struct Heading {
     account_id: AccountId,
     /// What the heading calls the account: its name, or its address.
     name: String,
-    chevron: gtk::Image,
     count: gtk::Label,
     /// The row's own Rules, Hide My Email and Automatic Reply actions,
     /// gated again by [`Sidebar::regate`] when the account starts.
@@ -560,11 +559,9 @@ impl Sidebar {
                 heading.row.remove_css_class("after-open");
             }
             after_open = open;
-            heading.chevron.set_icon_name(Some(if open {
-                "pan-down-symbolic"
-            } else {
-                "pan-end-symbolic"
-            }));
+            heading
+                .row
+                .update_state(&[gtk::accessible::State::Expanded(Some(open))]);
             heading
                 .count
                 .set_visible(!open && heading.count.label() != "0");
@@ -638,13 +635,12 @@ impl Sidebar {
         for (account, labels) in accounts {
             let shown = extras.names.get(&account.id);
             let account_offers = offers(account.id);
-            let (row, chevron, count, actions) = heading(account, shown, account_offers);
+            let (row, count, actions) = heading(account, shown, account_offers);
             self.list.append(&row);
             self.headings.borrow_mut().push(Heading {
                 row,
                 account_id: account.id,
                 name: shown.unwrap_or(&account.email).clone(),
-                chevron,
                 count,
                 actions,
             });
@@ -1171,19 +1167,14 @@ fn heading(
     account: &Account,
     name: Option<&String>,
     offers: Offers,
-) -> (gtk::ListBoxRow, gtk::Image, gtk::Label, gio::SimpleActionGroup) {
+) -> (gtk::ListBoxRow, gtk::Label, gio::SimpleActionGroup) {
     let content = gtk::Box::builder()
         .spacing(6)
         .css_classes(["sidebar-heading"])
         .build();
     // Ruling R3: the mockup's account row has no chevron, only a colour
-    // dot and the address. `apply_expansion` still flips `chevron`'s
-    // icon between open and closed; the image just never joins `content`,
-    // so nothing on screen shows it.
-    let chevron = gtk::Image::builder()
-        .icon_name("pan-down-symbolic")
-        .css_classes(["dim-label"])
-        .build();
+    // dot and the address. `apply_expansion` tells assistive technology
+    // whether the account is open.
     let dot = gtk::Box::builder()
         .valign(gtk::Align::Center)
         .css_classes([
@@ -1313,7 +1304,7 @@ fn heading(
         &heading_row_name(name.unwrap_or(&account.email), 0),
         &gettext("Show or hide this account's mailboxes"),
     );
-    (row, chevron, count, own)
+    (row, count, own)
 }
 
 /// The icon and the words beside an account's name for its state, or
