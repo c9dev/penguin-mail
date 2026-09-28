@@ -45,6 +45,10 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - Show in Calendar on an invitation opens the calendar on that day, with
   the event's details open. Its popover offers Open the invitation in
   Mail back to the message it arrived in.
+- An event's popover shows its notes under the place, as readable text
+  with clickable links, and a repeating event says when, such as
+  "Weekly on Wednesday". Its guest list shows every guest's own answer
+  and marks the organizer, with Show all past a few names.
 
 ### Improved
 
