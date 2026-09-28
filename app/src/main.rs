@@ -158,23 +158,17 @@ fn main() -> glib::ExitCode {
             APP_ID
         })
         .build();
-    // A second launch with --compose hands the request to the running copy.
-    if let Some(to) = &compose
-        && gio_app.register(gio::Cancellable::NONE).is_ok()
-        && gio_app.is_remote()
-    {
-        gio_app.activate_action("compose-to", Some(&to.to_variant()));
-        return glib::ExitCode::SUCCESS;
-    }
-    // Likewise a calendar file, which the running copy opens in a window
-    // of its own.
-    if let Some(path) = &file
-        && gio_app.register(gio::Cancellable::NONE).is_ok()
-        && gio_app.is_remote()
-    {
-        gio_app.activate_action("open-calendar-file", Some(&path.to_string_lossy().to_variant()));
-        return glib::ExitCode::SUCCESS;
-    }
+    // A second launch with --compose or a calendar file hands the request
+    // to the running copy; the check waits until the handlers below are
+    // connected, since registering emits `startup` for a copy that turns
+    // out to be the first.
+    let handoff = compose
+        .as_ref()
+        .map(|to| ("compose-to", to.to_variant()))
+        .or_else(|| {
+            file.as_ref()
+                .map(|path| ("open-calendar-file", path.to_string_lossy().to_variant()))
+        });
     let state: Rc<RefCell<Option<Rc<app::App>>>> = Rc::new(RefCell::new(None));
     let started = Rc::clone(&state);
     let finished = Rc::clone(&state);
@@ -197,6 +191,13 @@ fn main() -> glib::ExitCode {
             app.activate();
         }
     });
+    if let Some((action, parameter)) = &handoff
+        && gio_app.register(gio::Cancellable::NONE).is_ok()
+        && gio_app.is_remote()
+    {
+        gio_app.activate_action(action, Some(parameter));
+        return glib::ExitCode::SUCCESS;
+    }
     let code = gio_app.run_with_args(&args[..1]);
     // The MCP servers live in a static, which nothing drops, and a stdio
     // server would outlive the app without this.

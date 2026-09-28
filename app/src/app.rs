@@ -239,9 +239,10 @@ impl App {
             self.skip_first_window.set(false);
             // Accounts load asynchronously; give them a moment first, so
             // the window knows which have a calendar.
-            let this = Rc::clone(self);
+            let (this, hold) = (Rc::clone(self), self.gio.hold());
             glib::timeout_add_local_once(std::time::Duration::from_millis(600), move || {
-                this.open_calendar_file(&path)
+                this.open_calendar_file(&path);
+                drop(hold);
             });
             return;
         }

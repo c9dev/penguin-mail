@@ -53,6 +53,9 @@ pub fn open(app: &Rc<App>, path: &Path) -> adw::Window {
         .default_width(520)
         .default_height(-1)
         .build();
+    // The card's colors follow the window's light or dark class, which the
+    // main window sets for itself.
+    crate::ui::window::track_dark_class(&window);
     let toasts = adw::ToastOverlay::new();
     let header = adw::HeaderBar::new();
     let toolbar = adw::ToolbarView::new();
