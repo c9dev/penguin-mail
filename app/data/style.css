@@ -67,7 +67,6 @@ row.account-heading { transition: background-color 120ms ease, color 120ms ease;
 .thread-row.unread .from { font-weight: 800; }
 /* The sender's address beside the name, styled as the mockup's secondary
    text (R4): it lets a person spot a look-alike name. */
-.thread-row .address { opacity: 0.64; font-size: 0.89em; }
 .thread-row .subject { font-weight: 500; }
 .thread-row.unread .subject { font-weight: 700; }
 .thread-row .snippet { opacity: 0.6; font-size: 0.93em; }
