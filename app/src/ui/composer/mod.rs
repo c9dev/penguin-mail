@@ -125,6 +125,14 @@ pub struct Composer {
     drop_history: gtk::Button,
     /// Set while a move of `history` waits for the body's layout.
     placing: Cell<bool>,
+    unfold: gtk::Button,
+    /// The quote the writer unfolded, kept so an Undo that takes it out of
+    /// the body folds it again instead of losing it.
+    unfolded: RefCell<Option<String>>,
+    /// Where "•••" shows a forwarded message as it arrived, read-only,
+    /// under the editor. The page is made the first time it is asked for.
+    forward_box: gtk::Box,
+    forward_page: RefCell<Option<webkit::WebView>>,
     send: adw::SplitButton,
     /// Sign and Encrypt, which this computer's gpg and gpgsm answer for.
     /// Both stay out of the window when there is neither to run. One pair
@@ -451,6 +459,13 @@ impl Composer {
         content.append(&format_bar);
         content.append(&line());
         content.append(&stack);
+        let forward_box = gtk::Box::builder()
+            .orientation(gtk::Orientation::Vertical)
+            .height_request(280)
+            .visible(false)
+            .build();
+        forward_box.append(&line());
+        content.append(&forward_box);
         content.append(&files);
         let toolbar = adw::ToolbarView::new();
         toolbar.add_top_bar(&header);
@@ -494,6 +509,10 @@ impl Composer {
             history,
             drop_history,
             placing: Cell::new(false),
+            unfold: unfold.clone(),
+            unfolded: RefCell::new(None),
+            forward_box,
+            forward_page: RefCell::new(None),
             send,
             sign,
             encrypt,
@@ -528,7 +547,7 @@ impl Composer {
         composer.update_title();
         composer.show_more(composer.more_button.is_active());
         composer.wire(&attach, &preview_toggle);
-        composer.wire_history(&unfold);
+        composer.wire_history();
         composer.refresh_history();
         composer.fill_format_bar(&format_bar);
         composer.accept_images();
@@ -738,12 +757,7 @@ impl Composer {
         preview_toggle.connect_toggled(move |toggle| {
             let Some(c) = weak.upgrade() else { return };
             if toggle.is_active() {
-                let dark = adw::StyleManager::default().is_dark();
-                let html = format!(
-                    "<!doctype html><html><head><meta charset=\"utf-8\"><style>body{{margin:24px;{}}}</style></head><body>{}</body></html>",
-                    if dark { "background:#1e1e1e;filter:invert(0.92) hue-rotate(180deg)" } else { "background:#fff" },
-                    c.with_inline_images(c.html())
-                );
+                let html = c.page(&c.with_inline_images(c.html()));
                 c.preview.load_html(&html, None);
                 c.stack.set_visible_child_name("preview");
             } else {
@@ -903,9 +917,9 @@ impl Composer {
     /// "•••" puts the history in the body; × drops it, with Undo on a
     /// toast. The row follows the last line as the body grows, shrinks or
     /// wraps anew.
-    fn wire_history(self: &Rc<Self>, unfold: &gtk::Button) {
+    fn wire_history(self: &Rc<Self>) {
         let weak = Rc::downgrade(self);
-        unfold.connect_clicked(move |_| {
+        self.unfold.connect_clicked(move |_| {
             if let Some(c) = weak.upgrade() {
                 c.unfold_history();
             }
@@ -922,6 +936,16 @@ impl Composer {
                 c.place_history_soon();
             }
         });
+        // After GTK's own handlers, once the text has changed.
+        for signal in ["undo", "redo"] {
+            let weak = Rc::downgrade(self);
+            self.body.buffer().connect_local(signal, true, move |_| {
+                if let Some(c) = weak.upgrade() {
+                    c.history_moved();
+                }
+                None
+            });
+        }
         let adjustments = [self.body.vadjustment(), self.body.hadjustment()];
         for adjustment in adjustments.into_iter().flatten() {
             let weak = Rc::downgrade(self);
@@ -954,20 +978,92 @@ impl Composer {
             }
             None => {
                 self.history.set_visible(false);
+                self.show_forward(false);
                 self.body.set_bottom_margin(BODY_MARGIN);
             }
         }
     }
 
     /// Puts the folded history into the body, under the writer's words.
+    /// A reply's quote goes into the body to edit; a forwarded message
+    /// shows under the editor as it arrived, and "•••" hides it again.
     fn unfold_history(self: &Rc<Self>) {
         let unfolding = self.base.borrow_mut().take_history();
-        let Some(unfolding) = unfolding else { return };
+        let Some(unfolding) = unfolding else {
+            return self.show_forward(!self.forward_box.is_visible());
+        };
+        self.unfolded.replace(Some(unfolding.markdown.clone()));
         self.editor.append_history(&unfolding);
         self.dirty.set(true);
         self.refresh_history();
         // The button that had the focus is gone; the body takes it.
         self.body.grab_focus();
+    }
+
+    /// Folds the quote again when an Undo took the unfolded one out of the
+    /// body, and unfolds it when a Redo put it back, so no step of either
+    /// sends the reply without it.
+    fn history_moved(self: &Rc<Self>) {
+        let Some(present) = self.editor.history_present() else {
+            return;
+        };
+        let quote = self.unfolded.borrow().clone();
+        let Some(quote) = quote else { return };
+        let changed = {
+            let mut base = self.base.borrow_mut();
+            match (present, base.quoted.is_some()) {
+                (false, false) => {
+                    base.quoted = Some(quote);
+                    true
+                }
+                (true, true) => {
+                    base.quoted = None;
+                    true
+                }
+                _ => false,
+            }
+        };
+        if changed {
+            self.refresh_history();
+        }
+    }
+
+    /// Shows or hides the forwarded message under the editor, read-only
+    /// and as it will go out.
+    fn show_forward(&self, show: bool) {
+        let html = match show {
+            true => self.base.borrow().forwarded.as_ref().map(|f| f.to_html()),
+            false => None,
+        };
+        let shown = html.is_some();
+        if let Some(html) = html {
+            let page = self.forward_page.borrow().clone();
+            let page = page.unwrap_or_else(|| {
+                let settings = webkit::Settings::new();
+                settings.set_enable_javascript(false);
+                let page = webkit::WebView::builder().settings(&settings).build();
+                page.set_vexpand(true);
+                name(&page, &gettext("Forwarded Message"));
+                self.forward_box.append(&page);
+                self.forward_page.replace(Some(page.clone()));
+                page
+            });
+            page.load_html(&self.page(&self.with_inline_images(html)), None);
+        }
+        self.forward_box.set_visible(shown);
+        self.unfold
+            .update_state(&[gtk::accessible::State::Expanded(Some(shown))]);
+    }
+
+    /// `body` as a page for the preview and the forwarded message, drawn
+    /// dark when the app is.
+    fn page(&self, body: &str) -> String {
+        let dark = adw::StyleManager::default().is_dark();
+        format!(
+            "<!doctype html><html><head><meta charset=\"utf-8\"><style>body{{margin:24px;{}}}</style></head><body>{}</body></html>",
+            if dark { "background:#1e1e1e;filter:invert(0.92) hue-rotate(180deg)" } else { "background:#fff" },
+            body
+        )
     }
 
     /// Drops the folded history, so the message goes without it, and

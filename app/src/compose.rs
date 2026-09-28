@@ -21,7 +21,7 @@ use serde::{Deserialize, Serialize};
 use crate::attachcheck::{self, Promise};
 use crate::format::full_date;
 use crate::protection::Standard;
-use crate::richtext::{self, Block, BlockKind, RichBody, Span};
+use crate::richtext::{self, Block, RichBody};
 use mailrs_domain::translate::{fill, gettext};
 
 /// One address an account may send mail as, as Gmail last reported it: the
@@ -231,41 +231,6 @@ impl Forwarded {
         out.push('\n');
         out.push_str(self.text.trim_end());
         out
-    }
-
-    /// The forwarded part as the editor holds it once the writer unfolds
-    /// it: the header block a line each, then the original, styled as far
-    /// as its HTML goes.
-    pub fn as_rich(&self) -> RichBody {
-        let lines = |text: &str| -> Vec<Block> {
-            text.replace("\r\n", "\n")
-                .lines()
-                .map(|line| match line.trim().is_empty() {
-                    true => Block::default(),
-                    false => Block::new(BlockKind::Paragraph, vec![Span::plain(line)]),
-                })
-                .collect()
-        };
-        let html = self.html.as_deref().filter(|h| !h.trim().is_empty());
-        if self.whole {
-            // A saved draft's forward carries its header block already.
-            return match html {
-                Some(html) => RichBody::from_html(html),
-                None => RichBody {
-                    blocks: lines(self.text.trim()),
-                },
-            };
-        }
-        let mut blocks = lines("---------- Forwarded message ----------");
-        for (name, value) in self.header_lines() {
-            blocks.extend(lines(&format!("{name}: {value}")));
-        }
-        blocks.push(Block::default());
-        match html {
-            Some(html) => blocks.extend(RichBody::from_html(html).blocks),
-            None => blocks.extend(lines(self.text.trim_end())),
-        }
-        RichBody { blocks }
     }
 
     /// The whole forwarded part as HTML, with the original untouched
@@ -597,12 +562,7 @@ impl Draft {
             }
             None => (None, None),
         };
-        // A forward the writer unfolded has its header block in the text
-        // part too, but nothing marks it in the HTML: it stays in the body.
-        let (text, forwarded_text) = match forwarded_html.is_some() || html.is_none() {
-            true => split_forwarded_text(&body_text(body)),
-            false => (body_text(body), None),
-        };
+        let (text, forwarded_text) = split_forwarded_text(&body_text(body));
         let folded = html.as_deref().and_then(|html| html.find(QUOTE_MARK));
         let quote_at = folded.and_then(|_| trailing_quote_at(&text));
         let (text, html) = match (quote_at, folded, html) {
@@ -671,8 +631,8 @@ pub struct Unfolding {
 }
 
 impl Draft {
-    /// Puts the folded quote, or else the forwarded message, into the body
-    /// under the writer's words, and gives back what went in. From here on
+    /// Puts the folded quote into the body under the writer's words, and
+    /// gives back what went in. From here on
     /// the history is part of the body and the writer can trim it. `None`
     /// when nothing was folded.
     ///
@@ -690,23 +650,18 @@ impl Draft {
         Some(history)
     }
 
-    /// Takes the folded quote, or else the forwarded message, out of the
-    /// draft in the form the editor adds under the writer's words. The
-    /// composer calls this when the writer unfolds the history, since its
-    /// editor holds the body rather than the draft.
+    /// Takes the folded quote out of the draft in the form the editor adds
+    /// under the writer's words. The composer calls this when the writer
+    /// unfolds it, since its editor holds the body rather than the draft.
+    ///
+    /// A forwarded message stays where it is. Written into the editor it
+    /// would come back out as prose, which is what breaks a forwarded
+    /// newsletter, so the composer shows it beside the editor instead.
     pub fn take_history(&mut self) -> Option<Unfolding> {
-        Some(match self.quoted.take() {
-            Some(quoted) => Unfolding {
-                rich: RichBody::from_markdown(&quoted),
-                markdown: quoted,
-            },
-            None => {
-                let rich = self.forwarded.take()?.as_rich();
-                Unfolding {
-                    markdown: rich.to_markdown(),
-                    rich,
-                }
-            }
+        let quoted = self.quoted.take()?;
+        Some(Unfolding {
+            rich: RichBody::from_markdown(&quoted),
+            markdown: quoted,
         })
     }
 }
@@ -2808,30 +2763,25 @@ mod tests {
     }
 
     #[test]
-    fn unfolding_a_forward_puts_its_header_block_under_the_words() {
+    fn showing_a_forward_leaves_what_it_sends_alone() {
         let mut draft = forward_of_a_sale();
-        draft.rich = Some(RichBody::from_markdown("FYI"));
-        draft.unfold().expect("there was a forward to unfold");
-        assert!(draft.forwarded.is_none());
-        let rich = draft.rich.as_ref().unwrap();
-        let plain = rich.to_plain();
-        assert!(plain.starts_with("FYI\n\n---------- Forwarded message ----------\n"), "{plain}");
-        assert!(plain.contains("From: Ann <ann@example.com>\n"), "{plain}");
-        assert!(plain.contains("Subject: Lunch plans\n"), "{plain}");
-        assert!(plain.contains("Sale today"), "{plain}");
-        // The original's own bold survives the trip into the editor.
-        assert!(rich.to_html().contains("<strong>today</strong>"));
-        assert!(draft.markdown.contains("Forwarded message"));
-    }
-
-    #[test]
-    fn an_unfolded_forward_reopens_unfolded() {
-        let mut draft = forward_of_a_sale();
-        draft.unfold();
-        let (reopened, _) = saved_and_reopened(&draft);
-        assert!(reopened.forwarded.is_none());
-        assert!(reopened.markdown.contains("Forwarded message"));
-        assert!(reopened.markdown.contains("Sale"));
+        let before = build_mime(&draft, 0, "id@example.com").unwrap();
+        // "•••" on a forward shows the original beside the editor and puts
+        // nothing in the body.
+        assert!(draft.take_history().is_none());
+        let shown = draft.forwarded.as_ref().unwrap().to_html();
+        assert!(shown.contains("<p>Sale <b>today</b></p>"), "{shown}");
+        let after = build_mime(&draft, 0, "id@example.com").unwrap();
+        let html = |raw: &[u8]| {
+            MessageParser::default()
+                .parse(raw)
+                .unwrap()
+                .body_html(0)
+                .unwrap()
+                .to_string()
+        };
+        assert_eq!(html(&after), html(&before));
+        assert!(html(&after).contains("<p>Sale <b>today</b></p>"));
     }
 
     #[test]
