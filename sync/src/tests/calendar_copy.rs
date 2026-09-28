@@ -1652,3 +1652,150 @@ async fn an_organizers_removal_keeps_their_choice_about_the_guests() {
     copy.send(h.account_id).await.unwrap();
     assert_eq!(notices(&h), [("review".to_string(), Notify::Guests)]);
 }
+
+// ---- Going back further than the first read ----------------------------
+
+const YEAR: i64 = 365 * 24 * 60 * 60_000;
+
+/// An event `years` before `NOW`.
+fn back(calendar: &str, id: &str, years: i64) -> Event {
+    Event { start: NOW - years * YEAR, end: NOW - years * YEAR + 3_600_000, ..event(calendar, id) }
+}
+
+fn list_calls(h: &Harness) -> u32 {
+    h.fake.usage().calls_to("calendar.events.list")
+}
+
+async fn token_of(h: &Harness, calendar: &str) -> Option<String> {
+    let (account, calendar) = (h.account_id, calendar.to_string());
+    h.db.read(move |c| store::token(c, account, &calendar)).await.unwrap()
+}
+
+#[tokio::test]
+async fn an_older_week_is_fetched_and_kept() {
+    let h = harness().await;
+    h.fake.with(|s| s.calendars = vec![calendar("primary", true)]);
+    h.fake.put_calendar_event(event("primary", "now"));
+    h.fake.put_calendar_event(back("primary", "old", 2));
+    let copy = copy(&h);
+    copy.refresh(h.account_id, NOW).await.unwrap();
+    assert!(stored(&h, "primary", "old").await.is_none(), "the first read starts a year back");
+    let wanted = NOW - 2 * YEAR;
+    assert!(copy.older_missing(&[h.account_id], wanted).await.unwrap());
+    let read = copy.reach_back(&[h.account_id], wanted).await.unwrap();
+    assert_eq!(read, 1);
+    assert!(stored(&h, "primary", "old").await.is_some());
+    assert!(stored(&h, "primary", "now").await.is_some(), "what the copy had stays");
+}
+
+#[tokio::test]
+async fn a_range_already_fetched_is_not_fetched_again() {
+    let h = harness().await;
+    h.fake.with(|s| s.calendars = vec![calendar("primary", true)]);
+    h.fake.put_calendar_event(back("primary", "old", 2));
+    let copy = copy(&h);
+    copy.refresh(h.account_id, NOW).await.unwrap();
+    let wanted = NOW - 2 * YEAR;
+    copy.reach_back(&[h.account_id], wanted).await.unwrap();
+    let before = list_calls(&h);
+    assert!(!copy.older_missing(&[h.account_id], wanted).await.unwrap());
+    // The week before, in the same month, and a date the copy always had.
+    assert_eq!(copy.reach_back(&[h.account_id], wanted - 3 * 24 * 3_600_000).await.unwrap(), 0);
+    assert_eq!(copy.reach_back(&[h.account_id], NOW).await.unwrap(), 0);
+    assert_eq!(list_calls(&h), before, "no second request for a range the copy holds");
+}
+
+#[tokio::test]
+async fn a_range_fetch_leaves_the_sync_token_alone() {
+    let h = harness().await;
+    h.fake.with(|s| s.calendars = vec![calendar("primary", true)]);
+    h.fake.put_calendar_event(back("primary", "old", 2));
+    let copy = copy(&h);
+    copy.refresh(h.account_id, NOW).await.unwrap();
+    let token = token_of(&h, "primary").await;
+    assert!(token.is_some());
+    copy.reach_back(&[h.account_id], NOW - 2 * YEAR).await.unwrap();
+    assert_eq!(token_of(&h, "primary").await, token);
+}
+
+/// The change read that follows names only what changed. It must neither
+/// drop the older rows it never mentions nor store one of them twice.
+#[tokio::test]
+async fn a_later_change_read_leaves_the_older_rows_alone() {
+    let h = harness().await;
+    h.fake.with(|s| s.calendars = vec![calendar("primary", true)]);
+    h.fake.put_calendar_event(event("primary", "now"));
+    h.fake.put_calendar_event(back("primary", "old", 2));
+    let copy = copy(&h);
+    copy.refresh(h.account_id, NOW).await.unwrap();
+    copy.reach_back(&[h.account_id], NOW - 2 * YEAR).await.unwrap();
+    h.fake.put_calendar_event(event("primary", "new"));
+    h.fake.with(|s| s.calendar_events.retain(|e| e.id != "now"));
+    h.fake.put_calendar_event(event("primary", "now"));
+    copy.refresh(h.account_id, NOW + READ_EVERY_OPEN).await.unwrap();
+    assert!(stored(&h, "primary", "new").await.is_some());
+    let old = stored(&h, "primary", "old").await.expect("the older row survives the change read");
+    assert_eq!(old.start, NOW - 2 * YEAR);
+    let account = h.account_id;
+    let rows = h
+        .db
+        .read(move |c| store::occurrences(c, &[account], NOW - 3 * YEAR, NOW + YEAR, mailrs_store::calendar::CalendarScope::Shown))
+        .await
+        .unwrap();
+    assert_eq!(rows.iter().filter(|o| o.event.id == "old").count(), 1, "stored once");
+}
+
+#[tokio::test]
+async fn a_change_to_an_older_event_the_change_read_names_replaces_its_row() {
+    let h = harness().await;
+    h.fake.with(|s| s.calendars = vec![calendar("primary", true)]);
+    h.fake.put_calendar_event(back("primary", "old", 2));
+    let copy = copy(&h);
+    copy.refresh(h.account_id, NOW).await.unwrap();
+    copy.reach_back(&[h.account_id], NOW - 2 * YEAR).await.unwrap();
+    h.fake.put_calendar_event(Event { title: "renamed".into(), ..back("primary", "old", 2) });
+    copy.refresh(h.account_id, NOW + READ_EVERY_OPEN).await.unwrap();
+    assert_eq!(stored(&h, "primary", "old").await.unwrap().title, "renamed");
+}
+
+#[tokio::test]
+async fn a_calendar_read_whole_again_keeps_the_older_range_it_fetched() {
+    let h = harness().await;
+    h.fake.with(|s| s.calendars = vec![calendar("primary", true)]);
+    h.fake.put_calendar_event(back("primary", "old", 2));
+    let copy = copy(&h);
+    copy.refresh(h.account_id, NOW).await.unwrap();
+    copy.reach_back(&[h.account_id], NOW - 2 * YEAR).await.unwrap();
+    h.fake.with(|s| s.expire_calendar_tokens = true);
+    copy.refresh(h.account_id, NOW + READ_EVERY_OPEN).await.unwrap();
+    assert!(stored(&h, "primary", "old").await.is_some(), "the whole read went back as far as the copy did");
+}
+
+#[tokio::test]
+async fn offline_an_older_range_fails_and_is_asked_again_later() {
+    let h = harness().await;
+    h.fake.with(|s| s.calendars = vec![calendar("primary", true)]);
+    h.fake.put_calendar_event(back("primary", "old", 2));
+    let copy = copy(&h);
+    copy.refresh(h.account_id, NOW).await.unwrap();
+    let wanted = NOW - 2 * YEAR;
+    h.fake.with(|s| s.offline = true);
+    let err = copy.reach_back(&[h.account_id], wanted).await.unwrap_err();
+    assert!(matches!(err, crate::SyncError::Backend(ref e) if e.is_transient()), "{err:?}");
+    assert!(copy.older_missing(&[h.account_id], wanted).await.unwrap(), "nothing was recorded");
+    h.fake.with(|s| s.offline = false);
+    assert_eq!(copy.reach_back(&[h.account_id], wanted).await.unwrap(), 1);
+}
+
+#[tokio::test]
+async fn only_the_shown_calendars_are_fetched_back() {
+    let h = harness().await;
+    h.fake.with(|s| s.calendars = vec![calendar("primary", true), hidden("team")]);
+    h.fake.put_calendar_event(back("primary", "mine", 2));
+    h.fake.put_calendar_event(back("team", "theirs", 2));
+    let copy = copy(&h);
+    copy.refresh(h.account_id, NOW).await.unwrap();
+    copy.reach_back(&[h.account_id], NOW - 2 * YEAR).await.unwrap();
+    assert!(stored(&h, "primary", "mine").await.is_some());
+    assert!(stored(&h, "team", "theirs").await.is_none());
+}

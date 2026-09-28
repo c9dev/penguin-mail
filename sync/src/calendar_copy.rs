@@ -10,6 +10,8 @@
 //! open. A calendar is read whole once, from a year back, and after that
 //! only what changed since the provider's sync token. An expired token
 //! reads it whole again, which replaces what the store held for it.
+//! When the person goes further back, [`CalendarCopy::reach_back`] fetches
+//! that range on its own, once, and the copy remembers how far it reaches.
 //!
 //! An account that granted `calendar.events` but not the list scope
 //! still gets its primary calendar, addressed by the
@@ -28,6 +30,7 @@ use mailrs_domain::{AccountId, EpochMillis};
 use mailrs_store::Db;
 use mailrs_store::calendar as store;
 
+use crate::calendar_reach::missing_range;
 use crate::settings::Permitted;
 use crate::{Accounts, AnyCalendar, BackendError, CalendarService, SyncError};
 
@@ -90,6 +93,10 @@ pub struct CalendarCopy<A: Accounts> {
     /// reading it again and sending the same change twice. `send` waits on it instead of
     /// walking past it, since a person's own edit should still go out.
     running: tokio::sync::Mutex<()>,
+    /// Held while a range older than the copy reaches is fetched, so a
+    /// second ask for the same range waits, then finds it held and reads
+    /// nothing.
+    reaching: tokio::sync::Mutex<()>,
     /// The rows of held changes, which a read leaves alone as it leaves
     /// queued ones. One entry per step, so two changes touching one row
     /// each release only their own.
@@ -188,6 +195,7 @@ impl<A: Accounts> CalendarCopy<A> {
             last_read: Mutex::new(HashMap::new()),
             refused: Mutex::new(HashMap::new()),
             running: tokio::sync::Mutex::new(()),
+            reaching: tokio::sync::Mutex::new(()),
             held: Mutex::new(Vec::new()),
             waiting: tokio::sync::Mutex::new(None),
             serial: AtomicU64::new(0),
@@ -390,6 +398,14 @@ impl<A: Accounts> CalendarCopy<A> {
             let id = id.to_string();
             self.db.read(move |c| store::token(c, account_id, &id)).await?
         };
+        // A whole read goes back as far as the copy already does, so a
+        // token the server lost does not drop the older ranges the person
+        // fetched: the sweep after it keeps only what the read repeated.
+        let reach = {
+            let id = id.to_string();
+            self.db.read(move |c| store::reach(c, account_id, &id)).await?
+        };
+        let time_min = reach.map_or(now - FIRST_READ_BACK, |reach| reach.min(now - FIRST_READ_BACK));
         let mut token = held;
         let mut retried = false;
         // The moment this read started, marked on every row it writes, so
@@ -402,7 +418,7 @@ impl<A: Accounts> CalendarCopy<A> {
             let mut count = 0usize;
             for _ in 0..PAGE_LIMIT {
                 let answer = calendar
-                    .event_changes(id, token.as_deref(), page.as_deref(), now - FIRST_READ_BACK)
+                    .event_changes(id, token.as_deref(), page.as_deref(), time_min)
                     .await;
                 let got = match answer {
                     Ok(got) => got,
@@ -419,31 +435,18 @@ impl<A: Accounts> CalendarCopy<A> {
                 };
                 let last_page = got.next_page.is_none();
                 count += got.events.len() + got.removed.len();
-                let (mut events, mut removed, next_sync) = (got.events, got.removed, got.next_sync);
+                let (events, removed, next_sync) = (got.events, got.removed, got.next_sync);
                 let calendar_id = id.to_string();
                 // Taken before the write, since the lock must not be held
                 // across an await.
-                let (held, held_removals) = self.held_in(account_id, id);
+                let held = self.held_in(account_id, id);
                 self.db
                     .write(move |c| {
-                        // An event with a change of ours still queued or
-                        // held keeps our version until the queue sends it.
-                        let mut pending = store::pending_ids(c, account_id, &calendar_id)?;
-                        pending.extend(held);
-                        // A series on its way out takes its changed
-                        // occurrences with it; a read must not bring them
-                        // back to stand alone.
-                        let mut removing = store::removing_ids(c, account_id, &calendar_id)?;
-                        removing.extend(held_removals);
-                        events.retain(|e| {
-                            !pending.contains(&e.id) && !e.series.as_ref().is_some_and(|s| removing.contains(s))
-                        });
-                        removed.retain(|e| !pending.contains(e));
-                        store::save_events(c, account_id, &events, mark)?;
-                        store::remove_events(c, account_id, &calendar_id, &removed)?;
+                        store_page(c, account_id, &calendar_id, held, events, removed, mark)?;
                         if last_page {
                             if whole {
                                 store::sweep(c, account_id, &calendar_id, mark)?;
+                                store::set_reach(c, account_id, &calendar_id, time_min)?;
                             }
                             store::set_token(c, account_id, &calendar_id, next_sync.as_deref(), now)?;
                         }
@@ -458,6 +461,115 @@ impl<A: Accounts> CalendarCopy<A> {
             tracing::warn!(account = account_id, calendar = id, "gave up reading a calendar after {PAGE_LIMIT} pages");
             return Ok(Permitted::Done(count));
         }
+    }
+
+    /// Whether any shown calendar of `accounts` lacks events back to
+    /// `from`. The window asks this before `reach_back`, so it shows its
+    /// loading line only for a fetch that will happen.
+    pub async fn older_missing(&self, accounts: &[AccountId], from: EpochMillis) -> Result<bool, SyncError> {
+        let accounts = accounts.to_vec();
+        Ok(self
+            .db
+            .read(move |c| {
+                for account_id in accounts {
+                    for entry in store::calendars(c, account_id)?.into_iter().filter(|e| e.shown) {
+                        let reach = store::reach(c, account_id, &entry.id)?;
+                        if missing_range(reach, from).is_some() {
+                            return Ok(true);
+                        }
+                    }
+                }
+                Ok(false)
+            })
+            .await?)
+    }
+
+    /// Fetches, for every shown calendar of `accounts`, the events back to
+    /// `from` that the copy does not hold yet, and keeps them. A range is
+    /// a read of its own with `timeMin` and `timeMax`; it never touches a
+    /// calendar's sync token, and the change reads that follow name only
+    /// what changed, so they leave these rows as they are. What each
+    /// calendar now reaches is recorded, so no range is fetched twice.
+    /// Returns how many events were stored or removed. An offline or
+    /// rate-limited read stops the rest and answers the error, having
+    /// recorded nothing for the calendar it stopped on.
+    pub async fn reach_back(&self, accounts: &[AccountId], from: EpochMillis) -> Result<usize, SyncError> {
+        let mut total = 0;
+        for &account_id in accounts {
+            let Some(calendar) = self.calendar(account_id)? else { continue };
+            let shown: Vec<Calendar> = self
+                .db
+                .read(move |c| store::calendars(c, account_id))
+                .await?
+                .into_iter()
+                .filter(|e| e.shown)
+                .collect();
+            for entry in shown {
+                match crate::background(self.reach_calendar(&calendar, account_id, &entry.id, from)).await {
+                    Ok(Permitted::Done(count)) => total += count,
+                    Ok(Permitted::NeedsPermission) => {}
+                    Err(SyncError::Backend(BackendError::NotFound)) => {}
+                    Err(SyncError::Backend(err)) if err.is_transient() => return Err(err.into()),
+                    Err(err) if !matches!(err, SyncError::Store(_)) => {
+                        tracing::warn!(account = account_id, calendar = entry.id, %err, "could not read an older range");
+                    }
+                    Err(err) => return Err(err),
+                }
+            }
+        }
+        Ok(total)
+    }
+
+    async fn reach_calendar(
+        &self,
+        calendar: &AnyCalendar,
+        account_id: AccountId,
+        id: &str,
+        from: EpochMillis,
+    ) -> Result<Permitted<usize>, SyncError> {
+        let _turn = self.reaching.lock().await;
+        let reach = {
+            let id = id.to_string();
+            self.db.read(move |c| store::reach(c, account_id, &id)).await?
+        };
+        let Some((start, end)) = missing_range(reach, from) else {
+            return Ok(Permitted::Done(0));
+        };
+        let mark = crate::now_millis();
+        let mut page: Option<String> = None;
+        let mut count = 0usize;
+        for _ in 0..PAGE_LIMIT {
+            let got = match calendar.event_range(id, start, end, page.as_deref()).await {
+                Ok(got) => got,
+                Err(BackendError::NeedsPermission) => return Ok(Permitted::NeedsPermission),
+                Err(err) => return Err(err.into()),
+            };
+            let last_page = got.next_page.is_none();
+            count += got.events.len() + got.removed.len();
+            let calendar_id = id.to_string();
+            let held = self.held_in(account_id, id);
+            let (events, removed, next) = (got.events, got.removed, got.next_page);
+            // The sync token on the last page belongs to this range's own
+            // filter, so it is dropped: the calendar keeps its own.
+            self.db
+                .write(move |c| {
+                    store_page(c, account_id, &calendar_id, held, events, removed, mark)?;
+                    if last_page {
+                        store::set_reach(c, account_id, &calendar_id, start)?;
+                    }
+                    Ok(())
+                })
+                .await?;
+            match next {
+                Some(next) => page = Some(next),
+                None => return Ok(Permitted::Done(count)),
+            }
+        }
+        // The pages ran out of patience before the range did: what was
+        // stored stays, and the reach is not moved, so the next ask reads
+        // the range again.
+        tracing::warn!(account = account_id, calendar = id, "gave up reading an older range after {PAGE_LIMIT} pages");
+        Ok(Permitted::Done(count))
     }
 
     /// Stores `event` as waiting and queues it for the provider. The view
@@ -1207,6 +1319,29 @@ impl<A: Accounts> CalendarCopy<A> {
 
 /// The occurrence a person picked: a changed occurrence knows its place
 /// in the series, and a plain one starts where the series put it.
+/// Stores one page of a calendar read, leaving alone every event a queued
+/// or held change of ours still owns, and every occurrence of a series on
+/// its way out, which a read must not bring back to stand alone.
+fn store_page(
+    c: &rusqlite::Connection,
+    account_id: AccountId,
+    calendar_id: &str,
+    (held, held_removals): (Vec<String>, Vec<String>),
+    mut events: Vec<Event>,
+    mut removed: Vec<String>,
+    mark: EpochMillis,
+) -> mailrs_store::Result<()> {
+    let mut pending = store::pending_ids(c, account_id, calendar_id)?;
+    pending.extend(held);
+    let mut removing = store::removing_ids(c, account_id, calendar_id)?;
+    removing.extend(held_removals);
+    events.retain(|e| !pending.contains(&e.id) && !e.series.as_ref().is_some_and(|s| removing.contains(s)));
+    removed.retain(|e| !pending.contains(e));
+    store::save_events(c, account_id, &events, mark)?;
+    store::remove_events(c, account_id, calendar_id, &removed)?;
+    Ok(())
+}
+
 fn picked(occurrence: &Occurrence) -> Picked {
     Picked { original_start: occurrence.event.original_start.unwrap_or(occurrence.start), start: occurrence.start }
 }
