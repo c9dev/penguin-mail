@@ -692,6 +692,28 @@ impl CalendarView {
         self.go_to(chrono::Local::now().date_naive());
     }
 
+    /// A small date picker, for G: jumps to the day chosen and closes.
+    pub fn go_to_date(self: &Rc<Self>) {
+        let picker = gtk::Calendar::new();
+        picker.set_date(&editor::day_to_glib(self.day.get()));
+        crate::ui::name(&picker, &gettext("Go to date"));
+        let popover = gtk::Popover::builder().child(&picker).autohide(true).build();
+        popover.set_parent(&self.today_button);
+        let weak = Rc::downgrade(self);
+        let closing = popover.clone();
+        picker.connect_day_selected(move |picker| {
+            let Some(this) = weak.upgrade() else { return };
+            let picked = picker.date();
+            if let Some(day) =
+                NaiveDate::from_ymd_opt(picked.year(), picked.month() as u32, picked.day_of_month() as u32)
+            {
+                this.go_to(day);
+            }
+            closing.popdown();
+        });
+        popover.popup();
+    }
+
     /// Moves `by` ranges forward, or back when negative. One step slides
     /// the carousel to its neighbour page along the same spring a swipe
     /// settles with; the page change then brings the pages round.
@@ -2044,6 +2066,15 @@ impl CalendarView {
             }
             glib::ControlFlow::Break
         });
+    }
+
+    /// Undoes the change the Undo toast still offers, the same way its
+    /// own button does: Ctrl+Z while the toast would still be up. Does
+    /// nothing once it has gone, however it went.
+    pub fn undo_last_held(self: &Rc<Self>) {
+        if let Some(id) = self.holding.borrow().last_id() {
+            self.undo_held(id);
+        }
     }
 
     fn undo_held(self: &Rc<Self>, id: u64) {

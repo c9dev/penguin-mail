@@ -156,6 +156,8 @@ impl MainWindow {
             CalendarKey::Search => calendar.focus_search(),
             CalendarKey::Delete => calendar.delete_focused(),
             CalendarKey::NewEvent => calendar.quick_create(),
+            CalendarKey::GoToDate => calendar.go_to_date(),
+            CalendarKey::Undo => calendar.undo_last_held(),
         }
         glib::Propagation::Stop
     }
