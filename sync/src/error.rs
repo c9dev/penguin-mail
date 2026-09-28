@@ -45,6 +45,10 @@ pub enum BackendError {
     /// helps, so no permission prompt is worth showing.
     #[error("{service} is switched off in the Google Cloud project; turn it on at {enable_url}")]
     ApiDisabled { service: String, enable_url: String },
+    /// A file to upload is no longer where it was picked. The path names
+    /// where it was.
+    #[error("the file is no longer at {0}")]
+    FileMissing(String),
     #[error(transparent)]
     Gmail(GmailError),
 }
@@ -71,6 +75,7 @@ impl From<GmailError> for BackendError {
             GmailError::RateLimited { retry_after } => BackendError::RateLimited(retry_after),
             GmailError::NotFound => BackendError::NotFound,
             GmailError::MissingScope => BackendError::NeedsPermission,
+            GmailError::FileMissing(path) => BackendError::FileMissing(path),
             GmailError::ApiDisabled {
                 service,
                 enable_url,

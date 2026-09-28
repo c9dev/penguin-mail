@@ -11,6 +11,7 @@
 //! settles on a neighbour.
 
 pub mod agenda;
+pub mod attachments;
 pub mod block;
 pub mod draft;
 pub mod drag;
@@ -96,6 +97,9 @@ pub struct Hooks {
     /// changing the calendar list, needs a permission the account
     /// withheld, and offers to ask for it.
     pub needs_manage_permission: Box<dyn Fn(AccountId)>,
+    /// Explains that attaching a file from this computer needs Drive,
+    /// which the account withheld, and offers to ask for it.
+    pub needs_drive_permission: Box<dyn Fn(AccountId)>,
     /// Opens the mail that carries an invitation, switching away from the
     /// calendar to it: the "Waiting for your answer" card's "Open mail"
     /// door and the event popover's "Open the invitation in Mail" link
@@ -2786,9 +2790,34 @@ impl CalendarView {
             writable: self.writable(),
             hidden: self.hidden.borrow().clone(),
             calendars: self.calendars.borrow().clone(),
+            attaching: Rc::new(self.attaching()),
         };
         let this = Rc::clone(self);
         editor::open(&self.page, draft, choices, contacts, move |draft| this.save_draft(draft));
+    }
+
+    /// What the editor's "Attach File…" works through: the account's
+    /// Drive permission, the question that asks for it, and the upload on
+    /// the sync runtime.
+    fn attaching(self: &Rc<Self>) -> editor::Attaching {
+        let (withheld_view, ask_view) = (Rc::downgrade(self), Rc::downgrade(self));
+        let core = Rc::clone(&self.core);
+        editor::Attaching {
+            withheld: Box::new(move |account| {
+                withheld_view.upgrade().is_some_and(|view| {
+                    view.accounts.borrow().iter().any(|(a, _, withheld)| a.id == account && withheld.drive)
+                })
+            }),
+            ask: Box::new(move |account| {
+                if let Some(view) = ask_view.upgrade() {
+                    (view.hooks.needs_drive_permission)(account);
+                }
+            }),
+            upload: Box::new(move |account, file, sent| {
+                let copy = core.calendar_copy();
+                core.runtime().spawn(async move { attachments::uploaded(copy.upload(account, file, sent).await) })
+            }),
+        }
     }
 
     /// Writes a new or changed event. A new time is confirmed first, and

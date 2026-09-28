@@ -44,8 +44,11 @@ def icon(x, y, size):
     """The app icon, drawn from its own file."""
     with open(ICON) as source:
         body = source.read()
-    body = body[body.index(">", body.index("<svg")) + 1 : body.rindex("</svg>")]
-    return '<svg x="%d" y="%d" width="%d" height="%d" viewBox="0 0 256 256">%s</svg>' % (x, y, size, size, body)
+    head = body[body.index("<svg") : body.index(">", body.index("<svg"))]
+    # The icon's own viewBox, so a redrawn icon on another grid still fills the box.
+    view = head.split('viewBox="', 1)[1].split('"', 1)[0]
+    body = body[len(head) + body.index("<svg") + 1 : body.rindex("</svg>")]
+    return '<svg x="%d" y="%d" width="%d" height="%d" viewBox="%s">%s</svg>' % (x, y, size, size, view, body)
 
 
 BACKGROUND = """

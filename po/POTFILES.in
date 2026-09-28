@@ -49,6 +49,7 @@ app/src/ui/assistant.rs
 app/src/ui/assistant_skills_prefs.rs
 app/src/ui/assistant_web_prefs.rs
 app/src/ui/calendar/agenda.rs
+app/src/ui/calendar/attachments.rs
 app/src/ui/calendar/block.rs
 app/src/ui/calendar/draft.rs
 app/src/ui/calendar/editor.rs

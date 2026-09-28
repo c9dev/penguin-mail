@@ -162,9 +162,15 @@ its branches; `git log main..<branch>` must be empty before a delete.
 The standing instruction is to decide on taste and keep going without
 stopping to ask: build a complete, good-looking client. Ask only for
 decisions that are theirs, such as the licence or anything outward
-facing. Their desktop uses the Gruvbox Plus Dark icon pack; the app icon
-sits on that pack's squircle with its bevel, taupe behind a cream
-penguin and an orange beak. Keep new icons in that idiom.
+facing.
+
+The app icon is an envelope that is also a penguin, drawn in GNOME's
+style: front view, a darker bottom edge for thickness, no drop shadow.
+The ink frame (`#2a2623`) is the hood, the flap's V is the widow's peak,
+the paper (`#fbf7f0`) is the face, and an orange beak (`#e8660c`) sits
+where a seal would. A 16 px copy is drawn on whole pixels, and the
+symbolic icon is the same shape in one colour. New icons follow this
+idiom. `docs/brand/README.md` has the palette and the logo rules.
 
 ## Agent skills
 

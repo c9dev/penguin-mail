@@ -218,12 +218,14 @@ pub fn synced(conn: &Connection, account_id: AccountId) -> Result<bool> {
 /// page repeated from one still current.
 pub fn save_events(conn: &Connection, account_id: AccountId, events: &[Event], seen_at: EpochMillis) -> Result<()> {
     for event in events {
+        let attachments = kept_attachments(conn, account_id, event)?;
         conn.execute(
             "INSERT OR REPLACE INTO events (account_id, calendar, id, uid, etag, starts_at, ends_at, zone, \
              all_day, title, place, description, color, busy, status, private, organizer, my_answer, \
-             reminders, conference, rules, series_end, series, original_start, pending, seen_at, sequence, kind) \
+             reminders, conference, rules, series_end, series, original_start, pending, seen_at, sequence, kind, \
+             attachments) \
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, \
-             ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27, ?28)",
+             ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27, ?28, ?29)",
             params![
                 account_id,
                 event.calendar,
@@ -253,6 +255,7 @@ pub fn save_events(conn: &Connection, account_id: AccountId, events: &[Event], s
                 seen_at,
                 event.sequence,
                 (event.kind != Kind::Event).then(|| json(&event.kind)),
+                attachments.as_ref().map(json),
             ],
         )?;
         conn.execute(
@@ -362,7 +365,8 @@ pub fn sweep(conn: &Connection, account_id: AccountId, calendar: &str, before: E
 
 const COLUMNS: &str = "e.account_id, e.calendar, e.id, e.uid, e.etag, e.starts_at, e.ends_at, e.zone, \
     e.all_day, e.title, e.place, e.description, e.color, e.busy, e.status, e.private, e.organizer, \
-    e.my_answer, e.reminders, e.conference, e.rules, e.series, e.original_start, e.pending, e.sequence, e.kind";
+    e.my_answer, e.reminders, e.conference, e.rules, e.series, e.original_start, e.pending, e.sequence, e.kind, \
+    e.attachments";
 
 pub fn event(conn: &Connection, account_id: AccountId, calendar: &str, id: &str) -> Result<Option<Event>> {
     let found = conn
@@ -399,6 +403,71 @@ pub fn changed_occurrences(
         event.guests = guests(conn, account_id, calendar, &event.id)?;
     }
     Ok(found)
+}
+
+/// The attachments to store for `event`. A change made here (`pending`)
+/// takes its list as it is. A list from the provider keeps what only this
+/// computer knows: the files still waiting to upload, and which uploaded
+/// files are shared with whom (`calendar::keep_local`).
+fn kept_attachments(conn: &Connection, account_id: AccountId, event: &Event) -> Result<Option<Vec<model::Attachment>>> {
+    let Some(fresh) = &event.attachments else {
+        return Ok(None);
+    };
+    let mut fresh = fresh.clone();
+    if !event.pending {
+        let held: Option<Option<String>> = conn
+            .query_row(
+                "SELECT attachments FROM events WHERE account_id = ?1 AND calendar = ?2 AND id = ?3",
+                params![account_id, event.calendar, event.id],
+                |row| row.get(0),
+            )
+            .optional()?;
+        if let Some(Some(text)) = held {
+            model::keep_local(&mut fresh, &parse::<Vec<model::Attachment>>(&text));
+        }
+    }
+    Ok(Some(fresh))
+}
+
+/// Writes `list` as the event's attachments in queued change `seq`'s body
+/// and in the copy's row: the queue's uploads and shares, recorded before
+/// the write goes out, so a write that fails after them does not repeat
+/// them.
+pub fn replace_attachments(
+    conn: &Connection,
+    account_id: AccountId,
+    seq: i64,
+    calendar: &str,
+    id: &str,
+    list: &[model::Attachment],
+) -> Result<()> {
+    let body: Option<Option<String>> = conn
+        .query_row("SELECT body FROM calendar_changes WHERE seq = ?1", params![seq], |row| row.get(0))
+        .optional()?;
+    if let Some(body) = body.flatten() {
+        let mut event: Event = parse(&body);
+        if event.attachments.is_some() {
+            event.attachments = Some(list.to_vec());
+            conn.execute("UPDATE calendar_changes SET body = ?2 WHERE seq = ?1", params![seq, json(&event)])?;
+        }
+    }
+    conn.execute(
+        "UPDATE events SET attachments = ?4 WHERE account_id = ?1 AND calendar = ?2 AND id = ?3 \
+         AND attachments IS NOT NULL",
+        params![account_id, calendar, id, json(list)],
+    )?;
+    Ok(())
+}
+
+/// The events, by calendar and id, holding a file that waits for the
+/// account to grant Drive.
+pub fn waiting_for_access(conn: &Connection, account_id: AccountId) -> Result<Vec<(String, String)>> {
+    let mut stmt = conn.prepare(
+        "SELECT calendar, id FROM events WHERE account_id = ?1 AND attachments LIKE '%\"problem\":\"NeedsAccess\"%' \
+         ORDER BY calendar, id",
+    )?;
+    let rows = stmt.query_map(params![account_id], |row| Ok((row.get(0)?, row.get(1)?)))?;
+    Ok(rows.collect::<rusqlite::Result<_>>()?)
 }
 
 /// Marks an event as matching the provider again once its queued change
@@ -768,6 +837,7 @@ fn read_event(row: &Row) -> rusqlite::Result<Event> {
         // the store reads back.
         meet_request: None,
         kind: row.get::<_, Option<String>>(25)?.map(|k| parse(&k)).unwrap_or_default(),
+        attachments: row.get::<_, Option<String>>(26)?.map(|a| parse(&a)),
     })
 }
 
@@ -1430,6 +1500,106 @@ mod tests {
         assert_eq!(read("away"), away);
         assert_eq!(read("where"), Kind::WorkingLocation(Workplace::Office("Lisbon HQ".into())));
         assert_eq!(read("plain"), Kind::Event);
+    }
+
+    #[test]
+    fn the_copy_keeps_an_events_attachments() {
+        let (conn, account) = store();
+        let file = mailrs_domain::calendar::Attachment {
+            title: "Agenda.pdf".into(),
+            file_url: "https://drive.google.com/file/d/1abc/view".into(),
+            mime_type: "application/pdf".into(),
+            icon_link: "https://drive-thirdparty.googleusercontent.com/16/type/application/pdf".into(),
+            file_id: "1abc".into(),
+            ..Default::default()
+        };
+        let waiting = mailrs_domain::calendar::Attachment {
+            title: "Notes.txt".into(),
+            mime_type: "text/plain".into(),
+            waiting: Some("/home/me/Notes.txt".into()),
+            ..Default::default()
+        };
+        let with = Event { attachments: Some(vec![file, waiting]), ..event("primary", "a", 0, 1) };
+        let without = Event { attachments: Some(Vec::new()), ..event("primary", "b", 0, 1) };
+        save_events(&conn, account, &[with.clone(), without], 0).unwrap();
+        assert_eq!(super::event(&conn, account, "primary", "a").unwrap().unwrap().attachments, with.attachments);
+        assert_eq!(super::event(&conn, account, "primary", "b").unwrap().unwrap().attachments, Some(Vec::new()));
+    }
+
+    fn uploaded(id: &str, share: bool) -> mailrs_domain::calendar::Attachment {
+        mailrs_domain::calendar::Attachment {
+            title: id.into(),
+            file_url: format!("https://drive.google.com/file/d/{id}/view"),
+            file_id: id.into(),
+            share: Some(share),
+            shared_with: vec!["ana@example.com".into()],
+            ..Default::default()
+        }
+    }
+
+    fn waiting_file(problem: Option<mailrs_domain::calendar::UploadProblem>) -> mailrs_domain::calendar::Attachment {
+        mailrs_domain::calendar::Attachment {
+            title: "Notes.txt".into(),
+            waiting: Some("/home/me/Notes.txt".into()),
+            share: Some(true),
+            problem,
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn a_read_from_the_provider_keeps_waiting_files_and_sharing() {
+        let (conn, account) = store();
+        let mine = Event {
+            pending: true,
+            attachments: Some(vec![uploaded("1abc", false), waiting_file(None)]),
+            ..event("primary", "a", 0, 1)
+        };
+        save_events(&conn, account, &[mine], 0).unwrap();
+        // Google's copy knows the Drive file and nothing of the rest.
+        let google = mailrs_domain::calendar::Attachment { share: None, shared_with: Vec::new(), ..uploaded("1abc", true) };
+        let theirs = Event { attachments: Some(vec![google]), ..event("primary", "a", 0, 1) };
+        save_events(&conn, account, &[theirs], 1).unwrap();
+        let kept = super::event(&conn, account, "primary", "a").unwrap().unwrap().attachments.unwrap();
+        assert_eq!(kept, vec![uploaded("1abc", false), waiting_file(None)]);
+    }
+
+    #[test]
+    fn a_change_made_here_takes_the_list_as_it_is() {
+        let (conn, account) = store();
+        let with = Event { pending: true, attachments: Some(vec![waiting_file(None)]), ..event("primary", "a", 0, 1) };
+        save_events(&conn, account, &[with], 0).unwrap();
+        let removed = Event { pending: true, attachments: Some(Vec::new()), ..event("primary", "a", 0, 1) };
+        save_events(&conn, account, &[removed], 1).unwrap();
+        assert_eq!(super::event(&conn, account, "primary", "a").unwrap().unwrap().attachments, Some(Vec::new()));
+    }
+
+    #[test]
+    fn new_attachments_go_into_the_queued_change_and_the_copy() {
+        let (conn, account) = store();
+        let with = Event { pending: true, attachments: Some(vec![waiting_file(None)]), ..event("primary", "a", 0, 1) };
+        save_events(&conn, account, std::slice::from_ref(&with), 0).unwrap();
+        enqueue(&conn, account, ChangeKind::Create, &with).unwrap();
+        let seq = queued(&conn, account).unwrap()[0].seq;
+        let list = vec![uploaded("1abc", true)];
+        replace_attachments(&conn, account, seq, "primary", "a", &list).unwrap();
+        assert_eq!(queued(&conn, account).unwrap()[0].body.as_ref().unwrap().attachments, Some(list.clone()));
+        assert_eq!(super::event(&conn, account, "primary", "a").unwrap().unwrap().attachments, Some(list));
+    }
+
+    #[test]
+    fn files_waiting_for_access_name_their_events() {
+        let (conn, account) = store();
+        let stuck = Event {
+            attachments: Some(vec![waiting_file(Some(mailrs_domain::calendar::UploadProblem::NeedsAccess))]),
+            ..event("primary", "a", 0, 1)
+        };
+        let gone = Event {
+            attachments: Some(vec![waiting_file(Some(mailrs_domain::calendar::UploadProblem::NotFound))]),
+            ..event("primary", "b", 0, 1)
+        };
+        save_events(&conn, account, &[stuck, gone, event("primary", "c", 0, 1)], 0).unwrap();
+        assert_eq!(waiting_for_access(&conn, account).unwrap(), [("primary".to_string(), "a".to_string())]);
     }
 
     #[test]

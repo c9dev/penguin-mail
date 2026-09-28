@@ -11,7 +11,9 @@ use chrono::Duration;
 use chrono_tz::Tz;
 use mailrs_domain::calendar::repeat::Repeat;
 use mailrs_domain::calendar::series::{self, RepeatScope};
-use mailrs_domain::calendar::{Access, Calendar, Decline, Declines, Event, Guest, Kind, Occurrence, Reminder};
+use mailrs_domain::calendar::{
+    Access, Attachment, Calendar, Decline, Declines, Event, Guest, Kind, Occurrence, Reminder,
+};
 use mailrs_domain::translate::gettext;
 use mailrs_domain::{AccountId, EpochMillis};
 
@@ -85,6 +87,13 @@ pub struct Draft {
     /// An ordinary event, out of office or focus time. A working location
     /// or a birthday never reaches the editor.
     pub kind: Kind,
+    /// The files linked to the event, Drive files and files waiting to
+    /// upload alike.
+    pub attachments: Vec<Attachment>,
+    /// Whether the copy has read the event's attachments. An event stored
+    /// before it did holds none that the draft can see, and saving a list
+    /// then would take Google's files off.
+    attachments_known: bool,
     /// The event as it was, when editing one.
     pub base: Option<Event>,
     /// The occurrence the person opened, for the repeat question.
@@ -116,6 +125,8 @@ impl Draft {
             color: None,
             add_meet: false,
             kind: Kind::Event,
+            attachments: Vec::new(),
+            attachments_known: true,
             base: None,
             occurrence: None,
             opened: Opened { rules: Vec::new(), repeat: Repeat::Never, day },
@@ -148,6 +159,8 @@ impl Draft {
             color: event.color.clone(),
             add_meet: false,
             kind: event.kind.clone(),
+            attachments: event.attachments.clone().unwrap_or_default(),
+            attachments_known: event.attachments.is_some(),
             base: Some(Event::clone(event)),
             occurrence: Some(occurrence.clone()),
             opened: Opened { rules: series_rules.to_vec(), repeat, day },
@@ -329,6 +342,43 @@ impl Draft {
         }
     }
 
+    /// Whether "Attach File…" may add to the list: the copy knows the
+    /// event's files, the account organizes it, and it is an ordinary
+    /// event, not out of office or focus time.
+    pub fn can_attach(&self) -> bool {
+        self.attachments_known && !self.base.as_ref().is_some_and(limited) && self.kind == Kind::Event
+    }
+
+    /// Adds a file to the event.
+    pub fn attach(&mut self, file: Attachment) {
+        self.attachments.push(file);
+    }
+
+    /// Takes the file at `index` off the event. The file itself stays
+    /// where it is, on Drive or on this computer.
+    pub fn detach(&mut self, index: usize) {
+        if index < self.attachments.len() {
+            self.attachments.remove(index);
+        }
+    }
+
+    /// Whether the guests may open the file at `index`, one the app
+    /// uploaded. A file someone else attached stays as it is: the app
+    /// cannot share it.
+    pub fn set_share(&mut self, index: usize, share: bool) {
+        if let Some(file) = self.attachments.get_mut(index)
+            && file.share.is_some()
+        {
+            file.share = Some(share);
+        }
+    }
+
+    /// Whether anyone but the account itself is invited, the people an
+    /// uploaded file is shared with.
+    pub fn has_other_guests(&self) -> bool {
+        self.guests.iter().any(|guest| !guest.me)
+    }
+
     pub fn can_save(&self) -> bool {
         !self.title.trim().is_empty()
     }
@@ -399,6 +449,7 @@ impl Draft {
         event.rules = self.rules();
         event.meet_request = (self.add_meet && event.conference.is_none()).then(|| meet_request.to_string());
         event.kind = self.kind.clone();
+        event.attachments = self.attachments_known.then(|| self.attachments.clone());
         if event.kind.decline().is_some() {
             // Google refuses guests, a place and a Meet link on out of
             // office and focus time.
@@ -437,8 +488,8 @@ impl Draft {
 
 /// Whether going from `before` to `after` changes something the guests
 /// see: the title, the time, the place, the notes, the guest list, the
-/// Meet link, the repeat, or the calendar, whose owner becomes the
-/// organizer. Reminders, colour, busy or free and privacy are the
+/// Meet link, the repeat, the attachments, or the calendar, whose owner
+/// becomes the organizer. Reminders, colour, busy or free and privacy are the
 /// account's own, and Google sends nobody mail about them.
 pub fn reaches_guests(before: &Draft, after: &Draft) -> bool {
     // The save trims the title and the place, so compare what it writes.
@@ -451,6 +502,7 @@ pub fn reaches_guests(before: &Draft, after: &Draft) -> bool {
         || (after.add_meet && !before.add_meet)
         || before.repeat != after.repeat
         || before.calendar != after.calendar
+        || before.attachments != after.attachments
 }
 
 /// The zone the desktop is set to, for a new draft nothing else names one
@@ -728,6 +780,107 @@ mod tests {
 
     fn opened() -> Draft {
         Draft::open(&weekly(), &weekly().event.rules, Lisbon)
+    }
+
+    fn agenda() -> mailrs_domain::calendar::Attachment {
+        mailrs_domain::calendar::Attachment {
+            title: "Agenda.pdf".into(),
+            file_url: "https://drive.google.com/file/d/1abc/view".into(),
+            mime_type: "application/pdf".into(),
+            file_id: "1abc".into(),
+            ..Default::default()
+        }
+    }
+
+    fn with_attachments(files: Option<Vec<mailrs_domain::calendar::Attachment>>) -> Draft {
+        let mut occurrence = weekly();
+        Arc::make_mut(&mut occurrence.event).attachments = files;
+        Draft::open(&occurrence, &occurrence.event.rules, Lisbon)
+    }
+
+    #[test]
+    fn an_event_opens_with_its_attachments_and_saves_them_back() {
+        let draft = with_attachments(Some(vec![agenda()]));
+        assert_eq!(draft.attachments, vec![agenda()]);
+        assert_eq!(draft.to_event("pmnew", "pmmeet").attachments, Some(vec![agenda()]));
+    }
+
+    #[test]
+    fn a_new_event_starts_with_no_attachments_it_can_add_to() {
+        let draft = fresh();
+        assert!(draft.can_attach());
+        assert_eq!(draft.to_event("pmnew", "pmmeet").attachments, Some(Vec::new()));
+    }
+
+    #[test]
+    fn an_event_whose_attachments_are_unknown_saves_them_unknown() {
+        let draft = with_attachments(None);
+        assert!(!draft.can_attach(), "adding to an unread list would drop the files Google holds");
+        assert_eq!(draft.to_event("pmnew", "pmmeet").attachments, None);
+    }
+
+    #[test]
+    fn a_picked_file_joins_the_list_and_a_removed_one_leaves_it() {
+        let mut draft = with_attachments(Some(vec![agenda()]));
+        let waiting = mailrs_domain::calendar::Attachment {
+            title: "Notes.txt".into(),
+            waiting: Some("/home/me/Notes.txt".into()),
+            ..Default::default()
+        };
+        draft.attach(waiting.clone());
+        assert_eq!(draft.attachments, vec![agenda(), waiting.clone()]);
+        draft.detach(0);
+        assert_eq!(draft.to_event("pmnew", "pmmeet").attachments, Some(vec![waiting]));
+    }
+
+    #[test]
+    fn a_guest_cannot_attach_files_to_someone_elses_event() {
+        let mut occurrence = weekly();
+        let event = Arc::make_mut(&mut occurrence.event);
+        event.attachments = Some(vec![agenda()]);
+        event.guests = vec![Guest { email: "me@example.com".into(), me: true, ..Guest::default() }];
+        let draft = Draft::open(&occurrence, &occurrence.event.rules, Lisbon);
+        assert!(!draft.can_attach());
+        assert_eq!(draft.to_event("pmnew", "pmmeet").attachments, Some(vec![agenda()]));
+    }
+
+    #[test]
+    fn unticking_sharing_keeps_the_file_to_the_organizer() {
+        let ours = mailrs_domain::calendar::Attachment { share: Some(true), ..agenda() };
+        let mut draft = with_attachments(Some(vec![ours]));
+        draft.set_share(0, false);
+        assert_eq!(draft.to_event("pmnew", "pmmeet").attachments.unwrap()[0].share, Some(false));
+    }
+
+    #[test]
+    fn sharing_stays_off_a_file_someone_else_attached() {
+        let mut draft = with_attachments(Some(vec![agenda()]));
+        draft.set_share(0, true);
+        assert_eq!(draft.attachments[0].share, None);
+    }
+
+    #[test]
+    fn only_guests_other_than_the_account_count_for_sharing() {
+        let mut draft = fresh();
+        draft.guests = vec![Guest { email: "me@example.com".into(), me: true, ..Guest::default() }];
+        assert!(!draft.has_other_guests());
+        draft.add_guests("ana@example.com");
+        assert!(draft.has_other_guests());
+    }
+
+    #[test]
+    fn out_of_office_takes_no_attachments() {
+        let mut draft = fresh();
+        draft.set_type(TypeChoice::OutOfOffice);
+        assert!(!draft.can_attach());
+    }
+
+    #[test]
+    fn the_guests_see_a_file_attached() {
+        let before = with_attachments(Some(Vec::new()));
+        let mut after = before.clone();
+        after.attach(agenda());
+        assert!(reaches_guests(&before, &after));
     }
 
     /// Notes as Google's own editor writes them.
