@@ -82,6 +82,34 @@ where
     span_words(o.start, o.end, o.event.all_day, zone)
 }
 
+/// The agenda row's time column: "All day", or the start and end clock
+/// with no date, which the row's own heading already carries.
+pub fn agenda_span_words<Z: TimeZone>(o: &Occurrence, zone: &Z) -> String
+where
+    Z::Offset: std::fmt::Display,
+{
+    if o.event.all_day {
+        gettext("All day")
+    } else {
+        fill(
+            &gettext("{start}–{end}"),
+            &[("start", &clock_words(o.start, zone)), ("end", &clock_words(o.end, zone))],
+        )
+    }
+}
+
+/// The agenda row's dimmed second line: the place and the calendar name
+/// together when both are known, whichever one is known alone, or
+/// nothing when neither is.
+pub fn agenda_subtitle_words(place: &str, calendar: &str) -> String {
+    match (place.is_empty(), calendar.is_empty()) {
+        (false, false) => fill(&gettext("{place} · {calendar}"), &[("place", place), ("calendar", calendar)]),
+        (false, true) => place.to_string(),
+        (true, false) => calendar.to_string(),
+        (true, true) => String::new(),
+    }
+}
+
 /// "Thursday 24 – Friday 25 September": the last day always carries its
 /// month, and the first day carries one too only when it falls in a
 /// different month.
@@ -444,6 +472,41 @@ mod tests {
             .timestamp_millis();
         let o = occurrence(false, start, end);
         assert_eq!(when_words(&o, &Utc), "Wednesday 23 September · 15:00–16:00");
+    }
+
+    #[test]
+    fn an_agenda_row_times_a_timed_occurrence_with_no_date() {
+        mailrs_domain::translate::set_date_locale("en_US");
+        let start = Utc.with_ymd_and_hms(2026, 9, 23, 15, 0, 0).unwrap().timestamp_millis();
+        let end = Utc.with_ymd_and_hms(2026, 9, 23, 16, 0, 0).unwrap().timestamp_millis();
+        let o = occurrence(false, start, end);
+        assert_eq!(agenda_span_words(&o, &Utc), "15:00–16:00");
+    }
+
+    #[test]
+    fn an_agenda_row_times_an_all_day_occurrence_as_all_day() {
+        let o = occurrence(true, midnight(d(2026, 9, 23)), midnight(d(2026, 9, 24)));
+        assert_eq!(agenda_span_words(&o, &Utc), "All day");
+    }
+
+    #[test]
+    fn an_agenda_subtitle_joins_the_place_and_the_calendar() {
+        assert_eq!(agenda_subtitle_words("Room 5", "Work"), "Room 5 · Work");
+    }
+
+    #[test]
+    fn an_agenda_subtitle_with_no_place_is_just_the_calendar() {
+        assert_eq!(agenda_subtitle_words("", "Work"), "Work");
+    }
+
+    #[test]
+    fn an_agenda_subtitle_with_no_calendar_is_just_the_place() {
+        assert_eq!(agenda_subtitle_words("Room 5", ""), "Room 5");
+    }
+
+    #[test]
+    fn an_agenda_subtitle_with_neither_is_empty() {
+        assert_eq!(agenda_subtitle_words("", ""), "");
     }
 
     #[test]

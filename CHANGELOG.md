@@ -84,6 +84,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   a word a tag splits still matches.
 - The assistant's calendar tools read an event's notes as the text they
   show, not Google's HTML tags.
+- Calendar search results and the "N more" popover show each event's
+  end time and calendar, not just when it starts.
 - An event's notes from Google Calendar show as readable text in the
   editor instead of HTML tags, and their links still work after you
   save.
