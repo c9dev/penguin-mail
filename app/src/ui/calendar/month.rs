@@ -41,6 +41,7 @@ type Shown = (
     Vec<Occurrence>,
     HashMap<(AccountId, String), Calendar>,
     mailrs_domain::calendar::hours::WorkingHours,
+    HashMap<NaiveDate, String>,
 );
 
 type DayActivated = dyn Fn(NaiveDate);
@@ -412,15 +413,24 @@ impl MonthGrid {
     /// range was built with; a day outside that month is dimmed. An
     /// all-day occurrence places by its own UTC date, a timed one by
     /// local wall time, matching every other calendar view.
+    ///
+    /// `places` runs parallel to the range's days from its first: where
+    /// the person works each day, which the day's number carries.
     pub fn show(
         self: &Rc<Self>,
         range: Range,
         occurrences: &[Occurrence],
+        places: &[Option<String>],
         calendars: &HashMap<(AccountId, String), Calendar>,
         working_hours: mailrs_domain::calendar::hours::WorkingHours,
     ) {
+        let places: HashMap<NaiveDate, String> = places
+            .iter()
+            .enumerate()
+            .filter_map(|(i, place)| Some((range.first + Days::new(i as u64), place.clone()?)))
+            .collect();
         self.shown
-            .replace(Some((range, occurrences.to_vec(), calendars.clone(), working_hours)));
+            .replace(Some((range, occurrences.to_vec(), calendars.clone(), working_hours, places)));
         self.rebuild();
     }
     /// Runs `f` with the date a day's own number was activated for.
@@ -701,7 +711,7 @@ impl MonthGrid {
     }
 
     fn rebuild(self: &Rc<Self>) {
-        let Some((range, occurrences, calendars, working_hours)) = self.shown.borrow().clone() else {
+        let Some((range, occurrences, calendars, working_hours, places)) = self.shown.borrow().clone() else {
             return;
         };
         let today = chrono::Local::now().date_naive();
@@ -721,7 +731,7 @@ impl MonthGrid {
             if !working_hours.is_working_day(day.weekday()) {
                 cell.add_css_class("shaded");
             }
-            let day_button = day_heading(day, today, month);
+            let day_button = day_heading(day, today, month, places.get(&day).map(String::as_str));
             connect_day(self, &day_button, day);
             cell.append(&day_button);
         }
@@ -849,15 +859,20 @@ fn day_occurrences(occurrences: &[Occurrence], day: NaiveDate) -> Vec<&Occurrenc
 /// The date button a cell opens its day with: the number visible, the
 /// full date spoken, since "24" alone says nothing, today in the accent
 /// pill and a day outside `month` dimmed.
-fn day_heading(day: NaiveDate, today: NaiveDate, month: NaiveDate) -> gtk::Button {
+fn day_heading(day: NaiveDate, today: NaiveDate, month: NaiveDate, place: Option<&str>) -> gtk::Button {
     let label = gtk::Label::builder()
         .label(day.day().to_string())
         .css_classes(["date"])
         .build();
+    let inner = gtk::Box::builder().spacing(6).build();
+    inner.append(&label);
+    if let Some(place) = place {
+        inner.append(&super::place_label(place));
+    }
     let button = gtk::Button::builder()
         .css_classes(["flat", "day-heading"])
         .halign(gtk::Align::Start)
-        .child(&label)
+        .child(&inner)
         .build();
     if day == today {
         button.add_css_class("today");
@@ -865,7 +880,7 @@ fn day_heading(day: NaiveDate, today: NaiveDate, month: NaiveDate) -> gtk::Butto
     if day.month() != month.month() || day.year() != month.year() {
         button.add_css_class("dimmed");
     }
-    crate::ui::name(&button, &words::full_date_words(day));
+    crate::ui::name(&button, &super::kinds::heading_words(&words::full_date_words(day), place));
     button
 }
 

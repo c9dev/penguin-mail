@@ -640,3 +640,36 @@ async fn the_assistant_removes_an_invitation_quietly() {
     copy.send(h.account_id).await.unwrap();
     assert_eq!(h.fake.with(|s| s.calendar_notices.clone()), [("review".to_string(), Notify::Nobody)]);
 }
+
+/// A birthday on the primary calendar, as Google makes one from a
+/// contact.
+fn birthday() -> Ev {
+    Ev {
+        calendar: "primary".into(),
+        id: "bday".into(),
+        title: "Ana's birthday".into(),
+        zone: "UTC".into(),
+        start: 1_790_035_200_000,
+        end: 1_790_121_600_000,
+        all_day: true,
+        kind: mailrs_domain::calendar::Kind::Birthday,
+        ..Ev::default()
+    }
+}
+
+#[tokio::test]
+async fn the_assistant_cannot_change_or_delete_a_birthday() {
+    let h = harness().await;
+    h.fake.with(|s| s.calendars = vec![primary()]);
+    h.fake.put_calendar_event(birthday());
+    let (calendar, copy) = calendar_with_copy(&h);
+    copy.refresh(h.account_id, 1_790_000_000_000).await.unwrap();
+    let rename = EventFields { summary: Some("Party".into()), ..EventFields::default() };
+    let changed = calendar.update(h.account_id, "bday", &rename).await;
+    assert!(matches!(changed, Err(SyncError::MadeInGoogle(ref title)) if title == "Ana's birthday"), "{changed:?}");
+    let deleted = calendar.delete(h.account_id, "bday").await;
+    assert!(matches!(deleted, Err(SyncError::MadeInGoogle(_))), "{deleted:?}");
+    let account = h.account_id;
+    let queued = h.db.read(move |c| mailrs_store::calendar::queued(c, account)).await.unwrap();
+    assert!(queued.is_empty(), "nothing waits to go to Google");
+}

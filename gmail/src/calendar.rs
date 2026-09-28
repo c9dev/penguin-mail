@@ -995,6 +995,39 @@ pub fn google_event(calendar: &str, item: &Value, me: Option<&str>, calendar_zon
         // A Meet request is something Penguin Mail asks for on a write;
         // Google's answer never needs to say one is still pending here.
         meet_request: None,
+        kind: kind_of(item),
+    }
+}
+
+/// What sort of entry Google's event is, from its `eventType` and the
+/// properties object that type carries. An unknown type, such as
+/// `fromGmail`, reads as an ordinary event.
+fn kind_of(item: &Value) -> calendar::Kind {
+    let text = |pointer: &str| item.pointer(pointer).and_then(Value::as_str).unwrap_or_default().to_string();
+    let decline = |properties: &str| calendar::Decline {
+        meetings: calendar::Declines::from_google(&text(&format!("/{properties}/autoDeclineMode"))),
+        message: text(&format!("/{properties}/declineMessage")),
+    };
+    match item.get("eventType").and_then(Value::as_str) {
+        Some("outOfOffice") => calendar::Kind::OutOfOffice(decline("outOfOfficeProperties")),
+        Some("focusTime") => calendar::Kind::Focus(decline("focusTimeProperties")),
+        Some("birthday") => calendar::Kind::Birthday,
+        Some("workingLocation") => {
+            // An office without a label still has its building's id; the
+            // person picked it from Google's list, so either names it.
+            let office = || {
+                Some(text("/workingLocationProperties/officeLocation/label"))
+                    .filter(|label| !label.is_empty())
+                    .unwrap_or_else(|| text("/workingLocationProperties/officeLocation/buildingId"))
+            };
+            let place = match text("/workingLocationProperties/type").as_str() {
+                "officeLocation" => calendar::Workplace::Office(office()),
+                "customLocation" => calendar::Workplace::Elsewhere(text("/workingLocationProperties/customLocation/label")),
+                _ => calendar::Workplace::Home,
+            };
+            calendar::Kind::WorkingLocation(place)
+        }
+        _ => calendar::Kind::Event,
     }
 }
 
@@ -1092,12 +1125,37 @@ fn event_json(event: &calendar::Event, create: bool) -> Value {
     let mut body = json!({
         "transparency": transparency(event),
         "summary": event.title,
-        "location": event.place,
         "description": event.description,
         "start": time(event.start),
         "end": time(event.end),
         "visibility": if event.private { "private" } else { "default" },
-        "attendees": event.guests.iter().map(|g| {
+    });
+    if let Some(decline) = event.kind.decline() {
+        // Google refuses guests, a place and a Meet link on out of office
+        // and focus time, and takes the type only when the entry is made.
+        if create {
+            body["eventType"] = json!(event.kind.as_google());
+        }
+        let properties = match event.kind {
+            calendar::Kind::Focus(_) => "focusTimeProperties",
+            _ => "outOfOfficeProperties",
+        };
+        body["transparency"] = json!("opaque");
+        body[properties] = json!({
+            "autoDeclineMode": decline.meetings.as_google(),
+            "declineMessage": decline.message,
+        });
+        if event.series.is_none() && !(create && event.rules.is_empty()) {
+            body["recurrence"] = json!(event.rules);
+        }
+        own_fields_into(&mut body, event, create);
+        if create {
+            body["id"] = json!(event.id);
+        }
+        return body;
+    }
+    body["location"] = json!(event.place);
+    body["attendees"] = json!(event.guests.iter().map(|g| {
             let mut guest = json!({ "email": g.email });
             if let Some(status) = g.answer.map(Answer::response_status) {
                 guest["responseStatus"] = json!(status);
@@ -1106,8 +1164,7 @@ fn event_json(event: &calendar::Event, create: bool) -> Value {
                 guest["displayName"] = json!(name);
             }
             guest
-        }).collect::<Vec<_>>(),
-    });
+        }).collect::<Vec<_>>());
     // Google refuses a recurrence rule on a changed occurrence. A patch
     // that leaves recurrence out keeps the rule Google has, so a series
     // saved with no rules must say so with an empty list. A new event

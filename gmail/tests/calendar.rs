@@ -1323,3 +1323,195 @@ async fn an_answer_found_by_its_uid_carries_the_note_too() {
         .await
         .unwrap();
 }
+
+/// A change page holding one entry of each of Google's status types, as
+/// `events.list` returns them (Calendar API reference, checked
+/// 2026-09-28).
+async fn typed_page() -> Vec<mailrs_domain::calendar::Event> {
+    let server = MockServer::start().await;
+    mount_token(&server).await;
+    Mock::given(method("GET"))
+        .and(path(format!("{CALENDAR}/calendars/primary/events")))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "timeZone": "Europe/Lisbon",
+            "items": [
+                {"id": "ooo", "eventType": "outOfOffice", "summary": "Out of office",
+                 "transparency": "opaque",
+                 "start": {"dateTime": "2026-09-30T09:00:00+01:00"},
+                 "end": {"dateTime": "2026-09-30T18:00:00+01:00"},
+                 "outOfOfficeProperties": {"autoDeclineMode": "declineAllConflictingInvitations",
+                                           "declineMessage": "Away until Thursday"}},
+                {"id": "focus", "eventType": "focusTime", "summary": "Focus time",
+                 "start": {"dateTime": "2026-09-29T14:00:00+01:00"},
+                 "end": {"dateTime": "2026-09-29T16:00:00+01:00"},
+                 "focusTimeProperties": {"autoDeclineMode": "declineOnlyNewConflictingInvitations",
+                                         "chatStatus": "doNotDisturb", "declineMessage": "Heads down"}},
+                {"id": "home", "eventType": "workingLocation", "summary": "Home",
+                 "transparency": "transparent", "visibility": "public",
+                 "start": {"date": "2026-09-28"}, "end": {"date": "2026-09-29"},
+                 "workingLocationProperties": {"type": "homeOffice", "homeOffice": {}}},
+                {"id": "office", "eventType": "workingLocation", "summary": "Office",
+                 "start": {"date": "2026-09-29"}, "end": {"date": "2026-09-30"},
+                 "workingLocationProperties": {"type": "officeLocation",
+                     "officeLocation": {"buildingId": "lx-2", "label": "Lisbon HQ"}}},
+                {"id": "cafe", "eventType": "workingLocation", "summary": "Café",
+                 "start": {"date": "2026-10-01"}, "end": {"date": "2026-10-02"},
+                 "workingLocationProperties": {"type": "customLocation",
+                     "customLocation": {"label": "Café Tati"}}},
+                {"id": "bday", "eventType": "birthday", "summary": "Ana's birthday",
+                 "start": {"date": "2026-10-02"}, "end": {"date": "2026-10-03"},
+                 "recurrence": ["RRULE:FREQ=YEARLY"],
+                 "birthdayProperties": {"type": "birthday", "contact": "people/c123"}},
+                {"id": "plain", "summary": "Lunch",
+                 "start": {"dateTime": "2026-09-29T12:00:00+01:00"},
+                 "end": {"dateTime": "2026-09-29T13:00:00+01:00"}}
+            ],
+            "nextSyncToken": "t2"
+        })))
+        .mount(&server)
+        .await;
+    client(&server).event_changes("primary", None, None, "2026-09-01T00:00:00Z").await.unwrap().events
+}
+
+fn kind_of(events: &[mailrs_domain::calendar::Event], id: &str) -> mailrs_domain::calendar::Kind {
+    events.iter().find(|e| e.id == id).unwrap().kind.clone()
+}
+
+#[tokio::test]
+async fn an_out_of_office_entry_reads_with_what_it_declines() {
+    use mailrs_domain::calendar::{Decline, Declines, Kind};
+    let events = typed_page().await;
+    assert_eq!(
+        kind_of(&events, "ooo"),
+        Kind::OutOfOffice(Decline { meetings: Declines::All, message: "Away until Thursday".into() })
+    );
+}
+
+#[tokio::test]
+async fn a_focus_time_entry_reads_with_what_it_declines() {
+    use mailrs_domain::calendar::{Decline, Declines, Kind};
+    let events = typed_page().await;
+    assert_eq!(
+        kind_of(&events, "focus"),
+        Kind::Focus(Decline { meetings: Declines::New, message: "Heads down".into() })
+    );
+}
+
+#[tokio::test]
+async fn a_working_location_reads_as_home_an_office_or_a_named_place() {
+    use mailrs_domain::calendar::{Kind, Workplace};
+    let events = typed_page().await;
+    assert_eq!(kind_of(&events, "home"), Kind::WorkingLocation(Workplace::Home));
+    assert_eq!(kind_of(&events, "office"), Kind::WorkingLocation(Workplace::Office("Lisbon HQ".into())));
+    assert_eq!(kind_of(&events, "cafe"), Kind::WorkingLocation(Workplace::Elsewhere("Café Tati".into())));
+}
+
+#[tokio::test]
+async fn a_birthday_reads_as_a_birthday() {
+    let events = typed_page().await;
+    assert_eq!(kind_of(&events, "bday"), mailrs_domain::calendar::Kind::Birthday);
+}
+
+#[tokio::test]
+async fn an_event_with_no_type_is_an_ordinary_event() {
+    let events = typed_page().await;
+    assert_eq!(kind_of(&events, "plain"), mailrs_domain::calendar::Kind::Event);
+}
+
+fn out_of_office(declines: mailrs_domain::calendar::Declines) -> mailrs_domain::calendar::Event {
+    use mailrs_domain::calendar::{Decline, Kind};
+    mailrs_domain::calendar::Event {
+        calendar: "primary".into(),
+        id: "pm0ooo".into(),
+        title: "Out of office".into(),
+        start: 1_790_000_000_000,
+        end: 1_790_028_800_000,
+        zone: "Europe/Lisbon".into(),
+        busy: true,
+        kind: Kind::OutOfOffice(Decline { meetings: declines, message: "Back on Monday".into() }),
+        ..Default::default()
+    }
+}
+
+#[tokio::test]
+async fn a_new_out_of_office_goes_out_typed_with_what_it_declines() {
+    let server = MockServer::start().await;
+    mount_token(&server).await;
+    Mock::given(method("POST"))
+        .and(path(format!("{CALENDAR}/calendars/primary/events")))
+        .and(body_partial_json(json!({
+            "eventType": "outOfOffice",
+            "transparency": "opaque",
+            "outOfOfficeProperties": {
+                "autoDeclineMode": "declineAllConflictingInvitations",
+                "declineMessage": "Back on Monday"
+            }
+        })))
+        .respond_with(|request: &Request| {
+            let body: Value = serde_json::from_slice(&request.body).unwrap();
+            // Google refuses guests, a place and a Meet link on an
+            // out-of-office entry.
+            assert!(body.get("attendees").is_none(), "{body}");
+            assert!(body.get("location").is_none(), "{body}");
+            assert!(body.get("conferenceData").is_none(), "{body}");
+            ResponseTemplate::new(200).set_body_json(json!({
+                "id": "pm0ooo", "etag": "\"1\"", "eventType": "outOfOffice",
+                "summary": body["summary"], "start": body["start"], "end": body["end"],
+                "outOfOfficeProperties": body["outOfOfficeProperties"]
+            }))
+        })
+        .expect(1)
+        .mount(&server)
+        .await;
+    let made = client(&server)
+        .put_event(&out_of_office(mailrs_domain::calendar::Declines::All), None, true, Notify::Guests)
+        .await
+        .unwrap();
+    assert_eq!(made.kind, out_of_office(mailrs_domain::calendar::Declines::All).kind);
+}
+
+#[tokio::test]
+async fn a_new_focus_time_goes_out_typed() {
+    use mailrs_domain::calendar::{Decline, Declines, Kind};
+    let server = MockServer::start().await;
+    mount_token(&server).await;
+    Mock::given(method("POST"))
+        .and(path(format!("{CALENDAR}/calendars/primary/events")))
+        .and(body_partial_json(json!({
+            "eventType": "focusTime",
+            "focusTimeProperties": {"autoDeclineMode": "declineNone"}
+        })))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({"id": "pm0focus", "eventType": "focusTime"})))
+        .expect(1)
+        .mount(&server)
+        .await;
+    let event = mailrs_domain::calendar::Event {
+        id: "pm0focus".into(),
+        kind: Kind::Focus(Decline { meetings: Declines::Nothing, message: String::new() }),
+        ..out_of_office(Declines::Nothing)
+    };
+    client(&server).put_event(&event, None, true, Notify::Guests).await.unwrap();
+}
+
+#[tokio::test]
+async fn an_edit_of_an_out_of_office_leaves_its_type_alone() {
+    // Google refuses a change of `eventType`, and a PATCH that repeats it
+    // gains nothing, so only the properties go out.
+    let server = MockServer::start().await;
+    mount_token(&server).await;
+    Mock::given(method("PATCH"))
+        .and(path(format!("{CALENDAR}/calendars/primary/events/pm0ooo")))
+        .respond_with(|request: &Request| {
+            let body: Value = serde_json::from_slice(&request.body).unwrap();
+            assert!(body.get("eventType").is_none(), "{body}");
+            assert_eq!(body.pointer("/outOfOfficeProperties/autoDeclineMode"), Some(&json!("declineOnlyNewConflictingInvitations")));
+            ResponseTemplate::new(200).set_body_json(json!({"id": "pm0ooo", "eventType": "outOfOffice"}))
+        })
+        .expect(1)
+        .mount(&server)
+        .await;
+    client(&server)
+        .put_event(&out_of_office(mailrs_domain::calendar::Declines::New), Some("\"1\""), false, Notify::Guests)
+        .await
+        .unwrap();
+}

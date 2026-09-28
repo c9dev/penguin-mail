@@ -11,11 +11,46 @@ use chrono::Duration;
 use chrono_tz::Tz;
 use mailrs_domain::calendar::repeat::Repeat;
 use mailrs_domain::calendar::series::{self, RepeatScope};
-use mailrs_domain::calendar::{Access, Calendar, Event, Guest, Occurrence, Reminder};
+use mailrs_domain::calendar::{Access, Calendar, Decline, Declines, Event, Guest, Kind, Occurrence, Reminder};
+use mailrs_domain::translate::gettext;
 use mailrs_domain::{AccountId, EpochMillis};
 
 const DAY: EpochMillis = 86_400_000;
 const HOUR: EpochMillis = 3_600_000;
+
+/// The editor's Type choice for a new event.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TypeChoice {
+    Event,
+    OutOfOffice,
+    Focus,
+}
+
+/// The Type choices a new event on `address`'s account may take. Google
+/// Calendar offers out of office only on work and school accounts, and
+/// focus time only on some Google Workspace editions, so a personal
+/// address (`gmail.com`, `googlemail.com`) makes ordinary events alone.
+/// Any other domain may or may not be Workspace, and which edition it
+/// runs is not known ahead of time: it is offered every type, and a
+/// save Google turns down says why in the toast.
+pub fn creatable_types(address: &str) -> Vec<TypeChoice> {
+    let domain = address.trim().rsplit_once('@').map_or("", |(_, domain)| domain);
+    if domain.eq_ignore_ascii_case("gmail.com") || domain.eq_ignore_ascii_case("googlemail.com") {
+        vec![TypeChoice::Event]
+    } else {
+        vec![TypeChoice::Event, TypeChoice::OutOfOffice, TypeChoice::Focus]
+    }
+}
+
+/// The title a Type choice fills in: "Out of office", "Focus time", or
+/// nothing for an ordinary event.
+fn type_title(choice: TypeChoice) -> String {
+    match choice {
+        TypeChoice::Event => String::new(),
+        TypeChoice::OutOfOffice => gettext("Out of office"),
+        TypeChoice::Focus => gettext("Focus time"),
+    }
+}
 
 /// What the draft opened with, to tell what the person changed.
 #[derive(Debug, Clone, PartialEq)]
@@ -47,6 +82,9 @@ pub struct Draft {
     pub private: bool,
     pub color: Option<String>,
     pub add_meet: bool,
+    /// An ordinary event, out of office or focus time. A working location
+    /// or a birthday never reaches the editor.
+    pub kind: Kind,
     /// The event as it was, when editing one.
     pub base: Option<Event>,
     /// The occurrence the person opened, for the repeat question.
@@ -77,6 +115,7 @@ impl Draft {
             private: false,
             color: None,
             add_meet: false,
+            kind: Kind::Event,
             base: None,
             occurrence: None,
             opened: Opened { rules: Vec::new(), repeat: Repeat::Never, day },
@@ -108,6 +147,7 @@ impl Draft {
             private: event.private,
             color: event.color.clone(),
             add_meet: false,
+            kind: event.kind.clone(),
             base: Some(Event::clone(event)),
             occurrence: Some(occurrence.clone()),
             opened: Opened { rules: series_rules.to_vec(), repeat, day },
@@ -231,6 +271,64 @@ impl Draft {
         self.add_guests(text).join(", ")
     }
 
+    /// Whether the editor offers the Type choice: only for a new event,
+    /// since Google never changes an entry's type, and only on a primary
+    /// calendar, the one calendar Google keeps out of office and focus
+    /// time on.
+    pub fn offers_type(&self, primary: bool) -> bool {
+        self.is_new() && primary
+    }
+
+    /// The Type choice the draft stands for.
+    pub fn type_choice(&self) -> TypeChoice {
+        match self.kind {
+            Kind::OutOfOffice(_) => TypeChoice::OutOfOffice,
+            Kind::Focus(_) => TypeChoice::Focus,
+            _ => TypeChoice::Event,
+        }
+    }
+
+    /// Makes the draft an ordinary event, out of office or focus time.
+    ///
+    /// Out of office and focus time run for hours, as Google requires,
+    /// and always block the time. An empty title, or the one the last
+    /// choice filled in, becomes the new choice's name, as Google's own
+    /// editor does; a title the person typed stays.
+    pub fn set_type(&mut self, choice: TypeChoice) {
+        if choice == self.type_choice() {
+            return;
+        }
+        if self.title.trim().is_empty() || self.title == type_title(self.type_choice()) {
+            self.title = type_title(choice);
+        }
+        self.kind = match choice {
+            TypeChoice::Event => Kind::Event,
+            TypeChoice::OutOfOffice => Kind::OutOfOffice(Decline {
+                meetings: Declines::All,
+                message: gettext("Declined because I am out of office"),
+            }),
+            TypeChoice::Focus => Kind::Focus(Decline::default()),
+        };
+        if choice != TypeChoice::Event {
+            self.set_all_day(false);
+            self.busy = true;
+        }
+    }
+
+    /// Which meetings an out-of-office or focus-time draft declines.
+    pub fn set_declines(&mut self, meetings: Declines) {
+        if let Kind::OutOfOffice(decline) | Kind::Focus(decline) = &mut self.kind {
+            decline.meetings = meetings;
+        }
+    }
+
+    /// The words an organizer gets with each meeting it declines.
+    pub fn set_decline_message(&mut self, message: &str) {
+        if let Kind::OutOfOffice(decline) | Kind::Focus(decline) = &mut self.kind {
+            decline.message = message.to_string();
+        }
+    }
+
     pub fn can_save(&self) -> bool {
         !self.title.trim().is_empty()
     }
@@ -300,6 +398,16 @@ impl Draft {
         event.color = self.color.clone();
         event.rules = self.rules();
         event.meet_request = (self.add_meet && event.conference.is_none()).then(|| meet_request.to_string());
+        event.kind = self.kind.clone();
+        if event.kind.decline().is_some() {
+            // Google refuses guests, a place and a Meet link on out of
+            // office and focus time.
+            event.guests.clear();
+            event.place.clear();
+            event.meet_request = None;
+            event.all_day = false;
+            event.busy = true;
+        }
         event.pending = false;
         event
     }
@@ -494,7 +602,7 @@ impl Editing {
 /// access and what the account's provider offers and its consent
 /// withheld.
 pub fn editing(event: &Event, access: Access, offers_calendar: bool, withheld_calendar: bool) -> Editing {
-    if !offers_calendar || !access.can_write() {
+    if !offers_calendar || !access.can_write() || event.kind.made_elsewhere() {
         Editing::None
     } else if withheld_calendar {
         Editing::NeedsPermission
@@ -1003,6 +1111,114 @@ mod tests {
     #[test]
     fn a_guest_on_a_writable_calendar_gets_the_limited_editor() {
         assert_eq!(editing(&invitation().event, Access::Owner, true, false), Editing::Guest);
+    }
+
+    #[test]
+    fn a_birthday_or_a_working_location_edits_nothing() {
+        use mailrs_domain::calendar::{Kind, Workplace};
+        for kind in [Kind::Birthday, Kind::WorkingLocation(Workplace::Home)] {
+            let event = Event { kind, ..Event::clone(&weekly().event) };
+            assert_eq!(editing(&event, Access::Owner, true, false), Editing::None);
+        }
+    }
+
+    #[test]
+    fn out_of_office_and_focus_time_edit_as_a_whole_event() {
+        use mailrs_domain::calendar::{Decline, Kind};
+        let event = Event { kind: Kind::OutOfOffice(Decline::default()), ..Event::clone(&weekly().event) };
+        assert_eq!(editing(&event, Access::Owner, true, false), Editing::Whole);
+    }
+
+    #[test]
+    fn only_a_new_event_on_a_primary_calendar_offers_a_type() {
+        assert!(fresh().offers_type(true));
+        assert!(!fresh().offers_type(false), "Google keeps out of office and focus time on the primary calendar");
+        assert!(!Draft::open(&weekly(), &weekly().event.rules, Lisbon).offers_type(true), "Google never changes a type");
+    }
+
+    #[test]
+    fn a_personal_google_account_makes_only_events() {
+        for address in ["dana@gmail.com", "Dana.Reyes@GMAIL.com", " old@googlemail.com "] {
+            assert_eq!(creatable_types(address), vec![TypeChoice::Event], "{address}");
+        }
+    }
+
+    #[test]
+    fn an_account_on_its_own_domain_is_offered_every_type() {
+        // It may be Google Workspace or not; nothing ahead of time says,
+        // so the types are offered and Google's answer settles it.
+        assert_eq!(
+            creatable_types("dana@fernwood.example"),
+            vec![TypeChoice::Event, TypeChoice::OutOfOffice, TypeChoice::Focus]
+        );
+    }
+
+    #[test]
+    fn a_domain_that_only_ends_like_gmail_is_not_personal() {
+        assert_eq!(creatable_types("dana@notgmail.com").len(), 3);
+    }
+
+    #[test]
+    fn choosing_out_of_office_names_it_and_leaves_all_day() {
+        use mailrs_domain::calendar::{Decline, Declines, Kind};
+        let mut draft = fresh();
+        draft.set_all_day(true);
+        draft.set_type(TypeChoice::OutOfOffice);
+        assert!(!draft.all_day, "Google refuses an all-day out of office");
+        assert!(draft.busy);
+        assert_eq!(draft.title, "Out of office");
+        assert_eq!(draft.type_choice(), TypeChoice::OutOfOffice);
+        assert_eq!(
+            draft.kind,
+            Kind::OutOfOffice(Decline { meetings: Declines::All, message: "Declined because I am out of office".into() })
+        );
+    }
+
+    #[test]
+    fn a_typed_title_stays_when_the_type_changes() {
+        let mut draft = fresh();
+        draft.title = "Lisbon trip".into();
+        draft.set_type(TypeChoice::OutOfOffice);
+        draft.set_type(TypeChoice::Focus);
+        assert_eq!(draft.title, "Lisbon trip");
+    }
+
+    #[test]
+    fn a_default_title_follows_the_type() {
+        let mut draft = fresh();
+        draft.set_type(TypeChoice::OutOfOffice);
+        draft.set_type(TypeChoice::Focus);
+        assert_eq!(draft.title, "Focus time");
+        draft.set_type(TypeChoice::Event);
+        assert_eq!(draft.title, "");
+        assert_eq!(draft.kind, mailrs_domain::calendar::Kind::Event);
+    }
+
+    #[test]
+    fn out_of_office_goes_out_without_guests_place_or_meet() {
+        let mut draft = fresh();
+        draft.add_guests("ann@example.com");
+        draft.place = "Lisbon".into();
+        draft.add_meet = true;
+        draft.set_type(TypeChoice::OutOfOffice);
+        let event = draft.to_event("pm0new", "req1");
+        assert!(matches!(event.kind, mailrs_domain::calendar::Kind::OutOfOffice(_)));
+        assert!(event.guests.is_empty());
+        assert!(event.place.is_empty());
+        assert_eq!(event.meet_request, None);
+    }
+
+    #[test]
+    fn the_decline_choice_and_message_reach_the_event() {
+        use mailrs_domain::calendar::Declines;
+        let mut draft = fresh();
+        draft.set_type(TypeChoice::OutOfOffice);
+        draft.set_declines(Declines::New);
+        draft.set_decline_message("Back Monday");
+        let event = draft.to_event("pm0new", "req1");
+        let decline = event.kind.decline().unwrap();
+        assert_eq!(decline.meetings, Declines::New);
+        assert_eq!(decline.message, "Back Monday");
     }
 
     #[test]

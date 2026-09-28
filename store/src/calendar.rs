@@ -10,7 +10,7 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use mailrs_domain::calendar::series::Step;
-use mailrs_domain::calendar::{self as model, Access, Calendar, Event, Guest, Notify, Occurrence, Status};
+use mailrs_domain::calendar::{self as model, Access, Calendar, Event, Guest, Kind, Notify, Occurrence, Status};
 use mailrs_domain::invitation::Answer;
 use mailrs_domain::{AccountId, EpochMillis};
 use rusqlite::{Connection, OptionalExtension, Row, params};
@@ -219,9 +219,9 @@ pub fn save_events(conn: &Connection, account_id: AccountId, events: &[Event], s
         conn.execute(
             "INSERT OR REPLACE INTO events (account_id, calendar, id, uid, etag, starts_at, ends_at, zone, \
              all_day, title, place, description, color, busy, status, private, organizer, my_answer, \
-             reminders, conference, rules, series_end, series, original_start, pending, seen_at, sequence) \
+             reminders, conference, rules, series_end, series, original_start, pending, seen_at, sequence, kind) \
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, \
-             ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27)",
+             ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27, ?28)",
             params![
                 account_id,
                 event.calendar,
@@ -250,6 +250,7 @@ pub fn save_events(conn: &Connection, account_id: AccountId, events: &[Event], s
                 event.pending,
                 seen_at,
                 event.sequence,
+                (event.kind != Kind::Event).then(|| json(&event.kind)),
             ],
         )?;
         conn.execute(
@@ -359,7 +360,7 @@ pub fn sweep(conn: &Connection, account_id: AccountId, calendar: &str, before: E
 
 const COLUMNS: &str = "e.account_id, e.calendar, e.id, e.uid, e.etag, e.starts_at, e.ends_at, e.zone, \
     e.all_day, e.title, e.place, e.description, e.color, e.busy, e.status, e.private, e.organizer, \
-    e.my_answer, e.reminders, e.conference, e.rules, e.series, e.original_start, e.pending, e.sequence";
+    e.my_answer, e.reminders, e.conference, e.rules, e.series, e.original_start, e.pending, e.sequence, e.kind";
 
 pub fn event(conn: &Connection, account_id: AccountId, calendar: &str, id: &str) -> Result<Option<Event>> {
     let found = conn
@@ -764,6 +765,7 @@ fn read_event(row: &Row) -> rusqlite::Result<Event> {
         // A Meet request lives only in a queued write, never in a row
         // the store reads back.
         meet_request: None,
+        kind: row.get::<_, Option<String>>(25)?.map(|k| parse(&k)).unwrap_or_default(),
     })
 }
 
@@ -1408,6 +1410,23 @@ mod tests {
 
     fn starts(found: &[Occurrence]) -> Vec<(String, EpochMillis)> {
         found.iter().map(|o| (o.event.id.clone(), o.start)).collect()
+    }
+
+    #[test]
+    fn the_copy_keeps_what_sort_of_entry_an_event_is() {
+        use mailrs_domain::calendar::{Decline, Declines, Kind, Workplace};
+        let (conn, id) = store();
+        let away = Kind::OutOfOffice(Decline { meetings: Declines::All, message: "Back Monday".into() });
+        let events = [
+            Event { kind: away.clone(), ..event("primary", "away", MONDAY, 8) },
+            Event { kind: Kind::WorkingLocation(Workplace::Office("Lisbon HQ".into())), ..event("primary", "where", MONDAY, 24) },
+            event("primary", "plain", MONDAY, 1),
+        ];
+        save_events(&conn, id, &events, 0).unwrap();
+        let read = |event: &str| super::event(&conn, id, "primary", event).unwrap().unwrap().kind;
+        assert_eq!(read("away"), away);
+        assert_eq!(read("where"), Kind::WorkingLocation(Workplace::Office("Lisbon HQ".into())));
+        assert_eq!(read("plain"), Kind::Event);
     }
 
     #[test]

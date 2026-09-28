@@ -26,6 +26,7 @@ use std::sync::{Arc, Mutex};
 
 use mailrs_domain::calendar::series::{self, Picked, RepeatScope, Step};
 use mailrs_domain::calendar::{self, Access, Calendar, Event, Notify, Occurrence};
+use mailrs_domain::translate::{fill, gettext};
 use mailrs_domain::{AccountId, EpochMillis};
 use mailrs_store::Db;
 use mailrs_store::calendar as store;
@@ -886,6 +887,7 @@ impl<A: Accounts> CalendarCopy<A> {
     ) -> Result<TurnedDown, SyncError> {
         let account_id = change.account_id;
         let title = title_of(change);
+        let reason = reason.map(|reason| refusal_words(change, reason));
         // The next read carries Google's version; forget the token so it
         // reads the calendar whole and cannot miss it.
         let (seq, cal, id) = (change.seq, change.calendar.clone(), change.event.clone());
@@ -1384,6 +1386,23 @@ fn cut_series<'a>(steps: &[Step], before: &'a [Event]) -> Option<&'a Event> {
 
 /// The title of the event a queued change writes, to say which one the
 /// provider turned down.
+/// The provider's reason for turning `change` down, in words the person
+/// can act on. A new out-of-office or focus-time entry is refused on an
+/// account Google Calendar does not offer them on, which nothing could
+/// tell ahead of time for an address on its own domain; the words say
+/// which accounts have them and keep the provider's own after.
+fn refusal_words(change: &store::QueuedChange, reason: String) -> String {
+    let status_entry = change.kind == store::ChangeKind::Create
+        && change.body.as_ref().is_some_and(|body| body.kind.decline().is_some());
+    if !status_entry {
+        return reason;
+    }
+    fill(
+        &gettext("Google Calendar offers out of office and focus time only on some work and school accounts ({reason})"),
+        &[("reason", &reason)],
+    )
+}
+
 fn title_of(change: &store::QueuedChange) -> String {
     match (&change.body, &change.answer) {
         (Some(body), _) => body.title.clone(),

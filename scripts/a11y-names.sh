@@ -726,6 +726,55 @@ def walk_calendar(keys):
         print("No back button on the Custom Repeat page.", file=sys.stderr)
         sys.exit(2)
     settle()
+
+    # Out of office, picked from the Type row, shows the rows that ask
+    # which meetings to decline and with what message.
+    kind = find_first(lambda role, name: role in ACTS and name.startswith("Type"))
+    if kind is None or not activate(kind):
+        print("No 'Type' row in the editor.", file=sys.stderr)
+        sys.exit(2)
+    if not wait_until(
+        lambda: find_first(lambda role, name: role == "label" and name == "Out of office") is not None,
+        5.0,
+    ):
+        print("The Type row offered no 'Out of office' choice.", file=sys.stderr)
+        sys.exit(2)
+    time.sleep(0.5)
+
+    # The week's own out-of-office block has a label of the same words,
+    # so the choice is the one inside a list item.
+    def in_list_item(node):
+        while node is not None and node.get_role_name() != "list item":
+            node = node.get_parent()
+        return node
+
+    away_row = None
+    for app in penguins()[0]:
+        for node in nodes(app):
+            try:
+                if node.get_role_name() == "label" and (node.get_name() or "") == "Out of office":
+                    away_row = in_list_item(node)
+            except Exception:
+                continue
+            if away_row is not None:
+                break
+        if away_row is not None:
+            break
+    if away_row is None:
+        print("No 'list item' row held the 'Out of office' choice.", file=sys.stderr)
+        sys.exit(2)
+    box = away_row.get_component_iface().get_extents(Atspi.CoordType.WINDOW)
+    keys.click(box.x + box.width // 2, box.y + box.height // 2)
+    if not wait_until(
+        lambda: find_first(lambda role, name: role in ACTS and name.startswith("Decline")) is not None, 5.0
+    ):
+        print("Out of office showed no 'Decline' row.", file=sys.stderr)
+        sys.exit(2)
+    settle()
+    walk_view("Editor, Out of office")
+    if find_first(lambda role, name: name.startswith("Message")) is None:
+        print("Out of office showed no 'Message' row.", file=sys.stderr)
+        sys.exit(2)
     cancel = button_named(r"^Cancel$")
     if cancel is None or not activate(cancel):
         print("No 'Cancel' button in the editor.", file=sys.stderr)
@@ -733,7 +782,7 @@ def walk_calendar(keys):
     settle()
 
     unnamed = [row for row in calendar_found if not row[1]]
-    print("calendar: %d controls in four views, two popovers, the editor and its Custom page, %d unnamed"
+    print("calendar: %d controls in four views, two popovers, the editor with out of office and its Custom page, %d unnamed"
           % (len(calendar_found), len(unnamed)))
     for role, _, path in unnamed:
         print("  %s" % path)
