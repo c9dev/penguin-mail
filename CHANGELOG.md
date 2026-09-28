@@ -82,6 +82,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - Calendar search matches an event's notes as the text they show, not
   Google's HTML tags: a `<br>` no longer matches a search for "br", and
   a word a tag splits still matches.
+- The assistant's calendar tools read an event's notes as the text they
+  show, not Google's HTML tags.
 - An event's notes from Google Calendar show as readable text in the
   editor instead of HTML tags, and their links still work after you
   save.
