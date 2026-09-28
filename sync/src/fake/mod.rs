@@ -164,6 +164,9 @@ pub struct FakeState {
     /// The occurrence each answer named, oldest first, and `None` for an
     /// answer that covered the whole series.
     pub answered_occurrences: Vec<Option<EpochMillis>>,
+    /// Each answer given on a calendar event by its id, oldest first: the
+    /// calendar, the event or occurrence id, the answer and the note.
+    pub answered_events: Vec<(String, String, Answer, Option<String>)>,
     /// The events on the primary calendar that the event calls list and
     /// change. Kept apart from `calendar` and `busy`, which stand in for
     /// the calls an invitation makes.
@@ -377,6 +380,7 @@ impl FakeGmail {
                 busy: Vec::new(),
                 series: HashMap::new(),
                 answered_occurrences: Vec::new(),
+                answered_events: Vec::new(),
                 events: Vec::new(),
                 next_event: 0,
                 calendars: Vec::new(),
@@ -1433,6 +1437,54 @@ impl GmailApi for FakeGmail {
                 Ok(())
             }
         }
+    }
+
+    /// Answers on the event, or on the occurrence the id names, which
+    /// becomes a changed occurrence of its own as Google makes it. Every
+    /// row of a series takes a series answer.
+    async fn answer_event(
+        &self,
+        calendar: &str,
+        id: &str,
+        _me: &str,
+        answer: Answer,
+        note: Option<&str>,
+    ) -> Result<calendar::Event, GmailError> {
+        self.call("calendar.events.patch", 0).await?;
+        self.calendar_open()?;
+        self.calendar_held(calendar)?;
+        let held = self.with(|s| s.calendar_events.iter().find(|e| e.calendar == calendar && e.id == id).cloned());
+        let target = match (held, self.series_of(calendar, id)) {
+            (Some(held), _) => held,
+            (None, Some((series, start))) => calendar::Event {
+                id: id.to_string(),
+                rules: Vec::new(),
+                series: Some(series.id.clone()),
+                original_start: Some(start),
+                start,
+                end: start + (series.end - series.start),
+                ..series
+            },
+            (None, None) => return Err(self.deleted()),
+        };
+        self.with(|s| s.answered_events.push((calendar.to_string(), id.to_string(), answer, note.map(str::to_string))));
+        let answered = |mut event: calendar::Event| {
+            event.my_answer = Some(answer);
+            for guest in event.guests.iter_mut().filter(|g| g.me) {
+                guest.answer = Some(answer);
+            }
+            event
+        };
+        let changed: Vec<calendar::Event> = self.with(|s| {
+            s.calendar_events.iter().filter(|e| e.calendar == calendar && e.series.as_deref() == Some(id)).cloned().collect()
+        });
+        for occurrence in changed {
+            self.put_calendar_event(answered(occurrence));
+        }
+        self.put_calendar_event(answered(target));
+        Ok(self.with(|s| {
+            s.calendar_events.iter().find(|e| e.calendar == calendar && e.id == id).cloned().expect("just stored")
+        }))
     }
 
     /// Moves the event and a series' changed occurrences, as Google does,

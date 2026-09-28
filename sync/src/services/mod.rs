@@ -835,6 +835,20 @@ pub trait CalendarService: Send + Sync + 'static {
         destination: &str,
         notify: model::Notify,
     ) -> impl Future<Output = Result<model::Event, BackendError>> + Send;
+
+    /// Answers event `id` on `calendar` as the guest `me`: a series'
+    /// own id answers every occurrence, an occurrence's id that one
+    /// alone. `note` goes with the answer for the organizer to read;
+    /// `None` leaves an earlier one as it was. Answers the event as the
+    /// server now holds it.
+    fn answer_event(
+        &self,
+        calendar: &str,
+        id: &str,
+        me: &str,
+        answer: Answer,
+        note: Option<&str>,
+    ) -> impl Future<Output = Result<model::Event, BackendError>> + Send;
 }
 
 /// The account's address book.

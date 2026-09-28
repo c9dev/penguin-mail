@@ -6,6 +6,7 @@ use std::sync::Arc;
 
 use base64::Engine;
 use mailrs_domain::Address;
+use mailrs_domain::calendar::series::RepeatScope;
 use mailrs_domain::calendar::{Event, Guest};
 use mailrs_domain::invitation::{Answer, Invitation, Scope, When};
 use mailrs_gmail::GmailError;
@@ -259,7 +260,7 @@ async fn an_answer_reaches_the_calendar_and_comes_back_on_reopening() {
 }
 
 #[tokio::test]
-async fn an_answer_from_the_calendar_marks_the_copy_and_the_card() {
+async fn an_answer_from_the_calendar_marks_the_copy_and_the_card_and_waits_to_go_out() {
     let h = harness().await;
     let invitations = invitations(&h);
     h.fake.with(|s| s.calendar.insert(UID.into(), None));
@@ -312,20 +313,23 @@ async fn an_answer_from_the_calendar_marks_the_copy_and_the_card() {
     };
 
     let done = invitations
-        .answer_event(h.account_id, &occurrence, Answer::Yes)
+        .answer_event(h.account_id, &occurrence, Answer::Yes, RepeatScope::All, None)
         .await
         .unwrap();
     assert_eq!(done, Permitted::Done(()));
 
+    let queued = h
+        .db
+        .read({
+            let account_id = h.account_id;
+            move |c| calendar_store::queued(c, account_id)
+        })
+        .await
+        .unwrap();
     assert_eq!(
-        h.fake.with(|s| s.calendar[UID]),
-        Some(Answer::Yes),
-        "Google Calendar holds the answer"
-    );
-    assert_eq!(
-        h.fake.with(|s| s.answered_occurrences.last().copied()),
-        Some(None),
-        "the whole series answers, never one occurrence"
+        queued.iter().map(|q| (q.kind, q.event.as_str())).collect::<Vec<_>>(),
+        [(calendar_store::ChangeKind::Answer, "series-1")],
+        "the answer waits in the calendar's queue"
     );
 
     let stored = h

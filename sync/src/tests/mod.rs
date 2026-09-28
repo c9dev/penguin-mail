@@ -19,6 +19,7 @@ mod outbox;
 mod parity;
 mod priority;
 mod quota;
+mod rsvp;
 mod search;
 mod senders;
 mod settings;

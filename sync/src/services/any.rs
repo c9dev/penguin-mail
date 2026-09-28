@@ -412,6 +412,17 @@ impl CalendarService for AnyCalendar {
     ) -> Result<model::Event, BackendError> {
         forward!(AnyCalendar, self, move_event(event, destination, notify))
     }
+
+    async fn answer_event(
+        &self,
+        calendar: &str,
+        id: &str,
+        me: &str,
+        answer: Answer,
+        note: Option<&str>,
+    ) -> Result<model::Event, BackendError> {
+        forward!(AnyCalendar, self, answer_event(calendar, id, me, answer, note))
+    }
 }
 
 impl ContactsService for AnyContacts {

@@ -1164,3 +1164,97 @@ async fn a_guests_removal_is_one_quiet_delete_and_no_answer() {
     let notify = mailrs_domain::calendar::removal_notify(&invitation, Notify::Guests);
     client(&server).remove_event(&invitation.calendar, &invitation.id, None, notify).await.unwrap();
 }
+
+/// One occurrence of a weekly series, by the id Google gives it before
+/// anyone changes it: the series id and the original start in UTC.
+const INSTANCE: &str = "standup_20261020T090000Z";
+
+fn instance() -> Value {
+    json!({
+        "id": INSTANCE,
+        "recurringEventId": "standup",
+        "iCalUID": UID,
+        "summary": "Stand-up",
+        "originalStartTime": {"dateTime": "2026-10-20T09:00:00Z"},
+        "start": {"dateTime": "2026-10-20T09:00:00Z", "timeZone": "UTC"},
+        "end": {"dateTime": "2026-10-20T09:15:00Z", "timeZone": "UTC"},
+        "attendees": [
+            {"email": "priya@fernwood.example", "responseStatus": "accepted", "organizer": true,
+             "comment": "Bring the numbers"},
+            {"email": "me@example.com", "responseStatus": "needsAction", "self": true},
+            {"email": "jonas@fernwood.example", "responseStatus": "tentative", "optional": true}
+        ]
+    })
+}
+
+async fn mount_instance(server: &MockServer) {
+    Mock::given(method("GET"))
+        .and(path(format!("{CALENDAR}/calendars/primary/events/{INSTANCE}")))
+        .respond_with(ResponseTemplate::new(200).set_body_json(instance()))
+        .expect(1)
+        .mount(server)
+        .await;
+}
+
+#[tokio::test]
+async fn answering_one_occurrence_patches_that_instance_alone() {
+    let server = MockServer::start().await;
+    mount_token(&server).await;
+    mount_instance(&server).await;
+    let mut answered = instance();
+    answered["etag"] = json!("\"2\"");
+    answered["attendees"][1]["responseStatus"] = json!("declined");
+    Mock::given(method("PATCH"))
+        .and(path(format!("{CALENDAR}/calendars/primary/events/{INSTANCE}")))
+        .and(query_param("sendUpdates", "all"))
+        .and(body_json(json!({"attendees": [
+            {"email": "priya@fernwood.example", "responseStatus": "accepted", "organizer": true,
+             "comment": "Bring the numbers"},
+            {"email": "me@example.com", "responseStatus": "declined", "self": true},
+            {"email": "jonas@fernwood.example", "responseStatus": "tentative", "optional": true}
+        ]})))
+        .respond_with(ResponseTemplate::new(200).set_body_json(answered))
+        .expect(1)
+        .mount(&server)
+        .await;
+    // The series itself is never written.
+    Mock::given(method("PATCH"))
+        .and(path(format!("{CALENDAR}/calendars/primary/events/standup")))
+        .respond_with(ResponseTemplate::new(200))
+        .expect(0)
+        .mount(&server)
+        .await;
+
+    let event = client(&server)
+        .answer_event("primary", INSTANCE, "me@example.com", Answer::No, None)
+        .await
+        .unwrap();
+    assert_eq!(
+        (event.id.as_str(), event.series.as_deref(), event.etag.as_str(), event.my_answer),
+        (INSTANCE, Some("standup"), "\"2\"", Some(Answer::No))
+    );
+}
+
+#[tokio::test]
+async fn a_note_goes_out_as_the_guests_own_comment() {
+    let server = MockServer::start().await;
+    mount_token(&server).await;
+    mount_instance(&server).await;
+    Mock::given(method("PATCH"))
+        .and(path(format!("{CALENDAR}/calendars/primary/events/{INSTANCE}")))
+        .and(body_partial_json(json!({"attendees": [
+            {"email": "priya@fernwood.example", "comment": "Bring the numbers"},
+            {"email": "me@example.com", "responseStatus": "tentative",
+             "comment": "Running ten minutes late"},
+            {"email": "jonas@fernwood.example"}
+        ]})))
+        .respond_with(ResponseTemplate::new(200).set_body_json(instance()))
+        .expect(1)
+        .mount(&server)
+        .await;
+
+    client(&server)
+        .answer_event("primary", INSTANCE, "me@example.com", Answer::Maybe, Some("Running ten minutes late"))
+        .await
+        .unwrap();
+}

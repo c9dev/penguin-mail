@@ -598,6 +598,17 @@ impl<G: GmailApi> CalendarService for Google<G> {
     ) -> Result<model::Event, BackendError> {
         paced(self.gmail.move_event(event, destination, notify)).await.map_err(calendar_write_error)
     }
+
+    async fn answer_event(
+        &self,
+        calendar: &str,
+        id: &str,
+        me: &str,
+        answer: Answer,
+        note: Option<&str>,
+    ) -> Result<model::Event, BackendError> {
+        paced(self.gmail.answer_event(calendar, id, me, answer, note)).await.map_err(calendar_write_error)
+    }
 }
 
 /// A live write's error, with 410 Gone read as the event being gone

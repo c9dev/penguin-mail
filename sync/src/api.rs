@@ -314,6 +314,19 @@ pub trait GmailApi: Send + Sync + 'static {
         destination: &str,
         notify: calendar::Notify,
     ) -> impl Future<Output = Result<calendar::Event, GmailError>> + Send;
+
+    /// Answers event `id` on `calendar` as the guest `me`, a series by its
+    /// own id or one occurrence by its occurrence id, with `note` as the
+    /// guest's comment, and lets Google tell the organizer. Answers the
+    /// event as Google now holds it.
+    fn answer_event(
+        &self,
+        calendar: &str,
+        id: &str,
+        me: &str,
+        answer: Answer,
+        note: Option<&str>,
+    ) -> impl Future<Output = Result<calendar::Event, GmailError>> + Send;
 }
 
 /// An instant as the Calendar API writes one. `None` for a time no
@@ -611,6 +624,17 @@ impl GmailApi for AccountClient {
         notify: calendar::Notify,
     ) -> Result<calendar::Event, GmailError> {
         self.client.move_event(event, destination, notify).await
+    }
+
+    async fn answer_event(
+        &self,
+        calendar: &str,
+        id: &str,
+        me: &str,
+        answer: Answer,
+        note: Option<&str>,
+    ) -> Result<calendar::Event, GmailError> {
+        self.client.answer_event(calendar, id, me, answer, note).await
     }
 
     async fn create_label(&self, name: &str) -> Result<RemoteLabel, GmailError> {

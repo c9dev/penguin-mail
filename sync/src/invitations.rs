@@ -20,7 +20,8 @@ mod mail;
 
 use std::sync::{Arc, Mutex};
 
-use mailrs_domain::calendar::Occurrence;
+use mailrs_domain::calendar::series::{self, Picked, RepeatScope};
+use mailrs_domain::calendar::{Event, Occurrence};
 use mailrs_domain::invitation::{self, Answer, Invitation, Method, Scope, When};
 use mailrs_domain::{AccountId, Address, EpochMillis};
 use mailrs_gmail::Answered;
@@ -316,6 +317,26 @@ impl<A: Accounts> Invitations<A> {
         if !sync.services().offers().calendar {
             return Ok(None);
         }
+        Ok(self.found_on_copy(account_id, invitation, now).await?.map(|o| Spot {
+            account_id,
+            calendar: o.event.calendar.clone(),
+            id: o.event.id.clone(),
+            start: o.start,
+        }))
+    }
+
+    /// The occurrence of the invitation's event the copy holds: the one
+    /// the invitation is about, or the next to come. `None` for an
+    /// invitation with no UID and for a copy never read.
+    async fn found_on_copy(
+        &self,
+        account_id: AccountId,
+        invitation: &Invitation,
+        now: EpochMillis,
+    ) -> Result<Option<Occurrence>, SyncError> {
+        if invitation.uid.trim().is_empty() {
+            return Ok(None);
+        }
         let occurrence = invitation.occurrence.as_ref().and_then(|o| o.at);
         let from = invitation
             .when
@@ -334,12 +355,7 @@ impl<A: Accounts> Invitations<A> {
                 mailrs_store::calendar::with_uid(c, account_id, &uid, around - LOOK_AROUND, around + LOOK_AROUND)
             })
             .await?;
-        Ok(pick(found, occurrence, from).map(|o| Spot {
-            account_id,
-            calendar: o.event.calendar.clone(),
-            id: o.event.id.clone(),
-            start: o.start,
-        }))
+        Ok(pick(found, occurrence, from))
     }
 
     /// The invitations still waiting for the account's answer, each at
@@ -453,6 +469,12 @@ impl<A: Accounts> Invitations<A> {
     /// where it can, since one call tells the organizer and marks the
     /// user's own calendar; where it cannot, the answer goes to the
     /// organizer as mail. The answer says which of the two happened.
+    ///
+    /// An event the calendar's copy already holds is answered the way the
+    /// calendar view answers it, through the queue ([`Self::answer_event`]),
+    /// so the card and the calendar cannot disagree about how an answer
+    /// goes out; the caller sends the queue. Only an event the copy lacks
+    /// asks Google by its UID here.
     pub async fn answer(
         &self,
         account_id: AccountId,
@@ -468,6 +490,20 @@ impl<A: Accounts> Invitations<A> {
             needs_permission: false,
             api_off: None,
         };
+        // An occurrence whose instant this app could not work out cannot
+        // be matched to one in the copy; only the emailed reply names it.
+        let reach = match (scope, &invitation.occurrence) {
+            (Scope::Occurrence, Some(occurrence)) => occurrence.at.map(|_| RepeatScope::This),
+            _ => Some(RepeatScope::All),
+        };
+        if let Some(reach) = reach
+            && let Some(found) = self.held_on_calendar(account_id, invitation, now).await?
+        {
+            self.queue_answer(account_id, &found, reach, answer, None, me.email.clone())
+                .await?;
+            sent.told = Told::Calendar;
+            return Ok(sent);
+        }
         // Google needs an instant to find one occurrence of a series by.
         // An occurrence whose zone this app could not work out leaves it
         // nothing to go on, and only the emailed reply, which copies the
@@ -526,49 +562,98 @@ impl<A: Accounts> Invitations<A> {
         Ok(sent)
     }
 
-    /// Answers `occurrence`'s event from the calendar view. Unlike
-    /// [`Self::answer`], the occurrence came from an event the local copy
-    /// already read off Google's calendar, so one call there is the whole
-    /// answer: it tells the organizer and marks the account's own
-    /// calendar, and nothing else needs to be sent. The
-    /// whole series answers, never one occurrence, since Google's guest
-    /// answer call takes the series' own id and no occurrence. Once
-    /// Google has it, the copy's event and the invitation card (if the
-    /// message ever opened one) are updated to match, so both read the
-    /// same answer.
+    /// Answers `occurrence`'s event from the calendar view: `This`
+    /// answers that occurrence alone, any other scope the whole series (a
+    /// one-off event is its own series). `note` goes with the answer for
+    /// the organizer to read.
+    ///
+    /// The answer goes into the calendar's queue, as every other calendar
+    /// write does, so it survives the network going and a restart; the
+    /// copy and the invitation card (if the message ever opened one) show
+    /// it at once. The caller sends the queue. An account with no calendar
+    /// answers `Unsupported`, and one whose calendar permission is
+    /// withheld `NeedsPermission`, so the queue never takes an answer it
+    /// cannot send.
     pub async fn answer_event(
         &self,
         account_id: AccountId,
         occurrence: &Occurrence,
         answer: Answer,
+        scope: RepeatScope,
+        note: Option<String>,
     ) -> Result<Permitted<()>, SyncError> {
         let sync = self.sync(account_id)?;
-        let calendar = sync
-            .services()
-            .calendar
-            .as_ref()
-            .ok_or(SyncError::Backend(BackendError::Unsupported))?;
-        let event = &occurrence.event;
-        let me = event
+        let services = sync.services();
+        if services.calendar.is_none() {
+            return Err(SyncError::Backend(BackendError::Unsupported));
+        }
+        if services.withheld().calendar {
+            return Ok(Permitted::NeedsPermission);
+        }
+        let me = occurrence
+            .event
             .guests
             .iter()
             .find(|guest| guest.me)
-            .map(|guest| guest.email.as_str())
+            .map(|guest| guest.email.clone())
             .unwrap_or_default();
-        match calendar.answer_invitation(&event.uid, me, answer, None).await {
-            Ok(_) => {}
-            Err(BackendError::NeedsPermission) => return Ok(Permitted::NeedsPermission),
-            Err(err) => return Err(err.into()),
-        }
-        let (calendar_id, event_id, uid) =
-            (event.calendar.clone(), event.id.clone(), event.uid.clone());
+        self.queue_answer(account_id, occurrence, scope, answer, note, me).await?;
+        Ok(Permitted::Done(()))
+    }
+
+    /// Writes the answer to the copy, marked waiting, and queues it. The
+    /// one place an answer on the calendar is made, for the calendar view
+    /// and the invitation card alike.
+    async fn queue_answer(
+        &self,
+        account_id: AccountId,
+        occurrence: &Occurrence,
+        scope: RepeatScope,
+        answer: Answer,
+        note: Option<String>,
+        me: String,
+    ) -> Result<(), SyncError> {
+        let event = Event::clone(&occurrence.event);
+        let picked = Picked {
+            original_start: event.original_start.unwrap_or(occurrence.start),
+            start: occurrence.start,
+        };
+        let note = note.map(|n| n.trim().to_string()).filter(|n| !n.is_empty());
+        let now = crate::now_millis();
         self.db
             .write(move |c| {
-                calendar_store::set_my_answer(c, account_id, &calendar_id, &event_id, answer)?;
-                store::answer(c, account_id, &uid, answer)
+                let row = answered_row(c, account_id, &event, picked, scope, answer)?;
+                let row = Event { pending: true, ..row };
+                calendar_store::save_events(c, account_id, std::slice::from_ref(&row), now)?;
+                // The series answers for every occurrence, the changed
+                // ones stored apart from it included.
+                if row.series.is_none() {
+                    calendar_store::set_my_answer(c, account_id, &row.calendar, &row.id, answer)?;
+                }
+                let queued = calendar_store::QueuedAnswer { me, answer, note, title: row.title.clone() };
+                calendar_store::enqueue_answer(c, account_id, &row.calendar, &row.id, &queued)?;
+                store::answer(c, account_id, &row.uid, answer)
             })
             .await?;
-        Ok(Permitted::Done(()))
+        Ok(())
+    }
+
+    /// The event the invitation names, as the copy holds it, when the
+    /// account's calendar can take an answer: offered, permitted, and read
+    /// at least once. The occurrence the invitation is about, or the next
+    /// one to come.
+    async fn held_on_calendar(
+        &self,
+        account_id: AccountId,
+        invitation: &Invitation,
+        now: EpochMillis,
+    ) -> Result<Option<Occurrence>, SyncError> {
+        let sync = self.sync(account_id)?;
+        let services = sync.services();
+        if !services.offers().calendar || services.withheld().calendar {
+            return Ok(None);
+        }
+        self.found_on_copy(account_id, invitation, now).await
     }
 
     /// Answers the invitation in message `message_id` as the account
@@ -758,4 +843,27 @@ fn compare(held: Option<&store::Saved>, seen: &store::Saved) -> Option<Change> {
         }),
         _ => Some(Change::Updated),
     }
+}
+
+/// The row an answer writes: the series (or a one-off event) as the copy
+/// holds it, or for `This` the picked occurrence as a changed occurrence
+/// of its own. An occurrence whose series the copy lacks takes the answer
+/// on the row the person opened.
+fn answered_row(
+    c: &rusqlite::Connection,
+    account_id: AccountId,
+    event: &Event,
+    picked: Picked,
+    scope: RepeatScope,
+    answer: Answer,
+) -> mailrs_store::Result<Event> {
+    if !series::in_series(event) {
+        return Ok(series::answered(event, &[], picked, RepeatScope::All, answer));
+    }
+    let series_id = event.series.clone().unwrap_or_else(|| event.id.clone());
+    let Some(whole) = calendar_store::event(c, account_id, &event.calendar, &series_id)? else {
+        return Ok(series::answered(event, &[], picked, RepeatScope::All, answer));
+    };
+    let changed = calendar_store::changed_occurrences(c, account_id, &event.calendar, &series_id)?;
+    Ok(series::answered(&whole, &changed, picked, scope, answer))
 }
