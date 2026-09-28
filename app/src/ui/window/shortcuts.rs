@@ -1138,7 +1138,7 @@ mod tests {
             }
             answered.push(command);
         }
-        assert_eq!(answered.len(), 11);
+        assert_eq!(answered.len(), 13);
     }
 
     #[test]
