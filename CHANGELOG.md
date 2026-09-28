@@ -146,6 +146,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   it last updated, instead of leaving you guessing.
 
 ### Fixed
+- Events side by side in a narrow week lane stay inside their blocks. A
+  title that does not fit ends in "…", and the time shortens to the
+  start, or leaves, when the lane has no room for it.
 - In dark mode, a reply with quoted text shows on the dark page instead of
   in a white box.
 - Picking a contact from the suggestions in an event's Guests field adds

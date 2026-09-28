@@ -42,7 +42,7 @@ pub fn key_of(o: &Occurrence) -> EventKey {
 
 pub struct EventBlock {
     pub widget: gtk::Button,
-    title: gtk::Label,
+    title: TitleRow,
 }
 
 impl EventBlock {
@@ -90,8 +90,10 @@ impl EventBlock {
             .build();
 
         let text = gtk::Box::new(gtk::Orientation::Vertical, 0);
-        if event.all_day {
-            text.append(&title);
+        let row = if event.all_day {
+            let row = TitleRow::new(&title, None);
+            text.append(&row);
+            row
         } else {
             let clock = time_label(o, compact, zone);
             if compact {
@@ -99,16 +101,16 @@ impl EventBlock {
                 // One line centred on a block that may be shorter than
                 // the line, as the mockup's 15-minute Stand-up is.
                 text.set_valign(gtk::Align::Center);
-                title.set_hexpand(true);
-                let row = gtk::Box::new(gtk::Orientation::Horizontal, 4);
-                row.append(&title);
-                row.append(&clock);
+                let row = TitleRow::new(&title, Some(&clock));
                 text.append(&row);
+                row
             } else {
-                text.append(&title);
+                let row = TitleRow::new(&title, None);
+                text.append(&row);
                 text.append(&clock);
+                row
             }
-        }
+        };
 
         // The bar sits 1 px in and the text 11 px in, as the mockup has
         // them.
@@ -124,6 +126,9 @@ impl EventBlock {
         }
 
         button.set_child(Some(&content));
+        // Whatever still does not fit, in a lane narrower than the bar
+        // and the padding, stops at the block's rounded edge.
+        button.set_overflow(gtk::Overflow::Hidden);
 
         let name = accessible_name(o, calendar_name, day, zone);
         ui::describe(&button, &name, &description(event));
@@ -162,13 +167,14 @@ impl EventBlock {
         });
         button.add_controller(keys);
 
-        EventBlock { widget: button, title }
+        EventBlock { widget: button, title: row }
     }
 
     /// Lets the title wrap onto up to `lines` lines, for a block tall
     /// enough to hold them above its time.
     pub fn set_title_lines(&self, lines: i32) {
-        self.title.set_lines(lines.max(1));
+        self.title.imp().lines.set(lines.max(1));
+        self.title.queue_resize();
     }
 }
 
@@ -255,6 +261,193 @@ glib::wrapper! {
     pub struct BlockButton(ObjectSubclass<imp::BlockButton>)
         @extends gtk::Button, gtk::Widget,
         @implements gtk::Accessible, gtk::Actionable, gtk::Buildable, gtk::ConstraintTarget;
+}
+
+mod title_row {
+    use std::cell::{Cell, RefCell};
+
+    use super::*;
+
+    /// A block's title, and for a short block its start time on the same
+    /// line against the right edge. It picks what shows at the width it
+    /// is given, through [`super::title_lines`] and
+    /// [`super::beside_title`], and asks for no width of its own: a
+    /// `gtk::Box` hands each label at least its minimum and runs past a
+    /// lane narrower than that.
+    pub struct TitleRow {
+        pub title: RefCell<Option<gtk::Label>>,
+        pub clock: RefCell<Option<gtk::Widget>>,
+        /// The lines the block is tall enough for.
+        pub lines: Cell<i32>,
+    }
+
+    impl Default for TitleRow {
+        fn default() -> Self {
+            TitleRow { title: RefCell::default(), clock: RefCell::default(), lines: Cell::new(1) }
+        }
+    }
+
+    #[glib::object_subclass]
+    impl ObjectSubclass for TitleRow {
+        const NAME: &'static str = "MailrsTitleRow";
+        type Type = super::TitleRow;
+        type ParentType = gtk::Widget;
+    }
+
+    impl ObjectImpl for TitleRow {
+        fn dispose(&self) {
+            self.title.take();
+            self.clock.take();
+            while let Some(child) = self.obj().first_child() {
+                child.unparent();
+            }
+        }
+    }
+
+    impl WidgetImpl for TitleRow {
+        /// A wrapping title is taller the narrower it is.
+        fn request_mode(&self) -> gtk::SizeRequestMode {
+            gtk::SizeRequestMode::HeightForWidth
+        }
+
+        fn measure(&self, orientation: gtk::Orientation, for_size: i32) -> (i32, i32, i32, i32) {
+            let title = self.title.borrow().clone();
+            let clock = self.clock.borrow().clone();
+            let Some(title) = title else { return (0, 0, -1, -1) };
+            let clock_nat = clock.as_ref().map_or(0, |c| c.measure(gtk::Orientation::Horizontal, -1).1);
+            match orientation {
+                gtk::Orientation::Horizontal => {
+                    let (_, title_nat, _, _) = title.measure(orientation, for_size);
+                    let beside = if clock_nat > 0 { BESIDE_GAP + clock_nat } else { 0 };
+                    (0, title_nat + beside, -1, -1)
+                }
+                _ => {
+                    // The height depends on how many lines the title
+                    // keeps at this width, so that is chosen here, before
+                    // the label measures; a change made while allocating
+                    // would come after the height was already settled.
+                    let room = if for_size >= 0 { self.room(for_size, clock_nat) } else { -1 };
+                    if room >= 0 {
+                        self.fit_lines(&title, room);
+                    }
+                    let (title_min, title_nat, _, _) = title.measure(orientation, room);
+                    let clock_height = clock.map_or(0, |c| c.measure(orientation, -1).1);
+                    (title_min.max(clock_height), title_nat.max(clock_height), -1, -1)
+                }
+            }
+        }
+
+        fn size_allocate(&self, width: i32, height: i32, baseline: i32) {
+            let title = self.title.borrow().clone();
+            let clock = self.clock.borrow().clone();
+            let Some(title) = title else { return };
+            let clock_width = clock.as_ref().map_or(0, |c| c.measure(gtk::Orientation::Horizontal, -1).1);
+            let beside = clock.is_some() && super::beside_title(width, clock_width) == TimeShown::Start;
+            let room = self.room(width, clock_width);
+            self.fit_lines(&title, room);
+            title.allocate(room, height, baseline, None);
+            if let Some(clock) = clock {
+                clock.set_child_visible(beside);
+                if beside {
+                    let at = gsk::Transform::new().translate(&graphene::Point::new((width - clock_width) as f32, 0.0));
+                    clock.allocate(clock_width, height, baseline, Some(at));
+                }
+            }
+        }
+    }
+
+    impl TitleRow {
+        /// The title's own width in a row `width` wide, beside a clock
+        /// `clock` wide when the row has one and it fits.
+        fn room(&self, width: i32, clock: i32) -> i32 {
+            let beside = self.clock.borrow().is_some() && super::beside_title(width, clock) == TimeShown::Start;
+            if beside { width - clock - BESIDE_GAP } else { width }
+        }
+
+        fn fit_lines(&self, title: &gtk::Label, room: i32) {
+            let lines = super::title_lines(self.lines.get(), widest_word(title), room);
+            if title.lines() != lines {
+                title.set_lines(lines);
+            }
+        }
+    }
+
+    /// The width of the widest word of `title`'s text, in its own font.
+    fn widest_word(title: &gtk::Label) -> i32 {
+        let text = title.text();
+        text.split_whitespace()
+            .map(|word| title.create_pango_layout(Some(word)).pixel_size().0)
+            .max()
+            .unwrap_or(0)
+    }
+}
+
+glib::wrapper! {
+    pub struct TitleRow(ObjectSubclass<title_row::TitleRow>)
+        @extends gtk::Widget,
+        @implements gtk::Accessible, gtk::Buildable, gtk::ConstraintTarget;
+}
+
+impl TitleRow {
+    fn new(title: &gtk::Label, clock: Option<&gtk::Widget>) -> TitleRow {
+        let row: TitleRow = glib::Object::new();
+        title.set_parent(&row);
+        if let Some(clock) = clock {
+            clock.set_parent(&row);
+        }
+        row.imp().title.replace(Some(title.clone()));
+        row.imp().clock.replace(clock.cloned());
+        row
+    }
+}
+
+/// How much of its time a block shows, from the room its lane leaves.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TimeShown {
+    /// "10:00–11:30".
+    Full,
+    /// "10:00".
+    Start,
+    /// No time: the block keeps its room for the title, and the
+    /// accessible name and the tooltip still carry the time.
+    Nothing,
+}
+
+/// The gap between a short block's title and its time.
+const BESIDE_GAP: i32 = 4;
+/// The least room a short block keeps for its title before it gives the
+/// time any: about two letters and the ellipsis.
+const TITLE_FLOOR: i32 = 32;
+
+/// The time line under a block's title, `width` pixels wide: the whole
+/// span when `full` pixels fit, the start alone when `start` pixels do,
+/// and nothing when neither does, rather than a time cut off mid-digit.
+pub fn time_shown(width: i32, full: i32, start: i32) -> TimeShown {
+    if full <= width {
+        TimeShown::Full
+    } else if start <= width {
+        TimeShown::Start
+    } else {
+        TimeShown::Nothing
+    }
+}
+
+/// A short block's time, beside its title on one line `width` pixels
+/// wide, is the start (`clock` pixels) only when the title keeps
+/// [`TITLE_FLOOR`] pixels of its own; otherwise the title takes the line.
+pub fn beside_title(width: i32, clock: i32) -> TimeShown {
+    match time_shown(width - TITLE_FLOOR - BESIDE_GAP, clock, clock) {
+        TimeShown::Nothing => TimeShown::Nothing,
+        _ => TimeShown::Start,
+    }
+}
+
+/// How many lines a title wraps onto, out of the `lines` its block is
+/// tall enough for. A word `widest` pixels wide on a line `room` pixels
+/// wide cannot wrap, and Pango lets it run past the edge on any line but
+/// the last, which alone ends in "…". So such a title keeps one line.
+pub fn title_lines(lines: i32, widest: i32, room: i32) -> i32 {
+    if widest > room { 1 } else { lines.max(1) }
 }
 
 /// Whether the occurrence's length puts its time beside the title rather
@@ -344,16 +537,18 @@ where
         &[("start", &start), ("end", &clock(o.end, zone))],
     ));
     // A block in a lane too narrow for "10:00–11:30" shows "10:00", as
-    // a compact block does, rather than cutting the end time short. The
-    // overlay learns its width as it lays out, which is when it chooses.
+    // a compact block does, and one too narrow for that shows no time,
+    // rather than cutting a time short. The overlay learns its width as
+    // it lays out, which is when it chooses.
     let short = label(&start);
     let time = gtk::Overlay::builder().child(&full).build();
     time.add_overlay(&short);
     let chosen = full.clone();
     time.connect_get_child_position(move |time, short| {
-        let fits = chosen.measure(gtk::Orientation::Horizontal, -1).1 <= time.width();
-        chosen.set_child_visible(fits);
-        short.set_child_visible(!fits);
+        let natural = |label: &gtk::Widget| label.measure(gtk::Orientation::Horizontal, -1).1;
+        let shown = time_shown(time.width(), natural(chosen.upcast_ref()), natural(short));
+        chosen.set_child_visible(shown == TimeShown::Full);
+        short.set_child_visible(shown == TimeShown::Start);
         Some(gdk::Rectangle::new(0, 0, time.width(), time.height()))
     });
     time.upcast()
@@ -408,6 +603,38 @@ mod tests {
             my_answer,
             ..Event::default()
         }
+    }
+
+    #[test]
+    fn a_lane_wide_enough_shows_the_whole_time() {
+        assert_eq!(time_shown(80, 70, 30), TimeShown::Full);
+    }
+
+    #[test]
+    fn a_lane_too_narrow_for_the_end_shows_the_start() {
+        assert_eq!(time_shown(50, 70, 30), TimeShown::Start);
+    }
+
+    #[test]
+    fn a_lane_too_narrow_for_the_start_drops_the_time() {
+        assert_eq!(time_shown(20, 70, 30), TimeShown::Nothing);
+    }
+
+    #[test]
+    fn a_short_block_keeps_room_for_its_title_before_the_time() {
+        // 30 px of clock, the gap and the title's floor need 30 + 4 + 32.
+        assert_eq!(beside_title(66, 30), TimeShown::Start);
+        assert_eq!(beside_title(65, 30), TimeShown::Nothing);
+    }
+
+    #[test]
+    fn a_title_whose_words_fit_wraps_onto_the_lines_it_has() {
+        assert_eq!(title_lines(3, 40, 50), 3);
+    }
+
+    #[test]
+    fn a_word_wider_than_the_lane_puts_the_title_on_one_ellipsized_line() {
+        assert_eq!(title_lines(3, 60, 50), 1);
     }
 
     #[test]
