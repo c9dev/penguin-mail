@@ -500,6 +500,7 @@ impl MainWindow {
             let (t, g, n, a, m) = (weak.clone(), weak.clone(), weak.clone(), weak.clone(), weak.clone());
             let (read_settings, change_settings) = (Rc::downgrade(app), Rc::downgrade(app));
             let (contacts_app, push_app) = (Rc::downgrade(app), Rc::downgrade(app));
+            let refresh_app = Rc::downgrade(app);
             let calendar = CalendarView::new(
                 Rc::clone(&app.core),
                 move || {
@@ -548,6 +549,11 @@ impl MainWindow {
                     open_mail: Box::new(move |account_id, thread_id| {
                         if let Some(win) = m.upgrade() {
                             win.open_invitation_mail(account_id, thread_id);
+                        }
+                    }),
+                    refresh: Box::new(move || {
+                        if let Some(app) = refresh_app.upgrade() {
+                            app.refresh_calendars();
                         }
                     }),
                 },
@@ -2733,6 +2739,9 @@ impl MainWindow {
         let menu = gio::Menu::new();
         // Shown only while the calendar is: the action is off in Mail.
         let calendar = gio::Menu::new();
+        let refresh = gio::MenuItem::new(Some(&gettext("Refresh")), Some("win.refresh-calendar"));
+        refresh.set_attribute_value("hidden-when", Some(&"action-disabled".to_variant()));
+        calendar.append_item(&refresh);
         let declined = gio::MenuItem::new(
             Some(&gettext("Show Declined Events")),
             Some("win.show-declined-events"),
@@ -2924,10 +2933,12 @@ impl MainWindow {
     /// opens a thread by id, `MAILRS_DEMO_SEARCH` runs a search,
     /// `MAILRS_DEMO_COMPOSE=reply` opens a reply to the open thread,
     /// `MAILRS_DEMO_MESSAGE_MENU` right-clicks the message at that
-    /// position in the open thread, and `MAILRS_DEMO_ACTION` activates a
-    /// window action such as `shortcuts`, or one with a target such as
-    /// `account-rules(int64 1)`. With a thread to open, the action waits
-    /// for it, so `toggle-vip` has a sender to add.
+    /// position in the open thread, `MAILRS_DEMO_OFFLINE` shows the
+    /// calendar's offline line as if a sync just failed, and
+    /// `MAILRS_DEMO_ACTION` activates a window action such as
+    /// `shortcuts`, or one with a target such as `account-rules(int64
+    /// 1)`. With a thread to open, the action waits for it, so
+    /// `toggle-vip` has a sender to add.
     pub fn run_demo_script(self: &Rc<Self>) {
         if !self.core.demo {
             return;
@@ -2936,6 +2947,10 @@ impl MainWindow {
         glib::timeout_add_local_once(std::time::Duration::from_millis(900), move || {
             if std::env::var_os("MAILRS_DEMO_OPEN").is_none() {
                 this.run_demo_action();
+            }
+            if std::env::var_os("MAILRS_DEMO_OFFLINE").is_some() {
+                this.calendar.synced(true);
+                this.calendar.synced(false);
             }
             if let Ok(query) = std::env::var("MAILRS_DEMO_SEARCH") {
                 this.list.open_search();
@@ -3208,6 +3223,7 @@ impl MainWindow {
             // The app follows the light or dark choice; no window to redraw.
             Effect::Theme => {}
             Effect::Language => self.offer_restart(),
+            Effect::Calendar => self.calendar.week_start_changed(),
         }
     }
 

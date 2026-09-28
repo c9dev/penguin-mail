@@ -44,6 +44,12 @@ const WAIT: Duration = Duration::from_secs(2);
 /// busy with the rest of the suite.
 const MARGIN: Duration = Duration::from_secs(4);
 
+/// How long the tests that read a served CRL let gpgsm wait for it. They
+/// check what the CRL says, not how fast it comes, and a cold dirmngr on
+/// a two-core CI runner, beside the suite's other gpg-agents, has missed
+/// the app's ten seconds and read as RevocationUnknown.
+const CRL_FETCH: Duration = Duration::from_secs(60);
+
 /// What the CRL distribution point on Ada's certificate does when dirmngr
 /// comes asking.
 enum Point {
@@ -484,7 +490,11 @@ fn a_crl_that_lists_nothing_leaves_the_chain_trusted() {
     };
     let signature = home.signed(PART, "--detach-sign");
 
-    let found = home.smime.verify(PART, &signature).expect("a verdict");
+    let found = home
+        .smime
+        .clone()
+        .with_revocation_wait(CRL_FETCH)
+        .verify(PART, &signature).expect("a verdict");
 
     assert_eq!(found.verdict, Verdict::Good);
     assert_eq!(found.chain, Chain::Trusted);
@@ -510,7 +520,11 @@ fn a_certificate_the_crl_lists_is_revoked() {
     };
     let signature = home.signed(PART, "--detach-sign");
 
-    let found = home.smime.verify(PART, &signature).expect("a verdict");
+    let found = home
+        .smime
+        .clone()
+        .with_revocation_wait(CRL_FETCH)
+        .verify(PART, &signature).expect("a verdict");
 
     assert_eq!(found.verdict, Verdict::RevokedCertificate);
     assert!(!found.is_good());

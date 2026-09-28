@@ -44,6 +44,11 @@ pub(super) enum Place {
     /// The calendar page, which installs its keys itself and answers
     /// them only while it shows and no field has the focus.
     Calendar,
+    /// The calendar's time grid, which installs these keys itself,
+    /// moving or resizing the focused event card: listed here only so
+    /// the dialog shows them, since they need no `calendar_key` answer
+    /// of their own.
+    CalendarGrid,
 }
 
 impl Place {
@@ -142,6 +147,11 @@ const fn page(trigger: &'static str) -> Key {
 /// A key the calendar page answers itself.
 const fn calendar(trigger: &'static str) -> Key {
     key(trigger, "", Place::Calendar)
+}
+
+/// A key the calendar's time grid answers itself.
+const fn calendar_grid(trigger: &'static str) -> Key {
+    key(trigger, "", Place::CalendarGrid)
 }
 
 impl Key {
@@ -553,6 +563,36 @@ pub(super) static SHORTCUTS: &[Shortcut] = &[
         keys: &[calendar("<Control>f")],
     },
     Shortcut {
+        section: Section::Calendar,
+        description: || gettext("Go to date"),
+        keys: &[calendar("g")],
+    },
+    Shortcut {
+        section: Section::Calendar,
+        description: || gettext("Undo, while its toast is still up"),
+        keys: &[calendar("<Control>z")],
+    },
+    Shortcut {
+        section: Section::Calendar,
+        description: || gettext("Move the focused event a day earlier or later"),
+        keys: &[calendar_grid("<Shift>Left"), calendar_grid("<Shift>Right")],
+    },
+    Shortcut {
+        section: Section::Calendar,
+        description: || gettext("Move the focused event by 15 minutes"),
+        keys: &[calendar_grid("<Shift>Up"), calendar_grid("<Shift>Down")],
+    },
+    Shortcut {
+        section: Section::Calendar,
+        description: || gettext("Change when the focused event ends"),
+        keys: &[calendar_grid("<Shift><Alt>Up"), calendar_grid("<Shift><Alt>Down")],
+    },
+    Shortcut {
+        section: Section::Calendar,
+        description: || gettext("Refresh the calendar"),
+        keys: &[calendar("F5"), calendar("<Control>r")],
+    },
+    Shortcut {
         section: Section::General,
         description: || gettext("Preferences"),
         keys: &[main("<Control>comma", "win.preferences")],
@@ -604,6 +644,9 @@ pub(super) enum CalendarKey {
     Search,
     Delete,
     NewEvent,
+    GoToDate,
+    Undo,
+    Refresh,
 }
 
 /// The calendar's own key a press stands for, if any. Enter is listed in
@@ -621,6 +664,9 @@ pub(super) fn calendar_key(pressed: gdk::Key, modifiers: gdk::ModifierType) -> O
         "<Control>f" => CalendarKey::Search,
         "Delete" | "KP_Delete" => CalendarKey::Delete,
         "n" => CalendarKey::NewEvent,
+        "g" => CalendarKey::GoToDate,
+        "<Control>z" => CalendarKey::Undo,
+        "F5" | "<Control>r" => CalendarKey::Refresh,
         _ => return None,
     })
 }
@@ -658,6 +704,10 @@ const MAIL_ONLY: &[&str] = &[
     "zoom-in",
     "zoom-out",
     "zoom-reset",
+    // F5 is the calendar's own Refresh there; the calendar page's own
+    // key handling answers it, so the mail check stays quiet rather
+    // than also popping its "Checking for mail" toast.
+    "check",
 ];
 
 /// Where a main window action goes while `space` shows. The chords are
@@ -739,6 +789,9 @@ pub(super) static MAIN_ACTIONS: &[(&str, WindowRun)] = &[
         win.reload_folder();
         win.toast(&gettext("Checking for mail"));
     }),
+    // The menu's Refresh under the calendar section; disabled outside
+    // it, alongside "show-declined-events" (`install_spaces`).
+    ("refresh-calendar", |win| win.calendar.refresh_now()),
     ("add-account", |win| win.add_account()),
     ("shortcuts", |win| win.show_shortcuts()),
     ("mute", |win| win.toggle_mute()),
@@ -958,13 +1011,14 @@ impl MainWindow {
 mod tests {
     use super::*;
 
-    const PLACES: [Place; 6] = [
+    const PLACES: [Place; 7] = [
         Place::Main,
         Place::Conversation,
         Place::Composer,
         Place::List,
         Place::Page,
         Place::Calendar,
+        Place::CalendarGrid,
     ];
 
     /// The main window's actions that take an argument, which
@@ -1029,7 +1083,7 @@ mod tests {
             }
             if matches!(
                 key.place,
-                Place::Composer | Place::List | Place::Page | Place::Calendar
+                Place::Composer | Place::List | Place::Page | Place::Calendar | Place::CalendarGrid
             ) {
                 assert!(key.action.is_empty() && !key.letter);
             }
@@ -1077,10 +1131,14 @@ mod tests {
             if !key.shown {
                 continue;
             }
-            assert!(!answered.contains(&command), "{} repeats {command:?}", key.trigger);
+            // F5 and Ctrl+R both refresh the calendar, on purpose, each
+            // its own shown key.
+            if command != CalendarKey::Refresh {
+                assert!(!answered.contains(&command), "{} repeats {command:?}", key.trigger);
+            }
             answered.push(command);
         }
-        assert_eq!(answered.len(), 9);
+        assert_eq!(answered.len(), 13);
     }
 
     #[test]
@@ -1118,9 +1176,27 @@ mod tests {
 
     #[test]
     fn window_actions_run_in_either_space() {
-        for name in ["compose", "preferences", "assistant", "check", "go-mailbox", "show-mail"] {
+        for name in ["compose", "preferences", "assistant", "go-mailbox", "show-mail"] {
             assert_eq!(route(Space::Calendar, name), Route::Run, "{name}");
         }
+    }
+
+    #[test]
+    fn check_gives_way_to_the_calendars_own_refresh_key() {
+        assert_eq!(route(Space::Calendar, "check"), Route::Skip);
+        assert_eq!(route(Space::Mail, "check"), Route::Run);
+    }
+
+    #[test]
+    fn f5_and_control_r_refresh_the_calendar() {
+        assert_eq!(
+            calendar_key(gdk::Key::F5, gdk::ModifierType::empty()),
+            Some(CalendarKey::Refresh)
+        );
+        assert_eq!(
+            calendar_key(gdk::Key::r, gdk::ModifierType::CONTROL_MASK),
+            Some(CalendarKey::Refresh)
+        );
     }
 
     #[test]

@@ -1,10 +1,13 @@
 //! Which day a week starts on, and the column order that follows from
-//! it. The desktop's locale decides it (glibc's `first_weekday`, read in
-//! `mailrs::locale_time`); this module holds the arithmetic that reads a
-//! platform's raw answer and turns a start weekday into a grid's columns,
-//! neither of which touches the platform itself.
+//! it. The desktop's locale decides it by default (glibc's
+//! `first_weekday`, read in `mailrs::locale_time`), unless Preferences'
+//! Week Starts On row names a fixed day instead ([`WeekStart`]); this
+//! module holds the arithmetic that reads a platform's raw answer, folds
+//! in the person's own choice, and turns a start weekday into a grid's
+//! columns, none of which touches the platform itself.
 
 use chrono::{Datelike, Days, NaiveDate, Weekday};
+use serde::{Deserialize, Serialize};
 
 /// glibc's `nl_langinfo(_NL_TIME_FIRST_WEEKDAY)` answers with the
 /// `ABDAY_*` index of the first day of the week: 1 for Sunday up to 7 for
@@ -21,6 +24,36 @@ pub fn weekday_from_first_weekday_byte(byte: u8) -> Weekday {
         6 => Weekday::Fri,
         7 => Weekday::Sat,
         _ => Weekday::Mon,
+    }
+}
+
+/// Which day the Week grid, the Month grid and the mini month all start
+/// on: the locale's own first weekday, or a fixed weekday the person
+/// picked in Preferences instead. `mailrs::settings::Settings::week_start`
+/// keeps one of these; [`week_start`] is the one function that turns it,
+/// together with the locale's own answer, into the weekday a grid
+/// actually starts on.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum WeekStart {
+    /// The locale's own first weekday, as `nl_langinfo` names it
+    /// (`mailrs::locale_time::first_weekday`, read on the platform).
+    #[default]
+    Automatic,
+    Monday,
+    Sunday,
+}
+
+/// The weekday a calendar grid starts its week on: `locale` for
+/// [`WeekStart::Automatic`], or the fixed day the person chose instead.
+/// Every place that draws a week's columns — Week, Month and the mini
+/// month — calls this one function, so a Preferences change and the
+/// locale's own answer are read the same way everywhere.
+pub fn week_start(setting: WeekStart, locale: Weekday) -> Weekday {
+    match setting {
+        WeekStart::Automatic => locale,
+        WeekStart::Monday => Weekday::Mon,
+        WeekStart::Sunday => Weekday::Sun,
     }
 }
 
@@ -113,5 +146,26 @@ mod tests {
     fn the_first_day_of_its_own_week_is_itself() {
         let sunday = NaiveDate::from_ymd_opt(2026, 9, 20).unwrap();
         assert_eq!(week_start_on_or_before(sunday, Weekday::Sun), sunday);
+    }
+
+    #[test]
+    fn automatic_follows_the_locales_own_first_weekday() {
+        assert_eq!(week_start(WeekStart::Automatic, Weekday::Sun), Weekday::Sun);
+        assert_eq!(week_start(WeekStart::Automatic, Weekday::Mon), Weekday::Mon);
+    }
+
+    #[test]
+    fn monday_overrides_a_locale_that_starts_on_sunday() {
+        assert_eq!(week_start(WeekStart::Monday, Weekday::Sun), Weekday::Mon);
+    }
+
+    #[test]
+    fn sunday_overrides_a_locale_that_starts_on_monday() {
+        assert_eq!(week_start(WeekStart::Sunday, Weekday::Mon), Weekday::Sun);
+    }
+
+    #[test]
+    fn week_start_defaults_to_automatic() {
+        assert_eq!(WeekStart::default(), WeekStart::Automatic);
     }
 }

@@ -38,6 +38,15 @@ impl<T> Holding<T> {
             .map(|(_, item)| item)
     }
 
+    /// The id of the change held most recently, if any is still held: at
+    /// most one is, since holding another dismisses the toast over the
+    /// last one (`offer_undo`'s own comment). Ctrl+Z reads this the same
+    /// way the toast's own Undo button reads it, by the id it was handed
+    /// when it was held.
+    pub fn last_id(&self) -> Option<u64> {
+        self.items.last().map(|(id, _)| *id)
+    }
+
     /// Every item still held, taken out in the order it was held. For the
     /// window closing or the app quitting, when nothing is left to offer
     /// Undo over any of them.
@@ -80,6 +89,18 @@ mod tests {
             Some("delete lunch"),
             "peek did not take it"
         );
+    }
+
+    #[test]
+    fn last_id_names_the_most_recently_held_change() {
+        let mut holding: Holding<&str> = Holding::new();
+        assert_eq!(holding.last_id(), None);
+        let a = holding.hold("delete lunch");
+        assert_eq!(holding.last_id(), Some(a));
+        let b = holding.hold("move review");
+        assert_eq!(holding.last_id(), Some(b));
+        holding.take(b);
+        assert_eq!(holding.last_id(), Some(a), "the id before it is still held");
     }
 
     #[test]

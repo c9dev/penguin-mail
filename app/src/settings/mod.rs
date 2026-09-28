@@ -5,6 +5,7 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 use mailrs_domain::Category;
+use mailrs_domain::calendar::week::WeekStart;
 use mailrs_domain::translate::{fill_plural, gettext, pgettext};
 use serde::{Deserialize, Serialize};
 
@@ -128,6 +129,10 @@ pub struct Settings {
     /// day that is not one of them, and the assistant's free-time tool
     /// defaults to them. Defaults to 09:00 to 18:00, Monday to Friday.
     pub working_hours: mailrs_domain::calendar::hours::WorkingHours,
+    /// Which day the Week grid, the Month grid and the mini month start
+    /// on: the locale's own first weekday, or a fixed weekday. Defaults
+    /// to Automatic.
+    pub week_start: WeekStart,
     /// The address of the account the last new event went on. A new
     /// event goes on that account's primary calendar.
     pub last_calendar_account: Option<String>,
@@ -471,6 +476,7 @@ impl Default for Settings {
             calendar_view: CalendarView::Week,
             show_declined_events: false,
             working_hours: mailrs_domain::calendar::hours::WorkingHours::default(),
+            week_start: WeekStart::default(),
             last_calendar_account: None,
         }
     }
@@ -502,6 +508,18 @@ impl Choice for Category {
     const ALL: &'static [Self] = &Category::ALL;
     fn label(self) -> String {
         self.name()
+    }
+}
+
+/// The "Week Starts On" row in Preferences.
+impl Choice for WeekStart {
+    const ALL: &'static [Self] = &[WeekStart::Automatic, WeekStart::Monday, WeekStart::Sunday];
+    fn label(self) -> String {
+        match self {
+            WeekStart::Automatic => gettext("Automatic"),
+            WeekStart::Monday => gettext("Monday"),
+            WeekStart::Sunday => gettext("Sunday"),
+        }
     }
 }
 

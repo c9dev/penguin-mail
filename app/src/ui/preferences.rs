@@ -8,6 +8,7 @@ use adw::prelude::*;
 use chrono::Timelike;
 use gtk::glib;
 use mailrs_domain::calendar::hours::WorkingHours;
+use mailrs_domain::calendar::week::WeekStart;
 use mailrs_domain::translate::date_locale;
 use mailrs_domain::{Account, AccountId};
 use mailrs_sync::config::SyncConfig;
@@ -236,6 +237,7 @@ fn general_page(
         settings.event_reminders,
         Change::EventReminders,
     ));
+    calendar.add(&week_start_row(app, settings.week_start));
     calendar.add(&working_hours_row(app, settings.working_hours));
     page.add(&calendar);
     if !missing.is_empty() {
@@ -870,6 +872,26 @@ fn hour_dropdown(current: chrono::NaiveTime) -> gtk::DropDown {
         .build();
     drop.set_selected(current.hour());
     drop
+}
+
+/// The "Week Starts On" row: Automatic follows the locale's own first
+/// weekday. An explicit accessible name, since the closed row's own
+/// text does not always reach a screen reader on a plain title
+/// (`libadwaita-dialog-traps`, "Two choices read better as a toggle
+/// group").
+fn week_start_row(app: &Rc<App>, week_start: WeekStart) -> adw::ComboRow {
+    let title = gettext("Week Starts On");
+    let row = combo(
+        app,
+        &title,
+        Some(&gettext(
+            "Automatic follows the locale's own first day of the week",
+        )),
+        week_start,
+        Change::WeekStart,
+    );
+    crate::ui::name(&row, &title);
+    row
 }
 
 /// The "Working Hours" row: an expander with the current hours and days

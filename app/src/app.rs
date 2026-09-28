@@ -163,6 +163,7 @@ impl App {
             updater: crate::update::Updater::for_this_copy(core_demo).map(Rc::new),
             _hold: gio_app.hold(),
         });
+        crate::locale_time::set_week_start_setting(app.settings.borrow().week_start);
         app.install_actions();
         app.listen();
         app.listen_for_notifications(picked);
@@ -190,6 +191,9 @@ impl App {
             let available = monitor.is_network_available();
             // The engine pauses or wakes each account's loop itself.
             app.core.set_network(available);
+            if let Some(window) = app.window() {
+                window.calendar.network_changed();
+            }
             if available {
                 // The folder on screen may have changed on Gmail while
                 // the network was gone.
@@ -270,6 +274,9 @@ impl App {
     fn apply_effects(self: &Rc<Self>, effects: &Effects) {
         if effects.has(Effect::Theme) {
             self.apply_style();
+        }
+        if effects.has(Effect::Calendar) {
+            crate::locale_time::set_week_start_setting(self.settings.borrow().week_start);
         }
         if !effects.is_empty() {
             self.tell_window(Notice::SettingsChanged(effects));
@@ -934,16 +941,25 @@ impl App {
         });
     }
 
-    /// Keeps the calendar copy fresh. Runs on a short timer; the copy
-    /// reads an account only when its minute (window open) or five
-    /// minutes (tray only) are up, so most ticks cost nothing. Nothing
-    /// runs while the network is gone.
+    /// Keeps the calendar copy fresh. Runs on a short timer and on a
+    /// Refresh press alike; the copy reads an account only when its
+    /// minute (window open) or five minutes (tray only) are up, so most
+    /// ticks cost nothing. Nothing runs while the network is gone, and
+    /// an open calendar's offline line and Refresh debounce follow
+    /// whatever this pass finds.
     pub fn refresh_calendars(self: &Rc<Self>) {
         if !self.core.network() {
+            if let Some(window) = self.window() {
+                window.calendar.refresh_done();
+                window.calendar.network_changed();
+            }
             return;
         }
         let accounts: Vec<AccountId> = self.accounts.borrow().iter().map(|a| a.id).collect();
         if accounts.is_empty() {
+            if let Some(window) = self.window() {
+                window.calendar.refresh_done();
+            }
             return;
         }
         let window_open = self.core.window_open();
@@ -955,6 +971,10 @@ impl App {
                 .core
                 .call(async move { copy.refresh_due(&accounts, now, window_open).await })
                 .await;
+            if let Some(window) = this.window() {
+                window.calendar.refresh_done();
+                window.calendar.synced(read.is_ok());
+            }
             match read {
                 Ok(refreshed) => {
                     for turned_down in &refreshed.turned_down {

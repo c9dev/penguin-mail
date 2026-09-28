@@ -88,6 +88,40 @@ where
     span_words(o.start, o.end, o.event.all_day, zone)
 }
 
+/// A month bar's spoken name: the title, the days the whole event
+/// covers, and its calendar. The bar in each week row says the whole
+/// span, so a reader on its second row still hears where it began.
+pub fn bar_words<Z: TimeZone>(o: &Occurrence, calendar: &str, zone: &Z) -> String
+where
+    Z::Offset: std::fmt::Display,
+{
+    let title = &o.event.title;
+    if o.event.all_day {
+        fill(
+            &gettext("{title}, {days}, all day, {calendar}"),
+            &[
+                ("title", title),
+                ("days", &span_words(o.start, o.end, true, zone)),
+                ("calendar", calendar),
+            ],
+        )
+    } else {
+        let at = |instant: EpochMillis| {
+            fill(
+                &gettext("{date} {time}"),
+                &[
+                    ("date", &full_date_words(local_date(instant, zone))),
+                    ("time", &clock_words(instant, zone)),
+                ],
+            )
+        };
+        fill(
+            &gettext("{title}, {start} to {end}, {calendar}"),
+            &[("title", title), ("start", &at(o.start)), ("end", &at(o.end)), ("calendar", calendar)],
+        )
+    }
+}
+
 /// The agenda row's time column: "All day", or the start and end clock
 /// with no date, which the row's own heading already carries.
 pub fn agenda_span_words<Z: TimeZone>(o: &Occurrence, zone: &Z) -> String
@@ -240,6 +274,24 @@ pub fn mini_day_words(date: NaiveDate, has_events: bool) -> String {
     }
 }
 
+/// "Offline, last updated 14:32" under the calendar sidebar's mini
+/// month, or nothing while the account is online and its last sync
+/// succeeded. `online` says whether the computer has a network now,
+/// `sync_failed` whether the last calendar sync attempt came back with
+/// an error, and `last_synced` the last successful sync's own clock
+/// time, already through [`crate::clock_format::time_text`]. Offline
+/// and a failed sync read the same word, "Offline", since neither can
+/// promise the calendar is current.
+pub fn offline_line(online: bool, sync_failed: bool, last_synced: Option<&str>) -> Option<String> {
+    if online && !sync_failed {
+        return None;
+    }
+    Some(match last_synced {
+        Some(time) => fill(&gettext("Offline, last updated {time}"), &[("time", time)]),
+        None => gettext("Offline"),
+    })
+}
+
 /// "Wed 15:00": the day and time the calendar sidebar's "Waiting for
 /// your answer" card shows, short since the card has no room for the
 /// full weekday. An all-day occurrence gives just the day, since it has
@@ -350,9 +402,18 @@ pub fn repeat_words(repeat: &Repeat) -> String {
         Repeat::EveryWeek => once("Every week", "Every {count} weeks"),
         Repeat::EveryMonth => once("Every month", "Every {count} months"),
         Repeat::EveryYear => once("Every year", "Every {count} years"),
+        Repeat::MonthlyByDay(ordinal, weekday) => monthly_by_day_words(*ordinal, *weekday),
         Repeat::Kept(_) => gettext("A rule set in another app"),
         Repeat::Custom(custom) => custom_words(custom),
     }
+}
+
+/// "Monthly on the second Tuesday" or "Monthly on the last Friday", said
+/// the way `in_words` reads an invitation's own monthly ordinal `BYDAY`,
+/// so the two phrasings never drift apart.
+fn monthly_by_day_words(ordinal: i8, weekday: chrono::Weekday) -> String {
+    let rule = format!("FREQ=MONTHLY;BYDAY={ordinal}{}", byday_code(weekday));
+    in_words(&rule, None).unwrap_or_default()
 }
 
 /// A custom repeat's line, read the way `in_words` reads an invitation's
@@ -538,6 +599,37 @@ pub fn series_words(rules: &[String], start: EpochMillis, zone: Tz) -> Option<St
     (repeat != Repeat::Never).then(|| repeat_words(&repeat))
 }
 
+/// The event's own time added beside the desktop's, for the popover:
+/// "09:00 New York" once `event_zone` differs from `desktop_zone`.
+/// `None` when they are the same zone, so the popover names the time
+/// once. The time reads through the shared clock formatting
+/// ([`crate::clock_format::time_text`]), the same 12- or 24-hour choice
+/// the desktop's own time already shows in.
+pub fn own_zone_words(start: EpochMillis, event_zone: Tz, desktop_zone: Tz) -> Option<String> {
+    if event_zone == desktop_zone {
+        return None;
+    }
+    let time = utc(start)?.with_timezone(&event_zone).time();
+    Some(fill(
+        &gettext("{time} {city}"),
+        &[
+            ("time", &crate::clock_format::time_text(time)),
+            ("city", &zone_city(event_zone)),
+        ],
+    ))
+}
+
+/// The city an IANA zone id ends in, for a reader who does not parse
+/// zone ids: "New York" for `America/New_York`, "Lisbon" for
+/// `Europe/Lisbon`.
+fn zone_city(zone: Tz) -> String {
+    zone.name()
+        .rsplit('/')
+        .next()
+        .unwrap_or_else(|| zone.name())
+        .replace('_', " ")
+}
+
 fn utc(at: EpochMillis) -> Option<DateTime<Utc>> {
     DateTime::<Utc>::from_timestamp_millis(at)
 }
@@ -596,6 +688,30 @@ mod tests {
             .timestamp_millis();
         let o = occurrence(false, start, end);
         assert_eq!(when_words(&o, &Utc), "Wednesday 23 September · 15:00–16:00");
+    }
+
+    #[test]
+    fn a_bar_names_the_days_an_all_day_event_covers() {
+        mailrs_domain::translate::set_date_locale("en_US");
+        let mut o = occurrence(true, midnight(d(2026, 10, 2)), midnight(d(2026, 10, 5)));
+        Arc::make_mut(&mut o.event).title = "Lisbon offsite".into();
+        assert_eq!(
+            bar_words(&o, "Work", &Utc),
+            "Lisbon offsite, Friday 2 – Sunday 4 October, all day, Work"
+        );
+    }
+
+    #[test]
+    fn a_bar_names_both_days_and_clocks_of_a_timed_event() {
+        mailrs_domain::translate::set_date_locale("en_US");
+        let start = Utc.with_ymd_and_hms(2026, 10, 2, 22, 0, 0).unwrap().timestamp_millis();
+        let end = Utc.with_ymd_and_hms(2026, 10, 3, 2, 0, 0).unwrap().timestamp_millis();
+        let mut o = occurrence(false, start, end);
+        Arc::make_mut(&mut o.event).title = "Night shift".into();
+        assert_eq!(
+            bar_words(&o, "Work", &Utc),
+            "Night shift, Friday 2 October 22:00 to Saturday 3 October 02:00, Work"
+        );
     }
 
     #[test]
@@ -789,7 +905,21 @@ mod tests {
         assert_eq!(repeat_words(&two_weeks), "Every 2 weeks on Monday and Wednesday until 31 December");
         let five = Repeat::Custom(Custom { every: 1, frequency: Frequency::Daily, days: vec![], ends: Ends::After(5) });
         assert_eq!(repeat_words(&five), "Every day, 5 times");
-        assert_eq!(repeat_words(&Repeat::Kept("RRULE:FREQ=MONTHLY;BYDAY=1MO".into())), "A rule set in another app");
+        assert_eq!(repeat_words(&Repeat::Kept("RRULE:FREQ=MONTHLY;BYDAY=1MO,3MO".into())), "A rule set in another app");
+    }
+
+    #[test]
+    fn a_monthly_ordinal_choice_reads_as_the_nth_or_the_last_weekday() {
+        use chrono::Weekday;
+        mailrs_domain::translate::set_date_locale("en_US");
+        assert_eq!(
+            repeat_words(&Repeat::MonthlyByDay(2, Weekday::Tue)),
+            "Every month on the second Tuesday"
+        );
+        assert_eq!(
+            repeat_words(&Repeat::MonthlyByDay(-1, Weekday::Fri)),
+            "Every month on the last Friday"
+        );
     }
 
     #[test]
@@ -916,6 +1046,56 @@ mod tests {
     fn waiting_card_detail_for_an_all_day_occurrence_gives_just_the_day() {
         mailrs_domain::translate::set_date_locale("en_US");
         assert_eq!(waiting_card_detail(midnight(d(2026, 9, 23)), true, &Utc), "Wednesday 23");
+    }
+
+    #[test]
+    fn own_zone_words_names_the_event_s_own_zone_when_it_differs() {
+        mailrs_domain::translate::set_date_locale("en_US");
+        let start = Utc.with_ymd_and_hms(2026, 9, 23, 15, 0, 0).unwrap().timestamp_millis();
+        // 15:00 UTC is 11:00 in New York, on Eastern Daylight Time in
+        // September.
+        assert_eq!(
+            own_zone_words(start, Tz::America__New_York, Tz::Europe__Lisbon),
+            Some("11:00 New York".to_string())
+        );
+    }
+
+    #[test]
+    fn own_zone_words_says_nothing_for_the_desktop_s_own_zone() {
+        let start = Utc.with_ymd_and_hms(2026, 9, 23, 15, 0, 0).unwrap().timestamp_millis();
+        assert_eq!(own_zone_words(start, Tz::Europe__Lisbon, Tz::Europe__Lisbon), None);
+    }
+
+    #[test]
+    fn zone_city_reads_the_last_segment_of_a_zone_id() {
+        assert_eq!(zone_city(Tz::America__New_York), "New York");
+        assert_eq!(zone_city(Tz::Europe__Lisbon), "Lisbon");
+    }
+
+    #[test]
+    fn nothing_shows_while_online_and_the_last_sync_succeeded() {
+        assert_eq!(offline_line(true, false, Some("14:32")), None);
+    }
+
+    #[test]
+    fn offline_names_the_last_time_it_synced() {
+        assert_eq!(
+            offline_line(false, false, Some("14:32")),
+            Some("Offline, last updated 14:32".to_string())
+        );
+    }
+
+    #[test]
+    fn offline_with_nothing_synced_yet_says_just_offline() {
+        assert_eq!(offline_line(false, false, None), Some("Offline".to_string()));
+    }
+
+    #[test]
+    fn a_failed_sync_shows_the_line_even_while_online() {
+        assert_eq!(
+            offline_line(true, true, Some("09:00")),
+            Some("Offline, last updated 09:00".to_string())
+        );
     }
 
     #[test]
