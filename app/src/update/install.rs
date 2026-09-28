@@ -151,10 +151,14 @@ mod tests {
 
     #[test]
     fn a_package_something_else_updates_has_no_method() {
-        // The rpm installs under /usr as the .deb does, and dnf, not apt,
-        // brings its new versions.
+        // The rpm and the Arch package both install under /usr as the .deb
+        // does, but dnf and pacman, not apt, bring their new versions.
         assert_eq!(
             method_for(Packaging::Rpm, Path::new("/usr/bin/penguin-mail")),
+            None
+        );
+        assert_eq!(
+            method_for(Packaging::Arch, Path::new("/usr/bin/penguin-mail")),
             None
         );
         assert_eq!(

@@ -1664,15 +1664,19 @@ msgstr "O modelo não devolveu nada para pôr na mensagem."
 msgid "The model could not translate this: {reason}"
 msgstr "O modelo não conseguiu traduzir isto: {reason}"
 
-#: app/src/packaging.rs:89
+#: app/src/packaging.rs:97
 msgid "Updates come from dnf"
 msgstr "As atualizações chegam pelo dnf"
 
-#: app/src/packaging.rs:90
+#: app/src/packaging.rs:98
+msgid "Updates come from pacman"
+msgstr "As atualizações chegam pelo pacman"
+
+#: app/src/packaging.rs:99
 msgid "Updates come from Flathub"
 msgstr "As atualizações chegam pelo Flathub"
 
-#: app/src/packaging.rs:91
+#: app/src/packaging.rs:100
 msgid "Updates come from the Snap Store"
 msgstr "As atualizações chegam pela Snap Store"
 
