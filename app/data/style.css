@@ -267,22 +267,25 @@ flowboxchild:focus-visible > .recipient-chip {
   color: alpha(currentColor, 0.4);
 }
 .mailboxes > row > .sidebar-section {
-  margin: 14px 8px 4px 10px;
+  /* 5 px under, and the row under the heading adds its own 2 px. */
+  margin: 16px 8px 5px 10px;
   letter-spacing: 0.4px;
   text-transform: uppercase;
 }
-.mailboxes > row:first-child > .sidebar-section { margin-top: 4px; }
+.mailboxes > row:first-child > .sidebar-section { margin-top: 12px; }
 
 /* Row type: 14 px names, 700 when selected. */
 .mailbox-row > label { font-size: 0.95em; font-weight: 500; }
 .mailboxes > row:selected .mailbox-row > label { font-weight: 700; }
-.mailbox-row { min-height: 16px; padding: 8px 14px 8px 0; }
+/* Rows 32 px tall on a 34 px pitch, as mockups.py's `side_row` draws
+   them: 7 px above and below the label, and 2 px under each row. */
+.mailbox-row { min-height: 16px; padding: 7px 14px 7px 0; }
 
 /* The selected mailbox is a rounded card tinted with the accent, 8 px in
    from each side of the card: 18 % in light mode, 28 % in dark, over the
    sidebar shade (mockups.py's `tint + 0.04`, not the calendar event's
    14 %/24 %). Its icon, name and count take the accent colour. */
-.mailboxes > row { margin: 0 8px; padding: 0; border-radius: 9px; }
+.mailboxes > row { margin: 0 8px 2px; padding: 0; min-height: 0; border-radius: 9px; }
 .mailboxes > row:selected {
   background-color: alpha(var(--accent-bg-color), 0.18);
   color: var(--accent-color);
