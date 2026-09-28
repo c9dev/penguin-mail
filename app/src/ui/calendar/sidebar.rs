@@ -287,6 +287,17 @@ impl CalendarSidebar {
             .selection_mode(gtk::SelectionMode::None)
             .css_classes(["waiting-list"])
             .build();
+        // Its own scroller, capped at three cards' own pitch (the
+        // mockup's own 150 px), so the section never grows past the
+        // room the sidebar's foot has for it, whatever else sits above
+        // it or however tall the window is; a shorter list keeps its
+        // own natural height instead of always claiming the cap.
+        let waiting_scroller = gtk::ScrolledWindow::builder()
+            .hscrollbar_policy(gtk::PolicyType::Never)
+            .propagate_natural_height(true)
+            .max_content_height(150)
+            .child(&waiting_list)
+            .build();
         let waiting_section = gtk::Box::builder()
             .orientation(gtk::Orientation::Vertical)
             .spacing(8)
@@ -294,7 +305,7 @@ impl CalendarSidebar {
             .visible(false)
             .build();
         waiting_section.append(&waiting_heading);
-        waiting_section.append(&waiting_list);
+        waiting_section.append(&waiting_scroller);
         widget.append(&waiting_section);
         let waiting_shown: Rc<RefCell<Vec<Waiting>>> = Rc::new(RefCell::new(Vec::new()));
         waiting_list.connect_row_activated({
