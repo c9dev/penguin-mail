@@ -652,6 +652,14 @@ UPDATE calendars SET sync_token = NULL;
 ALTER TABLE calendars ADD COLUMN listed INTEGER NOT NULL DEFAULT 1;
 ALTER TABLE calendars ADD COLUMN own_color TEXT;
 "#,
+    // What sort of entry each event is (Google's `eventType`: out of
+    // office, focus time, a working location or a birthday), as JSON,
+    // NULL for an ordinary event. Emptying the tokens makes the next read
+    // take each calendar whole, so the rows already stored learn theirs.
+    r#"
+ALTER TABLE events ADD COLUMN kind TEXT;
+UPDATE calendars SET sync_token = NULL;
+"#,
 ];
 
 /// How long the copy taken before a migration stays once the store has

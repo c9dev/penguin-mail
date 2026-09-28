@@ -177,6 +177,100 @@ impl Status {
     }
 }
 
+/// Which meetings an out-of-office or focus-time entry turns down while it
+/// runs. Google's `autoDeclineMode`.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub enum Declines {
+    /// Google's `declineNone`.
+    #[default]
+    Nothing,
+    /// Only invitations that arrive after the entry was made.
+    /// `declineOnlyNewConflictingInvitations`.
+    New,
+    /// New invitations and the meetings already on the calendar.
+    /// `declineAllConflictingInvitations`.
+    All,
+}
+
+impl Declines {
+    pub fn as_google(self) -> &'static str {
+        match self {
+            Declines::Nothing => "declineNone",
+            Declines::New => "declineOnlyNewConflictingInvitations",
+            Declines::All => "declineAllConflictingInvitations",
+        }
+    }
+
+    pub fn from_google(word: &str) -> Declines {
+        match word {
+            "declineOnlyNewConflictingInvitations" => Declines::New,
+            "declineAllConflictingInvitations" => Declines::All,
+            _ => Declines::Nothing,
+        }
+    }
+}
+
+/// What an out-of-office or focus-time entry does with the meetings that
+/// fall in it, and the words the organizer gets with each refusal.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Decline {
+    pub meetings: Declines,
+    pub message: String,
+}
+
+/// Where the account's owner works on a day, from a working-location
+/// entry.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum Workplace {
+    Home,
+    /// An office, by the building's name when Google gives one.
+    Office(String),
+    /// Somewhere the person named themselves.
+    Elsewhere(String),
+}
+
+/// What sort of entry an event is: an ordinary event, or one of the
+/// entries Google keeps on the primary calendar to say where the person
+/// is. Google's `eventType`, which it never lets a write change.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub enum Kind {
+    #[default]
+    Event,
+    OutOfOffice(Decline),
+    Focus(Decline),
+    WorkingLocation(Workplace),
+    Birthday,
+}
+
+impl Kind {
+    /// Whether only Google's own apps make and change it: birthdays come
+    /// from contacts and working locations from Google's settings, so
+    /// Penguin Mail shows them and writes nothing to them.
+    pub fn made_elsewhere(&self) -> bool {
+        matches!(self, Kind::WorkingLocation(_) | Kind::Birthday)
+    }
+
+    /// Google's `eventType` for it.
+    pub fn as_google(&self) -> &'static str {
+        match self {
+            Kind::Event => "default",
+            Kind::OutOfOffice(_) => "outOfOffice",
+            Kind::Focus(_) => "focusTime",
+            Kind::WorkingLocation(_) => "workingLocation",
+            Kind::Birthday => "birthday",
+        }
+    }
+
+    /// The meetings it turns down, for an out-of-office or focus-time
+    /// entry.
+    pub fn decline(&self) -> Option<&Decline> {
+        match self {
+            Kind::OutOfOffice(decline) | Kind::Focus(decline) => Some(decline),
+            _ => None,
+        }
+    }
+}
+
 /// One event, or one changed occurrence of a series.
 ///
 /// An all-day event runs from midnight UTC of its first day to midnight
@@ -239,6 +333,10 @@ pub struct Event {
     /// carries it; the store does not keep it.
     #[serde(default)]
     pub meet_request: Option<String>,
+    /// An ordinary event, or out of office, focus time, a working
+    /// location or a birthday.
+    #[serde(default)]
+    pub kind: Kind,
 }
 
 impl Event {
