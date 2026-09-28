@@ -1,6 +1,9 @@
 <div align="center">
 
-<img src="app/data/icons/scalable/apps/io.github.c9dev.PenguinMail.svg" width="128" height="128" alt="">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/brand/penguin-mail-banner-dark.svg">
+  <img src="docs/brand/penguin-mail-banner.svg" width="640" alt="Penguin Mail">
+</picture>
 
 # Penguin Mail
 
