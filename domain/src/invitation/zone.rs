@@ -45,6 +45,12 @@ impl Zones {
         Zones { offsets }
     }
 
+    /// The IANA name of the zone a `TZID` stands for, when this app knows
+    /// it. A zone known only by its `VTIMEZONE` offset has no name.
+    pub(crate) fn iana(&self, tzid: &str) -> Option<String> {
+        named(tzid).map(|zone| zone.name().to_string())
+    }
+
     /// The instant a start or end names.
     pub(crate) fn instant(&self, when: &CalendarDateTime) -> Option<EpochMillis> {
         let CalendarDateTime::WithTimezone { date_time, tzid } = when else {
