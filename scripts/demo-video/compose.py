@@ -75,7 +75,7 @@ def opening():
         """<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080">%s
   <g filter="url(#shadow)">%s</g>
   <text x="960" y="700" text-anchor="middle" %s font-size="104" font-weight="700" fill="#fbf1c7">Penguin Mail</text>
-  <text x="960" y="770" text-anchor="middle" %s font-size="38" fill="#d5c4a1">A fast, private Gmail client for GNOME</text>
+  <text x="960" y="770" text-anchor="middle" %s font-size="38" fill="#d5c4a1">Mail and calendar for Linux</text>
 </svg>"""
         % (BACKGROUND, icon(835, 290, 250), FONT, FONT),
     )

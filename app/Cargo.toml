@@ -5,7 +5,7 @@ license.workspace = true
 repository.workspace = true
 edition.workspace = true
 rust-version.workspace = true
-description = "A Gmail client for the GNOME desktop"
+description = "Mail and calendar for Linux"
 
 [[bin]]
 name = "penguin-mail"

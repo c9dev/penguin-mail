@@ -1,6 +1,6 @@
 ---
 name: Penguin Mail
-description: A beautiful and functional mail and calendar client for GNOME
+description: A beautiful and functional mail and calendar client for Linux
 colors:
   accent: "#e8660c"
   accent-dark: "#ff7a1a"

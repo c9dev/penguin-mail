@@ -16,86 +16,94 @@ msgstr ""
 "X-Language-Name: English (United Kingdom)\n"
 
 #: app/data/io.github.c9dev.PenguinMail.desktop:5
-msgid "Read and write Gmail from all your accounts"
-msgstr "Read and write Gmail from all your accounts"
+msgid "Mail and calendar for Linux"
+msgstr "Mail and calendar for Linux"
 
 #: app/data/io.github.c9dev.PenguinMail.desktop:10
-msgid "mail;email;gmail;inbox;"
-msgstr "mail;email;gmail;inbox;"
+msgid "mail;email;gmail;imap;inbox;calendar;contacts;"
+msgstr "mail;email;gmail;imap;inbox;calendar;contacts;"
 
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:15
-msgid "Penguin Mail keeps several Gmail accounts in sync from the system tray, shows them in one inbox or one at a time, and keeps your mail on your own computer. It talks to Google directly, so no other server sees your mail."
-msgstr "Penguin Mail keeps several Gmail accounts in sync from the system tray, shows them in one inbox or one at a time, and keeps your mail on your own computer. It talks to Google directly, so no other server sees your mail."
+msgid "Penguin Mail reads Gmail accounts and any IMAP and SMTP account, such as Fastmail, iCloud and Yahoo, and finds the server settings for you. It syncs from the system tray, shows your accounts in one inbox or one at a time, and keeps your mail on your own computer."
+msgstr "Penguin Mail reads Gmail accounts and any IMAP and SMTP account, such as Fastmail, iCloud and Yahoo, and finds the server settings for you. It syncs from the system tray, shows your accounts in one inbox or one at a time, and keeps your mail on your own computer."
 
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:22
 msgid "One inbox for every account, with Gmail's categories, labels and search"
 msgstr "One inbox for every account, with Gmail's categories, labels and search"
 
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:23
+msgid "A calendar with Google Calendar: Day, Week, Month and Agenda views, invitations answered in the mail, and reminders"
+msgstr "A calendar with Google Calendar: Day, Week, Month and Agenda views, invitations answered in the mail, and reminders"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:24
+msgid "Contacts"
+msgstr "Contacts"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:25
 msgid "A composer that shows formatting as you write, with Undo Send and Send Later"
 msgstr "A composer that shows formatting as you write, with Undo Send and Send Later"
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:24
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:26
 msgid "Flags in seven colors, VIPs, smart mailboxes and reminders"
 msgstr "Flags in seven colours, VIPs, smart mailboxes and reminders"
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:25
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:27
 msgid "Gmail's rules, automatic replies and plus addresses, changed from the app"
 msgstr "Gmail's rules, automatic replies and plus addresses, changed from the app"
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:26
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:28
 msgid "OpenPGP and S/MIME signing and encryption through your own GnuPG"
 msgstr "OpenPGP and S/MIME signing and encryption through your own GnuPG"
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:27
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:29
 msgid "Remote images blocked until you ask for them"
 msgstr "Remote images blocked until you ask for them"
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:28
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:30
 msgid "An assistant that runs on a local model or on Claude, off until you pick one"
 msgstr "An assistant that runs on a local model or on Claude, off until you pick one"
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:30
-msgid "Adding a Gmail account takes one sign-in with Google in your browser."
-msgstr "Adding a Gmail account takes one sign-in with Google in your browser."
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:32
+msgid "Adding a Gmail account takes one sign-in with Google in your browser. Penguin Mail is built with GTK and libadwaita and fits best on GNOME, but it runs on any Linux desktop."
+msgstr "Adding a Gmail account takes one sign-in with Google in your browser. Penguin Mail is built with GTK and libadwaita and fits best on GNOME, but it runs on any Linux desktop."
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:46
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:50
 msgid "gmail"
 msgstr "gmail"
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:47
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:51
 msgid "email"
 msgstr "email"
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:48
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:52
 msgid "mail"
 msgstr "mail"
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:49
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:53
 msgid "inbox"
 msgstr "inbox"
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:78
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:82
 msgid "The inbox, with a conversation open"
 msgstr "The inbox, with a conversation open"
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:82
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:86
 msgid "An HTML message in dark mode"
 msgstr "An HTML message in dark mode"
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:86
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:90
 msgid "Replying in the composer"
 msgstr "Replying in the composer"
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:90
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:94
 msgid "Three conversations selected, with the actions for all of them"
 msgstr "Three conversations selected, with the actions for all of them"
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:94
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:98
 msgid "The assistant listing mail that waits on a reply"
 msgstr "The assistant listing mail that waits on a reply"
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:98
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:102
 msgid "The layout on a narrow screen"
 msgstr "The layout on a narrow screen"
 
@@ -1355,7 +1363,7 @@ msgstr "penguin-mail: unknown option {option}"
 msgid "Penguin Mail Could Not Start"
 msgstr "Penguin Mail Could Not Start"
 
-#: app/src/main.rs:282 app/src/ui/about.rs:148
+#: app/src/main.rs:282 app/src/ui/about.rs:147
 msgid "Report a Problem"
 msgstr "Report a Problem"
 
@@ -2525,8 +2533,8 @@ msgstr "Install Update {version}"
 msgid "What's New in {version}"
 msgstr "What's New in {version}"
 
-#: app/src/tray.rs:170 app/src/ui/about.rs:87 app/src/ui/about.rs:194
-#: app/src/ui/about.rs:202 app/src/ui/about.rs:209
+#: app/src/tray.rs:170 app/src/ui/about.rs:86 app/src/ui/about.rs:193
+#: app/src/ui/about.rs:201 app/src/ui/about.rs:208
 #: app/src/ui/preferences.rs:730 app/src/update/mod.rs:108
 msgid "Check for Updates"
 msgstr "Check for Updates"
@@ -2541,66 +2549,66 @@ msgid "Version {version}"
 msgstr "Version {version}"
 
 #: app/src/ui/about.rs:77
-msgid "A fast, private Gmail client for the GNOME desktop. Mail stays on your computer and your own Google Cloud project."
-msgstr "A fast, private Gmail client for the GNOME desktop. Mail stays on your computer and your own Google Cloud project."
+msgid "Mail and calendar for Linux. Your mail stays on your computer."
+msgstr "Mail and calendar for Linux. Your mail stays on your computer."
 
-#: app/src/ui/about.rs:142
+#: app/src/ui/about.rs:141
 msgid "What's New"
 msgstr "What's New"
 
-#: app/src/ui/about.rs:146
+#: app/src/ui/about.rs:145
 msgid "Website"
 msgstr "Website"
 
-#: app/src/ui/about.rs:153
+#: app/src/ui/about.rs:152
 msgid "License"
 msgstr "Licence"
 
-#: app/src/ui/about.rs:170 app/src/ui/window.rs:2841
+#: app/src/ui/about.rs:169 app/src/ui/window.rs:2841
 msgid "About Penguin Mail"
 msgstr "About Penguin Mail"
 
-#: app/src/ui/about.rs:200
+#: app/src/ui/about.rs:199
 msgid "Checking…"
 msgstr "Checking…"
 
-#: app/src/ui/about.rs:206
+#: app/src/ui/about.rs:205
 msgid "Penguin Mail is up to date"
 msgstr "Penguin Mail is up to date"
 
-#: app/src/ui/about.rs:214
+#: app/src/ui/about.rs:213
 msgid "Could not reach GitHub. Check your connection and try again."
 msgstr "Could not reach GitHub. Check your connection and try again."
 
-#: app/src/ui/about.rs:219
+#: app/src/ui/about.rs:218
 msgid "Install {version}"
 msgstr "Install {version}"
 
-#: app/src/ui/about.rs:226
+#: app/src/ui/about.rs:225
 msgid "Version {version} is available"
 msgstr "Version {version} is available"
 
-#: app/src/ui/about.rs:231
+#: app/src/ui/about.rs:230
 msgid "Installing…"
 msgstr "Installing…"
 
-#: app/src/ui/about.rs:236
+#: app/src/ui/about.rs:235
 msgid "Installing version {version}"
 msgstr "Installing version {version}"
 
-#: app/src/ui/about.rs:241 app/src/update/mod.rs:104
+#: app/src/ui/about.rs:240 app/src/update/mod.rs:104
 msgid "Restart to Update"
 msgstr "Restart to Update"
 
-#: app/src/ui/about.rs:246
+#: app/src/ui/about.rs:245
 msgid "Version {version} is installed"
 msgstr "Version {version} is installed"
 
-#: app/src/ui/about.rs:251 app/src/update/mod.rs:137
+#: app/src/ui/about.rs:250 app/src/update/mod.rs:137
 msgid "Show Log"
 msgstr "Show Log"
 
-#: app/src/ui/about.rs:256 app/src/update/mod.rs:134
+#: app/src/ui/about.rs:255 app/src/update/mod.rs:134
 msgid "The update to {version} failed"
 msgstr "The update to {version} failed"
 

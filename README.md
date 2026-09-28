@@ -4,7 +4,7 @@
 
 # Penguin Mail
 
-A Gmail client for the GNOME desktop, written in Rust.
+Mail and calendar for Linux, written in Rust.
 
 [![CI](https://github.com/c9dev/penguin-mail/actions/workflows/ci.yml/badge.svg)](https://github.com/c9dev/penguin-mail/actions/workflows/ci.yml)
 [![Latest release](https://img.shields.io/github/v/release/c9dev/penguin-mail?sort=semver&label=release)](https://github.com/c9dev/penguin-mail/releases/latest)
@@ -16,14 +16,23 @@ A Gmail client for the GNOME desktop, written in Rust.
 
 </div>
 
-Penguin Mail keeps several Gmail accounts in sync from the system tray,
-shows them in one inbox or one at a time, and keeps your mail on your own
-computer. It talks to Google directly, signed in with your Google account,
-so no other server sees your mail.
+Penguin Mail is mail and calendar for Linux. It reads Gmail accounts and
+any IMAP and SMTP account, such as Fastmail, iCloud and Yahoo, and finds the
+server settings for you. It syncs from the system tray, shows your accounts
+in one inbox or one at a time, and keeps your mail on your own computer.
+Gmail and Google Calendar accounts talk to Google directly, so no other
+server sees your mail.
+
+It is built with GTK and libadwaita and fits best on GNOME. It runs on any
+Linux desktop, and the tray icon and every other feature work outside GNOME.
 
 [![A two-minute tour of Penguin Mail: play the video](docs/screenshots/tour.png)](https://youtu.be/0PyJCsw1FSE)
 
 ## Features
+
+Penguin Mail has mail for Gmail and IMAP accounts, a calendar, contacts,
+OpenPGP and S/MIME, rules, and an optional assistant. Coming: Microsoft
+accounts, CalDAV and CardDAV, POP3.
 
 ### Reading
 

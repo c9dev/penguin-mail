@@ -1,4 +1,4 @@
-//! Penguin Mail: a Gmail client for the GNOME desktop.
+//! Penguin Mail: mail and calendar for Linux.
 
 #[cfg(test)]
 mod accent_contrast;

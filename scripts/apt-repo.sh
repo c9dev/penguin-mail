@@ -55,7 +55,7 @@ release="$out/dists/$suite/Release"
     echo "Codename: $suite"
     echo "Architectures: $arch"
     echo "Components: $component"
-    echo "Description: Penguin Mail, a Gmail client for GNOME"
+    echo "Description: Penguin Mail, mail and calendar for Linux"
     echo "Date: $(LC_ALL=C date -u '+%a, %d %b %Y %H:%M:%S UTC')"
     for sum in MD5Sum SHA256; do
         echo "$sum:"

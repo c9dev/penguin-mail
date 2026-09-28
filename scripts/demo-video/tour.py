@@ -443,7 +443,7 @@ def run_tour():
     start_recording()
     hold(1.2)
 
-    mark("Penguin Mail", "A Gmail client for GNOME, written in Rust")
+    mark("Penguin Mail", "Mail and calendar for Linux, written in Rust")
     x, y, w, h = WINDOW
     glide(960, 560)
     hold(0.4)

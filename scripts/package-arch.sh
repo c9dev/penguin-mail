@@ -41,7 +41,7 @@ cat > "$build/PKGBUILD" <<PKGBUILD
 pkgname=penguin-mail
 pkgver=$version
 pkgrel=1
-pkgdesc="Gmail client for GNOME"
+pkgdesc="Mail and calendar for Linux"
 arch=('x86_64')
 url="https://github.com/c9dev/penguin-mail"
 license=('GPL-3.0-or-later')
