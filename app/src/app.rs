@@ -32,6 +32,7 @@ const BLOCK_REMOTE_RULES: &str = r#"[
   {"trigger": {"url-filter": "^ftp:"}, "action": {"type": "block"}}
 ]"#;
 
+mod calendar_file;
 mod composing;
 mod hidden;
 mod photos;
@@ -67,6 +68,9 @@ pub struct App {
     shed_generation: Cell<u64>,
     /// A message requested on the command line, opened on first activation.
     pending_compose: RefCell<Option<String>>,
+    /// A calendar file requested on the command line, opened on first
+    /// activation.
+    pending_file: RefCell<Option<std::path::PathBuf>>,
     tray_started: Cell<bool>,
     /// Holds the tray's recount while a burst of changes goes by.
     tray_recount: crate::tray::Burst,
@@ -111,6 +115,7 @@ impl App {
         core: Rc<Core>,
         background: bool,
         compose: Option<String>,
+        calendar_file: Option<std::path::PathBuf>,
     ) -> Rc<App> {
         let (chosen, picked) = async_channel::unbounded();
         let core_demo = core.demo;
@@ -140,6 +145,7 @@ impl App {
             open_windows: Cell::new(0),
             shed_generation: Cell::new(0),
             pending_compose: RefCell::new(compose),
+            pending_file: RefCell::new(calendar_file),
             tray_started: Cell::new(false),
             tray_recount: crate::tray::Burst::default(),
             settings: RefCell::new(Settings {
@@ -226,6 +232,16 @@ impl App {
             let this = Rc::clone(self);
             glib::timeout_add_local_once(std::time::Duration::from_millis(600), move || {
                 this.compose_to(&to)
+            });
+            return;
+        }
+        if let Some(path) = self.pending_file.borrow_mut().take() {
+            self.skip_first_window.set(false);
+            // Accounts load asynchronously; give them a moment first, so
+            // the window knows which have a calendar.
+            let this = Rc::clone(self);
+            glib::timeout_add_local_once(std::time::Duration::from_millis(600), move || {
+                this.open_calendar_file(&path)
             });
             return;
         }
@@ -1058,6 +1074,16 @@ impl App {
             }
         });
         self.gio.add_action(&compose_to);
+        let open_file = gio::SimpleAction::new("open-calendar-file", Some(glib::VariantTy::STRING));
+        let weak = Rc::downgrade(self);
+        open_file.connect_activate(move |_, parameter| {
+            if let (Some(app), Some(path)) =
+                (weak.upgrade(), parameter.and_then(|p| p.get::<String>()))
+            {
+                app.open_calendar_file(std::path::Path::new(&path));
+            }
+        });
+        self.gio.add_action(&open_file);
         add("quit", Box::new(|app| app.quit()));
     }
 

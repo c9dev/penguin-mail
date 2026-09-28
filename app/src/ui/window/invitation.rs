@@ -321,6 +321,18 @@ impl MainWindow {
         let Some(Some(spot)) = view.with_invitation(|showing| showing.on_calendar.clone()) else {
             return;
         };
+        self.show_spot(&spot);
+    }
+
+    /// Reads the calendar again, after something added events to the copy
+    /// behind the window's back.
+    pub fn calendar_changed(&self) {
+        self.calendar.reload();
+    }
+
+    /// Raises the window and opens the calendar on the event at `spot`.
+    /// A calendar file opened from Files comes here too.
+    pub fn show_spot(self: &Rc<Self>, spot: &mailrs_sync::Spot) {
         self.present();
         let _ = WidgetExt::activate_action(&self.window, "win.show-calendar", None);
         self.calendar

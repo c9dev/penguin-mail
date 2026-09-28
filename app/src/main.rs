@@ -57,13 +57,14 @@ pub const APP_ID: &str = "io.github.c9dev.PenguinMail";
 
 fn usage() -> String {
     gettext(
-        "Usage: penguin-mail [--background] [--demo] [--compose [mailto:ADDRESS]]
+        "Usage: penguin-mail [--background] [--demo] [--compose [mailto:ADDRESS]] [FILE.ics]
 
   --version      print the version and quit
   --background   start in the tray without opening a window
   --demo         open sample mail in a throwaway store; nothing syncs
   --compose      open a new message, addressed to ADDRESS when given
-  mailto:...     the same as --compose mailto:...",
+  mailto:...     the same as --compose mailto:...
+  FILE.ics       open a calendar file, to add its events to a calendar",
     )
 }
 
@@ -120,7 +121,7 @@ fn main() -> glib::ExitCode {
         return glib::ExitCode::SUCCESS;
     }
     if let Some(unknown) = args.iter().skip(1).find(|a| {
-        !matches!(a.as_str(), "--background" | "--demo" | "--compose") && !a.starts_with("mailto:")
+        a.starts_with('-') && !matches!(a.as_str(), "--background" | "--demo" | "--compose")
     }) {
         let line = fill(
             &gettext("penguin-mail: unknown option {option}"),
@@ -134,6 +135,7 @@ fn main() -> glib::ExitCode {
         .iter()
         .find_map(|a| a.strip_prefix("mailto:").map(mailto_recipient))
         .or_else(|| args.iter().any(|a| a == "--compose").then(String::new));
+    let file = calendar_file(&args);
     let demo = args.iter().any(|a| a == "--demo");
     let background = args.iter().any(|a| a == "--background");
     if !demo {
@@ -164,6 +166,15 @@ fn main() -> glib::ExitCode {
         gio_app.activate_action("compose-to", Some(&to.to_variant()));
         return glib::ExitCode::SUCCESS;
     }
+    // Likewise a calendar file, which the running copy opens in a window
+    // of its own.
+    if let Some(path) = &file
+        && gio_app.register(gio::Cancellable::NONE).is_ok()
+        && gio_app.is_remote()
+    {
+        gio_app.activate_action("open-calendar-file", Some(&path.to_string_lossy().to_variant()));
+        return glib::ExitCode::SUCCESS;
+    }
     let state: Rc<RefCell<Option<Rc<app::App>>>> = Rc::new(RefCell::new(None));
     let started = Rc::clone(&state);
     let finished = Rc::clone(&state);
@@ -173,7 +184,7 @@ fn main() -> glib::ExitCode {
         match core::Core::open(demo) {
             Ok(core) => {
                 *started.borrow_mut() =
-                    Some(app::App::new(gio_app, core, background, compose.clone()))
+                    Some(app::App::new(gio_app, core, background, compose.clone(), file.clone()))
             }
             Err(err) => {
                 let report = err.downcast_ref::<core::StoreNotUpdated>().is_some();
@@ -194,6 +205,20 @@ fn main() -> glib::ExitCode {
         None => assistant::sources::mcp::registry().stop_all(),
     }
     code
+}
+
+/// The calendar file the desktop asked this launch to open: the first
+/// argument that is neither a flag nor a `mailto:` link, as a path or as
+/// the `file://` URI Files passes for `%u`.
+fn calendar_file(args: &[String]) -> Option<std::path::PathBuf> {
+    let named = args
+        .iter()
+        .skip(1)
+        .find(|a| !a.starts_with('-') && !a.starts_with("mailto:"))?;
+    match named.starts_with("file://") {
+        true => gio::File::for_uri(named).path(),
+        false => Some(std::path::PathBuf::from(named)),
+    }
 }
 
 /// The address part of a `mailto:` URI, percent-decoded.
@@ -276,7 +301,26 @@ fn show_fatal(gio_app: &gio::Application, message: &str, report: bool) {
 
 #[cfg(test)]
 mod tests {
-    use super::mailto_recipient;
+    use super::{calendar_file, mailto_recipient};
+
+    fn args(list: &[&str]) -> Vec<String> {
+        std::iter::once("penguin-mail").chain(list.iter().copied()).map(String::from).collect()
+    }
+
+    #[test]
+    fn files_hands_over_a_calendar_file_as_a_path_or_a_uri() {
+        let path = Some(std::path::PathBuf::from("/tmp/my ticket.ics"));
+        assert_eq!(calendar_file(&args(&["/tmp/my ticket.ics"])), path);
+        assert_eq!(calendar_file(&args(&["file:///tmp/my%20ticket.ics"])), path);
+    }
+
+    #[test]
+    fn flags_and_mail_links_are_no_calendar_file() {
+        assert_eq!(calendar_file(&args(&[])), None);
+        assert_eq!(calendar_file(&args(&["--background", "--demo"])), None);
+        assert_eq!(calendar_file(&args(&["mailto:ann@example.com"])), None);
+        assert_eq!(calendar_file(&args(&["--compose", "mailto:ann@example.com"])), None);
+    }
 
     #[test]
     fn mailto_uris_yield_their_address() {

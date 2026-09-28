@@ -173,6 +173,9 @@ pub struct EventCard {
     /// an account with no calendar, where Add to Calendar hands the file
     /// to the desktop.
     targets: RefCell<Vec<AddTo>>,
+    /// Set for a card in a window of its own that has no calendar to add
+    /// to, where Add to Calendar has nothing to do and stays off.
+    no_add: Cell<bool>,
     picker: gtk::DropDown,
     /// One check button per event of a file that holds several.
     events: gtk::Box,
@@ -518,6 +521,7 @@ impl EventCard {
             note,
             add,
             targets: RefCell::new(Vec::new()),
+            no_add: Cell::new(false),
             picker,
             events,
             picks: RefCell::new(Vec::new()),
@@ -586,6 +590,7 @@ impl EventCard {
             .is_some_and(|shown| shown.invitation.uid == showing.invitation.uid);
         if !same {
             self.note.set_text("");
+            self.targets.borrow_mut().clear();
         }
         self.draw(&showing);
         *self.showing.borrow_mut() = Some(showing);
@@ -755,7 +760,7 @@ impl EventCard {
     fn place_calendar_button(&self, showing: &Showing) {
         let button = calendar_button(showing);
         self.show_in_calendar.set_visible(button == CalendarButton::Show);
-        self.add.set_visible(button == CalendarButton::Add);
+        self.add.set_visible(button == CalendarButton::Add && !self.no_add.get());
         // Where the events go is asked only while Add to Calendar is the
         // button on offer, for a card that adds them.
         let adding = button == CalendarButton::Add && showing.invitation.card() == Card::Add;
@@ -795,6 +800,14 @@ impl EventCard {
             picks.push(check);
         }
         self.add.set_sensitive(true);
+    }
+
+    /// Takes Add to Calendar off the card, for a window that has no
+    /// calendar to add the events to.
+    pub fn cannot_add(&self) {
+        self.no_add.set(true);
+        self.add.set_visible(false);
+        self.picker.set_visible(false);
     }
 
     /// Offers these calendars for the file's events, starting on the
