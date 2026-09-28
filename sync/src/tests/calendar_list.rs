@@ -320,3 +320,16 @@ async fn a_change_google_turns_down_leaves_the_queue_and_googles_version_returns
     copy.refresh(h.account_id, NOW + 1).await.unwrap();
     assert_eq!(stored(&h, "team").await.unwrap().name, "team", "the next read puts Google's name back");
 }
+
+/// Google has no calendar under a `new:` id, so reading one would only
+/// answer 404 and send the copy back to the list every tick until the
+/// queue goes out.
+#[tokio::test]
+async fn a_calendar_still_waiting_to_be_made_is_not_read() {
+    let h = harness().await;
+    let copy = read(&h).await;
+    done(copy.new_calendar(h.account_id, "Climbing", "#16a766").await);
+    let before = h.fake.usage().calls_to("calendar.events.list");
+    copy.refresh(h.account_id, NOW + LIST_EVERY).await.unwrap();
+    assert_eq!(h.fake.usage().calls_to("calendar.events.list") - before, 2, "primary and team only");
+}

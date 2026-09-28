@@ -344,6 +344,11 @@ impl<A: Accounts> CalendarCopy<A> {
         let calendars: Vec<Calendar> = self.db.read(move |c| store::calendars(c, account_id)).await?;
         let mut refreshed = Refreshed::default();
         for entry in calendars {
+            // Google has no calendar under an id made here until the queue
+            // sends it; a read would only answer 404.
+            if calendar::list::is_local(&entry.id) {
+                continue;
+            }
             if !entry.shown {
                 let id = entry.id.clone();
                 let synced_at = self.db.read(move |c| store::synced_at(c, account_id, &id)).await?;
