@@ -724,6 +724,34 @@ mod tests {
         assert!(!note.paints && sale.paints);
     }
 
+    /// The colours a sender puts on `<body>` are a choice like any other,
+    /// and a font alone is not.
+    #[test]
+    fn a_body_that_picks_its_colours_paints_itself() {
+        let github = clean(
+            "<html><body style=\"color:#24292e;background-color:#fff\"><p>Run failed</p></body></html>",
+            "mailrs-cid:1/m1/0/",
+        );
+        let font = clean(
+            "<html><body style=\"font-family:Arial;line-height:1.5\"><p>Monday works.</p></body></html>",
+            "mailrs-cid:1/m1/0/",
+        );
+        assert!(github.paints && !font.paints);
+    }
+
+    /// The wrappers a `<body>` tag leaves do not hide a reply's history.
+    #[test]
+    fn a_wrapped_reply_still_folds_its_history() {
+        let open = clean(
+            "<html><body style=\"font-family:Arial\"><div dir=\"ltr\">Monday works.</div>\
+             <div class=\"gmail_quote\"><div class=\"gmail_attr\">On Friday, Ann wrote:</div>\
+             <blockquote class=\"gmail_quote\">Lunch?</blockquote></div></body></html>",
+            "mailrs-cid:1/m1/0/",
+        );
+        let history = open.history.expect("a fold");
+        assert!(open.html[history].contains("Lunch?"));
+    }
+
     /// A reply's quoted history is grey text with a border, as Penguin
     /// Mail and Gmail both write it. That is a note, not a newsletter, so
     /// it keeps the window's colours in the dark.
