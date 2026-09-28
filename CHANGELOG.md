@@ -7,6 +7,13 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### New
 
+- Remove an invitation from your calendar with Remove in its popover or
+  the Delete key. The organizer sees that you declined, and nobody else
+  gets mail about it. Edit in the same popover changes your own
+  reminders, color and busy or free.
+- Move an event to another of your calendars: pick it in the editor's
+  Calendar row and save. A new event from a quick drag can go on any of
+  your calendars too.
 - Penguin Mail comes as a package for Arch Linux: download the
   `.pkg.tar.zst` from the releases page and install it with
   `sudo pacman -U`.
