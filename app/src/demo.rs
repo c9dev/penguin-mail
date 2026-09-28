@@ -989,6 +989,7 @@ fn account0_events(now: EpochMillis) -> Vec<CalendarEvent> {
         busy: false,
         status: CalendarStatus::Confirmed,
         rules: vec!["RRULE:FREQ=YEARLY".into()],
+        kind: mailrs_domain::calendar::Kind::Birthday,
         ..CalendarEvent::default()
     });
     // Three days over next weekend into the Monday after, so Month
@@ -1099,6 +1100,7 @@ fn account1_events(now: EpochMillis) -> Vec<CalendarEvent> {
         timed_event(DESIGN_TEAM, "design-sync", "Design sync", at_week(monday, 9, 14, 0), at_week(monday, 9, 15, 0)),
         timed_event("primary", "hiring-panel", "Hiring panel", at_week(monday, 9, 16, 0), at_week(monday, 9, 17, 0)),
     ];
+    events.extend(status_entries(monday));
     let (offsite_start, offsite_end) = all_day_utc(monday.date_naive() + chrono::Duration::days(3), 2);
     events.push(CalendarEvent {
         calendar: "primary".into(),
@@ -1289,6 +1291,54 @@ fn until_stamp(at: EpochMillis) -> String {
         .unwrap_or_default()
         .format("%Y%m%dT%H%M%SZ")
         .to_string()
+}
+
+/// The work account's entries that say where the person is, one of each
+/// type Google keeps on a primary calendar: focus time on Tuesday
+/// morning, out of office on Friday afternoon, and where they work on
+/// each weekday but Thursday, the offsite's first day.
+fn status_entries(monday: chrono::DateTime<chrono::Local>) -> Vec<CalendarEvent> {
+    use mailrs_domain::calendar::{Decline, Declines, Kind, Workplace};
+    let mut entries = vec![
+        CalendarEvent {
+            kind: Kind::Focus(Decline { meetings: Declines::New, message: "Heads down on the Q4 roadmap".into() }),
+            ..timed_event("primary", "focus-tuesday", "Focus time", at_week(monday, 1, 10, 0), at_week(monday, 1, 12, 0))
+        },
+        CalendarEvent {
+            kind: Kind::OutOfOffice(Decline {
+                meetings: Declines::All,
+                message: "Declined because I am out of office".into(),
+            }),
+            ..timed_event("primary", "away-friday", "Out of office", at_week(monday, 4, 13, 0), at_week(monday, 4, 16, 0))
+        },
+    ];
+    let places = [
+        (0, Workplace::Home),
+        (1, Workplace::Office("Lisbon HQ".into())),
+        (2, Workplace::Home),
+        (4, Workplace::Office("Lisbon HQ".into())),
+    ];
+    for (offset, place) in places {
+        let (start, end) = all_day_utc(monday.date_naive() + chrono::Duration::days(offset), 1);
+        entries.push(CalendarEvent {
+            calendar: "primary".into(),
+            id: format!("where-{offset}"),
+            uid: format!("where-{offset}@google.com"),
+            start,
+            end,
+            zone: "UTC".into(),
+            all_day: true,
+            title: match &place {
+                Workplace::Home => "Home".into(),
+                _ => "Office".into(),
+            },
+            busy: false,
+            status: CalendarStatus::Confirmed,
+            kind: Kind::WorkingLocation(place),
+            ..CalendarEvent::default()
+        });
+    }
+    entries
 }
 
 /// The week of calendar events demo account `index` keeps. Only the two

@@ -728,6 +728,38 @@ button.event-block.unanswered:hover,
 .event-block.declined .title { text-decoration: line-through; }
 .event-block:focus-visible { outline: 2px solid var(--accent-color); outline-offset: 1px; }
 .all-day-strip button.event-block { border-radius: 6px; }
+/* Out of office: the calendar's tint with stripes of its colour at 22 %
+   across the hours, so the block reads as time taken rather than a
+   meeting. The tint provider in tint.rs sets only the background colour,
+   so the stripes lie over it in either theme. */
+button.event-block.away {
+  background-image: repeating-linear-gradient(135deg,
+    color-mix(in srgb, var(--cal-colour) 22%, transparent) 0px,
+    color-mix(in srgb, var(--cal-colour) 22%, transparent) 4px,
+    transparent 4px,
+    transparent 10px);
+}
+.app-dark button.event-block.away {
+  background-image: repeating-linear-gradient(135deg,
+    color-mix(in srgb, var(--cal-colour) 30%, transparent) 0px,
+    color-mix(in srgb, var(--cal-colour) 30%, transparent) 4px,
+    transparent 4px,
+    transparent 10px);
+}
+/* The target of focus time and the cake of a birthday, 12 px in the
+   calendar's colour, as strong as the bar beside them. */
+.event-block .kind-icon { color: var(--cal-colour); margin-top: 4px; }
+.event-block.compact .kind-icon,
+.all-day-strip .event-block .kind-icon,
+.month-grid .event-block .kind-icon { margin-top: 0; }
+/* A working location under a day's heading: the heading's weekday size
+   and strength, in the text colour. */
+.day-place {
+  font-size: 0.75em;
+  font-weight: 600;
+  opacity: 0.64;
+}
+.day-heading.today .day-place { opacity: 0.8; }
 /* The card a drag holds: lifted above the others while the pointer or
    the settle spring carries it. With animations off the spring lands it
    in place at once, so no separate no-motion rule is needed. */
@@ -930,6 +962,8 @@ popover.event-popover > contents { border-radius: 16px; padding: 0; }
 popover.event-popover label { font-size: 0.89em; }
 popover.event-popover .popover-title { font-size: 1.16em; }
 popover.event-popover .popover-when { font-size: 0.85em; }
+/* What sort of entry it is, at the dimmed text strength of the time. */
+popover.event-popover .popover-kind { opacity: 0.64; }
 /* GTK adds a button's own padding to its min-height; the mockup's
    buttons are 34 px in all. */
 button.popover-join, button.popover-answer {

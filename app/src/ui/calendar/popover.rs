@@ -24,6 +24,7 @@ use mailrs_domain::invitation::Answer;
 use mailrs_domain::translate::{fill, gettext};
 
 use super::draft;
+use super::kinds;
 use super::shown::{self, Refocus};
 use super::tint;
 use super::words;
@@ -73,6 +74,9 @@ pub struct EventPopover {
     on_edit: RefCell<Option<Box<OnEdit>>>,
     on_delete: RefCell<Option<Box<OnEdit>>>,
     calendar_label: gtk::Label,
+    /// What sort of entry it is and what it declines, or that Google's
+    /// own apps make it; hidden for an ordinary event.
+    kind_label: gtk::Label,
     place_row: gtk::Button,
     place_label: gtk::Label,
     place_url: RefCell<String>,
@@ -196,6 +200,15 @@ impl EventPopover {
 
         let calendar_label = gtk::Label::builder().xalign(0.0).build();
         let calendar_row = icon_row("penguin-mail-calendar-symbolic", &calendar_label);
+        // Under the calendar, level with the rows' own text, as the notes
+        // sit.
+        let kind_label = gtk::Label::builder()
+            .xalign(0.0)
+            .wrap(true)
+            .visible(false)
+            .margin_start(24)
+            .css_classes(["popover-kind"])
+            .build();
 
         let place_label = gtk::Label::builder()
             .xalign(0.0)
@@ -318,6 +331,7 @@ impl EventPopover {
             .margin_top(1)
             .build();
         rows.append(&calendar_row);
+        rows.append(&kind_label);
         rows.append(&place_row);
         rows.append(&notes_label);
         rows.append(&notes_more);
@@ -381,6 +395,7 @@ impl EventPopover {
             on_edit: RefCell::new(None),
             on_delete: RefCell::new(None),
             calendar_label,
+            kind_label,
             place_row,
             place_label,
             place_url: RefCell::new(String::new()),
@@ -585,6 +600,9 @@ impl EventPopover {
         self.repeat_label.set_visible(repeats.is_some());
         self.repeat_label.set_label(repeats.as_deref().unwrap_or_default());
         self.calendar_label.set_label(&calendar.name);
+        let kind = kinds::popover_words(&event.kind);
+        self.kind_label.set_visible(kind.is_some());
+        self.kind_label.set_label(kind.as_deref().unwrap_or_default());
 
         self.edit_button.set_visible(on_edit.is_some());
         self.delete_button.set_visible(on_delete.is_some());

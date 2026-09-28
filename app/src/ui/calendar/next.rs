@@ -39,7 +39,8 @@ impl NextUp {
 /// The event the card shows at `now`, from today's timed events the
 /// person has not declined and that are not cancelled. `day_ends` is the
 /// local midnight after `now`. A free (`busy: false`) event still shows:
-/// only an all-day, declined or cancelled one stays out.
+/// only an all-day, declined or cancelled one, or a working location,
+/// stays out.
 pub fn next_up(
     occurrences: &[Occurrence],
     now: EpochMillis,
@@ -47,6 +48,7 @@ pub fn next_up(
 ) -> Option<NextUp> {
     let counts = |o: &&Occurrence| {
         !o.event.all_day
+            && super::kinds::on_grid(&o.event.kind)
             && o.event.status != Status::Cancelled
             && o.event.my_answer != Some(Answer::No)
     };
@@ -217,6 +219,14 @@ mod tests {
         Arc::make_mut(&mut all_day.event).all_day = true;
         let tomorrow = at("Early", DAY_ENDS + 30 * M, 30);
         assert_eq!(next_up(&[declined, all_day, tomorrow], late, DAY_ENDS), None);
+    }
+
+    #[test]
+    fn a_timed_working_location_is_not_the_next_event() {
+        use mailrs_domain::calendar::{Kind, Workplace};
+        let mut office = at("Office", NOW + 20 * M, 240);
+        Arc::make_mut(&mut office.event).kind = Kind::WorkingLocation(Workplace::Office(String::new()));
+        assert_eq!(next_up(&[office], NOW, DAY_ENDS), None);
     }
 
     #[test]

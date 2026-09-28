@@ -426,6 +426,7 @@ pub fn can_move(o: &Occurrence, access: Access, offers_calendar: bool, withheld_
         && !withheld_calendar
         && !super::draft::limited(&o.event)
         && o.event.status != Status::Cancelled
+        && !o.event.kind.made_elsewhere()
 }
 
 #[cfg(test)]
@@ -585,6 +586,13 @@ mod tests {
         assert!(!can_move(&o, Access::Owner, true, true), "a withheld calendar permission starts no drag");
         assert!(can_move(&timed(true, Status::Confirmed), Access::Owner, true, false), "an all-day event drags in the all-day row and Month");
         assert!(!can_move(&timed(false, Status::Cancelled), Access::Owner, true, false), "a cancelled occurrence, on its way out, starts no drag");
+    }
+
+    #[test]
+    fn a_birthday_starts_no_drag() {
+        use mailrs_domain::calendar::{Event, Kind};
+        let o = Occurrence { event: std::sync::Arc::new(Event { kind: Kind::Birthday, ..Event::default() }), ..timed(true, mailrs_domain::calendar::Status::Confirmed) };
+        assert!(!can_move(&o, Access::Owner, true, false), "Google's own apps make birthdays");
     }
 
     #[test]

@@ -17,6 +17,7 @@ use mailrs_domain::translate::{fill, gettext};
 
 use crate::ui;
 use crate::ui::calendar::drag;
+use crate::ui::calendar::kinds;
 use crate::ui::calendar::tint;
 
 /// An occurrence under this many milliseconds puts its time on the
@@ -76,6 +77,10 @@ impl EventBlock {
             AnswerState::Declined => button.add_css_class("declined"),
             AnswerState::Answered => {}
         }
+        let look = kinds::look(&event.kind);
+        if let Some(class) = look.css_class() {
+            button.add_css_class(class);
+        }
 
         let bar = gtk::Box::builder().css_classes(["bar"]).build();
 
@@ -113,9 +118,21 @@ impl EventBlock {
         };
 
         // The bar sits 1 px in and the text 11 px in, as the mockup has
-        // them.
+        // them. Focus time and a birthday put their icon between the two,
+        // level with the title's first line.
         let content = gtk::Box::new(gtk::Orientation::Horizontal, 6);
         content.append(&bar);
+        if let Some(icon) = look.icon() {
+            let image = gtk::Image::builder()
+                .icon_name(icon)
+                .pixel_size(12)
+                .valign(if event.all_day || compact { gtk::Align::Center } else { gtk::Align::Start })
+                .css_classes(["kind-icon"])
+                .accessible_role(gtk::AccessibleRole::Presentation)
+                .build();
+            content.append(&image);
+            content.set_spacing(5);
+        }
         content.append(&text);
 
         if event.pending {
@@ -567,12 +584,21 @@ fn accessible_name<Z: TimeZone>(
 where
     Z::Offset: std::fmt::Display,
 {
+    // Out of office, focus time and a birthday say so after the title,
+    // since the stripes and the icon that show it are not spoken. A
+    // title that is already the type's name says it once.
+    let named = match super::kinds::kind_words(&o.event.kind) {
+        Some(kind) if !kind.eq_ignore_ascii_case(o.event.title.trim()) => {
+            fill(&gettext("{title}, {kind}"), &[("title", &o.event.title), ("kind", &kind)])
+        }
+        _ => o.event.title.clone(),
+    };
     let title = match day {
         Some(day) => fill(
             &gettext("{title}, {day}"),
-            &[("title", &o.event.title), ("day", &super::words::day_words(day))],
+            &[("title", &named), ("day", &super::words::day_words(day))],
         ),
-        None => o.event.title.clone(),
+        None => named,
     };
     if o.event.all_day {
         fill(
@@ -737,6 +763,36 @@ mod tests {
             accessible_name(&o, "Family", Some(monday), &Utc),
             "Quarterly review, Monday 21, all day, Family"
         );
+    }
+
+    #[test]
+    fn an_out_of_office_block_says_what_it_is() {
+        use mailrs_domain::calendar::{Decline, Kind};
+        mailrs_domain::translate::set_date_locale("en_US");
+        let event = Event { kind: Kind::OutOfOffice(Decline::default()), ..event(false, None) };
+        let o = Occurrence { account_id: 1, event: std::sync::Arc::new(event), start: 9 * 3_600_000, end: 17 * 3_600_000 };
+        assert_eq!(
+            accessible_name(&o, "Work", None, &Utc),
+            "Quarterly review, Out of office, 09:00 to 17:00, Work"
+        );
+    }
+
+    #[test]
+    fn a_block_titled_with_its_type_says_it_once() {
+        use mailrs_domain::calendar::{Decline, Kind};
+        mailrs_domain::translate::set_date_locale("en_US");
+        let event = Event { kind: Kind::Focus(Decline::default()), title: "Focus time".into(), ..event(false, None) };
+        let o = Occurrence { account_id: 1, event: std::sync::Arc::new(event), start: 9 * 3_600_000, end: 11 * 3_600_000 };
+        assert_eq!(accessible_name(&o, "Work", None, &Utc), "Focus time, 09:00 to 11:00, Work");
+    }
+
+    #[test]
+    fn a_birthday_chip_says_it_is_a_birthday() {
+        use mailrs_domain::calendar::Kind;
+        mailrs_domain::translate::set_date_locale("en_US");
+        let event = Event { kind: Kind::Birthday, title: "Ana".into(), ..event(true, None) };
+        let o = Occurrence { account_id: 1, event: std::sync::Arc::new(event), start: 0, end: 24 * 3_600_000 };
+        assert_eq!(accessible_name(&o, "Birthdays", None, &Utc), "Ana, Birthday, all day, Birthdays");
     }
 
     #[test]
