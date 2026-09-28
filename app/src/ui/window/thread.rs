@@ -516,9 +516,9 @@ impl Effects for Ports {
         self.view.show_invitation(showing);
     }
 
-    fn offer_gnome(&self, account_id: AccountId) {
+    fn offer_calendar_access(&self, account_id: AccountId) {
         if let Some(window) = self.window() {
-            window.offer_gnome(&self.view, account_id);
+            window.offer_calendar_access(&self.view, account_id);
         }
     }
 

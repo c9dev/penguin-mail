@@ -53,7 +53,7 @@ pub enum Step {
     ThumbnailsArrived,
     OpenInvitation,
     ShowInvitation,
-    OfferGnome,
+    OfferCalendarAccess,
     Busy,
     Clashes,
     Series,
@@ -772,8 +772,8 @@ impl Effects for FakeWindow {
         });
     }
 
-    fn offer_gnome(&self, _account_id: AccountId) {
-        self.reached(Step::OfferGnome);
+    fn offer_calendar_access(&self, _account_id: AccountId) {
+        self.reached(Step::OfferCalendarAccess);
     }
 
     fn clashes(&self, _uid: String, _busy: Vec<String>) {

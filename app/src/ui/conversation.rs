@@ -1145,9 +1145,9 @@ impl ConversationView {
         self.card.set_on_calendar(uid, spot);
     }
 
-    /// Offers to add the account to GNOME Online Accounts on the card.
-    pub fn offer_gnome(&self) {
-        self.card.offer_gnome();
+    /// Offers Grant Access for the calendar on the card.
+    pub fn offer_calendar_access(&self) {
+        self.card.offer_calendar_access();
     }
 
     /// The answer the card shows for the invitation `uid`: the one that

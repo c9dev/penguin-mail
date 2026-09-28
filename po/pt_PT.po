@@ -3852,7 +3852,7 @@ msgstr "Resposta"
 
 #: app/src/ui/calendar/popover.rs:216 app/src/ui/calendar/popover.rs:223
 msgid "Open the invitation in Mail"
-msgstr "Abrir o convite no Mail"
+msgstr "Abrir o convite no Correio"
 
 #: app/src/ui/calendar/popover.rs:495
 msgid "Your answer"
@@ -3959,6 +3959,10 @@ msgstr "O Penguin Mail não consegue ver os calendários desta conta"
 #: app/src/ui/window.rs:1056
 msgid "Grant Access"
 msgstr "Conceder acesso"
+
+#: app/src/ui/invitation.rs
+msgid "Penguin Mail needs permission to show this event in Calendar."
+msgstr "O Penguin Mail precisa de permissão para mostrar este evento no calendário."
 
 #: app/src/ui/calendar/sidebar.rs:554
 msgid "You can only read this calendar"

@@ -30,9 +30,9 @@ pub enum Action {
     /// Switch the main window to the calendar, on the event's day, with
     /// its popover open.
     ShowInCalendar,
-    /// Answer the offer to add this account to GNOME Online Accounts.
-    /// Either way the offer is over.
-    OnlineAccounts { open: bool },
+    /// Ask for the calendar permission the account withheld, so the event
+    /// can show in Calendar.
+    GrantAccess,
 }
 
 /// Which time to propose to the organizer.
@@ -122,9 +122,9 @@ pub struct EventCard {
     scope: Cell<Scope>,
     /// Where the last answer went, under the buttons that sent it.
     went: gtk::Label,
-    /// The line offering this account to GNOME Online Accounts, which the
-    /// window puts up once an account and never again.
-    gnome: gtk::Box,
+    /// The line offering Grant Access, which the window puts up for an
+    /// account whose consent left the calendar out.
+    access: gtk::Box,
     /// What the card shows now. The window reads it back to answer the
     /// invitation, so the card is the one place that holds it.
     showing: RefCell<Option<Showing>>,
@@ -267,9 +267,9 @@ impl EventCard {
             .css_classes(["dim-label", "caption"])
             .build();
 
-        // GNOME Calendar shows nothing about an account GNOME has never
-        // been told about, and adding it there is a job for Settings.
-        let gnome = gtk::Box::builder()
+        // Without the calendar permission the event never reaches the
+        // Calendar space, so Show in Calendar has nothing to show.
+        let access = gtk::Box::builder()
             .spacing(8)
             .margin_top(4)
             .visible(false)
@@ -279,22 +279,14 @@ impl EventCard {
             .wrap(true)
             .hexpand(true)
             .css_classes(["dim-label", "caption"])
-            .label(gettext(
-                "Add this account to GNOME Online Accounts and Calendar shows these \
-                 events too.",
-            ))
+            .label(gettext("Penguin Mail needs permission to show this event in Calendar."))
             .build();
-        let open_settings = gtk::Button::builder()
-            .label(gettext("Open Settings"))
+        let grant = gtk::Button::builder()
+            .label(gettext("Grant Access"))
             .css_classes(["flat"])
             .build();
-        let not_now = gtk::Button::builder()
-            .label(gettext("Not Now"))
-            .css_classes(["flat"])
-            .build();
-        gnome.append(&told);
-        gnome.append(&not_now);
-        gnome.append(&open_settings);
+        access.append(&told);
+        access.append(&grant);
 
         let inside = gtk::Box::builder()
             .orientation(gtk::Orientation::Vertical)
@@ -309,7 +301,7 @@ impl EventCard {
         inside.append(&guests);
         inside.append(&actions);
         inside.append(&went);
-        inside.append(&gnome);
+        inside.append(&access);
 
         let widget = gtk::Box::builder()
             .orientation(gtk::Orientation::Vertical)
@@ -338,7 +330,7 @@ impl EventCard {
             propose,
             proposals,
             act: Rc::clone(&on_action),
-            gnome,
+            access,
             reach,
             scope: Cell::new(Scope::Occurrence),
             went,
@@ -372,15 +364,8 @@ impl EventCard {
                 }
             });
         }
-        for (open, button) in [(true, &open_settings), (false, &not_now)] {
-            let (act, weak) = (Rc::clone(&on_action), Rc::downgrade(&card));
-            button.connect_clicked(move |_| {
-                if let Some(card) = weak.upgrade() {
-                    card.gnome.set_visible(false);
-                }
-                act(Action::OnlineAccounts { open });
-            });
-        }
+        let act = Rc::clone(&on_action);
+        grant.connect_clicked(move |_| act(Action::GrantAccess));
 
         let act = Rc::clone(&on_action);
         card.show_in_calendar
@@ -469,9 +454,9 @@ impl EventCard {
         self.add.set_visible(button == CalendarButton::Add);
     }
 
-    /// Puts up the offer to add this account to GNOME Online Accounts.
-    pub fn offer_gnome(&self) {
-        self.gnome.set_visible(true);
+    /// Puts up the line offering Grant Access for the calendar.
+    pub fn offer_calendar_access(&self) {
+        self.access.set_visible(true);
     }
 
     /// Says under the buttons where the answer went, or takes the line
@@ -527,7 +512,7 @@ impl EventCard {
         set_line(&self.organizer, organizer_line(event));
         self.fill_guests(showing);
         self.went.set_visible(false);
-        self.gnome.set_visible(false);
+        self.access.set_visible(false);
         set_line(&self.news, news(showing, now));
         self.news
             .set_css_classes(&["invitation-news", news_tone(showing)]);

@@ -205,7 +205,7 @@ async fn an_invitation_goes_on_the_card_with_what_else_is_on() {
         screen.invitations.last(),
         Some(&Some("kites@example.com".to_string()))
     );
-    assert!(screen.steps.contains(&Step::OfferGnome));
+    assert!(screen.steps.contains(&Step::OfferCalendarAccess));
     assert!(screen.steps.contains(&Step::Clashes));
 }
 
@@ -307,6 +307,29 @@ async fn an_answered_invitation_still_offers_to_show_it() {
     window.run().open(row(THREAD)).await;
     assert!(window.took(Step::OnCalendarKnown));
     assert!(!window.took(Step::Busy), "an answered invitation asks about no clashes");
+}
+
+#[tokio::test]
+async fn an_answered_invitation_still_offers_calendar_access() {
+    // Grant Access lets the event show in the Calendar space, which is
+    // worth as much after an answer as before it.
+    let window = FakeWindow::with_body(invited());
+    window.with(|screen| {
+        screen.invitation = Ok(Some(mailrs_sync::Opened {
+            answer: Some(mailrs_domain::invitation::Answer::Yes),
+            ..opened_invitation()
+        }));
+    });
+    window.run().open(row(THREAD)).await;
+    assert!(window.took(Step::OfferCalendarAccess));
+}
+
+#[tokio::test]
+async fn a_cancellation_offers_no_calendar_access() {
+    let window = FakeWindow::with_body(invited());
+    window.with(|screen| screen.invitation = Ok(Some(opened_cancellation())));
+    window.run().open(row(THREAD)).await;
+    assert!(!window.took(Step::OfferCalendarAccess));
 }
 
 #[tokio::test]

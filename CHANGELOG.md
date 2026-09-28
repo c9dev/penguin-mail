@@ -52,6 +52,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   this computer, so they answer without the network. A change the
   assistant makes waits there until Google takes it, even one to a
   single meeting of a repeating series, which leaves the others alone.
+- An invitation no longer asks you to add the account to GNOME Online
+  Accounts. When Penguin Mail lacks permission to read that calendar,
+  the card offers Grant Access, so the event can show in Calendar.
 - With Claude Opus 5 or newer, translating a message and reading an unsubscribe
   page take less time, because those quick jobs no longer think at length.
 
@@ -72,9 +75,6 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   in another folder stays there.
 - An account set up manually under a listed provider, such as Fastmail,
   shows that provider's name and rules instead of its bare domain.
-- `penguin-mail --demo`'s sample design review keeps its ninth weekly
-  occurrence on the calendar; it used to drop off a week early once the
-  clocks went back.
 - `penguin-mail --demo`'s sample invitation keeps its series ending on
   the same time of day it started; the clocks going back used to move
   it an hour earlier.

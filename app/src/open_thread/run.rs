@@ -225,8 +225,9 @@ pub trait Effects {
     fn clear(&self);
     /// Puts the invitation on its card, or takes the card down.
     fn show_invitation(&self, showing: Option<Showing>);
-    /// Offers the account to GNOME Online Accounts, when it is worth it.
-    fn offer_gnome(&self, account_id: AccountId);
+    /// Offers Grant Access on the card when the account has a calendar
+    /// and withheld the permission to read it.
+    fn offer_calendar_access(&self, account_id: AccountId);
     /// Puts what else the user has on during the event on the card.
     fn clashes(&self, uid: String, busy: Vec<String>);
     /// Puts how the series runs on the card, under the time.
@@ -707,6 +708,7 @@ impl ThreadRun {
         // An answered invitation is still worth finding on the calendar;
         // only a cancellation has nothing there to show.
         if let Some(showing) = showing.as_ref().filter(|s| !s.invitation.cancelled()) {
+            wanted.on_screen(|effects| effects.offer_calendar_access(account_id));
             let (uid, invitation) = (showing.invitation.uid.clone(), showing.invitation.clone());
             if let Some(Some(spot)) = wanted
                 .ask(
@@ -721,7 +723,6 @@ impl ThreadRun {
         let Some(showing) = showing.filter(waiting_on_an_answer) else {
             return;
         };
-        wanted.on_screen(|effects| effects.offer_gnome(account_id));
         let uid = showing.invitation.uid.clone();
         if let Some(busy) = wanted
             .ask(
@@ -746,8 +747,8 @@ fn one_of_a_series(showing: &Showing) -> bool {
 }
 
 /// Whether the invitation still waits on the user: a request they have not
-/// answered, for an event that still runs. Only then do the clashes and
-/// the GNOME offer earn a place on the card.
+/// answered, for an event that still runs. Only then do the clashes earn
+/// a place on the card.
 fn waiting_on_an_answer(showing: &Showing) -> bool {
     showing.answer.is_none()
         && showing.invitation.method == Method::Request
