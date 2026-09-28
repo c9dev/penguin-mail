@@ -196,7 +196,7 @@ struct Buttons {
 }
 
 /// The widget behind one slot of the header bar.
-fn slot_widget(buttons: &Buttons, labels: &gtk::MenuButton, slot: toolbar::Slot) -> gtk::Widget {
+fn slot_widget(buttons: &Buttons, labels: &adw::SplitButton, slot: toolbar::Slot) -> gtk::Widget {
     use toolbar::Slot;
     match slot {
         Slot::Reply => buttons.reply.clone().upcast(),
@@ -214,13 +214,18 @@ fn slot_widget(buttons: &Buttons, labels: &gtk::MenuButton, slot: toolbar::Slot)
 
 pub struct ConversationView {
     pub page: adw::NavigationPage,
-    /// Applies or removes labels; the window fills its popover.
-    pub label_button: gtk::MenuButton,
+    /// Applies or removes labels; the window fills its popover. A split
+    /// button like the flag's beside it, whose two parts both open the
+    /// labels.
+    pub label_button: adw::SplitButton,
     /// Opens or closes the assistant beside the mail. The window wires
     /// it to the assistant panel's own toggle path (R12) and hides it
     /// with `set_detached`, since a conversation of its own has no
     /// assistant panel to open.
     pub assistant_toggle: gtk::ToggleButton,
+    /// The bar of buttons above the conversation, the widest part the
+    /// pane cannot shrink.
+    header: adw::HeaderBar,
     many: adw::StatusPage,
     many_read: gtk::Button,
     many_star: gtk::Button,
@@ -578,12 +583,16 @@ impl ConversationView {
             .title_widget(&gtk::Label::new(None))
             .css_classes(["conversation-header"])
             .build();
-        let label_button = gtk::MenuButton::builder()
+        let label_button = adw::SplitButton::builder()
             .icon_name(Filing::Labels.icon())
             .tooltip_text(Filing::Labels.tooltip())
-            .always_show_arrow(true)
+            .dropdown_tooltip(Filing::Labels.tooltip())
             .build();
         name_with_shortcut(&label_button, &Filing::Labels.tooltip());
+        // The labels have no one-press action of their own, so the icon
+        // opens the same list as the arrow, as the whole button did
+        // before it took the flag's shape.
+        label_button.connect_clicked(|button| button.popup());
         // The capsules run from the start of the bar in the order the
         // mockup gives them; More stays a round button at the end.
         let capsules: Vec<gtk::Box> = toolbar::CAPSULES
@@ -669,6 +678,7 @@ impl ConversationView {
             page,
             label_button,
             assistant_toggle,
+            header: header.clone(),
             many,
             many_read,
             many_star,
@@ -910,11 +920,33 @@ impl ConversationView {
         );
     }
 
+    /// The arrow half of the Labels button, which asks the window for a
+    /// fresh list of labels each time it opens. libadwaita builds a split
+    /// button from a plain button and a menu button.
+    pub fn label_arrow(&self) -> Option<gtk::MenuButton> {
+        let mut child = self.label_button.first_child();
+        while let Some(widget) = child {
+            if let Ok(arrow) = widget.clone().downcast::<gtk::MenuButton>() {
+                return Some(arrow);
+            }
+            child = widget.next_sibling();
+        }
+        None
+    }
+
+    /// The narrowest the pane can go, its bar of buttons, without and
+    /// then with the window's buttons (`ui::header_least`). The message
+    /// itself reflows to any width.
+    pub fn least_width(&self) -> (i32, i32) {
+        crate::ui::header_least(&self.header)
+    }
+
     /// Words the Labels button and its menu item for how the accounts in
     /// reach file mail. The item sits fourth in the section, after Mute.
     pub fn set_filing(&self, filing: Filing) {
         let tip = filing.tooltip();
         self.label_button.set_tooltip_text(Some(&tip));
+        self.label_button.set_dropdown_tooltip(&tip);
         self.label_button.set_icon_name(filing.icon());
         name_with_shortcut(&self.label_button, &tip);
         self.mark_menu.remove(3);

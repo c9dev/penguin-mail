@@ -53,6 +53,33 @@ pub use mailrs_sync::Mailbox;
 pub use mailrs_sync::mailbox::Standard;
 use mailrs_sync::mailbox::{folder_icon, folder_name};
 
+/// The narrowest width a header bar can take, and the part of it the
+/// window's own buttons at its end take. libadwaita moves those buttons
+/// to whichever header sits at the window's right edge, so a pane's need
+/// without them stays the same wherever it sits.
+pub fn header_least(header: &impl IsA<gtk::Widget>) -> (i32, i32) {
+    fn controls(widget: &gtk::Widget) -> i32 {
+        if let Some(controls) = widget.downcast_ref::<gtk::WindowControls>() {
+            let shown = controls.get_visible() && controls.side() == gtk::PackType::End;
+            return if shown {
+                controls.measure(gtk::Orientation::Horizontal, -1).0
+            } else {
+                0
+            };
+        }
+        let mut width = 0;
+        let mut child = widget.first_child();
+        while let Some(next) = child {
+            width += controls(&next);
+            child = next.next_sibling();
+        }
+        width
+    }
+    let least = header.measure(gtk::Orientation::Horizontal, -1).0;
+    let buttons = controls(header.upcast_ref());
+    (least - buttons, buttons)
+}
+
 /// Gives `widget` the name a screen reader says for it.
 ///
 /// A button carrying only an icon has no name of its own, and GTK never

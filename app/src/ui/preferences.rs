@@ -48,7 +48,14 @@ pub fn present(
     dialog.add(&general_page(app, &settings, &missing_lines(&offered)));
     let writing = writing_page(app, &settings, accounts, signature_of, &dialog);
     dialog.add(&writing);
-    dialog.add(&super::contacts_prefs::page(app, &settings, &offered, withheld, grant));
+    dialog.add(&super::contacts_prefs::page(
+        app,
+        &settings,
+        &offered,
+        withheld,
+        grant,
+        &calendar_rows(app, &settings),
+    ));
     if signature_of.is_some() {
         dialog.set_visible_page(&writing);
     }
@@ -223,23 +230,6 @@ fn general_page(
     notifications.add(&previews);
     notifications.add(&actions);
     page.add(&notifications);
-    // Its own group rather than a row under the mail switches: turning
-    // new-mail notifications off leaves event reminders alone.
-    let calendar = adw::PreferencesGroup::builder()
-        .title(gettext("Calendar"))
-        .build();
-    calendar.add(&switch(
-        app,
-        &gettext("Event Reminders"),
-        Some(&gettext(
-            "A notification before each event, at the times the event or its calendar sets",
-        )),
-        settings.event_reminders,
-        Change::EventReminders,
-    ));
-    calendar.add(&week_start_row(app, settings.week_start));
-    calendar.add(&working_hours_row(app, settings.working_hours));
-    page.add(&calendar);
     if !missing.is_empty() {
         let unavailable = adw::PreferencesGroup::builder()
             .title(gettext("Not Available"))
@@ -255,6 +245,27 @@ fn general_page(
         page.add(&unavailable);
     }
     page
+}
+
+/// The calendar's own settings, which open the Calendar section of the
+/// Contacts & Calendar page. Event reminders keep a switch of their own
+/// there, so turning new-mail notifications off on the General page
+/// leaves them alone.
+fn calendar_rows(app: &Rc<App>, settings: &Settings) -> Vec<gtk::Widget> {
+    vec![
+        switch(
+            app,
+            &gettext("Event Reminders"),
+            Some(&gettext(
+                "A notification before each event, at the times the event or its calendar sets",
+            )),
+            settings.event_reminders,
+            Change::EventReminders,
+        )
+        .upcast(),
+        week_start_row(app, settings.week_start).upcast(),
+        working_hours_row(app, settings.working_hours).upcast(),
+    ]
 }
 
 fn writing_page(
