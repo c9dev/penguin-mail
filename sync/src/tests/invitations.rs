@@ -1296,3 +1296,65 @@ async fn waiting_for_answer_keeps_the_row_with_no_mail_to_open() {
     let found = invitations(&h).waiting_for_answer(&[h.account_id], MARCH).await.unwrap();
     assert_eq!(found, vec![waiting(&h, "ev1", TENTH)]);
 }
+
+/// A daily series nobody invited the account to, on the primary
+/// calendar from `first` with no end.
+fn daily(id: &str, first: i64) -> Ev {
+    Ev {
+        title: format!("Daily {id}"),
+        uid: format!("{id}@example.com"),
+        rules: vec!["RRULE:FREQ=DAILY".into()],
+        ..on_copy(id, first)
+    }
+}
+
+#[tokio::test]
+async fn an_invitation_behind_a_crowded_calendar_still_waits() {
+    let h = harness().await;
+    // Two daily series fill more than 500 occurrences before the
+    // invitation, nine months out.
+    let far = TENTH + 270 * 24 * HOUR;
+    read_copy(
+        &h,
+        vec![
+            daily("a", MARCH),
+            daily("b", MARCH + HOUR),
+            Ev { guests: vec![me_guest()], ..on_copy("ev1", far) },
+        ],
+    )
+    .await;
+    let found = invitations(&h).waiting_for_answer(&[h.account_id], MARCH).await.unwrap();
+    assert_eq!(found, vec![waiting(&h, "ev1", far)]);
+}
+
+#[tokio::test]
+async fn an_answer_on_the_card_stops_the_event_waiting() {
+    let h = harness().await;
+    read_copy(&h, vec![Ev { guests: vec![me_guest()], ..on_copy("ev1", TENTH) }]).await;
+    h.fake.with(|s| s.calendar.insert(UID.into(), None));
+    let invitation = read(&invite(0, "20300310T090000Z"));
+
+    let sent = invitations(&h)
+        .answer(h.account_id, &invitation, &me(), Answer::Yes, Scope::Series, MARCH)
+        .await
+        .unwrap();
+
+    assert_eq!(sent.told, Told::Calendar);
+    let found = invitations(&h).waiting_for_answer(&[h.account_id], MARCH).await.unwrap();
+    assert_eq!(found, Vec::new());
+}
+
+#[tokio::test]
+async fn an_answer_to_one_occurrence_leaves_the_rest_of_the_series_waiting() {
+    let h = harness().await;
+    read_copy(&h, vec![Ev { guests: vec![me_guest()], ..weekly(TENTH - WEEK) }]).await;
+    h.fake.with(|s| s.calendar.insert(UID.into(), None));
+
+    invitations(&h)
+        .answer(h.account_id, &to_the_tenth(), &me(), Answer::Yes, Scope::Occurrence, MARCH)
+        .await
+        .unwrap();
+
+    let found = invitations(&h).waiting_for_answer(&[h.account_id], MARCH).await.unwrap();
+    assert_eq!(found, vec![waiting(&h, "series", TENTH - WEEK)]);
+}

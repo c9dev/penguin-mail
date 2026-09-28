@@ -262,6 +262,35 @@ pub fn set_my_answer(
     Ok(())
 }
 
+/// Records the account's own answer on every row of the account whose
+/// iCalendar UID is `uid`, for an answer the invitation card gave, which
+/// knows the event by its UID alone. With `occurrence`, only the changed
+/// occurrence stored for that original start takes it: the provider
+/// answered that one occurrence, and the rest of the series still waits.
+pub fn set_my_answer_for_uid(
+    conn: &Connection,
+    account_id: AccountId,
+    uid: &str,
+    occurrence: Option<EpochMillis>,
+    answer: Answer,
+) -> Result<()> {
+    if uid.trim().is_empty() {
+        return Ok(());
+    }
+    let rows = "SELECT calendar, id FROM events WHERE account_id = ?1 AND lower(uid) = lower(?2) \
+         AND (?3 IS NULL OR original_start = ?3)";
+    conn.execute(
+        &format!("UPDATE event_guests SET answer = ?4 WHERE account_id = ?1 AND me = 1 AND (calendar, event) IN ({rows})"),
+        params![account_id, uid, occurrence, answer.as_str()],
+    )?;
+    conn.execute(
+        "UPDATE events SET my_answer = ?4 WHERE account_id = ?1 AND lower(uid) = lower(?2) \
+         AND (?3 IS NULL OR original_start = ?3)",
+        params![account_id, uid, occurrence, answer.as_str()],
+    )?;
+    Ok(())
+}
+
 /// Drops a calendar's rows a whole read did not repeat: every row still
 /// marked `seen_at` before `before`, save for one a queued change still
 /// owns, which the read must not drop out from under an unsent edit.
@@ -448,6 +477,86 @@ pub fn with_uid(
     let mut found = expand_rows(conn, account_id, events, from, to)?;
     found.sort_by(|a, b| (a.start, &a.event.title).cmp(&(b.start, &b.event.title)));
     Ok(found)
+}
+
+/// The invitations on the accounts' shown calendars that still want the
+/// account's own answer, each at its next occurrence that has not ended
+/// by `now`, nearest first, at most `limit` of them. An invitation is a
+/// row with a guest marked `me`, no answer of the account's, not
+/// cancelled, and not over. The query filters in SQL before it caps, so
+/// a calendar full of other events cannot push an invitation out, and it
+/// expands only the rows it keeps, never a year of every series.
+///
+/// A series and the occurrences someone changed share a uid, so one
+/// invitation keeps one row: the one whose occurrence comes first.
+pub fn waiting(
+    conn: &Connection,
+    accounts: &[AccountId],
+    now: EpochMillis,
+    limit: usize,
+) -> Result<Vec<Occurrence>> {
+    // A row per invitation is the common case; the spare half covers a
+    // series and its changed occurrences, which collapse to one below.
+    let rows = limit.saturating_mul(2);
+    let mut nearest: HashMap<(AccountId, String, String), Occurrence> = HashMap::new();
+    for &account_id in accounts {
+        let mut stmt = conn.prepare(&format!(
+            "SELECT {COLUMNS} FROM events e \
+             JOIN calendars c ON c.account_id = e.account_id AND c.id = e.calendar \
+             WHERE e.account_id = ?1 AND c.shown = 1 AND e.my_answer IS NULL AND e.status <> 'cancelled' \
+               AND EXISTS (SELECT 1 FROM event_guests g WHERE g.account_id = e.account_id \
+                   AND g.calendar = e.calendar AND g.event = e.id AND g.me = 1) \
+               AND ((e.rules = '' AND (e.ends_at > ?2 OR (e.ends_at = e.starts_at AND e.starts_at >= ?2))) \
+                 OR (e.rules <> '' AND (e.series_end IS NULL OR e.series_end > ?2))) \
+             ORDER BY MAX(e.starts_at, ?2), e.title LIMIT ?3"
+        ))?;
+        let events: Vec<Event> = stmt
+            .query_map(params![account_id, now, rows as i64], read_event)?
+            .collect::<rusqlite::Result<_>>()?;
+        for event in events {
+            let Some((start, end)) = next_after(conn, account_id, &event, now)? else {
+                continue;
+            };
+            let same = if event.uid.is_empty() { event.id.clone() } else { event.uid.to_lowercase() };
+            let key = (account_id, event.calendar.clone(), same);
+            if nearest.get(&key).is_some_and(|kept| kept.start <= start) {
+                continue;
+            }
+            let event = Arc::new(event);
+            nearest.insert(key, Occurrence { account_id, event, start, end });
+        }
+    }
+    let mut found: Vec<Occurrence> = nearest.into_values().collect();
+    found.sort_by(|a, b| (a.start, &a.event.title).cmp(&(b.start, &b.event.title)));
+    found.truncate(limit);
+    for occurrence in &mut found {
+        let event = Arc::make_mut(&mut occurrence.event);
+        event.guests = guests(conn, occurrence.account_id, &event.calendar, &event.id)?;
+    }
+    Ok(found)
+}
+
+/// The first occurrence of `event` that has not ended by `now`, within a
+/// year, skipping the ones a changed or cancelled occurrence replaces.
+fn next_after(
+    conn: &Connection,
+    account_id: AccountId,
+    event: &Event,
+    now: EpochMillis,
+) -> Result<Option<(EpochMillis, EpochMillis)>> {
+    if event.rules.is_empty() {
+        return Ok(model::expand(event, now, now + MAX_RANGE).first().copied());
+    }
+    let mut stmt = conn.prepare(
+        "SELECT original_start FROM events WHERE account_id = ?1 AND calendar = ?2 AND series = ?3 \
+         AND original_start IS NOT NULL",
+    )?;
+    let replaced: HashSet<EpochMillis> = stmt
+        .query_map(params![account_id, event.calendar, event.id], |row| row.get(0))?
+        .collect::<rusqlite::Result<_>>()?;
+    Ok(model::expand(event, now, now + MAX_RANGE)
+        .into_iter()
+        .find(|(start, _)| !replaced.contains(start)))
 }
 
 /// Events whose title, place, description or a guest's name or address
