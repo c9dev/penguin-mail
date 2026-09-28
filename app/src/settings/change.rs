@@ -75,6 +75,12 @@ pub enum Change {
     WeekStart(mailrs_domain::calendar::week::WeekStart),
     /// The account a new event went on.
     LastCalendarAccount(String),
+    /// Folds an account's calendars under its heading in the calendar
+    /// sidebar, or opens them again.
+    CalendarAccountFolded {
+        email: String,
+        folded: bool,
+    },
     /// Folds the old one switch for every account into the per-account
     /// list: all of `emails` when it was on.
     AllContacts(Vec<String>),
@@ -276,6 +282,13 @@ impl Change {
             Change::WorkingHours(hours) => settings.working_hours = hours,
             Change::WeekStart(week_start) => settings.week_start = week_start,
             Change::LastCalendarAccount(email) => settings.last_calendar_account = Some(email),
+            Change::CalendarAccountFolded { email, folded } => {
+                let email = email.to_lowercase();
+                settings.folded_calendar_accounts.retain(|e| *e != email);
+                if folded {
+                    settings.folded_calendar_accounts.push(email);
+                }
+            }
             Change::Signature { email, text } => settings.set_signature(&email, &text),
             Change::ToggleVip { email, name } => {
                 settings.toggle_vip(&email, &name);
@@ -528,6 +541,7 @@ settable! {
         // window's memory of the person's own clicks.
         calendar_view,
         last_calendar_account,
+        folded_calendar_accounts,
         // How the assistant's pane lays out its own turns belongs with the
         // rest of its settings, on the AI page.
         assistant_allowed_tools,
@@ -771,6 +785,7 @@ impl Effects {
             working_hours,
             week_start,
             last_calendar_account,
+            folded_calendar_accounts,
         } = after;
         // These leave the window as it is. The flag colour, the delay before
         // Send commits, and the rest are read when they are needed, so
@@ -826,6 +841,9 @@ impl Effects {
             // The New Event button remembers this by itself, for the
             // next new event; nothing on screen reads it.
             last_calendar_account,
+            // The calendar sidebar folds the account itself as the
+            // person clicks its heading.
+            folded_calendar_accounts,
         );
         let smart_changed = *smart_mailboxes != before.smart_mailboxes;
         let colors_changed = *account_colors != before.account_colors;
@@ -1010,6 +1028,36 @@ mod tests {
     }
 
     #[test]
+    fn a_folded_calendar_account_is_remembered_by_address() {
+        let mut settings = Settings::default();
+        Change::CalendarAccountFolded {
+            email: "Dana@Example.com".into(),
+            folded: true,
+        }
+        .apply_to(&mut settings);
+        assert_eq!(settings.folded_calendar_accounts, vec!["dana@example.com".to_string()]);
+        Change::CalendarAccountFolded {
+            email: "dana@example.com".into(),
+            folded: false,
+        }
+        .apply_to(&mut settings);
+        assert!(settings.folded_calendar_accounts.is_empty());
+    }
+
+    #[test]
+    fn folding_the_same_account_twice_keeps_one_entry() {
+        let mut settings = Settings::default();
+        for _ in 0..2 {
+            Change::CalendarAccountFolded {
+                email: "dana@example.com".into(),
+                folded: true,
+            }
+            .apply_to(&mut settings);
+        }
+        assert_eq!(settings.folded_calendar_accounts.len(), 1);
+    }
+
+    #[test]
     fn small_preferences_need_no_reload() {
         // The list the module's comment calls quiet, checked one by one.
         let quiet = [
@@ -1040,6 +1088,10 @@ mod tests {
                 on: true,
             },
             Change::LastCalendarAccount("me@work.pt".into()),
+            Change::CalendarAccountFolded {
+                email: "me@work.pt".into(),
+                folded: true,
+            },
         ];
         for change in quiet {
             let named = format!("{change:?}");

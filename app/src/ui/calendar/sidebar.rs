@@ -4,7 +4,7 @@
 //! the account's offers and consent, not a widget, decide it.
 
 use std::cell::{Cell, RefCell};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
 use adw::prelude::*;
@@ -14,6 +14,7 @@ use mailrs_domain::translate::{date_locale, fill, gettext};
 use mailrs_domain::{Account, AccountId, EpochMillis};
 use mailrs_sync::{Missing, Offers, Waiting, Withheld};
 
+use super::range::{Range, ViewKind};
 use super::tint;
 use super::words;
 
@@ -40,6 +41,9 @@ pub struct SidebarAccount {
     pub id: AccountId,
     pub address: String,
     pub reach: CalendarReach,
+    /// The calendars the person took off the list, which the "Hidden
+    /// Calendars" menu at its foot offers to put back.
+    pub hidden: Vec<Calendar>,
 }
 
 /// The sidebar's rows from each account's provider offers, its own
@@ -67,9 +71,120 @@ pub fn sidebar_accounts(
                 id: account.id,
                 address: account.email.clone(),
                 reach,
+                hidden: Vec::new(),
             }
         })
         .collect()
+}
+
+/// Moves each calendar in `unlisted`, by account, from the list to the
+/// account's hidden calendars. The list stays in its own order.
+pub fn take_off_the_list(
+    mut rows: Vec<SidebarAccount>,
+    unlisted: &HashMap<AccountId, HashSet<String>>,
+) -> Vec<SidebarAccount> {
+    for row in &mut rows {
+        let Some(ids) = unlisted.get(&row.id) else {
+            continue;
+        };
+        if let CalendarReach::Calendars(list) | CalendarReach::PrimaryOnly(list) = &mut row.reach {
+            let (hidden, kept) = std::mem::take(list)
+                .into_iter()
+                .partition(|calendar| ids.contains(&calendar.id));
+            *list = kept;
+            row.hidden = hidden;
+        }
+    }
+    rows
+}
+
+/// How many calendars every account together took off the list.
+pub fn hidden_count(rows: &[SidebarAccount]) -> usize {
+    rows.iter().map(|row| row.hidden.len()).sum()
+}
+
+/// The first and last day the grid shows, for the mini month's band: a
+/// week's seven days, or a month's own days without the ones before and
+/// after that fill its grid. A single day gets no band, since the
+/// selected day already marks it.
+pub fn in_view(kind: ViewKind, day: NaiveDate) -> Option<(NaiveDate, NaiveDate)> {
+    match kind {
+        ViewKind::Day => None,
+        ViewKind::Week => {
+            let range = Range::around(kind, day);
+            Some((range.first, range.first + Days::new(u64::from(range.days) - 1)))
+        }
+        ViewKind::Month => {
+            let first = day.with_day(1).unwrap_or(day);
+            Some((first, adjacent_month(first, 1) - Days::new(1)))
+        }
+    }
+}
+
+/// How one mini month day looks. `today` fills it with the accent,
+/// `selected` tints it, and a day `in_view` sits on the faint band, which
+/// rounds off at `band_start` and `band_end`.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct DayLook {
+    pub today: bool,
+    pub selected: bool,
+    pub outside: bool,
+    pub in_view: bool,
+    pub band_start: bool,
+    pub band_end: bool,
+}
+
+/// How `date`, in `column` of the mini month (0 to 6), looks while the
+/// month starting on `month` shows, the view sits on `selected`, and the
+/// grid shows `band` ([`in_view`]). The band rounds off where the range
+/// starts or ends and at each row's edges.
+pub fn day_look(
+    date: NaiveDate,
+    column: usize,
+    today: NaiveDate,
+    selected: NaiveDate,
+    month: NaiveDate,
+    band: Option<(NaiveDate, NaiveDate)>,
+) -> DayLook {
+    let in_view = band.is_some_and(|(first, last)| (first..=last).contains(&date));
+    DayLook {
+        today: date == today,
+        selected: date == selected,
+        outside: date.month() != month.month() || date.year() != month.year(),
+        in_view,
+        band_start: in_view && (column == 0 || band.is_some_and(|(first, _)| first == date)),
+        band_end: in_view && (column == 6 || band.is_some_and(|(_, last)| last == date)),
+    }
+}
+
+/// The day button's own classes for `look`.
+pub fn day_classes(look: DayLook) -> Vec<&'static str> {
+    let mut classes = vec!["flat"];
+    if look.today {
+        classes.push("today");
+    }
+    if look.selected {
+        classes.push("selected");
+    }
+    if look.outside {
+        classes.push("outside");
+    }
+    classes
+}
+
+/// The classes of the cell behind a day button, which draws the band.
+pub fn band_classes(look: DayLook) -> Vec<&'static str> {
+    let mut classes = vec!["mini-day"];
+    if look.in_view {
+        classes.push("in-view");
+    }
+    if look.band_start {
+        classes.push("band-start");
+    }
+    if look.band_end {
+        classes.push("band-end");
+    }
+    classes
 }
 
 /// The accounts whose invitations "Waiting for your answer" lists: those
@@ -605,8 +720,8 @@ impl CalendarSidebar {
             day.number.set_label(&date.day().to_string());
             let has_events = busy_days.contains(&date);
             day.dot.set_visible(has_events);
-            day.button
-                .set_css_classes(&mini_day_classes(date, today, first_of_month));
+            let look = day_look(date, index % 7, today, today, first_of_month, None);
+            day.button.set_css_classes(&day_classes(look));
             crate::ui::name(&day.button, &words::mini_day_words(date, has_events));
         }
     }
@@ -736,19 +851,11 @@ fn dim_line(text: &str) -> gtk::Label {
         .build()
 }
 
-fn mini_day_classes(date: NaiveDate, today: NaiveDate, month: NaiveDate) -> Vec<&'static str> {
-    let mut classes = vec!["flat"];
-    if date == today {
-        classes.push("today");
-    }
-    if date.month() != month.month() || date.year() != month.year() {
-        classes.push("outside");
-    }
-    classes
-}
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
+
     use mailrs_domain::calendar::Access;
     use mailrs_domain::{AccountState, Provider};
 
@@ -826,6 +933,7 @@ mod tests {
                 id: 1,
                 address: "dana@example.com".into(),
                 reach: CalendarReach::Calendars(vec![calendar("primary"), calendar("team")]),
+                hidden: Vec::new(),
             }]
         );
     }
@@ -893,6 +1001,122 @@ mod tests {
             Vec::new(),
         )]);
         assert_eq!(rows[0].reach, CalendarReach::Calendars(Vec::new()));
+    }
+
+    fn listed_ids(reach: &CalendarReach) -> Vec<String> {
+        match reach {
+            CalendarReach::Calendars(list) | CalendarReach::PrimaryOnly(list) => {
+                list.iter().map(|c| c.id.clone()).collect()
+            }
+            _ => Vec::new(),
+        }
+    }
+
+    #[test]
+    fn a_calendar_taken_off_the_list_moves_to_hidden_calendars() {
+        let rows = sidebar_accounts(&[(
+            account(1, "dana@example.com"),
+            Offers::EVERYTHING,
+            Withheld::NONE,
+            vec![calendar("primary"), calendar("holidays")],
+        )]);
+        let unlisted = HashMap::from([(1, HashSet::from(["holidays".to_string()]))]);
+        let rows = take_off_the_list(rows, &unlisted);
+        assert_eq!(listed_ids(&rows[0].reach), vec!["primary"]);
+        assert_eq!(rows[0].hidden, vec![calendar("holidays")]);
+    }
+
+    #[test]
+    fn an_account_with_nothing_unlisted_hides_nothing() {
+        let rows = sidebar_accounts(&[(
+            account(1, "dana@example.com"),
+            Offers::EVERYTHING,
+            Withheld::NONE,
+            vec![calendar("primary")],
+        )]);
+        let rows = take_off_the_list(rows, &HashMap::new());
+        assert_eq!(listed_ids(&rows[0].reach), vec!["primary"]);
+        assert!(rows[0].hidden.is_empty());
+    }
+
+    #[test]
+    fn hidden_calendars_list_every_accounts_own() {
+        let rows = sidebar_accounts(&[
+            (account(1, "dana@example.com"), Offers::EVERYTHING, Withheld::NONE, vec![calendar("a")]),
+            (account(2, "d.reyes@uni.example"), Offers::EVERYTHING, Withheld::NONE, vec![calendar("b")]),
+        ]);
+        let unlisted = HashMap::from([
+            (1, HashSet::from(["a".to_string()])),
+            (2, HashSet::from(["b".to_string()])),
+        ]);
+        let rows = take_off_the_list(rows, &unlisted);
+        assert_eq!(hidden_count(&rows), 2);
+    }
+
+    fn d(y: i32, m: u32, day: u32) -> NaiveDate {
+        NaiveDate::from_ymd_opt(y, m, day).unwrap()
+    }
+
+    #[test]
+    fn the_week_in_view_runs_from_the_week_start_for_seven_days() {
+        crate::locale_time::set_first_weekday_for_test(chrono::Weekday::Mon);
+        assert_eq!(in_view(ViewKind::Week, d(2026, 9, 30)), Some((d(2026, 9, 28), d(2026, 10, 4))));
+    }
+
+    #[test]
+    fn the_month_in_view_is_its_own_days_not_the_grids() {
+        assert_eq!(in_view(ViewKind::Month, d(2026, 9, 30)), Some((d(2026, 9, 1), d(2026, 9, 30))));
+    }
+
+    #[test]
+    fn a_single_day_marks_no_band() {
+        assert_eq!(in_view(ViewKind::Day, d(2026, 9, 30)), None);
+    }
+
+    #[test]
+    fn today_and_the_selected_day_read_apart() {
+        let look = day_look(d(2026, 9, 29), 1, d(2026, 9, 23), d(2026, 9, 29), d(2026, 9, 1), None);
+        assert!(look.selected && !look.today);
+        let look = day_look(d(2026, 9, 23), 2, d(2026, 9, 23), d(2026, 9, 29), d(2026, 9, 1), None);
+        assert!(look.today && !look.selected);
+    }
+
+    #[test]
+    fn a_day_outside_the_month_shown_is_outside() {
+        let look = day_look(d(2026, 8, 31), 0, d(2026, 9, 23), d(2026, 9, 23), d(2026, 9, 1), None);
+        assert!(look.outside);
+    }
+
+    #[test]
+    fn the_band_rounds_off_at_the_ends_of_the_week_in_view() {
+        let week = Some((d(2026, 9, 28), d(2026, 10, 4)));
+        let first = day_look(d(2026, 9, 28), 0, d(2026, 9, 23), d(2026, 9, 30), d(2026, 9, 1), week);
+        assert!(first.in_view && first.band_start && !first.band_end);
+        let middle = day_look(d(2026, 9, 30), 2, d(2026, 9, 23), d(2026, 9, 30), d(2026, 9, 1), week);
+        assert!(middle.in_view && !middle.band_start && !middle.band_end);
+        let last = day_look(d(2026, 10, 4), 6, d(2026, 9, 23), d(2026, 9, 30), d(2026, 9, 1), week);
+        assert!(last.in_view && last.band_end);
+        let after = day_look(d(2026, 10, 5), 0, d(2026, 9, 23), d(2026, 9, 30), d(2026, 9, 1), week);
+        assert!(!after.in_view);
+    }
+
+    #[test]
+    fn a_month_band_rounds_off_at_each_rows_edges() {
+        let month = Some((d(2026, 9, 1), d(2026, 9, 30)));
+        let sunday = day_look(d(2026, 9, 13), 6, d(2026, 9, 23), d(2026, 9, 23), d(2026, 9, 1), month);
+        assert!(sunday.band_end && !sunday.band_start);
+        let monday = day_look(d(2026, 9, 14), 0, d(2026, 9, 23), d(2026, 9, 23), d(2026, 9, 1), month);
+        assert!(monday.band_start && !monday.band_end);
+    }
+
+    #[test]
+    fn the_classes_carry_each_state() {
+        let look = DayLook { today: true, selected: true, in_view: true, band_start: true, ..DayLook::default() };
+        assert_eq!(
+            day_classes(look),
+            vec!["flat", "today", "selected"]
+        );
+        assert_eq!(band_classes(look), vec!["mini-day", "in-view", "band-start"]);
     }
 
     #[test]

@@ -17,6 +17,7 @@ use mailrs_sync::Offers;
 use super::{FolderLook, LABEL_COLORS, Mailbox, Standard, describe, label_color_name};
 use crate::format::{PALETTE, account_color_index, palette_name};
 use crate::offered::Filing;
+use crate::settings::Space;
 use sections::{Place, Section};
 
 struct Row {
@@ -970,6 +971,50 @@ fn mailbox_row_name(mailbox: &str, count: i64, unread: bool) -> String {
     }
 }
 
+/// The counts the Mail and Calendar toggles carry. Each counts only
+/// while the other space shows, since the space on screen already shows
+/// its own numbers.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SpaceBadges {
+    /// Unread mail in the unified inbox.
+    pub mail: i64,
+    /// Invitations waiting for the person's answer.
+    pub calendar: i64,
+}
+
+pub fn space_badges(on_screen: Space, unread: i64, waiting: i64) -> SpaceBadges {
+    SpaceBadges {
+        mail: if on_screen == Space::Calendar { unread } else { 0 },
+        calendar: if on_screen == Space::Mail { waiting } else { 0 },
+    }
+}
+
+/// A toggle's badge: its count, "99+" past 99, and none at zero.
+pub fn badge_text(count: i64) -> Option<String> {
+    match count {
+        ..=0 => None,
+        1..=99 => Some(count.to_string()),
+        _ => Some(gettext("99+")),
+    }
+}
+
+/// What a toggle says out loud, with the count its badge shows.
+pub fn toggle_name(space: Space, count: i64) -> String {
+    let number = count.to_string();
+    let values = [("count", number.as_str())];
+    match (space, count > 0) {
+        (Space::Mail, false) => gettext("Mail"),
+        (Space::Calendar, false) => gettext("Calendar"),
+        (Space::Mail, true) => fill_plural("Mail, {count} unread", "Mail, {count} unread", count as usize, &values),
+        (Space::Calendar, true) => fill_plural(
+            "Calendar, {count} waiting for your answer",
+            "Calendar, {count} waiting for your answer",
+            count as usize,
+            &values,
+        ),
+    }
+}
+
 /// What an account heading says out loud: the account, and the unread
 /// mail behind it while the section is closed.
 fn heading_row_name(account: &str, unread: i64) -> String {
@@ -1494,5 +1539,48 @@ mod tests {
             rows,
             [("receipts", 1, true), ("Work", 1, false), ("Clients", 2, true)]
         );
+    }
+}
+
+#[cfg(test)]
+mod badge_tests {
+    use super::{badge_text, space_badges, toggle_name};
+    use crate::settings::Space;
+
+    #[test]
+    fn no_badge_shows_at_zero() {
+        assert_eq!(badge_text(0), None);
+    }
+
+    #[test]
+    fn a_count_shows_as_its_number() {
+        assert_eq!(badge_text(12).as_deref(), Some("12"));
+    }
+
+    #[test]
+    fn a_count_past_ninety_nine_shows_as_99_plus() {
+        assert_eq!(badge_text(99).as_deref(), Some("99"));
+        assert_eq!(badge_text(100).as_deref(), Some("99+"));
+    }
+
+    #[test]
+    fn mail_shows_its_unread_only_while_the_calendar_shows() {
+        let badges = space_badges(Space::Calendar, 12, 3);
+        assert_eq!(badges.mail, 12);
+        assert_eq!(badges.calendar, 0);
+    }
+
+    #[test]
+    fn the_calendar_shows_what_waits_only_while_mail_shows() {
+        let badges = space_badges(Space::Mail, 12, 3);
+        assert_eq!(badges.mail, 0);
+        assert_eq!(badges.calendar, 3);
+    }
+
+    #[test]
+    fn a_toggle_says_its_count_out_loud() {
+        assert_eq!(toggle_name(Space::Mail, 12), "Mail, 12 unread");
+        assert_eq!(toggle_name(Space::Calendar, 1), "Calendar, 1 waiting for your answer");
+        assert_eq!(toggle_name(Space::Mail, 0), "Mail");
     }
 }
