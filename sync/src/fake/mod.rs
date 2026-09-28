@@ -177,6 +177,9 @@ pub struct FakeState {
     /// Each change in order: calendar, event id, and whether it went. A
     /// sync token is a position in this log.
     calendar_log: Vec<(String, String, bool)>,
+    /// Every calendar write that reached the fake, in order: the id and
+    /// whether it asked Google to mail the guests (`sendUpdates`).
+    pub calendar_notices: Vec<(String, calendar::Notify)>,
     /// Play Google forgetting every sync token: a read with one answers
     /// `ExpiredSyncToken`.
     pub expire_calendar_tokens: bool,
@@ -376,6 +379,7 @@ impl FakeGmail {
                 calendars: Vec::new(),
                 calendar_events: Vec::new(),
                 calendar_log: Vec::new(),
+                calendar_notices: Vec::new(),
                 expire_calendar_tokens: false,
                 offline: false,
                 deleted_answers_gone: false,
@@ -1333,9 +1337,11 @@ impl GmailApi for FakeGmail {
         event: &calendar::Event,
         etag: Option<&str>,
         create: bool,
+        notify: calendar::Notify,
     ) -> Result<calendar::Event, GmailError> {
         self.call(if create { "calendar.events.insert" } else { "calendar.events.patch" }, 0).await?;
         self.calendar_open()?;
+        self.with(|s| s.calendar_notices.push((event.id.clone(), notify)));
         self.calendar_held(&event.calendar)?;
         let held = self.with(|s| {
             s.calendar_events.iter().find(|e| e.calendar == event.calendar && e.id == event.id).cloned()
@@ -1374,9 +1380,16 @@ impl GmailApi for FakeGmail {
         }))
     }
 
-    async fn remove_event(&self, calendar: &str, id: &str, etag: Option<&str>) -> Result<(), GmailError> {
+    async fn remove_event(
+        &self,
+        calendar: &str,
+        id: &str,
+        etag: Option<&str>,
+        notify: calendar::Notify,
+    ) -> Result<(), GmailError> {
         self.call("calendar.events.delete", 0).await?;
         self.calendar_open()?;
+        self.with(|s| s.calendar_notices.push((id.to_string(), notify)));
         self.calendar_held(calendar)?;
         let held = self.with(|s| s.calendar_events.iter().find(|e| e.calendar == calendar && e.id == id).cloned());
         match (held, etag) {

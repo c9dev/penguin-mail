@@ -327,7 +327,7 @@ async fn the_fake_refuses_a_write_against_an_old_version() {
     h.fake.put_calendar_event(Ev { calendar: "primary".into(), id: "a".into(), zone: "UTC".into(), ..Ev::default() });
     let calendar = h.sync.services().calendar.clone().unwrap();
     let stale = Ev { calendar: "primary".into(), id: "a".into(), zone: "UTC".into(), ..Ev::default() };
-    let err = calendar.put_event(&stale, Some("\"0\""), false).await.unwrap_err();
+    let err = calendar.put_event(&stale, Some("\"0\""), false, mailrs_domain::calendar::Notify::Guests).await.unwrap_err();
     assert!(matches!(err, crate::BackendError::Changed), "{err}");
 }
 

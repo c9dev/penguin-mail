@@ -575,12 +575,19 @@ impl<G: GmailApi> CalendarService for Google<G> {
         event: &model::Event,
         etag: Option<&str>,
         create: bool,
+        notify: model::Notify,
     ) -> Result<model::Event, BackendError> {
-        paced(self.gmail.put_event(event, etag, create)).await.map_err(calendar_write_error)
+        paced(self.gmail.put_event(event, etag, create, notify)).await.map_err(calendar_write_error)
     }
 
-    async fn remove_event(&self, calendar: &str, id: &str, etag: Option<&str>) -> Result<(), BackendError> {
-        paced(self.gmail.remove_event(calendar, id, etag)).await.map_err(calendar_write_error)
+    async fn remove_event(
+        &self,
+        calendar: &str,
+        id: &str,
+        etag: Option<&str>,
+        notify: model::Notify,
+    ) -> Result<(), BackendError> {
+        paced(self.gmail.remove_event(calendar, id, etag, notify)).await.map_err(calendar_write_error)
     }
 }
 

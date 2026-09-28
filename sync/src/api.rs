@@ -286,21 +286,24 @@ pub trait GmailApi: Send + Sync + 'static {
     ) -> impl Future<Output = Result<calendar::EventPage, GmailError>> + Send;
 
     /// Creates `event` under its own id when `create`, or changes it to
-    /// match, and tells its guests. `etag` makes the server refuse the
-    /// change with `GmailError::Changed` when the event moved on since.
+    /// match, and mails its guests when `notify` says so. `etag` makes the
+    /// server refuse the change with `GmailError::Changed` when the event
+    /// moved on since.
     fn put_event(
         &self,
         event: &calendar::Event,
         etag: Option<&str>,
         create: bool,
+        notify: calendar::Notify,
     ) -> impl Future<Output = Result<calendar::Event, GmailError>> + Send;
 
-    /// Deletes an event and tells its guests.
+    /// Deletes an event, and mails its guests when `notify` says so.
     fn remove_event(
         &self,
         calendar: &str,
         id: &str,
         etag: Option<&str>,
+        notify: calendar::Notify,
     ) -> impl Future<Output = Result<(), GmailError>> + Send;
 }
 
@@ -577,12 +580,19 @@ impl GmailApi for AccountClient {
         event: &calendar::Event,
         etag: Option<&str>,
         create: bool,
+        notify: calendar::Notify,
     ) -> Result<calendar::Event, GmailError> {
-        self.client.put_event(event, etag, create).await
+        self.client.put_event(event, etag, create, notify).await
     }
 
-    async fn remove_event(&self, calendar: &str, id: &str, etag: Option<&str>) -> Result<(), GmailError> {
-        self.client.remove_event(calendar, id, etag).await
+    async fn remove_event(
+        &self,
+        calendar: &str,
+        id: &str,
+        etag: Option<&str>,
+        notify: calendar::Notify,
+    ) -> Result<(), GmailError> {
+        self.client.remove_event(calendar, id, etag, notify).await
     }
 
     async fn create_label(&self, name: &str) -> Result<RemoteLabel, GmailError> {

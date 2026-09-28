@@ -2,7 +2,7 @@
 //! a stand-in Calendar API. No network: `wiremock` answers the calls and
 //! checks what went out.
 
-use mailrs_domain::calendar::Access;
+use mailrs_domain::calendar::{Access, Notify};
 use mailrs_domain::invitation::Answer;
 use mailrs_gmail::{
     Answered, EventFields, EventTime, GmailClient, GmailError, OAuthClient, Series,
@@ -686,7 +686,7 @@ async fn a_write_against_an_older_version_is_refused_as_changed() {
         zone: "UTC".into(),
         ..Default::default()
     };
-    let err = client(&server).put_event(&event, Some("\"2\""), false).await.unwrap_err();
+    let err = client(&server).put_event(&event, Some("\"2\""), false, Notify::Guests).await.unwrap_err();
     assert!(matches!(err, GmailError::Changed));
 }
 
@@ -716,7 +716,7 @@ async fn a_new_event_goes_out_with_its_own_id() {
         zone: "Europe/Lisbon".into(),
         ..Default::default()
     };
-    let made = client(&server).put_event(&event, None, true).await.unwrap();
+    let made = client(&server).put_event(&event, None, true, Notify::Guests).await.unwrap();
     assert_eq!(made.etag, "\"1\"");
     assert_eq!(made.title, "Lunch");
 }
@@ -754,7 +754,7 @@ async fn asking_for_a_meet_link_sends_a_create_request() {
         meet_request: Some("req0123".into()),
         ..Default::default()
     };
-    let made = client(&server).put_event(&event, None, true).await.unwrap();
+    let made = client(&server).put_event(&event, None, true, Notify::Guests).await.unwrap();
     assert_eq!(made.conference.as_deref(), Some("https://meet.google.com/abc-defg-hij"));
 }
 
@@ -787,7 +787,7 @@ async fn a_changed_occurrence_goes_out_as_a_patch_without_a_rule() {
         original_start: Some(1_790_150_400_000),
         ..Default::default()
     };
-    let made = client(&server).put_event(&event, None, false).await.unwrap();
+    let made = client(&server).put_event(&event, None, false, Notify::Guests).await.unwrap();
     assert_eq!(made.series.as_deref(), Some("standup"));
 }
 
@@ -817,7 +817,7 @@ async fn a_series_saved_without_rules_stops_repeating_on_google() {
         end: 1_790_151_300_000,
         ..Default::default()
     };
-    let made = client(&server).put_event(&event, Some("\"7\""), false).await.unwrap();
+    let made = client(&server).put_event(&event, Some("\"7\""), false, Notify::Guests).await.unwrap();
     assert!(made.rules.is_empty());
 }
 
@@ -841,10 +841,10 @@ async fn an_event_colour_goes_out_as_googles_colour_id() {
         .await;
     let base = mailrs_domain::calendar::Event { calendar: "work".into(), zone: "UTC".into(), ..Default::default() };
     let tangerine = mailrs_domain::calendar::Event { id: "a".into(), color: Some("#F4511E".into()), ..base.clone() };
-    let made = client(&server).put_event(&tangerine, None, false).await.unwrap();
+    let made = client(&server).put_event(&tangerine, None, false, Notify::Guests).await.unwrap();
     assert_eq!(made.color.as_deref(), Some("#f4511e"));
     let plain = mailrs_domain::calendar::Event { id: "b".into(), color: None, ..base };
-    client(&server).put_event(&plain, None, false).await.unwrap();
+    client(&server).put_event(&plain, None, false, Notify::Guests).await.unwrap();
 }
 
 /// A guest's change, as the series change hands it over: every field as
@@ -897,8 +897,8 @@ async fn a_guests_change_patches_only_reminders_colour_and_busy() {
             .await;
     }
     let gmail = client(&server);
-    gmail.put_event(&attended("standup_20260923T080000Z", Some("standup")), None, false).await.unwrap();
-    gmail.put_event(&attended("standup", None), Some("\"7\""), false).await.unwrap();
+    gmail.put_event(&attended("standup_20260923T080000Z", Some("standup")), None, false, Notify::Guests).await.unwrap();
+    gmail.put_event(&attended("standup", None), Some("\"7\""), false, Notify::Guests).await.unwrap();
 }
 
 fn moved_standup() -> mailrs_domain::calendar::Event {
@@ -933,7 +933,7 @@ async fn an_occurrence_patch_answered_404_means_the_event_is_gone() {
         .mount(&server)
         .await;
     refuse_any_retry(&server).await;
-    let err = client(&server).put_event(&moved_standup(), None, false).await.unwrap_err();
+    let err = client(&server).put_event(&moved_standup(), None, false, Notify::Guests).await.unwrap_err();
     assert!(matches!(err, GmailError::NotFound), "got {err:?}");
 }
 
@@ -950,7 +950,7 @@ async fn an_occurrence_patch_answered_400_turns_the_edit_down_with_googles_reaso
         .mount(&server)
         .await;
     refuse_any_retry(&server).await;
-    let err = client(&server).put_event(&moved_standup(), None, false).await.unwrap_err();
+    let err = client(&server).put_event(&moved_standup(), None, false, Notify::Guests).await.unwrap_err();
     assert!(matches!(err, GmailError::Http { status: 400, .. }), "got {err:?}");
     assert!(err.to_string().contains("The specified time range is empty."));
 }
@@ -973,6 +973,77 @@ async fn an_occurrence_patch_refused_for_a_stale_etag_says_changed() {
         original_start: Some(1_790_150_400_000),
         ..Default::default()
     };
-    let err = client(&server).put_event(&event, Some("\"1\""), false).await.unwrap_err();
+    let err = client(&server).put_event(&event, Some("\"1\""), false, Notify::Guests).await.unwrap_err();
     assert!(matches!(err, GmailError::Changed), "got {err:?}");
+}
+
+fn guest(email: &str) -> mailrs_domain::calendar::Guest {
+    mailrs_domain::calendar::Guest { email: email.into(), ..Default::default() }
+}
+
+#[tokio::test]
+async fn a_new_event_with_a_guest_goes_out_with_the_guest_and_invitations_on() {
+    let server = MockServer::start().await;
+    mount_token(&server).await;
+    Mock::given(method("POST"))
+        .and(path(format!("{CALENDAR}/calendars/work/events")))
+        .and(query_param("sendUpdates", "all"))
+        .and(body_partial_json(json!({"attendees": [{"email": "ann@example.com"}]})))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({"id": "pm0123abcd", "etag": "\"1\""})))
+        .expect(1)
+        .mount(&server)
+        .await;
+    let event = mailrs_domain::calendar::Event {
+        calendar: "work".into(),
+        id: "pm0123abcd".into(),
+        title: "Planning".into(),
+        guests: vec![guest("ann@example.com")],
+        ..Default::default()
+    };
+    client(&server).put_event(&event, None, true, Notify::Guests).await.unwrap();
+}
+
+#[tokio::test]
+async fn a_move_the_person_keeps_quiet_goes_out_with_updates_off() {
+    let server = MockServer::start().await;
+    mount_token(&server).await;
+    Mock::given(method("PATCH"))
+        .and(path(format!("{CALENDAR}/calendars/work/events/review")))
+        .and(query_param("sendUpdates", "none"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({"id": "review", "etag": "\"2\""})))
+        .expect(1)
+        .mount(&server)
+        .await;
+    let event = mailrs_domain::calendar::Event {
+        calendar: "work".into(),
+        id: "review".into(),
+        etag: "\"1\"".into(),
+        title: "Review".into(),
+        guests: vec![guest("ann@example.com")],
+        ..Default::default()
+    };
+    client(&server).put_event(&event, Some("\"1\""), false, Notify::Nobody).await.unwrap();
+}
+
+#[tokio::test]
+async fn a_delete_sends_the_cancellation_only_when_asked() {
+    let server = MockServer::start().await;
+    mount_token(&server).await;
+    Mock::given(method("DELETE"))
+        .and(path(format!("{CALENDAR}/calendars/work/events/told")))
+        .and(query_param("sendUpdates", "all"))
+        .respond_with(ResponseTemplate::new(204))
+        .expect(1)
+        .mount(&server)
+        .await;
+    Mock::given(method("DELETE"))
+        .and(path(format!("{CALENDAR}/calendars/work/events/quiet")))
+        .and(query_param("sendUpdates", "none"))
+        .respond_with(ResponseTemplate::new(204))
+        .expect(1)
+        .mount(&server)
+        .await;
+    let gmail = client(&server);
+    gmail.remove_event("work", "told", None, Notify::Guests).await.unwrap();
+    gmail.remove_event("work", "quiet", None, Notify::Nobody).await.unwrap();
 }

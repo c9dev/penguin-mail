@@ -805,21 +805,25 @@ pub trait CalendarService: Send + Sync + 'static {
     ) -> impl Future<Output = Result<model::EventPage, BackendError>> + Send;
 
     /// Creates `event` under its own id when `create`, or changes it to
-    /// match, and tells its guests. `etag` refuses the write with
-    /// `BackendError::Changed` when the event moved on since.
+    /// match, and mails its guests when `notify` says so. `etag` refuses
+    /// the write with `BackendError::Changed` when the event moved on
+    /// since.
     fn put_event(
         &self,
         event: &model::Event,
         etag: Option<&str>,
         create: bool,
+        notify: model::Notify,
     ) -> impl Future<Output = Result<model::Event, BackendError>> + Send;
 
-    /// Deletes an event on `calendar` and tells its guests.
+    /// Deletes an event on `calendar`, and mails its guests when `notify`
+    /// says so.
     fn remove_event(
         &self,
         calendar: &str,
         id: &str,
         etag: Option<&str>,
+        notify: model::Notify,
     ) -> impl Future<Output = Result<(), BackendError>> + Send;
 }
 
