@@ -435,6 +435,7 @@ impl Composer {
             .title(gettext("New Message"))
             .content(&toasts)
             .build();
+        super::window::track_dark_class(&window);
 
         // The composer keeps the files in a list of its own, so the draft
         // it started from holds none for every save to copy.

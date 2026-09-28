@@ -230,6 +230,7 @@ fn show_source(parent: &adw::Window, subject: &str, raw: Vec<u8>) {
         .transient_for(parent)
         .content(&toolbar)
         .build();
+    super::track_dark_class(&window);
     let name: String = subject
         .chars()
         .map(|c| {
