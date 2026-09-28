@@ -131,8 +131,12 @@ fn event_json(occurrence: &model::Occurrence, calendar_name: &HashMap<String, St
             crate::format::local(occurrence.start).map(|at| at.format("%A").to_string()),
         )
     };
-    let mut description: String = event.description.chars().take(MAX_DESCRIPTION).collect();
-    if event.description.chars().count() > MAX_DESCRIPTION {
+    // Google may hold the description as HTML once someone has edited it
+    // in its own editor; the model reads it the way the editor's Notes
+    // field does, as text with each link's address kept, not raw tags.
+    let notes = mailrs_mime::notes::text(&event.description);
+    let mut description: String = notes.chars().take(MAX_DESCRIPTION).collect();
+    if notes.chars().count() > MAX_DESCRIPTION {
         description.push_str("\n[cut short]");
     }
     json!({
@@ -702,5 +706,25 @@ fn moment_text(moment: Moment) -> String {
                     .to_string()
             })
             .unwrap_or_default(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Google keeps a description as HTML once someone has edited it in
+    /// its own editor; the assistant reads events the same way the
+    /// editor's Notes field does, or the model reads "<br>" and
+    /// "<a href=…>" as part of the notes.
+    #[test]
+    fn event_json_reads_the_description_as_text_not_html_tags() {
+        let event = model::Event {
+            description: r#"Bring the numbers<br><a href="https://example.com/q3">Q3 sheet</a>"#.into(),
+            ..model::Event::default()
+        };
+        let occurrence = as_occurrence(1, event);
+        let json = event_json(&occurrence, &HashMap::new());
+        assert_eq!(json["description"], "Bring the numbers\nQ3 sheet (https://example.com/q3)");
     }
 }

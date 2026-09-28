@@ -319,8 +319,8 @@ msgstr ""
 msgid "Block {address}? Their future mail goes straight to the Trash."
 msgstr ""
 
-#: app/src/assistant/run.rs:1311 app/src/assistant/run/calendar.rs:213
-#: app/src/assistant/run/calendar.rs:697
+#: app/src/assistant/run.rs:1311 app/src/assistant/run/calendar.rs:217
+#: app/src/assistant/run/calendar.rs:701
 msgid "%a %-d %b"
 msgstr ""
 
@@ -362,68 +362,68 @@ msgid ""
 "rule for their future mail?"
 msgstr ""
 
-#: app/src/assistant/run/calendar.rs:219 app/src/assistant/run/calendar.rs:701
+#: app/src/assistant/run/calendar.rs:223 app/src/assistant/run/calendar.rs:705
 msgid "%a %-d %b %H:%M"
 msgstr ""
 
-#: app/src/assistant/run/calendar.rs:232 app/src/assistant/run/calendar.rs:236
-#: app/src/assistant/run/calendar.rs:240
+#: app/src/assistant/run/calendar.rs:236 app/src/assistant/run/calendar.rs:240
+#: app/src/assistant/run/calendar.rs:244
 msgid "{first} to {last}"
 msgstr ""
 
-#: app/src/assistant/run/calendar.rs:473
+#: app/src/assistant/run/calendar.rs:477
 msgid "Add “{title}” to the calendar “{calendar}” for {account}, {when}?"
 msgstr ""
 
-#: app/src/assistant/run/calendar.rs:482
+#: app/src/assistant/run/calendar.rs:486
 msgid "Add “{title}” to the calendar for {account}, {when}?"
 msgstr ""
 
-#: app/src/assistant/run/calendar.rs:489
+#: app/src/assistant/run/calendar.rs:493
 msgid "Google sends an invitation to {guests}."
 msgstr ""
 
-#: app/src/assistant/run/calendar.rs:542
+#: app/src/assistant/run/calendar.rs:546
 msgid "Title: {value}"
 msgstr ""
 
-#: app/src/assistant/run/calendar.rs:545
+#: app/src/assistant/run/calendar.rs:549
 msgid "Starts: {value}"
 msgstr ""
 
-#: app/src/assistant/run/calendar.rs:548
+#: app/src/assistant/run/calendar.rs:552
 msgid "Ends: {value}"
 msgstr ""
 
-#: app/src/assistant/run/calendar.rs:551
+#: app/src/assistant/run/calendar.rs:555
 msgid "Where: {value}"
 msgstr ""
 
-#: app/src/assistant/run/calendar.rs:554
+#: app/src/assistant/run/calendar.rs:558
 msgid "Guests: {value}"
 msgstr ""
 
-#: app/src/assistant/run/calendar.rs:558
+#: app/src/assistant/run/calendar.rs:562
 msgid "Description: {value}"
 msgstr ""
 
-#: app/src/assistant/run/calendar.rs:563
+#: app/src/assistant/run/calendar.rs:567
 msgid "Change “{title}” on the calendar for {account}? Its guests are told."
 msgstr ""
 
-#: app/src/assistant/run/calendar.rs:567
+#: app/src/assistant/run/calendar.rs:571
 msgid "Change an event on the calendar for {account}? Its guests are told."
 msgstr ""
 
-#: app/src/assistant/run/calendar.rs:594
+#: app/src/assistant/run/calendar.rs:598
 msgid "Delete “{title}” from the calendar for {account}? Its guests are told."
 msgstr ""
 
-#: app/src/assistant/run/calendar.rs:598
+#: app/src/assistant/run/calendar.rs:602
 msgid "Delete an event from the calendar for {account}? Its guests are told."
 msgstr ""
 
-#: app/src/assistant/run/calendar.rs:634
+#: app/src/assistant/run/calendar.rs:638
 msgid "Answer {answer} to “{title}”?"
 msgstr ""
 
@@ -3247,11 +3247,6 @@ msgstr ""
 msgid "Brave Search API Key"
 msgstr ""
 
-#: app/src/ui/calendar/agenda.rs:304 app/src/ui/calendar/editor.rs:325
-#: app/src/ui/calendar/words.rs:60
-msgid "All day"
-msgstr ""
-
 #: app/src/ui/calendar/agenda.rs:322
 msgid "{title}, {when}, {calendar}"
 msgstr ""
@@ -3272,7 +3267,7 @@ msgstr ""
 msgid "Declined"
 msgstr ""
 
-#: app/src/ui/calendar/block.rs:347
+#: app/src/ui/calendar/block.rs:347 app/src/ui/calendar/words.rs:95
 msgid "{start}–{end}"
 msgstr ""
 
@@ -3308,6 +3303,11 @@ msgstr ""
 
 #: app/src/ui/calendar/editor.rs:300 app/src/ui/calendar/quick.rs:53
 msgid "Title"
+msgstr ""
+
+#: app/src/ui/calendar/editor.rs:325 app/src/ui/calendar/words.rs:60
+#: app/src/ui/calendar/words.rs:92
+msgid "All day"
 msgstr ""
 
 #: app/src/ui/calendar/editor.rs:339
@@ -3359,7 +3359,7 @@ msgid "Stops"
 msgstr ""
 
 #: app/src/ui/calendar/editor.rs:631 app/src/ui/calendar/editor.rs:636
-#: app/src/ui/calendar/words.rs:313
+#: app/src/ui/calendar/words.rs:341
 msgid "Never"
 msgstr ""
 
@@ -3580,7 +3580,7 @@ msgstr ""
 msgid "View"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:299 app/src/ui/calendar/mod.rs:2117
+#: app/src/ui/calendar/mod.rs:299 app/src/ui/calendar/mod.rs:2139
 msgid "New Event (N)"
 msgstr ""
 
@@ -3596,65 +3596,65 @@ msgstr ""
 msgid "Search the Calendar"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:820
+#: app/src/ui/calendar/mod.rs:845
 msgid "List"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:821
+#: app/src/ui/calendar/mod.rs:846
 msgid "Day"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:822
+#: app/src/ui/calendar/mod.rs:847
 msgid "Week"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:823
+#: app/src/ui/calendar/mod.rs:848
 msgid "Month"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:1039
+#: app/src/ui/calendar/mod.rs:1061
 msgid "Moved “{title}”"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:1052
+#: app/src/ui/calendar/mod.rs:1074
 msgid "Could not move the event: {reason}"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:1147
+#: app/src/ui/calendar/mod.rs:1169
 msgid "All-day events"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:1149
+#: app/src/ui/calendar/mod.rs:1171
 msgid "All-day"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:1503 app/src/ui/calendar/mod.rs:2597
-#: app/src/ui/calendar/sidebar.rs:123 app/src/ui/calendar/words.rs:220
+#: app/src/ui/calendar/mod.rs:1525 app/src/ui/calendar/mod.rs:2619
+#: app/src/ui/calendar/sidebar.rs:123 app/src/ui/calendar/words.rs:248
 msgid "%a"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:1911
+#: app/src/ui/calendar/mod.rs:1933
 msgid "Deleted “{title}”"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:1914
+#: app/src/ui/calendar/mod.rs:1936
 msgid "Could not delete the event: {reason}"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:1958 app/src/ui/window.rs:1842
+#: app/src/ui/calendar/mod.rs:1980 app/src/ui/window.rs:1842
 #: app/src/ui/window/scheduled.rs:21 app/src/ui/window/shortcuts.rs:444
 msgid "Undo"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:2077
+#: app/src/ui/calendar/mod.rs:2099
 msgid "Could not send your answer: {reason}"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:2119
+#: app/src/ui/calendar/mod.rs:2141
 msgid "None of your calendars take new events"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:2374
+#: app/src/ui/calendar/mod.rs:2396
 msgid "Could not save the event: {reason}"
 msgstr ""
 
@@ -3695,7 +3695,7 @@ msgstr ""
 msgid "%B"
 msgstr ""
 
-#: app/src/ui/calendar/range.rs:117 app/src/ui/calendar/words.rs:95
+#: app/src/ui/calendar/range.rs:117 app/src/ui/calendar/words.rs:123
 msgid "{first} – {last}"
 msgstr ""
 
@@ -3775,27 +3775,27 @@ msgstr ""
 msgid "The new guests get their invitation, and the others get an update."
 msgstr ""
 
-#: app/src/ui/calendar/shown.rs:78
+#: app/src/ui/calendar/shown.rs:83
 msgid "Next Day"
 msgstr ""
 
-#: app/src/ui/calendar/shown.rs:78
+#: app/src/ui/calendar/shown.rs:83
 msgid "Previous Day"
 msgstr ""
 
-#: app/src/ui/calendar/shown.rs:79
+#: app/src/ui/calendar/shown.rs:84
 msgid "Next Week"
 msgstr ""
 
-#: app/src/ui/calendar/shown.rs:79
+#: app/src/ui/calendar/shown.rs:84
 msgid "Previous Week"
 msgstr ""
 
-#: app/src/ui/calendar/shown.rs:80 app/src/ui/calendar/sidebar.rs:266
+#: app/src/ui/calendar/shown.rs:85 app/src/ui/calendar/sidebar.rs:266
 msgid "Next Month"
 msgstr ""
 
-#: app/src/ui/calendar/shown.rs:80 app/src/ui/calendar/sidebar.rs:265
+#: app/src/ui/calendar/shown.rs:85 app/src/ui/calendar/sidebar.rs:265
 msgid "Previous Month"
 msgstr ""
 
@@ -3849,107 +3849,111 @@ msgstr ""
 msgid "{date} · {start}–{end}"
 msgstr ""
 
-#: app/src/ui/calendar/words.rs:111
+#: app/src/ui/calendar/words.rs:106
+msgid "{place} · {calendar}"
+msgstr ""
+
+#: app/src/ui/calendar/words.rs:139
 msgid "{yes} of {count} said yes"
 msgid_plural "{yes} of {count} said yes"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/calendar/words.rs:122
+#: app/src/ui/calendar/words.rs:150
 msgid "{name}, organizer"
 msgstr ""
 
-#: app/src/ui/calendar/words.rs:126
+#: app/src/ui/calendar/words.rs:154
 msgid "{organizer} · {answers}"
 msgstr ""
 
-#: app/src/ui/calendar/words.rs:137
+#: app/src/ui/calendar/words.rs:165
 msgid "and {count} more"
 msgid_plural "and {count} more"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/calendar/words.rs:148
+#: app/src/ui/calendar/words.rs:176
 msgid "Join with Google Meet"
 msgstr ""
 
-#: app/src/ui/calendar/words.rs:150
+#: app/src/ui/calendar/words.rs:178
 msgid "Join Call"
 msgstr ""
 
-#: app/src/ui/calendar/words.rs:162
+#: app/src/ui/calendar/words.rs:190
 msgid "Open {place} in Maps"
 msgstr ""
 
-#: app/src/ui/calendar/words.rs:177
+#: app/src/ui/calendar/words.rs:205
 msgid "{count} more"
 msgid_plural "{count} more"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/calendar/words.rs:188
+#: app/src/ui/calendar/words.rs:216
 msgid "{count} more event on {date}"
 msgid_plural "{count} more events on {date}"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/calendar/words.rs:203
+#: app/src/ui/calendar/words.rs:231
 msgid "{date}, has events"
 msgstr ""
 
-#: app/src/ui/calendar/words.rs:225
+#: app/src/ui/calendar/words.rs:253
 msgid "{weekday} {time}"
 msgstr ""
 
-#: app/src/ui/calendar/words.rs:246
+#: app/src/ui/calendar/words.rs:274
 msgid "{day}, {time}"
 msgstr ""
 
-#: app/src/ui/calendar/words.rs:264
+#: app/src/ui/calendar/words.rs:292
 msgid "Open the invitation for “{title}” in Mail"
 msgstr ""
 
-#: app/src/ui/calendar/words.rs:276
+#: app/src/ui/calendar/words.rs:304
 msgid "At the start"
 msgstr ""
 
-#: app/src/ui/calendar/words.rs:278
+#: app/src/ui/calendar/words.rs:306
 msgid "{count} week before"
 msgid_plural "{count} weeks before"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/calendar/words.rs:284
+#: app/src/ui/calendar/words.rs:312
 msgid "{count} day before"
 msgid_plural "{count} days before"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/calendar/words.rs:290
+#: app/src/ui/calendar/words.rs:318
 msgid "{count} hour before"
 msgid_plural "{count} hours before"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/calendar/words.rs:296
+#: app/src/ui/calendar/words.rs:324
 msgid "{count} minute before"
 msgid_plural "{count} minutes before"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/calendar/words.rs:315
+#: app/src/ui/calendar/words.rs:343
 msgid "Every weekday"
 msgstr ""
 
-#: app/src/ui/calendar/words.rs:319
+#: app/src/ui/calendar/words.rs:347
 msgid "A rule set in another app"
 msgstr ""
 
-#: app/src/ui/calendar/words.rs:384
+#: app/src/ui/calendar/words.rs:412
 msgid "Organizer"
 msgstr ""
 
-#: app/src/ui/calendar/words.rs:386
+#: app/src/ui/calendar/words.rs:414
 msgid "No answer yet"
 msgstr ""
 

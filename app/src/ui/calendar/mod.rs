@@ -405,7 +405,14 @@ impl CalendarView {
         let popover = EventPopover::new(&card, &today_button);
         let more_list = Agenda::new();
         more_list.widget.set_propagate_natural_height(true);
+        // A ScrolledWindow keeps its minimum width unless told to grow
+        // with its rows, so a long title fell back to that minimum and
+        // ellipsized after about a dozen characters. Growing with the
+        // rows, up to a sensible width, lets a title use the room
+        // before it ellipsizes.
+        more_list.widget.set_propagate_natural_width(true);
         more_list.widget.set_min_content_width(280);
+        more_list.widget.set_max_content_width(420);
         more_list.widget.set_max_content_height(360);
         let more = gtk::Popover::builder().child(&more_list.widget).build();
         more.set_parent(&card);
@@ -686,7 +693,7 @@ impl CalendarView {
         };
         match target {
             Some(holder) => self.carousel.scroll_to(&holder, true),
-            None => self.go_to(shown::stepped(self.kind.get(), self.day.get(), by)),
+            None => self.go_to(shown::stepped(self.effective_kind(), self.day.get(), by)),
         }
     }
 
@@ -765,13 +772,15 @@ impl CalendarView {
 
     /// Answers the window's medium breakpoint, where the sidebar folds
     /// away: the header drops the year and the week number so the rest
-    /// still fits.
+    /// still fits, and the view switch drops Week, the widest grid, so
+    /// its three labels stop crowding each other.
     pub fn set_compact(&self, compact: bool) {
         self.compact.set(compact);
         match compact {
             true => self.page.add_css_class("calendar-compact"),
             false => self.page.remove_css_class("calendar-compact"),
         }
+        self.build_switch();
         self.show_range();
     }
 
@@ -792,7 +801,23 @@ impl CalendarView {
 
     /// What the view shows now.
     fn showing(&self) -> Showing {
-        shown::showing(self.kind.get(), self.narrow.get())
+        shown::showing(self.kind.get(), self.narrow.get(), self.compact.get())
+    }
+
+    /// The grid actually on screen: the kind the person picked, unless
+    /// the breakpoint replaced it. List draws Month's grid behind its
+    /// own agenda page (unused while List is on screen, but built all
+    /// the same); a compact window without room for Week draws Month in
+    /// its place. Every page built from the current range, and anything
+    /// that steps by or matches against it, follows this rather than the
+    /// raw [`kind`](Self::kind), so what such code does lines up with
+    /// what the reader sees.
+    fn effective_kind(&self) -> ViewKind {
+        match self.showing() {
+            Showing::Day => ViewKind::Day,
+            Showing::Week => ViewKind::Week,
+            Showing::Month | Showing::List => ViewKind::Month,
+        }
     }
 
     fn account_ids(&self) -> Vec<AccountId> {
@@ -812,7 +837,7 @@ impl CalendarView {
     fn build_switch(&self) {
         self.switching.set(true);
         self.switch.remove_all();
-        for (name, on) in shown::offered(self.narrow.get()) {
+        for (name, on) in shown::offered(self.narrow.get(), self.compact.get()) {
             if !on {
                 continue;
             }
@@ -835,11 +860,8 @@ impl CalendarView {
         self.switching.set(true);
         self.switch.set_active_name(Some(shown::toggle_name(showing)));
         self.switching.set(false);
-        let range = match showing {
-            Showing::List => Range::around(ViewKind::Month, self.day.get()),
-            _ => Range::around(self.kind.get(), self.day.get()),
-        };
         // The list names its month the way a month's title does.
+        let range = Range::around(self.effective_kind(), self.day.get());
         let (bold, dim, week) = range.title();
         self.title_bold.set_label(&bold);
         self.title_dim.set_label(&dim);
@@ -882,7 +904,7 @@ impl CalendarView {
         for page in &old {
             self.carousel.remove(&page.holder);
         }
-        let current = Range::around(self.kind.get(), self.day.get());
+        let current = Range::around(self.effective_kind(), self.day.get());
         let mut pages = Vec::with_capacity(3);
         for range in [current.previous(), current, current.next()] {
             let page = Rc::new(Page {
@@ -967,7 +989,7 @@ impl CalendarView {
         self.more.popdown();
         self.quick.hide();
         self.clear_ghost();
-        let current = Range::around(self.kind.get(), self.day.get());
+        let current = Range::around(self.effective_kind(), self.day.get());
         let pages = self.pages.borrow().clone();
         for (page, range) in pages.iter().zip([current.previous(), current, current.next()]) {
             if page.range.get() != range {
@@ -1094,9 +1116,9 @@ impl CalendarView {
         drag::can_move(o, access, offers, withheld)
     }
 
-    /// A page's widgets for the current kind.
+    /// A page's widgets for the grid actually on screen.
     fn page_view(self: &Rc<Self>) -> PageView {
-        match self.kind.get() {
+        match self.effective_kind() {
             ViewKind::Month => {
                 let month = MonthGrid::new();
                 month.set_rows(self.month_rows.get());
@@ -1273,7 +1295,7 @@ impl CalendarView {
         let had_focus = self.holds_focus(&pages[1]);
         let arrived = &pages[if by < 0 { 0 } else { 2 }];
         self.day
-            .set(shown::stepped(self.kind.get(), self.day.get(), by));
+            .set(shown::stepped(self.effective_kind(), self.day.get(), by));
         // Keep the day inside the range the carousel landed on, which a
         // month step with a clamped date can otherwise miss.
         let range = arrived.range.get();
@@ -2152,7 +2174,7 @@ impl CalendarView {
     /// else at the time last clicked, else near now, else the range's
     /// first morning.
     fn slot(&self) -> (EpochMillis, EpochMillis) {
-        let range = Range::around(self.kind.get(), self.day.get());
+        let range = Range::around(self.effective_kind(), self.day.get());
         let span = range.span(&chrono::Local);
         let morning = layout::instant_at(range.first, 9.0, &chrono::Local);
         let focused = self.focused().map(|o| (o.start, o.end));
@@ -2175,7 +2197,7 @@ impl CalendarView {
     /// the focused day in Month. The narrow agenda has no grid to point
     /// at, so [`Self::quick_create_at`] opens the editor instead.
     pub fn quick_create(self: &Rc<Self>) {
-        match self.kind.get() {
+        match self.effective_kind() {
             ViewKind::Month => {
                 let day = self.focused_day().unwrap_or_else(|| chrono::Local::now().date_naive());
                 self.quick_create_on_day(day);
