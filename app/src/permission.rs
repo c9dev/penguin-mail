@@ -28,6 +28,10 @@ pub enum Permission {
     ChangeContacts,
     /// Reading and changing the events on the account's calendar.
     Calendar,
+    /// Making, renaming and deleting calendars, and changing the
+    /// account's calendar list: colours and hiding on every device, and
+    /// subscribing.
+    ManageCalendars,
 }
 
 /// Why the window asks for a permission, which decides how often it asks.
@@ -53,12 +57,13 @@ pub struct Wording {
 
 impl Permission {
     #[cfg(test)]
-    pub const ALL: [Permission; 5] = [
+    pub const ALL: [Permission; 6] = [
         Permission::Settings,
         Permission::Delete,
         Permission::Contacts,
         Permission::ChangeContacts,
         Permission::Calendar,
+        Permission::ManageCalendars,
     ];
 
     /// What the permission lets Penguin Mail do, to finish "needs
@@ -71,6 +76,7 @@ impl Permission {
             Permission::Contacts => "read contacts",
             Permission::ChangeContacts => "add and change contacts",
             Permission::Calendar => "use the calendar",
+            Permission::ManageCalendars => "manage calendars",
         }
     }
 
@@ -123,6 +129,14 @@ impl Permission {
                      own calendar too. Google asks you to confirm in your browser.",
                 ),
             ),
+            (Permission::ManageCalendars, _) => (
+                gettext("Allow Penguin Mail to Manage Your Calendars"),
+                gettext(
+                    "Making, renaming and deleting calendars, and subscribing to one, needs \
+                     one more permission for {account}. Google asks you to confirm in your \
+                     browser.",
+                ),
+            ),
         };
         Wording {
             heading,
@@ -157,7 +171,8 @@ impl Asked {
 
 /// The permissions `withheld` says the person did not grant, in the
 /// order Preferences lists them. Calendar and the calendar list share
-/// one permission, so either withheld field names it once.
+/// one permission, so either withheld field names it once; so do the
+/// calendars and changing the list, which calendar management needs.
 pub fn withheld_permissions(withheld: Withheld) -> Vec<Permission> {
     [
         (withheld.settings, Permission::Settings),
@@ -165,6 +180,7 @@ pub fn withheld_permissions(withheld: Withheld) -> Vec<Permission> {
         (withheld.contacts, Permission::Contacts),
         (withheld.change_contacts, Permission::ChangeContacts),
         (withheld.calendar || withheld.calendar_list, Permission::Calendar),
+        (withheld.calendars || withheld.change_calendar_list, Permission::ManageCalendars),
     ]
     .into_iter()
     .filter_map(|(missing, permission)| missing.then_some(permission))
@@ -181,6 +197,7 @@ impl Permission {
             Permission::Contacts => gettext("read contacts"),
             Permission::ChangeContacts => gettext("add and change contacts"),
             Permission::Calendar => gettext("use the calendar"),
+            Permission::ManageCalendars => gettext("manage calendars"),
         }
     }
 }
@@ -341,6 +358,59 @@ mod tests {
             !wants_banner(Withheld::NONE, Some(&asked)),
             "nothing withheld needs no banner either"
         );
+    }
+
+    /// The grant every account held between the five-scope sign-in and
+    /// the owner's approval of calendar management on 2026-09-28.
+    fn five_scope_grant() -> String {
+        use mailrs_gmail::{CALENDAR_LIST_SCOPE, CALENDAR_SCOPE, CONTACTS_WRITE_SCOPE, DELETE_SCOPE, SETTINGS_SCOPE};
+        [DELETE_SCOPE, SETTINGS_SCOPE, CONTACTS_WRITE_SCOPE, CALENDAR_SCOPE, CALENDAR_LIST_SCOPE].join(" ")
+    }
+
+    /// An account in a store that holds the old read-only calendar list
+    /// gets the Grant Access bar for calendar management, and nothing
+    /// else it had turns off.
+    #[test]
+    fn a_stored_five_scope_grant_asks_for_calendar_management() {
+        let conn = mailrs_store::open_in_memory().unwrap();
+        let id = mailrs_store::accounts::insert_account(&conn, "ana@example.com", 0).unwrap();
+        mailrs_store::accounts::set_granted(&conn, id, &five_scope_grant()).unwrap();
+        mailrs_store::accounts::set_asked(&conn, id, &five_scope_grant()).unwrap();
+
+        let consent = mailrs_store::accounts::consent(&conn, id).unwrap();
+        let granted = mailrs_gmail::Granted::parse(consent.granted.as_deref().unwrap());
+        let withheld = mailrs_sync::withheld_by_grant(Some(&granted));
+        assert!(!withheld.calendar && !withheld.calendar_list, "every calendar still reads");
+        assert!(wants_banner(withheld, consent.asked.as_deref()));
+        assert_eq!(withheld_permissions(withheld), [Permission::ManageCalendars]);
+        assert_eq!(
+            grant_bar_title("ana@example.com", &withheld_permissions(withheld)),
+            "ana@example.com has not allowed Penguin Mail to manage calendars"
+        );
+    }
+
+    /// Once the account went through a consent that asked for all seven,
+    /// a box left unticked there brings no bar back.
+    #[test]
+    fn a_consent_that_asked_for_all_seven_ends_the_bar() {
+        let conn = mailrs_store::open_in_memory().unwrap();
+        let id = mailrs_store::accounts::insert_account(&conn, "ana@example.com", 0).unwrap();
+        mailrs_store::accounts::set_granted(&conn, id, &five_scope_grant()).unwrap();
+        mailrs_store::accounts::set_asked(&conn, id, &SIGN_IN_SCOPES.join(" ")).unwrap();
+        let consent = mailrs_store::accounts::consent(&conn, id).unwrap();
+        let granted = mailrs_gmail::Granted::parse(consent.granted.as_deref().unwrap());
+        let withheld = mailrs_sync::withheld_by_grant(Some(&granted));
+        assert!(!wants_banner(withheld, consent.asked.as_deref()));
+    }
+
+    #[test]
+    fn either_calendar_management_scope_names_one_permission() {
+        for withheld in [
+            Withheld { calendars: true, ..Withheld::NONE },
+            Withheld { change_calendar_list: true, ..Withheld::NONE },
+        ] {
+            assert_eq!(withheld_permissions(withheld), [Permission::ManageCalendars]);
+        }
     }
 
     const IMAP: Offers = Offers { calendar: false, ..Offers::EVERYTHING };
