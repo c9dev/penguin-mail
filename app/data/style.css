@@ -390,10 +390,11 @@ button.calendar-today {
   font-size: 0.89em;
 }
 .calendar-arrows {
-  background: color-mix(in srgb, currentColor 10%, transparent);
+  background-color: #e3e3e7;
   border-radius: 16px;
   padding: 0 2px;
 }
+.app-dark .calendar-arrows { background-color: #3a3a40; }
 .calendar-arrows > button { min-height: 32px; min-width: 34px; padding: 0; border-radius: 16px; }
 .calendar-arrows > separator { margin: 8px 0; }
 /* The New Event button: a 32 px accent circle with a plain "+", 12 px
@@ -657,4 +658,58 @@ popover.event-popover button.popover-open-mail {
   margin: 0 -4px;
   font-weight: 700;
   color: var(--accent-color);
+}
+
+/* The conversation header's buttons, grouped into capsules the way the
+   mockup draws them (calendar-mockup/mockups.py, capsule()): replying,
+   filing, Move, then the flag, each a 32 px pill of 34 px buttons with
+   16 px corners. The calendar's view arrows are the same pill
+   (.calendar-arrows above), so this shares its colour rather than
+   picking a second alpha that could drift from it. */
+.toolbar-capsule,
+.calendar-arrows {
+  background-color: #e3e3e7;
+  border-radius: 16px;
+}
+.app-dark .toolbar-capsule,
+.app-dark .calendar-arrows {
+  background-color: #3a3a40;
+}
+.toolbar-capsule {
+  padding: 2px;
+}
+.toolbar-capsule > button,
+.toolbar-capsule > menubutton > button,
+.toolbar-capsule > splitbutton > button,
+.toolbar-capsule > splitbutton > menubutton > button {
+  min-height: 28px;
+  min-width: 34px;
+  padding: 0;
+  border-radius: 16px;
+}
+/* A hairline between two buttons, in `line2`, 9 to 23 px of the pill's
+   32 (25 % to 75 % of a 28 px button sitting 2 px into it). */
+.toolbar-capsule > * + * {
+  background-image: linear-gradient(
+    to bottom, transparent 25%, #dedee3 25%, #dedee3 75%, transparent 75%);
+  background-size: 1px 100%;
+  background-repeat: no-repeat;
+  background-position: left center;
+}
+.app-dark .toolbar-capsule > * + * {
+  background-image: linear-gradient(
+    to bottom, transparent 25%, #39393f 25%, #39393f 75%, transparent 75%);
+}
+/* A pressed segment rises out of the pill as the view colour, in both
+   modes: the mockup draws no dark-mode alpha for it, and the calendar's
+   chosen view-switch toggle already reads this way
+   (toggle-group.view-switch > toggle:checked, above). */
+.toolbar-capsule > button:active,
+.toolbar-capsule > button:checked,
+.toolbar-capsule > menubutton > button:active,
+.toolbar-capsule > menubutton > button:checked,
+.toolbar-capsule > splitbutton > button:active,
+.toolbar-capsule > splitbutton > menubutton > button:active,
+.toolbar-capsule > splitbutton > menubutton > button:checked {
+  background-color: var(--view-bg-color);
 }
