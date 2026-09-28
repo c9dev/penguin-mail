@@ -21,7 +21,7 @@ use gtk::{gdk, gio, glib, pango};
 use mailrs_domain::AccountId;
 use mailrs_domain::calendar::{Event, Guest, Occurrence};
 use mailrs_domain::invitation::Answer;
-use mailrs_domain::translate::gettext;
+use mailrs_domain::translate::{fill, gettext};
 
 use super::draft;
 use super::shown::{self, Refocus};
@@ -525,8 +525,17 @@ impl EventPopover {
         self.bar
             .set_css_classes(&["popover-bar", &tint::css_class(colour)]);
         self.title.set_label(&event.title);
-        self.when.set_label(&words::when_words(o, &chrono::Local));
         let zone: chrono_tz::Tz = event.zone.parse().unwrap_or_else(|_| draft::local_zone());
+        let mut when = words::when_words(o, &chrono::Local);
+        // Names the event's own zone beside the desktop's when they
+        // differ ("15:00–16:00, 09:00 New York"), so a meeting in
+        // another zone does not read as if it ran in this one.
+        if !event.all_day
+            && let Some(own_zone) = words::own_zone_words(o.start, zone, draft::local_zone())
+        {
+            when = fill(&gettext("{when}, {zone}"), &[("when", &when), ("zone", &own_zone)]);
+        }
+        self.when.set_label(&when);
         let repeats = words::series_words(&event.rules, o.start, zone);
         self.repeat_label.set_visible(repeats.is_some());
         self.repeat_label.set_label(repeats.as_deref().unwrap_or_default());

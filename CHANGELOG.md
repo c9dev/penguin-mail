@@ -99,6 +99,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   and Shift with the Left or Right arrow moves the focused event a day
   earlier or later. The Keyboard Shortcuts window now lists every
   calendar key, including the ones that move or resize an event.
+- The event popover names the event's own time zone beside the time
+  when it differs from your desktop's, such as "09:00 New York".
 
 ### Fixed
 - In dark mode, a reply with quoted text shows on the dark page instead of

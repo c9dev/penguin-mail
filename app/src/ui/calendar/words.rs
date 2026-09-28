@@ -547,6 +547,37 @@ pub fn series_words(rules: &[String], start: EpochMillis, zone: Tz) -> Option<St
     (repeat != Repeat::Never).then(|| repeat_words(&repeat))
 }
 
+/// The event's own time added beside the desktop's, for the popover:
+/// "09:00 New York" once `event_zone` differs from `desktop_zone`.
+/// `None` when they are the same zone, so the popover names the time
+/// once. The time reads through the shared clock formatting
+/// ([`crate::clock_format::time_text`]), the same 12- or 24-hour choice
+/// the desktop's own time already shows in.
+pub fn own_zone_words(start: EpochMillis, event_zone: Tz, desktop_zone: Tz) -> Option<String> {
+    if event_zone == desktop_zone {
+        return None;
+    }
+    let time = utc(start)?.with_timezone(&event_zone).time();
+    Some(fill(
+        &gettext("{time} {city}"),
+        &[
+            ("time", &crate::clock_format::time_text(time)),
+            ("city", &zone_city(event_zone)),
+        ],
+    ))
+}
+
+/// The city an IANA zone id ends in, for a reader who does not parse
+/// zone ids: "New York" for `America/New_York`, "Lisbon" for
+/// `Europe/Lisbon`.
+fn zone_city(zone: Tz) -> String {
+    zone.name()
+        .rsplit('/')
+        .next()
+        .unwrap_or_else(|| zone.name())
+        .replace('_', " ")
+}
+
 fn utc(at: EpochMillis) -> Option<DateTime<Utc>> {
     DateTime::<Utc>::from_timestamp_millis(at)
 }
@@ -939,6 +970,30 @@ mod tests {
     fn waiting_card_detail_for_an_all_day_occurrence_gives_just_the_day() {
         mailrs_domain::translate::set_date_locale("en_US");
         assert_eq!(waiting_card_detail(midnight(d(2026, 9, 23)), true, &Utc), "Wednesday 23");
+    }
+
+    #[test]
+    fn own_zone_words_names_the_event_s_own_zone_when_it_differs() {
+        mailrs_domain::translate::set_date_locale("en_US");
+        let start = Utc.with_ymd_and_hms(2026, 9, 23, 15, 0, 0).unwrap().timestamp_millis();
+        // 15:00 UTC is 11:00 in New York, on Eastern Daylight Time in
+        // September.
+        assert_eq!(
+            own_zone_words(start, Tz::America__New_York, Tz::Europe__Lisbon),
+            Some("11:00 New York".to_string())
+        );
+    }
+
+    #[test]
+    fn own_zone_words_says_nothing_for_the_desktop_s_own_zone() {
+        let start = Utc.with_ymd_and_hms(2026, 9, 23, 15, 0, 0).unwrap().timestamp_millis();
+        assert_eq!(own_zone_words(start, Tz::Europe__Lisbon, Tz::Europe__Lisbon), None);
+    }
+
+    #[test]
+    fn zone_city_reads_the_last_segment_of_a_zone_id() {
+        assert_eq!(zone_city(Tz::America__New_York), "New York");
+        assert_eq!(zone_city(Tz::Europe__Lisbon), "Lisbon");
     }
 
     #[test]
