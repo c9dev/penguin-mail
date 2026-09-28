@@ -872,6 +872,7 @@ fn demo_calendars(index: usize) -> Vec<CalendarModel> {
                 zone: LISBON.into(),
                 primary: true,
                 shown: true,
+                hidden: false,
                 // A common choice on Google's side; lets a run of the
                 // demo show a reminder for the call with Rita below.
                 reminders: vec![Reminder { minutes: 10, method: ReminderMethod::Notification }],
@@ -884,6 +885,7 @@ fn demo_calendars(index: usize) -> Vec<CalendarModel> {
                 zone: LISBON.into(),
                 primary: false,
                 shown: true,
+                hidden: false,
                 reminders: Vec::new(),
             },
             CalendarModel {
@@ -894,6 +896,7 @@ fn demo_calendars(index: usize) -> Vec<CalendarModel> {
                 zone: LISBON.into(),
                 primary: false,
                 shown: true,
+                hidden: false,
                 reminders: Vec::new(),
             },
         ],
@@ -906,6 +909,7 @@ fn demo_calendars(index: usize) -> Vec<CalendarModel> {
                 zone: LISBON.into(),
                 primary: true,
                 shown: true,
+                hidden: false,
                 reminders: Vec::new(),
             },
             CalendarModel {
@@ -916,6 +920,7 @@ fn demo_calendars(index: usize) -> Vec<CalendarModel> {
                 zone: LISBON.into(),
                 primary: false,
                 shown: true,
+                hidden: false,
                 reminders: Vec::new(),
             },
             CalendarModel {
@@ -926,6 +931,7 @@ fn demo_calendars(index: usize) -> Vec<CalendarModel> {
                 zone: LISBON.into(),
                 primary: false,
                 shown: false,
+                hidden: false,
                 reminders: Vec::new(),
             },
         ],
@@ -937,6 +943,7 @@ fn demo_calendars(index: usize) -> Vec<CalendarModel> {
             zone: LISBON.into(),
             primary: true,
             shown: true,
+            hidden: false,
             reminders: Vec::new(),
         }],
     }

@@ -438,6 +438,14 @@ impl CalendarService for AnyCalendar {
     ) -> Result<model::Event, BackendError> {
         forward!(AnyCalendar, self, answer_event(calendar, id, me, answer, note))
     }
+
+    async fn edit_list(
+        &self,
+        calendar: &str,
+        edit: &model::list::ListEdit,
+    ) -> Result<Option<model::Calendar>, BackendError> {
+        forward!(AnyCalendar, self, edit_list(calendar, edit))
+    }
 }
 
 impl ContactsService for AnyContacts {

@@ -28,6 +28,7 @@ fn calendar(id: &str, primary: bool) -> Calendar {
         zone: "UTC".into(),
         primary,
         shown: true,
+        hidden: false,
         reminders: Vec::new(),
     }
 }

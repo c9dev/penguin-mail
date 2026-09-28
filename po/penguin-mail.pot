@@ -1381,12 +1381,12 @@ msgstr ""
 msgid "Mark as Read"
 msgstr ""
 
-#: app/src/notify.rs:51 app/src/ui/calendar/popover.rs:195
-#: app/src/ui/calendar/popover.rs:197 app/src/ui/calendar/popover.rs:611
-#: app/src/ui/calendar/scope.rs:184 app/src/ui/conversation.rs:512
-#: app/src/ui/hide_my_email.rs:288 app/src/ui/queued.rs:58
-#: app/src/ui/templates.rs:149 app/src/ui/window/arrange.rs:92
-#: app/src/ui/window/organize.rs:142
+#: app/src/notify.rs:51 app/src/ui/calendar/manage.rs:191
+#: app/src/ui/calendar/popover.rs:195 app/src/ui/calendar/popover.rs:197
+#: app/src/ui/calendar/popover.rs:611 app/src/ui/calendar/scope.rs:184
+#: app/src/ui/conversation.rs:512 app/src/ui/hide_my_email.rs:288
+#: app/src/ui/queued.rs:58 app/src/ui/templates.rs:149
+#: app/src/ui/window/arrange.rs:92 app/src/ui/window/organize.rs:142
 msgid "Delete"
 msgstr ""
 
@@ -1409,7 +1409,7 @@ msgstr ""
 msgid "From {senders}"
 msgstr ""
 
-#: app/src/notify.rs:195 app/src/ui/window.rs:2415
+#: app/src/notify.rs:195 app/src/ui/window.rs:2421
 msgid "Open"
 msgstr ""
 
@@ -1589,84 +1589,98 @@ msgstr ""
 msgid "Updates come from the Snap Store"
 msgstr ""
 
-#: app/src/permission.rs:83
+#: app/src/permission.rs:89
 msgid "Allow Changes to Gmail Settings"
 msgstr ""
 
-#: app/src/permission.rs:85
+#: app/src/permission.rs:91
 msgid ""
 "Penguin Mail needs permission to change Gmail settings for {account}. Google "
 "asks you to confirm in your browser."
 msgstr ""
 
-#: app/src/permission.rs:90
+#: app/src/permission.rs:96
 msgid "Allow Penguin Mail to Delete Mail"
 msgstr ""
 
-#: app/src/permission.rs:92
+#: app/src/permission.rs:98
 msgid ""
 "Deleting mail for good needs one more permission for {account}. Google asks "
 "you to confirm in your browser."
 msgstr ""
 
-#: app/src/permission.rs:97
+#: app/src/permission.rs:103
 msgid "Allow Penguin Mail to Read Your Contacts"
 msgstr ""
 
-#: app/src/permission.rs:99
+#: app/src/permission.rs:105
 msgid ""
 "Reading the contacts of {account} needs one more permission. Google asks you "
 "to confirm in your browser. Names and photos stay on this computer."
 msgstr ""
 
-#: app/src/permission.rs:105
+#: app/src/permission.rs:111
 msgid "Allow Penguin Mail to Change Your Contacts"
 msgstr ""
 
-#: app/src/permission.rs:107
+#: app/src/permission.rs:113
 msgid ""
 "The assistant needs permission to add and change the contacts of {account}. "
 "Google asks you to confirm in your browser."
 msgstr ""
 
-#: app/src/permission.rs:112 app/src/permission.rs:119
+#: app/src/permission.rs:118 app/src/permission.rs:125
 msgid "Allow Penguin Mail to Use Your Calendar"
 msgstr ""
 
-#: app/src/permission.rs:114
+#: app/src/permission.rs:120
 msgid ""
 "The assistant needs permission to read and change events on the calendar for "
 "{account}. Google asks you to confirm in your browser."
 msgstr ""
 
-#: app/src/permission.rs:121
+#: app/src/permission.rs:127
 msgid ""
 "Your reply went to the organizer as mail. With permission to change events "
 "on the calendar for {account}, the meeting is marked on your own calendar "
 "too. Google asks you to confirm in your browser."
 msgstr ""
 
-#: app/src/permission.rs:179
+#: app/src/permission.rs:133
+msgid "Allow Penguin Mail to Manage Your Calendars"
+msgstr ""
+
+#: app/src/permission.rs:135
+msgid ""
+"Making, renaming and deleting calendars, and subscribing to one, needs one "
+"more permission for {account}. Google asks you to confirm in your browser."
+msgstr ""
+
+#: app/src/permission.rs:195
 msgid "change Gmail settings"
 msgstr ""
 
-#: app/src/permission.rs:180
+#: app/src/permission.rs:196
 msgid "delete mail for good"
 msgstr ""
 
-#: app/src/permission.rs:181
+#: app/src/permission.rs:197
 msgid "read contacts"
 msgstr ""
 
-#: app/src/permission.rs:182
+#: app/src/permission.rs:198
 msgid "add and change contacts"
 msgstr ""
 
-#: app/src/permission.rs:183
+#: app/src/permission.rs:199
 msgid "use the calendar"
 msgstr ""
 
-#: app/src/permission.rs:194
+#: app/src/permission.rs:200
+msgid "manage calendars"
+msgstr ""
+
+#: app/src/permission.rs:211
 msgid "{account} has not allowed Penguin Mail to {missing}"
 msgstr ""
 
@@ -1990,7 +2004,7 @@ msgstr ""
 msgid "Could not save: {reason}"
 msgstr ""
 
-#: app/src/protection/draft.rs:200 app/src/ui/window.rs:2333
+#: app/src/protection/draft.rs:200 app/src/ui/window.rs:2339
 msgid "Could not open the draft: {reason}"
 msgstr ""
 
@@ -2232,7 +2246,7 @@ msgstr ""
 #. The header in both spaces carries a button for this now (R12);
 #. the menu item stays too, so Ctrl+J shows here as well.
 #: app/src/settings/mod.rs:215 app/src/ui/assistant.rs:99
-#: app/src/ui/window.rs:2806
+#: app/src/ui/window.rs:2812
 msgid "Assistant"
 msgstr ""
 
@@ -2541,7 +2555,7 @@ msgstr ""
 msgid "New Message"
 msgstr ""
 
-#: app/src/tray.rs:159 app/src/ui/sidebar.rs:1340 app/src/ui/window.rs:2809
+#: app/src/tray.rs:159 app/src/ui/sidebar.rs:1340 app/src/ui/window.rs:2815
 msgid "Check for Mail"
 msgstr ""
 
@@ -2559,7 +2573,7 @@ msgstr ""
 msgid "Check for Updates"
 msgstr ""
 
-#: app/src/tray.rs:175 app/src/ui/window.rs:2821
+#: app/src/tray.rs:175 app/src/ui/window.rs:2827
 #: app/src/ui/window/shortcuts.rs:625
 msgid "Quit"
 msgstr ""
@@ -2586,7 +2600,7 @@ msgstr ""
 msgid "License"
 msgstr ""
 
-#: app/src/ui/about.rs:170 app/src/ui/window.rs:2820
+#: app/src/ui/about.rs:170 app/src/ui/window.rs:2826
 msgid "About Penguin Mail"
 msgstr ""
 
@@ -2673,7 +2687,7 @@ msgid "Signing In…"
 msgstr ""
 
 #: app/src/ui/add_account.rs:634 app/src/ui/add_account.rs:903
-#: app/src/ui/window.rs:1129
+#: app/src/ui/window.rs:1135
 msgid "Sign In"
 msgstr ""
 
@@ -2737,7 +2751,7 @@ msgstr ""
 msgid "Use These Settings"
 msgstr ""
 
-#: app/src/ui/assistant.rs:31 app/src/ui/window.rs:2888
+#: app/src/ui/assistant.rs:31 app/src/ui/window.rs:2894
 msgid "Summarize this conversation"
 msgstr ""
 
@@ -2873,7 +2887,7 @@ msgid "Edit {server}"
 msgstr ""
 
 #: app/src/ui/assistant_mcp_prefs.rs:121 app/src/ui/composer/mod.rs:1641
-#: app/src/ui/composer/recipients.rs:304 app/src/ui/window.rs:2611
+#: app/src/ui/composer/recipients.rs:304 app/src/ui/window.rs:2617
 msgid "Remove"
 msgstr ""
 
@@ -2910,8 +2924,9 @@ msgid ""
 "in front for the environment. A URL reaches a server over HTTP."
 msgstr ""
 
-#: app/src/ui/assistant_mcp_prefs.rs:254 app/src/ui/composer/mod.rs:2149
-#: app/src/ui/smart_editor.rs:37 app/src/ui/templates.rs:190
+#: app/src/ui/assistant_mcp_prefs.rs:254 app/src/ui/calendar/manage.rs:245
+#: app/src/ui/composer/mod.rs:2149 app/src/ui/smart_editor.rs:37
+#: app/src/ui/templates.rs:190
 msgid "Name"
 msgstr ""
 
@@ -2952,16 +2967,18 @@ msgstr ""
 msgid "Save"
 msgstr ""
 
-#: app/src/ui/assistant_mcp_prefs.rs:343
+#: app/src/ui/assistant_mcp_prefs.rs:343 app/src/ui/calendar/manage.rs:376
 msgid "Add"
 msgstr ""
 
 #: app/src/ui/assistant_mcp_prefs.rs:347 app/src/ui/calendar/editor.rs:122
-#: app/src/ui/calendar/scope.rs:164 app/src/ui/composer/mod.rs:1473
-#: app/src/ui/composer/mod.rs:1542 app/src/ui/composer/mod.rs:1860
-#: app/src/ui/composer/mod.rs:2154 app/src/ui/confirm.rs:29
-#: app/src/ui/smart_editor.rs:150 app/src/ui/templates.rs:239
-#: app/src/ui/unsubscribe.rs:95 app/src/ui/vacation.rs:45 app/src/ui/when.rs:52
+#: app/src/ui/calendar/manage.rs:152 app/src/ui/calendar/manage.rs:271
+#: app/src/ui/calendar/manage.rs:314 app/src/ui/calendar/scope.rs:164
+#: app/src/ui/composer/mod.rs:1473 app/src/ui/composer/mod.rs:1542
+#: app/src/ui/composer/mod.rs:1860 app/src/ui/composer/mod.rs:2154
+#: app/src/ui/confirm.rs:29 app/src/ui/smart_editor.rs:150
+#: app/src/ui/templates.rs:239 app/src/ui/unsubscribe.rs:95
+#: app/src/ui/vacation.rs:45 app/src/ui/when.rs:52
 #: app/src/ui/window/arrange.rs:132 app/src/ui/window/images.rs:101
 #: app/src/ui/window/organize.rs:56 app/src/ui/window/organize.rs:105
 msgid "Cancel"
@@ -3548,8 +3565,9 @@ msgstr ""
 msgid "Only people who can change this calendar see the details"
 msgstr ""
 
-#: app/src/ui/calendar/editor.rs:1454 app/src/ui/calendar/sidebar.rs:1061
-#: app/src/ui/sidebar.rs:1230 app/src/ui/sidebar.rs:1357
+#: app/src/ui/calendar/editor.rs:1454 app/src/ui/calendar/manage.rs:250
+#: app/src/ui/calendar/sidebar.rs:1188 app/src/ui/sidebar.rs:1230
+#: app/src/ui/sidebar.rs:1357
 msgid "Color"
 msgstr ""
 
@@ -3657,6 +3675,150 @@ msgstr ""
 msgid "{name}, {address}"
 msgstr ""
 
+#: app/src/ui/calendar/holidays.rs:25
+msgid "Holidays in {region}"
+msgstr ""
+
+#: app/src/ui/calendar/holidays.rs:37
+msgid "Australia"
+msgstr ""
+
+#: app/src/ui/calendar/holidays.rs:38
+msgid "Austria"
+msgstr ""
+
+#: app/src/ui/calendar/holidays.rs:39
+msgid "Brazil"
+msgstr ""
+
+#: app/src/ui/calendar/holidays.rs:40
+msgid "Canada"
+msgstr ""
+
+#: app/src/ui/calendar/holidays.rs:41
+msgid "China"
+msgstr ""
+
+#: app/src/ui/calendar/holidays.rs:42
+msgid "Denmark"
+msgstr ""
+
+#: app/src/ui/calendar/holidays.rs:43
+msgid "Netherlands"
+msgstr ""
+
+#: app/src/ui/calendar/holidays.rs:44
+msgid "Finland"
+msgstr ""
+
+#: app/src/ui/calendar/holidays.rs:45
+msgid "France"
+msgstr ""
+
+#: app/src/ui/calendar/holidays.rs:46
+msgid "Germany"
+msgstr ""
+
+#: app/src/ui/calendar/holidays.rs:47
+msgid "Greece"
+msgstr ""
+
+#: app/src/ui/calendar/holidays.rs:48
+msgid "Hong Kong"
+msgstr ""
+
+#: app/src/ui/calendar/holidays.rs:49
+msgid "India"
+msgstr ""
+
+#: app/src/ui/calendar/holidays.rs:50
+msgid "Indonesia"
+msgstr ""
+
+#: app/src/ui/calendar/holidays.rs:51
+msgid "Ireland"
+msgstr ""
+
+#: app/src/ui/calendar/holidays.rs:52
+msgid "Italy"
+msgstr ""
+
+#: app/src/ui/calendar/holidays.rs:53
+msgid "Japan"
+msgstr ""
+
+#: app/src/ui/calendar/holidays.rs:54
+msgid "Malaysia"
+msgstr ""
+
+#: app/src/ui/calendar/holidays.rs:55
+msgid "Mexico"
+msgstr ""
+
+#: app/src/ui/calendar/holidays.rs:56
+msgid "New Zealand"
+msgstr ""
+
+#: app/src/ui/calendar/holidays.rs:57
+msgid "Norway"
+msgstr ""
+
+#: app/src/ui/calendar/holidays.rs:58
+msgid "Philippines"
+msgstr ""
+
+#: app/src/ui/calendar/holidays.rs:59
+msgid "Poland"
+msgstr ""
+
+#: app/src/ui/calendar/holidays.rs:60
+msgid "Portugal"
+msgstr ""
+
+#: app/src/ui/calendar/holidays.rs:61
+msgid "Russia"
+msgstr ""
+
+#: app/src/ui/calendar/holidays.rs:62
+msgid "South Africa"
+msgstr ""
+
+#: app/src/ui/calendar/holidays.rs:63
+msgid "Singapore"
+msgstr ""
+
+#: app/src/ui/calendar/holidays.rs:64
+msgid "South Korea"
+msgstr ""
+
+#: app/src/ui/calendar/holidays.rs:65
+msgid "Spain"
+msgstr ""
+
+#: app/src/ui/calendar/holidays.rs:66
+msgid "Sweden"
+msgstr ""
+
+#: app/src/ui/calendar/holidays.rs:67
+msgid "Taiwan"
+msgstr ""
+
+#: app/src/ui/calendar/holidays.rs:68
+msgid "Thailand"
+msgstr ""
+
+#: app/src/ui/calendar/holidays.rs:69
+msgid "United Kingdom"
+msgstr ""
+
+#: app/src/ui/calendar/holidays.rs:70
+msgid "United States"
+msgstr ""
+
+#: app/src/ui/calendar/holidays.rs:71
+msgid "Vietnam"
+msgstr ""
+
 #: app/src/ui/calendar/kinds.rs:61
 msgid "Working location"
 msgstr ""
@@ -3700,112 +3862,250 @@ msgid ""
 "Working location. Google Calendar sets it, so you can only change it there."
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:362
+#: app/src/ui/calendar/manage.rs:35
+msgid ""
+"The calendar is deleted from Google Calendar on every device. This cannot be "
+"undone."
+msgstr ""
+
+#: app/src/ui/calendar/manage.rs:37
+msgid ""
+"The calendar and its {count} event are deleted from Google Calendar on every "
+"device. This cannot be undone."
+msgid_plural ""
+"The calendar and its {count} events are deleted from Google Calendar on "
+"every device. This cannot be undone."
+msgstr[0] ""
+msgstr[1] ""
+
+#: app/src/ui/calendar/manage.rs:72
+msgid "Could not change the calendar list: {reason}"
+msgstr ""
+
+#: app/src/ui/calendar/manage.rs:77
+msgid "Could not change the colour: {reason}"
+msgstr ""
+
+#: app/src/ui/calendar/manage.rs:148
+msgid "Rename Calendar"
+msgstr ""
+
+#: app/src/ui/calendar/manage.rs:150 app/src/ui/calendar/manage.rs:248
+msgid "Calendar name"
+msgstr ""
+
+#: app/src/ui/calendar/manage.rs:152 app/src/ui/window/organize.rs:106
+msgid "Rename"
+msgstr ""
+
+#: app/src/ui/calendar/manage.rs:169
+msgid "Could not rename the calendar: {reason}"
+msgstr ""
+
+#: app/src/ui/calendar/manage.rs:189
+msgid "Delete “{calendar}”?"
+msgstr ""
+
+#: app/src/ui/calendar/manage.rs:198
+msgid "Could not delete the calendar: {reason}"
+msgstr ""
+
+#: app/src/ui/calendar/manage.rs:201
+msgid "Deleted “{calendar}”"
+msgstr ""
+
+#: app/src/ui/calendar/manage.rs:213
+msgid "Unsubscribe from “{calendar}”?"
+msgstr ""
+
+#: app/src/ui/calendar/manage.rs:215
+msgid ""
+"It leaves your calendar list in Google Calendar on every device. You can "
+"subscribe to it again later."
+msgstr ""
+
+#: app/src/ui/calendar/manage.rs:218 app/src/ui/conversation.rs:368
+#: app/src/ui/unsubscribe.rs:96
+msgid "Unsubscribe"
+msgstr ""
+
+#: app/src/ui/calendar/manage.rs:225
+msgid "Could not unsubscribe: {reason}"
+msgstr ""
+
+#: app/src/ui/calendar/manage.rs:238
+msgid "New Calendar"
+msgstr ""
+
+#: app/src/ui/calendar/manage.rs:240
+msgid ""
+"A calendar of your own on {account}, in Google Calendar on every device."
+msgstr ""
+
+#: app/src/ui/calendar/manage.rs:271 app/src/ui/hide_my_email.rs:357
+#: app/src/ui/rules.rs:307 app/src/ui/smart_editor.rs:146
+#: app/src/ui/templates.rs:235 app/src/ui/window/organize.rs:57
+#: app/src/ui/window/organize.rs:285
+msgid "Create"
+msgstr ""
+
+#: app/src/ui/calendar/manage.rs:289
+msgid "Could not make the calendar: {reason}"
+msgstr ""
+
+#: app/src/ui/calendar/manage.rs:300
+msgid "Subscribe to Calendar"
+msgstr ""
+
+#: app/src/ui/calendar/manage.rs:302
+msgid ""
+"Enter the address of a published calendar, starting with https or webcal. "
+"Google Calendar fetches it from then on and shows it on every device. You "
+"can read it but not change it."
+msgstr ""
+
+#: app/src/ui/calendar/manage.rs:312
+msgid "Calendar address"
+msgstr ""
+
+#: app/src/ui/calendar/manage.rs:314
+msgid "Subscribe"
+msgstr ""
+
+#: app/src/ui/calendar/manage.rs:329
+msgid "Could not subscribe: {reason}"
+msgstr ""
+
+#: app/src/ui/calendar/manage.rs:332
+msgid "Subscribed. The events arrive once Google Calendar reads the address."
+msgstr ""
+
+#: app/src/ui/calendar/manage.rs:342
+msgid "Public holidays from Google Calendar, added to {account}."
+msgstr ""
+
+#: app/src/ui/calendar/manage.rs:355
+msgid "Holiday Calendars"
+msgstr ""
+
+#: app/src/ui/calendar/manage.rs:367
+msgid "Added"
+msgstr ""
+
+#: app/src/ui/calendar/manage.rs:379
+msgid "Add holidays in {region}"
+msgstr ""
+
+#: app/src/ui/calendar/manage.rs:386
+msgid "Could not add the holidays: {reason}"
+msgstr ""
+
+#: app/src/ui/calendar/mod.rs:368
 msgid "View"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:370 app/src/ui/calendar/mod.rs:2599
+#: app/src/ui/calendar/mod.rs:376 app/src/ui/calendar/mod.rs:2605
 msgid "New Event (N)"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:373 app/src/ui/calendar/mod.rs:375
+#: app/src/ui/calendar/mod.rs:379 app/src/ui/calendar/mod.rs:381
 msgid "Search the Calendar (Ctrl+F)"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:378 app/src/ui/calendar/mod.rs:381
+#: app/src/ui/calendar/mod.rs:384 app/src/ui/calendar/mod.rs:387
 msgid "Show Calendars"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:387 app/src/ui/calendar/mod.rs:391
+#: app/src/ui/calendar/mod.rs:393 app/src/ui/calendar/mod.rs:397
 #: app/src/ui/conversation.rs:500 app/src/ui/conversation.rs:504
 msgid "Assistant (Ctrl+J)"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:420 app/src/ui/calendar/mod.rs:422
+#: app/src/ui/calendar/mod.rs:426 app/src/ui/calendar/mod.rs:428
 msgid "Search the Calendar"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:486 app/src/ui/calendar/mod.rs:916
+#: app/src/ui/calendar/mod.rs:492 app/src/ui/calendar/mod.rs:922
 msgid "Loading older events"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:915
+#: app/src/ui/calendar/mod.rs:921
 msgid "Older events can't load while offline"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:949 app/src/ui/window/shortcuts.rs:567
+#: app/src/ui/calendar/mod.rs:955 app/src/ui/window/shortcuts.rs:567
 msgid "Go to date"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:1147
+#: app/src/ui/calendar/mod.rs:1153
 msgid "List"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:1148
+#: app/src/ui/calendar/mod.rs:1154
 msgid "Day"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:1149
+#: app/src/ui/calendar/mod.rs:1155
 msgid "Week"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:1150
+#: app/src/ui/calendar/mod.rs:1156
 msgid "Agenda"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:1151
+#: app/src/ui/calendar/mod.rs:1157
 msgid "Month"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:1369
+#: app/src/ui/calendar/mod.rs:1375
 msgid "Moved “{title}”"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:1378
+#: app/src/ui/calendar/mod.rs:1384
 msgid "Could not move the event: {reason}"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:1488
+#: app/src/ui/calendar/mod.rs:1494
 msgid "All-day events"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:1490
+#: app/src/ui/calendar/mod.rs:1496
 msgid "All-day"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:1874 app/src/ui/calendar/mod.rs:3158
-#: app/src/ui/calendar/sidebar.rs:255 app/src/ui/calendar/words.rs:320
+#: app/src/ui/calendar/mod.rs:1880 app/src/ui/calendar/mod.rs:3133
+#: app/src/ui/calendar/sidebar.rs:297 app/src/ui/calendar/words.rs:320
 #: app/src/ui/preferences.rs:864 app/src/ui/preferences.rs:976
 msgid "%a"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:2355
+#: app/src/ui/calendar/mod.rs:2361
 msgid "Removed “{title}” from your calendar"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:2356
+#: app/src/ui/calendar/mod.rs:2362
 msgid "Deleted “{title}”"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:2361
+#: app/src/ui/calendar/mod.rs:2367
 msgid "Could not delete the event: {reason}"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:2405 app/src/ui/composer/mod.rs:1096
-#: app/src/ui/window.rs:1981 app/src/ui/window/scheduled.rs:98
+#: app/src/ui/calendar/mod.rs:2411 app/src/ui/composer/mod.rs:1096
+#: app/src/ui/window.rs:1987 app/src/ui/window/scheduled.rs:98
 #: app/src/ui/window/shortcuts.rs:454
 msgid "Undo"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:2547
+#: app/src/ui/calendar/mod.rs:2553
 msgid "Could not send your answer: {reason}"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:2601
+#: app/src/ui/calendar/mod.rs:2607
 msgid "None of your calendars take new events"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:2862
+#: app/src/ui/calendar/mod.rs:2868
 msgid "Could not save the event: {reason}"
 msgstr ""
 
@@ -3914,7 +4214,7 @@ msgstr ""
 msgid "%A %-d"
 msgstr ""
 
-#: app/src/ui/calendar/range.rs:111 app/src/ui/calendar/sidebar.rs:770
+#: app/src/ui/calendar/range.rs:111 app/src/ui/calendar/sidebar.rs:830
 msgid "%B %Y"
 msgstr ""
 
@@ -4026,73 +4326,103 @@ msgstr ""
 msgid "Previous Week"
 msgstr ""
 
-#: app/src/ui/calendar/shown.rs:108 app/src/ui/calendar/sidebar.rs:432
+#: app/src/ui/calendar/shown.rs:108 app/src/ui/calendar/sidebar.rs:492
 msgid "Next Month"
 msgstr ""
 
-#: app/src/ui/calendar/shown.rs:108 app/src/ui/calendar/sidebar.rs:431
+#: app/src/ui/calendar/shown.rs:108 app/src/ui/calendar/sidebar.rs:491
 msgid "Previous Month"
 msgstr ""
 
-#: app/src/ui/calendar/sidebar.rs:521
+#: app/src/ui/calendar/sidebar.rs:581
 msgid "Waiting for your answer"
 msgstr ""
 
-#: app/src/ui/calendar/sidebar.rs:674
+#: app/src/ui/calendar/sidebar.rs:734
 msgid "Open mail"
 msgstr ""
 
-#: app/src/ui/calendar/sidebar.rs:814
+#: app/src/ui/calendar/sidebar.rs:874
 msgid "Grant Access to show shared calendars"
 msgstr ""
 
-#: app/src/ui/calendar/sidebar.rs:820
+#: app/src/ui/calendar/sidebar.rs:880
 msgid "Penguin Mail cannot see this account's calendars"
 msgstr ""
 
-#: app/src/ui/calendar/sidebar.rs:824 app/src/ui/contacts_prefs.rs:236
+#: app/src/ui/calendar/sidebar.rs:884 app/src/ui/contacts_prefs.rs:236
 #: app/src/ui/invitation.rs:446 app/src/ui/permission.rs:41
-#: app/src/ui/permission.rs:64 app/src/ui/window.rs:1198
+#: app/src/ui/permission.rs:64 app/src/ui/window.rs:1204
 msgid "Grant Access"
 msgstr ""
 
-#: app/src/ui/calendar/sidebar.rs:879
+#: app/src/ui/calendar/sidebar.rs:943
 msgid "Show or hide this account's calendars"
 msgstr ""
 
-#: app/src/ui/calendar/sidebar.rs:925
+#: app/src/ui/calendar/sidebar.rs:989
 msgid "You can only read this calendar"
 msgstr ""
 
-#: app/src/ui/calendar/sidebar.rs:949
+#: app/src/ui/calendar/sidebar.rs:1013
 msgid "Calendar options"
 msgstr ""
 
-#: app/src/ui/calendar/sidebar.rs:953
+#: app/src/ui/calendar/sidebar.rs:1017
 msgid "Options for {calendar}"
 msgstr ""
 
-#: app/src/ui/calendar/sidebar.rs:993 app/src/ui/contacts_prefs.rs:242
+#: app/src/ui/calendar/sidebar.rs:1057 app/src/ui/contacts_prefs.rs:242
 msgid "Grant Access for {account}"
 msgstr ""
 
-#: app/src/ui/calendar/sidebar.rs:1041
+#: app/src/ui/calendar/sidebar.rs:1133
+msgid "New Calendar…"
+msgstr ""
+
+#: app/src/ui/calendar/sidebar.rs:1134
+msgid "Subscribe to Calendar…"
+msgstr ""
+
+#: app/src/ui/calendar/sidebar.rs:1135
+msgid "Holiday Calendars…"
+msgstr ""
+
+#: app/src/ui/calendar/sidebar.rs:1146 app/src/ui/calendar/sidebar.rs:1154
+msgid "Add Calendar"
+msgstr ""
+
+#: app/src/ui/calendar/sidebar.rs:1168
 msgid "Hide from the List"
 msgstr ""
 
-#: app/src/ui/calendar/sidebar.rs:1054
+#: app/src/ui/calendar/sidebar.rs:1181
 msgid "Original Color"
 msgstr ""
 
-#: app/src/ui/calendar/sidebar.rs:1075
+#: app/src/ui/calendar/sidebar.rs:1191 app/src/ui/sidebar.rs:1220
+#: app/src/ui/sidebar.rs:1347
+msgid "Rename…"
+msgstr ""
+
+#: app/src/ui/calendar/sidebar.rs:1192 app/src/ui/sidebar.rs:1138
+#: app/src/ui/sidebar.rs:1231
+msgid "Delete…"
+msgstr ""
+
+#: app/src/ui/calendar/sidebar.rs:1193 app/src/ui/conversation.rs:553
+msgid "Unsubscribe…"
+msgstr ""
+
+#: app/src/ui/calendar/sidebar.rs:1217
 msgid "Show {calendar}"
 msgstr ""
 
-#: app/src/ui/calendar/sidebar.rs:1091
+#: app/src/ui/calendar/sidebar.rs:1233
 msgid "Hidden Calendars"
 msgstr ""
 
-#: app/src/ui/calendar/sidebar.rs:1111
+#: app/src/ui/calendar/sidebar.rs:1253
 msgid "{count} hidden calendar"
 msgid_plural "{count} hidden calendars"
 msgstr[0] ""
@@ -4711,10 +5041,6 @@ msgstr ""
 msgid "This message is from a mailing list"
 msgstr ""
 
-#: app/src/ui/conversation.rs:368 app/src/ui/unsubscribe.rs:96
-msgid "Unsubscribe"
-msgstr ""
-
 #: app/src/ui/conversation.rs:381 app/src/ui/conversation.rs:1143
 #: app/src/ui/window/message_menu.rs:128
 msgid "Flag"
@@ -4837,10 +5163,6 @@ msgstr ""
 
 #: app/src/ui/conversation.rs:552 app/src/ui/conversation.rs:884
 msgid "Add Sender to VIPs"
-msgstr ""
-
-#: app/src/ui/conversation.rs:553
-msgid "Unsubscribe…"
 msgstr ""
 
 #: app/src/ui/conversation.rs:555
@@ -5040,7 +5362,7 @@ msgstr ""
 msgid "Allow Hide My Email"
 msgstr ""
 
-#: app/src/ui/hide_my_email.rs:329 app/src/ui/window.rs:2936
+#: app/src/ui/hide_my_email.rs:329 app/src/ui/window.rs:2942
 msgid "Add an account first"
 msgstr ""
 
@@ -5056,12 +5378,6 @@ msgstr ""
 
 #: app/src/ui/hide_my_email.rs:350
 msgid "Where Did You Use It?"
-msgstr ""
-
-#: app/src/ui/hide_my_email.rs:357 app/src/ui/rules.rs:307
-#: app/src/ui/smart_editor.rs:146 app/src/ui/templates.rs:235
-#: app/src/ui/window/organize.rs:57 app/src/ui/window/organize.rs:285
-msgid "Create"
 msgstr ""
 
 #: app/src/ui/hide_my_email.rs:395
@@ -5966,14 +6282,6 @@ msgstr ""
 msgid "Move Down"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:1138 app/src/ui/sidebar.rs:1231
-msgid "Delete…"
-msgstr ""
-
-#: app/src/ui/sidebar.rs:1220 app/src/ui/sidebar.rs:1347
-msgid "Rename…"
-msgstr ""
-
 #: app/src/ui/sidebar.rs:1267
 msgid "Automatic Reply…"
 msgstr ""
@@ -5986,7 +6294,7 @@ msgstr ""
 msgid "Rules…"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:1270 app/src/ui/window.rs:2812
+#: app/src/ui/sidebar.rs:1270 app/src/ui/window.rs:2818
 msgid "Hide My Email…"
 msgstr ""
 
@@ -6358,7 +6666,7 @@ msgstr ""
 msgid "%a, %-d %b %Y"
 msgstr ""
 
-#: app/src/ui/welcome.rs:20 app/src/ui/window.rs:2540
+#: app/src/ui/welcome.rs:20 app/src/ui/window.rs:2546
 msgid "Sign In with Google"
 msgstr ""
 
@@ -6543,140 +6851,140 @@ msgid_plural "Moved {count} messages to the Inbox"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/window.rs:727
+#: app/src/ui/window.rs:733
 msgid "Penguin Mail (Demo)"
 msgstr ""
 
-#: app/src/ui/window.rs:1072
+#: app/src/ui/window.rs:1078
 msgid "Could not read accounts: {reason}"
 msgstr ""
 
-#: app/src/ui/window.rs:1126
+#: app/src/ui/window.rs:1132
 msgid "Sign in again to keep {account} syncing"
 msgstr ""
 
-#: app/src/ui/window.rs:1807
+#: app/src/ui/window.rs:1813
 msgid "Could not delete the mail: {reason}"
 msgstr ""
 
-#: app/src/ui/window.rs:1877
+#: app/src/ui/window.rs:1883
 msgid "Turn On the {service}"
 msgstr ""
 
-#: app/src/ui/window.rs:1880
+#: app/src/ui/window.rs:1886
 msgid ""
 "The Google Cloud project Penguin Mail signs in with has the {service} "
 "switched off, so Google refuses before it can ask for your permission. Turn "
 "it on, wait a minute, and try again."
 msgstr ""
 
-#: app/src/ui/window.rs:1886
+#: app/src/ui/window.rs:1892
 msgid "Open Google Cloud"
 msgstr ""
 
-#: app/src/ui/window.rs:2002
+#: app/src/ui/window.rs:2008
 msgid "Nothing to undo"
 msgstr ""
 
-#: app/src/ui/window.rs:2008
+#: app/src/ui/window.rs:2014
 msgid "{action} undone"
 msgstr ""
 
-#: app/src/ui/window.rs:2280
+#: app/src/ui/window.rs:2286
 msgid "Could not include {file}: {reason}"
 msgstr ""
 
-#: app/src/ui/window.rs:2391
+#: app/src/ui/window.rs:2397
 msgid "Downloading {file}…"
 msgstr ""
 
-#: app/src/ui/window.rs:2412 app/src/ui/window/attachments.rs:229
+#: app/src/ui/window.rs:2418 app/src/ui/window/attachments.rs:229
 msgid "Saved {file} to Downloads"
 msgstr ""
 
-#: app/src/ui/window.rs:2430 app/src/ui/window/attachments.rs:234
+#: app/src/ui/window.rs:2436 app/src/ui/window/attachments.rs:234
 msgid "Could not save {file}: {reason}"
 msgstr ""
 
-#: app/src/ui/window.rs:2458
+#: app/src/ui/window.rs:2464
 msgid "{account} is signed in again."
 msgstr ""
 
-#: app/src/ui/window.rs:2493 app/src/ui/window.rs:2527
+#: app/src/ui/window.rs:2499 app/src/ui/window.rs:2533
 msgid "Added {account}. Downloading mail…"
 msgstr ""
 
-#: app/src/ui/window.rs:2519
+#: app/src/ui/window.rs:2525
 msgid "Waiting for Your Browser…"
 msgstr ""
 
-#: app/src/ui/window.rs:2521
+#: app/src/ui/window.rs:2527
 msgid "Continue in your browser"
 msgstr ""
 
-#: app/src/ui/window.rs:2550
+#: app/src/ui/window.rs:2556
 msgid "This copy of Penguin Mail was built without Google sign-in."
 msgstr ""
 
-#: app/src/ui/window.rs:2552
+#: app/src/ui/window.rs:2558
 msgid "Get a Release"
 msgstr ""
 
-#: app/src/ui/window.rs:2604
+#: app/src/ui/window.rs:2610
 msgid "Remove {account}?"
 msgstr ""
 
-#: app/src/ui/window.rs:2608
+#: app/src/ui/window.rs:2614
 msgid ""
 "Its downloaded mail and saved sign-in are deleted from this computer. "
 "Nothing changes in Gmail."
 msgstr ""
 
-#: app/src/ui/window.rs:2624
+#: app/src/ui/window.rs:2630
 msgid "Removed {account}"
 msgstr ""
 
-#: app/src/ui/window.rs:2626
+#: app/src/ui/window.rs:2632
 msgid "Could not remove {account}: {reason}"
 msgstr ""
 
-#: app/src/ui/window.rs:2793
+#: app/src/ui/window.rs:2799
 msgid "Refresh"
 msgstr ""
 
-#: app/src/ui/window.rs:2797
+#: app/src/ui/window.rs:2803
 msgid "Show Declined Events"
 msgstr ""
 
-#: app/src/ui/window.rs:2810
+#: app/src/ui/window.rs:2816
 msgid "Add Account…"
 msgstr ""
 
-#: app/src/ui/window.rs:2811
+#: app/src/ui/window.rs:2817
 msgid "New Smart Mailbox…"
 msgstr ""
 
-#: app/src/ui/window.rs:2818 app/src/ui/window/shortcuts.rs:602
+#: app/src/ui/window.rs:2824 app/src/ui/window/shortcuts.rs:602
 msgid "Preferences"
 msgstr ""
 
-#: app/src/ui/window.rs:2819
+#: app/src/ui/window.rs:2825
 msgid "Keyboard Shortcuts"
 msgstr ""
 
-#: app/src/ui/window.rs:2827 app/src/ui/window.rs:2829
+#: app/src/ui/window.rs:2833 app/src/ui/window.rs:2835
 msgid "Main Menu"
 msgstr ""
 
-#: app/src/ui/window.rs:3204
+#: app/src/ui/window.rs:3210
 msgid "Open a message from the person first"
 msgstr ""
 
-#: app/src/ui/window.rs:3280
+#: app/src/ui/window.rs:3286
 msgid "Penguin Mail shows the new language after a restart"
 msgstr ""
 
-#: app/src/ui/window.rs:3282 app/src/update/mod.rs:130
+#: app/src/ui/window.rs:3288 app/src/update/mod.rs:130
 msgid "Restart"
 msgstr ""
 
@@ -6962,10 +7270,6 @@ msgstr ""
 
 #: app/src/ui/window/organize.rs:82
 msgid "Created “{name}”"
-msgstr ""
-
-#: app/src/ui/window/organize.rs:106
-msgid "Rename"
 msgstr ""
 
 #: app/src/ui/window/organize.rs:161
@@ -7719,7 +8023,7 @@ msgid_plural "{accounts} will get new labels."
 msgstr[0] ""
 msgstr[1] ""
 
-#: sync/src/calendar_copy.rs:1401
+#: sync/src/calendar_copy.rs:1423
 msgid ""
 "Google Calendar offers out of office and focus time only on some work and "
 "school accounts ({reason})"

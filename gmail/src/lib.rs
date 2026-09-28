@@ -1,6 +1,7 @@
 //! Gmail REST client: OAuth, quota limiting, and conversion to Penguin Mail domain types.
 
 pub mod calendar;
+mod calendar_list;
 mod client;
 pub mod convert;
 mod error;
@@ -16,7 +17,8 @@ pub mod structure;
 mod token_store;
 
 pub use calendar::{
-    Answered, Busy, CALENDAR_API_BASE, CALENDAR_LIST_SCOPE, CALENDAR_SCOPE, Event, EventFields,
+    Answered, Busy, CALENDAR_API_BASE, CALENDAR_LIST_SCOPE, CALENDAR_LIST_WRITE_SCOPE, CALENDAR_SCOPE,
+    CALENDARS_SCOPE, Event, EventFields,
     EventTime, Guest, Series, google_event,
 };
 pub use client::{
@@ -29,7 +31,7 @@ pub use model::{
     Draft, LabelColor, MessagePage, MessageRef, Profile, RemoteLabel, SendAs, is_reserved_label_name,
 };
 pub use oauth::{
-    AccessToken, DELETE_SCOPE, GMAIL_SCOPE, Granted, LoopbackListener, OAuthClient, Pkce,
+    AccessToken, DELETE_SCOPE, DRIVE_FILE_SCOPE, GMAIL_SCOPE, Granted, LoopbackListener, OAuthClient, Pkce,
     SETTINGS_SCOPE, SIGN_IN_SCOPES, Tokens, built_in_client, built_in_microsoft_client_id,
     client_from, parse_redirect, random_token,
 };

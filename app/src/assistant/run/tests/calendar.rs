@@ -379,6 +379,7 @@ async fn once_the_copy_has_read_the_account_listing_events_uses_it() {
             zone: "UTC".into(),
             primary: true,
             shown: true,
+            hidden: false,
             reminders: Vec::new(),
         }];
     });
@@ -527,6 +528,7 @@ fn calendars() -> Vec<Calendar> {
         zone: "Europe/Lisbon".into(),
         primary: id == ME,
         shown: true,
+        hidden: false,
         reminders: Vec::new(),
     };
     vec![

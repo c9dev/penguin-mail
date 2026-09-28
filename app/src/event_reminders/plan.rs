@@ -191,6 +191,7 @@ mod tests {
             zone: "Europe/Lisbon".into(),
             primary: true,
             shown: true,
+            hidden: false,
             reminders,
         }
     }

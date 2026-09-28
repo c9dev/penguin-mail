@@ -16,7 +16,8 @@ terminal, `penguin-mail-cli account add` does the same.
 
 Adding an account asks for every permission Penguin Mail uses in that one
 visit, so you never see a second consent screen for automatic replies and
-Rules, contacts, the calendar, or Delete Forever. Leave a box unticked and
+Rules, contacts, the calendar and its list of calendars, Google Drive
+files, or Delete Forever. Leave a box unticked and
 the feature it serves turns off with a reason rather than an error, and
 offers **Grant Access** where you would use it: in the calendar sidebar,
 on an invitation, in Preferences, or when you first try the feature. An account added

@@ -229,6 +229,7 @@ fn primary() -> Cal {
         zone: "UTC".into(),
         primary: true,
         shown: true,
+        hidden: false,
         reminders: Vec::new(),
     }
 }
@@ -515,6 +516,7 @@ fn cal(id: &str, name: &str, access: Access) -> Cal {
         zone: "UTC".into(),
         primary: id == "primary",
         shown: true,
+        hidden: false,
         reminders: Vec::new(),
     }
 }

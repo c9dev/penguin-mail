@@ -16,6 +16,7 @@ use crate::{AccountId, EpochMillis};
 
 pub mod clock;
 pub mod hours;
+pub mod list;
 pub mod repeat;
 pub mod series;
 pub mod week;
@@ -91,6 +92,11 @@ pub struct Calendar {
     pub primary: bool,
     /// Whether the view shows it. Kept on this computer only.
     pub shown: bool,
+    /// Whether the provider's own list hides it, as a person can on
+    /// another device. The store follows a change to it; the view reads
+    /// whether the calendar is listed from the store instead.
+    #[serde(default)]
+    pub hidden: bool,
     /// What an event on this calendar reminds of when it names none.
     pub reminders: Vec<Reminder>,
 }

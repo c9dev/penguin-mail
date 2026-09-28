@@ -5,6 +5,7 @@ pub mod accounts;
 pub mod address_book;
 pub mod bodies;
 pub mod calendar;
+pub mod calendar_list;
 pub mod contacts;
 mod db;
 pub mod drafts;

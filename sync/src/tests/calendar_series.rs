@@ -47,6 +47,7 @@ async fn read_standup(h: &Harness) -> CalendarCopy<Connected> {
             zone: "Europe/Lisbon".into(),
             primary: true,
             shown: true,
+            hidden: false,
             reminders: Vec::new(),
         }]
     });
@@ -167,6 +168,7 @@ async fn split_six_weeks(h: &Harness) -> (CalendarCopy<Connected>, String) {
             zone: "Europe/Lisbon".into(),
             primary: true,
             shown: true,
+            hidden: false,
             reminders: Vec::new(),
         }]
     });

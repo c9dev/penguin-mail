@@ -673,6 +673,7 @@ mod tests {
             zone: "Europe/Lisbon".into(),
             primary: true,
             shown: true,
+            hidden: false,
             reminders: vec![Reminder { minutes: 10, method: ReminderMethod::Notification }],
         }
     }

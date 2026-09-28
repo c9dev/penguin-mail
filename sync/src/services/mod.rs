@@ -11,6 +11,8 @@
 
 mod any;
 mod google;
+
+pub use google::withheld as withheld_by_grant;
 pub mod imap;
 mod pacing;
 
@@ -427,6 +429,11 @@ pub struct Withheld {
     pub change_contacts: bool,
     pub calendar: bool,
     pub calendar_list: bool,
+    /// Making, renaming and deleting the account's own calendars.
+    pub calendars: bool,
+    /// Changing the account's calendar list: a calendar's colour and
+    /// whether it is hidden on every device, and subscribing to one.
+    pub change_calendar_list: bool,
 }
 
 impl Withheld {
@@ -437,6 +444,8 @@ impl Withheld {
         change_contacts: false,
         calendar: false,
         calendar_list: false,
+        calendars: false,
+        change_calendar_list: false,
     };
 
     pub fn is_empty(self) -> bool {
@@ -871,6 +880,16 @@ pub trait CalendarService: Send + Sync + 'static {
         answer: Answer,
         note: Option<&str>,
     ) -> impl Future<Output = Result<model::Event, BackendError>> + Send;
+
+    /// Makes `edit` true of the calendar `calendar` on the account's
+    /// list. An edit that puts a calendar on the list answers it under
+    /// the server's own id; the others answer `None`, or the calendar as
+    /// the server now lists it.
+    fn edit_list(
+        &self,
+        calendar: &str,
+        edit: &model::list::ListEdit,
+    ) -> impl Future<Output = Result<Option<model::Calendar>, BackendError>> + Send;
 }
 
 /// The account's address book.

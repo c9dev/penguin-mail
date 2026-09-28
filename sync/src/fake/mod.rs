@@ -38,7 +38,8 @@ use mailrs_domain::{
 use mailrs_gmail::labels;
 use mailrs_gmail::model::{Header, Message, MessagePart, PartBody};
 use mailrs_gmail::{
-    AccountQuota, Answered, BATCH_LIMIT, Busy, CALENDAR_LIST_SCOPE, CALENDAR_SCOPE, CONTACTS_SCOPE,
+    AccountQuota, Answered, BATCH_LIMIT, Busy, CALENDAR_LIST_SCOPE, CALENDAR_LIST_WRITE_SCOPE,
+    CALENDAR_SCOPE, CALENDARS_SCOPE, CONTACTS_SCOPE,
     CONTACTS_WRITE_SCOPE, ConnectionsPage, ContactFields, DELETE_SCOPE, Event, EventFields,
     GmailError, Granted, Guest, HistoryChange, HistoryPage, LabelColor, MessagePage, MessageRef,
     Person, Priority, Profile, QuotaLimiter, RemoteLabel, SETTINGS_SCOPE, SendAs, Series, cost,
@@ -204,6 +205,11 @@ pub struct FakeState {
     /// Play Google turning down every move to another calendar, as it
     /// does for an event this account may not move: a move answers 400.
     pub refuse_moves: bool,
+    /// Play Google turning down every change to the calendar list: each
+    /// answers 400 with Google's reason.
+    pub refuse_list_edits: bool,
+    /// The feed addresses the account subscribed to, oldest first.
+    pub subscribed: Vec<String>,
     /// The OAuth scopes the account has not granted. A call that needs one
     /// answers `MissingScope`, as Google does until the user says yes.
     /// Change it through [`FakeGmail::withhold`] and [`FakeGmail::grant`].
@@ -397,6 +403,8 @@ impl FakeGmail {
                 refuse_new_events: false,
                 refuse_status_entries: false,
                 refuse_moves: false,
+                refuse_list_edits: false,
+                subscribed: Vec::new(),
                 withheld: BTreeSet::new(),
                 calendar_off: None,
                 clock: None,
@@ -579,9 +587,15 @@ impl FakeGmail {
         self.with(|s| s.withheld.remove(scope));
     }
 
-    /// Google's answer to a call that needs `scope`.
+    /// Google's answer to a call that needs `scope`. Withholding the
+    /// read-only calendar list withholds changing it too, since a person
+    /// who refused to show the list has not let anything change it.
     fn needs(&self, scope: &'static str) -> Result<(), GmailError> {
-        match self.with(|s| s.withheld.contains(scope)) {
+        let refused = self.with(|s| {
+            s.withheld.contains(scope)
+                || (scope == CALENDAR_LIST_WRITE_SCOPE && s.withheld.contains(CALENDAR_LIST_SCOPE))
+        });
+        match refused {
             true => Err(GmailError::MissingScope),
             false => Ok(()),
         }
@@ -872,16 +886,23 @@ impl GmailApi for FakeGmail {
     /// Every scope sign-in asks for, less whatever a test withheld. Tests
     /// use this to see how the app reacts to a scope the person unticked,
     /// without going through a real consent flow.
+    ///
+    /// The calendar list comes in two widths. Withholding
+    /// `CALENDAR_LIST_WRITE_SCOPE` alone plays an account that granted
+    /// the older read-only list, which still reads every calendar;
+    /// withholding `CALENDAR_LIST_SCOPE` plays one that granted neither.
     fn granted(&self) -> Option<Granted> {
         Some(self.with(|s| {
-            Granted::parse(
-                &mailrs_gmail::SIGN_IN_SCOPES
-                    .iter()
-                    .filter(|scope| !s.withheld.contains(*scope))
-                    .copied()
-                    .collect::<Vec<_>>()
-                    .join(" "),
-            )
+            let mut scopes: Vec<&str> = mailrs_gmail::SIGN_IN_SCOPES
+                .iter()
+                .filter(|scope| !s.withheld.contains(*scope))
+                .filter(|scope| !(**scope == CALENDAR_LIST_WRITE_SCOPE && s.withheld.contains(CALENDAR_LIST_SCOPE)))
+                .copied()
+                .collect();
+            if s.withheld.contains(CALENDAR_LIST_WRITE_SCOPE) && !s.withheld.contains(CALENDAR_LIST_SCOPE) {
+                scopes.push(CALENDAR_LIST_SCOPE);
+            }
+            Granted::parse(&scopes.join(" "))
         }))
     }
 
@@ -1565,6 +1586,114 @@ impl GmailApi for FakeGmail {
         Ok(self.with(|s| {
             s.calendar_events.iter().find(|e| e.calendar == calendar && e.id == id).cloned().expect("just stored")
         }))
+    }
+
+    /// Changes `calendars` as Google changes its calendar list, with the
+    /// scope each call needs. A new calendar and a subscription get ids
+    /// of Google's own form; a public calendar goes on the list only by
+    /// an id Google publishes, a holiday calendar's.
+    async fn edit_calendar_list(
+        &self,
+        id: &str,
+        edit: &calendar::list::ListEdit,
+    ) -> Result<Option<calendar::Calendar>, GmailError> {
+        use calendar::list::ListEdit;
+        let (method, scope) = match edit {
+            ListEdit::Create { .. } => ("calendar.calendars.insert", CALENDARS_SCOPE),
+            ListEdit::Rename { .. } => ("calendar.calendars.patch", CALENDARS_SCOPE),
+            ListEdit::Delete => ("calendar.calendars.delete", CALENDARS_SCOPE),
+            ListEdit::Unsubscribe => ("calendar.calendarList.delete", CALENDAR_LIST_WRITE_SCOPE),
+            ListEdit::Recolor { .. } | ListEdit::Hide { .. } => ("calendar.calendarList.patch", CALENDAR_LIST_WRITE_SCOPE),
+            ListEdit::Subscribe { .. } | ListEdit::Add => ("calendar.calendarList.insert", CALENDAR_LIST_WRITE_SCOPE),
+        };
+        self.call(method, 0).await?;
+        self.calendar_open()?;
+        self.needs(scope)?;
+        if self.with(|s| s.refuse_list_edits) {
+            return Err(GmailError::Http {
+                status: 400,
+                body: r#"{"error":{"code":400,"message":"Invalid value."}}"#.into(),
+            });
+        }
+        let held = self.with(|s| s.calendars.iter().find(|c| c.id == id).cloned());
+        let listed = |calendar: calendar::Calendar| {
+            self.with(|s| {
+                s.calendars.retain(|c| c.id != calendar.id);
+                s.calendars.push(calendar.clone());
+            });
+            Ok(Some(calendar))
+        };
+        match edit {
+            ListEdit::Create { name, color, zone } => {
+                let made = self.with(|s| s.calendars.len());
+                listed(calendar::Calendar {
+                    id: format!("made{made}@group.calendar.google.com"),
+                    name: name.clone(),
+                    color: color.clone(),
+                    access: calendar::Access::Owner,
+                    zone: if zone.is_empty() { "UTC".into() } else { zone.clone() },
+                    shown: true,
+                    ..calendar::Calendar::default()
+                })
+            }
+            ListEdit::Subscribe { url } => {
+                let feed = self.with(|s| {
+                    s.subscribed.push(url.clone());
+                    s.subscribed.len()
+                });
+                listed(calendar::Calendar {
+                    id: format!("feed{feed}@import.calendar.google.com"),
+                    name: calendar::list::subscription_name(url),
+                    color: "#9e69af".into(),
+                    access: calendar::Access::Reader,
+                    zone: "UTC".into(),
+                    shown: true,
+                    ..calendar::Calendar::default()
+                })
+            }
+            ListEdit::Add if id.ends_with("#holiday@group.v.calendar.google.com") => listed(calendar::Calendar {
+                id: id.to_string(),
+                name: "Holidays".into(),
+                color: "#e01b24".into(),
+                access: calendar::Access::Reader,
+                zone: "UTC".into(),
+                shown: true,
+                ..calendar::Calendar::default()
+            }),
+            ListEdit::Add => Err(GmailError::NotFound),
+            ListEdit::Rename { name } => {
+                let held = held.ok_or(GmailError::NotFound)?;
+                if held.access != calendar::Access::Owner {
+                    return Err(GmailError::Http { status: 403, body: "Forbidden".into() });
+                }
+                listed(calendar::Calendar { name: name.clone(), ..held }).map(|_| None)
+            }
+            ListEdit::Delete => {
+                let held = held.ok_or(GmailError::NotFound)?;
+                if held.primary || held.access != calendar::Access::Owner {
+                    return Err(GmailError::Http { status: 403, body: "Forbidden".into() });
+                }
+                self.with(|s| {
+                    s.calendars.retain(|c| c.id != id);
+                    s.calendar_events.retain(|e| e.calendar != id);
+                });
+                Ok(None)
+            }
+            ListEdit::Unsubscribe => {
+                held.ok_or(GmailError::NotFound)?;
+                self.with(|s| s.calendars.retain(|c| c.id != id));
+                Ok(None)
+            }
+            ListEdit::Recolor { color } => {
+                let held = held.ok_or(GmailError::NotFound)?;
+                listed(calendar::Calendar { color: color.clone(), ..held })
+            }
+            ListEdit::Hide { hidden } => {
+                let held = held.ok_or(GmailError::NotFound)?;
+                let shown = held.shown || !hidden;
+                listed(calendar::Calendar { hidden: *hidden, shown, ..held })
+            }
+        }
     }
 
     /// Files the event under its UID: one the calendar already holds is

@@ -298,6 +298,7 @@ async fn an_answer_from_the_calendar_marks_the_copy_and_the_card_and_waits_to_go
                     zone: "UTC".into(),
                     primary: true,
                     shown: true,
+                    hidden: false,
                     reminders: Vec::new(),
                 };
                 calendar_store::save_calendars(c, account_id, std::slice::from_ref(&calendar))?;
@@ -682,6 +683,7 @@ async fn the_copy_answers_a_clash_with_no_call_to_google() {
         zone: "UTC".into(),
         primary: true,
         shown: true,
+        hidden: false,
         reminders: Vec::new(),
     }]);
     h.fake.put_calendar_event(mailrs_domain::calendar::Event {
@@ -1027,6 +1029,7 @@ fn primary() -> Cal {
         zone: "UTC".into(),
         primary: true,
         shown: true,
+        hidden: false,
         reminders: Vec::new(),
     }
 }

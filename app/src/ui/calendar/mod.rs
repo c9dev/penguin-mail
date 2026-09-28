@@ -17,8 +17,10 @@ pub mod drag;
 pub mod editor;
 pub mod header;
 pub mod holding;
+pub mod holidays;
 pub mod kinds;
 pub mod layout;
+mod manage;
 pub mod month;
 pub mod next;
 pub mod popover;
@@ -90,6 +92,10 @@ pub struct Hooks {
     pub contacts: Box<dyn Fn() -> Contacts>,
     /// Sends the account's queued calendar changes now, then reloads.
     pub push: Box<dyn Fn(AccountId)>,
+    /// Explains that making, renaming or deleting a calendar, or
+    /// changing the calendar list, needs a permission the account
+    /// withheld, and offers to ask for it.
+    pub needs_manage_permission: Box<dyn Fn(AccountId)>,
     /// Opens the mail that carries an invitation, switching away from the
     /// calendar to it: the "Waiting for your answer" card's "Open mail"
     /// door and the event popover's "Open the invitation in Mail" link
@@ -2877,49 +2883,18 @@ impl CalendarView {
 
     // ---- The sidebar ----------------------------------------------------
 
-    /// Does what the person chose in the calendar list. Hiding a
-    /// calendar and its colour go to the store alone, since the account
-    /// may only read Google's calendar list; both then read the list and
-    /// the ranges again.
+    /// Does what the person chose in the calendar list. Ticking a
+    /// calendar and folding an account stay on this computer; the rest
+    /// go through the copy (`manage`), which sends them to the provider
+    /// when the account allows it.
     fn list_changed(self: &Rc<Self>, change: ListChange) {
-        let next_event = sidebar::redraws_next_event(&change);
         match change {
             ListChange::Shown { account, calendar, shown } => self.set_shown(account, calendar, shown),
-            ListChange::Listed { account, calendar, listed } => {
-                self.write_calendar(next_event, move |c| store::set_listed(c, account, &calendar, listed))
-            }
-            ListChange::Color { account, calendar, color } => self.write_calendar(next_event, move |c| {
-                store::set_own_color(c, account, &calendar, color.as_deref())
-            }),
             ListChange::Folded { address, folded } => {
                 (self.hooks.change)(Change::CalendarAccountFolded { email: address, folded })
             }
+            other => self.manage(other),
         }
-    }
-
-    /// Writes one choice about a calendar to the store, then reloads,
-    /// with the next-event card when `next_event` says it shows the
-    /// change.
-    fn write_calendar(
-        self: &Rc<Self>,
-        next_event: bool,
-        write: impl FnOnce(&rusqlite::Connection) -> mailrs_store::Result<()> + Send + 'static,
-    ) {
-        let weak = Rc::downgrade(self);
-        let core = Rc::clone(&self.core);
-        glib::spawn_future_local(async move {
-            let saved = core.write(write).await;
-            let Some(view) = weak.upgrade() else { return };
-            match saved {
-                Ok(()) => {
-                    view.reload();
-                    if next_event {
-                        (view.hooks.next_event)();
-                    }
-                }
-                Err(err) => tracing::warn!(%err, "could not save the calendar list"),
-            }
-        });
     }
 
     /// Shows or hides one calendar, then reads the ranges again.
