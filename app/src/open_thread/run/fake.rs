@@ -101,6 +101,8 @@ pub struct Screen {
     pub on_calendar: Result<Option<Spot>, String>,
     /// The spots put on the card, with the UID each was for.
     pub spots: Vec<(String, Spot)>,
+    /// The invitation on the card while it offers no Show in Calendar.
+    pub off_calendar: Option<Invitation>,
     pub flag_color: Option<FlagColor>,
     /// What the outbox holds, by row id.
     pub queued: HashMap<i64, Queued>,
@@ -350,6 +352,7 @@ impl FakeWindow {
             series_lines: Vec::new(),
             on_calendar: Ok(None),
             spots: Vec::new(),
+            off_calendar: None,
             flag_color: Some(FlagColor::Orange),
             queued: HashMap::new(),
             translation: Ok(vec![Some("Hello Ana".to_string())]),
@@ -510,6 +513,10 @@ impl Desk for FakeWindow {
 
     fn unread(&self) -> bool {
         self.read(OpenThread::unread)
+    }
+
+    fn invitation_off_calendar(&self) -> Option<Invitation> {
+        self.with(|screen| screen.off_calendar.clone())
     }
 
     fn invitation(&self) -> Option<(String, String)> {
@@ -768,7 +775,8 @@ impl Effects for FakeWindow {
         self.with(|screen| {
             screen
                 .invitations
-                .push(showing.map(|showing| showing.invitation.uid))
+                .push(showing.as_ref().map(|showing| showing.invitation.uid.clone()));
+            screen.off_calendar = showing.map(|showing| showing.invitation);
         });
     }
 
@@ -787,7 +795,10 @@ impl Effects for FakeWindow {
 
     fn on_calendar_known(&self, uid: String, spot: Spot) {
         self.reached(Step::OnCalendarKnown);
-        self.with(|screen| screen.spots.push((uid, spot)));
+        self.with(|screen| {
+            screen.spots.push((uid, spot));
+            screen.off_calendar = None;
+        });
     }
 
     fn start_engines(&self) {

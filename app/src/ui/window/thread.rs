@@ -83,6 +83,17 @@ impl MainWindow {
         }
     }
 
+    /// Looks for each open invitation's event on the calendar again,
+    /// after the calendar copy stored new events, so a card that offered
+    /// Add to Calendar before the copy held the event offers Show in
+    /// Calendar.
+    pub fn calendar_read_for_threads(self: &Rc<Self>) {
+        for view in self.views() {
+            let run = self.thread_run(&view);
+            glib::spawn_future_local(async move { run.calendar_read().await });
+        }
+    }
+
     /// The translation card's button.
     pub(super) fn translate_message(self: &Rc<Self>, view: &Rc<ConversationView>) {
         let run = self.thread_run(view);
@@ -185,6 +196,17 @@ impl Desk for Ports {
             open.invitation()
                 .map(|(meta, ics)| (meta.id.clone(), ics.to_string()))
         })
+    }
+
+    fn invitation_off_calendar(&self) -> Option<Invitation> {
+        self.view
+            .with_invitation(|showing| {
+                showing
+                    .on_calendar
+                    .is_none()
+                    .then(|| showing.invitation.clone())
+            })
+            .flatten()
     }
 
     fn wanting_thumbnails(&self) -> Vec<(String, MessageBody)> {

@@ -333,6 +333,36 @@ async fn a_cancellation_offers_no_calendar_access() {
 }
 
 #[tokio::test]
+async fn a_card_the_calendar_lacked_looks_again_once_the_calendar_is_read() {
+    // Opened before the copy's first read: the event was not there yet.
+    let window = FakeWindow::with_body(invited());
+    window.with(|screen| screen.on_calendar = Ok(None));
+    window.run().open(row(THREAD)).await;
+    assert!(window.0.borrow().spots.is_empty());
+    window.with(|screen| screen.on_calendar = Ok(Some(spot())));
+    window.run().calendar_read().await;
+    assert_eq!(window.0.borrow().spots, [("kites@example.com".to_string(), spot())]);
+}
+
+#[tokio::test]
+async fn a_card_that_shows_in_calendar_asks_nothing_when_the_calendar_is_read() {
+    let window = FakeWindow::with_body(invited());
+    window.with(|screen| screen.on_calendar = Ok(Some(spot())));
+    window.run().open(row(THREAD)).await;
+    window.with(|screen| screen.steps.clear());
+    window.run().calendar_read().await;
+    assert!(!window.took(Step::OnCalendar));
+}
+
+#[tokio::test]
+async fn a_thread_without_an_invitation_asks_nothing_when_the_calendar_is_read() {
+    let window = FakeWindow::new();
+    window.run().open(row(THREAD)).await;
+    window.run().calendar_read().await;
+    assert!(!window.took(Step::OnCalendar));
+}
+
+#[tokio::test]
 async fn a_cancellation_looks_for_nothing_on_the_calendar() {
     let window = FakeWindow::with_body(invited());
     window.with(|screen| screen.invitation = Ok(Some(opened_cancellation())));
