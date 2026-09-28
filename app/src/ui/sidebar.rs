@@ -40,10 +40,67 @@ struct Heading {
     actions: gio::SimpleActionGroup,
 }
 
+/// Undo Send at the foot of the sidebar, while a message waits out its
+/// delay. It slides up into place and back down, over 200 ms.
+pub struct UndoPill {
+    pub revealer: gtk::Revealer,
+    pub button: gtk::Button,
+    left: gtk::Label,
+}
+
+impl UndoPill {
+    fn new() -> UndoPill {
+        let left = gtk::Label::builder().css_classes(["undo-left"]).build();
+        let content = gtk::Box::builder().spacing(8).build();
+        content.append(&gtk::Image::from_icon_name("edit-undo-symbolic"));
+        content.append(
+            &gtk::Label::builder()
+                .label(gettext("Undo Send"))
+                .xalign(0.0)
+                .hexpand(true)
+                .build(),
+        );
+        content.append(&left);
+        let button = gtk::Button::builder()
+            .child(&content)
+            .css_classes(["undo-pill"])
+            .tooltip_text(gettext("Stop the message from going out"))
+            .build();
+        // The seconds change every second and the name stays put, so a
+        // screen reader is not told each one.
+        super::name(&button, &gettext("Undo Send"));
+        let revealer = gtk::Revealer::builder()
+            .transition_type(gtk::RevealerTransitionType::SlideUp)
+            .transition_duration(200)
+            .child(&button)
+            .build();
+        UndoPill { revealer, button, left }
+    }
+
+    /// Shows the pill with `left` ("0:07") at its end.
+    pub fn show(&self, left: &str) {
+        if self.left.label() != left {
+            self.left.set_label(left);
+        }
+        self.revealer.set_reveal_child(true);
+    }
+
+    pub fn hide(&self) {
+        self.revealer.set_reveal_child(false);
+    }
+}
+
 pub struct Sidebar {
     pub page: adw::ToolbarView,
     pub header: adw::HeaderBar,
-    pub add_account: gtk::Button,
+    /// Undo Send, and room above it for the next event (Task B2), at the
+    /// foot of the card. Ruling R9 leaves Add Account out of it; the main
+    /// menu and the welcome page still open the same picker.
+    pub undo: UndoPill,
+    /// Read by no code in this task; Task B2 prepends the next-event card
+    /// to it.
+    #[expect(dead_code, reason = "Task B2 reads this field")]
+    pub foot: gtk::Box,
     /// Switches between the mail and the calendar. Its toggles are named
     /// `mail` and `calendar`; it hides while no account offers a
     /// calendar, and "Mailboxes" shows in its place, since a switch to a
@@ -111,26 +168,6 @@ impl Sidebar {
             .show_end_title_buttons(false)
             .title_widget(&titles)
             .build();
-        // Ruling R9: Add Account leaves the sidebar's foot, which the
-        // mockup draws with nothing in it. The main menu's "Add Account…"
-        // and the welcome page still open the same picker, so the button
-        // stays here unparented, for `MainWindow` to enable and open as it
-        // does today, rather than reworking those call sites in this task.
-        let add_account = gtk::Button::builder()
-            .child(
-                &adw::ButtonContent::builder()
-                    .icon_name("list-add-symbolic")
-                    .label(gettext("Add Account"))
-                    .build(),
-            )
-            .css_classes(["flat"])
-            .halign(gtk::Align::Start)
-            .margin_start(6)
-            .margin_end(6)
-            .margin_top(6)
-            .margin_bottom(6)
-            .visible(false)
-            .build();
         let content = gtk::Stack::builder()
             .transition_type(gtk::StackTransitionType::Crossfade)
             .transition_duration(150)
@@ -147,11 +184,20 @@ impl Sidebar {
             .build();
         page.add_top_bar(&header);
         page.set_content(Some(&content));
+        let undo = UndoPill::new();
+        let foot = gtk::Box::builder()
+            .orientation(gtk::Orientation::Vertical)
+            .spacing(14)
+            .css_classes(["sidebar-foot"])
+            .build();
+        foot.append(&undo.revealer);
+        page.add_bottom_bar(&foot);
 
         let sidebar = Rc::new(Sidebar {
             page,
             header,
-            add_account,
+            undo,
+            foot,
             switch,
             title,
             content,
@@ -220,7 +266,7 @@ impl Sidebar {
     }
 
     /// Puts the calendar's own sidebar, `content`, in place of the
-    /// mailbox list. Add Account stays below it.
+    /// mailbox list. The foot, shared by both spaces, stays below it.
     pub fn show_calendar(&self, content: &gtk::Widget) {
         if self.content.child_by_name("calendar").is_none() {
             self.content.add_named(content, Some("calendar"));

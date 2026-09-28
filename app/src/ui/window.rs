@@ -75,6 +75,7 @@ mod spaces;
 mod thread;
 mod translation;
 mod triage;
+mod undo_send;
 
 pub use notice::Notice;
 
@@ -174,6 +175,9 @@ pub struct MainWindow {
     /// follow, so a reload does not fetch a folder's window again: the
     /// slow poll covers it from here. Cleared for an account that stops.
     followed: RefCell<HashMap<AccountId, HashSet<String>>>,
+    /// Undo Send: the sends waiting out their delay, and what calls each
+    /// one back.
+    undo_sends: RefCell<scheduled::UndoSends>,
 }
 
 /// The class that marks a toplevel window dark. `@media
@@ -722,6 +726,7 @@ impl MainWindow {
                 detached: RefCell::new(Vec::new()),
                 previews: previews::Previews::default(),
                 followed: RefCell::new(HashMap::new()),
+                undo_sends: RefCell::new(scheduled::UndoSends::default()),
             }
         });
         if window.core.demo {
@@ -764,6 +769,7 @@ impl MainWindow {
         });
         window.install_follow_ups();
         window.install_categories();
+        window.install_undo_send();
         let labels_of = Rc::downgrade(&window);
         super::search_suggest::attach(&window.list.search_entry, app.contacts(), move || {
             let Some(win) = labels_of.upgrade() else {
@@ -800,12 +806,6 @@ impl MainWindow {
             match account {
                 Some(account) => win.sign_in_again(account),
                 None => win.authorize(None),
-            }
-        });
-        let weak = Rc::downgrade(&window);
-        window.sidebar.add_account.connect_clicked(move |_| {
-            if let Some(win) = weak.upgrade() {
-                win.add_account();
             }
         });
         if let Some(filter) = app.filter() {
@@ -2400,7 +2400,6 @@ impl MainWindow {
         self.first_account
             .set_label(&gettext("Waiting for Your Browser…"));
         self.first_other.set_sensitive(false);
-        self.sidebar.add_account.set_sensitive(false);
         self.toast(&gettext("Continue in your browser"));
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
@@ -2422,7 +2421,6 @@ impl MainWindow {
             this.first_account
                 .set_label(&gettext("Sign In with Google"));
             this.first_other.set_sensitive(true);
-            this.sidebar.add_account.set_sensitive(true);
         });
     }
 
