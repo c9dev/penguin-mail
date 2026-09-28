@@ -19,16 +19,24 @@ async fn mount_token(server: &MockServer) {
         .await;
 }
 
+const DRIVE: &str = "/drive/v3";
+
 fn client(server: &MockServer) -> GmailClient {
     let oauth = OAuthClient::new("cid", "secret")
         .with_endpoints(format!("{}/auth", server.uri()), format!("{}/token", server.uri()));
-    GmailClient::new(oauth, "rt".into()).with_drive_upload_base_url(format!("{}{UPLOAD}", server.uri()))
+    GmailClient::new(oauth, "rt".into())
+        .with_drive_upload_base_url(format!("{}{UPLOAD}", server.uri()))
+        .with_drive_base_url(format!("{}{DRIVE}", server.uri()))
 }
 
 /// A file of `size` bytes in a folder of its own, which goes when the
 /// returned guard drops.
 fn file_of(size: usize) -> (std::path::PathBuf, TempDir) {
-    let dir = TempDir::new();
+    file_named(size, "one")
+}
+
+fn file_named(size: usize, tag: &str) -> (std::path::PathBuf, TempDir) {
+    let dir = TempDir::new_tagged(tag);
     let path = dir.0.join("Agenda.pdf");
     let bytes: Vec<u8> = (0..size).map(|i| (i % 251) as u8).collect();
     std::fs::write(&path, bytes).unwrap();
@@ -39,7 +47,11 @@ struct TempDir(std::path::PathBuf);
 
 impl TempDir {
     fn new() -> TempDir {
-        let dir = std::env::temp_dir().join(format!("penguin-drive-{}", rand_suffix()));
+        TempDir::new_tagged("one")
+    }
+
+    fn new_tagged(tag: &str) -> TempDir {
+        let dir = std::env::temp_dir().join(format!("penguin-drive-{}-{tag}", rand_suffix()));
         std::fs::create_dir_all(&dir).unwrap();
         TempDir(dir)
     }
@@ -172,4 +184,151 @@ async fn an_account_without_drive_access_gets_missing_scope() {
 fn split_head(part: &[u8]) -> (String, &[u8]) {
     let at = part.windows(4).position(|w| w == b"\r\n\r\n").expect("a blank line after the headers");
     (String::from_utf8_lossy(&part[..at]).into_owned(), &part[at + 4..])
+}
+
+const MIB: usize = 1024 * 1024;
+
+fn byte_at(i: usize) -> u8 {
+    (i % 251) as u8
+}
+
+/// The `bytes a-b/total` or `bytes */total` of a request.
+fn range_of(request: &Request) -> String {
+    request.headers.get("content-range").map(|v| v.to_str().unwrap().to_string()).unwrap_or_default()
+}
+
+async fn mount_session(server: &MockServer, size: usize) {
+    let location = format!("{}{UPLOAD}/files?uploadType=resumable&upload_id=session1", server.uri());
+    Mock::given(method("POST"))
+        .and(path(format!("{UPLOAD}/files")))
+        .and(query_param("uploadType", "resumable"))
+        .and(header("x-upload-content-type", "application/pdf"))
+        .and(header("x-upload-content-length", size.to_string().as_str()))
+        .respond_with(move |request: &Request| {
+            let metadata: Value = serde_json::from_slice(&request.body).unwrap();
+            assert_eq!(metadata, json!({"name": "Big.pdf", "mimeType": "application/pdf"}));
+            ResponseTemplate::new(200).insert_header("Location", location.as_str())
+        })
+        .expect(1)
+        .mount(server)
+        .await;
+}
+
+fn done_file() -> ResponseTemplate {
+    ResponseTemplate::new(200).set_body_json(json!({
+        "id": "big1", "name": "Big.pdf", "mimeType": "application/pdf",
+        "webViewLink": "https://drive.google.com/file/d/big1/view"
+    }))
+}
+
+/// A file above 5 MB goes up in chunks through a resumable session. The
+/// second chunk meets a 503; the client asks the session how much it
+/// holds and sends the rest from there.
+#[tokio::test]
+async fn a_large_file_resumes_after_a_server_error_midway() {
+    let server = MockServer::start().await;
+    mount_token(&server).await;
+    let size = 9 * MIB;
+    let (file, _dir) = file_named(size, "big");
+    mount_session(&server, size).await;
+    let held_back = 8 * MIB + 256 * 1024;
+    let log = Arc::new(std::sync::Mutex::new(Vec::<String>::new()));
+    let seen = Arc::clone(&log);
+    let failed = Arc::new(std::sync::atomic::AtomicBool::new(false));
+    Mock::given(method("PUT"))
+        .and(path(format!("{UPLOAD}/files")))
+        .and(query_param("upload_id", "session1"))
+        .respond_with(move |request: &Request| {
+            let range = range_of(request);
+            seen.lock().unwrap().push(range.clone());
+            if range == format!("bytes */{size}") {
+                assert!(request.body.is_empty(), "a status query carries no bytes");
+                return ResponseTemplate::new(308).insert_header("Range", format!("bytes=0-{}", held_back - 1).as_str());
+            }
+            let (span, total) = range.strip_prefix("bytes ").unwrap().split_once('/').unwrap();
+            assert_eq!(total, size.to_string());
+            let (from, to) = span.split_once('-').unwrap();
+            let (from, to): (usize, usize) = (from.parse().unwrap(), to.parse().unwrap());
+            assert_eq!(request.body.len(), to - from + 1, "the chunk is as long as its range");
+            assert!(request.body.iter().enumerate().all(|(i, b)| *b == byte_at(from + i)), "the chunk holds the file's own bytes");
+            if to + 1 < size {
+                return ResponseTemplate::new(308).insert_header("Range", format!("bytes=0-{to}").as_str());
+            }
+            if !failed.swap(true, std::sync::atomic::Ordering::SeqCst) {
+                return ResponseTemplate::new(503);
+            }
+            done_file()
+        })
+        .mount(&server)
+        .await;
+    let sent = Arc::new(AtomicU64::new(0));
+    let file = client(&server).upload_to_drive(&file, "Big.pdf", "application/pdf", Arc::clone(&sent)).await.unwrap();
+    assert_eq!(file.file_id, "big1");
+    assert_eq!(file.file_url, "https://drive.google.com/file/d/big1/view");
+    assert_eq!(sent.load(Ordering::SeqCst), size as u64);
+    let chunk = 8 * MIB;
+    assert_eq!(
+        *log.lock().unwrap(),
+        vec![
+            format!("bytes 0-{}/{size}", chunk - 1),
+            format!("bytes {chunk}-{}/{size}", size - 1),
+            format!("bytes */{size}"),
+            format!("bytes {held_back}-{}/{size}", size - 1),
+        ]
+    );
+    let posted_multipart = server
+        .received_requests()
+        .await
+        .unwrap()
+        .iter()
+        .any(|r| r.url.query().is_some_and(|q| q.contains("uploadType=multipart")));
+    assert!(!posted_multipart, "a large file never goes up in one multipart body");
+}
+
+/// Dropping the upload, as Cancel does, ends the session on Drive.
+#[tokio::test]
+async fn cancelling_a_large_upload_ends_its_session() {
+    let server = MockServer::start().await;
+    mount_token(&server).await;
+    let size = 6 * MIB;
+    let (file, _dir) = file_named(size, "cancel");
+    mount_session(&server, size).await;
+    Mock::given(method("PUT"))
+        .and(path(format!("{UPLOAD}/files")))
+        .respond_with(ResponseTemplate::new(308).set_delay(std::time::Duration::from_secs(10)))
+        .mount(&server)
+        .await;
+    Mock::given(method("DELETE"))
+        .and(path(format!("{UPLOAD}/files")))
+        .and(query_param("upload_id", "session1"))
+        .respond_with(ResponseTemplate::new(499))
+        .expect(1)
+        .mount(&server)
+        .await;
+    let gmail = client(&server);
+    let upload = gmail.upload_to_drive(&file, "Big.pdf", "application/pdf", Arc::default());
+    assert!(tokio::time::timeout(std::time::Duration::from_millis(500), upload).await.is_err());
+    for _ in 0..40 {
+        let deleted = server.received_requests().await.unwrap().iter().any(|r| r.method.as_str() == "DELETE");
+        if deleted {
+            return;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+    }
+    panic!("the session was never ended");
+}
+
+#[tokio::test]
+async fn sharing_a_file_makes_the_guest_a_reader_without_mailing_them() {
+    let server = MockServer::start().await;
+    mount_token(&server).await;
+    Mock::given(method("POST"))
+        .and(path(format!("{DRIVE}/files/1abc/permissions")))
+        .and(query_param("sendNotificationEmail", "false"))
+        .and(wiremock::matchers::body_json(json!({"role": "reader", "type": "user", "emailAddress": "ana@example.com"})))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({"id": "perm1"})))
+        .expect(1)
+        .mount(&server)
+        .await;
+    client(&server).share_file("1abc", "ana@example.com").await.unwrap();
 }
