@@ -986,6 +986,22 @@ fn account0_events(now: EpochMillis) -> Vec<CalendarEvent> {
         rules: vec!["RRULE:FREQ=YEARLY".into()],
         ..CalendarEvent::default()
     });
+    // Three days over next weekend into the Monday after, so Month
+    // draws one bar that carries on into the next week row.
+    let (trip_start, trip_end) = all_day_utc(monday.date_naive() + chrono::Duration::days(12), 3);
+    events.push(CalendarEvent {
+        calendar: FAMILY.into(),
+        id: "porto-weekend".into(),
+        uid: "porto-weekend@local".into(),
+        start: trip_start,
+        end: trip_end,
+        zone: "UTC".into(),
+        all_day: true,
+        title: "Porto weekend".into(),
+        busy: true,
+        status: CalendarStatus::Confirmed,
+        ..CalendarEvent::default()
+    });
     let year = monday.year();
     let republic_day = chrono::NaiveDate::from_ymd_opt(year, 10, 5).unwrap_or_else(|| monday.date_naive());
     let (start, end) = all_day_utc(republic_day, 1);
@@ -1061,8 +1077,8 @@ fn account1_events(now: EpochMillis) -> Vec<CalendarEvent> {
             at_week(monday, 3, 13, 0),
         ),
         timed_event(DESIGN_TEAM, "retro", "Retro", at_week(monday, 4, 16, 30), at_week(monday, 4, 17, 30)),
-        // Next Wednesday is busier than a month cell holds, so the month
-        // shows an "N more" button to open. It sits outside the week the
+        // Next Wednesday is the busiest day, so a short window folds it
+        // into an "N more" button in Month. It sits outside the week the
         // mockup draws.
         timed_event("primary", "sprint-review", "Sprint review", at_week(monday, 9, 11, 0), at_week(monday, 9, 12, 0)),
         timed_event(DESIGN_TEAM, "design-sync", "Design sync", at_week(monday, 9, 14, 0), at_week(monday, 9, 15, 0)),

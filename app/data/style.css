@@ -563,14 +563,21 @@ list.waiting-list > row.waiting-card:last-child { margin-bottom: 0; }
   min-width: 0;
 }
 /* The month view: each of the 42 cells is a small card; a day outside
-   the month shown reads quieter. */
+   the month shown reads quieter. The events sit over the cells, one
+   line each. */
 .month-cell { padding: 4px; border-top: 1px solid color-mix(in srgb, currentColor 8%, transparent); }
-.month-grid > .month-cell:not(:nth-child(7n)) {
+.month-grid > .month-cell:not(.last-column) {
   border-right: 1px solid color-mix(in srgb, currentColor 8%, transparent);
 }
-/* A month cell holds one line per event, all-day or timed alike. */
-.month-cell button.event-block { padding-top: 1px; padding-bottom: 1px; }
-.month-cell button.event-block .title { font-size: 0.82em; margin-top: 0; }
+.month-grid button.event-block { padding-top: 1px; padding-bottom: 1px; }
+.month-grid button.event-block .title { font-size: 0.82em; margin-top: 0; }
+/* A bar over several days is the week view's all-day card: 6 px corners
+   and the 12.5 px title. It squares the end that carries on into the
+   week row before or after. */
+.month-grid button.event-block.month-bar { border-radius: 6px; }
+.month-grid button.event-block.month-bar .title { font-size: 0.85em; }
+.month-grid button.event-block.continues-before { border-top-left-radius: 0; border-bottom-left-radius: 0; }
+.month-grid button.event-block.continues-after { border-top-right-radius: 0; border-bottom-right-radius: 0; }
 .day-heading.dimmed { opacity: 0.4; }
 /* A day outside working hours (a weekend, by default): the mockup shades
    nothing here, so this stays as subtle as the hairline above it. */

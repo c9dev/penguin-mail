@@ -616,6 +616,11 @@ def walk_calendar(keys):
             keys.escape()
             settle()
         if view == "Month":
+            # A week row grows to hold its events while the window has
+            # room, so the window goes short enough for the busiest week
+            # to fold a day into "N more".
+            keys.resize(1400, 560)
+            wait_until(lambda: button_named(r"^\d+ more events? on ") is not None, 5.0)
             more = button_named(r"^\d+ more events? on ")
             if more is None:
                 print("No crowded day in the month to open.", file=sys.stderr)
@@ -626,6 +631,7 @@ def walk_calendar(keys):
             time.sleep(0.3)
             walk_view("Month more")
             keys.escape()
+            keys.resize(1400, 900)
             settle()
 
     # The narrow window shows the list in place of Week and Month.

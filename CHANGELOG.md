@@ -63,6 +63,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Improved
 
+- In Month, an event over several days draws as one bar across them, and
+  a busy week gets more room than an empty one before it folds into "N
+  more".
 - Adding a Google account asks for every permission Penguin Mail uses
   in one visit to Google, and anything you leave unticked says why it
   is off, with Grant Access where you would use it. An account added
