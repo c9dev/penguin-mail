@@ -7810,6 +7810,12 @@ msgid_plural "{count} unread"
 msgstr[0] "{count} por ler"
 msgstr[1] "{count} por ler"
 
+#: sync/src/mailbox.rs
+msgid "{count} unread · {category}"
+msgid_plural "{count} unread · {category}"
+msgstr[0] "{count} por ler · {category}"
+msgstr[1] "{count} por ler · {category}"
+
 #: sync/src/mailbox.rs:1223
 msgid "Sent yesterday, no reply yet"
 msgstr "Enviada ontem, ainda sem resposta"

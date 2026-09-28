@@ -400,7 +400,9 @@ toggle-group.category-chips { background: none; padding: 0; box-shadow: none; }
 
 /* The list header's title, packed at the header's start instead of
    centred: "All Inboxes" leads, the unread count and category sit under
-   it, dim. */
+   it, dim. The margins set the title's centre at y 24 of the window and
+   the subtitle's baseline at 47, as mockups.py draws them. */
+.list-header-title { margin: 8px 0 -7px 2px; }
 .list-header-title .title { font-size: 1.16em; font-weight: 800; }
 .list-header-title .subtitle { font-size: 0.85em; font-weight: 500; opacity: 0.64; }
 
