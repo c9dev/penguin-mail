@@ -605,11 +605,19 @@ def walk_calendar(keys):
             # An invitation on the range on screen: its popover holds the
             # answer buttons. The ranges either side are hidden from the
             # bus, so the first match is one a person can see.
-            invitation = find_first(
-                lambda role, name: role in ("button", "push button")
-                and name.startswith("Quarterly review,")
-            )
-            if invitation is None or not on_screen(invitation):
+            def shown_invitation():
+                found = find_first(
+                    lambda role, name: role in ("button", "push button")
+                    and name.startswith("Quarterly review,")
+                )
+                return found if found is not None and on_screen(found) else None
+
+            # A busy machine can still be laying the week out when the walk
+            # gets here, so it waits for the block as the other steps do.
+            invitation = None
+            if wait_until(lambda: shown_invitation() is not None, 5.0):
+                invitation = shown_invitation()
+            if invitation is None:
                 print("No invitation on the week on screen to open.", file=sys.stderr)
                 sys.exit(2)
             activate(invitation)
