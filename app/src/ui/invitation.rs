@@ -390,7 +390,8 @@ impl EventCard {
             .css_classes(["invitation-card"])
             .accessible_role(gtk::AccessibleRole::Group)
             .build();
-        name(&inside, &gettext("Invitation"));
+        // No name of its own: the page's slot the card sits in already
+        // says "Invitation", and a screen reader would say it twice.
         inside.append(&news);
         inside.append(&head);
 
