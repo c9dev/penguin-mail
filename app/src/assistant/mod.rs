@@ -173,6 +173,27 @@ pub fn offers_summary(ai: &AiSettings) -> bool {
     }
 }
 
+/// Whether a header bar's assistant toggle should show, and whether it
+/// should show pressed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct AssistantToggle {
+    /// Shown under the same condition Summarize offers itself
+    /// ([`offers_summary`]): hidden while the assistant is off in
+    /// Preferences.
+    pub visible: bool,
+    /// Pressed while the assistant's panel is open.
+    pub pressed: bool,
+}
+
+/// The reading pane's and the calendar's assistant toggle, from the
+/// assistant's settings and whether its panel is open now.
+pub fn assistant_toggle(ai: &AiSettings, panel_open: bool) -> AssistantToggle {
+    AssistantToggle {
+        visible: offers_summary(ai),
+        pressed: panel_open,
+    }
+}
+
 /// The `claude` command, from `PATH` or its usual install places.
 pub fn find_claude() -> Option<PathBuf> {
     let on_path = std::env::var_os("PATH").and_then(|paths| {
@@ -284,5 +305,39 @@ mod tests {
         assert!(offers_summary(&ai));
         ai.provider = crate::settings::AiProvider::Anthropic;
         assert!(offers_summary(&ai));
+    }
+
+    #[test]
+    fn the_assistant_toggle_hides_while_the_assistant_is_off() {
+        let ai = crate::settings::AiSettings::default();
+        assert_eq!(
+            assistant_toggle(&ai, false),
+            AssistantToggle {
+                visible: false,
+                pressed: false
+            }
+        );
+    }
+
+    #[test]
+    fn the_assistant_toggle_shows_and_follows_the_panel_once_the_assistant_has_a_model() {
+        let ai = crate::settings::AiSettings {
+            provider: crate::settings::AiProvider::Anthropic,
+            ..Default::default()
+        };
+        assert_eq!(
+            assistant_toggle(&ai, false),
+            AssistantToggle {
+                visible: true,
+                pressed: false
+            }
+        );
+        assert_eq!(
+            assistant_toggle(&ai, true),
+            AssistantToggle {
+                visible: true,
+                pressed: true
+            }
+        );
     }
 }

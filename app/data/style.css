@@ -596,8 +596,10 @@ button.invitation-pill buttoncontent > box { border-spacing: 8px; }
 /* The header: "September 2026 W39", a Today pill, the arrows in one
    pill, and the view switch. */
 .range-title { margin: 0 10px 0 16px; }
-.calendar-compact .range-title { margin: 0 4px 0 2px; }
-.calendar-compact toggle-group.view-switch > toggle { min-width: 0; }
+.calendar-compact .range-title,
+.assistant-beside .range-title { margin: 0 4px 0 2px; }
+.calendar-compact toggle-group.view-switch > toggle,
+.assistant-beside toggle-group.view-switch > toggle { min-width: 0; }
 .range-title .bold { font-weight: 800; font-size: 1.43em; }
 .range-title .dim { font-size: 1.43em; font-weight: 400; opacity: 0.4; }
 .range-title .week { font-size: 0.85em; font-weight: 700; opacity: 0.4; }
@@ -877,6 +879,12 @@ popover.event-popover button.popover-open-mail {
   font-weight: 700;
   color: var(--accent-color);
 }
+
+/* The assistant toggle in the reading pane's and the calendar's headers
+   (R12): a plain flat circular button like More or the calendar's own
+   icon buttons until the panel is open, when its sparkle turns the
+   accent colour a symbolic icon takes from its foreground. */
+.assistant-toggle:checked { color: var(--accent-color); }
 
 /* The conversation header's buttons, grouped into capsules the way the
    mockup draws them (calendar-mockup/mockups.py, capsule()): replying,

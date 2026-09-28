@@ -141,6 +141,9 @@ pub struct CalendarView {
     pub sidebar: gtk::Box,
     /// Shows the sidebar when the window is too narrow to keep it open.
     pub sidebar_button: gtk::ToggleButton,
+    /// Opens or closes the assistant beside the mail (R12). The window
+    /// binds it to the assistant panel's own toggle path.
+    pub assistant_toggle: gtk::ToggleButton,
     core: Rc<Core>,
     settings: Box<dyn Fn() -> Settings>,
     hooks: Hooks,
@@ -184,6 +187,10 @@ pub struct CalendarView {
     /// Below the width where the sidebar folds away, the header keeps
     /// the range's bold part only.
     compact: Cell<bool>,
+    /// The assistant's panel is open beside the calendar (R12), which
+    /// narrows the header the same way `compact` does, whatever the
+    /// window's own width.
+    assistant_beside: Cell<bool>,
     month_rows: Cell<usize>,
     accounts: RefCell<Vec<CalendarAccount>>,
     calendars: RefCell<Calendars>,
@@ -309,6 +316,16 @@ impl CalendarView {
             .visible(false)
             .build();
         crate::ui::name(&sidebar_button, &gettext("Show Calendars"));
+        // The window binds this to the assistant panel's own open state
+        // (R12); it starts hidden until the window says the assistant is
+        // on.
+        let assistant_toggle = gtk::ToggleButton::builder()
+            .icon_name("penguin-mail-sparkle-symbolic")
+            .tooltip_text(gettext("Assistant (Ctrl+J)"))
+            .css_classes(["assistant-toggle"])
+            .visible(false)
+            .build();
+        crate::ui::name_with_shortcut(&assistant_toggle, &gettext("Assistant (Ctrl+J)"));
 
         let header = adw::HeaderBar::builder()
             .title_widget(&gtk::Box::new(gtk::Orientation::Horizontal, 0))
@@ -318,6 +335,11 @@ impl CalendarView {
         header.pack_start(&title);
         header.pack_start(&today_button);
         header.pack_start(&arrows);
+        // The assistant toggle sits at the header's outer right edge. Its
+        // own panel opening beside the calendar narrows the header the
+        // same way the window's compact width does (set_assistant_beside,
+        // style.css's .assistant-beside), so the switch still has room.
+        header.pack_end(&assistant_toggle);
         header.pack_end(&search_button);
         header.pack_end(&new_event);
         header.pack_end(&switch_slot);
@@ -447,6 +469,7 @@ impl CalendarView {
                 page,
                 sidebar,
                 sidebar_button,
+                assistant_toggle,
                 core,
                 settings: Box::new(settings),
                 hooks,
@@ -482,6 +505,7 @@ impl CalendarView {
                 }),
                 narrow: Cell::new(false),
                 compact: Cell::new(false),
+                assistant_beside: Cell::new(false),
                 month_rows: Cell::new(4),
                 accounts: RefCell::new(Vec::new()),
                 calendars: RefCell::new(HashMap::new()),
@@ -760,6 +784,21 @@ impl CalendarView {
         self.show_range();
     }
 
+    /// Answers the assistant's panel opening beside the calendar (R12):
+    /// the header narrows the same way `set_compact` does, at any window
+    /// width, since the panel takes room from the same card.
+    pub fn set_assistant_beside(&self, beside: bool) {
+        if beside == self.assistant_beside.get() {
+            return;
+        }
+        self.assistant_beside.set(beside);
+        match beside {
+            true => self.page.add_css_class("assistant-beside"),
+            false => self.page.remove_css_class("assistant-beside"),
+        }
+        self.show_range();
+    }
+
     /// Opens the search and puts the cursor in it.
     pub fn focus_search(&self) {
         self.search_bar.set_search_mode(true);
@@ -829,7 +868,7 @@ impl CalendarView {
         self.title_bold.set_label(&bold);
         self.title_dim.set_label(&dim);
         self.title_week.set_label(&week);
-        let roomy = !self.compact.get() && !self.narrow.get();
+        let roomy = !self.compact.get() && !self.narrow.get() && !self.assistant_beside.get();
         self.title_dim.set_visible(roomy);
         self.title_week.set_visible(!week.is_empty() && roomy);
         let (back, forward) = shown::arrow_names(showing);

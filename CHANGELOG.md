@@ -93,6 +93,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   window too narrow for the sidebar it stays a toast.
 - The message header is shorter: who sent it, who it went to, and
   Details for the rest.
+- A sparkle button beside More opens the assistant from the reading
+  pane, and the calendar's header carries the same button.
 
 ### Fixed
 
