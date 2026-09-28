@@ -136,6 +136,9 @@ pub struct Settings {
     /// The address of the account the last new event went on. A new
     /// event goes on that account's primary calendar.
     pub last_calendar_account: Option<String>,
+    /// The accounts, by lower-case address, whose calendars the calendar
+    /// sidebar keeps folded under their heading.
+    pub folded_calendar_accounts: Vec<String>,
     /// Before contacts were chosen per account, one switch for all of them.
     /// True folds into `contact_accounts` as every account the first time
     /// the accounts load, and goes back to false.
@@ -478,6 +481,7 @@ impl Default for Settings {
             working_hours: mailrs_domain::calendar::hours::WorkingHours::default(),
             week_start: WeekStart::default(),
             last_calendar_account: None,
+            folded_calendar_accounts: Vec::new(),
         }
     }
 }

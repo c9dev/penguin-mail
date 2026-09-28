@@ -17,6 +17,7 @@ use mailrs_sync::Offers;
 use super::{FolderLook, LABEL_COLORS, Mailbox, Standard, describe, label_color_name};
 use crate::format::{PALETTE, account_color_index, palette_name};
 use crate::offered::Filing;
+use crate::settings::Space;
 use sections::{Place, Section};
 
 struct Row {
@@ -275,6 +276,12 @@ pub struct Sidebar {
     /// calendar, and "Mailboxes" shows in its place, since a switch to a
     /// calendar that cannot show anything would only mislead.
     pub switch: adw::ToggleGroup,
+    /// The badge on the Mail toggle and on the Calendar one.
+    badges: [(Space, gtk::Label); 2],
+    /// Unread mail in the unified inbox, for the Mail toggle's badge.
+    unread: Cell<i64>,
+    /// Invitations waiting for an answer, for the Calendar toggle's.
+    waiting: Cell<i64>,
     title: adw::WindowTitle,
     /// The mailbox list, or the calendar's own sidebar.
     content: gtk::Stack,
@@ -313,22 +320,33 @@ impl Sidebar {
             .valign(gtk::Align::Center)
             .visible(false)
             .build();
-        for (name, label, icon) in [
-            ("mail", gettext("Mail"), "mail-unread-symbolic"),
-            ("calendar", gettext("Calendar"), "x-office-calendar-symbolic"),
-        ] {
+        let badges = [
+            (Space::Mail, "mail", gettext("Mail"), "mail-unread-symbolic"),
+            (Space::Calendar, "calendar", gettext("Calendar"), "x-office-calendar-symbolic"),
+        ]
+        .map(|(space, name, label, icon)| {
             let content = adw::ButtonContent::builder()
                 .icon_name(icon)
                 .label(&label)
                 .build();
-            switch.add(
-                adw::Toggle::builder()
-                    .name(name)
-                    .label(&label)
-                    .child(&content)
-                    .build(),
-            );
-        }
+            // Each toggle counts what waits in the other space, in a small
+            // accent pill after its name, while that space is away.
+            let badge = gtk::Label::builder()
+                .css_classes(["space-badge"])
+                .valign(gtk::Align::Center)
+                .visible(false)
+                .build();
+            let child = gtk::Box::builder().spacing(6).build();
+            child.append(&content);
+            child.append(&badge);
+            let toggle = adw::Toggle::builder()
+                .name(name)
+                .label(&label)
+                .child(&child)
+                .build();
+            switch.add(toggle);
+            (space, badge)
+        });
         switch.set_active_name(Some("mail"));
         // 8 px past the header's own padding puts the switch 14 px into
         // the card, as mockups.py's `sidebar_shell` draws it.
@@ -378,6 +396,9 @@ impl Sidebar {
             foot,
             mail_showing: Cell::new(true),
             switch,
+            badges,
+            unread: Cell::new(0),
+            waiting: Cell::new(0),
             title,
             content,
             list,
@@ -467,6 +488,7 @@ impl Sidebar {
         self.content.set_visible_child_name("calendar");
         self.mail_showing.set(false);
         self.sync_foot();
+        self.sync_badges();
     }
 
     /// Puts the mailbox list back.
@@ -474,6 +496,43 @@ impl Sidebar {
         self.content.set_visible_child_name("mail");
         self.mail_showing.set(true);
         self.sync_foot();
+        self.sync_badges();
+    }
+
+    /// Unread mail in the unified inbox changed.
+    pub fn set_unread(&self, count: i64) {
+        self.unread.set(count);
+        self.sync_badges();
+    }
+
+    /// The number of invitations waiting for an answer changed.
+    pub fn set_waiting(&self, count: i64) {
+        self.waiting.set(count);
+        self.sync_badges();
+    }
+
+    /// Puts each toggle's count on its badge, and in its name, so a
+    /// screen reader hears "Mail, 12 unread" where the eye sees the pill.
+    fn sync_badges(&self) {
+        let on_screen = if self.mail_showing.get() { Space::Mail } else { Space::Calendar };
+        let badges = space_badges(on_screen, self.unread.get(), self.waiting.get());
+        // An `adw::Toggle` is not a widget, and the group points each of
+        // its buttons' `LabelledBy` at the toggle's content, which wins
+        // over a label set later. The buttons are the group's radio
+        // children, in the toggles' own order.
+        let buttons = std::iter::successors(self.switch.first_child(), |child| child.next_sibling())
+            .filter(|child| child.accessible_role() == gtk::AccessibleRole::Radio);
+        for ((space, badge), button) in self.badges.iter().zip(buttons) {
+            let count = match space {
+                Space::Mail => badges.mail,
+                Space::Calendar => badges.calendar,
+            };
+            let text = badge_text(count);
+            badge.set_label(text.as_deref().unwrap_or_default());
+            badge.set_visible(text.is_some());
+            button.reset_relation(gtk::AccessibleRelation::LabelledBy);
+            super::name(&button, &toggle_name(*space, count));
+        }
     }
 
     /// Shows the next-event card and keeps the shared foot in step.
@@ -964,6 +1023,50 @@ fn mailbox_row_name(mailbox: &str, count: i64, unread: bool) -> String {
         false => fill_plural(
             "{mailbox}, {count} message",
             "{mailbox}, {count} messages",
+            count as usize,
+            &values,
+        ),
+    }
+}
+
+/// The counts the Mail and Calendar toggles carry. Each counts only
+/// while the other space shows, since the space on screen already shows
+/// its own numbers.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SpaceBadges {
+    /// Unread mail in the unified inbox.
+    pub mail: i64,
+    /// Invitations waiting for the person's answer.
+    pub calendar: i64,
+}
+
+pub fn space_badges(on_screen: Space, unread: i64, waiting: i64) -> SpaceBadges {
+    SpaceBadges {
+        mail: if on_screen == Space::Calendar { unread } else { 0 },
+        calendar: if on_screen == Space::Mail { waiting } else { 0 },
+    }
+}
+
+/// A toggle's badge: its count, "99+" past 99, and none at zero.
+pub fn badge_text(count: i64) -> Option<String> {
+    match count {
+        ..=0 => None,
+        1..=99 => Some(count.to_string()),
+        _ => Some(gettext("99+")),
+    }
+}
+
+/// What a toggle says out loud, with the count its badge shows.
+pub fn toggle_name(space: Space, count: i64) -> String {
+    let number = count.to_string();
+    let values = [("count", number.as_str())];
+    match (space, count > 0) {
+        (Space::Mail, false) => gettext("Mail"),
+        (Space::Calendar, false) => gettext("Calendar"),
+        (Space::Mail, true) => fill_plural("Mail, {count} unread", "Mail, {count} unread", count as usize, &values),
+        (Space::Calendar, true) => fill_plural(
+            "Calendar, {count} waiting for your answer",
+            "Calendar, {count} waiting for your answer",
             count as usize,
             &values,
         ),
@@ -1494,5 +1597,48 @@ mod tests {
             rows,
             [("receipts", 1, true), ("Work", 1, false), ("Clients", 2, true)]
         );
+    }
+}
+
+#[cfg(test)]
+mod badge_tests {
+    use super::{badge_text, space_badges, toggle_name};
+    use crate::settings::Space;
+
+    #[test]
+    fn no_badge_shows_at_zero() {
+        assert_eq!(badge_text(0), None);
+    }
+
+    #[test]
+    fn a_count_shows_as_its_number() {
+        assert_eq!(badge_text(12).as_deref(), Some("12"));
+    }
+
+    #[test]
+    fn a_count_past_ninety_nine_shows_as_99_plus() {
+        assert_eq!(badge_text(99).as_deref(), Some("99"));
+        assert_eq!(badge_text(100).as_deref(), Some("99+"));
+    }
+
+    #[test]
+    fn mail_shows_its_unread_only_while_the_calendar_shows() {
+        let badges = space_badges(Space::Calendar, 12, 3);
+        assert_eq!(badges.mail, 12);
+        assert_eq!(badges.calendar, 0);
+    }
+
+    #[test]
+    fn the_calendar_shows_what_waits_only_while_mail_shows() {
+        let badges = space_badges(Space::Mail, 12, 3);
+        assert_eq!(badges.mail, 0);
+        assert_eq!(badges.calendar, 3);
+    }
+
+    #[test]
+    fn a_toggle_says_its_count_out_loud() {
+        assert_eq!(toggle_name(Space::Mail, 12), "Mail, 12 unread");
+        assert_eq!(toggle_name(Space::Calendar, 1), "Calendar, 1 waiting for your answer");
+        assert_eq!(toggle_name(Space::Mail, 0), "Mail");
     }
 }

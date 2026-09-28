@@ -4,16 +4,18 @@
 //! the account's offers and consent, not a widget, decide it.
 
 use std::cell::{Cell, RefCell};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
 use adw::prelude::*;
 use chrono::{Datelike, Days, NaiveDate};
+use gtk::{gdk, gio, glib};
 use mailrs_domain::calendar::Calendar;
-use mailrs_domain::translate::{date_locale, fill, gettext};
+use mailrs_domain::translate::{date_locale, fill, fill_plural, gettext};
 use mailrs_domain::{Account, AccountId, EpochMillis};
 use mailrs_sync::{Missing, Offers, Waiting, Withheld};
 
+use super::range::{Range, ViewKind};
 use super::tint;
 use super::words;
 
@@ -40,6 +42,9 @@ pub struct SidebarAccount {
     pub id: AccountId,
     pub address: String,
     pub reach: CalendarReach,
+    /// The calendars the person took off the list, which the "Hidden
+    /// Calendars" menu at its foot offers to put back.
+    pub hidden: Vec<Calendar>,
 }
 
 /// The sidebar's rows from each account's provider offers, its own
@@ -67,9 +72,133 @@ pub fn sidebar_accounts(
                 id: account.id,
                 address: account.email.clone(),
                 reach,
+                hidden: Vec::new(),
             }
         })
         .collect()
+}
+
+/// Moves each calendar in `unlisted`, by account, from the list to the
+/// account's hidden calendars. The list stays in its own order.
+pub fn take_off_the_list(
+    mut rows: Vec<SidebarAccount>,
+    unlisted: &HashMap<AccountId, HashSet<String>>,
+) -> Vec<SidebarAccount> {
+    for row in &mut rows {
+        let Some(ids) = unlisted.get(&row.id) else {
+            continue;
+        };
+        if let CalendarReach::Calendars(list) | CalendarReach::PrimaryOnly(list) = &mut row.reach {
+            let (hidden, kept) = std::mem::take(list)
+                .into_iter()
+                .partition(|calendar| ids.contains(&calendar.id));
+            *list = kept;
+            row.hidden = hidden;
+        }
+    }
+    rows
+}
+
+/// Whether an account keeps its heading in the list: not once every
+/// calendar it has is off the list, since the heading would stand over
+/// nothing. Hidden Calendars still brings them back.
+pub fn shows_heading(account: &SidebarAccount) -> bool {
+    !matches!(&account.reach, CalendarReach::Calendars(list) if list.is_empty() && !account.hidden.is_empty())
+}
+
+/// Whether `change` alters what the next-event card at the foot of the
+/// mail sidebar shows: which calendars count, or their colour.
+pub fn redraws_next_event(change: &ListChange) -> bool {
+    !matches!(change, ListChange::Folded { .. })
+}
+
+/// How many calendars every account together took off the list.
+pub fn hidden_count(rows: &[SidebarAccount]) -> usize {
+    rows.iter().map(|row| row.hidden.len()).sum()
+}
+
+/// The first and last day the grid shows, for the mini month's band: a
+/// week's seven days, or a month's own days without the ones before and
+/// after that fill its grid. A single day gets no band, since the
+/// selected day already marks it.
+pub fn in_view(kind: ViewKind, day: NaiveDate) -> Option<(NaiveDate, NaiveDate)> {
+    match kind {
+        ViewKind::Day => None,
+        ViewKind::Week => {
+            let range = Range::around(kind, day);
+            Some((range.first, range.first + Days::new(u64::from(range.days) - 1)))
+        }
+        ViewKind::Month => {
+            let first = day.with_day(1).unwrap_or(day);
+            Some((first, adjacent_month(first, 1) - Days::new(1)))
+        }
+    }
+}
+
+/// How one mini month day looks. `today` fills it with the accent,
+/// `selected` tints it, and a day `in_view` sits on the faint band, which
+/// rounds off at `band_start` and `band_end`.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct DayLook {
+    pub today: bool,
+    pub selected: bool,
+    pub outside: bool,
+    pub in_view: bool,
+    pub band_start: bool,
+    pub band_end: bool,
+}
+
+/// How `date`, in `column` of the mini month (0 to 6), looks while the
+/// month starting on `month` shows, the view sits on `selected`, and the
+/// grid shows `band` ([`in_view`]). The band rounds off where the range
+/// starts or ends and at each row's edges.
+pub fn day_look(
+    date: NaiveDate,
+    column: usize,
+    today: NaiveDate,
+    selected: NaiveDate,
+    month: NaiveDate,
+    band: Option<(NaiveDate, NaiveDate)>,
+) -> DayLook {
+    let in_view = band.is_some_and(|(first, last)| (first..=last).contains(&date));
+    DayLook {
+        today: date == today,
+        selected: date == selected,
+        outside: date.month() != month.month() || date.year() != month.year(),
+        in_view,
+        band_start: in_view && (column == 0 || band.is_some_and(|(first, _)| first == date)),
+        band_end: in_view && (column == 6 || band.is_some_and(|(_, last)| last == date)),
+    }
+}
+
+/// The day button's own classes for `look`.
+pub fn day_classes(look: DayLook) -> Vec<&'static str> {
+    let mut classes = vec!["flat"];
+    if look.today {
+        classes.push("today");
+    }
+    if look.selected {
+        classes.push("selected");
+    }
+    if look.outside {
+        classes.push("outside");
+    }
+    classes
+}
+
+/// The classes of the cell behind a day button, which draws the band.
+pub fn band_classes(look: DayLook) -> Vec<&'static str> {
+    let mut classes = vec!["mini-day"];
+    if look.in_view {
+        classes.push("in-view");
+    }
+    if look.band_start {
+        classes.push("band-start");
+    }
+    if look.band_end {
+        classes.push("band-end");
+    }
+    classes
 }
 
 /// The accounts whose invitations "Waiting for your answer" lists: those
@@ -138,8 +267,22 @@ fn weekday_initials() -> Vec<String> {
 const WAITING_CARD: i32 = 42;
 const WAITING_GAP: i32 = 8;
 
+/// What the person changed in the calendar list. Every choice here stays
+/// on this computer: the account may only read Google's calendar list.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ListChange {
+    /// Ticked or unticked a calendar's check.
+    Shown { account: AccountId, calendar: String, shown: bool },
+    /// Took a calendar off the list, or put it back.
+    Listed { account: AccountId, calendar: String, listed: bool },
+    /// Gave a calendar a colour of its own, or `None` for the provider's.
+    Color { account: AccountId, calendar: String, color: Option<String> },
+    /// Folded an account's calendars under its heading, or opened them.
+    Folded { address: String, folded: bool },
+}
+
 type OnDate = dyn Fn(NaiveDate);
-type OnShown = dyn Fn(AccountId, String, bool);
+type OnChange = dyn Fn(ListChange);
 type OnGrant = dyn Fn(AccountId);
 /// Opens the occurrence a "Waiting for your answer" card names: the
 /// account, the calendar, the event's id and the occurrence's own start,
@@ -154,6 +297,10 @@ type OnOpenMail = dyn Fn(AccountId, String);
 /// so `show` moving it forward is what the closure reads at the next
 /// click, not a stale copy taken when the button was built.
 struct MiniDay {
+    /// The cell behind the button, which draws the band for the week or
+    /// month in view edge to edge, where the button is only as wide as
+    /// its number.
+    cell: gtk::Box,
     button: gtk::Button,
     number: gtk::Label,
     dot: gtk::Widget,
@@ -190,8 +337,11 @@ pub struct CalendarSidebar {
     /// `row-activated` handler to say which occurrence a card opens, and
     /// compared before a redraw to leave unchanged rows where they are.
     waiting_shown: Rc<RefCell<Vec<Waiting>>>,
+    /// The accounts, by lower-case address, whose calendars sit folded
+    /// under their heading.
+    folded: Rc<RefCell<HashSet<String>>>,
     on_date: Rc<OnDate>,
-    on_shown: Rc<OnShown>,
+    on_change: Rc<OnChange>,
     on_grant: Rc<OnGrant>,
     on_open_mail: Rc<OnOpenMail>,
 }
@@ -200,16 +350,17 @@ impl CalendarSidebar {
     /// `on_date` runs for a day cell, and for the mini month's own
     /// Previous/Next Month arrows with the 1st of that month. The view
     /// goes to the date and calls `show` again, so the grid and the mini
-    /// month always show the same month.
+    /// month always show the same month. `on_change` hears each choice
+    /// made in the calendar list.
     pub fn new(
         on_date: impl Fn(NaiveDate) + 'static,
-        on_shown: impl Fn(AccountId, String, bool) + 'static,
+        on_change: impl Fn(ListChange) + 'static,
         on_grant: impl Fn(AccountId) + 'static,
         on_open_waiting: impl Fn(AccountId, String, String, EpochMillis) + 'static,
         on_open_mail: impl Fn(AccountId, String) + 'static,
     ) -> Rc<CalendarSidebar> {
         let on_date: Rc<OnDate> = Rc::new(on_date);
-        let on_shown: Rc<OnShown> = Rc::new(on_shown);
+        let on_change: Rc<OnChange> = Rc::new(on_change);
         let on_grant: Rc<OnGrant> = Rc::new(on_grant);
         let on_open_waiting: Rc<OnOpenWaiting> = Rc::new(on_open_waiting);
         let on_open_mail: Rc<OnOpenMail> = Rc::new(on_open_mail);
@@ -328,10 +479,14 @@ impl CalendarSidebar {
                 let button = gtk::Button::builder()
                     .child(&inner)
                     .halign(gtk::Align::Center)
+                    .hexpand(true)
                     .build();
-                mini.attach(&button, column, row, 1, 1);
+                let cell = gtk::Box::builder().css_classes(["mini-day"]).build();
+                cell.append(&button);
+                mini.attach(&cell, column, row, 1, 1);
                 let date = Rc::new(Cell::new(placeholder));
                 days.push(MiniDay {
+                    cell,
                     button,
                     number,
                     dot: dot.upcast(),
@@ -418,11 +573,15 @@ impl CalendarSidebar {
             waiting_section,
             waiting_list,
             waiting_shown,
+            folded: Rc::new(RefCell::new(HashSet::new())),
             on_date,
-            on_shown,
+            on_change,
             on_grant,
             on_open_mail,
         });
+        sidebar
+            .widget
+            .insert_action_group("calendars", Some(&list_actions(&sidebar.on_change)));
 
         for day in &sidebar.days {
             let on_date = Rc::clone(&sidebar.on_date);
@@ -438,17 +597,20 @@ impl CalendarSidebar {
         sidebar
     }
 
-    /// Redraws the mini month around `month`, and rebuilds the calendar
-    /// list from `accounts` ([`sidebar_accounts`]'s own output) when it
-    /// differs from the list on screen.
+    /// Redraws the mini month around `selected`, the day the view sits
+    /// on, with `band` ([`in_view`]) marking what the grid shows, and
+    /// rebuilds the calendar list from `accounts` ([`sidebar_accounts`]
+    /// and [`take_off_the_list`]) when it differs from the list on
+    /// screen.
     pub fn show(
         &self,
-        month: NaiveDate,
+        selected: NaiveDate,
+        band: Option<(NaiveDate, NaiveDate)>,
         today: NaiveDate,
         busy_days: &HashSet<NaiveDate>,
         accounts: &[SidebarAccount],
     ) {
-        self.show_month(month, today, busy_days);
+        self.show_month(selected, band, today, busy_days);
         if *self.listed.borrow() != accounts {
             self.rebuild_calendar_list(accounts);
             self.listed.replace(accounts.to_vec());
@@ -587,9 +749,21 @@ impl CalendarSidebar {
         }
     }
 
-    /// Redraws the mini month around `month` alone.
-    pub fn show_month(&self, month: NaiveDate, today: NaiveDate, busy_days: &HashSet<NaiveDate>) {
-        let first_of_month = month.with_day(1).unwrap_or(month);
+    /// Sets the accounts whose calendars start folded, by lower-case
+    /// address, before the first [`Self::show`] builds the list.
+    pub fn set_folded(&self, folded: HashSet<String>) {
+        self.folded.replace(folded);
+    }
+
+    /// Redraws the mini month around `selected` alone.
+    fn show_month(
+        &self,
+        selected: NaiveDate,
+        band: Option<(NaiveDate, NaiveDate)>,
+        today: NaiveDate,
+        busy_days: &HashSet<NaiveDate>,
+    ) {
+        let first_of_month = selected.with_day(1).unwrap_or(selected);
         self.month.set(first_of_month);
         self.month_title.set_label(
             &first_of_month
@@ -599,14 +773,17 @@ impl CalendarSidebar {
         let first_shown = week_start_of(first_of_month);
         let weeks = weeks_shown(first_of_month);
         for (index, day) in self.days.iter().enumerate() {
-            day.button.set_visible(index / 7 < weeks);
+            day.cell.set_visible(index / 7 < weeks);
             let date = first_shown + Days::new(index as u64);
             day.date.set(date);
             day.number.set_label(&date.day().to_string());
             let has_events = busy_days.contains(&date);
             day.dot.set_visible(has_events);
+            let look = day_look(date, index % 7, today, selected, first_of_month, band);
+            day.button.set_css_classes(&day_classes(look));
+            day.cell.set_css_classes(&band_classes(look));
             day.button
-                .set_css_classes(&mini_day_classes(date, today, first_of_month));
+                .update_state(&[gtk::accessible::State::Selected(Some(look.selected))]);
             crate::ui::name(&day.button, &words::mini_day_words(date, has_events));
         }
     }
@@ -615,52 +792,121 @@ impl CalendarSidebar {
         while let Some(child) = self.calendar_list.first_child() {
             self.calendar_list.remove(&child);
         }
-        for account in accounts {
-            let heading = gtk::Label::builder()
-                .label(&account.address)
-                // A2's heading class (`app/data/style.css`) sets the
-                // size, weight and faint colour every sidebar heading
-                // shares; an account's address stays sentence case, so it
-                // takes none of that rule's capitals.
-                .css_classes(["sidebar-section"])
-                .xalign(0.0)
-                .margin_top(14)
-                .margin_bottom(12)
+        for account in accounts.iter().filter(|a| shows_heading(a)) {
+            // The gap under the heading sits inside the part that folds,
+            // so a folded account's heading runs straight on to the next.
+            let body = gtk::Box::builder()
+                .orientation(gtk::Orientation::Vertical)
+                .margin_top(12)
                 .build();
-            self.calendar_list.append(&heading);
             match &account.reach {
                 CalendarReach::Calendars(calendars) => {
                     for calendar in calendars {
-                        self.calendar_list
-                            .append(&self.calendar_row(account.id, &account.address, calendar));
+                        body.append(&self.calendar_row(account.id, &account.address, calendar));
                     }
                 }
                 CalendarReach::PrimaryOnly(calendars) => {
                     for calendar in calendars {
-                        self.calendar_list
-                            .append(&self.calendar_row(account.id, &account.address, calendar));
+                        body.append(&self.calendar_row(account.id, &account.address, calendar));
                     }
-                    self.calendar_list.append(&self.grant_row(
+                    body.append(&self.grant_row(
                         account.id,
                         &gettext("Grant Access to show shared calendars"),
                         None,
                     ));
                 }
                 CalendarReach::Withheld => {
-                    self.calendar_list.append(&dim_line(&gettext(
+                    body.append(&dim_line(&gettext(
                         "Penguin Mail cannot see this account's calendars",
                     )));
-                    self.calendar_list.append(&self.grant_row(
+                    body.append(&self.grant_row(
                         account.id,
                         &gettext("Grant Access"),
                         Some(&account.address),
                     ));
                 }
                 CalendarReach::NotOffered(reason) => {
-                    self.calendar_list.append(&dim_line(reason));
+                    body.append(&dim_line(reason));
                 }
             }
+            let folded = self.folded.borrow().contains(&account.address.to_lowercase());
+            let revealer = gtk::Revealer::builder()
+                .child(&body)
+                .reveal_child(!folded)
+                .transition_type(gtk::RevealerTransitionType::SlideDown)
+                .transition_duration(150)
+                .build();
+            self.calendar_list.append(&self.heading(&account.address, folded, &revealer));
+            self.calendar_list.append(&revealer);
         }
+        if hidden_count(accounts) > 0 {
+            self.calendar_list.append(&hidden_menu(accounts));
+        }
+    }
+
+    /// An account's heading: its address, which folds the calendars under
+    /// it away and opens them again, as a mail account's heading does.
+    /// The chevron shows while the account is folded, or under the
+    /// pointer or the focus, so an open list looks as the mockup draws it.
+    fn heading(&self, address: &str, folded: bool, revealer: &gtk::Revealer) -> gtk::Button {
+        let label = gtk::Label::builder()
+            .label(address)
+            // A2's heading class (`app/data/style.css`) sets the size,
+            // weight and faint colour every sidebar heading shares; an
+            // account's address stays sentence case, so it takes none of
+            // that rule's capitals.
+            .css_classes(["sidebar-section"])
+            .xalign(0.0)
+            .hexpand(true)
+            .ellipsize(gtk::pango::EllipsizeMode::Middle)
+            .build();
+        let chevron = gtk::Image::builder()
+            .icon_name(chevron_icon(folded))
+            .pixel_size(12)
+            .css_classes(["calendar-chevron"])
+            .build();
+        let content = gtk::Box::builder().spacing(4).build();
+        content.append(&label);
+        content.append(&chevron);
+        let button = gtk::Button::builder()
+            .child(&content)
+            .css_classes(["flat", "calendar-heading"])
+            .margin_top(14)
+            .build();
+        if folded {
+            button.add_css_class("folded");
+        }
+        crate::ui::describe(&button, address, &gettext("Show or hide this account's calendars"));
+        button.update_state(&[gtk::accessible::State::Expanded(Some(!folded))]);
+        let (folded_set, on_change, revealer) =
+            (Rc::clone(&self.folded), Rc::clone(&self.on_change), revealer.clone());
+        let address = address.to_string();
+        button.connect_clicked(move |button| {
+            let key = address.to_lowercase();
+            // The borrow ends here, before the widgets and the change
+            // below run any handler of their own.
+            let now_folded = {
+                let mut set = folded_set.borrow_mut();
+                if set.remove(&key) {
+                    false
+                } else {
+                    set.insert(key);
+                    true
+                }
+            };
+            revealer.set_reveal_child(!now_folded);
+            chevron.set_icon_name(Some(chevron_icon(now_folded)));
+            match now_folded {
+                true => button.add_css_class("folded"),
+                false => button.remove_css_class("folded"),
+            }
+            button.update_state(&[gtk::accessible::State::Expanded(Some(!now_folded))]);
+            on_change(ListChange::Folded {
+                address: address.clone(),
+                folded: now_folded,
+            });
+        });
+        button
     }
 
     fn calendar_row(&self, account_id: AccountId, address: &str, calendar: &Calendar) -> gtk::Box {
@@ -695,10 +941,38 @@ impl CalendarSidebar {
             lock.set_pixel_size(12);
             row.append(&lock);
         }
-        let on_shown = Rc::clone(&self.on_shown);
+        let options = gtk::MenuButton::builder()
+            .icon_name("view-more-symbolic")
+            .menu_model(&calendar_menu(account_id, &calendar.id))
+            .css_classes(["flat", "circular", "calendar-options"])
+            .valign(gtk::Align::Center)
+            .tooltip_text(gettext("Calendar options"))
+            .build();
+        crate::ui::name(
+            &options,
+            &fill(&gettext("Options for {calendar}"), &[("calendar", &calendar.name)]),
+        );
+        crate::ui::name_menu_items_of(&options);
+        row.append(&options);
+        // A right click or a long press anywhere on the row opens the
+        // same menu, from the button, which shows while the pointer is
+        // on the row.
+        let click = gtk::GestureClick::builder().button(gdk::BUTTON_SECONDARY).build();
+        let menu = options.clone();
+        click.connect_pressed(move |_, _, _, _| menu.popup());
+        row.add_controller(click);
+        let press = gtk::GestureLongPress::new();
+        let menu = options.clone();
+        press.connect_pressed(move |_, _, _| menu.popup());
+        row.add_controller(press);
+        let on_change = Rc::clone(&self.on_change);
         let calendar_id = calendar.id.clone();
         check.connect_toggled(move |check| {
-            on_shown(account_id, calendar_id.clone(), check.is_active())
+            on_change(ListChange::Shown {
+                account: account_id,
+                calendar: calendar_id.clone(),
+                shown: check.is_active(),
+            })
         });
         row
     }
@@ -727,6 +1001,123 @@ impl CalendarSidebar {
     }
 }
 
+fn chevron_icon(folded: bool) -> &'static str {
+    match folded {
+        true => "pan-end-symbolic",
+        false => "pan-down-symbolic",
+    }
+}
+
+/// The `calendars` actions the row menus and the Hidden Calendars menu
+/// name, each taking the account and the calendar's id.
+fn list_actions(on_change: &Rc<OnChange>) -> gio::SimpleActionGroup {
+    let actions = gio::SimpleActionGroup::new();
+    for (name, listed) in [("hide", false), ("unhide", true)] {
+        let action = gio::SimpleAction::new(name, Some(glib::VariantTy::new("(xs)").expect("a valid type")));
+        let on_change = Rc::clone(on_change);
+        action.connect_activate(move |_, target| {
+            if let Some((account, calendar)) = target.and_then(|t| t.get::<(AccountId, String)>()) {
+                on_change(ListChange::Listed { account, calendar, listed });
+            }
+        });
+        actions.add_action(&action);
+    }
+    let color = gio::SimpleAction::new("color", Some(glib::VariantTy::new("(xss)").expect("a valid type")));
+    let on_change = Rc::clone(on_change);
+    color.connect_activate(move |_, target| {
+        if let Some((account, calendar, color)) = target.and_then(|t| t.get::<(AccountId, String, String)>()) {
+            let color = (!color.is_empty()).then_some(color);
+            on_change(ListChange::Color { account, calendar, color });
+        }
+    });
+    actions.add_action(&color);
+    actions
+}
+
+/// A calendar row's menu: Hide from the List, and Color with Gmail's
+/// label colours and the calendar's own colour back.
+fn calendar_menu(account_id: AccountId, calendar: &str) -> gio::Menu {
+    let menu = gio::Menu::new();
+    let hide = gio::MenuItem::new(Some(&gettext("Hide from the List")), None);
+    hide.set_action_and_target_value(Some("calendars.hide"), Some(&(account_id, calendar).to_variant()));
+    menu.append_item(&hide);
+    let colors = gio::Menu::new();
+    for (index, (hex, _)) in crate::ui::LABEL_COLORS.iter().enumerate() {
+        let entry = gio::MenuItem::new(Some(&crate::ui::label_color_name(index)), None);
+        entry.set_action_and_target_value(
+            Some("calendars.color"),
+            Some(&(account_id, calendar, *hex).to_variant()),
+        );
+        colors.append_item(&entry);
+    }
+    let original = gio::Menu::new();
+    let entry = gio::MenuItem::new(Some(&gettext("Original Color")), None);
+    entry.set_action_and_target_value(
+        Some("calendars.color"),
+        Some(&(account_id, calendar, "").to_variant()),
+    );
+    original.append_item(&entry);
+    colors.append_section(None, &original);
+    menu.append_submenu(Some(&gettext("Color")), &colors);
+    menu
+}
+
+/// "Hidden Calendars" at the foot of the list, while any calendar is off
+/// it: a menu that puts each one back, under its account's address when
+/// more than one account has hidden some.
+fn hidden_menu(accounts: &[SidebarAccount]) -> gtk::MenuButton {
+    let menu = gio::Menu::new();
+    let hiding: Vec<&SidebarAccount> = accounts.iter().filter(|a| !a.hidden.is_empty()).collect();
+    for account in &hiding {
+        let section = gio::Menu::new();
+        for calendar in &account.hidden {
+            let item = gio::MenuItem::new(
+                Some(&fill(&gettext("Show {calendar}"), &[("calendar", &calendar.name)])),
+                None,
+            );
+            item.set_action_and_target_value(
+                Some("calendars.unhide"),
+                Some(&(account.id, calendar.id.as_str()).to_variant()),
+            );
+            section.append_item(&item);
+        }
+        let heading = (hiding.len() > 1).then_some(account.address.as_str());
+        menu.append_section(heading, &section);
+    }
+    let count = hidden_count(accounts);
+    let content = gtk::Box::builder().spacing(6).build();
+    content.append(
+        &gtk::Label::builder()
+            .label(gettext("Hidden Calendars"))
+            .css_classes(["calendar-name"])
+            .build(),
+    );
+    content.append(
+        &gtk::Label::builder()
+            .label(count.to_string())
+            .css_classes(["hidden-count"])
+            .build(),
+    );
+    let button = gtk::MenuButton::builder()
+        .child(&content)
+        .menu_model(&menu)
+        .css_classes(["flat", "hidden-calendars"])
+        .halign(gtk::Align::Start)
+        .margin_top(12)
+        .build();
+    crate::ui::name(
+        &button,
+        &fill_plural(
+            "{count} hidden calendar",
+            "{count} hidden calendars",
+            count,
+            &[("count", &count.to_string())],
+        ),
+    );
+    crate::ui::name_menu_items_of(&button);
+    button
+}
+
 fn dim_line(text: &str) -> gtk::Label {
     gtk::Label::builder()
         .label(text)
@@ -736,19 +1127,11 @@ fn dim_line(text: &str) -> gtk::Label {
         .build()
 }
 
-fn mini_day_classes(date: NaiveDate, today: NaiveDate, month: NaiveDate) -> Vec<&'static str> {
-    let mut classes = vec!["flat"];
-    if date == today {
-        classes.push("today");
-    }
-    if date.month() != month.month() || date.year() != month.year() {
-        classes.push("outside");
-    }
-    classes
-}
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
+
     use mailrs_domain::calendar::Access;
     use mailrs_domain::{AccountState, Provider};
 
@@ -826,6 +1209,7 @@ mod tests {
                 id: 1,
                 address: "dana@example.com".into(),
                 reach: CalendarReach::Calendars(vec![calendar("primary"), calendar("team")]),
+                hidden: Vec::new(),
             }]
         );
     }
@@ -893,6 +1277,162 @@ mod tests {
             Vec::new(),
         )]);
         assert_eq!(rows[0].reach, CalendarReach::Calendars(Vec::new()));
+    }
+
+    fn listed_ids(reach: &CalendarReach) -> Vec<String> {
+        match reach {
+            CalendarReach::Calendars(list) | CalendarReach::PrimaryOnly(list) => {
+                list.iter().map(|c| c.id.clone()).collect()
+            }
+            _ => Vec::new(),
+        }
+    }
+
+    #[test]
+    fn a_calendar_taken_off_the_list_moves_to_hidden_calendars() {
+        let rows = sidebar_accounts(&[(
+            account(1, "dana@example.com"),
+            Offers::EVERYTHING,
+            Withheld::NONE,
+            vec![calendar("primary"), calendar("holidays")],
+        )]);
+        let unlisted = HashMap::from([(1, HashSet::from(["holidays".to_string()]))]);
+        let rows = take_off_the_list(rows, &unlisted);
+        assert_eq!(listed_ids(&rows[0].reach), vec!["primary"]);
+        assert_eq!(rows[0].hidden, vec![calendar("holidays")]);
+    }
+
+    #[test]
+    fn an_account_with_nothing_unlisted_hides_nothing() {
+        let rows = sidebar_accounts(&[(
+            account(1, "dana@example.com"),
+            Offers::EVERYTHING,
+            Withheld::NONE,
+            vec![calendar("primary")],
+        )]);
+        let rows = take_off_the_list(rows, &HashMap::new());
+        assert_eq!(listed_ids(&rows[0].reach), vec!["primary"]);
+        assert!(rows[0].hidden.is_empty());
+    }
+
+    #[test]
+    fn hidden_calendars_list_every_accounts_own() {
+        let rows = sidebar_accounts(&[
+            (account(1, "dana@example.com"), Offers::EVERYTHING, Withheld::NONE, vec![calendar("a")]),
+            (account(2, "d.reyes@uni.example"), Offers::EVERYTHING, Withheld::NONE, vec![calendar("b")]),
+        ]);
+        let unlisted = HashMap::from([
+            (1, HashSet::from(["a".to_string()])),
+            (2, HashSet::from(["b".to_string()])),
+        ]);
+        let rows = take_off_the_list(rows, &unlisted);
+        assert_eq!(hidden_count(&rows), 2);
+    }
+
+    #[test]
+    fn an_account_with_every_calendar_hidden_loses_its_heading() {
+        let rows = sidebar_accounts(&[(
+            account(1, "dana@example.com"),
+            Offers::EVERYTHING,
+            Withheld::NONE,
+            vec![calendar("primary")],
+        )]);
+        let rows = take_off_the_list(rows, &HashMap::from([(1, HashSet::from(["primary".to_string()]))]));
+        assert!(!shows_heading(&rows[0]));
+        assert_eq!(hidden_count(&rows), 1, "Hidden Calendars still brings it back");
+    }
+
+    #[test]
+    fn an_account_with_a_calendar_left_keeps_its_heading() {
+        let rows = sidebar_accounts(&[(
+            account(1, "dana@example.com"),
+            Offers::EVERYTHING,
+            Withheld::NONE,
+            vec![calendar("primary"), calendar("team")],
+        )]);
+        let rows = take_off_the_list(rows, &HashMap::from([(1, HashSet::from(["team".to_string()]))]));
+        assert!(shows_heading(&rows[0]));
+    }
+
+    #[test]
+    fn an_account_not_synced_yet_keeps_its_heading() {
+        let rows = sidebar_accounts(&[(account(1, "dana@example.com"), Offers::EVERYTHING, Withheld::NONE, Vec::new())]);
+        assert!(shows_heading(&rows[0]));
+    }
+
+    #[test]
+    fn a_change_to_what_shows_or_its_colour_redraws_the_next_event() {
+        let (account, calendar) = (1, "team".to_string());
+        assert!(redraws_next_event(&ListChange::Color { account, calendar: calendar.clone(), color: None }));
+        assert!(redraws_next_event(&ListChange::Listed { account, calendar: calendar.clone(), listed: false }));
+        assert!(redraws_next_event(&ListChange::Shown { account, calendar, shown: false }));
+        assert!(!redraws_next_event(&ListChange::Folded { address: "dana@example.com".into(), folded: true }));
+    }
+
+    fn d(y: i32, m: u32, day: u32) -> NaiveDate {
+        NaiveDate::from_ymd_opt(y, m, day).unwrap()
+    }
+
+    #[test]
+    fn the_week_in_view_runs_from_the_week_start_for_seven_days() {
+        crate::locale_time::set_first_weekday_for_test(chrono::Weekday::Mon);
+        assert_eq!(in_view(ViewKind::Week, d(2026, 9, 30)), Some((d(2026, 9, 28), d(2026, 10, 4))));
+    }
+
+    #[test]
+    fn the_month_in_view_is_its_own_days_not_the_grids() {
+        assert_eq!(in_view(ViewKind::Month, d(2026, 9, 30)), Some((d(2026, 9, 1), d(2026, 9, 30))));
+    }
+
+    #[test]
+    fn a_single_day_marks_no_band() {
+        assert_eq!(in_view(ViewKind::Day, d(2026, 9, 30)), None);
+    }
+
+    #[test]
+    fn today_and_the_selected_day_read_apart() {
+        let look = day_look(d(2026, 9, 29), 1, d(2026, 9, 23), d(2026, 9, 29), d(2026, 9, 1), None);
+        assert!(look.selected && !look.today);
+        let look = day_look(d(2026, 9, 23), 2, d(2026, 9, 23), d(2026, 9, 29), d(2026, 9, 1), None);
+        assert!(look.today && !look.selected);
+    }
+
+    #[test]
+    fn a_day_outside_the_month_shown_is_outside() {
+        let look = day_look(d(2026, 8, 31), 0, d(2026, 9, 23), d(2026, 9, 23), d(2026, 9, 1), None);
+        assert!(look.outside);
+    }
+
+    #[test]
+    fn the_band_rounds_off_at_the_ends_of_the_week_in_view() {
+        let week = Some((d(2026, 9, 28), d(2026, 10, 4)));
+        let first = day_look(d(2026, 9, 28), 0, d(2026, 9, 23), d(2026, 9, 30), d(2026, 9, 1), week);
+        assert!(first.in_view && first.band_start && !first.band_end);
+        let middle = day_look(d(2026, 9, 30), 2, d(2026, 9, 23), d(2026, 9, 30), d(2026, 9, 1), week);
+        assert!(middle.in_view && !middle.band_start && !middle.band_end);
+        let last = day_look(d(2026, 10, 4), 6, d(2026, 9, 23), d(2026, 9, 30), d(2026, 9, 1), week);
+        assert!(last.in_view && last.band_end);
+        let after = day_look(d(2026, 10, 5), 0, d(2026, 9, 23), d(2026, 9, 30), d(2026, 9, 1), week);
+        assert!(!after.in_view);
+    }
+
+    #[test]
+    fn a_month_band_rounds_off_at_each_rows_edges() {
+        let month = Some((d(2026, 9, 1), d(2026, 9, 30)));
+        let sunday = day_look(d(2026, 9, 13), 6, d(2026, 9, 23), d(2026, 9, 23), d(2026, 9, 1), month);
+        assert!(sunday.band_end && !sunday.band_start);
+        let monday = day_look(d(2026, 9, 14), 0, d(2026, 9, 23), d(2026, 9, 23), d(2026, 9, 1), month);
+        assert!(monday.band_start && !monday.band_end);
+    }
+
+    #[test]
+    fn the_classes_carry_each_state() {
+        let look = DayLook { today: true, selected: true, in_view: true, band_start: true, ..DayLook::default() };
+        assert_eq!(
+            day_classes(look),
+            vec!["flat", "today", "selected"]
+        );
+        assert_eq!(band_classes(look), vec!["mini-day", "in-view", "band-start"]);
     }
 
     #[test]

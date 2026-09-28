@@ -567,7 +567,11 @@ def walk_calendar(keys):
 
     # Libadwaita's own toggles arrive as either "toggle button" or "radio
     # button", so the switch is found by its name and any acted-on role.
-    toggle = find_first(lambda role, name: role in ACTS and name == "Calendar")
+    # While mail shows, the name carries the invitations waiting for an
+    # answer: "Calendar, 2 waiting for your answer".
+    toggle = find_first(
+        lambda role, name: role in ACTS and (name == "Calendar" or name.startswith("Calendar, "))
+    )
     if toggle is None or not activate(toggle):
         print("No 'Calendar' toggle to switch spaces.", file=sys.stderr)
         sys.exit(2)

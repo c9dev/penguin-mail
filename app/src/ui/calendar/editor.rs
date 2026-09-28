@@ -12,7 +12,7 @@
 //! back to.
 
 use std::cell::{Cell, RefCell};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
 use adw::prelude::*;
@@ -34,6 +34,9 @@ use crate::ui::autocomplete::{self, Contacts};
 /// The calendars a new event may go on, and every calendar by key.
 pub struct Choices {
     pub writable: Vec<(AccountId, String, Calendar)>,
+    /// The calendars the person took off the sidebar's list, by account
+    /// and id, which the Calendar row leaves out.
+    pub hidden: HashSet<(AccountId, String)>,
     pub calendars: HashMap<(AccountId, String), Calendar>,
 }
 
@@ -808,7 +811,7 @@ impl Editor {
         let group = adw::PreferencesGroup::new();
         let draft = self.draft.borrow();
         let offered: Vec<(AccountId, String, Calendar)> =
-            draft::calendar_choices(&draft, &choices.writable).into_iter().cloned().collect();
+            draft::calendar_choices(&draft, &choices.writable, &choices.hidden).into_iter().cloned().collect();
         let current = offered
             .iter()
             .position(|(a, _, c)| *a == draft.account_id && c.id == draft.calendar);

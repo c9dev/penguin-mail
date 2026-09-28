@@ -30,7 +30,7 @@ pub mod tint;
 pub mod words;
 
 use std::cell::{Cell, RefCell};
-use std::collections::{BTreeSet, HashMap};
+use std::collections::{BTreeSet, HashMap, HashSet};
 use std::rc::{Rc, Weak};
 
 use adw::prelude::*;
@@ -58,7 +58,7 @@ use popover::EventPopover;
 use quick::Quick;
 use range::{Range, ViewKind};
 use shown::{Refocus, Showing};
-use sidebar::CalendarSidebar;
+use sidebar::{CalendarSidebar, ListChange};
 use time_grid::{AllDayStrip, GUTTER, TimeGrid};
 
 /// The most results a search lists.
@@ -97,6 +97,12 @@ pub struct Hooks {
     /// Asks the organizer of an event the account is a guest of for
     /// another time, through the invitation card's own Propose New Time.
     pub propose: Box<dyn Fn(AccountId, Occurrence)>,
+    /// Redraws the next-event card at the foot of the mail sidebar, after
+    /// a calendar's colour or whether it shows changed.
+    pub next_event: Box<dyn Fn()>,
+    /// Hears how many invitations "Waiting for your answer" lists, each
+    /// time it is read again, for the Calendar toggle's badge.
+    pub waiting: Box<dyn Fn(usize)>,
 }
 
 
@@ -202,6 +208,9 @@ pub struct CalendarView {
     assistant_beside: Cell<bool>,
     accounts: RefCell<Vec<CalendarAccount>>,
     calendars: RefCell<Calendars>,
+    /// The calendars the person took off the sidebar's list, by account
+    /// and id, which the pickers for a new event leave out.
+    hidden: RefCell<HashSet<(AccountId, String)>>,
     /// Counts every read, so each can tell whether a newer one replaced
     /// it: an answer can come back after the person moved on.
     reads: Cell<u64>,
@@ -462,7 +471,7 @@ impl CalendarView {
         let quick = Quick::new(&card);
 
         let view = Rc::new_cyclic(|weak: &Weak<CalendarView>| {
-            let (on_date, on_shown, on_grant, on_open_waiting, on_open_mail) =
+            let (on_date, on_change, on_grant, on_open_waiting, on_open_mail) =
                 (weak.clone(), weak.clone(), weak.clone(), weak.clone(), weak.clone());
             let calendar_sidebar = CalendarSidebar::new(
                 move |day| {
@@ -470,9 +479,9 @@ impl CalendarView {
                         view.go_to(day);
                     }
                 },
-                move |account, calendar, shown| {
-                    if let Some(view) = on_shown.upgrade() {
-                        view.set_shown(account, calendar, shown);
+                move |change| {
+                    if let Some(view) = on_change.upgrade() {
+                        view.list_changed(change);
                     }
                 },
                 move |account| {
@@ -536,6 +545,7 @@ impl CalendarView {
                 assistant_beside: Cell::new(false),
                 accounts: RefCell::new(Vec::new()),
                 calendars: RefCell::new(HashMap::new()),
+                hidden: RefCell::new(HashSet::new()),
                 reads: Cell::new(0),
                 sidebar_read: Cell::new(0),
                 waiting_read: Cell::new(0),
@@ -636,6 +646,8 @@ impl CalendarView {
         });
         view.connect_search();
         view.connect_lists();
+        view.calendar_sidebar
+            .set_folded((view.settings)().folded_calendar_accounts.into_iter().collect());
 
         view.build_switch();
         view.rebuild_pages();
@@ -728,7 +740,10 @@ impl CalendarView {
                 return;
             }
             match waiting {
-                Ok(waiting) => view.calendar_sidebar.show_waiting(&waiting),
+                Ok(waiting) => {
+                    view.calendar_sidebar.show_waiting(&waiting);
+                    (view.hooks.waiting)(waiting.len());
+                }
                 Err(err) => tracing::warn!(%err, "could not read what is waiting for an answer"),
             }
         });
@@ -758,6 +773,9 @@ impl CalendarView {
         self.rebuild_pages();
         self.show_range();
         self.fill_all();
+        // The mini month's band follows the grid: a week, a month, or
+        // none for a single day.
+        self.read_sidebar(false);
     }
 
     pub fn today(self: &Rc<Self>) {
@@ -2295,11 +2313,17 @@ impl CalendarView {
         writable
     }
 
+    /// [`Self::writable`] without the calendars the person took off the
+    /// list, for quick create and the calendar a new event starts on.
+    fn offered(&self) -> Vec<(AccountId, String, Calendar)> {
+        draft::without_hidden(self.writable(), &self.hidden.borrow())
+    }
+
     /// Insensitive, with why, while no calendar takes new events: an
     /// IMAP-only setup, or every account still starting or waiting on
     /// the calendar permission.
     fn update_new_event(&self) {
-        let can = !self.writable().is_empty();
+        let can = !self.offered().is_empty();
         self.new_event.set_sensitive(can);
         if can {
             crate::ui::name_with_shortcut(&self.new_event, &gettext("New Event (N)"));
@@ -2312,7 +2336,7 @@ impl CalendarView {
     /// calendar, or `None` when no calendar takes new events.
     fn fresh_draft(&self, start: EpochMillis, end: EpochMillis) -> Option<Draft> {
         let last = (self.settings)().last_calendar_account;
-        let (account, calendar) = draft::default_calendar(&self.writable(), last.as_deref())?;
+        let (account, calendar) = draft::default_calendar(&self.offered(), last.as_deref())?;
         Some(Draft::new(account, &calendar, start, end, draft::local_zone()))
     }
 
@@ -2445,7 +2469,7 @@ impl CalendarView {
             self.clear_ghost();
             return self.edit(draft);
         };
-        let choices = self.writable();
+        let choices = self.offered();
         let current = choices
             .iter()
             .position(|(a, _, c)| *a == draft.account_id && c.id == draft.calendar)
@@ -2484,6 +2508,7 @@ impl CalendarView {
         let contacts = (self.hooks.contacts)();
         let choices = editor::Choices {
             writable: self.writable(),
+            hidden: self.hidden.borrow().clone(),
             calendars: self.calendars.borrow().clone(),
         };
         let this = Rc::clone(self);
@@ -2582,6 +2607,51 @@ impl CalendarView {
 
     // ---- The sidebar ----------------------------------------------------
 
+    /// Does what the person chose in the calendar list. Hiding a
+    /// calendar and its colour go to the store alone, since the account
+    /// may only read Google's calendar list; both then read the list and
+    /// the ranges again.
+    fn list_changed(self: &Rc<Self>, change: ListChange) {
+        let next_event = sidebar::redraws_next_event(&change);
+        match change {
+            ListChange::Shown { account, calendar, shown } => self.set_shown(account, calendar, shown),
+            ListChange::Listed { account, calendar, listed } => {
+                self.write_calendar(next_event, move |c| store::set_listed(c, account, &calendar, listed))
+            }
+            ListChange::Color { account, calendar, color } => self.write_calendar(next_event, move |c| {
+                store::set_own_color(c, account, &calendar, color.as_deref())
+            }),
+            ListChange::Folded { address, folded } => {
+                (self.hooks.change)(Change::CalendarAccountFolded { email: address, folded })
+            }
+        }
+    }
+
+    /// Writes one choice about a calendar to the store, then reloads,
+    /// with the next-event card when `next_event` says it shows the
+    /// change.
+    fn write_calendar(
+        self: &Rc<Self>,
+        next_event: bool,
+        write: impl FnOnce(&rusqlite::Connection) -> mailrs_store::Result<()> + Send + 'static,
+    ) {
+        let weak = Rc::downgrade(self);
+        let core = Rc::clone(&self.core);
+        glib::spawn_future_local(async move {
+            let saved = core.write(write).await;
+            let Some(view) = weak.upgrade() else { return };
+            match saved {
+                Ok(()) => {
+                    view.reload();
+                    if next_event {
+                        (view.hooks.next_event)();
+                    }
+                }
+                Err(err) => tracing::warn!(%err, "could not save the calendar list"),
+            }
+        });
+    }
+
     /// Shows or hides one calendar, then reads the ranges again.
     fn set_shown(self: &Rc<Self>, account_id: AccountId, calendar: String, shown: bool) {
         self.calendar_sidebar.note_shown(account_id, &calendar, shown);
@@ -2600,7 +2670,10 @@ impl CalendarView {
                 .await;
             let Some(view) = weak.upgrade() else { return };
             match saved {
-                Ok(()) => view.reload(),
+                Ok(()) => {
+                    view.reload();
+                    (view.hooks.next_event)();
+                }
                 Err(err) => tracing::warn!(%err, "could not show or hide the calendar"),
             }
         });
@@ -2625,7 +2698,7 @@ impl CalendarView {
                 .read(move |c| {
                     let mut calendars = Vec::with_capacity(accounts.len());
                     for &id in &accounts {
-                        calendars.push((id, store::calendars(c, id)?));
+                        calendars.push((id, store::calendars(c, id)?, store::unlisted(c, id)?));
                     }
                     let busy = store::occurrences(c, &accounts, from, to, CalendarScope::Shown)?;
                     Ok((calendars, busy))
@@ -2647,19 +2720,18 @@ impl CalendarView {
 
     fn show_sidebar(
         &self,
-        calendars: Vec<(AccountId, Vec<Calendar>)>,
+        calendars: Vec<(AccountId, Vec<Calendar>, Vec<String>)>,
         busy: &[Occurrence],
         mini: Range,
     ) {
         let mut by_key: Calendars = HashMap::new();
-        for (account, list) in &calendars {
+        for (account, list, _) in &calendars {
             for calendar in list {
                 by_key.insert((*account, calendar.id.clone()), calendar.clone());
             }
         }
         ensure_tints(by_key.values().map(|c| c.color.as_str()));
         self.calendars.replace(by_key);
-        self.update_new_event();
         let rows: Vec<(Account, Offers, Withheld, Vec<Calendar>)> = self
             .accounts
             .borrow()
@@ -2667,8 +2739,8 @@ impl CalendarView {
             .map(|(account, offers, withheld)| {
                 let list = calendars
                     .iter()
-                    .find(|(id, _)| *id == account.id)
-                    .map(|(_, list)| list.clone())
+                    .find(|(id, _, _)| *id == account.id)
+                    .map(|(_, list, _)| list.clone())
                     .unwrap_or_default();
                 (account.clone(), *offers, *withheld, list)
             })
@@ -2682,12 +2754,24 @@ impl CalendarView {
             .collect();
         let busy_days = shown::busy_days(&kept, mini.first, mini.days, &chrono::Local);
         let today = chrono::Local::now().date_naive();
-        self.calendar_sidebar.show(
-            self.day.get(),
-            today,
-            &busy_days,
-            &sidebar::sidebar_accounts(&rows),
+        let unlisted = calendars
+            .into_iter()
+            .map(|(account, _, ids)| (account, ids.into_iter().collect()))
+            .collect();
+        let accounts = sidebar::take_off_the_list(sidebar::sidebar_accounts(&rows), &unlisted);
+        self.hidden.replace(
+            accounts
+                .iter()
+                .flat_map(|a| a.hidden.iter().map(|c| (a.id, c.id.clone())))
+                .collect(),
         );
+        self.update_new_event();
+        let day = self.day.get();
+        let band = match self.showing() {
+            Showing::List => None,
+            _ => sidebar::in_view(self.effective_kind(), day),
+        };
+        self.calendar_sidebar.show(day, band, today, &busy_days, &accounts);
     }
 }
 

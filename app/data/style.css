@@ -666,6 +666,21 @@ toggle-group.space-switch > toggle:not(:checked) { color: color-mix(in srgb, cur
    the darker #1e1e21 in dark, where libadwaita would lighten it. */
 toggle-group.view-switch > toggle:checked,
 toggle-group.space-switch > toggle:checked { font-weight: 700; background: var(--view-bg-color); }
+/* The count on the space the reader is away from: a small pill in the
+   selected mailbox's accent tint, 18 % light and 28 % dark, with the
+   number in the accent, which stays full strength on a dimmed toggle. */
+.space-badge {
+  font-size: 0.72em;
+  font-weight: 700;
+  font-feature-settings: "tnum";
+  min-width: 10px;
+  min-height: 16px;
+  padding: 0 4px;
+  border-radius: 99px;
+  background: alpha(var(--accent-bg-color), 0.18);
+  color: var(--accent-color);
+}
+.app-dark .space-badge { background: alpha(var(--accent-bg-color), 0.28); }
 
 /* An event block is a button so a press answers at once; GTK's own
    button rules would otherwise add a background, a border and a shadow
@@ -778,6 +793,20 @@ button.day-heading { min-height: 26px; padding: 0 14px; border-radius: 13px; }
   color: var(--accent-fg-color);
   font-weight: 800;
 }
+/* The day the calendar shows: the selected mailbox's tint, 18 % light
+   and 28 % dark, with its number in the accent. Today keeps its fill. */
+.mini-month button.selected:not(.today) {
+  background: alpha(var(--accent-bg-color), 0.18);
+  color: var(--accent-color);
+  font-weight: 700;
+}
+.app-dark .mini-month button.selected:not(.today) { background: alpha(var(--accent-bg-color), 0.28); }
+/* The week or month in view: a faint band behind its days, rounded where
+   the range or the row ends. */
+.mini-day.in-view { background: alpha(var(--accent-bg-color), 0.07); }
+.app-dark .mini-day.in-view { background: alpha(var(--accent-bg-color), 0.12); }
+.mini-day.band-start { border-top-left-radius: 8px; border-bottom-left-radius: 8px; }
+.mini-day.band-end { border-top-right-radius: 8px; border-bottom-right-radius: 8px; }
 .mini-month button.outside { opacity: 0.4; }
 .mini-month .dot { min-width: 4px; min-height: 4px; border-radius: 99px; background: currentColor; opacity: 0.4; }
 .mini-month button.today .dot,
@@ -785,6 +814,27 @@ button.day-heading { min-height: 26px; padding: 0 14px; border-radius: 13px; }
 .mini-month-header button { min-width: 24px; min-height: 24px; padding: 0; }
 .mini-month-header button label { font-size: 1.36em; font-weight: 400; }
 .calendar-row { min-height: 28px; }
+/* An account heading in the calendar list folds its calendars away. It
+   keeps the look of the plain heading it replaced: no padding and no
+   fill, and a chevron only while folded or under the pointer or focus. */
+button.calendar-heading { padding: 0; min-height: 0; background: none; box-shadow: none; }
+.calendar-chevron { opacity: 0; transition: opacity 120ms ease; }
+button.calendar-heading:hover .calendar-chevron,
+button.calendar-heading:focus-visible .calendar-chevron,
+button.calendar-heading.folded .calendar-chevron { opacity: 0.5; }
+/* Each calendar's options, shown on hover or focus as an account's are. */
+.calendar-options { opacity: 0; transition: opacity 120ms ease; }
+.calendar-options > button { min-height: 22px; min-width: 22px; padding: 2px; }
+.calendar-row:hover .calendar-options,
+.calendar-options:focus-within,
+.calendar-options > button:checked { opacity: 1; }
+/* The menu button's own node is `menubutton`; the button inside it
+   carries the padding, which the negative margin takes back so the text
+   lines up with the headings above. */
+.hidden-calendars { margin-left: -6px; }
+.hidden-calendars > button { padding: 2px 6px; min-height: 0; }
+.hidden-calendars .calendar-name { opacity: 0.64; }
+.hidden-count { font-size: 0.85em; font-weight: 700; opacity: 0.4; font-feature-settings: "tnum"; }
 .calendar-lock { opacity: 0.4; }
 .mini-month { margin-top: -2px; }
 checkbutton.calendar-check:not(:checked) + label { opacity: 0.64; }
