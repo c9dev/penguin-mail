@@ -385,6 +385,16 @@ impl CalendarService for AnyCalendar {
         forward!(AnyCalendar, self, event_changes(calendar, token, page, from))
     }
 
+    async fn event_range(
+        &self,
+        calendar: &str,
+        from: EpochMillis,
+        to: EpochMillis,
+        page: Option<&str>,
+    ) -> Result<model::EventPage, BackendError> {
+        forward!(AnyCalendar, self, event_range(calendar, from, to, page))
+    }
+
     async fn put_event(
         &self,
         event: &model::Event,
@@ -403,6 +413,10 @@ impl CalendarService for AnyCalendar {
         notify: model::Notify,
     ) -> Result<(), BackendError> {
         forward!(AnyCalendar, self, remove_event(calendar, id, etag, notify))
+    }
+
+    async fn import_event(&self, event: &model::Event) -> Result<model::Event, BackendError> {
+        forward!(AnyCalendar, self, import_event(event))
     }
 
     async fn move_event(

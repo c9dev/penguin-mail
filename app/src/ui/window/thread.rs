@@ -28,7 +28,7 @@ use crate::protection::Read;
 use crate::settings::MarkRead;
 use crate::translation::{self, Language, Prose, Translation};
 use crate::ui::conversation::ConversationView;
-use crate::ui::invitation::Showing;
+use crate::ui::invitation::{AddTo, Showing};
 use crate::ui::invitation::strip::{self, Strip};
 use crate::wanted::Screen;
 
@@ -440,6 +440,31 @@ impl Effects for Ports {
         })
     }
 
+    fn add_targets(&self, account_id: AccountId) -> Answer<'_, Result<Vec<AddTo>, String>> {
+        // An account with no calendar, or one that withheld it, leaves the
+        // card handing the file to the desktop.
+        let usable = self
+            .window()
+            .is_some_and(|w| w.offers(account_id).calendar && !w.withheld(account_id).calendar);
+        let calendar = self.core.calendar();
+        Box::pin(async move {
+            if !usable {
+                return Ok(Vec::new());
+            }
+            let listed = self
+                .core
+                .call(async move { calendar.calendars(account_id).await })
+                .await
+                .map_err(|err| err.to_string())?;
+            Ok(match listed {
+                mailrs_sync::Permitted::Done(list) => {
+                    crate::ui::invitation::targets_of(account_id, list, None)
+                }
+                mailrs_sync::Permitted::NeedsPermission => Vec::new(),
+            })
+        })
+    }
+
     fn on_calendar(
         &self,
         account_id: AccountId,
@@ -613,6 +638,10 @@ impl Effects for Ports {
 
     fn series_known(&self, uid: String, line: String) {
         self.view.series_known(&uid, line);
+    }
+
+    fn add_targets_known(&self, uid: String, targets: Vec<AddTo>) {
+        self.view.add_targets_known(&uid, targets);
     }
 
     fn on_calendar_known(&self, uid: String, spot: Spot) {

@@ -659,6 +659,47 @@ async fn a_change_page_maps_events_and_names_the_deleted_ones() {
     assert!(page.events[1].busy);
 }
 
+/// An older range is a read of its own: it bounds the events by time, keeps
+/// the series whole, asks for the cancelled ones, and never sends a sync
+/// token, which Google refuses beside `timeMin` and `timeMax`.
+#[tokio::test]
+async fn an_older_range_is_read_by_time_and_sends_no_sync_token() {
+    let server = MockServer::start().await;
+    mount_token(&server).await;
+    Mock::given(method("GET"))
+        .and(path(format!("{CALENDAR}/calendars/work/events")))
+        .and(query_param("timeMin", "2024-09-01T00:00:00Z"))
+        .and(query_param("timeMax", "2025-09-01T00:00:00Z"))
+        .and(query_param("showDeleted", "true"))
+        .and(query_param("pageToken", "p2"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "timeZone": "Europe/Lisbon",
+            "items": [
+                {"id": "old", "iCalUID": "old@google.com", "etag": "\"1\"", "status": "confirmed",
+                 "summary": "Last year's offsite",
+                 "start": {"dateTime": "2024-10-03T10:00:00+01:00"},
+                 "end": {"dateTime": "2024-10-03T11:00:00+01:00"}},
+                {"id": "gone", "status": "cancelled"}
+            ]
+        })))
+        .mount(&server)
+        .await;
+    let page = client(&server)
+        .event_range("work", "2024-09-01T00:00:00Z", "2025-09-01T00:00:00Z", Some("p2"))
+        .await
+        .unwrap();
+    assert_eq!(page.events.len(), 1);
+    assert_eq!(page.events[0].title, "Last year's offsite");
+    assert_eq!(page.events[0].zone, "Europe/Lisbon");
+    assert_eq!(page.removed, vec!["gone".to_string()]);
+    assert_eq!(page.next_sync, None);
+    let sent = server.received_requests().await.unwrap();
+    let events = sent.iter().find(|r| r.url.path().ends_with("/events")).unwrap();
+    let query = events.url.query().unwrap_or_default();
+    assert!(!query.contains("syncToken"), "a range read must not carry a sync token: {query}");
+    assert!(!query.contains("singleEvents"), "a series must arrive whole: {query}");
+}
+
 #[tokio::test]
 async fn an_expired_calendar_token_says_so() {
     let server = MockServer::start().await;
@@ -1473,4 +1514,47 @@ async fn an_edit_of_an_out_of_office_leaves_its_type_alone() {
         .put_event(&out_of_office(mailrs_domain::calendar::Declines::New), Some("\"1\""), false, Notify::Guests)
         .await
         .unwrap();
+}
+
+#[tokio::test]
+async fn an_imported_event_goes_out_under_its_uid_with_no_guests() {
+    let server = MockServer::start().await;
+    mount_token(&server).await;
+    let sent = std::sync::Arc::new(std::sync::Mutex::new(Value::Null));
+    let seen = std::sync::Arc::clone(&sent);
+    Mock::given(method("POST"))
+        .and(path(format!("{CALENDAR}/calendars/work/events/import")))
+        .respond_with(move |request: &Request| {
+            *seen.lock().unwrap() = request.body_json().unwrap();
+            ResponseTemplate::new(200).set_body_json(json!({
+                "id": "gen1", "iCalUID": "ticket-4471@rail.example", "summary": "Coach 4",
+                "start": {"dateTime": "2026-11-05T08:30:00Z", "timeZone": "Europe/Lisbon"},
+                "end": {"dateTime": "2026-11-05T11:30:00Z", "timeZone": "Europe/Lisbon"}
+            }))
+        })
+        .expect(1)
+        .mount(&server)
+        .await;
+    let event = mailrs_domain::calendar::Event {
+        calendar: "work".into(),
+        uid: "ticket-4471@rail.example".into(),
+        title: "Coach 4".into(),
+        zone: "Europe/Lisbon".into(),
+        start: 1_793_867_400_000,
+        end: 1_793_878_200_000,
+        guests: vec![guest("ann@example.com")],
+        rules: vec!["RRULE:FREQ=WEEKLY;COUNT=4".into()],
+        ..Default::default()
+    };
+
+    let made = client(&server).import_event(&event).await.unwrap();
+
+    assert_eq!((made.id.as_str(), made.uid.as_str()), ("gen1", "ticket-4471@rail.example"));
+    let body = sent.lock().unwrap().clone();
+    assert_eq!(body["iCalUID"], "ticket-4471@rail.example");
+    assert_eq!(body["start"]["timeZone"], "Europe/Lisbon");
+    assert_eq!(body["recurrence"], json!(["RRULE:FREQ=WEEKLY;COUNT=4"]));
+    // The import names no id of its own, or Google would file a second
+    // event beside the one the UID already matches, and it invites nobody.
+    assert!(body.get("id").is_none() && body.get("attendees").is_none());
 }

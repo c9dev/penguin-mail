@@ -18,6 +18,7 @@ pub mod contacts_prefs;
 pub mod conversation;
 pub mod find;
 pub mod hide_my_email;
+pub mod ics_file;
 pub mod invitation;
 pub mod list_feed;
 pub mod moving;

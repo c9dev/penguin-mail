@@ -1249,6 +1249,16 @@ impl ConversationView {
         self.card.set_busy(uid, busy);
     }
 
+    /// The calendars a file's events can go on, for the card's picker.
+    pub fn add_targets_known(&self, uid: &str, targets: Vec<crate::ui::invitation::AddTo>) {
+        self.card.set_targets(uid, targets);
+    }
+
+    /// Says the events of the file on the card went on `calendar`.
+    pub fn events_added(&self, uid: &str, calendar: &str, spots: &[mailrs_sync::Spot]) {
+        self.card.set_added(uid, calendar, spots);
+    }
+
     /// How the series behind the invitation `uid` runs, in words.
     pub fn series_known(&self, uid: &str, line: String) {
         self.card.set_series(uid, line);

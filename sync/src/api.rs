@@ -286,6 +286,16 @@ pub trait GmailApi: Send + Sync + 'static {
         from: EpochMillis,
     ) -> impl Future<Output = Result<calendar::EventPage, GmailError>> + Send;
 
+    /// One page of the events of `calendar` that overlap `from` to `to`,
+    /// a read apart from the sync token.
+    fn event_range(
+        &self,
+        calendar: &str,
+        from: EpochMillis,
+        to: EpochMillis,
+        page: Option<&str>,
+    ) -> impl Future<Output = Result<calendar::EventPage, GmailError>> + Send;
+
     /// Creates `event` under its own id when `create`, or changes it to
     /// match, and mails its guests when `notify` says so. `etag` makes the
     /// server refuse the change with `GmailError::Changed` when the event
@@ -306,6 +316,15 @@ pub trait GmailApi: Send + Sync + 'static {
         etag: Option<&str>,
         notify: calendar::Notify,
     ) -> impl Future<Output = Result<(), GmailError>> + Send;
+
+    /// Imports `event` into its calendar under its iCalendar UID and
+    /// invites nobody. Importing a UID the calendar already holds updates
+    /// that event, so a file added twice is still one event. Answers the
+    /// event as the calendar holds it.
+    fn import_event(
+        &self,
+        event: &calendar::Event,
+    ) -> impl Future<Output = Result<calendar::Event, GmailError>> + Send;
 
     /// Moves `event` from its calendar to `destination`, and mails its
     /// guests when `notify` says so. Answers the event on `destination`.
@@ -608,6 +627,17 @@ impl GmailApi for AccountClient {
         self.client.event_changes(calendar, token, page, &from).await
     }
 
+    async fn event_range(
+        &self,
+        calendar: &str,
+        from: EpochMillis,
+        to: EpochMillis,
+        page: Option<&str>,
+    ) -> Result<calendar::EventPage, GmailError> {
+        let (from, to) = (rfc3339(from).unwrap_or_default(), rfc3339(to).unwrap_or_default());
+        self.client.event_range(calendar, &from, &to, page).await
+    }
+
     async fn put_event(
         &self,
         event: &calendar::Event,
@@ -626,6 +656,10 @@ impl GmailApi for AccountClient {
         notify: calendar::Notify,
     ) -> Result<(), GmailError> {
         self.client.remove_event(calendar, id, etag, notify).await
+    }
+
+    async fn import_event(&self, event: &calendar::Event) -> Result<calendar::Event, GmailError> {
+        self.client.import_event(event).await
     }
 
     async fn move_event(

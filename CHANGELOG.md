@@ -7,6 +7,13 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### New
 
+- A calendar file that is not an invitation, such as a train ticket or a
+  booking, now shows an event card in the message with Add to Calendar.
+  Pick the calendar, and for a file with several events, which of them to
+  add. Adding the same file twice does not repeat the events, and the card
+  then says "Added to" the calendar and offers Show in Calendar.
+- Penguin Mail opens .ics files from Files. The file shows the same card in
+  a small window, and says so when no Google account can use its calendar.
 - A reply or a forward opens with the quoted message folded behind a
   "•••" button under your words, as in Gmail, and still sends with it.
   Click "•••" to read it, and in a reply to trim it, or × to send
@@ -112,6 +119,11 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Improved
 
+- The calendar goes back as far as you look. Go to an older week, month
+  or date, or scroll the Agenda up, and the events of that time load from
+  Google once and stay on this computer. While they load, a small note says
+  so, and offline it says older events can't load, instead of showing an
+  empty week.
 - Resize an event from its top edge as well as its bottom in Day and
   Week, or change its start with Ctrl+Shift+Up and Ctrl+Shift+Down.
 - Drag an event to another day in Month. It keeps its time and length.
@@ -191,6 +203,11 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   it last updated, instead of leaving you guessing.
 
 ### Fixed
+- Newsletters keep their own layout: a narrow table column no longer
+  breaks a word one letter per line, and a message designed at a set
+  width keeps it.
+- The page title some mail carries no longer shows as a stray line above
+  the message.
 - A message with a wide space character, such as some bank and shop
   receipts, opens again instead of leaving the reading pane stuck.
 - Events side by side in a narrow week lane stay inside their blocks. A

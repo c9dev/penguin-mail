@@ -660,9 +660,15 @@ ALTER TABLE calendars ADD COLUMN own_color TEXT;
 ALTER TABLE events ADD COLUMN kind TEXT;
 UPDATE calendars SET sync_token = NULL;
 "#,
-    // Held for the older-months branch (fb-older), whose migration takes
-    // this place, 44, when the two merge. Empty until then.
-    "",
+    // How far back each calendar's copy reaches, so a range older than the
+    // first read is fetched once and kept. Every calendar already read
+    // began a year before its last read at the latest; that is close
+    // enough, and a shorter reach only fetches a little twice.
+    r#"
+ALTER TABLE calendars ADD COLUMN reaches_back INTEGER;
+UPDATE calendars SET reaches_back = synced_at - 31536000000
+    WHERE sync_token IS NOT NULL AND synced_at IS NOT NULL;
+"#,
     // Changes to an account's calendar list made here and not yet sent:
     // a new calendar, a new name or colour, hiding one from the list,
     // deleting one, and subscribing. `edit` holds the

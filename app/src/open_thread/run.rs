@@ -35,7 +35,7 @@ use mailrs_sync::{Opened, Spot, outbox_id};
 use super::{Cleaned, InlineImage, OpenThread, Unsent};
 use crate::protection::Read;
 use crate::translation::{Language, Prose};
-use crate::ui::invitation::Showing;
+use crate::ui::invitation::{AddTo, Showing};
 use crate::ui::invitation::strip::Strip;
 pub use crate::wanted::Answer;
 use crate::wanted::{Screen, Wanted};
@@ -185,6 +185,9 @@ pub trait Effects {
         account_id: AccountId,
         invitation: Invitation,
     ) -> Answer<'_, Result<Option<String>, String>>;
+    /// The calendars of the account a file's events can go on, none for
+    /// an account with no calendar or one that withheld it.
+    fn add_targets(&self, account_id: AccountId) -> Answer<'_, Result<Vec<AddTo>, String>>;
     /// Where the invitation's event sits in the calendar's copy on this
     /// computer, or `None` when the copy does not hold it.
     fn on_calendar(
@@ -246,6 +249,9 @@ pub trait Effects {
     fn clashes(&self, uid: String, busy: Vec<String>);
     /// Puts how the series runs on the card, under the time.
     fn series_known(&self, uid: String, line: String);
+    /// Puts the calendars a file's events can go on into the card's
+    /// picker.
+    fn add_targets_known(&self, uid: String, targets: Vec<AddTo>);
     /// Puts Show in Calendar on the card, for the event at `spot`.
     fn on_calendar_known(&self, uid: String, spot: Spot);
     /// Puts the hours around the event on the card, in place of the clash
@@ -729,6 +735,7 @@ impl ThreadRun {
             Ok(opened) => opened.map(|opened| Showing {
                 message_id: carrier,
                 invitation: opened.invitation,
+                also: opened.also,
                 change: opened.change,
                 answer: opened.answer,
                 me: self.desk.me(account_id),
@@ -750,6 +757,21 @@ impl ThreadRun {
                 .await
             {
                 wanted.on_screen(|effects| effects.series_known(uid, line));
+            }
+        }
+        // A file that only describes events is added to a calendar the
+        // person picks, so the picker needs the account's calendars.
+        if let Some(showing) = showing.as_ref().filter(|s| adds(s)) {
+            let uid = showing.invitation.uid.clone();
+            if let Some(targets) = wanted
+                .ask(
+                    |effects| effects.add_targets(account_id),
+                    "could not list the calendars",
+                )
+                .await
+                .filter(|targets| !targets.is_empty())
+            {
+                wanted.on_screen(|effects| effects.add_targets_known(uid, targets));
             }
         }
         // An answered invitation is still worth finding on the calendar;
@@ -805,6 +827,12 @@ impl ThreadRun {
             wanted.on_screen(|effects| effects.clashes(uid, busy));
         }
     }
+}
+
+/// Whether the card holds a file that only describes events, which Add
+/// to Calendar puts on a calendar of the person's choosing.
+fn adds(showing: &Showing) -> bool {
+    showing.invitation.card() == mailrs_domain::invitation::Card::Add
 }
 
 /// Whether the invitation asks about one occurrence of a series that is

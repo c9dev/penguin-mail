@@ -1374,3 +1374,38 @@ async fn an_answer_to_one_occurrence_leaves_the_rest_of_the_series_waiting() {
     let found = invitations(&h).waiting_for_answer(&[h.account_id], MARCH).await.unwrap();
     assert_eq!(found, vec![waiting(&h, "series", TENTH - WEEK)]);
 }
+
+fn booking(uid_of_return: &str) -> String {
+    format!(
+        "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nMETHOD:PUBLISH\r\n\
+         BEGIN:VEVENT\r\nUID:out@rail\r\nDTSTART:20260310T090000Z\r\nSUMMARY:Outbound\r\nEND:VEVENT\r\n\
+         BEGIN:VEVENT\r\nUID:{uid_of_return}\r\nDTSTART:20260312T090000Z\r\nSUMMARY:Return\r\nEND:VEVENT\r\n\
+         END:VCALENDAR\r\n"
+    )
+}
+
+#[tokio::test]
+async fn a_file_with_two_events_opens_with_the_second_beside_the_first() {
+    let h = harness().await;
+    let opened = invitations(&h)
+        .open(h.account_id, "m1", &booking("back@rail"), 1_000)
+        .await
+        .unwrap()
+        .expect("the part holds events");
+    assert_eq!(opened.invitation.summary, "Outbound");
+    let also: Vec<&str> = opened.also.iter().map(|i| i.summary.as_str()).collect();
+    assert_eq!(also, ["Return"]);
+}
+
+/// Reading a ticket again after the sender fixed it is no news: nobody
+/// asked the user anything, and the file is theirs to add again.
+#[tokio::test]
+async fn a_published_file_reports_no_change_when_it_comes_again() {
+    let h = harness().await;
+    let invitations = invitations(&h);
+    let first = booking("back@rail");
+    invitations.open(h.account_id, "m1", &first, 1_000).await.unwrap();
+    let again = first.replace("SUMMARY:Outbound", "SEQUENCE:1\r\nSUMMARY:Outbound Renamed");
+    let opened = invitations.open(h.account_id, "m2", &again, 2_000).await.unwrap().unwrap();
+    assert_eq!(opened.change, None);
+}

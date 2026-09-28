@@ -32,6 +32,10 @@ mod pages;
 /// The id of the draft behind the sample draft message, as Gmail would hold it.
 const DRAFT_ID: &str = "demo-draft";
 
+/// The booking behind the sample ticket. Its two events add `-out` and
+/// `-back` to it.
+const TICKET_UID: &str = "cp-88213@cp.example";
+
 /// The event behind the sample invitation, as Google would write it.
 const INVITE_UID: &str = "7f3k2q9demo1invite@google.com";
 
@@ -172,6 +176,9 @@ struct Invite {
     /// The series the meeting belongs to, as the calendar holds it: its
     /// rule and when each occurrence starts.
     series: Option<fn(EpochMillis) -> Series>,
+    /// Whether Google already holds the event, so an answer finds it. A
+    /// ticket the sender only published is on no calendar until added.
+    answerable: bool,
 }
 
 /// A series' rule, and when each of its occurrences starts.
@@ -578,6 +585,25 @@ fn samples() -> Vec<Sample> {
             ..PLAIN
         },
         Sample {
+            thread: "t-train-ticket",
+            id: "train-ticket-1",
+            from: ("CP Comboios", "bilhetes@cp.example"),
+            to: &[ME],
+            subject: "Your tickets: Lisboa to Porto, Friday and Sunday",
+            minutes_ago: 25,
+            labels: &["INBOX", "UNREAD"],
+            text: "Your booking is confirmed. The calendar file attached holds both journeys.\n\nShow the QR code in the app when you board.",
+            attachments: &[("tickets.ics", "text/calendar", 1_106)],
+            invitation: Some(Invite {
+                uid: TICKET_UID,
+                ics: ticket_ics,
+                replaces: None,
+                series: None,
+                answerable: false,
+            }),
+            ..PLAIN
+        },
+        Sample {
             account: 1,
             thread: "t-design-review",
             id: "design-review-1",
@@ -593,6 +619,7 @@ fn samples() -> Vec<Sample> {
                 ics: invitation_ics,
                 replaces: None,
                 series: None,
+                answerable: true,
             }),
             ..PLAIN
         },
@@ -615,6 +642,7 @@ fn samples() -> Vec<Sample> {
                     starts: planning_was,
                 }),
                 series: Some(planning_series),
+                answerable: true,
             }),
             ..PLAIN
         },
@@ -1058,7 +1086,27 @@ fn account0_events(now: EpochMillis) -> Vec<CalendarEvent> {
         color: Some("#3584e4".into()),
         ..timed_event("primary", "demo-next-event", "Sprint planning", soon, soon + 30 * 60_000)
     });
+    events.extend(two_years_ago(now));
     events
+}
+
+/// A few events in the week two years back, which the copy's first read
+/// (a year back) leaves out. Going there fetches them from the demo's
+/// Google, as it does from the real one.
+fn two_years_ago(now: EpochMillis) -> Vec<CalendarEvent> {
+    let back = chrono::DateTime::from_timestamp_millis(now)
+        .unwrap_or_default()
+        .with_timezone(&chrono::Local)
+        .checked_sub_months(chrono::Months::new(24))
+        .map_or(now, |at| at.timestamp_millis());
+    let monday = week_monday(back);
+    vec![
+        timed_event("primary", "old-planning", "Quarter planning", at_week(monday, 0, 10, 0), at_week(monday, 0, 12, 0)),
+        timed_event("primary", "old-lunch", "Lunch with Rui", at_week(monday, 1, 13, 0), at_week(monday, 1, 14, 0)),
+        timed_event("primary", "old-review", "Design review", at_week(monday, 2, 15, 0), at_week(monday, 2, 16, 30)),
+        timed_event(FAMILY, "old-recital", "Piano recital", at_week(monday, 3, 18, 0), at_week(monday, 3, 19, 30)),
+        timed_event("primary", "old-run", "Morning run", at_week(monday, 4, 7, 30), at_week(monday, 4, 8, 30)),
+    ]
 }
 
 /// The second demo account's week: the weekday Stand-up and the rest of
@@ -1914,7 +1962,9 @@ impl Sample {
             if let Some(invite) = &self.invitation {
                 // Google puts an invitation on the guest's calendar as it
                 // arrives, so the demo has an event to answer.
-                state.calendar.insert(invite.uid.into(), None);
+                if invite.answerable {
+                    state.calendar.insert(invite.uid.into(), None);
+                }
                 if let Some(series) = invite.series {
                     state.series.insert(invite.uid.into(), series(now));
                 }
@@ -2093,6 +2143,40 @@ fn invitation_ics(now: EpochMillis) -> String {
         String::new(),
     ]
     .join("\r\n")
+}
+
+/// A ticket the sender only published: two journeys in one file, with no
+/// `METHOD:REQUEST` and nobody to answer.
+fn ticket_ics(now: EpochMillis) -> String {
+    let stamp = |at: chrono::DateTime<chrono::Local>| {
+        at.with_timezone(&chrono::Utc).format("%Y%m%dT%H%M%SZ").to_string()
+    };
+    let sent = chrono::DateTime::from_timestamp_millis(now).unwrap_or_default();
+    let out = weekday_at(now, chrono::Weekday::Fri, 9);
+    let back = weekday_at(now, chrono::Weekday::Sun, 17);
+    let leg = |uid: String, title: &str, from: &str, to: &str, start: chrono::DateTime<chrono::Local>| {
+        vec![
+            "BEGIN:VEVENT".to_string(),
+            format!("UID:{uid}"),
+            format!("DTSTAMP:{}", stamp(sent.with_timezone(&chrono::Local))),
+            format!("DTSTART:{}", stamp(start)),
+            format!("DTEND:{}", stamp(start + chrono::Duration::minutes(195))),
+            format!("SUMMARY:{title}"),
+            format!("LOCATION:{from} to {to}\\, coach 4 seat 22"),
+            "END:VEVENT".to_string(),
+        ]
+    };
+    let mut lines = vec![
+        "BEGIN:VCALENDAR".to_string(),
+        "PRODID:-//CP Comboios//Tickets//EN".to_string(),
+        "VERSION:2.0".to_string(),
+        "METHOD:PUBLISH".to_string(),
+    ];
+    lines.extend(leg(format!("{TICKET_UID}-out"), "Train to Porto", "Lisboa Santa Apolonia", "Porto Campanha", out));
+    lines.extend(leg(format!("{TICKET_UID}-back"), "Train to Lisboa", "Porto Campanha", "Lisboa Santa Apolonia", back));
+    lines.push("END:VCALENDAR".to_string());
+    lines.push(String::new());
+    lines.join("\r\n")
 }
 
 /// The update that moves the sprint planning meeting.
