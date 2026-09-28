@@ -1531,6 +1531,11 @@ impl ConversationView {
         let theme = Theme {
             dark: style.is_dark(),
             accent: style.accent_color_rgba().to_str().to_string(),
+            accent_text: style
+                .accent_color()
+                .to_standalone_rgba(style.is_dark())
+                .to_str()
+                .to_string(),
             // A conversation in its own window has no assistant beside it.
             summarize: self.summarize.get() && !self.detached.get(),
         };
