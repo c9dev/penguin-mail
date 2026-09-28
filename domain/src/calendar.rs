@@ -228,6 +228,12 @@ pub struct Event {
     pub original_start: Option<EpochMillis>,
     /// A change made here waits in the queue for the provider.
     pub pending: bool,
+    /// The organizer's version of the event, iCalendar's `SEQUENCE`,
+    /// which Google counts up with each change it sends the guests. A
+    /// guest's proposal names it, or the organizer may set it aside as
+    /// stale. Only read from the provider; a write never sends it.
+    #[serde(default)]
+    pub sequence: i64,
     /// A Google Meet link to ask for with the next write, named by a
     /// request id so a retry does not make two. Only the queue body
     /// carries it; the store does not keep it.

@@ -501,6 +501,7 @@ impl MainWindow {
             let (read_settings, change_settings) = (Rc::downgrade(app), Rc::downgrade(app));
             let (contacts_app, push_app) = (Rc::downgrade(app), Rc::downgrade(app));
             let refresh_app = Rc::downgrade(app);
+            let p = weak.clone();
             let calendar = CalendarView::new(
                 Rc::clone(&app.core),
                 move || {
@@ -554,6 +555,11 @@ impl MainWindow {
                     refresh: Box::new(move || {
                         if let Some(app) = refresh_app.upgrade() {
                             app.refresh_calendars();
+                        }
+                    }),
+                    propose: Box::new(move |account_id, occurrence| {
+                        if let Some(win) = p.upgrade() {
+                            win.propose_for_event(account_id, occurrence);
                         }
                     }),
                 },

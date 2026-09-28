@@ -6,6 +6,7 @@ use std::sync::Arc;
 
 use base64::Engine;
 use mailrs_domain::Address;
+use mailrs_domain::calendar::series::RepeatScope;
 use mailrs_domain::calendar::{Event, Guest};
 use mailrs_domain::invitation::{Answer, Invitation, Scope, When};
 use mailrs_gmail::GmailError;
@@ -31,7 +32,7 @@ fn read(ics: &str) -> Invitation {
 
 /// The one message the fake was asked to send, as text, with the base64
 /// parts decoded so a test can read the calendar object in it.
-fn sent_message(h: &Harness) -> String {
+pub(super) fn sent_message(h: &Harness) -> String {
     let raw = h.fake.with(|s| {
         assert_eq!(s.sent.len(), 1, "one message went out");
         s.sent[0].0.clone()
@@ -234,6 +235,7 @@ async fn an_answer_reaches_the_calendar_and_comes_back_on_reopening() {
             &me(),
             Answer::Maybe,
             Scope::Series,
+            None,
             1_000,
         )
         .await
@@ -259,7 +261,7 @@ async fn an_answer_reaches_the_calendar_and_comes_back_on_reopening() {
 }
 
 #[tokio::test]
-async fn an_answer_from_the_calendar_marks_the_copy_and_the_card() {
+async fn an_answer_from_the_calendar_marks_the_copy_and_the_card_and_waits_to_go_out() {
     let h = harness().await;
     let invitations = invitations(&h);
     h.fake.with(|s| s.calendar.insert(UID.into(), None));
@@ -312,20 +314,23 @@ async fn an_answer_from_the_calendar_marks_the_copy_and_the_card() {
     };
 
     let done = invitations
-        .answer_event(h.account_id, &occurrence, Answer::Yes)
+        .answer_event(h.account_id, &occurrence, Answer::Yes, RepeatScope::All, None)
         .await
         .unwrap();
     assert_eq!(done, Permitted::Done(()));
 
+    let queued = h
+        .db
+        .read({
+            let account_id = h.account_id;
+            move |c| calendar_store::queued(c, account_id)
+        })
+        .await
+        .unwrap();
     assert_eq!(
-        h.fake.with(|s| s.calendar[UID]),
-        Some(Answer::Yes),
-        "Google Calendar holds the answer"
-    );
-    assert_eq!(
-        h.fake.with(|s| s.answered_occurrences.last().copied()),
-        Some(None),
-        "the whole series answers, never one occurrence"
+        queued.iter().map(|q| (q.kind, q.event.as_str())).collect::<Vec<_>>(),
+        [(calendar_store::ChangeKind::Answer, "series-1")],
+        "the answer waits in the calendar's queue"
     );
 
     let stored = h
@@ -421,6 +426,7 @@ async fn a_newer_version_asks_again() {
             &me(),
             Answer::Yes,
             Scope::Series,
+            None,
             1_000,
         )
         .await
@@ -451,6 +457,7 @@ async fn an_event_on_no_calendar_is_answered_by_mail_to_the_organizer() {
             &me(),
             Answer::Yes,
             Scope::Series,
+            None,
             1_000,
         )
         .await
@@ -513,6 +520,7 @@ async fn an_invitation_with_no_organizer_has_nobody_to_answer() {
             &me(),
             Answer::Yes,
             Scope::Series,
+            None,
             1_000,
         )
         .await
@@ -549,6 +557,7 @@ async fn a_calendar_api_switched_off_still_reaches_the_organizer() {
             &me(),
             Answer::Yes,
             Scope::Series,
+            None,
             1_000,
         )
         .await
@@ -575,6 +584,7 @@ async fn a_missing_calendar_permission_still_reaches_the_organizer() {
             &me(),
             Answer::No,
             Scope::Series,
+            None,
             1_000,
         )
         .await
@@ -591,6 +601,7 @@ async fn a_missing_calendar_permission_still_reaches_the_organizer() {
             &me(),
             Answer::Yes,
             Scope::Series,
+            None,
             2_000,
         )
         .await
@@ -749,7 +760,7 @@ async fn google_hears_which_occurrence_an_answer_is_for() {
 
     for (scope, named) in [(Scope::Occurrence, Some(OCCURRENCE)), (Scope::Series, None)] {
         invitations
-            .answer(h.account_id, &invitation, &me(), Answer::Yes, scope, 1_000)
+            .answer(h.account_id, &invitation, &me(), Answer::Yes, scope, None, 1_000)
             .await
             .unwrap();
         assert_eq!(
@@ -772,6 +783,7 @@ async fn a_mailed_reply_names_the_occurrence_it_answers() {
             &me(),
             Answer::No,
             Scope::Occurrence,
+            None,
             1_000,
         )
         .await
@@ -786,6 +798,7 @@ async fn a_mailed_reply_names_the_occurrence_it_answers() {
             &me(),
             Answer::No,
             Scope::Series,
+            None,
             2_000,
         )
         .await
@@ -1335,7 +1348,7 @@ async fn an_answer_on_the_card_stops_the_event_waiting() {
     let invitation = read(&invite(0, "20300310T090000Z"));
 
     let sent = invitations(&h)
-        .answer(h.account_id, &invitation, &me(), Answer::Yes, Scope::Series, MARCH)
+        .answer(h.account_id, &invitation, &me(), Answer::Yes, Scope::Series, None, MARCH)
         .await
         .unwrap();
 
@@ -1351,7 +1364,7 @@ async fn an_answer_to_one_occurrence_leaves_the_rest_of_the_series_waiting() {
     h.fake.with(|s| s.calendar.insert(UID.into(), None));
 
     invitations(&h)
-        .answer(h.account_id, &to_the_tenth(), &me(), Answer::Yes, Scope::Occurrence, MARCH)
+        .answer(h.account_id, &to_the_tenth(), &me(), Answer::Yes, Scope::Occurrence, None, MARCH)
         .await
         .unwrap();
 

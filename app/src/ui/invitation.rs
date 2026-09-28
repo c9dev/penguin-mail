@@ -26,8 +26,9 @@ use mailrs_domain::translate::{fill, fill_plural, gettext};
 /// What the card asks the window to do.
 pub enum Action {
     /// Send this answer to the organizer, for the one occurrence the
-    /// invitation names or for the whole series.
-    Answer(Answer, Scope),
+    /// invitation names or for the whole series, with the note the user
+    /// wrote under the buttons.
+    Answer(Answer, Scope, Option<String>),
     /// Ask the organizer for another time.
     Propose(Proposal),
     /// Hand the `.ics` to the desktop, which files it in GNOME Calendar.
@@ -116,6 +117,9 @@ pub struct EventCard {
     strip_grid: gtk::Grid,
     answers: gtk::Box,
     buttons: Vec<(Answer, gtk::ToggleButton)>,
+    /// "Add a note", above the answer buttons: words the organizer reads
+    /// with the answer. Emptied when another invitation goes up.
+    note: gtk::Entry,
     add: gtk::Button,
     /// Show in Calendar. It takes Add to Calendar's place once the event
     /// is known to be on a calendar the app shows.
@@ -261,6 +265,12 @@ impl EventCard {
             answers.append(&button);
             buttons.push((answer, button));
         }
+        let note = gtk::Entry::builder()
+            .placeholder_text(gettext("Add a note"))
+            .max_length(500)
+            .css_classes(["invitation-note"])
+            .build();
+        crate::ui::describe(&note, &gettext("Note with your answer"), &gettext("The organizer reads it with your answer"));
         let reach = gtk::Box::builder()
             .spacing(0)
             .visible(false)
@@ -361,6 +371,16 @@ impl EventCard {
         access.append(&told);
         access.append(&grant);
 
+        // The note sits over the buttons that send it. Its box keeps the
+        // gap above the buttons whether the note shows or not.
+        let answering = gtk::Box::builder()
+            .orientation(gtk::Orientation::Vertical)
+            .spacing(10)
+            .css_classes(["invitation-answering"])
+            .build();
+        answering.append(&note);
+        answering.append(&actions);
+
         // Everything but the bar sits in one column, 12 px right of it,
         // as the mockup lines the title, the strip and the buttons up.
         let column = gtk::Box::builder()
@@ -374,7 +394,7 @@ impl EventCard {
             meta_row.upcast_ref(),
             clash.upcast_ref(),
             strip.upcast_ref(),
-            actions.upcast_ref(),
+            answering.upcast_ref(),
             went.upcast_ref(),
             access.upcast_ref(),
         ] {
@@ -419,6 +439,7 @@ impl EventCard {
             strip_grid,
             answers,
             buttons,
+            note,
             add,
             show_in_calendar,
             propose,
@@ -451,7 +472,8 @@ impl EventCard {
                 }
                 if button.is_active() {
                     card.mark(Some(answer));
-                    act(Action::Answer(answer, card.scope.get()));
+                    let note = Some(card.note.text().trim().to_string()).filter(|n| !n.is_empty());
+                    act(Action::Answer(answer, card.scope.get(), note));
                 } else {
                     // Pressing the answer already given keeps it: taking an
                     // answer back is not something Google Calendar does.
@@ -473,6 +495,14 @@ impl EventCard {
     /// Fills the card from an invitation and shows it.
     pub fn show(&self, showing: Showing) {
         *self.strip_shown.borrow_mut() = None;
+        let same = self
+            .showing
+            .borrow()
+            .as_ref()
+            .is_some_and(|shown| shown.invitation.uid == showing.invitation.uid);
+        if !same {
+            self.note.set_text("");
+        }
         self.draw(&showing);
         *self.showing.borrow_mut() = Some(showing);
     }
@@ -702,6 +732,7 @@ impl EventCard {
         // question, so neither gets answer buttons.
         let answerable = event.method == Method::Request && !event.cancelled();
         self.answers.set_visible(answerable);
+        self.note.set_visible(answerable);
         // Only an invitation to one occurrence of a series leaves the
         // question open; an answer to anything else covers the lot.
         self.reach

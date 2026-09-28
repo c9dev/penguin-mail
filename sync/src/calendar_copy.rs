@@ -541,14 +541,25 @@ impl<A: Accounts> CalendarCopy<A> {
                 }
                 continue;
             }
+            if change.kind == store::ChangeKind::Answer {
+                let turned_before = turned_down.len();
+                self.send_answer(&calendar, &change, &mut turned_down).await?;
+                if turned_down.len() > turned_before {
+                    after = 0;
+                }
+                continue;
+            }
             let create = change.kind == store::ChangeKind::Create;
             let answer = match change.kind {
                 store::ChangeKind::Remove => calendar
                     .remove_event(&change.calendar, &change.event, change.etag.as_deref(), change.notify)
                     .await
                     .map(|()| None),
-                // A move went out through `send_move` above.
-                store::ChangeKind::Create | store::ChangeKind::Save | store::ChangeKind::Move => {
+                // A move and an answer went out above.
+                store::ChangeKind::Create
+                | store::ChangeKind::Save
+                | store::ChangeKind::Move
+                | store::ChangeKind::Answer => {
                     let Some(body) = change.body.clone() else {
                         // A row `enqueue` gives a Create or Save always
                         // carries a body; one that does not has nothing
@@ -695,6 +706,42 @@ impl<A: Accounts> CalendarCopy<A> {
         }
     }
 
+    /// Sends one queued answer. Google takes it on the event or the one
+    /// occurrence the row names; a write the copy made of it waits only
+    /// for the new version. An event gone from Google drops the answer
+    /// with it, and any other refusal reads Google's version back.
+    async fn send_answer(
+        &self,
+        calendar: &AnyCalendar,
+        change: &store::QueuedChange,
+        turned_down: &mut Vec<TurnedDown>,
+    ) -> Result<(), SyncError> {
+        let (account_id, seq) = (change.account_id, change.seq);
+        let Some(reply) = change.answer.clone() else {
+            // A row `enqueue_answer` wrote always carries its answer.
+            self.db.write(move |c| store::dequeue(c, seq)).await?;
+            return Ok(());
+        };
+        let sent = calendar
+            .answer_event(&change.calendar, &change.event, &reply.me, reply.answer, reply.note.as_deref())
+            .await;
+        match sent {
+            Ok(written) => {
+                let (cal, id) = (change.calendar.clone(), change.event.clone());
+                self.db
+                    .write(move |c| store::finish_answer(c, account_id, seq, &cal, &id, &written.etag))
+                    .await?;
+            }
+            Err(BackendError::NotFound) => turned_down.push(self.drop_gone(change, "deleted elsewhere").await?),
+            Err(err) if holds_the_queue(&err) => return Err(err.into()),
+            Err(BackendError::Refused(reason)) => {
+                turned_down.push(self.take_theirs(calendar, change, Some(reason)).await?)
+            }
+            Err(err) => turned_down.push(self.take_theirs(calendar, change, Some(err.to_string())).await?),
+        }
+        Ok(())
+    }
+
     /// Drops a change whose event, or whose calendar, the provider no
     /// longer has, and takes the event off the copy.
     async fn drop_gone(&self, change: &store::QueuedChange, reason: &str) -> Result<TurnedDown, SyncError> {
@@ -711,7 +758,7 @@ impl<A: Accounts> CalendarCopy<A> {
             account_id,
             calendar: change.calendar.clone(),
             event: change.event.clone(),
-            title: change.body.as_ref().map(|b| b.title.clone()).unwrap_or_default(),
+            title: title_of(change),
             reason: Some(reason.to_string()),
         })
     }
@@ -726,7 +773,7 @@ impl<A: Accounts> CalendarCopy<A> {
         reason: Option<String>,
     ) -> Result<TurnedDown, SyncError> {
         let account_id = change.account_id;
-        let title = change.body.as_ref().map(|b| b.title.clone()).unwrap_or_default();
+        let title = title_of(change);
         // The next read carries Google's version; forget the token so it
         // reads the calendar whole and cannot miss it.
         let (seq, cal, id) = (change.seq, change.calendar.clone(), change.event.clone());
@@ -1198,6 +1245,16 @@ fn cut_series<'a>(steps: &[Step], before: &'a [Event]) -> Option<&'a Event> {
         .iter()
         .find(|e| e.calendar == cut.calendar && e.id == cut.id)
         .filter(|old| !old.rules.is_empty() && old.rules != cut.rules)
+}
+
+/// The title of the event a queued change writes, to say which one the
+/// provider turned down.
+fn title_of(change: &store::QueuedChange) -> String {
+    match (&change.body, &change.answer) {
+        (Some(body), _) => body.title.clone(),
+        (None, Some(answer)) => answer.title.clone(),
+        (None, None) => String::new(),
+    }
 }
 
 /// Whether a failed send should stop and keep the change for the next
