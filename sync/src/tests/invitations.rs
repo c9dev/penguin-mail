@@ -1150,3 +1150,149 @@ async fn a_cancellation_has_no_spot() {
         .unwrap();
     assert_eq!(found, None);
 }
+
+// -- "Waiting for your answer" (ruling R2) ----------------------------
+
+use mailrs_domain::calendar::Status;
+use mailrs_store::messages;
+
+use crate::invitations::Waiting;
+
+/// The account itself, as one of an event's guests.
+fn me_guest() -> Guest {
+    Guest {
+        me: true,
+        email: "me@example.com".into(),
+        ..Guest::default()
+    }
+}
+
+/// What [`waiting_for_answer`] answers for the fixture meeting, waiting
+/// at `start` with no mail linked to it yet.
+fn waiting(h: &Harness, id: &str, start: i64) -> Waiting {
+    Waiting {
+        account_id: h.account_id,
+        calendar: "primary".into(),
+        id: id.into(),
+        start,
+        title: "Design review".into(),
+        all_day: false,
+        thread_id: None,
+    }
+}
+
+/// Puts a plain message in the store, so `thread_id_of` can find it, as
+/// history replay would once the invitation's own message arrived.
+async fn store_message(h: &Harness, message_id: &str, thread_id: &str) {
+    let message = meta(message_id, thread_id, 1_000, &[]);
+    let account_id = message.account_id;
+    let upsert = messages::Change::Upsert {
+        meta: Box::new(message),
+        generation: 1,
+    };
+    h.db
+        .write(move |c| messages::apply(c, account_id, &[upsert]).map(drop))
+        .await
+        .unwrap();
+}
+
+#[tokio::test]
+async fn an_unanswered_invitation_waits_for_an_answer() {
+    let h = harness().await;
+    read_copy(&h, vec![Ev { guests: vec![me_guest()], ..on_copy("ev1", TENTH) }]).await;
+    let found = invitations(&h).waiting_for_answer(&[h.account_id], MARCH).await.unwrap();
+    assert_eq!(found, vec![waiting(&h, "ev1", TENTH)]);
+}
+
+#[tokio::test]
+async fn an_answered_invitation_does_not_wait() {
+    let h = harness().await;
+    read_copy(
+        &h,
+        vec![Ev {
+            guests: vec![me_guest()],
+            my_answer: Some(Answer::Yes),
+            ..on_copy("ev1", TENTH)
+        }],
+    )
+    .await;
+    let found = invitations(&h).waiting_for_answer(&[h.account_id], MARCH).await.unwrap();
+    assert_eq!(found, Vec::new());
+}
+
+#[tokio::test]
+async fn an_event_the_account_is_not_a_guest_of_does_not_wait() {
+    let h = harness().await;
+    read_copy(&h, vec![on_copy("ev1", TENTH)]).await;
+    let found = invitations(&h).waiting_for_answer(&[h.account_id], MARCH).await.unwrap();
+    assert_eq!(found, Vec::new());
+}
+
+#[tokio::test]
+async fn a_cancelled_invitation_does_not_wait() {
+    let h = harness().await;
+    read_copy(
+        &h,
+        vec![Ev {
+            guests: vec![me_guest()],
+            status: Status::Cancelled,
+            ..on_copy("ev1", TENTH)
+        }],
+    )
+    .await;
+    let found = invitations(&h).waiting_for_answer(&[h.account_id], MARCH).await.unwrap();
+    assert_eq!(found, Vec::new());
+}
+
+#[tokio::test]
+async fn a_hidden_calendar_has_nothing_waiting() {
+    let h = harness().await;
+    read_copy(&h, vec![Ev { guests: vec![me_guest()], ..on_copy("ev1", TENTH) }]).await;
+    let account = h.account_id;
+    h.db.write(move |c| copy_store::set_shown(c, account, "primary", false)).await.unwrap();
+    let found = invitations(&h).waiting_for_answer(&[h.account_id], MARCH).await.unwrap();
+    assert_eq!(found, Vec::new());
+}
+
+#[tokio::test]
+async fn an_unanswered_series_waits_only_once_at_its_nearest_occurrence() {
+    let h = harness().await;
+    read_copy(
+        &h,
+        vec![Ev {
+            guests: vec![me_guest()],
+            rules: vec!["RRULE:FREQ=WEEKLY;COUNT=4".into()],
+            ..on_copy("series", TENTH - WEEK)
+        }],
+    )
+    .await;
+    let found = invitations(&h).waiting_for_answer(&[h.account_id], MARCH).await.unwrap();
+    assert_eq!(found, vec![waiting(&h, "series", TENTH - WEEK)]);
+}
+
+#[tokio::test]
+async fn waiting_for_answer_links_to_the_message_the_invitation_arrived_in() {
+    let h = harness().await;
+    read_copy(&h, vec![Ev { guests: vec![me_guest()], ..on_copy("ev1", TENTH) }]).await;
+    invitations(&h)
+        .open(h.account_id, "m1", &invite(0, "20300310T090000Z"), MARCH)
+        .await
+        .unwrap();
+    store_message(&h, "m1", "t1").await;
+    let found = invitations(&h).waiting_for_answer(&[h.account_id], MARCH).await.unwrap();
+    assert_eq!(
+        found,
+        vec![Waiting {
+            thread_id: Some("t1".to_string()),
+            ..waiting(&h, "ev1", TENTH)
+        }]
+    );
+}
+
+#[tokio::test]
+async fn waiting_for_answer_keeps_the_row_with_no_mail_to_open() {
+    let h = harness().await;
+    read_copy(&h, vec![Ev { guests: vec![me_guest()], ..on_copy("ev1", TENTH) }]).await;
+    let found = invitations(&h).waiting_for_answer(&[h.account_id], MARCH).await.unwrap();
+    assert_eq!(found, vec![waiting(&h, "ev1", TENTH)]);
+}

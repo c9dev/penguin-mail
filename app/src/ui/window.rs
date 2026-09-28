@@ -425,13 +425,7 @@ impl MainWindow {
                 .max_sidebar_width(420.0)
                 .sidebar_width_fraction(0.34)
                 .build();
-            let (t, g, n, a, m) = (
-                weak.clone(),
-                weak.clone(),
-                weak.clone(),
-                weak.clone(),
-                weak.clone(),
-            );
+            let (t, g, n, a, m) = (weak.clone(), weak.clone(), weak.clone(), weak.clone(), weak.clone());
             let (read_settings, change_settings) = (Rc::downgrade(app), Rc::downgrade(app));
             let (contacts_app, push_app) = (Rc::downgrade(app), Rc::downgrade(app));
             let calendar = CalendarView::new(

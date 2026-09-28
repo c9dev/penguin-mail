@@ -86,7 +86,9 @@ pub struct Hooks {
     /// Sends the account's queued calendar changes now, then reloads.
     pub push: Box<dyn Fn(AccountId)>,
     /// Opens the mail that carries an invitation, switching away from the
-    /// calendar to it.
+    /// calendar to it: the "Waiting for your answer" card's "Open mail"
+    /// door and the event popover's "Open the invitation in Mail" link
+    /// both call this.
     pub open_mail: Box<dyn Fn(AccountId, String)>,
 }
 
@@ -403,7 +405,8 @@ impl CalendarView {
         let quick = Quick::new(&card);
 
         let view = Rc::new_cyclic(|weak: &Weak<CalendarView>| {
-            let (on_date, on_shown, on_grant) = (weak.clone(), weak.clone(), weak.clone());
+            let (on_date, on_shown, on_grant, on_open_waiting, on_open_mail) =
+                (weak.clone(), weak.clone(), weak.clone(), weak.clone(), weak.clone());
             let calendar_sidebar = CalendarSidebar::new(
                 move |day| {
                     if let Some(view) = on_date.upgrade() {
@@ -418,6 +421,16 @@ impl CalendarView {
                 move |account| {
                     if let Some(view) = on_grant.upgrade() {
                         (view.hooks.grant)(account);
+                    }
+                },
+                move |account_id, calendar, id, start| {
+                    if let Some(view) = on_open_waiting.upgrade() {
+                        view.open(account_id, &calendar, &id, start);
+                    }
+                },
+                move |account_id, thread_id| {
+                    if let Some(view) = on_open_mail.upgrade() {
+                        (view.hooks.open_mail)(account_id, thread_id);
                     }
                 },
             );
@@ -2284,8 +2297,11 @@ impl CalendarView {
         let accounts = self.account_ids();
         let mini = Range::around(ViewKind::Month, self.day.get());
         let (from, to) = mini.span(&chrono::Local);
+        let now = chrono::Local::now().timestamp_millis();
         let weak = Rc::downgrade(self);
         let core = Rc::clone(&self.core);
+        let waiting_accounts = accounts.clone();
+        let invitations = self.core.invitations();
         glib::spawn_future_local(async move {
             let found = core
                 .read(move |c| {
@@ -2297,6 +2313,17 @@ impl CalendarView {
                     Ok((calendars, busy))
                 })
                 .await;
+            // IMAP and withheld accounts have no calendars table of their
+            // own, so passing every account here adds nothing for them,
+            // the same way `store::occurrences` above already does. The
+            // read runs on the tokio runtime through `call`, as every
+            // other `Invitations` method the window calls does, since
+            // `Db::read`'s `spawn_blocking` needs one and the GTK loop
+            // gives it none.
+            let waiting = core
+                .call(async move { invitations.waiting_for_answer(&waiting_accounts, now).await })
+                .await
+                .map_err(|err| err.to_string());
             let Some(view) = weak.upgrade() else { return };
             if view.sidebar_read.get() != read {
                 return;
@@ -2304,6 +2331,10 @@ impl CalendarView {
             match found {
                 Ok((calendars, busy)) => view.show_sidebar(calendars, &busy, mini),
                 Err(err) => tracing::warn!(%err, "could not read the calendars"),
+            }
+            match waiting {
+                Ok(waiting) => view.calendar_sidebar.show_waiting(&waiting),
+                Err(err) => tracing::warn!(%err, "could not read what is waiting for an answer"),
             }
             if view.fill_owed.replace(false) {
                 view.fill_all();

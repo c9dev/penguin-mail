@@ -3960,6 +3960,14 @@ msgstr "Só pode ler este calendário"
 msgid "Grant Access for {account}"
 msgstr "Conceder acesso a {account}"
 
+#: app/src/ui/calendar/sidebar.rs:282
+msgid "Waiting for your answer"
+msgstr "À espera da sua resposta"
+
+#: app/src/ui/calendar/sidebar.rs:403
+msgid "Open mail"
+msgstr "Abrir correio"
+
 #: app/src/ui/calendar/time_grid.rs:190
 msgid "{count} more event"
 msgid_plural "{count} more events"
@@ -4029,6 +4037,18 @@ msgstr[1] "mais {count} eventos a {date}"
 #: app/src/ui/calendar/words.rs:203
 msgid "{date}, has events"
 msgstr "{date}, tem eventos"
+
+#: app/src/ui/calendar/words.rs:225
+msgid "{weekday} {time}"
+msgstr "{weekday} {time}"
+
+#: app/src/ui/calendar/words.rs:246
+msgid "{day}, {time}"
+msgstr "{day}, {time}"
+
+#: app/src/ui/calendar/words.rs:264
+msgid "Open the invitation for “{title}” in Mail"
+msgstr "Abrir o convite de “{title}” no Correio"
 
 #: app/src/ui/calendar/words.rs:216
 msgid "At the start"
