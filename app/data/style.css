@@ -406,10 +406,12 @@ toggle-group.category-chips { background: none; padding: 0; box-shadow: none; }
 }
 .follow-up-banner > image { color: var(--accent-color); }
 
-/* The event card above an invitation, after Apple Mail's. */
+/* The event card, laid over the place the page keeps for it inside the
+   invitation's message. The page gives the room around it, so the area
+   adds none and shows the page through. */
 .invitation-area {
-  padding: 12px 16px 4px 16px;
-  background: var(--view-bg-color);
+  padding: 0;
+  background: none;
 }
  /* Adwaita's card style draws the surface; this adds the room inside. */
 .invitation-card { padding: 14px 16px; border-radius: 12px; }

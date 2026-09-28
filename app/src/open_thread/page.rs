@@ -188,6 +188,13 @@ impl OpenThread {
         page
     }
 
+    /// Puts the event card in the message `message_id` names, or takes it
+    /// out of the page with `None`. The next [`Self::page`] patches the
+    /// articles that gain or lose the card's place.
+    pub fn take_invitation_place(&mut self, message_id: Option<String>) {
+        self.invitation_at = message_id;
+    }
+
     /// Forgets what the page on screen holds, so the next [`Self::page`]
     /// is the whole document: WebKit's process went away, or a patch could
     /// not be applied.
@@ -277,6 +284,7 @@ impl OpenThread {
                 html: &cleaned.html,
                 paints: cleaned.paints,
             }),
+            event_slot: self.invitation_at.as_deref() == Some(meta.id.as_str()),
         }
     }
 
@@ -466,6 +474,27 @@ mod tests {
         let mut open = thread("<p>Kites</p>");
         assert!(whole(open.page(&theme())).contains("<p>Kites</p>"));
         assert!(patched(open.page(&theme())).is_empty());
+    }
+
+    /// The card's place is in the article, so putting the card up or
+    /// taking it down replaces that article and keeps the reader's place.
+    #[test]
+    fn the_card_s_place_patches_the_message_that_carries_it() {
+        let mut open = thread("<p>Kites</p>");
+        let mut second = open.messages[0].clone();
+        second.id = "m2".to_string();
+        open.messages.push(second);
+        open.page(&theme());
+        open.take_invitation_place(Some("m2".to_string()));
+        let page = open.page(&theme());
+        let Page::Patch(patch) = page else {
+            panic!("a whole page for the card's place");
+        };
+        assert_eq!(patch.len(), 1);
+        assert_eq!(patch[0].message_id, "m2");
+        assert!(patch[0].html.contains("class=\"event-slot\""));
+        open.take_invitation_place(None);
+        assert_eq!(patched(open.page(&theme())), ["m2"]);
     }
 
     #[test]

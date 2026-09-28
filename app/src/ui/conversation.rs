@@ -31,6 +31,7 @@ use mailrs_domain::translate::{fill, fill_plural, gettext};
 use mailrs_domain::{Category, FlagColor, Folder, MessageMeta, Target};
 use webkit::prelude::*;
 
+use super::card_place::Host as CardHost;
 use super::find::FindBar;
 use super::invitation::{self, EventCard, Showing};
 use super::pgp::PgpCard;
@@ -222,14 +223,16 @@ pub struct ConversationView {
     webview: webkit::WebView,
     content: webkit::UserContentManager,
     banner: adw::Banner,
-    /// The event card above the message, shown when the open message
-    /// carries an invitation.
+    /// The event card, shown inside the message that carries an
+    /// invitation.
     pub card: Rc<EventCard>,
+    /// Lays the card over its place in the page.
+    card_host: Rc<CardHost>,
     /// The card above that, shown when gpg has something to say about the
     /// message.
     seal: Rc<PgpCard>,
-    /// The card between the event card and the message, shown when the
-    /// message is in a language the interface is not in.
+    /// The card above the message, shown when the message is in a
+    /// language the interface is not in.
     pub translate: Rc<TranslationCard>,
     /// The card at the top, shown for a queued message: when it goes, or
     /// why it has not gone, and what the person can do about it.
@@ -411,9 +414,11 @@ impl ConversationView {
         web_box.append(&list_banner);
         web_box.append(&banner);
         web_box.append(&seal.widget);
-        web_box.append(&card.widget);
         web_box.append(&translate.widget);
-        web_box.append(&webview);
+        // The event card sits inside the message that carries the
+        // invitation, laid over the place the page keeps for it.
+        let card_host = CardHost::new(&webview, &content, &card.widget);
+        web_box.append(&card_host.overlay);
         let stack = gtk::Stack::builder()
             .transition_type(gtk::StackTransitionType::Crossfade)
             .build();
@@ -652,6 +657,7 @@ impl ConversationView {
             content,
             banner,
             card,
+            card_host,
             seal,
             translate,
             queued,
@@ -1155,12 +1161,20 @@ impl ConversationView {
         self.queued.hide();
     }
 
-    /// Puts an invitation above the message, or takes the card away when
-    /// the message carries none.
+    /// Puts an invitation on the card, inside the message that carries it,
+    /// or takes the card away when the thread carries none. The page keeps
+    /// the card's place in that message, so it is patched too.
     pub fn show_invitation(&self, showing: Option<Showing>) {
+        let at = showing.as_ref().map(|showing| showing.message_id.clone());
         match showing {
             Some(showing) => self.card.show(showing),
             None => self.card.hide(),
+        }
+        if self
+            .change(|open| open.take_invitation_place(at))
+            .is_some()
+        {
+            self.render(false);
         }
     }
 
@@ -1457,7 +1471,10 @@ impl ConversationView {
                 self.waiting.borrow_mut().clear();
                 let load = self.loads.get() + 1;
                 self.loads.set(load);
-                let html = document.html(&format!(" data-load=\"{load}\""));
+                let html = document.html(&format!(
+                    " data-load=\"{load}\"{}",
+                    self.card_host.root_style()
+                ));
                 self.webview.load_html(&html, None);
             }
             Page::Patch(patch) if patch.is_empty() => {}

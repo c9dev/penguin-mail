@@ -48,6 +48,8 @@ pub enum Proposal {
 /// One invitation as the card shows it.
 #[derive(Clone)]
 pub struct Showing {
+    /// The message that carries the invitation, which the card sits in.
+    pub message_id: String,
     pub invitation: Invitation,
     pub change: Option<Change>,
     /// The answer the user already sent, if any. It wins over the guest
@@ -847,6 +849,7 @@ mod tests {
 
     fn showing(method: &str, extra: &[&str]) -> Showing {
         Showing {
+            message_id: "m1".to_string(),
             invitation: mailrs_domain::invitation::read(&ics(method, extra))
                 .expect("the part holds an event"),
             change: None,

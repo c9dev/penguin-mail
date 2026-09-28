@@ -771,7 +771,9 @@ impl Effects for FakeWindow {
     }
 
     fn show_invitation(&self, showing: Option<Showing>) {
-        self.reached(Step::ShowInvitation);
+        let at = showing.as_ref().map(|showing| showing.message_id.clone());
+        self.change(Step::ShowInvitation, |open| open.take_invitation_place(at));
+        self.draw();
         self.with(|screen| {
             screen
                 .invitations

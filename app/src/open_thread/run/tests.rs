@@ -209,6 +209,32 @@ async fn an_invitation_goes_on_the_card_with_what_else_is_on() {
     assert!(screen.steps.contains(&Step::Clashes));
 }
 
+/// The card sits inside the message that carries the invitation, between
+/// its header and its body, even when a later reply is the newest message.
+#[tokio::test]
+async fn an_invitation_s_card_sits_in_the_message_that_carries_it() {
+    let window = FakeWindow::with_body(invited());
+    window.with(|screen| {
+        let thread = vec![meta("m1", true), meta("m2", true)];
+        if let Some(stored) = screen.stored.get_mut(THREAD) {
+            stored.messages = thread.clone();
+        }
+        screen.messages = thread;
+        screen.gmail.insert("m2".to_string(), body("Count me in."));
+    });
+    window.run().open(row(THREAD)).await;
+    let screen = window.0.borrow();
+    let page = screen.document.as_ref().expect("a page").html("");
+    assert_eq!(page.matches("class=\"event-slot\"").count(), 1);
+    let slot = page.find("class=\"event-slot\"").expect("the card's place");
+    let first = page.find("id=\"m-m1\"").expect("the invitation");
+    let second = page.find("id=\"m-m2\"").expect("the reply");
+    assert!(
+        first < slot && slot < second,
+        "the place is in the message with the invitation"
+    );
+}
+
 #[tokio::test]
 async fn an_invitation_read_for_a_thread_the_reader_left_goes_nowhere() {
     let window = FakeWindow::with_body(invited());

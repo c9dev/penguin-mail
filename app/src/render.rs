@@ -37,6 +37,10 @@ pub struct MessageView<'a> {
     /// its text. Cleaning a long message costs milliseconds, so whoever
     /// builds the page keeps the result and passes it in here.
     pub sanitized: Option<Sanitized<'a>>,
+    /// Whether this message carries the invitation on the event card. Its
+    /// article then keeps an empty place between the header and the body,
+    /// which the card, a widget of the window, is laid over.
+    pub event_slot: bool,
 }
 
 /// A body's cleaned HTML, and whether it chooses its own colours. Mail
@@ -232,6 +236,20 @@ fn render_message(
     // page at zero height rather than dropping them, so the two states
     // have something to move between.
     html.push_str("<div class=\"fold\"><div class=\"folded\">");
+    // The event card is a widget of the window laid over this place, so
+    // the page holds no copy of it. The view sets its height to the
+    // card's through `--event-card`. The mockup puts the card 20 px under
+    // the header and the text 24 px under the card; the body's own top
+    // margin collapses into the place's. The place takes the focus in the
+    // page's order and hands it to the card, so Tab runs header, card,
+    // body, and a screen reader meets the card's name where it sits.
+    if view.event_slot {
+        let _ = write!(
+            html,
+            "<div class=\"event-slot\" tabindex=\"0\" role=\"group\" aria-label=\"{}\"></div>",
+            escape(&gettext("Invitation"))
+        );
+    }
     render_body(html, view);
     html.push_str("</div></div></article>");
 }
@@ -687,6 +705,8 @@ opacity 180ms cubic-bezier(0.23,1,0.32,1)}}\
 .message{{transition:background-color 120ms ease}}\
 .attachment,.attachment .get{{transition:background-color 120ms ease,opacity 120ms ease}}\
 @media (prefers-reduced-motion:reduce){{.fold,.message{{transition:none}}}}\
+.event-slot{{height:var(--event-card,0px);margin:20px 0 24px;outline:none}}\
+@media print{{.event-slot{{display:none}}}}\
 .body{{margin:14px 0 2px 52px}}\
 .text{{white-space:pre-wrap;overflow-wrap:anywhere}}\
 .body.text,.body.status,.html{{background:var(--surface);border-radius:12px;padding:14px;\
@@ -823,6 +843,7 @@ mod tests {
                 body: BodyState::Loaded(&body),
                 expanded: false,
                 thumbnails: &no_thumbs,
+                event_slot: false,
                 sanitized: None,
             }],
         );
@@ -843,6 +864,7 @@ mod tests {
             expanded: true,
             thumbnails: &no_thumbs,
             // Both fixtures are already clean.
+            event_slot: false,
             sanitized: body.html.as_deref().map(|html| Sanitized { html, paints }),
         };
         let html = page(
@@ -889,6 +911,7 @@ mod tests {
                 body: BodyState::Loaded(&body),
                 expanded: true,
                 thumbnails: &no_thumbs,
+                event_slot: false,
                 sanitized: None,
             }],
         );
@@ -909,6 +932,7 @@ mod tests {
             body: BodyState::Loaded(&body),
             expanded: false,
             thumbnails: &no_thumbs,
+            event_slot: false,
             sanitized: None,
         };
         let initials = page("Hi", vec![view()]);
@@ -950,6 +974,7 @@ mod tests {
                     body: BodyState::Loaded(&body),
                     expanded: false,
                     thumbnails: &no_thumbs,
+                    event_slot: false,
                     sanitized: None,
                 },
                 MessageView {
@@ -957,6 +982,7 @@ mod tests {
                     body: BodyState::Loaded(&body),
                     expanded: true,
                     thumbnails: &no_thumbs,
+                    event_slot: false,
                     sanitized: None,
                 },
             ],
@@ -990,6 +1016,67 @@ mod tests {
         assert!(html.contains("2 messages"));
     }
 
+    /// The event card is a widget laid over the page, so the page keeps
+    /// room for it in the message that carries the invitation: after the
+    /// header, before the body, inside the fold so it closes with them.
+    #[test]
+    fn the_message_with_the_invitation_keeps_a_place_for_its_card() {
+        let first = meta("m1", "Ann", &[]);
+        let second = meta("m2", "Ann", &[]);
+        let body = MessageBody {
+            text: Some("the body".into()),
+            ..Default::default()
+        };
+        let no_thumbs = HashMap::new();
+        let view = |meta, event_slot| MessageView {
+            meta,
+            body: BodyState::Loaded(&body),
+            expanded: true,
+            thumbnails: &no_thumbs,
+            sanitized: None,
+            event_slot,
+        };
+        let html = page("Hello", vec![view(&first, false), view(&second, true)]);
+        assert_eq!(html.matches("class=\"event-slot\"").count(), 1);
+        let second_starts = html.find("id=\"m-m2\"").expect("the second article");
+        let slot = html.find("class=\"event-slot\"").expect("the slot");
+        let folded = second_starts
+            + html[second_starts..]
+                .find("<div class=\"folded\">")
+                .expect("the fold");
+        let body = second_starts
+            + html[second_starts..]
+                .find("<div class=\"body")
+                .expect("the body");
+        assert!(
+            folded < slot && slot < body,
+            "the place sits in the fold, before the body"
+        );
+    }
+
+    /// The card's buttons are widgets outside the page, so the keyboard
+    /// reaches them through the place: it takes the focus in the page's
+    /// own order and hands it to the card.
+    #[test]
+    fn the_place_for_the_card_takes_the_focus_under_the_card_s_name() {
+        let m = meta("m1", "Ann", &[]);
+        let no_thumbs = HashMap::new();
+        let html = page(
+            "Hello",
+            vec![MessageView {
+                meta: &m,
+                body: BodyState::Loading,
+                expanded: true,
+                thumbnails: &no_thumbs,
+                sanitized: None,
+                event_slot: true,
+            }],
+        );
+        assert!(html.contains(
+            "<div class=\"event-slot\" tabindex=\"0\" role=\"group\" aria-label=\"Invitation\"></div>"
+        ));
+    }
+
     #[test]
     fn an_html_body_sits_inside_a_shadow_root() {
         let m = meta("m1", "Ann", &[]);
@@ -1005,6 +1092,7 @@ mod tests {
                 body: BodyState::Loaded(&body),
                 expanded: true,
                 thumbnails: &no_thumbs,
+                event_slot: false,
                 sanitized: Some(Sanitized {
                     html: "<p>Hi</p>",
                     paints: false,
@@ -1050,6 +1138,7 @@ mod tests {
                 body: BodyState::Loaded(&body),
                 expanded: true,
                 thumbnails: &no_thumbs,
+                event_slot: false,
                 sanitized: None,
             }],
         );
@@ -1091,6 +1180,7 @@ mod tests {
                 body: BodyState::Loaded(&body),
                 expanded: true,
                 thumbnails: &no_thumbs,
+                event_slot: false,
                 sanitized: None,
             }],
         );
@@ -1135,6 +1225,7 @@ mod tests {
                 body: BodyState::Loading,
                 expanded: true,
                 thumbnails: &thumbs,
+                event_slot: false,
                 sanitized: None,
             }],
         );
@@ -1172,6 +1263,7 @@ mod tests {
                 body: BodyState::Loaded(&body),
                 expanded: true,
                 thumbnails: &no_thumbs,
+                event_slot: false,
                 sanitized: None,
             }],
         );
@@ -1198,6 +1290,7 @@ mod tests {
                 body: BodyState::Loaded(&body),
                 expanded: true,
                 thumbnails: &no_thumbs,
+                event_slot: false,
                 sanitized: None,
             }],
         );
@@ -1225,6 +1318,7 @@ mod tests {
                 body: BodyState::Loaded(&body),
                 expanded: true,
                 thumbnails: &no_thumbs,
+                event_slot: false,
                 sanitized: None,
             }],
         );
@@ -1256,6 +1350,7 @@ mod tests {
                 body: BodyState::Loaded(&body),
                 expanded: true,
                 thumbnails: &no_thumbs,
+                event_slot: false,
                 sanitized: None,
             }],
         );
@@ -1286,6 +1381,7 @@ mod tests {
                 body: BodyState::Loaded(&body),
                 expanded: true,
                 thumbnails: &no_thumbs,
+                event_slot: false,
                 sanitized: None,
             }],
         );
@@ -1303,6 +1399,7 @@ mod tests {
                 body: BodyState::Loading,
                 expanded: true,
                 thumbnails: &no_thumbs,
+                event_slot: false,
                 sanitized: None,
             }],
         );
@@ -1314,6 +1411,7 @@ mod tests {
                 body: BodyState::Failed("offline <now>"),
                 expanded: true,
                 thumbnails: &no_thumbs,
+                event_slot: false,
                 sanitized: None,
             }],
         );

@@ -698,6 +698,7 @@ impl ThreadRun {
         };
         let account_id = wanted.target().account_id;
         let asked = (message_id.clone(), ics.clone());
+        let carrier = message_id.clone();
         let Some(opened) = wanted
             .wait(|effects| effects.open_invitation(account_id, message_id, ics))
             .await
@@ -712,6 +713,7 @@ impl ThreadRun {
         }
         let showing = match opened {
             Ok(opened) => opened.map(|opened| Showing {
+                message_id: carrier,
                 invitation: opened.invitation,
                 change: opened.change,
                 answer: opened.answer,
