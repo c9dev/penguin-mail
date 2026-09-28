@@ -27,9 +27,20 @@ use crate::error::GmailError;
 pub const CALENDAR_SCOPE: &str = "https://www.googleapis.com/auth/calendar.events";
 
 /// List the calendars on the account, so the calendar view can show
-/// shared and subscribed ones next to the primary.
+/// shared and subscribed ones next to the primary. Sign-in no longer
+/// asks for it on its own: [`CALENDAR_LIST_WRITE_SCOPE`] covers it, and
+/// [`crate::Granted::has`] still checks it for an account that granted
+/// only this one.
 pub const CALENDAR_LIST_SCOPE: &str =
     "https://www.googleapis.com/auth/calendar.calendarlist.readonly";
+
+/// Read and change the account's calendar list: subscribe to a calendar
+/// by its id or an ICS address, and set a calendar's colour and whether
+/// Google's own list hides it.
+pub const CALENDAR_LIST_WRITE_SCOPE: &str = "https://www.googleapis.com/auth/calendar.calendarlist";
+
+/// Make, rename and delete the calendars the account owns.
+pub const CALENDARS_SCOPE: &str = "https://www.googleapis.com/auth/calendar.calendars";
 
 pub const CALENDAR_API_BASE: &str = "https://www.googleapis.com/calendar/v3";
 
@@ -222,7 +233,10 @@ impl GmailClient {
         for _ in 0..MOST_CALENDAR_PAGES {
             let answer: Value = self
                 .call_at(&url, |url| {
-                    let mut query = vec![("maxResults", "250".to_string())];
+                    // Google leaves a hidden calendar off the list unless
+                    // asked, and the copy would then drop it and its events
+                    // rather than keep it under Hidden Calendars.
+                    let mut query = vec![("maxResults", "250".to_string()), ("showHidden", "true".to_string())];
                     if let Some(token) = &page {
                         query.push(("pageToken", token.clone()));
                     }
@@ -840,13 +854,13 @@ fn is_me(guest: &Value, me: &str) -> bool {
 /// `byte_serialize` turns into `%40` and `%23`; it also turns a space
 /// into `+`, which a URL path would read back as a literal plus, so that
 /// one substitution is undone.
-fn encode(part: &str) -> String {
+pub(crate) fn encode(part: &str) -> String {
     url::form_urlencoded::byte_serialize(part.as_bytes())
         .collect::<String>()
         .replace('+', "%20")
 }
 
-fn google_calendar(item: &Value) -> calendar::Calendar {
+pub(crate) fn google_calendar(item: &Value) -> calendar::Calendar {
     let text = |key: &str| item.get(key).and_then(Value::as_str).unwrap_or_default().to_string();
     calendar::Calendar {
         id: text("id"),
@@ -860,6 +874,8 @@ fn google_calendar(item: &Value) -> calendar::Calendar {
         zone: item.get("timeZone").and_then(Value::as_str).unwrap_or("UTC").to_string(),
         primary: item.get("primary").and_then(Value::as_bool) == Some(true),
         shown: item.get("selected").and_then(Value::as_bool) != Some(false),
+        // Google sends `hidden` only when it is true.
+        hidden: item.get("hidden").and_then(Value::as_bool) == Some(true),
         reminders: reminders(item.get("defaultReminders")),
     }
 }

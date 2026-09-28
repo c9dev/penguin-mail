@@ -13,7 +13,7 @@ use tokio::net::TcpListener;
 use url::Url;
 
 use crate::GmailError;
-use crate::calendar::{CALENDAR_LIST_SCOPE, CALENDAR_SCOPE};
+use crate::calendar::{CALENDAR_LIST_SCOPE, CALENDAR_LIST_WRITE_SCOPE, CALENDAR_SCOPE, CALENDARS_SCOPE};
 use crate::people::{CONTACTS_SCOPE, CONTACTS_WRITE_SCOPE};
 
 /// Read, send, and organize mail. Sign-in no longer asks for this one on
@@ -32,20 +32,28 @@ pub const DELETE_SCOPE: &str = "https://mail.google.com/";
 pub const GOOGLE_AUTH_URL: &str = "https://accounts.google.com/o/oauth2/v2/auth";
 pub const GOOGLE_TOKEN_URL: &str = "https://oauth2.googleapis.com/token";
 
+/// Files the app itself puts in the account's Google Drive, and nothing
+/// else there. Sign-in asks for it now so that sending large attachments
+/// through Drive needs no second consent later; nothing uses it yet.
+pub const DRIVE_FILE_SCOPE: &str = "https://www.googleapis.com/auth/drive.file";
+
 /// Every scope sign-in asks Google for, in one consent: [`DELETE_SCOPE`]
 /// (mail, and deleting it for good), settings, [`CONTACTS_WRITE_SCOPE`]
-/// (contacts, and changing them), and the two calendar scopes. Google's
-/// verification team asks for least privilege, so this leaves out
-/// [`GMAIL_SCOPE`] and [`crate::people::CONTACTS_SCOPE`]: each is already
-/// covered by the wider scope in the list. A person may untick any of
-/// these on Google's screen; [`Granted`] says which the token still
-/// carries.
-pub const SIGN_IN_SCOPES: [&str; 5] = [
+/// (contacts, and changing them), events, the calendar list and the
+/// calendars themselves, and [`DRIVE_FILE_SCOPE`]. Google's verification
+/// team asks for least privilege, so this leaves out [`GMAIL_SCOPE`],
+/// [`crate::people::CONTACTS_SCOPE`] and [`CALENDAR_LIST_SCOPE`]: each is
+/// already covered by the wider scope in the list. A person may untick
+/// any of these on Google's screen; [`Granted`] says which the token
+/// still carries.
+pub const SIGN_IN_SCOPES: [&str; 7] = [
     DELETE_SCOPE,
     SETTINGS_SCOPE,
     CONTACTS_WRITE_SCOPE,
     CALENDAR_SCOPE,
-    CALENDAR_LIST_SCOPE,
+    CALENDAR_LIST_WRITE_SCOPE,
+    CALENDARS_SCOPE,
+    DRIVE_FILE_SCOPE,
 ];
 
 #[derive(Debug, Clone)]
@@ -70,12 +78,14 @@ impl Granted {
     }
 
     /// Whether the token carries `scope`, directly or through a wider one
-    /// that covers it: [`DELETE_SCOPE`] covers [`GMAIL_SCOPE`], and
-    /// [`CONTACTS_WRITE_SCOPE`] covers [`CONTACTS_SCOPE`].
+    /// that covers it: [`DELETE_SCOPE`] covers [`GMAIL_SCOPE`],
+    /// [`CONTACTS_WRITE_SCOPE`] covers [`CONTACTS_SCOPE`], and
+    /// [`CALENDAR_LIST_WRITE_SCOPE`] covers [`CALENDAR_LIST_SCOPE`].
     pub fn has(&self, scope: &str) -> bool {
         self.0.contains(scope)
             || (scope == GMAIL_SCOPE && self.0.contains(DELETE_SCOPE))
             || (scope == CONTACTS_SCOPE && self.0.contains(CONTACTS_WRITE_SCOPE))
+            || (scope == CALENDAR_LIST_SCOPE && self.0.contains(CALENDAR_LIST_WRITE_SCOPE))
     }
 
     /// The scopes, sorted and joined with single spaces, as the store

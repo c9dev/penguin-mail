@@ -3,8 +3,8 @@ use std::collections::HashMap;
 use base64::Engine;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use mailrs_gmail::{
-    CALENDAR_LIST_SCOPE, CALENDAR_SCOPE, CONTACTS_SCOPE, CONTACTS_WRITE_SCOPE, DELETE_SCOPE,
-    GMAIL_SCOPE, GmailError, Granted, LoopbackListener, OAuthClient, Pkce, SETTINGS_SCOPE,
+    CALENDAR_LIST_SCOPE, CALENDAR_LIST_WRITE_SCOPE, CALENDAR_SCOPE, CALENDARS_SCOPE, CONTACTS_SCOPE,
+    CONTACTS_WRITE_SCOPE, DELETE_SCOPE, DRIVE_FILE_SCOPE, GMAIL_SCOPE, GmailError, Granted, LoopbackListener, OAuthClient, Pkce, SETTINGS_SCOPE,
     SIGN_IN_SCOPES, parse_redirect,
 };
 use serde_json::json;
@@ -73,24 +73,39 @@ fn sign_in_asks_for_every_scope_at_once() {
 }
 
 /// Google's verification team asks for least privilege: `mail.google.com`
-/// already covers `gmail.modify`, and `contacts` already covers
-/// `contacts.readonly`, so sign-in leaves both narrower scopes out.
+/// already covers `gmail.modify`, `contacts` already covers
+/// `contacts.readonly`, and `calendar.calendarlist` already covers
+/// `calendar.calendarlist.readonly`, so sign-in leaves the narrower
+/// scopes out.
 #[test]
-fn sign_in_asks_for_five_scopes_not_seven() {
-    assert_eq!(SIGN_IN_SCOPES.len(), 5);
+fn sign_in_asks_for_seven_scopes() {
+    assert_eq!(SIGN_IN_SCOPES.len(), 7);
     let scope = SIGN_IN_SCOPES.join(" ");
     for asked in [
         DELETE_SCOPE,
         SETTINGS_SCOPE,
         CONTACTS_WRITE_SCOPE,
         CALENDAR_SCOPE,
-        CALENDAR_LIST_SCOPE,
+        CALENDAR_LIST_WRITE_SCOPE,
+        CALENDARS_SCOPE,
+        DRIVE_FILE_SCOPE,
     ] {
-        assert!(scope.contains(asked), "{asked} missing from {scope}");
+        assert!(SIGN_IN_SCOPES.contains(&asked), "{asked} missing from {scope}");
     }
-    for covered in [GMAIL_SCOPE, CONTACTS_SCOPE] {
-        assert!(!SIGN_IN_SCOPES.contains(&covered), "{covered} should no longer be asked");
+    for covered in [GMAIL_SCOPE, CONTACTS_SCOPE, CALENDAR_LIST_SCOPE] {
+        assert!(!SIGN_IN_SCOPES.contains(&covered), "{covered} should not be asked");
     }
+}
+
+/// An account that granted the old read-only calendar list still reads
+/// the list, and one that granted the new list scope reads it too.
+#[test]
+fn the_calendar_list_scope_covers_the_read_only_one() {
+    let old = Granted::parse(CALENDAR_LIST_SCOPE);
+    assert!(old.has(CALENDAR_LIST_SCOPE));
+    assert!(!old.has(CALENDAR_LIST_WRITE_SCOPE));
+    let new = Granted::parse(CALENDAR_LIST_WRITE_SCOPE);
+    assert!(new.has(CALENDAR_LIST_SCOPE), "calendar.calendarlist covers the read-only list");
 }
 
 #[test]

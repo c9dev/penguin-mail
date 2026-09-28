@@ -1305,6 +1305,7 @@ fn primary_fallback(address: &str) -> Calendar {
         zone: String::new(),
         primary: true,
         shown: true,
+        hidden: false,
         reminders: Vec::new(),
     }
 }

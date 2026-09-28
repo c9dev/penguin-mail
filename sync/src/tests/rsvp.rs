@@ -66,6 +66,7 @@ async fn read_standup(h: &Harness) -> CalendarCopy<Connected> {
             zone: "UTC".into(),
             primary: true,
             shown: true,
+            hidden: false,
             reminders: Vec::new(),
         }]
     });
@@ -271,6 +272,7 @@ async fn proposal_sequence(copy_sequence: i64, mail: Option<i64>) -> String {
             zone: "UTC".into(),
             primary: true,
             shown: true,
+            hidden: false,
             reminders: Vec::new(),
         }]
     });
