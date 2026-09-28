@@ -564,26 +564,10 @@ impl CalendarView {
                 view.set_month_rows(4);
             }
         });
-        // The tints are stronger in dark mode (tint.rs), and the rules key
-        // off this class.
-        let style = adw::StyleManager::default();
-        let page = view.page.downgrade();
-        let mark = move |style: &adw::StyleManager| {
-            let Some(page) = page.upgrade() else { return };
-            match style.is_dark() {
-                true => page.add_css_class("calendar-dark"),
-                false => page.remove_css_class("calendar-dark"),
-            }
-        };
-        mark(&style);
-        // The style manager lives as long as the process, and a window
-        // closed to the tray goes; the handler goes with the page.
-        let handler = RefCell::new(Some(style.connect_dark_notify(mark)));
-        view.page.connect_destroy(move |_| {
-            if let Some(handler) = handler.take() {
-                adw::StyleManager::default().disconnect(handler);
-            }
-        });
+        // The tints are stronger in dark mode (tint.rs), against the
+        // `app-dark` class the toplevel window carries
+        // (`ui::window::track_dark_class`), which reaches this page
+        // whichever window it sits in.
         let weak = Rc::downgrade(&view);
         view.more.connect_closed(move |_| {
             let Some(view) = weak.upgrade() else { return };
