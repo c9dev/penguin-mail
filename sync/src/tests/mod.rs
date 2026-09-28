@@ -3,6 +3,7 @@ mod basics;
 mod bootstrap;
 mod calendar;
 mod calendar_copy;
+mod calendar_list;
 mod calendar_series;
 mod connect;
 mod contacts;

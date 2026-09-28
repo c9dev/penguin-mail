@@ -32,6 +32,10 @@ use mailrs_store::calendar as store;
 use crate::settings::Permitted;
 use crate::{Accounts, AnyCalendar, BackendError, CalendarService, SyncError};
 
+mod list;
+
+pub use list::new_calendar_id;
+
 pub const READ_EVERY_OPEN: EpochMillis = 60_000;
 pub const READ_EVERY_TRAY: EpochMillis = 5 * 60_000;
 pub const LIST_EVERY: EpochMillis = 30 * 60_000;
@@ -321,7 +325,9 @@ impl<A: Accounts> CalendarCopy<A> {
             } else {
                 match calendar.calendars().await {
                     Ok(list) => {
-                        self.db.write(move |c| store::save_calendars(c, account_id, &list)).await?;
+                        self.db
+                            .write(move |c| mailrs_store::calendar_list::save_calendar_list(c, account_id, &list))
+                            .await?;
                     }
                     Err(BackendError::NeedsPermission) => {
                         let address = self.address(account_id).await?;
@@ -527,7 +533,9 @@ impl<A: Accounts> CalendarCopy<A> {
         let Some(calendar) = self.calendar(account_id)? else {
             return Ok(Vec::new());
         };
-        let mut turned_down = Vec::new();
+        // The list goes first: an event below may sit on a calendar made
+        // here, which has Google's id only once its creation went out.
+        let mut turned_down = self.send_list(&calendar, account_id).await?;
         let mut after = 0;
         while let Some(change) = self.db.read(move |c| store::next_change(c, account_id, after)).await? {
             let seq = change.seq;

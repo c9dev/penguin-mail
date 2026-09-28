@@ -127,6 +127,29 @@ pub fn set_provider_color(conn: &Connection, account_id: AccountId, calendar: &s
     Ok(())
 }
 
+/// Takes what the provider says of one calendar on its list (its name,
+/// colour, access, zone and reminders) into the copy, and leaves the
+/// person's choices alone: whether it shows, whether it is listed, and a
+/// colour of their own.
+pub fn refresh_calendar(conn: &Connection, account_id: AccountId, calendar: &Calendar) -> Result<()> {
+    conn.execute(
+        "UPDATE calendars SET name = ?3, color = ?4, access = ?5, zone = ?6, is_primary = ?7, \
+         reminders = ?8, provider_hidden = ?9 WHERE account_id = ?1 AND id = ?2",
+        params![
+            account_id,
+            calendar.id,
+            calendar.name,
+            calendar.color,
+            calendar.access.as_str(),
+            calendar.zone,
+            calendar.primary,
+            serde_json::to_string(&calendar.reminders).unwrap_or_default(),
+            calendar.hidden,
+        ],
+    )?;
+    Ok(())
+}
+
 /// Records the provider's hidden flag as it now stands, after the queue
 /// sent a change to it.
 pub fn set_provider_hidden(conn: &Connection, account_id: AccountId, calendar: &str, hidden: bool) -> Result<()> {
@@ -423,6 +446,18 @@ mod tests {
         assert_eq!(queued[0].calendar, "abc@group.calendar.google.com");
         assert_eq!(queued[0].body.as_ref().unwrap().calendar, "abc@group.calendar.google.com");
         assert_eq!(queued_edits(&conn, id).unwrap()[0].calendar, "abc@group.calendar.google.com");
+    }
+
+    #[test]
+    fn the_providers_answer_fills_in_a_calendar_made_here() {
+        let (conn, id) = store();
+        add_calendar(&conn, id, &Calendar { name: "example.com".into(), access: Access::Reader, ..calendar("feed", false) })
+            .unwrap();
+        set_listed(&conn, id, "feed", false).unwrap();
+        let answered = Calendar { name: "Fixtures".into(), color: "#9e69af".into(), access: Access::Reader, ..calendar("feed", false) };
+        refresh_calendar(&conn, id, &answered).unwrap();
+        assert_eq!(one(&conn, id, "feed").name, "Fixtures");
+        assert_eq!(listed(&conn, id, "feed").unwrap(), Some(false), "the person's choice stays");
     }
 
     #[test]

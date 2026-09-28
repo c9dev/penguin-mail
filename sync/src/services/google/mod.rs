@@ -19,7 +19,8 @@ use mailrs_domain::mailbox::keyword;
 use mailrs_domain::{EpochMillis, Filter, MailSet, MailboxKind, RemoteMailbox, Role, Vacation};
 use mailrs_gmail::labels as gmail;
 use mailrs_gmail::{
-    Answered, Busy, CALENDAR_LIST_SCOPE, CALENDAR_SCOPE, CONTACTS_SCOPE, CONTACTS_WRITE_SCOPE,
+    Answered, Busy, CALENDAR_LIST_SCOPE, CALENDAR_LIST_WRITE_SCOPE, CALENDAR_SCOPE, CALENDARS_SCOPE,
+    CONTACTS_SCOPE, CONTACTS_WRITE_SCOPE,
     ConnectionsPage, ContactFields, DELETE_SCOPE, Event, EventFields, GmailError, Granted,
     LabelColor, Person, RemoteLabel, SETTINGS_SCOPE, SendAs, Series, limiter, structure,
 };
@@ -175,6 +176,8 @@ pub fn withheld(granted: Option<&Granted>) -> Withheld {
         change_contacts: !granted.has(CONTACTS_WRITE_SCOPE),
         calendar: !granted.has(CALENDAR_SCOPE),
         calendar_list: !granted.has(CALENDAR_LIST_SCOPE),
+        calendars: !granted.has(CALENDARS_SCOPE),
+        change_calendar_list: !granted.has(CALENDAR_LIST_WRITE_SCOPE),
     }
 }
 
@@ -610,6 +613,14 @@ impl<G: GmailApi> CalendarService for Google<G> {
     ) -> Result<model::Event, BackendError> {
         paced(self.gmail.answer_event(calendar, id, me, answer, note)).await.map_err(calendar_write_error)
     }
+
+    async fn edit_list(
+        &self,
+        calendar: &str,
+        edit: &model::list::ListEdit,
+    ) -> Result<Option<model::Calendar>, BackendError> {
+        paced(self.gmail.edit_calendar_list(calendar, edit)).await.map_err(calendar_write_error)
+    }
 }
 
 /// A live write's error, with 410 Gone read as the event being gone
@@ -716,8 +727,8 @@ mod tests {
     use std::time::Duration;
 
     use mailrs_gmail::{
-        AccountQuota, CALENDAR_LIST_SCOPE, CALENDAR_SCOPE, CONTACTS_SCOPE, CONTACTS_WRITE_SCOPE,
-        DELETE_SCOPE, GMAIL_SCOPE, GmailError, Granted, SETTINGS_SCOPE, SIGN_IN_SCOPES, SendAs,
+        AccountQuota, CALENDAR_LIST_SCOPE, CALENDAR_SCOPE, CALENDARS_SCOPE, CONTACTS_SCOPE,
+        CONTACTS_WRITE_SCOPE, DELETE_SCOPE, DRIVE_FILE_SCOPE, GMAIL_SCOPE, GmailError, Granted, SETTINGS_SCOPE, SIGN_IN_SCOPES, SendAs,
         limiter,
     };
 
@@ -834,6 +845,8 @@ mod tests {
                 contacts: true,
                 change_contacts: true,
                 calendar: true,
+                calendars: true,
+                change_calendar_list: true,
                 ..Withheld::NONE
             }
         );
@@ -858,21 +871,41 @@ mod tests {
         assert!(old.reads_mail(), "gmail.modify alone still reads mail");
         assert_eq!(
             withheld(Some(&old)),
-            Withheld { delete: true, change_contacts: true, ..Withheld::NONE },
+            Withheld {
+                delete: true,
+                change_contacts: true,
+                calendars: true,
+                change_calendar_list: true,
+                ..Withheld::NONE
+            },
             "contacts.readonly reads contacts but neither narrower scope writes or deletes"
         );
     }
 
-    /// A person who signs in after the trim and unticks one of the five
-    /// boxes withholds only the feature that scope serves.
+    /// A person who signs in and unticks the calendar list withholds
+    /// reading it and changing it, and nothing else.
     #[test]
-    fn withheld_reads_a_scope_the_person_unticked_from_the_new_five() {
+    fn withheld_reads_a_scope_the_person_unticked_from_the_seven() {
         let unticked_calendar_list = Granted::parse(&format!(
-            "{DELETE_SCOPE} {SETTINGS_SCOPE} {CONTACTS_WRITE_SCOPE} {CALENDAR_SCOPE}"
+            "{DELETE_SCOPE} {SETTINGS_SCOPE} {CONTACTS_WRITE_SCOPE} {CALENDAR_SCOPE} {CALENDARS_SCOPE} {DRIVE_FILE_SCOPE}"
         ));
         assert_eq!(
             withheld(Some(&unticked_calendar_list)),
-            Withheld { calendar_list: true, ..Withheld::NONE }
+            Withheld { calendar_list: true, change_calendar_list: true, ..Withheld::NONE }
+        );
+    }
+
+    /// An account that signed in before the owner approved the calendar
+    /// management scopes holds the read-only list: it still reads every
+    /// calendar, and withholds changing the list and the calendars.
+    #[test]
+    fn withheld_reads_the_five_scope_grant_before_calendar_management() {
+        let five = Granted::parse(&format!(
+            "{DELETE_SCOPE} {SETTINGS_SCOPE} {CONTACTS_WRITE_SCOPE} {CALENDAR_SCOPE} {CALENDAR_LIST_SCOPE}"
+        ));
+        assert_eq!(
+            withheld(Some(&five)),
+            Withheld { calendars: true, change_calendar_list: true, ..Withheld::NONE }
         );
     }
 }
