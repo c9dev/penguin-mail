@@ -23,6 +23,7 @@ use mailrs_domain::calendar::{Event, Guest, Occurrence};
 use mailrs_domain::invitation::Answer;
 use mailrs_domain::translate::{fill, gettext};
 
+use super::attachments;
 use super::draft;
 use super::kinds;
 use super::shown::{self, Refocus};
@@ -103,6 +104,8 @@ pub struct EventPopover {
     /// The occurrence's own guests, kept so `guests_more`'s handler can
     /// rebuild the list in full without `show` having run again.
     guests: RefCell<Vec<Guest>>,
+    /// One row per attached file, under the notes.
+    files_box: gtk::Box,
     join: gtk::Button,
     conference_url: RefCell<Option<String>>,
     answer_box: gtk::Box,
@@ -263,6 +266,12 @@ impl EventPopover {
             .build();
         crate::ui::name(&guests_more, &gettext("Show all guests"));
 
+        let files_box = gtk::Box::builder()
+            .orientation(gtk::Orientation::Vertical)
+            .spacing(2)
+            .visible(false)
+            .build();
+
         let join = gtk::Button::builder()
             .css_classes(["popover-join"])
             .hexpand(true)
@@ -335,6 +344,7 @@ impl EventPopover {
         rows.append(&place_row);
         rows.append(&notes_label);
         rows.append(&notes_more);
+        rows.append(&files_box);
         rows.append(&people_row);
         rows.append(&guests_box);
         rows.append(&guests_more);
@@ -407,6 +417,7 @@ impl EventPopover {
             guests_box,
             guests_more,
             guests: RefCell::new(Vec::new()),
+            files_box,
             join,
             conference_url: RefCell::new(None),
             answer_box,
@@ -651,6 +662,7 @@ impl EventPopover {
 
         self.guests.replace(event.guests.clone());
         self.rebuild_guests(MOST_GUESTS_SHOWN);
+        self.rebuild_files(event.attachments.as_deref().unwrap_or_default());
 
         let guest = draft::limited(event);
         self.answer_box.set_visible(guest);
@@ -733,6 +745,41 @@ impl EventPopover {
             // to give before this list replaced it.
             crate::ui::describe(&self.guests_more, &gettext("Show all guests"), &words::more_guests_words(more));
         }
+    }
+
+    /// Rebuilds `files_box` with one row per file: a button that opens
+    /// the file in the browser, or a plain row for one still waiting to
+    /// upload.
+    fn rebuild_files(&self, files: &[mailrs_domain::calendar::Attachment]) {
+        while let Some(child) = self.files_box.first_child() {
+            self.files_box.remove(&child);
+        }
+        for file in files {
+            let label = gtk::Label::builder()
+                .xalign(0.0)
+                .ellipsize(pango::EllipsizeMode::Middle)
+                .single_line_mode(true)
+                .label(attachments::title(file))
+                .build();
+            let row = row_with_icon(attachments::icon_name(&file.mime_type), &label, true);
+            if file.link().is_none() {
+                let note = attachments::note(file).unwrap_or_default();
+                crate::ui::describe(&row, &attachments::title(file), &note);
+                row.set_tooltip_text(Some(&note));
+                self.files_box.append(&row);
+                continue;
+            }
+            let button = gtk::Button::builder()
+                .child(&row)
+                .css_classes(["flat", "popover-place"])
+                .tooltip_text(gettext("Open in Browser"))
+                .build();
+            crate::ui::name(&button, &attachments::open_words(file));
+            let opened = file.clone();
+            button.connect_clicked(move |button| attachments::open(&opened, button));
+            self.files_box.append(&button);
+        }
+        self.files_box.set_visible(!files.is_empty());
     }
 
     /// Closes the popover, such as when the view's range changes under

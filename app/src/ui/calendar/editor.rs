@@ -14,16 +14,19 @@
 use std::cell::{Cell, RefCell};
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use adw::prelude::*;
 use chrono::{Datelike, NaiveDate, NaiveTime, Timelike, Weekday};
 use chrono_tz::{TZ_VARIANTS, Tz};
 use gtk::glib;
 use mailrs_domain::calendar::repeat::{Custom, Ends, Frequency, Repeat};
-use mailrs_domain::calendar::{self, Calendar, Declines, EVENT_COLORS, Reminder, ReminderMethod};
+use mailrs_domain::calendar::{self, Attachment, Calendar, Declines, EVENT_COLORS, Reminder, ReminderMethod};
 use mailrs_domain::translate::{date_locale, fill, gettext, ngettext};
 use mailrs_domain::{AccountId, EpochMillis};
 
+use super::attachments::{self, Uploaded};
 use super::draft::{self, Draft, Part, TypeChoice};
 use super::layout;
 use super::tint;
@@ -38,6 +41,33 @@ pub struct Choices {
     /// and id, which the Calendar row leaves out.
     pub hidden: HashSet<(AccountId, String)>,
     pub calendars: HashMap<(AccountId, String), Calendar>,
+    /// What "Attach File…" needs from outside the editor.
+    pub attaching: Rc<Attaching>,
+}
+
+/// What attaching a file needs from outside the editor: whether the
+/// account granted Drive, a way to ask for it, and the upload itself,
+/// which runs on the sync runtime.
+pub struct Attaching {
+    /// Whether the account has not granted Drive, so "Attach File…" asks
+    /// for it before it offers a file chooser.
+    pub withheld: Box<dyn Fn(AccountId) -> bool>,
+    /// Asks the account for Drive.
+    pub ask: Box<dyn Fn(AccountId)>,
+    /// Starts uploading a waiting file to the account's Drive, counting
+    /// the bytes sent into the counter. Aborting the handle stops it.
+    pub upload: Box<dyn Fn(AccountId, Attachment, Arc<AtomicU64>) -> tokio::task::JoinHandle<Uploaded>>,
+}
+
+/// A file on its way to Drive while the editor is open.
+struct Upload {
+    id: u64,
+    /// The file as it waits, with its path.
+    file: Attachment,
+    size: u64,
+    sent: Arc<AtomicU64>,
+    abort: tokio::task::AbortHandle,
+    bar: gtk::ProgressBar,
 }
 
 struct Editor {
@@ -98,6 +128,13 @@ struct Editor {
     /// place, the guests, busy and the Meet link. Hidden while the draft
     /// is one of those types.
     kind_hidden: RefCell<Vec<gtk::Widget>>,
+    attaching: Rc<Attaching>,
+    /// The Attachments group, its rows, and "Attach File…".
+    files_group: RefCell<Option<(adw::PreferencesGroup, gtk::Button)>>,
+    file_rows: RefCell<Vec<adw::ActionRow>>,
+    /// Files uploading now. Each joins the draft once Drive answers.
+    uploads: RefCell<Vec<Upload>>,
+    next_upload: Cell<u64>,
 }
 
 /// Shows the editor over `parent`. `on_save` gets the draft when the
@@ -164,6 +201,11 @@ pub fn open(
         type_row: RefCell::new(None),
         decline_group: RefCell::new(None),
         kind_hidden: RefCell::new(Vec::new()),
+        attaching: Rc::clone(&choices.attaching),
+        files_group: RefCell::new(None),
+        file_rows: RefCell::new(Vec::new()),
+        uploads: RefCell::new(Vec::new()),
+        next_upload: Cell::new(0),
     });
 
     let header = adw::HeaderBar::builder()
@@ -238,18 +280,29 @@ pub fn open(
             entry.grab_focus();
             return;
         }
-        let draft = this.draft.borrow().clone();
-        if draft.can_save() {
-            this.dialog.close();
-            on_save(draft);
+        if !this.draft.borrow().can_save() {
+            return;
         }
+        // A file still uploading goes to the queue instead, which uploads
+        // it with the event.
+        this.hand_uploads_to_queue();
+        let draft = this.draft.borrow().clone();
+        this.dialog.close();
+        on_save(draft);
     });
     // The one strong reference. Dropping it here, rather than in any
     // widget's own handler, is what lets the whole tree free once the
     // dialog closes.
     let held = RefCell::new(Some(Rc::clone(&editor)));
     dialog.connect_closed(move |_| {
-        held.borrow_mut().take();
+        // Cancel stops every upload still running. A Save has already
+        // handed them to the queue.
+        let taken = held.borrow_mut().take();
+        if let Some(editor) = taken {
+            for upload in editor.uploads.take() {
+                upload.abort.abort();
+            }
+        }
     });
 
     dialog.set_default_widget(Some(&save));
@@ -295,6 +348,9 @@ impl Editor {
         page.add(&self.reminders_group_widget(choices));
         let notes_group = self.notes_group();
         page.add(&notes_group);
+        let files_group = self.files_group_widget();
+        page.add(&files_group);
+        self.kind_hidden.borrow_mut().push(files_group.upcast());
         page.add(&self.more_group());
         title_group.set_sensitive(self.may(Part::Title));
         when_group.set_sensitive(self.may(Part::When));
@@ -1371,6 +1427,228 @@ impl Editor {
         });
         group.add(&frame);
         group
+    }
+
+    // ---- Attachments ----
+
+    fn files_group_widget(self: &Rc<Self>) -> adw::PreferencesGroup {
+        let group = adw::PreferencesGroup::builder().title(gettext("Attachments")).build();
+        let attach = gtk::Button::builder()
+            .child(
+                &adw::ButtonContent::builder()
+                    .icon_name("mail-attachment-symbolic")
+                    .label(gettext("Attach File…"))
+                    .build(),
+            )
+            .css_classes(["flat"])
+            .valign(gtk::Align::Center)
+            .build();
+        ui::name(&attach, &gettext("Attach File…"));
+        let weak = Rc::downgrade(self);
+        attach.connect_clicked(move |_| {
+            if let Some(this) = weak.upgrade() {
+                this.pick_file();
+            }
+        });
+        group.set_header_suffix(Some(&attach));
+        self.files_group.replace(Some((group.clone(), attach)));
+        self.rebuild_files();
+        group
+    }
+
+    /// Rebuilds the Attachments rows: the draft's files, then the ones
+    /// still uploading. A guest sees the files and cannot change them.
+    fn rebuild_files(self: &Rc<Self>) {
+        let Some((group, attach)) = self.files_group.borrow().clone() else {
+            return;
+        };
+        let old = self.file_rows.take();
+        for row in old {
+            group.remove(&row);
+        }
+        let (files, can_attach) = {
+            let draft = self.draft.borrow();
+            (draft.attachments.clone(), draft.can_attach())
+        };
+        let mut rows = Vec::new();
+        for (index, file) in files.iter().enumerate() {
+            let row = attachments::row(file);
+            if can_attach {
+                let remove = gtk::Button::builder()
+                    .icon_name("window-close-symbolic")
+                    .css_classes(["flat"])
+                    .valign(gtk::Align::Center)
+                    .tooltip_text(gettext("Remove"))
+                    .build();
+                ui::name(&remove, &fill(&gettext("Remove {file}"), &[("file", &attachments::title(file))]));
+                let weak = Rc::downgrade(self);
+                remove.connect_clicked(move |_| {
+                    let Some(this) = weak.upgrade() else { return };
+                    this.draft.borrow_mut().detach(index);
+                    this.rebuild_files();
+                });
+                row.add_suffix(&remove);
+            }
+            group.add(&row);
+            rows.push(row);
+        }
+        let uploading: Vec<(u64, String, gtk::ProgressBar)> = self
+            .uploads
+            .borrow()
+            .iter()
+            .map(|u| (u.id, attachments::title(&u.file), u.bar.clone()))
+            .collect();
+        for (id, title, bar) in uploading {
+            let row = adw::ActionRow::builder().title(title.clone()).title_lines(1).build();
+            let icon = gtk::Image::from_icon_name("mail-attachment-symbolic");
+            icon.add_css_class("dim-label");
+            row.add_prefix(&icon);
+            // The bar outlives the row a rebuild drops, since the timer
+            // moves it; it leaves the old row's suffix box first.
+            if let Some(old) = bar.parent().and_downcast::<gtk::Box>() {
+                old.remove(&bar);
+            }
+            row.add_suffix(&bar);
+            let cancel = gtk::Button::builder()
+                .icon_name("process-stop-symbolic")
+                .css_classes(["flat"])
+                .valign(gtk::Align::Center)
+                .tooltip_text(gettext("Cancel Upload"))
+                .build();
+            ui::name(&cancel, &fill(&gettext("Cancel upload of {file}"), &[("file", &title)]));
+            let weak = Rc::downgrade(self);
+            cancel.connect_clicked(move |_| {
+                if let Some(this) = weak.upgrade() {
+                    this.cancel_upload(id);
+                }
+            });
+            row.add_suffix(&cancel);
+            group.add(&row);
+            rows.push(row);
+        }
+        let shown = can_attach || !rows.is_empty();
+        group.set_visible(shown);
+        attach.set_visible(can_attach);
+        *self.file_rows.borrow_mut() = rows;
+    }
+
+    /// "Attach File…": asks for Drive when the account has not granted
+    /// it, and otherwise offers a file chooser and uploads what it picks.
+    fn pick_file(self: &Rc<Self>) {
+        let account = self.draft.borrow().account_id;
+        if (self.attaching.withheld)(account) {
+            (self.attaching.ask)(account);
+            return;
+        }
+        let dialog = gtk::FileDialog::builder().title(gettext("Attach File")).modal(true).build();
+        let weak = Rc::downgrade(self);
+        let parent = self.dialog.root().and_downcast::<gtk::Window>();
+        glib::spawn_future_local(async move {
+            let Ok(file) = dialog.open_future(parent.as_ref()).await else { return };
+            let info = file
+                .query_info_future(
+                    "standard::size,standard::content-type,standard::display-name",
+                    gtk::gio::FileQueryInfoFlags::NONE,
+                    glib::Priority::DEFAULT,
+                )
+                .await;
+            let Some(this) = weak.upgrade() else { return };
+            let (Some(path), Ok(info)) = (file.path(), info) else {
+                this.say_file_problem(&gettext("Penguin Mail can attach only a file saved on this computer."));
+                return;
+            };
+            let mime = info
+                .content_type()
+                .and_then(|kind| gtk::gio::content_type_get_mime_type(&kind))
+                .map(|m| m.to_string())
+                .unwrap_or_else(|| "application/octet-stream".into());
+            let waiting = Attachment {
+                title: info.display_name().to_string(),
+                mime_type: mime,
+                waiting: Some(path.display().to_string()),
+                ..Attachment::default()
+            };
+            this.start_upload(account, waiting, u64::try_from(info.size()).unwrap_or(0));
+        });
+    }
+
+    /// Uploads `file` for `account`, with a row that shows how far it got
+    /// and a button that stops it.
+    fn start_upload(self: &Rc<Self>, account: AccountId, file: Attachment, size: u64) {
+        self.say_file_problem("");
+        let id = self.next_upload.get();
+        self.next_upload.set(id + 1);
+        let sent = Arc::new(AtomicU64::new(0));
+        let handle = (self.attaching.upload)(account, file.clone(), Arc::clone(&sent));
+        let bar = gtk::ProgressBar::builder().valign(gtk::Align::Center).width_request(96).build();
+        ui::name(&bar, &fill(&gettext("Uploading {file}"), &[("file", &attachments::title(&file))]));
+        self.uploads.borrow_mut().push(Upload { id, file, size, sent, abort: handle.abort_handle(), bar });
+        self.rebuild_files();
+        let weak = Rc::downgrade(self);
+        glib::timeout_add_local(std::time::Duration::from_millis(100), move || {
+            let Some(this) = weak.upgrade() else { return glib::ControlFlow::Break };
+            let uploads = this.uploads.borrow();
+            let Some(upload) = uploads.iter().find(|u| u.id == id) else {
+                return glib::ControlFlow::Break;
+            };
+            let sent = upload.sent.load(Ordering::SeqCst);
+            match upload.size {
+                0 => upload.bar.pulse(),
+                size => upload.bar.set_fraction((sent as f64 / size as f64).min(1.0)),
+            }
+            glib::ControlFlow::Continue
+        });
+        let weak = Rc::downgrade(self);
+        glib::spawn_future_local(async move {
+            // An aborted upload answers an error here: Cancel, Save and the
+            // dialog closing each took it off the list already.
+            let Ok(answer) = handle.await else { return };
+            let Some(this) = weak.upgrade() else { return };
+            let Some(upload) = this.take_upload(id) else { return };
+            match answer {
+                Uploaded::Done(done) => this.draft.borrow_mut().attach(done),
+                // No network: the file waits, and the queue uploads it with
+                // the event.
+                Uploaded::Later => this.draft.borrow_mut().attach(upload.file),
+                Uploaded::NeedsPermission => (this.attaching.ask)(account),
+                Uploaded::Failed(reason) => this.say_file_problem(&fill(
+                    &gettext("Could not attach {file}: {reason}"),
+                    &[("file", &attachments::title(&upload.file)), ("reason", &reason)],
+                )),
+            }
+            this.rebuild_files();
+        });
+    }
+
+    fn take_upload(&self, id: u64) -> Option<Upload> {
+        let mut uploads = self.uploads.borrow_mut();
+        let at = uploads.iter().position(|u| u.id == id)?;
+        Some(uploads.remove(at))
+    }
+
+    fn cancel_upload(self: &Rc<Self>, id: u64) {
+        if let Some(upload) = self.take_upload(id) {
+            upload.abort.abort();
+        }
+        self.rebuild_files();
+    }
+
+    /// Stops the uploads still running and puts each file in the draft
+    /// as waiting, for the queue to upload with the event.
+    fn hand_uploads_to_queue(&self) {
+        let uploads = self.uploads.take();
+        for upload in uploads {
+            upload.abort.abort();
+            self.draft.borrow_mut().attach(upload.file);
+        }
+    }
+
+    /// Says what went wrong with a file under the Attachments heading, or
+    /// clears it for `""`.
+    fn say_file_problem(&self, words: &str) {
+        if let Some((group, _)) = self.files_group.borrow().as_ref() {
+            group.set_description((!words.is_empty()).then_some(words));
+        }
     }
 
     // ---- More ----

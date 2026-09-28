@@ -962,7 +962,22 @@ fn timed_event(calendar: &str, id: &str, title: &str, start: EpochMillis, end: E
         title: title.into(),
         busy: true,
         status: CalendarStatus::Confirmed,
+        // Read from the provider, files and all: an empty list, which the
+        // editor may add to.
+        attachments: Some(Vec::new()),
         ..CalendarEvent::default()
+    }
+}
+
+/// A Drive file on a sample event. The link goes nowhere real.
+fn drive_file(title: &str, mime_type: &str, id: &str) -> mailrs_domain::calendar::Attachment {
+    mailrs_domain::calendar::Attachment {
+        title: title.into(),
+        file_url: format!("https://drive.google.com/file/d/{id}/view"),
+        mime_type: mime_type.into(),
+        icon_link: String::new(),
+        file_id: id.into(),
+        waiting: None,
     }
 }
 
@@ -1010,7 +1025,13 @@ fn account0_events(now: EpochMillis) -> Vec<CalendarEvent> {
     use chrono::Datelike;
     let monday = week_monday(now);
     let mut events = vec![
-        timed_event("primary", "lunch-with-ana", "Lunch with Ana", at_week(monday, 1, 13, 0), at_week(monday, 1, 14, 0)),
+        CalendarEvent {
+            attachments: Some(vec![
+                drive_file("Restaurant menu.pdf", "application/pdf", "pmdemo-menu"),
+                drive_file("Summer trip budget", "application/vnd.google-apps.spreadsheet", "pmdemo-budget"),
+            ]),
+            ..timed_event("primary", "lunch-with-ana", "Lunch with Ana", at_week(monday, 1, 13, 0), at_week(monday, 1, 14, 0))
+        },
         timed_event("primary", "dentist", "Dentist", at_week(monday, 2, 11, 0), at_week(monday, 2, 12, 0)),
         timed_event("primary", "gym", "Gym", at_week(monday, 1, 16, 0), at_week(monday, 1, 17, 0)),
         timed_event("primary", "yoga", "Yoga", at_week(monday, 9, 18, 30), at_week(monday, 9, 19, 30)),
