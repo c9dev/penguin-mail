@@ -28,7 +28,7 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use mailrs_domain::invitation::{Invitation, Method};
-use mailrs_domain::{AccountId, FlagColor, MessageBody, MessageMeta, Target, ThreadSummary};
+use mailrs_domain::{AccountId, EpochMillis, FlagColor, MessageBody, MessageMeta, Target, ThreadSummary};
 use mailrs_store::outbox::Queued;
 use mailrs_sync::{Opened, Spot, outbox_id};
 
@@ -36,6 +36,7 @@ use super::{Cleaned, InlineImage, OpenThread, Unsent};
 use crate::protection::Read;
 use crate::translation::{Language, Prose};
 use crate::ui::invitation::Showing;
+use crate::ui::invitation::strip::Strip;
 pub use crate::wanted::Answer;
 use crate::wanted::{Screen, Wanted};
 
@@ -191,6 +192,16 @@ pub trait Effects {
         account_id: AccountId,
         invitation: Invitation,
     ) -> Answer<'_, Result<Option<Spot>, String>>;
+    /// The hours around the invitation's event from the calendar's copy
+    /// on this computer, or `None` when the account has no synced copy.
+    /// `at` is the occurrence Show in Calendar opens, when the copy holds
+    /// the event; the strip then shows the same day.
+    fn strip(
+        &self,
+        account_id: AccountId,
+        invitation: Invitation,
+        at: Option<EpochMillis>,
+    ) -> Answer<'_, Result<Option<Strip>, String>>;
     /// The flag colour the store holds for the thread.
     fn flag_color(
         &self,
@@ -237,6 +248,9 @@ pub trait Effects {
     fn series_known(&self, uid: String, line: String);
     /// Puts Show in Calendar on the card, for the event at `spot`.
     fn on_calendar_known(&self, uid: String, spot: Spot);
+    /// Puts the hours around the event on the card, in place of the clash
+    /// line.
+    fn strip_known(&self, uid: String, strip: Strip);
     /// Starts the engine run for a signed or encrypted message.
     fn start_engines(&self);
     fn translation_card(&self, card: Card);
@@ -740,6 +754,7 @@ impl ThreadRun {
         }
         // An answered invitation is still worth finding on the calendar;
         // only a cancellation has nothing there to show.
+        let mut at = None;
         if let Some(showing) = showing.as_ref().filter(|s| !s.invitation.cancelled()) {
             wanted.on_screen(|effects| effects.offer_calendar_access(account_id));
             let (uid, invitation) = (showing.invitation.uid.clone(), showing.invitation.clone());
@@ -750,12 +765,35 @@ impl ThreadRun {
                 )
                 .await
             {
+                at = Some(spot.start);
                 wanted.on_screen(|effects| effects.on_calendar_known(uid, spot));
+            }
+        }
+        // With the calendar's copy on this computer, the hours around the
+        // event say what else is on, and the clash line is not needed. The
+        // strip shows the occurrence Show in Calendar opens, which for a
+        // series is not the first one the invitation names.
+        let mut strip_drawn = false;
+        if let Some(showing) = showing.as_ref().filter(|s| draws_a_strip(s)) {
+            let (uid, invitation) = (showing.invitation.uid.clone(), showing.invitation.clone());
+            if let Some(Some(strip)) = wanted
+                .ask(
+                    |effects| effects.strip(account_id, invitation, at),
+                    "could not read the hours around the event",
+                )
+                .await
+            {
+                strip_drawn = wanted
+                    .on_screen(|effects| effects.strip_known(uid, strip))
+                    .is_some();
             }
         }
         let Some(showing) = showing.filter(waiting_on_an_answer) else {
             return;
         };
+        if strip_drawn {
+            return;
+        }
         let uid = showing.invitation.uid.clone();
         if let Some(busy) = wanted
             .ask(
@@ -777,6 +815,18 @@ fn one_of_a_series(showing: &Showing) -> bool {
     showing.invitation.occurrence.is_some()
         && showing.invitation.method == Method::Request
         && !showing.invitation.cancelled()
+}
+
+/// Whether the card has room for the hours around the event: a request
+/// that is still on, at a time of day rather than for whole days.
+fn draws_a_strip(showing: &Showing) -> bool {
+    showing.invitation.method == Method::Request
+        && !showing.invitation.cancelled()
+        && showing
+            .invitation
+            .when
+            .as_ref()
+            .is_some_and(|when| !when.all_day())
 }
 
 /// Whether the invitation still waits on the user: a request they have not

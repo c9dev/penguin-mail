@@ -7,6 +7,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### New
 
+- An invitation's card shows the hours around the meeting from your
+  calendar and says whether anything else is on then.
 - Penguin Mail comes as a package for Arch Linux: download the
   `.pkg.tar.zst` from the releases page and install it with
   `sudo pacman -U`.

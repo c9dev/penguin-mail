@@ -5,7 +5,7 @@ use mailrs_domain::Target;
 
 use super::fake::{
     ACCOUNT, ELSEWHERE, FakeWindow, Step, THREAD, body, html_body, invited, meta,
-    opened_cancellation, opened_invitation, opened_occurrence, portuguese, queued, row, spot,
+    opened_cancellation, opened_invitation, opened_occurrence, portuguese, queued, row, spot, strip,
     with_inline_picture, with_picture,
 };
 use super::{Card, Event, Stale};
@@ -922,4 +922,75 @@ async fn the_words_of_an_html_message_come_from_its_cleaned_body() {
         matches!(last, Some(Card::Offered { from: Some(from), .. }) if from.code == "pt"),
         "{last:?}"
     );
+}
+
+#[tokio::test]
+async fn a_synced_calendar_draws_the_hours_around_the_invitation() {
+    let window = FakeWindow::with_body(invited());
+    window.with(|screen| screen.strip = Ok(Some(strip())));
+    window.run().open(row(THREAD)).await;
+    assert_eq!(
+        window.0.borrow().strips,
+        [("kites@example.com".to_string(), strip())]
+    );
+    assert!(!window.took(Step::Busy), "the strip already says what else is on");
+}
+
+#[tokio::test]
+async fn without_a_synced_calendar_the_clash_line_stays() {
+    for found in [Ok(None), Err("the store is busy".to_string())] {
+        let window = FakeWindow::with_body(invited());
+        window.with(|screen| screen.strip = found);
+        window.run().open(row(THREAD)).await;
+        assert!(window.took(Step::Strip));
+        assert!(!window.took(Step::StripKnown));
+        assert!(window.took(Step::Busy));
+    }
+}
+
+#[tokio::test]
+async fn an_answered_invitation_still_draws_its_hours() {
+    let window = FakeWindow::with_body(invited());
+    window.with(|screen| {
+        screen.invitation = Ok(Some(mailrs_sync::Opened {
+            answer: Some(mailrs_domain::invitation::Answer::Yes),
+            ..opened_invitation()
+        }));
+        screen.strip = Ok(Some(strip()));
+    });
+    window.run().open(row(THREAD)).await;
+    assert!(window.took(Step::StripKnown));
+    assert!(!window.took(Step::Busy));
+}
+
+#[tokio::test]
+async fn a_cancellation_draws_no_hours() {
+    let window = FakeWindow::with_body(invited());
+    window.with(|screen| screen.invitation = Ok(Some(opened_cancellation())));
+    window.run().open(row(THREAD)).await;
+    assert!(!window.took(Step::Strip));
+}
+
+#[tokio::test]
+async fn the_hours_follow_the_occurrence_show_in_calendar_opens() {
+    let window = FakeWindow::with_body(invited());
+    window.with(|screen| screen.on_calendar = Ok(Some(spot())));
+    window.run().open(row(THREAD)).await;
+    assert_eq!(window.0.borrow().strip_asked, [Some(spot().start)]);
+
+    let window = FakeWindow::with_body(invited());
+    window.run().open(row(THREAD)).await;
+    assert_eq!(window.0.borrow().strip_asked, [None], "without a spot, the invitation's own start");
+}
+
+#[tokio::test]
+async fn hours_for_a_thread_the_reader_left_go_nowhere() {
+    let window = FakeWindow::with_body(invited());
+    window.with(|screen| {
+        screen.strip = Ok(Some(strip()));
+        screen.moves_on = Some(Step::Strip);
+    });
+    window.run().open(row(THREAD)).await;
+    assert!(window.took(Step::Strip));
+    assert!(!window.took(Step::StripKnown));
 }
