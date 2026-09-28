@@ -961,6 +961,24 @@ mod tests {
         );
     }
 
+    /// The standup starts Monday 21 September 2026, the third Monday of
+    /// its month, on `RRULE:FREQ=MONTHLY;BYDAY=3MO`. All events, dragged
+    /// one day later, must keep the ordinal and follow the weekday.
+    #[test]
+    fn all_events_moves_a_monthly_ordinal_rule_to_the_new_weekday() {
+        let series = standup(&["RRULE:FREQ=MONTHLY;BYDAY=3MO"]);
+        let picked = Picked {
+            original_start: lisbon(9, 21, 9, 0),
+            start: lisbon(9, 21, 9, 0),
+        };
+        let edited = moved(&series, picked, 24);
+        let steps = change(&series, &[], picked, edited, RepeatScope::All, "new");
+        assert_eq!(
+            saved(&steps)[0].rules,
+            vec!["RRULE:FREQ=MONTHLY;BYDAY=3TU".to_string()]
+        );
+    }
+
     #[test]
     fn a_weekly_rule_moved_by_a_whole_week_keeps_its_days() {
         let series = standup(&["RRULE:FREQ=WEEKLY;BYDAY=MO;COUNT=10"]);

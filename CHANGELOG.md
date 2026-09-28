@@ -89,6 +89,11 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   The assistant's free-time tool now looks inside the same hours.
 - The week starts on the day your locale expects, and every time the
   calendar shows follows your desktop's clock, 12-hour or 24-hour.
+- The editor's Repeats menu offers "Monthly on the second Tuesday" or
+  "the last Friday" worked out from the event's own date, and keeps
+  showing such a rule from Google as that choice instead of a rule it
+  cannot open. Moving the whole series a day still follows the right
+  weekday.
 
 ### Fixed
 - In dark mode, a reply with quoted text shows on the dark page instead of

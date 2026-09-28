@@ -350,9 +350,18 @@ pub fn repeat_words(repeat: &Repeat) -> String {
         Repeat::EveryWeek => once("Every week", "Every {count} weeks"),
         Repeat::EveryMonth => once("Every month", "Every {count} months"),
         Repeat::EveryYear => once("Every year", "Every {count} years"),
+        Repeat::MonthlyByDay(ordinal, weekday) => monthly_by_day_words(*ordinal, *weekday),
         Repeat::Kept(_) => gettext("A rule set in another app"),
         Repeat::Custom(custom) => custom_words(custom),
     }
+}
+
+/// "Monthly on the second Tuesday" or "Monthly on the last Friday", said
+/// the way `in_words` reads an invitation's own monthly ordinal `BYDAY`,
+/// so the two phrasings never drift apart.
+fn monthly_by_day_words(ordinal: i8, weekday: chrono::Weekday) -> String {
+    let rule = format!("FREQ=MONTHLY;BYDAY={ordinal}{}", byday_code(weekday));
+    in_words(&rule, None).unwrap_or_default()
 }
 
 /// A custom repeat's line, read the way `in_words` reads an invitation's
@@ -789,7 +798,21 @@ mod tests {
         assert_eq!(repeat_words(&two_weeks), "Every 2 weeks on Monday and Wednesday until 31 December");
         let five = Repeat::Custom(Custom { every: 1, frequency: Frequency::Daily, days: vec![], ends: Ends::After(5) });
         assert_eq!(repeat_words(&five), "Every day, 5 times");
-        assert_eq!(repeat_words(&Repeat::Kept("RRULE:FREQ=MONTHLY;BYDAY=1MO".into())), "A rule set in another app");
+        assert_eq!(repeat_words(&Repeat::Kept("RRULE:FREQ=MONTHLY;BYDAY=1MO,3MO".into())), "A rule set in another app");
+    }
+
+    #[test]
+    fn a_monthly_ordinal_choice_reads_as_the_nth_or_the_last_weekday() {
+        use chrono::Weekday;
+        mailrs_domain::translate::set_date_locale("en_US");
+        assert_eq!(
+            repeat_words(&Repeat::MonthlyByDay(2, Weekday::Tue)),
+            "Every month on the second Tuesday"
+        );
+        assert_eq!(
+            repeat_words(&Repeat::MonthlyByDay(-1, Weekday::Fri)),
+            "Every month on the last Friday"
+        );
     }
 
     #[test]

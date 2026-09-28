@@ -55,6 +55,12 @@ struct Editor {
     zone_touched: Cell<bool>,
     title_row: RefCell<Option<adw::EntryRow>>,
     repeat_row: RefCell<Option<adw::ComboRow>>,
+    /// The Repeats row's own choices, worked out once from the draft's
+    /// start day when the editor opens (`repeat::presets`): the six
+    /// fixed ones, and a monthly ordinal or two worked out from that day
+    /// ("the second Tuesday", "the last Friday"). A start moved after
+    /// the editor opens does not change them, matching `view_zone`.
+    repeat_presets: Vec<Repeat>,
     /// The Repeats row's selected index the draft actually holds, put
     /// back when the Custom page is left without pressing Done.
     repeat_confirmed: Cell<u32>,
@@ -103,7 +109,9 @@ pub fn open(
         .child(&nav)
         .build();
     let view_zone = draft::local_zone();
-    let repeat_confirmed = repeat_index(&draft.repeat);
+    let start_day = local_day(draft.start, draft.zone.parse().unwrap_or(view_zone));
+    let repeat_presets = calendar::repeat::presets(start_day);
+    let repeat_confirmed = repeat_index(&repeat_presets, &draft.repeat);
 
     let editor = Rc::new(Editor {
         dialog: dialog.clone(),
@@ -117,6 +125,7 @@ pub fn open(
         zone_touched: Cell::new(false),
         title_row: RefCell::new(None),
         repeat_row: RefCell::new(None),
+        repeat_presets,
         repeat_confirmed: Cell::new(repeat_confirmed),
         repeat_quiet: Cell::new(false),
         guests_group: RefCell::new(None),
@@ -494,7 +503,8 @@ impl Editor {
         let group = adw::PreferencesGroup::new();
         let row = adw::ComboRow::builder().title(gettext("Repeats")).build();
         crate::ui::name_combo_row_items(&row);
-        let names: Vec<String> = REPEAT_PRESETS
+        let names: Vec<String> = self
+            .repeat_presets
             .iter()
             .map(words::repeat_words)
             .chain([gettext("Custom…")])
@@ -503,7 +513,11 @@ impl Editor {
         row.set_model(Some(&gtk::StringList::new(&refs)));
         let repeat = self.draft.borrow().repeat.clone();
         row.set_selected(self.repeat_confirmed.get());
-        if matches!(repeat, Repeat::Custom(_) | Repeat::Kept(_)) {
+        // Whatever is not one of the row's own choices, such as a custom
+        // repeat, a rule the menu cannot show, or a monthly ordinal that
+        // does not match the day the editor opened on, still reads in
+        // full under the row.
+        if !self.repeat_presets.contains(&repeat) {
             row.set_subtitle(&words::repeat_words(&repeat));
         }
         let weak = Rc::downgrade(self);
@@ -513,11 +527,11 @@ impl Editor {
                 return;
             }
             let index = row.selected();
-            if index as usize == REPEAT_PRESETS.len() {
+            if index as usize == this.repeat_presets.len() {
                 this.open_custom_page();
                 return;
             }
-            let preset = REPEAT_PRESETS[index as usize].clone();
+            let preset = this.repeat_presets[index as usize].clone();
             this.draft.borrow_mut().repeat = preset;
             row.set_subtitle("");
             this.repeat_confirmed.set(index);
@@ -740,11 +754,11 @@ impl Editor {
         self.draft.borrow_mut().repeat = Repeat::Custom(custom);
         if let Some(row) = self.repeat_row.borrow().as_ref() {
             self.repeat_quiet.set(true);
-            row.set_selected(REPEAT_PRESETS.len() as u32);
+            row.set_selected(self.repeat_presets.len() as u32);
             row.set_subtitle(&words);
             self.repeat_quiet.set(false);
         }
-        self.repeat_confirmed.set(REPEAT_PRESETS.len() as u32);
+        self.repeat_confirmed.set(self.repeat_presets.len() as u32);
         self.nav.pop();
     }
 
@@ -1302,17 +1316,6 @@ impl Editor {
     }
 }
 
-/// The Repeats row's fixed choices, in menu order. "Custom…" is the row
-/// after the last of these, not a value of its own.
-const REPEAT_PRESETS: [Repeat; 6] = [
-    Repeat::Never,
-    Repeat::EveryDay,
-    Repeat::EveryWeekday,
-    Repeat::EveryWeek,
-    Repeat::EveryMonth,
-    Repeat::EveryYear,
-];
-
 const FREQUENCIES: [Frequency; 4] = [
     Frequency::Daily,
     Frequency::Weekly,
@@ -1330,13 +1333,13 @@ const WEEK: [Weekday; 7] = [
     Weekday::Sun,
 ];
 
-/// The Repeats row's index for `repeat`: its preset's position, or the
-/// row after the presets for a custom or a kept rule.
-fn repeat_index(repeat: &Repeat) -> u32 {
-    REPEAT_PRESETS
+/// The Repeats row's index for `repeat` among `presets`: its position, or
+/// the row after them ("Custom…") for one none of them shows.
+fn repeat_index(presets: &[Repeat], repeat: &Repeat) -> u32 {
+    presets
         .iter()
         .position(|p| p == repeat)
-        .map_or(REPEAT_PRESETS.len() as u32, |i| i as u32)
+        .map_or(presets.len() as u32, |i| i as u32)
 }
 
 fn frequency_index(frequency: Frequency) -> u32 {
@@ -1435,7 +1438,9 @@ fn date_button(
     button
 }
 
-fn day_to_glib(day: NaiveDate) -> glib::DateTime {
+/// `day` as GLib's own `gtk::Calendar` reads it, noon so no zone's
+/// rounding moves it to the day before or after.
+pub(super) fn day_to_glib(day: NaiveDate) -> glib::DateTime {
     glib::DateTime::from_local(day.year(), day.month() as i32, day.day() as i32, 12, 0, 0.0)
         .expect("a real date")
 }
