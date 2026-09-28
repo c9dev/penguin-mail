@@ -78,6 +78,10 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - `penguin-mail --demo`'s sample invitation keeps its series ending on
   the same time of day it started; the clocks going back used to move
   it an hour earlier.
+- The mailboxes sit in their own rounded panel under Favorites,
+  Mailboxes and Accounts, and the one you are in is tinted with your
+  accent colour. Send Later, Remind Me and Follow Up stay listed when
+  empty, so the rows below them no longer jump.
 
 ## 0.3.0 (2026-09-24)
 

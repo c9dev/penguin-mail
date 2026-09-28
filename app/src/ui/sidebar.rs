@@ -1,5 +1,7 @@
 //! Mailboxes: the unified views, then one section per account.
 
+mod sections;
+
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -15,6 +17,7 @@ use mailrs_sync::Offers;
 use super::{FolderLook, LABEL_COLORS, Mailbox, Standard, describe, label_color_name};
 use crate::format::{PALETTE, account_color_index, palette_name};
 use crate::offered::Filing;
+use sections::{Place, Section};
 
 struct Row {
     row: gtk::ListBoxRow,
@@ -70,7 +73,7 @@ impl Sidebar {
         on_drop: impl Fn(Mailbox) -> bool + 'static,
     ) -> Rc<Sidebar> {
         let list = gtk::ListBox::builder()
-            .css_classes(["navigation-sidebar"])
+            .css_classes(["navigation-sidebar", "mailboxes"])
             .selection_mode(gtk::SelectionMode::Single)
             .build();
         let scroller = gtk::ScrolledWindow::builder()
@@ -108,6 +111,11 @@ impl Sidebar {
             .show_end_title_buttons(false)
             .title_widget(&titles)
             .build();
+        // Ruling R9: Add Account leaves the sidebar's foot, which the
+        // mockup draws with nothing in it. The main menu's "Add Account…"
+        // and the welcome page still open the same picker, so the button
+        // stays here unparented, for `MainWindow` to enable and open as it
+        // does today, rather than reworking those call sites in this task.
         let add_account = gtk::Button::builder()
             .child(
                 &adw::ButtonContent::builder()
@@ -121,16 +129,24 @@ impl Sidebar {
             .margin_end(6)
             .margin_top(6)
             .margin_bottom(6)
+            .visible(false)
             .build();
         let content = gtk::Stack::builder()
             .transition_type(gtk::StackTransitionType::Crossfade)
             .transition_duration(150)
             .build();
         content.add_named(&scroller, Some("mail"));
-        let page = adw::ToolbarView::new();
+        // The sidebar sits inside the window, 8 px from its top, bottom,
+        // start and end edges, so the window's background shows round it.
+        let page = adw::ToolbarView::builder()
+            .css_classes(["sidebar-card"])
+            .margin_top(8)
+            .margin_bottom(8)
+            .margin_start(8)
+            .margin_end(8)
+            .build();
         page.add_top_bar(&header);
         page.set_content(Some(&content));
-        page.add_bottom_bar(&add_account);
 
         let sidebar = Rc::new(Sidebar {
             page,
@@ -299,84 +315,14 @@ impl Sidebar {
         self.list.remove_all();
         self.rows.borrow_mut().clear();
         self.headings.borrow_mut().clear();
-        for which in Standard::ALL {
-            self.add_mailbox(
-                Mailbox::Unified(which),
-                &which.unified_name(),
-                which.icon(),
-                0,
-            );
-            if which == Standard::Inbox && !vips.is_empty() {
-                let everyone = Mailbox::Vips {
-                    emails: vips.iter().map(|(e, _)| e.clone()).collect(),
-                    name: gettext("VIPs"),
-                };
-                self.add_mailbox(everyone, &gettext("VIPs"), "starred-symbolic", 0);
-                for (email, name) in vips {
-                    let person = Mailbox::Vips {
-                        emails: vec![email.clone()],
-                        name: name.clone(),
-                    };
-                    let row = self.add_mailbox(person, name, "avatar-default-symbolic", 1);
-                    let menu = gio::Menu::new();
-                    let item = gio::MenuItem::new(Some(&gettext("Remove from VIPs")), None);
-                    item.set_action_and_target_value(
-                        Some("win.vip-remove"),
-                        Some(&email.to_variant()),
-                    );
-                    menu.append_item(&item);
-                    context_menu(&row, &menu);
-                }
+        for (section, places) in sections::LAYOUT {
+            self.list.append(&section_title(&section.title()));
+            for &place in places {
+                self.add_place(place, vips);
             }
-            if which == Standard::Flagged {
-                // One row per flag colour in use, as Apple Mail shows them.
-                for color in FlagColor::ALL {
-                    let row = self.add_mailbox(
-                        Mailbox::Flag(color),
-                        &color.name(),
-                        "penguin-mail-flag-symbolic",
-                        1,
-                    );
-                    if let Some(icon) = row.child().and_then(|c| c.first_child()) {
-                        icon.add_css_class(&format!("flag-{}", color.as_str()));
-                    }
-                }
-            }
-        }
-        self.add_mailbox(
-            Mailbox::Outbox,
-            &gettext("Outbox"),
-            "penguin-mail-outbox-symbolic",
-            0,
-        );
-        self.add_mailbox(
-            Mailbox::Scheduled,
-            &gettext("Send Later"),
-            "mail-send-symbolic",
-            0,
-        );
-        self.add_mailbox(
-            Mailbox::Reminders,
-            &gettext("Remind Me"),
-            "alarm-symbolic",
-            0,
-        );
-        self.add_mailbox(
-            Mailbox::FollowUp,
-            &gettext("Follow Up"),
-            "mail-reply-sender-symbolic",
-            0,
-        );
-        for folder in Folder::ALL {
-            let mailbox = Mailbox::Folder {
-                account_id: None,
-                folder,
-            };
-            self.add_mailbox(mailbox, &folder.name(), folder.icon(), 0);
         }
         if !extras.smart.is_empty() {
-            self.list
-                .append(&section_title(&gettext("Smart Mailboxes")));
+            self.list.append(&section_title(&Section::Smart.title()));
             for smart in &extras.smart {
                 let mailbox = Mailbox::Smart(smart.clone());
                 let row = self.add_mailbox(mailbox, &smart.name, "folder-saved-search-symbolic", 0);
@@ -387,7 +333,7 @@ impl Sidebar {
             // The rows above list every account at once. This says what
             // the ones below are, rather than leaving a reader to work it
             // out from the addresses.
-            self.list.append(&section_title(&gettext("Accounts")));
+            self.list.append(&section_title(&Section::Accounts.title()));
         }
         for (account, labels) in accounts {
             let shown = extras.names.get(&account.id);
@@ -454,6 +400,96 @@ impl Sidebar {
         });
     }
 
+    /// Adds the row, or the run of rows, that one place in the layout
+    /// stands for.
+    fn add_place(&self, place: Place, vips: &[(String, String)]) {
+        match place {
+            Place::Unified(which) => {
+                let row =
+                    self.add_mailbox(Mailbox::Unified(which), &which.unified_name(), which.icon(), 0);
+                if which == Standard::Flagged
+                    && let Some(icon) = row.child().and_then(|c| c.first_child())
+                {
+                    // The Flagged row wears the same orange as each flag
+                    // colour under it, so the two read as one idea.
+                    icon.add_css_class("flag-orange");
+                }
+            }
+            Place::Vips => {
+                if vips.is_empty() {
+                    return;
+                }
+                let everyone = Mailbox::Vips {
+                    emails: vips.iter().map(|(e, _)| e.clone()).collect(),
+                    name: gettext("VIPs"),
+                };
+                let row = self.add_mailbox(everyone, &gettext("VIPs"), "starred-symbolic", 0);
+                if let Some(icon) = row.child().and_then(|c| c.first_child()) {
+                    icon.add_css_class("sidebar-vip");
+                }
+                for (email, name) in vips {
+                    let person = Mailbox::Vips {
+                        emails: vec![email.clone()],
+                        name: name.clone(),
+                    };
+                    let row = self.add_mailbox(person, name, "avatar-default-symbolic", 1);
+                    let menu = gio::Menu::new();
+                    let item = gio::MenuItem::new(Some(&gettext("Remove from VIPs")), None);
+                    item.set_action_and_target_value(Some("win.vip-remove"), Some(&email.to_variant()));
+                    menu.append_item(&item);
+                    context_menu(&row, &menu);
+                }
+            }
+            Place::FlagColors => {
+                // One row per flag colour in use, as Apple Mail shows them.
+                for color in FlagColor::ALL {
+                    let row = self.add_mailbox(
+                        Mailbox::Flag(color),
+                        &color.name(),
+                        "penguin-mail-flag-symbolic",
+                        1,
+                    );
+                    if let Some(icon) = row.child().and_then(|c| c.first_child()) {
+                        icon.add_css_class(&format!("flag-{}", color.as_str()));
+                    }
+                }
+            }
+            Place::Outbox => {
+                // The tray icon goes to Send Later, which the mockup
+                // pictures; this row keeps mail that could not go out, so
+                // it wears a warning instead of the tray they would
+                // otherwise share.
+                self.add_mailbox(Mailbox::Outbox, &gettext("Outbox"), "dialog-warning-symbolic", 0);
+            }
+            Place::Scheduled => {
+                self.add_mailbox(
+                    Mailbox::Scheduled,
+                    &gettext("Send Later"),
+                    "penguin-mail-outbox-symbolic",
+                    0,
+                );
+            }
+            Place::Reminders => {
+                self.add_mailbox(Mailbox::Reminders, &gettext("Remind Me"), "alarm-symbolic", 0);
+            }
+            Place::FollowUp => {
+                self.add_mailbox(
+                    Mailbox::FollowUp,
+                    &gettext("Follow Up"),
+                    "appointment-soon-symbolic",
+                    0,
+                );
+            }
+            Place::Folder(folder) => {
+                let mailbox = Mailbox::Folder {
+                    account_id: None,
+                    folder,
+                };
+                self.add_mailbox(mailbox, &folder.name(), folder.icon(), 0);
+            }
+        }
+    }
+
     /// Adds a mailbox row. `depth` indents it: 0 for the unified views, 1
     /// for an account's mailboxes, and one more per level of label nesting.
     fn add_mailbox(&self, mailbox: Mailbox, name: &str, icon: &str, depth: u32) -> gtk::ListBoxRow {
@@ -478,9 +514,13 @@ impl Sidebar {
         depth: u32,
         opens: bool,
     ) -> gtk::ListBoxRow {
+        // 12 px puts the icon inside the row's own left edge, which
+        // `.mailboxes > row`'s 8 px margin already sets 8 px in from the
+        // card; 10 px of spacing then lands the name 38 px into the row,
+        // as the mockup draws both.
         let content = gtk::Box::builder()
-            .spacing(12)
-            .margin_start(18 * depth as i32)
+            .spacing(10)
+            .margin_start(12 + 18 * depth as i32)
             .css_classes(["mailbox-row"])
             .build();
         content.append(&gtk::Image::from_icon_name(icon));
@@ -499,7 +539,7 @@ impl Sidebar {
         content.append(&count);
         let row = gtk::ListBoxRow::builder()
             .child(&content)
-            .visible(!hidden_until_used(&mailbox))
+            .visible(!sections::hidden_until_used(&mailbox))
             .selectable(opens)
             .activatable(opens)
             .build();
@@ -551,9 +591,8 @@ impl Sidebar {
         let selected = self.list.selected_row();
         for row in self.rows.borrow().iter() {
             let count = counts.get(&row.mailbox).copied().unwrap_or(0);
-            if hidden_until_used(&row.mailbox) {
-                // Send Later, Remind Me, Follow Up and each flag colour appear
-                // only while in use.
+            if sections::hidden_until_used(&row.mailbox) {
+                // Each flag colour shows only while in use.
                 row.row
                     .set_visible(count > 0 || selected.as_ref() == Some(&row.row));
             }
@@ -702,14 +741,6 @@ fn css_hex(color: &str) -> Option<String> {
     (hex.len() == 6 && hex.chars().all(|c| c.is_ascii_hexdigit())).then_some(hex)
 }
 
-/// Rows that show only while they hold something.
-fn hidden_until_used(mailbox: &Mailbox) -> bool {
-    matches!(
-        mailbox,
-        Mailbox::Scheduled | Mailbox::Reminders | Mailbox::FollowUp | Mailbox::Flag(_)
-    )
-}
-
 /// The icon for a folder row a person can open: the tag Gmail's labels
 /// wear, since mail there can carry several at once, or the plain folder
 /// icon the sidebar gives a group once the account keeps mail in one
@@ -842,14 +873,17 @@ fn heading(
     offers: Offers,
 ) -> (gtk::ListBoxRow, gtk::Image, gtk::Label, gio::SimpleActionGroup) {
     let content = gtk::Box::builder()
-        .spacing(8)
+        .spacing(6)
         .css_classes(["sidebar-heading"])
         .build();
+    // Ruling R3: the mockup's account row has no chevron, only a colour
+    // dot and the address. `apply_expansion` still flips `chevron`'s
+    // icon between open and closed; the image just never joins `content`,
+    // so nothing on screen shows it.
     let chevron = gtk::Image::builder()
         .icon_name("pan-down-symbolic")
         .css_classes(["dim-label"])
         .build();
-    content.append(&chevron);
     let dot = gtk::Box::builder()
         .valign(gtk::Align::Center)
         .css_classes([
@@ -933,7 +967,7 @@ fn heading(
     let options = gtk::MenuButton::builder()
         .icon_name("view-more-symbolic")
         .menu_model(&menu)
-        .css_classes(["flat", "circular"])
+        .css_classes(["flat", "circular", "account-options"])
         .valign(gtk::Align::Center)
         .tooltip_text(gettext("Account options"))
         .build();

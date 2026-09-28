@@ -63,20 +63,37 @@ row.account-heading { transition: background-color 120ms ease, color 120ms ease;
 .thread-row .starred.marker { opacity: 1; }
 
 /* Sidebar */
-.mailbox-row .count { opacity: 0.55; font-size: 0.88em; font-feature-settings: "tnum"; }
-.mailbox-row .count.unread { opacity: 1; font-weight: 700; color: var(--accent-color); }
+/* 12.5 px, weight 700, in the dim colour (mockups.py's `side_row`: every
+   count is bold, not only an unread one); an unread count takes the
+   accent instead. */
+.mailbox-row .count {
+  opacity: 0.64;
+  font-size: 0.85em;
+  font-weight: 700;
+  font-feature-settings: "tnum";
+}
+.mailbox-row .count.unread { opacity: 1; color: var(--accent-color); }
 /* An account row is a row like any other: same height, same hover, same
    gap to its neighbour. The heading above the accounts separates them
    from the unified mailboxes, so the rows themselves need no margin, and
-   padding here would sit under the hover highlight anyway. */
-.sidebar-heading { padding: 0 6px 0 4px; }
+   padding here would sit under the hover highlight anyway. 10 px on the
+   left lands the colour dot at the mockup's 26 px into the card, since
+   `.mailboxes > row` below already puts the row itself 8 px in. */
+.sidebar-heading { padding: 0 6px 0 10px; }
 /* Except after an open account, whose mailboxes would otherwise run into
    the next account's heading. The margin sits outside the hover highlight. */
 row.account-heading.after-open { margin-top: 12px; }
 .sidebar-heading label.heading { font-size: 0.8em; opacity: 0.6; }
-.sidebar-heading .email { font-size: 0.86em; font-weight: 700; }
+/* 13 px, weight 600, as ruling R3 keeps the account row to a dot and an
+   address: no chevron, and the options button only on hover or focus. */
+.sidebar-heading .email { font-size: 0.89em; font-weight: 600; }
 .sidebar-heading button { min-height: 22px; min-width: 22px; padding: 2px; }
 .sidebar-heading .count { font-size: 0.82em; font-weight: 700; color: var(--accent-color); }
+/* `GtkMenuButton`'s own CSS node is not named `button`, so the class
+   alone selects it. */
+.account-options { opacity: 0; transition: opacity 120ms ease; }
+row.account-heading:hover .account-options,
+.account-options:focus-visible { opacity: 1; }
 
 .account-dot { min-width: 8px; min-height: 8px; border-radius: 999px; }
 .account-0 { background: #3584e4; } .account-1 { background: #2190a4; } .account-2 { background: #3a944a; }
@@ -203,7 +220,58 @@ flowboxchild:focus-visible > .recipient-chip {
 .flag-gray { color: #6f8396; }
 .flag-swatch { padding: 6px; min-width: 20px; min-height: 20px; }
 .thread-row .vip.marker { color: #e5a50a; opacity: 1; }
-.sidebar-section { margin: 14px 6px 4px 4px; }
+/* The VIPs star and the Flagged row keep Apple Mail's own colours. */
+.sidebar-vip { color: #e5a50a; }
+
+/* A2: the inset sidebar card, its sections and the tinted selection.
+   `Sidebar::page` carries `.sidebar-card`, and both spaces' splits carry
+   `.inset-sidebar`, so this reaches the calendar's own sidebar too. */
+.inset-sidebar > .sidebar-pane { background: var(--window-bg-color); border: none; box-shadow: none; }
+.sidebar-card { background: var(--sidebar-bg-color); border-radius: 12px; }
+/* `adw::ToolbarView` wraps its top bars in its own box, so a `>` child
+   selector on `.sidebar-card` never reaches the header bar underneath. */
+.sidebar-card headerbar { background: none; box-shadow: none; }
+/* The mail list is the sidebar pane of window.rs's own inner split, which
+   would otherwise take the sidebar shade meant for `Sidebar::page` alone;
+   the mockup draws the list column on the window colour. */
+.mail-columns > .sidebar-pane { background: var(--window-bg-color); }
+
+/* The headings between the sections: 11.5 px, weight 700, faint (40 %).
+   The calendar sidebar's own account headings share this size, weight
+   and colour (`calendar::sidebar::rebuild_calendar_list`); only a mail
+   section's heading is drawn in spaced capitals, since an account's own
+   address is not a title to shout. 10 px of left margin lands the mail
+   heading's text at the mockup's 26 px into the card, since
+   `.mailboxes > row` below puts the row 8 px in already. */
+.sidebar-section {
+  font-size: 0.78em;
+  font-weight: 700;
+  color: alpha(currentColor, 0.4);
+}
+.mailboxes > row > .sidebar-section {
+  margin: 14px 8px 4px 10px;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+.mailboxes > row:first-child > .sidebar-section { margin-top: 4px; }
+
+/* Row type: 14 px names, 700 when selected. */
+.mailbox-row > label { font-size: 0.95em; font-weight: 500; }
+.mailboxes > row:selected .mailbox-row > label { font-weight: 700; }
+.mailbox-row { min-height: 16px; padding: 8px 14px 8px 0; }
+
+/* The selected mailbox is a rounded card tinted with the accent, 8 px in
+   from each side of the card: 18 % in light mode, 28 % in dark, over the
+   sidebar shade (mockups.py's `tint + 0.04`, not the calendar event's
+   14 %/24 %). Its icon, name and count take the accent colour. */
+.mailboxes > row { margin: 0 8px; padding: 0; border-radius: 9px; }
+.mailboxes > row:selected {
+  background-color: alpha(var(--accent-bg-color), 0.18);
+  color: var(--accent-color);
+}
+.mailboxes > row:selected image { color: var(--accent-color); }
+.mailboxes > row:selected .mailbox-row .count { opacity: 1; color: var(--accent-color); }
+.app-dark .mailboxes > row:selected { background-color: alpha(var(--accent-bg-color), 0.28); }
 
 /* The assistant pane. */
 .assistant-pane { background: var(--sidebar-bg-color); }
@@ -537,7 +605,6 @@ button.day-heading { min-height: 26px; padding: 0 14px; border-radius: 13px; }
 .calendar-lock { opacity: 0.4; }
 .mini-month { margin-top: -2px; }
 checkbutton.calendar-check:not(:checked) + label { opacity: 0.64; }
-.calendar-account { font-size: 0.78em; font-weight: 700; opacity: 0.4; }
 .calendar-name { font-size: 0.92em; font-weight: 500; }
 /* The indicator is the checkbutton's `check` child, not the row itself,
    or the circle would wrap the calendar's name too. A 15 px dot, filled
