@@ -5896,10 +5896,18 @@ msgid "Muted"
 msgstr "Silenciadas"
 
 #: app/src/ui/thread_row.rs:311
+msgid "Unread invitation, {sender}, {subject}, {snippet}"
+msgstr "Convite por ler, {sender}, {subject}, {snippet}"
+
+#: app/src/ui/thread_row.rs:312
 msgid "Unread, {sender}, {subject}, {snippet}"
 msgstr "Por ler, {sender}, {subject}, {snippet}"
 
-#: app/src/ui/thread_row.rs:312
+#: app/src/ui/thread_row.rs:313
+msgid "Invitation, {sender}, {subject}, {snippet}"
+msgstr "Convite, {sender}, {subject}, {snippet}"
+
+#: app/src/ui/thread_row.rs:314
 msgid "{sender}, {subject}, {snippet}"
 msgstr "{sender}, {subject}, {snippet}"
 

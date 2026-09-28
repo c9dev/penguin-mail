@@ -40,27 +40,46 @@ row.account-heading { transition: background-color 120ms ease, color 120ms ease;
 .navigation-sidebar > row:selected,
 .thread-list > row:selected { transition-duration: 90ms; }
 
-/* Thread list */
-.thread-list > row { padding: 0; }
-.thread-row { padding: 9px 12px 10px 6px; }
+/* Thread list. A selected conversation is a card tinted with the accent,
+   88 px tall on a 92 px pitch, 10 px in from the list's sides with 12 px
+   corners; libadwaita's row background is dropped so the tint shows.
+   Every other row draws a hairline under its text, from the text's start
+   to 16 px short of the list's end; the row above a selected card keeps
+   its line, 2 px clear of the card, and the card itself has none. */
+.thread-list > row { padding: 0; margin: 2px 10px; border-radius: 12px; }
+.thread-list > row:selected { background-color: alpha(var(--accent-bg-color), 0.16); }
+.app-dark .thread-list > row:selected { background-color: alpha(var(--accent-bg-color), 0.26); }
+.thread-row { padding: 0 12px 0 6px; }
+/* Dot 8 px, centred 22 px from the list's start and 20 px below the
+   row's top; avatar 34 px centred 52 px in; text from 80 px. */
 .thread-row .unread-dot {
-  min-width: 8px; min-height: 8px; border-radius: 999px; margin: 7px 0 0 0;
+  min-width: 8px; min-height: 8px; border-radius: 999px; margin: 16px 0 0 2px;
   background: transparent;
 }
 .thread-row.unread .unread-dot { background: var(--accent-bg-color); }
+.thread-row .thread-avatar { margin: 9px 0 0 9px; }
+.thread-row .thread-text {
+  padding: 9px 0 10px 0; margin-left: 11px;
+  border-bottom: 1px solid alpha(currentColor, 0.05);
+}
+.thread-list > row:selected .thread-text { border-bottom-color: transparent; }
 .thread-row .from { font-weight: 600; }
 .thread-row.unread .from { font-weight: 800; }
+/* The sender's address beside the name, styled as the mockup's secondary
+   text (R4): it lets a person spot a look-alike name. */
+.thread-row .address { opacity: 0.64; font-size: 0.89em; }
 .thread-row .subject { font-weight: 500; }
 .thread-row.unread .subject { font-weight: 700; }
 .thread-row .snippet { opacity: 0.6; font-size: 0.93em; }
 .thread-row .date { opacity: 0.6; font-size: 0.86em; font-feature-settings: "tnum"; }
-.thread-row .unread.date { opacity: 1; color: var(--accent-color); font-weight: 600; }
+.thread-row .unread.date { opacity: 1; color: var(--accent-color); font-weight: 700; }
 .thread-row .count {
   font-size: 0.78em; font-weight: 700; padding: 0 6px; border-radius: 999px;
   background: alpha(currentColor, 0.1); opacity: 0.8;
 }
 .thread-row .marker { opacity: 0.55; }
 .thread-row .starred.marker { opacity: 1; }
+.thread-row .invite.marker { color: var(--accent-color); opacity: 1; }
 
 /* Sidebar */
 /* 12.5 px, weight 700, in the dim colour (mockups.py's `side_row`: every

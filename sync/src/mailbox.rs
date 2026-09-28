@@ -1359,6 +1359,7 @@ fn row_of(hit: &MessageMeta, alone: bool) -> ThreadSummary {
             .as_ref()
             .map(|a| a.email.clone())
             .unwrap_or_default(),
+        invitation: false,
     }
 }
 
