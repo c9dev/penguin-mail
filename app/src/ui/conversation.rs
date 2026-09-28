@@ -1749,9 +1749,12 @@ impl ConversationView {
         }
         // A capsule shown here always agrees with toolbar::groups, which
         // decides the same thing in the abstract and is what the tests
-        // check; this catches the two falling out of step.
+        // check; this catches the two falling out of step. `get_visible`
+        // reads each capsule's own flag: `is_visible` would read false
+        // while the header or a parent is hidden and fail inside a signal
+        // handler, which cannot unwind.
         debug_assert_eq!(
-            self.capsules.iter().filter(|c| c.is_visible()).count(),
+            self.capsules.iter().filter(|c| c.get_visible()).count(),
             toolbar::groups(on).len()
         );
         self.buttons.more.set_visible(toolbar::more_shows(on));
