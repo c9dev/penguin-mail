@@ -562,6 +562,14 @@ impl MainWindow {
                             win.propose_for_event(account_id, occurrence);
                         }
                     }),
+                    next_event: Box::new({
+                        let win = weak.clone();
+                        move || {
+                            if let Some(win) = win.upgrade() {
+                                win.refresh_next_event();
+                            }
+                        }
+                    }),
                     waiting: Box::new({
                         let sidebar = Rc::downgrade(&sidebar);
                         move |count| {

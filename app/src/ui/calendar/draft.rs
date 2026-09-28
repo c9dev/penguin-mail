@@ -4,6 +4,8 @@
 //! start, Save needs a title, the repeat's day follows the start) live
 //! under tests.
 
+use std::collections::HashSet;
+
 use chrono::{NaiveDate, NaiveTime, TimeZone};
 use chrono::Duration;
 use chrono_tz::Tz;
@@ -400,14 +402,33 @@ pub fn may_change(event: Option<&Event>, part: Part) -> bool {
 /// The calendars the editor's Calendar row offers: any the person can
 /// write to for a new event, and for an existing one those of its own
 /// account, since a move between accounts is a copy and a delete that
-/// Google does not do in one call.
+/// Google does not do in one call. A calendar the person took off the
+/// sidebar's list (`hidden`, by account and id) is left out, except the
+/// draft's own, so the row never shows blank.
 pub fn calendar_choices<'a>(
     draft: &Draft,
     writable: &'a [(AccountId, String, Calendar)],
+    hidden: &HashSet<(AccountId, String)>,
 ) -> Vec<&'a (AccountId, String, Calendar)> {
     writable
         .iter()
         .filter(|(account, _, _)| draft.is_new() || *account == draft.account_id)
+        .filter(|(account, _, calendar)| {
+            (*account == draft.account_id && calendar.id == draft.calendar)
+                || !hidden.contains(&(*account, calendar.id.clone()))
+        })
+        .collect()
+}
+
+/// `writable` without the calendars the person took off the list, for
+/// quick create's menu and the calendar a new event starts on.
+pub fn without_hidden(
+    writable: Vec<(AccountId, String, Calendar)>,
+    hidden: &HashSet<(AccountId, String)>,
+) -> Vec<(AccountId, String, Calendar)> {
+    writable
+        .into_iter()
+        .filter(|(account, _, calendar)| !hidden.contains(&(*account, calendar.id.clone())))
         .collect()
 }
 
@@ -502,6 +523,7 @@ pub fn time_choices(current: NaiveTime) -> Vec<NaiveTime> {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
     use std::sync::Arc;
 
     use super::*;
@@ -1069,9 +1091,47 @@ mod tests {
         ];
         let weekly = weekly();
         let draft = Draft::open(&weekly, &weekly.event.rules, Lisbon);
-        let offered: Vec<&str> = calendar_choices(&draft, &writable).iter().map(|(_, _, c)| c.id.as_str()).collect();
+        let none = HashSet::new();
+        let offered: Vec<&str> =
+            calendar_choices(&draft, &writable, &none).iter().map(|(_, _, c)| c.id.as_str()).collect();
         assert_eq!(offered, ["me@example.com", "team"]);
-        assert_eq!(calendar_choices(&fresh(), &writable).len(), 3, "a new event may go on any account");
+        assert_eq!(calendar_choices(&fresh(), &writable, &none).len(), 3, "a new event may go on any account");
+    }
+
+    fn two_calendars() -> Vec<(AccountId, String, Calendar)> {
+        let team = Calendar { id: "team".into(), primary: false, ..personal() };
+        vec![
+            (1, "me@example.com".to_string(), personal()),
+            (1, "me@example.com".to_string(), team),
+        ]
+    }
+
+    #[test]
+    fn a_hidden_calendar_is_not_offered_for_a_new_event() {
+        let hidden = HashSet::from([(1, "team".to_string())]);
+        let writable = two_calendars();
+        let offered: Vec<&str> =
+            calendar_choices(&fresh(), &writable, &hidden).iter().map(|(_, _, c)| c.id.as_str()).collect();
+        assert_eq!(offered, ["me@example.com"]);
+    }
+
+    #[test]
+    fn an_event_on_a_hidden_calendar_still_shows_its_own_calendar() {
+        let weekly = weekly();
+        let mut draft = Draft::open(&weekly, &weekly.event.rules, Lisbon);
+        draft.calendar = "team".into();
+        let hidden = HashSet::from([(1, "team".to_string())]);
+        let writable = two_calendars();
+        let offered: Vec<&str> =
+            calendar_choices(&draft, &writable, &hidden).iter().map(|(_, _, c)| c.id.as_str()).collect();
+        assert_eq!(offered, ["me@example.com", "team"]);
+    }
+
+    #[test]
+    fn quick_create_and_the_default_leave_out_hidden_calendars() {
+        let hidden = HashSet::from([(1, "me@example.com".to_string())]);
+        let listed = without_hidden(two_calendars(), &hidden);
+        assert_eq!(listed.iter().map(|(_, _, c)| c.id.as_str()).collect::<Vec<_>>(), ["team"]);
     }
 
     #[test]

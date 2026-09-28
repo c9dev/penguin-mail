@@ -99,6 +99,19 @@ pub fn take_off_the_list(
     rows
 }
 
+/// Whether an account keeps its heading in the list: not once every
+/// calendar it has is off the list, since the heading would stand over
+/// nothing. Hidden Calendars still brings them back.
+pub fn shows_heading(account: &SidebarAccount) -> bool {
+    !matches!(&account.reach, CalendarReach::Calendars(list) if list.is_empty() && !account.hidden.is_empty())
+}
+
+/// Whether `change` alters what the next-event card at the foot of the
+/// mail sidebar shows: which calendars count, or their colour.
+pub fn redraws_next_event(change: &ListChange) -> bool {
+    !matches!(change, ListChange::Folded { .. })
+}
+
 /// How many calendars every account together took off the list.
 pub fn hidden_count(rows: &[SidebarAccount]) -> usize {
     rows.iter().map(|row| row.hidden.len()).sum()
@@ -779,7 +792,7 @@ impl CalendarSidebar {
         while let Some(child) = self.calendar_list.first_child() {
             self.calendar_list.remove(&child);
         }
-        for account in accounts {
+        for account in accounts.iter().filter(|a| shows_heading(a)) {
             // The gap under the heading sits inside the part that folds,
             // so a folded account's heading runs straight on to the next.
             let body = gtk::Box::builder()
@@ -1314,6 +1327,46 @@ mod tests {
         ]);
         let rows = take_off_the_list(rows, &unlisted);
         assert_eq!(hidden_count(&rows), 2);
+    }
+
+    #[test]
+    fn an_account_with_every_calendar_hidden_loses_its_heading() {
+        let rows = sidebar_accounts(&[(
+            account(1, "dana@example.com"),
+            Offers::EVERYTHING,
+            Withheld::NONE,
+            vec![calendar("primary")],
+        )]);
+        let rows = take_off_the_list(rows, &HashMap::from([(1, HashSet::from(["primary".to_string()]))]));
+        assert!(!shows_heading(&rows[0]));
+        assert_eq!(hidden_count(&rows), 1, "Hidden Calendars still brings it back");
+    }
+
+    #[test]
+    fn an_account_with_a_calendar_left_keeps_its_heading() {
+        let rows = sidebar_accounts(&[(
+            account(1, "dana@example.com"),
+            Offers::EVERYTHING,
+            Withheld::NONE,
+            vec![calendar("primary"), calendar("team")],
+        )]);
+        let rows = take_off_the_list(rows, &HashMap::from([(1, HashSet::from(["team".to_string()]))]));
+        assert!(shows_heading(&rows[0]));
+    }
+
+    #[test]
+    fn an_account_not_synced_yet_keeps_its_heading() {
+        let rows = sidebar_accounts(&[(account(1, "dana@example.com"), Offers::EVERYTHING, Withheld::NONE, Vec::new())]);
+        assert!(shows_heading(&rows[0]));
+    }
+
+    #[test]
+    fn a_change_to_what_shows_or_its_colour_redraws_the_next_event() {
+        let (account, calendar) = (1, "team".to_string());
+        assert!(redraws_next_event(&ListChange::Color { account, calendar: calendar.clone(), color: None }));
+        assert!(redraws_next_event(&ListChange::Listed { account, calendar: calendar.clone(), listed: false }));
+        assert!(redraws_next_event(&ListChange::Shown { account, calendar, shown: false }));
+        assert!(!redraws_next_event(&ListChange::Folded { address: "dana@example.com".into(), folded: true }));
     }
 
     fn d(y: i32, m: u32, day: u32) -> NaiveDate {
