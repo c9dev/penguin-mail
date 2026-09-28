@@ -3505,7 +3505,7 @@ msgstr "{name}, {address}"
 msgid "View"
 msgstr "View"
 
-#: app/src/ui/calendar/mod.rs:299 app/src/ui/calendar/mod.rs:2107
+#: app/src/ui/calendar/mod.rs:299 app/src/ui/calendar/mod.rs:2113
 msgid "New Event (N)"
 msgstr "New Event (N)"
 
@@ -3545,41 +3545,41 @@ msgstr "Moved “{title}”"
 msgid "Could not move the event: {reason}"
 msgstr "Could not move the event: {reason}"
 
-#: app/src/ui/calendar/mod.rs:1141
+#: app/src/ui/calendar/mod.rs:1147
 msgid "All-day events"
 msgstr "All-day events"
 
-#: app/src/ui/calendar/mod.rs:1143
+#: app/src/ui/calendar/mod.rs:1149
 msgid "All-day"
 msgstr "All-day"
 
-#: app/src/ui/calendar/mod.rs:1497 app/src/ui/calendar/mod.rs:2555
+#: app/src/ui/calendar/mod.rs:1503 app/src/ui/calendar/mod.rs:2571
 #: app/src/ui/calendar/sidebar.rs:123 app/src/ui/calendar/words.rs:220
 msgid "%a"
 msgstr "%a"
 
-#: app/src/ui/calendar/mod.rs:1901
+#: app/src/ui/calendar/mod.rs:1907
 msgid "Deleted “{title}”"
 msgstr "Deleted “{title}”"
 
-#: app/src/ui/calendar/mod.rs:1904
+#: app/src/ui/calendar/mod.rs:1910
 msgid "Could not delete the event: {reason}"
 msgstr "Could not delete the event: {reason}"
 
-#: app/src/ui/calendar/mod.rs:1948 app/src/ui/window.rs:1842
+#: app/src/ui/calendar/mod.rs:1954 app/src/ui/window.rs:1842
 #: app/src/ui/window/scheduled.rs:21 app/src/ui/window/shortcuts.rs:444
 msgid "Undo"
 msgstr "Undo"
 
-#: app/src/ui/calendar/mod.rs:2067
+#: app/src/ui/calendar/mod.rs:2073
 msgid "Could not send your answer: {reason}"
 msgstr "Could not send your answer: {reason}"
 
-#: app/src/ui/calendar/mod.rs:2109
+#: app/src/ui/calendar/mod.rs:2115
 msgid "None of your calendars take new events"
 msgstr "None of your calendars take new events"
 
-#: app/src/ui/calendar/mod.rs:2332
+#: app/src/ui/calendar/mod.rs:2348
 msgid "Could not save the event: {reason}"
 msgstr "Could not save the event: {reason}"
 
@@ -3742,17 +3742,17 @@ msgstr "You can only read this calendar"
 msgid "Grant Access for {account}"
 msgstr "Grant Access for {account}"
 
-#: app/src/ui/calendar/time_grid.rs:190
+#: app/src/ui/calendar/time_grid.rs:223
 msgid "{count} more event"
 msgid_plural "{count} more events"
 msgstr[0] "{count} more event"
 msgstr[1] "{count} more events"
 
-#: app/src/ui/calendar/time_grid.rs:216
+#: app/src/ui/calendar/time_grid.rs:249
 msgid "Shift+Up or Shift+Down moves it; Shift+Alt+Up or Shift+Alt+Down changes when it ends."
 msgstr "Shift+Up or Shift+Down moves it; Shift+Alt+Up or Shift+Alt+Down changes when it ends."
 
-#: app/src/ui/calendar/time_grid.rs:221
+#: app/src/ui/calendar/time_grid.rs:254
 msgid "{base} {hint}"
 msgstr "{base} {hint}"
 
