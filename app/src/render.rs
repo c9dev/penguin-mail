@@ -779,7 +779,8 @@ opacity 180ms cubic-bezier(0.23,1,0.32,1)}}\
 @media print{{.event-slot{{display:none}}}}\
 .body{{margin:14px 0 2px 52px}}\
 .text{{white-space:pre-wrap;overflow-wrap:anywhere}}\
-.body.text,.body.status,.html{{background:var(--surface);border-radius:12px;padding:14px;\
+.body.text{{margin-left:0}}\
+.body.status,.html{{background:var(--surface);border-radius:12px;padding:14px;\
 border:1px solid var(--line);overflow:hidden;margin-left:0}}\
 .html{{background:#fff}}\
 .html.plain{{background:var(--surface)}}\
@@ -875,6 +876,31 @@ mod tests {
             accent: "#3584e4".into(),
             summarize: false,
         }
+    }
+
+    /// Ruling R8: a plain-text body sits on the page as the mockup draws
+    /// it, starting at the avatar's column; HTML and status lines keep
+    /// their sheet.
+    #[test]
+    fn a_plain_text_body_has_no_sheet() {
+        let html = page("s", vec![]);
+        let rules: Vec<&str> = html
+            .split('}')
+            .filter(|rule| {
+                rule.split('{')
+                    .next()
+                    .is_some_and(|selectors| selectors.split(',').any(|s| s.trim() == ".body.text"))
+            })
+            .collect();
+        assert_eq!(rules.len(), 1, "{rules:?}");
+        for word in ["background", "border", "padding"] {
+            assert!(!rules[0].contains(word), "{rules:?}");
+        }
+        assert!(rules[0].contains("margin-left:0"), "{rules:?}");
+        assert!(
+            html.contains(".body.status,.html{background:var(--surface)"),
+            "HTML and status bodies keep the sheet"
+        );
     }
 
     fn page(subject: &str, views: Vec<MessageView>) -> String {

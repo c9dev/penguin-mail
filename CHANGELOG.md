@@ -69,6 +69,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 - An invitation's card now sits inside its message, under the sender and
   above the text, and scrolls with it.
+- A plain-text message sits on the page, lined up with the sender's
+  avatar, with no grey box around it. HTML mail keeps its white sheet.
 - The inbox categories are chips: the one you are in shows its name on
   an accent pill, and the others show their unread count on the corner.
 - The conversation you are reading is a tinted card in the list, and an
