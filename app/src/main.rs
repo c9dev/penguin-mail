@@ -265,6 +265,7 @@ fn show_fatal(gio_app: &gio::Application, message: &str, report: bool) {
         .default_height(420)
         .content(&toolbar)
         .build();
+    ui::window::track_dark_class(&window);
     let quit = gio_app.clone();
     window.connect_destroy(move |_| {
         let _ = &hold;

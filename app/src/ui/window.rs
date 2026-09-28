@@ -208,9 +208,18 @@ pub(super) const DARK_CLASS: &str = "app-dark";
 const SURFACES_CLASS: &str = "app-surfaces";
 
 /// Puts [`DARK_CLASS`] on `window` while libadwaita is dark, and keeps it
-/// current for as long as the window lives: on the main window here, and
-/// on each conversation window of its own in `window/detached.rs`.
-pub(super) fn track_dark_class(window: &adw::Window) {
+/// current for as long as the window lives. Every toplevel `adw::Window`
+/// this app opens calls this once, right after building it, so the
+/// mockup's window, sidebar and view colours reach it: the main window
+/// and each detached conversation (`window/detached.rs`), the composer
+/// (`composer/mod.rs`), the attachment preview
+/// (`window/attachments.rs`), the message-source viewer
+/// (`window/detached.rs`), and the startup-failure window (`main.rs`).
+/// An `adw::Dialog` such as Preferences or an alert needs no separate
+/// call: it is presented inside its parent window's own tree, so it
+/// inherits these colours through the CSS custom properties already set
+/// there.
+pub(crate) fn track_dark_class(window: &adw::Window) {
     window.add_css_class(SURFACES_CLASS);
     let style = adw::StyleManager::default();
     let target = window.downgrade();
