@@ -78,7 +78,8 @@ pub fn save_calendars(conn: &Connection, account_id: AccountId, list: &[Calendar
 
 pub fn calendars(conn: &Connection, account_id: AccountId) -> Result<Vec<Calendar>> {
     let mut stmt = conn.prepare(
-        "SELECT id, name, COALESCE(own_color, color), access, zone, is_primary, shown, reminders \
+        "SELECT id, name, COALESCE(own_color, color), access, zone, is_primary, shown, reminders, \
+         COALESCE(provider_hidden, 0) \
          FROM calendars WHERE account_id = ?1 ORDER BY is_primary DESC, name",
     )?;
     let rows = stmt.query_map(params![account_id], |row| {
@@ -91,6 +92,7 @@ pub fn calendars(conn: &Connection, account_id: AccountId) -> Result<Vec<Calenda
             primary: row.get(5)?,
             shown: row.get(6)?,
             reminders: parse(&row.get::<_, String>(7)?),
+            hidden: row.get(8)?,
         })
     })?;
     Ok(rows.collect::<rusqlite::Result<_>>()?)
@@ -1364,6 +1366,7 @@ mod tests {
             zone: "UTC".into(),
             primary,
             shown: true,
+            hidden: false,
             reminders: Vec::new(),
         }
     }

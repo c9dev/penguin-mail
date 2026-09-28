@@ -660,6 +660,26 @@ ALTER TABLE calendars ADD COLUMN own_color TEXT;
 ALTER TABLE events ADD COLUMN kind TEXT;
 UPDATE calendars SET sync_token = NULL;
 "#,
+    // Held for the older-months branch (fb-older), whose migration takes
+    // this place, 44, when the two merge. Empty until then.
+    "",
+    // Changes to an account's calendar list made here and not yet sent:
+    // a new calendar, a new name or colour, hiding one from the list,
+    // deleting one, and subscribing. `edit` holds the
+    // `calendar::list::ListEdit` as JSON, in the order the person made
+    // them. `provider_hidden` is the provider's own hidden flag as last
+    // read, NULL until the first read after this migration, so a read
+    // can tell a calendar hidden on another device since from one the
+    // person hid only here.
+    r#"
+CREATE TABLE calendar_list_changes (
+    seq        INTEGER PRIMARY KEY AUTOINCREMENT,
+    account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    calendar   TEXT NOT NULL,
+    edit       TEXT NOT NULL
+);
+ALTER TABLE calendars ADD COLUMN provider_hidden INTEGER;
+"#,
 ];
 
 /// How long the copy taken before a migration stays once the store has
