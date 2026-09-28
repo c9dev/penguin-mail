@@ -43,19 +43,53 @@ struct Row {
 /// on the same date, then by start time. Shared by [`Agenda::show`],
 /// which replaces every row, and [`Agenda::prepend`], which adds rows
 /// before them.
-fn sorted_rows(occurrences: &[Occurrence], zone: &chrono::Local) -> Vec<Row> {
+fn sorted_rows<Z: TimeZone>(occurrences: &[Occurrence], zone: &Z) -> Vec<Row> {
+    days_of(occurrences, zone)
+        .into_iter()
+        .flat_map(|(date, day)| {
+            let heading = words::full_date_words(date);
+            day.into_iter().map(move |occurrence| Row {
+                heading: heading.clone(),
+                date,
+                occurrence,
+            })
+        })
+        .collect()
+}
+
+/// `occurrences` grouped into days, earliest first; within a day an
+/// all-day occurrence comes before a timed one, then by start time.
+fn days_of<Z: TimeZone>(
+    occurrences: &[Occurrence],
+    zone: &Z,
+) -> Vec<(NaiveDate, Vec<Occurrence>)> {
     let mut dated: Vec<(NaiveDate, Occurrence)> = occurrences
         .iter()
         .map(|o| (agenda_date(o, zone), o.clone()))
         .collect();
     dated.sort_by_key(|(date, o)| (*date, !o.event.all_day, o.start));
-    dated
-        .into_iter()
-        .map(|(date, occurrence)| Row {
-            heading: words::full_date_words(date),
-            date,
-            occurrence,
-        })
+    let mut days: Vec<(NaiveDate, Vec<Occurrence>)> = Vec::new();
+    for (date, o) in dated {
+        match days.last_mut() {
+            Some((last, day)) if *last == date => day.push(o),
+            _ => days.push((date, vec![o])),
+        }
+    }
+    days
+}
+
+/// The occurrences that group under `first` or a later day. A read of
+/// later days also returns an event that began before them and runs
+/// into them, which the list already shows under its own first day.
+fn starting_from<Z: TimeZone>(
+    occurrences: &[Occurrence],
+    first: NaiveDate,
+    zone: &Z,
+) -> Vec<Occurrence> {
+    occurrences
+        .iter()
+        .filter(|o| agenda_date(o, zone) >= first)
+        .cloned()
         .collect()
 }
 
@@ -162,6 +196,23 @@ mod model {
             self.imp().sections.replace(sections);
             self.items_changed(0, old, new);
             self.sections_changed(0, new);
+        }
+
+        /// Adds `items` (already sorted) after the last row and
+        /// recomputes the section boundaries, since the first new row can
+        /// share the last section's date. Nothing scrolls.
+        pub(super) fn append_rows(&self, items: Vec<Row>) {
+            let added = items.len() as u32;
+            if added == 0 {
+                return;
+            }
+            let old = self.imp().items.borrow().len() as u32;
+            self.imp().items.borrow_mut().extend(items);
+            let dates: Vec<NaiveDate> =
+                self.imp().items.borrow().iter().map(|row| row.date).collect();
+            self.imp().sections.replace(sections_of(&dates));
+            self.items_changed(old, 0, added);
+            self.sections_changed(0, old + added);
         }
 
         /// Inserts `items` (already sorted, oldest first) before the
@@ -347,6 +398,9 @@ fn calendar_of<'a>(
     }
 }
 
+/// The widest the agenda's column grows in a wide window, in pixels.
+const COLUMN_WIDTH: i32 = 720;
+
 type Activated = dyn Fn(&Occurrence);
 type ScrolledToTop = dyn Fn();
 
@@ -460,9 +514,16 @@ impl Agenda {
         content.append(&no_earlier);
         content.append(&list_view);
 
+        // A wide window reads the agenda as a centred column; a narrow
+        // one is below the clamp's size and fills its width as before.
+        let column = adw::Clamp::builder()
+            .maximum_size(COLUMN_WIDTH)
+            .tightening_threshold(COLUMN_WIDTH)
+            .child(&content)
+            .build();
         let widget = gtk::ScrolledWindow::builder()
             .hscrollbar_policy(gtk::PolicyType::Never)
-            .child(&content)
+            .child(&column)
             .build();
         let scrolled_to_top: Rc<RefCell<Option<Box<ScrolledToTop>>>> = Rc::new(RefCell::new(None));
         let top_slot = Rc::clone(&scrolled_to_top);
@@ -528,6 +589,39 @@ impl Agenda {
         }
     }
 
+    /// Adds `occurrences` after the agenda's last row. Only those that
+    /// group under `first` or later are kept, so an event that runs
+    /// across the seam is not listed twice.
+    pub fn append(
+        &self,
+        occurrences: &[Occurrence],
+        first: NaiveDate,
+        calendars: &HashMap<(AccountId, String), Calendar>,
+        zone: &chrono::Local,
+    ) {
+        self.calendars
+            .borrow_mut()
+            .extend(calendars.iter().map(|(k, v)| (k.clone(), v.clone())));
+        let rows = sorted_rows(&starting_from(occurrences, first, zone), zone);
+        self.model.append_rows(rows);
+    }
+
+    /// Runs `f` when the scroll position comes within `margin` pixels of
+    /// the bottom, and again when the content grows and leaves it there,
+    /// so the caller loads later days.
+    pub fn connect_near_end(&self, margin: f64, f: impl Fn() + 'static) {
+        let f = Rc::new(f);
+        let adjustment = self.widget.vadjustment();
+        let check = move |a: &gtk::Adjustment| {
+            if super::shown::near_end(a.value(), a.page_size(), a.upper(), margin) {
+                f();
+            }
+        };
+        let on_value = check.clone();
+        adjustment.connect_value_changed(move |a| on_value(a));
+        adjustment.connect_changed(move |a| check(a));
+    }
+
     /// Reveals the dim line saying the copy holds nothing earlier, once
     /// loading has reached `FIRST_READ_BACK` before today. `show` hides
     /// it again, for the range change that follows leaving List mode
@@ -591,6 +685,54 @@ mod tests {
             d(2026, 9, 25),
         ];
         assert_eq!(sections_of(&dates), vec![(0, 2), (2, 3), (3, 5)]);
+    }
+
+    fn timed(start: i64) -> Occurrence {
+        Occurrence {
+            account_id: 1,
+            event: std::sync::Arc::new(mailrs_domain::calendar::Event {
+                start,
+                end: start + 3_600_000,
+                ..Default::default()
+            }),
+            start,
+            end: start + 3_600_000,
+        }
+    }
+
+    #[test]
+    fn events_group_into_days_earliest_first_with_all_day_ahead_of_timed() {
+        let zone = chrono_tz::Europe::Lisbon;
+        let at = |day, hour| {
+            zone.with_ymd_and_hms(2026, 9, day, hour, 0, 0).unwrap().timestamp_millis()
+        };
+        let mut all_day = timed(chrono::Utc.with_ymd_and_hms(2026, 9, 24, 0, 0, 0).unwrap().timestamp_millis());
+        std::sync::Arc::make_mut(&mut all_day.event).all_day = true;
+        let found = [timed(at(25, 9)), timed(at(24, 15)), all_day, timed(at(24, 8))];
+        let days = days_of(&found, &zone);
+        let shape: Vec<(NaiveDate, Vec<bool>)> = days
+            .iter()
+            .map(|(d, os)| (*d, os.iter().map(|o| o.event.all_day).collect()))
+            .collect();
+        assert_eq!(
+            shape,
+            vec![(d(2026, 9, 24), vec![true, false, false]), (d(2026, 9, 25), vec![false])]
+        );
+        assert!(days[0].1[1].start < days[0].1[2].start);
+    }
+
+    #[test]
+    fn a_later_read_drops_what_an_earlier_day_already_listed() {
+        let zone = chrono_tz::Europe::Lisbon;
+        let at = |day, hour| {
+            zone.with_ymd_and_hms(2026, 9, day, hour, 0, 0).unwrap().timestamp_millis()
+        };
+        // The store returns a multi-day event again when a later read
+        // overlaps it; its own start still sits before that read.
+        let found = [timed(at(23, 22)), timed(at(24, 9))];
+        let kept = starting_from(&found, d(2026, 9, 24), &zone);
+        assert_eq!(kept.len(), 1);
+        assert_eq!(kept[0].start, at(24, 9));
     }
 
     #[test]

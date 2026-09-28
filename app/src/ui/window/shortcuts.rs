@@ -529,8 +529,8 @@ pub(super) static SHORTCUTS: &[Shortcut] = &[
     },
     Shortcut {
         section: Section::Calendar,
-        description: || gettext("Day, week or month"),
-        keys: &[calendar("d"), calendar("w"), calendar("m")],
+        description: || gettext("Day, week, month or agenda"),
+        keys: &[calendar("d"), calendar("w"), calendar("m"), calendar("a")],
     },
     Shortcut {
         section: Section::Calendar,
@@ -644,6 +644,7 @@ pub(super) enum CalendarKey {
     Day,
     Week,
     Month,
+    Agenda,
     Previous,
     Next,
     Search,
@@ -664,6 +665,7 @@ pub(super) fn calendar_key(pressed: gdk::Key, modifiers: gdk::ModifierType) -> O
         "d" => CalendarKey::Day,
         "w" => CalendarKey::Week,
         "m" => CalendarKey::Month,
+        "a" => CalendarKey::Agenda,
         "Left" => CalendarKey::Previous,
         "Right" => CalendarKey::Next,
         "<Control>f" => CalendarKey::Search,
@@ -1161,7 +1163,7 @@ mod tests {
             assert!(!answered.contains(&command), "{} repeats {command}", key.trigger);
             answered.push(command);
         }
-        assert_eq!(answered.len(), 21);
+        assert_eq!(answered.len(), 22);
     }
 
     #[test]
@@ -1267,7 +1269,7 @@ mod tests {
             "<Control>plus <Control>minus"
         );
         assert_eq!(line("Search"), "slash <Control><Alt>f");
-        assert_eq!(line("Day, week or month"), "d w m");
+        assert_eq!(line("Day, week, month or agenda"), "d w m a");
         assert_eq!(line("Show the calendar"), "<Alt>2");
     }
 

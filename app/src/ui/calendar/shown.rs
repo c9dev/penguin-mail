@@ -33,6 +33,10 @@ pub enum Showing {
 pub fn showing(kind: ViewKind, narrow: bool, compact: bool) -> Showing {
     match (kind, narrow, compact) {
         (ViewKind::Day, _, _) => Showing::Day,
+        // Compact has no Agenda entry in the switch (see `offered`), so
+        // it shows the Month the switch does offer.
+        (ViewKind::Agenda, false, true) => Showing::Month,
+        (ViewKind::Agenda, _, _) => Showing::List,
         (_, true, _) => Showing::List,
         (ViewKind::Week, false, true) => Showing::Month,
         (ViewKind::Week, false, false) => Showing::Week,
@@ -43,13 +47,15 @@ pub fn showing(kind: ViewKind, narrow: bool, compact: bool) -> Showing {
 /// The view switch's toggles by name, in the order they sit, and whether
 /// each one is offered: List and Day in a narrow window; Day and Month
 /// alone once the header has no room left for Week too (`compact`); Day,
-/// Week and Month in a wide one.
-pub fn offered(narrow: bool, compact: bool) -> [(&'static str, bool); 4] {
+/// Week, Month and Agenda in a wide one. Agenda is the first to go when
+/// room runs short, then Week; Month stays.
+pub fn offered(narrow: bool, compact: bool) -> [(&'static str, bool); 5] {
     [
         ("list", narrow),
         ("day", true),
         ("week", !narrow && !compact),
         ("month", !narrow),
+        ("agenda", !narrow && !compact),
     ]
 }
 
@@ -63,6 +69,16 @@ pub fn toggle_name(showing: Showing) -> &'static str {
     }
 }
 
+/// The toggle to mark for the view the person picked in a window of this
+/// width: the agenda is List's toggle in a narrow window and Agenda's in
+/// a wide one.
+pub fn active_toggle(kind: ViewKind, narrow: bool, compact: bool) -> &'static str {
+    match showing(kind, narrow, compact) {
+        Showing::List if !narrow => "agenda",
+        other => toggle_name(other),
+    }
+}
+
 /// The grid a toggle picks. List is not a grid of its own: it stands for
 /// the week or month the person had before Day, `before_day`, which a
 /// wider window shows again.
@@ -71,9 +87,18 @@ pub fn kind_for(name: &str, before_day: ViewKind) -> Option<ViewKind> {
         "day" => Some(ViewKind::Day),
         "week" => Some(ViewKind::Week),
         "month" => Some(ViewKind::Month),
+        "agenda" => Some(ViewKind::Agenda),
         "list" => Some(before_day),
         _ => None,
     }
+}
+
+/// Whether a scrolled list has come within `margin` of its bottom, so
+/// the next days should load. `value` is the scroll offset, `page` the
+/// viewport's height and `upper` the content's. Content shorter than the
+/// viewport is at its end.
+pub fn near_end(value: f64, page: f64, upper: f64, margin: f64) -> bool {
+    value + page >= upper - margin
 }
 
 /// The accessible names of the back and forward arrows, which are icons
@@ -96,8 +121,8 @@ pub fn stepped(kind: ViewKind, day: NaiveDate, by: i32) -> NaiveDate {
         (ViewKind::Day, false) => day.checked_sub_days(Days::new(u64::from(count))),
         (ViewKind::Week, true) => day.checked_add_days(Days::new(7 * u64::from(count))),
         (ViewKind::Week, false) => day.checked_sub_days(Days::new(7 * u64::from(count))),
-        (ViewKind::Month, true) => day.checked_add_months(Months::new(count)),
-        (ViewKind::Month, false) => day.checked_sub_months(Months::new(count)),
+        (ViewKind::Month | ViewKind::Agenda, true) => day.checked_add_months(Months::new(count)),
+        (ViewKind::Month | ViewKind::Agenda, false) => day.checked_sub_months(Months::new(count)),
     };
     moved.unwrap_or(day)
 }
@@ -387,7 +412,68 @@ mod tests {
             .filter(|(_, on)| *on)
             .map(|(name, _)| name)
             .collect();
-        assert_eq!(on, ["day", "week", "month"]);
+        assert_eq!(on, ["day", "week", "month", "agenda"]);
+    }
+
+    /// Where the header runs short of room, Agenda goes before Month.
+    #[test]
+    fn a_compact_switch_drops_agenda_along_with_week() {
+        let on: Vec<&str> = offered(false, true)
+            .into_iter()
+            .filter(|(_, on)| *on)
+            .map(|(name, _)| name)
+            .collect();
+        assert!(on.contains(&"month") && !on.contains(&"agenda"));
+    }
+
+    #[test]
+    fn a_narrow_switch_has_no_agenda_entry_because_list_is_the_agenda() {
+        assert!(offered(true, false).iter().all(|(n, on)| *n != "agenda" || !on));
+    }
+
+    #[test]
+    fn a_wide_window_shows_the_agenda_as_the_list() {
+        assert_eq!(showing(ViewKind::Agenda, false, false), Showing::List);
+        assert_eq!(showing(ViewKind::Agenda, true, false), Showing::List);
+    }
+
+    /// The switch has no Agenda entry when compact, so the page shows the
+    /// Month the switch offers rather than a view it cannot mark.
+    #[test]
+    fn a_compact_window_shows_month_where_agenda_was_chosen() {
+        assert_eq!(showing(ViewKind::Agenda, false, true), Showing::Month);
+    }
+
+    #[test]
+    fn the_agenda_toggle_picks_the_agenda_and_the_list_toggle_keeps_the_grid() {
+        assert_eq!(kind_for("agenda", ViewKind::Month), Some(ViewKind::Agenda));
+        assert_eq!(kind_for("list", ViewKind::Week), Some(ViewKind::Week));
+    }
+
+    #[test]
+    fn the_agenda_marks_its_own_toggle_in_a_wide_window_and_list_in_a_narrow_one() {
+        assert_eq!(active_toggle(ViewKind::Agenda, false, false), "agenda");
+        assert_eq!(active_toggle(ViewKind::Agenda, true, false), "list");
+        assert_eq!(active_toggle(ViewKind::Agenda, false, true), "month");
+        assert_eq!(active_toggle(ViewKind::Week, false, false), "week");
+    }
+
+    #[test]
+    fn stepping_the_agenda_moves_by_months() {
+        assert_eq!(stepped(ViewKind::Agenda, d(2026, 3, 15), 1), d(2026, 4, 15));
+    }
+
+    #[test]
+    fn the_end_is_near_within_the_margin_of_the_bottom() {
+        // 1000px of content in a 400px window, 200px margin.
+        assert!(!near_end(300.0, 400.0, 1000.0, 200.0));
+        assert!(near_end(400.0, 400.0, 1000.0, 200.0));
+        assert!(near_end(600.0, 400.0, 1000.0, 200.0));
+    }
+
+    #[test]
+    fn content_that_fits_the_window_is_at_its_end() {
+        assert!(near_end(0.0, 400.0, 250.0, 200.0));
     }
 
     /// The switch that overlapped at 700px now drops Week rather than

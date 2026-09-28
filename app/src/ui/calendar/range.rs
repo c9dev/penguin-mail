@@ -11,11 +11,14 @@ use mailrs_sync::calendar_copy::FIRST_READ_BACK;
 /// count.
 const DAY_MS: EpochMillis = 24 * 60 * 60 * 1000;
 
-/// How many days the narrow agenda's first window covers.
+/// How many days the agenda's first window covers.
 const AGENDA_WINDOW: u64 = 60;
 
 /// How many earlier days one scroll-to-top load adds.
 const AGENDA_STEP: u64 = 30;
+
+/// How many days ahead of today the agenda keeps loading.
+const AGENDA_AHEAD: u64 = 730;
 
 /// Which grid the calendar page shows. Kept in [`crate::settings`], not
 /// here, so settings never has to import from `ui`.
@@ -49,10 +52,12 @@ impl Range {
                 first: week_start_of(day),
                 days: 7,
             },
-            ViewKind::Month => {
+            // The agenda has no grid of its own; it keeps Month's range for
+            // the title and the mini month.
+            ViewKind::Month | ViewKind::Agenda => {
                 let first_of_month = day.with_day(1).unwrap_or(day);
                 Range {
-                    kind,
+                    kind: ViewKind::Month,
                     first: week_start_of(first_of_month),
                     days: 42,
                 }
@@ -66,7 +71,7 @@ impl Range {
         match self.kind {
             ViewKind::Day => Range::around(self.kind, self.first + Days::new(1)),
             ViewKind::Week => Range::around(self.kind, self.first + Days::new(7)),
-            ViewKind::Month => Range::around(self.kind, self.month() + Months::new(1)),
+            ViewKind::Month | ViewKind::Agenda => Range::around(self.kind, self.month() + Months::new(1)),
         }
     }
 
@@ -75,7 +80,7 @@ impl Range {
         match self.kind {
             ViewKind::Day => Range::around(self.kind, self.first - Days::new(1)),
             ViewKind::Week => Range::around(self.kind, self.first - Days::new(7)),
-            ViewKind::Month => Range::around(self.kind, self.month() - Months::new(1)),
+            ViewKind::Month | ViewKind::Agenda => Range::around(self.kind, self.month() - Months::new(1)),
         }
     }
 
@@ -140,7 +145,7 @@ impl Range {
                     .to_string();
                 (bold, dim, week_tag(self.first))
             }
-            ViewKind::Month => {
+            ViewKind::Month | ViewKind::Agenda => {
                 let month = self.month();
                 (
                     month
@@ -160,6 +165,22 @@ impl Range {
 /// 60 in all.
 pub fn agenda_window(today: NaiveDate) -> (NaiveDate, NaiveDate) {
     (today, today + Days::new(AGENDA_WINDOW - 1))
+}
+
+/// The furthest day ahead the agenda loads: two years from `today`.
+pub fn latest_agenda_day(today: NaiveDate) -> NaiveDate {
+    today + Days::new(AGENDA_AHEAD)
+}
+
+/// The days the agenda reads next when the reader scrolls to its end:
+/// the 30 days after `last`, cut at [`latest_agenda_day`]. `None` once
+/// `last` has reached it.
+pub fn agenda_later(last: NaiveDate, today: NaiveDate) -> Option<(NaiveDate, NaiveDate)> {
+    let furthest = latest_agenda_day(today);
+    if last >= furthest {
+        return None;
+    }
+    Some((last + Days::new(1), (last + Days::new(AGENDA_STEP)).min(furthest)))
 }
 
 /// The next earlier day the narrow agenda loads once the reader scrolls
@@ -288,6 +309,23 @@ mod tests {
             agenda_window(d(2026, 9, 23)),
             (d(2026, 9, 23), d(2026, 11, 21))
         );
+    }
+
+    #[test]
+    fn later_reads_the_thirty_days_after_the_last_one_held() {
+        assert_eq!(
+            agenda_later(d(2026, 11, 21), d(2026, 9, 23)),
+            Some((d(2026, 11, 22), d(2026, 12, 21)))
+        );
+    }
+
+    #[test]
+    fn later_stops_at_the_furthest_day_ahead() {
+        let today = d(2026, 9, 23);
+        let furthest = latest_agenda_day(today);
+        let (first, last) = agenda_later(furthest - Days::new(10), today).unwrap();
+        assert_eq!((first, last), (furthest - Days::new(9), furthest));
+        assert_eq!(agenda_later(furthest, today), None);
     }
 
     #[test]

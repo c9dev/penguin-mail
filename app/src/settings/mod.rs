@@ -119,7 +119,7 @@ pub struct Settings {
     pub announced_update: Option<String>,
     /// Which space the window opened on last: mail or the calendar.
     pub space: Space,
-    /// The grid the calendar shows: a day, a week or a month.
+    /// The view the calendar shows: a day, a week, a month or the agenda.
     pub calendar_view: CalendarView,
     /// Show events the person said No to, faded and struck through,
     /// rather than leaving them out.
@@ -700,6 +700,9 @@ pub enum CalendarView {
     #[default]
     Week,
     Month,
+    /// The upcoming days as a list, which a narrow window shows for Week
+    /// and Month as well.
+    Agenda,
 }
 
 /// How often each account checks Gmail, in seconds. These say "every so
@@ -1012,14 +1015,14 @@ mod tests {
     fn the_calendar_choices_survive_the_settings_file() {
         let mut settings = Settings::default();
         Change::Space(Space::Calendar).apply(&mut settings);
-        Change::CalendarView(CalendarView::Month).apply(&mut settings);
+        Change::CalendarView(CalendarView::Agenda).apply(&mut settings);
         Change::ShowDeclinedEvents(true).apply(&mut settings);
         let written = toml::to_string(&settings).expect("settings serialise");
         assert!(written.contains("space = \"calendar\""), "{written}");
         let read: Settings = toml::from_str(&written).expect("and come back");
         assert_eq!(
             (read.space, read.calendar_view, read.show_declined_events),
-            (Space::Calendar, CalendarView::Month, true)
+            (Space::Calendar, CalendarView::Agenda, true)
         );
     }
 

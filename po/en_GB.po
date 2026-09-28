@@ -2320,43 +2320,43 @@ msgstr "Light"
 msgid "Dark"
 msgstr "Dark"
 
-#: app/src/settings/mod.rs:710
+#: app/src/settings/mod.rs:713
 msgid "Every second"
 msgid_plural "Every {count} seconds"
 msgstr[0] "Every second"
 msgstr[1] "Every {count} seconds"
 
-#: app/src/settings/mod.rs:718
+#: app/src/settings/mod.rs:721
 msgid "Every minute"
 msgid_plural "Every {count} minutes"
 msgstr[0] "Every minute"
 msgstr[1] "Every {count} minutes"
 
-#: app/src/settings/mod.rs:735
+#: app/src/settings/mod.rs:738
 msgid "2 weeks"
 msgstr "2 weeks"
 
-#: app/src/settings/mod.rs:736
+#: app/src/settings/mod.rs:739
 msgid "30 days"
 msgstr "30 days"
 
-#: app/src/settings/mod.rs:737
+#: app/src/settings/mod.rs:740
 msgid "90 days"
 msgstr "90 days"
 
-#: app/src/settings/mod.rs:738
+#: app/src/settings/mod.rs:741
 msgid "1 year"
 msgstr "1 year"
 
-#: app/src/settings/mod.rs:745
+#: app/src/settings/mod.rs:748
 msgid "256 MB"
 msgstr "256 MB"
 
-#: app/src/settings/mod.rs:746
+#: app/src/settings/mod.rs:749
 msgid "1 GB"
 msgstr "1 GB"
 
-#: app/src/settings/mod.rs:747
+#: app/src/settings/mod.rs:750
 msgid "4 GB"
 msgstr "4 GB"
 
@@ -3198,11 +3198,11 @@ msgstr "Brave Search API Key (Saved)"
 msgid "Brave Search API Key"
 msgstr "Brave Search API Key"
 
-#: app/src/ui/calendar/agenda.rs:322
+#: app/src/ui/calendar/agenda.rs:373
 msgid "{title}, {when}, {calendar}"
 msgstr "{title}, {when}, {calendar}"
 
-#: app/src/ui/calendar/agenda.rs:453
+#: app/src/ui/calendar/agenda.rs:507
 msgid "Nothing earlier on this computer"
 msgstr "Nothing earlier on this computer"
 
@@ -3519,99 +3519,103 @@ msgstr "Tomato"
 msgid "{name}, {address}"
 msgstr "{name}, {address}"
 
-#: app/src/ui/calendar/mod.rs:334
+#: app/src/ui/calendar/mod.rs:339
 msgid "View"
 msgstr "View"
 
-#: app/src/ui/calendar/mod.rs:342 app/src/ui/calendar/mod.rs:2362
+#: app/src/ui/calendar/mod.rs:347 app/src/ui/calendar/mod.rs:2427
 msgid "New Event (N)"
 msgstr "New Event (N)"
 
-#: app/src/ui/calendar/mod.rs:345 app/src/ui/calendar/mod.rs:347
+#: app/src/ui/calendar/mod.rs:350 app/src/ui/calendar/mod.rs:352
 msgid "Search the Calendar (Ctrl+F)"
 msgstr "Search the Calendar (Ctrl+F)"
 
-#: app/src/ui/calendar/mod.rs:350 app/src/ui/calendar/mod.rs:353
+#: app/src/ui/calendar/mod.rs:355 app/src/ui/calendar/mod.rs:358
 msgid "Show Calendars"
 msgstr "Show Calendars"
 
-#: app/src/ui/calendar/mod.rs:359 app/src/ui/calendar/mod.rs:363
+#: app/src/ui/calendar/mod.rs:364 app/src/ui/calendar/mod.rs:368
 #: app/src/ui/conversation.rs:495 app/src/ui/conversation.rs:499
 msgid "Assistant (Ctrl+J)"
 msgstr "Assistant (Ctrl+J)"
 
-#: app/src/ui/calendar/mod.rs:384 app/src/ui/calendar/mod.rs:386
+#: app/src/ui/calendar/mod.rs:389 app/src/ui/calendar/mod.rs:391
 msgid "Search the Calendar"
 msgstr "Search the Calendar"
 
-#: app/src/ui/calendar/mod.rs:789 app/src/ui/window/shortcuts.rs:567
+#: app/src/ui/calendar/mod.rs:796 app/src/ui/window/shortcuts.rs:567
 msgid "Go to date"
 msgstr "Go to date"
 
-#: app/src/ui/calendar/mod.rs:986
+#: app/src/ui/calendar/mod.rs:1003
 msgid "List"
 msgstr "List"
 
-#: app/src/ui/calendar/mod.rs:987
+#: app/src/ui/calendar/mod.rs:1004
 msgid "Day"
 msgstr "Day"
 
-#: app/src/ui/calendar/mod.rs:988
+#: app/src/ui/calendar/mod.rs:1005
 msgid "Week"
 msgstr "Week"
 
-#: app/src/ui/calendar/mod.rs:989
+#: app/src/ui/calendar/mod.rs:1006
+msgid "Agenda"
+msgstr "Agenda"
+
+#: app/src/ui/calendar/mod.rs:1007
 msgid "Month"
 msgstr "Month"
 
-#: app/src/ui/calendar/mod.rs:1200
+#: app/src/ui/calendar/mod.rs:1217
 msgid "Moved “{title}”"
 msgstr "Moved “{title}”"
 
-#: app/src/ui/calendar/mod.rs:1209
+#: app/src/ui/calendar/mod.rs:1226
 msgid "Could not move the event: {reason}"
 msgstr "Could not move the event: {reason}"
 
-#: app/src/ui/calendar/mod.rs:1319
+#: app/src/ui/calendar/mod.rs:1336
 msgid "All-day events"
 msgstr "All-day events"
 
-#: app/src/ui/calendar/mod.rs:1321
+#: app/src/ui/calendar/mod.rs:1338
 msgid "All-day"
 msgstr "All-day"
 
-#: app/src/ui/calendar/mod.rs:1699 app/src/ui/calendar/mod.rs:2908
+#: app/src/ui/calendar/mod.rs:1716 app/src/ui/calendar/mod.rs:2973
 #: app/src/ui/calendar/sidebar.rs:255 app/src/ui/calendar/words.rs:320
 #: app/src/ui/preferences.rs:853 app/src/ui/preferences.rs:965
 msgid "%a"
 msgstr "%a"
 
-#: app/src/ui/calendar/mod.rs:2118
+#: app/src/ui/calendar/mod.rs:2183
 msgid "Removed “{title}” from your calendar"
 msgstr "Removed “{title}” from your calendar"
 
-#: app/src/ui/calendar/mod.rs:2119
+#: app/src/ui/calendar/mod.rs:2184
 msgid "Deleted “{title}”"
 msgstr "Deleted “{title}”"
 
-#: app/src/ui/calendar/mod.rs:2124
+#: app/src/ui/calendar/mod.rs:2189
 msgid "Could not delete the event: {reason}"
 msgstr "Could not delete the event: {reason}"
 
-#: app/src/ui/calendar/mod.rs:2168 app/src/ui/window.rs:1958
+#: app/src/ui/calendar/mod.rs:2233 app/src/ui/window.rs:1958
 #: app/src/ui/window/scheduled.rs:98 app/src/ui/window/shortcuts.rs:454
 msgid "Undo"
 msgstr "Undo"
 
-#: app/src/ui/calendar/mod.rs:2310
+#: app/src/ui/calendar/mod.rs:2375
 msgid "Could not send your answer: {reason}"
 msgstr "Could not send your answer: {reason}"
 
-#: app/src/ui/calendar/mod.rs:2364
+#: app/src/ui/calendar/mod.rs:2429
 msgid "None of your calendars take new events"
 msgstr "None of your calendars take new events"
 
-#: app/src/ui/calendar/mod.rs:2625
+#: app/src/ui/calendar/mod.rs:2690
 msgid "Could not save the event: {reason}"
 msgstr "Could not save the event: {reason}"
 
@@ -3716,31 +3720,31 @@ msgstr "More Details"
 msgid "Calendar: {name}"
 msgstr "Calendar: {name}"
 
-#: app/src/ui/calendar/range.rs:105 app/src/ui/calendar/words.rs:34
+#: app/src/ui/calendar/range.rs:110 app/src/ui/calendar/words.rs:34
 msgid "%A %-d"
 msgstr "%A %-d"
 
-#: app/src/ui/calendar/range.rs:108 app/src/ui/calendar/sidebar.rs:770
+#: app/src/ui/calendar/range.rs:113 app/src/ui/calendar/sidebar.rs:770
 msgid "%B %Y"
 msgstr "%B %Y"
 
-#: app/src/ui/calendar/range.rs:116 app/src/ui/calendar/range.rs:147
+#: app/src/ui/calendar/range.rs:121 app/src/ui/calendar/range.rs:152
 msgid "%B"
 msgstr "%B"
 
-#: app/src/ui/calendar/range.rs:120 app/src/ui/calendar/words.rs:177
+#: app/src/ui/calendar/range.rs:125 app/src/ui/calendar/words.rs:177
 msgid "{first} – {last}"
 msgstr "{first} – {last}"
 
-#: app/src/ui/calendar/range.rs:126 app/src/ui/calendar/range.rs:132
+#: app/src/ui/calendar/range.rs:131 app/src/ui/calendar/range.rs:137
 msgid "%b"
 msgstr "%b"
 
-#: app/src/ui/calendar/range.rs:139 app/src/ui/calendar/range.rs:150
+#: app/src/ui/calendar/range.rs:144 app/src/ui/calendar/range.rs:155
 msgid "%Y"
 msgstr "%Y"
 
-#: app/src/ui/calendar/range.rs:188
+#: app/src/ui/calendar/range.rs:209
 msgid "W{week}"
 msgstr "W{week}"
 
@@ -3816,27 +3820,27 @@ msgstr "Keep Old Time saves your other changes at the time the event had."
 msgid "The new guests get their invitation, and the others get an update."
 msgstr "The new guests get their invitation, and the others get an update."
 
-#: app/src/ui/calendar/shown.rs:83
+#: app/src/ui/calendar/shown.rs:108
 msgid "Next Day"
 msgstr "Next Day"
 
-#: app/src/ui/calendar/shown.rs:83
+#: app/src/ui/calendar/shown.rs:108
 msgid "Previous Day"
 msgstr "Previous Day"
 
-#: app/src/ui/calendar/shown.rs:84
+#: app/src/ui/calendar/shown.rs:109
 msgid "Next Week"
 msgstr "Next Week"
 
-#: app/src/ui/calendar/shown.rs:84
+#: app/src/ui/calendar/shown.rs:109
 msgid "Previous Week"
 msgstr "Previous Week"
 
-#: app/src/ui/calendar/shown.rs:85 app/src/ui/calendar/sidebar.rs:432
+#: app/src/ui/calendar/shown.rs:110 app/src/ui/calendar/sidebar.rs:432
 msgid "Next Month"
 msgstr "Next Month"
 
-#: app/src/ui/calendar/shown.rs:85 app/src/ui/calendar/sidebar.rs:431
+#: app/src/ui/calendar/shown.rs:110 app/src/ui/calendar/sidebar.rs:431
 msgid "Previous Month"
 msgstr "Previous Month"
 
@@ -6942,8 +6946,8 @@ msgid "Go to today"
 msgstr "Go to today"
 
 #: app/src/ui/window/shortcuts.rs:532
-msgid "Day, week or month"
-msgstr "Day, week or month"
+msgid "Day, week, month or agenda"
+msgstr "Day, week, month or agenda"
 
 #: app/src/ui/window/shortcuts.rs:537
 msgid "Previous or next"
@@ -7005,7 +7009,7 @@ msgstr "Show or hide the assistant"
 msgid "Close window"
 msgstr "Close window"
 
-#: app/src/ui/window/shortcuts.rs:795
+#: app/src/ui/window/shortcuts.rs:797
 msgid "Checking for mail"
 msgstr "Checking for mail"
 
@@ -7017,7 +7021,7 @@ msgstr "Your change to “{title}” was not saved because it changed elsewhere"
 msgid "Your change to “{title}” was not saved: {reason}"
 msgstr "Your change to “{title}” was not saved: {reason}"
 
-#: app/src/ui/window/spaces.rs:247
+#: app/src/ui/window/spaces.rs:248
 msgid "Show Event"
 msgstr "Show Event"
 
