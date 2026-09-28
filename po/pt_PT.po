@@ -1,7 +1,19 @@
+# European Portuguese translation of Penguin Mail.
+# This file is distributed under the same licence as Penguin Mail.
+#
 msgid ""
 msgstr ""
+"Project-Id-Version: penguin-mail 0.1.0\n"
 "Report-Msgid-Bugs-To: https://github.com/c9dev/penguin-mail/issues\n"
+"PO-Revision-Date: 2026-09-20 12:00+0100\n"
+"Last-Translator: David Santos <g0shed@gmail.com>\n"
+"Language-Team: Portuguese (Portugal)\n"
+"Language: pt_PT\n"
+"MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Language-Name: Português (Portugal)\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 #: app/data/io.github.c9dev.PenguinMail.desktop:5
 msgid "Read and write Gmail from all your accounts"
