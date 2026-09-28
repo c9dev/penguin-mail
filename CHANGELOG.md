@@ -87,6 +87,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Fixed
 
+- Picking a contact from the suggestions in an event's Guests field adds
+  the guest at once and empties the field, with a gap above it; the start
+  and end times now stand as tall as the dates beside them.
 - Calendar search keeps the events that matter even when a common word
   matches hundreds of past ones: upcoming events first, then the most
   recent past ones, instead of whichever rows happened to load first.

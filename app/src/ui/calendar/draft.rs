@@ -194,9 +194,9 @@ impl Draft {
 
     /// Adds each address in `text`, as the Guests field holds it, that is
     /// not on the list yet. Answers the parts that are not addresses. The
-    /// editor runs this on Enter and again on Save, since picking a
-    /// suggestion only writes the address into the field, and a Save that
-    /// ignored the field left the guest uninvited.
+    /// editor runs this on Enter, on a picked suggestion and again on
+    /// Save, since a Save that ignored the field left a typed guest
+    /// uninvited.
     pub fn add_guests(&mut self, text: &str) -> Vec<String> {
         let mut refused = Vec::new();
         for address in crate::compose::parse_recipients(text) {
@@ -207,6 +207,14 @@ impl Draft {
             }
         }
         refused
+    }
+
+    /// Adds the guests in `text`, as [`Self::add_guests`] does, and
+    /// answers what the Guests field keeps: the parts that are not
+    /// addresses, or nothing. Enter, a picked suggestion and Save all come
+    /// here, so a pick adds its guest at once.
+    pub fn take_guests(&mut self, text: &str) -> String {
+        self.add_guests(text).join(", ")
     }
 
     pub fn can_save(&self) -> bool {
@@ -1064,5 +1072,23 @@ mod tests {
         let offered: Vec<&str> = calendar_choices(&draft, &writable).iter().map(|(_, _, c)| c.id.as_str()).collect();
         assert_eq!(offered, ["me@example.com", "team"]);
         assert_eq!(calendar_choices(&fresh(), &writable).len(), 3, "a new event may go on any account");
+    }
+
+    #[test]
+    fn picking_a_suggestion_adds_the_guest_and_empties_the_field() {
+        let mut draft = fresh();
+        let text = crate::ui::autocomplete::picked_text("Lo", "Love ❤️ <me.vhtavares@gmail.com>");
+        assert_eq!(draft.take_guests(&text), "");
+        assert_eq!(draft.guests.len(), 1);
+        assert_eq!(draft.guests[0].name.as_deref(), Some("Love ❤️"));
+    }
+
+    #[test]
+    fn a_pick_after_unparsed_text_keeps_only_that_text_in_the_field() {
+        let mut draft = fresh();
+        let text = crate::ui::autocomplete::picked_text("ann@example.com, typo, Lo", "Love <love@example.com>");
+        assert_eq!(draft.take_guests(&text), "typo");
+        let emails: Vec<&str> = draft.guests.iter().map(|g| g.email.as_str()).collect();
+        assert_eq!(emails, ["ann@example.com", "love@example.com"]);
     }
 }

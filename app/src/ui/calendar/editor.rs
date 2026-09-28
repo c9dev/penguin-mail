@@ -882,7 +882,13 @@ impl Editor {
             .placeholder_text(gettext("Add guests"))
             .build();
         ui::name(&entry, &gettext("Add guests"));
-        autocomplete::attach(&entry, contacts);
+        let weak = Rc::downgrade(self);
+        let picking = entry.downgrade();
+        autocomplete::attach_picking(&entry, contacts, move |text| {
+            if let (Some(this), Some(entry)) = (weak.upgrade(), picking.upgrade()) {
+                this.take_guests(&entry, text);
+            }
+        });
         let weak = Rc::downgrade(self);
         entry.connect_activate(move |entry| {
             if let Some(this) = weak.upgrade() {
@@ -901,28 +907,33 @@ impl Editor {
     /// field is clear. The borrow of the draft ends before any widget
     /// changes, since `set_text` runs the field's own handlers.
     fn take_typed_guests(self: &Rc<Self>, entry: &gtk::Entry) -> bool {
-        let text = entry.text();
+        self.take_guests(entry, &entry.text())
+    }
+
+    /// [`Self::take_typed_guests`] for `text`, which a picked suggestion
+    /// hands over before the field shows it.
+    fn take_guests(self: &Rc<Self>, entry: &gtk::Entry, text: &str) -> bool {
         if text.trim().is_empty() {
             return true;
         }
         let before = self.draft.borrow().guests.len();
-        let refused = self.draft.borrow_mut().add_guests(&text);
+        let left = self.draft.borrow_mut().take_guests(text);
         let added = self.draft.borrow().guests.len() > before;
-        if refused.is_empty() {
-            entry.set_text("");
+        let clear = left.is_empty();
+        entry.set_text(&left);
+        entry.set_position(-1);
+        if clear {
             entry.remove_css_class("error");
             entry.set_tooltip_text(None);
         } else {
-            let text = refused.join(", ");
-            entry.set_text(&text);
             entry.add_css_class("error");
-            entry.set_tooltip_text(Some(&fill(&gettext("Not an address: {text}"), &[("text", &text)])));
+            entry.set_tooltip_text(Some(&fill(&gettext("Not an address: {text}"), &[("text", &left)])));
         }
         if added {
             self.rebuild_guests();
             self.refresh_save();
         }
-        refused.is_empty()
+        clear
     }
 
     /// Rebuilds every guest row from `draft.guests`, replacing whatever
@@ -973,6 +984,12 @@ impl Editor {
             }
             group.add(&row);
             rows.push(row);
+        }
+        // The group puts its rows in a boxed list and the field after it,
+        // with nothing between the two. The 12 pixels are what libadwaita
+        // leaves between separate boxed rows (`.boxed-list-separate`).
+        if let Some(entry) = self.guest_entry.borrow().as_ref() {
+            entry.set_margin_top(if rows.is_empty() { 0 } else { 12 });
         }
         *self.guest_rows.borrow_mut() = rows;
     }
@@ -1444,9 +1461,12 @@ fn time_dropdown(current: NaiveTime) -> gtk::DropDown {
     let times = draft::time_choices(current);
     let names: Vec<String> = times.iter().map(|t| format_time(*t)).collect();
     let refs: Vec<&str> = names.iter().map(String::as_str).collect();
+    // Centred like the date button beside it: a drop-down left to fill
+    // stretches to the row's full height and stands taller than the button.
     let drop = gtk::DropDown::builder()
         .model(&gtk::StringList::new(&refs))
         .enable_search(true)
+        .valign(gtk::Align::Center)
         .build();
     if let Some(i) = times.iter().position(|t| *t == current) {
         drop.set_selected(i as u32);
