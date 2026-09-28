@@ -47,6 +47,11 @@ pub fn sanitize_html(html: &str, pictures: Option<&str>) -> String {
         .add_tags(&EXTRA_TAGS)
         .rm_clean_content_tags(&["style"])
         .add_generic_attributes(&LAYOUT_ATTRIBUTES)
+        // The marks other clients put on quoted history, which the page
+        // folds away (see `crate::quoted`). Each body sits in its own
+        // shadow root, so the ids cannot clash with the page's.
+        .add_tag_attribute_values("blockquote", "type", &["cite"])
+        .add_tag_attribute_values("div", "id", &["appendonsend", "divRplyFwdMsg"])
         .url_schemes(HashSet::from(["http", "https", "mailto", "cid", "data"]))
         .url_relative(UrlRelative::Deny)
         .link_rel(Some("noopener noreferrer"))
