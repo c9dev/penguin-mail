@@ -11,6 +11,7 @@ use std::collections::{HashMap, VecDeque};
 
 use adw::prelude::*;
 use chrono::{Datelike, Days, NaiveDate, TimeZone};
+use chrono_tz::Tz;
 use gtk::subclass::prelude::*;
 use gtk::{gdk, glib, graphene, gsk};
 use mailrs_domain::calendar::{Calendar, Occurrence};
@@ -1539,17 +1540,26 @@ impl TimeGrid {
 
     /// The keyboard path beside the drag: Shift+Up or Shift+Down moves
     /// the focused card by a quarter hour, Shift+Alt+Up or
-    /// Shift+Alt+Down changes when it ends. Neither writes anything the
-    /// card's own predicate refuses. The card moves at once; the view
-    /// hears of the total move once the keyboard rests (`drag::Nudges`),
-    /// so a run of presses asks one question.
+    /// Shift+Alt+Down changes when it ends, and Shift+Left or Shift+Right
+    /// moves it a whole day, in the event's own zone
+    /// (`drag::nudge_days`), for a move between days the grid has no
+    /// drag gesture for. Neither writes anything the card's own
+    /// predicate refuses. The card moves at once; the view hears of the
+    /// total move once the keyboard rests (`drag::Nudges`), so a run of
+    /// presses asks one question.
     fn nudge_focused(&self, keyval: gdk::Key, state: gdk::ModifierType) -> glib::Propagation {
         if !state.contains(gdk::ModifierType::SHIFT_MASK) {
             return glib::Propagation::Proceed;
         }
-        let steps = match keyval {
-            gdk::Key::Up => -1,
-            gdk::Key::Down => 1,
+        enum Axis {
+            Time(i64),
+            Day(i64),
+        }
+        let axis = match keyval {
+            gdk::Key::Up => Axis::Time(-1),
+            gdk::Key::Down => Axis::Time(1),
+            gdk::Key::Left => Axis::Day(-1),
+            gdk::Key::Right => Axis::Day(1),
             _ => return glib::Propagation::Proceed,
         };
         let imp = self.imp();
@@ -1572,10 +1582,15 @@ impl TimeGrid {
         }
         let now = glib::monotonic_time() / 1_000;
         let span = imp.nudging.borrow().as_ref().map_or((o.start, o.end), |n| n.run.to);
-        let to = if state.contains(gdk::ModifierType::ALT_MASK) {
-            drag::stretch(span.0, span.1, steps)
-        } else {
-            drag::nudge(span.0, span.1, steps)
+        let to = match axis {
+            Axis::Time(steps) if state.contains(gdk::ModifierType::ALT_MASK) => {
+                drag::stretch(span.0, span.1, steps)
+            }
+            Axis::Time(steps) => drag::nudge(span.0, span.1, steps),
+            Axis::Day(steps) => {
+                let zone: Tz = o.event.zone.parse().unwrap_or(Tz::UTC);
+                drag::nudge_days(span.0, span.1, steps, zone)
+            }
         };
         let placement = self.placement_of(&card);
         {

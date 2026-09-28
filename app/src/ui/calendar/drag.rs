@@ -13,6 +13,8 @@
 
 use std::collections::VecDeque;
 
+use chrono::{DateTime, Days, NaiveDate, TimeZone, Utc};
+use chrono_tz::Tz;
 use mailrs_domain::EpochMillis;
 use mailrs_domain::calendar::{Access, Occurrence, Status};
 
@@ -199,6 +201,37 @@ pub fn nudge(start: EpochMillis, end: EpochMillis, steps: i64) -> (EpochMillis, 
 /// beside the drag's stretch of a card's bottom edge.
 pub fn stretch(start: EpochMillis, end: EpochMillis, steps: i64) -> (EpochMillis, EpochMillis) {
     (start, (end + steps * STEP).max(start + SHORTEST))
+}
+
+/// The event's span moved `days` calendar days in `zone`, keeping its
+/// wall-clock time: the keyboard path Shift+Left and Shift+Right offer,
+/// for a move between days the grid has no drag gesture for. Moving the
+/// date and keeping the same local time, rather than adding a fixed
+/// number of milliseconds, keeps the clock steady across a change to
+/// `zone`'s own offset (see the rrule-until-dst skill).
+pub fn nudge_days(start: EpochMillis, end: EpochMillis, days: i64, zone: Tz) -> (EpochMillis, EpochMillis) {
+    (shift_days(start, days, zone), shift_days(end, days, zone))
+}
+
+/// `at` moved `days` calendar days later (or earlier, negative) in
+/// `zone`, at the same wall-clock time. Falls back to `at` unshifted on
+/// the near-impossible chance a date this far out overflows, or a local
+/// time a clock change skips entirely.
+fn shift_days(at: EpochMillis, days: i64, zone: Tz) -> EpochMillis {
+    let Some(utc) = DateTime::<Utc>::from_timestamp_millis(at) else { return at };
+    let local = utc.with_timezone(&zone);
+    let Some(date) = shift_date(local.date_naive(), days) else { return at };
+    let naive = date.and_time(local.time());
+    zone.from_local_datetime(&naive)
+        .earliest()
+        .map_or(at, |shifted| shifted.with_timezone(&Utc).timestamp_millis())
+}
+
+fn shift_date(date: NaiveDate, days: i64) -> Option<NaiveDate> {
+    match u64::try_from(days) {
+        Ok(days) => date.checked_add_days(Days::new(days)),
+        Err(_) => date.checked_sub_days(Days::new(days.unsigned_abs())),
+    }
 }
 
 /// How long the keyboard must rest after the last Shift+arrow before the
@@ -453,6 +486,33 @@ mod tests {
     fn shift_alt_up_and_down_stretch_an_event_s_end_never_below_the_shortest() {
         assert_eq!(stretch(10 * H, 11 * H, 1), (10 * H, 11 * H + 15 * M));
         assert_eq!(stretch(10 * H, 10 * H + SHORTEST, -4), (10 * H, 10 * H + SHORTEST));
+    }
+
+    #[test]
+    fn shift_left_and_right_move_an_event_by_whole_days() {
+        let lisbon = chrono_tz::Europe::Lisbon;
+        let start = lisbon.with_ymd_and_hms(2026, 9, 23, 10, 0, 0).unwrap().timestamp_millis();
+        let end = start + H;
+        assert_eq!(nudge_days(start, end, 1, lisbon), (start + 24 * H, end + 24 * H));
+        assert_eq!(nudge_days(start, end, -2, lisbon), (start - 48 * H, end - 48 * H));
+    }
+
+    /// Lisbon falls back an hour on the last Sunday of October 2026, 25
+    /// October. A day earlier than 26 October at 10:00 local must still
+    /// read 10:00 local on 25 October: a fixed 24-hour subtraction would
+    /// land on 09:00, an hour short of the wall clock.
+    #[test]
+    fn shift_left_keeps_the_wall_clock_time_across_a_clock_change() {
+        let lisbon = chrono_tz::Europe::Lisbon;
+        let start = lisbon.with_ymd_and_hms(2026, 10, 26, 10, 0, 0).unwrap().timestamp_millis();
+        let end = start + H;
+        let (moved_start, moved_end) = nudge_days(start, end, -1, lisbon);
+        let local = DateTime::<Utc>::from_timestamp_millis(moved_start)
+            .unwrap()
+            .with_timezone(&lisbon);
+        assert_eq!(local.date_naive(), NaiveDate::from_ymd_opt(2026, 10, 25).unwrap());
+        assert_eq!(local.time(), chrono::NaiveTime::from_hms_opt(10, 0, 0).unwrap());
+        assert_eq!(moved_end - moved_start, H, "the event's own length stays the same");
     }
 
     #[test]

@@ -89,6 +89,18 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   The assistant's free-time tool now looks inside the same hours.
 - The week starts on the day your locale expects, and every time the
   calendar shows follows your desktop's clock, 12-hour or 24-hour.
+- The editor's Repeats menu offers "Monthly on the second Tuesday" or
+  "the last Friday" worked out from the event's own date, and keeps
+  showing such a rule from Google as that choice instead of a rule it
+  cannot open. Moving the whole series a day still follows the right
+  weekday.
+- G opens a small date picker and jumps to the day you pick; Ctrl+Z
+  undoes your last calendar change while its Undo toast is still up;
+  and Shift with the Left or Right arrow moves the focused event a day
+  earlier or later. The Keyboard Shortcuts window now lists every
+  calendar key, including the ones that move or resize an event.
+- The event popover names the event's own time zone beside the time
+  when it differs from your desktop's, such as "09:00 New York".
 
 ### Fixed
 - In dark mode, a reply with quoted text shows on the dark page instead of

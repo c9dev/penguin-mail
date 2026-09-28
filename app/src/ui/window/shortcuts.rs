@@ -44,6 +44,11 @@ pub(super) enum Place {
     /// The calendar page, which installs its keys itself and answers
     /// them only while it shows and no field has the focus.
     Calendar,
+    /// The calendar's time grid, which installs these keys itself,
+    /// moving or resizing the focused event card: listed here only so
+    /// the dialog shows them, since they need no `calendar_key` answer
+    /// of their own.
+    CalendarGrid,
 }
 
 impl Place {
@@ -142,6 +147,11 @@ const fn page(trigger: &'static str) -> Key {
 /// A key the calendar page answers itself.
 const fn calendar(trigger: &'static str) -> Key {
     key(trigger, "", Place::Calendar)
+}
+
+/// A key the calendar's time grid answers itself.
+const fn calendar_grid(trigger: &'static str) -> Key {
+    key(trigger, "", Place::CalendarGrid)
 }
 
 impl Key {
@@ -553,6 +563,31 @@ pub(super) static SHORTCUTS: &[Shortcut] = &[
         keys: &[calendar("<Control>f")],
     },
     Shortcut {
+        section: Section::Calendar,
+        description: || gettext("Go to date"),
+        keys: &[calendar("g")],
+    },
+    Shortcut {
+        section: Section::Calendar,
+        description: || gettext("Undo, while its toast is still up"),
+        keys: &[calendar("<Control>z")],
+    },
+    Shortcut {
+        section: Section::Calendar,
+        description: || gettext("Move the focused event a day earlier or later"),
+        keys: &[calendar_grid("<Shift>Left"), calendar_grid("<Shift>Right")],
+    },
+    Shortcut {
+        section: Section::Calendar,
+        description: || gettext("Move the focused event by 15 minutes"),
+        keys: &[calendar_grid("<Shift>Up"), calendar_grid("<Shift>Down")],
+    },
+    Shortcut {
+        section: Section::Calendar,
+        description: || gettext("Change when the focused event ends"),
+        keys: &[calendar_grid("<Shift><Alt>Up"), calendar_grid("<Shift><Alt>Down")],
+    },
+    Shortcut {
         section: Section::General,
         description: || gettext("Preferences"),
         keys: &[main("<Control>comma", "win.preferences")],
@@ -604,6 +639,8 @@ pub(super) enum CalendarKey {
     Search,
     Delete,
     NewEvent,
+    GoToDate,
+    Undo,
 }
 
 /// The calendar's own key a press stands for, if any. Enter is listed in
@@ -621,6 +658,8 @@ pub(super) fn calendar_key(pressed: gdk::Key, modifiers: gdk::ModifierType) -> O
         "<Control>f" => CalendarKey::Search,
         "Delete" | "KP_Delete" => CalendarKey::Delete,
         "n" => CalendarKey::NewEvent,
+        "g" => CalendarKey::GoToDate,
+        "<Control>z" => CalendarKey::Undo,
         _ => return None,
     })
 }
@@ -958,13 +997,14 @@ impl MainWindow {
 mod tests {
     use super::*;
 
-    const PLACES: [Place; 6] = [
+    const PLACES: [Place; 7] = [
         Place::Main,
         Place::Conversation,
         Place::Composer,
         Place::List,
         Place::Page,
         Place::Calendar,
+        Place::CalendarGrid,
     ];
 
     /// The main window's actions that take an argument, which
@@ -1029,7 +1069,7 @@ mod tests {
             }
             if matches!(
                 key.place,
-                Place::Composer | Place::List | Place::Page | Place::Calendar
+                Place::Composer | Place::List | Place::Page | Place::Calendar | Place::CalendarGrid
             ) {
                 assert!(key.action.is_empty() && !key.letter);
             }
@@ -1080,7 +1120,7 @@ mod tests {
             assert!(!answered.contains(&command), "{} repeats {command:?}", key.trigger);
             answered.push(command);
         }
-        assert_eq!(answered.len(), 9);
+        assert_eq!(answered.len(), 11);
     }
 
     #[test]
