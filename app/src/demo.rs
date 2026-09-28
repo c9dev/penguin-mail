@@ -986,6 +986,22 @@ fn account0_events(now: EpochMillis) -> Vec<CalendarEvent> {
         rules: vec!["RRULE:FREQ=YEARLY".into()],
         ..CalendarEvent::default()
     });
+    // Three days over next weekend into the Monday after, so Month
+    // draws one bar that carries on into the next week row.
+    let (trip_start, trip_end) = all_day_utc(monday.date_naive() + chrono::Duration::days(12), 3);
+    events.push(CalendarEvent {
+        calendar: FAMILY.into(),
+        id: "porto-weekend".into(),
+        uid: "porto-weekend@local".into(),
+        start: trip_start,
+        end: trip_end,
+        zone: "UTC".into(),
+        all_day: true,
+        title: "Porto weekend".into(),
+        busy: true,
+        status: CalendarStatus::Confirmed,
+        ..CalendarEvent::default()
+    });
     let year = monday.year();
     let republic_day = chrono::NaiveDate::from_ymd_opt(year, 10, 5).unwrap_or_else(|| monday.date_naive());
     let (start, end) = all_day_utc(republic_day, 1);
