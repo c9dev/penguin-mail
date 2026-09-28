@@ -86,11 +86,14 @@ struct Editor {
     /// Every calendar by key, to tell whether the draft's is a primary
     /// one, the only kind Google keeps out of office and focus time on.
     calendars: HashMap<(AccountId, String), Calendar>,
+    /// Each writable account's address, for [`draft::creatable_types`].
+    addresses: HashMap<AccountId, String>,
     /// Event, Out of office or Focus time, for a new event or one of
     /// those two types.
     type_row: RefCell<Option<adw::ComboRow>>,
-    /// What out of office and focus time decline, and the message.
-    decline_group: RefCell<Option<adw::PreferencesGroup>>,
+    /// What out of office and focus time decline, and the message: the
+    /// group, its Decline row and its Message row.
+    decline_group: RefCell<Option<(adw::PreferencesGroup, adw::ComboRow, adw::EntryRow)>>,
     /// Rows Google refuses on out of office and focus time: all day, the
     /// place, the guests, busy and the Meet link. Hidden while the draft
     /// is one of those types.
@@ -157,6 +160,7 @@ pub fn open(
             ends: Ends::Never,
         }),
         calendars: choices.calendars.clone(),
+        addresses: choices.writable.iter().map(|(account, address, _)| (*account, address.clone())).collect(),
         type_row: RefCell::new(None),
         decline_group: RefCell::new(None),
         kind_hidden: RefCell::new(Vec::new()),
@@ -389,14 +393,18 @@ impl Editor {
     /// refuses on it, turns all day off for out of office and focus time,
     /// and lets the Type row change only a new event on a primary
     /// calendar, putting a new event on another calendar back to Event.
+    /// On an account that can make only events (`draft::creatable_types`)
+    /// the row does not show at all.
     fn refresh_type(self: &Rc<Self>) {
-        let primary = {
+        let (primary, creatable) = {
             let draft = self.draft.borrow();
-            self.calendars.get(&(draft.account_id, draft.calendar.clone())).is_some_and(|c| c.primary)
+            let primary = self.calendars.get(&(draft.account_id, draft.calendar.clone())).is_some_and(|c| c.primary);
+            let address = self.addresses.get(&draft.account_id).map_or("", String::as_str);
+            (primary, draft::creatable_types(address))
         };
         let (offers, typed, all_day, title) = {
             let mut draft = self.draft.borrow_mut();
-            if draft.is_new() && !primary {
+            if draft.is_new() && (!primary || !creatable.contains(&draft.type_choice())) {
                 draft.set_type(TypeChoice::Event);
             }
             (draft.offers_type(primary), draft.kind.decline().is_some(), draft.all_day, draft.title.clone())
@@ -412,6 +420,7 @@ impl Editor {
         }
         let row = self.type_row.borrow().clone();
         if let Some(row) = row {
+            row.set_visible(typed || creatable.len() > 1);
             row.set_sensitive(offers);
             let note = match (offers, typed) {
                 (false, false) => gettext("Out of office and focus time go on a primary calendar"),
@@ -435,9 +444,23 @@ impl Editor {
         for widget in hidden {
             widget.set_visible(!typed);
         }
+        // A type picked after the editor opened brings its own decline
+        // choice and message, which the rows show. Each write runs a
+        // handler that borrows the draft, which is free by now.
+        let decline = self.draft.borrow().kind.decline().cloned();
         let group = self.decline_group.borrow().clone();
-        if let Some(group) = group {
+        if let Some((group, row, text)) = group {
             group.set_visible(typed);
+            if let Some(decline) = decline {
+                let index = DECLINES.iter().position(|d| *d == decline.meetings).unwrap_or(0) as u32;
+                if row.selected() != index {
+                    row.set_selected(index);
+                }
+                if text.text() != decline.message {
+                    text.set_text(&decline.message);
+                }
+                text.set_sensitive(decline.meetings != Declines::Nothing);
+            }
         }
     }
 
@@ -454,7 +477,9 @@ impl Editor {
         };
         let row = adw::ComboRow::builder().title(gettext("Decline")).build();
         crate::ui::name_combo_row_items(&row);
-        let names = [gettext("No meetings"), gettext("New invitations only"), gettext("New and existing meetings")];
+        // The row's title says Decline, so each choice names only which
+        // meetings, short enough not to be cut off.
+        let names = [gettext("None"), gettext("New only"), gettext("New and existing")];
         let refs: Vec<&str> = names.iter().map(String::as_str).collect();
         row.set_model(Some(&gtk::StringList::new(&refs)));
         row.set_selected(DECLINES.iter().position(|d| *d == meetings).unwrap_or(0) as u32);
@@ -476,7 +501,7 @@ impl Editor {
         });
         group.add(&row);
         group.add(&text);
-        self.decline_group.replace(Some(group.clone()));
+        self.decline_group.replace(Some((group.clone(), row, text)));
         group
     }
 

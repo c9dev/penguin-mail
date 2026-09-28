@@ -26,6 +26,22 @@ pub enum TypeChoice {
     Focus,
 }
 
+/// The Type choices a new event on `address`'s account may take. Google
+/// Calendar offers out of office only on work and school accounts, and
+/// focus time only on some Google Workspace editions, so a personal
+/// address (`gmail.com`, `googlemail.com`) makes ordinary events alone.
+/// Any other domain may or may not be Workspace, and which edition it
+/// runs is not known ahead of time: it is offered every type, and a
+/// save Google turns down says why in the toast.
+pub fn creatable_types(address: &str) -> Vec<TypeChoice> {
+    let domain = address.trim().rsplit_once('@').map_or("", |(_, domain)| domain);
+    if domain.eq_ignore_ascii_case("gmail.com") || domain.eq_ignore_ascii_case("googlemail.com") {
+        vec![TypeChoice::Event]
+    } else {
+        vec![TypeChoice::Event, TypeChoice::OutOfOffice, TypeChoice::Focus]
+    }
+}
+
 /// The title a Type choice fills in: "Out of office", "Focus time", or
 /// nothing for an ordinary event.
 fn type_title(choice: TypeChoice) -> String {
@@ -1118,6 +1134,28 @@ mod tests {
         assert!(fresh().offers_type(true));
         assert!(!fresh().offers_type(false), "Google keeps out of office and focus time on the primary calendar");
         assert!(!Draft::open(&weekly(), &weekly().event.rules, Lisbon).offers_type(true), "Google never changes a type");
+    }
+
+    #[test]
+    fn a_personal_google_account_makes_only_events() {
+        for address in ["dana@gmail.com", "Dana.Reyes@GMAIL.com", " old@googlemail.com "] {
+            assert_eq!(creatable_types(address), vec![TypeChoice::Event], "{address}");
+        }
+    }
+
+    #[test]
+    fn an_account_on_its_own_domain_is_offered_every_type() {
+        // It may be Google Workspace or not; nothing ahead of time says,
+        // so the types are offered and Google's answer settles it.
+        assert_eq!(
+            creatable_types("dana@fernwood.example"),
+            vec![TypeChoice::Event, TypeChoice::OutOfOffice, TypeChoice::Focus]
+        );
+    }
+
+    #[test]
+    fn a_domain_that_only_ends_like_gmail_is_not_personal() {
+        assert_eq!(creatable_types("dana@notgmail.com").len(), 3);
     }
 
     #[test]

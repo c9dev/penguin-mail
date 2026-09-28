@@ -20,9 +20,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - Out of office shows as a striped block, focus time with a target and
   a birthday with a cake, and where you work each day (Home, Office or the
   building) sits under the day's heading instead of in the all-day row.
-- Make an out-of-office or focus-time entry from the event editor's new
-  Type row, and choose whether it declines new or existing meetings and
-  what the message to the organizer says.
+- On a work or school account, make an out-of-office or focus-time entry
+  from the event editor's new Type row, and choose whether it declines new
+  or existing meetings and what the message to the organizer says.
 
 - The earlier messages quoted under a reply or forward fold away behind
   a small "•••" button, as in Gmail; click it to read them in place.
