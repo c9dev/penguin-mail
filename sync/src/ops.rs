@@ -109,6 +109,9 @@ pub fn ops_for(
     };
     let add = |role| id(role).map(MailOp::AddToMailbox);
     let remove = |role| id(role).map(MailOp::RemoveFromMailbox);
+    // Taking mail out of a role the account may lack, where there is
+    // nothing to take it out of.
+    let leave = |role| id(role).ok().map(MailOp::RemoveFromMailbox);
     let moves = !caps.labels;
     Ok(match action {
         TriageAction::MarkRead => vec![keyword(SEEN, true)],
@@ -118,11 +121,19 @@ pub fn ops_for(
         TriageAction::Archive if moves => vec![MailOp::MoveToRole(Role::Archive)],
         TriageAction::Archive => vec![remove(Role::Inbox)?],
         TriageAction::Trash if moves => vec![MailOp::MoveToRole(Role::Trash)],
-        TriageAction::Trash => vec![add(Role::Trash)?, remove(Role::Inbox)?],
+        // Gmail's searches find mail labelled both Trash and Spam in
+        // neither list, so moving mail into one takes it out of the other.
+        TriageAction::Trash => [add(Role::Trash)?, remove(Role::Inbox)?]
+            .into_iter()
+            .chain(leave(Role::Junk))
+            .collect(),
         TriageAction::Untrash if moves => vec![MailOp::MoveToRole(Role::Inbox)],
         TriageAction::Untrash => vec![add(Role::Inbox)?, remove(Role::Trash)?],
         TriageAction::Junk if moves => vec![MailOp::MoveToRole(Role::Junk)],
-        TriageAction::Junk => vec![add(Role::Junk)?, remove(Role::Inbox)?],
+        TriageAction::Junk => [add(Role::Junk)?, remove(Role::Inbox)?]
+            .into_iter()
+            .chain(leave(Role::Trash))
+            .collect(),
         TriageAction::NotJunk if moves => vec![MailOp::MoveToRole(Role::Inbox)],
         TriageAction::NotJunk => vec![add(Role::Inbox)?, remove(Role::Junk)?],
         TriageAction::Mute if moves => {
@@ -462,11 +473,22 @@ mod tests {
             ops(TriageAction::Archive),
             [MailOp::RemoveFromMailbox("INBOX".into())]
         );
+        // Mail labelled both Trash and Spam shows in neither Gmail list, so
+        // each takes the mail out of the other.
         assert_eq!(
             ops(TriageAction::Trash),
             [
                 MailOp::AddToMailbox("TRASH".into()),
-                MailOp::RemoveFromMailbox("INBOX".into())
+                MailOp::RemoveFromMailbox("INBOX".into()),
+                MailOp::RemoveFromMailbox("SPAM".into())
+            ]
+        );
+        assert_eq!(
+            ops(TriageAction::Junk),
+            [
+                MailOp::AddToMailbox("SPAM".into()),
+                MailOp::RemoveFromMailbox("INBOX".into()),
+                MailOp::RemoveFromMailbox("TRASH".into())
             ]
         );
         assert_eq!(
