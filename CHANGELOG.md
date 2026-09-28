@@ -76,6 +76,12 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Fixed
 
+- Calendar search keeps the events that matter even when a common word
+  matches hundreds of past ones: upcoming events first, then the most
+  recent past ones, instead of whichever rows happened to load first.
+- Calendar search matches an event's notes as the text they show, not
+  Google's HTML tags: a `<br>` no longer matches a search for "br", and
+  a word a tag splits still matches.
 - An event's notes from Google Calendar show as readable text in the
   editor instead of HTML tags, and their links still work after you
   save.

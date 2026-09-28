@@ -787,6 +787,14 @@ pub(crate) fn configure(conn: &Connection) -> Result<()> {
         FunctionFlags::SQLITE_UTF8 | FunctionFlags::SQLITE_DETERMINISTIC,
         |ctx| Ok(ctx.get::<Option<String>>(0)?.unwrap_or_default().to_lowercase()),
     )?;
+    // An event description may be the HTML Google Calendar's own editor
+    // writes; a search matches the words it shows, not its tags.
+    conn.create_scalar_function(
+        crate::calendar::NOTES_TEXT,
+        1,
+        FunctionFlags::SQLITE_UTF8 | FunctionFlags::SQLITE_DETERMINISTIC,
+        |ctx| Ok(mailrs_mime::notes::text(&ctx.get::<Option<String>>(0)?.unwrap_or_default())),
+    )?;
     Ok(())
 }
 

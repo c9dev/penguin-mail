@@ -559,6 +559,12 @@ fn next_after(
         .find(|(start, _)| !replaced.contains(start)))
 }
 
+/// The SQL function that reads an event description the way the editor's
+/// Notes field does, turning Google's HTML into the words it shows
+/// (`mailrs_mime::notes::text`), so a search matches "bread" split by a
+/// `<b>` and never matches a `<br>` tag as the word "br".
+pub const NOTES_TEXT: &str = "penguin_notes_text";
+
 /// Events whose title, place, description or a guest's name or address
 /// holds `text`, matched with full Unicode folding through
 /// [`crate::query::FOLD`] rather than SQLite's ASCII-only `lower`. Each
@@ -567,9 +573,16 @@ fn next_after(
 /// is ahead; or the event's own span. A series and one of its changed
 /// occurrences share a uid and can both match a search on their shared
 /// title; only the earlier coming one of the pair stays. Coming events
-/// sort earliest first, then past ones latest first. Reading stops at
-/// [`MOST_EVENTS`] rows per account before ranking, so a word every
-/// event shares cannot make a search load a whole large calendar.
+/// sort earliest first, then past ones latest first.
+///
+/// Reading stops at [`MOST_EVENTS`] rows per account, so a word every
+/// event shares cannot make a search load a whole large calendar; the
+/// SQL keeps the rows the cap should not drop, ordered ahead of the
+/// rest: a still-running series (its stored span may be its first
+/// occurrence, long past, so any series counts as coming) or an event
+/// whose own span has not ended, soonest first, then past events, most
+/// recent first. The final ranking above still re-sorts what the cap
+/// let through by each match's true next occurrence.
 pub fn search(
     conn: &Connection,
     accounts: &[AccountId],
@@ -584,6 +597,7 @@ pub fn search(
         CalendarScope::Owned => "AND c.access = 'owner'",
     };
     let fold = crate::query::FOLD;
+    let notes_text = NOTES_TEXT;
     let needle = text.to_lowercase();
     // The best-ranked occurrence for one (account, calendar, uid) group,
     // so a series and its own changed occurrence collapse to one result.
@@ -598,12 +612,15 @@ pub fn search(
              LEFT JOIN event_guests g ON g.account_id = e.account_id AND g.calendar = e.calendar AND g.event = e.id \
              WHERE e.account_id = ?1 {calendar_filter} AND e.status <> 'cancelled' AND ( \
                instr({fold}(e.title), ?2) > 0 OR instr({fold}(e.place), ?2) > 0 \
-               OR instr({fold}(e.description), ?2) > 0 OR instr({fold}(g.email), ?2) > 0 \
+               OR instr({fold}({notes_text}(e.description)), ?2) > 0 OR instr({fold}(g.email), ?2) > 0 \
                OR instr({fold}(coalesce(g.name, '')), ?2) > 0) \
+             ORDER BY \
+               CASE WHEN e.rules <> '' OR e.ends_at >= ?3 THEN 0 ELSE 1 END, \
+               CASE WHEN e.rules <> '' OR e.ends_at >= ?3 THEN e.starts_at ELSE -e.starts_at END \
              LIMIT {MOST_EVENTS}"
         ))?;
         let events: Vec<Event> =
-            stmt.query_map(params![account_id, needle], read_event)?.collect::<rusqlite::Result<_>>()?;
+            stmt.query_map(params![account_id, needle, from], read_event)?.collect::<rusqlite::Result<_>>()?;
         for event in events {
             let (start, end) = next_showing(&event, from);
             let past = start < from;
@@ -1431,6 +1448,34 @@ mod tests {
         assert!(ids("nothing").is_empty());
     }
 
+    /// Google keeps a description as HTML once someone has edited it in
+    /// its own editor, and an inline tag such as `<b>` splits a word
+    /// across two runs of text with nothing between them. Reading the
+    /// description as words, the way the editor's Notes field does
+    /// (`mailrs_mime::notes::text`), joins the runs back into "bread".
+    #[test]
+    fn search_finds_a_word_an_inline_tag_splits() {
+        let (conn, id) = store();
+        let mut planning = event("primary", "planning", MONDAY + 3 * DAY, 1);
+        planning.description = "Br<b>ead</b> for the team".into();
+        save_events(&conn, id, &[planning], 0).unwrap();
+        let found = search(&conn, &[id], "bread", MONDAY, CalendarScope::Shown, 10).unwrap();
+        assert_eq!(found.len(), 1, "a word an inline tag splits must still match once its tags are read as text");
+    }
+
+    /// A `<br>` line break must not itself read as the word "br": the
+    /// tag never reaches the reader as text, only the line break it
+    /// stands for.
+    #[test]
+    fn search_does_not_match_a_br_tag_as_the_word_br() {
+        let (conn, id) = store();
+        let mut sync = event("primary", "sync", MONDAY + 4 * DAY, 1);
+        sync.description = "Notes<br>more notes".into();
+        save_events(&conn, id, &[sync], 0).unwrap();
+        let found = search(&conn, &[id], "br", MONDAY, CalendarScope::Shown, 10).unwrap();
+        assert!(found.is_empty(), "the <br> tag's own name must not match a search for it");
+    }
+
     #[test]
     fn a_search_stops_at_the_requested_limit() {
         let (conn, id) = store();
@@ -1452,6 +1497,25 @@ mod tests {
         save_events(&conn, id, &events, 0).unwrap();
         let found = search(&conn, &[id], "standup", MONDAY, CalendarScope::Shown, 1000).unwrap();
         assert_eq!(found.len(), 500);
+    }
+
+    /// A word every event shares still surfaces what is coming up: the
+    /// row cap must keep the events that matter rather than whichever
+    /// 500 the table scan reaches first. 500 old matches are saved
+    /// before 5 upcoming ones, so an unordered `LIMIT` would fill the
+    /// cap from the old rows alone and never reach the new ones.
+    #[test]
+    fn a_search_keeps_upcoming_events_when_500_past_ones_already_matched() {
+        let (conn, id) = store();
+        let past: Vec<Event> =
+            (0..500).map(|n| event("primary", &format!("standup-old{n}"), MONDAY - (500 - n) * DAY, 1)).collect();
+        save_events(&conn, id, &past, 0).unwrap();
+        let soon: Vec<Event> =
+            (0..5).map(|n| event("primary", &format!("standup-soon{n}"), MONDAY + (n + 1) * DAY, 1)).collect();
+        save_events(&conn, id, &soon, 0).unwrap();
+        let found = search(&conn, &[id], "standup", MONDAY, CalendarScope::Shown, 505).unwrap();
+        let kept_soon = found.iter().filter(|o| o.event.id.starts_with("standup-soon")).count();
+        assert_eq!(kept_soon, 5, "every upcoming match must survive the cap, not just whichever 500 rows came first");
     }
 
     #[test]
