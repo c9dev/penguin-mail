@@ -652,6 +652,15 @@ UPDATE calendars SET sync_token = NULL;
 ALTER TABLE calendars ADD COLUMN listed INTEGER NOT NULL DEFAULT 1;
 ALTER TABLE calendars ADD COLUMN own_color TEXT;
 "#,
+    // How far back each calendar's copy reaches, so a range older than the
+    // first read is fetched once and kept. Every calendar already read
+    // began a year before its last read at the latest; that is close
+    // enough, and a shorter reach only fetches a little twice.
+    r#"
+ALTER TABLE calendars ADD COLUMN reaches_back INTEGER;
+UPDATE calendars SET reaches_back = synced_at - 31536000000
+    WHERE sync_token IS NOT NULL AND synced_at IS NOT NULL;
+"#,
 ];
 
 /// How long the copy taken before a migration stays once the store has

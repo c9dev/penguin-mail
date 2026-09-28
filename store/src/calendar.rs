@@ -158,6 +158,31 @@ pub fn set_token(
     Ok(())
 }
 
+/// How far back the copy of `calendar` reaches: events that end before
+/// this instant may be missing. `None` before its first whole read, and
+/// for a calendar that does not exist.
+pub fn reach(conn: &Connection, account_id: AccountId, calendar: &str) -> Result<Option<EpochMillis>> {
+    Ok(conn
+        .query_row(
+            "SELECT reaches_back FROM calendars WHERE account_id = ?1 AND id = ?2",
+            params![account_id, calendar],
+            |row| row.get(0),
+        )
+        .optional()?
+        .flatten())
+}
+
+/// Records that the copy of `calendar` now holds every event that ends
+/// after `from`. It leaves the sync token alone, since a read of an older
+/// range is not a read of changes.
+pub fn set_reach(conn: &Connection, account_id: AccountId, calendar: &str, from: EpochMillis) -> Result<()> {
+    conn.execute(
+        "UPDATE calendars SET reaches_back = ?3 WHERE account_id = ?1 AND id = ?2",
+        params![account_id, calendar, from],
+    )?;
+    Ok(())
+}
+
 /// When a calendar was last read whole or for its changes, `None` before
 /// its first read. `CalendarCopy` reads this for a hidden calendar, which
 /// it reads at the slow cadence rather than every tick.
@@ -1929,6 +1954,30 @@ mod tests {
         sweep(&conn, id, "primary", 2).unwrap();
         assert!(super::event(&conn, id, "primary", "old").unwrap().is_none());
         assert!(super::event(&conn, id, "primary", "kept").unwrap().is_some());
+    }
+
+    /// How far back a calendar's copy reaches is kept per calendar, and a
+    /// refresh of the list leaves it alone.
+    #[test]
+    fn how_far_back_a_calendar_reaches_is_remembered_and_survives_a_list_refresh() {
+        let (conn, id) = store();
+        assert_eq!(reach(&conn, id, "primary").unwrap(), None, "unknown before the first read");
+        set_reach(&conn, id, "primary", 1_000).unwrap();
+        assert_eq!(reach(&conn, id, "primary").unwrap(), Some(1_000));
+        assert_eq!(reach(&conn, id, "team").unwrap(), None, "another calendar is unaffected");
+        save_calendars(&conn, id, &[calendar("primary", true), calendar("team", false)]).unwrap();
+        assert_eq!(reach(&conn, id, "primary").unwrap(), Some(1_000));
+    }
+
+    /// A range fetched for an older week writes rows and moves the reach,
+    /// and neither touches the sync token the next change read starts from.
+    #[test]
+    fn setting_the_reach_leaves_the_sync_token_alone() {
+        let (conn, id) = store();
+        set_token(&conn, id, "primary", Some("t"), 5).unwrap();
+        set_reach(&conn, id, "primary", 1_000).unwrap();
+        assert_eq!(token(&conn, id, "primary").unwrap().as_deref(), Some("t"));
+        assert_eq!(synced_at(&conn, id, "primary").unwrap(), Some(5));
     }
 
     #[test]
