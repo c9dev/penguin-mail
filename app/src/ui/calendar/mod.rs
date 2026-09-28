@@ -1363,23 +1363,36 @@ impl CalendarView {
                 grid.strip.show(&days, &found, &calendars);
                 let now = chrono::Local::now().timestamp_millis();
                 grid.grid.show(&days, &found, &calendars, now, &chrono::Local);
-                if !page.scrolled.get() {
-                    page.scrolled.set(true);
-                    let hour = first_hour(&found, range);
-                    let y = grid.grid.scroll_to_hour(hour);
-                    scroll_when_ready(&grid.scroller, y);
-                }
-                self.pending_block(&found, |key, start| {
+                let block = self.pending_block(&found, |key, start| {
                     grid.grid
                         .block_at(key, start)
                         .or_else(|| grid.strip.block_at(key, start))
-                })
+                });
+                // An event about to open brings its hour into view, however
+                // far the page was scrolled before; a fresh page otherwise
+                // opens at its first event.
+                let opening = block
+                    .as_ref()
+                    .filter(|(_, o)| !o.event.all_day)
+                    .map(|(_, o)| layout::open_hour(o.start, &chrono::Local));
+                let hour = match opening {
+                    Some(hour) => Some(hour),
+                    None if !page.scrolled.get() => Some(first_hour(&found, range)),
+                    None => None,
+                };
+                let scroll = hour.map(|hour| {
+                    page.scrolled.set(true);
+                    (grid.scroller.clone(), grid.grid.scroll_to_hour(hour))
+                });
+                (block, scroll)
             }
             PageView::Month(month) => {
                 month.show(range, &found, &calendars);
-                self.pending_block(&found, |key, start| month.block_at(key, start))
+                let block = self.pending_block(&found, |key, start| month.block_at(key, start));
+                (block, None)
             }
         };
+        let (block, scroll) = block;
         let is_current = self
             .pages
             .borrow()
@@ -1389,16 +1402,33 @@ impl CalendarView {
         if is_current && (had_focus || self.refocus_owed.replace(false)) {
             self.refocus(page, focused);
         }
-        if let (true, Some((anchor, o))) = (is_current, block) {
-            self.pending_open.replace(None);
+        let open = match (is_current, block) {
+            (true, Some((anchor, o))) => {
+                self.pending_open.replace(None);
+                let weak = Rc::downgrade(self);
+                Some(move || {
+                    if let Some(view) = weak.upgrade() {
+                        view.show_event(&anchor, &o);
+                    }
+                })
+            }
+            _ => None,
+        };
+        match (scroll, open) {
+            // The popover measures the block when it opens, so it waits
+            // until the scroll has landed and the grid has laid the block
+            // out at its new place.
+            (Some((scroller, y)), Some(open)) => {
+                let after = scroller.clone();
+                scroll_when_ready(&scroller, y, move || after_layout(&after, open));
+            }
+            (Some((scroller, y)), None) => scroll_when_ready(&scroller, y, || {}),
             // The block has no size until the grid lays it out, and a
             // popover needs one to point at.
-            let weak = Rc::downgrade(self);
-            glib::idle_add_local_once(move || {
-                if let Some(view) = weak.upgrade() {
-                    view.show_event(&anchor, &o);
-                }
-            });
+            (None, Some(open)) => {
+                glib::idle_add_local_once(open);
+            }
+            (None, None) => {}
         }
     }
 
@@ -2532,29 +2562,55 @@ fn first_hour(found: &[Occurrence], range: Range) -> f64 {
 
 /// Scrolls `scroller` to `y` once its content has a height to scroll in;
 /// a page that was just filled has not been laid out yet.
-fn scroll_when_ready(scroller: &gtk::ScrolledWindow, y: f64) {
+/// Then runs `then`.
+fn scroll_when_ready(scroller: &gtk::ScrolledWindow, y: f64, then: impl FnOnce() + 'static) {
     let adjustment = scroller.vadjustment();
     if adjustment.page_size() > 0.0 && adjustment.upper() > adjustment.page_size() {
         adjustment.set_value(y.min(adjustment.upper() - adjustment.page_size()));
+        then();
         return;
     }
     let handler: Rc<RefCell<Option<glib::SignalHandlerId>>> = Rc::new(RefCell::new(None));
     let slot = Rc::clone(&handler);
+    let then = Cell::new(Some(then));
     let id = adjustment.connect_changed(move |adjustment| {
         if adjustment.page_size() <= 0.0 || adjustment.upper() <= adjustment.page_size() {
             return;
         }
-        if let Some(id) = slot.borrow_mut().take() {
+        let id = slot.borrow_mut().take();
+        if let Some(id) = id {
             adjustment.disconnect(id);
         }
         // The scrolled window sets its own value while it lays out the
         // first time, after this signal, so the scroll waits for that.
         let adjustment = adjustment.clone();
+        let then = then.take();
         glib::idle_add_local_once(move || {
             adjustment.set_value(y.min(adjustment.upper() - adjustment.page_size()));
+            if let Some(then) = then {
+                then();
+            }
         });
     });
     handler.replace(Some(id));
+}
+
+/// Runs `f` once `widget` has been laid out after the change just made:
+/// a frame's tick comes before its layout, so the second tick follows a
+/// finished one.
+fn after_layout(widget: &impl IsA<gtk::Widget>, f: impl FnOnce() + 'static) {
+    let f = Cell::new(Some(f));
+    let ticks = Cell::new(0);
+    widget.add_tick_callback(move |_, _| {
+        ticks.set(ticks.get() + 1);
+        if ticks.get() < 2 {
+            return glib::ControlFlow::Continue;
+        }
+        if let Some(f) = f.take() {
+            f();
+        }
+        glib::ControlFlow::Break
+    });
 }
 
 thread_local! {
