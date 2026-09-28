@@ -208,6 +208,21 @@ fn version_fourteen(path: &std::path::Path) {
             PRIMARY KEY (account_id, thread_id, label_id),
             FOREIGN KEY (account_id, thread_id) REFERENCES threads(account_id, id) ON DELETE CASCADE
         );
+        CREATE TABLE invitations (
+            account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+            uid        TEXT NOT NULL,
+            sequence   INTEGER NOT NULL,
+            starts_at  INTEGER,
+            all_day    INTEGER NOT NULL DEFAULT 0,
+            summary    TEXT NOT NULL DEFAULT '',
+            cancelled  INTEGER NOT NULL DEFAULT 0,
+            answer     TEXT,
+            message_id TEXT NOT NULL,
+            seen_at    INTEGER NOT NULL,
+            news       TEXT,
+            moved_from INTEGER,
+            PRIMARY KEY (account_id, uid)
+        );
         INSERT INTO accounts (id, email, added_at) VALUES (1, 'me@example.com', 0);
         INSERT INTO scheduled VALUES (1, 'r1', 'm1', 't1', 'Monday', 'Ann', 5000);
         PRAGMA user_version = 14;",
