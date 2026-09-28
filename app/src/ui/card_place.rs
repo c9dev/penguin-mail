@@ -256,7 +256,7 @@ impl Host {
             let holder = holder.clone();
             glib::idle_add_local_once(move || {
                 if let Some(holder) = holder.upgrade()
-                    && !holder.state_flags().contains(gtk::StateFlags::FOCUS_WITHIN)
+                    && !keeps_focus_after_click(holder.state_flags())
                 {
                     holder.set_can_focus(false);
                 }
@@ -403,6 +403,16 @@ impl Host {
     }
 }
 
+/// Whether the card's holder should stay in GTK's Tab order once a click's
+/// gesture has ended. The idle callback in [`Host::new`] reads this against
+/// the holder's live state, once GTK has settled the click's own focus
+/// grab: the holder keeps `can_focus` only while the focus actually landed
+/// inside it (on the card or one of its buttons), never for a click that
+/// lands on the title or the strip, which take no focus of their own.
+fn keeps_focus_after_click(state: gtk::StateFlags) -> bool {
+    state.contains(gtk::StateFlags::FOCUS_WITHIN)
+}
+
 fn run_script(webview: &webkit::WebView, script: &str) {
     webview.evaluate_javascript(script, None, None, gio::Cancellable::NONE, |_| {});
 }
@@ -457,5 +467,19 @@ mod tests {
             width: 200.0,
         };
         assert_eq!(frame(place, 1.0, 320), (14, 10, 320));
+    }
+
+    #[test]
+    fn a_click_that_never_focused_the_card_leaves_the_tab_order() {
+        assert!(!keeps_focus_after_click(gtk::StateFlags::NORMAL));
+        assert!(!keeps_focus_after_click(gtk::StateFlags::PRELIGHT));
+    }
+
+    #[test]
+    fn a_click_that_focused_the_card_or_a_button_in_it_keeps_the_tab_order() {
+        assert!(keeps_focus_after_click(gtk::StateFlags::FOCUS_WITHIN));
+        assert!(keeps_focus_after_click(
+            gtk::StateFlags::FOCUS_WITHIN | gtk::StateFlags::PRELIGHT
+        ));
     }
 }
