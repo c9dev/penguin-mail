@@ -1567,6 +1567,35 @@ impl GmailApi for FakeGmail {
         }))
     }
 
+    /// Files the event under its UID: one the calendar already holds is
+    /// updated in place, keeping its id, and a new one gets an id of its
+    /// own. Google's page for `events.import` does not say what a repeated
+    /// UID does; this follows the update reading, which is what makes
+    /// adding a file twice safe. A guest list never arrives, as on the
+    /// wire.
+    async fn import_event(&self, event: &calendar::Event) -> Result<calendar::Event, GmailError> {
+        self.call("calendar.events.import", 0).await?;
+        self.calendar_open()?;
+        self.calendar_held(&event.calendar)?;
+        let id = self
+            .with(|s| {
+                s.calendar_events
+                    .iter()
+                    .find(|e| e.calendar == event.calendar && e.uid == event.uid)
+                    .map(|e| e.id.clone())
+            })
+            .unwrap_or_else(|| format!("imported{}", self.with(|s| s.calendar_events.len() + 1)));
+        self.put_calendar_event(calendar::Event {
+            id: id.clone(),
+            guests: Vec::new(),
+            pending: false,
+            ..event.clone()
+        });
+        Ok(self.with(|s| {
+            s.calendar_events.iter().find(|e| e.calendar == event.calendar && e.id == id).cloned().expect("just stored")
+        }))
+    }
+
     /// Moves the event and a series' changed occurrences, as Google does,
     /// so the old calendar's change feed hands each out as deleted and the
     /// new one's as new.

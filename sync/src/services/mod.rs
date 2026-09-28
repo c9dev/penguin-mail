@@ -839,6 +839,15 @@ pub trait CalendarService: Send + Sync + 'static {
         notify: model::Notify,
     ) -> impl Future<Output = Result<(), BackendError>> + Send;
 
+    /// Imports `event` into its calendar under its iCalendar UID, for a
+    /// file the person chose to keep, and invites nobody. Importing a UID
+    /// the calendar already holds updates that event rather than making a
+    /// second one. Answers the event as the provider now holds it.
+    fn import_event(
+        &self,
+        event: &model::Event,
+    ) -> impl Future<Output = Result<model::Event, BackendError>> + Send;
+
     /// Moves `event` from its calendar to `destination` on the same
     /// account, a series with its changed occurrences, and mails its
     /// guests when `notify` says so. Answers the event on `destination`.

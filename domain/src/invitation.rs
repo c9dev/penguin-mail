@@ -41,6 +41,21 @@ pub enum Method {
     Reply,
     /// The event is off.
     Cancel,
+    /// A file that only describes an event: a ticket, a booking, a
+    /// published calendar. It asks nothing of the reader, who may keep it.
+    /// A file with no `METHOD` at all reads the same way.
+    Publish,
+}
+
+/// Which card a calendar part gets.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Card {
+    /// Yes, Maybe and No: somebody asks the reader to answer.
+    Answer,
+    /// A cancellation or somebody's answer: news, with no button.
+    News,
+    /// Add to Calendar: the event is the reader's to keep.
+    Add,
 }
 
 /// Yes, No or Maybe: what an attendee said, and what the user sends back.
@@ -213,6 +228,13 @@ pub struct Invitation {
     /// Which occurrence of a repeating event this message is about, when
     /// it is about one rather than the series.
     pub occurrence: Option<Occurrence>,
+    /// The IANA name of the zone `DTSTART` is written in, when it names
+    /// one this app knows. Adding the event to a calendar sends it so a
+    /// repeat keeps its clock hour across a daylight-saving change.
+    pub zone: Option<String>,
+    /// The `RRULE`, `EXDATE` and `RDATE` lines, whole, as a calendar
+    /// provider takes them.
+    pub rules: Vec<String>,
 }
 
 impl Invitation {
@@ -220,6 +242,54 @@ impl Invitation {
     /// `STATUS:CANCELLED`.
     pub fn cancelled(&self) -> bool {
         self.method == Method::Cancel
+    }
+
+    /// The card this event gets: buttons to answer a request that still
+    /// stands, news for a cancellation or a reply, and Add to Calendar for
+    /// a file that only describes an event.
+    pub fn card(&self) -> Card {
+        match self.method {
+            _ if self.cancelled() => Card::News,
+            Method::Request => Card::Answer,
+            Method::Reply | Method::Cancel => Card::News,
+            Method::Publish => Card::Add,
+        }
+    }
+
+    /// The event as a calendar keeps it, on `calendar`, ready to import.
+    /// A time with no zone of its own takes `calendar_zone`. `None` when
+    /// the event has no start or no UID: an import matches on the UID, so
+    /// a file without one would add a new copy each time it was opened.
+    /// Nothing but the event itself goes: the guests and the organizer
+    /// belong to somebody else's calendar, and importing them would send
+    /// mail on the reader's behalf.
+    pub fn to_event(&self, calendar: &str, calendar_zone: &str) -> Option<crate::calendar::Event> {
+        if self.uid.trim().is_empty() {
+            return None;
+        }
+        const DAY: EpochMillis = 24 * 60 * 60 * 1_000;
+        let midnight = |day: NaiveDate| day.and_hms_opt(0, 0, 0).map(|d| d.and_utc().timestamp_millis());
+        let (start, end, all_day) = match self.when? {
+            When::At { starts_at, ends_at } => {
+                (starts_at, ends_at.unwrap_or(starts_at + 60 * 60 * 1_000), false)
+            }
+            When::Days { first, last } => (midnight(first)?, midnight(last)? + DAY, true),
+        };
+        Some(crate::calendar::Event {
+            calendar: calendar.to_string(),
+            uid: self.uid.clone(),
+            start,
+            end,
+            all_day,
+            zone: self.zone.clone().unwrap_or_else(|| calendar_zone.to_string()),
+            title: self.summary.clone(),
+            place: self.location.clone().unwrap_or_default(),
+            description: self.description.clone().unwrap_or_default(),
+            busy: true,
+            rules: self.rules.clone(),
+            sequence: self.sequence,
+            ..crate::calendar::Event::default()
+        })
     }
 
     /// How the series this occurrence belongs to runs, in words, from the
@@ -288,6 +358,8 @@ pub fn from_occurrence(found: &crate::calendar::Occurrence, sequence: i64) -> In
             .collect(),
         repeats: None,
         occurrence,
+        zone: None,
+        rules: Vec::new(),
     }
 }
 
@@ -295,18 +367,39 @@ pub fn from_occurrence(found: &crate::calendar::Occurrence, sequence: i64) -> In
 /// held no event this app can show, which covers an empty part, a part cut
 /// off mid-property, and a `VTODO` or `VFREEBUSY` that is not an event.
 pub fn read(ics: &str) -> Option<Invitation> {
-    let calendar: Calendar = repair(ics).parse().ok()?;
+    read_all(ics).into_iter().next()
+}
+
+/// Every event in an iCalendar part, in the order the file lists them. A
+/// booking with an outbound and a return leg holds two. Empty when the
+/// text held none.
+pub fn read_all(ics: &str) -> Vec<Invitation> {
+    let Ok(calendar) = repair(ics).parse::<Calendar>() else {
+        return Vec::new();
+    };
+    // Without a METHOD the file is not somebody's request. RFC 5545 has
+    // it describe events, which is what PUBLISH says.
     let method = match calendar.property_value("METHOD") {
         Some(value) if value.eq_ignore_ascii_case("REPLY") => Method::Reply,
         Some(value) if value.eq_ignore_ascii_case("CANCEL") => Method::Cancel,
+        Some(value) if value.eq_ignore_ascii_case("PUBLISH") => Method::Publish,
+        None => Method::Publish,
         _ => Method::Request,
     };
     let zones = Zones::read(&calendar);
-    let event = calendar.components.iter().find_map(event_of)?;
+    calendar
+        .components
+        .iter()
+        .filter_map(event_of)
+        .map(|event| invitation_of(&event, method, &zones))
+        .collect()
+}
+
+fn invitation_of(event: &Block<'_>, method: Method, zones: &Zones) -> Invitation {
     let cancelled = event
         .value("STATUS")
         .is_some_and(|status| status.eq_ignore_ascii_case("CANCELLED"));
-    let when = when_of(&event, &zones);
+    let when = when_of(event, zones);
     let organizer = event.properties.get("ORGANIZER").map(address_of);
     let mut guests: Vec<Guest> = event
         .multi
@@ -326,17 +419,17 @@ pub fn read(ics: &str) -> Option<Invitation> {
         })
         .collect();
     guests.dedup_by(|a, b| a.who.email.eq_ignore_ascii_case(&b.who.email));
-    Some(Invitation {
+    Invitation {
         uid: event.value("UID").unwrap_or_default().to_string(),
         sequence: event
             .value("SEQUENCE")
             .and_then(|value| value.trim().parse().ok())
             .unwrap_or(0),
         method: if cancelled { Method::Cancel } else { method },
-        summary: text_of(&event, "SUMMARY").unwrap_or_default(),
+        summary: text_of(event, "SUMMARY").unwrap_or_default(),
         when,
-        location: text_of(&event, "LOCATION"),
-        description: text_of(&event, "DESCRIPTION"),
+        location: text_of(event, "LOCATION"),
+        description: text_of(event, "DESCRIPTION"),
         organizer,
         guests,
         repeats: event
@@ -345,8 +438,47 @@ pub fn read(ics: &str) -> Option<Invitation> {
         occurrence: event
             .properties
             .get("RECURRENCE-ID")
-            .map(|property| occurrence_of(property, &zones)),
-    })
+            .map(|property| occurrence_of(property, zones)),
+        zone: event
+            .properties
+            .get("DTSTART")
+            .and_then(|start| zone_of(start, zones)),
+        rules: rules_of(event),
+    }
+}
+
+/// The zone a `DTSTART` is written in: its `TZID` as an IANA name, or
+/// UTC for a time that ends in `Z`.
+fn zone_of(start: &Property, zones: &Zones) -> Option<String> {
+    match DatePerhapsTime::from_property(start)? {
+        DatePerhapsTime::DateTime(CalendarDateTime::Utc(_)) => Some("UTC".to_string()),
+        DatePerhapsTime::DateTime(CalendarDateTime::WithTimezone { tzid, .. }) => zones.iana(&tzid),
+        _ => None,
+    }
+}
+
+/// The lines that make an event repeat, each whole with its parameters,
+/// which is how Google's `recurrence` holds them.
+fn rules_of(event: &Block<'_>) -> Vec<String> {
+    let mut lines = Vec::new();
+    for name in ["RRULE", "RDATE", "EXDATE"] {
+        let single = event.properties.get(name).into_iter();
+        let many = event.multi.get(name).into_iter().flatten();
+        for property in single.chain(many) {
+            let mut line = name.to_string();
+            for parameter in property.params().values() {
+                line.push_str(&format!(
+                    ";{}={}",
+                    parameter.key().to_ascii_uppercase(),
+                    reply::parameter(parameter.value())
+                ));
+            }
+            line.push(':');
+            line.push_str(property.value().trim());
+            lines.push(line);
+        }
+    }
+    lines
 }
 
 /// The occurrence a `RECURRENCE-ID` names, kept both as the organizer

@@ -76,6 +76,7 @@ app/src/ui/contacts_prefs.rs
 app/src/ui/conversation.rs
 app/src/ui/find.rs
 app/src/ui/hide_my_email.rs
+app/src/ui/ics_file.rs
 app/src/ui/invitation.rs
 app/src/ui/invitation/strip.rs
 app/src/ui/mod.rs

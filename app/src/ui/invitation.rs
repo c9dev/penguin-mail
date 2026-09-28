@@ -13,8 +13,8 @@ use std::rc::Rc;
 
 use adw::prelude::*;
 use chrono::{DateTime, Days, Local, TimeDelta};
-use mailrs_domain::invitation::{Answer, Invitation, Method, Scope, When};
-use mailrs_domain::{Address, EpochMillis};
+use mailrs_domain::invitation::{Answer, Card, Invitation, Method, Scope, When};
+use mailrs_domain::{AccountId, Address, EpochMillis};
 use mailrs_sync::{Change, Spot};
 
 use crate::format::{event_moved_from, event_when};
@@ -32,13 +32,58 @@ pub enum Action {
     /// Ask the organizer for another time.
     Propose(Proposal),
     /// Hand the `.ics` to the desktop, which files it in GNOME Calendar.
+    /// The card asks this only where it knows no calendar of the
+    /// account's to add to.
     AddToCalendar,
+    /// Add these events of the file to a calendar of the account.
+    Import(Vec<Invitation>, AddTo),
     /// Switch the main window to the calendar, on the event's day, with
     /// its popover open.
     ShowInCalendar,
     /// Ask for the calendar permission the account withheld, so the event
     /// can show in Calendar.
     GrantAccess,
+}
+
+/// A calendar the card offers to add a file's events to.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AddTo {
+    pub account_id: AccountId,
+    /// The provider's id for the calendar.
+    pub calendar: String,
+    /// What the picker says: the calendar's name, with the account's
+    /// address after it when the person has more than one.
+    pub label: String,
+    /// The account's own calendar, which the picker starts on.
+    pub primary: bool,
+}
+
+/// The calendars of one account a file's events can go on: the ones it
+/// can write to, its own first. `account` is added to each label when
+/// the person has several accounts.
+pub fn targets_of(
+    account_id: AccountId,
+    calendars: Vec<mailrs_domain::calendar::Calendar>,
+    account: Option<&str>,
+) -> Vec<AddTo> {
+    let mut found: Vec<AddTo> = calendars
+        .into_iter()
+        .filter(|calendar| calendar.access.can_write())
+        .map(|calendar| AddTo {
+            account_id,
+            label: match account {
+                Some(account) => fill(
+                    &gettext("{calendar} ({account})"),
+                    &[("calendar", &calendar.name), ("account", account)],
+                ),
+                None => calendar.name.clone(),
+            },
+            primary: calendar.primary,
+            calendar: calendar.id,
+        })
+        .collect();
+    found.sort_by_key(|target| !target.primary);
+    found
 }
 
 /// Which time to propose to the organizer.
@@ -57,6 +102,8 @@ pub struct Showing {
     /// The message that carries the invitation, which the card sits in.
     pub message_id: String,
     pub invitation: Invitation,
+    /// The other events of the same file, for a card that adds them.
+    pub also: Vec<Invitation>,
     pub change: Option<Change>,
     /// The answer the user already sent, if any. It wins over the guest
     /// list the organizer sent, which was written before the user answered.
@@ -121,6 +168,18 @@ pub struct EventCard {
     /// with the answer. Emptied when another invitation goes up.
     note: gtk::Entry,
     add: gtk::Button,
+    /// The calendars a file's events can go to, and the drop-down that
+    /// picks one. Empty until the window has asked the account, and for
+    /// an account with no calendar, where Add to Calendar hands the file
+    /// to the desktop.
+    targets: RefCell<Vec<AddTo>>,
+    /// Set for a card in a window of its own that has no calendar to add
+    /// to, where Add to Calendar has nothing to do and stays off.
+    no_add: Cell<bool>,
+    picker: gtk::DropDown,
+    /// One check button per event of a file that holds several.
+    events: gtk::Box,
+    picks: RefCell<Vec<gtk::CheckButton>>,
     /// Show in Calendar. It takes Add to Calendar's place once the event
     /// is known to be on a calendar the app shows.
     show_in_calendar: gtk::Button,
@@ -315,6 +374,24 @@ impl EventCard {
             .css_classes(["invitation-pill"])
             .build();
         name(&add, &gettext("Add to Calendar"));
+        let picker = gtk::DropDown::builder()
+            .model(&gtk::StringList::new(&[]))
+            .visible(false)
+            .css_classes(["invitation-picker"])
+            .build();
+        crate::ui::describe(
+            &picker,
+            &gettext("Calendar to add to"),
+            &gettext("The calendar the events go on"),
+        );
+        let events = gtk::Box::builder()
+            .orientation(gtk::Orientation::Vertical)
+            .spacing(4)
+            .visible(false)
+            .css_classes(["invitation-events"])
+            .accessible_role(gtk::AccessibleRole::Group)
+            .build();
+        name(&events, &gettext("Events to add"));
         let show_in_calendar = gtk::Button::builder()
             .child(
                 &adw::ButtonContent::builder()
@@ -335,6 +412,7 @@ impl EventCard {
         let spacer = gtk::Box::builder().hexpand(true).build();
         actions.append(&spacer);
         actions.append(&propose);
+        actions.append(&picker);
         actions.append(&show_in_calendar);
         actions.append(&add);
 
@@ -392,6 +470,7 @@ impl EventCard {
             title.upcast_ref::<gtk::Widget>(),
             when.upcast_ref(),
             meta_row.upcast_ref(),
+            events.upcast_ref(),
             clash.upcast_ref(),
             strip.upcast_ref(),
             answering.upcast_ref(),
@@ -441,6 +520,11 @@ impl EventCard {
             buttons,
             note,
             add,
+            targets: RefCell::new(Vec::new()),
+            no_add: Cell::new(false),
+            picker,
+            events,
+            picks: RefCell::new(Vec::new()),
             show_in_calendar,
             propose,
             proposals,
@@ -487,8 +571,12 @@ impl EventCard {
         let act = Rc::clone(&on_action);
         card.show_in_calendar
             .connect_clicked(move |_| act(Action::ShowInCalendar));
-        card.add
-            .connect_clicked(move |_| on_action(Action::AddToCalendar));
+        let weak = Rc::downgrade(&card);
+        card.add.connect_clicked(move |_| {
+            if let Some(card) = weak.upgrade() {
+                card.add_pressed();
+            }
+        });
         card
     }
 
@@ -502,6 +590,7 @@ impl EventCard {
             .is_some_and(|shown| shown.invitation.uid == showing.invitation.uid);
         if !same {
             self.note.set_text("");
+            self.targets.borrow_mut().clear();
         }
         self.draw(&showing);
         *self.showing.borrow_mut() = Some(showing);
@@ -671,7 +760,132 @@ impl EventCard {
     fn place_calendar_button(&self, showing: &Showing) {
         let button = calendar_button(showing);
         self.show_in_calendar.set_visible(button == CalendarButton::Show);
-        self.add.set_visible(button == CalendarButton::Add);
+        self.add.set_visible(button == CalendarButton::Add && !self.no_add.get());
+        // Where the events go is asked only while Add to Calendar is the
+        // button on offer, for a card that adds them.
+        let adding = button == CalendarButton::Add && showing.invitation.card() == Card::Add;
+        self.picker
+            .set_visible(adding && !self.targets.borrow().is_empty());
+        // The list stays once the events are on the calendar, so the card
+        // still says which ones went; only the choosing ends.
+        self.events.set_visible(showing.invitation.card() == Card::Add && !showing.also.is_empty());
+        self.events.set_sensitive(adding);
+    }
+
+    /// One check button per event when the file holds several, all
+    /// checked: Add to Calendar adds the checked ones.
+    fn fill_events(&self, showing: &Showing) {
+        while let Some(child) = self.events.first_child() {
+            self.events.remove(&child);
+        }
+        let mut picks = self.picks.borrow_mut();
+        picks.clear();
+        if showing.also.is_empty() {
+            return;
+        }
+        let now = Local::now();
+        for event in std::iter::once(&showing.invitation).chain(&showing.also) {
+            let title = match event.summary.is_empty() {
+                true => gettext("Untitled event"),
+                false => event.summary.clone(),
+            };
+            let when = event.when.as_ref().map(|when| event_when(when, now));
+            let check = gtk::CheckButton::builder()
+                .label(joined(&[Some(title), when]))
+                .active(true)
+                .build();
+            check.connect_toggled({
+                let add = self.add.clone();
+                let events = self.events.clone();
+                move |_| add.set_sensitive(any_checked(&events))
+            });
+            self.events.append(&check);
+            picks.push(check);
+        }
+        self.add.set_sensitive(true);
+    }
+
+    /// Takes Add to Calendar off the card, for a window that has no
+    /// calendar to add the events to.
+    pub fn cannot_add(&self) {
+        self.no_add.set(true);
+        self.add.set_visible(false);
+        self.picker.set_visible(false);
+    }
+
+    /// Offers these calendars for the file's events, starting on the
+    /// account's own. The card keeps them only while it still shows the
+    /// invitation `uid` names. With none, Add to Calendar goes on handing
+    /// the file to the desktop.
+    pub fn set_targets(&self, uid: &str, targets: Vec<AddTo>) {
+        if !self.shows(uid) {
+            return;
+        }
+        let labels: Vec<&str> = targets.iter().map(|t| t.label.as_str()).collect();
+        self.picker.set_model(Some(&gtk::StringList::new(&labels)));
+        let start = targets.iter().position(|t| t.primary).unwrap_or(0);
+        self.picker.set_selected(start as u32);
+        *self.targets.borrow_mut() = targets;
+        let showing = self.showing.borrow().clone();
+        if let Some(showing) = showing {
+            self.place_calendar_button(&showing);
+        }
+    }
+
+    /// Says the events went on `calendar` and turns Add to Calendar into
+    /// Show in Calendar, which opens the first of them. `calendar` is
+    /// empty when the account never named it.
+    pub fn set_added(&self, uid: &str, calendar: &str, spots: &[Spot]) {
+        if !self.shows(uid) {
+            return;
+        }
+        let Some(first) = spots.first() else {
+            return;
+        };
+        let line = match (calendar.is_empty(), spots.len()) {
+            (true, 1) => gettext("Added to your calendar"),
+            (true, count) => fill_plural(
+                "Added {count} events to your calendar",
+                "Added {count} events to your calendar",
+                count,
+                &[("count", &count.to_string())],
+            ),
+            (false, 1) => fill(&gettext("Added to {calendar}"), &[("calendar", calendar)]),
+            (false, count) => fill_plural(
+                "Added {count} events to {calendar}",
+                "Added {count} events to {calendar}",
+                count,
+                &[("count", &count.to_string()), ("calendar", calendar)],
+            ),
+        };
+        set_line(&self.went, Some(line));
+        self.set_on_calendar(uid, first.clone());
+    }
+
+    /// Add to Calendar: into the calendar the picker names when the card
+    /// knows one, and to the desktop otherwise.
+    fn add_pressed(&self) {
+        let picked = {
+            let showing = self.showing.borrow();
+            let Some(showing) = showing.as_ref() else {
+                return;
+            };
+            let picks = self.picks.borrow();
+            let all = std::iter::once(&showing.invitation).chain(&showing.also);
+            match picks.is_empty() {
+                true => all.cloned().collect::<Vec<_>>(),
+                false => all
+                    .zip(picks.iter())
+                    .filter(|(_, check)| check.is_active())
+                    .map(|(event, _)| event.clone())
+                    .collect(),
+            }
+        };
+        let target = self.targets.borrow().get(self.picker.selected() as usize).cloned();
+        match target {
+            Some(target) if showing_adds(&self.showing) => (self.act)(Action::Import(picked, target)),
+            _ => (self.act)(Action::AddToCalendar),
+        }
     }
 
     /// Puts up the line offering Grant Access for the calendar.
@@ -718,6 +932,18 @@ impl EventCard {
         });
         let when = event.when.as_ref().map(|when| event_when(when, now));
         set_line(&self.when, Some(joined(&[when, event.location.clone()])));
+        if !showing.also.is_empty() {
+            // A file with several events names none of them on the card's
+            // head: the list below does, one row each.
+            self.title.set_text(&fill_plural(
+                "{count} events",
+                "{count} events",
+                showing.also.len() + 1,
+                &[("count", &(showing.also.len() + 1).to_string())],
+            ));
+            self.when.set_visible(false);
+        }
+        self.fill_events(showing);
         self.bar.set_css_classes(&["invitation-bar", "cal-accent"]);
         self.clash.set_visible(false);
         self.strip.set_visible(false);
@@ -730,7 +956,7 @@ impl EventCard {
 
         // A cancellation and a reply from somebody else are news, not a
         // question, so neither gets answer buttons.
-        let answerable = event.method == Method::Request && !event.cancelled();
+        let answerable = event.card() == Card::Answer;
         self.answers.set_visible(answerable);
         self.note.set_visible(answerable);
         // Only an invitation to one occurrence of a series leaves the
@@ -850,6 +1076,30 @@ impl EventCard {
 /// nothing, since there is no telling it from the next one.
 fn still_showing(on_screen: Option<&str>, uid: &str) -> bool {
     !uid.trim().is_empty() && on_screen == Some(uid)
+}
+
+/// Whether the card holds a file that only describes events, which Add
+/// to Calendar puts on a calendar of the account's own.
+fn showing_adds(showing: &RefCell<Option<Showing>>) -> bool {
+    showing
+        .borrow()
+        .as_ref()
+        .is_some_and(|showing| showing.invitation.card() == Card::Add)
+}
+
+/// Whether any check button in the list of events is on.
+fn any_checked(events: &gtk::Box) -> bool {
+    let mut child = events.first_child();
+    while let Some(widget) = child {
+        if widget
+            .downcast_ref::<gtk::CheckButton>()
+            .is_some_and(|check| check.is_active())
+        {
+            return true;
+        }
+        child = widget.next_sibling();
+    }
+    false
 }
 
 /// Which calendar button the card offers.
@@ -1154,6 +1404,7 @@ mod tests {
             message_id: "m1".to_string(),
             invitation: mailrs_domain::invitation::read(&ics(method, extra))
                 .expect("the part holds an event"),
+            also: Vec::new(),
             change: None,
             answer: None,
             me: vec!["me@example.com".to_string()],

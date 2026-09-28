@@ -789,3 +789,132 @@ fn a_reply_with_a_note_carries_it_as_a_comment() {
     let plain = reply(&invitation, &me(), Answer::Maybe, Scope::Series, 1_780_000_000_000);
     assert!(!plain.contains("COMMENT"));
 }
+
+fn ticket(method: Option<&str>) -> String {
+    let mut lines = vec!["BEGIN:VCALENDAR", "VERSION:2.0"];
+    lines.extend(method);
+    lines.extend([
+        "BEGIN:VEVENT",
+        "UID:ticket-4471@rail.example",
+        "DTSTART;TZID=Europe/Lisbon:20261105T083000",
+        "DTEND;TZID=Europe/Lisbon:20261105T113000",
+        "SUMMARY:Lisboa to Porto, coach 4 seat 22",
+        "LOCATION:Santa Apolonia",
+        "END:VEVENT",
+        "END:VCALENDAR",
+    ]);
+    ics(&lines)
+}
+
+fn card_of(method: Option<&str>) -> Card {
+    read(&ticket(method)).expect("an event").card()
+}
+
+#[test]
+fn a_publish_file_is_offered_for_adding() {
+    assert_eq!(card_of(Some("METHOD:PUBLISH")), Card::Add);
+}
+
+#[test]
+fn a_file_with_no_method_is_offered_for_adding() {
+    assert_eq!(card_of(None), Card::Add);
+}
+
+#[test]
+fn a_request_asks_for_an_answer() {
+    assert_eq!(card_of(Some("METHOD:REQUEST")), Card::Answer);
+    assert_eq!(read(&google_invite()).unwrap().card(), Card::Answer);
+}
+
+#[test]
+fn a_cancellation_and_a_reply_are_news_with_no_button() {
+    assert_eq!(card_of(Some("METHOD:CANCEL")), Card::News);
+    assert_eq!(card_of(Some("METHOD:REPLY")), Card::News);
+}
+
+#[test]
+fn a_cancelled_status_is_news_even_under_a_request() {
+    let text = ticket(Some("METHOD:REQUEST")).replace("SUMMARY", "STATUS:CANCELLED\r\nSUMMARY");
+    assert_eq!(read(&text).unwrap().card(), Card::News);
+}
+
+#[test]
+fn every_event_in_a_file_is_read_in_order() {
+    let text = ics(&[
+        "BEGIN:VCALENDAR",
+        "METHOD:PUBLISH",
+        "BEGIN:VEVENT",
+        "UID:a@x",
+        "DTSTART:20261105T083000Z",
+        "SUMMARY:Outbound",
+        "END:VEVENT",
+        "BEGIN:VTODO",
+        "UID:not-an-event@x",
+        "END:VTODO",
+        "BEGIN:VEVENT",
+        "UID:b@x",
+        "DTSTART;VALUE=DATE:20261110",
+        "SUMMARY:Return",
+        "END:VEVENT",
+        "END:VCALENDAR",
+    ]);
+    let all = read_all(&text);
+    let titles: Vec<&str> = all.iter().map(|i| i.summary.as_str()).collect();
+    assert_eq!(titles, ["Outbound", "Return"]);
+    assert!(all.iter().all(|i| i.card() == Card::Add));
+    assert_eq!(read(&text), all.into_iter().next());
+}
+
+#[test]
+fn an_event_from_a_file_keeps_its_uid_zone_and_rules() {
+    let text = ticket(Some("METHOD:PUBLISH")).replace(
+        "SUMMARY",
+        "RRULE:FREQ=WEEKLY;COUNT=4\r\nEXDATE;TZID=Europe/Lisbon:20261112T083000\r\nSUMMARY",
+    );
+    let event = read(&text).unwrap().to_event("primary", "UTC").expect("an event");
+    assert_eq!(event.uid, "ticket-4471@rail.example");
+    assert_eq!(event.calendar, "primary");
+    assert_eq!(event.zone, "Europe/Lisbon");
+    assert_eq!(event.title, "Lisboa to Porto, coach 4 seat 22");
+    assert_eq!(event.place, "Santa Apolonia");
+    assert_eq!(
+        event.rules,
+        ["RRULE:FREQ=WEEKLY;COUNT=4", "EXDATE;TZID=Europe/Lisbon:20261112T083000"]
+    );
+    assert_eq!(event.end - event.start, 3 * 3_600_000);
+    assert!(!event.all_day);
+}
+
+#[test]
+fn a_floating_time_takes_the_calendars_zone() {
+    let text = ticket(None).replace(";TZID=Europe/Lisbon", "");
+    let event = read(&text).unwrap().to_event("primary", "America/New_York").unwrap();
+    assert_eq!(event.zone, "America/New_York");
+}
+
+#[test]
+fn an_all_day_event_from_a_file_ends_the_day_after_its_last_day() {
+    let text = ics(&[
+        "BEGIN:VCALENDAR",
+        "BEGIN:VEVENT",
+        "UID:trip@x",
+        "DTSTART;VALUE=DATE:20261110",
+        "DTEND;VALUE=DATE:20261113",
+        "SUMMARY:Trip",
+        "END:VEVENT",
+        "END:VCALENDAR",
+    ]);
+    let event = read(&text).unwrap().to_event("primary", "UTC").unwrap();
+    assert!(event.all_day);
+    assert_eq!(event.end - event.start, 3 * 24 * 3_600_000);
+    assert_eq!(
+        chrono::DateTime::from_timestamp_millis(event.start).unwrap().date_naive(),
+        chrono::NaiveDate::from_ymd_opt(2026, 11, 10).unwrap()
+    );
+}
+
+#[test]
+fn a_file_with_no_uid_cannot_be_added_twice_safely() {
+    let text = ticket(None).replace("UID:ticket-4471@rail.example\r\n", "");
+    assert!(read(&text).unwrap().to_event("primary", "UTC").is_none());
+}

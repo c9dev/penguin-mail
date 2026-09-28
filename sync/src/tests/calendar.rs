@@ -673,3 +673,83 @@ async fn the_assistant_cannot_change_or_delete_a_birthday() {
     let queued = h.db.read(move |c| mailrs_store::calendar::queued(c, account)).await.unwrap();
     assert!(queued.is_empty(), "nothing waits to go to Google");
 }
+
+fn ticket(uid: &str, title: &str) -> mailrs_domain::invitation::Invitation {
+    let text = format!(
+        "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nMETHOD:PUBLISH\r\nBEGIN:VEVENT\r\nUID:{uid}\r\n\
+         DTSTART:20260310T090000Z\r\nDTEND:20260310T110000Z\r\nSUMMARY:{title}\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n"
+    );
+    mailrs_domain::invitation::read(&text).expect("an event")
+}
+
+fn held(h: &Harness, uid: &str) -> Vec<Ev> {
+    h.fake.with(|s| s.calendar_events.iter().filter(|e| e.uid == uid).cloned().collect())
+}
+
+/// Adding the same file twice, or reopening it after an edit to the
+/// event, keeps one event: the UID is what the import matches on.
+#[tokio::test]
+async fn a_file_added_twice_is_one_event() {
+    let h = harness().await;
+    h.fake.with(|s| s.calendars = vec![cal("primary", "Personal", Access::Owner)]);
+    let (calendar, copy) = calendar_with_copy(&h);
+    copy.refresh(h.account_id, NINE).await.unwrap();
+    let file = [ticket("t-1@rail", "Coach 4")];
+
+    let first = calendar.import(h.account_id, None, &file).await.unwrap().done().unwrap();
+    let again = calendar.import(h.account_id, None, &file).await.unwrap().done().unwrap();
+
+    assert_eq!(held(&h, "t-1@rail").len(), 1);
+    assert_eq!(first.calendar, "Personal");
+    assert_eq!(first.spots.len(), 1);
+    assert_eq!(first.spots[0].id, again.spots[0].id);
+    assert_eq!(first.spots[0].start, NINE);
+}
+
+#[tokio::test]
+async fn a_file_with_two_events_adds_both_to_the_calendar_picked() {
+    let h = harness().await;
+    h.fake.with(|s| {
+        s.calendars = vec![cal("primary", "Personal", Access::Owner), cal("trips", "Trips", Access::Owner)];
+    });
+    let (calendar, copy) = calendar_with_copy(&h);
+    copy.refresh(h.account_id, NINE).await.unwrap();
+
+    let added = calendar
+        .import(h.account_id, Some("trips"), &[ticket("a@x", "Outbound"), ticket("b@x", "Return")])
+        .await
+        .unwrap()
+        .done()
+        .unwrap();
+
+    assert_eq!(added.calendar, "Trips");
+    assert_eq!(added.spots.len(), 2);
+    assert!(held(&h, "a@x").iter().chain(&held(&h, "b@x")).all(|e| e.calendar == "trips"));
+    // The copy holds them at once, so Show in Calendar works without
+    // waiting for the next read.
+    let listed = calendar.events(h.account_id, NINE - HOUR, NINE + 3 * HOUR).await.unwrap().done().unwrap();
+    assert_eq!(listed.len(), 2);
+}
+
+#[tokio::test]
+async fn a_calendar_the_account_only_reads_takes_no_import() {
+    let h = harness().await;
+    h.fake.with(|s| {
+        s.calendars = vec![cal("primary", "Personal", Access::Owner), cal("holidays", "Holidays", Access::Reader)];
+    });
+    let (calendar, copy) = calendar_with_copy(&h);
+    copy.refresh(h.account_id, NINE).await.unwrap();
+
+    let refused = calendar.import(h.account_id, Some("holidays"), &[ticket("a@x", "Outbound")]).await;
+
+    assert!(matches!(refused, Err(SyncError::NoCalendar(_))));
+    assert!(held(&h, "a@x").is_empty());
+}
+
+#[tokio::test]
+async fn an_import_without_the_calendar_permission_asks_for_it() {
+    let h = harness().await;
+    h.fake.withhold(mailrs_gmail::CALENDAR_SCOPE);
+    let refused = calendar(&h).import(h.account_id, None, &[ticket("a@x", "Outbound")]).await.unwrap();
+    assert!(matches!(refused, Permitted::NeedsPermission));
+}

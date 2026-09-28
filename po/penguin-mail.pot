@@ -218,7 +218,7 @@ msgstr ""
 msgid "Penguin Mail needs the password for {address} again."
 msgstr ""
 
-#: app/src/app.rs:336
+#: app/src/app.rs:353
 msgid ""
 "Your preferences could not be read, so Penguin Mail started from the "
 "defaults. The old file is kept as {file}."
@@ -1110,27 +1110,27 @@ msgstr ""
 msgid "Penguin Mail could not update its mail store, and kept the old one."
 msgstr ""
 
-#: app/src/core.rs:691 app/src/core.rs:780
+#: app/src/core.rs:697 app/src/core.rs:786
 msgid "Demo mode cannot add real accounts."
 msgstr ""
 
-#: app/src/core.rs:695
+#: app/src/core.rs:701
 msgid ""
 "This copy of Penguin Mail was built without Google sign-in. Get a release "
 "from github.com/c9dev/penguin-mail/releases."
 msgstr ""
 
-#: app/src/core.rs:713
+#: app/src/core.rs:719
 msgid "Gave up waiting for the browser after five minutes."
 msgstr ""
 
-#: app/src/core.rs:718
+#: app/src/core.rs:724
 msgid ""
 "Penguin Mail cannot work without access to your mail. Sign in again and "
 "leave the Gmail permission ticked."
 msgstr ""
 
-#: app/src/core.rs:728
+#: app/src/core.rs:734
 msgid "You signed in as {account}. Choose {wanted} to reconnect that account."
 msgstr ""
 
@@ -1346,24 +1346,26 @@ msgstr ""
 
 #: app/src/main.rs:60
 msgid ""
-"Usage: penguin-mail [--background] [--demo] [--compose [mailto:ADDRESS]]\n"
+"Usage: penguin-mail [--background] [--demo] [--compose [mailto:ADDRESS]] "
+"[FILE.ics]\n"
 "\n"
 "  --version      print the version and quit\n"
 "  --background   start in the tray without opening a window\n"
 "  --demo         open sample mail in a throwaway store; nothing syncs\n"
 "  --compose      open a new message, addressed to ADDRESS when given\n"
-"  mailto:...     the same as --compose mailto:..."
+"  mailto:...     the same as --compose mailto:...\n"
+"  FILE.ics       open a calendar file, to add its events to a calendar"
 msgstr ""
 
-#: app/src/main.rs:126
+#: app/src/main.rs:127
 msgid "penguin-mail: unknown option {option}"
 msgstr ""
 
-#: app/src/main.rs:249
+#: app/src/main.rs:275
 msgid "Penguin Mail Could Not Start"
 msgstr ""
 
-#: app/src/main.rs:254 app/src/ui/about.rs:148
+#: app/src/main.rs:280 app/src/ui/about.rs:148
 msgid "Report a Problem"
 msgstr ""
 
@@ -3807,8 +3809,8 @@ msgstr ""
 msgid "Could not save the event: {reason}"
 msgstr ""
 
-#: app/src/ui/calendar/next.rs:87 app/src/ui/invitation.rs:715
-#: app/src/ui/invitation/strip.rs:168
+#: app/src/ui/calendar/next.rs:87 app/src/ui/invitation.rs:789
+#: app/src/ui/invitation.rs:929 app/src/ui/invitation/strip.rs:168
 msgid "Untitled event"
 msgstr ""
 
@@ -3860,19 +3862,19 @@ msgid "Show all guests"
 msgstr ""
 
 #: app/src/ui/calendar/popover.rs:277 app/src/ui/calendar/popover.rs:670
-#: app/src/ui/invitation.rs:258
+#: app/src/ui/invitation.rs:317
 msgid "Answer"
 msgstr ""
 
-#: app/src/ui/calendar/popover.rs:291 app/src/ui/invitation.rs:269
+#: app/src/ui/calendar/popover.rs:291 app/src/ui/invitation.rs:328
 msgid "Add a note"
 msgstr ""
 
-#: app/src/ui/calendar/popover.rs:295 app/src/ui/invitation.rs:273
+#: app/src/ui/calendar/popover.rs:295 app/src/ui/invitation.rs:332
 msgid "Note with your answer"
 msgstr ""
 
-#: app/src/ui/calendar/popover.rs:295 app/src/ui/invitation.rs:273
+#: app/src/ui/calendar/popover.rs:295 app/src/ui/invitation.rs:332
 msgid "The organizer reads it with your answer"
 msgstr ""
 
@@ -4049,7 +4051,7 @@ msgid "Penguin Mail cannot see this account's calendars"
 msgstr ""
 
 #: app/src/ui/calendar/sidebar.rs:824 app/src/ui/contacts_prefs.rs:236
-#: app/src/ui/invitation.rs:368 app/src/ui/permission.rs:41
+#: app/src/ui/invitation.rs:446 app/src/ui/permission.rs:41
 #: app/src/ui/permission.rs:64 app/src/ui/window.rs:1198
 msgid "Grant Access"
 msgstr ""
@@ -4128,7 +4130,7 @@ msgstr ""
 msgid "{place} · {calendar}"
 msgstr ""
 
-#: app/src/ui/calendar/words.rs:193 app/src/ui/invitation.rs:960
+#: app/src/ui/calendar/words.rs:193 app/src/ui/invitation.rs:1210
 msgid "{yes} of {count} said yes"
 msgid_plural "{yes} of {count} said yes"
 msgstr[0] ""
@@ -4136,7 +4138,7 @@ msgstr[1] ""
 
 #. The calendar's popover words its people line the same way.
 #: app/src/ui/calendar/words.rs:204 app/src/ui/calendar/words.rs:528
-#: app/src/ui/invitation.rs:928
+#: app/src/ui/invitation.rs:1178
 msgid "{name}, organizer"
 msgstr ""
 
@@ -4246,7 +4248,7 @@ msgstr ""
 msgid "{time} {city}"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:228 app/src/ui/conversation.rs:1697
+#: app/src/ui/composer/mod.rs:228 app/src/ui/conversation.rs:1707
 msgid "Choose a Time…"
 msgstr ""
 
@@ -4758,7 +4760,7 @@ msgid "Mark as Unread (Ctrl+Shift+U)"
 msgstr ""
 
 #: app/src/ui/conversation.rs:466 app/src/ui/conversation.rs:470
-#: app/src/ui/conversation.rs:1737
+#: app/src/ui/conversation.rs:1747
 msgid "Flag (Ctrl+Shift+L)"
 msgstr ""
 
@@ -4900,23 +4902,23 @@ msgid_plural "{count} Messages Selected"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/conversation.rs:1736
+#: app/src/ui/conversation.rs:1746
 msgid "Unflag (Ctrl+Shift+L)"
 msgstr ""
 
-#: app/src/ui/conversation.rs:1749
+#: app/src/ui/conversation.rs:1759
 msgid "Mark as Read (U)"
 msgstr ""
 
-#: app/src/ui/conversation.rs:1750
+#: app/src/ui/conversation.rs:1760
 msgid "Mark as Unread (U)"
 msgstr ""
 
-#: app/src/ui/conversation.rs:1923
+#: app/src/ui/conversation.rs:1933
 msgid "{color} (Ctrl+Alt+{number})"
 msgstr ""
 
-#: app/src/ui/conversation.rs:1940 app/src/ui/window/message_menu.rs:250
+#: app/src/ui/conversation.rs:1950 app/src/ui/window/message_menu.rs:250
 msgid "Clear Flag"
 msgstr ""
 
@@ -5084,128 +5086,224 @@ msgstr ""
 msgid "Address Created"
 msgstr ""
 
-#: app/src/ui/invitation.rs:280
+#: app/src/ui/ics_file.rs:43
+msgid "This file is too large to be a calendar."
+msgstr ""
+
+#: app/src/ui/ics_file.rs:52
+msgid "Calendar File"
+msgstr ""
+
+#: app/src/ui/ics_file.rs:75
+msgid "No Events in This File"
+msgstr ""
+
+#: app/src/ui/ics_file.rs:76
+msgid "Penguin Mail found no event to add in it."
+msgstr ""
+
+#: app/src/ui/ics_file.rs:78
+msgid "Could Not Open This File"
+msgstr ""
+
+#: app/src/ui/ics_file.rs:141
+msgid "No app on this desktop opens calendar files"
+msgstr ""
+
+#: app/src/ui/ics_file.rs:152
+msgid "A file has nobody to answer to"
+msgstr ""
+
+#: app/src/ui/ics_file.rs:189
+msgid ""
+"No account here can use Google Calendar. Add a Google account, or allow "
+"calendar access for one in Preferences, then open the file again."
+msgstr ""
+
+#: app/src/ui/ics_file.rs:256
+msgid ""
+"Nothing in this file can be added, since its events have no id or start time"
+msgstr ""
+
+#: app/src/ui/ics_file.rs:261
+msgid "Some events were left out, since they have no id or start time"
+msgstr ""
+
+#: app/src/ui/ics_file.rs:270
+msgid ""
+"Penguin Mail has no permission to use this calendar. Allow it in Preferences."
+msgstr ""
+
+#: app/src/ui/ics_file.rs:273
+msgid "Could not add to your calendar: {reason}"
+msgstr ""
+
+#: app/src/ui/invitation.rs:76
+msgid "{calendar} ({account})"
+msgstr ""
+
+#: app/src/ui/invitation.rs:339
 msgid "What the answer covers"
 msgstr ""
 
-#: app/src/ui/invitation.rs:282
+#: app/src/ui/invitation.rs:341
 msgid "This Event"
 msgstr ""
 
-#: app/src/ui/invitation.rs:287
+#: app/src/ui/invitation.rs:346
 msgid "All Events"
 msgstr ""
 
-#: app/src/ui/invitation.rs:299
+#: app/src/ui/invitation.rs:358
 msgid "Propose New Time"
 msgstr ""
 
-#: app/src/ui/invitation.rs:312 app/src/ui/invitation.rs:317
+#: app/src/ui/invitation.rs:371 app/src/ui/invitation.rs:376
 msgid "Add to Calendar"
 msgstr ""
 
-#: app/src/ui/invitation.rs:322 app/src/ui/invitation.rs:328
+#: app/src/ui/invitation.rs:384
+msgid "Calendar to add to"
+msgstr ""
+
+#: app/src/ui/invitation.rs:385
+msgid "The calendar the events go on"
+msgstr ""
+
+#: app/src/ui/invitation.rs:394
+msgid "Events to add"
+msgstr ""
+
+#: app/src/ui/invitation.rs:399 app/src/ui/invitation.rs:405
 #: app/src/ui/sidebar.rs:127
 msgid "Show in Calendar"
 msgstr ""
 
-#: app/src/ui/invitation.rs:365
+#: app/src/ui/invitation.rs:443
 msgid "Penguin Mail needs permission to show this event in Calendar."
 msgstr ""
 
-#: app/src/ui/invitation.rs:790
+#: app/src/ui/invitation.rs:846
+msgid "Added to your calendar"
+msgstr ""
+
+#: app/src/ui/invitation.rs:848
+msgid "Added {count} events to your calendar"
+msgid_plural "Added {count} events to your calendar"
+msgstr[0] ""
+msgstr[1] ""
+
+#: app/src/ui/invitation.rs:853
+msgid "Added to {calendar}"
+msgstr ""
+
+#: app/src/ui/invitation.rs:855
+msgid "Added {count} events to {calendar}"
+msgid_plural "Added {count} events to {calendar}"
+msgstr[0] ""
+msgstr[1] ""
+
+#. A file with several events names none of them on the card's
+#. head: the list below does, one row each.
+#: app/src/ui/invitation.rs:939
+msgid "{count} events"
+msgid_plural "{count} events"
+msgstr[0] ""
+msgstr[1] ""
+
+#: app/src/ui/invitation.rs:1016
 msgid "Pick a Time…"
 msgstr ""
 
-#: app/src/ui/invitation.rs:835
+#: app/src/ui/invitation.rs:1061
 msgid "No reply yet"
 msgstr ""
 
-#: app/src/ui/invitation.rs:881
+#: app/src/ui/invitation.rs:1131
 msgid "Half an Hour Later"
 msgstr ""
 
-#: app/src/ui/invitation.rs:884
+#: app/src/ui/invitation.rs:1134
 msgid "An Hour Later"
 msgstr ""
 
-#: app/src/ui/invitation.rs:886
+#: app/src/ui/invitation.rs:1136
 msgid "Same Time Tomorrow"
 msgstr ""
 
-#: app/src/ui/invitation.rs:890
+#: app/src/ui/invitation.rs:1140
 msgid "Same Time Next Week"
 msgstr ""
 
-#: app/src/ui/invitation.rs:905
+#: app/src/ui/invitation.rs:1155
 msgid "You have {event} then"
 msgstr ""
 
-#: app/src/ui/invitation.rs:907
+#: app/src/ui/invitation.rs:1157
 msgid "You have {event} and {other} then"
 msgstr ""
 
-#: app/src/ui/invitation.rs:911
+#: app/src/ui/invitation.rs:1161
 msgid "You have {event} and {count} more then"
 msgid_plural "You have {event} and {count} more then"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/invitation.rs:924
+#: app/src/ui/invitation.rs:1174
 msgid "Reply to the invitation from {organizer}"
 msgstr ""
 
-#: app/src/ui/invitation.rs:1023
+#: app/src/ui/invitation.rs:1273
 msgid "You"
 msgstr ""
 
-#: app/src/ui/invitation.rs:1049
+#: app/src/ui/invitation.rs:1299
 msgid "{count} yes"
 msgid_plural "{count} yes"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/invitation.rs:1057
+#: app/src/ui/invitation.rs:1307
 msgid "{count} no"
 msgid_plural "{count} no"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/invitation.rs:1065
+#: app/src/ui/invitation.rs:1315
 msgid "{count} maybe"
 msgid_plural "{count} maybe"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/invitation.rs:1073
+#: app/src/ui/invitation.rs:1323
 msgid "{count} awaiting"
 msgid_plural "{count} awaiting"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/invitation.rs:1081
+#: app/src/ui/invitation.rs:1331
 msgid "{count} guest"
 msgid_plural "{count} guests"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/invitation.rs:1087
+#: app/src/ui/invitation.rs:1337
 msgid "{guests} · {answers}"
 msgstr ""
 
-#: app/src/ui/invitation.rs:1097
+#: app/src/ui/invitation.rs:1347
 msgid "This meeting moved from {when}"
 msgstr ""
 
-#: app/src/ui/invitation.rs:1100
+#: app/src/ui/invitation.rs:1350
 msgid "The organizer changed this meeting"
 msgstr ""
 
-#: app/src/ui/invitation.rs:1101
+#: app/src/ui/invitation.rs:1351
 msgid "The organizer canceled this meeting"
 msgstr ""
 
-#: app/src/ui/invitation.rs:1102
+#: app/src/ui/invitation.rs:1352
 msgid "This meeting is canceled"
 msgstr ""
 
@@ -5243,7 +5341,7 @@ msgstr[1] ""
 msgid "This meeting"
 msgstr ""
 
-#: app/src/ui/mod.rs:371
+#: app/src/ui/mod.rs:372
 msgid "Gray"
 msgstr ""
 
@@ -6754,87 +6852,87 @@ msgstr ""
 msgid "Could not remember that sender: {reason}"
 msgstr ""
 
-#: app/src/ui/window/invitation.rs:71
+#: app/src/ui/window/invitation.rs:72
 msgid "This invitation names no event, so there is nothing to answer"
 msgstr ""
 
-#: app/src/ui/window/invitation.rs:97
+#: app/src/ui/window/invitation.rs:98
 msgid "This invitation names no organizer, so there is nobody to reply to"
 msgstr ""
 
-#: app/src/ui/window/invitation.rs:126
+#: app/src/ui/window/invitation.rs:127
 msgid "Could not send your reply: {reason}"
 msgstr ""
 
-#: app/src/ui/window/invitation.rs:165 app/src/ui/window/invitation.rs:233
+#: app/src/ui/window/invitation.rs:166 app/src/ui/window/invitation.rs:234
 msgid "Could not send your proposal: {reason}"
 msgstr ""
 
-#: app/src/ui/window/invitation.rs:194
+#: app/src/ui/window/invitation.rs:195
 msgid "Nobody"
 msgstr ""
 
-#: app/src/ui/window/invitation.rs:200
+#: app/src/ui/window/invitation.rs:201
 msgid "The organizer decides. {organizer} hears what you suggest."
 msgstr ""
 
-#: app/src/ui/window/invitation.rs:203
+#: app/src/ui/window/invitation.rs:204
 msgid "Propose"
 msgstr ""
 
-#: app/src/ui/window/invitation.rs:221
+#: app/src/ui/window/invitation.rs:222
 msgid "This invitation names no organizer, so there is nobody to ask"
 msgstr ""
 
-#: app/src/ui/window/invitation.rs:226
+#: app/src/ui/window/invitation.rs:227
 msgid "Proposed a new time to {organizer}"
 msgstr ""
 
-#: app/src/ui/window/invitation.rs:229
+#: app/src/ui/window/invitation.rs:230
 msgid "Proposed a new time"
 msgstr ""
 
-#: app/src/ui/window/invitation.rs:231
+#: app/src/ui/window/invitation.rs:232
 msgid "New time proposed. The organizer decides."
 msgstr ""
 
-#: app/src/ui/window/invitation.rs:263
+#: app/src/ui/window/invitation.rs:264
 msgid "Could not save the invitation: {reason}"
 msgstr ""
 
-#: app/src/ui/window/invitation.rs:273
+#: app/src/ui/window/invitation.rs:274
 msgid "No app on this desktop opens invitations: {reason}"
 msgstr ""
 
-#: app/src/ui/window/invitation.rs:317
+#: app/src/ui/window/invitation.rs:365
 msgid "Replied Yes"
 msgstr ""
 
-#: app/src/ui/window/invitation.rs:318
+#: app/src/ui/window/invitation.rs:366
 msgid "Replied No"
 msgstr ""
 
-#: app/src/ui/window/invitation.rs:319
+#: app/src/ui/window/invitation.rs:367
 msgid "Replied Maybe"
 msgstr ""
 
-#: app/src/ui/window/invitation.rs:322
+#: app/src/ui/window/invitation.rs:370
 msgid "{answer}. The organizer has been told."
 msgstr ""
 
-#: app/src/ui/window/invitation.rs:323
+#: app/src/ui/window/invitation.rs:371
 msgid "{answer}. Your reply is on its way to the organizer."
 msgstr ""
 
-#: app/src/ui/window/invitation.rs:333
+#: app/src/ui/window/invitation.rs:381
 msgid "Answered on your calendar"
 msgstr ""
 
-#: app/src/ui/window/invitation.rs:335
+#: app/src/ui/window/invitation.rs:383
 msgid "Replied by email to {organizer}"
 msgstr ""
 
-#: app/src/ui/window/invitation.rs:338
+#: app/src/ui/window/invitation.rs:386
 msgid "Replied by email"
 msgstr ""
 
@@ -7376,23 +7474,23 @@ msgstr ""
 msgid "Social"
 msgstr ""
 
-#: domain/src/invitation.rs:69
+#: domain/src/invitation.rs:84
 msgid "Yes"
 msgstr ""
 
-#: domain/src/invitation.rs:70
+#: domain/src/invitation.rs:85
 msgid "No"
 msgstr ""
 
-#: domain/src/invitation.rs:71 domain/src/invitation.rs:80
+#: domain/src/invitation.rs:86 domain/src/invitation.rs:95
 msgid "Maybe"
 msgstr ""
 
-#: domain/src/invitation.rs:78
+#: domain/src/invitation.rs:93
 msgid "Going"
 msgstr ""
 
-#: domain/src/invitation.rs:79
+#: domain/src/invitation.rs:94
 msgid "Not going"
 msgstr ""
 

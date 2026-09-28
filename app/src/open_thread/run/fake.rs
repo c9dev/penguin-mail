@@ -26,7 +26,7 @@ use crate::open_thread::{Document, InlineImage, OpenThread, Page, ToClean, Unsen
 use crate::protection::Read;
 use crate::render::Theme;
 use crate::translation::{self, Language, Prose, Translation};
-use crate::ui::invitation::Showing;
+use crate::ui::invitation::{AddTo, Showing};
 use crate::ui::invitation::strip::{Strip, Verdict};
 use crate::wanted::Screen as OnScreen;
 
@@ -60,6 +60,8 @@ pub enum Step {
     Clashes,
     Series,
     SeriesKnown,
+    AddTargets,
+    AddTargetsKnown,
     OnCalendar,
     OnCalendarKnown,
     Strip,
@@ -101,6 +103,10 @@ pub struct Screen {
     pub series: Result<Option<String>, String>,
     /// The series lines put on the card.
     pub series_lines: Vec<String>,
+    /// The calendars the account offers a file's events.
+    pub add_targets: Result<Vec<AddTo>, String>,
+    /// The calendars put on the card, with the UID each list was for.
+    pub targets_shown: Vec<(String, Vec<AddTo>)>,
     /// What the calendar's copy says about the invitation's event.
     pub on_calendar: Result<Option<Spot>, String>,
     /// The spots put on the card, with the UID each was for.
@@ -229,6 +235,7 @@ pub fn ics() -> String {
 pub fn opened_invitation() -> Opened {
     Opened {
         invitation: mailrs_domain::invitation::read(&ics()).expect("the fixture reads"),
+        also: Vec::new(),
         change: None,
         answer: None,
     }
@@ -240,8 +247,30 @@ pub fn opened_occurrence() -> Opened {
     let ics = ics().replace("SEQUENCE:0", "SEQUENCE:0\r\nRECURRENCE-ID:20300310T090000Z");
     Opened {
         invitation: mailrs_domain::invitation::read(&ics).expect("the fixture reads"),
+        also: Vec::new(),
         change: None,
         answer: None,
+    }
+}
+
+/// A ticket the fixture's sender published: no request, no answer.
+pub fn opened_publish() -> Opened {
+    let ics = ics().replace("METHOD:REQUEST", "METHOD:PUBLISH");
+    Opened {
+        invitation: mailrs_domain::invitation::read(&ics).expect("the fixture reads"),
+        also: Vec::new(),
+        change: None,
+        answer: None,
+    }
+}
+
+/// The account's own calendar, which a file's events go on.
+pub fn personal() -> AddTo {
+    AddTo {
+        account_id: ACCOUNT,
+        calendar: "primary".to_string(),
+        label: "Personal".to_string(),
+        primary: true,
     }
 }
 
@@ -271,6 +300,7 @@ pub fn opened_cancellation() -> Opened {
     let ics = ics().replace("METHOD:REQUEST", "METHOD:CANCEL");
     Opened {
         invitation: mailrs_domain::invitation::read(&ics).expect("the fixture reads"),
+        also: Vec::new(),
         change: None,
         answer: None,
     }
@@ -371,6 +401,8 @@ impl FakeWindow {
             busy: Ok(vec!["Design crit".to_string()]),
             series: Ok(Some("Every Tuesday, 6 left".to_string())),
             series_lines: Vec::new(),
+            add_targets: Ok(vec![personal()]),
+            targets_shown: Vec::new(),
             on_calendar: Ok(None),
             spots: Vec::new(),
             strip: Ok(None),
@@ -703,6 +735,12 @@ impl Effects for FakeWindow {
         Box::pin(async move { series })
     }
 
+    fn add_targets(&self, _account_id: AccountId) -> Answer<'_, Result<Vec<AddTo>, String>> {
+        self.reached(Step::AddTargets);
+        let found = self.with(|screen| screen.add_targets.clone());
+        Box::pin(async move { found })
+    }
+
     fn on_calendar(
         &self,
         _account_id: AccountId,
@@ -832,6 +870,11 @@ impl Effects for FakeWindow {
     fn series_known(&self, _uid: String, line: String) {
         self.reached(Step::SeriesKnown);
         self.with(|screen| screen.series_lines.push(line));
+    }
+
+    fn add_targets_known(&self, uid: String, targets: Vec<AddTo>) {
+        self.reached(Step::AddTargetsKnown);
+        self.with(|screen| screen.targets_shown.push((uid, targets)));
     }
 
     fn on_calendar_known(&self, uid: String, spot: Spot) {

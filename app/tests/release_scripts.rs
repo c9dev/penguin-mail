@@ -21,6 +21,31 @@ fn succeeded(output: &Output) -> String {
     String::from_utf8(output.stdout.clone()).unwrap()
 }
 
+/// The media types a desktop entry says it opens.
+fn mime_types(entry: &str) -> Vec<&str> {
+    entry
+        .lines()
+        .find_map(|line| line.strip_prefix("MimeType="))
+        .map(|types| types.split(';').filter(|t| !t.is_empty()).collect())
+        .unwrap_or_default()
+}
+
+/// Files offers Penguin Mail for an `.ics` file only when the launcher
+/// names `text/calendar`, and for a link to a mail address only with the
+/// `mailto` handler. The launcher passes the file as `%u`, which the
+/// app's command line reads.
+#[test]
+fn the_launcher_opens_calendar_files_and_mail_links() {
+    let entry = std::fs::read_to_string(
+        Path::new(env!("CARGO_MANIFEST_DIR")).join(format!("data/{ID}.desktop")),
+    )
+    .unwrap();
+    let types = mime_types(&entry);
+    assert!(types.contains(&"text/calendar"), "{entry}");
+    assert!(types.contains(&"x-scheme-handler/mailto"), "{entry}");
+    assert!(entry.contains("\nExec=penguin-mail %u\n"), "{entry}");
+}
+
 const CHANGELOG: &str = "# Changelog
 
 Each release, newest first.
@@ -156,6 +181,7 @@ fn a_staged_tree_installs_from_the_tarball_folder() {
         "{launcher}"
     );
     assert!(!launcher.contains("Exec=penguin-mail"), "{launcher}");
+    assert!(mime_types(&launcher).contains(&"text/calendar"), "{launcher}");
     let login =
         std::fs::read_to_string(home.join(format!(".config/autostart/{ID}.desktop"))).unwrap();
     assert!(
