@@ -32,7 +32,7 @@ fn read(ics: &str) -> Invitation {
 
 /// The one message the fake was asked to send, as text, with the base64
 /// parts decoded so a test can read the calendar object in it.
-fn sent_message(h: &Harness) -> String {
+pub(super) fn sent_message(h: &Harness) -> String {
     let raw = h.fake.with(|s| {
         assert_eq!(s.sent.len(), 1, "one message went out");
         s.sent[0].0.clone()

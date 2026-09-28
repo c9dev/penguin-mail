@@ -719,3 +719,57 @@ fn a_name_that_would_end_a_parameter_is_quoted() {
         lines.contains(&"ORGANIZER;CN=\"Weber, Jonas\":mailto:jonas@fernwood.example".to_string())
     );
 }
+
+/// An occurrence of Priya's daily stand-up on the account's calendar,
+/// 20 October 2026 09:00 to 09:15 UTC.
+fn standup_on_calendar() -> crate::calendar::Occurrence {
+    use crate::calendar::{Event, Guest as CalendarGuest, Occurrence as Held};
+    let start = chrono::Utc.with_ymd_and_hms(2026, 10, 20, 9, 0, 0).unwrap().timestamp_millis();
+    Held {
+        account_id: 1,
+        event: std::sync::Arc::new(Event {
+            calendar: "primary".into(),
+            id: "standup".into(),
+            uid: "standup@google.com".into(),
+            title: "Stand-up".into(),
+            start: start - 86_400_000,
+            end: start - 86_400_000 + 900_000,
+            rules: vec!["RRULE:FREQ=DAILY".into()],
+            guests: vec![
+                CalendarGuest {
+                    email: "priya@example.com".into(),
+                    name: Some("Priya".into()),
+                    organizer: true,
+                    ..CalendarGuest::default()
+                },
+                CalendarGuest { email: "me@example.com".into(), me: true, ..CalendarGuest::default() },
+            ],
+            ..Event::default()
+        }),
+        start,
+        end: start + 900_000,
+    }
+}
+
+#[test]
+fn an_occurrence_on_the_calendar_reads_as_an_invitation_to_it() {
+    let found = standup_on_calendar();
+    let invitation = from_occurrence(&found, 3);
+    assert_eq!((invitation.uid.as_str(), invitation.sequence), ("standup@google.com", 3));
+    assert_eq!(invitation.when, Some(When::At { starts_at: found.start, ends_at: Some(found.end) }));
+    assert_eq!(invitation.organizer.as_ref().map(|o| o.email.as_str()), Some("priya@example.com"));
+    assert_eq!(
+        invitation.occurrence,
+        Some(Occurrence { written: ":20261020T090000Z".into(), at: Some(found.start) })
+    );
+}
+
+#[test]
+fn a_one_off_event_on_the_calendar_names_no_occurrence() {
+    let found = standup_on_calendar();
+    let one_off = crate::calendar::Occurrence {
+        event: std::sync::Arc::new(crate::calendar::Event { rules: Vec::new(), ..(*found.event).clone() }),
+        ..found
+    };
+    assert_eq!(from_occurrence(&one_off, 0).occurrence, None);
+}

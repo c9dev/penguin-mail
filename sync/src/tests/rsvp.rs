@@ -204,3 +204,36 @@ async fn the_mail_card_answers_through_the_same_queue() {
         [("primary".to_string(), "standup".to_string(), Answer::Yes, None)]
     );
 }
+
+#[tokio::test]
+async fn proposing_from_the_calendar_asks_the_organizer_about_that_occurrence() {
+    let h = harness().await;
+    let _copy = read_standup(&h).await;
+    let invitations = invitations(&h);
+    // The mail carried version 2 of the event; the proposal must name it.
+    invitations
+        .open(
+            h.account_id,
+            "m1",
+            &format!(
+                "BEGIN:VCALENDAR\r\nMETHOD:REQUEST\r\nBEGIN:VEVENT\r\nUID:{UID}\r\nSEQUENCE:2\r\n\
+                 SUMMARY:Stand-up\r\nDTSTART:20260921T141320Z\r\nRRULE:FREQ=DAILY;COUNT=5\r\n\
+                 ORGANIZER:mailto:priya@example.com\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n"
+            ),
+            NOW,
+        )
+        .await
+        .unwrap();
+    let wednesday = on_day(&h, 2).await;
+
+    let (invitation, me, scope) = invitations.for_event(h.account_id, &wednesday).await.unwrap();
+    assert_eq!((invitation.sequence, me.email.as_str(), scope), (2, "me@example.com", Scope::Occurrence));
+    let when = mailrs_domain::invitation::When::At { starts_at: NOW + 2 * DAY + HOUR, ends_at: Some(NOW + 2 * DAY + HOUR + HOUR / 4) };
+    let told = invitations.propose(h.account_id, &invitation, &me, &when, scope, NOW).await.unwrap();
+    assert_eq!(told, Told::Organizer);
+
+    let decoded = super::invitations::sent_message(&h);
+    assert!(decoded.contains("METHOD:COUNTER"), "{decoded}");
+    assert!(decoded.contains("SEQUENCE:2"), "{decoded}");
+    assert!(decoded.contains("RECURRENCE-ID:20260923T141320Z"), "{decoded}");
+}

@@ -702,6 +702,37 @@ impl<A: Accounts> Invitations<A> {
         Ok(Some((invitation, sent)))
     }
 
+    /// The invitation an event on the calendar stands for, the account's
+    /// own guest entry, and whether an answer or proposal names that
+    /// occurrence or the whole event: what the card holds for a message,
+    /// built for an event the person opened in the calendar, so
+    /// [`Self::propose`] serves both. The sequence comes from the last
+    /// invitation mail read for the event, 0 when none was.
+    pub async fn for_event(
+        &self,
+        account_id: AccountId,
+        occurrence: &Occurrence,
+    ) -> Result<(Invitation, Address, Scope), SyncError> {
+        let uid = occurrence.event.uid.clone();
+        let sequence = self
+            .db
+            .read(move |c| Ok(store::saved(c, account_id, &uid)?.map_or(0, |saved| saved.sequence)))
+            .await?;
+        let invitation = invitation::from_occurrence(occurrence, sequence);
+        let me = occurrence
+            .event
+            .guests
+            .iter()
+            .find(|guest| guest.me)
+            .map(|guest| Address { name: guest.name.clone(), email: guest.email.clone() })
+            .unwrap_or(Address { name: None, email: String::new() });
+        let scope = match invitation.occurrence {
+            Some(_) => Scope::Occurrence,
+            None => Scope::Series,
+        };
+        Ok((invitation, me, scope))
+    }
+
     /// Proposes another time for the event and mails the organizer the
     /// proposal. iTIP calls this a counter proposal: it asks rather than
     /// decides, so nothing changes on anybody's calendar until the

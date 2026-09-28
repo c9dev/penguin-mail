@@ -240,6 +240,57 @@ impl Invitation {
     }
 }
 
+/// The invitation an event on the account's calendar stands for, so a
+/// guest can answer it or propose another time from the calendar the way
+/// the mail card does. `sequence` is the organizer's latest version as
+/// the mail last said it (0 when no mail was read). An occurrence of a
+/// series names itself by its original start in UTC, which is how Google
+/// writes `RECURRENCE-ID`.
+pub fn from_occurrence(found: &crate::calendar::Occurrence, sequence: i64) -> Invitation {
+    let event = &found.event;
+    let day = |at: EpochMillis| chrono::DateTime::from_timestamp_millis(at).map(|d| d.date_naive());
+    let when = match (event.all_day, day(found.start), day(found.end - 1)) {
+        (true, Some(first), Some(last)) => When::Days { first, last },
+        _ => When::At { starts_at: found.start, ends_at: Some(found.end) },
+    };
+    let organizer = event
+        .guests
+        .iter()
+        .find(|g| g.organizer)
+        .map(|g| Address { name: g.name.clone(), email: g.email.clone() })
+        .or_else(|| event.organizer.clone().map(|email| Address { name: None, email }));
+    let occurrence = crate::calendar::series::in_series(event).then(|| {
+        let at = event.original_start.unwrap_or(found.start);
+        let stamp = chrono::DateTime::from_timestamp_millis(at).unwrap_or_default();
+        let written = match event.all_day {
+            true => format!(";VALUE=DATE:{}", stamp.format("%Y%m%d")),
+            false => format!(":{}", stamp.format("%Y%m%dT%H%M%SZ")),
+        };
+        Occurrence { written, at: Some(at) }
+    });
+    Invitation {
+        uid: event.uid.clone(),
+        sequence,
+        method: Method::Request,
+        summary: event.title.clone(),
+        when: Some(when),
+        location: Some(event.place.clone()).filter(|p| !p.is_empty()),
+        description: None,
+        organizer,
+        guests: event
+            .guests
+            .iter()
+            .map(|g| Guest {
+                who: Address { name: g.name.clone(), email: g.email.clone() },
+                answer: g.answer,
+                optional: false,
+            })
+            .collect(),
+        repeats: None,
+        occurrence,
+    }
+}
+
 /// Reads the first event out of an iCalendar part. `None` means the text
 /// held no event this app can show, which covers an empty part, a part cut
 /// off mid-property, and a `VTODO` or `VFREEBUSY` that is not an event.
