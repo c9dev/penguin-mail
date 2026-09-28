@@ -56,8 +56,8 @@
   <url type="donation">https://github.com/sponsors/g0shed</url>
 
   <branding>
-    <color type="primary" scheme_preference="light">#d5c4a1</color>
-    <color type="primary" scheme_preference="dark">#504945</color>
+    <color type="primary" scheme_preference="light">#fbf7f0</color>
+    <color type="primary" scheme_preference="dark">#2a2623</color>
   </branding>
 
   <content_rating type="oars-1.1">

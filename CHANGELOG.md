@@ -118,6 +118,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   Ctrl+R.
 
 ### Improved
+
+- A new icon and logo.
 - The page your browser shows after you sign in to Google says so with the
   Penguin Mail icon, in light or dark, and says how to try again if you
   didn't allow access.

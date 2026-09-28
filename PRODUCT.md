@@ -58,8 +58,9 @@ supported and checked.
 
 ## Brand Commitments
 
-- **The icon idiom.** The app icon sits on the Gruvbox Plus Dark squircle with its bevel: taupe behind a cream
-  penguin with an orange beak. New icons follow that idiom.
+- **The icon idiom.** The app icon is an envelope that is also a penguin, in GNOME's style: an ink frame for the
+  hood, the flap's V for the widow's peak, paper for the face and an orange beak. New icons follow that idiom, and
+  `docs/brand/README.md` holds the palette and the logo rules.
 - **The accent is the desktop's.** The app follows the accent colour set in GNOME's settings and has no accent
   setting of its own. Mockups, screenshots and the demo video use orange, the owner's desktop accent.
 - **Plain-spoken voice.** Every string, comment, doc and commit follows the stop-slop and unslop rules: plain

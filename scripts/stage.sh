@@ -21,6 +21,10 @@ install -Dm644 "app/data/icons/scalable/apps/$id.svg" \
     "$dir/share/icons/hicolor/scalable/apps/$id.svg"
 install -Dm644 "app/data/icons/scalable/apps/$id-symbolic.svg" \
     "$dir/share/icons/hicolor/symbolic/apps/$id-symbolic.svg"
+# A drawing of its own for 16 px, on whole pixels, so menus and lists show a
+# sharp icon rather than the large one scaled down to a blur.
+install -Dm644 "app/data/icons/16x16/apps/$id.svg" \
+    "$dir/share/icons/hicolor/16x16/apps/$id.svg"
 mkdir -p "$dir/share/applications" "$dir/share/metainfo"
 metainfo="$dir/share/metainfo/$id.metainfo.xml"
 
