@@ -240,14 +240,14 @@ pub fn mini_day_words(date: NaiveDate, has_events: bool) -> String {
     }
 }
 
-/// "Offline, last updated 14:32" under the calendar list, or nothing
-/// while the account is online and its last sync succeeded. `online`
-/// says whether the computer has a network now, `sync_failed` whether
-/// the last calendar sync attempt came back with an error, and
-/// `last_synced` the last successful sync's own clock time, already
-/// through [`crate::clock_format::time_text`]. Offline and a failed
-/// sync read the same word, "Offline", since neither can promise the
-/// calendar is current.
+/// "Offline, last updated 14:32" under the calendar sidebar's mini
+/// month, or nothing while the account is online and its last sync
+/// succeeded. `online` says whether the computer has a network now,
+/// `sync_failed` whether the last calendar sync attempt came back with
+/// an error, and `last_synced` the last successful sync's own clock
+/// time, already through [`crate::clock_format::time_text`]. Offline
+/// and a failed sync read the same word, "Offline", since neither can
+/// promise the calendar is current.
 pub fn offline_line(online: bool, sync_failed: bool, last_synced: Option<&str>) -> Option<String> {
     if online && !sync_failed {
         return None;

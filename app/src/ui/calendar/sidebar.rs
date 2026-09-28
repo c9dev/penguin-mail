@@ -174,8 +174,9 @@ pub struct CalendarSidebar {
     /// whole sidebar.
     weekday_labels: Vec<gtk::Label>,
     calendar_list: gtk::Box,
-    /// "Offline, last updated 14:32" under the calendar list, hidden
-    /// while nothing is wrong.
+    /// "Offline, last updated 14:32" under the mini month, hidden while
+    /// nothing is wrong. Sits above `calendar_list`, not under it, so it
+    /// stays on screen without scrolling whatever that list holds.
     offline_line: gtk::Label,
     /// What the calendar list was last built from. A redraw that would
     /// build the same rows leaves them, and the focus on one of them,
@@ -336,20 +337,23 @@ impl CalendarSidebar {
         }
         content.append(&mini);
 
+        // Offline, or the account's last calendar sync failed: a small
+        // row right under the mini month, hidden while all is well. It
+        // sits above the calendar list, not under it, so it is on
+        // screen without scrolling however many calendars are listed or
+        // how short the window is; the sidebar's redesign can move it,
+        // and `dim_line`'s own styling keeps it looking at home here in
+        // the meantime.
+        let offline_line = dim_line("");
+        offline_line.set_visible(false);
+        content.append(&offline_line);
+
         let calendar_list = gtk::Box::builder()
             .orientation(gtk::Orientation::Vertical)
             .spacing(0)
             .margin_top(8)
             .build();
         content.append(&calendar_list);
-
-        // Offline, or the account's last calendar sync failed: a small
-        // row under the calendar list, hidden while all is well. The
-        // sidebar's redesign can move this row; `dim_line`'s own styling
-        // keeps it looking at home here in the meantime.
-        let offline_line = dim_line("");
-        offline_line.set_visible(false);
-        content.append(&offline_line);
 
         let waiting_heading = gtk::Label::builder()
             .label(gettext("Waiting for your answer"))

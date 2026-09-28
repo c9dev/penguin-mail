@@ -93,9 +93,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   The assistant's free-time tool now looks inside the same hours.
 - The week starts on the day your locale expects, and every time the
   calendar shows follows your desktop's clock, 12-hour or 24-hour.
-- Offline, or when a calendar sync fails, the sidebar says so under
-  your calendars and when it last updated, instead of leaving you
-  guessing.
+- Offline, or when a calendar sync fails, the sidebar says so and when
+  it last updated, instead of leaving you guessing.
 
 ### Fixed
 - In dark mode, a reply with quoted text shows on the dark page instead of

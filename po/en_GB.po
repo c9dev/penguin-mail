@@ -3650,7 +3650,7 @@ msgstr "Calendar: {name}"
 msgid "%A %-d"
 msgstr "%A %-d"
 
-#: app/src/ui/calendar/range.rs:108 app/src/ui/calendar/sidebar.rs:583
+#: app/src/ui/calendar/range.rs:108 app/src/ui/calendar/sidebar.rs:587
 msgid "%B %Y"
 msgstr "%B %Y"
 
@@ -3754,41 +3754,41 @@ msgstr "Next Week"
 msgid "Previous Week"
 msgstr "Previous Week"
 
-#: app/src/ui/calendar/shown.rs:85 app/src/ui/calendar/sidebar.rs:276
+#: app/src/ui/calendar/shown.rs:85 app/src/ui/calendar/sidebar.rs:277
 msgid "Next Month"
 msgstr "Next Month"
 
-#: app/src/ui/calendar/shown.rs:85 app/src/ui/calendar/sidebar.rs:275
+#: app/src/ui/calendar/shown.rs:85 app/src/ui/calendar/sidebar.rs:276
 msgid "Previous Month"
 msgstr "Previous Month"
 
-#: app/src/ui/calendar/sidebar.rs:355
+#: app/src/ui/calendar/sidebar.rs:359
 msgid "Waiting for your answer"
 msgstr "Waiting for your answer"
 
-#: app/src/ui/calendar/sidebar.rs:499
+#: app/src/ui/calendar/sidebar.rs:503
 msgid "Open mail"
 msgstr "Open mail"
 
-#: app/src/ui/calendar/sidebar.rs:628
+#: app/src/ui/calendar/sidebar.rs:632
 msgid "Grant Access to show shared calendars"
 msgstr "Grant Access to show shared calendars"
 
-#: app/src/ui/calendar/sidebar.rs:634
+#: app/src/ui/calendar/sidebar.rs:638
 msgid "Penguin Mail cannot see this account's calendars"
 msgstr "Penguin Mail cannot see this account's calendars"
 
-#: app/src/ui/calendar/sidebar.rs:638 app/src/ui/contacts_prefs.rs:228
+#: app/src/ui/calendar/sidebar.rs:642 app/src/ui/contacts_prefs.rs:228
 #: app/src/ui/invitation.rs:285 app/src/ui/permission.rs:41
 #: app/src/ui/permission.rs:64 app/src/ui/window.rs:1072
 msgid "Grant Access"
 msgstr "Grant Access"
 
-#: app/src/ui/calendar/sidebar.rs:662
+#: app/src/ui/calendar/sidebar.rs:666
 msgid "You can only read this calendar"
 msgstr "You can only read this calendar"
 
-#: app/src/ui/calendar/sidebar.rs:702 app/src/ui/contacts_prefs.rs:234
+#: app/src/ui/calendar/sidebar.rs:706 app/src/ui/contacts_prefs.rs:234
 msgid "Grant Access for {account}"
 msgstr "Grant Access for {account}"
 

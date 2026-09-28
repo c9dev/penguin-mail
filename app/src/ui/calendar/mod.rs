@@ -241,7 +241,7 @@ pub struct CalendarView {
     /// second press before it answers does not start another one.
     refreshing: Cell<bool>,
     /// Whether the last calendar sync attempt came back with an error,
-    /// for the offline line under the calendar list.
+    /// for the offline line under the mini month.
     sync_failed: Cell<bool>,
     /// The clock time of the last calendar sync that succeeded, for the
     /// offline line's own "last updated" time. `None` before the first
@@ -703,8 +703,8 @@ impl CalendarView {
         self.show_offline_line();
     }
 
-    /// Shows or hides "Offline, last updated 14:32" under the calendar
-    /// list: nothing while the account is online and its last sync
+    /// Shows or hides "Offline, last updated 14:32" under the mini
+    /// month: nothing while the account is online and its last sync
     /// succeeded, [`words::offline_line`] decides the rest.
     fn show_offline_line(&self) {
         let last = self.last_synced.get().map(crate::clock_format::time_text);
