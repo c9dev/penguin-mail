@@ -1031,7 +1031,7 @@ impl TimeGrid {
 
     /// Says which occurrences a drag may move: a card whose predicate
     /// answers `false`, such as one on a read-only calendar or a guest's
-    /// own event (R9), starts no drag.
+    /// own event, starts no drag.
     pub fn set_can_move(&self, f: impl Fn(&Occurrence) -> bool + 'static) {
         self.imp().can_move.replace(Some(Box::new(f)));
     }
@@ -1368,8 +1368,8 @@ impl TimeGrid {
             grid.queue_allocate();
         });
         // Damping ratio 1.0: the card lands without passing its slot.
-        // `AdwAnimation` follows GNOME's animations setting on its own
-        // (R10): with it off, `play` ends the spring at once and `done`
+        // `AdwAnimation` follows GNOME's animations setting on its own:
+        // with it off, `play` ends the spring at once and `done`
         // below runs straight away, no cross-fade shown.
         let spring = adw::SpringAnimation::builder()
             .widget(self)

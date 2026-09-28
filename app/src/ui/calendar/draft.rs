@@ -184,7 +184,8 @@ impl Draft {
     /// and the event has none yet.
     ///
     /// On someone else's event the account is only a guest of ([`limited`]),
-    /// only the guest's reminders, colour and busy change (ruling R9). For
+    /// only the guest's reminders, colour and busy change, since Google
+    /// keeps a guest's changes to anything else to the organizer. For
     /// an occurrence nobody changed, `base` is the series with its first
     /// occurrence's times; `series::change` takes only those three fields
     /// from it, and the PATCH carries nothing else.
@@ -274,8 +275,8 @@ pub fn default_calendar(writable: &[(AccountId, String, Calendar)], last: Option
 }
 
 /// Whether someone else organizes the event and the account is only a
-/// guest. The editor then leaves the time, place and guests to them
-/// (ruling R9), and the popover asks this account for an answer.
+/// guest. The editor then leaves the time, place and guests to them,
+/// and the popover asks this account for an answer.
 pub fn limited(event: &Event) -> bool {
     event.limited()
 }
@@ -287,11 +288,11 @@ pub enum Editing {
     /// Delete, and a double click opens the editor.
     Whole,
     /// Someone else organizes it: a double click opens the editor
-    /// limited to reminders, colour and busy (R9), and the popover shows
-    /// neither Edit nor Delete (R1).
+    /// limited to reminders, colour and busy, and the popover shows
+    /// neither Edit nor Delete, as the mockup's invitation popover does.
     Guest,
     /// The account withheld the calendar permission: a double click, Enter
-    /// or Delete asks for it, and the popover shows neither (R8).
+    /// or Delete asks for it, and the popover shows neither.
     NeedsPermission,
     /// A read-only calendar, or an account with no calendar at all.
     None,

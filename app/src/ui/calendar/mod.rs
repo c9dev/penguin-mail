@@ -219,10 +219,10 @@ pub struct CalendarView {
     /// focus, so the page that replaces it takes the focus once its
     /// events arrive.
     refocus_owed: Cell<bool>,
-    /// The one change waiting on its Undo toast, if any (R4).
+    /// The one change waiting on its Undo toast, if any.
     holding: RefCell<Holding<Held>>,
     /// The toast that change's Undo is on, so a new one can dismiss it
-    /// (R4) and its own watcher can tell it apart from a later toast.
+    /// and its own watcher can tell it apart from a later toast.
     toast_up: RefCell<Option<adw::Toast>>,
 }
 
@@ -1689,7 +1689,7 @@ impl CalendarView {
     /// Opens the popover for `o`, pointed at `anchor`. Edit and Delete
     /// show only for an event the account may change as a whole: the
     /// mockup's invitation popover, on someone else's event, stays as
-    /// drawn (ruling R1, R9).
+    /// drawn.
     fn show_event(self: &Rc<Self>, anchor: &gtk::Widget, o: &Occurrence) {
         let calendar = self
             .calendars
@@ -1734,7 +1734,7 @@ impl CalendarView {
 
     /// Looks for the mail that carries `o`'s invitation, and puts "Open
     /// the invitation in Mail" on the popover once found, if it is still
-    /// open on this occurrence (R1). An event with no uid, such as one
+    /// open on this occurrence. An event with no uid, such as one
     /// made straight on the calendar, has no invitation to find.
     fn find_invitation_mail(self: &Rc<Self>, o: &Occurrence) {
         let uid = o.event.uid.clone();
@@ -1792,7 +1792,7 @@ impl CalendarView {
 
     /// The Delete key: takes the focused event off the grid at once and
     /// offers Undo, for an event the account may change as a whole, or
-    /// asks for the calendar permission the account withheld (R8).
+    /// asks for the calendar permission the account withheld.
     pub fn delete_focused(self: &Rc<Self>) {
         let Some(o) = self.focused() else { return };
         match self.editing(&o) {
@@ -1804,8 +1804,8 @@ impl CalendarView {
 
     /// A double click or Enter on a block. The editor opens over the
     /// popover a single click already opened, limited to reminders,
-    /// colour and busy on someone else's event (R1, R9). An account that
-    /// withheld the calendar permission is asked for it instead (R8), and
+    /// colour and busy on someone else's event. An account that
+    /// withheld the calendar permission is asked for it instead, and
     /// an event nobody here may change opens its popover.
     fn edit_or_show(self: &Rc<Self>, o: &Occurrence, anchor: Option<&gtk::Widget>) {
         match self.editing(o) {
@@ -1892,8 +1892,9 @@ impl CalendarView {
 
     /// A 10-second toast with Undo for a held change. Undo puts the rows
     /// back; the toast closing any other way queues the change. Only one
-    /// toast shows at a time (R4): holding another dismisses this one,
-    /// whose own `dismissed` handler queues it.
+    /// toast shows at a time, so two Undo offers never stack: holding
+    /// another dismisses this one, whose own `dismissed` handler queues
+    /// it.
     fn offer_undo(self: &Rc<Self>, said: String, held: Held) {
         // Take the toast out in a statement of its own: `dismiss` runs the
         // toast's dismissed handler at once, which borrows `toast_up`
@@ -2038,8 +2039,7 @@ impl CalendarView {
     /// The calendars a new event may go on, each with its account's
     /// address, as the sidebar lists them: only for an account whose
     /// provider offers a calendar and has not withheld it, so an IMAP
-    /// account or one waiting on the calendar permission offers neither
-    /// (ruling R8).
+    /// account or one waiting on the calendar permission offers neither.
     fn writable(&self) -> Vec<(AccountId, String, Calendar)> {
         let accounts = self.accounts.borrow();
         let mut writable = self

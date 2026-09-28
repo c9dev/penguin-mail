@@ -306,8 +306,7 @@ pub fn reminder_words(minutes: u32) -> String {
 /// three companions already exist in the template as the singular of a
 /// plural the invitation card counts with (`update-po.sh` refuses one
 /// msgid used both ways). A custom repeat is said the way the invitation
-/// card says a rule, `in_words`, so the two phrasings never drift apart
-/// (ruling R6).
+/// card says a rule, `in_words`, so the two phrasings never drift apart.
 pub fn repeat_words(repeat: &Repeat) -> String {
     let once = |one: &str, many: &str| fill_plural(one, many, 1, &[("count", "1")]);
     match repeat {
