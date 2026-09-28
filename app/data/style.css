@@ -631,3 +631,12 @@ popover.event-popover button.popover-open-mail {
   font-weight: 700;
   color: var(--accent-color);
 }
+/* "Show more" and "Show all": a small text link under the notes or the
+   guest list, not a filled pill. */
+popover.event-popover button.popover-more {
+  min-height: 0;
+  padding: 0;
+  font-size: 0.85em;
+  font-weight: 700;
+  color: var(--accent-color);
+}
