@@ -5,7 +5,8 @@ use mailrs_domain::Target;
 
 use super::fake::{
     ACCOUNT, ELSEWHERE, FakeWindow, Step, THREAD, body, html_body, invited, meta,
-    opened_cancellation, opened_invitation, opened_occurrence, portuguese, queued, row, spot, strip,
+    opened_cancellation, opened_invitation, opened_occurrence, opened_publish, personal, portuguese, queued, row,
+    spot, strip,
     with_inline_picture, with_picture,
 };
 use super::{Card, Event, Stale};
@@ -286,6 +287,49 @@ async fn a_series_for_a_thread_the_reader_left_goes_nowhere() {
     window.run().open(row(THREAD)).await;
     assert!(window.took(Step::Series));
     assert!(!window.took(Step::SeriesKnown));
+}
+
+#[tokio::test]
+async fn a_published_file_offers_the_calendars_to_add_it_to() {
+    let window = FakeWindow::with_body(invited());
+    window.with(|screen| screen.invitation = Ok(Some(opened_publish())));
+    window.run().open(row(THREAD)).await;
+    assert_eq!(
+        window.0.borrow().targets_shown,
+        [("kites@example.com".to_string(), vec![personal()])]
+    );
+}
+
+#[tokio::test]
+async fn a_request_asks_for_no_calendars_to_add_to() {
+    let window = FakeWindow::with_body(invited());
+    window.run().open(row(THREAD)).await;
+    assert!(!window.took(Step::AddTargets));
+}
+
+#[tokio::test]
+async fn an_account_with_no_calendar_leaves_the_card_to_hand_the_file_to_the_desktop() {
+    for targets in [Ok(Vec::new()), Err("offline".to_string())] {
+        let window = FakeWindow::with_body(invited());
+        window.with(|screen| {
+            screen.invitation = Ok(Some(opened_publish()));
+            screen.add_targets = targets;
+        });
+        window.run().open(row(THREAD)).await;
+        assert!(window.took(Step::AddTargets));
+        assert!(!window.took(Step::AddTargetsKnown));
+    }
+}
+
+#[tokio::test]
+async fn calendars_for_a_thread_the_reader_left_go_nowhere() {
+    let window = FakeWindow::with_body(invited());
+    window.with(|screen| {
+        screen.invitation = Ok(Some(opened_publish()));
+        screen.moves_on = Some(Step::AddTargets);
+    });
+    window.run().open(row(THREAD)).await;
+    assert!(!window.took(Step::AddTargetsKnown));
 }
 
 #[tokio::test]

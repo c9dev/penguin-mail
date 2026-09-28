@@ -19,7 +19,7 @@ use mailrs_sync::{Told, now_millis};
 use super::MainWindow;
 use crate::permission::{Occasion, Permission};
 use crate::ui::conversation::ConversationView;
-use crate::ui::invitation::{Action, Proposal};
+use crate::ui::invitation::{Action, AddTo, Proposal};
 use mailrs_domain::translate::{fill, gettext};
 
 impl MainWindow {
@@ -47,6 +47,7 @@ impl MainWindow {
             Action::Answer(answer, scope, note) => self.answer_invitation(view, answer, scope, note),
             Action::Propose(proposal) => self.propose_time(view, proposal),
             Action::AddToCalendar => self.add_to_calendar(view),
+            Action::Import(events, target) => self.import_events(view, events, target),
             Action::ShowInCalendar => self.show_in_calendar(view),
             Action::GrantAccess => self.grant_calendar_access(view),
         }
@@ -276,6 +277,41 @@ impl MainWindow {
                 }
             },
         );
+    }
+
+    /// Adds the events of a calendar file to the calendar the card's
+    /// picker named, and says on the card where they went.
+    fn import_events(self: &Rc<Self>, view: &Rc<ConversationView>, events: Vec<Invitation>, target: AddTo) {
+        let Some(uid) = view.with_invitation(|showing| showing.invitation.uid.clone()) else {
+            return;
+        };
+        let calendar = self.core.calendar();
+        let (this, view) = (Rc::clone(self), Rc::clone(view));
+        glib::spawn_future_local(async move {
+            let account_id = target.account_id;
+            let done = this
+                .core
+                .call(async move { calendar.import(account_id, Some(&target.calendar), &events).await })
+                .await;
+            match done {
+                Ok(mailrs_sync::Permitted::Done(added)) if added.spots.is_empty() => this.toast(&gettext(
+                    "Nothing in this file can be added, since its events have no id or start time",
+                )),
+                Ok(mailrs_sync::Permitted::Done(added)) => {
+                    view.events_added(&uid, &added.calendar, &added.spots);
+                    if added.skipped > 0 {
+                        this.toast(&gettext(
+                            "Some events were left out, since they have no id or start time",
+                        ));
+                    }
+                    this.calendar.reload();
+                }
+                Ok(mailrs_sync::Permitted::NeedsPermission) => {
+                    this.ask_permission(account_id, Permission::Calendar, Occasion::Offer);
+                }
+                Err(err) => this.failed(&gettext("Could not add to your calendar: {reason}"), &err),
+            }
+        });
     }
 
     /// Switches the main window to the calendar on the day of the event

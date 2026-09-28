@@ -63,6 +63,9 @@ impl Change {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Opened {
     pub invitation: Invitation,
+    /// The other events the same file lists, in order. A booking with an
+    /// outbound and a return leg holds two; a request holds one.
+    pub also: Vec<Invitation>,
     pub change: Option<Change>,
     /// The answer the user gave this version of the event, if they have.
     pub answer: Option<Answer>,
@@ -419,14 +422,17 @@ impl<A: Accounts> Invitations<A> {
         ics: &str,
         now: EpochMillis,
     ) -> Result<Option<Opened>, SyncError> {
-        let Some(invitation) = invitation::read(ics) else {
+        let mut events = invitation::read_all(ics).into_iter();
+        let Some(invitation) = events.next() else {
             return Ok(None);
         };
+        let also: Vec<Invitation> = events.collect();
         // An invitation with no UID is one nothing can be matched against,
         // and answering it would write over every other such event.
         if invitation.uid.trim().is_empty() {
             return Ok(Some(Opened {
                 invitation,
+                also,
                 change: None,
                 answer: None,
             }));
@@ -457,8 +463,12 @@ impl<A: Accounts> Invitations<A> {
                 ))
             })
             .await?;
+        // A file that only describes an event asks nothing of the reader,
+        // so a new version of it is not news.
+        let change = change.filter(|_| invitation.method != Method::Publish);
         Ok(Some(Opened {
             invitation,
+            also,
             change,
             answer,
         }))

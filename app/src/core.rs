@@ -556,6 +556,12 @@ impl Core {
         Arc::clone(&self.invitations)
     }
 
+    /// The account's calendars and the events on them, for what adds an
+    /// event on the person's word, such as a calendar file.
+    pub fn calendar(&self) -> Arc<mailrs_sync::Calendar<RunningEngine>> {
+        Arc::clone(&self.calendar)
+    }
+
     /// The messages waiting to go out: Send Later, and whatever could not
     /// be sent when it was written. See `mailrs_sync::Outbox`.
     pub fn outbox(&self) -> Arc<Waiting> {
