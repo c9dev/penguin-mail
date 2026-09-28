@@ -18,6 +18,7 @@ pub mod editor;
 pub mod holding;
 pub mod layout;
 pub mod month;
+pub mod next;
 pub mod popover;
 pub mod quick;
 pub mod range;
@@ -143,6 +144,9 @@ pub struct CalendarView {
     pub sidebar: gtk::Box,
     /// Shows the sidebar when the window is too narrow to keep it open.
     pub sidebar_button: gtk::ToggleButton,
+    /// Opens or closes the assistant beside the mail (R12). The window
+    /// binds it to the assistant panel's own toggle path.
+    pub assistant_toggle: gtk::ToggleButton,
     core: Rc<Core>,
     settings: Box<dyn Fn() -> Settings>,
     hooks: Hooks,
@@ -189,6 +193,10 @@ pub struct CalendarView {
     /// Below the width where the sidebar folds away, the header keeps
     /// the range's bold part only.
     compact: Cell<bool>,
+    /// The assistant's panel is open beside the calendar (R12), which
+    /// narrows the header the same way `compact` does, whatever the
+    /// window's own width.
+    assistant_beside: Cell<bool>,
     accounts: RefCell<Vec<CalendarAccount>>,
     calendars: RefCell<Calendars>,
     /// Counts every read, so each can tell whether a newer one replaced
@@ -331,6 +339,16 @@ impl CalendarView {
             .visible(false)
             .build();
         crate::ui::name(&sidebar_button, &gettext("Show Calendars"));
+        // The window binds this to the assistant panel's own open state
+        // (R12); it starts hidden until the window says the assistant is
+        // on.
+        let assistant_toggle = gtk::ToggleButton::builder()
+            .icon_name("penguin-mail-sparkle-symbolic")
+            .tooltip_text(gettext("Assistant (Ctrl+J)"))
+            .css_classes(["assistant-toggle"])
+            .visible(false)
+            .build();
+        crate::ui::name_with_shortcut(&assistant_toggle, &gettext("Assistant (Ctrl+J)"));
 
         let header = adw::HeaderBar::builder()
             .title_widget(&gtk::Box::new(gtk::Orientation::Horizontal, 0))
@@ -340,6 +358,11 @@ impl CalendarView {
         header.pack_start(&title);
         header.pack_start(&today_button);
         header.pack_start(&arrows);
+        // The assistant toggle sits at the header's outer right edge. Its
+        // own panel opening beside the calendar narrows the header the
+        // same way the window's compact width does (set_assistant_beside,
+        // style.css's .assistant-beside), so the switch still has room.
+        header.pack_end(&assistant_toggle);
         header.pack_end(&search_button);
         header.pack_end(&new_event);
         header.pack_end(&switch_slot);
@@ -470,6 +493,7 @@ impl CalendarView {
                 page,
                 sidebar,
                 sidebar_button,
+                assistant_toggle,
                 core,
                 settings: Box::new(settings),
                 hooks,
@@ -506,6 +530,7 @@ impl CalendarView {
                 }),
                 narrow: Cell::new(false),
                 compact: Cell::new(false),
+                assistant_beside: Cell::new(false),
                 accounts: RefCell::new(Vec::new()),
                 calendars: RefCell::new(HashMap::new()),
                 reads: Cell::new(0),
@@ -580,26 +605,10 @@ impl CalendarView {
                 view.settled_on(index);
             }
         });
-        // The tints are stronger in dark mode (tint.rs), and the rules key
-        // off this class.
-        let style = adw::StyleManager::default();
-        let page = view.page.downgrade();
-        let mark = move |style: &adw::StyleManager| {
-            let Some(page) = page.upgrade() else { return };
-            match style.is_dark() {
-                true => page.add_css_class("calendar-dark"),
-                false => page.remove_css_class("calendar-dark"),
-            }
-        };
-        mark(&style);
-        // The style manager lives as long as the process, and a window
-        // closed to the tray goes; the handler goes with the page.
-        let handler = RefCell::new(Some(style.connect_dark_notify(mark)));
-        view.page.connect_destroy(move |_| {
-            if let Some(handler) = handler.take() {
-                adw::StyleManager::default().disconnect(handler);
-            }
-        });
+        // The tints are stronger in dark mode (tint.rs), against the
+        // `app-dark` class the toplevel window carries
+        // (`ui::window::track_dark_class`), which reaches this page
+        // whichever window it sits in.
         // Redraws in the new clock as soon as the person flips GNOME's own
         // setting, not only the next time they navigate. Kept in
         // `clock_watch` for as long as the view lives, which is what
@@ -880,6 +889,21 @@ impl CalendarView {
         self.show_range();
     }
 
+    /// Answers the assistant's panel opening beside the calendar (R12):
+    /// the header narrows the same way `set_compact` does, at any window
+    /// width, since the panel takes room from the same card.
+    pub fn set_assistant_beside(&self, beside: bool) {
+        if beside == self.assistant_beside.get() {
+            return;
+        }
+        self.assistant_beside.set(beside);
+        match beside {
+            true => self.page.add_css_class("assistant-beside"),
+            false => self.page.remove_css_class("assistant-beside"),
+        }
+        self.show_range();
+    }
+
     /// Opens the search and puts the cursor in it.
     pub fn focus_search(&self) {
         self.search_bar.set_search_mode(true);
@@ -962,7 +986,7 @@ impl CalendarView {
         self.title_bold.set_label(&bold);
         self.title_dim.set_label(&dim);
         self.title_week.set_label(&week);
-        let roomy = !self.compact.get() && !self.narrow.get();
+        let roomy = !self.compact.get() && !self.narrow.get() && !self.assistant_beside.get();
         self.title_dim.set_visible(roomy);
         self.title_week.set_visible(!week.is_empty() && roomy);
         let (back, forward) = shown::arrow_names(showing);

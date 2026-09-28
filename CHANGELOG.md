@@ -7,6 +7,10 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### New
 
+- The earlier messages quoted under a reply or forward fold away behind
+  a small "•••" button, as in Gmail; click it to read them in place.
+- An invitation's card shows the hours around the meeting from your
+  calendar and says whether anything else is on then.
 - Remove an invitation from your calendar with Remove in its popover or
   the Delete key. The organizer sees that you declined, and nobody else
   gets mail about it. Edit in the same popover changes your own
@@ -52,6 +56,10 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - Show in Calendar on an invitation opens the calendar on that day, with
   the event's details open. Its popover offers Open the invitation in
   Mail back to the message it arrived in.
+- A Summarize button above a conversation asks the assistant for a
+  summary, when the assistant is set up.
+- The next event on your calendar shows at the foot of the mail sidebar
+  from three hours before it starts; a click opens it in the calendar.
 - An event's popover shows its notes under the place, as readable text
   with clickable links, and a repeating event says when, such as
   "Weekly on Wednesday". Its guest list shows every guest's own answer
@@ -63,6 +71,17 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Improved
 
+- An invitation's card now sits inside its message, under the sender and
+  above the text, and scrolls with it.
+- The mailboxes sit in their own rounded panel under Favorites,
+  Mailboxes and Accounts, and the one you are in is tinted with your
+  accent color.
+- A plain-text message sits on the page, lined up with the sender's
+  avatar, with no grey box around it. HTML mail keeps its white sheet.
+- The inbox categories are chips: the one you are in shows its name on
+  an accent pill, and the others show their unread count on the corner.
+- The conversation you are reading is a tinted card in the list, and an
+  invitation you have opened shows a calendar mark on its row.
 - In Month, an event over several days draws as one bar across them, and
   a busy week gets more room than an empty one before it folds into "N
   more".
@@ -91,6 +110,14 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   Escape there throws the whole edit away.
 - With Claude Opus 5 or newer, translating a message and reading an unsubscribe
   page take less time, because those quick jobs no longer think at length.
+- The buttons above a conversation sit in rounded groups: replying,
+  filing, moving and flagging.
+- Undo Send sits at the foot of the sidebar with the seconds left. In a
+  window too narrow for the sidebar it stays a toast.
+- The message header is shorter: who sent it, who it went to, and
+  Details for the rest.
+- A sparkle button beside More opens the assistant from the reading
+  pane, and the calendar's header carries the same button.
 - The Day, Week and Month grids shade the hours and days outside your
   working hours, which you set in Preferences next to Event Reminders.
   The assistant's free-time tool now looks inside the same hours.
@@ -164,6 +191,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - `penguin-mail --demo`'s sample invitation keeps its series ending on
   the same time of day it started; the clocks going back used to move
   it an hour earlier.
+- Send Later, Remind Me and Follow Up stay listed in the sidebar when
+  empty, so the rows below them no longer jump.
 - Dragging across empty time on the calendar stays in the day and column
   where it started, instead of scrolling the grid and offering to create
   an event that ran off the end of the wrong day.

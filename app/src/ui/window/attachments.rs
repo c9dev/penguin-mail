@@ -349,6 +349,7 @@ impl MainWindow {
             .title(&attachment.filename)
             .content(&toolbar)
             .build();
+        super::track_dark_class(&window);
 
         let source = path.clone();
         let this = Rc::clone(self);

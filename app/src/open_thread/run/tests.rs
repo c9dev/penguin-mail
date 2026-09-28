@@ -5,7 +5,7 @@ use mailrs_domain::Target;
 
 use super::fake::{
     ACCOUNT, ELSEWHERE, FakeWindow, Step, THREAD, body, html_body, invited, meta,
-    opened_cancellation, opened_invitation, opened_occurrence, portuguese, queued, row, spot,
+    opened_cancellation, opened_invitation, opened_occurrence, portuguese, queued, row, spot, strip,
     with_inline_picture, with_picture,
 };
 use super::{Card, Event, Stale};
@@ -207,6 +207,32 @@ async fn an_invitation_goes_on_the_card_with_what_else_is_on() {
     );
     assert!(screen.steps.contains(&Step::OfferCalendarAccess));
     assert!(screen.steps.contains(&Step::Clashes));
+}
+
+/// The card sits inside the message that carries the invitation, between
+/// its header and its body, even when a later reply is the newest message.
+#[tokio::test]
+async fn an_invitation_s_card_sits_in_the_message_that_carries_it() {
+    let window = FakeWindow::with_body(invited());
+    window.with(|screen| {
+        let thread = vec![meta("m1", true), meta("m2", true)];
+        if let Some(stored) = screen.stored.get_mut(THREAD) {
+            stored.messages = thread.clone();
+        }
+        screen.messages = thread;
+        screen.gmail.insert("m2".to_string(), body("Count me in."));
+    });
+    window.run().open(row(THREAD)).await;
+    let screen = window.0.borrow();
+    let page = screen.document.as_ref().expect("a page").html("");
+    assert_eq!(page.matches("class=\"event-slot\"").count(), 1);
+    let slot = page.find("class=\"event-slot\"").expect("the card's place");
+    let first = page.find("id=\"m-m1\"").expect("the invitation");
+    let second = page.find("id=\"m-m2\"").expect("the reply");
+    assert!(
+        first < slot && slot < second,
+        "the place is in the message with the invitation"
+    );
 }
 
 #[tokio::test]
@@ -896,4 +922,75 @@ async fn the_words_of_an_html_message_come_from_its_cleaned_body() {
         matches!(last, Some(Card::Offered { from: Some(from), .. }) if from.code == "pt"),
         "{last:?}"
     );
+}
+
+#[tokio::test]
+async fn a_synced_calendar_draws_the_hours_around_the_invitation() {
+    let window = FakeWindow::with_body(invited());
+    window.with(|screen| screen.strip = Ok(Some(strip())));
+    window.run().open(row(THREAD)).await;
+    assert_eq!(
+        window.0.borrow().strips,
+        [("kites@example.com".to_string(), strip())]
+    );
+    assert!(!window.took(Step::Busy), "the strip already says what else is on");
+}
+
+#[tokio::test]
+async fn without_a_synced_calendar_the_clash_line_stays() {
+    for found in [Ok(None), Err("the store is busy".to_string())] {
+        let window = FakeWindow::with_body(invited());
+        window.with(|screen| screen.strip = found);
+        window.run().open(row(THREAD)).await;
+        assert!(window.took(Step::Strip));
+        assert!(!window.took(Step::StripKnown));
+        assert!(window.took(Step::Busy));
+    }
+}
+
+#[tokio::test]
+async fn an_answered_invitation_still_draws_its_hours() {
+    let window = FakeWindow::with_body(invited());
+    window.with(|screen| {
+        screen.invitation = Ok(Some(mailrs_sync::Opened {
+            answer: Some(mailrs_domain::invitation::Answer::Yes),
+            ..opened_invitation()
+        }));
+        screen.strip = Ok(Some(strip()));
+    });
+    window.run().open(row(THREAD)).await;
+    assert!(window.took(Step::StripKnown));
+    assert!(!window.took(Step::Busy));
+}
+
+#[tokio::test]
+async fn a_cancellation_draws_no_hours() {
+    let window = FakeWindow::with_body(invited());
+    window.with(|screen| screen.invitation = Ok(Some(opened_cancellation())));
+    window.run().open(row(THREAD)).await;
+    assert!(!window.took(Step::Strip));
+}
+
+#[tokio::test]
+async fn the_hours_follow_the_occurrence_show_in_calendar_opens() {
+    let window = FakeWindow::with_body(invited());
+    window.with(|screen| screen.on_calendar = Ok(Some(spot())));
+    window.run().open(row(THREAD)).await;
+    assert_eq!(window.0.borrow().strip_asked, [Some(spot().start)]);
+
+    let window = FakeWindow::with_body(invited());
+    window.run().open(row(THREAD)).await;
+    assert_eq!(window.0.borrow().strip_asked, [None], "without a spot, the invitation's own start");
+}
+
+#[tokio::test]
+async fn hours_for_a_thread_the_reader_left_go_nowhere() {
+    let window = FakeWindow::with_body(invited());
+    window.with(|screen| {
+        screen.strip = Ok(Some(strip()));
+        screen.moves_on = Some(Step::Strip);
+    });
+    window.run().open(row(THREAD)).await;
+    assert!(window.took(Step::Strip));
+    assert!(!window.took(Step::StripKnown));
 }

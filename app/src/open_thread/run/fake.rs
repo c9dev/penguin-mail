@@ -15,7 +15,8 @@ use std::rc::Rc;
 use futures::channel::oneshot;
 use mailrs_domain::invitation::Invitation;
 use mailrs_domain::{
-    AccountId, Address, FlagColor, Memberships, MessageBody, MessageMeta, Target, ThreadSummary,
+    AccountId, Address, EpochMillis, FlagColor, Memberships, MessageBody, MessageMeta, Target,
+    ThreadSummary,
 };
 use mailrs_store::outbox::Queued;
 use mailrs_sync::{Opened, Spot};
@@ -26,6 +27,7 @@ use crate::protection::Read;
 use crate::render::Theme;
 use crate::translation::{self, Language, Prose, Translation};
 use crate::ui::invitation::Showing;
+use crate::ui::invitation::strip::{Strip, Verdict};
 use crate::wanted::Screen as OnScreen;
 
 /// The account and thread every fixture belongs to.
@@ -60,6 +62,8 @@ pub enum Step {
     SeriesKnown,
     OnCalendar,
     OnCalendarKnown,
+    Strip,
+    StripKnown,
     Engines,
     Card,
     Sleep,
@@ -101,6 +105,12 @@ pub struct Screen {
     pub on_calendar: Result<Option<Spot>, String>,
     /// The spots put on the card, with the UID each was for.
     pub spots: Vec<(String, Spot)>,
+    /// What the calendar's copy gives for the hours around the invitation.
+    pub strip: Result<Option<Strip>, String>,
+    /// The start each strip was asked around, when a spot gave one.
+    pub strip_asked: Vec<Option<EpochMillis>>,
+    /// The strips put on the card, with the UID each was for.
+    pub strips: Vec<(String, Strip)>,
     /// The invitation on the card while it offers no Show in Calendar.
     pub off_calendar: Option<Invitation>,
     pub flag_color: Option<FlagColor>,
@@ -245,6 +255,17 @@ pub fn spot() -> Spot {
     }
 }
 
+/// The hours around the fixture meeting, with nothing else on.
+pub fn strip() -> Strip {
+    Strip {
+        heading: "Your morning".to_string(),
+        hours: Vec::new(),
+        blocks: Vec::new(),
+        lanes: 1,
+        verdict: Verdict::Free,
+    }
+}
+
 /// What reading a cancellation of the fixture meeting gives back.
 pub fn opened_cancellation() -> Opened {
     let ics = ics().replace("METHOD:REQUEST", "METHOD:CANCEL");
@@ -352,6 +373,9 @@ impl FakeWindow {
             series_lines: Vec::new(),
             on_calendar: Ok(None),
             spots: Vec::new(),
+            strip: Ok(None),
+            strip_asked: Vec::new(),
+            strips: Vec::new(),
             off_calendar: None,
             flag_color: Some(FlagColor::Orange),
             queued: HashMap::new(),
@@ -437,6 +461,7 @@ impl FakeWindow {
         let theme = Theme {
             dark: false,
             accent: "#3584e4".to_string(),
+            summarize: false,
         };
         self.with(
             |screen| match screen.open.as_mut().map(|open| open.page(&theme)) {
@@ -688,6 +713,20 @@ impl Effects for FakeWindow {
         Box::pin(async move { found })
     }
 
+    fn strip(
+        &self,
+        _account_id: AccountId,
+        _invitation: Invitation,
+        at: Option<EpochMillis>,
+    ) -> Answer<'_, Result<Option<Strip>, String>> {
+        self.reached(Step::Strip);
+        let found = self.with(|screen| {
+            screen.strip_asked.push(at);
+            screen.strip.clone()
+        });
+        Box::pin(async move { found })
+    }
+
     fn flag_color(
         &self,
         _account_id: AccountId,
@@ -771,7 +810,9 @@ impl Effects for FakeWindow {
     }
 
     fn show_invitation(&self, showing: Option<Showing>) {
-        self.reached(Step::ShowInvitation);
+        let at = showing.as_ref().map(|showing| showing.message_id.clone());
+        self.change(Step::ShowInvitation, |open| open.take_invitation_place(at));
+        self.draw();
         self.with(|screen| {
             screen
                 .invitations
@@ -799,6 +840,11 @@ impl Effects for FakeWindow {
             screen.spots.push((uid, spot));
             screen.off_calendar = None;
         });
+    }
+
+    fn strip_known(&self, uid: String, strip: Strip) {
+        self.reached(Step::StripKnown);
+        self.with(|screen| screen.strips.push((uid, strip)));
     }
 
     fn start_engines(&self) {

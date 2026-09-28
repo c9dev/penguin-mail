@@ -214,6 +214,9 @@ impl MainWindow {
         {
             self.calendar.reload();
         }
+        if refreshed.events > 0 {
+            self.refresh_next_event();
+        }
         for turned_down in &refreshed.turned_down {
             self.say_turned_down(turned_down.clone());
         }

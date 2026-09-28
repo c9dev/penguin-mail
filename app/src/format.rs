@@ -253,23 +253,6 @@ pub fn event_moved_from(was: EpochMillis, all_day: bool, now: DateTime<Local>) -
     }
 }
 
-/// The month and day for the card's date tile: ("JUN", "9").
-pub fn event_tile(when: &When) -> (String, String) {
-    let day = match when {
-        When::Days { first, .. } => *first,
-        When::At { starts_at, .. } => match local(*starts_at) {
-            Some(start) => start.date_naive(),
-            None => return (String::new(), String::new()),
-        },
-    };
-    (
-        day.format_localized("%b", date_locale())
-            .to_string()
-            .to_uppercase(),
-        day.format("%-d").to_string(),
-    )
-}
-
 pub fn human_size(bytes: i64) -> String {
     const UNITS: [&str; 3] = ["KB", "MB", "GB"];
     if bytes < 1024 {
@@ -442,11 +425,6 @@ mod tests {
             full_date(at(2026, 9, 3, 14, 32)),
             "quinta, 3 setembro 2026 at 14:32"
         );
-        let (month, _) = event_tile(&When::At {
-            starts_at: at_local(2026, 2, 9, 15, 0),
-            ends_at: None,
-        });
-        assert_eq!(month, "FEV");
     }
 
     #[test]
@@ -550,15 +528,6 @@ mod tests {
             event_moved_from(at_local(2026, 9, 22, 0, 0), true, now),
             "Tuesday"
         );
-    }
-
-    #[test]
-    fn the_date_tile_holds_a_month_and_a_day() {
-        let (month, day) = event_tile(&When::At {
-            starts_at: at_local(2026, 6, 9, 15, 0),
-            ends_at: None,
-        });
-        assert_eq!((month.as_str(), day.as_str()), ("JUN", "9"));
     }
 
     #[test]

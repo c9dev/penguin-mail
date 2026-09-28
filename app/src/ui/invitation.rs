@@ -5,6 +5,9 @@
 //! user who declines the calendar permission still has Google's own Yes,
 //! No and Maybe links there.
 
+mod outline;
+pub mod strip;
+
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
@@ -14,7 +17,9 @@ use mailrs_domain::invitation::{Answer, Invitation, Method, Scope, When};
 use mailrs_domain::{Address, EpochMillis};
 use mailrs_sync::{Change, Spot};
 
-use crate::format::{event_moved_from, event_tile, event_when};
+use crate::format::{event_moved_from, event_when};
+use crate::ui::calendar::tint;
+use strip::Strip;
 use crate::ui::name;
 use mailrs_domain::translate::{fill, fill_plural, gettext};
 
@@ -48,6 +53,8 @@ pub enum Proposal {
 /// One invitation as the card shows it.
 #[derive(Clone)]
 pub struct Showing {
+    /// The message that carries the invitation, which the card sits in.
+    pub message_id: String,
     pub invitation: Invitation,
     pub change: Option<Change>,
     /// The answer the user already sent, if any. It wins over the guest
@@ -88,17 +95,25 @@ struct Attending {
 pub struct EventCard {
     pub widget: gtk::Box,
     news: gtk::Label,
-    month: gtk::Label,
-    day: gtk::Label,
+    /// The bar in the event's calendar colour, beside the title.
+    bar: gtk::Box,
     title: gtk::Label,
+    /// When the event runs and where, on one line.
     when: gtk::Label,
-    repeats: gtk::Label,
+    /// How the series runs and who organizes it, on one line.
+    meta: gtk::Label,
     /// What else the user has on while the event runs.
     clash: gtk::Label,
-    location: gtk::Label,
-    organizer: gtk::Label,
-    guests: gtk::Expander,
+    /// The guest count, which opens the guest list.
+    guests: gtk::MenuButton,
+    guests_label: gtk::Label,
     guest_list: gtk::Box,
+    /// The hours around the event, which take the clash line's place once
+    /// the calendar's copy has them.
+    strip: gtk::Box,
+    strip_heading: gtk::Label,
+    strip_verdict: gtk::Label,
+    strip_grid: gtk::Grid,
     answers: gtk::Box,
     buttons: Vec<(Answer, gtk::ToggleButton)>,
     add: gtk::Button,
@@ -128,10 +143,26 @@ pub struct EventCard {
     /// What the card shows now. The window reads it back to answer the
     /// invitation, so the card is the one place that holds it.
     showing: RefCell<Option<Showing>>,
+    /// The hours around the event, kept so an answer can draw them again
+    /// with this meeting solid.
+    strip_shown: RefCell<Option<Strip>>,
     /// Set while the card fills its buttons in, so setting one does not
     /// look like the user pressing it.
     filling: Cell<bool>,
 }
+
+/// Whether a block on the strip draws dashed: the calendar's sign for a
+/// meeting the person has not answered, so only this meeting, and only
+/// until an answer exists.
+fn dashed(this: bool, answer: Option<Answer>) -> bool {
+    this && answer.is_none()
+}
+
+/// The answers in the order the card offers them.
+const ANSWERS: [Answer; 3] = [Answer::Yes, Answer::Maybe, Answer::No];
+
+/// What goes between two parts of one line on the card.
+const DOT: &str = " · ";
 
 impl EventCard {
     pub fn new(on_action: impl Fn(Action) + 'static) -> Rc<EventCard> {
@@ -145,60 +176,88 @@ impl EventCard {
                 .build()
         };
 
-        let month = gtk::Label::builder()
-            .css_classes(["invitation-month"])
-            .build();
-        let day = gtk::Label::builder()
-            .css_classes(["invitation-day"])
-            .build();
-        let tile = gtk::Box::builder()
-            .orientation(gtk::Orientation::Vertical)
+        let bar = gtk::Box::builder()
             .valign(gtk::Align::Start)
-            .css_classes(["invitation-tile"])
+            .css_classes(["invitation-bar", "cal-accent"])
             .build();
-        tile.append(&month);
-        tile.append(&day);
 
-        let title = label(&["title-3"]);
+        let title = label(&["invitation-title"]);
         let when = label(&["invitation-when"]);
-        let repeats = label(&["dim-label", "caption"]);
-        let clash = label(&["invitation-clash", "caption"]);
-        let location = label(&["dim-label"]);
-        let organizer = label(&["dim-label", "caption"]);
-        let details = gtk::Box::builder()
-            .orientation(gtk::Orientation::Vertical)
-            .spacing(2)
-            .hexpand(true)
+        // One line, as the mockup has it: a narrow card cuts the series
+        // and the organizer short rather than pushing the guest count
+        // under them.
+        let meta = gtk::Label::builder()
+            .xalign(0.0)
+            .ellipsize(gtk::pango::EllipsizeMode::End)
+            .css_classes(["invitation-meta"])
             .build();
-        for widget in [&title, &when, &repeats, &clash, &location] {
-            details.append(widget);
-        }
-
-        let head = gtk::Box::builder().spacing(14).build();
-        head.append(&tile);
-        head.append(&details);
+        let clash = label(&["invitation-clash"]);
 
         let guest_list = gtk::Box::builder()
             .orientation(gtk::Orientation::Vertical)
-            .spacing(2)
+            .spacing(4)
             .margin_top(6)
-            .margin_start(4)
+            .margin_bottom(6)
+            .margin_start(8)
+            .margin_end(8)
             .build();
-        let guests = gtk::Expander::builder()
-            .use_markup(false)
-            .child(&guest_list)
+        // A label of its own as the child keeps the menu button from
+        // drawing an arrow, which the mockup's line has none of.
+        let guests_label = gtk::Label::new(None);
+        let guests = gtk::MenuButton::builder()
+            .child(&guests_label)
+            .css_classes(["flat", "invitation-guests"])
+            .popover(
+                &gtk::Popover::builder()
+                    .child(&guest_list)
+                    .has_arrow(true)
+                    .build(),
+            )
             .build();
+        let meta_row = gtk::Box::builder()
+            .spacing(4)
+            .css_classes(["invitation-meta-row"])
+            .build();
+        meta_row.append(&meta);
+        meta_row.append(&guests);
+
+        let strip_heading = gtk::Label::builder()
+            .xalign(0.0)
+            .hexpand(true)
+            .css_classes(["strip-heading"])
+            .build();
+        let strip_verdict = gtk::Label::builder()
+            .css_classes(["strip-verdict"])
+            .build();
+        let strip_top = gtk::Box::builder().spacing(8).build();
+        strip_top.append(&strip_heading);
+        strip_top.append(&strip_verdict);
+        let strip_grid = gtk::Grid::builder()
+            .column_homogeneous(true)
+            .overflow(gtk::Overflow::Hidden)
+            .css_classes(["strip-grid"])
+            .build();
+        let strip = gtk::Box::builder()
+            .orientation(gtk::Orientation::Vertical)
+            .spacing(5)
+            .visible(false)
+            .css_classes(["day-strip"])
+            .accessible_role(gtk::AccessibleRole::Group)
+            .build();
+        strip.append(&strip_top);
+        strip.append(&strip_grid);
 
         let answers = gtk::Box::builder()
-            .spacing(0)
-            .margin_top(4)
-            .css_classes(["linked"])
+            .spacing(8)
             .accessible_role(gtk::AccessibleRole::Group)
             .build();
         name(&answers, &gettext("Answer"));
         let mut buttons = Vec::new();
-        for answer in Answer::ALL {
-            let button = gtk::ToggleButton::builder().label(answer.label()).build();
+        for answer in ANSWERS {
+            let button = gtk::ToggleButton::builder()
+                .label(answer.label())
+                .css_classes(["invitation-answer"])
+                .build();
             answers.append(&button);
             buttons.push((answer, button));
         }
@@ -228,7 +287,7 @@ impl EventCard {
             .build();
         let propose = gtk::MenuButton::builder()
             .label(gettext("Propose New Time"))
-            .css_classes(["flat"])
+            .css_classes(["flat", "invitation-quiet"])
             .popover(
                 &gtk::Popover::builder()
                     .child(&proposals)
@@ -237,15 +296,30 @@ impl EventCard {
             )
             .build();
         let add = gtk::Button::builder()
-            .label(gettext("Add to Calendar"))
-            .css_classes(["flat"])
+            .child(
+                &adw::ButtonContent::builder()
+                    .icon_name("penguin-mail-calendar-symbolic")
+                    .label(gettext("Add to Calendar"))
+                    .build(),
+            )
+            .css_classes(["invitation-pill"])
             .build();
+        name(&add, &gettext("Add to Calendar"));
         let show_in_calendar = gtk::Button::builder()
-            .label(gettext("Show in Calendar"))
-            .css_classes(["flat"])
+            .child(
+                &adw::ButtonContent::builder()
+                    .icon_name("penguin-mail-calendar-symbolic")
+                    .label(gettext("Show in Calendar"))
+                    .build(),
+            )
+            .css_classes(["invitation-pill"])
             .visible(false)
             .build();
-        let actions = gtk::Box::builder().spacing(8).margin_top(6).build();
+        name(&show_in_calendar, &gettext("Show in Calendar"));
+        let actions = gtk::Box::builder()
+            .spacing(8)
+            .css_classes(["invitation-actions"])
+            .build();
         actions.append(&answers);
         actions.append(&reach);
         let spacer = gtk::Box::builder().hexpand(true).build();
@@ -264,21 +338,20 @@ impl EventCard {
             .xalign(0.0)
             .wrap(true)
             .visible(false)
-            .css_classes(["dim-label", "caption"])
+            .css_classes(["invitation-meta"])
             .build();
 
         // Without the calendar permission the event never reaches the
         // Calendar space, so Show in Calendar has nothing to show.
         let access = gtk::Box::builder()
             .spacing(8)
-            .margin_top(4)
             .visible(false)
             .build();
         let told = gtk::Label::builder()
             .xalign(0.0)
             .wrap(true)
             .hexpand(true)
-            .css_classes(["dim-label", "caption"])
+            .css_classes(["invitation-meta"])
             .label(gettext("Penguin Mail needs permission to show this event in Calendar."))
             .build();
         let grant = gtk::Button::builder()
@@ -288,20 +361,39 @@ impl EventCard {
         access.append(&told);
         access.append(&grant);
 
+        // Everything but the bar sits in one column, 12 px right of it,
+        // as the mockup lines the title, the strip and the buttons up.
+        let column = gtk::Box::builder()
+            .orientation(gtk::Orientation::Vertical)
+            .hexpand(true)
+            .css_classes(["invitation-column"])
+            .build();
+        for widget in [
+            title.upcast_ref::<gtk::Widget>(),
+            when.upcast_ref(),
+            meta_row.upcast_ref(),
+            clash.upcast_ref(),
+            strip.upcast_ref(),
+            actions.upcast_ref(),
+            went.upcast_ref(),
+            access.upcast_ref(),
+        ] {
+            column.append(widget);
+        }
+        let head = gtk::Box::builder().spacing(12).build();
+        head.append(&bar);
+        head.append(&column);
+
         let inside = gtk::Box::builder()
             .orientation(gtk::Orientation::Vertical)
-            .spacing(6)
-            .css_classes(["card", "invitation-card"])
+            .spacing(12)
+            .css_classes(["invitation-card"])
             .accessible_role(gtk::AccessibleRole::Group)
             .build();
-        name(&inside, &gettext("Invitation"));
+        // No name of its own: the page's slot the card sits in already
+        // says "Invitation", and a screen reader would say it twice.
         inside.append(&news);
         inside.append(&head);
-        inside.append(&organizer);
-        inside.append(&guests);
-        inside.append(&actions);
-        inside.append(&went);
-        inside.append(&access);
 
         let widget = gtk::Box::builder()
             .orientation(gtk::Orientation::Vertical)
@@ -313,16 +405,18 @@ impl EventCard {
         let card = Rc::new(EventCard {
             widget,
             news,
-            month,
-            day,
+            bar,
             title,
             when,
-            repeats,
+            meta,
             clash,
-            location,
-            organizer,
             guests,
+            guests_label,
             guest_list,
+            strip,
+            strip_heading,
+            strip_verdict,
+            strip_grid,
             answers,
             buttons,
             add,
@@ -335,6 +429,7 @@ impl EventCard {
             scope: Cell::new(Scope::Occurrence),
             went,
             showing: RefCell::new(None),
+            strip_shown: RefCell::new(None),
             filling: Cell::new(false),
         });
 
@@ -377,6 +472,7 @@ impl EventCard {
 
     /// Fills the card from an invitation and shows it.
     pub fn show(&self, showing: Showing) {
+        *self.strip_shown.borrow_mut() = None;
         self.draw(&showing);
         *self.showing.borrow_mut() = Some(showing);
     }
@@ -384,6 +480,7 @@ impl EventCard {
     pub fn hide(&self) {
         self.widget.set_visible(false);
         *self.showing.borrow_mut() = None;
+        *self.strip_shown.borrow_mut() = None;
     }
 
     /// Reads what the card shows. `None` means no invitation is on screen.
@@ -414,6 +511,94 @@ impl EventCard {
         }
     }
 
+    /// Puts the hours around the event on the card in place of the clash
+    /// line: the account's other events as tinted blocks, this one
+    /// dashed, hairlines on the hours, and one line saying whether the
+    /// hour is free. The bar beside the title takes the colour of the
+    /// calendar that holds the event.
+    pub fn set_strip(&self, uid: &str, strip: &Strip) {
+        if !self.shows(uid) {
+            return;
+        }
+        *self.strip_shown.borrow_mut() = Some(strip.clone());
+        let answer = self.with_showing(|showing| showing.answer).flatten();
+        self.draw_strip(strip, answer);
+    }
+
+    /// Draws `strip`, with this meeting dashed until `answer` holds one,
+    /// as the calendar draws an event the person has not answered.
+    fn draw_strip(&self, strip: &Strip, answer: Option<Answer>) {
+        self.clash.set_visible(false);
+        self.strip_heading.set_label(&strip.heading);
+        name(&self.strip, &strip.heading);
+        self.strip_verdict.set_label(&strip.verdict.words());
+        self.strip_verdict
+            .set_css_classes(&["strip-verdict", strip.verdict.tone()]);
+        while let Some(child) = self.strip_grid.first_child() {
+            self.strip_grid.remove(&child);
+        }
+        let rows = strip.lanes as i32;
+        let marks: Vec<i32> = strip
+            .hours
+            .iter()
+            .map(|(at, _)| strip::columns(*at, *at).0)
+            .collect();
+        // One cell per quarter hour holds the grid's width where no event
+        // sits; a cell that starts an hour draws its hairline.
+        for column in 0..strip::COLUMNS {
+            let cell = gtk::Box::builder()
+                .hexpand(true)
+                .css_classes(["strip-cell"])
+                .build();
+            if marks.contains(&column) {
+                cell.add_css_class("hour");
+            }
+            self.strip_grid.attach(&cell, column, 0, 1, rows + 1);
+        }
+        for ((_, hour), column) in strip.hours.iter().zip(&marks) {
+            let label = gtk::Label::builder()
+                .label(hour)
+                .xalign(0.0)
+                .valign(gtk::Align::End)
+                .css_classes(["strip-hour"])
+                .build();
+            self.strip_grid.attach(&label, *column, rows, 4, 1);
+        }
+        let mut colours = Vec::new();
+        for block in &strip.blocks {
+            let (column, span) = strip::columns(block.from, block.to);
+            colours.push(block.colour.clone());
+            let is_dashed = dashed(block.this, answer);
+            let outline = is_dashed.then(|| outline::colour_of(&block.colour));
+            let card = outline::Outlined::new(6, outline);
+            card.set_css_classes(&["event-block", "strip-block", &tint::css_class(&block.colour)]);
+            if block.lane == 0 {
+                card.add_css_class("first");
+            }
+            if is_dashed {
+                card.add_css_class("unanswered");
+            } else {
+                card.append(&gtk::Box::builder().css_classes(["bar"]).build());
+            }
+            card.append(
+                &gtk::Label::builder()
+                    .label(&block.title)
+                    .xalign(0.0)
+                    .ellipsize(gtk::pango::EllipsizeMode::End)
+                    .single_line_mode(true)
+                    .build(),
+            );
+            self.strip_grid
+                .attach(&card, column, block.lane as i32, span, 1);
+            if block.this {
+                self.bar
+                    .set_css_classes(&["invitation-bar", &tint::css_class(&block.colour)]);
+            }
+        }
+        tints(&colours);
+        self.strip.set_visible(true);
+    }
+
     /// Says how the series runs, in the line a repeating invitation's rule
     /// fills. An invitation to one occurrence has no rule of its own, so
     /// the line comes from the calendar after the card is up.
@@ -423,10 +608,15 @@ impl EventCard {
         if !self.shows(uid) {
             return;
         }
-        if let Some(showing) = self.showing.borrow_mut().as_mut() {
-            showing.invitation.repeats = Some(line.clone());
-        }
-        set_line(&self.repeats, Some(line));
+        let updated = {
+            let mut held = self.showing.borrow_mut();
+            let Some(showing) = held.as_mut() else {
+                return;
+            };
+            showing.invitation.repeats = Some(line);
+            showing.clone()
+        };
+        self.fill_meta(&updated);
     }
 
     /// Offers Show in Calendar for the invitation `uid`, now that the
@@ -482,6 +672,10 @@ impl EventCard {
             showing.clone()
         };
         self.draw(&updated);
+        let strip = self.strip_shown.borrow().clone();
+        if let Some(strip) = strip {
+            self.draw_strip(&strip, answer);
+        }
     }
 
     fn draw(&self, showing: &Showing) {
@@ -492,25 +686,12 @@ impl EventCard {
         } else {
             event.summary.clone()
         });
-        match &event.when {
-            Some(when) => {
-                let (month, day) = event_tile(when);
-                self.month.set_text(&month);
-                self.day.set_text(&day);
-                self.when.set_text(&event_when(when, now));
-                self.when.set_visible(true);
-            }
-            None => {
-                self.month.set_text("");
-                self.day.set_text("?");
-                self.when.set_visible(false);
-            }
-        }
-        set_line(&self.repeats, event.repeats.clone());
+        let when = event.when.as_ref().map(|when| event_when(when, now));
+        set_line(&self.when, Some(joined(&[when, event.location.clone()])));
+        self.bar.set_css_classes(&["invitation-bar", "cal-accent"]);
         self.clash.set_visible(false);
-        set_line(&self.location, event.location.clone());
-        set_line(&self.organizer, organizer_line(event));
-        self.fill_guests(showing);
+        self.strip.set_visible(false);
+        self.fill_meta(showing);
         self.went.set_visible(false);
         self.access.set_visible(false);
         set_line(&self.news, news(showing, now));
@@ -531,14 +712,26 @@ impl EventCard {
         self.widget.set_visible(true);
     }
 
+    /// The line under the time: how the series runs, who organizes it,
+    /// and how many guests said yes, which opens the guest list.
+    fn fill_meta(&self, showing: &Showing) {
+        let mut line = joined(&[
+            showing.invitation.repeats.clone(),
+            organizer_line(&showing.invitation),
+        ]);
+        if self.fill_guests(showing) && !line.is_empty() {
+            line.push_str(DOT.trim_end());
+        }
+        set_line(&self.meta, Some(line));
+    }
+
     /// Puts the pressed look on one answer and takes it off the others.
     fn mark(&self, answer: Option<Answer>) {
         self.filling.set(true);
         for (button_answer, button) in &self.buttons {
-            let chosen = Some(*button_answer) == answer;
-            button.set_active(chosen);
+            button.set_active(Some(*button_answer) == answer);
             button.remove_css_class("suggested-action");
-            if chosen {
+            if filled(*button_answer, answer) {
                 button.add_css_class("suggested-action");
             }
         }
@@ -581,17 +774,21 @@ impl EventCard {
         self.propose.set_visible(true);
     }
 
-    fn fill_guests(&self, showing: &Showing) {
+    /// Fills the guest list, and answers whether there is one to offer.
+    fn fill_guests(&self, showing: &Showing) -> bool {
         while let Some(child) = self.guest_list.first_child() {
             self.guest_list.remove(&child);
         }
         let attending = attending(showing);
         if attending.is_empty() {
             self.guests.set_visible(false);
-            return;
+            return false;
         }
         self.guests.set_visible(true);
-        self.guests.set_label(Some(&guest_summary(&attending)));
+        let yes = said_yes(&attending);
+        self.guests_label.set_label(&yes);
+        name(&self.guests, &yes);
+        self.guests.set_tooltip_text(Some(&guest_summary(&attending)));
         for guest in &attending {
             let row = gtk::Box::builder().spacing(8).build();
             let name = gtk::Label::builder()
@@ -611,6 +808,7 @@ impl EventCard {
             row.append(&said);
             self.guest_list.append(&row);
         }
+        true
     }
 }
 
@@ -687,17 +885,92 @@ fn clash(busy: &[String]) -> Option<String> {
     })
 }
 
-/// "Invitation from Priya Raman", or nothing when the organizer is missing.
+/// "Priya Raman, organizer", or nothing when the organizer is missing.
 fn organizer_line(event: &Invitation) -> Option<String> {
     let who = event.organizer.as_ref()?;
-    let values = [("organizer", who.display())];
     Some(match event.method {
         Method::Reply => fill(
             &gettext("Reply to the invitation from {organizer}"),
-            &values,
+            &[("organizer", who.display())],
         ),
-        _ => fill(&gettext("Invitation from {organizer}"), &values),
+        // The calendar's popover words its people line the same way.
+        _ => fill(&gettext("{name}, organizer"), &[("name", who.display())]),
     })
+}
+
+/// The parts of one line on the card that have words, with a dot
+/// between each two.
+fn joined(parts: &[Option<String>]) -> String {
+    parts
+        .iter()
+        .flatten()
+        .map(|part| part.trim())
+        .filter(|part| !part.is_empty())
+        .collect::<Vec<_>>()
+        .join(DOT)
+}
+
+/// Whether an answer's button is drawn filled: the answer given, or Yes
+/// while there is none, as the one most people send.
+fn filled(button: Answer, given: Option<Answer>) -> bool {
+    match given {
+        Some(given) => button == given,
+        None => button == Answer::Yes,
+    }
+}
+
+/// "4 of 6 said yes", which opens the guest list.
+fn said_yes(guests: &[Attending]) -> String {
+    let yes = guests
+        .iter()
+        .filter(|g| g.answer == Some(Answer::Yes))
+        .count();
+    fill_plural(
+        "{yes} of {count} said yes",
+        "{yes} of {count} said yes",
+        yes,
+        &[("yes", &yes.to_string()), ("count", &guests.len().to_string())],
+    )
+}
+
+thread_local! {
+    /// One stylesheet for the calendar colours of every card's strip, in
+    /// every window, and the colours it holds. A provider per card would
+    /// stay on the display for the rest of the run.
+    static TINTS: RefCell<Option<(gtk::CssProvider, Vec<String>)>> = const { RefCell::new(None) };
+}
+
+/// Makes sure the shared stylesheet holds a rule set for each colour in
+/// `colours`. It grows by the calendar colours the strips have shown,
+/// which are few.
+fn tints(colours: &[String]) {
+    TINTS.with(|held| {
+        let mut held = held.borrow_mut();
+        if held.is_none() {
+            let provider = gtk::CssProvider::new();
+            if let Some(display) = gtk::gdk::Display::default() {
+                gtk::style_context_add_provider_for_display(
+                    &display,
+                    &provider,
+                    gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
+                );
+            }
+            *held = Some((provider, Vec::new()));
+        }
+        let Some((provider, known)) = held.as_mut() else {
+            return;
+        };
+        let before = known.len();
+        for colour in colours {
+            let class = tint::css_class(colour);
+            if !known.iter().any(|k| tint::css_class(k) == class) {
+                known.push(colour.clone());
+            }
+        }
+        if known.len() != before {
+            provider.load_from_string(&tint::stylesheet(known));
+        }
+    });
 }
 
 /// The guest list as the card shows it: the user's own row reads "You"
@@ -847,6 +1120,7 @@ mod tests {
 
     fn showing(method: &str, extra: &[&str]) -> Showing {
         Showing {
+            message_id: "m1".to_string(),
             invitation: mailrs_domain::invitation::read(&ics(method, extra))
                 .expect("the part holds an event"),
             change: None,
@@ -854,6 +1128,20 @@ mod tests {
             me: vec!["me@example.com".to_string()],
             on_calendar: None,
         }
+    }
+
+    #[test]
+    fn this_meeting_is_dashed_until_answered() {
+        assert!(dashed(true, None));
+        for answer in Answer::ALL {
+            assert!(!dashed(true, Some(answer)), "{answer:?}");
+        }
+    }
+
+    #[test]
+    fn other_events_are_never_dashed() {
+        assert!(!dashed(false, None));
+        assert!(!dashed(false, Some(Answer::Yes)));
     }
 
     #[test]
@@ -915,7 +1203,7 @@ mod tests {
     fn the_organizer_line_follows_who_is_speaking() {
         assert_eq!(
             organizer_line(&showing("REQUEST", &[]).invitation).as_deref(),
-            Some("Invitation from Priya Raman")
+            Some("Priya Raman, organizer")
         );
         assert_eq!(
             organizer_line(&showing("REPLY", &[]).invitation).as_deref(),
@@ -958,6 +1246,39 @@ mod tests {
             guest_summary(&attending(&showing)),
             "4 guests · 2 yes, 1 maybe, 1 awaiting"
         );
+    }
+
+    #[test]
+    fn the_guest_line_counts_who_said_yes() {
+        let showing = showing(
+            "REQUEST",
+            &[
+                "ATTENDEE;PARTSTAT=ACCEPTED;CN=Ann Lee:mailto:ann@example.com",
+                "ATTENDEE;PARTSTAT=ACCEPTED;CN=Bo Chen:mailto:bo@example.com",
+                "ATTENDEE;PARTSTAT=TENTATIVE;CN=Cal Diaz:mailto:cal@example.com",
+                "ATTENDEE;PARTSTAT=NEEDS-ACTION;CN=Me:mailto:me@example.com",
+            ],
+        );
+        assert_eq!(said_yes(&attending(&showing)), "2 of 4 said yes");
+    }
+
+    #[test]
+    fn the_second_line_gives_the_time_then_the_place() {
+        let mut event = showing("REQUEST", &[]).invitation;
+        event.location = Some("Room 2.04".to_string());
+        assert_eq!(joined(&[Some("Wednesday".to_string()), event.location.clone()]), "Wednesday · Room 2.04");
+        assert_eq!(joined(&[Some("Wednesday".to_string()), None]), "Wednesday");
+        assert_eq!(joined(&[None, Some(" ".to_string())]), "");
+    }
+
+    #[test]
+    fn the_answers_run_yes_maybe_no_with_yes_filled_until_one_is_given() {
+        let order: Vec<Answer> = ANSWERS.to_vec();
+        assert_eq!(order, [Answer::Yes, Answer::Maybe, Answer::No]);
+        assert!(filled(Answer::Yes, None));
+        assert!(!filled(Answer::Maybe, None));
+        assert!(filled(Answer::Maybe, Some(Answer::Maybe)));
+        assert!(!filled(Answer::Yes, Some(Answer::Maybe)));
     }
 
     #[test]

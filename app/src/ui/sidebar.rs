@@ -1,5 +1,7 @@
 //! Mailboxes: the unified views, then one section per account.
 
+mod sections;
+
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -15,6 +17,7 @@ use mailrs_sync::Offers;
 use super::{FolderLook, LABEL_COLORS, Mailbox, Standard, describe, label_color_name};
 use crate::format::{PALETTE, account_color_index, palette_name};
 use crate::offered::Filing;
+use sections::{Place, Section};
 
 struct Row {
     row: gtk::ListBoxRow,
@@ -30,17 +33,243 @@ struct Heading {
     account_id: AccountId,
     /// What the heading calls the account: its name, or its address.
     name: String,
-    chevron: gtk::Image,
     count: gtk::Label,
     /// The row's own Rules, Hide My Email and Automatic Reply actions,
     /// gated again by [`Sidebar::regate`] when the account starts.
     actions: gio::SimpleActionGroup,
 }
 
+/// Undo Send at the foot of the sidebar, while a message waits out its
+/// delay. It slides up into place and back down, over 200 ms.
+pub struct UndoPill {
+    pub revealer: gtk::Revealer,
+    pub button: gtk::Button,
+    left: gtk::Label,
+}
+
+impl UndoPill {
+    fn new() -> UndoPill {
+        let left = gtk::Label::builder().css_classes(["undo-left"]).build();
+        let content = gtk::Box::builder().spacing(8).build();
+        content.append(&gtk::Image::from_icon_name("edit-undo-symbolic"));
+        content.append(
+            &gtk::Label::builder()
+                .label(gettext("Undo Send"))
+                .xalign(0.0)
+                .hexpand(true)
+                .build(),
+        );
+        content.append(&left);
+        let button = gtk::Button::builder()
+            .child(&content)
+            .css_classes(["undo-pill"])
+            .tooltip_text(gettext("Stop the message from going out"))
+            .build();
+        // The seconds change every second and the name stays put, so a
+        // screen reader is not told each one.
+        super::name(&button, &gettext("Undo Send"));
+        let revealer = gtk::Revealer::builder()
+            .transition_type(gtk::RevealerTransitionType::SlideUp)
+            .transition_duration(200)
+            .child(&button)
+            .build();
+        UndoPill { revealer, button, left }
+    }
+
+    /// Sets `left` ("0:07") at the pill's end. Private: go through
+    /// `Sidebar::show_undo`, which opens it and keeps the shared foot in
+    /// step.
+    fn fill(&self, left: &str) {
+        if self.left.label() != left {
+            self.left.set_label(left);
+        }
+    }
+}
+
+/// The next event, at the foot of the mail sidebar above Undo Send. A
+/// click opens it in the calendar.
+pub struct NextEvent {
+    pub revealer: gtk::Revealer,
+    pub button: gtk::Button,
+    bar: gtk::Box,
+    when: gtk::Label,
+    what: gtk::Label,
+    /// The tint rule for the event's colour, which gives the bar its
+    /// colour through `--cal-colour`.
+    css: gtk::CssProvider,
+    /// The colour `css` holds, so an unchanged one is not loaded again.
+    colour: RefCell<String>,
+}
+
+impl NextEvent {
+    fn new() -> NextEvent {
+        let bar = gtk::Box::builder().css_classes(["bar"]).build();
+        let when = gtk::Label::builder().xalign(0.0).css_classes(["when"]).build();
+        let what = gtk::Label::builder()
+            .xalign(0.0)
+            .ellipsize(pango::EllipsizeMode::End)
+            .css_classes(["what"])
+            .build();
+        let lines = gtk::Box::builder()
+            .orientation(gtk::Orientation::Vertical)
+            .hexpand(true)
+            .build();
+        lines.append(&when);
+        lines.append(&what);
+        let content = gtk::Box::builder().spacing(8).build();
+        content.append(&bar);
+        content.append(&lines);
+        content.append(&gtk::Image::from_icon_name("x-office-calendar-symbolic"));
+        let button = gtk::Button::builder()
+            .child(&content)
+            .css_classes(["next-event"])
+            .tooltip_text(gettext("Show in Calendar"))
+            .build();
+        let revealer = gtk::Revealer::builder()
+            .transition_type(gtk::RevealerTransitionType::Crossfade)
+            .transition_duration(200)
+            .child(&button)
+            .build();
+        let css = gtk::CssProvider::new();
+        if let Some(display) = gdk::Display::default() {
+            gtk::style_context_add_provider_for_display(&display, &css, gtk::STYLE_PROVIDER_PRIORITY_APPLICATION);
+        }
+        NextEvent {
+            revealer,
+            button,
+            bar,
+            when,
+            what,
+            css,
+            colour: RefCell::default(),
+        }
+    }
+
+    /// Sets the card's two lines and the event's colour. Private: go
+    /// through `Sidebar::show_next`, which opens it and keeps the shared
+    /// foot in step.
+    fn fill(&self, words: &crate::ui::calendar::next::Words, colour: &str) {
+        use crate::ui::calendar::{next, tint};
+        if self.when.label() != words.when {
+            self.when.set_label(&words.when);
+        }
+        if self.what.label() != words.what {
+            self.what.set_label(&words.what);
+        }
+        // Loading a provider on the display restyles every widget in every
+        // window, and this runs once a minute, so it loads only a new colour.
+        if *self.colour.borrow() != colour {
+            self.bar.set_css_classes(&["bar", tint::css_class(colour).as_str()]);
+            self.css.load_from_string(&tint::stylesheet(&[colour.to_string()]));
+            colour.clone_into(&mut self.colour.borrow_mut());
+        }
+        super::name(&self.button, &next::spoken(words));
+    }
+}
+
+/// What one revealer in the foot is doing: `reveals` is where it is
+/// headed, `revealed` whether its child is still on screen.
+#[derive(Clone, Copy, Debug)]
+struct Slot {
+    reveals: bool,
+    revealed: bool,
+}
+
+impl Slot {
+    fn of(revealer: &gtk::Revealer) -> Slot {
+        Slot {
+            reveals: revealer.reveals_child(),
+            revealed: revealer.is_child_revealed(),
+        }
+    }
+
+    /// A closed revealer has no height but still takes the box's
+    /// spacing, so it stays hidden unless it opens, shows or closes.
+    fn takes_room(self) -> bool {
+        self.reveals || self.revealed
+    }
+}
+
+/// Which parts of the sidebar's foot are visible. Free of GTK state, so
+/// a plain test can check the rule; `Sidebar::sync_foot` applies it.
+#[derive(Debug)]
+struct Foot {
+    next: bool,
+    undo: bool,
+    /// The bar itself, with its padding: hidden while it holds neither.
+    shown: bool,
+}
+
+impl Foot {
+    /// `mail` is whether the Mail space shows: the next-event card
+    /// belongs to it alone and goes at once when the calendar opens.
+    fn of(mail: bool, next: Slot, undo: Slot) -> Foot {
+        let next = mail && next.takes_room();
+        let undo = undo.takes_room();
+        Foot {
+            next,
+            undo,
+            shown: next || undo,
+        }
+    }
+}
+
+#[cfg(test)]
+mod foot_tests {
+    use super::{Foot, Slot};
+
+    const CLOSED: Slot = Slot { reveals: false, revealed: false };
+    const OPENING: Slot = Slot { reveals: true, revealed: false };
+    const OPEN: Slot = Slot { reveals: true, revealed: true };
+    const CLOSING: Slot = Slot { reveals: false, revealed: true };
+
+    #[test]
+    fn a_revealer_takes_room_while_it_opens_shows_or_closes() {
+        assert!(!CLOSED.takes_room());
+        assert!(OPENING.takes_room());
+        assert!(OPEN.takes_room());
+        assert!(CLOSING.takes_room());
+    }
+
+    #[test]
+    fn a_closed_revealer_is_hidden_so_the_foot_spacing_goes() {
+        let foot = Foot::of(true, OPEN, CLOSED);
+        assert_eq!((foot.next, foot.undo, foot.shown), (true, false, true));
+        let foot = Foot::of(true, CLOSED, OPENING);
+        assert_eq!((foot.next, foot.undo, foot.shown), (false, true, true));
+    }
+
+    #[test]
+    fn the_foot_stays_until_a_closing_slide_ends() {
+        assert!(Foot::of(true, CLOSING, CLOSED).shown);
+        assert!(Foot::of(true, CLOSED, CLOSING).shown);
+        assert!(!Foot::of(true, CLOSED, CLOSED).shown);
+    }
+
+    #[test]
+    fn the_calendar_space_hides_the_next_event_at_once() {
+        let foot = Foot::of(false, OPEN, CLOSED);
+        assert_eq!((foot.next, foot.undo, foot.shown), (false, false, false));
+        let foot = Foot::of(false, OPEN, OPEN);
+        assert_eq!((foot.next, foot.undo, foot.shown), (false, true, true));
+    }
+}
+
 pub struct Sidebar {
     pub page: adw::ToolbarView,
     pub header: adw::HeaderBar,
-    pub add_account: gtk::Button,
+    /// The next event, above Undo Send at the foot of the card. Belongs
+    /// to the Mail space only; hidden while the calendar shows.
+    pub next: NextEvent,
+    /// Undo Send, below the next-event card, at the foot of the card.
+    /// Ruling R9 leaves Add Account out of it; the main menu and the
+    /// welcome page still open the same picker.
+    pub undo: UndoPill,
+    /// The bottom bar `next` and `undo` sit in, shared by both spaces.
+    /// `sync_foot` hides it whole while it holds neither.
+    foot: gtk::Box,
+    /// Whether the Mail space shows, which the next-event card needs.
+    mail_showing: Cell<bool>,
     /// Switches between the mail and the calendar. Its toggles are named
     /// `mail` and `calendar`; it hides while no account offers a
     /// calendar, and "Mailboxes" shows in its place, since a switch to a
@@ -70,7 +299,7 @@ impl Sidebar {
         on_drop: impl Fn(Mailbox) -> bool + 'static,
     ) -> Rc<Sidebar> {
         let list = gtk::ListBox::builder()
-            .css_classes(["navigation-sidebar"])
+            .css_classes(["navigation-sidebar", "mailboxes"])
             .selection_mode(gtk::SelectionMode::Single)
             .build();
         let scroller = gtk::ScrolledWindow::builder()
@@ -101,41 +330,53 @@ impl Sidebar {
             );
         }
         switch.set_active_name(Some("mail"));
-        let titles = gtk::Box::new(gtk::Orientation::Horizontal, 0);
+        // 8 px past the header's own padding puts the switch 14 px into
+        // the card, as mockups.py's `sidebar_shell` draws it.
+        let titles = gtk::Box::builder().margin_start(8).build();
         titles.append(&title);
         titles.append(&switch);
+        // At the start rather than as the title: a title widget is centred
+        // in the room beside the menu button, 8 px right of where the
+        // mockup puts the switch.
         let header = adw::HeaderBar::builder()
             .show_end_title_buttons(false)
-            .title_widget(&titles)
+            .show_title(false)
             .build();
-        let add_account = gtk::Button::builder()
-            .child(
-                &adw::ButtonContent::builder()
-                    .icon_name("list-add-symbolic")
-                    .label(gettext("Add Account"))
-                    .build(),
-            )
-            .css_classes(["flat"])
-            .halign(gtk::Align::Start)
-            .margin_start(6)
-            .margin_end(6)
-            .margin_top(6)
-            .margin_bottom(6)
-            .build();
+        header.pack_start(&titles);
         let content = gtk::Stack::builder()
             .transition_type(gtk::StackTransitionType::Crossfade)
             .transition_duration(150)
             .build();
         content.add_named(&scroller, Some("mail"));
-        let page = adw::ToolbarView::new();
+        // The sidebar sits inside the window, 8 px from its top, bottom,
+        // start and end edges, so the window's background shows round it.
+        let page = adw::ToolbarView::builder()
+            .css_classes(["sidebar-card"])
+            .margin_top(8)
+            .margin_bottom(8)
+            .margin_start(8)
+            .margin_end(8)
+            .build();
         page.add_top_bar(&header);
         page.set_content(Some(&content));
-        page.add_bottom_bar(&add_account);
+        let next = NextEvent::new();
+        let undo = UndoPill::new();
+        let foot = gtk::Box::builder()
+            .orientation(gtk::Orientation::Vertical)
+            .spacing(14)
+            .css_classes(["sidebar-foot"])
+            .build();
+        foot.append(&next.revealer);
+        foot.append(&undo.revealer);
+        page.add_bottom_bar(&foot);
 
         let sidebar = Rc::new(Sidebar {
             page,
             header,
-            add_account,
+            next,
+            undo,
+            foot,
+            mail_showing: Cell::new(true),
             switch,
             title,
             content,
@@ -194,6 +435,18 @@ impl Sidebar {
                 sidebar.apply_expansion();
             }
         });
+        // A slide that closes a revealer ends here, and only then may the
+        // revealer and the foot go without cutting it short.
+        for revealer in [&sidebar.next.revealer, &sidebar.undo.revealer] {
+            let weak = Rc::downgrade(&sidebar);
+            revealer.connect_child_revealed_notify(move |_| {
+                if let Some(sidebar) = weak.upgrade() {
+                    sidebar.sync_foot();
+                }
+            });
+        }
+        // Neither the next event nor Undo Send has anything to show yet.
+        sidebar.sync_foot();
         sidebar
     }
 
@@ -204,17 +457,85 @@ impl Sidebar {
     }
 
     /// Puts the calendar's own sidebar, `content`, in place of the
-    /// mailbox list. Add Account stays below it.
+    /// mailbox list. The foot, shared by both spaces, stays below it, but
+    /// the next-event card belongs to Mail alone: the calendar shows the
+    /// same event on its own page.
     pub fn show_calendar(&self, content: &gtk::Widget) {
         if self.content.child_by_name("calendar").is_none() {
             self.content.add_named(content, Some("calendar"));
         }
         self.content.set_visible_child_name("calendar");
+        self.mail_showing.set(false);
+        self.sync_foot();
     }
 
     /// Puts the mailbox list back.
     pub fn show_mail(&self) {
         self.content.set_visible_child_name("mail");
+        self.mail_showing.set(true);
+        self.sync_foot();
+    }
+
+    /// Shows the next-event card and keeps the shared foot in step.
+    pub fn show_next(&self, words: &crate::ui::calendar::next::Words, colour: &str) {
+        self.next.fill(words, colour);
+        self.open(&self.next.revealer);
+    }
+
+    /// Takes the next-event card away. The foot follows once the card
+    /// has faded out.
+    pub fn hide_next(&self) {
+        self.next.revealer.set_reveal_child(false);
+        self.sync_foot();
+    }
+
+    /// Shows the Undo Send pill and keeps the shared foot in step.
+    pub fn show_undo(&self, left: &str) {
+        self.undo.fill(left);
+        self.open(&self.undo.revealer);
+    }
+
+    /// Takes the Undo Send pill away. The foot follows once the pill has
+    /// slid down.
+    pub fn hide_undo(&self) {
+        self.undo.revealer.set_reveal_child(false);
+        self.sync_foot();
+    }
+
+    /// Makes room for `revealer` before telling it to open: a revealer
+    /// that is not on screen jumps to open with no transition.
+    fn open(&self, revealer: &gtk::Revealer) {
+        if revealer.reveals_child() {
+            return;
+        }
+        let opening = Slot {
+            reveals: true,
+            revealed: revealer.is_child_revealed(),
+        };
+        let slot = |r: &gtk::Revealer| if r == revealer { opening } else { Slot::of(r) };
+        self.apply(Foot::of(
+            self.mail_showing.get(),
+            slot(&self.next.revealer),
+            slot(&self.undo.revealer),
+        ));
+        revealer.set_reveal_child(true);
+    }
+
+    /// Shows the foot (the border and the padding round it, `.sidebar-foot`)
+    /// and each revealer in it only while they have something on screen,
+    /// so the box's spacing falls only between two that both show.
+    fn sync_foot(&self) {
+        self.apply(Foot::of(
+            self.mail_showing.get(),
+            Slot::of(&self.next.revealer),
+            Slot::of(&self.undo.revealer),
+        ));
+    }
+
+    fn apply(&self, foot: Foot) {
+        self.next.revealer.set_visible(foot.next);
+        self.undo.revealer.set_visible(foot.undo);
+        self.foot.set_visible(foot.shown);
     }
 
     fn is_expanded(&self, account_id: AccountId) -> bool {
@@ -244,11 +565,9 @@ impl Sidebar {
                 heading.row.remove_css_class("after-open");
             }
             after_open = open;
-            heading.chevron.set_icon_name(Some(if open {
-                "pan-down-symbolic"
-            } else {
-                "pan-end-symbolic"
-            }));
+            heading
+                .row
+                .update_state(&[gtk::accessible::State::Expanded(Some(open))]);
             heading
                 .count
                 .set_visible(!open && heading.count.label() != "0");
@@ -299,84 +618,14 @@ impl Sidebar {
         self.list.remove_all();
         self.rows.borrow_mut().clear();
         self.headings.borrow_mut().clear();
-        for which in Standard::ALL {
-            self.add_mailbox(
-                Mailbox::Unified(which),
-                &which.unified_name(),
-                which.icon(),
-                0,
-            );
-            if which == Standard::Inbox && !vips.is_empty() {
-                let everyone = Mailbox::Vips {
-                    emails: vips.iter().map(|(e, _)| e.clone()).collect(),
-                    name: gettext("VIPs"),
-                };
-                self.add_mailbox(everyone, &gettext("VIPs"), "starred-symbolic", 0);
-                for (email, name) in vips {
-                    let person = Mailbox::Vips {
-                        emails: vec![email.clone()],
-                        name: name.clone(),
-                    };
-                    let row = self.add_mailbox(person, name, "avatar-default-symbolic", 1);
-                    let menu = gio::Menu::new();
-                    let item = gio::MenuItem::new(Some(&gettext("Remove from VIPs")), None);
-                    item.set_action_and_target_value(
-                        Some("win.vip-remove"),
-                        Some(&email.to_variant()),
-                    );
-                    menu.append_item(&item);
-                    context_menu(&row, &menu);
-                }
+        for (section, places) in sections::LAYOUT {
+            self.list.append(&section_title(&section.title()));
+            for &place in places {
+                self.add_place(place, vips);
             }
-            if which == Standard::Flagged {
-                // One row per flag colour in use, as Apple Mail shows them.
-                for color in FlagColor::ALL {
-                    let row = self.add_mailbox(
-                        Mailbox::Flag(color),
-                        &color.name(),
-                        "penguin-mail-flag-symbolic",
-                        1,
-                    );
-                    if let Some(icon) = row.child().and_then(|c| c.first_child()) {
-                        icon.add_css_class(&format!("flag-{}", color.as_str()));
-                    }
-                }
-            }
-        }
-        self.add_mailbox(
-            Mailbox::Outbox,
-            &gettext("Outbox"),
-            "penguin-mail-outbox-symbolic",
-            0,
-        );
-        self.add_mailbox(
-            Mailbox::Scheduled,
-            &gettext("Send Later"),
-            "mail-send-symbolic",
-            0,
-        );
-        self.add_mailbox(
-            Mailbox::Reminders,
-            &gettext("Remind Me"),
-            "alarm-symbolic",
-            0,
-        );
-        self.add_mailbox(
-            Mailbox::FollowUp,
-            &gettext("Follow Up"),
-            "mail-reply-sender-symbolic",
-            0,
-        );
-        for folder in Folder::ALL {
-            let mailbox = Mailbox::Folder {
-                account_id: None,
-                folder,
-            };
-            self.add_mailbox(mailbox, &folder.name(), folder.icon(), 0);
         }
         if !extras.smart.is_empty() {
-            self.list
-                .append(&section_title(&gettext("Smart Mailboxes")));
+            self.list.append(&section_title(&Section::Smart.title()));
             for smart in &extras.smart {
                 let mailbox = Mailbox::Smart(smart.clone());
                 let row = self.add_mailbox(mailbox, &smart.name, "folder-saved-search-symbolic", 0);
@@ -387,18 +636,17 @@ impl Sidebar {
             // The rows above list every account at once. This says what
             // the ones below are, rather than leaving a reader to work it
             // out from the addresses.
-            self.list.append(&section_title(&gettext("Accounts")));
+            self.list.append(&section_title(&Section::Accounts.title()));
         }
         for (account, labels) in accounts {
             let shown = extras.names.get(&account.id);
             let account_offers = offers(account.id);
-            let (row, chevron, count, actions) = heading(account, shown, account_offers);
+            let (row, count, actions) = heading(account, shown, account_offers);
             self.list.append(&row);
             self.headings.borrow_mut().push(Heading {
                 row,
                 account_id: account.id,
                 name: shown.unwrap_or(&account.email).clone(),
-                chevron,
                 count,
                 actions,
             });
@@ -454,6 +702,96 @@ impl Sidebar {
         });
     }
 
+    /// Adds the row, or the run of rows, that one place in the layout
+    /// stands for.
+    fn add_place(&self, place: Place, vips: &[(String, String)]) {
+        match place {
+            Place::Unified(which) => {
+                let row =
+                    self.add_mailbox(Mailbox::Unified(which), &which.unified_name(), which.icon(), 0);
+                if which == Standard::Flagged
+                    && let Some(icon) = row.child().and_then(|c| c.first_child())
+                {
+                    // The Flagged row wears the same orange as each flag
+                    // colour under it, so the two read as one idea.
+                    icon.add_css_class("flag-orange");
+                }
+            }
+            Place::Vips => {
+                if vips.is_empty() {
+                    return;
+                }
+                let everyone = Mailbox::Vips {
+                    emails: vips.iter().map(|(e, _)| e.clone()).collect(),
+                    name: gettext("VIPs"),
+                };
+                let row = self.add_mailbox(everyone, &gettext("VIPs"), "starred-symbolic", 0);
+                if let Some(icon) = row.child().and_then(|c| c.first_child()) {
+                    icon.add_css_class("sidebar-vip");
+                }
+                for (email, name) in vips {
+                    let person = Mailbox::Vips {
+                        emails: vec![email.clone()],
+                        name: name.clone(),
+                    };
+                    let row = self.add_mailbox(person, name, "avatar-default-symbolic", 1);
+                    let menu = gio::Menu::new();
+                    let item = gio::MenuItem::new(Some(&gettext("Remove from VIPs")), None);
+                    item.set_action_and_target_value(Some("win.vip-remove"), Some(&email.to_variant()));
+                    menu.append_item(&item);
+                    context_menu(&row, &menu);
+                }
+            }
+            Place::FlagColors => {
+                // One row per flag colour in use, as Apple Mail shows them.
+                for color in FlagColor::ALL {
+                    let row = self.add_mailbox(
+                        Mailbox::Flag(color),
+                        &color.name(),
+                        "penguin-mail-flag-symbolic",
+                        1,
+                    );
+                    if let Some(icon) = row.child().and_then(|c| c.first_child()) {
+                        icon.add_css_class(&format!("flag-{}", color.as_str()));
+                    }
+                }
+            }
+            Place::Outbox => {
+                // The tray icon goes to Send Later, which the mockup
+                // pictures; this row keeps mail that could not go out, so
+                // it wears a warning instead of the tray they would
+                // otherwise share.
+                self.add_mailbox(Mailbox::Outbox, &gettext("Outbox"), "dialog-warning-symbolic", 0);
+            }
+            Place::Scheduled => {
+                self.add_mailbox(
+                    Mailbox::Scheduled,
+                    &gettext("Send Later"),
+                    "penguin-mail-outbox-symbolic",
+                    0,
+                );
+            }
+            Place::Reminders => {
+                self.add_mailbox(Mailbox::Reminders, &gettext("Remind Me"), "alarm-symbolic", 0);
+            }
+            Place::FollowUp => {
+                self.add_mailbox(
+                    Mailbox::FollowUp,
+                    &gettext("Follow Up"),
+                    "appointment-soon-symbolic",
+                    0,
+                );
+            }
+            Place::Folder(folder) => {
+                let mailbox = Mailbox::Folder {
+                    account_id: None,
+                    folder,
+                };
+                self.add_mailbox(mailbox, &folder.name(), folder.icon(), 0);
+            }
+        }
+    }
+
     /// Adds a mailbox row. `depth` indents it: 0 for the unified views, 1
     /// for an account's mailboxes, and one more per level of label nesting.
     fn add_mailbox(&self, mailbox: Mailbox, name: &str, icon: &str, depth: u32) -> gtk::ListBoxRow {
@@ -478,9 +816,13 @@ impl Sidebar {
         depth: u32,
         opens: bool,
     ) -> gtk::ListBoxRow {
+        // 12 px puts the icon inside the row's own left edge, which
+        // `.mailboxes > row`'s 8 px margin already sets 8 px in from the
+        // card; 10 px of spacing then lands the name 38 px into the row,
+        // as the mockup draws both.
         let content = gtk::Box::builder()
-            .spacing(12)
-            .margin_start(18 * depth as i32)
+            .spacing(10)
+            .margin_start(12 + 18 * depth as i32)
             .css_classes(["mailbox-row"])
             .build();
         content.append(&gtk::Image::from_icon_name(icon));
@@ -499,7 +841,7 @@ impl Sidebar {
         content.append(&count);
         let row = gtk::ListBoxRow::builder()
             .child(&content)
-            .visible(!hidden_until_used(&mailbox))
+            .visible(!sections::hidden_until_used(&mailbox))
             .selectable(opens)
             .activatable(opens)
             .build();
@@ -551,9 +893,8 @@ impl Sidebar {
         let selected = self.list.selected_row();
         for row in self.rows.borrow().iter() {
             let count = counts.get(&row.mailbox).copied().unwrap_or(0);
-            if hidden_until_used(&row.mailbox) {
-                // Send Later, Remind Me, Follow Up and each flag colour appear
-                // only while in use.
+            if sections::hidden_until_used(&row.mailbox) {
+                // Each flag colour shows only while in use.
                 row.row
                     .set_visible(count > 0 || selected.as_ref() == Some(&row.row));
             }
@@ -702,14 +1043,6 @@ fn css_hex(color: &str) -> Option<String> {
     (hex.len() == 6 && hex.chars().all(|c| c.is_ascii_hexdigit())).then_some(hex)
 }
 
-/// Rows that show only while they hold something.
-fn hidden_until_used(mailbox: &Mailbox) -> bool {
-    matches!(
-        mailbox,
-        Mailbox::Scheduled | Mailbox::Reminders | Mailbox::FollowUp | Mailbox::Flag(_)
-    )
-}
-
 /// The icon for a folder row a person can open: the tag Gmail's labels
 /// wear, since mail there can carry several at once, or the plain folder
 /// icon the sidebar gives a group once the account keeps mail in one
@@ -840,16 +1173,14 @@ fn heading(
     account: &Account,
     name: Option<&String>,
     offers: Offers,
-) -> (gtk::ListBoxRow, gtk::Image, gtk::Label, gio::SimpleActionGroup) {
+) -> (gtk::ListBoxRow, gtk::Label, gio::SimpleActionGroup) {
     let content = gtk::Box::builder()
-        .spacing(8)
+        .spacing(6)
         .css_classes(["sidebar-heading"])
         .build();
-    let chevron = gtk::Image::builder()
-        .icon_name("pan-down-symbolic")
-        .css_classes(["dim-label"])
-        .build();
-    content.append(&chevron);
+    // Ruling R3: the mockup's account row has no chevron, only a colour
+    // dot and the address. `apply_expansion` tells assistive technology
+    // whether the account is open.
     let dot = gtk::Box::builder()
         .valign(gtk::Align::Center)
         .css_classes([
@@ -933,7 +1264,7 @@ fn heading(
     let options = gtk::MenuButton::builder()
         .icon_name("view-more-symbolic")
         .menu_model(&menu)
-        .css_classes(["flat", "circular"])
+        .css_classes(["flat", "circular", "account-options"])
         .valign(gtk::Align::Center)
         .tooltip_text(gettext("Account options"))
         .build();
@@ -979,7 +1310,7 @@ fn heading(
         &heading_row_name(name.unwrap_or(&account.email), 0),
         &gettext("Show or hide this account's mailboxes"),
     );
-    (row, chevron, count, own)
+    (row, count, own)
 }
 
 /// The icon and the words beside an account's name for its state, or

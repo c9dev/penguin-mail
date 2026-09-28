@@ -56,6 +56,7 @@ app/src/ui/calendar/block.rs
 app/src/ui/calendar/editor.rs
 app/src/ui/calendar/mod.rs
 app/src/ui/calendar/month.rs
+app/src/ui/calendar/next.rs
 app/src/ui/calendar/popover.rs
 app/src/ui/calendar/quick.rs
 app/src/ui/calendar/range.rs
@@ -74,6 +75,7 @@ app/src/ui/conversation.rs
 app/src/ui/find.rs
 app/src/ui/hide_my_email.rs
 app/src/ui/invitation.rs
+app/src/ui/invitation/strip.rs
 app/src/ui/mod.rs
 app/src/ui/moving.rs
 app/src/ui/permission.rs
@@ -82,6 +84,7 @@ app/src/ui/preferences.rs
 app/src/ui/queued.rs
 app/src/ui/rules.rs
 app/src/ui/sidebar.rs
+app/src/ui/sidebar/sections.rs
 app/src/ui/smart_editor.rs
 app/src/ui/templates.rs
 app/src/ui/thread_list.rs
@@ -92,10 +95,12 @@ app/src/ui/vacation.rs
 app/src/ui/welcome.rs
 app/src/ui/when.rs
 app/src/ui/window.rs
+app/src/ui/window/across.rs
 app/src/ui/window/arrange.rs
 app/src/ui/window/assistant.rs
 app/src/ui/window/attachments.rs
 app/src/ui/window/categories.rs
+app/src/ui/window/categories/chip.rs
 app/src/ui/window/detached.rs
 app/src/ui/window/export.rs
 app/src/ui/window/followup.rs
