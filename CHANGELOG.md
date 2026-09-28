@@ -7,6 +7,13 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### New
 
+- A calendar file that is not an invitation, such as a train ticket or a
+  booking, now shows an event card in the message with Add to Calendar.
+  Pick the calendar, and for a file with several events, which of them to
+  add. Adding the same file twice does not repeat the events, and the card
+  then says "Added to" the calendar and offers Show in Calendar.
+- Penguin Mail opens .ics files from Files. The file shows the same card in
+  a small window, and says so when no Google account can use its calendar.
 - A reply or a forward opens with the quoted message folded behind a
   "•••" button under your words, as in Gmail, and still sends with it.
   Click "•••" to read it, and in a reply to trim it, or × to send

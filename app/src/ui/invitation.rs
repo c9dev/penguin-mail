@@ -766,7 +766,10 @@ impl EventCard {
         let adding = button == CalendarButton::Add && showing.invitation.card() == Card::Add;
         self.picker
             .set_visible(adding && !self.targets.borrow().is_empty());
-        self.events.set_visible(adding && !showing.also.is_empty());
+        // The list stays once the events are on the calendar, so the card
+        // still says which ones went; only the choosing ends.
+        self.events.set_visible(showing.invitation.card() == Card::Add && !showing.also.is_empty());
+        self.events.set_sensitive(adding);
     }
 
     /// One check button per event when the file holds several, all
