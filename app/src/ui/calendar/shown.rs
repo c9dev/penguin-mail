@@ -99,12 +99,6 @@ pub fn near_end(value: f64, page: f64, upper: f64, margin: f64) -> bool {
     value + page >= upper - margin
 }
 
-/// Whether a list `upper` pixels tall may take more rows without passing
-/// `ceiling`.
-pub fn may_grow(upper: f64, ceiling: f64) -> bool {
-    upper < ceiling
-}
-
 /// The accessible names of the back and forward arrows, which are icons
 /// alone.
 pub fn arrow_names(showing: Showing) -> (String, String) {
@@ -471,12 +465,6 @@ mod tests {
         assert!(!near_end(300.0, 400.0, 1000.0, 200.0));
         assert!(near_end(400.0, 400.0, 1000.0, 200.0));
         assert!(near_end(600.0, 400.0, 1000.0, 200.0));
-    }
-
-    #[test]
-    fn a_list_stops_growing_at_its_ceiling() {
-        assert!(may_grow(11_999.0, 12_000.0));
-        assert!(!may_grow(12_000.0, 12_000.0));
     }
 
     #[test]

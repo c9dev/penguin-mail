@@ -405,7 +405,10 @@ type Activated = dyn Fn(&Occurrence);
 type ScrolledToTop = dyn Fn();
 
 pub struct Agenda {
-    pub widget: gtk::ScrolledWindow,
+    /// What callers place: the column around the scrolled list.
+    pub widget: gtk::Widget,
+    /// The scrolled list itself, for sizing it in a popover.
+    pub scrolled: gtk::ScrolledWindow,
     model: AgendaModel,
     /// Kept to scroll it after [`Agenda::prepend`]: the row
     /// that was first before the insert is asked to stay first.
@@ -500,9 +503,11 @@ impl Agenda {
             }
         });
 
-        // The dim line sits above the list inside the same scrolled
-        // content, so it reads as the true top of the agenda rather than
-        // a banner that stays on screen once shown.
+        // The list view is the scrolled window's own child: inside a box
+        // or a viewport GTK gives it the height of every row and builds a
+        // widget for each, which is what "virtualised" exists to avoid.
+        // The dim line therefore sits above the scrolled window, and
+        // shows once the top has been reached.
         let no_earlier = gtk::Label::builder()
             .label(gettext("Nothing earlier on this computer"))
             .css_classes(["dim-label", "caption"])
@@ -510,24 +515,24 @@ impl Agenda {
             .margin_bottom(10)
             .visible(false)
             .build();
+        let scrolled = gtk::ScrolledWindow::builder()
+            .hscrollbar_policy(gtk::PolicyType::Never)
+            .vexpand(true)
+            .child(&list_view)
+            .build();
         let content = gtk::Box::builder().orientation(gtk::Orientation::Vertical).build();
         content.append(&no_earlier);
-        content.append(&list_view);
-
-        // A wide window reads the agenda as a centred column; a narrow
+        content.append(&scrolled);
+        // A wide window reads the agenda as a centered column; a narrow
         // one is below the clamp's size and fills its width as before.
-        let column = adw::Clamp::builder()
+        let widget = adw::Clamp::builder()
             .maximum_size(COLUMN_WIDTH)
             .tightening_threshold(COLUMN_WIDTH)
             .child(&content)
             .build();
-        let widget = gtk::ScrolledWindow::builder()
-            .hscrollbar_policy(gtk::PolicyType::Never)
-            .child(&column)
-            .build();
         let scrolled_to_top: Rc<RefCell<Option<Box<ScrolledToTop>>>> = Rc::new(RefCell::new(None));
         let top_slot = Rc::clone(&scrolled_to_top);
-        widget.connect_edge_reached(move |_, position| {
+        scrolled.connect_edge_reached(move |_, position| {
             if position == gtk::PositionType::Top
                 && let Some(f) = top_slot.borrow().as_ref()
             {
@@ -536,7 +541,8 @@ impl Agenda {
         });
 
         Rc::new(Agenda {
-            widget,
+            widget: widget.upcast(),
+            scrolled,
             model,
             list_view,
             no_earlier,
@@ -563,7 +569,7 @@ impl Agenda {
         self.model.set_rows(rows, sections);
         // A new list starts at its first heading, not wherever the last
         // one was scrolled to.
-        self.widget.vadjustment().set_value(0.0);
+        self.scrolled.vadjustment().set_value(0.0);
     }
 
     /// Inserts `occurrences` before the agenda's earliest row and
@@ -611,7 +617,7 @@ impl Agenda {
     /// so the caller loads later days.
     pub fn connect_near_end(&self, margin: f64, f: impl Fn() + 'static) {
         let f = Rc::new(f);
-        let adjustment = self.widget.vadjustment();
+        let adjustment = self.scrolled.vadjustment();
         let check = move |a: &gtk::Adjustment| {
             if super::shown::near_end(a.value(), a.page_size(), a.upper(), margin) {
                 f();
@@ -733,6 +739,16 @@ mod tests {
         let kept = starting_from(&found, d(2026, 9, 24), &zone);
         assert_eq!(kept.len(), 1);
         assert_eq!(kept[0].start, at(24, 9));
+    }
+
+    #[test]
+    fn rows_appended_on_the_last_date_join_its_section() {
+        // The model recomputes every boundary from all its dates after an
+        // append, so a later read that starts on the day the list ended
+        // on adds to that day's section rather than opening a new one.
+        let mut dates = vec![d(2026, 9, 23), d(2026, 9, 24)];
+        dates.extend([d(2026, 9, 24), d(2026, 9, 25)]);
+        assert_eq!(sections_of(&dates), vec![(0, 1), (1, 3), (3, 4)]);
     }
 
     #[test]

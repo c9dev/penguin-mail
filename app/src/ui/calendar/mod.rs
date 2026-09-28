@@ -470,16 +470,16 @@ impl CalendarView {
 
         let popover = EventPopover::new(&card, &today_button);
         let more_list = Agenda::new();
-        more_list.widget.set_propagate_natural_height(true);
+        more_list.scrolled.set_propagate_natural_height(true);
         // A ScrolledWindow keeps its minimum width unless told to grow
         // with its rows, so a long title fell back to that minimum and
         // ellipsized after about a dozen characters. Growing with the
         // rows, up to a sensible width, lets a title use the room
         // before it ellipsizes.
-        more_list.widget.set_propagate_natural_width(true);
-        more_list.widget.set_min_content_width(280);
-        more_list.widget.set_max_content_width(420);
-        more_list.widget.set_max_content_height(360);
+        more_list.scrolled.set_propagate_natural_width(true);
+        more_list.scrolled.set_min_content_width(280);
+        more_list.scrolled.set_max_content_width(420);
+        more_list.scrolled.set_max_content_height(360);
         let more = gtk::Popover::builder().child(&more_list.widget).build();
         more.set_parent(&card);
         let quick = Quick::new(&card);
@@ -1867,9 +1867,7 @@ impl CalendarView {
     /// scrolls near its end, up to `range::latest_agenda_day`.
     fn load_later(self: &Rc<Self>) {
         let Some(held_to) = self.list_last.get() else { return };
-        if self.list_later_loading.get()
-            || !shown::may_grow(self.list.widget.vadjustment().upper(), MOST_LIST_HEIGHT)
-        {
+        if self.list_later_loading.get() {
             return;
         }
         let today = chrono::Local::now().date_naive();
@@ -2940,11 +2938,6 @@ impl PageView {
 
 /// Local midnight of `first` to local midnight after `last`, for a read
 /// covering whole days.
-/// How tall the list may grow, in pixels, before it stops loading later
-/// days. In the demo's Xvfb display, GTK drew nothing below about 16,400
-/// px of scrolled content, so the list stays well under that.
-const MOST_LIST_HEIGHT: f64 = 12_000.0;
-
 fn day_span(first: NaiveDate, last: NaiveDate) -> (EpochMillis, EpochMillis) {
     let (from, _) = Range::around(ViewKind::Day, first).span(&chrono::Local);
     let (_, to) = Range::around(ViewKind::Day, last).span(&chrono::Local);

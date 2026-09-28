@@ -3275,7 +3275,7 @@ msgstr ""
 msgid "{title}, {when}, {calendar}"
 msgstr ""
 
-#: app/src/ui/calendar/agenda.rs:507
+#: app/src/ui/calendar/agenda.rs:512
 msgid "Nothing earlier on this computer"
 msgstr ""
 
@@ -3597,7 +3597,7 @@ msgstr ""
 msgid "View"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:348 app/src/ui/calendar/mod.rs:2443
+#: app/src/ui/calendar/mod.rs:348 app/src/ui/calendar/mod.rs:2441
 msgid "New Event (N)"
 msgstr ""
 
@@ -3658,38 +3658,38 @@ msgstr ""
 msgid "All-day"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:1730 app/src/ui/calendar/mod.rs:2994
+#: app/src/ui/calendar/mod.rs:1730 app/src/ui/calendar/mod.rs:2987
 #: app/src/ui/calendar/sidebar.rs:255 app/src/ui/calendar/words.rs:320
 #: app/src/ui/preferences.rs:864 app/src/ui/preferences.rs:976
 msgid "%a"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:2199
+#: app/src/ui/calendar/mod.rs:2197
 msgid "Removed “{title}” from your calendar"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:2200
+#: app/src/ui/calendar/mod.rs:2198
 msgid "Deleted “{title}”"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:2205
+#: app/src/ui/calendar/mod.rs:2203
 msgid "Could not delete the event: {reason}"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:2249 app/src/ui/window.rs:1981
+#: app/src/ui/calendar/mod.rs:2247 app/src/ui/window.rs:1981
 #: app/src/ui/window/scheduled.rs:98 app/src/ui/window/shortcuts.rs:454
 msgid "Undo"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:2391
+#: app/src/ui/calendar/mod.rs:2389
 msgid "Could not send your answer: {reason}"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:2445
+#: app/src/ui/calendar/mod.rs:2443
 msgid "None of your calendars take new events"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:2706
+#: app/src/ui/calendar/mod.rs:2704
 msgid "Could not save the event: {reason}"
 msgstr ""
 
@@ -3894,27 +3894,27 @@ msgstr ""
 msgid "The new guests get their invitation, and the others get an update."
 msgstr ""
 
-#: app/src/ui/calendar/shown.rs:112
+#: app/src/ui/calendar/shown.rs:106
 msgid "Next Day"
 msgstr ""
 
-#: app/src/ui/calendar/shown.rs:112
+#: app/src/ui/calendar/shown.rs:106
 msgid "Previous Day"
 msgstr ""
 
-#: app/src/ui/calendar/shown.rs:113
+#: app/src/ui/calendar/shown.rs:107
 msgid "Next Week"
 msgstr ""
 
-#: app/src/ui/calendar/shown.rs:113
+#: app/src/ui/calendar/shown.rs:107
 msgid "Previous Week"
 msgstr ""
 
-#: app/src/ui/calendar/shown.rs:114 app/src/ui/calendar/sidebar.rs:432
+#: app/src/ui/calendar/shown.rs:108 app/src/ui/calendar/sidebar.rs:432
 msgid "Next Month"
 msgstr ""
 
-#: app/src/ui/calendar/shown.rs:114 app/src/ui/calendar/sidebar.rs:431
+#: app/src/ui/calendar/shown.rs:108 app/src/ui/calendar/sidebar.rs:431
 msgid "Previous Month"
 msgstr ""
 
