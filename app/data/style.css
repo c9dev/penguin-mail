@@ -311,29 +311,52 @@ flowboxchild:focus-visible > .recipient-chip {
 .assistant-suggestion { padding: 6px 10px; border-radius: 10px; }
 .assistant-confirm label { font-weight: 600; }
 
-/* Inbox categories: the switcher above an inbox's thread list. */
-/* min-width counts the content alone, so 24px is the icon's box and the
-   padding brings the toggle to 34px with the icon centred. */
-.category-bar > toggle { min-width: 24px; min-height: 30px; padding-left: 5px; padding-right: 5px; }
-/* The switcher reads as one strip, so drop the dividers between the icons. */
-.category-bar > separator { background: none; }
-.category-bar .category-name { margin-left: 5px; margin-right: 2px; }
-/* The chosen category leads; the rest sit back a little. */
-.category-bar > toggle image { opacity: 0.75; transition: opacity 160ms cubic-bezier(0.23, 1, 0.32, 1); }
-.category-bar > toggle:checked image, .category-bar > toggle:hover image { opacity: 1; }
-/* The unread count rides the icon's top right corner. */
-.category-bar .category-count {
-  min-width: 9px;
-  padding: 0 2px;
+/* Inbox categories as a row of chips. The chosen one is a filled accent
+   pill with its icon and name; the others are neutral pills in the
+   `pill` surface with their icon, and the unread count as a small
+   accent badge riding the pill's top end corner. */
+toggle-group.category-chips { background: none; padding: 0; box-shadow: none; }
+.category-chips > separator { min-width: 6px; background: none; }
+.category-chips > toggle {
+  min-width: 44px;
+  min-height: 30px;
+  padding: 0;
+  border-radius: 15px;
+  background: #e3e3e7;
+  box-shadow: none;
+  transition: background-color 120ms ease;
+}
+.app-dark .category-chips > toggle { background: #3a3a40; }
+.category-chips > toggle:hover { background: color-mix(in srgb, currentColor 8%, #e3e3e7); }
+.app-dark .category-chips > toggle:hover { background: color-mix(in srgb, currentColor 8%, #3a3a40); }
+.category-chips > toggle:checked { background: var(--accent-bg-color); color: var(--accent-fg-color); }
+.category-chips .category-chip { padding: 0 14px; min-height: 30px; }
+.category-chips .category-name { margin-left: 6px; font-weight: 700; font-size: 0.89em; }
+/* The mockup's badge rides the pill's top end corner and rises 3px
+   above it, but `CategoryStrip` clips its own bounds to a frame
+   (strip.rs, "Clip it") for the narrow-window fold, which crops that
+   3px off a badge drawn there. Kept inside the pill instead; see the
+   report's "known differences". */
+.category-chips .category-count {
+  min-width: 14px;
+  min-height: 14px;
+  margin: 1px 2px 0 0;
   border-radius: 99px;
-  font-size: 0.6em;
-  font-weight: 700;
+  font-size: 0.65em;
+  font-weight: 800;
   font-feature-settings: "tnum";
   color: var(--accent-fg-color);
   background: var(--accent-bg-color);
   transition: opacity 160ms cubic-bezier(0.23, 1, 0.32, 1);
 }
-.category-bar .category-count.no-mail { opacity: 0; }
+.category-chips > toggle:checked .category-count { opacity: 0; }
+.category-chips .category-count.no-mail { opacity: 0; }
+
+/* The list header's title, packed at the header's start instead of
+   centred: "All Inboxes" leads, the unread count and category sit under
+   it, dim. */
+.list-header-title .title { font-size: 1.16em; font-weight: 800; }
+.list-header-title .subtitle { font-size: 0.85em; font-weight: 500; opacity: 0.64; }
 
 /* Follow Up: the banner above All Inboxes. */
 .follow-up-banner {

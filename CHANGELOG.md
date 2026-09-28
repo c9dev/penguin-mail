@@ -43,6 +43,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Improved
 
+- The inbox categories are chips: the one you are in shows its name on
+  an accent pill, and the others show their unread count on the corner.
 - Adding a Google account asks for every permission Penguin Mail uses
   in one visit to Google, and anything you leave unticked says why it
   is off, with Grant Access where you would use it. An account added

@@ -13,8 +13,9 @@ use super::MainWindow;
 use crate::permission::{Occasion, Permission};
 use crate::ui::Mailbox;
 use crate::ui::conversation::ConversationView;
-use mailrs_domain::translate::{fill, fill_plural, gettext, with_reason};
+use mailrs_domain::translate::{fill, gettext, with_reason};
 
+mod chip;
 mod strip;
 
 use strip::CategoryStrip;
@@ -60,33 +61,31 @@ impl CategoryBar {
     pub(super) fn new(chosen: Category) -> CategoryBar {
         let group = adw::ToggleGroup::builder()
             .homogeneous(false)
-            .css_classes(["category-bar", "round"])
+            .css_classes(["category-bar", "category-chips"])
             .build();
         let (mut names, mut counts) = (Vec::new(), HashMap::new());
         for category in Category::ALL {
-            // No spacing: the name carries its own margin, so a closed name
-            // leaves no gap behind.
-            let content = gtk::Box::new(gtk::Orientation::Horizontal, 0);
+            // The icon and the name sit in the chip's content; the badge
+            // rides the content's top end corner, above the pill, so a
+            // count arriving or growing never moves the icons.
+            let content = gtk::Box::builder().css_classes(["category-chip"]).build();
             let image = gtk::Image::from_icon_name(icon(category));
             image.set_pixel_size(16);
-            // The icon's box leaves room for the count in its top right corner,
-            // so a count arriving or growing never moves the icons.
-            image.set_size_request(24, 20);
-            let count = gtk::Label::builder()
-                .css_classes(["category-count", "no-mail"])
-                .halign(gtk::Align::End)
-                .valign(gtk::Align::Start)
-                .build();
-            let badge = gtk::Overlay::builder().child(&image).build();
-            badge.add_overlay(&count);
             let name = slider(
                 &gtk::Label::builder()
                     .label(category.name())
                     .css_classes(["category-name"])
                     .build(),
             );
-            content.append(&badge);
+            content.append(&image);
             content.append(&name);
+            let count = gtk::Label::builder()
+                .css_classes(["category-count", "no-mail"])
+                .halign(gtk::Align::End)
+                .valign(gtk::Align::Start)
+                .build();
+            let chip = gtk::Overlay::builder().child(&content).build();
+            chip.add_overlay(&count);
             group.add(
                 adw::Toggle::builder()
                     .name(category.key())
@@ -94,16 +93,16 @@ impl CategoryBar {
                     // and goes; the label is what the toggle says out loud.
                     .label(category.name())
                     .tooltip(category.name())
-                    .child(&content)
+                    .child(&chip)
                     .build(),
             );
             names.push(name);
             counts.insert(category, count);
         }
         let bar = gtk::Box::builder()
-            .margin_top(6)
+            .margin_top(14)
             .margin_bottom(6)
-            .margin_start(8)
+            .margin_start(16)
             .margin_end(8)
             .visible(false)
             .build();
@@ -131,12 +130,7 @@ impl CategoryBar {
     pub(super) fn set_counts(&self, unread: &HashMap<Category, i64>) {
         for (category, label) in &self.counts {
             let count = unread.get(category).copied().unwrap_or(0);
-            // A long number would spill over the icon, so stop the badge at 99.
-            label.set_label(&match count {
-                ..=0 => String::new(),
-                1..=99 => count.to_string(),
-                _ => "99+".to_string(),
-            });
+            label.set_label(&chip::badge(count));
             // Nothing unread fades the badge out and leaves its place empty.
             if count > 0 {
                 label.remove_css_class("no-mail");
@@ -146,15 +140,7 @@ impl CategoryBar {
             // The name is hidden unless the category is chosen, so the tooltip
             // carries both it and the count.
             if let Some(toggle) = self.group.toggle_by_name(category.key()) {
-                let said = match count {
-                    0 => category.name(),
-                    count => fill_plural(
-                        "{name}, {count} unread",
-                        "{name}, {count} unread",
-                        count.max(0) as usize,
-                        &[("name", &category.name()), ("count", &count.to_string())],
-                    ),
-                };
+                let said = chip::spoken(*category, count);
                 toggle.set_tooltip(&said);
                 toggle.set_label(Some(&said));
             }
@@ -166,9 +152,10 @@ impl MainWindow {
     /// Puts the category switcher above the thread list and adds the
     /// Categorize Sender action.
     pub(super) fn install_categories(self: &Rc<Self>) {
-        if let Some(toolbar) = self.list.page.child().and_downcast::<adw::ToolbarView>() {
-            toolbar.add_top_bar(&self.categories.bar);
-        }
+        // The chips sit right under the header, in the slot `ThreadList`
+        // reserves before its banners, so a sign-in or Grant Access banner
+        // never lands between the header and the chips.
+        self.list.categories_slot.append(&self.categories.bar);
         let weak = Rc::downgrade(self);
         self.categories
             .group
