@@ -153,6 +153,11 @@ impl MonthGrid {
             .map(|(_, _, widget)| widget.clone())
     }
 
+    /// The block drawing the occurrence of `key` that starts at `start`.
+    pub fn block_at(&self, key: &EventKey, start: EpochMillis) -> Option<gtk::Widget> {
+        super::time_grid::block_at(&self.blocks.borrow(), key, start)
+    }
+
     /// The first event block in day order, and the event of the block
     /// that has the keyboard focus, for the view to put the focus back
     /// after it rebuilds the month.

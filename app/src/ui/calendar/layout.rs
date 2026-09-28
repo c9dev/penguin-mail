@@ -181,11 +181,42 @@ pub fn first_hour(timed_starts: &[f64]) -> f64 {
     timed_starts.iter().copied().fold(8.0, f64::min)
 }
 
+/// The hour a grid scrolls to when it opens an event starting at
+/// `start`: an hour above the event, so its block and the popover
+/// pointing at it land in the upper part of the view with some of the
+/// day above for context.
+pub fn open_hour<Z: TimeZone>(start: EpochMillis, tz: &Z) -> f64 {
+    let Some(local) = DateTime::<Utc>::from_timestamp_millis(start).map(|utc| utc.with_timezone(tz)) else {
+        return 0.0;
+    };
+    let midnight = local.date_naive().and_hms_opt(0, 0, 0).expect("midnight exists");
+    (wall_offset(start, midnight, tz) - 1.0).max(0.0)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     const H: EpochMillis = 3_600_000;
+
+    #[test]
+    fn an_event_opened_at_14_00_scrolls_the_grid_to_13_00() {
+        // Tuesday 6 October 2026, 14:00 UTC.
+        let start = 1_791_295_200_000;
+        assert_eq!(open_hour(start, &Utc), 13.0);
+    }
+
+    #[test]
+    fn an_event_opened_before_01_00_scrolls_the_grid_to_midnight() {
+        let midnight = 1_791_244_800_000;
+        assert_eq!(open_hour(midnight + H / 2, &Utc), 0.0);
+    }
+
+    #[test]
+    fn an_event_opened_at_23_00_scrolls_the_grid_to_22_00() {
+        let midnight = 1_791_244_800_000;
+        assert_eq!(open_hour(midnight + 23 * H, &Utc), 22.0);
+    }
 
     #[test]
     fn events_that_overlap_share_the_width() {

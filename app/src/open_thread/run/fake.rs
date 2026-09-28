@@ -18,7 +18,7 @@ use mailrs_domain::{
     AccountId, Address, FlagColor, Memberships, MessageBody, MessageMeta, Target, ThreadSummary,
 };
 use mailrs_store::outbox::Queued;
-use mailrs_sync::Opened;
+use mailrs_sync::{Opened, Spot};
 
 use super::{Answer, Card, Desk, Effects, Fetched, InlinePictures, Stored, ThreadRun};
 use crate::open_thread::{Document, InlineImage, OpenThread, Page, ToClean, Unsent};
@@ -53,11 +53,13 @@ pub enum Step {
     ThumbnailsArrived,
     OpenInvitation,
     ShowInvitation,
-    OfferGnome,
+    OfferCalendarAccess,
     Busy,
     Clashes,
     Series,
     SeriesKnown,
+    OnCalendar,
+    OnCalendarKnown,
     Engines,
     Card,
     Sleep,
@@ -95,6 +97,12 @@ pub struct Screen {
     pub series: Result<Option<String>, String>,
     /// The series lines put on the card.
     pub series_lines: Vec<String>,
+    /// What the calendar's copy says about the invitation's event.
+    pub on_calendar: Result<Option<Spot>, String>,
+    /// The spots put on the card, with the UID each was for.
+    pub spots: Vec<(String, Spot)>,
+    /// The invitation on the card while it offers no Show in Calendar.
+    pub off_calendar: Option<Invitation>,
     pub flag_color: Option<FlagColor>,
     /// What the outbox holds, by row id.
     pub queued: HashMap<i64, Queued>,
@@ -227,6 +235,26 @@ pub fn opened_occurrence() -> Opened {
     }
 }
 
+/// Where the fixture meeting sits on the calendar.
+pub fn spot() -> Spot {
+    Spot {
+        account_id: ACCOUNT,
+        calendar: "primary".to_string(),
+        id: "kites".to_string(),
+        start: 1_899_363_600_000,
+    }
+}
+
+/// What reading a cancellation of the fixture meeting gives back.
+pub fn opened_cancellation() -> Opened {
+    let ics = ics().replace("METHOD:REQUEST", "METHOD:CANCEL");
+    Opened {
+        invitation: mailrs_domain::invitation::read(&ics).expect("the fixture reads"),
+        change: None,
+        answer: None,
+    }
+}
+
 /// A body whose HTML shows a picture by `cid:`.
 pub fn with_inline_picture() -> MessageBody {
     MessageBody {
@@ -322,6 +350,9 @@ impl FakeWindow {
             busy: Ok(vec!["Design crit".to_string()]),
             series: Ok(Some("Every Tuesday, 6 left".to_string())),
             series_lines: Vec::new(),
+            on_calendar: Ok(None),
+            spots: Vec::new(),
+            off_calendar: None,
             flag_color: Some(FlagColor::Orange),
             queued: HashMap::new(),
             translation: Ok(vec![Some("Hello Ana".to_string())]),
@@ -484,6 +515,10 @@ impl Desk for FakeWindow {
         self.read(OpenThread::unread)
     }
 
+    fn invitation_off_calendar(&self) -> Option<Invitation> {
+        self.with(|screen| screen.off_calendar.clone())
+    }
+
     fn invitation(&self) -> Option<(String, String)> {
         self.open(|open| {
             open.invitation()
@@ -643,6 +678,16 @@ impl Effects for FakeWindow {
         Box::pin(async move { series })
     }
 
+    fn on_calendar(
+        &self,
+        _account_id: AccountId,
+        _invitation: Invitation,
+    ) -> Answer<'_, Result<Option<Spot>, String>> {
+        self.reached(Step::OnCalendar);
+        let found = self.with(|screen| screen.on_calendar.clone());
+        Box::pin(async move { found })
+    }
+
     fn flag_color(
         &self,
         _account_id: AccountId,
@@ -730,12 +775,13 @@ impl Effects for FakeWindow {
         self.with(|screen| {
             screen
                 .invitations
-                .push(showing.map(|showing| showing.invitation.uid))
+                .push(showing.as_ref().map(|showing| showing.invitation.uid.clone()));
+            screen.off_calendar = showing.map(|showing| showing.invitation);
         });
     }
 
-    fn offer_gnome(&self, _account_id: AccountId) {
-        self.reached(Step::OfferGnome);
+    fn offer_calendar_access(&self, _account_id: AccountId) {
+        self.reached(Step::OfferCalendarAccess);
     }
 
     fn clashes(&self, _uid: String, _busy: Vec<String>) {
@@ -745,6 +791,14 @@ impl Effects for FakeWindow {
     fn series_known(&self, _uid: String, line: String) {
         self.reached(Step::SeriesKnown);
         self.with(|screen| screen.series_lines.push(line));
+    }
+
+    fn on_calendar_known(&self, uid: String, spot: Spot) {
+        self.reached(Step::OnCalendarKnown);
+        self.with(|screen| {
+            screen.spots.push((uid, spot));
+            screen.off_calendar = None;
+        });
     }
 
     fn start_engines(&self) {

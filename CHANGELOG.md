@@ -32,6 +32,14 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   turns down part of a change to several dates of a repeating event, the
   event goes back to how it was and a message says why. Double-click an
   invitation to change its reminders, color and busy status.
+- The assistant can tell you which calendars you have and put an event
+  on the one you name, such as "the Family calendar".
+- The calendar sidebar lists invitations you have not answered yet: open
+  one to see it on the calendar, or open its mail when you still have
+  it.
+- Show in Calendar on an invitation opens the calendar on that day, with
+  the event's details open. Its popover offers Open the invitation in
+  Mail back to the message it arrived in.
 
 ### Improved
 
@@ -44,6 +52,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   this computer, so they answer without the network. A change the
   assistant makes waits there until Google takes it, even one to a
   single meeting of a repeating series, which leaves the others alone.
+- An invitation no longer asks you to add the account to GNOME Online
+  Accounts. When Penguin Mail lacks permission to read that calendar,
+  the card offers Grant Access, so the event can show in Calendar.
 - With Claude Opus 5 or newer, translating a message and reading an unsubscribe
   page take less time, because those quick jobs no longer think at length.
 
@@ -64,6 +75,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   in another folder stays there.
 - An account set up manually under a listed provider, such as Fastmail,
   shows that provider's name and rules instead of its bare domain.
+- `penguin-mail --demo`'s sample invitation keeps its series ending on
+  the same time of day it started; the clocks going back used to move
+  it an hour earlier.
 
 ## 0.3.0 (2026-09-24)
 

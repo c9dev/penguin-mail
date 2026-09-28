@@ -14,7 +14,7 @@ use mailrs_domain::invitation::Invitation;
 use mailrs_domain::{AccountId, FlagColor, MessageBody, MessageMeta, Target, ThreadSummary};
 use mailrs_store::outbox::Queued;
 use mailrs_store::{messages, threads, unsubscribes};
-use mailrs_sync::{History, MailAction, Opened, TriageAction, now_millis};
+use mailrs_sync::{History, MailAction, Opened, Spot, TriageAction, now_millis};
 
 use super::pictures::Pictures;
 use super::{BODY_FETCHES, MainWindow, read_cached_body};
@@ -80,6 +80,17 @@ impl MainWindow {
         for view in self.views() {
             let run = self.thread_run(&view);
             glib::spawn_future_local(async move { run.refresh_flag_color().await });
+        }
+    }
+
+    /// Looks for each open invitation's event on the calendar again,
+    /// after the calendar copy stored new events, so a card that offered
+    /// Add to Calendar before the copy held the event offers Show in
+    /// Calendar.
+    pub fn calendar_read_for_threads(self: &Rc<Self>) {
+        for view in self.views() {
+            let run = self.thread_run(&view);
+            glib::spawn_future_local(async move { run.calendar_read().await });
         }
     }
 
@@ -185,6 +196,17 @@ impl Desk for Ports {
             open.invitation()
                 .map(|(meta, ics)| (meta.id.clone(), ics.to_string()))
         })
+    }
+
+    fn invitation_off_calendar(&self) -> Option<Invitation> {
+        self.view
+            .with_invitation(|showing| {
+                showing
+                    .on_calendar
+                    .is_none()
+                    .then(|| showing.invitation.clone())
+            })
+            .flatten()
     }
 
     fn wanting_thumbnails(&self) -> Vec<(String, MessageBody)> {
@@ -365,14 +387,22 @@ impl Effects for Ports {
     ) -> Answer<'_, Result<Option<Opened>, String>> {
         let invitations = self.core.invitations();
         Box::pin(async move {
-            self.core
+            let opened = self
+                .core
                 .call(async move {
                     invitations
                         .open(account_id, &message_id, &ics, now_millis())
                         .await
                 })
                 .await
-                .map_err(|err| err.to_string())
+                .map_err(|err| err.to_string());
+            // Opening saved the message the invitation came in, which is
+            // what gives its "Waiting for your answer" card an "Open mail"
+            // door.
+            if let (Ok(Some(_)), Some(win)) = (&opened, self.window()) {
+                win.calendar.refresh_waiting();
+            }
+            opened
         })
     }
 
@@ -401,6 +431,24 @@ impl Effects for Ports {
                 .call(async move {
                     invitations
                         .series(account_id, &invitation, now_millis())
+                        .await
+                })
+                .await
+                .map_err(|err| err.to_string())
+        })
+    }
+
+    fn on_calendar(
+        &self,
+        account_id: AccountId,
+        invitation: Invitation,
+    ) -> Answer<'_, Result<Option<Spot>, String>> {
+        let invitations = self.core.invitations();
+        Box::pin(async move {
+            self.core
+                .call(async move {
+                    invitations
+                        .on_calendar(account_id, &invitation, now_millis())
                         .await
                 })
                 .await
@@ -498,9 +546,9 @@ impl Effects for Ports {
         self.view.show_invitation(showing);
     }
 
-    fn offer_gnome(&self, account_id: AccountId) {
+    fn offer_calendar_access(&self, account_id: AccountId) {
         if let Some(window) = self.window() {
-            window.offer_gnome(&self.view, account_id);
+            window.offer_calendar_access(&self.view, account_id);
         }
     }
 
@@ -510,6 +558,10 @@ impl Effects for Ports {
 
     fn series_known(&self, uid: String, line: String) {
         self.view.series_known(&uid, line);
+    }
+
+    fn on_calendar_known(&self, uid: String, spot: Spot) {
+        self.view.found_on_calendar(&uid, spot);
     }
 
     fn start_engines(&self) {

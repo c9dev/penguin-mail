@@ -30,7 +30,7 @@ use std::rc::Rc;
 use mailrs_domain::invitation::{Invitation, Method};
 use mailrs_domain::{AccountId, FlagColor, MessageBody, MessageMeta, Target, ThreadSummary};
 use mailrs_store::outbox::Queued;
-use mailrs_sync::{Opened, outbox_id};
+use mailrs_sync::{Opened, Spot, outbox_id};
 
 use super::{Cleaned, InlineImage, OpenThread, Unsent};
 use crate::protection::Read;
@@ -98,6 +98,9 @@ pub trait Desk: Screen {
     /// The newest message on screen that carries an invitation, with the
     /// `text/calendar` part it arrived in.
     fn invitation(&self) -> Option<(String, String)>;
+    /// The invitation on the card while the card offers no Show in
+    /// Calendar, which the calendar copy may since have come to hold.
+    fn invitation_off_calendar(&self) -> Option<Invitation>;
     /// Bodies on screen with a picture attached that has no thumbnail.
     fn wanting_thumbnails(&self) -> Vec<(String, MessageBody)>;
     /// Bodies on screen that name a picture by `cid:` whose pictures have
@@ -181,6 +184,13 @@ pub trait Effects {
         account_id: AccountId,
         invitation: Invitation,
     ) -> Answer<'_, Result<Option<String>, String>>;
+    /// Where the invitation's event sits in the calendar's copy on this
+    /// computer, or `None` when the copy does not hold it.
+    fn on_calendar(
+        &self,
+        account_id: AccountId,
+        invitation: Invitation,
+    ) -> Answer<'_, Result<Option<Spot>, String>>;
     /// The flag colour the store holds for the thread.
     fn flag_color(
         &self,
@@ -218,12 +228,15 @@ pub trait Effects {
     fn clear(&self);
     /// Puts the invitation on its card, or takes the card down.
     fn show_invitation(&self, showing: Option<Showing>);
-    /// Offers the account to GNOME Online Accounts, when it is worth it.
-    fn offer_gnome(&self, account_id: AccountId);
+    /// Offers Grant Access on the card when the account has a calendar
+    /// and withheld the permission to read it.
+    fn offer_calendar_access(&self, account_id: AccountId);
     /// Puts what else the user has on during the event on the card.
     fn clashes(&self, uid: String, busy: Vec<String>);
     /// Puts how the series runs on the card, under the time.
     fn series_known(&self, uid: String, line: String);
+    /// Puts Show in Calendar on the card, for the event at `spot`.
+    fn on_calendar_known(&self, uid: String, spot: Spot);
     /// Starts the engine run for a signed or encrypted message.
     fn start_engines(&self);
     fn translation_card(&self, card: Card);
@@ -496,6 +509,34 @@ impl ThreadRun {
         }
     }
 
+    /// Looks for the card's event on the calendar again, after the
+    /// calendar copy read the provider. An invitation opened before the
+    /// copy's first read, in the first minute after start, found nothing
+    /// there and offered Add to Calendar; this swaps in Show in Calendar
+    /// once the event arrives.
+    pub async fn calendar_read(&self) {
+        let Some(wanted) = self.on_screen() else {
+            return;
+        };
+        let Some(Some(invitation)) = wanted.on_screen(|_| self.desk.invitation_off_calendar()) else {
+            return;
+        };
+        if invitation.cancelled() {
+            return;
+        }
+        let account_id = wanted.target().account_id;
+        let uid = invitation.uid.clone();
+        if let Some(Some(spot)) = wanted
+            .ask(
+                |effects| effects.on_calendar(account_id, invitation),
+                "could not look for the event on the calendar",
+            )
+            .await
+        {
+            wanted.on_screen(|effects| effects.on_calendar_known(uid, spot));
+        }
+    }
+
     /// Reads the flag colour of the thread on screen again. The store's
     /// change events do not carry it, so an undo needs this.
     pub async fn refresh_flag_color(&self) {
@@ -675,6 +716,7 @@ impl ThreadRun {
                 change: opened.change,
                 answer: opened.answer,
                 me: self.desk.me(account_id),
+                on_calendar: None,
             }),
             Err(err) => {
                 tracing::info!(error = %err, "could not read the invitation");
@@ -694,10 +736,24 @@ impl ThreadRun {
                 wanted.on_screen(|effects| effects.series_known(uid, line));
             }
         }
+        // An answered invitation is still worth finding on the calendar;
+        // only a cancellation has nothing there to show.
+        if let Some(showing) = showing.as_ref().filter(|s| !s.invitation.cancelled()) {
+            wanted.on_screen(|effects| effects.offer_calendar_access(account_id));
+            let (uid, invitation) = (showing.invitation.uid.clone(), showing.invitation.clone());
+            if let Some(Some(spot)) = wanted
+                .ask(
+                    |effects| effects.on_calendar(account_id, invitation),
+                    "could not look for the event on the calendar",
+                )
+                .await
+            {
+                wanted.on_screen(|effects| effects.on_calendar_known(uid, spot));
+            }
+        }
         let Some(showing) = showing.filter(waiting_on_an_answer) else {
             return;
         };
-        wanted.on_screen(|effects| effects.offer_gnome(account_id));
         let uid = showing.invitation.uid.clone();
         if let Some(busy) = wanted
             .ask(
@@ -722,8 +778,8 @@ fn one_of_a_series(showing: &Showing) -> bool {
 }
 
 /// Whether the invitation still waits on the user: a request they have not
-/// answered, for an event that still runs. Only then do the clashes and
-/// the GNOME offer earn a place on the card.
+/// answered, for an event that still runs. Only then do the clashes earn
+/// a place on the card.
 fn waiting_on_an_answer(showing: &Showing) -> bool {
     showing.answer.is_none()
         && showing.invitation.method == Method::Request

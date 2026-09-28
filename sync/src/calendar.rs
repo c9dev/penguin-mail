@@ -33,6 +33,47 @@ use mailrs_store::calendar as store;
 use crate::calendar_copy::{CalendarCopy, new_event_id};
 use crate::{Accounts, AnyCalendar, BackendError, CalendarService, Permitted, SyncError};
 
+/// Why no calendar answers to a name.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum NoPick {
+    /// No calendar on the account has that name or id.
+    Unknown,
+    /// Only a calendar the account cannot write to has it. This carries
+    /// the name as the calendar spells it.
+    ReadOnly(String),
+    /// More than one calendar the account can write to has that name.
+    Several,
+}
+
+/// The calendar the account can write to that `wanted` names: its id, or
+/// its name in any case, with spaces around it ignored. An id wins over a
+/// name, so two calendars that share a name can still be told apart.
+pub fn writable_named<'a>(
+    calendars: &'a [model::Calendar],
+    wanted: &str,
+) -> Result<&'a model::Calendar, NoPick> {
+    let wanted = wanted.trim();
+    if let Some(calendar) = calendars.iter().find(|c| c.id == wanted) {
+        return match calendar.access.can_write() {
+            true => Ok(calendar),
+            false => Err(NoPick::ReadOnly(calendar.name.clone())),
+        };
+    }
+    let lower = wanted.to_lowercase();
+    let named: Vec<&model::Calendar> = calendars
+        .iter()
+        .filter(|c| c.name.trim().to_lowercase() == lower)
+        .collect();
+    let writable: Vec<&model::Calendar> =
+        named.iter().copied().filter(|c| c.access.can_write()).collect();
+    match (writable.as_slice(), named.first()) {
+        ([one], _) => Ok(*one),
+        ([], Some(read_only)) => Err(NoPick::ReadOnly(read_only.name.clone())),
+        ([], None) => Err(NoPick::Unknown),
+        _ => Err(NoPick::Several),
+    }
+}
+
 pub struct Calendar<A: Accounts> {
     accounts: Arc<A>,
     db: Db,
@@ -81,18 +122,53 @@ impl<A: Accounts> Calendar<A> {
         Ok(Permitted::Done(free_slots(&busy, windows, length)))
     }
 
-    /// Puts a new event on the primary calendar and invites its guests.
-    /// Once the copy is reading the account, the event waits in the
-    /// queue and comes back `pending`; `send` is kicked off at once so
-    /// it does not sit there until the next tick.
+    /// Every calendar on the account: from the copy once it has been
+    /// read, else from the provider, which answers `NeedsPermission`
+    /// until the account grants the calendar list.
+    pub async fn calendars(
+        &self,
+        account_id: AccountId,
+    ) -> Result<Permitted<Vec<model::Calendar>>, SyncError> {
+        let held = self
+            .db
+            .read(move |c| {
+                Ok(match store::synced(c, account_id)? {
+                    true => Some(store::calendars(c, account_id)?),
+                    false => None,
+                })
+            })
+            .await?;
+        match held {
+            Some(list) => Ok(Permitted::Done(list)),
+            None => permitted(self.calendar(account_id)?.calendars().await),
+        }
+    }
+
+    /// Puts a new event on `calendar`, or the primary calendar when it
+    /// names none, and invites its guests. Once the copy is reading the
+    /// account, the event waits in the queue and comes back `pending`;
+    /// `send` is kicked off at once so it does not sit there until the
+    /// next tick.
     pub async fn create(
         &self,
         account_id: AccountId,
+        calendar: Option<&str>,
         fields: &EventFields,
     ) -> Result<Permitted<model::Event>, SyncError> {
-        let calendar = self.calendar(account_id)?;
+        let service = self.calendar(account_id)?;
+        // A calendar other than the primary exists only in the copy, so a
+        // copy never read is read now; the event must not fall back to
+        // the primary because the copy was late.
+        if calendar.is_some() && !self.synced(account_id).await? {
+            if let Permitted::NeedsPermission = self.copy.refresh(account_id, crate::now_millis()).await? {
+                return Ok(Permitted::NeedsPermission);
+            }
+            if !self.synced(account_id).await? {
+                return Err(SyncError::NoCalendar(calendar.unwrap_or_default().to_string()));
+            }
+        }
         if self.synced(account_id).await? {
-            let mut event = self.new_event(account_id, fields).await?;
+            let mut event = self.new_event(account_id, calendar, fields).await?;
             self.copy.save(account_id, event.clone()).await?;
             self.send_soon(account_id);
             // `save` marks its own copy of `event` pending; this one is
@@ -100,7 +176,7 @@ impl<A: Accounts> Calendar<A> {
             event.pending = true;
             return Ok(Permitted::Done(event));
         }
-        match calendar.create_event(fields).await {
+        match service.create_event(fields).await {
             Ok(event) => Ok(Permitted::Done(live_event(&event))),
             Err(BackendError::NeedsPermission) => Ok(Permitted::NeedsPermission),
             Err(err) => Err(err.into()),
@@ -244,15 +320,21 @@ impl<A: Accounts> Calendar<A> {
         Ok(self.db.read(move |c| store::synced(c, account_id)).await?)
     }
 
-    /// The neutral event a fresh `create` writes: on the primary
-    /// calendar, in its zone, under a new id, always busy, since an
-    /// event the assistant makes is never a placeholder.
-    async fn new_event(&self, account_id: AccountId, fields: &EventFields) -> Result<model::Event, SyncError> {
-        let primary = self.primary_calendar(account_id).await?;
+    /// The neutral event a fresh `create` writes: on `calendar`, or the
+    /// primary calendar when it names none, in that calendar's zone,
+    /// under a new id, always busy, since an event the assistant makes is
+    /// never a placeholder.
+    async fn new_event(
+        &self,
+        account_id: AccountId,
+        calendar: Option<&str>,
+        fields: &EventFields,
+    ) -> Result<model::Event, SyncError> {
+        let target = self.target(account_id, calendar).await?;
         Ok(model::Event {
-            calendar: primary.id,
+            calendar: target.id,
             id: new_event_id(),
-            zone: primary.zone,
+            zone: target.zone,
             start: fields.start.as_ref().and_then(instant).unwrap_or_default(),
             end: fields.end.as_ref().and_then(instant).unwrap_or_default(),
             all_day: matches!(fields.start, Some(EventTime::Day(_))),
@@ -265,17 +347,29 @@ impl<A: Accounts> Calendar<A> {
         })
     }
 
-    /// The calendar Google lists as `primary == true`. A real account's
-    /// primary calendar is named by its address, not `primary`. A `synced`
-    /// account always has one; the fallback only guards a caller that
-    /// races `synced` against a calendar list still being written.
-    async fn primary_calendar(&self, account_id: AccountId) -> Result<model::Calendar, SyncError> {
+    /// The calendar a new event goes on: the one `calendar` names by id,
+    /// or, when it names none, the one Google lists as `primary == true`
+    /// (a real account's primary calendar is named by its address, not
+    /// `primary`). Either must take events from the account; a calendar
+    /// the account cannot write to, or an id naming none, is
+    /// `SyncError::NoCalendar`. The no-primary fallback only guards a
+    /// caller that races `synced` against a calendar list still being
+    /// written.
+    async fn target(&self, account_id: AccountId, calendar: Option<&str>) -> Result<model::Calendar, SyncError> {
         let calendars = self.db.read(move |c| store::calendars(c, account_id)).await?;
-        Ok(calendars.into_iter().find(|c| c.primary).unwrap_or_else(|| model::Calendar {
-            id: "primary".to_string(),
-            primary: true,
-            ..model::Calendar::default()
-        }))
+        let found = match calendar {
+            Some(id) => calendars.into_iter().find(|c| c.id == id),
+            None => Some(calendars.into_iter().find(|c| c.primary).unwrap_or_else(|| model::Calendar {
+                id: "primary".to_string(),
+                primary: true,
+                access: model::Access::Owner,
+                ..model::Calendar::default()
+            })),
+        };
+        match found {
+            Some(calendar) if calendar.access.can_write() => Ok(calendar),
+            _ => Err(SyncError::NoCalendar(calendar.unwrap_or("primary").to_string())),
+        }
     }
 
     /// Sends the account's queue right away rather than leaving a change

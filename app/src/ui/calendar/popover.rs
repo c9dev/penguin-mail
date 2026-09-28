@@ -5,7 +5,7 @@
 //! keeps one, parented to itself, and points it at whichever block was
 //! pressed with `set_pointing_to`. Edit and Delete sit in the title row
 //! for an event the account may change as a whole; an invitation, which
-//! the mockup draws, gets neither (ruling R1).
+//! the mockup draws, gets neither.
 //!
 //! The popover does not auto-hide: a second click of a double click must
 //! reach the card behind it rather than be swallowed as the click that
@@ -17,6 +17,7 @@ use std::rc::Rc;
 
 use adw::prelude::*;
 use gtk::{gdk, gio, glib, pango};
+use mailrs_domain::AccountId;
 use mailrs_domain::calendar::{Event, Guest, Occurrence};
 use mailrs_domain::invitation::Answer;
 use mailrs_domain::translate::gettext;
@@ -80,7 +81,15 @@ pub struct EventPopover {
     conference_url: RefCell<Option<String>>,
     answer_box: gtk::Box,
     answer_buttons: Vec<(Answer, gtk::Button)>,
-    on_answer: RefCell<Option<Box<OnAnswer>>>,
+    on_answer: RefCell<Option<Rc<OnAnswer>>>,
+    /// "Open the invitation in Mail", shown only for an event this popover
+    /// has found the mail for.
+    mail_row: gtk::Button,
+    on_mail: RefCell<Option<Box<dyn Fn()>>>,
+    /// The account and UID `show` last opened, so a mail lookup that comes
+    /// back after the popover has moved to another occurrence changes
+    /// nothing.
+    showing: RefCell<Option<(AccountId, String)>>,
     /// The block the popover points at, which takes the focus back when
     /// it closes.
     anchor: glib::WeakRef<gtk::Widget>,
@@ -128,8 +137,8 @@ impl EventPopover {
 
         // Edit and Delete, right of the title, flat and icon-only, so a
         // popover that has them does not grow past the mockup's width.
-        // Only an event the account may change as a whole gets them
-        // (ruling R1); `show` hides whichever `on_edit` or `on_delete`
+        // Only an event the account may change as a whole gets them;
+        // `show` hides whichever `on_edit` or `on_delete`
         // comes in `None`.
         let edit_button = gtk::Button::builder()
             .icon_name("document-edit-symbolic")
@@ -197,6 +206,22 @@ impl EventPopover {
             })
             .collect();
 
+        // "Open the invitation in Mail", under the answer row, only for
+        // an event that arrived by mail; an icon-and-text link
+        // rather than a filled pill, as the mockup draws it.
+        let mail_label = gtk::Label::builder()
+            .xalign(0.0)
+            .wrap(true)
+            .hexpand(true)
+            .label(gettext("Open the invitation in Mail"))
+            .build();
+        let mail_row = gtk::Button::builder()
+            .child(&row_with_icon("mail-unread-symbolic", &mail_label, false))
+            .css_classes(["flat", "popover-open-mail"])
+            .visible(false)
+            .build();
+        crate::ui::name(&mail_row, &gettext("Open the invitation in Mail"));
+
         // The mockup's rows sit 26 px apart, the first 31 px under the
         // time, and Join 22 px under the last.
         let rows = gtk::Box::builder()
@@ -222,6 +247,7 @@ impl EventPopover {
             rows.upcast_ref(),
             join.upcast_ref(),
             answer_box.upcast_ref(),
+            mail_row.upcast_ref(),
         ] {
             content.append(widget);
         }
@@ -270,6 +296,9 @@ impl EventPopover {
             answer_box,
             answer_buttons,
             on_answer: RefCell::new(None),
+            mail_row,
+            on_mail: RefCell::new(None),
+            showing: RefCell::new(None),
             anchor: glib::WeakRef::new(),
             root_press: RefCell::new(None),
         });
@@ -308,7 +337,10 @@ impl EventPopover {
             let answer = *answer;
             button.connect_clicked(move |_| {
                 let Some(this) = weak.upgrade() else { return };
-                if let Some(f) = this.on_answer.borrow().as_ref() {
+                // Cloned out so the borrow ends before the callback runs,
+                // which may open the popover again and replace it.
+                let f = this.on_answer.borrow().clone();
+                if let Some(f) = f {
                     f(answer);
                 }
                 this.popover.popdown();
@@ -318,7 +350,8 @@ impl EventPopover {
         this.edit_button.connect_clicked(move |_| {
             let Some(this) = weak.upgrade() else { return };
             this.popover.popdown();
-            if let Some(f) = this.on_edit.borrow_mut().take() {
+            let f = this.on_edit.borrow_mut().take();
+            if let Some(f) = f {
                 f();
             }
         });
@@ -326,7 +359,17 @@ impl EventPopover {
         this.delete_button.connect_clicked(move |_| {
             let Some(this) = weak.upgrade() else { return };
             this.popover.popdown();
-            if let Some(f) = this.on_delete.borrow_mut().take() {
+            let f = this.on_delete.borrow_mut().take();
+            if let Some(f) = f {
+                f();
+            }
+        });
+        let weak = Rc::downgrade(&this);
+        this.mail_row.connect_clicked(move |_| {
+            let Some(this) = weak.upgrade() else { return };
+            this.popover.popdown();
+            let f = this.on_mail.borrow_mut().take();
+            if let Some(f) = f {
                 f();
             }
         });
@@ -357,7 +400,8 @@ impl EventPopover {
         let weak = Rc::downgrade(&this);
         this.popover.connect_unrealize(move |_| {
             let Some(this) = weak.upgrade() else { return };
-            if let Some((root, outside)) = this.root_press.borrow_mut().take() {
+            let press = this.root_press.borrow_mut().take();
+            if let Some((root, outside)) = press {
                 root.remove_controller(&outside);
             }
         });
@@ -380,6 +424,13 @@ impl EventPopover {
         on_delete: Option<Box<dyn Fn()>>,
     ) {
         let event = &o.event;
+        // The mail lookup this event's uid started, if any, is for the
+        // occurrence the popover showed then; a late answer for it must
+        // not land on whatever the popover shows now.
+        self.showing
+            .replace(Some((o.account_id, event.uid.clone())));
+        self.mail_row.set_visible(false);
+        self.on_mail.replace(None);
         let colour = event.color.as_deref().unwrap_or(calendar.color.as_str());
         self.bar
             .set_css_classes(&["popover-bar", &tint::css_class(colour)]);
@@ -454,7 +505,7 @@ impl EventPopover {
             crate::ui::describe(button, &answer.label(), &said);
         }
 
-        self.on_answer.replace(Some(Box::new(on_answer)));
+        self.on_answer.replace(Some(Rc::new(on_answer)));
         self.anchor.set(Some(anchor));
 
         if let Some(bounds) = anchor.compute_bounds(&self.parent) {
@@ -489,6 +540,19 @@ impl EventPopover {
     pub fn hide(&self) {
         self.popover.popdown();
     }
+
+    /// Puts "Open the invitation in Mail" on the popover, once the mail
+    /// carrying `uid`'s invitation is found; `None` leaves it hidden, for
+    /// an event with no mail behind it. Changes nothing once the popover
+    /// has moved on to another occurrence, since the lookup that found
+    /// this answers after `show` already returned.
+    pub fn set_open_mail(&self, account_id: AccountId, uid: &str, open: Option<Box<dyn Fn()>>) {
+        if *self.showing.borrow() != Some((account_id, uid.to_string())) {
+            return;
+        }
+        self.mail_row.set_visible(open.is_some());
+        self.on_mail.replace(open);
+    }
 }
 
 /// Opens `link` in the browser, only when it is `https:`: a calendar
@@ -503,9 +567,18 @@ fn open(link: &str, from: &impl IsA<gtk::Widget>) {
 }
 
 fn icon_row(icon: &str, label: &gtk::Label) -> gtk::Box {
+    row_with_icon(icon, label, true)
+}
+
+/// A row of an icon and `label`. The detail rows dim their icon; the
+/// link into Mail keeps its icon in the link's accent colour, as the
+/// mockup draws it.
+fn row_with_icon(icon: &str, label: &gtk::Label, dim: bool) -> gtk::Box {
     let row = gtk::Box::builder().spacing(8).build();
     let image = gtk::Image::from_icon_name(icon);
-    image.add_css_class("dim-label");
+    if dim {
+        image.add_css_class("dim-label");
+    }
     row.append(&image);
     label.set_hexpand(true);
     row.append(label);

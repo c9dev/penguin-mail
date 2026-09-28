@@ -18,6 +18,7 @@ use mailrs_domain::{
 };
 use mailrs_gmail::RemoteLabel;
 use mailrs_store::{Db, accounts, messages};
+use mailrs_sync::calendar_copy::CalendarCopy;
 use mailrs_sync::fake::{FakeGmail, FakeImap, FakeOneClick, FakeSmtp, fill_store};
 use mailrs_sync::{
     AccountServices, AccountSettings, AccountSync, Accounts, Calendar, ContactBook, Invitations,
@@ -458,6 +459,9 @@ pub struct Harness {
     pub desk: Rc<FakeDesk>,
     pub effects: Rc<FakeEffects>,
     pub account_id: AccountId,
+    /// The same copy the tools' `Calendar` module reads and writes, for a
+    /// test to read into as the app's own timer does a minute after start.
+    pub copy: Arc<CalendarCopy<Connected>>,
     /// The second account and its Gmail, when the test connected one.
     pub second: Option<(AccountId, Arc<FakeGmail>)>,
     /// Held so the engine's change events have somewhere to go.
@@ -644,7 +648,8 @@ impl Harness {
             OneClick::Fake(Arc::clone(&one_click)),
         ));
         let settings = Arc::new(AccountSettings::new(Arc::clone(&connected), db.clone()));
-        let calendar_copy = Arc::new(mailrs_sync::calendar_copy::CalendarCopy::new(Arc::clone(&connected), db.clone()));
+        let calendar_copy = Arc::new(CalendarCopy::new(Arc::clone(&connected), db.clone()));
+        let copy = Arc::clone(&calendar_copy);
         let modules = Modules {
             mail: Arc::clone(&mail),
             lists: Arc::new(Mailboxes::new(Arc::clone(&connected), db.clone())),
@@ -701,10 +706,23 @@ impl Harness {
             desk,
             effects,
             account_id,
+            copy,
             second: other,
             _heard: heard,
             _dir: dir,
         }
+    }
+
+    /// Puts `calendars` on the first account's Google calendar and reads
+    /// them into the copy, as the app's timer does a minute after start.
+    pub async fn read_calendars(&self, calendars: Vec<mailrs_domain::calendar::Calendar>) {
+        self.gmail.with(|s| s.calendars = calendars);
+        let read = self
+            .copy
+            .refresh(self.account_id, mailrs_sync::now_millis())
+            .await
+            .expect("the calendars read");
+        assert!(matches!(read, mailrs_sync::Permitted::Done(_)));
     }
 
     /// Runs one tool call and gives back its JSON, or its error message.

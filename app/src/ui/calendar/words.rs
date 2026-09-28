@@ -206,6 +206,66 @@ pub fn mini_day_words(date: NaiveDate, has_events: bool) -> String {
     }
 }
 
+/// "Wed 15:00": the day and time the calendar sidebar's "Waiting for
+/// your answer" card shows, short since the card has no room for the
+/// full weekday. An all-day occurrence gives just the day, since it has
+/// no clock to add.
+pub fn waiting_when_words<Z: TimeZone>(start: EpochMillis, all_day: bool, zone: &Z) -> String
+where
+    Z::Offset: std::fmt::Display,
+{
+    let Some(day) = waiting_day(start, all_day, zone) else {
+        return String::new();
+    };
+    let weekday = day.format_localized(&gettext("%a"), date_locale()).to_string();
+    if all_day {
+        weekday
+    } else {
+        fill(
+            &gettext("{weekday} {time}"),
+            &[("weekday", &weekday), ("time", &clock_words(start, zone))],
+        )
+    }
+}
+
+/// The full words for a "Waiting for your answer" card's own day and
+/// time, read after its name: the day in full, then the clock unless
+/// the occurrence runs all day.
+pub fn waiting_card_detail<Z: TimeZone>(start: EpochMillis, all_day: bool, zone: &Z) -> String
+where
+    Z::Offset: std::fmt::Display,
+{
+    let Some(day) = waiting_day(start, all_day, zone) else {
+        return String::new();
+    };
+    let day_text = day_words(day);
+    if all_day {
+        day_text
+    } else {
+        fill(
+            &gettext("{day}, {time}"),
+            &[("day", &day_text), ("time", &clock_words(start, zone))],
+        )
+    }
+}
+
+/// The day a "Waiting for your answer" card's own words read from: the
+/// occurrence's own UTC date for an all-day one, never converted to
+/// local time, as [`span_words`] reads it; the local day otherwise.
+fn waiting_day<Z: TimeZone>(start: EpochMillis, all_day: bool, zone: &Z) -> Option<NaiveDate> {
+    if all_day { utc_date(start) } else { Some(local_date(start, zone)) }
+}
+
+/// The "Waiting for your answer" card's own "Open mail" door, named so
+/// several cards on screen read apart, as "Open mail" repeated on every
+/// one would sound alike to a screen reader.
+pub fn waiting_mail_name(title: &str) -> String {
+    fill(
+        &gettext("Open the invitation for “{title}” in Mail"),
+        &[("title", title)],
+    )
+}
+
 /// The reminder times the editor offers, in minutes before the start.
 pub const REMINDER_CHOICES: [u32; 9] = [0, 5, 10, 15, 30, 60, 120, 1440, 10080];
 
@@ -246,8 +306,7 @@ pub fn reminder_words(minutes: u32) -> String {
 /// three companions already exist in the template as the singular of a
 /// plural the invitation card counts with (`update-po.sh` refuses one
 /// msgid used both ways). A custom repeat is said the way the invitation
-/// card says a rule, `in_words`, so the two phrasings never drift apart
-/// (ruling R6).
+/// card says a rule, `in_words`, so the two phrasings never drift apart.
 pub fn repeat_words(repeat: &Repeat) -> String {
     let once = |one: &str, many: &str| fill_plural(one, many, 1, &[("count", "1")]);
     match repeat {
@@ -554,5 +613,41 @@ mod tests {
         assert_eq!(answer_words(&guest(Some(Answer::Maybe), false)), "Maybe");
         assert_eq!(answer_words(&guest(None, false)), "No answer yet");
         assert_eq!(answer_words(&guest(Some(Answer::Yes), true)), "Organizer");
+    }
+
+    fn wednesday_at(hour: u32) -> EpochMillis {
+        Utc.with_ymd_and_hms(2026, 9, 23, hour, 0, 0).unwrap().timestamp_millis()
+    }
+
+    #[test]
+    fn waiting_when_words_gives_the_short_day_and_time() {
+        mailrs_domain::translate::set_date_locale("en_US");
+        assert_eq!(waiting_when_words(wednesday_at(15), false, &Utc), "Wed 15:00");
+    }
+
+    #[test]
+    fn waiting_when_words_for_an_all_day_occurrence_gives_just_the_day() {
+        mailrs_domain::translate::set_date_locale("en_US");
+        assert_eq!(waiting_when_words(midnight(d(2026, 9, 23)), true, &Utc), "Wed");
+    }
+
+    #[test]
+    fn waiting_card_detail_gives_the_full_day_and_time() {
+        mailrs_domain::translate::set_date_locale("en_US");
+        assert_eq!(waiting_card_detail(wednesday_at(15), false, &Utc), "Wednesday 23, 15:00");
+    }
+
+    #[test]
+    fn waiting_card_detail_for_an_all_day_occurrence_gives_just_the_day() {
+        mailrs_domain::translate::set_date_locale("en_US");
+        assert_eq!(waiting_card_detail(midnight(d(2026, 9, 23)), true, &Utc), "Wednesday 23");
+    }
+
+    #[test]
+    fn waiting_mail_name_names_the_invitation_it_opens() {
+        assert_eq!(
+            waiting_mail_name("Quarterly review"),
+            "Open the invitation for “Quarterly review” in Mail"
+        );
     }
 }

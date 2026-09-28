@@ -85,6 +85,11 @@ pub struct Hooks {
     pub contacts: Box<dyn Fn() -> Contacts>,
     /// Sends the account's queued calendar changes now, then reloads.
     pub push: Box<dyn Fn(AccountId)>,
+    /// Opens the mail that carries an invitation, switching away from the
+    /// calendar to it: the "Waiting for your answer" card's "Open mail"
+    /// door and the event popover's "Open the invitation in Mail" link
+    /// both call this.
+    pub open_mail: Box<dyn Fn(AccountId, String)>,
 }
 
 
@@ -107,6 +112,10 @@ struct GridPage {
     headings: gtk::Box,
     strip: AllDayStrip,
     scroller: gtk::ScrolledWindow,
+    /// Counts the scrolls asked of `scroller`. A scroll waiting for the
+    /// grid's first layout, asked while the page was hidden, must not
+    /// land after a later one, such as Show in Calendar's.
+    scroll_asked: Rc<Cell<u64>>,
     grid: TimeGrid,
 }
 
@@ -128,7 +137,7 @@ pub struct CalendarView {
     /// The page the window puts beside the sidebar.
     pub page: adw::ToolbarView,
     /// What the sidebar shows while the calendar is on screen.
-    pub sidebar: gtk::ScrolledWindow,
+    pub sidebar: gtk::Box,
     /// Shows the sidebar when the window is too narrow to keep it open.
     pub sidebar_button: gtk::ToggleButton,
     core: Rc<Core>,
@@ -181,6 +190,9 @@ pub struct CalendarView {
     /// it: an answer can come back after the person moved on.
     reads: Cell<u64>,
     sidebar_read: Cell<u64>,
+    /// The latest "Waiting for your answer" read, counted apart from the
+    /// sidebar's so neither drops the other's answer.
+    waiting_read: Cell<u64>,
     list_read: Cell<u64>,
     /// The earliest day the narrow list already holds. `load_earlier`
     /// reads back from here and moves it once the read comes back.
@@ -199,8 +211,10 @@ pub struct CalendarView {
     /// Counts `open`'s reads, so a newer one, or a move to another range,
     /// drops an older answer.
     open_read: Cell<u64>,
-    /// An event to open once the page that holds it has been read.
-    pending_open: RefCell<Option<EventKey>>,
+    /// An occurrence to open once the page that holds it has been read:
+    /// the event and the occurrence's own start, since every occurrence
+    /// of an unsplit series shares one row and one id.
+    pending_open: RefCell<Option<(EventKey, EpochMillis)>>,
     /// Set while the view changes its own switch, so the switch's signal
     /// does not echo the change back.
     switching: Cell<bool>,
@@ -212,10 +226,10 @@ pub struct CalendarView {
     /// focus, so the page that replaces it takes the focus once its
     /// events arrive.
     refocus_owed: Cell<bool>,
-    /// The one change waiting on its Undo toast, if any (R4).
+    /// The one change waiting on its Undo toast, if any.
     holding: RefCell<Holding<Held>>,
     /// The toast that change's Undo is on, so a new one can dismiss it
-    /// (R4) and its own watcher can tell it apart from a later toast.
+    /// and its own watcher can tell it apart from a later toast.
     toast_up: RefCell<Option<adw::Toast>>,
 }
 
@@ -398,7 +412,8 @@ impl CalendarView {
         let quick = Quick::new(&card);
 
         let view = Rc::new_cyclic(|weak: &Weak<CalendarView>| {
-            let (on_date, on_shown, on_grant) = (weak.clone(), weak.clone(), weak.clone());
+            let (on_date, on_shown, on_grant, on_open_waiting, on_open_mail) =
+                (weak.clone(), weak.clone(), weak.clone(), weak.clone(), weak.clone());
             let calendar_sidebar = CalendarSidebar::new(
                 move |day| {
                     if let Some(view) = on_date.upgrade() {
@@ -415,16 +430,18 @@ impl CalendarView {
                         (view.hooks.grant)(account);
                     }
                 },
+                move |account_id, calendar, id, start| {
+                    if let Some(view) = on_open_waiting.upgrade() {
+                        view.open(account_id, &calendar, &id, start);
+                    }
+                },
+                move |account_id, thread_id| {
+                    if let Some(view) = on_open_mail.upgrade() {
+                        (view.hooks.open_mail)(account_id, thread_id);
+                    }
+                },
             );
-            calendar_sidebar.widget.set_margin_start(12);
-            calendar_sidebar.widget.set_margin_end(12);
-            calendar_sidebar.widget.set_margin_top(6);
-            calendar_sidebar.widget.set_margin_bottom(12);
-            let sidebar = gtk::ScrolledWindow::builder()
-                .hscrollbar_policy(gtk::PolicyType::Never)
-                .vexpand(true)
-                .child(&calendar_sidebar.widget)
-                .build();
+            let sidebar = calendar_sidebar.widget.clone();
             CalendarView {
                 page,
                 sidebar,
@@ -469,6 +486,7 @@ impl CalendarView {
                 calendars: RefCell::new(HashMap::new()),
                 reads: Cell::new(0),
                 sidebar_read: Cell::new(0),
+                waiting_read: Cell::new(0),
                 list_read: Cell::new(0),
                 list_first: Cell::new(today),
                 list_exhausted: Cell::new(false),
@@ -591,6 +609,36 @@ impl CalendarView {
     /// copy changed.
     pub fn reload(self: &Rc<Self>) {
         self.read_sidebar(true);
+        self.refresh_waiting();
+    }
+
+    /// Reads "Waiting for your answer" again, and nothing else: after an
+    /// invitation's message is saved, which may give a card its "Open
+    /// mail" door, and after an answer. It leaves the pages and the
+    /// open popover alone, so it can run while the view opens an event.
+    pub fn refresh_waiting(self: &Rc<Self>) {
+        let read = self.waiting_read.get() + 1;
+        self.waiting_read.set(read);
+        let accounts = sidebar::waiting_accounts(&self.accounts.borrow());
+        let now = chrono::Local::now().timestamp_millis();
+        let weak = Rc::downgrade(self);
+        let core = Rc::clone(&self.core);
+        let invitations = self.core.invitations();
+        glib::spawn_future_local(async move {
+            // `Db::read`'s `spawn_blocking` needs the tokio runtime, which
+            // `call` gives it and the GTK loop does not.
+            let waiting = core
+                .call(async move { invitations.waiting_for_answer(&accounts, now).await })
+                .await;
+            let Some(view) = weak.upgrade() else { return };
+            if view.waiting_read.get() != read {
+                return;
+            }
+            match waiting {
+                Ok(waiting) => view.calendar_sidebar.show_waiting(&waiting),
+                Err(err) => tracing::warn!(%err, "could not read what is waiting for an answer"),
+            }
+        });
     }
 
     /// Moves the view to the range around `day`.
@@ -642,10 +690,13 @@ impl CalendarView {
         }
     }
 
-    /// Goes to the day of an event the store holds and opens its
-    /// popover, as the toast about a change the provider turned down
-    /// does. Nothing happens when the store no longer has the event.
-    pub fn open(self: &Rc<Self>, account_id: AccountId, calendar: &str, id: &str) {
+    /// Goes to the day `start` falls on and opens that occurrence's
+    /// popover once the range has drawn, as the toast about a change the
+    /// provider turned down does. `start` is the occurrence's own start,
+    /// not the series' first one: an invitation to next Tuesday's design
+    /// review names that Tuesday, not the series' beginning. Nothing
+    /// happens when the store no longer has the event.
+    pub fn open(self: &Rc<Self>, account_id: AccountId, calendar: &str, id: &str, start: EpochMillis) {
         let (calendar, id) = (calendar.to_string(), id.to_string());
         let key: EventKey = (account_id, calendar.clone(), id.clone());
         let read = self.next_read();
@@ -665,14 +716,23 @@ impl CalendarView {
             }
             match read {
                 Ok(Some(event)) => {
-                    let day = date_of(event.start, event.all_day);
-                    view.pending_open.replace(Some(key));
+                    let day = date_of(start, event.all_day);
+                    view.pending_open.replace(Some((key, start)));
                     view.go_to(day);
                 }
                 Ok(None) => {}
                 Err(err) => tracing::warn!(%err, "could not read the event to open"),
             }
         });
+    }
+
+    /// The pending target, in the flat shape [`shown::keep`] matches
+    /// against.
+    fn pending(&self) -> Option<(AccountId, String, String, EpochMillis)> {
+        self.pending_open
+            .borrow()
+            .clone()
+            .map(|((account_id, calendar, id), start)| (account_id, calendar, id, start))
     }
 
     /// Answers the window's narrow breakpoint: a list in place of Week
@@ -1052,7 +1112,7 @@ impl CalendarView {
                 let weak = Rc::downgrade(self);
                 month.connect_event_edited(move |month, o| {
                     if let Some(view) = weak.upgrade() {
-                        view.edit_or_show(o, month.block_of(&key_of(o)).as_ref());
+                        view.edit_or_show(o, month.block_at(&key_of(o), o.start).as_ref());
                     }
                 });
                 let weak = Rc::downgrade(self);
@@ -1120,7 +1180,7 @@ impl CalendarView {
         let weak = Rc::downgrade(self);
         grid.connect_event_edited(move |grid, o| {
             if let Some(view) = weak.upgrade() {
-                view.edit_or_show(o, grid.block_of(&key_of(o)).as_ref());
+                view.edit_or_show(o, grid.block_at(&key_of(o), o.start).as_ref());
             }
         });
         let weak = Rc::downgrade(self);
@@ -1138,7 +1198,7 @@ impl CalendarView {
         let weak = Rc::downgrade(self);
         strip.connect_event_edited(move |strip, o| {
             if let Some(view) = weak.upgrade() {
-                view.edit_or_show(o, strip.block_of(&key_of(o)).as_ref());
+                view.edit_or_show(o, strip.block_at(&key_of(o), o.start).as_ref());
             }
         });
         let weak = Rc::downgrade(self);
@@ -1170,6 +1230,7 @@ impl CalendarView {
             headings,
             strip,
             scroller,
+            scroll_asked: Rc::new(Cell::new(0)),
             grid,
         }
     }
@@ -1303,9 +1364,10 @@ impl CalendarView {
 
     fn show_page(self: &Rc<Self>, page: &Rc<Page>, found: Vec<Occurrence>) {
         let show_declined = (self.settings)().show_declined_events;
+        let pending = self.pending();
         let found: Vec<Occurrence> = found
             .into_iter()
-            .filter(|o| shown::keep(o, show_declined))
+            .filter(|o| shown::keep(o, show_declined, pending.as_ref()))
             .collect();
         ensure_tints(found.iter().filter_map(|o| o.event.color.as_deref()));
         let range = page.range.get();
@@ -1332,21 +1394,40 @@ impl CalendarView {
                 grid.strip.show(&days, &found, &calendars);
                 let now = chrono::Local::now().timestamp_millis();
                 grid.grid.show(&days, &found, &calendars, now, &chrono::Local);
-                if !page.scrolled.get() {
+                let block = self.pending_block(&found, |key, start| {
+                    grid.grid
+                        .block_at(key, start)
+                        .or_else(|| grid.strip.block_at(key, start))
+                });
+                // An event about to open brings its hour into view, however
+                // far the page was scrolled before; a fresh page otherwise
+                // opens at its first event.
+                let opening = block
+                    .as_ref()
+                    .filter(|(_, o)| !o.event.all_day)
+                    .map(|(_, o)| layout::open_hour(o.start, &chrono::Local));
+                let hour = match opening {
+                    Some(hour) => Some(hour),
+                    None if !page.scrolled.get() => Some(first_hour(&found, range)),
+                    None => None,
+                };
+                let scroll = hour.map(|hour| {
                     page.scrolled.set(true);
-                    let hour = first_hour(&found, range);
-                    let y = grid.grid.scroll_to_hour(hour);
-                    scroll_when_ready(&grid.scroller, y);
-                }
-                self.pending_block(&found, |key| {
-                    grid.grid.block_of(key).or_else(|| grid.strip.block_of(key))
-                })
+                    (
+                        grid.scroller.clone(),
+                        Rc::clone(&grid.scroll_asked),
+                        grid.grid.scroll_to_hour(hour),
+                    )
+                });
+                (block, scroll)
             }
             PageView::Month(month) => {
                 month.show(range, &found, &calendars);
-                self.pending_block(&found, |key| month.block_of(key))
+                let block = self.pending_block(&found, |key, start| month.block_at(key, start));
+                (block, None)
             }
         };
+        let (block, scroll) = block;
         let is_current = self
             .pages
             .borrow()
@@ -1356,29 +1437,48 @@ impl CalendarView {
         if is_current && (had_focus || self.refocus_owed.replace(false)) {
             self.refocus(page, focused);
         }
-        if let (true, Some((anchor, o))) = (is_current, block) {
-            self.pending_open.replace(None);
+        let open = match (is_current, block) {
+            (true, Some((anchor, o))) => {
+                self.pending_open.replace(None);
+                let weak = Rc::downgrade(self);
+                Some(move || {
+                    if let Some(view) = weak.upgrade() {
+                        view.show_event(&anchor, &o);
+                    }
+                })
+            }
+            _ => None,
+        };
+        match (scroll, open) {
+            // The popover measures the block when it opens, so it waits
+            // until the scroll has landed and the grid has laid the block
+            // out at its new place.
+            (Some((scroller, asked, y)), Some(open)) => {
+                let after = scroller.clone();
+                scroll_when_ready(&scroller, &asked, y, move || after_layout(&after, open));
+            }
+            (Some((scroller, asked, y)), None) => scroll_when_ready(&scroller, &asked, y, || {}),
             // The block has no size until the grid lays it out, and a
             // popover needs one to point at.
-            let weak = Rc::downgrade(self);
-            glib::idle_add_local_once(move || {
-                if let Some(view) = weak.upgrade() {
-                    view.show_event(&anchor, &o);
-                }
-            });
+            (None, Some(open)) => {
+                glib::idle_add_local_once(open);
+            }
+            (None, None) => {}
         }
     }
 
     /// The block and occurrence of the event waiting to open, when
-    /// `found` holds it.
+    /// `found` holds it. Matches the occurrence's start as well as its
+    /// key, since every occurrence of an unsplit series shares the same
+    /// key and a page can show several.
     fn pending_block(
         &self,
         found: &[Occurrence],
-        block_of: impl Fn(&EventKey) -> Option<gtk::Widget>,
+        block_at: impl Fn(&EventKey, EpochMillis) -> Option<gtk::Widget>,
     ) -> Option<(gtk::Widget, Occurrence)> {
-        let key = self.pending_open.borrow().clone()?;
-        let o = found.iter().find(|o| key_of(o) == key)?;
-        Some((block_of(&key)?, o.clone()))
+        let (key, start) = self.pending_open.borrow().clone()?;
+        let o = found.iter().find(|o| key_of(o) == key && o.start == start)?;
+        Some((block_at(&key, start)?, o.clone()))
     }
 
     /// The day headings over a grid: "MON 21", today's in a pill. Each
@@ -1468,7 +1568,9 @@ impl CalendarView {
             match found {
                 Ok(found) => {
                     let show_declined = (view.settings)().show_declined_events;
-                    let found = keep_agenda_events(found, show_declined, first, last);
+                    let pending = view.pending();
+                    let found =
+                        keep_agenda_events(found, show_declined, pending.as_ref(), first, last);
                     view.list
                         .show(&found, &view.calendars.borrow(), &chrono::Local);
                 }
@@ -1514,8 +1616,10 @@ impl CalendarView {
             match found {
                 Ok(found) => {
                     let show_declined = (view.settings)().show_declined_events;
+                    let pending = view.pending();
                     let found = shown::not_yet_listed(found, listed_from);
-                    let found = keep_agenda_events(found, show_declined, first, last);
+                    let found =
+                        keep_agenda_events(found, show_declined, pending.as_ref(), first, last);
                     view.list
                         .prepend(&found, &view.calendars.borrow(), &chrono::Local);
                     view.list_first.set(first);
@@ -1556,7 +1660,7 @@ impl CalendarView {
         self.results.connect_event_activated(move |o| {
             let Some(view) = weak.upgrade() else { return };
             view.search_bar.set_search_mode(false);
-            view.pending_open.replace(Some(key_of(o)));
+            view.pending_open.replace(Some((key_of(o), o.start)));
             view.go_to(date_of(o.start, o.event.all_day));
         });
     }
@@ -1620,7 +1724,7 @@ impl CalendarView {
     /// Opens the popover for `o`, pointed at `anchor`. Edit and Delete
     /// show only for an event the account may change as a whole: the
     /// mockup's invitation popover, on someone else's event, stays as
-    /// drawn (ruling R1, R9).
+    /// drawn.
     fn show_event(self: &Rc<Self>, anchor: &gtk::Widget, o: &Occurrence) {
         let calendar = self
             .calendars
@@ -1660,6 +1764,45 @@ impl CalendarView {
             on_edit,
             on_delete,
         );
+        self.find_invitation_mail(o);
+    }
+
+    /// Looks for the mail that carries `o`'s invitation, and puts "Open
+    /// the invitation in Mail" on the popover once found, if it is still
+    /// open on this occurrence. An event with no uid, such as one
+    /// made straight on the calendar, has no invitation to find.
+    fn find_invitation_mail(self: &Rc<Self>, o: &Occurrence) {
+        let uid = o.event.uid.clone();
+        if uid.is_empty() {
+            return;
+        }
+        let account_id = o.account_id;
+        let weak = Rc::downgrade(self);
+        let for_popover = uid.clone();
+        glib::spawn_future_local(async move {
+            let Some(view) = weak.upgrade() else { return };
+            let uid_read = uid.clone();
+            let saved = view
+                .core
+                .read(move |c| mailrs_store::invitations::saved(c, account_id, &uid_read))
+                .await;
+            let Ok(Some(saved)) = saved else { return };
+            let thread = view
+                .core
+                .read(move |c| mailrs_store::messages::thread_id_of(c, account_id, &saved.message_id))
+                .await;
+            let Ok(Some(thread_id)) = thread else { return };
+            let open_view = Rc::downgrade(&view);
+            view.popover.set_open_mail(
+                account_id,
+                &for_popover,
+                Some(Box::new(move || {
+                    if let Some(view) = open_view.upgrade() {
+                        (view.hooks.open_mail)(account_id, thread_id.clone());
+                    }
+                })),
+            );
+        });
     }
 
     /// What the view lets a person do to `o`: see [`draft::editing`].
@@ -1684,7 +1827,7 @@ impl CalendarView {
 
     /// The Delete key: takes the focused event off the grid at once and
     /// offers Undo, for an event the account may change as a whole, or
-    /// asks for the calendar permission the account withheld (R8).
+    /// asks for the calendar permission the account withheld.
     pub fn delete_focused(self: &Rc<Self>) {
         let Some(o) = self.focused() else { return };
         match self.editing(&o) {
@@ -1696,8 +1839,8 @@ impl CalendarView {
 
     /// A double click or Enter on a block. The editor opens over the
     /// popover a single click already opened, limited to reminders,
-    /// colour and busy on someone else's event (R1, R9). An account that
-    /// withheld the calendar permission is asked for it instead (R8), and
+    /// colour and busy on someone else's event. An account that
+    /// withheld the calendar permission is asked for it instead, and
     /// an event nobody here may change opens its popover.
     fn edit_or_show(self: &Rc<Self>, o: &Occurrence, anchor: Option<&gtk::Widget>) {
         match self.editing(o) {
@@ -1784,8 +1927,9 @@ impl CalendarView {
 
     /// A 10-second toast with Undo for a held change. Undo puts the rows
     /// back; the toast closing any other way queues the change. Only one
-    /// toast shows at a time (R4): holding another dismisses this one,
-    /// whose own `dismissed` handler queues it.
+    /// toast shows at a time, so two Undo offers never stack: holding
+    /// another dismisses this one, whose own `dismissed` handler queues
+    /// it.
     fn offer_undo(self: &Rc<Self>, said: String, held: Held) {
         // Take the toast out in a statement of its own: `dismiss` runs the
         // toast's dismissed handler at once, which borrows `toast_up`
@@ -1930,8 +2074,7 @@ impl CalendarView {
     /// The calendars a new event may go on, each with its account's
     /// address, as the sidebar lists them: only for an account whose
     /// provider offers a calendar and has not withheld it, so an IMAP
-    /// account or one waiting on the calendar permission offers neither
-    /// (ruling R8).
+    /// account or one waiting on the calendar permission offers neither.
     fn writable(&self) -> Vec<(AccountId, String, Calendar)> {
         let accounts = self.accounts.borrow();
         let mut writable = self
@@ -2285,9 +2428,10 @@ impl CalendarView {
             })
             .collect();
         let show_declined = (self.settings)().show_declined_events;
+        let pending = self.pending();
         let kept: Vec<Occurrence> = busy
             .iter()
-            .filter(|o| shown::keep(o, show_declined))
+            .filter(|o| shown::keep(o, show_declined, pending.as_ref()))
             .cloned()
             .collect();
         let busy_days = shown::busy_days(&kept, mini.first, mini.days, &chrono::Local);
@@ -2358,13 +2502,14 @@ fn day_span(first: NaiveDate, last: NaiveDate) -> (EpochMillis, EpochMillis) {
     (from, to)
 }
 
-/// Drops a declined event unless `show_declined` keeps it, warms the
-/// tint stylesheet for any colour among what is left, and logs once
-/// when `found` came back full: `MOST_EVENTS` may have cut the read to
-/// `first`..`last` short.
+/// Drops a declined event unless `show_declined` keeps it or `pending`
+/// names it, warms the tint stylesheet for any colour among what is
+/// left, and logs once when `found` came back full: `MOST_EVENTS` may
+/// have cut the read to `first`..`last` short.
 fn keep_agenda_events(
     found: Vec<Occurrence>,
     show_declined: bool,
+    pending: Option<&(AccountId, String, String, EpochMillis)>,
     first: NaiveDate,
     last: NaiveDate,
 ) -> Vec<Occurrence> {
@@ -2377,7 +2522,7 @@ fn keep_agenda_events(
     }
     let found: Vec<Occurrence> = found
         .into_iter()
-        .filter(|o| shown::keep(o, show_declined))
+        .filter(|o| shown::keep(o, show_declined, pending))
         .collect();
     ensure_tints(found.iter().filter_map(|o| o.event.color.as_deref()));
     found
@@ -2434,29 +2579,72 @@ fn first_hour(found: &[Occurrence], range: Range) -> f64 {
 
 /// Scrolls `scroller` to `y` once its content has a height to scroll in;
 /// a page that was just filled has not been laid out yet.
-fn scroll_when_ready(scroller: &gtk::ScrolledWindow, y: f64) {
+/// Then runs `then`. `asked` counts the scrolls asked of `scroller`: one
+/// still waiting when a later one is asked gives way to it.
+fn scroll_when_ready(
+    scroller: &gtk::ScrolledWindow,
+    asked: &Rc<Cell<u64>>,
+    y: f64,
+    then: impl FnOnce() + 'static,
+) {
+    let mine = asked.get() + 1;
+    asked.set(mine);
     let adjustment = scroller.vadjustment();
     if adjustment.page_size() > 0.0 && adjustment.upper() > adjustment.page_size() {
         adjustment.set_value(y.min(adjustment.upper() - adjustment.page_size()));
+        then();
         return;
     }
     let handler: Rc<RefCell<Option<glib::SignalHandlerId>>> = Rc::new(RefCell::new(None));
     let slot = Rc::clone(&handler);
+    let then = Cell::new(Some(then));
+    let asked = Rc::clone(asked);
     let id = adjustment.connect_changed(move |adjustment| {
-        if adjustment.page_size() <= 0.0 || adjustment.upper() <= adjustment.page_size() {
+        let superseded = asked.get() != mine;
+        if !superseded && (adjustment.page_size() <= 0.0 || adjustment.upper() <= adjustment.page_size()) {
             return;
         }
-        if let Some(id) = slot.borrow_mut().take() {
+        let id = slot.borrow_mut().take();
+        if let Some(id) = id {
             adjustment.disconnect(id);
+        }
+        if superseded {
+            return;
         }
         // The scrolled window sets its own value while it lays out the
         // first time, after this signal, so the scroll waits for that.
         let adjustment = adjustment.clone();
+        let then = then.take();
+        let asked = Rc::clone(&asked);
         glib::idle_add_local_once(move || {
+            if asked.get() != mine {
+                return;
+            }
             adjustment.set_value(y.min(adjustment.upper() - adjustment.page_size()));
+            if let Some(then) = then {
+                then();
+            }
         });
     });
     handler.replace(Some(id));
+}
+
+/// Runs `f` once `widget` has been laid out after the change just made:
+/// a frame's tick comes before its layout, so the second tick follows a
+/// finished one.
+fn after_layout(widget: &impl IsA<gtk::Widget>, f: impl FnOnce() + 'static) {
+    let f = Cell::new(Some(f));
+    let ticks = Cell::new(0);
+    widget.add_tick_callback(move |_, _| {
+        ticks.set(ticks.get() + 1);
+        if ticks.get() < 2 {
+            return glib::ControlFlow::Continue;
+        }
+        if let Some(f) = f.take() {
+            f();
+        }
+        glib::ControlFlow::Break
+    });
 }
 
 thread_local! {

@@ -107,15 +107,22 @@ Trash.
 
 ## Your calendar
 
-The assistant reads every calendar this computer keeps a copy of and
-makes events on the primary one:
+The assistant reads and changes every calendar each account can see:
+your own, the ones shared with you, and the ones you subscribe to.
 
 - "What's on my calendar next week?"
+- "Which calendars do I have?"
 - "Find me an hour with nobody booked on Thursday or Friday."
+- "Put the piano recital on the Family calendar, Friday at 6 pm."
 - "Put the kite festival on my calendar, the 14th to the 16th."
 - "Move the design crit to 3 pm and add Ann."
 - "Cancel Friday's dentist appointment."
 - "Say yes to Priya's roadmap review."
+
+A new event goes on the account's main calendar unless you name another.
+It can go only on a calendar you can add events to; name a calendar you
+can only read, such as a holidays calendar, and the assistant says so
+and names the ones that take events.
 
 Times are your local time. Free time counts from 09:00 to 18:00 on
 weekdays unless you ask for other hours or the weekend. Google tells the

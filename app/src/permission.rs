@@ -12,7 +12,7 @@ use std::collections::HashSet;
 use mailrs_domain::AccountId;
 use mailrs_domain::translate::{fill, gettext};
 use mailrs_gmail::SIGN_IN_SCOPES;
-use mailrs_sync::Withheld;
+use mailrs_sync::{Offers, Withheld};
 
 /// A Google permission sign-in leaves out, or one a caller can find
 /// missing. CONTEXT.md describes each.
@@ -212,6 +212,15 @@ pub fn wants_banner(withheld: Withheld, asked: Option<&str>) -> bool {
     !SIGN_IN_SCOPES.iter().all(|scope| asked.contains(scope))
 }
 
+/// Whether an invitation's card offers Grant Access: the account has a
+/// calendar and its consent left the calendar out, so the event cannot
+/// show in the Calendar space until the person grants it. With the
+/// permission granted, Show in Calendar covers the event; an account with
+/// no calendar (IMAP) hands the `.ics` to the desktop instead.
+pub fn card_offers_calendar_access(offers: Offers, withheld: Withheld) -> bool {
+    offers.calendar && withheld_permissions(withheld).contains(&Permission::Calendar)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -332,5 +341,29 @@ mod tests {
             !wants_banner(Withheld::NONE, Some(&asked)),
             "nothing withheld needs no banner either"
         );
+    }
+
+    const IMAP: Offers = Offers { calendar: false, ..Offers::EVERYTHING };
+
+    #[test]
+    fn the_card_offers_calendar_access_when_the_calendar_permission_is_withheld() {
+        let withheld = Withheld { calendar: true, ..Withheld::NONE };
+        assert!(card_offers_calendar_access(Offers::EVERYTHING, withheld));
+        let list_only = Withheld { calendar_list: true, ..Withheld::NONE };
+        assert!(card_offers_calendar_access(Offers::EVERYTHING, list_only));
+    }
+
+    #[test]
+    fn the_card_offers_nothing_when_the_calendar_permission_is_granted() {
+        let other = Withheld { contacts: true, ..Withheld::NONE };
+        assert!(!card_offers_calendar_access(Offers::EVERYTHING, Withheld::NONE));
+        assert!(!card_offers_calendar_access(Offers::EVERYTHING, other));
+    }
+
+    #[test]
+    fn the_card_offers_nothing_for_an_account_with_no_calendar() {
+        let withheld = Withheld { calendar: true, ..Withheld::NONE };
+        assert!(!card_offers_calendar_access(IMAP, withheld));
+        assert!(!card_offers_calendar_access(IMAP, Withheld::NONE));
     }
 }

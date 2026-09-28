@@ -440,7 +440,7 @@ button.event-block.unanswered:hover,
 .all-day-strip button.event-block { border-radius: 6px; }
 /* The card a drag holds: lifted above the others while the pointer or
    the settle spring carries it. With animations off the spring lands it
-   in place at once (R10), so no separate no-motion rule is needed. */
+   in place at once, so no separate no-motion rule is needed. */
 .event-block.dragging {
   box-shadow: 0 6px 18px color-mix(in srgb, black 22%, transparent);
 }
@@ -485,6 +485,7 @@ button.day-heading { min-height: 26px; padding: 0 14px; border-radius: 13px; }
 /* The mini month: 13 px numbers at weight 500, today a filled accent
    square with rounded corners, a faint dot under a day with events. */
 .mini-month-title { font-weight: 800; font-size: 0.99em; }
+.list-fade { background: linear-gradient(to bottom, alpha(var(--sidebar-bg-color), 0), var(--sidebar-bg-color)); }
 .mini-month-weekday { font-size: 0.78em; font-weight: 700; opacity: 0.4; }
 .mini-month button {
   min-width: 28px;
@@ -530,6 +531,37 @@ checkbutton.calendar-check > check:checked {
 }
 /* Quick create's plain colour dot, beside the calendar's name. */
 .checked-dot { min-width: 10px; min-height: 10px; border-radius: 99px; background: var(--cal-colour); }
+/* The calendar sidebar's "Waiting for your answer" section: a small
+   capitals heading and a lifted card per invitation, each a door into
+   the event it names, and, when the store still holds the message, a
+   second door into Mail beside its day and time. */
+.waiting-heading {
+  font-size: 0.78em;
+  font-weight: 700;
+  opacity: 0.4;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+list.waiting-list { background: none; }
+list.waiting-list > row.waiting-card {
+  min-height: 42px;
+  margin-bottom: 8px;
+  padding: 0;
+  border-radius: 10px;
+  background: var(--view-bg-color);
+  box-shadow: 0 1px 2px color-mix(in srgb, black 10%, transparent);
+}
+list.waiting-list > row.waiting-card:last-child { margin-bottom: 0; }
+.waiting-icon { color: var(--accent-color); }
+.waiting-title { font-size: 0.89em; font-weight: 700; }
+/* The mockup draws "Wed 15:00 · Open mail" as one dim line at weight
+   500, so the door's own label carries these classes too. */
+.waiting-when { font-size: 0.78em; font-weight: 500; }
+.waiting-mail-link {
+  padding: 0;
+  min-height: 0;
+  min-width: 0;
+}
 /* The month view: each of the 42 cells is a small card; a day outside
    the month shown reads quieter. */
 .month-cell { padding: 4px; border-top: 1px solid color-mix(in srgb, currentColor 8%, transparent); }
@@ -588,4 +620,14 @@ popover.event-popover button.popover-answer:not(.suggested-action):hover {
 .calendar-dark popover.event-popover button.popover-join:hover,
 .calendar-dark popover.event-popover button.popover-answer:not(.suggested-action):hover {
   background: color-mix(in srgb, currentColor 8%, #3a3a40);
+}
+/* "Open the invitation in Mail": an icon-and-text link, not a filled
+   pill, in the accent colour, the way the place row reads as a row
+   rather than a button. */
+popover.event-popover button.popover-open-mail {
+  min-height: 0;
+  padding: 4px 4px 0 4px;
+  margin: 0 -4px;
+  font-weight: 700;
+  color: var(--accent-color);
 }

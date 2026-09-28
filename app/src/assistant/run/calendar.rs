@@ -14,7 +14,7 @@ use mailrs_domain::calendar as model;
 use mailrs_domain::invitation::Answer;
 use mailrs_gmail::{EventFields, EventTime};
 use mailrs_sync::Told;
-use mailrs_sync::calendar::at;
+use mailrs_sync::calendar::{NoPick, at, writable_named};
 
 use super::*;
 
@@ -161,6 +161,18 @@ fn event_json(occurrence: &model::Occurrence, calendar_name: &HashMap<String, St
         "link": Value::Null,
         "calendar": calendar_name.get(&event.calendar).cloned().unwrap_or_else(|| event.calendar.clone()),
         "pending": event.pending,
+    })
+}
+
+/// One calendar, in the shape `list_calendars` writes.
+fn calendar_json(calendar: &model::Calendar) -> Value {
+    json!({
+        "id": calendar.id,
+        "name": calendar.name,
+        "color": calendar.color,
+        "primary": calendar.primary,
+        "writable": calendar.access.can_write(),
+        "shown": calendar.shown,
     })
 }
 
@@ -329,6 +341,99 @@ impl<A: Accounts> Tools<A> {
         }))
     }
 
+    /// Each account's calendars, or one account's. Listing every account
+    /// asks nobody for a permission: an account without a calendar at
+    /// all, or without the calendar permission, gets a note instead, and
+    /// naming the account asks for the permission, as every other
+    /// calendar tool does.
+    pub(super) async fn list_calendars(&self, input: &Value) -> ToolResult {
+        let named = text(input, "account");
+        let accounts = match &named {
+            Some(email) => vec![self.account_named(email)?],
+            None => self.desk.accounts(),
+        };
+        let mut listed = Vec::new();
+        for account in accounts {
+            if let Some(answer) = self.unavailable(&account, Missing::Calendar) {
+                listed.push(json!({
+                    "account": account.email,
+                    "calendars": [],
+                    "note": answer["unavailable"].clone(),
+                }));
+                continue;
+            }
+            let calendar = Arc::clone(&self.modules.calendar);
+            let account_id = account.id;
+            let task = async move { calendar.calendars(account_id).await };
+            let calendars = if named.is_some() {
+                self.permitted(&account, Permission::Calendar, task).await?
+            } else {
+                match self.away(task).await? {
+                    Ok(Permitted::Done(list)) => list,
+                    Ok(Permitted::NeedsPermission) => {
+                        listed.push(json!({
+                            "account": account.email,
+                            "calendars": [],
+                            "note": "Penguin Mail lacks the calendar permission for this account. Call list_calendars with the account to ask the user for it.",
+                        }));
+                        continue;
+                    }
+                    Err(err) => {
+                        listed.push(json!({
+                            "account": account.email,
+                            "calendars": [],
+                            "note": format!("Could not read the calendars: {err}"),
+                        }));
+                        continue;
+                    }
+                }
+            };
+            listed.push(json!({
+                "account": account.email,
+                "calendars": calendars.iter().map(calendar_json).collect::<Vec<_>>(),
+            }));
+        }
+        Ok(json!({"accounts": listed}))
+    }
+
+    /// The calendar `wanted` names on `account`, among those it can write
+    /// to, or what the model should hear when there is none.
+    async fn writable_calendar(
+        &self,
+        account: &Account,
+        wanted: &str,
+    ) -> Result<model::Calendar, String> {
+        let calendar = Arc::clone(&self.modules.calendar);
+        let account_id = account.id;
+        let list = self
+            .permitted(account, Permission::Calendar, async move {
+                calendar.calendars(account_id).await
+            })
+            .await?;
+        let (email, wanted) = (&account.email, wanted.trim());
+        let takes = list
+            .iter()
+            .filter(|c| c.access.can_write())
+            .map(|c| c.name.as_str())
+            .collect::<Vec<_>>();
+        let takes = match takes.is_empty() {
+            true => format!("No calendar on {email} takes new events."),
+            false => format!("Calendars that take events: {}.", takes.join(", ")),
+        };
+        match writable_named(&list, wanted) {
+            Ok(found) => Ok(found.clone()),
+            Err(NoPick::ReadOnly(name)) => Err(format!(
+                "“{name}” on {email} is read-only. {takes}"
+            )),
+            Err(NoPick::Unknown) => Err(format!(
+                "{email} has no calendar called “{wanted}”. {takes}"
+            )),
+            Err(NoPick::Several) => Err(format!(
+                "{email} has more than one calendar called “{wanted}”. Give the id list_calendars shows instead."
+            )),
+        }
+    }
+
     pub(super) async fn create_event<'a>(&'a self, input: &'a Value) -> Result<Plan<'a>, String> {
         let account = self.account_or_default(input)?;
         if let Some(answer) = self.unavailable(&account, Missing::Calendar) {
@@ -350,6 +455,10 @@ impl<A: Accounts> Tools<A> {
         if !in_order {
             return Err("The event must end after it starts.".into());
         }
+        let chosen = match text(input, "calendar") {
+            Some(wanted) => Some(self.writable_calendar(&account, &wanted).await?),
+            None => None,
+        };
         let fields = EventFields {
             summary: Some(title.clone()),
             start: Some(event_time(start, false)?),
@@ -358,14 +467,22 @@ impl<A: Accounts> Tools<A> {
             description: text(input, "description"),
             guests: guests(input),
         };
-        let mut question = fill(
-            &gettext("Add “{title}” to the calendar for {account}, {when}?"),
-            &[
-                ("title", &title),
-                ("account", &account.email),
-                ("when", &when_text(start, end)),
-            ],
-        );
+        let when = when_text(start, end);
+        let mut question = match &chosen {
+            Some(chosen) => fill(
+                &gettext("Add “{title}” to the calendar “{calendar}” for {account}, {when}?"),
+                &[
+                    ("title", &title),
+                    ("calendar", &chosen.name),
+                    ("account", &account.email),
+                    ("when", &when),
+                ],
+            ),
+            None => fill(
+                &gettext("Add “{title}” to the calendar for {account}, {when}?"),
+                &[("title", &title), ("account", &account.email), ("when", &when)],
+            ),
+        };
         if let Some(invited) = fields.guests.as_ref().filter(|g| !g.is_empty()) {
             question.push_str("\n\n");
             question.push_str(&fill(
@@ -376,9 +493,10 @@ impl<A: Accounts> Tools<A> {
         Ok(Plan::ask(question, async move {
             let calendar = Arc::clone(&self.modules.calendar);
             let account_id = account.id;
+            let on = chosen.as_ref().map(|c| c.id.clone());
             let made = self
                 .permitted(&account, Permission::Calendar, async move {
-                    calendar.create(account_id, &fields).await
+                    calendar.create(account_id, on.as_deref(), &fields).await
                 })
                 .await?;
             let names = self.calendar_names(account_id).await?;

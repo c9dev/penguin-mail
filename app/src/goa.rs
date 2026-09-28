@@ -7,7 +7,7 @@
 //! calendar empty however many invitations the inbox holds.
 //!
 //! This reads the file GNOME keeps its accounts in rather than asking the
-//! daemon over D-Bus: the answer settles one line in the event card, and a
+//! daemon over D-Bus: the answer settles one row in Preferences, and a
 //! file read that fails is an answer of its own.
 
 use std::path::{Path, PathBuf};
@@ -28,12 +28,6 @@ const SETTINGS: [&str; 2] = [
 
 /// What GNOME Settings is started with, and the panel to open.
 const PANEL: &str = "gnome-control-center online-accounts";
-
-/// Whether to offer `email` to GNOME: true when this desktop has Online
-/// Accounts and that address is not in them yet.
-pub fn worth_offering(email: &str) -> bool {
-    has_settings() && !known_in(&gtk::glib::user_config_dir(), email)
-}
 
 /// Where `email` stands with GNOME: `None` on a desktop without Online
 /// Accounts, otherwise whether GNOME knows the address.

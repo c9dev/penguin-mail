@@ -11,8 +11,8 @@ use adw::prelude::*;
 use gtk::{gio, glib};
 use mailrs_domain::translate::{fill, fill_plural, gettext, with_reason};
 use mailrs_domain::{
-    Account, AccountId, AccountState, ChangeEvent, Label, MessageBody, Provider, Role, Target,
-    ThreadSummary,
+    Account, AccountId, AccountState, ChangeEvent, EpochMillis, Label, MessageBody, Provider,
+    Role, Target, ThreadSummary,
 };
 use mailrs_sync::{
     History, Listing, Loaded, MailAction, MovedFrom, Offers, Permitted, Scope, TriageAction, View,
@@ -425,7 +425,7 @@ impl MainWindow {
                 .max_sidebar_width(420.0)
                 .sidebar_width_fraction(0.34)
                 .build();
-            let (t, g, n, a) = (weak.clone(), weak.clone(), weak.clone(), weak.clone());
+            let (t, g, n, a, m) = (weak.clone(), weak.clone(), weak.clone(), weak.clone(), weak.clone());
             let (read_settings, change_settings) = (Rc::downgrade(app), Rc::downgrade(app));
             let (contacts_app, push_app) = (Rc::downgrade(app), Rc::downgrade(app));
             let calendar = CalendarView::new(
@@ -471,6 +471,11 @@ impl MainWindow {
                     push: Box::new(move |account_id| {
                         if let Some(app) = push_app.upgrade() {
                             app.push_calendar(account_id);
+                        }
+                    }),
+                    open_mail: Box::new(move |account_id, thread_id| {
+                        if let Some(win) = m.upgrade() {
+                            win.open_invitation_mail(account_id, thread_id);
                         }
                     }),
                 },
@@ -2871,12 +2876,60 @@ impl MainWindow {
         self.show_preferences_for(None);
     }
 
+    /// Switches to Mail and opens thread `thread_id` wherever it is filed,
+    /// for the calendar's doors into an invitation's mail. An invitation
+    /// the person archived, or one older than the list's first page, has
+    /// no row in the list, so this opens the conversation the way the
+    /// assistant does and leaves the list on the mailbox it showed. The
+    /// row is selected only when the list holds it.
+    fn open_invitation_mail(self: &Rc<Self>, account_id: AccountId, thread_id: String) {
+        self.show_space(crate::settings::Space::Mail);
+        let this = Rc::clone(self);
+        glib::spawn_future_local(async move {
+            let key = thread_id.clone();
+            let found = this
+                .core
+                .read(move |c| mailrs_store::threads::get_thread(c, account_id, &key))
+                .await;
+            let summary = match found {
+                Ok(Some(summary)) => summary,
+                Ok(None) => ThreadSummary {
+                    account_id,
+                    id: thread_id.clone(),
+                    message_count: 1,
+                    ..ThreadSummary::default()
+                },
+                Err(err) => {
+                    tracing::warn!(%err, "could not read the invitation's thread");
+                    return;
+                }
+            };
+            this.list.select(account_id, &thread_id, None);
+            let listed = this
+                .list
+                .selected_rows()
+                .iter()
+                .any(|row| row.account_id == account_id && row.id == thread_id);
+            if !listed {
+                this.list.unselect();
+            }
+            this.open_thread(summary);
+        });
+    }
+
     /// Switches to the calendar and opens one occurrence's popover. A
     /// click on a reminder lands here, and so will Show in Calendar on
-    /// an invitation.
-    pub(crate) fn show_event(&self, account_id: AccountId, calendar: &str, id: &str) {
+    /// an invitation. `start` is that occurrence's own start, not
+    /// necessarily the series' first.
+    pub(crate) fn show_event(
+        &self,
+        account_id: AccountId,
+        calendar: &str,
+        id: &str,
+        start: EpochMillis,
+    ) {
         let _ = WidgetExt::activate_action(&self.window, "win.show-calendar", None);
-        self.calendar.open(account_id, calendar, id);
+        self.calendar.open(account_id, calendar, id, start);
     }
 
     /// Opens Preferences, on the signature of `signature_of` when given.

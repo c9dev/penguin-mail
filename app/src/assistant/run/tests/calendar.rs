@@ -512,3 +512,174 @@ async fn a_calendar_tool_on_an_account_without_a_calendar_says_why() {
         Ok(json!({"unavailable": "Gmail has no calendar that other apps can reach."}))
     );
 }
+
+use mailrs_domain::calendar::{Access, Calendar};
+
+const FAMILY: &str = "family@group.calendar.google.com";
+const HOLIDAYS: &str = "pt.portuguese#holiday@group.v.calendar.google.com";
+
+fn calendars() -> Vec<Calendar> {
+    let one = |id: &str, name: &str, color: &str, access: Access| Calendar {
+        id: id.into(),
+        name: name.into(),
+        color: color.into(),
+        access,
+        zone: "Europe/Lisbon".into(),
+        primary: id == ME,
+        shown: true,
+        reminders: Vec::new(),
+    };
+    vec![
+        one(ME, "Personal", "#e8660c", Access::Owner),
+        one(FAMILY, "Family", "#9141ac", Access::Writer),
+        one(HOLIDAYS, "Holidays in Portugal", "#e01b24", Access::Reader),
+    ]
+}
+
+fn recital(day: NaiveDate, calendar: &str) -> Value {
+    json!({
+        "title": "Piano recital",
+        "start": at(day, "18:00"),
+        "end": at(day, "19:00"),
+        "calendar": calendar,
+    })
+}
+
+#[tokio::test]
+async fn every_calendar_is_listed_with_its_colour_and_whether_it_takes_events() {
+    let h = harness().await;
+    h.read_calendars(calendars()).await;
+    let account = h.account_id;
+    h.db.write(move |c| mailrs_store::calendar::set_shown(c, account, HOLIDAYS, false))
+        .await
+        .unwrap();
+
+    let listed = h.ok("list_calendars", json!({})).await;
+    let mine = &listed["accounts"][0];
+    assert_eq!(mine["account"], ME);
+    let names: Vec<&str> = mine["calendars"]
+        .as_array()
+        .expect("a list")
+        .iter()
+        .map(|c| c["name"].as_str().unwrap_or_default())
+        .collect();
+    assert_eq!(names, ["Personal", "Family", "Holidays in Portugal"]);
+    assert_eq!(mine["calendars"][0]["primary"], true);
+    assert_eq!(mine["calendars"][1]["writable"], true);
+    assert_eq!(mine["calendars"][1]["id"], FAMILY);
+    let holidays = &mine["calendars"][2];
+    assert_eq!(holidays["writable"], false);
+    assert_eq!(holidays["shown"], false);
+    assert_eq!(holidays["color"], "#e01b24");
+}
+
+#[tokio::test]
+async fn an_account_without_the_calendar_list_is_noted_and_asked_about_only_when_named() {
+    let h = harness().await;
+    h.gmail.withhold(mailrs_gmail::CALENDAR_LIST_SCOPE);
+
+    let listed = h.ok("list_calendars", json!({})).await;
+    assert_eq!(listed["accounts"][0]["calendars"], json!([]));
+    let note = listed["accounts"][0]["note"].as_str().unwrap_or_default();
+    assert!(note.contains("calendar permission"), "{note}");
+    assert!(h.asked().permission_asked.is_empty(), "a list of every account asks nobody");
+
+    assert_eq!(
+        h.run("list_calendars", json!({"account": ME})).await,
+        Err(format!(
+            "Penguin Mail needs permission to use the calendar for {ME}. \
+             The user was asked to grant it; try again once they have."
+        ))
+    );
+    assert_eq!(h.asked().permission_asked, [(h.account_id, Permission::Calendar)]);
+}
+
+#[tokio::test]
+async fn an_event_goes_on_the_calendar_named_in_any_case() {
+    let h = harness().await;
+    h.read_calendars(calendars()).await;
+    let made = h.ok("create_event", recital(monday(), "family")).await;
+    assert_eq!(made["created"]["calendar"], "Family");
+    let question = h.asked().questions[0].clone();
+    assert!(
+        question.starts_with(&format!("Add “Piano recital” to the calendar “Family” for {ME}, ")),
+        "{question}"
+    );
+    let (account, id) = (h.account_id, made["created"]["id"].as_str().expect("an id").to_string());
+    let held = h
+        .db
+        .read(move |c| mailrs_store::calendar::event(c, account, FAMILY, &id))
+        .await
+        .unwrap();
+    assert!(held.is_some(), "it lands on Family");
+    // The queue's own background send can outrun this check (it starts as
+    // soon as `create` saves the event, before this test asks for it
+    // again), so pending is read from the tool's own answer, taken before
+    // any send had a chance to run, rather than from a second store read.
+    assert_eq!(made["created"]["pending"], true, "it waits in the queue");
+}
+
+#[tokio::test]
+async fn an_account_with_no_calendar_that_takes_events_says_so() {
+    let h = harness().await;
+    let read_only = calendars()
+        .into_iter()
+        .map(|c| Calendar { access: Access::Reader, ..c })
+        .collect();
+    h.read_calendars(read_only).await;
+    assert_eq!(
+        h.run("create_event", recital(monday(), "Family")).await,
+        Err(format!("“Family” on {ME} is read-only. No calendar on {ME} takes new events."))
+    );
+}
+
+#[tokio::test]
+async fn a_read_only_or_unknown_calendar_is_an_error_the_model_reads() {
+    let h = harness().await;
+    h.read_calendars(calendars()).await;
+    let day = monday();
+    assert_eq!(
+        h.run("create_event", recital(day, "Holidays in Portugal")).await,
+        Err(format!(
+            "“Holidays in Portugal” on {ME} is read-only. Calendars that take events: Personal, Family."
+        ))
+    );
+    assert_eq!(
+        h.run("create_event", recital(day, "Work")).await,
+        Err(format!("{ME} has no calendar called “Work”. Calendars that take events: Personal, Family."))
+    );
+    assert!(h.asked().questions.is_empty(), "nothing was put to the user");
+}
+
+#[tokio::test]
+async fn naming_a_calendar_reads_the_copy_first() {
+    let h = harness().await;
+    // Google lists the calendars, but the copy has not been read, as in
+    // the first minute after start.
+    h.gmail.with(|s| s.calendars = calendars());
+    let made = h.ok("create_event", recital(monday(), "Family")).await;
+    assert_eq!(made["created"]["calendar"], "Family");
+    let account = h.account_id;
+    assert!(h.db.read(move |c| mailrs_store::calendar::synced(c, account)).await.unwrap());
+}
+
+#[tokio::test]
+async fn an_account_with_no_calendar_service_lists_none_and_says_why_whether_or_not_it_is_named() {
+    let h = Harness::with_services(|_, services| services.calendar = None).await;
+
+    let listed = h.ok("list_calendars", json!({})).await;
+    assert_eq!(listed["accounts"][0]["calendars"], json!([]));
+    assert_eq!(
+        listed["accounts"][0]["note"],
+        "Gmail has no calendar that other apps can reach."
+    );
+    assert!(h.asked().permission_asked.is_empty());
+
+    let named = h.ok("list_calendars", json!({"account": ME})).await;
+    assert_eq!(named["accounts"][0]["calendars"], json!([]));
+    assert_eq!(
+        named["accounts"][0]["note"],
+        "Gmail has no calendar that other apps can reach."
+    );
+    assert!(h.asked().permission_asked.is_empty(), "a permanent gap is not a permission to ask for");
+}
