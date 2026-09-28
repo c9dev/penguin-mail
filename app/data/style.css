@@ -533,7 +533,7 @@ checkbutton.calendar-check > check:checked {
 /* The calendar sidebar's "Waiting for your answer" section: a small
    capitals heading and a lifted card per invitation, each a door into
    the event it names, and, when the store still holds the message, a
-   second door into Mail beside its day and time (ruling R2). */
+   second door into Mail beside its day and time. */
 .waiting-heading {
   font-size: 0.78em;
   font-weight: 700;
@@ -553,11 +553,10 @@ list.waiting-list > row.waiting-card {
 list.waiting-list > row.waiting-card:last-child { margin-bottom: 0; }
 .waiting-icon { color: var(--accent-color); }
 .waiting-title { font-size: 0.89em; font-weight: 700; }
-.waiting-when { font-size: 0.78em; }
+/* The mockup draws "Wed 15:00 · Open mail" as one dim line at weight
+   500, so the door's own label carries these classes too. */
+.waiting-when { font-size: 0.78em; font-weight: 500; }
 .waiting-mail-link {
-  font-size: 0.78em;
-  font-weight: 700;
-  color: var(--accent-color);
   padding: 0;
   min-height: 0;
   min-width: 0;

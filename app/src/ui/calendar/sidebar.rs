@@ -72,6 +72,19 @@ pub fn sidebar_accounts(
         .collect()
 }
 
+/// The accounts whose invitations "Waiting for your answer" lists: those
+/// whose provider offers a calendar the person has not withheld. The
+/// copy keeps an account's events after it withdraws the calendar
+/// permission, and a card for one of them would lead to an event the
+/// person cannot answer here.
+pub fn waiting_accounts(accounts: &[(Account, Offers, Withheld)]) -> Vec<AccountId> {
+    accounts
+        .iter()
+        .filter(|(_, offers, withheld)| offers.calendar && !withheld.calendar)
+        .map(|(account, _, _)| account.id)
+        .collect()
+}
+
 /// The Monday on or before `day`, the mini month's own copy of
 /// `range::monday_of` (private there).
 fn monday_of(day: NaiveDate) -> NaiveDate {
@@ -117,6 +130,11 @@ fn weekday_initials() -> Vec<String> {
         .collect()
 }
 
+/// A "Waiting for your answer" card's height and the gap between two,
+/// from the mockup.
+const WAITING_CARD: i32 = 42;
+const WAITING_GAP: i32 = 8;
+
 type OnDate = dyn Fn(NaiveDate);
 type OnShown = dyn Fn(AccountId, String, bool);
 type OnGrant = dyn Fn(AccountId);
@@ -140,6 +158,8 @@ struct MiniDay {
 }
 
 pub struct CalendarSidebar {
+    /// The whole sidebar: the mini month and the calendar list scroll,
+    /// and "Waiting for your answer" stays pinned below them.
     pub widget: gtk::Box,
     month_title: gtk::Label,
     /// The 1st of the month the mini month shows, which its arrows step
@@ -151,8 +171,8 @@ pub struct CalendarSidebar {
     /// build the same rows leaves them, and the focus on one of them,
     /// where they are.
     listed: RefCell<Vec<SidebarAccount>>,
-    /// The "Waiting for your answer" section at the sidebar's foot,
-    /// hidden while nothing is waiting.
+    /// The "Waiting for your answer" section pinned to the sidebar's
+    /// foot, hidden while nothing is waiting.
     waiting_section: gtk::Box,
     waiting_list: gtk::ListBox,
     /// What the waiting list was last built from, read by its own
@@ -185,8 +205,22 @@ impl CalendarSidebar {
 
         let widget = gtk::Box::builder()
             .orientation(gtk::Orientation::Vertical)
-            .spacing(10)
             .build();
+        let content = gtk::Box::builder()
+            .orientation(gtk::Orientation::Vertical)
+            .spacing(10)
+            .margin_start(12)
+            .margin_end(12)
+            .margin_top(6)
+            .margin_bottom(12)
+            .build();
+        widget.append(
+            &gtk::ScrolledWindow::builder()
+                .hscrollbar_policy(gtk::PolicyType::Never)
+                .vexpand(true)
+                .child(&content)
+                .build(),
+        );
 
         let month_title = gtk::Label::builder()
             .css_classes(["mini-month-title"])
@@ -210,7 +244,7 @@ impl CalendarSidebar {
         header.append(&month_title);
         header.append(&previous);
         header.append(&next);
-        widget.append(&header);
+        content.append(&header);
 
         let weekdays = gtk::Grid::builder()
             .column_homogeneous(true)
@@ -228,7 +262,7 @@ impl CalendarSidebar {
                 1,
             );
         }
-        widget.append(&weekdays);
+        content.append(&weekdays);
 
         let mini = gtk::Grid::builder()
             .row_spacing(4)
@@ -269,14 +303,14 @@ impl CalendarSidebar {
                 });
             }
         }
-        widget.append(&mini);
+        content.append(&mini);
 
         let calendar_list = gtk::Box::builder()
             .orientation(gtk::Orientation::Vertical)
             .spacing(0)
             .margin_top(8)
             .build();
-        widget.append(&calendar_list);
+        content.append(&calendar_list);
 
         let waiting_heading = gtk::Label::builder()
             .label(gettext("Waiting for your answer"))
@@ -287,21 +321,23 @@ impl CalendarSidebar {
             .selection_mode(gtk::SelectionMode::None)
             .css_classes(["waiting-list"])
             .build();
-        // Its own scroller, capped at three cards' own pitch (the
-        // mockup's own 150 px), so the section never grows past the
-        // room the sidebar's foot has for it, whatever else sits above
-        // it or however tall the window is; a shorter list keeps its
-        // own natural height instead of always claiming the cap.
+        // The mockup pins the section to the sidebar's foot with room for
+        // two whole cards, 42 px each with 8 px between. More than two
+        // scroll inside it, so none is ever cut off by what sits below
+        // the sidebar.
         let waiting_scroller = gtk::ScrolledWindow::builder()
             .hscrollbar_policy(gtk::PolicyType::Never)
             .propagate_natural_height(true)
-            .max_content_height(150)
+            .max_content_height(2 * WAITING_CARD + WAITING_GAP)
             .child(&waiting_list)
             .build();
         let waiting_section = gtk::Box::builder()
             .orientation(gtk::Orientation::Vertical)
             .spacing(8)
-            .margin_top(20)
+            .margin_start(12)
+            .margin_end(12)
+            .margin_top(12)
+            .margin_bottom(12)
             .visible(false)
             .build();
         waiting_section.append(&waiting_heading);
@@ -386,9 +422,9 @@ impl CalendarSidebar {
     }
 
     /// One "Waiting for your answer" card: the mail icon, the title, and
-    /// the day and time with an "Open mail" door beside it, shown only
-    /// when the store still holds the message the invitation arrived in
-    /// (ruling R2: the door hides alone, not the card).
+    /// the day and time with an "Open mail" door beside it. The door
+    /// shows only while the store holds the message the invitation came
+    /// in; without it the card stays, since it still opens the event.
     fn waiting_row(&self, w: &Waiting) -> gtk::ListBoxRow {
         let icon = gtk::Image::from_icon_name("mail-unread-symbolic");
         icon.add_css_class("waiting-icon");
@@ -400,7 +436,10 @@ impl CalendarSidebar {
             .ellipsize(gtk::pango::EllipsizeMode::End)
             .single_line_mode(true)
             .build();
-        let when_row = gtk::Box::builder().spacing(4).build();
+        // The mockup sets the line as one run of text, "Wed 15:00 · Open
+        // mail", so the pieces sit with no spacing of their own and the
+        // dot carries its single spaces.
+        let when_row = gtk::Box::builder().spacing(0).build();
         when_row.append(
             &gtk::Label::builder()
                 .label(words::waiting_when_words(w.start, w.all_day, &chrono::Local))
@@ -409,9 +448,17 @@ impl CalendarSidebar {
                 .build(),
         );
         if let Some(thread_id) = &w.thread_id {
-            when_row.append(&gtk::Label::builder().label("·").css_classes(["waiting-when", "dim-label"]).build());
+            when_row.append(&gtk::Label::builder().label(" · ").css_classes(["waiting-when", "dim-label"]).build());
+            // A child label, since GTK names a button after its own label
+            // over the name set below, and each card's door must say
+            // which event's mail it opens.
             let mail_button = gtk::Button::builder()
-                .label(gettext("Open mail"))
+                .child(
+                    &gtk::Label::builder()
+                        .label(gettext("Open mail"))
+                        .css_classes(["waiting-when", "dim-label"])
+                        .build(),
+                )
                 .css_classes(["flat", "waiting-mail-link"])
                 .valign(gtk::Align::Center)
                 .build();
@@ -425,7 +472,7 @@ impl CalendarSidebar {
             .orientation(gtk::Orientation::Vertical)
             .valign(gtk::Align::Center)
             .hexpand(true)
-            .spacing(2)
+            .spacing(0)
             .build();
         text.append(&title);
         text.append(&when_row);
@@ -433,8 +480,6 @@ impl CalendarSidebar {
             .spacing(8)
             .margin_start(10)
             .margin_end(10)
-            .margin_top(8)
-            .margin_bottom(8)
             .valign(gtk::Align::Center)
             .build();
         content.append(&icon);
@@ -759,5 +804,17 @@ mod tests {
             Vec::new(),
         )]);
         assert_eq!(rows[0].reach, CalendarReach::Calendars(Vec::new()));
+    }
+
+    #[test]
+    fn only_accounts_that_can_answer_on_their_calendar_list_waiting_invitations() {
+        let no_calendar = Offers { calendar: false, ..Offers::EVERYTHING };
+        let withheld = Withheld { calendar: true, ..Withheld::NONE };
+        let accounts = [
+            (account(1, "dana@example.com"), Offers::EVERYTHING, Withheld::NONE),
+            (imap(2, "dana@fastmail.example"), no_calendar, Withheld::NONE),
+            (account(3, "d.reyes@uni.example"), Offers::EVERYTHING, withheld),
+        ];
+        assert_eq!(waiting_accounts(&accounts), vec![1]);
     }
 }

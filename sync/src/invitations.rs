@@ -18,10 +18,9 @@
 
 mod mail;
 
-use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
 
-use mailrs_domain::calendar::{Event, Occurrence, Status};
+use mailrs_domain::calendar::Occurrence;
 use mailrs_domain::invitation::{self, Answer, Invitation, Method, Scope, When};
 use mailrs_domain::{AccountId, Address, EpochMillis};
 use mailrs_gmail::Answered;
@@ -115,7 +114,7 @@ pub struct Spot {
 
 /// One occurrence the account is a guest of, has not answered, and that
 /// is not cancelled, for the calendar sidebar's "Waiting for your
-/// answer" list (ruling R2). Its `account_id`, `calendar`, `id` and
+/// answer" list. Its `account_id`, `calendar`, `id` and
 /// `start` are exactly what `CalendarView::open` takes, since clicking
 /// the card opens the occurrence.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -127,8 +126,9 @@ pub struct Waiting {
     pub title: String,
     pub all_day: bool,
     /// The thread this invitation arrived in, when the store still holds
-    /// the message; `None` hides the card's "Open mail" door alone, not
-    /// the card itself (ruling R2).
+    /// the message. `None` hides the card's "Open mail" door and keeps
+    /// the card: the event still waits for an answer, and the card can
+    /// still open it in the calendar.
     pub thread_id: Option<String>,
 }
 
@@ -342,18 +342,17 @@ impl<A: Accounts> Invitations<A> {
         }))
     }
 
-    /// Every occurrence the account is a guest of, has not answered, and
-    /// that is not cancelled, nearest first, for the calendar sidebar's
-    /// "Waiting for your answer" list (ruling R2). `accounts` is the ones
-    /// already known to offer a calendar and not withhold it; an IMAP
-    /// account or one that withheld the calendar has no calendars table
-    /// of its own for [`mailrs_store::calendar::occurrences`] to read, so
-    /// passing it finds nothing, same as one still starting.
+    /// The invitations still waiting for the account's answer, each at
+    /// its next occurrence, nearest first, at most [`MOST_WAITING`], for
+    /// the calendar sidebar's "Waiting for your answer" list. Pass only
+    /// accounts that offer a calendar and have not withheld it: the copy
+    /// keeps an account's rows after it withdraws the calendar
+    /// permission, and a list built from them would offer events the
+    /// person can no longer answer here.
     ///
-    /// A series with no answer shares one row across every occurrence it
-    /// expands to, so this keeps only the nearest occurrence of each
-    /// event or series rather than repeating it once a week for a year.
-    /// Reads the store and nothing else.
+    /// [`calendar_store::waiting`] filters before it caps, so a busy
+    /// calendar cannot push an invitation out of the list. Reads the
+    /// store and nothing else.
     pub async fn waiting_for_answer(
         &self,
         accounts: &[AccountId],
@@ -363,27 +362,9 @@ impl<A: Accounts> Invitations<A> {
         Ok(self
             .db
             .read(move |c| {
-                let found = calendar_store::occurrences(
-                    c,
-                    &accounts,
-                    now,
-                    now + LOOK_AROUND,
-                    calendar_store::CalendarScope::Shown,
-                )?;
-                let mut seen = HashSet::new();
-                let mut waiting = Vec::new();
+                let found = calendar_store::waiting(c, &accounts, now, MOST_WAITING)?;
+                let mut waiting = Vec::with_capacity(found.len());
                 for occurrence in found {
-                    if !is_waiting(&occurrence.event) {
-                        continue;
-                    }
-                    let key = (
-                        occurrence.account_id,
-                        occurrence.event.calendar.clone(),
-                        occurrence.event.id.clone(),
-                    );
-                    if !seen.insert(key) {
-                        continue;
-                    }
                     let thread_id = store::saved(c, occurrence.account_id, &occurrence.event.uid)?
                         .and_then(|saved| {
                             messages::thread_id_of(c, occurrence.account_id, &saved.message_id)
@@ -399,9 +380,6 @@ impl<A: Accounts> Invitations<A> {
                         all_day: occurrence.event.all_day,
                         thread_id,
                     });
-                    if waiting.len() >= MOST_WAITING {
-                        break;
-                    }
                 }
                 Ok(waiting)
             })
@@ -530,8 +508,19 @@ impl<A: Accounts> Invitations<A> {
         }
         if sent.told != Told::Nobody {
             let uid = invitation.uid.clone();
+            // Google's call marked the account's own calendar, so the
+            // copy takes the answer now rather than at its next read, and
+            // the calendar and its "Waiting for your answer" list agree
+            // with the card at once. A mailed reply leaves the copy alone:
+            // the provider's calendar has not changed.
+            let on_calendar = (sent.told == Told::Calendar).then(|| google.flatten());
             self.db
-                .write(move |c| store::answer(c, account_id, &uid, answer))
+                .write(move |c| {
+                    if let Some(occurrence) = on_calendar {
+                        calendar_store::set_my_answer_for_uid(c, account_id, &uid, occurrence, answer)?;
+                    }
+                    store::answer(c, account_id, &uid, answer)
+                })
                 .await?;
         }
         Ok(sent)
@@ -692,17 +681,6 @@ impl<A: Accounts> Invitations<A> {
             .account(account_id)
             .ok_or(SyncError::UnknownAccount(account_id))
     }
-}
-
-/// Whether an event still wants the account's own answer: a guest of
-/// it, not answered, and not cancelled. `mailrs_store::calendar`'s
-/// `expand_rows` already drops a cancelled row before this ever sees
-/// it, but the check stays here too, so the predicate is correct on its
-/// own and a test can call it without going through the store.
-fn is_waiting(event: &Event) -> bool {
-    event.status != Status::Cancelled
-        && event.my_answer.is_none()
-        && event.guests.iter().any(|guest| guest.me)
 }
 
 /// The occurrence Show in Calendar opens. For an invitation to one

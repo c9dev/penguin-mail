@@ -475,8 +475,7 @@ impl MainWindow {
                     }),
                     open_mail: Box::new(move |account_id, thread_id| {
                         if let Some(win) = m.upgrade() {
-                            win.show_space(crate::settings::Space::Mail);
-                            win.reveal(account_id, thread_id, Reveal::Read);
+                            win.open_invitation_mail(account_id, thread_id);
                         }
                     }),
                 },
@@ -2875,6 +2874,47 @@ impl MainWindow {
 
     fn show_preferences(self: &Rc<Self>) {
         self.show_preferences_for(None);
+    }
+
+    /// Switches to Mail and opens thread `thread_id` wherever it is filed,
+    /// for the calendar's doors into an invitation's mail. An invitation
+    /// the person archived, or one older than the list's first page, has
+    /// no row in the list, so this opens the conversation the way the
+    /// assistant does and leaves the list on the mailbox it showed. The
+    /// row is selected only when the list holds it.
+    fn open_invitation_mail(self: &Rc<Self>, account_id: AccountId, thread_id: String) {
+        self.show_space(crate::settings::Space::Mail);
+        let this = Rc::clone(self);
+        glib::spawn_future_local(async move {
+            let key = thread_id.clone();
+            let found = this
+                .core
+                .read(move |c| mailrs_store::threads::get_thread(c, account_id, &key))
+                .await;
+            let summary = match found {
+                Ok(Some(summary)) => summary,
+                Ok(None) => ThreadSummary {
+                    account_id,
+                    id: thread_id.clone(),
+                    message_count: 1,
+                    ..ThreadSummary::default()
+                },
+                Err(err) => {
+                    tracing::warn!(%err, "could not read the invitation's thread");
+                    return;
+                }
+            };
+            this.list.select(account_id, &thread_id, None);
+            let listed = this
+                .list
+                .selected_rows()
+                .iter()
+                .any(|row| row.account_id == account_id && row.id == thread_id);
+            if !listed {
+                this.list.unselect();
+            }
+            this.open_thread(summary);
+        });
     }
 
     /// Switches to the calendar and opens one occurrence's popover. A
