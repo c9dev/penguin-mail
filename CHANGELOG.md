@@ -193,7 +193,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - The page title some mail carries no longer shows as a stray line above
   the message.
 - Mail that sets its font and colors for the whole message, as GitHub's
-  notifications do, shows in that font, as in Gmail.
+  notifications do, shows in that font, as in Gmail. Small icons in a
+  message's tables no longer vanish, and a count beside one sits level
+  with it.
 - A message with a wide space character, such as some bank and shop
   receipts, opens again instead of leaving the reading pane stuck.
 - Events side by side in a narrow week lane stay inside their blocks. A

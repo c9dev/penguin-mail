@@ -667,12 +667,25 @@ pub fn escape(s: &str) -> String {
 /// Long words break only where nothing else fits (`break-word`), since
 /// `anywhere` let a table column shrink to one letter and set "Status"
 /// down the page a letter per line. Tables get a `max-width` without
-/// `!important`, so a newsletter's own 600 px card still wins.
-const HTML_BODY_CSS: &str = ":host{all:initial;display:block;contain:content}\
+/// `!important`, so a newsletter's own 600 px card still wins. A picture
+/// is no wider than the message (`cqw` of `.root`): a percentage would
+/// be of its table cell, and a cell counts such a picture as zero wide
+/// when it shares out a row, so a small icon beside a cell that asks for
+/// all the width vanished.
+///
+/// Helvetica, which much mail asks for, is Liberation Sans here, as in
+/// Chrome. Fontconfig would give Nimbus Sans, whose shorter ascent and
+/// descent leave more leading in a line: text in a table cell aligned by
+/// its baseline then sits about 2 px higher than in Chrome, enough to
+/// make GitHub's annotation count look like a superscript. The
+/// last source keeps the system's own Helvetica when Liberation Sans is
+/// missing.
+const HTML_BODY_CSS: &str = "@font-face{font-family:Helvetica;src:local(\"Liberation Sans\"),local(\"Arimo\"),local(\"Helvetica\")}\
+:host{all:initial;display:block;contain:content}\
 :host(.plain) .root{color:var(--fg)}:host(.plain) a{color:var(--accent)}\
 .root{font:14px/1.5 -apple-system,\"Adwaita Sans\",Cantarell,\"Segoe UI\",Roboto,Helvetica,Arial,sans-serif;\
-color:#1d1d20;overflow-wrap:break-word;overflow-x:auto}\
-img{max-width:100% !important;height:auto !important}\
+color:#1d1d20;overflow-wrap:break-word;overflow-x:auto;container-type:inline-size}\
+img{max-width:100cqw !important;height:auto !important}\
 table{max-width:100%}a{color:#1c71d8}";
 
 /// The button that shows the quoted history, drawn in the page's colours
@@ -839,6 +852,34 @@ mod tests {
     fn a_body_keeps_its_columns_and_its_own_width() {
         assert!(!HTML_BODY_CSS.contains("anywhere"), "{HTML_BODY_CSS}");
         assert!(HTML_BODY_CSS.contains("table{max-width:100%}"), "{HTML_BODY_CSS}");
+    }
+
+    /// A picture's width limit is the message's width, not its cell's.
+    /// A percentage let a table cell count a picture as zero wide, and a
+    /// row whose middle cell asked for all the width lost the picture
+    /// beside it: GitHub's red cross next to a failed job never showed.
+    #[test]
+    fn a_picture_in_a_table_cell_keeps_its_size() {
+        assert!(
+            HTML_BODY_CSS.contains("container-type:inline-size"),
+            "{HTML_BODY_CSS}"
+        );
+        assert!(
+            HTML_BODY_CSS.contains("img{max-width:100cqw !important;height:auto !important}"),
+            "{HTML_BODY_CSS}"
+        );
+    }
+
+    /// Fontconfig answers Helvetica with Nimbus Sans, whose line metrics
+    /// set a table cell's text higher than Arial's do. GitHub's annotation
+    /// count sat above its icon because of it; Chrome picks Liberation Sans.
+    #[test]
+    fn helvetica_is_drawn_in_liberation_sans() {
+        assert!(
+            HTML_BODY_CSS
+                .starts_with("@font-face{font-family:Helvetica;src:local(\"Liberation Sans\")"),
+            "{HTML_BODY_CSS}"
+        );
     }
 
     use std::collections::HashMap;
