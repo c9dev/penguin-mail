@@ -1047,3 +1047,56 @@ async fn a_delete_sends_the_cancellation_only_when_asked() {
     gmail.remove_event("work", "told", None, Notify::Guests).await.unwrap();
     gmail.remove_event("work", "quiet", None, Notify::Nobody).await.unwrap();
 }
+
+/// Google leaves `timeZone` off an event's start and end when the event
+/// keeps the calendar's own zone, which the listing names at its top.
+#[tokio::test]
+async fn an_event_without_a_zone_takes_the_calendar_s() {
+    let server = MockServer::start().await;
+    mount_token(&server).await;
+    Mock::given(method("GET"))
+        .and(path(format!("{CALENDAR}/calendars/work/events")))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "timeZone": "Europe/Lisbon",
+            "items": [
+                {"id": "a", "iCalUID": "a@google.com", "etag": "\"3\"", "status": "confirmed",
+                 "summary": "Dentist",
+                 "start": {"dateTime": "2026-07-14T10:00:00+01:00"},
+                 "end": {"dateTime": "2026-07-14T11:00:00+01:00"}}
+            ],
+            "nextSyncToken": "t2"
+        })))
+        .mount(&server)
+        .await;
+    let page = client(&server)
+        .event_changes("work", Some("t1"), None, "2025-09-23T00:00:00Z")
+        .await
+        .unwrap();
+    assert_eq!(page.events[0].zone, "Europe/Lisbon");
+}
+
+/// A write's answer is one event with no calendar around it. When Google
+/// leaves the zone off, the event keeps the zone it went out with.
+#[tokio::test]
+async fn a_written_event_without_a_zone_in_the_answer_keeps_its_own() {
+    let server = MockServer::start().await;
+    mount_token(&server).await;
+    Mock::given(method("PATCH"))
+        .and(path(format!("{CALENDAR}/calendars/work/events/a")))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "id": "a", "iCalUID": "a@google.com", "etag": "\"4\"", "status": "confirmed",
+            "summary": "Dentist",
+            "start": {"dateTime": "2026-07-14T10:00:00+01:00"},
+            "end": {"dateTime": "2026-07-14T11:00:00+01:00"}
+        })))
+        .mount(&server)
+        .await;
+    let event = mailrs_domain::calendar::Event {
+        calendar: "work".into(),
+        id: "a".into(),
+        zone: "Europe/Lisbon".into(),
+        ..Default::default()
+    };
+    let saved = client(&server).put_event(&event, None, false, Notify::Nobody).await.unwrap();
+    assert_eq!(saved.zone, "Europe/Lisbon");
+}

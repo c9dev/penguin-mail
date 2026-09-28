@@ -5,6 +5,7 @@
 pub mod address;
 pub mod charset;
 pub mod html;
+pub mod notes;
 mod parts;
 mod read;
 pub mod provenance;

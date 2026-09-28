@@ -624,6 +624,13 @@ ALTER TABLE calendar_holds ADD COLUMN before TEXT;
 ALTER TABLE calendar_changes ADD COLUMN notify TEXT;
 ALTER TABLE calendar_holds ADD COLUMN notify TEXT;
 "#,
+    // Events Google sent without a zone of their own were filed in UTC
+    // rather than their calendar's zone. A change read brings back only
+    // what changed, so every calendar is read whole once more; the rows
+    // stay until that read replaces them.
+    r#"
+UPDATE calendars SET sync_token = NULL;
+"#,
 ];
 
 /// How long the copy taken before a migration stays once the store has
