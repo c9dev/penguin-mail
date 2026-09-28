@@ -85,11 +85,11 @@ pub fn waiting_accounts(accounts: &[(Account, Offers, Withheld)]) -> Vec<Account
         .collect()
 }
 
-/// The first day, on or before `day`, of the week the locale's own first
-/// weekday starts: the mini month's own copy of `range::week_start_of`
-/// (private there).
+/// The first day, on or before `day`, of the week
+/// [`crate::locale_time::week_start_weekday`] starts: the mini month's
+/// own copy of `range::week_start_of` (private there).
 fn week_start_of(day: NaiveDate) -> NaiveDate {
-    mailrs_domain::calendar::week::week_start_on_or_before(day, crate::locale_time::first_weekday())
+    mailrs_domain::calendar::week::week_start_on_or_before(day, crate::locale_time::week_start_weekday())
 }
 
 /// The 1st of the month `step` months from the one `month` falls in, for
@@ -114,12 +114,12 @@ fn weeks_shown(first: NaiveDate) -> usize {
     days.div_ceil(7)
 }
 
-/// "M", "T", "W", … for the mini month's weekday row, starting on the
-/// locale's own first weekday, from a known Monday so the locale's own
-/// weekday names decide the letter.
+/// "M", "T", "W", … for the mini month's weekday row, starting on
+/// [`crate::locale_time::week_start_weekday`], from a known Monday so
+/// the locale's own weekday names decide the letter.
 fn weekday_initials() -> Vec<String> {
     let monday = NaiveDate::from_ymd_opt(2024, 1, 1).expect("2024-01-01 is a Monday");
-    mailrs_domain::calendar::week::week_columns(crate::locale_time::first_weekday())
+    mailrs_domain::calendar::week::week_columns(crate::locale_time::week_start_weekday())
         .into_iter()
         .map(|day| {
             (monday + Days::new(u64::from(day.num_days_from_monday())))
@@ -169,7 +169,14 @@ pub struct CalendarSidebar {
     /// from.
     month: Rc<Cell<NaiveDate>>,
     days: Vec<MiniDay>,
+    /// The mini month's "M T W T F S S" row, kept so [`Self::week_start_changed`]
+    /// can swap its letters for the new order without rebuilding the
+    /// whole sidebar.
+    weekday_labels: Vec<gtk::Label>,
     calendar_list: gtk::Box,
+    /// "Offline, last updated 14:32" under the calendar list, hidden
+    /// while nothing is wrong.
+    offline_line: gtk::Label,
     /// What the calendar list was last built from. A redraw that would
     /// build the same rows leaves them, and the focus on one of them,
     /// where they are.
@@ -277,17 +284,14 @@ impl CalendarSidebar {
             .column_homogeneous(true)
             .margin_top(4)
             .build();
+        let mut weekday_labels = Vec::with_capacity(7);
         for (column, initial) in weekday_initials().into_iter().enumerate() {
-            weekdays.attach(
-                &gtk::Label::builder()
-                    .label(&initial)
-                    .css_classes(["mini-month-weekday"])
-                    .build(),
-                column as i32,
-                0,
-                1,
-                1,
-            );
+            let label = gtk::Label::builder()
+                .label(&initial)
+                .css_classes(["mini-month-weekday"])
+                .build();
+            weekdays.attach(&label, column as i32, 0, 1, 1);
+            weekday_labels.push(label);
         }
         content.append(&weekdays);
 
@@ -339,6 +343,14 @@ impl CalendarSidebar {
             .build();
         content.append(&calendar_list);
 
+        // Offline, or the account's last calendar sync failed: a small
+        // row under the calendar list, hidden while all is well. The
+        // sidebar's redesign can move this row; `dim_line`'s own styling
+        // keeps it looking at home here in the meantime.
+        let offline_line = dim_line("");
+        offline_line.set_visible(false);
+        content.append(&offline_line);
+
         let waiting_heading = gtk::Label::builder()
             .label(gettext("Waiting for your answer"))
             .css_classes(["waiting-heading"])
@@ -386,7 +398,9 @@ impl CalendarSidebar {
             month_title,
             month: Rc::new(Cell::new(placeholder)),
             days,
+            weekday_labels,
             calendar_list,
+            offline_line,
             listed: RefCell::new(Vec::new()),
             waiting_section,
             waiting_list,
@@ -535,6 +549,28 @@ impl CalendarSidebar {
                     calendar.shown = shown;
                 }
             }
+        }
+    }
+
+    /// Swaps the mini month's "M T W T F S S" row for the new order
+    /// after the "Week Starts On" choice changes. The day numbers move
+    /// with it the next time [`Self::show_month`] runs.
+    pub fn week_start_changed(&self) {
+        for (label, initial) in self.weekday_labels.iter().zip(weekday_initials()) {
+            label.set_label(&initial);
+        }
+    }
+
+    /// Shows or hides the "Offline, last updated 14:32" line under the
+    /// calendar list; `None` hides it. [`super::words::offline_line`]
+    /// decides the words.
+    pub fn set_offline_line(&self, text: Option<&str>) {
+        match text {
+            Some(text) => {
+                self.offline_line.set_label(text);
+                self.offline_line.set_visible(true);
+            }
+            None => self.offline_line.set_visible(false),
         }
     }
 

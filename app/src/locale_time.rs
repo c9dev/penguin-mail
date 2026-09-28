@@ -16,7 +16,7 @@ use std::ffi::{CStr, c_char, c_int};
 
 use chrono::Weekday;
 use mailrs_domain::calendar::clock::is_12_hour_pattern;
-use mailrs_domain::calendar::week::weekday_from_first_weekday_byte;
+use mailrs_domain::calendar::week::{self, WeekStart, weekday_from_first_weekday_byte};
 
 unsafe extern "C" {
     fn nl_langinfo(item: c_int) -> *mut c_char;
@@ -38,6 +38,7 @@ const T_FMT: c_int = 131_114;
 thread_local! {
     static FIRST_WEEKDAY: Cell<Option<Weekday>> = const { Cell::new(None) };
     static PREFERS_12_HOUR: Cell<Option<bool>> = const { Cell::new(None) };
+    static WEEK_START_SETTING: Cell<WeekStart> = const { Cell::new(WeekStart::Automatic) };
 }
 
 fn read_first_weekday_byte() -> Option<u8> {
@@ -76,6 +77,24 @@ pub fn first_weekday() -> Weekday {
 #[cfg(test)]
 pub fn set_first_weekday_for_test(day: Weekday) {
     FIRST_WEEKDAY.with(|cell| cell.set(Some(day)));
+}
+
+/// Sets the "Week Starts On" choice [`week_start_weekday`] resolves
+/// against: called once at startup with the saved setting, and again
+/// whenever Preferences changes it, so every reader sees the new choice
+/// without a restart.
+pub fn set_week_start_setting(setting: WeekStart) {
+    WEEK_START_SETTING.with(|cell| cell.set(setting));
+}
+
+/// The weekday every calendar grid starts its week on:
+/// [`mailrs_domain::calendar::week::week_start`] applied to the
+/// person's own "Week Starts On" choice and [`first_weekday`]. The one
+/// function the Week grid, the Month grid and the mini month all call,
+/// so a Preferences change and the locale's own answer read the same
+/// way everywhere.
+pub fn week_start_weekday() -> Weekday {
+    week::week_start(WEEK_START_SETTING.with(Cell::get), first_weekday())
 }
 
 /// Whether the system locale's own clock spells the hour in twelve-hour

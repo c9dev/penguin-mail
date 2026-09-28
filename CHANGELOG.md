@@ -56,6 +56,10 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   with clickable links, and a repeating event says when, such as
   "Weekly on Wednesday". Its guest list shows every guest's own answer
   and marks the organizer, with Show all past a few names.
+- Preferences has a Week Starts On choice, next to Working Hours:
+  Automatic follows your locale, or pick Monday or Sunday yourself.
+- Refresh syncs your calendars now, from the calendar's menu, F5, or
+  Ctrl+R.
 
 ### Improved
 
@@ -89,6 +93,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   The assistant's free-time tool now looks inside the same hours.
 - The week starts on the day your locale expects, and every time the
   calendar shows follows your desktop's clock, 12-hour or 24-hour.
+- Offline, or when a calendar sync fails, the sidebar says so under
+  your calendars and when it last updated, instead of leaving you
+  guessing.
 
 ### Fixed
 - In dark mode, a reply with quoted text shows on the dark page instead of

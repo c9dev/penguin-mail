@@ -71,6 +71,8 @@ pub enum Change {
     ShowDeclinedEvents(bool),
     /// The hours and days meetings usually run in.
     WorkingHours(mailrs_domain::calendar::hours::WorkingHours),
+    /// Which day the calendar's grids start the week on.
+    WeekStart(mailrs_domain::calendar::week::WeekStart),
     /// The account a new event went on.
     LastCalendarAccount(String),
     /// Folds the old one switch for every account into the per-account
@@ -272,6 +274,7 @@ impl Change {
             Change::CalendarView(view) => settings.calendar_view = view,
             Change::ShowDeclinedEvents(on) => settings.show_declined_events = on,
             Change::WorkingHours(hours) => settings.working_hours = hours,
+            Change::WeekStart(week_start) => settings.week_start = week_start,
             Change::LastCalendarAccount(email) => settings.last_calendar_account = Some(email),
             Change::Signature { email, text } => settings.set_signature(&email, &text),
             Change::ToggleVip { email, name } => {
@@ -583,6 +586,9 @@ settable! {
         // make the two hard to reason about together, so this stays a
         // choice the person makes in Preferences.
         working_hours,
+        // Where the week starts is the person's own view of the grid,
+        // like working hours.
+        week_start,
     }
 }
 
@@ -624,12 +630,14 @@ pub enum Effect {
     /// gettext both read the locale as the process starts. The window says
     /// so and offers a restart rather than translating half of itself.
     Language,
+    /// Where the week starts, which an open calendar redraws for at once.
+    Calendar,
 }
 
 impl Effect {
     /// In the order the window applies them: accounts first, because the
     /// rows and the smart mailbox on screen read what it sets.
-    pub const ALL: [Effect; 12] = [
+    pub const ALL: [Effect; 13] = [
         Effect::ListShape,
         Effect::Accounts,
         Effect::RowColors,
@@ -642,6 +650,7 @@ impl Effect {
         Effect::Contacts,
         Effect::Theme,
         Effect::Language,
+        Effect::Calendar,
     ];
 }
 
@@ -760,6 +769,7 @@ impl Effects {
             calendar_view,
             show_declined_events,
             working_hours,
+            week_start,
             last_calendar_account,
         } = after;
         // These leave the window as it is. The flag colour, the delay before
@@ -854,6 +864,7 @@ impl Effects {
                 }
                 Effect::Theme => *color_scheme != before.color_scheme,
                 Effect::Language => *language != before.language,
+                Effect::Calendar => *week_start != before.week_start,
             })
             .collect();
         Effects {
@@ -916,6 +927,10 @@ mod tests {
         assert!(effects(Change::SuggestFollowUps(false)).has(Effect::FollowUps));
         assert!(effects(Change::TextSize(TextSize::Large)).has(Effect::TextSize));
         assert!(effects(Change::ColorScheme(ColorScheme::Dark)).has(Effect::Theme));
+        assert!(
+            effects(Change::WeekStart(mailrs_domain::calendar::week::WeekStart::Monday))
+                .has(Effect::Calendar)
+        );
         let anthropic = Change::Ai(AiChange::Use {
             feature: Feature::Assistant,
             choice: Use::Model {
@@ -1204,6 +1219,7 @@ mod tests {
         after.contact_accounts = vec!["ann@example.com".into()];
         after.color_scheme = ColorScheme::Dark;
         after.language = "pt_PT".into();
+        after.week_start = mailrs_domain::calendar::week::WeekStart::Monday;
         let effects = Effects::between(&before, &after);
         assert_eq!(effects.iter().collect::<Vec<_>>(), Effect::ALL);
     }
@@ -1373,6 +1389,7 @@ mod tests {
             },
             Change::ColorScheme(ColorScheme::Light),
             Change::Language("pt_PT".into()),
+            Change::WeekStart(mailrs_domain::calendar::week::WeekStart::Monday),
         ];
         let mut seen: Vec<Effect> = Vec::new();
         for change in changes {
