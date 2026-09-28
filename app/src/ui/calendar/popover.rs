@@ -17,6 +17,7 @@ use std::rc::Rc;
 
 use adw::prelude::*;
 use gtk::{gdk, gio, glib, pango};
+use mailrs_domain::AccountId;
 use mailrs_domain::calendar::{Event, Guest, Occurrence};
 use mailrs_domain::invitation::Answer;
 use mailrs_domain::translate::gettext;
@@ -81,6 +82,14 @@ pub struct EventPopover {
     answer_box: gtk::Box,
     answer_buttons: Vec<(Answer, gtk::Button)>,
     on_answer: RefCell<Option<Box<OnAnswer>>>,
+    /// "Open the invitation in Mail", shown only for an event this popover
+    /// has found the mail for (R1).
+    mail_row: gtk::Button,
+    on_mail: RefCell<Option<Box<dyn Fn()>>>,
+    /// The account and UID `show` last opened, so a mail lookup that comes
+    /// back after the popover has moved to another occurrence changes
+    /// nothing.
+    showing: RefCell<Option<(AccountId, String)>>,
     /// The block the popover points at, which takes the focus back when
     /// it closes.
     anchor: glib::WeakRef<gtk::Widget>,
@@ -197,6 +206,22 @@ impl EventPopover {
             })
             .collect();
 
+        // "Open the invitation in Mail", under the answer row, only for
+        // an event that arrived by mail (R1); an icon-and-text link
+        // rather than a filled pill, as the mockup draws it.
+        let mail_label = gtk::Label::builder()
+            .xalign(0.0)
+            .wrap(true)
+            .hexpand(true)
+            .label(gettext("Open the invitation in Mail"))
+            .build();
+        let mail_row = gtk::Button::builder()
+            .child(&icon_row("mail-unread-symbolic", &mail_label))
+            .css_classes(["flat", "popover-open-mail"])
+            .visible(false)
+            .build();
+        crate::ui::name(&mail_row, &gettext("Open the invitation in Mail"));
+
         // The mockup's rows sit 26 px apart, the first 31 px under the
         // time, and Join 22 px under the last.
         let rows = gtk::Box::builder()
@@ -222,6 +247,7 @@ impl EventPopover {
             rows.upcast_ref(),
             join.upcast_ref(),
             answer_box.upcast_ref(),
+            mail_row.upcast_ref(),
         ] {
             content.append(widget);
         }
@@ -270,6 +296,9 @@ impl EventPopover {
             answer_box,
             answer_buttons,
             on_answer: RefCell::new(None),
+            mail_row,
+            on_mail: RefCell::new(None),
+            showing: RefCell::new(None),
             anchor: glib::WeakRef::new(),
             root_press: RefCell::new(None),
         });
@@ -330,6 +359,14 @@ impl EventPopover {
                 f();
             }
         });
+        let weak = Rc::downgrade(&this);
+        this.mail_row.connect_clicked(move |_| {
+            let Some(this) = weak.upgrade() else { return };
+            this.popover.popdown();
+            if let Some(f) = this.on_mail.borrow_mut().take() {
+                f();
+            }
+        });
 
         // A press anywhere else in the window closes the popover, since
         // it no longer auto-hides. Installed once, on the root the
@@ -380,6 +417,13 @@ impl EventPopover {
         on_delete: Option<Box<dyn Fn()>>,
     ) {
         let event = &o.event;
+        // The mail lookup this event's uid started, if any, is for the
+        // occurrence the popover showed then; a late answer for it must
+        // not land on whatever the popover shows now.
+        self.showing
+            .replace(Some((o.account_id, event.uid.clone())));
+        self.mail_row.set_visible(false);
+        self.on_mail.replace(None);
         let colour = event.color.as_deref().unwrap_or(calendar.color.as_str());
         self.bar
             .set_css_classes(&["popover-bar", &tint::css_class(colour)]);
@@ -488,6 +532,19 @@ impl EventPopover {
     /// it.
     pub fn hide(&self) {
         self.popover.popdown();
+    }
+
+    /// Puts "Open the invitation in Mail" on the popover, once the mail
+    /// carrying `uid`'s invitation is found; `None` leaves it hidden, for
+    /// an event with no mail behind it. Changes nothing once the popover
+    /// has moved on to another occurrence, since the lookup that found
+    /// this answers after `show` already returned.
+    pub fn set_open_mail(&self, account_id: AccountId, uid: &str, open: Option<Box<dyn Fn()>>) {
+        if *self.showing.borrow() != Some((account_id, uid.to_string())) {
+            return;
+        }
+        self.mail_row.set_visible(open.is_some());
+        self.on_mail.replace(open);
     }
 }
 

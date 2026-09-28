@@ -37,6 +37,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - The calendar sidebar lists invitations you have not answered yet: open
   one to see it on the calendar, or open its mail when you still have
   it.
+- Show in Calendar on an invitation opens the calendar on that day, with
+  the event's details open. Its popover offers Open the invitation in
+  Mail back to the message it arrived in.
 
 ### Improved
 
@@ -71,6 +74,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - `penguin-mail --demo`'s sample design review keeps its ninth weekly
   occurrence on the calendar; it used to drop off a week early once the
   clocks went back.
+- `penguin-mail --demo`'s sample invitation keeps its series ending on
+  the same time of day it started; the clocks going back used to move
+  it an hour earlier.
 
 ## 0.3.0 (2026-09-24)
 

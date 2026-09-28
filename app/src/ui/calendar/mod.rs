@@ -85,8 +85,10 @@ pub struct Hooks {
     pub contacts: Box<dyn Fn() -> Contacts>,
     /// Sends the account's queued calendar changes now, then reloads.
     pub push: Box<dyn Fn(AccountId)>,
-    /// Opens a "Waiting for your answer" card's "Open mail" door: shows
-    /// Mail and reveals the thread its invitation arrived in.
+    /// Opens the mail that carries an invitation, switching away from the
+    /// calendar to it: the "Waiting for your answer" card's "Open mail"
+    /// door and the event popover's "Open the invitation in Mail" link
+    /// both call this.
     pub open_mail: Box<dyn Fn(AccountId, String)>,
 }
 
@@ -1695,6 +1697,45 @@ impl CalendarView {
             on_edit,
             on_delete,
         );
+        self.find_invitation_mail(o);
+    }
+
+    /// Looks for the mail that carries `o`'s invitation, and puts "Open
+    /// the invitation in Mail" on the popover once found, if it is still
+    /// open on this occurrence (R1). An event with no uid, such as one
+    /// made straight on the calendar, has no invitation to find.
+    fn find_invitation_mail(self: &Rc<Self>, o: &Occurrence) {
+        let uid = o.event.uid.clone();
+        if uid.is_empty() {
+            return;
+        }
+        let account_id = o.account_id;
+        let weak = Rc::downgrade(self);
+        let for_popover = uid.clone();
+        glib::spawn_future_local(async move {
+            let Some(view) = weak.upgrade() else { return };
+            let uid_read = uid.clone();
+            let saved = view
+                .core
+                .read(move |c| mailrs_store::invitations::saved(c, account_id, &uid_read))
+                .await;
+            let Ok(Some(saved)) = saved else { return };
+            let thread = view
+                .core
+                .read(move |c| mailrs_store::messages::thread_id_of(c, account_id, &saved.message_id))
+                .await;
+            let Ok(Some(thread_id)) = thread else { return };
+            let open_view = Rc::downgrade(&view);
+            view.popover.set_open_mail(
+                account_id,
+                &for_popover,
+                Some(Box::new(move || {
+                    if let Some(view) = open_view.upgrade() {
+                        (view.hooks.open_mail)(account_id, thread_id.clone());
+                    }
+                })),
+            );
+        });
     }
 
     /// What the view lets a person do to `o`: see [`draft::editing`].

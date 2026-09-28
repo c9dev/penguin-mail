@@ -1952,7 +1952,11 @@ fn invitation_ics(now: EpochMillis) -> String {
     let sent = chrono::DateTime::from_timestamp_millis(now).unwrap_or_default();
     let start = next_tuesday(sent.with_timezone(&chrono::Local));
     let end = start + chrono::Duration::minutes(45);
-    let until = start + chrono::Duration::weeks(8);
+    // Adding eight weeks of milliseconds would drift UNTIL's wall-clock
+    // hour by one across Lisbon's clock change (the rrule-until-dst
+    // trap); `eight_weeks_later` walks the date and re-anchors to the
+    // zone instead, the same fix `account1_events` already carries.
+    let until = eight_weeks_later(start);
     [
         "BEGIN:VCALENDAR".to_string(),
         "PRODID:-//Google Inc//Google Calendar 70.9054//EN".to_string(),
@@ -1968,10 +1972,7 @@ fn invitation_ics(now: EpochMillis) -> String {
         format!("DTSTAMP:{}", stamp(sent)),
         format!("DTSTART:{}", stamp(start.with_timezone(&chrono::Utc))),
         format!("DTEND:{}", stamp(end.with_timezone(&chrono::Utc))),
-        format!(
-            "RRULE:FREQ=WEEKLY;BYDAY=TU;UNTIL={}",
-            stamp(until.with_timezone(&chrono::Utc))
-        ),
+        format!("RRULE:FREQ=WEEKLY;BYDAY=TU;UNTIL={}", until_stamp(until)),
         "ORGANIZER;CN=Priya Raman:mailto:priya@fernwood.example".to_string(),
         format!(
             "ATTENDEE;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=TRUE;CN=Dana Reyes:mailto:{}",
@@ -2438,6 +2439,31 @@ mod tests {
         // UNTIL is eight weeks after the first start, on a Tuesday at the
         // same time, and iCalendar counts it: nine Tuesdays.
         assert_eq!(found.len(), 9);
+    }
+
+    #[test]
+    fn the_invitation_ics_keeps_its_until_at_the_same_local_hour_across_a_dst_change() {
+        use chrono::{TimeZone, Timelike};
+        // Eight weeks after this seed lands past Lisbon's autumn clock
+        // change, so a fixed-millisecond span would drift the wall-clock
+        // hour by one (the rrule-until-dst trap); walking the date and
+        // re-anchoring to the zone keeps UNTIL at 14:00, the same hour
+        // DTSTART names.
+        let seed = chrono::Local
+            .with_ymd_and_hms(2026, 9, 27, 12, 0, 0)
+            .unwrap()
+            .timestamp_millis();
+        let ics = invitation_ics(seed);
+        let until = ics
+            .lines()
+            .find_map(|line| line.strip_prefix("RRULE:"))
+            .and_then(|rule| rule.split(';').find_map(|part| part.strip_prefix("UNTIL=")))
+            .expect("the rule carries an UNTIL");
+        let until = chrono::NaiveDateTime::parse_from_str(until, "%Y%m%dT%H%M%SZ")
+            .expect("UNTIL parses")
+            .and_utc()
+            .with_timezone(&chrono::Local);
+        assert_eq!(until.hour(), 14, "UNTIL drifted to {until}");
     }
 
     #[tokio::test]
