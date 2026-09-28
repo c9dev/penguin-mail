@@ -948,6 +948,32 @@ mod tests {
         assert_eq!(saved(&steps)[0].rules, series.rules);
     }
 
+    /// A split hands a series an end, and the end must not change how its
+    /// days move: moved a day under All events, each day set lands on the
+    /// same days with an `UNTIL` as without one.
+    #[test]
+    fn an_end_does_not_change_how_a_series_days_move() {
+        let until = ";UNTIL=20261231T235959Z";
+        // Each day set, and the day of September 2026 its series starts on.
+        for (days, first) in [("MO,TU,WE,TH,FR", 21), ("MO,WE,FR", 21), ("TU", 22), ("SA,SU", 26)] {
+            let moved_rule = |end: &str| {
+                let series = Event {
+                    start: lisbon(9, first, 9, 0),
+                    end: lisbon(9, first, 9, 15),
+                    ..standup(&[&format!("RRULE:FREQ=WEEKLY;BYDAY={days}{end}")])
+                };
+                // The series' fourth week, on the day it starts on.
+                let picked = Picked {
+                    original_start: lisbon(10, first - 9, 9, 0),
+                    start: lisbon(10, first - 9, 9, 0),
+                };
+                let steps = change(&series, &[], picked, moved(&series, picked, 24), RepeatScope::All, "new");
+                with_end(&saved(&steps)[0].rules[0], None)
+            };
+            assert_eq!(moved_rule(until), moved_rule(""), "BYDAY={days}");
+        }
+    }
+
     /// Stand-up as Rita organizes it and this account attends, skipping
     /// Wednesday and adding a Saturday.
     fn attended() -> Event {

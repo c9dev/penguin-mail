@@ -207,13 +207,34 @@ impl Repeat {
 }
 
 /// Whether `rules` repeat weekly on days they list, the kind of series
-/// whose `BYDAY` has to follow the series to another weekday.
+/// whose `BYDAY` has to follow the series to another weekday. The rules
+/// are read without their `COUNT` or `UNTIL`: a split hands a series an
+/// end, and a series must move the same way before and after one.
 pub(crate) fn names_weekdays(rules: &[String], day: NaiveDate, zone: Tz) -> bool {
-    match Repeat::read(rules, day, zone) {
+    let endless: Vec<String> = rules.iter().map(|line| without_end(line)).collect();
+    match Repeat::read(&endless, day, zone) {
         Repeat::EveryWeek => true,
         Repeat::Custom(custom) => custom.frequency == Frequency::Weekly && !custom.days.is_empty(),
         _ => false,
     }
+}
+
+/// A rule line without its `COUNT` or `UNTIL`; any other line as it is.
+fn without_end(line: &str) -> String {
+    if !is_rule_line(line) {
+        return line.to_string();
+    }
+    let Some((head, body)) = line.split_once(':') else {
+        return line.to_string();
+    };
+    let parts: Vec<&str> = body
+        .split(';')
+        .filter(|p| {
+            let p = p.to_ascii_uppercase();
+            !p.starts_with("COUNT=") && !p.starts_with("UNTIL=")
+        })
+        .collect();
+    format!("{head}:{}", parts.join(";"))
 }
 
 /// `line` with each weekday its `BYDAY` lists moved `days` later, and
