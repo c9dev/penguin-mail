@@ -103,7 +103,7 @@ pub struct RichBody {
 const FONT: &str = "font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;line-height:1.5";
 pub(crate) const PARAGRAPH: &str = "margin:0 0 1em";
 pub(crate) const QUOTE: &str =
-    "margin:0 0 0 0.8ex;border-left:2px solid #ccc;padding-left:1ex;color:#555";
+    "margin:0 0 0 0.8ex;border-left:2px solid #ccc;padding-left:1ex";
 pub(crate) const PRE: &str = "background:#f6f6f8;padding:10px;border-radius:6px;overflow:auto";
 pub(crate) const IMAGE: &str = "max-width:100%;height:auto";
 const CODE: &str = "font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:#f6f6f8;padding:1px 3px;border-radius:4px";

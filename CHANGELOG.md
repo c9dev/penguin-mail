@@ -79,6 +79,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   page take less time, because those quick jobs no longer think at length.
 
 ### Fixed
+- In dark mode, a reply with quoted text shows on the dark page instead of
+  in a white box.
 
 - Calendar search keeps the events that matter even when a common word
   matches hundreds of past ones: upcoming events first, then the most
