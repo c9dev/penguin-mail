@@ -659,6 +659,47 @@ async fn a_change_page_maps_events_and_names_the_deleted_ones() {
     assert!(page.events[1].busy);
 }
 
+/// An older range is a read of its own: it bounds the events by time, keeps
+/// the series whole, asks for the cancelled ones, and never sends a sync
+/// token, which Google refuses beside `timeMin` and `timeMax`.
+#[tokio::test]
+async fn an_older_range_is_read_by_time_and_sends_no_sync_token() {
+    let server = MockServer::start().await;
+    mount_token(&server).await;
+    Mock::given(method("GET"))
+        .and(path(format!("{CALENDAR}/calendars/work/events")))
+        .and(query_param("timeMin", "2024-09-01T00:00:00Z"))
+        .and(query_param("timeMax", "2025-09-01T00:00:00Z"))
+        .and(query_param("showDeleted", "true"))
+        .and(query_param("pageToken", "p2"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "timeZone": "Europe/Lisbon",
+            "items": [
+                {"id": "old", "iCalUID": "old@google.com", "etag": "\"1\"", "status": "confirmed",
+                 "summary": "Last year's offsite",
+                 "start": {"dateTime": "2024-10-03T10:00:00+01:00"},
+                 "end": {"dateTime": "2024-10-03T11:00:00+01:00"}},
+                {"id": "gone", "status": "cancelled"}
+            ]
+        })))
+        .mount(&server)
+        .await;
+    let page = client(&server)
+        .event_range("work", "2024-09-01T00:00:00Z", "2025-09-01T00:00:00Z", Some("p2"))
+        .await
+        .unwrap();
+    assert_eq!(page.events.len(), 1);
+    assert_eq!(page.events[0].title, "Last year's offsite");
+    assert_eq!(page.events[0].zone, "Europe/Lisbon");
+    assert_eq!(page.removed, vec!["gone".to_string()]);
+    assert_eq!(page.next_sync, None);
+    let sent = server.received_requests().await.unwrap();
+    let events = sent.iter().find(|r| r.url.path().ends_with("/events")).unwrap();
+    let query = events.url.query().unwrap_or_default();
+    assert!(!query.contains("syncToken"), "a range read must not carry a sync token: {query}");
+    assert!(!query.contains("singleEvents"), "a series must arrive whole: {query}");
+}
+
 #[tokio::test]
 async fn an_expired_calendar_token_says_so() {
     let server = MockServer::start().await;

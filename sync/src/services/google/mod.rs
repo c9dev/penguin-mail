@@ -571,6 +571,16 @@ impl<G: GmailApi> CalendarService for Google<G> {
         }
     }
 
+    async fn event_range(
+        &self,
+        calendar: &str,
+        from: EpochMillis,
+        to: EpochMillis,
+        page: Option<&str>,
+    ) -> Result<model::EventPage, BackendError> {
+        Ok(paced(self.gmail.event_range(calendar, from, to, page)).await?)
+    }
+
     async fn put_event(
         &self,
         event: &model::Event,
