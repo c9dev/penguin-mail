@@ -75,6 +75,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Fixed
 
+- An event's notes from Google Calendar show as readable text in the
+  editor instead of HTML tags, and their links still work after you
+  save.
 - A Google event made outside Google Calendar shows at its real time
   and zone in the editor, not in UTC, and saving it keeps that zone.
 - Dragging a weekday event to another day with All events keeps it on Monday to Friday, even after the series was split with This and following.

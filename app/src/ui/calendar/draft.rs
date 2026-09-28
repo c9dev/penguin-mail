@@ -38,6 +38,8 @@ pub struct Draft {
     pub guests: Vec<Guest>,
     /// `None` takes the calendar's reminders.
     pub reminders: Option<Vec<Reminder>>,
+    /// The description as lines to edit. Google may hold it as HTML, and
+    /// the event keeps that HTML until the person changes these lines.
     pub notes: String,
     pub busy: bool,
     pub private: bool,
@@ -99,7 +101,7 @@ impl Draft {
             place: event.place.clone(),
             guests: event.guests.clone(),
             reminders: event.reminders.clone(),
-            notes: event.description.clone(),
+            notes: mailrs_mime::notes::text(&event.description),
             busy: event.busy,
             private: event.private,
             color: event.color.clone(),
@@ -255,7 +257,11 @@ impl Draft {
         event.place = self.place.trim().to_string();
         event.guests = self.guests.clone();
         event.reminders = self.reminders.clone();
-        event.description = self.notes.clone();
+        // Notes nobody touched go back as Google holds them, since turning
+        // its HTML into lines and back would drop its formatting.
+        if self.base.as_ref().is_none_or(|base| mailrs_mime::notes::text(&base.description) != self.notes) {
+            event.description = mailrs_mime::notes::html(&self.notes);
+        }
         event.busy = self.busy;
         event.private = self.private;
         event.color = self.color.clone();
@@ -489,6 +495,37 @@ mod tests {
 
     fn opened() -> Draft {
         Draft::open(&weekly(), &weekly().event.rules, Lisbon)
+    }
+
+    /// Notes as Google's own editor writes them.
+    const GOOGLE_NOTES: &str = r#"Bring the numbers<br><a href="https://example.com/q3">Q3 sheet</a>"#;
+
+    fn with_google_notes() -> Draft {
+        let mut occurrence = weekly();
+        Arc::make_mut(&mut occurrence.event).description = GOOGLE_NOTES.into();
+        Draft::open(&occurrence, &occurrence.event.rules, Lisbon)
+    }
+
+    #[test]
+    fn google_s_html_notes_open_as_lines() {
+        assert_eq!(with_google_notes().notes, "Bring the numbers\nQ3 sheet (https://example.com/q3)");
+    }
+
+    #[test]
+    fn notes_left_alone_go_back_exactly_as_google_holds_them() {
+        let mut draft = with_google_notes();
+        draft.title = "Quarterly review".into();
+        assert_eq!(draft.to_event("", "").description, GOOGLE_NOTES);
+    }
+
+    #[test]
+    fn edited_notes_go_out_as_html_with_the_link_working() {
+        let mut draft = with_google_notes();
+        draft.notes.push_str("\nRoom 5");
+        assert_eq!(
+            draft.to_event("", "").description,
+            "Bring the numbers<br>Q3 sheet (<a href=\"https://example.com/q3\">https://example.com/q3</a>)<br>Room 5"
+        );
     }
 
     fn reaches(change: impl FnOnce(&mut Draft)) -> bool {

@@ -185,6 +185,9 @@ pub struct Event {
     pub all_day: bool,
     pub title: String,
     pub place: String,
+    /// The description as the provider holds it. Google keeps HTML once
+    /// someone has edited it in Google Calendar, and plain text otherwise;
+    /// `mailrs_mime::notes` turns either into lines to edit and back.
     pub description: String,
     /// `#rrggbb` when the event has its own colour; `None` takes the
     /// calendar's.
