@@ -33,9 +33,6 @@ pub enum Showing {
 pub fn showing(kind: ViewKind, narrow: bool, compact: bool) -> Showing {
     match (kind, narrow, compact) {
         (ViewKind::Day, _, _) => Showing::Day,
-        // Compact has no Agenda entry in the switch (see `offered`), so
-        // it shows the Month the switch does offer.
-        (ViewKind::Agenda, false, true) => Showing::Month,
         (ViewKind::Agenda, _, _) => Showing::List,
         (_, true, _) => Showing::List,
         (ViewKind::Week, false, true) => Showing::Month,
@@ -47,15 +44,16 @@ pub fn showing(kind: ViewKind, narrow: bool, compact: bool) -> Showing {
 /// The view switch's toggles by name, in the order they sit, and whether
 /// each one is offered: List and Day in a narrow window; Day and Month
 /// alone once the header has no room left for Week too (`compact`); Day,
-/// Week, Month and Agenda in a wide one. Agenda is the first to go when
-/// room runs short, then Week; Month stays.
+/// Week, Month and Agenda in a wide one. Compact drops Week only. A
+/// narrow window drops Agenda too, since the list it shows is the
+/// agenda.
 pub fn offered(narrow: bool, compact: bool) -> [(&'static str, bool); 5] {
     [
         ("list", narrow),
         ("day", true),
         ("week", !narrow && !compact),
         ("month", !narrow),
-        ("agenda", !narrow && !compact),
+        ("agenda", !narrow),
     ]
 }
 
@@ -99,6 +97,12 @@ pub fn kind_for(name: &str, before_day: ViewKind) -> Option<ViewKind> {
 /// viewport is at its end.
 pub fn near_end(value: f64, page: f64, upper: f64, margin: f64) -> bool {
     value + page >= upper - margin
+}
+
+/// Whether a list `upper` pixels tall may take more rows without passing
+/// `ceiling`.
+pub fn may_grow(upper: f64, ceiling: f64) -> bool {
+    upper < ceiling
 }
 
 /// The accessible names of the back and forward arrows, which are icons
@@ -415,15 +419,15 @@ mod tests {
         assert_eq!(on, ["day", "week", "month", "agenda"]);
     }
 
-    /// Where the header runs short of room, Agenda goes before Month.
+    /// Compact drops Week alone; Agenda and Month stay.
     #[test]
-    fn a_compact_switch_drops_agenda_along_with_week() {
+    fn a_compact_switch_keeps_agenda_and_drops_only_week() {
         let on: Vec<&str> = offered(false, true)
             .into_iter()
             .filter(|(_, on)| *on)
             .map(|(name, _)| name)
             .collect();
-        assert!(on.contains(&"month") && !on.contains(&"agenda"));
+        assert_eq!(on, ["day", "month", "agenda"]);
     }
 
     #[test]
@@ -437,11 +441,9 @@ mod tests {
         assert_eq!(showing(ViewKind::Agenda, true, false), Showing::List);
     }
 
-    /// The switch has no Agenda entry when compact, so the page shows the
-    /// Month the switch offers rather than a view it cannot mark.
     #[test]
-    fn a_compact_window_shows_month_where_agenda_was_chosen() {
-        assert_eq!(showing(ViewKind::Agenda, false, true), Showing::Month);
+    fn a_compact_window_keeps_the_agenda_chosen() {
+        assert_eq!(showing(ViewKind::Agenda, false, true), Showing::List);
     }
 
     #[test]
@@ -454,7 +456,7 @@ mod tests {
     fn the_agenda_marks_its_own_toggle_in_a_wide_window_and_list_in_a_narrow_one() {
         assert_eq!(active_toggle(ViewKind::Agenda, false, false), "agenda");
         assert_eq!(active_toggle(ViewKind::Agenda, true, false), "list");
-        assert_eq!(active_toggle(ViewKind::Agenda, false, true), "month");
+        assert_eq!(active_toggle(ViewKind::Agenda, false, true), "agenda");
         assert_eq!(active_toggle(ViewKind::Week, false, false), "week");
     }
 
@@ -469,6 +471,12 @@ mod tests {
         assert!(!near_end(300.0, 400.0, 1000.0, 200.0));
         assert!(near_end(400.0, 400.0, 1000.0, 200.0));
         assert!(near_end(600.0, 400.0, 1000.0, 200.0));
+    }
+
+    #[test]
+    fn a_list_stops_growing_at_its_ceiling() {
+        assert!(may_grow(11_999.0, 12_000.0));
+        assert!(!may_grow(12_000.0, 12_000.0));
     }
 
     #[test]

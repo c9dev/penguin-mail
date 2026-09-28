@@ -907,7 +907,7 @@ impl CalendarView {
     /// away: the header drops the year and the week number so the rest
     /// still fits, and the view switch drops Week, the widest grid, so
     /// its three labels stop crowding each other.
-    pub fn set_compact(self: &Rc<Self>, compact: bool) {
+    pub fn set_compact(&self, compact: bool) {
         self.compact.set(compact);
         match compact {
             true => self.page.add_css_class("calendar-compact"),
@@ -915,11 +915,6 @@ impl CalendarView {
         }
         self.build_switch();
         self.show_range();
-        // A chosen Agenda shows as the list again once the window is
-        // roomy enough for its switch entry.
-        if self.showing() == Showing::List {
-            self.fill_list();
-        }
     }
 
     /// Answers the assistant's panel opening beside the calendar (R12):
@@ -1853,7 +1848,9 @@ impl CalendarView {
     /// scrolls near its end, up to `range::latest_agenda_day`.
     fn load_later(self: &Rc<Self>) {
         let Some(held_to) = self.list_last.get() else { return };
-        if self.list_later_loading.get() {
+        if self.list_later_loading.get()
+            || !shown::may_grow(self.list.widget.vadjustment().upper(), MOST_LIST_HEIGHT)
+        {
             return;
         }
         let today = chrono::Local::now().date_naive();
@@ -2924,6 +2921,11 @@ impl PageView {
 
 /// Local midnight of `first` to local midnight after `last`, for a read
 /// covering whole days.
+/// How tall the list may grow, in pixels, before it stops loading later
+/// days. In the demo's Xvfb display, GTK drew nothing below about 16,400
+/// px of scrolled content, so the list stays well under that.
+const MOST_LIST_HEIGHT: f64 = 12_000.0;
+
 fn day_span(first: NaiveDate, last: NaiveDate) -> (EpochMillis, EpochMillis) {
     let (from, _) = Range::around(ViewKind::Day, first).span(&chrono::Local);
     let (_, to) = Range::around(ViewKind::Day, last).span(&chrono::Local);
