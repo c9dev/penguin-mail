@@ -970,6 +970,11 @@ impl TimeGrid {
         find_block(&self.imp().blocks.borrow(), key)
     }
 
+    /// The block drawing the occurrence of `key` that starts at `start`.
+    pub fn block_at(&self, key: &EventKey, start: EpochMillis) -> Option<gtk::Widget> {
+        block_at(&self.imp().blocks.borrow(), key, start)
+    }
+
     /// The first card Tab reaches, in day and start order.
     pub fn first_block(&self) -> Option<gtk::Widget> {
         self.imp()
@@ -1026,7 +1031,7 @@ impl TimeGrid {
 
     /// Says which occurrences a drag may move: a card whose predicate
     /// answers `false`, such as one on a read-only calendar or a guest's
-    /// own event (R9), starts no drag.
+    /// own event, starts no drag.
     pub fn set_can_move(&self, f: impl Fn(&Occurrence) -> bool + 'static) {
         self.imp().can_move.replace(Some(Box::new(f)));
     }
@@ -1363,8 +1368,8 @@ impl TimeGrid {
             grid.queue_allocate();
         });
         // Damping ratio 1.0: the card lands without passing its slot.
-        // `AdwAnimation` follows GNOME's animations setting on its own
-        // (R10): with it off, `play` ends the spring at once and `done`
+        // `AdwAnimation` follows GNOME's animations setting on its own:
+        // with it off, `play` ends the spring at once and `done`
         // below runs straight away, no cross-fade shown.
         let spring = adw::SpringAnimation::builder()
             .widget(self)
@@ -1536,6 +1541,20 @@ fn find_block(blocks: &[(EventKey, Occurrence, gtk::Widget)], key: &EventKey) ->
         .map(|(_, _, widget)| widget.clone())
 }
 
+/// The block among `blocks` drawing the occurrence of `key` that starts
+/// at `start`. Every occurrence of an unsplit series shares one key, and
+/// a page can show several of them, so the key alone may find a sibling.
+pub fn block_at<W: Clone>(
+    blocks: &[(EventKey, Occurrence, W)],
+    key: &EventKey,
+    start: EpochMillis,
+) -> Option<W> {
+    blocks
+        .iter()
+        .find(|(k, o, _)| k == key && o.start == start)
+        .map(|(_, _, widget)| widget.clone())
+}
+
 glib::wrapper! {
     pub struct AllDayStrip(ObjectSubclass<imp::AllDayStrip>)
         @extends gtk::Widget,
@@ -1624,6 +1643,11 @@ impl AllDayStrip {
     /// The block drawing `key`, when the strip shows it.
     pub fn block_of(&self, key: &EventKey) -> Option<gtk::Widget> {
         find_block(&self.imp().blocks.borrow(), key)
+    }
+
+    /// The block drawing the occurrence of `key` that starts at `start`.
+    pub fn block_at(&self, key: &EventKey, start: EpochMillis) -> Option<gtk::Widget> {
+        block_at(&self.imp().blocks.borrow(), key, start)
     }
 
     /// The first card Tab reaches.
@@ -1723,6 +1747,25 @@ mod tests {
     fn one_all_day_lane_and_its_rule_make_the_mockup_s_34_pixel_row() {
         // The rule under the row is a separate 1 px widget.
         assert_eq!(all_day_height(1) + 1.0, 34.0);
+    }
+
+    #[test]
+    fn a_series_shown_twice_finds_the_block_of_the_asked_occurrence() {
+        // A weekly series on a month page: two occurrences share one key.
+        let first = all_day_event(1_000, 2_000);
+        let second = Occurrence {
+            start: 5_000,
+            end: 6_000,
+            ..first.clone()
+        };
+        let key = block::key_of(&first);
+        let blocks = [
+            (key.clone(), first, "first"),
+            (key.clone(), second, "second"),
+        ];
+        assert_eq!(block_at(&blocks, &key, 5_000), Some("second"));
+        assert_eq!(block_at(&blocks, &key, 1_000), Some("first"));
+        assert_eq!(block_at(&blocks, &key, 9_000), None);
     }
 
     fn d(y: i32, m: u32, day: u32) -> NaiveDate {

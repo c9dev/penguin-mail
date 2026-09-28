@@ -147,9 +147,6 @@ pub enum Change {
     },
     /// Keeps a word Add to Dictionary accepted.
     KeepWord(String),
-    /// Records that an account has been offered to GNOME Online Accounts,
-    /// whichever way the person answered.
-    OfferedToGnome(String),
     Ai(AiChange),
     /// Open the assistant's thinking and tool rows as they appear.
     AssistantDetailsExpanded(bool),
@@ -354,12 +351,6 @@ impl Change {
                     settings.spell_languages.remove(&key);
                 } else {
                     settings.spell_languages.insert(key, languages);
-                }
-            }
-            Change::OfferedToGnome(email) => {
-                let email = email.to_lowercase();
-                if !settings.offered_to_gnome.contains(&email) {
-                    settings.offered_to_gnome.push(email);
                 }
             }
             Change::KeepWord(word) => {
@@ -570,9 +561,6 @@ settable! {
         // Which buttons a notification carries is a list, and a setting the
         // assistant changes by name holds one value.
         notification_buttons,
-        // Whether an account has been offered to GNOME is the card's own
-        // memory of asking, not a preference.
-        offered_to_gnome,
         send_as,
         // When Gmail last answered is the app's own bookkeeping.
         send_as_checked,
@@ -757,7 +745,6 @@ impl Effects {
             encrypt_when_possible,
             contacts,
             contact_accounts,
-            offered_to_gnome,
             check_for_updates,
             last_update_check,
             announced_update,
@@ -795,9 +782,6 @@ impl Effects {
             check_attachments,
             sign_by_default,
             encrypt_when_possible,
-            // The event card reads this as it goes up, and it changes
-            // nothing that is already on screen.
-            offered_to_gnome,
             // The pane reads this as it adds a row, and rows already in the
             // chat stay as the reader left them.
             assistant_details_expanded,

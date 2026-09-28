@@ -19,7 +19,7 @@ visit, so you never see a second consent screen for automatic replies and
 Rules, contacts, the calendar, or Delete Forever. Leave a box unticked and
 the feature it serves turns off with a reason rather than an error, and
 offers **Grant Access** where you would use it: in the calendar sidebar,
-in Preferences, or when you first try the feature. An account added
+on an invitation, in Preferences, or when you first try the feature. An account added
 before this way of signing in gets a bar at the top of the mail list that
 names what it lacks, until you go through Google's screen once more. Mail
 keeps syncing throughout.

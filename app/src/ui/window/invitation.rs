@@ -16,43 +16,26 @@ use mailrs_domain::{AccountId, EpochMillis};
 use mailrs_sync::{Told, now_millis};
 
 use super::MainWindow;
-use crate::goa;
 use crate::permission::{Occasion, Permission};
-use crate::settings::Change;
 use crate::ui::conversation::ConversationView;
 use crate::ui::invitation::{Action, Proposal};
 use mailrs_domain::translate::{fill, gettext};
 
 impl MainWindow {
-    /// Offers to put this account in GNOME Online Accounts, where GNOME
-    /// Calendar and the shell clock can see its meetings. The offer goes
-    /// up once an account: the answer is remembered whichever way it
-    /// goes, and an account GNOME already has is never asked about.
-    pub(super) fn offer_gnome(self: &Rc<Self>, view: &Rc<ConversationView>, account_id: AccountId) {
-        let Some(account) = self.account(account_id) else {
-            return;
-        };
-        let asked = self.settings_with(|s| {
-            s.offered_to_gnome
-                .iter()
-                .any(|email| email.eq_ignore_ascii_case(&account.email))
-        });
-        if !asked && goa::worth_offering(&account.email) {
-            view.offer_gnome();
-        }
-    }
-
-    /// Records the answer to that offer, and opens Online Accounts when
-    /// the answer was yes.
-    fn answer_gnome_offer(self: &Rc<Self>, view: &Rc<ConversationView>, open: bool) {
-        let Some(account_id) = view.read(|open| open.account_id) else {
-            return;
-        };
-        if let (Some(app), Some(account)) = (self.app.upgrade(), self.account(account_id)) {
-            app.change_settings(Change::OfferedToGnome(account.email));
-        }
-        if open && let Err(err) = goa::open_online_accounts() {
-            self.failed(&gettext("Could not open Settings: {reason}"), &err);
+    /// Offers Grant Access on the card when the account has a calendar
+    /// and withheld the permission to read it. With the permission
+    /// granted Show in Calendar covers the event, and an account with no
+    /// calendar hands the `.ics` to the desktop, so neither gets a line.
+    pub(super) fn offer_calendar_access(
+        self: &Rc<Self>,
+        view: &Rc<ConversationView>,
+        account_id: AccountId,
+    ) {
+        if crate::permission::card_offers_calendar_access(
+            self.offers(account_id),
+            self.withheld(account_id),
+        ) {
+            view.offer_calendar_access();
         }
     }
 
@@ -64,7 +47,7 @@ impl MainWindow {
             Action::Propose(proposal) => self.propose_time(view, proposal),
             Action::AddToCalendar => self.add_to_calendar(view),
             Action::ShowInCalendar => self.show_in_calendar(view),
-            Action::OnlineAccounts { open } => self.answer_gnome_offer(view, open),
+            Action::GrantAccess => self.grant_calendar_access(view),
         }
     }
 
@@ -212,6 +195,15 @@ impl MainWindow {
                 Err(err) => this.failed(&gettext("Could not send your proposal: {reason}"), &err),
             }
         });
+    }
+
+    /// Sends the account through consent again for the calendar
+    /// permission, the same path as the Grant Access banner. The line
+    /// stays up, since the person may close the consent page unanswered.
+    fn grant_calendar_access(self: &Rc<Self>, view: &Rc<ConversationView>) {
+        if let Some(account_id) = view.read(|open| open.account_id) {
+            self.grant_access(account_id);
+        }
     }
 
     /// Writes the invitation to a file and opens it with the desktop's

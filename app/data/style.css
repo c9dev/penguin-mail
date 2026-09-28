@@ -440,7 +440,7 @@ button.event-block.unanswered:hover,
 .all-day-strip button.event-block { border-radius: 6px; }
 /* The card a drag holds: lifted above the others while the pointer or
    the settle spring carries it. With animations off the spring lands it
-   in place at once (R10), so no separate no-motion rule is needed. */
+   in place at once, so no separate no-motion rule is needed. */
 .event-block.dragging {
   box-shadow: 0 6px 18px color-mix(in srgb, black 22%, transparent);
 }

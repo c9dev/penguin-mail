@@ -205,7 +205,7 @@ async fn an_invitation_goes_on_the_card_with_what_else_is_on() {
         screen.invitations.last(),
         Some(&Some("kites@example.com".to_string()))
     );
-    assert!(screen.steps.contains(&Step::OfferGnome));
+    assert!(screen.steps.contains(&Step::OfferCalendarAccess));
     assert!(screen.steps.contains(&Step::Clashes));
 }
 
@@ -307,6 +307,59 @@ async fn an_answered_invitation_still_offers_to_show_it() {
     window.run().open(row(THREAD)).await;
     assert!(window.took(Step::OnCalendarKnown));
     assert!(!window.took(Step::Busy), "an answered invitation asks about no clashes");
+}
+
+#[tokio::test]
+async fn an_answered_invitation_still_offers_calendar_access() {
+    // Grant Access lets the event show in the Calendar space, which is
+    // worth as much after an answer as before it.
+    let window = FakeWindow::with_body(invited());
+    window.with(|screen| {
+        screen.invitation = Ok(Some(mailrs_sync::Opened {
+            answer: Some(mailrs_domain::invitation::Answer::Yes),
+            ..opened_invitation()
+        }));
+    });
+    window.run().open(row(THREAD)).await;
+    assert!(window.took(Step::OfferCalendarAccess));
+}
+
+#[tokio::test]
+async fn a_cancellation_offers_no_calendar_access() {
+    let window = FakeWindow::with_body(invited());
+    window.with(|screen| screen.invitation = Ok(Some(opened_cancellation())));
+    window.run().open(row(THREAD)).await;
+    assert!(!window.took(Step::OfferCalendarAccess));
+}
+
+#[tokio::test]
+async fn a_card_the_calendar_lacked_looks_again_once_the_calendar_is_read() {
+    // Opened before the copy's first read: the event was not there yet.
+    let window = FakeWindow::with_body(invited());
+    window.with(|screen| screen.on_calendar = Ok(None));
+    window.run().open(row(THREAD)).await;
+    assert!(window.0.borrow().spots.is_empty());
+    window.with(|screen| screen.on_calendar = Ok(Some(spot())));
+    window.run().calendar_read().await;
+    assert_eq!(window.0.borrow().spots, [("kites@example.com".to_string(), spot())]);
+}
+
+#[tokio::test]
+async fn a_card_that_shows_in_calendar_asks_nothing_when_the_calendar_is_read() {
+    let window = FakeWindow::with_body(invited());
+    window.with(|screen| screen.on_calendar = Ok(Some(spot())));
+    window.run().open(row(THREAD)).await;
+    window.with(|screen| screen.steps.clear());
+    window.run().calendar_read().await;
+    assert!(!window.took(Step::OnCalendar));
+}
+
+#[tokio::test]
+async fn a_thread_without_an_invitation_asks_nothing_when_the_calendar_is_read() {
+    let window = FakeWindow::new();
+    window.run().open(row(THREAD)).await;
+    window.run().calendar_read().await;
+    assert!(!window.took(Step::OnCalendar));
 }
 
 #[tokio::test]

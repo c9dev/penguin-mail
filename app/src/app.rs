@@ -968,6 +968,9 @@ impl App {
                     }
                     if let Some(window) = this.window() {
                         window.calendar_refreshed(&refreshed);
+                        if refreshed.events > 0 {
+                            window.calendar_read_for_threads();
+                        }
                     }
                     // A change read from Google may bring a reminder
                     // closer than the next minute's check.

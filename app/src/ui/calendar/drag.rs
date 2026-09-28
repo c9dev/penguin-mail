@@ -166,7 +166,7 @@ pub fn stretch(start: EpochMillis, end: EpochMillis, steps: i64) -> (EpochMillis
 
 /// Whether a drag may move `o`: the calendar must be one the account can
 /// write to, the account must offer a calendar and not have withheld it,
-/// and the event must not be all-day, a guest's own event (R9), or
+/// and the event must not be all-day, a guest's own event, or
 /// already leaving through a queued removal.
 pub fn can_move(o: &Occurrence, access: Access, offers_calendar: bool, withheld_calendar: bool) -> bool {
     access.can_write()

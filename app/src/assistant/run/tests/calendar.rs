@@ -620,6 +620,20 @@ async fn an_event_goes_on_the_calendar_named_in_any_case() {
 }
 
 #[tokio::test]
+async fn an_account_with_no_calendar_that_takes_events_says_so() {
+    let h = harness().await;
+    let read_only = calendars()
+        .into_iter()
+        .map(|c| Calendar { access: Access::Reader, ..c })
+        .collect();
+    h.read_calendars(read_only).await;
+    assert_eq!(
+        h.run("create_event", recital(monday(), "Family")).await,
+        Err(format!("“Family” on {ME} is read-only. No calendar on {ME} takes new events."))
+    );
+}
+
+#[tokio::test]
 async fn a_read_only_or_unknown_calendar_is_an_error_the_model_reads() {
     let h = harness().await;
     h.read_calendars(calendars()).await;

@@ -107,10 +107,6 @@ pub struct Settings {
     pub sign_by_default: bool,
     /// Turn Encrypt on as soon as gpg holds a key for every recipient.
     pub encrypt_when_possible: bool,
-    /// Accounts already offered to GNOME Online Accounts, lower case.
-    /// The offer is worth making once: whoever says no to it means no,
-    /// and whoever says yes has GNOME asking them the rest.
-    pub offered_to_gnome: Vec<String>,
     /// Ask GitHub once a day whether a newer release is out.
     pub check_for_updates: bool,
     /// When the last timed check ran, in seconds since the Unix epoch. The
@@ -463,7 +459,6 @@ impl Default for Settings {
             encrypt_when_possible: false,
             contacts: false,
             contact_accounts: Vec::new(),
-            offered_to_gnome: Vec::new(),
             check_for_updates: true,
             last_update_check: None,
             announced_update: None,
@@ -972,6 +967,17 @@ mod tests {
             (read.space, read.calendar_view, read.show_declined_events),
             (Space::Mail, CalendarView::Week, false)
         );
+    }
+
+    #[test]
+    fn a_file_that_remembers_the_gnome_offer_reads_and_forgets_it() {
+        // The event card no longer offers GNOME Online Accounts, so the
+        // accounts it asked about need no remembering.
+        let old = "threading = false\noffered_to_gnome = [\"dana@example.com\"]\n";
+        let read: Settings = toml::from_str(old).expect("an old file reads");
+        assert!(!read.threading);
+        let written = toml::to_string(&read).expect("settings serialise");
+        assert!(!written.contains("offered_to_gnome"), "{written}");
     }
 
     #[test]
