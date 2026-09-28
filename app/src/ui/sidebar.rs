@@ -77,19 +77,13 @@ impl UndoPill {
         UndoPill { revealer, button, left }
     }
 
-    /// Shows the pill with `left` ("0:07") at its end. Private: go
-    /// through `Sidebar::show_undo`, which keeps the shared foot in
+    /// Sets `left` ("0:07") at the pill's end. Private: go through
+    /// `Sidebar::show_undo`, which opens it and keeps the shared foot in
     /// step.
-    fn show(&self, left: &str) {
+    fn fill(&self, left: &str) {
         if self.left.label() != left {
             self.left.set_label(left);
         }
-        self.revealer.set_reveal_child(true);
-    }
-
-    /// Private: go through `Sidebar::hide_undo`.
-    fn hide(&self) {
-        self.revealer.set_reveal_child(false);
     }
 }
 
@@ -142,10 +136,10 @@ impl NextEvent {
         NextEvent { revealer, button, bar, when, what, css }
     }
 
-    /// Shows the card with its two lines and the event's colour.
-    /// Private: go through `Sidebar::show_next`, which keeps the shared
+    /// Sets the card's two lines and the event's colour. Private: go
+    /// through `Sidebar::show_next`, which opens it and keeps the shared
     /// foot in step.
-    fn show(&self, words: &crate::ui::calendar::next::Words, colour: &str) {
+    fn fill(&self, words: &crate::ui::calendar::next::Words, colour: &str) {
         use crate::ui::calendar::{next, tint};
         if self.when.label() != words.when {
             self.when.set_label(&words.when);
@@ -156,34 +150,94 @@ impl NextEvent {
         self.bar.set_css_classes(&["bar", tint::css_class(colour).as_str()]);
         self.css.load_from_string(&tint::stylesheet(&[colour.to_string()]));
         super::name(&self.button, &next::spoken(words));
-        self.revealer.set_reveal_child(true);
-    }
-
-    /// Private: go through `Sidebar::hide_next`.
-    fn hide(&self) {
-        self.revealer.set_reveal_child(false);
     }
 }
 
-/// Whether the sidebar's shared bottom bar should show at all: while
-/// either the next-event card is on screen or the Undo Send pill has
-/// something to show. Free of GTK types, so a plain test can check the
-/// rule without starting the toolkit; `Sidebar::sync_foot` is the only
-/// caller and supplies the two widgets' real state.
-fn foot_shows(next_on_screen: bool, undo_on_screen: bool) -> bool {
-    next_on_screen || undo_on_screen
+/// What one revealer in the foot is doing: `reveals` is where it is
+/// headed, `revealed` whether its child is still on screen.
+#[derive(Clone, Copy, Debug)]
+struct Slot {
+    reveals: bool,
+    revealed: bool,
+}
+
+impl Slot {
+    fn of(revealer: &gtk::Revealer) -> Slot {
+        Slot {
+            reveals: revealer.reveals_child(),
+            revealed: revealer.is_child_revealed(),
+        }
+    }
+
+    /// A closed revealer has no height but still takes the box's
+    /// spacing, so it stays hidden unless it opens, shows or closes.
+    fn takes_room(self) -> bool {
+        self.reveals || self.revealed
+    }
+}
+
+/// Which parts of the sidebar's foot are visible. Free of GTK state, so
+/// a plain test can check the rule; `Sidebar::sync_foot` applies it.
+#[derive(Debug)]
+struct Foot {
+    next: bool,
+    undo: bool,
+    /// The bar itself, with its padding: hidden while it holds neither.
+    shown: bool,
+}
+
+impl Foot {
+    /// `mail` is whether the Mail space shows: the next-event card
+    /// belongs to it alone and goes at once when the calendar opens.
+    fn of(mail: bool, next: Slot, undo: Slot) -> Foot {
+        let next = mail && next.takes_room();
+        let undo = undo.takes_room();
+        Foot {
+            next,
+            undo,
+            shown: next || undo,
+        }
+    }
 }
 
 #[cfg(test)]
 mod foot_tests {
-    use super::foot_shows;
+    use super::{Foot, Slot};
+
+    const CLOSED: Slot = Slot { reveals: false, revealed: false };
+    const OPENING: Slot = Slot { reveals: true, revealed: false };
+    const OPEN: Slot = Slot { reveals: true, revealed: true };
+    const CLOSING: Slot = Slot { reveals: false, revealed: true };
 
     #[test]
-    fn the_foot_shows_when_either_the_card_or_the_pill_shows() {
-        assert!(!foot_shows(false, false));
-        assert!(foot_shows(true, false));
-        assert!(foot_shows(false, true));
-        assert!(foot_shows(true, true));
+    fn a_revealer_takes_room_while_it_opens_shows_or_closes() {
+        assert!(!CLOSED.takes_room());
+        assert!(OPENING.takes_room());
+        assert!(OPEN.takes_room());
+        assert!(CLOSING.takes_room());
+    }
+
+    #[test]
+    fn a_closed_revealer_is_hidden_so_the_foot_spacing_goes() {
+        let foot = Foot::of(true, OPEN, CLOSED);
+        assert_eq!((foot.next, foot.undo, foot.shown), (true, false, true));
+        let foot = Foot::of(true, CLOSED, OPENING);
+        assert_eq!((foot.next, foot.undo, foot.shown), (false, true, true));
+    }
+
+    #[test]
+    fn the_foot_stays_until_a_closing_slide_ends() {
+        assert!(Foot::of(true, CLOSING, CLOSED).shown);
+        assert!(Foot::of(true, CLOSED, CLOSING).shown);
+        assert!(!Foot::of(true, CLOSED, CLOSED).shown);
+    }
+
+    #[test]
+    fn the_calendar_space_hides_the_next_event_at_once() {
+        let foot = Foot::of(false, OPEN, CLOSED);
+        assert_eq!((foot.next, foot.undo, foot.shown), (false, false, false));
+        let foot = Foot::of(false, OPEN, OPEN);
+        assert_eq!((foot.next, foot.undo, foot.shown), (false, true, true));
     }
 }
 
@@ -200,6 +254,8 @@ pub struct Sidebar {
     /// The bottom bar `next` and `undo` sit in, shared by both spaces.
     /// `sync_foot` hides it whole while it holds neither.
     foot: gtk::Box,
+    /// Whether the Mail space shows, which the next-event card needs.
+    mail_showing: Cell<bool>,
     /// Switches between the mail and the calendar. Its toggles are named
     /// `mail` and `calendar`; it hides while no account offers a
     /// calendar, and "Mailboxes" shows in its place, since a switch to a
@@ -300,6 +356,7 @@ impl Sidebar {
             next,
             undo,
             foot,
+            mail_showing: Cell::new(true),
             switch,
             title,
             content,
@@ -358,6 +415,16 @@ impl Sidebar {
                 sidebar.apply_expansion();
             }
         });
+        // A slide that closes a revealer ends here, and only then may the
+        // revealer and the foot go without cutting it short.
+        for revealer in [&sidebar.next.revealer, &sidebar.undo.revealer] {
+            let weak = Rc::downgrade(&sidebar);
+            revealer.connect_child_revealed_notify(move |_| {
+                if let Some(sidebar) = weak.upgrade() {
+                    sidebar.sync_foot();
+                }
+            });
+        }
         // Neither the next event nor Undo Send has anything to show yet.
         sidebar.sync_foot();
         sidebar
@@ -378,55 +445,77 @@ impl Sidebar {
             self.content.add_named(content, Some("calendar"));
         }
         self.content.set_visible_child_name("calendar");
-        self.next.revealer.set_visible(false);
+        self.mail_showing.set(false);
         self.sync_foot();
     }
 
     /// Puts the mailbox list back.
     pub fn show_mail(&self) {
         self.content.set_visible_child_name("mail");
-        self.next.revealer.set_visible(true);
+        self.mail_showing.set(true);
         self.sync_foot();
     }
 
     /// Shows the next-event card and keeps the shared foot in step.
     pub fn show_next(&self, words: &crate::ui::calendar::next::Words, colour: &str) {
-        self.next.show(words, colour);
-        self.sync_foot();
+        self.next.fill(words, colour);
+        self.open(&self.next.revealer);
     }
 
-    /// Takes the next-event card away and keeps the shared foot in step.
+    /// Takes the next-event card away. The foot follows once the card
+    /// has faded out.
     pub fn hide_next(&self) {
-        self.next.hide();
+        self.next.revealer.set_reveal_child(false);
         self.sync_foot();
     }
 
     /// Shows the Undo Send pill and keeps the shared foot in step.
     pub fn show_undo(&self, left: &str) {
-        self.undo.show(left);
+        self.undo.fill(left);
+        self.open(&self.undo.revealer);
+    }
+
+    /// Takes the Undo Send pill away. The foot follows once the pill has
+    /// slid down.
+    pub fn hide_undo(&self) {
+        self.undo.revealer.set_reveal_child(false);
         self.sync_foot();
     }
 
-    /// Takes the Undo Send pill away and keeps the shared foot in step.
-    pub fn hide_undo(&self) {
-        self.undo.hide();
-        self.sync_foot();
+    /// Makes room for `revealer` before telling it to open: a revealer
+    /// that is not on screen jumps to open with no transition.
+    fn open(&self, revealer: &gtk::Revealer) {
+        if revealer.reveals_child() {
+            return;
+        }
+        let opening = Slot {
+            reveals: true,
+            revealed: revealer.is_child_revealed(),
+        };
+        let slot = |r: &gtk::Revealer| if r == revealer { opening } else { Slot::of(r) };
+        self.apply(Foot::of(
+            self.mail_showing.get(),
+            slot(&self.next.revealer),
+            slot(&self.undo.revealer),
+        ));
+        revealer.set_reveal_child(true);
     }
 
     /// Shows the foot (the border and the padding round it, `.sidebar-foot`)
-    /// only while it holds something: with no next event and no message
-    /// waiting out Undo Send, the card and the pill both sit at zero
-    /// height, but the bar's own border and padding would otherwise
-    /// still draw as an empty band under the mailbox list.
+    /// and each revealer in it only while they have something on screen,
+    /// so the box's spacing falls only between two that both show.
     fn sync_foot(&self) {
-        // `get_visible`, not `is_visible`: the latter also asks whether
-        // every ancestor is visible, and `next.revealer` sits inside
-        // `foot`, so once `foot` itself is hidden `is_visible` would
-        // read false for the card forever after, whatever `show_mail`
-        // sets. `get_visible` reads the card's own flag alone.
-        let next_on_screen = self.next.revealer.get_visible() && self.next.revealer.reveals_child();
-        let undo_on_screen = self.undo.revealer.reveals_child();
-        self.foot.set_visible(foot_shows(next_on_screen, undo_on_screen));
+        self.apply(Foot::of(
+            self.mail_showing.get(),
+            Slot::of(&self.next.revealer),
+            Slot::of(&self.undo.revealer),
+        ));
+    }
+
+    fn apply(&self, foot: Foot) {
+        self.next.revealer.set_visible(foot.next);
+        self.undo.revealer.set_visible(foot.undo);
+        self.foot.set_visible(foot.shown);
     }
 
     fn is_expanded(&self, account_id: AccountId) -> bool {
