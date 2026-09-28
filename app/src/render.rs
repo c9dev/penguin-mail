@@ -694,7 +694,7 @@ fn page_css(theme: &Theme) -> String {
     // sheet rather than as more page.
     let (bg, fg, dim, card, line, hover, surface) = if theme.dark {
         (
-            "#222226",
+            "#1e1e21",
             "#ffffff",
             "rgba(255,255,255,0.58)",
             "rgba(255,255,255,0.08)",
@@ -716,7 +716,7 @@ fn page_css(theme: &Theme) -> String {
     format!(
         ":root{{color-scheme:{scheme};--bg:{bg};--fg:{fg};--dim:{dim};--card:{card};--line:{line};--hover:{hover};--surface:{surface};--accent:{accent}}}\
 html{{background:var(--bg)}}\
-body{{margin:0 auto;max-width:980px;padding:14px 36px 64px;color:var(--fg);\
+body{{margin:0 auto;max-width:980px;padding:20px 36px 64px;color:var(--fg);\
 font:15px/1.5 \"Adwaita Sans\",Cantarell,system-ui,sans-serif;-webkit-font-smoothing:antialiased}}\
 .thread h1{{font-size:22px;line-height:1.25;font-weight:800;letter-spacing:-0.01em;margin:0}}\
 .thread .headline{{display:flex;align-items:flex-start;gap:12px}}\
@@ -779,7 +779,8 @@ opacity 180ms cubic-bezier(0.23,1,0.32,1)}}\
 @media print{{.event-slot{{display:none}}}}\
 .body{{margin:14px 0 2px 52px}}\
 .text{{white-space:pre-wrap;overflow-wrap:anywhere}}\
-.body.text,.body.status,.html{{background:var(--surface);border-radius:12px;padding:14px;\
+.body.text{{margin-left:0}}\
+.body.status,.html{{background:var(--surface);border-radius:12px;padding:14px;\
 border:1px solid var(--line);overflow:hidden;margin-left:0}}\
 .html{{background:#fff}}\
 .html.plain{{background:var(--surface)}}\
@@ -875,6 +876,31 @@ mod tests {
             accent: "#3584e4".into(),
             summarize: false,
         }
+    }
+
+    /// Ruling R8: a plain-text body sits on the page as the mockup draws
+    /// it, starting at the avatar's column; HTML and status lines keep
+    /// their sheet.
+    #[test]
+    fn a_plain_text_body_has_no_sheet() {
+        let html = page("s", vec![]);
+        let rules: Vec<&str> = html
+            .split('}')
+            .filter(|rule| {
+                rule.split('{')
+                    .next()
+                    .is_some_and(|selectors| selectors.split(',').any(|s| s.trim() == ".body.text"))
+            })
+            .collect();
+        assert_eq!(rules.len(), 1, "{rules:?}");
+        for word in ["background", "border", "padding"] {
+            assert!(!rules[0].contains(word), "{rules:?}");
+        }
+        assert!(rules[0].contains("margin-left:0"), "{rules:?}");
+        assert!(
+            html.contains(".body.status,.html{background:var(--surface)"),
+            "HTML and status bodies keep the sheet"
+        );
     }
 
     fn page(subject: &str, views: Vec<MessageView>) -> String {
@@ -1602,7 +1628,7 @@ mod tests {
             accent: "#fff".into(),
             summarize: false,
         });
-        assert!(dark.contains("color-scheme:dark") && dark.contains("#222226"));
+        assert!(dark.contains("color-scheme:dark") && dark.contains("#1e1e21"));
     }
 
     #[test]

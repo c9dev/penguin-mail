@@ -959,12 +959,15 @@ fn count(conn: &Connection, sql: &Sql) -> Result<i64> {
         .query_row(params_from_iter(&sql.params), |row| row.get(0))?)
 }
 
+// The invitation mark walks the thread's messages first: SQLite keeps a
+// CROSS JOIN's order, and a store with few invitations could otherwise
+// lead it to read every invitation of the account for each row.
 const COLUMNS: &str = "t.account_id, t.id, t.last_message_at, t.subject, t.snippet, t.from_display, \
                        t.message_count, t.unread, t.starred, t.has_attachments, t.flag_color, \
                        t.from_email, t.muted, \
-                       EXISTS (SELECT 1 FROM invitations i JOIN messages im \
-                               ON im.account_id = i.account_id AND im.id = i.message_id \
-                               WHERE i.account_id = t.account_id AND im.thread_id = t.id \
+                       EXISTS (SELECT 1 FROM messages im CROSS JOIN invitations i \
+                               ON i.account_id = im.account_id AND i.message_id = im.id \
+                               WHERE im.account_id = t.account_id AND im.thread_id = t.id \
                                AND i.cancelled = 0)";
 
 fn flag_color(row: &Row<'_>, index: usize) -> rusqlite::Result<Option<FlagColor>> {
@@ -1723,6 +1726,41 @@ mod walk_tests {
             assert!(
                 plan.iter()
                     .any(|p| p.contains("sqlite_autoindex_threads_1 (account_id=? AND id=?)")),
+                "{plan:?}"
+            );
+        }
+    }
+
+    /// The mark on each row looks its invitations up by message. Through
+    /// the table's key alone it walks every invitation of the account for
+    /// each row, which on 2,000 invitations costs a 50-row page 60 ms.
+    #[test]
+    fn the_invitation_mark_finds_invitations_by_message() {
+        let (conn, _, _) = mailbox();
+        let filter = ThreadFilter::unified(set("INBOX"));
+        for (rows, select) in [
+            (Rows::Threads, format!("SELECT {COLUMNS}")),
+            (Rows::Messages, format!("SELECT {MESSAGE_COLUMNS}")),
+        ] {
+            let mut sql =
+                filter.query_walking(&filter.resolve(&conn).unwrap(), rows, &select, &Walk::Date);
+            rows.order(&mut sql, Page::Offset(0, 50));
+            let plan: Vec<String> = conn
+                .prepare(&format!("EXPLAIN QUERY PLAN {}", sql.text))
+                .unwrap()
+                .query_map(params_from_iter(&sql.params), |r| r.get::<_, String>(3))
+                .unwrap()
+                .map(|r| r.unwrap())
+                .collect();
+            let reads_invitations: Vec<&String> = plan
+                .iter()
+                .filter(|p| p.starts_with("SCAN i") || p.starts_with("SEARCH i "))
+                .collect();
+            assert!(!reads_invitations.is_empty(), "{plan:?}");
+            assert!(
+                reads_invitations
+                    .iter()
+                    .all(|p| p.contains("invitations_by_message (account_id=? AND message_id=?)")),
                 "{plan:?}"
             );
         }

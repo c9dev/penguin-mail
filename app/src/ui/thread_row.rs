@@ -19,10 +19,9 @@ mod imp {
         pub avatar: OnceCell<adw::Avatar>,
         pub account: OnceCell<gtk::Box>,
         pub vip: OnceCell<gtk::Image>,
-        pub from: OnceCell<gtk::Label>,
-        /// The sender's address beside their name (ruling R4), so a
+        /// The sender's name, and after it the address (ruling R4), so a
         /// look-alike display name does not hide the real address.
-        pub address: OnceCell<gtk::Label>,
+        pub from: OnceCell<gtk::Label>,
         pub clip: OnceCell<gtk::Image>,
         pub mute: OnceCell<gtk::Image>,
         pub star: OnceCell<gtk::Image>,
@@ -86,15 +85,10 @@ mod imp {
             let vip = marker("starred-symbolic");
             vip.add_css_class("vip");
             vip.set_tooltip_text(Some(&gettext("VIP")));
+            // The name and the address share one label that takes the row's
+            // spare width; see `sender_markup`.
             let from = text_label("from");
-            // The address rides beside the name (ruling R4), both inside
-            // the box that takes the row's spare width so either can
-            // ellipsize before the other's date and markers are pushed off.
-            let address = text_label("address");
-            let namebox = gtk::Box::new(gtk::Orientation::Horizontal, 6);
-            namebox.set_hexpand(true);
-            namebox.append(&from);
-            namebox.append(&address);
+            from.set_hexpand(true);
             let clip = marker("mail-attachment-symbolic");
             let mute = marker("audio-volume-muted-symbolic");
             mute.set_tooltip_text(Some(&gettext("Muted")));
@@ -105,7 +99,7 @@ mod imp {
             for widget in [
                 account.upcast_ref::<gtk::Widget>(),
                 vip.upcast_ref(),
-                namebox.upcast_ref(),
+                from.upcast_ref(),
                 clip.upcast_ref(),
                 mute.upcast_ref(),
                 star.upcast_ref(),
@@ -145,7 +139,6 @@ mod imp {
             let _ = self.account.set(account);
             let _ = self.vip.set(vip);
             let _ = self.from.set(from);
-            let _ = self.address.set(address);
             let _ = self.clip.set(clip);
             let _ = self.mute.set(mute);
             let _ = self.star.set(star);
@@ -294,18 +287,12 @@ impl ThreadRow {
         } else {
             self.remove_css_class("unread");
         }
-        let from = get(&imp.from);
-        from.set_label(&if thread.from.is_empty() {
+        let name = if thread.from.is_empty() {
             gettext("Unknown sender")
         } else {
             thread.from.clone()
-        });
-        let address = get(&imp.address);
-        let show_address = !thread.from_email.is_empty() && thread.from_email != thread.from;
-        address.set_visible(show_address);
-        if show_address {
-            address.set_label(&thread.from_email);
-        }
+        };
+        get(&imp.from).set_markup(&sender_markup(&name, &thread.from_email));
         let date = get(&imp.date);
         date.set_label(&relative_date(thread.last_message_at, Local::now()));
         if thread.unread {
@@ -364,9 +351,43 @@ impl ThreadRow {
     }
 }
 
+/// The sender's name and, dimmed after it, the address (ruling R4), as
+/// one line of Pango markup. One label ellipsizes at its end, so the
+/// address gives way first and the name only once the address is gone.
+/// Two labels in a box would shrink both at once.
+fn sender_markup(name: &str, address: &str) -> String {
+    let name_part = glib::markup_escape_text(name);
+    if address.is_empty() || address == name {
+        return name_part.to_string();
+    }
+    format!(
+        "{name_part}\u{2002}<span weight=\"normal\" alpha=\"64%\" size=\"89%\">{}</span>",
+        glib::markup_escape_text(address)
+    )
+}
+
 #[cfg(test)]
 mod tests {
-    use super::spoken;
+    use super::{sender_markup, spoken};
+
+    #[test]
+    fn the_address_follows_the_name_in_one_line() {
+        assert_eq!(
+            sender_markup("Kemi Adeyemi", "k@uni.example"),
+            "Kemi Adeyemi\u{2002}<span weight=\"normal\" alpha=\"64%\" size=\"89%\">k@uni.example</span>"
+        );
+    }
+
+    #[test]
+    fn a_name_that_is_the_address_shows_once() {
+        assert_eq!(sender_markup("k@uni.example", "k@uni.example"), "k@uni.example");
+        assert_eq!(sender_markup("Kemi", ""), "Kemi");
+    }
+
+    #[test]
+    fn the_sender_line_escapes_markup() {
+        assert_eq!(sender_markup("A & <B>", ""), "A &amp; &lt;B&gt;");
+    }
 
     #[test]
     fn a_row_says_what_its_marks_show() {

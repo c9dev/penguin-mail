@@ -50,7 +50,9 @@ pub struct ThreadList {
     pub grant_bars: gtk::Box,
     pub search_entry: gtk::SearchEntry,
     search_bar: gtk::SearchBar,
-    title: adw::WindowTitle,
+    /// "All Inboxes", and under it the unread count and category.
+    title: gtk::Label,
+    subtitle: gtk::Label,
     stack: gtk::Stack,
     empty: adw::StatusPage,
     store: gio::ListStore,
@@ -216,10 +218,28 @@ impl ThreadList {
         search_bar.connect_entry(&search_entry);
 
         // "All Inboxes" leads the list column, with the unread count and
-        // category under it; the header no longer centres it, so it sits
-        // where the chips and the rows start.
-        let title = adw::WindowTitle::new(&gettext("All Inboxes"), "");
-        title.add_css_class("list-header-title");
+        // category under it, both flush left where the chips and the rows
+        // start. `adw::WindowTitle` centres its two labels on each other
+        // and in the bar, so two plain labels stand in for it.
+        let title = gtk::Label::builder()
+            .label(gettext("All Inboxes"))
+            .xalign(0.0)
+            .ellipsize(gtk::pango::EllipsizeMode::End)
+            .css_classes(["title"])
+            .build();
+        let subtitle = gtk::Label::builder()
+            .xalign(0.0)
+            .ellipsize(gtk::pango::EllipsizeMode::End)
+            .visible(false)
+            .css_classes(["subtitle"])
+            .build();
+        let titles = gtk::Box::builder()
+            .orientation(gtk::Orientation::Vertical)
+            .valign(gtk::Align::Start)
+            .css_classes(["list-header-title"])
+            .build();
+        titles.append(&title);
+        titles.append(&subtitle);
         let sidebar_button = gtk::ToggleButton::builder()
             .icon_name("sidebar-show-symbolic")
             .tooltip_text(gettext("Show Mailboxes"))
@@ -252,7 +272,7 @@ impl ThreadList {
         }
         let header = adw::HeaderBar::builder().show_title(false).build();
         header.pack_start(&sidebar_button);
-        header.pack_start(&title);
+        header.pack_start(&titles);
         header.pack_end(&compose_button);
         header.pack_end(&search_button);
 
@@ -282,6 +302,7 @@ impl ThreadList {
             search_entry,
             search_bar,
             title,
+            subtitle,
             stack,
             empty,
             store,
@@ -313,8 +334,9 @@ impl ThreadList {
     }
 
     pub fn set_title(&self, title: &str, subtitle: &str) {
-        self.title.set_title(title);
-        self.title.set_subtitle(subtitle);
+        self.title.set_label(title);
+        self.subtitle.set_label(subtitle);
+        self.subtitle.set_visible(!subtitle.is_empty());
         self.page.set_title(title);
     }
 

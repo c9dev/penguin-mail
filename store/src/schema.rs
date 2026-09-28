@@ -631,6 +631,12 @@ ALTER TABLE calendar_holds ADD COLUMN notify TEXT;
     r#"
 UPDATE calendars SET sync_token = NULL;
 "#,
+    // The thread list marks each row that carries an invitation, and
+    // looks invitations up by message. The table's key starts with the
+    // uid, so without this each row read every invitation of its account.
+    r#"
+CREATE INDEX invitations_by_message ON invitations(account_id, message_id);
+"#,
 ];
 
 /// How long the copy taken before a migration stays once the store has

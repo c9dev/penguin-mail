@@ -143,9 +143,19 @@ pub struct EventCard {
     /// What the card shows now. The window reads it back to answer the
     /// invitation, so the card is the one place that holds it.
     showing: RefCell<Option<Showing>>,
+    /// The hours around the event, kept so an answer can draw them again
+    /// with this meeting solid.
+    strip_shown: RefCell<Option<Strip>>,
     /// Set while the card fills its buttons in, so setting one does not
     /// look like the user pressing it.
     filling: Cell<bool>,
+}
+
+/// Whether a block on the strip draws dashed: the calendar's sign for a
+/// meeting the person has not answered, so only this meeting, and only
+/// until an answer exists.
+fn dashed(this: bool, answer: Option<Answer>) -> bool {
+    this && answer.is_none()
 }
 
 /// The answers in the order the card offers them.
@@ -380,7 +390,8 @@ impl EventCard {
             .css_classes(["invitation-card"])
             .accessible_role(gtk::AccessibleRole::Group)
             .build();
-        name(&inside, &gettext("Invitation"));
+        // No name of its own: the page's slot the card sits in already
+        // says "Invitation", and a screen reader would say it twice.
         inside.append(&news);
         inside.append(&head);
 
@@ -418,6 +429,7 @@ impl EventCard {
             scope: Cell::new(Scope::Occurrence),
             went,
             showing: RefCell::new(None),
+            strip_shown: RefCell::new(None),
             filling: Cell::new(false),
         });
 
@@ -460,6 +472,7 @@ impl EventCard {
 
     /// Fills the card from an invitation and shows it.
     pub fn show(&self, showing: Showing) {
+        *self.strip_shown.borrow_mut() = None;
         self.draw(&showing);
         *self.showing.borrow_mut() = Some(showing);
     }
@@ -467,6 +480,7 @@ impl EventCard {
     pub fn hide(&self) {
         self.widget.set_visible(false);
         *self.showing.borrow_mut() = None;
+        *self.strip_shown.borrow_mut() = None;
     }
 
     /// Reads what the card shows. `None` means no invitation is on screen.
@@ -506,6 +520,14 @@ impl EventCard {
         if !self.shows(uid) {
             return;
         }
+        *self.strip_shown.borrow_mut() = Some(strip.clone());
+        let answer = self.with_showing(|showing| showing.answer).flatten();
+        self.draw_strip(strip, answer);
+    }
+
+    /// Draws `strip`, with this meeting dashed until `answer` holds one,
+    /// as the calendar draws an event the person has not answered.
+    fn draw_strip(&self, strip: &Strip, answer: Option<Answer>) {
         self.clash.set_visible(false);
         self.strip_heading.set_label(&strip.heading);
         name(&self.strip, &strip.heading);
@@ -546,13 +568,14 @@ impl EventCard {
         for block in &strip.blocks {
             let (column, span) = strip::columns(block.from, block.to);
             colours.push(block.colour.clone());
-            let outline = block.this.then(|| outline::colour_of(&block.colour));
+            let is_dashed = dashed(block.this, answer);
+            let outline = is_dashed.then(|| outline::colour_of(&block.colour));
             let card = outline::Outlined::new(6, outline);
             card.set_css_classes(&["event-block", "strip-block", &tint::css_class(&block.colour)]);
             if block.lane == 0 {
                 card.add_css_class("first");
             }
-            if block.this {
+            if is_dashed {
                 card.add_css_class("unanswered");
             } else {
                 card.append(&gtk::Box::builder().css_classes(["bar"]).build());
@@ -649,6 +672,10 @@ impl EventCard {
             showing.clone()
         };
         self.draw(&updated);
+        let strip = self.strip_shown.borrow().clone();
+        if let Some(strip) = strip {
+            self.draw_strip(&strip, answer);
+        }
     }
 
     fn draw(&self, showing: &Showing) {
@@ -1101,6 +1128,20 @@ mod tests {
             me: vec!["me@example.com".to_string()],
             on_calendar: None,
         }
+    }
+
+    #[test]
+    fn this_meeting_is_dashed_until_answered() {
+        assert!(dashed(true, None));
+        for answer in Answer::ALL {
+            assert!(!dashed(true, Some(answer)), "{answer:?}");
+        }
+    }
+
+    #[test]
+    fn other_events_are_never_dashed() {
+        assert!(!dashed(false, None));
+        assert!(!dashed(false, Some(Answer::Yes)));
     }
 
     #[test]

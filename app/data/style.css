@@ -25,6 +25,25 @@
      13.5px = 0.92em, 14px = 0.95em, 17px = 1.16em, at the calendar
      CSS's 1em = 14.67px (an 11pt interface font). */
 
+/* The mockup's window, sidebar and view colours (mockups.py's THEMES),
+   in place of libadwaita's, on the windows `ui::window::track_dark_class`
+   marks. Redefining the variables carries them into the calendar,
+   popovers and dialogs as well. */
+window.app-surfaces {
+  --window-bg-color: #f6f6f7;
+  --sidebar-bg-color: #ebebed;
+  --view-bg-color: #ffffff;
+}
+window.app-surfaces.app-dark {
+  --window-bg-color: #242428;
+  --sidebar-bg-color: #2e2e33;
+  --view-bg-color: #1e1e21;
+}
+
+/* The reading pane's toolbar sits on the view colour, as the pane under
+   it does in the mockup, not on the window colour of a header bar. */
+headerbar.conversation-header { background: var(--view-bg-color); box-shadow: none; }
+
 /* The composer's signing button, when the message goes out signed or
    encrypted. Its icon carries the accent so the state reads at a glance. */
 .protected image { color: var(--accent-color); }
@@ -67,7 +86,6 @@ row.account-heading { transition: background-color 120ms ease, color 120ms ease;
 .thread-row.unread .from { font-weight: 800; }
 /* The sender's address beside the name, styled as the mockup's secondary
    text (R4): it lets a person spot a look-alike name. */
-.thread-row .address { opacity: 0.64; font-size: 0.89em; }
 .thread-row .subject { font-weight: 500; }
 .thread-row.unread .subject { font-weight: 700; }
 .thread-row .snippet { opacity: 0.6; font-size: 0.93em; }
@@ -268,22 +286,25 @@ flowboxchild:focus-visible > .recipient-chip {
   color: alpha(currentColor, 0.4);
 }
 .mailboxes > row > .sidebar-section {
-  margin: 14px 8px 4px 10px;
+  /* 5 px under, and the row under the heading adds its own 2 px. */
+  margin: 16px 8px 5px 10px;
   letter-spacing: 0.4px;
   text-transform: uppercase;
 }
-.mailboxes > row:first-child > .sidebar-section { margin-top: 4px; }
+.mailboxes > row:first-child > .sidebar-section { margin-top: 12px; }
 
 /* Row type: 14 px names, 700 when selected. */
 .mailbox-row > label { font-size: 0.95em; font-weight: 500; }
 .mailboxes > row:selected .mailbox-row > label { font-weight: 700; }
-.mailbox-row { min-height: 16px; padding: 8px 14px 8px 0; }
+/* Rows 32 px tall on a 34 px pitch, as mockups.py's `side_row` draws
+   them: 7 px above and below the label, and 2 px under each row. */
+.mailbox-row { min-height: 16px; padding: 7px 14px 7px 0; }
 
 /* The selected mailbox is a rounded card tinted with the accent, 8 px in
    from each side of the card: 18 % in light mode, 28 % in dark, over the
    sidebar shade (mockups.py's `tint + 0.04`, not the calendar event's
    14 %/24 %). Its icon, name and count take the accent colour. */
-.mailboxes > row { margin: 0 8px; padding: 0; border-radius: 9px; }
+.mailboxes > row { margin: 0 8px 2px; padding: 0; min-height: 0; border-radius: 9px; }
 .mailboxes > row:selected {
   background-color: alpha(var(--accent-bg-color), 0.18);
   color: var(--accent-color);
@@ -301,11 +322,15 @@ flowboxchild:focus-visible > .recipient-chip {
    `ny + 58` to `uy`, both `H`-relative: 14 px apart); 10 px of side
    padding here lands both the card and the pill at the mockup's inset
    from the sidebar card's own edge. The mockup gives no value for the
-   gap above the card, so the top padding matches the 6 px below the
-   pill, which leaves that much room to `AdwToolbarView`'s own bottom
-   inset. The pill is 36 px tall (mockups.py's `uy`), fully rounded,
-   tinted 16 % with the accent over the sidebar shade. */
-.sidebar-foot { padding: 6px 10px; }
+   gap above the card, so the top padding is 6 px. The pill sits 12 px
+   above the card's bottom edge (mockups.py's `uy + 36` to `H - 8`). It
+   is 36 px tall, fully rounded, tinted 16 % with the accent over the
+   sidebar shade. */
+.sidebar-foot { padding: 6px 10px 12px; }
+/* A flat bottom bar draws a shadow line while the list scrolls under it;
+   the mockup's foot sits on the card's own shade with no line. */
+.sidebar-card > .bottom-bar,
+toolbarview.sidebar-card.undershoot-bottom > .bottom-bar { box-shadow: none; border: none; }
 .undo-pill {
   min-height: 36px;
   padding: 0 16px;
@@ -401,7 +426,9 @@ toggle-group.category-chips { background: none; padding: 0; box-shadow: none; }
 
 /* The list header's title, packed at the header's start instead of
    centred: "All Inboxes" leads, the unread count and category sit under
-   it, dim. */
+   it, dim. The margins set the title's centre at y 24 of the window and
+   the subtitle's baseline at 47, as mockups.py draws them. */
+.list-header-title { margin: 8px 0 -7px 2px; }
 .list-header-title .title { font-size: 1.16em; font-weight: 800; }
 .list-header-title .subtitle { font-size: 0.85em; font-weight: 500; opacity: 0.64; }
 
@@ -630,7 +657,9 @@ toggle-group.view-switch > toggle,
 toggle-group.space-switch > toggle { font-size: 0.89em; font-weight: 600; }
 /* The mockup's switch is a 204 x 32 pill of three 64 px toggles. */
 toggle-group.view-switch > toggle { min-width: 64px; padding-left: 0; padding-right: 0; }
-toggle-group.space-switch > toggle { -gtk-icon-size: 14px; padding-left: 12px; padding-right: 12px; }
+toggle-group.space-switch > toggle { -gtk-icon-size: 14px; padding: 0 12px; min-height: 28px; }
+/* The mockup's Mail / Calendar pill is 32 px tall: 28 px toggles, 2 px in. */
+toggle-group.space-switch { padding: 2px; }
 toggle-group.view-switch > toggle:not(:checked),
 toggle-group.space-switch > toggle:not(:checked) { color: color-mix(in srgb, currentColor 64%, transparent); }
 /* The chosen toggle is the view colour on the pill, white in light and
@@ -948,8 +977,11 @@ popover.event-popover button.popover-open-mail {
    colour down its start edge. Sizes are the mockup's own (11.5 px =
    0.78em, 13.5 px = 0.92em); dim text is the text colour at 64 %, as
    the calendar CSS above already has it. */
+/* 58 px tall as drawn: 10 px above and below the 38 px colour bar. The
+   bar sits 8 px in, the text 20 px in, and the icon 18 px from the end. */
 .next-event {
-  padding: 8px 10px;
+  min-height: 38px;
+  padding: 10px 8px;
   border-radius: 12px;
   background: var(--view-bg-color);
   box-shadow: 0 1px 2px alpha(black, 0.1);
@@ -957,7 +989,7 @@ popover.event-popover button.popover-open-mail {
 .next-event .bar { min-width: 3.5px; border-radius: 2px; background: var(--cal-colour); }
 .next-event .when { font-size: 0.78em; font-weight: 600; opacity: 0.64; }
 .next-event .what { font-size: 0.92em; font-weight: 700; }
-.next-event image { opacity: 0.55; }
+.next-event image { opacity: 0.55; margin-right: 10px; }
 /* "Show more" and "Show all": a small text link under the notes or the
    guest list, not a filled pill. */
 popover.event-popover button.popover-more {

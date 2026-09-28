@@ -788,6 +788,7 @@ impl<A: Accounts> Mailboxes<A> {
                 .push(thread_id.clone());
         }
         let threading = view.threading;
+        let category = shown_category(mailbox, view);
         Ok(Some(
             self.db
                 .read(move |c| {
@@ -814,7 +815,7 @@ impl<A: Accounts> Mailboxes<A> {
                     Ok(Changed {
                         rows,
                         unread,
-                        subtitle: unread_subtitle(unread),
+                        subtitle: unread_subtitle(unread, category),
                     })
                 })
                 .await?,
@@ -873,7 +874,7 @@ impl<A: Accounts> Mailboxes<A> {
             rows,
             unread,
             subtitle: if first {
-                unread_subtitle(unread)
+                unread_subtitle(unread, shown_category(mailbox, view))
             } else {
                 String::new()
             },
@@ -1203,18 +1204,29 @@ impl<A: Accounts> Mailboxes<A> {
     }
 }
 
-/// "3 unread", or nothing when everything has been read.
-fn unread_subtitle(unread: i64) -> String {
+/// The inbox category the list is narrowed to, if any.
+fn shown_category(mailbox: &Mailbox, view: &View) -> Option<Category> {
+    view.category.filter(|_| mailbox.takes_categories())
+}
+
+/// "3 unread · Primary": the unread count, then the inbox category on
+/// screen. Either part drops out when it has nothing to say.
+fn unread_subtitle(unread: i64, category: Option<Category>) -> String {
+    let category = category.filter(|c| *c != Category::All).map(Category::name);
     if unread <= 0 {
-        return String::new();
+        return category.unwrap_or_default();
     }
-    let count = unread.max(0) as usize;
-    fill_plural(
-        "{count} unread",
-        "{count} unread",
-        count,
-        &[("count", &count.to_string())],
-    )
+    let count = unread.to_string();
+    let n = unread as usize;
+    match category {
+        Some(category) => fill_plural(
+            "{count} unread · {category}",
+            "{count} unread · {category}",
+            n,
+            &[("count", &count), ("category", &category)],
+        ),
+        None => fill_plural("{count} unread", "{count} unread", n, &[("count", &count)]),
+    }
 }
 
 /// "Sent 5 days ago, no reply yet".
@@ -1381,7 +1393,22 @@ fn row_of(hit: &MessageMeta, alone: bool) -> ThreadSummary {
 mod tests {
     use mailrs_domain::{Address, MessageMeta};
 
-    use super::{summarize_search, waited};
+    use mailrs_domain::Category;
+
+    use super::{summarize_search, unread_subtitle, waited};
+
+    #[test]
+    fn the_subtitle_names_the_chosen_category() {
+        assert_eq!(unread_subtitle(6, Some(Category::Primary)), "6 unread · Primary");
+        assert_eq!(unread_subtitle(0, Some(Category::Social)), "Social");
+    }
+
+    #[test]
+    fn the_subtitle_without_a_category_is_the_count() {
+        assert_eq!(unread_subtitle(6, None), "6 unread");
+        assert_eq!(unread_subtitle(0, None), "");
+        assert_eq!(unread_subtitle(6, Some(Category::All)), "6 unread");
+    }
 
     const DAY: i64 = 24 * 60 * 60 * 1000;
 

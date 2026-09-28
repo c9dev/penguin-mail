@@ -69,6 +69,11 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 - An invitation's card now sits inside its message, under the sender and
   above the text, and scrolls with it.
+- The mailboxes sit in their own rounded panel under Favorites,
+  Mailboxes and Accounts, and the one you are in is tinted with your
+  accent color.
+- A plain-text message sits on the page, lined up with the sender's
+  avatar, with no grey box around it. HTML mail keeps its white sheet.
 - The inbox categories are chips: the one you are in shows its name on
   an accent pill, and the others show their unread count on the corner.
 - The conversation you are reading is a tinted card in the list, and an
@@ -166,9 +171,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - `penguin-mail --demo`'s sample invitation keeps its series ending on
   the same time of day it started; the clocks going back used to move
   it an hour earlier.
-- The mailboxes sit in their own rounded panel under Favorites,
-  Mailboxes and Accounts, and the one you are in is tinted with your
-  accent colour. Send Later, Remind Me and Follow Up stay listed when
+- Send Later, Remind Me and Follow Up stay listed in the sidebar when
   empty, so the rows below them no longer jump.
 - Dragging across empty time on the calendar stays in the day and column
   where it started, instead of scrolling the grid and offering to create

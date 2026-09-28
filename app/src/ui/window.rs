@@ -193,6 +193,8 @@ pub struct MainWindow {
     /// The event the next-event card shows, so a click on it knows where
     /// to open the calendar. `None` while the card is hidden.
     next_up: RefCell<Option<crate::ui::calendar::next::NextUp>>,
+    /// The next-event reads under way; only the newest writes the card.
+    next_reads: across::Reads,
 }
 
 /// The class that marks a toplevel window dark. `@media
@@ -201,11 +203,15 @@ pub struct MainWindow {
 /// every dark rule in `app/data/style.css` and `calendar::tint` keys off
 /// this class instead of that query.
 pub(super) const DARK_CLASS: &str = "app-dark";
+/// Marks a window that takes the mockup's window, sidebar and view
+/// colours in place of libadwaita's (style.css).
+const SURFACES_CLASS: &str = "app-surfaces";
 
 /// Puts [`DARK_CLASS`] on `window` while libadwaita is dark, and keeps it
 /// current for as long as the window lives: on the main window here, and
 /// on each conversation window of its own in `window/detached.rs`.
 pub(super) fn track_dark_class(window: &adw::Window) {
+    window.add_css_class(SURFACES_CLASS);
     let style = adw::StyleManager::default();
     let target = window.downgrade();
     let mark = move |style: &adw::StyleManager| {
@@ -478,7 +484,9 @@ impl MainWindow {
                 .css_classes(["mail-columns"])
                 .min_sidebar_width(300.0)
                 .max_sidebar_width(420.0)
-                .sidebar_width_fraction(0.34)
+                // The mockup's list is 392 px of the 1,184 left beside
+                // the sidebar in a 1,440 px window.
+                .sidebar_width_fraction(0.331)
                 .build();
             let (t, g, n, a, m) = (weak.clone(), weak.clone(), weak.clone(), weak.clone(), weak.clone());
             let (read_settings, change_settings) = (Rc::downgrade(app), Rc::downgrade(app));
@@ -743,6 +751,7 @@ impl MainWindow {
                 followed: RefCell::new(HashMap::new()),
                 undo_sends: RefCell::new(scheduled::UndoSends::default()),
                 next_up: RefCell::new(None),
+                next_reads: across::Reads::default(),
             }
         });
         if window.core.demo {
