@@ -73,6 +73,21 @@ export PENGUIN_MAIL_LOCALE_DIR="$PWD/target/locale"
 # The screenshots are in English whatever the machine speaks.
 export LANG=en_US.UTF-8 LANGUAGE=en_US LC_ALL=en_US.UTF-8
 
+# MAILRS_DEMO_NOW=HH:MM takes the shots as if it were that time today: a
+# small preload (scripts/demo-clock.c) shifts the demo's wall clock, so the
+# seeded mail, the Today and Yesterday labels and the Next card agree. The
+# machine's own clock may be at midnight. The preload goes only to the demo.
+offset=0
+preload=
+if [ -n "${MAILRS_DEMO_NOW:-}" ]; then
+    mkdir -p target
+    cc -shared -fPIC -O2 -o target/demo-clock.so scripts/demo-clock.c -ldl
+    want=$(date -d "today $MAILRS_DEMO_NOW" +%s)
+    offset=$((want - $(date +%s)))
+    preload=$PWD/target/demo-clock.so
+fi
+export DEMO_CLOCK_OFFSET=$offset DEMO_CLOCK_PRELOAD=$preload
+
 driver=$PWD/scripts/screenshots.py
 app=$PWD/target/debug/penguin-mail
 out=${OUT:-$PWD/docs/screenshots}

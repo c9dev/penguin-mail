@@ -175,6 +175,13 @@ def click(x, y):
     time.sleep(0.5)
 
 
+def scroll_to_morning():
+    """Puts the time grid's top edge near 07:00. The grid opens at the
+    current hour, so go to the top first."""
+    scroll_down(900, 500, 20, button=4)
+    scroll_down(900, 500, 5)
+
+
 def park_pointer():
     """Moves the pointer off the window, so no hover shows in the shot."""
     xtest.fake_input(xdisplay, X.MotionNotify, x=1590, y=990)
@@ -344,6 +351,9 @@ def launch(settings="", env=None, args=("--demo",)):
     environment["MAILRS_DEMO_FULL_CONSENT"] = "1"
     environment["MAILRS_SETTINGS"] = settings_file(settings)
     environment.update(env or {})
+    # Only the app gets the shifted clock, not the driver or the display.
+    if os.environ.get("DEMO_CLOCK_PRELOAD"):
+        environment["LD_PRELOAD"] = os.environ["DEMO_CLOCK_PRELOAD"]
     log = open(os.path.join(SANDBOX, "app.log"), "a")
     return subprocess.Popen([APP, *args], env=environment, stdout=log, stderr=log)
 
@@ -604,9 +614,7 @@ def calendar_week():
     run = launch()
     window = main_window()
     to_calendar("Week")
-    # The grid opens at the current hour, which on the machine that takes
-    # the shot can be the middle of the night. Scroll to the working day.
-    scroll_down(900, 500, 4)
+    scroll_to_morning()
     settle(2)
     dump("week")
     capture(window, "calendar-week")
@@ -640,7 +648,7 @@ def event_popover():
     to_calendar("Week")
     act("button", name="Next Week")
     time.sleep(1.5)
-    scroll_down(900, 500, 4)
+    scroll_to_morning()
     act("button", contains="Offline editor design review, Tuesday 6")
     settle(2)
     dump("popover")
