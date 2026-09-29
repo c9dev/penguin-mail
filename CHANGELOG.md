@@ -225,6 +225,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   it last updated, instead of leaving you guessing.
 
 ### Fixed
+- A message opened in a wide window is no longer cut short when you narrow
+  the window: the whole text stays readable.
 - Newsletters keep their own layout: a narrow table column no longer
   breaks a word one letter per line, and a message designed at a set
   width keeps it.

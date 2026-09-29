@@ -787,11 +787,11 @@ table.details td{{text-align:left;color:var(--fg);padding:1px 0;word-break:break
 table.details .warn{{color:#c0392b}}\
 .collapsed .to,.collapsed .address,.expanded .snippet{{display:none}}\
 .collapsed .toggle{{cursor:pointer}}\
-.fold{{display:grid;grid-template-rows:1fr;\
+.fold{{display:grid;grid-template-rows:minmax(0,1fr);\
 transition:grid-template-rows {fold}ms cubic-bezier(0.23,1,0.32,1),\
 opacity 180ms cubic-bezier(0.23,1,0.32,1)}}\
 .folded{{overflow:hidden;min-height:0}}\
-.collapsed .fold{{grid-template-rows:0fr;opacity:0}}\
+.collapsed .fold{{grid-template-rows:minmax(0,0fr);opacity:0}}\
 .shut .folded{{content-visibility:hidden}}\
 .message{{transition:background-color 120ms ease}}\
 .attachment,.attachment .get{{transition:background-color 120ms ease,opacity 120ms ease}}\
@@ -1088,6 +1088,25 @@ mod tests {
         assert!(html.contains("&lt;script&gt;"));
     }
 
+    /// WebKit sizes a plain `1fr` track from a cache that a change of the
+    /// page's width does not clear, so a fold laid out wide stayed as short
+    /// as it was after the window narrowed and clipped the text below. A
+    /// track that cannot be smaller than nothing is sized from the item's
+    /// current height. Both ends keep the same shape so the row still
+    /// animates between them.
+    #[test]
+    fn the_fold_row_follows_the_content_when_the_width_changes() {
+        let css = page_css(&theme());
+        assert!(
+            css.contains(".fold{display:grid;grid-template-rows:minmax(0,1fr);"),
+            "{css}"
+        );
+        assert!(
+            css.contains(".collapsed .fold{grid-template-rows:minmax(0,0fr);opacity:0}"),
+            "{css}"
+        );
+    }
+
     #[test]
     fn a_contact_photo_replaces_the_initials() {
         let from_ann = meta("m1", "Ann Lee", &[]);
@@ -1159,7 +1178,7 @@ mod tests {
             "a message closed since the page loaded is not laid out"
         );
         assert!(
-            html.contains(".collapsed .fold{grid-template-rows:0fr;opacity:0}"),
+            html.contains(".collapsed .fold{grid-template-rows:minmax(0,0fr);opacity:0}"),
             "a collapsed message keeps its fold at no height"
         );
         assert_eq!(
