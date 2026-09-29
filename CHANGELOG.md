@@ -129,6 +129,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   Ctrl+R.
 
 ### Improved
+- The Google tile shows Google's logo and the iCloud tile a cloud, in place of a colored letter.
 
 - Add Account and the first window have a new look: pick your provider from
   a tile, see what it needs before you continue, and follow Google's

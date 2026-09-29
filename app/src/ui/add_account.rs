@@ -228,7 +228,7 @@ fn icon_button(icon: &str, text: &str, classes: &[&str]) -> gtk::Button {
     button
 }
 
-/// A provider's mark: its initial on a tile of its colour.
+/// A provider's mark: its logo, or its initial on a tile of its colour.
 fn mark(stamp: Stamp, size: i32) -> gtk::Label {
     let mark = gtk::Label::builder()
         .label(stamp.letter.to_string())
@@ -245,11 +245,19 @@ fn mark(stamp: Stamp, size: i32) -> gtk::Label {
 
 fn set_mark(mark: &gtk::Label, stamp: Stamp) {
     for class in mark.css_classes() {
-        if class.starts_with("tint-") {
+        if class.starts_with("tint-") || class.starts_with("logo-") {
             mark.remove_css_class(&class);
         }
     }
-    mark.set_label(&stamp.letter.to_string());
+    // The logo is a background in the stylesheet, so the label holds no
+    // text for a screen reader to find and the mark stays presentation.
+    match stamp.logo {
+        Some(logo) => {
+            mark.set_label("");
+            mark.add_css_class(&format!("logo-{logo}"));
+        }
+        None => mark.set_label(&stamp.letter.to_string()),
+    }
     mark.add_css_class(&format!("tint-{}", stamp.colour.trim_start_matches('#')));
 }
 

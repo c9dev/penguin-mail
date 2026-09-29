@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+  <title>A plain cloud, Penguin Mail's own drawing for iCloud Mail</title>
+  <defs>
+    <g id="cloud">
+      <rect x="4" y="12.5" width="16" height="6" rx="3"/>
+      <circle cx="9" cy="12.5" r="3.6"/>
+      <circle cx="13.4" cy="10" r="4.8"/>
+      <circle cx="17" cy="13.5" r="3.2"/>
+    </g>
+  </defs>
+  <use href="#cloud" y="1" fill="#d9cdb8"/>
+  <use href="#cloud" fill="#fbf7f0"/>
+</svg>

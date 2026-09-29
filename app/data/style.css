@@ -1214,6 +1214,28 @@ toolbarview.post-opaque { background-color: var(--dialog-bg-color); }
 .tint-504945 { background-color: #504945; }
 .tint-9d0006 { background-color: #9d0006; }
 
+/* Logos replace the letter. Google's is its own square button art, white
+   with a grey edge, so it keeps Google's small corner and shows in dark mode
+   unchanged. Microsoft's sits on white for the same reason. The cloud is
+   Penguin Mail's drawing and keeps the tile's colour. */
+.post-mark.logo-google, .post-mark.logo-microsoft, .post-mark.logo-icloud {
+  background-repeat: no-repeat; background-position: center;
+}
+.post-mark.logo-google {
+  background-color: transparent; border-radius: 4px;
+  background-image: url("resource:///io/github/c9dev/PenguinMail/logos/google.png");
+  background-size: 100% 100%;
+}
+.post-mark.logo-microsoft {
+  background-color: #ffffff;
+  background-image: url("resource:///io/github/c9dev/PenguinMail/logos/microsoft.svg");
+  background-size: 58% 58%;
+}
+.post-mark.logo-icloud {
+  background-image: url("resource:///io/github/c9dev/PenguinMail/logos/icloud.svg");
+  background-size: 74% 74%;
+}
+
 .post-tiles { margin-top: 21px; }
 button.post-tile {
   padding: 14px 14px 8px; border-radius: 14px; min-height: 0;

@@ -120,23 +120,30 @@ pub fn band_for(step: Step) -> Option<Band> {
     })
 }
 
-/// A provider's mark: its initial on a tile of its colour. Penguin Mail
-/// draws its own marks and no logos.
+/// A provider's mark: its logo where the owner's terms let an app show
+/// it, and its initial on a tile of its colour where they do not.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Stamp {
     pub letter: char,
     /// The tile's colour, as `#rrggbb`.
     pub colour: &'static str,
+    /// The file stem under `logos/` in the resources, when the tile shows
+    /// artwork instead of the letter.
+    pub logo: Option<&'static str>,
 }
 
 /// The stamp for an address the list does not name.
 pub const ANY_SERVER: Stamp = Stamp {
     letter: '@',
     colour: "#504945",
+    logo: None,
 };
 
 /// The stamp for `provider`, a name from the built-in list. A provider
 /// without a tile of its own takes its initial on the neutral colour.
+/// Yahoo and Fastmail keep the initial: Yahoo approves each use of its
+/// logo in advance, and Fastmail's guidelines forbid redistributing it.
+/// The iCloud cloud is Penguin Mail's own drawing, not Apple's logo.
 pub fn stamp_for(provider: &str) -> Stamp {
     let colour = match provider {
         "Google" => "#076678",
@@ -154,7 +161,17 @@ pub fn stamp_for(provider: &str) -> Stamp {
         (_, Some(initial)) => initial.to_uppercase().next().unwrap_or(initial),
         (_, None) => return ANY_SERVER,
     };
-    Stamp { letter, colour }
+    let logo = match provider {
+        "Google" => Some("google"),
+        "Microsoft" => Some("microsoft"),
+        "iCloud Mail" => Some("icloud"),
+        _ => None,
+    };
+    Stamp {
+        letter,
+        colour,
+        logo,
+    }
 }
 
 /// One tile on the first page. Microsoft joins them once Penguin Mail
@@ -503,12 +520,52 @@ mod tests {
             stamp_for("GMX"),
             Stamp {
                 letter: 'G',
-                colour: ANY_SERVER.colour
+                colour: ANY_SERVER.colour,
+                logo: None,
             }
         );
         assert_eq!(stamp_for("Tuta").colour, "#9d0006");
         assert_eq!(stamp_for("mailbox.org").letter, 'M');
         assert_eq!(stamp_for(""), ANY_SERVER);
+    }
+
+    #[test]
+    fn only_providers_whose_terms_allow_it_get_a_logo() {
+        let logos: Vec<(&str, Option<&str>)> = [
+            "Google",
+            "Microsoft",
+            "iCloud Mail",
+            "Fastmail",
+            "Yahoo Mail",
+            "GMX",
+        ]
+        .into_iter()
+        .map(|name| (name, stamp_for(name).logo))
+        .collect();
+        assert_eq!(
+            logos,
+            [
+                ("Google", Some("google")),
+                ("Microsoft", Some("microsoft")),
+                ("iCloud Mail", Some("icloud")),
+                ("Fastmail", None),
+                ("Yahoo Mail", None),
+                ("GMX", None),
+            ]
+        );
+        assert_eq!(ANY_SERVER.logo, None);
+    }
+
+    #[test]
+    fn every_logo_a_stamp_names_ships_in_the_resources() {
+        let manifest = include_str!("../../data/penguin-mail.gresource.xml");
+        for name in ["Google", "Microsoft", "iCloud Mail"] {
+            let logo = stamp_for(name).logo.expect(name);
+            let listed = manifest
+                .lines()
+                .any(|line| line.contains(&format!("logos/{logo}.")));
+            assert!(listed, "{logo} is not in the gresource manifest");
+        }
     }
 
     #[test]
