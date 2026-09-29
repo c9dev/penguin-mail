@@ -217,6 +217,57 @@ impl Permission {
     }
 }
 
+impl Permission {
+    /// The row Add Account shows for this permission when the sign-in
+    /// left it out: what stays off, and what that covers.
+    pub fn feature(self) -> (String, String) {
+        let (title, covers) = match self {
+            Permission::Settings => (
+                gettext("Change Gmail settings"),
+                gettext("Rules, automatic reply, send-as addresses"),
+            ),
+            Permission::Delete => (
+                gettext("Delete mail for good"),
+                gettext("Emptying the trash and spam"),
+            ),
+            Permission::Contacts => (
+                gettext("Read contacts"),
+                gettext("Names and photos as you write"),
+            ),
+            Permission::ChangeContacts => (
+                gettext("Add and change contacts"),
+                gettext("Saving a sender as a contact"),
+            ),
+            Permission::Calendar => (
+                gettext("Use the calendar"),
+                gettext("Events, invitations, reminders"),
+            ),
+            Permission::ManageCalendars => (
+                gettext("Manage calendars"),
+                gettext("New calendars, colors, subscriptions"),
+            ),
+            Permission::Drive => (
+                gettext("Add files to Google Drive"),
+                gettext("Files attached to events"),
+            ),
+        };
+        (title, covers)
+    }
+
+    /// The icon beside that row.
+    pub fn feature_icon(self) -> &'static str {
+        match self {
+            Permission::Settings => "emblem-system-symbolic",
+            Permission::Delete => "user-trash-symbolic",
+            Permission::Contacts | Permission::ChangeContacts => "penguin-mail-people-symbolic",
+            Permission::Calendar | Permission::ManageCalendars => {
+                "penguin-mail-calendar-symbolic"
+            }
+            Permission::Drive => "folder-documents-symbolic",
+        }
+    }
+}
+
 /// What an account's Grant Access bar says: the account and each
 /// feature its consent left out.
 pub fn grant_bar_title(account: &str, missing: &[Permission]) -> String {
@@ -258,6 +309,28 @@ mod tests {
     use super::*;
 
     const OCCASIONS: [Occasion; 2] = [Occasion::Needed, Occasion::Offer];
+
+    #[test]
+    fn add_account_names_each_feature_left_off_in_the_mockups_words() {
+        assert_eq!(
+            Permission::Settings.feature(),
+            (
+                "Change Gmail settings".to_string(),
+                "Rules, automatic reply, send-as addresses".to_string()
+            )
+        );
+        assert_eq!(
+            Permission::ManageCalendars.feature(),
+            (
+                "Manage calendars".to_string(),
+                "New calendars, colors, subscriptions".to_string()
+            )
+        );
+        for permission in Permission::ALL {
+            assert!(!permission.feature().1.is_empty(), "{permission:?}");
+            assert!(permission.feature_icon().ends_with("-symbolic"));
+        }
+    }
 
     #[test]
     fn the_grant_bar_names_each_missing_feature() {
