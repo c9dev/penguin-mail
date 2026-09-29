@@ -417,8 +417,7 @@ def dark():
 def phone():
     run = launch()
     window = main_window()
-    # A conversation opened before the window narrows is laid out for the
-    # wide window and cut short at the narrow one, so narrow first.
+    # Narrow first, so the shot shows the phone layout from the start.
     resize(window, 400, 800)
     settle(3)
     # The third row, the roadmap reply, whose quoted history is folded.
