@@ -518,6 +518,12 @@ def walk_calendar(keys):
         except Exception:
             return False
 
+    def in_this_range(node):
+        try:
+            return node.get_state_set().contains(Atspi.StateType.VISIBLE)
+        except Exception:
+            return False
+
     def activate(node):
         # A libadwaita toggle may carry no AT-SPI action, unlike a plain
         # button; click its centre instead, the way a row's menu opens.
@@ -610,10 +616,14 @@ def walk_calendar(keys):
                     lambda role, name: role in ("button", "push button")
                     and name.startswith("Quarterly review,")
                 )
-                return found if found is not None and on_screen(found) else None
+                return found if found is not None and in_this_range(found) else None
 
-            # A busy machine can still be laying the week out when the walk
-            # gets here, so it waits for the block as the other steps do.
+            # The week opens at the current hour, so in the evening the
+            # 15:00 block sits above the view: it is VISIBLE (in this week)
+            # but not SHOWING. The weeks either side are not visible at
+            # all, so VISIBLE is the test, and the block is pressed through
+            # its action, which needs no position on screen. A busy machine
+            # can still be laying the week out, so the walk waits for it.
             invitation = None
             if wait_until(lambda: shown_invitation() is not None, 5.0):
                 invitation = shown_invitation()
