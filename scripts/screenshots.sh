@@ -3,6 +3,7 @@
 #
 #   scripts/screenshots.sh              every shot in docs/screenshots
 #   scripts/screenshots.sh dark rules   only the shots named
+#   SCREENSHOTS_DARK=1 OUT=dir scripts/screenshots.sh   every shot, dark, into dir
 #
 # Each shot starts the demo afresh with its own settings, drives it into
 # one state through the accessibility tree and the keyboard, and saves the

@@ -347,6 +347,10 @@ def settings_file(extra):
 
 
 def launch(settings="", env=None, args=("--demo",)):
+    # SCREENSHOTS_DARK=1 takes every shot in the dark style, for material
+    # such as the promo video that wants both.
+    if os.environ.get("SCREENSHOTS_DARK") and DARK not in settings:
+        settings = DARK + settings
     environment = dict(os.environ)
     environment["MAILRS_DEMO_FULL_CONSENT"] = "1"
     environment["MAILRS_SETTINGS"] = settings_file(settings)
