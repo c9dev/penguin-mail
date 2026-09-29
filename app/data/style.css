@@ -1043,7 +1043,12 @@ popover.event-popover button.popover-open-mail {
    (R12): a plain flat circular button like More or the calendar's own
    icon buttons until the panel is open, when its sparkle turns the
    accent colour a symbolic icon takes from its foreground. */
+/* A pressed toggle gets a filled background from the theme; this one stays
+   flat like its neighbours, and only its sparkle shows the panel is open. */
+.assistant-toggle:checked,
+.assistant-toggle:checked:hover { background: none; box-shadow: none; }
 .assistant-toggle:checked { color: var(--accent-color); }
+.assistant-toggle:checked:hover { background-color: alpha(currentColor, 0.07); }
 
 /* The conversation header's buttons, grouped into capsules the way the
    mockup draws them (calendar-mockup/mockups.py, capsule()): replying,

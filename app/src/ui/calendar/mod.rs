@@ -396,7 +396,7 @@ impl CalendarView {
         let assistant_toggle = gtk::ToggleButton::builder()
             .icon_name("penguin-mail-sparkle-symbolic")
             .tooltip_text(gettext("Assistant (Ctrl+J)"))
-            .css_classes(["assistant-toggle"])
+            .css_classes(["flat", "assistant-toggle"])
             .visible(false)
             .build();
         crate::ui::name_with_shortcut(&assistant_toggle, &gettext("Assistant (Ctrl+J)"));
