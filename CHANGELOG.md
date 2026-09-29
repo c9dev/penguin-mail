@@ -230,6 +230,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   it last updated, instead of leaving you guessing.
 
 ### Fixed
+- Switching the calendar between Day, Week and Month no longer jumps months
+  back to an empty range. It stays on the day you were looking at.
 - The calendar's header no longer flickers, with the search button
   appearing and disappearing, at some window widths.
 - A message opened in a wide window is no longer cut short when you narrow

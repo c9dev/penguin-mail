@@ -24,6 +24,7 @@ pub mod layout;
 mod manage;
 pub mod month;
 pub mod next;
+pub(crate) mod pager;
 pub mod popover;
 pub mod quick;
 pub mod range;
@@ -1221,25 +1222,29 @@ impl CalendarView {
         }
         self.arranging.set(true);
         let old: Vec<Rc<Page>> = self.pages.replace(Vec::new());
-        for page in &old {
-            self.carousel.remove(&page.holder);
-        }
         let current = Range::around(self.effective_kind(), self.day.get());
-        let mut pages = Vec::with_capacity(3);
-        for range in [current.previous(), current, current.next()] {
-            let page = Rc::new(Page {
-                holder: adw::Bin::builder().hexpand(true).vexpand(true).build(),
-                range: Cell::new(range),
-                view: RefCell::new(self.page_view()),
-                generation: Cell::new(0),
-                scrolled: Cell::new(false),
-            });
-            page.holder.set_child(Some(&page.view.borrow().widget()));
-            self.carousel.append(&page.holder);
-            pages.push(page);
-        }
+        let ranges = [current.previous(), current, current.next()];
+        let views = ranges.map(|_| self.page_view());
+        let holders = pager::show_views(
+            &self.carousel,
+            old.iter().map(|page| page.holder.clone()).collect(),
+            views.each_ref().map(PageView::widget),
+        );
+        let pages: Vec<Rc<Page>> = holders
+            .into_iter()
+            .zip(ranges)
+            .zip(views)
+            .map(|((holder, range), view)| {
+                Rc::new(Page {
+                    holder,
+                    range: Cell::new(range),
+                    view: RefCell::new(view),
+                    generation: Cell::new(0),
+                    scrolled: Cell::new(false),
+                })
+            })
+            .collect();
         self.pages.replace(pages);
-        self.carousel.scroll_to(&self.pages.borrow()[1].holder, false);
         self.arranging.set(false);
         self.mark_reachable();
     }
