@@ -170,7 +170,8 @@ The ink frame (`#2a2623`) is the hood, the flap's V is the widow's peak,
 the paper (`#fbf7f0`) is the face, and an orange beak (`#e8660c`) sits
 where a seal would. A 16 px copy is drawn on whole pixels, and the
 symbolic icon is the same shape in one colour. New icons follow this
-idiom. `docs/brand/README.md` has the palette and the logo rules.
+idiom. The logo files and their usage rules live in `docs/brand/` on the
+owner's machine only; it is gitignored, like `docs/superpowers/`.
 
 ## Agent skills
 
@@ -184,4 +185,5 @@ The five triage labels: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-
 
 ### Domain docs
 
-Single-context: one `CONTEXT.md` and `docs/adr/` at the repo root.
+Single-context: one `CONTEXT.md` at the repo root. Architecture decision
+records live in `docs/adr/` on the owner's machine only; it is gitignored.

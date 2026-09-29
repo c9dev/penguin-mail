@@ -1,8 +1,8 @@
 <div align="center">
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/brand/penguin-mail-banner-dark.svg">
-  <img src="docs/brand/penguin-mail-banner.svg" width="640" alt="Penguin Mail">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/banner-dark.svg">
+  <img src="docs/screenshots/banner.svg" width="640" alt="Penguin Mail">
 </picture>
 
 # Penguin Mail
