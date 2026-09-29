@@ -12,8 +12,8 @@
 # On the hidden display it also opens every menu it can reach, since a
 # menu is in the accessible tree only while it is open, opens a
 # conversation to read its message view and invitation card, opens a
-# reply and a forward in the composer with their history shown, and walks
-# the calendar.
+# reply and a forward in the composer with their history shown, opens Add
+# Account on its tiles and its Other page, and walks the calendar.
 #
 # The hidden display needs Xvfb, dbus-run-session, at-spi2-core, python3
 # with the GObject bindings, and the XTest library to click and type:
@@ -894,18 +894,95 @@ def walk_composer():
     return len(unnamed) + missing
 
 
-calendar_unnamed = conversation_unnamed = composer_unnamed = 0
+def walk_add_account(keys):
+    """Opens Add Account from the main menu and walks its first page, the
+    provider tiles, then the address page behind the Other tile, into a
+    list of its own. The dialog closes with Escape before the calendar
+    walk.
+
+    Reports the dialog's own line and gives back how many of its controls
+    came back with no name, counting as one each page that did not open."""
+
+    def named(role, name):
+        for app in penguins()[0]:
+            for node in nodes(app):
+                try:
+                    if node.get_role_name() == role and (node.get_name() or "").strip() == name:
+                        return node
+                except Exception:
+                    continue
+        return None
+
+    def showing(node):
+        try:
+            return node.get_state_set().contains(Atspi.StateType.SHOWING)
+        except Exception:
+            return False
+
+    def dialog_of(node):
+        while node is not None and node.get_role_name() != "dialog":
+            node = node.get_parent()
+        return node
+
+    added_found = []
+    menu = named("toggle button", "Main Menu")
+    if menu is None or not menu.get_action_iface().do_action(0):
+        print("The main menu would not open for Add Account.", file=sys.stderr)
+        return 1
+    # A popover's items answer do_action without the SHOWING state.
+    wait_until(lambda: named("menu item", "Add Account…") is not None, 3.0)
+    item = named("menu item", "Add Account…")
+    if item is None:
+        print("The main menu has no Add Account item.", file=sys.stderr)
+        close(keys)
+        return 1
+    item.get_action_iface().do_action(0)
+    google = "Google, Gmail, Workspace, signs in through your browser"
+    if not wait_until(lambda: (lambda n: n is not None and showing(n))(named("button", google)), 10.0):
+        print("Add Account showed no provider tiles by name.", file=sys.stderr)
+        return 1
+    time.sleep(1.0)
+    dialog = dialog_of(named("button", google))
+    walk(dialog, ["Add Account, tiles"], added_found)
+    other = named("button", "Other, Any server")
+    missing = 0
+    if other is None:
+        print("Add Account has no Other tile by name.", file=sys.stderr)
+        missing += 1
+    else:
+        other.get_action_iface().do_action(0)
+        if wait_until(lambda: (lambda n: n is not None and showing(n))(named("text", "Email Address")), 10.0):
+            time.sleep(1.0)
+            walk(dialog, ["Add Account, Other"], added_found)
+        else:
+            print("The Other tile opened no address page.", file=sys.stderr)
+            missing += 1
+    for _ in range(3):
+        keys.escape()
+        time.sleep(0.4)
+        if named("button", google) is None:
+            break
+    unnamed = [row for row in added_found if not row[1]]
+    print("add account: %d controls on the tiles and the Other page, %d unnamed"
+          % (len(added_found), len(unnamed)))
+    for role, _, path in unnamed:
+        print("  %s" % path)
+    return len(unnamed) + missing
+
+
+calendar_unnamed = conversation_unnamed = composer_unnamed = added_unnamed = 0
 if sys.argv[1:] == ["--menus"]:
     open_menus()
     conversation_unnamed = walk_conversation(Input())
     composer_unnamed = walk_composer()
+    added_unnamed = walk_add_account(Input())
     calendar_unnamed = walk_calendar(Input())
 
 unnamed = [row for row in found if not row[1]]
 print("%d controls, %d named, %d unnamed" % (len(found), len(found) - len(unnamed), len(unnamed)))
 for role, _, path in unnamed:
     print("  %s" % path)
-sys.exit(1 if (unnamed or calendar_unnamed or conversation_unnamed or composer_unnamed) else 0)
+sys.exit(1 if (unnamed or calendar_unnamed or conversation_unnamed or composer_unnamed or added_unnamed) else 0)
 PYTHON
 
 if [ "$here" = --here ]; then

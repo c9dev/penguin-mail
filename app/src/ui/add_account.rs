@@ -350,6 +350,7 @@ impl Card {
         self.title.set_text(title);
         self.body.set_text(body);
         self.source.set_visible(false);
+        self.area.remove_css_class("with-source");
         self.said.set_visible(false);
         while let Some(child) = self.links.first_child() {
             self.links.remove(&child);
@@ -365,6 +366,7 @@ impl Card {
     fn show_source(&self, source: &str) {
         self.source.set_text(source);
         self.source.set_visible(true);
+        self.area.add_css_class("with-source");
     }
 
     fn show_said(&self, said: Option<&str>) {
@@ -1054,9 +1056,22 @@ fn added_page() -> AddedPage {
     folder_list.add_css_class("post-folders");
     let mut folders = Vec::new();
     for (role, icon, name) in [
-        (MailRole::Inbox, "penguin-mail-inbox-symbolic", gettext("Inbox")),
-        (MailRole::Sent, "mail-send-symbolic", gettext("Sent")),
-        (MailRole::Archive, "penguin-mail-archive-symbolic", gettext("Archive")),
+        // The sidebar's own names, so each folder reads as it does there.
+        (
+            MailRole::Inbox,
+            "penguin-mail-inbox-symbolic",
+            crate::ui::Standard::Inbox.name(),
+        ),
+        (
+            MailRole::Sent,
+            "mail-send-symbolic",
+            crate::ui::Standard::Sent.name(),
+        ),
+        (
+            MailRole::Archive,
+            "penguin-mail-archive-symbolic",
+            mailrs_domain::translate::pgettext("mailbox", "Archive"),
+        ),
     ] {
         let state = label("", &["post-folder-state", "numeric"]);
         state.set_xalign(1.0);
@@ -2166,6 +2181,7 @@ impl Dialog {
             page.failed_retry.grab_focus();
         } else {
             page.password.grab_focus();
+            page.password.set_position(-1);
         }
         page.failed
             .area

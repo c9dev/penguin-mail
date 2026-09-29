@@ -1243,8 +1243,6 @@ list.post-field > row { min-height: 51px; }
 .post-fields > .post-card { margin-top: 12px; }
 .post-fields > list.post-list { margin-top: 19px; }
 .post-dialog list.boxed-list { box-shadow: 0 0 0 1px var(--post-line); }
-list.post-field.post-wrong { box-shadow: 0 0 0 2px var(--post-err); }
-list.post-field.post-wrong row .title { color: var(--post-err); }
 
 .post-card { padding: 13px 16px 8px; border-radius: 12px; margin-top: 16px; }
 .post-fields > .post-card.post-first-card { margin-top: 17px; margin-bottom: 37px; }
@@ -1337,7 +1335,19 @@ list.post-list row image.post-down-icon { color: var(--post-err); }
 .post-fields > list.post-list.post-tight { margin-top: 15px; }
 
 /* The first-run window. */
-.post-first-title { font-size: 26px; font-weight: 800; margin-top: 30px; }
-.post-first-lede { font-size: 14.5px; color: var(--post-dim); margin-top: 8px; }
-.post-first .post-tiles { margin-top: 26px; margin-bottom: 32px; }
+.post-first-title { font-size: 26px; font-weight: 800; margin-top: 23px; }
+.post-first-lede { font-size: 14.5px; color: var(--post-dim); margin-top: 4px; }
+.post-first .post-tiles { margin-top: 27px; margin-bottom: 32px; }
 .post-waiting .post-note { margin-top: 0; }
+list.post-closed-list > row > box.header { margin: -2px 12px -1px; }
+list.post-field.post-wrong > row,
+list.post-field.post-wrong > row:focus-within { outline: 2px solid var(--post-err); outline-offset: -2px; }
+list.post-field.post-wrong > row label.subtitle,
+list.post-field.post-wrong > row:focus-within label.subtitle { color: var(--post-err); }
+/* The mockup sets a link's arrow 16 px in from the heading above it, with
+   a wider gap to its words than a button usually has. */
+.post-links button.link { margin-left: 16px; }
+.post-links buttoncontent > box { border-spacing: 9px; }
+.post-links buttoncontent image { -gtk-icon-size: 13px; }
+.post-card.with-source .post-card-source { line-height: 1.13; }
+.post-card.with-source .post-links { margin-top: 18px; margin-bottom: 4px; }
