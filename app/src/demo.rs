@@ -769,12 +769,14 @@ pub async fn seed(db: &Db, now: EpochMillis) -> std::result::Result<DemoMail, Sy
             .await?;
         let fake = Arc::new(account.gmail());
         fake.keep_sent_copies(account_id);
-        if index == 2 {
+        if index == 2 && std::env::var_os("MAILRS_DEMO_FULL_CONSENT").is_none() {
             // Shows the Grant Access banner: this account was never asked
             // for the settings scope, the way an account added before
             // sign-in asked for every scope at once never was. gmail.settings.basic covers
             // nothing else and nothing covers it, so withholding it alone
             // is unambiguous.
+            // `MAILRS_DEMO_FULL_CONSENT` grants it, for screenshots that are
+            // not about the banner.
             fake.withhold(mailrs_gmail::SETTINGS_SCOPE);
         }
         let mine: Vec<&Sample> = samples.iter().filter(|s| s.account == index).collect();

@@ -91,27 +91,27 @@ msgid "inbox"
 msgstr ""
 
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:82
-msgid "The inbox, with a conversation open"
+msgid "All your accounts in one inbox, with a reply open"
 msgstr ""
 
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:86
-msgid "An HTML message in dark mode"
+msgid "The same inbox in dark mode"
 msgstr ""
 
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:90
-msgid "Replying in the composer"
+msgid "The calendar's week, with working hours and where you work"
 msgstr ""
 
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:94
-msgid "Three conversations selected, with the actions for all of them"
+msgid "An invitation in a message, with the hours around the meeting"
 msgstr ""
 
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:98
-msgid "The assistant listing mail that waits on a reply"
+msgid "Replying, with the quoted history folded away"
 msgstr ""
 
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:102
-msgid "The layout on a narrow screen"
+msgid "The assistant beside your mail"
 msgstr ""
 
 #: app/src/add_account.rs:34
