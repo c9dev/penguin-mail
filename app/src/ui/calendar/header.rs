@@ -38,6 +38,38 @@ pub fn keeps(room: i32, core: i32, extras: [i32; 3]) -> [bool; 3] {
     kept
 }
 
+/// [`keeps`] with memory, so a steady width gives a steady answer.
+///
+/// The header's core width is worked out from its natural width less the
+/// extras showing. A centred title makes that estimate come out
+/// differently with an extra shown and with it hidden, so at some widths
+/// the plain rule dropped an extra, then found room for it, then dropped
+/// it again, and the search button blinked. Once an extra goes at a
+/// width, it comes back only when the header is wider than that width.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub struct Steady {
+    /// The width at which each extra was last dropped, while it stays
+    /// dropped.
+    dropped_at: [Option<i32>; 3],
+}
+
+impl Steady {
+    /// Which extras to keep in `room`, given the estimate `core` and the
+    /// widths in `extras`, remembering what this decided before.
+    pub fn decide(&mut self, room: i32, core: i32, extras: [i32; 3]) -> [bool; 3] {
+        let mut kept = keeps(room, core, extras);
+        for (index, keep) in kept.iter_mut().enumerate() {
+            match self.dropped_at[index] {
+                Some(width) if *keep && room <= width => *keep = false,
+                Some(_) if *keep => self.dropped_at[index] = None,
+                None if !*keep => self.dropped_at[index] = Some(room),
+                _ => {}
+            }
+        }
+        kept
+    }
+}
+
 /// One extra as the header holds it: the widget, and the gap beside it
 /// that goes with it.
 struct Held {
@@ -60,6 +92,7 @@ mod imp {
         pub(super) header: RefCell<Option<adw::HeaderBar>>,
         pub(super) extras: RefCell<Vec<Held>>,
         pub(super) kept: Cell<[bool; 3]>,
+        pub(super) steady: Cell<Steady>,
         pub(super) queued: Cell<bool>,
         pub(super) on_change: RefCell<Option<Box<dyn Fn()>>>,
     }
@@ -115,7 +148,9 @@ mod imp {
                 return;
             };
             let (core, extras) = self.widths(&header);
-            let kept = keeps(width, core, extras);
+            let mut steady = self.steady.get();
+            let kept = steady.decide(width, core, extras);
+            self.steady.set(steady);
             if kept != self.kept.replace(kept) && !self.queued.replace(true) {
                 // Showing or hiding a widget changes the size the header
                 // asks for, which GTK does not take in the middle of
@@ -216,6 +251,43 @@ impl HeaderRoom {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The header's core width is worked out from its natural width,
+    /// which a centred title makes come out differently with an extra
+    /// shown and with it hidden. At a steady width the two estimates
+    /// flipped the answer every frame and the search button blinked.
+    #[test]
+    fn a_steady_width_settles_instead_of_blinking() {
+        let extras = [30, 30, 40];
+        let room = 600;
+        // With the extras shown the estimate is high; with them hidden,
+        // low enough that the plain rule would bring them straight back.
+        let core_shown = 560;
+        let core_hidden = 500;
+        assert_eq!(keeps(room, core_hidden, extras), [true, true, true]);
+        let mut state = Steady::default();
+        let first = state.decide(room, core_shown, extras);
+        assert_ne!(first, [true, true, true], "no room for every extra at the high estimate");
+        for _ in 0..5 {
+            assert_eq!(state.decide(room, core_hidden, extras), first, "nothing comes back at the same width");
+        }
+    }
+
+    #[test]
+    fn a_dropped_extra_comes_back_when_the_header_widens() {
+        let extras = [30, 30, 40];
+        let mut state = Steady::default();
+        assert_ne!(state.decide(600, 560, extras), [true, true, true]);
+        assert_eq!(state.decide(700, 500, extras), [true, true, true]);
+    }
+
+    #[test]
+    fn a_narrower_header_still_drops_at_once() {
+        let extras = [30, 30, 40];
+        let mut state = Steady::default();
+        assert_eq!(state.decide(1000, 500, extras), [true, true, true]);
+        assert_eq!(state.decide(560, 500, extras), [false, false, true]);
+    }
 
     const EXTRAS: [i32; 3] = [40, 60, 40];
 

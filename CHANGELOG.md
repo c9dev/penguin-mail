@@ -230,6 +230,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   it last updated, instead of leaving you guessing.
 
 ### Fixed
+- The calendar's header no longer flickers, with the search button
+  appearing and disappearing, at some window widths.
 - A message opened in a wide window is no longer cut short when you narrow
   the window: the whole text stays readable.
 - Newsletters keep their own layout: a narrow table column no longer
