@@ -31,6 +31,7 @@ use mailrs_sync::{
 };
 
 use crate::add_account::Attempt;
+use crate::add_account::lookup::{Check, Heard, check_of_url};
 use crate::assistant::run::{Background, Modules};
 use crate::demo::{self, DemoMail};
 use mailrs_domain::translate::{fill, gettext};
@@ -687,11 +688,13 @@ impl Core {
     /// for every scope Penguin Mail uses in one visit; Google keeps what
     /// the account already granted, so signing in again asks nothing new.
     /// Every sign-in, first or again, goes through the build's client and
-    /// records it for the account.
+    /// records it for the account. Dropping the sender behind `cancel`
+    /// stops the wait for the browser, as Cancel on the waiting page does.
     pub async fn authorize_account(
         &self,
         urls: async_channel::Sender<String>,
         expected: Option<String>,
+        cancel: async_channel::Receiver<()>,
     ) -> Result<Account> {
         if self.demo {
             bail!(gettext("Demo mode cannot add real accounts."));
@@ -712,8 +715,11 @@ impl Core {
             let flow = authorize(&oauth, GMAIL_API_BASE, move |url: &str| {
                 let _ = urls.try_send(url.to_string());
             });
-            let authorized = tokio::time::timeout(std::time::Duration::from_secs(300), flow)
-                .await
+            let waited = tokio::select! {
+                waited = tokio::time::timeout(BROWSER_WAIT, flow) => waited,
+                _ = cancel.recv() => bail!(gettext("Canceled.")),
+            };
+            let authorized = waited
                 .map_err(|_| {
                     anyhow!(gettext(
                         "Gave up waiting for the browser after five minutes."
@@ -763,13 +769,18 @@ impl Core {
 
     /// The servers for `address`, found the way discovery goes: the
     /// provider table, then DNS, the domain's own files and a probe. The
-    /// demo reads the table alone, so it sends nothing anywhere.
-    pub async fn discover(&self, address: String) -> Result<Found> {
+    /// demo reads the table alone, so it sends nothing anywhere. Each
+    /// question discovery sends out, and its answer, goes to `heard` for
+    /// the lookup page.
+    pub async fn discover(&self, address: String, heard: async_channel::Sender<Heard>) -> Result<Found> {
         let demo = self.demo;
         self.call(async move {
             let found = match demo {
-                true => mailrs_discover::find(&Offline, &address).await,
-                false => mailrs_discover::find(&RealNet::new()?, &address).await,
+                true => mailrs_discover::find(&Watched { net: Offline, heard }, &address).await,
+                false => {
+                    let net = RealNet::new()?;
+                    mailrs_discover::find(&Watched { net, heard }, &address).await
+                }
             };
             Ok::<_, anyhow::Error>(found)
         })
@@ -908,6 +919,49 @@ impl Net for Offline {
 
     async fn reaches(&self, _host: &str, _port: u16, _security: Security) -> bool {
         false
+    }
+}
+
+/// How long a browser sign-in waits for the person to finish on the
+/// provider's page. The waiting page counts it down.
+pub const BROWSER_WAIT: std::time::Duration = std::time::Duration::from_secs(300);
+
+/// A network that tells the lookup page each time discovery asks it
+/// something and each time the answer comes back. The page reads nothing
+/// else from it, so the answers themselves never leave discovery.
+struct Watched<N> {
+    net: N,
+    heard: async_channel::Sender<Heard>,
+}
+
+impl<N: Net> Watched<N> {
+    async fn asking<T>(&self, check: Check, ask: impl Future<Output = T>, found: impl Fn(&T) -> bool) -> T {
+        let _ = self.heard.try_send(Heard::Asked(check));
+        let answer = ask.await;
+        let _ = self.heard.try_send(Heard::Answered(check, found(&answer)));
+        answer
+    }
+}
+
+impl<N: Net> Net for Watched<N> {
+    async fn mx(&self, domain: &str) -> Vec<String> {
+        self.asking(Check::Mx, self.net.mx(domain), |hosts| !hosts.is_empty())
+            .await
+    }
+
+    async fn srv(&self, name: &str) -> Vec<SrvRecord> {
+        self.asking(Check::Common, self.net.srv(name), |records| !records.is_empty())
+            .await
+    }
+
+    async fn get(&self, url: &str) -> Option<String> {
+        self.asking(check_of_url(url), self.net.get(url), Option::is_some)
+            .await
+    }
+
+    async fn reaches(&self, host: &str, port: u16, security: Security) -> bool {
+        self.asking(Check::Common, self.net.reaches(host, port, security), |ok| *ok)
+            .await
     }
 }
 

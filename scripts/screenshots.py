@@ -443,8 +443,8 @@ def welcome():
     # presses the button, so nothing reaches Google.
     run = launch(args=())
     window = window_titled("Penguin Mail")
-    resize(window, 1320, 840)
-    find(name="Sign In with Google", patience=60)
+    resize(window, 1440, 900)
+    find(name="Google, Gmail, Workspace, signs in through your browser", patience=60)
     settle(3)
     capture(window, "welcome")
     return run

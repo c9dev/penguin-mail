@@ -1,82 +1,66 @@
-//! The first-run page: adding the first account.
+//! The first-run page: the band and the provider tiles across the empty
+//! window, to add the first account. A tile opens Add Account on its
+//! step: the browser sign-in for Google, the address for the rest.
 
 use adw::prelude::*;
 use mailrs_domain::translate::gettext;
 
-/// The first-run page and the two buttons on it, which the window makes
-/// insensitive while Google's browser flow runs.
-pub struct FirstAccount {
-    pub page: gtk::Widget,
-    pub google: gtk::Button,
-    pub other: gtk::Button,
-}
+use crate::add_account::post::{Band, Tile};
+use crate::ui::add_account::tiles;
+use crate::ui::post_band::PostBand;
 
-/// Offers to add the first account, from Google or from another provider.
-pub fn first_account_page(
-    on_google: impl Fn() + 'static,
-    on_other: impl Fn() + 'static,
-) -> FirstAccount {
-    let google = gtk::Button::builder()
-        .label(gettext("Sign In with Google"))
-        .css_classes(["pill", "suggested-action"])
+/// The band's height across the window, with the art at 1.25 times its
+/// size in the dialog.
+const BAND: i32 = 250;
+const SCALE: f32 = 1.25;
+
+/// Offers to add the first account from one of the tiles.
+pub fn first_account_page(on_tile: impl Fn(Tile) + 'static) -> gtk::Widget {
+    let band = PostBand::new(BAND, SCALE);
+    band.show(Band::Idle, None, None);
+    let title = gtk::Label::builder()
+        .label(gettext("Add your first account"))
+        .wrap(true)
+        .justify(gtk::Justification::Center)
+        .accessible_role(gtk::AccessibleRole::Heading)
+        .css_classes(["post-first-title"])
         .build();
-    google.connect_clicked(move |_| on_google());
-    // The browser warning is about Google's sign-in alone, so it sits
-    // under that button and not above both.
-    let warning = gtk::Label::builder()
+    let lede = gtk::Label::builder()
         .label(gettext(
-            "Your browser opens Google's sign-in page. Until Google finishes \
-             checking Penguin Mail, it warns that it has not verified the app: \
-             choose Advanced, then continue.",
+            "Choose where your mail lives. You can add more later from the main menu.",
         ))
         .wrap(true)
         .justify(gtk::Justification::Center)
-        .css_classes(["caption", "dim-label"])
+        .css_classes(["post-first-lede"])
         .build();
-    let with_google = gtk::Box::builder()
+    let grid = tiles(136);
+    let on_tile = std::rc::Rc::new(on_tile);
+    for (tile, button, _) in &grid.buttons {
+        let (tile, on_tile) = (*tile, std::rc::Rc::clone(&on_tile));
+        button.connect_clicked(move |_| on_tile(tile));
+    }
+    let column = gtk::Box::builder()
         .orientation(gtk::Orientation::Vertical)
-        .spacing(8)
+        .css_classes(["post-first"])
         .build();
-    with_google.append(&google);
-    with_google.append(&warning);
-    let other = gtk::Button::builder()
-        .label(gettext("Use Another Provider"))
-        .css_classes(["pill"])
-        .build();
-    other.connect_clicked(move |_| on_other());
-    let buttons = gtk::Box::builder()
-        .orientation(gtk::Orientation::Vertical)
-        .spacing(24)
-        .build();
-    buttons.append(&with_google);
-    buttons.append(&other);
-    // The clamp keeps both buttons one width and wraps the warning to it,
-    // where the warning's own width would stretch them across the page.
-    let clamp = adw::Clamp::builder()
-        .maximum_size(320)
-        .tightening_threshold(320)
-        .child(&buttons)
-        .build();
-    let page = adw::StatusPage::builder()
-        .icon_name("io.github.c9dev.PenguinMail")
-        .title(gettext("Add Your First Account"))
-        .child(&clamp)
+    column.append(&band.widget);
+    column.append(&title);
+    column.append(&lede);
+    column.append(&grid.grid);
+    let scroller = gtk::ScrolledWindow::builder()
+        .hscrollbar_policy(gtk::PolicyType::Never)
+        .child(&column)
         .vexpand(true)
         .build();
-    FirstAccount {
-        page: wrap(&page),
-        google,
-        other,
-    }
-}
-
-fn wrap(content: &impl IsA<gtk::Widget>) -> gtk::Widget {
-    let toolbar = adw::ToolbarView::new();
-    toolbar.add_top_bar(
-        &adw::HeaderBar::builder()
-            .title_widget(&gtk::Label::new(None))
-            .build(),
-    );
-    toolbar.set_content(Some(content));
+    let header = adw::HeaderBar::builder()
+        .title_widget(&gtk::Label::new(None))
+        .css_classes(["post-band-header"])
+        .build();
+    let toolbar = adw::ToolbarView::builder()
+        .extend_content_to_top_edge(true)
+        .top_bar_style(adw::ToolbarStyle::Flat)
+        .content(&scroller)
+        .build();
+    toolbar.add_top_bar(&header);
     toolbar.upcast()
 }

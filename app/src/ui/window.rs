@@ -154,10 +154,6 @@ pub struct MainWindow {
     sidebar: Rc<Sidebar>,
     list: Rc<ThreadList>,
     conversation: Rc<ConversationView>,
-    first_account: gtk::Button,
-    /// The welcome page's Use Another Provider, off while Google's
-    /// browser flow runs.
-    first_other: gtk::Button,
     /// The mailbox on screen, the one a search goes back to, the inbox
     /// category, and what the thread list loads next.
     screen: RefCell<OnScreen>,
@@ -645,23 +641,16 @@ impl MainWindow {
                 .sync_create()
                 .build();
 
-            let (w, o) = (weak.clone(), weak.clone());
-            let welcome::FirstAccount {
-                page: first_page,
-                google: first_account,
-                other: first_other,
-            } = welcome::first_account_page(
-                move || {
-                    if let Some(win) = w.upgrade() {
-                        win.authorize(None);
-                    }
-                },
-                move || {
-                    if let Some(win) = o.upgrade() {
-                        win.present_add_account(Opening::Other);
-                    }
-                },
-            );
+            let w = weak.clone();
+            let first_page = welcome::first_account_page(move |tile| {
+                if let Some(win) = w.upgrade() {
+                    win.present_add_account(if tile.in_browser() {
+                        Opening::Google
+                    } else {
+                        Opening::Tile(tile)
+                    });
+                }
+            });
             let (s, w) = (Rc::downgrade(app), weak.clone());
             let assistant = super::assistant::AssistantPane::new(
                 Rc::clone(&app.core),
@@ -819,8 +808,6 @@ impl MainWindow {
                 sidebar,
                 list,
                 conversation,
-                first_account,
-                first_other,
                 screen: RefCell::new(OnScreen::new(app.settings_with(|s| s.default_category))),
                 counts: RefCell::new(on_screen::Counts::default()),
                 accounts_read: RefCell::new(None),
@@ -1099,7 +1086,9 @@ impl MainWindow {
                 return self.failed(&gettext("Could not read accounts: {reason}"), &err);
             }
         };
-        let page = if data.is_empty() {
+        // The demo shows the first-run page on request, for screenshots.
+        let first_run = self.core.demo && std::env::var_os("MAILRS_DEMO_FIRST_RUN").is_some();
+        let page = if data.is_empty() || first_run {
             "first-account"
         } else {
             "mail"
@@ -2478,8 +2467,22 @@ impl MainWindow {
         super::add_account::present(&self.core, &self.window, opening, move |done| {
             let Some(win) = weak.upgrade() else { return };
             match done {
-                Done::Google(expected) => win.authorize(expected),
                 Done::Added { account, name } => win.imap_added(&account, name),
+                Done::GoogleAdded(account) => {
+                    if let Some(app) = win.app.upgrade() {
+                        app.signed_in(&account);
+                    }
+                    win.refresh_accounts(Reload::Yes);
+                }
+                Done::OpenInbox(account_id) => {
+                    let inbox = Mailbox::Standard {
+                        account_id,
+                        which: crate::ui::Standard::Inbox,
+                    };
+                    win.sidebar.select(&inbox);
+                    win.show_mailbox(inbox);
+                }
+                Done::Grant(email) => win.grant(email),
                 Done::SignedInAgain(account) => {
                     win.toast(&fill(
                         &gettext("{account} is signed in again."),
@@ -2516,10 +2519,8 @@ impl MainWindow {
                 at: mailrs_sync::now_millis(),
             });
         }
-        self.toast(&fill(
-            &gettext("Added {account}. Downloading mail…"),
-            &[("account", &account.email)],
-        ));
+        // The dialog stays open on the account's first sync, which says
+        // what a toast would.
         self.refresh_accounts(Reload::Yes);
     }
 
@@ -2541,14 +2542,15 @@ impl MainWindow {
                 gtk::UriLauncher::new(&url).launch(Some(&window), gio::Cancellable::NONE, |_| {});
             }
         });
-        self.first_account.set_sensitive(false);
-        self.first_account
-            .set_label(&gettext("Waiting for Your Browser…"));
-        self.first_other.set_sensitive(false);
         self.toast(&gettext("Continue in your browser"));
+        // The wait runs until the browser comes back or gives up; nothing
+        // here cancels it, so the sender lives as long as the run.
+        let (keep, cancel) = async_channel::bounded::<()>(1);
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
-            match this.core.authorize_account(urls, expected).await {
+            let signed = this.core.authorize_account(urls, expected, cancel).await;
+            drop(keep);
+            match signed {
                 Ok(account) => {
                     this.toast(&fill(
                         &gettext("Added {account}. Downloading mail…"),
@@ -2562,10 +2564,6 @@ impl MainWindow {
                 Err(err) => this.toast(&err.to_string()),
             }
             this.authorizing.set(false);
-            this.first_account.set_sensitive(true);
-            this.first_account
-                .set_label(&gettext("Sign In with Google"));
-            this.first_other.set_sensitive(true);
         });
     }
 
@@ -3005,7 +3003,10 @@ impl MainWindow {
     /// `MAILRS_DEMO_COMPOSE=reply` opens a reply to the open thread,
     /// `MAILRS_DEMO_MESSAGE_MENU` right-clicks the message at that
     /// position in the open thread, `MAILRS_DEMO_OFFLINE` shows the
-    /// calendar's offline line as if a sync just failed, and
+    /// calendar's offline line as if a sync just failed,
+    /// `MAILRS_DEMO_ADD_ACCOUNT` opens Add Account on one of its stages
+    /// (see `ui::add_account::preview`), `MAILRS_DEMO_FIRST_RUN` shows the
+    /// first-run page over the sample accounts, and
     /// `MAILRS_DEMO_ACTION` activates a window action such as
     /// `shortcuts`, or one with a target such as `account-rules(int64
     /// 1)`. With a thread to open, the action waits for it, so
@@ -3018,6 +3019,9 @@ impl MainWindow {
         glib::timeout_add_local_once(std::time::Duration::from_millis(900), move || {
             if std::env::var_os("MAILRS_DEMO_OPEN").is_none() {
                 this.run_demo_action();
+            }
+            if let Ok(stage) = std::env::var("MAILRS_DEMO_ADD_ACCOUNT") {
+                this.present_add_account(Opening::Preview(stage));
             }
             if std::env::var_os("MAILRS_DEMO_OFFLINE").is_some() {
                 this.calendar.synced(true);

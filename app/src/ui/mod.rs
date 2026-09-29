@@ -3,6 +3,7 @@
 
 pub mod about;
 pub mod add_account;
+pub mod post_band;
 pub mod assistant;
 pub mod assistant_mcp_prefs;
 pub mod assistant_prefs;

@@ -129,6 +129,11 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   Ctrl+R.
 
 ### Improved
+
+- Add Account and the first window have a new look: pick your provider from
+  a tile, see what it needs before you continue, and follow Google's
+  sign-in, the server lookup and the first download on their own pages,
+  with Cancel and Try Again where you need them.
 - Penguin Mail now describes itself as mail and calendar for Linux, in
   the About window and in app stores.
 
