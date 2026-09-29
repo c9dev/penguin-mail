@@ -1,20 +1,34 @@
 # Setting up Penguin Mail
 
-Penguin Mail signs in to Gmail with your Google account. Add each account in
+Penguin Mail works with Google accounts and with any mail provider that
+offers IMAP and SMTP, such as Fastmail, iCloud or Yahoo. Add each account in
 the app, or from the command line.
 
-## Signing in
+## Adding an account
 
-Choose **Sign In with Google** on the first screen. Your browser opens
-Google's sign-in page; sign in and allow the permissions Penguin Mail asks
-for. Until Google finishes verifying the app, the page warns that Google has
-not verified it. Choose **Advanced**, then continue.
+The first window shows the providers you can add. For each account after the
+first, open the main menu and choose **Add Account**. From a terminal,
+`penguin-mail-cli account add` does the same for a Google account.
 
-The account appears in the sidebar and starts downloading. For each account
-after the first, click **Add Account** at the bottom of the sidebar. From a
-terminal, `penguin-mail-cli account add` does the same.
+### Google
 
-Adding an account asks for every permission Penguin Mail uses in that one
+Choose **Google**. Your browser opens Google's sign-in page; sign in and allow
+the permissions Penguin Mail asks for, then come back to the app. Until Google
+finishes verifying the app, the page warns that Google has not verified it.
+Choose **Advanced**, then continue.
+
+### Other providers
+
+Choose your provider, or **Other**, and type your address. Penguin Mail finds
+the server settings for you and says what the provider needs, such as an app
+password for iCloud, Fastmail or Yahoo, with a link to the page where you make
+one. If it can't find them, **Enter Server Settings** lets you type the
+incoming (IMAP) and outgoing (SMTP) servers yourself. The password goes to
+your desktop's keyring, never into a file.
+
+The account appears in the sidebar and starts downloading.
+
+Adding a Google account asks for every permission Penguin Mail uses in that one
 visit, so you never see a second consent screen for automatic replies and
 Rules, contacts, the calendar and its list of calendars, Google Drive
 files, or Delete Forever. Leave a box unticked and
@@ -61,10 +75,30 @@ client, from these variables:
 exists. A copy built without them works in every other way and says so when
 you try to add a Google account.
 
-To build with a client of your own instead, make one in a Google Cloud project:
-enable the Gmail, People and Calendar APIs, fill in the consent screen with
-the values in [google-cloud.md](google-cloud.md), and create an OAuth client of
-type **Desktop app**. Put its ID and secret in `packaging/secrets.env`:
+To build with a client of your own instead, make one in a Google Cloud
+project:
+
+1. Enable the Gmail, People, Calendar and Drive APIs.
+2. Under Branding, set the app name to `Penguin Mail` and your own address as
+   the support and developer contact. Leave the logo out for personal use:
+   uploading one sends the app toward Google's verification.
+3. Under Audience, choose **External** and publish the app. Don't submit it
+   for verification for personal use; you click through Google's
+   "unverified app" notice once per account instead.
+4. Under Data Access, add the seven scopes the app asks for at sign-in, so
+   Google's list matches the app's:
+   - `https://mail.google.com/`
+   - `https://www.googleapis.com/auth/gmail.settings.basic`
+   - `https://www.googleapis.com/auth/contacts`
+   - `https://www.googleapis.com/auth/calendar.events`
+   - `https://www.googleapis.com/auth/calendar.calendarlist`
+   - `https://www.googleapis.com/auth/calendar.calendars`
+   - `https://www.googleapis.com/auth/drive.file`
+
+   The [privacy policy](privacy-policy.md) says what each one is for.
+5. Under Clients, create an OAuth client of type **Desktop app**.
+
+Put its ID and secret in `packaging/secrets.env`:
 
 ```sh
 PENGUIN_MAIL_GOOGLE_CLIENT_ID=1234567890-abc.apps.googleusercontent.com
