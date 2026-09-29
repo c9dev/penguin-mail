@@ -1141,3 +1141,203 @@ popover.event-popover button.popover-more {
 }
 .add-calendar { margin-left: -6px; }
 .add-calendar > button { padding: 2px 6px; min-height: 0; }
+
+/* Add Account and the first-run window (the "Penguin Post" mockups,
+   d1c). The band is taupe in both themes: the ink frame and the paper
+   wordmark measure against it, not against the window. The page colours
+   are the mockup's, set on the dialog so its rows and cards take them. */
+.post-band {
+  background-image:
+    linear-gradient(to bottom, alpha(#fbf7f0, 0.18), alpha(#fbf7f0, 0) 10%, alpha(#000000, 0) 85%, alpha(#000000, 0.12)),
+    linear-gradient(to bottom, #8b7d71, #7c6f64);
+}
+headerbar.post-band-header { background: none; box-shadow: none; color: #fbf7f0; }
+headerbar.post-band-header > windowhandle > box > widget > box > button:not(.suggested-action),
+headerbar.post-band-header button.back { color: #fbf7f0; }
+headerbar.post-band-header windowcontrols > button > image {
+  background-color: #5e544c; color: #fbf7f0;
+}
+headerbar.post-band-header windowcontrols > button:hover > image { background-color: #6b6057; }
+
+.post-dialog, .post-first {
+  --post-dim: #5f5f67;
+  --post-faint: #8a8a93;
+  --post-line: #e6e6ea;
+  --post-pill: #e6e6ea;
+  --post-acc: #a84000;
+  --post-code: #f0f0f3;
+  --post-err: #b3121f;
+  --post-err-bg: #fbe9ea;
+  --dialog-bg-color: #fafafb;
+  --card-bg-color: #ffffff;
+}
+.app-dark .post-dialog, .app-dark .post-first {
+  --post-dim: #b9b9c2;
+  --post-faint: #8e8e98;
+  --post-line: #3d3d44;
+  --post-pill: #46464d;
+  --post-acc: #ffa35c;
+  --post-code: #242428;
+  --post-err: #ff8a8a;
+  --post-err-bg: #4a2a2e;
+  --dialog-bg-color: #2b2b30;
+  --card-bg-color: #38383e;
+}
+.post-first { background-color: var(--dialog-bg-color); }
+.post-body { padding: 16px 24px 18px;
+}
+.post-body.post-found { padding-top: 14px; }
+.post-body { background-color: var(--dialog-bg-color); }
+toolbarview.post-opaque { background-color: var(--dialog-bg-color); }
+.post-dialog button.suggested-action,
+.post-first button.suggested-action { background-color: var(--accent-fill); color: #ffffff; }
+
+.post-title { font-size: 20px; font-weight: 800; }
+.post-body.centered .post-title { font-size: 22px; }
+.post-lede { font-size: 14.5px; line-height: 1.07; color: var(--post-dim); margin-top: 5px; }
+.post-lede-small { font-size: 13px; color: var(--post-dim); margin-top: 4px; }
+.post-note { font-size: 12.5px; line-height: 1.07; color: var(--post-dim); margin-top: 16px; }
+
+/* A provider's mark: its initial on a tile of its colour, lit a little
+   on its top half. */
+.post-mark {
+  color: #fbf1c7; font-weight: 800;
+  background-image: linear-gradient(to bottom, alpha(#ffffff, 0.07) 50%, alpha(#ffffff, 0) 50%);
+}
+.post-mark.mark-38 { font-size: 19px; border-radius: 11px; min-width: 38px; min-height: 38px; }
+.post-mark.mark-34 { font-size: 17px; border-radius: 9.5px; min-width: 34px; min-height: 34px; }
+.tint-076678 { background-color: #076678; }
+.tint-427b58 { background-color: #427b58; }
+.tint-8f3f71 { background-color: #8f3f71; }
+.tint-af3a03 { background-color: #af3a03; }
+.tint-79740e { background-color: #79740e; }
+.tint-504945 { background-color: #504945; }
+.tint-9d0006 { background-color: #9d0006; }
+
+.post-tiles { margin-top: 21px; }
+.post-tiles > flowboxchild { padding: 0; }
+button.post-tile {
+  padding: 14px 14px 8px; border-radius: 14px; min-height: 0;
+  background-color: var(--card-bg-color);
+  box-shadow: 0 0 0 1px var(--post-line);
+}
+button.post-tile:focus-visible { outline: 2px solid #e8660c; outline-offset: 1px; }
+.app-dark button.post-tile:focus-visible { outline-color: #ff7a1a; }
+button.post-tile:hover { background-image: linear-gradient(alpha(currentColor, 0.04), alpha(currentColor, 0.04)); }
+.post-tile-name { font-size: 15px; font-weight: 800; margin-top: 9px; }
+.post-tile-sub { font-size: 12px; color: var(--post-dim); margin-top: 1px; }
+.post-globe { color: var(--post-faint); -gtk-icon-size: 13px; }
+.post-legend { margin-top: 20px; font-size: 12.5px; font-weight: 500; color: var(--post-dim); }
+.post-legend image { color: var(--post-faint); -gtk-icon-size: 13px; margin-left: 2px; }
+separator.post-rule { margin-top: 17px; background-color: var(--post-line); min-height: 1px; }
+list.post-plain-list { background: none; margin: 2px -14px 0; }
+list.post-plain-list > row { border-radius: 10px; }
+row.post-by-hand { min-height: 48px; }
+
+/* Fields: each its own rounded box, as the mockup draws them. */
+list.post-field { margin-top: 12px; }
+list.post-field > row { min-height: 51px; }
+.post-fields > * { margin-top: 8px; }
+.post-fields > list.post-field { margin-top: 8px; }
+.post-fields > list.post-field:first-child { margin-top: 13px; }
+.post-fields > .post-card { margin-top: 12px; }
+.post-fields > list.post-list { margin-top: 19px; }
+.post-dialog list.boxed-list { box-shadow: 0 0 0 1px var(--post-line); }
+list.post-field.post-wrong { box-shadow: 0 0 0 2px var(--post-err); }
+list.post-field.post-wrong row .title { color: var(--post-err); }
+
+.post-card { padding: 13px 16px 8px; border-radius: 12px; margin-top: 16px; }
+.post-fields > .post-card.post-first-card { margin-top: 17px; margin-bottom: 37px; }
+.post-card.advice { background-color: alpha(#a84000, 0.12); }
+.app-dark .post-card.advice { background-color: alpha(#ffa35c, 0.22); }
+.post-card.trouble { background-color: var(--post-err-bg); }
+.post-card > .post-mark { margin-right: 12px; margin-top: 3px; }
+.post-card > .post-card-icon { margin-right: 10px; }
+.post-card-icon { color: var(--post-acc); margin-top: 3px; }
+.post-card.trouble .post-card-icon, .post-card.trouble .post-card-title { color: var(--post-err); }
+.post-card-title { font-size: 14.5px; font-weight: 800; }
+.post-card-body { font-size: 13px; line-height: 1.07; margin-top: 4px; }
+.post-card-source { font-size: 12.5px; line-height: 1.07; color: var(--post-dim); margin-top: 4px; }
+.post-said {
+  font-size: 12px; color: var(--post-dim); background-color: var(--post-code);
+  border-radius: 6px; padding: 4px 8px; margin: 8px 16px 0 0;
+}
+.post-links { margin-top: 12px; }
+.post-links button.link { padding: 2px 0; min-height: 0; font-size: 14px; font-weight: 700; color: var(--post-acc); }
+.post-card-buttons { margin-top: 22px; margin-bottom: 8px; }
+
+button.post-wide { min-height: 44px; padding: 0 16px; margin-top: 10px; font-weight: 700; }
+button.post-wide:not(.suggested-action), button.post-small-pill:not(.suggested-action) { background-color: var(--post-pill); }
+button.post-small-pill { min-height: 34px; border-radius: 10px; padding: 0 14px; font-weight: 700; }
+.post-bottom { margin-top: 7px; }
+button.post-cancel { font-weight: 700; }
+.post-suggest { margin-top: 12px; }
+.post-said-line { margin-top: 12px; }
+
+/* The lookup's checks. */
+.post-list > row { min-height: 48px; }
+.post-body > list.post-list { margin-top: 22px; }
+.post-body > list.post-list.post-closed-list { margin-top: 26px; }
+.post-body > list.post-list.post-folders { margin-top: 23px; }
+.post-body > list.post-list.post-checks { margin-top: 15px; }
+list.post-list row label.title { font-size: 14.5px; }
+list.post-list row label.subtitle { font-size: 12.5px; }
+list.post-list row > box.header > image,
+list.post-list row > box.header > box.prefixes image { color: var(--post-dim); }
+.post-list > row.post-check-row { min-height: 0; padding: 0; }
+.post-check { min-height: 47px; padding: 0 16px 0 17px; }
+.post-status > * { min-height: 0; min-width: 0; }
+.post-check-title { font-size: 14.5px; font-weight: 500; }
+.post-spinner { color: var(--post-acc); }
+list.post-servers > row > box.header { min-height: 0; padding-top: 0; padding-bottom: 0; margin: -3px 12px -3px; }
+list.post-servers > row { min-height: 0; }
+.post-status { color: var(--post-acc); }
+list.post-field row.entry .edit-icon { opacity: 0; }
+button.post-mid-pill { min-height: 40px; border-radius: 20px; padding: 0 16px; font-weight: 700; }
+button.post-mid-pill:not(.suggested-action) { background-color: var(--post-pill); }
+button.post-header-action { padding: 0 19px; font-weight: 700; }
+button.post-header-action:disabled { opacity: 1; filter: none; background-color: #e3ab8a; color: alpha(#ffffff, 0.85); }
+.app-dark button.post-header-action:disabled { background-color: #71391a; color: alpha(#ffffff, 0.6); }
+list.post-field > row:focus-within { outline-color: #e8660c; outline-width: 2px; }
+.app-dark list.post-field > row:focus-within { outline-color: #ff7a1a; }
+list.post-field > row:focus-within label.subtitle { color: var(--post-acc); }
+.post-ring { min-width: 16px; min-height: 16px; border-radius: 50%; border: 1.6px solid var(--post-line); }
+.post-ring.not-listed { border: 1.6px dashed var(--post-faint); }
+.post-done { color: #16774a; }
+.app-dark .post-done { color: #6fdc9f; }
+.post-check-state { font-size: 13px; font-weight: 500; color: var(--post-dim); }
+.post-check-state.asking { color: var(--post-acc); }
+
+/* The browser wait. */
+.post-steps { margin-top: 26px; }
+.post-step { margin-bottom: 22px; }
+.post-step:last-child { margin-bottom: 0; }
+.post-step-number {
+  min-width: 22px; min-height: 22px; border-radius: 11px;
+  font-size: 12.5px; font-weight: 800; color: var(--post-acc);
+  background-color: alpha(#a84000, 0.2);
+}
+.app-dark .post-step-number { background-color: alpha(#ffa35c, 0.3); }
+.post-step-text { font-size: 14px; line-height: 1.05; }
+.post-waiting separator.post-rule { margin-top: 0; margin-bottom: 15px; }
+.post-wait-title { font-size: 14.5px; font-weight: 700; }
+.post-left { font-size: 13px; font-weight: 500; color: var(--post-dim); }
+progressbar.post-progress > trough { min-height: 6px; border-radius: 3px; background-color: var(--post-pill); }
+progressbar.post-progress > trough > progress { min-height: 6px; border-radius: 3px; background-color: var(--post-acc); }
+.post-waiting progressbar.post-progress { margin-top: 8px; margin-bottom: 10px; }
+
+/* The last page. */
+.post-folder { padding: 10px 16px 14px; }
+list.post-folders + .post-note { margin-top: 9px; }
+.post-folder-name { font-size: 14.5px; font-weight: 600; }
+.post-folder-state { font-size: 12.5px; font-weight: 500; color: var(--post-dim); }
+.post-folder progressbar.post-progress { margin: 5px 0 0 26px; }
+list.post-list > row.post-down .subtitle { color: var(--post-err); opacity: 1; }
+list.post-list row image.post-down-icon { color: var(--post-err); }
+.post-fields > list.post-list.post-tight { margin-top: 15px; }
+
+/* The first-run window. */
+.post-first-title { font-size: 26px; font-weight: 800; margin-top: 30px; }
+.post-first-lede { font-size: 14.5px; color: var(--post-dim); margin-top: 8px; }
+.post-first .post-tiles { margin-top: 26px; margin-bottom: 32px; }
+.post-waiting .post-note { margin-top: 0; }

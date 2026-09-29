@@ -1,9 +1,10 @@
-//! What the Add Account dialog decides, without widgets: the picker's
-//! choices, whether an address can be looked up, where discovery's
-//! answer leads, which of its candidates gets tried and when a failed
-//! one hands off to the next, the line about app passwords, the words
-//! for a failed sign-in, the Server Settings form, and which answers
-//! still count. `ui::add_account` draws what these say.
+//! What the Add Account dialog decides, without widgets: whether an
+//! address can be looked up, where discovery's answer leads, which of its
+//! candidates gets tried and when a failed one hands off to the next, the
+//! line about app passwords, the words for a failed sign-in, the Server
+//! Settings form, and which answers still count. `post` decides the band
+//! and the tiles, `lookup` the lookup page's checks. `ui::add_account`
+//! draws what these say.
 
 pub mod lookup;
 pub mod post;
@@ -18,33 +19,6 @@ use mailrs_domain::Account;
 use mailrs_domain::translate::{fill, gettext};
 use mailrs_imap::{CheckError, ImapError};
 use mailrs_store::servers::{Saved, Servers};
-
-/// One row of the Add Account picker. Microsoft joins them once Penguin
-/// Mail can sign in to it.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Choice {
-    Google,
-    Other,
-}
-
-impl Choice {
-    pub const ALL: [Choice; 2] = [Choice::Google, Choice::Other];
-
-    pub fn title(self) -> String {
-        match self {
-            // A brand, so it is not translated.
-            Choice::Google => "Google".to_string(),
-            Choice::Other => gettext("Another Provider"),
-        }
-    }
-
-    pub fn subtitle(self) -> String {
-        match self {
-            Choice::Google => gettext("Gmail and Google Workspace"),
-            Choice::Other => gettext("Fastmail, iCloud, Yahoo and any server with IMAP"),
-        }
-    }
-}
 
 /// An address the person typed, split at its last `@`. The domain is in
 /// lower case, as DNS and the provider table read it; the local part
@@ -387,14 +361,6 @@ impl Running {
     }
 }
 
-/// One server as the confirmation shows it.
-pub fn server_line(server: &Server) -> String {
-    fill(
-        &gettext("{host} on port {port}"),
-        &[("host", &server.host), ("port", &server.port.to_string())],
-    )
-}
-
 /// One server as its row under the password shows it: host, port and
 /// security.
 pub fn server_row_line(server: &Server) -> String {
@@ -466,6 +432,22 @@ pub fn time_left(left: std::time::Duration) -> String {
         &gettext("{time} left"),
         &[("time", &format!("{}:{:02}", seconds / 60, seconds % 60))],
     )
+}
+
+/// A count from two to nine in words, as a sentence writes it, and
+/// anything larger in figures.
+pub fn small_number(count: usize) -> String {
+    match count {
+        2 => gettext("two"),
+        3 => gettext("three"),
+        4 => gettext("four"),
+        5 => gettext("five"),
+        6 => gettext("six"),
+        7 => gettext("seven"),
+        8 => gettext("eight"),
+        9 => gettext("nine"),
+        _ => count.to_string(),
+    }
 }
 
 /// How far a folder's first sync has got: waiting, or how many
@@ -1071,13 +1053,6 @@ mod tests {
     }
 
     #[test]
-    fn the_picker_offers_google_then_another_provider_and_no_microsoft() {
-        assert_eq!(Choice::ALL, [Choice::Google, Choice::Other]);
-        assert_eq!(Choice::Google.title(), "Google");
-        assert_eq!(Choice::Other.title(), "Another Provider");
-    }
-
-    #[test]
     fn an_address_is_trimmed_and_its_domain_put_in_lower_case() {
         let address = Address::parse("  Dana@FastMail.COM. ").unwrap();
         assert_eq!(address.local, "Dana");
@@ -1515,14 +1490,6 @@ mod tests {
         assert!(!asking.wants(third));
     }
 
-    #[test]
-    fn the_confirmation_names_each_host_and_its_port() {
-        assert_eq!(
-            server_line(&server("imap.example.org", 993)),
-            "imap.example.org on port 993"
-        );
-    }
-
     /// The controller's own scenario: two candidates, the first unreachable.
     fn two_candidates(second_confirm: bool) -> Found {
         Found {
@@ -1864,6 +1831,13 @@ mod tests {
         assert_eq!(time_left(Duration::from_secs(252)), "4:12 left");
         assert_eq!(time_left(Duration::from_millis(59_200)), "1:00 left");
         assert_eq!(time_left(Duration::ZERO), "0:00 left");
+    }
+
+    #[test]
+    fn a_small_count_is_written_in_words() {
+        assert_eq!(small_number(2), "two");
+        assert_eq!(small_number(9), "nine");
+        assert_eq!(small_number(12), "12");
     }
 
     #[test]

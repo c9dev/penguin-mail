@@ -15,9 +15,18 @@
     <file>icons/scalable/actions/penguin-mail-flag-outline-symbolic.svg</file>
     <file>icons/scalable/actions/penguin-mail-focus-symbolic.svg</file>
     <file>icons/scalable/actions/penguin-mail-cake-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-globe-symbolic.svg</file>
+    <file>icons/scalable/actions/penguin-mail-mark-symbolic.svg</file>
     <file>icons/scalable/apps/io.github.c9dev.PenguinMail.svg</file>
     <file>icons/scalable/apps/io.github.c9dev.PenguinMail-symbolic.svg</file>
     <file>icons/16x16/apps/io.github.c9dev.PenguinMail.svg</file>
     <file>style.css</file>
+    <file>band/idle.svg</file>
+    <file>band/stamped.svg</file>
+    <file>band/browser.svg</file>
+    <file>band/lookup.svg</file>
+    <file>band/error.svg</file>
+    <file>band/unreachable.svg</file>
+    <file>band/success.svg</file>
   </gresource>
 </gresources>

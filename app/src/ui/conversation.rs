@@ -354,7 +354,7 @@ impl ConversationView {
         webview.set_hexpand(true);
 
         let empty = adw::StatusPage::builder()
-            .icon_name("io.github.c9dev.PenguinMail-symbolic")
+            .icon_name("penguin-mail-mark-symbolic")
             .title(gettext("No Conversation Selected"))
             .build();
         empty.add_css_class("dim-label");
