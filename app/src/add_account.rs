@@ -594,6 +594,7 @@ pub fn failure(err: &anyhow::Error, proposal: &Proposal) -> Failure {
             proposal,
             refused_title(proposal),
             refused_body(proposal),
+            false,
         ),
         ImapError::ImapDisabled { text } => refused(
             gettext("IMAP is off for this account."),
@@ -607,6 +608,7 @@ pub fn failure(err: &anyhow::Error, proposal: &Proposal) -> Failure {
                 ),
                 None => gettext("Turn on IMAP in your mail settings, then choose Sign In."),
             },
+            true,
         ),
         // The spec's one line for a TLS failure. The detail, such as a
         // server without TLS 1.2, goes to the log with the error.
@@ -705,15 +707,16 @@ fn refused_body(proposal: &Proposal) -> String {
     }
 }
 
-/// A turned-down login: `line`, the server's own words, and the pages
-/// for the usual causes, IMAP left off and an account password where an
-/// app password is due.
+/// A turned-down login: `line`, the server's own words, and the page for
+/// the likelier cause: IMAP left off when `imap_off` says the server said
+/// so, else an account password where an app password is due.
 fn refused(
     mut line: String,
     said: &str,
     proposal: &Proposal,
     title: String,
     body: String,
+    imap_off: bool,
 ) -> Failure {
     let said = (!said.trim().is_empty()).then(|| {
         fill(
@@ -725,30 +728,33 @@ fn refused(
         line.push(' ');
         line.push_str(said);
     }
-    let mut links = Vec::new();
-    if let Some(info) = &proposal.info {
-        let provider = [("provider", info.name.as_str())];
-        if let Some(url) = &info.enable_imap_url {
-            links.push(Link {
+    // One page, as the approved card has: the page that turns IMAP on
+    // when the server said it is off, else the app password page where
+    // one is due, else the IMAP page.
+    let links = proposal
+        .info
+        .as_ref()
+        .and_then(|info| {
+            let app_password = info
+                .app_password_url
+                .as_ref()
+                .filter(|_| info.password != PasswordKind::AccountPassword)
+                .map(|url| Link {
+                    label: gettext("Make an App Password"),
+                    url: url.clone(),
+                });
+            let imap = info.enable_imap_url.as_ref().map(|url| Link {
                 label: gettext("Turn On IMAP"),
                 url: url.clone(),
             });
-        }
-        if info.password != PasswordKind::AccountPassword
-            && let Some(url) = &info.app_password_url
-        {
-            links.push(Link {
-                label: gettext("Make an App Password"),
-                url: url.clone(),
-            });
-        }
-        if let Some(url) = &info.documentation_url {
-            links.push(Link {
-                label: fill(&gettext("{provider}'s Help for Mail Apps"), &provider),
-                url: url.clone(),
-            });
-        }
-    }
+            if imap_off {
+                imap.or(app_password)
+            } else {
+                app_password.or(imap)
+            }
+        })
+        .into_iter()
+        .collect();
     Failure {
         line,
         title,
@@ -1831,6 +1837,25 @@ mod tests {
         assert_eq!(time_left(Duration::from_secs(252)), "4:12 left");
         assert_eq!(time_left(Duration::from_millis(59_200)), "1:00 left");
         assert_eq!(time_left(Duration::ZERO), "0:00 left");
+    }
+
+    #[test]
+    fn a_refused_password_offers_one_page_as_the_board_does() {
+        let with_help = Proposal {
+            info: Some(ProviderInfo {
+                documentation_url: Some("https://fastmail.example/help".into()),
+                enable_imap_url: Some("https://fastmail.example/imap".into()),
+                ..fastmail_info()
+            }),
+            ..fastmail()
+        };
+        let refused = anyhow::Error::new(CheckError::Imap(ImapError::Auth { text: "no".into() }));
+        let labels: Vec<String> = failure(&refused, &with_help)
+            .links
+            .into_iter()
+            .map(|link| link.label)
+            .collect();
+        assert_eq!(labels, ["Make an App Password"]);
     }
 
     #[test]

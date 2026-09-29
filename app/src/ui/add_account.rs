@@ -431,21 +431,18 @@ struct PickPage {
 /// The tiles, the line about the browser and the row to type servers:
 /// the dialog's first page, and the body of the first-run window.
 pub struct Tiles {
-    pub grid: gtk::FlowBox,
+    pub grid: gtk::Box,
     pub buttons: Vec<(Tile, gtk::Button, gtk::Label)>,
 }
 
-/// The provider tiles, three to a row. Each tile is one button named
+/// The provider tiles, three to a row, each row centred, so five sit three
+/// over two with no gap left at the end. Each tile is one button named
 /// "Fastmail, Fastmail" or "Google, Gmail, Workspace, signs in through
 /// your browser".
 pub fn tiles(width: i32) -> Tiles {
-    let grid = gtk::FlowBox::builder()
-        .selection_mode(gtk::SelectionMode::None)
-        .min_children_per_line(3)
-        .max_children_per_line(3)
-        .homogeneous(true)
-        .column_spacing(12)
-        .row_spacing(12)
+    let grid = gtk::Box::builder()
+        .orientation(gtk::Orientation::Vertical)
+        .spacing(12)
         .halign(gtk::Align::Center)
         .css_classes(["post-tiles"])
         .build();
@@ -478,13 +475,18 @@ pub fn tiles(width: i32) -> Tiles {
             .css_classes(["card", "post-tile"])
             .build();
         crate::ui::name(&button, &tile.described());
-        grid.append(&button);
-        if let Some(child) = button.parent() {
-            // The button takes the focus; the flow box's own child would
-            // be a second, empty stop.
-            child.set_focusable(false);
-        }
         buttons.push((tile, button, mark));
+    }
+    let mut rest = buttons.iter();
+    for count in post::tile_rows(buttons.len()) {
+        let row = gtk::Box::builder()
+            .spacing(12)
+            .halign(gtk::Align::Center)
+            .build();
+        for (_, button, _) in rest.by_ref().take(count) {
+            row.append(button);
+        }
+        grid.append(&row);
     }
     Tiles { grid, buttons }
 }
@@ -1985,6 +1987,7 @@ impl Dialog {
         }
         page.down.set_visible(false);
         page.hosts.remove_css_class("post-tight");
+        page.hosts.remove_css_class("post-after-refusal");
         page.incoming.set_visible(true);
         page.outgoing.set_visible(true);
         page.summary.set_visible(false);
@@ -2170,6 +2173,7 @@ impl Dialog {
                 page.incoming.set_visible(false);
                 page.outgoing.set_visible(false);
                 page.summary.set_visible(true);
+                page.hosts.add_css_class("post-after-refusal");
                 self.set_band("password", Step::Refused, stamp, provider.as_deref());
             }
         }

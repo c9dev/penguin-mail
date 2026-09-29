@@ -237,6 +237,16 @@ impl Tile {
     }
 }
 
+/// How many tiles go on each row, three to a row, the last row holding
+/// what is left. The window centres each row, so five tiles sit three over
+/// two with nothing missing.
+pub fn tile_rows(tiles: usize) -> Vec<usize> {
+    (0..tiles)
+        .step_by(3)
+        .map(|start| (tiles - start).min(3))
+        .collect()
+}
+
 /// The name a person knows a provider by: the tile's title for a provider
 /// with a tile ("iCloud" for "iCloud Mail"), the list's name otherwise.
 pub fn short_name(provider: &str) -> String {
@@ -245,6 +255,9 @@ pub fn short_name(provider: &str) -> String {
         .find(|tile| tile.provider() == Some(provider))
         .map_or_else(|| provider.to_string(), Tile::title)
 }
+
+/// Where Apple makes app passwords: the Apple Account page.
+const APPLE_ACCOUNT: &str = "https://account.apple.com";
 
 /// What kind of advice the list has for an address.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -334,20 +347,38 @@ fn password_advice(info: &ProviderInfo) -> Option<Advice> {
         }
         PasswordKind::AccountPassword => return None,
     };
+    // Apple makes app passwords on the Apple Account page, and a person
+    // knows the password it stands in for as their Apple password.
+    let (body, link) = if info.name == "iCloud Mail" {
+        (
+            gettext(
+                "On the next page, paste an app-specific password from your Apple Account page, not your Apple password.",
+            ),
+            Some(Link {
+                label: gettext("Open Apple Account Page"),
+                url: APPLE_ACCOUNT.to_string(),
+            }),
+        )
+    } else {
+        (
+            fill(
+                &gettext(
+                    "On the next page, paste an app password from {provider}'s settings, not your {provider} password.",
+                ),
+                &named,
+            ),
+            info.app_password_url.clone().map(|url| Link {
+                label: fill(&gettext("Open {provider}'s Settings"), &named),
+                url,
+            }),
+        )
+    };
     Some(Advice {
         kind: AdviceKind::AppPassword,
         stamp: stamp_for(&info.name),
         title: fill(&title, &named),
-        body: fill(
-            &gettext(
-                "On the next page, paste an app password from {provider}'s settings, not your {provider} password.",
-            ),
-            &named,
-        ),
-        link: info.app_password_url.clone().map(|url| Link {
-            label: fill(&gettext("Open {provider}'s Settings"), &named),
-            url,
-        }),
+        body,
+        link,
         provider,
     })
 }
@@ -494,13 +525,41 @@ mod tests {
         assert_eq!(said.title, "iCloud needs an app password");
         assert_eq!(
             said.body,
-            "On the next page, paste an app password from iCloud's settings, not your iCloud password."
+            "On the next page, paste an app-specific password from your Apple Account page, not your Apple password."
         );
         assert_eq!(said.stamp.letter, 'i');
         assert_eq!(
-            said.link.map(|link| link.label),
-            Some("Open iCloud's Settings".to_string())
+            said.link,
+            Some(Link {
+                label: "Open Apple Account Page".to_string(),
+                url: "https://account.apple.com".to_string(),
+            })
         );
+    }
+
+    #[test]
+    fn fastmail_advice_keeps_the_general_words() {
+        let said = advice("fastmail.com").expect("the list knows Fastmail");
+        assert_eq!(
+            said.link.map(|link| link.label),
+            Some("Open Fastmail's Settings".to_string())
+        );
+    }
+
+    #[test]
+    fn five_tiles_sit_three_over_two() {
+        assert_eq!(tile_rows(5), [3, 2]);
+    }
+
+    #[test]
+    fn six_tiles_sit_three_over_three() {
+        assert_eq!(tile_rows(6), [3, 3]);
+    }
+
+    #[test]
+    fn a_short_list_fills_one_row() {
+        assert_eq!(tile_rows(2), [2]);
+        assert_eq!(tile_rows(0), Vec::<usize>::new());
     }
 
     #[test]

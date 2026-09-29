@@ -1215,7 +1215,6 @@ toolbarview.post-opaque { background-color: var(--dialog-bg-color); }
 .tint-9d0006 { background-color: #9d0006; }
 
 .post-tiles { margin-top: 21px; }
-.post-tiles > flowboxchild { padding: 0; }
 button.post-tile {
   padding: 14px 14px 8px; border-radius: 14px; min-height: 0;
   background-color: var(--card-bg-color);
@@ -1351,3 +1350,5 @@ list.post-field.post-wrong > row:focus-within label.subtitle { color: var(--post
 .post-links buttoncontent image { -gtk-icon-size: 13px; }
 .post-card.with-source .post-card-source { line-height: 1.13; }
 .post-card.with-source .post-links { margin-top: 18px; margin-bottom: 4px; }
+.post-card.trouble .post-links { margin-bottom: 4px; }
+.post-fields > list.post-list.post-after-refusal { margin-top: 37px; }
