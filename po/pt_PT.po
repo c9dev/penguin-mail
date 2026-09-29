@@ -4885,112 +4885,112 @@ msgstr "Adicionar os feriados de {region}"
 msgid "Could not add the holidays: {reason}"
 msgstr "Não foi possível adicionar os feriados: {reason}"
 
-#: app/src/ui/calendar/mod.rs:372
+#: app/src/ui/calendar/mod.rs:373
 msgid "View"
 msgstr "Vista"
 
-#: app/src/ui/calendar/mod.rs:380 app/src/ui/calendar/mod.rs:2609
+#: app/src/ui/calendar/mod.rs:381 app/src/ui/calendar/mod.rs:2614
 msgid "New Event (N)"
 msgstr "Novo evento (N)"
 
-#: app/src/ui/calendar/mod.rs:383 app/src/ui/calendar/mod.rs:385
+#: app/src/ui/calendar/mod.rs:384 app/src/ui/calendar/mod.rs:386
 msgid "Search the Calendar (Ctrl+F)"
 msgstr "Pesquisar no calendário (Ctrl+F)"
 
-#: app/src/ui/calendar/mod.rs:388 app/src/ui/calendar/mod.rs:391
+#: app/src/ui/calendar/mod.rs:389 app/src/ui/calendar/mod.rs:392
 msgid "Show Calendars"
 msgstr "Mostrar os calendários"
 
-#: app/src/ui/calendar/mod.rs:397 app/src/ui/calendar/mod.rs:401
+#: app/src/ui/calendar/mod.rs:398 app/src/ui/calendar/mod.rs:402
 #: app/src/ui/conversation.rs:500 app/src/ui/conversation.rs:504
 msgid "Assistant (Ctrl+J)"
 msgstr "Assistente (Ctrl+J)"
 
-#: app/src/ui/calendar/mod.rs:430 app/src/ui/calendar/mod.rs:432
+#: app/src/ui/calendar/mod.rs:431 app/src/ui/calendar/mod.rs:433
 msgid "Search the Calendar"
 msgstr "Pesquisar no calendário"
 
-#: app/src/ui/calendar/mod.rs:496 app/src/ui/calendar/mod.rs:926
+#: app/src/ui/calendar/mod.rs:497 app/src/ui/calendar/mod.rs:927
 msgid "Loading older events"
 msgstr "A carregar eventos mais antigos"
 
-#: app/src/ui/calendar/mod.rs:925
+#: app/src/ui/calendar/mod.rs:926
 msgid "Older events can't load while offline"
 msgstr "Os eventos mais antigos não carregam sem ligação"
 
-#: app/src/ui/calendar/mod.rs:959 app/src/ui/window/shortcuts.rs:567
+#: app/src/ui/calendar/mod.rs:960 app/src/ui/window/shortcuts.rs:567
 msgid "Go to date"
 msgstr "Ir para uma data"
 
-#: app/src/ui/calendar/mod.rs:1157
+#: app/src/ui/calendar/mod.rs:1158
 msgid "List"
 msgstr "Lista"
 
-#: app/src/ui/calendar/mod.rs:1158
+#: app/src/ui/calendar/mod.rs:1159
 msgid "Day"
 msgstr "Dia"
 
-#: app/src/ui/calendar/mod.rs:1159
+#: app/src/ui/calendar/mod.rs:1160
 msgid "Week"
 msgstr "Semana"
 
-#: app/src/ui/calendar/mod.rs:1160
+#: app/src/ui/calendar/mod.rs:1161
 msgid "Agenda"
 msgstr "Agenda"
 
-#: app/src/ui/calendar/mod.rs:1161
+#: app/src/ui/calendar/mod.rs:1162
 msgid "Month"
 msgstr "Mês"
 
-#: app/src/ui/calendar/mod.rs:1379
+#: app/src/ui/calendar/mod.rs:1384
 msgid "Moved “{title}”"
 msgstr "“{title}” movido"
 
-#: app/src/ui/calendar/mod.rs:1388
+#: app/src/ui/calendar/mod.rs:1393
 msgid "Could not move the event: {reason}"
 msgstr "Não foi possível mover o evento: {reason}"
 
-#: app/src/ui/calendar/mod.rs:1498
+#: app/src/ui/calendar/mod.rs:1503
 msgid "All-day events"
 msgstr "Eventos de dia inteiro"
 
-#: app/src/ui/calendar/mod.rs:1500
+#: app/src/ui/calendar/mod.rs:1505
 msgid "All-day"
 msgstr "Dia inteiro"
 
-#: app/src/ui/calendar/mod.rs:1884 app/src/ui/calendar/mod.rs:3162
+#: app/src/ui/calendar/mod.rs:1889 app/src/ui/calendar/mod.rs:3167
 #: app/src/ui/calendar/sidebar.rs:297 app/src/ui/calendar/words.rs:320
 #: app/src/ui/preferences.rs:864 app/src/ui/preferences.rs:976
 msgid "%a"
 msgstr "%a"
 
-#: app/src/ui/calendar/mod.rs:2365
+#: app/src/ui/calendar/mod.rs:2370
 msgid "Removed “{title}” from your calendar"
 msgstr "“{title}” removido do seu calendário"
 
-#: app/src/ui/calendar/mod.rs:2366
+#: app/src/ui/calendar/mod.rs:2371
 msgid "Deleted “{title}”"
 msgstr "“{title}” eliminado"
 
-#: app/src/ui/calendar/mod.rs:2371
+#: app/src/ui/calendar/mod.rs:2376
 msgid "Could not delete the event: {reason}"
 msgstr "Não foi possível eliminar o evento: {reason}"
 
-#: app/src/ui/calendar/mod.rs:2415 app/src/ui/composer/mod.rs:1096
+#: app/src/ui/calendar/mod.rs:2420 app/src/ui/composer/mod.rs:1096
 #: app/src/ui/window.rs:2007 app/src/ui/window/scheduled.rs:98
 #: app/src/ui/window/shortcuts.rs:454
 msgid "Undo"
 msgstr "Anular"
 
-#: app/src/ui/calendar/mod.rs:2557
+#: app/src/ui/calendar/mod.rs:2562
 msgid "Could not send your answer: {reason}"
 msgstr "Não foi possível enviar a sua resposta: {reason}"
 
-#: app/src/ui/calendar/mod.rs:2611
+#: app/src/ui/calendar/mod.rs:2616
 msgid "None of your calendars take new events"
 msgstr "Nenhum dos seus calendários aceita eventos novos"
 
-#: app/src/ui/calendar/mod.rs:2897
+#: app/src/ui/calendar/mod.rs:2902
 msgid "Could not save the event: {reason}"
 msgstr "Não foi possível guardar o evento: {reason}"
 
