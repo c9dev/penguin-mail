@@ -79,28 +79,28 @@
 
   <screenshots>
     <screenshot type="default">
-      <caption>The inbox, with a conversation open</caption>
+      <caption>All your accounts in one inbox, with a reply open</caption>
       <image>https://raw.githubusercontent.com/c9dev/penguin-mail/main/docs/screenshots/inbox.png</image>
     </screenshot>
     <screenshot>
-      <caption>An HTML message in dark mode</caption>
+      <caption>The same inbox in dark mode</caption>
       <image>https://raw.githubusercontent.com/c9dev/penguin-mail/main/docs/screenshots/dark.png</image>
     </screenshot>
     <screenshot>
-      <caption>Replying in the composer</caption>
+      <caption>The calendar's week, with working hours and where you work</caption>
+      <image>https://raw.githubusercontent.com/c9dev/penguin-mail/main/docs/screenshots/calendar-week.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>An invitation in a message, with the hours around the meeting</caption>
+      <image>https://raw.githubusercontent.com/c9dev/penguin-mail/main/docs/screenshots/invitation.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Replying, with the quoted history folded away</caption>
       <image>https://raw.githubusercontent.com/c9dev/penguin-mail/main/docs/screenshots/composer.png</image>
     </screenshot>
     <screenshot>
-      <caption>Three conversations selected, with the actions for all of them</caption>
-      <image>https://raw.githubusercontent.com/c9dev/penguin-mail/main/docs/screenshots/selection.png</image>
-    </screenshot>
-    <screenshot>
-      <caption>The assistant listing mail that waits on a reply</caption>
+      <caption>The assistant beside your mail</caption>
       <image>https://raw.githubusercontent.com/c9dev/penguin-mail/main/docs/screenshots/assistant.png</image>
-    </screenshot>
-    <screenshot>
-      <caption>The layout on a narrow screen</caption>
-      <image>https://raw.githubusercontent.com/c9dev/penguin-mail/main/docs/screenshots/phone.png</image>
     </screenshot>
   </screenshots>
 

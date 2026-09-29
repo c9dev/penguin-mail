@@ -114,28 +114,28 @@ msgid "inbox"
 msgstr "caixa de entrada"
 
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:82
-msgid "The inbox, with a conversation open"
-msgstr "A caixa de entrada, com uma conversa aberta"
+msgid "All your accounts in one inbox, with a reply open"
+msgstr "Todas as contas numa caixa de entrada, com uma resposta aberta"
 
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:86
-msgid "An HTML message in dark mode"
-msgstr "Uma mensagem HTML no modo escuro"
+msgid "The same inbox in dark mode"
+msgstr "A mesma caixa de entrada no modo escuro"
 
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:90
-msgid "Replying in the composer"
-msgstr "A responder na janela de escrita"
+msgid "The calendar's week, with working hours and where you work"
+msgstr "A semana do calendário, com o horário de trabalho e o local onde trabalha"
 
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:94
-msgid "Three conversations selected, with the actions for all of them"
-msgstr "Três conversas selecionadas, com as ações para todas"
+msgid "An invitation in a message, with the hours around the meeting"
+msgstr "Um convite numa mensagem, com as horas em redor da reunião"
 
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:98
-msgid "The assistant listing mail that waits on a reply"
-msgstr "O assistente a listar o correio que aguarda resposta"
+msgid "Replying, with the quoted history folded away"
+msgstr "A responder, com o texto citado recolhido"
 
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:102
-msgid "The layout on a narrow screen"
-msgstr "A disposição num ecrã estreito"
+msgid "The assistant beside your mail"
+msgstr "O assistente ao lado do correio"
 
 #: app/src/add_account.rs:34
 msgid "Another Provider"
@@ -8747,6 +8747,21 @@ msgstr "Marcar como não sendo spam"
 #: sync/src/triage.rs:70
 msgid "Move to {folder}"
 msgstr "Mover para {folder}"
+
+#~ msgid "The inbox, with a conversation open"
+#~ msgstr "A caixa de entrada, com uma conversa aberta"
+
+#~ msgid "Replying in the composer"
+#~ msgstr "A responder na janela de escrita"
+
+#~ msgid "Three conversations selected, with the actions for all of them"
+#~ msgstr "Três conversas selecionadas, com as ações para todas"
+
+#~ msgid "The assistant listing mail that waits on a reply"
+#~ msgstr "O assistente a listar o correio que aguarda resposta"
+
+#~ msgid "The layout on a narrow screen"
+#~ msgstr "A disposição num ecrã estreito"
 
 #~ msgid "mail;email;gmail;inbox;"
 #~ msgstr "correio;email;e-mail;gmail;caixa de entrada;"

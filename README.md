@@ -173,11 +173,19 @@ uses a tool from outside the app, and it is off until you pick a model.
 
 ## Screenshots
 
-![The inbox, with a conversation open](docs/screenshots/inbox.png)
+![All accounts in one inbox, with a reply open and its quoted history folded](docs/screenshots/inbox.png)
+
+| Week | Month | Agenda |
+|---|---|---|
+| ![The calendar's week, with working hours shaded and each day's location](docs/screenshots/calendar-week.png) | ![The calendar's month, with a bar across the days of a trip](docs/screenshots/calendar-month.png) | ![The calendar's agenda, one line per event](docs/screenshots/calendar-agenda.png) |
+
+| Invitation | Event |
+|---|---|
+| ![An invitation in a message, with the hours around the meeting](docs/screenshots/invitation.png) | ![An event's details, guests and answers](docs/screenshots/event-popover.png) |
 
 | Dark | Writing | Narrow |
 |---|---|---|
-| ![Dark mode with an HTML email](docs/screenshots/dark.png) | ![Replying in the composer](docs/screenshots/composer.png) | ![The phone-width layout](docs/screenshots/phone.png) |
+| ![The inbox in dark mode](docs/screenshots/dark.png) | ![Replying in the composer](docs/screenshots/composer.png) | ![The phone-width layout](docs/screenshots/phone.png) |
 
 | Several selected | Automatic reply |
 |---|---|
@@ -197,7 +205,7 @@ uses a tool from outside the app, and it is off until you pick a model.
 
 | Hide My Email | Preferences |
 |---|---|
-| ![Hide My Email, with one address and its switch](docs/screenshots/hide-my-email.png) | ![Preferences](docs/screenshots/preferences.png) |
+| ![Hide My Email, with one address and its switch](docs/screenshots/hide-my-email.png) | ![Preferences, with the calendar settings](docs/screenshots/preferences.png) |
 
 ## Install
 

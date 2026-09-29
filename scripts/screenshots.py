@@ -478,8 +478,9 @@ def flags():
 def vips():
     run = launch(env={"MAILRS_DEMO_OPEN": "t-hike", "MAILRS_DEMO_ACTION": "toggle-vip"})
     window = main_window()
-    find("label", contains="to VIPs")
-    settle(1)
+    find("label", name="VIPs")
+    # The toast that confirms the change stays a few seconds.
+    settle(10)
     capture(window, "vips")
     return run
 
@@ -647,16 +648,7 @@ def event_popover():
     return run
 
 
-def explore():
-    run = launch(env={"MAILRS_DEMO_OPEN": "t-roadmap"})
-    window = main_window()
-    settle(4)
-    capture(window, "explore-mail")
-    return run
-
-
 SHOTS = {
-    "explore": explore,
     "invitation": invitation,
     "calendar-week": calendar_week,
     "calendar-month": calendar_month,

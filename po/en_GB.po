@@ -84,28 +84,28 @@ msgid "inbox"
 msgstr "inbox"
 
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:82
-msgid "The inbox, with a conversation open"
-msgstr "The inbox, with a conversation open"
+msgid "All your accounts in one inbox, with a reply open"
+msgstr "All your accounts in one inbox, with a reply open"
 
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:86
-msgid "An HTML message in dark mode"
-msgstr "An HTML message in dark mode"
+msgid "The same inbox in dark mode"
+msgstr "The same inbox in dark mode"
 
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:90
-msgid "Replying in the composer"
-msgstr "Replying in the composer"
+msgid "The calendar's week, with working hours and where you work"
+msgstr "The calendar's week, with working hours and where you work"
 
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:94
-msgid "Three conversations selected, with the actions for all of them"
-msgstr "Three conversations selected, with the actions for all of them"
+msgid "An invitation in a message, with the hours around the meeting"
+msgstr "An invitation in a message, with the hours around the meeting"
 
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:98
-msgid "The assistant listing mail that waits on a reply"
-msgstr "The assistant listing mail that waits on a reply"
+msgid "Replying, with the quoted history folded away"
+msgstr "Replying, with the quoted history folded away"
 
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:102
-msgid "The layout on a narrow screen"
-msgstr "The layout on a narrow screen"
+msgid "The assistant beside your mail"
+msgstr "The assistant beside your mail"
 
 #: app/src/add_account.rs:34
 msgid "Another Provider"
