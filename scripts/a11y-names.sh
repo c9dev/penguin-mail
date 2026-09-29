@@ -611,24 +611,53 @@ def walk_calendar(keys):
             # An invitation on the range on screen: its popover holds the
             # answer buttons. The ranges either side are hidden from the
             # bus, so the first match is one a person can see.
-            def shown_invitation():
-                found = find_first(
-                    lambda role, name: role in ("button", "push button")
-                    and name.startswith("Quarterly review,")
-                )
-                return found if found is not None and in_this_range(found) else None
+            def invitations():
+                found = []
+                for app in penguins()[0]:
+                    for n in nodes(app):
+                        try:
+                            if n.get_role_name() in ("button", "push button") and (
+                                n.get_name() or ""
+                            ).strip().startswith("Quarterly review,"):
+                                found.append(n)
+                        except Exception:
+                            continue
+                return found
 
-            # The week opens at the current hour, so in the evening the
-            # 15:00 block sits above the view: it is VISIBLE (in this week)
-            # but not SHOWING. The weeks either side are not visible at
-            # all, so VISIBLE is the test, and the block is pressed through
-            # its action, which needs no position on screen. A busy machine
-            # can still be laying the week out, so the walk waits for it.
+            def shown_invitation():
+                # The carousel keeps the weeks either side, and may hold a
+                # copy of this one while it recycles a page, so the first
+                # match is not always the one a person sees. Prefer a block
+                # showing on screen; in the evening the week opens scrolled
+                # past 15:00, so take one visible in this week after that.
+                found = invitations()
+                for test in (on_screen, in_this_range):
+                    for n in found:
+                        if test(n):
+                            return n
+                return None
+
             invitation = None
             if wait_until(lambda: shown_invitation() is not None, 5.0):
                 invitation = shown_invitation()
             if invitation is None:
                 print("No invitation on the week on screen to open.", file=sys.stderr)
+                seen = []
+                for app in penguins()[0]:
+                    for n in nodes(app):
+                        try:
+                            name = (n.get_name() or "").strip()
+                            if n.get_role_name() in ("button", "push button") and ", " in name and ":" in name:
+                                seen.append(name[:50])
+                        except Exception:
+                            continue
+                print("  event blocks seen: %d, e.g. %s" % (len(seen), seen[:12]), file=sys.stderr)
+                for n in invitations():
+                    print(
+                        "  found %r showing=%s visible=%s"
+                        % ((n.get_name() or "")[:60], on_screen(n), in_this_range(n)),
+                        file=sys.stderr,
+                    )
                 sys.exit(2)
             activate(invitation)
             if not wait_until(lambda: button_named(r"^Maybe$") is not None, 5.0):
