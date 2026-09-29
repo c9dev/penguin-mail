@@ -5800,6 +5800,19 @@
     {
         "type": "archive",
         "archive-type": "tar-gzip",
+        "url": "https://static.crates.io/crates/wasm-streams/wasm-streams-0.5.0.crate",
+        "sha256": "9d1ec4f6517c9e11ae630e200b2b65d193279042e28edd4a2cda233e46670bbb",
+        "dest": "cargo/vendor/wasm-streams-0.5.0"
+    },
+    {
+        "type": "inline",
+        "contents": "{\"package\": \"9d1ec4f6517c9e11ae630e200b2b65d193279042e28edd4a2cda233e46670bbb\", \"files\": {}}",
+        "dest": "cargo/vendor/wasm-streams-0.5.0",
+        "dest-filename": ".cargo-checksum.json"
+    },
+    {
+        "type": "archive",
+        "archive-type": "tar-gzip",
         "url": "https://static.crates.io/crates/web-sys/web-sys-0.3.105.crate",
         "sha256": "9fbddc4a036f00ec4f18c83445bd3115cb306a91da554919a099d9222fe4a7f8",
         "dest": "cargo/vendor/web-sys-0.3.105"
