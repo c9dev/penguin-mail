@@ -1293,6 +1293,16 @@ impl MainWindow {
         self.screen.borrow().mailbox().clone()
     }
 
+    /// Puts one account's inbox on screen and selects its sidebar row.
+    pub fn show_inbox_of(self: &Rc<Self>, account_id: AccountId) {
+        let inbox = Mailbox::Standard {
+            account_id,
+            which: crate::ui::Standard::Inbox,
+        };
+        self.sidebar.select(&inbox);
+        self.show_mailbox(inbox);
+    }
+
     /// Puts `mailbox` on screen.
     fn show_mailbox(self: &Rc<Self>, mailbox: Mailbox) {
         let search_open = self.list.search_open();

@@ -130,6 +130,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Improved
 
+- The tray menu lists only the accounts with unread mail, and choosing one
+  opens its inbox. With nothing unread it says "No unread mail" instead of
+  listing every address.
 - Add Account and the first window have a new look: pick your provider from
   a tile, see what it needs before you continue, and follow Google's
   sign-in, the server lookup and the first download on their own pages,
