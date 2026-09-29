@@ -21,7 +21,7 @@ use crate::core::Core;
 use crate::notify;
 use crate::permission::{Occasion, Permission};
 use crate::settings::{Change, ColorScheme, Effect, Effects, Settings};
-use crate::tray::{MailTray, TrayCommand};
+use crate::tray::{AccountUnread, MailTray, TrayCommand};
 use crate::ui::autocomplete::Contacts;
 use crate::ui::composer::spell;
 use crate::ui::window::{MainWindow, Notice, Reveal};
@@ -319,6 +319,16 @@ impl App {
             ColorScheme::Light => adw::ColorScheme::ForceLight,
             ColorScheme::Dark => adw::ColorScheme::ForceDark,
         });
+    }
+
+    /// Shows the window on `account_id`'s inbox, as the sidebar's Inbox row
+    /// under that account does. A tray line can outlive its account, and
+    /// then the window opens as it is.
+    pub fn show_inbox_of(self: &Rc<Self>, account_id: AccountId) {
+        let window = self.show_window();
+        if self.accounts.borrow().iter().any(|a| a.id == account_id) {
+            window.show_inbox_of(account_id);
+        }
     }
 
     pub fn show_window(self: &Rc<Self>) -> Rc<MainWindow> {
@@ -1311,6 +1321,7 @@ impl App {
                     TrayCommand::Open => {
                         this.show_window();
                     }
+                    TrayCommand::OpenInbox(id) => this.show_inbox_of(id),
                     TrayCommand::Compose => this.compose_to(""),
                     TrayCommand::Check => this.core.poke_all(),
                     TrayCommand::CheckForUpdates => this.check_for_updates(true),
@@ -1352,7 +1363,11 @@ impl App {
                             c,
                             &threads::ThreadFilter::account(account.id, MailSet::Role(Role::Inbox)),
                         )?;
-                        counts.push((account.email, unread));
+                        counts.push(AccountUnread {
+                            id: account.id,
+                            email: account.email,
+                            unread,
+                        });
                     }
                     Ok(counts)
                 })
@@ -1361,7 +1376,7 @@ impl App {
             this.core.spawn(async move {
                 handle
                     .update(move |tray: &mut MailTray| {
-                        tray.unread = counts.iter().map(|(_, n)| n).sum();
+                        tray.unread = counts.iter().map(|a| a.unread).sum();
                         tray.accounts = counts;
                     })
                     .await;

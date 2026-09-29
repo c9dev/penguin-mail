@@ -1,6 +1,7 @@
 //! The StatusNotifierItem shown by Ubuntu's AppIndicator extension.
 
 use crate::APP_ID;
+use mailrs_domain::AccountId;
 use mailrs_domain::translate::{fill, fill_plural, gettext};
 
 /// How long the tray waits after a change before it counts again. Sync
@@ -29,6 +30,8 @@ impl Burst {
 pub enum TrayCommand {
     Toggle,
     Open,
+    /// Show the window on this account's inbox.
+    OpenInbox(AccountId),
     Compose,
     Check,
     CheckForUpdates,
@@ -65,10 +68,49 @@ fn account_line(email: &str, unread: i64) -> String {
     }
 }
 
+/// One account's unread INBOX count, with what the tray needs to name it
+/// and to open it.
+#[derive(Clone, Debug, PartialEq)]
+pub struct AccountUnread {
+    pub id: AccountId,
+    pub email: String,
+    pub unread: i64,
+}
+
+/// A line above the menu's separator.
+#[derive(Debug, PartialEq)]
+enum AccountLine {
+    /// An account with unread mail; choosing it opens that inbox.
+    Unread { id: AccountId, label: String },
+    /// Nothing is unread anywhere.
+    NoUnread(String),
+}
+
+/// The lines above the separator: the accounts with unread mail in the
+/// order given, or one line saying there is none. No accounts, no lines.
+fn account_lines(accounts: &[AccountUnread]) -> Vec<AccountLine> {
+    if accounts.is_empty() {
+        return Vec::new();
+    }
+    let lines: Vec<AccountLine> = accounts
+        .iter()
+        .filter(|a| a.unread > 0)
+        .map(|a| AccountLine::Unread {
+            id: a.id,
+            label: account_line(&a.email, a.unread),
+        })
+        .collect();
+    if lines.is_empty() {
+        vec![AccountLine::NoUnread(summary(0))]
+    } else {
+        lines
+    }
+}
+
 pub struct MailTray {
     pub unread: i64,
-    /// Each account's address and unread INBOX count.
-    pub accounts: Vec<(String, i64)>,
+    /// Each account's id, address and unread INBOX count.
+    pub accounts: Vec<AccountUnread>,
     pub commands: async_channel::Sender<TrayCommand>,
     /// This copy can update itself, so the menu offers a check.
     pub can_update: bool,
@@ -116,8 +158,8 @@ impl ksni::Tray for MailTray {
             description: self
                 .accounts
                 .iter()
-                .filter(|(_, n)| *n > 0)
-                .map(|(email, n)| format!("{email}: {n}"))
+                .filter(|a| a.unread > 0)
+                .map(|a| format!("{}: {}", a.email, a.unread))
                 .collect::<Vec<_>>()
                 .join("\n"),
             icon_name: String::new(),
@@ -131,16 +173,23 @@ impl ksni::Tray for MailTray {
 
     fn menu(&self) -> Vec<ksni::MenuItem<Self>> {
         use ksni::menu::{MenuItem, StandardItem};
-        let mut items: Vec<MenuItem<Self>> = self
-            .accounts
-            .iter()
-            .map(|(email, n)| {
-                StandardItem {
-                    label: account_line(email, *n),
+        let mut items: Vec<MenuItem<Self>> = account_lines(&self.accounts)
+            .into_iter()
+            .map(|line| match line {
+                AccountLine::Unread { id, label } => StandardItem {
+                    label,
+                    activate: Box::new(move |tray: &mut Self| {
+                        tray.send(TrayCommand::OpenInbox(id));
+                    }),
+                    ..Default::default()
+                }
+                .into(),
+                AccountLine::NoUnread(label) => StandardItem {
+                    label,
                     enabled: false,
                     ..Default::default()
                 }
-                .into()
+                .into(),
             })
             .collect();
         if !items.is_empty() {
@@ -179,7 +228,7 @@ impl ksni::Tray for MailTray {
 
 #[cfg(test)]
 mod tests {
-    use super::{Burst, account_line, summary};
+    use super::{AccountId, AccountLine, AccountUnread, Burst, account_line, account_lines, summary};
 
     #[test]
     fn a_burst_of_changes_counts_once() {
@@ -211,5 +260,72 @@ mod tests {
             account_line("ann@example.com", 3),
             "ann@example.com, 3 unread messages"
         );
+    }
+
+    fn unread(id: AccountId, email: &str, unread: i64) -> AccountUnread {
+        AccountUnread {
+            id,
+            email: email.into(),
+            unread,
+        }
+    }
+
+    #[test]
+    fn the_menu_lists_only_accounts_with_unread_mail_in_their_order() {
+        let lines = account_lines(&[
+            unread(1, "a@example.com", 0),
+            unread(2, "b@example.com", 4),
+            unread(3, "c@example.com", 0),
+            unread(4, "d@example.com", 1),
+        ]);
+        assert_eq!(
+            lines,
+            [
+                AccountLine::Unread {
+                    id: 2,
+                    label: "b@example.com, 4 unread messages".into()
+                },
+                AccountLine::Unread {
+                    id: 4,
+                    label: "d@example.com, 1 unread message".into()
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn the_menu_says_so_when_nothing_is_unread() {
+        let lines = account_lines(&[unread(1, "a@example.com", 0), unread(2, "b@example.com", 0)]);
+        assert_eq!(lines, [AccountLine::NoUnread("No unread mail".into())]);
+    }
+
+    #[test]
+    fn the_menu_lists_nothing_without_accounts() {
+        assert_eq!(account_lines(&[]), []);
+    }
+
+    #[test]
+    fn choosing_an_account_line_asks_to_open_that_inbox() {
+        use ksni::Tray;
+        use ksni::menu::MenuItem;
+        let (commands, received) = async_channel::unbounded();
+        let mut tray = super::MailTray {
+            unread: 4,
+            accounts: vec![unread(1, "a@example.com", 0), unread(2, "b@example.com", 4)],
+            commands,
+            can_update: false,
+            update: None,
+        };
+        let menu = tray.menu();
+        let MenuItem::Standard(line) = &menu[0] else {
+            panic!("the first item is an account line");
+        };
+        assert_eq!(line.label, "b@example.com, 4 unread messages");
+        (line.activate)(&mut tray);
+        assert!(matches!(
+            received.try_recv(),
+            Ok(super::TrayCommand::OpenInbox(2))
+        ));
+        assert!(matches!(menu[1], MenuItem::Separator));
     }
 }
