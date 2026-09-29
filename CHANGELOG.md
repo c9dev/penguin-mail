@@ -129,6 +129,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   Ctrl+R.
 
 ### Improved
+- The Google tile shows Google's logo and the iCloud tile a cloud, in place of a colored letter.
 
 - The tray menu lists only the accounts with unread mail, and choosing one
   opens its inbox. With nothing unread it says "No unread mail" instead of

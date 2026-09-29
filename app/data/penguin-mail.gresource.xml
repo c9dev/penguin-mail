@@ -21,6 +21,9 @@
     <file>icons/scalable/apps/io.github.c9dev.PenguinMail-symbolic.svg</file>
     <file>icons/16x16/apps/io.github.c9dev.PenguinMail.svg</file>
     <file>style.css</file>
+    <file>logos/google.png</file>
+    <file>logos/microsoft.svg</file>
+    <file>logos/icloud.svg</file>
     <file>band/idle.svg</file>
     <file>band/stamped.svg</file>
     <file>band/browser.svg</file>
