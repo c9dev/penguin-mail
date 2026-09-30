@@ -754,7 +754,8 @@ impl Sidebar {
             // names reach the store with slashes too: "Work/Clients" sits
             // under "Work".
             let order = extras.label_order.get(&account.id).cloned().unwrap_or_default();
-            for entry in label_rows(labels, &order) {
+            let rows = label_rows(labels, &order);
+            for entry in &rows {
                 let label = entry.label;
                 let mailbox = Mailbox::Label {
                     account_id: account.id,
@@ -775,7 +776,8 @@ impl Sidebar {
                     label_rules.push_str(&format!(".{class} {{ color: #{color}; }}\n"));
                     icon.add_css_class(&class);
                 }
-                label_menu(&row, account.id, label, Filing::of([account_offers]));
+                let moves = tree::moves(&rows, &label.id);
+                label_menu(&row, account.id, label, Filing::of([account_offers]), moves);
                 self.label_drag(&row, account.id, &label.id, entry.opens.then_some(dest));
             }
         }
@@ -1335,7 +1337,7 @@ fn takes_mail(mailbox: &Mailbox) -> bool {
 /// A label row's menu, on a right click or long press and on the button
 /// at the row's end, which shows while the pointer or the keyboard is on
 /// the row.
-fn label_menu(row: &gtk::ListBoxRow, account_id: AccountId, label: &Label, filing: Filing) {
+fn label_menu(row: &gtk::ListBoxRow, account_id: AccountId, label: &Label, filing: Filing, moves: tree::Moves) {
     let menu = gio::Menu::new();
     let target = (account_id, label.id.clone()).to_variant();
     let item = |text: &str, action: &str| {
@@ -1357,10 +1359,18 @@ fn label_menu(row: &gtk::ListBoxRow, account_id: AccountId, label: &Label, filin
     }
     edit.append_submenu(Some(&gettext("Color")), &colors);
     menu.append_section(None, &edit);
+    // Move Up and Move Down show only where they would move the label:
+    // not up for the first among its siblings, not down for the last.
     let order = gio::Menu::new();
-    order.append_item(&item(&gettext("Move Up"), "win.label-up"));
-    order.append_item(&item(&gettext("Move Down"), "win.label-down"));
-    menu.append_section(None, &order);
+    if moves.up {
+        order.append_item(&item(&gettext("Move Up"), "win.label-up"));
+    }
+    if moves.down {
+        order.append_item(&item(&gettext("Move Down"), "win.label-down"));
+    }
+    if order.n_items() > 0 {
+        menu.append_section(None, &order);
+    }
     let danger = gio::Menu::new();
     danger.append_item(&item(&gettext("Delete…"), "win.label-delete"));
     menu.append_section(None, &danger);
