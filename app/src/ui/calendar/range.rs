@@ -200,12 +200,13 @@ fn week_start_of(day: NaiveDate) -> NaiveDate {
     mailrs_domain::calendar::week::week_start_on_or_before(day, crate::locale_time::week_start_weekday())
 }
 
-/// The ISO week tag a range's title carries, such as "W39".
+/// The week tag a range's title carries, such as "W39": the number of
+/// the week holding `date` under the week start in use
+/// ([`mailrs_domain::calendar::week::week_number`]), so the Week view and
+/// the Day view of any day inside it agree.
 fn week_tag(date: NaiveDate) -> String {
-    fill(
-        &gettext("W{week}"),
-        &[("week", &date.iso_week().week().to_string())],
-    )
+    let week = mailrs_domain::calendar::week::week_number(date, crate::locale_time::week_start_weekday());
+    fill(&gettext("W{week}"), &[("week", &week.to_string())])
 }
 
 /// Local midnight at the start of `date`, or the first hour of it that
@@ -288,6 +289,15 @@ mod tests {
             (bold.as_str(), dim.as_str(), tag.as_str()),
             ("Wednesday 23", "September 2026", "W39")
         );
+    }
+
+    #[test]
+    fn week_and_day_give_a_day_the_same_week_number_when_weeks_start_on_sunday() {
+        crate::locale_time::set_first_weekday_for_test(chrono::Weekday::Sun);
+        let (_, _, week) = Range::around(ViewKind::Week, d(2026, 9, 30)).title();
+        let (_, _, day) = Range::around(ViewKind::Day, d(2026, 9, 30)).title();
+        let (_, _, sunday) = Range::around(ViewKind::Day, d(2026, 9, 27)).title();
+        assert_eq!((week.as_str(), day.as_str(), sunday.as_str()), ("W40", "W40", "W40"));
     }
 
     #[test]

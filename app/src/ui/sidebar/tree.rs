@@ -184,13 +184,29 @@ pub fn step(rows: &[LabelRow<'_>], id: &str, by: i32) -> Option<Placement> {
     })
 }
 
+/// Which of Move Up and Move Down a label's menu offers.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Moves {
+    pub up: bool,
+    pub down: bool,
+}
+
+/// The moves [`step`] can make for label `id`: none up for the first of
+/// its siblings, none down for the last, and neither for an only child.
+pub fn moves(rows: &[LabelRow<'_>], id: &str) -> Moves {
+    Moves {
+        up: step(rows, id, -1).is_some(),
+        down: step(rows, id, 1).is_some(),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
 
     use mailrs_domain::{Label, LabelKind};
 
-    use super::{Placement, Refusal, Zone, label_rows, place, step, zone};
+    use super::{Placement, Refusal, Zone, label_rows, moves, place, step, zone};
 
     fn label(name: &str, kind: LabelKind) -> Label {
         Label {
@@ -354,5 +370,20 @@ mod tests {
         );
         assert_eq!(step(&rows, "id:Personal/bills", -1), None);
         assert_eq!(step(&rows, "id:Work", 1), None);
+    }
+
+    #[test]
+    fn a_label_offers_only_the_moves_that_have_somewhere_to_go() {
+        let labels = owner_labels();
+        let rows = label_rows(&labels, &HashMap::new());
+        let offered = |id: &str| {
+            let moves = moves(&rows, id);
+            (moves.up, moves.down)
+        };
+        assert_eq!(offered("id:Personal"), (false, true));
+        assert_eq!(offered("id:Work"), (true, false));
+        assert_eq!(offered("id:Personal/Important"), (true, false));
+        // The only label inside Work has nowhere to move.
+        assert_eq!(offered("id:Work/bugs"), (false, false));
     }
 }

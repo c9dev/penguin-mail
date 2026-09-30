@@ -136,89 +136,52 @@ fn later_presets(now: DateTime<Local>) -> Vec<(String, EpochMillis)> {
     presets
 }
 
-/// When an event runs, in the reader's own time zone: "Tuesday, 9 June ·
-/// 15:00 to 16:00". A meeting in the next few days is named by its
-/// weekday, since that is how people talk about one.
+/// When an event runs, in the reader's own time zone, in the words the
+/// calendar's event popover uses ([`crate::ui::calendar::words::span_words`])
+/// so an invitation card and the event agree: "Tuesday 9 June ·
+/// 15:00–16:00", "Tuesday 14 July · All day", or "Tuesday 14 – Thursday
+/// 16 July". A timed event in another year than the reader's carries the
+/// year, which the calendar's own header gives there.
 pub fn event_when(when: &When, now: DateTime<Local>) -> String {
+    use crate::ui::calendar::words;
     match when {
         When::Days { first, last } if first == last => fill(
-            &gettext("{day} · All day"),
-            &[("day", &event_day(*first, now))],
+            &gettext("{date} · All day"),
+            &[("date", &words::full_date_words(*first))],
         ),
-        When::Days { first, last } => fill(
-            &gettext("{first} to {last} · All day"),
-            &[
-                ("first", &span_start(*first, *last)),
-                ("last", &span_end(*last, now)),
-            ],
-        ),
+        When::Days { first, last } => words::all_day_range_words(*first, *last),
         When::At { starts_at, ends_at } => {
             let Some(start) = local(*starts_at) else {
                 return String::new();
             };
-            let day = event_day(start.date_naive(), now);
+            let date = if start.year() == now.year() {
+                words::full_date_words(start.date_naive())
+            } else {
+                start
+                    .format_localized(&gettext("%A %-d %B %Y"), date_locale())
+                    .to_string()
+            };
             let from = crate::clock_format::time_text(start.time());
-            match ends_at.and_then(local) {
-                None => fill(
-                    &gettext("{day} · {start}"),
-                    &[("day", &day), ("start", &from)],
-                ),
-                // A meeting that runs past midnight names the day it ends on.
-                Some(end) if end.date_naive() != start.date_naive() => fill(
-                    &gettext("{day} · {start} to {end}"),
+            let Some(end) = ends_at.and_then(local) else {
+                return fill(&gettext("{date} · {start}"), &[("date", &date), ("start", &from)]);
+            };
+            // A meeting that runs past midnight names the day it ends on.
+            let until = if end.date_naive() == start.date_naive() {
+                crate::clock_format::time_text(end.time())
+            } else {
+                fill(
+                    &gettext("{date} {time}"),
                     &[
-                        ("day", &day),
-                        ("start", &from),
-                        (
-                            "end",
-                            &fill(
-                                &gettext("{date} {time}"),
-                                &[
-                                    (
-                                        "date",
-                                        &end.format_localized(&gettext("%-d %b"), date_locale())
-                                            .to_string(),
-                                    ),
-                                    ("time", &crate::clock_format::time_text(end.time())),
-                                ],
-                            ),
-                        ),
+                        ("date", &end.format_localized(&gettext("%-d %b"), date_locale()).to_string()),
+                        ("time", &crate::clock_format::time_text(end.time())),
                     ],
-                ),
-                Some(end) => fill(
-                    &gettext("{day} · {start} to {end}"),
-                    &[
-                        ("day", &day),
-                        ("start", &from),
-                        ("end", &crate::clock_format::time_text(end.time())),
-                    ],
-                ),
-            }
+                )
+            };
+            fill(
+                &gettext("{date} · {start}–{end}"),
+                &[("date", &date), ("start", &from), ("end", &until)],
+            )
         }
-    }
-}
-
-/// The start of a run of days, with the month left off while both ends
-/// share it: "14" in "14 to 16 July", "30 June" in "30 June to 2 July".
-fn span_start(first: NaiveDate, last: NaiveDate) -> String {
-    if first.month() == last.month() && first.year() == last.year() {
-        first.format("%-d").to_string()
-    } else {
-        first
-            .format_localized(&gettext("%-d %B"), date_locale())
-            .to_string()
-    }
-}
-
-/// The end of a run of days: "16 July", with the year when the reader is
-/// in another one.
-fn span_end(last: NaiveDate, now: DateTime<Local>) -> String {
-    if last.year() == now.year() {
-        last.format_localized(&gettext("%-d %B"), date_locale())
-            .to_string()
-    } else {
-        last.format_localized(&gettext("%-d %B %Y"), date_locale())
-            .to_string()
     }
 }
 
@@ -428,7 +391,7 @@ mod tests {
     }
 
     #[test]
-    fn an_event_reads_as_a_day_and_a_time() {
+    fn an_event_reads_as_the_event_popover_words_it() {
         let now = Local.with_ymd_and_hms(2026, 9, 19, 15, 0, 0).unwrap();
         let at = |start: EpochMillis, end: Option<EpochMillis>| {
             event_when(
@@ -444,32 +407,32 @@ mod tests {
                 at_local(2026, 9, 19, 16, 0),
                 Some(at_local(2026, 9, 19, 17, 0))
             ),
-            "Today · 16:00 to 17:00"
+            "Saturday 19 September · 16:00–17:00"
         );
         assert_eq!(
             at(
                 at_local(2026, 9, 20, 9, 30),
                 Some(at_local(2026, 9, 20, 10, 15))
             ),
-            "Tomorrow · 09:30 to 10:15"
+            "Sunday 20 September · 09:30–10:15"
         );
         assert_eq!(
             at(
                 at_local(2026, 9, 22, 14, 0),
                 Some(at_local(2026, 9, 22, 14, 45))
             ),
-            "Tuesday · 14:00 to 14:45"
+            "Tuesday 22 September · 14:00–14:45"
         );
         assert_eq!(
             at(at_local(2026, 11, 3, 14, 0), None),
-            "Tuesday, 3 November · 14:00"
+            "Tuesday 3 November · 14:00"
         );
         assert_eq!(
             at(
                 at_local(2027, 1, 4, 9, 0),
                 Some(at_local(2027, 1, 4, 10, 0))
             ),
-            "Monday, 4 January 2027 · 09:00 to 10:00"
+            "Monday 4 January 2027 · 09:00–10:00"
         );
         // A meeting that runs past midnight names the day it ends on.
         assert_eq!(
@@ -477,7 +440,7 @@ mod tests {
                 at_local(2026, 11, 3, 23, 0),
                 Some(at_local(2026, 11, 4, 1, 0))
             ),
-            "Tuesday, 3 November · 23:00 to 4 Nov 01:00"
+            "Tuesday 3 November · 23:00–4 Nov 01:00"
         );
     }
 
@@ -493,7 +456,7 @@ mod tests {
                 },
                 now
             ),
-            "Tuesday, 14 July · All day"
+            "Tuesday 14 July · All day"
         );
         assert_eq!(
             event_when(
@@ -503,7 +466,7 @@ mod tests {
                 },
                 now
             ),
-            "14 to 16 July · All day"
+            "Tuesday 14 – Thursday 16 July"
         );
         assert_eq!(
             event_when(
@@ -513,7 +476,7 @@ mod tests {
                 },
                 now
             ),
-            "30 June to 2 July · All day"
+            "Tuesday 30 June – Thursday 2 July"
         );
     }
 

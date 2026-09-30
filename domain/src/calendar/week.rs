@@ -76,9 +76,57 @@ pub fn week_start_on_or_before(date: NaiveDate, start: Weekday) -> NaiveDate {
     date - Days::new(u64::from(offset))
 }
 
+/// The week number of the week holding `date`, for weeks that start on
+/// `start`: the ISO number that most of the week's seven days carry.
+/// That is the ISO week of the week's Thursday, since ISO weeks run
+/// Monday to Sunday and Thursday is their fourth day. A week of Monday
+/// to Sunday gets its plain ISO number. A week from Sunday to Saturday
+/// takes the number of the six days after its Sunday, so the Week and
+/// Day views give every day in it the same number.
+pub fn week_number(date: NaiveDate, start: Weekday) -> u32 {
+    let first = week_start_on_or_before(date, start);
+    let thursday = first + Days::new(u64::from(Weekday::Thu.days_since(start)));
+    thursday.iso_week().week()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn day(y: i32, m: u32, d: u32) -> NaiveDate {
+        NaiveDate::from_ymd_opt(y, m, d).unwrap()
+    }
+
+    #[test]
+    fn every_day_of_a_sunday_week_gets_the_number_most_of_its_days_carry() {
+        // Sunday 27 September to Saturday 3 October 2026: the Sunday is
+        // in ISO week 39, the six days after it in week 40.
+        for offset in 0..7 {
+            let date = day(2026, 9, 27) + Days::new(offset);
+            assert_eq!(week_number(date, Weekday::Sun), 40, "{date}");
+        }
+    }
+
+    #[test]
+    fn a_monday_week_takes_its_iso_number() {
+        assert_eq!(week_number(day(2026, 9, 27), Weekday::Mon), 39);
+        assert_eq!(week_number(day(2026, 9, 28), Weekday::Mon), 40);
+    }
+
+    #[test]
+    fn a_saturday_week_counts_with_the_monday_inside_it() {
+        // Saturday 26 September to Friday 2 October 2026.
+        assert_eq!(week_number(day(2026, 9, 26), Weekday::Sat), 40);
+        assert_eq!(week_number(day(2026, 10, 2), Weekday::Sat), 40);
+    }
+
+    #[test]
+    fn a_sunday_week_across_new_year_takes_the_new_years_first_week() {
+        // Sunday 28 December 2025 to Saturday 3 January 2026: ISO week 1
+        // of 2026 starts on Monday 29 December.
+        assert_eq!(week_number(day(2025, 12, 28), Weekday::Sun), 1);
+        assert_eq!(week_number(day(2026, 1, 3), Weekday::Sun), 1);
+    }
 
     #[test]
     fn glibcs_first_weekday_byte_one_is_sunday() {

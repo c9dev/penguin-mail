@@ -160,25 +160,21 @@ pub fn hidden_count(rows: &[SidebarAccount]) -> usize {
 }
 
 /// The first and last day the grid shows, for the mini month's band: a
-/// week's seven days, or a month's own days without the ones before and
-/// after that fill its grid. A single day gets no band, since the
-/// selected day already marks it.
+/// week's seven days. A single day gets no band, since the selected day
+/// already marks it, and nor does a month, which the mini month itself
+/// already shows; a band over all of it said nothing.
 pub fn in_view(kind: ViewKind, day: NaiveDate) -> Option<(NaiveDate, NaiveDate)> {
     match kind {
-        ViewKind::Day | ViewKind::Agenda => None,
+        ViewKind::Day | ViewKind::Agenda | ViewKind::Month => None,
         ViewKind::Week => {
             let range = Range::around(kind, day);
             Some((range.first, range.first + Days::new(u64::from(range.days) - 1)))
-        }
-        ViewKind::Month => {
-            let first = day.with_day(1).unwrap_or(day);
-            Some((first, adjacent_month(first, 1) - Days::new(1)))
         }
     }
 }
 
 /// How one mini month day looks. `today` fills it with the accent,
-/// `selected` tints it, and a day `in_view` sits on the faint band, which
+/// `selected` rings it, and a day `in_view` sits on the faint band, which
 /// rounds off at `band_start` and `band_end`.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct DayLook {
@@ -1571,8 +1567,8 @@ mod tests {
     }
 
     #[test]
-    fn the_month_in_view_is_its_own_days_not_the_grids() {
-        assert_eq!(in_view(ViewKind::Month, d(2026, 9, 30)), Some((d(2026, 9, 1), d(2026, 9, 30))));
+    fn a_month_marks_no_band_since_the_mini_month_already_shows_it() {
+        assert_eq!(in_view(ViewKind::Month, d(2026, 9, 30)), None);
     }
 
     #[test]

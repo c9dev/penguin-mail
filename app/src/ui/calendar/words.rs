@@ -167,7 +167,7 @@ pub fn agenda_subtitle_words(place: &str, calendar: &str) -> String {
 /// "Thursday 24 – Friday 25 September": the last day always carries its
 /// month, and the first day carries one too only when it falls in a
 /// different month.
-fn all_day_range_words(first: NaiveDate, last: NaiveDate) -> String {
+pub fn all_day_range_words(first: NaiveDate, last: NaiveDate) -> String {
     let first_words = if first.year() == last.year() && first.month() == last.month() {
         day_words(first)
     } else {
@@ -180,15 +180,22 @@ fn all_day_range_words(first: NaiveDate, last: NaiveDate) -> String {
 }
 
 /// How many of `guests` said yes, for the popover's answer line: "4 of 6
-/// said yes". The plural picks on the yes count, since that is the word
+/// said yes" ([`said_yes_words`]).
+pub fn answers_words(guests: &[Guest]) -> String {
+    said_yes_words(guests.iter().map(|g| g.answer))
+}
+
+/// "4 of 6 said yes", from each guest's answer: the event popover and the
+/// invitation card both count through this, so the two agree on one
+/// event. The plural picks on the yes count, since that is the word
 /// pt_PT conjugates ("disse" for one, "disseram" for several), not the
 /// total.
-pub fn answers_words(guests: &[Guest]) -> String {
-    let yes = guests
-        .iter()
-        .filter(|g| g.answer == Some(Answer::Yes))
-        .count();
-    let count = guests.len();
+pub fn said_yes_words(answers: impl IntoIterator<Item = Option<Answer>>) -> String {
+    let (mut yes, mut count) = (0, 0);
+    for answer in answers {
+        count += 1;
+        yes += usize::from(answer == Some(Answer::Yes));
+    }
     fill_plural(
         "{yes} of {count} said yes",
         "{yes} of {count} said yes",
@@ -197,11 +204,16 @@ pub fn answers_words(guests: &[Guest]) -> String {
     )
 }
 
-/// The popover's people line, as the mockup writes it: who organized the
-/// event and how many guests said yes, "Rita Lopes, organizer · 4 of 6
-/// said yes", either half alone when the other is missing.
+/// The popover's people line: who organized the event and how many
+/// guests said yes, "Rita Lopes, organizer · 4 of 6 said yes", either
+/// half alone when the other is missing. When a guest row already marks
+/// the organizer ([`guest_name_words`]), the line leaves their name to
+/// that row, so it shows once.
 pub fn people_words(organizer: Option<&str>, guests: &[Guest]) -> String {
-    let organizer = organizer.map(|name| fill(&gettext("{name}, organizer"), &[("name", name)]));
+    let listed = guests.iter().any(|guest| guest.organizer);
+    let organizer = organizer
+        .filter(|_| !listed)
+        .map(|name| fill(&gettext("{name}, organizer"), &[("name", name)]));
     let answers = (!guests.is_empty()).then(|| answers_words(guests));
     match (organizer, answers) {
         (Some(organizer), Some(answers)) => fill(
@@ -487,6 +499,13 @@ fn byday_code(day: chrono::Weekday) -> &'static str {
     }
 }
 
+/// Whether an answer's button is drawn filled, on the invitation card and
+/// in the event popover: only the answer given. Before any answer the
+/// three look alike, since a filled Yes read as an answer already sent.
+pub fn answer_filled(button: Answer, given: Option<Answer>) -> bool {
+    given == Some(button)
+}
+
 /// What a guest answered, in a word. The editor's own guest list reads
 /// the organizer this way, so the answer never shows once it has said
 /// who ran the meeting; the popover's guest list marks the two apart
@@ -507,22 +526,26 @@ pub fn guest_answer_words(guest: &Guest) -> String {
 }
 
 /// The symbolic icon a guest's answer shows in the popover's list: a
-/// check for yes, a question mark for maybe, a cross for no, and a
-/// loading ring for nobody has answered yet.
+/// check for yes, a question mark for maybe, a cross for no, and a clock
+/// for no answer yet. The clock replaced three dots, which read as a
+/// menu button.
 pub fn answer_icon(answer: Option<Answer>) -> &'static str {
     match answer {
         Some(Answer::Yes) => "object-select-symbolic",
         Some(Answer::Maybe) => "dialog-question-symbolic",
         Some(Answer::No) => "process-stop-symbolic",
-        None => "content-loading-symbolic",
+        None => "penguin-mail-waiting-symbolic",
     }
 }
 
-/// A guest row's own name: their name, or their address when they gave
-/// none, with ", organizer" added for whoever organized the event, the
+/// A guest row's own name: "You" for the reader, their name, or their
+/// address when they gave none, with ", organizer" added for whoever organized the event, the
 /// same words the summary line already gives the organizer
 /// ([`people_words`]).
 pub fn guest_name_words(guest: &Guest) -> String {
+    if guest.me {
+        return gettext("You");
+    }
     let shown = guest.name.clone().unwrap_or_else(|| guest.email.clone());
     if guest.organizer {
         fill(&gettext("{name}, organizer"), &[("name", &shown)])
@@ -812,6 +835,12 @@ mod tests {
     }
 
     #[test]
+    fn said_yes_words_counts_every_guest_whatever_they_answered() {
+        let answers = [Some(Answer::Yes), None, Some(Answer::Maybe), Some(Answer::No)];
+        assert_eq!(said_yes_words(answers), "1 of 4 said yes");
+    }
+
+    #[test]
     fn join_words_names_google_meet_apart_from_any_other_call() {
         assert_eq!(
             join_words("https://meet.google.com/abc-defg-hij"),
@@ -888,6 +917,21 @@ mod tests {
             people_words(Some("Rita Lopes"), &guests),
             "Rita Lopes, organizer · 1 of 2 said yes"
         );
+    }
+
+    #[test]
+    fn the_people_line_leaves_the_organizer_to_a_guest_row_that_names_them() {
+        let guests = [
+            Guest { name: Some("Rita Lopes".into()), answer: Some(Answer::Yes), organizer: true, ..Default::default() },
+            Guest { answer: None, me: true, ..Default::default() },
+        ];
+        assert_eq!(people_words(Some("Rita Lopes"), &guests), "1 of 2 said yes");
+    }
+
+    #[test]
+    fn a_guest_row_calls_the_reader_you() {
+        let me = Guest { email: "dana@fernwood.example".into(), me: true, ..Guest::default() };
+        assert_eq!(guest_name_words(&me), "You");
     }
 
     #[test]
@@ -972,7 +1016,7 @@ mod tests {
         assert_eq!(answer_icon(Some(Answer::Yes)), "object-select-symbolic");
         assert_eq!(answer_icon(Some(Answer::Maybe)), "dialog-question-symbolic");
         assert_eq!(answer_icon(Some(Answer::No)), "process-stop-symbolic");
-        assert_eq!(answer_icon(None), "content-loading-symbolic");
+        assert_eq!(answer_icon(None), "penguin-mail-waiting-symbolic");
     }
 
     #[test]

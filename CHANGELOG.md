@@ -140,6 +140,10 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   Ctrl+R.
 
 ### Improved
+- The mini month marks today with the only fill and the day you're viewing with a ring, and tints the week in view only in Week view.
+- Section headings in the sidebar and the calendar's hour labels, week number, ALL-DAY, account names, days outside the month and agenda times are dark enough to read in light and dark.
+- Conversations in the list light up under the pointer, as the sidebar's rows do.
+- An event's bubble lists each guest once, calls you "You", marks guests who haven't answered with a clock, and shows a map pin beside the place.
 - The Google tile shows Google's logo and the iCloud tile a cloud, in place of a colored letter.
 - In the snap, when Penguin Mail cannot reach your keyring, the window and
   Add Account give the command that connects it, with a Copy button, in
@@ -249,6 +253,12 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   it last updated, instead of leaving you guessing.
 
 ### Fixed
+- In Month view, the clock on an event waiting to be sent no longer covers its time, and an unanswered invitation's dashed outline no longer cuts through its time.
+- In Month view, an event with a short name such as Gym shows its time again.
+- A label's menu offers Move Up or Move Down only when the label has somewhere to move.
+- Yes no longer looks already chosen on an invitation you haven't answered. The three answers look alike until you pick one.
+- An invitation in a message and the same event in the calendar give the same date, time and count of guests who said yes.
+- The week number in the calendar header is the same in Week and Day view for every day of the week, whichever day your weeks start on.
 - Double-clicking an event opens the editor without leaving the event's bubble open beside it.
 - Show more in an event's bubble opens the rest of the notes instead of closing the bubble.
 - A reply's quoted message folds behind "•••" again, including replies Penguin Mail sent earlier with each quoted paragraph set apart.

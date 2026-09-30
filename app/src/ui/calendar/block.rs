@@ -32,6 +32,11 @@ const DASH_WIDTH: f32 = 1.5;
 const DASH: [f32; 2] = [5.0, 4.0];
 const CORNER: f32 = 8.0;
 
+/// The pending clock's centre sits 14 px from the content's right edge
+/// with a radius of 5.5 and a 1.4 px line, so its left edge is about
+/// 20 px in. The text keeps 23 px clear of that edge.
+const PENDING_ROOM: i32 = 23;
+
 /// Which event a block draws: its account, calendar and id. The view
 /// finds a block by it to point a popover at an event it opens by name.
 pub type EventKey = (AccountId, String, String);
@@ -137,9 +142,9 @@ impl EventBlock {
 
         if event.pending {
             // The clock the block draws in its top right corner; the
-            // title stops short of it.
+            // title and a compact block's time stop 3 px short of it.
             block.imp().pending.set(true);
-            text.set_margin_end(16);
+            text.set_margin_end(PENDING_ROOM);
         }
 
         button.set_child(Some(&content));
@@ -241,11 +246,20 @@ mod imp {
             let widget = self.obj();
             let (width, height) = (widget.width() as f32, widget.height() as f32);
             if let Some(colour) = self.dashed.get() {
-                // The mockup's stroke sits on the block's edge, half in
-                // and half out, as an SVG stroke does.
-                let bounds = graphene::Rect::new(0.0, 0.0, width, height);
+                // The stroke runs just inside the block's edge. The
+                // snapshot starts at the content box, which a compact
+                // block's 7 px of padding puts inside that edge, so the
+                // outline follows the widget's own bounds; drawn on the
+                // content box, it ran through the time at the end of the
+                // line. It keeps half its width in from the bounds, since
+                // the block clips what lies outside them.
+                let half = DASH_WIDTH / 2.0;
+                let bounds = widget
+                    .compute_bounds(&*widget)
+                    .unwrap_or_else(|| graphene::Rect::new(0.0, 0.0, width, height))
+                    .inset_r(half, half);
                 let path = gsk::PathBuilder::new();
-                path.add_rounded_rect(&gsk::RoundedRect::from_rect(bounds, CORNER));
+                path.add_rounded_rect(&gsk::RoundedRect::from_rect(bounds, CORNER - half));
                 let stroke = gsk::Stroke::new(DASH_WIDTH);
                 stroke.set_dash(&DASH);
                 snapshot.append_stroke(&path.to_path(), &stroke, &colour);
@@ -342,7 +356,8 @@ mod title_row {
                     // keeps at this width, so that is chosen here, before
                     // the label measures; a change made while allocating
                     // would come after the height was already settled.
-                    let room = if for_size >= 0 { self.room(for_size, clock_nat) } else { -1 };
+                    let title_nat = title.measure(gtk::Orientation::Horizontal, -1).1;
+                    let room = if for_size >= 0 { self.room(for_size, clock_nat, title_nat) } else { -1 };
                     if room >= 0 {
                         self.fit_lines(&title, room);
                     }
@@ -358,8 +373,9 @@ mod title_row {
             let clock = self.clock.borrow().clone();
             let Some(title) = title else { return };
             let clock_width = clock.as_ref().map_or(0, |c| c.measure(gtk::Orientation::Horizontal, -1).1);
-            let beside = clock.is_some() && super::beside_title(width, clock_width) == TimeShown::Start;
-            let room = self.room(width, clock_width);
+            let title_width = title.measure(gtk::Orientation::Horizontal, -1).1;
+            let beside = clock.is_some() && super::beside_title(width, clock_width, title_width) == TimeShown::Start;
+            let room = self.room(width, clock_width, title_width);
             self.fit_lines(&title, room);
             title.allocate(room, height, baseline, None);
             if let Some(clock) = clock {
@@ -374,9 +390,10 @@ mod title_row {
 
     impl TitleRow {
         /// The title's own width in a row `width` wide, beside a clock
-        /// `clock` wide when the row has one and it fits.
-        fn room(&self, width: i32, clock: i32) -> i32 {
-            let beside = self.clock.borrow().is_some() && super::beside_title(width, clock) == TimeShown::Start;
+        /// `clock` wide when the row has one and it fits a title whose
+        /// natural width is `title`.
+        fn room(&self, width: i32, clock: i32, title: i32) -> i32 {
+            let beside = self.clock.borrow().is_some() && super::beside_title(width, clock, title) == TimeShown::Start;
             if beside { width - clock - BESIDE_GAP } else { width }
         }
 
@@ -450,9 +467,13 @@ pub fn time_shown(width: i32, full: i32, start: i32) -> TimeShown {
 
 /// A short block's time, beside its title on one line `width` pixels
 /// wide, is the start (`clock` pixels) only when the title keeps
-/// [`TITLE_FLOOR`] pixels of its own; otherwise the title takes the line.
-pub fn beside_title(width: i32, clock: i32) -> TimeShown {
-    match time_shown(width - TITLE_FLOOR - BESIDE_GAP, clock, clock) {
+/// [`TITLE_FLOOR`] pixels of its own, or all of itself when its natural
+/// width `title` is less; otherwise the title takes the line. A title
+/// such as "Gym" is narrower than the floor, and the row that holds it
+/// gets only its natural width, so asking for the whole floor would drop
+/// its time with room to spare.
+pub fn beside_title(width: i32, clock: i32, title: i32) -> TimeShown {
+    match time_shown(width - TITLE_FLOOR.min(title) - BESIDE_GAP, clock, clock) {
         TimeShown::Nothing => TimeShown::Nothing,
         _ => TimeShown::Start,
     }
@@ -648,8 +669,15 @@ mod tests {
     #[test]
     fn a_short_block_keeps_room_for_its_title_before_the_time() {
         // 30 px of clock, the gap and the title's floor need 30 + 4 + 32.
-        assert_eq!(beside_title(66, 30), TimeShown::Start);
-        assert_eq!(beside_title(65, 30), TimeShown::Nothing);
+        assert_eq!(beside_title(66, 30, 100), TimeShown::Start);
+        assert_eq!(beside_title(65, 30, 100), TimeShown::Nothing);
+    }
+
+    #[test]
+    fn a_title_shorter_than_the_floor_keeps_its_time_at_its_own_width() {
+        // "Gym" is 25 px: its row is 25 + 4 + 26 wide and shows 16:00.
+        assert_eq!(beside_title(55, 26, 25), TimeShown::Start);
+        assert_eq!(beside_title(54, 26, 25), TimeShown::Nothing);
     }
 
     #[test]
