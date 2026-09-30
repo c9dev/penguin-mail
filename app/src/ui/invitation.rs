@@ -422,9 +422,12 @@ impl EventCard {
             .visible(false)
             .css_classes(["invitation-news"])
             .build();
+        // Clear of the buttons above it, which have no gap of their own
+        // below them in the column.
         let went = gtk::Label::builder()
             .xalign(0.0)
             .wrap(true)
+            .margin_top(8)
             .visible(false)
             .css_classes(["invitation-meta"])
             .build();
