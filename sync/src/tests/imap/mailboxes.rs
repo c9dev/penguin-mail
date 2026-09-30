@@ -112,3 +112,30 @@ async fn counting_the_inbox_learns_which_keywords_the_server_stores() {
 
     assert!(adapter.capabilities().keywords.contains(&"$muted"));
 }
+
+/// On a folder server a folder's id is its name, so dropping "bugs" into
+/// "Personal" renames it on the server, and its place goes to the new id.
+#[tokio::test]
+async fn a_folder_dropped_into_another_is_renamed_there_and_placed_by_its_new_name() {
+    let h = imap_harness().await;
+    h.bootstrap().await;
+    h.imap.add_mailbox("Personal", None);
+    h.imap.add_mailbox("Personal/bills", None);
+    h.imap.add_mailbox("bugs", None);
+    h.sync.refresh_labels().await.unwrap();
+
+    h.sync
+        .place_label("bugs", "Personal/bugs", &["bugs".into(), "Personal/bills".into()])
+        .await
+        .unwrap();
+
+    let account_id = h.account_id;
+    let order = h
+        .db
+        .read(move |c| mailrs_store::labels::positions(c, account_id))
+        .await
+        .unwrap();
+    assert_eq!(order.get("Personal/bugs"), Some(&0));
+    assert_eq!(order.get("Personal/bills"), Some(&1));
+    assert_eq!(order.get("bugs"), None);
+}

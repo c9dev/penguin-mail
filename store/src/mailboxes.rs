@@ -72,6 +72,17 @@ pub fn rename(
     upsert(conn, account_id, to)
 }
 
+/// Puts the mailboxes `ids` names in that order among their siblings, the
+/// first at position 0. Ids the store lacks are passed over.
+pub fn set_positions(conn: &Connection, account_id: AccountId, ids: &[String]) -> Result<()> {
+    let mut stmt = conn
+        .prepare_cached("UPDATE mailboxes SET position = ?3 WHERE account_id = ?1 AND id = ?2")?;
+    for (position, id) in ids.iter().enumerate() {
+        stmt.execute(params![account_id, id, position as i64])?;
+    }
+    Ok(())
+}
+
 /// Makes `listed` the account's whole list, as a bootstrap does. A mailbox
 /// the listing left out goes, unless mail is still filed under it, in
 /// which case it stays unlisted so the mail keeps its key.
