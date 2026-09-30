@@ -54,6 +54,8 @@ pub struct App {
     /// this one copy.
     accounts: RefCell<Vec<Account>>,
     labels: RefCell<HashMap<AccountId, Vec<Label>>>,
+    /// Where the person put each account's labels among their siblings.
+    label_order: RefCell<HashMap<AccountId, HashMap<String, i64>>>,
     /// Each account's consent, read in the same pass as `accounts` so the
     /// Grant Access banner never waits on a round trip of its own.
     consent: RefCell<HashMap<AccountId, accounts::Consent>>,
@@ -136,6 +138,7 @@ impl App {
             filter: RefCell::new(None),
             accounts: RefCell::new(Vec::new()),
             labels: RefCell::new(HashMap::new()),
+            label_order: RefCell::new(HashMap::new()),
             consent: RefCell::new(HashMap::new()),
             names: RefCell::new(HashMap::new()),
             tray: Arc::new(Mutex::new(None)),
@@ -666,6 +669,16 @@ impl App {
             .unwrap_or_default()
     }
 
+    /// Where the person put each of the account's labels among its
+    /// siblings, by label id, as `reload_accounts` last read it.
+    pub fn label_order(&self, account_id: AccountId) -> HashMap<String, i64> {
+        self.label_order
+            .borrow()
+            .get(&account_id)
+            .cloned()
+            .unwrap_or_default()
+    }
+
     /// Reads the accounts and their labels from the store and keeps them.
     /// Hands back each account with its labels, for the sidebar. Reads
     /// every account's consent in the same pass, so the Grant Access
@@ -674,18 +687,21 @@ impl App {
     /// shown up as a stray unnamed control to a screen reader already
     /// walking the page.
     pub async fn reload_accounts(self: &Rc<Self>) -> anyhow::Result<Vec<(Account, Vec<Label>)>> {
-        let (loaded, consent) = self
+        let (loaded, order, consent) = self
             .core
             .read(|c| {
                 let mut out: Vec<(Account, Vec<Label>)> = Vec::new();
+                let mut order = HashMap::new();
                 for account in accounts::list_accounts(c)? {
                     let account_labels = labels::list_labels(c, account.id)?;
+                    order.insert(account.id, labels::positions(c, account.id)?);
                     out.push((account, account_labels));
                 }
                 let consent = accounts::all_consent(c)?;
-                Ok((out, consent))
+                Ok((out, order, consent))
             })
             .await?;
+        *self.label_order.borrow_mut() = order;
         let known: Vec<AccountId> = self.accounts.borrow().iter().map(|a| a.id).collect();
         *self.accounts.borrow_mut() = loaded.iter().map(|(a, _)| a.clone()).collect();
         *self.labels.borrow_mut() = loaded.iter().map(|(a, l)| (a.id, l.clone())).collect();

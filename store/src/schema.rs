@@ -695,6 +695,14 @@ ALTER TABLE calendars ADD COLUMN provider_hidden INTEGER;
 ALTER TABLE events ADD COLUMN attachments TEXT;
 UPDATE calendars SET sync_token = NULL;
 "#,
+    // Where the person put each of an account's labels or folders among
+    // its siblings in the sidebar, 0 first, NULL for one never moved.
+    // Gmail and IMAP keep no order, so it lives here alone. The column
+    // sits on the mailbox row, so a listing leaves it be and an IMAP
+    // rename, which moves the row to its new id, takes it along.
+    r#"
+ALTER TABLE mailboxes ADD COLUMN position INTEGER;
+"#,
 ];
 
 /// How long the copy taken before a migration stays once the store has

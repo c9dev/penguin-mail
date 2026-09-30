@@ -67,6 +67,20 @@ impl AccountSync {
 
     /// Renames a label, and the labels nested under it along with it.
     pub async fn rename_label(&self, id: &str, name: &str) -> Result<(), SyncError> {
+        self.place_label(id, name, &[]).await
+    }
+
+    /// Gives label `id` the name `name`, which may put it under another
+    /// label or take it out of one, and puts its new siblings in `order`,
+    /// which names it by its old id. The order stays on this computer
+    /// alone: neither Gmail nor IMAP keeps one. An empty `order` leaves
+    /// the stored order as it is.
+    pub async fn place_label(
+        &self,
+        id: &str,
+        name: &str,
+        order: &[String],
+    ) -> Result<(), SyncError> {
         let account_id = self.account_id;
         let all = self
             .db
@@ -76,6 +90,17 @@ impl AccountSync {
             return Ok(());
         };
         let name = name.trim().to_string();
+        if name == old {
+            if order.is_empty() {
+                return Ok(());
+            }
+            let order = order.to_vec();
+            self.db
+                .write(move |c| mailboxes::set_positions(c, account_id, &order))
+                .await?;
+            self.emit(ChangeEvent::LabelsChanged { account_id });
+            return Ok(());
+        }
         if is_reserved_label_name(&name) {
             return Err(SyncError::ReservedLabel(name));
         }
@@ -116,6 +141,14 @@ impl AccountSync {
         // The mail filed under each old name stays filed under the new one,
         // or the next listing takes the old row and the mail's place in it.
         let pairs = moved.clone();
+        // A folder's id is its name, so the order names it anew.
+        let order: Vec<String> = order
+            .iter()
+            .map(|sibling| match moved.iter().find(|(from, _)| from == sibling) {
+                Some((_, to)) => to.clone(),
+                None => sibling.clone(),
+            })
+            .collect();
         self.db
             .write(move |c| {
                 for ((from, to), mailbox) in pairs.iter().zip(&renamed) {
@@ -127,7 +160,7 @@ impl AccountSync {
                         false => mailboxes::upsert(c, account_id, mailbox)?,
                     }
                 }
-                Ok(())
+                mailboxes::set_positions(c, account_id, &order)
             })
             .await?;
         self.emit(ChangeEvent::LabelsChanged { account_id });

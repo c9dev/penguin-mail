@@ -1,6 +1,7 @@
 //! Mailboxes: the unified views, then one section per account.
 
 mod sections;
+pub(crate) mod tree;
 
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
@@ -10,7 +11,7 @@ use adw::prelude::*;
 use gtk::{gdk, gio, glib, pango};
 use mailrs_domain::translate::{fill, fill_plural, gettext};
 use mailrs_domain::{
-    Account, AccountId, AccountState, FlagColor, Folder, Label, LabelKind,
+    Account, AccountId, AccountState, FlagColor, Folder, Label,
 };
 use mailrs_sync::Offers;
 
@@ -19,6 +20,7 @@ use crate::format::{PALETTE, account_color_index, palette_name};
 use crate::offered::Filing;
 use crate::settings::Space;
 use sections::{Place, Section};
+use tree::label_rows;
 
 struct Row {
     row: gtk::ListBoxRow,
@@ -298,12 +300,35 @@ pub struct Sidebar {
     muted: Cell<bool>,
     /// Handles mail dropped on a mailbox; true when it was taken.
     on_drop: Rc<dyn Fn(Mailbox) -> bool>,
+    /// Handles a label dropped on another label's row.
+    on_label_drop: Rc<dyn Fn(LabelDrop)>,
+    /// The label being dragged, while one is, so the rows it passes over
+    /// can tell it from dragged mail.
+    dragging: Rc<RefCell<Option<Dragged>>>,
+}
+
+/// A label on the move, by account and id.
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct Dragged {
+    account_id: AccountId,
+    label_id: String,
+}
+
+/// A label dropped on a row of its own account's labels: which one, onto
+/// which row, and on which part of it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LabelDrop {
+    pub account_id: AccountId,
+    pub dragged: String,
+    pub target: String,
+    pub zone: tree::Zone,
 }
 
 impl Sidebar {
     pub fn new(
         on_select: impl Fn(Mailbox) + 'static,
         on_drop: impl Fn(Mailbox) -> bool + 'static,
+        on_label_drop: impl Fn(LabelDrop) + 'static,
     ) -> Rc<Sidebar> {
         let list = gtk::ListBox::builder()
             .css_classes(["navigation-sidebar", "mailboxes"])
@@ -420,6 +445,8 @@ impl Sidebar {
             start_expanded: Cell::new(None),
             muted: Cell::new(false),
             on_drop: Rc::new(on_drop),
+            on_label_drop: Rc::new(on_label_drop),
+            dragging: Rc::default(),
         });
         let weak = Rc::downgrade(&sidebar);
         sidebar.list.connect_row_selected(move |_, row| {
@@ -726,19 +753,21 @@ impl Sidebar {
             // Gmail nests labels with slashes, and an IMAP server's folder
             // names reach the store with slashes too: "Work/Clients" sits
             // under "Work".
-            for entry in label_rows(labels) {
+            let order = extras.label_order.get(&account.id).cloned().unwrap_or_default();
+            for entry in label_rows(labels, &order) {
                 let label = entry.label;
                 let mailbox = Mailbox::Label {
                     account_id: account.id,
                     label_id: label.id.clone(),
                     name: label.name.replace('/', " › "),
                 };
-                if !entry.opens {
-                    self.add_group(mailbox, entry.leaf, entry.depth);
-                    continue;
-                }
-                let row =
-                    self.add_mailbox(mailbox, entry.leaf, label_icon(account_offers), entry.depth);
+                let dest = mailbox.clone();
+                let row = match entry.opens {
+                    true => {
+                        self.add_mailbox(mailbox, entry.leaf, label_icon(account_offers), entry.depth)
+                    }
+                    false => self.add_group(mailbox, entry.leaf, entry.depth),
+                };
                 if let Some(color) = label.color.as_deref().and_then(css_hex)
                     && let Some(icon) = row.child().and_then(|c| c.first_child())
                 {
@@ -746,7 +775,8 @@ impl Sidebar {
                     label_rules.push_str(&format!(".{class} {{ color: #{color}; }}\n"));
                     icon.add_css_class(&class);
                 }
-                label_menu(&row, account.id, &label.id);
+                label_menu(&row, account.id, label, Filing::of([account_offers]));
+                self.label_drag(&row, account.id, &label.id, entry.opens.then_some(dest));
             }
         }
         self.label_css.load_from_string(&label_rules);
@@ -861,9 +891,100 @@ impl Sidebar {
     /// folders. It indents and closes with its account like a mailbox, so
     /// the folders under it nest, but nothing selects or opens it and it
     /// takes no dropped mail.
-    fn add_group(&self, mailbox: Mailbox, name: &str, depth: u32) {
+    fn add_group(&self, mailbox: Mailbox, name: &str, depth: u32) -> gtk::ListBoxRow {
         let row = self.add_row(mailbox, name, "folder-symbolic", depth, false);
         row.set_tooltip_text(Some(&gettext("Holds folders, not mail")));
+        row
+    }
+
+    /// Lets a label row be dragged within its account's labels, and take
+    /// a dragged label before it, after it, or inside it. With `mail`, the
+    /// mailbox the row opens, it takes dragged mail too, as every mailbox
+    /// row does; a group opens none and takes none.
+    fn label_drag(
+        &self,
+        row: &gtk::ListBoxRow,
+        account_id: AccountId,
+        label_id: &str,
+        mail: Option<Mailbox>,
+    ) {
+        let here = Dragged {
+            account_id,
+            label_id: label_id.to_string(),
+        };
+        let source = gtk::DragSource::new();
+        source.set_actions(gdk::DragAction::MOVE);
+        source.connect_prepare(|_, _, _| {
+            Some(gdk::ContentProvider::for_value(&DRAG_LABEL.to_value()))
+        });
+        let (dragging, dragged, weak) = (Rc::clone(&self.dragging), here.clone(), row.downgrade());
+        source.connect_drag_begin(move |source, _| {
+            *dragging.borrow_mut() = Some(dragged.clone());
+            if let Some(row) = weak.upgrade() {
+                source.set_icon(Some(&gtk::WidgetPaintable::new(Some(&row))), 0, 0);
+            }
+        });
+        let dragging = Rc::clone(&self.dragging);
+        source.connect_drag_end(move |_, _, _| {
+            dragging.borrow_mut().take();
+        });
+        row.add_controller(source);
+
+        // Some(true) for another label of this account, Some(false) for a
+        // label that cannot land here, None for mail.
+        let dragging = Rc::clone(&self.dragging);
+        let label_over = move || -> Option<bool> {
+            let dragging = dragging.borrow();
+            let dragged = dragging.as_ref()?;
+            Some(dragged.account_id == here.account_id && dragged.label_id != here.label_id)
+        };
+        let target = gtk::DropTarget::new(glib::Type::STRING, gdk::DragAction::MOVE);
+        let (over, takes_mail) = (label_over.clone(), mail.is_some());
+        target.connect_enter(move |target, _, _| match over().unwrap_or(takes_mail) {
+            true => gdk::DragAction::MOVE,
+            false => {
+                target.reject();
+                gdk::DragAction::empty()
+            }
+        });
+        let weak = row.downgrade();
+        target.connect_motion(move |_, _, y| {
+            if let (Some(true), Some(row)) = (label_over(), weak.upgrade()) {
+                show_zone(&row, Some(tree::zone(y, f64::from(row.height()))));
+            }
+            gdk::DragAction::MOVE
+        });
+        let weak = row.downgrade();
+        target.connect_leave(move |_| {
+            if let Some(row) = weak.upgrade() {
+                show_zone(&row, None);
+            }
+        });
+        let (dragging, weak) = (Rc::clone(&self.dragging), row.downgrade());
+        let (on_label_drop, on_drop) = (Rc::clone(&self.on_label_drop), Rc::clone(&self.on_drop));
+        let target_id = label_id.to_string();
+        target.connect_drop(move |_, value, _, y| {
+            let Some(row) = weak.upgrade() else {
+                return false;
+            };
+            show_zone(&row, None);
+            // Cloned out, so the callbacks below may start another drag.
+            let dragged = dragging.borrow().clone();
+            match (dragged, value.get::<String>().ok().as_deref()) {
+                (Some(dragged), Some(DRAG_LABEL)) if dragged.account_id == account_id => {
+                    on_label_drop(LabelDrop {
+                        account_id,
+                        dragged: dragged.label_id,
+                        target: target_id.clone(),
+                        zone: tree::zone(y, f64::from(row.height())),
+                    });
+                    true
+                }
+                (None, Some(DRAG_MAIL)) => mail.clone().is_some_and(|mailbox| on_drop(mailbox)),
+                _ => false,
+            }
+        });
+        row.add_controller(target);
     }
 
     /// Adds a row. `opens` is false for a row that only groups others.
@@ -904,8 +1025,19 @@ impl Sidebar {
             .selectable(opens)
             .activatable(opens)
             .build();
-        if opens && takes_mail(&mailbox) {
+        // A label row takes mail through `label_drag`, which also takes
+        // dragged labels. Every other row turns a dragged label away.
+        let label = matches!(mailbox, Mailbox::Label { .. });
+        if opens && takes_mail(&mailbox) && !label {
             let target = gtk::DropTarget::new(glib::Type::STRING, gdk::DragAction::MOVE);
+            let dragging = Rc::clone(&self.dragging);
+            target.connect_enter(move |target, _, _| match dragging.borrow().is_some() {
+                true => {
+                    target.reject();
+                    gdk::DragAction::empty()
+                }
+                false => gdk::DragAction::MOVE,
+            });
             let (on_drop, dest) = (Rc::clone(&self.on_drop), mailbox.clone());
             target.connect_drop(move |_, value, _, _| {
                 value.get::<String>().is_ok_and(|v| v == DRAG_MAIL) && on_drop(dest.clone())
@@ -1004,6 +1136,25 @@ impl Sidebar {
 /// the thread list.
 pub const DRAG_MAIL: &str = "mailrs-mail";
 
+/// What a dragged label row carries. Which label it is waits in
+/// `Sidebar::dragging`, since only the sidebar drags labels.
+const DRAG_LABEL: &str = "mailrs-label";
+
+/// Marks `row` with where a dragged label would land: a line above or
+/// below it, or a tint for inside it. None clears the mark.
+fn show_zone(row: &gtk::ListBoxRow, zone: Option<tree::Zone>) {
+    for (class, shown) in [
+        ("drop-before", tree::Zone::Before),
+        ("drop-inside", tree::Zone::Inside),
+        ("drop-after", tree::Zone::After),
+    ] {
+        match zone == Some(shown) {
+            true => row.add_css_class(class),
+            false => row.remove_css_class(class),
+        }
+    }
+}
+
 /// What a mailbox row says out loud. The badge at its end is a bare
 /// number on screen, so the name takes it in and says what it counts. A
 /// row whose badge is hidden says only its name.
@@ -1097,6 +1248,9 @@ pub struct Extras {
     pub smart: Vec<mailrs_domain::SmartMailbox>,
     /// Names shown instead of account addresses.
     pub names: HashMap<AccountId, String>,
+    /// Where the person put each account's labels among their siblings,
+    /// by label id.
+    pub label_order: HashMap<AccountId, HashMap<String, i64>>,
 }
 
 /// A small heading between sections. It cannot be selected.
@@ -1178,58 +1332,76 @@ fn takes_mail(mailbox: &Mailbox) -> bool {
     }
 }
 
-/// One of an account's own labels or folders as the sidebar lists it.
-#[derive(Debug, PartialEq, Eq)]
-struct LabelRow<'a> {
-    label: &'a Label,
-    /// The part of the name after the last slash.
-    leaf: &'a str,
-    /// 1 at the top, one more for each slash in the name.
-    depth: u32,
-    /// False for a group, which holds only other folders.
-    opens: bool,
-}
-
-/// An account's labels and folders by name, ignoring case, with the
-/// groups that hold folders, so "Work/Clients" sits under "Work" even
-/// where the server keeps no mail in "Work".
-fn label_rows(labels: &[Label]) -> Vec<LabelRow<'_>> {
-    let mut rows: Vec<LabelRow<'_>> = labels
-        .iter()
-        .filter(|l| matches!(l.kind, LabelKind::User | LabelKind::Group))
-        .map(|label| LabelRow {
-            label,
-            leaf: label.name.rsplit('/').next().unwrap_or(&label.name),
-            depth: 1 + label.name.matches('/').count() as u32,
-            opens: label.kind == LabelKind::User,
-        })
-        .collect();
-    rows.sort_by_key(|row| row.label.name.to_lowercase());
-    rows
-}
-
-/// Rename and Delete on a right click or long press of a label row.
-fn label_menu(row: &gtk::ListBoxRow, account_id: AccountId, label_id: &str) {
+/// A label row's menu, on a right click or long press and on the button
+/// at the row's end, which shows while the pointer or the keyboard is on
+/// the row.
+fn label_menu(row: &gtk::ListBoxRow, account_id: AccountId, label: &Label, filing: Filing) {
     let menu = gio::Menu::new();
-    let target = (account_id, label_id.to_string()).to_variant();
+    let target = (account_id, label.id.clone()).to_variant();
     let item = |text: &str, action: &str| {
         let item = gio::MenuItem::new(Some(text), None);
         item.set_action_and_target_value(Some(action), Some(&target));
         item
     };
-    menu.append_item(&item(&gettext("Rename…"), "win.label-rename"));
+    let edit = gio::Menu::new();
+    edit.append_item(&item(&gettext("Rename…"), "win.label-rename"));
+    edit.append_item(&item(&filing.new_inside_item(), "win.label-new-inside"));
     let colors = gio::Menu::new();
     for index in 0..LABEL_COLORS.len() {
         let entry = gio::MenuItem::new(Some(&label_color_name(index)), None);
         entry.set_action_and_target_value(
             Some("win.label-color"),
-            Some(&(account_id, label_id.to_string(), index as i32).to_variant()),
+            Some(&(account_id, label.id.clone(), index as i32).to_variant()),
         );
         colors.append_item(&entry);
     }
-    menu.append_submenu(Some(&gettext("Color")), &colors);
-    menu.append_item(&item(&gettext("Delete…"), "win.label-delete"));
+    edit.append_submenu(Some(&gettext("Color")), &colors);
+    menu.append_section(None, &edit);
+    let order = gio::Menu::new();
+    order.append_item(&item(&gettext("Move Up"), "win.label-up"));
+    order.append_item(&item(&gettext("Move Down"), "win.label-down"));
+    menu.append_section(None, &order);
+    let danger = gio::Menu::new();
+    danger.append_item(&item(&gettext("Delete…"), "win.label-delete"));
+    menu.append_section(None, &danger);
     context_menu(row, &menu);
+
+    let Some(content) = row.child().and_downcast::<gtk::Box>() else {
+        return;
+    };
+    let options = gtk::MenuButton::builder()
+        .icon_name("view-more-symbolic")
+        .menu_model(&menu)
+        .css_classes(["flat", "circular", "label-options"])
+        .valign(gtk::Align::Center)
+        .halign(gtk::Align::End)
+        .tooltip_text(filing.options_tooltip())
+        .build();
+    super::name(&options, &filing.options_name(&label.name.replace('/', " › ")));
+    super::name_menu_items_of(&options);
+    // `.options-open` keeps the count hidden while the menu is open and
+    // the pointer has left the row.
+    let weak = row.downgrade();
+    options.connect_active_notify(move |options| {
+        if let Some(row) = weak.upgrade() {
+            match options.is_active() {
+                true => row.add_css_class("options-open"),
+                false => row.remove_css_class("options-open"),
+            }
+        }
+    });
+    // The sidebar has no room for the count and the button side by side,
+    // so the button lies over the count and takes its place on hover or
+    // focus, as in Gmail.
+    let end = gtk::Overlay::builder().css_classes(["label-end"]).build();
+    if let Some(count) = content.last_child() {
+        content.remove(&count);
+        count.set_halign(gtk::Align::End);
+        end.set_child(Some(&count));
+    }
+    end.add_overlay(&options);
+    end.set_measure_overlay(&options, true);
+    content.append(&end);
 }
 
 /// Opens `menu` at the pointer on a right click or long press of `row`.
@@ -1252,7 +1424,9 @@ fn context_menu(row: &gtk::ListBoxRow, menu: &gio::Menu) {
     let open = show.clone();
     click.connect_pressed(move |_, _, x, y| open(x, y));
     row.add_controller(click);
-    let press = gtk::GestureLongPress::new();
+    // Touch only: a mouse has the right click, and a held mouse button is
+    // how a label drag starts.
+    let press = gtk::GestureLongPress::builder().touch_only(true).build();
     press.connect_pressed(move |_, x, y| show(x, y));
     row.add_controller(press);
     row.connect_destroy(move |_| popover.unparent());
@@ -1449,8 +1623,7 @@ mod tests {
 
     use super::status_of;
     use super::{
-        Label, LabelKind, LabelRow, Mailbox, Standard, heading_row_name, label_icon, label_rows,
-        mailbox_row_name, takes_mail,
+        Mailbox, Standard, heading_row_name, label_icon, mailbox_row_name, takes_mail,
     };
 
     use super::{Offers, account_settings};
@@ -1572,31 +1745,6 @@ mod tests {
             assert!(!takes_mail(&Mailbox::Unified(which)), "{which:?}");
             assert!(!takes_mail(&Mailbox::Standard { account_id: 1, which }), "{which:?}");
         }
-    }
-
-    #[test]
-    fn a_group_nests_its_folders_but_opens_nothing() {
-        let label = |name: &str, kind| Label {
-            account_id: 1,
-            id: name.to_string(),
-            name: name.to_string(),
-            kind,
-            color: None,
-        };
-        let labels = [
-            label("Work/Clients", LabelKind::User),
-            label("INBOX", LabelKind::System),
-            label("Work", LabelKind::Group),
-            label("receipts", LabelKind::User),
-        ];
-        let rows: Vec<(&str, u32, bool)> = label_rows(&labels)
-            .iter()
-            .map(|row: &LabelRow<'_>| (row.leaf, row.depth, row.opens))
-            .collect();
-        assert_eq!(
-            rows,
-            [("receipts", 1, true), ("Work", 1, false), ("Clients", 2, true)]
-        );
     }
 }
 

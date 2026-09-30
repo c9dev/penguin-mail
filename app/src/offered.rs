@@ -202,6 +202,50 @@ impl Filing {
         }
     }
 
+    /// The menu item that opens that dialog with this one's name and a
+    /// slash already typed, so the new one nests under it.
+    pub fn new_inside_item(self) -> String {
+        match self {
+            Filing::Labels => gettext("New Label Inside…"),
+            Filing::Folders => gettext("New Folder Inside…"),
+        }
+    }
+
+    /// What the button at the end of a sidebar row says out loud.
+    pub fn options_name(self, name: &str) -> String {
+        match self {
+            Filing::Labels => fill(&gettext("Label Options for {name}"), &[("name", name)]),
+            Filing::Folders => fill(&gettext("Folder Options for {name}"), &[("name", name)]),
+        }
+    }
+
+    /// That button's tooltip.
+    pub fn options_tooltip(self) -> String {
+        match self {
+            Filing::Labels => gettext("Label options"),
+            Filing::Folders => gettext("Folder options"),
+        }
+    }
+
+    /// Why one dragged into its own subtree stays put.
+    pub fn inside_itself(self) -> String {
+        match self {
+            Filing::Labels => gettext("A label cannot go inside a label nested under it"),
+            Filing::Folders => gettext("A folder cannot go inside a folder nested under it"),
+        }
+    }
+
+    /// Why one dragged beside or into a namesake stays put.
+    pub fn name_taken(self, name: &str) -> String {
+        let name = name.replace('/', " › ");
+        match self {
+            Filing::Labels => fill(&gettext("There is a label called “{name}” already"), &[("name", &name)]),
+            Filing::Folders => {
+                fill(&gettext("There is a folder called “{name}” already"), &[("name", &name)])
+            }
+        }
+    }
+
     /// The heading of the dialog that asks for a new one's name.
     pub fn new_heading(self) -> String {
         match self {

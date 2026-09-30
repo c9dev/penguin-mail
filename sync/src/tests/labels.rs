@@ -34,6 +34,51 @@ async fn labels_are_created_renamed_with_children_and_deleted() {
     assert!(h.fake.with(|s| s.labels.iter().all(|l| l.id != clients.id)));
 }
 
+async fn positions(h: &super::Harness) -> Vec<(String, i64)> {
+    let mut order: Vec<(String, i64)> = h
+        .db
+        .read(|c| mailrs_store::labels::positions(c, 1))
+        .await
+        .unwrap()
+        .into_iter()
+        .collect();
+    order.sort_by_key(|(_, position)| *position);
+    order
+}
+
+#[tokio::test]
+async fn a_label_moved_among_its_siblings_keeps_its_name_and_takes_its_place() {
+    let h = harness().await;
+    h.bootstrap_all().await;
+    let personal = h.sync.create_label("Personal").await.unwrap();
+    let work = h.sync.create_label("Work").await.unwrap();
+
+    h.sync
+        .place_label(&work.id, "Work", &[work.id.clone(), personal.id.clone()])
+        .await
+        .unwrap();
+
+    assert_eq!(positions(&h).await, [(work.id.clone(), 0), (personal.id, 1)]);
+    assert!(h.fake.with(|s| s.labels.iter().any(|l| l.id == work.id && l.name == "Work")));
+}
+
+#[tokio::test]
+async fn a_label_dropped_into_another_is_renamed_under_it_and_placed() {
+    let h = harness().await;
+    h.bootstrap_all().await;
+    let _personal = h.sync.create_label("Personal").await.unwrap();
+    let bills = h.sync.create_label("Personal/bills").await.unwrap();
+    let bugs = h.sync.create_label("Work/bugs").await.unwrap();
+
+    h.sync
+        .place_label(&bugs.id, "Personal/bugs", &[bugs.id.clone(), bills.id.clone()])
+        .await
+        .unwrap();
+
+    assert!(h.fake.with(|s| s.labels.iter().any(|l| l.id == bugs.id && l.name == "Personal/bugs")));
+    assert_eq!(positions(&h).await, [(bugs.id, 0), (bills.id, 1)]);
+}
+
 #[tokio::test]
 async fn a_label_colour_is_kept() {
     let h = harness().await;
