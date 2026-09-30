@@ -3459,7 +3459,7 @@ msgstr "Agora não"
 
 #: app/src/ui/add_account.rs:1154 app/src/ui/calendar/editor.rs:1486
 #: app/src/ui/calendar/sidebar.rs:880 app/src/ui/contacts_prefs.rs:236
-#: app/src/ui/invitation.rs:449 app/src/ui/permission.rs:41
+#: app/src/ui/invitation.rs:461 app/src/ui/permission.rs:41
 #: app/src/ui/permission.rs:64 app/src/ui/window.rs:1259
 msgid "Grant Access"
 msgstr "Conceder acesso"
@@ -5075,8 +5075,8 @@ msgstr "Nenhum dos seus calendários aceita eventos novos"
 msgid "Could not save the event: {reason}"
 msgstr "Não foi possível guardar o evento: {reason}"
 
-#: app/src/ui/calendar/next.rs:87 app/src/ui/invitation.rs:792
-#: app/src/ui/invitation.rs:932 app/src/ui/invitation/strip.rs:168
+#: app/src/ui/calendar/next.rs:87 app/src/ui/invitation.rs:804
+#: app/src/ui/invitation.rs:944 app/src/ui/invitation/strip.rs:168
 msgid "Untitled event"
 msgstr "Evento sem título"
 
@@ -5423,7 +5423,7 @@ msgstr[1] "{yes} de {count} disseram que sim"
 
 #. The calendar's popover words its people line the same way.
 #: app/src/ui/calendar/words.rs:216 app/src/ui/calendar/words.rs:551
-#: app/src/ui/invitation.rs:1181
+#: app/src/ui/invitation.rs:1193
 msgid "{name}, organizer"
 msgstr "{name}, organizador"
 
@@ -5529,7 +5529,7 @@ msgstr "Organizador"
 msgid "No answer yet"
 msgstr "Ainda sem resposta"
 
-#: app/src/ui/calendar/words.rs:547 app/src/ui/invitation.rs:1259
+#: app/src/ui/calendar/words.rs:547 app/src/ui/invitation.rs:1271
 msgid "You"
 msgstr "Você"
 
@@ -6504,26 +6504,26 @@ msgstr "Eventos a adicionar"
 msgid "Show in Calendar"
 msgstr "Mostrar no calendário"
 
-#: app/src/ui/invitation.rs:446
+#: app/src/ui/invitation.rs:458
 msgid "Penguin Mail needs permission to show this event in Calendar."
 msgstr ""
 "O Penguin Mail precisa de permissão para mostrar este evento no calendário."
 
-#: app/src/ui/invitation.rs:849
+#: app/src/ui/invitation.rs:861
 msgid "Added to your calendar"
 msgstr "Adicionado ao seu calendário"
 
-#: app/src/ui/invitation.rs:851
+#: app/src/ui/invitation.rs:863
 msgid "Added {count} events to your calendar"
 msgid_plural "Added {count} events to your calendar"
 msgstr[0] "Adicionado {count} evento ao seu calendário"
 msgstr[1] "Adicionados {count} eventos ao seu calendário"
 
-#: app/src/ui/invitation.rs:856
+#: app/src/ui/invitation.rs:868
 msgid "Added to {calendar}"
 msgstr "Adicionado a {calendar}"
 
-#: app/src/ui/invitation.rs:858
+#: app/src/ui/invitation.rs:870
 msgid "Added {count} events to {calendar}"
 msgid_plural "Added {count} events to {calendar}"
 msgstr[0] "Adicionado {count} evento a {calendar}"
@@ -6531,101 +6531,101 @@ msgstr[1] "Adicionados {count} eventos a {calendar}"
 
 #. A file with several events names none of them on the card's
 #. head: the list below does, one row each.
-#: app/src/ui/invitation.rs:942
+#: app/src/ui/invitation.rs:954
 msgid "{count} events"
 msgid_plural "{count} events"
 msgstr[0] "{count} evento"
 msgstr[1] "{count} eventos"
 
-#: app/src/ui/invitation.rs:1019
+#: app/src/ui/invitation.rs:1031
 msgid "Pick a Time…"
 msgstr "Escolher uma hora…"
 
-#: app/src/ui/invitation.rs:1064
+#: app/src/ui/invitation.rs:1076
 msgid "No reply yet"
 msgstr "Ainda sem resposta"
 
-#: app/src/ui/invitation.rs:1134
+#: app/src/ui/invitation.rs:1146
 msgid "Half an Hour Later"
 msgstr "Meia hora mais tarde"
 
-#: app/src/ui/invitation.rs:1137
+#: app/src/ui/invitation.rs:1149
 msgid "An Hour Later"
 msgstr "Uma hora mais tarde"
 
-#: app/src/ui/invitation.rs:1139
+#: app/src/ui/invitation.rs:1151
 msgid "Same Time Tomorrow"
 msgstr "À mesma hora amanhã"
 
-#: app/src/ui/invitation.rs:1143
+#: app/src/ui/invitation.rs:1155
 msgid "Same Time Next Week"
 msgstr "À mesma hora na próxima semana"
 
-#: app/src/ui/invitation.rs:1158
+#: app/src/ui/invitation.rs:1170
 msgid "You have {event} then"
 msgstr "Tem {event} a essa hora"
 
-#: app/src/ui/invitation.rs:1160
+#: app/src/ui/invitation.rs:1172
 msgid "You have {event} and {other} then"
 msgstr "Tem {event} e {other} a essa hora"
 
-#: app/src/ui/invitation.rs:1164
+#: app/src/ui/invitation.rs:1176
 msgid "You have {event} and {count} more then"
 msgid_plural "You have {event} and {count} more then"
 msgstr[0] "Tem {event} e mais {count} a essa hora"
 msgstr[1] "Tem {event} e mais {count} a essa hora"
 
-#: app/src/ui/invitation.rs:1177
+#: app/src/ui/invitation.rs:1189
 msgid "Reply to the invitation from {organizer}"
 msgstr "Resposta ao convite de {organizer}"
 
-#: app/src/ui/invitation.rs:1285
+#: app/src/ui/invitation.rs:1297
 msgid "{count} yes"
 msgid_plural "{count} yes"
 msgstr[0] "{count} sim"
 msgstr[1] "{count} sim"
 
-#: app/src/ui/invitation.rs:1293
+#: app/src/ui/invitation.rs:1305
 msgid "{count} no"
 msgid_plural "{count} no"
 msgstr[0] "{count} não"
 msgstr[1] "{count} não"
 
-#: app/src/ui/invitation.rs:1301
+#: app/src/ui/invitation.rs:1313
 msgid "{count} maybe"
 msgid_plural "{count} maybe"
 msgstr[0] "{count} talvez"
 msgstr[1] "{count} talvez"
 
-#: app/src/ui/invitation.rs:1309
+#: app/src/ui/invitation.rs:1321
 msgid "{count} awaiting"
 msgid_plural "{count} awaiting"
 msgstr[0] "{count} por responder"
 msgstr[1] "{count} por responder"
 
-#: app/src/ui/invitation.rs:1317
+#: app/src/ui/invitation.rs:1329
 msgid "{count} guest"
 msgid_plural "{count} guests"
 msgstr[0] "{count} convidado"
 msgstr[1] "{count} convidados"
 
-#: app/src/ui/invitation.rs:1323
+#: app/src/ui/invitation.rs:1335
 msgid "{guests} · {answers}"
 msgstr "{guests} · {answers}"
 
-#: app/src/ui/invitation.rs:1333
+#: app/src/ui/invitation.rs:1345
 msgid "This meeting moved from {when}"
 msgstr "Esta reunião mudou de {when}"
 
-#: app/src/ui/invitation.rs:1336
+#: app/src/ui/invitation.rs:1348
 msgid "The organizer changed this meeting"
 msgstr "O organizador alterou esta reunião"
 
-#: app/src/ui/invitation.rs:1337
+#: app/src/ui/invitation.rs:1349
 msgid "The organizer canceled this meeting"
 msgstr "O organizador cancelou esta reunião"
 
-#: app/src/ui/invitation.rs:1338
+#: app/src/ui/invitation.rs:1350
 msgid "This meeting is canceled"
 msgstr "Esta reunião foi cancelada"
 

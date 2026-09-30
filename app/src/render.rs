@@ -764,6 +764,7 @@ transition:transform 200ms cubic-bezier(0.23,1,0.32,1),opacity 120ms ease}}\
 .toggle:focus-visible{{outline:2px solid var(--accent);outline-offset:-3px;border-radius:12px}}\
 .toggle{{position:absolute;inset:0;border-radius:12px}}\
 .expanded .header{{position:relative}}\
+.expanded .toggle{{inset:-16px -12px -10px;cursor:pointer}}\
 .fold{{position:relative}}\
 .avatar{{position:relative;grid-row:span 2;align-self:start;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;\
 justify-content:center;overflow:hidden;color:#fff;font-weight:700;font-size:15px;letter-spacing:0.02em;text-decoration:none}}\
@@ -776,7 +777,8 @@ background:var(--accent);margin-right:7px;vertical-align:1px}}\
 .address{{color:var(--dim);font-size:12.5px;font-weight:500;margin-left:8px}}\
 .date{{grid-column:4;grid-row:1;color:var(--dim);font-size:12.5px;white-space:nowrap}}\
 .line{{grid-column:2 / -1;color:var(--dim);font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}\
-.line.to{{position:relative;overflow:visible;white-space:normal;padding-right:96px}}\
+.line.to{{position:relative;overflow:visible;white-space:normal;padding-right:96px;pointer-events:none}}\
+.line.to details{{pointer-events:auto}}\
 .line.to .recipients{{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}\
 .line.to summary{{position:absolute;top:0;right:0;list-style:none;display:flex;align-items:center;gap:4px;\
 color:var(--accent-text);font-weight:700;cursor:pointer;user-select:none;border-radius:6px}}\
@@ -1524,6 +1526,29 @@ mod tests {
         // A collapsed message opens from anywhere on its card.
         assert!(html.contains(".message{position:relative"), "the card holds the toggle");
         assert!(html.contains(".expanded .header{position:relative}"), "an open message toggles from its header only");
+    }
+
+    #[test]
+    fn an_open_message_shuts_from_its_whole_header_band() {
+        let m = meta("m1", "Ann", &[]);
+        let no_thumbs = HashMap::new();
+        let html = page(
+            "x",
+            vec![MessageView {
+                meta: &m,
+                body: BodyState::Loading,
+                expanded: true,
+                thumbnails: &no_thumbs,
+                event_slot: false,
+                sanitized: None,
+            }],
+        );
+        // The toggle reaches the card's padding, and a press on the
+        // recipients passes through to it; only Details and its table
+        // keep presses of their own.
+        assert!(html.contains(".expanded .toggle{inset:-16px -12px -10px;cursor:pointer}"));
+        assert!(html.contains("pointer-events:none}"), "the recipients pass presses through");
+        assert!(html.contains(".line.to details{pointer-events:auto}"));
     }
 
     #[test]
