@@ -246,6 +246,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   it last updated, instead of leaving you guessing.
 
 ### Fixed
+- A window too narrow for the mail list beside the conversation shows one at a time, with a back button, instead of cutting off the conversation's right side.
 - On a phone-width window the mail list and the open conversation fit the screen again, with times, New Message and the window buttons in view.
 - Double-clicking an event opens the editor without leaving the event's bubble open beside it.
 - Show more in an event's bubble opens the rest of the notes instead of closing the bubble.

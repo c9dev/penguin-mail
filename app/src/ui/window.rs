@@ -719,21 +719,23 @@ impl MainWindow {
                 // The space needs the wider of the mail and the calendar,
                 // so switching between them leaves the panes where they
                 // are. The mail needs its list beside the conversation's
-                // bar of buttons, or the wider of the two once they stack.
-                arranged_room(&split, &assistant_split, move || {
+                // bar of buttons, whether or not they stack now: the room
+                // decides from that width when they stack.
+                arranged_room(&split, &assistant_split, &nav, move || {
                     let list = list_page.upgrade().map_or(0, |w| least(&w));
-                    let (collapsed, list) = columns.upgrade().map_or((false, list), |nav| {
-                        (nav.is_collapsed(), list.max(nav.min_sidebar_width() as i32))
-                    });
+                    let list = columns
+                        .upgrade()
+                        .map_or(list, |nav| list.max(nav.min_sidebar_width() as i32));
                     let (bar, bar_buttons) =
                         reading.upgrade().map_or((0, 0), |view| view.least_width());
-                    let mail = if collapsed { list.max(bar) } else { list + bar };
+                    let mail = list + bar;
                     let (calendar, calendar_buttons) =
                         days.upgrade().map_or((0, 0), |view| view.least_width());
                     buttons.set(buttons.get().max(bar_buttons).max(calendar_buttons));
                     room::Needs {
                         mailboxes: mailboxes.upgrade().map_or(0, |w| least(&w)).max(sidebar_least),
                         space: mail.max(calendar),
+                        columns: mail,
                         controls: buttons.get(),
                         panel: panel.upgrade().map_or(0, |w| least(&w)).max(room::PANEL_LEAST),
                     }
@@ -767,17 +769,17 @@ impl MainWindow {
                 .height_request(480)
                 .content(&toasts)
                 .build();
-            // Whether the mailboxes fold and the assistant slides over the
-            // space follow from the widths the panes need (room.rs), not
-            // from fixed breakpoints: those drifted from what the panes
-            // needed, and libadwaita clips a pane that does not fit.
+            // Whether the mailboxes fold, the assistant slides over the
+            // space and the list stacks over the conversation follow from
+            // the widths the panes need (room.rs), not from fixed
+            // breakpoints: those drifted from what the panes needed, and
+            // libadwaita clips a pane that does not fit.
             let medium = adw::Breakpoint::new(
                 adw::BreakpointCondition::parse("max-width: 960sp").expect("valid breakpoint"),
             );
             let narrow = adw::Breakpoint::new(
                 adw::BreakpointCondition::parse("max-width: 620sp").expect("valid breakpoint"),
             );
-            narrow.add_setter(&nav, "collapsed", Some(&true.to_value()));
             let (on, off) = (Rc::clone(&conversation), Rc::clone(&conversation));
             let (calendar_on, calendar_off) = (Rc::clone(&calendar), Rc::clone(&calendar));
             narrow.connect_apply(move |_| {
@@ -3615,6 +3617,7 @@ fn still_there(mailbox: &Mailbox, data: &[(Account, Vec<Label>)]) -> bool {
 fn arranged_room(
     split: &adw::OverlaySplitView,
     assistant_split: &adw::OverlaySplitView,
+    columns: &adw::NavigationSplitView,
     needs: impl Fn() -> room::Needs + 'static,
 ) -> room::Room {
     let open = assistant_split.downgrade();
@@ -3623,7 +3626,11 @@ fn arranged_room(
         room::arrange(width, panel_open, needs())
     };
     let (split_weak, assistant_weak) = (split.downgrade(), assistant_split.downgrade());
+    let columns = columns.downgrade();
     let apply = move |arranged: room::Arrangement| {
+        if let Some(columns) = columns.upgrade() {
+            columns.set_collapsed(arranged.columns_fold);
+        }
         if let Some(split) = split_weak.upgrade()
             && split.is_collapsed() != arranged.mailboxes_fold
         {

@@ -8,8 +8,9 @@
 //! each part needs, in pixels, so that whatever sits side by side fits:
 //! the panel goes beside the space while both fit, the mailboxes fold
 //! away first to make that room, and below that the panel slides over
-//! the space instead of squeezing it. [`Room`] holds the window's panes
-//! and arranges them each time GTK hands it a width.
+//! the space instead of squeezing it. Last, the mail's list and
+//! conversation stack and show one at a time. [`Room`] holds the
+//! window's panes and arranges them each time GTK hands it a width.
 
 use std::cell::{Cell, RefCell};
 
@@ -22,9 +23,12 @@ use gtk::subclass::prelude::*;
 pub struct Needs {
     /// The mailboxes, or the calendar's own sidebar.
     pub mailboxes: i32,
-    /// The mail's list and conversation, or the calendar, without the
-    /// window's buttons.
+    /// The mail's list beside its conversation, or the calendar,
+    /// whichever is wider, without the window's buttons.
     pub space: i32,
+    /// The mail's list beside its conversation alone. Below this and the
+    /// window's buttons, the two stack and show one at a time.
+    pub columns: i32,
     /// The window's own buttons (minimize, maximize, close), which sit
     /// at the end of the space's header unless the panel beside it takes
     /// them into its own.
@@ -44,6 +48,9 @@ pub struct Arrangement {
     pub panel_overlays: bool,
     /// The panel's width.
     pub panel_width: i32,
+    /// The mail's list and conversation stack and show one at a time,
+    /// with a back button, rather than sitting side by side.
+    pub columns_fold: bool,
 }
 
 /// The panel's narrowest width, where its suggestions still read well
@@ -70,6 +77,7 @@ pub fn arrange(width: i32, panel_open: bool, needs: Needs) -> Arrangement {
             mailboxes_fold: !panel_open && !mailboxes_fit_alone,
             panel_overlays: false,
             panel_width: panel_natural.min(width - with_mailboxes),
+            columns_fold: false,
         }
     } else if width - needs.panel >= needs.space {
         // The mailboxes stay while the panel is closed and fold only
@@ -78,12 +86,16 @@ pub fn arrange(width: i32, panel_open: bool, needs: Needs) -> Arrangement {
             mailboxes_fold: panel_open || !mailboxes_fit_alone,
             panel_overlays: false,
             panel_width: panel_natural.min(width - needs.space),
+            columns_fold: false,
         }
     } else {
+        // With the mailboxes gone, a window still too narrow for the list
+        // beside the conversation and its header shows one at a time.
         Arrangement {
             mailboxes_fold: !mailboxes_fit_alone,
             panel_overlays: true,
             panel_width: panel_natural.min(width),
+            columns_fold: width < needs.columns + needs.controls,
         }
     }
 }
@@ -231,6 +243,7 @@ mod tests {
     const MAIL: Needs = Needs {
         mailboxes: 257,
         space: 767,
+        columns: 767,
         controls: 108,
         panel: 320,
     };
@@ -244,6 +257,7 @@ mod tests {
                 mailboxes_fold: false,
                 panel_overlays: false,
                 panel_width: 460,
+                columns_fold: false,
             }
         );
     }
@@ -257,6 +271,7 @@ mod tests {
                 mailboxes_fold: true,
                 panel_overlays: false,
                 panel_width: 399,
+                columns_fold: false,
             }
         );
     }
@@ -302,11 +317,36 @@ mod tests {
     }
 
     #[test]
+    fn a_window_too_narrow_for_the_list_beside_the_conversation_stacks_them() {
+        for width in [874, 800, 700, 620] {
+            assert!(arrange(width, false, MAIL).columns_fold, "at {width}");
+        }
+    }
+
+    #[test]
+    fn the_list_stays_beside_the_conversation_while_both_fit() {
+        for width in [875, 900, 1100, 1440] {
+            assert!(!arrange(width, false, MAIL).columns_fold, "at {width}");
+        }
+    }
+
+    #[test]
+    fn the_calendar_does_not_stack_the_mail() {
+        let wide_calendar = Needs {
+            space: 1000,
+            ..MAIL
+        };
+        assert!(!arrange(900, false, wide_calendar).columns_fold);
+    }
+
+    #[test]
     fn whatever_sits_side_by_side_fits_the_window() {
+        // The list over the conversation, once they stack.
+        const STACKED: i32 = 467;
         for width in (360..2400).step_by(7) {
             for open in [false, true] {
                 let arranged = arrange(width, open, MAIL);
-                let mut used = MAIL.space;
+                let mut used = if arranged.columns_fold { STACKED } else { MAIL.space };
                 if !arranged.mailboxes_fold {
                     used += MAIL.mailboxes;
                 }
@@ -318,7 +358,7 @@ mod tests {
                 }
                 // A space too wide for the window on its own has nothing
                 // left to fold; every other arrangement fits.
-                let least = MAIL.space + MAIL.controls;
+                let least = STACKED + MAIL.controls;
                 assert!(used <= width.max(least), "at {width}, open {open}");
             }
         }
