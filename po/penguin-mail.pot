@@ -1684,7 +1684,7 @@ msgstr ""
 
 #: app/src/notify.rs:51 app/src/ui/calendar/manage.rs:191
 #: app/src/ui/calendar/popover.rs:198 app/src/ui/calendar/popover.rs:200
-#: app/src/ui/calendar/popover.rs:622 app/src/ui/calendar/scope.rs:184
+#: app/src/ui/calendar/popover.rs:624 app/src/ui/calendar/scope.rs:184
 #: app/src/ui/conversation.rs:512 app/src/ui/hide_my_email.rs:288
 #: app/src/ui/queued.rs:58 app/src/ui/templates.rs:149
 #: app/src/ui/window/arrange.rs:92 app/src/ui/window/organize.rs:142
@@ -3910,7 +3910,7 @@ msgstr ""
 msgid "Open {file} in the browser"
 msgstr ""
 
-#: app/src/ui/calendar/attachments.rs:132 app/src/ui/calendar/popover.rs:775
+#: app/src/ui/calendar/attachments.rs:132 app/src/ui/calendar/popover.rs:777
 msgid "Open in Browser"
 msgstr ""
 
@@ -3918,7 +3918,7 @@ msgstr ""
 msgid "Waiting to be sent"
 msgstr ""
 
-#: app/src/ui/calendar/block.rs:510 app/src/ui/calendar/popover.rs:680
+#: app/src/ui/calendar/block.rs:510 app/src/ui/calendar/popover.rs:682
 msgid "Not answered yet"
 msgstr ""
 
@@ -4820,11 +4820,11 @@ msgstr ""
 #. The button reads "Show all"; a screen reader also hears how
 #. many are still hidden, in the same words the tooltip used
 #. to give before this list replaced it.
-#: app/src/ui/calendar/popover.rs:267 app/src/ui/calendar/popover.rs:746
+#: app/src/ui/calendar/popover.rs:267 app/src/ui/calendar/popover.rs:748
 msgid "Show all guests"
 msgstr ""
 
-#: app/src/ui/calendar/popover.rs:286 app/src/ui/calendar/popover.rs:682
+#: app/src/ui/calendar/popover.rs:286 app/src/ui/calendar/popover.rs:684
 #: app/src/ui/invitation.rs:317
 msgid "Answer"
 msgstr ""
@@ -4849,15 +4849,15 @@ msgstr ""
 msgid "Open the invitation in Mail"
 msgstr ""
 
-#: app/src/ui/calendar/popover.rs:607
+#: app/src/ui/calendar/popover.rs:609
 msgid "{when}, {zone}"
 msgstr ""
 
-#: app/src/ui/calendar/popover.rs:623
+#: app/src/ui/calendar/popover.rs:625
 msgid "Remove from My Calendar"
 msgstr ""
 
-#: app/src/ui/calendar/popover.rs:692
+#: app/src/ui/calendar/popover.rs:694
 msgid "Your answer"
 msgstr ""
 
