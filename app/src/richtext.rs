@@ -291,7 +291,7 @@ impl RichBody {
     }
 }
 
-fn span_to_markdown(span: &Span) -> String {
+pub(crate) fn span_to_markdown(span: &Span) -> String {
     if let Some(src) = &span.image {
         return format!("![{}]({src})", span.text);
     }
@@ -406,6 +406,8 @@ struct Builder {
     /// The heading level or code block we are inside.
     block: Option<BlockKind>,
     open: bool,
+    /// The cells of the table row being read so far.
+    cells: usize,
 }
 
 impl Builder {
@@ -572,6 +574,28 @@ impl Builder {
                     .push(Block::new(BlockKind::Paragraph, vec![Span::plain("———")]));
             }
             Event::Html(text) | Event::InlineHtml(text) => self.push(&text),
+            // A table keeps one line a row, its cells set apart by a bar,
+            // and the header row in bold.
+            Event::Start(Tag::TableHead) => {
+                self.cells = 0;
+                self.style.bold = true;
+            }
+            Event::End(TagEnd::TableHead) => {
+                self.line();
+                self.style.bold = false;
+            }
+            Event::Start(Tag::TableRow) => self.cells = 0,
+            Event::End(TagEnd::TableRow) => self.line(),
+            Event::Start(Tag::TableCell) => {
+                self.cells += 1;
+                if self.cells > 1 {
+                    let (style, link) = (self.style, self.link.take());
+                    self.style = Style::default();
+                    self.push(" | ");
+                    (self.style, self.link) = (style, link);
+                }
+            }
+            Event::End(TagEnd::Table) => self.gap(),
             _ => {}
         }
     }
@@ -1193,6 +1217,14 @@ mod tests {
         assert_eq!(RichBody::from_html("<p>unclosed").to_plain(), "unclosed");
         assert_eq!(RichBody::from_html("<p>a < b</p>").to_plain(), "a < b");
         assert!(RichBody::from_html("").is_empty());
+    }
+
+    #[test]
+    fn a_table_keeps_one_line_a_row() {
+        let doc = RichBody::from_markdown("| Day | Dish |\n|-----|------|\n| Mon | Soup |\n| Tue | Stew |");
+        let rows: Vec<String> = doc.blocks.iter().map(Block::text).collect();
+        assert_eq!(rows, ["Day | Dish", "Mon | Soup", "Tue | Stew"]);
+        assert!(doc.blocks[0].spans.iter().all(|s| s.style.bold || s.text == " | "));
     }
 
     #[test]
