@@ -246,6 +246,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   it last updated, instead of leaving you guessing.
 
 ### Fixed
+- The calendar's view switch always shows the view on screen. When the header runs short it becomes one button, such as "Week", that lists Day, Week, Month and Agenda, and the week keeps all seven days in view.
+- On a phone-width window the calendar keeps New Event, Search and the window buttons in its header, with Today and the arrows beside List and Day at the bottom, and agenda rows fit their card.
 - A window too narrow for the mail list beside the conversation shows one at a time, with a back button, instead of cutting off the conversation's right side.
 - On a phone-width window the mail list and the open conversation fit the screen again, with times, New Message and the window buttons in view.
 - Double-clicking an event opens the editor without leaving the event's bubble open beside it.

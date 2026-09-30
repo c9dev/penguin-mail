@@ -17,6 +17,7 @@ pub mod draft;
 pub mod drag;
 pub mod editor;
 pub mod header;
+pub mod headings;
 pub mod holding;
 pub mod holidays;
 pub mod kinds;
@@ -42,7 +43,7 @@ use std::sync::Arc;
 
 use adw::prelude::*;
 use chrono::{DateTime, Datelike, Days, NaiveDate, Utc};
-use gtk::{gdk, glib};
+use gtk::{gdk, gio, glib};
 use mailrs_domain::calendar::series::{self, RepeatScope};
 use mailrs_domain::calendar::{Access, Calendar, Guest, Occurrence};
 use mailrs_domain::invitation::Answer;
@@ -137,7 +138,7 @@ enum PageView {
 /// 24-hour grid.
 struct GridPage {
     root: gtk::Box,
-    headings: gtk::Box,
+    headings: headings::DayHeadings,
     strip: AllDayStrip,
     scroller: gtk::ScrolledWindow,
     /// Counts the scrolls asked of `scroller`. A scroll waiting for the
@@ -183,11 +184,19 @@ pub struct CalendarView {
     previous: gtk::Button,
     next: gtk::Button,
     switch: adw::ToggleGroup,
-    switch_slot: adw::Bin,
+    /// The switch folded into one button, for a header without room for
+    /// its toggles: it names the view on screen and lists the others.
+    view_menu: gtk::MenuButton,
+    /// The view the drop-down marks, as the name of its toggle.
+    view_action: gio::SimpleAction,
+    /// Holds the switch and the drop-down in the header, one at a time.
+    switch_slot: gtk::Box,
     /// Holds the header bar and decides which of its extras fit.
     header_room: HeaderRoom,
-    search_button: gtk::ToggleButton,
-    bottom_slot: adw::Bin,
+    /// The bar under a narrow window's view: Today, the arrows and the
+    /// switch.
+    bottom_row: gtk::Box,
+    header: adw::HeaderBar,
     /// The orange "+" button: the editor on a new event at the slot.
     /// Hidden while no calendar takes new events.
     new_event: gtk::Button,
@@ -230,9 +239,6 @@ pub struct CalendarView {
     /// for in a narrow window.
     before_day: Cell<ViewKind>,
     narrow: Cell<bool>,
-    /// Below the width where the sidebar folds away, the header keeps
-    /// the range's bold part only.
-    compact: Cell<bool>,
     accounts: RefCell<Vec<CalendarAccount>>,
     calendars: RefCell<Calendars>,
     /// The calendars the person took off the sidebar's list, by account
@@ -376,7 +382,39 @@ impl CalendarView {
             .valign(gtk::Align::Center)
             .build();
         crate::ui::name(&switch, &gettext("View"));
-        let switch_slot = adw::Bin::builder().child(&switch).build();
+        // The same choice as the switch, for a header too short for its
+        // toggles. The action's state is the name of the toggle on
+        // screen, so the menu marks it.
+        let view_action = gio::SimpleAction::new_stateful(
+            "view",
+            Some(glib::VariantTy::STRING),
+            &"week".to_variant(),
+        );
+        let view_actions = gio::SimpleActionGroup::new();
+        view_actions.add_action(&view_action);
+        let view_items = gio::Menu::new();
+        for (name, label) in [
+            ("day", gettext("Day")),
+            ("week", gettext("Week")),
+            ("month", gettext("Month")),
+            ("agenda", gettext("Agenda")),
+        ] {
+            let item = gio::MenuItem::new(Some(&label), None);
+            item.set_action_and_target_value(Some("calendar-view.view"), Some(&name.to_variant()));
+            view_items.append_item(&item);
+        }
+        let view_menu = gtk::MenuButton::builder()
+            .menu_model(&view_items)
+            .always_show_arrow(true)
+            .tooltip_text(gettext("View"))
+            .css_classes(["view-menu"])
+            .valign(gtk::Align::Center)
+            .visible(false)
+            .build();
+        view_menu.insert_action_group("calendar-view", Some(&view_actions));
+        let switch_slot = gtk::Box::new(gtk::Orientation::Horizontal, 0);
+        switch_slot.append(&switch);
+        switch_slot.append(&view_menu);
 
         let new_event = gtk::Button::builder()
             .icon_name("list-add-symbolic")
@@ -406,8 +444,11 @@ impl CalendarView {
             .build();
         crate::ui::name_with_shortcut(&assistant_toggle, &gettext("Assistant (Ctrl+J)"));
 
+        // No centred title: the range's title sits at the start, and
+        // without a centre the bar's natural width is its two sides, the
+        // width HeaderRoom weighs the view switch against.
         let header = adw::HeaderBar::builder()
-            .title_widget(&gtk::Box::new(gtk::Orientation::Horizontal, 0))
+            .show_title(false)
             .css_classes(["calendar-header"])
             .build();
         header.pack_start(&sidebar_button);
@@ -419,15 +460,16 @@ impl CalendarView {
         header.pack_end(&search_button);
         header.pack_end(&new_event);
         header.pack_end(&switch_slot);
-        // When the room runs short the header drops its extras rather
-        // than squeeze the view switch. The title's parts sit 8 px apart
-        // and the bar's packed children 6.
+        // When the room runs short the header drops its extras, and then
+        // folds the view switch into its drop-down, rather than lose New
+        // Event, Search or the window's buttons. The title's parts sit
+        // 8 px apart; the switch and the drop-down share one slot.
         let header_room = HeaderRoom::new(
             &header,
             [
-                (title_week.clone().upcast(), 8),
-                (title_dim.clone().upcast(), 8),
-                (search_button.clone().upcast(), 6),
+                (title_week.clone().upcast(), 8, None),
+                (title_dim.clone().upcast(), 8, None),
+                (switch.clone().upcast(), 0, Some(view_menu.clone().upcast())),
             ],
         );
 
@@ -461,9 +503,12 @@ impl CalendarView {
         carousel.set_scroll_params(&adw::SpringParams::new(1.0, 1.0, 400.0));
         let list = Agenda::new();
         let results = Agenda::new();
+        // Only the view on screen sets the width, so the list is not held
+        // to the seven columns of a week it does not show.
         let views = gtk::Stack::builder()
             .transition_type(gtk::StackTransitionType::Crossfade)
             .transition_duration(150)
+            .hhomogeneous(false)
             .build();
         for agenda in [&list, &results] {
             agenda.widget.set_margin_start(12);
@@ -520,6 +565,8 @@ impl CalendarView {
         page.add_top_bar(&header_room);
         page.add_top_bar(&search_bar);
         page.set_content(Some(&bin));
+        let bottom_row = gtk::Box::new(gtk::Orientation::Horizontal, 12);
+        bottom_slot.set_child(Some(&bottom_row));
         page.add_bottom_bar(&bottom_slot);
         page.set_reveal_bottom_bars(false);
 
@@ -587,10 +634,12 @@ impl CalendarView {
                 previous,
                 next,
                 switch,
+                view_menu,
+                view_action,
                 switch_slot,
                 header_room: header_room.clone(),
-                search_button: search_button.clone(),
-                bottom_slot,
+                bottom_row,
+                header: header.clone(),
                 new_event: new_event.clone(),
                 search_bar,
                 search_entry,
@@ -617,7 +666,6 @@ impl CalendarView {
                     other => other,
                 }),
                 narrow: Cell::new(false),
-                compact: Cell::new(false),
                 accounts: RefCell::new(Vec::new()),
                 calendars: RefCell::new(HashMap::new()),
                 hidden: RefCell::new(HashSet::new()),
@@ -679,6 +727,14 @@ impl CalendarView {
                 return;
             }
             let name = switch.active_name();
+            if let Some(kind) = name.and_then(|n| shown::kind_for(&n, view.before_day.get())) {
+                view.set_kind(kind);
+            }
+        });
+        let weak = Rc::downgrade(&view);
+        view.view_action.connect_activate(move |_, name| {
+            let Some(view) = weak.upgrade() else { return };
+            let name = name.and_then(|n| n.get::<String>());
             if let Some(kind) = name.and_then(|n| shown::kind_for(&n, view.before_day.get())) {
                 view.set_kind(kind);
             }
@@ -1053,13 +1109,35 @@ impl CalendarView {
             return;
         }
         self.narrow.set(narrow);
-        self.switch_slot.set_child(None::<&gtk::Widget>);
-        self.bottom_slot.set_child(None::<&gtk::Widget>);
-        match narrow {
-            true => self.bottom_slot.set_child(Some(&self.switch)),
-            false => self.switch_slot.set_child(Some(&self.switch)),
+        // A phone's header keeps its title, New Event, Search and the
+        // window's buttons; Today and the arrows go down beside the
+        // switch.
+        if narrow {
+            self.switch_slot.remove(&self.switch);
+            self.header.remove(&self.today_button);
+            self.header.remove(&self.arrows);
+            self.bottom_row.append(&self.today_button);
+            self.bottom_row.append(&self.arrows);
+            self.bottom_row.append(&self.switch);
+        } else {
+            for widget in [
+                self.today_button.upcast_ref::<gtk::Widget>(),
+                self.arrows.upcast_ref(),
+                self.switch.upcast_ref(),
+            ] {
+                self.bottom_row.remove(widget);
+            }
+            self.switch_slot.prepend(&self.switch);
+            self.header.pack_start(&self.today_button);
+            self.header.pack_start(&self.arrows);
         }
+        self.switch_slot.set_visible(!narrow);
+        self.header_room.want(Extra::Switch, !narrow);
         self.page.set_reveal_bottom_bars(narrow);
+        match narrow {
+            true => self.page.add_css_class("calendar-narrow"),
+            false => self.page.remove_css_class("calendar-narrow"),
+        }
         self.build_switch();
         self.show_range();
         if self.showing() == Showing::List {
@@ -1074,27 +1152,15 @@ impl CalendarView {
         self.today_button.grab_focus();
     }
 
-    /// Answers the window's medium breakpoint: the view switch drops
-    /// Week, the widest grid, which has no room to show its seven days.
-    /// The header drops its own extras as its room runs short
-    /// (`header::HeaderRoom`).
-    pub fn set_compact(&self, compact: bool) {
-        self.compact.set(compact);
-        match compact {
-            true => self.page.add_css_class("calendar-compact"),
-            false => self.page.remove_css_class("calendar-compact"),
-        }
-        self.build_switch();
-        self.show_range();
-    }
-
     /// The narrowest the calendar can go, the header with its extras
-    /// gone or the card, whichever is wider, and then the window's
-    /// buttons in the header (`ui::header_least`). The grid inside the
-    /// card reflows to any width.
+    /// gone or the card with the view it shows, whichever is wider, and
+    /// then the window's buttons in the header (`ui::header_least`).
     pub fn least_width(&self) -> (i32, i32) {
         let (header, buttons) = crate::ui::header_least(&self.header_room);
-        let card = self.page.content().map_or(0, |c| c.width_request());
+        let card = self
+            .page
+            .content()
+            .map_or(0, |c| c.measure(gtk::Orientation::Horizontal, -1).0);
         (header.max(card), buttons)
     }
 
@@ -1115,19 +1181,18 @@ impl CalendarView {
 
     /// What the view shows now.
     fn showing(&self) -> Showing {
-        shown::showing(self.kind.get(), self.narrow.get(), self.compact.get())
+        shown::showing(self.kind.get(), self.narrow.get())
     }
 
     /// The name of the switch entry that marks what is on screen.
     fn active_toggle(&self) -> &'static str {
-        shown::active_toggle(self.kind.get(), self.narrow.get(), self.compact.get())
+        shown::active_toggle(self.kind.get(), self.narrow.get())
     }
 
     /// The grid actually on screen: the kind the person picked, unless
     /// the breakpoint replaced it. List draws Month's grid behind its
     /// own agenda page (unused while List is on screen, but built all
-    /// the same); a compact window without room for Week draws Month in
-    /// its place. Every page built from the current range, and anything
+    /// the same). Every page built from the current range, and anything
     /// that steps by or matches against it, follows this rather than the
     /// raw [`kind`](Self::kind), so what such code does lines up with
     /// what the reader sees.
@@ -1156,7 +1221,7 @@ impl CalendarView {
     fn build_switch(&self) {
         self.switching.set(true);
         self.switch.remove_all();
-        for (name, on) in shown::offered(self.narrow.get(), self.compact.get()) {
+        for (name, on) in shown::offered(self.narrow.get()) {
             if !on {
                 continue;
             }
@@ -1179,7 +1244,9 @@ impl CalendarView {
         self.title_dim.set_visible(room.keeps(Extra::Year));
         self.title_week
             .set_visible(!self.title_week.label().is_empty() && room.keeps(Extra::Week));
-        self.search_button.set_visible(room.keeps(Extra::Search));
+        let whole = room.keeps(Extra::Switch);
+        self.switch.set_visible(whole || self.narrow.get());
+        self.view_menu.set_visible(!whole);
     }
 
     /// Brings the header and the visible view in line with the range.
@@ -1188,8 +1255,23 @@ impl CalendarView {
         self.switching.set(true);
         self.switch.set_active_name(Some(self.active_toggle()));
         self.switching.set(false);
-        // The list names its month the way a month's title does.
-        let range = Range::around(self.effective_kind(), self.day.get());
+        let active = self.active_toggle();
+        self.view_action.set_state(&active.to_variant());
+        self.view_menu.set_label(&match active {
+            "day" => gettext("Day"),
+            "week" => gettext("Week"),
+            "month" => gettext("Month"),
+            "list" => gettext("List"),
+            _ => gettext("Agenda"),
+        });
+        // The list names its month the way a month's title does. So does
+        // a narrow window's Day, whose heading under the header already
+        // names the day.
+        let titled = match (showing, self.narrow.get()) {
+            (Showing::Day, true) => ViewKind::Month,
+            _ => self.effective_kind(),
+        };
+        let range = Range::around(titled, self.day.get());
         let (bold, dim, week) = range.title();
         self.title_bold.set_label(&bold);
         self.title_dim.set_label(&dim);
@@ -1499,12 +1581,10 @@ impl CalendarView {
     }
 
     fn grid_page(self: &Rc<Self>) -> GridPage {
-        let headings = gtk::Box::builder()
-            .homogeneous(true)
-            .margin_start(GUTTER as i32)
-            .margin_top(11)
-            .margin_bottom(10)
-            .build();
+        let headings = headings::DayHeadings::new();
+        headings.set_margin_start(GUTTER as i32);
+        headings.set_margin_top(11);
+        headings.set_margin_bottom(10);
         let strip = AllDayStrip::new();
         crate::ui::name(&strip, &gettext("All-day events"));
         let all_day = gtk::Label::builder()
@@ -1883,10 +1963,13 @@ impl CalendarView {
     /// The day headings over a grid: "MON 21", today's in a pill, and
     /// under it where the person works that day, from `places`, which
     /// runs parallel to `days`. Each opens its day.
-    fn fill_headings(self: &Rc<Self>, headings: &gtk::Box, days: &[NaiveDate], places: &[Option<String>]) {
-        while let Some(child) = headings.first_child() {
-            headings.remove(&child);
-        }
+    fn fill_headings(
+        self: &Rc<Self>,
+        headings: &headings::DayHeadings,
+        days: &[NaiveDate],
+        places: &[Option<String>],
+    ) {
+        let mut row = Vec::with_capacity(days.len());
         let today = chrono::Local::now().date_naive();
         for (index, &day) in days.iter().enumerate() {
             let place = places.get(index).cloned().flatten();
@@ -1901,11 +1984,12 @@ impl CalendarView {
                 .label(day.day().to_string())
                 .css_classes(["date"])
                 .build();
-            let inner = gtk::Box::builder().spacing(8).build();
+            let inner = gtk::Box::builder().spacing(headings::SPACING).build();
             inner.append(&weekday);
             inner.append(&date);
-            if let Some(place) = &place {
-                inner.append(&place_label(place));
+            let place_shown = place.as_deref().map(place_label);
+            if let Some(label) = &place_shown {
+                inner.append(label);
             }
             let button = gtk::Button::builder()
                 .child(&inner)
@@ -1923,8 +2007,9 @@ impl CalendarView {
                     view.open_day(day);
                 }
             });
-            headings.append(&button);
+            row.push((button, place_shown));
         }
+        headings.replace(row);
     }
 
     /// Shows `day` alone.

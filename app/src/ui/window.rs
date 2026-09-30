@@ -774,9 +774,8 @@ impl MainWindow {
             // the widths the panes need (room.rs), not from fixed
             // breakpoints: those drifted from what the panes needed, and
             // libadwaita clips a pane that does not fit.
-            let medium = adw::Breakpoint::new(
-                adw::BreakpointCondition::parse("max-width: 960sp").expect("valid breakpoint"),
-            );
+            // The calendar's header folds its own view switch when short
+            // of room (calendar/header.rs).
             let narrow = adw::Breakpoint::new(
                 adw::BreakpointCondition::parse("max-width: 620sp").expect("valid breakpoint"),
             );
@@ -785,19 +784,11 @@ impl MainWindow {
             narrow.connect_apply(move |_| {
                 on.set_compact(true);
                 calendar_on.set_narrow(true);
-                calendar_on.set_compact(true);
             });
             narrow.connect_unapply(move |_| {
                 off.set_compact(false);
                 calendar_off.set_narrow(false);
-                calendar_off.set_compact(false);
             });
-            // The window applies one breakpoint at a time, so going from
-            // narrow to medium unapplies narrow before this applies.
-            let (calendar_on, calendar_off) = (Rc::clone(&calendar), Rc::clone(&calendar));
-            medium.connect_apply(move |_| calendar_on.set_compact(true));
-            medium.connect_unapply(move |_| calendar_off.set_compact(false));
-            window.add_breakpoint(medium);
             window.add_breakpoint(narrow);
 
             let actions = gio::SimpleActionGroup::new();
