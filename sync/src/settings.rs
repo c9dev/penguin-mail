@@ -97,6 +97,16 @@ impl AutomaticReply {
     }
 }
 
+/// What replacing a rule came to.
+#[derive(Debug)]
+pub enum Replaced {
+    /// The new rule runs in place of the old one.
+    Swapped(Filter),
+    /// The server made the new rule but refused to delete the old one, so
+    /// both run until someone deletes one.
+    BothRun { new: Filter, error: SyncError },
+}
+
 pub struct AccountSettings<A: Accounts> {
     accounts: Arc<A>,
     db: Db,
@@ -159,6 +169,36 @@ impl<A: Accounts> AccountSettings<A> {
         id: &str,
     ) -> Result<Permitted<()>, SyncError> {
         permitted(delete_filter(&self.rules_service(account_id)?, id).await)
+    }
+
+    /// Puts `rule` in the place of `old`. Gmail cannot change a filter, so
+    /// this creates the new one first and deletes the old one after it:
+    /// a failed create leaves the old rule running and answers the error,
+    /// and a failed delete answers `Replaced::BothRun`. A rule that
+    /// matches and does what `old` does stays as it is, since Gmail
+    /// refuses a filter identical to one it has.
+    pub async fn replace_rule(
+        &self,
+        account_id: AccountId,
+        old: &Filter,
+        rule: Filter,
+    ) -> Result<Permitted<Replaced>, SyncError> {
+        if rule.criteria == old.criteria && rule.action == old.action {
+            return Ok(Permitted::Done(Replaced::Swapped(old.clone())));
+        }
+        let old_id = old
+            .id
+            .as_deref()
+            .ok_or(SyncError::Backend(BackendError::NotFound))?;
+        let rules = self.rules_service(account_id)?;
+        let new = done!(rules.create_filter(&Filter { id: None, ..rule }).await);
+        Ok(Permitted::Done(match delete_filter(&rules, old_id).await {
+            Ok(()) => Replaced::Swapped(new),
+            Err(err) => Replaced::BothRun {
+                new,
+                error: err.into(),
+            },
+        }))
     }
 
     /// Sends mail from `email` straight to the Trash from now on.

@@ -88,6 +88,27 @@ fn a_gmail_filter_survives_the_trip_through_mail_sets() {
     assert_eq!(serde_json::to_value(GmailFilter::from(&filter)).unwrap(), wire);
 }
 
+/// Editing a rule writes it again, so every criterion Gmail sends has to
+/// come back on the wire, the ones the Rules form never shows included.
+#[test]
+fn a_gmail_filter_keeps_its_size_and_chat_criteria() {
+    let wire = serde_json::json!({
+        "id": "f2",
+        "criteria": {
+            "from": "ann@example.com",
+            "size": 5_242_880,
+            "sizeComparison": "larger",
+            "excludeChats": true
+        },
+        "action": {"removeLabelIds": ["INBOX"]}
+    });
+    let filter = serde_json::from_value::<GmailFilter>(wire.clone())
+        .unwrap()
+        .into_filter();
+    assert_eq!(filter.criteria.size, Some(5_242_880));
+    assert_eq!(serde_json::to_value(GmailFilter::from(&filter)).unwrap(), wire);
+}
+
 #[test]
 fn labels_and_threads_parse() {
     let l: LabelList = serde_json::from_str(

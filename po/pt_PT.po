@@ -1795,7 +1795,7 @@ msgstr "Arquivar"
 
 #: app/src/notify.rs:50 app/src/ui/conversation.rs:380
 #: app/src/ui/conversation.rs:1136 app/src/ui/preferences.rs:140
-#: app/src/ui/rules.rs:281 app/src/ui/window/message_menu.rs:126
+#: app/src/ui/rules.rs:298 app/src/ui/window/message_menu.rs:126
 msgid "Mark as Read"
 msgstr "Marcar como lida"
 
@@ -2683,71 +2683,79 @@ msgstr "eu"
 msgid "Show trimmed content"
 msgstr "Mostrar conteúdo cortado"
 
-#: app/src/rules.rs:72
+#: app/src/rules.rs:172
 msgid "From {address}"
 msgstr "De {address}"
 
-#: app/src/rules.rs:75
+#: app/src/rules.rs:175
 msgid "To {address}"
 msgstr "Para {address}"
 
-#: app/src/rules.rs:79
+#: app/src/rules.rs:179
 msgid "Subject has “{words}”"
 msgstr "Assunto com “{words}”"
 
-#: app/src/rules.rs:84
+#: app/src/rules.rs:184
 msgid "Has “{words}”"
 msgstr "Contém “{words}”"
 
-#: app/src/rules.rs:88
+#: app/src/rules.rs:188
 msgid "Doesn't have “{words}”"
 msgstr "Não contém “{words}”"
 
-#: app/src/rules.rs:93
+#: app/src/rules.rs:193
 msgid "Has an attachment"
 msgstr "Tem um anexo"
 
-#: app/src/rules.rs:96
+#: app/src/rules.rs:198
+msgid "Smaller than {size}"
+msgstr "Menor do que {size}"
+
+#: app/src/rules.rs:199
+msgid "Larger than {size}"
+msgstr "Maior do que {size}"
+
+#: app/src/rules.rs:204
 msgid "All mail"
 msgstr "Todo o correio"
 
-#: app/src/rules.rs:116
+#: app/src/rules.rs:224
 msgid "Delete it"
 msgstr "Eliminá-la"
 
-#: app/src/rules.rs:118 app/src/ui/rules.rs:280
+#: app/src/rules.rs:226 app/src/ui/rules.rs:297
 msgid "Skip the Inbox"
 msgstr "Saltar a caixa de entrada"
 
-#: app/src/rules.rs:123
+#: app/src/rules.rs:231
 msgid "Apply {label}"
 msgstr "Aplicar {label}"
 
-#: app/src/rules.rs:129
+#: app/src/rules.rs:237
 msgid "Star it"
 msgstr "Marcar com estrela"
 
-#: app/src/rules.rs:132
+#: app/src/rules.rs:240
 msgid "Mark as read"
 msgstr "Marcar como lida"
 
-#: app/src/rules.rs:135
+#: app/src/rules.rs:243
 msgid "Mark as important"
 msgstr "Marcar como importante"
 
-#: app/src/rules.rs:138
+#: app/src/rules.rs:246
 msgid "Never mark as important"
 msgstr "Nunca marcar como importante"
 
-#: app/src/rules.rs:141
+#: app/src/rules.rs:249
 msgid "Never send to Spam"
 msgstr "Nunca enviar para spam"
 
-#: app/src/rules.rs:144
+#: app/src/rules.rs:252
 msgid "Forward to {address}"
 msgstr "Reencaminhar para {address}"
 
-#: app/src/rules.rs:147
+#: app/src/rules.rs:255
 msgid "Nothing"
 msgstr "Nada"
 
@@ -3294,8 +3302,9 @@ msgstr "Tentar de novo"
 #: app/src/ui/calendar/scope.rs:164 app/src/ui/composer/mod.rs:1473
 #: app/src/ui/composer/mod.rs:1542 app/src/ui/composer/mod.rs:1860
 #: app/src/ui/composer/mod.rs:2154 app/src/ui/confirm.rs:29
-#: app/src/ui/smart_editor.rs:150 app/src/ui/templates.rs:239
-#: app/src/ui/unsubscribe.rs:95 app/src/ui/vacation.rs:45 app/src/ui/when.rs:52
+#: app/src/ui/rules.rs:367 app/src/ui/smart_editor.rs:150
+#: app/src/ui/templates.rs:239 app/src/ui/unsubscribe.rs:95
+#: app/src/ui/vacation.rs:45 app/src/ui/when.rs:52
 #: app/src/ui/window/arrange.rs:132 app/src/ui/window/images.rs:101
 #: app/src/ui/window/organize.rs:56 app/src/ui/window/organize.rs:105
 msgid "Cancel"
@@ -3761,9 +3770,9 @@ msgstr "Testar"
 
 #: app/src/ui/assistant_mcp_prefs.rs:341 app/src/ui/calendar/editor.rs:155
 #: app/src/ui/calendar/quick.rs:103 app/src/ui/calendar/scope.rs:183
-#: app/src/ui/composer/mod.rs:2154 app/src/ui/smart_editor.rs:144
-#: app/src/ui/templates.rs:233 app/src/ui/vacation.rs:41
-#: app/src/ui/window/arrange.rs:132
+#: app/src/ui/composer/mod.rs:2154 app/src/ui/rules.rs:360
+#: app/src/ui/smart_editor.rs:144 app/src/ui/templates.rs:233
+#: app/src/ui/vacation.rs:41 app/src/ui/window/arrange.rs:132
 msgid "Save"
 msgstr "Guardar"
 
@@ -4856,7 +4865,7 @@ msgstr ""
 "Um calendário seu em {account}, no Google Calendar em todos os dispositivos."
 
 #: app/src/ui/calendar/manage.rs:271 app/src/ui/hide_my_email.rs:357
-#: app/src/ui/rules.rs:307 app/src/ui/smart_editor.rs:146
+#: app/src/ui/rules.rs:361 app/src/ui/smart_editor.rs:146
 #: app/src/ui/templates.rs:235 app/src/ui/window/organize.rs:57
 #: app/src/ui/window/organize.rs:285
 msgid "Create"
@@ -5553,7 +5562,7 @@ msgid "Blind carbon copy"
 msgstr "Cópia oculta"
 
 #: app/src/ui/composer/mod.rs:344 app/src/ui/composer/mod.rs:383
-#: app/src/ui/rules.rs:266 app/src/ui/templates.rs:192
+#: app/src/ui/rules.rs:283 app/src/ui/templates.rs:192
 #: app/src/ui/vacation.rs:213
 msgid "Subject"
 msgstr "Assunto"
@@ -5566,11 +5575,11 @@ msgstr "Cc/Bcc"
 msgid "Show Cc and Bcc"
 msgstr "Mostrar Cc e Bcc"
 
-#: app/src/ui/composer/mod.rs:362 app/src/ui/rules.rs:264
+#: app/src/ui/composer/mod.rs:362 app/src/ui/rules.rs:281
 msgid "From"
 msgstr "De"
 
-#: app/src/ui/composer/mod.rs:367 app/src/ui/rules.rs:265
+#: app/src/ui/composer/mod.rs:367 app/src/ui/rules.rs:282
 msgid "To"
 msgstr "Para"
 
@@ -7078,7 +7087,7 @@ msgstr ""
 "O Gmail aplica-as ao correio novo à medida que chega, mesmo com este "
 "computador desligado."
 
-#: app/src/ui/rules.rs:63 app/src/ui/rules.rs:65 app/src/ui/rules.rs:317
+#: app/src/ui/rules.rs:63 app/src/ui/rules.rs:65 app/src/ui/rules.rs:361
 msgid "New Rule"
 msgstr "Nova regra"
 
@@ -7098,77 +7107,101 @@ msgstr "Ainda não há regras"
 msgid "Add one with the + button."
 msgstr "Adicione uma com o botão +."
 
-#: app/src/ui/rules.rs:183
+#: app/src/ui/rules.rs:187
+msgid "Edit the rule for {mail}"
+msgstr "Editar a regra para {mail}"
+
+#: app/src/ui/rules.rs:198
 msgid "Delete Rule"
 msgstr "Eliminar regra"
 
-#: app/src/ui/rules.rs:190
+#: app/src/ui/rules.rs:205
 msgid "Delete the rule for {mail}"
 msgstr "Eliminar a regra para {mail}"
 
-#: app/src/ui/rules.rs:217
+#: app/src/ui/rules.rs:233
 msgid "Rule deleted"
 msgstr "Regra eliminada"
 
-#: app/src/ui/rules.rs:221
+#: app/src/ui/rules.rs:237
 msgid "Could not delete the rule: {reason}"
 msgstr "Não foi possível eliminar a regra: {reason}"
 
-#: app/src/ui/rules.rs:229
+#: app/src/ui/rules.rs:245
 msgid "Could Not Load the Rules"
 msgstr "Não foi possível carregar as regras"
 
-#: app/src/ui/rules.rs:238
+#: app/src/ui/rules.rs:254
 msgid "Allow Rules"
 msgstr "Permitir regras"
 
-#: app/src/ui/rules.rs:267
+#: app/src/ui/rules.rs:284
 msgid "Has the Words"
 msgstr "Contém as palavras"
 
-#: app/src/ui/rules.rs:268
+#: app/src/ui/rules.rs:285
 msgid "Doesn't Have"
 msgstr "Não contém"
 
-#: app/src/ui/rules.rs:270
+#: app/src/ui/rules.rs:287
 msgid "Has an Attachment"
 msgstr "Tem um anexo"
 
-#: app/src/ui/rules.rs:272
+#: app/src/ui/rules.rs:289
 msgid "When Mail Matches"
 msgstr "Quando o correio corresponder"
 
-#: app/src/ui/rules.rs:282
+#: app/src/ui/rules.rs:299
 msgid "Star It"
 msgstr "Marcar com estrela"
 
-#: app/src/ui/rules.rs:283
+#: app/src/ui/rules.rs:300
 msgid "Never Send to Spam"
 msgstr "Nunca enviar para spam"
 
-#: app/src/ui/rules.rs:284
+#: app/src/ui/rules.rs:301
 msgid "Delete It"
 msgstr "Eliminar"
 
-#: app/src/ui/rules.rs:286
+#: app/src/ui/rules.rs:303
 msgid "Don't Apply a Label"
 msgstr "Não aplicar etiqueta"
 
-#: app/src/ui/rules.rs:290
+#: app/src/ui/rules.rs:307
 msgid "Apply Label"
 msgstr "Aplicar etiqueta"
 
-#: app/src/ui/rules.rs:294
+#: app/src/ui/rules.rs:311
 msgid "Do This"
 msgstr "Fazer isto"
 
-#: app/src/ui/rules.rs:358
+#: app/src/ui/rules.rs:349
+msgid "This rule also does things this form can't show. Saving keeps them."
+msgstr "Esta regra também faz coisas que este formulário não mostra. Ao guardar, mantêm-se."
+
+#: app/src/ui/rules.rs:360
+msgid "Edit Rule"
+msgstr "Editar regra"
+
+#: app/src/ui/rules.rs:429
 msgid "Rule added"
 msgstr "Regra adicionada"
 
-#: app/src/ui/rules.rs:367
+#: app/src/ui/rules.rs:436
 msgid "Could not add the rule: {reason}"
 msgstr "Não foi possível adicionar a regra: {reason}"
+
+#: app/src/ui/rules.rs:452
+msgid "Rule saved"
+msgstr "Regra guardada"
+
+#: app/src/ui/rules.rs:457
+msgid "Saved, but Gmail kept the old rule too, so both run now: {reason}"
+msgstr "Guardada, mas o Gmail manteve também a regra antiga, por isso as duas estão ativas: {reason}"
+
+#: app/src/ui/rules.rs:469
+msgid "Could not save the rule: {reason}"
+msgstr "Não foi possível guardar a regra: {reason}"
 
 #: app/src/ui/sidebar.rs:67
 msgid "Stop the message from going out"

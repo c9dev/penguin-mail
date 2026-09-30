@@ -16,7 +16,8 @@ use mailrs_domain::calendar::{
 };
 use mailrs_domain::invitation::Answer;
 use mailrs_domain::{
-    AccountId, Address, Attachment, EpochMillis, MessageBody, MessageMeta, Provenance,
+    AccountId, Address, Attachment, EpochMillis, Filter, FilterAction, FilterCriteria, MailSet,
+    MessageBody, MessageMeta, Provenance, Role,
 };
 use mailrs_gmail::{LabelColor, RemoteLabel, SendAs};
 use mailrs_store::servers::{self, Saved, Security, Servers};
@@ -788,6 +789,7 @@ pub async fn seed(db: &Db, now: EpochMillis) -> std::result::Result<DemoMail, Sy
             sample.put_in(&fake, account_id, now);
         }
         fake.with(|s| s.calendars = demo_calendars(index));
+        fake.with(|s| s.filters = demo_rules(index));
         for event in demo_events(index, now) {
             fake.put_calendar_event(event);
         }
@@ -861,6 +863,52 @@ impl mailrs_sync::Accounts for Seeding {
     fn account(&self, account_id: AccountId) -> Option<Arc<AccountSync>> {
         self.0.get(&account_id).cloned()
     }
+}
+
+/// The rules demo account `index` has at Gmail. The Fernwood account
+/// gets two the Rules form shows whole and one made in Gmail's own
+/// settings, whose forward the form has no field for.
+fn demo_rules(index: usize) -> Vec<Filter> {
+    if index != 1 {
+        return Vec::new();
+    }
+    let from = |address: &str| FilterCriteria {
+        from: Some(address.into()),
+        ..FilterCriteria::default()
+    };
+    vec![
+        Filter {
+            id: Some("demo-rule-post".into()),
+            criteria: from("tracking@packetpost.example"),
+            action: FilterAction {
+                remove: vec![MailSet::Role(Role::Inbox), MailSet::Unseen],
+                ..FilterAction::default()
+            },
+        },
+        Filter {
+            id: Some("demo-rule-tickets".into()),
+            criteria: FilterCriteria {
+                subject: Some("tickets".into()),
+                ..from("tickets@hollowpines.example")
+            },
+            action: FilterAction {
+                add: vec![MailSet::Mailbox("Label_travel".into()), MailSet::flagged()],
+                ..FilterAction::default()
+            },
+        },
+        Filter {
+            id: Some("demo-rule-bank".into()),
+            criteria: FilterCriteria {
+                query: Some("statement".into()),
+                ..from("statements@juniper.example")
+            },
+            action: FilterAction {
+                add: vec![MailSet::Mailbox("Label_clients".into())],
+                remove: vec![MailSet::Role(Role::Inbox)],
+                forward: Some("books@fernwood.example".into()),
+            },
+        },
+    ]
 }
 
 /// The calendars demo account `index` keeps, its own primary always

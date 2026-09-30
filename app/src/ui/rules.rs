@@ -1,5 +1,5 @@
 //! The Rules dialog: Gmail filters for one account, listed in plain words,
-//! with a form to add one.
+//! with a form to add one or edit one.
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -7,11 +7,11 @@ use std::rc::Rc;
 use adw::prelude::*;
 use gtk::glib;
 use mailrs_domain::{Account, Filter, Label, LabelKind};
-use mailrs_sync::Permitted;
+use mailrs_sync::{Permitted, Replaced};
 
 use crate::core::Core;
 use crate::permission::Permission;
-use crate::rules::{RuleForm, describe_action, describe_criteria};
+use crate::rules::{RuleForm, Unshown, describe_action, describe_criteria};
 use crate::ui::permission;
 use mailrs_domain::translate::{fill, gettext, with_reason};
 
@@ -106,7 +106,7 @@ pub fn present(
     let weak = Rc::downgrade(&rules);
     add.connect_clicked(move |_| {
         if let Some(rules) = weak.upgrade() {
-            rules.show_form();
+            rules.show_form(None);
         }
     });
     // The dialog owns the state behind its buttons until it closes.
@@ -169,15 +169,30 @@ impl Rules {
             self.shown.borrow_mut().push(row);
         }
         for filter in filters {
+            let criteria = describe_criteria(&filter.criteria);
             let row = adw::ActionRow::builder()
-                .title(glib::markup_escape_text(&describe_criteria(
-                    &filter.criteria,
-                )))
+                .title(glib::markup_escape_text(&criteria))
                 .subtitle(glib::markup_escape_text(&describe_action(
                     &filter.action,
                     |id| self.label_name(id),
                 )))
+                .activatable(true)
                 .build();
+            // The row points its LabelledBy relation at the title, which
+            // wins over a label set on it, so drop the relation first.
+            row.upcast_ref::<gtk::Widget>()
+                .reset_relation(gtk::AccessibleRelation::LabelledBy);
+            crate::ui::name(
+                &row,
+                &fill(&gettext("Edit the rule for {mail}"), &[("mail", &criteria)]),
+            );
+            let weak = Rc::downgrade(self);
+            let editing = filter.clone();
+            row.connect_activated(move |_| {
+                if let Some(rules) = weak.upgrade() {
+                    rules.show_form(Some(editing.clone()));
+                }
+            });
             let delete = gtk::Button::builder()
                 .icon_name("user-trash-symbolic")
                 .tooltip_text(gettext("Delete Rule"))
@@ -198,6 +213,7 @@ impl Rules {
                 }
             });
             row.add_suffix(&delete);
+            row.add_suffix(&gtk::Image::from_icon_name("go-next-symbolic"));
             self.list.add(&row);
             self.shown.borrow_mut().push(row);
         }
@@ -256,8 +272,9 @@ impl Rules {
         self.stack.set_visible_child_name(name);
     }
 
-    /// The New Rule page.
-    fn show_form(self: &Rc<Self>) {
+    /// The rule form: New Rule when `editing` is `None`, else Edit Rule
+    /// with every field filled in from that rule.
+    fn show_form(self: &Rc<Self>, editing: Option<Filter>) {
         let entry = |title: &str| adw::EntryRow::builder().title(title).build();
         let switch = |title: &str| adw::SwitchRow::builder().title(title).build();
         let (from, to, subject, has, not) = (
@@ -303,25 +320,73 @@ impl Rules {
         let page = adw::PreferencesPage::new();
         page.add(&when);
         page.add(&then);
-        let create = gtk::Button::builder()
-            .label(gettext("Create"))
+
+        // An edit fills the form in and sets aside what it cannot show,
+        // which Save puts back.
+        let unshown = match &editing {
+            Some(rule) => {
+                let (form, unshown) =
+                    RuleForm::read(rule, |id| self.labels.iter().any(|l| l.id == id));
+                from.set_text(&form.from);
+                to.set_text(&form.to);
+                subject.set_text(&form.subject);
+                has.set_text(&form.has_words);
+                not.set_text(&form.not_words);
+                attachment.set_active(form.has_attachment);
+                skip.set_active(form.skip_inbox);
+                read.set_active(form.mark_read);
+                star.set_active(form.star);
+                never_spam.set_active(form.never_spam);
+                trash.set_active(form.trash);
+                let index = form
+                    .label
+                    .and_then(|id| self.labels.iter().position(|l| l.id == id));
+                label.set_selected(index.map_or(0, |i| i as u32 + 1));
+                if !unshown.is_empty() {
+                    page.add(
+                        &adw::PreferencesGroup::builder()
+                            .description(gettext(
+                                "This rule also does things this form can't show. Saving keeps them.",
+                            ))
+                            .build(),
+                    );
+                }
+                unshown
+            }
+            None => Unshown::default(),
+        };
+
+        let (title, tag, verb) = match editing {
+            Some(_) => (gettext("Edit Rule"), "edit-rule", gettext("Save")),
+            None => (gettext("New Rule"), "new-rule", gettext("Create")),
+        };
+        let save = gtk::Button::builder()
+            .label(verb)
             .css_classes(["suggested-action"])
             .build();
-        let header = adw::HeaderBar::new();
-        header.pack_end(&create);
+        let cancel = gtk::Button::builder().label(gettext("Cancel")).build();
+        let header = adw::HeaderBar::builder().show_back_button(false).build();
+        header.pack_start(&cancel);
+        header.pack_end(&save);
         let toolbar = adw::ToolbarView::new();
         toolbar.add_top_bar(&header);
         toolbar.set_content(Some(&page));
         self.nav.push(
             &adw::NavigationPage::builder()
-                .title(gettext("New Rule"))
-                .tag("new-rule")
+                .title(title)
+                .tag(tag)
                 .child(&toolbar)
                 .build(),
         );
 
         let weak = Rc::downgrade(self);
-        create.connect_clicked(move |button| {
+        cancel.connect_clicked(move |_| {
+            if let Some(rules) = weak.upgrade() {
+                rules.nav.pop();
+            }
+        });
+        let weak = Rc::downgrade(self);
+        save.connect_clicked(move |button| {
             let Some(rules) = weak.upgrade() else { return };
             let form = RuleForm {
                 from: from.text().into(),
@@ -340,34 +405,77 @@ impl Rules {
                 never_spam: never_spam.is_active(),
                 trash: trash.is_active(),
             };
-            let filter = match form.filter() {
+            let filter = match form.filter_keeping(&unshown) {
                 Ok(filter) => filter,
                 Err(reason) => return rules.toast(reason),
             };
-            let (settings, account_id) = (rules.core.gmail_settings(), rules.account.id);
             button.set_sensitive(false);
-            let button = button.clone();
-            glib::spawn_future_local(async move {
-                let added = rules
-                    .core
-                    .call(async move { settings.add_rule(account_id, filter).await })
-                    .await;
-                match added {
-                    Ok(Permitted::Done(_)) => {
-                        rules.nav.pop();
-                        rules.toast(&gettext("Rule added"));
-                        rules.reload();
-                    }
-                    Ok(Permitted::NeedsPermission) => {
-                        button.set_sensitive(true);
-                        rules.ask_for_access();
-                    }
-                    Err(err) => {
-                        button.set_sensitive(true);
-                        rules.failed(&gettext("Could not add the rule: {reason}"), &err);
-                    }
-                }
-            });
+            match editing.clone() {
+                Some(old) => rules.replace(old, filter, button.clone()),
+                None => rules.add(filter, button.clone()),
+            }
         });
+    }
+
+    fn add(self: &Rc<Self>, filter: Filter, button: gtk::Button) {
+        let (this, settings, account_id) =
+            (Rc::clone(self), self.core.gmail_settings(), self.account.id);
+        glib::spawn_future_local(async move {
+            let added = this
+                .core
+                .call(async move { settings.add_rule(account_id, filter).await })
+                .await;
+            match added {
+                Ok(Permitted::Done(_)) => this.saved(&gettext("Rule added")),
+                Ok(Permitted::NeedsPermission) => {
+                    button.set_sensitive(true);
+                    this.ask_for_access();
+                }
+                Err(err) => {
+                    button.set_sensitive(true);
+                    this.failed(&gettext("Could not add the rule: {reason}"), &err);
+                }
+            }
+        });
+    }
+
+    /// Saves an edit: the server makes `filter` and then drops `old`.
+    fn replace(self: &Rc<Self>, old: Filter, filter: Filter, button: gtk::Button) {
+        let (this, settings, account_id) =
+            (Rc::clone(self), self.core.gmail_settings(), self.account.id);
+        glib::spawn_future_local(async move {
+            let replaced = this
+                .core
+                .call(async move { settings.replace_rule(account_id, &old, filter).await })
+                .await;
+            match replaced {
+                Ok(Permitted::Done(Replaced::Swapped(_))) => this.saved(&gettext("Rule saved")),
+                Ok(Permitted::Done(Replaced::BothRun { error, .. })) => {
+                    this.nav.pop();
+                    this.failed(
+                        &gettext(
+                            "Saved, but Gmail kept the old rule too, so both run now: {reason}",
+                        ),
+                        &error,
+                    );
+                    this.reload();
+                }
+                Ok(Permitted::NeedsPermission) => {
+                    button.set_sensitive(true);
+                    this.ask_for_access();
+                }
+                Err(err) => {
+                    button.set_sensitive(true);
+                    this.failed(&gettext("Could not save the rule: {reason}"), &err);
+                }
+            }
+        });
+    }
+
+    /// Back to the list after a save, which it then shows again.
+    fn saved(self: &Rc<Self>, said: &str) {
+        self.nav.pop();
+        self.toast(said);
+        self.reload();
     }
 }

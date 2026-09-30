@@ -1643,7 +1643,7 @@ msgstr "Archive"
 
 #: app/src/notify.rs:50 app/src/ui/conversation.rs:380
 #: app/src/ui/conversation.rs:1136 app/src/ui/preferences.rs:140
-#: app/src/ui/rules.rs:281 app/src/ui/window/message_menu.rs:126
+#: app/src/ui/rules.rs:298 app/src/ui/window/message_menu.rs:126
 msgid "Mark as Read"
 msgstr "Mark as Read"
 
@@ -2447,71 +2447,79 @@ msgstr "me"
 msgid "Show trimmed content"
 msgstr "Show trimmed content"
 
-#: app/src/rules.rs:72
+#: app/src/rules.rs:172
 msgid "From {address}"
 msgstr "From {address}"
 
-#: app/src/rules.rs:75
+#: app/src/rules.rs:175
 msgid "To {address}"
 msgstr "To {address}"
 
-#: app/src/rules.rs:79
+#: app/src/rules.rs:179
 msgid "Subject has “{words}”"
 msgstr "Subject has “{words}”"
 
-#: app/src/rules.rs:84
+#: app/src/rules.rs:184
 msgid "Has “{words}”"
 msgstr "Has “{words}”"
 
-#: app/src/rules.rs:88
+#: app/src/rules.rs:188
 msgid "Doesn't have “{words}”"
 msgstr "Doesn't have “{words}”"
 
-#: app/src/rules.rs:93
+#: app/src/rules.rs:193
 msgid "Has an attachment"
 msgstr "Has an attachment"
 
-#: app/src/rules.rs:96
+#: app/src/rules.rs:198
+msgid "Smaller than {size}"
+msgstr "Smaller than {size}"
+
+#: app/src/rules.rs:199
+msgid "Larger than {size}"
+msgstr "Larger than {size}"
+
+#: app/src/rules.rs:204
 msgid "All mail"
 msgstr "All mail"
 
-#: app/src/rules.rs:116
+#: app/src/rules.rs:224
 msgid "Delete it"
 msgstr "Delete it"
 
-#: app/src/rules.rs:118 app/src/ui/rules.rs:280
+#: app/src/rules.rs:226 app/src/ui/rules.rs:297
 msgid "Skip the Inbox"
 msgstr "Skip the Inbox"
 
-#: app/src/rules.rs:123
+#: app/src/rules.rs:231
 msgid "Apply {label}"
 msgstr "Apply {label}"
 
-#: app/src/rules.rs:129
+#: app/src/rules.rs:237
 msgid "Star it"
 msgstr "Star it"
 
-#: app/src/rules.rs:132
+#: app/src/rules.rs:240
 msgid "Mark as read"
 msgstr "Mark as read"
 
-#: app/src/rules.rs:135
+#: app/src/rules.rs:243
 msgid "Mark as important"
 msgstr "Mark as important"
 
-#: app/src/rules.rs:138
+#: app/src/rules.rs:246
 msgid "Never mark as important"
 msgstr "Never mark as important"
 
-#: app/src/rules.rs:141
+#: app/src/rules.rs:249
 msgid "Never send to Spam"
 msgstr "Never send to Spam"
 
-#: app/src/rules.rs:144
+#: app/src/rules.rs:252
 msgid "Forward to {address}"
 msgstr "Forward to {address}"
 
-#: app/src/rules.rs:147
+#: app/src/rules.rs:255
 msgid "Nothing"
 msgstr "Nothing"
 
@@ -3042,8 +3050,9 @@ msgstr "Try Again"
 #: app/src/ui/calendar/scope.rs:164 app/src/ui/composer/mod.rs:1473
 #: app/src/ui/composer/mod.rs:1542 app/src/ui/composer/mod.rs:1860
 #: app/src/ui/composer/mod.rs:2154 app/src/ui/confirm.rs:29
-#: app/src/ui/smart_editor.rs:150 app/src/ui/templates.rs:239
-#: app/src/ui/unsubscribe.rs:95 app/src/ui/vacation.rs:45 app/src/ui/when.rs:52
+#: app/src/ui/rules.rs:367 app/src/ui/smart_editor.rs:150
+#: app/src/ui/templates.rs:239 app/src/ui/unsubscribe.rs:95
+#: app/src/ui/vacation.rs:45 app/src/ui/when.rs:52
 #: app/src/ui/window/arrange.rs:132 app/src/ui/window/images.rs:101
 #: app/src/ui/window/organize.rs:56 app/src/ui/window/organize.rs:105
 msgid "Cancel"
@@ -3458,9 +3467,9 @@ msgstr "Test"
 
 #: app/src/ui/assistant_mcp_prefs.rs:341 app/src/ui/calendar/editor.rs:155
 #: app/src/ui/calendar/quick.rs:103 app/src/ui/calendar/scope.rs:183
-#: app/src/ui/composer/mod.rs:2154 app/src/ui/smart_editor.rs:144
-#: app/src/ui/templates.rs:233 app/src/ui/vacation.rs:41
-#: app/src/ui/window/arrange.rs:132
+#: app/src/ui/composer/mod.rs:2154 app/src/ui/rules.rs:360
+#: app/src/ui/smart_editor.rs:144 app/src/ui/templates.rs:233
+#: app/src/ui/vacation.rs:41 app/src/ui/window/arrange.rs:132
 msgid "Save"
 msgstr "Save"
 
@@ -4477,7 +4486,7 @@ msgid "A calendar of your own on {account}, in Google Calendar on every device."
 msgstr "A calendar of your own on {account}, in Google Calendar on every device."
 
 #: app/src/ui/calendar/manage.rs:271 app/src/ui/hide_my_email.rs:357
-#: app/src/ui/rules.rs:307 app/src/ui/smart_editor.rs:146
+#: app/src/ui/rules.rs:361 app/src/ui/smart_editor.rs:146
 #: app/src/ui/templates.rs:235 app/src/ui/window/organize.rs:57
 #: app/src/ui/window/organize.rs:285
 msgid "Create"
@@ -5163,7 +5172,7 @@ msgid "Blind carbon copy"
 msgstr "Blind carbon copy"
 
 #: app/src/ui/composer/mod.rs:344 app/src/ui/composer/mod.rs:383
-#: app/src/ui/rules.rs:266 app/src/ui/templates.rs:192
+#: app/src/ui/rules.rs:283 app/src/ui/templates.rs:192
 #: app/src/ui/vacation.rs:213
 msgid "Subject"
 msgstr "Subject"
@@ -5176,11 +5185,11 @@ msgstr "Cc/Bcc"
 msgid "Show Cc and Bcc"
 msgstr "Show Cc and Bcc"
 
-#: app/src/ui/composer/mod.rs:362 app/src/ui/rules.rs:264
+#: app/src/ui/composer/mod.rs:362 app/src/ui/rules.rs:281
 msgid "From"
 msgstr "From"
 
-#: app/src/ui/composer/mod.rs:367 app/src/ui/rules.rs:265
+#: app/src/ui/composer/mod.rs:367 app/src/ui/rules.rs:282
 msgid "To"
 msgstr "To"
 
@@ -6599,7 +6608,7 @@ msgstr "This message is waiting to be sent"
 msgid "Gmail runs these on new mail as it arrives, even when this computer is off."
 msgstr "Gmail runs these on new mail as it arrives, even when this computer is off."
 
-#: app/src/ui/rules.rs:63 app/src/ui/rules.rs:65 app/src/ui/rules.rs:317
+#: app/src/ui/rules.rs:63 app/src/ui/rules.rs:65 app/src/ui/rules.rs:361
 msgid "New Rule"
 msgstr "New Rule"
 
@@ -6619,77 +6628,101 @@ msgstr "No rules yet"
 msgid "Add one with the + button."
 msgstr "Add one with the + button."
 
-#: app/src/ui/rules.rs:183
+#: app/src/ui/rules.rs:187
+msgid "Edit the rule for {mail}"
+msgstr "Edit the rule for {mail}"
+
+#: app/src/ui/rules.rs:198
 msgid "Delete Rule"
 msgstr "Delete Rule"
 
-#: app/src/ui/rules.rs:190
+#: app/src/ui/rules.rs:205
 msgid "Delete the rule for {mail}"
 msgstr "Delete the rule for {mail}"
 
-#: app/src/ui/rules.rs:217
+#: app/src/ui/rules.rs:233
 msgid "Rule deleted"
 msgstr "Rule deleted"
 
-#: app/src/ui/rules.rs:221
+#: app/src/ui/rules.rs:237
 msgid "Could not delete the rule: {reason}"
 msgstr "Could not delete the rule: {reason}"
 
-#: app/src/ui/rules.rs:229
+#: app/src/ui/rules.rs:245
 msgid "Could Not Load the Rules"
 msgstr "Could Not Load the Rules"
 
-#: app/src/ui/rules.rs:238
+#: app/src/ui/rules.rs:254
 msgid "Allow Rules"
 msgstr "Allow Rules"
 
-#: app/src/ui/rules.rs:267
+#: app/src/ui/rules.rs:284
 msgid "Has the Words"
 msgstr "Has the Words"
 
-#: app/src/ui/rules.rs:268
+#: app/src/ui/rules.rs:285
 msgid "Doesn't Have"
 msgstr "Doesn't Have"
 
-#: app/src/ui/rules.rs:270
+#: app/src/ui/rules.rs:287
 msgid "Has an Attachment"
 msgstr "Has an Attachment"
 
-#: app/src/ui/rules.rs:272
+#: app/src/ui/rules.rs:289
 msgid "When Mail Matches"
 msgstr "When Mail Matches"
 
-#: app/src/ui/rules.rs:282
+#: app/src/ui/rules.rs:299
 msgid "Star It"
 msgstr "Star It"
 
-#: app/src/ui/rules.rs:283
+#: app/src/ui/rules.rs:300
 msgid "Never Send to Spam"
 msgstr "Never Send to Spam"
 
-#: app/src/ui/rules.rs:284
+#: app/src/ui/rules.rs:301
 msgid "Delete It"
 msgstr "Delete It"
 
-#: app/src/ui/rules.rs:286
+#: app/src/ui/rules.rs:303
 msgid "Don't Apply a Label"
 msgstr "Don't Apply a Label"
 
-#: app/src/ui/rules.rs:290
+#: app/src/ui/rules.rs:307
 msgid "Apply Label"
 msgstr "Apply Label"
 
-#: app/src/ui/rules.rs:294
+#: app/src/ui/rules.rs:311
 msgid "Do This"
 msgstr "Do This"
 
-#: app/src/ui/rules.rs:358
+#: app/src/ui/rules.rs:349
+msgid "This rule also does things this form can't show. Saving keeps them."
+msgstr "This rule also does things this form can't show. Saving keeps them."
+
+#: app/src/ui/rules.rs:360
+msgid "Edit Rule"
+msgstr "Edit Rule"
+
+#: app/src/ui/rules.rs:429
 msgid "Rule added"
 msgstr "Rule added"
 
-#: app/src/ui/rules.rs:367
+#: app/src/ui/rules.rs:436
 msgid "Could not add the rule: {reason}"
 msgstr "Could not add the rule: {reason}"
+
+#: app/src/ui/rules.rs:452
+msgid "Rule saved"
+msgstr "Rule saved"
+
+#: app/src/ui/rules.rs:457
+msgid "Saved, but Gmail kept the old rule too, so both run now: {reason}"
+msgstr "Saved, but Gmail kept the old rule too, so both run now: {reason}"
+
+#: app/src/ui/rules.rs:469
+msgid "Could not save the rule: {reason}"
+msgstr "Could not save the rule: {reason}"
 
 #: app/src/ui/sidebar.rs:67
 msgid "Stop the message from going out"
