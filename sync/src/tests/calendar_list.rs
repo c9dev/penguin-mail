@@ -395,3 +395,30 @@ async fn a_hide_made_before_the_grant_reaches_google_once_it_is_granted() {
     assert!(queued(&h).await.is_empty(), "the hide went out once");
     assert_eq!(listed(&h, "team").await, Some(false));
 }
+
+#[tokio::test]
+async fn a_read_that_changes_only_the_list_says_so() {
+    let h = harness().await;
+    h.fake.with(|s| s.calendars = vec![calendar("primary", true), calendar("team", false)]);
+    let copy = copy(&h);
+    let first = done(copy.refresh(h.account_id, NOW).await);
+    assert_eq!(first.events, 0, "the calendars hold no events");
+    assert!(first.calendars_changed, "the first read brings the list");
+
+    let same = done(copy.refresh(h.account_id, NOW + LIST_EVERY).await);
+    assert!(!same.calendars_changed, "the same list is no change");
+
+    h.fake.with(|s| s.calendars.push(calendar(HOLIDAYS, false)));
+    let more = done(copy.refresh(h.account_id, NOW + 2 * LIST_EVERY).await);
+    assert!(more.calendars_changed, "a calendar added at Google is a change");
+}
+
+#[tokio::test]
+async fn a_pass_over_the_accounts_carries_a_list_change() {
+    let h = harness().await;
+    h.fake.with(|s| s.calendars = vec![calendar("primary", true), calendar("team", false)]);
+    let copy = copy(&h);
+    let pass = copy.refresh_due(&[h.account_id], NOW, true).await.unwrap();
+    assert_eq!(pass.events, 0);
+    assert!(pass.calendars_changed, "the window reloads its sidebar for the new list");
+}

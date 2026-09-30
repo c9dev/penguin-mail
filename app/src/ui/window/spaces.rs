@@ -211,11 +211,13 @@ impl MainWindow {
     }
 
     /// What the window does after the calendar copy read the provider:
-    /// the view reads the copy again when something changed, each change
-    /// the provider turned down gets a toast, and an account that wants a
-    /// permission redraws its row in the calendar's sidebar.
+    /// the view reads the copy again when an event or the list of
+    /// calendars changed, each change the provider turned down gets a
+    /// toast, and an account that wants a permission redraws its row in
+    /// the calendar's sidebar.
     pub fn calendar_refreshed(self: &Rc<Self>, refreshed: &Refreshed) {
         if refreshed.events > 0
+            || refreshed.calendars_changed
             || !refreshed.turned_down.is_empty()
             || !refreshed.needs_permission.is_empty()
         {

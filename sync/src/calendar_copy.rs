@@ -53,6 +53,10 @@ const PAGE_LIMIT: usize = 200;
 pub struct Refreshed {
     /// Events stored or removed.
     pub events: usize,
+    /// Whether the account's list of calendars changed: one added,
+    /// removed or renamed at the provider. The sidebar reads the list
+    /// again even when no event moved.
+    pub calendars_changed: bool,
     /// Accounts whose calendars the provider would not hand over until
     /// the person grants the permission.
     pub needs_permission: Vec<AccountId>,
@@ -270,7 +274,10 @@ impl<A: Accounts> CalendarCopy<A> {
                 continue;
             }
             match self.refresh(account_id, now).await {
-                Ok(Permitted::Done(one)) => total.events += one.events,
+                Ok(Permitted::Done(one)) => {
+                    total.events += one.events;
+                    total.calendars_changed |= one.calendars_changed;
+                }
                 Ok(Permitted::NeedsPermission) => total.needs_permission.push(account_id),
                 // One account's trouble, such as one not yet running, one
                 // signed out or one just removed, must not stop the
@@ -325,6 +332,10 @@ impl<A: Accounts> CalendarCopy<A> {
             .expect("copy poisoned")
             .get(&account_id)
             .is_none_or(|last| now - last >= LIST_EVERY);
+        let before = match list_due {
+            true => Some(self.db.read(move |c| store::calendars(c, account_id)).await?),
+            false => None,
+        };
         if list_due {
             // Recorded before the call, so a refusal still waits
             // LIST_EVERY instead of asking again on the very next tick.
@@ -364,7 +375,10 @@ impl<A: Accounts> CalendarCopy<A> {
         }
         self.last_read.lock().expect("copy poisoned").insert(account_id, now);
         let calendars: Vec<Calendar> = self.db.read(move |c| store::calendars(c, account_id)).await?;
-        let mut refreshed = Refreshed::default();
+        let mut refreshed = Refreshed {
+            calendars_changed: before.is_some_and(|before| before != calendars),
+            ..Refreshed::default()
+        };
         for entry in calendars {
             // Google has no calendar under an id made here until the queue
             // sends it; a read would only answer 404.
