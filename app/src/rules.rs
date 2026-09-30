@@ -31,6 +31,7 @@ impl RuleForm {
             query: field(&self.has_words),
             negated_query: field(&self.not_words),
             has_attachment: self.has_attachment,
+            ..FilterCriteria::default()
         };
         if criteria == FilterCriteria::default() {
             return Err("Say which mail the rule is for");

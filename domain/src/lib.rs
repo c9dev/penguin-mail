@@ -549,6 +549,17 @@ pub struct FilterCriteria {
     pub negated_query: Option<String>,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub has_attachment: bool,
+    /// Leave chat messages out of the match, as Gmail's own filter editor
+    /// can.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub exclude_chats: bool,
+    /// A message size in bytes that `size_comparison` compares against.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub size: Option<u64>,
+    /// Gmail's word for how `size` compares: `larger` or `smaller`. Kept
+    /// as Gmail sends it, since the app only carries it over on an edit.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub size_comparison: Option<String>,
 }
 
 /// What a rule does to the mail it matches, in mail sets: the sets it
