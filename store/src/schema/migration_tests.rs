@@ -773,7 +773,7 @@ fn migration_46_leaves_attachments_unknown_until_a_whole_read() {
     .unwrap();
     drop(conn);
 
-    let conn = open_with(&path, MIGRATIONS).unwrap();
+    let conn = open_with(&path, &MIGRATIONS[..46]).unwrap();
     assert_eq!(schema_version(&conn).unwrap(), 46);
     let token: Option<String> = conn
         .query_row("SELECT sync_token FROM calendars WHERE id = 'primary'", [], |row| row.get(0))
@@ -781,4 +781,24 @@ fn migration_46_leaves_attachments_unknown_until_a_whole_read() {
     assert_eq!(token, None);
     let event = crate::calendar::event(&conn, 1, "primary", "a").unwrap().unwrap();
     assert_eq!(event.attachments, None);
+}
+
+/// Migration 47 gives each server mailbox a place among its siblings in
+/// the sidebar. A mailbox stored before it has none, so the sidebar lists
+/// it by name as before.
+#[test]
+fn migration_47_leaves_every_mailbox_unplaced() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("mail.db");
+    let conn = open_with(&path, &MIGRATIONS[..46]).unwrap();
+    conn.execute_batch(
+        "INSERT INTO accounts (id, email, added_at) VALUES (1, 'me@gmail.com', 0);
+         INSERT INTO mailboxes (account_id, id, name, kind) VALUES (1, 'Label_1', 'Work', 'label');",
+    )
+    .unwrap();
+    drop(conn);
+
+    let conn = open_with(&path, &MIGRATIONS[..47]).unwrap();
+    assert_eq!(schema_version(&conn).unwrap(), 47);
+    assert!(crate::labels::positions(&conn, 1).unwrap().is_empty());
 }
