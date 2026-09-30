@@ -469,6 +469,7 @@ impl MainWindow {
         let window = Rc::new_cyclic(|weak: &Weak<MainWindow>| {
             let w = weak.clone();
             let d = weak.clone();
+            let l = weak.clone();
             let sidebar = Sidebar::new(
                 move |mailbox| {
                     if let Some(win) = w.upgrade() {
@@ -476,6 +477,11 @@ impl MainWindow {
                     }
                 },
                 move |mailbox| d.upgrade().is_some_and(|win| win.drop_on(mailbox)),
+                move |drop| {
+                    if let Some(win) = l.upgrade() {
+                        win.drop_label(drop);
+                    }
+                },
             );
             let (w, s) = (weak.clone(), weak.clone());
             let list = ThreadList::new(
@@ -2675,6 +2681,13 @@ impl MainWindow {
             .unwrap_or_default()
     }
 
+    fn label_order(&self, account_id: AccountId) -> HashMap<String, i64> {
+        self.app
+            .upgrade()
+            .map(|app| app.label_order(account_id))
+            .unwrap_or_default()
+    }
+
     fn confirm_remove(self: &Rc<Self>, account: Account) {
         let question = confirm(
             &fill(
@@ -2814,6 +2827,11 @@ impl MainWindow {
             ("label-delete", |win, account, label| {
                 win.delete_label(account, label)
             }),
+            ("label-new-inside", |win, account, label| {
+                win.new_label_inside(account, label)
+            }),
+            ("label-up", |win, account, label| win.move_label(account, label, -1)),
+            ("label-down", |win, account, label| win.move_label(account, label, 1)),
         ] {
             let action = gio::SimpleAction::new(
                 name,

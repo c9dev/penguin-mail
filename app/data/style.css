@@ -142,6 +142,31 @@ row.account-heading.after-open { margin-top: 12px; }
 .account-options { opacity: 0; transition: opacity 120ms ease; }
 row.account-heading:hover .account-options,
 .account-options:focus-visible { opacity: 1; }
+/* A label row's options button lies over its count (`sidebar::label_menu`)
+   and swaps with it on hover, on keyboard focus, and while its menu is
+   open. The negative margins keep a 20 px button inside the row's 16 px
+   content height, so the row stays 32 px tall. */
+.label-options {
+  margin: -2px -6px -2px 0;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+.label-options > button { min-height: 20px; min-width: 20px; padding: 0; }
+.mailboxes > row:hover .label-options,
+.mailboxes > row:focus-within .label-options,
+.mailboxes > row.options-open .label-options { opacity: 1; }
+/* One class heavier than the selected row's count rule further down. */
+.mailboxes > row:hover .mailbox-row .label-end .count,
+.mailboxes > row:focus-within .mailbox-row .label-end .count,
+.mailboxes > row.options-open .mailbox-row .label-end .count { opacity: 0; }
+/* Where a dragged label would land: a 2 px accent line along the top or
+   the bottom of the row for beside it, a tint and outline for inside. */
+.mailboxes > row.drop-before { box-shadow: inset 0 2px var(--accent-bg-color); }
+.mailboxes > row.drop-after { box-shadow: inset 0 -2px var(--accent-bg-color); }
+.mailboxes > row.drop-inside {
+  background-color: alpha(var(--accent-bg-color), 0.18);
+  box-shadow: inset 0 0 0 1px alpha(var(--accent-bg-color), 0.7);
+}
 
 .account-dot { min-width: 8px; min-height: 8px; border-radius: 999px; }
 .account-0 { background: #3584e4; } .account-1 { background: #2190a4; } .account-2 { background: #3a944a; }

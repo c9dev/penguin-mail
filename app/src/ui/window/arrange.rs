@@ -54,6 +54,10 @@ impl MainWindow {
                 .iter()
                 .filter_map(|(email, name)| Some((find(email)?, name.clone())))
                 .collect(),
+            label_order: sorted
+                .iter()
+                .map(|(account, _)| (account.id, self.label_order(account.id)))
+                .collect(),
         };
         (sorted, extras)
     }

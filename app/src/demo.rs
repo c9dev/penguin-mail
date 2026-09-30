@@ -91,7 +91,15 @@ struct Alias {
 const ACCOUNTS: [SampleAccount; 3] = [
     SampleAccount {
         email: "dana.reyes@example.com",
-        labels: &[],
+        // Nested a level deep, so the sidebar shows labels inside labels
+        // and a drag has somewhere to nest one.
+        labels: &[
+            ("Label_personal", "Personal", Some("#16a766")),
+            ("Label_bills", "Personal/bills", None),
+            ("Label_important", "Personal/Important", None),
+            ("Label_work", "Work", Some("#4a86e8")),
+            ("Label_bugs", "Work/bugs", None),
+        ],
         aliases: &[],
     },
     SampleAccount {

@@ -11,6 +11,8 @@ use mailrs_sync::{History, MailAction, NewLabels};
 use super::{MainWindow, Target};
 use crate::offered::Filing;
 use crate::ui::Mailbox;
+use crate::ui::sidebar::LabelDrop;
+use crate::ui::sidebar::tree::{self, Placement, Refusal, label_rows};
 use crate::ui::confirm::{Tone, confirm};
 use super::press::{Press, Scope};
 use super::reach::Reach;
@@ -42,12 +44,27 @@ impl MainWindow {
     /// an account that files in folders. With `then`, runs it on the new
     /// label, as the label menu does to apply it.
     pub(super) fn new_label(self: &Rc<Self>, account_id: AccountId, then: Option<AfterCreate>) {
+        self.new_label_from(account_id, then, "");
+    }
+
+    /// Asks for a new label's name with "Parent/" typed already, so the
+    /// new one nests under `parent_id`.
+    pub(super) fn new_label_inside(self: &Rc<Self>, account_id: AccountId, parent_id: String) {
+        if let Some(parent) = self.label_name(account_id, &parent_id) {
+            self.new_label_from(account_id, None, &format!("{parent}/"));
+        }
+    }
+
+    /// The New Label dialog with `start` in its entry and the cursor
+    /// after it.
+    fn new_label_from(self: &Rc<Self>, account_id: AccountId, then: Option<AfterCreate>, start: &str) {
         let filing = Filing::of([self.offers(account_id)]);
         let entry = gtk::Entry::builder()
+            .text(start)
             .placeholder_text(gettext("Name, or Parent/Name to nest it"))
             .activates_default(true)
             .build();
-        focus_when_shown(&entry);
+        focus_at_end(&entry);
         let dialog = adw::AlertDialog::builder()
             .heading(filing.new_heading())
             .extra_child(&entry)
@@ -124,6 +141,51 @@ impl MainWindow {
             if let Err(err) = this
                 .core
                 .call(async move { sync.rename_label(&label_id, &wanted).await })
+                .await
+            {
+                this.failed(&filing.rename_failed(), &err);
+            }
+        });
+    }
+
+    /// Carries out a label dropped on another row of its account: moves
+    /// it among its siblings, or renames it into or out of a parent, or
+    /// says why it stays.
+    pub(super) fn drop_label(self: &Rc<Self>, drop: LabelDrop) {
+        let labels = self.labels_of(drop.account_id);
+        let order = self.label_order(drop.account_id);
+        let rows = label_rows(&labels, &order);
+        let filing = Filing::of([self.offers(drop.account_id)]);
+        match tree::place(&rows, &drop.dragged, &drop.target, drop.zone) {
+            Ok(Some(placement)) => self.place_label(drop.account_id, drop.dragged, placement),
+            Ok(None) => {}
+            Err(Refusal::OwnSubtree) => self.toast(&filing.inside_itself()),
+            Err(Refusal::Taken(name)) => self.toast(&filing.name_taken(&name)),
+        }
+    }
+
+    /// Moves a label one place up (`-1`) or down (`1`) among its
+    /// siblings, from its menu.
+    pub(super) fn move_label(self: &Rc<Self>, account_id: AccountId, label_id: String, by: i32) {
+        let labels = self.labels_of(account_id);
+        let order = self.label_order(account_id);
+        let rows = label_rows(&labels, &order);
+        if let Some(placement) = tree::step(&rows, &label_id, by) {
+            self.place_label(account_id, label_id, placement);
+        }
+    }
+
+    fn place_label(self: &Rc<Self>, account_id: AccountId, label_id: String, placement: Placement) {
+        let Some(sync) = self.core.account(account_id) else {
+            return self.toast(&gettext("That account is not connected"));
+        };
+        let filing = Filing::of([self.offers(account_id)]);
+        let this = Rc::clone(self);
+        glib::spawn_future_local(async move {
+            let Placement { name, order } = placement;
+            if let Err(err) = this
+                .core
+                .call(async move { sync.place_label(&label_id, &name, &order).await })
                 .await
             {
                 this.failed(&filing.rename_failed(), &err);
@@ -305,6 +367,18 @@ impl MainWindow {
 
 /// Puts the cursor in `entry` once its dialog is on screen; dialogs
 /// otherwise focus their default button.
+/// Focuses `entry` once it shows, with the cursor after its text rather
+/// than the text selected, so typing adds to it.
+fn focus_at_end(entry: &gtk::Entry) {
+    entry.connect_map(|entry| {
+        let entry = entry.clone();
+        glib::idle_add_local_once(move || {
+            entry.grab_focus_without_selecting();
+            entry.set_position(-1);
+        });
+    });
+}
+
 fn focus_when_shown(entry: &gtk::Entry) {
     entry.connect_map(|entry| {
         let entry = entry.clone();

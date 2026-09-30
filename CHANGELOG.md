@@ -7,6 +7,11 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### New
 
+- Each label in the sidebar has a ⋯ button on hover with Rename, New Label
+  Inside, Color, Move Up, Move Down and Delete, the same menu a right click
+  opens.
+- Drag a label in the sidebar to put it in the order you like, or drop it
+  on another label to nest it there. Folder accounts work the same way.
 - Events show their attached files, such as Google Drive documents, in the
   event popover and the editor. Click one to open it in the browser.
 - Attach a file from this computer to an event with Attach File… in the
