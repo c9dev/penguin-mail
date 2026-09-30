@@ -77,8 +77,15 @@ row.account-heading { transition: background-color 120ms ease, color 120ms ease;
    to 16 px short of the list's end; the row above a selected card keeps
    its line, 2 px clear of the card, and the card itself has none. */
 .thread-list > row { padding: 0; margin: 2px 10px; border-radius: 12px; }
+/* The pointer over a row tints it the way libadwaita's lists do, on the
+   same card a selected row fills, and a selected row under the pointer
+   takes a little more accent. The tint follows the text colour, so it
+   holds in dark too. */
+.thread-list > row:hover { background-color: alpha(currentColor, 0.05); }
 .thread-list > row:selected { background-color: alpha(var(--accent-bg-color), 0.16); }
+.thread-list > row:selected:hover { background-color: alpha(var(--accent-bg-color), 0.21); }
 .app-dark .thread-list > row:selected { background-color: alpha(var(--accent-bg-color), 0.26); }
+.app-dark .thread-list > row:selected:hover { background-color: alpha(var(--accent-bg-color), 0.31); }
 .thread-row { padding: 0 12px 0 6px; }
 /* Dot 8 px, centred 22 px from the list's start and 20 px below the
    row's top; avatar 34 px centred 52 px in; text from 80 px. */
@@ -92,7 +99,8 @@ row.account-heading { transition: background-color 120ms ease, color 120ms ease;
   padding: 9px 0 10px 0; margin-left: 11px;
   border-bottom: 1px solid alpha(currentColor, 0.05);
 }
-.thread-list > row:selected .thread-text { border-bottom-color: transparent; }
+.thread-list > row:selected .thread-text,
+.thread-list > row:hover .thread-text { border-bottom-color: transparent; }
 .thread-row .from { font-weight: 600; }
 .thread-row.unread .from { font-weight: 800; }
 /* The sender's address beside the name, styled as the mockup's secondary

@@ -137,6 +137,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   Ctrl+R.
 
 ### Improved
+- Conversations in the list light up under the pointer, as the sidebar's rows do.
 - An event's bubble lists each guest once, calls you "You", marks guests who haven't answered with a clock, and shows a map pin beside the place.
 - The Google tile shows Google's logo and the iCloud tile a cloud, in place of a colored letter.
 - In the snap, when Penguin Mail cannot reach your keyring, the window and
