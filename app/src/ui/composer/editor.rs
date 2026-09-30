@@ -20,12 +20,25 @@ use crate::compose::{
 };
 use crate::richtext::{Block, BlockKind, RichBody, Style};
 use crate::settings::ComposeFormat;
+use crate::stray_markdown;
 
 /// The body read out once, in the two forms a draft keeps.
 pub struct Written {
     pub markdown: String,
     /// The styled body, while the writer is in rich text.
     pub rich: Option<RichBody>,
+}
+
+/// Markdown pasted as styled text, held by marks while the toast that
+/// offers the literal text instead is up.
+pub struct Pasted {
+    start: gtk::TextMark,
+    end: gtk::TextMark,
+    /// The text the clipboard held.
+    markdown: String,
+    /// The pasted lines as they first stood in the buffer, to tell them
+    /// from lines the writer has edited since.
+    shown: String,
 }
 
 /// The words a link will go on, held by marks while the dialog that asks
@@ -477,6 +490,127 @@ impl Editor {
         }
         self.buffer.end_user_action();
         self.busy.set(false);
+    }
+
+    /// Puts `markdown`, read as Markdown and styled, in place of the
+    /// selection or at the cursor, as one step of Undo. The paste stays
+    /// held until [`Editor::unpaste`] or [`Editor::let_go`].
+    pub fn paste_markdown(&self, markdown: &str) -> Pasted {
+        let buffer = &self.buffer;
+        self.busy.set(true);
+        buffer.begin_user_action();
+        buffer.delete_selection(true, true);
+        let start = buffer.create_mark(None, &buffer.iter_at_mark(&buffer.get_insert()), true);
+        richbuffer::insert(buffer, &stray_markdown::styled(markdown));
+        let end = buffer.create_mark(None, &buffer.iter_at_mark(&buffer.get_insert()), false);
+        buffer.end_user_action();
+        self.busy.set(false);
+        let shown = self.between(&start, &end);
+        Pasted {
+            start,
+            end,
+            markdown: markdown.to_string(),
+            shown,
+        }
+    }
+
+    /// Puts the literal text of `pasted` back in place of its styled
+    /// lines, as a plain paste would have left it. False, and nothing
+    /// changed, when the writer has edited the pasted lines since.
+    pub fn unpaste(&self, pasted: Pasted) -> bool {
+        let buffer = &self.buffer;
+        let same = self.between(&pasted.start, &pasted.end) == pasted.shown;
+        if same {
+            buffer.begin_user_action();
+            let (mut from, mut to) = (
+                buffer.iter_at_mark(&pasted.start),
+                buffer.iter_at_mark(&pasted.end),
+            );
+            buffer.delete(&mut from, &mut to);
+            buffer.insert(&mut from, &pasted.markdown);
+            buffer.place_cursor(&from);
+            buffer.end_user_action();
+        }
+        self.let_go(pasted);
+        same
+    }
+
+    /// Stops holding a paste.
+    pub fn let_go(&self, pasted: Pasted) {
+        self.buffer.delete_mark(&pasted.start);
+        self.buffer.delete_mark(&pasted.end);
+    }
+
+    fn between(&self, start: &gtk::TextMark, end: &gtk::TextMark) -> String {
+        let buffer = &self.buffer;
+        buffer
+            .slice(&buffer.iter_at_mark(start), &buffer.iter_at_mark(end), true)
+            .to_string()
+    }
+
+    /// Whether the writer's words in a rich body still hold Markdown that
+    /// nobody formatted, such as marks typed by hand.
+    pub fn markdown_left(&self) -> bool {
+        self.format.get() == ComposeFormat::Rich && stray_markdown::left_in(&self.written_lines())
+    }
+
+    /// Styles the Markdown left in the writer's words, as one step of
+    /// Undo. Lines already styled, the signature and the quoted history
+    /// stay as they are. False when there was nothing to format.
+    pub fn format_stray_markdown(&self) -> bool {
+        if self.format.get() != ComposeFormat::Rich {
+            return false;
+        }
+        let found = stray_markdown::conversions(&self.written_lines());
+        if found.is_empty() {
+            return false;
+        }
+        let buffer = &self.buffer;
+        // A cursor inside a run that is rewritten ends up after the new
+        // lines, where the writer was typing.
+        let cursor = buffer.create_mark(None, &buffer.iter_at_mark(&buffer.get_insert()), false);
+        self.busy.set(true);
+        buffer.begin_user_action();
+        // From the bottom up, so the line numbers above stay true.
+        for conversion in found.iter().rev() {
+            let (first, last) = (
+                conversion.lines.start as i32,
+                conversion.lines.end as i32 - 1,
+            );
+            let mut from = buffer
+                .iter_at_line(first)
+                .unwrap_or_else(|| buffer.end_iter());
+            let mut to = line_end(buffer, last);
+            buffer.delete(&mut from, &mut to);
+            buffer.place_cursor(&from);
+            richbuffer::insert(buffer, &conversion.body);
+        }
+        buffer.end_user_action();
+        self.busy.set(false);
+        buffer.place_cursor(&buffer.iter_at_mark(&cursor));
+        buffer.delete_mark(&cursor);
+        true
+    }
+
+    /// The lines that may hold the writer's words: those above the history
+    /// they unfolded, down to the first quoted line. Reading on through a
+    /// long quote would cost a pause for lines that are never formatted.
+    fn written_lines(&self) -> RichBody {
+        let buffer = &self.buffer;
+        let end = match self.history_present() {
+            Some(true) => self
+                .history_start
+                .borrow()
+                .as_ref()
+                .map_or(buffer.line_count(), |(mark, _)| {
+                    buffer.iter_at_mark(mark).line() + 1
+                }),
+            _ => buffer.line_count(),
+        };
+        let end = (0..end)
+            .find(|line| richbuffer::kind_at(buffer, *line) == BlockKind::Quote)
+            .map_or(end, |quote| quote + 1);
+        richbuffer::read_until(buffer, &self.anchors.borrow(), end)
     }
 
     /// Adds the history the writer unfolded at the end of the body, one
@@ -951,6 +1085,81 @@ pub(super) mod checks {
         a_keystroke_looks_at_its_own_lines_only();
         the_body_is_read_once_for_a_draft();
         an_unfolded_quote_lands_where_the_folded_one_would_go();
+        typed_markdown_formats_in_place_as_one_undo_step();
+        format_keeps_styled_words_and_the_quote();
+        pasted_markdown_arrives_styled_and_goes_back_to_plain();
+        a_markdown_draft_opens_styled();
+    }
+
+    fn typed_markdown_formats_in_place_as_one_undo_step() {
+        let typed = "Hi Ann,\n\n# Plan\n\n- soup\n- salad";
+        let (_view, editor) = opened("");
+        editor.buffer.insert_at_cursor(typed);
+        assert!(editor.markdown_left());
+        assert!(editor.format_stray_markdown());
+        assert!(!editor.markdown_left());
+        assert_eq!(richbuffer::kind_at(&editor.buffer, 2), BlockKind::Heading(1));
+        assert_eq!(richbuffer::kind_at(&editor.buffer, 5), BlockKind::Bullet);
+        assert_eq!(editor.rich().to_plain(), "Hi Ann,\n\nPlan\n\n- soup\n- salad");
+        // The cursor stays at the end, where the writer was typing.
+        let cursor = editor.buffer.iter_at_mark(&editor.buffer.get_insert());
+        assert!(cursor.is_end(), "{}", cursor.offset());
+        editor.buffer.undo();
+        assert_eq!(editor.source(), typed);
+        // Nothing left to format is no change at all.
+        let (_view, editor) = opened("Hi Ann,\n\nSee you Friday - bring soup.");
+        assert!(!editor.markdown_left());
+        assert!(!editor.format_stray_markdown());
+    }
+
+    fn format_keeps_styled_words_and_the_quote() {
+        let (_view, editor) = opened("Hi **Ann**.\n\nOn Monday, Ann wrote:\n\n> \\- one\n> \\- two\n> \\# three");
+        assert_eq!(richbuffer::kind_at(&editor.buffer, 4), BlockKind::Quote);
+        let quoted_before: Vec<Block> = editor.rich().blocks[1..].to_vec();
+        cursor_at(&editor, 7);
+        editor.buffer.insert_at_cursor("\n- soup\n- salad");
+        assert!(editor.format_stray_markdown());
+        let after = editor.rich();
+        assert!(after.blocks[0].spans[1].style.bold, "{after:?}");
+        // A list sets itself apart from the paragraph above it, as it
+        // does in any body read from Markdown.
+        assert!(after.blocks[1].is_blank(), "{after:?}");
+        assert_eq!(after.blocks[2].kind, BlockKind::Bullet, "{after:?}");
+        assert_eq!(after.blocks[3].kind, BlockKind::Bullet, "{after:?}");
+        assert_eq!(after.blocks[4..].to_vec(), quoted_before);
+    }
+
+    fn pasted_markdown_arrives_styled_and_goes_back_to_plain() {
+        let markdown = "# Plan\n\n- soup\n- salad";
+        let (_view, editor) = opened("Hi");
+        cursor_at(&editor, 2);
+        editor.buffer.insert_at_cursor("\n");
+        let pasted = editor.paste_markdown(markdown);
+        assert_eq!(richbuffer::kind_at(&editor.buffer, 1), BlockKind::Heading(1));
+        assert_eq!(editor.rich().to_plain(), "Hi\nPlan\n\n- soup\n- salad");
+        assert!(!editor.markdown_left());
+        assert!(editor.unpaste(pasted));
+        assert_eq!(editor.source(), format!("Hi\n{markdown}"));
+        assert!(editor.markdown_left());
+        // One Undo takes the plain text out, and one more the whole paste.
+        editor.buffer.undo();
+        editor.buffer.undo();
+        assert_eq!(editor.source(), "Hi\n");
+        // A paste the writer has since edited stays as it is.
+        let (_view, editor) = opened("");
+        let pasted = editor.paste_markdown(markdown);
+        cursor_at(&editor, 2);
+        editor.buffer.insert_at_cursor("x");
+        assert!(!editor.unpaste(pasted));
+    }
+
+    fn a_markdown_draft_opens_styled() {
+        // What the assistant and a template hand over: Markdown, which a
+        // rich body shows styled.
+        let (_view, editor) = opened("Hi,\n\n## Agenda\n\n1. **Budget**\n2. [Plan](https://e.com)");
+        assert!(!editor.markdown_left());
+        assert_eq!(richbuffer::kind_at(&editor.buffer, 2), BlockKind::Heading(2));
+        assert_eq!(richbuffer::kind_at(&editor.buffer, 4), BlockKind::Numbered);
     }
 
     fn an_unfolded_quote_lands_where_the_folded_one_would_go() {

@@ -38,6 +38,7 @@ mod sanitize;
 mod search;
 mod settings;
 mod smime;
+mod stray_markdown;
 mod templates;
 mod translation;
 mod tray;
