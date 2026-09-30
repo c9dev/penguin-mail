@@ -260,6 +260,12 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - Yes no longer looks already chosen on an invitation you haven't answered. The three answers look alike until you pick one.
 - An invitation in a message and the same event in the calendar give the same date, time and count of guests who said yes.
 - The week number in the calendar header is the same in Week and Day view for every day of the week, whichever day your weeks start on.
+- Two short events at the same time in Week or Day show their whole titles on two lines when the column has room, rather than "Sprint p…" and "Call wit…".
+- The calendar's Agenda opens with today's heading at the top, rather than with the day's first event and no day above it.
+- The calendar's view switch always shows the view on screen. When the header runs short it becomes one button, such as "Week", that lists Day, Week, Month and Agenda, and the week keeps all seven days in view.
+- On a phone-width window the calendar keeps New Event, Search and the window buttons in its header, with Today and the arrows beside List and Day at the bottom, and agenda rows fit their card.
+- A window too narrow for the mail list beside the conversation shows one at a time, with a back button, instead of cutting off the conversation's right side.
+- On a phone-width window the mail list and the open conversation fit the screen again, with times, New Message and the window buttons in view.
 - Double-clicking an event opens the editor without leaving the event's bubble open beside it.
 - Show more in an event's bubble opens the rest of the notes instead of closing the bubble.
 - A reply's quoted message folds behind "•••" again, including replies Penguin Mail sent earlier with each quoted paragraph set apart.

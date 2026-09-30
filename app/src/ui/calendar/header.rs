@@ -1,7 +1,8 @@
-//! What the calendar's header drops when its room runs short. The view
-//! switch keeps its full width: the week number goes first, then the
-//! year beside the month, then the search button, which Ctrl+F still
-//! opens. The bold part of the title ellipsizes only after all three.
+//! What the calendar's header gives up when its room runs short. The
+//! week number goes first, then the year beside the month, then the view
+//! switch folds into a drop-down that names the view on screen. Today,
+//! New Event, Search and the window's buttons stay. The bold part of the
+//! title ellipsizes only after all three.
 
 use std::cell::{Cell, RefCell};
 
@@ -15,11 +16,11 @@ use gtk::subclass::prelude::*;
 pub enum Extra {
     Week,
     Year,
-    Search,
+    Switch,
 }
 
 impl Extra {
-    pub const ALL: [Extra; 3] = [Extra::Week, Extra::Year, Extra::Search];
+    pub const ALL: [Extra; 3] = [Extra::Week, Extra::Year, Extra::Switch];
 }
 
 /// Which of [`Extra::ALL`] the header keeps in `room` pixels, when the
@@ -36,6 +37,13 @@ pub fn keeps(room: i32, core: i32, extras: [i32; 3]) -> [bool; 3] {
         used -= width;
     }
     kept
+}
+
+/// The width an extra `natural` pixels wide, with `gap` beside it, gives
+/// back when it goes: all of it, or less the width of the `fallback`
+/// that takes its place.
+pub fn saving(natural: i32, gap: i32, fallback: Option<i32>) -> i32 {
+    natural + gap - fallback.map_or(0, |width| width + gap)
 }
 
 /// [`keeps`] with memory, so a steady width gives a steady answer.
@@ -75,6 +83,9 @@ impl Steady {
 struct Held {
     widget: gtk::Widget,
     gap: i32,
+    /// What shows in the extra's place once it goes, such as a drop-down
+    /// for the view switch. The extra then saves only the difference.
+    fallback: Option<gtk::Widget>,
     /// Whether it has anything to show at all, such as a week number in
     /// a view that has one.
     wanted: Cell<bool>,
@@ -82,6 +93,68 @@ struct Held {
     /// measures nothing, and the header needs to know what showing it
     /// again would take.
     natural: Cell<i32>,
+    /// The fallback's natural width the last time it showed, or before
+    /// it first did.
+    fallback_natural: Cell<i32>,
+}
+
+impl Held {
+    /// The width the fallback takes in the extra's place, gap included,
+    /// or nothing when the extra has none.
+    fn fallback_width(&self) -> i32 {
+        self.fallback
+            .as_ref()
+            .map_or(0, |_| self.fallback_natural.get() + self.gap)
+    }
+}
+
+/// The header's natural width with its start and end side by side. The
+/// bar lays them out in a `gtk::CenterBox`, which asks for twice its
+/// wider side so a title could sit in the middle, even with no title; so
+/// hiding a widget on the narrower side changed nothing, and the estimate
+/// of the room the extras need moved with what showed.
+fn sides_natural(header: &adw::HeaderBar) -> i32 {
+    let measure = |widget: &gtk::Widget| widget.measure(gtk::Orientation::Horizontal, -1);
+    let (whole_min, whole, _, _) = measure(header.upcast_ref());
+    let mut at = header.first_child();
+    for _ in 0..3 {
+        let Some(widget) = at else { break };
+        if let Some(center) = widget.downcast_ref::<gtk::CenterBox>() {
+            let sides: i32 = [center.start_widget(), center.end_widget()]
+                .iter()
+                .flatten()
+                .map(|side| measure(side).1)
+                .sum();
+            // The bar's own padding. Its measured widths leave it out
+            // (the natural width came out 2 px below the centre box's),
+            // so read it from the last allocation once there is one.
+            let padding = match center.width() {
+                0 => whole_min - measure(center.upcast_ref()).0,
+                inside => header.width() - inside,
+            };
+            return padding + sides;
+        }
+        at = widget.first_child();
+    }
+    whole
+}
+
+/// Whether `widget` shows inside `header`: it and every parent up to the
+/// header are visible. The view switch can sit in the bottom bar
+/// instead, where it takes none of the header's room.
+fn shows_in(widget: &gtk::Widget, header: &adw::HeaderBar) -> bool {
+    let header = header.upcast_ref::<gtk::Widget>();
+    let mut at = Some(widget.clone());
+    while let Some(widget) = at {
+        if &widget == header {
+            return true;
+        }
+        if !widget.get_visible() {
+            return false;
+        }
+        at = widget.parent();
+    }
+    false
 }
 
 mod imp {
@@ -129,18 +202,21 @@ mod imp {
                 return header.measure(orientation, -1);
             }
             // The header asks for the width it takes with every extra
-            // gone, so the window never counts an extra as room it must
-            // find, and for its full width as the width it would like.
+            // gone, or in its fallback's form, so the window never counts
+            // an extra as room it must find, and for its full width as
+            // the width it would like.
             let (min, _, _, _) = header.measure(orientation, for_size);
             let (core, extras) = self.widths(&header);
-            let showing: i32 = self
-                .extras
-                .borrow()
-                .iter()
-                .filter(|held| held.widget.get_visible())
-                .map(|held| held.widget.measure(orientation, -1).0 + held.gap)
-                .sum();
-            (min - showing, core + extras.iter().sum::<i32>(), -1, -1)
+            let mut least = min;
+            for held in self.extras.borrow().iter() {
+                if shows_in(&held.widget, &header) {
+                    least -= held.widget.measure(orientation, -1).0 + held.gap;
+                    if held.fallback.is_some() {
+                        least += held.fallback_width();
+                    }
+                }
+            }
+            (least, core + extras.iter().sum::<i32>(), -1, -1)
         }
 
         fn size_allocate(&self, width: i32, height: i32, baseline: i32) {
@@ -173,23 +249,33 @@ mod imp {
     }
 
     impl HeaderRoom {
-        /// The header's natural width without the extras, and each
-        /// extra's width with its gap, in the order of [`Extra::ALL`].
+        /// The header's natural width with every extra gone or in its
+        /// fallback's form, and what each extra adds to that with its
+        /// gap, in the order of [`Extra::ALL`].
         fn widths(&self, header: &adw::HeaderBar) -> (i32, [i32; 3]) {
-            let (_, natural, _, _) = header.measure(gtk::Orientation::Horizontal, -1);
+            let natural = sides_natural(header);
             let mut extras = [0; 3];
-            let mut showing = 0;
+            let mut core = natural;
             for (index, held) in self.extras.borrow().iter().enumerate() {
-                if held.widget.get_visible() {
+                if shows_in(&held.widget, header) {
                     let width = held.widget.measure(gtk::Orientation::Horizontal, -1).1;
                     held.natural.set(width);
-                    showing += width + held.gap;
+                    core -= width + held.gap;
+                }
+                if let Some(fallback) = &held.fallback
+                    && shows_in(fallback, header)
+                {
+                    let width = fallback.measure(gtk::Orientation::Horizontal, -1).1;
+                    held.fallback_natural.set(width);
+                    core -= width + held.gap;
                 }
                 if held.wanted.get() {
-                    extras[index] = held.natural.get() + held.gap;
+                    core += held.fallback_width();
+                    let fallback = held.fallback.as_ref().map(|_| held.fallback_natural.get());
+                    extras[index] = saving(held.natural.get(), held.gap, fallback);
                 }
             }
-            (natural - showing, extras)
+            (core, extras)
         }
     }
 }
@@ -204,18 +290,25 @@ glib::wrapper! {
 
 impl HeaderRoom {
     /// Holds `header`, whose extras are `extras` in the order of
-    /// [`Extra::ALL`], each with the gap beside it.
-    pub fn new(header: &adw::HeaderBar, extras: [(gtk::Widget, i32); 3]) -> HeaderRoom {
+    /// [`Extra::ALL`], each with the gap beside it and what shows in its
+    /// place once it goes, if anything.
+    pub fn new(
+        header: &adw::HeaderBar,
+        extras: [(gtk::Widget, i32, Option<gtk::Widget>); 3],
+    ) -> HeaderRoom {
         let room: HeaderRoom = glib::Object::new();
         header.set_parent(&room);
         room.imp().header.replace(Some(header.clone()));
+        let natural = |widget: &gtk::Widget| widget.measure(gtk::Orientation::Horizontal, -1).1;
         room.imp().extras.replace(
             extras
                 .into_iter()
-                .map(|(widget, gap)| Held {
-                    natural: Cell::new(widget.measure(gtk::Orientation::Horizontal, -1).1),
+                .map(|(widget, gap, fallback)| Held {
+                    natural: Cell::new(natural(&widget)),
+                    fallback_natural: Cell::new(fallback.as_ref().map_or(0, natural)),
                     widget,
                     gap,
+                    fallback,
                     wanted: Cell::new(true),
                 })
                 .collect(),
@@ -287,6 +380,16 @@ mod tests {
         let mut state = Steady::default();
         assert_eq!(state.decide(1000, 500, extras), [true, true, true]);
         assert_eq!(state.decide(560, 500, extras), [false, false, true]);
+    }
+
+    #[test]
+    fn an_extra_with_a_fallback_saves_only_the_difference() {
+        assert_eq!(saving(273, 0, Some(79)), 194);
+    }
+
+    #[test]
+    fn an_extra_without_a_fallback_saves_itself_and_its_gap() {
+        assert_eq!(saving(32, 8, None), 40);
     }
 
     const EXTRAS: [i32; 3] = [40, 60, 40];

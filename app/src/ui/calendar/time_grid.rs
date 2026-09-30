@@ -186,6 +186,25 @@ fn title_lines(top: f64, bottom: f64) -> i32 {
     (((height - ABOVE_AND_BELOW) / TITLE_LINE).floor() as i32).max(1)
 }
 
+/// The tallest a short card in a shared column grows, in pixels: room for
+/// two lines of its title and no time, which such a narrow lane has no
+/// room for beside it.
+const TWO_LINE_CARD: f32 = 42.0;
+
+/// How far down, in hours, a card from `top` to `bottom` may run: a card
+/// sharing its column with others (`lanes` above one) may run on to
+/// [`TWO_LINE_CARD`] so a title too wide for its lane can take a second
+/// line, though never past `next`, the start of the next card in its
+/// lane. The card takes that extra only when its title needs it (see
+/// `size_allocate`).
+fn reach(top: f64, bottom: f64, lanes: usize, next: Option<f64>) -> f64 {
+    if lanes <= 1 {
+        return bottom;
+    }
+    let two_lines = top + f64::from(TWO_LINE_CARD + CARD_INSET) / f64::from(HOUR);
+    next.map_or(two_lines, |next| two_lines.min(next)).max(bottom)
+}
+
 /// Whether the label of `hour` shows while the grid is scrolled to `top`
 /// with `height` of it on screen. The edges of the scrolled window would
 /// cut a label on the top line or the bottom line in half, and the
@@ -350,6 +369,9 @@ mod imp {
             lanes: usize,
             top: f64,
             bottom: f64,
+            /// How far down the card may run when its title needs a
+            /// second line (`super::reach`); `bottom` when it may not.
+            reach: f64,
         },
         Hour(u32),
     }
@@ -509,7 +531,15 @@ mod imp {
                     // Placed below from `dragging.rect`, not its own slot.
                     continue;
                 }
-                let (x, y, w, h) = placement_pixels(*placement, width as f32);
+                let (x, y, w, mut h) = placement_pixels(*placement, width as f32);
+                if let imp::Placement::Card { top, reach, bottom, .. } = *placement
+                    && reach > bottom
+                {
+                    let room = (reach - top) as f32 * HOUR - CARD_INSET;
+                    let (_, wanted, _, _) =
+                        child.measure(gtk::Orientation::Vertical, w.round().max(0.0) as i32);
+                    h = h.max((wanted as f32).min(room));
+                }
                 allocate_at(child, x, y, w, h, baseline);
             }
             if let Some(dragging) = self.dragging.borrow().as_ref()
@@ -747,7 +777,7 @@ mod imp {
 /// the dragged card's allocation and the ghost's can share it.
 fn placement_pixels(placement: imp::Placement, width: f32) -> (f32, f32, f32, f32) {
     match placement {
-        imp::Placement::Card { column, columns, lane, lanes, top, bottom } => {
+        imp::Placement::Card { column, columns, lane, lanes, top, bottom, .. } => {
             rect(column, columns, lane, lanes, top, bottom, width)
         }
         // Right-aligned 10 pixels short of the gutter's edge and centred
@@ -908,6 +938,15 @@ impl TimeGrid {
                 pieces.iter().map(|&(_, s, e)| (s, e)).collect();
             let min = min_duration(MIN_HEIGHT, CARD_INSET, HOUR);
             let (placed, more) = layout::lanes(&stretch_for_lanes(&spans, min));
+            // Where each lane's cards start, for how far a card above
+            // another may run on.
+            let starts: Vec<(usize, f64)> = placed
+                .iter()
+                .map(|p| (p.lane, layout::wall_offset(pieces[p.index].1, midnight, zone)))
+                .chain(more.iter().map(|group| {
+                    (layout::MOST_LANES - 1, layout::wall_offset(group.from, midnight, zone))
+                }))
+                .collect();
 
             let mut in_day: Vec<(gtk::Widget, imp::Placement, f64)> = Vec::new();
             for p in placed {
@@ -920,7 +959,18 @@ impl TimeGrid {
                 let named_day = (days.len() > 1).then_some(day);
                 let on_edit = edit_closure(self, o.clone());
                 let event_block = EventBlock::new(o, colour, name, compact, named_day, zone, on_edit);
-                event_block.set_title_lines(title_lines(top, bottom));
+                let next = starts
+                    .iter()
+                    .filter(|&&(lane, start)| lane == p.lane && start > top)
+                    .map(|&(_, start)| start)
+                    .reduce(f64::min);
+                let reach = reach(top, bottom, p.lanes, next);
+                // A short card that may run on gets its second line.
+                let lines = match compact && reach > bottom {
+                    true => 2,
+                    false => title_lines(top, bottom),
+                };
+                event_block.set_title_lines(lines);
                 let card = event_block.widget;
                 connect_activated(self, &card, o.clone());
                 card.set_parent(self);
@@ -937,6 +987,7 @@ impl TimeGrid {
                         lanes: p.lanes,
                         top,
                         bottom,
+                        reach,
                     },
                     top,
                 ));
@@ -961,6 +1012,7 @@ impl TimeGrid {
                         lanes: layout::MOST_LANES,
                         top,
                         bottom,
+                        reach: bottom,
                     },
                     top,
                 ));
@@ -1062,6 +1114,7 @@ impl TimeGrid {
                 lanes: 1,
                 top,
                 bottom,
+                reach: bottom,
             },
         ));
         imp.ghost.replace(Some((widget, span)));
@@ -1831,7 +1884,7 @@ impl TimeGrid {
     fn place_nudged(&self, card: &gtk::Widget, (start, end): (EpochMillis, EpochMillis)) {
         let Some((column, top, bottom)) = self.imp().span_placement(start, end) else { return };
         let Some(imp::Placement::Card { columns, lane, lanes, .. }) = self.placement_of(card) else { return };
-        let placement = imp::Placement::Card { column, columns, lane, lanes, top, bottom };
+        let placement = imp::Placement::Card { column, columns, lane, lanes, top, bottom, reach: bottom };
         self.set_placement(card, placement);
     }
 }
@@ -2559,6 +2612,7 @@ mod tests {
             lanes: 1,
             top: 9.0,
             bottom: 10.0,
+            reach: 10.0,
         }
     }
 
@@ -2584,6 +2638,30 @@ mod tests {
     #[test]
     fn a_short_block_keeps_its_title_on_one_line() {
         assert_eq!(title_lines(9.0, 9.75), 1);
+    }
+
+    /// Sprint planning at 13:10 and Call with Rita at 13:15, half an hour
+    /// each, share a column and cut to "Sprint p…" and "Call wit…".
+    #[test]
+    fn a_short_card_in_a_shared_column_may_run_on_for_a_second_line() {
+        let top = 13.0 + 10.0 / 60.0;
+        let reach = reach(top, top + 0.5, 2, None);
+        assert!((reach - top) * f64::from(HOUR) >= f64::from(TWO_LINE_CARD));
+    }
+
+    #[test]
+    fn a_card_alone_in_its_column_keeps_its_own_length() {
+        assert_eq!(reach(13.0, 13.5, 1, None), 13.5);
+    }
+
+    #[test]
+    fn a_card_runs_on_no_further_than_the_next_card_in_its_lane() {
+        assert_eq!(reach(13.0, 13.5, 2, Some(13.6)), 13.6);
+    }
+
+    #[test]
+    fn a_card_already_tall_enough_keeps_its_own_length() {
+        assert_eq!(reach(13.0, 15.0, 2, None), 15.0);
     }
 
     #[test]
