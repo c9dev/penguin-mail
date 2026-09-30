@@ -238,6 +238,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   it last updated, instead of leaving you guessing.
 
 ### Fixed
+- Double-clicking an event opens the editor without leaving the event's bubble open beside it.
 - The assistant's button in the mail and calendar headers is a plain button
   like its neighbours; only its sparkle turns orange while the panel is open.
 - Switching the calendar between Day, Week and Month no longer jumps months

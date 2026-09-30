@@ -207,6 +207,10 @@ pub struct CalendarView {
     list: Rc<Agenda>,
     results: Rc<Agenda>,
     popover: Rc<EventPopover>,
+    /// Set from a double click until the editor it opens is on screen.
+    /// The release of that second click still fires the block's own
+    /// click, which would open the popover again beside the editor.
+    editor_opening: Cell<bool>,
     more: gtk::Popover,
     more_list: Rc<Agenda>,
     /// The popover N and a press on empty time open: the time, a title
@@ -599,6 +603,7 @@ impl CalendarView {
                 list,
                 results,
                 popover,
+                editor_opening: Cell::new(false),
                 more,
                 more_list,
                 quick,
@@ -2173,6 +2178,9 @@ impl CalendarView {
     /// show for an event the account may change as a whole; a guest gets
     /// Edit, limited to their own parts, and Remove.
     fn show_event(self: &Rc<Self>, anchor: &gtk::Widget, o: &Occurrence) {
+        if self.editor_opening.get() || self.dialog_open() {
+            return;
+        }
         let calendar = self
             .calendars
             .borrow()
@@ -2324,13 +2332,25 @@ impl CalendarView {
     /// never leaves it open behind the editor.
     pub fn open_editor(self: &Rc<Self>, o: &Occurrence) {
         self.popover.hide();
+        self.editor_opening.set(true);
         let this = Rc::clone(self);
         let o = o.clone();
         glib::spawn_future_local(async move {
             let rules = this.series_rules(&o).await;
             let draft = Draft::open(&o, &rules, draft::local_zone());
             this.edit(draft);
+            this.editor_opening.set(false);
         });
+    }
+
+    /// Whether a dialog, such as the editor, is open over the window.
+    fn dialog_open(&self) -> bool {
+        let Some(root) = self.page.root() else { return false };
+        if let Some(window) = root.downcast_ref::<adw::Window>() {
+            return window.visible_dialog().is_some();
+        }
+        root.downcast_ref::<adw::ApplicationWindow>()
+            .is_some_and(|window| window.visible_dialog().is_some())
     }
 
     /// Deletes `o` at once and offers Undo. An occurrence of a series asks

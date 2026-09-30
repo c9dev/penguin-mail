@@ -152,11 +152,10 @@ impl EventBlock {
         button.set_tooltip_text(Some(&name));
 
         // Capture phase, so this sees the second press before the
-        // button's own click gesture does, and claims it: unclaimed, that
-        // second press still completes an ordinary click once it
-        // releases, firing the button's own `clicked` a second time and
-        // reopening the popover the first click already showed, behind
-        // the editor this gesture is about to open.
+        // button's own click gesture does, and claims it. The release
+        // still fires the button's own `clicked` a second time, so the
+        // calendar view refuses to open the popover while the editor
+        // this gesture opens is on its way or on screen.
         let double = gtk::GestureClick::builder()
             .button(gdk::BUTTON_PRIMARY)
             .propagation_phase(gtk::PropagationPhase::Capture)
