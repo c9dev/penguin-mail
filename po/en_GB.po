@@ -3799,36 +3799,36 @@ msgstr "Open {file} in the browser"
 msgid "Open in Browser"
 msgstr "Open in Browser"
 
-#: app/src/ui/calendar/block.rs:508
+#: app/src/ui/calendar/block.rs:507
 msgid "Waiting to be sent"
 msgstr "Waiting to be sent"
 
-#: app/src/ui/calendar/block.rs:511 app/src/ui/calendar/popover.rs:680
+#: app/src/ui/calendar/block.rs:510 app/src/ui/calendar/popover.rs:680
 msgid "Not answered yet"
 msgstr "Not answered yet"
 
-#: app/src/ui/calendar/block.rs:512
+#: app/src/ui/calendar/block.rs:511
 msgid "Declined"
 msgstr "Declined"
 
-#: app/src/ui/calendar/block.rs:553 app/src/ui/calendar/words.rs:149
+#: app/src/ui/calendar/block.rs:552 app/src/ui/calendar/words.rs:149
 #: app/src/ui/preferences.rs:850
 msgid "{start}–{end}"
 msgstr "{start}–{end}"
 
-#: app/src/ui/calendar/block.rs:592
+#: app/src/ui/calendar/block.rs:591
 msgid "{title}, {kind}"
 msgstr "{title}, {kind}"
 
-#: app/src/ui/calendar/block.rs:598
+#: app/src/ui/calendar/block.rs:597
 msgid "{title}, {day}"
 msgstr "{title}, {day}"
 
-#: app/src/ui/calendar/block.rs:605
+#: app/src/ui/calendar/block.rs:604
 msgid "{title}, all day, {calendar}"
 msgstr "{title}, all day, {calendar}"
 
-#: app/src/ui/calendar/block.rs:610 app/src/ui/calendar/words.rs:133
+#: app/src/ui/calendar/block.rs:609 app/src/ui/calendar/words.rs:133
 msgid "{title}, {start} to {end}, {calendar}"
 msgstr "{title}, {start} to {end}, {calendar}"
 
@@ -4531,112 +4531,112 @@ msgstr "Add holidays in {region}"
 msgid "Could not add the holidays: {reason}"
 msgstr "Could not add the holidays: {reason}"
 
-#: app/src/ui/calendar/mod.rs:373
+#: app/src/ui/calendar/mod.rs:377
 msgid "View"
 msgstr "View"
 
-#: app/src/ui/calendar/mod.rs:381 app/src/ui/calendar/mod.rs:2614
+#: app/src/ui/calendar/mod.rs:385 app/src/ui/calendar/mod.rs:2634
 msgid "New Event (N)"
 msgstr "New Event (N)"
 
-#: app/src/ui/calendar/mod.rs:384 app/src/ui/calendar/mod.rs:386
+#: app/src/ui/calendar/mod.rs:388 app/src/ui/calendar/mod.rs:390
 msgid "Search the Calendar (Ctrl+F)"
 msgstr "Search the Calendar (Ctrl+F)"
 
-#: app/src/ui/calendar/mod.rs:389 app/src/ui/calendar/mod.rs:392
+#: app/src/ui/calendar/mod.rs:393 app/src/ui/calendar/mod.rs:396
 msgid "Show Calendars"
 msgstr "Show Calendars"
 
-#: app/src/ui/calendar/mod.rs:398 app/src/ui/calendar/mod.rs:402
+#: app/src/ui/calendar/mod.rs:402 app/src/ui/calendar/mod.rs:406
 #: app/src/ui/conversation.rs:500 app/src/ui/conversation.rs:504
 msgid "Assistant (Ctrl+J)"
 msgstr "Assistant (Ctrl+J)"
 
-#: app/src/ui/calendar/mod.rs:431 app/src/ui/calendar/mod.rs:433
+#: app/src/ui/calendar/mod.rs:435 app/src/ui/calendar/mod.rs:437
 msgid "Search the Calendar"
 msgstr "Search the Calendar"
 
-#: app/src/ui/calendar/mod.rs:497 app/src/ui/calendar/mod.rs:927
+#: app/src/ui/calendar/mod.rs:501 app/src/ui/calendar/mod.rs:932
 msgid "Loading older events"
 msgstr "Loading older events"
 
-#: app/src/ui/calendar/mod.rs:926
+#: app/src/ui/calendar/mod.rs:931
 msgid "Older events can't load while offline"
 msgstr "Older events can't load while offline"
 
-#: app/src/ui/calendar/mod.rs:960 app/src/ui/window/shortcuts.rs:567
+#: app/src/ui/calendar/mod.rs:965 app/src/ui/window/shortcuts.rs:567
 msgid "Go to date"
 msgstr "Go to date"
 
-#: app/src/ui/calendar/mod.rs:1158
+#: app/src/ui/calendar/mod.rs:1163
 msgid "List"
 msgstr "List"
 
-#: app/src/ui/calendar/mod.rs:1159
+#: app/src/ui/calendar/mod.rs:1164
 msgid "Day"
 msgstr "Day"
 
-#: app/src/ui/calendar/mod.rs:1160
+#: app/src/ui/calendar/mod.rs:1165
 msgid "Week"
 msgstr "Week"
 
-#: app/src/ui/calendar/mod.rs:1161
+#: app/src/ui/calendar/mod.rs:1166
 msgid "Agenda"
 msgstr "Agenda"
 
-#: app/src/ui/calendar/mod.rs:1162
+#: app/src/ui/calendar/mod.rs:1167
 msgid "Month"
 msgstr "Month"
 
-#: app/src/ui/calendar/mod.rs:1384
+#: app/src/ui/calendar/mod.rs:1389
 msgid "Moved “{title}”"
 msgstr "Moved “{title}”"
 
-#: app/src/ui/calendar/mod.rs:1393
+#: app/src/ui/calendar/mod.rs:1398
 msgid "Could not move the event: {reason}"
 msgstr "Could not move the event: {reason}"
 
-#: app/src/ui/calendar/mod.rs:1503
+#: app/src/ui/calendar/mod.rs:1508
 msgid "All-day events"
 msgstr "All-day events"
 
-#: app/src/ui/calendar/mod.rs:1505
+#: app/src/ui/calendar/mod.rs:1510
 msgid "All-day"
 msgstr "All-day"
 
-#: app/src/ui/calendar/mod.rs:1889 app/src/ui/calendar/mod.rs:3167
+#: app/src/ui/calendar/mod.rs:1894 app/src/ui/calendar/mod.rs:3187
 #: app/src/ui/calendar/sidebar.rs:297 app/src/ui/calendar/words.rs:320
 #: app/src/ui/preferences.rs:864 app/src/ui/preferences.rs:976
 msgid "%a"
 msgstr "%a"
 
-#: app/src/ui/calendar/mod.rs:2370
+#: app/src/ui/calendar/mod.rs:2390
 msgid "Removed “{title}” from your calendar"
 msgstr "Removed “{title}” from your calendar"
 
-#: app/src/ui/calendar/mod.rs:2371
+#: app/src/ui/calendar/mod.rs:2391
 msgid "Deleted “{title}”"
 msgstr "Deleted “{title}”"
 
-#: app/src/ui/calendar/mod.rs:2376
+#: app/src/ui/calendar/mod.rs:2396
 msgid "Could not delete the event: {reason}"
 msgstr "Could not delete the event: {reason}"
 
-#: app/src/ui/calendar/mod.rs:2420 app/src/ui/composer/mod.rs:1096
+#: app/src/ui/calendar/mod.rs:2440 app/src/ui/composer/mod.rs:1096
 #: app/src/ui/window.rs:2049 app/src/ui/window/scheduled.rs:98
 #: app/src/ui/window/shortcuts.rs:454
 msgid "Undo"
 msgstr "Undo"
 
-#: app/src/ui/calendar/mod.rs:2562
+#: app/src/ui/calendar/mod.rs:2582
 msgid "Could not send your answer: {reason}"
 msgstr "Could not send your answer: {reason}"
 
-#: app/src/ui/calendar/mod.rs:2616
+#: app/src/ui/calendar/mod.rs:2636
 msgid "None of your calendars take new events"
 msgstr "None of your calendars take new events"
 
-#: app/src/ui/calendar/mod.rs:2902
+#: app/src/ui/calendar/mod.rs:2922
 msgid "Could not save the event: {reason}"
 msgstr "Could not save the event: {reason}"
 
@@ -8115,7 +8115,7 @@ msgstr "Your change to “{title}” was not saved because it changed elsewhere"
 msgid "Your change to “{title}” was not saved: {reason}"
 msgstr "Your change to “{title}” was not saved: {reason}"
 
-#: app/src/ui/window/spaces.rs:254
+#: app/src/ui/window/spaces.rs:256
 msgid "Show Event"
 msgstr "Show Event"
 
@@ -8482,7 +8482,7 @@ msgid_plural "{accounts} will get new labels."
 msgstr[0] "{accounts} will get a new label."
 msgstr[1] "{accounts} will get new labels."
 
-#: sync/src/calendar_copy.rs:1451
+#: sync/src/calendar_copy.rs:1465
 msgid "Google Calendar offers out of office and focus time only on some work and school accounts ({reason})"
 msgstr "Google Calendar offers out of office and focus time only on some work and school accounts ({reason})"
 
