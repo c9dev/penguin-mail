@@ -130,6 +130,10 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Improved
 - The Google tile shows Google's logo and the iCloud tile a cloud, in place of a colored letter.
+- In the snap, when Penguin Mail cannot reach your keyring, the window and
+  Add Account give the command that connects it, with a Copy button, in
+  place of a keyring error. The snap's GnuPG now keeps its own keyring, so
+  keys and certificates in `~/.gnupg` no longer appear there.
 
 - The tray menu lists only the accounts with unread mail, and choosing one
   opens its inbox. With nothing unread it says "No unread mail" instead of

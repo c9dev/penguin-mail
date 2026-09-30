@@ -382,6 +382,28 @@ impl Card {
         self.said.set_visible(said.is_some());
     }
 
+    /// Adds a Copy Command button under the links that puts `text` on the
+    /// clipboard. `show` takes it away again with the links.
+    fn show_copy(&self, text: Option<&str>) {
+        let Some(text) = text else { return };
+        let button = icon_button(
+            "edit-copy-symbolic",
+            &gettext("Copy Command"),
+            &["pill", "post-small-pill"],
+        );
+        button.set_halign(gtk::Align::Start);
+        let text = text.to_string();
+        button.connect_clicked(move |button| {
+            button.clipboard().set_text(&text);
+            button.announce(
+                &gettext("Command copied"),
+                gtk::AccessibleAnnouncementPriority::Medium,
+            );
+        });
+        self.links.append(&button);
+        self.links.set_visible(true);
+    }
+
     fn hide(&self) {
         self.area.set_visible(false);
     }
@@ -2177,6 +2199,7 @@ impl Dialog {
                     &failure.links,
                 );
                 page.failed.show_said(failure.said.as_deref());
+                page.failed.show_copy(failure.copy.as_deref());
                 page.password_list.add_css_class("post-wrong");
                 page.incoming.set_visible(false);
                 page.outgoing.set_visible(false);
@@ -2365,7 +2388,10 @@ impl Dialog {
                 }
                 Err(err) if this.asking.wants(ticket) => {
                     this.stop_browser();
-                    this.browser_failed(&err.to_string());
+                    match add_account::keyring_unplugged(&err, crate::keyring_plug::current()) {
+                        Some(unplugged) => this.browser_failed_with(&unplugged),
+                        None => this.browser_failed(&err.to_string()),
+                    }
                 }
                 Err(err) => tracing::info!(error = %err, "a browser sign-in ended after its dialog moved on"),
             }
@@ -2373,15 +2399,29 @@ impl Dialog {
     }
 
     fn browser_failed(&self, said: &str) {
+        self.browser_failed_with(&Failure {
+            line: said.to_string(),
+            title: gettext("Could not sign in"),
+            body: said.to_string(),
+            said: None,
+            links: Vec::new(),
+            copy: None,
+            kind: FailureKind::Refused,
+        });
+    }
+
+    fn browser_failed_with(&self, failure: &Failure) {
         let page = &self.browser;
         page.steps.set_visible(false);
         page.failed.show(
             "trouble",
             Ok("dialog-warning-symbolic"),
-            &gettext("Could not sign in"),
-            said,
-            &[],
+            &failure.title,
+            &failure.body,
+            &failure.links,
         );
+        page.failed.show_said(failure.said.as_deref());
+        page.failed.show_copy(failure.copy.as_deref());
         page.waiting.set_visible(false);
         page.again.set_visible(false);
         page.copy.set_visible(false);
@@ -2391,7 +2431,7 @@ impl Dialog {
         page.retry.grab_focus();
         page.failed
             .area
-            .announce(said, gtk::AccessibleAnnouncementPriority::High);
+            .announce(&failure.line, gtk::AccessibleAnnouncementPriority::High);
     }
 
     /// Counts the browser's time down to `deadline` once a second.
