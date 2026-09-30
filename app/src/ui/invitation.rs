@@ -403,18 +403,30 @@ impl EventCard {
             .visible(false)
             .build();
         name(&show_in_calendar, &gettext("Show in Calendar"));
-        let actions = gtk::Box::builder()
-            .spacing(8)
+        // The answers keep the left edge and the rest keep the right, on
+        // one line while the card has room. In a narrow reading pane the
+        // right group moves under the answers, and wraps again inside
+        // itself, so the card never grows wider than the page's column.
+        let left = gtk::Box::builder().spacing(8).build();
+        left.append(&answers);
+        left.append(&reach);
+        let right = adw::WrapBox::builder()
+            .child_spacing(8)
+            .line_spacing(8)
+            .build();
+        right.append(&propose);
+        right.append(&picker);
+        right.append(&show_in_calendar);
+        right.append(&add);
+        let actions = adw::WrapBox::builder()
+            .child_spacing(8)
+            .line_spacing(8)
+            .justify(adw::JustifyMode::Spread)
+            .justify_last_line(true)
             .css_classes(["invitation-actions"])
             .build();
-        actions.append(&answers);
-        actions.append(&reach);
-        let spacer = gtk::Box::builder().hexpand(true).build();
-        actions.append(&spacer);
-        actions.append(&propose);
-        actions.append(&picker);
-        actions.append(&show_in_calendar);
-        actions.append(&add);
+        actions.append(&left);
+        actions.append(&right);
 
         let news = gtk::Label::builder()
             .xalign(0.0)
