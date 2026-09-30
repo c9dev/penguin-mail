@@ -38,6 +38,12 @@ const MOST_GUESTS_SHOWN: usize = 5;
 /// `Answer::ALL` orders Yes, No, Maybe, for the invitation card.
 const ANSWER_ORDER: [Answer; 3] = [Answer::Yes, Answer::Maybe, Answer::No];
 
+/// How tall the notes grow, in pixels, before they scroll. Mutter gives a
+/// popover no more height than the monitor has, and GTK destroys a popup
+/// that gets less height than its content needs, so notes shown whole
+/// with no cap closed the popover on a 1080-pixel screen.
+const NOTES_TALLEST: i32 = 480;
+
 /// Who organized the event, by name where a guest row gives one,
 /// otherwise the bare organizer address the event carries.
 fn organizer_name(event: &Event) -> Option<String> {
@@ -81,10 +87,13 @@ pub struct EventPopover {
     place_row: gtk::Button,
     place_label: gtk::Label,
     place_url: RefCell<String>,
-    /// The notes as clickable text, under the place; hidden for an
-    /// event with none. Shows [`words::notes_collapsed`] until
-    /// `notes_more` is pressed, then the notes whole.
+    /// The notes as clickable text, under the place. Shows
+    /// [`words::notes_collapsed`] until `notes_more` is pressed, then the
+    /// notes whole.
     notes_label: gtk::Label,
+    /// Holds `notes_label` and scrolls it past [`NOTES_TALLEST`]; hidden
+    /// for an event with no notes.
+    notes_scroll: gtk::ScrolledWindow,
     /// "Show more", under the notes; visible only once
     /// [`words::notes_need_more`] says the notes overflow the cap.
     notes_more: gtk::Button,
@@ -231,12 +240,26 @@ impl EventPopover {
         // rows' own text, with no icon of their own.
         let notes_label = gtk::Label::builder()
             .xalign(0.0)
+            .yalign(0.0)
             .wrap(true)
             .wrap_mode(pango::WrapMode::WordChar)
             .use_markup(true)
-            .visible(false)
-            .margin_start(24)
             .build();
+        // Past NOTES_TALLEST the notes scroll, so the popover never needs
+        // more height than a screen gives it. The undershoot classes draw a
+        // line at an edge the notes run past, since the scrollbar only
+        // shows under the pointer.
+        let notes_scroll = gtk::ScrolledWindow::builder()
+            .css_classes(["undershoot-top", "undershoot-bottom"])
+            .child(&notes_label)
+            .hscrollbar_policy(gtk::PolicyType::Never)
+            .propagate_natural_width(true)
+            .propagate_natural_height(true)
+            .max_content_height(NOTES_TALLEST)
+            .margin_start(24)
+            .visible(false)
+            .build();
+        crate::ui::name(&notes_scroll, &gettext("Notes"));
         let notes_more = gtk::Button::builder()
             .label(gettext("Show more"))
             .css_classes(["flat", "popover-more"])
@@ -342,7 +365,7 @@ impl EventPopover {
         rows.append(&calendar_row);
         rows.append(&kind_label);
         rows.append(&place_row);
-        rows.append(&notes_label);
+        rows.append(&notes_scroll);
         rows.append(&notes_more);
         rows.append(&files_box);
         rows.append(&people_row);
@@ -410,6 +433,7 @@ impl EventPopover {
             place_label,
             place_url: RefCell::new(String::new()),
             notes_label,
+            notes_scroll,
             notes_more,
             notes: RefCell::new(String::new()),
             people_row,
@@ -466,6 +490,13 @@ impl EventPopover {
         this.notes_more.connect_clicked(move |button| {
             let Some(this) = weak.upgrade() else { return };
             this.notes_label.set_markup(&words::notes_markup(&this.notes.borrow()));
+            // A hidden button that keeps the focus leaves the popover deaf
+            // to Escape, so the notes take it: a link in them when there is
+            // one, or else the scroller around them.
+            if !this.notes_label.grab_focus() {
+                this.notes_scroll.set_focusable(true);
+                this.notes_scroll.grab_focus();
+            }
             button.set_visible(false);
         });
         let weak = Rc::downgrade(&this);
@@ -539,10 +570,11 @@ impl EventPopover {
         let weak = Rc::downgrade(&this);
         outside.connect_pressed(move |gesture, _, _, _| {
             let Some(this) = weak.upgrade() else { return };
-            // The popover draws on a surface of its own, and a press there
-            // reaches this gesture too. Picking the press's point in the
-            // window finds whatever lies under the popover instead, such
-            // as a label in the grid, so the surface decides.
+            // The popover draws on a surface of its own. Under GNOME Shell
+            // on Wayland a press there never reaches this gesture, and the
+            // surface check keeps one that does from closing the popover.
+            // Picking the press's point in the window would find whatever
+            // lies under the popover instead, such as a label in the grid.
             let pressed_on = gesture.current_event().and_then(|event| event.surface());
             let inside = pressed_on.is_some_and(|surface| this.popover.surface().as_ref() == Some(&surface));
             if !inside {
@@ -639,7 +671,10 @@ impl EventPopover {
 
         let notes = mailrs_mime::notes::text(&event.description);
         let notes_visible = !notes.is_empty();
-        self.notes_label.set_visible(notes_visible);
+        self.notes_scroll.set_visible(notes_visible);
+        self.notes_scroll.vadjustment().set_value(0.0);
+        // Only "Show more" makes the notes a stop for the Tab key.
+        self.notes_scroll.set_focusable(false);
         let overflows = notes_visible && words::notes_need_more(&notes);
         if notes_visible {
             self.notes_label.set_markup(&words::notes_markup(&words::notes_collapsed(&notes)));
@@ -855,6 +890,79 @@ fn row_with_icon(icon: &str, label: &gtk::Label, dim: bool) -> gtk::Box {
     label.set_hexpand(true);
     row.append(label);
     row
+}
+
+/// Checks that need GTK running, called from the one test that starts it
+/// (`composer::richbuffer`), since GTK belongs to the thread that starts
+/// it.
+#[cfg(test)]
+pub(crate) mod checks {
+    use std::sync::Arc;
+
+    use mailrs_domain::calendar::Calendar;
+
+    use super::*;
+
+    pub fn run() {
+        show_more_keeps_the_popover_short_enough_to_place();
+        show_more_hands_the_focus_on_as_it_hides();
+    }
+
+    /// Mutter gives a popover no more height than the monitor has, and GTK
+    /// destroys a popup it is given less height than its content needs. Notes
+    /// shown whole used to raise that need past a 1080-pixel screen, so
+    /// "Show more" closed the popover instead of opening the notes.
+    fn show_more_keeps_the_popover_short_enough_to_place() {
+        let window = gtk::Window::new();
+        let parent = gtk::Box::new(gtk::Orientation::Vertical, 0);
+        let anchor = gtk::Button::new();
+        parent.append(&anchor);
+        window.set_child(Some(&parent));
+        let popover = EventPopover::new(&parent, &parent);
+        let event = Event {
+            title: "Client workshop".to_string(),
+            description: "Dial in by phone: +351 21 000 0000\n".repeat(200),
+            ..Event::default()
+        };
+        let o = Occurrence { account_id: 1, event: Arc::new(event), start: 0, end: 3_600_000 };
+        popover.show(anchor.upcast_ref(), &o, &Calendar::default(), |_, _| {}, None, None, None);
+        assert!(popover.notes_more.get_visible(), "notes this long should offer Show more");
+
+        popover.notes_more.emit_clicked();
+
+        let (needed, _, _, _) = popover.popover.measure(gtk::Orientation::Vertical, -1);
+        assert!(needed < 600, "the popover needs {needed} px with the notes shown whole");
+        window.destroy();
+    }
+
+    /// "Show more" hides itself once pressed. A hidden button that keeps
+    /// the focus leaves the popover deaf to Escape, so the focus moves on.
+    fn show_more_hands_the_focus_on_as_it_hides() {
+        let window = gtk::Window::new();
+        let parent = gtk::Box::new(gtk::Orientation::Vertical, 0);
+        let anchor = gtk::Button::new();
+        parent.append(&anchor);
+        window.set_child(Some(&parent));
+        let popover = EventPopover::new(&parent, &parent);
+        let event = Event {
+            title: "Client workshop".to_string(),
+            description: "One\nTwo\nThree\nFour\nFive\nSix".to_string(),
+            ..Event::default()
+        };
+        let o = Occurrence { account_id: 1, event: Arc::new(event), start: 0, end: 3_600_000 };
+        popover.show(anchor.upcast_ref(), &o, &Calendar::default(), |_, _| {}, None, None, None);
+        popover.popover.set_visible(true);
+        let more = popover.notes_more.clone().upcast::<gtk::Widget>();
+        assert!(more.grab_focus(), "Show more should take the focus to begin with");
+        assert_eq!(gtk::prelude::GtkWindowExt::focus(&window).as_ref(), Some(&more));
+
+        popover.notes_more.emit_clicked();
+
+        let focus = gtk::prelude::GtkWindowExt::focus(&window);
+        assert_ne!(focus.as_ref(), Some(&more), "the hidden Show more kept the focus");
+        assert!(focus.is_some_and(|w| w.get_visible()), "the focus went nowhere");
+        window.destroy();
+    }
 }
 
 #[cfg(test)]

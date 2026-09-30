@@ -268,7 +268,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - A window too narrow for the mail list beside the conversation shows one at a time, with a back button, instead of cutting off the conversation's right side.
 - On a phone-width window the mail list and the open conversation fit the screen again, with times, New Message and the window buttons in view.
 - Double-clicking an event opens the editor without leaving the event's bubble open beside it.
-- Show more in an event's bubble opens the rest of the notes instead of closing the bubble.
+- Show more in an event's bubble opens the rest of the notes instead of closing the bubble. Notes too long for the screen scroll inside it, and Escape still closes it afterwards.
 - A reply's quoted message folds behind "•••" again, including replies Penguin Mail sent earlier with each quoted paragraph set apart.
 - The calendar sidebar shows a newly listed calendar as soon as it arrives, even before any of its events do.
 - The assistant's button in the mail and calendar headers is a plain button
