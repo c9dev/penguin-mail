@@ -248,6 +248,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   it last updated, instead of leaving you guessing.
 
 ### Fixed
+- In Month view, an event with a short name such as Gym shows its time again.
 - A label's menu offers Move Up or Move Down only when the label has somewhere to move.
 - Yes no longer looks already chosen on an invitation you haven't answered. The three answers look alike until you pick one.
 - An invitation in a message and the same event in the calendar give the same date, time and count of guests who said yes.
