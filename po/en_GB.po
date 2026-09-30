@@ -3194,7 +3194,7 @@ msgstr "Not Now"
 
 #: app/src/ui/add_account.rs:1154 app/src/ui/calendar/editor.rs:1486
 #: app/src/ui/calendar/sidebar.rs:884 app/src/ui/contacts_prefs.rs:236
-#: app/src/ui/invitation.rs:446 app/src/ui/permission.rs:41
+#: app/src/ui/invitation.rs:449 app/src/ui/permission.rs:41
 #: app/src/ui/permission.rs:64 app/src/ui/window.rs:1262
 msgid "Grant Access"
 msgstr "Grant Access"
@@ -4689,8 +4689,8 @@ msgstr "None of your calendars take new events"
 msgid "Could not save the event: {reason}"
 msgstr "Could not save the event: {reason}"
 
-#: app/src/ui/calendar/next.rs:87 app/src/ui/invitation.rs:789
-#: app/src/ui/invitation.rs:929 app/src/ui/invitation/strip.rs:168
+#: app/src/ui/calendar/next.rs:87 app/src/ui/invitation.rs:792
+#: app/src/ui/invitation.rs:932 app/src/ui/invitation/strip.rs:168
 msgid "Untitled event"
 msgstr "Untitled event"
 
@@ -5032,7 +5032,7 @@ msgstr "{title}, {days}, all day, {calendar}"
 msgid "{place} · {calendar}"
 msgstr "{place} · {calendar}"
 
-#: app/src/ui/calendar/words.rs:193 app/src/ui/invitation.rs:1210
+#: app/src/ui/calendar/words.rs:193 app/src/ui/invitation.rs:1213
 msgid "{yes} of {count} said yes"
 msgid_plural "{yes} of {count} said yes"
 msgstr[0] "{yes} of {count} said yes"
@@ -5040,7 +5040,7 @@ msgstr[1] "{yes} of {count} said yes"
 
 #. The calendar's popover words its people line the same way.
 #: app/src/ui/calendar/words.rs:204 app/src/ui/calendar/words.rs:528
-#: app/src/ui/invitation.rs:1178
+#: app/src/ui/invitation.rs:1181
 msgid "{name}, organizer"
 msgstr "{name}, organiser"
 
@@ -6037,25 +6037,25 @@ msgstr "Events to add"
 msgid "Show in Calendar"
 msgstr "Show in Calendar"
 
-#: app/src/ui/invitation.rs:443
+#: app/src/ui/invitation.rs:446
 msgid "Penguin Mail needs permission to show this event in Calendar."
 msgstr "Penguin Mail needs permission to show this event in Calendar."
 
-#: app/src/ui/invitation.rs:846
+#: app/src/ui/invitation.rs:849
 msgid "Added to your calendar"
 msgstr "Added to your calendar"
 
-#: app/src/ui/invitation.rs:848
+#: app/src/ui/invitation.rs:851
 msgid "Added {count} events to your calendar"
 msgid_plural "Added {count} events to your calendar"
 msgstr[0] "Added {count} events to your calendar"
 msgstr[1] "Added {count} events to your calendar"
 
-#: app/src/ui/invitation.rs:853
+#: app/src/ui/invitation.rs:856
 msgid "Added to {calendar}"
 msgstr "Added to {calendar}"
 
-#: app/src/ui/invitation.rs:855
+#: app/src/ui/invitation.rs:858
 msgid "Added {count} events to {calendar}"
 msgid_plural "Added {count} events to {calendar}"
 msgstr[0] "Added {count} events to {calendar}"
@@ -6063,105 +6063,105 @@ msgstr[1] "Added {count} events to {calendar}"
 
 #. A file with several events names none of them on the card's
 #. head: the list below does, one row each.
-#: app/src/ui/invitation.rs:939
+#: app/src/ui/invitation.rs:942
 msgid "{count} events"
 msgid_plural "{count} events"
 msgstr[0] "{count} events"
 msgstr[1] "{count} events"
 
-#: app/src/ui/invitation.rs:1016
+#: app/src/ui/invitation.rs:1019
 msgid "Pick a Time…"
 msgstr "Pick a Time…"
 
-#: app/src/ui/invitation.rs:1061
+#: app/src/ui/invitation.rs:1064
 msgid "No reply yet"
 msgstr "No reply yet"
 
-#: app/src/ui/invitation.rs:1131
+#: app/src/ui/invitation.rs:1134
 msgid "Half an Hour Later"
 msgstr "Half an Hour Later"
 
-#: app/src/ui/invitation.rs:1134
+#: app/src/ui/invitation.rs:1137
 msgid "An Hour Later"
 msgstr "An Hour Later"
 
-#: app/src/ui/invitation.rs:1136
+#: app/src/ui/invitation.rs:1139
 msgid "Same Time Tomorrow"
 msgstr "Same Time Tomorrow"
 
-#: app/src/ui/invitation.rs:1140
+#: app/src/ui/invitation.rs:1143
 msgid "Same Time Next Week"
 msgstr "Same Time Next Week"
 
-#: app/src/ui/invitation.rs:1155
+#: app/src/ui/invitation.rs:1158
 msgid "You have {event} then"
 msgstr "You have {event} then"
 
-#: app/src/ui/invitation.rs:1157
+#: app/src/ui/invitation.rs:1160
 msgid "You have {event} and {other} then"
 msgstr "You have {event} and {other} then"
 
-#: app/src/ui/invitation.rs:1161
+#: app/src/ui/invitation.rs:1164
 msgid "You have {event} and {count} more then"
 msgid_plural "You have {event} and {count} more then"
 msgstr[0] "You have {event} and {count} more then"
 msgstr[1] "You have {event} and {count} more then"
 
-#: app/src/ui/invitation.rs:1174
+#: app/src/ui/invitation.rs:1177
 msgid "Reply to the invitation from {organizer}"
 msgstr "Reply to the invitation from {organizer}"
 
-#: app/src/ui/invitation.rs:1273
+#: app/src/ui/invitation.rs:1276
 msgid "You"
 msgstr "You"
 
-#: app/src/ui/invitation.rs:1299
+#: app/src/ui/invitation.rs:1302
 msgid "{count} yes"
 msgid_plural "{count} yes"
 msgstr[0] "{count} yes"
 msgstr[1] "{count} yes"
 
-#: app/src/ui/invitation.rs:1307
+#: app/src/ui/invitation.rs:1310
 msgid "{count} no"
 msgid_plural "{count} no"
 msgstr[0] "{count} no"
 msgstr[1] "{count} no"
 
-#: app/src/ui/invitation.rs:1315
+#: app/src/ui/invitation.rs:1318
 msgid "{count} maybe"
 msgid_plural "{count} maybe"
 msgstr[0] "{count} maybe"
 msgstr[1] "{count} maybe"
 
-#: app/src/ui/invitation.rs:1323
+#: app/src/ui/invitation.rs:1326
 msgid "{count} awaiting"
 msgid_plural "{count} awaiting"
 msgstr[0] "{count} awaiting"
 msgstr[1] "{count} awaiting"
 
-#: app/src/ui/invitation.rs:1331
+#: app/src/ui/invitation.rs:1334
 msgid "{count} guest"
 msgid_plural "{count} guests"
 msgstr[0] "{count} guest"
 msgstr[1] "{count} guests"
 
-#: app/src/ui/invitation.rs:1337
+#: app/src/ui/invitation.rs:1340
 msgid "{guests} · {answers}"
 msgstr "{guests} · {answers}"
 
-#: app/src/ui/invitation.rs:1347
+#: app/src/ui/invitation.rs:1350
 msgid "This meeting moved from {when}"
 msgstr "This meeting moved from {when}"
 
-#: app/src/ui/invitation.rs:1350
+#: app/src/ui/invitation.rs:1353
 msgid "The organizer changed this meeting"
 msgstr "The organiser changed this meeting"
 
-#: app/src/ui/invitation.rs:1351
+#: app/src/ui/invitation.rs:1354
 msgid "The organizer canceled this meeting"
 msgstr "The organiser cancelled this meeting"
 
-#: app/src/ui/invitation.rs:1352
+#: app/src/ui/invitation.rs:1355
 msgid "This meeting is canceled"
 msgstr "This meeting is cancelled"
 
