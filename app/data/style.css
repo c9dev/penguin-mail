@@ -1029,6 +1029,19 @@ list.waiting-list > row.waiting-card:last-child { margin-bottom: 0; }
   background: var(--cal-colour, var(--accent-bg-color));
 }
 .agenda-heading { font-weight: 800; opacity: 0.75; }
+/* A date's first row carries the date's heading (agenda.rs), so the
+   hover tint and the focus ring go on the event's own line, not round
+   the heading as well. */
+listview.agenda-list > row:hover,
+listview.agenda-list > row:active,
+listview.agenda-list > row:focus-visible { background: none; outline: none; box-shadow: none; }
+listview.agenda-list > row:hover .agenda-row { background-color: alpha(currentColor, 0.05); border-radius: 8px; }
+listview.agenda-list > row:active .agenda-row { background-color: alpha(currentColor, 0.1); border-radius: 8px; }
+listview.agenda-list > row:focus-visible .agenda-row {
+  outline: 2px solid alpha(var(--accent-color), 0.5);
+  outline-offset: -2px;
+  border-radius: 8px;
+}
 /* The event popover: 16 px corners, a 4 px bar beside the title and
    the time, 13 px rows, and 34 px buttons with 10 px corners. */
 popover.event-popover > contents { border-radius: 16px; padding: 0; }

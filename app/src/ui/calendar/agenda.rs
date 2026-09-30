@@ -4,10 +4,16 @@
 //! below it.
 //!
 //! A `gtk::ListView` over `AgendaModel`, a `gio::ListStore`-like model
-//! that also implements `gtk::SectionModel`, gives GTK the date headings
-//! with a widget only for the rows on screen; a `gtk::ListBox` would
-//! build a widget tree for every day loaded, and scrolling up loads as
-//! much as a year.
+//! that also implements `gtk::SectionModel`, builds a widget only for the
+//! rows on screen; a `gtk::ListBox` would build a widget tree for every
+//! day loaded, and scrolling up loads as much as a year.
+//!
+//! The first row of each date draws the date's heading above itself,
+//! rather than GTK's own section header. GTK's list keeps its scroll
+//! position as a row at the top edge, never a header, so a list set to a
+//! day opened on that day's first row with its heading just above the
+//! edge ("09:30 Stand-up" with no day over it), and moving the list back
+//! by hand drifted again with every resize and late layout.
 
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -121,6 +127,12 @@ fn sections_of(dates: &[NaiveDate]) -> Vec<(u32, u32)> {
         }
     }
     sections
+}
+
+/// Whether the row at `position` is the first of its date in `sections`,
+/// and so draws the date's heading above itself.
+fn opens_section(sections: &[(u32, u32)], position: u32) -> bool {
+    sections.iter().any(|&(start, _)| start == position)
 }
 
 mod model {
@@ -254,6 +266,8 @@ mod row {
 
         #[derive(Default)]
         pub struct AgendaRow {
+            /// The date's heading, shown on the date's first row only.
+            pub heading: OnceCell<gtk::Label>,
             pub dot: OnceCell<gtk::Box>,
             pub time: OnceCell<gtk::Label>,
             pub title: OnceCell<gtk::Label>,
@@ -273,13 +287,34 @@ mod row {
         impl ObjectImpl for AgendaRow {
             fn constructed(&self) {
                 self.parent_constructed();
-                let row = self.obj();
-                row.set_orientation(gtk::Orientation::Horizontal);
-                row.set_spacing(8);
-                row.set_margin_top(4);
-                row.set_margin_bottom(4);
-                row.add_css_class("agenda-row");
-                row.set_accessible_role(gtk::AccessibleRole::ListItem);
+                let outer = self.obj();
+                outer.set_orientation(gtk::Orientation::Vertical);
+                outer.set_accessible_role(gtk::AccessibleRole::ListItem);
+                let heading = gtk::Label::builder()
+                    .css_classes(["agenda-heading", "heading"])
+                    .xalign(0.0)
+                    // The space GTK's own section header kept around it.
+                    .margin_top(20)
+                    .margin_bottom(8)
+                    .accessible_role(gtk::AccessibleRole::Heading)
+                    .visible(false)
+                    .build();
+                // A press on the date is not a press on the event under it.
+                let still = gtk::GestureClick::new();
+                still.connect_pressed(|gesture, _, _, _| {
+                    gesture.set_state(gtk::EventSequenceState::Claimed);
+                });
+                heading.add_controller(still);
+                let row = gtk::Box::builder()
+                    .orientation(gtk::Orientation::Horizontal)
+                    .spacing(8)
+                    .margin_top(4)
+                    .margin_bottom(4)
+                    .css_classes(["agenda-row"])
+                    .build();
+                outer.append(&heading);
+                outer.append(&row);
+                let _ = self.heading.set(heading);
 
                 let dot = gtk::Box::builder()
                     .valign(gtk::Align::Center)
@@ -345,9 +380,18 @@ mod row {
 
         /// Fills every label from `row`'s occurrence, using `calendars`
         /// for the dot's colour and the calendar name shown below the
-        /// title and read out in the accessible name.
-        pub(super) fn fill(&self, row: &Row, calendars: &HashMap<(AccountId, String), Calendar>) {
+        /// title and read out in the accessible name. `opens` says the
+        /// row is its date's first, which draws the date's heading.
+        pub(super) fn fill(
+            &self,
+            row: &Row,
+            opens: bool,
+            calendars: &HashMap<(AccountId, String), Calendar>,
+        ) {
             let imp = self.imp();
+            let heading = imp.heading.get().expect("built in constructed");
+            heading.set_visible(opens);
+            heading.set_label(&row.heading);
             let o = &row.occurrence;
             imp.occurrence.replace(Some(o.clone()));
             let (colour, calendar_name) = calendar_of(o, calendars);
@@ -384,49 +428,6 @@ mod row {
 
 use model::AgendaModel;
 use row::AgendaRow;
-
-/// [`show_top_heading`] once the frame under way has painted: the rows
-/// reach their new places in its layout, and read before it they are
-/// where they were.
-fn show_top_heading_once_painted(list: &gtk::ListView, scrolled: &gtk::ScrolledWindow) {
-    let Some(clock) = list.frame_clock() else { return };
-    let painted: Rc<RefCell<Option<glib::SignalHandlerId>>> = Rc::default();
-    let (list, scrolled) = (list.downgrade(), scrolled.downgrade());
-    let handler = clock.connect_after_paint({
-        let painted = Rc::clone(&painted);
-        move |clock| {
-            if let Some(id) = painted.borrow_mut().take() {
-                clock.disconnect(id);
-            }
-            if let (Some(list), Some(scrolled)) = (list.upgrade(), scrolled.upgrade()) {
-                show_top_heading(&list, &scrolled);
-            }
-        }
-    });
-    painted.replace(Some(handler));
-}
-
-/// Scrolls up to the heading just above the top edge, the heading of the
-/// top row's day, when one sits there.
-fn show_top_heading(list: &gtk::ListView, scrolled: &gtk::ScrolledWindow) {
-    let origin = gtk::graphene::Point::new(0.0, 0.0);
-    let mut above: Option<f32> = None;
-    let mut child = list.first_child();
-    while let Some(widget) = child {
-        if widget.css_name() == "header"
-            && let Some(point) = widget.compute_point(scrolled, &origin)
-            && point.y() < 0.0
-            && point.y() > -2.0 * widget.height() as f32
-        {
-            above = Some(above.map_or(point.y(), |y| y.max(point.y())));
-        }
-        child = widget.next_sibling();
-    }
-    if let Some(y) = above {
-        let adjustment = scrolled.vadjustment();
-        adjustment.set_value((adjustment.value() + f64::from(y)).max(0.0));
-    }
-}
 
 /// The calendar an occurrence's event names: its own colour and name.
 /// Missing from `calendars` only when a caller passes an incomplete map;
@@ -465,11 +466,6 @@ pub struct Agenda {
     calendars: Rc<RefCell<HashMap<(AccountId, String), Calendar>>>,
     activated: Rc<RefCell<Option<Box<Activated>>>>,
     scrolled_to_top: Rc<RefCell<Option<Box<ScrolledToTop>>>>,
-    /// The wait for the list's next move, to bring a heading into view
-    /// after it, and a count of the waits started. One wait at a time: a
-    /// second would lift the list twice.
-    lifting: Rc<RefCell<Option<(u64, glib::SignalHandlerId)>>>,
-    lifts: std::cell::Cell<u64>,
 }
 
 impl Agenda {
@@ -488,6 +484,7 @@ impl Agenda {
             item.set_child(Some(&AgendaRow::default()));
         });
         let bind_calendars = Rc::clone(&calendars);
+        let bind_model = model.clone();
         row_factory.connect_bind(move |_, item| {
             let item = item
                 .downcast_ref::<gtk::ListItem>()
@@ -499,42 +496,16 @@ impl Agenda {
                 return;
             };
             let row = boxed.borrow::<Row>();
-            widget.fill(&row, &bind_calendars.borrow());
-        });
-
-        let header_factory = gtk::SignalListItemFactory::new();
-        header_factory.connect_setup(move |_, item| {
-            let item = item
-                .downcast_ref::<gtk::ListHeader>()
-                .expect("headers are ListHeaders");
-            let label = gtk::Label::builder()
-                .css_classes(["agenda-heading", "heading"])
-                .xalign(0.0)
-                .margin_top(10)
-                .margin_bottom(4)
-                .build();
-            item.set_child(Some(&label));
-        });
-        header_factory.connect_bind(move |_, item| {
-            let item = item
-                .downcast_ref::<gtk::ListHeader>()
-                .expect("headers are ListHeaders");
-            let Some(label) = item.child().and_downcast::<gtk::Label>() else {
-                return;
-            };
-            let Some(boxed) = item.item().and_downcast::<glib::BoxedAnyObject>() else {
-                return;
-            };
-            let row = boxed.borrow::<Row>();
-            label.set_label(&row.heading);
+            let opens = opens_section(&bind_model.imp().sections.borrow(), item.position());
+            widget.fill(&row, opens, &bind_calendars.borrow());
         });
 
         let list_view = gtk::ListView::builder()
             .model(&selection)
             .factory(&row_factory)
-            .header_factory(&header_factory)
             .single_click_activate(true)
             .build();
+        list_view.add_css_class("agenda-list");
 
         let activated: Rc<RefCell<Option<Box<Activated>>>> = Rc::new(RefCell::new(None));
         let on_activate = Rc::clone(&activated);
@@ -578,21 +549,6 @@ impl Agenda {
             .tightening_threshold(COLUMN_WIDTH)
             .child(&content)
             .build();
-        // GTK keeps the top row's place as a share of the page's height,
-        // so a page that gets shorter, as when a narrow window's bottom
-        // bar slides in, moves the row up and cuts its heading. Bring the
-        // heading back after any change of height; the person's own
-        // scrolling changes the value, never the height.
-        let page_height = std::cell::Cell::new(0.0);
-        let (heights_list, heights_scrolled) = (list_view.downgrade(), scrolled.downgrade());
-        scrolled.vadjustment().connect_changed(move |adjustment| {
-            if page_height.replace(adjustment.page_size()) == adjustment.page_size() {
-                return;
-            }
-            if let (Some(list), Some(scrolled)) = (heights_list.upgrade(), heights_scrolled.upgrade()) {
-                show_top_heading_once_painted(&list, &scrolled);
-            }
-        });
         let scrolled_to_top: Rc<RefCell<Option<Box<ScrolledToTop>>>> = Rc::new(RefCell::new(None));
         let top_slot = Rc::clone(&scrolled_to_top);
         scrolled.connect_edge_reached(move |_, position| {
@@ -612,8 +568,6 @@ impl Agenda {
             calendars,
             activated,
             scrolled_to_top,
-            lifting: Rc::default(),
-            lifts: std::cell::Cell::new(0),
         })
     }
 
@@ -635,7 +589,6 @@ impl Agenda {
         // A new list starts at its first heading, not wherever the last
         // one was scrolled to.
         self.scrolled.vadjustment().set_value(0.0);
-        self.show_heading_once_moved();
     }
 
     /// Inserts `occurrences` before the agenda's earliest row and
@@ -658,48 +611,7 @@ impl Agenda {
         let inserted = self.model.prepend_rows(rows);
         if inserted > 0 {
             self.list_view.scroll_to(inserted, gtk::ListScrollFlags::NONE, None);
-            self.show_heading_once_moved();
         }
-    }
-
-    /// Brings the day heading of the top row into view once the list
-    /// next moves. GTK's list keeps its place as a row at the top edge,
-    /// whether from `scroll_to` or from setting the scroll to 0, and the
-    /// row's heading sits just above it, out of view: the agenda opened
-    /// on a bare "09:30 Stand-up". The move lands in the list's next
-    /// layout; a list that does not move within a second is left alone.
-    fn show_heading_once_moved(&self) {
-        let adjustment = self.scrolled.vadjustment();
-        let waiting = Rc::clone(&self.lifting);
-        if let Some((_, earlier)) = waiting.borrow_mut().take() {
-            adjustment.disconnect(earlier);
-        }
-        let lift = self.lifts.get() + 1;
-        self.lifts.set(lift);
-        let (list, scrolled) = (self.list_view.downgrade(), self.scrolled.downgrade());
-        let handler = adjustment.connect_value_changed({
-            let waiting = Rc::clone(&waiting);
-            move |adjustment| {
-                if let Some((_, id)) = waiting.borrow_mut().take() {
-                    adjustment.disconnect(id);
-                }
-                if let (Some(list), Some(scrolled)) = (list.upgrade(), scrolled.upgrade()) {
-                    show_top_heading_once_painted(&list, &scrolled);
-                }
-            }
-        });
-        waiting.replace(Some((lift, handler)));
-        let adjustment = adjustment.downgrade();
-        glib::timeout_add_local_once(std::time::Duration::from_secs(1), move || {
-            // A later wait may have taken this one's place; it keeps its
-            // own second.
-            let mut slot = waiting.borrow_mut();
-            if slot.as_ref().is_some_and(|(armed, _)| *armed == lift)
-                && let (Some(adjustment), Some((_, id))) = (adjustment.upgrade(), slot.take())
-            {
-                adjustment.disconnect(id);
-            }
-        });
     }
 
     /// Adds `occurrences` after the agenda's last row. Only those that
@@ -856,6 +768,13 @@ mod tests {
         let mut dates = vec![d(2026, 9, 23), d(2026, 9, 24)];
         dates.extend([d(2026, 9, 24), d(2026, 9, 25)]);
         assert_eq!(sections_of(&dates), vec![(0, 1), (1, 3), (3, 4)]);
+    }
+
+    #[test]
+    fn the_first_row_of_each_day_carries_its_heading() {
+        let sections = [(0, 2), (2, 3), (3, 5)];
+        let heads: Vec<u32> = (0..5).filter(|&p| opens_section(&sections, p)).collect();
+        assert_eq!(heads, vec![0, 2, 3]);
     }
 
     #[test]
