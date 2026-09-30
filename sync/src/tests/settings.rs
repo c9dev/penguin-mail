@@ -2,12 +2,12 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use chrono::{Local, NaiveDate, TimeZone};
-use mailrs_domain::{EpochMillis, MailSet, Role};
+use mailrs_domain::{EpochMillis, Filter, FilterAction, FilterCriteria, MailSet, Role};
 use mailrs_gmail::GmailError;
 
 use super::{Connected, Harness, harness};
 use crate::hidden;
-use crate::settings::{AccountSettings, AutomaticReply, HIDE_MY_EMAIL_LABEL, Permitted};
+use crate::settings::{AccountSettings, AutomaticReply, HIDE_MY_EMAIL_LABEL, Permitted, Replaced};
 use crate::{AccountServices, AccountSync, BackendError, SyncError};
 
 fn settings(h: &Harness) -> AccountSettings<Connected> {
@@ -152,6 +152,134 @@ async fn rules_are_created_and_deleted() {
     assert_eq!(
         settings.rules(h.account_id).await.unwrap().done().unwrap(),
         []
+    );
+}
+
+/// A rule from news@example.com that skips the Inbox, made at the fake.
+async fn a_news_rule(h: &Harness, settings: &AccountSettings<Connected>) -> Filter {
+    let rule = Filter {
+        criteria: FilterCriteria {
+            from: Some("news@example.com".into()),
+            ..FilterCriteria::default()
+        },
+        action: FilterAction {
+            remove: vec![MailSet::Role(Role::Inbox)],
+            ..FilterAction::default()
+        },
+        ..Filter::default()
+    };
+    settings
+        .add_rule(h.account_id, rule)
+        .await
+        .unwrap()
+        .done()
+        .unwrap()
+}
+
+/// The same rule marking its mail read as well.
+fn marks_read(rule: &Filter) -> Filter {
+    let mut edited = rule.clone();
+    edited.action.remove.push(MailSet::Unseen);
+    edited
+}
+
+#[tokio::test]
+async fn replacing_a_rule_leaves_only_the_new_one() {
+    let h = harness().await;
+    let settings = settings(&h);
+    let old = a_news_rule(&h, &settings).await;
+
+    let replaced = settings
+        .replace_rule(h.account_id, &old, marks_read(&old))
+        .await
+        .unwrap()
+        .done()
+        .unwrap();
+    let Replaced::Swapped(new) = replaced else {
+        panic!("the old rule should be gone: {replaced:?}");
+    };
+    assert_ne!(new.id, old.id, "Gmail gives the new rule an id of its own");
+    assert_eq!(
+        settings.rules(h.account_id).await.unwrap().done().unwrap(),
+        [new]
+    );
+}
+
+#[tokio::test]
+async fn a_refused_create_keeps_the_old_rule() {
+    let h = harness().await;
+    let settings = settings(&h);
+    let old = a_news_rule(&h, &settings).await;
+
+    h.fake.fail_call(
+        "users.settings.filters.create",
+        0,
+        GmailError::Http {
+            status: 400,
+            body: "bad".into(),
+        },
+    );
+    let result = settings
+        .replace_rule(h.account_id, &old, marks_read(&old))
+        .await;
+    assert!(result.is_err(), "{result:?}");
+    assert_eq!(
+        h.fake.with(|s| s.usage.calls_to("users.settings.filters.delete")),
+        0,
+        "nothing deletes the old rule when the new one never came"
+    );
+    assert_eq!(
+        settings.rules(h.account_id).await.unwrap().done().unwrap(),
+        [old]
+    );
+}
+
+#[tokio::test]
+async fn a_refused_delete_says_both_rules_run() {
+    let h = harness().await;
+    let settings = settings(&h);
+    let old = a_news_rule(&h, &settings).await;
+
+    h.fake.fail_call(
+        "users.settings.filters.delete",
+        0,
+        GmailError::Network("offline".into()),
+    );
+    let replaced = settings
+        .replace_rule(h.account_id, &old, marks_read(&old))
+        .await
+        .unwrap()
+        .done()
+        .unwrap();
+    let Replaced::BothRun { new, error } = replaced else {
+        panic!("the delete failed, so both rules should run: {replaced:?}");
+    };
+    assert!(error.to_string().contains("offline"), "{error}");
+    assert_eq!(
+        settings.rules(h.account_id).await.unwrap().done().unwrap(),
+        [old, new]
+    );
+}
+
+/// Gmail refuses a filter identical to one it has, so saving an edit that
+/// changed nothing must not ask it to make one.
+#[tokio::test]
+async fn an_unchanged_rule_is_left_alone() {
+    let h = harness().await;
+    let settings = settings(&h);
+    let old = a_news_rule(&h, &settings).await;
+    let made = h.fake.with(|s| s.usage.calls_to("users.settings.filters.create"));
+
+    let replaced = settings
+        .replace_rule(h.account_id, &old, Filter { id: None, ..old.clone() })
+        .await
+        .unwrap()
+        .done()
+        .unwrap();
+    assert!(matches!(replaced, Replaced::Swapped(ref kept) if *kept == old));
+    assert_eq!(
+        h.fake.with(|s| s.usage.calls_to("users.settings.filters.create")),
+        made
     );
 }
 
