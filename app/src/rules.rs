@@ -20,9 +20,114 @@ pub struct RuleForm {
     pub trash: bool,
 }
 
+/// The parts of a rule the form has no field for, such as a size, a
+/// forward, a category or a second label. Gmail's own settings can make
+/// them, and an edit carries them over as they were.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct Unshown {
+    exclude_chats: bool,
+    size: Option<u64>,
+    size_comparison: Option<String>,
+    add: Vec<MailSet>,
+    remove: Vec<MailSet>,
+    forward: Option<String>,
+}
+
+impl Unshown {
+    /// Whether the form shows all of the rule.
+    pub fn is_empty(&self) -> bool {
+        *self == Unshown::default()
+    }
+
+    /// `filter` with these parts put back. A set the form already adds
+    /// or removes stays listed once.
+    fn put_back(&self, mut filter: Filter) -> Filter {
+        filter.criteria.exclude_chats = self.exclude_chats;
+        filter.criteria.size = self.size;
+        filter.criteria.size_comparison = self.size_comparison.clone();
+        let join = |sets: &mut Vec<MailSet>, more: &[MailSet]| {
+            for set in more {
+                if !sets.contains(set) {
+                    sets.push(set.clone());
+                }
+            }
+        };
+        join(&mut filter.action.add, &self.add);
+        join(&mut filter.action.remove, &self.remove);
+        filter.action.forward = self.forward.clone();
+        filter
+    }
+}
+
 impl RuleForm {
+    /// The form filled in from `filter`, and what it cannot show.
+    /// `offered` says whether the Apply Label list has a label id; the
+    /// first such label the rule adds goes in that list.
+    pub fn read(filter: &Filter, offered: impl Fn(&str) -> bool) -> (RuleForm, Unshown) {
+        let text = |field: &Option<String>| field.clone().unwrap_or_default();
+        let criteria = &filter.criteria;
+        let (add, remove) = (&filter.action.add, &filter.action.remove);
+        let label = add.iter().find_map(|set| match set {
+            MailSet::Mailbox(id) if offered(id) => Some(id.clone()),
+            _ => None,
+        });
+        let form = RuleForm {
+            from: text(&criteria.from),
+            to: text(&criteria.to),
+            subject: text(&criteria.subject),
+            has_words: text(&criteria.query),
+            not_words: text(&criteria.negated_query),
+            has_attachment: criteria.has_attachment,
+            skip_inbox: remove.contains(&MailSet::Role(Role::Inbox)),
+            mark_read: remove.contains(&MailSet::Unseen),
+            star: add.contains(&MailSet::flagged()),
+            never_spam: remove.contains(&MailSet::Role(Role::Junk)),
+            trash: add.contains(&MailSet::Role(Role::Trash)),
+            label: label.clone(),
+        };
+        let shown_add = |set: &MailSet| {
+            *set == MailSet::flagged()
+                || *set == MailSet::Role(Role::Trash)
+                || matches!(set, MailSet::Mailbox(id) if Some(id) == label.as_ref())
+        };
+        let shown_remove = |set: &MailSet| {
+            matches!(
+                set,
+                MailSet::Role(Role::Inbox | Role::Junk) | MailSet::Unseen
+            )
+        };
+        let unshown = Unshown {
+            exclude_chats: criteria.exclude_chats,
+            size: criteria.size,
+            size_comparison: criteria.size_comparison.clone(),
+            add: add.iter().filter(|s| !shown_add(s)).cloned().collect(),
+            remove: remove.iter().filter(|s| !shown_remove(s)).cloned().collect(),
+            forward: filter.action.forward.clone(),
+        };
+        (form, unshown)
+    }
+
     /// The Gmail filter the form describes, or what is missing.
     pub fn filter(&self) -> Result<Filter, &'static str> {
+        self.filter_keeping(&Unshown::default())
+    }
+
+    /// The filter the form describes with `unshown` put back, or what is
+    /// missing. A rule that says which mail through its size alone
+    /// counts, though the form shows no field for it.
+    pub fn filter_keeping(&self, unshown: &Unshown) -> Result<Filter, &'static str> {
+        let filter = unshown.put_back(self.built());
+        if filter.criteria == FilterCriteria::default() {
+            return Err("Say which mail the rule is for");
+        }
+        if filter.action == FilterAction::default() {
+            return Err("Choose what the rule does");
+        }
+        Ok(filter)
+    }
+
+    /// The filter the form's own fields describe, unchecked.
+    fn built(&self) -> Filter {
         let field = |text: &str| Some(text.trim().to_string()).filter(|t| !t.is_empty());
         let criteria = FilterCriteria {
             from: field(&self.from),
@@ -33,9 +138,6 @@ impl RuleForm {
             has_attachment: self.has_attachment,
             ..FilterCriteria::default()
         };
-        if criteria == FilterCriteria::default() {
-            return Err("Say which mail the rule is for");
-        }
         let mut action = FilterAction::default();
         if self.star {
             action.add.push(MailSet::flagged());
@@ -55,14 +157,11 @@ impl RuleForm {
         if self.never_spam {
             action.remove.push(MailSet::Role(Role::Junk));
         }
-        if action == FilterAction::default() {
-            return Err("Choose what the rule does");
-        }
-        Ok(Filter {
+        Filter {
             id: None,
             criteria,
             action,
-        })
+        }
     }
 }
 
@@ -92,6 +191,14 @@ pub fn describe_criteria(criteria: &FilterCriteria) -> String {
     }
     if criteria.has_attachment {
         parts.push(gettext("Has an attachment"));
+    }
+    if let Some(size) = criteria.size {
+        let size = crate::format::human_size(i64::try_from(size).unwrap_or(i64::MAX));
+        let words = match criteria.size_comparison.as_deref() {
+            Some("smaller") => gettext("Smaller than {size}"),
+            _ => gettext("Larger than {size}"),
+        };
+        parts.push(fill(&words, &[("size", &size)]));
     }
     if parts.is_empty() {
         return gettext("All mail");
@@ -217,6 +324,145 @@ mod tests {
             describe_action(&Filter::block("x@y.com").action, |_| None),
             "Delete it"
         );
+    }
+
+    /// Label ids the form's Apply Label list offers in these tests.
+    fn offered(id: &str) -> bool {
+        matches!(id, "Label_7" | "Label_8")
+    }
+
+    #[test]
+    fn a_rule_the_form_made_reads_back_whole() {
+        let form = RuleForm {
+            from: "news@example.com".into(),
+            has_words: "unsubscribe".into(),
+            has_attachment: true,
+            skip_inbox: true,
+            mark_read: true,
+            star: true,
+            label: Some("Label_7".into()),
+            never_spam: true,
+            ..RuleForm::default()
+        };
+        let filter = form.filter().unwrap();
+        let (read, unshown) = RuleForm::read(&filter, offered);
+        assert_eq!(read, form);
+        assert!(unshown.is_empty(), "{unshown:?}");
+    }
+
+    #[test]
+    fn a_deleting_rule_reads_as_delete_it() {
+        let (form, unshown) = RuleForm::read(&Filter::block("x@y.com"), offered);
+        assert!(form.trash);
+        assert_eq!(form.from, "x@y.com");
+        assert!(unshown.is_empty(), "{unshown:?}");
+    }
+
+    /// A filter made in Gmail's own settings, with a size, a forward, a
+    /// category, a second label and the important marker.
+    fn made_in_gmail() -> Filter {
+        Filter {
+            id: Some("f1".into()),
+            criteria: FilterCriteria {
+                from: Some("shop@example.com".into()),
+                size: Some(5_000_000),
+                size_comparison: Some("larger".into()),
+                exclude_chats: true,
+                ..FilterCriteria::default()
+            },
+            action: FilterAction {
+                add: vec![
+                    MailSet::Mailbox("Label_7".into()),
+                    MailSet::Mailbox("Label_8".into()),
+                    MailSet::Category("CATEGORY_PROMOTIONS".into()),
+                    MailSet::Role(Role::Important),
+                ],
+                remove: vec![MailSet::Role(Role::Inbox)],
+                forward: Some("me@example.org".into()),
+            },
+        }
+    }
+
+    #[test]
+    fn a_rule_from_gmail_fills_what_the_form_can_show() {
+        let (form, unshown) = RuleForm::read(&made_in_gmail(), offered);
+        assert_eq!(form.from, "shop@example.com");
+        assert_eq!(form.label.as_deref(), Some("Label_7"));
+        assert!(form.skip_inbox);
+        assert!(!unshown.is_empty());
+    }
+
+    #[test]
+    fn saving_an_edit_keeps_what_the_form_cannot_show() {
+        let (mut form, unshown) = RuleForm::read(&made_in_gmail(), offered);
+        form.from = "deals@example.com".into();
+        form.mark_read = true;
+        let saved = form.filter_keeping(&unshown).unwrap();
+        let mut expected = made_in_gmail();
+        expected.id = None;
+        expected.criteria.from = Some("deals@example.com".into());
+        expected.action.remove.push(MailSet::Unseen);
+        assert_eq!(sorted(saved), sorted(expected));
+    }
+
+    #[test]
+    fn choosing_no_label_drops_only_the_one_the_form_showed() {
+        let (mut form, unshown) = RuleForm::read(&made_in_gmail(), offered);
+        form.label = None;
+        let saved = form.filter_keeping(&unshown).unwrap();
+        assert!(!saved.action.add.contains(&MailSet::Mailbox("Label_7".into())));
+        assert!(saved.action.add.contains(&MailSet::Mailbox("Label_8".into())));
+    }
+
+    #[test]
+    fn picking_a_label_the_rule_already_adds_lists_it_once() {
+        let (mut form, unshown) = RuleForm::read(&made_in_gmail(), offered);
+        form.label = Some("Label_8".into());
+        let saved = form.filter_keeping(&unshown).unwrap();
+        let eights = saved
+            .action
+            .add
+            .iter()
+            .filter(|set| **set == MailSet::Mailbox("Label_8".into()))
+            .count();
+        assert_eq!(eights, 1);
+    }
+
+    #[test]
+    fn a_size_alone_is_enough_to_say_which_mail() {
+        let mut filter = made_in_gmail();
+        filter.criteria.from = None;
+        let (form, unshown) = RuleForm::read(&filter, offered);
+        assert!(form.filter_keeping(&unshown).is_ok());
+        assert_eq!(form.filter(), Err("Say which mail the rule is for"));
+    }
+
+    #[test]
+    fn a_size_rule_names_the_size() {
+        let criteria = FilterCriteria {
+            size: Some(5 * 1024 * 1024),
+            size_comparison: Some("larger".into()),
+            ..FilterCriteria::default()
+        };
+        assert_eq!(describe_criteria(&criteria), "Larger than 5.0 MB");
+        let smaller = FilterCriteria {
+            from: Some("a@b.c".into()),
+            size_comparison: Some("smaller".into()),
+            ..criteria
+        };
+        assert_eq!(
+            describe_criteria(&smaller),
+            "From a@b.c, smaller than 5.0 MB"
+        );
+    }
+
+    /// The filter with its sets in a fixed order, since Gmail treats the
+    /// lists as sets.
+    fn sorted(mut filter: Filter) -> Filter {
+        let key = |set: &MailSet| format!("{set:?}");
+        filter.action.add.sort_by_key(key);
+        filter.action.remove.sort_by_key(key);
+        filter
     }
 
     #[test]
