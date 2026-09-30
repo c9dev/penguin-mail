@@ -246,6 +246,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   it last updated, instead of leaving you guessing.
 
 ### Fixed
+- Two short events at the same time in Week or Day show their whole titles on two lines when the column has room, rather than "Sprint p…" and "Call wit…".
 - The calendar's Agenda opens with today's heading at the top, rather than with the day's first event and no day above it.
 - The calendar's view switch always shows the view on screen. When the header runs short it becomes one button, such as "Week", that lists Day, Week, Month and Agenda, and the week keeps all seven days in view.
 - On a phone-width window the calendar keeps New Event, Search and the window buttons in its header, with Today and the arrows beside List and Day at the bottom, and agenda rows fit their card.
