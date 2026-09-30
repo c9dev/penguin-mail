@@ -8,8 +8,10 @@ export XDG_DATA_DIRS="$SNAP/usr/share:${XDG_DATA_DIRS:-/usr/local/share:/usr/sha
 export GSETTINGS_SCHEMA_DIR="$SNAP/usr/share/glib-2.0/schemas"
 export GIO_MODULE_DIR="$SNAP/usr/lib/$arch/gio/modules"
 export LD_LIBRARY_PATH="$SNAP/usr/lib/$arch:$SNAP/usr/lib/$arch/webkitgtk-6.0/injected-bundle${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
-# snapd points HOME at the snap's own folder. gpg has to use the person's
-# real keyring, which the gnupg plug opens.
-export GNUPGHOME="$SNAP_REAL_HOME/.gnupg"
+# gpg and gpgsm keep a keyring of their own inside the snap, since the
+# store would not let the snap open ~/.gnupg. gpg refuses a home that
+# anyone but its owner can read, so a new one starts at mode 700.
+export GNUPGHOME="$SNAP_USER_DATA/.gnupg"
+[ -d "$GNUPGHOME" ] || mkdir -m 700 "$GNUPGHOME"
 
 exec "$@"

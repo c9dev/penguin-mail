@@ -18,6 +18,7 @@ mod exe;
 mod format;
 mod goa;
 mod images;
+mod keyring_plug;
 mod language;
 mod locale_time;
 mod logging;

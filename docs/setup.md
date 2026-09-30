@@ -129,7 +129,7 @@ decides where updates come from and whether skills run.
 | | .deb | rpm | Arch | Flatpak | Snap |
 |---|---|---|---|---|---|
 | Updates | Install in the app, or the apt repository | the dnf repository | pacman, by hand | Flathub | Snap Store |
-| GnuPG | system | system | system | runtime's `gpg`, on `~/.gnupg` | snap's `gpg`, on `~/.gnupg` |
+| GnuPG | system | system | system | runtime's `gpg`, on `~/.gnupg` | snap's `gpg`, on a keyring inside the snap |
 | Assistant skills | yes | yes | yes | no | no |
 | Claude Code, MCP servers run as a command | yes | yes | yes | no | no |
 | Tray icon | yes | yes | yes | yes | yes |
@@ -149,13 +149,20 @@ decides where updates come from and whether skills run.
   `$XDG_RUNTIME_DIR/gnupg`, read-only, so your own agent and pinentry
   handle passphrases. It also talks to the tray and the notification
   daemon, and writes to Downloads; the manifest says why for each. The
-  snap reaches `~/.gnupg` through a `personal-files` plug.
+  snap's `gpg` and `gpgsm` use a keyring of their own inside the snap, in
+  `~/snap/penguin-mail/current/.gnupg`, so the OpenPGP keys and S/MIME
+  certificates in `~/.gnupg` do not appear there. The app has no way yet
+  to import them, so signing and decrypting with your existing keys and
+  certificates does not work in the snap yet.
 - **Secrets.** Outside a sandbox, Google's refresh tokens, an IMAP
   password, and the assistant's API keys and MCP tokens sit in the
   desktop's keyring, service `mailrs` or `penguin-mail-imap`. The
   Flatpak keeps them in its own encrypted file instead, through the
   Secret portal, so no other app on the desktop can read them; the snap
-  still uses the desktop's keyring, the same as the .deb.
+  still uses the desktop's keyring, the same as the .deb. The snap reaches
+  it only once you run `snap connect penguin-mail:password-manager-service`
+  and restart the app. Until then it cannot save a sign-in, and a bar
+  across the top of the window says so and gives the command.
 - **Skills.** A skill's scripts run under bubblewrap, which cannot start
   inside Flatpak's or a strict snap's sandbox. Running them without one
   would hand a skill your mail and keys, so both packages turn skills off

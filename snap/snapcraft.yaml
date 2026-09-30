@@ -37,7 +37,10 @@ apps:
     plugs:
       - network
       - network-status
-      # The Google sign-in tokens and API keys live in the Secret Service.
+      # Google refresh tokens, IMAP passwords and API keys live in the
+      # Secret Service. The store does not connect this plug on install;
+      # the app finds it missing at start and shows the command that
+      # connects it.
       - password-manager-service
       - desktop
       - desktop-legacy
@@ -48,7 +51,6 @@ apps:
       - browser-support
       - home
       - removable-media
-      - gnupg
 
 slots:
   # The name that keeps the app to one copy and answers its D-Bus actions.
@@ -56,14 +58,6 @@ slots:
     interface: dbus
     bus: session
     name: io.github.c9dev.PenguinMail
-
-plugs:
-  # OpenPGP and S/MIME run gpg and gpgsm on the person's own keyring. The
-  # store has to approve this plug by hand.
-  gnupg:
-    interface: personal-files
-    write:
-      - $HOME/.gnupg
 
 layout:
   # WebKitGTK and gdk-pixbuf look for their helpers at paths fixed when

@@ -124,6 +124,9 @@ pub struct MainWindow {
     toasts: adw::ToastOverlay,
     /// Says a release is available, installing, waiting to restart, or failed.
     update_banner: adw::Banner,
+    /// Says a snap cannot reach the keyring and gives the command that
+    /// connects it. Revealed once, for the rest of the run.
+    keyring_banner: adw::Banner,
     /// One bar per account whose own consent leaves something out, at the
     /// top of the mail list; see [`crate::permission::wants_banner`].
     /// Rebuilt whenever the accounts are read again.
@@ -731,9 +734,13 @@ impl MainWindow {
             // An update's banner spans the whole window, above the panes,
             // since it is about the app and not the mail on screen.
             let update_banner = adw::Banner::builder().revealed(false).build();
+            // The keyring notice is about the app too, and the command it
+            // gives needs the width a pane would cut short.
+            let keyring_banner = adw::Banner::builder().revealed(false).build();
             let grant_banners = list.grant_bars.clone();
             let content = gtk::Box::new(gtk::Orientation::Vertical, 0);
             content.append(&update_banner);
+            content.append(&keyring_banner);
             content.append(&stack);
             stack.set_vexpand(true);
             let toasts = adw::ToastOverlay::new();
@@ -795,6 +802,7 @@ impl MainWindow {
                 core: Rc::clone(&app.core),
                 toasts,
                 update_banner,
+                keyring_banner,
                 grant_banners,
                 grant_banner_widgets: RefCell::new(HashMap::new()),
                 update_menu: gio::Menu::new(),
@@ -940,6 +948,7 @@ impl MainWindow {
             .set_zoom(app.settings_with(|s| s.text_size.zoom()));
         window.refresh_accounts(Reload::Yes);
         window.reload_image_senders();
+        window.check_keyring_plug();
         // Copies another program opened in an earlier run have had their
         // chance; nothing else deletes them.
         // The handle is dropped; the sweep runs on to the end regardless.
@@ -1164,6 +1173,39 @@ impl MainWindow {
         let accounts: Vec<Account> = data.iter().map(|(a, _)| a.clone()).collect();
         self.rebuild_grant_banners(&accounts, &app.consent());
         self.accounts_for_calendar(&accounts);
+    }
+
+    /// Asks snapd whether the snap can reach the keyring, and when it
+    /// cannot, puts a notice across the top of the window that stays for
+    /// the rest of the run: connecting the plug takes a restart.
+    /// Outside a snap this asks nothing. `MAILRS_DEMO_KEYRING_UNPLUGGED`
+    /// shows the notice in the demo.
+    fn check_keyring_plug(self: &Rc<Self>) {
+        let unplugged_demo =
+            self.core.demo && std::env::var_os("MAILRS_DEMO_KEYRING_UNPLUGGED").is_some();
+        let weak = Rc::downgrade(self);
+        glib::spawn_future_local(async move {
+            let plug = crate::keyring_plug::check(unplugged_demo).await;
+            let Some(win) = weak.upgrade() else { return };
+            if plug.wants_notice() {
+                win.show_keyring_notice();
+            }
+        });
+    }
+
+    fn show_keyring_notice(self: &Rc<Self>) {
+        let banner = &self.keyring_banner;
+        banner.set_use_markup(true);
+        banner.set_title(&crate::keyring_plug::notice_markup());
+        banner.set_button_label(Some(&gettext("Copy Command")));
+        let weak = Rc::downgrade(self);
+        banner.connect_button_clicked(move |banner| {
+            banner.clipboard().set_text(crate::keyring_plug::COMMAND);
+            if let Some(win) = weak.upgrade() {
+                win.toast(&gettext("Command copied"));
+            }
+        });
+        banner.set_revealed(true);
     }
 
     /// Brings the Grant Access banners in line with `accounts` and
