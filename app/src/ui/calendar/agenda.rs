@@ -385,6 +385,28 @@ mod row {
 use model::AgendaModel;
 use row::AgendaRow;
 
+/// Scrolls up to the heading just above the top edge, the heading of the
+/// top row's day, when one sits there.
+fn show_top_heading(list: &gtk::ListView, scrolled: &gtk::ScrolledWindow) {
+    let origin = gtk::graphene::Point::new(0.0, 0.0);
+    let mut above: Option<f32> = None;
+    let mut child = list.first_child();
+    while let Some(widget) = child {
+        if widget.css_name() == "header"
+            && let Some(point) = widget.compute_point(scrolled, &origin)
+            && point.y() < 0.0
+            && point.y() > -2.0 * widget.height() as f32
+        {
+            above = Some(above.map_or(point.y(), |y| y.max(point.y())));
+        }
+        child = widget.next_sibling();
+    }
+    if let Some(y) = above {
+        let adjustment = scrolled.vadjustment();
+        adjustment.set_value((adjustment.value() + f64::from(y)).max(0.0));
+    }
+}
+
 /// The calendar an occurrence's event names: its own colour and name.
 /// Missing from `calendars` only when a caller passes an incomplete map;
 /// an empty pair still draws a usable row.
@@ -422,6 +444,11 @@ pub struct Agenda {
     calendars: Rc<RefCell<HashMap<(AccountId, String), Calendar>>>,
     activated: Rc<RefCell<Option<Box<Activated>>>>,
     scrolled_to_top: Rc<RefCell<Option<Box<ScrolledToTop>>>>,
+    /// The wait for the list's next move, to bring a heading into view
+    /// after it, and a count of the waits started. One wait at a time: a
+    /// second would lift the list twice.
+    lifting: Rc<RefCell<Option<(u64, glib::SignalHandlerId)>>>,
+    lifts: std::cell::Cell<u64>,
 }
 
 impl Agenda {
@@ -549,6 +576,8 @@ impl Agenda {
             calendars,
             activated,
             scrolled_to_top,
+            lifting: Rc::default(),
+            lifts: std::cell::Cell::new(0),
         })
     }
 
@@ -570,6 +599,7 @@ impl Agenda {
         // A new list starts at its first heading, not wherever the last
         // one was scrolled to.
         self.scrolled.vadjustment().set_value(0.0);
+        self.show_heading_once_moved();
     }
 
     /// Inserts `occurrences` before the agenda's earliest row and
@@ -592,7 +622,66 @@ impl Agenda {
         let inserted = self.model.prepend_rows(rows);
         if inserted > 0 {
             self.list_view.scroll_to(inserted, gtk::ListScrollFlags::NONE, None);
+            self.show_heading_once_moved();
         }
+    }
+
+    /// Brings the day heading of the top row into view once the list
+    /// next moves. GTK's list keeps its place as a row at the top edge,
+    /// whether from `scroll_to` or from setting the scroll to 0, and the
+    /// row's heading sits just above it, out of view: the agenda opened
+    /// on a bare "09:30 Stand-up". The move lands in the list's next
+    /// layout; a list that does not move within a second is left alone.
+    fn show_heading_once_moved(&self) {
+        let adjustment = self.scrolled.vadjustment();
+        let waiting = Rc::clone(&self.lifting);
+        if let Some((_, earlier)) = waiting.borrow_mut().take() {
+            adjustment.disconnect(earlier);
+        }
+        let lift = self.lifts.get() + 1;
+        self.lifts.set(lift);
+        let (list, scrolled) = (self.list_view.downgrade(), self.scrolled.downgrade());
+        let handler = adjustment.connect_value_changed({
+            let waiting = Rc::clone(&waiting);
+            move |adjustment| {
+                if let Some((_, id)) = waiting.borrow_mut().take() {
+                    adjustment.disconnect(id);
+                }
+                // The rows reach their new places in this frame's layout;
+                // read them once it has painted.
+                let (Some(clock), Some(scrolled)) =
+                    (list.upgrade().and_then(|l| l.frame_clock()), scrolled.upgrade())
+                else {
+                    return;
+                };
+                let painted: Rc<RefCell<Option<glib::SignalHandlerId>>> = Rc::default();
+                let list = list.clone();
+                let handler = clock.connect_after_paint({
+                    let painted = Rc::clone(&painted);
+                    move |clock| {
+                        if let Some(id) = painted.borrow_mut().take() {
+                            clock.disconnect(id);
+                        }
+                        if let Some(list) = list.upgrade() {
+                            show_top_heading(&list, &scrolled);
+                        }
+                    }
+                });
+                painted.replace(Some(handler));
+            }
+        });
+        waiting.replace(Some((lift, handler)));
+        let adjustment = adjustment.downgrade();
+        glib::timeout_add_local_once(std::time::Duration::from_secs(1), move || {
+            // A later wait may have taken this one's place; it keeps its
+            // own second.
+            let mut slot = waiting.borrow_mut();
+            if slot.as_ref().is_some_and(|(armed, _)| *armed == lift)
+                && let (Some(adjustment), Some((_, id))) = (adjustment.upgrade(), slot.take())
+            {
+                adjustment.disconnect(id);
+            }
+        });
     }
 
     /// Adds `occurrences` after the agenda's last row. Only those that
