@@ -385,6 +385,27 @@ mod row {
 use model::AgendaModel;
 use row::AgendaRow;
 
+/// [`show_top_heading`] once the frame under way has painted: the rows
+/// reach their new places in its layout, and read before it they are
+/// where they were.
+fn show_top_heading_once_painted(list: &gtk::ListView, scrolled: &gtk::ScrolledWindow) {
+    let Some(clock) = list.frame_clock() else { return };
+    let painted: Rc<RefCell<Option<glib::SignalHandlerId>>> = Rc::default();
+    let (list, scrolled) = (list.downgrade(), scrolled.downgrade());
+    let handler = clock.connect_after_paint({
+        let painted = Rc::clone(&painted);
+        move |clock| {
+            if let Some(id) = painted.borrow_mut().take() {
+                clock.disconnect(id);
+            }
+            if let (Some(list), Some(scrolled)) = (list.upgrade(), scrolled.upgrade()) {
+                show_top_heading(&list, &scrolled);
+            }
+        }
+    });
+    painted.replace(Some(handler));
+}
+
 /// Scrolls up to the heading just above the top edge, the heading of the
 /// top row's day, when one sits there.
 fn show_top_heading(list: &gtk::ListView, scrolled: &gtk::ScrolledWindow) {
@@ -557,6 +578,21 @@ impl Agenda {
             .tightening_threshold(COLUMN_WIDTH)
             .child(&content)
             .build();
+        // GTK keeps the top row's place as a share of the page's height,
+        // so a page that gets shorter, as when a narrow window's bottom
+        // bar slides in, moves the row up and cuts its heading. Bring the
+        // heading back after any change of height; the person's own
+        // scrolling changes the value, never the height.
+        let page_height = std::cell::Cell::new(0.0);
+        let (heights_list, heights_scrolled) = (list_view.downgrade(), scrolled.downgrade());
+        scrolled.vadjustment().connect_changed(move |adjustment| {
+            if page_height.replace(adjustment.page_size()) == adjustment.page_size() {
+                return;
+            }
+            if let (Some(list), Some(scrolled)) = (heights_list.upgrade(), heights_scrolled.upgrade()) {
+                show_top_heading_once_painted(&list, &scrolled);
+            }
+        });
         let scrolled_to_top: Rc<RefCell<Option<Box<ScrolledToTop>>>> = Rc::new(RefCell::new(None));
         let top_slot = Rc::clone(&scrolled_to_top);
         scrolled.connect_edge_reached(move |_, position| {
@@ -647,27 +683,9 @@ impl Agenda {
                 if let Some((_, id)) = waiting.borrow_mut().take() {
                     adjustment.disconnect(id);
                 }
-                // The rows reach their new places in this frame's layout;
-                // read them once it has painted.
-                let (Some(clock), Some(scrolled)) =
-                    (list.upgrade().and_then(|l| l.frame_clock()), scrolled.upgrade())
-                else {
-                    return;
-                };
-                let painted: Rc<RefCell<Option<glib::SignalHandlerId>>> = Rc::default();
-                let list = list.clone();
-                let handler = clock.connect_after_paint({
-                    let painted = Rc::clone(&painted);
-                    move |clock| {
-                        if let Some(id) = painted.borrow_mut().take() {
-                            clock.disconnect(id);
-                        }
-                        if let Some(list) = list.upgrade() {
-                            show_top_heading(&list, &scrolled);
-                        }
-                    }
-                });
-                painted.replace(Some(handler));
+                if let (Some(list), Some(scrolled)) = (list.upgrade(), scrolled.upgrade()) {
+                    show_top_heading_once_painted(&list, &scrolled);
+                }
             }
         });
         waiting.replace(Some((lift, handler)));
