@@ -499,6 +499,13 @@ fn byday_code(day: chrono::Weekday) -> &'static str {
     }
 }
 
+/// Whether an answer's button is drawn filled, on the invitation card and
+/// in the event popover: only the answer given. Before any answer the
+/// three look alike, since a filled Yes read as an answer already sent.
+pub fn answer_filled(button: Answer, given: Option<Answer>) -> bool {
+    given == Some(button)
+}
+
 /// What a guest answered, in a word. The editor's own guest list reads
 /// the organizer this way, so the answer never shows once it has said
 /// who ran the meeting; the popover's guest list marks the two apart

@@ -672,10 +672,9 @@ impl EventPopover {
         self.note.set_text("");
         self.propose_row.set_visible(guest && on_propose.is_some());
         self.on_propose.replace(on_propose);
-        // The current answer is filled; with none yet, Yes is, as the
-        // mockup draws an invitation still waiting. A screen reader hears
-        // which one is the answer, or that there is none yet.
-        let filled = event.my_answer.unwrap_or(Answer::Yes);
+        // Only the answer given is filled; before one, the three look
+        // alike. A screen reader hears which one is the answer, or that
+        // there is none yet.
         let answered = event.my_answer.is_some();
         let waiting = match answered {
             true => String::new(),
@@ -685,12 +684,16 @@ impl EventPopover {
         let mut first = None;
         for (answer, button) in &self.answer_buttons {
             button.remove_css_class("suggested-action");
-            let current = guest && *answer == filled;
+            let current = guest && words::answer_filled(*answer, event.my_answer);
             if current {
                 button.add_css_class("suggested-action");
+            }
+            // Focus starts on the answer given, or on Yes, the first,
+            // while there is none.
+            if guest && (current || (!answered && first.is_none())) {
                 first = Some(button.clone().upcast::<gtk::Widget>());
             }
-            let said = match current && answered {
+            let said = match current {
                 true => gettext("Your answer"),
                 false => String::new(),
             };

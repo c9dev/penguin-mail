@@ -18,7 +18,7 @@ use mailrs_domain::{AccountId, Address, EpochMillis};
 use mailrs_sync::{Change, Spot};
 
 use crate::format::{event_moved_from, event_when};
-use crate::ui::calendar::tint;
+use crate::ui::calendar::{tint, words};
 use strip::Strip;
 use crate::ui::name;
 use mailrs_domain::translate::{fill, fill_plural, gettext};
@@ -991,7 +991,7 @@ impl EventCard {
         for (button_answer, button) in &self.buttons {
             button.set_active(Some(*button_answer) == answer);
             button.remove_css_class("suggested-action");
-            if filled(*button_answer, answer) {
+            if words::answer_filled(*button_answer, answer) {
                 button.add_css_class("suggested-action");
             }
         }
@@ -1192,15 +1192,6 @@ fn joined(parts: &[Option<String>]) -> String {
         .filter(|part| !part.is_empty())
         .collect::<Vec<_>>()
         .join(DOT)
-}
-
-/// Whether an answer's button is drawn filled: the answer given, or Yes
-/// while there is none, as the one most people send.
-fn filled(button: Answer, given: Option<Answer>) -> bool {
-    match given {
-        Some(given) => button == given,
-        None => button == Answer::Yes,
-    }
 }
 
 /// "4 of 6 said yes", which opens the guest list, in the words the
@@ -1549,13 +1540,14 @@ mod tests {
     }
 
     #[test]
-    fn the_answers_run_yes_maybe_no_with_yes_filled_until_one_is_given() {
+    fn the_answers_run_yes_maybe_no_and_only_the_one_given_is_filled() {
         let order: Vec<Answer> = ANSWERS.to_vec();
         assert_eq!(order, [Answer::Yes, Answer::Maybe, Answer::No]);
-        assert!(filled(Answer::Yes, None));
-        assert!(!filled(Answer::Maybe, None));
-        assert!(filled(Answer::Maybe, Some(Answer::Maybe)));
-        assert!(!filled(Answer::Yes, Some(Answer::Maybe)));
+        for answer in ANSWERS {
+            assert!(!words::answer_filled(answer, None), "{answer:?} before any answer");
+        }
+        assert!(words::answer_filled(Answer::Maybe, Some(Answer::Maybe)));
+        assert!(!words::answer_filled(Answer::Yes, Some(Answer::Maybe)));
     }
 
     #[test]
