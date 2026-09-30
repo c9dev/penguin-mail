@@ -204,11 +204,16 @@ pub fn said_yes_words(answers: impl IntoIterator<Item = Option<Answer>>) -> Stri
     )
 }
 
-/// The popover's people line, as the mockup writes it: who organized the
-/// event and how many guests said yes, "Rita Lopes, organizer · 4 of 6
-/// said yes", either half alone when the other is missing.
+/// The popover's people line: who organized the event and how many
+/// guests said yes, "Rita Lopes, organizer · 4 of 6 said yes", either
+/// half alone when the other is missing. When a guest row already marks
+/// the organizer ([`guest_name_words`]), the line leaves their name to
+/// that row, so it shows once.
 pub fn people_words(organizer: Option<&str>, guests: &[Guest]) -> String {
-    let organizer = organizer.map(|name| fill(&gettext("{name}, organizer"), &[("name", name)]));
+    let listed = guests.iter().any(|guest| guest.organizer);
+    let organizer = organizer
+        .filter(|_| !listed)
+        .map(|name| fill(&gettext("{name}, organizer"), &[("name", name)]));
     let answers = (!guests.is_empty()).then(|| answers_words(guests));
     match (organizer, answers) {
         (Some(organizer), Some(answers)) => fill(
@@ -514,22 +519,26 @@ pub fn guest_answer_words(guest: &Guest) -> String {
 }
 
 /// The symbolic icon a guest's answer shows in the popover's list: a
-/// check for yes, a question mark for maybe, a cross for no, and a
-/// loading ring for nobody has answered yet.
+/// check for yes, a question mark for maybe, a cross for no, and a clock
+/// for no answer yet. The clock replaced three dots, which read as a
+/// menu button.
 pub fn answer_icon(answer: Option<Answer>) -> &'static str {
     match answer {
         Some(Answer::Yes) => "object-select-symbolic",
         Some(Answer::Maybe) => "dialog-question-symbolic",
         Some(Answer::No) => "process-stop-symbolic",
-        None => "content-loading-symbolic",
+        None => "penguin-mail-waiting-symbolic",
     }
 }
 
-/// A guest row's own name: their name, or their address when they gave
-/// none, with ", organizer" added for whoever organized the event, the
+/// A guest row's own name: "You" for the reader, their name, or their
+/// address when they gave none, with ", organizer" added for whoever organized the event, the
 /// same words the summary line already gives the organizer
 /// ([`people_words`]).
 pub fn guest_name_words(guest: &Guest) -> String {
+    if guest.me {
+        return gettext("You");
+    }
     let shown = guest.name.clone().unwrap_or_else(|| guest.email.clone());
     if guest.organizer {
         fill(&gettext("{name}, organizer"), &[("name", &shown)])
@@ -904,6 +913,21 @@ mod tests {
     }
 
     #[test]
+    fn the_people_line_leaves_the_organizer_to_a_guest_row_that_names_them() {
+        let guests = [
+            Guest { name: Some("Rita Lopes".into()), answer: Some(Answer::Yes), organizer: true, ..Default::default() },
+            Guest { answer: None, me: true, ..Default::default() },
+        ];
+        assert_eq!(people_words(Some("Rita Lopes"), &guests), "1 of 2 said yes");
+    }
+
+    #[test]
+    fn a_guest_row_calls_the_reader_you() {
+        let me = Guest { email: "dana@fernwood.example".into(), me: true, ..Guest::default() };
+        assert_eq!(guest_name_words(&me), "You");
+    }
+
+    #[test]
     fn the_people_line_without_an_organizer_counts_the_answers() {
         let guests = [Guest { answer: Some(Answer::Yes), ..Default::default() }];
         assert_eq!(people_words(None, &guests), "1 of 1 said yes");
@@ -985,7 +1009,7 @@ mod tests {
         assert_eq!(answer_icon(Some(Answer::Yes)), "object-select-symbolic");
         assert_eq!(answer_icon(Some(Answer::Maybe)), "dialog-question-symbolic");
         assert_eq!(answer_icon(Some(Answer::No)), "process-stop-symbolic");
-        assert_eq!(answer_icon(None), "content-loading-symbolic");
+        assert_eq!(answer_icon(None), "penguin-mail-waiting-symbolic");
     }
 
     #[test]

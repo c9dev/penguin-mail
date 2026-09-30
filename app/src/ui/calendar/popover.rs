@@ -222,7 +222,7 @@ impl EventPopover {
         // The whole place row opens the map, so the popover draws it as
         // the mockup does, with no link beside it.
         let place_row = gtk::Button::builder()
-            .child(&icon_row("folder-symbolic", &place_label))
+            .child(&icon_row("mark-location-symbolic", &place_label))
             .css_classes(["flat", "popover-place"])
             .tooltip_text(gettext("Open in Maps"))
             .build();
