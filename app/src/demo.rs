@@ -217,6 +217,10 @@ const ME: (&str, &str) = ("", "");
 const HOUR: i64 = 60;
 const DAY: i64 = 24 * HOUR;
 
+/// The Client workshop's notes: an agenda and a video-call footer long
+/// enough to need "Show more" and then to scroll.
+const CLIENT_WORKSHOP_NOTES: &str = "Agenda:\n1. Where the pilot stands\n2. What the client saw in week one\n3. Changes to the rollout\n4. Training for the support team\n5. Next steps and owners\n\nPlease read the pilot report before the call.\n\n________________________________________\nVideo call\nJoin: https://meet.example.com/client-workshop\nMeeting ID: 482 193 775 204\nPasscode: 5KQ2\n\nDial in by phone\n+351 21 000 0000, Lisbon\n+44 20 0000 0000, London\nPhone conference ID: 918 227 441#\n\nFind a local number\nReset dial-in PIN\n\nFor organizers: Meeting options\n________________________________________";
+
 fn samples() -> Vec<Sample> {
     vec![
         Sample {
@@ -1203,13 +1207,18 @@ fn account1_events(now: EpochMillis) -> Vec<CalendarEvent> {
             at_week(monday, 0, 14, 0),
             at_week(monday, 0, 15, 30),
         ),
-        timed_event(
-            "primary",
-            "client-workshop",
-            "Client workshop",
-            at_week(monday, 3, 11, 0),
-            at_week(monday, 3, 13, 0),
-        ),
+        // Long notes, as a video-call invitation carries, so the popover
+        // shows "Show more" and scrolls once they open whole.
+        CalendarEvent {
+            description: CLIENT_WORKSHOP_NOTES.into(),
+            ..timed_event(
+                "primary",
+                "client-workshop",
+                "Client workshop",
+                at_week(monday, 3, 11, 0),
+                at_week(monday, 3, 13, 0),
+            )
+        },
         timed_event(DESIGN_TEAM, "retro", "Retro", at_week(monday, 4, 16, 30), at_week(monday, 4, 17, 30)),
         // Next Wednesday is the busiest day, so a short window folds it
         // into an "N more" button in Month. It sits outside the week the

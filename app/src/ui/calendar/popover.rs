@@ -537,12 +537,14 @@ impl EventPopover {
         // popover's own realize finds, rather than per `show`.
         let outside = gtk::GestureClick::builder().propagation_phase(gtk::PropagationPhase::Capture).build();
         let weak = Rc::downgrade(&this);
-        outside.connect_pressed(move |gesture, _, x, y| {
+        outside.connect_pressed(move |gesture, _, _, _| {
             let Some(this) = weak.upgrade() else { return };
-            let Some(widget) = gesture.widget() else { return };
-            let inside = widget
-                .pick(x, y, gtk::PickFlags::DEFAULT)
-                .is_some_and(|w| w.is_ancestor(&this.popover) || w == *this.popover.upcast_ref::<gtk::Widget>());
+            // The popover draws on a surface of its own, and a press there
+            // reaches this gesture too. Picking the press's point in the
+            // window finds whatever lies under the popover instead, such
+            // as a label in the grid, so the surface decides.
+            let pressed_on = gesture.current_event().and_then(|event| event.surface());
+            let inside = pressed_on.is_some_and(|surface| this.popover.surface().as_ref() == Some(&surface));
             if !inside {
                 this.popover.popdown();
             }
