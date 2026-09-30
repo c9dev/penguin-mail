@@ -698,8 +698,12 @@ impl MainWindow {
                     split.set_show_sidebar(false);
                 }
             });
+            // Only the page on screen sets the width. Measured whole, the
+            // hidden first-run page's row of provider tiles held the mail
+            // at about 600 px, and a narrower window clipped it.
             let stack = gtk::Stack::builder()
                 .transition_type(gtk::StackTransitionType::Crossfade)
+                .hhomogeneous(false)
                 .build();
             let room = {
                 let least = |widget: &gtk::Widget| widget.measure(gtk::Orientation::Horizontal, -1).0;

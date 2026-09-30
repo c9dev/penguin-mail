@@ -246,6 +246,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   it last updated, instead of leaving you guessing.
 
 ### Fixed
+- On a phone-width window the mail list and the open conversation fit the screen again, with times, New Message and the window buttons in view.
 - Double-clicking an event opens the editor without leaving the event's bubble open beside it.
 - Show more in an event's bubble opens the rest of the notes instead of closing the bubble.
 - A reply's quoted message folds behind "•••" again, including replies Penguin Mail sent earlier with each quoted paragraph set apart.
