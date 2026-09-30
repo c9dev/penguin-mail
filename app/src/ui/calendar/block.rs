@@ -32,6 +32,11 @@ const DASH_WIDTH: f32 = 1.5;
 const DASH: [f32; 2] = [5.0, 4.0];
 const CORNER: f32 = 8.0;
 
+/// The pending clock's centre sits 14 px from the content's right edge
+/// with a radius of 5.5 and a 1.4 px line, so its left edge is about
+/// 20 px in. The text keeps 23 px clear of that edge.
+const PENDING_ROOM: i32 = 23;
+
 /// Which event a block draws: its account, calendar and id. The view
 /// finds a block by it to point a popover at an event it opens by name.
 pub type EventKey = (AccountId, String, String);
@@ -137,9 +142,9 @@ impl EventBlock {
 
         if event.pending {
             // The clock the block draws in its top right corner; the
-            // title stops short of it.
+            // title and a compact block's time stop 3 px short of it.
             block.imp().pending.set(true);
-            text.set_margin_end(16);
+            text.set_margin_end(PENDING_ROOM);
         }
 
         button.set_child(Some(&content));
@@ -241,11 +246,20 @@ mod imp {
             let widget = self.obj();
             let (width, height) = (widget.width() as f32, widget.height() as f32);
             if let Some(colour) = self.dashed.get() {
-                // The mockup's stroke sits on the block's edge, half in
-                // and half out, as an SVG stroke does.
-                let bounds = graphene::Rect::new(0.0, 0.0, width, height);
+                // The stroke runs just inside the block's edge. The
+                // snapshot starts at the content box, which a compact
+                // block's 7 px of padding puts inside that edge, so the
+                // outline follows the widget's own bounds; drawn on the
+                // content box, it ran through the time at the end of the
+                // line. It keeps half its width in from the bounds, since
+                // the block clips what lies outside them.
+                let half = DASH_WIDTH / 2.0;
+                let bounds = widget
+                    .compute_bounds(&*widget)
+                    .unwrap_or_else(|| graphene::Rect::new(0.0, 0.0, width, height))
+                    .inset_r(half, half);
                 let path = gsk::PathBuilder::new();
-                path.add_rounded_rect(&gsk::RoundedRect::from_rect(bounds, CORNER));
+                path.add_rounded_rect(&gsk::RoundedRect::from_rect(bounds, CORNER - half));
                 let stroke = gsk::Stroke::new(DASH_WIDTH);
                 stroke.set_dash(&DASH);
                 snapshot.append_stroke(&path.to_path(), &stroke, &colour);
