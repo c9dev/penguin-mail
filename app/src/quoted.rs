@@ -31,7 +31,7 @@ fn html_history(html: &str) -> Option<Range<usize>> {
         let from = match kind {
             Kind::Quote { needs_attribution } => {
                 let from = tree.attribution(at, needs_attribution);
-                if (needs_attribution && from == node.start) || last >= node.end {
+                if (needs_attribution && from == node.start) || last >= tree.quote_run_end(at) {
                     return None;
                 }
                 from
@@ -313,6 +313,29 @@ impl<'a> Tree<'a> {
         Some(decode(&out))
     }
 
+    /// Where the quote at `at` ends, taking in the blockquotes that follow
+    /// it as siblings with only blank text or line breaks between. Some
+    /// writers, Penguin Mail among them before, quote each paragraph in a
+    /// blockquote of its own.
+    fn quote_run_end(&self, at: usize) -> usize {
+        let node = &self.nodes[at];
+        let siblings = &self.children[node.parent];
+        let mut end = node.end;
+        let after = siblings.iter().position(|&s| s == at).map_or(0, |i| i + 1);
+        for &next in &siblings[after..] {
+            let sibling = &self.nodes[next];
+            if (sibling.text && self.blank(next)) || self.name(sibling) == "br" {
+                continue;
+            }
+            if !sibling.text && self.name(sibling) == "blockquote" {
+                end = sibling.end;
+                continue;
+            }
+            break;
+        }
+        end
+    }
+
     /// Whether the element at `at` opens the history, and how.
     fn opens_history(&self, at: usize) -> Option<Kind> {
         let node = &self.nodes[at];
@@ -538,6 +561,32 @@ mod tests {
         assert!(shown.contains("Monday works."), "{shown}");
         assert!(hidden.starts_with("<p style=\"margin:0 0 1em\">On Monday"), "{hidden}");
         assert!(hidden.ends_with("</blockquote>"), "{hidden}");
+    }
+
+    #[test]
+    fn a_reply_quoted_one_blockquote_per_paragraph_still_folds() {
+        let quote = "<blockquote style=\"margin:0 0 0 0.8ex;border-left:2px solid #ccc;padding-left:1ex\">";
+        let (shown, hidden) = fold(&format!(
+            "<div><p>Here is the video.</p><p>On Wednesday, 30 September 2026 at 02:01, Ann Lee wrote:</p>\
+             {quote}<p>Hello,</p></blockquote>{quote}<p>Thank you for waiting.</p></blockquote>\
+             {quote}<p>Ann</p></blockquote></div>"
+        ))
+        .expect("a fold");
+        assert!(shown.contains("Here is the video.") && !shown.contains("wrote:"), "{shown}");
+        assert!(hidden.starts_with("<p>On Wednesday"), "{hidden}");
+        assert!(hidden.contains("Thank you for waiting.") && hidden.ends_with("</blockquote>"), "{hidden}");
+    }
+
+    #[test]
+    fn writing_after_a_quote_keeps_it_unfolded() {
+        let quote = "<blockquote>";
+        assert_eq!(
+            fold(&format!(
+                "<div><p>Top.</p><p>On Monday, Ann wrote:</p>{quote}<p>Hello,</p></blockquote>\
+                 <p>My answer, under the quote.</p>{quote}<p>Ann</p></blockquote></div>"
+            )),
+            None
+        );
     }
 
     #[test]

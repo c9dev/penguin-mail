@@ -131,7 +131,10 @@ impl RichBody {
         let mut rest = self.blocks.as_slice();
         while let Some(first) = rest.first() {
             let kind = first.kind;
-            let run = rest.iter().take_while(|b| b.kind == kind).count();
+            let run = match kind {
+                BlockKind::Quote => quote_run(rest),
+                _ => rest.iter().take_while(|b| b.kind == kind).count(),
+            };
             let (group, tail) = rest.split_at(run);
             rest = tail;
             match kind {
@@ -159,10 +162,11 @@ impl RichBody {
                     out.push_str(&format!("</{list}>"));
                 }
                 BlockKind::Quote => {
-                    out.push_str(&format!(
-                        "<blockquote style=\"{QUOTE}\"><p style=\"{PARAGRAPH}\">{}</p></blockquote>",
-                        lines_to_html(group)
-                    ));
+                    out.push_str(&format!("<blockquote style=\"{QUOTE}\">"));
+                    for run in split_on_blanks(group) {
+                        out.push_str(&format!("<p style=\"{PARAGRAPH}\">{}</p>", lines_to_html(run)));
+                    }
+                    out.push_str("</blockquote>");
                 }
                 BlockKind::Code => {
                     let text: Vec<String> = group.iter().map(|b| escape(&b.text())).collect();
@@ -366,6 +370,22 @@ fn lines_to_html(blocks: &[Block]) -> String {
 }
 
 /// Groups of lines with the blank ones between them dropped.
+/// How many of `blocks`, which start with a quoted line, belong to that
+/// quote. A blank line between quoted paragraphs has no quote of its own
+/// in the editor, but it stays inside the quote while quoted lines follow
+/// it, so a reply sends one blockquote rather than one per paragraph.
+fn quote_run(blocks: &[Block]) -> usize {
+    let mut end = 0;
+    for (index, block) in blocks.iter().enumerate() {
+        match block.kind {
+            BlockKind::Quote => end = index + 1,
+            _ if block.is_blank() => continue,
+            _ => break,
+        }
+    }
+    end
+}
+
 fn split_on_blanks(blocks: &[Block]) -> Vec<&[Block]> {
     blocks
         .split(|b| b.is_blank())
@@ -936,6 +956,23 @@ mod tests {
             doc.to_plain(),
             "Order\n- milk\n- eggs\n1. first\n2. second\n> she said\ncargo test"
         );
+    }
+
+    #[test]
+    fn a_quote_with_blank_lines_between_its_paragraphs_stays_one_quote() {
+        let doc = body(vec![
+            Block::new(BlockKind::Paragraph, vec![Span::plain("Sounds good.")]),
+            Block::new(BlockKind::Quote, vec![Span::plain("On Monday, Ann wrote:")]),
+            Block::new(BlockKind::Quote, vec![Span::plain("Hello,")]),
+            Block::new(BlockKind::Paragraph, Vec::new()),
+            Block::new(BlockKind::Quote, vec![Span::plain("Lunch on Monday?")]),
+            Block::new(BlockKind::Paragraph, Vec::new()),
+            Block::new(BlockKind::Quote, vec![Span::plain("Ann")]),
+        ]);
+        let html = doc.to_html();
+        assert_eq!(html.matches("<blockquote").count(), 1, "{html}");
+        assert!(html.ends_with("</blockquote></div>"), "{html}");
+        assert_eq!(html.matches("<p style").count(), 4, "one paragraph above, three inside: {html}");
     }
 
     #[test]
