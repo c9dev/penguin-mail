@@ -167,7 +167,7 @@ pub fn agenda_subtitle_words(place: &str, calendar: &str) -> String {
 /// "Thursday 24 – Friday 25 September": the last day always carries its
 /// month, and the first day carries one too only when it falls in a
 /// different month.
-fn all_day_range_words(first: NaiveDate, last: NaiveDate) -> String {
+pub fn all_day_range_words(first: NaiveDate, last: NaiveDate) -> String {
     let first_words = if first.year() == last.year() && first.month() == last.month() {
         day_words(first)
     } else {
@@ -180,15 +180,22 @@ fn all_day_range_words(first: NaiveDate, last: NaiveDate) -> String {
 }
 
 /// How many of `guests` said yes, for the popover's answer line: "4 of 6
-/// said yes". The plural picks on the yes count, since that is the word
+/// said yes" ([`said_yes_words`]).
+pub fn answers_words(guests: &[Guest]) -> String {
+    said_yes_words(guests.iter().map(|g| g.answer))
+}
+
+/// "4 of 6 said yes", from each guest's answer: the event popover and the
+/// invitation card both count through this, so the two agree on one
+/// event. The plural picks on the yes count, since that is the word
 /// pt_PT conjugates ("disse" for one, "disseram" for several), not the
 /// total.
-pub fn answers_words(guests: &[Guest]) -> String {
-    let yes = guests
-        .iter()
-        .filter(|g| g.answer == Some(Answer::Yes))
-        .count();
-    let count = guests.len();
+pub fn said_yes_words(answers: impl IntoIterator<Item = Option<Answer>>) -> String {
+    let (mut yes, mut count) = (0, 0);
+    for answer in answers {
+        count += 1;
+        yes += usize::from(answer == Some(Answer::Yes));
+    }
     fill_plural(
         "{yes} of {count} said yes",
         "{yes} of {count} said yes",
@@ -809,6 +816,12 @@ mod tests {
             guest(None),
         ];
         assert_eq!(answers_words(&guests), "4 of 6 said yes");
+    }
+
+    #[test]
+    fn said_yes_words_counts_every_guest_whatever_they_answered() {
+        let answers = [Some(Answer::Yes), None, Some(Answer::Maybe), Some(Answer::No)];
+        assert_eq!(said_yes_words(answers), "1 of 4 said yes");
     }
 
     #[test]

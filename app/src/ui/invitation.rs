@@ -1203,18 +1203,10 @@ fn filled(button: Answer, given: Option<Answer>) -> bool {
     }
 }
 
-/// "4 of 6 said yes", which opens the guest list.
+/// "4 of 6 said yes", which opens the guest list, in the words the
+/// calendar's event popover uses for the same event.
 fn said_yes(guests: &[Attending]) -> String {
-    let yes = guests
-        .iter()
-        .filter(|g| g.answer == Some(Answer::Yes))
-        .count();
-    fill_plural(
-        "{yes} of {count} said yes",
-        "{yes} of {count} said yes",
-        yes,
-        &[("yes", &yes.to_string()), ("count", &guests.len().to_string())],
-    )
+    crate::ui::calendar::words::said_yes_words(guests.iter().map(|g| g.answer))
 }
 
 thread_local! {

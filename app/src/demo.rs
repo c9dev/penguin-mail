@@ -1376,6 +1376,20 @@ fn account1_events(now: EpochMillis) -> Vec<CalendarEvent> {
                 organizer: true,
                 me: false,
             },
+            // The same guests the invitation lists, so the card in the
+            // message and the event's popover count the same answers.
+            CalendarGuest {
+                email: "jonas@fernwood.example".into(),
+                name: Some("Jonas Weber".into()),
+                answer: Some(Answer::Maybe),
+                ..CalendarGuest::default()
+            },
+            CalendarGuest {
+                email: "mara.okafor@example.org".into(),
+                name: Some("Mara Okafor".into()),
+                answer: Some(Answer::No),
+                ..CalendarGuest::default()
+            },
         ],
         rules: vec![format!("RRULE:FREQ=WEEKLY;BYDAY=TU;UNTIL={}", until_stamp(until))],
         ..CalendarEvent::default()

@@ -246,6 +246,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   it last updated, instead of leaving you guessing.
 
 ### Fixed
+- An invitation in a message and the same event in the calendar give the same date, time and count of guests who said yes.
 - The week number in the calendar header is the same in Week and Day view for every day of the week, whichever day your weeks start on.
 - Double-clicking an event opens the editor without leaving the event's bubble open beside it.
 - Show more in an event's bubble opens the rest of the notes instead of closing the bubble.
