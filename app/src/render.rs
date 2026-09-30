@@ -348,8 +348,8 @@ fn render_details(html: &mut String, meta: &MessageMeta, me: &[String], view: &M
     let provenance = provenance.unwrap_or(&empty);
     let _ = write!(
         html,
-        "<details class=\"line to\"><summary><span class=\"recipients\">{to}</span>\
-         <span class=\"more\">{more}</span></summary><table class=\"details\">"
+        "<div class=\"line to\"><span class=\"recipients\">{to}</span>\
+         <details><summary class=\"more\">{more}</summary><table class=\"details\">"
     );
     let mut row = |name: String, value: String| {
         let _ = write!(html, "<tr><th>{}</th><td>{value}</td></tr>", escape(&name));
@@ -392,7 +392,7 @@ fn render_details(html: &mut String, meta: &MessageMeta, me: &[String], view: &M
             },
         );
     }
-    html.push_str("</table></details>");
+    html.push_str("</table></details></div>");
 }
 
 /// "Ann Lee <ann@example.com>, bo@example.com", for the details table.
@@ -751,10 +751,10 @@ font-size:13px;font-weight:700;text-decoration:none;transition:background-color 
 .summarize:hover{{background:color-mix(in srgb,var(--accent) 18%,var(--bg))}}\
 .summarize:active{{transform:scale(0.97)}}\
 .summarize:focus-visible{{outline:2px solid var(--accent);outline-offset:2px}}\
-.message{{border-top:1px solid var(--line);padding:16px 12px 18px;margin:0 -12px;border-radius:12px}}\
+.message{{position:relative;border-top:1px solid var(--line);padding:16px 12px 18px;margin:0 -12px;border-radius:12px}}\
 .thread+.message{{border-top-color:transparent}}\
 .message.collapsed:hover{{background:var(--hover)}}\
-.header{{position:relative;display:grid;grid-template-columns:40px minmax(0,1fr) auto auto;\
+.header{{display:grid;grid-template-columns:40px minmax(0,1fr) auto auto;\
 column-gap:12px;align-items:center;color:inherit}}\
 .chev{{grid-column:3;grid-row:1;width:16px;height:16px;margin-right:-6px;background:var(--dim);opacity:0;\
 -webkit-mask:url(\"{CHEV}\") center/14px no-repeat;\
@@ -762,8 +762,10 @@ transition:transform 200ms cubic-bezier(0.23,1,0.32,1),opacity 120ms ease}}\
 .message:hover .chev,.toggle:focus-visible~.chev{{opacity:.7}}\
 .expanded .chev{{transform:rotate(180deg)}}\
 .toggle:focus-visible{{outline:2px solid var(--accent);outline-offset:-3px;border-radius:12px}}\
-.toggle{{position:absolute;inset:0}}\
-.avatar{{position:relative;grid-row:span 2;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;\
+.toggle{{position:absolute;inset:0;border-radius:12px}}\
+.expanded .header{{position:relative}}\
+.fold{{position:relative}}\
+.avatar{{position:relative;grid-row:span 2;align-self:start;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;\
 justify-content:center;overflow:hidden;color:#fff;font-weight:700;font-size:15px;letter-spacing:0.02em;text-decoration:none}}\
 .avatar img{{width:100%;height:100%;object-fit:cover}}\
 .who{{position:relative;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}\
@@ -774,12 +776,16 @@ background:var(--accent);margin-right:7px;vertical-align:1px}}\
 .address{{color:var(--dim);font-size:12.5px;font-weight:500;margin-left:8px}}\
 .date{{grid-column:4;grid-row:1;color:var(--dim);font-size:12.5px;white-space:nowrap}}\
 .line{{grid-column:2 / -1;color:var(--dim);font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}\
-details.to{{overflow:visible;white-space:normal}}\
-details.to>summary{{list-style:none;cursor:default;display:flex;gap:12px;align-items:baseline;position:relative}}\
-details.to>summary::-webkit-details-marker{{display:none}}\
-details.to .recipients{{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}\
-details.to>summary:hover .recipients{{color:var(--fg)}}\
-details.to .more{{flex:none;color:var(--accent-text);font-weight:700;cursor:pointer}}\
+.line.to{{position:relative;overflow:visible;white-space:normal;padding-right:96px}}\
+.line.to .recipients{{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}\
+.line.to summary{{position:absolute;top:0;right:0;list-style:none;display:flex;align-items:center;gap:4px;\
+color:var(--accent-text);font-weight:700;cursor:pointer;user-select:none;border-radius:6px}}\
+.line.to summary::-webkit-details-marker{{display:none}}\
+.line.to summary::after{{content:\"\";width:12px;height:12px;background:currentColor;\
+-webkit-mask:url(\"{CHEV}\") center/12px no-repeat;transition:transform 200ms cubic-bezier(0.23,1,0.32,1)}}\
+.line.to details[open]>summary::after{{transform:rotate(180deg)}}\
+.line.to summary:focus-visible{{outline:2px solid var(--accent);outline-offset:2px}}\
+table.details td,table.details th{{user-select:text}}\
 table.details{{margin:8px 0 2px;border-collapse:collapse;font-size:13px;line-height:1.45}}\
 table.details th{{text-align:right;font-weight:normal;color:var(--dim);padding:1px 10px 1px 0;\
 vertical-align:top;white-space:nowrap}}\
@@ -1480,13 +1486,44 @@ mod tests {
                 sanitized: None,
             }],
         );
-        assert!(html.contains("<details class=\"line to\">"), "it opens");
+        assert!(html.contains("<div class=\"line to\">"), "it opens");
         assert!(html.contains("<th>mailed-by</th><td>bounce.example.net</td>"));
         assert!(html.contains("<th>signed-by</th><td>example.net</td>"));
         assert!(html.contains("Standard encryption (TLS)"));
         assert!(html.contains("<th>subject</th>"));
         // The page carries no JavaScript, so the panel must open on its own.
         assert!(!html.contains("mailrs:details"));
+    }
+
+    #[test]
+    fn only_the_details_button_opens_the_panel_and_its_text_can_be_selected() {
+        let m = meta("m1", "Ann", &[]);
+        let body = MessageBody {
+            text: Some("Hello".into()),
+            ..Default::default()
+        };
+        let no_thumbs = HashMap::new();
+        let html = page(
+            "x",
+            vec![MessageView {
+                meta: &m,
+                body: BodyState::Loaded(&body),
+                expanded: true,
+                thumbnails: &no_thumbs,
+                event_slot: false,
+                sanitized: None,
+            }],
+        );
+        // The recipients sit outside the summary, so a click on them
+        // selects text rather than opening or shutting the panel.
+        assert!(html.contains("<div class=\"line to\"><span class=\"recipients\">"), "{html}");
+        assert!(html.contains("<details><summary class=\"more\">"), "{html}");
+        // The line sits above the header's toggle layer, so a press on it
+        // or on the table never reaches the toggle.
+        assert!(html.contains(".line.to{position:relative"), "the line is lifted over the toggle");
+        // A collapsed message opens from anywhere on its card.
+        assert!(html.contains(".message{position:relative"), "the card holds the toggle");
+        assert!(html.contains(".expanded .header{position:relative}"), "an open message toggles from its header only");
     }
 
     #[test]
@@ -1510,7 +1547,7 @@ mod tests {
         );
         // From, to, date and subject come off the metadata, so they are
         // there whatever the headers did or did not say.
-        assert!(html.contains("<details class=\"line to\">"));
+        assert!(html.contains("<div class=\"line to\">"));
         assert!(html.contains("<th>subject</th>"));
         assert!(!html.contains("mailed-by"), "nothing invented");
         assert!(!html.contains("signed-by"));
@@ -1772,8 +1809,8 @@ mod tests {
         );
         assert!(
             html.contains(
-                "<summary><span class=\"recipients\">To: me, Bob Smith</span>\
-                 <span class=\"more\">Details</span></summary>"
+                "<div class=\"line to\"><span class=\"recipients\">To: me, Bob Smith</span>\
+                 <details><summary class=\"more\">Details</summary>"
             ),
             "{html}"
         );

@@ -253,6 +253,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   it last updated, instead of leaving you guessing.
 
 ### Fixed
+- A message's details can be selected and copied. Only the Details button, now with a chevron, opens and closes them, and a collapsed message opens from a click anywhere on it.
 - In Month view, the clock on an event waiting to be sent no longer covers its time, and an unanswered invitation's dashed outline no longer cuts through its time.
 - In Month view, an event with a short name such as Gym shows its time again.
 - A label's menu offers Move Up or Move Down only when the label has somewhere to move.
