@@ -7,6 +7,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### New
 
+- Edit a rule: click it in Rules, or press Enter on it, to change what it
+  matches or does. Parts the form can't show, such as a forward set up in
+  Gmail, stay as they were.
 - Events show their attached files, such as Google Drive documents, in the
   event popover and the editor. Click one to open it in the browser.
 - Attach a file from this computer to an event with Attach File… in the
