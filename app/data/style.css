@@ -871,7 +871,9 @@ button.day-heading { min-height: 26px; padding: 0 14px; border-radius: 13px; }
 }
 
 /* The mini month: 13 px numbers at weight 500, today a filled accent
-   square with rounded corners, a faint dot under a day with events. */
+   square with rounded corners, a faint dot under a day with events.
+   Today has the only fill, the selected day a ring, and the week in view
+   a faint band: one mark for each meaning. */
 .mini-month-title { font-weight: 800; font-size: 0.99em; }
 .list-fade { background: linear-gradient(to bottom, alpha(var(--sidebar-bg-color), 0), var(--sidebar-bg-color)); }
 .mini-month-weekday { font-size: 0.78em; font-weight: 700; }
@@ -888,14 +890,14 @@ button.day-heading { min-height: 26px; padding: 0 14px; border-radius: 13px; }
   color: var(--accent-fg-color);
   font-weight: 800;
 }
-/* The day the calendar shows: the selected mailbox's tint, 18 % light
-   and 28 % dark, with its number in the accent. Today keeps its fill. */
+/* The day the calendar shows: a 1.5 px accent ring and its number in the
+   accent, with no fill, so it cannot pass for today. Today keeps its
+   fill. */
 .mini-month button.selected:not(.today) {
-  background: alpha(var(--accent-bg-color), 0.18);
+  box-shadow: inset 0 0 0 1.5px var(--accent-color);
   color: var(--accent-color);
   font-weight: 700;
 }
-.app-dark .mini-month button.selected:not(.today) { background: alpha(var(--accent-bg-color), 0.28); }
 /* The week or month in view: a faint band behind its days, rounded where
    the range or the row ends. */
 .mini-day.in-view { background: alpha(var(--accent-bg-color), 0.07); }
@@ -1050,6 +1052,9 @@ list.waiting-list > row.waiting-card:last-child { margin-bottom: 0; }
 .app-dark .waiting-heading,
 .app-dark .hidden-count,
 .app-dark .agenda-row .dim-label { opacity: 0.55; }
+/* Today keeps its full fill when it sits outside the month shown. */
+.mini-month button.today.outside,
+.app-dark .mini-month button.today.outside { opacity: 1; }
 /* The event popover: 16 px corners, a 4 px bar beside the title and
    the time, 13 px rows, and 34 px buttons with 10 px corners. */
 popover.event-popover > contents { border-radius: 16px; padding: 0; }

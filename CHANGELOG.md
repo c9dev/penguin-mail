@@ -137,6 +137,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   Ctrl+R.
 
 ### Improved
+- The mini month marks today with the only fill and the day you're viewing with a ring, and tints the week in view only in Week view.
 - Section headings in the sidebar and the calendar's hour labels, week number, ALL-DAY, account names, days outside the month and agenda times are dark enough to read in light and dark.
 - Conversations in the list light up under the pointer, as the sidebar's rows do.
 - An event's bubble lists each guest once, calls you "You", marks guests who haven't answered with a clock, and shows a map pin beside the place.
