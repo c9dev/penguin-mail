@@ -329,7 +329,8 @@ flowboxchild:focus-visible > .recipient-chip {
    the mockup draws the list column on the window colour. */
 .mail-columns > .sidebar-pane { background: var(--window-bg-color); }
 
-/* The headings between the sections: 11.5 px, weight 700, faint (40 %).
+/* The headings between the sections: 11.5 px, weight 700, at the small
+   secondary text strength (see "Small secondary text" below).
    The calendar sidebar's own account headings share this size, weight
    and colour (`calendar::sidebar::rebuild_calendar_list`); only a mail
    section's heading is drawn in spaced capitals, since an account's own
@@ -339,7 +340,6 @@ flowboxchild:focus-visible > .recipient-chip {
 .sidebar-section {
   font-size: 0.78em;
   font-weight: 700;
-  color: alpha(currentColor, 0.4);
 }
 .mailboxes > row > .sidebar-section {
   /* 5 px under, and the row under the heading adds its own 2 px. */
@@ -694,7 +694,7 @@ button.invitation-pill buttoncontent > box { border-spacing: 8px; }
 .calendar-compact .range-title { margin: 0 4px 0 2px; }
 .range-title .bold { font-weight: 800; font-size: 1.43em; }
 .range-title .dim { font-size: 1.43em; font-weight: 400; opacity: 0.4; }
-.range-title .week { font-size: 0.85em; font-weight: 700; opacity: 0.4; }
+.range-title .week { font-size: 0.85em; font-weight: 700; }
 button.calendar-today {
   min-height: 30px;
   padding: 0 14px;
@@ -861,14 +861,12 @@ button.day-heading { min-height: 26px; padding: 0 14px; border-radius: 13px; }
 .hour-label {
   font-size: 0.75em;
   font-weight: 500;
-  opacity: 0.4;
   font-feature-settings: "tnum";
 }
 .all-day-label {
   font-size: 0.65em;
   font-weight: 700;
   letter-spacing: 0.6px;
-  opacity: 0.4;
   text-transform: uppercase;
 }
 
@@ -876,7 +874,7 @@ button.day-heading { min-height: 26px; padding: 0 14px; border-radius: 13px; }
    square with rounded corners, a faint dot under a day with events. */
 .mini-month-title { font-weight: 800; font-size: 0.99em; }
 .list-fade { background: linear-gradient(to bottom, alpha(var(--sidebar-bg-color), 0), var(--sidebar-bg-color)); }
-.mini-month-weekday { font-size: 0.78em; font-weight: 700; opacity: 0.4; }
+.mini-month-weekday { font-size: 0.78em; font-weight: 700; }
 .mini-month button {
   min-width: 28px;
   min-height: 26px;
@@ -904,7 +902,6 @@ button.day-heading { min-height: 26px; padding: 0 14px; border-radius: 13px; }
 .app-dark .mini-day.in-view { background: alpha(var(--accent-bg-color), 0.12); }
 .mini-day.band-start { border-top-left-radius: 8px; border-bottom-left-radius: 8px; }
 .mini-day.band-end { border-top-right-radius: 8px; border-bottom-right-radius: 8px; }
-.mini-month button.outside { opacity: 0.4; }
 .mini-month .dot { min-width: 4px; min-height: 4px; border-radius: 99px; background: currentColor; opacity: 0.4; }
 .mini-month button.today .dot,
 .mini-month button.outside .dot { opacity: 0; }
@@ -931,7 +928,7 @@ button.calendar-heading.folded .calendar-chevron { opacity: 0.5; }
 .hidden-calendars { margin-left: -6px; }
 .hidden-calendars > button { padding: 2px 6px; min-height: 0; }
 .hidden-calendars .calendar-name { opacity: 0.64; }
-.hidden-count { font-size: 0.85em; font-weight: 700; opacity: 0.4; font-feature-settings: "tnum"; }
+.hidden-count { font-size: 0.85em; font-weight: 700; font-feature-settings: "tnum"; }
 .calendar-lock { opacity: 0.4; }
 .mini-month { margin-top: -2px; }
 checkbutton.calendar-check:not(:checked) + label { opacity: 0.64; }
@@ -962,7 +959,6 @@ checkbutton.calendar-check > check:checked {
 .waiting-heading {
   font-size: 0.78em;
   font-weight: 700;
-  opacity: 0.4;
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
@@ -1002,7 +998,6 @@ list.waiting-list > row.waiting-card:last-child { margin-bottom: 0; }
 .month-grid button.event-block.month-bar .title { font-size: 0.85em; }
 .month-grid button.event-block.continues-before { border-top-left-radius: 0; border-bottom-left-radius: 0; }
 .month-grid button.event-block.continues-after { border-top-right-radius: 0; border-bottom-right-radius: 0; }
-.day-heading.dimmed { opacity: 0.4; }
 /* A day outside working hours (a weekend, by default): the mockup shades
    nothing here, so this stays as subtle as the hairline above it. */
 .month-cell.shaded { background: color-mix(in srgb, currentColor 4%, transparent); }
@@ -1021,6 +1016,40 @@ list.waiting-list > row.waiting-card:last-child { margin-bottom: 0; }
   background: var(--cal-colour, var(--accent-bg-color));
 }
 .agenda-heading { font-weight: 800; opacity: 0.75; }
+
+/* Small secondary text: the sidebar's section and account headings, the
+   calendar's hour labels, week tag and ALL-DAY, the mini month's weekday
+   letters and the days outside its month, a Month day outside the month,
+   the agenda's times and calendar names, and the count of hidden
+   calendars. WCAG asks 4.5:1 of text this small. libadwaita's dim-label
+   (55 %) reaches about 3:1 in light, less on the grey sidebar, so these
+   take the window's text colour at 80 % there and at 55 % in dark, which
+   measured 4.5:1 or more on screen in both. */
+.sidebar-section,
+.range-title .week,
+.hour-label,
+.all-day-label,
+.mini-month-weekday,
+.mini-month button.outside,
+.day-heading.dimmed,
+.waiting-heading,
+.hidden-count,
+.agenda-row .dim-label { opacity: 0.8; }
+/* A day outside the month still has to read as one next to the month's
+   own days, which are at full strength: 76 % keeps 4.5:1 in light, on
+   the week band too. */
+.mini-month button.outside,
+.day-heading.dimmed { opacity: 0.76; }
+.app-dark .sidebar-section,
+.app-dark .range-title .week,
+.app-dark .hour-label,
+.app-dark .all-day-label,
+.app-dark .mini-month-weekday,
+.app-dark .mini-month button.outside,
+.app-dark .day-heading.dimmed,
+.app-dark .waiting-heading,
+.app-dark .hidden-count,
+.app-dark .agenda-row .dim-label { opacity: 0.55; }
 /* The event popover: 16 px corners, a 4 px bar beside the title and
    the time, 13 px rows, and 34 px buttons with 10 px corners. */
 popover.event-popover > contents { border-radius: 16px; padding: 0; }
