@@ -34,6 +34,7 @@ use crate::format::{future_date, human_size, send_later_presets};
 use crate::protection::{self, Held, Standard};
 use crate::richtext::{BlockKind, RichBody};
 use crate::settings::ComposeFormat;
+use crate::stray_markdown;
 use crate::templates::{self, Filling};
 use mailrs_domain::translate::{fill, fill_plural, gettext, with_reason};
 
@@ -75,6 +76,8 @@ const BODY_MARGIN: i32 = 18;
 /// The room under the last line for the "•••" row, and the gap above it.
 const HISTORY_ROOM: i32 = 40;
 const HISTORY_GAP: i32 = 12;
+/// How long the writer pauses before the body is read for Markdown.
+const MARKDOWN_PAUSE: std::time::Duration = std::time::Duration::from_millis(600);
 
 /// A history the writer dropped, held for the toast's Undo.
 enum Folded {
@@ -117,6 +120,16 @@ pub struct Composer {
     editor: Rc<Editor>,
     stack: gtk::Stack,
     preview: webkit::WebView,
+    /// The bar above the text that offers to format Markdown written in a
+    /// rich body, with its Format and close buttons.
+    markdown_bar: gtk::Revealer,
+    markdown_format: gtk::Button,
+    markdown_close: gtk::Button,
+    /// Set once the writer closed that bar, which stays away for this
+    /// draft from then on.
+    markdown_dismissed: Cell<bool>,
+    /// Bumped on every edit; a check that finds it moved on stands down.
+    markdown_check: Cell<u64>,
     /// The attachment rows and the box that holds them.
     files: gtk::Box,
     /// The "•••" button and its ×, under the last line of the body while
@@ -454,10 +467,12 @@ impl Composer {
             gtk::accessible::Property::Label(&gettext("Formatting")),
             gtk::accessible::Property::Orientation(gtk::Orientation::Horizontal),
         ]);
+        let (markdown_bar, markdown_format, markdown_close) = markdown_bar();
         let content = gtk::Box::new(gtk::Orientation::Vertical, 0);
         content.append(&fields);
         content.append(&format_bar);
         content.append(&line());
+        content.append(&markdown_bar);
         content.append(&stack);
         // WebKit's view reaches the accessibility bus as a nameless panel
         // whatever label it is given, so the box around it carries the name
@@ -510,6 +525,11 @@ impl Composer {
             editor,
             stack,
             preview,
+            markdown_bar,
+            markdown_format,
+            markdown_close,
+            markdown_dismissed: Cell::new(false),
+            markdown_check: Cell::new(0),
             files,
             history,
             drop_history,
@@ -553,6 +573,7 @@ impl Composer {
         composer.show_more(composer.more_button.is_active());
         composer.wire(&attach, &preview_toggle);
         composer.wire_history();
+        composer.wire_markdown();
         composer.refresh_history();
         composer.fill_format_bar(&format_bar);
         composer.accept_images();
@@ -1897,6 +1918,145 @@ impl Composer {
         self.toast(&gettext("Markdown formatted"));
     }
 
+    /// Markdown that lands in a rich body becomes rich text: a paste of
+    /// plain text that reads as Markdown arrives styled, and Markdown typed
+    /// by hand brings up the bar that offers to format it.
+    fn wire_markdown(self: &Rc<Self>) {
+        let weak = Rc::downgrade(self);
+        self.body.buffer().connect_changed(move |_| {
+            if let Some(c) = weak.upgrade() {
+                c.check_markdown_soon();
+            }
+        });
+        let weak = Rc::downgrade(self);
+        self.markdown_format.connect_clicked(move |_| {
+            if let Some(c) = weak.upgrade() {
+                c.format_typed_markdown();
+            }
+        });
+        let weak = Rc::downgrade(self);
+        self.markdown_close.connect_clicked(move |_| {
+            if let Some(c) = weak.upgrade() {
+                c.markdown_dismissed.set(true);
+                c.markdown_bar.set_reveal_child(false);
+                c.body.grab_focus();
+            }
+        });
+        let weak = Rc::downgrade(self);
+        self.body.connect_paste_clipboard(move |view| {
+            let Some(c) = weak.upgrade() else { return };
+            if c.editor.format() != ComposeFormat::Rich {
+                return;
+            }
+            let clipboard = view.clipboard();
+            let formats = clipboard.formats();
+            let offered = formats.mime_types();
+            let mut mime_types: Vec<&str> = offered.iter().map(|m| m.as_str()).collect();
+            if formats.contains_type(glib::GString::static_type()) {
+                mime_types.push("text/plain");
+            }
+            // Text copied from a text view in this app carries its styles
+            // with it. The clipboard's formats name a text buffer for any
+            // plain text, since GTK can make one of it, so only the content
+            // this app put there tells.
+            let styled = clipboard.is_local()
+                && clipboard.content().is_some_and(|content| {
+                    content
+                        .formats()
+                        .contains_type(gtk::TextBuffer::static_type())
+                });
+            if styled
+                || formats.contains_type(gdk::Texture::static_type())
+                || formats.contains_type(gdk::FileList::static_type())
+                || !stray_markdown::plain_text_only(&mime_types)
+            {
+                return;
+            }
+            // The text only arrives after a wait, so the view's own paste
+            // stops here and runs again below when the text is prose.
+            view.stop_signal_emission_by_name("paste-clipboard");
+            glib::spawn_future_local(async move {
+                match clipboard.read_text_future().await {
+                    Ok(Some(text)) if stray_markdown::reads_as_markdown(&text) => {
+                        c.paste_markdown(&text);
+                    }
+                    _ => c.body.buffer().paste_clipboard(&clipboard, None, true),
+                }
+            });
+        });
+        self.check_markdown_soon();
+    }
+
+    /// Looks for Markdown in the body once the writer pauses, rather than
+    /// reading the body on every keystroke.
+    fn check_markdown_soon(self: &Rc<Self>) {
+        let turn = self.markdown_check.get().wrapping_add(1);
+        self.markdown_check.set(turn);
+        if self.markdown_dismissed.get() {
+            return;
+        }
+        let weak = Rc::downgrade(self);
+        glib::timeout_add_local_once(MARKDOWN_PAUSE, move || {
+            if let Some(c) = weak.upgrade()
+                && c.markdown_check.get() == turn
+            {
+                c.check_markdown();
+            }
+        });
+    }
+
+    /// Shows the bar while the rich body holds Markdown nobody formatted.
+    fn check_markdown(&self) {
+        let show = !self.markdown_dismissed.get() && self.editor.markdown_left();
+        if self.markdown_bar.reveals_child() != show {
+            self.markdown_bar.set_reveal_child(show);
+        }
+    }
+
+    /// The bar's Format: styles the Markdown where it stands.
+    fn format_typed_markdown(self: &Rc<Self>) {
+        if self.editor.format_stray_markdown() {
+            self.dirty.set(true);
+            self.refresh_toggles();
+        }
+        self.markdown_bar.set_reveal_child(false);
+        self.body.grab_focus();
+    }
+
+    /// Puts pasted Markdown in styled, and offers the literal text on a
+    /// toast for a writer who meant the marks.
+    fn paste_markdown(self: &Rc<Self>, text: &str) {
+        let pasted = self.editor.paste_markdown(text);
+        self.dirty.set(true);
+        self.body
+            .scroll_mark_onscreen(&self.body.buffer().get_insert());
+        let toast = adw::Toast::builder()
+            .title(gettext("Pasted as rich text"))
+            .button_label(gettext("Paste as Plain Text"))
+            .build();
+        let held = Rc::new(RefCell::new(Some(pasted)));
+        let (weak, kept) = (Rc::downgrade(self), Rc::clone(&held));
+        toast.connect_button_clicked(move |_| {
+            let taken = kept.borrow_mut().take();
+            let (Some(c), Some(pasted)) = (weak.upgrade(), taken) else {
+                return;
+            };
+            if c.editor.unpaste(pasted) {
+                c.dirty.set(true);
+            }
+            c.body.grab_focus();
+        });
+        // The button dismisses the toast too, and finds the paste gone.
+        let weak = Rc::downgrade(self);
+        toast.connect_dismissed(move |_| {
+            let taken = held.borrow_mut().take();
+            if let (Some(c), Some(pasted)) = (weak.upgrade(), taken) {
+                c.editor.let_go(pasted);
+            }
+        });
+        self.toasts.add_toast(toast);
+    }
+
     /// Switches between the two ways of writing, keeping the body.
     fn edit_as_markdown(self: &Rc<Self>) {
         if self.editor.format() == ComposeFormat::Markdown {
@@ -2240,6 +2400,42 @@ fn from_dropdown(identities: &[Identity]) -> gtk::DropDown {
         from.set_header_factory(Some(&headers));
     }
     from
+}
+
+/// The slim bar above the text that says the body holds Markdown, with a
+/// Format button and a close button. It starts hidden.
+fn markdown_bar() -> (gtk::Revealer, gtk::Button, gtk::Button) {
+    let said = gtk::Label::builder()
+        .label(gettext("This looks like Markdown"))
+        .xalign(0.0)
+        .hexpand(true)
+        .ellipsize(gtk::pango::EllipsizeMode::End)
+        .build();
+    let format = gtk::Button::builder()
+        .label(gettext("Format"))
+        .tooltip_text(gettext("Turn the Markdown into rich text"))
+        .css_classes(["suggested-action"])
+        .valign(gtk::Align::Center)
+        .build();
+    let close = gtk::Button::builder()
+        .icon_name("window-close-symbolic")
+        .tooltip_text(gettext("Dismiss"))
+        .css_classes(["flat", "circular"])
+        .valign(gtk::Align::Center)
+        .build();
+    name(&close, &gettext("Dismiss"));
+    let row = gtk::Box::builder()
+        .spacing(8)
+        .css_classes(["markdown-bar"])
+        .build();
+    row.append(&said);
+    row.append(&format);
+    row.append(&close);
+    let bar = gtk::Revealer::builder()
+        .transition_type(gtk::RevealerTransitionType::SlideDown)
+        .child(&row)
+        .build();
+    (bar, format, close)
 }
 
 fn line() -> gtk::Separator {

@@ -259,6 +259,17 @@ flowboxchild:focus-visible > .recipient-chip {
 .format-bar button { min-width: 28px; min-height: 26px; padding: 2px 4px; }
 .format-bar togglebutton:checked { background: alpha(currentColor, 0.16); }
 
+/* The bar over the text that offers to format Markdown written in a rich
+   body. It lines up with the words under it and stays one row high. */
+.markdown-bar {
+  padding: 4px 10px 4px 20px;
+  background: alpha(var(--accent-bg-color), 0.1);
+  border-bottom: 1px solid alpha(currentColor, 0.1);
+}
+.app-dark .markdown-bar { background: alpha(var(--accent-bg-color), 0.18); }
+.markdown-bar button { min-height: 26px; padding: 0 12px; }
+.markdown-bar button.circular { min-width: 26px; padding: 0; }
+
 /* Attachments: one row per file, with its size. */
 .attachment-row {
   padding: 4px 4px 4px 10px; border-radius: 8px;

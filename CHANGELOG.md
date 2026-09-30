@@ -7,6 +7,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### New
 
+- Markdown you paste into a rich text message arrives formatted, with Paste
+  as Plain Text on the notice that follows if you wanted the marks. Markdown
+  you type shows a bar with a Format button that turns it into rich text.
 - Edit a rule: click it in Rules, or press Enter on it, to change what it
   matches or does. Parts the form can't show, such as a forward set up in
   Gmail, stay as they were.

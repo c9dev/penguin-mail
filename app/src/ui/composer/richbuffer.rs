@@ -310,8 +310,15 @@ pub fn renumber(buffer: &gtk::TextBuffer, first: i32, last: i32) -> usize {
 /// next, since every character in a run carries the same tags. Asking each
 /// character for its tags took a fifth of a second on a long reply.
 pub fn read(buffer: &gtk::TextBuffer, anchors: &Anchors) -> RichBody {
-    let mut blocks = Vec::with_capacity(buffer.line_count().max(0) as usize);
-    for line in 0..buffer.line_count() {
+    read_until(buffer, anchors, buffer.line_count())
+}
+
+/// The buffer's lines above `end` as a rich body, for a question about
+/// the writer's words that has no need of the history under them.
+pub fn read_until(buffer: &gtk::TextBuffer, anchors: &Anchors, end: i32) -> RichBody {
+    let end = end.min(buffer.line_count());
+    let mut blocks = Vec::with_capacity(end.max(0) as usize);
+    for line in 0..end {
         let Some((start, end)) = line_bounds(buffer, line) else {
             continue;
         };
@@ -459,19 +466,21 @@ pub fn write(
 
 /// Puts `body` in at the cursor, styled, and leaves the cursor after it.
 ///
-/// The line the cursor sits on keeps the kind it had, since the body is
-/// arriving in the middle of someone's writing; every further line takes
-/// its own. A picture is left out, because a body inserted this way brings
-/// no attachments with it.
+/// The line the cursor sits on keeps the kind it had when it holds words,
+/// since the body is then arriving in the middle of someone's writing; on
+/// an empty line, and on every further line, each block takes its own. A
+/// picture is left out, because a body inserted this way brings no
+/// attachments with it.
 pub fn insert(buffer: &gtk::TextBuffer, body: &RichBody) {
     let mut at = buffer.iter_at_mark(&buffer.get_insert());
+    let empty = is_empty_line(buffer, at.line());
     let here = kind_at(buffer, at.line());
     let mut lines: Vec<(i32, BlockKind)> = Vec::new();
     for (index, block) in body.blocks.iter().enumerate() {
         if index > 0 {
             buffer.insert(&mut at, "\n");
         }
-        let kind = if index == 0 { here } else { block.kind };
+        let kind = if index == 0 && !empty { here } else { block.kind };
         lines.push((at.line(), kind));
         insert_spans(buffer, &mut at, &block.spans, kind);
     }
@@ -481,7 +490,8 @@ pub fn insert(buffer: &gtk::TextBuffer, body: &RichBody) {
         lines.first().map_or(0, |l| l.0),
         lines.last().map_or(0, |l| l.0),
     );
-    for (line, kind) in lines.into_iter().skip(1) {
+    let skip = if empty { 0 } else { 1 };
+    for (line, kind) in lines.into_iter().skip(skip) {
         set_kind(buffer, line, kind);
     }
     renumber(buffer, first, last);
