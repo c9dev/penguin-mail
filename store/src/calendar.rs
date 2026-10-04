@@ -292,6 +292,24 @@ pub fn remove_events(conn: &Connection, account_id: AccountId, calendar: &str, i
     Ok(())
 }
 
+/// Drops the changed occurrences of `series` on `calendar` whose ids are
+/// not in `keep`, except one a queued change still owns.
+pub fn keep_occurrences(
+    conn: &Connection,
+    account_id: AccountId,
+    calendar: &str,
+    series: &str,
+    keep: &[String],
+) -> Result<()> {
+    let keep = serde_json::to_string(keep).unwrap_or_else(|_| "[]".to_string());
+    conn.execute(
+        "DELETE FROM events WHERE account_id = ?1 AND calendar = ?2 AND series = ?3 AND pending = 0 \
+         AND id NOT IN (SELECT value FROM json_each(?4))",
+        params![account_id, calendar, series, keep],
+    )?;
+    Ok(())
+}
+
 /// The rows `set_my_answer` changes: event `id`, and every other row of
 /// the account that shares its uid, such as a moved occurrence stored
 /// apart from its series. An empty uid matches nothing but the event.
@@ -2242,6 +2260,29 @@ mod tests {
         enqueue(&conn, id, ChangeKind::Create, &lunch).unwrap();
         let ids = pending_ids(&conn, id, "primary").unwrap();
         assert_eq!(ids, HashSet::from(["lunch".to_string()]));
+    }
+
+    /// A series handed back whole keeps the changed occurrences it still
+    /// has; one the organizer took back goes, and one a queued change owns
+    /// stays.
+    #[test]
+    fn keep_occurrences_drops_the_changed_occurrences_a_page_no_longer_gives() {
+        let (conn, id) = store();
+        let occurrence = |name: &str, pending: bool| Event {
+            series: Some("standup".into()),
+            pending,
+            ..event("primary", name, MONDAY, 1)
+        };
+        let rows = [
+            event("primary", "standup", MONDAY, 1),
+            occurrence("kept", false),
+            occurrence("taken-back", false),
+            occurrence("queued", true),
+        ];
+        save_events(&conn, id, &rows, 1).unwrap();
+        keep_occurrences(&conn, id, "primary", "standup", &["kept".to_string()]).unwrap();
+        let held = |name: &str| super::event(&conn, id, "primary", name).unwrap().is_some();
+        assert_eq!([held("standup"), held("kept"), held("taken-back"), held("queued")], [true, true, false, true]);
     }
 
     /// A page-at-a-time read marks each row

@@ -23,6 +23,7 @@ mod ops;
 pub mod outbox;
 pub mod passwords;
 pub mod raw_cache;
+pub mod rules;
 pub mod sign_in;
 pub mod services;
 mod settings;

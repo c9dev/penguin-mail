@@ -17,11 +17,13 @@ packaging-flatpak = ["mailrs-gmail/packaging-flatpak"]
 [dependencies]
 # Only the fake encodes or decodes base64 outside a test.
 base64 = { workspace = true, optional = true }
+mailrs-dav.workspace = true
 mailrs-discover.workspace = true
 mailrs-domain.workspace = true
 mailrs-gmail.workspace = true
 mailrs-imap.workspace = true
 mailrs-mime.workspace = true
+mailrs-sieve.workspace = true
 mailrs-store.workspace = true
 async-channel.workspace = true
 chrono.workspace = true
