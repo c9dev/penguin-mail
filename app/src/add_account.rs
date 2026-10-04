@@ -417,7 +417,7 @@ pub fn found_line(proposal: &Proposal) -> String {
             "Penguin Mail's own list knows this provider. Nothing has left this computer.",
         ),
         Some(Source::Mx) => gettext("Found by its mail servers. Nothing else was asked."),
-        Some(Source::Autoconfig | Source::MxAutoconfig) => {
+        Some(Source::Autoconfig | Source::MxAutoconfig | Source::WellKnown) => {
             gettext("Found in the domain's own settings.")
         }
         Some(Source::Ispdb) => gettext("Found in Mozilla's provider list."),

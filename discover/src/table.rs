@@ -44,6 +44,51 @@ pub(crate) struct Entry {
     pub(crate) documentation_url: Option<String>,
     #[serde(default)]
     pub(crate) files_sent_mail: bool,
+    pub(crate) caldav: Option<String>,
+    pub(crate) carddav: Option<String>,
+    pub(crate) sieve: Option<SieveEntry>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct SieveEntry {
+    pub(crate) host: String,
+    pub(crate) port: u16,
+}
+
+/// Where a provider's calendar, contacts and Sieve servers are, as the
+/// table knows them.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct ProviderServices {
+    pub caldav: Option<String>,
+    pub carddav: Option<String>,
+    pub sieve: Option<(String, u16)>,
+}
+
+/// The table's servers beside mail for the account whose IMAP server is
+/// `imap_host`: the entry whose IMAP host it is, or whose domain list
+/// holds it. The host tells GMX's two families and each Zoho data center
+/// apart, which the provider's name cannot. A host the table does not
+/// know gets nothing, and the caller asks the domain instead.
+pub fn services_of(imap_host: &str) -> ProviderServices {
+    let host = imap_host.trim_end_matches('.').to_ascii_lowercase();
+    Table::built_in()
+        .entries
+        .iter()
+        .find(|entry| {
+            entry.kind == Kind::Imap
+                && (entry
+                    .imap
+                    .as_ref()
+                    .is_some_and(|server| server.host == host)
+                    || entry.domains.contains(&host))
+        })
+        .map(|entry| ProviderServices {
+            caldav: entry.caldav.clone(),
+            carddav: entry.carddav.clone(),
+            sieve: entry.sieve.as_ref().map(|s| (s.host.clone(), s.port)),
+        })
+        .unwrap_or_default()
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
@@ -498,6 +543,51 @@ mod tests {
                 .found(Source::Table, false);
             assert_eq!(found.candidates[0].imap.host, host, "{domain}");
         }
+    }
+
+    #[test]
+    fn every_provider_with_imap_says_where_its_calendar_is_or_that_it_has_none() {
+        let fastmail = services_of("imap.fastmail.com");
+        assert_eq!(
+            fastmail.caldav.as_deref(),
+            Some("https://caldav.fastmail.com/")
+        );
+        assert_eq!(fastmail.sieve, None);
+        assert_eq!(
+            services_of("imap.mailbox.org").sieve,
+            Some(("imap.mailbox.org".to_string(), 4190))
+        );
+        assert_eq!(
+            services_of("imap.mail.me.com").carddav.as_deref(),
+            Some("https://contacts.icloud.com/")
+        );
+        assert_eq!(
+            services_of("imap.aol.com").caldav.as_deref(),
+            Some("https://caldav.aol.com/")
+        );
+        assert_eq!(services_of("imap.example.org"), ProviderServices::default());
+    }
+
+    #[test]
+    fn the_imap_host_picks_the_family_and_the_data_center() {
+        let net = services_of("imap.gmx.net");
+        let com = services_of("imap.gmx.com");
+        assert_eq!(net.caldav.as_deref(), Some("https://caldav.gmx.net/"));
+        assert_eq!(com.caldav.as_deref(), Some("https://caldav.gmx.com/"));
+        assert_eq!(
+            services_of("imap.zoho.eu").carddav.as_deref(),
+            Some("https://contacts.zoho.eu/carddav")
+        );
+        assert_eq!(
+            services_of("imap.zoho.com.au").caldav.as_deref(),
+            Some("https://calendar.zoho.com.au/")
+        );
+        // A listed domain counts too, and a name the table lacks counts for nothing.
+        assert_eq!(
+            services_of("fastmail.com"),
+            services_of("imap.fastmail.com")
+        );
+        assert_eq!(services_of("Fastmail"), ProviderServices::default());
     }
 
     #[test]
