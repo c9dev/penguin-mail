@@ -44,6 +44,38 @@ pub(crate) struct Entry {
     pub(crate) documentation_url: Option<String>,
     #[serde(default)]
     pub(crate) files_sent_mail: bool,
+    pub(crate) caldav: Option<String>,
+    pub(crate) carddav: Option<String>,
+    pub(crate) sieve: Option<SieveEntry>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct SieveEntry {
+    pub(crate) host: String,
+    pub(crate) port: u16,
+}
+
+/// Where a provider's calendar, contacts and Sieve servers are, as the
+/// table knows them.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct ProviderServices {
+    pub caldav: Option<String>,
+    pub carddav: Option<String>,
+    pub sieve: Option<(String, u16)>,
+}
+
+/// The table's servers beside mail for the IMAP provider called `name`.
+pub fn services_of(name: &str) -> ProviderServices {
+    let resolved = resolved_provider_name(name);
+    Table::built_in()
+        .by_name(&resolved)
+        .map(|entry| ProviderServices {
+            caldav: entry.caldav.clone(),
+            carddav: entry.carddav.clone(),
+            sieve: entry.sieve.as_ref().map(|s| (s.host.clone(), s.port)),
+        })
+        .unwrap_or_default()
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
@@ -501,6 +533,29 @@ mod tests {
     }
 
     #[test]
+    fn every_provider_with_imap_says_where_its_calendar_is_or_that_it_has_none() {
+        let fastmail = services_of("Fastmail");
+        assert_eq!(
+            fastmail.caldav.as_deref(),
+            Some("https://caldav.fastmail.com/")
+        );
+        assert_eq!(fastmail.sieve, None);
+        assert_eq!(
+            services_of("mailbox.org").sieve,
+            Some(("imap.mailbox.org".to_string(), 4190))
+        );
+        assert_eq!(
+            services_of("iCloud Mail").carddav.as_deref(),
+            Some("https://contacts.icloud.com/")
+        );
+        assert_eq!(
+            services_of("AOL Mail").caldav.as_deref(),
+            Some("https://caldav.aol.com/")
+        );
+        assert_eq!(services_of("No Such Mail"), ProviderServices::default());
+    }
+
+    #[test]
     fn the_built_in_table_is_the_file() {
         assert_eq!(Table::built_in().entries.len(), table().entries.len());
     }
@@ -543,6 +598,18 @@ mod tests {
             let own = entry.info();
             assert_eq!(first.files_sent_mail, own.files_sent_mail, "{}", entry.id);
             assert_eq!(first.password, own.password, "{}", entry.id);
+            // Zoho's data centers and GMX's two families differ by design.
+            if !entry.id.starts_with("zoho") && !entry.id.starts_with("gmx") {
+                let first = table.by_name(&entry.name).expect("the entry itself");
+                assert_eq!(first.caldav, entry.caldav, "{}", entry.id);
+                assert_eq!(first.carddav, entry.carddav, "{}", entry.id);
+                assert_eq!(
+                    first.sieve.as_ref().map(|s| (&s.host, s.port)),
+                    entry.sieve.as_ref().map(|s| (&s.host, s.port)),
+                    "{}",
+                    entry.id
+                );
+            }
         }
     }
 }

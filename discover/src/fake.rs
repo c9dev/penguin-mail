@@ -12,6 +12,8 @@ pub enum Request {
     Mx(String),
     Srv(String),
     Get(String),
+    Txt(String),
+    Locate(String),
     Reaches(String, u16, Security),
 }
 
@@ -19,7 +21,11 @@ impl Request {
     /// The DNS name, URL or host the request names.
     pub fn name(&self) -> &str {
         match self {
-            Request::Mx(name) | Request::Srv(name) | Request::Get(name) => name,
+            Request::Mx(name)
+            | Request::Srv(name)
+            | Request::Get(name)
+            | Request::Txt(name)
+            | Request::Locate(name) => name,
             Request::Reaches(host, _, _) => host,
         }
     }
@@ -34,6 +40,8 @@ pub struct FakeNet {
     mx: HashMap<String, Vec<String>>,
     srv: HashMap<String, Vec<SrvRecord>>,
     pages: HashMap<String, String>,
+    txt: HashMap<String, Vec<String>>,
+    located: HashMap<String, String>,
     servers: HashSet<(String, u16, Security)>,
     delays: HashMap<String, Duration>,
     requests: Mutex<Vec<Request>>,
@@ -49,6 +57,19 @@ impl FakeNet {
 
     pub fn answer_srv(mut self, name: &str, records: Vec<SrvRecord>) -> FakeNet {
         self.srv.insert(name.into(), records);
+        self
+    }
+
+    /// `name` has these TXT strings.
+    pub fn answer_txt(mut self, name: &str, strings: &[&str]) -> FakeNet {
+        self.txt
+            .insert(name.into(), strings.iter().map(|s| s.to_string()).collect());
+        self
+    }
+
+    /// `url` redirects to `target`, where a server answers.
+    pub fn locate_at(mut self, url: &str, target: &str) -> FakeNet {
+        self.located.insert(url.into(), target.into());
         self
     }
 
@@ -98,6 +119,16 @@ impl Net for FakeNet {
     async fn srv(&self, name: &str) -> Vec<SrvRecord> {
         self.record(Request::Srv(name.into())).await;
         self.srv.get(name).cloned().unwrap_or_default()
+    }
+
+    async fn txt(&self, name: &str) -> Vec<String> {
+        self.record(Request::Txt(name.into())).await;
+        self.txt.get(name).cloned().unwrap_or_default()
+    }
+
+    async fn locate(&self, url: &str) -> Option<String> {
+        self.record(Request::Locate(url.into())).await;
+        self.located.get(url).cloned()
     }
 
     async fn get(&self, url: &str) -> Option<String> {

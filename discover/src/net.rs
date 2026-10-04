@@ -24,6 +24,21 @@ pub trait Net: Send + Sync {
     /// The SRV records at `name`, as the server gave them, targets as
     /// they came (a target of `.` means the service is not offered).
     fn srv(&self, name: &str) -> impl Future<Output = Vec<SrvRecord>> + Send;
+    /// The TXT strings at `name`, each record's strings joined. Empty when
+    /// there are none. Answers nothing unless an implementation says
+    /// otherwise, so a network that asks nobody need not.
+    fn txt(&self, name: &str) -> impl Future<Output = Vec<String>> + Send {
+        let _ = name;
+        async { Vec::new() }
+    }
+    /// Where an HTTPS URL leads once its redirects are followed, when the
+    /// server there answers anything but "not found" or a server error: a
+    /// well-known DAV URL answers 401 at its target, which still says the
+    /// service is there. No credentials go with it.
+    fn locate(&self, url: &str) -> impl Future<Output = Option<String>> + Send {
+        let _ = url;
+        async { None }
+    }
     /// The body of an HTTPS page, or `None` for anything but a success.
     fn get(&self, url: &str) -> impl Future<Output = Option<String>> + Send;
     /// Whether a connection to host:port reaches TLS with a valid
@@ -149,6 +164,31 @@ impl Net for RealNet {
                 _ => None,
             })
             .collect()
+    }
+
+    async fn txt(&self, name: &str) -> Vec<String> {
+        let Ok(lookup) = self.resolver.txt_lookup(rooted(name)).await else {
+            return Vec::new();
+        };
+        lookup
+            .answers()
+            .iter()
+            .filter_map(|record| match &record.data {
+                RData::TXT(txt) => Some(
+                    txt.txt_data
+                        .iter()
+                        .map(|part| String::from_utf8_lossy(part))
+                        .collect::<String>(),
+                ),
+                _ => None,
+            })
+            .collect()
+    }
+
+    async fn locate(&self, url: &str) -> Option<String> {
+        let response = self.http.get(url).send().await.ok()?;
+        let status = response.status().as_u16();
+        (status != 404 && status != 410 && status < 500).then(|| response.url().to_string())
     }
 
     async fn get(&self, url: &str) -> Option<String> {
