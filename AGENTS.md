@@ -63,7 +63,10 @@ Installing for the owner: `NO_AUTOSTART=1 scripts/install.sh`.
 - **Docker tests** (`testmail/`, `imap/tests/dovecot*.rs`,
   `sync/tests/dovecot.rs`) start Dovecot and Mailpit and skip when Docker
   is missing or cannot start. `PENGUIN_MAIL_REQUIRE_IMAP=1` turns the skip
-  into a failure; CI's `imap` job sets it and the gate does not. The
+  into a failure; CI's `imap` job sets it and the gate does not. The tests
+  never pull an image (`docker create --pull never`); run
+  `scripts/test-images.sh` once on a new computer. Radicale serves the
+  CalDAV and CardDAV tests, and `Profile::Sieve` Dovecot's ManageSieve. The
   files under `imap/tests/` and `sync/tests/` hold one test each, because
   that test points `SSL_CERT_FILE` at a root made for the run: add a step
   to it rather than a second test. The sync suite spawns its body on a
