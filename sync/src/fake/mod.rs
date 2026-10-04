@@ -1397,6 +1397,7 @@ impl GmailApi for FakeGmail {
                         removed: Vec::new(),
                         next_page: more.then(|| next.to_string()),
                         next_sync: (!more).then_some(end),
+                        whole_series: Vec::new(),
                     })
                 }
             }

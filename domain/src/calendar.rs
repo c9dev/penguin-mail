@@ -567,6 +567,12 @@ pub struct EventPage {
     pub next_page: Option<String>,
     /// On the last page, the token for the next read.
     pub next_sync: Option<String>,
+    /// Series this page gives whole: the series and every changed
+    /// occurrence it still has. The copy drops any other changed
+    /// occurrence it holds of them, which is how an occurrence the
+    /// organizer took back leaves a CalDAV calendar, since one resource
+    /// holds the series. Google names each removal and leaves this empty.
+    pub whole_series: Vec<String>,
 }
 
 /// The starts and ends of `event`'s occurrences that overlap `from` to
