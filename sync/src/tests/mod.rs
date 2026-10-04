@@ -86,6 +86,13 @@ pub(crate) struct Harness {
 }
 
 pub(crate) async fn harness() -> Harness {
+    harness_with(AccountServices::fake).await
+}
+
+/// `harness`, with services `services` builds over the fake: a Gmail
+/// whose mail service claims other capabilities, for a test of how the
+/// engine meets a server unlike Gmail.
+pub(crate) async fn harness_with(services: impl FnOnce(Arc<FakeGmail>) -> AccountServices) -> Harness {
     let dir = tempfile::tempdir().unwrap();
     let db = Db::open(&dir.path().join("mail.db")).unwrap();
     let account_id = db
@@ -116,7 +123,7 @@ pub(crate) async fn harness() -> Harness {
     let sync = Arc::new(
         AccountSync::new(
             account_id,
-            AccountServices::fake(Arc::clone(&fake)),
+            services(Arc::clone(&fake)),
             db.clone(),
             sender.clone(),
         )

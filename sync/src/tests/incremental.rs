@@ -1,9 +1,12 @@
 use mailrs_domain::{ChangeEvent, MailSet, Role};
 use mailrs_gmail::GmailError;
 
-use super::harness;
-use crate::fake::meta;
+use std::sync::Arc;
+
+use super::{harness, harness_with};
+use crate::fake::{FakeGmail, meta};
 use crate::now_millis;
+use crate::{AccountServices, MailCapabilities};
 
 const DAY: i64 = 24 * 60 * 60 * 1000;
 
@@ -63,6 +66,43 @@ async fn old_mail_moved_into_the_inbox_is_fetched() {
     h.fake.remote_relabel("old", &["INBOX"], &[]);
     h.sync.incremental().await.unwrap();
     assert_eq!(h.threads(MailSet::Role(Role::Inbox)).await, ["told"]);
+    assert!(
+        !h.drain().iter().any(|e| matches!(e, ChangeEvent::NewMail { .. })),
+        "a feed that does not restate announces no old mail"
+    );
+}
+
+/// Gmail's services, claiming a change feed that restates each changed
+/// message whole, as Graph's delta queries do.
+fn restating(fake: Arc<FakeGmail>) -> AccountServices {
+    let caps = MailCapabilities {
+        restates: true,
+        ..AccountServices::fake(Arc::clone(&fake)).capabilities()
+    };
+    AccountServices::fake_with_capabilities(fake, caps)
+}
+
+#[tokio::test]
+async fn a_restating_feed_stores_mail_it_names_first() {
+    let h = harness_with(restating).await;
+    h.bootstrap_all().await;
+    h.fake.seed(meta("old", "told", now_millis() - 90 * DAY, &[]));
+    h.fake.remote_relabel("old", &["Label_1"], &[]);
+    h.sync.incremental().await.unwrap();
+    assert_eq!(h.labels_of("old").await, ["Label_1"]);
+}
+
+#[tokio::test]
+async fn a_restating_feed_announces_new_inbox_mail() {
+    let h = harness_with(restating).await;
+    h.bootstrap_all().await;
+    h.fake.seed(meta("new", "tnew", now_millis(), &["UNREAD"]));
+    h.fake.remote_relabel("new", &["INBOX"], &[]);
+    h.sync.incremental().await.unwrap();
+    assert!(h.drain().contains(&ChangeEvent::NewMail {
+        account_id: 1,
+        message_ids: vec!["new".into()]
+    }));
 }
 
 #[tokio::test]

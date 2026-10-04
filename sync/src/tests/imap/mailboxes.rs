@@ -27,6 +27,10 @@ fn an_imap_account_files_mail_in_folders_and_threads_it_here() {
             // stored.
             keywords: &["$seen", "$flagged", "$answered", "$draft"],
             native_search: false,
+            renames: true,
+            restates: false,
+            tags: false,
+            focus: false,
         }
     );
 }
@@ -46,6 +50,8 @@ fn an_imap_account_offers_mail_alone() {
             rules: false,
             auto_reply: false,
             search: true,
+            tags: false,
+            focused: false,
             event_files: false,
             moves_events: false,
             calendar_list: false,

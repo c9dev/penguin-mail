@@ -66,6 +66,10 @@ const GMAIL: MailCapabilities = MailCapabilities {
     keywords: &[keyword::SEEN, keyword::FLAGGED, keyword::MUTED],
     native_search: true,
     batch_limit: mailrs_gmail::BATCH_LIMIT,
+    renames: false,
+    restates: false,
+    tags: false,
+    focus: false,
 };
 
 impl<G> Google<G> {
@@ -836,6 +840,10 @@ mod tests {
                 keywords: &["$seen", "$flagged", "$muted"],
                 native_search: true,
                 batch_limit: 1000,
+                renames: false,
+                restates: false,
+                tags: false,
+                focus: false,
             }
         );
     }

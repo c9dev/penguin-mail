@@ -12,7 +12,7 @@ use mailrs_store::{labels, mailboxes, messages, reminders, remote_refs, threads}
 
 use super::{AccountSync, FETCH_CONCURRENCY};
 use crate::ops::{
-    Roles, drop_protected, local_changes, moved_out_of, ops_for, reverse_changes, source_mailbox,
+    Roles, Tags, drop_protected, local_changes, moved_out_of, ops_for, reverse_changes, source_mailbox,
     split_keywords,
 };
 use crate::services::{Relocated, Unapplied};
@@ -197,6 +197,16 @@ impl AccountSync {
             .await?)
     }
 
+    /// The account's tags, read from the store, where the last mailbox
+    /// listing put them. A label account keeps none.
+    async fn tags(&self) -> Result<Tags, SyncError> {
+        if !self.services.mail.capabilities().tags {
+            return Ok(Tags::new());
+        }
+        let account_id = self.account_id;
+        Ok(self.db.read(move |c| labels::tag_ids(c, account_id)).await?)
+    }
+
     /// Applies `action` to every target at once, as the operations
     /// `ops_for` makes of it for this account. `from` is the place the
     /// person picked the mail from, if one; an action that takes mail out
@@ -209,8 +219,9 @@ impl AccountSync {
     ) -> Result<Vec<Applied>, SyncError> {
         let mail = &self.services.mail;
         let set_of = |id: &str| mail.set_of(id);
-        let ops = ops_for(action, &mail.capabilities(), &self.roles(), set_of)?;
-        let from = moved_out_of(action, set_of).or_else(|| from.cloned());
+        let tags = self.tags().await?;
+        let ops = ops_for(action, &mail.capabilities(), &self.roles(), &tags, set_of)?;
+        let from = moved_out_of(action, &tags, set_of).or_else(|| from.cloned());
         let what = self.describe_named(action).await;
         self.change_all(targets, &ops, &what, from.as_ref()).await
     }
@@ -297,9 +308,10 @@ impl AccountSync {
 
         let stored = self.keywords_stored(&wanted, ops).await;
         let (to_server, kept_here) = split_keywords(ops, &stored);
+        let tags = self.tags().await?;
         let (ids, applied) = {
             let (wanted, ops, roles) = (wanted.clone(), ops.to_vec(), self.roles());
-            let from = from.and_then(|set| source_mailbox(set, &roles));
+            let from = from.and_then(|set| source_mailbox(set, &roles, &tags));
             self.db
                 .write(move |c| {
                     let mut ids = Vec::new();
@@ -318,13 +330,20 @@ impl AccountSync {
                         }
                     }
                     let held = messages::memberships_of(c, account_id, &ids)?;
-                    let ids =
-                        drop_protected(ids, &whole_thread, &held, &ops, &roles, from.as_deref());
+                    let ids = drop_protected(
+                        ids,
+                        &whole_thread,
+                        &held,
+                        &ops,
+                        &roles,
+                        &tags,
+                        from.as_deref(),
+                    );
                     let none = Memberships::default();
                     let changes: Vec<Change> = ids
                         .iter()
                         .flat_map(|id| {
-                            local_changes(id, held.get(id).unwrap_or(&none), &ops, &roles)
+                            local_changes(id, held.get(id).unwrap_or(&none), &ops, &roles, &tags)
                         })
                         .collect();
                     let applied = messages::apply(c, account_id, &changes)?.applied;
@@ -524,6 +543,7 @@ impl AccountSync {
             .filter_map(|r| Some((by_name.get(r.from.as_str())?.to_string(), r.to)))
             .collect();
         let account_id = self.account_id;
+        let tags = self.tags().await?;
         let (touched, unknown) = self
             .db
             .write(move |c| {
@@ -545,6 +565,7 @@ impl AccountSync {
                         held.get(id).unwrap_or(&none),
                         &[MailOp::MoveToMailbox(at.mailbox.clone())],
                         &Roles::new(),
+                        &tags,
                     ));
                 }
                 let touched = messages::apply(c, account_id, &changes)?.threads;

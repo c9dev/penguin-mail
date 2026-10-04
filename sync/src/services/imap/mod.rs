@@ -323,6 +323,10 @@ impl<I: ImapApi, S: Submit> MailBackend for Imap<I, S> {
             batch_limit: BATCH_LIMIT,
             keywords: self.stored_keywords("INBOX"),
             native_search: false,
+            renames: true,
+            restates: false,
+            tags: false,
+            focus: false,
         }
     }
 

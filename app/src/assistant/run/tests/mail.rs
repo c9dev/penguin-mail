@@ -196,6 +196,7 @@ async fn folder_account() -> Harness {
     Harness::with_services(|gmail, services| {
         let caps = MailCapabilities {
             labels: false,
+            renames: true,
             ..services.capabilities()
         };
         *services = AccountServices::fake_with_capabilities(Arc::clone(gmail), caps);

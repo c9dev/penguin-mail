@@ -16,9 +16,10 @@ use crate::{Found, MailBackend, RemoteChange, SyncError, Want};
 
 impl AccountSync {
     /// Whether a message on this account's server takes a new name when
-    /// it moves, as on a folder server, whose names are mailbox and UID.
+    /// it moves, as on IMAP, whose names are mailbox and UID. Gmail and
+    /// Graph (asked for immutable ids) keep one name for good.
     pub(super) fn renames(&self) -> bool {
-        !self.services.mail.capabilities().labels
+        self.services.mail.capabilities().renames
     }
 
     /// The server's name for each of `ids`, in the same order. An id

@@ -49,7 +49,7 @@ fn triage_actions_parse_and_map_to_operations() {
         .collect();
     let ops = |action: &TriageAction| {
         let caps = crate::MailBackend::capabilities(&gmail);
-        crate::ops::ops_for(action, &caps, &roles, |id| crate::MailBackend::set_of(&gmail, id))
+        crate::ops::ops_for(action, &caps, &roles, &crate::ops::Tags::new(), |id| crate::MailBackend::set_of(&gmail, id))
             .unwrap()
     };
     assert_eq!(
