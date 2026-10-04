@@ -161,6 +161,7 @@ impl RuleForm {
             id: None,
             criteria,
             action,
+            ..Filter::default()
         }
     }
 }
@@ -380,6 +381,7 @@ mod tests {
                 remove: vec![MailSet::Role(Role::Inbox)],
                 forward: Some("me@example.org".into()),
             },
+            ..Filter::default()
         }
     }
 

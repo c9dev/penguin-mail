@@ -2,7 +2,7 @@ mod common;
 
 use std::collections::HashSet;
 
-use common::{LabelChange, db, labels_of, meta, store};
+use common::{LabelChange, bare_db, db, labels_of, meta, store};
 use mailrs_domain::{Applied, LabelKind, MailSet, MailboxKind, Membership, RemoteMailbox, Role};
 use mailrs_store::messages::Change;
 use mailrs_store::threads::ThreadFilter;
@@ -41,6 +41,29 @@ fn labels_are_replaced_wholesale_and_listed_system_first() {
     let inbox = listed("INBOX", "INBOX", MailboxKind::System, None);
     mailboxes::replace_listed(&conn, id, &[inbox]).unwrap();
     assert_eq!(labels::list_labels(&conn, id).unwrap().len(), 1);
+}
+
+#[test]
+fn a_tag_lists_as_a_tag_and_only_tags_are_tag_ids() {
+    let (conn, id) = bare_db();
+    mailboxes::replace_listed(
+        &conn,
+        id,
+        &[
+            listed("AAMk-trips", "Trips", MailboxKind::Folder, None),
+            listed("category:Red", "Red", MailboxKind::Tag, Some("#e81123")),
+        ],
+    )
+    .unwrap();
+    let kinds: Vec<(String, LabelKind)> = labels::list_labels(&conn, id)
+        .unwrap()
+        .into_iter()
+        .map(|l| (l.id, l.kind))
+        .collect();
+    assert!(kinds.contains(&("category:Red".to_string(), LabelKind::Tag)));
+    assert!(kinds.contains(&("AAMk-trips".to_string(), LabelKind::User)));
+    let tags = labels::tag_ids(&conn, id).unwrap();
+    assert_eq!(tags.into_iter().collect::<Vec<_>>(), ["category:Red"]);
 }
 
 #[test]

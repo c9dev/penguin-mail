@@ -4,7 +4,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use mailrs_domain::{Address, Category, Filter, FilterAction, FilterCriteria, MailSet, MessageMeta};
+use mailrs_domain::{Address, Category, Filter, FilterAction, FilterCriteria, MailSet, MessageMeta, category};
 use mailrs_gmail::labels;
 use mailrs_store::unsubscribes::{self, How};
 
@@ -114,6 +114,7 @@ fn sorts(email: &str, label: &str) -> Filter {
             add: vec![MailSet::Category(label.into())],
             ..FilterAction::default()
         },
+        ..Filter::default()
     }
 }
 
@@ -163,6 +164,28 @@ async fn categorizing_a_sender_moves_their_mail_and_replaces_their_rule() {
     let new = rules.iter().find(|r| r.id != blocked.id).unwrap();
     assert_eq!(new.criteria.from.as_deref(), Some(shop));
     assert_eq!(new.action.add, [MailSet::Category("CATEGORY_PROMOTIONS".into())]);
+}
+
+#[tokio::test]
+async fn sorting_a_sender_into_focused_writes_a_rule_that_takes_other_off() {
+    let h = harness().await;
+    let shop = "shop@example.com";
+    h.fake.seed(from(shop, "a", "t1", "CATEGORY_UPDATES"));
+    h.bootstrap_all().await;
+    let rules = h.sync.services().rules.clone().expect("Gmail has rules");
+    rules
+        .create_filter(&sorts(shop, category::OTHER))
+        .await
+        .unwrap();
+
+    let done = actions(&h)
+        .categorize_sender(h.account_id, shop, None, Category::Focused)
+        .await;
+    assert!(matches!(done.sorted, Ok(Permitted::Done(()))));
+    let rules = h.fake.with(|s| s.filters.clone());
+    assert_eq!(rules.len(), 1, "the old Other rule was replaced: {rules:?}");
+    assert!(rules[0].action.add.is_empty());
+    assert_eq!(rules[0].action.remove, [MailSet::Category(category::OTHER.into())]);
 }
 
 #[tokio::test]

@@ -7,7 +7,7 @@
 use std::sync::Arc;
 
 use mailrs_domain::{
-    AccountId, Category, Filter, FilterAction, FilterCriteria, MailSet, Target, category,
+    AccountId, Category, Filter, FilterAction, FilterCriteria, MailSet, Target, category::Sorting,
 };
 use mailrs_store::threads::{self, ThreadFilter};
 
@@ -69,48 +69,43 @@ impl<A: Accounts> MailActions<A> {
             .into_iter()
             .map(|id| Target::thread(account_id, id))
             .collect();
-        let label = category.id();
+        let sorting = category.sorting();
         let relabel = TriageAction::Relabel {
-            add: vec![MailSet::Category(label.into())],
-            remove: category::IDS
-                .iter()
-                .filter(|c| **c != label)
-                .map(|c| MailSet::Category(c.to_string()))
-                .collect(),
+            add: marks(sorting.gains.as_slice()),
+            remove: marks(&sorting.loses),
         };
         let moved = self
             .run(&targets, MailAction::Triage(relabel), History::Skip)
             .await;
-        let sorted = self.sort_future_mail(account_id, email, label).await;
+        let sorted = self.sort_future_mail(account_id, email, &sorting).await;
         Categorized { moved, sorted }
     }
 
     /// Replaces any rule that puts `email`'s mail in a category with one
-    /// that adds `category`. Account settings keep no state of their own,
+    /// that adds the category the slice gains, or for a slice that gains
+    /// none takes the ones it loses off. Account settings keep no state of their own,
     /// so this borrows the same accounts and store rather than holding a
     /// second handle.
     async fn sort_future_mail(
         &self,
         account_id: AccountId,
         email: &str,
-        category: &str,
+        sorting: &Sorting,
     ) -> Result<Permitted<()>, SyncError> {
         let settings = AccountSettings::new(Arc::clone(&self.accounts), self.db.clone());
         let Permitted::Done(rules) = settings.rules(account_id).await? else {
             return Ok(Permitted::NeedsPermission);
         };
         for old in rules {
-            let sorts_sender = old
-                .criteria
-                .from
-                .as_deref()
-                .is_some_and(|f| f.eq_ignore_ascii_case(email))
-                && !old.action.add.is_empty()
+            let named: Vec<&MailSet> = old.action.add.iter().chain(&old.action.remove).collect();
+            let sorts_sender = !old.read_only
                 && old
-                    .action
-                    .add
-                    .iter()
-                    .all(|s| matches!(s, MailSet::Category(_)));
+                    .criteria
+                    .from
+                    .as_deref()
+                    .is_some_and(|f| f.eq_ignore_ascii_case(email))
+                && !named.is_empty()
+                && named.iter().all(|s| matches!(s, MailSet::Category(_)));
             if let (true, Some(id)) = (sorts_sender, old.id.as_deref())
                 && settings.delete_rule(account_id, id).await? == Permitted::NeedsPermission
             {
@@ -124,13 +119,23 @@ impl<A: Accounts> MailActions<A> {
                 ..FilterCriteria::default()
             },
             action: FilterAction {
-                add: vec![MailSet::Category(category.into())],
-                ..FilterAction::default()
+                add: marks(sorting.gains.as_slice()),
+                remove: match sorting.gains {
+                    Some(_) => Vec::new(),
+                    None => marks(&sorting.loses),
+                },
+                forward: None,
             },
+            read_only: false,
         };
         Ok(match settings.add_rule(account_id, rule).await? {
             Permitted::Done(_) => Permitted::Done(()),
             Permitted::NeedsPermission => Permitted::NeedsPermission,
         })
     }
+}
+
+/// The categories `ids` name, as mail sets.
+fn marks(ids: &[&'static str]) -> Vec<MailSet> {
+    ids.iter().map(|c| MailSet::Category(c.to_string())).collect()
 }
