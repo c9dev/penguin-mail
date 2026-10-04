@@ -9198,11 +9198,11 @@ msgstr ""
 "O Google Calendar só oferece fora do escritório e tempo de concentração em "
 "algumas contas de trabalho e de escola ({reason})"
 
-#: sync/src/error.rs:135
+#: sync/src/error.rs:139
 msgid "Gmail keeps “{name}” for its own label. Choose another name."
 msgstr "O Gmail reserva “{name}” para uma etiqueta sua. Escolha outro nome."
 
-#: sync/src/error.rs:142
+#: sync/src/error.rs:146
 msgid ""
 "Google Calendar makes “{title}” itself, so only Google Calendar can change "
 "it."
@@ -9210,11 +9210,11 @@ msgstr ""
 "O Google Calendar cria “{title}” por si, por isso só o Google Calendar o "
 "pode alterar."
 
-#: sync/src/error.rs:150
+#: sync/src/error.rs:154
 msgid "{host} refused the request to unsubscribe (HTTP {status})"
 msgstr "{host} recusou o pedido para cancelar a subscrição (HTTP {status})"
 
-#: sync/src/error.rs:154
+#: sync/src/error.rs:158
 msgid "could not reach {host}"
 msgstr "não foi possível contactar {host}"
 
@@ -9379,7 +9379,8 @@ msgstr "O porta-chaves recusou: {reason}"
 
 #: sync/src/rules/forward.rs:18
 msgid "A rule on this computer forwarded the attached message from {address}."
-msgstr "Uma regra neste computador reencaminhou a mensagem em anexo de {address}."
+msgstr ""
+"Uma regra neste computador reencaminhou a mensagem em anexo de {address}."
 
 #: sync/src/services/imap/outgoing.rs:85
 msgid "The message names nobody to send it to."
@@ -9388,6 +9389,50 @@ msgstr "A mensagem não indica a quem a enviar."
 #: sync/src/services/local.rs:29
 msgid "This rule is read-only, so Penguin Mail leaves it as it is."
 msgstr "Esta regra é só de leitura, por isso o Penguin Mail deixa-a como está."
+
+#: sync/src/services/sieve.rs:81
+msgid ""
+"{provider} offers no encrypted connection for rules, so Penguin Mail does "
+"not send your password there."
+msgstr ""
+"{provider} não oferece uma ligação cifrada para regras, por isso o Penguin "
+"Mail não envia lá a sua palavra-passe."
+
+#: sync/src/services/sieve.rs:94
+msgid ""
+"{provider} cannot run this rule: its server lacks the Sieve extension "
+"“{extension}”."
+msgstr ""
+"{provider} não consegue executar esta regra: o servidor não tem a extensão "
+"Sieve “{extension}”."
+
+#: sync/src/services/sieve.rs:99
+msgid "The folder this rule files into is not on the server yet."
+msgstr "A pasta para onde esta regra arquiva ainda não está no servidor."
+
+#: sync/src/services/sieve.rs:102
+msgid "A rule on {provider} cannot keep mail out of Spam."
+msgstr "Uma regra em {provider} não consegue manter mensagens fora do Spam."
+
+#: sync/src/services/sieve.rs:106
+msgid "{provider} does not mark mail as important."
+msgstr "{provider} não marca mensagens como importantes."
+
+#: sync/src/services/sieve.rs:110
+msgid "A rule can file mail into one folder."
+msgstr "Uma regra pode arquivar mensagens numa só pasta."
+
+#: sync/src/services/sieve.rs:113
+msgid "Say which mail the rule is for"
+msgstr "Indique a que mensagens se aplica a regra"
+
+#: sync/src/services/sieve.rs:115
+msgid "Choose what the rule does"
+msgstr "Escolha o que a regra faz"
+
+#: sync/src/services/sieve.rs:182
+msgid "The rule is read-only."
+msgstr "A regra é só de leitura."
 
 #: sync/src/sign_in.rs:136
 msgid "{address} is already in Penguin Mail as a {provider} account."

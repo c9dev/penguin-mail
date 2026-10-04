@@ -8814,21 +8814,21 @@ msgid ""
 "school accounts ({reason})"
 msgstr ""
 
-#: sync/src/error.rs:135
+#: sync/src/error.rs:139
 msgid "Gmail keeps “{name}” for its own label. Choose another name."
 msgstr ""
 
-#: sync/src/error.rs:142
+#: sync/src/error.rs:146
 msgid ""
 "Google Calendar makes “{title}” itself, so only Google Calendar can change "
 "it."
 msgstr ""
 
-#: sync/src/error.rs:150
+#: sync/src/error.rs:154
 msgid "{host} refused the request to unsubscribe (HTTP {status})"
 msgstr ""
 
-#: sync/src/error.rs:154
+#: sync/src/error.rs:158
 msgid "could not reach {host}"
 msgstr ""
 
@@ -9000,6 +9000,46 @@ msgstr ""
 
 #: sync/src/services/local.rs:29
 msgid "This rule is read-only, so Penguin Mail leaves it as it is."
+msgstr ""
+
+#: sync/src/services/sieve.rs:81
+msgid ""
+"{provider} offers no encrypted connection for rules, so Penguin Mail does "
+"not send your password there."
+msgstr ""
+
+#: sync/src/services/sieve.rs:94
+msgid ""
+"{provider} cannot run this rule: its server lacks the Sieve extension "
+"“{extension}”."
+msgstr ""
+
+#: sync/src/services/sieve.rs:99
+msgid "The folder this rule files into is not on the server yet."
+msgstr ""
+
+#: sync/src/services/sieve.rs:102
+msgid "A rule on {provider} cannot keep mail out of Spam."
+msgstr ""
+
+#: sync/src/services/sieve.rs:106
+msgid "{provider} does not mark mail as important."
+msgstr ""
+
+#: sync/src/services/sieve.rs:110
+msgid "A rule can file mail into one folder."
+msgstr ""
+
+#: sync/src/services/sieve.rs:113
+msgid "Say which mail the rule is for"
+msgstr ""
+
+#: sync/src/services/sieve.rs:115
+msgid "Choose what the rule does"
+msgstr ""
+
+#: sync/src/services/sieve.rs:182
+msgid "The rule is read-only."
 msgstr ""
 
 #: sync/src/sign_in.rs:136
