@@ -102,6 +102,32 @@ async fn a_refresh_walks_every_page_and_downloads_each_photo_once() {
 }
 
 #[tokio::test]
+async fn an_empty_photo_is_recorded_as_none_and_not_asked_again() {
+    let h = harness().await;
+    let b = book(&h);
+    h.fake.with(|s| {
+        s.contacts = vec![person(
+            "people/c1",
+            "Mara",
+            &["mara@example.com"],
+            Some("p/empty"),
+        )];
+        s.photos.insert("p/empty".into(), Vec::new());
+    });
+    b.book.refresh(h.account_id).await.unwrap();
+    let account_id = h.account_id;
+    let missing = h
+        .db
+        .read(move |c| address_book::missing_photos(c, account_id))
+        .await
+        .unwrap();
+    assert!(
+        missing.is_empty(),
+        "the empty photo is recorded, so no refresh asks again"
+    );
+}
+
+#[tokio::test]
 async fn contacts_wait_for_the_permission() {
     let h = harness().await;
     let b = book(&h);
