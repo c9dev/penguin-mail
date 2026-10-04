@@ -34,7 +34,7 @@ pub use model::{
 };
 pub use oauth::{
     AccessToken, DELETE_SCOPE, DRIVE_FILE_SCOPE, GMAIL_SCOPE, Granted, LoopbackListener, OAuthClient, Pkce,
-    SETTINGS_SCOPE, SIGN_IN_SCOPES, Tokens, built_in_client, built_in_microsoft_client_id,
+    SETTINGS_SCOPE, SIGN_IN_SCOPES, Tokens, built_in_client,
     client_from, parse_redirect, random_token,
 };
 pub use people::{CONTACTS_SCOPE, CONTACTS_WRITE_SCOPE, ConnectionsPage, ContactFields, Person};

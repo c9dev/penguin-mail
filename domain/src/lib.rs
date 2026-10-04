@@ -15,6 +15,7 @@ pub mod mailbox;
 pub mod invitation;
 mod location;
 pub mod query;
+pub mod sign_in_page;
 pub mod smart;
 pub mod subject;
 mod target;
