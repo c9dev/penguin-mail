@@ -1043,17 +1043,32 @@ fn drive_file(title: &str, mime_type: &str, id: &str) -> mailrs_domain::calendar
     }
 }
 
-/// The Monday, midnight local, of the week `now` falls in.
+/// The Monday, midnight local, the demo's week of events hangs off: the
+/// Monday inside the week the calendar shows for `now`. The calendar's
+/// week can start on Sunday, and on a Sunday the ISO week's Monday lies
+/// in the week before the one on screen, which left that week empty.
 fn week_monday(now: EpochMillis) -> chrono::DateTime<chrono::Local> {
-    use chrono::{Datelike, TimeZone};
+    use chrono::TimeZone;
     let from = chrono::DateTime::from_timestamp_millis(now)
         .unwrap_or_default()
         .with_timezone(&chrono::Local);
-    let back = from.weekday().num_days_from_monday();
-    (from.date_naive() - chrono::Days::new(u64::from(back)))
+    let start = mailrs_domain::calendar::week::week_start(
+        mailrs_domain::calendar::week::WeekStart::Automatic,
+        crate::locale_time::first_weekday(),
+    );
+    demo_monday(from.date_naive(), start)
         .and_hms_opt(0, 0, 0)
         .and_then(|at| chrono::Local.from_local_datetime(&at).earliest())
         .unwrap_or(from)
+}
+
+/// The Monday inside the week that starts on `start` and holds `today`.
+fn demo_monday(today: chrono::NaiveDate, start: chrono::Weekday) -> chrono::NaiveDate {
+    use chrono::Datelike;
+    let into_week = (today.weekday().num_days_from_monday() + 7 - start.num_days_from_monday()) % 7;
+    let first = today - chrono::Days::new(u64::from(into_week));
+    let to_monday = (7 - start.num_days_from_monday()) % 7;
+    first + chrono::Days::new(u64::from(to_monday))
 }
 
 /// `hour:minute` local, `day_offset` days after `monday`.
@@ -2932,5 +2947,32 @@ mod tests {
                 "press@fernwood.example"
             ]
         );
+    }
+}
+
+#[cfg(test)]
+mod week_anchor_tests {
+    use super::demo_monday;
+    use chrono::{NaiveDate, Weekday};
+
+    fn day(m: u32, d: u32) -> NaiveDate {
+        NaiveDate::from_ymd_opt(2026, m, d).expect("a date")
+    }
+
+    #[test]
+    fn a_sunday_in_a_week_that_starts_on_sunday_hangs_off_the_next_monday() {
+        assert_eq!(demo_monday(day(10, 4), Weekday::Sun), day(10, 5));
+    }
+
+    #[test]
+    fn a_sunday_in_a_week_that_starts_on_monday_keeps_its_own_monday() {
+        assert_eq!(demo_monday(day(10, 4), Weekday::Mon), day(9, 28));
+    }
+
+    #[test]
+    fn a_midweek_day_hangs_off_its_monday_whatever_the_start() {
+        assert_eq!(demo_monday(day(9, 30), Weekday::Sun), day(9, 28));
+        assert_eq!(demo_monday(day(9, 30), Weekday::Mon), day(9, 28));
+        assert_eq!(demo_monday(day(10, 3), Weekday::Sat), day(10, 5));
     }
 }
