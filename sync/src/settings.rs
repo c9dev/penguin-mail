@@ -14,6 +14,7 @@ use mailrs_domain::{
 };
 use mailrs_gmail::LabelColor;
 use mailrs_store::Db;
+use mailrs_store::rule_changes::{self, RuleChange};
 
 use crate::actions::label_id;
 use crate::hidden::{self, HiddenAddress};
@@ -197,14 +198,7 @@ impl<A: Accounts> AccountSettings<A> {
             .as_deref()
             .ok_or(SyncError::Backend(BackendError::NotFound))?;
         let rules = self.rules_service(account_id)?;
-        let new = done!(rules.create_filter(&Filter { id: None, ..rule }).await);
-        Ok(Permitted::Done(match delete_filter(&rules, old_id).await {
-            Ok(()) => Replaced::Swapped(new),
-            Err(err) => Replaced::BothRun {
-                new,
-                error: err.into(),
-            },
-        }))
+        permitted(replace_via(&rules, &self.db, account_id, old_id, rule).await)
     }
 
     /// Sends mail from `email` straight to the Trash from now on.
@@ -406,11 +400,52 @@ fn permitted<T>(result: Result<T, impl Into<SyncError>>) -> Result<Permitted<T>,
 /// Deletes filter `id`. A filter the server no longer has counts as
 /// deleted, so a hidden address whose filter went elsewhere still turns
 /// off and on.
-async fn delete_filter(rules: &AnyRules, id: &str) -> Result<(), BackendError> {
+async fn delete_filter(rules: &impl RulesService, id: &str) -> Result<(), BackendError> {
     match rules.delete_filter(id).await {
         Ok(()) | Err(BackendError::NotFound) => Ok(()),
         Err(err) => Err(err),
     }
+}
+
+/// Puts `rule` in the place of `old_id` through `rules`. An adapter that
+/// replaces in place does it in one call. Gmail cannot, so the new rule
+/// is created first and the old one deleted after it. A ManageSieve
+/// server that does not answer queues the edit as a create and a delete,
+/// which the minute timer sends once it does.
+pub(crate) async fn replace_via(
+    rules: &impl RulesService,
+    db: &Db,
+    account_id: AccountId,
+    old_id: &str,
+    rule: Filter,
+) -> Result<Replaced, SyncError> {
+    let rule = Filter { id: None, ..rule };
+    match rules.replace_filter(old_id, &rule).await {
+        Ok(new) => return Ok(Replaced::Swapped(new)),
+        Err(BackendError::Unsupported) => {}
+        Err(err) if err.is_transient() && rules.queues_offline() => {
+            let new = Filter {
+                id: Some(format!("sieve-{:016x}", rand::random::<u64>())),
+                ..rule
+            };
+            let (create, delete) = (RuleChange::Create(new.clone()), RuleChange::Delete(old_id.to_string()));
+            db.write(move |c| {
+                rule_changes::enqueue(c, account_id, &create)?;
+                rule_changes::enqueue(c, account_id, &delete)
+            })
+            .await?;
+            return Ok(Replaced::Swapped(new));
+        }
+        Err(err) => return Err(err.into()),
+    }
+    let new = rules.create_filter(&rule).await?;
+    Ok(match delete_filter(rules, old_id).await {
+        Ok(()) => Replaced::Swapped(new),
+        Err(err) => Replaced::BothRun {
+            new,
+            error: err.into(),
+        },
+    })
 }
 
 /// The filter that files mail to `address` in the server mailbox `label_id`.

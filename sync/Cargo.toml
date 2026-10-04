@@ -46,6 +46,8 @@ tracing.workspace = true
 base64.workspace = true
 mail-parser.workspace = true
 mailrs-testmail.workspace = true
+# The in-memory ManageSieve server the Sieve adapter tests run against.
+mailrs-sieve = { workspace = true, features = ["fake"] }
 tempfile.workspace = true
 # Lets a test read what the code logged.
 tracing-subscriber.workspace = true
