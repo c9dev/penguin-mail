@@ -2,7 +2,7 @@
 //! the account's services, and the words for what an account lacks.
 
 use mailrs_domain::translate::{fill, gettext};
-use mailrs_domain::{Account, AccountId, Provider};
+use mailrs_domain::{Account, AccountId, Category, Provider};
 use mailrs_sync::{AccountServices, Mailbox, Missing, Offers, Withheld};
 
 /// What an account offers. An account that is not running yet has no
@@ -51,14 +51,73 @@ pub fn shows_categories(
         }
 }
 
+/// The switcher above an inbox: Gmail's categories, or Focused Inbox's two
+/// tabs.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum InboxBar {
+    Categories,
+    Focus,
+}
+
+/// Which switcher shows over `mailbox`, if any. Gmail's categories win
+/// wherever they apply, the unified inbox included; Focused and Other
+/// show over one account's inbox when that account sorts it so. The
+/// person's inbox categories preference (`on`) turns both off.
+pub fn inbox_bar(
+    on: bool,
+    mailbox: &Mailbox,
+    accounts: &[AccountId],
+    offers: impl Fn(AccountId) -> Offers,
+) -> Option<InboxBar> {
+    if shows_categories(on, mailbox, accounts, &offers) {
+        return Some(InboxBar::Categories);
+    }
+    let focus = on
+        && mailbox.takes_categories()
+        && mailbox.account().is_some_and(|id| offers(id).focused);
+    focus.then_some(InboxBar::Focus)
+}
+
+/// The slice to list once `bar` shows: the one on screen when the bar has
+/// it, else Focused for the tabs and `default` for Gmail's categories.
+pub fn category_after(bar: InboxBar, current: Category, default: Category) -> Category {
+    let focus = Category::FOCUS.contains(&current);
+    match (bar, focus) {
+        (InboxBar::Focus, true) | (InboxBar::Categories, false) => current,
+        (InboxBar::Focus, false) => Category::Focused,
+        (InboxBar::Categories, true) => default,
+    }
+}
+
+/// Whether Tags… is on: the mail reached comes from one account, and it
+/// keeps tags.
+pub fn tags_on(reached: &[AccountId], offers: impl Fn(AccountId) -> Offers) -> bool {
+    let mut accounts = reached.to_vec();
+    accounts.sort_unstable();
+    accounts.dedup();
+    matches!(accounts.as_slice(), [one] if offers(*one).tags)
+}
+
+/// The slices Categorize Sender offers for an account: Focused and Other
+/// where the inbox splits that way, else Gmail's four.
+pub fn categorize_choices(offers: Offers) -> Vec<Category> {
+    match offers.focused {
+        true => Category::FOCUS.to_vec(),
+        false => Category::ALL
+            .into_iter()
+            .filter(|c| *c != Category::All)
+            .collect(),
+    }
+}
+
 /// Whether the sender's own actions are on for an account that `offers`
 /// what it offers. Blocking a sender and sorting its mail into a category
 /// both leave a rule on the server for the mail still to come, so both
-/// need rules.
+/// need rules. A Microsoft account sorts senders into Focused and Other.
 pub fn sender_actions(offers: Offers) -> [(&'static str, bool); 2] {
     [
         ("block-sender", offers.rules),
-        ("categorize-sender", offers.categories && offers.rules),
+        ("categorize-sender", (offers.categories || offers.focused) && offers.rules),
     ]
 }
 
@@ -831,5 +890,57 @@ mod tests {
     fn a_mailbox_that_is_not_an_inbox_never_shows_the_bar() {
         let sent = Mailbox::Unified(Standard::Sent);
         assert!(!shows_categories(true, &sent, &[1], |_| Offers::EVERYTHING));
+    }
+
+    fn microsoft() -> Offers {
+        Offers {
+            labels: false,
+            categories: false,
+            tags: true,
+            focused: true,
+            ..Offers::EVERYTHING
+        }
+    }
+
+    use super::{InboxBar, categorize_choices, category_after, inbox_bar, tags_on};
+    use mailrs_domain::{AccountId, Category};
+
+    #[test]
+    fn one_microsoft_inbox_shows_focused_and_other() {
+        let offers = |id: AccountId| if id == 2 { microsoft() } else { Offers::EVERYTHING };
+        let outlook = Mailbox::Standard { account_id: 2, which: Standard::Inbox };
+        assert_eq!(inbox_bar(true, &outlook, &[1, 2], offers), Some(InboxBar::Focus));
+        assert_eq!(inbox_bar(false, &outlook, &[1, 2], offers), None, "the categories preference turns both off");
+        let gmail = Mailbox::Standard { account_id: 1, which: Standard::Inbox };
+        assert_eq!(inbox_bar(true, &gmail, &[1, 2], offers), Some(InboxBar::Categories));
+        // The unified inbox keeps Gmail's categories; Outlook mail there
+        // counts as Primary.
+        assert_eq!(inbox_bar(true, &Mailbox::Unified(Standard::Inbox), &[1, 2], offers), Some(InboxBar::Categories));
+        assert_eq!(inbox_bar(true, &Mailbox::Unified(Standard::Inbox), &[2], offers), None);
+    }
+
+    #[test]
+    fn switching_bars_moves_the_slice_to_one_the_bar_has() {
+        assert_eq!(category_after(InboxBar::Focus, Category::Social, Category::Primary), Category::Focused);
+        assert_eq!(category_after(InboxBar::Focus, Category::Other, Category::Primary), Category::Other);
+        assert_eq!(category_after(InboxBar::Categories, Category::Other, Category::Primary), Category::Primary);
+        assert_eq!(category_after(InboxBar::Categories, Category::Social, Category::Primary), Category::Social);
+    }
+
+    #[test]
+    fn tags_show_for_mail_from_one_account_that_keeps_them() {
+        let offers = |id: AccountId| if id == 2 { microsoft() } else { Offers::EVERYTHING };
+        assert!(tags_on(&[2, 2], offers));
+        assert!(!tags_on(&[1], offers));
+        assert!(!tags_on(&[1, 2], offers), "tags belong to one account");
+        assert!(!tags_on(&[], offers));
+    }
+
+    #[test]
+    fn categorize_sender_offers_focus_on_a_microsoft_account() {
+        assert_eq!(categorize_choices(microsoft()), [Category::Focused, Category::Other]);
+        assert_eq!(categorize_choices(Offers::EVERYTHING), [Category::Primary, Category::Updates, Category::Promotions, Category::Social]);
+        let on = sender_actions(microsoft());
+        assert!(on.contains(&("categorize-sender", true)));
     }
 }

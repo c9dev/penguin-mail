@@ -48,6 +48,22 @@ described keeps their words; one nobody described is given an empty
 description in `sanitize.rs`, so a reader passes over it rather than
 spelling a kilobyte of base64 out.
 
+## Labels, tags and the inbox tabs
+
+The Labels button and the Tags button sit in one capsule of the header
+bar. The Tags button shows only while the open mail comes from one
+account that keeps tags, and not in a conversation's own window. Its
+name is "Tags"; the Tags… item in the More menu and in the message menu
+opens the same picker, and `win.tag` has no key. The picker names each
+row like a label row, with the tag's name, and "{tag}, on this mail"
+when the tag is ticked, since the tick itself is drawn without a name.
+An account with no tags, or mail from several accounts, gets a line of
+words instead of rows.
+
+Focused and Other are the category bar's toggles, the same control as
+Gmail's categories, and each is named with its unread count, as in
+"Focused, 6 unread". Only one of the two bars shows over an inbox.
+
 ## The composer from the keyboard
 
 Tab goes From, To, Cc and Bcc while they show, Subject, the formatting

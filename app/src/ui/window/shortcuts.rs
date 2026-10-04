@@ -697,6 +697,7 @@ pub(super) enum Route {
 const MAIL_ONLY: &[&str] = &[
     "mute",
     "label",
+    "tag",
     "undo",
     "remind-custom",
     "remind-at",
@@ -803,6 +804,7 @@ pub(super) static MAIN_ACTIONS: &[(&str, WindowRun)] = &[
     ("shortcuts", |win| win.show_shortcuts()),
     ("mute", |win| win.toggle_mute()),
     ("label", |win| win.conversation.label_button.popup()),
+    ("tag", |win| win.conversation.tag_button.popup()),
     ("undo", |win| win.undo()),
     ("assistant", |win| win.toggle_assistant()),
     ("remind-custom", |win| win.remind_custom()),
@@ -879,6 +881,7 @@ pub(super) static MESSAGE_ACTIONS: &[(&str, MessageRun)] = &[
         win.organize_message(view, &Action::ToggleStar, id)
     }),
     ("message-label", |win, view, id| win.label_message(view, id)),
+    ("message-tag", |win, view, id| win.tag_message(view, id)),
     ("message-export", |win, view, id| {
         win.export_message(view, id)
     }),
@@ -973,6 +976,11 @@ impl MainWindow {
                 }
             });
             self.actions.add_action(&action);
+        }
+        // Tags… waits for mail from one account that keeps tags;
+        // `word_filing` turns it on.
+        if let Some(tag) = self.actions.lookup_action("tag").and_downcast::<gio::SimpleAction>() {
+            tag.set_enabled(false);
         }
         let view = Rc::clone(&self.conversation);
         self.install_view_actions(&self.actions, &view);
@@ -1179,7 +1187,7 @@ mod tests {
         for (name, _) in VIEW_ACTIONS {
             assert_eq!(route(Space::Mail, name), Route::Run, "{name}");
         }
-        for name in ["archive", "trash", "reply", "toggle-read", "print", "flag-color", "label"] {
+        for name in ["archive", "trash", "reply", "toggle-read", "print", "flag-color", "label", "tag"] {
             assert_eq!(route(Space::Calendar, name), Route::Skip, "{name}");
         }
     }
