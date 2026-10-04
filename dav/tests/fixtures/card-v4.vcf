@@ -1,0 +1,9 @@
+BEGIN:VCARD
+VERSION:4.0
+FN:Bruno Dias
+EMAIL;PREF=1:bruno@example.org
+EMAIL:b.dias@example.net
+PHOTO:https://dav.example.org/photos/bruno.jpg
+X-FOO;X-BAR=baz:kept
+UID:urn:uuid:4fbe8971-0bc3-424c-9c26-36c3e1eff6b1
+END:VCARD
