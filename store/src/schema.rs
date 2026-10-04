@@ -703,6 +703,51 @@ UPDATE calendars SET sync_token = NULL;
     r#"
 ALTER TABLE mailboxes ADD COLUMN position INTEGER;
 "#,
+    // Part 5. What serves an IMAP account beside its mail: the CalDAV and
+    // CardDAV context URLs and the ManageSieve host that discovery found
+    // or the person typed, with the user name that worked and whether the
+    // person has said yes to a host outside the address's domain (`extra`,
+    // JSON). The password is the account's IMAP one, in the keyring.
+    //
+    // Local rules are the neutral `Filter` as JSON, in the order the
+    // person made them, for an account whose server runs no rules.
+    // `rules_ran_until` is the newest INTERNALDATE the rules have looked
+    // at; `local_rules_ran` holds the messages they ran on within an hour
+    // of it, since INTERNALDATE has one-second steps and a burst of mail
+    // shares one. Rows below the hour are pruned as the watermark moves.
+    //
+    // `rule_changes` holds changes to a ManageSieve account's rules made
+    // while its server did not answer, sent in order once it does.
+    r#"
+CREATE TABLE account_services (
+    account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    service    TEXT NOT NULL CHECK (service IN ('caldav', 'carddav', 'sieve')),
+    url        TEXT NOT NULL,
+    extra      TEXT NOT NULL DEFAULT '{}',
+    PRIMARY KEY (account_id, service)
+);
+CREATE TABLE local_rules (
+    account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    id         TEXT NOT NULL,
+    position   INTEGER NOT NULL,
+    filter     TEXT NOT NULL,
+    PRIMARY KEY (account_id, id)
+);
+ALTER TABLE accounts ADD COLUMN rules_ran_until INTEGER;
+CREATE TABLE local_rules_ran (
+    account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    message_id TEXT NOT NULL,
+    date       INTEGER NOT NULL,
+    PRIMARY KEY (account_id, message_id)
+);
+CREATE TABLE rule_changes (
+    seq        INTEGER PRIMARY KEY AUTOINCREMENT,
+    account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    kind       TEXT NOT NULL CHECK (kind IN ('create', 'delete')),
+    filter_id  TEXT NOT NULL,
+    filter     TEXT
+);
+"#,
 ];
 
 /// How long the copy taken before a migration stays once the store has
