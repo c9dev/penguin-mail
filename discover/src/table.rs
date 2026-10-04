@@ -65,11 +65,24 @@ pub struct ProviderServices {
     pub sieve: Option<(String, u16)>,
 }
 
-/// The table's servers beside mail for the IMAP provider called `name`.
-pub fn services_of(name: &str) -> ProviderServices {
-    let resolved = resolved_provider_name(name);
+/// The table's servers beside mail for the account whose IMAP server is
+/// `imap_host`: the entry whose IMAP host it is, or whose domain list
+/// holds it. The host tells GMX's two families and each Zoho data center
+/// apart, which the provider's name cannot. A host the table does not
+/// know gets nothing, and the caller asks the domain instead.
+pub fn services_of(imap_host: &str) -> ProviderServices {
+    let host = imap_host.trim_end_matches('.').to_ascii_lowercase();
     Table::built_in()
-        .by_name(&resolved)
+        .entries
+        .iter()
+        .find(|entry| {
+            entry.kind == Kind::Imap
+                && (entry
+                    .imap
+                    .as_ref()
+                    .is_some_and(|server| server.host == host)
+                    || entry.domains.contains(&host))
+        })
         .map(|entry| ProviderServices {
             caldav: entry.caldav.clone(),
             carddav: entry.carddav.clone(),
@@ -534,25 +547,47 @@ mod tests {
 
     #[test]
     fn every_provider_with_imap_says_where_its_calendar_is_or_that_it_has_none() {
-        let fastmail = services_of("Fastmail");
+        let fastmail = services_of("imap.fastmail.com");
         assert_eq!(
             fastmail.caldav.as_deref(),
             Some("https://caldav.fastmail.com/")
         );
         assert_eq!(fastmail.sieve, None);
         assert_eq!(
-            services_of("mailbox.org").sieve,
+            services_of("imap.mailbox.org").sieve,
             Some(("imap.mailbox.org".to_string(), 4190))
         );
         assert_eq!(
-            services_of("iCloud Mail").carddav.as_deref(),
+            services_of("imap.mail.me.com").carddav.as_deref(),
             Some("https://contacts.icloud.com/")
         );
         assert_eq!(
-            services_of("AOL Mail").caldav.as_deref(),
+            services_of("imap.aol.com").caldav.as_deref(),
             Some("https://caldav.aol.com/")
         );
-        assert_eq!(services_of("No Such Mail"), ProviderServices::default());
+        assert_eq!(services_of("imap.example.org"), ProviderServices::default());
+    }
+
+    #[test]
+    fn the_imap_host_picks_the_family_and_the_data_center() {
+        let net = services_of("imap.gmx.net");
+        let com = services_of("imap.gmx.com");
+        assert_eq!(net.caldav.as_deref(), Some("https://caldav.gmx.net/"));
+        assert_eq!(com.caldav.as_deref(), Some("https://caldav.gmx.com/"));
+        assert_eq!(
+            services_of("imap.zoho.eu").carddav.as_deref(),
+            Some("https://contacts.zoho.eu/carddav")
+        );
+        assert_eq!(
+            services_of("imap.zoho.com.au").caldav.as_deref(),
+            Some("https://calendar.zoho.com.au/")
+        );
+        // A listed domain counts too, and a name the table lacks counts for nothing.
+        assert_eq!(
+            services_of("fastmail.com"),
+            services_of("imap.fastmail.com")
+        );
+        assert_eq!(services_of("Fastmail"), ProviderServices::default());
     }
 
     #[test]
@@ -598,18 +633,6 @@ mod tests {
             let own = entry.info();
             assert_eq!(first.files_sent_mail, own.files_sent_mail, "{}", entry.id);
             assert_eq!(first.password, own.password, "{}", entry.id);
-            // Zoho's data centers and GMX's two families differ by design.
-            if !entry.id.starts_with("zoho") && !entry.id.starts_with("gmx") {
-                let first = table.by_name(&entry.name).expect("the entry itself");
-                assert_eq!(first.caldav, entry.caldav, "{}", entry.id);
-                assert_eq!(first.carddav, entry.carddav, "{}", entry.id);
-                assert_eq!(
-                    first.sieve.as_ref().map(|s| (&s.host, s.port)),
-                    entry.sieve.as_ref().map(|s| (&s.host, s.port)),
-                    "{}",
-                    entry.id
-                );
-            }
         }
     }
 }

@@ -40,10 +40,12 @@ const SIEVE_PORT: u16 = 4190;
 pub async fn dav_hints<N: Net>(
     net: &N,
     address: &str,
-    provider_name: &str,
+    // The table is read by IMAP host now, which tells GMX's families and
+    // Zoho's data centers apart; the name stays for the callers' sake.
+    _provider_name: &str,
     imap_host: &str,
 ) -> DavHints {
-    let listed = services_of(provider_name);
+    let listed = services_of(imap_host);
     let mut hints = DavHints::default();
     let table = |url: Option<String>| {
         url.map(|url| Hint {
