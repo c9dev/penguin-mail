@@ -25,3 +25,4 @@ tracing.workspace = true
 [dev-dependencies]
 mailrs-testmail.workspace = true
 tokio = { workspace = true, features = ["test-util"] }
+mailrs-sieve = { path = ".", features = ["fake"] }
