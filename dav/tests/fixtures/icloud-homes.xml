@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<multistatus xmlns="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav" xmlns:CR="urn:ietf:params:xml:ns:carddav">
+  <response>
+    <href>/1234567890/principal/</href>
+    <propstat>
+      <prop>
+        <C:calendar-home-set><href>https://p12-caldav.icloud.com:443/1234567890/calendars/</href></C:calendar-home-set>
+      </prop>
+      <status>HTTP/1.1 200 OK</status>
+    </propstat>
+    <propstat>
+      <prop><CR:addressbook-home-set/></prop>
+      <status>HTTP/1.1 404 Not Found</status>
+    </propstat>
+  </response>
+</multistatus>

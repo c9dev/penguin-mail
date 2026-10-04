@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<d:multistatus xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav"
+    xmlns:cs="http://calendarserver.org/ns/" xmlns:a="http://apple.com/ns/ical/">
+  <d:response>
+    <d:href>/dav/calendars/user/me@fastmail.com/</d:href>
+    <d:propstat><d:prop>
+      <d:displayname>me@fastmail.com</d:displayname>
+      <d:resourcetype><d:collection/></d:resourcetype>
+      <d:current-user-privilege-set><d:privilege><d:read/></d:privilege></d:current-user-privilege-set>
+    </d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat>
+  </d:response>
+  <d:response>
+    <d:href>/dav/calendars/user/me@fastmail.com/Default/</d:href>
+    <d:propstat><d:prop>
+      <d:displayname>Personal</d:displayname>
+      <a:calendar-color>#3A87ADFF</a:calendar-color>
+      <d:resourcetype><d:collection/><c:calendar/></d:resourcetype>
+      <c:supported-calendar-component-set><c:comp name="VEVENT"/><c:comp name="VTODO"/></c:supported-calendar-component-set>
+      <d:current-user-privilege-set><d:privilege><d:read/></d:privilege><d:privilege><d:write/></d:privilege></d:current-user-privilege-set>
+      <cs:getctag>ctag-9</cs:getctag>
+      <d:supported-report-set><d:supported-report><d:report><d:sync-collection/></d:report></d:supported-report></d:supported-report-set>
+    </d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat>
+  </d:response>
+  <d:response>
+    <d:href>/dav/calendars/user/me@fastmail.com/shared-1/</d:href>
+    <d:propstat><d:prop>
+      <d:displayname>Shared with me</d:displayname>
+      <d:resourcetype><d:collection/><c:calendar/></d:resourcetype>
+      <c:supported-calendar-component-set><c:comp name="VEVENT"/></c:supported-calendar-component-set>
+      <d:current-user-privilege-set><d:privilege><d:read/></d:privilege></d:current-user-privilege-set>
+    </d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat>
+  </d:response>
+  <d:response>
+    <d:href>/dav/calendars/user/me@fastmail.com/tasks/</d:href>
+    <d:propstat><d:prop>
+      <d:displayname>Tasks</d:displayname>
+      <d:resourcetype><d:collection/><c:calendar/></d:resourcetype>
+      <c:supported-calendar-component-set><c:comp name="VTODO"/></c:supported-calendar-component-set>
+      <d:current-user-privilege-set><d:privilege><d:read/></d:privilege><d:privilege><d:write/></d:privilege></d:current-user-privilege-set>
+    </d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat>
+  </d:response>
+</d:multistatus>
