@@ -219,11 +219,16 @@ pub mod body {
         )
     }
 
-    /// Every event's etag, those overlapping `from` onwards when given.
-    pub fn calendar_query(from: Option<EpochMillis>) -> String {
-        let range = from
-            .and_then(chrono::DateTime::from_timestamp_millis)
-            .map(|at| format!(r#"<C:time-range start="{}"/>"#, at.format("%Y%m%dT%H%M%SZ")))
+    /// Every event's etag, those overlapping `range` when given. An end
+    /// that is not a date (`i64::MAX`) leaves the range open.
+    pub fn calendar_query(range: Option<(EpochMillis, EpochMillis)>) -> String {
+        let stamp = |at: EpochMillis| chrono::DateTime::from_timestamp_millis(at).map(|at| at.format("%Y%m%dT%H%M%SZ").to_string());
+        let range = range
+            .and_then(|(from, to)| {
+                let start = format!(r#" start="{}""#, stamp(from)?);
+                let end = stamp(to).map(|end| format!(r#" end="{end}""#)).unwrap_or_default();
+                Some(format!("<C:time-range{start}{end}/>"))
+            })
             .unwrap_or_default();
         format!(
             r#"<?xml version="1.0" encoding="utf-8"?>
@@ -323,6 +328,12 @@ mod tests {
     fn a_document_type_declaration_is_refused() {
         let body = r#"<?xml version="1.0"?><!DOCTYPE x [<!ENTITY a "aaaa">]><multistatus xmlns="DAV:"/>"#;
         assert!(parse_multistatus(body).is_err());
+    }
+
+    #[test]
+    fn an_open_ended_range_has_a_start_only() {
+        let q = body::calendar_query(Some((0, i64::MAX)));
+        assert!(q.contains(r#"<C:time-range start="19700101T000000Z"/>"#), "{q}");
     }
 
     #[test]

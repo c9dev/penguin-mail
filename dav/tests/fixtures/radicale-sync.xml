@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<multistatus xmlns="DAV:">
+  <response><href>/me/work/</href>
+    <status>HTTP/1.1 507 Insufficient Storage</status>
+    <error><number-of-matches-within-limits/></error>
+  </response>
+  <response><href>/me/work/a.ics</href>
+    <propstat><prop><getetag>"1"</getetag></prop><status>HTTP/1.1 200 OK</status></propstat>
+  </response>
+  <response><href>/me/work/gone.ics</href><status>HTTP/1.1 404 Not Found</status></response>
+  <sync-token>http://radicale.org/ns/sync/abc</sync-token>
+</multistatus>

@@ -33,3 +33,6 @@ url.workspace = true
 mailrs-testmail.workspace = true
 tokio = { workspace = true, features = ["test-util"] }
 wiremock.workspace = true
+# The integration tests build `DavClient::over` and `FakeDav`, which the
+# `fake` feature ships.
+mailrs-dav = { path = ".", features = ["fake"] }

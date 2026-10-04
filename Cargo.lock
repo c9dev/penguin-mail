@@ -2490,6 +2490,7 @@ dependencies = [
  "calcard",
  "chrono",
  "chrono-tz",
+ "mailrs-dav",
  "mailrs-domain",
  "mailrs-testmail",
  "psl",

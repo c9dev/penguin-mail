@@ -17,6 +17,7 @@ mod zones;
 #[cfg(any(test, feature = "fake"))]
 pub mod fake;
 
+pub use client::{Collection, CollectionState, DavApi, DavClient, Fetched, Homes, Kind, Login, Member, Precondition, Synced};
 pub use error::DavError;
 
 /// The most bytes one multistatus answer may hold. A calendar's etag

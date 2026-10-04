@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<d:multistatus xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav">
+  <d:response><d:href>/cal/work/a.ics</d:href>
+    <d:propstat><d:prop>
+      <d:getetag>"a1"</d:getetag>
+      <c:calendar-data>BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+UID:a
+DTSTART:20261101T090000Z
+SUMMARY:One
+END:VEVENT
+END:VCALENDAR
+</c:calendar-data>
+    </d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat>
+  </d:response>
+  <d:response><d:href>/cal/work/b.ics</d:href>
+    <d:propstat><d:prop>
+      <d:getetag>"b1"</d:getetag>
+      <c:calendar-data>BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+UID:b
+DTSTART:20261102T090000Z
+SUMMARY:Two
+END:VEVENT
+END:VCALENDAR
+</c:calendar-data>
+    </d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat>
+  </d:response>
+  <d:response><d:href>/cal/work/gone.ics</d:href><d:status>HTTP/1.1 404 Not Found</d:status></d:response>
+</d:multistatus>
