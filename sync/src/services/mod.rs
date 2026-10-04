@@ -12,12 +12,16 @@
 mod any;
 mod caldav;
 mod carddav;
+// Tasks 12 and 13 read these; Task 12 takes this attribute out.
+#[allow(dead_code)]
 mod dav_read;
 pub mod finding;
 mod google;
 
 pub use google::withheld as withheld_by_grant;
 pub mod imap;
+// Task 15 re-exports `LocalRules` and takes this attribute out.
+#[allow(dead_code)]
 pub(crate) mod local;
 mod pacing;
 mod sieve;

@@ -64,6 +64,29 @@ pub(crate) fn labels_of(
         .unwrap_or_default())
 }
 
+/// An empty message of account 1, for tests of the rules' matching that
+/// need no store.
+pub(crate) fn meta_for_rules() -> MessageMeta {
+    MessageMeta {
+        account_id: 1,
+        id: String::new(),
+        thread_id: String::new(),
+        rfc822_msgid: None,
+        from: None,
+        to: Vec::new(),
+        cc: Vec::new(),
+        subject: String::new(),
+        date: 0,
+        snippet: String::new(),
+        size: 0,
+        has_attachments: false,
+        held: Default::default(),
+        roles: Vec::new(),
+        list_unsubscribe: None,
+        one_click: false,
+    }
+}
+
 /// The accounts a test connects, by id.
 pub(crate) struct Connected(pub HashMap<AccountId, Arc<AccountSync>>);
 

@@ -103,6 +103,18 @@ fn start_running_never_moves_a_watermark_back() {
 }
 
 #[test]
+fn replacing_a_local_rule_keeps_its_place_in_the_order() {
+    let (conn, a) = db();
+    for (id, from) in [("local-1", "a@"), ("local-2", "b@"), ("local-3", "c@")] {
+        local_rules::add(&conn, a, &rule(id, from)).unwrap();
+    }
+    assert!(local_rules::replace(&conn, a, "local-2", &rule("local-9", "z@")).unwrap());
+    let ids: Vec<_> = local_rules::list(&conn, a).unwrap().into_iter().filter_map(|f| f.id).collect();
+    assert_eq!(ids, ["local-1", "local-9", "local-3"]);
+    assert!(!local_rules::replace(&conn, a, "local-missing", &rule("local-8", "y@")).unwrap());
+}
+
+#[test]
 fn rule_changes_wait_in_order() {
     let (conn, a) = db();
     rule_changes::enqueue(&conn, a, &RuleChange::Create(rule("r2", "x@example.com"))).unwrap();

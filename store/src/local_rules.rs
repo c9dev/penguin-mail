@@ -51,6 +51,21 @@ pub fn remove(conn: &Connection, account_id: AccountId, id: &str) -> Result<bool
     Ok(conn.execute("DELETE FROM local_rules WHERE account_id = ?1 AND id = ?2", params![account_id, id])? > 0)
 }
 
+/// Puts `filter`, which carries its id, where rule `old_id` was, so the
+/// edited rule keeps its turn; `false` when the account had no such rule.
+pub fn replace(conn: &Connection, account_id: AccountId, old_id: &str, filter: &Filter) -> Result<bool> {
+    let id = filter
+        .id
+        .clone()
+        .ok_or(StoreError::Corrupt { column: "local_rules.id", value: String::new() })?;
+    let text = serde_json::to_string(filter)
+        .map_err(|err| StoreError::Corrupt { column: "local_rules.filter", value: err.to_string() })?;
+    Ok(conn.execute(
+        "UPDATE local_rules SET id = ?3, filter = ?4 WHERE account_id = ?1 AND id = ?2",
+        params![account_id, old_id, id, text],
+    )? > 0)
+}
+
 /// Sets the watermark to `now` unless the rules have run before, so the
 /// first rule an account gets runs on mail from now on and not on the
 /// Inbox it already holds.
