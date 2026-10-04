@@ -149,3 +149,5 @@ sync/src/services/imap/outgoing.rs
 sync/src/sign_in.rs
 sync/src/triage.rs
 # the template from the crate roots and warns when this list has drifted
+sync/src/rules/forward.rs
+sync/src/services/local.rs

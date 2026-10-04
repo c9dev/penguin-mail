@@ -9377,9 +9377,17 @@ msgstr "{problem}. O Penguin Mail deixou de tentar"
 msgid "The keyring refused: {reason}"
 msgstr "O porta-chaves recusou: {reason}"
 
+#: sync/src/rules/forward.rs:18
+msgid "A rule on this computer forwarded the attached message from {address}."
+msgstr "Uma regra neste computador reencaminhou a mensagem em anexo de {address}."
+
 #: sync/src/services/imap/outgoing.rs:85
 msgid "The message names nobody to send it to."
 msgstr "A mensagem não indica a quem a enviar."
+
+#: sync/src/services/local.rs:29
+msgid "This rule is read-only, so Penguin Mail leaves it as it is."
+msgstr "Esta regra é só de leitura, por isso o Penguin Mail deixa-a como está."
 
 #: sync/src/sign_in.rs:136
 msgid "{address} is already in Penguin Mail as a {provider} account."
