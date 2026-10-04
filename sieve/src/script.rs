@@ -8,7 +8,12 @@ pub struct Extensions(BTreeSet<String>);
 
 impl Extensions {
     pub fn parse(listed: &str) -> Extensions {
-        Extensions(listed.split_whitespace().map(str::to_ascii_lowercase).collect())
+        Extensions(
+            listed
+                .split_whitespace()
+                .map(str::to_ascii_lowercase)
+                .collect(),
+        )
     }
 
     pub fn has(&self, name: &str) -> bool {
