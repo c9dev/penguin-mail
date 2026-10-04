@@ -548,7 +548,10 @@ fn a_clearsigned_body_changed_on_the_way_still_shows_its_text() {
     let Some(home) = Home::new("Ada Lovelace", "ada@example.test") else {
         return;
     };
-    let body = clearsigned(&home, "Meet at six.\n").replace("six", "nine");
+    // Only the first "six", in the text: the signature's base64 below it
+    // can hold those three letters too, and changing them there breaks
+    // the armor rather than the signature.
+    let body = clearsigned(&home, "Meet at six.\n").replacen("six", "nine", 1);
 
     let opened = home.pgp.open_inline(&body).expect("the text inside");
 
