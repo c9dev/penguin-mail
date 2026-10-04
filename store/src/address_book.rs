@@ -188,6 +188,13 @@ pub fn set_photo_file(
     Ok(())
 }
 
+/// Records that `resource` has no photo, so the next refresh does not ask
+/// again. An empty `photo_file` stands for none, and every reader turns it
+/// into `None`.
+pub fn set_no_photo(conn: &Connection, account_id: AccountId, resource: &str) -> Result<()> {
+    set_photo_file(conn, account_id, resource, "")
+}
+
 /// What the last refresh of this address book left behind: the sync token
 /// to hand back to Google, and when it ran.
 pub fn book(
@@ -221,7 +228,7 @@ pub fn set_book(
 /// The contacts `filter` keeps, each with its addresses, by name.
 fn query(filter: &str) -> String {
     format!(
-        "SELECT c.account_id, c.resource, c.name, c.organization, c.phone, c.photo_url, c.photo_file, \
+        "SELECT c.account_id, c.resource, c.name, c.organization, c.phone, c.photo_url, NULLIF(c.photo_file, ''), \
          (SELECT group_concat(a.email, char(10)) FROM (SELECT email FROM contact_addresses \
           WHERE account_id = c.account_id AND resource = c.resource ORDER BY rank) a) \
          FROM contacts c WHERE {filter} ORDER BY c.name IS NULL, c.name COLLATE NOCASE, c.resource"
@@ -330,6 +337,24 @@ mod tests {
         assert_eq!(names("fernwood theo"), ["Theo Lang"]);
         assert!(names("priya").is_empty());
         assert!(names("  ").is_empty(), "no words find nobody");
+    }
+
+    #[test]
+    fn a_contact_marked_without_a_photo_is_not_missing_one_and_shows_none() {
+        let conn = open_in_memory().unwrap();
+        let id = accounts::insert_account(&conn, "dana@outlook.com", 0).unwrap();
+        let with_url = Contact {
+            photo_url: Some("graph:contact/AAMk-c1".into()),
+            ..contact(id, "AAMk-c1", "Mara Okafor", &["mara@example.org"])
+        };
+        save(&conn, &[with_url]).unwrap();
+        assert_eq!(missing_photos(&conn, id).unwrap().len(), 1);
+        set_no_photo(&conn, id, "AAMk-c1").unwrap();
+        assert!(missing_photos(&conn, id).unwrap().is_empty());
+        assert_eq!(
+            find(&conn, "mara@example.org").unwrap().unwrap().photo_file,
+            None
+        );
     }
 
     #[test]

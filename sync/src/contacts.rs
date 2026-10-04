@@ -352,7 +352,14 @@ impl<A: Accounts> ContactBook<A> {
         for (resource, url) in wanted {
             let bytes = match contacts.contact_photo(&url).await {
                 Ok(bytes) if !bytes.is_empty() => bytes,
-                Ok(_) => continue,
+                // The provider holds no photo for this contact; say so once.
+                Ok(_) => {
+                    let resource = resource.clone();
+                    self.db
+                        .write(move |c| address_book::set_no_photo(c, account_id, &resource))
+                        .await?;
+                    continue;
+                }
                 Err(err) => {
                     tracing::debug!(error = %err, "could not download a contact photo");
                     continue;
