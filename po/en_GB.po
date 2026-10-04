@@ -573,38 +573,38 @@ msgstr "Add an Anthropic API key in Preferences."
 msgid "Claude Code is not installed. Install it and sign in, then try again."
 msgstr "Claude Code is not installed. Install it and sign in, then try again."
 
-#: app/src/assistant/run.rs:1027
+#: app/src/assistant/run.rs:1029
 msgid "Move {count} conversation to the Trash?"
 msgid_plural "Move {count} conversations to the Trash?"
 msgstr[0] "Move {count} conversation to the Trash?"
 msgstr[1] "Move {count} conversations to the Trash?"
 
-#: app/src/assistant/run.rs:1192
+#: app/src/assistant/run.rs:1194
 msgid "Don't Allow labels only the mail in accounts that have the label already."
 msgstr "Don't Allow labels only the mail in accounts that have the label already."
 
-#: app/src/assistant/run.rs:1229
+#: app/src/assistant/run.rs:1231
 msgid "Block {address}? Their future mail goes straight to the Trash."
 msgstr "Block {address}? Their future mail goes straight to the Trash."
 
-#: app/src/assistant/run.rs:1311 app/src/assistant/run/calendar.rs:217
+#: app/src/assistant/run.rs:1313 app/src/assistant/run/calendar.rs:217
 #: app/src/assistant/run/calendar.rs:695
 msgid "%a %-d %b"
 msgstr "%a %-d %b"
 
-#: app/src/assistant/run.rs:1317
+#: app/src/assistant/run.rs:1319
 msgid " from {first} to {last}"
 msgstr " from {first} to {last}"
 
-#: app/src/assistant/run.rs:1320
+#: app/src/assistant/run.rs:1322
 msgid " until {last}"
 msgstr " until {last}"
 
-#: app/src/assistant/run.rs:1321
+#: app/src/assistant/run.rs:1323
 msgid " from {first}"
 msgstr " from {first}"
 
-#: app/src/assistant/run.rs:1327
+#: app/src/assistant/run.rs:1329
 msgid ""
 "Turn on the automatic reply for {account}{dates}?\n"
 "\n"
@@ -616,19 +616,19 @@ msgstr ""
 "“{subject}”\n"
 "{body}"
 
-#: app/src/assistant/run.rs:1338
+#: app/src/assistant/run.rs:1340
 msgid "Turn off the automatic reply for {account}?"
 msgstr "Turn off the automatic reply for {account}?"
 
-#: app/src/assistant/run.rs:1436
+#: app/src/assistant/run.rs:1438
 msgid "Create a Gmail rule for {account}: {when} → {then}?"
 msgstr "Create a Gmail rule for {account}: {when} → {then}?"
 
-#: app/src/assistant/run.rs:1479
+#: app/src/assistant/run.rs:1481
 msgid "Delete a Gmail rule from {account}?"
 msgstr "Delete a Gmail rule from {account}?"
 
-#: app/src/assistant/run.rs:1808
+#: app/src/assistant/run.rs:1810
 msgid "Move mail from {sender} to {category} in {account}, and add a {provider} rule for their future mail?"
 msgstr "Move mail from {sender} to {category} in {account}, and add a {provider} rule for their future mail?"
 
@@ -1635,7 +1635,7 @@ msgstr "Archive"
 
 #: app/src/notify.rs:50 app/src/ui/conversation.rs:380
 #: app/src/ui/conversation.rs:1136 app/src/ui/preferences.rs:140
-#: app/src/ui/rules.rs:298 app/src/ui/window/message_menu.rs:126
+#: app/src/ui/rules.rs:312 app/src/ui/window/message_menu.rs:126
 msgid "Mark as Read"
 msgstr "Mark as Read"
 
@@ -2479,79 +2479,79 @@ msgstr "me"
 msgid "Show trimmed content"
 msgstr "Show trimmed content"
 
-#: app/src/rules.rs:172
+#: app/src/rules.rs:173
 msgid "From {address}"
 msgstr "From {address}"
 
-#: app/src/rules.rs:175
+#: app/src/rules.rs:176
 msgid "To {address}"
 msgstr "To {address}"
 
-#: app/src/rules.rs:179
+#: app/src/rules.rs:180
 msgid "Subject has “{words}”"
 msgstr "Subject has “{words}”"
 
-#: app/src/rules.rs:184
+#: app/src/rules.rs:185
 msgid "Has “{words}”"
 msgstr "Has “{words}”"
 
-#: app/src/rules.rs:188
+#: app/src/rules.rs:189
 msgid "Doesn't have “{words}”"
 msgstr "Doesn't have “{words}”"
 
-#: app/src/rules.rs:193
+#: app/src/rules.rs:194
 msgid "Has an attachment"
 msgstr "Has an attachment"
 
-#: app/src/rules.rs:198
+#: app/src/rules.rs:199
 msgid "Smaller than {size}"
 msgstr "Smaller than {size}"
 
-#: app/src/rules.rs:199
+#: app/src/rules.rs:200
 msgid "Larger than {size}"
 msgstr "Larger than {size}"
 
-#: app/src/rules.rs:204
+#: app/src/rules.rs:205
 msgid "All mail"
 msgstr "All mail"
 
-#: app/src/rules.rs:224
+#: app/src/rules.rs:225
 msgid "Delete it"
 msgstr "Delete it"
 
-#: app/src/rules.rs:226 app/src/ui/rules.rs:297
+#: app/src/rules.rs:227 app/src/ui/rules.rs:311
 msgid "Skip the Inbox"
 msgstr "Skip the Inbox"
 
-#: app/src/rules.rs:231
+#: app/src/rules.rs:232
 msgid "Apply {label}"
 msgstr "Apply {label}"
 
-#: app/src/rules.rs:237
+#: app/src/rules.rs:238
 msgid "Star it"
 msgstr "Star it"
 
-#: app/src/rules.rs:240
+#: app/src/rules.rs:241
 msgid "Mark as read"
 msgstr "Mark as read"
 
-#: app/src/rules.rs:243
+#: app/src/rules.rs:244
 msgid "Mark as important"
 msgstr "Mark as important"
 
-#: app/src/rules.rs:246
+#: app/src/rules.rs:247
 msgid "Never mark as important"
 msgstr "Never mark as important"
 
-#: app/src/rules.rs:249
+#: app/src/rules.rs:250
 msgid "Never send to Spam"
 msgstr "Never send to Spam"
 
-#: app/src/rules.rs:252
+#: app/src/rules.rs:253
 msgid "Forward to {address}"
 msgstr "Forward to {address}"
 
-#: app/src/rules.rs:255
+#: app/src/rules.rs:256
 msgid "Nothing"
 msgstr "Nothing"
 
@@ -3086,7 +3086,7 @@ msgstr "Try Again"
 #: app/src/ui/calendar/scope.rs:164 app/src/ui/composer/mod.rs:1494
 #: app/src/ui/composer/mod.rs:1563 app/src/ui/composer/mod.rs:1881
 #: app/src/ui/composer/mod.rs:2314 app/src/ui/confirm.rs:29
-#: app/src/ui/rules.rs:367 app/src/ui/smart_editor.rs:150
+#: app/src/ui/rules.rs:381 app/src/ui/smart_editor.rs:150
 #: app/src/ui/templates.rs:239 app/src/ui/unsubscribe.rs:95
 #: app/src/ui/vacation.rs:45 app/src/ui/when.rs:52
 #: app/src/ui/window/arrange.rs:136 app/src/ui/window/images.rs:101
@@ -3503,7 +3503,7 @@ msgstr "Test"
 
 #: app/src/ui/assistant_mcp_prefs.rs:341 app/src/ui/calendar/editor.rs:155
 #: app/src/ui/calendar/quick.rs:103 app/src/ui/calendar/scope.rs:183
-#: app/src/ui/composer/mod.rs:2314 app/src/ui/rules.rs:360
+#: app/src/ui/composer/mod.rs:2314 app/src/ui/rules.rs:374
 #: app/src/ui/smart_editor.rs:144 app/src/ui/templates.rs:233
 #: app/src/ui/vacation.rs:41 app/src/ui/window/arrange.rs:136
 msgid "Save"
@@ -4523,7 +4523,7 @@ msgid "A calendar of your own on {account}, in Google Calendar on every device."
 msgstr "A calendar of your own on {account}, in Google Calendar on every device."
 
 #: app/src/ui/calendar/manage.rs:271 app/src/ui/hide_my_email.rs:357
-#: app/src/ui/rules.rs:361 app/src/ui/smart_editor.rs:146
+#: app/src/ui/rules.rs:375 app/src/ui/smart_editor.rs:146
 #: app/src/ui/templates.rs:235 app/src/ui/window/organize.rs:74
 #: app/src/ui/window/organize.rs:347
 msgid "Create"
@@ -5209,7 +5209,7 @@ msgid "Blind carbon copy"
 msgstr "Blind carbon copy"
 
 #: app/src/ui/composer/mod.rs:357 app/src/ui/composer/mod.rs:396
-#: app/src/ui/rules.rs:283 app/src/ui/templates.rs:192
+#: app/src/ui/rules.rs:297 app/src/ui/templates.rs:192
 #: app/src/ui/vacation.rs:213
 msgid "Subject"
 msgstr "Subject"
@@ -5222,11 +5222,11 @@ msgstr "Cc/Bcc"
 msgid "Show Cc and Bcc"
 msgstr "Show Cc and Bcc"
 
-#: app/src/ui/composer/mod.rs:375 app/src/ui/rules.rs:281
+#: app/src/ui/composer/mod.rs:375 app/src/ui/rules.rs:295
 msgid "From"
 msgstr "From"
 
-#: app/src/ui/composer/mod.rs:380 app/src/ui/rules.rs:282
+#: app/src/ui/composer/mod.rs:380 app/src/ui/rules.rs:296
 msgid "To"
 msgstr "To"
 
@@ -6665,7 +6665,7 @@ msgstr "This message is waiting to be sent"
 msgid "Gmail runs these on new mail as it arrives, even when this computer is off."
 msgstr "Gmail runs these on new mail as it arrives, even when this computer is off."
 
-#: app/src/ui/rules.rs:63 app/src/ui/rules.rs:65 app/src/ui/rules.rs:361
+#: app/src/ui/rules.rs:63 app/src/ui/rules.rs:65 app/src/ui/rules.rs:375
 msgid "New Rule"
 msgstr "New Rule"
 
@@ -6686,98 +6686,102 @@ msgid "Add one with the + button."
 msgstr "Add one with the + button."
 
 #: app/src/ui/rules.rs:187
+msgid "Made elsewhere. Change it where you made it."
+msgstr "Made elsewhere. Change it where you made it."
+
+#: app/src/ui/rules.rs:201
 msgid "Edit the rule for {mail}"
 msgstr "Edit the rule for {mail}"
 
-#: app/src/ui/rules.rs:198
+#: app/src/ui/rules.rs:212
 msgid "Delete Rule"
 msgstr "Delete Rule"
 
-#: app/src/ui/rules.rs:205
+#: app/src/ui/rules.rs:219
 msgid "Delete the rule for {mail}"
 msgstr "Delete the rule for {mail}"
 
-#: app/src/ui/rules.rs:233
+#: app/src/ui/rules.rs:247
 msgid "Rule deleted"
 msgstr "Rule deleted"
 
-#: app/src/ui/rules.rs:237
+#: app/src/ui/rules.rs:251
 msgid "Could not delete the rule: {reason}"
 msgstr "Could not delete the rule: {reason}"
 
-#: app/src/ui/rules.rs:245
+#: app/src/ui/rules.rs:259
 msgid "Could Not Load the Rules"
 msgstr "Could Not Load the Rules"
 
-#: app/src/ui/rules.rs:254
+#: app/src/ui/rules.rs:268
 msgid "Allow Rules"
 msgstr "Allow Rules"
 
-#: app/src/ui/rules.rs:284
+#: app/src/ui/rules.rs:298
 msgid "Has the Words"
 msgstr "Has the Words"
 
-#: app/src/ui/rules.rs:285
+#: app/src/ui/rules.rs:299
 msgid "Doesn't Have"
 msgstr "Doesn't Have"
 
-#: app/src/ui/rules.rs:287
+#: app/src/ui/rules.rs:301
 msgid "Has an Attachment"
 msgstr "Has an Attachment"
 
-#: app/src/ui/rules.rs:289
+#: app/src/ui/rules.rs:303
 msgid "When Mail Matches"
 msgstr "When Mail Matches"
 
-#: app/src/ui/rules.rs:299
+#: app/src/ui/rules.rs:313
 msgid "Star It"
 msgstr "Star It"
 
-#: app/src/ui/rules.rs:300
+#: app/src/ui/rules.rs:314
 msgid "Never Send to Spam"
 msgstr "Never Send to Spam"
 
-#: app/src/ui/rules.rs:301
+#: app/src/ui/rules.rs:315
 msgid "Delete It"
 msgstr "Delete It"
 
-#: app/src/ui/rules.rs:303
+#: app/src/ui/rules.rs:317
 msgid "Don't Apply a Label"
 msgstr "Don't Apply a Label"
 
-#: app/src/ui/rules.rs:307
+#: app/src/ui/rules.rs:321
 msgid "Apply Label"
 msgstr "Apply Label"
 
-#: app/src/ui/rules.rs:311
+#: app/src/ui/rules.rs:325
 msgid "Do This"
 msgstr "Do This"
 
-#: app/src/ui/rules.rs:349
+#: app/src/ui/rules.rs:363
 msgid "This rule also does things this form can't show. Saving keeps them."
 msgstr "This rule also does things this form can't show. Saving keeps them."
 
-#: app/src/ui/rules.rs:360
+#: app/src/ui/rules.rs:374
 msgid "Edit Rule"
 msgstr "Edit Rule"
 
-#: app/src/ui/rules.rs:429
+#: app/src/ui/rules.rs:443
 msgid "Rule added"
 msgstr "Rule added"
 
-#: app/src/ui/rules.rs:436
+#: app/src/ui/rules.rs:450
 msgid "Could not add the rule: {reason}"
 msgstr "Could not add the rule: {reason}"
 
-#: app/src/ui/rules.rs:452
+#: app/src/ui/rules.rs:466
 msgid "Rule saved"
 msgstr "Rule saved"
 
-#: app/src/ui/rules.rs:457
+#: app/src/ui/rules.rs:471
 msgid "Saved, but Gmail kept the old rule too, so both run now: {reason}"
 msgstr "Saved, but Gmail kept the old rule too, so both run now: {reason}"
 
-#: app/src/ui/rules.rs:469
+#: app/src/ui/rules.rs:483
 msgid "Could not save the rule: {reason}"
 msgstr "Could not save the rule: {reason}"
 
@@ -7588,19 +7592,19 @@ msgstr "Open in Another Program"
 msgid "{file}, preview"
 msgstr "{file}, preview"
 
-#: app/src/ui/window/categories.rs:229
+#: app/src/ui/window/categories.rs:231
 msgid "Open a message from the sender first"
 msgstr "Open a message from the sender first"
 
-#: app/src/ui/window/categories.rs:273
+#: app/src/ui/window/categories.rs:275
 msgid "Mail from {sender} now goes to {category}"
 msgstr "Mail from {sender} now goes to {category}"
 
-#: app/src/ui/window/categories.rs:278
+#: app/src/ui/window/categories.rs:280
 msgid "Moved mail from {sender} to {category}"
 msgstr "Moved mail from {sender} to {category}"
 
-#: app/src/ui/window/categories.rs:285
+#: app/src/ui/window/categories.rs:287
 msgid "Moved mail from {sender} to {category}, but could not sort new mail: {reason}"
 msgstr "Moved mail from {sender} to {category}, but could not sort new mail: {reason}"
 
@@ -8290,21 +8294,33 @@ msgstr "Checking the release's signature needs gpgv or gpg, and neither is insta
 msgid "%-I:%M %p"
 msgstr "%-I:%M %p"
 
-#: domain/src/category.rs:63
+#: domain/src/category.rs:89
 msgid "All"
 msgstr "All"
 
-#: domain/src/category.rs:64
+#: domain/src/category.rs:90
 msgid "Primary"
 msgstr "Primary"
 
-#: domain/src/category.rs:66
+#: domain/src/category.rs:92
 msgid "Promotions"
 msgstr "Promotions"
 
-#: domain/src/category.rs:67
+#: domain/src/category.rs:93
 msgid "Social"
 msgstr "Social"
+
+#. Outlook's two inboxes. "Focused" alone already names "
+#. calendar event kind, so these carry a context of their own.
+#: domain/src/category.rs:96
+msgctxt "inbox"
+msgid "Focused"
+msgstr "Focused"
+
+#: domain/src/category.rs:97
+msgctxt "inbox"
+msgid "Other"
+msgstr "Other"
 
 #: domain/src/invitation.rs:84
 msgid "Yes"
@@ -8579,7 +8595,7 @@ msgid_plural "{accounts} will get new labels."
 msgstr[0] "{accounts} will get a new label."
 msgstr[1] "{accounts} will get new labels."
 
-#: sync/src/calendar_copy.rs:1465
+#: sync/src/calendar_copy.rs:1477
 msgid "Google Calendar offers out of office and focus time only on some work and school accounts ({reason})"
 msgstr "Google Calendar offers out of office and focus time only on some work and school accounts ({reason})"
 

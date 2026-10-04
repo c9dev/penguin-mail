@@ -3,7 +3,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::translate::gettext;
+use crate::translate::{gettext, pgettext};
 
 /// One slice of the inbox. `All` shows the whole inbox. Mail with no
 /// category label other than Personal counts as `Primary`.
@@ -91,8 +91,10 @@ impl Category {
             Category::Updates => gettext("Updates"),
             Category::Promotions => gettext("Promotions"),
             Category::Social => gettext("Social"),
-            Category::Focused => gettext("Focused"),
-            Category::Other => gettext("Other"),
+            // Outlook's two inboxes. "Focused" alone already names a
+            // calendar event kind, so these carry a context of their own.
+            Category::Focused => pgettext("inbox", "Focused"),
+            Category::Other => pgettext("inbox", "Other"),
         }
     }
 
