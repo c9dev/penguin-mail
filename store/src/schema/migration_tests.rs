@@ -802,3 +802,42 @@ fn migration_47_leaves_every_mailbox_unplaced() {
     assert_eq!(schema_version(&conn).unwrap(), 47);
     assert!(crate::labels::positions(&conn, 1).unwrap().is_empty());
 }
+
+/// Migration 48 adds the found servers, the local rules with their
+/// watermark and ran-set, and the queue of rule changes. An IMAP account
+/// from before it has none of them, and deleting the account takes every
+/// row with it through the foreign keys.
+#[test]
+fn migration_48_adds_the_services_and_rules_tables() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("mail.db");
+    let conn = open_with(&path, &MIGRATIONS[..47]).unwrap();
+    conn.execute(
+        "INSERT INTO accounts (id, email, added_at, provider, provider_name) \
+         VALUES (2, 'me@fastmail.com', 0, 'imap', 'Fastmail')",
+        [],
+    )
+    .unwrap();
+    drop(conn);
+
+    let conn = open_with(&path, &MIGRATIONS[..48]).unwrap();
+    assert_eq!(schema_version(&conn).unwrap(), 48);
+    let ran: Option<i64> = conn
+        .query_row("SELECT rules_ran_until FROM accounts WHERE id = 2", [], |row| row.get(0))
+        .unwrap();
+    assert_eq!(ran, None, "an old account has run no local rules yet");
+    conn.execute_batch(
+        "INSERT INTO account_services (account_id, service, url) VALUES (2, 'caldav', 'https://caldav.fastmail.com/');
+         INSERT INTO local_rules (account_id, id, position, filter) VALUES (2, 'local-1', 0, '{}');
+         INSERT INTO local_rules_ran (account_id, message_id, date) VALUES (2, 'INBOX/1/1', 0);
+         INSERT INTO rule_changes (account_id, kind, filter_id) VALUES (2, 'delete', 'r1');",
+    )
+    .unwrap();
+    conn.execute("DELETE FROM accounts WHERE id = 2", []).unwrap();
+    for table in ["account_services", "local_rules", "local_rules_ran", "rule_changes"] {
+        let left: i64 = conn
+            .query_row(&format!("SELECT COUNT(*) FROM {table}"), [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(left, 0, "{table}");
+    }
+}
