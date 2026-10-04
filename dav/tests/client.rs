@@ -14,7 +14,7 @@ fn multistatus(body: String) -> ResponseTemplate {
 }
 
 fn client(server: &MockServer) -> DavClient {
-    DavClient::over(url::Url::parse(&server.uri()).unwrap(), Login::new("me", "pw"), reqwest::Client::new())
+    DavClient::over(url::Url::parse(&server.uri()).unwrap(), Login::new("me", "pw")).unwrap()
 }
 
 #[tokio::test]
@@ -175,4 +175,34 @@ fn every_future_a_trait_method_returns_is_send() {
     }
     let _ = check::<DavClient>;
     let _ = check::<mailrs_dav::fake::FakeDav>;
+}
+
+fn redirect_to(target: String) -> ResponseTemplate {
+    ResponseTemplate::new(307).insert_header("Location", target.as_str())
+}
+
+#[tokio::test]
+async fn a_redirect_to_another_site_is_followed_without_the_password() {
+    let origin = MockServer::start().await;
+    let elsewhere = MockServer::start().await;
+    let port = elsewhere.address().port();
+    // The same machine under another host name, so another site.
+    Mock::given(method("PROPFIND")).respond_with(redirect_to(format!("http://localhost:{port}/cal/"))).mount(&origin).await;
+    Mock::given(method("PROPFIND")).respond_with(multistatus(fixture("radicale-sync.xml"))).mount(&elsewhere).await;
+    client(&origin).state("/cal/").await.unwrap();
+    let seen = elsewhere.received_requests().await.unwrap();
+    assert_eq!(seen.len(), 1, "the client follows the redirect");
+    assert!(!seen[0].headers.contains_key("authorization"), "the password left the site");
+}
+
+#[tokio::test]
+async fn a_redirect_within_the_site_keeps_the_password() {
+    let origin = MockServer::start().await;
+    let same_site = MockServer::start().await;
+    let port = same_site.address().port();
+    Mock::given(method("PROPFIND")).respond_with(redirect_to(format!("http://127.0.0.1:{port}/cal/"))).mount(&origin).await;
+    Mock::given(method("PROPFIND")).respond_with(multistatus(fixture("radicale-sync.xml"))).mount(&same_site).await;
+    client(&origin).state("/cal/").await.unwrap();
+    let seen = same_site.received_requests().await.unwrap();
+    assert!(seen[0].headers.contains_key("authorization"));
 }

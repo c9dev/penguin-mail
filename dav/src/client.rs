@@ -149,29 +149,33 @@ struct Answer {
 
 const REQUEST_LIMIT: Duration = Duration::from_secs(30);
 
+fn http_client(https_only: bool) -> Result<reqwest::Client, DavError> {
+    reqwest::Client::builder()
+        .https_only(https_only)
+        // Redirects are followed by hand, so the password goes only
+        // where `same_site` allows.
+        .redirect(reqwest::redirect::Policy::none())
+        .timeout(REQUEST_LIMIT)
+        .user_agent(concat!("Penguin Mail/", env!("CARGO_PKG_VERSION")))
+        .build()
+        .map_err(|err| DavError::Network(err.to_string()))
+}
+
 impl DavClient {
     pub fn new(context: &str, login: Login) -> Result<DavClient, DavError> {
         let base = Url::parse(context).map_err(|err| DavError::Parse(err.to_string()))?;
         if base.scheme() != "https" {
             return Err(DavError::Forbidden("Penguin Mail reaches calendar and contact servers over HTTPS only".into()));
         }
-        let http = reqwest::Client::builder()
-            .https_only(true)
-            // Redirects are followed by hand, so the password goes only
-            // where `same_site` allows.
-            .redirect(reqwest::redirect::Policy::none())
-            .timeout(REQUEST_LIMIT)
-            .user_agent(concat!("Penguin Mail/", env!("CARGO_PKG_VERSION")))
-            .build()
-            .map_err(|err| DavError::Network(err.to_string()))?;
-        Ok(DavClient { base, login, http })
+        Ok(DavClient { base, login, http: http_client(true)? })
     }
 
-    /// A client over `http` with no https check, for tests against a
-    /// local mock server.
+    /// A client with no https check, for tests against a local mock
+    /// server. It builds its own HTTP client, so it follows redirects by
+    /// hand as `new` does and a test exercises the real credential rule.
     #[cfg(any(test, feature = "fake"))]
-    pub fn over(base: Url, login: Login, http: reqwest::Client) -> DavClient {
-        DavClient { base, login, http }
+    pub fn over(base: Url, login: Login) -> Result<DavClient, DavError> {
+        Ok(DavClient { base, login, http: http_client(false)? })
     }
 
     fn url(&self, href: &str) -> Result<Url, DavError> {
