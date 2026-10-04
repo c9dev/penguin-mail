@@ -2631,6 +2631,7 @@ dependencies = [
  "base64 0.23.1",
  "chrono",
  "mailrs-domain",
+ "mailrs-sieve",
  "mailrs-testmail",
  "rustls",
  "rustls-platform-verifier",
