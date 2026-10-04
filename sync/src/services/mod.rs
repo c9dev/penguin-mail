@@ -84,6 +84,19 @@ pub struct MailCapabilities {
     /// The server reads a search in its own syntax, as the person typed
     /// it, so `SearchQuery::Native` reaches it untouched.
     pub native_search: bool,
+    /// A message takes a new name on the server when it moves, as an IMAP
+    /// message's mailbox and UID do. The engine then keeps remote refs.
+    pub renames: bool,
+    /// The change feed hands over each changed message whole, as it stands
+    /// now, and names new mail no differently from a change: Graph's delta
+    /// queries. A message it names that the store lacks is new to the
+    /// store, and the engine fetches it.
+    pub restates: bool,
+    /// The account keeps tags: server mailboxes that are marks beside the
+    /// one folder a message sits in.
+    pub tags: bool,
+    /// The server sorts the inbox into Focused and Other.
+    pub focus: bool,
 }
 
 /// How far a write got before the server refused the rest: the first
@@ -406,6 +419,7 @@ impl AccountServices {
 
     pub fn offers(&self) -> Offers {
         let caps = self.capabilities();
+        let features = CalendarFeatures::of(self.calendar.as_ref());
         Offers {
             labels: caps.labels,
             categories: caps.categories,
@@ -418,6 +432,40 @@ impl AccountServices {
             // in part 6, keeps no mail on the server to search, and adds a
             // capability for it then.
             search: true,
+            tags: caps.tags,
+            focused: caps.focus,
+            event_files: features.event_files,
+            moves_events: features.moves_events,
+            calendar_list: features.calendar_list,
+        }
+    }
+}
+
+/// What a calendar adapter can do beyond reading and writing events.
+/// Gated here, once, so no adapter is asked for a write it can never do:
+/// an `Unsupported` answer would keep its change in the queue and every
+/// later calendar change of the account would wait behind it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct CalendarFeatures {
+    event_files: bool,
+    moves_events: bool,
+    calendar_list: bool,
+}
+
+impl CalendarFeatures {
+    const NONE: CalendarFeatures =
+        CalendarFeatures { event_files: false, moves_events: false, calendar_list: false };
+    const GOOGLE: CalendarFeatures =
+        CalendarFeatures { event_files: true, moves_events: true, calendar_list: true };
+
+    /// The match has no wildcard, so an adapter added to `AnyCalendar`
+    /// has to say what it can do.
+    fn of(calendar: Option<&AnyCalendar>) -> CalendarFeatures {
+        match calendar {
+            None => CalendarFeatures::NONE,
+            Some(AnyCalendar::Google(_)) => CalendarFeatures::GOOGLE,
+            #[cfg(any(test, feature = "fake"))]
+            Some(AnyCalendar::Fake(_)) => CalendarFeatures::GOOGLE,
         }
     }
 }
@@ -481,10 +529,22 @@ pub struct Offers {
     /// The server searches past the mail kept on this computer. The
     /// window reads nothing of it yet, since every account so far can.
     pub search: bool,
+    /// The account keeps tags beside its folders, so the window offers
+    /// Tags… beside Move to Folder.
+    pub tags: bool,
+    /// The inbox splits into Focused and Other.
+    pub focused: bool,
+    /// An event can carry files the person attaches from this computer.
+    pub event_files: bool,
+    /// An event can move to another calendar of the account.
+    pub moves_events: bool,
+    /// The calendar list can change: a new calendar, a rename, a colour,
+    /// a subscription, removing one.
+    pub calendar_list: bool,
 }
 
 impl Offers {
-    /// Everything, as Gmail offers, and as the window assumes of an account
+    /// Everything Gmail offers (it has neither tags nor Focused), and as the window assumes of an account
     /// that has not started yet, so nothing disappears for a moment.
     pub const EVERYTHING: Offers = Offers {
         labels: true,
@@ -495,6 +555,11 @@ impl Offers {
         rules: true,
         auto_reply: true,
         search: true,
+        tags: false,
+        focused: false,
+        event_files: true,
+        moves_events: true,
+        calendar_list: true,
     };
 
     /// What the account lacks, in the order Preferences lists it.
@@ -1023,6 +1088,10 @@ mod tests {
                 keywords: &["$seen", "$flagged", "$muted"],
                 native_search: true,
                 batch_limit: 1000,
+                renames: false,
+                restates: false,
+                tags: false,
+                focus: false,
             }
         );
     }
@@ -1053,6 +1122,28 @@ mod tests {
         let services = AccountServices::fake(Arc::new(FakeGmail::new()));
         assert_eq!(services.offers(), Offers::EVERYTHING);
         assert!(services.offers().missing().is_empty());
+    }
+
+    #[test]
+    fn offers_read_tags_and_focus_from_the_capabilities() {
+        let gmail = Arc::new(FakeGmail::new());
+        let caps = MailCapabilities {
+            labels: false,
+            tags: true,
+            focus: true,
+            ..AccountServices::fake(Arc::clone(&gmail)).capabilities()
+        };
+        let offers = AccountServices::fake_with_capabilities(gmail, caps).offers();
+        assert!(offers.tags && offers.focused && !offers.labels);
+        assert_eq!((Offers::EVERYTHING.tags, Offers::EVERYTHING.focused), (false, false));
+    }
+
+    #[test]
+    fn gmail_offers_all_three_calendar_gates_and_imap_none() {
+        let gmail = AccountServices::fake(Arc::new(FakeGmail::new())).offers();
+        assert!(gmail.event_files && gmail.moves_events && gmail.calendar_list);
+        let imap = AccountServices::fake_imap(Arc::new(FakeImap::new()), Arc::new(FakeSmtp::default())).offers();
+        assert!(!imap.event_files && !imap.moves_events && !imap.calendar_list);
     }
 
     #[test]

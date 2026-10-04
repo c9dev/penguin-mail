@@ -4,7 +4,7 @@
 //! what each message gained and lost, and hands them to the account's
 //! backend; undo builds the operations that reverse that report.
 
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 
 use mailrs_domain::mailbox::keyword::{FLAGGED, MUTED, SEEN};
 use mailrs_domain::{AccountId, Applied, MailSet, Membership, Memberships, Role};
@@ -88,6 +88,11 @@ impl MovedFrom {
 /// The server's id for each role's mailbox, as the backend reports it.
 pub type Roles = BTreeMap<Role, String>;
 
+/// The server mailboxes a folder account keeps as marks beside the one
+/// folder a message sits in: Outlook's categories. Adding or taking one
+/// never moves mail, and a move keeps them.
+pub type Tags = BTreeSet<String>;
+
 /// The operations `action` stands for on an account whose mail service can
 /// do `caps`. A label account files and unfiles; a folder account moves,
 /// since a message there sits in one folder: the one place an action adds
@@ -100,6 +105,7 @@ pub fn ops_for(
     action: &TriageAction,
     caps: &MailCapabilities,
     roles: &Roles,
+    tags: &Tags,
     set_of: impl Fn(&str) -> MailSet,
 ) -> Result<Vec<MailOp>, BackendError> {
     let id = |role: Role| roles.get(&role).cloned().ok_or(BackendError::Unsupported);
@@ -148,11 +154,11 @@ pub fn ops_for(
         // On a label account a move files the mail and takes it out of
         // the inbox, as Gmail's own Move to does.
         TriageAction::MoveTo(id) => vec![MailOp::AddToMailbox(id.clone()), remove(Role::Inbox)?],
-        TriageAction::AddLabel(id) if moves => moved(&[set_of(id)], &[], roles)?,
+        TriageAction::AddLabel(id) if moves => moved(&[set_of(id)], &[], roles, tags)?,
         TriageAction::AddLabel(id) => vec![set_op(&set_of(id), true, roles)?],
-        TriageAction::RemoveLabel(id) if moves => moved(&[], &[set_of(id)], roles)?,
+        TriageAction::RemoveLabel(id) if moves => moved(&[], &[set_of(id)], roles, tags)?,
         TriageAction::RemoveLabel(id) => vec![set_op(&set_of(id), false, roles)?],
-        TriageAction::Relabel { add, remove } if moves => moved(add, remove, roles)?,
+        TriageAction::Relabel { add, remove } if moves => moved(add, remove, roles, tags)?,
         TriageAction::Relabel { add, remove } => add
             .iter()
             .map(|set| set_op(set, true, roles))
@@ -182,8 +188,15 @@ fn set_op(set: &MailSet, on: bool, roles: &Roles) -> Result<MailOp, BackendError
 /// account. The one place `add` names is where the mail moves, which
 /// takes it out of every other; with none named, mail that leaves a place
 /// goes to the Archive, since a folder server has nowhere else to keep
-/// it. Two places at once is `Unsupported`.
-fn moved(add: &[MailSet], remove: &[MailSet], roles: &Roles) -> Result<Vec<MailOp>, BackendError> {
+/// it. Two places at once is `Unsupported`. A tag is a mark: it goes on
+/// and comes off in place and never counts as a place.
+fn moved(
+    add: &[MailSet],
+    remove: &[MailSet],
+    roles: &Roles,
+    tags: &Tags,
+) -> Result<Vec<MailOp>, BackendError> {
+    let move_op = |set: &MailSet| move_op(set, tags);
     let mut ops = Vec::new();
     for (sets, on) in [(add, true), (remove, false)] {
         for set in sets.iter().filter(|set| move_op(set).is_none()) {
@@ -204,9 +217,10 @@ fn moved(add: &[MailSet], remove: &[MailSet], roles: &Roles) -> Result<Vec<MailO
 }
 
 /// The move into `set`, when `set` is a place mail sits in rather than a
-/// mark it carries.
-fn move_op(set: &MailSet) -> Option<MailOp> {
+/// mark it carries. A tag is a mark.
+fn move_op(set: &MailSet, tags: &Tags) -> Option<MailOp> {
     match set {
+        MailSet::Mailbox(id) if tags.contains(id) => None,
         MailSet::Role(role) => Some(MailOp::MoveToRole(*role)),
         MailSet::Mailbox(id) => Some(MailOp::MoveToMailbox(id.clone())),
         MailSet::Keyword(_) | MailSet::Unseen | MailSet::Category(_) => None,
@@ -232,13 +246,23 @@ pub fn drop_protected(
     held: &HashMap<String, Memberships>,
     ops: &[MailOp],
     roles: &Roles,
+    tags: &Tags,
     from: Option<&str>,
 ) -> Vec<String> {
     if !ops.iter().any(is_move_op) {
         return ids;
     }
     let none = Memberships::default();
-    let mailboxes = |id: &String| &held.get(id).unwrap_or(&none).mailboxes;
+    // A tag is no place, so a tagged Sent message still sits only in Sent.
+    let mailboxes = |id: &String| -> Vec<String> {
+        held.get(id)
+            .unwrap_or(&none)
+            .mailboxes
+            .iter()
+            .filter(|m| !tags.contains(*m))
+            .cloned()
+            .collect()
+    };
     let sits_in_source =
         |id: &String| from.is_some_and(|from| mailboxes(id).iter().any(|m| m == from));
     let with_source: HashSet<&String> = whole_thread
@@ -254,7 +278,7 @@ pub fn drop_protected(
             if with_source.contains(thread) {
                 return sits_in_source(id);
             }
-            match only_role(mailboxes(id), roles) {
+            match only_role(&mailboxes(id), roles) {
                 Some(role) => !move_leaves_alone(role, ops, roles),
                 None => true,
             }
@@ -264,10 +288,12 @@ pub fn drop_protected(
 
 /// The server mailbox `from` names in an account whose role mailboxes are
 /// `roles`. `None` for a mark, such as flagged or unread, which is no
-/// place mail moves out of, and for a role the account has no mailbox for.
-pub fn source_mailbox(from: &MailSet, roles: &Roles) -> Option<String> {
+/// place mail moves out of, for a tag, which is a mark, and for a role the
+/// account has no mailbox for.
+pub fn source_mailbox(from: &MailSet, roles: &Roles, tags: &Tags) -> Option<String> {
     match from {
         MailSet::Role(role) => roles.get(role).cloned(),
+        MailSet::Mailbox(id) if tags.contains(id) => None,
         MailSet::Mailbox(id) => Some(id.clone()),
         MailSet::Keyword(_) | MailSet::Unseen | MailSet::Category(_) => None,
     }
@@ -277,8 +303,12 @@ pub fn source_mailbox(from: &MailSet, roles: &Roles) -> Option<String> {
 /// mailbox a `RemoveLabel` or a `Relabel` removes. That is the source of
 /// the move on a folder account, whatever list the mail was picked from.
 /// `set_of` reads a mailbox id as the account's mail service reads it.
-pub fn moved_out_of(action: &TriageAction, set_of: impl Fn(&str) -> MailSet) -> Option<MailSet> {
-    let place = |set: MailSet| move_op(&set).is_some().then_some(set);
+pub fn moved_out_of(
+    action: &TriageAction,
+    tags: &Tags,
+    set_of: impl Fn(&str) -> MailSet,
+) -> Option<MailSet> {
+    let place = |set: MailSet| move_op(&set, tags).is_some().then_some(set);
     match action {
         TriageAction::RemoveLabel(id) => place(set_of(id)),
         TriageAction::Relabel { remove, .. } => remove.iter().cloned().find_map(place),
@@ -335,7 +365,13 @@ fn op(membership: Membership, on: bool) -> MailOp {
 }
 
 /// The store changes `ops` make to message `id`, which now holds `held`.
-pub fn local_changes(id: &str, held: &Memberships, ops: &[MailOp], roles: &Roles) -> Vec<Change> {
+pub fn local_changes(
+    id: &str,
+    held: &Memberships,
+    ops: &[MailOp],
+    roles: &Roles,
+    tags: &Tags,
+) -> Vec<Change> {
     let mut changes = Vec::new();
     for op in ops {
         match op {
@@ -358,18 +394,18 @@ pub fn local_changes(id: &str, held: &Memberships, ops: &[MailOp], roles: &Roles
                 let Some(target) = roles.get(role) else {
                     continue;
                 };
-                move_to(&mut changes, id, held, target);
+                move_to(&mut changes, id, held, target, tags);
             }
-            MailOp::MoveToMailbox(target) => move_to(&mut changes, id, held, target),
+            MailOp::MoveToMailbox(target) => move_to(&mut changes, id, held, target, tags),
         }
     }
     changes
 }
 
 /// The store changes that take message `id` out of every mailbox it
-/// holds and into `target`.
-fn move_to(changes: &mut Vec<Change>, id: &str, held: &Memberships, target: &str) {
-    for mailbox in held.mailboxes.iter().filter(|m| *m != target) {
+/// holds, except its tags, and into `target`.
+fn move_to(changes: &mut Vec<Change>, id: &str, held: &Memberships, target: &str, tags: &Tags) {
+    for mailbox in held.mailboxes.iter().filter(|m| *m != target && !tags.contains(*m)) {
         changes.push(Change::of(id, Membership::Mailbox(mailbox.clone()), false));
     }
     changes.push(Change::of(id, Membership::Mailbox(target.into()), true));
@@ -467,7 +503,7 @@ mod tests {
     fn a_label_account_adds_and_removes_mailboxes() {
         let roles = gmail_roles();
         let ops = |action: TriageAction| {
-            ops_for(&action, &label_account(), &roles, named).unwrap()
+            ops_for(&action, &label_account(), &roles, &Tags::new(), named).unwrap()
         };
         assert_eq!(
             ops(TriageAction::Archive),
@@ -541,7 +577,7 @@ mod tests {
             remove: vec![],
         };
         assert_eq!(
-            ops_for(&back, &label_account(), &roles, named).unwrap(),
+            ops_for(&back, &label_account(), &roles, &Tags::new(), named).unwrap(),
             vec![
                 MailOp::AddToMailbox("INBOX".into()),
                 MailOp::SetKeyword { keyword: SEEN.into(), on: false },
@@ -557,7 +593,7 @@ mod tests {
             remove: vec![MailSet::Category("CATEGORY_UPDATES".into())],
         };
         assert_eq!(
-            ops_for(&sort, &label_account(), &roles, named).unwrap(),
+            ops_for(&sort, &label_account(), &roles, &Tags::new(), named).unwrap(),
             vec![
                 MailOp::SetCategory { category: "CATEGORY_SOCIAL".into(), on: true },
                 MailOp::SetKeyword { keyword: FLAGGED.into(), on: true },
@@ -573,7 +609,7 @@ mod tests {
             remove: vec![],
         };
         assert!(matches!(
-            ops_for(&relabel, &label_account(), &gmail_roles(), named),
+            ops_for(&relabel, &label_account(), &gmail_roles(), &Tags::new(), named),
             Err(BackendError::Unsupported)
         ));
     }
@@ -586,7 +622,7 @@ mod tests {
                 &TriageAction::RemoveLabel("UNREAD".into()),
                 &label_account(),
                 &roles,
-                named
+                &Tags::new(), named
             )
             .unwrap(),
             [keyword(SEEN, true)]
@@ -596,7 +632,7 @@ mod tests {
                 &TriageAction::AddLabel("STARRED".into()),
                 &label_account(),
                 &roles,
-                named
+                &Tags::new(), named
             )
             .unwrap(),
             [MailOp::SetKeyword { keyword: FLAGGED.into(), on: true }]
@@ -607,7 +643,7 @@ mod tests {
     fn a_folder_account_moves_to_a_role() {
         let roles = gmail_roles();
         let ops = |action: TriageAction| {
-            ops_for(&action, &folder_account(), &roles, named).unwrap()
+            ops_for(&action, &folder_account(), &roles, &Tags::new(), named).unwrap()
         };
         assert_eq!(
             ops(TriageAction::Archive),
@@ -630,7 +666,7 @@ mod tests {
     fn a_folder_account_moves_where_a_label_account_adds_a_mailbox() {
         let roles = gmail_roles();
         let ops = |action: TriageAction| {
-            ops_for(&action, &folder_account(), &roles, named).unwrap()
+            ops_for(&action, &folder_account(), &roles, &Tags::new(), named).unwrap()
         };
         // Dropped from Flagged or a search, nothing is taken away, and the
         // mail still moves rather than gaining a copy.
@@ -666,7 +702,7 @@ mod tests {
     fn a_folder_account_archives_mail_that_leaves_a_folder_for_nowhere() {
         let roles = gmail_roles();
         let ops = |action: TriageAction| {
-            ops_for(&action, &folder_account(), &roles, named).unwrap()
+            ops_for(&action, &folder_account(), &roles, &Tags::new(), named).unwrap()
         };
         assert_eq!(
             ops(TriageAction::Relabel {
@@ -700,7 +736,7 @@ mod tests {
             remove: vec![],
         };
         assert!(matches!(
-            ops_for(&two, &folder_account(), &gmail_roles(), named),
+            ops_for(&two, &folder_account(), &gmail_roles(), &Tags::new(), named),
             Err(BackendError::Unsupported)
         ));
     }
@@ -708,7 +744,7 @@ mod tests {
     #[test]
     fn a_label_account_without_the_mailbox_cannot_file_there() {
         assert!(matches!(
-            ops_for(&TriageAction::Trash, &label_account(), &Roles::new(), named),
+            ops_for(&TriageAction::Trash, &label_account(), &Roles::new(), &Tags::new(), named),
             Err(crate::BackendError::Unsupported)
         ));
     }
@@ -721,7 +757,7 @@ mod tests {
         };
         let roles = Roles::from([(Role::Archive, "Archive".to_string())]);
         assert_eq!(
-            local_changes("m1", &held, &[MailOp::MoveToRole(Role::Archive)], &roles),
+            local_changes("m1", &held, &[MailOp::MoveToRole(Role::Archive)], &roles, &Tags::new()),
             [
                 Change::RemoveFromMailbox {
                     message_id: "m1".into(),
@@ -744,11 +780,11 @@ mod tests {
         let roles = gmail_roles();
         let action = TriageAction::MoveTo("Label_5".into());
         assert_eq!(
-            ops_for(&action, &folder_account(), &roles, named).unwrap(),
+            ops_for(&action, &folder_account(), &roles, &Tags::new(), named).unwrap(),
             vec![MailOp::MoveToMailbox("Label_5".into())]
         );
         assert_eq!(
-            ops_for(&action, &label_account(), &roles, named).unwrap(),
+            ops_for(&action, &label_account(), &roles, &Tags::new(), named).unwrap(),
             vec![
                 MailOp::AddToMailbox("Label_5".into()),
                 MailOp::RemoveFromMailbox("INBOX".into()),
@@ -767,6 +803,7 @@ mod tests {
             &held,
             &[MailOp::MoveToMailbox("Label_5".into())],
             &gmail_roles(),
+            &Tags::new(),
         );
         assert_eq!(
             changes,
@@ -811,7 +848,7 @@ mod tests {
         let ids = vec!["work".to_string(), "sent".to_string()];
         let ops = [MailOp::MoveToRole(Role::Archive)];
         assert_eq!(
-            drop_protected(ids, &whole_thread, &held, &ops, &roles, None),
+            drop_protected(ids, &whole_thread, &held, &ops, &roles, &Tags::new(), None),
             ["work".to_string()]
         );
     }
@@ -829,7 +866,7 @@ mod tests {
         let ids = vec!["sent".to_string()];
         let ops = [MailOp::MoveToRole(Role::Archive)];
         assert_eq!(
-            drop_protected(ids, &HashMap::new(), &held, &ops, &roles, Some("Work")),
+            drop_protected(ids, &HashMap::new(), &held, &ops, &roles, &Tags::new(), Some("Work")),
             ["sent".to_string()]
         );
     }
@@ -848,7 +885,7 @@ mod tests {
         let ids = vec!["t".to_string()];
         let ops = [MailOp::MoveToRole(Role::Inbox)];
         assert_eq!(
-            drop_protected(ids, &whole_thread, &held, &ops, &roles, None),
+            drop_protected(ids, &whole_thread, &held, &ops, &roles, &Tags::new(), None),
             ["t".to_string()]
         );
     }
@@ -867,7 +904,7 @@ mod tests {
         let ids = vec!["j".to_string()];
         let ops = [MailOp::MoveToRole(Role::Trash)];
         assert_eq!(
-            drop_protected(ids, &whole_thread, &held, &ops, &roles, None),
+            drop_protected(ids, &whole_thread, &held, &ops, &roles, &Tags::new(), None),
             ["j".to_string()]
         );
     }
@@ -883,7 +920,7 @@ mod tests {
         let ids = vec!["sent".to_string()];
         let ops = [keyword(SEEN, true)];
         assert_eq!(
-            drop_protected(ids, &whole_thread, &held, &ops, &roles, None),
+            drop_protected(ids, &whole_thread, &held, &ops, &roles, &Tags::new(), None),
             ["sent".to_string()]
         );
     }
@@ -908,6 +945,88 @@ mod tests {
             .collect()
     }
 
+    fn outlook_roles() -> Roles {
+        [
+            (Role::Inbox, "AAMk-inbox".to_string()),
+            (Role::Archive, "AAMk-archive".to_string()),
+            (Role::Sent, "AAMk-sent".to_string()),
+            (Role::Trash, "AAMk-trash".to_string()),
+        ]
+        .into()
+    }
+
+    fn red() -> Tags {
+        ["category:Red".to_string()].into()
+    }
+
+    #[test]
+    fn tagging_on_a_folder_account_files_without_moving() {
+        let (roles, tags) = (outlook_roles(), red());
+        let set_of = |id: &str| MailSet::Mailbox(id.to_string());
+        assert_eq!(
+            ops_for(&TriageAction::AddLabel("category:Red".into()), &folder_account(), &roles, &tags, set_of).unwrap(),
+            [MailOp::AddToMailbox("category:Red".into())]
+        );
+        assert_eq!(
+            ops_for(&TriageAction::RemoveLabel("category:Red".into()), &folder_account(), &roles, &tags, set_of).unwrap(),
+            [MailOp::RemoveFromMailbox("category:Red".into())]
+        );
+        // A folder still moves.
+        assert_eq!(
+            ops_for(&TriageAction::AddLabel("AAMk-trips".into()), &folder_account(), &roles, &tags, set_of).unwrap(),
+            [MailOp::MoveToMailbox("AAMk-trips".into())]
+        );
+    }
+
+    #[test]
+    fn a_move_on_a_folder_account_keeps_its_tags() {
+        let (roles, tags) = (outlook_roles(), red());
+        let held = Memberships {
+            mailboxes: vec!["AAMk-inbox".into(), "category:Red".into()],
+            ..Memberships::default()
+        };
+        let changes = local_changes("m1", &held, &[MailOp::MoveToRole(Role::Archive)], &roles, &tags);
+        assert!(changes.contains(&Change::of("m1", Membership::Mailbox("AAMk-inbox".into()), false)));
+        assert!(changes.contains(&Change::of("m1", Membership::Mailbox("AAMk-archive".into()), true)));
+        assert!(
+            !changes.contains(&Change::of("m1", Membership::Mailbox("category:Red".into()), false)),
+            "{changes:?}"
+        );
+    }
+
+    #[test]
+    fn a_tagged_sent_message_still_stays_put_on_a_thread_move() {
+        let (roles, tags) = (outlook_roles(), red());
+        let held: HashMap<String, Memberships> = [(
+            "sent".to_string(),
+            Memberships {
+                mailboxes: vec!["AAMk-sent".into(), "category:Red".into()],
+                ..Memberships::default()
+            },
+        )]
+        .into();
+        let whole: HashMap<String, String> = [("sent".to_string(), "t1".to_string())].into();
+        let kept = drop_protected(
+            vec!["sent".into()],
+            &whole,
+            &held,
+            &[MailOp::MoveToRole(Role::Archive)],
+            &roles,
+            &tags,
+            None,
+        );
+        assert!(kept.is_empty(), "a sent reply is not pulled into the Archive");
+    }
+
+    #[test]
+    fn removing_a_tag_is_no_move_out_of_a_place() {
+        let (roles, tags) = (outlook_roles(), red());
+        let set_of = |id: &str| MailSet::Mailbox(id.to_string());
+        let action = TriageAction::RemoveLabel("category:Red".into());
+        assert_eq!(moved_out_of(&action, &tags, set_of), None);
+        assert_eq!(source_mailbox(&MailSet::Mailbox("category:Red".into()), &roles, &tags), None);
+    }
+
     fn folder_roles() -> Roles {
         Roles::from([
             (Role::Inbox, "INBOX".to_string()),
@@ -926,7 +1045,7 @@ mod tests {
         let whole_thread = one_thread(&["work", "travel", "sent"]);
         let ops = [MailOp::MoveToRole(Role::Archive)];
         assert_eq!(
-            drop_protected(ids, &whole_thread, &held, &ops, &folder_roles(), Some("Work")),
+            drop_protected(ids, &whole_thread, &held, &ops, &folder_roles(), &Tags::new(), Some("Work")),
             ["work".to_string()]
         );
     }
@@ -940,7 +1059,7 @@ mod tests {
         let whole_thread = one_thread(&["work", "travel", "sent"]);
         let ops = [MailOp::MoveToRole(Role::Archive)];
         assert_eq!(
-            drop_protected(ids, &whole_thread, &held, &ops, &folder_roles(), None),
+            drop_protected(ids, &whole_thread, &held, &ops, &folder_roles(), &Tags::new(), None),
             ["work".to_string(), "travel".to_string()]
         );
     }
@@ -953,7 +1072,7 @@ mod tests {
         let whole_thread = one_thread(&["work", "sent"]);
         let ops = [MailOp::MoveToRole(Role::Archive)];
         assert_eq!(
-            drop_protected(ids, &whole_thread, &held, &ops, &folder_roles(), Some("Sent")),
+            drop_protected(ids, &whole_thread, &held, &ops, &folder_roles(), &Tags::new(), Some("Sent")),
             ["sent".to_string()]
         );
     }
@@ -968,7 +1087,7 @@ mod tests {
         let whole_thread = one_thread(&["travel", "sent"]);
         let ops = [MailOp::MoveToRole(Role::Archive)];
         assert_eq!(
-            drop_protected(ids, &whole_thread, &held, &ops, &folder_roles(), Some("Work")),
+            drop_protected(ids, &whole_thread, &held, &ops, &folder_roles(), &Tags::new(), Some("Work")),
             ["travel".to_string()]
         );
     }
@@ -985,7 +1104,7 @@ mod tests {
         ]);
         let ops = [MailOp::MoveToRole(Role::Archive)];
         assert_eq!(
-            drop_protected(ids, &whole_thread, &held, &ops, &folder_roles(), Some("Work")),
+            drop_protected(ids, &whole_thread, &held, &ops, &folder_roles(), &Tags::new(), Some("Work")),
             ["a-work".to_string(), "b-travel".to_string()]
         );
     }
@@ -993,11 +1112,11 @@ mod tests {
     #[test]
     fn a_source_resolves_by_role_or_by_mailbox() {
         let roles = folder_roles();
-        let source = |set: MailSet| source_mailbox(&set, &roles);
+        let source = |set: MailSet| source_mailbox(&set, &roles, &Tags::new());
         assert_eq!(source(MailSet::Role(Role::Inbox)).as_deref(), Some("INBOX"));
         assert_eq!(source(MailSet::Mailbox("Work".into())).as_deref(), Some("Work"));
-        assert_eq!(source_mailbox(&MailSet::Role(Role::Junk), &roles), None, "no Junk here");
-        assert_eq!(source_mailbox(&MailSet::flagged(), &roles), None, "a mark is no place");
+        assert_eq!(source_mailbox(&MailSet::Role(Role::Junk), &roles, &Tags::new()), None, "no Junk here");
+        assert_eq!(source_mailbox(&MailSet::flagged(), &roles, &Tags::new()), None, "a mark is no place");
     }
 
     /// Taking mail out of a folder names where it comes from, whatever
@@ -1006,17 +1125,17 @@ mod tests {
     fn a_removal_names_its_own_source() {
         let set_of = |id: &str| MailSet::Mailbox(id.into());
         assert_eq!(
-            moved_out_of(&TriageAction::RemoveLabel("Travel".into()), set_of),
+            moved_out_of(&TriageAction::RemoveLabel("Travel".into()), &Tags::new(), set_of),
             Some(MailSet::Mailbox("Travel".into()))
         );
         let relabel = TriageAction::Relabel {
             add: vec![MailSet::Mailbox("Work".into())],
             remove: vec![MailSet::Unseen, MailSet::Role(Role::Inbox)],
         };
-        assert_eq!(moved_out_of(&relabel, set_of), Some(MailSet::Role(Role::Inbox)));
-        assert_eq!(moved_out_of(&TriageAction::Archive, set_of), None);
+        assert_eq!(moved_out_of(&relabel, &Tags::new(), set_of), Some(MailSet::Role(Role::Inbox)));
+        assert_eq!(moved_out_of(&TriageAction::Archive, &Tags::new(), set_of), None);
         assert_eq!(
-            moved_out_of(&TriageAction::RemoveLabel("$flagged".into()), |_| MailSet::flagged()),
+            moved_out_of(&TriageAction::RemoveLabel("$flagged".into()), &Tags::new(), |_| MailSet::flagged()),
             None
         );
     }

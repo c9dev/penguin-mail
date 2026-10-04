@@ -93,6 +93,7 @@ impl AccountSync {
             .filter(|id| mail.made_by_person(id))
             .collect();
         let generation = cursor.sync_gen;
+        let restates = mail.capabilities().restates;
         let state = found.state;
         let (touched, new_mail, unknown_mailbox) = self
             .db
@@ -139,6 +140,12 @@ impl AccountSync {
                         }
                         RemoteChange::Gained { id, .. } => {
                             if let Some(meta) = fetched.get(id) {
+                                // A restating feed has no `Added`, so the
+                                // message it brings in unread is announced
+                                // here.
+                                if restates && is_new_inbox_mail(meta) && !new_mail.contains(id) {
+                                    new_mail.push(id.clone());
+                                }
                                 batch.push(placing.upsert(account_id, meta, generation));
                             }
                         }
@@ -404,29 +411,35 @@ impl AccountSync {
                 _ => None,
             })
             .collect();
-        let into_inbox: Vec<Want> = changes
+        // A feed that restates names new mail no differently from a
+        // change, so a message gaining any server mailbox may be new to
+        // the store. Otherwise only a move into the inbox from outside the
+        // window counts.
+        let restates = self.services.mail.capabilities().restates;
+        let arriving: Vec<Want> = changes
             .iter()
             .filter_map(|change| match change {
                 RemoteChange::Gained {
                     id,
                     thread_id,
                     memberships,
-                } if inbox
-                    .as_ref()
-                    .is_some_and(|inbox| memberships.contains(inbox)) =>
+                } if memberships.iter().any(|m| match m {
+                    Membership::Mailbox(_) if restates => true,
+                    other => inbox.as_ref() == Some(other),
+                }) =>
                 {
                     Some(want(id, thread_id))
                 }
                 _ => None,
             })
             .collect();
-        if !into_inbox.is_empty() {
-            let candidates: Vec<String> = into_inbox.iter().map(|w| w.id.clone()).collect();
+        if !arriving.is_empty() {
+            let candidates: Vec<String> = arriving.iter().map(|w| w.id.clone()).collect();
             let known = self
                 .db
                 .read(move |c| messages::existing_ids(c, account_id, &candidates))
                 .await?;
-            wanted.extend(into_inbox.into_iter().filter(|w| !known.contains(&w.id)));
+            wanted.extend(arriving.into_iter().filter(|w| !known.contains(&w.id)));
         }
         let fetched = self.fetch(wanted).await?;
         let metas = fetched
