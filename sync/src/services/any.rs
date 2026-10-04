@@ -3,7 +3,9 @@
 //! holds with a `match`: no boxed futures and no trait objects. `Google`
 //! holds the adapter over the real client; `Fake` holds the same adapter
 //! over `FakeGmail`, for tests and the demo. `Imap` and `FakeImap` do the
-//! same for an IMAP account's mail and identity.
+//! same for an IMAP account's mail and identity. `Microsoft` and
+//! `FakeMicrosoft` hold the Graph adapter, over the real client and over
+//! `FakeGraph`.
 
 use std::ops::RangeInclusive;
 use std::time::Duration;
@@ -19,12 +21,12 @@ use mailrs_mime::Parts;
 
 use super::{
     AutoReplyService, Backfill, CalendarService, Changes, ContactsService, Found, Google,
-    IdentityService, Imap, KeywordsPage, MailBackend, MailCapabilities, RawMessage, Relocated,
-    RemoteRef, RulesService, SearchQuery, SendAsAddress, SyncState, Unapplied, Want, Withheld,
+    IdentityService, Imap, KeywordsPage, MailBackend, MailCapabilities, Microsoft, RawMessage,
+    Refused, Relocated, RemoteRef, RulesService, SearchQuery, SendAsAddress, SyncState, Unapplied, Want, Withheld,
 };
 use crate::api::{AccountClient, DraftRef, SavedDraft};
 #[cfg(any(test, feature = "fake"))]
-use crate::fake::{FakeGmail, FakeImap, FakeSmtp};
+use crate::fake::{FakeGmail, FakeGraph, FakeImap, FakeSmtp};
 use crate::{BackendError, MailOp};
 
 /// Awaits `$method` on whichever adapter `$self`, an `$enum`, holds.
@@ -34,6 +36,9 @@ macro_rules! forward {
             $enum::Google(adapter) => adapter.$method($($arg),*).await,
             #[cfg(any(test, feature = "fake"))]
             $enum::Fake(adapter) => adapter.$method($($arg),*).await,
+            $enum::Microsoft(adapter) => adapter.$method($($arg),*).await,
+            #[cfg(any(test, feature = "fake"))]
+            $enum::FakeMicrosoft(adapter) => adapter.$method($($arg),*).await,
         }
     };
 }
@@ -48,6 +53,9 @@ macro_rules! forward_all {
             $enum::Imap(adapter) => adapter.$method($($arg),*).await,
             #[cfg(any(test, feature = "fake"))]
             $enum::FakeImap(adapter) => adapter.$method($($arg),*).await,
+            $enum::Microsoft(adapter) => adapter.$method($($arg),*).await,
+            #[cfg(any(test, feature = "fake"))]
+            $enum::FakeMicrosoft(adapter) => adapter.$method($($arg),*).await,
         }
     };
 }
@@ -62,6 +70,9 @@ macro_rules! forward_all_now {
             $enum::Imap(adapter) => adapter.$method($($arg),*),
             #[cfg(any(test, feature = "fake"))]
             $enum::FakeImap(adapter) => adapter.$method($($arg),*),
+            $enum::Microsoft(adapter) => adapter.$method($($arg),*),
+            #[cfg(any(test, feature = "fake"))]
+            $enum::FakeMicrosoft(adapter) => adapter.$method($($arg),*),
         }
     };
 }
@@ -75,6 +86,9 @@ pub enum AnyMail {
     Imap(Imap<ImapClient, SmtpClient>),
     #[cfg(any(test, feature = "fake"))]
     FakeImap(Imap<FakeImap, FakeSmtp>),
+    Microsoft(Microsoft<mailrs_graph::Graph>),
+    #[cfg(any(test, feature = "fake"))]
+    FakeMicrosoft(Microsoft<FakeGraph>),
 }
 
 /// An account's calendar.
@@ -83,6 +97,9 @@ pub enum AnyCalendar {
     Google(Google<AccountClient>),
     #[cfg(any(test, feature = "fake"))]
     Fake(Google<FakeGmail>),
+    Microsoft(Microsoft<mailrs_graph::Graph>),
+    #[cfg(any(test, feature = "fake"))]
+    FakeMicrosoft(Microsoft<FakeGraph>),
 }
 
 /// An account's address book.
@@ -91,6 +108,9 @@ pub enum AnyContacts {
     Google(Google<AccountClient>),
     #[cfg(any(test, feature = "fake"))]
     Fake(Google<FakeGmail>),
+    Microsoft(Microsoft<mailrs_graph::Graph>),
+    #[cfg(any(test, feature = "fake"))]
+    FakeMicrosoft(Microsoft<FakeGraph>),
 }
 
 /// The rules an account's server runs.
@@ -99,6 +119,9 @@ pub enum AnyRules {
     Google(Google<AccountClient>),
     #[cfg(any(test, feature = "fake"))]
     Fake(Google<FakeGmail>),
+    Microsoft(Microsoft<mailrs_graph::Graph>),
+    #[cfg(any(test, feature = "fake"))]
+    FakeMicrosoft(Microsoft<FakeGraph>),
 }
 
 /// An account's automatic reply.
@@ -107,6 +130,9 @@ pub enum AnyAutoReply {
     Google(Google<AccountClient>),
     #[cfg(any(test, feature = "fake"))]
     Fake(Google<FakeGmail>),
+    Microsoft(Microsoft<mailrs_graph::Graph>),
+    #[cfg(any(test, feature = "fake"))]
+    FakeMicrosoft(Microsoft<FakeGraph>),
 }
 
 /// The addresses an account sends as.
@@ -118,6 +144,9 @@ pub enum AnyIdentities {
     Imap(Imap<ImapClient, SmtpClient>),
     #[cfg(any(test, feature = "fake"))]
     FakeImap(Imap<FakeImap, FakeSmtp>),
+    Microsoft(Microsoft<mailrs_graph::Graph>),
+    #[cfg(any(test, feature = "fake"))]
+    FakeMicrosoft(Microsoft<FakeGraph>),
 }
 
 impl AnyMail {
@@ -132,6 +161,20 @@ impl AnyMail {
             AnyMail::Imap(_) => Withheld::NONE,
             #[cfg(any(test, feature = "fake"))]
             AnyMail::FakeImap(_) => Withheld::NONE,
+            AnyMail::Microsoft(adapter) => adapter.withheld(),
+            #[cfg(any(test, feature = "fake"))]
+            AnyMail::FakeMicrosoft(adapter) => adapter.withheld(),
+        }
+    }
+
+    /// The services an organization refused a Microsoft account this run.
+    /// No other provider learns of such a refusal.
+    pub fn refused(&self) -> Refused {
+        match self {
+            AnyMail::Microsoft(adapter) => adapter.refused(),
+            #[cfg(any(test, feature = "fake"))]
+            AnyMail::FakeMicrosoft(adapter) => adapter.refused(),
+            _ => Refused::default(),
         }
     }
 }
