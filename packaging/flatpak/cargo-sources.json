@@ -41,6 +41,19 @@
     {
         "type": "archive",
         "archive-type": "tar-gzip",
+        "url": "https://static.crates.io/crates/ahash/ahash-0.8.12.crate",
+        "sha256": "5a15f179cd60c4584b8a8c596927aadc462e27f2ca70c04e0071964a73ba7a75",
+        "dest": "cargo/vendor/ahash-0.8.12"
+    },
+    {
+        "type": "inline",
+        "contents": "{\"package\": \"5a15f179cd60c4584b8a8c596927aadc462e27f2ca70c04e0071964a73ba7a75\", \"files\": {}}",
+        "dest": "cargo/vendor/ahash-0.8.12",
+        "dest-filename": ".cargo-checksum.json"
+    },
+    {
+        "type": "archive",
+        "archive-type": "tar-gzip",
         "url": "https://static.crates.io/crates/aho-corasick/aho-corasick-1.1.5.crate",
         "sha256": "c982642fa9e8606056828ee9a8505737230110bb1099153c79efe865c59d12ba",
         "dest": "cargo/vendor/aho-corasick-1.1.5"
@@ -608,6 +621,19 @@
         "type": "inline",
         "contents": "{\"package\": \"ee548131103ad8f698c6725669647b9c757b3b66992dd6a026037596417bee21\", \"files\": {}}",
         "dest": "cargo/vendor/cairo-sys-rs-0.22.9",
+        "dest-filename": ".cargo-checksum.json"
+    },
+    {
+        "type": "archive",
+        "archive-type": "tar-gzip",
+        "url": "https://static.crates.io/crates/calcard/calcard-0.3.14.crate",
+        "sha256": "c601473ec15a875626bce73db1a1f0fc81e9c949ca25f1463b714947c0a70a1f",
+        "dest": "cargo/vendor/calcard-0.3.14"
+    },
+    {
+        "type": "inline",
+        "contents": "{\"package\": \"c601473ec15a875626bce73db1a1f0fc81e9c949ca25f1463b714947c0a70a1f\", \"files\": {}}",
+        "dest": "cargo/vendor/calcard-0.3.14",
         "dest-filename": ".cargo-checksum.json"
     },
     {
