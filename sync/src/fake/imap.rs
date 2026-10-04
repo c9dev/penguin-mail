@@ -415,6 +415,17 @@ impl FakeImap {
         })
     }
 
+    /// The raw text of every message in `mailbox`, oldest UID first. Empty
+    /// for a mailbox the server does not have.
+    pub fn messages_in(&self, mailbox: &str) -> Vec<String> {
+        self.with(|s| {
+            s.mailboxes
+                .get(mailbox)
+                .map(|m| m.messages.values().map(|msg| String::from_utf8_lossy(&msg.raw).into_owned()).collect())
+                .unwrap_or_default()
+        })
+    }
+
     /// A copy of one message.
     pub fn message(&self, mailbox: &str, uid: u32) -> Option<FakeMessage> {
         self.with(|s| s.mailboxes.get(mailbox)?.messages.get(&uid).cloned())
