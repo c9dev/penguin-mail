@@ -32,6 +32,7 @@ pub use google::{Google, ID_PAGE_SIZE, LIST_PAGE_SIZE};
 pub use imap::{Imap, ImapApi, ImapSettings, Submit};
 pub use microsoft::GraphApi;
 pub use pacing::{Priority, background, priority};
+pub use sieve::SieveRules;
 
 use std::collections::HashMap;
 use std::ops::RangeInclusive;
@@ -1047,6 +1048,12 @@ pub trait RulesService: Send + Sync + 'static {
     /// a ManageSieve account holds such rules; the default does nothing.
     fn take_over(&self) -> impl Future<Output = ()> + Send {
         async {}
+    }
+
+    /// Whether a change made while the server is down waits in the rule
+    /// queue and goes out when it answers. Only ManageSieve does this.
+    fn queues_offline(&self) -> bool {
+        false
     }
 }
 

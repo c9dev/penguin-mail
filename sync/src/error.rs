@@ -49,6 +49,10 @@ pub enum BackendError {
     /// where it was.
     #[error("the file is no longer at {0}")]
     FileMissing(String),
+    /// The server runs a script of the person's own, cannot include it in
+    /// Penguin Mail's, and the person has not said to replace it.
+    #[error("the server runs your rules in “{script}” and cannot run two scripts")]
+    WouldReplace { script: String },
     #[error(transparent)]
     Gmail(GmailError),
 }
