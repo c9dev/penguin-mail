@@ -18,6 +18,7 @@ mod google;
 
 pub use google::withheld as withheld_by_grant;
 pub mod imap;
+pub mod microsoft;
 pub(crate) mod local;
 mod pacing;
 mod sieve;
@@ -25,6 +26,7 @@ mod sieve;
 pub use any::{AnyAutoReply, AnyCalendar, AnyContacts, AnyIdentities, AnyMail, AnyRules};
 pub use google::{Google, ID_PAGE_SIZE, LIST_PAGE_SIZE};
 pub use imap::{Imap, ImapApi, ImapSettings, Submit};
+pub use microsoft::GraphApi;
 pub use pacing::{Priority, background, priority};
 
 use std::collections::HashMap;

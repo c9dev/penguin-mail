@@ -2684,6 +2684,7 @@ dependencies = [
  "mailrs-discover",
  "mailrs-domain",
  "mailrs-gmail",
+ "mailrs-graph",
  "mailrs-imap",
  "mailrs-mime",
  "mailrs-sieve",
