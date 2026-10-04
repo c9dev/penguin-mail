@@ -1135,7 +1135,7 @@ mod tests {
         };
         let offers = AccountServices::fake_with_capabilities(gmail, caps).offers();
         assert!(offers.tags && offers.focused && !offers.labels);
-        assert!(!Offers::EVERYTHING.tags && !Offers::EVERYTHING.focused);
+        assert_eq!((Offers::EVERYTHING.tags, Offers::EVERYTHING.focused), (false, false));
     }
 
     #[test]
