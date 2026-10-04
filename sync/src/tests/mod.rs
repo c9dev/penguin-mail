@@ -21,6 +21,7 @@ mod invitations;
 mod labels;
 mod local_rules;
 mod mailbox;
+mod microsoft;
 mod newsletters;
 mod outbox;
 mod parity;

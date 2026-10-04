@@ -30,7 +30,7 @@ mod sieve;
 pub use any::{AnyAutoReply, AnyCalendar, AnyContacts, AnyIdentities, AnyMail, AnyRules};
 pub use google::{Google, ID_PAGE_SIZE, LIST_PAGE_SIZE};
 pub use imap::{Imap, ImapApi, ImapSettings, Submit};
-pub use microsoft::GraphApi;
+pub use microsoft::{GraphApi, Microsoft, MicrosoftSettings};
 pub use pacing::{Priority, background, priority};
 
 use std::collections::HashMap;
@@ -53,7 +53,7 @@ use mailrs_store::threading::Links;
 
 use crate::api::{AccountClient, DraftRef, SavedDraft};
 #[cfg(any(test, feature = "fake"))]
-use crate::fake::{FakeGmail, FakeImap, FakeSmtp};
+use crate::fake::{FakeGmail, FakeGraph, FakeImap, FakeSmtp};
 use crate::{BackendError, MailOp};
 
 /// One address an account may send mail as: its own, or an alias whose
@@ -318,6 +318,17 @@ pub enum SearchQuery {
     Tree(Query),
 }
 
+/// The services an organization refused a Microsoft account this run,
+/// learned from Graph's answers. The account offers each one it refused
+/// as missing, with a reason naming the organization.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct Refused {
+    pub calendar: bool,
+    pub contacts: bool,
+    pub rules: bool,
+    pub auto_reply: bool,
+}
+
 /// The services one account is served by. A provider that lacks one leaves
 /// its field `None`, and the module that needs it answers
 /// `BackendError::Unsupported`.
@@ -358,6 +369,44 @@ impl AccountServices {
             rules: None,
             auto_reply: None,
             identities: AnyIdentities::Imap(adapter),
+        }
+    }
+
+    /// A Microsoft account: every service over the one Graph client.
+    pub fn microsoft(graph: mailrs_graph::Graph, settings: MicrosoftSettings) -> Self {
+        let adapter = Microsoft::new(Arc::new(graph), settings);
+        AccountServices {
+            mail: AnyMail::Microsoft(adapter.clone()),
+            calendar: Some(AnyCalendar::Microsoft(adapter.clone())),
+            contacts: Some(AnyContacts::Microsoft(adapter.clone())),
+            rules: Some(AnyRules::Microsoft(adapter.clone())),
+            auto_reply: Some(AnyAutoReply::Microsoft(adapter.clone())),
+            identities: AnyIdentities::Microsoft(adapter),
+        }
+    }
+
+    /// The in-memory Graph, for tests and the demo, as an Outlook account.
+    #[cfg(any(test, feature = "fake"))]
+    pub fn fake_microsoft(fake: Arc<FakeGraph>) -> Self {
+        let settings = MicrosoftSettings {
+            address: "me@outlook.com".into(),
+            provider_name: "Outlook".into(),
+            window_days: crate::DEFAULT_WINDOW_DAYS,
+        };
+        AccountServices::fake_microsoft_with(fake, settings)
+    }
+
+    /// The in-memory Graph with `settings`.
+    #[cfg(any(test, feature = "fake"))]
+    pub fn fake_microsoft_with(fake: Arc<FakeGraph>, settings: MicrosoftSettings) -> Self {
+        let adapter = Microsoft::new(fake, settings);
+        AccountServices {
+            mail: AnyMail::FakeMicrosoft(adapter.clone()),
+            calendar: Some(AnyCalendar::FakeMicrosoft(adapter.clone())),
+            contacts: Some(AnyContacts::FakeMicrosoft(adapter.clone())),
+            rules: Some(AnyRules::FakeMicrosoft(adapter.clone())),
+            auto_reply: Some(AnyAutoReply::FakeMicrosoft(adapter.clone())),
+            identities: AnyIdentities::FakeMicrosoft(adapter),
         }
     }
 
@@ -426,14 +475,15 @@ impl AccountServices {
     pub fn offers(&self) -> Offers {
         let caps = self.capabilities();
         let features = CalendarFeatures::of(self.calendar.as_ref());
+        let refused = self.mail.refused();
         Offers {
             labels: caps.labels,
             categories: caps.categories,
             delete_forever: caps.delete_forever,
-            calendar: self.calendar.is_some(),
-            contacts: self.contacts.is_some(),
-            rules: self.rules.is_some(),
-            auto_reply: self.auto_reply.is_some(),
+            calendar: self.calendar.is_some() && !refused.calendar,
+            contacts: self.contacts.is_some() && !refused.contacts,
+            rules: self.rules.is_some() && !refused.rules,
+            auto_reply: self.auto_reply.is_some() && !refused.auto_reply,
             // Gmail searches in its own syntax and IMAP with SEARCH. POP3,
             // in part 6, keeps no mail on the server to search, and adds a
             // capability for it then.
@@ -461,6 +511,8 @@ struct CalendarFeatures {
 impl CalendarFeatures {
     const NONE: CalendarFeatures =
         CalendarFeatures { event_files: false, moves_events: false, calendar_list: false };
+    const MICROSOFT: CalendarFeatures =
+        CalendarFeatures { event_files: false, moves_events: false, calendar_list: true };
     const GOOGLE: CalendarFeatures =
         CalendarFeatures { event_files: true, moves_events: true, calendar_list: true };
 
@@ -472,6 +524,11 @@ impl CalendarFeatures {
             Some(AnyCalendar::Google(_)) => CalendarFeatures::GOOGLE,
             #[cfg(any(test, feature = "fake"))]
             Some(AnyCalendar::Fake(_)) => CalendarFeatures::GOOGLE,
+            // Graph holds no files for an event and keeps each event in
+            // its calendar, but it lists, makes and changes calendars.
+            Some(AnyCalendar::Microsoft(_)) => CalendarFeatures::MICROSOFT,
+            #[cfg(any(test, feature = "fake"))]
+            Some(AnyCalendar::FakeMicrosoft(_)) => CalendarFeatures::MICROSOFT,
         }
     }
 }

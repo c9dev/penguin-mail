@@ -77,21 +77,22 @@ impl Placing {
 
     /// The change that stores `meta` under `generation`. A server without
     /// threads does not know the store's account id, so its messages take
-    /// this account's.
+    /// this account's. Neither does Graph's adapter, which is built before
+    /// the account has a row, so a message from any server takes it.
     pub(super) fn upsert(
         &self,
         account_id: AccountId,
         meta: &MessageMeta,
         generation: i64,
     ) -> Change {
+        let mut meta = meta.clone();
+        meta.account_id = account_id;
         if !self.local {
             return Change::Upsert {
-                meta: Box::new(meta.clone()),
+                meta: Box::new(meta),
                 generation,
             };
         }
-        let mut meta = meta.clone();
-        meta.account_id = account_id;
         Change::UpsertLocal {
             links: self.links.get(&meta.id).cloned().unwrap_or_default(),
             meta: Box::new(meta),
@@ -243,5 +244,16 @@ mod tests {
         };
         assert_eq!((meta.account_id, meta.id.as_str(), generation), (7, "b", 4));
         assert_eq!(links.in_reply_to.as_deref(), Some("<a@example.com>"));
+    }
+
+    #[test]
+    fn a_server_with_threads_still_stores_under_this_account() {
+        let placing = Placing::new(false, HashMap::new(), HashMap::new());
+        let mut from_server = meta("b", "t1", 0, &[]);
+        from_server.account_id = 0;
+        let Change::Upsert { meta, .. } = placing.upsert(7, &from_server, 4) else {
+            panic!("a server with threads stores each message as it is");
+        };
+        assert_eq!(meta.account_id, 7);
     }
 }
