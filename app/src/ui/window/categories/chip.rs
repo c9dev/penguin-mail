@@ -35,6 +35,12 @@ mod tests {
     use super::*;
 
     #[test]
+    fn a_focused_inbox_slice_reads_with_its_unread_count() {
+        assert_eq!(spoken(Category::Focused, 6), "Focused, 6 unread");
+        assert_eq!(spoken(Category::Other, 0), "Other");
+    }
+
+    #[test]
     fn the_badge_stops_at_ninety_nine() {
         assert_eq!(badge(0), "");
         assert_eq!(badge(-3), "");

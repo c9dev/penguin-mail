@@ -428,6 +428,45 @@ async fn a_create_whose_answer_was_lost_is_not_sent_twice() {
     assert!(stored(&h, "primary", &id).await.is_some());
 }
 
+/// Graph answers a create with an id of its own. The copy takes that id,
+/// guests and queued edits along, so the next change goes to the event
+/// Graph knows.
+#[tokio::test]
+async fn a_create_answered_with_another_id_takes_that_id() {
+    use mailrs_domain::calendar::Guest;
+    let h = harness().await;
+    h.fake.with(|s| s.calendars = vec![calendar("primary", true)]);
+    h.fake.assign_event_ids(true);
+    let copy = copy(&h);
+    copy.refresh(h.account_id, NOW).await.unwrap();
+    let id = new_event_id();
+    let first = Event {
+        guests: vec![Guest { email: "ann@example.com".into(), ..Guest::default() }],
+        ..event("primary", &id)
+    };
+    copy.save(h.account_id, first.clone()).await.unwrap();
+    // A second edit before the send folds into the same create.
+    copy.save(h.account_id, Event { title: "Dentist, moved".into(), ..first.clone() }).await.unwrap();
+    assert!(copy.send(h.account_id).await.unwrap().is_empty());
+
+    assert!(stored(&h, "primary", &id).await.is_none(), "the local id is gone");
+    let kept = h.fake.with(|s| s.calendar_events.clone());
+    assert_eq!(kept.len(), 1, "one event, created once");
+    assert!(kept[0].id.starts_with("fake-"));
+    let theirs = stored(&h, "primary", &kept[0].id).await.unwrap();
+    assert_eq!(theirs.title, "Dentist, moved");
+    assert_eq!(theirs.guests.len(), 1);
+    assert!(!theirs.pending);
+    assert!(queue(&h).await.is_empty());
+
+    // The next change goes to the id Graph gave.
+    copy.save(h.account_id, Event { title: "Dentist, again".into(), ..theirs }).await.unwrap();
+    assert!(copy.send(h.account_id).await.unwrap().is_empty());
+    let kept = h.fake.with(|s| s.calendar_events.clone());
+    assert_eq!(kept.len(), 1);
+    assert_eq!(kept[0].title, "Dentist, again");
+}
+
 /// `send` once inferred a
 /// create from an empty etag. A row `enqueue` marked `Save` (because an
 /// edit is already queued for the event, ruling out a create) must still

@@ -10,9 +10,6 @@ use mailrs_store::messages::{self, Change};
 use mailrs_store::rule_changes::{self, RuleChange};
 use mailrs_store::services::{self, FoundService, ServiceKind};
 
-// Part 4 adds a field to `Filter`; the update keeps this literal compiling
-// when it merges, and clippy sees it as needless until then.
-#[allow(clippy::needless_update)]
 fn rule(id: &str, from: &str) -> Filter {
     Filter {
         id: Some(id.into()),

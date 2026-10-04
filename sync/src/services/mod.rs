@@ -10,11 +10,17 @@
 //! and its pacing are neutral.
 
 mod any;
+mod caldav;
+mod carddav;
+mod dav_read;
+pub mod finding;
 mod google;
 
 pub use google::withheld as withheld_by_grant;
 pub mod imap;
+pub(crate) mod local;
 mod pacing;
+mod sieve;
 
 pub use any::{AnyAutoReply, AnyCalendar, AnyContacts, AnyIdentities, AnyMail, AnyRules};
 pub use google::{Google, ID_PAGE_SIZE, LIST_PAGE_SIZE};
@@ -996,6 +1002,24 @@ pub trait RulesService: Send + Sync + 'static {
     ) -> impl Future<Output = Result<Filter, BackendError>> + Send;
 
     fn delete_filter(&self, id: &str) -> impl Future<Output = Result<(), BackendError>> + Send;
+
+    /// Replaces rule `old_id` with `new`, in place so it keeps its turn.
+    /// An adapter that cannot answers `Unsupported`, and the caller
+    /// creates the new rule and deletes the old one instead.
+    fn replace_filter(
+        &self,
+        old_id: &str,
+        new: &Filter,
+    ) -> impl Future<Output = Result<Filter, BackendError>> + Send {
+        let _ = (old_id, new);
+        async { Err(BackendError::Unsupported) }
+    }
+
+    /// Lets the next write replace rules the person wrote elsewhere. Only
+    /// a ManageSieve account holds such rules; the default does nothing.
+    fn take_over(&self) -> impl Future<Output = ()> + Send {
+        async {}
+    }
 }
 
 /// The automatic reply the server sends while the person is away.
@@ -1044,6 +1068,27 @@ mod tests {
                 batch_limit: 1000,
             }
         );
+    }
+
+    /// A rules adapter that says nothing about replacing or taking over
+    /// answers `Unsupported` to the first and does nothing for the second.
+    #[tokio::test]
+    async fn rules_replace_and_take_over_have_defaults() {
+        struct Bare;
+        impl RulesService for Bare {
+            async fn filters(&self) -> Result<Vec<Filter>, BackendError> {
+                Ok(Vec::new())
+            }
+            async fn create_filter(&self, filter: &Filter) -> Result<Filter, BackendError> {
+                Ok(filter.clone())
+            }
+            async fn delete_filter(&self, _id: &str) -> Result<(), BackendError> {
+                Ok(())
+            }
+        }
+        let replaced = Bare.replace_filter("a", &Filter::default()).await;
+        assert!(matches!(replaced, Err(BackendError::Unsupported)));
+        Bare.take_over().await;
     }
 
     #[test]

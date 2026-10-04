@@ -176,7 +176,8 @@ impl<A: Accounts> AccountSettings<A> {
     /// a failed create leaves the old rule running and answers the error,
     /// and a failed delete answers `Replaced::BothRun`. A rule that
     /// matches and does what `old` does stays as it is, since Gmail
-    /// refuses a filter identical to one it has.
+    /// refuses a filter identical to one it has. A read-only rule is
+    /// refused.
     pub async fn replace_rule(
         &self,
         account_id: AccountId,
@@ -185,6 +186,11 @@ impl<A: Accounts> AccountSettings<A> {
     ) -> Result<Permitted<Replaced>, SyncError> {
         if rule.criteria == old.criteria && rule.action == old.action {
             return Ok(Permitted::Done(Replaced::Swapped(old.clone())));
+        }
+        if old.read_only {
+            return Err(SyncError::Backend(BackendError::Refused(
+                "the rule is read-only".into(),
+            )));
         }
         let old_id = old
             .id
@@ -416,6 +422,7 @@ fn labels(address: &str, label_id: &str) -> Filter {
             add: vec![MailSet::Mailbox(label_id.to_string())],
             ..FilterAction::default()
         },
+        ..Filter::default()
     }
 }
 
@@ -429,6 +436,7 @@ fn trashes(address: &str) -> Filter {
             remove: vec![MailSet::Role(Role::Inbox)],
             forward: None,
         },
+        ..Filter::default()
     }
 }
 

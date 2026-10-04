@@ -1347,7 +1347,7 @@ fn category_unread(
     };
     let mut sql = Sql::default();
     sql.push("SELECT ");
-    for (i, category) in Category::ALL.into_iter().enumerate() {
+    for (i, category) in Category::COUNTED.into_iter().enumerate() {
         if i > 0 {
             sql.push(", ");
         }
@@ -1374,11 +1374,11 @@ fn category_unread(
     let counts =
         conn.prepare_cached(&sql.text)?
             .query_row(params_from_iter(&sql.params), |row| {
-                (0..Category::ALL.len())
+                (0..Category::COUNTED.len())
                     .map(|i| row.get::<_, i64>(i))
                     .collect::<rusqlite::Result<Vec<i64>>>()
             })?;
-    Ok(Category::ALL.into_iter().zip(counts).collect())
+    Ok(Category::COUNTED.into_iter().zip(counts).collect())
 }
 
 #[cfg(test)]

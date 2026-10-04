@@ -178,6 +178,20 @@ impl Rules {
                 )))
                 .activatable(true)
                 .build();
+            if filter.read_only {
+                // The server holds this rule in a shape the form cannot say,
+                // so the row neither opens nor deletes it. The line says why.
+                row.set_subtitle(&glib::markup_escape_text(&format!(
+                    "{}\n{}",
+                    describe_action(&filter.action, |id| self.label_name(id)),
+                    gettext("Made elsewhere. Change it where you made it."),
+                )));
+                row.set_activatable(false);
+                row.add_suffix(&gtk::Image::from_icon_name("changes-prevent-symbolic"));
+                self.list.add(&row);
+                self.shown.borrow_mut().push(row);
+                continue;
+            }
             // The row points its LabelledBy relation at the title, which
             // wins over a label set on it, so drop the relation first.
             row.upcast_ref::<gtk::Widget>()

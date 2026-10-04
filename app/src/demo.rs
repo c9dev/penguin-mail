@@ -892,6 +892,7 @@ fn demo_rules(index: usize) -> Vec<Filter> {
                 remove: vec![MailSet::Role(Role::Inbox), MailSet::Unseen],
                 ..FilterAction::default()
             },
+            ..Filter::default()
         },
         Filter {
             id: Some("demo-rule-tickets".into()),
@@ -903,6 +904,7 @@ fn demo_rules(index: usize) -> Vec<Filter> {
                 add: vec![MailSet::Mailbox("Label_travel".into()), MailSet::flagged()],
                 ..FilterAction::default()
             },
+            ..Filter::default()
         },
         Filter {
             id: Some("demo-rule-bank".into()),
@@ -915,6 +917,7 @@ fn demo_rules(index: usize) -> Vec<Filter> {
                 remove: vec![MailSet::Role(Role::Inbox)],
                 forward: Some("books@fernwood.example".into()),
             },
+            ..Filter::default()
         },
     ]
 }

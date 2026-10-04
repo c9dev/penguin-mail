@@ -118,14 +118,19 @@ pub enum MailboxKind {
     /// lists a `\Noselect` or `\NonExistent` parent. Nothing opens it or
     /// moves mail into it.
     Group,
+    /// A mark a folder server keeps beside the one folder a message sits
+    /// in: an Outlook category. A message carries any number of them, and
+    /// moving it to another folder keeps them.
+    Tag,
 }
 
 impl MailboxKind {
-    pub const ALL: [MailboxKind; 4] = [
+    pub const ALL: [MailboxKind; 5] = [
         MailboxKind::System,
         MailboxKind::Label,
         MailboxKind::Folder,
         MailboxKind::Group,
+        MailboxKind::Tag,
     ];
 
     /// The stored form, in `mailboxes.kind`.
@@ -135,6 +140,7 @@ impl MailboxKind {
             MailboxKind::Label => "label",
             MailboxKind::Folder => "folder",
             MailboxKind::Group => "group",
+            MailboxKind::Tag => "tag",
         }
     }
 }
@@ -306,6 +312,13 @@ mod tests {
             assert_eq!(provider.as_str().parse::<Provider>(), Ok(provider));
         }
         assert!("outbox".parse::<Role>().is_err());
+    }
+
+    #[test]
+    fn a_tag_is_stored_as_tag() {
+        assert_eq!(MailboxKind::Tag.as_str(), "tag");
+        assert_eq!("tag".parse::<MailboxKind>(), Ok(MailboxKind::Tag));
+        assert_eq!("tag".parse::<crate::LabelKind>(), Ok(crate::LabelKind::Tag));
     }
 
     #[test]
