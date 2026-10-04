@@ -229,6 +229,48 @@ impl Graph {
         }
     }
 
+    /// Microsoft's upload sessions answer on the Outlook web host, with the
+    /// right to write already in the URL. The token never goes there, and
+    /// nothing goes anywhere else.
+    fn upload_host(&self, url: &Url) -> bool {
+        let microsoft = url.scheme() == "https"
+            && matches!(
+                url.host_str(),
+                Some("outlook.office.com" | "outlook.office365.com")
+            );
+        microsoft || self.check_origin(url).is_ok()
+    }
+
+    /// PUTs one piece of an upload session, with no token.
+    pub async fn upload(
+        &self,
+        url: &str,
+        offset: u64,
+        total: u64,
+        bytes: &[u8],
+    ) -> Result<bool, GraphError> {
+        let parsed = Url::parse(url).map_err(|e| GraphError::Decode(e.to_string()))?;
+        if !self.upload_host(&parsed) {
+            return Err(GraphError::OffHost(
+                parsed.host_str().unwrap_or_default().to_string(),
+            ));
+        }
+        let end = offset + bytes.len() as u64 - 1;
+        let response = self
+            .http
+            .put(parsed)
+            .header("Content-Range", format!("bytes {offset}-{end}/{total}"))
+            .body(bytes.to_vec())
+            .send()
+            .await
+            .map_err(network)?;
+        match response.status().as_u16() {
+            200 | 202 => Ok(false),
+            201 => Ok(true),
+            _ => Err(error_of(response).await),
+        }
+    }
+
     /// `link`, a next or delta link, as a path under the base, for a
     /// `$batch` entry. Refused off the base like [`Graph::follow`].
     pub fn relative(&self, link: &str) -> Result<String, GraphError> {
