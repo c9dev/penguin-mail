@@ -2891,6 +2891,13 @@ impl CalendarView {
             hidden: self.hidden.borrow().clone(),
             calendars: self.calendars.borrow().clone(),
             attaching: Rc::new(self.attaching()),
+            moving: self
+                .accounts
+                .borrow()
+                .iter()
+                .filter(|(_, offers, _)| offers.moves_events)
+                .map(|(account, _, _)| account.id)
+                .collect(),
         };
         let this = Rc::clone(self);
         editor::open(&self.page, draft, choices, contacts, move |draft| this.save_draft(draft));
@@ -2902,7 +2909,13 @@ impl CalendarView {
     fn attaching(self: &Rc<Self>) -> editor::Attaching {
         let (withheld_view, ask_view) = (Rc::downgrade(self), Rc::downgrade(self));
         let core = Rc::clone(&self.core);
+        let offered_view = Rc::downgrade(self);
         editor::Attaching {
+            offered: Box::new(move |account| {
+                offered_view.upgrade().is_some_and(|view| {
+                    view.accounts.borrow().iter().any(|(a, offers, _)| a.id == account && offers.event_files)
+                })
+            }),
             withheld: Box::new(move |account| {
                 withheld_view.upgrade().is_some_and(|view| {
                     view.accounts.borrow().iter().any(|(a, _, withheld)| a.id == account && withheld.drive)

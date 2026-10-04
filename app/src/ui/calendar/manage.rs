@@ -44,6 +44,20 @@ pub fn delete_body(events: usize) -> String {
     }
 }
 
+/// The account a change to the calendar list would write to, or `None`
+/// for a change that stays on this computer (showing a calendar, folding
+/// an account).
+fn list_edit_of(change: &ListChange) -> Option<AccountId> {
+    match change {
+        ListChange::Color { account, .. }
+        | ListChange::Rename { account, .. }
+        | ListChange::Delete { account, .. }
+        | ListChange::Unsubscribe { account, .. }
+        | ListChange::Add { account, .. } => Some(*account),
+        ListChange::Listed { .. } | ListChange::Shown { .. } | ListChange::Folded { .. } => None,
+    }
+}
+
 /// Shows `dialog` over `parent` with the keyboard focus in `field`, and
 /// answers the response the person chose. An alert dialog puts its own
 /// focus on its first button once it shows, so the field takes it back
@@ -65,6 +79,14 @@ impl CalendarView {
     /// Calendar. Showing a calendar and folding an account stay with the
     /// view itself.
     pub(super) fn manage(self: &Rc<Self>, change: ListChange) {
+        // The menus leave these out for an account that cannot change its
+        // list; a stale menu or a script that reaches here is turned away
+        // before any adapter is asked.
+        if let Some(account) = list_edit_of(&change)
+            && !self.changeable(account)
+        {
+            return;
+        }
         let copy = self.core.calendar_copy();
         let next_event = super::sidebar::redraws_next_event(&change);
         match change {
@@ -117,6 +139,16 @@ impl CalendarView {
                 Err(err) => (view.hooks.toast)(&with_reason(&failed, &err, &[])),
             }
         });
+    }
+
+    /// Whether the account's provider lets its calendar list change.
+    /// An account not yet known reads as able, as the sidebar assumes.
+    fn changeable(&self, account: AccountId) -> bool {
+        self.accounts
+            .borrow()
+            .iter()
+            .find(|(a, _, _)| a.id == account)
+            .is_none_or(|(_, offers, _)| offers.calendar_list)
     }
 
     fn withheld_of(&self, account: AccountId) -> Withheld {
@@ -409,5 +441,15 @@ mod tests {
     fn deleting_a_calendar_says_how_many_events_go() {
         assert!(delete_body(1).contains("its 1 event are"), "{}", delete_body(1));
         assert!(delete_body(12).contains("its 12 events"));
+    }
+
+    #[test]
+    fn only_changes_that_write_the_list_name_an_account_to_check() {
+        let on = |c: &str| (7, c.to_string());
+        let (account, calendar) = on("work");
+        assert_eq!(list_edit_of(&ListChange::Rename { account, calendar: calendar.clone() }), Some(7));
+        assert_eq!(list_edit_of(&ListChange::Color { account, calendar: calendar.clone(), color: None }), Some(7));
+        assert_eq!(list_edit_of(&ListChange::Add { account, kind: AddKind::Subscribe }), Some(7));
+        assert_eq!(list_edit_of(&ListChange::Shown { account, calendar, shown: true }), None);
     }
 }

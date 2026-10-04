@@ -43,12 +43,20 @@ pub struct Choices {
     pub calendars: HashMap<(AccountId, String), Calendar>,
     /// What "Attach File…" needs from outside the editor.
     pub attaching: Rc<Attaching>,
+    /// The accounts whose events can move to another calendar
+    /// (`Offers::moves_events`). An existing event of any other account
+    /// shows its calendar as a label.
+    pub moving: HashSet<AccountId>,
 }
 
 /// What attaching a file needs from outside the editor: whether the
 /// account granted Drive, a way to ask for it, and the upload itself,
 /// which runs on the sync runtime.
 pub struct Attaching {
+    /// Whether the account's events carry files at all
+    /// (`Offers::event_files`). When not, there is no "Attach File…" and
+    /// nothing asks the account for Drive.
+    pub offered: Box<dyn Fn(AccountId) -> bool>,
     /// Whether the account has not granted Drive, so "Attach File…" asks
     /// for it before it offers a file chooser.
     pub withheld: Box<dyn Fn(AccountId) -> bool>,
@@ -1048,7 +1056,11 @@ impl Editor {
         let current = offered
             .iter()
             .position(|(a, _, c)| *a == draft.account_id && c.id == draft.calendar);
-        let choose = draft.is_new() || (self.may(Part::Calendar) && current.is_some());
+        let choose = picks_calendar(
+            draft.is_new(),
+            self.may(Part::Calendar) && current.is_some(),
+            choices.moving.contains(&draft.account_id),
+        );
         if choose {
             let row = adw::ComboRow::builder().title(gettext("Calendar")).build();
             crate::ui::name_combo_row_items(&row);
@@ -1472,6 +1484,7 @@ impl Editor {
             let draft = self.draft.borrow();
             (draft.attachments.clone(), draft.can_attach(), draft.has_other_guests(), draft.account_id)
         };
+        let can_attach = can_attach && (self.attaching.offered)(account);
         let mut rows = Vec::new();
         for (index, file) in files.iter().enumerate() {
             let row = attachments::row(file);
@@ -2046,6 +2059,13 @@ fn local_time(at: EpochMillis, zone: Tz) -> NaiveTime {
 /// The key the Calendar row's model holds for a calendar: its account
 /// and id, which together name it, since two accounts can share a
 /// calendar id.
+/// Whether the Calendar row is a choice: always for a new event, and for
+/// an existing one only when the person may move it (`may_move`) and its
+/// account moves events between calendars at all.
+fn picks_calendar(is_new: bool, may_move: bool, account_moves: bool) -> bool {
+    is_new || (may_move && account_moves)
+}
+
 fn calendar_key(account: AccountId, id: &str) -> String {
     format!("{account}\u{1f}{id}")
 }
@@ -2144,6 +2164,14 @@ mod tests {
             (2, "me@work.pt".into(), calendar("team", "Design team")),
             (1, "me@example.com".into(), calendar("family", "Family")),
         ]
+    }
+
+    #[test]
+    fn an_existing_event_picks_its_calendar_only_where_events_move() {
+        assert!(picks_calendar(true, false, false), "a new event always picks");
+        assert!(picks_calendar(false, true, true));
+        assert!(!picks_calendar(false, true, false), "an account that cannot move events shows a label");
+        assert!(!picks_calendar(false, false, true), "a guest's event stays put");
     }
 
     #[test]

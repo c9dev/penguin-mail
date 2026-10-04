@@ -400,6 +400,7 @@ impl AccountServices {
 
     pub fn offers(&self) -> Offers {
         let caps = self.capabilities();
+        let features = CalendarFeatures::of(self.calendar.as_ref());
         Offers {
             labels: caps.labels,
             categories: caps.categories,
@@ -412,6 +413,38 @@ impl AccountServices {
             // in part 6, keeps no mail on the server to search, and adds a
             // capability for it then.
             search: true,
+            event_files: features.event_files,
+            moves_events: features.moves_events,
+            calendar_list: features.calendar_list,
+        }
+    }
+}
+
+/// What a calendar adapter can do beyond reading and writing events.
+/// Gated here, once, so no adapter is asked for a write it can never do:
+/// an `Unsupported` answer would keep its change in the queue and every
+/// later calendar change of the account would wait behind it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct CalendarFeatures {
+    event_files: bool,
+    moves_events: bool,
+    calendar_list: bool,
+}
+
+impl CalendarFeatures {
+    const NONE: CalendarFeatures =
+        CalendarFeatures { event_files: false, moves_events: false, calendar_list: false };
+    const GOOGLE: CalendarFeatures =
+        CalendarFeatures { event_files: true, moves_events: true, calendar_list: true };
+
+    /// The match has no wildcard, so an adapter added to `AnyCalendar`
+    /// has to say what it can do.
+    fn of(calendar: Option<&AnyCalendar>) -> CalendarFeatures {
+        match calendar {
+            None => CalendarFeatures::NONE,
+            Some(AnyCalendar::Google(_)) => CalendarFeatures::GOOGLE,
+            #[cfg(any(test, feature = "fake"))]
+            Some(AnyCalendar::Fake(_)) => CalendarFeatures::GOOGLE,
         }
     }
 }
@@ -475,6 +508,13 @@ pub struct Offers {
     /// The server searches past the mail kept on this computer. The
     /// window reads nothing of it yet, since every account so far can.
     pub search: bool,
+    /// An event can carry files the person attaches from this computer.
+    pub event_files: bool,
+    /// An event can move to another calendar of the account.
+    pub moves_events: bool,
+    /// The calendar list can change: a new calendar, a rename, a colour,
+    /// a subscription, removing one.
+    pub calendar_list: bool,
 }
 
 impl Offers {
@@ -489,6 +529,9 @@ impl Offers {
         rules: true,
         auto_reply: true,
         search: true,
+        event_files: true,
+        moves_events: true,
+        calendar_list: true,
     };
 
     /// What the account lacks, in the order Preferences lists it.
@@ -1008,6 +1051,14 @@ mod tests {
         let services = AccountServices::fake(Arc::new(FakeGmail::new()));
         assert_eq!(services.offers(), Offers::EVERYTHING);
         assert!(services.offers().missing().is_empty());
+    }
+
+    #[test]
+    fn gmail_offers_all_three_calendar_gates_and_imap_none() {
+        let gmail = AccountServices::fake(Arc::new(FakeGmail::new())).offers();
+        assert!(gmail.event_files && gmail.moves_events && gmail.calendar_list);
+        let imap = AccountServices::fake_imap(Arc::new(FakeImap::new()), Arc::new(FakeSmtp::default())).offers();
+        assert!(!imap.event_files && !imap.moves_events && !imap.calendar_list);
     }
 
     #[test]

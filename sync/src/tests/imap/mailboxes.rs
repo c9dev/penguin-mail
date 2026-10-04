@@ -46,6 +46,9 @@ fn an_imap_account_offers_mail_alone() {
             rules: false,
             auto_reply: false,
             search: true,
+            event_files: false,
+            moves_events: false,
+            calendar_list: false,
         }
     );
 }

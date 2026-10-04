@@ -46,6 +46,10 @@ pub struct SidebarAccount {
     /// The calendars the person took off the list, which the "Hidden
     /// Calendars" menu at its foot offers to put back.
     pub hidden: Vec<Calendar>,
+    /// Whether the account lets the list change (`Offers::calendar_list`).
+    /// When it does not, the rows keep Hide from the List and lose Color,
+    /// Rename, Delete and Unsubscribe, and Add Calendar skips the account.
+    pub changeable: bool,
 }
 
 /// The sidebar's rows from each account's provider offers, its own
@@ -74,6 +78,7 @@ pub fn sidebar_accounts(
                 address: account.email.clone(),
                 reach,
                 hidden: Vec::new(),
+                changeable: offers.calendar_list,
             }
         })
         .collect()
@@ -130,9 +135,13 @@ pub enum RowItem {
 /// Whether the account granted the permission for
 /// them is asked when the person picks one, so an item that needs it
 /// says why rather than going missing.
-pub fn row_menu(calendar: &Calendar) -> Vec<RowItem> {
+pub fn row_menu(calendar: &Calendar, changeable: bool) -> Vec<RowItem> {
+    let mut items = vec![RowItem::Hide];
+    if !changeable {
+        return items;
+    }
     let allows = list::allows(calendar);
-    let mut items = vec![RowItem::Hide, RowItem::Color];
+    items.push(RowItem::Color);
     if allows.rename {
         items.push(RowItem::Rename);
     }
@@ -149,6 +158,7 @@ pub fn row_menu(calendar: &Calendar) -> Vec<RowItem> {
 /// whose calendars the sidebar lists.
 pub fn adding_accounts(rows: &[SidebarAccount]) -> Vec<(AccountId, String)> {
     rows.iter()
+        .filter(|row| row.changeable)
         .filter(|row| matches!(row.reach, CalendarReach::Calendars(_) | CalendarReach::PrimaryOnly(_)))
         .map(|row| (row.id, row.address.clone()))
         .collect()
@@ -858,12 +868,12 @@ impl CalendarSidebar {
             match &account.reach {
                 CalendarReach::Calendars(calendars) => {
                     for calendar in calendars {
-                        body.append(&self.calendar_row(account.id, &account.address, calendar));
+                        body.append(&self.calendar_row(account.id, &account.address, calendar, account.changeable));
                     }
                 }
                 CalendarReach::PrimaryOnly(calendars) => {
                     for calendar in calendars {
-                        body.append(&self.calendar_row(account.id, &account.address, calendar));
+                        body.append(&self.calendar_row(account.id, &account.address, calendar, account.changeable));
                     }
                     body.append(&self.grant_row(
                         account.id,
@@ -969,7 +979,7 @@ impl CalendarSidebar {
         button
     }
 
-    fn calendar_row(&self, account_id: AccountId, address: &str, calendar: &Calendar) -> gtk::Box {
+    fn calendar_row(&self, account_id: AccountId, address: &str, calendar: &Calendar, changeable: bool) -> gtk::Box {
         let row = gtk::Box::builder()
             .spacing(8)
             .css_classes(["calendar-row"])
@@ -1003,7 +1013,7 @@ impl CalendarSidebar {
         }
         let options = gtk::MenuButton::builder()
             .icon_name("view-more-symbolic")
-            .menu_model(&calendar_menu(account_id, calendar))
+            .menu_model(&calendar_menu(account_id, calendar, changeable))
             .css_classes(["flat", "circular", "calendar-options"])
             .valign(gtk::Align::Center)
             .tooltip_text(gettext("Calendar options"))
@@ -1156,8 +1166,8 @@ fn add_menu(accounts: &[(AccountId, String)]) -> gtk::MenuButton {
 /// Gmail's label colours and the calendar's own colour back, and for a
 /// calendar the account owns, Rename and Delete in a section of their
 /// own.
-fn calendar_menu(account_id: AccountId, calendar: &Calendar) -> gio::Menu {
-    let items = row_menu(calendar);
+fn calendar_menu(account_id: AccountId, calendar: &Calendar, changeable: bool) -> gio::Menu {
+    let items = row_menu(calendar, changeable);
     let target = (account_id, calendar.id.as_str()).to_variant();
     let calendar = calendar.id.as_str();
     let menu = gio::Menu::new();
@@ -1181,7 +1191,9 @@ fn calendar_menu(account_id: AccountId, calendar: &Calendar) -> gio::Menu {
     );
     original.append_item(&entry);
     colors.append_section(None, &original);
-    menu.append_submenu(Some(&gettext("Color")), &colors);
+    if items.contains(&RowItem::Color) {
+        menu.append_submenu(Some(&gettext("Color")), &colors);
+    }
     let owned = gio::Menu::new();
     for (item, label, action) in [
         (RowItem::Rename, gettext("Rename…"), "calendars.rename"),
@@ -1348,6 +1360,7 @@ mod tests {
                 address: "dana@example.com".into(),
                 reach: CalendarReach::Calendars(vec![calendar("primary"), calendar("team")]),
                 hidden: Vec::new(),
+                changeable: true,
             }]
         );
     }
@@ -1510,7 +1523,7 @@ mod tests {
     #[test]
     fn an_owned_calendar_can_be_renamed_and_deleted_from_its_menu() {
         assert_eq!(
-            row_menu(&calendar("team")),
+            row_menu(&calendar("team"), true),
             [RowItem::Hide, RowItem::Color, RowItem::Rename, RowItem::Delete]
         );
     }
@@ -1518,15 +1531,33 @@ mod tests {
     #[test]
     fn the_primary_calendar_is_renamed_but_never_deleted() {
         let primary = Calendar { primary: true, ..calendar("primary") };
-        assert_eq!(row_menu(&primary), [RowItem::Hide, RowItem::Color, RowItem::Rename]);
+        assert_eq!(row_menu(&primary, true), [RowItem::Hide, RowItem::Color, RowItem::Rename]);
     }
 
     #[test]
     fn a_subscribed_or_shared_calendar_offers_unsubscribe_in_place_of_delete() {
         for access in [Access::Reader, Access::Writer, Access::FreeBusy] {
             let other = Calendar { access, ..calendar("fixtures") };
-            assert_eq!(row_menu(&other), [RowItem::Hide, RowItem::Color, RowItem::Unsubscribe], "{access:?}");
+            assert_eq!(row_menu(&other, true), [RowItem::Hide, RowItem::Color, RowItem::Unsubscribe], "{access:?}");
         }
+    }
+
+    #[test]
+    fn an_account_that_cannot_change_its_list_keeps_hide_and_nothing_else() {
+        for access in [Access::Owner, Access::Reader] {
+            let held = Calendar { access, ..calendar("team") };
+            assert_eq!(row_menu(&held, false), [RowItem::Hide], "{access:?}");
+        }
+    }
+
+    #[test]
+    fn calendars_are_not_added_to_an_account_that_cannot_change_its_list() {
+        let fixed = Offers { calendar_list: false, ..Offers::EVERYTHING };
+        let rows = sidebar_accounts(&[
+            (account(1, "dana@example.com"), Offers::EVERYTHING, Withheld::NONE, vec![calendar("primary")]),
+            (account(2, "ana@outlook.example"), fixed, Withheld::NONE, vec![calendar("primary")]),
+        ]);
+        assert_eq!(adding_accounts(&rows), [(1, "dana@example.com".to_string())]);
     }
 
     #[test]
