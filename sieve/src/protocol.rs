@@ -1,0 +1,1 @@
+//! ManageSieve's wire format.

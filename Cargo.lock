@@ -32,6 +32,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "ahash"
+version = "0.8.12"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5a15f179cd60c4584b8a8c596927aadc462e27f2ca70c04e0071964a73ba7a75"
+dependencies = [
+ "cfg-if",
+ "getrandom 0.3.4",
+ "once_cell",
+ "version_check",
+ "zerocopy",
+]
+
+[[package]]
 name = "aho-corasick"
 version = "1.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -485,6 +498,20 @@ dependencies = [
  "glib-sys",
  "libc",
  "system-deps 9.0.0",
+]
+
+[[package]]
+name = "calcard"
+version = "0.3.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c601473ec15a875626bce73db1a1f0fc81e9c949ca25f1463b714947c0a70a1f"
+dependencies = [
+ "ahash",
+ "chrono",
+ "chrono-tz",
+ "hashify",
+ "mail-builder",
+ "mail-parser",
 ]
 
 [[package]]
@@ -2456,6 +2483,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "mailrs-dav"
+version = "0.3.0"
+dependencies = [
+ "base64 0.23.1",
+ "calcard",
+ "chrono",
+ "chrono-tz",
+ "mailrs-domain",
+ "mailrs-testmail",
+ "psl",
+ "rand 0.10.2",
+ "reqwest",
+ "roxmltree",
+ "serde_json",
+ "thiserror 2.0.20",
+ "tokio",
+ "tracing",
+ "url",
+ "wiremock",
+]
+
+[[package]]
 name = "mailrs-discover"
 version = "0.3.0"
 dependencies = [
@@ -2573,6 +2622,23 @@ dependencies = [
  "rand 0.10.2",
  "tempfile",
  "thiserror 2.0.20",
+]
+
+[[package]]
+name = "mailrs-sieve"
+version = "0.3.0"
+dependencies = [
+ "base64 0.23.1",
+ "chrono",
+ "mailrs-domain",
+ "mailrs-testmail",
+ "rustls",
+ "rustls-platform-verifier",
+ "serde_json",
+ "thiserror 2.0.20",
+ "tokio",
+ "tokio-rustls",
+ "tracing",
 ]
 
 [[package]]

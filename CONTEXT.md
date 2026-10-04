@@ -194,6 +194,10 @@ Terms the code and its docs use for Gmail mail. The `domain` crate holds the cod
 
 **Local copy** (calendar): the account's calendars and events kept in the store and read from there, fresh within a minute while the window is open. `mailrs_sync::calendar_copy::CalendarCopy`, ticked from the app's own timer as the address book is, not from the mail engine's loop. _Avoid_: cache, mirror.
 
+**CalDAV**: the protocol an IMAP provider's calendar speaks (RFC 4791): collections of iCalendar resources under the account's calendar home, found through the provider table, RFC 6764 or a URL the person typed. `mailrs_dav` speaks it and `mailrs_sync::services::CalDav` puts it behind the calendar service, so the local copy reads a Fastmail calendar the way it reads a Google one. One resource holds a whole series with its changed occurrences. _Avoid_: iCal server, WebCal.
+
+**CardDAV**: the protocol an IMAP provider's contacts speak (RFC 6352): address books of vCards under the account's address book home. `mailrs_sync::services::CardDav` puts it behind the contacts service; the account's contacts are every address book together. _Avoid_: vCard server.
+
 **Calendar scope**: which of an account's calendars an `occurrences` query reads: every one the person has not hidden, every one regardless, or only the ones the account owns, which the clash line and free time use. `mailrs_store::calendar::CalendarScope`. Not to be confused with a mail action's Reach, which is what a button or key acts on. _Avoid_: reach, view.
 
 **Repeat scope**: whether an edit or a delete covers the one occurrence someone picked, that occurrence and every later one, or the whole series. `mailrs_domain::calendar::series::RepeatScope`, the third meaning of "scope" alongside an invitation's answer scope and a calendar scope, kept apart in name so a search or a stack trace lands on the right one. `series::change` and `series::delete` turn a repeat scope into the writes it takes: a changed occurrence of its own, the series cut short with `UNTIL` and a new series picking up where it left off, or the series itself. _Avoid_: scope (bare), range, this and future.

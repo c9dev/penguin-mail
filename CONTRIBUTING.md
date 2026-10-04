@@ -56,6 +56,9 @@ mime/     reading mail: charsets, address lists, HTML to text
 gmail/    Gmail REST client, OAuth, quota limiter
 discover/ from an address to its mail servers: the provider table, MX,
           autoconfig files, SRV records and a probe
+dav/      CalDAV and CardDAV: WebDAV's XML, a client, and calendars and
+          contacts read from iCalendar and vCard
+sieve/    Sieve rules and the automatic reply, and a ManageSieve client
 store/    SQLite schema and queries
 sync/     one sync loop per account: bootstrap, history replay, backfill,
           mail actions, mailbox listing, and each account's Gmail settings
