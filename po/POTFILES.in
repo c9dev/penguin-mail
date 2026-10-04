@@ -137,7 +137,7 @@ domain/src/smart.rs
 domain/src/translate.rs
 # Every file holding words a person reads. scripts/update-po.sh rebuilds
 # from what it found.
-gmail/src/oauth.rs
+domain/src/sign_in_page.rs
 sync/src/account/writes.rs
 sync/src/actions/labelling.rs
 sync/src/actions.rs

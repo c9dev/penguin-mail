@@ -8663,6 +8663,37 @@ msgstr ""
 msgid "%-d %B"
 msgstr ""
 
+#: domain/src/sign_in_page.rs:36
+msgid "Signed in to Penguin Mail"
+msgstr ""
+
+#: domain/src/sign_in_page.rs:37
+msgid "You can close this tab and go back to Penguin Mail."
+msgstr ""
+
+#: domain/src/sign_in_page.rs:42
+msgid "You didn't allow access"
+msgstr ""
+
+#: domain/src/sign_in_page.rs:44
+msgid ""
+"Penguin Mail has not been signed in. To try again, go back to Penguin Mail "
+"and press Grant Access."
+msgstr ""
+
+#: domain/src/sign_in_page.rs:50
+msgid "Sign-in didn't finish"
+msgstr ""
+
+#: domain/src/sign_in_page.rs:51
+msgid ""
+"Go back to Penguin Mail to see why and try again. You can close this tab."
+msgstr ""
+
+#: domain/src/sign_in_page.rs:56
+msgid "Nothing here"
+msgstr ""
+
 #: domain/src/smart.rs:69
 msgid "From contains"
 msgstr ""
@@ -8697,37 +8728,6 @@ msgstr ""
 
 #: domain/src/smart.rs:78
 msgid "Is flagged"
-msgstr ""
-
-#: gmail/src/oauth.rs:419
-msgid "Signed in to Penguin Mail"
-msgstr ""
-
-#: gmail/src/oauth.rs:420
-msgid "You can close this tab and go back to Penguin Mail."
-msgstr ""
-
-#: gmail/src/oauth.rs:425
-msgid "You didn't allow access"
-msgstr ""
-
-#: gmail/src/oauth.rs:426
-msgid ""
-"Penguin Mail has not been signed in. To try again, go back to Penguin Mail "
-"and press Grant Access."
-msgstr ""
-
-#: gmail/src/oauth.rs:431
-msgid "Sign-in didn't finish"
-msgstr ""
-
-#: gmail/src/oauth.rs:432
-msgid ""
-"Go back to Penguin Mail to see why and try again. You can close this tab."
-msgstr ""
-
-#: gmail/src/oauth.rs:434
-msgid "Nothing here"
 msgstr ""
 
 #: sync/src/account/writes.rs:730
