@@ -8785,6 +8785,10 @@ msgstr "The message names nobody to send it to."
 msgid "This rule is read-only, so Penguin Mail leaves it as it is."
 msgstr "This rule is read-only, so Penguin Mail leaves it as it is."
 
+#: sync/src/services/microsoft/errors.rs:18
+msgid "This mailbox is on your organization's own Exchange server, which Penguin Mail cannot reach."
+msgstr "This mailbox is on your organisation's own Exchange server, which Penguin Mail cannot reach."
+
 #: sync/src/services/sieve.rs:81
 msgid "{provider} offers no encrypted connection for rules, so Penguin Mail does not send your password there."
 msgstr "{provider} offers no encrypted connection for rules, so Penguin Mail does not send your password there."

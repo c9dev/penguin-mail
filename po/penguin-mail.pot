@@ -9002,6 +9002,12 @@ msgstr ""
 msgid "This rule is read-only, so Penguin Mail leaves it as it is."
 msgstr ""
 
+#: sync/src/services/microsoft/errors.rs:18
+msgid ""
+"This mailbox is on your organization's own Exchange server, which Penguin "
+"Mail cannot reach."
+msgstr ""
+
 #: sync/src/services/sieve.rs:81
 msgid ""
 "{provider} offers no encrypted connection for rules, so Penguin Mail does "

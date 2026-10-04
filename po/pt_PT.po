@@ -9390,6 +9390,14 @@ msgstr "A mensagem não indica a quem a enviar."
 msgid "This rule is read-only, so Penguin Mail leaves it as it is."
 msgstr "Esta regra é só de leitura, por isso o Penguin Mail deixa-a como está."
 
+#: sync/src/services/microsoft/errors.rs:18
+msgid ""
+"This mailbox is on your organization's own Exchange server, which Penguin "
+"Mail cannot reach."
+msgstr ""
+"Esta caixa de correio está no servidor Exchange da sua organização, ao qual "
+"o Penguin Mail não consegue chegar."
+
 #: sync/src/services/sieve.rs:81
 msgid ""
 "{provider} offers no encrypted connection for rules, so Penguin Mail does "

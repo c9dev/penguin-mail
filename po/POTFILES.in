@@ -152,3 +152,4 @@ sync/src/triage.rs
 sync/src/rules/forward.rs
 sync/src/services/local.rs
 sync/src/services/sieve.rs
+sync/src/services/microsoft/errors.rs
