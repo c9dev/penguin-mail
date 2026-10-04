@@ -21,6 +21,7 @@ mailrs-dav.workspace = true
 mailrs-discover.workspace = true
 mailrs-domain.workspace = true
 mailrs-gmail.workspace = true
+mailrs-graph.workspace = true
 mailrs-imap.workspace = true
 mailrs-mime.workspace = true
 mailrs-sieve.workspace = true

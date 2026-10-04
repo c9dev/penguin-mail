@@ -9,11 +9,13 @@
 //! sync against this mailbox would leave, for callers that want mail on
 //! screen before the engine starts.
 
+mod graph;
 mod imap;
 mod one_click;
 mod query;
 mod sent;
 
+pub use graph::{Area, FakeGraph, FakeMail, GraphState};
 pub use imap::{
     FakeImap, FakeMailbox, FakeMessage, FakeSmtp, ImapState, SmtpState, Submitted, raw_message,
 };
