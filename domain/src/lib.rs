@@ -159,6 +159,10 @@ pub enum LabelKind {
     User,
     /// A server folder that holds only other folders.
     Group,
+    /// A mark a folder server keeps beside the one folder a message sits
+    /// in: an Outlook category. A message carries any number of them, and
+    /// moving it to another folder keeps them.
+    Tag,
 }
 
 impl LabelKind {
@@ -167,6 +171,7 @@ impl LabelKind {
             LabelKind::System => "system",
             LabelKind::User => "user",
             LabelKind::Group => "group",
+            LabelKind::Tag => "tag",
         }
     }
 }
@@ -179,6 +184,7 @@ impl FromStr for LabelKind {
             "system" => Ok(LabelKind::System),
             "user" => Ok(LabelKind::User),
             "group" => Ok(LabelKind::Group),
+            "tag" => Ok(LabelKind::Tag),
             other => Err(UnknownVariant(other.to_string())),
         }
     }
@@ -530,6 +536,11 @@ pub struct Filter {
     pub criteria: FilterCriteria,
     #[serde(default)]
     pub action: FilterAction,
+    /// The server holds a rule this shape cannot say, such as an Outlook
+    /// rule with an exception or an action Penguin Mail has no word for.
+    /// The Rules dialog lists it and never rewrites or deletes it.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub read_only: bool,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -590,6 +601,7 @@ impl Filter {
                 remove: vec![MailSet::Role(Role::Inbox)],
                 forward: None,
             },
+            read_only: false,
         }
     }
 }
@@ -611,6 +623,17 @@ pub struct Vacation {
 
 #[cfg(test)]
 pub(crate) mod tests {
+    #[test]
+    fn a_read_only_rule_says_so_in_json_and_an_ordinary_one_says_nothing() {
+        let plain = crate::Filter::block("pest@example.com");
+        assert!(!serde_json::to_string(&plain).unwrap().contains("readOnly"));
+        let held = crate::Filter { read_only: true, ..plain };
+        let text = serde_json::to_string(&held).unwrap();
+        assert!(text.contains("\"readOnly\":true"));
+        let back: crate::Filter = serde_json::from_str(&text).unwrap();
+        assert!(back.read_only);
+    }
+
     use crate::mailbox::keyword::{FLAGGED, MUTED, SEEN};
     use crate::{Category, MailSet, Memberships, MessageMeta, Role, category};
 

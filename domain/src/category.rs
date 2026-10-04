@@ -15,6 +15,10 @@ pub enum Category {
     Updates,
     Promotions,
     Social,
+    /// Focused Inbox's first tab, over a Microsoft account's inbox.
+    Focused,
+    /// Focused Inbox's second tab.
+    Other,
 }
 
 /// The categories a message can be sorted into, as the store keeps them
@@ -27,19 +31,39 @@ pub const PROMOTIONS: &str = "CATEGORY_PROMOTIONS";
 pub const SOCIAL: &str = "CATEGORY_SOCIAL";
 pub const FORUMS: &str = "CATEGORY_FORUMS";
 
-/// Every category, Personal first.
+/// The category Microsoft's Focused Inbox gives the inbox mail it files
+/// under Other. The store keeps it beside Gmail's; no Gmail message ever
+/// carries it, so Gmail's slices never name it.
+pub const OTHER: &str = "FOCUS_OTHER";
+
+/// Every Gmail category, Personal first.
 pub const IDS: [&str; 5] = [PERSONAL, UPDATES, PROMOTIONS, SOCIAL, FORUMS];
 
 /// What Primary leaves out: every category but Personal.
 const NOT_PRIMARY: [&str; 4] = [UPDATES, PROMOTIONS, SOCIAL, FORUMS];
 
 impl Category {
+    /// Gmail's five, in the order its category bar shows them.
     pub const ALL: [Category; 5] = [
         Category::All,
         Category::Primary,
         Category::Updates,
         Category::Promotions,
         Category::Social,
+    ];
+
+    /// Focused Inbox's two tabs, over a Microsoft account's inbox.
+    pub const FOCUS: [Category; 2] = [Category::Focused, Category::Other];
+
+    /// Every slice the store counts unread mail for.
+    pub const COUNTED: [Category; 7] = [
+        Category::All,
+        Category::Primary,
+        Category::Updates,
+        Category::Promotions,
+        Category::Social,
+        Category::Focused,
+        Category::Other,
     ];
 
     /// The name that actions and the assistant's tools pass around.
@@ -50,11 +74,13 @@ impl Category {
             Category::Updates => "updates",
             Category::Promotions => "promotions",
             Category::Social => "social",
+            Category::Focused => "focused",
+            Category::Other => "other",
         }
     }
 
     pub fn from_key(key: &str) -> Option<Category> {
-        Category::ALL.into_iter().find(|c| c.key() == key)
+        Category::COUNTED.into_iter().find(|c| c.key() == key)
     }
 
     /// The name the category bar shows.
@@ -65,6 +91,8 @@ impl Category {
             Category::Updates => gettext("Updates"),
             Category::Promotions => gettext("Promotions"),
             Category::Social => gettext("Social"),
+            Category::Focused => gettext("Focused"),
+            Category::Other => gettext("Other"),
         }
     }
 
@@ -77,23 +105,41 @@ impl Category {
             Category::Updates => (&[UPDATES], &[]),
             Category::Promotions => (&[PROMOTIONS], &[]),
             Category::Social => (&[SOCIAL, FORUMS], &[]),
+            Category::Focused => (&[], &[OTHER]),
+            Category::Other => (&[OTHER], &[]),
         }
     }
+}
 
-    /// The category mail sorted into this one carries.
-    pub fn id(self) -> &'static str {
+/// What sorting mail into a slice changes on it: the category it gains,
+/// if any, and the ones it loses. Focused has no category of its own: it
+/// is inbox mail without Other.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Sorting {
+    pub gains: Option<&'static str>,
+    pub loses: Vec<&'static str>,
+}
+
+impl Category {
+    pub fn sorting(self) -> Sorting {
+        let gmail = |id: &'static str| Sorting {
+            gains: Some(id),
+            loses: IDS.iter().copied().filter(|c| *c != id).collect(),
+        };
         match self {
-            Category::All | Category::Primary => PERSONAL,
-            Category::Updates => UPDATES,
-            Category::Promotions => PROMOTIONS,
-            Category::Social => SOCIAL,
+            Category::All | Category::Primary => gmail(PERSONAL),
+            Category::Updates => gmail(UPDATES),
+            Category::Promotions => gmail(PROMOTIONS),
+            Category::Social => gmail(SOCIAL),
+            Category::Focused => Sorting { gains: None, loses: vec![OTHER] },
+            Category::Other => Sorting { gains: Some(OTHER), loses: Vec::new() },
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{Category, FORUMS, IDS, PERSONAL, SOCIAL};
+    use super::{Category, FORUMS, IDS, OTHER, PERSONAL, SOCIAL};
 
     #[test]
     fn keys_round_trip() {
@@ -127,8 +173,53 @@ mod tests {
     #[test]
     fn sorting_uses_a_stored_category() {
         for category in Category::ALL {
-            assert!(IDS.contains(&category.id()));
+            assert!(IDS.contains(&category.sorting().gains.unwrap()));
         }
-        assert_eq!(Category::Primary.id(), PERSONAL);
+    }
+
+    #[test]
+    fn gmails_list_leaves_out_the_focused_inbox_slices() {
+        for category in Category::FOCUS {
+            assert!(!Category::ALL.contains(&category));
+        }
+    }
+
+    #[test]
+    fn other_holds_focus_other_and_focused_holds_none_of_it() {
+        assert_eq!(Category::Other.categories(), (&[OTHER][..], &[][..]));
+        assert_eq!(Category::Focused.categories(), (&[][..], &[OTHER][..]));
+    }
+
+    #[test]
+    fn gmails_slices_never_name_other() {
+        for category in Category::ALL {
+            let (any, none) = category.categories();
+            assert!(!any.contains(&OTHER) && !none.contains(&OTHER), "{category:?}");
+        }
+    }
+
+    #[test]
+    fn every_counted_slice_round_trips_its_key() {
+        for category in Category::COUNTED {
+            assert_eq!(Category::from_key(category.key()), Some(category));
+        }
+        assert_eq!(Category::COUNTED.len(), Category::ALL.len() + Category::FOCUS.len());
+    }
+
+    #[test]
+    fn sorting_into_focused_takes_other_off_and_into_other_puts_it_on() {
+        let focused = Category::Focused.sorting();
+        assert_eq!((focused.gains, focused.loses), (None, vec![OTHER]));
+        let other = Category::Other.sorting();
+        assert_eq!((other.gains, other.loses), (Some(OTHER), vec![]));
+    }
+
+    #[test]
+    fn sorting_into_a_gmail_category_leaves_the_others() {
+        let social = Category::Social.sorting();
+        assert_eq!(social.gains, Some(SOCIAL));
+        assert!(!social.loses.contains(&SOCIAL));
+        assert_eq!(social.loses.len(), IDS.len() - 1);
+        assert_eq!(Category::Primary.sorting().gains, Some(PERSONAL));
     }
 }

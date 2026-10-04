@@ -300,6 +300,8 @@ fn category_name(category: Category) -> &'static str {
         Category::Updates => "Updates",
         Category::Promotions => "Promotions",
         Category::Social => "Social",
+        Category::Focused => "Focused",
+        Category::Other => "Other",
         Category::Primary | Category::All => "Primary",
     }
 }

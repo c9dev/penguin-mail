@@ -1,7 +1,7 @@
 //! The label list: the server mailboxes a listing named, read as labels
 //! for the window and the assistant until they read server mailboxes.
 
-use std::collections::HashMap;
+use std::collections::{BTreeSet, HashMap};
 
 use mailrs_domain::{AccountId, Label, LabelKind, MailboxKind};
 use rusqlite::{Connection, params};
@@ -29,6 +29,7 @@ pub fn list_labels(conn: &Connection, account_id: AccountId) -> Result<Vec<Label
             Ok(MailboxKind::System) => LabelKind::System,
             Ok(MailboxKind::Label | MailboxKind::Folder) => LabelKind::User,
             Ok(MailboxKind::Group) => LabelKind::Group,
+            Ok(MailboxKind::Tag) => LabelKind::Tag,
             Err(_) => {
                 return Err(StoreError::Corrupt {
                     column: "mailboxes.kind",
@@ -45,6 +46,15 @@ pub fn list_labels(conn: &Connection, account_id: AccountId) -> Result<Vec<Label
         })
     })
     .collect()
+}
+
+/// The ids of the tags `account_id` keeps: server mailboxes that are marks
+/// beside a folder rather than places. A move leaves them on the message.
+pub fn tag_ids(conn: &Connection, account_id: AccountId) -> Result<BTreeSet<String>> {
+    let mut stmt =
+        conn.prepare_cached("SELECT id FROM mailboxes WHERE account_id = ?1 AND kind = 'tag'")?;
+    let ids = stmt.query_map(params![account_id], |row| row.get::<_, String>(0))?;
+    Ok(ids.collect::<rusqlite::Result<_>>()?)
 }
 
 /// Where the person put each label they moved, by id. A label never

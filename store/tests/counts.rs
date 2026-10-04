@@ -185,7 +185,7 @@ fn category_counts_match_the_query_per_category() {
     ] {
         let threaded = threads::category_unread_threads(&conn, &filter).unwrap();
         let single = threads::category_unread_messages(&conn, &filter).unwrap();
-        for category in Category::ALL {
+        for category in Category::COUNTED {
             let (any, none) = category.categories();
             let narrowed = filter.clone().with_categories(any, none);
             assert_eq!(
@@ -207,6 +207,21 @@ fn category_counts_match_the_query_per_category() {
     assert_eq!(unified[&Category::Social], 2);
     // The one unread thread without a category label is in the Trash.
     assert_eq!(unified[&Category::Primary], 0);
+    assert_eq!(unified[&Category::Focused], 3, "no mail here carries FOCUS_OTHER");
+    assert_eq!(unified[&Category::Other], 0);
+}
+
+#[test]
+fn other_and_focused_split_an_inbox_by_focus_other() {
+    let (conn, a, _) = mixed_mail();
+    let plain = meta(a, "f1", "tf1", 1010, &["INBOX", "UNREAD"]);
+    let mut other = meta(a, "f2", "tf2", 1020, &["INBOX", "UNREAD"]);
+    other.held.categories.push(mailrs_domain::category::OTHER.into());
+    store(&conn, &[plain, other]);
+    let filter = ThreadFilter::account(a, set("INBOX"));
+    let counts = threads::category_unread_threads(&conn, &filter).unwrap();
+    assert_eq!(counts[&Category::Other], 1);
+    assert_eq!(counts[&Category::Focused], counts[&Category::All] - 1);
 }
 
 #[test]

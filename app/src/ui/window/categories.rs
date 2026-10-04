@@ -27,6 +27,8 @@ fn icon(category: Category) -> &'static str {
         Category::Updates => "preferences-system-notifications-symbolic",
         Category::Promotions => "penguin-mail-tag-symbolic",
         Category::Social => "system-users-symbolic",
+        Category::Focused => "starred-symbolic",
+        Category::Other => "mail-archive-symbolic",
     }
 }
 

@@ -262,6 +262,7 @@ impl GmailFilter {
                 remove: sets(self.action.remove_label_ids),
                 forward: self.action.forward,
             },
+            ..Filter::default()
         }
     }
 }

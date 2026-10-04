@@ -206,6 +206,22 @@ async fn replacing_a_rule_leaves_only_the_new_one() {
 }
 
 #[tokio::test]
+async fn a_read_only_rule_is_never_replaced() {
+    let h = harness().await;
+    let settings = settings(&h);
+    let old = Filter {
+        read_only: true,
+        ..a_news_rule(&h, &settings).await
+    };
+
+    let result = settings
+        .replace_rule(h.account_id, &old, marks_read(&old))
+        .await;
+    assert!(matches!(result, Err(SyncError::Backend(BackendError::Refused(_)))), "{result:?}");
+    assert_eq!(h.fake.with(|s| s.filters.len()), 1);
+}
+
+#[tokio::test]
 async fn a_refused_create_keeps_the_old_rule() {
     let h = harness().await;
     let settings = settings(&h);
