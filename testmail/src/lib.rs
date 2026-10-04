@@ -39,9 +39,9 @@ pub const REQUIRE: &str = "PENGUIN_MAIL_REQUIRE_IMAP";
 /// run left behind shows in `docker ps -a --filter label=...`.
 pub const LABEL: &str = "io.github.c9dev.penguin-mail.test";
 
-/// How long a server gets to answer once its container starts. The first
-/// run on a computer also pulls the image inside `docker create`, before
-/// this clock starts.
+/// How long a server gets to answer once its container starts. The images
+/// are on the computer already, from scripts/test-images.sh, so this clock
+/// covers the server's start alone.
 const READY_WITHIN: Duration = Duration::from_secs(60);
 
 // The Dovecot image runs unprivileged, so it listens above 1024.
@@ -49,6 +49,8 @@ const DOVECOT_IMAPS: u16 = 31993;
 const DOVECOT_IMAP: u16 = 31143;
 const MAILPIT_SMTP: u16 = 1025;
 const MAILPIT_API: u16 = 8025;
+const DOVECOT_SIEVE: u16 = 34190;
+const RADICALE_PORT: u16 = 5232;
 
 /// Skips, or fails when [`REQUIRE`] is set. Returns `None` for the caller
 /// to hand back.
@@ -96,6 +98,11 @@ pub unsafe fn trust(root: &Path) {
         std::env::set_var("SSL_CERT_FILE", root);
     }
 }
+
+/// Radicale 3.8.1, from its authors' own registry, for CalDAV and
+/// CardDAV. It supports `sync-collection` and `getctag`, and makes a
+/// user's principal the first time the user asks for it.
+pub const RADICALE_IMAGE: &str = "ghcr.io/kozea/radicale:3.8.1@sha256:54d9406cd30f9e206a9dd6d61dfac48da26b9afc37200e14f23beb8fafa7d11c";
 
 /// A root made for the run, a certificate for `localhost` it signs, and a
 /// second root that signs nothing, for a test that trusts the wrong one.
@@ -241,15 +248,29 @@ impl Container {
         command: &[&str],
         files: &[(PathBuf, &str)],
     ) -> Option<Container> {
-        let mut create = vec!["create".to_string(), "--label".into(), LABEL.into()];
+        let mut create = vec![
+            "create".to_string(),
+            "--pull".into(),
+            "never".into(),
+            "--label".into(),
+            LABEL.into(),
+        ];
         create.extend(options.iter().cloned());
         create.push(image.into());
         create.extend(command.iter().map(|arg| arg.to_string()));
         let created = docker_output(&create).await;
         if !created.status.success() {
+            let said = String::from_utf8_lossy(&created.stderr);
+            // A test never downloads: the image comes from
+            // scripts/test-images.sh, run once on the computer.
+            if said.contains("No such image") || said.contains("not found") {
+                return unavailable(&format!(
+                    "{image} is not on this computer; run scripts/test-images.sh"
+                ));
+            }
             return unavailable(&format!(
                 "docker could not create a container from {image}: {}",
-                String::from_utf8_lossy(&created.stderr).trim()
+                said.trim()
             ));
         }
         let container = Container {
@@ -395,6 +416,9 @@ pub enum Profile {
     /// Archive mailbox, so the client falls back on every path and knows
     /// the role mailboxes by their names alone.
     Bare,
+    /// Everything `Full` offers, with ManageSieve mapped and Sieve run on
+    /// delivery.
+    Sieve,
 }
 
 impl Profile {
@@ -413,6 +437,13 @@ impl Profile {
                 include_str!("../dovecot/no-qresync.conf"),
             ),
             Profile::Bare => ("bare.conf", include_str!("../dovecot/bare.conf")),
+            Profile::Sieve => (
+                "sieve.conf",
+                concat!(
+                    include_str!("../dovecot/full.conf"),
+                    include_str!("../dovecot/sieve.conf")
+                ),
+            ),
         }
     }
 }
@@ -441,6 +472,8 @@ pub struct Dovecot {
     pub imaps: u16,
     /// The host port for IMAP with STARTTLS.
     pub imap: u16,
+    /// The host port for ManageSieve, mapped for [`Profile::Sieve`] only.
+    pub sieve: Option<u16>,
 }
 
 impl Dovecot {
@@ -448,17 +481,21 @@ impl Dovecot {
         let (name, text) = profile.config();
         let config = certs.file(name);
         std::fs::write(&config, text).expect("write the Dovecot profile");
+        let mut options = vec![
+            "-p".to_string(),
+            format!("127.0.0.1::{DOVECOT_IMAPS}"),
+            "-p".into(),
+            format!("127.0.0.1::{DOVECOT_IMAP}"),
+            // The image's static passdb takes this password for any
+            // user name.
+            "-e".into(),
+            format!("USER_PASSWORD={password}"),
+        ];
+        if profile == Profile::Sieve {
+            options.extend(["-p".into(), format!("127.0.0.1::{DOVECOT_SIEVE}")]);
+        }
         let container = Container::start(
-            &[
-                "-p".into(),
-                format!("127.0.0.1::{DOVECOT_IMAPS}"),
-                "-p".into(),
-                format!("127.0.0.1::{DOVECOT_IMAP}"),
-                // The image's static passdb takes this password for any
-                // user name.
-                "-e".into(),
-                format!("USER_PASSWORD={password}"),
-            ],
+            &options,
             DOVECOT_IMAGE,
             &[],
             &[
@@ -473,10 +510,15 @@ impl Dovecot {
         if !greets(imap).await {
             return container.not_ready("Dovecot").await;
         }
+        let sieve = match profile {
+            Profile::Sieve => Some(container.port(DOVECOT_SIEVE).await),
+            _ => None,
+        };
         Some(Dovecot {
             container,
             imaps,
             imap,
+            sieve,
         })
     }
 
@@ -517,6 +559,23 @@ impl Dovecot {
             .map(|line| line.trim().to_string())
             .filter(|line| !line.is_empty())
             .collect()
+    }
+
+    /// Delivers `raw` to `user` through dovecot-lda, which runs the user's
+    /// active Sieve script, as a message arriving over SMTP would.
+    pub async fn deliver(&self, user: &str, raw: &[u8]) {
+        let out = self
+            .container
+            .exec(
+                &["/dovecot/libexec/dovecot/dovecot-lda", "-d", user],
+                Some(raw),
+            )
+            .await;
+        assert!(
+            out.status.success(),
+            "dovecot-lda failed: {}",
+            String::from_utf8_lossy(&out.stderr)
+        );
     }
 
     /// Delivers `raw` into `mailbox` as another client would, with
@@ -838,3 +897,168 @@ fn addresses(list: &serde_json::Value) -> Vec<String> {
         })
         .unwrap_or_default()
 }
+
+/// Radicale over TLS for `localhost`. A test trusts the run's root with
+/// [`trust`] before it starts one, since the readiness check speaks TLS.
+pub struct Radicale {
+    container: Container,
+    pub port: u16,
+    http: reqwest::Client,
+}
+
+impl Radicale {
+    pub async fn start(certs: &Certs, user: &str, password: &str) -> Option<Radicale> {
+        let dir = certs.file("radicale");
+        std::fs::create_dir_all(&dir).expect("make Radicale's folder");
+        for name in ["tls.crt", "tls.key"] {
+            std::fs::copy(certs.file(name), dir.join(name)).expect("copy the certificate");
+        }
+        std::fs::write(dir.join("config"), include_str!("../radicale/config"))
+            .expect("write the config");
+        std::fs::write(dir.join("users"), format!("{user}:{password}\n")).expect("write the users");
+        // docker cp keeps the host's owner and mode, and Radicale runs as
+        // another uid, so everything it reads must be world-readable.
+        for name in ["tls.crt", "tls.key", "users", "config"] {
+            std::fs::set_permissions(dir.join(name), std::fs::Permissions::from_mode(0o644))
+                .expect("let Radicale read its files");
+        }
+        std::fs::set_permissions(&dir, std::fs::Permissions::from_mode(0o755))
+            .expect("let Radicale read its folder");
+        let container = Container::start(
+            &["-p".into(), format!("127.0.0.1::{RADICALE_PORT}")],
+            RADICALE_IMAGE,
+            &["--config", "/certs/config"],
+            &[(dir, "/certs")],
+        )
+        .await?;
+        let radicale = Radicale {
+            port: container.port(RADICALE_PORT).await,
+            container,
+            http: reqwest::Client::new(),
+        };
+        if !radicale.answers().await {
+            return radicale.container.not_ready("Radicale").await;
+        }
+        Some(radicale)
+    }
+
+    pub fn id(&self) -> &str {
+        self.container.id()
+    }
+
+    /// The server's root, which a DAV client takes as its context URL.
+    pub fn url(&self) -> String {
+        format!("https://localhost:{}/", self.port)
+    }
+
+    /// Any HTTP answer over TLS means Radicale listens.
+    async fn answers(&self) -> bool {
+        let deadline = Instant::now() + READY_WITHIN;
+        while Instant::now() < deadline {
+            if self
+                .http
+                .get(self.url() + ".well-known/caldav")
+                .send()
+                .await
+                .is_ok()
+            {
+                return true;
+            }
+            tokio::time::sleep(Duration::from_millis(200)).await;
+        }
+        false
+    }
+
+    /// Makes calendar `name` under `user`'s principal and answers its path.
+    pub async fn make_calendar(&self, user: &str, password: &str, name: &str) -> String {
+        self.make(user, password, name, "MKCALENDAR", MKCALENDAR)
+            .await
+    }
+
+    /// Makes address book `name` under `user`'s principal.
+    pub async fn make_address_book(&self, user: &str, password: &str, name: &str) -> String {
+        self.make(user, password, name, "MKCOL", MKADDRESSBOOK)
+            .await
+    }
+
+    async fn make(
+        &self,
+        user: &str,
+        password: &str,
+        name: &str,
+        method: &str,
+        body: &str,
+    ) -> String {
+        // Radicale makes the principal the first time its user asks.
+        let principal = format!("/{user}/");
+        let asked = self
+            .http
+            .request(
+                reqwest::Method::from_bytes(b"PROPFIND").expect("a method"),
+                self.url() + &principal[1..],
+            )
+            .basic_auth(user, Some(password))
+            .header("Depth", "0")
+            .send()
+            .await
+            .expect("Radicale answers PROPFIND");
+        assert!(
+            asked.status().is_success(),
+            "PROPFIND {principal}: {}",
+            asked.status()
+        );
+        let path = format!("/{user}/{name}/");
+        let made = self
+            .http
+            .request(
+                reqwest::Method::from_bytes(method.as_bytes()).expect("a method"),
+                self.url() + &path[1..],
+            )
+            .basic_auth(user, Some(password))
+            .header("Content-Type", "application/xml; charset=utf-8")
+            .body(body.to_string())
+            .send()
+            .await
+            .expect("Radicale answers");
+        assert!(
+            made.status().is_success(),
+            "{method} {path}: {}",
+            made.status()
+        );
+        path
+    }
+
+    /// Puts `body` at `path` as another client would.
+    pub async fn put(
+        &self,
+        user: &str,
+        password: &str,
+        path: &str,
+        body: &str,
+        content_type: &str,
+    ) {
+        let put = self
+            .http
+            .put(self.url() + path.trim_start_matches('/'))
+            .basic_auth(user, Some(password))
+            .header("Content-Type", content_type)
+            .body(body.to_string())
+            .send()
+            .await
+            .expect("Radicale answers PUT");
+        assert!(put.status().is_success(), "PUT {path}: {}", put.status());
+    }
+}
+
+const MKCALENDAR: &str = r#"<?xml version="1.0" encoding="utf-8"?>
+<C:mkcalendar xmlns:D="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav">
+  <D:set><D:prop><D:displayname>Work</D:displayname></D:prop></D:set>
+</C:mkcalendar>"#;
+
+const MKADDRESSBOOK: &str = r#"<?xml version="1.0" encoding="utf-8"?>
+<D:mkcol xmlns:D="DAV:" xmlns:CR="urn:ietf:params:xml:ns:carddav">
+  <D:set><D:prop>
+    <D:resourcetype><D:collection/><CR:addressbook/></D:resourcetype>
+    <D:displayname>People</D:displayname>
+  </D:prop></D:set>
+</D:mkcol>"#;

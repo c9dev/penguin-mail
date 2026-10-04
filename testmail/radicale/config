@@ -1,0 +1,19 @@
+# Radicale for Penguin Mail's CalDAV and CardDAV tests: TLS with the
+# run's own certificate, one user from a plain password file, and each
+# user's collections their own.
+[server]
+hosts = 0.0.0.0:5232
+ssl = True
+certificate = /certs/tls.crt
+key = /certs/tls.key
+
+[auth]
+type = htpasswd
+htpasswd_filename = /certs/users
+htpasswd_encryption = plain
+
+[rights]
+type = owner_only
+
+[storage]
+filesystem_folder = /var/lib/radicale/collections

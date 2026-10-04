@@ -80,7 +80,9 @@ jobs:
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           shared-key: docker-suite
-      # docker create pulls the images the tests pin by digest.
+      # The tests never pull; this step fetches every pinned image once.
+      - name: Pull the test images
+        run: scripts/test-images.sh
       - name: The test servers
         run: cargo test -p mailrs-testmail
       - name: The client against Dovecot and Mailpit
