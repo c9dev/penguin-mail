@@ -204,6 +204,12 @@ pub struct FakeState {
     /// Play Google turning down every new event, as it does a body it
     /// cannot take: a create answers 400 with Google's reason.
     pub refuse_new_events: bool,
+    /// Play a provider that names a new event itself, as Graph does: a
+    /// create is stored and answered under `fake-<n>`, and the id sent
+    /// stays unknown.
+    pub assign_event_ids: bool,
+    /// How many events were named under `assign_event_ids`.
+    pub assigned_event_ids: usize,
     /// Refuse a new out-of-office or focus-time entry, as Google does on
     /// an account that is not on Google Workspace.
     pub refuse_status_entries: bool,
@@ -408,6 +414,8 @@ impl FakeGmail {
                 deleted_answers_gone: false,
                 deleted_calendars: Vec::new(),
                 refuse_new_events: false,
+                assign_event_ids: false,
+                assigned_event_ids: 0,
                 refuse_status_entries: false,
                 refuse_moves: false,
                 refuse_list_edits: false,
@@ -586,6 +594,10 @@ impl FakeGmail {
     /// Takes back one of the account's OAuth scopes, such as
     /// `mailrs_gmail::SETTINGS_SCOPE`. Calls that need it fail until
     /// [`FakeGmail::grant`] hands it over.
+    pub fn assign_event_ids(&self, on: bool) {
+        self.with(|s| s.assign_event_ids = on);
+    }
+
     pub fn withhold(&self, scope: &'static str) {
         self.with(|s| s.withheld.insert(scope));
     }
@@ -1478,6 +1490,13 @@ impl GmailApi for FakeGmail {
         }
         let mut stored = event.clone();
         stored.pending = false;
+        if create && self.with(|s| s.assign_event_ids) {
+            stored.id = self.with(|s| {
+                s.assigned_event_ids += 1;
+                format!("fake-{}", s.assigned_event_ids)
+            });
+            stored.uid.clear();
+        }
         // A write that leaves the attachments out keeps Google's, as a
         // PATCH without the key does.
         if stored.attachments.is_none() {
@@ -1498,6 +1517,7 @@ impl GmailApi for FakeGmail {
         }
         let decline = stored.kind.decline().filter(|d| d.meetings == calendar::Declines::All).cloned();
         let (calendar, span) = (stored.calendar.clone(), (stored.start, stored.end));
+        let stored_id = stored.id.clone();
         self.put_calendar_event(stored);
         if let Some(decline) = decline {
             self.decline_during(&calendar, span, &decline.message);
@@ -1505,7 +1525,7 @@ impl GmailApi for FakeGmail {
         Ok(self.with(|s| {
             s.calendar_events
                 .iter()
-                .find(|e| e.calendar == event.calendar && e.id == event.id)
+                .find(|e| e.calendar == event.calendar && e.id == stored_id)
                 .cloned()
                 .expect("just stored")
         }))

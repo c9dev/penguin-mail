@@ -481,6 +481,80 @@ pub fn settle(conn: &Connection, account_id: AccountId, calendar: &str, id: &str
     Ok(())
 }
 
+/// Moves event `from` to the id `to`, for a provider that answers a
+/// create with an id of its own: the row, its guests, the changed
+/// occurrences that name it as their series, the reminders already
+/// shown, every queued change for it (whose bodies carry the id too) and
+/// the change held for Undo. A later change then goes to the event the
+/// provider knows. Runs inside the caller's write transaction.
+pub fn rename_event(conn: &Connection, account_id: AccountId, calendar: &str, from: &str, to: &str) -> Result<()> {
+    if from == to {
+        return Ok(());
+    }
+    // Guests point at their event with no cascade on a change of id.
+    // Checking the keys at the end of the transaction lets every table
+    // move before any is checked.
+    conn.pragma_update(None, "defer_foreign_keys", true)?;
+    let at = params![account_id, calendar, from, to];
+    for table in [
+        "events SET id",
+        "events SET series",
+        "event_guests SET event",
+        "event_reminders_shown SET event",
+        "calendar_changes SET event",
+    ] {
+        let column = table.rsplit(' ').next().unwrap_or("id");
+        conn.execute(&format!("UPDATE {table} = ?4 WHERE account_id = ?1 AND calendar = ?2 AND {column} = ?3"), at)?;
+    }
+    // A queued event carries its id, and a changed occurrence its series,
+    // in its body too. A move's body names its destination in `calendar`.
+    for column in ["body", "prior_body", "restores"] {
+        for field in ["id", "series"] {
+            conn.execute(
+                &format!(
+                    "UPDATE calendar_changes SET {column} = json_set({column}, '$.{field}', ?4) \
+                     WHERE account_id = ?1 AND {column} IS NOT NULL \
+                     AND json_extract({column}, '$.calendar') = ?2 AND json_extract({column}, '$.{field}') = ?3"
+                ),
+                at,
+            )?;
+        }
+    }
+    let held: Option<(String, Option<String>)> = conn
+        .query_row("SELECT steps, before FROM calendar_holds WHERE account_id = ?1", params![account_id], |row| {
+            Ok((row.get(0)?, row.get(1)?))
+        })
+        .optional()?;
+    if let Some((steps, before)) = held {
+        let rename = |event: &mut Event| {
+            if event.calendar == calendar && event.id == from {
+                event.id = to.to_string();
+            }
+            if event.calendar == calendar && event.series.as_deref() == Some(from) {
+                event.series = Some(to.to_string());
+            }
+        };
+        let mut steps: Vec<Step> = parse(&steps);
+        for step in &mut steps {
+            match step {
+                Step::Save(event) | Step::Cancel(event) => rename(event),
+                Step::Remove { calendar: on, id } | Step::Move { to: on, id, .. } => {
+                    if on == calendar && id == from {
+                        *id = to.to_string();
+                    }
+                }
+            }
+        }
+        let mut before: Vec<Event> = before.as_deref().map(parse).unwrap_or_default();
+        before.iter_mut().for_each(rename);
+        conn.execute(
+            "UPDATE calendar_holds SET steps = ?2, before = ?3 WHERE account_id = ?1",
+            params![account_id, json(&steps), json(&before)],
+        )?;
+    }
+    Ok(())
+}
+
 /// Finds an event by its id alone, when which calendar holds it is not
 /// known: the primary calendar first, then a calendar the account owns,
 /// then any other. The same id can show on more than one calendar at
@@ -1479,6 +1553,43 @@ mod tests {
             busy: true,
             ..Event::default()
         }
+    }
+
+    #[test]
+    fn a_renamed_event_takes_its_guests_and_its_queued_change_along() {
+        let (conn, id) = store();
+        let mut series = event("primary", "pmlocal1", MONDAY, 1);
+        series.guests = vec![Guest { email: "ann@example.com".into(), ..Guest::default() }];
+        let mut changed = event("primary", "pmlocal1_x", MONDAY + DAY, 1);
+        changed.series = Some("pmlocal1".into());
+        save_events(&conn, id, &[series.clone(), changed], 1).unwrap();
+        enqueue(&conn, id, ChangeKind::Save, &Event { title: "Later".into(), ..series.clone() }).unwrap();
+        let held = [Step::Save(series.clone()), Step::Remove { calendar: "primary".into(), id: "pmlocal1".into() }];
+        save_holding(&conn, id, &held, std::slice::from_ref(&series), Notify::Guests).unwrap();
+        conn.execute("UPDATE calendar_changes SET prior_body = body, restores = body", []).unwrap();
+
+        // `Db::write` runs every write in a transaction, which the
+        // deferred key check needs.
+        let tx = conn.unchecked_transaction().unwrap();
+        rename_event(&tx, id, "primary", "pmlocal1", "AAMkAGraph=").unwrap();
+        tx.commit().unwrap();
+
+        assert!(super::event(&conn, id, "primary", "pmlocal1").unwrap().is_none());
+        let moved = super::event(&conn, id, "primary", "AAMkAGraph=").unwrap().unwrap();
+        assert_eq!(moved.guests.len(), 1);
+        let occurrence = super::event(&conn, id, "primary", "pmlocal1_x").unwrap().unwrap();
+        assert_eq!(occurrence.series.as_deref(), Some("AAMkAGraph="));
+        let queued = next_change(&conn, id, 0).unwrap().unwrap();
+        assert_eq!(queued.event, "AAMkAGraph=");
+        assert_eq!(queued.body.unwrap().id, "AAMkAGraph=");
+        let (prior, restores): (String, String) = conn
+            .query_row("SELECT prior_body, restores FROM calendar_changes", [], |r| Ok((r.get(0)?, r.get(1)?)))
+            .unwrap();
+        assert!(prior.contains("AAMkAGraph=") && restores.contains("AAMkAGraph="));
+        let (_, steps, before, _) = holdings(&conn).unwrap().remove(0);
+        assert_eq!(steps[0].key().1, "AAMkAGraph=");
+        assert_eq!(steps[1].key().1, "AAMkAGraph=");
+        assert_eq!(before[0].id, "AAMkAGraph=");
     }
 
     fn starts(found: &[Occurrence]) -> Vec<(String, EpochMillis)> {

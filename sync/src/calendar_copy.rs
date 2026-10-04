@@ -751,11 +751,23 @@ impl<A: Accounts> CalendarCopy<A> {
             match (change.kind, answer) {
                 (_, Ok(Some(mut sent))) => {
                     sent.pending = false;
-                    let attempted = attempted.clone().expect("a create or save always has a body");
+                    let mut attempted = attempted.clone().expect("a create or save always has a body");
                     let new_etag = sent.etag.clone();
+                    // A provider may name a new event itself, as Graph does.
+                    let renamed = (create && sent.id != attempted.id).then(|| attempted.id.clone());
+                    if renamed.is_some() {
+                        attempted.id = sent.id.clone();
+                    }
                     let waiting = self
                         .db
                         .write(move |c| {
+                            // Every row and queued change moves to the
+                            // provider's id first, so the comparison below
+                            // and any later change name the event the
+                            // provider knows.
+                            if let Some(local) = &renamed {
+                                store::rename_event(c, account_id, &attempted.calendar, local, &attempted.id)?;
+                            }
                             // An edit or a delete made while this change
                             // was in flight wins over the answer.
                             if store::finish_change(c, account_id, seq, &attempted, &new_etag)? {
