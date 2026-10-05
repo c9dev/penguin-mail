@@ -591,17 +591,9 @@ fn resident_peak() -> usize {
         .map_or(0, |kb| kb * 1024)
 }
 
-/// Run alone, so other tests add nothing to the process's peak:
-/// `cargo test -p mailrs-sync --lib -- --ignored a_large_message_downloads`
-///
-/// One message of 32 MB, nearly all of it a base64 file. Downloading it
-/// should hold the message once, plus what reading its headers and first
-/// text part takes; the Rust heap peak leaves out SQLite's own memory,
-/// which the resident peak shows.
-#[tokio::test]
-#[ignore = "a measurement of the whole process, run alone"]
-async fn a_large_message_downloads_holding_it_about_once() {
-    use crate::tests::heap::ProcessMark;
+/// A server holding one message of 32 MB, nearly all of it a base64 file
+/// of the letter A, as part "2". Answers the message's size.
+fn large_message() -> (FakePop3, usize) {
     let line = format!("{}\r\n", "QUFB".repeat(19));
     let lines = (32 << 20) / line.len();
     let mut raw = String::with_capacity(lines * line.len() + 1024);
@@ -616,8 +608,61 @@ async fn a_large_message_downloads_holding_it_about_once() {
     }
     raw.push_str("--b--\r\n");
     let size = raw.len();
-    let fake = FakePop3::default().with_message("big", raw.as_bytes());
-    drop(raw);
+    (FakePop3::default().with_message("big", raw.as_bytes()), size)
+}
+
+/// Run alone, so other tests add nothing to the process's peak:
+/// `cargo test -p mailrs-sync --lib -- --ignored a_large_message_opens`
+///
+/// Opening the message reads its structure and text; saving its file
+/// reads that part alone. Neither should decode the file on the way, nor
+/// hold the message more than once.
+#[tokio::test]
+#[ignore = "a measurement of the whole process, run alone"]
+async fn a_large_message_opens_and_saves_its_file_holding_it_at_most_once() {
+    use crate::tests::heap::ProcessMark;
+    let (fake, size) = large_message();
+    let h = pop3_harness(fake, RemoveSetting::Never).await;
+    h.sync.pop3_check().await.unwrap();
+
+    let _ = std::fs::write("/proc/self/clear_refs", "5");
+    let resident = resident_peak();
+    let mark = ProcessMark::start();
+    let body = h.sync.body("pop3/big").await.unwrap();
+    let (open_heap, open_resident) = (mark.peak(), resident_peak().saturating_sub(resident));
+    eprintln!("opening a {size}-byte message: heap peak {open_heap} bytes, resident peak {open_resident} bytes");
+    assert_eq!(body.text.as_deref(), Some("The scans are attached."));
+    let file = &body.attachments[0];
+    assert_eq!(file.filename, "scans.pdf");
+
+    let _ = std::fs::write("/proc/self/clear_refs", "5");
+    let resident = resident_peak();
+    let mark = ProcessMark::start();
+    let bytes = h.sync.attachment("pop3/big", &file.part_id).await.unwrap();
+    let (save_heap, save_resident) = (mark.peak(), resident_peak().saturating_sub(resident));
+    eprintln!("saving its {}-byte file: heap peak {save_heap} bytes, resident peak {save_resident} bytes", bytes.len());
+    assert_eq!(bytes.len() as i64, file.size);
+    assert!(bytes.iter().all(|b| *b == b'A'));
+
+    assert!(open_heap < size * 6 / 5, "opening held {open_heap} bytes for a {size}-byte message");
+    assert!(open_resident < size * 3 / 2, "opening raised resident memory {open_resident} bytes");
+    // The file decoded is three quarters of the message.
+    assert!(save_heap < size * 4 / 5, "saving the file held {save_heap} bytes for a {size}-byte message");
+    assert!(save_resident < size, "saving the file raised resident memory {save_resident} bytes");
+}
+
+/// Run alone, so other tests add nothing to the process's peak:
+/// `cargo test -p mailrs-sync --lib -- --ignored a_large_message_downloads`
+///
+/// One message of 32 MB, nearly all of it a base64 file. Downloading it
+/// should hold the message once, plus what reading its headers and first
+/// text part takes; the Rust heap peak leaves out SQLite's own memory,
+/// which the resident peak shows.
+#[tokio::test]
+#[ignore = "a measurement of the whole process, run alone"]
+async fn a_large_message_downloads_holding_it_about_once() {
+    use crate::tests::heap::ProcessMark;
+    let (fake, size) = large_message();
     let h = pop3_harness(fake, RemoveSetting::Never).await;
     let _ = std::fs::write("/proc/self/clear_refs", "5");
     let resident = resident_peak();

@@ -17,7 +17,7 @@ use crate::fake::{FakePop3, FakeSmtp, pop3_mail};
 use crate::passwords::{MemoryPasswords, PasswordStore};
 use crate::services::pop3::{keep_local, local_meta};
 use crate::{
-    AccountServices, AccountSync, AnyCalendar, AnyContacts, AnyRules, EngineConfig, History,
+    AccountServices, AccountSync, AnyCalendar, AnyContacts, AnyRules, BackendError, EngineConfig, History,
     MailAction, MailActions, MailBackend, Pop3Settings, RulesPlace, TriageAction, connect_pop3,
     now_millis,
 };
@@ -292,4 +292,45 @@ async fn a_listing_read_before_the_person_changed_a_folder_leaves_the_change_alo
     assert_eq!(h.ids_in(MailSet::Mailbox(receipts.id)).await, [filed], "with its mail");
     let renamed = listed.iter().find(|m| m.id == bills.id).map(|m| m.name.as_str());
     assert_eq!(renamed, Some("Invoices"), "the rename stays");
+}
+
+/// A file of its own, a forwarded message holding a file, and one sent
+/// base64-encoded, whose parts lie only in its decoded copy.
+const WITH_FILES: &[u8] = b"From: Ana <ana@example.org>\r\nSubject: Files\r\n\
+Content-Type: multipart/mixed; boundary=f\r\n\r\n--f\r\nContent-Type: text/plain\r\n\r\nSee below.\r\n\
+--f\r\nContent-Type: application/pdf; name=a.pdf\r\nContent-Transfer-Encoding: base64\r\n\r\nJVBERi0xLjcK\r\n\
+--f\r\nContent-Type: message/rfc822\r\n\r\nSubject: inner\r\nContent-Type: multipart/mixed; boundary=g\r\n\r\n\
+--g\r\nContent-Type: text/plain\r\n\r\nInner body.\r\n--g\r\nContent-Type: image/png; name=i.png\r\n\
+Content-Transfer-Encoding: base64\r\n\r\niVBORw0KGgo=\r\n--g--\r\n\
+--f\r\nContent-Type: message/rfc822\r\nContent-Transfer-Encoding: base64\r\n\r\n\
+U3ViamVjdDogaW5uZXINCkNvbnRlbnQtVHlwZTogYXBwbGljYXRpb24vemlwOyBuYW1lPWEuemlwDQoNClBLAwQ=\r\n--f--\r\n";
+
+/// Its parts come from the stored copy as a server's structure gives
+/// them, and each file comes alone, whether the message opened first in
+/// this run or not.
+#[tokio::test]
+async fn a_kept_message_opens_by_its_structure_and_each_file_comes_alone() {
+    let h = pop3_harness(FakePop3::default(), RemoveSetting::Never).await;
+    let id = h.keep("u1", WITH_FILES, "inbox", now_millis()).await;
+    let expected = mailrs_mime::read(WITH_FILES);
+    assert_eq!(expected.attachments.len(), 5, "the PDF, two forwarded messages and their files");
+    let files: Vec<(String, Vec<u8>)> = expected
+        .attachments
+        .iter()
+        .map(|a| a.part_id.clone())
+        .zip(mailrs_mime::files(WITH_FILES))
+        .collect();
+
+    let mail = &h.sync.services().mail;
+    let parts = mail.fetch_structure(&id).await.unwrap();
+    assert_eq!(mailrs_mime::body(&parts), expected);
+    for (path, bytes) in &files {
+        assert_eq!(&mail.fetch_part(&id, path).await.unwrap(), bytes, "part {path} after opening");
+    }
+
+    let fresh = h.again();
+    for (path, bytes) in &files {
+        assert_eq!(&fresh.services().mail.fetch_part(&id, path).await.unwrap(), bytes, "part {path} unopened");
+    }
+    assert!(matches!(mail.fetch_part(&id, "9").await, Err(BackendError::NotFound)));
 }
