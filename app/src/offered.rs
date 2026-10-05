@@ -421,11 +421,14 @@ pub fn reason(account: &Account, missing: Missing) -> String {
         (Provider::Microsoft, Missing::AutoReply) => {
             gettext("Your organization does not allow Penguin Mail to change the automatic reply.")
         }
-        (Provider::Imap, Missing::Calendar) => {
+        (Provider::Imap | Provider::Pop3, Missing::Calendar) => {
             gettext("Penguin Mail found no calendar server for {provider}.")
         }
-        (Provider::Imap, Missing::Contacts) => {
+        (Provider::Imap | Provider::Pop3, Missing::Contacts) => {
             gettext("Penguin Mail found no contacts server for {provider}.")
+        }
+        (Provider::Pop3, Missing::AutoReply) => {
+            gettext("{provider} cannot send automatic replies over POP3.")
         }
         (Provider::Imap, Missing::AutoReply) => {
             gettext("{provider} cannot send automatic replies.")
@@ -474,6 +477,37 @@ pub fn missing_name(address: &str, reason: &str) -> String {
     )
 }
 
+/// One line per message a POP3 server would not hand over after three
+/// tries, with the server's own words.
+pub fn failing_lines(failing: &[(String, String)]) -> Vec<String> {
+    failing
+        .iter()
+        .enumerate()
+        .map(|(n, (_, words))| {
+            fill(
+                &gettext("Message {number}: {words}"),
+                &[("number", &(n + 1).to_string()), ("words", words)],
+            )
+        })
+        .collect()
+}
+
+/// About's line for each account whose mail lives only in the store.
+pub fn kept_here_lines(accounts: &[Account]) -> Vec<String> {
+    accounts
+        .iter()
+        .filter(|account| account.provider == Provider::Pop3)
+        .map(|account| {
+            fill(
+                &gettext(
+                    "Mail from {address} is kept only on this computer; back up this file to keep it.",
+                ),
+                &[("address", &account.email)],
+            )
+        })
+        .collect()
+}
+
 /// Whether the app asks the server which addresses `account` sends as.
 /// Gmail keeps send-as addresses with their names. An IMAP server keeps
 /// neither, and asking it would replace the name the person typed when
@@ -487,13 +521,63 @@ mod tests {
     use mailrs_domain::{Account, AccountState, Provider};
     use mailrs_sync::{Missing, Offers};
 
-    use super::{hides_addresses, offers_for, reason, shows_space_switch, withheld_for};
+    use super::{
+        failing_lines, hides_addresses, kept_here_lines, offers_for, reason, shows_space_switch,
+        withheld_for,
+    };
     use crate::settings::Space;
 
     const NO_CALENDAR: Offers = Offers {
         calendar: false,
         ..Offers::EVERYTHING
     };
+
+    fn pop3_account() -> Account {
+        Account {
+            id: 5,
+            email: "dana@example.org".into(),
+            state: AccountState::Ok,
+            provider: Provider::Pop3,
+            provider_name: Some("example.org".into()),
+        }
+    }
+
+    #[test]
+    fn a_pop3_account_says_why_it_has_no_automatic_reply() {
+        assert_eq!(
+            reason(&pop3_account(), Missing::AutoReply),
+            "example.org cannot send automatic replies over POP3."
+        );
+        assert_eq!(
+            reason(&pop3_account(), Missing::Calendar),
+            "Penguin Mail found no calendar server for example.org."
+        );
+    }
+
+    #[test]
+    fn each_message_that_will_not_download_reads_with_the_servers_words() {
+        let failing = [
+            ("u1".to_string(), "no such message".to_string()),
+            ("u9".to_string(), "locked".to_string()),
+        ];
+        assert_eq!(
+            failing_lines(&failing),
+            ["Message 1: no such message", "Message 2: locked"]
+        );
+    }
+
+    #[test]
+    fn about_says_which_accounts_keep_their_mail_here_alone() {
+        let imap = Account {
+            provider: Provider::Imap,
+            email: "ana@fastmail.com".into(),
+            ..pop3_account()
+        };
+        assert_eq!(
+            kept_here_lines(&[imap, pop3_account()]),
+            ["Mail from dana@example.org is kept only on this computer; back up this file to keep it."]
+        );
+    }
 
     #[test]
     fn the_switch_shows_once_a_started_account_offers_a_calendar() {

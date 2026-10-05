@@ -1,6 +1,6 @@
 //! Smart mailboxes, and arranging accounts: order, colour, and name.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
 use adw::prelude::*;
@@ -21,6 +21,7 @@ impl MainWindow {
         &self,
         data: Vec<(Account, Vec<Label>)>,
         settings: &Settings,
+        not_downloading: HashSet<AccountId>,
     ) -> (Vec<(Account, Vec<Label>)>, Extras) {
         let emails: Vec<&str> = data.iter().map(|(a, _)| a.email.as_str()).collect();
         let order: Vec<String> = settings
@@ -58,6 +59,7 @@ impl MainWindow {
                 .iter()
                 .map(|(account, _)| (account.id, self.label_order(account.id)))
                 .collect(),
+            not_downloading,
         };
         (sorted, extras)
     }

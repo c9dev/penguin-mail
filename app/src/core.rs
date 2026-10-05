@@ -103,6 +103,8 @@ pub struct Core {
     runtime: tokio::runtime::Runtime,
     pub db: Db,
     pub demo: bool,
+    /// Where the mail store lives, for About's backup line.
+    pub store_path: PathBuf,
     /// The sample accounts' servers, in demo mode only.
     demo_mail: Option<Arc<DemoMail>>,
     engine: Arc<RunningEngine>,
@@ -277,6 +279,7 @@ impl Core {
             runtime,
             db,
             demo,
+            store_path: db_path.clone(),
             demo_mail,
             engine,
             actions,
