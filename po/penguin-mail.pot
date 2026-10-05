@@ -1480,62 +1480,62 @@ msgstr ""
 msgid "On {date}, {sender} wrote:"
 msgstr ""
 
-#: app/src/core.rs:217
+#: app/src/core.rs:218
 msgid ""
 "Another copy of Penguin Mail, or penguin-mail-cli sync, is syncing your "
 "mail. Stop it, then open Penguin Mail again."
 msgstr ""
 
-#: app/src/core.rs:229
+#: app/src/core.rs:230
 msgid "Penguin Mail could not update its mail store, and kept the old one."
 msgstr ""
 
-#: app/src/core.rs:787 app/src/core.rs:870 app/src/core.rs:973
-#: app/src/core.rs:1018
+#: app/src/core.rs:722 app/src/core.rs:805 app/src/core.rs:908
+#: app/src/core.rs:953
 msgid "Demo mode cannot add real accounts."
 msgstr ""
 
-#: app/src/core.rs:791
+#: app/src/core.rs:726
 msgid ""
 "This copy of Penguin Mail was built without Google sign-in. Get a release "
 "from github.com/c9dev/penguin-mail/releases."
 msgstr ""
 
-#: app/src/core.rs:807 app/src/core.rs:896
+#: app/src/core.rs:742 app/src/core.rs:831
 msgid "Canceled."
 msgstr ""
 
-#: app/src/core.rs:812 app/src/core.rs:901
+#: app/src/core.rs:747 app/src/core.rs:836
 msgid "Gave up waiting for the browser after five minutes."
 msgstr ""
 
-#: app/src/core.rs:817
+#: app/src/core.rs:752
 msgid ""
 "Penguin Mail cannot work without access to your mail. Sign in again and "
 "leave the Gmail permission ticked."
 msgstr ""
 
-#: app/src/core.rs:827 app/src/core.rs:921
+#: app/src/core.rs:762 app/src/core.rs:856
 msgid "You signed in as {account}. Choose {wanted} to reconnect that account."
 msgstr ""
 
-#: app/src/core.rs:874
+#: app/src/core.rs:809
 msgid ""
 "This copy of Penguin Mail was built without Microsoft sign-in. Get a release "
 "from github.com/c9dev/penguin-mail/releases."
 msgstr ""
 
-#: app/src/core.rs:906
+#: app/src/core.rs:841
 msgid "Your organization's administrator must approve Penguin Mail."
 msgstr ""
 
-#: app/src/core.rs:909
+#: app/src/core.rs:844
 msgid ""
 "Penguin Mail cannot work without access to your mail. Sign in again and "
 "allow it."
 msgstr ""
 
-#: app/src/core.rs:912
+#: app/src/core.rs:847
 msgid ""
 "This mailbox is on your organization's own Exchange server, which Penguin "
 "Mail cannot reach."
@@ -1749,7 +1749,7 @@ msgid ""
 "{command} in a terminal, then restart Penguin Mail."
 msgstr ""
 
-#: app/src/main.rs:65
+#: app/src/main.rs:66
 msgid ""
 "Usage: penguin-mail [--background] [--demo] [--compose [mailto:ADDRESS]] "
 "[FILE.ics]\n"
@@ -1762,15 +1762,15 @@ msgid ""
 "  FILE.ics       open a calendar file, to add its events to a calendar"
 msgstr ""
 
-#: app/src/main.rs:132
+#: app/src/main.rs:133
 msgid "penguin-mail: unknown option {option}"
 msgstr ""
 
-#: app/src/main.rs:280
+#: app/src/main.rs:281
 msgid "Penguin Mail Could Not Start"
 msgstr ""
 
-#: app/src/main.rs:285 app/src/ui/about.rs:176
+#: app/src/main.rs:286 app/src/ui/about.rs:176
 msgid "Report a Problem"
 msgstr ""
 
@@ -9330,21 +9330,21 @@ msgid ""
 "school accounts ({reason})"
 msgstr ""
 
-#: sync/src/error.rs:139
+#: sync/src/error.rs:144
 msgid "Gmail keeps “{name}” for its own label. Choose another name."
 msgstr ""
 
-#: sync/src/error.rs:146
+#: sync/src/error.rs:151
 msgid ""
 "Google Calendar makes “{title}” itself, so only Google Calendar can change "
 "it."
 msgstr ""
 
-#: sync/src/error.rs:154
+#: sync/src/error.rs:159
 msgid "{host} refused the request to unsubscribe (HTTP {status})"
 msgstr ""
 
-#: sync/src/error.rs:158
+#: sync/src/error.rs:163
 msgid "could not reach {host}"
 msgstr ""
 

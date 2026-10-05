@@ -1,8 +1,10 @@
 use std::sync::Arc;
+use std::future::Future;
+use std::time::Duration;
 
 use mailrs_dav::{DavClient, Kind as DavKind, Login as DavLogin};
 use mailrs_discover::{Security, Server, UserName};
-use mailrs_domain::{Account, AccountState};
+use mailrs_domain::{Account, AccountId, AccountState};
 use mailrs_gmail::{Granted, GmailClient, GmailError, OAuthClient, TokenStore};
 use mailrs_graph::MicrosoftClient;
 use mailrs_imap::{ImapClient, Login, SmtpClient};
@@ -18,6 +20,48 @@ use crate::{
     CalDav, CardDav, ImapSettings, LocalRules, MicrosoftSettings, Pop3Settings, SieveRules, SyncError,
 };
 
+/// How long starting an account waits on one step, such as a keyring
+/// read. Twenty seconds is far past a keyring that answers, and short
+/// enough that the account is reported and tried again soon after.
+pub const STEP_WAIT: Duration = Duration::from_secs(20);
+
+/// `work`, given up after `wait` with a log line that names `step` and
+/// the account. Starting an account waits on the keyring and the store,
+/// and a step that never answers would otherwise hold the account, with
+/// nothing in the log to say where.
+async fn bounded<T, E: Into<SyncError>>(
+    account: AccountId,
+    step: &'static str,
+    wait: Duration,
+    work: impl Future<Output = Result<T, E>>,
+) -> Result<T, SyncError> {
+    match tokio::time::timeout(wait, work).await {
+        Ok(done) => done.map_err(Into::into),
+        Err(_) => {
+            tracing::warn!(account, step, waited_secs = wait.as_secs_f32(), "a step of starting the account did not answer");
+            Err(SyncError::NoAnswer(step))
+        }
+    }
+}
+
+/// A secret read from `store` off the runtime, given up after `wait`.
+/// The keyring can wait without end: its Secret Service client holds one
+/// lock for the whole process while an unlock prompt is on screen, so a
+/// prompt nobody answers holds every later read too. The blocking thread
+/// stays behind until the keyring answers; the account does not.
+async fn read_secret<P: PasswordStore + 'static>(
+    store: Arc<P>,
+    account: AccountId,
+    wait: Duration,
+) -> Result<Option<String>, SyncError> {
+    let read = async move {
+        tokio::task::spawn_blocking(move || store.load(account))
+            .await
+            .map_err(|err| PasswordError::Keyring(err.to_string()))?
+    };
+    bounded(account, "the keyring", wait, read).await
+}
+
 /// A Gmail client for `account`, built from its refresh token in `tokens`
 /// and seeded with the scopes `db` last recorded for it. Fails with
 /// `NeedsReauth` when no token is stored. A later refresh that reports a
@@ -29,13 +73,26 @@ pub async fn connect_account(
     account: &Account,
     db: &Db,
 ) -> Result<AccountClient, SyncError> {
-    let email = account.email.clone();
-    let stored = tokio::task::spawn_blocking(move || tokens.load(&email))
-        .await
-        .map_err(|e| GmailError::Keyring(e.to_string()))??;
+    connect_account_within(oauth, tokens, account, db, STEP_WAIT).await
+}
+
+pub(crate) async fn connect_account_within(
+    oauth: OAuthClient,
+    tokens: Arc<dyn TokenStore>,
+    account: &Account,
+    db: &Db,
+    wait: Duration,
+) -> Result<AccountClient, SyncError> {
+    let (id, email) = (account.id, account.email.clone());
+    // The same keyring as `read_secret`, under Google's own key.
+    let read = async move {
+        tokio::task::spawn_blocking(move || tokens.load(&email))
+            .await
+            .map_err(|e| GmailError::Keyring(e.to_string()))?
+    };
+    let stored = bounded(id, "the keyring", wait, read).await?;
     let refresh_token = stored.ok_or(GmailError::NeedsReauth)?;
-    let id = account.id;
-    let consent = db.read(move |c| accounts::consent(c, id)).await?;
+    let consent = bounded(id, "the mail store", wait, db.read(move |c| accounts::consent(c, id))).await?;
     let granted = consent.granted.as_deref().map(Granted::parse);
     let db = db.clone();
     let client = GmailClient::for_account(oauth, refresh_token, &account.email)
@@ -79,17 +136,25 @@ pub async fn connect_microsoft_at<P: PasswordStore + 'static>(
     window_days: i64,
     base: &str,
 ) -> Result<AccountServices, SyncError> {
+    connect_microsoft_within(db, tokens, client, account, window_days, base, STEP_WAIT).await
+}
+
+pub(crate) async fn connect_microsoft_within<P: PasswordStore + 'static>(
+    db: &Db,
+    tokens: Arc<P>,
+    client: MicrosoftClient,
+    account: &Account,
+    window_days: i64,
+    base: &str,
+    wait: Duration,
+) -> Result<AccountServices, SyncError> {
     let id = account.id;
-    let held = Arc::clone(&tokens);
-    let refresh = tokio::task::spawn_blocking(move || held.load(id))
-        .await
-        .map_err(|err| PasswordError::Keyring(err.to_string()))??;
-    let Some(refresh) = refresh else {
-        db.write(move |c| accounts::set_state(c, id, AccountState::NeedsReauth))
-            .await?;
+    let Some(refresh) = read_secret(Arc::clone(&tokens), id, wait).await? else {
+        let marked = db.write(move |c| accounts::set_state(c, id, AccountState::NeedsReauth));
+        bounded(id, "the mail store", wait, marked).await?;
         return Err(BackendError::NeedsReauth.into());
     };
-    let consent = db.read(move |c| accounts::consent(c, id)).await?;
+    let consent = bounded(id, "the mail store", wait, db.read(move |c| accounts::consent(c, id))).await?;
     let granted = consent.granted.as_deref().map(mailrs_graph::Granted::parse);
     let saver = Arc::clone(&tokens);
     let store = db.clone();
@@ -140,14 +205,22 @@ pub async fn connect_imap<P: PasswordStore + 'static>(
     account: &Account,
     window_days: i64,
 ) -> Result<AccountServices, SyncError> {
+    connect_imap_within(db, passwords, account, window_days, STEP_WAIT).await
+}
+
+pub(crate) async fn connect_imap_within<P: PasswordStore + 'static>(
+    db: &Db,
+    passwords: Arc<P>,
+    account: &Account,
+    window_days: i64,
+    wait: Duration,
+) -> Result<AccountServices, SyncError> {
     let id = account.id;
-    let saved = db.read(move |c| servers::load(c, id)).await?;
-    let password = tokio::task::spawn_blocking(move || passwords.load(id))
-        .await
-        .map_err(|err| PasswordError::Keyring(err.to_string()))??;
+    let saved = bounded(id, "the mail store", wait, db.read(move |c| servers::load(c, id))).await?;
+    let password = read_secret(passwords, id, wait).await?;
     let (Some(saved), Some(password)) = (saved, password) else {
-        db.write(move |c| accounts::set_state(c, id, AccountState::NeedsReauth))
-            .await?;
+        let marked = db.write(move |c| accounts::set_state(c, id, AccountState::NeedsReauth));
+        bounded(id, "the mail store", wait, marked).await?;
         return Err(BackendError::NeedsReauth.into());
     };
     // A saved account's provider_name may be a domain "Set up manually"
@@ -182,7 +255,7 @@ pub async fn connect_imap<P: PasswordStore + 'static>(
             window_days,
         },
     );
-    let found = db.read(move |c| mailrs_store::services::load(c, id)).await?;
+    let found = bounded(id, "the mail store", wait, db.read(move |c| mailrs_store::services::load(c, id))).await?;
     // The password goes only to a server the person confirmed.
     for service in found.into_iter().filter(|f| f.confirmed) {
         services = attach(services, &service, &secret, account, &provider_name);
@@ -205,14 +278,21 @@ pub async fn connect_pop3<P: PasswordStore + 'static>(
     passwords: Arc<P>,
     account: &Account,
 ) -> Result<AccountServices, SyncError> {
+    connect_pop3_within(db, passwords, account, STEP_WAIT).await
+}
+
+pub(crate) async fn connect_pop3_within<P: PasswordStore + 'static>(
+    db: &Db,
+    passwords: Arc<P>,
+    account: &Account,
+    wait: Duration,
+) -> Result<AccountServices, SyncError> {
     let id = account.id;
-    let saved = db.read(move |c| servers::load_pop3(c, id)).await?;
-    let password = tokio::task::spawn_blocking(move || passwords.load(id))
-        .await
-        .map_err(|err| PasswordError::Keyring(err.to_string()))??;
+    let saved = bounded(id, "the mail store", wait, db.read(move |c| servers::load_pop3(c, id))).await?;
+    let password = read_secret(passwords, id, wait).await?;
     let (Some(saved), Some(password)) = (saved, password) else {
-        db.write(move |c| accounts::set_state(c, id, AccountState::NeedsReauth))
-            .await?;
+        let marked = db.write(move |c| accounts::set_state(c, id, AccountState::NeedsReauth));
+        bounded(id, "the mail store", wait, marked).await?;
         return Err(BackendError::NeedsReauth.into());
     };
     let provider_name = mailrs_discover::resolved_provider_name(account.provider_name());
@@ -236,7 +316,7 @@ pub async fn connect_pop3<P: PasswordStore + 'static>(
             provider_name,
         },
     );
-    let found = db.read(move |c| mailrs_store::services::load(c, id)).await?;
+    let found = bounded(id, "the mail store", wait, db.read(move |c| mailrs_store::services::load(c, id))).await?;
     // The password goes only to a server the person confirmed.
     for service in found.into_iter().filter(|f| f.confirmed) {
         services = attach_pop3(services, &service, &secret, account);
