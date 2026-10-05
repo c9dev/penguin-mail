@@ -8111,19 +8111,19 @@ msgstr "Open in Another Program"
 msgid "{file}, preview"
 msgstr "{file}, preview"
 
-#: app/src/ui/window/categories.rs:305
+#: app/src/ui/window/categories.rs:341
 msgid "Open a message from the sender first"
 msgstr "Open a message from the sender first"
 
-#: app/src/ui/window/categories.rs:349
+#: app/src/ui/window/categories.rs:385
 msgid "Mail from {sender} now goes to {category}"
 msgstr "Mail from {sender} now goes to {category}"
 
-#: app/src/ui/window/categories.rs:354
+#: app/src/ui/window/categories.rs:390
 msgid "Moved mail from {sender} to {category}"
 msgstr "Moved mail from {sender} to {category}"
 
-#: app/src/ui/window/categories.rs:361
+#: app/src/ui/window/categories.rs:397
 msgid "Moved mail from {sender} to {category}, but could not sort new mail: {reason}"
 msgstr "Moved mail from {sender} to {category}, but could not sort new mail: {reason}"
 

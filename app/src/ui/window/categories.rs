@@ -2,6 +2,7 @@
 //! `mailrs_domain::Category` holds which Gmail labels each category means.
 
 use std::collections::HashMap;
+use std::cell::Cell;
 use std::rc::Rc;
 
 use adw::prelude::*;
@@ -50,17 +51,22 @@ fn slider(child: &impl IsA<gtk::Widget>) -> gtk::Revealer {
 }
 
 /// The switcher above an inbox's thread list. Each chip shows its icon,
-/// its name and its unread count while the row has room for every name;
-/// a narrower row keeps only the chosen chip's name, and a narrower one
-/// still shows icons alone. Focused and Other are worded tabs with no icon.
+/// its name and its unread count, wrapping onto a second line when one
+/// does not hold them. Past two lines, and in the phone layout, only the
+/// chosen chip keeps its name. Focused and Other are worded tabs with no
+/// icon.
 pub(super) struct CategoryBar {
     bar: gtk::Box,
-    group: adw::ToggleGroup,
     strip: CategoryStrip,
+    /// One toggle per category, grouped so one is on at a time.
+    chips: Vec<gtk::ToggleButton>,
     /// The categories the bar holds, in order: Gmail's five, or Focused
     /// and Other.
     set: &'static [Category],
     counts: HashMap<Category, Badges>,
+    /// Set while the window turns a chip on, so the chip does not ask the
+    /// window for the category it is already showing.
+    quiet: Rc<Cell<bool>>,
 }
 
 /// A chip's unread count, drawn in two places: after its name while the
@@ -83,17 +89,17 @@ impl CategoryBar {
     /// `chosen` is the category the window opens on, from Preferences, and
     /// `set` the categories the bar holds.
     pub(super) fn new(chosen: Category, set: &'static [Category]) -> CategoryBar {
-        let group = adw::ToggleGroup::builder()
-            .homogeneous(false)
-            .css_classes(["category-bar", "category-chips"])
-            .build();
         // Focused and Other are worded alone, as Outlook words them;
         // Gmail's categories keep an icon each.
         let worded = set.len() == Category::FOCUS.len();
-        let (mut names, mut corners, mut counts) = (Vec::new(), Vec::new(), HashMap::new());
+        let (mut chips, mut names, mut corners, mut counts) =
+            (Vec::new(), Vec::new(), Vec::new(), HashMap::new());
         for &category in set {
             let content = gtk::Box::builder()
                 .css_classes(["category-chip"])
+                // An icon alone is narrower than the pill's 44 px least width,
+                // and sits in its middle.
+                .halign(gtk::Align::Center)
                 .build();
             if worded {
                 content.add_css_class("category-tab");
@@ -118,25 +124,27 @@ impl CategoryBar {
             named.append(&inline);
             let name = slider(&named);
             content.append(&name);
-            let chip = gtk::Overlay::builder().child(&content).build();
+            let face = gtk::Overlay::builder().child(&content).build();
             // An icon alone carries its badge over the pill's end padding,
             // clear of the 16 px icon, so a count arriving never moves the
             // icons. A worded tab always shows its name and needs none.
             let corner = (!worded).then(|| {
                 let corner = badge_label("corner", gtk::Align::Start);
-                chip.add_overlay(&corner);
+                face.add_overlay(&corner);
                 corner
             });
-            group.add(
-                adw::Toggle::builder()
-                    .name(category.key())
-                    // The child is an icon, a name that comes and goes and
-                    // a badge; the label is what the toggle says out loud.
-                    .label(category.name())
-                    .tooltip(category.name())
-                    .child(&chip)
-                    .build(),
-            );
+            // The child is an icon, a name that comes and goes and a
+            // badge; the spoken name is the category and its count.
+            let chip = gtk::ToggleButton::builder()
+                .child(&face)
+                .tooltip_text(category.name())
+                .css_classes(["category-toggle"])
+                .build();
+            crate::ui::name(&chip, &category.name());
+            if let Some(first) = chips.first() {
+                chip.set_group(Some(first));
+            }
+            chips.push(chip);
             names.push(name);
             corners.push(corner.clone());
             counts.insert(category, Badges { inline, corner });
@@ -148,32 +156,58 @@ impl CategoryBar {
             .margin_end(8)
             .visible(false)
             .build();
-        let strip = CategoryStrip::new(&group, names, corners, worded);
+        let strip = CategoryStrip::new(chips.clone(), names, corners, worded);
         strip.set_hexpand(true);
         bar.append(&strip);
-        group.set_active_name(Some(chosen.key()));
         let this = CategoryBar {
             bar,
-            group,
             strip,
+            chips,
             set,
             counts,
+            quiet: Rc::new(Cell::new(false)),
         };
         this.show_names(chosen);
         this
     }
 
-    /// Makes `chosen` the chip that keeps its name when not every name
-    /// fits.
-    pub(super) fn show_names(&self, chosen: Category) {
-        if let Some(index) = self.set.iter().position(|&c| c == chosen) {
-            self.strip.choose(index);
+    /// Runs `chosen` with the category of a chip the person turns on.
+    fn connect_chosen(&self, chosen: impl Fn(Category) + 'static) {
+        let chosen = Rc::new(chosen);
+        for (chip, &category) in self.chips.iter().zip(self.set) {
+            let (chosen, quiet) = (Rc::clone(&chosen), Rc::clone(&self.quiet));
+            chip.connect_toggled(move |chip| {
+                if chip.is_active() && !quiet.get() {
+                    chosen(category);
+                }
+            });
         }
+    }
+
+    /// Turns on `chosen`'s chip, the one that keeps its name when not
+    /// every name fits.
+    pub(super) fn show_names(&self, chosen: Category) {
+        let Some(index) = self.set.iter().position(|&c| c == chosen) else {
+            return;
+        };
+        self.quiet.set(true);
+        self.chips[index].set_active(true);
+        self.quiet.set(false);
+        self.strip.choose(index);
+    }
+
+    /// Keeps the chips to the chosen name and icons while the window shows
+    /// the list alone, as on a phone.
+    pub(super) fn set_phone(&self, phone: bool) {
+        self.strip.set_phone(phone);
     }
 
     pub(super) fn set_counts(&self, unread: &HashMap<Category, i64>) {
         let worded = self.set.len() == Category::FOCUS.len();
-        for (category, badges) in &self.counts {
+        for (chip, category) in self.chips.iter().zip(self.set) {
+            let Some(badges) = self.counts.get(category) else {
+                continue;
+            };
             let count = unread.get(category).copied().unwrap_or(0);
             let badge = chip::badge(count);
             for label in std::iter::once(&badges.inline).chain(badges.corner.as_ref()) {
@@ -191,11 +225,9 @@ impl CategoryBar {
             badges.inline.set_visible(count > 0 || worded);
             // The name may be folded away, so the tooltip carries both it
             // and the count.
-            if let Some(toggle) = self.group.toggle_by_name(category.key()) {
-                let said = chip::spoken(*category, count);
-                toggle.set_tooltip(&said);
-                toggle.set_label(Some(&said));
-            }
+            let said = chip::spoken(*category, count);
+            chip.set_tooltip_text(Some(&said));
+            crate::ui::name(chip, &said);
         }
     }
 }
@@ -210,15 +242,19 @@ impl MainWindow {
         for bar in [&self.categories, &self.focus] {
             self.list.categories_slot.append(&bar.bar);
             let weak = Rc::downgrade(self);
-            bar.group.connect_active_name_notify(move |group| {
+            bar.connect_chosen(move |category| {
                 let Some(win) = weak.upgrade() else { return };
-                let Some(category) = group.active_name().and_then(|k| Category::from_key(&k))
-                else {
-                    return;
-                };
                 win.change_screen(|screen| screen.choose_category(category));
             });
+            bar.set_phone(self.nav.is_collapsed());
         }
+        let weak = Rc::downgrade(self);
+        self.nav.connect_collapsed_notify(move |nav| {
+            let Some(win) = weak.upgrade() else { return };
+            for bar in [&win.categories, &win.focus] {
+                bar.set_phone(nav.is_collapsed());
+            }
+        });
     }
 
     /// The switcher `mailbox` shows on screen, if any: the person has

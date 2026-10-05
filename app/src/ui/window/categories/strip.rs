@@ -1,9 +1,9 @@
-//! The row that holds the category toggles. It shows every chip's name
-//! while the whole row fits, then only the chosen chip's name, then icons
-//! alone, the way a libadwaita view switcher drops its labels in a narrow
-//! window. `chip::names_for` makes that call from the widths measured
-//! here. Every toggle keeps its spoken label and its tooltip either way,
-//! so the name is never lost to a screen reader or to the pointer.
+//! The chips over an inbox, laid out in lines that wrap. Every chip shows
+//! its name while the chips fit on two lines; past that, and in the phone
+//! layout, only the chosen chip keeps its name and the others show icons.
+//! `chip::names_for` makes that call from the widths measured here. Every
+//! chip keeps its spoken name and its tooltip either way, so the name is
+//! never lost to a screen reader or to the pointer.
 
 use std::cell::{Cell, RefCell};
 
@@ -11,35 +11,39 @@ use adw::prelude::*;
 use gtk::subclass::prelude::*;
 use gtk::glib;
 
-use super::chip::{Names, Needs, names_for};
+use super::chip::{GAP, Names, lines, names_for};
 
 mod imp {
     use super::*;
 
     pub struct CategoryStrip {
-        pub group: RefCell<Option<adw::ToggleGroup>>,
-        /// Each category's name and its count, in toggle order.
+        /// The chips, in reading order.
+        pub chips: RefCell<Vec<gtk::ToggleButton>>,
+        /// Each chip's name and its count.
         pub names: RefCell<Vec<gtk::Revealer>>,
-        /// Each category's corner badge, shown while its name is folded.
+        /// Each chip's corner badge, shown while its name is folded.
         /// Worded tabs have none.
         pub corners: RefCell<Vec<Option<gtk::Label>>>,
-        /// The chosen category, an index into `names`.
+        /// The chosen chip, an index into `chips`.
         pub chosen: Cell<usize>,
         /// The names the last width handed over held.
         pub shown: Cell<Names>,
         /// Focused and Other: names with no icon to fall back to.
         pub worded: Cell<bool>,
+        /// The window shows the list alone, as on a phone.
+        pub phone: Cell<bool>,
     }
 
     impl Default for CategoryStrip {
         fn default() -> Self {
             CategoryStrip {
-                group: RefCell::default(),
+                chips: RefCell::default(),
                 names: RefCell::default(),
                 corners: RefCell::default(),
                 chosen: Cell::new(0),
                 shown: Cell::new(Names::Every),
                 worded: Cell::new(false),
+                phone: Cell::new(false),
             }
         }
     }
@@ -55,94 +59,121 @@ mod imp {
         fn constructed(&self) {
             self.parent_constructed();
             // After the row gets narrower the names close on the next idle,
-            // so the group is wider than its place for one frame. Clip it
+            // so a chip can reach past the edge for one frame. Clip it
             // rather than draw over the list's edges.
             self.obj().set_overflow(gtk::Overflow::Hidden);
         }
 
         fn dispose(&self) {
-            if let Some(group) = self.group.take() {
-                group.unparent();
+            for chip in self.chips.take() {
+                chip.unparent();
             }
         }
     }
 
     impl WidgetImpl for CategoryStrip {
-        fn measure(&self, orientation: gtk::Orientation, for_size: i32) -> (i32, i32, i32, i32) {
-            let Some(group) = self.group.borrow().clone() else {
-                return (0, 0, -1, -1);
-            };
-            if orientation == gtk::Orientation::Vertical {
-                return group.measure(orientation, -1);
-            }
-            let needs = self.needs(&group, for_size);
-            let least = match self.worded.get() {
-                true => needs.every,
-                false => needs.icons,
-            };
-            (least, needs.every, -1, -1)
+        fn request_mode(&self) -> gtk::SizeRequestMode {
+            gtk::SizeRequestMode::HeightForWidth
         }
 
-        fn size_allocate(&self, width: i32, height: i32, baseline: i32) {
-            let Some(group) = self.group.borrow().clone() else {
-                return;
+        fn measure(&self, orientation: gtk::Orientation, for_size: i32) -> (i32, i32, i32, i32) {
+            let (named, folded) = self.widths();
+            if orientation == gtk::Orientation::Horizontal {
+                // The widest chip in the fold sets how narrow the row may
+                // get; one line of every name is what it would like.
+                let least = folded.iter().copied().max().unwrap_or(0);
+                let natural = named.iter().sum::<i32>() + GAP * (named.len() as i32 - 1).max(0);
+                return (least, natural.max(least), -1, -1);
+            }
+            let line = self.line_height();
+            let count = match for_size < 0 {
+                true => 1,
+                false => {
+                    let widths = match self.names_at(for_size, &named) {
+                        Names::Every => named,
+                        Names::Chosen => folded,
+                    };
+                    lines(&widths, for_size).len().max(1) as i32
+                }
             };
-            let names = names_for(width, self.needs(&group, height), self.worded.get());
+            let height = count * line + (count - 1) * GAP;
+            (height, height, -1, -1)
+        }
+
+        fn size_allocate(&self, width: i32, _height: i32, _baseline: i32) {
+            let (named, _) = self.widths();
+            let names = self.names_at(width, &named);
             if names != self.shown.replace(names) {
-                // Revealing a name changes the size the group asks for,
-                // and GTK does not take a new size request in the middle
-                // of handing out space. Change it once this pass is over.
+                // Revealing a name changes the size a chip asks for, and
+                // GTK does not take a new size request in the middle of
+                // handing out space. Change it once this pass is over.
                 let strip = self.obj().downgrade();
                 glib::idle_add_local_once(move || {
                     if let Some(strip) = strip.upgrade() {
                         strip.imp().show_names();
+                        strip.queue_resize();
                     }
                 });
             }
-            let (min, natural, _, _) = group.measure(gtk::Orientation::Horizontal, height);
-            let own = natural.min(width).max(min);
-            // The chips sit flush at the row's start, under the list
-            // header's title, rather than centred: `own` only bounds how
-            // much of the width the group actually takes.
-            group.allocate(own, height, baseline, None);
+            // Lay the chips out as they are now, flush left, line by line.
+            let chips = self.chips.borrow();
+            let now: Vec<i32> = chips.iter().map(natural_width).collect();
+            let line = self.line_height();
+            let mut index = 0;
+            for (row, count) in lines(&now, width).into_iter().enumerate() {
+                let (mut x, y) = (0, row as i32 * (line + GAP));
+                for chip in &chips[index..index + count] {
+                    let chip_width = natural_width(chip).min(width);
+                    chip.size_allocate(&gtk::Allocation::new(x, y, chip_width, line), -1);
+                    x += chip_width + GAP;
+                }
+                index += count;
+            }
         }
     }
 
     impl CategoryStrip {
-        /// The width the row needs with icons alone, with the chosen name
-        /// beside its icon, and with every name. Each name is measured on
-        /// its own, open or not, so the answer does not change with the
-        /// names that happen to be showing.
-        fn needs(&self, group: &adw::ToggleGroup, for_size: i32) -> Needs {
+        /// Each chip's width with its name open, and folded the way
+        /// [`Names::Chosen`] draws it. A name is measured on its own, open
+        /// or not, so the answer does not change with the names showing.
+        fn widths(&self) -> (Vec<i32>, Vec<i32>) {
             let horizontal = gtk::Orientation::Horizontal;
-            let (_, natural, _, _) = group.measure(horizontal, for_size);
-            let names = self.names.borrow();
-            let showing: i32 = names.iter().map(|n| n.measure(horizontal, -1).1).sum();
-            let icons = natural - showing;
-            let width = |name: &gtk::Revealer| {
-                name.child()
-                    .map_or(0, |name| name.measure(horizontal, -1).1)
-            };
-            let chosen = names.get(self.chosen.get()).map_or(0, width);
-            Needs {
-                icons,
-                chosen: icons + chosen,
-                every: icons + names.iter().map(width).sum::<i32>(),
+            let (chips, names) = (self.chips.borrow(), self.names.borrow());
+            let mut named = Vec::with_capacity(chips.len());
+            let mut folded = Vec::with_capacity(chips.len());
+            for (index, (chip, name)) in chips.iter().zip(names.iter()).enumerate() {
+                let bare = natural_width(chip) - name.measure(horizontal, -1).1;
+                let open = bare + name.child().map_or(0, |n| n.measure(horizontal, -1).1);
+                named.push(open);
+                folded.push(match index == self.chosen.get() {
+                    true => open,
+                    false => bare,
+                });
             }
+            (named, folded)
         }
 
-        /// Opens the names the row has room for and closes the others. A
-        /// chip whose name is closed shows its count on its corner. A name
-        /// that was closed fades in.
+        fn names_at(&self, width: i32, named: &[i32]) -> Names {
+            names_for(width, named, self.phone.get(), self.worded.get())
+        }
+
+        fn line_height(&self) -> i32 {
+            self.chips
+                .borrow()
+                .iter()
+                .map(|chip| chip.measure(gtk::Orientation::Vertical, -1).1)
+                .max()
+                .unwrap_or(0)
+        }
+
+        /// Opens the names the room allows and closes the others. A chip
+        /// whose name is closed shows its count on its corner. A name that
+        /// was closed fades in.
         pub fn show_names(&self) {
             let (chosen, shown) = (self.chosen.get(), self.shown.get());
             let corners = self.corners.borrow();
             for (index, name) in self.names.borrow().iter().enumerate() {
-                let open = match shown {
-                    Names::Every => true,
-                    Names::Chosen => index == chosen,
-                    Names::Icons => false,
-                };
+                let open = shown == Names::Every || index == chosen;
                 if open
                     && !name.reveals_child()
                     && let Some(label) = name.child()
@@ -156,6 +187,10 @@ mod imp {
             }
         }
     }
+}
+
+fn natural_width(widget: &impl IsA<gtk::Widget>) -> i32 {
+    widget.measure(gtk::Orientation::Horizontal, -1).1
 }
 
 /// How long a category's name takes to fade in, in milliseconds.
@@ -178,19 +213,21 @@ glib::wrapper! {
 }
 
 impl CategoryStrip {
-    /// Holds `group`, whose toggles carry `names` and `corners` in the
-    /// same order. `worded` says the toggles have no icons, so their names
-    /// always show.
+    /// Holds `chips`, which carry `names` and `corners` in the same order.
+    /// `worded` says the chips have no icons, so their names always show.
     pub fn new(
-        group: &adw::ToggleGroup,
+        chips: Vec<gtk::ToggleButton>,
         names: Vec<gtk::Revealer>,
         corners: Vec<Option<gtk::Label>>,
         worded: bool,
     ) -> CategoryStrip {
         let strip: CategoryStrip = glib::Object::new();
-        group.set_parent(&strip);
+        strip.add_css_class("category-chips");
+        for chip in &chips {
+            chip.set_parent(&strip);
+        }
         let imp = strip.imp();
-        imp.group.replace(Some(group.clone()));
+        imp.chips.replace(chips);
         imp.names.replace(names);
         imp.corners.replace(corners);
         imp.worded.set(worded);
@@ -198,13 +235,20 @@ impl CategoryStrip {
         strip
     }
 
-    /// Makes the name at `index` the one that stays when not every name
-    /// fits.
+    /// Makes the chip at `index` the one that keeps its name when not
+    /// every name fits.
     pub fn choose(&self, index: usize) {
         self.imp().chosen.set(index);
         self.imp().show_names();
-        // A shorter or longer name may fit where the last one did not, and
-        // with every name closed nothing else would ask for a new layout.
+        // A shorter or longer name may fit where the last one did not.
         self.queue_resize();
+    }
+
+    /// The window shows the list alone, as on a phone, which keeps the
+    /// chips to the chosen name and icons.
+    pub fn set_phone(&self, phone: bool) {
+        if self.imp().phone.replace(phone) != phone {
+            self.queue_resize();
+        }
     }
 }

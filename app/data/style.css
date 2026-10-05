@@ -465,27 +465,27 @@ toolbarview.sidebar-card.undershoot-bottom > .bottom-bar { box-shadow: none; bor
 .assistant-suggestion { padding: 6px 10px; border-radius: 10px; }
 .assistant-confirm label { font-weight: 600; }
 
-/* Inbox categories as a row of chips. The chosen one is a filled accent
-   pill; the others are neutral pills in the `pill` surface. Each shows
-   its icon, name and unread count while the row has room; a narrow row
-   keeps the chosen chip's name alone, then icons alone, with the count
-   as a small accent badge riding the pill's top end corner. */
-toggle-group.category-chips { background: none; padding: 0; box-shadow: none; }
-.category-chips > separator { min-width: 6px; background: none; }
-.category-chips > toggle {
+/* Inbox categories as chips that wrap onto a second line, 6 px apart
+   both ways (strip.rs). The chosen one is a filled accent pill; the
+   others are neutral pills in the `pill` surface. Each shows its icon,
+   name and unread count; past two lines, and in the phone layout, the
+   others fold to icons with the count as a small accent badge riding
+   the pill's top end corner. */
+.category-chips > button.category-toggle {
   min-width: 44px;
   min-height: 30px;
   padding: 0;
+  border: none;
   border-radius: 15px;
   background: #e3e3e7;
   box-shadow: none;
   transition: background-color 120ms ease;
 }
-.app-dark .category-chips > toggle { background: #3a3a40; }
-.category-chips > toggle:hover { background: color-mix(in srgb, currentColor 8%, #e3e3e7); }
-.app-dark .category-chips > toggle:hover { background: color-mix(in srgb, currentColor 8%, #3a3a40); }
-.category-chips > toggle:checked { background: var(--accent-fill); color: var(--accent-fg-color); }
-.category-chips .category-chip { padding: 0 14px; min-height: 30px; }
+.app-dark .category-chips > button.category-toggle { background: #3a3a40; }
+.category-chips > button.category-toggle:hover { background: color-mix(in srgb, currentColor 8%, #e3e3e7); }
+.app-dark .category-chips > button.category-toggle:hover { background: color-mix(in srgb, currentColor 8%, #3a3a40); }
+.category-chips > button.category-toggle:checked { background: var(--accent-fill); color: var(--accent-fg-color); }
+.category-chips .category-chip { padding: 0 12px; min-height: 30px; }
 .category-chips .category-tab .category-name { margin-left: 0; }
 .category-chips .category-name { margin-left: 6px; font-weight: 700; font-size: 0.89em; }
 /* The mockup's badge rides the pill's top end corner and rises 3px
@@ -510,11 +510,11 @@ toggle-group.category-chips { background: none; padding: 0; box-shadow: none; }
    holds the same contrast as the white name on the fill. Folded to an
    icon, the chosen chip drops its corner badge, as before. */
 .category-chips .category-count.inline { margin: 0 0 0 6px; }
-.category-chips > toggle:checked .category-count.inline {
+.category-chips > button.category-toggle:checked .category-count.inline {
   color: var(--accent-fill);
   background: var(--accent-fg-color);
 }
-.category-chips > toggle:checked .category-count.corner { opacity: 0; }
+.category-chips > button.category-toggle:checked .category-count.corner { opacity: 0; }
 .category-chips .category-count.no-mail { opacity: 0; }
 /* Focused and Other carry their badge in the row after the name
    (categories.rs). The 20 px each side of the name match: the start
