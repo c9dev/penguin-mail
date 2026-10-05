@@ -281,7 +281,7 @@ async fn remove_account(db: &Db, email: &str) -> Result<()> {
                 "Removed {email}. Revoke Google's side at https://myaccount.google.com/permissions if you want."
             );
         }
-        Provider::Imap => {
+        Provider::Imap | Provider::Pop3 => {
             let passwords = passwords();
             tokio::task::spawn_blocking(move || passwords.delete(id)).await??;
             println!("Removed {email} and its password.");
@@ -338,6 +338,8 @@ async fn run_sync(db: &Db, dir: &Path, config: &Config) -> Result<()> {
                     err => err.into(),
                 }),
             Provider::Microsoft => connect_microsoft_account(db, account, window_days).await,
+            // T7 connects POP3 accounts; until then one stays idle.
+            Provider::Pop3 => Err(anyhow!("POP3 accounts are not connected yet")),
         };
         match connected {
             Ok(services) => engine.start_account(account.id, services),
@@ -651,6 +653,7 @@ async fn account_sync(db: &Db, config: &Config, email: &str) -> Result<AccountSy
         }
         Provider::Imap => connect_imap(db, passwords(), &account, engine.window_days).await?,
         Provider::Microsoft => connect_microsoft_account(db, &account, engine.window_days).await?,
+        Provider::Pop3 => bail!("POP3 accounts are not connected yet"),
     };
     let (events, _) = async_channel::unbounded();
     Ok(

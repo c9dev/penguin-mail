@@ -89,3 +89,39 @@ fn no_column_of_the_servers_table_holds_a_password() {
         ]
     );
 }
+
+fn pop3_servers() -> servers::Pop3Servers {
+    servers::Pop3Servers {
+        pop3: Saved {
+            host: "pop.example.org".into(),
+            port: 995,
+            security: Security::Tls,
+            user_name: "dana@example.org".into(),
+        },
+        smtp: Saved {
+            host: "smtp.example.org".into(),
+            port: 465,
+            security: Security::Tls,
+            user_name: "dana@example.org".into(),
+        },
+    }
+}
+
+#[test]
+fn a_pop3_account_loads_as_pop3_and_never_as_imap() {
+    let conn = open_in_memory().unwrap();
+    let id = accounts::insert_pop3_account(&conn, "dana@example.org", "example.org", mailrs_domain::RemoveSetting::Never, 0)
+        .unwrap()
+        .unwrap();
+    servers::save_pop3(&conn, id, &pop3_servers()).unwrap();
+    assert_eq!(servers::load_pop3(&conn, id).unwrap(), Some(pop3_servers()));
+    assert_eq!(servers::load(&conn, id).unwrap(), None);
+}
+
+#[test]
+fn an_imap_account_has_no_pop3_servers() {
+    let conn = open_in_memory().unwrap();
+    let id = accounts::insert_imap_account(&conn, "dana@fastmail.com", "Fastmail", 0).unwrap().unwrap();
+    servers::save(&conn, id, &fastmail()).unwrap();
+    assert_eq!(servers::load_pop3(&conn, id).unwrap(), None);
+}

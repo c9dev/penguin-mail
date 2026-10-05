@@ -841,3 +841,50 @@ fn migration_48_adds_the_services_and_rules_tables() {
         assert_eq!(left, 0, "{table}");
     }
 }
+
+/// Migration 49 adds what a POP3 account keeps: the UIDLs downloaded, the
+/// ones that failed, the raw copies, the removal setting, and a 'pop3'
+/// server row. An account from before it leaves mail on the server, and
+/// its servers come through the rebuilt table unchanged.
+#[test]
+fn migration_49_adds_the_pop3_tables_and_columns() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("mail.db");
+    let conn = open_with(&path, &MIGRATIONS[..48]).unwrap();
+    conn.execute_batch(
+        "INSERT INTO accounts (id, email, added_at, provider, provider_name) VALUES (2, 'me@fastmail.com', 0, 'imap', 'Fastmail');
+         INSERT INTO account_servers (account_id, role, host, port, security, user_name)
+             VALUES (2, 'imap', 'imap.fastmail.com', 993, 'tls', 'me@fastmail.com');",
+    )
+    .unwrap();
+    drop(conn);
+
+    let conn = open_with(&path, MIGRATIONS).unwrap();
+    assert_eq!(schema_version(&conn).unwrap(), 49);
+    let (mode, days): (String, Option<i64>) = conn
+        .query_row("SELECT pop3_remove, pop3_remove_days FROM accounts WHERE id = 2", [], |row| {
+            Ok((row.get(0)?, row.get(1)?))
+        })
+        .unwrap();
+    assert_eq!((mode.as_str(), days), ("never", None));
+    let kept: String = conn
+        .query_row("SELECT host FROM account_servers WHERE account_id = 2 AND role = 'imap'", [], |row| row.get(0))
+        .unwrap();
+    assert_eq!(kept, "imap.fastmail.com");
+    conn.execute_batch(
+        "INSERT INTO account_servers (account_id, role, host, port, security, user_name)
+             VALUES (2, 'pop3', 'pop.fastmail.com', 995, 'tls', 'me@fastmail.com');
+         INSERT INTO pop3_seen (account_id, uidl, downloaded_at) VALUES (2, 'u1', 0);
+         INSERT INTO pop3_failures (account_id, uidl, failures, last_error) VALUES (2, 'u2', 1, 'gone');
+         INSERT INTO local_messages (account_id, message_id, raw) VALUES (2, 'pop3/u1', X'00');",
+    )
+    .unwrap();
+    assert!(conn.execute("UPDATE accounts SET pop3_remove = 'sometimes' WHERE id = 2", []).is_err());
+    conn.execute("DELETE FROM accounts WHERE id = 2", []).unwrap();
+    for table in ["pop3_seen", "pop3_failures", "local_messages", "account_servers"] {
+        let left: i64 = conn
+            .query_row(&format!("SELECT COUNT(*) FROM {table}"), [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(left, 0, "{table}");
+    }
+}

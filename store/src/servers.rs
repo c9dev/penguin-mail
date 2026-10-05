@@ -1,4 +1,4 @@
-//! Where an IMAP account's mail lives: one incoming and one outgoing
+//! Where an IMAP or POP3 account's mail lives: one incoming and one outgoing
 //! server, each with how to reach it and whom to log in as. The password
 //! is in the keyring and never here.
 
@@ -51,29 +51,69 @@ pub struct Servers {
     pub smtp: Saved,
 }
 
+/// A POP3 account's two servers. It keeps a 'pop3' row where an IMAP
+/// account keeps an 'imap' one.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Pop3Servers {
+    pub pop3: Saved,
+    pub smtp: Saved,
+}
+
 /// Keeps `servers` for `account_id`, replacing what was there.
 pub fn save(conn: &Connection, account_id: AccountId, servers: &Servers) -> Result<()> {
-    for (role, server) in [("imap", &servers.imap), ("smtp", &servers.smtp)] {
-        conn.execute(
-            "INSERT INTO account_servers (account_id, role, host, port, security, user_name) \
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6) \
-             ON CONFLICT (account_id, role) DO UPDATE SET host = excluded.host, \
-             port = excluded.port, security = excluded.security, user_name = excluded.user_name",
-            params![
-                account_id,
-                role,
-                server.host,
-                server.port,
-                server.security.as_str(),
-                server.user_name
-            ],
-        )?;
+    put(conn, account_id, "imap", &servers.imap)?;
+    put(conn, account_id, "smtp", &servers.smtp)
+}
+
+/// Keeps a POP3 account's servers, replacing what was there.
+pub fn save_pop3(conn: &Connection, account_id: AccountId, servers: &Pop3Servers) -> Result<()> {
+    put(conn, account_id, "pop3", &servers.pop3)?;
+    put(conn, account_id, "smtp", &servers.smtp)
+}
+
+/// An IMAP account's servers, or `None` unless both are there. A POP3
+/// account answers `None` here and its servers through [`load_pop3`].
+pub fn load(conn: &Connection, account_id: AccountId) -> Result<Option<Servers>> {
+    let (mut imap, mut smtp, mut pop3) = (None, None, None);
+    for (role, saved) in rows(conn, account_id)? {
+        match role.as_str() {
+            "imap" => imap = Some(saved),
+            "smtp" => smtp = Some(saved),
+            _ => pop3 = Some(saved),
+        }
     }
+    if pop3.is_some() {
+        return Ok(None);
+    }
+    Ok(imap.zip(smtp).map(|(imap, smtp)| Servers { imap, smtp }))
+}
+
+/// A POP3 account's servers, or `None` unless both are there.
+pub fn load_pop3(conn: &Connection, account_id: AccountId) -> Result<Option<Pop3Servers>> {
+    let (mut pop3, mut smtp) = (None, None);
+    for (role, saved) in rows(conn, account_id)? {
+        match role.as_str() {
+            "pop3" => pop3 = Some(saved),
+            "smtp" => smtp = Some(saved),
+            _ => {}
+        }
+    }
+    Ok(pop3.zip(smtp).map(|(pop3, smtp)| Pop3Servers { pop3, smtp }))
+}
+
+fn put(conn: &Connection, account_id: AccountId, role: &str, server: &Saved) -> Result<()> {
+    conn.execute(
+        "INSERT INTO account_servers (account_id, role, host, port, security, user_name) \
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6) \
+         ON CONFLICT (account_id, role) DO UPDATE SET host = excluded.host, \
+         port = excluded.port, security = excluded.security, user_name = excluded.user_name",
+        params![account_id, role, server.host, server.port, server.security.as_str(), server.user_name],
+    )?;
     Ok(())
 }
 
-/// The servers kept for `account_id`, or `None` unless both are there.
-pub fn load(conn: &Connection, account_id: AccountId) -> Result<Option<Servers>> {
+/// Every server row kept for `account_id`, by role.
+fn rows(conn: &Connection, account_id: AccountId) -> Result<Vec<(String, Saved)>> {
     let mut stmt = conn.prepare(
         "SELECT role, host, port, security, user_name FROM account_servers WHERE account_id = ?1",
     )?;
@@ -86,9 +126,12 @@ pub fn load(conn: &Connection, account_id: AccountId) -> Result<Option<Servers>>
             row.get::<_, String>(4)?,
         ))
     })?;
-    let (mut imap, mut smtp) = (None, None);
+    let mut kept = Vec::new();
     for row in rows {
         let (role, host, port, security, user_name) = row?;
+        if !matches!(role.as_str(), "imap" | "smtp" | "pop3") {
+            return Err(StoreError::Corrupt { column: "account_servers.role", value: role });
+        }
         let port = u16::try_from(port).map_err(|_| StoreError::Corrupt {
             column: "account_servers.port",
             value: port.to_string(),
@@ -97,22 +140,7 @@ pub fn load(conn: &Connection, account_id: AccountId) -> Result<Option<Servers>>
             column: "account_servers.security",
             value: security.clone(),
         })?;
-        let saved = Saved {
-            host,
-            port,
-            security,
-            user_name,
-        };
-        match role.as_str() {
-            "imap" => imap = Some(saved),
-            "smtp" => smtp = Some(saved),
-            _ => {
-                return Err(StoreError::Corrupt {
-                    column: "account_servers.role",
-                    value: role,
-                });
-            }
-        }
+        kept.push((role, Saved { host, port, security, user_name }));
     }
-    Ok(imap.zip(smtp).map(|(imap, smtp)| Servers { imap, smtp }))
+    Ok(kept)
 }

@@ -748,6 +748,62 @@ CREATE TABLE rule_changes (
     filter     TEXT
 );
 "#,
+    // Part 6, POP3. `pop3_seen` holds each UIDL a POP3 account downloaded,
+    // so a message deleted here is not fetched again while the server
+    // still lists it; a row goes once the server stops listing it.
+    // `remove_wanted` says the account's setting asks for a DELE, and
+    // `removed` that a clean QUIT confirmed one; Leave on Server sets
+    // neither. `pop3_failures` counts the RETRs a server refused per UIDL
+    // that is not downloaded yet, with its last words.
+    //
+    // `local_messages` holds the raw bytes of mail that lives only here,
+    // and goes with the message row. `accounts.pop3_remove` is `never`,
+    // `downloaded` or `days`, with the day count beside it. SQLite cannot
+    // widen a CHECK in place, so `account_servers` is rebuilt to take a
+    // 'pop3' role.
+    r#"
+CREATE TABLE pop3_seen (
+    account_id    INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    uidl          TEXT NOT NULL,
+    downloaded_at INTEGER NOT NULL,
+    remove_wanted INTEGER NOT NULL DEFAULT 0,
+    removed       INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (account_id, uidl)
+);
+CREATE TABLE pop3_failures (
+    account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    uidl       TEXT NOT NULL,
+    failures   INTEGER NOT NULL,
+    last_error TEXT NOT NULL,
+    PRIMARY KEY (account_id, uidl)
+);
+CREATE TABLE local_messages (
+    account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    message_id TEXT NOT NULL,
+    raw        BLOB NOT NULL,
+    PRIMARY KEY (account_id, message_id)
+);
+CREATE TRIGGER local_messages_follow AFTER DELETE ON messages BEGIN
+    DELETE FROM local_messages WHERE account_id = old.account_id AND message_id = old.id;
+END;
+ALTER TABLE accounts ADD COLUMN pop3_remove TEXT NOT NULL DEFAULT 'never'
+    CHECK (pop3_remove IN ('never', 'downloaded', 'days'));
+ALTER TABLE accounts ADD COLUMN pop3_remove_days INTEGER
+    CHECK (pop3_remove_days IS NULL OR pop3_remove_days > 0);
+CREATE TABLE account_servers_new (
+    account_id         INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    role               TEXT NOT NULL CHECK (role IN ('imap', 'smtp', 'pop3')),
+    host               TEXT NOT NULL,
+    port               INTEGER NOT NULL,
+    security           TEXT NOT NULL CHECK (security IN ('tls', 'starttls')),
+    user_name          TEXT NOT NULL,
+    pinned_certificate BLOB,
+    PRIMARY KEY (account_id, role)
+);
+INSERT INTO account_servers_new SELECT account_id, role, host, port, security, user_name, pinned_certificate FROM account_servers;
+DROP TABLE account_servers;
+ALTER TABLE account_servers_new RENAME TO account_servers;
+"#,
 ];
 
 /// How long the copy taken before a migration stays once the store has
