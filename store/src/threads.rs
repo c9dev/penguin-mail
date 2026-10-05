@@ -1008,6 +1008,29 @@ pub fn get_thread(
         .optional()?)
 }
 
+/// The messages among `ids` whose thread is muted, each with its thread,
+/// in the order given. Each id costs two key lookups, so new mail asks
+/// this at every look without reading the rest of the store.
+pub fn in_muted_threads(
+    conn: &Connection,
+    account_id: AccountId,
+    ids: &[String],
+) -> Result<Vec<(String, String)>> {
+    let mut stmt = conn.prepare_cached(
+        "SELECT m.thread_id FROM messages m \
+         JOIN threads t ON t.account_id = m.account_id AND t.id = m.thread_id \
+         WHERE m.account_id = ?1 AND m.id = ?2 AND t.muted = 1",
+    )?;
+    let mut muted = Vec::new();
+    for id in ids {
+        let thread: Option<String> = stmt.query_row(params![account_id, id], |row| row.get(0)).optional()?;
+        if let Some(thread) = thread {
+            muted.push((id.clone(), thread));
+        }
+    }
+    Ok(muted)
+}
+
 /// The account holding the thread `thread_id`, for a caller that knows
 /// only Gmail's id. Two accounts can in principle share one; the first
 /// added wins.

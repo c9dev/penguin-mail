@@ -18,6 +18,24 @@ impl AccountSync {
     /// yet, and lists the mail again when the server has lost its place. A
     /// mailbox the server renumbered is listed again first, alone.
     pub async fn incremental(&self) -> Result<(), SyncError> {
+        let Replayed { touched, new_mail } = self.replay().await?;
+        // Filing takes the move lock the replay held, so it waits until
+        // the replay has let go of it.
+        let new_mail = self.file_muted_replies(new_mail).await;
+        self.emit_threads(touched);
+        if !new_mail.is_empty() {
+            self.emit(ChangeEvent::NewMail {
+                account_id: self.account_id,
+                message_ids: new_mail,
+            });
+        }
+        Ok(())
+    }
+
+    /// What [`Self::incremental`] stores, holding the move lock, before
+    /// anything hears of it: the threads it touched and the new Inbox
+    /// mail.
+    async fn replay(&self) -> Result<Replayed, SyncError> {
         let _moves = self.hold_moves().await;
         let account_id = self.account_id;
         let cursor = self
@@ -25,7 +43,8 @@ impl AccountSync {
             .read(move |c| accounts::sync_cursor(c, account_id))
             .await?;
         let Some(since) = cursor.state.map(SyncState::new) else {
-            return self.bootstrap().await;
+            self.bootstrap().await?;
+            return Ok(Replayed::default());
         };
         let found = match self.services.mail.changes(Some(&since)).await {
             Ok(found) => found,
@@ -34,13 +53,14 @@ impl AccountSync {
                     account = account_id,
                     "the server lost its place; listing the mail again"
                 );
-                return self.rebootstrap().await;
+                self.rebootstrap().await?;
+                return Ok(Replayed::default());
             }
             Err(err) => return Err(err.into()),
         };
         if found.changes.is_empty() && found.state == since {
             self.mark_caught_up();
-            return Ok(());
+            return Ok(Replayed::default());
         }
 
         let mut changes = self.changes_as_stored(found.changes).await?;
@@ -213,14 +233,7 @@ impl AccountSync {
             self.refresh_labels().await?;
         }
         self.mark_caught_up();
-        self.emit_threads(touched);
-        if !new_mail.is_empty() {
-            self.emit(ChangeEvent::NewMail {
-                account_id,
-                message_ids: new_mail,
-            });
-        }
-        Ok(())
+        Ok(Replayed { touched, new_mail })
     }
 
     /// The keyword changes that bring the stored messages located in
@@ -492,6 +505,13 @@ fn keyword_changes(
 const RELIST_BATCH: usize = 500;
 
 /// Unread mail that someone else sent to the inbox.
+/// What one replay of the feed stored.
+#[derive(Default)]
+struct Replayed {
+    touched: BTreeSet<String>,
+    new_mail: Vec<String>,
+}
+
 fn is_new_inbox_mail(meta: &MessageMeta) -> bool {
     meta.in_role(Role::Inbox)
         && meta.is_unread()

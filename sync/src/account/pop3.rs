@@ -82,6 +82,7 @@ impl AccountSync {
         } = done;
         // What was stored stays stored whatever went wrong after it, so
         // the window and the local rules hear of it either way.
+        let new_mail = self.file_muted_replies(new_mail).await;
         self.emit_threads(threads);
         if !new_mail.is_empty() {
             self.emit(ChangeEvent::NewMail {

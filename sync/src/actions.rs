@@ -83,8 +83,9 @@ pub enum MailAction {
     Remind { at: EpochMillis },
     /// Drops the targets' reminders and puts them back in the inbox now.
     CancelReminder,
-    /// Mutes the targets, so Gmail archives the replies that follow, or
-    /// with `false` unmutes them and puts them back in the inbox.
+    /// Mutes the targets, so the replies that follow go to the Archive
+    /// (Gmail's filter or the engine files them), or with `false` unmutes
+    /// them and puts them back in the inbox.
     Mute { muted: bool },
     /// Adds and removes labels by name. Adding a name the account lacks
     /// creates that label when `create` holds and skips the name when it

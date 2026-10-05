@@ -22,6 +22,7 @@ mod labels;
 mod local_rules;
 mod mailbox;
 mod microsoft;
+mod muted_replies;
 mod newsletters;
 mod outbox;
 mod parity;
