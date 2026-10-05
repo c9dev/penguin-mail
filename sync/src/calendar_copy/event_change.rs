@@ -310,8 +310,11 @@ impl<A: Accounts> CalendarCopy<A> {
         let quiet = self.quiet_changes(account_id)?;
         let (steps, notify) = match change {
             EventChange::New(event) => (vec![Step::Save(event)], forced(None, quiet, choice.notify)),
-            EventChange::Edit { occurrence, edited, .. } => {
-                let notify = forced(Some(&occurrence.event), quiet, choice.notify);
+            EventChange::Edit { occurrence, edited, how } => {
+                // An edit the guests would not notice tells nobody, also
+                // when the person answered only which occurrences it covers.
+                let chosen = if how.moves || how.seen { choice.notify } else { Notify::Nobody };
+                let notify = forced(Some(&occurrence.event), quiet, chosen);
                 (self.change_steps(account_id, &occurrence, edited, choice.scope).await?, notify)
             }
             EventChange::Remove(occurrence) => {

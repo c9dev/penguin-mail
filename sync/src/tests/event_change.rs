@@ -234,6 +234,27 @@ async fn a_withheld_calendar_permission_writes_nothing() {
     assert_eq!(on_day(&h, 0).await.len(), 1);
 }
 
+/// The repeat question alone, answered with an occurrence, follows the
+/// same guest rule as a change nobody was asked about: a colour on your
+/// own repeating meeting is yours, and Google mails nobody about it.
+#[tokio::test]
+async fn a_scope_answer_for_a_change_the_guests_cannot_see_sends_no_mail() {
+    let h = harness().await;
+    let copy = read(&h, vec![Event { guests: vec![me(), ann()], ..standup() }]).await;
+    let tuesday = on_day(&h, 1).await.remove(0);
+    let edited = Event { start: tuesday.start, end: tuesday.end, color: Some("5".into()), ..Event::clone(&tuesday.event) };
+    let change = EventChange::Edit { occurrence: tuesday, edited, how: Edit::default() };
+    let asked = the_question(copy.ask_before(h.account_id, &change).unwrap());
+    assert!(!asked.ask_guests && asked.scopes == EVERY, "{asked:?}");
+
+    // What the dialog's "This event only" button answers.
+    let button = Choice { scope: Some(RepeatScope::This), notify: Notify::Guests };
+    done(copy.change(h.account_id, change, button, Undo::Skip).await.unwrap());
+    copy.send(h.account_id).await.unwrap();
+    let sent = notices(&h);
+    assert!(!sent.is_empty() && sent.iter().all(|(_, n)| *n == Notify::Nobody), "{sent:?}");
+}
+
 // ---- A held change while a send of an earlier one lands -----------------
 
 /// An edit of the review queued and on its way to Google, then a second
