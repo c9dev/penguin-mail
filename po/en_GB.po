@@ -616,15 +616,19 @@ msgstr ""
 msgid "Turn off the automatic reply for {account}?"
 msgstr "Turn off the automatic reply for {account}?"
 
-#: app/src/assistant/run.rs:1438
-msgid "Create a Gmail rule for {account}: {when} → {then}?"
-msgstr "Create a Gmail rule for {account}: {when} → {then}?"
+#: app/src/assistant/run.rs:1442
+msgid "Create a rule for {account}: {when} → {then}?"
+msgstr "Create a rule for {account}: {when} → {then}?"
 
-#: app/src/assistant/run.rs:1481
-msgid "Delete a Gmail rule from {account}?"
-msgstr "Delete a Gmail rule from {account}?"
+#: app/src/assistant/run.rs:1485
+msgid "Delete a rule from {account}?"
+msgstr "Delete a rule from {account}?"
 
-#: app/src/assistant/run.rs:1810
+#: app/src/assistant/run.rs:1684 app/src/assistant/run.rs:1718
+msgid "Hide My Email works with Gmail accounts."
+msgstr "Hide My Email works with Gmail accounts."
+
+#: app/src/assistant/run.rs:1820
 msgid "Move mail from {sender} to {category} in {account}, and add a {provider} rule for their future mail?"
 msgstr "Move mail from {sender} to {category} in {account}, and add a {provider} rule for their future mail?"
 
@@ -1353,37 +1357,53 @@ msgstr "Choose a time in the future"
 msgid "On {date}, {sender} wrote:"
 msgstr "On {date}, {sender} wrote:"
 
-#: app/src/core.rs:202
+#: app/src/core.rs:209
 msgid "Another copy of Penguin Mail, or penguin-mail-cli sync, is syncing your mail. Stop it, then open Penguin Mail again."
 msgstr "Another copy of Penguin Mail, or penguin-mail-cli sync, is syncing your mail. Stop it, then open Penguin Mail again."
 
-#: app/src/core.rs:214
+#: app/src/core.rs:221
 msgid "Penguin Mail could not update its mail store, and kept the old one."
 msgstr "Penguin Mail could not update its mail store, and kept the old one."
 
-#: app/src/core.rs:724 app/src/core.rs:821
+#: app/src/core.rs:763 app/src/core.rs:846 app/src/core.rs:949
 msgid "Demo mode cannot add real accounts."
 msgstr "Demo mode cannot add real accounts."
 
-#: app/src/core.rs:728
+#: app/src/core.rs:767
 msgid "This copy of Penguin Mail was built without Google sign-in. Get a release from github.com/c9dev/penguin-mail/releases."
 msgstr "This copy of Penguin Mail was built without Google sign-in. Get a release from github.com/c9dev/penguin-mail/releases."
 
-#: app/src/core.rs:744
+#: app/src/core.rs:783 app/src/core.rs:872
 msgid "Canceled."
 msgstr "Cancelled."
 
-#: app/src/core.rs:749
+#: app/src/core.rs:788 app/src/core.rs:877
 msgid "Gave up waiting for the browser after five minutes."
 msgstr "Gave up waiting for the browser after five minutes."
 
-#: app/src/core.rs:754
+#: app/src/core.rs:793
 msgid "Penguin Mail cannot work without access to your mail. Sign in again and leave the Gmail permission ticked."
 msgstr "Penguin Mail cannot work without access to your mail. Sign in again and leave the Gmail permission ticked."
 
-#: app/src/core.rs:764
+#: app/src/core.rs:803 app/src/core.rs:897
 msgid "You signed in as {account}. Choose {wanted} to reconnect that account."
 msgstr "You signed in as {account}. Choose {wanted} to reconnect that account."
+
+#: app/src/core.rs:850
+msgid "This copy of Penguin Mail was built without Microsoft sign-in. Get a release from github.com/c9dev/penguin-mail/releases."
+msgstr "This copy of Penguin Mail was built without Microsoft sign-in. Get a release from github.com/c9dev/penguin-mail/releases."
+
+#: app/src/core.rs:882
+msgid "Your organization's administrator must approve Penguin Mail."
+msgstr "Your organisation's administrator must approve Penguin Mail."
+
+#: app/src/core.rs:885
+msgid "Penguin Mail cannot work without access to your mail. Sign in again and allow it."
+msgstr "Penguin Mail cannot work without access to your mail. Sign in again and allow it."
+
+#: app/src/core.rs:888
+msgid "This mailbox is on your organization's own Exchange server, which Penguin Mail cannot reach."
+msgstr "This mailbox is on your organisation's own Exchange server, which Penguin Mail cannot reach."
 
 #: app/src/event_reminders/notice.rs:31
 msgid "Join"
@@ -2634,7 +2654,7 @@ msgstr "Claude subscription"
 #. The header in both spaces carries a button for this now (R12);
 #. the menu item stays too, so Ctrl+J shows here as well.
 #: app/src/settings/mod.rs:215 app/src/ui/assistant.rs:99
-#: app/src/ui/window.rs:3040
+#: app/src/ui/window.rs:3112
 msgid "Assistant"
 msgstr "Assistant"
 
@@ -2944,7 +2964,7 @@ msgstr "Open Penguin Mail"
 msgid "New Message"
 msgstr "New Message"
 
-#: app/src/tray.rs:208 app/src/ui/sidebar.rs:1542 app/src/ui/window.rs:3043
+#: app/src/tray.rs:208 app/src/ui/sidebar.rs:1542 app/src/ui/window.rs:3115
 msgid "Check for Mail"
 msgstr "Check for Mail"
 
@@ -2962,7 +2982,7 @@ msgstr "What's New in {version}"
 msgid "Check for Updates"
 msgstr "Check for Updates"
 
-#: app/src/tray.rs:224 app/src/ui/window.rs:3055
+#: app/src/tray.rs:224 app/src/ui/window.rs:3127
 #: app/src/ui/window/shortcuts.rs:625
 msgid "Quit"
 msgstr "Quit"
@@ -2987,7 +3007,7 @@ msgstr "Website"
 msgid "License"
 msgstr "Licence"
 
-#: app/src/ui/about.rs:169 app/src/ui/window.rs:3054
+#: app/src/ui/about.rs:169 app/src/ui/window.rs:3126
 msgid "About Penguin Mail"
 msgstr "About Penguin Mail"
 
@@ -3344,7 +3364,7 @@ msgstr "{account} is ready"
 msgid "Mail is downloading. You can close this window."
 msgstr "Mail is downloading. You can close this window."
 
-#: app/src/ui/assistant.rs:31 app/src/ui/window.rs:3122
+#: app/src/ui/assistant.rs:31 app/src/ui/window.rs:3194
 msgid "Summarize this conversation"
 msgstr "Summarise this conversation"
 
@@ -3475,7 +3495,7 @@ msgstr "Edit {server}"
 
 #: app/src/ui/assistant_mcp_prefs.rs:121 app/src/ui/calendar/editor.rs:1532
 #: app/src/ui/composer/mod.rs:1662 app/src/ui/composer/recipients.rs:304
-#: app/src/ui/window.rs:2840
+#: app/src/ui/window.rs:2912
 msgid "Remove"
 msgstr "Remove"
 
@@ -6015,7 +6035,7 @@ msgstr "Could not delete the address: {reason}"
 msgid "Allow Hide My Email"
 msgstr "Allow Hide My Email"
 
-#: app/src/ui/hide_my_email.rs:329 app/src/ui/window.rs:3170
+#: app/src/ui/hide_my_email.rs:329 app/src/ui/window.rs:3242
 msgid "Add an account first"
 msgstr "Add an account first"
 
@@ -6978,7 +6998,7 @@ msgstr "Signature…"
 msgid "Rules…"
 msgstr "Rules…"
 
-#: app/src/ui/sidebar.rs:1472 app/src/ui/window.rs:3046
+#: app/src/ui/sidebar.rs:1472 app/src/ui/window.rs:3118
 msgid "Hide My Email…"
 msgstr "Hide My Email…"
 
@@ -7578,79 +7598,83 @@ msgstr "Saved {file} to Downloads"
 msgid "Could not save {file}: {reason}"
 msgstr "Could not save {file}: {reason}"
 
-#: app/src/ui/window.rs:2659
+#: app/src/ui/window.rs:2659 app/src/ui/window.rs:2819
 msgid "{account} is signed in again."
 msgstr "{account} is signed in again."
 
-#: app/src/ui/window.rs:2742
-msgid "Continue in your browser"
-msgstr "Continue in your browser"
-
-#: app/src/ui/window.rs:2753
+#: app/src/ui/window.rs:2695 app/src/ui/window.rs:2775
 msgid "Added {account}. Downloading mail…"
 msgstr "Added {account}. Downloading mail…"
 
-#: app/src/ui/window.rs:2772
+#: app/src/ui/window.rs:2764 app/src/ui/window.rs:2807
+msgid "Continue in your browser"
+msgstr "Continue in your browser"
+
+#: app/src/ui/window.rs:2794
+msgid "This copy of Penguin Mail was built without Microsoft sign-in."
+msgstr "This copy of Penguin Mail was built without Microsoft sign-in."
+
+#: app/src/ui/window.rs:2838
 msgid "This copy of Penguin Mail was built without Google sign-in."
 msgstr "This copy of Penguin Mail was built without Google sign-in."
 
-#: app/src/ui/window.rs:2774
+#: app/src/ui/window.rs:2846
 msgid "Get a Release"
 msgstr "Get a Release"
 
-#: app/src/ui/window.rs:2833
+#: app/src/ui/window.rs:2905
 msgid "Remove {account}?"
 msgstr "Remove {account}?"
 
-#: app/src/ui/window.rs:2837
+#: app/src/ui/window.rs:2909
 msgid "Its downloaded mail and saved sign-in are deleted from this computer. Nothing changes in Gmail."
 msgstr "Its downloaded mail and saved sign-in are deleted from this computer. Nothing changes in Gmail."
 
-#: app/src/ui/window.rs:2853
+#: app/src/ui/window.rs:2925
 msgid "Removed {account}"
 msgstr "Removed {account}"
 
-#: app/src/ui/window.rs:2855
+#: app/src/ui/window.rs:2927
 msgid "Could not remove {account}: {reason}"
 msgstr "Could not remove {account}: {reason}"
 
-#: app/src/ui/window.rs:3027
+#: app/src/ui/window.rs:3099
 msgid "Refresh"
 msgstr "Refresh"
 
-#: app/src/ui/window.rs:3031
+#: app/src/ui/window.rs:3103
 msgid "Show Declined Events"
 msgstr "Show Declined Events"
 
-#: app/src/ui/window.rs:3044
+#: app/src/ui/window.rs:3116
 msgid "Add Account…"
 msgstr "Add Account…"
 
-#: app/src/ui/window.rs:3045
+#: app/src/ui/window.rs:3117
 msgid "New Smart Mailbox…"
 msgstr "New Smart Mailbox…"
 
-#: app/src/ui/window.rs:3052 app/src/ui/window/shortcuts.rs:602
+#: app/src/ui/window.rs:3124 app/src/ui/window/shortcuts.rs:602
 msgid "Preferences"
 msgstr "Preferences"
 
-#: app/src/ui/window.rs:3053
+#: app/src/ui/window.rs:3125
 msgid "Keyboard Shortcuts"
 msgstr "Keyboard Shortcuts"
 
-#: app/src/ui/window.rs:3061 app/src/ui/window.rs:3063
+#: app/src/ui/window.rs:3133 app/src/ui/window.rs:3135
 msgid "Main Menu"
 msgstr "Main Menu"
 
-#: app/src/ui/window.rs:3445
+#: app/src/ui/window.rs:3517
 msgid "Open a message from the person first"
 msgstr "Open a message from the person first"
 
-#: app/src/ui/window.rs:3521
+#: app/src/ui/window.rs:3593
 msgid "Penguin Mail shows the new language after a restart"
 msgstr "Penguin Mail shows the new language after a restart"
 
-#: app/src/ui/window.rs:3523 app/src/update/mod.rs:130
+#: app/src/ui/window.rs:3595 app/src/update/mod.rs:130
 msgid "Restart"
 msgstr "Restart"
 
@@ -8887,7 +8911,7 @@ msgstr "{problem}. Trying again {when}"
 msgid "{problem}. Penguin Mail stopped trying"
 msgstr "{problem}. Penguin Mail stopped trying"
 
-#: sync/src/passwords.rs:19
+#: sync/src/passwords.rs:20
 msgid "The keyring refused: {reason}"
 msgstr "The keyring refused: {reason}"
 
@@ -8961,10 +8985,6 @@ msgstr "Outlook cannot subscribe to a calendar by its address."
 msgid "Outlook has no other calendars to add."
 msgstr "Outlook has no other calendars to add."
 
-#: sync/src/services/microsoft/errors.rs:18
-msgid "This mailbox is on your organization's own Exchange server, which Penguin Mail cannot reach."
-msgstr "This mailbox is on your organisation's own Exchange server, which Penguin Mail cannot reach."
-
 #: sync/src/services/microsoft/rules.rs:96
 msgid "Outlook's rules cannot do that."
 msgstr "Outlook's rules cannot do that."
@@ -9005,7 +9025,7 @@ msgstr "Choose what the rule does"
 msgid "The rule is read-only."
 msgstr "The rule is read-only."
 
-#: sync/src/sign_in.rs:136
+#: sync/src/sign_in.rs:158
 msgid "{address} is already in Penguin Mail as a {provider} account."
 msgstr "{address} is already in Penguin Mail as a {provider} account."
 
