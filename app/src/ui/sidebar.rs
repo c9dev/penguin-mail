@@ -4,7 +4,7 @@ mod sections;
 pub(crate) mod tree;
 
 use std::cell::{Cell, RefCell};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
 use adw::prelude::*;
@@ -729,7 +729,12 @@ impl Sidebar {
         for (account, labels) in accounts {
             let shown = extras.names.get(&account.id);
             let account_offers = offers(account.id);
-            let (row, count, actions) = heading(account, shown, account_offers);
+            let (row, count, actions) = heading(
+                account,
+                shown,
+                account_offers,
+                extras.not_downloading.contains(&account.id),
+            );
             self.list.append(&row);
             self.headings.borrow_mut().push(Heading {
                 row,
@@ -1274,6 +1279,8 @@ pub struct Extras {
     /// Where the person put each account's labels among their siblings,
     /// by label id.
     pub label_order: HashMap<AccountId, HashMap<String, i64>>,
+    /// Accounts with a message their POP3 server refused three times.
+    pub not_downloading: HashSet<AccountId>,
 }
 
 /// A small heading between sections. It cannot be selected.
@@ -1533,6 +1540,7 @@ fn heading(
     account: &Account,
     name: Option<&String>,
     offers: Offers,
+    not_downloading: bool,
 ) -> (gtk::ListBoxRow, gtk::Label, gio::SimpleActionGroup) {
     let content = gtk::Box::builder()
         .spacing(6)
@@ -1617,6 +1625,10 @@ fn heading(
     menu.append_section(None, &look);
     let access = gio::Menu::new();
     access.append_item(&item(&gettext("Sign In Again…"), "win.account-reconnect"));
+    access.append_item(&item(
+        &gettext("Messages That Will Not Download…"),
+        "account.not-downloading",
+    ));
     menu.append_section(None, &access);
     let danger = gio::Menu::new();
     danger.append_item(&item(&gettext("Remove Account…"), "win.account-remove"));
@@ -1649,7 +1661,7 @@ fn heading(
     // `Sidebar::regate` sets them again once the account's offers change,
     // whether or not the row itself gets rebuilt.
     let own = gio::SimpleActionGroup::new();
-    for (name, enabled) in crate::offered::account_menu_actions(offers) {
+    let add_own = |name: &'static str, enabled: bool| {
         let action = gio::SimpleAction::new(name, None);
         action.set_enabled(enabled);
         let (weak, account_id) = (row.downgrade(), account.id);
@@ -1663,7 +1675,13 @@ fn heading(
             }
         });
         own.add_action(&action);
+    };
+    for (name, enabled) in crate::offered::account_menu_actions(offers) {
+        add_own(name, enabled);
     }
+    // On while the store holds a message the POP3 server refused three
+    // times; the window rebuilds the row when one reaches three.
+    add_own("not-downloading", not_downloading);
     row.insert_action_group("account", Some(&own));
     describe(
         &row,

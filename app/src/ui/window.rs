@@ -1127,7 +1127,13 @@ impl MainWindow {
         let still_there = still_there(&self.shown(), &data);
         let vanished = self.screen.borrow_mut().accounts_read(still_there);
         let settings = self.settings();
-        let (data, extras) = self.arrange(data, &settings);
+        let not_downloading = self
+            .core
+            .read(mailrs_store::pop3::accounts_failing)
+            .await
+            .map(|ids| ids.into_iter().collect())
+            .unwrap_or_default();
+        let (data, extras) = self.arrange(data, &settings, not_downloading);
         self.list.set_vips(settings.vips.keys().cloned().collect());
         let mailbox = self.shown();
         if !matches!(mailbox, Mailbox::Search { .. }) {
@@ -3022,6 +3028,10 @@ impl MainWindow {
             Box::new(|win, account| win.show_rules(account)),
         );
         with_account(
+            "account-not-downloading",
+            Box::new(|win, account| win.show_not_downloading(account)),
+        );
+        with_account(
             "account-hide-my-email",
             Box::new(|win, account| win.show_hide_my_email(Some(account.id))),
         );
@@ -3623,11 +3633,38 @@ impl MainWindow {
         shortcuts::dialog(Filing::of(offers)).present(Some(&self.window));
     }
 
+    /// The messages a POP3 account's server would not hand over after
+    /// three tries, each with the server's words.
+    fn show_not_downloading(self: &Rc<Self>, account: Account) {
+        let win = Rc::clone(self);
+        glib::spawn_future_local(async move {
+            let id = account.id;
+            let failing = match win.core.read(move |c| mailrs_store::pop3::failing(c, id)).await {
+                Ok(failing) => failing,
+                Err(err) => {
+                    return tracing::warn!(account = id, %err, "could not read the messages that will not download");
+                }
+            };
+            let lines = crate::offered::failing_lines(&failing).join("\n");
+            let dialog = adw::AlertDialog::builder()
+                .heading(gettext("Messages That Will Not Download"))
+                .body(fill(
+                    &gettext("{address}'s server would not hand these over after three tries. Penguin Mail tries again at each check.\n\n{lines}"),
+                    &[("address", &account.email), ("lines", &lines)],
+                ))
+                .build();
+            dialog.add_responses(&[("close", &gettext("Close"))]);
+            dialog.set_close_response("close");
+            dialog.present(Some(&win.window));
+        });
+    }
+
     fn show_about(self: &Rc<Self>) {
         let Some(app) = self.app.upgrade() else {
             return;
         };
-        let about = crate::ui::about::About::new(app.can_update());
+        let kept_here = crate::offered::kept_here_lines(&self.accounts());
+        let about = crate::ui::about::About::new(app.can_update(), &self.core.store_path, &kept_here);
         if let Some(state) = app.update_state() {
             about.show_update(&state);
         }

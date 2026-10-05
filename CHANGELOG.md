@@ -10,7 +10,10 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - Add a POP3 account for a provider that offers only POP3, or to keep an
   account's mail on this computer alone: choose Other, then Enter Server
   Settings, and pick POP3. Mail stays on the server unless you choose to
-  remove it after downloading or after some days.
+  remove it after downloading or after some days. A message the server
+  will not hand over after three tries appears in the account's menu with
+  the server's own words, and About names the file that holds mail kept
+  only on this computer.
 - Add Outlook.com, Hotmail and Microsoft 365 accounts: choose Microsoft in
   Add Account, or on the first page, and sign in on Microsoft's own page.
 - Outlook accounts get their calendars, with repeating events, invitations

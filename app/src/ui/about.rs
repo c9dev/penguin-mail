@@ -24,7 +24,7 @@ pub struct About {
 }
 
 impl About {
-    pub fn new(can_update: bool) -> Rc<About> {
+    pub fn new(can_update: bool, store: &std::path::Path, kept_here: &[String]) -> Rc<About> {
         let content = gtk::Box::builder()
             .orientation(gtk::Orientation::Vertical)
             .spacing(6)
@@ -82,6 +82,33 @@ impl About {
             .margin_top(12)
             .build();
         content.append(&comments);
+
+        // A POP3 account's mail lives only in the store, so About names the
+        // file to back up and says whose mail it holds.
+        if !kept_here.is_empty() {
+            let path = gtk::Label::builder()
+                .label(store.display().to_string())
+                .selectable(true)
+                .wrap(true)
+                .wrap_mode(gtk::pango::WrapMode::Char)
+                .justify(gtk::Justification::Center)
+                .margin_top(12)
+                .build();
+            path.add_css_class("caption");
+            path.add_css_class("monospace");
+            content.append(&path);
+            for line in kept_here {
+                let label = gtk::Label::builder()
+                    .label(line)
+                    .wrap(true)
+                    .justify(gtk::Justification::Center)
+                    .max_width_chars(40)
+                    .build();
+                label.add_css_class("caption");
+                label.add_css_class("dim-label");
+                content.append(&label);
+            }
+        }
 
         let label = gtk::Label::new(Some(&gettext("Check for Updates")));
         let spinner = adw::Spinner::builder().visible(false).build();
