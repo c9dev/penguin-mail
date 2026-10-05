@@ -393,6 +393,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   only its popover open.
 - In light mode, message previews, dates, mailbox counts and the grey
   sender lines above each message are darker and easier to read.
+- The card above an unsent or translated message lines up with the
+  message under it, instead of running past it on both sides.
 
 ## 0.3.0 (2026-09-24)
 

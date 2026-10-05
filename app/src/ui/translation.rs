@@ -14,7 +14,7 @@ use crate::translation::Language;
 use mailrs_domain::translate::{fill, gettext};
 
 pub struct TranslationCard {
-    pub widget: gtk::Box,
+    pub widget: adw::BreakpointBin,
     title: gtk::Label,
     detail: gtk::Label,
     button: gtk::Button,
@@ -60,12 +60,7 @@ impl TranslationCard {
         inside.append(&lines);
         inside.append(&button);
 
-        let widget = gtk::Box::builder()
-            .orientation(gtk::Orientation::Vertical)
-            .visible(false)
-            .css_classes(["translation-area"])
-            .build();
-        widget.append(&inside);
+        let widget = super::page_column(&inside, "translation-area");
 
         Rc::new(TranslationCard {
             widget,

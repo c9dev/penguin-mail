@@ -12,7 +12,7 @@ use crate::open_thread::Unsent;
 use mailrs_domain::translate::gettext;
 
 pub struct QueuedCard {
-    pub widget: gtk::Box,
+    pub widget: adw::BreakpointBin,
     title: gtk::Label,
     detail: gtk::Label,
     /// Edit, Send Now and Delete, for a message in the Outbox.
@@ -77,12 +77,7 @@ impl QueuedCard {
         inside.append(&icon);
         inside.append(&lines);
 
-        let widget = gtk::Box::builder()
-            .orientation(gtk::Orientation::Vertical)
-            .visible(false)
-            .css_classes(["queued-area"])
-            .build();
-        widget.append(&inside);
+        let widget = super::page_column(&inside, "queued-area");
         QueuedCard {
             widget,
             title,

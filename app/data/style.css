@@ -684,10 +684,22 @@ button.invitation-pill buttoncontent > box { border-spacing: 8px; }
 .strip-block.unanswered { background: var(--view-bg-color); padding: 0; }
 .strip-block.unanswered label { margin: 0 8px; }
 
+/* The cards above the page (translation, queued, gpg) sit in the page's
+   own column (`ui::page_column`), which gives their sides; they used to
+   reach 20 px past the text on each side. They belong to the page, so
+   they take the card border and no shadow (DESIGN.md: shadows only for
+   what floats); the shadow was also cut flat at their foot. */
+.translation-card,
+.queued-card,
+.pgp-card { box-shadow: none; border: 1px solid #dedee3; }
+.app-dark .translation-card,
+.app-dark .queued-card,
+.app-dark .pgp-card { border-color: #39393f; }
+
 /* The message is in another language: which one, where its words would go
    to be translated, and the button that sends them. */
 .translation-area {
-  padding: 12px 16px 0 16px;
+  padding-top: 12px;
   background: var(--view-bg-color);
 }
 .translation-card { padding: 10px 14px; border-radius: 12px; }
@@ -696,7 +708,7 @@ button.invitation-pill buttoncontent > box { border-spacing: 8px; }
 /* A queued message: when it goes, or why it has not gone, and the buttons
    that act on it. */
 .queued-area {
-  padding: 12px 16px 0 16px;
+  padding-top: 12px;
   background: var(--view-bg-color);
 }
 .queued-card { padding: 10px 14px; border-radius: 12px; }
@@ -704,7 +716,7 @@ button.invitation-pill buttoncontent > box { border-spacing: 8px; }
 
 /* What gpg made of a message, above it and above the event card. */
 .pgp-area {
-  padding: 12px 16px 0 16px;
+  padding-top: 12px;
   background: var(--view-bg-color);
 }
 .pgp-card { padding: 10px 14px; border-radius: 12px; }

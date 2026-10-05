@@ -709,6 +709,15 @@ background:color-mix(in srgb,var(--fg) 20%,transparent)}\
 :host(.plain) details.trimmed>summary:focus-visible,.text details.trimmed>summary:focus-visible{\
 outline-color:var(--accent)}";
 
+/// The page's column: at most this wide, with this much room at each side
+/// of its text. The cards GTK lays above the page (`ui::page_column`)
+/// take the same column, so their edges line up with the text under them.
+pub(crate) const PAGE_MAX_WIDTH: i32 = 980;
+pub(crate) const PAGE_SIDE: i32 = 36;
+/// At or under this width the page keeps less room at its sides.
+pub(crate) const PAGE_NARROW: i32 = 560;
+pub(crate) const PAGE_NARROW_SIDE: i32 = 14;
+
 /// The conversation page's colours in one theme.
 pub(crate) struct PagePalette {
     pub bg: &'static str,
@@ -757,7 +766,7 @@ fn page_css(theme: &Theme) -> String {
     format!(
         ":root{{color-scheme:{scheme};--bg:{bg};--fg:{fg};--dim:{dim};--card:{card};--line:{line};--hover:{hover};--surface:{surface};--accent:{accent};--accent-text:{accent_text}}}\
 html{{background:var(--bg)}}\
-body{{margin:0 auto;max-width:980px;padding:20px 36px 64px;color:var(--fg);\
+body{{margin:0 auto;max-width:{PAGE_MAX_WIDTH}px;padding:20px {PAGE_SIDE}px 64px;color:var(--fg);\
 font:15px/1.5 \"Adwaita Sans\",Cantarell,system-ui,sans-serif;-webkit-font-smoothing:antialiased}}\
 .thread h1{{font-size:22px;line-height:1.25;font-weight:800;letter-spacing:-0.01em;margin:0}}\
 .thread .headline{{display:flex;align-items:flex-start;gap:12px}}\
@@ -851,7 +860,7 @@ color:inherit;text-decoration:none;min-width:0}}\
 .attachment .get:hover{{opacity:1;background:var(--accent)}}\
 .thumb{{width:32px;height:32px;flex:none;border-radius:5px;object-fit:cover;background:var(--card)}}\
 .clip{{width:16px;height:16px;flex:none;background:var(--dim);-webkit-mask:url(\"{CLIP}\") center/contain no-repeat}}\
-@media (max-width:560px){{body{{padding:18px 14px 40px}}.body,.attachments{{margin-left:0}}.thread h1{{font-size:20px}}\
+@media (max-width:{PAGE_NARROW}px){{body{{padding:18px {PAGE_NARROW_SIDE}px 40px}}.body,.attachments{{margin-left:0}}.thread h1{{font-size:20px}}\
 .address{{display:none}}.message{{padding:14px 8px 16px;margin:0 -8px}}.chev{{display:none}}}}",
         fold = FOLD_MS,
         trimmed = TRIMMED_CSS,
