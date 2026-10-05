@@ -9522,37 +9522,37 @@ msgstr ""
 msgid "This rule is read-only, so Penguin Mail leaves it as it is."
 msgstr ""
 
-#: sync/src/services/microsoft/calendar.rs:317
+#: sync/src/services/microsoft/calendar.rs:328
 msgid "Outlook cannot repeat an event that way."
 msgstr ""
 
-#: sync/src/services/microsoft/calendar.rs:681
+#: sync/src/services/microsoft/calendar.rs:738
 msgid "Outlook cannot attach a file to an event."
 msgstr ""
 
-#: sync/src/services/microsoft/calendar.rs:685
+#: sync/src/services/microsoft/calendar.rs:742
 msgid "Outlook has no files to share."
 msgstr ""
 
-#: sync/src/services/microsoft/calendar.rs:694
+#: sync/src/services/microsoft/calendar.rs:751
 msgid "Outlook cannot move an event to another calendar."
 msgstr ""
 
 #. What Outlook has no call for is a refusal, not `Unsupported`:
 #. that answer would keep the change in the queue for good.
-#: sync/src/services/microsoft/calendar.rs:728
+#: sync/src/services/microsoft/calendar.rs:785
 msgid "Outlook cannot take a calendar off the list."
 msgstr ""
 
-#: sync/src/services/microsoft/calendar.rs:729
+#: sync/src/services/microsoft/calendar.rs:786
 msgid "Outlook cannot hide a calendar on all your devices."
 msgstr ""
 
-#: sync/src/services/microsoft/calendar.rs:730
+#: sync/src/services/microsoft/calendar.rs:787
 msgid "Outlook cannot subscribe to a calendar by its address."
 msgstr ""
 
-#: sync/src/services/microsoft/calendar.rs:731
+#: sync/src/services/microsoft/calendar.rs:788
 msgid "Outlook has no other calendars to add."
 msgstr ""
 

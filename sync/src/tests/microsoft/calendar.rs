@@ -7,7 +7,14 @@ use mailrs_graph::{
     RecurrencePattern, RecurrenceRange, ResponseStatus,
 };
 
+use std::collections::HashMap;
+use std::sync::Arc;
+
+use mailrs_store::calendar as store;
+
 use super::outlook;
+use crate::calendar_copy::CalendarCopy;
+use crate::tests::Connected;
 use crate::fake::Area;
 use crate::services::microsoft::GraphApi;
 use crate::{BackendError, CalendarService};
@@ -92,6 +99,62 @@ fn millis(text: &str) -> i64 {
     chrono::DateTime::parse_from_rfc3339(text).unwrap().timestamp_millis()
 }
 
+/// The owner's series from 2026-10-05: "test event", Monday to Friday,
+/// 08:00 to 09:00 UTC, made in Penguin Mail.
+fn weekday_series() -> GraphEvent {
+    GraphEvent {
+        id: "w1".into(),
+        ical_uid: Some("w1@outlook".into()),
+        subject: Some("test event".into()),
+        start: Some(at("2026-10-05T08:00:00.0000000")),
+        end: Some(at("2026-10-05T09:00:00.0000000")),
+        kind: Some("seriesMaster".into()),
+        recurrence: Some(PatternedRecurrence {
+            pattern: RecurrencePattern {
+                kind: "weekly".into(),
+                interval: 1,
+                days_of_week: ["monday", "tuesday", "wednesday", "thursday", "friday"].map(String::from).to_vec(),
+                ..Default::default()
+            },
+            range: RecurrenceRange { kind: "noEnd".into(), start_date: "2026-10-05".into(), ..Default::default() },
+        }),
+        ..GraphEvent::default()
+    }
+}
+
+/// An occurrence of `weekday_series` moved in Outlook on the web: Graph
+/// holds the start it replaced, which its calendar-view delta leaves out.
+fn moved(id: &str, day: &str, to: &str) -> GraphEvent {
+    GraphEvent {
+        id: id.into(),
+        subject: Some("test event".into()),
+        start: Some(at(&format!("{day}T{to}:00.0000000"))),
+        end: Some(at(&format!("{day}T09:30:00.0000000"))),
+        kind: Some("exception".into()),
+        series_master_id: Some("w1".into()),
+        original_start: Some(format!("{day}T08:00:00Z")),
+        ..GraphEvent::default()
+    }
+}
+
+fn copy_of(h: &super::Outlook) -> CalendarCopy<Connected> {
+    let connected = HashMap::from([(h.account_id, Arc::clone(&h.sync))]);
+    CalendarCopy::new(Arc::new(Connected(connected)), h.db.clone())
+}
+
+/// When each occurrence the copy shows on `day` starts, as UTC `HH:MM`.
+async fn shown_on(h: &super::Outlook, day: &str) -> Vec<String> {
+    let account = h.account_id;
+    let from = millis(&format!("{day}T00:00:00Z"));
+    let mut shown = h
+        .db
+        .read(move |c| store::occurrences(c, &[account], from, from + 86_400_000, store::CalendarScope::Shown))
+        .await
+        .unwrap();
+    shown.sort_by_key(|o| o.start);
+    shown.iter().map(|o| Utc.timestamp_millis_opt(o.start).unwrap().format("%H:%M").to_string()).collect()
+}
+
 #[tokio::test]
 async fn calendars_come_with_their_colour_and_access() {
     let h = outlook().await;
@@ -116,7 +179,7 @@ async fn a_series_arrives_once_with_its_rule_its_gaps_and_its_changed_occurrence
     assert!(master.rules.contains(&"EXDATE:20261012T090000Z".to_string()), "{:?}", master.rules);
     let changed = page.events.iter().find(|e| e.id == "o3").unwrap();
     assert_eq!(changed.series.as_deref(), Some("m1"));
-    assert!(changed.original_start.is_some());
+    assert_eq!(changed.original_start, Some(millis("2026-10-19T09:00:00Z")));
     assert!(page.events.iter().all(|e| e.id != "o1"), "a plain occurrence is the rule's to expand");
     assert!(page.next_sync.is_some());
 }
@@ -307,7 +370,7 @@ async fn the_window_moves_on_once_a_month_has_passed() {
     let h = outlook().await;
     let calendar = h.sync.services().calendar.clone().unwrap();
     let old_end = crate::now_millis() + 700 * 86_400_000 - 40 * 86_400_000;
-    let token = serde_json::json!({ "end": old_end, "link": "fake:delta:cal-1:0", "series": [] }).to_string();
+    let token = serde_json::json!({ "end": old_end, "link": "fake:delta:cal-1:0", "series": [], "shape": 1 }).to_string();
     let answer = calendar.event_changes("cal-1", Some(&token), None, 0).await;
     assert!(matches!(answer, Err(BackendError::StateLost)));
 }
@@ -505,4 +568,73 @@ async fn an_edit_that_keeps_the_repeat_sends_it_again() {
     let sent = h.fake.with(|s| s.event_bodies.last().cloned()).unwrap();
     assert!(sent["recurrence"].is_object(), "{sent}");
     assert!(h.fake.with(|s| s.events[&made.id].1.recurrence.is_some()));
+}
+
+/// The owner's live run on 2026-10-05: Monday's occurrence moved to 08:30
+/// in Outlook on the web showed at 08:00 and at 08:30.
+#[tokio::test]
+async fn an_occurrence_moved_in_outlook_takes_its_series_slot() {
+    let h = outlook().await;
+    h.fake.put_event("cal-1", weekday_series());
+    h.fake.put_event("cal-1", moved("w1x", "2026-10-05", "08:30"));
+    copy_of(&h).refresh(h.account_id, crate::now_millis()).await.unwrap();
+    assert_eq!(shown_on(&h, "2026-10-05").await, ["08:30"]);
+    assert_eq!(shown_on(&h, "2026-10-06").await, ["08:00"]);
+}
+
+/// Each exception the delta brings costs one entry in a `$batch`, twenty
+/// to a request, and a round that brings none asks nothing.
+#[tokio::test]
+async fn the_original_starts_of_a_rounds_exceptions_come_in_one_lookup() {
+    let h = outlook().await;
+    h.fake.put_event("cal-1", weekday_series());
+    let days: Vec<String> = (0..25).map(|n| (chrono::NaiveDate::from_ymd_opt(2026, 10, 5).unwrap() + chrono::Days::new(7 * n)).to_string()).collect();
+    for (n, day) in days.iter().enumerate() {
+        h.fake.put_event("cal-1", moved(&format!("w1x{n}"), day, "08:30"));
+    }
+    let calendar = h.sync.services().calendar.clone().unwrap();
+    let first = calendar.event_changes("cal-1", None, None, crate::now_millis() - 365 * 86_400_000).await.unwrap();
+    assert!(first.events.iter().filter(|e| e.series.is_some()).all(|e| e.original_start.is_some()));
+    let lookups = h.fake.with(|s| s.start_lookups.clone());
+    assert_eq!(lookups.iter().map(Vec::len).collect::<Vec<_>>(), [25]);
+    calendar.event_changes("cal-1", first.next_sync.as_deref(), None, 0).await.unwrap();
+    assert_eq!(h.fake.with(|s| s.start_lookups.len()), 1, "a quiet round looks nothing up");
+}
+
+/// A token from before exceptions carried their original start makes the
+/// copy read the calendar whole once, which rewrites each exception.
+#[tokio::test]
+async fn a_token_of_the_old_shape_reads_the_calendar_whole() {
+    let h = outlook().await;
+    let calendar = h.sync.services().calendar.clone().unwrap();
+    let end = crate::now_millis() + 730 * 86_400_000;
+    let token = serde_json::json!({ "end": end, "link": "fake:delta:cal-1:0", "series": [] }).to_string();
+    let answer = calendar.event_changes("cal-1", Some(&token), None, 0).await;
+    assert!(matches!(answer, Err(BackendError::StateLost)), "{answer:?}");
+}
+
+/// The owner's store holds the moved Monday with no original start. The
+/// next read after the fix puts it right with nothing for them to do.
+#[tokio::test]
+async fn an_exception_stored_without_its_original_start_heals_on_the_next_read() {
+    let h = outlook().await;
+    h.fake.put_event("cal-1", weekday_series());
+    h.fake.put_event("cal-1", moved("w1x", "2026-10-05", "08:30"));
+    let copy = copy_of(&h);
+    copy.refresh(h.account_id, crate::now_millis()).await.unwrap();
+    let account = h.account_id;
+    // What a build before the fix left behind: the row without the start
+    // it replaces, under a token that names no shape.
+    h.db.write(move |c| {
+        c.execute("UPDATE events SET original_start = NULL WHERE account_id = ?1 AND id = 'w1x'", [account])?;
+        let held = store::token(c, account, "cal-1")?.unwrap();
+        let mut old: serde_json::Value = serde_json::from_str(&held).unwrap();
+        old.as_object_mut().unwrap().remove("shape");
+        store::set_token(c, account, "cal-1", Some(&old.to_string()), 0)
+    })
+    .await
+    .unwrap();
+    assert_eq!(shown_on(&h, "2026-10-05").await, ["08:00", "08:30"], "the owner's store before the fix");
+    copy.refresh(h.account_id, crate::now_millis()).await.unwrap();
+    assert_eq!(shown_on(&h, "2026-10-05").await, ["08:30"]);
 }

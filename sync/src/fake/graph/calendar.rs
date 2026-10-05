@@ -140,13 +140,24 @@ pub(super) fn calendar_view_delta(
         || {
             s.events
                 .values()
-                .filter(|(c, e)| c == calendar && !is_master(e) && within(e, start, end))
-                .map(|(_, e)| e.clone())
+                .filter(|(c, e)| c == calendar && within(e, start, end))
+                .map(|(_, e)| as_delta(e))
                 .collect()
         },
-        |id| s.events.get(id).filter(|(c, e)| c == calendar && !is_master(e)).map(|(_, e)| e.clone()),
+        |id| s.events.get(id).filter(|(c, _)| c == calendar).map(|(_, e)| as_delta(e)),
         removed_event,
     )
+}
+
+/// `event` as a calendar-view delta hands it over. Graph leaves
+/// `originalStart` out of an exception there, though `GET /events/{id}`
+/// and `/instances` carry it, and it names a series master too, which a
+/// plain calendar view does not.
+fn as_delta(event: &GraphEvent) -> GraphEvent {
+    match event.kind.as_deref() {
+        Some("exception") => GraphEvent { original_start: None, ..event.clone() },
+        _ => event.clone(),
+    }
 }
 
 pub(super) fn event(s: &mut GraphState, id: &str) -> Answer<GraphEvent> {
@@ -161,6 +172,24 @@ pub(super) fn instances(s: &mut GraphState, series: &str, start: &str, end: &str
         .map(|(_, e)| e)
         .filter(|e| e.series_master_id.as_deref() == Some(series) && within(e, start, end))
         .cloned()
+        .collect())
+}
+
+/// What Graph's `GET /events/{id}?$select=id,originalStart,originalStartTimeZone`
+/// answers for each id, logged so a test can count the lookups.
+pub(super) fn original_starts(s: &mut GraphState, ids: &[String]) -> Answer<Vec<Answer<GraphEvent>>> {
+    s.refuses(Area::Calendar)?;
+    s.start_lookups.push(ids.to_vec());
+    Ok(ids
+        .iter()
+        .map(|id| {
+            event_of(s, id).map(|e| GraphEvent {
+                id: e.id.clone(),
+                original_start: e.original_start.clone(),
+                original_start_time_zone: e.original_start_time_zone.clone(),
+                ..GraphEvent::default()
+            })
+        })
         .collect())
 }
 
@@ -425,7 +454,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn a_series_master_stays_out_of_the_delta() {
+    async fn a_delta_names_the_series_master_as_graph_does() {
         let fake = FakeGraph::new();
         let master = fake
             .create_event(
@@ -443,6 +472,28 @@ mod tests {
             .calendar_view_delta("cal-1", None, "2026-09-01T00:00:00Z", "2026-12-01T00:00:00Z")
             .await
             .unwrap();
-        assert!(page.value.is_empty());
+        assert_eq!(page.value.iter().map(|e| e.id.as_str()).collect::<Vec<_>>(), [master.id.as_str()]);
+    }
+
+    #[tokio::test]
+    async fn a_delta_leaves_out_an_exceptions_original_start_and_a_get_has_it() {
+        let fake = FakeGraph::new();
+        fake.put_event(
+            "cal-1",
+            mailrs_graph::GraphEvent {
+                id: "x1".into(),
+                kind: Some("exception".into()),
+                series_master_id: Some("m1".into()),
+                original_start: Some("2026-10-05T08:00:00Z".into()),
+                ..Default::default()
+            },
+        );
+        let page = fake
+            .calendar_view_delta("cal-1", None, "2026-09-01T00:00:00Z", "2026-12-01T00:00:00Z")
+            .await
+            .unwrap();
+        assert_eq!(page.value[0].original_start, None);
+        let held = fake.event("x1").await.unwrap();
+        assert_eq!(held.original_start.as_deref(), Some("2026-10-05T08:00:00Z"));
     }
 }

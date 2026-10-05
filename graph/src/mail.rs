@@ -23,7 +23,7 @@ const PAGE_PREFER: &str = "odata.maxpagesize=50";
 
 /// `path` with `pairs` as an encoded query, for a `$batch` entry, whose
 /// URL Graph reads as it would a request line.
-fn with_query(path: &str, pairs: &[(&str, &str)]) -> String {
+pub(crate) fn with_query(path: &str, pairs: &[(&str, &str)]) -> String {
     let query = url::form_urlencoded::Serializer::new(String::new())
         .extend_pairs(pairs)
         .finish();

@@ -203,3 +203,61 @@ fn a_hex_maps_to_the_nearest_outlook_color() {
     }
     assert_eq!(nearest_color("not a color"), "lightBlue");
 }
+
+/// The calendar-view delta leaves `originalStart` out of an exception; a
+/// GET of the event has it. Twenty-five exceptions take two `$batch` posts.
+#[tokio::test]
+async fn original_starts_come_in_batches_of_twenty() {
+    let server = MockServer::start().await;
+    common::token_endpoint(&server, "r").await;
+    Mock::given(method("POST"))
+        .and(path("/v1.0/$batch"))
+        .respond_with(|request: &wiremock::Request| {
+            let body: serde_json::Value = serde_json::from_slice(&request.body).unwrap();
+            let answers: Vec<serde_json::Value> = body["requests"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|r| {
+                    let url = r["url"].as_str().unwrap();
+                    let id = url.trim_start_matches("/me/events/").split('?').next().unwrap();
+                    assert!(url.contains("%24select=id%2CoriginalStart%2CoriginalStartTimeZone"), "{url}");
+                    match id {
+                        "x24" => json!({"id": r["id"], "status": 404, "body": {"error": {"code": "ErrorItemNotFound"}}}),
+                        _ => json!({"id": r["id"], "status": 200,
+                                    "body": {"id": id, "originalStart": "2026-10-05T08:00:00Z"}}),
+                    }
+                })
+                .collect();
+            ResponseTemplate::new(200).set_body_json(json!({"responses": answers}))
+        })
+        .mount(&server)
+        .await;
+    let ids: Vec<String> = (0..25).map(|n| format!("x{n}")).collect();
+    let found = common::graph(&server).original_starts(&ids).await.unwrap();
+    assert_eq!(found.len(), 25);
+    assert_eq!(found[3].as_ref().unwrap().id, "x3");
+    assert_eq!(found[3].as_ref().unwrap().original_start.as_deref(), Some("2026-10-05T08:00:00Z"));
+    assert!(matches!(found[24], Err(mailrs_graph::GraphError::NotFound)));
+    let posts = server.received_requests().await.unwrap().iter().filter(|r| r.url.path() == "/v1.0/$batch").count();
+    assert_eq!(posts, 2);
+}
+
+#[tokio::test]
+async fn instances_ask_for_their_original_start() {
+    let server = MockServer::start().await;
+    common::token_endpoint(&server, "r").await;
+    Mock::given(method("GET"))
+        .and(path("/v1.0/me/events/s1/instances"))
+        .and(query_param("$select", "id,type,seriesMasterId,start,end,originalStart"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "value": [{"id": "x1", "originalStart": "2026-10-05T08:00:00Z"}],
+        })))
+        .mount(&server)
+        .await;
+    let found = common::graph(&server)
+        .instances("s1", "2026-10-05T00:00:00Z", "2026-10-06T00:00:00Z")
+        .await
+        .unwrap();
+    assert_eq!(found[0].original_start.as_deref(), Some("2026-10-05T08:00:00Z"));
+}

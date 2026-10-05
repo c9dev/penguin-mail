@@ -109,6 +109,8 @@ pub struct GraphState {
     pub responses: Vec<Answered>,
     /// The body of every event create and change, as sent.
     pub event_bodies: Vec<serde_json::Value>,
+    /// The ids each `original_starts` call looked up, one entry a call.
+    pub start_lookups: Vec<Vec<String>>,
     pub contact_folders: Vec<ContactFolder>,
     /// Contact id to its folder and the contact.
     pub contacts: BTreeMap<String, (String, GraphContact)>,
@@ -463,6 +465,10 @@ impl GraphApi for FakeGraph {
 
     async fn instances(&self, series: &str, start: &str, end: &str) -> Answer<Vec<GraphEvent>> {
         self.with(|s| calendar::instances(s, series, start, end))
+    }
+
+    async fn original_starts(&self, ids: &[String]) -> Answer<Vec<Answer<GraphEvent>>> {
+        self.with(|s| calendar::original_starts(s, ids))
     }
 
     async fn calendar_view(&self, start: &str, end: &str) -> Answer<Vec<GraphEvent>> {

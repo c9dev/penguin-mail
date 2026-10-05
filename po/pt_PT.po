@@ -3355,8 +3355,11 @@ msgid "That passphrase does not open this file. Nothing was imported."
 msgstr "Essa frase-passe não abre este ficheiro. Não foi importado nada."
 
 #: app/src/smime.rs:281
-msgid "The file needs its passphrase, and none was given. Nothing was imported."
-msgstr "O ficheiro precisa da frase-passe e não foi indicada nenhuma. Não foi importado nada."
+msgid ""
+"The file needs its passphrase, and none was given. Nothing was imported."
+msgstr ""
+"O ficheiro precisa da frase-passe e não foi indicada nenhuma. Não foi "
+"importado nada."
 
 #: app/src/smime.rs:284
 msgid "gpgsm failed: {reason}"
@@ -7104,8 +7107,12 @@ msgid "gpgsm already holds everything in this file."
 msgstr "O gpgsm já tem tudo o que este ficheiro contém."
 
 #: app/src/ui/key_import.rs:316
-msgid "You can sign and decrypt with the secret key now. gpg asks for its passphrase the first time."
-msgstr "Já pode assinar e desencriptar com a chave secreta. O gpg pede a frase-passe da primeira vez."
+msgid ""
+"You can sign and decrypt with the secret key now. gpg asks for its "
+"passphrase the first time."
+msgstr ""
+"Já pode assinar e desencriptar com a chave secreta. O gpg pede a frase-passe "
+"da primeira vez."
 
 #: app/src/ui/key_import.rs:319
 msgid "You can sign and decrypt with the secret key now."
@@ -7115,13 +7122,16 @@ msgstr "Já pode assinar e desencriptar com a chave secreta."
 msgid "You can encrypt to this person and check their signatures."
 msgid_plural "You can encrypt to these people and check their signatures."
 msgstr[0] "Já pode encriptar para esta pessoa e verificar as assinaturas dela."
-msgstr[1] "Já pode encriptar para estas pessoas e verificar as assinaturas delas."
+msgstr[1] ""
+"Já pode encriptar para estas pessoas e verificar as assinaturas delas."
 
 #: app/src/ui/key_import.rs:327
 msgid "Penguin Mail can check signatures made with this certificate."
 msgid_plural "Penguin Mail can check signatures made with these certificates."
-msgstr[0] "O Penguin Mail pode verificar as assinaturas feitas com este certificado."
-msgstr[1] "O Penguin Mail pode verificar as assinaturas feitas com estes certificados."
+msgstr[0] ""
+"O Penguin Mail pode verificar as assinaturas feitas com este certificado."
+msgstr[1] ""
+"O Penguin Mail pode verificar as assinaturas feitas com estes certificados."
 
 #: app/src/ui/key_import.rs:350
 msgid "New, with secret key"
@@ -9961,38 +9971,38 @@ msgstr "A mensagem não indica a quem a enviar."
 msgid "This rule is read-only, so Penguin Mail leaves it as it is."
 msgstr "Esta regra é só de leitura, por isso o Penguin Mail deixa-a como está."
 
-#: sync/src/services/microsoft/calendar.rs:317
+#: sync/src/services/microsoft/calendar.rs:328
 msgid "Outlook cannot repeat an event that way."
 msgstr "O Outlook não consegue repetir um evento dessa forma."
 
-#: sync/src/services/microsoft/calendar.rs:681
+#: sync/src/services/microsoft/calendar.rs:738
 msgid "Outlook cannot attach a file to an event."
 msgstr "O Outlook não consegue anexar um ficheiro a um evento."
 
-#: sync/src/services/microsoft/calendar.rs:685
+#: sync/src/services/microsoft/calendar.rs:742
 msgid "Outlook has no files to share."
 msgstr "O Outlook não tem ficheiros para partilhar."
 
-#: sync/src/services/microsoft/calendar.rs:694
+#: sync/src/services/microsoft/calendar.rs:751
 msgid "Outlook cannot move an event to another calendar."
 msgstr "O Outlook não consegue mover um evento para outro calendário."
 
 #. What Outlook has no call for is a refusal, not `Unsupported`:
 #. that answer would keep the change in the queue for good.
-#: sync/src/services/microsoft/calendar.rs:728
+#: sync/src/services/microsoft/calendar.rs:785
 msgid "Outlook cannot take a calendar off the list."
 msgstr "O Outlook não consegue retirar um calendário da lista."
 
-#: sync/src/services/microsoft/calendar.rs:729
+#: sync/src/services/microsoft/calendar.rs:786
 msgid "Outlook cannot hide a calendar on all your devices."
 msgstr ""
 "O Outlook não consegue ocultar um calendário em todos os seus dispositivos."
 
-#: sync/src/services/microsoft/calendar.rs:730
+#: sync/src/services/microsoft/calendar.rs:787
 msgid "Outlook cannot subscribe to a calendar by its address."
 msgstr "O Outlook não consegue subscrever um calendário pelo endereço."
 
-#: sync/src/services/microsoft/calendar.rs:731
+#: sync/src/services/microsoft/calendar.rs:788
 msgid "Outlook has no other calendars to add."
 msgstr "O Outlook não tem outros calendários para adicionar."
 

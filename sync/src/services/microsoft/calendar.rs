@@ -1,10 +1,13 @@
 //! The account's calendar over Graph.
 //!
-//! Graph's calendar-view delta hands over single events, occurrences and
-//! exceptions but never a series master. The adapter reads each master
-//! once, stores the series with its `RRULE` and an `EXDATE` for each
-//! occurrence Graph cancelled, drops the plain occurrences, which the rule
-//! expands, and stores each exception as a changed occurrence. The window
+//! Graph's calendar-view delta hands over single events, occurrences,
+//! exceptions and now and then a series master. The adapter reads each
+//! master once, stores the series with its `RRULE` and an `EXDATE` for
+//! each occurrence Graph cancelled, drops the plain occurrences, which the
+//! rule expands, and stores each exception as a changed occurrence. The
+//! delta leaves an exception's `originalStart` out, so the adapter reads
+//! it for each exception the round brings; without it the copy shows the
+//! series' own occurrence beside the moved one. The window
 //! runs one year back and two years ahead; once its end is a month closer
 //! than that, the token answers `StateLost` and the copy reads the
 //! calendar whole with the window moved on.
@@ -45,6 +48,11 @@ const MONTH: i64 = 30 * DAY;
 const MOST_SERIES: usize = 500;
 /// How far ahead `series` counts the occurrences a counted rule has left.
 const COUNT_AHEAD: i64 = 3650 * DAY;
+/// The shape of the sync token this build writes. Builds before 1 stored
+/// exceptions without the start they replace; a token of an older shape
+/// answers `StateLost`, so the copy reads the calendar whole once and
+/// rewrites each exception.
+const TOKEN_SHAPE: u32 = 1;
 
 /// Where a read of the calendar stands, kept in the sync token and the
 /// page token. Nothing outside this file reads either.
@@ -58,6 +66,9 @@ struct CalendarToken {
     /// Masters read in this round already.
     #[serde(default)]
     fresh: Vec<String>,
+    /// [`TOKEN_SHAPE`] when the token was written; 0 before it existed.
+    #[serde(default)]
+    shape: u32,
 }
 
 /// An instant as Graph writes a time: `date_time` is a local time in
@@ -371,25 +382,32 @@ impl<G: GraphApi> Microsoft<G> {
             (Some(page), _) => read(page)?,
             (None, Some(token)) => {
                 let held = read(token)?;
-                // The window's end has come a month nearer: read the
-                // calendar whole with the window moved on.
-                if held.end - now < WINDOW_AHEAD - MONTH {
+                // The window's end has come a month nearer, or an older
+                // build stored the rows: read the calendar whole.
+                if held.end - now < WINDOW_AHEAD - MONTH || held.shape < TOKEN_SHAPE {
                     return Err(BackendError::StateLost);
                 }
                 CalendarToken { fresh: Vec::new(), ..held }
             }
-            (None, None) => CalendarToken { end: now + WINDOW_AHEAD, link: String::new(), series: Vec::new(), fresh: Vec::new() },
+            (None, None) => CalendarToken {
+                end: now + WINDOW_AHEAD,
+                link: String::new(),
+                series: Vec::new(),
+                fresh: Vec::new(),
+                shape: TOKEN_SHAPE,
+            },
         };
         let (start, end) = (iso(from), iso(at.end));
         let link = (!at.link.is_empty()).then_some(at.link.as_str());
         let got = self.graph().calendar_view_delta(calendar, link, &start, &end).await.map_err(|e| self.service(e))?;
         let (mut events, mut removed) = (Vec::new(), Vec::new());
         let mut masters: BTreeSet<String> = BTreeSet::new();
+        let mut exceptions = Vec::new();
         for e in &got.value {
             if e.removed.is_some() {
                 removed.push(e.id.clone());
                 // A removed occurrence changes its master's cancelled list,
-                // and the delta never names the master: read every series
+                // and the delta does not name the master: read every series
                 // this calendar holds again.
                 masters.extend(at.series.iter().cloned());
                 continue;
@@ -398,11 +416,19 @@ impl<G: GraphApi> Microsoft<G> {
                 Some("occurrence") => masters.extend(e.series_master_id.clone()),
                 Some("exception") => {
                     masters.extend(e.series_master_id.clone());
-                    events.push(self.event_of(e, calendar));
+                    exceptions.push(e.clone());
+                }
+                // The master a delta names is read whole like any other,
+                // so its cancelled occurrences come with it.
+                Some("seriesMaster") => {
+                    masters.insert(e.id.clone());
                 }
                 _ => events.push(self.event_of(e, calendar)),
             }
         }
+        let gone = self.read_original_starts(&mut exceptions).await?;
+        removed.extend(gone);
+        events.extend(exceptions.iter().map(|e| self.event_of(e, calendar)));
         let unread: Vec<String> = masters.into_iter().filter(|m| !at.fresh.contains(m)).collect();
         for master in unread {
             match self.graph().event(&master).await {
@@ -426,6 +452,37 @@ impl<G: GraphApi> Microsoft<G> {
             }
             (None, None) => Err(BackendError::StateLost),
         }
+    }
+
+    /// Fills in the `originalStart` the calendar-view delta leaves out of
+    /// each exception, from one `$batch` entry an exception, twenty to a
+    /// request. A delta names an exception only when it changed, so a
+    /// quiet round asks nothing. Takes out and answers the ids Graph no
+    /// longer holds.
+    async fn read_original_starts(&self, exceptions: &mut Vec<GraphEvent>) -> Result<Vec<String>, BackendError> {
+        let missing: Vec<String> =
+            exceptions.iter().filter(|e| e.original_start.is_none()).map(|e| e.id.clone()).collect();
+        if missing.is_empty() {
+            return Ok(Vec::new());
+        }
+        let found = self.graph().original_starts(&missing).await.map_err(|e| self.service(e))?;
+        let mut gone = Vec::new();
+        for (id, answer) in missing.into_iter().zip(found) {
+            let held = match answer {
+                Ok(held) => held,
+                Err(GraphError::NotFound) => {
+                    gone.push(id);
+                    continue;
+                }
+                Err(err) => return Err(self.service(err)),
+            };
+            if let Some(e) = exceptions.iter_mut().find(|e| e.id == id) {
+                e.original_start = held.original_start;
+                e.original_start_time_zone = e.original_start_time_zone.take().or(held.original_start_time_zone);
+            }
+        }
+        exceptions.retain(|e| !gone.contains(&e.id));
+        Ok(gone)
     }
 
     /// An event in the shapes the assistant reads.

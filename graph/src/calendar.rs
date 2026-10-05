@@ -5,7 +5,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
 use crate::error::GraphError;
-use crate::http::{DeltaPage, Graph, Method, Page};
+use crate::http::{BatchRequest, DeltaPage, Graph, Method, Page};
+use crate::mail::with_query;
 use crate::model::{DateTimeZone, EmailAddress, ItemBody, Recipient, Removed};
 
 const UTC: &str = "outlook.timezone=\"UTC\"";
@@ -172,8 +173,10 @@ impl Graph {
     }
 
     /// One page of `calendar`'s view between `start` and `end` (RFC 3339),
-    /// as a delta round: single events, occurrences and exceptions, never
-    /// series masters. `link` continues a round or starts the next.
+    /// as a delta round: single events, occurrences, exceptions and, now
+    /// and then, a series master. An exception comes without its
+    /// `originalStart`; [`Graph::original_starts`] reads it. `link`
+    /// continues a round or starts the next.
     pub async fn calendar_view_delta(
         &self,
         calendar: &str,
@@ -197,7 +200,9 @@ impl Graph {
         self.get_with(&format!("me/events/{id}"), &[], &[UTC]).await
     }
 
-    /// The occurrences of series `series` between `start` and `end`.
+    /// The occurrences of series `series` between `start` and `end`, each
+    /// with the start it has in the series. Graph was seen to answer
+    /// `originalStart` here when `$select` names it.
     pub async fn instances(
         &self,
         series: &str,
@@ -210,12 +215,41 @@ impl Graph {
                 &[
                     ("startDateTime", start),
                     ("endDateTime", end),
+                    ("$select", "id,type,seriesMasterId,start,end,originalStart"),
                     ("$top", "100"),
                 ],
                 &[UTC],
             )
             .await?;
         Ok(page.value)
+    }
+
+    /// The `originalStart` of each event in `ids`, which the calendar-view
+    /// delta leaves out of an exception. One `$batch` entry an event,
+    /// twenty to a request; each answer is in the place of its id.
+    pub async fn original_starts(
+        &self,
+        ids: &[String],
+    ) -> Result<Vec<Result<GraphEvent, GraphError>>, GraphError> {
+        let requests: Vec<BatchRequest> = ids
+            .iter()
+            .map(|id| {
+                BatchRequest::get(with_query(
+                    &format!("me/events/{id}"),
+                    &[("$select", "id,originalStart,originalStartTimeZone")],
+                ))
+            })
+            .collect();
+        Ok(self
+            .batch(&requests)
+            .await?
+            .into_iter()
+            .map(|answer| {
+                answer
+                    .into_json::<GraphEvent>()
+                    .and_then(|e| e.ok_or(GraphError::NotFound))
+            })
+            .collect())
     }
 
     /// The default calendar's events between `start` and `end`.
