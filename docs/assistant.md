@@ -30,8 +30,11 @@ assistant on the right. Ask it about your mail in plain words:
 It reads mail with the same tools you use: it lists mailboxes, searches
 each account's server, and reads conversations. On an account from
 another provider it files mail in folders, and when you ask for
-something only a Gmail account has, such as categories or filters, it
-tells you why that account cannot. It looks people up in your address book,
+something only a Gmail account has, such as categories or Hide My Email,
+it tells you why that account cannot. Every account has rules. Gmail and
+servers that run Sieve keep them on the server; for other providers
+Penguin Mail runs them on this computer while it is open, and the
+assistant says which when it lists them. It looks people up in your address book,
 by name, address or organisation, and gets back their addresses, phone
 number and organisation. It acts through the app too, so Ctrl+Z
 undoes what it archived, trashed, flagged, muted, or marked. It can also
@@ -304,7 +307,7 @@ By default, the assistant asks you before it:
 
 - sends mail, now or later,
 - turns an automatic reply on or off,
-- creates or deletes a Gmail filter,
+- creates or deletes a rule,
 - blocks a sender or sorts one into a category,
 - creates a label that an account lacks, when it labels mail by name
   (say no, and it labels only the mail in accounts that have the label),
