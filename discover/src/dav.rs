@@ -158,8 +158,8 @@ mod tests {
     async fn a_listed_provider_answers_from_the_table_and_asks_nobody() {
         let net = FakeNet::default();
         let hints = dav_hints(&net, "me@fastmail.com", "Fastmail", "imap.fastmail.com").await;
-        assert_eq!(hints.caldav[0].url, "https://caldav.fastmail.com/");
-        assert_eq!(hints.carddav[0].url, "https://carddav.fastmail.com/");
+        assert_eq!(hints.caldav[0].url, "https://caldav.fastmail.com/dav/calendars");
+        assert_eq!(hints.carddav[0].url, "https://carddav.fastmail.com/dav/addressbooks");
         assert_eq!(hints.caldav[0].source, Source::Table);
         assert!(!hints.caldav[0].confirm);
         assert!(

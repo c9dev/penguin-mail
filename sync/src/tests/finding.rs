@@ -38,7 +38,7 @@ impl ServiceProbe for Probe {
 #[tokio::test]
 async fn a_table_provider_is_found_with_the_user_name_that_works() {
     let probe = Probe {
-        open: [("https://caldav.fastmail.com/".to_string(), "me@fastmail.com".to_string())].into(),
+        open: [("https://caldav.fastmail.com/dav/calendars".to_string(), "me@fastmail.com".to_string())].into(),
         ..Probe::default()
     };
     let found = find_services(&FakeNet::default(), &probe, "me@fastmail.com", "Fastmail", "imap.fastmail.com", "me", "pw").await;
