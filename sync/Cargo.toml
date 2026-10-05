@@ -24,6 +24,7 @@ mailrs-gmail.workspace = true
 mailrs-graph.workspace = true
 mailrs-imap.workspace = true
 mailrs-mime.workspace = true
+mailrs-pop3.workspace = true
 mailrs-sieve.workspace = true
 mailrs-store.workspace = true
 async-channel.workspace = true
