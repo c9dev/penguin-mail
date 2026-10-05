@@ -9428,6 +9428,10 @@ msgstr "Está por ler"
 msgid "Is flagged"
 msgstr "Está marcada"
 
+#: sync/src/account/pop3.rs:221
+msgid "The message is larger than Penguin Mail downloads."
+msgstr "A mensagem é maior do que o Penguin Mail transfere."
+
 #: sync/src/account/writes.rs:756
 msgid "{provider} is busy. Still working on {conversations}."
 msgstr "{provider} está ocupado. Ainda a trabalhar em {conversations}."
@@ -9768,14 +9772,14 @@ msgstr ""
 msgid "Outlook's rules cannot do that."
 msgstr "As regras do Outlook não conseguem fazer isso."
 
-#: sync/src/services/pop3/mod.rs:352
+#: sync/src/services/pop3/mod.rs:350
 msgid ""
 "Penguin Mail keeps the names of Inbox, Sent, Drafts, Trash, Junk and Archive."
 msgstr ""
 "O Penguin Mail mantém os nomes de Caixa de entrada, Enviadas, Rascunhos, "
 "Lixo, Spam e Arquivo."
 
-#: sync/src/services/pop3/mod.rs:368
+#: sync/src/services/pop3/mod.rs:366
 msgid "Penguin Mail keeps Inbox, Sent, Drafts, Trash, Junk and Archive."
 msgstr ""
 "O Penguin Mail mantém Caixa de entrada, Enviadas, Rascunhos, Lixo, Spam e "

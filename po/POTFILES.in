@@ -139,6 +139,7 @@ domain/src/translate.rs
 # from what it found.
 domain/src/sign_in_page.rs
 sync/src/account/writes.rs
+sync/src/account/pop3.rs
 sync/src/actions/labelling.rs
 sync/src/actions.rs
 sync/src/calendar_copy.rs

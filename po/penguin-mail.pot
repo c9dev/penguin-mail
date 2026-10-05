@@ -9021,6 +9021,10 @@ msgstr ""
 msgid "Is flagged"
 msgstr ""
 
+#: sync/src/account/pop3.rs:221
+msgid "The message is larger than Penguin Mail downloads."
+msgstr ""
+
 #: sync/src/account/writes.rs:756
 msgid "{provider} is busy. Still working on {conversations}."
 msgstr ""
@@ -9345,12 +9349,12 @@ msgstr ""
 msgid "Outlook's rules cannot do that."
 msgstr ""
 
-#: sync/src/services/pop3/mod.rs:352
+#: sync/src/services/pop3/mod.rs:350
 msgid ""
 "Penguin Mail keeps the names of Inbox, Sent, Drafts, Trash, Junk and Archive."
 msgstr ""
 
-#: sync/src/services/pop3/mod.rs:368
+#: sync/src/services/pop3/mod.rs:366
 msgid "Penguin Mail keeps Inbox, Sent, Drafts, Trash, Junk and Archive."
 msgstr ""
 
