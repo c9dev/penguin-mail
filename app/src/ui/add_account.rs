@@ -19,7 +19,7 @@ use adw::prelude::*;
 use gtk::{gio, glib, graphene};
 use mailrs_discover::Server;
 use mailrs_domain::translate::{fill, fill_plural, gettext};
-use mailrs_domain::{Account, AccountId, MailSet, RemoveSetting, Role as MailRole};
+use mailrs_domain::{Account, AccountId, MailSet, Provider, RemoveSetting, Role as MailRole};
 use mailrs_store::{accounts, servers};
 
 use crate::add_account::lookup::{Check, Checks, State};
@@ -1128,12 +1128,8 @@ fn added_page() -> AddedPage {
             progress,
         });
     }
-    let note = label(
-        &gettext(
-            "Newest mail comes first. Older mail keeps coming in the background, even with the window closed.",
-        ),
-        &["post-note"],
-    );
+    // The words depend on the account, so `show_added` sets them.
+    let note = label("", &["post-note"]);
     let withheld = boxed_list();
     let grant_note = label(
         &gettext("Grant Access opens Google's page again. You can also do it later in Preferences."),
@@ -2849,36 +2845,55 @@ impl Dialog {
         self.set_band("added", Step::Added, stamp, Some(&provider));
         self.band.set_letters(true);
         self.push("added");
-        self.count_folders(account.id);
+        self.finished.note.set_text(
+            &add_account::added_page(account.provider, RemoveSetting::Never, false, false).note,
+        );
+        self.count_folders(account.id, account.provider);
     }
 
     /// Reads the new account's folder counts every second and a half
-    /// until its first sync has filled the window of mail it keeps.
-    fn count_folders(self: &Rc<Self>, account_id: AccountId) {
+    /// until its first download is done: the backfill for an account that
+    /// has one, the first check for a POP3 account.
+    fn count_folders(self: &Rc<Self>, account_id: AccountId, provider: Provider) {
         self.stop_counting();
+        Self::read_counts(self, account_id, provider);
         let weak = Rc::downgrade(self);
         let timer = glib::timeout_add_local(Duration::from_millis(1500), move || {
             let Some(this) = weak.upgrade() else {
                 return glib::ControlFlow::Break;
             };
-            glib::spawn_future_local(async move {
-                let read = this
-                    .core
-                    .read(move |c| {
-                        let counts = mailrs_store::threads::mail_counts(c)?;
-                        let done = mailrs_store::accounts::sync_cursor(c, account_id)?.backfill_done;
-                        Ok((counts, done))
-                    })
-                    .await;
-                if let Ok((counts, done)) = read
-                    && this.added.get() == Some(account_id)
-                {
-                    this.show_counts(account_id, &counts, done);
-                }
-            });
+            Self::read_counts(&this, account_id, provider);
             glib::ControlFlow::Continue
         });
         self.count_timer.replace(Some(timer));
+    }
+
+    fn read_counts(this: &Rc<Self>, account_id: AccountId, provider: Provider) {
+        let this = this.clone();
+        glib::spawn_future_local(async move {
+            let read = this
+                .core
+                .read(move |c| {
+                    let counts = mailrs_store::threads::mail_counts(c)?;
+                    let backfill = mailrs_store::accounts::sync_cursor(c, account_id)?.backfill_done;
+                    let (remove, first_check) = if provider == Provider::Pop3 {
+                        (
+                            mailrs_store::accounts::pop3_remove(c, account_id)?,
+                            mailrs_store::pop3::first_check_finished(c, account_id)?,
+                        )
+                    } else {
+                        (RemoveSetting::Never, false)
+                    };
+                    Ok((counts, add_account::added_page(provider, remove, backfill, first_check)))
+                })
+                .await;
+            if let Ok((counts, page)) = read
+                && this.added.get() == Some(account_id)
+            {
+                this.finished.note.set_text(&page.note);
+                this.show_counts(account_id, &counts, page.done);
+            }
+        });
     }
 
     fn show_counts(&self, account_id: AccountId, counts: &mailrs_store::threads::MailCounts, done: bool) {

@@ -380,7 +380,38 @@ msgstr ""
 msgid "Type the outgoing server's name."
 msgstr ""
 
-#: app/src/add_account.rs:1204
+#: app/src/add_account.rs:1220
+msgid ""
+"Newest mail comes first. Older mail keeps coming in the background, even "
+"with the window closed."
+msgstr ""
+
+#: app/src/add_account.rs:1227
+msgid ""
+"Penguin Mail downloads the server's mail into Inbox and keeps checking in "
+"the background, even with the window closed. Mail stays on the server."
+msgstr ""
+
+#: app/src/add_account.rs:1230
+msgid ""
+"Penguin Mail downloads the server's mail into Inbox and keeps checking in "
+"the background, even with the window closed. It removes each message from "
+"the server after downloading it."
+msgstr ""
+
+#: app/src/add_account.rs:1233
+msgid ""
+"Penguin Mail downloads the server's mail into Inbox and keeps checking in "
+"the background, even with the window closed. It removes each message from "
+"the server {days} day after downloading it."
+msgid_plural ""
+"Penguin Mail downloads the server's mail into Inbox and keeps checking in "
+"the background, even with the window closed. It removes each message from "
+"the server {days} days after downloading it."
+msgstr[0] ""
+msgstr[1] ""
+
+#: app/src/add_account.rs:1245
 msgid "Penguin Mail needs the password for {address} again."
 msgstr ""
 
@@ -3233,7 +3264,7 @@ msgstr ""
 msgid "Signs in through your browser"
 msgstr ""
 
-#: app/src/ui/add_account.rs:539 app/src/ui/add_account.rs:1570
+#: app/src/ui/add_account.rs:539 app/src/ui/add_account.rs:1566
 msgid "Add Account"
 msgstr ""
 
@@ -3324,7 +3355,7 @@ msgid "Cancel"
 msgstr ""
 
 #: app/src/ui/add_account.rs:885 app/src/ui/add_account.rs:978
-#: app/src/ui/add_account.rs:2250 app/src/ui/window.rs:1170
+#: app/src/ui/add_account.rs:2246 app/src/ui/window.rs:1170
 msgid "Sign In"
 msgstr ""
 
@@ -3332,11 +3363,11 @@ msgstr ""
 msgid "Your Name"
 msgstr ""
 
-#: app/src/ui/add_account.rs:912 app/src/ui/add_account.rs:1465
+#: app/src/ui/add_account.rs:912 app/src/ui/add_account.rs:1461
 msgid "Server Settings"
 msgstr ""
 
-#: app/src/ui/add_account.rs:936 app/src/ui/add_account.rs:2333
+#: app/src/ui/add_account.rs:936 app/src/ui/add_account.rs:2329
 msgid "Outgoing"
 msgstr ""
 
@@ -3387,67 +3418,61 @@ msgctxt "mailbox"
 msgid "Archive"
 msgstr ""
 
-#: app/src/ui/add_account.rs:1133
-msgid ""
-"Newest mail comes first. Older mail keeps coming in the background, even "
-"with the window closed."
-msgstr ""
-
-#: app/src/ui/add_account.rs:1139
+#: app/src/ui/add_account.rs:1135
 msgid ""
 "Grant Access opens Google's page again. You can also do it later in "
 "Preferences."
 msgstr ""
 
-#: app/src/ui/add_account.rs:1142
+#: app/src/ui/add_account.rs:1138
 msgid "Open Inbox"
 msgstr ""
 
-#: app/src/ui/add_account.rs:1144
+#: app/src/ui/add_account.rs:1140
 msgid "Add Another Account"
 msgstr ""
 
-#: app/src/ui/add_account.rs:1146 app/src/ui/confirm.rs:46
+#: app/src/ui/add_account.rs:1142 app/src/ui/confirm.rs:46
 msgid "Not Now"
 msgstr ""
 
-#: app/src/ui/add_account.rs:1151 app/src/ui/calendar/editor.rs:1499
+#: app/src/ui/add_account.rs:1147 app/src/ui/calendar/editor.rs:1499
 #: app/src/ui/calendar/sidebar.rs:911 app/src/ui/contacts_prefs.rs:334
 #: app/src/ui/invitation.rs:461 app/src/ui/permission.rs:42
 #: app/src/ui/permission.rs:66 app/src/ui/window.rs:1280
 msgid "Grant Access"
 msgstr ""
 
-#: app/src/ui/add_account.rs:1221
+#: app/src/ui/add_account.rs:1217
 msgid "Server"
 msgstr ""
 
-#: app/src/ui/add_account.rs:1224 app/src/ui/add_account.rs:1225
+#: app/src/ui/add_account.rs:1220 app/src/ui/add_account.rs:1221
 msgid "Port"
 msgstr ""
 
-#: app/src/ui/add_account.rs:1235 app/src/ui/add_account.rs:1237
+#: app/src/ui/add_account.rs:1231 app/src/ui/add_account.rs:1233
 msgid "Security"
 msgstr ""
 
-#: app/src/ui/add_account.rs:1298
+#: app/src/ui/add_account.rs:1294
 msgid "Mail on the Server"
 msgstr ""
 
-#: app/src/ui/add_account.rs:1300
+#: app/src/ui/add_account.rs:1296
 msgid "Penguin Mail keeps every message it downloads on this computer."
 msgstr ""
 
-#: app/src/ui/add_account.rs:1305 app/src/ui/add_account.rs:1306
+#: app/src/ui/add_account.rs:1301 app/src/ui/add_account.rs:1302
 #: app/src/ui/preferences.rs:969
 msgid "Days"
 msgstr ""
 
-#: app/src/ui/add_account.rs:1380
+#: app/src/ui/add_account.rs:1376
 msgid "Incoming User Name"
 msgstr ""
 
-#: app/src/ui/add_account.rs:1381
+#: app/src/ui/add_account.rs:1377
 msgid "Outgoing User Name"
 msgstr ""
 
@@ -3455,83 +3480,83 @@ msgstr ""
 #. text draws over the title. The rule goes in a tooltip, since a
 #. second line under the group would push this row off a 768-pixel
 #. screen.
-#: app/src/ui/add_account.rs:1387
+#: app/src/ui/add_account.rs:1383
 msgid "Leave it empty to use the incoming user name."
 msgstr ""
 
-#: app/src/ui/add_account.rs:1390
+#: app/src/ui/add_account.rs:1386
 msgid "Incoming Mail"
 msgstr ""
 
-#: app/src/ui/add_account.rs:1400 app/src/ui/add_account.rs:1402
+#: app/src/ui/add_account.rs:1396 app/src/ui/add_account.rs:1398
 msgid "Protocol"
 msgstr ""
 
-#: app/src/ui/add_account.rs:1431
+#: app/src/ui/add_account.rs:1427
 msgid "Outgoing Mail"
 msgstr ""
 
-#: app/src/ui/add_account.rs:1442
+#: app/src/ui/add_account.rs:1438
 msgid "Sign-In"
 msgstr ""
 
-#: app/src/ui/add_account.rs:1443
+#: app/src/ui/add_account.rs:1439
 msgid "Leave them empty to sign in with your address."
 msgstr ""
 
-#: app/src/ui/add_account.rs:1454
+#: app/src/ui/add_account.rs:1450
 msgid "Use These Settings"
 msgstr ""
 
-#: app/src/ui/add_account.rs:1874 app/src/ui/add_account.rs:2998
+#: app/src/ui/add_account.rs:1870 app/src/ui/add_account.rs:3013
 msgid "Looking up {domain}"
 msgstr ""
 
-#: app/src/ui/add_account.rs:2107
+#: app/src/ui/add_account.rs:2103
 msgid "Sign in to {domain}"
 msgstr ""
 
-#: app/src/ui/add_account.rs:2110
+#: app/src/ui/add_account.rs:2106
 msgid "{domain} uses {provider}"
 msgstr ""
 
-#: app/src/ui/add_account.rs:2134
+#: app/src/ui/add_account.rs:2130
 msgid ""
 "Not your {provider} website password. Make one with mail access in "
 "{provider}'s settings and paste it here."
 msgstr ""
 
-#: app/src/ui/add_account.rs:2242 app/src/ui/add_account.rs:3068
+#: app/src/ui/add_account.rs:2238 app/src/ui/add_account.rs:3083
 msgid "Signing In…"
 msgstr ""
 
-#: app/src/ui/add_account.rs:2352
+#: app/src/ui/add_account.rs:2348
 msgid "Could not reach {host}"
 msgstr ""
 
-#: app/src/ui/add_account.rs:2354
+#: app/src/ui/add_account.rs:2350
 msgid "Your password was not sent."
 msgstr ""
 
-#: app/src/ui/add_account.rs:2562
+#: app/src/ui/add_account.rs:2558
 msgid "Sign in with {provider} in your browser"
 msgstr ""
 
-#: app/src/ui/add_account.rs:2567
+#: app/src/ui/add_account.rs:2563
 msgid ""
 "{provider}'s sign-in page is open in your browser. When you finish there, "
 "this window moves on."
 msgstr ""
 
-#: app/src/ui/add_account.rs:2764
+#: app/src/ui/add_account.rs:2760
 msgid "Link copied"
 msgstr ""
 
-#: app/src/ui/add_account.rs:2789
+#: app/src/ui/add_account.rs:2785
 msgid "{account} is added"
 msgstr ""
 
-#: app/src/ui/add_account.rs:2796
+#: app/src/ui/add_account.rs:2792
 msgid ""
 "Mail is downloading. You left one box unticked on Microsoft's page, so this "
 "feature stays off:"
@@ -3541,7 +3566,7 @@ msgid_plural ""
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/add_account.rs:2803
+#: app/src/ui/add_account.rs:2799
 msgid ""
 "Mail is downloading. You left one box unticked on Google's page, so this "
 "feature stays off:"
@@ -3551,15 +3576,15 @@ msgid_plural ""
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/add_account.rs:2819
+#: app/src/ui/add_account.rs:2815
 msgid "{account} is ready"
 msgstr ""
 
-#: app/src/ui/add_account.rs:2823
+#: app/src/ui/add_account.rs:2819
 msgid "Mail is downloading. You can close this window."
 msgstr ""
 
-#: app/src/ui/add_account.rs:3071
+#: app/src/ui/add_account.rs:3086
 msgid ""
 "This server cannot tell its messages apart, so Penguin Mail cannot download "
 "from it safely."

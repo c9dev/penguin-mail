@@ -1198,6 +1198,47 @@ pub fn shows_folder(provider: Provider, role: mailrs_domain::Role) -> bool {
     }
 }
 
+/// What the added page says under the folder list, and whether the new
+/// account's first download is finished, from the store's values.
+pub struct AddedPage {
+    pub note: String,
+    pub done: bool,
+}
+
+/// Decides the added page's note and progress for a new account.
+/// Gmail, IMAP and Microsoft accounts are done when the backfill has
+/// finished. A POP3 account never sets that marker; its first check does.
+pub fn added_page(
+    provider: Provider,
+    remove: RemoveSetting,
+    backfill_done: bool,
+    pop3_first_check_done: bool,
+) -> AddedPage {
+    if provider != Provider::Pop3 {
+        return AddedPage {
+            note: gettext(
+                "Newest mail comes first. Older mail keeps coming in the background, even with the window closed.",
+            ),
+            done: backfill_done,
+        };
+    }
+    let note = match remove {
+        RemoveSetting::Never => gettext(
+            "Penguin Mail downloads the server's mail into Inbox and keeps checking in the background, even with the window closed. Mail stays on the server.",
+        ),
+        RemoveSetting::Downloaded => gettext(
+            "Penguin Mail downloads the server's mail into Inbox and keeps checking in the background, even with the window closed. It removes each message from the server after downloading it.",
+        ),
+        RemoveSetting::Days(days) => fill_plural(
+            "Penguin Mail downloads the server's mail into Inbox and keeps checking in the background, even with the window closed. It removes each message from the server {days} day after downloading it.",
+            "Penguin Mail downloads the server's mail into Inbox and keeps checking in the background, even with the window closed. It removes each message from the server {days} days after downloading it.",
+            days as usize,
+            &[("days", &days.to_string())],
+        ),
+    };
+    AddedPage { note, done: pop3_first_check_done }
+}
+
 /// What step 2 says above the password for an account signing in again.
 pub fn again_line(account: &Account) -> String {
     fill(
@@ -1253,6 +1294,53 @@ mod tests {
     use mailrs_store::servers::{Pop3Servers, Saved, Servers};
 
     use super::*;
+
+    #[test]
+    fn a_pop3_account_is_done_when_its_first_check_is() {
+        let page = added_page(Provider::Pop3, RemoveSetting::Never, false, true);
+        assert!(page.done);
+    }
+
+    #[test]
+    fn a_pop3_account_is_not_done_before_its_first_check() {
+        let page = added_page(Provider::Pop3, RemoveSetting::Never, false, false);
+        assert!(!page.done);
+    }
+
+    #[test]
+    fn a_pop3_account_ignores_the_backfill_marker() {
+        let page = added_page(Provider::Pop3, RemoveSetting::Never, true, false);
+        assert!(!page.done);
+    }
+
+    #[test]
+    fn other_accounts_are_done_with_their_backfill_and_ignore_the_pop3_marker() {
+        assert!(added_page(Provider::Imap, RemoveSetting::Never, true, false).done);
+        assert!(!added_page(Provider::Imap, RemoveSetting::Never, false, true).done);
+        assert!(added_page(Provider::Gmail, RemoveSetting::Never, true, false).done);
+        assert!(!added_page(Provider::Microsoft, RemoveSetting::Never, false, true).done);
+    }
+
+    #[test]
+    fn only_non_pop3_accounts_are_told_newest_mail_comes_first() {
+        for provider in [Provider::Gmail, Provider::Imap, Provider::Microsoft] {
+            let page = added_page(provider, RemoveSetting::Never, false, false);
+            assert!(page.note.starts_with("Newest mail comes first"));
+        }
+        let page = added_page(Provider::Pop3, RemoveSetting::Never, false, false);
+        assert!(page.note.contains("downloads the server's mail into Inbox"));
+        assert!(!page.note.contains("Newest"));
+    }
+
+    #[test]
+    fn the_pop3_note_says_what_happens_to_mail_on_the_server() {
+        let note = |remove| added_page(Provider::Pop3, remove, false, false).note;
+        assert!(note(RemoveSetting::Never).contains("Mail stays on the server."));
+        assert!(note(RemoveSetting::Downloaded).contains("removes each message from the server after"));
+        assert!(note(RemoveSetting::Days(30)).contains("30 days after"));
+        assert!(note(RemoveSetting::Days(1)).contains("1 day after"));
+        assert!(!note(RemoveSetting::Days(1)).contains("1 days"));
+    }
 
     fn fastmail_info() -> ProviderInfo {
         ProviderInfo {
