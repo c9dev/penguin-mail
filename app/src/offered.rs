@@ -2,7 +2,7 @@
 //! the account's services, and the words for what an account lacks.
 
 use mailrs_domain::translate::{fill, gettext};
-use mailrs_domain::{Account, AccountId, Category, Provider};
+use mailrs_domain::{Account, AccountId, Category, Provider, RemoveSetting};
 use mailrs_store::pop3::{FailReason, Failing};
 use mailrs_sync::{AccountServices, Mailbox, Missing, Offers, Withheld};
 
@@ -523,17 +523,26 @@ pub fn failing_lines(failing: &[Failing]) -> Vec<String> {
 }
 
 /// What Remove Account's confirmation says happens to `account`'s mail.
-/// A POP3 account's mail lives only in the store, and under a removal
-/// setting the server has let go of it, so removing the account loses it.
-pub fn remove_account_body(account: &Account) -> String {
-    match account.provider {
-        Provider::Pop3 => gettext(
-            "Its mail exists only on this computer, and removing the account deletes it \
-             with the saved sign-in. Nothing changes on the server.",
+/// `remove` is a POP3 account's removal setting. Under one that removes
+/// mail from the server, the server has let go of what came down, so
+/// removing the account loses it.
+pub fn remove_account_body(account: &Account, remove: RemoveSetting) -> String {
+    match (account.provider, remove) {
+        (Provider::Pop3, RemoveSetting::Never) => gettext(
+            "Removing the account deletes this computer's copy of its mail and the \
+             saved sign-in. Mail still on the server stays there.",
         ),
-        _ => gettext(
-            "Its downloaded mail and saved sign-in are deleted from this computer. \
-             Nothing changes in Gmail.",
+        (Provider::Pop3, _) => gettext(
+            "Mail already removed from the server exists only on this computer, \
+             and removing the account deletes it with the saved sign-in. Mail \
+             still on the server stays there.",
+        ),
+        _ => fill(
+            &gettext(
+                "Its downloaded mail and saved sign-in are deleted from this computer. \
+                 Nothing changes in {provider}.",
+            ),
+            &[("provider", account.provider_name())],
         ),
     }
 }
@@ -564,7 +573,7 @@ pub fn reads_send_as(account: &Account) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use mailrs_domain::{Account, AccountState, Provider};
+    use mailrs_domain::{Account, AccountState, Provider, RemoveSetting};
     use mailrs_store::pop3::{FailReason, Failing};
     use mailrs_sync::{Missing, Offers};
 
@@ -634,21 +643,38 @@ mod tests {
     }
 
     #[test]
-    fn removing_a_pop3_account_says_its_mail_goes_with_it() {
-        assert_eq!(
-            remove_account_body(&pop3_account()),
-            "Its mail exists only on this computer, and removing the account deletes it \
-             with the saved sign-in. Nothing changes on the server."
-        );
-        let gmail = Account {
-            provider: Provider::Gmail,
+    fn removing_a_pop3_account_says_what_its_removal_setting_left_on_the_server() {
+        let kept = "Removing the account deletes this computer's copy of its mail and the \
+                    saved sign-in. Mail still on the server stays there.";
+        let only_here = "Mail already removed from the server exists only on this computer, \
+                         and removing the account deletes it with the saved sign-in. Mail \
+                         still on the server stays there.";
+        let account = pop3_account();
+        assert_eq!(remove_account_body(&account, RemoveSetting::Never), kept);
+        assert_eq!(remove_account_body(&account, RemoveSetting::Downloaded), only_here);
+        assert_eq!(remove_account_body(&account, RemoveSetting::Days(30)), only_here);
+    }
+
+    #[test]
+    fn removing_another_account_names_its_own_service() {
+        let named = |provider, name: Option<&str>| Account {
+            provider,
+            provider_name: name.map(Into::into),
             ..pop3_account()
         };
-        assert_eq!(
-            remove_account_body(&gmail),
-            "Its downloaded mail and saved sign-in are deleted from this computer. \
-             Nothing changes in Gmail."
-        );
+        for (account, service) in [
+            (named(Provider::Gmail, None), "Gmail"),
+            (named(Provider::Imap, Some("Fastmail")), "Fastmail"),
+            (named(Provider::Microsoft, Some("Outlook.com")), "Outlook.com"),
+        ] {
+            assert_eq!(
+                remove_account_body(&account, RemoveSetting::Never),
+                format!(
+                    "Its downloaded mail and saved sign-in are deleted from this computer. \
+                     Nothing changes in {service}."
+                )
+            );
+        }
     }
 
     #[test]
