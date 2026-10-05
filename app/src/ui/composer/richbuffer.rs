@@ -658,8 +658,34 @@ mod tests {
     /// Everything the buffer does sits in one test on purpose: GTK belongs
     /// to the thread that starts it, and the test harness hands each test
     /// its own.
+    ///
+    /// The checks run on a thread that never ends. WebKit makes the thread
+    /// that starts GTK its main thread and expects it to last as long as
+    /// the process. When the harness's thread ended after the last check,
+    /// WebKit tore its run loop down on the way out while one of its IPC
+    /// threads waited to hand that run loop a message, and now and then
+    /// the two waited on each other for good.
     #[test]
     fn the_buffer_holds_a_rich_body_and_gives_it_back() {
+        let (done, finished) = std::sync::mpsc::channel();
+        std::thread::Builder::new()
+            .name("gtk-checks".into())
+            .spawn(move || {
+                let _ = done.send(std::panic::catch_unwind(run_checks));
+                loop {
+                    std::thread::park();
+                }
+            })
+            .expect("a thread for the GTK checks");
+        match finished.recv() {
+            Ok(Ok(())) => {}
+            // The panic's message is already printed; this fails the test.
+            Ok(Err(panic)) => std::panic::resume_unwind(panic),
+            Err(_) => panic!("the GTK checks' thread ended without an answer"),
+        }
+    }
+
+    fn run_checks() {
         // No display means no GTK, which is how most machines run the suite.
         if gtk::init().is_err() {
             return;

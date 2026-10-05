@@ -48,7 +48,10 @@ Installing for the owner: `NO_AUTOSTART=1 scripts/install.sh`.
   starts it and the harness gives each test its own thread, so a second
   test calling `gtk::init()` crashes the binary with SIGSEGV. The one
   that exists is in `app/src/ui/composer/richbuffer.rs`; fold new GTK
-  checks into it, or test the logic without widgets.
+  checks into it, or test the logic without widgets. Its checks run on
+  a thread that never ends: WebKit takes that thread as its main thread,
+  and when it ended WebKit sometimes deadlocked tearing down its run
+  loop, which hung the whole suite.
 - **Picture decoding.** GDK decodes PNG, JPEG and TIFF in this process;
   every other format, and every gdk-pixbuf load or save, goes to
   glycin's sandboxed loader. Go through `app/src/ui/texture.rs` rather
