@@ -245,6 +245,15 @@ pub fn after_popover(anchor_on_screen: bool) -> Refocus {
     }
 }
 
+/// Whether a press outside the open event popover, which closes it, goes
+/// on to the widget under the pointer. Only a press on an event does, so
+/// a double click still opens the editor and a press on another event
+/// opens that one's popover. On empty time the grid would open quick add
+/// on the release, and the next click would go to closing that.
+pub fn press_goes_on(on_event: bool) -> bool {
+    on_event
+}
+
 /// What a read of the days before the narrow list leaves to add: the
 /// occurrences that end by `listed_from`, where the list's own reads
 /// begin. The store returns every occurrence that overlaps a read, so
@@ -351,6 +360,18 @@ mod tests {
     #[test]
     fn a_closed_popover_whose_event_went_gives_the_focus_to_today() {
         assert_eq!(after_popover(false), Refocus::Today);
+    }
+
+    #[test]
+    fn a_press_on_empty_time_that_closes_the_popover_does_nothing_more() {
+        assert!(!press_goes_on(false), "the grid would open quick add on the release");
+    }
+
+    #[test]
+    fn a_press_on_an_event_that_closes_the_popover_still_reaches_the_event() {
+        // The second press of a double click lands on the event while its
+        // popover is open, and has to reach it to open the editor.
+        assert!(press_goes_on(true));
     }
 
     fn occurrence(all_day: bool, start: i64, end: i64, my_answer: Option<Answer>) -> Occurrence {

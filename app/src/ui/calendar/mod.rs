@@ -1926,9 +1926,18 @@ impl CalendarView {
             .borrow()
             .get(1)
             .is_some_and(|current| Rc::ptr_eq(current, page));
+        let hours = match &*view {
+            PageView::Grid(grid) => Some(grid.scroller.clone()),
+            PageView::Month(_) => None,
+        };
         drop(view);
         if is_current && (had_focus || self.refocus_owed.replace(false)) {
-            self.refocus(page, focused);
+            // A refill asks no scroll of its own, so the hours stay where
+            // the person left them; one that does ask scrolls below.
+            match hours {
+                Some(hours) => pager::refocus_in_place(&hours, || self.refocus(page, focused)),
+                None => self.refocus(page, focused),
+            }
         }
         let open = match (is_current, block) {
             (true, Some((anchor, o))) => {
