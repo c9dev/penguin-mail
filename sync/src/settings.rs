@@ -6,7 +6,8 @@
 //! and filters a hidden address needs, and what Gmail answers when the
 //! account has not granted the settings permission.
 
-use std::sync::Arc;
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 
 use chrono::{Local, TimeZone};
 use mailrs_domain::{
@@ -20,7 +21,7 @@ use crate::actions::label_id;
 use crate::hidden::{self, HiddenAddress};
 use crate::{
     AccountServices, AccountSync, Accounts, AnyAutoReply, AnyRules, AutoReplyService, BackendError,
-    IdentityService, RulesService, SendAsAddress, SyncError, now_millis,
+    IdentityService, RulesPlace, RulesService, SendAsAddress, SyncError, now_millis,
 };
 
 /// The user label that mail to a hidden address gets.
@@ -108,9 +109,32 @@ pub enum Replaced {
     BothRun { new: Filter, error: SyncError },
 }
 
+/// An account's rules as the Rules dialog lists them.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RuleList {
+    pub rules: Vec<Filter>,
+    /// Blocks the server holds that nobody here wrote, shown read-only.
+    pub elsewhere: Vec<String>,
+    pub place: RulesPlace,
+    /// The server is not answering: the list is the last one read, with
+    /// the changes waiting to go out applied.
+    pub waiting: bool,
+}
+
+/// What sending the waiting rule changes came to.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct SentRules {
+    pub sent: usize,
+    /// The server's words for each waiting change it refused.
+    pub refused: Vec<String>,
+}
+
 pub struct AccountSettings<A: Accounts> {
     accounts: Arc<A>,
     db: Db,
+    /// The rules last read from each account's server, so the list can
+    /// still show them while the server does not answer.
+    last_rules: Mutex<HashMap<AccountId, RuleList>>,
 }
 
 /// The value, or an early return when Gmail wants the permission first.
@@ -125,7 +149,7 @@ macro_rules! done {
 
 impl<A: Accounts> AccountSettings<A> {
     pub fn new(accounts: Arc<A>, db: Db) -> Self {
-        AccountSettings { accounts, db }
+        AccountSettings { accounts, db, last_rules: Mutex::new(HashMap::new()) }
     }
 
     /// The automatic reply the server holds, in whole days.
@@ -148,18 +172,81 @@ impl<A: Accounts> AccountSettings<A> {
         permitted(service.set_vacation(&reply.to_gmail()).await)
     }
 
-    /// The account's filters, newest last, as the server returns them.
-    pub async fn rules(&self, account_id: AccountId) -> Result<Permitted<Vec<Filter>>, SyncError> {
-        permitted(self.rules_service(account_id)?.filters().await)
+    /// The rules, where they run, and whether the server is answering.
+    pub async fn rule_list(&self, account_id: AccountId) -> Result<Permitted<RuleList>, SyncError> {
+        let rules = self.rules_service(account_id)?;
+        let queued = self.db.read(move |c| rule_changes::queued(c, account_id)).await?;
+        let mut list = match rules.listing().await {
+            Ok((filters, elsewhere)) => {
+                let list = RuleList { rules: filters, elsewhere, place: rules.place(), waiting: false };
+                self.remember_rules(account_id, Some(list.clone()));
+                list
+            }
+            Err(BackendError::NeedsPermission) => return Ok(Permitted::NeedsPermission),
+            Err(err) if err.is_transient() && rules.queues_offline() => {
+                let last = self.remember_rules(account_id, None);
+                let mut list = last.unwrap_or(RuleList {
+                    rules: Vec::new(),
+                    elsewhere: Vec::new(),
+                    place: rules.place(),
+                    waiting: true,
+                });
+                list.waiting = true;
+                list
+            }
+            Err(err) => return Err(err.into()),
+        };
+        for queued in queued {
+            match queued.change {
+                RuleChange::Create(filter) if !list.rules.iter().any(|r| r.id == filter.id) => {
+                    list.rules.push(filter);
+                }
+                RuleChange::Create(_) => {}
+                RuleChange::Delete(id) => list.rules.retain(|r| r.id.as_deref() != Some(id.as_str())),
+            }
+        }
+        Ok(Permitted::Done(list))
     }
 
-    /// Adds a filter. The server gives the stored one an id.
+    /// Stores `list` as the last one read, or reads it back when `list` is
+    /// `None`. A poisoned lock still holds a usable map.
+    fn remember_rules(&self, account_id: AccountId, list: Option<RuleList>) -> Option<RuleList> {
+        let mut held = self.last_rules.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+        match list {
+            Some(list) => held.insert(account_id, list),
+            None => held.get(&account_id).cloned(),
+        }
+    }
+
+    /// The rules alone, for the assistant.
+    pub async fn rules(&self, account_id: AccountId) -> Result<Permitted<Vec<Filter>>, SyncError> {
+        Ok(match self.rule_list(account_id).await? {
+            Permitted::Done(list) => Permitted::Done(list.rules),
+            Permitted::NeedsPermission => Permitted::NeedsPermission,
+        })
+    }
+
+    /// Adds a filter. The server gives the stored one an id. On a
+    /// ManageSieve server that is not answering, the rule waits in the
+    /// store under the id it will keep.
     pub async fn add_rule(
         &self,
         account_id: AccountId,
         rule: Filter,
     ) -> Result<Permitted<Filter>, SyncError> {
-        permitted(self.rules_service(account_id)?.create_filter(&rule).await)
+        let service = self.rules_service(account_id)?;
+        match service.create_filter(&rule).await {
+            Err(err) if err.is_transient() && service.queues_offline() => {
+                let waiting = Filter {
+                    id: Some(format!("sieve-{:016x}", rand::random::<u64>())),
+                    ..rule
+                };
+                let queued = RuleChange::Create(waiting.clone());
+                self.db.write(move |c| rule_changes::enqueue(c, account_id, &queued).map(drop)).await?;
+                Ok(Permitted::Done(waiting))
+            }
+            other => permitted(other),
+        }
     }
 
     /// The person said yes to replacing the rules script they run on a
@@ -170,13 +257,45 @@ impl<A: Accounts> AccountSettings<A> {
     }
 
     /// Deletes a filter. A filter the server no longer has counts as
-    /// deleted.
+    /// deleted. On a ManageSieve server that is not answering, the delete
+    /// waits as an add does.
     pub async fn delete_rule(
         &self,
         account_id: AccountId,
         id: &str,
     ) -> Result<Permitted<()>, SyncError> {
-        permitted(delete_filter(&self.rules_service(account_id)?, id).await)
+        let service = self.rules_service(account_id)?;
+        match delete_filter(&service, id).await {
+            Err(err) if err.is_transient() && service.queues_offline() => {
+                let queued = RuleChange::Delete(id.to_string());
+                self.db.write(move |c| rule_changes::enqueue(c, account_id, &queued).map(drop)).await?;
+                Ok(Permitted::Done(()))
+            }
+            other => permitted(other),
+        }
+    }
+
+    /// Sends the changes that waited for the server, in order. It stops at
+    /// a failure that may pass and drops a change the server refused,
+    /// keeping its words for the caller to show.
+    pub async fn send_rule_changes(&self, account_id: AccountId) -> Result<SentRules, SyncError> {
+        let service = self.rules_service(account_id)?;
+        let queued = self.db.read(move |c| rule_changes::queued(c, account_id)).await?;
+        let mut sent = SentRules::default();
+        for queued in queued {
+            let answer = match &queued.change {
+                RuleChange::Create(filter) => service.create_filter(filter).await.map(drop),
+                RuleChange::Delete(id) => delete_filter(&service, id).await,
+            };
+            match answer {
+                Ok(()) => sent.sent += 1,
+                Err(err) if err.is_transient() => break,
+                Err(err) => sent.refused.push(err.to_string()),
+            }
+            let seq = queued.seq;
+            self.db.write(move |c| rule_changes::dequeue(c, seq)).await?;
+        }
+        Ok(sent)
     }
 
     /// Puts `rule` in the place of `old`. Gmail cannot change a filter, so
