@@ -826,7 +826,7 @@ msgid "Block {address}? Their future mail goes straight to the Trash."
 msgstr "Bloquear {address}? O correio futuro vai direto para o lixo."
 
 #: app/src/assistant/run.rs:1315 app/src/assistant/run/calendar.rs:217
-#: app/src/assistant/run/calendar.rs:697
+#: app/src/assistant/run/calendar.rs:715
 msgid "%a %-d %b"
 msgstr "%a %-d %b"
 
@@ -886,7 +886,7 @@ msgstr ""
 "Mover o correio de {sender} para {category} em {account} e criar uma regra "
 "do {provider} para o correio futuro?"
 
-#: app/src/assistant/run/calendar.rs:223 app/src/assistant/run/calendar.rs:701
+#: app/src/assistant/run/calendar.rs:223 app/src/assistant/run/calendar.rs:719
 msgid "%a %-d %b %H:%M"
 msgstr "%a %-d %b %H:%M"
 
@@ -932,26 +932,30 @@ msgid "Description: {value}"
 msgstr "Descrição: {value}"
 
 #: app/src/assistant/run/calendar.rs:563
-msgid "Change “{title}” on the calendar for {account}? Its guests are told."
-msgstr ""
-"Alterar “{title}” no calendário de {account}? Os convidados são avisados."
+msgid "Change “{title}” on the calendar for {account}?"
+msgstr "Alterar “{title}” no calendário de {account}?"
 
 #: app/src/assistant/run/calendar.rs:567
-msgid "Change an event on the calendar for {account}? Its guests are told."
-msgstr ""
-"Alterar um evento no calendário de {account}? Os convidados são avisados."
+msgid "Change an event on the calendar for {account}?"
+msgstr "Alterar um evento no calendário de {account}?"
 
-#: app/src/assistant/run/calendar.rs:594
-msgid "Delete “{title}” from the calendar for {account}? Its guests are told."
-msgstr ""
-"Eliminar “{title}” do calendário de {account}? Os convidados são avisados."
+#: app/src/assistant/run/calendar.rs:595
+msgid "Delete “{title}” from the calendar for {account}?"
+msgstr "Eliminar “{title}” do calendário de {account}?"
 
-#: app/src/assistant/run/calendar.rs:598
-msgid "Delete an event from the calendar for {account}? Its guests are told."
-msgstr ""
-"Eliminar um evento do calendário de {account}? Os convidados são avisados."
+#: app/src/assistant/run/calendar.rs:599
+msgid "Delete an event from the calendar for {account}?"
+msgstr "Eliminar um evento do calendário de {account}?"
 
-#: app/src/assistant/run/calendar.rs:634
+#: app/src/assistant/run/calendar.rs:622
+msgid "The new guests get their invitation, and the others get an update."
+msgstr "Os novos convidados recebem o convite e os restantes uma atualização."
+
+#: app/src/assistant/run/calendar.rs:623 app/src/assistant/run/calendar.rs:625
+msgid "Its guests are told."
+msgstr "Os convidados são avisados."
+
+#: app/src/assistant/run/calendar.rs:652
 msgid "Answer {answer} to “{title}”?"
 msgstr "Responder {answer} a “{title}”?"
 
@@ -2040,7 +2044,7 @@ msgstr "Marcar como lida"
 
 #: app/src/notify.rs:51 app/src/ui/calendar/manage.rs:223
 #: app/src/ui/calendar/popover.rs:211 app/src/ui/calendar/popover.rs:213
-#: app/src/ui/calendar/popover.rs:706 app/src/ui/calendar/scope.rs:194
+#: app/src/ui/calendar/popover.rs:706 app/src/ui/calendar/scope.rs:112
 #: app/src/ui/conversation.rs:545 app/src/ui/hide_my_email.rs:289
 #: app/src/ui/queued.rs:58 app/src/ui/templates.rs:149
 #: app/src/ui/window/arrange.rs:106 app/src/ui/window/organize.rs:204
@@ -3808,7 +3812,7 @@ msgstr "Tentar de novo"
 #: app/src/ui/add_account.rs:806 app/src/ui/assistant_mcp_prefs.rs:347
 #: app/src/ui/calendar/editor.rs:177 app/src/ui/calendar/manage.rs:184
 #: app/src/ui/calendar/manage.rs:303 app/src/ui/calendar/manage.rs:346
-#: app/src/ui/calendar/scope.rs:174 app/src/ui/composer/editor.rs:343
+#: app/src/ui/calendar/scope.rs:92 app/src/ui/composer/editor.rs:343
 #: app/src/ui/composer/mod.rs:1573 app/src/ui/composer/mod.rs:1642
 #: app/src/ui/composer/mod.rs:1965 app/src/ui/composer/mod.rs:2416
 #: app/src/ui/confirm.rs:29 app/src/ui/rules.rs:445 app/src/ui/rules.rs:586
@@ -4079,7 +4083,7 @@ msgid "Ask Penguin Mail…"
 msgstr "Pergunte ao Penguin Mail…"
 
 #: app/src/ui/assistant.rs:156 app/src/ui/assistant.rs:160
-#: app/src/ui/assistant.rs:446 app/src/ui/calendar/scope.rs:195
+#: app/src/ui/assistant.rs:446 app/src/ui/calendar/scope.rs:113
 #: app/src/ui/composer/mod.rs:295 app/src/ui/window/shortcuts.rs:492
 msgid "Send"
 msgstr "Enviar"
@@ -4263,7 +4267,7 @@ msgid "Test"
 msgstr "Testar"
 
 #: app/src/ui/assistant_mcp_prefs.rs:341 app/src/ui/calendar/editor.rs:173
-#: app/src/ui/calendar/quick.rs:211 app/src/ui/calendar/scope.rs:193
+#: app/src/ui/calendar/quick.rs:211 app/src/ui/calendar/scope.rs:111
 #: app/src/ui/composer/editor.rs:343 app/src/ui/composer/mod.rs:2416
 #: app/src/ui/dav_edit.rs:26 app/src/ui/rules.rs:438
 #: app/src/ui/smart_editor.rs:144 app/src/ui/templates.rs:233
@@ -4695,17 +4699,17 @@ msgstr "{title}, todo o dia, {calendar}"
 msgid "{title}, {start} to {end}, {calendar}"
 msgstr "{title}, {start} às {end}, {calendar}"
 
-#: app/src/ui/calendar/draft.rs:104 app/src/ui/calendar/editor.rs:1935
+#: app/src/ui/calendar/draft.rs:103 app/src/ui/calendar/editor.rs:1935
 #: app/src/ui/calendar/kinds.rs:59
 msgid "Out of office"
 msgstr "Fora do escritório"
 
-#: app/src/ui/calendar/draft.rs:105 app/src/ui/calendar/editor.rs:1934
+#: app/src/ui/calendar/draft.rs:104 app/src/ui/calendar/editor.rs:1934
 #: app/src/ui/calendar/kinds.rs:60
 msgid "Focus time"
 msgstr "Tempo de concentração"
 
-#: app/src/ui/calendar/draft.rs:373
+#: app/src/ui/calendar/draft.rs:367
 msgid "Declined because I am out of office"
 msgstr "Recusado porque estou fora do escritório"
 
@@ -4987,7 +4991,7 @@ msgstr "Google Meet"
 msgid "Add Google Meet"
 msgstr "Adicionar Google Meet"
 
-#: app/src/ui/calendar/editor.rs:1933 app/src/ui/calendar/mod.rs:2804
+#: app/src/ui/calendar/editor.rs:1933 app/src/ui/calendar/mod.rs:2788
 #: app/src/ui/calendar/quick.rs:54
 msgid "Event"
 msgstr "Evento"
@@ -5433,105 +5437,105 @@ msgstr "Adicionar os feriados de {region}"
 msgid "Could not add the holidays: {reason}"
 msgstr "Não foi possível adicionar os feriados: {reason}"
 
-#: app/src/ui/calendar/mod.rs:394 app/src/ui/calendar/mod.rs:414
+#: app/src/ui/calendar/mod.rs:397 app/src/ui/calendar/mod.rs:417
 msgid "View"
 msgstr "Vista"
 
-#: app/src/ui/calendar/mod.rs:429 app/src/ui/calendar/mod.rs:437
-#: app/src/ui/calendar/mod.rs:2792
+#: app/src/ui/calendar/mod.rs:432 app/src/ui/calendar/mod.rs:440
+#: app/src/ui/calendar/mod.rs:2776
 msgid "New Event (N)"
 msgstr "Novo evento (N)"
 
-#: app/src/ui/calendar/mod.rs:434
+#: app/src/ui/calendar/mod.rs:437
 msgid "New Focus Time or Out of Office"
 msgstr "Novo tempo de concentração ou fora do escritório"
 
-#: app/src/ui/calendar/mod.rs:443 app/src/ui/calendar/mod.rs:445
+#: app/src/ui/calendar/mod.rs:446 app/src/ui/calendar/mod.rs:448
 msgid "Search the Calendar (Ctrl+F)"
 msgstr "Pesquisar no calendário (Ctrl+F)"
 
-#: app/src/ui/calendar/mod.rs:448 app/src/ui/calendar/mod.rs:451
+#: app/src/ui/calendar/mod.rs:451 app/src/ui/calendar/mod.rs:454
 msgid "Show Calendars"
 msgstr "Mostrar os calendários"
 
-#: app/src/ui/calendar/mod.rs:457 app/src/ui/calendar/mod.rs:461
+#: app/src/ui/calendar/mod.rs:460 app/src/ui/calendar/mod.rs:464
 #: app/src/ui/conversation.rs:533 app/src/ui/conversation.rs:537
 msgid "Assistant (Ctrl+J)"
 msgstr "Assistente (Ctrl+J)"
 
-#: app/src/ui/calendar/mod.rs:494 app/src/ui/calendar/mod.rs:496
+#: app/src/ui/calendar/mod.rs:497 app/src/ui/calendar/mod.rs:499
 msgid "Search the Calendar"
 msgstr "Pesquisar no calendário"
 
-#: app/src/ui/calendar/mod.rs:563 app/src/ui/calendar/mod.rs:1032
+#: app/src/ui/calendar/mod.rs:566 app/src/ui/calendar/mod.rs:1035
 msgid "Loading older events"
 msgstr "A carregar eventos mais antigos"
 
-#: app/src/ui/calendar/mod.rs:1031
+#: app/src/ui/calendar/mod.rs:1034
 msgid "Older events can't load while offline"
 msgstr "Os eventos mais antigos não carregam sem ligação"
 
-#: app/src/ui/calendar/mod.rs:1065 app/src/ui/window/shortcuts.rs:571
+#: app/src/ui/calendar/mod.rs:1068 app/src/ui/window/shortcuts.rs:571
 msgid "Go to date"
 msgstr "Ir para uma data"
 
-#: app/src/ui/calendar/mod.rs:1527
+#: app/src/ui/calendar/mod.rs:1517
 msgid "Moved “{title}”"
 msgstr "“{title}” movido"
 
-#: app/src/ui/calendar/mod.rs:1536
+#: app/src/ui/calendar/mod.rs:1527
 msgid "Could not move the event: {reason}"
 msgstr "Não foi possível mover o evento: {reason}"
 
-#: app/src/ui/calendar/mod.rs:1657
+#: app/src/ui/calendar/mod.rs:1652
 msgid "All-day events"
 msgstr "Eventos de dia inteiro"
 
-#: app/src/ui/calendar/mod.rs:1659
+#: app/src/ui/calendar/mod.rs:1654
 msgid "All-day"
 msgstr "Dia inteiro"
 
-#: app/src/ui/calendar/mod.rs:2055 app/src/ui/calendar/mod.rs:3428
+#: app/src/ui/calendar/mod.rs:2050 app/src/ui/calendar/mod.rs:3407
 #: app/src/ui/calendar/sidebar.rs:309 app/src/ui/calendar/words.rs:347
 #: app/src/ui/preferences.rs:940 app/src/ui/preferences.rs:1053
 msgid "%a"
 msgstr "%a"
 
-#: app/src/ui/calendar/mod.rs:2543
+#: app/src/ui/calendar/mod.rs:2525
 msgid "Removed “{title}” from your calendar"
 msgstr "“{title}” removido do seu calendário"
 
-#: app/src/ui/calendar/mod.rs:2544
+#: app/src/ui/calendar/mod.rs:2526
 msgid "Deleted “{title}”"
 msgstr "“{title}” eliminado"
 
-#: app/src/ui/calendar/mod.rs:2549
+#: app/src/ui/calendar/mod.rs:2533
 msgid "Could not delete the event: {reason}"
 msgstr "Não foi possível eliminar o evento: {reason}"
 
-#: app/src/ui/calendar/mod.rs:2593 app/src/ui/composer/mod.rs:1202
+#: app/src/ui/calendar/mod.rs:2577 app/src/ui/composer/mod.rs:1202
 #: app/src/ui/window.rs:2124 app/src/ui/window/scheduled.rs:98
 #: app/src/ui/window/shortcuts.rs:458
 msgid "Undo"
 msgstr "Anular"
 
-#: app/src/ui/calendar/mod.rs:2735
+#: app/src/ui/calendar/mod.rs:2719
 msgid "Could not send your answer: {reason}"
 msgstr "Não foi possível enviar a sua resposta: {reason}"
 
-#: app/src/ui/calendar/mod.rs:2794
+#: app/src/ui/calendar/mod.rs:2778
 msgid "None of your calendars take new events"
 msgstr "Nenhum dos seus calendários aceita eventos novos"
 
-#: app/src/ui/calendar/mod.rs:2805 app/src/ui/calendar/quick.rs:55
+#: app/src/ui/calendar/mod.rs:2789 app/src/ui/calendar/quick.rs:55
 msgid "Focus Time"
 msgstr "Tempo de concentração"
 
-#: app/src/ui/calendar/mod.rs:2806 app/src/ui/calendar/quick.rs:56
+#: app/src/ui/calendar/mod.rs:2790 app/src/ui/calendar/quick.rs:56
 msgid "Out of Office"
 msgstr "Fora do escritório"
 
-#: app/src/ui/calendar/mod.rs:3160
+#: app/src/ui/calendar/mod.rs:3088 app/src/ui/calendar/mod.rs:3108
 msgid "Could not save the event: {reason}"
 msgstr "Não foi possível guardar o evento: {reason}"
 
@@ -5669,86 +5673,82 @@ msgstr "%Y"
 msgid "W{week}"
 msgstr "S{week}"
 
-#: app/src/ui/calendar/scope.rs:156
+#: app/src/ui/calendar/scope.rs:74
 msgid "This event only"
 msgstr "Só este evento"
 
-#: app/src/ui/calendar/scope.rs:157
+#: app/src/ui/calendar/scope.rs:75
 msgid "This and following events"
 msgstr "Este e os seguintes"
 
-#: app/src/ui/calendar/scope.rs:158
+#: app/src/ui/calendar/scope.rs:76
 msgid "All events"
 msgstr "Todos os eventos"
 
-#: app/src/ui/calendar/scope.rs:168
+#: app/src/ui/calendar/scope.rs:86
 msgid "Keep Old Time"
 msgstr "Manter a hora antiga"
 
-#: app/src/ui/calendar/scope.rs:169 app/src/ui/calendar/scope.rs:192
+#: app/src/ui/calendar/scope.rs:87 app/src/ui/calendar/scope.rs:110
 msgid "Move"
 msgstr "Mover"
 
-#: app/src/ui/calendar/scope.rs:178
+#: app/src/ui/calendar/scope.rs:96
 msgid "Don't send"
 msgstr "Não enviar"
 
-#: app/src/ui/calendar/scope.rs:182
+#: app/src/ui/calendar/scope.rs:100
 msgid "Send a cancellation to the guests"
 msgstr "Enviar um cancelamento aos convidados"
 
-#: app/src/ui/calendar/scope.rs:184 app/src/ui/calendar/scope.rs:316
+#: app/src/ui/calendar/scope.rs:102 app/src/ui/calendar/scope.rs:234
 msgid "Send an update to the guests"
 msgstr "Enviar uma atualização aos convidados"
 
-#: app/src/ui/calendar/scope.rs:254
+#: app/src/ui/calendar/scope.rs:172
 msgid "Move “{title}”?"
 msgstr "Mover “{title}”?"
 
-#: app/src/ui/calendar/scope.rs:255
+#: app/src/ui/calendar/scope.rs:173
 msgid "Delete “{title}”?"
 msgstr "Eliminar “{title}”?"
 
-#: app/src/ui/calendar/scope.rs:256
+#: app/src/ui/calendar/scope.rs:174
 msgid "Move a repeating event"
 msgstr "Mover um evento repetido"
 
-#: app/src/ui/calendar/scope.rs:257
+#: app/src/ui/calendar/scope.rs:175
 msgid "Delete a repeating event"
 msgstr "Eliminar um evento repetido"
 
-#: app/src/ui/calendar/scope.rs:258
+#: app/src/ui/calendar/scope.rs:176
 msgid "Save changes to “{title}”?"
 msgstr "Guardar as alterações em “{title}”?"
 
-#: app/src/ui/calendar/scope.rs:259
+#: app/src/ui/calendar/scope.rs:177
 msgid "Change a repeating event"
 msgstr "Alterar um evento repetido"
 
-#: app/src/ui/calendar/scope.rs:260
+#: app/src/ui/calendar/scope.rs:178
 msgid "Answer “{title}”?"
 msgstr "Responder a “{title}”?"
 
-#: app/src/ui/calendar/scope.rs:261
+#: app/src/ui/calendar/scope.rs:179
 msgid "Answer a repeating event"
 msgstr "Responder a um evento repetido"
 
-#: app/src/ui/calendar/scope.rs:272
+#: app/src/ui/calendar/scope.rs:190
 msgid "Keep Old Time saves your other changes at the time the event had."
 msgstr ""
 "Manter a hora antiga guarda as outras alterações na hora que o evento tinha."
 
-#: app/src/ui/calendar/scope.rs:276
+#: app/src/ui/calendar/scope.rs:194
 msgid "The guests get a cancellation by mail."
 msgstr "Os convidados recebem um cancelamento por correio."
 
-#: app/src/ui/calendar/scope.rs:278
+#: app/src/ui/calendar/scope.rs:196
 msgid "The guests get an update by mail."
 msgstr "Os convidados recebem uma atualização por correio."
-
-#: app/src/ui/calendar/scope.rs:282
-msgid "The new guests get their invitation, and the others get an update."
-msgstr "Os novos convidados recebem o convite e os restantes uma atualização."
 
 #: app/src/ui/calendar/shown.rs:69
 msgid "Day"
@@ -9911,7 +9911,7 @@ msgid_plural "{accounts} will get new labels."
 msgstr[0] "Etiqueta nova em: {accounts}."
 msgstr[1] "Etiquetas novas em: {accounts}."
 
-#: sync/src/calendar_copy.rs:1556
+#: sync/src/calendar_copy.rs:1593
 msgid ""
 "Google Calendar offers out of office and focus time only on some work and "
 "school accounts ({reason})"

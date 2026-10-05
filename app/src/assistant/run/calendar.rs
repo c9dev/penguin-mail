@@ -558,16 +558,17 @@ impl<A: Accounts> Tools<A> {
             line(gettext("Description: {value}"), &preview);
         }
         let name = text(input, "current_title");
-        let question = match &name {
+        let mut question = match &name {
             Some(title) => fill(
-                &gettext("Change “{title}” on the calendar for {account}? Its guests are told."),
+                &gettext("Change “{title}” on the calendar for {account}?"),
                 &[("title", title), ("account", &account.email)],
             ),
             None => fill(
-                &gettext("Change an event on the calendar for {account}? Its guests are told."),
+                &gettext("Change an event on the calendar for {account}?"),
                 &[("account", &account.email)],
             ),
         };
+        self.say_who_hears(&mut question, &account, &id, Some(&edit)).await;
         let question = format!("{question}\n\n{}", changes.join("\n"));
         Ok(Plan::ask(question, async move {
             let calendar = Arc::clone(&self.modules.calendar);
@@ -589,16 +590,17 @@ impl<A: Accounts> Tools<A> {
             return Ok(Plan::without_asking(async move { Ok(answer) }));
         }
         let id = required(input, "id")?;
-        let question = match text(input, "title") {
+        let mut question = match text(input, "title") {
             Some(title) => fill(
-                &gettext("Delete “{title}” from the calendar for {account}? Its guests are told."),
+                &gettext("Delete “{title}” from the calendar for {account}?"),
                 &[("title", &title), ("account", &account.email)],
             ),
             None => fill(
-                &gettext("Delete an event from the calendar for {account}? Its guests are told."),
+                &gettext("Delete an event from the calendar for {account}?"),
                 &[("account", &account.email)],
             ),
         };
+        self.say_who_hears(&mut question, &account, &id, None).await;
         Ok(Plan::ask(question, async move {
             let calendar = Arc::clone(&self.modules.calendar);
             let (account_id, gone) = (account.id, id.clone());
@@ -608,6 +610,22 @@ impl<A: Accounts> Tools<A> {
             .await?;
             Ok(json!({"account": account.email, "deleted": id}))
         }))
+    }
+
+    /// Adds to `question` who gets mail of changing event `id` by `edit`,
+    /// or of deleting it, as the calendar's own question rule says. An
+    /// event the copy cannot find yet keeps the old promise that its
+    /// guests are told, rather than one of silence the write may break.
+    async fn say_who_hears(&self, question: &mut String, account: &Account, id: &str, edit: Option<&EventEdit>) {
+        let asked = self.modules.calendar.question(account.id, id, edit).await;
+        let line = match asked {
+            Ok(asked) if asked.told => gettext("The new guests get their invitation, and the others get an update."),
+            Ok(asked) if asked.guests_hear() => gettext("Its guests are told."),
+            Ok(_) => return,
+            Err(_) => gettext("Its guests are told."),
+        };
+        question.push(' ');
+        question.push_str(&line);
     }
 
     pub(super) async fn answer_invitation<'a>(
