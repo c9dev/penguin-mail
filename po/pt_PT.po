@@ -8419,16 +8419,12 @@ msgstr "Mensagens que não se transferem"
 #: app/src/ui/window.rs:3652
 msgid ""
 "{address}'s server would not hand these over after three tries. Penguin Mail "
-"tries again at each check.\n"
-"\n"
-"{lines}"
+"tries again at each check."
 msgstr ""
 "O servidor de {address} não entregou estas mensagens após três tentativas. O "
-"Penguin Mail tenta de novo em cada verificação.\n"
-"\n"
-"{lines}"
+"Penguin Mail tenta de novo em cada verificação."
 
-#: app/src/ui/window.rs:3656
+#: app/src/ui/window.rs:3672
 msgid "Close"
 msgstr "Fechar"
 

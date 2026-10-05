@@ -7823,16 +7823,10 @@ msgid "Messages That Will Not Download"
 msgstr "Messages That Will Not Download"
 
 #: app/src/ui/window.rs:3652
-msgid ""
-"{address}'s server would not hand these over after three tries. Penguin Mail tries again at each check.\n"
-"\n"
-"{lines}"
-msgstr ""
-"{address}'s server would not hand these over after three tries. Penguin Mail tries again at each check.\n"
-"\n"
-"{lines}"
+msgid "{address}'s server would not hand these over after three tries. Penguin Mail tries again at each check."
+msgstr "{address}'s server would not hand these over after three tries. Penguin Mail tries again at each check."
 
-#: app/src/ui/window.rs:3656
+#: app/src/ui/window.rs:3672
 msgid "Close"
 msgstr "Close"
 
