@@ -2738,8 +2738,8 @@ msgstr[1] ""
 msgid "Quick Look"
 msgstr ""
 
-#: app/src/render.rs:460 app/src/ui/window/attachments.rs:319
-#: app/src/ui/window/attachments.rs:325
+#: app/src/render.rs:460 app/src/ui/window/attachments.rs:329
+#: app/src/ui/window/attachments.rs:335
 msgid "Save to Downloads"
 msgstr ""
 
@@ -3263,7 +3263,7 @@ msgstr ""
 
 #: app/src/tray.rs:207 app/src/ui/composer/mod.rs:233
 #: app/src/ui/composer/mod.rs:499 app/src/ui/composer/mod.rs:1201
-#: app/src/ui/contact_card.rs:146
+#: app/src/ui/contact_card.rs:157
 msgid "New Message"
 msgstr ""
 
@@ -5981,27 +5981,27 @@ msgstr ""
 msgid "Ignore"
 msgstr ""
 
-#: app/src/ui/contact_card.rs:94
+#: app/src/ui/contact_card.rs:105
 msgid "Email"
 msgstr ""
 
-#: app/src/ui/contact_card.rs:96
+#: app/src/ui/contact_card.rs:107
 msgid "Other email"
 msgstr ""
 
-#: app/src/ui/contact_card.rs:116
+#: app/src/ui/contact_card.rs:127
 msgid "Phone"
 msgstr ""
 
-#: app/src/ui/contact_card.rs:156 app/src/ui/sidebar.rs:856
+#: app/src/ui/contact_card.rs:167 app/src/ui/sidebar.rs:856
 msgid "Remove from VIPs"
 msgstr ""
 
-#: app/src/ui/contact_card.rs:158
+#: app/src/ui/contact_card.rs:169
 msgid "Add to VIPs"
 msgstr ""
 
-#: app/src/ui/contact_card.rs:169
+#: app/src/ui/contact_card.rs:180
 msgid "All Their Mail"
 msgstr ""
 
@@ -6836,7 +6836,7 @@ msgstr[1] ""
 msgid "Could not read {file}: {reason}"
 msgstr ""
 
-#: app/src/ui/mod.rs:376
+#: app/src/ui/mod.rs:377
 msgid "Gray"
 msgstr ""
 
@@ -7448,7 +7448,7 @@ msgid "Mailboxes"
 msgstr ""
 
 #: app/src/ui/sidebar.rs:351 app/src/ui/sidebar.rs:1243
-#: app/src/ui/thread_list.rs:290
+#: app/src/ui/thread_list.rs:293
 msgid "Mail"
 msgstr ""
 
@@ -7695,34 +7695,34 @@ msgstr ""
 msgid "New Template"
 msgstr ""
 
-#: app/src/ui/thread_list.rs:188
+#: app/src/ui/thread_list.rs:191
 msgid "No Mail"
 msgstr ""
 
 #. The two search terms are Gmail's own and stay in English.
-#: app/src/ui/thread_list.rs:206
+#: app/src/ui/thread_list.rs:209
 msgid "Search mail, e.g. from:ann has:attachment"
 msgstr ""
 
-#: app/src/ui/thread_list.rs:225
+#: app/src/ui/thread_list.rs:228
 msgid "All Inboxes"
 msgstr ""
 
-#: app/src/ui/thread_list.rs:245 app/src/ui/thread_list.rs:265
+#: app/src/ui/thread_list.rs:248 app/src/ui/thread_list.rs:268
 msgid "Show Mailboxes"
 msgstr ""
 
-#: app/src/ui/thread_list.rs:250
+#: app/src/ui/thread_list.rs:253
 msgid "New Message (C)"
 msgstr ""
 
-#: app/src/ui/thread_list.rs:255
+#: app/src/ui/thread_list.rs:258
 msgid "Search (/)"
 msgstr ""
 
 #. The tooltips already say what these do; the spoken name takes
 #. the words and leaves the keys to a property of their own.
-#: app/src/ui/thread_list.rs:264
+#: app/src/ui/thread_list.rs:267
 msgid "Search mail"
 msgstr ""
 
@@ -8281,15 +8281,15 @@ msgstr[1] ""
 msgid "Saved {count} to {folder}. Could not save {files}"
 msgstr ""
 
-#: app/src/ui/window/attachments.rs:279
+#: app/src/ui/window/attachments.rs:277
 msgid "Could not open {file}"
 msgstr ""
 
-#: app/src/ui/window/attachments.rs:323 app/src/ui/window/attachments.rs:326
+#: app/src/ui/window/attachments.rs:333 app/src/ui/window/attachments.rs:336
 msgid "Open in Another Program"
 msgstr ""
 
-#: app/src/ui/window/attachments.rs:330
+#: app/src/ui/window/attachments.rs:340
 msgid "{file}, preview"
 msgstr ""
 

@@ -9,7 +9,7 @@ use std::path::PathBuf;
 use std::rc::Rc;
 
 use adw::prelude::*;
-use gtk::{gdk, pango};
+use gtk::{glib, pango};
 use mailrs_domain::translate::gettext;
 
 /// Who the card is about.
@@ -59,12 +59,23 @@ pub fn present(parent: &impl IsA<gtk::Widget>, person: Person, chose: impl Fn(Ch
         .show_initials(true)
         .halign(gtk::Align::Center)
         .build();
-    if let Some(photo) = person
-        .photo
-        .as_ref()
-        .and_then(|path| gdk::Texture::from_filename(path).ok())
-    {
-        avatar.set_custom_image(Some(&photo));
+    if let Some(bytes) = person.photo.as_ref().and_then(|path| std::fs::read(path).ok()) {
+        let bytes = glib::Bytes::from_owned(bytes);
+        match super::texture::here(&bytes) {
+            Some(photo) => avatar.set_custom_image(Some(&photo)),
+            // A format GDK does not read itself decodes on a worker
+            // thread, and the initials stand in until it has.
+            None => {
+                let weak = avatar.downgrade();
+                glib::spawn_future_local(async move {
+                    if let Some(photo) = super::texture::decode(bytes).await
+                        && let Some(avatar) = weak.upgrade()
+                    {
+                        avatar.set_custom_image(Some(&photo));
+                    }
+                });
+            }
+        }
     }
     content.append(&avatar);
 

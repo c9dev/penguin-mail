@@ -2128,19 +2128,7 @@ fn portrait(color: (u8, u8, u8)) -> Vec<u8> {
             pixels[at + 2] = if ink { b } else { wash(b) };
         }
     }
-    let pixbuf = gtk::gdk_pixbuf::Pixbuf::from_mut_slice(
-        pixels,
-        gtk::gdk_pixbuf::Colorspace::Rgb,
-        false,
-        8,
-        SIZE as i32,
-        SIZE as i32,
-        (SIZE * 3) as i32,
-    );
-    pixbuf
-        .save_to_bufferv("png", &[])
-        .map(|bytes| bytes.to_vec())
-        .unwrap_or_default()
+    png(pixels, SIZE, SIZE)
 }
 
 impl SampleAccount {
@@ -2214,8 +2202,8 @@ fn stand_in(attachment_id: &str, mime_type: &str, size: i64) -> Vec<u8> {
 /// and Quick Look has something to open. Two bands of colour chosen from
 /// the attachment id, which keeps the same file the same colour.
 fn stand_in_picture(attachment_id: &str) -> Option<Vec<u8>> {
-    const WIDTH: i32 = 640;
-    const HEIGHT: i32 = 420;
+    const WIDTH: usize = 640;
+    const HEIGHT: usize = 420;
     let seed = attachment_id.bytes().fold(0u32, |hash, byte| {
         hash.wrapping_mul(31).wrapping_add(byte as u32)
     });
@@ -2230,18 +2218,29 @@ fn stand_in_picture(attachment_id: &str) -> Option<Vec<u8>> {
         (top.1 as u32 * 2 / 5) as u8,
         (top.2 as u32 * 2 / 5) as u8,
     );
-    let pixbuf =
-        gtk::gdk_pixbuf::Pixbuf::new(gtk::gdk_pixbuf::Colorspace::Rgb, false, 8, WIDTH, HEIGHT)?;
     let horizon = HEIGHT * 2 / 3;
-    pixbuf.new_subpixbuf(0, 0, WIDTH, horizon).fill(rgba(top));
-    pixbuf
-        .new_subpixbuf(0, horizon, WIDTH, HEIGHT - horizon)
-        .fill(rgba((bottom.0, bottom.1, bottom.2)));
-    pixbuf.save_to_bufferv("png", &[]).ok()
+    let pixels = (0..HEIGHT)
+        .flat_map(|y| {
+            let (r, g, b) = if y < horizon { top } else { bottom };
+            [r, g, b].repeat(WIDTH)
+        })
+        .collect();
+    Some(png(pixels, WIDTH, HEIGHT))
 }
 
-fn rgba((r, g, b): (u8, u8, u8)) -> u32 {
-    u32::from_be_bytes([r, g, b, 0xff])
+/// RGB `pixels`, `width` by `height`, as a PNG. GDK writes it in this
+/// process; gdk-pixbuf would start a sandboxed glycin process for it.
+fn png(pixels: Vec<u8>, width: usize, height: usize) -> Vec<u8> {
+    use gtk::prelude::TextureExt;
+    gtk::gdk::MemoryTexture::new(
+        width as i32,
+        height as i32,
+        gtk::gdk::MemoryFormat::R8g8b8,
+        &gtk::glib::Bytes::from_owned(pixels),
+        width * 3,
+    )
+    .save_to_png_bytes()
+    .to_vec()
 }
 
 impl Sample {

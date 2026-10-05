@@ -49,6 +49,11 @@ Installing for the owner: `NO_AUTOSTART=1 scripts/install.sh`.
   test calling `gtk::init()` crashes the binary with SIGSEGV. The one
   that exists is in `app/src/ui/composer/richbuffer.rs`; fold new GTK
   checks into it, or test the logic without widgets.
+- **Picture decoding.** GDK decodes PNG, JPEG and TIFF in this process;
+  every other format, and every gdk-pixbuf load or save, goes to
+  glycin's sandboxed loader. Go through `app/src/ui/texture.rs` rather
+  than calling `gdk::Texture::from_bytes` or gdk-pixbuf on the GTK
+  thread, and build test pictures from `gdk::MemoryTexture`.
 - **GnuPG tests** build a throwaway keyring and skip when `gpg` or
   `gpgsm` is missing. `PENGUIN_MAIL_REQUIRE_CRYPTO=1` turns the skip into
   a failure. Fixtures write `pinentry-program /bin/false` into

@@ -277,6 +277,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   it last updated, instead of leaving you guessing.
 
 ### Fixed
+- Inserting a GIF or WebP picture into a message, or showing a contact photo in such a format, no longer holds up the window while it loads. The composer shows a placeholder until the picture is ready.
 - Muting a conversation on an Outlook, IMAP or POP3 account keeps its later replies out of the Inbox: each goes to the Archive, read and without a notification, while Penguin Mail runs.
 - An account that cannot start syncing no longer stops the accounts after it, as when Penguin Mail restarts itself in the tray; it shows as retrying and starts once it can.
 - Penguin Mail finds the calendars and contacts of Fastmail, GMX, WEB.DE, mail.com and Zoho accounts, and when it finds none, Preferences says whether the password was refused or the server did not answer.

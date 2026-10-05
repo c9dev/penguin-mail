@@ -308,9 +308,15 @@ impl Pictures {
                                 .await
                         })
                         .await?;
-                        Ok::<_, anyhow::Error>(
-                            tokio::task::spawn_blocking(move || shrink(&bytes)).await?,
+                        // gdk-pixbuf decodes through glycin's sandboxed
+                        // loader, which can leave a caller waiting for
+                        // good. The row keeps its paperclip then.
+                        let shrunk = tokio::time::timeout(
+                            crate::ui::texture::WAIT,
+                            tokio::task::spawn_blocking(move || shrink(&bytes)),
                         )
+                        .await??;
+                        Ok::<_, anyhow::Error>(shrunk)
                     })
                     .await;
                 made.ok().flatten()
@@ -341,6 +347,7 @@ fn data_uri(mime: &str, bytes: &[u8]) -> String {
 /// a worker thread: GdkPixbuf needs no GTK thread, and a large photo
 /// takes long enough to decode to hold up everything drawn on that one.
 fn shrink(data: &[u8]) -> Option<String> {
+    use gtk::prelude::TextureExt;
     use gtk::{gio, glib};
     let stream = gio::MemoryInputStream::from_bytes(&glib::Bytes::from(data));
     let pixbuf = gtk::gdk_pixbuf::Pixbuf::from_stream_at_scale(
@@ -351,7 +358,10 @@ fn shrink(data: &[u8]) -> Option<String> {
         gio::Cancellable::NONE,
     )
     .ok()?;
-    let png = pixbuf.save_to_bufferv("png", &[]).ok()?;
+    // GDK writes the PNG in this process; gdk-pixbuf would start a
+    // second sandboxed glycin process just to encode 64 pixels.
+    #[allow(deprecated)]
+    let png = gtk::gdk::Texture::for_pixbuf(&pixbuf).save_to_png_bytes();
     Some(data_uri("image/png", &png))
 }
 

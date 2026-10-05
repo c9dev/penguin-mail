@@ -68,6 +68,9 @@ pub struct ThreadList {
     /// Contact photos by lower-case sender address, already decoded. Empty
     /// while contacts are off, and then rows show no face at all.
     photos: Rc<RefCell<HashMap<String, gdk::Texture>>>,
+    /// How many times the window has handed over photos, so a photo that
+    /// decodes after a newer hand-over is dropped.
+    photos_asked: Cell<u64>,
     muted: Cell<bool>,
     /// The menu a right click on a row opens. It has no model until the
     /// window hands over the conversation's own through `set_row_menu`.
@@ -314,6 +317,7 @@ impl ThreadList {
             show_accounts,
             vips,
             photos,
+            photos_asked: Cell::new(0),
             muted: Cell::new(false),
             row_popover,
         });
@@ -356,15 +360,32 @@ impl ThreadList {
     /// The contact photos rows may show, by lower-case address. An empty
     /// map takes the whole avatar column away, which is how the list looks
     /// while contacts are off.
-    pub fn set_photos(&self, files: &HashMap<String, std::path::PathBuf>) {
+    ///
+    /// A PNG or JPEG decodes on the spot. Any other format decodes on a
+    /// worker thread, and its face appears once it has.
+    pub fn set_photos(self: &Rc<Self>, files: &HashMap<String, std::path::PathBuf>) {
+        let asked = self.photos_asked.get() + 1;
+        self.photos_asked.set(asked);
         let mut photos = self.photos.borrow_mut();
         let before = photos.len();
         photos.retain(|email, _| files.contains_key(email));
+        let mut later = Vec::new();
         for (email, file) in files {
             if photos.contains_key(email) {
                 continue;
             }
-            match gdk::Texture::from_filename(file) {
+            let bytes = match std::fs::read(file) {
+                Ok(bytes) => glib::Bytes::from_owned(bytes),
+                Err(err) => {
+                    tracing::debug!(error = %err, "could not read a contact photo");
+                    continue;
+                }
+            };
+            if !super::texture::decoded_in_process(&bytes) {
+                later.push((email.clone(), bytes));
+                continue;
+            }
+            match gdk::Texture::from_bytes(&bytes) {
                 Ok(texture) => {
                     photos.insert(email.clone(), texture);
                 }
@@ -376,6 +397,27 @@ impl ThreadList {
         if changed {
             self.rebind();
         }
+        if later.is_empty() {
+            return;
+        }
+        let weak = Rc::downgrade(self);
+        glib::spawn_future_local(async move {
+            let mut decoded = Vec::new();
+            for (email, bytes) in later {
+                if let Some(texture) = super::texture::decode(bytes).await {
+                    decoded.push((email, texture));
+                }
+            }
+            // A newer set of photos replaced this one while it decoded.
+            let Some(list) = weak.upgrade() else {
+                return;
+            };
+            if decoded.is_empty() || list.photos_asked.get() != asked {
+                return;
+            }
+            list.photos.borrow_mut().extend(decoded);
+            list.rebind();
+        });
     }
 
     /// Marks rows from these addresses as VIP mail.
