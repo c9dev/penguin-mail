@@ -20,11 +20,13 @@ fn json(list: &[String]) -> String {
 }
 
 /// The UIDLs of `uidls`, a page of the server's list, that this account
-/// never downloaded, in the order given.
+/// never downloaded, in the order given. A row whose removal a clean QUIT
+/// confirmed does not count: the server no longer holds that message, so
+/// a UIDL it lists again names a new one (RFC 1939 section 7).
 pub fn unseen(conn: &Connection, account_id: AccountId, uidls: &[String]) -> Result<Vec<String>> {
     let mut stmt = conn.prepare_cached(
         "SELECT j.value FROM json_each(?2) j WHERE NOT EXISTS \
-         (SELECT 1 FROM pop3_seen s WHERE s.account_id = ?1 AND s.uidl = j.value) \
+         (SELECT 1 FROM pop3_seen s WHERE s.account_id = ?1 AND s.uidl = j.value AND s.removed = 0) \
          ORDER BY j.key",
     )?;
     let rows = stmt.query_map(params![account_id, json(uidls)], |row| row.get(0))?;
@@ -70,7 +72,8 @@ pub fn download_id(conn: &Connection, account_id: AccountId, uidl: &str) -> Resu
 }
 
 /// Records `uidl` as downloaded at `at` into message `message_id`, and
-/// drops its failure count.
+/// drops its failure count. A row for a message already removed from the
+/// server gives way to the new download that took its UIDL.
 pub fn mark_downloaded(
     conn: &Connection,
     account_id: AccountId,
@@ -80,7 +83,9 @@ pub fn mark_downloaded(
 ) -> Result<()> {
     conn.execute(
         "INSERT INTO pop3_seen (account_id, uidl, downloaded_at, message_id) VALUES (?1, ?2, ?3, ?4) \
-         ON CONFLICT (account_id, uidl) DO NOTHING",
+         ON CONFLICT (account_id, uidl) DO UPDATE SET downloaded_at = excluded.downloaded_at, \
+         message_id = excluded.message_id, remove_wanted = 0, removed = 0 \
+         WHERE pop3_seen.removed = 1",
         params![account_id, uidl, at, message_id],
     )?;
     conn.execute(

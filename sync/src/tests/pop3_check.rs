@@ -394,6 +394,22 @@ async fn a_reused_uidl_keeps_the_old_message_and_stores_the_new_one_beside_it() 
     assert_eq!(meta(&h, "pop3/u1").await.subject, "Hello 1", "and its row");
 }
 
+/// Under a removal setting the server can give a UIDL to new mail right
+/// after the QUIT that removed the old message, with no check between
+/// that lists the server without it.
+#[tokio::test]
+async fn a_uidl_reused_right_after_its_removal_downloads_the_new_message() {
+    let h = pop3_harness(FakePop3::default().with_message("u1", &pop3_mail(1)), RemoveSetting::Downloaded).await;
+    h.sync.pop3_check().await.unwrap();
+    assert!(h.fake.held().is_empty());
+    h.fake.add("u1", &pop3_mail(2));
+    h.sync.pop3_check().await.unwrap();
+    assert_eq!(h.ids_in(MailSet::Role(Role::Inbox)).await, ["pop3/u1", "pop3/u1/2"]);
+    assert_eq!(raw(&h, "pop3/u1/2").await, Some(pop3_mail(2)));
+    assert_eq!(raw(&h, "pop3/u1").await, Some(pop3_mail(1)), "the first message keeps its bytes");
+    assert!(h.fake.held().is_empty(), "the new message is removed from the server too");
+}
+
 #[tokio::test]
 async fn a_uidl_listed_twice_in_one_session_downloads_once_and_removes_only_that_one() {
     let fake = FakePop3::default().with_message("d", &pop3_mail(1)).with_message("d", &pop3_mail(2));
