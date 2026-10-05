@@ -7,6 +7,7 @@ use std::time::Duration;
 
 use mailrs_domain::{ChangeEvent, EpochMillis, MailSet, MessageMeta, RemoveSetting, Role, Target};
 use mailrs_pop3::MOST_MESSAGE_BYTES;
+use mailrs_store::pop3::{FailReason, Failing};
 use mailrs_store::{local_messages, messages, pop3};
 use tokio::time::Instant;
 
@@ -30,7 +31,7 @@ async fn pending(h: &Pop3Harness) -> Vec<String> {
     h.db.read(move |c| pop3::pending_removal(c, account_id, None, pop3::PAGE)).await.unwrap()
 }
 
-async fn failing(h: &Pop3Harness) -> Vec<(String, String)> {
+async fn failing(h: &Pop3Harness) -> Vec<Failing> {
     let account_id = h.account_id;
     h.db.read(move |c| pop3::failing(c, account_id)).await.unwrap()
 }
@@ -178,7 +179,17 @@ async fn one_refused_retr_leaves_the_rest_downloaded_and_counts_a_failure() {
         assert_eq!(failing(&h).await.is_empty(), round < 3, "check {round}");
     }
     assert_eq!(h.ids_in(MailSet::Role(Role::Inbox)).await, ["pop3/u2"]);
-    assert_eq!(failing(&h).await, [("bad".to_string(), "message 1 cannot be read".to_string())]);
+    assert_eq!(
+        failing(&h).await,
+        [Failing {
+            uidl: "bad".into(),
+            reason: FailReason::Refused,
+            words: "message 1 cannot be read".into(),
+            sender: Some("Ana".into()),
+            subject: Some("Hello 1".into()),
+        }],
+        "the third failure reads the message's headers with TOP, so the menu can name it"
+    );
     assert_eq!(h.fake.retr_calls(), [1, 2, 1, 1], "tried again at each check");
 }
 

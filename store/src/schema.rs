@@ -825,6 +825,21 @@ ALTER TABLE pop3_seen ADD COLUMN message_id TEXT;
 UPDATE pop3_seen SET message_id = 'pop3/' || uidl;
 CREATE INDEX pop3_seen_message ON pop3_seen (account_id, message_id);
 "#,
+    // Why a POP3 message did not download, as a code the window translates
+    // when it shows it: the server refused it (`last_error` holds its
+    // words), it is over the size Penguin Mail reads, its answer could not
+    // be read, or the connection dropped during it. `sender` and `subject`
+    // name the message once a `TOP` has read its headers. Over-size rows
+    // from before held translated words, in English or Portuguese.
+    r#"
+ALTER TABLE pop3_failures ADD COLUMN reason TEXT NOT NULL DEFAULT 'refused'
+    CHECK (reason IN ('refused', 'too_large', 'unreadable', 'dropped'));
+ALTER TABLE pop3_failures ADD COLUMN sender TEXT;
+ALTER TABLE pop3_failures ADD COLUMN subject TEXT;
+UPDATE pop3_failures SET reason = 'too_large', last_error = ''
+    WHERE last_error IN ('The message is larger than Penguin Mail downloads.',
+                         'A mensagem é maior do que o Penguin Mail transfere.');
+"#,
 ];
 
 /// How long the copy taken before a migration stays once the store has

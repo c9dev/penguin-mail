@@ -6,9 +6,9 @@
 
 use std::collections::{BTreeSet, HashMap, HashSet};
 
-use mailrs_domain::translate::gettext;
 use mailrs_domain::{ChangeEvent, RemoveSetting};
 use mailrs_pop3::{MOST_MESSAGE_BYTES, Pop3Api, Pop3Error, Uidl};
+use mailrs_store::pop3::FailReason;
 use mailrs_store::{accounts, pop3};
 
 use super::AccountSync;
@@ -141,7 +141,7 @@ impl AccountSync {
                     .get(id)
                     .is_some_and(|octets| *octets > MOST_MESSAGE_BYTES)
                 {
-                    done.failing_grew |= self.count_failure(uidl, &Pop3Error::TooLarge).await?;
+                    done.failing_grew |= self.count_failure(pop3, *id, uidl, &Pop3Error::TooLarge, true).await?;
                     continue;
                 }
                 match pop3.retr(*id).await {
@@ -150,7 +150,7 @@ impl AccountSync {
                     // nothing else; the next check asks for it again.
                     Err(err @ Pop3Error::Refused(_)) => {
                         tracing::warn!(account = account_id, uidl, %err, "the server would not hand over a message");
-                        done.failing_grew |= self.count_failure(uidl, &err).await?;
+                        done.failing_grew |= self.count_failure(pop3, *id, uidl, &err, true).await?;
                     }
                     // Anything else leaves the session unusable.
                     Err(err) => return Err(BackendError::from(err).into()),
@@ -235,20 +235,49 @@ impl AccountSync {
         Ok(())
     }
 
-    /// Counts a refused RETR with the server's words. True when the
-    /// message just reached the account's menu.
-    async fn count_failure(&self, uidl: &str, err: &Pop3Error) -> Result<bool, SyncError> {
-        let words = match err {
-            Pop3Error::Refused(text) => text.clone(),
-            Pop3Error::TooLarge => gettext("The message is larger than Penguin Mail downloads."),
-            other => other.to_string(),
+    /// Counts a failed RETR of message `id`, called `uidl`, and why. True
+    /// when the message just reached the account's menu. With the session
+    /// still open, that third failure reads the message's headers with
+    /// `TOP n 0`, so the menu can say who sent it and what it is about.
+    async fn count_failure<P: Pop3Api>(
+        &self,
+        pop3: &P,
+        id: u32,
+        uidl: &str,
+        err: &Pop3Error,
+        session_open: bool,
+    ) -> Result<bool, SyncError> {
+        let (reason, words) = match err {
+            Pop3Error::Refused(text) => (FailReason::Refused, text.clone()),
+            Pop3Error::TooLarge => (FailReason::TooLarge, String::new()),
+            Pop3Error::Network(_) => (FailReason::Dropped, String::new()),
+            _ => (FailReason::Unreadable, String::new()),
         };
         let (account_id, uidl) = (self.account_id, uidl.to_string());
+        let named = uidl.clone();
         let failures = self
             .db
-            .write(move |c| pop3::record_failure(c, account_id, &uidl, &words))
+            .write(move |c| pop3::record_failure(c, account_id, &uidl, reason, &words))
             .await?;
-        Ok(failures == pop3::SHOWN_AFTER)
+        let shown = failures == pop3::SHOWN_AFTER;
+        if shown && session_open {
+            // The headers only name the message; a server that cannot
+            // answer TOP leaves the menu to number it.
+            match pop3.top(id, 0).await {
+                Ok(head) => {
+                    let summary = mailrs_mime::summary(&head);
+                    let sender = summary.from.map(|from| from.display().to_string());
+                    let subject = Some(summary.subject).filter(|s| !s.is_empty());
+                    self.db
+                        .write(move |c| {
+                            pop3::name_failure(c, account_id, &named, sender.as_deref(), subject.as_deref())
+                        })
+                        .await?;
+                }
+                Err(err) => tracing::info!(account = account_id, uidl = named, %err, "could not read the failing message's headers"),
+            }
+        }
+        Ok(shown)
     }
 
     /// A DELE for each message the account wants off the server that the

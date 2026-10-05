@@ -5,6 +5,7 @@ use std::collections::HashSet;
 use common::{meta, store};
 use mailrs_domain::RemoveSetting;
 use mailrs_store::messages::{self, Change};
+use mailrs_store::pop3::{FailReason, Failing};
 use mailrs_store::{accounts, local_messages, open_in_memory, pop3};
 use rusqlite::Connection;
 
@@ -107,11 +108,11 @@ fn removal_after_days_wants_only_the_old_ones() {
 fn a_refused_retr_is_counted_apart_from_what_was_downloaded() {
     let (conn, id) = pop3_account(RemoveSetting::Never);
     assert_eq!(
-        pop3::record_failure(&conn, id, "u9", "-ERR no such message").unwrap(),
+        pop3::record_failure(&conn, id, "u9", FailReason::Refused, "-ERR no such message").unwrap(),
         1
     );
     assert_eq!(
-        pop3::record_failure(&conn, id, "u9", "-ERR still gone").unwrap(),
+        pop3::record_failure(&conn, id, "u9", FailReason::Refused, "-ERR still gone").unwrap(),
         2
     );
     assert!(
@@ -124,18 +125,47 @@ fn a_refused_retr_is_counted_apart_from_what_was_downloaded() {
         "a failure is tried again"
     );
     assert_eq!(
-        pop3::record_failure(&conn, id, "u9", "-ERR still gone").unwrap(),
+        pop3::record_failure(&conn, id, "u9", FailReason::Refused, "-ERR still gone").unwrap(),
         3
     );
     assert_eq!(
         pop3::failing(&conn, id).unwrap(),
-        [("u9".to_string(), "-ERR still gone".to_string())]
+        [Failing {
+            uidl: "u9".into(),
+            reason: FailReason::Refused,
+            words: "-ERR still gone".into(),
+            sender: None,
+            subject: None,
+        }]
     );
     assert_eq!(pop3::accounts_failing(&conn).unwrap(), [id]);
     pop3::mark_downloaded(&conn, id, "u9", "pop3/u9", 10).unwrap();
     assert!(
         pop3::failing(&conn, id).unwrap().is_empty(),
         "a download clears the count"
+    );
+}
+
+#[test]
+fn a_failure_keeps_its_latest_reason_and_the_message_named_once_known() {
+    let (conn, id) = pop3_account(RemoveSetting::Never);
+    pop3::record_failure(&conn, id, "u9", FailReason::Refused, "-ERR busy").unwrap();
+    pop3::record_failure(&conn, id, "u9", FailReason::TooLarge, "").unwrap();
+    pop3::record_failure(&conn, id, "u9", FailReason::TooLarge, "").unwrap();
+    pop3::name_failure(&conn, id, "u9", Some("Ana Lima"), Some("Photos")).unwrap();
+    assert_eq!(
+        pop3::failing(&conn, id).unwrap(),
+        [Failing {
+            uidl: "u9".into(),
+            reason: FailReason::TooLarge,
+            words: String::new(),
+            sender: Some("Ana Lima".into()),
+            subject: Some("Photos".into()),
+        }]
+    );
+    assert_eq!(
+        pop3::failure_reasons(&conn, id, &uidls(&["u1", "u9"])).unwrap(),
+        [("u9".to_string(), FailReason::TooLarge)]
     );
 }
 

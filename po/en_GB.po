@@ -1760,223 +1760,251 @@ msgstr "From {senders}"
 msgid "Open"
 msgstr "Open"
 
-#: app/src/offered.rs:235 app/src/ui/window/shortcuts.rs:446
+#: app/src/offered.rs:236 app/src/ui/window/shortcuts.rs:446
 msgid "Labels"
 msgstr "Labels"
 
-#: app/src/offered.rs:236
+#: app/src/offered.rs:237
 msgid "Move to folder"
 msgstr "Move to folder"
 
-#: app/src/offered.rs:242
+#: app/src/offered.rs:243
 msgid "Labels…"
 msgstr "Labels…"
 
-#: app/src/offered.rs:243
+#: app/src/offered.rs:244
 msgid "Move to Folder…"
 msgstr "Move to Folder…"
 
-#: app/src/offered.rs:250
+#: app/src/offered.rs:251
 msgid "Labels (L)"
 msgstr "Labels (L)"
 
-#: app/src/offered.rs:251
+#: app/src/offered.rs:252
 msgid "Move to Folder (L)"
 msgstr "Move to Folder (L)"
 
-#: app/src/offered.rs:268
+#: app/src/offered.rs:269
 msgid "New Label…"
 msgstr "New Label…"
 
-#: app/src/offered.rs:269
+#: app/src/offered.rs:270
 msgid "New Folder…"
 msgstr "New Folder…"
 
-#: app/src/offered.rs:277
+#: app/src/offered.rs:278
 msgid "New Label Inside…"
 msgstr "New Label Inside…"
 
-#: app/src/offered.rs:278
+#: app/src/offered.rs:279
 msgid "New Folder Inside…"
 msgstr "New Folder Inside…"
 
-#: app/src/offered.rs:285
+#: app/src/offered.rs:286
 msgid "Label Options for {name}"
 msgstr "Label Options for {name}"
 
-#: app/src/offered.rs:286
+#: app/src/offered.rs:287
 msgid "Folder Options for {name}"
 msgstr "Folder Options for {name}"
 
-#: app/src/offered.rs:293
+#: app/src/offered.rs:294
 msgid "Label options"
 msgstr "Label options"
 
-#: app/src/offered.rs:294
+#: app/src/offered.rs:295
 msgid "Folder options"
 msgstr "Folder options"
 
-#: app/src/offered.rs:301
+#: app/src/offered.rs:302
 msgid "A label cannot go inside a label nested under it"
 msgstr "A label cannot go inside a label nested under it"
 
-#: app/src/offered.rs:302
+#: app/src/offered.rs:303
 msgid "A folder cannot go inside a folder nested under it"
 msgstr "A folder cannot go inside a folder nested under it"
 
-#: app/src/offered.rs:310
+#: app/src/offered.rs:311
 msgid "There is a label called “{name}” already"
 msgstr "There is a label called “{name}” already"
 
-#: app/src/offered.rs:312
+#: app/src/offered.rs:313
 msgid "There is a folder called “{name}” already"
 msgstr "There is a folder called “{name}” already"
 
-#: app/src/offered.rs:320
+#: app/src/offered.rs:321
 msgid "New Label"
 msgstr "New Label"
 
-#: app/src/offered.rs:321
+#: app/src/offered.rs:322
 msgid "New Folder"
 msgstr "New Folder"
 
-#: app/src/offered.rs:329
+#: app/src/offered.rs:330
 msgid "Could not create the label: {reason}"
 msgstr "Could not create the label: {reason}"
 
-#: app/src/offered.rs:330
+#: app/src/offered.rs:331
 msgid "Could not create the folder: {reason}"
 msgstr "Could not create the folder: {reason}"
 
-#: app/src/offered.rs:337
+#: app/src/offered.rs:338
 msgid "Open or select mail to label it."
 msgstr "Open or select mail to label it."
 
-#: app/src/offered.rs:338
+#: app/src/offered.rs:339
 msgid "Open or select mail to move it."
 msgstr "Open or select mail to move it."
 
-#: app/src/offered.rs:346
+#: app/src/offered.rs:347
 msgid "Select mail from one account to label it."
 msgstr "Select mail from one account to label it."
 
-#: app/src/offered.rs:347
+#: app/src/offered.rs:348
 msgid "Select mail from one account to move it."
 msgstr "Select mail from one account to move it."
 
-#: app/src/offered.rs:353
+#: app/src/offered.rs:354
 msgid "Rename Label"
 msgstr "Rename Label"
 
-#: app/src/offered.rs:354
+#: app/src/offered.rs:355
 msgid "Rename Folder"
 msgstr "Rename Folder"
 
-#: app/src/offered.rs:360
+#: app/src/offered.rs:361
 msgid "Labels nested under it move along."
 msgstr "Labels nested under it move along."
 
-#: app/src/offered.rs:361
+#: app/src/offered.rs:362
 msgid "Folders nested under it move along."
 msgstr "Folders nested under it move along."
 
-#: app/src/offered.rs:369
+#: app/src/offered.rs:370
 msgid "Could not rename the label: {reason}"
 msgstr "Could not rename the label: {reason}"
 
-#: app/src/offered.rs:370
+#: app/src/offered.rs:371
 msgid "Could not rename the folder: {reason}"
 msgstr "Could not rename the folder: {reason}"
 
-#: app/src/offered.rs:380
+#: app/src/offered.rs:381
 msgid "Its mail stays in Gmail, without the label. Nested labels stay too."
 msgstr "Its mail stays in Gmail, without the label. Nested labels stay too."
 
-#: app/src/offered.rs:382
+#: app/src/offered.rs:383
 msgid "The mail in the folder is deleted with it."
 msgstr "The mail in the folder is deleted with it."
 
-#: app/src/offered.rs:390
+#: app/src/offered.rs:391
 msgid "Could not delete the label: {reason}"
 msgstr "Could not delete the label: {reason}"
 
-#: app/src/offered.rs:391
+#: app/src/offered.rs:392
 msgid "Could not delete the folder: {reason}"
 msgstr "Could not delete the folder: {reason}"
 
-#: app/src/offered.rs:398
+#: app/src/offered.rs:399
 msgid "This account has no labels yet."
 msgstr "This account has no labels yet."
 
-#: app/src/offered.rs:399
+#: app/src/offered.rs:400
 msgid "This account has no folders yet."
 msgstr "This account has no folders yet."
 
-#: app/src/offered.rs:413
+#: app/src/offered.rs:414
 msgid "Your organization does not allow Penguin Mail to use this calendar."
 msgstr "Your organisation does not allow Penguin Mail to use this calendar."
 
-#: app/src/offered.rs:416
+#: app/src/offered.rs:417
 msgid "Your organization does not allow Penguin Mail to read these contacts."
 msgstr "Your organisation does not allow Penguin Mail to read these contacts."
 
-#: app/src/offered.rs:419
+#: app/src/offered.rs:420
 msgid "Your organization does not allow Penguin Mail to change these rules."
 msgstr "Your organisation does not allow Penguin Mail to change these rules."
 
-#: app/src/offered.rs:422
+#: app/src/offered.rs:423
 msgid "Your organization does not allow Penguin Mail to change the automatic reply."
 msgstr "Your organisation does not allow Penguin Mail to change the automatic reply."
 
-#: app/src/offered.rs:425
+#: app/src/offered.rs:426
 msgid "Penguin Mail found no calendar server for {provider}."
 msgstr "Penguin Mail found no calendar server for {provider}."
 
-#: app/src/offered.rs:428
+#: app/src/offered.rs:429
 msgid "Penguin Mail found no contacts server for {provider}."
 msgstr "Penguin Mail found no contacts server for {provider}."
 
-#: app/src/offered.rs:431
+#: app/src/offered.rs:432
 msgid "{provider} cannot send automatic replies over POP3."
 msgstr "{provider} cannot send automatic replies over POP3."
 
-#: app/src/offered.rs:434
+#: app/src/offered.rs:435
 msgid "{provider} cannot send automatic replies."
 msgstr "{provider} cannot send automatic replies."
 
-#: app/src/offered.rs:436
+#: app/src/offered.rs:437
 msgid "{provider} has no calendar that other apps can reach."
 msgstr "{provider} has no calendar that other apps can reach."
 
-#: app/src/offered.rs:438
+#: app/src/offered.rs:439
 msgid "{provider} keeps no contacts that other apps can reach."
 msgstr "{provider} keeps no contacts that other apps can reach."
 
-#: app/src/offered.rs:440
+#: app/src/offered.rs:441
 msgid "{provider} has no rules that other apps can change."
 msgstr "{provider} has no rules that other apps can change."
 
-#: app/src/offered.rs:442
+#: app/src/offered.rs:443
 msgid "{provider} has no automatic reply that other apps can change."
 msgstr "{provider} has no automatic reply that other apps can change."
 
-#: app/src/offered.rs:445
+#: app/src/offered.rs:446
 msgid "{provider} cannot delete mail for good. Delete moves it to the Trash."
 msgstr "{provider} cannot delete mail for good. Delete moves it to the Trash."
 
-#: app/src/offered.rs:447
+#: app/src/offered.rs:448
 msgid "{provider} does not sort the inbox into categories."
 msgstr "{provider} does not sort the inbox into categories."
 
-#: app/src/offered.rs:475
+#: app/src/offered.rs:476
 msgid "{address}: {reason}"
 msgstr "{address}: {reason}"
 
-#: app/src/offered.rs:488
+#: app/src/offered.rs:491
+msgid "The server would not hand it over."
+msgstr "The server would not hand it over."
+
+#: app/src/offered.rs:493
+msgid "The message is larger than Penguin Mail downloads."
+msgstr "The message is larger than Penguin Mail downloads."
+
+#: app/src/offered.rs:496
+msgid "Penguin Mail could not read the server's answer."
+msgstr "Penguin Mail could not read the server's answer."
+
+#: app/src/offered.rs:499
+msgid "The connection closed while the message downloaded."
+msgstr "The connection closed while the message downloaded."
+
+#: app/src/offered.rs:505
+msgid "“{subject}” from {sender}: {words}"
+msgstr "“{subject}” from {sender}: {words}"
+
+#: app/src/offered.rs:509
+msgid "“{subject}”: {words}"
+msgstr "“{subject}”: {words}"
+
+#: app/src/offered.rs:513
+msgid "A message from {sender}: {words}"
+msgstr "A message from {sender}: {words}"
+
+#: app/src/offered.rs:517
 msgid "Message {number}: {words}"
 msgstr "Message {number}: {words}"
 
-#: app/src/offered.rs:503
+#: app/src/offered.rs:533
 msgid "Mail from {address} is kept only on this computer; back up this file to keep it."
 msgstr "Mail from {address} is kept only on this computer; back up this file to keep it."
 
@@ -8837,10 +8865,6 @@ msgstr "Is unread"
 msgid "Is flagged"
 msgstr "Is flagged"
 
-#: sync/src/account/pop3.rs:221
-msgid "The message is larger than Penguin Mail downloads."
-msgstr "The message is larger than Penguin Mail downloads."
-
 #: sync/src/account/writes.rs:756
 msgid "{provider} is busy. Still working on {conversations}."
 msgstr "{provider} is busy. Still working on {conversations}."
@@ -9155,11 +9179,11 @@ msgstr "Microsoft cannot send a signed or encrypted message larger than 3 MB. Ma
 msgid "Outlook's rules cannot do that."
 msgstr "Outlook's rules cannot do that."
 
-#: sync/src/services/pop3/mod.rs:350
+#: sync/src/services/pop3/mod.rs:338
 msgid "Penguin Mail keeps the names of Inbox, Sent, Drafts, Trash, Junk and Archive."
 msgstr "Penguin Mail keeps the names of Inbox, Sent, Drafts, Trash, Junk and Archive."
 
-#: sync/src/services/pop3/mod.rs:366
+#: sync/src/services/pop3/mod.rs:354
 msgid "Penguin Mail keeps Inbox, Sent, Drafts, Trash, Junk and Archive."
 msgstr "Penguin Mail keeps Inbox, Sent, Drafts, Trash, Junk and Archive."
 

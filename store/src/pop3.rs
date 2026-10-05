@@ -195,31 +195,120 @@ pub fn forget_gone(
     }
 }
 
-/// Counts one refused RETR of `uidl` with the server's words, and answers
-/// how many there have been.
+/// Why a message did not download. Stored as a code, so the window shows
+/// it in the language it runs in.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum FailReason {
+    /// The server answered `-ERR`, in the words kept beside it.
+    Refused,
+    /// `LIST` or the answer itself was past what Penguin Mail reads.
+    TooLarge,
+    /// The server's answer was not POP3.
+    Unreadable,
+    /// The connection dropped while the message came down.
+    Dropped,
+}
+
+impl FailReason {
+    fn code(self) -> &'static str {
+        match self {
+            FailReason::Refused => "refused",
+            FailReason::TooLarge => "too_large",
+            FailReason::Unreadable => "unreadable",
+            FailReason::Dropped => "dropped",
+        }
+    }
+
+    fn from_code(code: &str) -> FailReason {
+        match code {
+            "too_large" => FailReason::TooLarge,
+            "unreadable" => FailReason::Unreadable,
+            "dropped" => FailReason::Dropped,
+            _ => FailReason::Refused,
+        }
+    }
+}
+
+/// A message that failed [`SHOWN_AFTER`] times or more.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Failing {
+    pub uidl: String,
+    /// Why it failed the last time.
+    pub reason: FailReason,
+    /// The server's words for a refusal; empty for the other reasons.
+    pub words: String,
+    /// Who sent it and its subject, once a `TOP` has read its headers.
+    pub sender: Option<String>,
+    pub subject: Option<String>,
+}
+
+/// Counts one failed RETR of `uidl`, keeping why and, for a refusal, the
+/// server's words. Answers how many there have been.
 pub fn record_failure(
     conn: &Connection,
     account_id: AccountId,
     uidl: &str,
-    error: &str,
+    reason: FailReason,
+    words: &str,
 ) -> Result<i64> {
     Ok(conn.query_row(
-        "INSERT INTO pop3_failures (account_id, uidl, failures, last_error) VALUES (?1, ?2, 1, ?3) \
-         ON CONFLICT (account_id, uidl) DO UPDATE SET failures = failures + 1, last_error = excluded.last_error \
+        "INSERT INTO pop3_failures (account_id, uidl, failures, last_error, reason) VALUES (?1, ?2, 1, ?3, ?4) \
+         ON CONFLICT (account_id, uidl) DO UPDATE SET failures = failures + 1, \
+         last_error = excluded.last_error, reason = excluded.reason \
          RETURNING failures",
-        params![account_id, uidl, error],
+        params![account_id, uidl, words, reason.code()],
         |row| row.get(0),
     )?)
 }
 
-/// The UIDLs refused [`SHOWN_AFTER`] times or more, each with the server's
-/// last words, for the account's menu.
-pub fn failing(conn: &Connection, account_id: AccountId) -> Result<Vec<(String, String)>> {
+/// Keeps who sent the failing message `uidl` and its subject, read from
+/// its headers, so the account's menu can name it.
+pub fn name_failure(
+    conn: &Connection,
+    account_id: AccountId,
+    uidl: &str,
+    sender: Option<&str>,
+    subject: Option<&str>,
+) -> Result<()> {
+    conn.execute(
+        "UPDATE pop3_failures SET sender = ?3, subject = ?4 WHERE account_id = ?1 AND uidl = ?2",
+        params![account_id, uidl, sender, subject],
+    )?;
+    Ok(())
+}
+
+/// The UIDLs among `uidls` that have failed before, each with why it
+/// failed the last time, in UIDL order.
+pub fn failure_reasons(
+    conn: &Connection,
+    account_id: AccountId,
+    uidls: &[String],
+) -> Result<Vec<(String, FailReason)>> {
     let mut stmt = conn.prepare_cached(
-        "SELECT uidl, last_error FROM pop3_failures WHERE account_id = ?1 AND failures >= ?2 ORDER BY uidl",
+        "SELECT uidl, reason FROM pop3_failures \
+         WHERE account_id = ?1 AND uidl IN (SELECT value FROM json_each(?2)) ORDER BY uidl",
+    )?;
+    let rows = stmt.query_map(params![account_id, json(uidls)], |row| {
+        Ok((row.get(0)?, FailReason::from_code(&row.get::<_, String>(1)?)))
+    })?;
+    Ok(rows.collect::<rusqlite::Result<_>>()?)
+}
+
+/// The messages that failed [`SHOWN_AFTER`] times or more, for the
+/// account's menu.
+pub fn failing(conn: &Connection, account_id: AccountId) -> Result<Vec<Failing>> {
+    let mut stmt = conn.prepare_cached(
+        "SELECT uidl, reason, last_error, sender, subject FROM pop3_failures \
+         WHERE account_id = ?1 AND failures >= ?2 ORDER BY uidl",
     )?;
     let rows = stmt.query_map(params![account_id, SHOWN_AFTER], |row| {
-        Ok((row.get(0)?, row.get(1)?))
+        Ok(Failing {
+            uidl: row.get(0)?,
+            reason: FailReason::from_code(&row.get::<_, String>(1)?),
+            words: row.get(2)?,
+            sender: row.get(3)?,
+            subject: row.get(4)?,
+        })
     })?;
     Ok(rows.collect::<rusqlite::Result<_>>()?)
 }
