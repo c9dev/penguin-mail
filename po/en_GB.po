@@ -692,7 +692,7 @@ msgid "Block {address}? Their future mail goes straight to the Trash."
 msgstr "Block {address}? Their future mail goes straight to the Trash."
 
 #: app/src/assistant/run.rs:1315 app/src/assistant/run/calendar.rs:217
-#: app/src/assistant/run/calendar.rs:695
+#: app/src/assistant/run/calendar.rs:697
 msgid "%a %-d %b"
 msgstr "%a %-d %b"
 
@@ -744,7 +744,7 @@ msgstr "Move mail from {sender} to {category} in {account}, and send their futur
 msgid "Move mail from {sender} to {category} in {account}, and add a {provider} rule for their future mail?"
 msgstr "Move mail from {sender} to {category} in {account}, and add a {provider} rule for their future mail?"
 
-#: app/src/assistant/run/calendar.rs:223 app/src/assistant/run/calendar.rs:699
+#: app/src/assistant/run/calendar.rs:223 app/src/assistant/run/calendar.rs:701
 msgid "%a %-d %b %H:%M"
 msgstr "%a %-d %b %H:%M"
 
@@ -753,59 +753,59 @@ msgstr "%a %-d %b %H:%M"
 msgid "{first} to {last}"
 msgstr "{first} to {last}"
 
-#: app/src/assistant/run/calendar.rs:471
+#: app/src/assistant/run/calendar.rs:472
 msgid "Add “{title}” to the calendar “{calendar}” for {account}, {when}?"
 msgstr "Add “{title}” to the calendar “{calendar}” for {account}, {when}?"
 
-#: app/src/assistant/run/calendar.rs:480
+#: app/src/assistant/run/calendar.rs:481
 msgid "Add “{title}” to the calendar for {account}, {when}?"
 msgstr "Add “{title}” to the calendar for {account}, {when}?"
 
-#: app/src/assistant/run/calendar.rs:487
-msgid "Google sends an invitation to {guests}."
-msgstr "Google sends an invitation to {guests}."
+#: app/src/assistant/run/calendar.rs:488
+msgid "Guests get an invitation: {guests}."
+msgstr "Guests get an invitation: {guests}."
 
-#: app/src/assistant/run/calendar.rs:540
+#: app/src/assistant/run/calendar.rs:542
 msgid "Title: {value}"
 msgstr "Title: {value}"
 
-#: app/src/assistant/run/calendar.rs:543
+#: app/src/assistant/run/calendar.rs:545
 msgid "Starts: {value}"
 msgstr "Starts: {value}"
 
-#: app/src/assistant/run/calendar.rs:546
+#: app/src/assistant/run/calendar.rs:548
 msgid "Ends: {value}"
 msgstr "Ends: {value}"
 
-#: app/src/assistant/run/calendar.rs:549
+#: app/src/assistant/run/calendar.rs:551
 msgid "Where: {value}"
 msgstr "Where: {value}"
 
-#: app/src/assistant/run/calendar.rs:552
+#: app/src/assistant/run/calendar.rs:554
 msgid "Guests: {value}"
 msgstr "Guests: {value}"
 
-#: app/src/assistant/run/calendar.rs:556
+#: app/src/assistant/run/calendar.rs:558
 msgid "Description: {value}"
 msgstr "Description: {value}"
 
-#: app/src/assistant/run/calendar.rs:561
+#: app/src/assistant/run/calendar.rs:563
 msgid "Change “{title}” on the calendar for {account}? Its guests are told."
 msgstr "Change “{title}” on the calendar for {account}? Its guests are told."
 
-#: app/src/assistant/run/calendar.rs:565
+#: app/src/assistant/run/calendar.rs:567
 msgid "Change an event on the calendar for {account}? Its guests are told."
 msgstr "Change an event on the calendar for {account}? Its guests are told."
 
-#: app/src/assistant/run/calendar.rs:592
+#: app/src/assistant/run/calendar.rs:594
 msgid "Delete “{title}” from the calendar for {account}? Its guests are told."
 msgstr "Delete “{title}” from the calendar for {account}? Its guests are told."
 
-#: app/src/assistant/run/calendar.rs:596
+#: app/src/assistant/run/calendar.rs:598
 msgid "Delete an event from the calendar for {account}? Its guests are told."
 msgstr "Delete an event from the calendar for {account}? Its guests are told."
 
-#: app/src/assistant/run/calendar.rs:632
+#: app/src/assistant/run/calendar.rs:634
 msgid "Answer {answer} to “{title}”?"
 msgstr "Answer {answer} to “{title}”?"
 
@@ -9188,7 +9188,7 @@ msgid_plural "{accounts} will get new labels."
 msgstr[0] "{accounts} will get a new label."
 msgstr[1] "{accounts} will get new labels."
 
-#: sync/src/calendar_copy.rs:1486
+#: sync/src/calendar_copy.rs:1502
 msgid "Google Calendar offers out of office and focus time only on some work and school accounts ({reason})"
 msgstr "Google Calendar offers out of office and focus time only on some work and school accounts ({reason})"
 
@@ -9382,23 +9382,23 @@ msgstr "The keyring refused: {reason}"
 msgid "A rule on this computer forwarded the attached message from {address}."
 msgstr "A rule on this computer forwarded the attached message from {address}."
 
-#: sync/src/services/caldav.rs:481
+#: sync/src/services/caldav.rs:438
 msgid "An event needs an ID to be imported."
 msgstr "An event needs an ID to be imported."
 
-#: sync/src/services/caldav.rs:502
+#: sync/src/services/caldav.rs:459
 msgid "A CalDAV calendar cannot store attached files."
 msgstr "A CalDAV calendar cannot store attached files."
 
-#: sync/src/services/caldav.rs:506
+#: sync/src/services/caldav.rs:463
 msgid "A CalDAV calendar has no files to share."
 msgstr "A CalDAV calendar has no files to share."
 
-#: sync/src/services/caldav.rs:536
+#: sync/src/services/caldav.rs:493
 msgid "You are not a guest of this event."
 msgstr "You are not a guest of this event."
 
-#: sync/src/services/caldav.rs:540
+#: sync/src/services/caldav.rs:497
 msgid "Penguin Mail cannot change the calendar list of a CalDAV server."
 msgstr "Penguin Mail cannot change the calendar list of a CalDAV server."
 
@@ -9414,37 +9414,37 @@ msgstr "The message names nobody to send it to."
 msgid "This rule is read-only, so Penguin Mail leaves it as it is."
 msgstr "This rule is read-only, so Penguin Mail leaves it as it is."
 
-#: sync/src/services/microsoft/calendar.rs:328
+#: sync/src/services/microsoft/calendar.rs:307
 msgid "Outlook cannot repeat an event that way."
 msgstr "Outlook cannot repeat an event that way."
 
-#: sync/src/services/microsoft/calendar.rs:738
+#: sync/src/services/microsoft/calendar.rs:564
 msgid "Outlook cannot attach a file to an event."
 msgstr "Outlook cannot attach a file to an event."
 
-#: sync/src/services/microsoft/calendar.rs:742
+#: sync/src/services/microsoft/calendar.rs:568
 msgid "Outlook has no files to share."
 msgstr "Outlook has no files to share."
 
-#: sync/src/services/microsoft/calendar.rs:751
+#: sync/src/services/microsoft/calendar.rs:577
 msgid "Outlook cannot move an event to another calendar."
 msgstr "Outlook cannot move an event to another calendar."
 
 #. What Outlook has no call for is a refusal, not `Unsupported`:
 #. that answer would keep the change in the queue for good.
-#: sync/src/services/microsoft/calendar.rs:785
+#: sync/src/services/microsoft/calendar.rs:611
 msgid "Outlook cannot take a calendar off the list."
 msgstr "Outlook cannot take a calendar off the list."
 
-#: sync/src/services/microsoft/calendar.rs:786
+#: sync/src/services/microsoft/calendar.rs:612
 msgid "Outlook cannot hide a calendar on all your devices."
 msgstr "Outlook cannot hide a calendar on all your devices."
 
-#: sync/src/services/microsoft/calendar.rs:787
+#: sync/src/services/microsoft/calendar.rs:613
 msgid "Outlook cannot subscribe to a calendar by its address."
 msgstr "Outlook cannot subscribe to a calendar by its address."
 
-#: sync/src/services/microsoft/calendar.rs:788
+#: sync/src/services/microsoft/calendar.rs:614
 msgid "Outlook has no other calendars to add."
 msgstr "Outlook has no other calendars to add."
 

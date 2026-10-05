@@ -826,7 +826,7 @@ msgid "Block {address}? Their future mail goes straight to the Trash."
 msgstr "Bloquear {address}? O correio futuro vai direto para o lixo."
 
 #: app/src/assistant/run.rs:1315 app/src/assistant/run/calendar.rs:217
-#: app/src/assistant/run/calendar.rs:695
+#: app/src/assistant/run/calendar.rs:697
 msgid "%a %-d %b"
 msgstr "%a %-d %b"
 
@@ -886,7 +886,7 @@ msgstr ""
 "Mover o correio de {sender} para {category} em {account} e criar uma regra "
 "do {provider} para o correio futuro?"
 
-#: app/src/assistant/run/calendar.rs:223 app/src/assistant/run/calendar.rs:699
+#: app/src/assistant/run/calendar.rs:223 app/src/assistant/run/calendar.rs:701
 msgid "%a %-d %b %H:%M"
 msgstr "%a %-d %b %H:%M"
 
@@ -895,63 +895,63 @@ msgstr "%a %-d %b %H:%M"
 msgid "{first} to {last}"
 msgstr "{first} a {last}"
 
-#: app/src/assistant/run/calendar.rs:471
+#: app/src/assistant/run/calendar.rs:472
 msgid "Add “{title}” to the calendar “{calendar}” for {account}, {when}?"
 msgstr "Adicionar “{title}” ao calendário “{calendar}” de {account}, {when}?"
 
-#: app/src/assistant/run/calendar.rs:480
+#: app/src/assistant/run/calendar.rs:481
 msgid "Add “{title}” to the calendar for {account}, {when}?"
 msgstr "Adicionar “{title}” ao calendário de {account}, {when}?"
 
-#: app/src/assistant/run/calendar.rs:487
-msgid "Google sends an invitation to {guests}."
-msgstr "A Google envia um convite a {guests}."
+#: app/src/assistant/run/calendar.rs:488
+msgid "Guests get an invitation: {guests}."
+msgstr "Os convidados recebem um convite: {guests}."
 
-#: app/src/assistant/run/calendar.rs:540
+#: app/src/assistant/run/calendar.rs:542
 msgid "Title: {value}"
 msgstr "Título: {value}"
 
-#: app/src/assistant/run/calendar.rs:543
+#: app/src/assistant/run/calendar.rs:545
 msgid "Starts: {value}"
 msgstr "Começa: {value}"
 
-#: app/src/assistant/run/calendar.rs:546
+#: app/src/assistant/run/calendar.rs:548
 msgid "Ends: {value}"
 msgstr "Termina: {value}"
 
-#: app/src/assistant/run/calendar.rs:549
+#: app/src/assistant/run/calendar.rs:551
 msgid "Where: {value}"
 msgstr "Local: {value}"
 
-#: app/src/assistant/run/calendar.rs:552
+#: app/src/assistant/run/calendar.rs:554
 msgid "Guests: {value}"
 msgstr "Convidados: {value}"
 
-#: app/src/assistant/run/calendar.rs:556
+#: app/src/assistant/run/calendar.rs:558
 msgid "Description: {value}"
 msgstr "Descrição: {value}"
 
-#: app/src/assistant/run/calendar.rs:561
+#: app/src/assistant/run/calendar.rs:563
 msgid "Change “{title}” on the calendar for {account}? Its guests are told."
 msgstr ""
 "Alterar “{title}” no calendário de {account}? Os convidados são avisados."
 
-#: app/src/assistant/run/calendar.rs:565
+#: app/src/assistant/run/calendar.rs:567
 msgid "Change an event on the calendar for {account}? Its guests are told."
 msgstr ""
 "Alterar um evento no calendário de {account}? Os convidados são avisados."
 
-#: app/src/assistant/run/calendar.rs:592
+#: app/src/assistant/run/calendar.rs:594
 msgid "Delete “{title}” from the calendar for {account}? Its guests are told."
 msgstr ""
 "Eliminar “{title}” do calendário de {account}? Os convidados são avisados."
 
-#: app/src/assistant/run/calendar.rs:596
+#: app/src/assistant/run/calendar.rs:598
 msgid "Delete an event from the calendar for {account}? Its guests are told."
 msgstr ""
 "Eliminar um evento do calendário de {account}? Os convidados são avisados."
 
-#: app/src/assistant/run/calendar.rs:632
+#: app/src/assistant/run/calendar.rs:634
 msgid "Answer {answer} to “{title}”?"
 msgstr "Responder {answer} a “{title}”?"
 
@@ -9913,7 +9913,7 @@ msgid_plural "{accounts} will get new labels."
 msgstr[0] "Etiqueta nova em: {accounts}."
 msgstr[1] "Etiquetas novas em: {accounts}."
 
-#: sync/src/calendar_copy.rs:1486
+#: sync/src/calendar_copy.rs:1502
 msgid ""
 "Google Calendar offers out of office and focus time only on some work and "
 "school accounts ({reason})"
@@ -10118,23 +10118,23 @@ msgid "A rule on this computer forwarded the attached message from {address}."
 msgstr ""
 "Uma regra neste computador reencaminhou a mensagem em anexo de {address}."
 
-#: sync/src/services/caldav.rs:481
+#: sync/src/services/caldav.rs:438
 msgid "An event needs an ID to be imported."
 msgstr "Um evento precisa de um ID para ser importado."
 
-#: sync/src/services/caldav.rs:502
+#: sync/src/services/caldav.rs:459
 msgid "A CalDAV calendar cannot store attached files."
 msgstr "Um calendário CalDAV não pode guardar ficheiros anexados."
 
-#: sync/src/services/caldav.rs:506
+#: sync/src/services/caldav.rs:463
 msgid "A CalDAV calendar has no files to share."
 msgstr "Um calendário CalDAV não tem ficheiros para partilhar."
 
-#: sync/src/services/caldav.rs:536
+#: sync/src/services/caldav.rs:493
 msgid "You are not a guest of this event."
 msgstr "Não é convidado deste evento."
 
-#: sync/src/services/caldav.rs:540
+#: sync/src/services/caldav.rs:497
 msgid "Penguin Mail cannot change the calendar list of a CalDAV server."
 msgstr ""
 "O Penguin Mail não pode alterar a lista de calendários de um servidor CalDAV."
@@ -10152,38 +10152,38 @@ msgstr "A mensagem não indica a quem a enviar."
 msgid "This rule is read-only, so Penguin Mail leaves it as it is."
 msgstr "Esta regra é só de leitura, por isso o Penguin Mail deixa-a como está."
 
-#: sync/src/services/microsoft/calendar.rs:328
+#: sync/src/services/microsoft/calendar.rs:307
 msgid "Outlook cannot repeat an event that way."
 msgstr "O Outlook não consegue repetir um evento dessa forma."
 
-#: sync/src/services/microsoft/calendar.rs:738
+#: sync/src/services/microsoft/calendar.rs:564
 msgid "Outlook cannot attach a file to an event."
 msgstr "O Outlook não consegue anexar um ficheiro a um evento."
 
-#: sync/src/services/microsoft/calendar.rs:742
+#: sync/src/services/microsoft/calendar.rs:568
 msgid "Outlook has no files to share."
 msgstr "O Outlook não tem ficheiros para partilhar."
 
-#: sync/src/services/microsoft/calendar.rs:751
+#: sync/src/services/microsoft/calendar.rs:577
 msgid "Outlook cannot move an event to another calendar."
 msgstr "O Outlook não consegue mover um evento para outro calendário."
 
 #. What Outlook has no call for is a refusal, not `Unsupported`:
 #. that answer would keep the change in the queue for good.
-#: sync/src/services/microsoft/calendar.rs:785
+#: sync/src/services/microsoft/calendar.rs:611
 msgid "Outlook cannot take a calendar off the list."
 msgstr "O Outlook não consegue retirar um calendário da lista."
 
-#: sync/src/services/microsoft/calendar.rs:786
+#: sync/src/services/microsoft/calendar.rs:612
 msgid "Outlook cannot hide a calendar on all your devices."
 msgstr ""
 "O Outlook não consegue ocultar um calendário em todos os seus dispositivos."
 
-#: sync/src/services/microsoft/calendar.rs:787
+#: sync/src/services/microsoft/calendar.rs:613
 msgid "Outlook cannot subscribe to a calendar by its address."
 msgstr "O Outlook não consegue subscrever um calendário pelo endereço."
 
-#: sync/src/services/microsoft/calendar.rs:788
+#: sync/src/services/microsoft/calendar.rs:614
 msgid "Outlook has no other calendars to add."
 msgstr "O Outlook não tem outros calendários para adicionar."
 
