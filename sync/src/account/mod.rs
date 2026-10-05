@@ -5,6 +5,7 @@ mod fetch;
 mod history;
 mod labels;
 mod listed;
+mod muted;
 mod outbox;
 mod pop3;
 mod refs;

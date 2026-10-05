@@ -32,6 +32,7 @@ fn an_imap_account_files_mail_in_folders_and_threads_it_here() {
             tags: false,
             focus: false,
             local_mailboxes: false,
+            files_muted_replies: false,
         }
     );
 }

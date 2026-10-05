@@ -199,7 +199,7 @@ impl AccountSync {
 
     /// The account's tags, read from the store, where the last mailbox
     /// listing put them. A label account keeps none.
-    async fn tags(&self) -> Result<Tags, SyncError> {
+    pub(super) async fn tags(&self) -> Result<Tags, SyncError> {
         if !self.services.mail.capabilities().tags {
             return Ok(Tags::new());
         }
@@ -261,7 +261,7 @@ impl AccountSync {
     }
 
     /// The server's id for each role's mailbox.
-    fn roles(&self) -> Roles {
+    pub(super) fn roles(&self) -> Roles {
         Role::ALL
             .into_iter()
             .filter_map(|role| self.services.mail.mailbox_for(role).map(|id| (role, id)))

@@ -270,6 +270,7 @@ impl<S: Submit, P: Pop3Api> MailBackend for Pop3<S, P> {
             tags: false,
             focus: false,
             local_mailboxes: true,
+            files_muted_replies: false,
         }
     }
 

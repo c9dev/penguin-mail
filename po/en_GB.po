@@ -9033,19 +9033,19 @@ msgstr[1] "{count} seconds"
 msgid "a minute"
 msgstr "a minute"
 
-#: sync/src/actions.rs:122 sync/src/actions.rs:680
+#: sync/src/actions.rs:123 sync/src/actions.rs:681
 msgid "Change labels"
 msgstr "Change labels"
 
-#: sync/src/actions.rs:348
+#: sync/src/actions.rs:349
 msgid "Delete Forever failed: {reason}"
 msgstr "Delete Forever failed: {reason}"
 
-#: sync/src/actions.rs:572
+#: sync/src/actions.rs:573
 msgid "This mail has moved since, so Undo left it where it is."
 msgstr "This mail has moved since, so Undo left it where it is."
 
-#: sync/src/actions.rs:633 sync/src/actions.rs:687
+#: sync/src/actions.rs:634 sync/src/actions.rs:688
 msgid "Could not undo: {reason}"
 msgstr "Could not undo: {reason}"
 
@@ -9321,11 +9321,11 @@ msgstr "Outlook's rules cannot do that."
 msgid "Outlook answered but did not keep the automatic reply."
 msgstr "Outlook answered but did not keep the automatic reply."
 
-#: sync/src/services/pop3/mod.rs:338
+#: sync/src/services/pop3/mod.rs:339
 msgid "Penguin Mail keeps the names of Inbox, Sent, Drafts, Trash, Junk and Archive."
 msgstr "Penguin Mail keeps the names of Inbox, Sent, Drafts, Trash, Junk and Archive."
 
-#: sync/src/services/pop3/mod.rs:354
+#: sync/src/services/pop3/mod.rs:355
 msgid "Penguin Mail keeps Inbox, Sent, Drafts, Trash, Junk and Archive."
 msgstr "Penguin Mail keeps Inbox, Sent, Drafts, Trash, Junk and Archive."
 

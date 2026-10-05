@@ -121,6 +121,10 @@ pub struct MailCapabilities {
     /// has it, so the engine sends nothing, and nothing prunes or relists
     /// the account's mail.
     pub local_mailboxes: bool,
+    /// The server files a muted thread's replies itself, as Gmail's own
+    /// filter does. Without it the engine files each one as it arrives,
+    /// which works only while Penguin Mail runs.
+    pub files_muted_replies: bool,
 }
 
 /// How far a write got before the server refused the rest: the first
@@ -1294,6 +1298,7 @@ mod tests {
                 tags: false,
                 focus: false,
                 local_mailboxes: false,
+                files_muted_replies: true,
             }
         );
     }
