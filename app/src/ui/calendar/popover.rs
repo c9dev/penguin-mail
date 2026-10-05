@@ -139,6 +139,10 @@ pub struct EventPopover {
     /// The block the popover points at, which takes the focus back when
     /// it closes.
     anchor: glib::WeakRef<gtk::Widget>,
+    /// The block whose tooltip is off while the popover points at it,
+    /// since the tooltip shows again as soon as the pointer moves on the
+    /// block and draws over the popover.
+    hushed: glib::WeakRef<gtk::Widget>,
     /// The window root and the gesture watching for a press outside the
     /// popover, added once the popover is realized and removed when it
     /// is not, since the root does not exist before then.
@@ -455,6 +459,7 @@ impl EventPopover {
             on_mail: RefCell::new(None),
             showing: RefCell::new(None),
             anchor: glib::WeakRef::new(),
+            hushed: glib::WeakRef::new(),
             root_press: RefCell::new(None),
         });
 
@@ -465,6 +470,7 @@ impl EventPopover {
         let fallback = fallback.as_ref().downgrade();
         this.popover.connect_closed(move |_| {
             let Some(this) = weak.upgrade() else { return };
+            this.give_tooltip_back();
             let anchor = this.anchor.upgrade();
             let back = match shown::after_popover(anchor.as_ref().is_some_and(|a| a.is_mapped())) {
                 Refocus::Anchor => anchor.is_some_and(|a| a.grab_focus()),
@@ -613,6 +619,15 @@ impl EventPopover {
         this
     }
 
+    /// Turns the tooltip back on for the block the popover last pointed
+    /// at, once the popover closes or moves to another block.
+    fn give_tooltip_back(&self) {
+        if let Some(block) = self.hushed.upgrade() {
+            block.set_has_tooltip(true);
+        }
+        self.hushed.set(None);
+    }
+
     /// Shows the popover for `o`, pointed at `anchor` (the block or "N
     /// more" button pressed). `on_answer` runs when a guest picks Yes,
     /// Maybe or No, with the note they wrote; the caller asks which
@@ -749,6 +764,14 @@ impl EventPopover {
 
         self.on_answer.replace(Some(Rc::new(on_answer)));
         self.anchor.set(Some(anchor));
+        self.give_tooltip_back();
+        if anchor.has_tooltip() {
+            anchor.set_has_tooltip(false);
+            // Hides a tooltip already on screen, which the press that
+            // opened the popover does not always take down.
+            anchor.trigger_tooltip_query();
+            self.hushed.set(Some(anchor));
+        }
 
         if let Some(bounds) = anchor.compute_bounds(&self.parent) {
             let rect = gdk::Rectangle::new(
@@ -918,6 +941,37 @@ pub(crate) mod checks {
     pub fn run() {
         show_more_keeps_the_popover_short_enough_to_place();
         show_more_hands_the_focus_on_as_it_hides();
+        the_block_keeps_its_tooltip_off_the_popover();
+    }
+
+    /// The block under the pointer showed its tooltip again over the
+    /// popover it had just opened, so the block has no tooltip while its
+    /// popover is open, and gets it back once the popover closes.
+    fn the_block_keeps_its_tooltip_off_the_popover() {
+        let window = gtk::Window::new();
+        let parent = gtk::Box::new(gtk::Orientation::Vertical, 0);
+        let anchor = gtk::Button::builder().tooltip_text("Design review, 11:00 to 12:00").build();
+        let other = gtk::Button::builder().tooltip_text("Dentist, 10:00 to 10:45").build();
+        parent.append(&anchor);
+        parent.append(&other);
+        window.set_child(Some(&parent));
+        window.present();
+        let popover = EventPopover::new(&parent, &parent);
+        let event = Event { title: "Design review".to_string(), ..Event::default() };
+        let o = Occurrence { account_id: 1, event: Arc::new(event), start: 0, end: 3_600_000 };
+
+        popover.show(anchor.upcast_ref(), &o, &Calendar::default(), |_, _| {}, None, None, None);
+        assert!(!anchor.has_tooltip(), "the block's tooltip can still cover its popover");
+
+        // A press on another event moves the popover there.
+        popover.show(other.upcast_ref(), &o, &Calendar::default(), |_, _| {}, None, None, None);
+        assert!(anchor.has_tooltip(), "the first block lost its tooltip for good");
+        assert!(!other.has_tooltip());
+
+        popover.popover.popdown();
+        assert!(other.has_tooltip(), "the block lost its tooltip for good");
+        assert_eq!(anchor.tooltip_text().as_deref(), Some("Design review, 11:00 to 12:00"));
+        window.destroy();
     }
 
     /// Mutter gives a popover no more height than the monitor has, and GTK
