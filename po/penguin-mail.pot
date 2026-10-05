@@ -624,35 +624,39 @@ msgstr ""
 msgid "Not signed, so not sent: {reason}"
 msgstr ""
 
-#: app/src/app/sending.rs:258
+#: app/src/app/sending.rs:254
+msgid "Message sent"
+msgstr ""
+
+#: app/src/app/sending.rs:262
 msgid "Waiting in the Outbox. It goes out as soon as it can."
 msgstr ""
 
-#: app/src/app/sending.rs:263 app/src/app/sending.rs:268
+#: app/src/app/sending.rs:267 app/src/app/sending.rs:272
 msgid "Not sent: {reason}"
 msgstr ""
 
-#: app/src/app/sending.rs:298 app/src/app/sending.rs:311
+#: app/src/app/sending.rs:302 app/src/app/sending.rs:315
 msgid "Not scheduled: {reason}"
 msgstr ""
 
-#: app/src/app/sending.rs:304
+#: app/src/app/sending.rs:308
 msgid "Will send {when}"
 msgstr ""
 
-#: app/src/app/sending.rs:360
+#: app/src/app/sending.rs:366
 msgid "Sent {message}"
 msgstr ""
 
-#: app/src/app/sending.rs:366
+#: app/src/app/sending.rs:375
 msgid "Still in the Outbox: {message}"
 msgstr ""
 
-#: app/src/app/sending.rs:475
+#: app/src/app/sending.rs:484
 msgid "your message"
 msgstr ""
 
-#: app/src/app/sending.rs:477
+#: app/src/app/sending.rs:486
 msgid "“{subject}”"
 msgstr ""
 
@@ -1488,6 +1492,50 @@ msgstr ""
 msgid "On {date}, {sender} wrote:"
 msgstr ""
 
+#: app/src/contacts.rs:96
+msgid "from mail"
+msgstr ""
+
+#: app/src/contacts.rs:118
+msgid "{account} and {count} more"
+msgid_plural "{account} and {count} more"
+msgstr[0] ""
+msgstr[1] ""
+
+#: app/src/contacts.rs:131
+msgid "contact in {accounts}"
+msgstr ""
+
+#: app/src/contacts.rs:159
+msgid "Save {name} to contacts in {account}?"
+msgstr ""
+
+#: app/src/contacts.rs:163
+msgid "Save {count} person to contacts in {account}?"
+msgid_plural "Save {count} people to contacts in {account}?"
+msgstr[0] ""
+msgstr[1] ""
+
+#: app/src/contacts.rs:192
+msgid "Saved {name} to contacts in {account}"
+msgstr ""
+
+#: app/src/contacts.rs:196
+msgid "Saved {count} person to contacts in {account}"
+msgid_plural "Saved {count} people to contacts in {account}"
+msgstr[0] ""
+msgstr[1] ""
+
+#: app/src/contacts.rs:208
+msgid "Could not save {name} to contacts in {account}"
+msgstr ""
+
+#: app/src/contacts.rs:212
+msgid "Could not save {count} person to contacts in {account}"
+msgid_plural "Could not save {count} people to contacts in {account}"
+msgstr[0] ""
+msgstr[1] ""
+
 #: app/src/core.rs:218
 msgid ""
 "Another copy of Penguin Mail, or penguin-mail-cli sync, is syncing your "
@@ -1799,7 +1847,7 @@ msgstr ""
 #: app/src/ui/calendar/popover.rs:706 app/src/ui/calendar/scope.rs:194
 #: app/src/ui/conversation.rs:537 app/src/ui/hide_my_email.rs:288
 #: app/src/ui/queued.rs:58 app/src/ui/templates.rs:149
-#: app/src/ui/window/arrange.rs:98 app/src/ui/window/organize.rs:204
+#: app/src/ui/window/arrange.rs:106 app/src/ui/window/organize.rs:204
 msgid "Delete"
 msgstr ""
 
@@ -1822,7 +1870,7 @@ msgstr ""
 msgid "From {senders}"
 msgstr ""
 
-#: app/src/notify.rs:195 app/src/ui/window.rs:2631
+#: app/src/notify.rs:195 app/src/ui/window.rs:2632
 msgid "Open"
 msgstr ""
 
@@ -2642,7 +2690,7 @@ msgstr ""
 msgid "Could not save: {reason}"
 msgstr ""
 
-#: app/src/protection/draft.rs:200 app/src/ui/window.rs:2549
+#: app/src/protection/draft.rs:200 app/src/ui/window.rs:2550
 msgid "Could not open the draft: {reason}"
 msgstr ""
 
@@ -2728,7 +2776,7 @@ msgstr ""
 msgid "Not encrypted in transit"
 msgstr ""
 
-#: app/src/render.rs:427 app/src/ui/composer/mod.rs:1627
+#: app/src/render.rs:427 app/src/ui/composer/mod.rs:1636
 msgid "{count} attachment"
 msgid_plural "{count} attachments"
 msgstr[0] ""
@@ -2775,8 +2823,8 @@ msgstr[1] ""
 msgid "me"
 msgstr ""
 
-#: app/src/render.rs:577 app/src/ui/composer/mod.rs:443
-#: app/src/ui/composer/mod.rs:447
+#: app/src/render.rs:577 app/src/ui/composer/mod.rs:448
+#: app/src/ui/composer/mod.rs:452
 msgid "Show trimmed content"
 msgstr ""
 
@@ -2941,7 +2989,7 @@ msgstr ""
 #. The header in both spaces carries a button for this now (R12);
 #. the menu item stays too, so Ctrl+J shows here as well.
 #: app/src/settings/mod.rs:215 app/src/ui/assistant.rs:99
-#: app/src/ui/window.rs:3142
+#: app/src/ui/window.rs:3143
 msgid "Assistant"
 msgstr ""
 
@@ -3261,13 +3309,13 @@ msgstr ""
 msgid "Open Penguin Mail"
 msgstr ""
 
-#: app/src/tray.rs:207 app/src/ui/composer/mod.rs:233
-#: app/src/ui/composer/mod.rs:499 app/src/ui/composer/mod.rs:1201
+#: app/src/tray.rs:207 app/src/ui/composer/mod.rs:234
+#: app/src/ui/composer/mod.rs:504 app/src/ui/composer/mod.rs:1210
 #: app/src/ui/contact_card.rs:146
 msgid "New Message"
 msgstr ""
 
-#: app/src/tray.rs:208 app/src/ui/sidebar.rs:1605 app/src/ui/window.rs:3145
+#: app/src/tray.rs:208 app/src/ui/sidebar.rs:1605 app/src/ui/window.rs:3146
 msgid "Check for Mail"
 msgstr ""
 
@@ -3285,7 +3333,7 @@ msgstr ""
 msgid "Check for Updates"
 msgstr ""
 
-#: app/src/tray.rs:224 app/src/ui/window.rs:3157
+#: app/src/tray.rs:224 app/src/ui/window.rs:3158
 #: app/src/ui/window/shortcuts.rs:625
 msgid "Quit"
 msgstr ""
@@ -3310,7 +3358,7 @@ msgstr ""
 msgid "License"
 msgstr ""
 
-#: app/src/ui/about.rs:201 app/src/ui/window.rs:3156
+#: app/src/ui/about.rs:201 app/src/ui/window.rs:3157
 msgid "About Penguin Mail"
 msgstr ""
 
@@ -3358,11 +3406,11 @@ msgstr ""
 msgid "The update to {version} failed"
 msgstr ""
 
-#: app/src/ui/add_account.rs:396 app/src/ui/window.rs:1222
+#: app/src/ui/add_account.rs:396 app/src/ui/window.rs:1223
 msgid "Copy Command"
 msgstr ""
 
-#: app/src/ui/add_account.rs:404 app/src/ui/window.rs:1227
+#: app/src/ui/add_account.rs:404 app/src/ui/window.rs:1228
 msgid "Command copied"
 msgstr ""
 
@@ -3450,19 +3498,19 @@ msgstr ""
 #: app/src/ui/add_account.rs:797 app/src/ui/assistant_mcp_prefs.rs:347
 #: app/src/ui/calendar/editor.rs:167 app/src/ui/calendar/manage.rs:184
 #: app/src/ui/calendar/manage.rs:303 app/src/ui/calendar/manage.rs:346
-#: app/src/ui/calendar/scope.rs:174 app/src/ui/composer/mod.rs:1495
-#: app/src/ui/composer/mod.rs:1564 app/src/ui/composer/mod.rs:1882
-#: app/src/ui/composer/mod.rs:2315 app/src/ui/confirm.rs:29
+#: app/src/ui/calendar/scope.rs:174 app/src/ui/composer/mod.rs:1504
+#: app/src/ui/composer/mod.rs:1573 app/src/ui/composer/mod.rs:1891
+#: app/src/ui/composer/mod.rs:2324 app/src/ui/confirm.rs:29
 #: app/src/ui/rules.rs:437 app/src/ui/rules.rs:578
 #: app/src/ui/smart_editor.rs:150 app/src/ui/templates.rs:239
 #: app/src/ui/unsubscribe.rs:95 app/src/ui/vacation.rs:45 app/src/ui/when.rs:52
-#: app/src/ui/window/arrange.rs:138 app/src/ui/window/images.rs:101
+#: app/src/ui/window/arrange.rs:146 app/src/ui/window/images.rs:101
 #: app/src/ui/window/organize.rs:73 app/src/ui/window/organize.rs:122
 msgid "Cancel"
 msgstr ""
 
 #: app/src/ui/add_account.rs:885 app/src/ui/add_account.rs:978
-#: app/src/ui/add_account.rs:2250 app/src/ui/window.rs:1176
+#: app/src/ui/add_account.rs:2250 app/src/ui/window.rs:1177
 msgid "Sign In"
 msgstr ""
 
@@ -3546,7 +3594,7 @@ msgstr ""
 #: app/src/ui/add_account.rs:1147 app/src/ui/calendar/editor.rs:1499
 #: app/src/ui/calendar/sidebar.rs:917 app/src/ui/contacts_prefs.rs:336
 #: app/src/ui/invitation.rs:461 app/src/ui/permission.rs:42
-#: app/src/ui/permission.rs:66 app/src/ui/window.rs:1286
+#: app/src/ui/permission.rs:66 app/src/ui/window.rs:1287
 msgid "Grant Access"
 msgstr ""
 
@@ -3693,7 +3741,7 @@ msgid ""
 "from it safely."
 msgstr ""
 
-#: app/src/ui/assistant.rs:31 app/src/ui/window.rs:3224
+#: app/src/ui/assistant.rs:31 app/src/ui/window.rs:3225
 msgid "Summarize this conversation"
 msgstr ""
 
@@ -3729,7 +3777,7 @@ msgstr ""
 
 #: app/src/ui/assistant.rs:156 app/src/ui/assistant.rs:160
 #: app/src/ui/assistant.rs:446 app/src/ui/calendar/scope.rs:195
-#: app/src/ui/composer/mod.rs:250 app/src/ui/window/shortcuts.rs:488
+#: app/src/ui/composer/mod.rs:251 app/src/ui/window/shortcuts.rs:488
 msgid "Send"
 msgstr ""
 
@@ -3829,8 +3877,8 @@ msgid "Edit {server}"
 msgstr ""
 
 #: app/src/ui/assistant_mcp_prefs.rs:121 app/src/ui/calendar/editor.rs:1532
-#: app/src/ui/composer/mod.rs:1663 app/src/ui/composer/recipients.rs:304
-#: app/src/ui/window.rs:2940
+#: app/src/ui/composer/mod.rs:1672 app/src/ui/composer/recipients.rs:315
+#: app/src/ui/window.rs:2941
 msgid "Remove"
 msgstr ""
 
@@ -3868,7 +3916,7 @@ msgid ""
 msgstr ""
 
 #: app/src/ui/assistant_mcp_prefs.rs:254 app/src/ui/calendar/manage.rs:277
-#: app/src/ui/composer/mod.rs:2310 app/src/ui/smart_editor.rs:37
+#: app/src/ui/composer/mod.rs:2319 app/src/ui/smart_editor.rs:37
 #: app/src/ui/templates.rs:190
 msgid "Name"
 msgstr ""
@@ -3904,10 +3952,10 @@ msgstr ""
 
 #: app/src/ui/assistant_mcp_prefs.rs:341 app/src/ui/calendar/editor.rs:163
 #: app/src/ui/calendar/quick.rs:103 app/src/ui/calendar/scope.rs:193
-#: app/src/ui/composer/mod.rs:2315 app/src/ui/dav_edit.rs:26
+#: app/src/ui/composer/mod.rs:2324 app/src/ui/dav_edit.rs:26
 #: app/src/ui/rules.rs:430 app/src/ui/smart_editor.rs:144
 #: app/src/ui/templates.rs:233 app/src/ui/vacation.rs:41
-#: app/src/ui/window/arrange.rs:138
+#: app/src/ui/window/arrange.rs:146 app/src/ui/window/save_contacts.rs:94
 msgid "Save"
 msgstr ""
 
@@ -4222,6 +4270,15 @@ msgstr ""
 msgid "Brave Search API Key"
 msgstr ""
 
+#: app/src/ui/autocomplete.rs:307 app/src/ui/calendar/editor.rs:2147
+#: app/src/ui/composer/recipients.rs:50
+msgid "{name}, {address}"
+msgstr ""
+
+#: app/src/ui/autocomplete.rs:315
+msgid "{person}, {source}"
+msgstr ""
+
 #: app/src/ui/calendar/agenda.rs:417
 msgid "{title}, {when}, {calendar}"
 msgstr ""
@@ -4373,7 +4430,7 @@ msgstr ""
 msgid "None"
 msgstr ""
 
-#: app/src/ui/calendar/editor.rs:550 app/src/ui/composer/mod.rs:410
+#: app/src/ui/calendar/editor.rs:550 app/src/ui/composer/mod.rs:415
 #: app/src/ui/vacation.rs:246 app/src/ui/vacation.rs:255
 msgid "Message"
 msgstr ""
@@ -4527,7 +4584,7 @@ msgstr ""
 msgid "Share {file} with the guests"
 msgstr ""
 
-#: app/src/ui/calendar/editor.rs:1534 app/src/ui/composer/mod.rs:1667
+#: app/src/ui/calendar/editor.rs:1534 app/src/ui/composer/mod.rs:1676
 msgid "Remove {file}"
 msgstr ""
 
@@ -4679,10 +4736,6 @@ msgstr ""
 
 #: app/src/ui/calendar/editor.rs:1947
 msgid "Tomato"
-msgstr ""
-
-#: app/src/ui/calendar/editor.rs:2147 app/src/ui/composer/recipients.rs:47
-msgid "{name}, {address}"
 msgstr ""
 
 #: app/src/ui/calendar/holidays.rs:25
@@ -5105,8 +5158,8 @@ msgstr ""
 msgid "Could not delete the event: {reason}"
 msgstr ""
 
-#: app/src/ui/calendar/mod.rs:2539 app/src/ui/composer/mod.rs:1118
-#: app/src/ui/window.rs:2092 app/src/ui/window/scheduled.rs:98
+#: app/src/ui/calendar/mod.rs:2539 app/src/ui/composer/mod.rs:1123
+#: app/src/ui/window.rs:2093 app/src/ui/window/scheduled.rs:98
 #: app/src/ui/window/shortcuts.rs:454
 msgid "Undo"
 msgstr ""
@@ -5590,382 +5643,382 @@ msgstr ""
 msgid "{time} {city}"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:242 app/src/ui/conversation.rs:1744
+#: app/src/ui/composer/mod.rs:243 app/src/ui/conversation.rs:1744
 msgid "Choose a Time…"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:254 app/src/ui/composer/mod.rs:1510
+#: app/src/ui/composer/mod.rs:255 app/src/ui/composer/mod.rs:1519
 #: app/src/ui/sidebar.rs:886
 msgid "Send Later"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:256 app/src/ui/composer/mod.rs:1230
+#: app/src/ui/composer/mod.rs:257 app/src/ui/composer/mod.rs:1239
 msgid "Send (Ctrl+Enter)"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:260
+#: app/src/ui/composer/mod.rs:261
 msgid "Attach Files (Ctrl+Shift+A)"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:264 app/src/ui/composer/mod.rs:787
+#: app/src/ui/composer/mod.rs:265 app/src/ui/composer/mod.rs:792
 msgid "Preview"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:271
+#: app/src/ui/composer/mod.rs:272
 msgid "Save as Template…"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:277 app/src/ui/templates.rs:23
+#: app/src/ui/composer/mod.rs:278 app/src/ui/templates.rs:23
 msgid "Templates"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:281
+#: app/src/ui/composer/mod.rs:282
 msgid "Sign"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:282
+#: app/src/ui/composer/mod.rs:283
 msgid "Sign this message with your own key"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:286
+#: app/src/ui/composer/mod.rs:287
 msgid "Encrypt"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:287
+#: app/src/ui/composer/mod.rs:288
 msgid "Add a recipient this computer can encrypt to."
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:327 app/src/ui/composer/mod.rs:333
+#: app/src/ui/composer/mod.rs:328 app/src/ui/composer/mod.rs:334
 msgid "Signing and encryption"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:354
+#: app/src/ui/composer/mod.rs:355
 msgid "Recipients"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:355
+#: app/src/ui/composer/mod.rs:356
 msgid "Carbon copy"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:356
+#: app/src/ui/composer/mod.rs:357
 msgid "Blind carbon copy"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:358 app/src/ui/composer/mod.rs:397
+#: app/src/ui/composer/mod.rs:363 app/src/ui/composer/mod.rs:402
 #: app/src/ui/rules.rs:347 app/src/ui/templates.rs:192
 #: app/src/ui/vacation.rs:235
 msgid "Subject"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:365
+#: app/src/ui/composer/mod.rs:370
 msgid "Cc/Bcc"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:366 app/src/ui/composer/mod.rs:910
+#: app/src/ui/composer/mod.rs:371 app/src/ui/composer/mod.rs:915
 msgid "Show Cc and Bcc"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:376 app/src/ui/rules.rs:345
+#: app/src/ui/composer/mod.rs:381 app/src/ui/rules.rs:345
 msgid "From"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:381 app/src/ui/rules.rs:346
+#: app/src/ui/composer/mod.rs:386 app/src/ui/rules.rs:346
 msgid "To"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:385
+#: app/src/ui/composer/mod.rs:390
 msgid "Cc"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:387
+#: app/src/ui/composer/mod.rs:392
 msgid "Bcc"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:468
+#: app/src/ui/composer/mod.rs:473
 msgid "Formatting"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:487 app/src/ui/composer/mod.rs:1078
+#: app/src/ui/composer/mod.rs:492 app/src/ui/composer/mod.rs:1083
 msgid "Forwarded Message"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:908
+#: app/src/ui/composer/mod.rs:913
 msgid "Hide Cc and Bcc"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:993
+#: app/src/ui/composer/mod.rs:998
 msgid "Remove Quoted Text"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:994
+#: app/src/ui/composer/mod.rs:999
 msgid "Do Not Forward the Original"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1113
+#: app/src/ui/composer/mod.rs:1118
 msgid "Quoted text removed"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1114
+#: app/src/ui/composer/mod.rs:1119
 msgid "Forwarded message removed"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1209
+#: app/src/ui/composer/mod.rs:1218
 msgid "Scheduled to send {when}"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1220
+#: app/src/ui/composer/mod.rs:1229
 msgid "No account to send from."
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1283
+#: app/src/ui/composer/mod.rs:1292
 msgid "Signed and encrypted"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1284
+#: app/src/ui/composer/mod.rs:1293
 msgid "Signed"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1285
+#: app/src/ui/composer/mod.rs:1294
 msgid "Encrypted"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1286
+#: app/src/ui/composer/mod.rs:1295
 msgid "Not signed or encrypted"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1462
+#: app/src/ui/composer/mod.rs:1471
 msgid "Attachment Missing?"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1464
+#: app/src/ui/composer/mod.rs:1473
 msgid "The message says “{sentence}” and carries no file."
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1469
+#: app/src/ui/composer/mod.rs:1478
 msgid "Add Attachment"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1470
+#: app/src/ui/composer/mod.rs:1479
 msgid "Send Anyway"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1488
+#: app/src/ui/composer/mod.rs:1497
 msgid "Send Without Encryption?"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1490
+#: app/src/ui/composer/mod.rs:1499
 msgid "This message was to go out encrypted, and it cannot be. {reason}"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1496
+#: app/src/ui/composer/mod.rs:1505
 msgid "Send Readable"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1511
+#: app/src/ui/composer/mod.rs:1520
 msgid "Penguin Mail sends it at this time while it runs, even in the tray."
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1512
+#: app/src/ui/composer/mod.rs:1521
 msgid "Schedule"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1545
+#: app/src/ui/composer/mod.rs:1554
 msgid "Draft saved, encrypted to your own key"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1547
+#: app/src/ui/composer/mod.rs:1556
 msgid "Draft saved"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1557
+#: app/src/ui/composer/mod.rs:1566
 msgid "Save as Draft?"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1559
+#: app/src/ui/composer/mod.rs:1568
 msgid "The draft is kept in Gmail, so you can finish it later on any device."
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1563
+#: app/src/ui/composer/mod.rs:1572
 msgid "Discard"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1565
+#: app/src/ui/composer/mod.rs:1574
 msgid "Save Draft"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1586
+#: app/src/ui/composer/mod.rs:1595
 msgid "Attach Files"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1622
+#: app/src/ui/composer/mod.rs:1631
 msgid "{files}  ·  {size}"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1704
+#: app/src/ui/composer/mod.rs:1713
 msgid "Bold (Ctrl+B)"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1705
+#: app/src/ui/composer/mod.rs:1714
 msgid "Italic (Ctrl+I)"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1708
+#: app/src/ui/composer/mod.rs:1717
 msgid "Strikethrough (Ctrl+Shift+X)"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1711
+#: app/src/ui/composer/mod.rs:1720
 msgid "Code (Ctrl+E)"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1748
+#: app/src/ui/composer/mod.rs:1757
 msgid "Link (Ctrl+K)"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1758
+#: app/src/ui/composer/mod.rs:1767
 msgid "Bulleted List (Ctrl+Shift+8)"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1763
+#: app/src/ui/composer/mod.rs:1772
 msgid "Numbered List (Ctrl+Shift+7)"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1768
+#: app/src/ui/composer/mod.rs:1777
 msgid "Quote (Ctrl+Shift+9)"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1785
+#: app/src/ui/composer/mod.rs:1794
 msgid "Insert Image (Ctrl+Shift+P)"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1795
+#: app/src/ui/composer/mod.rs:1804
 msgid "Paragraph"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1796
+#: app/src/ui/composer/mod.rs:1805
 msgid "Heading 1"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1797
+#: app/src/ui/composer/mod.rs:1806
 msgid "Heading 2"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1798
+#: app/src/ui/composer/mod.rs:1807
 msgid "Heading 3"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1799
+#: app/src/ui/composer/mod.rs:1808
 msgid "Code Block"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1808
+#: app/src/ui/composer/mod.rs:1817
 msgid "Format Markdown"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1812
+#: app/src/ui/composer/mod.rs:1821
 msgid "Clear Formatting"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1818
+#: app/src/ui/composer/mod.rs:1827
 msgid "Edit as Markdown"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1824 app/src/ui/composer/mod.rs:1828
+#: app/src/ui/composer/mod.rs:1833 app/src/ui/composer/mod.rs:1837
 msgid "More Formatting"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1865
+#: app/src/ui/composer/mod.rs:1874
 msgid "Add a Link"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1871
+#: app/src/ui/composer/mod.rs:1880
 msgid "Text"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1883
+#: app/src/ui/composer/mod.rs:1892
 msgid "Add Link"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:1919
+#: app/src/ui/composer/mod.rs:1928
 msgid "Markdown formatted"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:2035
+#: app/src/ui/composer/mod.rs:2044
 msgid "Pasted as rich text"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:2036
+#: app/src/ui/composer/mod.rs:2045
 msgid "Paste as Plain Text"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:2070
+#: app/src/ui/composer/mod.rs:2079
 msgid "Editing as Markdown"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:2096
+#: app/src/ui/composer/mod.rs:2105
 msgid "Images"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:2101
+#: app/src/ui/composer/mod.rs:2110
 msgid "Insert Image"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:2144
+#: app/src/ui/composer/mod.rs:2153
 msgid "Could not read the file: {reason}"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:2209
+#: app/src/ui/composer/mod.rs:2218
 msgid "Could not paste the image"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:2254
+#: app/src/ui/composer/mod.rs:2263
 msgid "No Templates Yet"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:2304
+#: app/src/ui/composer/mod.rs:2313
 msgid "Save as Template"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:2306
+#: app/src/ui/composer/mod.rs:2315
 msgid "Placeholders such as {{first_name}} fill in each time you use it."
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:2329 app/src/ui/templates.rs:280
+#: app/src/ui/composer/mod.rs:2338 app/src/ui/templates.rs:280
 msgid "Give the template a name"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:2337
+#: app/src/ui/composer/mod.rs:2346
 msgid "Template saved"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:2340
+#: app/src/ui/composer/mod.rs:2349
 msgid "Template not saved: {reason}"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:2410
+#: app/src/ui/composer/mod.rs:2419
 msgid "This looks like Markdown"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:2416
+#: app/src/ui/composer/mod.rs:2425
 msgid "Format"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:2417
+#: app/src/ui/composer/mod.rs:2426
 msgid "Turn the Markdown into rich text"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:2423 app/src/ui/composer/mod.rs:2427
+#: app/src/ui/composer/mod.rs:2432 app/src/ui/composer/mod.rs:2436
 msgid "Dismiss"
 msgstr ""
 
-#: app/src/ui/composer/recipients.rs:54
+#: app/src/ui/composer/recipients.rs:57
 msgid "{recipient}, not an address"
 msgstr ""
 
-#: app/src/ui/composer/recipients.rs:309
+#: app/src/ui/composer/recipients.rs:320
 msgid "Remove {recipient}"
 msgstr ""
 
-#: app/src/ui/composer/recipients.rs:323
+#: app/src/ui/composer/recipients.rs:334
 msgid "Press Delete to remove"
 msgstr ""
 
@@ -6436,7 +6489,7 @@ msgstr ""
 msgid "Allow Hide My Email"
 msgstr ""
 
-#: app/src/ui/hide_my_email.rs:335 app/src/ui/window.rs:3272
+#: app/src/ui/hide_my_email.rs:335 app/src/ui/window.rs:3273
 msgid "Add an account first"
 msgstr ""
 
@@ -6752,7 +6805,7 @@ msgid "All Files"
 msgstr ""
 
 #: app/src/ui/key_import.rs:213 app/src/ui/key_import.rs:217
-#: app/src/ui/window.rs:3683
+#: app/src/ui/window.rs:3684
 msgid "Close"
 msgstr ""
 
@@ -7522,7 +7575,7 @@ msgstr ""
 msgid "Rules…"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:1517 app/src/ui/window.rs:3148
+#: app/src/ui/sidebar.rs:1517 app/src/ui/window.rs:3149
 msgid "Hide My Email…"
 msgstr ""
 
@@ -7730,7 +7783,7 @@ msgstr ""
 msgid "VIP"
 msgstr ""
 
-#: app/src/ui/thread_row.rs:94 app/src/ui/window.rs:369
+#: app/src/ui/thread_row.rs:94 app/src/ui/window.rs:370
 msgid "Muted"
 msgstr ""
 
@@ -7928,330 +7981,330 @@ msgid ""
 "Choose where your mail lives. You can add more later from the main menu."
 msgstr ""
 
-#: app/src/ui/window.rs:267
+#: app/src/ui/window.rs:268
 msgid "Deleted forever"
 msgstr ""
 
-#: app/src/ui/window.rs:269
+#: app/src/ui/window.rs:270
 msgid "Deleted {count} conversation forever"
 msgid_plural "Deleted {count} conversations forever"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/window.rs:275
+#: app/src/ui/window.rs:276
 msgid "Deleted {count} message forever"
 msgid_plural "Deleted {count} messages forever"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/window.rs:288
+#: app/src/ui/window.rs:289
 msgid "{label}, on this mail"
 msgstr ""
 
-#: app/src/ui/window.rs:317
+#: app/src/ui/window.rs:318
 msgid "Added {person} to VIPs"
 msgstr ""
 
-#: app/src/ui/window.rs:318
+#: app/src/ui/window.rs:319
 msgid "Removed {person} from VIPs"
 msgstr ""
 
-#: app/src/ui/window.rs:324
+#: app/src/ui/window.rs:325
 msgid "Could not load mail: {reason}"
 msgstr ""
 
-#: app/src/ui/window.rs:340
+#: app/src/ui/window.rs:341
 msgid "Made a folder called “{name}” on {provider} for archived mail"
 msgstr ""
 
-#: app/src/ui/window.rs:349
+#: app/src/ui/window.rs:350
 msgid "Flagged red"
 msgstr ""
 
-#: app/src/ui/window.rs:350
+#: app/src/ui/window.rs:351
 msgid "Flagged orange"
 msgstr ""
 
-#: app/src/ui/window.rs:351
+#: app/src/ui/window.rs:352
 msgid "Flagged yellow"
 msgstr ""
 
-#: app/src/ui/window.rs:352
+#: app/src/ui/window.rs:353
 msgid "Flagged green"
 msgstr ""
 
-#: app/src/ui/window.rs:353
+#: app/src/ui/window.rs:354
 msgid "Flagged blue"
 msgstr ""
 
-#: app/src/ui/window.rs:354
+#: app/src/ui/window.rs:355
 msgid "Flagged purple"
 msgstr ""
 
-#: app/src/ui/window.rs:355
+#: app/src/ui/window.rs:356
 msgid "Flagged gray"
 msgstr ""
 
-#: app/src/ui/window.rs:366 app/src/ui/window.rs:464
+#: app/src/ui/window.rs:367 app/src/ui/window.rs:465
 msgid "Labels changed"
 msgstr ""
 
-#: app/src/ui/window.rs:370
+#: app/src/ui/window.rs:371
 msgid "Unmuted"
 msgstr ""
 
-#: app/src/ui/window.rs:372
+#: app/src/ui/window.rs:373
 msgid "Muted {count} conversation"
 msgid_plural "Muted {count} conversations"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/window.rs:378
+#: app/src/ui/window.rs:379
 msgid "Muted {count} message"
 msgid_plural "Muted {count} messages"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/window.rs:384
+#: app/src/ui/window.rs:385
 msgid "Unmuted {count} conversation"
 msgid_plural "Unmuted {count} conversations"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/window.rs:390
+#: app/src/ui/window.rs:391
 msgid "Unmuted {count} message"
 msgid_plural "Unmuted {count} messages"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/window.rs:400
+#: app/src/ui/window.rs:401
 msgid "Dismissed {count} follow-up"
 msgid_plural "Dismissed {count} follow-ups"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/window.rs:409
+#: app/src/ui/window.rs:410
 msgid "Archived"
 msgstr ""
 
-#: app/src/ui/window.rs:411
+#: app/src/ui/window.rs:412
 msgid "Archived {count} conversation"
 msgid_plural "Archived {count} conversations"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/window.rs:417
+#: app/src/ui/window.rs:418
 msgid "Archived {count} message"
 msgid_plural "Archived {count} messages"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/window.rs:422
+#: app/src/ui/window.rs:423
 msgid "Moved to Trash"
 msgstr ""
 
-#: app/src/ui/window.rs:424
+#: app/src/ui/window.rs:425
 msgid "Moved {count} conversation to Trash"
 msgid_plural "Moved {count} conversations to Trash"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/window.rs:430
+#: app/src/ui/window.rs:431
 msgid "Moved {count} message to Trash"
 msgid_plural "Moved {count} messages to Trash"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/window.rs:435
+#: app/src/ui/window.rs:436
 msgid "Marked as junk"
 msgstr ""
 
-#: app/src/ui/window.rs:437
+#: app/src/ui/window.rs:438
 msgid "Marked {count} conversation as junk"
 msgid_plural "Marked {count} conversations as junk"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/window.rs:443
+#: app/src/ui/window.rs:444
 msgid "Marked {count} message as junk"
 msgid_plural "Marked {count} messages as junk"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/window.rs:448
+#: app/src/ui/window.rs:449
 msgid "Moved to the Inbox"
 msgstr ""
 
-#: app/src/ui/window.rs:450
+#: app/src/ui/window.rs:451
 msgid "Moved {count} conversation to the Inbox"
 msgid_plural "Moved {count} conversations to the Inbox"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/window.rs:456
+#: app/src/ui/window.rs:457
 msgid "Moved {count} message to the Inbox"
 msgid_plural "Moved {count} messages to the Inbox"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/window.rs:765
+#: app/src/ui/window.rs:766
 msgid "Penguin Mail (Demo)"
 msgstr ""
 
-#: app/src/ui/window.rs:1111
+#: app/src/ui/window.rs:1112
 msgid "Could not read accounts: {reason}"
 msgstr ""
 
-#: app/src/ui/window.rs:1173
+#: app/src/ui/window.rs:1174
 msgid "Sign in again to keep {account} syncing"
 msgstr ""
 
-#: app/src/ui/window.rs:1906
+#: app/src/ui/window.rs:1907
 msgid "Could not delete the mail: {reason}"
 msgstr ""
 
-#: app/src/ui/window.rs:1988
+#: app/src/ui/window.rs:1989
 msgid "Turn On the {service}"
 msgstr ""
 
-#: app/src/ui/window.rs:1991
+#: app/src/ui/window.rs:1992
 msgid ""
 "The Google Cloud project Penguin Mail signs in with has the {service} "
 "switched off, so Google refuses before it can ask for your permission. Turn "
 "it on, wait a minute, and try again."
 msgstr ""
 
-#: app/src/ui/window.rs:1997
+#: app/src/ui/window.rs:1998
 msgid "Open Google Cloud"
 msgstr ""
 
-#: app/src/ui/window.rs:2113
+#: app/src/ui/window.rs:2114
 msgid "Nothing to undo"
 msgstr ""
 
-#: app/src/ui/window.rs:2119
+#: app/src/ui/window.rs:2120
 msgid "{action} undone"
 msgstr ""
 
-#: app/src/ui/window.rs:2345
+#: app/src/ui/window.rs:2346
 msgid "Select mail from one account to tag it."
 msgstr ""
 
-#: app/src/ui/window.rs:2357
+#: app/src/ui/window.rs:2358
 msgid "This account has no tags yet. Make one in Outlook."
 msgstr ""
 
-#: app/src/ui/window.rs:2496
+#: app/src/ui/window.rs:2497
 msgid "Could not include {file}: {reason}"
 msgstr ""
 
-#: app/src/ui/window.rs:2607
+#: app/src/ui/window.rs:2608
 msgid "Downloading {file}…"
 msgstr ""
 
-#: app/src/ui/window.rs:2628 app/src/ui/window/attachments.rs:229
+#: app/src/ui/window.rs:2629 app/src/ui/window/attachments.rs:229
 msgid "Saved {file} to Downloads"
 msgstr ""
 
-#: app/src/ui/window.rs:2646 app/src/ui/window/attachments.rs:234
+#: app/src/ui/window.rs:2647 app/src/ui/window/attachments.rs:234
 msgid "Could not save {file}: {reason}"
 msgstr ""
 
-#: app/src/ui/window.rs:2689 app/src/ui/window.rs:2838
+#: app/src/ui/window.rs:2690 app/src/ui/window.rs:2839
 msgid "{account} is signed in again."
 msgstr ""
 
-#: app/src/ui/window.rs:2781 app/src/ui/window.rs:2826
+#: app/src/ui/window.rs:2782 app/src/ui/window.rs:2827
 msgid "Continue in your browser"
 msgstr ""
 
-#: app/src/ui/window.rs:2792
+#: app/src/ui/window.rs:2793
 msgid "Added {account}. Downloading mail…"
 msgstr ""
 
-#: app/src/ui/window.rs:2856
+#: app/src/ui/window.rs:2857
 msgid "This copy of Penguin Mail was built without Google sign-in."
 msgstr ""
 
-#: app/src/ui/window.rs:2864
+#: app/src/ui/window.rs:2865
 msgid "Get a Release"
 msgstr ""
 
-#: app/src/ui/window.rs:2936
+#: app/src/ui/window.rs:2937
 msgid "Remove {account}?"
 msgstr ""
 
-#: app/src/ui/window.rs:2951
+#: app/src/ui/window.rs:2952
 msgid "Removed {account}"
 msgstr ""
 
-#: app/src/ui/window.rs:2953
+#: app/src/ui/window.rs:2954
 msgid "Could not remove {account}: {reason}"
 msgstr ""
 
-#: app/src/ui/window.rs:3129
+#: app/src/ui/window.rs:3130
 msgid "Refresh"
 msgstr ""
 
-#: app/src/ui/window.rs:3133
+#: app/src/ui/window.rs:3134
 msgid "Show Declined Events"
 msgstr ""
 
-#: app/src/ui/window.rs:3146
+#: app/src/ui/window.rs:3147
 msgid "Add Account…"
 msgstr ""
 
-#: app/src/ui/window.rs:3147
+#: app/src/ui/window.rs:3148
 msgid "New Smart Mailbox…"
 msgstr ""
 
-#: app/src/ui/window.rs:3154 app/src/ui/window/shortcuts.rs:602
+#: app/src/ui/window.rs:3155 app/src/ui/window/shortcuts.rs:602
 msgid "Preferences"
 msgstr ""
 
-#: app/src/ui/window.rs:3155
+#: app/src/ui/window.rs:3156
 msgid "Keyboard Shortcuts"
 msgstr ""
 
-#: app/src/ui/window.rs:3163 app/src/ui/window.rs:3165
+#: app/src/ui/window.rs:3164 app/src/ui/window.rs:3166
 msgid "Main Menu"
 msgstr ""
 
-#: app/src/ui/window.rs:3547
+#: app/src/ui/window.rs:3548
 msgid "Open a message from the person first"
 msgstr ""
 
-#: app/src/ui/window.rs:3623
+#: app/src/ui/window.rs:3624
 msgid "Penguin Mail shows the new language after a restart"
 msgstr ""
 
-#: app/src/ui/window.rs:3625 app/src/update/mod.rs:130
+#: app/src/ui/window.rs:3626 app/src/update/mod.rs:130
 msgid "Restart"
 msgstr ""
 
-#: app/src/ui/window.rs:3658
+#: app/src/ui/window.rs:3659
 msgid "Messages That Will Not Download"
 msgstr ""
 
-#: app/src/ui/window.rs:3660
+#: app/src/ui/window.rs:3661
 msgid ""
 "Penguin Mail could not download these from {address}'s server. It tries "
 "again at each check, except for a message too large to download."
 msgstr ""
 
-#: app/src/ui/window/arrange.rs:96 app/src/ui/window/organize.rs:202
+#: app/src/ui/window/arrange.rs:104 app/src/ui/window/organize.rs:202
 msgid "Delete “{name}”?"
 msgstr ""
 
-#: app/src/ui/window/arrange.rs:97
+#: app/src/ui/window/arrange.rs:105
 msgid "Only the smart mailbox goes. The mail it shows stays where it is."
 msgstr ""
 
-#: app/src/ui/window/arrange.rs:131
+#: app/src/ui/window/arrange.rs:139
 msgid "Name This Account"
 msgstr ""
 
-#: app/src/ui/window/arrange.rs:133
+#: app/src/ui/window/arrange.rs:141
 msgid ""
 "The sidebar shows the name instead of the address. Leave it empty for the "
 "address."
@@ -8508,11 +8561,7 @@ msgstr ""
 msgid "Copied {address}"
 msgstr ""
 
-#: app/src/ui/window/notice.rs:85 app/src/ui/window/outbox.rs:103
-msgid "Message sent"
-msgstr ""
-
-#: app/src/ui/window/notice.rs:89
+#: app/src/ui/window/notice.rs:98
 msgid "A rule that waited was refused: {reason}"
 msgstr ""
 
@@ -8540,31 +8589,31 @@ msgstr ""
 msgid "Only Where It Exists"
 msgstr ""
 
-#: app/src/ui/window/outbox.rs:105
+#: app/src/ui/window/outbox.rs:116
 msgid "Still not sent. It stays in the Outbox."
 msgstr ""
 
-#: app/src/ui/window/outbox.rs:129
+#: app/src/ui/window/outbox.rs:140
 msgid "That message is no longer waiting."
 msgstr ""
 
-#: app/src/ui/window/outbox.rs:133
+#: app/src/ui/window/outbox.rs:144
 msgid "Penguin Mail cannot reopen this message. Send it as it is."
 msgstr ""
 
-#: app/src/ui/window/outbox.rs:142
+#: app/src/ui/window/outbox.rs:153
 msgid "Could not open it: {reason}"
 msgstr ""
 
-#: app/src/ui/window/outbox.rs:166
+#: app/src/ui/window/outbox.rs:177
 msgid "Could not delete: {reason}"
 msgstr ""
 
-#: app/src/ui/window/outbox.rs:172
+#: app/src/ui/window/outbox.rs:183
 msgid "Deleted. It will not be sent."
 msgstr ""
 
-#: app/src/ui/window/outbox.rs:174
+#: app/src/ui/window/outbox.rs:185
 msgid "Deleted. They will not be sent."
 msgstr ""
 

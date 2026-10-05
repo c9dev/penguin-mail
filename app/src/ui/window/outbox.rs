@@ -94,13 +94,24 @@ impl MainWindow {
         let (this, view) = (Rc::clone(self), Rc::clone(view));
         glib::spawn_future_local(async move {
             for id in waiting {
+                // Read before it goes, since a sent message leaves the
+                // outbox: its draft names who to offer to save.
+                let outbox = this.core.outbox();
+                let message = this.core.call(async move { outbox.find(id).await }).await;
                 let outbox = this.core.outbox();
                 let posted = this
                     .core
                     .call(async move { outbox.send_one(id).await })
                     .await;
                 match posted {
-                    Ok(Posted::Sent(_)) => this.toast(&gettext("Message sent")),
+                    Ok(Posted::Sent(_)) => match message {
+                        Ok(Some(message)) => this.sent(
+                            gettext("Message sent"),
+                            message.account_id,
+                            crate::contacts::queued_recipients(&message),
+                        ),
+                        _ => this.toast(&gettext("Message sent")),
+                    },
                     Ok(Posted::Waiting(_)) => {
                         this.toast(&gettext("Still not sent. It stays in the Outbox."))
                     }

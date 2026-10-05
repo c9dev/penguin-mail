@@ -292,6 +292,82 @@ pub fn set_account_colors(colors: std::collections::HashMap<AccountId, usize>) {
     ACCOUNT_COLORS.with(|c| *c.borrow_mut() = colors);
 }
 
+/// What an account is called beside a contact or in a toast.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct AccountName {
+    /// For a line with little room: the name given in the account menu,
+    /// or else its mail domain, such as "Fernwood".
+    pub short: String,
+    /// For a tooltip or a screen reader: the given name, or the address.
+    pub full: String,
+}
+
+/// Second-level labels that stand for a kind of organization rather than
+/// for the organization, as in `example.co.uk`.
+const GENERIC_LABELS: [&str; 9] = ["co", "com", "org", "net", "ac", "gov", "edu", "ne", "or"];
+
+/// The organization part of the domain of `email`, capitalized:
+/// "Fernwood" for `dana@mail.fernwood.example`.
+fn domain_name(email: &str) -> Option<String> {
+    let domain = email.rsplit_once('@')?.1;
+    let labels: Vec<&str> = domain.split('.').filter(|l| !l.is_empty()).collect();
+    let mut at = labels.len().checked_sub(2)?;
+    if at > 0 && GENERIC_LABELS.contains(&labels[at]) {
+        at -= 1;
+    }
+    let mut chars = labels[at].chars();
+    let first = chars.next()?;
+    Some(first.to_uppercase().chain(chars).collect())
+}
+
+/// What to call each of `accounts`, given as id, address and the name the
+/// person gave it. Two accounts whose domains would read the same are
+/// called by their addresses instead.
+pub fn account_labels(
+    accounts: &[(AccountId, &str, Option<&str>)],
+) -> std::collections::HashMap<AccountId, AccountName> {
+    let given = |name: Option<&str>| name.map(str::trim).filter(|n| !n.is_empty()).map(str::to_string);
+    let short: Vec<String> = accounts
+        .iter()
+        .map(|(_, email, name)| {
+            given(*name)
+                .or_else(|| domain_name(email))
+                .unwrap_or_else(|| email.to_string())
+        })
+        .collect();
+    accounts
+        .iter()
+        .zip(&short)
+        .map(|((id, email, name), mine)| {
+            let named = given(*name);
+            let shared = named.is_none() && short.iter().filter(|s| *s == mine).count() > 1;
+            let full = named.clone().unwrap_or_else(|| email.to_string());
+            let short = match shared {
+                true => email.to_string(),
+                false => mine.clone(),
+            };
+            (*id, AccountName { short, full })
+        })
+        .collect()
+}
+
+thread_local! {
+    /// What each account is called, as [`account_labels`] decided.
+    static ACCOUNT_LABELS: std::cell::RefCell<std::collections::HashMap<AccountId, AccountName>> =
+        Default::default();
+}
+
+/// Replaces the account names that [`account_label`] reads.
+pub fn set_account_labels(labels: std::collections::HashMap<AccountId, AccountName>) {
+    ACCOUNT_LABELS.with(|l| *l.borrow_mut() = labels);
+}
+
+/// What `account_id` is called, or empty names for an account the window
+/// has not listed.
+pub fn account_label(account_id: AccountId) -> AccountName {
+    ACCOUNT_LABELS.with(|l| l.borrow().get(&account_id).cloned().unwrap_or_default())
+}
+
 /// Each account's colour, as an index into [`PALETTE`]: the one chosen, or
 /// one assigned in the order accounts were added. The stylesheet defines
 /// `account-0` to `account-8`.
@@ -509,6 +585,34 @@ mod tests {
         assert_eq!(initials("dana.reyes@example.com"), "DR");
         assert_eq!(initials("élodie"), "É");
         assert_eq!(initials(""), "?");
+    }
+
+    #[test]
+    fn an_account_is_called_by_its_name_or_its_mail_domain() {
+        let labels = account_labels(&[
+            (1, "dana.reyes@example.com", Some("Work")),
+            (2, "dana@fernwood.example", None),
+            (3, "d.reyes@outlook.com", Some(" ")),
+        ]);
+        assert_eq!(labels[&1], AccountName { short: "Work".into(), full: "Work".into() });
+        assert_eq!(
+            labels[&2],
+            AccountName { short: "Fernwood".into(), full: "dana@fernwood.example".into() }
+        );
+        assert_eq!(labels[&3].short, "Outlook");
+    }
+
+    #[test]
+    fn two_accounts_at_one_domain_are_called_by_their_addresses() {
+        let labels = account_labels(&[
+            (1, "dana@gmail.com", None),
+            (2, "reyes@gmail.com", None),
+            (3, "dana@mail.fernwood.example", None),
+        ]);
+        assert_eq!(labels[&1].short, "dana@gmail.com");
+        assert_eq!(labels[&2].short, "reyes@gmail.com");
+        assert_eq!(labels[&3].short, "Fernwood");
+        assert_eq!(account_labels(&[(4, "ana@example.co.uk", None)])[&4].short, "Example");
     }
 
     #[test]

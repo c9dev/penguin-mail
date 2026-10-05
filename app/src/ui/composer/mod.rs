@@ -355,6 +355,10 @@ impl Composer {
         let to = Recipients::new(&gettext("Recipients"), &draft.to, Rc::clone(&contacts));
         let cc = Recipients::new(&gettext("Carbon copy"), &draft.cc, Rc::clone(&contacts));
         let bcc = Recipients::new(&gettext("Blind carbon copy"), &draft.bcc, contacts);
+        let sending = identities.get(selected).map(|i| i.account_id);
+        for field in [&to, &cc, &bcc] {
+            field.set_from(sending);
+        }
         let subject = gtk::Entry::builder()
             .placeholder_text(gettext("Subject"))
             .text(&draft.subject)
@@ -1172,6 +1176,10 @@ impl Composer {
     /// send-as address and a message signed by the wrong one looks careless.
     fn identity_changed(self: &Rc<Self>, to: usize) {
         let was = self.showing.replace(to);
+        let sending = self.identities.get(to).map(|i| i.account_id);
+        for field in [&self.to, &self.cc, &self.bcc] {
+            field.set_from(sending);
+        }
         // The new address may be one the other standard holds.
         self.check_own();
         let (Some(old), Some(new)) = (self.identities.get(was), self.identities.get(to)) else {

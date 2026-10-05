@@ -851,6 +851,18 @@ CREATE TABLE service_misses (
     PRIMARY KEY (account_id, service)
 );
 "#,
+    // What the person answered when offered to save a sent message's new
+    // recipients to the sending account's contacts. An address with a row
+    // is not offered again for that account. `email` is lower case.
+    r#"
+CREATE TABLE contact_offers (
+    account_id  INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    email       TEXT NOT NULL,
+    answer      TEXT NOT NULL CHECK (answer IN ('declined', 'saved')),
+    answered_at INTEGER NOT NULL,
+    PRIMARY KEY (account_id, email)
+);
+"#,
 ];
 
 /// How long the copy taken before a migration stays once the store has

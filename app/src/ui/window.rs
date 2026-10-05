@@ -71,6 +71,7 @@ mod reach;
 mod room;
 mod reminders;
 mod reveal;
+mod save_contacts;
 mod scheduled;
 mod senders;
 mod shortcuts;

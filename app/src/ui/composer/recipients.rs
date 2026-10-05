@@ -12,10 +12,10 @@ use std::rc::Rc;
 
 use adw::prelude::*;
 use gtk::{gdk, gio, glib};
-use mailrs_domain::Address;
+use mailrs_domain::{AccountId, Address};
 
 use crate::compose::{is_address, parse_recipients};
-use crate::ui::autocomplete::{self, Contacts};
+use crate::ui::autocomplete::{self, Contacts, Sending};
 use crate::ui::roving::{self, Move};
 use crate::ui::{describe, name};
 use mailrs_domain::translate::{fill, gettext};
@@ -35,6 +35,9 @@ pub struct Recipients {
     /// itself, so it has to hand it on.
     next: RefCell<Option<Box<dyn Fn()>>>,
     previous: RefCell<Option<Box<dyn Fn()>>>,
+    /// The account the message goes out from, whose contacts the
+    /// suggestions put first.
+    sending: Sending,
 }
 
 /// What one chip says out loud: the name it shows, the address behind it
@@ -91,7 +94,8 @@ impl Recipients {
         // The placeholder is what the row is called; an entry's
         // placeholder is not its name, so it is given as one too.
         name(&entry, placeholder);
-        autocomplete::attach(&entry, contacts);
+        let sending = Sending::default();
+        autocomplete::attach(&entry, contacts, Rc::clone(&sending));
         let holder = gtk::FlowBoxChild::builder()
             .child(&entry)
             .focusable(false)
@@ -106,10 +110,17 @@ impl Recipients {
             changed: RefCell::new(None),
             next: RefCell::new(None),
             previous: RefCell::new(None),
+            sending,
         });
         field.rebuild();
         field.wire();
         field
+    }
+
+    /// Puts the contacts of `account`, the one the message goes out from,
+    /// first among the suggestions.
+    pub fn set_from(&self, account: Option<AccountId>) {
+        self.sending.set(account);
     }
 
     /// Calls `run` whenever the recipients change.
