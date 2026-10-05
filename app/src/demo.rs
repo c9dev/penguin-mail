@@ -26,7 +26,7 @@ use mailrs_sync::calendar_copy::CalendarCopy;
 use mailrs_sync::fake::{DavKind, FakeDav, FakeGmail, FakeGraph, FakeImap, FakeSmtp, fill_store};
 use mailrs_store::services::{FoundService, ServiceKind};
 use mailrs_sync::{
-    AccountServices, AccountSync, AnyCalendar, AnyContacts, AnyRules, CalDav, CardDav, ContactBook, DEFAULT_WINDOW_DAYS,
+    AccountServices, AccountSync, AnyCalendar, AnyContacts, AnyMail, AnyRules, CalDav, CardDav, ContactBook, DEFAULT_WINDOW_DAYS,
     Imap, ImapSettings, LocalRules, SyncError,
 };
 use rusqlite::Connection;
@@ -1874,7 +1874,7 @@ fn imap_services(
 ) -> AccountServices {
     let mail = Imap::new(Arc::clone(imap), Arc::clone(smtp), fastmail_settings());
     AccountServices::fake_imap_with(Arc::clone(imap), Arc::clone(smtp), fastmail_settings())
-        .with_calendar(AnyCalendar::FakeDav(CalDav::new(Arc::clone(dav), mail, vec![FASTMAIL.to_string()])))
+        .with_calendar(AnyCalendar::FakeDav(CalDav::new(Arc::clone(dav), AnyMail::FakeImap(mail), vec![FASTMAIL.to_string()])))
         .with_contacts(AnyContacts::FakeDav(CardDav::new(Arc::clone(dav))))
         .with_rules(AnyRules::Local(LocalRules::new(db.clone(), account_id)))
 }

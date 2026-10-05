@@ -117,7 +117,7 @@ async fn the_local_copy_reads_a_caldav_calendar_and_sends_an_edit_back() {
         "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//t//EN\r\nBEGIN:VEVENT\r\nUID:lunch\r\nDTSTART:20261006T120000Z\r\n\
          DTEND:20261006T130000Z\r\nSUMMARY:Lunch\r\nX-KEEP:yes\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n",
     );
-    let mail = h.sync.services().fake_imap_adapter().expect("an IMAP account");
+    let mail = h.sync.services().mail.clone();
     let services = h.sync.services().clone().with_calendar(AnyCalendar::FakeDav(CalDav::new(
         Arc::clone(&dav),
         mail,
@@ -151,7 +151,7 @@ async fn a_lost_token_reads_the_calendar_whole_once_and_doubles_nothing() {
         "/cal/work/a.ics",
         "BEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\nUID:a\r\nDTSTART:20261006T120000Z\r\nDTEND:20261006T130000Z\r\nSUMMARY:A\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n",
     );
-    let mail = h.sync.services().fake_imap_adapter().expect("an IMAP account");
+    let mail = h.sync.services().mail.clone();
     let services = h
         .sync
         .services()
@@ -194,7 +194,7 @@ async fn the_settings_ask_before_replacing_a_script_and_go_ahead_after_a_yes() {
     let h = imap_harness().await;
     let sieve = Arc::new(FakeSieve::new("fileinto vacation imap4flags"));
     sieve.put_elsewhere("mine", "keep;\n", true);
-    let imap = h.sync.services().fake_imap_adapter().expect("an IMAP account");
+    let imap = h.sync.services().mail.clone();
     let rules = SieveRules::new(Arc::clone(&sieve), imap, "me@example.com".into(), "Example".into());
     let services = h
         .sync
@@ -217,7 +217,7 @@ async fn the_settings_ask_before_replacing_a_script_and_go_ahead_after_a_yes() {
 async fn an_edit_through_the_settings_keeps_its_place_on_a_sieve_server() {
     let h = imap_harness().await;
     let sieve = Arc::new(FakeSieve::new("fileinto vacation imap4flags"));
-    let imap = h.sync.services().fake_imap_adapter().expect("an IMAP account");
+    let imap = h.sync.services().mail.clone();
     let rules = SieveRules::new(Arc::clone(&sieve), imap, "me@example.com".into(), "Example".into());
     let services = h.sync.services().clone().with_rules(AnyRules::FakeSieve(rules));
     let settings =
@@ -271,7 +271,7 @@ async fn an_edit_through_the_settings_keeps_its_place_among_local_rules() {
 async fn a_caldav_account_offers_quiet_changes() {
     let h = imap_harness().await;
     let dav = Arc::new(FakeDav::new());
-    let mail = h.sync.services().fake_imap_adapter().expect("an IMAP account");
+    let mail = h.sync.services().mail.clone();
     let services = h
         .sync
         .services()
@@ -305,7 +305,7 @@ async fn a_caldav_invitation_to_one_occurrence_says_how_its_series_runs() {
             end = first.format("%Y%m%dT093000Z"),
         ),
     );
-    let mail = h.sync.services().fake_imap_adapter().expect("an IMAP account");
+    let mail = h.sync.services().mail.clone();
     let services = h.sync.services().clone().with_calendar(AnyCalendar::FakeDav(CalDav::new(
         Arc::clone(&dav),
         mail,

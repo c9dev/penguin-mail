@@ -13,7 +13,7 @@ use crate::{AccountSettings, AnyAutoReply, AnyRules, Permitted, Replaced, RulesP
 async fn settings() -> (Arc<FakeSieve>, AccountSettings<ServedBy>, i64, ImapHarness) {
     let h = imap_harness().await;
     let sieve = Arc::new(FakeSieve::new("fileinto vacation imap4flags copy include"));
-    let imap = h.sync.services().fake_imap_adapter().expect("an IMAP account");
+    let imap = h.sync.services().mail.clone();
     let rules = SieveRules::new(Arc::clone(&sieve), imap, "me@example.com".into(), "Example".into());
     let services = h
         .sync

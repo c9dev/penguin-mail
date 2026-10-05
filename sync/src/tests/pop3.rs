@@ -230,7 +230,7 @@ async fn connect_pop3_keeps_rules_here_and_takes_a_confirmed_calendar_and_contac
     let passwords = Arc::new(MemoryPasswords::default());
     passwords.save(account.id, "pw").unwrap();
     let services = connect_pop3(&db, passwords, &account).await.unwrap();
-    assert!(matches!(services.calendar, Some(AnyCalendar::Pop3Dav(_))));
+    assert!(matches!(services.calendar, Some(AnyCalendar::Dav(_))));
     assert!(matches!(services.contacts, Some(AnyContacts::Dav(_))));
     assert_eq!(services.rules.as_ref().map(AnyRules::place), Some(RulesPlace::ThisComputer), "a Sieve row never serves a POP3 account");
     assert!(services.auto_reply.is_none());
@@ -241,6 +241,35 @@ async fn connect_pop3_keeps_rules_here_and_takes_a_confirmed_calendar_and_contac
 
     let none = Arc::new(MemoryPasswords::default());
     assert!(connect_pop3(&db, none, &account).await.is_err(), "no password needs a new sign-in");
+}
+
+/// A POP3 account's CalDAV server that does not schedule gets the answer
+/// to an invitation mailed through the account's SMTP, as an IMAP
+/// account's does.
+#[tokio::test]
+async fn a_pop3_accounts_calendar_mails_an_answer_through_its_smtp() {
+    use mailrs_dav::Kind;
+    use mailrs_dav::fake::FakeDav;
+    use mailrs_domain::invitation::Answer;
+
+    use crate::CalendarService;
+    use crate::services::CalDav;
+
+    let h = pop3_harness(FakePop3::default(), RemoveSetting::Never).await;
+    let dav = Arc::new(FakeDav::new());
+    dav.add_collection("/cal/work/", Kind::Calendar, "Work", None);
+    dav.put_resource(
+        "/cal/work/standup.ics",
+        "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//test//EN\r\nBEGIN:VEVENT\r\nUID:standup\r\n\
+         DTSTART:20261005T093000Z\r\nDTEND:20261005T100000Z\r\nSUMMARY:Standup\r\n\
+         ORGANIZER:mailto:boss@example.org\r\nATTENDEE;PARTSTAT=NEEDS-ACTION:mailto:me@example.org\r\n\
+         END:VEVENT\r\nEND:VCALENDAR\r\n",
+    );
+    let calendar = CalDav::new(dav, h.sync.services().mail.clone(), vec!["me@example.org".into()]);
+    calendar.answer_event("/cal/work/", "standup", "me@example.org", Answer::Yes, None).await.unwrap();
+    let sent = h.smtp.sent();
+    assert_eq!(sent.len(), 1);
+    assert_eq!(sent[0].to, ["boss@example.org"]);
 }
 
 #[tokio::test]

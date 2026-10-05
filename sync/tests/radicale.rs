@@ -12,7 +12,7 @@ use mailrs_discover::{Security, Server, UserName};
 use mailrs_domain::calendar::{Notify, occurrence_id};
 use mailrs_imap::{ImapClient, SmtpClient};
 use mailrs_sync::services::{CalDav, Imap};
-use mailrs_sync::{CalendarService, ImapSettings};
+use mailrs_sync::{AnyMail, CalendarService, ImapSettings};
 use mailrs_testmail::{Certs, Radicale};
 
 const USER: &str = "me@example.test";
@@ -55,7 +55,7 @@ fn the_caldav_adapter_reads_and_writes_radicale() {
             Arc::new(SmtpClient::new(&nowhere, &login).expect("an SMTP client")),
             ImapSettings { address: USER.into(), provider_name: "Radicale".into(), files_sent_mail: false, window_days: 30 },
         );
-        let caldav = CalDav::new(Arc::clone(&client), mail, vec![USER.into()]);
+        let caldav = CalDav::new(Arc::clone(&client), AnyMail::Imap(mail), vec![USER.into()]);
 
         let calendars = caldav.calendars().await.expect("the calendars");
         let work = calendars.iter().find(|c| c.id.ends_with(&path)).expect("the calendar is listed").id.clone();

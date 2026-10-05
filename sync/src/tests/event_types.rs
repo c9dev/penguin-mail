@@ -59,7 +59,7 @@ fn a_caldav_account_stores_only_events_whatever_its_address() {
     let settings = imap_settings("dana@fernwood.example");
     let mail = Imap::new(Arc::clone(&imap), Arc::clone(&smtp), settings.clone());
     let offers = AccountServices::fake_imap_with(imap, smtp, settings)
-        .with_calendar(AnyCalendar::FakeDav(CalDav::new(Arc::new(FakeDav::new()), mail, vec![])))
+        .with_calendar(AnyCalendar::FakeDav(CalDav::new(Arc::new(FakeDav::new()), crate::AnyMail::FakeImap(mail), vec![])))
         .offers();
     assert!(offers.calendar);
     assert!(!offers.out_of_office && !offers.focus_time && !offers.declines);

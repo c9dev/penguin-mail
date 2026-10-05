@@ -412,23 +412,6 @@ impl AccountServices {
         self
     }
 
-    /// The IMAP adapter an account's mail runs on, for a service that
-    /// names its folders, such as Sieve rules.
-    pub fn imap_adapter(&self) -> Option<Imap<ImapClient, SmtpClient>> {
-        match &self.mail {
-            AnyMail::Imap(adapter) => Some(adapter.clone()),
-            _ => None,
-        }
-    }
-
-    #[cfg(any(test, feature = "fake"))]
-    pub fn fake_imap_adapter(&self) -> Option<Imap<FakeImap, FakeSmtp>> {
-        match &self.mail {
-            AnyMail::FakeImap(adapter) => Some(adapter.clone()),
-            _ => None,
-        }
-    }
-
     /// A Microsoft account: every service over the one Graph client.
     pub fn microsoft(graph: mailrs_graph::Graph, settings: MicrosoftSettings) -> Self {
         let adapter = Microsoft::new(Arc::new(graph), settings);
@@ -539,15 +522,6 @@ impl AccountServices {
         }
     }
 
-    /// The POP3 adapter an account's mail runs on, for its CalDAV replies
-    /// and its downloader.
-    pub fn pop3_adapter(&self) -> Option<Pop3<SmtpClient, Pop3Client>> {
-        match &self.mail {
-            AnyMail::Pop3(adapter) => Some(adapter.clone()),
-            _ => None,
-        }
-    }
-
     /// A POP3 account over the in-memory POP3 server and SMTP sink.
     #[cfg(any(test, feature = "fake"))]
     pub fn fake_pop3(
@@ -565,14 +539,6 @@ impl AccountServices {
             rules: Some(AnyRules::Local(LocalRules::new(db, account_id))),
             auto_reply: None,
             identities: AnyIdentities::FakePop3(adapter),
-        }
-    }
-
-    #[cfg(any(test, feature = "fake"))]
-    pub fn fake_pop3_adapter(&self) -> Option<Pop3<FakeSmtp, FakePop3>> {
-        match &self.mail {
-            AnyMail::FakePop3(adapter) => Some(adapter.clone()),
-            _ => None,
         }
     }
 
@@ -711,9 +677,6 @@ impl CalendarFeatures {
             Some(AnyCalendar::Dav(_)) => CalendarFeatures::CALDAV,
             #[cfg(any(test, feature = "fake"))]
             Some(AnyCalendar::FakeDav(_)) => CalendarFeatures::CALDAV,
-            Some(AnyCalendar::Pop3Dav(_)) => CalendarFeatures::CALDAV,
-            #[cfg(any(test, feature = "fake"))]
-            Some(AnyCalendar::FakePop3Dav(_)) => CalendarFeatures::CALDAV,
         }
     }
 }

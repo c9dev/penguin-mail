@@ -12,12 +12,12 @@ use crate::fake::{FakeImap, FakeSmtp};
 use crate::services::{Imap, SieveRules};
 use crate::settings::{Replaced, replace_via};
 use crate::tests::fake_settings;
-use crate::{AutoReplyService, BackendError, MailBackend, RulesService};
+use crate::{AnyMail, AutoReplyService, BackendError, MailBackend, RulesService};
 
 const DOVECOT: &str =
     "fileinto vacation imap4flags copy include body mime date relational mailbox";
 
-type Adapter = SieveRules<FakeSieve, Imap<FakeImap, FakeSmtp>>;
+type Adapter = SieveRules<FakeSieve>;
 
 async fn adapter(extensions: &str) -> (Arc<FakeSieve>, Adapter) {
     let imap = Imap::new(
@@ -30,7 +30,7 @@ async fn adapter(extensions: &str) -> (Arc<FakeSieve>, Adapter) {
     let sieve = Arc::new(FakeSieve::new(extensions));
     let rules = SieveRules::new(
         Arc::clone(&sieve),
-        imap,
+        AnyMail::FakeImap(imap),
         "me@example.com".into(),
         "mailbox.org".into(),
     );
