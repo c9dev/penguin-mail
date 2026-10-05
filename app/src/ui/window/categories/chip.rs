@@ -67,6 +67,20 @@ pub fn lines(widths: &[i32], width: i32) -> Vec<usize> {
     lines
 }
 
+/// The widths `widths` take on a line `width` pixels wide once the room
+/// left after them and their gaps is shared out, the first chips taking
+/// the odd pixels.
+pub fn spread(widths: &[i32], width: i32) -> Vec<i32> {
+    let count = widths.len() as i32;
+    let used = widths.iter().sum::<i32>() + GAP * (count - 1).max(0);
+    let spare = (width - used).max(0);
+    widths
+        .iter()
+        .enumerate()
+        .map(|(index, chip)| chip + spare / count + i32::from((index as i32) < spare % count))
+        .collect()
+}
+
 /// Whether every chip shows its name in a row `width` pixels wide, where
 /// `named` are the chips' widths with their names. Every name shows while
 /// the chips fit on [`MOST_LINES`] lines, except in the phone layout,
@@ -92,6 +106,19 @@ mod tests {
         // 86 + 6 + 117 + 6 + 100 = 315 holds three; the other two wrap.
         assert_eq!(lines(&NAMED, 328), [3, 2]);
         assert_eq!(lines(&NAMED, 600), [5]);
+    }
+
+    #[test]
+    fn a_wrapped_line_shares_its_spare_room_so_both_edges_line_up() {
+        // 86 + 117 + 100 and two gaps leave 13 pixels of a 328 line.
+        assert_eq!(spread(&NAMED[..3], 328), [91, 121, 104]);
+        // 140 + 108 and one gap leave 74, 37 for each.
+        assert_eq!(spread(&NAMED[3..], 328), [177, 145]);
+    }
+
+    #[test]
+    fn a_chip_wider_than_its_line_keeps_its_width() {
+        assert_eq!(spread(&[200], 120), [200]);
     }
 
     #[test]

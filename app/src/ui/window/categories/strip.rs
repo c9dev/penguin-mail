@@ -11,7 +11,7 @@ use adw::prelude::*;
 use gtk::subclass::prelude::*;
 use gtk::glib;
 
-use super::chip::{GAP, Names, lines, names_for};
+use super::chip::{GAP, Names, lines, names_for, spread};
 
 mod imp {
     use super::*;
@@ -115,15 +115,24 @@ mod imp {
                     }
                 });
             }
-            // Lay the chips out as they are now, flush left, line by line.
+            // Lay the chips out as they are now, line by line. One line sits
+            // flush left; once they wrap, each line shares its spare room
+            // among its chips, so the lines meet both edges rather than
+            // leaving a ragged right side.
             let chips = self.chips.borrow();
             let now: Vec<i32> = chips.iter().map(natural_width).collect();
             let line = self.line_height();
+            let rows = lines(&now, width);
+            let wrapped = rows.len() > 1;
             let mut index = 0;
-            for (row, count) in lines(&now, width).into_iter().enumerate() {
+            for (row, count) in rows.into_iter().enumerate() {
                 let (mut x, y) = (0, row as i32 * (line + GAP));
-                for chip in &chips[index..index + count] {
-                    let chip_width = natural_width(chip).min(width);
+                let widths = match wrapped {
+                    true => spread(&now[index..index + count], width),
+                    false => now[index..index + count].to_vec(),
+                };
+                for (chip, chip_width) in chips[index..index + count].iter().zip(widths) {
+                    let chip_width = chip_width.min(width);
                     chip.size_allocate(&gtk::Allocation::new(x, y, chip_width, line), -1);
                     x += chip_width + GAP;
                 }
