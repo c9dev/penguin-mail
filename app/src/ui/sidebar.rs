@@ -1320,6 +1320,41 @@ fn css_hex(color: &str) -> Option<String> {
     (hex.len() == 6 && hex.chars().all(|c| c.is_ascii_hexdigit())).then_some(hex)
 }
 
+/// A 10 px dot in a tag's colour, the one its icon wears in the sidebar,
+/// for a list of tags such as the Tags popover. A tag with no colour
+/// gets a dim dot in the text colour, so every name starts at the same
+/// place.
+pub(super) fn tag_dot(color: Option<&str>) -> gtk::DrawingArea {
+    let fill = color
+        .and_then(css_hex)
+        .and_then(|hex| gdk::RGBA::parse(format!("#{hex}")).ok());
+    let dot = gtk::DrawingArea::builder()
+        .content_width(10)
+        .content_height(10)
+        .valign(gtk::Align::Center)
+        .accessible_role(gtk::AccessibleRole::Presentation)
+        .build();
+    dot.set_draw_func(move |area, cr, width, height| {
+        let paint = fill.unwrap_or_else(|| {
+            let mut dim = area.color();
+            dim.set_alpha(dim.alpha() * 0.35);
+            dim
+        });
+        let (width, height) = (f64::from(width), f64::from(height));
+        cr.set_source_rgba(
+            f64::from(paint.red()),
+            f64::from(paint.green()),
+            f64::from(paint.blue()),
+            f64::from(paint.alpha()),
+        );
+        cr.arc(width / 2.0, height / 2.0, width.min(height) / 2.0, 0.0, std::f64::consts::TAU);
+        // A failed fill leaves the dot out, which costs nothing but its
+        // colour.
+        let _ = cr.fill();
+    });
+    dot
+}
+
 /// The icon for a folder row a person can open: the tag Gmail's labels
 /// wear, since mail there can carry several at once, or the plain folder
 /// icon the sidebar gives a group once the account keeps mail in one

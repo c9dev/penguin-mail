@@ -2358,9 +2358,12 @@ impl MainWindow {
             .build();
         for tag in &tags {
             let row = gtk::Box::builder().spacing(10).build();
+            // The tick keeps its place at zero opacity when the tag is off,
+            // so the dot and the name start at the same x on every row.
             let check = gtk::Image::from_icon_name("object-select-symbolic");
             check.set_opacity(if applied.contains(&tag.id) { 1.0 } else { 0.0 });
             row.append(&check);
+            row.append(&super::sidebar::tag_dot(tag.color.as_deref()));
             row.append(&gtk::Label::builder().label(&tag.name).xalign(0.0).build());
             let row = gtk::ListBoxRow::builder()
                 .child(&row)
