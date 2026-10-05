@@ -79,7 +79,7 @@ struct RefusedNow {
 }
 
 /// A service a tenant can refuse.
-// The write, calendar, contact, rule and settings tasks use this; the one that
+// The calendar, contact, rule and settings tasks use this; the one that
 // first does takes the attribute out.
 #[allow(dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -175,7 +175,6 @@ pub(super) fn tag_id(name: &str) -> String {
     format!("category:{name}")
 }
 
-#[allow(dead_code)]
 pub(super) fn tag_name(id: &str) -> Option<&str> {
     id.strip_prefix("category:")
 }
