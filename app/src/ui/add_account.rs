@@ -19,14 +19,14 @@ use adw::prelude::*;
 use gtk::{gio, glib, graphene};
 use mailrs_discover::Server;
 use mailrs_domain::translate::{fill, fill_plural, gettext};
-use mailrs_domain::{Account, AccountId, MailSet, Role as MailRole};
-use mailrs_store::servers;
+use mailrs_domain::{Account, AccountId, MailSet, RemoveSetting, Role as MailRole};
+use mailrs_store::{accounts, servers};
 
 use crate::add_account::lookup::{Check, Checks, State};
 use crate::add_account::post::{self, Advice, AdviceKind, Band, Browser, Stamp, Step, Tile};
 use crate::add_account::{
-    self, Address, Asking, Continue, Failure, FailureKind, Next, Outcome, Proposal, Role,
-    Running, Typed,
+    self, Address, Asking, Continue, Failure, FailureKind, Next, Outcome, Proposal, Protocol,
+    Removal, Role, Running, Typed,
 };
 use crate::core::Core;
 use crate::permission::Permission;
@@ -872,6 +872,9 @@ struct PasswordPage {
     down: adw::ActionRow,
     hosts: gtk::ListBox,
     outgoing: adw::ActionRow,
+    /// The POP3 server discovery found beside IMAP, leading to Server
+    /// Settings with POP3 picked.
+    pop3_offer: adw::ActionRow,
     summary: adw::ActionRow,
     agree: adw::ActionRow,
     confirmed: gtk::CheckButton,
@@ -931,6 +934,15 @@ fn password_page() -> PasswordPage {
     down.add_suffix(&gtk::Image::from_icon_name("go-next-symbolic"));
     down.set_visible(false);
     let outgoing = icon_row("penguin-mail-lock-symbolic", &gettext("Outgoing"), "", true);
+    // Shaped like the outgoing row: a choice one level deeper, offered
+    // under the servers the password goes to.
+    let pop3_offer = adw::ActionRow::builder()
+        .activatable(true)
+        .subtitle(gettext("Keep this account's mail on this computer alone"))
+        .visible(false)
+        .build();
+    pop3_offer.add_prefix(&gtk::Image::from_icon_name("computer-symbolic"));
+    pop3_offer.add_suffix(&gtk::Image::from_icon_name("go-next-symbolic"));
     let summary = icon_row("penguin-mail-lock-symbolic", &gettext("Servers"), "", true);
     summary.set_visible(false);
     let confirmed = gtk::CheckButton::builder()
@@ -946,7 +958,7 @@ fn password_page() -> PasswordPage {
         .visible(false)
         .build();
     agree.add_prefix(&confirmed);
-    for row in [&incoming, &outgoing, &down, &summary, &agree] {
+    for row in [&incoming, &outgoing, &pop3_offer, &down, &summary, &agree] {
         hosts.append(row);
     }
     let fields = gtk::Box::builder()
@@ -989,6 +1001,7 @@ fn password_page() -> PasswordPage {
         down,
         hosts,
         outgoing,
+        pop3_offer,
         summary,
         agree,
         confirmed,
@@ -1180,7 +1193,10 @@ fn added_page() -> AddedPage {
 struct ManualStep {
     page: adw::NavigationPage,
     content: adw::PreferencesPage,
-    imap: ServerRows,
+    /// What the incoming server speaks: IMAP or POP3.
+    protocol: adw::ToggleGroup,
+    removal: Removals,
+    incoming: ServerRows,
     smtp: ServerRows,
     problem: gtk::Label,
     use_them: gtk::Button,
@@ -1196,7 +1212,12 @@ struct ServerRows {
 }
 
 impl ServerRows {
-    fn new(role: Role, group: &adw::PreferencesGroup, user: adw::EntryRow) -> ServerRows {
+    fn new(
+        role: Role,
+        protocol: Option<adw::ToggleGroup>,
+        group: &adw::PreferencesGroup,
+        user: adw::EntryRow,
+    ) -> ServerRows {
         let host = entry(&gettext("Server"));
         host.set_input_purpose(gtk::InputPurpose::Url);
         let port = adw::SpinRow::with_range(1.0, 65535.0, 1.0);
@@ -1224,8 +1245,11 @@ impl ServerRows {
         let follows = port.clone();
         security.connect_active_notify(move |security| {
             let now = add_account::security_at(security.active());
+            let protocol = protocol
+                .as_ref()
+                .map_or(Protocol::Imap, |p| add_account::protocol_at(p.active()));
             let port = follows.value() as u16;
-            let moved = add_account::port_after_switch(role, port, now);
+            let moved = add_account::port_after_switch(role, protocol, port, now);
             if moved != port {
                 follows.set_value(f64::from(moved));
             }
@@ -1240,6 +1264,10 @@ impl ServerRows {
 
     fn fill(&self, server: &Server, user: Option<&str>) {
         self.user.set_text(user.unwrap_or_default());
+        self.fill_server(server);
+    }
+
+    fn fill_server(&self, server: &Server) {
         self.host.set_text(&server.host);
         self.port.set_value(f64::from(server.port));
         self.security
@@ -1253,6 +1281,91 @@ impl ServerRows {
             security: add_account::security_at(self.security.active()),
             user: self.user.text().to_string(),
         }
+    }
+}
+
+/// Server Settings' removal choice for a POP3 account: three radio rows
+/// and the day count the third one reads.
+struct Removals {
+    group: adw::PreferencesGroup,
+    rows: Vec<(Removal, gtk::CheckButton, adw::ActionRow)>,
+    days: adw::SpinRow,
+}
+
+impl Removals {
+    fn new() -> Removals {
+        let group = adw::PreferencesGroup::builder()
+            .title(gettext("Mail on the Server"))
+            .description(gettext(
+                "Penguin Mail keeps every message it downloads on this computer.",
+            ))
+            .visible(false)
+            .build();
+        let days = adw::SpinRow::with_range(1.0, 365.0, 1.0);
+        days.set_title(&gettext("Days"));
+        crate::ui::name(&days, &gettext("Days"));
+        days.set_value(f64::from(add_account::DEFAULT_DAYS));
+        days.set_visible(false);
+        let mut rows: Vec<(Removal, gtk::CheckButton, adw::ActionRow)> = Vec::new();
+        for removal in add_account::REMOVALS {
+            let check = gtk::CheckButton::builder()
+                .valign(gtk::Align::Center)
+                .build();
+            if let Some((_, first, _)) = rows.first() {
+                check.set_group(Some(first));
+            }
+            let title = add_account::removal_title(removal, add_account::DEFAULT_DAYS);
+            crate::ui::name(&check, &title);
+            let row = adw::ActionRow::builder()
+                .title(&title)
+                .activatable_widget(&check)
+                .build();
+            row.add_prefix(&check);
+            group.add(&row);
+            rows.push((removal, check, row));
+        }
+        group.add(&days);
+        let removals = Removals { group, rows, days };
+        removals.follow_days();
+        removals
+    }
+
+    /// The day count is read only by the third row, whose title says it,
+    /// and shows only while that row is picked: its number is already in
+    /// the title above it.
+    fn follow_days(&self) {
+        let Some((_, third, after)) = self.rows.last() else {
+            return;
+        };
+        let (after, check, days) = (after.clone(), third.clone(), self.days.clone());
+        let retitle = move || {
+            let title = add_account::removal_title(Removal::AfterDays, days.value() as u32);
+            after.set_title(&title);
+            crate::ui::name(&check, &title);
+        };
+        let again = retitle.clone();
+        self.days.connect_value_notify(move |_| again());
+        let days = self.days.clone();
+        third.connect_active_notify(move |third| days.set_visible(third.is_active()));
+        retitle();
+    }
+
+    fn fill(&self, setting: RemoveSetting) {
+        let (removal, days) = add_account::removal_of(setting);
+        self.days.set_value(f64::from(days));
+        for (choice, check, _) in &self.rows {
+            check.set_active(*choice == removal);
+        }
+        self.days.set_visible(removal == Removal::AfterDays);
+    }
+
+    fn chosen(&self) -> RemoveSetting {
+        let removal = self
+            .rows
+            .iter()
+            .find(|(_, check, _)| check.is_active())
+            .map_or(Removal::Leave, |(removal, _, _)| *removal);
+        add_account::removal_setting(removal, self.days.value() as u32)
     }
 }
 
@@ -1276,11 +1389,48 @@ fn manual_step() -> ManualStep {
     let incoming = adw::PreferencesGroup::builder()
         .title(gettext("Incoming Mail"))
         .build();
-    let imap = ServerRows::new(Role::Incoming, &incoming, imap_user);
+    // Two choices side by side, as Security is.
+    let protocol = adw::ToggleGroup::builder()
+        .valign(gtk::Align::Center)
+        .build();
+    for choice in add_account::PROTOCOLS {
+        let label = add_account::protocol_label(choice);
+        protocol.add(adw::Toggle::builder().label(label).name(label).build());
+    }
+    crate::ui::name(&protocol, &gettext("Protocol"));
+    let protocol_row = adw::ActionRow::builder()
+        .title(gettext("Protocol"))
+        .build();
+    protocol_row.add_suffix(&protocol);
+    incoming.add(&protocol_row);
+    let incoming_rows = ServerRows::new(
+        Role::Incoming,
+        Some(protocol.clone()),
+        &incoming,
+        imap_user,
+    );
+    let removal = Removals::new();
+    // The port follows the protocol as it follows Security, and the
+    // removal rows show for POP3 alone.
+    let (port, security, shown) = (
+        incoming_rows.port.clone(),
+        incoming_rows.security.clone(),
+        removal.group.clone(),
+    );
+    protocol.connect_active_notify(move |protocol| {
+        let now = add_account::protocol_at(protocol.active());
+        let at = port.value() as u16;
+        let security = add_account::security_at(security.active());
+        let moved = add_account::port_after_protocol(at, security, now);
+        if moved != at {
+            port.set_value(f64::from(moved));
+        }
+        shown.set_visible(now == Protocol::Pop3);
+    });
     let outgoing = adw::PreferencesGroup::builder()
         .title(gettext("Outgoing Mail"))
         .build();
-    let smtp = ServerRows::new(Role::Outgoing, &outgoing, smtp_user);
+    let smtp = ServerRows::new(Role::Outgoing, None, &outgoing, smtp_user);
     let problem = gtk::Label::builder()
         .wrap(true)
         .xalign(0.0)
@@ -1292,11 +1442,12 @@ fn manual_step() -> ManualStep {
         .title(gettext("Sign-In"))
         .description(gettext("Leave them empty to sign in with your address."))
         .build();
-    login.add(&imap.user);
+    login.add(&incoming_rows.user);
     login.add(&smtp.user);
     login.add(&problem);
     let content = adw::PreferencesPage::new();
     content.add(&incoming);
+    content.add(&removal.group);
     content.add(&outgoing);
     content.add(&login);
     let use_them = gtk::Button::builder()
@@ -1318,7 +1469,9 @@ fn manual_step() -> ManualStep {
     ManualStep {
         page,
         content,
-        imap,
+        protocol,
+        removal,
+        incoming: incoming_rows,
         smtp,
         problem,
         use_them,
@@ -1510,6 +1663,10 @@ impl Dialog {
         self.password.down.connect_activated(move |_| manual());
         let manual = on(Dialog::manual_from_password);
         self.password.failed_servers.connect_clicked(move |_| manual());
+        let as_pop3 = on(Dialog::manual_as_pop3);
+        self.password.pop3_offer.connect_activated(move |_| as_pop3());
+        let follow = on(Dialog::follow_protocol);
+        self.manual.protocol.connect_active_notify(move |_| follow());
         let sign_in = on(Dialog::sign_in);
         self.password.failed_retry.connect_clicked(move |_| sign_in());
         let sign_in = on(Dialog::sign_in);
@@ -1580,7 +1737,7 @@ impl Dialog {
             .banded
             .page
             .connect_shown(move |_| _ = password.grab_focus());
-        let host = self.manual.imap.host.clone();
+        let host = self.manual.incoming.host.clone();
         self.manual
             .page
             .connect_shown(move |_| _ = host.grab_focus());
@@ -2030,8 +2187,15 @@ impl Dialog {
     /// yes when Penguin Mail guessed them.
     fn show_hosts(&self, proposal: &Proposal) {
         let page = &self.password;
+        page.incoming.set_title(&add_account::incoming_title(proposal));
         page.incoming
-            .set_subtitle(&add_account::server_row_line(&proposal.imap));
+            .set_subtitle(&add_account::server_row_line(&proposal.incoming));
+        // Signing in again keeps the protocol the account has.
+        let offer = add_account::pop3_line(proposal).filter(|_| self.again.is_none());
+        page.pop3_offer.set_visible(offer.is_some());
+        if let Some(line) = offer {
+            page.pop3_offer.set_title(&line);
+        }
         page.outgoing
             .set_subtitle(&add_account::server_row_line(&proposal.smtp));
         page.summary
@@ -2100,7 +2264,10 @@ impl Dialog {
     ) {
         loop {
             let attempt = add_account::attempt(&address, &proposal, &password);
-            let signed = self.core.sign_in_imap(attempt).await;
+            let signed = match attempt.protocol {
+                Protocol::Imap => self.core.sign_in_imap(attempt).await,
+                Protocol::Pop3 => self.core.sign_in_pop3(attempt).await,
+            };
             let err = match signed {
                 // The account is kept whether or not the dialog is
                 // still open, so the window hears about it either way.
@@ -2164,7 +2331,10 @@ impl Dialog {
                 page.outgoing.set_visible(false);
                 let (title, server) = match (outgoing_failed, self.proposal.borrow().as_ref()) {
                     (true, Some(p)) => (gettext("Outgoing"), add_account::server_row_line(&p.smtp)),
-                    (false, Some(p)) => (gettext("Incoming"), add_account::server_row_line(&p.imap)),
+                    (false, Some(p)) => (
+                        add_account::incoming_title(p),
+                        add_account::server_row_line(&p.incoming),
+                    ),
                     (_, None) => (String::new(), String::new()),
                 };
                 page.down.set_title(&title);
@@ -2253,6 +2423,13 @@ impl Dialog {
     }
 
     fn show_manual(self: &Rc<Self>, proposal: &Proposal, said: Option<&str>) {
+        self.proposal.replace(Some(proposal.clone()));
+        self.fill_manual(proposal, said);
+    }
+
+    /// Fills Server Settings from `proposal` and shows it, leaving the
+    /// proposal the dialog holds as it is.
+    fn fill_manual(self: &Rc<Self>, proposal: &Proposal, said: Option<&str>) {
         let manual = &self.manual;
         manual.content.set_description(said.unwrap_or_default());
         // An outgoing name that only repeats the incoming one stays empty,
@@ -2260,14 +2437,48 @@ impl Dialog {
         let smtp_user = proposal
             .smtp_user
             .as_deref()
-            .filter(|user| Some(*user) != proposal.imap_user.as_deref());
+            .filter(|user| Some(*user) != proposal.incoming_user.as_deref());
+        // The protocol first, so its handlers move nothing the rows below
+        // are about to be filled with.
         manual
-            .imap
-            .fill(&proposal.imap, proposal.imap_user.as_deref());
+            .protocol
+            .set_active(add_account::protocol_index(proposal.protocol));
+        manual
+            .incoming
+            .fill(&proposal.incoming, proposal.incoming_user.as_deref());
         manual.smtp.fill(&proposal.smtp, smtp_user);
+        manual.removal.fill(proposal.pop3_remove.unwrap_or_default());
+        manual
+            .removal
+            .group
+            .set_visible(proposal.protocol == Protocol::Pop3);
         manual.problem.set_visible(false);
-        self.proposal.replace(Some(proposal.clone()));
         self.push("servers");
+    }
+
+    /// Server Settings with POP3 picked and the server discovery found
+    /// for it. The proposal on the password page stays IMAP, so going
+    /// back without Use These Settings signs in as the page shows.
+    fn manual_as_pop3(self: &Rc<Self>) {
+        let proposal = self.proposal.borrow().as_ref().and_then(add_account::as_pop3);
+        if let Some(proposal) = proposal {
+            self.fill_manual(&proposal, None);
+        }
+    }
+
+    /// Moves the incoming rows to the server discovery found for the
+    /// protocol just picked, while they still hold the other one.
+    fn follow_protocol(self: &Rc<Self>) {
+        let now = add_account::protocol_at(self.manual.protocol.active());
+        let host = self.manual.incoming.host.text();
+        let found = self
+            .proposal
+            .borrow()
+            .as_ref()
+            .and_then(|proposal| add_account::server_after_protocol(proposal, &host, now));
+        if let Some(server) = found {
+            self.manual.incoming.fill_server(&server);
+        }
     }
 
     fn use_manual(self: &Rc<Self>) {
@@ -2276,12 +2487,16 @@ impl Dialog {
         let (Some(before), Some(address)) = (before, address) else {
             return;
         };
+        let protocol = add_account::protocol_at(self.manual.protocol.active());
         let typed = add_account::typed_servers(
-            &self.manual.imap.typed(),
+            &self.manual.incoming.typed(),
             &self.manual.smtp.typed(),
             &before,
             &address,
-        );
+        )
+        .map(|proposal| {
+            add_account::with_protocol(proposal, protocol, self.manual.removal.chosen())
+        });
         match typed {
             Ok(proposal) => self.show_password(proposal),
             Err(problem) => {
@@ -2299,10 +2514,22 @@ impl Dialog {
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
             let id = account.id;
-            let saved = this.core.read(move |c| servers::load(c, id)).await;
+            let saved = this
+                .core
+                .read(move |c| {
+                    if let Some(servers) = servers::load(c, id)? {
+                        return Ok(Some(add_account::Kept::Imap(servers)));
+                    }
+                    let Some(servers) = servers::load_pop3(c, id)? else {
+                        return Ok(None);
+                    };
+                    let remove = accounts::pop3_remove(c, id)?;
+                    Ok(Some(add_account::Kept::Pop3(servers, remove)))
+                })
+                .await;
             match saved {
-                Ok(Some(saved)) => {
-                    this.show_password(add_account::saved_proposal(&account, &saved))
+                Ok(Some(kept)) => {
+                    this.show_password(add_account::saved_proposal(&account, &kept))
                 }
                 Ok(None) => {
                     let typed = this.typed.borrow().clone();
@@ -2610,10 +2837,8 @@ impl Dialog {
         ] {
             part.set_visible(grant);
         }
-        // Gmail has no Archive folder of its own.
-        let gmail = account.provider == mailrs_domain::Provider::Gmail;
         for folder in &page.folders {
-            let shown = !(gmail && folder.role == MailRole::Archive);
+            let shown = add_account::shows_folder(account.provider, folder.role);
             if let Some(row) = folder.row.parent() {
                 row.set_visible(shown);
             }
@@ -2711,17 +2936,18 @@ fn preview(this: &Rc<Dialog>, stage: &str) {
         user_name: UserName::Address,
     };
     let studio = Address::parse("dana@reyes.studio").expect("a sample address");
+    let fastmail_candidate = || Candidate {
+        source: Source::Mx,
+        provider: mailrs_discover::provider_named("Fastmail"),
+        imap: server("imap.fastmail.com", 993),
+        smtp: server("smtp.fastmail.com", 465),
+        pop3: None,
+        confirm: false,
+    };
     let fastmail = || {
         let found = Found {
             verdict: Verdict::Servers,
-            candidates: vec![Candidate {
-                source: Source::Mx,
-                provider: mailrs_discover::provider_named("Fastmail"),
-                imap: server("imap.fastmail.com", 993),
-                smtp: server("smtp.fastmail.com", 465),
-                pop3: None,
-                confirm: false,
-            }],
+            candidates: vec![fastmail_candidate()],
         };
         match add_account::after_discovery(found, &studio, true) {
             Next::Password(proposal) => proposal,
@@ -2795,7 +3021,7 @@ fn preview(this: &Rc<Dialog>, stage: &str) {
             this.typed.replace(Some(studio.clone()));
             this.push("address");
             let proposal = Proposal {
-                imap: server("mail.reyes.studio", 993),
+                incoming: server("mail.reyes.studio", 993),
                 smtp: server("mail.reyes.studio", 465),
                 ..add_account::guess(&studio)
             };
@@ -2807,14 +3033,68 @@ fn preview(this: &Rc<Dialog>, stage: &str) {
             )));
             this.show_failure(&add_account::failure(&gone, &proposal));
         }
+        // POP3: Fastmail offers it beside IMAP, so step 2 has the row
+        // that leads to it, and Server Settings opens on it from there.
+        "pop3-offer" | "pop3-servers" | "pop3-days" | "pop3-checking" | "pop3-failed" => {
+            let found = Found {
+                verdict: Verdict::Servers,
+                candidates: vec![Candidate {
+                    pop3: Some(server("pop.fastmail.com", 995)),
+                    ..fastmail_candidate()
+                }],
+            };
+            let Next::Password(imap) = add_account::after_discovery(found, &studio, true) else {
+                return;
+            };
+            this.typed.replace(Some(studio.clone()));
+            this.push("address");
+            this.show_password(imap.clone());
+            this.password.name.set_text("Dana Reyes");
+            let Some(pop3) = add_account::as_pop3(&imap) else {
+                return;
+            };
+            match stage {
+                "pop3-servers" => this.manual_as_pop3(),
+                "pop3-days" => {
+                    this.manual_as_pop3();
+                    this.manual.removal.fill(RemoveSetting::Days(30));
+                }
+                "pop3-checking" | "pop3-failed" => {
+                    this.show_password(pop3.clone());
+                    this.password.name.set_text("Dana Reyes");
+                    this.password.password.set_text("correcthorse");
+                    if stage == "pop3-checking" {
+                        this.password.sign_in.set_sensitive(false);
+                        this.password.sign_in.set_label(&gettext("Signing In…"));
+                    } else {
+                        let no_uidl = ImapError::Refused(gettext(
+                            "This server cannot tell its messages apart, so Penguin Mail cannot download from it safely.",
+                        ));
+                        // That is what `in_imap_words` makes of a server
+                        // without UIDL; the app does not link the POP3
+                        // crate to build it from one.
+                        let failed = anyhow::Error::new(CheckError::Imap(no_uidl));
+                        this.show_failure(&add_account::failure(&failed, &pop3));
+                    }
+                }
+                _ => {}
+            }
+        }
         "closed" => {
             let tuta = Address::parse("dana@tuta.com").expect("a sample address");
             this.typed.replace(Some(tuta.clone()));
             this.push("address");
             this.show_closed(&tuta);
         }
-        "added" | "grant" => {
+        "servers" => {
+            this.typed.replace(Some(studio.clone()));
+            this.push("address");
+            this.show_password(fastmail());
+            this.manual_from_password();
+        }
+        "added" | "grant" | "pop3-added" => {
             let grant = stage == "grant";
+            let pop3 = stage == "pop3-added";
             let this = Rc::clone(this);
             glib::spawn_future_local(async move {
                 let accounts = this
@@ -2848,7 +3128,11 @@ fn preview(this: &Rc<Dialog>, stage: &str) {
                 } else {
                     let account = account(
                         "dana@reyes.studio",
-                        mailrs_domain::Provider::Imap,
+                        if pop3 {
+                            mailrs_domain::Provider::Pop3
+                        } else {
+                            mailrs_domain::Provider::Imap
+                        },
                         "Fastmail",
                     );
                     this.show_added(&account, Some(post::stamp_for("Fastmail")), None);

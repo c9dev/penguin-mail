@@ -15,10 +15,10 @@ use mailrs_discover::{
     Candidate, Found, PasswordKind, ProviderInfo, Security, Server, Source, Unreachable, UserName,
     Verdict,
 };
-use mailrs_domain::Account;
-use mailrs_domain::translate::{fill, gettext};
+use mailrs_domain::translate::{fill, fill_plural, gettext};
+use mailrs_domain::{Account, Provider, RemoveSetting};
 use mailrs_imap::{CheckError, ImapError};
-use mailrs_store::servers::{Saved, Servers};
+use mailrs_store::servers::{Pop3Servers, Saved, Servers};
 
 use crate::keyring_plug::Plug;
 
@@ -155,12 +155,15 @@ pub struct Proposal {
     /// domain for a server the table does not list.
     pub provider_name: String,
     pub info: Option<ProviderInfo>,
-    pub imap: Server,
+    /// What the incoming server speaks.
+    pub protocol: Protocol,
+    /// The incoming server, IMAP or POP3 as `protocol` says.
+    pub incoming: Server,
     pub smtp: Server,
     /// The user name typed in Server Settings for the incoming server,
     /// sent as typed. `None` logs in with the address, the way the
     /// server's user name rule says.
-    pub imap_user: Option<String>,
+    pub incoming_user: Option<String>,
     /// The same for the outgoing server.
     pub smtp_user: Option<String>,
     /// The person must say yes to these host names before the password
@@ -173,6 +176,11 @@ pub struct Proposal {
     /// untried. A connection or a TLS failure on this proposal moves on
     /// to the first of these; a refused password does not.
     pub remaining: Vec<Candidate>,
+    /// The POP3 server discovery found beside the IMAP one, which step 2
+    /// offers on a row of its own.
+    pub pop3_offer: Option<Server>,
+    /// What a POP3 account does with mail on the server; `None` for IMAP.
+    pub pop3_remove: Option<RemoveSetting>,
 }
 
 /// Where discovery's answer takes the dialog.
@@ -192,6 +200,84 @@ pub enum Next {
     Microsoft,
     /// Nothing found: Server Settings, filled with a guess, under a line.
     Manual { proposal: Proposal, line: String },
+}
+
+/// What an account's incoming server speaks.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum Protocol {
+    #[default]
+    Imap,
+    Pop3,
+}
+
+/// The choices Server Settings' Protocol row offers.
+pub const PROTOCOLS: [Protocol; 2] = [Protocol::Imap, Protocol::Pop3];
+
+/// A protocol's name, so it is not translated.
+pub fn protocol_label(protocol: Protocol) -> &'static str {
+    match protocol {
+        Protocol::Imap => "IMAP",
+        Protocol::Pop3 => "POP3",
+    }
+}
+
+pub fn protocol_index(protocol: Protocol) -> u32 {
+    match protocol {
+        Protocol::Imap => 0,
+        Protocol::Pop3 => 1,
+    }
+}
+
+pub fn protocol_at(index: u32) -> Protocol {
+    match index {
+        1 => Protocol::Pop3,
+        _ => Protocol::Imap,
+    }
+}
+
+/// What a POP3 account does with mail on the server, as Server Settings
+/// lists the choices.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Removal {
+    Leave,
+    AfterDownloading,
+    AfterDays,
+}
+
+pub const REMOVALS: [Removal; 3] = [Removal::Leave, Removal::AfterDownloading, Removal::AfterDays];
+
+/// The day count Remove After {n} Days starts at.
+pub const DEFAULT_DAYS: u32 = 14;
+
+/// A removal row's title; the third names `days`.
+pub fn removal_title(removal: Removal, days: u32) -> String {
+    match removal {
+        Removal::Leave => gettext("Leave on Server"),
+        Removal::AfterDownloading => gettext("Remove After Downloading"),
+        Removal::AfterDays => fill_plural(
+            "Remove After {count} Day",
+            "Remove After {count} Days",
+            days as usize,
+            &[("count", &days.to_string())],
+        ),
+    }
+}
+
+pub fn removal_setting(removal: Removal, days: u32) -> RemoveSetting {
+    match removal {
+        Removal::Leave => RemoveSetting::Never,
+        Removal::AfterDownloading => RemoveSetting::Downloaded,
+        Removal::AfterDays => RemoveSetting::Days(days.max(1)),
+    }
+}
+
+/// The row and day count that show `setting`.
+pub fn removal_of(setting: RemoveSetting) -> (Removal, u32) {
+    match setting {
+        RemoveSetting::Never => (Removal::Leave, DEFAULT_DAYS),
+        RemoveSetting::Downloaded => (Removal::AfterDownloading, DEFAULT_DAYS),
+        RemoveSetting::Days(days) => (Removal::AfterDays, days),
+    }
 }
 
 /// What Add Account says for a Microsoft address in a build without
@@ -251,13 +337,16 @@ fn proposal_from(candidate: Candidate, remaining: Vec<Candidate>, address: &Addr
     Proposal {
         provider_name,
         info: candidate.provider,
-        imap: candidate.imap,
+        protocol: Protocol::Imap,
+        incoming: candidate.imap,
         smtp: candidate.smtp,
-        imap_user: None,
+        incoming_user: None,
         smtp_user: None,
         confirm: candidate.confirm,
         source: Some(candidate.source),
         remaining,
+        pop3_offer: candidate.pop3,
+        pop3_remove: None,
     }
 }
 
@@ -283,13 +372,57 @@ pub fn guess(address: &Address) -> Proposal {
     Proposal {
         provider_name: address.domain.clone(),
         info: None,
-        imap: server(format!("imap.{}", address.domain), 993),
+        protocol: Protocol::Imap,
+        incoming: server(format!("imap.{}", address.domain), 993),
         smtp: server(format!("smtp.{}", address.domain), 465),
-        imap_user: None,
+        incoming_user: None,
         smtp_user: None,
         confirm: false,
         source: None,
         remaining: Vec::new(),
+        pop3_offer: None,
+        pop3_remove: None,
+    }
+}
+
+/// `proposal` speaking `protocol`, with `remove` kept only for POP3, so
+/// switching back to IMAP leaves no POP3 setting behind.
+pub fn with_protocol(proposal: Proposal, protocol: Protocol, remove: RemoveSetting) -> Proposal {
+    Proposal {
+        protocol,
+        pop3_remove: (protocol == Protocol::Pop3).then_some(remove),
+        pop3_offer: None,
+        ..proposal
+    }
+}
+
+/// Server Settings for the POP3 server discovery found beside IMAP,
+/// leaving mail on the server.
+pub fn as_pop3(proposal: &Proposal) -> Option<Proposal> {
+    let pop3 = proposal.pop3_offer.clone()?;
+    Some(Proposal {
+        incoming: pop3,
+        remaining: Vec::new(),
+        ..with_protocol(proposal.clone(), Protocol::Pop3, RemoveSetting::Never)
+    })
+}
+
+/// The line step 2 shows when the provider offers POP3 beside the IMAP
+/// it picked.
+pub fn pop3_line(proposal: &Proposal) -> Option<String> {
+    (proposal.protocol == Protocol::Imap && proposal.pop3_offer.is_some()).then(|| {
+        fill(
+            &gettext("{provider} also offers POP3"),
+            &[("provider", &post::short_name(&proposal.provider_name))],
+        )
+    })
+}
+
+/// The title of step 2's incoming server row.
+pub fn incoming_title(proposal: &Proposal) -> String {
+    match proposal.protocol {
+        Protocol::Imap => gettext("Incoming"),
+        Protocol::Pop3 => fill(&gettext("Incoming over {protocol}"), &[("protocol", "POP3")]),
     }
 }
 
@@ -389,7 +522,7 @@ pub fn server_row_line(server: &Server) -> String {
 /// refused password: "imap and smtp.fastmail.com · TLS" when the hosts
 /// differ only in their first label.
 pub fn servers_summary(proposal: &Proposal) -> String {
-    let (imap, smtp) = (&proposal.imap, &proposal.smtp);
+    let (imap, smtp) = (&proposal.incoming, &proposal.smtp);
     let rest = |host: &str| host.split_once('.').map(|(_, rest)| rest.to_string());
     let hosts = match (imap.host.split_once('.'), rest(&smtp.host)) {
         (Some((first, domain)), Some(other)) if domain == other => fill(
@@ -480,16 +613,19 @@ pub fn folder_line(conversations: usize) -> String {
 pub struct Attempt {
     pub address: String,
     pub provider_name: String,
-    pub imap: Server,
+    pub protocol: Protocol,
+    pub incoming: Server,
     pub smtp: Server,
-    /// What `mailrs_imap::check` signs in to the incoming server with:
+    /// What the incoming server is signed in to with:
     /// the user name typed for it in Server Settings, else the address.
     /// The server's `user_name` rule turns it into the names to try, and a
     /// typed name comes with the `Address` rule, so it goes as typed.
-    pub imap_login: String,
+    pub incoming_login: String,
     /// The same for the outgoing server.
     pub smtp_login: String,
     pub password: String,
+    /// What a POP3 account does with mail on the server.
+    pub pop3_remove: RemoveSetting,
 }
 
 /// The try Sign In makes. The password goes as typed: app passwords are
@@ -498,11 +634,16 @@ pub fn attempt(address: &Address, proposal: &Proposal, password: &str) -> Attemp
     Attempt {
         address: address.full(),
         provider_name: proposal.provider_name.clone(),
-        imap: proposal.imap.clone(),
+        protocol: proposal.protocol,
+        incoming: proposal.incoming.clone(),
         smtp: proposal.smtp.clone(),
-        imap_login: proposal.imap_user.clone().unwrap_or_else(|| address.full()),
+        incoming_login: proposal
+            .incoming_user
+            .clone()
+            .unwrap_or_else(|| address.full()),
         smtp_login: proposal.smtp_user.clone().unwrap_or_else(|| address.full()),
         password: password.to_string(),
+        pop3_remove: proposal.pop3_remove.unwrap_or_default(),
     }
 }
 
@@ -597,7 +738,7 @@ fn failure_given(err: &anyhow::Error, proposal: &Proposal, plug: Plug) -> Failur
     // `check` says which server failed; a network error names that host,
     // since the other one may have answered.
     let (server, err) = match check {
-        CheckError::Imap(err) => (&proposal.imap, err),
+        CheckError::Imap(err) => (&proposal.incoming, err),
         CheckError::Smtp(err) => (&proposal.smtp, err),
     };
     let host = &server.host;
@@ -831,29 +972,59 @@ pub enum Role {
 }
 
 /// The port a server of `role` listens on for `security` unless its
-/// provider says otherwise: 993 and 143 for IMAP, 465 and 587 for
-/// submission (RFC 8314).
-fn default_port(role: Role, security: Security) -> u16 {
-    match (role, security) {
-        (Role::Incoming, Security::Tls) => 993,
-        (Role::Incoming, Security::StartTls) => 143,
-        (Role::Outgoing, Security::Tls) => 465,
-        (Role::Outgoing, Security::StartTls) => 587,
+/// provider says otherwise: 993 and 143 for IMAP, 995 and 110 for POP3,
+/// 465 and 587 for submission (RFC 8314).
+fn default_port(role: Role, protocol: Protocol, security: Security) -> u16 {
+    match (role, protocol, security) {
+        (Role::Incoming, Protocol::Imap, Security::Tls) => 993,
+        (Role::Incoming, Protocol::Imap, Security::StartTls) => 143,
+        (Role::Incoming, Protocol::Pop3, Security::Tls) => 995,
+        (Role::Incoming, Protocol::Pop3, Security::StartTls) => 110,
+        (Role::Outgoing, _, Security::Tls) => 465,
+        (Role::Outgoing, _, Security::StartTls) => 587,
     }
 }
 
 /// The port after the Security row switched to `now`. A port that still
 /// holds the other choice's default moves to this one's; a port the
 /// person typed stays.
-pub fn port_after_switch(role: Role, port: u16, now: Security) -> u16 {
+pub fn port_after_switch(role: Role, protocol: Protocol, port: u16, now: Security) -> u16 {
     let other = match now {
         Security::Tls => Security::StartTls,
         Security::StartTls => Security::Tls,
     };
-    if port == default_port(role, other) {
-        default_port(role, now)
+    if port == default_port(role, protocol, other) {
+        default_port(role, protocol, now)
     } else {
         port
+    }
+}
+
+/// The incoming port after the Protocol row switched to `now`, by the
+/// same rule.
+pub fn port_after_protocol(port: u16, security: Security, now: Protocol) -> u16 {
+    let other = match now {
+        Protocol::Imap => Protocol::Pop3,
+        Protocol::Pop3 => Protocol::Imap,
+    };
+    if port == default_port(Role::Incoming, other, security) {
+        default_port(Role::Incoming, now, security)
+    } else {
+        port
+    }
+}
+
+/// The incoming server Server Settings moves to when the Protocol row
+/// switches to `now`, for a provider discovery found both IMAP and POP3
+/// at: the other protocol's server while `host` still names the one just
+/// left. A host the person typed stays, with `None`.
+pub fn server_after_protocol(proposal: &Proposal, host: &str, now: Protocol) -> Option<Server> {
+    let pop3 = proposal.pop3_offer.as_ref()?;
+    let imap = &proposal.incoming;
+    match now {
+        Protocol::Pop3 if host == imap.host => Some(pop3.clone()),
+        Protocol::Imap if host == pop3.host => Some(imap.clone()),
+        _ => None,
     }
 }
 
@@ -888,7 +1059,7 @@ pub fn security_at(index: u32) -> Security {
 /// it, and a blank outgoing one takes the incoming one. Servers the
 /// person typed need no second yes or fallback candidate. The provider
 /// found for the address keeps naming the account only while both hosts
-/// are still its own: another host is a server the person chose, so the
+/// are still its own, its POP3 server among them: another host is a server the person chose, so the
 /// account takes the address's domain and none of the table's rules,
 /// such as its server filing sent mail, carry over to it.
 pub fn typed_servers(
@@ -919,8 +1090,8 @@ pub fn typed_servers(
         let user = typed.user.trim();
         (!user.is_empty()).then(|| user.to_string())
     };
-    let imap_user = typed_user(imap);
-    let smtp_user = typed_user(smtp).or_else(|| imap_user.clone());
+    let incoming_user = typed_user(imap);
+    let smtp_user = typed_user(smtp).or_else(|| incoming_user.clone());
     let server = |host: String, typed: &Typed, user: &Option<String>, rule: UserName| Server {
         host,
         port: typed.port,
@@ -931,7 +1102,11 @@ pub fn typed_servers(
             rule
         },
     };
-    let same_hosts = imap_host == before.imap.host && smtp_host == before.smtp.host;
+    // The POP3 server found beside IMAP is the provider's own too.
+    let found = std::iter::once(&before.incoming)
+        .chain(&before.pop3_offer)
+        .find(|server| server.host == imap_host);
+    let same_hosts = found.is_some() && smtp_host == before.smtp.host;
     let (provider_name, info) = if same_hosts {
         (before.provider_name.clone(), before.info.clone())
     } else {
@@ -940,13 +1115,21 @@ pub fn typed_servers(
     Ok(Proposal {
         provider_name,
         info,
-        imap: server(imap_host, imap, &imap_user, before.imap.user_name),
+        protocol: before.protocol,
+        incoming: server(
+            imap_host,
+            imap,
+            &incoming_user,
+            found.unwrap_or(&before.incoming).user_name,
+        ),
         smtp: server(smtp_host, smtp, &smtp_user, before.smtp.user_name),
-        imap_user,
+        incoming_user,
         smtp_user,
         confirm: false,
         source: None,
         remaining: Vec::new(),
+        pop3_offer: None,
+        pop3_remove: before.pop3_remove,
     })
 }
 
@@ -957,7 +1140,13 @@ pub fn typed_servers(
 /// its SMTP server takes the address). A name no rule gives, typed in
 /// Server Settings, goes to that server as typed again. There is no
 /// discovery to fall back to, so nothing waits in `remaining`.
-pub fn saved_proposal(account: &Account, saved: &Servers) -> Proposal {
+pub fn saved_proposal(account: &Account, kept: &Kept) -> Proposal {
+    let (protocol, incoming, smtp, pop3_remove) = match kept {
+        Kept::Imap(servers) => (Protocol::Imap, &servers.imap, &servers.smtp, None),
+        Kept::Pop3(servers, remove) => {
+            (Protocol::Pop3, &servers.pop3, &servers.smtp, Some(*remove))
+        }
+    };
     let local = account.email.rsplit_once('@').map(|(local, _)| local);
     // `server_of` gives the server the `Address` rule, which sends a
     // typed name as it is.
@@ -973,19 +1162,39 @@ pub fn saved_proposal(account: &Account, saved: &Servers) -> Proposal {
         };
         (server, user)
     };
-    let (imap, imap_user) = restore(&saved.imap);
-    let (smtp, smtp_user) = restore(&saved.smtp);
+    let (incoming, incoming_user) = restore(incoming);
+    let (smtp, smtp_user) = restore(smtp);
     let provider_name = mailrs_discover::resolved_provider_name(account.provider_name());
     Proposal {
         info: mailrs_discover::provider_named(&provider_name),
         provider_name,
-        imap,
+        protocol,
+        incoming,
         smtp,
-        imap_user,
+        incoming_user,
         smtp_user,
         confirm: false,
         source: None,
         remaining: Vec::new(),
+        pop3_offer: None,
+        pop3_remove,
+    }
+}
+
+/// The servers an account kept, as its protocol keeps them.
+pub enum Kept {
+    Imap(Servers),
+    Pop3(Pop3Servers, RemoveSetting),
+}
+
+/// Whether the added page lists `role` for a new account of `provider`:
+/// the folders its server fills. Gmail has no Archive of its own, and a
+/// POP3 server holds an inbox alone.
+pub fn shows_folder(provider: Provider, role: mailrs_domain::Role) -> bool {
+    match provider {
+        Provider::Gmail => role != mailrs_domain::Role::Archive,
+        Provider::Pop3 => role == mailrs_domain::Role::Inbox,
+        Provider::Imap | Provider::Microsoft => true,
     }
 }
 
@@ -1040,7 +1249,8 @@ mod tests {
     };
     use mailrs_domain::{Account, AccountState, Provider};
     use mailrs_imap::{CheckError, ImapError};
-    use mailrs_store::servers::{Saved, Servers};
+    use mailrs_domain::RemoveSetting;
+    use mailrs_store::servers::{Pop3Servers, Saved, Servers};
 
     use super::*;
 
@@ -1137,7 +1347,7 @@ mod tests {
         let proposal = fastmail();
         assert_eq!(proposal.provider_name, "Fastmail");
         assert!(!proposal.confirm);
-        assert_eq!(proposal.imap.host, "imap.example.org");
+        assert_eq!(proposal.incoming.host, "imap.example.org");
     }
 
     #[test]
@@ -1222,7 +1432,7 @@ mod tests {
     fn set_up_manually_before_a_lookup_still_finds_a_listed_provider() {
         let proposal = guess(&dana());
         assert_eq!(proposal.provider_name, "Fastmail");
-        assert_eq!(proposal.imap, server("imap.fastmail.com", 993));
+        assert_eq!(proposal.incoming, server("imap.fastmail.com", 993));
         assert_eq!(proposal.smtp, server("smtp.fastmail.com", 465));
         assert!(
             proposal.info.is_some_and(|info| info.password == PasswordKind::AppPassword),
@@ -1238,13 +1448,16 @@ mod tests {
             Proposal {
                 provider_name: "example.org".into(),
                 info: None,
-                imap: server("imap.example.org", 993),
+                protocol: Protocol::Imap,
+                incoming: server("imap.example.org", 993),
                 smtp: server("smtp.example.org", 465),
-                imap_user: None,
+                incoming_user: None,
                 smtp_user: None,
                 confirm: false,
                 source: None,
                 remaining: Vec::new(),
+                pop3_offer: None,
+                pop3_remove: None,
             }
         );
     }
@@ -1257,7 +1470,7 @@ mod tests {
         else {
             panic!("expected Server Settings");
         };
-        assert_eq!(proposal.imap, server("imap.example.org", 993));
+        assert_eq!(proposal.incoming, server("imap.example.org", 993));
         assert_eq!(proposal.smtp, server("smtp.example.org", 465));
         assert_eq!(
             line,
@@ -1305,7 +1518,7 @@ mod tests {
     fn the_password_goes_as_typed_and_the_address_logs_in() {
         let tried = attempt(&dana(), &fastmail(), " abcd efgh ");
         assert_eq!(tried.password, " abcd efgh ");
-        assert_eq!(tried.imap_login, "Dana@fastmail.com");
+        assert_eq!(tried.incoming_login, "Dana@fastmail.com");
         assert_eq!(tried.smtp_login, "Dana@fastmail.com");
         assert_eq!(tried.provider_name, "Fastmail");
     }
@@ -1313,12 +1526,12 @@ mod tests {
     #[test]
     fn a_user_name_typed_in_server_settings_is_who_logs_in() {
         let typed = Proposal {
-            imap_user: Some("dana".into()),
+            incoming_user: Some("dana".into()),
             smtp_user: Some("dana@fastmail.com".into()),
             ..fastmail()
         };
         let tried = attempt(&dana(), &typed, "pw");
-        assert_eq!(tried.imap_login, "dana");
+        assert_eq!(tried.incoming_login, "dana");
         assert_eq!(tried.smtp_login, "dana@fastmail.com");
     }
 
@@ -1473,8 +1686,8 @@ mod tests {
             Err("https://mail.example.org is not a server name.".into())
         );
         let proposal = typed_servers(&ok, &ok, &fastmail(), &dana()).unwrap();
-        assert_eq!(proposal.imap.host, "imap.example.org");
-        assert_eq!(proposal.imap_user, None);
+        assert_eq!(proposal.incoming.host, "imap.example.org");
+        assert_eq!(proposal.incoming_user, None);
         assert_eq!(proposal.smtp_user, None);
         assert!(!proposal.confirm);
     }
@@ -1489,17 +1702,17 @@ mod tests {
         assert_eq!(security_label(Security::StartTls), "STARTTLS");
     }
 
-    fn kept(imap_user: &str, smtp_user: &str) -> Servers {
+    fn kept(imap_user: &str, smtp_user: &str) -> Kept {
         let saved = |host: &str, port, user: &str| Saved {
             host: host.into(),
             port,
             security: mailrs_store::servers::Security::Tls,
             user_name: user.into(),
         };
-        Servers {
+        Kept::Imap(Servers {
             imap: saved("imap.mail.me.com", 993, imap_user),
             smtp: saved("smtp.mail.me.com", 587, smtp_user),
-        }
+        })
     }
 
     fn icloud_account() -> Account {
@@ -1517,12 +1730,12 @@ mod tests {
         let account = icloud_account();
         let proposal = saved_proposal(&account, &kept("dana", "dana@icloud.com"));
         assert_eq!(proposal.provider_name, "iCloud Mail");
-        assert_eq!(proposal.imap.host, "imap.mail.me.com");
+        assert_eq!(proposal.incoming.host, "imap.mail.me.com");
         // Each server gets back the name it took last time from the
         // address: the part before @ for IMAP, the whole address for SMTP.
-        assert_eq!(proposal.imap.user_name, UserName::LocalPartFirst);
+        assert_eq!(proposal.incoming.user_name, UserName::LocalPartFirst);
         assert_eq!(proposal.smtp.user_name, UserName::Address);
-        assert_eq!(proposal.imap_user, None);
+        assert_eq!(proposal.incoming_user, None);
         assert_eq!(proposal.smtp_user, None);
         assert!(!proposal.confirm);
         assert_eq!(
@@ -1534,9 +1747,9 @@ mod tests {
     #[test]
     fn a_user_name_typed_in_server_settings_is_kept_for_signing_in_again() {
         let proposal = saved_proposal(&icloud_account(), &kept("d.santos", "d.santos"));
-        assert_eq!(proposal.imap_user.as_deref(), Some("d.santos"));
+        assert_eq!(proposal.incoming_user.as_deref(), Some("d.santos"));
         assert_eq!(proposal.smtp_user.as_deref(), Some("d.santos"));
-        assert_eq!(proposal.imap.user_name, UserName::Address);
+        assert_eq!(proposal.incoming.user_name, UserName::Address);
         assert_eq!(proposal.smtp.user_name, UserName::Address);
     }
 
@@ -1566,7 +1779,7 @@ mod tests {
                 user_name: "dana@fastmail.com".into(),
             },
         };
-        let proposal = saved_proposal(&account, &saved);
+        let proposal = saved_proposal(&account, &Kept::Imap(saved));
         assert_eq!(proposal.provider_name, "Fastmail");
         assert!(proposal.info.is_some_and(|info| info.password == PasswordKind::AppPassword));
     }
@@ -1616,14 +1829,14 @@ mod tests {
         let Next::Password(first) = after_discovery(two_candidates(false), &address, true) else {
             panic!("expected the password step");
         };
-        assert_eq!(first.imap.host, "imap1.example.org");
+        assert_eq!(first.incoming.host, "imap1.example.org");
         let blocked = anyhow::Error::new(CheckError::Imap(ImapError::Network(
             "connection refused".into(),
         )));
         let Outcome::TryNext(second) = after_failure(&blocked, &first, &address) else {
             panic!("expected the second candidate");
         };
-        assert_eq!(second.imap.host, "imap2.example.org");
+        assert_eq!(second.incoming.host, "imap2.example.org");
         assert!(second.remaining.is_empty());
     }
 
@@ -1732,9 +1945,9 @@ mod tests {
             &dana(),
         )
         .unwrap();
-        assert_eq!(proposal.imap_user.as_deref(), Some("d.santos"));
+        assert_eq!(proposal.incoming_user.as_deref(), Some("d.santos"));
         assert_eq!(proposal.smtp_user.as_deref(), Some("dana@example.org"));
-        assert_eq!(proposal.imap.user_name, UserName::Address);
+        assert_eq!(proposal.incoming.user_name, UserName::Address);
         assert_eq!(proposal.smtp.user_name, UserName::Address);
     }
 
@@ -1755,8 +1968,8 @@ mod tests {
     #[test]
     fn a_name_typed_for_one_server_is_kept_for_that_server_alone() {
         let proposal = saved_proposal(&icloud_account(), &kept("d.santos", "dana@icloud.com"));
-        assert_eq!(proposal.imap_user.as_deref(), Some("d.santos"));
-        assert_eq!(proposal.imap.user_name, UserName::Address);
+        assert_eq!(proposal.incoming_user.as_deref(), Some("d.santos"));
+        assert_eq!(proposal.incoming.user_name, UserName::Address);
         assert_eq!(proposal.smtp_user, None);
         assert_eq!(proposal.smtp.user_name, UserName::Address);
     }
@@ -1764,21 +1977,21 @@ mod tests {
     #[test]
     fn switching_security_moves_a_default_port_to_the_other_default() {
         use Role::{Incoming, Outgoing};
-        assert_eq!(port_after_switch(Incoming, 993, Security::StartTls), 143);
-        assert_eq!(port_after_switch(Incoming, 143, Security::Tls), 993);
-        assert_eq!(port_after_switch(Outgoing, 465, Security::StartTls), 587);
-        assert_eq!(port_after_switch(Outgoing, 587, Security::Tls), 465);
+        assert_eq!(port_after_switch(Incoming, Protocol::Imap, 993, Security::StartTls), 143);
+        assert_eq!(port_after_switch(Incoming, Protocol::Imap, 143, Security::Tls), 993);
+        assert_eq!(port_after_switch(Outgoing, Protocol::Imap, 465, Security::StartTls), 587);
+        assert_eq!(port_after_switch(Outgoing, Protocol::Imap, 587, Security::Tls), 465);
     }
 
     #[test]
     fn switching_security_keeps_a_port_the_person_chose() {
         assert_eq!(
-            port_after_switch(Role::Incoming, 1143, Security::StartTls),
+            port_after_switch(Role::Incoming, Protocol::Imap, 1143, Security::StartTls),
             1143
         );
-        assert_eq!(port_after_switch(Role::Outgoing, 2525, Security::Tls), 2525);
+        assert_eq!(port_after_switch(Role::Outgoing, Protocol::Imap, 2525, Security::Tls), 2525);
         // Already the new mode's default: nothing to move.
-        assert_eq!(port_after_switch(Role::Outgoing, 465, Security::Tls), 465);
+        assert_eq!(port_after_switch(Role::Outgoing, Protocol::Imap, 465, Security::Tls), 465);
     }
 
     #[test]
@@ -1879,13 +2092,13 @@ mod tests {
     #[test]
     fn two_hosts_on_one_domain_share_a_summary() {
         let both = Proposal {
-            imap: server("imap.fastmail.com", 993),
+            incoming: server("imap.fastmail.com", 993),
             smtp: server("smtp.fastmail.com", 465),
             ..fastmail()
         };
         assert_eq!(servers_summary(&both), "imap and smtp.fastmail.com · TLS");
         let apart = Proposal {
-            imap: server("mail.example.org", 993),
+            incoming: server("mail.example.org", 993),
             smtp: Server {
                 security: Security::StartTls,
                 ..server("smtp.example.net", 587)
@@ -2025,5 +2238,135 @@ mod tests {
             on_continue("dana", None),
             Continue::Say("Type the whole address, such as dana@example.com.".into())
         );
+    }
+
+    #[test]
+    fn switching_protocol_from_pop3_back_to_imap_drops_the_removal_choice() {
+        let typed = typed_servers(
+            &typed("mail.example.org", 995, ""),
+            &typed("smtp.example.org", 465, ""),
+            &fastmail(),
+            &dana(),
+        )
+        .unwrap();
+        let pop3 = with_protocol(typed, Protocol::Pop3, RemoveSetting::Downloaded);
+        assert_eq!(
+            (pop3.protocol, pop3.pop3_remove),
+            (Protocol::Pop3, Some(RemoveSetting::Downloaded))
+        );
+        assert_eq!(attempt(&dana(), &pop3, "pw").pop3_remove, RemoveSetting::Downloaded);
+        let back = with_protocol(pop3, Protocol::Imap, RemoveSetting::Downloaded);
+        assert_eq!((back.protocol, back.pop3_remove), (Protocol::Imap, None));
+        let tried = attempt(&dana(), &back, "pw");
+        assert_eq!((tried.protocol, tried.pop3_remove), (Protocol::Imap, RemoveSetting::Never));
+    }
+
+    #[test]
+    fn a_provider_that_also_offers_pop3_says_so_and_keeps_imap_first() {
+        let mut found = found(Some(fastmail_info()), Source::Table, false);
+        found.candidates[0].pop3 = Some(server("pop.fastmail.com", 995));
+        let Next::Password(proposal) = after_discovery(found, &dana(), true) else {
+            panic!("step 2")
+        };
+        assert_eq!(proposal.protocol, Protocol::Imap);
+        assert_eq!(pop3_line(&proposal).as_deref(), Some("Fastmail also offers POP3"));
+        let pop3 = as_pop3(&proposal).expect("a POP3 proposal");
+        assert_eq!(
+            (pop3.protocol, pop3.incoming.host.as_str()),
+            (Protocol::Pop3, "pop.fastmail.com")
+        );
+        assert_eq!(pop3.pop3_remove, Some(RemoveSetting::Never), "Leave on Server is the default");
+        assert_eq!(pop3_line(&pop3), None);
+        assert_eq!(incoming_title(&pop3), "Incoming over POP3");
+        assert_eq!(incoming_title(&proposal), "Incoming");
+    }
+
+    #[test]
+    fn the_incoming_port_follows_the_protocol_unless_typed() {
+        assert_eq!(port_after_protocol(993, Security::Tls, Protocol::Pop3), 995);
+        assert_eq!(port_after_protocol(143, Security::StartTls, Protocol::Pop3), 110);
+        assert_eq!(port_after_protocol(995, Security::Tls, Protocol::Imap), 993);
+        assert_eq!(port_after_protocol(1995, Security::Tls, Protocol::Imap), 1995);
+        assert_eq!(port_after_switch(Role::Incoming, Protocol::Pop3, 995, Security::StartTls), 110);
+        assert_eq!(port_after_switch(Role::Outgoing, Protocol::Pop3, 465, Security::StartTls), 587);
+    }
+
+    #[test]
+    fn the_removal_rows_name_their_setting() {
+        assert_eq!(removal_title(Removal::AfterDays, 1), "Remove After 1 Day");
+        assert_eq!(removal_title(Removal::AfterDays, 14), "Remove After 14 Days");
+        assert_eq!(removal_setting(Removal::AfterDays, 30), RemoveSetting::Days(30));
+        assert_eq!(removal_of(RemoveSetting::Days(30)), (Removal::AfterDays, 30));
+        assert_eq!(removal_of(RemoveSetting::Never), (Removal::Leave, DEFAULT_DAYS));
+    }
+
+    #[test]
+    fn a_pop3_account_signing_in_again_starts_as_pop3_with_its_setting() {
+        let account = Account {
+            provider: Provider::Pop3,
+            provider_name: Some("example.org".into()),
+            ..icloud_account()
+        };
+        let saved = |host: &str, port| Saved {
+            host: host.into(),
+            port,
+            security: mailrs_store::servers::Security::Tls,
+            user_name: "dana@icloud.com".into(),
+        };
+        let kept = Kept::Pop3(
+            Pop3Servers {
+                pop3: saved("pop.example.org", 995),
+                smtp: saved("smtp.example.org", 465),
+            },
+            RemoveSetting::Days(7),
+        );
+        let proposal = saved_proposal(&account, &kept);
+        assert_eq!(proposal.protocol, Protocol::Pop3);
+        assert_eq!(proposal.incoming.host, "pop.example.org");
+        assert_eq!(proposal.pop3_remove, Some(RemoveSetting::Days(7)));
+    }
+
+    fn fastmail_with_pop3() -> Proposal {
+        let mut found = found(Some(fastmail_info()), Source::Table, false);
+        found.candidates[0].pop3 = Some(server("pop.example.org", 995));
+        match after_discovery(found, &dana(), true) {
+            Next::Password(proposal) => proposal,
+            other => panic!("{other:?}"),
+        }
+    }
+
+    #[test]
+    fn picking_pop3_takes_the_pop3_server_discovery_found_while_the_host_is_untouched() {
+        let found = fastmail_with_pop3();
+        let pop3 = server_after_protocol(&found, "imap.example.org", Protocol::Pop3);
+        assert_eq!(pop3, Some(server("pop.example.org", 995)));
+        let back = server_after_protocol(&found, "pop.example.org", Protocol::Imap);
+        assert_eq!(back, Some(server("imap.example.org", 993)));
+        assert_eq!(server_after_protocol(&found, "mail.example.org", Protocol::Pop3), None);
+        assert_eq!(server_after_protocol(&fastmail(), "imap.example.org", Protocol::Pop3), None);
+    }
+
+    #[test]
+    fn the_pop3_server_discovery_found_keeps_the_provider() {
+        let found = fastmail_with_pop3();
+        let typed = typed_servers(
+            &typed("pop.example.org", 995, ""),
+            &typed("smtp.example.org", 465, ""),
+            &found,
+            &dana(),
+        )
+        .unwrap();
+        assert_eq!(typed.provider_name, "Fastmail");
+        assert!(typed.info.is_some());
+    }
+
+    #[test]
+    fn the_added_page_lists_only_the_folders_the_server_fills() {
+        use mailrs_domain::Role as MailRole;
+        assert!(shows_folder(Provider::Imap, MailRole::Archive));
+        assert!(!shows_folder(Provider::Gmail, MailRole::Archive));
+        assert!(shows_folder(Provider::Pop3, MailRole::Inbox));
+        assert!(!shows_folder(Provider::Pop3, MailRole::Sent));
+        assert!(!shows_folder(Provider::Pop3, MailRole::Archive));
     }
 }

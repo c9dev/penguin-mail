@@ -27,14 +27,14 @@ use mailrs_sync::lock::{LockError, SyncLock};
 use mailrs_sync::passwords::{KeyringPasswords, MemoryPasswords, PasswordStore, Passwords};
 use mailrs_sync::services::finding;
 use mailrs_sync::sign_in::{
-    NewImap, NewMicrosoft, account_client, google_signed_in, imap_signed_in, microsoft_signed_in,
+    NewImap, NewMicrosoft, NewPop3, account_client, check_pop3, google_signed_in, imap_signed_in,
+    microsoft_signed_in, pop3_signed_in,
 };
 use mailrs_sync::{
     AccountServices, AccountSettings, AccountSync, Accounts, BackendError, ContactBook, Failure,
     History, Invitations, MailAction, MailActions, Mailboxes, MovedFrom, OneClick, Outbox, Outcome,
     SyncEngine, SyncError, Undone, connect_account, connect_imap, connect_microsoft, connect_pop3,
-    now_millis,
-    servers_for,
+    now_millis, pop3_servers_for, servers_for,
 };
 
 use crate::add_account::Attempt;
@@ -968,24 +968,70 @@ impl Core {
             let Attempt {
                 address,
                 provider_name,
-                imap,
+                incoming,
                 smtp,
-                imap_login,
+                incoming_login,
                 smtp_login,
                 password,
+                ..
             } = attempt;
             // `check` reports which server refused, as a `CheckError` the
             // dialog reads back out of the `anyhow::Error`.
             let checked =
-                mailrs_imap::check(&imap, &smtp, &imap_login, &smtp_login, &password).await?;
+                mailrs_imap::check(&incoming, &smtp, &incoming_login, &smtp_login, &password)
+                    .await?;
             let new = NewImap {
                 address,
                 provider_name,
-                servers: servers_for(&imap, &checked.imap_user, &smtp, &checked.smtp_user),
+                servers: servers_for(&incoming, &checked.imap_user, &smtp, &checked.smtp_user),
                 password,
             };
             let account = imap_signed_in(&db, Arc::clone(&passwords), new, now_millis()).await?;
             let services = connect_imap(&db, passwords, &account, window_days).await?;
+            engine.start_account(account.id, services);
+            Ok::<_, anyhow::Error>(account)
+        })
+        .await
+    }
+
+    /// Signs in to a POP3 account: signs in to the POP3 server, which
+    /// must answer UIDL, then to the SMTP server, then keeps the account,
+    /// its servers, its removal setting and its password, and starts
+    /// downloading. Nothing is kept when a sign-in fails; a failure comes
+    /// back as a `CheckError` naming the server, as for IMAP.
+    pub async fn sign_in_pop3(&self, attempt: Attempt) -> Result<Account> {
+        if self.demo {
+            bail!(gettext("Demo mode cannot add real accounts."));
+        }
+        let engine = self
+            .engine
+            .current()
+            .ok_or_else(|| anyhow!("sync is not running"))?;
+        let (db, passwords) = (self.db.clone(), Arc::clone(&self.passwords));
+        self.call(async move {
+            let Attempt {
+                address,
+                provider_name,
+                incoming,
+                smtp,
+                incoming_login,
+                smtp_login,
+                password,
+                pop3_remove,
+                ..
+            } = attempt;
+            let pop3_user = check_pop3(&incoming, &incoming_login, &password).await?;
+            let smtp_user =
+                mailrs_imap::check_smtp(&smtp, &pop3_user, &smtp_login, &password).await?;
+            let new = NewPop3 {
+                address,
+                provider_name,
+                servers: pop3_servers_for(&incoming, &pop3_user, &smtp, &smtp_user),
+                remove: pop3_remove,
+                password,
+            };
+            let account = pop3_signed_in(&db, Arc::clone(&passwords), new, now_millis()).await?;
+            let services = connect_pop3(&db, passwords, &account).await?;
             engine.start_account(account.id, services);
             Ok::<_, anyhow::Error>(account)
         })

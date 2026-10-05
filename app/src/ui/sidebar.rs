@@ -11,7 +11,7 @@ use adw::prelude::*;
 use gtk::{gdk, gio, glib, pango};
 use mailrs_domain::translate::{fill, fill_plural, gettext};
 use mailrs_domain::{
-    Account, AccountId, AccountState, FlagColor, Folder, Label,
+    Account, AccountId, AccountState, FlagColor, Folder, Label, Provider,
 };
 use mailrs_sync::Offers;
 
@@ -36,6 +36,8 @@ struct Heading {
     account_id: AccountId,
     /// What the heading calls the account: its name, or its address.
     name: String,
+    /// What a screen reader adds after the row's name.
+    description: String,
     count: gtk::Label,
     /// The row's own Rules, Hide My Email and Automatic Reply actions,
     /// gated again by [`Sidebar::regate`] when the account starts.
@@ -733,6 +735,7 @@ impl Sidebar {
                 row,
                 account_id: account.id,
                 name: shown.unwrap_or(&account.email).clone(),
+                description: heading_description(account),
                 count,
                 actions,
             });
@@ -1145,7 +1148,7 @@ impl Sidebar {
             describe(
                 &heading.row,
                 &heading_row_name(&heading.name, unread),
-                &gettext("Show or hide this account's mailboxes"),
+                &heading.description,
             );
         }
         self.apply_expansion();
@@ -1509,6 +1512,23 @@ fn account_settings(offers: Offers) -> Vec<(String, &'static str)> {
     ]
 }
 
+/// The account row's tooltip: the address, and for an account whose mail
+/// lives only here, a second line that says so.
+fn heading_tooltip(account: &Account) -> String {
+    match account.provider {
+        Provider::Pop3 => format!("{}\n{}", account.email, gettext("On this computer")),
+        _ => account.email.clone(),
+    }
+}
+
+/// What a screen reader adds after the account row's name.
+fn heading_description(account: &Account) -> String {
+    match account.provider {
+        Provider::Pop3 => gettext("On this computer. Show or hide this account's mailboxes"),
+        _ => gettext("Show or hide this account's mailboxes"),
+    }
+}
+
 fn heading(
     account: &Account,
     name: Option<&String>,
@@ -1536,7 +1556,7 @@ fn heading(
             .hexpand(true)
             .ellipsize(pango::EllipsizeMode::Middle)
             .css_classes(["email"])
-            .tooltip_text(&account.email)
+            .tooltip_text(heading_tooltip(account))
             .build(),
     );
     let status = status_of(account);
@@ -1648,7 +1668,7 @@ fn heading(
     describe(
         &row,
         &heading_row_name(name.unwrap_or(&account.email), 0),
-        &gettext("Show or hide this account's mailboxes"),
+        &heading_description(account),
     );
     (row, count, own)
 }
@@ -1690,6 +1710,28 @@ mod tests {
     };
 
     use super::{Offers, account_settings};
+
+    #[test]
+    fn a_pop3_account_row_says_its_mail_is_on_this_computer() {
+        let pop3 = Account {
+            id: 3,
+            email: "dana@example.org".into(),
+            state: AccountState::Ok,
+            provider: Provider::Pop3,
+            provider_name: Some("example.org".into()),
+        };
+        assert_eq!(super::heading_tooltip(&pop3), "dana@example.org\nOn this computer");
+        assert!(super::heading_description(&pop3).starts_with("On this computer."));
+        let imap = Account {
+            provider: Provider::Imap,
+            ..pop3
+        };
+        assert_eq!(super::heading_tooltip(&imap), "dana@example.org");
+        assert_eq!(
+            super::heading_description(&imap),
+            "Show or hide this account's mailboxes"
+        );
+    }
 
     #[test]
     fn a_label_account_opens_a_folder_row_under_a_tag() {
