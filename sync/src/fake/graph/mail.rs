@@ -573,6 +573,9 @@ pub(super) fn create_draft(s: &mut GraphState, draft: &Value) -> Answer<Message>
         .from(s.me.as_str())
         .subject(draft["subject"].as_str().unwrap_or_default())
         .text_body(draft["body"]["content"].as_str().unwrap_or_default());
+    if let Some(id) = draft["internetMessageId"].as_str() {
+        builder = builder.message_id(id.trim_matches(['<', '>']));
+    }
     for to in draft["toRecipients"].as_array().into_iter().flatten() {
         if let Some(address) = to["emailAddress"]["address"].as_str() {
             builder = builder.to(address);
