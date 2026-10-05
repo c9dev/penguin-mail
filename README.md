@@ -178,6 +178,8 @@ uses a tool from outside the app, and it is off until you pick a model.
 
 ![All accounts in one inbox, with a reply open and its quoted history folded](docs/screenshots/inbox.png)
 
+![An Outlook.com inbox with Focused and Other, and the account's tags in the sidebar](docs/screenshots/outlook.png)
+
 | Week | Month | Agenda |
 |---|---|---|
 | ![The calendar's week, with working hours shaded and each day's location](docs/screenshots/calendar-week.png) | ![The calendar's month, with a bar across the days of a trip](docs/screenshots/calendar-month.png) | ![The calendar's agenda, one line per event](docs/screenshots/calendar-agenda.png) |
