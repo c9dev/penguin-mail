@@ -863,24 +863,48 @@ fn fitted_scale(width: f32, scale: f32) -> f32 {
 }
 
 /// Draws each pose's SVG into its picture at `scale` times the art's
-/// size, for a display at `factor`.
+/// size, for a display at `factor`. gdk-pixbuf draws SVG through glycin's
+/// sandboxed loader, which can keep its caller waiting for good, so the
+/// drawing happens on a worker thread and the poses appear once it is
+/// done.
 fn load_poses(poses: &gtk::Stack, scale: f32, factor: i32) {
     let width = (ART_W * scale * factor as f32).round() as i32;
     let height = (ART_H * scale * factor as f32).round() as i32;
-    for band in Band::ALL {
-        let Some(picture) = poses
-            .child_by_name(band.name())
-            .and_downcast::<gtk::Picture>()
-        else {
-            continue;
+    let weak = poses.downgrade();
+    glib::spawn_future_local(async move {
+        let drawn = super::texture::off_thread(super::texture::WAIT, move || {
+            Band::ALL.map(|band| {
+                let path = format!("/io/github/c9dev/PenguinMail/band/{}.svg", band.name());
+                match gtk::gdk_pixbuf::Pixbuf::from_resource_at_scale(&path, width, height, true)
+                {
+                    #[allow(deprecated)]
+                    Ok(pixbuf) => Some(gdk::Texture::for_pixbuf(&pixbuf)),
+                    Err(err) => {
+                        tracing::warn!(%path, error = %err, "could not draw a band pose");
+                        None
+                    }
+                }
+            })
+        })
+        .await;
+        // A newer drawing for another scale may be on its way.
+        let (Some(poses), Some(drawn)) = (weak.upgrade(), drawn) else {
+            return;
         };
-        let path = format!("/io/github/c9dev/PenguinMail/band/{}.svg", band.name());
-        match gtk::gdk_pixbuf::Pixbuf::from_resource_at_scale(&path, width, height, true) {
-            #[allow(deprecated)]
-            Ok(pixbuf) => picture.set_paintable(Some(&gdk::Texture::for_pixbuf(&pixbuf))),
-            Err(err) => tracing::warn!(%path, error = %err, "could not draw a band pose"),
+        if poses.scale_factor() != factor {
+            return;
         }
-    }
+        for (band, texture) in Band::ALL.into_iter().zip(drawn) {
+            if let (Some(picture), Some(texture)) = (
+                poses
+                    .child_by_name(band.name())
+                    .and_downcast::<gtk::Picture>(),
+                texture,
+            ) {
+                picture.set_paintable(Some(&texture));
+            }
+        }
+    });
 }
 
 #[cfg(test)]

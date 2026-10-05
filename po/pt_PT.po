@@ -3001,8 +3001,8 @@ msgstr[1] "{count} anexos"
 msgid "Quick Look"
 msgstr "Vista rápida"
 
-#: app/src/render.rs:460 app/src/ui/window/attachments.rs:319
-#: app/src/ui/window/attachments.rs:325
+#: app/src/render.rs:460 app/src/ui/window/attachments.rs:329
+#: app/src/ui/window/attachments.rs:335
 msgid "Save to Downloads"
 msgstr "Guardar nas transferências"
 
@@ -3545,7 +3545,7 @@ msgstr "Abrir o Penguin Mail"
 
 #: app/src/tray.rs:207 app/src/ui/composer/mod.rs:234
 #: app/src/ui/composer/mod.rs:504 app/src/ui/composer/mod.rs:1210
-#: app/src/ui/contact_card.rs:146
+#: app/src/ui/contact_card.rs:157
 msgid "New Message"
 msgstr "Nova mensagem"
 
@@ -6350,27 +6350,27 @@ msgstr "Adicionar ao dicionário"
 msgid "Ignore"
 msgstr "Ignorar"
 
-#: app/src/ui/contact_card.rs:94
+#: app/src/ui/contact_card.rs:105
 msgid "Email"
 msgstr "E-mail"
 
-#: app/src/ui/contact_card.rs:96
+#: app/src/ui/contact_card.rs:107
 msgid "Other email"
 msgstr "Outro e-mail"
 
-#: app/src/ui/contact_card.rs:116
+#: app/src/ui/contact_card.rs:127
 msgid "Phone"
 msgstr "Telefone"
 
-#: app/src/ui/contact_card.rs:156 app/src/ui/sidebar.rs:856
+#: app/src/ui/contact_card.rs:167 app/src/ui/sidebar.rs:856
 msgid "Remove from VIPs"
 msgstr "Remover dos VIP"
 
-#: app/src/ui/contact_card.rs:158
+#: app/src/ui/contact_card.rs:169
 msgid "Add to VIPs"
 msgstr "Adicionar aos VIP"
 
-#: app/src/ui/contact_card.rs:169
+#: app/src/ui/contact_card.rs:180
 msgid "All Their Mail"
 msgstr "Todo o correio desta pessoa"
 
@@ -7243,7 +7243,7 @@ msgstr[1] "E mais {count}"
 msgid "Could not read {file}: {reason}"
 msgstr "Não foi possível ler {file}: {reason}"
 
-#: app/src/ui/mod.rs:376
+#: app/src/ui/mod.rs:377
 msgid "Gray"
 msgstr "Cinzento"
 
@@ -7882,7 +7882,7 @@ msgid "Mailboxes"
 msgstr "Caixas de correio"
 
 #: app/src/ui/sidebar.rs:351 app/src/ui/sidebar.rs:1243
-#: app/src/ui/thread_list.rs:290
+#: app/src/ui/thread_list.rs:293
 msgid "Mail"
 msgstr "Correio"
 
@@ -8136,34 +8136,34 @@ msgstr "Corpo"
 msgid "New Template"
 msgstr "Novo modelo"
 
-#: app/src/ui/thread_list.rs:188
+#: app/src/ui/thread_list.rs:191
 msgid "No Mail"
 msgstr "Sem correio"
 
 #. The two search terms are Gmail's own and stay in English.
-#: app/src/ui/thread_list.rs:206
+#: app/src/ui/thread_list.rs:209
 msgid "Search mail, e.g. from:ann has:attachment"
 msgstr "Pesquisar correio, por exemplo from:ana has:attachment"
 
-#: app/src/ui/thread_list.rs:225
+#: app/src/ui/thread_list.rs:228
 msgid "All Inboxes"
 msgstr "Todas as caixas de entrada"
 
-#: app/src/ui/thread_list.rs:245 app/src/ui/thread_list.rs:265
+#: app/src/ui/thread_list.rs:248 app/src/ui/thread_list.rs:268
 msgid "Show Mailboxes"
 msgstr "Mostrar as caixas de correio"
 
-#: app/src/ui/thread_list.rs:250
+#: app/src/ui/thread_list.rs:253
 msgid "New Message (C)"
 msgstr "Nova mensagem (C)"
 
-#: app/src/ui/thread_list.rs:255
+#: app/src/ui/thread_list.rs:258
 msgid "Search (/)"
 msgstr "Pesquisar (/)"
 
 #. The tooltips already say what these do; the spoken name takes
 #. the words and leaves the keys to a property of their own.
-#: app/src/ui/thread_list.rs:264
+#: app/src/ui/thread_list.rs:267
 msgid "Search mail"
 msgstr "Pesquisar correio"
 
@@ -8738,15 +8738,15 @@ msgstr[1] "{count} anexos guardados em {folder}"
 msgid "Saved {count} to {folder}. Could not save {files}"
 msgstr "{count} guardados em {folder}. Não foi possível guardar {files}"
 
-#: app/src/ui/window/attachments.rs:279
+#: app/src/ui/window/attachments.rs:277
 msgid "Could not open {file}"
 msgstr "Não foi possível abrir {file}"
 
-#: app/src/ui/window/attachments.rs:323 app/src/ui/window/attachments.rs:326
+#: app/src/ui/window/attachments.rs:333 app/src/ui/window/attachments.rs:336
 msgid "Open in Another Program"
 msgstr "Abrir noutro programa"
 
-#: app/src/ui/window/attachments.rs:330
+#: app/src/ui/window/attachments.rs:340
 msgid "{file}, preview"
 msgstr "{file}, pré-visualização"
 

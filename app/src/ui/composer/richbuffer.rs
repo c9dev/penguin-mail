@@ -669,7 +669,11 @@ pub fn insert_spans(
 }
 
 /// Puts the picture in `data` at `at`, held by an anchor the reader maps
-/// back to `cid`.
+/// back to `cid`. A PNG or JPEG shows at once. Any other format shows a
+/// placeholder until a worker thread has decoded it, since GDK hands
+/// those to a sandboxed loader that can keep the GTK thread waiting; one
+/// that never decodes keeps the placeholder and still goes out with the
+/// message.
 pub fn insert_image(
     view: &gtk::TextView,
     at: &mut gtk::TextIter,
@@ -677,20 +681,59 @@ pub fn insert_image(
     data: &[u8],
     anchors: &mut Anchors,
 ) {
-    let Ok(texture) = gdk::Texture::from_bytes(&glib::Bytes::from(data)) else {
-        return;
-    };
+    let bytes = glib::Bytes::from(data);
     let anchor = view.buffer().create_child_anchor(at);
-    let picture = gtk::Picture::for_paintable(&texture);
+    let picture = gtk::Picture::new();
     picture.set_can_shrink(true);
-    picture.set_content_fit(gtk::ContentFit::Contain);
-    // Big pictures come down to something the writer can see all of.
-    let (width, height) = (texture.width() as f64, texture.height() as f64);
-    let scale = (420.0 / width).min(260.0 / height).min(1.0);
-    picture.set_size_request((width * scale) as i32, (height * scale) as i32);
+    match crate::ui::texture::here(&bytes) {
+        Some(texture) => show_picture(&picture, &texture),
+        None => {
+            show_placeholder(&picture, "image-x-generic-symbolic");
+            let weak = picture.downgrade();
+            glib::spawn_future_local(async move {
+                let texture = crate::ui::texture::decode(bytes).await;
+                // The composer may have closed while the picture decoded.
+                let Some(picture) = weak.upgrade() else {
+                    return;
+                };
+                match texture {
+                    Some(texture) => show_picture(&picture, &texture),
+                    None => show_placeholder(&picture, "image-missing-symbolic"),
+                }
+            });
+        }
+    }
     view.add_child_at_anchor(&picture, &anchor);
     picture.set_visible(true);
     anchors.push((anchor, cid.to_string()));
+}
+
+/// Shows `texture` in `picture`, brought down to a size the writer can
+/// see all of.
+fn show_picture(picture: &gtk::Picture, texture: &gdk::Texture) {
+    picture.set_content_fit(gtk::ContentFit::Contain);
+    picture.set_paintable(Some(texture));
+    let (width, height) = (texture.width() as f64, texture.height() as f64);
+    let scale = (420.0 / width).min(260.0 / height).min(1.0);
+    picture.set_size_request((width * scale) as i32, (height * scale) as i32);
+}
+
+/// Shows the icon `name` in `picture`, in a box about the size of a small
+/// photo, while there is no picture to show.
+fn show_placeholder(picture: &gtk::Picture, name: &str) {
+    const SIZE: i32 = 64;
+    let icon = gtk::IconTheme::for_display(&picture.display()).lookup_icon(
+        name,
+        &[],
+        SIZE,
+        picture.scale_factor(),
+        gtk::TextDirection::None,
+        gtk::IconLookupFlags::empty(),
+    );
+    // The icon keeps its own size in the middle of the box.
+    picture.set_content_fit(gtk::ContentFit::ScaleDown);
+    picture.set_paintable(Some(&icon));
+    picture.set_size_request(SIZE * 2, SIZE * 3 / 2);
 }
 
 pub fn has(style: Style, name: &str) -> bool {
@@ -710,8 +753,34 @@ mod tests {
     /// Everything the buffer does sits in one test on purpose: GTK belongs
     /// to the thread that starts it, and the test harness hands each test
     /// its own.
+    ///
+    /// The checks run on a thread that never ends. WebKit makes the thread
+    /// that starts GTK its main thread and expects it to last as long as
+    /// the process. When the harness's thread ended after the last check,
+    /// WebKit tore its run loop down on the way out while one of its IPC
+    /// threads waited to hand that run loop a message, and now and then
+    /// the two waited on each other for good.
     #[test]
     fn the_buffer_holds_a_rich_body_and_gives_it_back() {
+        let (done, finished) = std::sync::mpsc::channel();
+        std::thread::Builder::new()
+            .name("gtk-checks".into())
+            .spawn(move || {
+                let _ = done.send(std::panic::catch_unwind(run_checks));
+                loop {
+                    std::thread::park();
+                }
+            })
+            .expect("a thread for the GTK checks");
+        match finished.recv() {
+            Ok(Ok(())) => {}
+            // The panic's message is already printed; this fails the test.
+            Ok(Err(panic)) => std::panic::resume_unwind(panic),
+            Err(_) => panic!("the GTK checks' thread ended without an answer"),
+        }
+    }
+
+    fn run_checks() {
         // No display means no GTK, which is how most machines run the suite.
         if gtk::init().is_err() {
             return;
@@ -722,6 +791,7 @@ mod tests {
         typing_after_styled_words_carries_the_style_on();
         an_inserted_body_lands_at_the_cursor();
         a_picture_reads_back_where_it_sits();
+        a_picture_gdk_cannot_read_itself_waits_in_a_placeholder();
         super::super::editor::checks::run();
         super::super::spell::checks::run();
         crate::ui::calendar::pager::checks::run();
@@ -947,6 +1017,33 @@ mod tests {
         assert_eq!(anchors.len(), 1);
         let read_back = read(&buffer, &anchors);
         assert_eq!(read_back, body, "{}", read_back.to_markdown());
+    }
+
+    /// Bytes GDK does not read itself would go to glycin's sandboxed
+    /// loader, which can keep a synchronous caller waiting for good. The
+    /// picture takes its place at once, as a placeholder, and the decode
+    /// happens away from the GTK thread. These bytes are no picture at
+    /// all, so no loader starts and the check waits on nothing.
+    fn a_picture_gdk_cannot_read_itself_waits_in_a_placeholder() {
+        let (view, buffer, mut anchors) = buffer();
+        let mut at = buffer.end_iter();
+        insert_image(&view, &mut at, "odd@mailrs", b"plain words", &mut anchors);
+        assert_eq!(anchors.len(), 1, "the picture has its place in the text");
+        let picture = anchors[0]
+            .0
+            .widgets()
+            .into_iter()
+            .find_map(|widget| widget.downcast::<gtk::Picture>().ok())
+            .expect("a picture sits in the anchor");
+        assert!(picture.paintable().is_some(), "the placeholder shows");
+        assert!(picture.width_request() > 0 && picture.height_request() > 0);
+        let read_back = read(&buffer, &anchors);
+        assert_eq!(
+            read_back.blocks[0].spans[0].image.as_deref(),
+            Some("cid:odd@mailrs"),
+            "{}",
+            read_back.to_markdown()
+        );
     }
 
     fn typing_after_styled_words_carries_the_style_on() {

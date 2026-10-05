@@ -265,20 +265,30 @@ impl MainWindow {
             attachment.mime_type.starts_with("image/"),
         );
         let this = Rc::clone(self);
+        let bytes = glib::Bytes::from_owned(data);
         glib::spawn_future_local(async move {
+            let written = bytes.clone();
             let made = gio::spawn_blocking(move || {
-                let path = super::previews::write(&super::previews::folder(), &name, &data)?;
-                let texture = picture
-                    .then(|| gdk::Texture::from_bytes(&glib::Bytes::from_owned(data)).ok())
-                    .flatten();
-                Ok::<_, std::io::Error>((path, texture))
+                super::previews::write(&super::previews::folder(), &name, &written)
             })
             .await;
-            let Ok(Ok((path, texture))) = made else {
+            let Ok(Ok(path)) = made else {
                 return this.toast(&fill(
                     &gettext("Could not open {file}"),
                     &[("file", &attachment.filename)],
                 ));
+            };
+            // A thread of its own with a time limit, not GIO's pool: a
+            // format GDK hands to glycin can wait there for good, and one
+            // that never decodes goes to the desktop instead.
+            let texture = if picture {
+                crate::ui::texture::off_thread(crate::ui::texture::WAIT, move || {
+                    gdk::Texture::from_bytes(&bytes).ok()
+                })
+                .await
+                .flatten()
+            } else {
+                None
             };
             this.previews.kept(path.clone(), decrypted);
             match texture {
