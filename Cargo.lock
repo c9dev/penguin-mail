@@ -2628,6 +2628,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "mailrs-pop3"
+version = "0.3.0"
+dependencies = [
+ "base64 0.23.1",
+ "mailrs-discover",
+ "rustls",
+ "rustls-platform-verifier",
+ "thiserror 2.0.20",
+ "tokio",
+ "tokio-rustls",
+]
+
+[[package]]
 name = "mailrs-sieve"
 version = "0.3.0"
 dependencies = [
