@@ -257,157 +257,185 @@ msgstr ""
 msgid "nine"
 msgstr ""
 
-#: app/src/add_account.rs:616
+#: app/src/add_account.rs:618
 msgid "Waiting"
 msgstr ""
 
 #: app/src/add_account.rs:619
+msgid "Empty"
+msgstr ""
+
+#: app/src/add_account.rs:623
 msgid "{count} conversation"
 msgid_plural "{count} conversations"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/add_account.rs:749
+#: app/src/add_account.rs:753
 msgid "Could not sign in"
 msgstr ""
 
-#: app/src/add_account.rs:762
+#: app/src/add_account.rs:766
 msgid "Could not sign in: {reason}"
 msgstr ""
 
-#: app/src/add_account.rs:769
+#: app/src/add_account.rs:773
 msgid "The server refused the password."
 msgstr ""
 
-#: app/src/add_account.rs:777
+#: app/src/add_account.rs:781
 msgid "IMAP is off for this account."
 msgstr ""
 
-#: app/src/add_account.rs:780
+#: app/src/add_account.rs:784
 msgid "IMAP is off for this account"
 msgstr ""
 
-#: app/src/add_account.rs:783
+#: app/src/add_account.rs:787
 msgid "Turn on IMAP in {provider}'s settings, then choose Sign In."
 msgstr ""
 
-#: app/src/add_account.rs:786
+#: app/src/add_account.rs:790
 msgid "Turn on IMAP in your mail settings, then choose Sign In."
 msgstr ""
 
-#: app/src/add_account.rs:794
+#: app/src/add_account.rs:798
 msgid "The server's certificate does not match {host}."
 msgstr ""
 
-#: app/src/add_account.rs:799
+#: app/src/add_account.rs:803
 msgid "The certificate does not match"
 msgstr ""
 
-#: app/src/add_account.rs:805
+#: app/src/add_account.rs:809
 msgid "Could not reach {host}: {reason}"
 msgstr ""
 
-#: app/src/add_account.rs:809
+#: app/src/add_account.rs:813
 msgid "No answer on port {port}"
 msgstr ""
 
-#: app/src/add_account.rs:813
+#: app/src/add_account.rs:817
 msgid ""
 "The server did not answer. Check the server name and port, or try again when "
 "you are online."
 msgstr ""
 
-#: app/src/add_account.rs:833
+#: app/src/add_account.rs:837
 msgid ""
 "{host} answered but turned down another connection. Try again in a few "
 "minutes."
 msgstr ""
 
-#: app/src/add_account.rs:837
+#: app/src/add_account.rs:841
 msgid "Too many connections"
 msgstr ""
 
-#: app/src/add_account.rs:860
+#: app/src/add_account.rs:864
 msgid ""
 "Penguin Mail cannot save your sign-in until the snap can reach your keyring. "
 "Run this command in a terminal, restart Penguin Mail, then add the account "
 "again."
 msgstr ""
 
-#: app/src/add_account.rs:865
+#: app/src/add_account.rs:869
 msgid "Connect Your Keyring"
 msgstr ""
 
-#: app/src/add_account.rs:894
+#: app/src/add_account.rs:898
 msgid "{provider} refused the password"
 msgstr ""
 
-#: app/src/add_account.rs:897
+#: app/src/add_account.rs:901
 msgid "The server refused the password"
 msgstr ""
 
-#: app/src/add_account.rs:905
+#: app/src/add_account.rs:909
 msgid ""
 "{provider} wants an app password here, not your website password. Make one, "
 "paste it above, then choose Sign In."
 msgstr ""
 
-#: app/src/add_account.rs:909
+#: app/src/add_account.rs:913
 msgid "Check the password, then choose Sign In."
 msgstr ""
 
-#: app/src/add_account.rs:926
+#: app/src/add_account.rs:930
 msgid "The server said: {reason}"
 msgstr ""
 
-#: app/src/add_account.rs:946
+#: app/src/add_account.rs:950
 msgid "Make an App Password"
 msgstr ""
 
-#: app/src/add_account.rs:950
+#: app/src/add_account.rs:954
 msgid "Turn On IMAP"
 msgstr ""
 
-#: app/src/add_account.rs:1096
+#: app/src/add_account.rs:1100
 msgid "{host} is not a server name."
 msgstr ""
 
-#: app/src/add_account.rs:1102
+#: app/src/add_account.rs:1106
 msgid "Type the incoming server's name."
 msgstr ""
 
-#: app/src/add_account.rs:1103
+#: app/src/add_account.rs:1107
 msgid "Type the outgoing server's name."
 msgstr ""
 
-#: app/src/add_account.rs:1229
+#: app/src/add_account.rs:1233
 msgid "Mail is downloading. You can close this window."
 msgstr ""
 
-#: app/src/add_account.rs:1230
+#: app/src/add_account.rs:1234 app/src/add_account.rs:1261
 msgid "Your mail is here."
 msgstr ""
 
-#: app/src/add_account.rs:1247
+#: app/src/add_account.rs:1246
+msgid ""
+"You left one box unticked on Microsoft's page, so this feature stays off:"
+msgid_plural ""
+"You left {count} boxes unticked on Microsoft's page, so these features stay "
+"off:"
+msgstr[0] ""
+msgstr[1] ""
+
+#: app/src/add_account.rs:1253
+msgid "You left one box unticked on Google's page, so this feature stays off:"
+msgid_plural ""
+"You left {count} boxes unticked on Google's page, so these features stay off:"
+msgstr[0] ""
+msgstr[1] ""
+
+#: app/src/add_account.rs:1260
+msgid "Mail is downloading."
+msgstr ""
+
+#: app/src/add_account.rs:1280
 msgid ""
 "Newest mail comes first. Older mail keeps coming in the background, even "
 "with the window closed."
 msgstr ""
 
-#: app/src/add_account.rs:1254
+#: app/src/add_account.rs:1282
+msgid "Penguin Mail keeps checking for new mail, even with the window closed."
+msgstr ""
+
+#: app/src/add_account.rs:1292
 msgid ""
 "Penguin Mail downloads the server's mail into Inbox and keeps checking in "
 "the background, even with the window closed. Mail stays on the server."
 msgstr ""
 
-#: app/src/add_account.rs:1257
+#: app/src/add_account.rs:1295
 msgid ""
 "Penguin Mail downloads the server's mail into Inbox and keeps checking in "
 "the background, even with the window closed. It removes each message from "
 "the server after downloading it."
 msgstr ""
 
-#: app/src/add_account.rs:1260
+#: app/src/add_account.rs:1298
 msgid ""
 "Penguin Mail downloads the server's mail into Inbox and keeps checking in "
 "the background, even with the window closed. It removes each message from "
@@ -419,7 +447,7 @@ msgid_plural ""
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/add_account.rs:1276
+#: app/src/add_account.rs:1314
 msgid "Penguin Mail needs the password for {address} again."
 msgstr ""
 
@@ -3615,7 +3643,7 @@ msgstr ""
 msgid "Use These Settings"
 msgstr ""
 
-#: app/src/ui/add_account.rs:1874 app/src/ui/add_account.rs:3029
+#: app/src/ui/add_account.rs:1874 app/src/ui/add_account.rs:3022
 msgid "Looking up {domain}"
 msgstr ""
 
@@ -3633,7 +3661,7 @@ msgid ""
 "{provider}'s settings and paste it here."
 msgstr ""
 
-#: app/src/ui/add_account.rs:2242 app/src/ui/add_account.rs:3099
+#: app/src/ui/add_account.rs:2242 app/src/ui/add_account.rs:3092
 msgid "Signing In…"
 msgstr ""
 
@@ -3659,35 +3687,15 @@ msgstr ""
 msgid "Link copied"
 msgstr ""
 
-#: app/src/ui/add_account.rs:2790
+#: app/src/ui/add_account.rs:2791
 msgid "{account} is added"
 msgstr ""
 
-#: app/src/ui/add_account.rs:2797
-msgid ""
-"Mail is downloading. You left one box unticked on Microsoft's page, so this "
-"feature stays off:"
-msgid_plural ""
-"Mail is downloading. You left {count} boxes unticked on Microsoft's page, so "
-"these features stay off:"
-msgstr[0] ""
-msgstr[1] ""
-
-#: app/src/ui/add_account.rs:2804
-msgid ""
-"Mail is downloading. You left one box unticked on Google's page, so this "
-"feature stays off:"
-msgid_plural ""
-"Mail is downloading. You left {count} boxes unticked on Google's page, so "
-"these features stay off:"
-msgstr[0] ""
-msgstr[1] ""
-
-#: app/src/ui/add_account.rs:2820
+#: app/src/ui/add_account.rs:2811
 msgid "{account} is ready"
 msgstr ""
 
-#: app/src/ui/add_account.rs:3102
+#: app/src/ui/add_account.rs:3095
 msgid ""
 "This server cannot tell its messages apart, so Penguin Mail cannot download "
 "from it safely."
@@ -5089,7 +5097,7 @@ msgstr ""
 
 #: app/src/ui/calendar/mod.rs:2001 app/src/ui/calendar/mod.rs:3307
 #: app/src/ui/calendar/sidebar.rs:309 app/src/ui/calendar/words.rs:332
-#: app/src/ui/preferences.rs:931 app/src/ui/preferences.rs:1043
+#: app/src/ui/preferences.rs:931 app/src/ui/preferences.rs:1044
 msgid "%a"
 msgstr ""
 
@@ -7259,19 +7267,19 @@ msgstr ""
 msgid "–"
 msgstr ""
 
-#: app/src/ui/preferences.rs:1114
+#: app/src/ui/preferences.rs:1115
 msgid "Follow System"
 msgstr ""
 
-#: app/src/ui/preferences.rs:1118
+#: app/src/ui/preferences.rs:1119
 msgid "Language"
 msgstr ""
 
-#: app/src/ui/preferences.rs:1119
+#: app/src/ui/preferences.rs:1120
 msgid "Penguin Mail shows a new language after a restart"
 msgstr ""
 
-#: app/src/ui/preferences.rs:1191
+#: app/src/ui/preferences.rs:1192
 msgid "No signature"
 msgstr ""
 
@@ -7667,10 +7675,6 @@ msgstr ""
 
 #: app/src/ui/templates.rs:110
 msgid "Delete {template}"
-msgstr ""
-
-#: app/src/ui/templates.rs:135
-msgid "Empty"
 msgstr ""
 
 #: app/src/ui/templates.rs:147
