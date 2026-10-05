@@ -1,4 +1,5 @@
-//! WCAG contrast checks over the accent colours in `data/style.css`.
+//! WCAG contrast checks over the accent colours in `data/style.css`, and
+//! over small text it draws at less than full strength.
 //!
 //! The app follows the desktop accent through libadwaita, whose
 //! `--accent-bg-color` is a fill: white text on it falls below AA for
@@ -93,6 +94,43 @@ fn no_filled_control_carries_white_text_on_the_raw_accent() {
         .filter(|selector| !RAW_FILL_EXCEPTIONS.iter().any(|(name, _)| selector.ends_with(name)))
         .collect();
     assert!(filled.is_empty(), "fill these with --accent-fill: {filled:?}");
+}
+
+/// The contrast of text drawn at `opacity` over `background`: in light
+/// libadwaita's text is `rgb(0 0 6 / 80%)`, in dark it is white.
+fn dimmed_text_contrast(dark: bool, opacity: f64, background: &str) -> f64 {
+    let (text, alpha) = if dark { ([255.0; 3], opacity) } else { ([0.0, 0.0, 6.0], 0.8 * opacity) };
+    let back = channels(background);
+    let mixed: Vec<String> = (0..3)
+        .map(|i| format!("{:02x}", (text[i] * alpha + back[i] * (1.0 - alpha)).round() as u8))
+        .collect();
+    contrast(&format!("#{}", mixed.concat()), background)
+}
+
+#[test]
+fn a_day_headings_weekday_and_place_pass_aa_in_light_and_dark() {
+    // The week view's heading row sits on the view, the month's on the
+    // window, so both surfaces count.
+    let surfaces = |dark: bool| {
+        let selector = if dark { "window.app-surfaces.app-dark" } else { "window.app-surfaces" };
+        ["--view-bg-color", "--window-bg-color"]
+            .map(|name| custom_property(selector, name).expect("a surface colour"))
+    };
+    for (dark, selectors) in [
+        (false, [".day-heading .weekday", ".day-place"]),
+        (true, [".app-dark .day-heading:not(.today) .weekday", ".app-dark .day-heading:not(.today) .day-place"]),
+    ] {
+        for selector in selectors {
+            let opacity: f64 = custom_property(selector, "opacity")
+                .unwrap_or_else(|| panic!("style.css sets an opacity for {selector}"))
+                .parse()
+                .expect("a number");
+            for surface in surfaces(dark) {
+                let ratio = dimmed_text_contrast(dark, opacity, &surface);
+                assert!(ratio >= AA, "{selector} at {opacity} on {surface} is {ratio:.2}:1");
+            }
+        }
+    }
 }
 
 #[test]
