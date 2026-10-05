@@ -35,6 +35,20 @@ pub(super) fn show_views(carousel: &adw::Carousel, holders: Vec<adw::Bin>, views
     holders
 }
 
+/// Runs `refocus`, which gives the keyboard focus back to a page whose
+/// blocks were just built again, and keeps `scroller` where it was.
+///
+/// The viewport around the hours follows the window's focus, and a block
+/// built a moment ago has no place yet: its bounds put it at the top of
+/// the day, or wherever the last layout left them. Setting the value
+/// back without animation also stops the scroll GTK has started.
+pub(super) fn refocus_in_place(scroller: &gtk::ScrolledWindow, refocus: impl FnOnce()) {
+    let adjustment = scroller.vadjustment();
+    let kept = adjustment.value();
+    refocus();
+    adjustment.set_value(kept);
+}
+
 /// The pager's checks. They run from the one GTK test in `richbuffer`,
 /// because GTK belongs to the thread that starts it and the test harness
 /// gives each test a thread of its own.
@@ -47,6 +61,49 @@ pub(crate) mod checks {
 
     pub fn run() {
         new_views_leave_the_middle_page_on_screen();
+        focus_on_a_new_block_leaves_the_hours_where_they_were();
+    }
+
+    /// Answering an invitation reads the week again and builds its blocks
+    /// anew, and the focus goes back to the event before GTK has laid
+    /// the new block out. The viewport follows the window's focus and
+    /// scrolled to the bounds the block had so far, at the top of the
+    /// day, so the week sprang back to 00:00.
+    fn focus_on_a_new_block_leaves_the_hours_where_they_were() {
+        let hours = gtk::Fixed::builder().height_request(2000).width_request(300).build();
+        let scroller = gtk::ScrolledWindow::builder()
+            .hscrollbar_policy(gtk::PolicyType::Never)
+            .child(&hours)
+            .build();
+        let window = gtk::Window::builder()
+            .default_width(400)
+            .default_height(300)
+            .child(&scroller)
+            .build();
+        let block = gtk::Button::with_label("Design review");
+        hours.put(&block, 10.0, 1000.0);
+        window.present();
+        spin(Duration::from_millis(300));
+        scroller.vadjustment().set_value(900.0);
+        spin(Duration::from_millis(300));
+        assert_eq!(scroller.vadjustment().value(), 900.0, "the hours start where the check put them");
+
+        // The refill puts a new block where the old one was, and the focus
+        // goes to it.
+        hours.remove(&block);
+        let again = gtk::Button::with_label("Design review");
+        hours.put(&again, 10.0, 1000.0);
+        refocus_in_place(&scroller, || {
+            again.grab_focus();
+            // A check's window is never the active one, so GTK does not
+            // follow its focus here. In the app it scrolls toward the new
+            // block's bounds before layout, the top of the day.
+            scroller.vadjustment().set_value(0.0);
+        });
+        spin(Duration::from_millis(600));
+
+        assert_eq!(scroller.vadjustment().value(), 900.0, "the hours moved under the reader");
+        window.destroy();
     }
 
     /// Runs the main loop for `time`, so the carousel lays out, animates
