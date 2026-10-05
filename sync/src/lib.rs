@@ -81,7 +81,7 @@ pub use services::{
     IdentityService, KeywordsOf, KeywordsPage, MailBackend, MailCapabilities, Microsoft, MicrosoftSettings, Missing, Offers, Refused,
     Priority, Relocated, RemoteChange,
     RulesService, SendAsAddress, SyncState, Unapplied, Changes, RAW_LIMIT, Submit, Withheld,
-    background, withheld_by_grant,
+    background, withheld_by_grant, CalDav, CardDav, LocalRules, RulesPlace, SieveRules,
 };
 pub use settings::{AccountSettings, AutomaticReply, HIDE_MY_EMAIL_LABEL, Permitted, Replaced};
 pub use triage::TriageAction;

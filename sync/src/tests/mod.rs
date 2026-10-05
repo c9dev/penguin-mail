@@ -97,6 +97,35 @@ impl Accounts for Connected {
     }
 }
 
+/// One account whose services a test chose, over its own sync, so a
+/// module can be handed an account with other services without building
+/// a second `AccountSync`.
+pub(crate) struct ServedBy {
+    account_id: AccountId,
+    sync: Arc<AccountSync>,
+    services: AccountServices,
+}
+
+impl ServedBy {
+    pub(crate) fn new(
+        account_id: AccountId,
+        sync: Arc<AccountSync>,
+        services: AccountServices,
+    ) -> ServedBy {
+        ServedBy { account_id, sync, services }
+    }
+}
+
+impl Accounts for ServedBy {
+    fn account(&self, account_id: AccountId) -> Option<Arc<AccountSync>> {
+        (account_id == self.account_id).then(|| Arc::clone(&self.sync))
+    }
+
+    fn services(&self, account_id: AccountId) -> Option<AccountServices> {
+        (account_id == self.account_id).then(|| self.services.clone())
+    }
+}
+
 pub(crate) struct Harness {
     pub fake: Arc<FakeGmail>,
     pub one_click: Arc<FakeOneClick>,

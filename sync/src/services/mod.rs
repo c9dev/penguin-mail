@@ -19,8 +19,6 @@ mod google;
 pub use google::withheld as withheld_by_grant;
 pub mod imap;
 pub mod microsoft;
-// Task 15 re-exports `LocalRules` and takes this attribute out.
-#[allow(dead_code)]
 pub(crate) mod local;
 mod pacing;
 mod sieve;
@@ -28,11 +26,21 @@ mod sieve;
 pub use caldav::CalDav;
 pub use any::{AnyAutoReply, AnyCalendar, AnyContacts, AnyIdentities, AnyMail, AnyRules};
 pub use carddav::CardDav;
+pub use local::LocalRules;
 pub use google::{Google, ID_PAGE_SIZE, LIST_PAGE_SIZE};
 pub use imap::{Imap, ImapApi, ImapSettings, Submit};
 pub use microsoft::{GraphApi, Microsoft, MicrosoftSettings};
 pub use pacing::{Priority, background, priority};
 pub use sieve::SieveRules;
+
+/// Where an account's rules run.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RulesPlace {
+    /// On the mail server, whether this computer is on or not.
+    Server,
+    /// On this computer, while Penguin Mail is open.
+    ThisComputer,
+}
 
 use std::collections::HashMap;
 use std::ops::RangeInclusive;
@@ -359,8 +367,8 @@ impl AccountServices {
     }
 
     /// An account on an IMAP server: its mail and the address it sends
-    /// from. Calendars, contacts, rules and the automatic reply need
-    /// servers of their own, and the account has none of them yet.
+    /// from. `connect_imap` adds the calendar, contacts, rules and
+    /// automatic reply the account's servers offer.
     pub fn imap(imap: ImapClient, smtp: SmtpClient, settings: ImapSettings) -> Self {
         let adapter = Imap::new(Arc::new(imap), Arc::new(smtp), settings);
         AccountServices {
@@ -370,6 +378,43 @@ impl AccountServices {
             rules: None,
             auto_reply: None,
             identities: AnyIdentities::Imap(adapter),
+        }
+    }
+
+    pub fn with_calendar(mut self, calendar: AnyCalendar) -> Self {
+        self.calendar = Some(calendar);
+        self
+    }
+
+    pub fn with_contacts(mut self, contacts: AnyContacts) -> Self {
+        self.contacts = Some(contacts);
+        self
+    }
+
+    pub fn with_rules(mut self, rules: AnyRules) -> Self {
+        self.rules = Some(rules);
+        self
+    }
+
+    pub fn with_auto_reply(mut self, auto_reply: AnyAutoReply) -> Self {
+        self.auto_reply = Some(auto_reply);
+        self
+    }
+
+    /// The IMAP adapter an account's mail runs on, for a service that
+    /// names its folders, such as Sieve rules.
+    pub fn imap_adapter(&self) -> Option<Imap<ImapClient, SmtpClient>> {
+        match &self.mail {
+            AnyMail::Imap(adapter) => Some(adapter.clone()),
+            _ => None,
+        }
+    }
+
+    #[cfg(any(test, feature = "fake"))]
+    pub fn fake_imap_adapter(&self) -> Option<Imap<FakeImap, FakeSmtp>> {
+        match &self.mail {
+            AnyMail::FakeImap(adapter) => Some(adapter.clone()),
+            _ => None,
         }
     }
 
@@ -519,7 +564,6 @@ impl CalendarFeatures {
     /// CalDAV keeps no files, moves an event by copying its resource, which
     /// the queue must not rely on, and lists the calendars its server
     /// holds without letting the app edit the list.
-    #[expect(dead_code, reason = "the AnyCalendar arm for CalDav matches it once wiring adds one")]
     const CALDAV: CalendarFeatures =
         CalendarFeatures { event_files: false, moves_events: false, calendar_list: false };
 
@@ -536,6 +580,9 @@ impl CalendarFeatures {
             Some(AnyCalendar::Microsoft(_)) => CalendarFeatures::MICROSOFT,
             #[cfg(any(test, feature = "fake"))]
             Some(AnyCalendar::FakeMicrosoft(_)) => CalendarFeatures::MICROSOFT,
+            Some(AnyCalendar::Dav(_)) => CalendarFeatures::CALDAV,
+            #[cfg(any(test, feature = "fake"))]
+            Some(AnyCalendar::FakeDav(_)) => CalendarFeatures::CALDAV,
         }
     }
 }

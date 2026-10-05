@@ -61,6 +61,13 @@ impl<M: ManageSieveApi, B: MailBackend + Clone> SieveRules<M, B> {
         }
     }
 
+    /// The rules, and the text on the server nobody here wrote, in one
+    /// read of the script.
+    pub async fn listing(&self) -> Result<(Vec<Filter>, Vec<String>), BackendError> {
+        let (script, _, _) = self.load().await?;
+        Ok((script.rules, script.foreign))
+    }
+
     /// The Sieve extensions the server offered when last asked.
     pub fn extensions(&self) -> Option<Extensions> {
         self.state().extensions.clone()
