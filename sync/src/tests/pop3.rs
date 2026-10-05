@@ -273,3 +273,23 @@ async fn deleting_a_folder_deletes_the_mail_in_it_as_the_dialog_says() {
     assert_eq!(h.ids_in(MailSet::Role(Role::Inbox)).await, [kept]);
     assert!(h.sync.services().mail.delete_mailbox("inbox").await.is_err(), "a role mailbox stays");
 }
+
+/// A store-only account's folders change only through the person. A
+/// listing read before they made or renamed one must not undo it when it
+/// is stored, or the new folder goes with the mail moved into it.
+#[tokio::test]
+async fn a_listing_read_before_the_person_changed_a_folder_leaves_the_change_alone() {
+    let h = pop3_harness(FakePop3::default(), RemoveSetting::Never).await;
+    let mail = &h.sync.services().mail;
+    let bills = h.sync.create_label("Bills").await.unwrap();
+    let stale = mail.mailboxes().await.unwrap();
+    let receipts = h.sync.create_label("Receipts").await.unwrap();
+    let filed = h.keep("u1", &pop3_mail(1), &receipts.id, now_millis()).await;
+    h.sync.rename_label(&bills.id, "Invoices").await.unwrap();
+    h.sync.store_listing(stale).await.unwrap();
+    let listed = mail.mailboxes().await.unwrap();
+    assert!(listed.iter().any(|m| m.id == receipts.id), "the new folder stays");
+    assert_eq!(h.ids_in(MailSet::Mailbox(receipts.id)).await, [filed], "with its mail");
+    let renamed = listed.iter().find(|m| m.id == bills.id).map(|m| m.name.as_str());
+    assert_eq!(renamed, Some("Invoices"), "the rename stays");
+}
