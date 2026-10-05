@@ -168,6 +168,41 @@ pub fn conversions(body: &RichBody) -> Vec<Conversion> {
         .collect()
 }
 
+/// Every run of loose lines in `body` that its Markdown would change, each
+/// with its styled lines, for Format Markdown.
+///
+/// Unlike [`conversions`], it reads the whole body, quoted lines aside, and
+/// asks for no proof that a run was written as Markdown, since the writer
+/// asked for it. A line already styled stays as it is, and a styled word
+/// keeps its style. The signature's `--` line stays out of every run,
+/// because Markdown would read it as the underline of a heading.
+pub fn every_conversion(body: &RichBody) -> Vec<Conversion> {
+    let counts = |b: &Block| is_loose(b) && b.text().trim_end() != "--";
+    let blocks = &body.blocks;
+    let mut found = Vec::new();
+    let mut at = 0;
+    while at < blocks.len() {
+        let start = at + blocks[at..].iter().take_while(|b| !counts(b)).count();
+        let end = start + blocks[start..].iter().take_while(|b| counts(b)).count();
+        at = end.max(start + 1);
+        let lines = &blocks[start..end];
+        let first = start + lines.iter().take_while(|b| b.is_blank()).count();
+        let last = end - lines.iter().rev().take_while(|b| b.is_blank()).count();
+        if first >= last {
+            continue;
+        }
+        let markdown: Vec<String> = blocks[first..last].iter().map(line_as_markdown).collect();
+        let styled = styled(&markdown.join("\n"));
+        if styled.blocks != blocks[first..last] {
+            found.push(Conversion {
+                lines: first..last,
+                body: styled,
+            });
+        }
+    }
+    found
+}
+
 /// `markdown` as styled lines. A picture it names becomes a link to the
 /// picture, because only a file attached to the message can show one.
 pub fn styled(markdown: &str) -> RichBody {
@@ -197,8 +232,9 @@ fn written_part(blocks: &[Block]) -> usize {
 }
 
 /// Whether a line may hold marks nobody has formatted: a paragraph with
-/// no picture in it. A picture lives in the buffer as a widget, which no
-/// rewrite of the line could carry over.
+/// no picture in it. A caller that can carry a picture through a rewrite,
+/// as the composer can, puts a placeholder in its place before it asks,
+/// and the line then counts.
 fn is_loose(block: &Block) -> bool {
     block.kind == BlockKind::Paragraph && block.spans.iter().all(|s| s.image.is_none())
 }
@@ -447,6 +483,68 @@ mod tests {
         let found = conversions(&body);
         assert_eq!(found.len(), 1, "{found:?}");
         assert_eq!(found[0].lines, 2..4);
+    }
+
+    fn bold(text: &str) -> Span {
+        Span {
+            style: Style {
+                bold: true,
+                ..Style::default()
+            },
+            ..Span::plain(text)
+        }
+    }
+
+    #[test]
+    fn format_markdown_keeps_the_words_made_bold_before_it() {
+        let body = RichBody {
+            blocks: vec![
+                Block::new(
+                    BlockKind::Paragraph,
+                    vec![Span::plain("Hi "), bold("Ann"), Span::plain(",")],
+                ),
+                paragraph("# Plan"),
+            ],
+        };
+        let found = every_conversion(&body);
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert_eq!(found[0].lines, 0..2);
+        let first = &found[0].body.blocks[0];
+        assert_eq!(first.spans[1], bold("Ann"), "{first:?}");
+        let kinds: Vec<BlockKind> = found[0].body.blocks.iter().map(|b| b.kind).collect();
+        assert!(kinds.contains(&BlockKind::Heading(1)), "{kinds:?}");
+    }
+
+    #[test]
+    fn format_markdown_leaves_styled_lines_and_unchanged_runs_alone() {
+        let mut body = lines(&["Hi Ann,", "", "x", "- soup", "- salad"]);
+        body.blocks[2] = Block::new(BlockKind::Bullet, vec![Span::plain("kept")]);
+        let found = every_conversion(&body);
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert_eq!(found[0].lines, 3..5, "{found:?}");
+    }
+
+    #[test]
+    fn format_markdown_takes_a_single_mark_the_bar_would_pass_over() {
+        // One list line is not proof enough for the bar's Format, but Format
+        // Markdown is the writer asking for it.
+        let body = lines(&["- soup"]);
+        assert!(conversions(&body).is_empty());
+        let found = every_conversion(&body);
+        assert_eq!(found[0].body.blocks[0].kind, BlockKind::Bullet);
+    }
+
+    #[test]
+    fn format_markdown_reads_past_the_quote_and_keeps_the_signature_line() {
+        let mut body = lines(&["Thanks."]);
+        body.blocks.push(Block::new(BlockKind::Quote, vec![Span::plain("hi")]));
+        body.blocks.extend(lines(&["# Reply", "--", "Dana"]).blocks);
+        let found = every_conversion(&body);
+        // "Thanks." reads the same, and the `--` would make the line above
+        // it a heading, so it stays out of the run.
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert_eq!(found[0].lines, 2..3, "{found:?}");
+        assert_eq!(found[0].body.blocks[0].kind, BlockKind::Heading(1));
     }
 
     #[test]

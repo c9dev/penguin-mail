@@ -9,6 +9,10 @@
 //! Backspace or Delete presses into one step, so a deletion next to the one
 //! before it is also kept joined to it.
 //!
+//! A picture inside a deleted stretch comes back from GTK's history as a
+//! bare object replacement character, so the stretch keeps the picture as
+//! well, for the editor to show again in that character's place.
+//!
 //! A picture beside a deleted stretch stays in the buffer, since its anchor
 //! is not text. Format changes its line kind all the same, so the stretch
 //! also keeps the tags of a picture at either end, for Undo and Redo to
@@ -24,7 +28,7 @@ const KEPT: usize = 128;
 /// and the tags over each run of them, as a length in characters and the
 /// tags that run carried.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Removal<T> {
+pub struct Removal<T, P = ()> {
     pub at: i32,
     pub text: String,
     pub runs: Vec<(i32, Vec<T>)>,
@@ -32,31 +36,45 @@ pub struct Removal<T> {
     /// after it.
     pub picture_before: Option<Vec<T>>,
     pub picture_after: Option<Vec<T>>,
+    /// The pictures the stretch held, each with its place in `text` in
+    /// characters.
+    pub pictures: Vec<(i32, P)>,
 }
 
-impl<T: Clone> Removal<T> {
+impl<T: Clone, P: Clone> Removal<T, P> {
     fn length(&self) -> i32 {
         self.text.chars().count() as i32
     }
 
     /// `self` followed by `after`, starting where `self` starts.
-    fn then(&self, after: &Removal<T>) -> Removal<T> {
+    fn then(&self, after: &Removal<T, P>) -> Removal<T, P> {
         Removal {
             at: self.at,
             text: format!("{}{}", self.text, after.text),
             runs: self.runs.iter().chain(&after.runs).cloned().collect(),
             picture_before: self.picture_before.clone(),
             picture_after: after.picture_after.clone(),
+            pictures: self
+                .pictures
+                .iter()
+                .cloned()
+                .chain(
+                    after
+                        .pictures
+                        .iter()
+                        .map(|(at, picture)| (at + self.length(), picture.clone())),
+                )
+                .collect(),
         }
     }
 }
 
 #[derive(Debug)]
-pub struct Removals<T> {
-    kept: VecDeque<Removal<T>>,
+pub struct Removals<T, P = ()> {
+    kept: VecDeque<Removal<T, P>>,
 }
 
-impl<T> Default for Removals<T> {
+impl<T, P> Default for Removals<T, P> {
     fn default() -> Self {
         Removals {
             kept: VecDeque::new(),
@@ -64,11 +82,11 @@ impl<T> Default for Removals<T> {
     }
 }
 
-impl<T: Clone> Removals<T> {
+impl<T: Clone, P: Clone> Removals<T, P> {
     /// Keeps `removal`, and the newest stretch joined to it when the two
     /// touch: a Backspace ends where the stretch before it starts, and a
     /// Delete starts where it starts.
-    pub fn removed(&mut self, removal: Removal<T>) {
+    pub fn removed(&mut self, removal: Removal<T, P>) {
         let joined = self.kept.back().and_then(|newest| {
             if removal.at + removal.length() == newest.at {
                 Some(removal.then(newest))
@@ -84,7 +102,7 @@ impl<T: Clone> Removals<T> {
         }
     }
 
-    fn keep(&mut self, removal: Removal<T>) {
+    fn keep(&mut self, removal: Removal<T, P>) {
         if self.kept.len() == KEPT {
             self.kept.pop_front();
         }
@@ -92,7 +110,7 @@ impl<T: Clone> Removals<T> {
     }
 
     /// The newest stretch that held `text` at `at`.
-    pub fn find(&self, at: i32, text: &str) -> Option<&Removal<T>> {
+    pub fn find(&self, at: i32, text: &str) -> Option<&Removal<T, P>> {
         self.kept
             .iter()
             .rev()
@@ -109,14 +127,53 @@ impl<T: Clone> Removals<T> {
 mod tests {
     use super::*;
 
-    fn removal(at: i32, text: &str, runs: &[(i32, &'static str)]) -> Removal<&'static str> {
+    fn removal(
+        at: i32,
+        text: &str,
+        runs: &[(i32, &'static str)],
+    ) -> Removal<&'static str, &'static str> {
         Removal {
             at,
             text: text.to_string(),
             runs: runs.iter().map(|(n, tag)| (*n, vec![*tag])).collect(),
             picture_before: None,
             picture_after: None,
+            pictures: Vec::new(),
         }
+    }
+
+    #[test]
+    fn a_deleted_picture_is_kept_where_it_sat_in_the_stretch() {
+        let mut kept = Removals::default();
+        kept.removed(Removal {
+            pictures: vec![(1, "map")],
+            ..removal(4, "a\u{fffc}b", &[(3, "plain")])
+        });
+        let found = kept.find(4, "a\u{fffc}b").expect("kept");
+        assert_eq!(found.pictures, vec![(1, "map")]);
+    }
+
+    #[test]
+    fn a_picture_deleted_press_by_press_is_kept_in_the_joined_stretch() {
+        let mut kept = Removals::default();
+        // Backspace takes "x", then the picture before it, then "a".
+        kept.removed(removal(6, "x", &[(1, "plain")]));
+        kept.removed(Removal {
+            pictures: vec![(0, "map")],
+            ..removal(5, "\u{fffc}", &[(1, "plain")])
+        });
+        kept.removed(removal(4, "a", &[(1, "plain")]));
+        let found = kept.find(4, "a\u{fffc}x").expect("joined");
+        assert_eq!(found.pictures, vec![(1, "map")]);
+        // Delete presses at one place join the other way round.
+        let mut kept = Removals::default();
+        kept.removed(removal(4, "a", &[(1, "plain")]));
+        kept.removed(Removal {
+            pictures: vec![(0, "map")],
+            ..removal(4, "\u{fffc}", &[(1, "plain")])
+        });
+        let found = kept.find(4, "a\u{fffc}").expect("joined");
+        assert_eq!(found.pictures, vec![(1, "map")]);
     }
 
     #[test]

@@ -25,6 +25,17 @@ pub fn hold(body: &mut RichBody) -> Vec<Span> {
     held
 }
 
+/// The alt text a picture inserted from `file_name` starts with: the name
+/// without its extension, and without square brackets, which would end a
+/// Markdown picture's alt text early.
+pub fn alt_from_file_name(file_name: &str) -> String {
+    let stem = std::path::Path::new(file_name)
+        .file_stem()
+        .map_or_else(|| file_name.into(), |stem| stem.to_string_lossy());
+    let alt: String = stem.chars().filter(|c| !matches!(c, '[' | ']')).collect();
+    alt.trim().to_string()
+}
+
 /// Puts `pictures` back in `body`, one at each placeholder, in order. A
 /// placeholder left with no picture to show goes.
 pub fn restore(body: &mut RichBody, pictures: &[Span]) {
@@ -116,6 +127,18 @@ mod tests {
         assert_eq!(spans[1], picture("a"));
         assert_eq!(spans[2].text, " words");
         assert!(spans[2].style.bold);
+    }
+
+    #[test]
+    fn a_picture_from_a_file_is_described_by_its_name() {
+        assert_eq!(alt_from_file_name("Beach at dusk.jpeg"), "Beach at dusk");
+        assert_eq!(alt_from_file_name("plan.v2.png"), "plan.v2");
+        assert_eq!(alt_from_file_name("scan"), "scan");
+    }
+
+    #[test]
+    fn brackets_leave_a_file_name_so_markdown_can_hold_it() {
+        assert_eq!(alt_from_file_name("[draft] map.png"), "draft map");
     }
 
     #[test]

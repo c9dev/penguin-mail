@@ -72,8 +72,10 @@ app/src/ui/calendar/shown.rs
 app/src/ui/calendar/sidebar.rs
 app/src/ui/calendar/time_grid.rs
 app/src/ui/calendar/words.rs
+app/src/ui/composer/editor.rs
 app/src/ui/composer/mod.rs
 app/src/ui/composer/recipients.rs
+app/src/ui/composer/richbuffer.rs
 app/src/ui/composer/spell.rs
 app/src/ui/confirm.rs
 app/src/ui/contact_card.rs
