@@ -36,6 +36,9 @@ struct Inner {
     capabilities: Capabilities,
     refuse_sign_in: bool,
     failing: BTreeSet<String>,
+    /// `retr` of these fails without `-ERR`, and the session ends, as the
+    /// real client ends it on an answer it cannot read to the end.
+    broken: BTreeMap<String, Pop3Error>,
     /// Every `quit` fails as a dropped connection would.
     drop_before_quit: bool,
     /// After this many answered `retr`s, the next one fails as a dropped
@@ -64,6 +67,7 @@ impl Default for FakePop3 {
                 capabilities: Capabilities { uidl: true, stls: false, sasl_plain: true, top: true },
                 refuse_sign_in: false,
                 failing: BTreeSet::new(),
+                broken: BTreeMap::new(),
                 drop_before_quit: false,
                 drop_after_retrs: None,
                 retr_calls: Vec::new(),
@@ -111,6 +115,15 @@ impl FakePop3 {
     /// `retr` of this message answers `-ERR`.
     pub fn failing_retr(self, uidl: &str) -> Self {
         self.lock().failing.insert(uidl.to_string());
+        self
+    }
+
+    /// `retr` of this message fails with `err`, which is not `-ERR`, and
+    /// the session ends: an answer longer than `LIST` claimed
+    /// (`TooLarge`), a garbled one (`Protocol`), or a connection that
+    /// drops on this message (`Network`).
+    pub fn breaking_retr(self, uidl: &str, err: Pop3Error) -> Self {
+        self.lock().broken.insert(uidl.to_string(), err);
         self
     }
 
@@ -288,6 +301,10 @@ impl Pop3Api for FakePop3 {
             return Err(Pop3Error::Network("the connection dropped".into()));
         }
         let uidl = inner.uidl_of(id)?;
+        if let Some(err) = inner.broken.get(&uidl).cloned() {
+            inner.end_session();
+            return Err(err);
+        }
         if inner.failing.contains(&uidl) {
             return Err(Pop3Error::Refused(format!("message {id} cannot be read")));
         }

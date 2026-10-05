@@ -104,18 +104,6 @@ impl AccountSync {
         done: &mut Done,
     ) -> Result<(), SyncError> {
         let account_id = self.account_id;
-        let listed = pop3.uidl().await.map_err(BackendError::from)?;
-        let sizes: HashMap<u32, u64> = pop3
-            .list()
-            .await
-            .map_err(BackendError::from)?
-            .into_iter()
-            .map(|item| (item.id, item.octets))
-            .collect();
-        // A server should never list one UIDL twice in a session, but a
-        // buggy one can. The first listing downloads and the rest are
-        // skipped, so neither body replaces the other.
-        let mut taken: HashSet<&str> = HashSet::new();
         // Decided by the marker, not by whether anything is downloaded: a
         // first download that failed partway leaves mail here that is still
         // old mail.
@@ -123,48 +111,20 @@ impl AccountSync {
             .db
             .read(move |c| pop3::first_check_finished(c, account_id))
             .await?;
-        for page in listed.chunks(pop3::PAGE) {
-            let names: Vec<String> = page.iter().map(|u| u.uidl.clone()).collect();
-            let new: HashSet<String> = self
-                .db
-                .read(move |c| pop3::unseen(c, account_id, &names))
+        // The UIDLs that failed during this check, so a session opened
+        // after a broken answer neither counts nor asks for them twice. A
+        // download needs no entry: the store already has it. Each new
+        // session follows a failure added here, so the loop ends.
+        let mut handled: HashSet<String> = HashSet::new();
+        let listed = loop {
+            if let Some(listed) = self
+                .download_pass(pop3, first, remove, &mut handled, done)
                 .await?
-                .into_iter()
-                .collect();
-            for Uidl { id, uidl } in page.iter().filter(|u| new.contains(&u.uidl)) {
-                if !taken.insert(uidl) {
-                    tracing::warn!(account = account_id, uidl, message = id, "the server listed this UIDL twice; only its first message downloads");
-                    continue;
-                }
-                // A message over the cap is never asked for.
-                if sizes
-                    .get(id)
-                    .is_some_and(|octets| *octets > MOST_MESSAGE_BYTES)
-                {
-                    done.failing_grew |= self.count_failure(pop3, *id, uidl, &Pop3Error::TooLarge, true).await?;
-                    continue;
-                }
-                match pop3.retr(*id).await {
-                    Ok(raw) => self.keep_download(uidl, raw, first, remove, done).await?,
-                    // One message the server will not hand over holds up
-                    // nothing else; the next check asks for it again.
-                    Err(err @ Pop3Error::Refused(_)) => {
-                        tracing::warn!(account = account_id, uidl, %err, "the server would not hand over a message");
-                        done.failing_grew |= self.count_failure(pop3, *id, uidl, &err, true).await?;
-                    }
-                    // Anything else leaves the session unusable.
-                    Err(err) => return Err(BackendError::from(err).into()),
-                }
+            {
+                break listed;
             }
-        }
-        // Every listed message is downloaded or recorded as failed. A
-        // check that ended early never reaches this line, so the next one
-        // is still a first check and takes the old mail as old.
-        if first {
-            self.db
-                .write(move |c| pop3::finish_first_check(c, account_id))
-                .await?;
-        }
+            pop3.connect().await.map_err(BackendError::from)?;
+        };
         if let RemoveSetting::Days(days) = remove {
             let cutoff = now_millis() - i64::from(days) * DAY;
             self.db
@@ -187,6 +147,151 @@ impl AccountSync {
         }
         done.listed = listed.into_iter().map(|u| u.uidl).collect();
         Ok(())
+    }
+
+    /// One pass over what the open session lists: every message not yet
+    /// here and not handled this check, those that never failed first.
+    /// Answers the listing, or `None` when a broken answer ended the
+    /// session and another must carry on.
+    async fn download_pass<P: Pop3Api>(
+        &self,
+        pop3: &P,
+        first: bool,
+        remove: RemoveSetting,
+        handled: &mut HashSet<String>,
+        done: &mut Done,
+    ) -> Result<Option<Vec<Uidl>>, SyncError> {
+        let account_id = self.account_id;
+        let listed = pop3.uidl().await.map_err(BackendError::from)?;
+        let sizes: HashMap<u32, u64> = pop3
+            .list()
+            .await
+            .map_err(BackendError::from)?
+            .into_iter()
+            .map(|item| (item.id, item.octets))
+            .collect();
+        // A server should never list one UIDL twice in a session, but a
+        // buggy one can. The first listing downloads and the rest are
+        // skipped, so neither body replaces the other.
+        let mut taken: HashSet<&str> = HashSet::new();
+        // A message that failed before waits until the rest are down, so
+        // one that fails at every check never holds up the mail listed
+        // after it.
+        let mut retry: Vec<(&Uidl, FailReason)> = Vec::new();
+        for page in listed.chunks(pop3::PAGE) {
+            let names: Vec<String> = page
+                .iter()
+                .filter(|u| !handled.contains(&u.uidl))
+                .map(|u| u.uidl.clone())
+                .collect();
+            let (new, failed) = self
+                .db
+                .read(move |c| {
+                    let new = pop3::unseen(c, account_id, &names)?;
+                    let failed = pop3::failure_reasons(c, account_id, &new)?;
+                    Ok((new, failed))
+                })
+                .await?;
+            let new: HashSet<String> = new.into_iter().collect();
+            let failed: HashMap<String, FailReason> = failed.into_iter().collect();
+            for listing in page.iter().filter(|u| new.contains(&u.uidl)) {
+                if !taken.insert(&listing.uidl) {
+                    tracing::warn!(account = account_id, uidl = listing.uidl, message = listing.id, "the server listed this UIDL twice; only its first message downloads");
+                    continue;
+                }
+                if let Some(reason) = failed.get(&listing.uidl) {
+                    retry.push((listing, *reason));
+                    continue;
+                }
+                let size = sizes.get(&listing.id).copied();
+                if !self
+                    .download_one(pop3, listing, size, None, first, remove, handled, done)
+                    .await?
+                {
+                    return Ok(None);
+                }
+            }
+        }
+        // Every listed message is downloaded or recorded as failed. A
+        // check that ended early never reaches this line, so the next one
+        // is still a first check and takes the old mail as old.
+        if first {
+            self.db
+                .write(move |c| pop3::finish_first_check(c, account_id))
+                .await?;
+        }
+        for (listing, reason) in retry {
+            let size = sizes.get(&listing.id).copied();
+            if !self
+                .download_one(pop3, listing, size, Some(reason), first, remove, handled, done)
+                .await?
+            {
+                return Ok(None);
+            }
+        }
+        Ok(Some(listed))
+    }
+
+    /// Downloads one listed message of `size` octets, or counts why it did
+    /// not come down. `earlier` is why it failed last time. False when the
+    /// answer left the session unreadable and the check must open another.
+    #[expect(clippy::too_many_arguments, reason = "one step of the pass, which holds all of these")]
+    async fn download_one<P: Pop3Api>(
+        &self,
+        pop3: &P,
+        listing: &Uidl,
+        size: Option<u64>,
+        earlier: Option<FailReason>,
+        first: bool,
+        remove: RemoveSetting,
+        handled: &mut HashSet<String>,
+        done: &mut Done,
+    ) -> Result<bool, SyncError> {
+        let Uidl { id, uidl } = listing;
+        let account_id = self.account_id;
+        // A message over the cap is never asked for, and neither is one
+        // whose answer ran past the cap before: reading it again would
+        // fetch up to the cap and fail at the same place.
+        if size.is_some_and(|octets| octets > MOST_MESSAGE_BYTES)
+            || earlier == Some(FailReason::TooLarge)
+        {
+            handled.insert(uidl.clone());
+            done.failing_grew |= self
+                .count_failure(pop3, *id, uidl, &Pop3Error::TooLarge, true)
+                .await?;
+            return Ok(true);
+        }
+        let answer = pop3.retr(*id).await;
+        if answer.is_err() {
+            handled.insert(uidl.clone());
+        }
+        match answer {
+            Ok(raw) => self.keep_download(uidl, raw, first, remove, done).await?,
+            // One message the server will not hand over holds up nothing
+            // else; the next check asks for it again.
+            Err(err @ Pop3Error::Refused(_)) => {
+                tracing::warn!(account = account_id, uidl, %err, "the server would not hand over a message");
+                done.failing_grew |= self.count_failure(pop3, *id, uidl, &err, true).await?;
+            }
+            // An answer past the cap that LIST put under it, or one that is
+            // not POP3, leaves the rest of it unread, and the client has
+            // dropped the session. The message is counted and another
+            // session carries on with the rest.
+            Err(err @ (Pop3Error::TooLarge | Pop3Error::Protocol(_))) => {
+                tracing::warn!(account = account_id, uidl, %err, "could not read a message's answer");
+                done.failing_grew |= self.count_failure(pop3, *id, uidl, &err, false).await?;
+                return Ok(false);
+            }
+            // A connection that drops ends the check. Counting the message
+            // in flight puts it after the rest at the next check, in case
+            // it is what the server drops on.
+            Err(err @ Pop3Error::Network(_)) => {
+                done.failing_grew |= self.count_failure(pop3, *id, uidl, &err, false).await?;
+                return Err(BackendError::from(err).into());
+            }
+            Err(err) => return Err(BackendError::from(err).into()),
+        }
+        Ok(true)
     }
 
     /// Stores one download. The bytes, the row and the UIDL go in one

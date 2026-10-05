@@ -6,7 +6,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use mailrs_domain::{ChangeEvent, EpochMillis, MailSet, MessageMeta, RemoveSetting, Role, Target};
-use mailrs_pop3::MOST_MESSAGE_BYTES;
+use mailrs_pop3::{MOST_MESSAGE_BYTES, Pop3Error};
 use mailrs_store::pop3::{FailReason, Failing};
 use mailrs_store::{local_messages, messages, pop3};
 use tokio::time::Instant;
@@ -274,7 +274,7 @@ async fn a_first_check_cut_short_carries_on_as_a_first_check() {
 
     let rest = Arc::new(five());
     h.with_server(Arc::clone(&rest)).pop3_check().await.unwrap();
-    assert_eq!(rest.retr_calls(), [3, 4, 5], "only what was left");
+    assert_eq!(rest.retr_calls(), [4, 5, 3], "only what was left, the message the connection dropped on last");
     let heard = drain(&h);
     assert!(!heard.iter().any(|e| matches!(e, ChangeEvent::NewMail { .. })), "the rest of the old mail raises no notifications");
     for id in ["pop3/u3", "pop3/u4", "pop3/u5"] {
@@ -341,6 +341,57 @@ async fn a_uidl_listed_twice_in_one_session_downloads_once_and_removes_only_that
     assert_eq!(h.ids_in(MailSet::Role(Role::Inbox)).await, ["pop3/d"]);
     assert_eq!(raw(&h, "pop3/d").await, Some(pop3_mail(1)));
     assert_eq!(h.fake.deleted(), [1], "the DELE goes to the message that came down, not the skipped one");
+}
+
+async fn failed_as(h: &Pop3Harness, uidl: &str) -> Vec<(String, FailReason)> {
+    let (account_id, uidls) = (h.account_id, vec![uidl.to_string()]);
+    h.db.read(move |c| pop3::failure_reasons(c, account_id, &uidls)).await.unwrap()
+}
+
+fn three() -> FakePop3 {
+    (1..=3).fold(FakePop3::default(), |fake, n| fake.with_message(&format!("u{n}"), &pop3_mail(n)))
+}
+
+/// LIST is only the server's claim. A message it puts under the cap whose
+/// answer runs past it ends that session, and the check opens another
+/// for the rest.
+#[tokio::test]
+async fn a_retr_answer_longer_than_list_claimed_is_counted_and_the_rest_download() {
+    let h = pop3_harness(three().breaking_retr("u1", Pop3Error::TooLarge), RemoveSetting::Never).await;
+    h.sync.pop3_check().await.unwrap();
+    assert_eq!(h.ids_in(MailSet::Role(Role::Inbox)).await, ["pop3/u2", "pop3/u3"]);
+    assert_eq!(failed_as(&h, "u1").await, [("u1".to_string(), FailReason::TooLarge)]);
+    assert_eq!(h.fake.connects(), 2, "a second session for the rest");
+    assert!(first_check_finished(&h).await, "every message is downloaded or recorded");
+    h.sync.pop3_check().await.unwrap();
+    assert_eq!(h.fake.retr_calls(), [1, 2, 3], "an answer too large to read is not asked for again");
+}
+
+#[tokio::test]
+async fn a_garbled_retr_answer_is_counted_and_the_rest_download() {
+    let garbled = Pop3Error::Protocol("+GARBAGE".into());
+    let h = pop3_harness(three().breaking_retr("u2", garbled), RemoveSetting::Never).await;
+    h.sync.pop3_check().await.unwrap();
+    assert_eq!(h.ids_in(MailSet::Role(Role::Inbox)).await, ["pop3/u1", "pop3/u3"]);
+    assert_eq!(failed_as(&h, "u2").await, [("u2".to_string(), FailReason::Unreadable)]);
+}
+
+/// A connection that drops on one message every time must not stop every
+/// message listed after it.
+#[tokio::test]
+async fn a_message_the_connection_drops_on_is_recorded_and_tried_after_the_rest() {
+    let dropping = three().breaking_retr("u1", Pop3Error::Network("the connection dropped".into()));
+    let h = pop3_harness(dropping, RemoveSetting::Never).await;
+    assert!(h.sync.pop3_check().await.is_err(), "the connection dropped");
+    assert_eq!(failed_as(&h, "u1").await, [("u1".to_string(), FailReason::Dropped)]);
+    assert!(h.sync.pop3_check().await.is_err(), "it drops on u1 again");
+    assert_eq!(h.fake.retr_calls(), [1, 2, 3, 1], "u2 and u3 come down before u1 is tried again");
+    assert_eq!(h.ids_in(MailSet::Role(Role::Inbox)).await, ["pop3/u2", "pop3/u3"]);
+    assert!(first_check_finished(&h).await, "all that is left is a recorded failure");
+    drain(&h);
+    assert!(h.sync.pop3_check().await.is_err());
+    assert!(drain(&h).iter().any(|e| matches!(e, ChangeEvent::LabelsChanged { .. })), "the third drop puts it in the menu");
+    assert_eq!(failing(&h).await.len(), 1);
 }
 
 /// The store commits without waiting for the disk (WAL, synchronous
