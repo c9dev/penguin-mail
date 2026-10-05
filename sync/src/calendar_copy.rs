@@ -1112,64 +1112,15 @@ impl<A: Accounts> CalendarCopy<A> {
         }
         let keys = held_keys(account_id, &steps);
         let release = Release::new(&self.held, keys);
-        let mut touched: Vec<(String, String)> = Vec::new();
-        for step in &steps {
-            let key = step.key();
-            if !touched.contains(&key) {
-                touched.push(key);
-            }
-        }
-        let removals: HashSet<(String, String)> = steps
-            .iter()
-            .filter(|s| matches!(s, Step::Remove { .. }))
-            .map(Step::key)
-            .collect();
-        let (keys, writes) = (touched, steps.clone());
+        let writes = steps.clone();
         let now = crate::now_millis();
         let before = self
             .db
             .write(move |c| {
-                let mut before = Vec::new();
-                for key in &keys {
-                    let (calendar, id) = key;
-                    before.extend(store::event(c, account_id, calendar, id)?);
-                    // Removing a series takes its changed occurrences off
-                    // the copy too, so Undo must have them to put back.
-                    if removals.contains(key) {
-                        before.extend(store::changed_occurrences(c, account_id, calendar, id)?);
-                    }
-                }
-                // A move takes the event off its old calendar, a series with
-                // its changed occurrences, so Undo must have them all.
-                for step in &writes {
-                    if let Step::Move { from, id, .. } = step {
-                        before.extend(store::event(c, account_id, from, id)?);
-                        before.extend(store::changed_occurrences(c, account_id, from, id)?);
-                    }
-                }
-                for step in &writes {
-                    match step {
-                        Step::Save(event) | Step::Cancel(event) => {
-                            let event = Event { pending: true, ..event.clone() };
-                            store::save_events(c, account_id, std::slice::from_ref(&event), now)?;
-                        }
-                        Step::Remove { calendar, id } => {
-                            store::remove_events(c, account_id, calendar, std::slice::from_ref(id))?;
-                        }
-                        Step::Move { from, to, id } => {
-                            let leaving: Vec<Event> = before
-                                .iter()
-                                .filter(|e| &e.calendar == from && (&e.id == id || e.series.as_ref() == Some(id)))
-                                .map(|e| Event { calendar: to.clone(), pending: &e.id == id, ..e.clone() })
-                                .collect();
-                            store::remove_events(c, account_id, from, std::slice::from_ref(id))?;
-                            store::save_events(c, account_id, &leaving, now)?;
-                        }
-                    }
-                }
-                // Persisted in the same transaction as the rows above, so
-                // a crash or a quit before the Undo toast closes still
-                // has this change to queue at the next start.
+                let before = write_steps(c, account_id, &writes, now)?;
+                // Persisted in the same transaction as the rows, so a
+                // crash or a quit before the Undo toast closes still has
+                // this change to queue at the next start.
                 store::save_holding(c, account_id, &writes, &before, notify)?;
                 Ok(before)
             })
@@ -1246,16 +1197,34 @@ impl<A: Accounts> CalendarCopy<A> {
     /// Writes `steps` and queues them at once, for a change with no Undo
     /// toast, such as one the assistant makes. Like `hold_with`, it commits
     /// a change still waiting on its toast first.
+    ///
+    /// The rows and the queue change in one transaction. A send that
+    /// finishes between the two would find its own change still queued
+    /// and write the provider's answer over the rows just written.
     pub(crate) async fn apply_with(
         &self,
         account_id: AccountId,
         steps: Vec<Step>,
         notify: Notify,
     ) -> Result<Permitted<()>, SyncError> {
-        match self.hold_with(account_id, steps, notify).await? {
-            Permitted::Done(held) => self.commit(held).await.map(Permitted::Done),
-            Permitted::NeedsPermission => Ok(Permitted::NeedsPermission),
+        if self.calendar(account_id)?.is_none() {
+            return Err(SyncError::Backend(BackendError::Unsupported));
         }
+        if self.withheld(account_id)? {
+            return Ok(Permitted::NeedsPermission);
+        }
+        let mut waiting = self.waiting.lock().await;
+        if let Some(prior) = waiting.take() {
+            self.queue_held(prior).await?;
+        }
+        let now = crate::now_millis();
+        self.db
+            .write(move |c| {
+                let before = write_steps(c, account_id, &steps, now)?;
+                enqueue_steps(c, account_id, &steps, &before, notify)
+            })
+            .await?;
+        Ok(Permitted::Done(()))
     }
 
     /// Commits the change still waiting on its Undo toast, if any: for the
@@ -1284,63 +1253,14 @@ impl<A: Accounts> CalendarCopy<A> {
         Ok(())
     }
 
-    /// Queues a held change's steps and releases its rows to reads. A new
-    /// event goes out as a create; an occurrence, which has no etag before
-    /// its first change, as a change of that occurrence. Each step waits
-    /// on the one before it, so a split's new series goes out only once
-    /// Google took the cut, and its removals only once Google took the new
-    /// series; a step turned down drops the steps after it. The new series
-    /// carries the old one as it was, to put back if Google takes the cut
-    /// and turns the new series down.
+    /// Queues a held change's steps ([`enqueue_steps`]) and releases its
+    /// rows to reads.
     async fn queue_held(&self, held: Held) -> Result<(), SyncError> {
         let _release = Release { held: &self.held, keys: held.keys() };
         let Held { account_id, steps, before, notify, .. } = held;
-        let cut_from = cut_series(&steps, &before).cloned();
         self.db
             .write(move |c| {
-                let mut lead = None;
-                for step in &steps {
-                    let seq = match step {
-                        Step::Save(event) => {
-                            let queued = store::pending_ids(c, account_id, &event.calendar)?.contains(&event.id);
-                            let kind = if event.etag.is_empty() && event.series.is_none() && !queued {
-                                store::ChangeKind::Create
-                            } else {
-                                store::ChangeKind::Save
-                            };
-                            let event = Event { pending: true, ..event.clone() };
-                            let restores = cut_from.as_ref().filter(|_| kind == store::ChangeKind::Create);
-                            store::enqueue_after(c, account_id, kind, &event, lead, restores, notify)?
-                        }
-                        // The cancelled row stays in the copy; the provider
-                        // gets a delete of that occurrence.
-                        Step::Cancel(event) => {
-                            store::enqueue_after(c, account_id, store::ChangeKind::Remove, event, lead, None, notify)?
-                        }
-                        Step::Remove { calendar, id } => {
-                            let prior = before
-                                .iter()
-                                .find(|e| &e.calendar == calendar && &e.id == id)
-                                .cloned()
-                                .unwrap_or_else(|| Event {
-                                    calendar: calendar.clone(),
-                                    id: id.clone(),
-                                    ..Event::default()
-                                });
-                            store::enqueue_after(c, account_id, store::ChangeKind::Remove, &prior, lead, None, notify)?
-                        }
-                        Step::Move { from, to, id } => {
-                            let prior = before
-                                .iter()
-                                .find(|e| &e.calendar == from && &e.id == id)
-                                .cloned()
-                                .unwrap_or_else(|| Event { id: id.clone(), ..Event::default() });
-                            let moving = Event { calendar: to.clone(), ..prior };
-                            store::enqueue_move(c, account_id, from, &moving, lead, notify)?
-                        }
-                    };
-                    lead = seq.or(lead);
-                }
+                enqueue_steps(c, account_id, &steps, &before, notify)?;
                 store::clear_holding(c, account_id)?;
                 Ok(())
             })
@@ -1460,6 +1380,126 @@ impl<A: Accounts> CalendarCopy<A> {
             .ok_or(SyncError::UnknownAccount(account_id))?
             .email)
     }
+}
+
+/// Writes `steps` to the copy, marked waiting, and answers each row they
+/// touched as it was, with a removed or moved series' changed
+/// occurrences, for Undo to put back and the queue to name.
+fn write_steps(
+    c: &rusqlite::Connection,
+    account_id: AccountId,
+    steps: &[Step],
+    now: EpochMillis,
+) -> mailrs_store::Result<Vec<Event>> {
+    let mut touched: Vec<(String, String)> = Vec::new();
+    for step in steps {
+        let key = step.key();
+        if !touched.contains(&key) {
+            touched.push(key);
+        }
+    }
+    let removals: HashSet<(String, String)> =
+        steps.iter().filter(|s| matches!(s, Step::Remove { .. })).map(Step::key).collect();
+    let mut before = Vec::new();
+    for key in &touched {
+        let (calendar, id) = key;
+        before.extend(store::event(c, account_id, calendar, id)?);
+        // Removing a series takes its changed occurrences off the copy
+        // too, so Undo must have them to put back.
+        if removals.contains(key) {
+            before.extend(store::changed_occurrences(c, account_id, calendar, id)?);
+        }
+    }
+    // A move takes the event off its old calendar, a series with its
+    // changed occurrences, so Undo must have them all.
+    for step in steps {
+        if let Step::Move { from, id, .. } = step {
+            before.extend(store::event(c, account_id, from, id)?);
+            before.extend(store::changed_occurrences(c, account_id, from, id)?);
+        }
+    }
+    for step in steps {
+        match step {
+            Step::Save(event) | Step::Cancel(event) => {
+                let event = Event { pending: true, ..event.clone() };
+                store::save_events(c, account_id, std::slice::from_ref(&event), now)?;
+            }
+            Step::Remove { calendar, id } => {
+                store::remove_events(c, account_id, calendar, std::slice::from_ref(id))?;
+            }
+            Step::Move { from, to, id } => {
+                let leaving: Vec<Event> = before
+                    .iter()
+                    .filter(|e| &e.calendar == from && (&e.id == id || e.series.as_ref() == Some(id)))
+                    .map(|e| Event { calendar: to.clone(), pending: &e.id == id, ..e.clone() })
+                    .collect();
+                store::remove_events(c, account_id, from, std::slice::from_ref(id))?;
+                store::save_events(c, account_id, &leaving, now)?;
+            }
+        }
+    }
+    Ok(before)
+}
+
+/// Queues `steps`, whose rows were `before`. A new event goes out as a
+/// create; an occurrence, which has no etag before its first change, as a
+/// change of that occurrence. Each step waits on the one before it, so a
+/// split's new series goes out only once Google took the cut, and its
+/// removals only once Google took the new series; a step turned down
+/// drops the steps after it. The new series carries the old one as it
+/// was, to put back if Google takes the cut and turns the new series down.
+fn enqueue_steps(
+    c: &rusqlite::Connection,
+    account_id: AccountId,
+    steps: &[Step],
+    before: &[Event],
+    notify: Notify,
+) -> mailrs_store::Result<()> {
+    let cut_from = cut_series(steps, before);
+    let mut lead = None;
+    for step in steps {
+        let seq = match step {
+            Step::Save(event) => {
+                let queued = store::pending_ids(c, account_id, &event.calendar)?.contains(&event.id);
+                let kind = if event.etag.is_empty() && event.series.is_none() && !queued {
+                    store::ChangeKind::Create
+                } else {
+                    store::ChangeKind::Save
+                };
+                let event = Event { pending: true, ..event.clone() };
+                let restores = cut_from.filter(|_| kind == store::ChangeKind::Create);
+                store::enqueue_after(c, account_id, kind, &event, lead, restores, notify)?
+            }
+            // The cancelled row stays in the copy; the provider
+            // gets a delete of that occurrence.
+            Step::Cancel(event) => {
+                store::enqueue_after(c, account_id, store::ChangeKind::Remove, event, lead, None, notify)?
+            }
+            Step::Remove { calendar, id } => {
+                let prior = before
+                    .iter()
+                    .find(|e| &e.calendar == calendar && &e.id == id)
+                    .cloned()
+                    .unwrap_or_else(|| Event {
+                        calendar: calendar.clone(),
+                        id: id.clone(),
+                        ..Event::default()
+                    });
+                store::enqueue_after(c, account_id, store::ChangeKind::Remove, &prior, lead, None, notify)?
+            }
+            Step::Move { from, to, id } => {
+                let prior = before
+                    .iter()
+                    .find(|e| &e.calendar == from && &e.id == id)
+                    .cloned()
+                    .unwrap_or_else(|| Event { id: id.clone(), ..Event::default() });
+                let moving = Event { calendar: to.clone(), ..prior };
+                store::enqueue_move(c, account_id, from, &moving, lead, notify)?
+            }
+        };
+        lead = seq.or(lead);
+    }
+    Ok(())
 }
 
 /// The occurrence a person picked: a changed occurrence knows its place
