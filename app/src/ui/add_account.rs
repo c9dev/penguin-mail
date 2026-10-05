@@ -23,7 +23,7 @@ use mailrs_domain::{Account, AccountId, MailSet, Role as MailRole};
 use mailrs_store::servers;
 
 use crate::add_account::lookup::{Check, Checks, State};
-use crate::add_account::post::{self, Advice, AdviceKind, Band, Stamp, Step, Tile};
+use crate::add_account::post::{self, Advice, AdviceKind, Band, Browser, Stamp, Step, Tile};
 use crate::add_account::{
     self, Address, Asking, Continue, Failure, FailureKind, Next, Outcome, Proposal, Role,
     Running, Typed,
@@ -47,8 +47,8 @@ pub enum Opening {
     Pick,
     /// The address page for a tile picked in the first-run window.
     Tile(Tile),
-    /// Google's browser sign-in, from the first-run window.
-    Google,
+    /// A provider's browser sign-in, from the first-run window.
+    Browser(Browser),
     /// The password page for an IMAP account that needs to sign in again.
     Again(Account),
     /// A demo stage, for screenshots: see [`preview`].
@@ -63,9 +63,13 @@ pub enum Done {
         account: Account,
         name: Option<String>,
     },
-    /// A Google account signed in. The dialog stays open on its first
-    /// sync, or on Grant Access.
-    GoogleAdded(Account),
+    /// A Google or Microsoft account signed in through the browser, with
+    /// the name Microsoft knows the person by. The dialog stays open on
+    /// its first sync, or on Grant Access.
+    BrowserAdded {
+        account: Account,
+        name: Option<String>,
+    },
     /// An IMAP account that needed to sign in again did. The dialog is
     /// closed.
     SignedInAgain(Account),
@@ -73,7 +77,7 @@ pub enum Done {
     /// inbox. The dialog is closed.
     OpenInbox(AccountId),
     /// Grant Access on the last page: the window sends this account
-    /// through Google's consent again. The dialog is closed.
+    /// through its provider's consent again. The dialog is closed.
     Grant(String),
 }
 
@@ -92,7 +96,7 @@ pub fn present(
     let root = match &opening {
         Opening::Pick | Opening::Preview(_) => "pick",
         Opening::Tile(_) => "address",
-        Opening::Google => "browser",
+        Opening::Browser(_) => "browser",
         Opening::Again(_) => "password",
     };
     // Every page is added, the root first, so a page popped off the stack
@@ -133,7 +137,7 @@ pub fn present(
     match opening {
         Opening::Pick => {}
         Opening::Tile(tile) => this.open_address(Some(tile), false),
-        Opening::Google => this.start_browser(None),
+        Opening::Browser(browser) => this.start_browser(browser, None),
         Opening::Again(account) => this.load_saved(account),
         Opening::Preview(stage) => preview(&this, &stage),
     }
@@ -465,11 +469,12 @@ pub struct Tiles {
     pub buttons: Vec<(Tile, gtk::Button, gtk::Label)>,
 }
 
-/// The provider tiles, three to a row, each row centred, so five sit three
-/// over two with no gap left at the end. Each tile is one button named
+/// The provider tiles, three to a row, each row centred, so six sit three
+/// over three and five three over two. Each tile is one button named
 /// "Fastmail, Fastmail" or "Google, Gmail, Workspace, signs in through
-/// your browser".
-pub fn tiles(width: i32) -> Tiles {
+/// your browser". `microsoft` is whether the build can sign in to
+/// Microsoft, whose tile shows only then.
+pub fn tiles(width: i32, microsoft: bool) -> Tiles {
     let grid = gtk::Box::builder()
         .orientation(gtk::Orientation::Vertical)
         .spacing(12)
@@ -477,7 +482,7 @@ pub fn tiles(width: i32) -> Tiles {
         .css_classes(["post-tiles"])
         .build();
     let mut buttons = Vec::new();
-    for tile in Tile::ALL {
+    for tile in post::tiles(microsoft) {
         let mark = mark(tile.stamp(), 38);
         let top = gtk::Box::new(gtk::Orientation::Horizontal, 0);
         top.append(&mark);
@@ -538,7 +543,7 @@ pub fn browser_legend() -> gtk::Box {
     legend
 }
 
-fn pick_page() -> PickPage {
+fn pick_page(microsoft: bool) -> PickPage {
     let banded = banded("pick", &gettext("Add Account"));
     let body = &banded.body;
     body.add_css_class("centered");
@@ -546,7 +551,7 @@ fn pick_page() -> PickPage {
     title.set_xalign(0.5);
     let lede = label(&gettext("Choose where your mail lives."), &["post-lede"]);
     lede.set_xalign(0.5);
-    let Tiles { grid, buttons } = tiles(136);
+    let Tiles { grid, buttons } = tiles(136, microsoft);
     let by_hand = icon_row(
         "emblem-system-symbolic",
         &gettext("Enter server settings by hand"),
@@ -833,25 +838,12 @@ fn browser_page() -> BrowserPage {
     }
 }
 
-/// The browser page's numbered steps.
-fn fill_steps(steps: &gtk::Box, provider: &str) {
+/// The browser page's numbered steps, for `browser`'s own pages.
+fn fill_steps(steps: &gtk::Box, browser: Browser) {
     while let Some(child) = steps.first_child() {
         steps.remove(&child);
     }
-    let said = [
-        fill(
-            &gettext("Choose your {provider} account."),
-            &[("provider", provider)],
-        ),
-        fill(
-            &gettext(
-                "If {provider} says it has not verified the app, choose Advanced, then Go to Penguin Mail.",
-            ),
-            &[("provider", provider)],
-        ),
-        gettext("Leave every box ticked and choose Continue."),
-    ];
-    for (index, step) in said.iter().enumerate() {
+    for (index, step) in browser.steps().iter().enumerate() {
         let number = gtk::Label::builder()
             .label((index + 1).to_string())
             .valign(gtk::Align::Start)
@@ -1389,6 +1381,9 @@ struct Dialog {
     browser_timer: RefCell<Option<glib::SourceId>>,
     /// Whether the browser sign-in expects an address, for Try Again.
     browser_expected: RefCell<Option<String>>,
+    /// The provider the browser page waits for, for Try Again and the
+    /// stamp on a failure.
+    browser_provider: Cell<Browser>,
     /// The account the last page follows, and the timer that reads its
     /// counts.
     added: Cell<Option<AccountId>>,
@@ -1403,7 +1398,17 @@ struct Dialog {
     manual: ManualStep,
 }
 
+/// Whether Add Account offers Microsoft: in a build with its client, and
+/// in the demo, which signs in nowhere and shows every tile.
+pub fn signs_in_to_microsoft(core: &Core) -> bool {
+    core.demo || core.built_with_microsoft_sign_in()
+}
+
 impl Dialog {
+    fn microsoft(&self) -> bool {
+        signs_in_to_microsoft(&self.core)
+    }
+
     fn new(core: &Rc<Core>, again: Option<Account>, done: Box<dyn Fn(Done)>) -> Rc<Dialog> {
         let nav = adw::NavigationView::new();
         let band = PostBand::new(BAND, 1.0);
@@ -1444,9 +1449,10 @@ impl Dialog {
             browser_deadline: Cell::new(None),
             browser_timer: RefCell::new(None),
             browser_expected: RefCell::new(None),
+            browser_provider: Cell::new(Browser::Google),
             added: Cell::new(None),
             count_timer: RefCell::new(None),
-            pick: pick_page(),
+            pick: pick_page(signs_in_to_microsoft(core)),
             address: address_page(),
             lookup: lookup_page(),
             browser: browser_page(),
@@ -1532,7 +1538,7 @@ impl Dialog {
         self.browser.copy.connect_clicked(move |_| copy());
         let retry = on(|this| {
             let expected = this.browser_expected.borrow().clone();
-            this.start_browser(expected);
+            this.start_browser(this.browser_provider.get(), expected);
         });
         self.browser.retry.connect_clicked(move |_| retry());
         let cancel = on(Dialog::cancel_browser);
@@ -1668,14 +1674,13 @@ impl Dialog {
         }
     }
 
-    /// A tile: the browser for Google, the address page for the rest.
-    /// The tile's mark flies up to the envelope's corner.
+    /// A tile: the browser for Google and Microsoft, the address page for
+    /// the rest. The tile's mark flies up to the envelope's corner.
     fn chose(self: &Rc<Self>, tile: Tile, mark: &gtk::Label) {
         let middle = graphene::Point::new(mark.width() as f32 / 2.0, mark.height() as f32 / 2.0);
-        if tile.in_browser() {
-            self.start_browser(None);
-        } else {
-            self.open_address(Some(tile), false);
+        match tile.browser() {
+            Some(browser) => self.start_browser(browser, None),
+            None => self.open_address(Some(tile), false),
         }
         self.band.fly_from(mark, &middle);
     }
@@ -1753,7 +1758,9 @@ impl Dialog {
             this.asking.forget();
             this.address.look.set_sensitive(true);
             let next = match found {
-                Ok(found) => add_account::after_discovery(found, &address),
+                Ok(found) => {
+                    add_account::after_discovery(found, &address, this.microsoft())
+                }
                 Err(err) => Next::Say(err.to_string()),
             };
             match next {
@@ -1763,7 +1770,10 @@ impl Dialog {
                     this.say(&said);
                 }
                 Next::Closed(_) => this.show_closed(&address),
-                Next::Google => this.start_browser(Some(address.full())),
+                Next::Google => this.start_browser(Browser::Google, Some(address.full())),
+                Next::Microsoft => {
+                    this.start_browser(Browser::Microsoft, Some(address.full()))
+                }
                 Next::Manual { proposal, line } => this.show_manual(&proposal, Some(&line)),
             }
         });
@@ -1804,7 +1814,7 @@ impl Dialog {
     /// The stamp for an address at `domain`: the provider the list names
     /// for it, else the tile picked, else the stamp for any server.
     fn address_stamp(&self, domain: &str) -> Stamp {
-        post::advice(domain)
+        post::advice(domain, self.microsoft())
             .map(|advice| advice.stamp)
             .or_else(|| self.tile.get().map(Tile::stamp))
             .unwrap_or(post::ANY_SERVER)
@@ -1860,7 +1870,7 @@ impl Dialog {
             .rsplit_once('@')
             .map(|(_, domain)| domain.trim().trim_end_matches('.').to_lowercase());
         let advice = match &domain {
-            Some(domain) if !domain.is_empty() => post::advice(domain),
+            Some(domain) if !domain.is_empty() => post::advice(domain, self.microsoft()),
             _ => None,
         };
         let advice = advice.or_else(|| {
@@ -1915,7 +1925,7 @@ impl Dialog {
     /// A provider with no IMAP: the page that says so and offers another
     /// address or another provider.
     fn show_closed(&self, address: &Address) {
-        let Some(advice) = post::advice(&address.domain) else {
+        let Some(advice) = post::advice(&address.domain, self.microsoft()) else {
             return;
         };
         self.closed.title.set_text(&advice.title);
@@ -2322,11 +2332,12 @@ impl Dialog {
 
     // ---- The browser -------------------------------------------------------------
 
-    /// Google's sign-in in the browser, with the page that waits for it.
-    /// `expected` is the address typed, when there was one.
-    fn start_browser(self: &Rc<Self>, expected: Option<String>) {
+    /// `browser`'s sign-in in the browser, with the page that waits for
+    /// it. `expected` is the address typed, when there was one.
+    fn start_browser(self: &Rc<Self>, browser: Browser, expected: Option<String>) {
         self.stop_browser();
-        let provider = "Google";
+        self.browser_provider.set(browser);
+        let provider = browser.name();
         let page = &self.browser;
         page.title.set_text(&fill(
             &gettext("Sign in with {provider} in your browser"),
@@ -2338,7 +2349,7 @@ impl Dialog {
             ),
             &[("provider", provider)],
         ));
-        fill_steps(&page.steps, provider);
+        fill_steps(&page.steps, browser);
         page.steps.set_visible(true);
         page.failed.hide();
         page.waiting.set_visible(true);
@@ -2349,12 +2360,21 @@ impl Dialog {
         let stamp = post::stamp_for(provider);
         self.set_band("browser", Step::Browser, Some(stamp), Some(provider));
         self.push("browser");
-        // Without the build's Google client the browser would open for
-        // nothing, so say why at once. The demo goes on to its own message.
-        if !self.core.demo && !self.core.built_with_google_sign_in() {
-            return self.browser_failed(&gettext(
-                "This copy of Penguin Mail was built without Google sign-in. Get a release from github.com/c9dev/penguin-mail/releases.",
-            ));
+        // Without the build's client the browser would open for nothing,
+        // so say why at once. The demo goes on to its own message.
+        let built = match browser {
+            Browser::Google => self.core.built_with_google_sign_in(),
+            Browser::Microsoft => self.core.built_with_microsoft_sign_in(),
+        };
+        if !self.core.demo && !built {
+            return self.browser_failed(&match browser {
+                Browser::Google => gettext(
+                    "This copy of Penguin Mail was built without Google sign-in. Get a release from github.com/c9dev/penguin-mail/releases.",
+                ),
+                Browser::Microsoft => gettext(
+                    "This copy of Penguin Mail was built without Microsoft sign-in. Get a release from github.com/c9dev/penguin-mail/releases.",
+                ),
+            });
         }
         let ticket = self.asking.ask();
         let (urls, opened) = async_channel::unbounded::<String>();
@@ -2370,19 +2390,39 @@ impl Dialog {
         });
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
-            let signed = this.core.authorize_account(urls, expected, canceled).await;
+            let signed = match browser {
+                Browser::Google => this
+                    .core
+                    .authorize_account(urls, expected, canceled)
+                    .await
+                    .map(|account| (account, None)),
+                Browser::Microsoft => {
+                    this.core
+                        .authorize_microsoft(urls, expected, false, canceled)
+                        .await
+                }
+            };
             match signed {
                 // The account is kept whether or not the dialog is still
                 // open, so the window hears about it either way.
-                Ok(account) => {
-                    (this.done)(Done::GoogleAdded(account.clone()));
+                Ok((account, name)) => {
+                    (this.done)(Done::BrowserAdded {
+                        account: account.clone(),
+                        name,
+                    });
                     if this.asking.wants(ticket) {
                         this.stop_browser();
                         this.typed.replace(Address::parse(&account.email));
-                        let withheld = crate::offered::withheld_for(
-                            this.core.account(account.id).as_ref().map(|s| s.services()),
-                        );
-                        let missing = crate::permission::withheld_permissions(withheld);
+                        // Microsoft's consent is all or nothing, so only
+                        // Google's page can leave a feature off.
+                        let missing = match browser {
+                            Browser::Google => {
+                                crate::permission::withheld_permissions(crate::offered::withheld_for(
+                                    this.core.account(account.id).as_ref().map(|s| s.services()),
+                                ))
+                            }
+                            Browser::Microsoft => Vec::new(),
+                        };
                         this.show_added(&account, Some(stamp), Some(&missing));
                     }
                 }
@@ -2426,8 +2466,8 @@ impl Dialog {
         page.again.set_visible(false);
         page.copy.set_visible(false);
         page.retry.set_visible(true);
-        let stamp = Some(post::stamp_for("Google"));
-        self.set_band("browser", Step::Refused, stamp, Some("Google"));
+        let provider = self.browser_provider.get().name();
+        self.set_band("browser", Step::Refused, Some(post::stamp_for(provider)), Some(provider));
         page.retry.grab_focus();
         page.failed
             .area
@@ -2679,7 +2719,7 @@ fn preview(this: &Rc<Dialog>, stage: &str) {
                 confirm: false,
             }],
         };
-        match add_account::after_discovery(found, &studio) {
+        match add_account::after_discovery(found, &studio, true) {
             Next::Password(proposal) => proposal,
             _ => add_account::guess(&studio),
         }
@@ -2696,20 +2736,30 @@ fn preview(this: &Rc<Dialog>, stage: &str) {
                 field.set_position(-1);
             });
         }
-        "browser" => {
-            this.start_browser(None);
+        "browser" | "browser-microsoft" => {
+            let browser = if stage == "browser" {
+                Browser::Google
+            } else {
+                Browser::Microsoft
+            };
+            this.start_browser(browser, None);
             // The demo cannot sign in, so its answer never comes: the
-            // page keeps waiting, as it would for a person still on
-            // Google's page.
+            // page keeps waiting, as it would for a person still on the
+            // provider's page, with the mockup's time left.
             this.asking.forget();
-            this.count_down(Instant::now() + Duration::from_secs(252));
+            let left = match browser {
+                Browser::Google => 252,
+                Browser::Microsoft => 220,
+            };
+            this.count_down(Instant::now() + Duration::from_secs(left));
             this.browser.failed.hide();
             this.browser.steps.set_visible(true);
             this.browser.waiting.set_visible(true);
             this.browser.again.set_visible(true);
             this.browser.copy.set_visible(true);
             this.browser.retry.set_visible(false);
-            this.set_band("browser", Step::Browser, Some(post::stamp_for("Google")), Some("Google"));
+            let provider = browser.name();
+            this.set_band("browser", Step::Browser, Some(post::stamp_for(provider)), Some(provider));
         }
         "lookup" => {
             this.typed.replace(Some(studio.clone()));

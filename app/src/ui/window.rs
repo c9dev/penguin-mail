@@ -654,12 +654,12 @@ impl MainWindow {
                 .build();
 
             let w = weak.clone();
-            let first_page = welcome::first_account_page(move |tile| {
+            let microsoft = super::add_account::signs_in_to_microsoft(&app.core);
+            let first_page = welcome::first_account_page(microsoft, move |tile| {
                 if let Some(win) = w.upgrade() {
-                    win.present_add_account(if tile.in_browser() {
-                        Opening::Google
-                    } else {
-                        Opening::Tile(tile)
+                    win.present_add_account(match tile.browser() {
+                        Some(browser) => Opening::Browser(browser),
+                        None => Opening::Tile(tile),
                     });
                 }
             });
@@ -1938,11 +1938,22 @@ impl MainWindow {
         });
     }
 
-    /// Sends `email` through consent again, once the person has chosen
-    /// Grant Access. The consent asks for every scope Penguin Mail uses,
-    /// so this is the one path a permission or the banner needs.
+    /// Sends `email` through its provider's consent again, once the person
+    /// has chosen Grant Access. Each consent asks for every scope Penguin
+    /// Mail uses, so this is the one path a permission or the banner
+    /// needs. An IMAP account has no consent to run.
     fn grant(self: &Rc<Self>, email: String) {
-        self.authorize_with(Some(email));
+        let provider = self
+            .accounts()
+            .into_iter()
+            .find(|account| account.email.eq_ignore_ascii_case(&email))
+            .map(|account| account.provider);
+        match provider {
+            Some(Provider::Microsoft) => self.authorize_microsoft(email),
+            Some(Provider::Imap) => {}
+            // An address no account has yet goes to Google, as before.
+            Some(Provider::Gmail) | None => self.authorize_with(Some(email)),
+        }
     }
 
     /// [`MainWindow::grant`] for an account known only by its id: the one
@@ -2639,7 +2650,8 @@ impl MainWindow {
             let Some(win) = weak.upgrade() else { return };
             match done {
                 Done::Added { account, name } => win.imap_added(&account, name),
-                Done::GoogleAdded(account) => {
+                Done::BrowserAdded { account, name } => {
+                    win.keep_send_as_name(&account, name);
                     if let Some(app) = win.app.upgrade() {
                         app.signed_in(&account);
                     }
@@ -2671,7 +2683,7 @@ impl MainWindow {
         match account.provider {
             Provider::Gmail => self.authorize(Some(account.email)),
             Provider::Imap => self.present_add_account(Opening::Again(account)),
-            Provider::Microsoft => self.authorize_microsoft(Some(account.email), true),
+            Provider::Microsoft => self.authorize_microsoft(account.email),
         }
     }
 
@@ -2686,23 +2698,10 @@ impl MainWindow {
         self.look_for_servers(account);
     }
 
-    /// A Microsoft account signed in. The name Microsoft gave becomes the
-    /// account's one send-as address, since `offered::reads_send_as` asks
-    /// only Gmail.
-    pub(super) fn microsoft_added(self: &Rc<Self>, account: &Account, name: Option<String>) {
-        self.keep_send_as_name(account, name);
-        self.toast(&fill(
-            &gettext("Added {account}. Downloading mail…"),
-            &[("account", &account.email)],
-        ));
-        if let Some(app) = self.app.upgrade() {
-            app.signed_in(account);
-        }
-        self.refresh_accounts(Reload::Yes);
-    }
-
     /// Keeps `name` as the account's one send-as address, for a provider
-    /// that does not tell the client what its person sends as.
+    /// that does not tell the client what its person sends as. Microsoft
+    /// gives a name at sign-in, and `offered::reads_send_as` asks only
+    /// Gmail.
     fn keep_send_as_name(&self, account: &Account, name: Option<String>) {
         if let (Some(app), Some(name)) = (self.app.upgrade(), name) {
             app.change_settings(Change::SendAsAddresses {
@@ -2786,9 +2785,11 @@ impl MainWindow {
         });
     }
 
-    /// Runs Microsoft's sign-in in the browser, for Sign In Again and
-    /// Grant Access. Add Account runs its own inside the dialog.
-    pub(super) fn authorize_microsoft(self: &Rc<Self>, address: Option<String>, again: bool) {
+    /// Runs Microsoft's sign-in in the browser for the account at `email`,
+    /// for Sign In Again and Grant Access. A sign-in that comes back as
+    /// another address is refused. Add Account runs its own sign-in
+    /// inside the dialog.
+    fn authorize_microsoft(self: &Rc<Self>, email: String) {
         if !self.core.demo && !self.core.built_with_microsoft_sign_in() {
             return self.no_sign_in(&gettext(
                 "This copy of Penguin Mail was built without Microsoft sign-in.",
@@ -2810,11 +2811,11 @@ impl MainWindow {
         glib::spawn_future_local(async move {
             let signed = this
                 .core
-                .authorize_microsoft(urls, address, again, cancel)
+                .authorize_microsoft(urls, Some(email), true, cancel)
                 .await;
             drop(keep);
             match signed {
-                Ok((account, _)) if again => {
+                Ok((account, _)) => {
                     this.toast(&fill(
                         &gettext("{account} is signed in again."),
                         &[("account", &account.email)],
@@ -2824,7 +2825,6 @@ impl MainWindow {
                     }
                     this.refresh_accounts(Reload::Yes);
                 }
-                Ok((account, name)) => this.microsoft_added(&account, name),
                 Err(err) => this.toast(&err.to_string()),
             }
             this.authorizing.set(false);
