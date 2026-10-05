@@ -9594,6 +9594,10 @@ msgstr ""
 "Esta caixa de correio está no servidor Exchange da sua organização, ao qual "
 "o Penguin Mail não consegue chegar."
 
+#: sync/src/services/microsoft/rules.rs:96
+msgid "Outlook's rules cannot do that."
+msgstr "As regras do Outlook não conseguem fazer isso."
+
 #: sync/src/services/sieve.rs:88
 msgid ""
 "{provider} offers no encrypted connection for rules, so Penguin Mail does "

@@ -8965,6 +8965,10 @@ msgstr "Outlook has no other calendars to add."
 msgid "This mailbox is on your organization's own Exchange server, which Penguin Mail cannot reach."
 msgstr "This mailbox is on your organisation's own Exchange server, which Penguin Mail cannot reach."
 
+#: sync/src/services/microsoft/rules.rs:96
+msgid "Outlook's rules cannot do that."
+msgstr "Outlook's rules cannot do that."
+
 #: sync/src/services/sieve.rs:88
 msgid "{provider} offers no encrypted connection for rules, so Penguin Mail does not send your password there."
 msgstr "{provider} offers no encrypted connection for rules, so Penguin Mail does not send your password there."
