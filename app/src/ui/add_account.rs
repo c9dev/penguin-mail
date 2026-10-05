@@ -23,7 +23,8 @@ use mailrs_domain::{Account, AccountId, MailSet, Provider, RemoveSetting, Role a
 use mailrs_store::{accounts, servers};
 
 use crate::add_account::lookup::{Check, Checks, State};
-use crate::add_account::post::{self, Advice, AdviceKind, Band, Browser, Stamp, Step, Tile};
+use crate::add_account::post::{self, Advice, AdviceKind, Band, Browser, BrowserWords, Stamp, Step, Tile};
+use mailrs_sync::sign_in::Wanted;
 use crate::add_account::{
     self, Address, Asking, Continue, Failure, FailureKind, Next, Outcome, Proposal, Protocol,
     Removal, Role, Running, Typed,
@@ -1556,7 +1557,7 @@ struct Dialog {
 /// Whether Add Account offers Microsoft: in a build with its client, and
 /// in the demo, which signs in nowhere and shows every tile.
 pub fn signs_in_to_microsoft(core: &Core) -> bool {
-    core.demo || core.built_with_microsoft_sign_in()
+    core.demo || core.built_with_sign_in(Browser::Microsoft)
 }
 
 impl Dialog {
@@ -2592,11 +2593,7 @@ impl Dialog {
         self.push("browser");
         // Without the build's client the browser would open for nothing,
         // so say why at once. The demo goes on to its own message.
-        let built = match browser {
-            Browser::Google => self.core.built_with_google_sign_in(),
-            Browser::Microsoft => self.core.built_with_microsoft_sign_in(),
-        };
-        if !self.core.demo && !built {
+        if !self.core.demo && !self.core.built_with_sign_in(browser) {
             return self.browser_failed(&match browser {
                 Browser::Google => gettext(
                     "This copy of Penguin Mail was built without Google sign-in. Get a release from github.com/c9dev/penguin-mail/releases.",
@@ -2620,18 +2617,15 @@ impl Dialog {
         });
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
-            let signed = match browser {
-                Browser::Google => this
-                    .core
-                    .authorize_account(urls, expected, canceled)
-                    .await
-                    .map(|account| (account, None)),
-                Browser::Microsoft => {
-                    this.core
-                        .authorize_microsoft(urls, expected, false, canceled)
-                        .await
-                }
+            // Google's page takes no address, so the typed one must be the
+            // one that comes back. Microsoft's fills its field with it and
+            // takes another one.
+            let wanted = match (browser, expected) {
+                (_, None) => Wanted::Anyone,
+                (Browser::Google, Some(address)) => Wanted::Only(address),
+                (Browser::Microsoft, Some(address)) => Wanted::Suggested(address),
             };
+            let signed = this.core.sign_in_in_browser(browser, urls, wanted, canceled).await;
             match signed {
                 // The account is kept whether or not the dialog is still
                 // open, so the window hears about it either way.

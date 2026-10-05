@@ -205,25 +205,28 @@ pub fn tiles(microsoft: bool) -> Vec<Tile> {
 }
 
 /// A provider whose sign-in runs in the browser.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Browser {
-    Google,
-    Microsoft,
+pub use mailrs_sync::sign_in::Browser;
+
+/// What Add Account says about a browser sign-in.
+pub trait BrowserWords {
+    /// The provider's name, as the built-in list and the stamp know it.
+    fn name(self) -> &'static str;
+    /// The numbered steps the waiting page lists for the provider's own
+    /// pages.
+    fn steps(self) -> Vec<String>;
 }
 
-impl Browser {
-    /// The provider's name, as the built-in list and the stamp know it.
-    pub fn name(self) -> &'static str {
+impl BrowserWords for Browser {
+    fn name(self) -> &'static str {
         match self {
             Browser::Google => "Google",
             Browser::Microsoft => "Microsoft",
         }
     }
 
-    /// The numbered steps the waiting page lists for the provider's own
-    /// pages. Microsoft asks for no unverified-app click and shows no
-    /// boxes to untick, so it has two.
-    pub fn steps(self) -> Vec<String> {
+    /// Microsoft asks for no unverified-app click and shows no boxes to
+    /// untick, so it has two.
+    fn steps(self) -> Vec<String> {
         let named = [("provider", self.name())];
         match self {
             Browser::Google => vec![

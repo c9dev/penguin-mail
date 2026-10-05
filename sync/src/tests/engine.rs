@@ -62,7 +62,7 @@ fn reached(wanted: AccountState) -> impl Fn(&ChangeEvent) -> bool {
 #[tokio::test]
 async fn the_engine_bootstraps_and_polls_when_poked() {
     let s = setup().await;
-    s.engine.start_account(1, AccountServices::fake(Arc::clone(&s.fake)));
+    s.engine.start_account(1, AccountServices::google(Arc::clone(&s.fake)));
     wait_for(&s.events, reached(AccountState::Ok)).await;
     s.fake
         .deliver(meta("n", "tn", now_millis(), &["INBOX", "UNREAD"]));
@@ -80,7 +80,7 @@ async fn the_engine_corrects_a_stale_inbox_when_it_starts() {
     let (sender, _receiver) = async_channel::unbounded();
     let earlier = AccountSync::new(
         1,
-        AccountServices::fake(Arc::clone(&s.fake)),
+        AccountServices::google(Arc::clone(&s.fake)),
         s.db.clone(),
         sender,
     );
@@ -88,7 +88,7 @@ async fn the_engine_corrects_a_stale_inbox_when_it_starts() {
     // Gmail archives it, and the store never hears.
     s.fake
         .with(|f| crate::fake::edit_labels(f.messages.get_mut("stale").unwrap(), Vec::clear));
-    s.engine.start_account(1, AccountServices::fake(Arc::clone(&s.fake)));
+    s.engine.start_account(1, AccountServices::google(Arc::clone(&s.fake)));
     wait_for(
         &s.events,
         |e| matches!(e, ChangeEvent::ThreadsChanged { thread_ids, .. } if thread_ids == &["ts"]),
@@ -105,7 +105,7 @@ async fn the_engine_corrects_a_stale_inbox_when_it_starts() {
 async fn a_rejected_refresh_token_stops_the_account() {
     let s = setup().await;
     s.fake.fail_next(GmailError::NeedsReauth);
-    s.engine.start_account(1, AccountServices::fake(Arc::clone(&s.fake)));
+    s.engine.start_account(1, AccountServices::google(Arc::clone(&s.fake)));
     wait_for(&s.events, reached(AccountState::NeedsReauth)).await;
     tokio::time::timeout(Duration::from_secs(5), async {
         while s.engine.is_running(1) {
@@ -120,7 +120,7 @@ async fn a_rejected_refresh_token_stops_the_account() {
 async fn a_network_failure_goes_offline_then_recovers() {
     let s = setup().await;
     s.fake.fail_next(GmailError::Network("down".into()));
-    s.engine.start_account(1, AccountServices::fake(Arc::clone(&s.fake)));
+    s.engine.start_account(1, AccountServices::google(Arc::clone(&s.fake)));
     wait_for(&s.events, reached(AccountState::Offline)).await;
     wait_for(&s.events, reached(AccountState::Ok)).await;
 }
@@ -128,7 +128,7 @@ async fn a_network_failure_goes_offline_then_recovers() {
 #[tokio::test]
 async fn stopping_an_account_ends_its_loop() {
     let s = setup().await;
-    s.engine.start_account(1, AccountServices::fake(Arc::clone(&s.fake)));
+    s.engine.start_account(1, AccountServices::google(Arc::clone(&s.fake)));
     wait_for(&s.events, reached(AccountState::Ok)).await;
     s.engine.stop_account(1);
     assert!(!s.engine.is_running(1));
@@ -142,7 +142,7 @@ async fn stopping_an_account_ends_its_loop() {
 async fn a_loop_that_crashes_starts_again_after_a_pause() {
     let s = setup().await;
     s.fake.panic_next(1);
-    s.engine.start_account(1, AccountServices::fake(Arc::clone(&s.fake)));
+    s.engine.start_account(1, AccountServices::google(Arc::clone(&s.fake)));
     wait_for(&s.events, reached(AccountState::Ok)).await;
     assert!(s.engine.is_running(1));
 }
@@ -151,7 +151,7 @@ async fn a_loop_that_crashes_starts_again_after_a_pause() {
 async fn a_loop_that_crashes_twice_stops_and_says_so() {
     let s = setup().await;
     s.fake.panic_next(2);
-    s.engine.start_account(1, AccountServices::fake(Arc::clone(&s.fake)));
+    s.engine.start_account(1, AccountServices::google(Arc::clone(&s.fake)));
     wait_for(&s.events, reached(AccountState::Stopped)).await;
     tokio::time::timeout(Duration::from_secs(5), async {
         while s.engine.is_running(1) {
@@ -170,7 +170,7 @@ async fn a_loop_that_crashes_twice_stops_and_says_so() {
 async fn a_loop_waits_for_the_network_without_asking_gmail() {
     let s = setup().await;
     s.engine.set_network(false);
-    s.engine.start_account(1, AccountServices::fake(Arc::clone(&s.fake)));
+    s.engine.start_account(1, AccountServices::google(Arc::clone(&s.fake)));
     wait_for(&s.events, reached(AccountState::Offline)).await;
     tokio::time::sleep(Duration::from_millis(100)).await;
     assert_eq!(s.fake.with(|f| f.usage.calls), 0);
@@ -181,7 +181,7 @@ async fn a_loop_waits_for_the_network_without_asking_gmail() {
 #[tokio::test]
 async fn losing_the_network_marks_a_waiting_account_offline_at_once() {
     let s = setup().await;
-    s.engine.start_account(1, AccountServices::fake(Arc::clone(&s.fake)));
+    s.engine.start_account(1, AccountServices::google(Arc::clone(&s.fake)));
     wait_for(&s.events, reached(AccountState::Ok)).await;
     s.engine.set_network(false);
     wait_for(&s.events, reached(AccountState::Offline)).await;
@@ -193,7 +193,7 @@ async fn losing_the_network_marks_a_waiting_account_offline_at_once() {
 async fn a_check_asks_gmail_while_the_network_seems_gone() {
     let s = setup().await;
     s.engine.set_network(false);
-    s.engine.start_account(1, AccountServices::fake(Arc::clone(&s.fake)));
+    s.engine.start_account(1, AccountServices::google(Arc::clone(&s.fake)));
     wait_for(&s.events, reached(AccountState::Offline)).await;
     s.engine.poke(1);
     wait_for(&s.events, reached(AccountState::Ok)).await;

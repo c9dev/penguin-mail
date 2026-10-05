@@ -9,28 +9,24 @@ use mailrs_sieve::fake::FakeSieve;
 use mailrs_store::{Db, accounts, rule_changes};
 
 use crate::fake::{FakeImap, FakeSmtp};
-use crate::services::{Imap, SieveRules};
+use crate::services::SieveRules;
 use crate::settings::{Replaced, replace_via};
 use crate::tests::fake_settings;
-use crate::{AutoReplyService, BackendError, MailBackend, RulesService};
+use crate::{AccountServices, AutoReplyService, BackendError, MailBackend, RulesService};
 
 const DOVECOT: &str =
     "fileinto vacation imap4flags copy include body mime date relational mailbox";
 
-type Adapter = SieveRules<FakeSieve, Imap<FakeImap, FakeSmtp>>;
+type Adapter = SieveRules<FakeSieve>;
 
 async fn adapter(extensions: &str) -> (Arc<FakeSieve>, Adapter) {
-    let imap = Imap::new(
-        Arc::new(FakeImap::new()),
-        Arc::new(FakeSmtp::default()),
-        fake_settings(),
-    );
+    let mail = AccountServices::imap(Arc::new(FakeImap::new()), Arc::new(FakeSmtp::default()), fake_settings()).mail;
     // The folders and their roles, as the first listing learns them.
-    imap.mailboxes().await.unwrap();
+    mail.mailboxes().await.unwrap();
     let sieve = Arc::new(FakeSieve::new(extensions));
     let rules = SieveRules::new(
         Arc::clone(&sieve),
-        imap,
+        mail,
         "me@example.com".into(),
         "mailbox.org".into(),
     );

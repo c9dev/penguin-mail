@@ -24,7 +24,7 @@ use mailrs_domain::translate::gettext;
 use mailrs_domain::{Address, EpochMillis};
 
 use super::dav_read::{Reads, TOKEN_CTAG, TOKEN_SYNC, backend};
-use super::{CalendarService, MailBackend};
+use super::{AnyMail, CalendarService, MailBackend};
 use crate::BackendError;
 use crate::invitations::mail;
 
@@ -39,11 +39,11 @@ const DEFAULT_COLOR: &str = "#3584e4";
 /// answer short. Twenty cover a calendar far past any person's.
 const SYNC_ROUNDS: usize = 20;
 
-pub struct CalDav<D, B> {
+pub struct CalDav<D> {
     api: Arc<D>,
-    /// The account's mail adapter, which carries the REPLY of a server
-    /// that does not schedule.
-    mail: B,
+    /// The account's mail, which carries the REPLY of a server that does
+    /// not schedule.
+    mail: AnyMail,
     me: Arc<Vec<String>>,
     reads: Arc<Mutex<Reads>>,
     written: Arc<Mutex<VecDeque<(String, String)>>>,
@@ -54,7 +54,7 @@ pub struct CalDav<D, B> {
     listed: Arc<Mutex<Vec<String>>>,
 }
 
-impl<D, B: Clone> Clone for CalDav<D, B> {
+impl<D> Clone for CalDav<D> {
     fn clone(&self) -> Self {
         CalDav {
             api: Arc::clone(&self.api),
@@ -89,8 +89,8 @@ fn refused(err: DavError) -> BackendError {
     BackendError::Refused(err.to_string())
 }
 
-impl<D: DavApi, B: MailBackend + Clone> CalDav<D, B> {
-    pub fn new(api: Arc<D>, mail: B, me: Vec<String>) -> CalDav<D, B> {
+impl<D: DavApi> CalDav<D> {
+    pub fn new(api: Arc<D>, mail: AnyMail, me: Vec<String>) -> CalDav<D> {
         CalDav {
             api,
             mail,
@@ -345,7 +345,7 @@ impl<D: DavApi, B: MailBackend + Clone> CalDav<D, B> {
     }
 }
 
-impl<D: DavApi, B: MailBackend + Clone> CalendarService for CalDav<D, B> {
+impl<D: DavApi> CalendarService for CalDav<D> {
     async fn calendars(&self) -> Result<Vec<model::Calendar>, BackendError> {
         let homes = self.api.homes().await.map_err(|e| self.err(e))?;
         let home = homes.calendar.ok_or(BackendError::Unsupported)?;

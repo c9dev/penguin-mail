@@ -15,7 +15,7 @@ fn kept(offers: Offers) -> (bool, bool) {
 
 #[test]
 fn gmail_keeps_a_subject_and_can_limit_to_contacts() {
-    let offers = AccountServices::fake(Arc::new(FakeGmail::new())).offers();
+    let offers = AccountServices::google(Arc::new(FakeGmail::new())).offers();
     assert_eq!(kept(offers), (true, true));
 }
 
@@ -28,10 +28,10 @@ fn outlook_keeps_the_text_but_no_subject_and_can_limit_to_contacts() {
 #[test]
 fn sieve_keeps_a_subject_and_has_no_contacts_limit() {
     let imap = AccountServices::fake_imap(Arc::new(FakeImap::new()), Arc::new(FakeSmtp::default()));
-    let adapter = imap.fake_imap_adapter().expect("an IMAP account");
+    let adapter = imap.mail.clone();
     let sieve = Arc::new(FakeSieve::new("fileinto vacation"));
-    let rules = SieveRules::new(sieve, adapter, "me@example.com".into(), "Example".into());
-    let offers = imap.with_auto_reply(AnyAutoReply::FakeSieve(rules)).offers();
+    let rules = SieveRules::new(Arc::new(crate::AnySieve::from(sieve)), adapter, "me@example.com".into(), "Example".into());
+    let offers = imap.with_auto_reply(AnyAutoReply::Sieve(rules)).offers();
     assert!(offers.auto_reply);
     assert_eq!(kept(offers), (true, false));
 }

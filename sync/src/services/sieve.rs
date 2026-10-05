@@ -14,12 +14,13 @@ use mailrs_sieve::SCRIPT_NAME;
 use mailrs_sieve::client::{ManageSieveApi, SieveError};
 use mailrs_sieve::script::{self, Extensions, Script, Unsayable, WriteError};
 
-use super::{AutoReplyService, MailBackend, RulesService};
+use super::{AnyMail, AutoReplyService, MailBackend, RulesService};
 use crate::BackendError;
 
-pub struct SieveRules<M, B> {
+pub struct SieveRules<M> {
     api: Arc<M>,
-    mail: B,
+    /// The account's mail, which names the folder a role files into.
+    mail: AnyMail,
     address: String,
     provider: String,
     state: Arc<Mutex<State>>,
@@ -31,7 +32,7 @@ struct State {
     extensions: Option<Extensions>,
 }
 
-impl<M, B: Clone> Clone for SieveRules<M, B> {
+impl<M> Clone for SieveRules<M> {
     fn clone(&self) -> Self {
         SieveRules {
             api: Arc::clone(&self.api),
@@ -50,8 +51,8 @@ enum Running {
     Nothing,
 }
 
-impl<M: ManageSieveApi, B: MailBackend + Clone> SieveRules<M, B> {
-    pub fn new(api: Arc<M>, mail: B, address: String, provider: String) -> Self {
+impl<M: ManageSieveApi> SieveRules<M> {
+    pub fn new(api: Arc<M>, mail: AnyMail, address: String, provider: String) -> Self {
         SieveRules {
             api,
             mail,
@@ -199,7 +200,7 @@ impl<M: ManageSieveApi, B: MailBackend + Clone> SieveRules<M, B> {
     }
 }
 
-impl<M: ManageSieveApi, B: MailBackend + Clone> RulesService for SieveRules<M, B> {
+impl<M: ManageSieveApi> RulesService for SieveRules<M> {
     async fn filters(&self) -> Result<Vec<Filter>, BackendError> {
         Ok(self.load().await?.0.rules)
     }
@@ -246,7 +247,7 @@ impl<M: ManageSieveApi, B: MailBackend + Clone> RulesService for SieveRules<M, B
     }
 }
 
-impl<M: ManageSieveApi, B: MailBackend + Clone> AutoReplyService for SieveRules<M, B> {
+impl<M: ManageSieveApi> AutoReplyService for SieveRules<M> {
     async fn vacation(&self) -> Result<Vacation, BackendError> {
         Ok(self.load().await?.0.vacation.unwrap_or_default())
     }

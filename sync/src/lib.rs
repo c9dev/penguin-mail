@@ -61,7 +61,7 @@ pub use api::{AccountClient, DraftRef, GmailApi, SavedDraft};
 pub use backoff::{MOST_TRIES, backoff_delay, poll_offset, retry_delay, with_jitter};
 pub use calendar::{Added, Calendar};
 pub use connect::{
-    KEYRING, connect_account, connect_imap, connect_microsoft, connect_microsoft_at, connect_pop3, pop3_servers_for,
+    Clients, Connected, Connector, KEYRING, Lacks, connect_account, connect_imap, connect_microsoft, connect_microsoft_at, connect_pop3, pop3_servers_for,
     server_of, servers_for,
 };
 pub use contacts::{Card, ContactBook, Refreshed};
@@ -78,7 +78,7 @@ pub use one_click::OneClick;
 pub use ops::{MailOp, MovedFrom};
 pub use outbox::{Cancelled, Drained, Outbox, Posted};
 pub use services::{
-    AccountServices, AnyAutoReply, Backfill, Found, ID_PAGE_SIZE, LIST_PAGE_SIZE, RawMessage,
+    AccountServices, AnyAutoReply, AnyDav, AnyGmail, AnyGraph, AnyImap, AnyPop3, AnySieve, AnySmtp, Backfill, Found, ID_PAGE_SIZE, LIST_PAGE_SIZE, RawMessage,
     RemoteRef, SearchQuery, Want, AnyCalendar, AnyContacts, AnyIdentities, AnyMail, AnyRules,
     AutoReplyService, CalendarService, ContactsService, Google, GraphApi, Imap, ImapApi, ImapSettings,
     IdentityService, KeywordsOf, KeywordsPage, MailBackend, MailCapabilities, Microsoft, MicrosoftSettings, Missing, Offers, Pop3, Pop3Settings, Refused,

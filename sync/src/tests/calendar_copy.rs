@@ -300,7 +300,7 @@ async fn a_refresh_already_running_leaves_a_second_one_alone() {
     let (sender2, _events2) = async_channel::unbounded();
     let sync2 = Arc::new(crate::AccountSync::new(
         account2,
-        crate::AccountServices::fake(Arc::clone(&fake2)),
+        crate::AccountServices::google(Arc::clone(&fake2)),
         h.db.clone(),
         sender2,
     ));

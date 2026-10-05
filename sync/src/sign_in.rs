@@ -1,5 +1,10 @@
-//! Which Google client an account signs in with, and keeping an IMAP, POP3
-//! or Microsoft account that just signed in.
+//! Which Google client an account signs in with, signing one in on its
+//! provider's page, and keeping an IMAP, POP3 or Microsoft account that
+//! just signed in.
+
+mod browser;
+
+pub use browser::{Browser, BrowserSignInError, SignedIn, Wanted, in_browser};
 
 use std::sync::Arc;
 

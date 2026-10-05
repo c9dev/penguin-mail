@@ -77,7 +77,7 @@ async fn old_mail_moved_into_the_inbox_is_fetched() {
 fn restating(fake: Arc<FakeGmail>) -> AccountServices {
     let caps = MailCapabilities {
         restates: true,
-        ..AccountServices::fake(Arc::clone(&fake)).capabilities()
+        ..AccountServices::google(Arc::clone(&fake)).capabilities()
     };
     AccountServices::fake_with_capabilities(fake, caps)
 }

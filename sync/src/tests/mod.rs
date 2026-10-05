@@ -10,6 +10,7 @@ mod calendar_list;
 mod calendar_series;
 mod carddav;
 mod connect;
+mod connector;
 mod contacts;
 mod engine;
 mod event_change;
@@ -158,7 +159,7 @@ pub(crate) struct Harness {
 }
 
 pub(crate) async fn harness() -> Harness {
-    harness_with(AccountServices::fake).await
+    harness_with(AccountServices::google).await
 }
 
 /// `harness`, with services `services` builds over the fake: a Gmail
@@ -219,7 +220,7 @@ impl Harness {
     pub fn sync_with(&self, ceiling: Duration) -> AccountSync {
         AccountSync::new(
             self.account_id,
-            AccountServices::fake(Arc::clone(&self.fake)),
+            AccountServices::google(Arc::clone(&self.fake)),
             self.db.clone(),
             self.sender.clone(),
         )
@@ -369,8 +370,8 @@ pub(crate) async fn imap_harness_on(imap: FakeImap, settings: ImapSettings) -> I
         .unwrap();
     let (imap, smtp) = (Arc::new(imap), Arc::new(FakeSmtp::default()));
     let services =
-        AccountServices::fake_imap_with(Arc::clone(&imap), Arc::clone(&smtp), settings);
-    if let AnyMail::FakeImap(adapter) = &services.mail {
+        AccountServices::imap(Arc::clone(&imap), Arc::clone(&smtp), settings);
+    if let AnyMail::Imap(adapter) = &services.mail {
         adapter.look_at_every_mailbox();
     }
     let (sender, events) = async_channel::unbounded();
@@ -455,12 +456,12 @@ impl ImapHarness {
     /// The account as the app finds it after a restart: the same store
     /// and server, and an adapter that has asked the server nothing yet.
     pub fn restarted(&self) -> AccountSync {
-        let services = AccountServices::fake_imap_with(
+        let services = AccountServices::imap(
             Arc::clone(&self.imap),
             Arc::clone(&self.smtp),
             fake_settings(),
         );
-        if let AnyMail::FakeImap(adapter) = &services.mail {
+        if let AnyMail::Imap(adapter) = &services.mail {
             adapter.look_at_every_mailbox();
         }
         AccountSync::new(
@@ -475,7 +476,7 @@ impl ImapHarness {
     /// Whether the adapter still follows `mailbox`.
     pub fn is_followed(&self, mailbox: &str) -> bool {
         match &self.sync.services().mail {
-            AnyMail::FakeImap(adapter) => adapter.is_followed(mailbox),
+            AnyMail::Imap(adapter) => adapter.is_followed(mailbox),
             _ => false,
         }
     }

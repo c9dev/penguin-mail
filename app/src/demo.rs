@@ -26,8 +26,8 @@ use mailrs_sync::calendar_copy::CalendarCopy;
 use mailrs_sync::fake::{DavKind, FakeDav, FakeGmail, FakeGraph, FakeImap, FakeSmtp, fill_store};
 use mailrs_store::services::{FoundService, ServiceKind};
 use mailrs_sync::{
-    AccountServices, AccountSync, AnyCalendar, AnyContacts, AnyRules, CalDav, CardDav, ContactBook, DEFAULT_WINDOW_DAYS,
-    Imap, ImapSettings, LocalRules, SyncError,
+    AccountServices, AccountSync, AnyCalendar, AnyContacts, AnyDav, AnyRules, CalDav, CardDav, ContactBook, DEFAULT_WINDOW_DAYS,
+    ImapSettings, LocalRules, SyncError,
 };
 use rusqlite::Connection;
 
@@ -751,10 +751,10 @@ impl DemoMail {
     /// A demo account's services, built the way a real account's are.
     pub fn services(&self, account_id: AccountId) -> Option<AccountServices> {
         Some(match self.0.get(&account_id)? {
-            DemoServer::Gmail(gmail) => AccountServices::fake(Arc::clone(gmail)),
+            DemoServer::Gmail(gmail) => AccountServices::google(Arc::clone(gmail)),
             DemoServer::Imap { imap, smtp, dav, db } => imap_services(imap, smtp, dav, db, account_id),
             DemoServer::Microsoft(graph) => {
-                AccountServices::fake_microsoft_with(Arc::clone(graph), outlook::settings())
+                AccountServices::microsoft(Arc::clone(graph), outlook::settings())
             }
             DemoServer::Pop3 { server, db } => server.services(db, account_id),
         })
@@ -812,7 +812,7 @@ pub async fn seed(db: &Db, now: EpochMillis) -> std::result::Result<DemoMail, Sy
         let (events, _) = async_channel::unbounded();
         let sync = Arc::new(AccountSync::new(
             account_id,
-            AccountServices::fake(Arc::clone(&fake)),
+            AccountServices::google(Arc::clone(&fake)),
             db.clone(),
             events,
         ));
@@ -1872,10 +1872,12 @@ fn imap_services(
     db: &Db,
     account_id: AccountId,
 ) -> AccountServices {
-    let mail = Imap::new(Arc::clone(imap), Arc::clone(smtp), fastmail_settings());
-    AccountServices::fake_imap_with(Arc::clone(imap), Arc::clone(smtp), fastmail_settings())
-        .with_calendar(AnyCalendar::FakeDav(CalDav::new(Arc::clone(dav), mail, vec![FASTMAIL.to_string()])))
-        .with_contacts(AnyContacts::FakeDav(CardDav::new(Arc::clone(dav))))
+    let services = AccountServices::imap(Arc::clone(imap), Arc::clone(smtp), fastmail_settings());
+    let mail = services.mail.clone();
+    let dav = Arc::new(AnyDav::from(Arc::clone(dav)));
+    services
+        .with_calendar(AnyCalendar::Dav(CalDav::new(Arc::clone(&dav), mail, vec![FASTMAIL.to_string()])))
+        .with_contacts(AnyContacts::Dav(CardDav::new(dav)))
         .with_rules(AnyRules::Local(LocalRules::new(db.clone(), account_id)))
 }
 
@@ -2754,8 +2756,8 @@ mod tests {
         let demo = demo().await;
         let fastmail = demo.fastmail().await;
         let services = demo.mail.services(fastmail).expect("the demo serves it");
-        assert!(matches!(services.calendar, Some(mailrs_sync::AnyCalendar::FakeDav(_))));
-        assert!(matches!(services.contacts, Some(mailrs_sync::AnyContacts::FakeDav(_))));
+        assert!(matches!(services.calendar, Some(mailrs_sync::AnyCalendar::Dav(_))));
+        assert!(matches!(services.contacts, Some(mailrs_sync::AnyContacts::Dav(_))));
         assert_eq!(
             services.rules.as_ref().map(mailrs_sync::AnyRules::place),
             Some(mailrs_sync::RulesPlace::ThisComputer)
@@ -2925,7 +2927,7 @@ mod tests {
         let (events, _) = async_channel::unbounded();
         let sync = AccountSync::new(
             work,
-            AccountServices::fake(Arc::clone(&fake)),
+            AccountServices::google(Arc::clone(&fake)),
             demo.db.clone(),
             events,
         );
@@ -3136,13 +3138,13 @@ mod tests {
         assert_eq!(listed.len(), 1);
         assert_eq!(listed[0].draft_id, DRAFT_ID);
         assert_eq!(listed[0].message_id, "draft-1");
-        let file = AccountServices::fake(Arc::clone(&api))
+        let file = AccountServices::google(Arc::clone(&api))
             .mail
             .fetch_part("roadmap-1", &mailrs_sync::fake::attachment_path(0))
             .await
             .unwrap();
         assert!(String::from_utf8(file).unwrap().contains("stand-in file"));
-        let identities = AccountServices::fake(Arc::clone(&api))
+        let identities = AccountServices::google(Arc::clone(&api))
             .identities
             .identities()
             .await
