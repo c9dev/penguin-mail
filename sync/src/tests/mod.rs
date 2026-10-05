@@ -26,6 +26,7 @@ mod newsletters;
 mod outbox;
 mod parity;
 mod pop3;
+mod pop3_check;
 mod priority;
 mod quota;
 mod rsvp;
