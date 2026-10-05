@@ -22,7 +22,7 @@ mod types;
 mod uid_set;
 pub mod utf7;
 
-pub use check::{CheckError, Checked, check, user_names};
+pub use check::{CheckError, Checked, check, check_smtp, user_names};
 pub use client::{Dial, IDLE_LIMIT, ImapClient, TlsDial};
 pub use error::ImapError;
 pub use logging::quiet;

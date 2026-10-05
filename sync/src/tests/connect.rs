@@ -6,7 +6,8 @@ use mailrs_store::servers::{self, Saved, Security, Servers};
 use mailrs_store::{Db, accounts};
 
 use crate::passwords::{MemoryPasswords, PasswordError, PasswordStore};
-use crate::sign_in::{ImapSignInError, NewImap, imap_signed_in};
+use crate::sign_in::{ImapSignInError, NewImap, NewPop3, imap_signed_in, in_imap_words, pop3_signed_in};
+use mailrs_domain::RemoveSetting;
 use crate::{
     BackendError, MailBackend, SyncError, connect_account, connect_imap, server_of, servers_for,
 };
@@ -388,4 +389,100 @@ async fn a_microsoft_account_with_no_token_needs_to_sign_in() {
     assert!(matches!(refused, Err(SyncError::Backend(BackendError::NeedsReauth))));
     let state = db.read(move |c| accounts::account(c, id)).await.unwrap().unwrap().state;
     assert_eq!(state, AccountState::NeedsReauth);
+}
+
+fn new_pop3(password: &str, remove: RemoveSetting) -> NewPop3 {
+    let saved = |host: &str, port| Saved {
+        host: host.into(),
+        port,
+        security: Security::Tls,
+        user_name: "dana@example.org".into(),
+    };
+    NewPop3 {
+        address: "dana@example.org".into(),
+        provider_name: "example.org".into(),
+        servers: servers::Pop3Servers {
+            pop3: saved("pop.example.org", 995),
+            smtp: saved("smtp.example.org", 465),
+        },
+        remove,
+        password: password.into(),
+    }
+}
+
+#[tokio::test]
+async fn a_pop3_sign_in_keeps_the_account_its_servers_its_setting_and_its_password() {
+    let (db, _dir) = store().await;
+    let passwords = Arc::new(MemoryPasswords::default());
+    let dana = pop3_signed_in(&db, Arc::clone(&passwords), new_pop3("pw", RemoveSetting::Days(14)), 7)
+        .await
+        .unwrap();
+    assert_eq!(dana.provider, mailrs_domain::Provider::Pop3);
+    let id = dana.id;
+    let (kept, remove) = db
+        .read(move |c| Ok((servers::load_pop3(c, id)?, accounts::pop3_remove(c, id)?)))
+        .await
+        .unwrap();
+    assert_eq!(kept.map(|k| k.pop3.host), Some("pop.example.org".to_string()));
+    assert_eq!(remove, RemoveSetting::Days(14));
+    assert_eq!(passwords.load(id).unwrap().as_deref(), Some("pw"));
+}
+
+#[tokio::test]
+async fn signing_a_pop3_account_in_again_takes_the_new_setting_and_ends_needs_sign_in() {
+    let (db, _dir) = store().await;
+    let passwords = Arc::new(MemoryPasswords::default());
+    let first = pop3_signed_in(&db, Arc::clone(&passwords), new_pop3("old", RemoveSetting::Never), 7)
+        .await
+        .unwrap();
+    let id = first.id;
+    db.write(move |c| accounts::set_state(c, id, AccountState::NeedsReauth))
+        .await
+        .unwrap();
+    let again = pop3_signed_in(&db, Arc::clone(&passwords), new_pop3("new", RemoveSetting::Downloaded), 8)
+        .await
+        .unwrap();
+    assert_eq!(again.id, id);
+    assert_eq!(again.state, AccountState::Ok);
+    assert_eq!(
+        db.read(move |c| accounts::pop3_remove(c, id)).await.unwrap(),
+        RemoveSetting::Downloaded
+    );
+    assert_eq!(passwords.load(id).unwrap().as_deref(), Some("new"));
+}
+
+#[tokio::test]
+async fn a_pop3_sign_in_for_an_address_an_imap_account_holds_is_refused() {
+    let (db, _dir) = store().await;
+    db.write(|c| accounts::insert_imap_account(c, "dana@example.org", "example.org", 0))
+        .await
+        .unwrap();
+    let passwords = Arc::new(MemoryPasswords::default());
+    let refused = pop3_signed_in(&db, Arc::clone(&passwords), new_pop3("pw", RemoveSetting::Never), 7).await;
+    assert!(matches!(refused, Err(ImapSignInError::Taken { .. })));
+    assert_eq!(passwords.load(1).unwrap(), None, "a refused sign-in keeps no password");
+}
+
+#[test]
+fn a_pop3_failure_reads_as_the_incoming_servers() {
+    use mailrs_imap::ImapError;
+    use mailrs_pop3::Pop3Error;
+    assert_eq!(
+        in_imap_words(Pop3Error::Unsupported("UIDL")),
+        ImapError::Refused(
+            "This server cannot tell its messages apart, so Penguin Mail cannot download from it safely.".into()
+        )
+    );
+    assert_eq!(
+        in_imap_words(Pop3Error::Auth { text: "no".into() }),
+        ImapError::Auth { text: "no".into() }
+    );
+    assert_eq!(
+        in_imap_words(Pop3Error::Network("gone".into())),
+        ImapError::Network("gone".into())
+    );
+    assert!(matches!(
+        in_imap_words(Pop3Error::InUse("[IN-USE]".into())),
+        ImapError::TooManyConnections { .. }
+    ));
 }
