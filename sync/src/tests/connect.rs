@@ -135,6 +135,126 @@ impl PasswordStore for Refusing {
     }
 }
 
+/// A keyring that never answers, like one waiting on an unlock prompt
+/// that nobody sees because only the tray is running. It answers once
+/// the test drops `release`, so the runtime can shut down.
+struct Silent(std::sync::Mutex<std::sync::mpsc::Receiver<()>>);
+
+fn silent() -> (Arc<Silent>, std::sync::mpsc::Sender<()>) {
+    let (release, held) = std::sync::mpsc::channel();
+    (Arc::new(Silent(std::sync::Mutex::new(held))), release)
+}
+
+impl PasswordStore for Silent {
+    fn load(&self, _: AccountId) -> Result<Option<String>, PasswordError> {
+        let _ = self.0.lock().unwrap().recv();
+        Ok(None)
+    }
+    fn save(&self, _: AccountId, _: &str) -> Result<(), PasswordError> {
+        Ok(())
+    }
+    fn delete(&self, _: AccountId) -> Result<(), PasswordError> {
+        Ok(())
+    }
+}
+
+const SHORT: std::time::Duration = std::time::Duration::from_millis(50);
+
+#[tokio::test]
+async fn a_microsoft_connect_gives_up_on_a_keyring_that_never_answers() {
+    let (db, _dir) = store().await;
+    db.write(|c| accounts::insert_microsoft_account(c, "dana@outlook.com", "Outlook", 0))
+        .await
+        .unwrap()
+        .unwrap();
+    let account = account(&db, "dana@outlook.com").await;
+    let client = mailrs_graph::MicrosoftClient::new("00000000-0000-0000-0000-000000000000");
+    let (keyring, _release) = silent();
+    let started = tokio::time::timeout(
+        std::time::Duration::from_secs(5),
+        crate::connect::connect_microsoft_within(&db, keyring, client, &account, 30, mailrs_graph::GRAPH_BASE, SHORT),
+    )
+    .await
+    .expect("the connect gave up by itself");
+    assert!(matches!(started, Err(SyncError::NoAnswer("the keyring"))));
+}
+
+#[tokio::test]
+async fn an_imap_connect_gives_up_on_a_keyring_that_never_answers() {
+    let (db, _dir) = store().await;
+    db.write(|c| {
+        let id = accounts::insert_imap_account(c, "dana@fastmail.com", "Fastmail", 0)?
+            .expect("nobody holds the address");
+        servers::save(c, id, &fastmail())
+    })
+    .await
+    .unwrap();
+    let dana = account(&db, "dana@fastmail.com").await;
+    let (keyring, _release) = silent();
+    let started = tokio::time::timeout(
+        std::time::Duration::from_secs(5),
+        crate::connect::connect_imap_within(&db, keyring, &dana, 30, SHORT),
+    )
+    .await
+    .expect("the connect gave up by itself");
+    assert!(matches!(started, Err(SyncError::NoAnswer("the keyring"))));
+}
+
+#[tokio::test]
+async fn a_pop3_connect_gives_up_on_a_keyring_that_never_answers() {
+    let (db, _dir) = store().await;
+    let passwords = Arc::new(MemoryPasswords::default());
+    let dana = pop3_signed_in(&db, passwords, new_pop3("pw", RemoveSetting::Never), 7)
+        .await
+        .unwrap();
+    let (keyring, _release) = silent();
+    let started = tokio::time::timeout(
+        std::time::Duration::from_secs(5),
+        crate::connect::connect_pop3_within(&db, keyring, &dana, SHORT),
+    )
+    .await
+    .expect("the connect gave up by itself");
+    assert!(matches!(started, Err(SyncError::NoAnswer("the keyring"))));
+}
+
+/// Google's refresh tokens through the same silent keyring.
+impl TokenStore for Silent {
+    fn load(&self, _: &str) -> Result<Option<String>, mailrs_gmail::GmailError> {
+        let _ = self.0.lock().unwrap().recv();
+        Ok(None)
+    }
+    fn save(&self, _: &str, _: &str) -> Result<(), mailrs_gmail::GmailError> {
+        Ok(())
+    }
+    fn delete(&self, _: &str) -> Result<(), mailrs_gmail::GmailError> {
+        Ok(())
+    }
+}
+
+#[tokio::test]
+async fn a_gmail_connect_gives_up_on_a_keyring_that_never_answers() {
+    let (db, _dir) = store().await;
+    let id = db
+        .write(|c| accounts::insert_account(c, "me@example.com", 0))
+        .await
+        .unwrap();
+    let account = Account {
+        id,
+        email: "me@example.com".into(),
+        state: AccountState::Ok,
+        provider: mailrs_domain::Provider::Gmail,
+        provider_name: None,
+    };
+    let (keyring, _release) = silent();
+    let started = tokio::time::timeout(
+        std::time::Duration::from_secs(5),
+        crate::connect::connect_account_within(OAuthClient::new("cid", "secret"), keyring, &account, &db, SHORT),
+    )
+    .await
+    .expect("the connect gave up by itself");
+    assert!(matches!(started, Err(SyncError::NoAnswer("the keyring"))));
+}
+
 #[tokio::test]
 async fn an_imap_account_without_a_password_needs_to_sign_in() {
     let (db, _dir) = store().await;

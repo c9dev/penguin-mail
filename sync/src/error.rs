@@ -125,6 +125,11 @@ pub enum SyncError {
     /// The keyring would not read or keep an IMAP account's password.
     #[error(transparent)]
     Password(#[from] crate::passwords::PasswordError),
+    /// One step of starting an account, named here, waited longer than it
+    /// may. The keyring waits for as long as an unlock prompt stays on
+    /// screen, and a tray-only process has no window to show one over.
+    #[error("{0} did not answer in time")]
+    NoAnswer(&'static str),
 }
 
 /// Lets `?` take a Gmail error where a sync error is due.
