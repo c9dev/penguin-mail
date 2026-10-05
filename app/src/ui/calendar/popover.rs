@@ -144,8 +144,7 @@ pub struct EventPopover {
     /// block and draws over the popover.
     hushed: glib::WeakRef<gtk::Widget>,
     /// The window root and the gesture watching for a press outside the
-    /// popover, added once the popover is realized and removed when it
-    /// is not, since the root does not exist before then.
+    /// popover, there only while the popover is on screen.
     root_press: RefCell<Option<(gtk::Root, gtk::GestureClick)>>,
 }
 
@@ -571,8 +570,10 @@ impl EventPopover {
         });
 
         // A press anywhere else in the window closes the popover, since
-        // it no longer auto-hides. Installed once, on the root the
-        // popover's own realize finds, rather than per `show`.
+        // it no longer auto-hides. The gesture claims that press, so it
+        // sits on the root only while the popover shows. A popover stays
+        // realized once closed, and a gesture kept until unrealize went on
+        // claiming every press off an event, the Mail switch's too.
         let outside = gtk::GestureClick::builder().propagation_phase(gtk::PropagationPhase::Capture).build();
         let weak = Rc::downgrade(&this);
         outside.connect_pressed(move |gesture, _, x, y| {
@@ -600,7 +601,7 @@ impl EventPopover {
             this.popover.popdown();
         });
         let weak = Rc::downgrade(&this);
-        this.popover.connect_realize(move |popover| {
+        this.popover.connect_map(move |popover| {
             let Some(this) = weak.upgrade() else { return };
             if let Some(root) = popover.root() {
                 root.add_controller(outside.clone());
@@ -608,7 +609,7 @@ impl EventPopover {
             }
         });
         let weak = Rc::downgrade(&this);
-        this.popover.connect_unrealize(move |_| {
+        this.popover.connect_unmap(move |_| {
             let Some(this) = weak.upgrade() else { return };
             let press = this.root_press.borrow_mut().take();
             if let Some((root, outside)) = press {
@@ -942,6 +943,31 @@ pub(crate) mod checks {
         show_more_keeps_the_popover_short_enough_to_place();
         show_more_hands_the_focus_on_as_it_hides();
         the_block_keeps_its_tooltip_off_the_popover();
+        a_closed_popover_leaves_presses_to_the_window();
+    }
+
+    /// The gesture that closes the popover on a press outside it claims
+    /// that press. It stayed on the window after the popover closed and
+    /// swallowed every later press off an event, the Mail switch's among
+    /// them, so the window was stuck on the calendar.
+    fn a_closed_popover_leaves_presses_to_the_window() {
+        let window = gtk::Window::new();
+        let parent = gtk::Box::new(gtk::Orientation::Vertical, 0);
+        let anchor = gtk::Button::new();
+        parent.append(&anchor);
+        window.set_child(Some(&parent));
+        window.present();
+        let popover = EventPopover::new(&parent, &parent);
+        let o = Occurrence { account_id: 1, event: Arc::new(Event::default()), start: 0, end: 3_600_000 };
+        let watching = || window.observe_controllers().n_items();
+        let before = watching();
+
+        popover.show(anchor.upcast_ref(), &o, &Calendar::default(), |_, _| {}, None, None, None);
+        assert_eq!(watching(), before + 1, "nothing watches for a press outside the open popover");
+
+        popover.popover.popdown();
+        assert_eq!(watching(), before, "the closed popover still claims the window's presses");
+        window.destroy();
     }
 
     /// The block under the pointer showed its tooltip again over the
