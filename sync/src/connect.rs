@@ -4,7 +4,7 @@ use std::time::Duration;
 
 use mailrs_dav::{DavClient, Kind as DavKind, Login as DavLogin};
 use mailrs_discover::{Security, Server, UserName};
-use mailrs_domain::{Account, AccountId, AccountState};
+use mailrs_domain::{Account, AccountId, AccountState, Provider};
 use mailrs_gmail::{Granted, GmailClient, GmailError, OAuthClient, TokenStore};
 use mailrs_graph::MicrosoftClient;
 use mailrs_imap::{ImapClient, Login, SmtpClient};
@@ -14,7 +14,9 @@ use mailrs_store::servers::{self, Pop3Servers, Saved, Servers};
 use mailrs_store::services::{FoundService, ServiceKind};
 use mailrs_store::{Db, accounts};
 
-use crate::passwords::{PasswordError, PasswordStore};
+use crate::config::Config;
+use crate::passwords::{PasswordError, PasswordStore, Secrets};
+use crate::sign_in::account_client;
 use crate::{
     AccountClient, AccountServices, AnyAutoReply, AnyCalendar, AnyContacts, AnyRules, BackendError,
     CalDav, CardDav, ImapSettings, LocalRules, MicrosoftSettings, Pop3Settings, SieveRules, SyncError,
@@ -64,6 +66,98 @@ async fn read_secret<P: PasswordStore + 'static>(
             .map_err(|err| PasswordError::Keyring(err.to_string()))?
     };
     bounded(account, KEYRING, wait, read).await
+}
+
+/// The build's own sign-in clients. A copy built from source without the
+/// release values has neither, and its Google and Microsoft accounts
+/// cannot refresh their tokens.
+#[derive(Clone, Default)]
+pub struct Clients {
+    pub google: Option<OAuthClient>,
+    pub microsoft: Option<MicrosoftClient>,
+}
+
+impl Clients {
+    /// The clients compiled into this build.
+    pub fn built_in() -> Self {
+        Clients {
+            google: mailrs_gmail::built_in_client(),
+            microsoft: mailrs_graph::built_in_client(),
+        }
+    }
+}
+
+/// What connecting an account came to, short of an error.
+// One of these is made per account start and moved to the engine at once,
+// so the unboxed services cost nothing worth a box.
+#[expect(clippy::large_enum_variant)]
+pub enum Connected {
+    /// The services to run the account's sync on.
+    Ready(AccountServices),
+    /// Only a new sign-in helps. The store already says so for every
+    /// account but a Google one with no token, which the caller records.
+    NeedsSignIn(Lacks),
+}
+
+/// What an account that needs a new sign-in lacks.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Lacks {
+    /// The client it signed in with: this build has none, or an own
+    /// Google client left `config.toml`.
+    Client,
+    /// Its refresh token or password, or an IMAP or POP3 account's servers.
+    Secret,
+}
+
+/// What connecting any account needs besides the account: the store, the
+/// settings, the build's clients and where secrets live. The app and the
+/// CLI both connect and forget accounts through it, so a new provider
+/// adds its case here.
+#[derive(Clone)]
+pub struct Connector {
+    pub db: Db,
+    pub config: Config,
+    pub clients: Clients,
+    pub secrets: Secrets,
+}
+
+impl Connector {
+    /// The account's services, or what it lacks to have them. Nothing
+    /// here talks to a server; the clients log in when sync first asks.
+    pub async fn connect(&self, account: &Account) -> Result<Connected, SyncError> {
+        let db = &self.db;
+        let window_days = self.config.engine_config().window_days;
+        let started = match account.provider {
+            Provider::Gmail => {
+                let Some(oauth) = account_client(db, &self.config, self.clients.google.clone(), account).await? else {
+                    tracing::warn!(account = %account.email, "no Google client for this account");
+                    return Ok(Connected::NeedsSignIn(Lacks::Client));
+                };
+                connect_account(oauth, Arc::clone(&self.secrets.google), account, db)
+                    .await
+                    .map(AccountServices::google)
+            }
+            Provider::Imap => connect_imap(db, Arc::clone(&self.secrets.passwords), account, window_days).await,
+            Provider::Pop3 => connect_pop3(db, Arc::clone(&self.secrets.passwords), account).await,
+            Provider::Microsoft => {
+                let Some(client) = self.clients.microsoft.clone() else {
+                    tracing::warn!(account = %account.email, "no Microsoft client in this build");
+                    return Ok(Connected::NeedsSignIn(Lacks::Client));
+                };
+                connect_microsoft(db, Arc::clone(&self.secrets.microsoft), client, account, window_days).await
+            }
+        };
+        match started {
+            Ok(services) => Ok(Connected::Ready(services)),
+            Err(SyncError::Backend(BackendError::NeedsReauth)) => Ok(Connected::NeedsSignIn(Lacks::Secret)),
+            Err(err) => Err(err),
+        }
+    }
+
+    /// Deletes what signs `account` in. See [`Secrets::forget`].
+    pub async fn forget(&self, account: &Account) -> Result<(), PasswordError> {
+        self.secrets.forget(account).await
+    }
 }
 
 /// A Gmail client for `account`, built from its refresh token in `tokens`

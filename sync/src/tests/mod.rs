@@ -10,6 +10,7 @@ mod calendar_list;
 mod calendar_series;
 mod carddav;
 mod connect;
+mod connector;
 mod contacts;
 mod engine;
 mod event_types;
