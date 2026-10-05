@@ -102,15 +102,29 @@ impl SyncEngine {
                 .with_limits(self.config.window_days, self.config.body_cache_bytes),
         );
         let poke = Arc::new(Notify::new());
-        let task = tokio::spawn(supervise(
+        let mut running = self.lock();
+        // The old loop may be in the middle of a POP3 check, and a server
+        // that locks the maildrop refuses a second session until the first
+        // one's connection closes. The new loop starts once the old task
+        // has stopped and dropped its connection.
+        let previous = running.remove(&account_id).map(|previous| {
+            previous.task.abort();
+            previous.task
+        });
+        let loop_ = supervise(
             Arc::clone(&sync),
             Arc::clone(&poke),
             Arc::clone(&self.network),
             self.config.clone(),
-        ));
-        if let Some(previous) = self.lock().insert(account_id, Running { sync, poke, task }) {
-            previous.task.abort();
-        }
+        );
+        let task = tokio::spawn(async move {
+            if let Some(previous) = previous {
+                // Cancelled is the expected end; anything else ended it first.
+                let _ = previous.await;
+            }
+            loop_.await;
+        });
+        running.insert(account_id, Running { sync, poke, task });
     }
 
     pub fn stop_account(&self, account_id: AccountId) {

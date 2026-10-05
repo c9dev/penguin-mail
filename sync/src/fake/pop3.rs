@@ -6,6 +6,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
+use std::time::Duration;
 
 use mailrs_pop3::{Capabilities, ListItem, Pop3Api, Pop3Error, Stat, Uidl, UidlListing};
 use tokio::sync::Notify;
@@ -56,6 +57,11 @@ struct Inner {
     hold: Option<Arc<Notify>>,
     /// Runs at each `dele`, before the fake marks the message.
     on_dele: Option<Box<dyn Fn() + Send>>,
+    /// How long the server takes to notice a client that went away in the
+    /// middle of a held `retr`; until then the maildrop stays locked.
+    close_delay: Duration,
+    /// `connect`s refused because another session held the maildrop.
+    in_use_refusals: usize,
 }
 
 impl Default for FakePop3 {
@@ -81,6 +87,8 @@ impl Default for FakePop3 {
                 most_in_flight: 0,
                 hold: None,
                 on_dele: None,
+                close_delay: Duration::ZERO,
+                in_use_refusals: 0,
             }),
         }
     }
@@ -174,6 +182,19 @@ impl FakePop3 {
         self
     }
 
+    /// A client that goes away in the middle of a held `retr` keeps the
+    /// maildrop locked for `delay`, as a server that takes a moment to see
+    /// the connection close.
+    pub fn closing_slowly(self, delay: Duration) -> Self {
+        self.lock().close_delay = delay;
+        self
+    }
+
+    /// How many `connect`s met another session's lock.
+    pub fn in_use_refusals(&self) -> usize {
+        self.lock().in_use_refusals
+    }
+
     /// The first `retr` waits until the [`Release`] says go.
     pub fn holding_retr(self) -> (Self, Release) {
         let notify = Arc::new(Notify::new());
@@ -208,6 +229,23 @@ impl FakePop3 {
     /// The UIDLs the server holds now.
     pub fn held(&self) -> Vec<String> {
         self.lock().messages.iter().map(|(uidl, _)| uidl.clone()).collect()
+    }
+}
+
+/// Ends the session when a held `retr` is dropped before its answer, as
+/// the server does once it sees the client's connection close.
+struct Abandoned<'a> {
+    fake: &'a FakePop3,
+    waiting: bool,
+}
+
+impl Drop for Abandoned<'_> {
+    fn drop(&mut self) {
+        if self.waiting {
+            let delay = self.fake.lock().close_delay;
+            std::thread::sleep(delay);
+            self.fake.lock().end_session();
+        }
     }
 }
 
@@ -261,6 +299,7 @@ impl Pop3Api for FakePop3 {
             return Err(Pop3Error::Unsupported("UIDL"));
         }
         if inner.in_session {
+            inner.in_use_refusals += 1;
             return Err(Pop3Error::InUse("[IN-USE] the maildrop is locked".into()));
         }
         inner.in_session = true;
@@ -307,7 +346,9 @@ impl Pop3Api for FakePop3 {
             inner.hold.take()
         };
         if let Some(hold) = hold {
+            let mut gone = Abandoned { fake: self, waiting: true };
             hold.notified().await;
+            gone.waiting = false;
         }
         let mut inner = self.lock();
         if inner.drop_after_retrs.is_some_and(|n| inner.retr_calls.len() > n) {

@@ -211,6 +211,34 @@ async fn a_failing_message_leaves_the_menu_once_the_server_drops_it() {
     assert!(drain(&h).iter().any(|e| matches!(e, ChangeEvent::LabelsChanged { .. })), "the menu loses its item");
 }
 
+/// Add Account restarts the account's services. The old loop may be in
+/// the middle of a check, and a server that locks the maildrop refuses a
+/// second session until it sees the first one's connection close.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn restarting_an_account_ends_its_old_session_before_the_new_one_signs_in() {
+    let (fake, release) = FakePop3::default().with_message("u1", &pop3_mail(1)).holding_retr();
+    let h = pop3_harness(fake.closing_slowly(Duration::from_millis(300)), RemoveSetting::Never).await;
+    let (engine, _events) = crate::SyncEngine::new(h.db.clone(), EngineConfig::default());
+    let services = || {
+        let settings = crate::Pop3Settings { address: "me@example.org".into(), provider_name: "example.org".into() };
+        crate::AccountServices::fake_pop3(h.db.clone(), h.account_id, Arc::clone(&h.fake), Arc::clone(&h.smtp), settings)
+    };
+    engine.start_account(h.account_id, services());
+    let started = Instant::now();
+    while h.fake.retr_calls().is_empty() {
+        assert!(started.elapsed() < Duration::from_secs(5), "the first loop reached RETR");
+        tokio::time::sleep(Duration::from_millis(5)).await;
+    }
+    engine.start_account(h.account_id, services());
+    while h.ids_in(MailSet::Role(Role::Inbox)).await.is_empty() {
+        assert!(started.elapsed() < Duration::from_secs(5), "the new loop downloaded the message; refused {} times", h.fake.in_use_refusals());
+        tokio::time::sleep(Duration::from_millis(5)).await;
+    }
+    assert_eq!(h.fake.in_use_refusals(), 0, "the new loop signed in after the old session closed");
+    assert_eq!(h.fake.most_in_flight(), 1);
+    drop(release);
+}
+
 #[tokio::test]
 async fn a_message_over_the_size_limit_is_counted_without_retr() {
     let fake = FakePop3::default().with_message("big", &pop3_mail(1)).claiming_size("big", MOST_MESSAGE_BYTES + 1);
