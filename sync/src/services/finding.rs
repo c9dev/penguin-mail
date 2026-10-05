@@ -31,7 +31,7 @@ pub struct RealProbe;
 
 impl ServiceProbe for RealProbe {
     async fn dav(&self, url: &str, user: &str, password: &str, kind: Kind) -> Result<(), BackendError> {
-        let client = DavClient::new(url, mailrs_dav::Login::new(user, password)).map_err(|e| BackendError::Refused(e.to_string()))?;
+        let client = DavClient::new(url, kind, mailrs_dav::Login::new(user, password)).map_err(|e| BackendError::Refused(e.to_string()))?;
         let homes = client.homes().await.map_err(|e| match e {
             mailrs_dav::DavError::Unauthorized => BackendError::NeedsReauth,
             mailrs_dav::DavError::Network(detail) => BackendError::Offline(detail),

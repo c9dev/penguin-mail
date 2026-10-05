@@ -134,11 +134,15 @@ pub fn same_site(host: &str, other: &str) -> bool {
 
 pub struct DavClient {
     base: Url,
+    /// Which well-known URL `homes` falls back on (RFC 6764).
+    kind: Kind,
     login: Login,
     http: reqwest::Client,
 }
 
 struct Answer {
+    /// The URL that answered, after any redirect.
+    url: Url,
     status: StatusCode,
     etag: Option<String>,
     retry_after: Option<Duration>,
@@ -162,20 +166,20 @@ fn http_client(https_only: bool) -> Result<reqwest::Client, DavError> {
 }
 
 impl DavClient {
-    pub fn new(context: &str, login: Login) -> Result<DavClient, DavError> {
+    pub fn new(context: &str, kind: Kind, login: Login) -> Result<DavClient, DavError> {
         let base = Url::parse(context).map_err(|err| DavError::Parse(err.to_string()))?;
         if base.scheme() != "https" {
             return Err(DavError::Forbidden("Penguin Mail reaches calendar and contact servers over HTTPS only".into()));
         }
-        Ok(DavClient { base, login, http: http_client(true)? })
+        Ok(DavClient { base, kind, login, http: http_client(true)? })
     }
 
     /// A client with no https check, for tests against a local mock
     /// server. It builds its own HTTP client, so it follows redirects by
     /// hand as `new` does and a test exercises the real credential rule.
     #[cfg(any(test, feature = "fake"))]
-    pub fn over(base: Url, login: Login) -> Result<DavClient, DavError> {
-        Ok(DavClient { base, login, http: http_client(false)? })
+    pub fn over(base: Url, kind: Kind, login: Login) -> Result<DavClient, DavError> {
+        Ok(DavClient { base, kind, login, http: http_client(false)? })
     }
 
     fn url(&self, href: &str) -> Result<Url, DavError> {
@@ -227,7 +231,7 @@ impl DavClient {
                 }
             }
             let body = String::from_utf8_lossy(&bytes).into_owned();
-            return check(Answer { status, etag, retry_after, dav, body });
+            return check(Answer { url, status, etag, retry_after, dav, body });
         }
         Err(DavError::Http { status: 310, detail: "too many redirects".into() })
     }
@@ -235,6 +239,59 @@ impl DavClient {
     async fn multistatus(&self, method: &str, href: &str, depth: &str, request: String) -> Result<Multistatus, DavError> {
         let answer = self.send(method, href, Some(depth), Some(request), &[]).await?;
         xml::parse_multistatus(&answer.body)
+    }
+
+    /// `href` from an answer given at `answered`. It stays as the server
+    /// wrote it while that is the context URL's own origin, and becomes
+    /// absolute when a redirect led to another host of the site.
+    fn resolve(&self, answered: &Url, href: &str) -> String {
+        match answered.origin() == self.base.origin() {
+            true => href.to_string(),
+            false => absolute(answered, href),
+        }
+    }
+
+    /// The principal the server names at `href`.
+    async fn principal_at(&self, href: &str) -> Result<String, DavError> {
+        let answer = self.send("PROPFIND", href, Some("0"), Some(body::principal().into()), &[]).await?;
+        let found = xml::parse_multistatus(&answer.body)?;
+        let principal = found
+            .responses
+            .iter()
+            .find_map(|r| r.props.principal.clone())
+            .ok_or_else(|| DavError::Parse("the server named no principal".into()))?;
+        Ok(self.resolve(&answer.url, &principal))
+    }
+
+    /// The principal at the context URL, or at the host's well-known URL
+    /// for the client's kind when the context URL holds no DAV principal
+    /// (RFC 6764 section 5). Fastmail's hosts and iCloud's contacts host
+    /// answer 404 at their root, Zoho's 501 or 502, and GMX's CardDAV root
+    /// sends a web page.
+    async fn principal(&self) -> Result<String, DavError> {
+        let context = path_of(self.base.as_str());
+        let well_known = match self.kind {
+            Kind::Calendar => "/.well-known/caldav",
+            Kind::AddressBook => "/.well-known/carddav",
+        };
+        let first = match self.principal_at(&context).await {
+            Err(err) if not_dav(&err) && !context.starts_with("/.well-known/") => err,
+            other => return other,
+        };
+        match self.principal_at(well_known).await {
+            Err(second) if not_dav(&second) => Err(first),
+            other => other,
+        }
+    }
+}
+
+/// An answer that says the URL asked holds no DAV principal, as opposed
+/// to a refused login, a busy server or a network failure.
+fn not_dav(err: &DavError) -> bool {
+    match err {
+        DavError::NotFound | DavError::Parse(_) => true,
+        DavError::Http { status, .. } => matches!(status, 300..=399 | 400 | 405 | 501 | 502),
+        _ => false,
     }
 }
 
@@ -267,15 +324,12 @@ fn color(raw: &str) -> Option<String> {
 
 impl DavApi for DavClient {
     async fn homes(&self) -> Result<Homes, DavError> {
-        let found = self.multistatus("PROPFIND", &path_of(self.base.as_str()), "0", body::principal().into()).await?;
-        let principal = found
-            .responses
-            .iter()
-            .find_map(|r| r.props.principal.clone())
-            .ok_or_else(|| DavError::Parse("the server named no principal".into()))?;
-        let homes = self.multistatus("PROPFIND", &principal, "0", body::homes().into()).await?;
+        let principal = self.principal().await?;
+        let answer = self.send("PROPFIND", &principal, Some("0"), Some(body::homes().into()), &[]).await?;
+        let homes = xml::parse_multistatus(&answer.body)?;
         let props = homes.responses.first().map(|r| r.props.clone()).unwrap_or_default();
-        Ok(Homes { principal, calendar: props.calendar_home, addressbook: props.addressbook_home })
+        let resolve = |home: Option<String>| home.map(|h| self.resolve(&answer.url, &h));
+        Ok(Homes { principal, calendar: resolve(props.calendar_home), addressbook: resolve(props.addressbook_home) })
     }
 
     async fn collections(&self, home: &str, kind: Kind) -> Result<Vec<Collection>, DavError> {
@@ -413,7 +467,7 @@ impl DavApi for DavClient {
         let status = response.status();
         let etag = response.headers().get("ETag").and_then(|e| e.to_str().ok()).map(str::to_string);
         let text = response.text().await.unwrap_or_default();
-        check(Answer { status, etag: etag.clone(), retry_after: None, dav: None, body: text })?;
+        check(Answer { url, status, etag: etag.clone(), retry_after: None, dav: None, body: text })?;
         Ok(etag)
     }
 
