@@ -3,9 +3,10 @@
 //!
 //! Sync decides who is new (`ContactBook::new_recipients`) and makes the
 //! contacts; this module words the toast and reacts to it. Nothing is
-//! written until the person presses Save. A toast that goes away without
-//! Save counts as No, so the same people are not offered again on that
-//! account.
+//! written until the person presses Save. Closing the toast counts as No,
+//! so the same people are not offered again on that account. A toast that
+//! runs out of time records nothing: whoever looked away is asked again
+//! the next time they write to those people.
 
 use std::cell::Cell;
 use std::rc::Rc;
@@ -17,7 +18,7 @@ use mailrs_domain::{AccountId, Address};
 use mailrs_sync::Permitted;
 
 use super::MainWindow;
-use crate::contacts::{failed_title, offer_title, saved_title};
+use crate::contacts::{OfferEnd, declines, failed_title, offer_title, saved_title};
 use crate::format::account_label;
 use crate::permission::{Occasion, Permission};
 
@@ -91,15 +92,30 @@ impl MainWindow {
         let toast = adw::Toast::builder()
             .custom_title(&title)
             .button_label(gettext("Save"))
-            .timeout(OFFER_SECONDS)
+            // The toast's own timeout ends it the way its close button
+            // does, and the dismissed signal cannot tell the two apart.
+            // It waits for nobody here; the timer below ends it instead
+            // and says so. High priority shows it at once, so the time
+            // runs while it is on screen rather than in the queue.
+            .timeout(0)
+            .priority(adw::ToastPriority::High)
             .build();
         let people = Rc::new(people);
-        let saving = Rc::new(Cell::new(false));
-        let (win, chosen, who) = (Rc::downgrade(self), Rc::clone(&saving), Rc::clone(&people));
+        let ended: Rc<Cell<Option<OfferEnd>>> = Rc::new(Cell::new(None));
+        let (win, chosen, who) = (Rc::downgrade(self), Rc::clone(&ended), Rc::clone(&people));
         toast.connect_button_clicked(move |_| {
-            chosen.set(true);
+            chosen.set(Some(OfferEnd::Saved));
             if let Some(win) = win.upgrade() {
                 win.save_recipients(account_id, who.to_vec());
+            }
+        });
+        let (timer, held) = (toast.downgrade(), Rc::clone(&ended));
+        glib::timeout_add_seconds_local_once(OFFER_SECONDS, move || {
+            if held.get().is_none()
+                && let Some(toast) = timer.upgrade()
+            {
+                held.set(Some(OfferEnd::TimedOut));
+                toast.dismiss();
             }
         });
         let win = Rc::downgrade(self);
@@ -108,12 +124,13 @@ impl MainWindow {
             let emails: Vec<String> = people.iter().map(|p| p.email.clone()).collect();
             let book = win.core.contacts();
             let core = Rc::clone(&win.core);
-            let saving = Rc::clone(&saving);
+            let ended = Rc::clone(&ended);
             glib::spawn_future_local(async move {
                 // Save also dismisses the toast, and the two signals may
                 // come in either order. The future first runs after both,
-                // so it sees whether Save was pressed.
-                if saving.get() {
+                // so it sees whether Save was pressed. Nothing else said
+                // how it ended, so the person closed it.
+                if !declines(ended.get().unwrap_or(OfferEnd::Closed)) {
                     return;
                 }
                 let declined = core

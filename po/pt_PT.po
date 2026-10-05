@@ -1620,21 +1620,21 @@ msgid_plural "Save {count} people to contacts in {account}?"
 msgstr[0] "Guardar {count} pessoa nos contactos de {account}?"
 msgstr[1] "Guardar {count} pessoas nos contactos de {account}?"
 
-#: app/src/contacts.rs:167
+#: app/src/contacts.rs:184
 msgid "Saved {name} to contacts in {account}"
 msgstr "Guardado nos contactos de {account}: {name}"
 
-#: app/src/contacts.rs:171
+#: app/src/contacts.rs:188
 msgid "Saved {count} person to contacts in {account}"
 msgid_plural "Saved {count} people to contacts in {account}"
 msgstr[0] "{count} pessoa guardada nos contactos de {account}"
 msgstr[1] "{count} pessoas guardadas nos contactos de {account}"
 
-#: app/src/contacts.rs:183
+#: app/src/contacts.rs:200
 msgid "Could not save {name} to contacts in {account}"
 msgstr "Não foi possível guardar {name} nos contactos de {account}"
 
-#: app/src/contacts.rs:187
+#: app/src/contacts.rs:204
 msgid "Could not save {count} person to contacts in {account}"
 msgid_plural "Could not save {count} people to contacts in {account}"
 msgstr[0] "Não foi possível guardar {count} pessoa nos contactos de {account}"
@@ -4215,7 +4215,7 @@ msgstr "Testar"
 #: app/src/ui/composer/mod.rs:2323 app/src/ui/dav_edit.rs:26
 #: app/src/ui/rules.rs:430 app/src/ui/smart_editor.rs:144
 #: app/src/ui/templates.rs:233 app/src/ui/vacation.rs:41
-#: app/src/ui/window/arrange.rs:146 app/src/ui/window/save_contacts.rs:93
+#: app/src/ui/window/arrange.rs:146 app/src/ui/window/save_contacts.rs:94
 msgid "Save"
 msgstr "Guardar"
 

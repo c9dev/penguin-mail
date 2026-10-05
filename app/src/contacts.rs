@@ -160,6 +160,23 @@ pub fn offer_title(people: &[Address], account: &str) -> String {
     }
 }
 
+/// How the offer to save new recipients went away.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum OfferEnd {
+    /// The person pressed Save.
+    Saved,
+    /// The person closed the toast.
+    Closed,
+    /// Nobody answered before the toast's time ran out.
+    TimedOut,
+}
+
+/// Whether the offer's end means the person turned it down, so those
+/// people are not offered again on that account.
+pub fn declines(end: OfferEnd) -> bool {
+    end == OfferEnd::Closed
+}
+
 /// What the window says once Save has made contacts of `people`.
 pub fn saved_title(people: &[Address], account: &str) -> String {
     match people {
@@ -383,6 +400,13 @@ mod tests {
             failed_title(&[ana, rui], "Work"),
             "Could not save 2 people to contacts in Work"
         );
+    }
+
+    #[test]
+    fn only_closing_the_offer_turns_it_down() {
+        assert!(declines(OfferEnd::Closed));
+        assert!(!declines(OfferEnd::TimedOut), "a person who looked away is asked again");
+        assert!(!declines(OfferEnd::Saved));
     }
 
     #[test]
