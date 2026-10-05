@@ -1036,7 +1036,8 @@ fn working_hours_row(
     let days_row = adw::ActionRow::builder().title(gettext("Days")).build();
     let days_box = gtk::Box::builder()
         .orientation(gtk::Orientation::Horizontal)
-        .css_classes(["linked"])
+        .css_classes(["linked", "day-toggles"])
+        .homogeneous(true)
         .valign(gtk::Align::Center)
         .build();
     for (index, day) in WEEK_MONDAY_FIRST.into_iter().enumerate() {
