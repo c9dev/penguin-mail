@@ -1,7 +1,7 @@
 //! A VCALENDAR resource read into Penguin Mail's events, and written back
 //! with only the edited lines changed.
 
-use mailrs_dav::ical::{answer, cancel_occurrence, read_resource, write_event, write_event_notifying};
+use mailrs_dav::ical::{answer, answer_scheduled, cancel_occurrence, read_resource, write_event, write_event_notifying};
 use mailrs_domain::calendar::{Notify, Reminder, ReminderMethod, Status};
 use mailrs_domain::invitation::Answer;
 
@@ -194,4 +194,12 @@ fn telling_nobody_marks_every_attendee_client_scheduled() {
     assert_eq!(quiet.matches("SCHEDULE-AGENT=CLIENT").count(), 2, "{quiet}");
     let loud = write_event_notifying(Some(&text), &master, &me(), NOW, Notify::Guests).unwrap();
     assert!(!loud.contains("SCHEDULE-AGENT"), "{loud}");
+}
+
+#[test]
+fn an_answer_for_a_scheduling_server_leaves_the_scheduling_to_it() {
+    let text = fixture("google-series.ics");
+    let written = answer_scheduled(&text, &me(), Answer::Yes, NOW, true).unwrap().expect("I am a guest");
+    assert!(written.contains("PARTSTAT=ACCEPTED"), "{written}");
+    assert!(!written.contains("SCHEDULE-AGENT"), "{written}");
 }

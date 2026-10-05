@@ -22,7 +22,7 @@ use mailrs_domain::{Address, EpochMillis};
 /// The RFC 822 bytes of one iTIP message: `object` to `to`, from `me`.
 /// `method` is the iTIP method the object holds, which the calendar part
 /// names again in its own `Content-Type`.
-pub(super) fn itip(
+pub(crate) fn itip(
     me: &Address,
     to: &Address,
     subject: &str,
@@ -54,7 +54,7 @@ pub(super) fn itip(
 
 /// "Accepted: Q4 roadmap review", the subject line every mailer since
 /// Outlook 97 has put an answer under.
-pub(super) fn reply_subject(answer: Answer, summary: &str) -> String {
+pub(crate) fn reply_subject(answer: Answer, summary: &str) -> String {
     let said = match answer {
         Answer::Yes => "Accepted",
         Answer::No => "Declined",
@@ -64,7 +64,7 @@ pub(super) fn reply_subject(answer: Answer, summary: &str) -> String {
 }
 
 /// What the organizer reads when their mail client shows no calendar part.
-pub(super) fn reply_prose(me: &Address, answer: Answer, summary: &str) -> String {
+pub(crate) fn reply_prose(me: &Address, answer: Answer, summary: &str) -> String {
     let said = match answer {
         Answer::Yes => "accepted",
         Answer::No => "declined",
