@@ -12,13 +12,13 @@ use crate::accent_contrast::{AA, channels, contrast, custom_property, dimmed_tex
 fn opacity(selector: &str) -> f64 {
     rules()
         .into_iter()
+        .rev()
         .filter(|(head, _)| head.split(',').any(|s| s.trim() == selector))
-        .filter_map(|(_, body)| {
+        .find_map(|(_, body)| {
             let at = body.find("opacity:")?;
             let rest = &body[at + "opacity:".len()..];
             rest[..rest.find(';')?].trim().parse().ok()
         })
-        .last()
         .unwrap_or_else(|| panic!("style.css sets an opacity for {selector}"))
 }
 
