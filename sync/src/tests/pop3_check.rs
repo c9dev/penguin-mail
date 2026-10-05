@@ -257,6 +257,22 @@ async fn a_uidl_the_server_dropped_is_forgotten_after_a_clean_quit() {
     assert_eq!(unseen, ["u2"], "u2's row went; u1's stays while the server lists it");
 }
 
+/// A UIDL line that does not read leaves its message out of the listing.
+/// Forgetting what the listing lacks would forget that message's row, and
+/// it would download again once the line reads.
+#[tokio::test]
+async fn a_listing_with_an_unreadable_line_forgets_nothing() {
+    let fake = FakePop3::default().with_message("u1", &pop3_mail(1)).with_message("u2", &pop3_mail(2));
+    let h = pop3_harness(fake, RemoveSetting::Never).await;
+    h.sync.pop3_check().await.unwrap();
+    h.fake.garbling_uidl("u2");
+    h.sync.pop3_check().await.unwrap();
+    let account_id = h.account_id;
+    let unseen = h.db.read(move |c| pop3::unseen(c, account_id, &["u2".to_string()])).await.unwrap();
+    assert!(unseen.is_empty(), "u2's row stays");
+    assert_eq!(h.fake.retr_calls(), [1, 2]);
+}
+
 #[tokio::test]
 async fn a_refused_password_needs_a_new_sign_in() {
     let h = pop3_harness(FakePop3::default().refusing_sign_in(), RemoveSetting::Never).await;

@@ -61,6 +61,16 @@ pub struct Uidl {
     pub uidl: String,
 }
 
+/// A `UIDL` answer.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct UidlListing {
+    /// Each message's number and name, in the server's order.
+    pub messages: Vec<Uidl>,
+    /// Lines that did not read as a number and a name, each logged. The
+    /// messages they stood for are missing from `messages`.
+    pub unreadable: usize,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ListItem {
     pub id: u32,
@@ -74,7 +84,7 @@ pub trait Pop3Api: Send + Sync + 'static {
     /// that cannot answer `UIDL` with `Unsupported("UIDL")`.
     fn connect(&self) -> impl Future<Output = Result<Capabilities, Pop3Error>> + Send;
     fn stat(&self) -> impl Future<Output = Result<Stat, Pop3Error>> + Send;
-    fn uidl(&self) -> impl Future<Output = Result<Vec<Uidl>, Pop3Error>> + Send;
+    fn uidl(&self) -> impl Future<Output = Result<UidlListing, Pop3Error>> + Send;
     fn list(&self) -> impl Future<Output = Result<Vec<ListItem>, Pop3Error>> + Send;
     /// The whole message, its dots undone, up to [`MOST_MESSAGE_BYTES`].
     fn retr(&self, id: u32) -> impl Future<Output = Result<Vec<u8>, Pop3Error>> + Send;
@@ -353,13 +363,22 @@ impl<C: Connect> Pop3Api for Pop3Client<C> {
         kept(&mut held, answer)
     }
 
-    async fn uidl(&self) -> Result<Vec<Uidl>, Pop3Error> {
+    async fn uidl(&self) -> Result<UidlListing, Pop3Error> {
         let mut held = self.session.lock().await;
         let session = held.as_mut().ok_or_else(no_session)?;
-        let answer = session
-            .listing("UIDL\r\n")
-            .await
-            .map(|lines| lines.iter().filter_map(|l| wire::uidl_line(l)).collect());
+        let answer = session.listing("UIDL\r\n").await.map(|lines| {
+            let mut listing = UidlListing::default();
+            for line in &lines {
+                match wire::uidl_line(line) {
+                    Some(uidl) => listing.messages.push(uidl),
+                    None => {
+                        tracing::warn!(line, "a UIDL line that does not read");
+                        listing.unreadable += 1;
+                    }
+                }
+            }
+            listing
+        });
         kept(&mut held, answer)
     }
 
@@ -481,7 +500,7 @@ mod tests {
         assert!(caps.uidl && caps.sasl_plain && caps.top && !caps.stls);
         assert_eq!(client.stat().await.unwrap(), Stat { count: 2, octets: 150 });
         assert_eq!(
-            client.uidl().await.unwrap(),
+            client.uidl().await.unwrap().messages,
             [Uidl { id: 1, uidl: "a1".into() }, Uidl { id: 2, uidl: "a2".into() }]
         );
         assert_eq!(
@@ -576,6 +595,27 @@ mod tests {
         client.connect().await.unwrap();
         assert_eq!(client.retr(3).await, Err(Pop3Error::Refused("no such message".into())));
         client.dele(2).await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn a_uidl_line_that_does_not_read_is_counted() {
+        let (client, _server) = scripted(
+            false,
+            vec![
+                ("CAPA", "+OK\r\nUIDL\r\nUSER\r\n.\r\n"),
+                ("USER me", "+OK\r\n"),
+                ("PASS pw", "+OK\r\n"),
+                ("UIDL", "+OK\r\n1 a1\r\n2\r\nx a3\r\n4 a4\r\n.\r\n"),
+            ],
+        );
+        client.connect().await.unwrap();
+        assert_eq!(
+            client.uidl().await.unwrap(),
+            UidlListing {
+                messages: vec![Uidl { id: 1, uidl: "a1".into() }, Uidl { id: 4, uidl: "a4".into() }],
+                unreadable: 2,
+            }
+        );
     }
 
     #[tokio::test]

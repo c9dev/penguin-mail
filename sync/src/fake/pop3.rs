@@ -7,7 +7,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 
-use mailrs_pop3::{Capabilities, ListItem, Pop3Api, Pop3Error, Stat, Uidl};
+use mailrs_pop3::{Capabilities, ListItem, Pop3Api, Pop3Error, Stat, Uidl, UidlListing};
 use tokio::sync::Notify;
 
 /// A small message, the `n`th of a test.
@@ -39,6 +39,9 @@ struct Inner {
     /// `retr` of these fails without `-ERR`, and the session ends, as the
     /// real client ends it on an answer it cannot read to the end.
     broken: BTreeMap<String, Pop3Error>,
+    /// Messages whose `UIDL` line does not read, so the listing leaves
+    /// them out and counts them.
+    garbled: BTreeSet<String>,
     /// Every `quit` fails as a dropped connection would.
     drop_before_quit: bool,
     /// After this many answered `retr`s, the next one fails as a dropped
@@ -68,6 +71,7 @@ impl Default for FakePop3 {
                 refuse_sign_in: false,
                 failing: BTreeSet::new(),
                 broken: BTreeMap::new(),
+                garbled: BTreeSet::new(),
                 drop_before_quit: false,
                 drop_after_retrs: None,
                 retr_calls: Vec::new(),
@@ -125,6 +129,12 @@ impl FakePop3 {
     pub fn breaking_retr(self, uidl: &str, err: Pop3Error) -> Self {
         self.lock().broken.insert(uidl.to_string(), err);
         self
+    }
+
+    /// The `UIDL` line of this message does not read, so the listing
+    /// leaves it out and counts it as unreadable.
+    pub fn garbling_uidl(&self, uidl: &str) {
+        self.lock().garbled.insert(uidl.to_string());
     }
 
     /// `LIST` reports `octets` for this message.
@@ -267,10 +277,14 @@ impl Pop3Api for FakePop3 {
         Ok(Stat { count: live.len() as u32, octets: live.iter().sum() })
     }
 
-    async fn uidl(&self) -> Result<Vec<Uidl>, Pop3Error> {
+    async fn uidl(&self) -> Result<UidlListing, Pop3Error> {
         let inner = self.lock();
         inner.session()?;
-        Ok(inner.live().map(|(id, uidl, _)| Uidl { id, uidl: uidl.clone() }).collect())
+        let (garbled, messages): (Vec<Uidl>, Vec<Uidl>) = inner
+            .live()
+            .map(|(id, uidl, _)| Uidl { id, uidl: uidl.clone() })
+            .partition(|u| inner.garbled.contains(&u.uidl));
+        Ok(UidlListing { messages, unreadable: garbled.len() })
     }
 
     async fn list(&self) -> Result<Vec<ListItem>, Pop3Error> {
@@ -364,7 +378,7 @@ mod tests {
         let fake = FakePop3::default().with_message("u1", b"Subject: hi\r\n\r\nbody\r\n");
         assert!(matches!(fake.uidl().await, Err(Pop3Error::Protocol(_))), "no session yet");
         fake.connect().await.unwrap();
-        assert_eq!(fake.uidl().await.unwrap(), [Uidl { id: 1, uidl: "u1".into() }]);
+        assert_eq!(fake.uidl().await.unwrap().messages, [Uidl { id: 1, uidl: "u1".into() }]);
         assert_eq!(fake.list().await.unwrap(), [ListItem { id: 1, octets: 21 }]);
         assert_eq!(fake.retr(1).await.unwrap(), b"Subject: hi\r\n\r\nbody\r\n");
         assert_eq!(fake.retr_calls(), [1]);
@@ -377,7 +391,7 @@ mod tests {
         let fake = FakePop3::default().with_message("u1", &pop3_mail(1)).with_message("u2", &pop3_mail(2));
         fake.connect().await.unwrap();
         fake.dele(1).await.unwrap();
-        assert_eq!(fake.uidl().await.unwrap(), [Uidl { id: 2, uidl: "u2".into() }], "numbers hold for the session");
+        assert_eq!(fake.uidl().await.unwrap().messages, [Uidl { id: 2, uidl: "u2".into() }], "numbers hold for the session");
         fake.quit().await.unwrap();
         assert_eq!(fake.held(), ["u2"]);
 

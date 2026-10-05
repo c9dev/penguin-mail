@@ -7,7 +7,7 @@
 use std::collections::{BTreeSet, HashMap, HashSet};
 
 use mailrs_domain::{ChangeEvent, RemoveSetting};
-use mailrs_pop3::{MOST_MESSAGE_BYTES, Pop3Api, Pop3Error, Uidl};
+use mailrs_pop3::{MOST_MESSAGE_BYTES, Pop3Api, Pop3Error, Uidl, UidlListing};
 use mailrs_store::pop3::FailReason;
 use mailrs_store::{accounts, pop3};
 
@@ -20,7 +20,8 @@ const DAY: i64 = 24 * 60 * 60 * 1000;
 /// What a check did before its QUIT.
 #[derive(Default)]
 struct Done {
-    /// Every UIDL the server listed, once the listing came back whole.
+    /// Every UIDL the server listed, once the listing came back whole and
+    /// every line of it read. Empty otherwise, and nothing is forgotten.
     listed: HashSet<String>,
     /// The UIDLs a DELE went out for this session.
     removed: Vec<String>,
@@ -121,15 +122,16 @@ impl AccountSync {
         // download needs no entry: the store already has it. Each new
         // session follows a failure added here, so the loop ends.
         let mut handled: HashSet<String> = HashSet::new();
-        let listed = loop {
-            if let Some(listed) = self
+        let listing = loop {
+            if let Some(listing) = self
                 .download_pass(pop3, first, remove, &mut handled, done)
                 .await?
             {
-                break listed;
+                break listing;
             }
             pop3.connect().await.map_err(BackendError::from)?;
         };
+        let UidlListing { messages: listed, unreadable } = listing;
         if let RemoveSetting::Days(days) = remove {
             let cutoff = now_millis() - i64::from(days) * DAY;
             self.db
@@ -150,7 +152,13 @@ impl AccountSync {
                 tracing::warn!(account = account_id, "the downloads are not on disk yet; removal from the server waits for the next check");
             }
         }
-        done.listed = listed.into_iter().map(|u| u.uidl).collect();
+        // A line that did not read left its message out of the listing,
+        // and forgetting what the listing lacks would forget that one too.
+        if unreadable == 0 {
+            done.listed = listed.into_iter().map(|u| u.uidl).collect();
+        } else {
+            tracing::warn!(account = account_id, unreadable, "the UIDL answer had lines that do not read; nothing is forgotten this check");
+        }
         Ok(())
     }
 
@@ -165,9 +173,10 @@ impl AccountSync {
         remove: RemoveSetting,
         handled: &mut HashSet<String>,
         done: &mut Done,
-    ) -> Result<Option<Vec<Uidl>>, SyncError> {
+    ) -> Result<Option<UidlListing>, SyncError> {
         let account_id = self.account_id;
-        let listed = pop3.uidl().await.map_err(BackendError::from)?;
+        let listing = pop3.uidl().await.map_err(BackendError::from)?;
+        let listed = &listing.messages;
         let sizes: HashMap<u32, u64> = pop3
             .list()
             .await
@@ -234,7 +243,7 @@ impl AccountSync {
                 return Ok(None);
             }
         }
-        Ok(Some(listed))
+        Ok(Some(listing))
     }
 
     /// Downloads one listed message of `size` octets, or counts why it did

@@ -64,7 +64,7 @@ fn the_client_downloads_and_deletes_on_dovecot() {
         let tls = Pop3Client::new(&at(pop3s, Security::Tls), Login::new(USER, &password));
         let caps = tls.connect().await.expect("TLS from the first byte");
         assert!(caps.uidl && caps.sasl_plain, "{caps:?}");
-        let listed = tls.uidl().await.expect("UIDL");
+        let listed = tls.uidl().await.expect("UIDL").messages;
         assert_eq!(listed.len(), 2);
         let raw = tls.retr(listed[0].id).await.expect("RETR");
         assert!(String::from_utf8_lossy(&raw).contains("\r\n.a line that starts with a dot\r\n"), "the dot comes back undone");
@@ -73,7 +73,7 @@ fn the_client_downloads_and_deletes_on_dovecot() {
 
         let stls = Pop3Client::new(&at(pop3, Security::StartTls), Login::new(USER, &password));
         stls.connect().await.expect("STLS, then the sign-in");
-        let left = stls.uidl().await.expect("UIDL");
+        let left = stls.uidl().await.expect("UIDL").messages;
         assert_eq!(left.len(), 1, "the DELE took effect at QUIT");
         assert_ne!(left[0].uidl, listed[0].uidl);
         stls.quit().await.expect("QUIT");
