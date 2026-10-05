@@ -14,6 +14,9 @@ pub(crate) struct Status {
     pub kind: Kind,
     pub code: Option<String>,
     pub text: String,
+    /// The length of the literal that carries the words instead of a
+    /// quoted string, `NO {37}`; the caller reads those bytes into `text`.
+    pub literal: Option<usize>,
 }
 
 /// The status a line holds, or `None` for a data line.
@@ -34,8 +37,9 @@ pub(crate) fn status(line: &str) -> Option<Status> {
         },
         None => (None, rest),
     };
+    let literal = literal(rest);
     let text = strings(rest).0.into_iter().next().unwrap_or_default();
-    Some(Status { kind, code, text })
+    Some(Status { kind, code, text, literal })
 }
 
 /// The quoted strings on a line, unescaped, and the atoms beside them.
@@ -101,7 +105,8 @@ mod tests {
             Status {
                 kind: Kind::No,
                 code: Some("QUOTA/MAXSIZE".into()),
-                text: "Too big.".into()
+                text: "Too big.".into(),
+                literal: None,
             }
         );
         assert_eq!(status("OK").unwrap().kind, Kind::Ok);
@@ -109,6 +114,17 @@ mod tests {
             status("\"SIEVE\" \"x\"").is_none(),
             "a data line is no status"
         );
+    }
+
+    #[test]
+    fn a_status_line_can_promise_its_words_as_a_literal() {
+        // Dovecot sends a script's compile errors this way, one error a
+        // line, so they cannot fit in a quoted string.
+        let refused = status("NO {37}").unwrap();
+        assert_eq!((refused.kind, refused.literal), (Kind::No, Some(37)));
+        let coded = status("NO (QUOTA) {5+}").unwrap();
+        assert_eq!((coded.code.as_deref(), coded.literal), (Some("QUOTA"), Some(5)));
+        assert_eq!(status("NO \"x\"").unwrap().literal, None);
     }
 
     #[test]

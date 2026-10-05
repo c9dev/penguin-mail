@@ -136,22 +136,30 @@ impl<S: AsyncRead + AsyncWrite + Unpin> Session<S> {
         let mut data = Vec::new();
         loop {
             let line = self.line().await?;
-            if let Some(status) = protocol::status(&line) {
+            if let Some(mut status) = protocol::status(&line) {
+                if let Some(len) = status.literal {
+                    status.text = self.literal(len).await?;
+                }
                 return Ok((data, status));
             }
             if let Some(len) = literal(&line) {
-                if len > MOST_SCRIPT_BYTES {
-                    return Err(SieveError::TooLarge);
-                }
-                let mut bytes = vec![0u8; len];
-                self.reader.read_exact(&mut bytes).await.map_err(network)?;
-                data.push(String::from_utf8_lossy(&bytes).into_owned());
-                // The CRLF that ends the literal's line.
-                self.line().await?;
+                let text = self.literal(len).await?;
+                data.push(text);
                 continue;
             }
             data.push(line);
         }
+    }
+
+    /// A literal's bytes, and the CRLF that ends the line they finish.
+    async fn literal(&mut self, len: usize) -> Result<String, SieveError> {
+        if len > MOST_SCRIPT_BYTES {
+            return Err(SieveError::TooLarge);
+        }
+        let mut bytes = vec![0u8; len];
+        self.reader.read_exact(&mut bytes).await.map_err(network)?;
+        self.line().await?;
+        Ok(String::from_utf8_lossy(&bytes).into_owned())
     }
 
     async fn read_capabilities(&mut self) -> Result<Capabilities, SieveError> {
@@ -363,6 +371,22 @@ mod tests {
         is_send(&client.get("x"));
         is_send(&client.put("x", "keep;"));
         is_send(&client.activate("x"));
+    }
+
+    #[tokio::test]
+    async fn a_refusal_sent_as_a_literal_keeps_its_words() {
+        let words = "line 1: unknown command 'fileintoo'.\r\n";
+        let (ours, mut server) = tokio::io::duplex(1024);
+        server
+            .write_all(format!("NO {{{}}}\r\n{words}\r\nOK\r\n", words.len()).as_bytes())
+            .await
+            .unwrap();
+        let mut session = Session::new(ours);
+        let refused = session.simple("PUTSCRIPT \"x\" {1+}\r\nx\r\n".into()).await.unwrap_err();
+        assert!(matches!(refused, SieveError::Refused(ref w) if w.contains("unknown command")), "{refused:?}");
+        // The literal's closing CRLF is read too, so the next answer
+        // starts on its own status line.
+        assert!(session.simple("NOOP\r\n".into()).await.is_ok());
     }
 
     #[test]
