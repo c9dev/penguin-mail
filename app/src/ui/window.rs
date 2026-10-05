@@ -12,7 +12,7 @@ use gtk::{gio, glib};
 use mailrs_domain::translate::{fill, fill_plural, gettext, with_reason};
 use mailrs_domain::{
     Account, AccountId, AccountState, Category, ChangeEvent, EpochMillis, Label, MessageBody,
-    Provider,
+    Provider, RemoveSetting,
     Role, Target, ThreadSummary,
 };
 use mailrs_sync::{
@@ -2918,17 +2918,28 @@ impl MainWindow {
     }
 
     fn confirm_remove(self: &Rc<Self>, account: Account) {
-        let question = confirm(
-            &fill(
-                &gettext("Remove {account}?"),
-                &[("account", &account.email)],
-            ),
-            &crate::offered::remove_account_body(&account),
-            &gettext("Remove"),
-            Tone::Destructive,
-        );
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
+            // What a POP3 account's removal loses depends on whether its
+            // setting has already taken mail off the server.
+            let remove = if account.provider == Provider::Pop3 {
+                let account_id = account.id;
+                this.core
+                    .read(move |c| mailrs_store::accounts::pop3_remove(c, account_id))
+                    .await
+                    .unwrap_or(RemoveSetting::Downloaded)
+            } else {
+                RemoveSetting::Never
+            };
+            let question = confirm(
+                &fill(
+                    &gettext("Remove {account}?"),
+                    &[("account", &account.email)],
+                ),
+                &crate::offered::remove_account_body(&account, remove),
+                &gettext("Remove"),
+                Tone::Destructive,
+            );
             if !question.ask(&this.window).await {
                 return;
             }

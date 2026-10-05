@@ -324,3 +324,27 @@ fn a_removal_asked_for_a_message_reaches_its_own_download_only() {
         uidls(&["u1"])
     );
 }
+
+/// Once a clean QUIT confirmed the DELE, the server no longer holds that
+/// message, and a UIDL it lists again names a new one.
+#[test]
+fn a_uidl_listed_again_after_its_removal_is_a_new_message() {
+    let (conn, id) = pop3_account(RemoveSetting::Downloaded);
+    pop3::mark_downloaded(&conn, id, "u1", "pop3/u1", 10).unwrap();
+    pop3::want_removed(&conn, id, &uidls(&["u1"])).unwrap();
+    pop3::mark_removed(&conn, id, &uidls(&["u1"])).unwrap();
+    assert_eq!(
+        pop3::unseen(&conn, id, &uidls(&["u1"])).unwrap(),
+        uidls(&["u1"]),
+        "the removed message cannot be the one listed now"
+    );
+
+    pop3::mark_downloaded(&conn, id, "u1", "pop3/u1/2", 20).unwrap();
+    assert!(pop3::unseen(&conn, id, &uidls(&["u1"])).unwrap().is_empty());
+    pop3::want_removed_of(&conn, id, &uidls(&["pop3/u1/2"])).unwrap();
+    assert_eq!(
+        pop3::pending_removal(&conn, id, None, pop3::PAGE).unwrap(),
+        uidls(&["u1"]),
+        "the row now names the new download, and its DELE has not gone out"
+    );
+}

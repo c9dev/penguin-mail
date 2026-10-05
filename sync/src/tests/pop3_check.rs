@@ -329,8 +329,8 @@ fn five() -> FakePop3 {
 
 #[tokio::test]
 async fn a_first_check_cut_short_carries_on_as_a_first_check() {
-    let h = pop3_harness(five().dropping_after_retrs(2), RemoveSetting::Never).await;
-    assert!(h.sync.pop3_check().await.is_err(), "the connection dropped");
+    let h = pop3_harness(five().going_away_after_retrs(2), RemoveSetting::Never).await;
+    assert!(h.sync.pop3_check().await.is_err(), "the connection dropped and the server cannot be reached");
     assert!(!first_check_finished(&h).await, "two of five is not the first check done");
     drain(&h);
 
@@ -394,6 +394,22 @@ async fn a_reused_uidl_keeps_the_old_message_and_stores_the_new_one_beside_it() 
     assert_eq!(meta(&h, "pop3/u1").await.subject, "Hello 1", "and its row");
 }
 
+/// Under a removal setting the server can give a UIDL to new mail right
+/// after the QUIT that removed the old message, with no check between
+/// that lists the server without it.
+#[tokio::test]
+async fn a_uidl_reused_right_after_its_removal_downloads_the_new_message() {
+    let h = pop3_harness(FakePop3::default().with_message("u1", &pop3_mail(1)), RemoveSetting::Downloaded).await;
+    h.sync.pop3_check().await.unwrap();
+    assert!(h.fake.held().is_empty());
+    h.fake.add("u1", &pop3_mail(2));
+    h.sync.pop3_check().await.unwrap();
+    assert_eq!(h.ids_in(MailSet::Role(Role::Inbox)).await, ["pop3/u1", "pop3/u1/2"]);
+    assert_eq!(raw(&h, "pop3/u1/2").await, Some(pop3_mail(2)));
+    assert_eq!(raw(&h, "pop3/u1").await, Some(pop3_mail(1)), "the first message keeps its bytes");
+    assert!(h.fake.held().is_empty(), "the new message is removed from the server too");
+}
+
 #[tokio::test]
 async fn a_uidl_listed_twice_in_one_session_downloads_once_and_removes_only_that_one() {
     let fake = FakePop3::default().with_message("d", &pop3_mail(1)).with_message("d", &pop3_mail(2));
@@ -438,22 +454,70 @@ async fn a_garbled_retr_answer_is_counted_and_the_rest_download() {
     assert_eq!(failed_as(&h, "u2").await, [("u2".to_string(), FailReason::Unreadable)]);
 }
 
-/// A connection that drops on one message every time must not stop every
-/// message listed after it.
+/// A connection that drops on one message every time, as a corrupt file in
+/// the maildrop can make it, must not stop the messages listed after it
+/// or the removals the account wants.
 #[tokio::test]
-async fn a_message_the_connection_drops_on_is_recorded_and_tried_after_the_rest() {
+async fn a_message_the_connection_drops_on_is_recorded_and_the_check_carries_on() {
     let dropping = three().breaking_retr("u1", Pop3Error::Network("the connection dropped".into()));
-    let h = pop3_harness(dropping, RemoveSetting::Never).await;
-    assert!(h.sync.pop3_check().await.is_err(), "the connection dropped");
+    let h = pop3_harness(dropping, RemoveSetting::Downloaded).await;
+    h.sync.pop3_check().await.unwrap();
     assert_eq!(failed_as(&h, "u1").await, [("u1".to_string(), FailReason::Dropped)]);
-    assert!(h.sync.pop3_check().await.is_err(), "it drops on u1 again");
-    assert_eq!(h.fake.retr_calls(), [1, 2, 3, 1], "u2 and u3 come down before u1 is tried again");
+    assert_eq!(h.fake.connects(), 2, "a second session for the rest");
     assert_eq!(h.ids_in(MailSet::Role(Role::Inbox)).await, ["pop3/u2", "pop3/u3"]);
+    assert_eq!(h.fake.held(), ["u1"], "u2 and u3 left the server");
     assert!(first_check_finished(&h).await, "all that is left is a recorded failure");
+    h.sync.pop3_check().await.unwrap();
     drain(&h);
-    assert!(h.sync.pop3_check().await.is_err());
+    h.sync.pop3_check().await.unwrap();
     assert!(drain(&h).iter().any(|e| matches!(e, ChangeEvent::LabelsChanged { .. })), "the third drop puts it in the menu");
     assert_eq!(failing(&h).await.len(), 1);
+    assert_eq!(h.fake.retr_calls(), [1, 2, 3, 1, 1]);
+}
+
+/// An answer that breaks the session leaves no session for TOP, so the
+/// next session names the message before it downloads anything.
+#[tokio::test]
+async fn a_message_that_breaks_the_session_is_named_at_its_third_failure() {
+    for (err, reason) in [
+        (Pop3Error::Protocol("+GARBAGE".into()), FailReason::Unreadable),
+        (Pop3Error::Network("the connection dropped".into()), FailReason::Dropped),
+    ] {
+        let h = pop3_harness(three().breaking_retr("u1", err), RemoveSetting::Never).await;
+        for _ in 0..3 {
+            h.sync.pop3_check().await.unwrap();
+        }
+        assert_eq!(
+            failing(&h).await,
+            [Failing {
+                uidl: "u1".into(),
+                reason,
+                words: String::new(),
+                sender: Some("Ana".into()),
+                subject: Some("Hello 1".into()),
+            }]
+        );
+    }
+}
+
+/// The TOP that names a failing message at its third failure can break the
+/// session too. The next message must not pay for it.
+#[tokio::test]
+async fn a_top_that_breaks_the_session_charges_nothing_to_the_next_message() {
+    let fake = FakePop3::default()
+        .with_message("bad1", &pop3_mail(1))
+        .with_message("bad2", &pop3_mail(2))
+        .failing_retr("bad1")
+        .failing_retr("bad2")
+        .breaking_top("bad1", Pop3Error::Protocol("+GARBAGE".into()));
+    let h = pop3_harness(fake, RemoveSetting::Never).await;
+    for _ in 0..3 {
+        h.sync.pop3_check().await.unwrap();
+    }
+    assert_eq!(failed_as(&h, "bad2").await, [("bad2".to_string(), FailReason::Refused)]);
+    let failing = failing(&h).await;
+    assert_eq!(failing.len(), 2, "both reached their third failure");
+    assert_eq!(failing[1].subject.as_deref(), Some("Hello 2"), "a new session named bad2");
 }
 
 /// The store commits without waiting for the disk (WAL, synchronous
@@ -482,6 +546,39 @@ async fn a_download_is_in_the_database_file_before_its_dele_goes_out() {
         .query_row("SELECT COUNT(*) FROM local_messages WHERE message_id = 'pop3/u1'", [], |row| row.get(0))
         .unwrap_or(0);
     assert_eq!(kept, 1, "the downloaded bytes were on disk when the DELE went out");
+}
+
+/// A reader on an older snapshot keeps the download in the log past the
+/// checkpoint's busy timeout, so its DELE waits for a later check. Takes
+/// that five-second timeout.
+#[tokio::test]
+async fn the_deles_wait_while_the_downloads_cannot_reach_the_database_file() {
+    let h = pop3_harness(FakePop3::default().with_message("u1", &pop3_mail(1)), RemoveSetting::Downloaded).await;
+    let reader = rusqlite::Connection::open(h.db_path()).unwrap();
+    reader.execute_batch("BEGIN").unwrap();
+    let _: i64 = reader.query_row("SELECT COUNT(*) FROM pop3_seen", [], |row| row.get(0)).unwrap();
+    h.sync.pop3_check().await.unwrap();
+    assert_eq!(h.ids_in(MailSet::Role(Role::Inbox)).await, ["pop3/u1"]);
+    assert!(h.fake.deleted().is_empty(), "no DELE while the download is only in the log");
+    assert_eq!(pending(&h).await, ["u1"]);
+    reader.execute_batch("COMMIT").unwrap();
+    h.sync.pop3_check().await.unwrap();
+    assert_eq!(h.fake.deleted(), [1]);
+    assert!(h.fake.held().is_empty());
+}
+
+/// A checkpoint syncs the database file and can hold the writer for the
+/// busy timeout, so a check with no DELE to send runs none.
+#[tokio::test]
+async fn a_check_with_no_removal_pending_leaves_the_database_file_alone() {
+    let h = pop3_harness(FakePop3::default().with_message("u1", &pop3_mail(1)), RemoveSetting::Downloaded).await;
+    h.sync.pop3_check().await.unwrap();
+    assert!(h.fake.held().is_empty());
+    // The first check's last write, which marked u1 removed, is in the log
+    // alone; a checkpoint would copy it into the file.
+    let before = std::fs::read(h.db_path()).unwrap();
+    h.sync.pop3_check().await.unwrap();
+    assert!(std::fs::read(h.db_path()).unwrap() == before, "no checkpoint ran");
 }
 
 /// The process's highest resident memory since the last reset, in bytes.

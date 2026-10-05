@@ -41,14 +41,18 @@ struct Inner {
     /// `retr` of these fails without `-ERR`, and the session ends, as the
     /// real client ends it on an answer it cannot read to the end.
     broken: BTreeMap<String, Pop3Error>,
+    /// `top` of these fails with the error kept, and the session ends.
+    broken_top: BTreeMap<String, Pop3Error>,
     /// Messages whose `UIDL` line does not read, so the listing leaves
     /// them out and counts them.
     garbled: BTreeSet<String>,
     /// Every `quit` fails as a dropped connection would.
     drop_before_quit: bool,
     /// After this many answered `retr`s, the next one fails as a dropped
-    /// connection would.
+    /// connection would, and the server stays out of reach.
     drop_after_retrs: Option<usize>,
+    /// Every `connect` fails as an unreachable server's would.
+    gone: bool,
     retr_calls: Vec<u32>,
     deleted: Vec<u32>,
     connects: usize,
@@ -78,9 +82,11 @@ impl Default for FakePop3 {
                 refuse_sign_in: false,
                 failing: BTreeSet::new(),
                 broken: BTreeMap::new(),
+                broken_top: BTreeMap::new(),
                 garbled: BTreeSet::new(),
                 drop_before_quit: false,
                 drop_after_retrs: None,
+                gone: false,
                 retr_calls: Vec::new(),
                 deleted: Vec::new(),
                 connects: 0,
@@ -140,6 +146,13 @@ impl FakePop3 {
         self
     }
 
+    /// `top` of this message fails with `err`, which is not `-ERR`, and the
+    /// session ends.
+    pub fn breaking_top(self, uidl: &str, err: Pop3Error) -> Self {
+        self.lock().broken_top.insert(uidl.to_string(), err);
+        self
+    }
+
     /// The `UIDL` line of this message does not read, so the listing
     /// leaves it out and counts it as unreadable.
     pub fn garbling_uidl(&self, uidl: &str) {
@@ -170,8 +183,9 @@ impl FakePop3 {
     }
 
     /// Once `answered` `retr`s have gone through, the next one fails as a
-    /// dropped connection would, and the session ends.
-    pub fn dropping_after_retrs(self, answered: usize) -> Self {
+    /// dropped connection would, the session ends, and the server cannot
+    /// be reached again.
+    pub fn going_away_after_retrs(self, answered: usize) -> Self {
         self.lock().drop_after_retrs = Some(answered);
         self
     }
@@ -293,6 +307,9 @@ impl Pop3Api for FakePop3 {
     async fn connect(&self) -> Result<Capabilities, Pop3Error> {
         let mut inner = self.lock();
         inner.connects += 1;
+        if inner.gone {
+            return Err(Pop3Error::Network("the server cannot be reached".into()));
+        }
         if inner.refuse_sign_in {
             return Err(Pop3Error::Auth { text: "invalid login".into() });
         }
@@ -354,6 +371,7 @@ impl Pop3Api for FakePop3 {
         let mut inner = self.lock();
         if inner.drop_after_retrs.is_some_and(|n| inner.retr_calls.len() > n) {
             inner.end_session();
+            inner.gone = true;
             return Err(Pop3Error::Network("the connection dropped".into()));
         }
         let uidl = inner.uidl_of(id)?;
@@ -368,8 +386,12 @@ impl Pop3Api for FakePop3 {
     }
 
     async fn top(&self, id: u32, lines: u32) -> Result<Vec<u8>, Pop3Error> {
-        let inner = self.lock();
-        inner.uidl_of(id)?;
+        let mut inner = self.lock();
+        let uidl = inner.uidl_of(id)?;
+        if let Some(err) = inner.broken_top.get(&uidl).cloned() {
+            inner.end_session();
+            return Err(err);
+        }
         let raw = inner.raw_at(id);
         let split = raw.windows(4).position(|w| w == b"\r\n\r\n").map_or(raw.len(), |p| p + 4);
         let (head, body) = raw.split_at(split);

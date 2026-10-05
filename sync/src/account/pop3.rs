@@ -29,6 +29,17 @@ struct Done {
     new_mail: Vec<String>,
     /// A message reached its third refused RETR.
     failing_grew: bool,
+    /// Messages that reached the menu when their answer had ended the
+    /// session, for the next session to name through `TOP`.
+    unnamed: Vec<String>,
+}
+
+/// What counting one failed message did.
+struct Counted {
+    /// The message just reached the account's menu.
+    shown: bool,
+    /// The session is still open for the next command.
+    session_kept: bool,
 }
 
 impl AccountSync {
@@ -66,6 +77,8 @@ impl AccountSync {
             threads,
             new_mail,
             failing_grew,
+            // Left unnamed when the check ended before another session.
+            unnamed: _,
         } = done;
         // What was stored stays stored whatever went wrong after it, so
         // the window and the local rules hear of it either way.
@@ -142,8 +155,16 @@ impl AccountSync {
                 .await?;
         }
         // Leave on Server sends no DELE, even for a row an earlier setting
-        // marked.
-        if remove != RemoveSetting::Never {
+        // marked. A checkpoint syncs the database file and can hold the
+        // writer for the busy timeout, so a check with no DELE to send
+        // runs none.
+        let pending = remove != RemoveSetting::Never
+            && !self
+                .db
+                .read(move |c| pop3::pending_removal(c, account_id, None, 1))
+                .await?
+                .is_empty();
+        if pending {
             // The store commits without syncing, and a DELE lets the server
             // drop the other copy at QUIT. A power cut after that QUIT and
             // before SQLite's own checkpoint would lose the message from
@@ -194,6 +215,17 @@ impl AccountSync {
             .into_iter()
             .map(|item| (item.id, item.octets))
             .collect();
+        // Named before any RETR, which could end this session too. Each is
+        // tried once, so a TOP that breaks every session cannot keep the
+        // check opening new ones.
+        for uidl in std::mem::take(&mut done.unnamed) {
+            let Some(listing) = listed.iter().find(|u| u.uidl == uidl) else {
+                continue;
+            };
+            if !self.name_failing(pop3, listing.id, &uidl).await? {
+                return Ok(None);
+            }
+        }
         // A server should never list one UIDL twice in a session, but a
         // buggy one can. The first listing downloads and the rest are
         // skipped, so neither body replaces the other.
@@ -272,7 +304,8 @@ impl AccountSync {
 
     /// Downloads one listed message of `size` octets, or counts why it did
     /// not come down. `earlier` is why it failed last time. False when the
-    /// answer left the session unreadable and the check must open another.
+    /// session ended, on the RETR or on the TOP after it, and the check
+    /// must open another.
     #[expect(
         clippy::too_many_arguments,
         reason = "one step of the pass, which holds all of these"
@@ -297,10 +330,11 @@ impl AccountSync {
             || earlier == Some(FailReason::TooLarge)
         {
             handled.insert(uidl.clone());
-            done.failing_grew |= self
+            let counted = self
                 .count_failure(pop3, *id, uidl, &Pop3Error::TooLarge, true)
                 .await?;
-            return Ok(true);
+            done.failing_grew |= counted.shown;
+            return Ok(counted.session_kept);
         }
         let answer = pop3.retr(*id, size.unwrap_or(0)).await;
         if answer.is_err() {
@@ -312,23 +346,28 @@ impl AccountSync {
             // else; the next check asks for it again.
             Err(err @ Pop3Error::Refused(_)) => {
                 tracing::warn!(account = account_id, uidl, %err, "the server would not hand over a message");
-                done.failing_grew |= self.count_failure(pop3, *id, uidl, &err, true).await?;
+                let counted = self.count_failure(pop3, *id, uidl, &err, true).await?;
+                done.failing_grew |= counted.shown;
+                return Ok(counted.session_kept);
             }
-            // An answer past the cap that LIST put under it, or one that is
-            // not POP3, leaves the rest of it unread, and the client has
-            // dropped the session. The message is counted and another
-            // session carries on with the rest.
-            Err(err @ (Pop3Error::TooLarge | Pop3Error::Protocol(_))) => {
+            // An answer past the cap that LIST put under it, one that is not
+            // POP3, or a connection that drops partway leaves the rest of it
+            // unread, and the client has dropped the session. The message is
+            // counted and another session carries on with the rest, so a
+            // server that drops on one message every time still gets its
+            // DELEs. A server that is down fails that session's connect and
+            // ends the check.
+            Err(err @ (Pop3Error::TooLarge | Pop3Error::Protocol(_) | Pop3Error::Network(_))) => {
                 tracing::warn!(account = account_id, uidl, %err, "could not read a message's answer");
-                done.failing_grew |= self.count_failure(pop3, *id, uidl, &err, false).await?;
+                if self
+                    .count_failure(pop3, *id, uidl, &err, false)
+                    .await?
+                    .shown
+                {
+                    done.failing_grew = true;
+                    done.unnamed.push(uidl.clone());
+                }
                 return Ok(false);
-            }
-            // A connection that drops ends the check. Counting the message
-            // in flight puts it after the rest at the next check, in case
-            // it is what the server drops on.
-            Err(err @ Pop3Error::Network(_)) => {
-                done.failing_grew |= self.count_failure(pop3, *id, uidl, &err, false).await?;
-                return Err(BackendError::from(err).into());
             }
             Err(err) => return Err(BackendError::from(err).into()),
         }
@@ -381,12 +420,11 @@ impl AccountSync {
         Ok(())
     }
 
-    /// Counts a failed RETR of message `id`, called `uidl`, and why. True
-    /// when the message just reached the account's menu. One the server
-    /// stopped listing and lists again counts from nothing and reaches the
-    /// menu again (`pop3::forget_gone_failures`). With the session
-    /// still open, that third failure reads the message's headers with
-    /// `TOP n 0`, so the menu can say who sent it and what it is about.
+    /// Counts a failed RETR of message `id`, called `uidl`, and why. A
+    /// message the server stopped listing and lists again counts from
+    /// nothing and reaches the menu again (`pop3::forget_gone_failures`).
+    /// With the session still open, the third failure names the message
+    /// through `TOP` (see [`AccountSync::name_failing`]).
     async fn count_failure<P: Pop3Api>(
         &self,
         pop3: &P,
@@ -394,46 +432,68 @@ impl AccountSync {
         uidl: &str,
         err: &Pop3Error,
         session_open: bool,
-    ) -> Result<bool, SyncError> {
+    ) -> Result<Counted, SyncError> {
         let (reason, words) = match err {
             Pop3Error::Refused(text) => (FailReason::Refused, text.clone()),
             Pop3Error::TooLarge => (FailReason::TooLarge, String::new()),
             Pop3Error::Network(_) => (FailReason::Dropped, String::new()),
             _ => (FailReason::Unreadable, String::new()),
         };
-        let (account_id, uidl) = (self.account_id, uidl.to_string());
-        let named = uidl.clone();
+        let (account_id, recorded) = (self.account_id, uidl.to_string());
         let failures = self
             .db
-            .write(move |c| pop3::record_failure(c, account_id, &uidl, reason, &words))
+            .write(move |c| pop3::record_failure(c, account_id, &recorded, reason, &words))
             .await?;
         let shown = failures == pop3::SHOWN_AFTER;
-        if shown && session_open {
+        let session_kept = if shown && session_open {
+            self.name_failing(pop3, id, uidl).await?
+        } else {
+            session_open
+        };
+        Ok(Counted {
+            shown,
+            session_kept,
+        })
+    }
+
+    /// Reads the headers of failing message `id`, called `uidl`, with
+    /// `TOP n 0`, so the account's menu can say who sent it and what it is
+    /// about. False when the TOP ended the session: the client drops it on
+    /// any failure but `-ERR`, and the next command would fail and be
+    /// charged to a message that did nothing wrong.
+    async fn name_failing<P: Pop3Api>(
+        &self,
+        pop3: &P,
+        id: u32,
+        uidl: &str,
+    ) -> Result<bool, SyncError> {
+        let account_id = self.account_id;
+        match pop3.top(id, 0).await {
+            Ok(head) => {
+                let summary = mailrs_mime::summary(&head);
+                let sender = summary.from.map(|from| from.display().to_string());
+                let subject = Some(summary.subject).filter(|s| !s.is_empty());
+                let uidl = uidl.to_string();
+                self.db
+                    .write(move |c| {
+                        pop3::name_failure(
+                            c,
+                            account_id,
+                            &uidl,
+                            sender.as_deref(),
+                            subject.as_deref(),
+                        )
+                    })
+                    .await?;
+                Ok(true)
+            }
             // The headers only name the message; a server that cannot
             // answer TOP leaves the menu to number it.
-            match pop3.top(id, 0).await {
-                Ok(head) => {
-                    let summary = mailrs_mime::summary(&head);
-                    let sender = summary.from.map(|from| from.display().to_string());
-                    let subject = Some(summary.subject).filter(|s| !s.is_empty());
-                    self.db
-                        .write(move |c| {
-                            pop3::name_failure(
-                                c,
-                                account_id,
-                                &named,
-                                sender.as_deref(),
-                                subject.as_deref(),
-                            )
-                        })
-                        .await?;
-                }
-                Err(err) => {
-                    tracing::info!(account = account_id, uidl = named, %err, "could not read the failing message's headers")
-                }
+            Err(err) => {
+                tracing::info!(account = account_id, uidl, %err, "could not read the failing message's headers");
+                Ok(matches!(err, Pop3Error::Refused(_)))
             }
         }
-        Ok(shown)
     }
 
     /// A DELE for each message the account wants off the server that the
