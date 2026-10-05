@@ -1599,3 +1599,17 @@ dialog.alert.short .failing-list { margin-top: 4px; }
    bar at the foot of the list. */
 .list-header-title .title.small { font-size: 1em; margin-top: 1px; }
 button.bottom-new { min-height: 32px; padding: 0 16px; }
+
+/* Avatars without a photo: the flat hue of format::PALETTE that the
+   conversation draws for the same address (format::avatar_hue), in place
+   of the gradient libadwaita picks from the name. One person then has
+   one colour in the list, the conversation and the contact card. */
+.avatar-hue-0 avatar { background-image: none; background-color: #3584e4; color: #fff; }
+.avatar-hue-1 avatar { background-image: none; background-color: #2190a4; color: #fff; }
+.avatar-hue-2 avatar { background-image: none; background-color: #3a944a; color: #fff; }
+.avatar-hue-3 avatar { background-image: none; background-color: #c88800; color: #fff; }
+.avatar-hue-4 avatar { background-image: none; background-color: #ed5b00; color: #fff; }
+.avatar-hue-5 avatar { background-image: none; background-color: #e62d42; color: #fff; }
+.avatar-hue-6 avatar { background-image: none; background-color: #d56199; color: #fff; }
+.avatar-hue-7 avatar { background-image: none; background-color: #9141ac; color: #fff; }
+.avatar-hue-8 avatar { background-image: none; background-color: #6f8396; color: #fff; }

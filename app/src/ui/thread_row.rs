@@ -211,7 +211,34 @@ const ACCOUNT_CLASSES: [&str; 9] = [
 const _: () = assert!(ACCOUNT_CLASSES.len() == PALETTE.len());
 const _: () = assert!(FLAG_CLASSES.len() == FlagColor::ALL.len());
 
-/// The name an avatar draws its initials and its colour from.
+/// The CSS class of each avatar hue, one per entry of [`PALETTE`], which
+/// the stylesheet paints in that entry's colour.
+const HUE_CLASSES: [&str; 9] = [
+    "avatar-hue-0",
+    "avatar-hue-1",
+    "avatar-hue-2",
+    "avatar-hue-3",
+    "avatar-hue-4",
+    "avatar-hue-5",
+    "avatar-hue-6",
+    "avatar-hue-7",
+    "avatar-hue-8",
+];
+const _: () = assert!(HUE_CLASSES.len() == PALETTE.len());
+
+/// Paints `avatar` in the hue the conversation gives the same person
+/// ([`crate::format::avatar_hue`]).
+pub fn set_avatar_hue(avatar: &adw::Avatar, name: &str, address: &str) {
+    let hue = crate::format::avatar_hue(name, address);
+    for (index, class) in HUE_CLASSES.iter().enumerate() {
+        match index == hue {
+            true => avatar.add_css_class(class),
+            false => avatar.remove_css_class(class),
+        }
+    }
+}
+
+/// The name an avatar draws its initials from.
 fn display_name(thread: &ThreadSummary) -> String {
     if thread.from.trim().is_empty() {
         thread.from_email.clone()
@@ -276,6 +303,7 @@ impl ThreadRow {
                 face.set_custom_image(gdk::Paintable::NONE);
             }
         }
+        set_avatar_hue(face, &thread.from, &thread.from_email);
         imp.vip.get().expect("vip star exists").set_visible(vip);
         let get = |cell: &OnceCell<gtk::Label>| {
             cell.get()

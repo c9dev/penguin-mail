@@ -8,7 +8,7 @@ use std::ops::Range;
 
 use mailrs_domain::{Address, MessageBody, MessageMeta, Provenance};
 
-use crate::format::{color_for, full_date, header_date, human_size, initials};
+use crate::format::{avatar_hue, full_date, header_date, human_size, initials};
 use crate::quoted;
 use mailrs_domain::translate::{fill, fill_plural, gettext};
 
@@ -223,7 +223,7 @@ fn render_message(
                 html,
                 "<a class=\"avatar\" href=\"{card}\" title=\"{contact}\" \
                  aria-label=\"{opens}\" style=\"background:{color}\">{initials}</a>",
-                color = color_for(if address.is_empty() { &name } else { &address }),
+                color = crate::format::PALETTE[avatar_hue(&name, &address)],
                 initials = escape(&initials(&name)),
             );
         }

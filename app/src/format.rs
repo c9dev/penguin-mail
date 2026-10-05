@@ -274,15 +274,24 @@ pub fn initials(display: &str) -> String {
     }
 }
 
-/// A stable palette colour for a string, such as a sender address.
-pub fn color_for(seed: &str) -> &'static str {
+/// A stable place in [`PALETTE`] for a string, such as a sender address,
+/// the same whatever its case.
+pub fn hue_index(seed: &str) -> usize {
     let hash = seed
         .to_lowercase()
         .bytes()
         .fold(0xcbf29ce484222325u64, |h, b| {
             (h ^ u64::from(b)).wrapping_mul(0x100000001b3)
         });
-    PALETTE[(hash % PALETTE.len() as u64) as usize]
+    (hash % PALETTE.len() as u64) as usize
+}
+
+/// The [`PALETTE`] index of a person's avatar, keyed on their address so
+/// the list, the conversation and the contact card draw one person in one
+/// colour whatever name each message gives. A sender with no address
+/// falls back to the name.
+pub fn avatar_hue(name: &str, address: &str) -> usize {
+    hue_index(if address.is_empty() { name } else { address })
 }
 
 /// What the account colour menu calls the [`PALETTE`] colour at `index`.
@@ -661,8 +670,21 @@ mod tests {
     }
 
     #[test]
+    fn an_avatar_takes_its_hue_from_the_address() {
+        assert_eq!(
+            avatar_hue("Priya Raman", "priya@fernwood.example"),
+            avatar_hue("P. Raman", "priya@fernwood.example")
+        );
+    }
+
+    #[test]
+    fn an_avatar_with_no_address_takes_its_hue_from_the_name() {
+        assert_eq!(avatar_hue("Priya Raman", ""), hue_index("Priya Raman"));
+    }
+
+    #[test]
     fn colours_are_stable() {
-        assert_eq!(color_for("ann@example.com"), color_for("ANN@example.com"));
+        assert_eq!(hue_index("ann@example.com"), hue_index("ANN@example.com"));
         assert_eq!(account_color_index(1), 0);
         assert_eq!(account_color_index(10), 0);
     }
