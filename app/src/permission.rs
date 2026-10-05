@@ -75,6 +75,15 @@ fn settings_of(provider: Provider) -> &'static str {
     }
 }
 
+/// The toast a settings dialog shows when a save finds the permission
+/// gone.
+pub fn settings_needed(provider: Provider) -> String {
+    fill(
+        &gettext("Penguin Mail needs permission to change {service} settings"),
+        &[("service", settings_of(provider))],
+    )
+}
+
 impl Permission {
     #[cfg(test)]
     pub const ALL: [Permission; 7] = [
@@ -434,6 +443,12 @@ mod tests {
             ),
             "d@outlook.com has not allowed Penguin Mail to change Outlook settings and use the calendar"
         );
+    }
+
+    #[test]
+    fn the_settings_toast_names_the_providers_settings() {
+        assert_eq!(settings_needed(Provider::Gmail), "Penguin Mail needs permission to change Gmail settings");
+        assert_eq!(settings_needed(Provider::Microsoft), "Penguin Mail needs permission to change Outlook settings");
     }
 
     #[test]

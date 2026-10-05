@@ -138,9 +138,7 @@ pub fn present(
                     }
                     Ok(Permitted::NeedsPermission) => {
                         button.set_sensitive(true);
-                        toasts.add_toast(adw::Toast::new(&gettext(
-                            "Penguin Mail needs permission to change Gmail settings",
-                        )));
+                        toasts.add_toast(adw::Toast::new(&crate::permission::settings_needed(provider)));
                     }
                     Err(err) => {
                         button.set_sensitive(true);
