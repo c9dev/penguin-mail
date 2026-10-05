@@ -690,7 +690,11 @@ impl<A: Accounts> CalendarCopy<A> {
     /// send is created once and changed the second time, never created
     /// twice. An empty etag alone would not say that: an event already
     /// queued as a create has none either.
-    pub async fn save(&self, account_id: AccountId, mut event: Event) -> Result<(), SyncError> {
+    ///
+    /// The queue's own tests write through this seam; the app and the
+    /// assistant go through [`Self::change`].
+    #[cfg(test)]
+    pub(crate) async fn save(&self, account_id: AccountId, mut event: Event) -> Result<(), SyncError> {
         event.pending = true;
         let now = crate::now_millis();
         self.db
@@ -713,7 +717,11 @@ impl<A: Accounts> CalendarCopy<A> {
     /// Takes the event off the copy and queues its removal, which tells
     /// the guests unless the account is only a guest itself
     /// ([`calendar::removal_notify`]).
-    pub async fn remove(&self, account_id: AccountId, calendar: &str, id: &str) -> Result<(), SyncError> {
+    ///
+    /// The queue's own tests write through this seam; the app and the
+    /// assistant go through [`Self::change`].
+    #[cfg(test)]
+    pub(crate) async fn remove(&self, account_id: AccountId, calendar: &str, id: &str) -> Result<(), SyncError> {
         let (calendar, id) = (calendar.to_string(), id.to_string());
         self.db
             .write(move |c| {
@@ -1070,20 +1078,23 @@ impl<A: Accounts> CalendarCopy<A> {
         })
     }
 
+    /// [`Self::hold_with`], telling the guests.
+    ///
+    /// The queue's own tests write through this seam; the app and the
+    /// assistant go through [`Self::change`].
+    #[cfg(test)]
+    pub(crate) async fn hold(&self, account_id: AccountId, steps: Vec<Step>) -> Result<Permitted<Held>, SyncError> {
+        self.hold_with(account_id, steps, Notify::Guests).await
+    }
+
     /// Writes `steps` to the copy, marked waiting, and queues nothing. A
     /// change held before and still waiting is committed first, since only
     /// one Undo toast shows at a time. An account with no calendar answers
     /// `Unsupported`, and one whose calendar permission is withheld
     /// `NeedsPermission`, so the queue never takes a change it cannot send.
-    /// The guests hear of it; [`Self::hold_with`] lets the person say no.
-    pub async fn hold(&self, account_id: AccountId, steps: Vec<Step>) -> Result<Permitted<Held>, SyncError> {
-        self.hold_with(account_id, steps, Notify::Guests).await
-    }
-
-    /// [`Self::hold`], with the person's choice of whether the provider
-    /// mails the guests. The choice stays with the change through Undo, a
-    /// restart and the queue.
-    pub async fn hold_with(
+    /// `notify` says whether the provider mails the guests, and stays with
+    /// the change through Undo, a restart and the queue.
+    pub(crate) async fn hold_with(
         &self,
         account_id: AccountId,
         steps: Vec<Step>,
@@ -1215,24 +1226,27 @@ impl<A: Accounts> CalendarCopy<A> {
     /// Whether `held` is still the one change waiting on its Undo toast.
     /// A hold, commit or revert already under way answers `true`, so as
     /// not to say a change already gone before its own write lands. The
-    /// view polls this while a toast is up: an assistant edit made
-    /// through [`apply`](Self::apply) commits the change waiting before
-    /// it, same as holding a new one does, and the view then closes its
-    /// toast instead of leaving an Undo that would do nothing.
+    /// view polls this while a toast is up: an assistant edit, which
+    /// [`change`](Self::change) queues at once, commits the change waiting
+    /// before it, same as holding a new one does, and the view then closes
+    /// its toast instead of leaving an Undo that would do nothing.
     pub fn still_waiting(&self, held: &Held) -> bool {
         self.waiting.try_lock().map(|w| w.as_ref().is_some_and(|w| w.serial == held.serial)).unwrap_or(true)
     }
 
-    /// Writes `steps` and queues them at once, for a change with no Undo
-    /// toast, such as one the assistant makes. Like `hold`, it commits a
-    /// change still waiting on its toast first.
-    pub async fn apply(&self, account_id: AccountId, steps: Vec<Step>) -> Result<Permitted<()>, SyncError> {
+    /// [`Self::apply_with`], telling the guests.
+    ///
+    /// The queue's own tests write through this seam; the app and the
+    /// assistant go through [`Self::change`].
+    #[cfg(test)]
+    pub(crate) async fn apply(&self, account_id: AccountId, steps: Vec<Step>) -> Result<Permitted<()>, SyncError> {
         self.apply_with(account_id, steps, Notify::Guests).await
     }
 
-    /// [`Self::apply`], with the person's choice of whether the provider
-    /// mails the guests.
-    pub async fn apply_with(
+    /// Writes `steps` and queues them at once, for a change with no Undo
+    /// toast, such as one the assistant makes. Like `hold_with`, it commits
+    /// a change still waiting on its toast first.
+    pub(crate) async fn apply_with(
         &self,
         account_id: AccountId,
         steps: Vec<Step>,
@@ -1339,7 +1353,7 @@ impl<A: Accounts> CalendarCopy<A> {
     /// scope, saves the event as it is.
     /// An `edited` event on another calendar of the account moves there
     /// first, a series whole, and the other writes follow it.
-    pub async fn change_steps(
+    pub(crate) async fn change_steps(
         &self,
         account_id: AccountId,
         occurrence: &Occurrence,
@@ -1376,7 +1390,7 @@ impl<A: Accounts> CalendarCopy<A> {
     }
 
     /// The writes that delete `occurrence`, and the others `scope` covers.
-    pub async fn delete_steps(
+    pub(crate) async fn delete_steps(
         &self,
         account_id: AccountId,
         occurrence: &Occurrence,
@@ -1392,24 +1406,6 @@ impl<A: Accounts> CalendarCopy<A> {
             return Ok(alone());
         };
         Ok(series::delete(&whole, &changed, picked(occurrence), scope))
-    }
-
-    /// Takes `occurrence` off the calendar, with the others `scope`
-    /// covers, and holds the change for its Undo toast. `notify` is what
-    /// the person chose; a guest's removal deletes only their own copy and
-    /// goes out quiet whatever it says ([`calendar::removal_notify`]).
-    /// Google marks a guest who deletes an invitation as having declined,
-    /// so no answer of No goes out first.
-    pub async fn hold_removal(
-        &self,
-        account_id: AccountId,
-        occurrence: &Occurrence,
-        scope: Option<RepeatScope>,
-        notify: Notify,
-    ) -> Result<Permitted<Held>, SyncError> {
-        let steps = self.delete_steps(account_id, occurrence, scope).await?;
-        let notify = calendar::removal_notify(&occurrence.event, notify);
-        self.hold_with(account_id, steps, notify).await
     }
 
     /// The series `event` belongs to, and its changed occurrences.
