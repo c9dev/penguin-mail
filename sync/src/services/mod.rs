@@ -539,6 +539,7 @@ impl AccountServices {
             event_files: features.event_files,
             moves_events: features.moves_events,
             calendar_list: features.calendar_list,
+            quiet_changes: features.quiet_changes,
         }
     }
 }
@@ -552,20 +553,23 @@ struct CalendarFeatures {
     event_files: bool,
     moves_events: bool,
     calendar_list: bool,
+    /// A change can go without mailing the guests. Graph mails them on
+    /// every change an organizer makes and has no switch against it.
+    quiet_changes: bool,
 }
 
 impl CalendarFeatures {
     const NONE: CalendarFeatures =
-        CalendarFeatures { event_files: false, moves_events: false, calendar_list: false };
+        CalendarFeatures { event_files: false, moves_events: false, calendar_list: false, quiet_changes: false };
     const MICROSOFT: CalendarFeatures =
-        CalendarFeatures { event_files: false, moves_events: false, calendar_list: true };
+        CalendarFeatures { event_files: false, moves_events: false, calendar_list: true, quiet_changes: false };
     const GOOGLE: CalendarFeatures =
-        CalendarFeatures { event_files: true, moves_events: true, calendar_list: true };
+        CalendarFeatures { event_files: true, moves_events: true, calendar_list: true, quiet_changes: true };
     /// CalDAV keeps no files, moves an event by copying its resource, which
     /// the queue must not rely on, and lists the calendars its server
     /// holds without letting the app edit the list.
     const CALDAV: CalendarFeatures =
-        CalendarFeatures { event_files: false, moves_events: false, calendar_list: false };
+        CalendarFeatures { event_files: false, moves_events: false, calendar_list: false, quiet_changes: true };
 
     /// The match has no wildcard, so an adapter added to `AnyCalendar`
     /// has to say what it can do.
@@ -658,6 +662,9 @@ pub struct Offers {
     /// The calendar list can change: a new calendar, a rename, a colour,
     /// a subscription, removing one.
     pub calendar_list: bool,
+    /// A change to an event can go without mailing its guests, so the
+    /// window may offer to send none. Outlook mails them on every change.
+    pub quiet_changes: bool,
 }
 
 impl Offers {
@@ -677,6 +684,7 @@ impl Offers {
         event_files: true,
         moves_events: true,
         calendar_list: true,
+        quiet_changes: true,
     };
 
     /// What the account lacks, in the order Preferences lists it.
@@ -1264,9 +1272,9 @@ mod tests {
     #[test]
     fn gmail_offers_all_three_calendar_gates_and_imap_none() {
         let gmail = AccountServices::fake(Arc::new(FakeGmail::new())).offers();
-        assert!(gmail.event_files && gmail.moves_events && gmail.calendar_list);
+        assert!(gmail.event_files && gmail.moves_events && gmail.calendar_list && gmail.quiet_changes);
         let imap = AccountServices::fake_imap(Arc::new(FakeImap::new()), Arc::new(FakeSmtp::default())).offers();
-        assert!(!imap.event_files && !imap.moves_events && !imap.calendar_list);
+        assert!(!imap.event_files && !imap.moves_events && !imap.calendar_list && !imap.quiet_changes);
     }
 
     #[test]

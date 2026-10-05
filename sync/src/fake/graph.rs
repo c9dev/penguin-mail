@@ -105,6 +105,8 @@ pub struct GraphState {
     /// `transactionId` to the event it made, so a retried create finds it.
     pub transactions: HashMap<String, String>,
     pub responses: Vec<Answered>,
+    /// The body of every event create and change, as sent.
+    pub event_bodies: Vec<serde_json::Value>,
     pub contact_folders: Vec<ContactFolder>,
     /// Contact id to its folder and the contact.
     pub contacts: BTreeMap<String, (String, GraphContact)>,

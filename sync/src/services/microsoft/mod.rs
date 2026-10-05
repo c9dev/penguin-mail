@@ -79,8 +79,8 @@ struct RefusedNow {
 }
 
 /// A service a tenant can refuse.
-// The calendar, contact, rule and settings tasks use this; the one that
-// first does takes the attribute out.
+// The calendar uses its variant; the contacts, rules and automatic reply
+// use theirs when they are written, and the attribute goes then.
 #[allow(dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum Service {
@@ -90,7 +90,6 @@ pub(super) enum Service {
     AutoReply,
 }
 
-#[allow(dead_code)]
 impl Service {
     /// The scope the service's calls need.
     fn scope(self) -> &'static str {
@@ -222,7 +221,6 @@ impl<G: GraphApi> Microsoft<G> {
     /// service turns off for the run and answers `Unsupported`, which
     /// Preferences explains. Without the scope it is a permission to ask
     /// for.
-    #[allow(dead_code)]
     pub(super) fn service_error(&self, service: Service, err: mailrs_graph::GraphError) -> crate::BackendError {
         let granted = self.graph.granted().is_none_or(|g| g.has(service.scope()));
         if matches!(err, mailrs_graph::GraphError::AccessDenied { .. }) && granted {
