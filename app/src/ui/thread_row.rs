@@ -22,6 +22,12 @@ mod imp {
         /// The sender's name, and after it the address (ruling R4), so a
         /// look-alike display name does not hide the real address.
         pub from: OnceCell<gtk::Label>,
+        /// The name alone, shown in place of `from` while the row is too
+        /// narrow for `floor`.
+        pub from_name: OnceCell<gtk::Label>,
+        /// `from` cut after the address's "@" (`address_floor_markup`),
+        /// or `None` when it carries no address.
+        pub floor: RefCell<Option<String>>,
         pub clip: OnceCell<gtk::Image>,
         pub mute: OnceCell<gtk::Image>,
         pub star: OnceCell<gtk::Image>,
@@ -86,9 +92,27 @@ mod imp {
             vip.add_css_class("vip");
             vip.set_tooltip_text(Some(&gettext("VIP")));
             // The name and the address share one label that takes the row's
-            // spare width; see `sender_markup`.
+            // spare width; see `sender_markup`. While the row cannot show
+            // the address up to its "@", the name alone takes the label's
+            // place, laid over it.
             let from = text_label("from");
-            from.set_hexpand(true);
+            let from_name = text_label("from");
+            let sender = gtk::Overlay::builder().child(&from).hexpand(true).build();
+            sender.add_overlay(&from_name);
+            let weak = row.downgrade();
+            sender.connect_get_child_position(move |overlay, _| {
+                let row = weak.upgrade()?;
+                let imp = row.imp();
+                let (full, short) = (imp.from.get()?, imp.from_name.get()?);
+                let fits = imp.floor.borrow().as_deref().is_none_or(|floor| {
+                    let layout = full.create_pango_layout(None);
+                    layout.set_markup(floor);
+                    layout.pixel_size().0 <= overlay.width()
+                });
+                full.set_child_visible(fits);
+                short.set_child_visible(!fits);
+                Some(gdk::Rectangle::new(0, 0, overlay.width(), overlay.height()))
+            });
             let clip = marker("mail-attachment-symbolic");
             let mute = marker("audio-volume-muted-symbolic");
             mute.set_tooltip_text(Some(&gettext("Muted")));
@@ -99,7 +123,7 @@ mod imp {
             for widget in [
                 account.upcast_ref::<gtk::Widget>(),
                 vip.upcast_ref(),
-                from.upcast_ref(),
+                sender.upcast_ref(),
                 clip.upcast_ref(),
                 mute.upcast_ref(),
                 star.upcast_ref(),
@@ -139,6 +163,7 @@ mod imp {
             let _ = self.account.set(account);
             let _ = self.vip.set(vip);
             let _ = self.from.set(from);
+            let _ = self.from_name.set(from_name);
             let _ = self.clip.set(clip);
             let _ = self.mute.set(mute);
             let _ = self.star.set(star);
@@ -293,6 +318,8 @@ impl ThreadRow {
             thread.from.clone()
         };
         get(&imp.from).set_markup(&sender_markup(&name, &thread.from_email));
+        get(&imp.from_name).set_text(&name);
+        imp.floor.replace(address_floor_markup(&name, &thread.from_email));
         let date = get(&imp.date);
         date.set_label(&relative_date(thread.last_message_at, Local::now()));
         if thread.unread {
@@ -366,6 +393,18 @@ fn sender_markup(name: &str, address: &str) -> String {
     )
 }
 
+/// The sender's line cut after the address's "@": the least of the
+/// address worth showing, since a few letters of it cannot tell a real
+/// sender from a look-alike. A row narrower than this shows the name
+/// alone. `None` when the line carries no address.
+fn address_floor_markup(name: &str, address: &str) -> Option<String> {
+    if address.is_empty() || address == name {
+        return None;
+    }
+    let local = address.split_once('@').map_or(address, |(local, _)| local);
+    Some(sender_markup(name, &format!("{local}@")))
+}
+
 /// `text` as one paragraph. A label clamps its lines within each
 /// paragraph, so a preview that kept the body's line breaks would show
 /// every line of it.
@@ -375,7 +414,7 @@ fn one_line(text: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{one_line, sender_markup, spoken};
+    use super::{address_floor_markup, one_line, sender_markup, spoken};
 
     #[test]
     fn a_preview_shows_as_one_paragraph() {
@@ -391,6 +430,23 @@ mod tests {
             sender_markup("Kemi Adeyemi", "k@uni.example"),
             "Kemi Adeyemi\u{2002}<span weight=\"normal\" alpha=\"64%\" size=\"89%\">k@uni.example</span>"
         );
+    }
+
+    #[test]
+    fn the_least_of_an_address_worth_showing_is_its_local_part_and_the_at() {
+        // Four letters of "priya@fernwood.example" cannot tell a real
+        // sender from a look-alike, so the row measures the name with
+        // "priya@" after it and drops the address below that.
+        assert_eq!(
+            address_floor_markup("Priya Raman", "priya@fernwood.example").as_deref(),
+            Some("Priya Raman\u{2002}<span weight=\"normal\" alpha=\"64%\" size=\"89%\">priya@</span>")
+        );
+    }
+
+    #[test]
+    fn a_row_without_an_address_has_no_floor() {
+        assert_eq!(address_floor_markup("k@uni.example", "k@uni.example"), None);
+        assert_eq!(address_floor_markup("Kemi", ""), None);
     }
 
     #[test]

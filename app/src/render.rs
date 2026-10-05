@@ -689,7 +689,8 @@ const HTML_BODY_CSS: &str = "@font-face{font-family:Helvetica;src:local(\"Libera
 .root{font:14px/1.5 -apple-system,\"Adwaita Sans\",Cantarell,\"Segoe UI\",Roboto,Helvetica,Arial,sans-serif;\
 color:#1d1d20;overflow-wrap:break-word;overflow-x:auto;container-type:inline-size}\
 img{max-width:100cqw !important;height:auto !important}\
-table{max-width:100%}a{color:#1c71d8}";
+table{max-width:100%}a{color:#1c71d8}\
+a:focus-visible{outline:2px solid var(--accent,#1c71d8);outline-offset:2px}";
 
 /// The button that shows the quoted history, drawn in the page's colours
 /// and, on mail that keeps its white page, in the grey Gmail uses. It sits
@@ -709,35 +710,64 @@ background:color-mix(in srgb,var(--fg) 20%,transparent)}\
 :host(.plain) details.trimmed>summary:focus-visible,.text details.trimmed>summary:focus-visible{\
 outline-color:var(--accent)}";
 
-fn page_css(theme: &Theme) -> String {
-    // A message sits on a surface a step away from the page: lighter in a
-    // dark window, darker in a light one, so an open message reads as a
-    // sheet rather than as more page.
-    let (bg, fg, dim, card, line, hover, surface) = if theme.dark {
-        (
-            "#1e1e21",
-            "#ffffff",
-            "rgba(255,255,255,0.58)",
-            "rgba(255,255,255,0.08)",
-            "rgba(255,255,255,0.09)",
-            "rgba(255,255,255,0.04)",
-            "#2b2b30",
-        )
+/// The page's column: at most this wide, with this much room at each side
+/// of its text. The cards GTK lays above the page (`ui::page_column`)
+/// take the same column, so their edges line up with the text under them.
+pub(crate) const PAGE_MAX_WIDTH: i32 = 980;
+pub(crate) const PAGE_SIDE: i32 = 36;
+/// At or under this width the page keeps less room at its sides.
+pub(crate) const PAGE_NARROW: i32 = 560;
+pub(crate) const PAGE_NARROW_SIDE: i32 = 14;
+
+/// The conversation page's colours in one theme.
+pub(crate) struct PagePalette {
+    pub bg: &'static str,
+    pub fg: &'static str,
+    /// Secondary text: counts, addresses, dates, recipients, quotes.
+    pub dim: &'static str,
+    pub card: &'static str,
+    pub line: &'static str,
+    pub hover: &'static str,
+    /// What a message sits on.
+    pub surface: &'static str,
+}
+
+/// A message sits on a surface a step away from the page: lighter in a
+/// dark window, darker in a light one, so an open message reads as a
+/// sheet rather than as more page.
+pub(crate) fn page_palette(dark: bool) -> PagePalette {
+    if dark {
+        PagePalette {
+            bg: "#1e1e21",
+            fg: "#ffffff",
+            dim: "rgba(255,255,255,0.58)",
+            card: "rgba(255,255,255,0.08)",
+            line: "rgba(255,255,255,0.09)",
+            hover: "rgba(255,255,255,0.04)",
+            surface: "#2b2b30",
+        }
     } else {
-        (
-            "#ffffff",
-            "rgba(0,0,6,0.84)",
-            "rgba(0,0,6,0.52)",
-            "rgba(0,0,6,0.05)",
-            "rgba(0,0,6,0.08)",
-            "rgba(0,0,6,0.03)",
-            "#f4f4f6",
-        )
-    };
+        PagePalette {
+            bg: "#ffffff",
+            fg: "rgba(0,0,6,0.84)",
+            // At 52 % the dim text read 4.3:1 on the page, under the
+            // 4.5:1 WCAG asks of 12.5 px text; 60 % reads 5.7:1 there and
+            // 5.2:1 on a message's surface, and stays well under the body.
+            dim: "rgba(0,0,6,0.6)",
+            card: "rgba(0,0,6,0.05)",
+            line: "rgba(0,0,6,0.08)",
+            hover: "rgba(0,0,6,0.03)",
+            surface: "#f4f4f6",
+        }
+    }
+}
+
+fn page_css(theme: &Theme) -> String {
+    let PagePalette { bg, fg, dim, card, line, hover, surface } = page_palette(theme.dark);
     format!(
         ":root{{color-scheme:{scheme};--bg:{bg};--fg:{fg};--dim:{dim};--card:{card};--line:{line};--hover:{hover};--surface:{surface};--accent:{accent};--accent-text:{accent_text}}}\
 html{{background:var(--bg)}}\
-body{{margin:0 auto;max-width:980px;padding:20px 36px 64px;color:var(--fg);\
+body{{margin:0 auto;max-width:{PAGE_MAX_WIDTH}px;padding:20px {PAGE_SIDE}px 64px;color:var(--fg);\
 font:15px/1.5 \"Adwaita Sans\",Cantarell,system-ui,sans-serif;-webkit-font-smoothing:antialiased}}\
 .thread h1{{font-size:22px;line-height:1.25;font-weight:800;letter-spacing:-0.01em;margin:0}}\
 .thread .headline{{display:flex;align-items:flex-start;gap:12px}}\
@@ -761,6 +791,7 @@ column-gap:12px;align-items:center;color:inherit}}\
 transition:transform 200ms cubic-bezier(0.23,1,0.32,1),opacity 120ms ease}}\
 .message:hover .chev,.toggle:focus-visible~.chev{{opacity:.7}}\
 .expanded .chev{{transform:rotate(180deg)}}\
+a:focus-visible,summary:focus-visible,.event-slot:focus-visible{{outline:2px solid var(--accent);outline-offset:2px}}\
 .toggle:focus-visible{{outline:2px solid var(--accent);outline-offset:-3px;border-radius:12px}}\
 .toggle{{position:absolute;inset:0;border-radius:12px}}\
 .expanded .header{{position:relative}}\
@@ -831,7 +862,7 @@ color:inherit;text-decoration:none;min-width:0}}\
 .attachment .get:hover{{opacity:1;background:var(--accent)}}\
 .thumb{{width:32px;height:32px;flex:none;border-radius:5px;object-fit:cover;background:var(--card)}}\
 .clip{{width:16px;height:16px;flex:none;background:var(--dim);-webkit-mask:url(\"{CLIP}\") center/contain no-repeat}}\
-@media (max-width:560px){{body{{padding:18px 14px 40px}}.body,.attachments{{margin-left:0}}.thread h1{{font-size:20px}}\
+@media (max-width:{PAGE_NARROW}px){{body{{padding:18px {PAGE_NARROW_SIDE}px 40px}}.body,.attachments{{margin-left:0}}.thread h1{{font-size:20px}}\
 .address{{display:none}}.message{{padding:14px 8px 16px;margin:0 -8px}}.chev{{display:none}}}}",
         fold = FOLD_MS,
         trimmed = TRIMMED_CSS,
@@ -1102,6 +1133,20 @@ mod tests {
     /// track that cannot be smaller than nothing is sized from the item's
     /// current height. Both ends keep the same shape so the row still
     /// animates between them.
+    /// Tab walks the page's links, its summaries and the invitation's
+    /// slot. Each kind has to show where the focus is, or a keyboard user
+    /// presses Tab with nothing on screen changing.
+    #[test]
+    fn every_kind_of_stop_tab_reaches_in_the_page_shows_a_focus_ring() {
+        let css = page_css(&theme());
+        for stop in ["a:focus-visible", "summary:focus-visible", ".event-slot:focus-visible"] {
+            assert!(css.contains(stop), "no ring for {stop}");
+        }
+        // An HTML body sits in a shadow root the page's rules do not
+        // reach, so its links need a ring of their own.
+        assert!(HTML_BODY_CSS.contains("a:focus-visible"), "no ring for links in an HTML body");
+    }
+
     #[test]
     fn the_fold_row_follows_the_content_when_the_width_changes() {
         let css = page_css(&theme());

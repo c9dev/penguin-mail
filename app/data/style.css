@@ -14,8 +14,15 @@
    - line: #ececef light, #2c2c31 dark (hairlines, about 5 %).
    - line2: #dedee3 light, #39393f dark (capsule separators, card
      borders).
-   - text: dim is the text at 64 % opacity, faint at 40 %. libadwaita's
-     `dim-label` is 55 %, which is neither.
+   - text: dim is the text at 75 % opacity in light and 64 % in dark,
+     faint at 40 %. libadwaita's `dim-label` is 55 %, which is neither.
+     The mockup's 64 % read 4.1:1 in light, under the 4.5:1 WCAG asks of
+     small text, because light text is already 80 % ink; 75 % reads 5.4:1
+     on the sidebar and more on the window and the view. Dark text is
+     white at full strength, so 64 % there reads 6.5:1 or better. A dim
+     rule therefore comes in two, the light value and an `.app-dark` twin
+     that puts 64 % back, and `text_contrast.rs` checks each pair on the
+     surface it sits on.
    - accent tints: the sidebar's selected row, 18 % light and 28 % dark
      over the sidebar shade; the selected thread, 16 % and 26 %; the
      Undo Send pill, 16 % over the sidebar; the Summarize pill, 12 %
@@ -116,8 +123,17 @@ row.account-heading { transition: background-color 120ms ease, color 120ms ease;
    text (R4): it lets a person spot a look-alike name. */
 .thread-row .subject { font-weight: 500; }
 .thread-row.unread .subject { font-weight: 700; }
-.thread-row .snippet { opacity: 0.6; font-size: 0.93em; }
-.thread-row .date { opacity: 0.6; font-size: 0.86em; font-feature-settings: "tnum"; }
+/* At 60 % the preview and a read date measured 3.6:1 on the list in
+   light and 3.4:1 on a selected card. At 75 % they read 5.6:1 on the
+   list and 5.1:1 or better on the card under the pointer, whatever the
+   accent. Dark keeps 60 %, which reads 6.4:1 on the list and 4.7:1 or
+   better on the card. The subject stays ahead by weight and full ink. */
+.thread-row .snippet { opacity: 0.75; font-size: 0.93em; }
+.thread-row .date { opacity: 0.75; font-size: 0.86em; font-feature-settings: "tnum"; }
+/* Before the unread date's rule, which has the same weight and has to
+   win. */
+.app-dark .thread-row .snippet,
+.app-dark .thread-row .date { opacity: 0.6; }
 .thread-row .unread.date { opacity: 1; color: var(--accent-color); font-weight: 700; }
 .thread-row .count {
   font-size: 0.78em; font-weight: 700; padding: 0 6px; border-radius: 999px;
@@ -132,11 +148,14 @@ row.account-heading { transition: background-color 120ms ease, color 120ms ease;
    count is bold, not only an unread one); an unread count takes the
    accent instead. */
 .mailbox-row .count {
-  opacity: 0.64;
+  opacity: 0.75;
   font-size: 0.85em;
   font-weight: 700;
   font-feature-settings: "tnum";
 }
+/* Before the unread count's rule, which has the same weight and has to
+   win. */
+.app-dark .mailbox-row .count { opacity: 0.64; }
 .mailbox-row .count.unread { opacity: 1; color: var(--accent-color); }
 /* An account row is a row like any other: same height, same hover, same
    gap to its neighbour. The heading above the accounts separates them
@@ -385,15 +404,33 @@ flowboxchild:focus-visible > .recipient-chip {
 /* The selected mailbox is a rounded card tinted with the accent, 8 px in
    from each side of the card: 18 % in light mode, 28 % in dark, over the
    sidebar shade (mockups.py's `tint + 0.04`, not the calendar event's
-   14 %/24 %). Its icon, name and count take the accent colour. */
+   14 %/24 %). Its icon, name and count take the accent colour.
+
+   The accent text read 3.2:1 on the card in light and 3.7:1 in dark, with
+   Yaru's orange; WCAG AA asks 4.5:1 for the name and the count. So the
+   words take the accent darkened in light, with L, a and b in OKLab
+   scaled down together until L is 0.45 at most, which keeps the hue, as
+   today's heading in the calendar does; and lifted in dark, to an L of
+   0.9 with a and b kept. Every libadwaita and Yaru accent then reads
+   4.8:1 or better in light and 5.2:1 or better in dark. The icon keeps
+   the plain accent: a shape needs 3:1, which it has. */
 .mailboxes > row { margin: 0 8px 2px; padding: 0; min-height: 0; border-radius: 9px; }
+/* libadwaita's focus ring, on the row the arrow keys moved to
+   (`Sidebar::mark_keyed` says why it needs a class of its own). */
+.mailboxes > row.keyed:focus {
+  outline: 2px solid color-mix(in srgb, var(--accent-color) 50%, transparent);
+  outline-offset: -2px;
+}
 .mailboxes > row:selected {
   background-color: alpha(var(--accent-bg-color), 0.18);
-  color: var(--accent-color);
+  color: oklab(from var(--accent-bg-color) min(l, 0.45) calc(a * min(1, 0.45 / l)) calc(b * min(1, 0.45 / l)));
 }
 .mailboxes > row:selected image { color: var(--accent-color); }
-.mailboxes > row:selected .mailbox-row .count { opacity: 1; color: var(--accent-color); }
-.app-dark .mailboxes > row:selected { background-color: alpha(var(--accent-bg-color), 0.28); }
+.mailboxes > row:selected .mailbox-row .count { opacity: 1; color: inherit; }
+.app-dark .mailboxes > row:selected {
+  background-color: alpha(var(--accent-bg-color), 0.28);
+  color: oklab(from var(--accent-bg-color) max(l, 0.9) a b);
+}
 
 /* A6/B2: the foot of the sidebar, shared by both spaces since it is
    `Sidebar::page`'s own bottom bar, and hidden whole (`Sidebar::sync_foot`)
@@ -530,7 +567,8 @@ toolbarview.sidebar-card.undershoot-bottom > .bottom-bar { box-shadow: none; bor
    the subtitle's baseline at 47, as mockups.py draws them. */
 .list-header-title { margin: 8px 0 -7px 2px; }
 .list-header-title .title { font-size: 1.16em; font-weight: 800; }
-.list-header-title .subtitle { font-size: 0.85em; font-weight: 500; opacity: 0.64; }
+.list-header-title .subtitle { font-size: 0.85em; font-weight: 500; opacity: 0.75; }
+.app-dark .list-header-title .subtitle { opacity: 0.64; }
 
 /* Follow Up: the banner above All Inboxes. */
 .follow-up-banner {
@@ -563,8 +601,11 @@ toolbarview.sidebar-card.undershoot-bottom > .bottom-bar { box-shadow: none; bor
   background: var(--cal-colour);
 }
 .invitation-title { font-size: 1.23em; font-weight: 800; }
-.invitation-when { font-size: 0.89em; font-weight: 500; opacity: 0.64; margin-top: 5px; }
-.invitation-meta { font-size: 0.85em; font-weight: 500; opacity: 0.64; }
+/* The dim token: 75 % in light, 64 % in dark (see the top of the file). */
+.invitation-when { font-size: 0.89em; font-weight: 500; opacity: 0.75; margin-top: 5px; }
+.invitation-meta { font-size: 0.85em; font-weight: 500; opacity: 0.75; }
+.app-dark .invitation-when,
+.app-dark .invitation-meta { opacity: 0.64; }
 .invitation-meta-row { margin-top: 8px; }
 /* The guest count reads as part of the line it sits in, and opens the
    guest list. */
@@ -573,8 +614,9 @@ menubutton.invitation-guests > button {
   min-height: 0;
   font-size: 0.85em;
   font-weight: 500;
-  opacity: 0.64;
+  opacity: 0.75;
 }
+.app-dark menubutton.invitation-guests > button { opacity: 0.64; }
 .invitation-news {
   padding: 6px 10px;
   border-radius: 8px;
@@ -619,17 +661,22 @@ button.invitation-pill buttoncontent > box { border-spacing: 8px; }
 
 /* The day strip on the event card: the hours around the meeting, the
    account's other events as tinted blocks, this one dashed, hairlines on
-   the hours. */
+   the hours. The heading and the hour labels take the strength of the
+   calendar grid's hour labels, in the rule for small secondary text
+   further down. */
 .day-strip { margin-top: 8px; }
 .strip-heading {
   font-size: 0.72em;
   font-weight: 700;
   letter-spacing: 0.5px;
   text-transform: uppercase;
-  opacity: 0.4;
 }
 .strip-verdict { font-size: 0.78em; font-weight: 700; }
-.strip-verdict.free { color: #2ec27e; }
+/* #2ec27e read 2.1:1 on the card in light. #18754a is the same green
+   scaled in OKLab to a lightness of 0.5, which keeps its hue and reads
+   5.3:1; dark keeps the bright green, which reads 6.7:1. */
+.strip-verdict.free { color: #18754a; }
+.app-dark .strip-verdict.free { color: #2ec27e; }
 .strip-verdict.clash { color: var(--warning-color); }
 .strip-grid {
   border-radius: 10px;
@@ -639,10 +686,11 @@ button.invitation-pill buttoncontent > box { border-spacing: 8px; }
 .app-dark .strip-grid { border-color: #2c2c31; }
 .strip-cell.hour { border-left: 1px solid #ececef; }
 .app-dark .strip-cell.hour { border-left-color: #2c2c31; }
+/* At 10 px a weight of 500 lost so much of each digit's stem to
+   smoothing that 80 % read 4.4:1 from the pixels; 600 keeps the stems. */
 .strip-hour {
   font-size: 0.68em;
-  font-weight: 500;
-  opacity: 0.4;
+  font-weight: 600;
   margin: 3px 0 3px 4px;
   font-feature-settings: "tnum";
 }
@@ -661,10 +709,22 @@ button.invitation-pill buttoncontent > box { border-spacing: 8px; }
 .strip-block.unanswered { background: var(--view-bg-color); padding: 0; }
 .strip-block.unanswered label { margin: 0 8px; }
 
+/* The cards above the page (translation, queued, gpg) sit in the page's
+   own column (`ui::page_column`), which gives their sides; they used to
+   reach 20 px past the text on each side. They belong to the page, so
+   they take the card border and no shadow (DESIGN.md: shadows only for
+   what floats); the shadow was also cut flat at their foot. */
+.translation-card,
+.queued-card,
+.pgp-card { box-shadow: none; border: 1px solid #dedee3; }
+.app-dark .translation-card,
+.app-dark .queued-card,
+.app-dark .pgp-card { border-color: #39393f; }
+
 /* The message is in another language: which one, where its words would go
    to be translated, and the button that sends them. */
 .translation-area {
-  padding: 12px 16px 0 16px;
+  padding-top: 12px;
   background: var(--view-bg-color);
 }
 .translation-card { padding: 10px 14px; border-radius: 12px; }
@@ -673,7 +733,7 @@ button.invitation-pill buttoncontent > box { border-spacing: 8px; }
 /* A queued message: when it goes, or why it has not gone, and the buttons
    that act on it. */
 .queued-area {
-  padding: 12px 16px 0 16px;
+  padding-top: 12px;
   background: var(--view-bg-color);
 }
 .queued-card { padding: 10px 14px; border-radius: 12px; }
@@ -681,7 +741,7 @@ button.invitation-pill buttoncontent > box { border-spacing: 8px; }
 
 /* What gpg made of a message, above it and above the event card. */
 .pgp-area {
-  padding: 12px 16px 0 16px;
+  padding-top: 12px;
   background: var(--view-bg-color);
 }
 .pgp-card { padding: 10px 14px; border-radius: 12px; }
@@ -1031,7 +1091,8 @@ button.calendar-heading.folded .calendar-chevron { opacity: 0.5; }
    lines up with the headings above. */
 .hidden-calendars { margin-left: -6px; }
 .hidden-calendars > button { padding: 2px 6px; min-height: 0; }
-.hidden-calendars .calendar-name { opacity: 0.64; }
+.hidden-calendars .calendar-name { opacity: 0.75; }
+.app-dark .hidden-calendars .calendar-name { opacity: 0.64; }
 .hidden-count { font-size: 0.85em; font-weight: 700; font-feature-settings: "tnum"; }
 .calendar-lock { opacity: 0.4; }
 .mini-month { margin-top: -2px; }
@@ -1056,6 +1117,13 @@ checkbutton.calendar-check > check:checked {
 }
 /* Quick create's plain colour dot, beside the calendar's name. */
 .checked-dot { min-width: 10px; min-height: 10px; border-radius: 99px; background: var(--cal-colour); }
+/* The quick add's calendar, on its button and in its list: the account
+   under the name, in the dim token, where calendars of several accounts
+   can share a name. */
+.quick-account { opacity: 0.75; }
+.app-dark .quick-account { opacity: 0.64; }
+.quick-calendars { min-width: 220px; }
+.quick-calendars > row { padding: 6px 8px; }
 /* The calendar sidebar's "Waiting for your answer" section: a small
    capitals heading and a lifted card per invitation, each a door into
    the event it names, and, when the store still holds the message, a
@@ -1122,6 +1190,14 @@ list.waiting-list > row.waiting-card:last-child { margin-bottom: 0; }
   border-radius: 99px;
   background: var(--cal-colour, var(--accent-bg-color));
 }
+/* An invitation not answered yet: a ring in the calendar's colour, as
+   Week and Month draw the event dashed. */
+.agenda-dot.unanswered {
+  background: none;
+  border: 2px solid var(--cal-colour, var(--accent-bg-color));
+  min-width: 4px;
+  min-height: 4px;
+}
 /* Out of office: a rounded square striped in the calendar's colour, the
    week view's stripes at the dot's size. */
 .agenda-dot.away {
@@ -1136,18 +1212,31 @@ list.waiting-list > row.waiting-card:last-child { margin-bottom: 0; }
 /* Focus time's target and a birthday's cake take the dot's place. */
 .agenda-kind { color: var(--cal-colour); }
 .agenda-heading { font-weight: 800; opacity: 0.75; }
+/* Today's date in the accent at full strength, as the grids mark today.
+   The accent darkened in light (L at most 0.45, a and b scaled with it)
+   and lifted in dark (L at least 0.8) reads 4.5:1 or better on the view
+   for every libadwaita and Yaru accent; the raw Yaru orange read 3.5:1
+   on white. */
+.agenda-heading.today {
+  opacity: 1;
+  color: oklab(from var(--accent-bg-color) min(l, 0.45) calc(a * min(1, 0.45 / l)) calc(b * min(1, 0.45 / l)));
+}
+.app-dark .agenda-heading.today { color: oklab(from var(--accent-bg-color) max(l, 0.8) a b); }
 
 /* Small secondary text: the sidebar's section and account headings, the
    calendar's hour labels, week tag and ALL-DAY, the mini month's weekday
    letters and the days outside its month, a Month day outside the month,
-   the agenda's times and calendar names, and the count of hidden
-   calendars. WCAG asks 4.5:1 of text this small. libadwaita's dim-label
+   the agenda's times and calendar names, the invitation's day strip,
+   and the count of hidden calendars. WCAG asks 4.5:1 of text this
+   small. libadwaita's dim-label
    (55 %) reaches about 3:1 in light, less on the grey sidebar, so these
    take the window's text colour at 80 % there and at 55 % in dark, which
    measured 4.5:1 or more on screen in both. */
 .sidebar-section,
 .range-title .week,
 .hour-label,
+.strip-hour,
+.strip-heading,
 .all-day-label,
 .mini-month-weekday,
 .mini-month button.outside,
@@ -1163,6 +1252,8 @@ list.waiting-list > row.waiting-card:last-child { margin-bottom: 0; }
 .app-dark .sidebar-section,
 .app-dark .range-title .week,
 .app-dark .hour-label,
+.app-dark .strip-hour,
+.app-dark .strip-heading,
 .app-dark .all-day-label,
 .app-dark .mini-month-weekday,
 .app-dark .mini-month button.outside,
@@ -1192,12 +1283,14 @@ listview.agenda-list > row:focus-visible .agenda-row {
 popover.event-popover > contents { border-radius: 16px; padding: 0; }
 .popover-bar { min-width: 4px; border-radius: 2px; background: var(--cal-colour); }
 .popover-title { font-weight: 800; font-size: 1.16em; }
-.popover-when { font-size: 0.85em; font-weight: 500; opacity: 0.64; }
+.popover-when { font-size: 0.85em; font-weight: 500; opacity: 0.75; }
+.app-dark .popover-when { opacity: 0.64; }
 popover.event-popover label { font-size: 0.89em; }
 popover.event-popover .popover-title { font-size: 1.16em; }
 popover.event-popover .popover-when { font-size: 0.85em; }
 /* What sort of entry it is, at the dimmed text strength of the time. */
-popover.event-popover .popover-kind { opacity: 0.64; }
+popover.event-popover .popover-kind { opacity: 0.75; }
+.app-dark popover.event-popover .popover-kind { opacity: 0.64; }
 /* GTK adds a button's own padding to its min-height; the mockup's
    buttons are 34 px in all. */
 button.popover-join, button.popover-answer {
@@ -1318,7 +1411,8 @@ popover.event-popover button.popover-open-mail {
   box-shadow: 0 1px 2px alpha(black, 0.1);
 }
 .next-event .bar { min-width: 3.5px; border-radius: 2px; background: var(--cal-colour); }
-.next-event .when { font-size: 0.78em; font-weight: 600; opacity: 0.64; }
+.next-event .when { font-size: 0.78em; font-weight: 600; opacity: 0.75; }
+.app-dark .next-event .when { opacity: 0.64; }
 .next-event .what { font-size: 0.92em; font-weight: 700; }
 .next-event image { opacity: 0.55; margin-right: 10px; }
 /* "Show more" and "Show all": a small text link under the notes or the
@@ -1343,6 +1437,10 @@ popover.event-popover button.popover-more {
   outline: 2px solid var(--cal-colour);
   outline-offset: 2px;
 }
+/* The hairline under the last account's calendars, 24 px below them with
+   the row's own spacing; Add Calendar and Hidden Calendars sit under it
+   as actions on the whole list. */
+.calendar-list-end { margin-top: 20px; }
 .add-calendar { margin-left: -6px; }
 .add-calendar > button { padding: 2px 6px; min-height: 0; }
 

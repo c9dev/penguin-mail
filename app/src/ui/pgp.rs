@@ -16,7 +16,7 @@ use crate::protection::{Mark, Tone};
 use crate::ui::name;
 
 pub struct PgpCard {
-    pub widget: gtk::Box,
+    pub widget: adw::BreakpointBin,
     icon: gtk::Image,
     title: gtk::Label,
     detail: gtk::Label,
@@ -54,12 +54,7 @@ impl PgpCard {
         inside.append(&icon);
         inside.append(&lines);
 
-        let widget = gtk::Box::builder()
-            .orientation(gtk::Orientation::Vertical)
-            .visible(false)
-            .css_classes(["pgp-area"])
-            .build();
-        widget.append(&inside);
+        let widget = super::page_column(&inside, "pgp-area");
 
         Rc::new(PgpCard {
             widget,

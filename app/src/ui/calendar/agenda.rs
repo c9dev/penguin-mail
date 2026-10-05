@@ -31,6 +31,12 @@ use mailrs_domain::{AccountId, EpochMillis};
 use super::tint;
 use super::words;
 
+/// The class that marks an invitation the account has not answered: the
+/// dot becomes a ring, as Week and Month draw such an event dashed.
+fn answer_mark(event: &mailrs_domain::calendar::Event) -> Option<&'static str> {
+    (super::block::answer_state(event) == super::block::AnswerState::Unanswered).then_some("unanswered")
+}
+
 /// One row's data: the occurrence, the local date it groups under, and
 /// the heading its section shares, computed once in [`Agenda::show`] or
 /// [`Agenda::prepend`] so neither the row factory nor the header
@@ -405,6 +411,11 @@ mod row {
             let heading = imp.heading.get().expect("built in constructed");
             heading.set_visible(opens);
             heading.set_label(&row.heading);
+            if row.date == chrono::Local::now().date_naive() {
+                heading.add_css_class("today");
+            } else {
+                heading.remove_css_class("today");
+            }
             let o = &row.occurrence;
             imp.occurrence.replace(Some(o.clone()));
             let (colour, calendar_name) = calendar_of(o, calendars);
@@ -414,6 +425,7 @@ mod row {
             let look = crate::ui::calendar::kinds::look(&o.event.kind);
             let mut classes = vec!["agenda-dot", tinted.as_str()];
             classes.extend(look.css_class());
+            classes.extend(answer_mark(&o.event));
             dot.set_css_classes(&classes);
             let kind = imp.kind.get().expect("built in constructed");
             kind.set_css_classes(&["agenda-kind", &tinted]);
@@ -453,6 +465,11 @@ mod row {
                 ],
             );
             crate::ui::name(self, &name);
+            // What the ring, like the grids' dashed outline, says to a
+            // sighted reader.
+            self.update_property(&[gtk::accessible::Property::Description(
+                &crate::ui::calendar::block::description(&o.event),
+            )]);
         }
     }
 }
@@ -754,6 +771,24 @@ mod tests {
             start,
             end: start + 3_600_000,
         }
+    }
+
+    fn invitation(answer: Option<mailrs_domain::invitation::Answer>) -> mailrs_domain::calendar::Event {
+        mailrs_domain::calendar::Event {
+            guests: vec![mailrs_domain::calendar::Guest { me: true, organizer: false, answer, ..Default::default() }],
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn an_unanswered_invitation_takes_the_ring_the_grids_dash_stands_for() {
+        assert_eq!(answer_mark(&invitation(None)), Some("unanswered"));
+    }
+
+    #[test]
+    fn an_answered_or_own_event_takes_no_ring() {
+        assert_eq!(answer_mark(&invitation(Some(mailrs_domain::invitation::Answer::Yes))), None);
+        assert_eq!(answer_mark(&timed(0).event), None);
     }
 
     #[test]

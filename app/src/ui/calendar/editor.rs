@@ -1354,11 +1354,7 @@ impl Editor {
             group.remove(&row);
         }
         let inherited = self.draft.borrow().reminders.is_none();
-        group.set_description(
-            inherited
-                .then(|| gettext("The calendar's default"))
-                .as_deref(),
-        );
+        group.set_description(reminders_description(inherited).as_deref());
         let list = self
             .draft
             .borrow()
@@ -1396,9 +1392,11 @@ impl Editor {
     }
 
     fn reminder_row(self: &Rc<Self>, index: usize, reminder: Reminder) -> adw::ComboRow {
-        let row = adw::ComboRow::builder()
-            .title(words::reminder_words(reminder.minutes))
-            .build();
+        let (title, subtitle) = reminder_row_words(reminder.method);
+        let row = adw::ComboRow::builder().title(title).build();
+        if let Some(subtitle) = subtitle {
+            row.set_subtitle(&subtitle);
+        }
         crate::ui::name_combo_row_items(&row);
         let values = reminder_choice_values(reminder.minutes);
         let names: Vec<String> = values.iter().map(|m| words::reminder_words(*m)).collect();
@@ -1406,9 +1404,6 @@ impl Editor {
         row.set_model(Some(&gtk::StringList::new(&refs)));
         if let Some(i) = values.iter().position(|m| *m == reminder.minutes) {
             row.set_selected(i as u32);
-        }
-        if reminder.method == ReminderMethod::Email {
-            row.set_subtitle(&gettext("By email"));
         }
         let remove = gtk::Button::builder()
             .icon_name("window-close-symbolic")
@@ -1989,6 +1984,20 @@ fn colour_names() -> Vec<String> {
     ]
 }
 
+/// A reminder row's title and subtitle. The drop-down beside the title
+/// shows the time, so the title names the row's role rather than saying
+/// the time again.
+fn reminder_row_words(method: ReminderMethod) -> (String, Option<String>) {
+    let subtitle = (method == ReminderMethod::Email).then(|| gettext("By email"));
+    (gettext("Reminder"), subtitle)
+}
+
+/// The Reminders group's description: a sentence while the event keeps
+/// its calendar's reminders, and nothing once the person has changed them.
+fn reminders_description(inherited: bool) -> Option<String> {
+    inherited.then(|| gettext("Uses the calendar's default"))
+}
+
 /// `REMINDER_CHOICES` with `minutes` added when it is not already one of
 /// them, sorted.
 fn reminder_choice_values(minutes: u32) -> Vec<u32> {
@@ -2205,6 +2214,23 @@ mod tests {
             (2, "me@work.pt".into(), calendar("team", "Design team")),
             (1, "me@example.com".into(), calendar("family", "Family")),
         ]
+    }
+
+    #[test]
+    fn a_reminder_row_leaves_the_time_to_its_drop_down() {
+        // The drop-down shows "10 minutes before"; a title saying it too
+        // read the time twice.
+        assert_eq!(reminder_row_words(ReminderMethod::Notification), (gettext("Reminder"), None));
+        assert_eq!(
+            reminder_row_words(ReminderMethod::Email),
+            (gettext("Reminder"), Some(gettext("By email")))
+        );
+    }
+
+    #[test]
+    fn reminders_left_to_the_calendar_say_so_in_a_sentence() {
+        assert_eq!(reminders_description(true).as_deref(), Some("Uses the calendar's default"));
+        assert_eq!(reminders_description(false), None);
     }
 
     #[test]

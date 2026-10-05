@@ -13,7 +13,7 @@ use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 use adw::prelude::*;
-use gtk::{gdk, gio, glib, graphene};
+use gtk::{gdk, graphene};
 use mailrs_domain::AccountId;
 use mailrs_domain::calendar::Calendar;
 use mailrs_domain::translate::{fill, gettext};
@@ -64,18 +64,65 @@ pub fn retitled(text: &str, from: TypeChoice, to: TypeChoice) -> Option<String> 
     (text.trim().is_empty() || text == draft::type_title(from)).then(|| draft::type_title(to))
 }
 
-/// The words the calendar menu shows for each choice: its name, and the
-/// account's address after it once the choices span more than one
-/// account, where two may share a name such as "Personal".
-pub fn choice_labels(choices: &[(AccountId, String, Calendar)]) -> Vec<String> {
+/// The lines the calendar button and its list show for each choice: its
+/// name, and under it the account's address once the choices span more
+/// than one account, where two may share a name such as "Personal".
+pub fn choice_lines(choices: &[(AccountId, String, Calendar)]) -> Vec<(String, Option<String>)> {
     let several = choices.iter().any(|(a, _, _)| Some(a) != choices.first().map(|(a, _, _)| a));
     choices
         .iter()
-        .map(|(_, address, calendar)| match several {
-            true => format!("{} ({address})", calendar.name),
-            false => calendar.name.clone(),
-        })
+        .map(|(_, address, calendar)| (calendar.name.clone(), several.then(|| address.clone())))
         .collect()
+}
+
+/// A choice as a screen reader says it: the name, then the account
+/// where the list shows one.
+pub fn spoken_choice(name: &str, account: Option<&str>) -> String {
+    match account {
+        Some(account) => fill(&gettext("{name}, {account}"), &[("name", name), ("account", account)]),
+        None => name.to_string(),
+    }
+}
+
+/// A calendar as the button and the list draw it: the calendar's dot,
+/// its name, and the account under it when there is one to tell apart.
+struct ChoiceView {
+    widget: gtk::Box,
+    dot: gtk::Box,
+    name: gtk::Label,
+    account: gtk::Label,
+}
+
+impl ChoiceView {
+    fn new() -> ChoiceView {
+        let dot = gtk::Box::builder()
+            .css_classes(["checked-dot"])
+            .valign(gtk::Align::Center)
+            .build();
+        let name = gtk::Label::builder().xalign(0.0).css_classes(["caption"]).build();
+        let account = gtk::Label::builder()
+            .xalign(0.0)
+            .css_classes(["caption", "quick-account"])
+            .ellipsize(gtk::pango::EllipsizeMode::Middle)
+            .build();
+        let lines = gtk::Box::builder()
+            .orientation(gtk::Orientation::Vertical)
+            .valign(gtk::Align::Center)
+            .build();
+        lines.append(&name);
+        lines.append(&account);
+        let widget = gtk::Box::builder().spacing(8).build();
+        widget.append(&dot);
+        widget.append(&lines);
+        ChoiceView { widget, dot, name, account }
+    }
+
+    fn show(&self, colour: &str, name: &str, account: Option<&str>) {
+        self.dot.set_css_classes(&["checked-dot", &tint::css_class(colour)]);
+        self.name.set_label(name);
+        self.account.set_label(account.unwrap_or_default());
+        self.account.set_visible(account.is_some());
+    }
 }
 
 pub struct Quick {
@@ -85,13 +132,15 @@ pub struct Quick {
     parent: gtk::Widget,
     time: gtk::Label,
     title: gtk::Entry,
-    dot: gtk::Box,
-    calendar_label: gtk::Label,
-    /// Opens the menu of calendars; the dot and the name are its child.
+    /// The picked calendar as the button shows it.
+    current: ChoiceView,
+    /// Opens the list of calendars; `current` is its child.
     calendar_button: gtk::MenuButton,
-    /// The `quick.calendar` action the menu's items pick with.
-    pick: gio::SimpleAction,
-    /// The calendars the menu offers, from the last `show`.
+    /// The calendars on offer, one row each, with the picked one ticked.
+    list: gtk::ListBox,
+    /// The tick on each row of `list`, in order.
+    ticks: RefCell<Vec<gtk::Image>>,
+    /// The calendars the list offers, from the last `show`.
     choices: RefCell<Vec<(AccountId, String, Calendar)>>,
     picked: Cell<usize>,
     /// Event, Focus Time and Out of Office, as many as the picked
@@ -125,31 +174,35 @@ impl Quick {
             .width_chars(26)
             .build();
         name(&title, &gettext("Title"));
-        let dot = gtk::Box::builder()
-            .css_classes(["checked-dot"])
-            .valign(gtk::Align::Center)
-            .build();
-        let calendar_label = gtk::Label::builder()
-            .css_classes(["dim-label", "caption"])
-            .build();
         let kinds = adw::ToggleGroup::builder()
             .css_classes(["quick-kinds"])
             .halign(gtk::Align::Start)
             .visible(false)
             .build();
         name(&kinds, &gettext("Type"));
-        let where_to = gtk::Box::builder().spacing(6).build();
-        where_to.append(&dot);
-        where_to.append(&calendar_label);
+        // A list rather than a menu: a menu's items cannot carry the
+        // calendar's dot or a second line for its account, and three
+        // calendars can be called Personal.
+        let current = ChoiceView::new();
+        let list = gtk::ListBox::builder()
+            .selection_mode(gtk::SelectionMode::None)
+            .css_classes(["navigation-sidebar", "quick-calendars"])
+            .build();
+        let scroller = gtk::ScrolledWindow::builder()
+            .hscrollbar_policy(gtk::PolicyType::Never)
+            .propagate_natural_height(true)
+            .propagate_natural_width(true)
+            .max_content_height(360)
+            .child(&list)
+            .build();
+        let list_popover = gtk::Popover::builder().child(&scroller).build();
         let calendar_button = gtk::MenuButton::builder()
-            .child(&where_to)
-            .css_classes(["flat"])
+            .child(&current.widget)
+            .popover(&list_popover)
+            .css_classes(["flat", "quick-calendar"])
             .halign(gtk::Align::Start)
             .always_show_arrow(true)
             .build();
-        let pick = gio::SimpleAction::new_stateful("calendar", Some(glib::VariantTy::INT32), &0i32.to_variant());
-        let actions = gio::SimpleActionGroup::new();
-        actions.add_action(&pick);
         let more = gtk::Button::builder()
             .label(gettext("More Details"))
             .css_classes(["flat"])
@@ -188,17 +241,16 @@ impl Quick {
             .position(gtk::PositionType::Right)
             .build();
         popover.set_parent(parent);
-        popover.insert_action_group("quick", Some(&actions));
 
         let this = Rc::new(Quick {
             popover,
             parent: parent.clone().upcast(),
             time,
             title,
-            dot,
-            calendar_label,
+            current,
             calendar_button,
-            pick,
+            list,
+            ticks: RefCell::new(Vec::new()),
             choices: RefCell::new(Vec::new()),
             picked: Cell::new(0),
             kinds,
@@ -213,13 +265,24 @@ impl Quick {
         });
 
         let weak = Rc::downgrade(&this);
-        this.pick.connect_activate(move |action, target| {
+        this.list.connect_row_activated(move |_, row| {
             let Some(this) = weak.upgrade() else { return };
-            let Some(index) = target.and_then(i32::from_variant) else { return };
-            action.set_state(&index.to_variant());
-            this.show_calendar(index as usize);
+            let Ok(index) = usize::try_from(row.index()) else { return };
+            this.show_calendar(index);
             this.show_kinds();
+            if let Some(list) = this.calendar_button.popover() {
+                list.popdown();
+            }
             this.title.grab_focus();
+        });
+        // The list opens on the picked calendar, so arrows start from it.
+        let weak = Rc::downgrade(&this);
+        list_popover.connect_show(move |_| {
+            let Some(this) = weak.upgrade() else { return };
+            let picked = i32::try_from(this.picked.get()).unwrap_or(0);
+            if let Some(row) = this.list.row_at_index(picked) {
+                row.grab_focus();
+            }
         });
         let weak = Rc::downgrade(&this);
         this.kinds.connect_active_name_notify(move |group| {
@@ -290,18 +353,30 @@ impl Quick {
         self.when.replace(Some(Box::new(when)));
         self.types.replace(types);
         self.kind.set(TypeChoice::Event);
-        let menu = gio::Menu::new();
-        for (index, label) in choice_labels(&choices).iter().enumerate() {
-            menu.append(Some(label), Some(&format!("quick.calendar({index})")));
+        self.list.remove_all();
+        let mut ticks = Vec::new();
+        for ((name, account), (_, _, calendar)) in choice_lines(&choices).iter().zip(&choices) {
+            let view = ChoiceView::new();
+            view.show(&calendar.color, name, account.as_deref());
+            let tick = gtk::Image::builder()
+                .icon_name("object-select-symbolic")
+                .hexpand(true)
+                .halign(gtk::Align::End)
+                .accessible_role(gtk::AccessibleRole::Presentation)
+                .build();
+            view.widget.append(&tick);
+            let row = gtk::ListBoxRow::builder().child(&view.widget).build();
+            crate::ui::name(&row, &spoken_choice(name, account.as_deref()));
+            self.list.append(&row);
+            ticks.push(tick);
         }
-        self.calendar_button.set_menu_model(Some(&menu));
+        self.ticks.replace(ticks);
         // One calendar leaves nothing to pick, so the row reads as the
         // plain line it was.
         let several = choices.len() > 1;
         self.calendar_button.set_sensitive(several);
         self.calendar_button.set_always_show_arrow(several);
         self.choices.replace(choices);
-        self.pick.set_state(&(current as i32).to_variant());
         self.show_calendar(current);
         self.title.set_text("");
         self.save.set_sensitive(false);
@@ -331,12 +406,15 @@ impl Quick {
         let choices = self.choices.borrow();
         let Some((_, _, calendar)) = choices.get(index) else { return };
         self.picked.set(index);
-        self.dot
-            .set_css_classes(&["checked-dot", &tint::css_class(&calendar.color)]);
-        self.calendar_label.set_label(&calendar.name);
+        let lines = choice_lines(&choices);
+        let account = lines.get(index).and_then(|(_, account)| account.as_deref());
+        self.current.show(&calendar.color, &calendar.name, account);
+        for (at, tick) in self.ticks.borrow().iter().enumerate() {
+            tick.set_opacity(if at == index { 1.0 } else { 0.0 });
+        }
         name(
             &self.calendar_button,
-            &fill(&gettext("Calendar: {name}"), &[("name", &calendar.name)]),
+            &fill(&gettext("Calendar: {name}"), &[("name", &spoken_choice(&calendar.name, account))]),
         );
     }
 
@@ -474,12 +552,24 @@ mod tests {
     #[test]
     fn one_accounts_calendars_go_by_their_names() {
         let choices = [entry(1, "me@example.com", "me@example.com", "Personal"), entry(1, "me@example.com", "team", "Team")];
-        assert_eq!(choice_labels(&choices), ["Personal", "Team"]);
+        assert_eq!(choice_lines(&choices), [("Personal".to_string(), None), ("Team".to_string(), None)]);
     }
 
     #[test]
-    fn calendars_of_several_accounts_carry_their_address() {
+    fn calendars_of_several_accounts_carry_their_address_under_the_name() {
         let choices = [entry(1, "me@example.com", "me@example.com", "Personal"), entry(2, "me@work.pt", "me@work.pt", "Personal")];
-        assert_eq!(choice_labels(&choices), ["Personal (me@example.com)", "Personal (me@work.pt)"]);
+        assert_eq!(
+            choice_lines(&choices),
+            [
+                ("Personal".to_string(), Some("me@example.com".to_string())),
+                ("Personal".to_string(), Some("me@work.pt".to_string()))
+            ]
+        );
+    }
+
+    #[test]
+    fn a_calendar_with_an_account_says_both_out_loud() {
+        assert_eq!(spoken_choice("Personal", Some("me@work.pt")), "Personal, me@work.pt");
+        assert_eq!(spoken_choice("Personal", None), "Personal");
     }
 }

@@ -400,6 +400,16 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   an event that ran off the end of the wrong day.
 - Double-clicking a calendar event opens its editor, instead of leaving
   only its popover open.
+- In light mode, message previews, dates, mailbox counts and the grey
+  sender lines above each message are darker and easier to read.
+- Tab moves through a conversation's messages and links with a ring on
+  the one it reaches, then on out of the page, instead of stopping on
+  something invisible where letter shortcuts no longer worked.
+- The mailbox list is one Tab stop: the arrow keys move through it without
+  opening each mailbox on the way, Enter or Space opens one, and the Menu
+  key or Shift+F10 opens a row's menu.
+- The card above an unsent or translated message lines up with the
+  message under it, instead of running past it on both sides.
 
 ## 0.3.0 (2026-09-24)
 
