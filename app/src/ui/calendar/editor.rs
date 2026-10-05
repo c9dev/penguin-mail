@@ -112,6 +112,8 @@ struct Editor {
     repeat_confirmed: Cell<u32>,
     repeat_quiet: Cell<bool>,
     guests_group: RefCell<Option<adw::PreferencesGroup>>,
+    /// The boxed list that holds the guest rows and, last, the field.
+    guest_list: RefCell<Option<gtk::ListBox>>,
     guest_rows: RefCell<Vec<adw::ActionRow>>,
     /// The field new guests are typed into, read again on Save.
     guest_entry: RefCell<Option<gtk::Entry>>,
@@ -200,6 +202,7 @@ pub fn open(
         repeat_confirmed: Cell::new(0),
         repeat_quiet: Cell::new(false),
         guests_group: RefCell::new(None),
+        guest_list: RefCell::new(None),
         guest_rows: RefCell::new(Vec::new()),
         guest_entry: RefCell::new(None),
         reminders_group: RefCell::new(None),
@@ -1208,6 +1211,9 @@ impl Editor {
             .build();
         let entry = gtk::Entry::builder()
             .placeholder_text(gettext("Add guests"))
+            .hexpand(true)
+            .valign(gtk::Align::Center)
+            .css_classes(["guest-entry"])
             .build();
         ui::name(&entry, &gettext("Add guests"));
         let weak = Rc::downgrade(self);
@@ -1223,8 +1229,23 @@ impl Editor {
                 this.take_typed_guests(entry);
             }
         });
-        group.add(&entry);
+        // The guests and the field share one boxed list, as Place does
+        // above, with the field as its last row; the group would put a bare
+        // field after its own list.
+        let list = gtk::ListBox::builder()
+            .selection_mode(gtk::SelectionMode::None)
+            .css_classes(["boxed-list"])
+            .build();
+        let field = adw::PreferencesRow::builder()
+            .activatable(false)
+            .focusable(false)
+            .child(&entry)
+            .css_classes(["guest-field"])
+            .build();
+        list.append(&field);
+        group.add(&list);
         self.guest_entry.replace(Some(entry));
+        self.guest_list.replace(Some(list));
         *self.guests_group.borrow_mut() = Some(group.clone());
         self.rebuild_guests();
         group
@@ -1267,11 +1288,11 @@ impl Editor {
     /// Rebuilds every guest row from `draft.guests`, replacing whatever
     /// rows were there.
     fn rebuild_guests(self: &Rc<Self>) {
-        let Some(group) = self.guests_group.borrow().clone() else {
+        let Some(list) = self.guest_list.borrow().clone() else {
             return;
         };
         for row in self.guest_rows.borrow_mut().drain(..) {
-            group.remove(&row);
+            list.remove(&row);
         }
         let guests = self.draft.borrow().guests.clone();
         let mut rows = Vec::new();
@@ -1310,14 +1331,9 @@ impl Editor {
                 });
                 row.add_suffix(&remove);
             }
-            group.add(&row);
+            // Each guest goes before the field, which stays last.
+            list.insert(&row, rows.len() as i32);
             rows.push(row);
-        }
-        // The group puts its rows in a boxed list and the field after it,
-        // with nothing between the two. The 12 pixels are what libadwaita
-        // leaves between separate boxed rows (`.boxed-list-separate`).
-        if let Some(entry) = self.guest_entry.borrow().as_ref() {
-            entry.set_margin_top(if rows.is_empty() { 0 } else { 12 });
         }
         *self.guest_rows.borrow_mut() = rows;
         // Whether a file says the guests can open it follows the list.

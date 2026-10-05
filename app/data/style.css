@@ -1632,3 +1632,18 @@ window.app-surfaces .composer-field:focus-within > .composer-label { opacity: 1;
 window.app-surfaces:not(.app-dark) .composer-field:focus-within > .composer-label {
   color: oklab(from var(--accent-bg-color) min(l, 0.45) calc(a * min(1, 0.45 / l)) calc(b * min(1, 0.45 / l)));
 }
+
+/* The event editor's Add Guests field, the last row of the guest list:
+   a flat field the height of a row, with the focus ring on the row as
+   an entry row draws it. */
+row.guest-field entry.guest-entry {
+  background: none;
+  box-shadow: none;
+  outline: none;
+  min-height: 50px;
+  padding: 0 12px;
+}
+row.guest-field:focus-within {
+  outline: 2px solid alpha(var(--accent-color), 0.5);
+  outline-offset: -2px;
+}
