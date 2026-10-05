@@ -48,6 +48,8 @@ struct Inner {
     most_in_flight: usize,
     /// Taken by the first `retr`, which waits until it is notified.
     hold: Option<Arc<Notify>>,
+    /// Runs at each `dele`, before the fake marks the message.
+    on_dele: Option<Box<dyn Fn() + Send>>,
 }
 
 impl Default for FakePop3 {
@@ -70,6 +72,7 @@ impl Default for FakePop3 {
                 in_flight: 0,
                 most_in_flight: 0,
                 hold: None,
+                on_dele: None,
             }),
         }
     }
@@ -138,6 +141,13 @@ impl FakePop3 {
     /// dropped connection would, and the session ends.
     pub fn dropping_after_retrs(self, answered: usize) -> Self {
         self.lock().drop_after_retrs = Some(answered);
+        self
+    }
+
+    /// Runs `look` at each `dele`, as the server receives it, so a test
+    /// can see what the client had done by then.
+    pub fn on_dele(self, look: impl Fn() + Send + 'static) -> Self {
+        self.lock().on_dele = Some(Box::new(look));
         self
     }
 
@@ -300,6 +310,9 @@ impl Pop3Api for FakePop3 {
     async fn dele(&self, id: u32) -> Result<(), Pop3Error> {
         let mut inner = self.lock();
         inner.uidl_of(id)?;
+        if let Some(look) = &inner.on_dele {
+            look();
+        }
         inner.marked.insert(id);
         inner.deleted.push(id);
         Ok(())

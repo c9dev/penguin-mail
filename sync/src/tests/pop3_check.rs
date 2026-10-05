@@ -332,6 +332,34 @@ async fn a_uidl_listed_twice_in_one_session_downloads_once_and_removes_only_that
     assert_eq!(h.fake.deleted(), [1], "the DELE goes to the message that came down, not the skipped one");
 }
 
+/// The store commits without waiting for the disk (WAL, synchronous
+/// NORMAL). Once a DELE goes out, the server may delete its copy at QUIT,
+/// so by then the download must be in the database file itself.
+#[tokio::test]
+async fn a_download_is_in_the_database_file_before_its_dele_goes_out() {
+    let store: Arc<std::sync::Mutex<Option<std::path::PathBuf>>> = Arc::default();
+    let copies = tempfile::tempdir().unwrap();
+    let copy = copies.path().join("at-dele.db");
+    let fake = FakePop3::default().with_message("u1", &pop3_mail(1)).on_dele({
+        let (store, copy) = (Arc::clone(&store), copy.clone());
+        move || {
+            if let Some(path) = store.lock().unwrap().as_ref() {
+                std::fs::copy(path, &copy).unwrap();
+            }
+        }
+    });
+    let h = pop3_harness(fake, RemoveSetting::Downloaded).await;
+    *store.lock().unwrap() = Some(h.db_path());
+    h.sync.pop3_check().await.unwrap();
+    assert_eq!(h.fake.deleted(), [1]);
+    // The file without its write-ahead log, as a power cut can leave it.
+    let conn = rusqlite::Connection::open(&copy).unwrap();
+    let kept: i64 = conn
+        .query_row("SELECT COUNT(*) FROM local_messages WHERE message_id = 'pop3/u1'", [], |row| row.get(0))
+        .unwrap_or(0);
+    assert_eq!(kept, 1, "the downloaded bytes were on disk when the DELE went out");
+}
+
 /// Run alone, so other tests add nothing to the process's peak:
 /// `cargo test -p mailrs-sync --lib -- --ignored a_first_download_holds`
 #[tokio::test]

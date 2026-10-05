@@ -54,6 +54,11 @@ pub(crate) async fn pop3_harness(fake: FakePop3, remove: RemoveSetting) -> Pop3H
 }
 
 impl Pop3Harness {
+    /// The store's database file.
+    pub fn db_path(&self) -> std::path::PathBuf {
+        self._dir.path().join("mail.db")
+    }
+
     /// Another sync over the same store and fakes, as a restart makes.
     pub fn again(&self) -> AccountSync {
         self.with_server(Arc::clone(&self.fake))

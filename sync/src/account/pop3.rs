@@ -174,7 +174,16 @@ impl AccountSync {
         // Leave on Server sends no DELE, even for a row an earlier setting
         // marked.
         if remove != RemoveSetting::Never {
-            self.send_deles(pop3, &listed, done).await?;
+            // The store commits without syncing, and a DELE lets the server
+            // drop the other copy at QUIT. A power cut after that QUIT and
+            // before SQLite's own checkpoint would lose the message from
+            // both, so the downloads go to disk first. When a reader holds
+            // the log back, the DELEs wait for the next check.
+            if self.db.checkpoint().await? {
+                self.send_deles(pop3, &listed, done).await?;
+            } else {
+                tracing::warn!(account = account_id, "the downloads are not on disk yet; removal from the server waits for the next check");
+            }
         }
         done.listed = listed.into_iter().map(|u| u.uidl).collect();
         Ok(())

@@ -100,6 +100,35 @@ impl Db {
         result.await.map_err(|_| StoreError::Closed)?
     }
 
+    /// Copies every commit so far from the write-ahead log into the
+    /// database file and syncs both, on the writer thread. True when the
+    /// whole log went in; false when a reader held an older snapshot past
+    /// the busy timeout and some commits are still only in the log.
+    ///
+    /// With WAL and `synchronous = NORMAL` a commit is not synced, so a
+    /// power cut can lose it. A caller about to delete the only other copy
+    /// of what it stored (a POP3 DELE) calls this first. A checkpoint
+    /// covers every earlier commit at once. Switching one write to
+    /// `synchronous = FULL` would sync the log only if that write changed
+    /// a row, which the write before a DELE need not.
+    pub async fn checkpoint(&self) -> Result<bool> {
+        let (done, result) = tokio::sync::oneshot::channel();
+        let job: Job = Box::new(move |conn| {
+            let outcome = conn
+                .query_row("PRAGMA wal_checkpoint(FULL)", [], |row| {
+                    Ok((row.get::<_, i64>(0)?, row.get::<_, i64>(1)?, row.get::<_, i64>(2)?))
+                })
+                .map(|(busy, log, copied)| busy == 0 && log == copied)
+                .map_err(StoreError::from);
+            let _ = done.send(outcome);
+        });
+        self.inner
+            .writer
+            .send(job)
+            .map_err(|_| StoreError::Closed)?;
+        result.await.map_err(|_| StoreError::Closed)?
+    }
+
     /// Runs `f` on a read-only connection.
     pub async fn read<F, R>(&self, f: F) -> Result<R>
     where
