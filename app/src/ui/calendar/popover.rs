@@ -590,15 +590,37 @@ impl EventPopover {
             }
             // The press is outside, so picking its point finds the widget
             // it would reach. Claiming it here, in the capture phase,
-            // keeps it and its release from every widget below.
-            let on_event = gesture
-                .widget()
-                .and_then(|root| root.pick(x, y, gtk::PickFlags::DEFAULT))
-                .is_some_and(|picked| picked.ancestor(BlockButton::static_type()).is_some());
-            if !shown::press_goes_on(on_event) {
+            // keeps it and its release from every widget below. The
+            // calendar's views are the popover's parent.
+            let picked = gesture.widget().and_then(|root| root.pick(x, y, gtk::PickFlags::DEFAULT));
+            let views = this.popover.parent();
+            let pressed = match (picked, views) {
+                (Some(picked), _) if picked.ancestor(BlockButton::static_type()).is_some() => {
+                    shown::Pressed::OnEvent
+                }
+                (Some(picked), Some(views)) if picked == views || picked.is_ancestor(&views) => {
+                    shown::Pressed::InCalendar
+                }
+                _ => shown::Pressed::Elsewhere,
+            };
+            if !shown::press_goes_on(pressed) {
                 gesture.set_state(gtk::EventSequenceState::Claimed);
             }
-            this.popover.popdown();
+            // A press on another event opens that event's popover during
+            // this press, so this one closes now. A press elsewhere closes
+            // it once the press has been handled: closed in the middle of
+            // the press, the popover took the press with it, and the arrow
+            // or switch under the pointer never saw it (checked under Xvfb).
+            if pressed != shown::Pressed::Elsewhere {
+                this.popover.popdown();
+                return;
+            }
+            let popover = this.popover.downgrade();
+            glib::idle_add_local_once(move || {
+                if let Some(popover) = popover.upgrade() {
+                    popover.popdown();
+                }
+            });
         });
         let weak = Rc::downgrade(&this);
         this.popover.connect_map(move |popover| {
