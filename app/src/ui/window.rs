@@ -666,14 +666,23 @@ impl MainWindow {
 
             let w = weak.clone();
             let microsoft = super::add_account::signs_in_to_microsoft(&app.core);
-            let first_page = welcome::first_account_page(microsoft, move |tile| {
-                if let Some(win) = w.upgrade() {
-                    win.present_add_account(match tile.browser() {
-                        Some(browser) => Opening::Browser(browser),
-                        None => Opening::Tile(tile),
-                    });
-                }
-            });
+            let by_hand = weak.clone();
+            let first_page = welcome::first_account_page(
+                microsoft,
+                move |tile| {
+                    if let Some(win) = w.upgrade() {
+                        win.present_add_account(match tile.browser() {
+                            Some(browser) => Opening::Browser(browser),
+                            None => Opening::Tile(tile),
+                        });
+                    }
+                },
+                move || {
+                    if let Some(win) = by_hand.upgrade() {
+                        win.present_add_account(Opening::ByHand);
+                    }
+                },
+            );
             let (s, w) = (Rc::downgrade(app), weak.clone());
             let assistant = super::assistant::AssistantPane::new(
                 Rc::clone(&app.core),

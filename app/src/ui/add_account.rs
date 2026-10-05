@@ -48,6 +48,9 @@ pub enum Opening {
     Pick,
     /// The address page for a tile picked in the first-run window.
     Tile(Tile),
+    /// The address page for any server, to type its settings, from the
+    /// first-run window's "Enter server settings by hand".
+    ByHand,
     /// A provider's browser sign-in, from the first-run window.
     Browser(Browser),
     /// The password page for an IMAP account that needs to sign in again.
@@ -96,7 +99,7 @@ pub fn present(
     this.connect();
     let root = match &opening {
         Opening::Pick | Opening::Preview(_) => "pick",
-        Opening::Tile(_) => "address",
+        Opening::Tile(_) | Opening::ByHand => "address",
         Opening::Browser(_) => "browser",
         Opening::Again(_) => "password",
     };
@@ -138,6 +141,7 @@ pub fn present(
     match opening {
         Opening::Pick => {}
         Opening::Tile(tile) => this.open_address(Some(tile), false),
+        Opening::ByHand => this.open_address(None, true),
         Opening::Browser(browser) => this.start_browser(browser, None),
         Opening::Again(account) => this.load_saved(account),
         Opening::Preview(stage) => preview(&this, &stage),
@@ -473,7 +477,7 @@ pub struct Tiles {
 /// The provider tiles, three to a row, each row centred, so six sit three
 /// over three and five three over two; two to a row in a window too
 /// narrow for three (see [`TileGrid`]). Each tile is one button named
-/// "Fastmail, Fastmail" or "Google, Gmail, Workspace, signs in through
+/// "Fastmail, Custom domains too" or "Google, Gmail, Workspace, signs in through
 /// your browser". `microsoft` is whether the build can sign in to
 /// Microsoft, whose tile shows only then.
 pub fn tiles(width: i32, microsoft: bool) -> Tiles {
@@ -535,15 +539,10 @@ pub fn browser_legend() -> gtk::Box {
     legend
 }
 
-fn pick_page(microsoft: bool) -> PickPage {
-    let banded = banded("pick", &gettext("Add Account"));
-    let body = &banded.body;
-    body.add_css_class("centered");
-    let title = heading(&gettext("Add an account"));
-    title.set_xalign(0.5);
-    let lede = label(&gettext("Choose where your mail lives."), &["post-lede"]);
-    lede.set_xalign(0.5);
-    let Tiles { grid, buttons } = tiles(136, microsoft);
+/// The row under the tiles that opens the address page to type a
+/// server's settings, in the plain list that holds it. Shared by the
+/// dialog's first page and the first-run window.
+pub fn by_hand_list() -> (gtk::ListBox, adw::ActionRow) {
     let by_hand = icon_row(
         "emblem-system-symbolic",
         &gettext("Enter server settings by hand"),
@@ -556,6 +555,19 @@ fn pick_page(microsoft: bool) -> PickPage {
         .css_classes(["post-plain-list"])
         .build();
     list.append(&by_hand);
+    (list, by_hand)
+}
+
+fn pick_page(microsoft: bool) -> PickPage {
+    let banded = banded("pick", &gettext("Add Account"));
+    let body = &banded.body;
+    body.add_css_class("centered");
+    let title = heading(&gettext("Add an account"));
+    title.set_xalign(0.5);
+    let lede = label(&gettext("Choose where your mail lives."), &["post-lede"]);
+    lede.set_xalign(0.5);
+    let Tiles { grid, buttons } = tiles(136, microsoft);
+    let (list, by_hand) = by_hand_list();
     body.append(&title);
     body.append(&lede);
     body.append(&grid);
@@ -710,11 +722,8 @@ fn lookup_page() -> LookupPage {
         list.append(&row);
         rows.push((check, title, status, state));
     }
-    let servers = gtk::Button::builder()
-        .label(gettext("Enter Server Settings"))
-        .halign(gtk::Align::Start)
-        .css_classes(["pill", "post-mid-pill"])
-        .build();
+    // The same full-width secondary button as on the address page.
+    let servers = pill(&gettext("Enter Server Settings"), false);
     let body = &banded.body;
     body.append(&title);
     body.append(&label(
@@ -1028,12 +1037,14 @@ fn closed_page() -> ClosedPage {
         &gettext("Change the address and look it up again"),
         true,
     );
+    // It leads back, so it takes no forward chevron beside its arrow.
     let another_provider = icon_row(
         "go-previous-symbolic",
         &gettext("Choose another provider"),
         &gettext("Back to the list"),
-        true,
+        false,
     );
+    another_provider.set_activatable(true);
     list.add_css_class("post-closed-list");
     list.append(&another_address);
     list.append(&another_provider);
