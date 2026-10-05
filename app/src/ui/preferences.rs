@@ -311,6 +311,7 @@ fn writing_page(
         .model(&gtk::StringList::new(&labels))
         .selected(current as u32)
         .build();
+    super::combo_value::widen_value(&from);
     let weak = Rc::downgrade(app);
     from.connect_selected_notify(move |row| {
         let (Some(app), Some(email)) =
@@ -651,43 +652,48 @@ fn spelling_group(
     accounts: &[Account],
 ) -> adw::PreferencesGroup {
     let installed = app.installed_dictionaries();
-    let group = adw::PreferencesGroup::builder()
-        .title(gettext("Spelling"))
-        .description(if installed.is_empty() {
-            gettext(
+    if installed.is_empty() {
+        return adw::PreferencesGroup::builder()
+            .title(gettext("Spelling"))
+            .description(gettext(
                 "No dictionaries are installed, so Penguin Mail is not checking \
                  spelling. Install a Hunspell dictionary, such as hunspell-en-us \
                  or hunspell-pt-pt, and reopen the composer.",
-            )
-        } else {
-            fill(
-                &gettext("Dictionaries found: {languages}."),
-                &[("languages", &installed.join(", "))],
-            )
-        })
-        .build();
-    if installed.is_empty() {
-        return group;
+            ))
+            .build();
     }
+    // Each row is an account and its value the language, so the group
+    // says what the rows choose.
+    let names = crate::language_names::IsoNames::load();
+    let named: Vec<String> = installed.iter().map(|code| names.name(code)).collect();
+    let group = adw::PreferencesGroup::builder()
+        .title(gettext("Spelling"))
+        .description(fill(
+            &gettext("The language each account checks spelling in. Dictionaries installed: {languages}."),
+            &[(
+                "languages",
+                &crate::protection::joined(&named.iter().map(String::as_str).collect::<Vec<_>>()),
+            )],
+        ))
+        .build();
     // Following the desktop's language is the first choice, then one
-    // dictionary per row, then both English and Portuguese together for
-    // anyone who writes in two languages.
+    // dictionary per row, then every one together for anyone who writes
+    // in several languages.
     let mut choices: Vec<(String, Vec<String>)> = vec![(
         fill(
-            &gettext("Follow the System Language ({language})"),
-            &[("language", &crate::ui::composer::spell::locale_language())],
+            &gettext("System: {language}"),
+            &[("language", &names.name(&crate::ui::composer::spell::locale_language()))],
         ),
         Vec::new(),
     )];
     choices.extend(
         installed
             .iter()
-            .map(|language| (language.clone(), vec![language.clone()])),
+            .zip(&named)
+            .map(|(code, name)| (name.clone(), vec![code.clone()])),
     );
     if installed.len() > 1 {
-        let both =
-            crate::protection::joined(&installed.iter().map(String::as_str).collect::<Vec<_>>());
-        choices.push((both, installed.clone()));
+        choices.push((gettext("All Installed Languages"), installed.clone()));
     }
     for account in accounts {
         let current = settings
@@ -701,11 +707,11 @@ fn spelling_group(
             .position(|(_, languages)| *languages == current)
             .unwrap_or(0);
         let row = adw::ComboRow::builder()
-            .title(gettext("Check Spelling In"))
-            .subtitle(&account.email)
+            .title(&account.email)
             .model(&gtk::StringList::new(&labels))
             .selected(selected as u32)
             .build();
+        super::combo_value::widen_value(&row);
         let (weak, email, choices) = (Rc::downgrade(app), account.email.clone(), choices.clone());
         row.connect_selected_notify(move |row| {
             let (Some(app), Some((_, languages))) =

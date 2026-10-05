@@ -167,6 +167,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   Ctrl+R.
 
 ### Improved
+- Preferences names spelling dictionaries by language, "English (Australia)" rather than "en_AU", with each account's address as its row's title, and an address chosen in a drop-down shows whole rather than cut short with room to spare.
 - A message that names no font of its own reads in your desktop's interface font, the one the rest of the window uses, rather than Liberation Sans.
 - A person without a photo has one avatar colour, picked from their address, in the list, the conversation and their contact card.
 - In a window as narrow as a phone, the mail list's title shows whole: the unread line under it goes and New Message moves to a bar at the foot of the list.

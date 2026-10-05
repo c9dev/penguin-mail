@@ -20,6 +20,7 @@ mod goa;
 mod images;
 mod keyring_plug;
 mod language;
+mod language_names;
 mod locale_time;
 mod logging;
 mod notify;

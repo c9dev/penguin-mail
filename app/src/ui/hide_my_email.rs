@@ -347,6 +347,7 @@ impl Dialog {
             .model(&gtk::StringList::new(&emails))
             .visible(self.accounts.len() > 1)
             .build();
+        super::combo_value::widen_value(&account);
         if let Some(at) = self
             .preselect
             .and_then(|id| self.accounts.iter().position(|a| a.id == id))
