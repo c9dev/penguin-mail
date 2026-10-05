@@ -61,7 +61,7 @@ pub use api::{AccountClient, DraftRef, GmailApi, SavedDraft};
 pub use backoff::{MOST_TRIES, backoff_delay, poll_offset, retry_delay, with_jitter};
 pub use calendar::{Added, Calendar};
 pub use connect::{
-    connect_account, connect_imap, connect_microsoft, connect_microsoft_at, connect_pop3, pop3_servers_for,
+    KEYRING, connect_account, connect_imap, connect_microsoft, connect_microsoft_at, connect_pop3, pop3_servers_for,
     server_of, servers_for,
 };
 pub use contacts::{Card, ContactBook, Refreshed};

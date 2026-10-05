@@ -25,6 +25,10 @@ use crate::{
 /// enough that the account is reported and tried again soon after.
 pub const STEP_WAIT: Duration = Duration::from_secs(20);
 
+/// The step a keyring read names in `SyncError::NoAnswer`, which the app
+/// reads to say the keyring is at fault rather than the provider.
+pub const KEYRING: &str = "the keyring";
+
 /// `work`, given up after `wait` with a log line that names `step` and
 /// the account. Starting an account waits on the keyring and the store,
 /// and a step that never answers would otherwise hold the account, with
@@ -59,7 +63,7 @@ async fn read_secret<P: PasswordStore + 'static>(
             .await
             .map_err(|err| PasswordError::Keyring(err.to_string()))?
     };
-    bounded(account, "the keyring", wait, read).await
+    bounded(account, KEYRING, wait, read).await
 }
 
 /// A Gmail client for `account`, built from its refresh token in `tokens`
@@ -90,7 +94,7 @@ pub(crate) async fn connect_account_within(
             .await
             .map_err(|e| GmailError::Keyring(e.to_string()))?
     };
-    let stored = bounded(id, "the keyring", wait, read).await?;
+    let stored = bounded(id, KEYRING, wait, read).await?;
     let refresh_token = stored.ok_or(GmailError::NeedsReauth)?;
     let consent = bounded(id, "the mail store", wait, db.read(move |c| accounts::consent(c, id))).await?;
     let granted = consent.granted.as_deref().map(Granted::parse);

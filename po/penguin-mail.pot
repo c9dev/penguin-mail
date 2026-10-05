@@ -7566,11 +7566,15 @@ msgstr ""
 msgid "{provider} is not responding; retrying"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:1711
+#: app/src/ui/sidebar.rs:1714
+msgid "The keyring is not responding; retrying"
+msgstr ""
+
+#: app/src/ui/sidebar.rs:1717
 msgid "Downloading mail"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:1715
+#: app/src/ui/sidebar.rs:1721
 msgid "Syncing stopped after an error; restart Penguin Mail to try again"
 msgstr ""
 

@@ -1707,6 +1707,12 @@ fn status_of(account: &Account) -> Option<(&'static str, String)> {
                 &[("provider", &mailrs_discover::resolved_provider_name(account.provider_name()))],
             ),
         )),
+        // A keyring read that never answers, often an unlock prompt
+        // nobody can see, is no fault of the provider's.
+        AccountState::WaitingForKeyring => Some((
+            "dialog-password-symbolic",
+            gettext("The keyring is not responding; retrying"),
+        )),
         AccountState::Bootstrapping => {
             Some(("mail-send-receive-symbolic", gettext("Downloading mail")))
         }
@@ -1792,6 +1798,21 @@ mod tests {
             said(&by_domain).as_deref(),
             Some("Fastmail is not responding; retrying"),
             "an account saved under its domain still shows its real provider"
+        );
+    }
+
+    #[test]
+    fn an_account_waiting_for_the_keyring_names_the_keyring() {
+        let waiting = Account {
+            id: 1,
+            email: "dana@reyes-home.example".into(),
+            state: AccountState::WaitingForKeyring,
+            provider: Provider::Pop3,
+            provider_name: Some("reyes-home.example".into()),
+        };
+        assert_eq!(
+            status_of(&waiting),
+            Some(("dialog-password-symbolic", "The keyring is not responding; retrying".to_string()))
         );
     }
 

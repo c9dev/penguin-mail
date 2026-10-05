@@ -7947,11 +7947,15 @@ msgstr "Inicie sessão de novo para continuar a sincronizar"
 msgid "{provider} is not responding; retrying"
 msgstr "{provider} não responde; a tentar de novo"
 
-#: app/src/ui/sidebar.rs:1711
+#: app/src/ui/sidebar.rs:1714
+msgid "The keyring is not responding; retrying"
+msgstr "O porta-chaves não responde; a tentar de novo"
+
+#: app/src/ui/sidebar.rs:1717
 msgid "Downloading mail"
 msgstr "A transferir correio"
 
-#: app/src/ui/sidebar.rs:1715
+#: app/src/ui/sidebar.rs:1721
 msgid "Syncing stopped after an error; restart Penguin Mail to try again"
 msgstr ""
 "A sincronização parou depois de um erro; reinicie o Penguin Mail para tentar "

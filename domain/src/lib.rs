@@ -60,16 +60,20 @@ pub enum AccountState {
     /// The account's sync loop crashed twice in a row, and the engine gave
     /// up on it until the app starts again.
     Stopped,
+    /// Starting the account gave up on a keyring read that did not
+    /// answer, and tries again later. The provider is not at fault.
+    WaitingForKeyring,
 }
 
 impl AccountState {
-    pub const ALL: [AccountState; 6] = [
+    pub const ALL: [AccountState; 7] = [
         AccountState::Ok,
         AccountState::Bootstrapping,
         AccountState::NeedsReauth,
         AccountState::BackingOff,
         AccountState::Offline,
         AccountState::Stopped,
+        AccountState::WaitingForKeyring,
     ];
 
     pub fn as_str(self) -> &'static str {
@@ -80,6 +84,7 @@ impl AccountState {
             AccountState::BackingOff => "backing_off",
             AccountState::Offline => "offline",
             AccountState::Stopped => "stopped",
+            AccountState::WaitingForKeyring => "waiting_for_keyring",
         }
     }
 }

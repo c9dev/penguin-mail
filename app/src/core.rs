@@ -1268,6 +1268,14 @@ impl Reach {
         let started = match (self.demo.as_deref(), account.provider) {
             // The demo's accounts talk to their sample servers and need no
             // Google client and no password.
+            // `MAILRS_DEMO_STUCK_KEYRING` names an account whose start
+            // waits on a keyring that never answers, to see what the
+            // sidebar says then.
+            (Some(_), _)
+                if std::env::var("MAILRS_DEMO_STUCK_KEYRING").is_ok_and(|id| id == account.id.to_string()) =>
+            {
+                return Err(SyncError::NoAnswer(mailrs_sync::KEYRING).into());
+            }
             (Some(demo), _) => {
                 return demo
                     .services(account.id)
