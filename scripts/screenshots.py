@@ -597,6 +597,25 @@ def categories():
     return run
 
 
+def outlook():
+    """The demo's Outlook account: its Inbox with the Focused and Other
+    tabs, the Travel tag in the sidebar, and the booking open with its
+    Tags button. The sidebar's rows have no names that tell the Outlook
+    Inbox from the others, so this scrolls to the foot of the list, where
+    the Outlook account is the last section, and clicks where its Inbox
+    row lands."""
+    run = launch()
+    window = main_window()
+    scroll_down(150, 500, 80)
+    click(94, 415)
+    settle(2)
+    # The Focused tab holds the booking, first in the list.
+    click(480, 150)
+    settle(4)
+    capture(window, "outlook")
+    return run
+
+
 def to_calendar(view="Week"):
     act("radio button", contains="Calendar, ")
     find("radio button", name=view)
@@ -672,6 +691,7 @@ SHOTS = {
     "flags": flags,
     "vips": vips,
     "categories": categories,
+    "outlook": outlook,
     "automatic-reply": automatic_reply,
     "rules": rules,
     "assistant": assistant,
