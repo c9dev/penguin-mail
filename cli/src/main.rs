@@ -19,7 +19,7 @@ use mailrs_store::{Db, accounts, messages};
 use mailrs_sync::passwords::{KeyringPasswords, PasswordStore};
 use mailrs_sync::{
     AccountServices, AccountSync, BackendError, SyncEngine, SyncError, TriageAction,
-    connect_account, connect_imap, connect_microsoft, export, now_millis,
+    connect_account, connect_imap, connect_microsoft, connect_pop3, export, now_millis,
 };
 
 use mailrs_sync::config::{Config, config_path, data_dir, migrate_old_dirs, secure_dirs};
@@ -338,8 +338,14 @@ async fn run_sync(db: &Db, dir: &Path, config: &Config) -> Result<()> {
                     err => err.into(),
                 }),
             Provider::Microsoft => connect_microsoft_account(db, account, window_days).await,
-            // T7 connects POP3 accounts; until then one stays idle.
-            Provider::Pop3 => Err(anyhow!("POP3 accounts are not connected yet")),
+            Provider::Pop3 => connect_pop3(db, Arc::clone(&passwords), account)
+                .await
+                .map_err(|err| match err {
+                    SyncError::Backend(BackendError::NeedsReauth) => {
+                        anyhow!("needs to sign in again in Penguin Mail")
+                    }
+                    err => err.into(),
+                }),
         };
         match connected {
             Ok(services) => engine.start_account(account.id, services),
@@ -653,7 +659,7 @@ async fn account_sync(db: &Db, config: &Config, email: &str) -> Result<AccountSy
         }
         Provider::Imap => connect_imap(db, passwords(), &account, engine.window_days).await?,
         Provider::Microsoft => connect_microsoft_account(db, &account, engine.window_days).await?,
-        Provider::Pop3 => bail!("POP3 accounts are not connected yet"),
+        Provider::Pop3 => connect_pop3(db, passwords(), &account).await?,
     };
     let (events, _) = async_channel::unbounded();
     Ok(

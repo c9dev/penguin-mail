@@ -32,7 +32,8 @@ use mailrs_sync::sign_in::{
 use mailrs_sync::{
     AccountServices, AccountSettings, AccountSync, Accounts, BackendError, ContactBook, Failure,
     History, Invitations, MailAction, MailActions, Mailboxes, MovedFrom, OneClick, Outbox, Outcome,
-    SyncEngine, SyncError, Undone, connect_account, connect_imap, connect_microsoft, now_millis,
+    SyncEngine, SyncError, Undone, connect_account, connect_imap, connect_microsoft, connect_pop3,
+    now_millis,
     servers_for,
 };
 
@@ -418,8 +419,15 @@ impl Core {
                             started => started.map_err(Into::into),
                         }
                     }
-                    // T7 connects POP3 accounts; until then one stays idle.
-                    (None, Provider::Pop3) => Err(anyhow!("POP3 accounts are not connected yet")),
+                    (None, Provider::Pop3) => {
+                        match connect_pop3(&db, Arc::clone(&passwords), &account).await {
+                            Err(SyncError::Backend(BackendError::NeedsReauth)) => {
+                                needs_sign_in(&events, account.id).await;
+                                continue;
+                            }
+                            started => started.map_err(Into::into),
+                        }
+                    }
                     (None, Provider::Microsoft) => {
                         let Some(client) = mailrs_graph::built_in_client() else {
                             // This build cannot refresh the account's token.
@@ -984,8 +992,9 @@ impl Core {
         .await
     }
 
-    /// Looks for the account's calendar, contacts and Sieve servers and
-    /// keeps what it finds. A new confirmed server restarts the account's
+    /// Looks for the account's calendar, contacts and Sieve servers
+    /// (calendar and contacts alone for a POP3 account) and keeps what it
+    /// finds. A new confirmed server restarts the account's
     /// services, so the calendar and contacts show without a restart. The
     /// demo asks nobody.
     pub async fn find_services(&self, account: Account) -> Result<ServicesFound> {
@@ -999,25 +1008,26 @@ impl Core {
         );
         let window_days = self.config.borrow().engine_config().window_days;
         self.call(async move {
-            let (user, password) = imap_password(&db, &passwords, account.id).await?;
-            let saved = db
-                .read(move |c| mailrs_store::servers::load(c, account.id))
-                .await?
-                .ok_or_else(|| anyhow!("no servers kept"))?;
+            let (host, user, password) = incoming_login(&db, &passwords, account.id).await?;
             let net = RealNet::new()?;
-            let found = finding::find_services(
+            let mut found = finding::find_services(
                 &net,
                 &finding::RealProbe,
                 &account.email,
                 account.provider_name(),
-                &saved.imap.host,
+                &host,
                 &user,
                 &password,
             )
             .await;
+            // POP3 mail never reaches a server's rules, so a ManageSieve
+            // host found beside a POP3 server is not kept.
+            if account.provider == Provider::Pop3 {
+                found.sieve = None;
+            }
             let changed = finding::keep_found(&db, account.id, &found).await?;
             if changed {
-                restart_imap(&db, passwords, engine, &account, window_days).await?;
+                restart_services(&db, passwords, engine, &account, window_days).await?;
             }
             Ok::<_, anyhow::Error>(ServicesFound {
                 calendar: found.caldav.is_some_and(|f| f.confirmed),
@@ -1052,7 +1062,7 @@ impl Core {
         );
         let window_days = self.config.borrow().engine_config().window_days;
         self.call(async move {
-            let (user, password) = imap_password(&db, &passwords, account.id).await?;
+            let (_, user, password) = incoming_login(&db, &passwords, account.id).await?;
             finding::use_typed(
                 &finding::RealProbe,
                 &db,
@@ -1063,7 +1073,7 @@ impl Core {
                 &password,
             )
             .await?;
-            restart_imap(&db, passwords, engine, &account, window_days).await
+            restart_services(&db, passwords, engine, &account, window_days).await
         })
         .await
     }
@@ -1077,10 +1087,10 @@ impl Core {
         );
         let window_days = self.config.borrow().engine_config().window_days;
         self.call(async move {
-            let (_, password) = imap_password(&db, &passwords, account.id).await?;
+            let (_, _, password) = incoming_login(&db, &passwords, account.id).await?;
             finding::confirm_found(&finding::RealProbe, &db, account.id, kind, &password)
                 .await?;
-            restart_imap(&db, passwords, engine, &account, window_days).await
+            restart_services(&db, passwords, engine, &account, window_days).await
         })
         .await
     }
@@ -1140,7 +1150,7 @@ impl Core {
     }
 }
 
-/// What a search for an IMAP account's other servers found in use.
+/// What a search for an IMAP or POP3 account's other servers found in use.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct ServicesFound {
     pub calendar: bool,
@@ -1148,26 +1158,32 @@ pub struct ServicesFound {
     pub rules_on_server: bool,
 }
 
-/// The IMAP user name and the password in the keyring for `account_id`.
-async fn imap_password(
+/// The incoming server's host, the user name it took, and the password in
+/// the keyring for `account_id`: an IMAP account's, or a POP3 account's.
+async fn incoming_login(
     db: &Db,
     passwords: &Arc<Passwords>,
     account_id: AccountId,
-) -> anyhow::Result<(String, String)> {
+) -> anyhow::Result<(String, String, String)> {
     let saved = db
-        .read(move |c| mailrs_store::servers::load(c, account_id))
+        .read(move |c| {
+            Ok(match mailrs_store::servers::load(c, account_id)? {
+                Some(servers) => Some(servers.imap),
+                None => mailrs_store::servers::load_pop3(c, account_id)?.map(|servers| servers.pop3),
+            })
+        })
         .await?
         .ok_or_else(|| anyhow!("no servers kept"))?;
     let passwords = Arc::clone(passwords);
     let password = tokio::task::spawn_blocking(move || passwords.load(account_id))
         .await??
         .ok_or_else(|| anyhow!("no password kept"))?;
-    Ok((saved.imap.user_name, password))
+    Ok((saved.host, saved.user_name, password))
 }
 
 /// Builds the account's services again from the store and restarts its
 /// loop on them, so a server found or typed serves at once.
-async fn restart_imap(
+async fn restart_services(
     db: &Db,
     passwords: Arc<Passwords>,
     engine: Option<Arc<SyncEngine>>,
@@ -1175,7 +1191,10 @@ async fn restart_imap(
     window_days: i64,
 ) -> anyhow::Result<()> {
     let Some(engine) = engine else { return Ok(()) };
-    let services = connect_imap(db, passwords, account, window_days).await?;
+    let services = match account.provider {
+        Provider::Pop3 => connect_pop3(db, passwords, account).await?,
+        _ => connect_imap(db, passwords, account, window_days).await?,
+    };
     engine.start_account(account.id, services);
     Ok(())
 }
