@@ -195,6 +195,49 @@ pub fn forget_gone(
     }
 }
 
+/// Drops the failure count of every UIDL `listed`, the server's whole list,
+/// lacks, a page at a time. Such a message will never download, so it
+/// leaves the account's menu. True when one that the menu showed went.
+///
+/// A message the server lists again later starts its count from nothing
+/// and reaches the menu again at its third failure. To this account it is
+/// a new arrival: the server may have given its UIDL to another message.
+pub fn forget_gone_failures(
+    conn: &Connection,
+    account_id: AccountId,
+    listed: &HashSet<String>,
+) -> Result<bool> {
+    let mut after = String::new();
+    let mut shown_went = false;
+    loop {
+        let page: Vec<(String, i64)> = conn
+            .prepare_cached(
+                "SELECT uidl, failures FROM pop3_failures WHERE account_id = ?1 AND uidl > ?2 \
+                 ORDER BY uidl LIMIT ?3",
+            )?
+            .query_map(params![account_id, after, PAGE as i64], |row| {
+                Ok((row.get(0)?, row.get(1)?))
+            })?
+            .collect::<rusqlite::Result<_>>()?;
+        let Some((last, _)) = page.last() else {
+            return Ok(shown_went);
+        };
+        after = last.clone();
+        let gone: Vec<String> = page
+            .into_iter()
+            .filter(|(uidl, _)| !listed.contains(uidl))
+            .map(|(uidl, failures)| {
+                shown_went |= failures >= SHOWN_AFTER;
+                uidl
+            })
+            .collect();
+        conn.execute(
+            "DELETE FROM pop3_failures WHERE account_id = ?1 AND uidl IN (SELECT value FROM json_each(?2))",
+            params![account_id, json(&gone)],
+        )?;
+    }
+}
+
 /// Why a message did not download. Stored as a code, so the window shows
 /// it in the language it runs in.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

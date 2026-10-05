@@ -194,6 +194,24 @@ async fn one_refused_retr_leaves_the_rest_downloaded_and_counts_a_failure() {
 }
 
 #[tokio::test]
+async fn a_failing_message_leaves_the_menu_once_the_server_drops_it() {
+    let fake = FakePop3::default()
+        .with_message("bad", &pop3_mail(1))
+        .with_message("u2", &pop3_mail(2))
+        .failing_retr("bad");
+    let h = pop3_harness(fake, RemoveSetting::Never).await;
+    for _ in 0..3 {
+        h.sync.pop3_check().await.unwrap();
+    }
+    assert_eq!(failing(&h).await.len(), 1);
+    drain(&h);
+    h.fake.take("bad");
+    h.sync.pop3_check().await.unwrap();
+    assert!(failing(&h).await.is_empty(), "deleted through webmail, so it will never download");
+    assert!(drain(&h).iter().any(|e| matches!(e, ChangeEvent::LabelsChanged { .. })), "the menu loses its item");
+}
+
+#[tokio::test]
 async fn a_message_over_the_size_limit_is_counted_without_retr() {
     let fake = FakePop3::default().with_message("big", &pop3_mail(1)).claiming_size("big", MOST_MESSAGE_BYTES + 1);
     let h = pop3_harness(fake, RemoveSetting::Never).await;

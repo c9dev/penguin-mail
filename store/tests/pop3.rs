@@ -170,6 +170,29 @@ fn a_failure_keeps_its_latest_reason_and_the_message_named_once_known() {
 }
 
 #[test]
+fn a_failure_goes_once_the_server_stops_listing_it() {
+    let (conn, id) = pop3_account(RemoveSetting::Never);
+    for _ in 0..3 {
+        pop3::record_failure(&conn, id, "shown", FailReason::Refused, "-ERR").unwrap();
+    }
+    pop3::record_failure(&conn, id, "once", FailReason::Refused, "-ERR").unwrap();
+    pop3::record_failure(&conn, id, "kept", FailReason::Refused, "-ERR").unwrap();
+    let listed: HashSet<String> = ["kept".to_string()].into();
+    assert!(
+        pop3::forget_gone_failures(&conn, id, &listed).unwrap(),
+        "a message in the menu went, so the menu changes"
+    );
+    assert_eq!(
+        pop3::failure_reasons(&conn, id, &uidls(&["kept", "once", "shown"])).unwrap(),
+        [("kept".to_string(), FailReason::Refused)]
+    );
+    assert!(
+        !pop3::forget_gone_failures(&conn, id, &listed).unwrap(),
+        "nothing left to go"
+    );
+}
+
+#[test]
 fn a_uidl_the_server_no_longer_lists_is_forgotten() {
     let (conn, id) = pop3_account(RemoveSetting::Never);
     for n in 0..(pop3::PAGE + 3) {

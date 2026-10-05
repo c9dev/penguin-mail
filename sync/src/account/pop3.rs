@@ -82,18 +82,23 @@ impl AccountSync {
         // A QUIT that did not come back carried out no DELE; the rows still
         // want removal, and the next check sends them again.
         quit.map_err(BackendError::from)?;
-        self.db
+        let menu_changed = self
+            .db
             .write(move |c| {
                 pop3::mark_removed(c, account_id, &removed)?;
                 // A server listing nothing may have lost its list for a
                 // moment, so the rows wait for a listing that names
                 // something before any is forgotten.
-                if !listed.is_empty() {
-                    pop3::forget_gone(c, account_id, &listed)?;
+                if listed.is_empty() {
+                    return Ok(false);
                 }
-                Ok(())
+                pop3::forget_gone(c, account_id, &listed)?;
+                pop3::forget_gone_failures(c, account_id, &listed)
             })
             .await?;
+        if menu_changed {
+            self.emit(ChangeEvent::LabelsChanged { account_id });
+        }
         Ok(())
     }
 
@@ -341,7 +346,9 @@ impl AccountSync {
     }
 
     /// Counts a failed RETR of message `id`, called `uidl`, and why. True
-    /// when the message just reached the account's menu. With the session
+    /// when the message just reached the account's menu. One the server
+    /// stopped listing and lists again counts from nothing and reaches the
+    /// menu again (`pop3::forget_gone_failures`). With the session
     /// still open, that third failure reads the message's headers with
     /// `TOP n 0`, so the menu can say who sent it and what it is about.
     async fn count_failure<P: Pop3Api>(
