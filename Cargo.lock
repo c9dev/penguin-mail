@@ -2422,6 +2422,7 @@ dependencies = [
  "mailrs-discover",
  "mailrs-domain",
  "mailrs-gmail",
+ "mailrs-graph",
  "mailrs-imap",
  "mailrs-mime",
  "mailrs-pgp",
@@ -2475,6 +2476,7 @@ dependencies = [
  "clap",
  "mailrs-domain",
  "mailrs-gmail",
+ "mailrs-graph",
  "mailrs-imap",
  "mailrs-store",
  "mailrs-sync",
@@ -2703,6 +2705,7 @@ dependencies = [
  "toml",
  "tracing",
  "tracing-subscriber",
+ "wiremock",
 ]
 
 [[package]]

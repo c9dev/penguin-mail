@@ -1,6 +1,7 @@
-//! Where an IMAP account's password lives: the desktop keyring, under one
-//! service name for every IMAP account, with the account's id as the
-//! user. The store keeps the servers and never the password.
+//! Where an IMAP account's password and a Microsoft account's refresh
+//! token live: the desktop keyring, under one service name for each kind,
+//! with the account's id as the user. The store keeps the servers and
+//! never the secret.
 
 use std::collections::HashMap;
 use std::sync::{Mutex, PoisonError};
@@ -43,6 +44,18 @@ impl KeyringPasswords {
     pub fn new() -> Self {
         KeyringPasswords {
             service: Self::SERVICE.to_string(),
+        }
+    }
+
+    /// Microsoft's refresh tokens, apart from IMAP passwords and Google's
+    /// tokens, keyed by account id like the passwords. Both the desktop
+    /// keyring and the Flatpak's Secret portal file key by service name,
+    /// so this works on either.
+    pub const MICROSOFT_SERVICE: &'static str = "penguin-mail-microsoft";
+
+    pub fn microsoft() -> Self {
+        KeyringPasswords {
+            service: Self::MICROSOFT_SERVICE.to_string(),
         }
     }
 

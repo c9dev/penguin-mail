@@ -1,5 +1,5 @@
-//! Which Google client an account signs in with, and keeping an IMAP
-//! account that just signed in.
+//! Which Google client an account signs in with, and keeping an IMAP or
+//! Microsoft account that just signed in.
 
 use std::sync::Arc;
 
@@ -131,6 +131,28 @@ pub enum ImapSignInError {
     Password(#[from] PasswordError),
 }
 
+/// A Microsoft account a person just signed in to. No `Debug`: the token
+/// must not reach a log line.
+pub struct NewMicrosoft {
+    pub address: String,
+    /// "Outlook" or "Microsoft 365", from the id token's tenant.
+    pub provider_name: String,
+    pub refresh_token: String,
+    /// The scopes the token answer carried, as `Granted::to_scope` writes them.
+    pub granted: Option<String>,
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum MicrosoftSignInError {
+    /// The address belongs to an account another provider serves.
+    #[error("{}", taken(.address, .provider))]
+    Taken { address: String, provider: String },
+    #[error(transparent)]
+    Store(#[from] StoreError),
+    #[error(transparent)]
+    Password(#[from] PasswordError),
+}
+
 fn taken(address: &str, provider: &str) -> String {
     fill(
         &gettext("{address} is already in Penguin Mail as a {provider} account."),
@@ -218,6 +240,89 @@ pub async fn imap_signed_in<P: PasswordStore + 'static>(
         .ok_or(ImapSignInError::Store(StoreError::Sqlite(
             rusqlite::Error::QueryReturnedNoRows,
         )))
+}
+
+/// Keeps a Microsoft account that just signed in: adds it, or finds the
+/// one already here for the address, and stores its refresh token, the
+/// scopes granted and the scopes asked. An account signing in again keeps
+/// its mail and stops needing a sign-in. As with IMAP, the token goes in
+/// before an existing row changes, and a new row goes again when the
+/// keyring refuses, so nothing is left that could never start.
+pub async fn microsoft_signed_in<P: PasswordStore + 'static>(
+    db: &Db,
+    tokens: Arc<P>,
+    new: NewMicrosoft,
+    now: EpochMillis,
+    asked: &str,
+) -> Result<Account, MicrosoftSignInError> {
+    let NewMicrosoft {
+        address,
+        provider_name,
+        refresh_token,
+        granted,
+    } = new;
+    let email = address.clone();
+    let before = db
+        .read(move |c| accounts::account_by_email(c, &email))
+        .await?;
+    if let Some(held) = &before {
+        if held.provider != Provider::Microsoft {
+            return Err(MicrosoftSignInError::Taken {
+                address,
+                provider: held.provider_name().to_string(),
+            });
+        }
+        save_token(Arc::clone(&tokens), held.id, refresh_token.clone()).await?;
+    }
+    let (email, asked_scopes) = (address.clone(), asked.to_string());
+    let again = before.as_ref().map(|held| held.state);
+    let added = db
+        .write(move |c| {
+            let Some(id) = accounts::insert_microsoft_account(c, &email, &provider_name, now)?
+            else {
+                // Another provider's account took the address between the
+                // read and this write.
+                let held = accounts::account_by_email(c, &email)?;
+                return Ok(Err(held.map(|a| a.provider_name().to_string())));
+            };
+            if let Some(granted) = &granted {
+                accounts::set_granted(c, id, granted)?;
+            }
+            accounts::set_asked(c, id, &asked_scopes)?;
+            // Signing in again is what ends Needs Sign-In; the engine
+            // reports every other state itself once the account runs.
+            if again == Some(AccountState::NeedsReauth) {
+                accounts::set_state(c, id, AccountState::Ok)?;
+            }
+            Ok(Ok(id))
+        })
+        .await?;
+    let id = added.map_err(|provider| MicrosoftSignInError::Taken {
+        address: address.clone(),
+        provider: provider.unwrap_or_default(),
+    })?;
+    if before.is_none()
+        && let Err(err) = save_token(Arc::clone(&tokens), id, refresh_token).await
+    {
+        db.write(move |c| accounts::delete_account(c, id)).await?;
+        return Err(err);
+    }
+    db.read(move |c| accounts::account_by_email(c, &address))
+        .await?
+        .ok_or(MicrosoftSignInError::Store(StoreError::Sqlite(
+            rusqlite::Error::QueryReturnedNoRows,
+        )))
+}
+
+async fn save_token<P: PasswordStore + 'static>(
+    tokens: Arc<P>,
+    id: AccountId,
+    token: String,
+) -> Result<(), MicrosoftSignInError> {
+    tokio::task::spawn_blocking(move || tokens.save(id, &token))
+        .await
+        .map_err(|err| PasswordError::Keyring(err.to_string()))??;
+    Ok(())
 }
 
 /// Hands `password` to the keyring off the async runtime, since the
@@ -433,5 +538,62 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(kind, SignInClient::BuiltIn);
+    }
+
+    fn new_microsoft(address: &str) -> NewMicrosoft {
+        NewMicrosoft {
+            address: address.into(),
+            provider_name: "Outlook".into(),
+            refresh_token: "refresh-1".into(),
+            granted: Some("mail.readwrite openid".into()),
+        }
+    }
+
+    #[tokio::test]
+    async fn a_microsoft_sign_in_keeps_the_row_the_token_and_the_consent() {
+        let (_dir, db) = store();
+        let tokens = Arc::new(crate::passwords::MemoryPasswords::default());
+        let account = microsoft_signed_in(&db, Arc::clone(&tokens), new_microsoft("dana@outlook.com"), 0, "openid mail.readwrite")
+            .await
+            .unwrap();
+        assert_eq!(account.provider, mailrs_domain::Provider::Microsoft);
+        assert_eq!(tokens.load(account.id).unwrap().as_deref(), Some("refresh-1"));
+        let id = account.id;
+        let consent = db.read(move |c| accounts::consent(c, id)).await.unwrap();
+        assert_eq!(consent.granted.as_deref(), Some("mail.readwrite openid"));
+        assert_eq!(consent.asked.as_deref(), Some("openid mail.readwrite"));
+    }
+
+    #[tokio::test]
+    async fn a_microsoft_sign_in_for_a_gmail_address_is_refused_and_keeps_no_token() {
+        let (_dir, db) = store();
+        db.write(|c| accounts::insert_account(c, "dana@contoso.com", 0)).await.unwrap();
+        let tokens = Arc::new(crate::passwords::MemoryPasswords::default());
+        let refused = microsoft_signed_in(&db, Arc::clone(&tokens), new_microsoft("dana@contoso.com"), 0, "")
+            .await
+            .expect_err("Gmail holds the address");
+        assert_eq!(refused.to_string(), "dana@contoso.com is already in Penguin Mail as a Gmail account.");
+        assert_eq!(tokens.load(1).unwrap(), None);
+    }
+
+    #[tokio::test]
+    async fn signing_a_microsoft_account_in_again_ends_needs_sign_in() {
+        let (_dir, db) = store();
+        let tokens = Arc::new(crate::passwords::MemoryPasswords::default());
+        let first = microsoft_signed_in(&db, Arc::clone(&tokens), new_microsoft("dana@outlook.com"), 0, "").await.unwrap();
+        let id = first.id;
+        db.write(move |c| accounts::set_state(c, id, AccountState::NeedsReauth)).await.unwrap();
+        let again = microsoft_signed_in(
+            &db,
+            Arc::clone(&tokens),
+            NewMicrosoft { refresh_token: "refresh-2".into(), ..new_microsoft("dana@outlook.com") },
+            1,
+            "",
+        )
+        .await
+        .unwrap();
+        assert_eq!(again.id, id);
+        assert_eq!(again.state, AccountState::Ok);
+        assert_eq!(tokens.load(id).unwrap().as_deref(), Some("refresh-2"));
     }
 }

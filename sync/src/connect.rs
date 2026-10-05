@@ -4,6 +4,7 @@ use mailrs_dav::{DavClient, Login as DavLogin};
 use mailrs_discover::{Security, Server, UserName};
 use mailrs_domain::{Account, AccountState};
 use mailrs_gmail::{Granted, GmailClient, GmailError, OAuthClient, TokenStore};
+use mailrs_graph::MicrosoftClient;
 use mailrs_imap::{ImapClient, Login, SmtpClient};
 use mailrs_sieve::client::{Login as SieveLogin, ManageSieveClient};
 use mailrs_store::servers::{self, Saved, Servers};
@@ -13,7 +14,7 @@ use mailrs_store::{Db, accounts};
 use crate::passwords::{PasswordError, PasswordStore};
 use crate::{
     AccountClient, AccountServices, AnyAutoReply, AnyCalendar, AnyContacts, AnyRules, BackendError,
-    CalDav, CardDav, ImapSettings, LocalRules, SieveRules, SyncError,
+    CalDav, CardDav, ImapSettings, LocalRules, MicrosoftSettings, SieveRules, SyncError,
 };
 
 /// A Gmail client for `account`, built from its refresh token in `tokens`
@@ -51,6 +52,75 @@ pub async fn connect_account(
         account_id: account.id,
         client,
     })
+}
+
+/// The services for a Microsoft account, from the refresh token under its
+/// id and the scopes the store last recorded. No token means the account
+/// needs to sign in again, which the store records before this answers.
+/// Each token Microsoft rotates goes back to the keyring off the runtime,
+/// and each change of scopes back to the store.
+pub async fn connect_microsoft<P: PasswordStore + 'static>(
+    db: &Db,
+    tokens: Arc<P>,
+    client: MicrosoftClient,
+    account: &Account,
+    window_days: i64,
+) -> Result<AccountServices, SyncError> {
+    connect_microsoft_at(db, tokens, client, account, window_days, mailrs_graph::GRAPH_BASE).await
+}
+
+/// [`connect_microsoft`] against `base`, which tests point at a mock.
+pub async fn connect_microsoft_at<P: PasswordStore + 'static>(
+    db: &Db,
+    tokens: Arc<P>,
+    client: MicrosoftClient,
+    account: &Account,
+    window_days: i64,
+    base: &str,
+) -> Result<AccountServices, SyncError> {
+    let id = account.id;
+    let held = Arc::clone(&tokens);
+    let refresh = tokio::task::spawn_blocking(move || held.load(id))
+        .await
+        .map_err(|err| PasswordError::Keyring(err.to_string()))??;
+    let Some(refresh) = refresh else {
+        db.write(move |c| accounts::set_state(c, id, AccountState::NeedsReauth))
+            .await?;
+        return Err(BackendError::NeedsReauth.into());
+    };
+    let consent = db.read(move |c| accounts::consent(c, id)).await?;
+    let granted = consent.granted.as_deref().map(mailrs_graph::Granted::parse);
+    let saver = Arc::clone(&tokens);
+    let store = db.clone();
+    let session = mailrs_graph::Session::new(client, refresh)
+        .with_granted(granted)
+        .on_rotated(move |token| {
+            let saver = Arc::clone(&saver);
+            tokio::spawn(async move {
+                let saved = tokio::task::spawn_blocking(move || saver.save(id, &token)).await;
+                if !matches!(saved, Ok(Ok(()))) {
+                    tracing::warn!(account = id, "could not keep Microsoft's new refresh token");
+                }
+            });
+        })
+        .on_granted(move |granted| {
+            let (store, scope) = (store.clone(), granted.to_scope());
+            tokio::spawn(async move {
+                if let Err(err) = store.write(move |c| accounts::set_granted(c, id, &scope)).await {
+                    tracing::warn!(account = id, %err, "could not save the granted scopes");
+                }
+            });
+        });
+    let graph = mailrs_graph::Graph::with_base(Arc::new(session), base)
+        .map_err(crate::services::microsoft::backend)?;
+    Ok(AccountServices::microsoft(
+        graph,
+        MicrosoftSettings {
+            address: account.email.clone(),
+            provider_name: account.provider_name().to_string(),
+            window_days,
+        },
+    ))
 }
 
 /// The services for an IMAP account, from the servers the store keeps

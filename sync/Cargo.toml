@@ -55,6 +55,7 @@ mailrs-dav = { workspace = true, features = ["fake"] }
 # The in-memory network the service-finding tests run against.
 mailrs-discover = { workspace = true, features = ["fake"] }
 tempfile.workspace = true
+wiremock.workspace = true
 # Lets a test read what the code logged.
 tracing-subscriber.workspace = true
 # `start_paused` lets a test watch a retry wait out Gmail's Retry-After

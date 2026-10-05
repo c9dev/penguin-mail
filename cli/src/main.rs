@@ -19,7 +19,7 @@ use mailrs_store::{Db, accounts, messages};
 use mailrs_sync::passwords::{KeyringPasswords, PasswordStore};
 use mailrs_sync::{
     AccountServices, AccountSync, BackendError, SyncEngine, SyncError, TriageAction,
-    connect_account, connect_imap, export, now_millis,
+    connect_account, connect_imap, connect_microsoft, export, now_millis,
 };
 
 use mailrs_sync::config::{Config, config_path, data_dir, migrate_old_dirs, secure_dirs};
@@ -193,6 +193,31 @@ fn passwords() -> Arc<KeyringPasswords> {
     Arc::new(KeyringPasswords::new())
 }
 
+fn microsoft_tokens() -> Arc<KeyringPasswords> {
+    Arc::new(KeyringPasswords::microsoft())
+}
+
+/// A Microsoft account's services. Adding one stays in the app, which has
+/// a browser to hand the sign-in page to; a build with no Microsoft client
+/// cannot refresh the account's token.
+async fn connect_microsoft_account(
+    db: &Db,
+    account: &Account,
+    window_days: i64,
+) -> Result<AccountServices> {
+    let Some(client) = mailrs_graph::built_in_client() else {
+        bail!("this build has no Microsoft client, so it cannot sync this account");
+    };
+    connect_microsoft(db, microsoft_tokens(), client, account, window_days)
+        .await
+        .map_err(|err| match err {
+            SyncError::Backend(BackendError::NeedsReauth) => {
+                anyhow!("needs to sign in again in Penguin Mail")
+            }
+            err => err.into(),
+        })
+}
+
 async fn add_account(db: &Db) -> Result<()> {
     // Every sign-in, first or again, goes through the build's client.
     let oauth = built_in_client()
@@ -261,6 +286,13 @@ async fn remove_account(db: &Db, email: &str) -> Result<()> {
             tokio::task::spawn_blocking(move || passwords.delete(id)).await??;
             println!("Removed {email} and its password.");
         }
+        Provider::Microsoft => {
+            let tokens = microsoft_tokens();
+            tokio::task::spawn_blocking(move || tokens.delete(id)).await??;
+            println!(
+                "Removed {email} and its sign-in. Revoke Microsoft's side at https://account.live.com/consent/Manage if you want."
+            );
+        }
     }
     Ok(())
 }
@@ -305,6 +337,7 @@ async fn run_sync(db: &Db, dir: &Path, config: &Config) -> Result<()> {
                     }
                     err => err.into(),
                 }),
+            Provider::Microsoft => connect_microsoft_account(db, account, window_days).await,
         };
         match connected {
             Ok(services) => engine.start_account(account.id, services),
@@ -617,6 +650,7 @@ async fn account_sync(db: &Db, config: &Config, email: &str) -> Result<AccountSy
             AccountServices::google(connect_account(oauth, token_store(), &account, db).await?)
         }
         Provider::Imap => connect_imap(db, passwords(), &account, engine.window_days).await?,
+        Provider::Microsoft => connect_microsoft_account(db, &account, engine.window_days).await?,
     };
     let (events, _) = async_channel::unbounded();
     Ok(

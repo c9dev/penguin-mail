@@ -19,6 +19,7 @@ packaging-flatpak = ["mailrs-gmail/packaging-flatpak", "mailrs-sync/packaging-fl
 [dependencies]
 mailrs-domain.workspace = true
 mailrs-gmail.workspace = true
+mailrs-graph.workspace = true
 mailrs-imap.workspace = true
 mailrs-store.workspace = true
 mailrs-sync.workspace = true

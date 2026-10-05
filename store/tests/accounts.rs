@@ -1,4 +1,4 @@
-use mailrs_domain::{AccountState, SignInClient};
+use mailrs_domain::{AccountState, Provider, SignInClient};
 use mailrs_store::accounts::{self, SyncCursor};
 use mailrs_store::{open_connection, open_in_memory, schema_version};
 
@@ -190,4 +190,24 @@ fn adding_an_imap_address_again_keeps_one_account_under_the_new_name() {
     let all = accounts::list_accounts(&conn).unwrap();
     assert_eq!(all.len(), 1);
     assert_eq!(all[0].provider_name(), "Fastmail");
+}
+
+#[test]
+fn a_microsoft_account_keeps_its_provider_and_name() {
+    let conn = open_in_memory().unwrap();
+    let id = accounts::insert_microsoft_account(&conn, "dana@outlook.com", "Outlook", 0)
+        .unwrap()
+        .unwrap();
+    let account = accounts::account(&conn, id).unwrap().unwrap();
+    assert_eq!(account.provider, Provider::Microsoft);
+    assert_eq!(account.provider_name(), "Outlook");
+    // Signing in again finds the same row and takes the new name.
+    assert_eq!(
+        accounts::insert_microsoft_account(&conn, "dana@outlook.com", "Microsoft 365", 5).unwrap(),
+        Some(id)
+    );
+    assert_eq!(accounts::account(&conn, id).unwrap().unwrap().provider_name(), "Microsoft 365");
+    // Another provider's address is left alone.
+    accounts::insert_account(&conn, "dana@gmail.com", 0).unwrap();
+    assert_eq!(accounts::insert_microsoft_account(&conn, "dana@gmail.com", "Outlook", 0).unwrap(), None);
 }
