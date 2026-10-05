@@ -155,3 +155,4 @@ sync/src/services/sieve.rs
 sync/src/services/microsoft/errors.rs
 sync/src/services/caldav.rs
 sync/src/services/finding.rs
+sync/src/services/microsoft/calendar.rs

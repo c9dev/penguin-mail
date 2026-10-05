@@ -9485,6 +9485,41 @@ msgstr "A mensagem não indica a quem a enviar."
 msgid "This rule is read-only, so Penguin Mail leaves it as it is."
 msgstr "Esta regra é só de leitura, por isso o Penguin Mail deixa-a como está."
 
+#: sync/src/services/microsoft/calendar.rs:317
+msgid "Outlook cannot repeat an event that way."
+msgstr "O Outlook não consegue repetir um evento dessa forma."
+
+#: sync/src/services/microsoft/calendar.rs:681
+msgid "Outlook cannot attach a file to an event."
+msgstr "O Outlook não consegue anexar um ficheiro a um evento."
+
+#: sync/src/services/microsoft/calendar.rs:685
+msgid "Outlook has no files to share."
+msgstr "O Outlook não tem ficheiros para partilhar."
+
+#: sync/src/services/microsoft/calendar.rs:694
+msgid "Outlook cannot move an event to another calendar."
+msgstr "O Outlook não consegue mover um evento para outro calendário."
+
+#. What Outlook has no call for is a refusal, not `Unsupported`:
+#. that answer would keep the change in the queue for good.
+#: sync/src/services/microsoft/calendar.rs:728
+msgid "Outlook cannot take a calendar off the list."
+msgstr "O Outlook não consegue retirar um calendário da lista."
+
+#: sync/src/services/microsoft/calendar.rs:729
+msgid "Outlook cannot hide a calendar on all your devices."
+msgstr ""
+"O Outlook não consegue ocultar um calendário em todos os seus dispositivos."
+
+#: sync/src/services/microsoft/calendar.rs:730
+msgid "Outlook cannot subscribe to a calendar by its address."
+msgstr "O Outlook não consegue subscrever um calendário pelo endereço."
+
+#: sync/src/services/microsoft/calendar.rs:731
+msgid "Outlook has no other calendars to add."
+msgstr "O Outlook não tem outros calendários para adicionar."
+
 #: sync/src/services/microsoft/errors.rs:18
 msgid ""
 "This mailbox is on your organization's own Exchange server, which Penguin "

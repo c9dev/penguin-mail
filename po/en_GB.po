@@ -8865,6 +8865,40 @@ msgstr "The message names nobody to send it to."
 msgid "This rule is read-only, so Penguin Mail leaves it as it is."
 msgstr "This rule is read-only, so Penguin Mail leaves it as it is."
 
+#: sync/src/services/microsoft/calendar.rs:317
+msgid "Outlook cannot repeat an event that way."
+msgstr "Outlook cannot repeat an event that way."
+
+#: sync/src/services/microsoft/calendar.rs:681
+msgid "Outlook cannot attach a file to an event."
+msgstr "Outlook cannot attach a file to an event."
+
+#: sync/src/services/microsoft/calendar.rs:685
+msgid "Outlook has no files to share."
+msgstr "Outlook has no files to share."
+
+#: sync/src/services/microsoft/calendar.rs:694
+msgid "Outlook cannot move an event to another calendar."
+msgstr "Outlook cannot move an event to another calendar."
+
+#. What Outlook has no call for is a refusal, not `Unsupported`:
+#. that answer would keep the change in the queue for good.
+#: sync/src/services/microsoft/calendar.rs:728
+msgid "Outlook cannot take a calendar off the list."
+msgstr "Outlook cannot take a calendar off the list."
+
+#: sync/src/services/microsoft/calendar.rs:729
+msgid "Outlook cannot hide a calendar on all your devices."
+msgstr "Outlook cannot hide a calendar on all your devices."
+
+#: sync/src/services/microsoft/calendar.rs:730
+msgid "Outlook cannot subscribe to a calendar by its address."
+msgstr "Outlook cannot subscribe to a calendar by its address."
+
+#: sync/src/services/microsoft/calendar.rs:731
+msgid "Outlook has no other calendars to add."
+msgstr "Outlook has no other calendars to add."
+
 #: sync/src/services/microsoft/errors.rs:18
 msgid "This mailbox is on your organization's own Exchange server, which Penguin Mail cannot reach."
 msgstr "This mailbox is on your organisation's own Exchange server, which Penguin Mail cannot reach."
