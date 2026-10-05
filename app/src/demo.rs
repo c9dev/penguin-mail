@@ -23,7 +23,7 @@ use mailrs_gmail::{LabelColor, RemoteLabel, SendAs};
 use mailrs_store::servers::{self, Saved, Security, Servers};
 use mailrs_store::{Db, Result, StoreError, accounts, address_book, invitations};
 use mailrs_sync::calendar_copy::CalendarCopy;
-use mailrs_sync::fake::{DavKind, FakeDav, FakeGmail, FakeImap, FakeSmtp, fill_store};
+use mailrs_sync::fake::{DavKind, FakeDav, FakeGmail, FakeGraph, FakeImap, FakeSmtp, fill_store};
 use mailrs_store::services::{FoundService, ServiceKind};
 use mailrs_sync::{
     AccountServices, AccountSync, AnyCalendar, AnyContacts, AnyRules, CalDav, CardDav, ContactBook, DEFAULT_WINDOW_DAYS,
@@ -32,6 +32,7 @@ use mailrs_sync::{
 use rusqlite::Connection;
 
 pub mod folder;
+mod outlook;
 mod pages;
 
 /// The id of the draft behind the sample draft message, as Gmail would hold it.
@@ -747,6 +748,7 @@ enum DemoServer {
         dav: Arc<FakeDav>,
         db: Db,
     },
+    Microsoft(Arc<FakeGraph>),
 }
 
 impl DemoMail {
@@ -755,6 +757,9 @@ impl DemoMail {
         Some(match self.0.get(&account_id)? {
             DemoServer::Gmail(gmail) => AccountServices::fake(Arc::clone(gmail)),
             DemoServer::Imap { imap, smtp, dav, db } => imap_services(imap, smtp, dav, db, account_id),
+            DemoServer::Microsoft(graph) => {
+                AccountServices::fake_microsoft_with(Arc::clone(graph), outlook::settings())
+            }
         })
     }
 
@@ -763,7 +768,7 @@ impl DemoMail {
     fn gmail(&self, account_id: AccountId) -> Option<Arc<FakeGmail>> {
         match self.0.get(&account_id)? {
             DemoServer::Gmail(gmail) => Some(Arc::clone(gmail)),
-            DemoServer::Imap { .. } => None,
+            DemoServer::Imap { .. } | DemoServer::Microsoft(_) => None,
         }
     }
 }
@@ -839,6 +844,9 @@ pub async fn seed(db: &Db, now: EpochMillis) -> std::result::Result<DemoMail, Sy
     }
     syncing.insert(account_id, sync);
     mail.insert(account_id, server);
+    let (outlook_id, graph, sync) = outlook::seed_outlook(db, now).await?;
+    syncing.insert(outlook_id, sync);
+    mail.insert(outlook_id, DemoServer::Microsoft(graph));
 
     // Reads each account's calendars into the store now, so the demo
     // opens already synced: the assistant and the invitation card's clash
@@ -853,6 +861,7 @@ pub async fn seed(db: &Db, now: EpochMillis) -> std::result::Result<DemoMail, Sy
     // and the photo folder is never touched.
     let book = ContactBook::new(seeding, db.clone(), std::env::temp_dir());
     book.refresh(account_id).await?;
+    book.refresh(outlook_id).await?;
     // Parents' evening is a change made on this computer and not sent
     // yet, as the mockup draws it. It goes straight into the copy with no
     // queued change, so the demo never sends it and it stays waiting;
@@ -2681,6 +2690,50 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn the_demo_has_an_outlook_account_with_tags_focus_and_a_calendar() {
+        let demo = demo().await;
+        let account = demo
+            .db
+            .read(|c| accounts::account_by_email(c, outlook::OUTLOOK))
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(account.provider, mailrs_domain::Provider::Microsoft);
+        assert_eq!(account.provider_name(), "Outlook");
+        let services = demo.mail.services(account.id).expect("the demo serves it");
+        let offers = services.offers();
+        assert!(offers.tags && offers.focused && offers.calendar && offers.contacts);
+        let id = account.id;
+        let tags = demo.db.read(move |c| mailrs_store::labels::tag_ids(c, id)).await.unwrap();
+        assert!(tags.contains("category:Travel"), "{tags:?}");
+        let counts = demo
+            .db
+            .read(move |c| {
+                let filter = ThreadFilter::account(id, MailSet::Role(Role::Inbox));
+                threads::category_unread_threads(c, &filter)
+            })
+            .await
+            .unwrap();
+        assert!(counts[&mailrs_domain::Category::Other] > 0 && counts[&mailrs_domain::Category::Focused] > 0);
+        let calendars = demo.db.read(move |c| mailrs_store::calendar::calendars(c, id)).await.unwrap();
+        assert!(!calendars.is_empty());
+        let (from, to) = (demo.now - 40 * 86_400_000, demo.now + 40 * 86_400_000);
+        let seen = demo
+            .db
+            .read(move |c| {
+                mailrs_store::calendar::occurrences(c, &[id], from, to, mailrs_store::calendar::CalendarScope::Shown)
+            })
+            .await
+            .unwrap();
+        assert!(
+            seen.iter().filter(|o| o.event.title == "Standup").count() >= 4,
+            "the weekly standup repeats on the calendar"
+        );
+        let people = demo.db.read(mailrs_store::address_book::list).await.unwrap();
+        assert!(people.iter().any(|p| p.account_id == id && p.name.as_deref() == Some("Rui Costa")));
+    }
+
+    #[tokio::test]
     async fn the_fastmail_account_has_a_calendar_contacts_and_rules_here() {
         let demo = demo().await;
         let fastmail = demo.fastmail().await;
@@ -2819,8 +2872,8 @@ mod tests {
             .take_while(|s| s.known)
             .map(|s| s.email.as_str())
             .collect();
-        // Four Gmail contacts and the three in the Fastmail address book.
-        assert_eq!(known.len(), 7, "every demo contact comes before the rest");
+        // Four Gmail contacts, the three in the Fastmail address book and the two at Outlook.
+        assert_eq!(known.len(), 9, "every demo contact comes before the rest");
         assert!(known.contains(&"jonas@fernwood.example"));
     }
 
@@ -2998,7 +3051,7 @@ mod tests {
         assert_eq!(threads[0].id, "t-hike");
         let accounts_seen: std::collections::HashSet<_> =
             threads.iter().map(|t| t.account_id).collect();
-        assert_eq!(accounts_seen.len(), 4);
+        assert_eq!(accounts_seen.len(), 5);
         assert_eq!(
             demo.threads(ThreadFilter::unified(MailSet::Role(Role::Drafts)))
                 .await
