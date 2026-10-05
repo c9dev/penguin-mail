@@ -148,7 +148,7 @@ impl MainWindow {
         });
     }
 
-    /// Propose a New Time from the calendar's event popover: the same
+    /// Propose New Time from the calendar's event popover: the same
     /// question and the same mail as the card's, for the invitation the
     /// event stands for.
     pub(super) fn propose_for_event(self: &Rc<Self>, account_id: AccountId, occurrence: Occurrence) {
@@ -196,7 +196,7 @@ impl MainWindow {
                     };
                     crate::ui::when::pick_time(
                         &this.window,
-                        &gettext("Propose a New Time"),
+                        &gettext("Propose New Time"),
                         &fill(
                             &gettext("The organizer decides. {organizer} hears what you suggest."),
                             &[("organizer", &hears)],

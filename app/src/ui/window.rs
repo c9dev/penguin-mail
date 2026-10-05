@@ -666,14 +666,23 @@ impl MainWindow {
 
             let w = weak.clone();
             let microsoft = super::add_account::signs_in_to_microsoft(&app.core);
-            let first_page = welcome::first_account_page(microsoft, move |tile| {
-                if let Some(win) = w.upgrade() {
-                    win.present_add_account(match tile.browser() {
-                        Some(browser) => Opening::Browser(browser),
-                        None => Opening::Tile(tile),
-                    });
-                }
-            });
+            let by_hand = weak.clone();
+            let first_page = welcome::first_account_page(
+                microsoft,
+                move |tile| {
+                    if let Some(win) = w.upgrade() {
+                        win.present_add_account(match tile.browser() {
+                            Some(browser) => Opening::Browser(browser),
+                            None => Opening::Tile(tile),
+                        });
+                    }
+                },
+                move || {
+                    if let Some(win) = by_hand.upgrade() {
+                        win.present_add_account(Opening::ByHand);
+                    }
+                },
+            );
             let (s, w) = (Rc::downgrade(app), weak.clone());
             let assistant = super::assistant::AssistantPane::new(
                 Rc::clone(&app.core),
@@ -795,13 +804,16 @@ impl MainWindow {
             );
             let (on, off) = (Rc::clone(&conversation), Rc::clone(&conversation));
             let (calendar_on, calendar_off) = (Rc::clone(&calendar), Rc::clone(&calendar));
+            let (list_on, list_off) = (Rc::clone(&list), Rc::clone(&list));
             narrow.connect_apply(move |_| {
                 on.set_compact(true);
                 calendar_on.set_narrow(true);
+                list_on.set_narrow(true);
             });
             narrow.connect_unapply(move |_| {
                 off.set_compact(false);
                 calendar_off.set_narrow(false);
+                list_off.set_narrow(false);
             });
             window.add_breakpoint(narrow);
 
@@ -1526,6 +1538,7 @@ impl MainWindow {
             self.toast(notice);
         }
         let rows = listing.rows.into_iter().map(Rc::new).collect();
+        self.list.set_empty_description(&listing.empty.description);
         self.list
             .set_rows(rows, &listing.empty.title, listing.empty.icon);
         self.follow_selection();

@@ -1,5 +1,5 @@
 //! The chips over an inbox, laid out in lines that wrap. Every chip shows
-//! its name while the chips fit on two lines; past that, and in the phone
+//! its name while the chips fit on three lines; past that, and in the phone
 //! layout, only the chosen chip keeps its name and the others show icons.
 //! `chip::names_for` makes that call from the widths measured here. Every
 //! chip keeps its spoken name and its tooltip either way, so the name is

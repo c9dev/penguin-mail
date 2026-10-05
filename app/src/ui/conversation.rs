@@ -384,7 +384,8 @@ impl ConversationView {
             .icon_name("penguin-mail-mark-symbolic")
             .title(gettext("No Conversation Selected"))
             .build();
-        empty.add_css_class("dim-label");
+        // libadwaita dims a status page's icon itself; the title stays at
+        // full strength, like the empty list's title beside it.
         let banner = adw::Banner::builder()
             .title(gettext("Remote images are hidden to protect your privacy"))
             .button_label(gettext("Load Images"))
@@ -491,10 +492,15 @@ impl ConversationView {
                 let star = adw::SplitButton::builder()
                     .icon_name("penguin-mail-flag-outline-symbolic")
                     .tooltip_text(gettext("Flag (Ctrl+Shift+L)"))
-                    .dropdown_tooltip(gettext("Flag Color"))
+                    .dropdown_tooltip(gettext("Choose Flag Color"))
                     .popover(&flag_colors())
                     .build();
                 name_with_shortcut(&star, &gettext("Flag (Ctrl+Shift+L)"));
+                name_arrow(
+                    &star,
+                    &gettext("Choose Flag Color"),
+                    &gettext("Flags it in the color you chose last, or takes the flag off"),
+                );
                 star
             },
             reply: button("mail-reply-sender-symbolic", gettext("Reply (Ctrl+R)")),
@@ -610,9 +616,10 @@ impl ConversationView {
         let label_button = adw::SplitButton::builder()
             .icon_name(Filing::Labels.icon())
             .tooltip_text(Filing::Labels.tooltip())
-            .dropdown_tooltip(Filing::Labels.tooltip())
+            .dropdown_tooltip(Filing::Labels.arrow())
             .build();
         name_with_shortcut(&label_button, &Filing::Labels.tooltip());
+        name_arrow(&label_button, &Filing::Labels.arrow(), "");
         // The labels have no one-press action of their own, so the icon
         // opens the same list as the arrow, as the whole button did
         // before it took the flag's shape.
@@ -957,14 +964,7 @@ impl ConversationView {
     /// fresh list of labels each time it opens. libadwaita builds a split
     /// button from a plain button and a menu button.
     pub fn label_arrow(&self) -> Option<gtk::MenuButton> {
-        let mut child = self.label_button.first_child();
-        while let Some(widget) = child {
-            if let Ok(arrow) = widget.clone().downcast::<gtk::MenuButton>() {
-                return Some(arrow);
-            }
-            child = widget.next_sibling();
-        }
-        None
+        arrow_of(&self.label_button)
     }
 
     /// The narrowest the pane can go, its bar of buttons, without and
@@ -979,9 +979,10 @@ impl ConversationView {
     pub fn set_filing(&self, filing: Filing) {
         let tip = filing.tooltip();
         self.label_button.set_tooltip_text(Some(&tip));
-        self.label_button.set_dropdown_tooltip(&tip);
+        self.label_button.set_dropdown_tooltip(&filing.arrow());
         self.label_button.set_icon_name(filing.icon());
         name_with_shortcut(&self.label_button, &tip);
+        name_arrow(&self.label_button, &filing.arrow(), "");
         self.mark_menu.remove(3);
         self.mark_menu
             .insert(3, Some(&filing.menu_item()), Some("win.label"));
@@ -1572,6 +1573,10 @@ impl ConversationView {
                 .to_string(),
             // A conversation in its own window has no assistant beside it.
             summarize: self.summarize.get() && !self.detached.get(),
+            font: gtk::Settings::default()
+                .and_then(|settings| settings.gtk_font_name())
+                .map(|name| crate::render::css_family(&name))
+                .unwrap_or_default(),
         };
         let page = open.page(&theme);
         let background = if theme.dark {
@@ -1986,6 +1991,37 @@ impl ConversationView {
 }
 
 /// The flag button's menu: seven colours in a row, then Clear Flag.
+/// The arrow half of a split button, a menu button among its children.
+fn arrow_of(split: &adw::SplitButton) -> Option<gtk::MenuButton> {
+    let mut child = split.first_child();
+    while let Some(widget) = child {
+        if let Ok(arrow) = widget.clone().downcast::<gtk::MenuButton>() {
+            return Some(arrow);
+        }
+        child = widget.next_sibling();
+    }
+    None
+}
+
+/// Names a split button's arrow `said`, and gives the main half the
+/// description `main` in place of the arrow's words, which libadwaita
+/// copies onto it. A screen reader then says each half once: "Flag" and
+/// "Choose Flag Color", not "Flag, Flag Color" and "Flag Color".
+fn name_arrow(split: &adw::SplitButton, said: &str, main: &str) {
+    let mut child = split.first_child();
+    while let Some(widget) = child {
+        if widget.is::<gtk::MenuButton>() {
+            name(&widget, said);
+        } else if widget.is::<gtk::Button>() {
+            // libadwaita points the main half's DescribedBy at the arrow,
+            // and GTK reads that relation before the property.
+            widget.reset_relation(gtk::AccessibleRelation::DescribedBy);
+            widget.update_property(&[gtk::accessible::Property::Description(main)]);
+        }
+        child = widget.next_sibling();
+    }
+}
+
 fn flag_colors() -> gtk::Popover {
     let row = gtk::Box::builder().spacing(2).build();
     for color in FlagColor::ALL {

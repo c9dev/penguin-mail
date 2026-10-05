@@ -295,24 +295,36 @@ impl Mailbox {
         )
     }
 
-    /// What an empty list says: a title and an icon.
+    /// What an empty list says: a title, an icon, and for a list that
+    /// fills through something the person does, a line saying what.
     pub fn empty(&self) -> Empty {
-        let empty = |title: String, icon| Empty { title, icon };
+        let empty = |title: String, icon| Empty { title, icon, description: String::new() };
+        let with = |title: String, icon, description: String| Empty { title, icon, description };
         match self {
             Mailbox::Unified(_)
             | Mailbox::Standard { .. }
             | Mailbox::Label { .. }
             | Mailbox::Set { .. } => {}
             Mailbox::Search { .. } => {
-                return empty(gettext("No Results"), "system-search-symbolic");
+                return with(
+                    gettext("No Results"),
+                    "system-search-symbolic",
+                    gettext("Try other words, or fewer of them."),
+                );
             }
             Mailbox::Scheduled => {
                 return empty(gettext("Nothing Scheduled"), "mail-send-symbolic");
             }
             Mailbox::Outbox => {
-                return empty(gettext("Outbox Is Empty"), "penguin-mail-outbox-symbolic");
+                return empty(gettext("Outbox Is Empty"), "penguin-mail-outgoing-symbolic");
             }
-            Mailbox::Reminders => return empty(gettext("No Reminders"), "alarm-symbolic"),
+            Mailbox::Reminders => {
+                return with(
+                    gettext("No Reminders"),
+                    "alarm-symbolic",
+                    gettext("Choose Remind Me on a conversation to bring it back here later."),
+                );
+            }
             Mailbox::FollowUp => {
                 return empty(gettext("No Follow-Ups"), "mail-reply-sender-symbolic");
             }
@@ -337,7 +349,11 @@ impl Mailbox {
             Some(Standard::Inbox) => empty(gettext("Inbox Zero"), "penguin-mail-inbox-symbolic"),
             Some(Standard::Flagged) => empty(gettext("No Starred Mail"), "starred-symbolic"),
             Some(Standard::Sent) => empty(gettext("No Sent Mail"), "mail-send-symbolic"),
-            Some(Standard::Drafts) => empty(gettext("No Drafts"), "document-edit-symbolic"),
+            Some(Standard::Drafts) => with(
+                gettext("No Drafts"),
+                "document-edit-symbolic",
+                gettext("Close a message without sending it and Penguin Mail keeps it here."),
+            ),
             Some(Standard::Muted) => empty(gettext("No Muted Mail"), "audio-volume-muted-symbolic"),
             None => empty(gettext("No Mail"), "penguin-mail-tag-symbolic"),
         }
@@ -397,6 +413,8 @@ pub fn folder_icon(folder: Folder) -> &'static str {
 pub struct Empty {
     pub title: String,
     pub icon: &'static str,
+    /// The line under the title, empty for none.
+    pub description: String,
 }
 
 impl Default for Empty {
@@ -404,6 +422,7 @@ impl Default for Empty {
         Empty {
             title: gettext("No Mail"),
             icon: "penguin-mail-inbox-symbolic",
+            description: String::new(),
         }
     }
 }
@@ -1490,6 +1509,22 @@ mod tests {
     use mailrs_domain::Category;
 
     use super::{summarize_search, unread_subtitle, waited};
+
+    #[test]
+    fn an_empty_search_says_what_to_try_next() {
+        let search = super::Mailbox::Search { query: "kites".into(), account_id: None };
+        assert_eq!(search.empty().description, "Try other words, or fewer of them.");
+    }
+
+    #[test]
+    fn empty_reminders_say_how_one_gets_there() {
+        assert!(super::Mailbox::Reminders.empty().description.contains("Remind Me"));
+    }
+
+    #[test]
+    fn an_empty_outbox_shows_the_outbox_tray() {
+        assert_eq!(super::Mailbox::Outbox.empty().icon, "penguin-mail-outgoing-symbolic");
+    }
 
     #[test]
     fn the_subtitle_names_the_chosen_category() {

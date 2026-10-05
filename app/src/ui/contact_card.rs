@@ -59,6 +59,7 @@ pub fn present(parent: &impl IsA<gtk::Widget>, person: Person, chose: impl Fn(Ch
         .show_initials(true)
         .halign(gtk::Align::Center)
         .build();
+    super::thread_row::set_avatar_hue(&avatar, &person.name, &person.email);
     if let Some(bytes) = person.photo.as_ref().and_then(|path| std::fs::read(path).ok()) {
         let bytes = glib::Bytes::from_owned(bytes);
         match super::texture::here(&bytes) {

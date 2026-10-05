@@ -62,9 +62,9 @@ provider offers them. Coming: POP3.
   Cc and Bcc stay hidden until you want them, and attachments list their
   sizes. Replies and forwards thread correctly in Gmail, and drafts save to
   Gmail with their formatting, so they follow you to your phone.
-- **Markdown when you want it.** Format Markdown turns Markdown in the body
-  into formatted text, and Edit as Markdown goes back. Paste, drop or insert
-  images into the text.
+- **Markdown when you want it.** Turn Markdown into Formatting styles the
+  Markdown in the body, and Write in Markdown goes back. Paste, drop or
+  insert images into the text.
 - **Recipient suggestions** from your contacts and the people you have
   written to or heard from.
 - **Undo Send and Send Later.** Sent mail waits a few seconds with an Undo

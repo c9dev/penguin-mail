@@ -7,7 +7,7 @@ use adw::prelude::*;
 use mailrs_domain::translate::gettext;
 
 use crate::add_account::post::{Band, Tile};
-use crate::ui::add_account::tiles;
+use crate::ui::add_account::{browser_legend, by_hand_list, tiles};
 use crate::ui::post_band::PostBand;
 
 /// The band's height across the window, with the art at 1.25 times its
@@ -15,9 +15,16 @@ use crate::ui::post_band::PostBand;
 const BAND: i32 = 250;
 const SCALE: f32 = 1.25;
 
-/// Offers to add the first account from one of the tiles. `microsoft` is
-/// whether the build can sign in to Microsoft, whose tile shows only then.
-pub fn first_account_page(microsoft: bool, on_tile: impl Fn(Tile) + 'static) -> gtk::Widget {
+/// Offers to add the first account from one of the tiles, or from the
+/// row to type a server's settings, which runs `on_by_hand`. Under the
+/// tiles sits the same legend for the globe as in Add Account.
+/// `microsoft` is whether the build can sign in to Microsoft, whose tile
+/// shows only then.
+pub fn first_account_page(
+    microsoft: bool,
+    on_tile: impl Fn(Tile) + 'static,
+    on_by_hand: impl Fn() + 'static,
+) -> gtk::Widget {
     let band = PostBand::new(BAND, SCALE);
     band.show(Band::Idle, None, None);
     let title = gtk::Label::builder()
@@ -49,6 +56,22 @@ pub fn first_account_page(microsoft: bool, on_tile: impl Fn(Tile) + 'static) -> 
     column.append(&title);
     column.append(&lede);
     column.append(&grid.grid);
+    // The legend and the row sit in a centred column as wide as two tiles,
+    // the narrowest the grid gets, as on the dialog's first page.
+    let below = gtk::Box::builder()
+        .orientation(gtk::Orientation::Vertical)
+        .halign(gtk::Align::Center)
+        .width_request(300)
+        .css_classes(["post-first-below"])
+        .build();
+    let legend = browser_legend();
+    legend.set_halign(gtk::Align::Center);
+    below.append(&legend);
+    below.append(&gtk::Separator::builder().css_classes(["post-rule"]).build());
+    let (list, by_hand) = by_hand_list();
+    by_hand.connect_activated(move |_| on_by_hand());
+    below.append(&list);
+    column.append(&below);
     let scroller = gtk::ScrolledWindow::builder()
         .hscrollbar_policy(gtk::PolicyType::Never)
         .child(&column)

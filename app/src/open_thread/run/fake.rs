@@ -495,6 +495,7 @@ impl FakeWindow {
             accent: "#3584e4".to_string(),
             accent_text: "#1a5fb4".to_string(),
             summarize: false,
+            font: String::new(),
         };
         self.with(
             |screen| match screen.open.as_mut().map(|open| open.page(&theme)) {

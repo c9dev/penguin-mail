@@ -96,7 +96,7 @@ impl CalendarView {
                 })
             }
             ListChange::Color { account, calendar, color } => {
-                self.run_list_edit(account, next_event, gettext("Could not change the colour: {reason}"), async move {
+                self.run_list_edit(account, next_event, gettext("Could not change the color: {reason}"), async move {
                     copy.recolor_calendar(account, &calendar, color).await
                 })
             }

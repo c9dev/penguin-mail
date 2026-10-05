@@ -246,6 +246,16 @@ impl Filing {
         }
     }
 
+    /// The name and tooltip of the arrow beside the header button. It
+    /// differs from the button's own, so a screen reader does not say
+    /// "Labels" twice.
+    pub fn arrow(self) -> String {
+        match self {
+            Filing::Labels => gettext("Choose Labels"),
+            Filing::Folders => gettext("Choose a Folder"),
+        }
+    }
+
     /// The header button's tooltip, with its key.
     pub fn tooltip(self) -> String {
         match self {
@@ -943,6 +953,12 @@ mod tests {
         // folders do, one account at a time.
         assert_eq!(Filing::picker(&[1, 2], &[1, 2], offers), Filing::Folders);
         assert_eq!(Filing::picker(&[1, 3], &[1, 3], offers), Filing::Labels);
+    }
+
+    #[test]
+    fn the_arrow_beside_the_labels_button_has_a_name_of_its_own() {
+        assert_eq!(Filing::Labels.arrow(), "Choose Labels");
+        assert_eq!(Filing::Folders.arrow(), "Choose a Folder");
     }
 
     #[test]

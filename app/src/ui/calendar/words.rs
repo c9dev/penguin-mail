@@ -71,7 +71,7 @@ where
         fill(
             &gettext("{date} · {start}–{end}"),
             &[
-                ("date", &full_date_words(local_date(start, zone))),
+                ("date", &crate::format::long_date(local_date(start, zone))),
                 ("start", &clock_words(start, zone)),
                 ("end", &clock_words(end, zone)),
             ],
@@ -88,7 +88,7 @@ where
 {
     let one_day = utc_date(start).zip(utc_date(end)).is_some_and(|(first, next)| first.succ_opt() == Some(next));
     match (all_day, utc_date(start)) {
-        (true, Some(day)) if one_day => fill(&gettext("{date} · All day"), &[("date", &full_date_words(day))]),
+        (true, Some(day)) if one_day => fill(&gettext("{date} · All day"), &[("date", &crate::format::long_date(day))]),
         _ => span_words(start, end, all_day, zone),
     }
 }
@@ -739,7 +739,7 @@ mod tests {
             .unwrap()
             .timestamp_millis();
         let o = occurrence(false, start, end);
-        assert_eq!(when_words(&o, &Utc), "Wednesday 23 September · 15:00–16:00");
+        assert_eq!(when_words(&o, &Utc), "Wednesday, 23 September 2026 · 15:00–16:00");
     }
 
     #[test]
@@ -770,7 +770,7 @@ mod tests {
     fn a_move_to_one_whole_day_names_the_day() {
         mailrs_domain::translate::set_date_locale("en_US");
         let (start, end) = (midnight(d(2026, 9, 29)), midnight(d(2026, 9, 30)));
-        assert_eq!(landing_words(start, end, true, &Utc), "Tuesday 29 September · All day");
+        assert_eq!(landing_words(start, end, true, &Utc), "Tuesday, 29 September 2026 · All day");
     }
 
     #[test]

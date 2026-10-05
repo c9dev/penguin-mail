@@ -183,7 +183,7 @@ assistant on it. You can also set one up by hand.
 
 1. In LM Studio, load a model and start the server on the Developer tab.
    It listens on `http://localhost:1234/v1`.
-2. In Penguin Mail, choose **Local server** for the assistant. The
+2. In Penguin Mail, choose **Local Server** for the assistant. The
    default address already points at LM Studio. Pick the model from the
    list next to the Model field.
 
@@ -196,9 +196,9 @@ you paste, but it cannot touch your mail.
 Unsloth Studio serves its API on port 8888 and asks for a key.
 
 1. Copy the API key from Unsloth Studio.
-2. Under **Local server** in Connections, set the address to
+2. Under **Local Server** in Connections, set the address to
    `http://localhost:8888/v1` and paste the key into **API Key
-   (Optional)**. Then choose **Local server** for the assistant.
+   (Optional)**. Then choose **Local Server** for the assistant.
 
 Ollama (port 11434), llama.cpp's server (8080), and vLLM (8000) work the
 same way. Any server that speaks the OpenAI chat completions API does.
@@ -213,7 +213,7 @@ Penguin Mail starts, the Found list offers it.
 ### Your Claude subscription
 
 If Claude Code is installed and signed in, the Found list shows it. Press
-**Use**, or choose **Claude subscription**, and the assistant
+**Use**, or choose **Claude Subscription**, and the assistant
 runs on your Pro or Max plan with no API key. Penguin Mail looks for
 `claude` on your PATH and in `~/.local/bin`.
 

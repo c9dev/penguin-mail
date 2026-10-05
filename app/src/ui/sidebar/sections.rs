@@ -75,6 +75,17 @@ pub const LAYOUT: [(Section, &[Place]); 2] = [
     ),
 ];
 
+/// The Outbox row's icon: its own tray, or a warning while `stuck`
+/// messages wait there because sending them failed. The warning used to
+/// show all the time, so the sidebar wore an alert sign with nothing
+/// wrong.
+pub fn outbox_icon(stuck: i64) -> &'static str {
+    match stuck {
+        ..=0 => "penguin-mail-outgoing-symbolic",
+        _ => "dialog-warning-symbolic",
+    }
+}
+
 /// Rows that show only while they hold something: the flag colours.
 pub fn hidden_until_used(mailbox: &Mailbox) -> bool {
     matches!(mailbox, Mailbox::Flag(_))
@@ -85,6 +96,16 @@ mod tests {
     use mailrs_domain::FlagColor;
 
     use super::*;
+
+    #[test]
+    fn an_outbox_with_nothing_stuck_shows_its_tray() {
+        assert_eq!(outbox_icon(0), "penguin-mail-outgoing-symbolic");
+    }
+
+    #[test]
+    fn an_outbox_holding_a_failed_send_shows_a_warning() {
+        assert_eq!(outbox_icon(2), "dialog-warning-symbolic");
+    }
 
     #[test]
     fn favorites_lead_with_what_the_person_marked() {

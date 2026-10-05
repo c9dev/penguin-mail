@@ -36,7 +36,7 @@ struct Rules {
     /// The group of rules written elsewhere, removed on each reload.
     elsewhere: RefCell<Option<adw::PreferencesGroup>>,
     /// Rows in `list` now, removed on each reload.
-    shown: RefCell<Vec<adw::ActionRow>>,
+    shown: RefCell<Vec<gtk::Widget>>,
     toasts: adw::ToastOverlay,
     grant: Box<dyn Fn()>,
     dialog: adw::Dialog,
@@ -185,15 +185,23 @@ impl Rules {
                 .build();
             row.add_prefix(&gtk::Image::from_icon_name("network-offline-symbolic"));
             self.list.add(&row);
-            self.shown.borrow_mut().push(row);
+            self.shown.borrow_mut().push(row.upcast());
         }
         if list.rules.is_empty() {
-            let row = adw::ActionRow::builder()
-                .title(gettext("No rules yet"))
-                .subtitle(gettext("Add one with the + button."))
+            // The empty list offers the first rule itself rather than
+            // pointing at the + in the header.
+            let row = adw::ButtonRow::builder()
+                .title(gettext("Add Rule"))
+                .start_icon_name("list-add-symbolic")
                 .build();
+            let weak = Rc::downgrade(self);
+            row.connect_activated(move |_| {
+                if let Some(rules) = weak.upgrade() {
+                    rules.show_form(None);
+                }
+            });
             self.list.add(&row);
-            self.shown.borrow_mut().push(row);
+            self.shown.borrow_mut().push(row.upcast());
         }
         for filter in list.rules {
             let criteria = describe_criteria(&filter.criteria);
@@ -216,7 +224,7 @@ impl Rules {
                 row.set_activatable(false);
                 row.add_suffix(&gtk::Image::from_icon_name("changes-prevent-symbolic"));
                 self.list.add(&row);
-                self.shown.borrow_mut().push(row);
+                self.shown.borrow_mut().push(row.upcast());
                 continue;
             }
             // The row points its LabelledBy relation at the title, which
@@ -256,7 +264,7 @@ impl Rules {
             row.add_suffix(&delete);
             row.add_suffix(&gtk::Image::from_icon_name("go-next-symbolic"));
             self.list.add(&row);
-            self.shown.borrow_mut().push(row);
+            self.shown.borrow_mut().push(row.upcast());
         }
         if !list.elsewhere.is_empty() {
             let group = adw::PreferencesGroup::builder()

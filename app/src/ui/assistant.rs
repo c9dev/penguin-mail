@@ -180,8 +180,8 @@ impl AssistantPane {
             .icon_name("penguin-mail-sparkle-symbolic")
             .title(gettext("Set Up the Assistant"))
             .description(gettext(
-                "Use a local model from LM Studio, Ollama, or Unsloth, an Anthropic \
-                 API key, or your Claude subscription.",
+                "Use a local model from LM Studio, Ollama, or any server with OpenAI's \
+                 API. You can also use an Anthropic API key or your Claude subscription.",
             ))
             .child(&setup_button)
             .build();

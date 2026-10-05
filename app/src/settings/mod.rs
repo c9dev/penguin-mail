@@ -185,9 +185,9 @@ impl Choice for AiProvider {
     fn label(self) -> String {
         match self {
             AiProvider::Off => gettext("Off"),
-            AiProvider::Local => gettext("Local server"),
+            AiProvider::Local => gettext("Local Server"),
             AiProvider::Anthropic => gettext("Anthropic API"),
-            AiProvider::ClaudeCode => gettext("Claude subscription"),
+            AiProvider::ClaudeCode => gettext("Claude Subscription"),
         }
     }
 }

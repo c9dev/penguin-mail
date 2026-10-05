@@ -167,8 +167,15 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   Ctrl+R.
 
 ### Improved
+- The composer fits a window as narrow as a phone: its title and Send's word give way and the formatting buttons pack closer. Its formatting menu marks the paragraph style the cursor is in and names its Markdown items by what they do, and the Subject field no longer says "Subject" twice.
+- An empty search, Remind Me or Drafts says what to do next, and "No Conversation Selected" reads at full strength like the empty list beside it.
+- Preferences names spelling dictionaries by language, "English (Australia)" rather than "en_AU", with each account's address as its row's title, and an address chosen in a drop-down shows whole rather than cut short with room to spare.
+- A message that names no font of its own reads in your desktop's interface font, the one the rest of the window uses, rather than Liberation Sans.
+- A person without a photo has one avatar colour, picked from their address, in the list, the conversation and their contact card.
+- In a window as narrow as a phone, the mail list's title shows whole: the unread line under it goes and New Message moves to a bar at the foot of the list.
+- Dates read one way across the app: "Mon, 5 Oct" in Automatic Reply and Hide My Email, with the year when it is not this year, and "Monday, 5 October 2026 at 13:36" in a message's details and on an invitation, with the time in your desktop's clock.
 - Schedule focus time or out of office from the New Event button's menu or the type switch in quick add, offered only on calendars that can keep them: Google Workspace has both, Outlook has out of office.
-- The category chips over the inbox show each category's name and unread count, "Primary 2", wrapping onto a second line when one is too short, and fold to icons in a narrow window.
+- The category chips over the inbox show each category's name and unread count, "Primary 2", wrapping onto a second or third line when one is too short, and fold to icons in a narrow window.
 - Mail search shows results as you type: a moment after you stop, the mail on this computer shows first and the servers' results follow from three letters on. Enter still searches at once.
 - The composer's header holds Attach Files, a More menu and Send. More has Templates, Preview, Sign and Encrypt, and a shield shows beside Attach Files while the message goes out signed or encrypted.
 - Today's day, date and place over the calendar's days are dark enough to read on their tint in light.
@@ -287,6 +294,10 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 ### Fixed
 - The assistant can change a contact on an Outlook or CardDAV account, even with that account's contacts off in Preferences, and it no longer calls an Outlook account's contacts or categories Gmail's.
 - Changing an Outlook contact's company or phone keeps its name. Outlook used to rename the contact after its company.
+- Attachments under a plain-text message start where its words start, rather than 52 pixels in.
+- The Outbox in the sidebar shows a warning only while a message in it failed to send, and an outbox tray of its own otherwise.
+- Dimmed text in light mode, such as the composer's From and Subject labels and the lines under each row in Preferences, is dark enough to read, and the composer's focused field label reads in both modes.
+- Preferences reads "gpg and gpgsm, which hold your keys" with the verb in the plural, and the assistant's setup page names the same model servers as Preferences.
 - Inserting a GIF or WebP picture into a message, or showing a contact photo in such a format, no longer holds up the window while it loads. The composer shows a placeholder until the picture is ready.
 - Muting a conversation on an Outlook, IMAP or POP3 account keeps its later replies out of the Inbox: each goes to the Archive, read and without a notification, while Penguin Mail runs.
 - Format and Format Markdown in the composer keep the pictures in your message where they were, and Undo and Redo keep them too.

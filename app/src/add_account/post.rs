@@ -262,7 +262,7 @@ impl Tile {
             Tile::Google => gettext("Gmail, Workspace"),
             Tile::Microsoft => gettext("Outlook, 365"),
             Tile::Icloud => "iCloud Mail".to_string(),
-            Tile::Fastmail => "Fastmail".to_string(),
+            Tile::Fastmail => gettext("Custom domains too"),
             Tile::Yahoo => "Yahoo Mail".to_string(),
             Tile::Other => gettext("Any server"),
         }
@@ -581,7 +581,7 @@ mod tests {
             Tile::Microsoft.described(),
             "Microsoft, Outlook, 365, signs in through your browser"
         );
-        assert_eq!(Tile::Fastmail.described(), "Fastmail, Fastmail");
+        assert_eq!(Tile::Fastmail.described(), "Fastmail, Custom domains too");
     }
 
     #[test]

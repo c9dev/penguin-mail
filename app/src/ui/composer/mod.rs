@@ -225,6 +225,9 @@ pub struct Composer {
     secret: Cell<bool>,
     /// The formatting bar's toggles, each with the tag it stands for.
     toggles: RefCell<Vec<(gtk::ToggleButton, &'static str)>>,
+    /// The paragraph style action, whose state marks the cursor's line in
+    /// the formatting menu.
+    block: RefCell<Option<gio::SimpleAction>>,
     identities: Vec<Identity>,
     /// Which identity the From row is on, so a change knows what to undo.
     showing: Cell<usize>,
@@ -392,7 +395,6 @@ impl Composer {
             field.set_from(sending);
         }
         let subject = gtk::Entry::builder()
-            .placeholder_text(gettext("Subject"))
             .text(&draft.subject)
             .hexpand(true)
             .has_frame(false)
@@ -535,8 +537,34 @@ impl Composer {
             .default_height(660)
             .title(gettext("New Message"))
             .content(&toasts)
+            .width_request(360)
+            .height_request(400)
             .build();
         super::window::track_dark_class(&window);
+        // On a phone the composer has 360 px. The header drops its title
+        // and Send its word, and the format bar's buttons pack closer
+        // (style.css, .composer-narrow), which brings the narrowest the
+        // window goes from 443 px to under 360.
+        let narrow = adw::Breakpoint::new(
+            adw::BreakpointCondition::parse("max-width: 480sp").expect("valid breakpoint"),
+        );
+        narrow.add_setter(&title, "visible", Some(&false.to_value()));
+        if let Some(content) = send.child().and_downcast::<adw::ButtonContent>() {
+            narrow.add_setter(&content, "label", Some(&"".to_value()));
+        }
+        let marked = window.downgrade();
+        narrow.connect_apply(move |_| {
+            if let Some(window) = marked.upgrade() {
+                window.add_css_class("composer-narrow");
+            }
+        });
+        let marked = window.downgrade();
+        narrow.connect_unapply(move |_| {
+            if let Some(window) = marked.upgrade() {
+                window.remove_css_class("composer-narrow");
+            }
+        });
+        window.add_breakpoint(narrow);
 
         // The composer keeps the files in a list of its own, so the draft
         // it started from holds none for every save to copy.
@@ -593,6 +621,7 @@ impl Composer {
             encrypt_when_possible: has_engine && (encrypt_when_possible || draft.encrypt),
             secret: Cell::new(has_engine && draft.encrypt),
             toggles: RefCell::new(Vec::new()),
+            block: RefCell::new(None),
             identities,
             showing: Cell::new(selected),
             spell: RefCell::new(None),
@@ -770,7 +799,13 @@ impl Composer {
             }
         });
         actions.add_action(&choose);
-        let block = gio::SimpleAction::new("block", Some(glib::VariantTy::STRING));
+        // Stateful, so the menu marks the style of the cursor's line as a
+        // radio item; `refresh_toggles` keeps the state with the cursor.
+        let block = gio::SimpleAction::new_stateful(
+            "block",
+            Some(glib::VariantTy::STRING),
+            &block_name(BlockKind::Paragraph).to_variant(),
+        );
         let weak = Rc::downgrade(self);
         block.connect_activate(move |_, kind| {
             let (Some(c), Some(kind)) =
@@ -778,15 +813,11 @@ impl Composer {
             else {
                 return;
             };
-            c.set_block(match kind.as_str() {
-                "heading1" => BlockKind::Heading(1),
-                "heading2" => BlockKind::Heading(2),
-                "heading3" => BlockKind::Heading(3),
-                "code" => BlockKind::Code,
-                _ => BlockKind::Paragraph,
-            });
+            c.set_block(block_of(&kind));
+            c.refresh_toggles();
         });
         actions.add_action(&block);
+        self.block.replace(Some(block));
         let template = gio::SimpleAction::new("template", Some(glib::VariantTy::INT64));
         let weak = Rc::downgrade(self);
         template.connect_activate(move |_, id| {
@@ -1839,20 +1870,25 @@ impl Composer {
         let menu = gio::Menu::new();
         let paragraph = gio::Menu::new();
         for (label, kind) in [
-            (gettext("Paragraph"), "paragraph"),
-            (gettext("Heading 1"), "heading1"),
-            (gettext("Heading 2"), "heading2"),
-            (gettext("Heading 3"), "heading3"),
-            (gettext("Code Block"), "code"),
+            (gettext("Paragraph"), BlockKind::Paragraph),
+            (gettext("Heading 1"), BlockKind::Heading(1)),
+            (gettext("Heading 2"), BlockKind::Heading(2)),
+            (gettext("Heading 3"), BlockKind::Heading(3)),
+            (gettext("Code Block"), BlockKind::Code),
         ] {
             let item = gio::MenuItem::new(Some(&label), None);
-            item.set_action_and_target_value(Some("composer.block"), Some(&kind.to_variant()));
+            item.set_action_and_target_value(
+                Some("composer.block"),
+                Some(&block_name(kind).to_variant()),
+            );
             paragraph.append_item(&item);
         }
         menu.append_section(None, &paragraph);
         let rest = gio::Menu::new();
+        // Each item says what it leaves: Markdown marks turned into
+        // formatting here, and a body written in Markdown with the next.
         rest.append(
-            Some(&gettext("Format Markdown")),
+            Some(&gettext("Turn Markdown into Formatting")),
             Some("composer.format-markdown"),
         );
         rest.append(
@@ -1862,7 +1898,7 @@ impl Composer {
         menu.append_section(None, &rest);
         let switch = gio::Menu::new();
         switch.append(
-            Some(&gettext("Edit as Markdown")),
+            Some(&gettext("Write in Markdown")),
             Some("composer.edit-markdown"),
         );
         menu.append_section(None, &switch);
@@ -2127,8 +2163,15 @@ impl Composer {
         self.refresh_toggles();
     }
 
-    /// Keeps the formatting bar showing what the cursor sits in.
+    /// Keeps the formatting bar, and the paragraph styles in its menu,
+    /// showing what the cursor sits in.
     fn refresh_toggles(&self) {
+        if let Some(block) = self.block.borrow().as_ref() {
+            let here = block_name(self.editor.block_here()).to_variant();
+            if block.state().as_ref() != Some(&here) {
+                block.set_state(&here);
+            }
+        }
         let style = self.editor.style_here();
         for (button, tag) in self.toggles.borrow().iter() {
             let wanted = richbuffer::has(style, tag);
@@ -2529,9 +2572,53 @@ fn now_secs() -> i64 {
     mailrs_sync::now_millis() / 1000
 }
 
+/// The formatting menu's name for a paragraph style, the target of
+/// `composer.block`. Lists and quotes are buttons on the bar, not menu
+/// items, so a line of one marks no item.
+fn block_name(kind: BlockKind) -> &'static str {
+    match kind {
+        BlockKind::Paragraph => "paragraph",
+        BlockKind::Heading(1) => "heading1",
+        BlockKind::Heading(2) => "heading2",
+        BlockKind::Heading(_) => "heading3",
+        BlockKind::Code => "code",
+        BlockKind::Bullet | BlockKind::Numbered | BlockKind::Quote => "",
+    }
+}
+
+/// The paragraph style a menu item names ([`block_name`]).
+fn block_of(name: &str) -> BlockKind {
+    match name {
+        "heading1" => BlockKind::Heading(1),
+        "heading2" => BlockKind::Heading(2),
+        "heading3" => BlockKind::Heading(3),
+        "code" => BlockKind::Code,
+        _ => BlockKind::Paragraph,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn each_paragraph_style_in_the_menu_reads_back_as_itself() {
+        for kind in [
+            BlockKind::Paragraph,
+            BlockKind::Heading(1),
+            BlockKind::Heading(2),
+            BlockKind::Heading(3),
+            BlockKind::Code,
+        ] {
+            assert_eq!(block_of(block_name(kind)), kind);
+        }
+    }
+
+    #[test]
+    fn a_list_line_marks_no_paragraph_style_in_the_menu() {
+        assert_eq!(block_name(BlockKind::Bullet), "");
+        assert_eq!(block_name(BlockKind::Quote), "");
+    }
 
     /// What a check item's handler heard, in order.
     fn heard(check: &Check) -> Rc<RefCell<Vec<bool>>> {
