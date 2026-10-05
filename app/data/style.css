@@ -864,13 +864,14 @@ button.event-block.away {
 .all-day-strip .event-block .kind-icon,
 .month-grid .event-block .kind-icon { margin-top: 0; }
 /* A working location under a day's heading: the heading's weekday size
-   and strength, in the text colour. */
+   and strength, in the text colour. Today's takes the accent at full
+   strength, as today's weekday does. */
 .day-place {
   font-size: 0.75em;
   font-weight: 600;
-  opacity: 0.64;
+  opacity: 0.8;
 }
-.day-heading.today .day-place { opacity: 0.8; }
+.day-heading.today .day-place { opacity: 1; }
 /* The card a drag holds: lifted above the others while the pointer or
    the settle spring carries it. With animations off the spring lands it
    in place at once, so no separate no-motion rule is needed. */
@@ -885,14 +886,20 @@ button.event-block.away {
 }
 
 /* "Mon" and "All-day" stay title case in the string a screen reader
-   reads; the small capitals are drawn, not spoken. */
+   reads; the small capitals are drawn, not spoken. At 64 % the weekday
+   and the place under it read 4.1:1 in light, under the 4.5:1 WCAG asks
+   of text this small. At 80 % they read 6.7:1 on the view and 6.5:1 on
+   the window; dark keeps 64 %, which reads 7.5:1 there. The bold date
+   at full strength still leads. */
 .day-heading .weekday {
   font-size: 0.75em;
   font-weight: 600;
   letter-spacing: 0.6px;
-  opacity: 0.64;
+  opacity: 0.8;
   text-transform: uppercase;
 }
+.app-dark .day-heading:not(.today) .weekday { opacity: 0.64; }
+.app-dark .day-heading:not(.today) .day-place { opacity: 0.64; }
 .day-heading .date { font-weight: 800; font-size: 0.95em; }
 button.day-heading { min-height: 26px; padding: 0 14px; border-radius: 13px; }
 .day-heading.today {
@@ -1509,3 +1516,11 @@ list.post-field.post-wrong > row:focus-within label.subtitle { color: var(--post
 .post-card.with-source .post-links { margin-top: 18px; margin-bottom: 4px; }
 .post-card.trouble .post-links { margin-bottom: 4px; }
 .post-fields > list.post-list.post-after-refusal { margin-top: 37px; }
+
+/* The list in Messages That Will Not Download. libadwaita leaves 18 px
+   above an alert's extra child (10 px of spacing and an 8 px margin) and
+   21 px below it (9 px under the message area and 12 px over the
+   buttons), and 14 and 18 px in a short window. The difference goes on
+   top, so the list sits midway between the words and the button. */
+dialog.alert .failing-list { margin-top: 3px; }
+dialog.alert.short .failing-list { margin-top: 4px; }

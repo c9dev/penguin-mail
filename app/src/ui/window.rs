@@ -3676,6 +3676,9 @@ impl MainWindow {
                 .propagate_natural_height(true)
                 .max_content_height(220)
                 .build();
+            // The stylesheet evens out the gaps libadwaita leaves above
+            // and below the list.
+            scroller.add_css_class("failing-list");
             dialog.set_extra_child(Some(&scroller));
             dialog.add_responses(&[("close", &gettext("Close"))]);
             dialog.set_close_response("close");

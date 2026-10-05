@@ -472,35 +472,36 @@ pub fn reason(account: &Account, missing: Missing, missed: Option<Miss>) -> Stri
     fill(&template, &[("provider", &provider)])
 }
 
-/// The lines Preferences shows under Not Available: everything an
-/// account lacks but the category bar, which needs no line because it is
-/// not there, each as the account's address and the reason. `missed`
-/// says why the search for an account's calendar or contacts server
-/// failed, where the store kept a reason.
+/// The rows Preferences shows under Not Available: one for each account
+/// that lacks something, as its address and one reason for each thing it
+/// lacks. The category bar needs no reason because it is not there.
+/// `missed` says why the search for an account's calendar or contacts
+/// server failed, where the store kept a reason.
 pub fn missing_lines(
     accounts: &[(Account, Offers)],
     missed: impl Fn(AccountId, Missing) -> Option<Miss>,
-) -> Vec<(String, String)> {
-    let mut lines: Vec<(String, String)> = accounts
+) -> Vec<(String, Vec<String>)> {
+    accounts
         .iter()
-        .flat_map(|(account, offers)| {
-            offers
+        .filter_map(|(account, offers)| {
+            let mut reasons: Vec<String> = offers
                 .missing()
                 .into_iter()
                 .filter(|m| *m != Missing::Categories)
-                .map(|m| (account.email.clone(), reason(account, m, missed(account.id, m))))
+                .map(|m| reason(account, m, missed(account.id, m)))
+                .collect();
+            reasons.dedup();
+            (!reasons.is_empty()).then(|| (account.email.clone(), reasons))
         })
-        .collect();
-    lines.dedup();
-    lines
+        .collect()
 }
 
-/// What a screen reader calls a Not Available row. One account can have
-/// several rows under the same address, so the name carries the reason.
-pub fn missing_name(address: &str, reason: &str) -> String {
+/// What a screen reader calls a Not Available row: the account's address
+/// and every reason under it.
+pub fn missing_name(address: &str, reasons: &[String]) -> String {
     fill(
         &gettext("{address}: {reason}"),
-        &[("address", address), ("reason", reason)],
+        &[("address", address), ("reason", &reasons.join(" "))],
     )
 }
 
@@ -818,8 +819,9 @@ mod tests {
         let lines = missing_lines(&[(fastmail(), imap)], |_, missing| {
             (missing == Missing::Calendar).then_some(Miss::Refused)
         });
-        assert!(lines[0].1.starts_with("Fastmail refused the password for calendars."), "{lines:?}");
-        assert_eq!(lines[1].1, "Penguin Mail found no contacts server for Fastmail.");
+        let reasons = &lines[0].1;
+        assert!(reasons[0].starts_with("Fastmail refused the password for calendars."), "{lines:?}");
+        assert_eq!(reasons[1], "Penguin Mail found no contacts server for Fastmail.");
     }
 
     #[test]
@@ -1155,11 +1157,35 @@ mod tests {
         let lines = missing_lines(&[(gmail(), Offers::EVERYTHING), (bare.clone(), lacking)], |_, _| None);
         assert_eq!(
             lines,
-            [
-                ("me@example.com".to_string(), reason(&bare, Missing::Rules, None)),
-                ("me@example.com".to_string(), reason(&bare, Missing::AutoReply, None)),
-            ]
+            [(
+                "me@example.com".to_string(),
+                vec![
+                    reason(&bare, Missing::Rules, None),
+                    reason(&bare, Missing::AutoReply, None),
+                ],
+            )]
         );
+    }
+
+    #[test]
+    fn preferences_gives_each_account_one_entry_whatever_it_lacks() {
+        let pop3 = Account {
+            id: 3,
+            email: "dana@reyes-home.example".into(),
+            provider: Provider::Pop3,
+            provider_name: Some("reyes-home.example".into()),
+            ..gmail()
+        };
+        let lacking = Offers {
+            calendar: false,
+            contacts: false,
+            auto_reply: false,
+            ..Offers::EVERYTHING
+        };
+        let lines = missing_lines(&[(fastmail(), lacking), (pop3, lacking)], |_, _| None);
+        let addresses: Vec<&str> = lines.iter().map(|(address, _)| address.as_str()).collect();
+        assert_eq!(addresses, ["dana@fastmail.com", "dana@reyes-home.example"]);
+        assert_eq!(lines[1].1.len(), 3, "{lines:?}");
     }
 
     #[test]
@@ -1173,9 +1199,8 @@ mod tests {
             ..Offers::EVERYTHING
         };
         let lines = missing_lines(&[(fastmail(), imap)], |_, _| None);
-        let said: Vec<&str> = lines.iter().map(|(_, line)| line.as_str()).collect();
         assert_eq!(
-            said,
+            lines[0].1,
             [
                 "Penguin Mail found no calendar server for Fastmail.",
                 "Penguin Mail found no contacts server for Fastmail.",
@@ -1185,13 +1210,17 @@ mod tests {
     }
 
     #[test]
-    fn each_not_available_row_is_named_for_its_account_and_its_reason() {
+    fn each_not_available_row_is_named_for_its_account_and_every_reason() {
         assert_eq!(
             super::missing_name(
                 "dana@fastmail.example",
-                "Penguin Mail found no calendar server for Fastmail."
+                &[
+                    "Penguin Mail found no calendar server for Fastmail.".to_string(),
+                    "Fastmail cannot send automatic replies.".to_string(),
+                ]
             ),
-            "dana@fastmail.example: Penguin Mail found no calendar server for Fastmail."
+            "dana@fastmail.example: Penguin Mail found no calendar server for Fastmail. \
+             Fastmail cannot send automatic replies."
         );
     }
 

@@ -1528,6 +1528,9 @@ struct Dialog {
     /// The account the last page follows, and the timer that reads its
     /// counts.
     added: Cell<Option<AccountId>>,
+    /// Whether the last page offers Grant Access, whose lede names the
+    /// features left off and stays as it is.
+    granting: Cell<bool>,
     count_timer: RefCell<Option<glib::SourceId>>,
     pick: PickPage,
     address: AddressPage,
@@ -1592,6 +1595,7 @@ impl Dialog {
             browser_expected: RefCell::new(None),
             browser_provider: Cell::new(Browser::Google),
             added: Cell::new(None),
+            granting: Cell::new(false),
             count_timer: RefCell::new(None),
             pick: pick_page(signs_in_to_microsoft(core)),
             address: address_page(),
@@ -2778,6 +2782,7 @@ impl Dialog {
         self.added.set(Some(account.id));
         let missing = withheld.unwrap_or_default();
         let grant = !missing.is_empty();
+        self.granting.set(grant);
         page.title.set_xalign(if grant { 0.0 } else { 0.5 });
         page.lede.set_xalign(if grant { 0.0 } else { 0.5 });
         if grant {
@@ -2815,8 +2820,9 @@ impl Dialog {
                 &gettext("{account} is ready"),
                 &[("account", &account.email)],
             ));
-            page.lede
-                .set_text(&gettext("Mail is downloading. You can close this window."));
+            page.lede.set_text(
+                &add_account::added_page(account.provider, RemoveSetting::Never, false, false).lede,
+            );
         }
         for part in [
             page.folder_list.upcast_ref::<gtk::Widget>(),
@@ -2890,10 +2896,20 @@ impl Dialog {
             if let Ok((counts, page)) = read
                 && this.added.get() == Some(account_id)
             {
-                this.finished.note.set_text(&page.note);
+                this.show_words(&page);
                 this.show_counts(account_id, &counts, page.done);
             }
         });
+    }
+
+    /// Puts `page`'s words on the last page. The lede follows the first
+    /// download, which it said was still running after it had ended;
+    /// Grant Access keeps its own.
+    fn show_words(&self, page: &add_account::AddedPage) {
+        self.finished.note.set_text(&page.note);
+        if !self.granting.get() {
+            self.finished.lede.set_text(&page.lede);
+        }
     }
 
     fn show_counts(&self, account_id: AccountId, counts: &mailrs_store::threads::MailCounts, done: bool) {
@@ -3107,9 +3123,10 @@ fn preview(this: &Rc<Dialog>, stage: &str) {
             this.show_password(fastmail());
             this.manual_from_password();
         }
-        "added" | "grant" | "pop3-added" => {
+        "added" | "added-done" | "grant" | "pop3-added" => {
             let grant = stage == "grant";
             let pop3 = stage == "pop3-added";
+            let done = stage == "added-done";
             let this = Rc::clone(this);
             glib::spawn_future_local(async move {
                 let accounts = this
@@ -3151,8 +3168,12 @@ fn preview(this: &Rc<Dialog>, stage: &str) {
                         "Fastmail",
                     );
                     this.show_added(&account, Some(post::stamp_for("Fastmail")), None);
-                    // The demo's first sync has long finished; the stage
-                    // shows one still running.
+                    // The demo's first sync has long finished, so
+                    // `added-done` lets the page read that from the store.
+                    // The other stages show one still running.
+                    if done {
+                        return;
+                    }
                     this.stop_counting();
                     this.band.set_letters(true);
                     let counts = [312, 0, 0];

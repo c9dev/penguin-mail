@@ -245,13 +245,27 @@ pub fn after_popover(anchor_on_screen: bool) -> Refocus {
     }
 }
 
+/// Where a press outside the open event popover landed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Pressed {
+    /// On an event in the calendar's views.
+    OnEvent,
+    /// Anywhere else in the calendar's views, such as empty time.
+    InCalendar,
+    /// Outside the views: the Mail and Calendar switch, the sidebar, the
+    /// header's buttons.
+    Elsewhere,
+}
+
 /// Whether a press outside the open event popover, which closes it, goes
-/// on to the widget under the pointer. Only a press on an event does, so
-/// a double click still opens the editor and a press on another event
-/// opens that one's popover. On empty time the grid would open quick add
-/// on the release, and the next click would go to closing that.
-pub fn press_goes_on(on_event: bool) -> bool {
-    on_event
+/// on to the widget under the pointer. A press on an event does, so a
+/// double click still opens the editor and a press on another event
+/// opens that one's popover, and so does a press outside the calendar's
+/// views, which would otherwise take a second press to do its work. On
+/// empty time the grid would open quick add on the release, and the next
+/// click would go to closing that, so a press there only closes.
+pub fn press_goes_on(pressed: Pressed) -> bool {
+    pressed != Pressed::InCalendar
 }
 
 /// What a read of the days before the narrow list leaves to add: the
@@ -364,14 +378,21 @@ mod tests {
 
     #[test]
     fn a_press_on_empty_time_that_closes_the_popover_does_nothing_more() {
-        assert!(!press_goes_on(false), "the grid would open quick add on the release");
+        assert!(!press_goes_on(Pressed::InCalendar), "the grid would open quick add on the release");
     }
 
     #[test]
     fn a_press_on_an_event_that_closes_the_popover_still_reaches_the_event() {
         // The second press of a double click lands on the event while its
         // popover is open, and has to reach it to open the editor.
-        assert!(press_goes_on(true));
+        assert!(press_goes_on(Pressed::OnEvent));
+    }
+
+    #[test]
+    fn a_press_outside_the_calendar_that_closes_the_popover_still_does_its_work() {
+        // The Mail switch, the sidebar and the header's buttons took a
+        // second press while the first only closed the popover.
+        assert!(press_goes_on(Pressed::Elsewhere));
     }
 
     fn occurrence(all_day: bool, start: i64, end: i64, my_answer: Option<Answer>) -> Occurrence {

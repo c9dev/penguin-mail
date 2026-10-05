@@ -73,28 +73,46 @@ where
 {
     let mut pause = waits.first_retry;
     loop {
-        match tokio::time::timeout(waits.connect, connect(account.clone())).await {
+        let state = match tokio::time::timeout(waits.connect, connect(account.clone())).await {
             Ok(Ok(Connected::Ready(services))) => return port.start(account.id, services),
             Ok(Ok(Connected::NeedsSignIn)) => return port.report(account.id, AccountState::NeedsReauth).await,
-            Ok(Err(err)) => tracing::warn!(
-                account = %account.email,
-                error = %err,
-                retry_in_secs = pause.as_secs(),
-                "could not start syncing; trying again later"
-            ),
-            Err(_) => tracing::warn!(
-                account = %account.email,
-                waited_secs = waits.connect.as_secs(),
-                retry_in_secs = pause.as_secs(),
-                "starting the account took too long; trying again later"
-            ),
-        }
-        port.report(account.id, AccountState::BackingOff).await;
+            Ok(Err(err)) => {
+                tracing::warn!(
+                    account = %account.email,
+                    error = %err,
+                    retry_in_secs = pause.as_secs(),
+                    "could not start syncing; trying again later"
+                );
+                waiting_state(&err)
+            }
+            Err(_) => {
+                tracing::warn!(
+                    account = %account.email,
+                    waited_secs = waits.connect.as_secs(),
+                    retry_in_secs = pause.as_secs(),
+                    "starting the account took too long; trying again later"
+                );
+                AccountState::BackingOff
+            }
+        };
+        port.report(account.id, state).await;
         tokio::time::sleep(pause).await;
         if !port.wanted(account.id).await {
             return;
         }
         pause = (pause * 2).min(waits.longest_retry);
+    }
+}
+
+/// The state an account waits in after `err` stopped it from starting:
+/// waiting for the keyring when a keyring read did not answer, so the
+/// sidebar does not blame the provider, else backing off.
+fn waiting_state(err: &anyhow::Error) -> AccountState {
+    match err.downcast_ref::<mailrs_sync::SyncError>() {
+        Some(mailrs_sync::SyncError::NoAnswer(step)) if *step == mailrs_sync::KEYRING => {
+            AccountState::WaitingForKeyring
+        }
+        _ => AccountState::BackingOff,
     }
 }
 
@@ -145,6 +163,7 @@ mod tests {
         Ready,
         Hang,
         Fail,
+        Keyring,
         SignIn,
     }
 
@@ -173,6 +192,7 @@ mod tests {
                         Answer::Ready => Ok(Connected::Ready("services")),
                         Answer::SignIn => Ok(Connected::NeedsSignIn),
                         Answer::Fail => Err(anyhow::anyhow!("the keyring refused")),
+                        Answer::Keyring => Err(mailrs_sync::SyncError::NoAnswer(mailrs_sync::KEYRING).into()),
                         Answer::Hang => std::future::pending().await,
                     }
                 })
@@ -223,6 +243,16 @@ mod tests {
         tokio::spawn(start_each(vec![account(9)], script.connect(), Arc::clone(&record), SHORT));
         until(|| record.started.lock().unwrap().contains(&9)).await;
         assert_eq!(script.tries(9), 2);
+        assert_eq!(*record.reported.lock().unwrap(), vec![(9, AccountState::BackingOff)]);
+    }
+
+    #[tokio::test]
+    async fn an_account_whose_keyring_does_not_answer_is_reported_as_waiting_for_it() {
+        let script = Script::default().with(9, &[Answer::Keyring, Answer::Ready]);
+        let record = Arc::new(Record::default());
+        tokio::spawn(start_each(vec![account(9)], script.connect(), Arc::clone(&record), SHORT));
+        until(|| record.started.lock().unwrap().contains(&9)).await;
+        assert_eq!(*record.reported.lock().unwrap(), vec![(9, AccountState::WaitingForKeyring)]);
     }
 
     #[tokio::test]
