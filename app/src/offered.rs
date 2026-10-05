@@ -522,6 +522,22 @@ pub fn failing_lines(failing: &[Failing]) -> Vec<String> {
         .collect()
 }
 
+/// What Remove Account's confirmation says happens to `account`'s mail.
+/// A POP3 account's mail lives only in the store, and under a removal
+/// setting the server has let go of it, so removing the account loses it.
+pub fn remove_account_body(account: &Account) -> String {
+    match account.provider {
+        Provider::Pop3 => gettext(
+            "Its mail exists only on this computer, and removing the account deletes it \
+             with the saved sign-in. Nothing changes on the server.",
+        ),
+        _ => gettext(
+            "Its downloaded mail and saved sign-in are deleted from this computer. \
+             Nothing changes in Gmail.",
+        ),
+    }
+}
+
 /// About's line for each account whose mail lives only in the store.
 pub fn kept_here_lines(accounts: &[Account]) -> Vec<String> {
     accounts
@@ -553,7 +569,8 @@ mod tests {
     use mailrs_sync::{Missing, Offers};
 
     use super::{
-        failing_lines, hides_addresses, kept_here_lines, offers_for, reason, shows_space_switch,
+        failing_lines, hides_addresses, kept_here_lines, offers_for, reason, remove_account_body,
+        shows_space_switch,
         withheld_for,
     };
     use crate::settings::Space;
@@ -613,6 +630,24 @@ mod tests {
                 "Message 4: Penguin Mail could not read the server's answer.",
                 "Message 5: The server would not hand it over.",
             ]
+        );
+    }
+
+    #[test]
+    fn removing_a_pop3_account_says_its_mail_goes_with_it() {
+        assert_eq!(
+            remove_account_body(&pop3_account()),
+            "Its mail exists only on this computer, and removing the account deletes it \
+             with the saved sign-in. Nothing changes on the server."
+        );
+        let gmail = Account {
+            provider: Provider::Gmail,
+            ..pop3_account()
+        };
+        assert_eq!(
+            remove_account_body(&gmail),
+            "Its downloaded mail and saved sign-in are deleted from this computer. \
+             Nothing changes in Gmail."
         );
     }
 

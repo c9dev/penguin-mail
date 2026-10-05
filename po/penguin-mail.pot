@@ -2063,7 +2063,19 @@ msgstr ""
 msgid "Message {number}: {words}"
 msgstr ""
 
-#: app/src/offered.rs:533
+#: app/src/offered.rs:531
+msgid ""
+"Its mail exists only on this computer, and removing the account deletes it "
+"with the saved sign-in. Nothing changes on the server."
+msgstr ""
+
+#: app/src/offered.rs:535
+msgid ""
+"Its downloaded mail and saved sign-in are deleted from this computer. "
+"Nothing changes in Gmail."
+msgstr ""
+
+#: app/src/offered.rs:549
 msgid ""
 "Mail from {address} is kept only on this computer; back up this file to keep "
 "it."
@@ -2890,7 +2902,7 @@ msgstr ""
 #. The header in both spaces carries a button for this now (R12);
 #. the menu item stays too, so Ctrl+J shows here as well.
 #: app/src/settings/mod.rs:215 app/src/ui/assistant.rs:99
-#: app/src/ui/window.rs:3134
+#: app/src/ui/window.rs:3131
 msgid "Assistant"
 msgstr ""
 
@@ -3203,7 +3215,7 @@ msgstr ""
 msgid "New Message"
 msgstr ""
 
-#: app/src/tray.rs:208 app/src/ui/sidebar.rs:1605 app/src/ui/window.rs:3137
+#: app/src/tray.rs:208 app/src/ui/sidebar.rs:1605 app/src/ui/window.rs:3134
 msgid "Check for Mail"
 msgstr ""
 
@@ -3221,7 +3233,7 @@ msgstr ""
 msgid "Check for Updates"
 msgstr ""
 
-#: app/src/tray.rs:224 app/src/ui/window.rs:3149
+#: app/src/tray.rs:224 app/src/ui/window.rs:3146
 #: app/src/ui/window/shortcuts.rs:625
 msgid "Quit"
 msgstr ""
@@ -3246,7 +3258,7 @@ msgstr ""
 msgid "License"
 msgstr ""
 
-#: app/src/ui/about.rs:196 app/src/ui/window.rs:3148
+#: app/src/ui/about.rs:196 app/src/ui/window.rs:3145
 msgid "About Penguin Mail"
 msgstr ""
 
@@ -3632,7 +3644,7 @@ msgid ""
 "from it safely."
 msgstr ""
 
-#: app/src/ui/assistant.rs:31 app/src/ui/window.rs:3216
+#: app/src/ui/assistant.rs:31 app/src/ui/window.rs:3213
 msgid "Summarize this conversation"
 msgstr ""
 
@@ -3769,7 +3781,7 @@ msgstr ""
 
 #: app/src/ui/assistant_mcp_prefs.rs:121 app/src/ui/calendar/editor.rs:1532
 #: app/src/ui/composer/mod.rs:1662 app/src/ui/composer/recipients.rs:304
-#: app/src/ui/window.rs:2930
+#: app/src/ui/window.rs:2927
 msgid "Remove"
 msgstr ""
 
@@ -6375,7 +6387,7 @@ msgstr ""
 msgid "Allow Hide My Email"
 msgstr ""
 
-#: app/src/ui/hide_my_email.rs:335 app/src/ui/window.rs:3264
+#: app/src/ui/hide_my_email.rs:335 app/src/ui/window.rs:3261
 msgid "Add an account first"
 msgstr ""
 
@@ -7352,7 +7364,7 @@ msgstr ""
 msgid "Rules…"
 msgstr ""
 
-#: app/src/ui/sidebar.rs:1517 app/src/ui/window.rs:3140
+#: app/src/ui/sidebar.rs:1517 app/src/ui/window.rs:3137
 msgid "Hide My Email…"
 msgstr ""
 
@@ -8007,65 +8019,59 @@ msgstr ""
 msgid "Remove {account}?"
 msgstr ""
 
-#: app/src/ui/window.rs:2927
-msgid ""
-"Its downloaded mail and saved sign-in are deleted from this computer. "
-"Nothing changes in Gmail."
-msgstr ""
-
-#: app/src/ui/window.rs:2943
+#: app/src/ui/window.rs:2940
 msgid "Removed {account}"
 msgstr ""
 
-#: app/src/ui/window.rs:2945
+#: app/src/ui/window.rs:2942
 msgid "Could not remove {account}: {reason}"
 msgstr ""
 
-#: app/src/ui/window.rs:3121
+#: app/src/ui/window.rs:3118
 msgid "Refresh"
 msgstr ""
 
-#: app/src/ui/window.rs:3125
+#: app/src/ui/window.rs:3122
 msgid "Show Declined Events"
 msgstr ""
 
-#: app/src/ui/window.rs:3138
+#: app/src/ui/window.rs:3135
 msgid "Add Account…"
 msgstr ""
 
-#: app/src/ui/window.rs:3139
+#: app/src/ui/window.rs:3136
 msgid "New Smart Mailbox…"
 msgstr ""
 
-#: app/src/ui/window.rs:3146 app/src/ui/window/shortcuts.rs:602
+#: app/src/ui/window.rs:3143 app/src/ui/window/shortcuts.rs:602
 msgid "Preferences"
 msgstr ""
 
-#: app/src/ui/window.rs:3147
+#: app/src/ui/window.rs:3144
 msgid "Keyboard Shortcuts"
 msgstr ""
 
-#: app/src/ui/window.rs:3155 app/src/ui/window.rs:3157
+#: app/src/ui/window.rs:3152 app/src/ui/window.rs:3154
 msgid "Main Menu"
 msgstr ""
 
-#: app/src/ui/window.rs:3539
+#: app/src/ui/window.rs:3536
 msgid "Open a message from the person first"
 msgstr ""
 
-#: app/src/ui/window.rs:3615
+#: app/src/ui/window.rs:3612
 msgid "Penguin Mail shows the new language after a restart"
 msgstr ""
 
-#: app/src/ui/window.rs:3617 app/src/update/mod.rs:130
+#: app/src/ui/window.rs:3614 app/src/update/mod.rs:130
 msgid "Restart"
 msgstr ""
 
-#: app/src/ui/window.rs:3650
+#: app/src/ui/window.rs:3647
 msgid "Messages That Will Not Download"
 msgstr ""
 
-#: app/src/ui/window.rs:3652
+#: app/src/ui/window.rs:3649
 msgid ""
 "{address}'s server would not hand these over after three tries. Penguin Mail "
 "tries again at each check.\n"
@@ -8073,7 +8079,7 @@ msgid ""
 "{lines}"
 msgstr ""
 
-#: app/src/ui/window.rs:3656
+#: app/src/ui/window.rs:3653
 msgid "Close"
 msgstr ""
 
