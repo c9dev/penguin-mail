@@ -8595,7 +8595,7 @@ msgid_plural "{accounts} will get new labels."
 msgstr[0] "{accounts} will get a new label."
 msgstr[1] "{accounts} will get new labels."
 
-#: sync/src/calendar_copy.rs:1477
+#: sync/src/calendar_copy.rs:1486
 msgid "Google Calendar offers out of office and focus time only on some work and school accounts ({reason})"
 msgstr "Google Calendar offers out of office and focus time only on some work and school accounts ({reason})"
 
@@ -8776,6 +8776,26 @@ msgstr "The keyring refused: {reason}"
 #: sync/src/rules/forward.rs:18
 msgid "A rule on this computer forwarded the attached message from {address}."
 msgstr "A rule on this computer forwarded the attached message from {address}."
+
+#: sync/src/services/caldav.rs:481
+msgid "An event needs an ID to be imported."
+msgstr "An event needs an ID to be imported."
+
+#: sync/src/services/caldav.rs:502
+msgid "A CalDAV calendar cannot store attached files."
+msgstr "A CalDAV calendar cannot store attached files."
+
+#: sync/src/services/caldav.rs:506
+msgid "A CalDAV calendar has no files to share."
+msgstr "A CalDAV calendar has no files to share."
+
+#: sync/src/services/caldav.rs:536
+msgid "You are not a guest of this event."
+msgstr "You are not a guest of this event."
+
+#: sync/src/services/caldav.rs:540
+msgid "Penguin Mail cannot change the calendar list of a CalDAV server."
+msgstr "Penguin Mail cannot change the calendar list of a CalDAV server."
 
 #: sync/src/services/imap/outgoing.rs:85
 msgid "The message names nobody to send it to."

@@ -9190,7 +9190,7 @@ msgid_plural "{accounts} will get new labels."
 msgstr[0] "Etiqueta nova em: {accounts}."
 msgstr[1] "Etiquetas novas em: {accounts}."
 
-#: sync/src/calendar_copy.rs:1477
+#: sync/src/calendar_copy.rs:1486
 msgid ""
 "Google Calendar offers out of office and focus time only on some work and "
 "school accounts ({reason})"
@@ -9381,6 +9381,27 @@ msgstr "O porta-chaves recusou: {reason}"
 msgid "A rule on this computer forwarded the attached message from {address}."
 msgstr ""
 "Uma regra neste computador reencaminhou a mensagem em anexo de {address}."
+
+#: sync/src/services/caldav.rs:481
+msgid "An event needs an ID to be imported."
+msgstr "Um evento precisa de um ID para ser importado."
+
+#: sync/src/services/caldav.rs:502
+msgid "A CalDAV calendar cannot store attached files."
+msgstr "Um calendário CalDAV não pode guardar ficheiros anexados."
+
+#: sync/src/services/caldav.rs:506
+msgid "A CalDAV calendar has no files to share."
+msgstr "Um calendário CalDAV não tem ficheiros para partilhar."
+
+#: sync/src/services/caldav.rs:536
+msgid "You are not a guest of this event."
+msgstr "Não é convidado deste evento."
+
+#: sync/src/services/caldav.rs:540
+msgid "Penguin Mail cannot change the calendar list of a CalDAV server."
+msgstr ""
+"O Penguin Mail não pode alterar a lista de calendários de um servidor CalDAV."
 
 #: sync/src/services/imap/outgoing.rs:85
 msgid "The message names nobody to send it to."
