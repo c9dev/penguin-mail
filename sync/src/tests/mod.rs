@@ -292,6 +292,18 @@ pub(crate) fn fake_settings() -> ImapSettings {
     }
 }
 
+/// A store on disk with one IMAP account and no sync, for tests of what
+/// is kept about the account. The directory goes with the tuple.
+pub(crate) async fn store_with_imap_account() -> (Db, AccountId, tempfile::TempDir) {
+    let dir = tempfile::tempdir().unwrap();
+    let db = Db::open(&dir.path().join("mail.db")).unwrap();
+    let account_id = db
+        .write(|c| accounts::insert_account(c, "me@example.com", 0))
+        .await
+        .unwrap();
+    (db, account_id, dir)
+}
+
 /// An IMAP account on a fresh fake server.
 pub(crate) async fn imap_harness() -> ImapHarness {
     imap_harness_on(FakeImap::new(), fake_settings()).await

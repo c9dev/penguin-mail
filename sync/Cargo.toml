@@ -51,6 +51,8 @@ mailrs-testmail.workspace = true
 mailrs-sieve = { workspace = true, features = ["fake"] }
 # The in-memory CalDAV and CardDAV server the DAV adapter tests run against.
 mailrs-dav = { workspace = true, features = ["fake"] }
+# The in-memory network the service-finding tests run against.
+mailrs-discover = { workspace = true, features = ["fake"] }
 tempfile.workspace = true
 # Lets a test read what the code logged.
 tracing-subscriber.workspace = true
