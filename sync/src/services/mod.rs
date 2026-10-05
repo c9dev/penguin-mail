@@ -601,6 +601,8 @@ impl AccountServices {
             contacts: self.contacts.is_some() && !refused.contacts,
             rules: self.rules.is_some() && !refused.rules,
             auto_reply: self.auto_reply.is_some() && !refused.auto_reply,
+            auto_reply_subject: self.auto_reply.as_ref().is_some_and(AutoReplyService::keeps_subject),
+            auto_reply_contacts_only: self.auto_reply.as_ref().is_some_and(AutoReplyService::limits_to_contacts),
             // Gmail, IMAP and Graph search on the server. A POP3 account's
             // server keeps nothing to search; its mail is all in the store.
             search: !caps.local_mailboxes,
@@ -774,6 +776,12 @@ pub struct Offers {
     pub contacts: bool,
     pub rules: bool,
     pub auto_reply: bool,
+    /// The automatic reply has a subject of its own. Outlook keeps only
+    /// the message.
+    pub auto_reply_subject: bool,
+    /// The automatic reply can go to the person's contacts only. Sieve
+    /// cannot say it.
+    pub auto_reply_contacts_only: bool,
     /// The server searches past the mail kept on this computer. False for
     /// an account whose mailboxes are local, whose whole mail the store
     /// holds.
@@ -813,6 +821,8 @@ impl Offers {
         contacts: true,
         rules: true,
         auto_reply: true,
+        auto_reply_subject: true,
+        auto_reply_contacts_only: true,
         search: true,
         tags: false,
         focused: false,
@@ -1323,6 +1333,14 @@ pub trait AutoReplyService: Send + Sync + 'static {
         &self,
         vacation: &Vacation,
     ) -> impl Future<Output = Result<(), BackendError>> + Send;
+
+    /// Whether the reply has a subject of its own. Graph keeps only the
+    /// message.
+    fn keeps_subject(&self) -> bool;
+
+    /// Whether the reply can go to the person's contacts only. Sieve's
+    /// vacation action has no way to say it (RFC 5230).
+    fn limits_to_contacts(&self) -> bool;
 }
 
 /// The addresses the account sends as.

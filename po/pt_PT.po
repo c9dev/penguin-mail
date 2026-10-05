@@ -2975,7 +2975,7 @@ msgstr ""
 msgid "That account is not connected."
 msgstr "Essa conta não está ligada."
 
-#: app/src/protection/draft.rs:156 app/src/ui/vacation.rs:145
+#: app/src/protection/draft.rs:156 app/src/ui/vacation.rs:146
 msgid "Could not save: {reason}"
 msgstr "Não foi possível guardar: {reason}"
 
@@ -4775,7 +4775,7 @@ msgid "None"
 msgstr "Nenhuma"
 
 #: app/src/ui/calendar/editor.rs:592 app/src/ui/composer/mod.rs:449
-#: app/src/ui/vacation.rs:246 app/src/ui/vacation.rs:255
+#: app/src/ui/vacation.rs:249 app/src/ui/vacation.rs:258
 msgid "Message"
 msgstr "Mensagem"
 
@@ -6124,7 +6124,7 @@ msgid "Bcc"
 msgstr "Bcc"
 
 #: app/src/ui/composer/mod.rs:436 app/src/ui/rules.rs:355
-#: app/src/ui/templates.rs:192 app/src/ui/vacation.rs:235
+#: app/src/ui/templates.rs:192 app/src/ui/vacation.rs:238
 msgid "Subject"
 msgstr "Assunto"
 
@@ -8387,61 +8387,59 @@ msgstr "Não foi possível cancelar a subscrição de {sender}: {reason}"
 msgid "Automatic Reply"
 msgstr "Resposta automática"
 
-#: app/src/ui/vacation.rs:90
+#: app/src/ui/vacation.rs:91
 msgid "Allow Automatic Replies"
 msgstr "Permitir respostas automáticas"
 
-#: app/src/ui/vacation.rs:134
+#: app/src/ui/vacation.rs:135
 msgid "Automatic reply is on"
 msgstr "A resposta automática está ligada"
 
-#: app/src/ui/vacation.rs:136
+#: app/src/ui/vacation.rs:137
 msgid "Automatic reply is off"
 msgstr "A resposta automática está desligada"
 
-#: app/src/ui/vacation.rs:157
+#: app/src/ui/vacation.rs:158
 msgid "Could Not Load the Automatic Reply"
 msgstr "Não foi possível carregar a resposta automática"
 
-#: app/src/ui/vacation.rs:194
+#: app/src/ui/vacation.rs:168
+msgid "Your mail server"
+msgstr "O seu servidor de correio"
+
+#: app/src/ui/vacation.rs:173
+msgid ""
+"{provider} answers new mail while you are away, even when this computer is "
+"off"
+msgstr ""
+"{provider} responde ao correio novo enquanto estiver ausente, mesmo com este "
+"computador desligado"
+
+#: app/src/ui/vacation.rs:204
 msgid "Send Automatic Replies"
 msgstr "Enviar respostas automáticas"
 
-#: app/src/ui/vacation.rs:197
-msgid ""
-"Outlook answers new mail while you are away, even when this computer is off"
-msgstr ""
-"O Outlook responde ao correio novo enquanto estiver ausente, mesmo com este "
-"computador desligado"
-
-#: app/src/ui/vacation.rs:200
-msgid ""
-"Gmail answers new mail while you are away, even when this computer is off"
-msgstr ""
-"O Gmail responde ao correio novo enquanto estiver ausente, mesmo com este "
-"computador desligado"
-
-#: app/src/ui/vacation.rs:216
+#: app/src/ui/vacation.rs:219
 msgid "Only Between These Dates"
 msgstr "Apenas entre estas datas"
 
-#: app/src/ui/vacation.rs:219
+#: app/src/ui/vacation.rs:222
 msgid "First Day"
 msgstr "Primeiro dia"
 
-#: app/src/ui/vacation.rs:220
+#: app/src/ui/vacation.rs:223
 msgid "Last Day"
 msgstr "Último dia"
 
-#: app/src/ui/vacation.rs:228
+#: app/src/ui/vacation.rs:231
 msgid "Dates"
 msgstr "Datas"
 
-#: app/src/ui/vacation.rs:262
+#: app/src/ui/vacation.rs:265
 msgid "The same reply goes to people inside and outside your organization."
 msgstr "A mesma resposta segue para pessoas dentro e fora da sua organização."
 
-#: app/src/ui/vacation.rs:269
+#: app/src/ui/vacation.rs:272
 msgid "Only Reply to My Contacts"
 msgstr "Responder apenas aos meus contactos"
 
@@ -10303,6 +10301,13 @@ msgstr "Marcar como não sendo spam"
 #: sync/src/triage.rs:70
 msgid "Move to {folder}"
 msgstr "Mover para {folder}"
+
+#~ msgid ""
+#~ "Outlook answers new mail while you are away, even when this computer is "
+#~ "off"
+#~ msgstr ""
+#~ "O Outlook responde ao correio novo enquanto estiver ausente, mesmo com "
+#~ "este computador desligado"
 
 #~ msgid "Add {contact} to the Google contacts of {account}?"
 #~ msgstr "Adicionar {contact} aos contactos Google de {account}?"

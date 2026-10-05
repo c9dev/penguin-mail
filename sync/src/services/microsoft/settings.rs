@@ -169,6 +169,14 @@ impl<G: GraphApi> AutoReplyService for Microsoft<G> {
             "Outlook answered but did not keep the automatic reply.",
         )))
     }
+
+    fn keeps_subject(&self) -> bool {
+        false
+    }
+
+    fn limits_to_contacts(&self) -> bool {
+        true
+    }
 }
 
 #[cfg(test)]

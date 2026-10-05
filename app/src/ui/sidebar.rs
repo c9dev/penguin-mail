@@ -2006,6 +2006,8 @@ mod tests {
         let bare = Offers {
             rules: false,
             auto_reply: false,
+            auto_reply_subject: false,
+            auto_reply_contacts_only: false,
             ..Offers::EVERYTHING
         };
         // The items stay in the model; the account's own actions are off,

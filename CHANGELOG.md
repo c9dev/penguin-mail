@@ -292,6 +292,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   it last updated, instead of leaving you guessing.
 
 ### Fixed
+- The automatic reply dialog names the provider that answers for an IMAP
+  account with Sieve, where it used to say Gmail.
 - The conversation list is one Tab stop: Tab lands on the open conversation and the next Tab leaves the list, while the arrow keys, Home, End, Page Up and Page Down move between conversations. A screen reader reads each conversation the focus reaches.
 - The assistant can change a contact on an Outlook or CardDAV account, even with that account's contacts off in Preferences, and it no longer calls an Outlook account's contacts or categories Gmail's.
 - Changing an Outlook contact's company or phone keeps its name. Outlook used to rename the contact after its company.
