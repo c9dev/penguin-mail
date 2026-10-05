@@ -290,6 +290,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   it last updated, instead of leaving you guessing.
 
 ### Fixed
+- The Outbox in the sidebar shows a warning only while a message in it failed to send, and an outbox tray of its own otherwise.
 - Dimmed text in light mode, such as the composer's From and Subject labels and the lines under each row in Preferences, is dark enough to read, and the composer's focused field label reads in both modes.
 - Preferences reads "gpg and gpgsm, which hold your keys" with the verb in the plural, and the assistant's setup page names the same model servers as Preferences.
 - Inserting a GIF or WebP picture into a message, or showing a contact photo in such a format, no longer holds up the window while it loads. The composer shows a placeholder until the picture is ready.

@@ -874,11 +874,10 @@ impl Sidebar {
                 }
             }
             Place::Outbox => {
-                // The tray icon goes to Send Later, which the mockup
-                // pictures; this row keeps mail that could not go out, so
-                // it wears a warning instead of the tray they would
-                // otherwise share.
-                self.add_mailbox(Mailbox::Outbox, &gettext("Outbox"), "dialog-warning-symbolic", 0);
+                // Send Later has the tray with an arrow, which the mockup
+                // pictures; the Outbox has a tray holding a letter, and
+                // `set_counts` swaps in a warning while a send has failed.
+                self.add_mailbox(Mailbox::Outbox, &gettext("Outbox"), sections::outbox_icon(0), 0);
             }
             Place::Scheduled => {
                 self.add_mailbox(
@@ -1127,6 +1126,11 @@ impl Sidebar {
                         | Mailbox::Flag(_)
                 );
             let shown = count > 0 && (row.mailbox.counts_unread() || is_drafts);
+            if row.mailbox == Mailbox::Outbox
+                && let Some(icon) = row.row.child().and_then(|c| c.first_child()).and_downcast::<gtk::Image>()
+            {
+                icon.set_icon_name(Some(sections::outbox_icon(count)));
+            }
             row.count.set_visible(shown);
             row.count.set_label(&count.to_string());
             super::name(
