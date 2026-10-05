@@ -77,12 +77,12 @@ pub enum Unreachable {
 pub struct Candidate {
     pub source: Source,
     pub provider: Option<ProviderInfo>,
-    pub imap: Server,
+    /// `None` for a provider that offers POP3 and no IMAP; `pop3` then
+    /// holds its incoming server.
+    pub imap: Option<Server>,
     pub smtp: Server,
-    /// The POP3 server the same source names, which Add Account offers
-    /// beside IMAP. Discovery offers POP3 only beside an IMAP server: a
-    /// provider with POP3 alone has no candidate, and the person types
-    /// its servers in Server Settings.
+    /// The POP3 server the same source names. Add Account offers it beside
+    /// an IMAP server, and signs in to it when there is no IMAP server.
     pub pop3: Option<Server>,
     /// The person must confirm these host names before the password goes out.
     pub confirm: bool,
@@ -147,32 +147,43 @@ pub enum PasswordKind {
 
 /// One candidate for each IMAP server with each SMTP server, in the order
 /// given: the first IMAP server with every SMTP server, then the next.
+/// Each carries `pop3`, the POP3 server the same source names. With no
+/// IMAP server, `pop3` takes its place, so a provider that offers POP3
+/// alone still gets a candidate for each SMTP server.
 pub(crate) fn pairs(
     source: Source,
     provider: Option<&ProviderInfo>,
     imap: &[Server],
     smtp: &[Server],
+    pop3: Option<&Server>,
     confirm: bool,
 ) -> Vec<Candidate> {
+    if imap.is_empty() {
+        let Some(pop3) = pop3 else {
+            return Vec::new();
+        };
+        return smtp
+            .iter()
+            .map(|smtp| Candidate {
+                source,
+                provider: provider.cloned(),
+                imap: None,
+                smtp: smtp.clone(),
+                pop3: Some(pop3.clone()),
+                confirm,
+            })
+            .collect();
+    }
     imap.iter()
         .flat_map(|imap| {
             smtp.iter().map(move |smtp| Candidate {
                 source,
                 provider: provider.cloned(),
-                imap: imap.clone(),
+                imap: Some(imap.clone()),
                 smtp: smtp.clone(),
-                pop3: None,
+                pop3: pop3.cloned(),
                 confirm,
             })
         })
         .collect()
-}
-
-/// `candidates`, each with `pop3` beside its IMAP server, for a source
-/// that names one.
-pub(crate) fn with_pop3(mut candidates: Vec<Candidate>, pop3: Option<&Server>) -> Vec<Candidate> {
-    for candidate in &mut candidates {
-        candidate.pop3 = pop3.cloned();
-    }
-    candidates
 }

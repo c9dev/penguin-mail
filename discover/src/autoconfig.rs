@@ -4,7 +4,7 @@
 use roxmltree::{Document, Node, ParsingOptions};
 
 use crate::name::{host, is_within};
-use crate::{Candidate, PasswordKind, ProviderInfo, Security, Server, Source, UserName, pairs, with_pop3};
+use crate::{Candidate, PasswordKind, ProviderInfo, Security, Server, Source, UserName, pairs};
 
 /// A config file is a few kilobytes. A bigger document is not one, and
 /// parsing it would only cost memory.
@@ -23,7 +23,8 @@ pub(crate) struct Config {
 }
 
 /// Reads `xml` for an address at `domain`. `None` when it is not an
-/// autoconfig file or offers no IMAP or no SMTP server the app can use.
+/// autoconfig file, or offers no IMAP or POP3 server or no SMTP server the
+/// app can use.
 pub(crate) fn parse(xml: &str, domain: &str) -> Option<Config> {
     let options = ParsingOptions {
         nodes_limit: MOST_NODES,
@@ -62,7 +63,8 @@ pub(crate) fn parse(xml: &str, domain: &str) -> Option<Config> {
                     .find_map(|n| link(n.attribute("url")))
             }),
     };
-    (!config.imap.is_empty() && !config.smtp.is_empty()).then_some(config)
+    let incoming = !config.imap.is_empty() || !config.pop3.is_empty();
+    (incoming && !config.smtp.is_empty()).then_some(config)
 }
 
 impl Config {
@@ -79,20 +81,23 @@ impl Config {
             documentation_url: self.documentation_url.clone(),
             files_sent_mail: false,
         };
-        let mut candidates = pairs(source, Some(&provider), &self.imap, &self.smtp, false);
-        if source == Source::MxAutoconfig {
-            for candidate in &mut candidates {
-                candidate.confirm = !is_within(&candidate.imap.host, domain)
-                    || !is_within(&candidate.smtp.host, domain);
-            }
-        }
         // A file found through the MX hosts names a POP3 server outside the
         // domain with no yes to ask for it, so such a server is left out.
         let pop3 = self
             .pop3
             .iter()
             .find(|server| source != Source::MxAutoconfig || is_within(&server.host, domain));
-        with_pop3(candidates, pop3)
+        let mut candidates = pairs(source, Some(&provider), &self.imap, &self.smtp, pop3, false);
+        if source == Source::MxAutoconfig {
+            for candidate in &mut candidates {
+                candidate.confirm = candidate
+                    .imap
+                    .as_ref()
+                    .is_some_and(|imap| !is_within(&imap.host, domain))
+                    || !is_within(&candidate.smtp.host, domain);
+            }
+        }
+        candidates
     }
 }
 
@@ -327,7 +332,7 @@ mod tests {
         let candidates = config.candidates(Source::Autoconfig, "mailbox.org");
         let ports: Vec<(u16, u16)> = candidates
             .iter()
-            .map(|c| (c.imap.port, c.smtp.port))
+            .map(|c| (c.imap.as_ref().unwrap().port, c.smtp.port))
             .collect();
         assert_eq!(ports, [(993, 465), (993, 587), (143, 465), (143, 587)]);
         let provider = candidates[0].provider.clone().expect("a provider");

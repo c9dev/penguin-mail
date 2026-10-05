@@ -2,7 +2,7 @@
 
 use futures::future::join_all;
 
-use crate::{Candidate, Net, Security, Server, Source, UserName, pairs, with_pop3};
+use crate::{Candidate, Net, Security, Server, Source, UserName, pairs};
 
 /// Tries `imap.`, `mail.` and the bare domain on 993, and `smtp.` and
 /// `mail.` on 465, then on 587 with STARTTLS, and `pop.` and `pop3.` on 995,
@@ -37,10 +37,7 @@ pub(crate) async fn probe<N: Net>(net: &N, domain: &str) -> Vec<Candidate> {
     );
     // The first IMAP host that answered, with every submission server that
     // answered, in the order tried, and the first POP3 host beside them.
-    with_pop3(
-        pairs(Source::Probe, None, &imap[..imap.len().min(1)], &smtp, true),
-        pop3.first(),
-    )
+    pairs(Source::Probe, None, &imap[..imap.len().min(1)], &smtp, pop3.first(), true)
 }
 
 fn server(host: String, port: u16, security: Security) -> Server {
@@ -80,7 +77,7 @@ mod tests {
             .accept("smtp.example.org", 587, Security::StartTls);
         let found = probe(&net, "example.org").await;
         assert_eq!(found.len(), 1);
-        assert_eq!(found[0].imap.host, "mail.example.org");
+        assert_eq!(found[0].imap.as_ref().unwrap().host, "mail.example.org");
         assert_eq!(
             (found[0].smtp.host.as_str(), found[0].smtp.port),
             ("smtp.example.org", 587)
@@ -101,6 +98,18 @@ mod tests {
             .map(|c| (c.smtp.host.as_str(), c.smtp.port))
             .collect();
         assert_eq!(smtp, [("mail.example.org", 465), ("smtp.example.org", 587)]);
+    }
+
+    #[tokio::test]
+    async fn a_domain_with_pop3_and_no_imap_gets_a_pop3_candidate() {
+        let net = FakeNet::default()
+            .accept("pop.example.org", 995, Security::Tls)
+            .accept("smtp.example.org", 465, Security::Tls);
+        let found = probe(&net, "example.org").await;
+        assert_eq!(found.len(), 1);
+        assert_eq!(found[0].imap, None);
+        assert_eq!(found[0].pop3.as_ref().map(|s| s.host.as_str()), Some("pop.example.org"));
+        assert!(found[0].confirm, "a guess is confirmed before the password goes out");
     }
 
     #[tokio::test]
