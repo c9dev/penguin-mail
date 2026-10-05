@@ -31,7 +31,6 @@ use mailrs_domain::EpochMillis;
 use mailrs_domain::calendar::{self as model, Access, Guest, Kind, Reminder, ReminderMethod, Status};
 use mailrs_domain::invitation::Answer;
 use mailrs_domain::translate::gettext;
-use mailrs_gmail::{Answered, Busy, EventFields, EventTime, Series};
 use mailrs_graph::{DateTimeZone, GraphCalendar, GraphError, GraphEvent, Response};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
@@ -46,8 +45,6 @@ const MONTH: i64 = 30 * DAY;
 /// Most series a token remembers, so a calendar of thousands of them
 /// cannot grow it without bound.
 const MOST_SERIES: usize = 500;
-/// How far ahead `series` counts the occurrences a counted rule has left.
-const COUNT_AHEAD: i64 = 3650 * DAY;
 /// The shape of the sync token this build writes. Builds before 1 stored
 /// exceptions without the start they replace; a token of an older shape
 /// answers `StateLost`, so the copy reads the calendar whole once and
@@ -99,15 +96,6 @@ fn answer(response: &str) -> Option<Answer> {
         "declined" => Some(Answer::No),
         "tentativelyAccepted" => Some(Answer::Maybe),
         _ => None,
-    }
-}
-
-fn google_word(response: Option<&str>) -> &'static str {
-    match response {
-        Some("accepted") => "accepted",
-        Some("declined") => "declined",
-        Some("tentativelyAccepted") => "tentative",
-        _ => "needsAction",
     }
 }
 
@@ -189,15 +177,6 @@ fn calendar_of(c: &GraphCalendar) -> model::Calendar {
         reminders: Vec::new(),
         ..model::Calendar::default()
     }
-}
-
-/// Whether the event takes the account's time: not cancelled, not free,
-/// not all day, not declined.
-fn blocks_time(e: &GraphEvent) -> bool {
-    !e.is_cancelled
-        && !e.is_all_day
-        && !matches!(e.show_as.as_deref(), Some("free" | "workingElsewhere"))
-        && e.response_status.as_ref().is_none_or(|s| s.response != "declined")
 }
 
 fn refused(line: String) -> BackendError {
@@ -363,12 +342,6 @@ impl<G: GraphApi> Microsoft<G> {
             .ok_or(BackendError::NotFound)
     }
 
-    /// The id of the account's default calendar.
-    async fn default_calendar(&self) -> Result<String, BackendError> {
-        let all = self.graph().calendars().await.map_err(|e| self.service(e))?;
-        all.into_iter().find(|c| c.is_default_calendar).map(|c| c.id).ok_or(BackendError::NotFound)
-    }
-
     async fn changes_of(
         &self,
         calendar: &str,
@@ -484,156 +457,9 @@ impl<G: GraphApi> Microsoft<G> {
         exceptions.retain(|e| !gone.contains(&e.id));
         Ok(gone)
     }
-
-    /// An event in the shapes the assistant reads.
-    fn assistant_event(&self, e: &GraphEvent) -> mailrs_gmail::Event {
-        let event = self.event_of(e, "");
-        let time = |at: i64| {
-            if e.is_all_day {
-                EventTime::Day(DateTime::<Utc>::from_timestamp_millis(at).unwrap_or_default().format("%Y-%m-%d").to_string())
-            } else {
-                EventTime::At(iso(at))
-            }
-        };
-        mailrs_gmail::Event {
-            id: event.id.clone(),
-            uid: event.uid.clone(),
-            summary: event.title.clone(),
-            start: Some(time(event.start)),
-            end: Some(time(event.end)),
-            location: event.place.clone(),
-            description: event.description.clone(),
-            organizer: event.organizer.clone(),
-            guests: e
-                .attendees
-                .iter()
-                .filter_map(|a| {
-                    let email = a.email_address.address.clone()?;
-                    Some(mailrs_gmail::Guest {
-                        me: email.eq_ignore_ascii_case(&self.settings().address),
-                        name: a.email_address.name.clone(),
-                        answer: google_word(a.status.as_ref().map(|s| s.response.as_str())).to_string(),
-                        email,
-                    })
-                })
-                .collect(),
-            cancelled: e.is_cancelled,
-            busy: blocks_time(e),
-            link: None,
-        }
-    }
-
-    /// What an `EventFields` sets, as the body of a create or a change.
-    fn fields_body(fields: &EventFields) -> Value {
-        let mut body = serde_json::Map::new();
-        let mut time = |key: &str, at: &EventTime| {
-            let (text, all_day) = match at {
-                EventTime::At(text) => {
-                    let utc = DateTime::parse_from_rfc3339(text).map(|t| t.with_timezone(&Utc)).unwrap_or_default();
-                    (utc.format("%Y-%m-%dT%H:%M:%S").to_string(), false)
-                }
-                EventTime::Day(day) => (format!("{day}T00:00:00"), true),
-            };
-            body.insert(key.to_string(), json!({ "dateTime": text, "timeZone": "UTC" }));
-            all_day
-        };
-        let all_day = [fields.start.as_ref().map(|s| time("start", s)), fields.end.as_ref().map(|e| time("end", e))]
-            .into_iter()
-            .flatten()
-            .any(|day| day);
-        if fields.start.is_some() || fields.end.is_some() {
-            body.insert("isAllDay".into(), json!(all_day));
-        }
-        if let Some(summary) = &fields.summary {
-            body.insert("subject".into(), json!(summary));
-        }
-        if let Some(place) = &fields.location {
-            body.insert("location".into(), json!({ "displayName": place }));
-        }
-        if let Some(text) = &fields.description {
-            body.insert("body".into(), json!({ "contentType": "text", "content": text }));
-        }
-        if let Some(guests) = &fields.guests {
-            let list: Vec<Value> =
-                guests.iter().map(|g| json!({ "emailAddress": { "address": g }, "type": "required" })).collect();
-            body.insert("attendees".into(), Value::Array(list));
-        }
-        Value::Object(body)
-    }
 }
 
 impl<G: GraphApi> CalendarService for Microsoft<G> {
-    async fn answer_invitation(
-        &self,
-        ical_uid: &str,
-        _me: &str,
-        answer: Answer,
-        occurrence: Option<EpochMillis>,
-        note: Option<&str>,
-    ) -> Result<Answered, BackendError> {
-        let found = self.graph().events_by_uid(ical_uid).await.map_err(|e| self.service(e))?;
-        let Some(target) = found
-            .iter()
-            .find(|e| !matches!(e.kind.as_deref(), Some("occurrence" | "exception")))
-            .or(found.first())
-        else {
-            return Ok(Answered::NotOnCalendar);
-        };
-        let id = match occurrence {
-            Some(start) => self.instance_of(&target.id, start).await?.id,
-            None => target.id.clone(),
-        };
-        self.graph().respond(&id, response_of(answer), note).await.map_err(|e| self.service(e))?;
-        Ok(Answered::Done)
-    }
-
-    async fn busy_between(&self, from: EpochMillis, to: EpochMillis) -> Result<Vec<Busy>, BackendError> {
-        let events = self.graph().calendar_view(&iso(from), &iso(to)).await.map_err(|e| self.service(e))?;
-        Ok(events
-            .iter()
-            .filter(|e| blocks_time(e))
-            .map(|e| Busy { uid: e.ical_uid.clone().unwrap_or_default(), summary: e.subject.clone().unwrap_or_default() })
-            .collect())
-    }
-
-    async fn series(&self, ical_uid: &str, from: EpochMillis) -> Result<Option<Series>, BackendError> {
-        let found = self.graph().events_by_uid(ical_uid).await.map_err(|e| self.service(e))?;
-        let Some(master) = found.iter().find(|e| e.kind.as_deref() == Some("seriesMaster")) else {
-            return Ok(None);
-        };
-        let event = self.event_of(master, "");
-        let Some(rule) = event.rules.iter().find_map(|r| r.strip_prefix("RRULE:")) else {
-            return Ok(None);
-        };
-        let counted = master.recurrence.as_ref().is_some_and(|r| r.range.kind == "numbered");
-        let left = counted.then(|| {
-            let left = model::expand(&event, from, from + COUNT_AHEAD).len();
-            u32::try_from(left).unwrap_or(u32::MAX)
-        });
-        Ok(Some(Series { rule: rule.to_string(), left }))
-    }
-
-    async fn events_between(&self, from: EpochMillis, to: EpochMillis) -> Result<Vec<mailrs_gmail::Event>, BackendError> {
-        let mut events = self.graph().calendar_view(&iso(from), &iso(to)).await.map_err(|e| self.service(e))?;
-        events.sort_by_key(|e| e.start.as_ref().and_then(millis));
-        Ok(events.iter().map(|e| self.assistant_event(e)).collect())
-    }
-
-    async fn create_event(&self, fields: &EventFields) -> Result<mailrs_gmail::Event, BackendError> {
-        let calendar = self.default_calendar().await?;
-        let made = self.graph().create_event(&calendar, &Self::fields_body(fields)).await.map_err(|e| self.service(e))?;
-        Ok(self.assistant_event(&made))
-    }
-
-    async fn update_event(&self, id: &str, fields: &EventFields) -> Result<mailrs_gmail::Event, BackendError> {
-        let changed = self.graph().update_event(id, &Self::fields_body(fields), None).await.map_err(|e| self.service(e))?;
-        Ok(self.assistant_event(&changed))
-    }
-
-    async fn delete_event(&self, id: &str) -> Result<(), BackendError> {
-        self.graph().delete_event(id, None).await.map_err(|e| self.service(e))
-    }
-
     async fn calendars(&self) -> Result<Vec<model::Calendar>, BackendError> {
         let all = self.graph().calendars().await.map_err(|e| self.service(e))?;
         Ok(all.iter().map(calendar_of).collect())

@@ -45,7 +45,6 @@ pub trait GraphApi: Send + Sync + 'static {
     fn event(&self, id: &str) -> impl Future<Output = Answer<GraphEvent>> + Send;
     fn instances(&self, series: &str, start: &str, end: &str) -> impl Future<Output = Answer<Vec<GraphEvent>>> + Send;
     fn original_starts(&self, ids: &[String]) -> impl Future<Output = Answer<Vec<Answer<GraphEvent>>>> + Send;
-    fn calendar_view(&self, start: &str, end: &str) -> impl Future<Output = Answer<Vec<GraphEvent>>> + Send;
     fn events_by_uid(&self, uid: &str) -> impl Future<Output = Answer<Vec<GraphEvent>>> + Send;
     fn create_event(&self, calendar: &str, body: &Value) -> impl Future<Output = Answer<GraphEvent>> + Send;
     fn update_event(&self, id: &str, body: &Value, etag: Option<&str>) -> impl Future<Output = Answer<GraphEvent>> + Send;
@@ -187,10 +186,6 @@ impl GraphApi for Graph {
 
     async fn original_starts(&self, ids: &[String]) -> Answer<Vec<Answer<GraphEvent>>> {
         Graph::original_starts(self, ids).await
-    }
-
-    async fn calendar_view(&self, start: &str, end: &str) -> Answer<Vec<GraphEvent>> {
-        Graph::calendar_view(self, start, end).await
     }
 
     async fn events_by_uid(&self, uid: &str) -> Answer<Vec<GraphEvent>> {

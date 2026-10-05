@@ -698,6 +698,25 @@ pub fn with_uid(
     Ok(found)
 }
 
+/// The repeating event whose iCalendar UID is `uid`: the row that holds
+/// the rule, not a changed occurrence of it. When more than one calendar
+/// holds it, the primary calendar's row comes first, then one the
+/// account owns, as [`find_event`] orders them. `None` when no row under
+/// that UID repeats.
+pub fn series_with_uid(conn: &Connection, account_id: AccountId, uid: &str) -> Result<Option<Event>> {
+    Ok(conn
+        .query_row(
+            &format!(
+                "SELECT {COLUMNS} FROM events e JOIN calendars c ON c.account_id = e.account_id AND c.id = e.calendar \
+                 WHERE e.account_id = ?1 AND lower(e.uid) = lower(?2) AND e.rules <> '' \
+                 ORDER BY c.is_primary DESC, c.access = 'owner' DESC LIMIT 1"
+            ),
+            params![account_id, uid],
+            read_event,
+        )
+        .optional()?)
+}
+
 /// The invitations on the accounts' shown calendars that still want the
 /// account's own answer, each at its next occurrence that has not ended
 /// by `now`, nearest first, at most `limit` of them. An invitation is a

@@ -45,11 +45,11 @@ use mailrs_domain::{
 use mailrs_gmail::labels;
 use mailrs_gmail::model::{Header, Message, MessagePart, PartBody};
 use mailrs_gmail::{
-    AccountQuota, Answered, BATCH_LIMIT, Busy, CALENDAR_LIST_SCOPE, CALENDAR_LIST_WRITE_SCOPE,
+    AccountQuota, BATCH_LIMIT, CALENDAR_LIST_SCOPE, CALENDAR_LIST_WRITE_SCOPE,
     CALENDAR_SCOPE, CALENDARS_SCOPE, CONTACTS_SCOPE,
-    CONTACTS_WRITE_SCOPE, ConnectionsPage, ContactFields, DELETE_SCOPE, Event, EventFields,
-    GmailError, Granted, Guest, HistoryChange, HistoryPage, LabelColor, MessagePage, MessageRef,
-    Person, Priority, Profile, QuotaLimiter, RemoteLabel, SETTINGS_SCOPE, SendAs, Series, cost,
+    CONTACTS_WRITE_SCOPE, ConnectionsPage, ContactFields, DELETE_SCOPE,
+    GmailError, Granted, HistoryChange, HistoryPage, LabelColor, MessagePage, MessageRef,
+    Person, Priority, Profile, QuotaLimiter, RemoteLabel, SETTINGS_SCOPE, SendAs, cost,
     limiter,
 };
 
@@ -162,27 +162,9 @@ pub struct FakeState {
     pub contacts: Vec<Person>,
     /// Photo bytes by URL. A URL nobody seeded answers `NotFound`.
     pub photos: HashMap<String, Vec<u8>>,
-    /// The events on this account's calendar, by their iCalendar UID, with
-    /// the answer this account gave each one. A UID that is not here is on
-    /// nobody's calendar and cannot be answered.
-    pub calendar: HashMap<String, Option<Answer>>,
-    /// What the account already has on, as a start, an end and a title.
-    /// An invitation for a time one of these covers clashes with it.
-    pub busy: Vec<(EpochMillis, EpochMillis, String)>,
-    /// The repeating events on the calendar, by their iCalendar UID: the
-    /// rule without its `RRULE:` prefix, and when each occurrence starts.
-    pub series: HashMap<String, (String, Vec<EpochMillis>)>,
-    /// The occurrence each answer named, oldest first, and `None` for an
-    /// answer that covered the whole series.
-    pub answered_occurrences: Vec<Option<EpochMillis>>,
     /// Each answer given on a calendar event by its id, oldest first: the
     /// calendar, the event or occurrence id, the answer and the note.
     pub answered_events: Vec<(String, String, Answer, Option<String>)>,
-    /// The events on the primary calendar that the event calls list and
-    /// change. Kept apart from `calendar` and `busy`, which stand in for
-    /// the calls an invitation makes.
-    pub events: Vec<Event>,
-    next_event: u32,
     /// The calendars `calendars()` lists, for the local copy.
     pub calendars: Vec<calendar::Calendar>,
     /// Every event on those calendars, series and changed occurrences
@@ -407,13 +389,7 @@ impl FakeGmail {
                 filters_made: 0,
                 contacts: Vec::new(),
                 photos: HashMap::new(),
-                calendar: HashMap::new(),
-                busy: Vec::new(),
-                series: HashMap::new(),
-                answered_occurrences: Vec::new(),
                 answered_events: Vec::new(),
-                events: Vec::new(),
-                next_event: 0,
                 calendars: Vec::new(),
                 calendar_events: Vec::new(),
                 calendar_log: Vec::new(),
@@ -1241,131 +1217,6 @@ impl GmailApi for FakeGmail {
         self.needs(SETTINGS_SCOPE)?;
         self.with(|s| s.vacation = vacation.clone());
         Ok(())
-    }
-
-    async fn answer_invitation(
-        &self,
-        ical_uid: &str,
-        _me: &str,
-        answer: Answer,
-        occurrence: Option<EpochMillis>,
-        _note: Option<&str>,
-    ) -> Result<Answered, GmailError> {
-        // The Calendar API spends none of the Gmail budget, so this call
-        // is priced at nothing and only the failure queue applies.
-        self.call("calendar.events.patch", 0).await?;
-        self.calendar_open()?;
-        Ok(self.with(|s| {
-            s.answered_occurrences.push(occurrence);
-            match s.calendar.get_mut(ical_uid) {
-                Some(held) => {
-                    *held = Some(answer);
-                    Answered::Done
-                }
-                None => Answered::NotOnCalendar,
-            }
-        }))
-    }
-
-    async fn busy_between(
-        &self,
-        from: EpochMillis,
-        to: EpochMillis,
-    ) -> Result<Vec<Busy>, GmailError> {
-        self.call("calendar.events.list", 0).await?;
-        self.calendar_open()?;
-        Ok(self.with(|s| {
-            s.busy
-                .iter()
-                .filter(|(starts, ends, _)| *starts < to && *ends > from)
-                .map(|(_, _, summary)| Busy {
-                    uid: format!("busy-{summary}"),
-                    summary: summary.clone(),
-                })
-                .collect()
-        }))
-    }
-
-    /// Counts the occurrences left only for a rule with a `COUNT`, as the
-    /// real client does, so a test sees the same answer Google would give.
-    async fn series(
-        &self,
-        ical_uid: &str,
-        from: EpochMillis,
-    ) -> Result<Option<Series>, GmailError> {
-        self.call("calendar.events.list", 0).await?;
-        self.calendar_open()?;
-        Ok(self.with(|s| {
-            let (rule, starts) = s.series.get(ical_uid)?;
-            let counted = rule.to_ascii_uppercase().contains("COUNT=");
-            Some(Series {
-                rule: rule.clone(),
-                left: counted.then(|| starts.iter().filter(|&&at| at >= from).count() as u32),
-            })
-        }))
-    }
-
-    async fn events_between(
-        &self,
-        from: EpochMillis,
-        to: EpochMillis,
-    ) -> Result<Vec<Event>, GmailError> {
-        self.call("calendar.events.list", 0).await?;
-        self.calendar_open()?;
-        let mut events: Vec<Event> = self.with(|s| {
-            s.events
-                .iter()
-                .filter(|event| {
-                    crate::calendar::span(event)
-                        .is_some_and(|(starts, ends)| starts < to && ends.max(starts + 1) > from)
-                })
-                .cloned()
-                .collect()
-        });
-        events.sort_by_key(|event| crate::calendar::span(event).map(|(starts, _)| starts));
-        Ok(events)
-    }
-
-    async fn create_event(&self, fields: &EventFields) -> Result<Event, GmailError> {
-        self.call("calendar.events.insert", 0).await?;
-        self.calendar_open()?;
-        Ok(self.with(|s| {
-            s.next_event += 1;
-            let mut event = Event {
-                id: format!("event-{}", s.next_event),
-                uid: format!("event-{}@google.com", s.next_event),
-                busy: true,
-                ..Event::default()
-            };
-            apply(&mut event, fields);
-            s.events.push(event.clone());
-            event
-        }))
-    }
-
-    async fn update_event(&self, id: &str, fields: &EventFields) -> Result<Event, GmailError> {
-        self.call("calendar.events.patch", 0).await?;
-        self.calendar_open()?;
-        self.with(|s| {
-            let event = s.events.iter_mut().find(|e| e.id == id)?;
-            apply(event, fields);
-            Some(event.clone())
-        })
-        .ok_or(GmailError::NotFound)
-    }
-
-    async fn delete_event(&self, id: &str) -> Result<(), GmailError> {
-        self.call("calendar.events.delete", 0).await?;
-        self.calendar_open()?;
-        self.with(|s| {
-            let before = s.events.len();
-            s.events.retain(|e| e.id != id);
-            if s.events.len() == before {
-                Err(GmailError::NotFound)
-            } else {
-                Ok(())
-            }
-        })
     }
 
     async fn calendars(&self) -> Result<Vec<calendar::Calendar>, GmailError> {
@@ -2364,44 +2215,6 @@ pub async fn fill_store(sync: &AccountSync) -> Result<(), SyncError> {
     sync.bootstrap().await?;
     while sync.backfill_step().await? {}
     Ok(())
-}
-
-/// Writes what `fields` sets onto `event`, as Google's patch does. A guest
-/// who stays on a new list keeps the answer they gave.
-fn apply(event: &mut Event, fields: &EventFields) {
-    if let Some(summary) = &fields.summary {
-        event.summary = summary.clone();
-    }
-    if let Some(start) = &fields.start {
-        event.start = Some(start.clone());
-    }
-    if let Some(end) = &fields.end {
-        event.end = Some(end.clone());
-    }
-    if let Some(location) = &fields.location {
-        event.location = location.clone();
-    }
-    if let Some(description) = &fields.description {
-        event.description = description.clone();
-    }
-    if let Some(guests) = &fields.guests {
-        event.guests = guests
-            .iter()
-            .map(|email| {
-                event
-                    .guests
-                    .iter()
-                    .find(|g| g.email.eq_ignore_ascii_case(email))
-                    .cloned()
-                    .unwrap_or_else(|| Guest {
-                        email: email.clone(),
-                        name: None,
-                        answer: "needsAction".into(),
-                        me: false,
-                    })
-            })
-            .collect();
-    }
 }
 
 /// The first header called `name` in RFC 822 bytes, unfolded no further

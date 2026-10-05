@@ -252,26 +252,6 @@ impl Graph {
             .collect())
     }
 
-    /// The default calendar's events between `start` and `end`.
-    pub async fn calendar_view(
-        &self,
-        start: &str,
-        end: &str,
-    ) -> Result<Vec<GraphEvent>, GraphError> {
-        let page: Page<GraphEvent> = self
-            .get_with(
-                "me/calendarView",
-                &[
-                    ("startDateTime", start),
-                    ("endDateTime", end),
-                    ("$top", "100"),
-                ],
-                &[UTC],
-            )
-            .await?;
-        Ok(page.value)
-    }
-
     pub async fn events_by_uid(&self, uid: &str) -> Result<Vec<GraphEvent>, GraphError> {
         let filter = format!("iCalUId eq '{}'", uid.replace('\'', "''"));
         let page: Page<GraphEvent> = self

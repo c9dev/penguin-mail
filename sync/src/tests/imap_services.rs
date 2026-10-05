@@ -279,3 +279,56 @@ async fn a_caldav_account_offers_quiet_changes() {
         .with_calendar(AnyCalendar::FakeDav(CalDav::new(dav, mail, vec!["me@example.com".into()])));
     assert!(services.offers().quiet_changes);
 }
+
+/// A Fastmail invitation to one Tuesday of a weekly meeting carries no
+/// rule of its own. The copy holds the series' resource, rule and all, so
+/// the card's series line comes from there.
+#[tokio::test]
+async fn a_caldav_invitation_to_one_occurrence_says_how_its_series_runs() {
+    use chrono::{Datelike, Duration, Utc, Weekday};
+    let h = imap_harness().await;
+    let mut first = Utc::now().date_naive() + Duration::days(1);
+    while first.weekday() != Weekday::Tue {
+        first = first.succ_opt().unwrap();
+    }
+    let stamp = |day: chrono::NaiveDate| day.format("%Y%m%dT090000Z").to_string();
+    let dav = Arc::new(FakeDav::new());
+    dav.add_collection("/cal/work/", Kind::Calendar, "Work", None);
+    dav.put_resource(
+        "/cal/work/standup.ics",
+        &format!(
+            "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//t//EN\r\nBEGIN:VEVENT\r\nUID:standup@fastmail\r\n\
+             DTSTART:{start}\r\nDTEND:{end}\r\nRRULE:FREQ=WEEKLY;BYDAY=TU;COUNT=10\r\nSUMMARY:Stand-up\r\n\
+             ORGANIZER:mailto:boss@example.com\r\nATTENDEE;PARTSTAT=NEEDS-ACTION:mailto:me@example.com\r\n\
+             END:VEVENT\r\nEND:VCALENDAR\r\n",
+            start = stamp(first),
+            end = first.format("%Y%m%dT093000Z"),
+        ),
+    );
+    let mail = h.sync.services().fake_imap_adapter().expect("an IMAP account");
+    let services = h.sync.services().clone().with_calendar(AnyCalendar::FakeDav(CalDav::new(
+        Arc::clone(&dav),
+        mail,
+        vec!["me@example.com".into()],
+    )));
+    let accounts = Arc::new(ServedBy::new(h.account_id, Arc::clone(&h.sync), services));
+    let copy = Arc::new(CalendarCopy::new(Arc::clone(&accounts), h.db.clone()));
+    copy.refresh(h.account_id, crate::now_millis()).await.unwrap();
+    let invitations = crate::Invitations::new(accounts, h.db.clone(), copy);
+
+    let fourth = first + Duration::weeks(3);
+    let ics = format!(
+        "BEGIN:VCALENDAR\r\nMETHOD:REQUEST\r\nBEGIN:VEVENT\r\nUID:standup@fastmail\r\nSEQUENCE:1\r\n\
+         RECURRENCE-ID:{at}\r\nSUMMARY:Stand-up\r\nDTSTART:{at}\r\nDTEND:{end}\r\n\
+         ORGANIZER:mailto:boss@example.com\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n",
+        at = stamp(fourth),
+        end = fourth.format("%Y%m%dT093000Z"),
+    );
+    let invitation = mailrs_domain::invitation::read(&ics).expect("an invitation");
+    // A moment after the fourth Tuesday starts, six are still to come.
+    let now = fourth.and_hms_opt(9, 0, 0).unwrap().and_utc().timestamp_millis() + 1;
+    assert_eq!(
+        invitations.series(h.account_id, &invitation, now).await.unwrap().as_deref(),
+        Some("Every Tuesday, 6 left")
+    );
+}

@@ -489,10 +489,6 @@ impl GraphApi for FakeGraph {
         self.with(|s| calendar::original_starts(s, ids))
     }
 
-    async fn calendar_view(&self, start: &str, end: &str) -> Answer<Vec<GraphEvent>> {
-        self.with(|s| calendar::calendar_view(s, start, end))
-    }
-
     async fn events_by_uid(&self, uid: &str) -> Answer<Vec<GraphEvent>> {
         self.with(|s| calendar::events_by_uid(s, uid))
     }

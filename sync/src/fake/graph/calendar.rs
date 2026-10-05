@@ -196,18 +196,6 @@ pub(super) fn original_starts(s: &mut GraphState, ids: &[String]) -> Answer<Vec<
         .collect())
 }
 
-pub(super) fn calendar_view(s: &mut GraphState, start: &str, end: &str) -> Answer<Vec<GraphEvent>> {
-    s.refuses(Area::Calendar)?;
-    let Some(default) = s.calendars.iter().find(|c| c.is_default_calendar).map(|c| c.id.clone()) else {
-        return Ok(Vec::new());
-    };
-    Ok(s.events
-        .values()
-        .filter(|(c, e)| *c == default && !is_master(e) && within(e, start, end))
-        .map(|(_, e)| e.clone())
-        .collect())
-}
-
 pub(super) fn events_by_uid(s: &mut GraphState, uid: &str) -> Answer<Vec<GraphEvent>> {
     s.refuses(Area::Calendar)?;
     Ok(s.events.values().map(|(_, e)| e).filter(|e| e.ical_uid.as_deref() == Some(uid)).cloned().collect())

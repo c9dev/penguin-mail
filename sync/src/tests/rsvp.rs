@@ -49,7 +49,7 @@ fn connected(h: &Harness) -> Arc<Connected> {
 }
 
 fn invitations(h: &Harness) -> Invitations<Connected> {
-    Invitations::new(connected(h), h.db.clone())
+    Invitations::new(connected(h), h.db.clone(), Arc::new(copy(h)))
 }
 
 fn copy(h: &Harness) -> CalendarCopy<Connected> {
@@ -194,7 +194,7 @@ async fn the_mail_card_answers_through_the_same_queue() {
         .unwrap();
     assert_eq!(sent.told, Told::Calendar);
     assert!(
-        h.fake.with(|s| s.answered_occurrences.is_empty()),
+        h.fake.with(|s| s.answered_events.is_empty()),
         "no answer went around the queue"
     );
     assert_eq!(queued(&h).await.len(), 1);

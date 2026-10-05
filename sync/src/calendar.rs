@@ -2,31 +2,28 @@
 //! events the assistant makes, moves and deletes, for the assistant and
 //! for anything else that reads a calendar without a window of its own.
 //!
-//! Once the local copy has read an account's primary calendar at least
-//! once (`mailrs_store::calendar::synced`), every read here comes from
-//! it: no network call, no quota spent, every calendar named.
-//! A write goes into the copy's queue and [`crate::calendar_copy::CalendarCopy::send`]
-//! is asked to send it right away rather than waiting for the next timer
-//! tick, without making the caller wait on the network round
-//! trip. Before the first read, or for a provider the copy cannot yet
-//! reach, every call goes straight to the provider, as it always has.
+//! Every read comes from the local copy: no network call, no quota
+//! spent, every calendar named. A read before the copy has read the
+//! account once waits for that first read
+//! ([`crate::calendar_copy::CalendarCopy::ready`]). A write goes into the
+//! copy's queue and [`crate::calendar_copy::CalendarCopy::send`] is asked
+//! to send it right away rather than waiting for the next timer tick,
+//! without making the caller wait on the network round trip.
 //!
-//! Every call needs the calendar permission, which sign-in leaves out.
-//! Without it each one answers `Permitted::NeedsPermission`, as the
-//! settings calls do, and the caller asks the user for it. A Google Cloud
-//! project with the Calendar API switched off answers
-//! `BackendError::ApiDisabled` inside `SyncError::Backend` instead, since no
-//! permission would help there. An account whose provider has no calendar
-//! answers `BackendError::Unsupported`.
+//! Every call needs the calendar permission. Without it each one answers
+//! `Permitted::NeedsPermission`, as the settings calls do, and the caller
+//! asks the user for it. A Google Cloud project with the Calendar API
+//! switched off answers `BackendError::ApiDisabled` inside
+//! `SyncError::Backend` instead, since no permission would help there. An
+//! account whose provider has no calendar answers
+//! `BackendError::Unsupported`.
 
 use std::sync::Arc;
 
-use chrono::{DateTime, NaiveDate};
 use mailrs_domain::calendar as model;
+use mailrs_domain::calendar::EventEdit;
 use mailrs_domain::calendar::series::{RepeatScope, Step};
-use mailrs_domain::invitation::Answer;
 use mailrs_domain::{AccountId, EpochMillis};
-use mailrs_gmail::{Event, EventFields, EventTime};
 use mailrs_store::Db;
 use mailrs_store::calendar as store;
 
@@ -137,26 +134,27 @@ impl<A: Accounts> Calendar<A> {
         Ok(Permitted::Done(free_slots(&busy, windows, length)))
     }
 
-    /// Every calendar on the account: from the copy once it has been
-    /// read, else from the provider, which answers `NeedsPermission`
-    /// until the account grants the calendar list.
+    /// Every calendar on the account, as the copy lists them. Without the
+    /// calendar list permission the copy holds the primary calendar alone,
+    /// which would read as every calendar the account has, so the answer
+    /// is `NeedsPermission` instead.
     pub async fn calendars(
         &self,
         account_id: AccountId,
     ) -> Result<Permitted<Vec<model::Calendar>>, SyncError> {
-        let held = self
-            .db
-            .read(move |c| {
-                Ok(match store::synced(c, account_id)? {
-                    true => Some(store::calendars(c, account_id)?),
-                    false => None,
-                })
-            })
-            .await?;
-        match held {
-            Some(list) => Ok(Permitted::Done(list)),
-            None => permitted(self.calendar(account_id)?.calendars().await),
+        let withheld = self
+            .accounts
+            .services(account_id)
+            .ok_or(SyncError::UnknownAccount(account_id))?
+            .withheld();
+        if withheld.calendar_list {
+            return Ok(Permitted::NeedsPermission);
         }
+        if let Permitted::NeedsPermission = self.ready(account_id).await? {
+            return Ok(Permitted::NeedsPermission);
+        }
+        let list = self.db.read(move |c| store::calendars(c, account_id)).await?;
+        Ok(Permitted::Done(list))
     }
 
     /// Adds the events of a calendar file to `calendar`, or the primary
@@ -164,9 +162,8 @@ impl<A: Accounts> Calendar<A> {
     /// the queue: the person pressed Add to Calendar and the card says
     /// where the event went, so a failure has to reach them now. The
     /// provider matches each event on its UID, so the same file added
-    /// again updates what the first time made. Once the copy is reading
-    /// the account the events go into it too, and Show in Calendar works
-    /// at once.
+    /// again updates what the first time made. The events go into the
+    /// copy too, so Show in Calendar works at once.
     ///
     /// A calendar the account cannot write to, or one it does not have,
     /// is `SyncError::NoCalendar`.
@@ -177,22 +174,10 @@ impl<A: Accounts> Calendar<A> {
         events: &[Invitation],
     ) -> Result<Permitted<Added>, SyncError> {
         let service = self.calendar(account_id)?;
-        let target = match self.target(account_id, calendar).await {
-            // A copy never read holds no calendars, so a named one is
-            // looked up on the provider.
-            Err(SyncError::NoCalendar(_)) if calendar.is_some() && !self.synced(account_id).await? => {
-                let listed = match self.calendars(account_id).await? {
-                    Permitted::Done(listed) => listed,
-                    Permitted::NeedsPermission => return Ok(Permitted::NeedsPermission),
-                };
-                let id = calendar.unwrap_or_default();
-                match listed.into_iter().find(|c| c.id == id && c.access.can_write()) {
-                    Some(found) => found,
-                    None => return Err(SyncError::NoCalendar(id.to_string())),
-                }
-            }
-            other => other?,
-        };
+        if let Permitted::NeedsPermission = self.ready(account_id).await? {
+            return Ok(Permitted::NeedsPermission);
+        }
+        let target = self.target(account_id, calendar).await?;
         let mut saved = Vec::new();
         let mut skipped = 0;
         for invitation in events {
@@ -206,10 +191,8 @@ impl<A: Accounts> Calendar<A> {
                 Err(err) => return Err(err.into()),
             }
         }
-        if self.synced(account_id).await? {
-            let (rows, now) = (saved.clone(), crate::now_millis());
-            self.db.write(move |c| store::save_events(c, account_id, &rows, now)).await?;
-        }
+        let (rows, now) = (saved.clone(), crate::now_millis());
+        self.db.write(move |c| store::save_events(c, account_id, &rows, now)).await?;
         let spots = saved
             .iter()
             .map(|event| Spot {
@@ -222,142 +205,116 @@ impl<A: Accounts> Calendar<A> {
         Ok(Permitted::Done(Added { calendar: target.name, spots, skipped }))
     }
 
-    /// Puts a new event on `calendar`, or the primary calendar when it
-    /// names none, and invites its guests. Once the copy is reading the
-    /// account, the event waits in the queue and comes back `pending`;
-    /// `send` is kicked off at once so it does not sit there until the
-    /// next tick.
+    /// Puts a new event made of `edit` on `calendar`, or the primary
+    /// calendar when it names none, and invites its guests. The event
+    /// waits in the copy's queue and comes back `pending`; `send` is kicked
+    /// off at once so it does not sit there until the next tick.
     pub async fn create(
         &self,
         account_id: AccountId,
         calendar: Option<&str>,
-        fields: &EventFields,
+        edit: &EventEdit,
     ) -> Result<Permitted<model::Event>, SyncError> {
-        let service = self.calendar(account_id)?;
-        // A calendar other than the primary exists only in the copy, so a
-        // copy never read is read now; the event must not fall back to
-        // the primary because the copy was late.
-        if calendar.is_some() && !self.synced(account_id).await? {
-            if let Permitted::NeedsPermission = self.copy.refresh(account_id, crate::now_millis()).await? {
-                return Ok(Permitted::NeedsPermission);
-            }
-            if !self.synced(account_id).await? {
-                return Err(SyncError::NoCalendar(calendar.unwrap_or_default().to_string()));
-            }
+        if let Permitted::NeedsPermission = self.ready(account_id).await? {
+            return Ok(Permitted::NeedsPermission);
         }
-        if self.synced(account_id).await? {
-            let mut event = self.new_event(account_id, calendar, fields).await?;
-            self.copy.save(account_id, event.clone()).await?;
-            self.send_soon(account_id);
-            // `save` marks its own copy of `event` pending; this one is
-            // what the caller sees, so it carries the same word.
-            event.pending = true;
-            return Ok(Permitted::Done(event));
-        }
-        match service.create_event(fields).await {
-            Ok(event) => Ok(Permitted::Done(live_event(&event))),
-            Err(BackendError::NeedsPermission) => Ok(Permitted::NeedsPermission),
-            Err(err) => Err(err.into()),
-        }
+        let mut event = self.new_event(account_id, calendar, edit).await?;
+        self.copy.save(account_id, event.clone()).await?;
+        self.copy.send_soon(account_id);
+        // `save` marks its own copy of `event` pending; this one is
+        // what the caller sees, so it carries the same word.
+        event.pending = true;
+        Ok(Permitted::Done(event))
     }
 
-    /// Changes what `fields` sets on event `id` and tells its guests.
-    /// When the copy holds a row for `id` the change goes into the
-    /// queue, the same way `create` does. An occurrence id
-    /// (`<series>_<start>`) names one occurrence of a series in the copy:
-    /// the change queues as a changed occurrence, for that occurrence
-    /// alone, as the window's "This event only" does. Any other id, such
-    /// as one the live path gave before the copy's first read, goes
-    /// straight to the provider.
+    /// Changes what `edit` sets on event `id` and tells its guests,
+    /// through the copy's queue, the same way `create` does. An
+    /// occurrence id (`<series>_<start>`) names one occurrence of a series
+    /// in the copy: the change queues as a changed occurrence, for that
+    /// occurrence alone, as the window's "This event only" does. An id
+    /// the copy does not hold is `BackendError::NotFound`.
     pub async fn update(
         &self,
         account_id: AccountId,
         id: &str,
-        fields: &EventFields,
+        edit: &EventEdit,
     ) -> Result<Permitted<model::Event>, SyncError> {
-        let calendar = self.calendar(account_id)?;
-        if self.synced(account_id).await? {
-            let found = {
-                let id = id.to_string();
-                self.db.read(move |c| store::find_event(c, account_id, &id)).await?
-            };
-            if let Some(mut event) = found {
-                made_here(&event)?;
-                apply_fields(&mut event, fields);
-                self.copy.save(account_id, event.clone()).await?;
-                self.send_soon(account_id);
-                event.pending = true;
-                return Ok(Permitted::Done(event));
-            }
-            if let Some(occurrence) = self.occurrence(account_id, id).await? {
-                made_here(&occurrence.event)?;
-                let mut edited = model::Event {
-                    start: occurrence.start,
-                    end: occurrence.end,
-                    ..model::Event::clone(&occurrence.event)
-                };
-                apply_fields(&mut edited, fields);
-                let steps = self
-                    .copy
-                    .change_steps(account_id, &occurrence, edited, Some(RepeatScope::This))
-                    .await?;
-                let saved = steps.iter().find_map(|step| match step {
-                    Step::Save(event) => Some(model::Event { pending: true, ..event.clone() }),
-                    _ => None,
-                });
-                if let Permitted::NeedsPermission = self.copy.apply(account_id, steps).await? {
-                    return Ok(Permitted::NeedsPermission);
-                }
-                self.send_soon(account_id);
-                return Ok(Permitted::Done(saved.expect("one occurrence changes in one save")));
-            }
+        if let Permitted::NeedsPermission = self.ready(account_id).await? {
+            return Ok(Permitted::NeedsPermission);
         }
-        match calendar.update_event(id, fields).await {
-            Ok(event) => Ok(Permitted::Done(live_event(&event))),
-            Err(BackendError::NeedsPermission) => Ok(Permitted::NeedsPermission),
-            Err(err) => Err(err.into()),
+        let found = {
+            let id = id.to_string();
+            self.db.read(move |c| store::find_event(c, account_id, &id)).await?
+        };
+        if let Some(mut event) = found {
+            made_here(&event)?;
+            edit.apply(&mut event);
+            self.copy.save(account_id, event.clone()).await?;
+            self.copy.send_soon(account_id);
+            event.pending = true;
+            return Ok(Permitted::Done(event));
         }
+        let Some(occurrence) = self.occurrence(account_id, id).await? else {
+            return Err(SyncError::Backend(BackendError::NotFound));
+        };
+        made_here(&occurrence.event)?;
+        let mut edited = model::Event {
+            start: occurrence.start,
+            end: occurrence.end,
+            ..model::Event::clone(&occurrence.event)
+        };
+        edit.apply(&mut edited);
+        let steps = self
+            .copy
+            .change_steps(account_id, &occurrence, edited, Some(RepeatScope::This))
+            .await?;
+        let saved = steps.iter().find_map(|step| match step {
+            Step::Save(event) => Some(model::Event { pending: true, ..event.clone() }),
+            _ => None,
+        });
+        if let Permitted::NeedsPermission = self.copy.apply(account_id, steps).await? {
+            return Ok(Permitted::NeedsPermission);
+        }
+        self.copy.send_soon(account_id);
+        saved.map(Permitted::Done).ok_or(SyncError::Backend(BackendError::NotFound))
     }
 
     /// Takes event `id` off the calendar and tells its guests, through
-    /// the queue when the copy holds it or it names one occurrence of a
-    /// series, which the queue cancels alone; straight to the provider for
-    /// an id the copy does not know (see [`Self::update`]).
+    /// the queue. An occurrence id names one occurrence of a series, which
+    /// the queue cancels alone (see [`Self::update`]).
     pub async fn delete(
         &self,
         account_id: AccountId,
         id: &str,
     ) -> Result<Permitted<()>, SyncError> {
-        let calendar = self.calendar(account_id)?;
-        if self.synced(account_id).await? {
-            let found = {
-                let id = id.to_string();
-                self.db.read(move |c| store::find_event(c, account_id, &id)).await?
-            };
-            if let Some(event) = found {
-                made_here(&event)?;
-                self.copy.remove(account_id, &event.calendar, id).await?;
-                self.send_soon(account_id);
-                return Ok(Permitted::Done(()));
-            }
-            if let Some(occurrence) = self.occurrence(account_id, id).await? {
-                made_here(&occurrence.event)?;
-                let steps = self.copy.delete_steps(account_id, &occurrence, Some(RepeatScope::This)).await?;
-                let notify = model::removal_notify(&occurrence.event, model::Notify::Guests);
-                if let Permitted::NeedsPermission = self.copy.apply_with(account_id, steps, notify).await? {
-                    return Ok(Permitted::NeedsPermission);
-                }
-                self.send_soon(account_id);
-                return Ok(Permitted::Done(()));
-            }
+        if let Permitted::NeedsPermission = self.ready(account_id).await? {
+            return Ok(Permitted::NeedsPermission);
         }
-        permitted(calendar.delete_event(id).await)
+        let found = {
+            let id = id.to_string();
+            self.db.read(move |c| store::find_event(c, account_id, &id)).await?
+        };
+        if let Some(event) = found {
+            made_here(&event)?;
+            self.copy.remove(account_id, &event.calendar, id).await?;
+            self.copy.send_soon(account_id);
+            return Ok(Permitted::Done(()));
+        }
+        let Some(occurrence) = self.occurrence(account_id, id).await? else {
+            return Err(SyncError::Backend(BackendError::NotFound));
+        };
+        made_here(&occurrence.event)?;
+        let steps = self.copy.delete_steps(account_id, &occurrence, Some(RepeatScope::This)).await?;
+        let notify = model::removal_notify(&occurrence.event, model::Notify::Guests);
+        if let Permitted::NeedsPermission = self.copy.apply_with(account_id, steps, notify).await? {
+            return Ok(Permitted::NeedsPermission);
+        }
+        self.copy.send_soon(account_id);
+        Ok(Permitted::Done(()))
     }
 
-    /// Occurrences over `from` to `to`, from the copy once it has read
-    /// the account's primary calendar, live otherwise. The live branch
-    /// only ever sees that one calendar, so `scope` makes no difference
-    /// to it.
+    /// Occurrences over `from` to `to` on the calendars `scope` names,
+    /// from the copy.
     async fn occurrences(
         &self,
         account_id: AccountId,
@@ -365,16 +322,19 @@ impl<A: Accounts> Calendar<A> {
         to: EpochMillis,
         scope: store::CalendarScope,
     ) -> Result<Permitted<Vec<model::Occurrence>>, SyncError> {
-        let calendar = self.calendar(account_id)?;
-        if self.synced(account_id).await? {
-            let occurrences = self.db.read(move |c| store::occurrences(c, &[account_id], from, to, scope)).await?;
-            return Ok(Permitted::Done(occurrences));
+        if let Permitted::NeedsPermission = self.ready(account_id).await? {
+            return Ok(Permitted::NeedsPermission);
         }
-        match calendar.events_between(from, to).await {
-            Ok(events) => Ok(Permitted::Done(events.iter().map(|e| live_occurrence(account_id, e)).collect())),
-            Err(BackendError::NeedsPermission) => Ok(Permitted::NeedsPermission),
-            Err(err) => Err(err.into()),
-        }
+        let occurrences = self.db.read(move |c| store::occurrences(c, &[account_id], from, to, scope)).await?;
+        Ok(Permitted::Done(occurrences))
+    }
+
+    /// Waits for the copy's first read of the account when it has none
+    /// yet. An account whose provider has no calendar is
+    /// `BackendError::Unsupported`.
+    async fn ready(&self, account_id: AccountId) -> Result<Permitted<()>, SyncError> {
+        self.calendar(account_id)?;
+        self.copy.ready(account_id, crate::now_millis()).await
     }
 
     /// The occurrence an occurrence id names (`<series>_<start>`, as
@@ -399,10 +359,6 @@ impl<A: Accounts> Calendar<A> {
         Ok(Some(model::Occurrence { account_id, event: Arc::new(series), start, end }))
     }
 
-    async fn synced(&self, account_id: AccountId) -> Result<bool, SyncError> {
-        Ok(self.db.read(move |c| store::synced(c, account_id)).await?)
-    }
-
     /// The neutral event a fresh `create` writes: on `calendar`, or the
     /// primary calendar when it names none, in that calendar's zone,
     /// under a new id, always busy, since an event the assistant makes is
@@ -411,33 +367,28 @@ impl<A: Accounts> Calendar<A> {
         &self,
         account_id: AccountId,
         calendar: Option<&str>,
-        fields: &EventFields,
+        edit: &EventEdit,
     ) -> Result<model::Event, SyncError> {
         let target = self.target(account_id, calendar).await?;
-        Ok(model::Event {
+        let mut event = model::Event {
             calendar: target.id,
             id: new_event_id(),
             zone: target.zone,
-            start: fields.start.as_ref().and_then(instant).unwrap_or_default(),
-            end: fields.end.as_ref().and_then(instant).unwrap_or_default(),
-            all_day: matches!(fields.start, Some(EventTime::Day(_))),
-            title: fields.summary.clone().unwrap_or_default(),
-            place: fields.location.clone().unwrap_or_default(),
-            description: fields.description.clone().unwrap_or_default(),
-            guests: guest_list(fields),
             busy: true,
             ..model::Event::default()
-        })
+        };
+        edit.apply(&mut event);
+        Ok(event)
     }
 
     /// The calendar a new event goes on: the one `calendar` names by id,
-    /// or, when it names none, the one Google lists as `primary == true`
-    /// (a real account's primary calendar is named by its address, not
+    /// or, when it names none, the one the provider lists as primary (a
+    /// real Google account's primary calendar is named by its address, not
     /// `primary`). Either must take events from the account; a calendar
     /// the account cannot write to, or an id naming none, is
-    /// `SyncError::NoCalendar`. The no-primary fallback only guards a
-    /// caller that races `synced` against a calendar list still being
-    /// written.
+    /// `SyncError::NoCalendar`. The no-primary fallback serves a copy that
+    /// could not read the calendar list, whose provider still takes
+    /// `primary` as the primary calendar's name.
     async fn target(&self, account_id: AccountId, calendar: Option<&str>) -> Result<model::Calendar, SyncError> {
         let calendars = self.db.read(move |c| store::calendars(c, account_id)).await?;
         let found = match calendar {
@@ -453,20 +404,6 @@ impl<A: Accounts> Calendar<A> {
             Some(calendar) if calendar.access.can_write() => Ok(calendar),
             _ => Err(SyncError::NoCalendar(calendar.unwrap_or("primary").to_string())),
         }
-    }
-
-    /// Sends the account's queue right away rather than leaving a change
-    /// made here to wait for the next tick. Spawned rather
-    /// than awaited, so the assistant's own answer does not wait on the
-    /// network round trip; a failed send just leaves the change queued
-    /// for the next tick, as any other network failure does.
-    fn send_soon(&self, account_id: AccountId) {
-        let copy = Arc::clone(&self.copy);
-        tokio::spawn(async move {
-            if let Err(err) = copy.send(account_id).await {
-                tracing::warn!(account = account_id, %err, "could not send a calendar change made here");
-            }
-        });
     }
 
     fn calendar(&self, account_id: AccountId) -> Result<AnyCalendar, SyncError> {
@@ -487,141 +424,6 @@ fn made_here(event: &model::Event) -> Result<(), SyncError> {
         return Err(SyncError::MadeInGoogle(event.title.clone()));
     }
     Ok(())
-}
-
-/// A calendar answer with the missing permission turned into a value the
-/// caller matches on.
-fn permitted<T>(answer: Result<T, BackendError>) -> Result<Permitted<T>, SyncError> {
-    match answer {
-        Ok(value) => Ok(Permitted::Done(value)),
-        Err(BackendError::NeedsPermission) => Ok(Permitted::NeedsPermission),
-        Err(err) => Err(err.into()),
-    }
-}
-
-/// The guests `EventFields` gives a fresh event, each with no answer of
-/// their own yet.
-fn guest_list(fields: &EventFields) -> Vec<model::Guest> {
-    fields
-        .guests
-        .clone()
-        .unwrap_or_default()
-        .into_iter()
-        .map(|email| model::Guest { email, ..model::Guest::default() })
-        .collect()
-}
-
-/// Writes what `fields` sets onto `event`, leaving the rest as it was, the
-/// way a Google patch would. A new start with no new end keeps the
-/// event's length, since a person moving a meeting means to move all of
-/// it.
-fn apply_fields(event: &mut model::Event, fields: &EventFields) {
-    if let Some(summary) = &fields.summary {
-        event.title = summary.clone();
-    }
-    if let Some(start) = &fields.start {
-        event.all_day = matches!(start, EventTime::Day(_));
-        if let Some(at) = instant(start) {
-            let length = event.end - event.start;
-            event.start = at;
-            event.end = at + length;
-        }
-    }
-    if let Some(end) = &fields.end
-        && let Some(at) = instant(end)
-    {
-        event.end = at;
-    }
-    if let Some(location) = &fields.location {
-        event.place = location.clone();
-    }
-    if let Some(description) = &fields.description {
-        event.description = description.clone();
-    }
-    if let Some(guests) = &fields.guests {
-        event.guests = guests.iter().map(|email| model::Guest { email: email.clone(), ..model::Guest::default() }).collect();
-    }
-}
-
-/// Google's word for a guest's answer, read into the neutral model.
-/// `needsAction` and anything unrecognised are "not yet answered".
-fn guest_answer(word: &str) -> Option<Answer> {
-    match word {
-        "accepted" => Some(Answer::Yes),
-        "declined" => Some(Answer::No),
-        "tentative" => Some(Answer::Maybe),
-        _ => None,
-    }
-}
-
-/// A live Google event, read into the neutral model the copy would give
-/// it: on the account's `"primary"` calendar, since that is the only one
-/// the live calls ever reach.
-fn live_event(event: &Event) -> model::Event {
-    let (start, end) = span(event).unwrap_or_default();
-    let guests: Vec<model::Guest> = event
-        .guests
-        .iter()
-        .map(|g| model::Guest {
-            email: g.email.clone(),
-            name: g.name.clone(),
-            answer: guest_answer(&g.answer),
-            organizer: event.organizer.as_deref() == Some(g.email.as_str()),
-            me: g.me,
-        })
-        .collect();
-    let my_answer = event.guests.iter().find(|g| g.me).and_then(|g| guest_answer(&g.answer));
-    model::Event {
-        calendar: "primary".to_string(),
-        id: event.id.clone(),
-        uid: event.uid.clone(),
-        start,
-        end,
-        all_day: matches!(event.start, Some(EventTime::Day(_))),
-        title: event.summary.clone(),
-        place: event.location.clone(),
-        description: event.description.clone(),
-        busy: event.busy,
-        status: if event.cancelled { model::Status::Cancelled } else { model::Status::Confirmed },
-        organizer: event.organizer.clone(),
-        guests,
-        my_answer,
-        ..model::Event::default()
-    }
-}
-
-fn live_occurrence(account_id: AccountId, event: &Event) -> model::Occurrence {
-    let event = live_event(event);
-    let (start, end) = (event.start, event.end);
-    model::Occurrence { account_id, event: Arc::new(event), start, end }
-}
-
-/// An instant as the Calendar API writes one, in UTC.
-pub fn at(instant: EpochMillis) -> Option<EventTime> {
-    DateTime::from_timestamp_millis(instant).map(|at| EventTime::At(at.to_rfc3339()))
-}
-
-/// When an event time falls. A whole day counts from midnight UTC, which
-/// is close enough for the one use this has outside a test: all-day
-/// events never make the user busy.
-pub fn instant(time: &EventTime) -> Option<EpochMillis> {
-    match time {
-        EventTime::At(at) => DateTime::parse_from_rfc3339(at)
-            .ok()
-            .map(|at| at.timestamp_millis()),
-        EventTime::Day(day) => NaiveDate::parse_from_str(day, "%Y-%m-%d")
-            .ok()?
-            .and_hms_opt(0, 0, 0)
-            .map(|midnight| midnight.and_utc().timestamp_millis()),
-    }
-}
-
-/// When an event starts and ends. An event with no end of its own takes
-/// no time, as Google treats one.
-pub fn span(event: &Event) -> Option<(EpochMillis, EpochMillis)> {
-    let start = instant(event.start.as_ref()?)?;
-    let end = event.end.as_ref().and_then(instant).unwrap_or(start);
-    Some((start, end.max(start)))
 }
 
 /// The gaps of at least `length` inside each window that no busy span

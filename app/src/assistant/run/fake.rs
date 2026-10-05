@@ -572,6 +572,18 @@ impl Harness {
             s.clock = Some(NOW);
             // One page holds any search, as the assistant sees it.
             s.page_size = 1000;
+            // Every Google account has a primary calendar under its own
+            // address, which the copy reads before the first calendar
+            // tool answers.
+            s.calendars = vec![mailrs_domain::calendar::Calendar {
+                id: ME.into(),
+                name: ME.into(),
+                access: mailrs_domain::calendar::Access::Owner,
+                zone: "UTC".into(),
+                primary: true,
+                shown: true,
+                ..mailrs_domain::calendar::Calendar::default()
+            }];
             // Gmail's own labels, and the person's one label.
             s.labels.retain(|l| l.kind.as_deref() == Some("system"));
             s.labels.push(RemoteLabel {
@@ -654,8 +666,8 @@ impl Harness {
             mail: Arc::clone(&mail),
             lists: Arc::new(Mailboxes::new(Arc::clone(&connected), db.clone())),
             gmail: Arc::clone(&settings),
-            calendar: Arc::new(Calendar::new(Arc::clone(&connected), db.clone(), calendar_copy)),
-            invitations: Arc::new(Invitations::new(Arc::clone(&connected), db.clone())),
+            calendar: Arc::new(Calendar::new(Arc::clone(&connected), db.clone(), Arc::clone(&calendar_copy))),
+            invitations: Arc::new(Invitations::new(Arc::clone(&connected), db.clone(), calendar_copy)),
             contacts: Arc::new(ContactBook::new(
                 Arc::clone(&connected),
                 db.clone(),

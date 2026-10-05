@@ -3,33 +3,35 @@
 //!
 //! Only this module knows that an organizer numbers each change to an
 //! event with a sequence under one UID, that a higher sequence makes the
-//! answer the user gave stale, and that Google Calendar takes the answer
-//! while Gmail does not. The card in the window and its tests both go
+//! answer the user gave stale, and that the calendar takes the answer
+//! while mail does not. The card in the window and its tests both go
 //! through here, so neither works out any of that for itself.
 //!
-//! An answer reaches the organizer one of two ways. Google Calendar is
-//! the better one where it works, since a single call tells the organizer
-//! and marks the user's own calendar; it works only for an event Google
-//! already holds, which leaves out an invitation from Exchange, one
-//! forwarded by hand, and one that arrived at an address the calendar does
-//! not belong to. The other is RFC 5546's: mail the organizer a
-//! `METHOD:REPLY` object. That needs nobody's permission, so it is what an
-//! answer falls back to.
+//! Every calendar read here goes through the local copy: the clash line,
+//! the series line, Show in Calendar and the event an answer lands on.
+//! An answer reaches the organizer one of two ways. The calendar is the
+//! better one where it works, since one queued change tells the organizer
+//! and marks the user's own calendar; it works only for an event the copy
+//! holds, which leaves out an invitation from a server that never put it
+//! on the calendar, one forwarded by hand, and one that arrived at an
+//! address the calendar does not belong to. The other is RFC 5546's: mail
+//! the organizer a `METHOD:REPLY` object. That needs nobody's permission,
+//! so it is what an answer falls back to.
 
 pub(crate) mod mail;
 
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use mailrs_domain::calendar::series::{self, Picked, RepeatScope};
-use mailrs_domain::calendar::{Event, Occurrence};
+use mailrs_domain::calendar::{Event, Occurrence, Series};
 use mailrs_domain::invitation::{self, Answer, Invitation, Method, Scope, When};
 use mailrs_domain::{AccountId, Address, EpochMillis};
-use mailrs_gmail::Answered;
 use mailrs_store::calendar as calendar_store;
 use mailrs_store::{Db, invitations as store, messages};
 
+use crate::calendar_copy::CalendarCopy;
 use crate::settings::Permitted;
-use crate::{AccountSync, Accounts, BackendError, CalendarService, SyncError};
+use crate::{AccountSync, Accounts, BackendError, SyncError};
 
 /// What a message does to an event the user already has. `None` alongside
 /// it means the message is the first word on this event, or an older
@@ -74,8 +76,8 @@ pub struct Opened {
 /// Where the user's answer went.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Told {
-    /// Google Calendar recorded it, which tells the organizer and marks
-    /// the event on the user's own calendar.
+    /// The calendar took it: the answer waits in the change queue, which
+    /// tells the organizer and marks the event on the user's own calendar.
     Calendar,
     /// Mailed to the organizer as an iTIP reply.
     Organizer,
@@ -88,12 +90,13 @@ pub enum Told {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Sent {
     pub told: Told,
-    /// Google turned the calendar call down for want of the permission.
-    /// The answer went out all the same; the caller offers to ask for the
+    /// The account withholds the calendar permission. The answer went
+    /// out by mail all the same; the caller offers to ask for the
     /// permission so that the user's own calendar keeps up from here on.
     pub needs_permission: bool,
-    /// The Google Cloud project has the Calendar API switched off, so the
-    /// answer went by mail instead and no permission would change that.
+    /// The provider has the calendar switched off, such as a Google Cloud
+    /// project without the Calendar API, so the answer went by mail
+    /// instead and no permission would change that.
     pub api_off: Option<ApiOff>,
 }
 
@@ -103,6 +106,19 @@ pub struct Sent {
 pub struct ApiOff {
     pub service: String,
     pub enable_url: String,
+}
+
+/// What the calendar's copy says about the event an invitation names,
+/// for an answer.
+enum Held {
+    /// The copy holds it, at this occurrence.
+    On(Occurrence),
+    /// The account has no calendar, or the copy has no such event.
+    Missing,
+    /// The account withholds the calendar permission.
+    NeedsPermission,
+    /// The provider has the calendar switched off.
+    ApiOff(ApiOff),
 }
 
 /// Where the event an invitation names sits in the calendar's copy on
@@ -151,43 +167,34 @@ const LOOK_AROUND: EpochMillis = 400 * 24 * 60 * 60 * 1_000;
 /// means a meeting, not a day.
 const ASSUMED_LENGTH: EpochMillis = 60 * 60 * 1_000;
 
-/// The last invitation this asked Google what clashes with, and what it
-/// said. The window reads a message twice on the way in and again each
-/// time the body lands, so without this the same question goes out three
-/// times for one opening.
-struct Asked {
-    account_id: AccountId,
-    uid: String,
-    busy: Vec<String>,
-}
 
 pub struct Invitations<A: Accounts> {
     accounts: Arc<A>,
     db: Db,
-    asked: Mutex<Option<Asked>>,
+    /// The calendar's local copy, which every read here goes through.
+    copy: Arc<CalendarCopy<A>>,
 }
 
 impl<A: Accounts> Invitations<A> {
-    pub fn new(accounts: Arc<A>, db: Db) -> Self {
+    pub fn new(accounts: Arc<A>, db: Db, copy: Arc<CalendarCopy<A>>) -> Self {
         Invitations {
             accounts,
             db,
-            asked: Mutex::new(None),
+            copy,
         }
     }
 
-    /// What else the user has on while this event runs, by title. Once the
-    /// local copy has read the account, this reads it straight, on
-    /// calendars the account owns only, and never remembers the answer: a
-    /// store read costs nothing, and remembering it would hide a refresh
-    /// that landed while the message stayed open. Before that, one call to
-    /// Google, the answer kept for as long as the message stays open, and
-    /// nothing at all without the calendar permission: a clash is worth
-    /// saying, not worth a permission prompt of its own.
+    /// What else the user has on while this event runs, by title, from
+    /// the local copy, on the calendars the account owns. Nothing at all
+    /// without a calendar, without the calendar permission or with the
+    /// provider's calendar switched off: a clash is worth saying, not
+    /// worth a permission prompt of its own. Never remembered, since a
+    /// store read costs nothing and remembering it would hide a refresh
+    /// that landed while the message stayed open.
     ///
-    /// The live call goes out at background priority. It answers a
-    /// question nobody asked, so it waits behind whatever the user is
-    /// doing.
+    /// `Event::busy` is the provider's transparency alone, so
+    /// `Event::blocks_time` also leaves out a cancelled, declined or
+    /// all-day event.
     pub async fn busy(
         &self,
         account_id: AccountId,
@@ -196,83 +203,38 @@ impl<A: Accounts> Invitations<A> {
         let Some(When::At { starts_at, ends_at }) = invitation.when else {
             return Ok(Vec::new());
         };
-        let sync = self.sync(account_id)?;
-        // Without a calendar there is nothing to clash with.
-        let Some(calendar) = sync.services().calendar.as_ref() else {
+        if !self.copy_ready(account_id, crate::now_millis()).await? {
             return Ok(Vec::new());
-        };
+        }
         let ends_at = ends_at.unwrap_or(starts_at + ASSUMED_LENGTH);
-        if let Some(busy) = self.busy_from_copy(account_id, &invitation.uid, starts_at, ends_at).await? {
-            return Ok(busy);
-        }
-        if let Some(held) = self.remembered(account_id, &invitation.uid) {
-            return Ok(held);
-        }
-        let busy = match crate::background(calendar.busy_between(starts_at, ends_at)).await {
-            Ok(busy) => busy,
-            // Without the permission there is nothing to say, and the user
-            // is answering an invitation rather than asking about their
-            // calendar. The empty answer is remembered like any other.
-            Err(BackendError::NeedsPermission) => Vec::new(),
-            Err(err) => return Err(err.into()),
-        };
-        let busy: Vec<String> = busy
-            .into_iter()
-            .filter(|held| !held.uid.eq_ignore_ascii_case(&invitation.uid))
-            .map(|held| held.summary)
-            .collect();
-        *self.asked.lock().expect("invitations poisoned") = Some(Asked {
-            account_id,
-            uid: invitation.uid.clone(),
-            busy: busy.clone(),
-        });
-        Ok(busy)
-    }
-
-    /// What the local copy says is busy over `starts_at` to `ends_at`,
-    /// once it has read the account's primary calendar; `None` when it
-    /// has not, so the caller falls back to Google. `Event::busy` is
-    /// Google's transparency alone, so `Event::blocks_time` also leaves
-    /// out a cancelled, declined or all-day event.
-    async fn busy_from_copy(
-        &self,
-        account_id: AccountId,
-        uid: &str,
-        starts_at: EpochMillis,
-        ends_at: EpochMillis,
-    ) -> Result<Option<Vec<String>>, SyncError> {
-        let db = self.db.clone();
-        let uid = uid.to_string();
-        Ok(db
+        let uid = invitation.uid.clone();
+        Ok(self
+            .db
             .read(move |c| {
-                if !mailrs_store::calendar::synced(c, account_id)? {
-                    return Ok(None);
-                }
-                let found = mailrs_store::calendar::occurrences(
+                let found = calendar_store::occurrences(
                     c,
                     &[account_id],
                     starts_at,
                     ends_at,
-                    mailrs_store::calendar::CalendarScope::Owned,
+                    calendar_store::CalendarScope::Owned,
                 )?;
-                let busy: Vec<String> = found
+                Ok(found
                     .into_iter()
                     .filter(|o| o.event.blocks_time())
                     .filter(|o| !o.event.uid.eq_ignore_ascii_case(&uid))
                     .map(|o| o.event.title.clone())
-                    .collect();
-                Ok(Some(busy))
+                    .collect())
             })
             .await?)
     }
 
     /// How the series behind an invitation to one of its occurrences runs,
     /// in words: "Every Tuesday, 6 left". The invitation carries no rule of
-    /// its own, so this asks the calendar, at background priority as
-    /// [`Self::busy`] does. `None` leaves the card as it was: for an
-    /// invitation to a whole event, for a series the calendar does not
-    /// hold, and when the calendar cannot be read for want of the
-    /// permission or of the API.
+    /// its own, so this reads the series the local copy holds under the
+    /// invitation's UID. `None` leaves the card as it was: for an
+    /// invitation to a whole event, for a series the copy does not hold,
+    /// and when the calendar cannot be read for want of the permission or
+    /// of the API.
     pub async fn series(
         &self,
         account_id: AccountId,
@@ -282,19 +244,37 @@ impl<A: Accounts> Invitations<A> {
         if invitation.occurrence.is_none() || invitation.uid.trim().is_empty() {
             return Ok(None);
         }
-        let sync = self.sync(account_id)?;
-        let Some(calendar) = sync.services().calendar.as_ref() else {
+        if !self.copy_ready(account_id, now).await? {
             return Ok(None);
-        };
-        let series = match crate::background(calendar.series(&invitation.uid, now)).await {
-            Ok(series) => series,
-            Err(
-                BackendError::NeedsPermission
-                | BackendError::ApiDisabled { .. },
-            ) => None,
-            Err(err) => return Err(err.into()),
-        };
-        Ok(series.and_then(|series| invitation.series_in_words(&series.rule, series.left)))
+        }
+        let uid = invitation.uid.clone();
+        let held = self
+            .db
+            .read(move |c| calendar_store::series_with_uid(c, account_id, &uid))
+            .await?;
+        Ok(held
+            .and_then(|event| Series::of(&event, now))
+            .and_then(|series| invitation.series_in_words(&series.rule, series.left)))
+    }
+
+    /// Whether the local copy can answer for the account's calendar,
+    /// after waiting for its first read when it has none yet. `false` for
+    /// an account with no calendar, one that withholds it, and one whose
+    /// provider has the calendar switched off.
+    async fn copy_ready(&self, account_id: AccountId, now: EpochMillis) -> Result<bool, SyncError> {
+        let services = self
+            .accounts
+            .services(account_id)
+            .ok_or(SyncError::UnknownAccount(account_id))?;
+        if services.calendar.is_none() {
+            return Ok(false);
+        }
+        match self.copy.ready(account_id, now).await {
+            Ok(Permitted::Done(())) => Ok(true),
+            Ok(Permitted::NeedsPermission)
+            | Err(SyncError::Backend(BackendError::ApiDisabled { .. })) => Ok(false),
+            Err(err) => Err(err),
+        }
     }
 
     /// Where the event this invitation names sits in the calendar's copy,
@@ -315,9 +295,12 @@ impl<A: Accounts> Invitations<A> {
         if invitation.cancelled() || invitation.uid.trim().is_empty() {
             return Ok(None);
         }
-        let sync = self.sync(account_id)?;
+        let services = self
+            .accounts
+            .services(account_id)
+            .ok_or(SyncError::UnknownAccount(account_id))?;
         // Without a calendar there is nowhere for the event to sit.
-        if !sync.services().offers().calendar {
+        if !services.offers().calendar {
             return Ok(None);
         }
         Ok(self.found_on_copy(account_id, invitation, now).await?.map(|o| Spot {
@@ -405,13 +388,6 @@ impl<A: Accounts> Invitations<A> {
             .await?)
     }
 
-    /// What the last look said, when it was about this same invitation.
-    fn remembered(&self, account_id: AccountId, uid: &str) -> Option<Vec<String>> {
-        let asked = self.asked.lock().expect("invitations poisoned");
-        let asked = asked.as_ref()?;
-        (asked.account_id == account_id && asked.uid == uid).then(|| asked.busy.clone())
-    }
-
     /// Reads the `text/calendar` part of a message, records the version of
     /// the event it carries, and says what it changes and what the user
     /// already answered. `None` means the part held no event to show.
@@ -475,16 +451,13 @@ impl<A: Accounts> Invitations<A> {
     }
 
     /// Sends the user's answer to the organizer and remembers it, so
-    /// reopening the message shows it. Google Calendar takes the answer
-    /// where it can, since one call tells the organizer and marks the
-    /// user's own calendar; where it cannot, the answer goes to the
-    /// organizer as mail. The answer says which of the two happened.
-    ///
-    /// An event the calendar's copy already holds is answered the way the
-    /// calendar view answers it, through the queue ([`Self::answer_event`]),
-    /// so the card and the calendar cannot disagree about how an answer
-    /// goes out; the caller sends the queue. Only an event the copy lacks
-    /// asks Google by its UID here.
+    /// reopening the message shows it. An event the calendar's copy holds
+    /// is answered the way the calendar view answers it, through the
+    /// queue ([`Self::answer_event`]), which tells the organizer and marks
+    /// the user's own calendar, so the card and the calendar cannot
+    /// disagree about how an answer goes out; the caller sends the queue.
+    /// An event the copy lacks is answered by mail to the organizer. The
+    /// answer says which of the two happened.
     #[expect(clippy::too_many_arguments, reason = "each is part of what the organizer is told")]
     pub async fn answer(
         &self,
@@ -504,72 +477,37 @@ impl<A: Accounts> Invitations<A> {
             api_off: None,
         };
         // An occurrence whose instant this app could not work out cannot
-        // be matched to one in the copy; only the emailed reply names it.
+        // be matched to one in the copy; only the emailed reply, which
+        // copies the organizer's own `RECURRENCE-ID` back, can name it.
         let reach = match (scope, &invitation.occurrence) {
             (Scope::Occurrence, Some(occurrence)) => occurrence.at.map(|_| RepeatScope::This),
             _ => Some(RepeatScope::All),
         };
-        if let Some(reach) = reach
-            && let Some(found) = self.held_on_calendar(account_id, invitation, now).await?
-        {
-            self.queue_answer(account_id, &found, reach, answer, note, me.email.clone())
-                .await?;
-            sent.told = Told::Calendar;
-            return Ok(sent);
-        }
-        // Google needs an instant to find one occurrence of a series by.
-        // An occurrence whose zone this app could not work out leaves it
-        // nothing to go on, and only the emailed reply, which copies the
-        // organizer's own `RECURRENCE-ID` back, can name that one.
-        let google = match (scope, &invitation.occurrence) {
-            (Scope::Occurrence, Some(occurrence)) => occurrence.at.map(Some),
-            _ => Some(None),
-        };
-        // An account whose provider has no calendar answers by mail, as
-        // it does when the calendar does not hold the event.
-        if let (Some(occurrence), Some(calendar)) = (google, sync.services().calendar.as_ref()) {
-            match calendar
-                .answer_invitation(&invitation.uid, &me.email, answer, occurrence, note.as_deref())
-                .await
-            {
-                Ok(Answered::Done) => sent.told = Told::Calendar,
-                Ok(Answered::NotOnCalendar) => {}
+        if let Some(reach) = reach {
+            match self.held_on_calendar(account_id, invitation, now).await? {
+                Held::On(found) => {
+                    self.queue_answer(account_id, &found, reach, answer, note, me.email.clone())
+                        .await?;
+                    sent.told = Told::Calendar;
+                    return Ok(sent);
+                }
                 // The answer still has to reach the organizer, so it goes
                 // by mail and the caller offers to ask for the permission,
                 // which keeps the user's own calendar in step from here on.
-                Err(BackendError::NeedsPermission) => sent.needs_permission = true,
-                Err(BackendError::ApiDisabled {
-                    service,
-                    enable_url,
-                }) => {
-                    sent.api_off = Some(ApiOff {
-                        service,
-                        enable_url,
-                    })
-                }
-                Err(err) => return Err(err.into()),
+                Held::NeedsPermission => sent.needs_permission = true,
+                Held::ApiOff(off) => sent.api_off = Some(off),
+                Held::Missing => {}
             }
         }
-        if sent.told == Told::Nobody {
-            sent.told = self
-                .mail_reply(&sync, invitation, me, answer, scope, note.as_deref(), now)
-                .await?;
-        }
+        sent.told = self
+            .mail_reply(&sync, invitation, me, answer, scope, note.as_deref(), now)
+            .await?;
+        // A mailed reply leaves the copy alone: the provider's calendar
+        // has not changed.
         if sent.told != Told::Nobody {
             let uid = invitation.uid.clone();
-            // Google's call marked the account's own calendar, so the
-            // copy takes the answer now rather than at its next read, and
-            // the calendar and its "Waiting for your answer" list agree
-            // with the card at once. A mailed reply leaves the copy alone:
-            // the provider's calendar has not changed.
-            let on_calendar = (sent.told == Told::Calendar).then(|| google.flatten());
             self.db
-                .write(move |c| {
-                    if let Some(occurrence) = on_calendar {
-                        calendar_store::set_my_answer_for_uid(c, account_id, &uid, occurrence, answer)?;
-                    }
-                    store::answer(c, account_id, &uid, answer)
-                })
+                .write(move |c| store::answer(c, account_id, &uid, answer))
                 .await?;
         }
         Ok(sent)
@@ -595,8 +533,10 @@ impl<A: Accounts> Invitations<A> {
         scope: RepeatScope,
         note: Option<String>,
     ) -> Result<Permitted<()>, SyncError> {
-        let sync = self.sync(account_id)?;
-        let services = sync.services();
+        let services = self
+            .accounts
+            .services(account_id)
+            .ok_or(SyncError::UnknownAccount(account_id))?;
         if services.calendar.is_none() {
             return Err(SyncError::Backend(BackendError::Unsupported));
         }
@@ -651,22 +591,38 @@ impl<A: Accounts> Invitations<A> {
         Ok(())
     }
 
-    /// The event the invitation names, as the copy holds it, when the
-    /// account's calendar can take an answer: offered, permitted, and read
-    /// at least once. The occurrence the invitation is about, or the next
-    /// one to come.
+    /// The event the invitation names, as the copy holds it: the
+    /// occurrence the invitation is about, or the next one to come. The
+    /// copy is read first when it never has been, so an answer in the
+    /// first minute after an account is added still reaches the calendar.
     async fn held_on_calendar(
         &self,
         account_id: AccountId,
         invitation: &Invitation,
         now: EpochMillis,
-    ) -> Result<Option<Occurrence>, SyncError> {
-        let sync = self.sync(account_id)?;
-        let services = sync.services();
-        if !services.offers().calendar || services.withheld().calendar {
-            return Ok(None);
+    ) -> Result<Held, SyncError> {
+        let services = self
+            .accounts
+            .services(account_id)
+            .ok_or(SyncError::UnknownAccount(account_id))?;
+        if !services.offers().calendar {
+            return Ok(Held::Missing);
         }
-        self.found_on_copy(account_id, invitation, now).await
+        if services.withheld().calendar {
+            return Ok(Held::NeedsPermission);
+        }
+        match self.copy.ready(account_id, now).await {
+            Ok(Permitted::Done(())) => {}
+            Ok(Permitted::NeedsPermission) => return Ok(Held::NeedsPermission),
+            Err(SyncError::Backend(BackendError::ApiDisabled { service, enable_url })) => {
+                return Ok(Held::ApiOff(ApiOff { service, enable_url }));
+            }
+            Err(err) => return Err(err),
+        }
+        Ok(match self.found_on_copy(account_id, invitation, now).await? {
+            Some(found) => Held::On(found),
+            None => Held::Missing,
+        })
     }
 
     /// Answers the invitation in message `message_id` as the account
@@ -712,6 +668,11 @@ impl<A: Accounts> Invitations<A> {
         let sent = self
             .answer(account_id, &invitation, &me, answer, scope, None, now)
             .await?;
+        // The card's caller pushes the queue itself; this caller has no
+        // window, so the answer goes out from here.
+        if sent.told == Told::Calendar {
+            self.copy.send_soon(account_id);
+        }
         Ok(Some((invitation, sent)))
     }
 
@@ -751,7 +712,7 @@ impl<A: Accounts> Invitations<A> {
     /// Proposes another time for the event and mails the organizer the
     /// proposal. iTIP calls this a counter proposal: it asks rather than
     /// decides, so nothing changes on anybody's calendar until the
-    /// organizer answers, and Google Calendar has no part in it.
+    /// organizer answers, and the calendar has no part in it.
     pub async fn propose(
         &self,
         account_id: AccountId,

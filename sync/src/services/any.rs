@@ -15,7 +15,7 @@ use mailrs_domain::calendar as model;
 use mailrs_domain::invitation::Answer;
 use mailrs_domain::{EpochMillis, Filter, MailSet, RemoteMailbox, Role, Vacation};
 use mailrs_gmail::{
-    Answered, Busy, ConnectionsPage, ContactFields, Event, EventFields, LabelColor, Person, Series,
+    ConnectionsPage, ContactFields, LabelColor, Person,
 };
 use mailrs_dav::DavClient;
 use mailrs_imap::{ImapClient, SmtpClient};
@@ -470,56 +470,6 @@ impl MailBackend for AnyMail {
 }
 
 impl CalendarService for AnyCalendar {
-    async fn answer_invitation(
-        &self,
-        ical_uid: &str,
-        me: &str,
-        answer: Answer,
-        occurrence: Option<EpochMillis>,
-        note: Option<&str>,
-    ) -> Result<Answered, BackendError> {
-        forward_calendar!(
-            self,
-            answer_invitation(ical_uid, me, answer, occurrence, note)
-        )
-    }
-
-    async fn busy_between(
-        &self,
-        from: EpochMillis,
-        to: EpochMillis,
-    ) -> Result<Vec<Busy>, BackendError> {
-        forward_calendar!(self, busy_between(from, to))
-    }
-
-    async fn series(
-        &self,
-        ical_uid: &str,
-        from: EpochMillis,
-    ) -> Result<Option<Series>, BackendError> {
-        forward_calendar!(self, series(ical_uid, from))
-    }
-
-    async fn events_between(
-        &self,
-        from: EpochMillis,
-        to: EpochMillis,
-    ) -> Result<Vec<Event>, BackendError> {
-        forward_calendar!(self, events_between(from, to))
-    }
-
-    async fn create_event(&self, fields: &EventFields) -> Result<Event, BackendError> {
-        forward_calendar!(self, create_event(fields))
-    }
-
-    async fn update_event(&self, id: &str, fields: &EventFields) -> Result<Event, BackendError> {
-        forward_calendar!(self, update_event(id, fields))
-    }
-
-    async fn delete_event(&self, id: &str) -> Result<(), BackendError> {
-        forward_calendar!(self, delete_event(id))
-    }
-
     async fn calendars(&self) -> Result<Vec<model::Calendar>, BackendError> {
         forward_calendar!(self, calendars())
     }

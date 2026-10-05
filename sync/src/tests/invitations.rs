@@ -53,8 +53,9 @@ pub(super) fn sent_message(h: &Harness) -> String {
 }
 
 fn invitations(h: &Harness) -> Invitations<Connected> {
-    let connected = HashMap::from([(h.account_id, Arc::clone(&h.sync))]);
-    Invitations::new(Arc::new(Connected(connected)), h.db.clone())
+    let connected = Arc::new(Connected(HashMap::from([(h.account_id, Arc::clone(&h.sync))])));
+    let copy = Arc::new(CalendarCopy::new(Arc::clone(&connected), h.db.clone()));
+    Invitations::new(connected, h.db.clone(), copy)
 }
 
 /// An invitation to one event, at `start` in UTC, numbered `sequence`.
@@ -220,36 +221,29 @@ async fn a_cancellation_of_a_known_event_says_so() {
 #[tokio::test]
 async fn an_answer_reaches_the_calendar_and_comes_back_on_reopening() {
     let h = harness().await;
+    design_review_on_calendar(&h, &[]).await;
     let invitations = invitations(&h);
     let invitation = read(&invite(0, "20260310T090000Z"));
-    h.fake.with(|s| s.calendar.insert(UID.into(), None));
     invitations
         .open(h.account_id, "m1", &invite(0, "20260310T090000Z"), 1_000)
         .await
         .unwrap();
 
     let sent = invitations
-        .answer(
-            h.account_id,
-            &invitation,
-            &me(),
-            Answer::Maybe,
-            Scope::Series,
-            None,
-            1_000,
-        )
+        .answer(h.account_id, &invitation, &me(), Answer::Maybe, Scope::Series, None, MARCH_2026)
         .await
         .unwrap();
     assert_eq!(sent.told, Told::Calendar);
     assert!(!sent.needs_permission);
+    send_queue(&h).await;
     assert_eq!(
-        h.fake.with(|s| s.calendar[UID]),
-        Some(Answer::Maybe),
-        "Google Calendar holds the answer"
+        h.fake.with(|s| s.answered_events.clone()),
+        [("primary".to_string(), "design-review".to_string(), Answer::Maybe, None)],
+        "the calendar holds the answer"
     );
     assert!(
         h.fake.with(|s| s.sent.is_empty()),
-        "Google tells the organizer, so no mail goes out"
+        "the calendar tells the organizer, so no mail goes out"
     );
 
     let reopened = invitations
@@ -264,7 +258,6 @@ async fn an_answer_reaches_the_calendar_and_comes_back_on_reopening() {
 async fn an_answer_from_the_calendar_marks_the_copy_and_the_card_and_waits_to_go_out() {
     let h = harness().await;
     let invitations = invitations(&h);
-    h.fake.with(|s| s.calendar.insert(UID.into(), None));
     // A card only shows the answer once the message has been opened, as
     // it does in the app: opening writes the invitations row `answer`
     // updates.
@@ -360,9 +353,9 @@ async fn an_answer_from_the_calendar_marks_the_copy_and_the_card_and_waits_to_go
 #[tokio::test]
 async fn a_message_is_answered_from_the_invitation_it_carries() {
     let h = harness().await;
+    design_review_on_calendar(&h, &[]).await;
     let invitations = invitations(&h);
     h.fake.with(|s| {
-        s.calendar.insert(UID.into(), None);
         for id in ["m1", "m2", "m3"] {
             s.messages.insert(id.into(), meta(id, id, 1, &["INBOX"]));
         }
@@ -391,7 +384,8 @@ async fn a_message_is_answered_from_the_invitation_it_carries() {
         .expect("the message holds an invitation");
     assert_eq!(invitation.summary, "Design review");
     assert_eq!(sent.told, Told::Calendar);
-    assert_eq!(h.fake.with(|s| s.calendar[UID]), Some(Answer::Yes));
+    send_queue(&h).await;
+    assert_eq!(h.fake.with(|s| s.answered_events.last().map(|a| a.2)), Some(Answer::Yes));
     let reopened = invitations
         .open(h.account_id, "m1", &invite(0, "20260310T090000Z"), 2_000)
         .await
@@ -414,8 +408,8 @@ async fn a_message_is_answered_from_the_invitation_it_carries() {
 #[tokio::test]
 async fn a_newer_version_asks_again() {
     let h = harness().await;
+    design_review_on_calendar(&h, &[]).await;
     let invitations = invitations(&h);
-    h.fake.with(|s| s.calendar.insert(UID.into(), None));
     invitations
         .open(h.account_id, "m1", &invite(0, "20260310T090000Z"), 1_000)
         .await
@@ -544,7 +538,6 @@ async fn a_calendar_api_switched_off_still_reaches_the_organizer() {
     let h = harness().await;
     let invitations = invitations(&h);
     let invitation = read(&invite(0, "20260310T090000Z"));
-    h.fake.with(|s| s.calendar.insert(UID.into(), None));
     h.fake.fail_next(GmailError::ApiDisabled {
         service: "Google Calendar API".into(),
         enable_url: "https://console.developers.google.com/apis/api/calendar-json.googleapis.com"
@@ -573,41 +566,18 @@ async fn a_calendar_api_switched_off_still_reaches_the_organizer() {
 #[tokio::test]
 async fn a_missing_calendar_permission_still_reaches_the_organizer() {
     let h = harness().await;
+    design_review_on_calendar(&h, &[]).await;
+    h.fake.withhold(mailrs_gmail::CALENDAR_SCOPE);
     let invitations = invitations(&h);
     let invitation = read(&invite(0, "20260310T090000Z"));
-    h.fake.with(|s| s.calendar.insert(UID.into(), None));
-    h.fake.fail_next(GmailError::MissingScope);
 
     let sent = invitations
-        .answer(
-            h.account_id,
-            &invitation,
-            &me(),
-            Answer::No,
-            Scope::Series,
-            None,
-            1_000,
-        )
+        .answer(h.account_id, &invitation, &me(), Answer::No, Scope::Series, None, MARCH_2026)
         .await
         .unwrap();
     assert_eq!(sent.told, Told::Organizer);
     assert!(sent.needs_permission, "the window offers to ask for it");
     assert!(sent_message(&h).contains("PARTSTAT=DECLINED"));
-
-    h.fake.fail_next(GmailError::Network("offline".into()));
-    let err = invitations
-        .answer(
-            h.account_id,
-            &invitation,
-            &me(),
-            Answer::Yes,
-            Scope::Series,
-            None,
-            2_000,
-        )
-        .await
-        .unwrap_err();
-    assert!(err.to_string().contains("offline"), "{err}");
 }
 
 /// An invitation at a fixed hour, for the questions about what else the
@@ -635,36 +605,23 @@ const CLASH: (i64, i64) = (1_773_138_600_000, 1_773_142_200_000);
 #[tokio::test]
 async fn an_invitation_over_something_else_says_what() {
     let h = harness().await;
-    let invitations = invitations(&h);
-    h.fake
-        .with(|s| s.busy.push((CLASH.0, CLASH.1, "Design crit".into())));
-    let invitation = read(&at_ten());
+    let crit = Ev { uid: "crit@x".into(), title: "Design crit".into(), ..on_copy("crit", CLASH.0) };
+    read_copy_at(&h, vec![crit], MARCH_2026).await;
 
     assert_eq!(
-        invitations.busy(h.account_id, &invitation).await.unwrap(),
+        invitations(&h).busy(h.account_id, &read(&at_ten())).await.unwrap(),
         vec!["Design crit".to_string()]
     );
-
-    // The window opens the same message again and again; Google hears
-    // about it once.
-    invitations.busy(h.account_id, &invitation).await.unwrap();
-    invitations.busy(h.account_id, &invitation).await.unwrap();
-    assert_eq!(h.fake.with(|s| s.usage.calls_to("calendar.events.list")), 1);
 }
 
 #[tokio::test]
 async fn an_hour_with_nothing_in_it_says_nothing() {
     let h = harness().await;
-    let invitations = invitations(&h);
-    h.fake.with(|s| {
-        s.busy.push((
-            CLASH.0 + 86_400_000,
-            CLASH.1 + 86_400_000,
-            "Design crit".into(),
-        ))
-    });
+    let next_day = CLASH.0 + 86_400_000;
+    let crit = Ev { uid: "crit@x".into(), title: "Design crit".into(), ..on_copy("crit", next_day) };
+    read_copy_at(&h, vec![crit], MARCH_2026).await;
     assert!(
-        invitations
+        invitations(&h)
             .busy(h.account_id, &read(&at_ten()))
             .await
             .unwrap()
@@ -754,20 +711,21 @@ fn one_of_a_series() -> String {
 const OCCURRENCE: i64 = 1_773_133_200_000;
 
 #[tokio::test]
-async fn google_hears_which_occurrence_an_answer_is_for() {
+async fn the_calendar_hears_which_occurrence_an_answer_is_for() {
     let h = harness().await;
+    design_review_on_calendar(&h, &["RRULE:FREQ=WEEKLY;COUNT=4"]).await;
     let invitations = invitations(&h);
-    h.fake.with(|s| s.calendar.insert(UID.into(), None));
     let invitation = read(&one_of_a_series());
 
-    for (scope, named) in [(Scope::Occurrence, Some(OCCURRENCE)), (Scope::Series, None)] {
+    for (scope, named) in [(Scope::Occurrence, "design-review_20260310T090000Z"), (Scope::Series, "design-review")] {
         invitations
-            .answer(h.account_id, &invitation, &me(), Answer::Yes, scope, None, 1_000)
+            .answer(h.account_id, &invitation, &me(), Answer::Yes, scope, None, MARCH_2026)
             .await
             .unwrap();
+        send_queue(&h).await;
         assert_eq!(
-            h.fake.with(|s| s.answered_occurrences.last().copied()),
-            Some(named)
+            h.fake.with(|s| s.answered_events.last().map(|a| a.1.clone())),
+            Some(named.to_string())
         );
     }
 }
@@ -845,25 +803,20 @@ async fn a_proposal_asks_the_organizer_for_another_time() {
     assert!(message.contains("DTEND:20260310T150000Z\r\n"), "{message}");
     assert!(message.contains(&format!("UID:{UID}\r\n")), "{message}");
     // A proposal settles nothing, so no calendar hears about it.
-    assert!(h.fake.with(|s| s.answered_occurrences.is_empty()));
+    assert!(h.fake.with(|s| s.answered_events.is_empty()));
 }
 
 #[tokio::test]
 async fn one_occurrence_says_how_many_of_its_series_are_left() {
     let h = harness().await;
-    let invitations = invitations(&h);
+    design_review_on_calendar(&h, &["RRULE:FREQ=WEEKLY;BYDAY=TU;COUNT=10"]).await;
     let week = 7 * 86_400_000;
-    h.fake.with(|s| {
-        let starts = (0..10).map(|n| OCCURRENCE + n * week).collect();
-        s.series
-            .insert(UID.into(), ("FREQ=WEEKLY;BYDAY=TU;COUNT=10".into(), starts));
-    });
     let invitation = read(&one_of_a_series());
 
     // Asked a moment after the fourth Tuesday, six are still to come.
     let now = OCCURRENCE + 3 * week + 1;
     assert_eq!(
-        invitations
+        invitations(&h)
             .series(h.account_id, &invitation, now)
             .await
             .unwrap()
@@ -875,38 +828,58 @@ async fn one_occurrence_says_how_many_of_its_series_are_left() {
 #[tokio::test]
 async fn a_series_the_calendar_cannot_give_leaves_the_card_alone() {
     let h = harness().await;
-    let invitations = invitations(&h);
     let invitation = read(&one_of_a_series());
 
     // Not on the calendar.
+    read_copy_at(&h, Vec::new(), MARCH_2026).await;
     assert_eq!(
-        invitations
+        invitations(&h)
             .series(h.account_id, &invitation, OCCURRENCE)
             .await
             .unwrap(),
         None
     );
-    // On it, but the account never granted the calendar.
-    h.fake.with(|s| {
-        s.series
-            .insert(UID.into(), ("FREQ=WEEKLY".into(), vec![OCCURRENCE]))
-    });
-    h.fake.fail_next(GmailError::MissingScope);
+    // On it, and open-ended.
+    design_review_on_calendar(&h, &["RRULE:FREQ=WEEKLY"]).await;
     assert_eq!(
-        invitations
-            .series(h.account_id, &invitation, OCCURRENCE)
-            .await
-            .unwrap(),
-        None
-    );
-    // Readable, and open-ended.
-    assert_eq!(
-        invitations
+        invitations(&h)
             .series(h.account_id, &invitation, OCCURRENCE)
             .await
             .unwrap()
             .as_deref(),
         Some("Every week, no end date")
+    );
+}
+
+/// The first message opened after an account is added comes before the
+/// app's timer has read the calendar; the series line waits for that read.
+#[tokio::test]
+async fn a_calendar_never_read_is_read_before_the_series_line() {
+    let h = harness().await;
+    h.fake.with(|s| s.calendars = vec![primary()]);
+    h.fake.put_calendar_event(Ev { rules: vec!["RRULE:FREQ=WEEKLY".into()], ..on_copy("design-review", OCCURRENCE) });
+    assert_eq!(
+        invitations(&h)
+            .series(h.account_id, &read(&one_of_a_series()), OCCURRENCE)
+            .await
+            .unwrap()
+            .as_deref(),
+        Some("Every week, no end date")
+    );
+}
+
+#[tokio::test]
+async fn a_calendar_the_account_withholds_gives_no_series_line() {
+    let h = harness().await;
+    h.fake.withhold(mailrs_gmail::CALENDAR_SCOPE);
+    h.fake.with(|s| s.calendars = vec![primary()]);
+    h.fake.put_calendar_event(Ev { rules: vec!["RRULE:FREQ=WEEKLY".into()], ..on_copy("design-review", OCCURRENCE) });
+    assert_eq!(
+        invitations(&h)
+            .series(h.account_id, &read(&one_of_a_series()), OCCURRENCE)
+            .await
+            .unwrap(),
+        None
     );
 }
 
@@ -1057,13 +1030,45 @@ fn weekly(first: i64) -> Ev {
 /// Puts `events` on the fake's primary calendar and reads them into the
 /// copy, as the app's timer does a minute after start.
 async fn read_copy(h: &Harness, events: Vec<Ev>) {
+    read_copy_at(h, events, MARCH).await;
+}
+
+/// Puts `events` on the fake's primary calendar and reads them into the
+/// copy at `now`.
+async fn read_copy_at(h: &Harness, events: Vec<Ev>, now: i64) {
     h.fake.with(|s| s.calendars = vec![primary()]);
     for event in events {
         h.fake.put_calendar_event(event);
     }
     let connected = HashMap::from([(h.account_id, Arc::clone(&h.sync))]);
     CalendarCopy::new(Arc::new(Connected(connected)), h.db.clone())
-        .refresh(h.account_id, MARCH)
+        .refresh(h.account_id, now)
+        .await
+        .unwrap();
+}
+
+/// 1 March 2026, before the 10 March 2026 the older fixtures name.
+const MARCH_2026: i64 = 1_772_323_200_000;
+
+/// The fixture meeting on 10 March 2026, with the account as a guest and
+/// `rules` as its repeat, on the fake's primary calendar and read into
+/// the copy on 1 March, as the app's timer would.
+async fn design_review_on_calendar(h: &Harness, rules: &[&str]) {
+    let organizer = Guest { email: "priya@example.com".into(), organizer: true, ..Guest::default() };
+    let event = Ev {
+        guests: vec![me_guest(), organizer],
+        rules: rules.iter().map(|r| r.to_string()).collect(),
+        organizer: Some("priya@example.com".into()),
+        ..on_copy("design-review", OCCURRENCE)
+    };
+    read_copy_at(h, vec![event], MARCH_2026).await;
+}
+
+/// Sends what the calendar's queue holds, as the app does after an answer.
+async fn send_queue(h: &Harness) {
+    let connected = HashMap::from([(h.account_id, Arc::clone(&h.sync))]);
+    CalendarCopy::new(Arc::new(Connected(connected)), h.db.clone())
+        .send(h.account_id)
         .await
         .unwrap();
 }
@@ -1347,7 +1352,6 @@ async fn an_invitation_behind_a_crowded_calendar_still_waits() {
 async fn an_answer_on_the_card_stops_the_event_waiting() {
     let h = harness().await;
     read_copy(&h, vec![Ev { guests: vec![me_guest()], ..on_copy("ev1", TENTH) }]).await;
-    h.fake.with(|s| s.calendar.insert(UID.into(), None));
     let invitation = read(&invite(0, "20300310T090000Z"));
 
     let sent = invitations(&h)
@@ -1364,7 +1368,6 @@ async fn an_answer_on_the_card_stops_the_event_waiting() {
 async fn an_answer_to_one_occurrence_leaves_the_rest_of_the_series_waiting() {
     let h = harness().await;
     read_copy(&h, vec![Ev { guests: vec![me_guest()], ..weekly(TENTH - WEEK) }]).await;
-    h.fake.with(|s| s.calendar.insert(UID.into(), None));
 
     invitations(&h)
         .answer(h.account_id, &to_the_tenth(), &me(), Answer::Yes, Scope::Occurrence, None, MARCH)
@@ -1408,4 +1411,62 @@ async fn a_published_file_reports_no_change_when_it_comes_again() {
     let again = first.replace("SUMMARY:Outbound", "SEQUENCE:1\r\nSUMMARY:Outbound Renamed");
     let opened = invitations.open(h.account_id, "m2", &again, 2_000).await.unwrap().unwrap();
     assert_eq!(opened.change, None);
+}
+
+/// ADR 0001: a change queued here goes out right after the edit that
+/// queued it, not on the next tick. The assistant's answer is one.
+#[tokio::test]
+async fn an_answer_from_the_assistant_reaches_the_calendar_without_a_tick() {
+    let h = harness().await;
+    design_review_on_calendar(&h, &[]).await;
+    h.fake.with(|s| {
+        s.messages.insert("m1".into(), meta("m1", "m1", 1, &["INBOX"]));
+        s.bodies.insert(
+            "m1".into(),
+            mailrs_domain::MessageBody { calendar: Some(invite(0, "20260310T090000Z")), ..Default::default() },
+        );
+    });
+
+    let (_, sent) = invitations(&h)
+        .answer_message(h.account_id, "m1", "me@example.com", Answer::Yes, MARCH_2026)
+        .await
+        .unwrap()
+        .expect("the message holds an invitation");
+
+    assert_eq!(sent.told, Told::Calendar);
+    assert!(
+        super::eventually(|| !h.fake.with(|s| s.answered_events.is_empty())).await,
+        "Google heard the answer with no send from the test"
+    );
+}
+
+/// A calendar read that failed is not tried again for a minute: the clash
+/// and series lines read the copy as it stands meanwhile, at no cost.
+#[tokio::test]
+async fn a_failed_first_read_is_not_tried_again_for_a_minute() {
+    let h = harness().await;
+    h.fake.with(|s| s.calendars = vec![primary()]);
+    h.fake.put_calendar_event(Ev { rules: vec!["RRULE:FREQ=WEEKLY".into()], ..on_copy("design-review", OCCURRENCE) });
+    let invitations = invitations(&h);
+    let invitation = read(&one_of_a_series());
+    let lists = || {
+        let usage = h.fake.usage();
+        usage.calls_to("calendar.calendarList.list") + usage.calls_to("calendar.events.list")
+    };
+
+    h.fake.fail_next(GmailError::Network("offline".into()));
+    assert!(invitations.series(h.account_id, &invitation, OCCURRENCE).await.is_err());
+    let tried = lists();
+    assert_eq!(
+        invitations.series(h.account_id, &invitation, OCCURRENCE + 30_000).await.unwrap(),
+        None,
+        "half a minute on, the line reads the empty copy"
+    );
+    assert_eq!(lists(), tried, "and asks Google nothing");
+
+    assert_eq!(
+        invitations.series(h.account_id, &invitation, OCCURRENCE + 61_000).await.unwrap().as_deref(),
+        Some("Every week, no end date"),
+        "a minute on, the read is tried again"
+    );
 }

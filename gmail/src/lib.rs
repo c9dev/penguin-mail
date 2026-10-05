@@ -18,9 +18,8 @@ pub mod structure;
 mod token_store;
 
 pub use calendar::{
-    Answered, Busy, CALENDAR_API_BASE, CALENDAR_LIST_SCOPE, CALENDAR_LIST_WRITE_SCOPE, CALENDAR_SCOPE,
-    CALENDARS_SCOPE, Event, EventFields,
-    EventTime, Guest, Series, google_event,
+    CALENDAR_API_BASE, CALENDAR_LIST_SCOPE, CALENDAR_LIST_WRITE_SCOPE, CALENDAR_SCOPE, CALENDARS_SCOPE,
+    google_event,
 };
 pub use client::{
     Authorized, BATCH_LIMIT, GMAIL_API_BASE, GmailClient, authorize, cost, one_click_unsubscribe,

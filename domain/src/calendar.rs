@@ -555,6 +555,93 @@ pub fn split_occurrence_id(id: &str) -> Option<(&str, EpochMillis)> {
     Some((series, at.and_utc().timestamp_millis()))
 }
 
+/// What the assistant sets on an event: each field it names, with the
+/// rest of the event left as it was. A new event starts from a blank
+/// [`Event`] and takes the edit the same way.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct EventEdit {
+    pub title: Option<String>,
+    /// The new start. A new start with no new end keeps the event's
+    /// length, since a person moving a meeting means to move all of it.
+    pub start: Option<EpochMillis>,
+    /// The new end. A whole-day event ends at midnight UTC after its last
+    /// day, as [`Event`] keeps it.
+    pub end: Option<EpochMillis>,
+    pub all_day: Option<bool>,
+    pub place: Option<String>,
+    pub description: Option<String>,
+    /// The guests by address, each with no answer of their own yet. The
+    /// list replaces the event's.
+    pub guests: Option<Vec<String>>,
+}
+
+impl EventEdit {
+    /// Whether the edit names nothing to change.
+    pub fn is_empty(&self) -> bool {
+        *self == EventEdit::default()
+    }
+
+    /// Writes what the edit names onto `event`.
+    pub fn apply(&self, event: &mut Event) {
+        if let Some(title) = &self.title {
+            event.title = title.clone();
+        }
+        if let Some(start) = self.start {
+            let length = event.end - event.start;
+            event.start = start;
+            event.end = start + length;
+        }
+        if let Some(end) = self.end {
+            event.end = end;
+        }
+        if let Some(all_day) = self.all_day {
+            event.all_day = all_day;
+        }
+        if let Some(place) = &self.place {
+            event.place = place.clone();
+        }
+        if let Some(description) = &self.description {
+            event.description = description.clone();
+        }
+        if let Some(guests) = &self.guests {
+            event.guests = guests.iter().map(|email| Guest { email: email.clone(), ..Guest::default() }).collect();
+        }
+    }
+}
+
+/// How a repeating event runs, for the series line an invitation to one
+/// of its occurrences shows: "Every Tuesday, 6 left".
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Series {
+    /// The rule without its `RRULE:` prefix, such as
+    /// `FREQ=WEEKLY;BYDAY=MO;COUNT=10`.
+    pub rule: String,
+    /// How many occurrences start at or after the instant asked about.
+    /// Only a rule that stops after a number of occurrences has one; a
+    /// rule with an end date or none counts nothing.
+    pub left: Option<u32>,
+}
+
+impl Series {
+    /// How `event` repeats, counted from `from`. `None` for an event that
+    /// does not repeat.
+    pub fn of(event: &Event, from: EpochMillis) -> Option<Series> {
+        let line = event.rules.iter().find(|line| is_rule_line(line))?;
+        let rule = line.split_once(':').map_or(line.as_str(), |(_, rule)| rule).to_string();
+        let counted = rule.split(';').any(|part| part.trim().to_ascii_uppercase().starts_with("COUNT="));
+        // `series_end` gives up on a series longer than `expand` would
+        // list, and then nothing is counted rather than a short count.
+        let left = match (counted, series_end(event)) {
+            (true, Some(end)) => {
+                let left = expand(event, from, end + 1).iter().filter(|(start, _)| *start >= from).count();
+                Some(u32::try_from(left).unwrap_or(u32::MAX))
+            }
+            _ => None,
+        };
+        Some(Series { rule, left })
+    }
+}
+
 /// One page of changes to one calendar, provider-neutral so a CalDAV
 /// adapter answers the same shape a Google one does.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -1064,5 +1151,58 @@ mod tests {
         assert_eq!(Notify::from_stored(None), Notify::Guests);
         assert_eq!(Notify::from_stored(Notify::Nobody.stored()), Notify::Nobody);
         assert_eq!(Notify::Guests.stored(), None);
+    }
+
+    #[test]
+    fn a_counted_series_says_its_rule_and_how_many_are_still_to_come() {
+        let event = standup(&["RRULE:FREQ=DAILY;COUNT=10"]);
+        // A moment after the fourth one starts, six are still to come.
+        let series = Series::of(&event, lisbon(2026, 10, 22, 9, 0) + 1).expect("it repeats");
+        assert_eq!(series, Series { rule: "FREQ=DAILY;COUNT=10".into(), left: Some(6) });
+    }
+
+    #[test]
+    fn a_series_with_no_count_counts_nothing() {
+        let series = Series::of(&standup(&["RRULE:FREQ=WEEKLY", "EXDATE:20261026T080000Z"]), 0);
+        assert_eq!(series, Some(Series { rule: "FREQ=WEEKLY".into(), left: None }));
+    }
+
+    #[test]
+    fn a_one_off_event_has_no_series() {
+        assert_eq!(Series::of(&standup(&[]), 0), None);
+    }
+
+    #[test]
+    fn an_edit_sets_what_it_names_and_keeps_the_rest() {
+        let mut event = standup(&[]);
+        let edit = EventEdit { title: Some("Retro".into()), place: Some("Room 2".into()), ..EventEdit::default() };
+        edit.apply(&mut event);
+        assert_eq!((event.title.as_str(), event.place.as_str()), ("Retro", "Room 2"));
+        assert_eq!((event.start, event.end), (lisbon(2026, 10, 19, 9, 0), lisbon(2026, 10, 19, 9, 15)));
+        assert!(EventEdit::default().is_empty() && !edit.is_empty());
+    }
+
+    #[test]
+    fn a_new_start_alone_keeps_the_length() {
+        let mut event = standup(&[]);
+        EventEdit { start: Some(lisbon(2026, 10, 19, 14, 0)), ..EventEdit::default() }.apply(&mut event);
+        assert_eq!((event.start, event.end), (lisbon(2026, 10, 19, 14, 0), lisbon(2026, 10, 19, 14, 15)));
+    }
+
+    #[test]
+    fn an_edit_to_whole_days_marks_the_event_all_day_and_names_its_guests() {
+        let mut event = standup(&[]);
+        let day = |d: u32| NaiveDate::from_ymd_opt(2026, 10, d).unwrap().and_hms_opt(0, 0, 0).unwrap().and_utc().timestamp_millis();
+        EventEdit {
+            start: Some(day(20)),
+            end: Some(day(22)),
+            all_day: Some(true),
+            guests: Some(vec!["ann@example.com".into()]),
+            ..EventEdit::default()
+        }
+        .apply(&mut event);
+        assert!(event.all_day);
+        assert_eq!((event.start, event.end), (day(20), day(22)));
+        assert_eq!(event.guests, vec![Guest { email: "ann@example.com".into(), ..Guest::default() }]);
     }
 }
