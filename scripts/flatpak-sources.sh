@@ -9,8 +9,11 @@
 #       also write the files for the flathub/io.github.c9dev.PenguinMail
 #       repository into <dir>: the manifest building that tag, and the
 #       two files beside it. The manifest gets the Google client from
-#       PENGUIN_MAIL_GOOGLE_CLIENT_ID and _SECRET, read from the
-#       environment or from the gitignored packaging/secrets.env.
+#       PENGUIN_MAIL_GOOGLE_CLIENT_ID and _SECRET, and the Microsoft
+#       client from PENGUIN_MAIL_MICROSOFT_CLIENT_ID, read from the
+#       environment or from the gitignored packaging/secrets.env. A
+#       manifest without the Microsoft id builds a Flatpak that hides
+#       Microsoft in Add Account; the script does not fail without it.
 #
 # flatpak-cargo-generator comes from flatpak-builder-tools at a fixed
 # commit, and runs in a Python environment under ~/.cache made on first
@@ -52,10 +55,12 @@ case $mode in
     out=${3:?usage: scripts/flatpak-sources.sh --flathub vX.Y.Z <dir>}
     commit=$(git rev-parse "$tag^{commit}")
     # Flathub builds on its own servers, where GitHub's secrets do not
-    # reach, so its manifest carries the Google client in the open. Google
+    # reach, so its manifest carries the Google and Microsoft clients in
+    # the open. Google
     # treats a desktop app's client secret as public, and the .deb holds
     # both values already. The manifest in this repository stays empty.
-    if { [ -z "${PENGUIN_MAIL_GOOGLE_CLIENT_ID:-}" ] || [ -z "${PENGUIN_MAIL_GOOGLE_CLIENT_SECRET:-}" ]; } &&
+    if { [ -z "${PENGUIN_MAIL_GOOGLE_CLIENT_ID:-}" ] || [ -z "${PENGUIN_MAIL_GOOGLE_CLIENT_SECRET:-}" ] ||
+        [ -z "${PENGUIN_MAIL_MICROSOFT_CLIENT_ID:-}" ]; } &&
         [ -f packaging/secrets.env ]; then
         set -a
         # shellcheck source=/dev/null
@@ -68,7 +73,9 @@ case $mode in
         echo "packaging/secrets.env; without them Flathub's build cannot sign in to Google." >&2
         exit 1
     fi
-    export PENGUIN_MAIL_GOOGLE_CLIENT_ID PENGUIN_MAIL_GOOGLE_CLIENT_SECRET
+    # Microsoft is optional in a build, so an unset id becomes an empty one.
+    PENGUIN_MAIL_MICROSOFT_CLIENT_ID=${PENGUIN_MAIL_MICROSOFT_CLIENT_ID:-}
+    export PENGUIN_MAIL_GOOGLE_CLIENT_ID PENGUIN_MAIL_GOOGLE_CLIENT_SECRET PENGUIN_MAIL_MICROSOFT_CLIENT_ID
     # Cargo.lock at the tag is what Flathub builds, so its crates are the
     # ones to list.
     git show "$tag:Cargo.lock" > "$work/Cargo.lock"
@@ -87,7 +94,11 @@ import sys
 
 source, target, tag, commit = sys.argv[1:]
 text = open(source, encoding="utf-8").read()
-for name in ("PENGUIN_MAIL_GOOGLE_CLIENT_ID", "PENGUIN_MAIL_GOOGLE_CLIENT_SECRET"):
+for name in (
+    "PENGUIN_MAIL_GOOGLE_CLIENT_ID",
+    "PENGUIN_MAIL_GOOGLE_CLIENT_SECRET",
+    "PENGUIN_MAIL_MICROSOFT_CLIENT_ID",
+):
     empty = f'{name}: ""'
     if text.count(empty) != 1:
         sys.exit(f"{source} has no single empty {name}")

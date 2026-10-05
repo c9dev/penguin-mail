@@ -56,6 +56,8 @@ jobs:
           appstreamcli validate --strict --no-net app/data/io.github.c9dev.PenguinMail.metainfo.xml
           desktop-file-validate app/data/io.github.c9dev.PenguinMail.desktop
           scripts/metainfo.sh --check
+      - name: Every package build gets the Microsoft client id
+        run: scripts/check-secrets.sh
       - name: Every control has an accessible name
         run: scripts/a11y-names.sh
 

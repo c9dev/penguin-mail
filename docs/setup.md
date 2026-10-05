@@ -77,16 +77,19 @@ portal; see "Which package" below.
 
 ## Building your own copy
 
-A build signs in to Google only when it was compiled with the project's
-client, from these variables:
+A build signs in to Google or Microsoft only when it was compiled with the
+project's client, from these variables:
 
 - `PENGUIN_MAIL_GOOGLE_CLIENT_ID`
 - `PENGUIN_MAIL_GOOGLE_CLIENT_SECRET`
 - `PENGUIN_MAIL_MICROSOFT_CLIENT_ID`
 
-`scripts/install.sh` reads them from `packaging/secrets.env` when that file
-exists. A copy built without them works in every other way and says so when
-you try to add a Google account.
+The release workflow takes them from the secrets
+`PENGUIN_MAIL_GOOGLE_CLIENT_ID`, `PENGUIN_MAIL_GOOGLE_CLIENT_SECRET` and
+`MICROSOFT_CLIENT_ID`. `scripts/install.sh` reads them from
+`packaging/secrets.env` when that file exists. A copy built without them
+works in every other way and says so when you try to add a Google account.
+A copy built without the Microsoft one hides Microsoft in Add Account.
 
 To build with a client of your own instead, make one in a Google Cloud
 project:
@@ -121,6 +124,15 @@ PENGUIN_MAIL_GOOGLE_CLIENT_SECRET=GOCSPX-...
 Google issues a desktop client secret to identify the app, and anyone who
 downloads a desktop app can read it. Your refresh tokens are what grant access
 to mail.
+
+To build with a Microsoft client of your own, register a public client in
+Microsoft Entra for "Accounts in any organizational directory and personal
+Microsoft accounts", with the platform "Mobile and desktop applications" and
+the redirect `http://localhost`. Put its id in `packaging/secrets.env`:
+
+```sh
+PENGUIN_MAIL_MICROSOFT_CLIENT_ID=...
+```
 
 ## The command line
 
