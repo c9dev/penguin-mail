@@ -475,14 +475,14 @@ impl<A: Accounts> CalendarCopy<A> {
                 };
                 let last_page = got.next_page.is_none();
                 count += got.events.len() + got.removed.len();
-                let (events, removed, next_sync) = (got.events, got.removed, got.next_sync);
+                let (events, removed, next_sync, whole_series) = (got.events, got.removed, got.next_sync, got.whole_series);
                 let calendar_id = id.to_string();
                 // Taken before the write, since the lock must not be held
                 // across an await.
                 let held = self.held_in(account_id, id);
                 self.db
                     .write(move |c| {
-                        store_page(c, account_id, &calendar_id, held, events, removed, mark)?;
+                        store_page(c, account_id, &calendar_id, held, events, removed, whole_series, mark)?;
                         if last_page {
                             if whole {
                                 store::sweep(c, account_id, &calendar_id, mark)?;
@@ -588,12 +588,12 @@ impl<A: Accounts> CalendarCopy<A> {
             count += got.events.len() + got.removed.len();
             let calendar_id = id.to_string();
             let held = self.held_in(account_id, id);
-            let (events, removed, next) = (got.events, got.removed, got.next_page);
+            let (events, removed, next, whole_series) = (got.events, got.removed, got.next_page, got.whole_series);
             // The sync token on the last page belongs to this range's own
             // filter, so it is dropped: the calendar keeps its own.
             self.db
                 .write(move |c| {
-                    store_page(c, account_id, &calendar_id, held, events, removed, mark)?;
+                    store_page(c, account_id, &calendar_id, held, events, removed, whole_series, mark)?;
                     if last_page {
                         store::set_reach(c, account_id, &calendar_id, start)?;
                     }
@@ -1400,13 +1400,15 @@ impl<A: Accounts> CalendarCopy<A> {
 /// Stores one page of a calendar read, leaving alone every event a queued
 /// or held change of ours still owns, and every occurrence of a series on
 /// its way out, which a read must not bring back to stand alone.
-fn store_page(
+#[expect(clippy::too_many_arguments, reason = "each is part of one page and where it lands")]
+pub(crate) fn store_page(
     c: &rusqlite::Connection,
     account_id: AccountId,
     calendar_id: &str,
     (held, held_removals): (Vec<String>, Vec<String>),
     mut events: Vec<Event>,
     mut removed: Vec<String>,
+    whole_series: Vec<String>,
     mark: EpochMillis,
 ) -> mailrs_store::Result<()> {
     let mut pending = store::pending_ids(c, account_id, calendar_id)?;
@@ -1417,6 +1419,13 @@ fn store_page(
     removed.retain(|e| !pending.contains(e));
     store::save_events(c, account_id, &events, mark)?;
     store::remove_events(c, account_id, calendar_id, &removed)?;
+    // A series the page gives whole names every changed occurrence it
+    // still has, so any other the copy holds went elsewhere. A series with
+    // a change of ours waiting keeps what it has until that change lands.
+    for series in whole_series.iter().filter(|s| !pending.contains(*s)) {
+        let kept: Vec<String> = events.iter().filter(|e| e.series.as_ref() == Some(series)).map(|e| e.id.clone()).collect();
+        store::keep_occurrences(c, account_id, calendar_id, series, &kept)?;
+    }
     Ok(())
 }
 

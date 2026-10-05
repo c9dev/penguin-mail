@@ -1932,3 +1932,35 @@ async fn only_the_shown_calendars_are_fetched_back() {
     assert!(stored(&h, "primary", "mine").await.is_some());
     assert!(stored(&h, "team", "theirs").await.is_none());
 }
+
+/// A page that gives a series whole, with the changed occurrences it still
+/// has, leaves the copy holding only those: one the organizer took back
+/// elsewhere goes.
+#[tokio::test]
+async fn a_page_that_gives_a_series_whole_drops_its_other_changed_occurrences() {
+    let h = harness().await;
+    let series = Event { rules: vec!["RRULE:FREQ=WEEKLY".into()], ..event("primary", "standup") };
+    let changed = |id: &str| Event {
+        series: Some("standup".into()),
+        original_start: Some(NOW + 7 * 86_400_000),
+        ..event("primary", id)
+    };
+    let (kept, taken_back) = (changed("standup_kept"), changed("standup_taken_back"));
+    let seeded = vec![series.clone(), kept.clone(), taken_back];
+    let account = h.account_id;
+    h.db
+        .write(move |c| {
+            store::save_calendars(c, account, &[calendar("primary", true)])?;
+            store::save_events(c, account, &seeded, NOW)
+        })
+        .await
+        .unwrap();
+    let page = vec![series, kept];
+    h.db
+        .write(move |c| crate::calendar_copy::store_page(c, account, "primary", Default::default(), page, Vec::new(), vec!["standup".into()], NOW))
+        .await
+        .unwrap();
+    assert!(stored(&h, "primary", "standup_kept").await.is_some());
+    assert!(stored(&h, "primary", "standup_taken_back").await.is_none());
+    assert!(stored(&h, "primary", "standup").await.is_some());
+}
