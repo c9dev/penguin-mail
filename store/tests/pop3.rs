@@ -48,6 +48,21 @@ fn a_raw_copy_goes_with_its_message() {
 }
 
 #[test]
+fn a_raw_copy_put_again_reads_back_as_the_new_bytes() {
+    let (conn, id) = pop3_account(RemoveSetting::Never);
+    let long = vec![b'a'; 300_000];
+    local_messages::put(&conn, id, "local/1", &long).unwrap();
+    assert_eq!(local_messages::get(&conn, id, "local/1").unwrap(), Some(long));
+    local_messages::put(&conn, id, "local/1", b"short").unwrap();
+    assert_eq!(
+        local_messages::get(&conn, id, "local/1").unwrap().as_deref(),
+        Some(&b"short"[..])
+    );
+    local_messages::put(&conn, id, "local/2", b"").unwrap();
+    assert_eq!(local_messages::get(&conn, id, "local/2").unwrap(), Some(Vec::new()));
+}
+
+#[test]
 fn only_uidls_never_downloaded_count_as_new() {
     let (conn, id) = pop3_account(RemoveSetting::Never);
     pop3::mark_downloaded(&conn, id, "u1", "pop3/u1", 10).unwrap();

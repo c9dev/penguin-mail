@@ -484,6 +484,57 @@ async fn a_download_is_in_the_database_file_before_its_dele_goes_out() {
     assert_eq!(kept, 1, "the downloaded bytes were on disk when the DELE went out");
 }
 
+/// The process's highest resident memory since the last reset, in bytes.
+fn resident_peak() -> usize {
+    let status = std::fs::read_to_string("/proc/self/status").unwrap_or_default();
+    status
+        .lines()
+        .find_map(|line| line.strip_prefix("VmHWM:"))
+        .and_then(|kb| kb.trim().trim_end_matches("kB").trim().parse::<usize>().ok())
+        .map_or(0, |kb| kb * 1024)
+}
+
+/// Run alone, so other tests add nothing to the process's peak:
+/// `cargo test -p mailrs-sync --lib -- --ignored a_large_message_downloads`
+///
+/// One message of 32 MB, nearly all of it a base64 file. Downloading it
+/// should hold the message once, plus what reading its headers and first
+/// text part takes; the Rust heap peak leaves out SQLite's own memory,
+/// which the resident peak shows.
+#[tokio::test]
+#[ignore = "a measurement of the whole process, run alone"]
+async fn a_large_message_downloads_holding_it_about_once() {
+    use crate::tests::heap::ProcessMark;
+    let line = format!("{}\r\n", "QUFB".repeat(19));
+    let lines = (32 << 20) / line.len();
+    let mut raw = String::with_capacity(lines * line.len() + 1024);
+    raw.push_str(
+        "From: Ana <ana@example.org>\r\nSubject: Scans\r\nMIME-Version: 1.0\r\n\
+         Content-Type: multipart/mixed; boundary=b\r\n\r\n--b\r\nContent-Type: text/plain\r\n\r\n\
+         The scans are attached.\r\n--b\r\nContent-Type: application/pdf\r\n\
+         Content-Disposition: attachment; filename=scans.pdf\r\nContent-Transfer-Encoding: base64\r\n\r\n",
+    );
+    for _ in 0..lines {
+        raw.push_str(&line);
+    }
+    raw.push_str("--b--\r\n");
+    let size = raw.len();
+    let fake = FakePop3::default().with_message("big", raw.as_bytes());
+    drop(raw);
+    let h = pop3_harness(fake, RemoveSetting::Never).await;
+    let _ = std::fs::write("/proc/self/clear_refs", "5");
+    let resident = resident_peak();
+    let mark = ProcessMark::start();
+    h.sync.pop3_check().await.unwrap();
+    let peak = mark.peak();
+    let resident = resident_peak().saturating_sub(resident);
+    eprintln!("a {size}-byte message: heap peak {peak} bytes, resident peak {resident} bytes above the start");
+    assert!(meta(&h, "pop3/big").await.has_attachments);
+    assert_eq!(meta(&h, "pop3/big").await.snippet, "The scans are attached.");
+    assert!(peak < size * 3 / 2, "the download held {peak} bytes for a {size}-byte message");
+    assert!(resident < size * 2, "resident memory rose {resident} bytes for a {size}-byte message");
+}
+
 /// Run alone, so other tests add nothing to the process's peak:
 /// `cargo test -p mailrs-sync --lib -- --ignored a_first_download_holds`
 #[tokio::test]

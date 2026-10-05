@@ -26,12 +26,13 @@ pub struct FakePop3 {
 
 struct Inner {
     /// The maildrop: each message's UIDL and bytes, oldest first.
-    messages: Vec<(String, Vec<u8>)>,
+    /// Shared with the session's numbering, so a session costs no copy.
+    messages: Vec<(String, Arc<[u8]>)>,
     /// Sizes `LIST` reports in place of a message's real length.
     claimed: BTreeMap<String, u64>,
     /// This session's numbering: message `n` is `numbered[n - 1]`, with
     /// its own bytes, so a UIDL listed twice answers two messages.
-    numbered: Vec<(String, Vec<u8>)>,
+    numbered: Vec<(String, Arc<[u8]>)>,
     marked: BTreeSet<u32>,
     in_session: bool,
     capabilities: Capabilities,
@@ -115,7 +116,7 @@ impl FakePop3 {
 
     /// Puts a message on the server now, as mail arriving between checks.
     pub fn add(&self, uidl: &str, raw: &[u8]) {
-        self.lock().messages.push((uidl.to_string(), raw.to_vec()));
+        self.lock().messages.push((uidl.to_string(), Arc::from(raw)));
     }
 
     /// Takes a message off the server, as another client's DELE and QUIT
@@ -269,10 +270,10 @@ impl Inner {
 
     /// The bytes of message `id` this session.
     fn raw_at(&self, id: u32) -> Vec<u8> {
-        self.numbered.get(id as usize - 1).map(|(_, raw)| raw.clone()).unwrap_or_default()
+        self.numbered.get(id as usize - 1).map(|(_, raw)| raw.to_vec()).unwrap_or_default()
     }
 
-    fn live(&self) -> impl Iterator<Item = (u32, &String, &Vec<u8>)> {
+    fn live(&self) -> impl Iterator<Item = (u32, &String, &Arc<[u8]>)> {
         self.numbered
             .iter()
             .enumerate()
@@ -338,7 +339,7 @@ impl Pop3Api for FakePop3 {
             .collect())
     }
 
-    async fn retr(&self, id: u32) -> Result<Vec<u8>, Pop3Error> {
+    async fn retr(&self, id: u32, _octets: u64) -> Result<Vec<u8>, Pop3Error> {
         let hold = {
             let mut inner = self.lock();
             inner.session()?;
@@ -421,7 +422,7 @@ mod tests {
         fake.connect().await.unwrap();
         assert_eq!(fake.uidl().await.unwrap().messages, [Uidl { id: 1, uidl: "u1".into() }]);
         assert_eq!(fake.list().await.unwrap(), [ListItem { id: 1, octets: 21 }]);
-        assert_eq!(fake.retr(1).await.unwrap(), b"Subject: hi\r\n\r\nbody\r\n");
+        assert_eq!(fake.retr(1, 21).await.unwrap(), b"Subject: hi\r\n\r\nbody\r\n");
         assert_eq!(fake.retr_calls(), [1]);
         fake.quit().await.unwrap();
         assert_eq!((fake.connects(), fake.in_flight()), (1, 0));
@@ -450,7 +451,7 @@ mod tests {
         fake.connect().await.unwrap();
         assert!(matches!(fake.connect().await, Err(Pop3Error::InUse(_))));
         assert_eq!(fake.most_in_flight(), 1);
-        assert!(matches!(fake.retr(1).await, Err(Pop3Error::Refused(_))));
+        assert!(matches!(fake.retr(1, 0).await, Err(Pop3Error::Refused(_))));
         assert_eq!(fake.list().await.unwrap()[0].octets, 1 << 40);
         assert!(matches!(FakePop3::default().refusing_sign_in().connect().await, Err(Pop3Error::Auth { .. })));
         assert_eq!(FakePop3::default().without_uidl().connect().await, Err(Pop3Error::Unsupported("UIDL")));
@@ -463,7 +464,7 @@ mod tests {
         fake.connect().await.unwrap();
         let waiting = tokio::spawn({
             let fake = Arc::clone(&fake);
-            async move { fake.retr(1).await }
+            async move { fake.retr(1, 0).await }
         });
         tokio::task::yield_now().await;
         assert!(!waiting.is_finished());

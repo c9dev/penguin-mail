@@ -66,7 +66,7 @@ fn the_client_downloads_and_deletes_on_dovecot() {
         assert!(caps.uidl && caps.sasl_plain, "{caps:?}");
         let listed = tls.uidl().await.expect("UIDL").messages;
         assert_eq!(listed.len(), 2);
-        let raw = tls.retr(listed[0].id).await.expect("RETR");
+        let raw = tls.retr(listed[0].id, 0).await.expect("RETR");
         assert!(String::from_utf8_lossy(&raw).contains("\r\n.a line that starts with a dot\r\n"), "the dot comes back undone");
         tls.dele(listed[0].id).await.expect("DELE");
         tls.quit().await.expect("QUIT");

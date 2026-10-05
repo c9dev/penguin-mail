@@ -275,7 +275,7 @@ impl AccountSync {
                 .await?;
             return Ok(true);
         }
-        let answer = pop3.retr(*id).await;
+        let answer = pop3.retr(*id, size.unwrap_or(0)).await;
         if answer.is_err() {
             handled.insert(uidl.clone());
         }
