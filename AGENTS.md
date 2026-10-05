@@ -56,7 +56,10 @@ Installing for the owner: `NO_AUTOSTART=1 scripts/install.sh`.
   trust dialog on the owner's screen. In product code, every `gpg` and
   `gpgsm` run goes through `mailrs_pgp::gnupg::Program::run`, which takes
   `Pinentry::Never` (`--pinentry-mode error`) or `Pinentry::MayAsk`; only
-  decrypting and signing may ask for a passphrase.
+  decrypting, signing and importing a file the person picked may ask for
+  a passphrase. A test that imports a passphrase-protected PKCS#12 file
+  names a pinentry script that answers from the fixture
+  (`smime/tests/import.rs`), so nobody is asked.
 - **Sandbox tests** for skill scripts run real `bwrap` and skip when it
   is missing or cannot start, as in an unprivileged container.
   `PENGUIN_MAIL_REQUIRE_SANDBOX=1` turns the skip into a failure.
@@ -89,6 +92,9 @@ recipe, including waiting for the window to reach the accessibility bus.
 Take screenshots of the hidden display with `scripts/demo-shot.sh out.png`
 (`--run drive.py` clicks or types first). It takes down the accessibility
 registry it starts; a hand-made recipe leaves one running for every shot.
+The scripts also set `GNUPGHOME` to a folder in their sandbox. A recipe
+that only moves `HOME` still reaches the owner's own gpg-agent, and a
+secret key it imports lands in their keyring.
 Render SVGs with `rsvg-convert`: ImageMagick mangles gradients and makes
 a good icon look broken.
 

@@ -21,6 +21,9 @@ pub enum PgpError {
     /// A body that was meant to hold inline PGP holds none.
     #[error("this text holds no PGP block")]
     NotPgp,
+    /// A file handed to import holds no OpenPGP key gpg could read.
+    #[error("this file holds no OpenPGP key")]
+    NotAKey,
     #[error("gpg failed: {0}")]
     Gpg(String),
 }

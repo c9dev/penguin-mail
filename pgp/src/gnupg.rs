@@ -24,8 +24,9 @@ const STATUS: &str = "[GNUPG:] ";
 /// gpg-agent to mark a root trusted, and gpg-agent asks through a window,
 /// so opening the inbox would mean a window per message. Only a run that
 /// needs the person's own secret key, to decrypt or to sign, may ask for
-/// the passphrase that unlocks it. Every run names one of the two, so a new
-/// call cannot forget the rule.
+/// the passphrase that unlocks it, and so may importing a file the person
+/// picked, since a PKCS#12 file opens with a passphrase of its own. Every
+/// run names one of the two, so a new call cannot forget the rule.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Pinentry {
     /// `--pinentry-mode error`: a request becomes an error, and the
@@ -507,6 +508,123 @@ fn split(line: &str) -> (&str, &str) {
         Some((keyword, rest)) => (keyword, rest.trim_start()),
         None => (line, ""),
     }
+}
+
+/// One key or certificate a file brought in, as gpg and gpgsm report it
+/// when they import.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Import {
+    pub fingerprint: String,
+    /// What the import changed for it.
+    pub change: Change,
+    /// Whether the file carried its secret key.
+    pub secret: bool,
+    /// Who it names, as the person would say it: the name of a user id,
+    /// or a certificate's common name. The status lines carry none; the
+    /// engine fills it in from a listing afterwards.
+    pub name: Option<String>,
+    pub address: Option<String>,
+}
+
+/// What an import changed for one key or certificate.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Change {
+    /// The keyring did not hold it before, or held it without the secret
+    /// key that came in now.
+    New,
+    /// The keyring held it, and the file added user ids, signatures or
+    /// subkeys to it.
+    Updated,
+    /// The keyring already held everything the file carried.
+    Unchanged,
+}
+
+/// Every key or certificate an import reported, each once, in the order
+/// of the `IMPORT_OK` lines.
+///
+/// `IMPORT_OK <reason> <fingerprint>` carries a bit field: 1 for a new
+/// key, 2, 4 and 8 for new user ids, signatures and subkeys, and 16 for
+/// a secret key. gpg writes one line for the public half and another for
+/// the secret half of the same key, so lines are merged by fingerprint.
+/// gpgsm never sets 16; [`import_counts`] says whether it read a secret key.
+pub fn imports<S: AsRef<str>>(status: &[S]) -> Vec<Import> {
+    let mut found: Vec<Import> = Vec::new();
+    for line in status {
+        let (keyword, rest) = split(line.as_ref());
+        if keyword != "IMPORT_OK" {
+            continue;
+        }
+        let mut words = rest.split_whitespace();
+        let (Some(reason), Some(fingerprint)) = (
+            words.next().and_then(|reason| reason.parse::<u32>().ok()),
+            words.next(),
+        ) else {
+            continue;
+        };
+        let change = match reason {
+            reason if reason & 1 != 0 => Change::New,
+            reason if reason & (2 | 4 | 8) != 0 => Change::Updated,
+            _ => Change::Unchanged,
+        };
+        let secret = reason & 16 != 0;
+        match found
+            .iter_mut()
+            .find(|import| import.fingerprint == fingerprint)
+        {
+            Some(import) => {
+                import.secret |= secret;
+                import.change = more(import.change, change);
+            }
+            None => found.push(Import {
+                fingerprint: fingerprint.to_string(),
+                change,
+                secret,
+                name: None,
+                address: None,
+            }),
+        }
+    }
+    found
+}
+
+/// The bigger of two changes reported for the same key.
+fn more(one: Change, other: Change) -> Change {
+    match (one, other) {
+        (Change::New, _) | (_, Change::New) => Change::New,
+        (Change::Updated, _) | (_, Change::Updated) => Change::Updated,
+        _ => Change::Unchanged,
+    }
+}
+
+/// The totals at the end of an import.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ImportCounts {
+    /// How many keys or certificates the program found in the file.
+    pub considered: u64,
+    /// How many secret keys it found.
+    pub secret_read: u64,
+    /// How many of those were new to the keyring.
+    pub secret_imported: u64,
+}
+
+/// The totals from the `IMPORT_RES` line, which both programs write once
+/// at the end: the count first, then the secret keys read and imported
+/// as the tenth and eleventh numbers. `None` when there is no such line.
+pub fn import_counts<S: AsRef<str>>(status: &[S]) -> Option<ImportCounts> {
+    let rest = status.iter().find_map(|line| {
+        let (keyword, rest) = split(line.as_ref());
+        (keyword == "IMPORT_RES").then_some(rest)
+    })?;
+    let numbers: Vec<u64> = rest
+        .split_whitespace()
+        .map(|number| number.parse().unwrap_or_default())
+        .collect();
+    let number = |index: usize| numbers.get(index).copied().unwrap_or_default();
+    Some(ImportCounts {
+        considered: number(0),
+        secret_read: number(9),
+        secret_imported: number(10),
+    })
 }
 
 /// The address at the end of a status line that leads with a reason code,

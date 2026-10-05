@@ -155,6 +155,37 @@ fn keys(listing: &str) -> Vec<Listed> {
     found
 }
 
+/// The first user id still in use on the key with this fingerprint, out
+/// of a `--with-colons` listing.
+pub(crate) fn first_user_id(listing: &str, fingerprint: &str) -> Option<String> {
+    keys(listing)
+        .into_iter()
+        .find(|listed| listed.fingerprint.eq_ignore_ascii_case(fingerprint))?
+        .uids
+        .into_iter()
+        .find(|(_, validity)| trusted(validity))
+        .map(|(uid, _)| uid)
+}
+
+/// The name and the address out of a user id, which reads
+/// `Ada Lovelace <ada@example.com>`, a bare address, or a bare name.
+pub fn split_user_id(uid: &str) -> (Option<String>, Option<String>) {
+    let uid = uid.trim();
+    if let Some((name, rest)) = uid.rsplit_once('<')
+        && let Some(address) = rest.strip_suffix('>')
+    {
+        let name = name.trim();
+        return (
+            (!name.is_empty()).then(|| name.to_string()),
+            Some(address.trim().to_string()),
+        );
+    }
+    match uid.contains('@') {
+        true => (None, Some(uid.to_string())),
+        false => ((!uid.is_empty()).then(|| uid.to_string()), None),
+    }
+}
+
 /// Whether a user id names `address`: in angle brackets, as gpg matched
 /// it, or as the whole user id.
 fn names(uid: &str, address: &str) -> bool {

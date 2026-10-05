@@ -24,6 +24,16 @@ pub enum SmimeError {
     /// A part that was meant to hold CMS holds none.
     #[error("this part holds no S/MIME data")]
     NotSmime,
+    /// A file handed to import holds no certificate gpgsm could read.
+    #[error("this file holds no certificate")]
+    NotACertificate,
+    /// The passphrase typed for a PKCS#12 file did not open it.
+    #[error("the passphrase did not open this file")]
+    WrongPassphrase,
+    /// A PKCS#12 file needed its passphrase and none came: the person
+    /// canceled, or no pinentry could ask.
+    #[error("no passphrase was given for this file")]
+    NoPassphrase,
     #[error("gpgsm failed: {0}")]
     Gpgsm(String),
 }

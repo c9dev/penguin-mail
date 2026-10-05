@@ -7,6 +7,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### New
 
+- Import your OpenPGP keys and S/MIME certificates in Preferences, under
+  Writing: choose Import beside either row and pick an .asc, .p12 or .pem
+  file.
 - Add a POP3 account for a provider that offers only POP3, or to keep an
   account's mail on this computer alone: choose Other, then Enter Server
   Settings, and pick POP3. Mail stays on the server unless you choose to

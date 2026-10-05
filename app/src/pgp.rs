@@ -264,6 +264,7 @@ pub fn explain(err: &PgpError) -> String {
             &[("address", address)],
         ),
         PgpError::NotPgp => gettext("This text holds no OpenPGP block."),
+        PgpError::NotAKey => gettext("This file holds no OpenPGP key."),
         PgpError::Gpg(reason) => fill(&gettext("gpg failed: {reason}"), &[("reason", reason)]),
     }
 }

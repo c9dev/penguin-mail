@@ -9,6 +9,7 @@
 pub mod certificates;
 mod error;
 mod gpgsm;
+pub mod import;
 pub mod mime;
 mod read;
 pub mod status;

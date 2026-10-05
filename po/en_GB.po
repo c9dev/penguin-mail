@@ -2253,6 +2253,10 @@ msgid "This text holds no OpenPGP block."
 msgstr "This text holds no OpenPGP block."
 
 #: app/src/pgp.rs:267
+msgid "This file holds no OpenPGP key."
+msgstr "This file holds no OpenPGP key."
+
+#: app/src/pgp.rs:268
 msgid "gpg failed: {reason}"
 msgstr "gpg failed: {reason}"
 
@@ -3015,7 +3019,19 @@ msgstr "gpgsm holds no trusted certificate it can encrypt to for {address}."
 msgid "This part holds no S/MIME data."
 msgstr "This part holds no S/MIME data."
 
-#: app/src/smime.rs:277
+#: app/src/smime.rs:276
+msgid "This file holds no certificate."
+msgstr "This file holds no certificate."
+
+#: app/src/smime.rs:278
+msgid "That passphrase does not open this file. Nothing was imported."
+msgstr "That passphrase does not open this file. Nothing was imported."
+
+#: app/src/smime.rs:281
+msgid "The file needs its passphrase, and none was given. Nothing was imported."
+msgstr "The file needs its passphrase, and none was given. Nothing was imported."
+
+#: app/src/smime.rs:284
 msgid "gpgsm failed: {reason}"
 msgstr "gpgsm failed: {reason}"
 
@@ -3131,7 +3147,7 @@ msgstr "What's New in {version}"
 
 #: app/src/tray.rs:219 app/src/ui/about.rs:115 app/src/ui/about.rs:222
 #: app/src/ui/about.rs:230 app/src/ui/about.rs:237
-#: app/src/ui/preferences.rs:730 app/src/update/mod.rs:108
+#: app/src/ui/preferences.rs:795 app/src/update/mod.rs:108
 msgid "Check for Updates"
 msgstr "Check for Updates"
 
@@ -3293,6 +3309,7 @@ msgid "Copy Link"
 msgstr "Copy Link"
 
 #: app/src/ui/add_account.rs:792 app/src/ui/add_account.rs:917
+#: app/src/ui/key_import.rs:213
 msgid "Try Again"
 msgstr "Try Again"
 
@@ -3416,7 +3433,7 @@ msgid "Penguin Mail keeps every message it downloads on this computer."
 msgstr "Penguin Mail keeps every message it downloads on this computer."
 
 #: app/src/ui/add_account.rs:1301 app/src/ui/add_account.rs:1302
-#: app/src/ui/preferences.rs:969
+#: app/src/ui/preferences.rs:1034
 msgid "Days"
 msgstr "Days"
 
@@ -4085,7 +4102,7 @@ msgid "Declined"
 msgstr "Declined"
 
 #: app/src/ui/calendar/block.rs:573 app/src/ui/calendar/words.rs:149
-#: app/src/ui/preferences.rs:850
+#: app/src/ui/preferences.rs:915
 msgid "{start}–{end}"
 msgstr "{start}–{end}"
 
@@ -4203,11 +4220,11 @@ msgstr "End date"
 msgid "End time"
 msgstr "End time"
 
-#: app/src/ui/calendar/editor.rs:656 app/src/ui/preferences.rs:940
+#: app/src/ui/calendar/editor.rs:656 app/src/ui/preferences.rs:1005
 msgid "Starts"
 msgstr "Starts"
 
-#: app/src/ui/calendar/editor.rs:659 app/src/ui/preferences.rs:942
+#: app/src/ui/calendar/editor.rs:659 app/src/ui/preferences.rs:1007
 msgid "Ends"
 msgstr "Ends"
 
@@ -4878,7 +4895,7 @@ msgstr "All-day"
 
 #: app/src/ui/calendar/mod.rs:2001 app/src/ui/calendar/mod.rs:3304
 #: app/src/ui/calendar/sidebar.rs:303 app/src/ui/calendar/words.rs:332
-#: app/src/ui/preferences.rs:864 app/src/ui/preferences.rs:976
+#: app/src/ui/preferences.rs:929 app/src/ui/preferences.rs:1041
 msgid "%a"
 msgstr "%a"
 
@@ -6490,7 +6507,114 @@ msgstr[1] "Clashes with {event} and {count} more"
 msgid "This meeting"
 msgstr "This meeting"
 
-#: app/src/ui/mod.rs:375
+#: app/src/ui/key_import.rs:34
+msgid "Import…"
+msgstr "Import…"
+
+#: app/src/ui/key_import.rs:43 app/src/ui/key_import.rs:83
+msgid "Import OpenPGP Keys"
+msgstr "Import OpenPGP Keys"
+
+#: app/src/ui/key_import.rs:44 app/src/ui/key_import.rs:88
+msgid "Import S/MIME Certificates"
+msgstr "Import S/MIME Certificates"
+
+#: app/src/ui/key_import.rs:84
+msgid "OpenPGP Keys"
+msgstr "OpenPGP Keys"
+
+#: app/src/ui/key_import.rs:89
+msgid "Certificates"
+msgstr "Certificates"
+
+#: app/src/ui/key_import.rs:99
+msgid "All Files"
+msgstr "All Files"
+
+#: app/src/ui/key_import.rs:213 app/src/ui/key_import.rs:217
+#: app/src/ui/window.rs:3680
+msgid "Close"
+msgstr "Close"
+
+#: app/src/ui/key_import.rs:279
+msgid "Key Not Imported"
+msgstr "Key Not Imported"
+
+#: app/src/ui/key_import.rs:280
+msgid "Certificate Not Imported"
+msgstr "Certificate Not Imported"
+
+#: app/src/ui/key_import.rs:298
+msgid "Already Imported"
+msgstr "Already Imported"
+
+#: app/src/ui/key_import.rs:300
+msgid "Key Imported"
+msgid_plural "{count} Keys Imported"
+msgstr[0] "Key Imported"
+msgstr[1] "{count} Keys Imported"
+
+#: app/src/ui/key_import.rs:306
+msgid "Certificate Imported"
+msgid_plural "{count} Certificates Imported"
+msgstr[0] "Certificate Imported"
+msgstr[1] "{count} Certificates Imported"
+
+#: app/src/ui/key_import.rs:313
+msgid "gpg already holds everything in this file."
+msgstr "gpg already holds everything in this file."
+
+#: app/src/ui/key_import.rs:314
+msgid "gpgsm already holds everything in this file."
+msgstr "gpgsm already holds everything in this file."
+
+#: app/src/ui/key_import.rs:316
+msgid "You can sign and decrypt with the secret key now. gpg asks for its passphrase the first time."
+msgstr "You can sign and decrypt with the secret key now. gpg asks for its passphrase the first time."
+
+#: app/src/ui/key_import.rs:319
+msgid "You can sign and decrypt with the secret key now."
+msgstr "You can sign and decrypt with the secret key now."
+
+#: app/src/ui/key_import.rs:321
+msgid "You can encrypt to this person and check their signatures."
+msgid_plural "You can encrypt to these people and check their signatures."
+msgstr[0] "You can encrypt to this person and check their signatures."
+msgstr[1] "You can encrypt to these people and check their signatures."
+
+#: app/src/ui/key_import.rs:327
+msgid "Penguin Mail can check signatures made with this certificate."
+msgid_plural "Penguin Mail can check signatures made with these certificates."
+msgstr[0] "Penguin Mail can check signatures made with this certificate."
+msgstr[1] "Penguin Mail can check signatures made with these certificates."
+
+#: app/src/ui/key_import.rs:350
+msgid "New, with secret key"
+msgstr "New, with secret key"
+
+#: app/src/ui/key_import.rs:351
+msgid "New"
+msgstr "New"
+
+#: app/src/ui/key_import.rs:352
+msgid "Updated"
+msgstr "Updated"
+
+#: app/src/ui/key_import.rs:353
+msgid "Already here"
+msgstr "Already here"
+
+#: app/src/ui/key_import.rs:378
+msgid "And {count} more"
+msgid_plural "And {count} more"
+msgstr[0] "And {count} more"
+msgstr[1] "And {count} more"
+
+#: app/src/ui/key_import.rs:388
+msgid "Could not read {file}: {reason}"
+msgstr "Could not read {file}: {reason}"
+
+#: app/src/ui/mod.rs:376
 msgid "Gray"
 msgstr "Grey"
 
@@ -6709,213 +6833,213 @@ msgstr "Gmail has no signature for this account"
 msgid "Could not import: {reason}"
 msgstr "Could not import: {reason}"
 
-#: app/src/ui/preferences.rs:474
+#: app/src/ui/preferences.rs:475
 msgid "Signing and Encryption"
 msgstr "Signing and Encryption"
 
-#: app/src/ui/preferences.rs:476
+#: app/src/ui/preferences.rs:477
 msgid "Penguin Mail signs and encrypts through GnuPG, which holds your keys and asks for your passphrase itself."
 msgstr "Penguin Mail signs and encrypts through GnuPG, which holds your keys and asks for your passphrase itself."
 
-#: app/src/ui/preferences.rs:481
+#: app/src/ui/preferences.rs:482
 msgid "Your OpenPGP Keys"
 msgstr "Your OpenPGP Keys"
 
-#: app/src/ui/preferences.rs:482
+#: app/src/ui/preferences.rs:483
 msgid "Asking gpg…"
 msgstr "Asking gpg…"
 
-#: app/src/ui/preferences.rs:486
+#: app/src/ui/preferences.rs:487
 msgid "Your S/MIME Certificates"
 msgstr "Your S/MIME Certificates"
 
-#: app/src/ui/preferences.rs:487
+#: app/src/ui/preferences.rs:488
 msgid "Asking gpgsm…"
 msgstr "Asking gpgsm…"
 
-#: app/src/ui/preferences.rs:494
+#: app/src/ui/preferences.rs:495
 msgid "Sign My Messages by Default"
 msgstr "Sign My Messages by Default"
 
-#: app/src/ui/preferences.rs:495
+#: app/src/ui/preferences.rs:496
 msgid "New messages open with Sign turned on"
 msgstr "New messages open with Sign turned on"
 
-#: app/src/ui/preferences.rs:501
+#: app/src/ui/preferences.rs:502
 msgid "Encrypt When I Can"
 msgstr "Encrypt When I Can"
 
-#: app/src/ui/preferences.rs:503
+#: app/src/ui/preferences.rs:504
 msgid "Turn Encrypt on as soon as every recipient has a key or a certificate"
 msgstr "Turn Encrypt on as soon as every recipient has a key or a certificate"
 
-#: app/src/ui/preferences.rs:526
+#: app/src/ui/preferences.rs:593
 msgid "gpg could not be asked: {reason}"
 msgstr "gpg could not be asked: {reason}"
 
-#: app/src/ui/preferences.rs:545
+#: app/src/ui/preferences.rs:612
 msgid "gpgsm could not be asked: {reason}"
 msgstr "gpgsm could not be asked: {reason}"
 
-#: app/src/ui/preferences.rs:554
+#: app/src/ui/preferences.rs:621
 msgid "Penguin Mail signs and encrypts through {programs}, which holds your keys and asks for your passphrase itself."
 msgstr "Penguin Mail signs and encrypts through {programs}, which holds your keys and asks for your passphrase itself."
 
-#: app/src/ui/preferences.rs:585
+#: app/src/ui/preferences.rs:650
 msgid "Spelling"
 msgstr "Spelling"
 
-#: app/src/ui/preferences.rs:588
+#: app/src/ui/preferences.rs:653
 msgid "No dictionaries are installed, so Penguin Mail is not checking spelling. Install a Hunspell dictionary, such as hunspell-en-us or hunspell-pt-pt, and reopen the composer."
 msgstr "No dictionaries are installed, so Penguin Mail is not checking spelling. Install a Hunspell dictionary, such as hunspell-en-us or hunspell-pt-pt, and reopen the composer."
 
-#: app/src/ui/preferences.rs:594
+#: app/src/ui/preferences.rs:659
 msgid "Dictionaries found: {languages}."
 msgstr "Dictionaries found: {languages}."
 
-#: app/src/ui/preferences.rs:607
+#: app/src/ui/preferences.rs:672
 msgid "Follow the System Language ({language})"
 msgstr "Follow the System Language ({language})"
 
-#: app/src/ui/preferences.rs:634
+#: app/src/ui/preferences.rs:699
 msgid "Check Spelling In"
 msgstr "Check Spelling In"
 
-#: app/src/ui/preferences.rs:658
+#: app/src/ui/preferences.rs:723
 msgid "Sync"
 msgstr "Sync"
 
-#: app/src/ui/preferences.rs:664
+#: app/src/ui/preferences.rs:729
 msgid "Checking"
 msgstr "Checking"
 
-#: app/src/ui/preferences.rs:670
+#: app/src/ui/preferences.rs:735
 msgid "Check for New Mail"
 msgstr "Check for New Mail"
 
-#: app/src/ui/preferences.rs:679
+#: app/src/ui/preferences.rs:744
 msgid "Storage"
 msgstr "Storage"
 
-#: app/src/ui/preferences.rs:684
+#: app/src/ui/preferences.rs:749
 msgid "Keep Mail on This Computer For"
 msgstr "Keep Mail on This Computer For"
 
-#: app/src/ui/preferences.rs:686
+#: app/src/ui/preferences.rs:751
 msgid "Everything in your inbox stays too, and older mail remains searchable"
 msgstr "Everything in your inbox stays too, and older mail remains searchable"
 
-#: app/src/ui/preferences.rs:695
+#: app/src/ui/preferences.rs:760
 msgid "Message Cache"
 msgstr "Message Cache"
 
-#: app/src/ui/preferences.rs:697
+#: app/src/ui/preferences.rs:762
 msgid "Bodies of mail you have read, kept for opening offline"
 msgstr "Bodies of mail you have read, kept for opening offline"
 
-#: app/src/ui/preferences.rs:706
+#: app/src/ui/preferences.rs:771
 msgid "Startup"
 msgstr "Startup"
 
-#: app/src/ui/preferences.rs:709
+#: app/src/ui/preferences.rs:774
 msgid "Start in the Tray at Login"
 msgstr "Start in the Tray at Login"
 
-#: app/src/ui/preferences.rs:723
+#: app/src/ui/preferences.rs:788
 msgid "Not available in demo mode"
 msgstr "Not available in demo mode"
 
-#: app/src/ui/preferences.rs:731
+#: app/src/ui/preferences.rs:796
 msgid "Look for a new release once a day"
 msgstr "Look for a new release once a day"
 
-#: app/src/ui/preferences.rs:738
+#: app/src/ui/preferences.rs:803
 msgid "Updates"
 msgstr "Updates"
 
-#: app/src/ui/preferences.rs:752
+#: app/src/ui/preferences.rs:817
 msgid "Senders Who May Load Images"
 msgstr "Senders Who May Load Images"
 
-#: app/src/ui/preferences.rs:753 app/src/ui/preferences.rs:761
+#: app/src/ui/preferences.rs:818 app/src/ui/preferences.rs:826
 msgid "Nobody yet"
 msgstr "Nobody yet"
 
-#: app/src/ui/preferences.rs:763
+#: app/src/ui/preferences.rs:828
 msgid "{count} sender"
 msgid_plural "{count} senders"
 msgstr[0] "{count} sender"
 msgstr[1] "{count} senders"
 
-#: app/src/ui/preferences.rs:773
+#: app/src/ui/preferences.rs:838
 msgid "Anyone at this domain"
 msgstr "Anyone at this domain"
 
-#: app/src/ui/preferences.rs:775
+#: app/src/ui/preferences.rs:840
 msgid "This address"
 msgstr "This address"
 
-#: app/src/ui/preferences.rs:780
+#: app/src/ui/preferences.rs:845
 msgid "Stop Loading Images from This Sender"
 msgstr "Stop Loading Images from This Sender"
 
-#: app/src/ui/preferences.rs:787
+#: app/src/ui/preferences.rs:852
 msgid "Stop loading images from {sender}"
 msgstr "Stop loading images from {sender}"
 
-#: app/src/ui/preferences.rs:857
+#: app/src/ui/preferences.rs:922
 msgid "Monday to Friday"
 msgstr "Monday to Friday"
 
-#: app/src/ui/preferences.rs:858
+#: app/src/ui/preferences.rs:923
 msgid "Every day of the week"
 msgstr "Every day of the week"
 
-#: app/src/ui/preferences.rs:859
+#: app/src/ui/preferences.rs:924
 msgid "No days"
 msgstr "No days"
 
-#: app/src/ui/preferences.rs:866
+#: app/src/ui/preferences.rs:931
 msgid ", "
 msgstr ", "
 
-#: app/src/ui/preferences.rs:868
+#: app/src/ui/preferences.rs:933
 msgid "{time}, {days}"
 msgstr "{time}, {days}"
 
-#: app/src/ui/preferences.rs:894
+#: app/src/ui/preferences.rs:959
 msgid "Week Starts On"
 msgstr "Week Starts On"
 
-#: app/src/ui/preferences.rs:899
+#: app/src/ui/preferences.rs:964
 msgid "Automatic follows the locale's own first day of the week"
 msgstr "Automatic follows the locale's own first day of the week"
 
-#: app/src/ui/preferences.rs:915
+#: app/src/ui/preferences.rs:980
 msgid "Working Hours"
 msgstr "Working Hours"
 
-#: app/src/ui/preferences.rs:933
+#: app/src/ui/preferences.rs:998
 msgid "Hours"
 msgstr "Hours"
 
-#: app/src/ui/preferences.rs:964
+#: app/src/ui/preferences.rs:1029
 msgid "–"
 msgstr "–"
 
-#: app/src/ui/preferences.rs:1047
+#: app/src/ui/preferences.rs:1112
 msgid "Follow System"
 msgstr "Follow System"
 
-#: app/src/ui/preferences.rs:1051
+#: app/src/ui/preferences.rs:1116
 msgid "Language"
 msgstr "Language"
 
-#: app/src/ui/preferences.rs:1052
+#: app/src/ui/preferences.rs:1117
 msgid "Penguin Mail shows a new language after a restart"
 msgstr "Penguin Mail shows a new language after a restart"
 
-#: app/src/ui/preferences.rs:1124
+#: app/src/ui/preferences.rs:1189
 msgid "No signature"
 msgstr "No signature"
 
@@ -7861,10 +7985,6 @@ msgstr "Messages That Will Not Download"
 #: app/src/ui/window.rs:3660
 msgid "Penguin Mail could not download these from {address}'s server. It tries again at each check, except for a message too large to download."
 msgstr "Penguin Mail could not download these from {address}'s server. It tries again at each check, except for a message too large to download."
-
-#: app/src/ui/window.rs:3680
-msgid "Close"
-msgstr "Close"
 
 #: app/src/ui/window/arrange.rs:96 app/src/ui/window/organize.rs:202
 msgid "Delete “{name}”?"
