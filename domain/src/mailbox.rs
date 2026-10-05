@@ -17,26 +17,31 @@ pub enum Provider {
     /// Any server that speaks IMAP and SMTP. Who runs it, such as
     /// Fastmail, is the account's provider name.
     Imap,
+    /// Outlook.com and Microsoft 365, through Microsoft Graph. The
+    /// account's provider name says which.
+    Microsoft,
 }
 
 impl Provider {
-    pub const ALL: [Provider; 2] = [Provider::Gmail, Provider::Imap];
+    pub const ALL: [Provider; 3] = [Provider::Gmail, Provider::Imap, Provider::Microsoft];
 
     /// The stored form, in `accounts.provider`.
     pub fn as_str(self) -> &'static str {
         match self {
             Provider::Gmail => "gmail",
             Provider::Imap => "imap",
+            Provider::Microsoft => "microsoft",
         }
     }
 
     /// The provider's name as people know it. A brand or a protocol, so
-    /// it is not translated. An IMAP account names its own provider
-    /// through `Account::provider_name`.
+    /// it is not translated. An IMAP or Microsoft account names its own
+    /// provider through `Account::provider_name`.
     pub fn name(self) -> &'static str {
         match self {
             Provider::Gmail => "Gmail",
             Provider::Imap => "IMAP",
+            Provider::Microsoft => "Microsoft",
         }
     }
 }

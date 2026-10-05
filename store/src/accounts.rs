@@ -103,6 +103,32 @@ pub fn insert_imap_account(
     Ok(Some(conn.last_insert_rowid()))
 }
 
+/// Adds a Microsoft account, or finds the one already here for the address
+/// and takes the new `provider_name` ("Outlook" or "Microsoft 365").
+/// `None` when an account of another provider holds the address.
+pub fn insert_microsoft_account(
+    conn: &Connection,
+    email: &str,
+    provider_name: &str,
+    now: EpochMillis,
+) -> Result<Option<AccountId>> {
+    if let Some(existing) = account_by_email(conn, email)? {
+        if existing.provider != Provider::Microsoft {
+            return Ok(None);
+        }
+        conn.execute(
+            "UPDATE accounts SET provider_name = ?2 WHERE id = ?1",
+            params![existing.id, provider_name],
+        )?;
+        return Ok(Some(existing.id));
+    }
+    conn.execute(
+        "INSERT INTO accounts (email, added_at, provider, provider_name) VALUES (?1, ?2, ?3, ?4)",
+        params![email, now, Provider::Microsoft.as_str(), provider_name],
+    )?;
+    Ok(Some(conn.last_insert_rowid()))
+}
+
 /// Deletes the account and, through foreign keys, all of its mail.
 pub fn delete_account(conn: &Connection, id: AccountId) -> Result<()> {
     conn.execute("DELETE FROM accounts WHERE id = ?1", params![id])?;

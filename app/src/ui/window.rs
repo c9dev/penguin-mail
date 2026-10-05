@@ -2671,6 +2671,7 @@ impl MainWindow {
         match account.provider {
             Provider::Gmail => self.authorize(Some(account.email)),
             Provider::Imap => self.present_add_account(Opening::Again(account)),
+            Provider::Microsoft => self.authorize_microsoft(Some(account.email), true),
         }
     }
 
@@ -2678,6 +2679,31 @@ impl MainWindow {
     /// mail goes out under, kept as the account's one send-as address,
     /// since the server keeps no name.
     fn imap_added(self: &Rc<Self>, account: &Account, name: Option<String>) {
+        self.keep_send_as_name(account, name);
+        // The dialog stays open on the account's first sync, which says
+        // what a toast would.
+        self.refresh_accounts(Reload::Yes);
+        self.look_for_servers(account);
+    }
+
+    /// A Microsoft account signed in. The name Microsoft gave becomes the
+    /// account's one send-as address, since `offered::reads_send_as` asks
+    /// only Gmail.
+    pub(super) fn microsoft_added(self: &Rc<Self>, account: &Account, name: Option<String>) {
+        self.keep_send_as_name(account, name);
+        self.toast(&fill(
+            &gettext("Added {account}. Downloading mail…"),
+            &[("account", &account.email)],
+        ));
+        if let Some(app) = self.app.upgrade() {
+            app.signed_in(account);
+        }
+        self.refresh_accounts(Reload::Yes);
+    }
+
+    /// Keeps `name` as the account's one send-as address, for a provider
+    /// that does not tell the client what its person sends as.
+    fn keep_send_as_name(&self, account: &Account, name: Option<String>) {
         if let (Some(app), Some(name)) = (self.app.upgrade(), name) {
             app.change_settings(Change::SendAsAddresses {
                 account: account.email.clone(),
@@ -2690,10 +2716,6 @@ impl MainWindow {
                 at: mailrs_sync::now_millis(),
             });
         }
-        // The dialog stays open on the account's first sync, which says
-        // what a toast would.
-        self.refresh_accounts(Reload::Yes);
-        self.look_for_servers(account);
     }
 
     /// Searches for the new account's calendar, contacts and rules
@@ -2764,13 +2786,63 @@ impl MainWindow {
         });
     }
 
+    /// Runs Microsoft's sign-in in the browser, for Sign In Again and
+    /// Grant Access. Add Account runs its own inside the dialog.
+    pub(super) fn authorize_microsoft(self: &Rc<Self>, address: Option<String>, again: bool) {
+        if !self.core.demo && !self.core.built_with_microsoft_sign_in() {
+            return self.no_sign_in(&gettext(
+                "This copy of Penguin Mail was built without Microsoft sign-in.",
+            ));
+        }
+        if self.authorizing.replace(true) {
+            return;
+        }
+        let (urls, opened) = async_channel::unbounded::<String>();
+        let window = self.window.clone();
+        glib::spawn_future_local(async move {
+            while let Ok(url) = opened.recv().await {
+                gtk::UriLauncher::new(&url).launch(Some(&window), gio::Cancellable::NONE, |_| {});
+            }
+        });
+        self.toast(&gettext("Continue in your browser"));
+        let (keep, cancel) = async_channel::bounded::<()>(1);
+        let this = Rc::clone(self);
+        glib::spawn_future_local(async move {
+            let signed = this
+                .core
+                .authorize_microsoft(urls, address, again, cancel)
+                .await;
+            drop(keep);
+            match signed {
+                Ok((account, _)) if again => {
+                    this.toast(&fill(
+                        &gettext("{account} is signed in again."),
+                        &[("account", &account.email)],
+                    ));
+                    if let Some(app) = this.app.upgrade() {
+                        app.signed_in(&account);
+                    }
+                    this.refresh_accounts(Reload::Yes);
+                }
+                Ok((account, name)) => this.microsoft_added(&account, name),
+                Err(err) => this.toast(&err.to_string()),
+            }
+            this.authorizing.set(false);
+        });
+    }
+
     /// Says that this copy cannot sign in to Google, with a button to the
     /// releases, whose builds can.
     fn no_google_sign_in(&self) {
+        self.no_sign_in(&gettext(
+            "This copy of Penguin Mail was built without Google sign-in.",
+        ));
+    }
+
+    /// Says `reason`, with a button to the releases, whose builds can sign in.
+    fn no_sign_in(&self, reason: &str) {
         let toast = adw::Toast::builder()
-            .title(toast_title(&gettext(
-                "This copy of Penguin Mail was built without Google sign-in.",
-            )))
+            .title(toast_title(reason))
             .button_label(gettext("Get a Release"))
             .timeout(10)
             .build();

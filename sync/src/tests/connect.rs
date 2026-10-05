@@ -320,3 +320,72 @@ async fn signing_in_again_keeps_the_account_and_ends_needs_sign_in() {
     assert_eq!(again.state, AccountState::Ok);
     assert_eq!(passwords.load(id).unwrap().as_deref(), Some("new"));
 }
+
+#[tokio::test]
+async fn a_rotated_token_goes_to_the_keyring() {
+    use wiremock::matchers::{method, path};
+    use wiremock::{Mock, MockServer, ResponseTemplate};
+    let server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/token"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "access_token": "a", "expires_in": 3600, "refresh_token": "refresh-2",
+            "scope": "https://graph.microsoft.com/Mail.ReadWrite",
+        })))
+        .mount(&server)
+        .await;
+    Mock::given(method("GET"))
+        .and(path("/v1.0/me"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({"mail": "dana@outlook.com"})))
+        .mount(&server)
+        .await;
+    let (db, _dir) = store().await;
+    let tokens = Arc::new(MemoryPasswords::default());
+    let account = crate::sign_in::microsoft_signed_in(
+        &db,
+        Arc::clone(&tokens),
+        crate::sign_in::NewMicrosoft {
+            address: "dana@outlook.com".into(),
+            provider_name: "Outlook".into(),
+            refresh_token: "refresh-1".into(),
+            granted: None,
+        },
+        0,
+        "",
+    )
+    .await
+    .unwrap();
+    let client = mailrs_graph::MicrosoftClient::new("00000000-0000-0000-0000-000000000000")
+        .with_endpoints(format!("{}/authorize", server.uri()), format!("{}/token", server.uri()));
+    let services = crate::connect_microsoft_at(&db, Arc::clone(&tokens), client, &account, 30, &format!("{}/v1.0/", server.uri()))
+        .await
+        .unwrap();
+    let crate::AnyIdentities::Microsoft(adapter) = &services.identities else {
+        panic!("a Microsoft account")
+    };
+    adapter.probe().await.unwrap();
+    // The save runs off the runtime; give it a moment.
+    for _ in 0..50 {
+        if tokens.load(account.id).unwrap().as_deref() == Some("refresh-2") {
+            return;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+    }
+    panic!("the rotated token never reached the keyring");
+}
+
+#[tokio::test]
+async fn a_microsoft_account_with_no_token_needs_to_sign_in() {
+    let (db, _dir) = store().await;
+    let id = db
+        .write(|c| accounts::insert_microsoft_account(c, "dana@outlook.com", "Outlook", 0))
+        .await
+        .unwrap()
+        .unwrap();
+    let account = account(&db, "dana@outlook.com").await;
+    let client = mailrs_graph::MicrosoftClient::new("00000000-0000-0000-0000-000000000000");
+    let refused = crate::connect_microsoft(&db, Arc::new(MemoryPasswords::default()), client, &account, 30).await;
+    assert!(matches!(refused, Err(SyncError::Backend(BackendError::NeedsReauth))));
+    let state = db.read(move |c| accounts::account(c, id)).await.unwrap().unwrap().state;
+    assert_eq!(state, AccountState::NeedsReauth);
+}

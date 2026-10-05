@@ -190,6 +190,11 @@ impl<G: GraphApi> Microsoft<G> {
         &self.graph
     }
 
+    /// One call to `/me`, so a test can watch a refresh happen.
+    pub async fn probe(&self) -> Result<(), BackendError> {
+        self.graph.me().await.map(|_| ()).map_err(backend)
+    }
+
     pub(super) fn settings(&self) -> &MicrosoftSettings {
         &self.settings
     }
