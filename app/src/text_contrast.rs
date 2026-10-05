@@ -113,3 +113,26 @@ fn the_conversation_pages_dim_text_passes_aa_on_the_page_and_the_message() {
         }
     }
 }
+#[test]
+fn the_invitation_cards_secondary_lines_pass_aa() {
+    // The card is the window colour; its day strip is the view colour.
+    for (dark, prefix) in [(false, ""), (true, ".app-dark ")] {
+        let card = surface(dark, "--window-bg-color");
+        let strip = surface(dark, "--view-bg-color");
+        for part in [".invitation-when", ".invitation-meta", "menubutton.invitation-guests > button", ".strip-heading"] {
+            assert_passes(dark, &format!("{prefix}{part}"), std::slice::from_ref(&card));
+        }
+        assert_passes(dark, &format!("{prefix}.strip-hour"), &[strip]);
+    }
+}
+
+#[test]
+fn the_free_hour_verdict_passes_aa_on_the_card() {
+    for (dark, selector) in [(false, ".strip-verdict.free"), (true, ".app-dark .strip-verdict.free")] {
+        let colour = custom_property(selector, "color").unwrap_or_else(|| panic!("style.css colours {selector}"));
+        let card = surface(dark, "--window-bg-color");
+        let ratio = contrast(&colour, &card);
+        assert!(ratio >= AA, "{selector} in {colour} on {card} is {ratio:.2}:1");
+    }
+}
+

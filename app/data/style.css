@@ -564,8 +564,11 @@ toggle-group.category-chips { background: none; padding: 0; box-shadow: none; }
   background: var(--cal-colour);
 }
 .invitation-title { font-size: 1.23em; font-weight: 800; }
-.invitation-when { font-size: 0.89em; font-weight: 500; opacity: 0.64; margin-top: 5px; }
-.invitation-meta { font-size: 0.85em; font-weight: 500; opacity: 0.64; }
+/* The dim token: 75 % in light, 64 % in dark (see the top of the file). */
+.invitation-when { font-size: 0.89em; font-weight: 500; opacity: 0.75; margin-top: 5px; }
+.invitation-meta { font-size: 0.85em; font-weight: 500; opacity: 0.75; }
+.app-dark .invitation-when,
+.app-dark .invitation-meta { opacity: 0.64; }
 .invitation-meta-row { margin-top: 8px; }
 /* The guest count reads as part of the line it sits in, and opens the
    guest list. */
@@ -574,8 +577,9 @@ menubutton.invitation-guests > button {
   min-height: 0;
   font-size: 0.85em;
   font-weight: 500;
-  opacity: 0.64;
+  opacity: 0.75;
 }
+.app-dark menubutton.invitation-guests > button { opacity: 0.64; }
 .invitation-news {
   padding: 6px 10px;
   border-radius: 8px;
@@ -620,17 +624,22 @@ button.invitation-pill buttoncontent > box { border-spacing: 8px; }
 
 /* The day strip on the event card: the hours around the meeting, the
    account's other events as tinted blocks, this one dashed, hairlines on
-   the hours. */
+   the hours. The heading and the hour labels take the strength of the
+   calendar grid's hour labels, in the rule for small secondary text
+   further down. */
 .day-strip { margin-top: 8px; }
 .strip-heading {
   font-size: 0.72em;
   font-weight: 700;
   letter-spacing: 0.5px;
   text-transform: uppercase;
-  opacity: 0.4;
 }
 .strip-verdict { font-size: 0.78em; font-weight: 700; }
-.strip-verdict.free { color: #2ec27e; }
+/* #2ec27e read 2.1:1 on the card in light. #18754a is the same green
+   scaled in OKLab to a lightness of 0.5, which keeps its hue and reads
+   5.3:1; dark keeps the bright green, which reads 6.7:1. */
+.strip-verdict.free { color: #18754a; }
+.app-dark .strip-verdict.free { color: #2ec27e; }
 .strip-verdict.clash { color: var(--warning-color); }
 .strip-grid {
   border-radius: 10px;
@@ -640,10 +649,11 @@ button.invitation-pill buttoncontent > box { border-spacing: 8px; }
 .app-dark .strip-grid { border-color: #2c2c31; }
 .strip-cell.hour { border-left: 1px solid #ececef; }
 .app-dark .strip-cell.hour { border-left-color: #2c2c31; }
+/* At 10 px a weight of 500 lost so much of each digit's stem to
+   smoothing that 80 % read 4.4:1 from the pixels; 600 keeps the stems. */
 .strip-hour {
   font-size: 0.68em;
-  font-weight: 500;
-  opacity: 0.4;
+  font-weight: 600;
   margin: 3px 0 3px 4px;
   font-feature-settings: "tnum";
 }
@@ -1132,14 +1142,17 @@ list.waiting-list > row.waiting-card:last-child { margin-bottom: 0; }
 /* Small secondary text: the sidebar's section and account headings, the
    calendar's hour labels, week tag and ALL-DAY, the mini month's weekday
    letters and the days outside its month, a Month day outside the month,
-   the agenda's times and calendar names, and the count of hidden
-   calendars. WCAG asks 4.5:1 of text this small. libadwaita's dim-label
+   the agenda's times and calendar names, the invitation's day strip,
+   and the count of hidden calendars. WCAG asks 4.5:1 of text this
+   small. libadwaita's dim-label
    (55 %) reaches about 3:1 in light, less on the grey sidebar, so these
    take the window's text colour at 80 % there and at 55 % in dark, which
    measured 4.5:1 or more on screen in both. */
 .sidebar-section,
 .range-title .week,
 .hour-label,
+.strip-hour,
+.strip-heading,
 .all-day-label,
 .mini-month-weekday,
 .mini-month button.outside,
@@ -1155,6 +1168,8 @@ list.waiting-list > row.waiting-card:last-child { margin-bottom: 0; }
 .app-dark .sidebar-section,
 .app-dark .range-title .week,
 .app-dark .hour-label,
+.app-dark .strip-hour,
+.app-dark .strip-heading,
 .app-dark .all-day-label,
 .app-dark .mini-month-weekday,
 .app-dark .mini-month button.outside,
