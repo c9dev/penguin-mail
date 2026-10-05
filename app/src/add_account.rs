@@ -1213,14 +1213,25 @@ pub fn shows_folder(provider: Provider, role: mailrs_domain::Role) -> bool {
     }
 }
 
-/// What the added page says under the folder list, and whether the new
-/// account's first download is finished, from the store's values.
+/// What the added page says under its title and under the folder list,
+/// and whether the new account's first download is finished, from the
+/// store's values.
 pub struct AddedPage {
+    pub lede: String,
     pub note: String,
     pub done: bool,
 }
 
-/// Decides the added page's note and progress for a new account.
+/// The line under "{account} is ready": the mail is on its way until the
+/// first download ends, then it is here.
+fn ready_lede(done: bool) -> String {
+    match done {
+        false => gettext("Mail is downloading. You can close this window."),
+        true => gettext("Your mail is here."),
+    }
+}
+
+/// Decides the added page's words and progress for a new account.
 /// Gmail, IMAP and Microsoft accounts are done when the backfill has
 /// finished. A POP3 account never sets that marker; its first check does.
 pub fn added_page(
@@ -1231,6 +1242,7 @@ pub fn added_page(
 ) -> AddedPage {
     if provider != Provider::Pop3 {
         return AddedPage {
+            lede: ready_lede(backfill_done),
             note: gettext(
                 "Newest mail comes first. Older mail keeps coming in the background, even with the window closed.",
             ),
@@ -1251,7 +1263,11 @@ pub fn added_page(
             &[("days", &days.to_string())],
         ),
     };
-    AddedPage { note, done: pop3_first_check_done }
+    AddedPage {
+        lede: ready_lede(pop3_first_check_done),
+        note,
+        done: pop3_first_check_done,
+    }
 }
 
 /// What step 2 says above the password for an account signing in again.
@@ -1334,6 +1350,27 @@ mod tests {
         assert!(!added_page(Provider::Imap, RemoveSetting::Never, false, true).done);
         assert!(added_page(Provider::Gmail, RemoveSetting::Never, true, false).done);
         assert!(!added_page(Provider::Microsoft, RemoveSetting::Never, false, true).done);
+    }
+
+    #[test]
+    fn the_ready_page_says_mail_is_downloading_until_the_first_download_ends() {
+        for provider in [Provider::Gmail, Provider::Imap, Provider::Microsoft, Provider::Pop3] {
+            let page = added_page(provider, RemoveSetting::Never, false, false);
+            assert_eq!(page.lede, "Mail is downloading. You can close this window.", "{provider:?}");
+        }
+    }
+
+    #[test]
+    fn the_ready_page_says_the_mail_is_here_once_the_first_download_ends() {
+        for (provider, backfill, first_check) in [
+            (Provider::Gmail, true, false),
+            (Provider::Imap, true, false),
+            (Provider::Microsoft, true, false),
+            (Provider::Pop3, false, true),
+        ] {
+            let page = added_page(provider, RemoveSetting::Never, backfill, first_check);
+            assert_eq!(page.lede, "Your mail is here.", "{provider:?}");
+        }
     }
 
     #[test]
