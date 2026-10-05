@@ -16,7 +16,7 @@
 //! `METHOD:REPLY` object. That needs nobody's permission, so it is what an
 //! answer falls back to.
 
-mod mail;
+pub(crate) mod mail;
 
 use std::sync::{Arc, Mutex};
 

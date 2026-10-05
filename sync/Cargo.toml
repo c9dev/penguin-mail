@@ -49,7 +49,7 @@ mail-parser.workspace = true
 mailrs-testmail.workspace = true
 # The in-memory ManageSieve server the Sieve adapter tests run against.
 mailrs-sieve = { workspace = true, features = ["fake"] }
-# The in-memory DAV server the CardDAV adapter tests run against.
+# The in-memory CalDAV and CardDAV server the DAV adapter tests run against.
 mailrs-dav = { workspace = true, features = ["fake"] }
 tempfile.workspace = true
 # Lets a test read what the code logged.

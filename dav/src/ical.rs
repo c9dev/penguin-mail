@@ -495,7 +495,7 @@ fn patch_guests(ical: &mut ICalendar, at: usize, before: &Event, event: &Event, 
     if before.my_answer != event.my_answer
         && let Some(answer) = event.my_answer
     {
-        changed |= set_partstat(&mut ical.components[at], me, answer)?;
+        changed |= set_partstat(&mut ical.components[at], me, answer, true)?;
     }
     Ok(changed)
 }
@@ -529,11 +529,14 @@ fn partstat_word(answer: Answer) -> &'static str {
     }
 }
 
-/// Sets PARTSTAT and SCHEDULE-AGENT=CLIENT on the account's own ATTENDEE
-/// line, keeping its other parameters. The two parameters come from a
-/// line read back, so no parameter value is built by hand.
-fn set_partstat(comp: &mut ICalendarComponent, me: &[String], answer: Answer) -> Result<bool, DavError> {
-    let donor = entries(&[format!("ATTENDEE;PARTSTAT={};SCHEDULE-AGENT=CLIENT:mailto:x@x", partstat_word(answer))])?;
+/// Sets PARTSTAT on the account's own ATTENDEE line, and
+/// SCHEDULE-AGENT=CLIENT beside it when `by_client`, keeping its other
+/// parameters. Without `by_client` an agent the line had is dropped, so
+/// the server schedules. The parameters come from a line read back, so
+/// no parameter value is built by hand.
+fn set_partstat(comp: &mut ICalendarComponent, me: &[String], answer: Answer, by_client: bool) -> Result<bool, DavError> {
+    let agent = if by_client { ";SCHEDULE-AGENT=CLIENT" } else { "" };
+    let donor = entries(&[format!("ATTENDEE;PARTSTAT={}{agent}:mailto:x@x", partstat_word(answer))])?;
     let Some(donor) = donor.into_iter().next() else { return Ok(false) };
     let mut found = false;
     for entry in comp.entries.iter_mut().filter(|e| e.name == ICalendarProperty::Attendee) {
@@ -605,11 +608,18 @@ pub fn cancel_occurrence(existing: &str, original_start: EpochMillis, now: Epoch
 }
 
 pub fn answer(existing: &str, me: &[String], answer: Answer, now: EpochMillis) -> Result<Option<String>, DavError> {
+    answer_scheduled(existing, me, answer, now, false)
+}
+
+/// [`answer`], for a server that mails the organizer itself when a PUT
+/// changes an attendee's PARTSTAT (`server_schedules`): the line then
+/// carries no `SCHEDULE-AGENT=CLIENT`, which would stop it.
+pub fn answer_scheduled(existing: &str, me: &[String], answer: Answer, now: EpochMillis, server_schedules: bool) -> Result<Option<String>, DavError> {
     let mut ical = parse(existing)?;
     let mut any = false;
     let events: Vec<usize> = events_of(&ical).map(|(at, _)| at).collect();
     for at in events {
-        if set_partstat(&mut ical.components[at], me, answer)? {
+        if set_partstat(&mut ical.components[at], me, answer, !server_schedules)? {
             stamp(&mut ical, at, now)?;
             any = true;
         }

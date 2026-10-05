@@ -12,8 +12,6 @@
 mod any;
 mod caldav;
 mod carddav;
-// Tasks 12 and 13 read these; Task 12 takes this attribute out.
-#[allow(dead_code)]
 mod dav_read;
 pub mod finding;
 mod google;
@@ -27,6 +25,7 @@ pub(crate) mod local;
 mod pacing;
 mod sieve;
 
+pub use caldav::CalDav;
 pub use any::{AnyAutoReply, AnyCalendar, AnyContacts, AnyIdentities, AnyMail, AnyRules};
 pub use carddav::CardDav;
 pub use google::{Google, ID_PAGE_SIZE, LIST_PAGE_SIZE};
@@ -517,6 +516,12 @@ impl CalendarFeatures {
         CalendarFeatures { event_files: false, moves_events: false, calendar_list: true };
     const GOOGLE: CalendarFeatures =
         CalendarFeatures { event_files: true, moves_events: true, calendar_list: true };
+    /// CalDAV keeps no files, moves an event by copying its resource, which
+    /// the queue must not rely on, and lists the calendars its server
+    /// holds without letting the app edit the list.
+    #[expect(dead_code, reason = "the AnyCalendar arm for CalDav matches it once wiring adds one")]
+    const CALDAV: CalendarFeatures =
+        CalendarFeatures { event_files: false, moves_events: false, calendar_list: false };
 
     /// The match has no wildcard, so an adapter added to `AnyCalendar`
     /// has to say what it can do.
