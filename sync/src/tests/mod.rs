@@ -104,6 +104,19 @@ impl Accounts for Connected {
 /// One account whose services a test chose, over its own sync, so a
 /// module can be handed an account with other services without building
 /// a second `AccountSync`.
+/// Waits up to two seconds of real time for `done`, for a test of work
+/// the code under test spawned and did not await, which reads the store
+/// through blocking calls a yield alone does not move past.
+pub(crate) async fn eventually(done: impl Fn() -> bool) -> bool {
+    for _ in 0..200 {
+        if done() {
+            return true;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+    }
+    done()
+}
+
 pub(crate) struct ServedBy {
     account_id: AccountId,
     sync: Arc<AccountSync>,

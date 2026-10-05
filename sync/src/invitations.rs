@@ -668,6 +668,11 @@ impl<A: Accounts> Invitations<A> {
         let sent = self
             .answer(account_id, &invitation, &me, answer, scope, None, now)
             .await?;
+        // The card's caller pushes the queue itself; this caller has no
+        // window, so the answer goes out from here.
+        if sent.told == Told::Calendar {
+            self.copy.send_soon(account_id);
+        }
         Ok(Some((invitation, sent)))
     }
 

@@ -273,6 +273,20 @@ async fn an_event_the_assistant_makes_waits_in_the_queue() {
     );
 }
 
+/// ADR 0001: a change queued here goes out right after the edit that
+/// queued it. The assistant's new event reaches Google with no tick and
+/// no send from the test.
+#[tokio::test]
+async fn an_event_the_assistant_makes_reaches_google_without_a_tick() {
+    let h = harness().await;
+    let calendar = calendar(&h);
+    calendar.create(h.account_id, None, &event("Dentist", NINE, NINE + HOUR)).await.unwrap().done().unwrap();
+    assert!(
+        super::eventually(|| h.fake.with(|s| s.calendar_events.iter().any(|e| e.title == "Dentist"))).await,
+        "Google has the event"
+    );
+}
+
 #[tokio::test]
 async fn the_fake_hands_back_changes_since_a_token() {
     let h = harness().await;

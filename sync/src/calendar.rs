@@ -220,7 +220,7 @@ impl<A: Accounts> Calendar<A> {
         }
         let mut event = self.new_event(account_id, calendar, edit).await?;
         self.copy.save(account_id, event.clone()).await?;
-        self.send_soon(account_id);
+        self.copy.send_soon(account_id);
         // `save` marks its own copy of `event` pending; this one is
         // what the caller sees, so it carries the same word.
         event.pending = true;
@@ -250,7 +250,7 @@ impl<A: Accounts> Calendar<A> {
             made_here(&event)?;
             edit.apply(&mut event);
             self.copy.save(account_id, event.clone()).await?;
-            self.send_soon(account_id);
+            self.copy.send_soon(account_id);
             event.pending = true;
             return Ok(Permitted::Done(event));
         }
@@ -275,7 +275,7 @@ impl<A: Accounts> Calendar<A> {
         if let Permitted::NeedsPermission = self.copy.apply(account_id, steps).await? {
             return Ok(Permitted::NeedsPermission);
         }
-        self.send_soon(account_id);
+        self.copy.send_soon(account_id);
         saved.map(Permitted::Done).ok_or(SyncError::Backend(BackendError::NotFound))
     }
 
@@ -297,7 +297,7 @@ impl<A: Accounts> Calendar<A> {
         if let Some(event) = found {
             made_here(&event)?;
             self.copy.remove(account_id, &event.calendar, id).await?;
-            self.send_soon(account_id);
+            self.copy.send_soon(account_id);
             return Ok(Permitted::Done(()));
         }
         let Some(occurrence) = self.occurrence(account_id, id).await? else {
@@ -309,7 +309,7 @@ impl<A: Accounts> Calendar<A> {
         if let Permitted::NeedsPermission = self.copy.apply_with(account_id, steps, notify).await? {
             return Ok(Permitted::NeedsPermission);
         }
-        self.send_soon(account_id);
+        self.copy.send_soon(account_id);
         Ok(Permitted::Done(()))
     }
 
@@ -404,20 +404,6 @@ impl<A: Accounts> Calendar<A> {
             Some(calendar) if calendar.access.can_write() => Ok(calendar),
             _ => Err(SyncError::NoCalendar(calendar.unwrap_or("primary").to_string())),
         }
-    }
-
-    /// Sends the account's queue right away rather than leaving a change
-    /// made here to wait for the next tick. Spawned rather
-    /// than awaited, so the assistant's own answer does not wait on the
-    /// network round trip; a failed send just leaves the change queued
-    /// for the next tick, as any other network failure does.
-    fn send_soon(&self, account_id: AccountId) {
-        let copy = Arc::clone(&self.copy);
-        tokio::spawn(async move {
-            if let Err(err) = copy.send(account_id).await {
-                tracing::warn!(account = account_id, %err, "could not send a calendar change made here");
-            }
-        });
     }
 
     fn calendar(&self, account_id: AccountId) -> Result<AnyCalendar, SyncError> {

@@ -44,6 +44,12 @@ pub const READ_EVERY_OPEN: EpochMillis = 60_000;
 pub const READ_EVERY_TRAY: EpochMillis = 5 * 60_000;
 pub const LIST_EVERY: EpochMillis = 30 * 60_000;
 pub const FIRST_READ_BACK: EpochMillis = 365 * 24 * 60 * 60_000;
+/// How long [`CalendarCopy::ready`] leaves an account alone after a first
+/// read that did not leave the copy synced. It matches the timer's
+/// cadence while the window is open, so an account whose read keeps
+/// failing costs the clash and series lines one read a minute at most,
+/// the same as the timer already spends on it.
+pub const READY_RETRY: EpochMillis = READ_EVERY_OPEN;
 
 /// Pages one calendar read walks before it stops. A calendar past this
 /// keeps what was read and no token, so the next read walks it again.
@@ -102,6 +108,10 @@ pub struct CalendarCopy<A: Accounts> {
     last_read: Mutex<HashMap<AccountId, EpochMillis>>,
     /// When each account was last found to lack `calendar.events` itself.
     refused: Mutex<HashMap<AccountId, EpochMillis>>,
+    /// When `ready` last tried a first read that left the account's copy
+    /// unsynced, so the next reader within [`READY_RETRY`] answers from
+    /// the copy as it stands rather than trying again.
+    tried: Mutex<HashMap<AccountId, EpochMillis>>,
     /// Held for the length of one `refresh_due` pass, so a tick that is
     /// still reading a large calendar is never joined by a second one
     /// reading it again and sending the same change twice. `send` waits on it instead of
@@ -208,6 +218,7 @@ impl<A: Accounts> CalendarCopy<A> {
             last_list: Mutex::new(HashMap::new()),
             last_read: Mutex::new(HashMap::new()),
             refused: Mutex::new(HashMap::new()),
+            tried: Mutex::new(HashMap::new()),
             running: tokio::sync::Mutex::new(()),
             reaching: tokio::sync::Mutex::new(()),
             held: Mutex::new(Vec::new()),
@@ -310,14 +321,50 @@ impl<A: Accounts> CalendarCopy<A> {
     /// asked in the first minute after an account is added gets the
     /// calendar's answer rather than an empty one. `NeedsPermission` when
     /// the account withholds the calendar.
+    ///
+    /// A first read that fails, or ends with the copy still unsynced, is
+    /// not tried again for [`READY_RETRY`]: a reader in that time answers
+    /// `Done` and reads the copy as it stands, often empty, without a
+    /// call. A reader that arrives while another's first read is still
+    /// going does the same rather than starting a second one.
     pub async fn ready(&self, account_id: AccountId, now: EpochMillis) -> Result<Permitted<()>, SyncError> {
         if self.db.read(move |c| store::synced(c, account_id)).await? {
             return Ok(Permitted::Done(()));
         }
-        Ok(match self.refresh(account_id, now).await? {
+        if self.refused_lately(account_id, now) {
+            return Ok(Permitted::NeedsPermission);
+        }
+        {
+            let mut tried = self.tried.lock().expect("copy poisoned");
+            if tried.get(&account_id).is_some_and(|at| (now - at).abs() < READY_RETRY) {
+                return Ok(Permitted::Done(()));
+            }
+            tried.insert(account_id, now);
+        }
+        let read = self.refresh(account_id, now).await;
+        if self.db.read(move |c| store::synced(c, account_id)).await? {
+            self.tried.lock().expect("copy poisoned").remove(&account_id);
+        }
+        Ok(match read? {
             Permitted::Done(_) => Permitted::Done(()),
             Permitted::NeedsPermission => Permitted::NeedsPermission,
         })
+    }
+
+    /// Sends the account's queue now rather than leaving a change made
+    /// here to wait for the next tick, as ADR 0001 wants and as the
+    /// window's own push does (`App::push_calendar`, which calls
+    /// [`Self::send`]). Spawned rather than awaited, so the caller's
+    /// answer does not wait on the network round trip; a failed send
+    /// leaves the change queued for the next tick, as any other network
+    /// failure does.
+    pub fn send_soon(self: &Arc<Self>, account_id: AccountId) {
+        let copy = Arc::clone(self);
+        tokio::spawn(async move {
+            if let Err(err) = copy.send(account_id).await {
+                tracing::warn!(account = account_id, %err, "could not send a calendar change made here");
+            }
+        });
     }
 
     async fn refresh_calendars(
@@ -385,7 +432,14 @@ impl<A: Accounts> CalendarCopy<A> {
                             .write(move |c| store::save_calendars(c, account_id, &fallback))
                             .await?;
                     }
-                    Err(err) => return Err(err.into()),
+                    // A list that did not come, for want of the network or
+                    // the API, is read again next time rather than after
+                    // LIST_EVERY: a copy never read has no calendars to
+                    // read without it.
+                    Err(err) => {
+                        self.last_list.lock().expect("copy poisoned").remove(&account_id);
+                        return Err(err.into());
+                    }
                 }
             }
         }

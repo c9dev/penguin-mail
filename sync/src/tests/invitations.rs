@@ -1412,3 +1412,61 @@ async fn a_published_file_reports_no_change_when_it_comes_again() {
     let opened = invitations.open(h.account_id, "m2", &again, 2_000).await.unwrap().unwrap();
     assert_eq!(opened.change, None);
 }
+
+/// ADR 0001: a change queued here goes out right after the edit that
+/// queued it, not on the next tick. The assistant's answer is one.
+#[tokio::test]
+async fn an_answer_from_the_assistant_reaches_the_calendar_without_a_tick() {
+    let h = harness().await;
+    design_review_on_calendar(&h, &[]).await;
+    h.fake.with(|s| {
+        s.messages.insert("m1".into(), meta("m1", "m1", 1, &["INBOX"]));
+        s.bodies.insert(
+            "m1".into(),
+            mailrs_domain::MessageBody { calendar: Some(invite(0, "20260310T090000Z")), ..Default::default() },
+        );
+    });
+
+    let (_, sent) = invitations(&h)
+        .answer_message(h.account_id, "m1", "me@example.com", Answer::Yes, MARCH_2026)
+        .await
+        .unwrap()
+        .expect("the message holds an invitation");
+
+    assert_eq!(sent.told, Told::Calendar);
+    assert!(
+        super::eventually(|| !h.fake.with(|s| s.answered_events.is_empty())).await,
+        "Google heard the answer with no send from the test"
+    );
+}
+
+/// A calendar read that failed is not tried again for a minute: the clash
+/// and series lines read the copy as it stands meanwhile, at no cost.
+#[tokio::test]
+async fn a_failed_first_read_is_not_tried_again_for_a_minute() {
+    let h = harness().await;
+    h.fake.with(|s| s.calendars = vec![primary()]);
+    h.fake.put_calendar_event(Ev { rules: vec!["RRULE:FREQ=WEEKLY".into()], ..on_copy("design-review", OCCURRENCE) });
+    let invitations = invitations(&h);
+    let invitation = read(&one_of_a_series());
+    let lists = || {
+        let usage = h.fake.usage();
+        usage.calls_to("calendar.calendarList.list") + usage.calls_to("calendar.events.list")
+    };
+
+    h.fake.fail_next(GmailError::Network("offline".into()));
+    assert!(invitations.series(h.account_id, &invitation, OCCURRENCE).await.is_err());
+    let tried = lists();
+    assert_eq!(
+        invitations.series(h.account_id, &invitation, OCCURRENCE + 30_000).await.unwrap(),
+        None,
+        "half a minute on, the line reads the empty copy"
+    );
+    assert_eq!(lists(), tried, "and asks Google nothing");
+
+    assert_eq!(
+        invitations.series(h.account_id, &invitation, OCCURRENCE + 61_000).await.unwrap().as_deref(),
+        Some("Every week, no end date"),
+        "a minute on, the read is tried again"
+    );
+}
