@@ -31,6 +31,7 @@ use crate::add_account::{
 use crate::core::Core;
 use crate::permission::Permission;
 use crate::ui::post_band::PostBand;
+use crate::ui::tile_grid::TileGrid;
 
 /// The dialog's size, the mockup's.
 const WIDTH: i32 = 480;
@@ -465,22 +466,17 @@ struct PickPage {
 /// The tiles, the line about the browser and the row to type servers:
 /// the dialog's first page, and the body of the first-run window.
 pub struct Tiles {
-    pub grid: gtk::Box,
+    pub grid: TileGrid,
     pub buttons: Vec<(Tile, gtk::Button, gtk::Label)>,
 }
 
 /// The provider tiles, three to a row, each row centred, so six sit three
-/// over three and five three over two. Each tile is one button named
+/// over three and five three over two; two to a row in a window too
+/// narrow for three (see [`TileGrid`]). Each tile is one button named
 /// "Fastmail, Fastmail" or "Google, Gmail, Workspace, signs in through
 /// your browser". `microsoft` is whether the build can sign in to
 /// Microsoft, whose tile shows only then.
 pub fn tiles(width: i32, microsoft: bool) -> Tiles {
-    let grid = gtk::Box::builder()
-        .orientation(gtk::Orientation::Vertical)
-        .spacing(12)
-        .halign(gtk::Align::Center)
-        .css_classes(["post-tiles"])
-        .build();
     let mut buttons = Vec::new();
     for tile in post::tiles(microsoft) {
         let mark = mark(tile.stamp(), 38);
@@ -512,17 +508,13 @@ pub fn tiles(width: i32, microsoft: bool) -> Tiles {
         crate::ui::name(&button, &tile.described());
         buttons.push((tile, button, mark));
     }
-    let mut rest = buttons.iter();
-    for count in post::tile_rows(buttons.len()) {
-        let row = gtk::Box::builder()
-            .spacing(12)
-            .halign(gtk::Align::Center)
-            .build();
-        for (_, button, _) in rest.by_ref().take(count) {
-            row.append(button);
-        }
-        grid.append(&row);
-    }
+    let grid = TileGrid::new(
+        &buttons
+            .iter()
+            .map(|(_, button, _)| button.clone())
+            .collect::<Vec<_>>(),
+    );
+    grid.add_css_class("post-tiles");
     Tiles { grid, buttons }
 }
 

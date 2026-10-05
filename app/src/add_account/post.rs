@@ -318,14 +318,23 @@ impl Tile {
     }
 }
 
-/// How many tiles go on each row, three to a row, the last row holding
-/// what is left. The window centres each row, so six tiles sit three over
-/// three, and five, in a build without Microsoft, three over two.
-pub fn tile_rows(tiles: usize) -> Vec<usize> {
+/// How many tiles go on each row, `per_row` to a row, the last row
+/// holding what is left. The grid centres each row, so six tiles sit
+/// three over three, and five, in a build without Microsoft, three over
+/// two.
+pub fn tile_rows(tiles: usize, per_row: usize) -> Vec<usize> {
+    let per_row = per_row.max(1);
     (0..tiles)
-        .step_by(3)
-        .map(|start| (tiles - start).min(3))
+        .step_by(per_row)
+        .map(|start| (tiles - start).min(per_row))
         .collect()
+}
+
+/// How many tiles `tile` pixels wide, `gap` apart, go on a row `width`
+/// wide: three when all three fit, as on the desktop, and two otherwise,
+/// so a narrow window pairs them off rather than cutting the third.
+pub fn tiles_per_row(width: i32, tile: i32, gap: i32) -> usize {
+    if width >= 3 * tile + 2 * gap { 3 } else { 2 }
 }
 
 /// The name a person knows a provider by: the tile's title for a provider
@@ -729,18 +738,35 @@ mod tests {
 
     #[test]
     fn five_tiles_sit_three_over_two() {
-        assert_eq!(tile_rows(5), [3, 2]);
+        assert_eq!(tile_rows(5, 3), [3, 2]);
     }
 
     #[test]
     fn six_tiles_sit_three_over_three() {
-        assert_eq!(tile_rows(6), [3, 3]);
+        assert_eq!(tile_rows(6, 3), [3, 3]);
     }
 
     #[test]
     fn a_short_list_fills_one_row() {
-        assert_eq!(tile_rows(2), [2]);
-        assert_eq!(tile_rows(0), Vec::<usize>::new());
+        assert_eq!(tile_rows(2, 3), [2]);
+        assert_eq!(tile_rows(0, 3), Vec::<usize>::new());
+    }
+
+    #[test]
+    fn two_to_a_row_pairs_the_tiles_off() {
+        assert_eq!(tile_rows(6, 2), [2, 2, 2]);
+        assert_eq!(tile_rows(5, 2), [2, 2, 1]);
+    }
+
+    #[test]
+    fn three_tiles_go_on_a_row_only_when_all_three_fit() {
+        // The dialog's body is 432 pixels wide, three 136-pixel tiles
+        // with two 12-pixel gaps.
+        assert_eq!(tiles_per_row(432, 136, 12), 3);
+        assert_eq!(tiles_per_row(431, 136, 12), 2);
+        assert_eq!(tiles_per_row(312, 136, 12), 2);
+        assert_eq!(tiles_per_row(0, 136, 12), 2);
+        assert_eq!(tiles_per_row(2000, 136, 12), 3);
     }
 
     #[test]
