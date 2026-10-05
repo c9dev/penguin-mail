@@ -228,6 +228,24 @@ impl Editor {
             }
         });
         self.view.add_controller(gesture);
+        // The Menu key and Shift+F10, as the text view's own menu takes
+        // them, open the picture's menu when the cursor is beside one, so
+        // Describe Picture is in reach of the keyboard. Elsewhere they
+        // fall through to the text view's menu.
+        let keys = gtk::ShortcutController::new();
+        keys.set_propagation_phase(gtk::PropagationPhase::Capture);
+        let weak = Rc::downgrade(self);
+        keys.add_shortcut(gtk::Shortcut::new(
+            gtk::ShortcutTrigger::parse_string("Menu|<Shift>F10"),
+            Some(gtk::CallbackAction::new(move |_, _| {
+                let open = weak.upgrade().is_some_and(|editor| editor.offer_picture_menu_here());
+                match open {
+                    true => glib::Propagation::Stop,
+                    false => glib::Propagation::Proceed,
+                }
+            })),
+        ));
+        self.view.add_controller(keys);
     }
 
     /// Opens the picture menu at `x`, `y` in the view, when a picture is
@@ -243,6 +261,34 @@ impl Editor {
         else {
             return false;
         };
+        self.open_picture_menu(anchor, gdk::Rectangle::new(x as i32, y as i32, 1, 1))
+    }
+
+    /// Opens the picture menu over the picture beside the cursor, for the
+    /// keyboard. False when no picture is there.
+    fn offer_picture_menu_here(&self) -> bool {
+        let cursor = self.buffer.iter_at_mark(&self.buffer.get_insert());
+        let mut before = cursor;
+        let behind = match before.backward_char() {
+            true => before.child_anchor().map(|anchor| (anchor, before)),
+            false => None,
+        };
+        let ahead = cursor.child_anchor().map(|anchor| (anchor, cursor));
+        let Some((anchor, at)) = picture_beside(ahead, behind) else {
+            return false;
+        };
+        let place = self.view.iter_location(&at);
+        let (x, y) = self.view.buffer_to_window_coords(
+            gtk::TextWindowType::Widget,
+            place.x(),
+            place.y(),
+        );
+        self.open_picture_menu(anchor, gdk::Rectangle::new(x, y, place.width().max(1), place.height().max(1)))
+    }
+
+    /// Opens the picture menu for `anchor`, pointing at `rect` in the
+    /// view. False when the anchor holds no picture of the editor's.
+    fn open_picture_menu(&self, anchor: gtk::TextChildAnchor, rect: gdk::Rectangle) -> bool {
         if !self.anchors.borrow().iter().any(|p| p.anchor == anchor) {
             return false;
         }
@@ -253,9 +299,11 @@ impl Editor {
             Some("picture.describe"),
         );
         let popover = gtk::PopoverMenu::from_model(Some(&menu));
+        // GTK's model items reach the accessibility bus unnamed.
+        crate::ui::name_menu_items(&popover);
         popover.set_parent(&self.view);
         popover.set_has_arrow(false);
-        popover.set_pointing_to(Some(&gdk::Rectangle::new(x as i32, y as i32, 1, 1)));
+        popover.set_pointing_to(Some(&rect));
         // A closed menu lets go of the view on the next turn of the main
         // loop, once the item that closed it has done its work.
         popover.connect_closed(|popover| {
@@ -541,6 +589,13 @@ impl Editor {
             *self.typing.borrow_mut() = Some((cursor.offset(), style, link));
         }
         self.busy.set(false);
+    }
+
+    /// The kind of the line the cursor is on, for the paragraph styles the
+    /// formatting menu marks.
+    pub fn block_here(&self) -> BlockKind {
+        let cursor = self.buffer.iter_at_mark(&self.buffer.get_insert());
+        richbuffer::kind_at(&self.buffer, cursor.line())
     }
 
     /// The styles the formatting bar should show as on: those of the
@@ -2250,5 +2305,31 @@ pub(super) mod checks {
             // A signature the writer rewrote stays as they wrote it.
             assert!(!editor.swap_signature("Dana", "Sales"), "{format:?}");
         }
+    }
+}
+
+/// The picture the keyboard menu is for: the one right after the cursor,
+/// else the one right before it, as after typing past a picture.
+fn picture_beside<A>(ahead: Option<A>, behind: Option<A>) -> Option<A> {
+    ahead.or(behind)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::picture_beside;
+
+    #[test]
+    fn the_keyboard_menu_takes_the_picture_after_the_cursor_first() {
+        assert_eq!(picture_beside(Some(1), Some(2)), Some(1));
+    }
+
+    #[test]
+    fn the_keyboard_menu_takes_the_picture_just_typed_past() {
+        assert_eq!(picture_beside(None, Some(2)), Some(2));
+    }
+
+    #[test]
+    fn with_no_picture_beside_the_cursor_the_text_menu_opens() {
+        assert_eq!(picture_beside::<i32>(None, None), None);
     }
 }

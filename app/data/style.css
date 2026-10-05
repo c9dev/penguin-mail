@@ -1647,3 +1647,8 @@ row.guest-field:focus-within {
   outline: 2px solid alpha(var(--accent-color), 0.5);
   outline-offset: -2px;
 }
+
+/* A composer as narrow as a phone: the format bar's buttons pack closer,
+   30 px each rather than 36, so the bar fits 360 px. */
+.composer-narrow .format-bar button { padding: 2px 1px; }
+.composer-narrow .format-group { padding: 0 3px; }

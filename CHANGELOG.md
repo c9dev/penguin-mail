@@ -167,6 +167,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   Ctrl+R.
 
 ### Improved
+- The composer fits a window as narrow as a phone: its title and Send's word give way and the formatting buttons pack closer. Its formatting menu marks the paragraph style the cursor is in and names its Markdown items by what they do, and the Subject field no longer says "Subject" twice.
 - An empty search, Remind Me or Drafts says what to do next, and "No Conversation Selected" reads at full strength like the empty list beside it.
 - Preferences names spelling dictionaries by language, "English (Australia)" rather than "en_AU", with each account's address as its row's title, and an address chosen in a drop-down shows whole rather than cut short with room to spare.
 - A message that names no font of its own reads in your desktop's interface font, the one the rest of the window uses, rather than Liberation Sans.
