@@ -396,3 +396,27 @@ async fn a_refused_login_waits_in_the_queue_and_says_why() {
     caldav.calendars().await.unwrap();
     assert_eq!(caldav.login_refused(), None);
 }
+
+#[tokio::test]
+async fn an_event_the_server_reports_under_an_encoded_href_stays_one_event() {
+    let (dav, _, caldav) = adapter().await;
+    let (decoded, encoded) = ("/cal/me@fastmail.com/work/", "/cal/me%40fastmail.com/work/");
+    dav.add_collection(decoded, Kind::Calendar, "Mine", None);
+    let event = Event {
+        calendar: decoded.into(),
+        uid: "one@example.com".into(),
+        start: 1_791_300_000_000,
+        end: 1_791_303_600_000,
+        zone: "UTC".into(),
+        title: "Offsite".into(),
+        busy: true,
+        ..Event::default()
+    };
+    let made = caldav.import_event(&event).await.unwrap();
+    // Another client edits it, and the server spells the href its own way.
+    dav.put_resource(&format!("{encoded}{}.ics", made.id), &one_off_ics("one@example.com", "Edited elsewhere"));
+    let page = caldav.event_changes(decoded, None, None, 0).await.unwrap();
+    let ids: Vec<&str> = page.events.iter().map(|e| e.id.as_str()).collect();
+    assert_eq!(ids, [made.id.as_str()], "one event, not one per spelling: {page:?}");
+    assert_eq!(dav.with(|s| s.resources.len()), 1);
+}

@@ -83,7 +83,7 @@ fn status_code(node: Node) -> Option<u16> {
 }
 
 fn href_in(node: Node) -> Option<String> {
-    child(node, DAV, "href").and_then(text)
+    child(node, DAV, "href").and_then(text).map(|href| crate::ids::canonical_href(&href))
 }
 
 /// Reads a 207 answer.
@@ -259,7 +259,7 @@ pub mod body {
     }
 
     fn multiget(element: &str, namespace: &str, data: &str, hrefs: &[String]) -> String {
-        let listed: String = hrefs.iter().map(|h| format!("<D:href>{}</D:href>", escape(h))).collect();
+        let listed: String = hrefs.iter().map(|h| format!("<D:href>{}</D:href>", escape(&crate::ids::wire_href(h)))).collect();
         format!(
             r#"<?xml version="1.0" encoding="utf-8"?>
 <{element} xmlns:D="DAV:" {namespace}><D:prop><D:getetag/>{data}</D:prop>{listed}</{element}>"#
@@ -286,6 +286,13 @@ mod tests {
         assert_eq!(read.sync_token.as_deref(), Some("http://radicale.org/ns/sync/abc"));
         assert_eq!(read.responses[0].props.etag.as_deref(), Some("\"1\""));
         assert_eq!(read.responses[1].status, Some(404));
+    }
+
+    #[test]
+    fn a_percent_encoded_href_reads_decoded() {
+        let encoded = SYNC.replace("/me/work/a.ics", "/me%40example.test/work/e1.ics");
+        let read = parse_multistatus(&encoded).unwrap();
+        assert_eq!(read.responses[0].href, "/me@example.test/work/e1.ics");
     }
 
     const COLLECTIONS: &str = r#"<d:multistatus xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav"

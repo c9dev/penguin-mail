@@ -2,7 +2,9 @@
 //! real client serves: collections, resources with etags, and a change
 //! log that answers `sync-collection` from any token it still keeps. A
 //! test can forget every token, turn the report off, go offline or
-//! refuse the login, and read how many PUTs and GETs arrived.
+//! refuse the login, and read how many PUTs and GETs arrived. Like the
+//! real client, it names every resource by its canonical href, so a path
+//! spelled `%40` and one spelled `@` are one resource.
 
 use std::collections::BTreeMap;
 use std::sync::{Mutex, MutexGuard, PoisonError};
@@ -10,6 +12,7 @@ use std::sync::{Mutex, MutexGuard, PoisonError};
 use mailrs_domain::EpochMillis;
 
 use crate::client::{Collection, CollectionState, DavApi, Fetched, Homes, Kind, Member, Precondition, Synced};
+use crate::ids::canonical_href;
 use crate::DavError;
 
 #[derive(Default)]
@@ -73,7 +76,7 @@ impl FakeDav {
     pub fn add_collection(&self, href: &str, kind: Kind, name: &str, color: Option<&str>) {
         self.with(|s| {
             s.collections.push(Collection {
-                href: href.into(),
+                href: canonical_href(href),
                 kind,
                 name: name.into(),
                 color: color.map(str::to_string),
@@ -90,6 +93,7 @@ impl FakeDav {
 
     /// Puts `body` at `href` as another client would, and answers its etag.
     pub fn put_resource(&self, href: &str, body: &str) -> String {
+        let href = &canonical_href(href);
         self.with(|s| {
             s.seq += 1;
             let etag = format!("\"{}\"", s.seq);
@@ -101,6 +105,7 @@ impl FakeDav {
     }
 
     pub fn remove_resource(&self, href: &str) {
+        let href = &canonical_href(href);
         self.with(|s| {
             s.seq += 1;
             s.resources.remove(href);
@@ -110,10 +115,12 @@ impl FakeDav {
     }
 
     pub fn body(&self, href: &str) -> Option<String> {
+        let href = &canonical_href(href);
         self.with(|s| s.resources.get(href).map(|(_, b)| b.clone()))
     }
 
     pub fn etag(&self, href: &str) -> Option<String> {
+        let href = &canonical_href(href);
         self.with(|s| s.resources.get(href).map(|(e, _)| e.clone()))
     }
 
@@ -183,6 +190,7 @@ impl DavApi for FakeDav {
     }
 
     async fn sync(&self, collection: &str, token: &str) -> Result<Synced, DavError> {
+        let collection = canonical_href(collection);
         let s = self.open()?;
         if s.no_sync {
             return Err(DavError::NoSyncCollection);
@@ -218,6 +226,7 @@ impl DavApi for FakeDav {
     }
 
     async fn members(&self, collection: &str, kind: Kind, range: Option<(EpochMillis, EpochMillis)>) -> Result<Vec<Member>, DavError> {
+        let collection = canonical_href(collection);
         let s = self.open()?;
         Ok(s.resources
             .iter()
@@ -235,11 +244,13 @@ impl DavApi for FakeDav {
         s.gets += hrefs.len();
         Ok(hrefs
             .iter()
-            .filter_map(|h| s.resources.get(h).map(|(etag, body)| Fetched { href: h.clone(), etag: etag.clone(), body: body.clone() }))
+            .map(|h| canonical_href(h))
+            .filter_map(|h| s.resources.get(&h).map(|(etag, body)| Fetched { href: h, etag: etag.clone(), body: body.clone() }))
             .collect())
     }
 
     async fn get(&self, href: &str) -> Result<Fetched, DavError> {
+        let href = &canonical_href(href);
         let mut s = self.open()?;
         s.gets += 1;
         let (etag, body) = s.resources.get(href).cloned().ok_or(DavError::NotFound)?;
@@ -247,6 +258,7 @@ impl DavApi for FakeDav {
     }
 
     async fn put(&self, href: &str, body: &str, _kind: Kind, when: Precondition) -> Result<Option<String>, DavError> {
+        let href = &canonical_href(href);
         let mut s = self.open()?;
         let held = s.resources.get(href).map(|(e, _)| e.clone());
         match (&when, &held) {
@@ -265,6 +277,7 @@ impl DavApi for FakeDav {
     }
 
     async fn delete(&self, href: &str, etag: Option<&str>) -> Result<(), DavError> {
+        let href = &canonical_href(href);
         let mut s = self.open()?;
         match (s.resources.get(href), etag) {
             (None, _) => return Err(DavError::NotFound),
@@ -279,6 +292,7 @@ impl DavApi for FakeDav {
     }
 
     async fn find_uid(&self, collection: &str, uid: &str) -> Result<Option<Fetched>, DavError> {
+        let collection = canonical_href(collection);
         let s = self.open()?;
         let wanted = format!("UID:{uid}");
         Ok(s.resources
