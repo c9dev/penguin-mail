@@ -374,8 +374,9 @@ struct MiniDay {
 }
 
 pub struct CalendarSidebar {
-    /// The whole sidebar: the mini month and the calendar list scroll,
-    /// and "Waiting for your answer" stays pinned below them.
+    /// The whole sidebar: the mini month, the calendar list and "Waiting
+    /// for your answer" scroll as one column, with Waiting at the foot
+    /// while everything fits.
     pub widget: gtk::Box,
     month_title: gtk::Label,
     /// The 1st of the month the mini month shows, which its arrows step
@@ -395,8 +396,8 @@ pub struct CalendarSidebar {
     /// build the same rows leaves them, and the focus on one of them,
     /// where they are.
     listed: RefCell<Vec<SidebarAccount>>,
-    /// The "Waiting for your answer" section pinned to the sidebar's
-    /// foot, hidden while nothing is waiting.
+    /// The "Waiting for your answer" section at the foot of the column,
+    /// hidden while nothing is waiting.
     waiting_section: gtk::Box,
     waiting_list: gtk::ListBox,
     /// What the waiting list was last built from, read by its own
@@ -445,17 +446,38 @@ impl CalendarSidebar {
             .margin_end(18)
             .margin_top(6)
             .margin_bottom(12)
+            // Takes the room the column has spare, which keeps "Waiting
+            // for your answer" at the foot while everything fits.
+            .vexpand(true)
+            .build();
+        // The mini month, the calendar list and "Waiting for your answer"
+        // scroll as one column. With Waiting pinned below a scroller of
+        // its own, a short window left the last calendars a sliver of
+        // list to scroll in, cut between rows, so the list looked done.
+        // A viewport gives its child at least its own height, so while
+        // everything fits the column fills the sidebar and Waiting sits
+        // at the foot as the mockup draws it.
+        let column = gtk::Box::builder()
+            .orientation(gtk::Orientation::Vertical)
+            .build();
+        column.append(&content);
+        // A viewport of its own rather than the one the scroller would
+        // make, to size the column by its natural height: at its minimum
+        // the Waiting list below shrinks to less than its two cards.
+        let viewport = gtk::Viewport::builder()
+            .child(&column)
+            .vscroll_policy(gtk::ScrollablePolicy::Natural)
             .build();
         let scroller = gtk::ScrolledWindow::builder()
             .hscrollbar_policy(gtk::PolicyType::Never)
             .vexpand(true)
-            .child(&content)
+            .child(&viewport)
             .build();
-        // The pinned Waiting section below cuts the list at whatever pixel
-        // is left, often through a line of text. A short fade in the
-        // sidebar's own colour marks that more sits below instead. GTK's
-        // CSS has no mask-image, so the fade is a strip laid over the
-        // scroller's foot, shown only while the list runs past it.
+        // The window's foot cuts the column at whatever pixel is left,
+        // often through a line of text. A short fade in the sidebar's own
+        // colour marks that more sits below instead. GTK's CSS has no
+        // mask-image, so the fade is a strip laid over the scroller's
+        // foot, shown only while the column runs past it.
         let fade = gtk::Box::builder()
             .css_classes(["list-fade"])
             .height_request(24)
@@ -593,10 +615,9 @@ impl CalendarSidebar {
             .selection_mode(gtk::SelectionMode::None)
             .css_classes(["waiting-list"])
             .build();
-        // The mockup pins the section to the sidebar's foot with room for
-        // two whole cards, 42 px each with 8 px between. More than two
-        // scroll inside it, so none is ever cut off by what sits below
-        // the sidebar.
+        // The mockup gives the section room for two whole cards, 42 px
+        // each with 8 px between. More than two scroll inside it, so a
+        // long run of invitations never pushes the calendars far up.
         let waiting_scroller = gtk::ScrolledWindow::builder()
             .hscrollbar_policy(gtk::PolicyType::Never)
             .propagate_natural_height(true)
@@ -615,7 +636,7 @@ impl CalendarSidebar {
             .build();
         waiting_section.append(&waiting_heading);
         waiting_section.append(&waiting_scroller);
-        widget.append(&waiting_section);
+        column.append(&waiting_section);
         let waiting_shown: Rc<RefCell<Vec<Waiting>>> = Rc::new(RefCell::new(Vec::new()));
         waiting_list.connect_row_activated({
             let (shown, open_waiting) = (Rc::clone(&waiting_shown), Rc::clone(&on_open_waiting));
