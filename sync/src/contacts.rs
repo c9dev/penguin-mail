@@ -263,6 +263,13 @@ impl<A: Accounts> ContactBook<A> {
                         token = None;
                         continue 'whole;
                     }
+                    // CardDAV's words for the same thing: a token the
+                    // server forgot, or an address book that came or went.
+                    Err(BackendError::StateLost) if !retried => {
+                        retried = true;
+                        token = None;
+                        continue 'whole;
+                    }
                     Err(err) => return Err(err.into()),
                 };
                 read.extend(page.people.iter().map(|person| Contact {
@@ -396,6 +403,9 @@ fn photo_file(account_id: AccountId, resource: &str) -> String {
         .chars()
         .map(|c| if c.is_ascii_alphanumeric() { c } else { '-' })
         .collect();
+    // A CardDAV resource is a whole URL, and its end tells two apart. The
+    // name is ASCII by now, so a byte slice is safe.
+    let tail = &tail[tail.len().saturating_sub(120)..];
     format!("{account_id}-{tail}.jpg")
 }
 
@@ -407,5 +417,12 @@ mod tests {
     fn a_photo_file_is_named_after_its_account_and_contact() {
         assert_eq!(photo_file(2, "people/c17"), "2-people-c17.jpg");
         assert_eq!(photo_file(1, "../etc/passwd"), "1----etc-passwd.jpg");
+    }
+
+    #[test]
+    fn a_long_resource_makes_a_short_file_name() {
+        let name = photo_file(3, &format!("https://dav.example.org/{}.vcf", "a".repeat(400)));
+        assert!(name.len() <= 130, "{name}");
+        assert!(name.ends_with("aaa-vcf.jpg"));
     }
 }

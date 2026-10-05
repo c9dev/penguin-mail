@@ -28,6 +28,7 @@ mod pacing;
 mod sieve;
 
 pub use any::{AnyAutoReply, AnyCalendar, AnyContacts, AnyIdentities, AnyMail, AnyRules};
+pub use carddav::CardDav;
 pub use google::{Google, ID_PAGE_SIZE, LIST_PAGE_SIZE};
 pub use imap::{Imap, ImapApi, ImapSettings, Submit};
 pub use microsoft::GraphApi;
