@@ -36,6 +36,7 @@ use crate::settings::Permitted;
 use crate::{Accounts, AnyCalendar, BackendError, CalendarService, SyncError};
 
 mod attach;
+pub mod event_change;
 mod list;
 
 pub use list::new_calendar_id;
