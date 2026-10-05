@@ -42,6 +42,7 @@ use crate::add_account::Attempt;
 use crate::add_account::lookup::{Check, Heard, check_of_url};
 use crate::assistant::run::{Background, Modules};
 use crate::demo::{self, DemoMail};
+use crate::starting::{self, Connected, Starting};
 use mailrs_domain::translate::{fill, gettext};
 
 /// The store could not be updated to this version, and the copy taken
@@ -381,94 +382,28 @@ impl Core {
                 }
             }
         });
-        let (db, tokens, passwords, microsoft_tokens, demo, events) = (
-            self.db.clone(),
-            Arc::clone(&self.tokens),
-            Arc::clone(&self.passwords),
-            Arc::clone(&self.microsoft_tokens),
-            self.demo_mail.clone(),
-            self.events_tx.clone(),
-        );
-        let window_days = config.engine_config().window_days;
+        let reach = Arc::new(Reach {
+            db: self.db.clone(),
+            config,
+            tokens: Arc::clone(&self.tokens),
+            passwords: Arc::clone(&self.passwords),
+            microsoft_tokens: Arc::clone(&self.microsoft_tokens),
+            demo: self.demo_mail.clone(),
+        });
+        let port = Arc::new(EnginePort {
+            engine,
+            running: Arc::clone(&self.engine),
+            db: self.db.clone(),
+            events: self.events_tx.clone(),
+        });
+        let db = self.db.clone();
         self.runtime.spawn(async move {
             let Ok(all) = db.read(accounts::list_accounts).await else { return };
-            for account in all {
-                let started = match (demo.as_deref(), account.provider) {
-                    // The demo's accounts talk to their sample servers and
-                    // need no Google client and no password.
-                    (Some(demo), _) => demo
-                        .services(account.id)
-                        .ok_or_else(|| anyhow!("the demo has no mailbox for {}", account.email)),
-                    (None, Provider::Gmail) => {
-                        match account_client(&db, &config, built_in_client(), &account).await {
-                            Ok(Some(oauth)) => {
-                                connect_account(oauth, Arc::clone(&tokens), &account, &db)
-                                    .await
-                                    .map(AccountServices::google)
-                                    .map_err(Into::into)
-                            }
-                            // The store now says the account needs a new
-                            // sign-in; the sidebar hears it here, since the
-                            // engine never runs the account to report it.
-                            Ok(None) => {
-                                tracing::warn!(account = %account.email, "no Google client for this account");
-                                needs_sign_in(&events, account.id).await;
-                                continue;
-                            }
-                            Err(err) => {
-                                tracing::warn!(account = %account.email, error = %err, "could not read the account's Google client");
-                                continue;
-                            }
-                        }
-                    }
-                    (None, Provider::Imap) => {
-                        match connect_imap(&db, Arc::clone(&passwords), &account, window_days).await {
-                            // No password in the keyring, or no servers: the
-                            // store says so already, and the sidebar hears it
-                            // here for the same reason as above.
-                            Err(SyncError::Backend(BackendError::NeedsReauth)) => {
-                                needs_sign_in(&events, account.id).await;
-                                continue;
-                            }
-                            started => started.map_err(Into::into),
-                        }
-                    }
-                    (None, Provider::Pop3) => {
-                        match connect_pop3(&db, Arc::clone(&passwords), &account).await {
-                            Err(SyncError::Backend(BackendError::NeedsReauth)) => {
-                                needs_sign_in(&events, account.id).await;
-                                continue;
-                            }
-                            started => started.map_err(Into::into),
-                        }
-                    }
-                    (None, Provider::Microsoft) => {
-                        let Some(client) = mailrs_graph::built_in_client() else {
-                            // This build cannot refresh the account's token.
-                            tracing::warn!(account = %account.email, "no Microsoft client in this build");
-                            let id = account.id;
-                            let _ = db
-                                .write(move |c| accounts::set_state(c, id, AccountState::NeedsReauth))
-                                .await;
-                            needs_sign_in(&events, account.id).await;
-                            continue;
-                        };
-                        match connect_microsoft(&db, Arc::clone(&microsoft_tokens), client, &account, window_days)
-                            .await
-                        {
-                            Err(SyncError::Backend(BackendError::NeedsReauth)) => {
-                                needs_sign_in(&events, account.id).await;
-                                continue;
-                            }
-                            started => started.map_err(Into::into),
-                        }
-                    }
-                };
-                match started {
-                    Ok(services) => engine.start_account(account.id, services),
-                    Err(err) => tracing::warn!(account = %account.email, error = %err, "could not start syncing"),
-                }
-            }
+            let connect = move |account: Account| {
+                let reach = Arc::clone(&reach);
+                async move { reach.connect(&account).await }
+            };
+            starting::start_each(all, connect, port, starting::Waits::APP).await;
         });
     }
 
@@ -1312,11 +1247,106 @@ fn contact_photo_dir(demo: bool, data_dir: &std::path::Path) -> PathBuf {
 
 /// Tells the window that `account_id` needs a new sign-in, for an account
 /// the engine never starts and so never reports on.
-async fn needs_sign_in(events: &async_channel::Sender<ChangeEvent>, account_id: AccountId) {
-    let state = AccountState::NeedsReauth;
-    let _ = events
-        .send(ChangeEvent::AccountStateChanged { account_id, state })
-        .await;
+/// What connecting an account at startup needs: the store, the settings,
+/// and the places each kind of account keeps its secret.
+struct Reach {
+    db: Db,
+    config: Config,
+    tokens: Arc<dyn TokenStore>,
+    passwords: Arc<Passwords>,
+    microsoft_tokens: Arc<Passwords>,
+    demo: Option<Arc<DemoMail>>,
+}
+
+impl Reach {
+    /// The account's services, or that it needs to sign in again. A
+    /// missing token or password is recorded in the store by the connect
+    /// that finds it.
+    async fn connect(&self, account: &Account) -> Result<Connected<AccountServices>> {
+        let window_days = self.config.engine_config().window_days;
+        let db = &self.db;
+        let started = match (self.demo.as_deref(), account.provider) {
+            // The demo's accounts talk to their sample servers and need no
+            // Google client and no password.
+            (Some(demo), _) => {
+                return demo
+                    .services(account.id)
+                    .map(Connected::Ready)
+                    .ok_or_else(|| anyhow!("the demo has no mailbox for {}", account.email));
+            }
+            (None, Provider::Gmail) => {
+                let oauth = account_client(db, &self.config, built_in_client(), account)
+                    .await
+                    .context("could not read the account's Google client")?;
+                let Some(oauth) = oauth else {
+                    tracing::warn!(account = %account.email, "no Google client for this account");
+                    return Ok(Connected::NeedsSignIn);
+                };
+                connect_account(oauth, Arc::clone(&self.tokens), account, db)
+                    .await
+                    .map(AccountServices::google)
+            }
+            (None, Provider::Imap) => connect_imap(db, Arc::clone(&self.passwords), account, window_days).await,
+            (None, Provider::Pop3) => connect_pop3(db, Arc::clone(&self.passwords), account).await,
+            (None, Provider::Microsoft) => {
+                let Some(client) = mailrs_graph::built_in_client() else {
+                    // This build cannot refresh the account's token.
+                    tracing::warn!(account = %account.email, "no Microsoft client in this build");
+                    return Ok(Connected::NeedsSignIn);
+                };
+                connect_microsoft(db, Arc::clone(&self.microsoft_tokens), client, account, window_days).await
+            }
+        };
+        match started {
+            Ok(services) => Ok(Connected::Ready(services)),
+            Err(SyncError::Backend(BackendError::NeedsReauth)) => Ok(Connected::NeedsSignIn),
+            Err(err) => Err(err.into()),
+        }
+    }
+}
+
+/// Where starting an account lands in the app: the engine it was meant
+/// for, the store, and the window through the change events.
+struct EnginePort {
+    engine: Arc<SyncEngine>,
+    running: Arc<RunningEngine>,
+    db: Db,
+    events: async_channel::Sender<ChangeEvent>,
+}
+
+impl EnginePort {
+    /// Whether the engine this start was meant for still runs. Changing
+    /// the sync settings replaces it, and the new one starts every
+    /// account itself.
+    fn current(&self) -> bool {
+        self.running.current().is_some_and(|now| Arc::ptr_eq(&now, &self.engine))
+    }
+}
+
+impl Starting<AccountServices> for EnginePort {
+    fn start(&self, account: AccountId, services: AccountServices) {
+        if self.current() {
+            self.engine.start_account(account, services);
+        }
+    }
+
+    /// The engine never runs an account that did not start, so the store
+    /// and the sidebar hear its state here.
+    async fn report(&self, account_id: AccountId, state: AccountState) {
+        let marked = self.db.write(move |c| accounts::set_state(c, account_id, state)).await;
+        if let Err(err) = marked {
+            tracing::warn!(account = account_id, %err, "could not record the account's state");
+        }
+        let _ = self
+            .events
+            .send(ChangeEvent::AccountStateChanged { account_id, state })
+            .await;
+    }
+
+    async fn wanted(&self, account_id: AccountId) -> bool {
+        self.current()
+            && matches!(self.db.read(move |c| accounts::account(c, account_id)).await, Ok(Some(_)))
+    }
 }
 
 /// A network that answers nothing, for the demo: discovery then finds
