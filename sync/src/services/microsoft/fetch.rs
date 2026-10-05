@@ -64,7 +64,9 @@ impl<G: GraphApi> Microsoft<G> {
             cc: message.cc_recipients.iter().filter_map(address).collect(),
             subject: message.subject.clone().unwrap_or_default(),
             date: message.received_millis().unwrap_or_default(),
-            snippet: message.body_preview.clone().unwrap_or_default(),
+            // Graph keeps the body's line breaks in the preview; a
+            // preview is one paragraph wherever it is shown.
+            snippet: message.body_preview.as_deref().unwrap_or_default().split_whitespace().collect::<Vec<_>>().join(" "),
             // Without the size property the message goes by its
             // structure, as a size of 0 does.
             size: message.size().unwrap_or(0),

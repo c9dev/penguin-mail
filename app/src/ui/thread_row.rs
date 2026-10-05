@@ -308,7 +308,7 @@ impl ThreadRow {
         let count = get(&imp.count);
         count.set_visible(thread.message_count > 1);
         count.set_label(&thread.message_count.to_string());
-        get(&imp.snippet).set_label(&thread.snippet);
+        get(&imp.snippet).set_label(&one_line(&thread.snippet));
         let flag = imp.star.get().expect("flag exists");
         flag.set_visible(thread.starred);
         let wanted = flag_class(thread.flag_color.unwrap_or(FlagColor::Red));
@@ -366,9 +366,24 @@ fn sender_markup(name: &str, address: &str) -> String {
     )
 }
 
+/// `text` as one paragraph. A label clamps its lines within each
+/// paragraph, so a preview that kept the body's line breaks would show
+/// every line of it.
+fn one_line(text: &str) -> String {
+    text.split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{sender_markup, spoken};
+    use super::{one_line, sender_markup, spoken};
+
+    #[test]
+    fn a_preview_shows_as_one_paragraph() {
+        // A label clamps its lines within each paragraph, so a preview
+        // stored with line breaks would grow the row.
+        assert_eq!(one_line("Hi\r\n\r\nSee you\n  soon"), "Hi See you soon");
+        assert_eq!(one_line("  plain "), "plain");
+    }
 
     #[test]
     fn the_address_follows_the_name_in_one_line() {

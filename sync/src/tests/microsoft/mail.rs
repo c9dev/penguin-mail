@@ -148,6 +148,21 @@ async fn metadata_reads_graphs_fields_into_the_store_shape() {
 }
 
 #[tokio::test]
+async fn a_preview_with_line_breaks_is_stored_as_one_line() {
+    // Graph's bodyPreview keeps the body's line breaks and blank lines;
+    // the list row clamps a preview to two lines only within one
+    // paragraph, so a preview with breaks filled the row.
+    let h = outlook().await;
+    let id = h.fake.deliver(&h.fake.folder_id("inbox"), FakeMail { subject: "Apps", ..fresh() });
+    h.fake.with(|s| {
+        s.messages.get_mut(&id).unwrap().message.body_preview =
+            Some("Microsoft account\r\nNew app(s) have access\r\n\r\n  Manage your apps".into());
+    });
+    let found = h.sync.services().mail.fetch(vec![crate::Want::message(&id)]).await.unwrap();
+    assert_eq!(found.metas[0].snippet, "Microsoft account New app(s) have access Manage your apps");
+}
+
+#[tokio::test]
 async fn a_large_message_reads_by_its_structure_with_part_paths() {
     let h = outlook().await;
     let id = h.fake.deliver(
