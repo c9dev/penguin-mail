@@ -1613,3 +1613,22 @@ button.bottom-new { min-height: 32px; padding: 0 16px; }
 .avatar-hue-6 avatar { background-image: none; background-color: #d56199; color: #fff; }
 .avatar-hue-7 avatar { background-image: none; background-color: #9141ac; color: #fff; }
 .avatar-hue-8 avatar { background-image: none; background-color: #6f8396; color: #fff; }
+
+/* Dimmed text in light: libadwaita's --dim-opacity of 55 % gave about 3:1
+   on white and on the grey sidebar, under the 4.5:1 small text needs.
+   80 % gives 5.0 to 6.2:1. The variable reaches every dimmed thing
+   libadwaita draws (.dim-label, .dimmed, row subtitles, header
+   subtitles, menu shortcuts) and every dialog and popover in the window.
+   Dark keeps 55 %, which already gives about 5:1. A placeholder keeps
+   55 %, so an empty field does not read as filled in. */
+window.app-surfaces:not(.app-dark) { --dim-opacity: 80%; }
+window.app-surfaces:not(.app-dark) text > placeholder { opacity: 0.55; }
+/* The focused composer label is the accent, which dimmed read 3.1:1 in
+   light and 2.6:1 in dark on the demo's purple. It shows at full
+   strength; in light it is darkened as the accent text elsewhere is
+   (oklab L at most 0.45), which keeps 5.3:1 or better for every
+   libadwaita and Yaru accent. */
+window.app-surfaces .composer-field:focus-within > .composer-label { opacity: 1; }
+window.app-surfaces:not(.app-dark) .composer-field:focus-within > .composer-label {
+  color: oklab(from var(--accent-bg-color) min(l, 0.45) calc(a * min(1, 0.45 / l)) calc(b * min(1, 0.45 / l)));
+}

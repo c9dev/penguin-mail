@@ -290,6 +290,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   it last updated, instead of leaving you guessing.
 
 ### Fixed
+- Dimmed text in light mode, such as the composer's From and Subject labels and the lines under each row in Preferences, is dark enough to read, and the composer's focused field label reads in both modes.
 - Preferences reads "gpg and gpgsm, which hold your keys" with the verb in the plural, and the assistant's setup page names the same model servers as Preferences.
 - Inserting a GIF or WebP picture into a message, or showing a contact photo in such a format, no longer holds up the window while it loads. The composer shows a placeholder until the picture is ready.
 - Muting a conversation on an Outlook, IMAP or POP3 account keeps its later replies out of the Inbox: each goes to the Archive, read and without a notification, while Penguin Mail runs.
