@@ -804,6 +804,17 @@ INSERT INTO account_servers_new SELECT account_id, role, host, port, security, u
 DROP TABLE account_servers;
 ALTER TABLE account_servers_new RENAME TO account_servers;
 "#,
+    // A POP3 account's first check takes the server's existing mail as old
+    // mail. `pop3_first_check_done` is set once a check has dealt with
+    // every message the server listed, so a first download cut short
+    // carries on as a first check. An account that already holds downloaded
+    // mail counts as done and does not start announcing it.
+    r#"
+ALTER TABLE accounts ADD COLUMN pop3_first_check_done INTEGER NOT NULL DEFAULT 0
+    CHECK (pop3_first_check_done IN (0, 1));
+UPDATE accounts SET pop3_first_check_done = 1
+    WHERE EXISTS (SELECT 1 FROM pop3_seen WHERE pop3_seen.account_id = accounts.id);
+"#,
 ];
 
 /// How long the copy taken before a migration stays once the store has

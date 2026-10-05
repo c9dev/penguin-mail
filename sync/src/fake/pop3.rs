@@ -37,6 +37,9 @@ struct Inner {
     failing: BTreeSet<String>,
     /// Every `quit` fails as a dropped connection would.
     drop_before_quit: bool,
+    /// After this many answered `retr`s, the next one fails as a dropped
+    /// connection would.
+    drop_after_retrs: Option<usize>,
     retr_calls: Vec<u32>,
     deleted: Vec<u32>,
     connects: usize,
@@ -59,6 +62,7 @@ impl Default for FakePop3 {
                 refuse_sign_in: false,
                 failing: BTreeSet::new(),
                 drop_before_quit: false,
+                drop_after_retrs: None,
                 retr_calls: Vec::new(),
                 deleted: Vec::new(),
                 connects: 0,
@@ -126,6 +130,13 @@ impl FakePop3 {
     /// whole life, so nothing `dele` marked is deleted.
     pub fn dropping_before_quit(self) -> Self {
         self.lock().drop_before_quit = true;
+        self
+    }
+
+    /// Once `answered` `retr`s have gone through, the next one fails as a
+    /// dropped connection would, and the session ends.
+    pub fn dropping_after_retrs(self, answered: usize) -> Self {
+        self.lock().drop_after_retrs = Some(answered);
         self
     }
 
@@ -259,7 +270,11 @@ impl Pop3Api for FakePop3 {
         if let Some(hold) = hold {
             hold.notified().await;
         }
-        let inner = self.lock();
+        let mut inner = self.lock();
+        if inner.drop_after_retrs.is_some_and(|n| inner.retr_calls.len() > n) {
+            inner.end_session();
+            return Err(Pop3Error::Network("the connection dropped".into()));
+        }
         let uidl = inner.uidl_of(id)?;
         if inner.failing.contains(&uidl) {
             return Err(Pop3Error::Refused(format!("message {id} cannot be read")));

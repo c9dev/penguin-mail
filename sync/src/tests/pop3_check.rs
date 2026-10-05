@@ -245,6 +245,60 @@ async fn the_engine_checks_a_pop3_account_at_its_tick() {
     assert!(next_poll > Instant::now() + Duration::from_secs(50), "the next check waits the adapter's minute");
 }
 
+async fn first_check_finished(h: &Pop3Harness) -> bool {
+    let account_id = h.account_id;
+    h.db.read(move |c| pop3::first_check_finished(c, account_id)).await.unwrap()
+}
+
+fn five() -> FakePop3 {
+    (1..=5).fold(FakePop3::default(), |fake, n| fake.with_message(&format!("u{n}"), &pop3_mail(n)))
+}
+
+#[tokio::test]
+async fn a_first_check_cut_short_carries_on_as_a_first_check() {
+    let h = pop3_harness(five().dropping_after_retrs(2), RemoveSetting::Never).await;
+    assert!(h.sync.pop3_check().await.is_err(), "the connection dropped");
+    assert!(!first_check_finished(&h).await, "two of five is not the first check done");
+    drain(&h);
+
+    let rest = Arc::new(five());
+    h.with_server(Arc::clone(&rest)).pop3_check().await.unwrap();
+    assert_eq!(rest.retr_calls(), [3, 4, 5], "only what was left");
+    let heard = drain(&h);
+    assert!(!heard.iter().any(|e| matches!(e, ChangeEvent::NewMail { .. })), "the rest of the old mail raises no notifications");
+    for id in ["pop3/u3", "pop3/u4", "pop3/u5"] {
+        assert_eq!(meta(&h, id).await.date, 1_609_750_800_000, "{id} keeps its own date");
+    }
+    assert!(first_check_finished(&h).await);
+}
+
+#[tokio::test]
+async fn a_finished_first_check_sets_the_marker_and_the_next_check_announces_new_mail() {
+    let h = pop3_harness(five(), RemoveSetting::Never).await;
+    assert!(!first_check_finished(&h).await);
+    h.sync.pop3_check().await.unwrap();
+    assert!(first_check_finished(&h).await);
+    drain(&h);
+    h.fake.add("u6", &pop3_mail(6));
+    h.sync.pop3_check().await.unwrap();
+    let announced: Vec<String> = drain(&h)
+        .into_iter()
+        .filter_map(|e| match e {
+            ChangeEvent::NewMail { message_ids, .. } => Some(message_ids),
+            _ => None,
+        })
+        .flatten()
+        .collect();
+    assert_eq!(announced, ["pop3/u6"]);
+}
+
+#[tokio::test]
+async fn a_first_check_with_a_refused_message_still_finishes() {
+    let h = pop3_harness(five().failing_retr("u2"), RemoveSetting::Never).await;
+    h.sync.pop3_check().await.unwrap();
+    assert!(first_check_finished(&h).await, "a refused message is recorded as failed, so the check dealt with it");
+}
+
 /// Run alone, so other tests add nothing to the process's peak:
 /// `cargo test -p mailrs-sync --lib -- --ignored a_first_download_holds`
 #[tokio::test]

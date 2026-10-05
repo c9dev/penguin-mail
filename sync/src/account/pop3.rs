@@ -112,9 +112,12 @@ impl AccountSync {
             .into_iter()
             .map(|item| (item.id, item.octets))
             .collect();
+        // Decided by the marker, not by whether anything is downloaded: a
+        // first download that failed partway leaves mail here that is still
+        // old mail.
         let first = !self
             .db
-            .read(move |c| pop3::has_downloaded(c, account_id))
+            .read(move |c| pop3::first_check_finished(c, account_id))
             .await?;
         for page in listed.chunks(pop3::PAGE) {
             let names: Vec<String> = page.iter().map(|u| u.uidl.clone()).collect();
@@ -145,6 +148,14 @@ impl AccountSync {
                     Err(err) => return Err(BackendError::from(err).into()),
                 }
             }
+        }
+        // Every listed message is downloaded or recorded as failed. A
+        // check that ended early never reaches this line, so the next one
+        // is still a first check and takes the old mail as old.
+        if first {
+            self.db
+                .write(move |c| pop3::finish_first_check(c, account_id))
+                .await?;
         }
         if let RemoveSetting::Days(days) = remove {
             let cutoff = now_millis() - i64::from(days) * DAY;

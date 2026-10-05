@@ -31,17 +31,24 @@ pub fn unseen(conn: &Connection, account_id: AccountId, uidls: &[String]) -> Res
     Ok(rows.collect::<rusqlite::Result<_>>()?)
 }
 
-/// Whether the account has downloaded anything yet. Its first check
+/// Whether the account's first check finished: every message the server
+/// listed then was downloaded or recorded as failed. Until it has, a check
 /// takes each message's own date and announces nothing.
-pub fn has_downloaded(conn: &Connection, account_id: AccountId) -> Result<bool> {
-    Ok(conn
-        .query_row(
-            "SELECT 1 FROM pop3_seen WHERE account_id = ?1 LIMIT 1",
-            [account_id],
-            |_| Ok(()),
-        )
-        .optional()?
-        .is_some())
+pub fn first_check_finished(conn: &Connection, account_id: AccountId) -> Result<bool> {
+    Ok(conn.query_row(
+        "SELECT pop3_first_check_done FROM accounts WHERE id = ?1",
+        [account_id],
+        |row| row.get(0),
+    )?)
+}
+
+/// Records that the account's first check finished.
+pub fn finish_first_check(conn: &Connection, account_id: AccountId) -> Result<()> {
+    conn.execute(
+        "UPDATE accounts SET pop3_first_check_done = 1 WHERE id = ?1",
+        [account_id],
+    )?;
+    Ok(())
 }
 
 /// Records `uidl` as downloaded at `at` and drops its failure count.
