@@ -19,10 +19,12 @@ use mailrs_gmail::{
 };
 use mailrs_pgp::{Pgp, PgpError};
 use mailrs_smime::{Smime, SmimeError};
+use mailrs_store::services::{FoundService, ServiceKind};
 use mailrs_store::{Db, StoreError, accounts};
 use mailrs_sync::config::{Config, config_path, data_dir, migrate_old_dirs};
 use mailrs_sync::lock::{LockError, SyncLock};
 use mailrs_sync::passwords::{KeyringPasswords, MemoryPasswords, PasswordStore, Passwords};
+use mailrs_sync::services::finding;
 use mailrs_sync::sign_in::{NewImap, account_client, google_signed_in, imap_signed_in};
 use mailrs_sync::{
     AccountServices, AccountSettings, AccountSync, Accounts, BackendError, ContactBook, Failure,
@@ -852,6 +854,120 @@ impl Core {
         .await
     }
 
+    /// Looks for the account's calendar, contacts and Sieve servers and
+    /// keeps what it finds. A new confirmed server restarts the account's
+    /// services, so the calendar and contacts show without a restart. The
+    /// demo asks nobody.
+    pub async fn find_services(&self, account: Account) -> Result<ServicesFound> {
+        if self.demo {
+            return Ok(ServicesFound::default());
+        }
+        let (db, passwords, engine) = (
+            self.db.clone(),
+            Arc::clone(&self.passwords),
+            self.engine.current(),
+        );
+        let window_days = self.config.borrow().engine_config().window_days;
+        self.call(async move {
+            let (user, password) = imap_password(&db, &passwords, account.id).await?;
+            let saved = db
+                .read(move |c| mailrs_store::servers::load(c, account.id))
+                .await?
+                .ok_or_else(|| anyhow!("no servers kept"))?;
+            let net = RealNet::new()?;
+            let found = finding::find_services(
+                &net,
+                &finding::RealProbe,
+                &account.email,
+                account.provider_name(),
+                &saved.imap.host,
+                &user,
+                &password,
+            )
+            .await;
+            let changed = finding::keep_found(&db, account.id, &found).await?;
+            if changed {
+                restart_imap(&db, passwords, engine, &account, window_days).await?;
+            }
+            Ok::<_, anyhow::Error>(ServicesFound {
+                calendar: found.caldav.is_some_and(|f| f.confirmed),
+                contacts: found.carddav.is_some_and(|f| f.confirmed),
+                rules_on_server: found.sieve.is_some(),
+            })
+        })
+        .await
+    }
+
+    /// What was found for the account, for the Preferences rows.
+    pub async fn services_found(&self, account_id: AccountId) -> Result<Vec<FoundService>> {
+        let db = self.db.clone();
+        self.call(async move {
+            db.read(move |c| mailrs_store::services::load(c, account_id))
+                .await
+        })
+        .await
+    }
+
+    /// Checks a CalDAV or CardDAV address the person typed and uses it.
+    pub async fn use_typed_server(
+        &self,
+        account: Account,
+        kind: ServiceKind,
+        url: String,
+    ) -> Result<()> {
+        let (db, passwords, engine) = (
+            self.db.clone(),
+            Arc::clone(&self.passwords),
+            self.engine.current(),
+        );
+        let window_days = self.config.borrow().engine_config().window_days;
+        self.call(async move {
+            let (user, password) = imap_password(&db, &passwords, account.id).await?;
+            finding::use_typed(
+                &finding::RealProbe,
+                &db,
+                account.id,
+                kind,
+                &url,
+                &user,
+                &password,
+            )
+            .await?;
+            restart_imap(&db, passwords, engine, &account, window_days).await
+        })
+        .await
+    }
+
+    /// The person said yes to a server found outside their domain.
+    pub async fn confirm_server(&self, account: Account, kind: ServiceKind) -> Result<()> {
+        let (db, passwords, engine) = (
+            self.db.clone(),
+            Arc::clone(&self.passwords),
+            self.engine.current(),
+        );
+        let window_days = self.config.borrow().engine_config().window_days;
+        self.call(async move {
+            let (_, password) = imap_password(&db, &passwords, account.id).await?;
+            finding::confirm_found(&finding::RealProbe, &db, account.id, kind, &password)
+                .await?;
+            restart_imap(&db, passwords, engine, &account, window_days).await
+        })
+        .await
+    }
+
+    /// Why the account's calendar and contacts servers last refused the
+    /// login, for the Preferences rows.
+    pub fn login_refusals(&self, account_id: AccountId) -> (Option<String>, Option<String>) {
+        let Some(sync) = self.account(account_id) else {
+            return (None, None);
+        };
+        let services = sync.services();
+        (
+            services.calendar.as_ref().and_then(|c| c.login_refused()),
+            services.contacts.as_ref().and_then(|c| c.login_refused()),
+        )
+    }
+
     /// Stops syncing an account and deletes its local mail and what signs
     /// it in: a Google account's refresh token, an IMAP account's password.
     pub async fn remove_account(&self, account: Account) -> Result<()> {
@@ -886,6 +1002,46 @@ impl Core {
         })
         .await
     }
+}
+
+/// What a search for an IMAP account's other servers found in use.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct ServicesFound {
+    pub calendar: bool,
+    pub contacts: bool,
+    pub rules_on_server: bool,
+}
+
+/// The IMAP user name and the password in the keyring for `account_id`.
+async fn imap_password(
+    db: &Db,
+    passwords: &Arc<Passwords>,
+    account_id: AccountId,
+) -> anyhow::Result<(String, String)> {
+    let saved = db
+        .read(move |c| mailrs_store::servers::load(c, account_id))
+        .await?
+        .ok_or_else(|| anyhow!("no servers kept"))?;
+    let passwords = Arc::clone(passwords);
+    let password = tokio::task::spawn_blocking(move || passwords.load(account_id))
+        .await??
+        .ok_or_else(|| anyhow!("no password kept"))?;
+    Ok((saved.imap.user_name, password))
+}
+
+/// Builds the account's services again from the store and restarts its
+/// loop on them, so a server found or typed serves at once.
+async fn restart_imap(
+    db: &Db,
+    passwords: Arc<Passwords>,
+    engine: Option<Arc<SyncEngine>>,
+    account: &Account,
+    window_days: i64,
+) -> anyhow::Result<()> {
+    let Some(engine) = engine else { return Ok(()) };
+    let services = connect_imap(db, passwords, account, window_days).await?;
+    engine.start_account(account.id, services);
+    Ok(())
 }
 
 /// The assistant's tools run on the GTK thread and hand their store and

@@ -1,11 +1,14 @@
 //! The Contacts & Calendar page of Preferences: each account's Google
 //! contacts on its own switch, and whether GNOME shows its calendar.
 
+use std::cell::RefCell;
 use std::rc::Rc;
 
 use adw::prelude::*;
 use mailrs_domain::translate::{fill, gettext};
-use mailrs_domain::{Account, AccountId};
+use gtk::glib;
+use mailrs_domain::{Account, AccountId, Provider};
+use mailrs_store::services::ServiceKind;
 use mailrs_sync::{Missing, Offers, Withheld};
 
 use crate::app::App;
@@ -31,7 +34,98 @@ pub fn page(
         .build();
     page.add(&contacts(app, settings, accounts, &withheld, grant.clone()));
     page.add(&calendar(accounts, &withheld, grant, calendar_rows));
+    if let Some(group) = servers(app, accounts) {
+        page.add(&group);
+    }
     page
+}
+
+/// Where each IMAP account's calendar, contacts and rules are, with Find
+/// Again and Edit. A server found outside the address's domain waits here
+/// for a yes before the password goes to it.
+fn servers(app: &Rc<App>, accounts: &[(Account, Offers)]) -> Option<adw::PreferencesGroup> {
+    let imap: Vec<&Account> = accounts.iter().map(|(a, _)| a).filter(|a| a.provider == Provider::Imap).collect();
+    if imap.is_empty() {
+        return None;
+    }
+    let group = adw::PreferencesGroup::builder()
+        .title(gettext("Calendar, Contacts and Rules Servers"))
+        .description(gettext("Penguin Mail looks for these when you add an account. The login is the account's own."))
+        .build();
+    for account in imap {
+        let row = adw::ExpanderRow::builder().title(&account.email).build();
+        group.add(&row);
+        let shown: Shown = Rc::default();
+        fill_servers(app, &row, account, &shown);
+    }
+    Some(group)
+}
+
+type Shown = Rc<RefCell<Vec<adw::ActionRow>>>;
+
+/// Fills `row` with `account`'s server lines and its two buttons, after
+/// taking out what an earlier fill put there.
+fn fill_servers(app: &Rc<App>, row: &adw::ExpanderRow, account: &Account, shown: &Shown) {
+    let (app, row, account, shown) = (Rc::clone(app), row.clone(), account.clone(), Rc::clone(shown));
+    glib::spawn_future_local(async move {
+        let found = app.core.services_found(account.id).await.unwrap_or_default();
+        let (refused_calendar, refused_contacts) = app.core.login_refusals(account.id);
+        let rules_here = app.core.rules_here(account.id);
+        for old in shown.borrow_mut().drain(..) {
+            row.remove(&old);
+        }
+        let lines = crate::servers::lines(&found, refused_calendar.as_deref(), refused_contacts.as_deref(), rules_here);
+        for line in lines {
+            let child = adw::ActionRow::builder().title(&line.title).subtitle(glib::markup_escape_text(&line.subtitle).as_str()).build();
+            if let Some(kind) = line.ask {
+                let host = found.iter().find(|f| f.kind == kind).map(|f| f.url.clone()).unwrap_or_default();
+                let use_it = gtk::Button::builder().label(gettext("Use It")).valign(gtk::Align::Center).css_classes(["flat"]).build();
+                crate::ui::name(&use_it, &fill(&gettext("Use {host} for {account}"), &[("host", &host), ("account", &account.email)]));
+                let (app, row, account, shown) = (Rc::clone(&app), row.clone(), account.clone(), Rc::clone(&shown));
+                use_it.connect_clicked(move |button| {
+                    button.set_sensitive(false);
+                    let (app, row, account, shown) = (Rc::clone(&app), row.clone(), account.clone(), Rc::clone(&shown));
+                    glib::spawn_future_local(async move {
+                        if let Err(err) = app.core.confirm_server(account.clone(), kind).await {
+                            tracing::info!(account = %account.email, %err, "the server did not take the login");
+                        }
+                        fill_servers(&app, &row, &account, &shown);
+                    });
+                });
+                child.add_suffix(&use_it);
+            }
+            row.add_row(&child);
+            shown.borrow_mut().push(child);
+        }
+        let again = gtk::Button::builder().label(gettext("Find Again")).valign(gtk::Align::Center).build();
+        let edit = gtk::Button::builder().label(gettext("Edit…")).valign(gtk::Align::Center).build();
+        let holder = adw::ActionRow::builder().activatable(false).build();
+        holder.add_suffix(&again);
+        holder.add_suffix(&edit);
+        row.add_row(&holder);
+        shown.borrow_mut().push(holder);
+        {
+            let (app, row, account, shown) = (Rc::clone(&app), row.clone(), account.clone(), Rc::clone(&shown));
+            again.connect_clicked(move |button| {
+                button.set_sensitive(false);
+                let (app, row, account, shown) = (Rc::clone(&app), row.clone(), account.clone(), Rc::clone(&shown));
+                glib::spawn_future_local(async move {
+                    if let Err(err) = app.core.find_services(account.clone()).await {
+                        tracing::info!(account = %account.email, %err, "the search for servers failed");
+                    }
+                    fill_servers(&app, &row, &account, &shown);
+                });
+            });
+        }
+        let calendar = found.iter().find(|f| f.kind == ServiceKind::CalDav).map(|f| f.url.clone()).unwrap_or_default();
+        let contacts = found.iter().find(|f| f.kind == ServiceKind::CardDav).map(|f| f.url.clone()).unwrap_or_default();
+        edit.connect_clicked(move |button| {
+            let (again_app, again_row, again_account, again_shown) = (Rc::clone(&app), row.clone(), account.clone(), Rc::clone(&shown));
+            super::dav_edit::present(&app, &account, &calendar, &contacts, button, move || {
+                fill_servers(&again_app, &again_row, &again_account, &again_shown)
+            });
+        });
+    });
 }
 
 /// What one account's contacts switch shows.
@@ -57,7 +151,7 @@ fn contacts(
     grant: impl Fn(AccountId) + Clone + 'static,
 ) -> adw::PreferencesGroup {
     let group = adw::PreferencesGroup::builder()
-        .title(gettext("Google Contacts"))
+        .title(gettext("Contacts"))
         .description(gettext(
             "Penguin Mail can read an account's contacts: names, email addresses, photos, \
              organizations, and phone numbers. It uses them to suggest recipients, to show \

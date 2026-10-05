@@ -15,6 +15,7 @@ pub mod card_place;
 pub mod composer;
 pub mod confirm;
 pub mod contact_card;
+pub mod dav_edit;
 pub mod contacts_prefs;
 pub mod conversation;
 pub mod find;

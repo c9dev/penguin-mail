@@ -28,6 +28,19 @@ your desktop's keyring, never into a file.
 
 The account appears in the sidebar and starts downloading.
 
+### Calendars, contacts and rules on other providers
+
+Penguin Mail looks for an IMAP account's calendar (CalDAV), contacts
+(CardDAV) and rules server (ManageSieve) when you add the account, with
+the same password. Fastmail, iCloud, Yahoo, Zoho, GMX, WEB.DE, mail.com,
+Yandex, mailbox.org and Posteo are known; for another server it asks the
+domain's DNS and its well-known addresses. **Preferences > Contacts &
+Calendar** lists what it found under **Calendar, Contacts and Rules
+Servers**, with **Find Again**, and **Edit** to type a CalDAV or CardDAV
+address yourself. A server outside your address's domain waits there for
+you to press **Use It** before your password goes to it. Where the server
+runs no rules, Penguin Mail runs them on this computer while it is open.
+
 Adding a Google account asks for every permission Penguin Mail uses in that one
 visit, so you never see a second consent screen for automatic replies and
 Rules, contacts, the calendar and its list of calendars, Google Drive

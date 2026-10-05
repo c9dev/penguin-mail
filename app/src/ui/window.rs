@@ -2693,6 +2693,32 @@ impl MainWindow {
         // The dialog stays open on the account's first sync, which says
         // what a toast would.
         self.refresh_accounts(Reload::Yes);
+        self.look_for_servers(account);
+    }
+
+    /// Searches for the new account's calendar, contacts and rules
+    /// servers once it is running, so adding it waits on no DNS. Contacts
+    /// switch on when a CardDAV server is found.
+    fn look_for_servers(self: &Rc<Self>, account: &Account) {
+        let (win, account) = (Rc::clone(self), account.clone());
+        glib::spawn_future_local(async move {
+            match win.core.find_services(account.clone()).await {
+                Ok(found) if found.contacts => {
+                    if let Some(app) = win.app.upgrade() {
+                        app.change_settings(Change::AccountContacts {
+                            email: account.email.clone(),
+                            on: true,
+                        });
+                    }
+                    win.refresh_accounts(Reload::Yes);
+                }
+                Ok(found) if found.calendar => win.refresh_accounts(Reload::Yes),
+                Ok(_) => {}
+                Err(err) => {
+                    tracing::info!(account = %account.email, %err, "found no calendar or contacts server");
+                }
+            }
+        });
     }
 
     /// Runs the consent flow, asking Google for every scope Penguin Mail
