@@ -1,7 +1,7 @@
 //! `Quick`, the small popover a drag across empty time or N opens: the
-//! time, a title field with the cursor in it, the calendar it goes on,
-//! which a menu button changes, and More Details for the editor. Enter
-//! saves.
+//! time, a title field with the cursor in it, the entry's type where the
+//! calendar takes more than events, the calendar it goes on, which a
+//! menu button changes, and More Details for the editor. Enter saves.
 //!
 //! One popover serves the whole view, parented to the calendar's card
 //! the way the event popover is (`popover.rs`'s own doc comment): a
@@ -18,12 +18,51 @@ use mailrs_domain::AccountId;
 use mailrs_domain::calendar::Calendar;
 use mailrs_domain::translate::{fill, gettext};
 
+use super::draft::{self, TypeChoice};
 use super::tint;
 use crate::ui::name;
 
-/// Runs with the title and the index of the calendar picked among the
-/// choices `show` was given.
-type OnTitle = dyn Fn(String, usize);
+/// Runs with the title, the index of the calendar picked among the
+/// choices `show` was given, and the type picked.
+type OnTitle = dyn Fn(String, usize, TypeChoice);
+
+/// Runs when the type changes, and answers the words the time line
+/// shows for it: an hour for an event, two for focus time, whole days for
+/// out of office. The view marks the new span on its grid meanwhile.
+type When = dyn Fn(TypeChoice) -> String;
+
+/// The name the type switch gives each toggle, and back.
+fn toggle_name(choice: TypeChoice) -> &'static str {
+    match choice {
+        TypeChoice::Event => "event",
+        TypeChoice::Focus => "focus",
+        TypeChoice::OutOfOffice => "away",
+    }
+}
+
+fn toggle_choice(name: &str) -> TypeChoice {
+    match name {
+        "focus" => TypeChoice::Focus,
+        "away" => TypeChoice::OutOfOffice,
+        _ => TypeChoice::Event,
+    }
+}
+
+/// The type switch's words for `choice`, a button's, so in title case.
+pub fn type_label(choice: TypeChoice) -> String {
+    match choice {
+        TypeChoice::Event => gettext("Event"),
+        TypeChoice::Focus => gettext("Focus Time"),
+        TypeChoice::OutOfOffice => gettext("Out of Office"),
+    }
+}
+
+/// The title the field shows after the type changes from `from` to `to`:
+/// the new type's own name when the field is empty or still holds the
+/// old type's, else `None`, keeping what the person typed.
+pub fn retitled(text: &str, from: TypeChoice, to: TypeChoice) -> Option<String> {
+    (text.trim().is_empty() || text == draft::type_title(from)).then(|| draft::type_title(to))
+}
 
 /// The words the calendar menu shows for each choice: its name, and the
 /// account's address after it once the choices span more than one
@@ -55,6 +94,16 @@ pub struct Quick {
     /// The calendars the menu offers, from the last `show`.
     choices: RefCell<Vec<(AccountId, String, Calendar)>>,
     picked: Cell<usize>,
+    /// Event, Focus Time and Out of Office, as many as the picked
+    /// calendar takes. Hidden on a calendar that takes events alone.
+    kinds: adw::ToggleGroup,
+    /// The types each calendar among the choices takes, where it takes
+    /// more than events (`draft::type_switch`).
+    types: RefCell<Vec<Option<Vec<TypeChoice>>>>,
+    kind: Cell<TypeChoice>,
+    /// Set while the code, not the person, changes the type switch.
+    quiet: Cell<bool>,
+    when: RefCell<Option<Box<When>>>,
     save: gtk::Button,
     more: gtk::Button,
     on_save: RefCell<Option<Box<OnTitle>>>,
@@ -83,6 +132,12 @@ impl Quick {
         let calendar_label = gtk::Label::builder()
             .css_classes(["dim-label", "caption"])
             .build();
+        let kinds = adw::ToggleGroup::builder()
+            .css_classes(["quick-kinds"])
+            .halign(gtk::Align::Start)
+            .visible(false)
+            .build();
+        name(&kinds, &gettext("Type"));
         let where_to = gtk::Box::builder().spacing(6).build();
         where_to.append(&dot);
         where_to.append(&calendar_label);
@@ -121,6 +176,7 @@ impl Quick {
         for child in [
             time.upcast_ref::<gtk::Widget>(),
             title.upcast_ref(),
+            kinds.upcast_ref(),
             calendar_button.upcast_ref(),
             buttons.upcast_ref(),
         ] {
@@ -145,6 +201,11 @@ impl Quick {
             pick,
             choices: RefCell::new(Vec::new()),
             picked: Cell::new(0),
+            kinds,
+            types: RefCell::new(Vec::new()),
+            kind: Cell::new(TypeChoice::Event),
+            quiet: Cell::new(false),
+            when: RefCell::new(None),
             save,
             more,
             on_save: RefCell::new(None),
@@ -157,7 +218,17 @@ impl Quick {
             let Some(index) = target.and_then(i32::from_variant) else { return };
             action.set_state(&index.to_variant());
             this.show_calendar(index as usize);
+            this.show_kinds();
             this.title.grab_focus();
+        });
+        let weak = Rc::downgrade(&this);
+        this.kinds.connect_active_name_notify(move |group| {
+            let Some(this) = weak.upgrade() else { return };
+            if this.quiet.get() {
+                return;
+            }
+            let choice = group.active_name().map_or(TypeChoice::Event, |n| toggle_choice(&n));
+            this.pick_kind(choice);
         });
         let (t, s) = (this.title.clone(), this.save.clone());
         t.connect_changed(move |t| s.set_sensitive(!t.text().trim().is_empty()));
@@ -168,7 +239,7 @@ impl Quick {
             if !text.is_empty() {
                 this.popover.popdown();
                 if let Some(f) = this.on_save.borrow().as_ref() {
-                    f(text, this.picked.get());
+                    f(text, this.picked.get(), this.kind.get());
                 }
             }
         });
@@ -178,7 +249,7 @@ impl Quick {
             let text = this.title.text().trim().to_string();
             this.popover.popdown();
             if let Some(f) = this.on_save.borrow().as_ref() {
-                f(text, this.picked.get());
+                f(text, this.picked.get(), this.kind.get());
             }
         });
         let weak = Rc::downgrade(&this);
@@ -187,7 +258,7 @@ impl Quick {
             let text = this.title.text().to_string();
             this.popover.popdown();
             if let Some(f) = this.on_more.borrow().as_ref() {
-                f(text, this.picked.get());
+                f(text, this.picked.get(), this.kind.get());
             }
         });
         this
@@ -199,20 +270,26 @@ impl Quick {
     /// where the popover itself is parented. The calendar menu offers
     /// `choices`, starting on the one at `current`. `on_save` runs with
     /// the title and the calendar picked on Enter or Save; `on_more` on
-    /// More Details.
+    /// More Details. `types` holds, for each choice, the types its type
+    /// switch offers, or `None` for a calendar that takes events alone;
+    /// `when` words the time for each type.
     #[expect(clippy::too_many_arguments, reason = "each is a separate part of what the popover shows")]
     pub fn show(
         self: &Rc<Self>,
         anchor: &gtk::Widget,
         rect: &gdk::Rectangle,
         side: gtk::PositionType,
-        when: &str,
+        when: impl Fn(TypeChoice) -> String + 'static,
         choices: Vec<(AccountId, String, Calendar)>,
+        types: Vec<Option<Vec<TypeChoice>>>,
         current: usize,
-        on_save: impl Fn(String, usize) + 'static,
-        on_more: impl Fn(String, usize) + 'static,
+        on_save: impl Fn(String, usize, TypeChoice) + 'static,
+        on_more: impl Fn(String, usize, TypeChoice) + 'static,
     ) {
-        self.time.set_label(when);
+        self.time.set_label(&when(TypeChoice::Event));
+        self.when.replace(Some(Box::new(when)));
+        self.types.replace(types);
+        self.kind.set(TypeChoice::Event);
         let menu = gio::Menu::new();
         for (index, label) in choice_labels(&choices).iter().enumerate() {
             menu.append(Some(label), Some(&format!("quick.calendar({index})")));
@@ -228,6 +305,7 @@ impl Quick {
         self.show_calendar(current);
         self.title.set_text("");
         self.save.set_sensitive(false);
+        self.show_kinds();
         self.on_save.replace(Some(Box::new(on_save)));
         self.on_more.replace(Some(Box::new(on_more)));
 
@@ -260,6 +338,38 @@ impl Quick {
             &self.calendar_button,
             &fill(&gettext("Calendar: {name}"), &[("name", &calendar.name)]),
         );
+    }
+
+    /// Fills the type switch with what the picked calendar takes, keeping
+    /// the type picked where it still can, and hides it on a calendar
+    /// that takes events alone.
+    fn show_kinds(&self) {
+        let types = self.types.borrow().get(self.picked.get()).cloned().flatten();
+        let list = types.clone().unwrap_or_default();
+        let kept = draft::kept_type(self.kind.get(), &list);
+        self.quiet.set(true);
+        self.kinds.remove_all();
+        for choice in &list {
+            let toggle = adw::Toggle::builder().name(toggle_name(*choice)).label(type_label(*choice)).build();
+            self.kinds.add(toggle);
+        }
+        self.kinds.set_active_name(Some(toggle_name(kept)));
+        self.kinds.set_visible(types.is_some());
+        self.quiet.set(false);
+        self.pick_kind(kept);
+    }
+
+    /// Makes the entry `choice`: its time line, and its name in the title
+    /// field unless the person typed one.
+    fn pick_kind(&self, choice: TypeChoice) {
+        let from = self.kind.replace(choice);
+        if let Some(when) = self.when.borrow().as_ref() {
+            self.time.set_label(&when(choice));
+        }
+        if let Some(title) = retitled(&self.title.text(), from, choice) {
+            self.title.set_text(&title);
+            self.title.set_position(-1);
+        }
     }
 
     /// Closes the popover, such as when the view's range changes under
@@ -337,6 +447,28 @@ mod tests {
 
     fn entry(account: AccountId, address: &str, id: &str, name: &str) -> (AccountId, String, Calendar) {
         (account, address.into(), Calendar { id: id.into(), name: name.into(), ..Calendar::default() })
+    }
+
+    #[test]
+    fn an_empty_title_takes_the_new_types_name() {
+        assert_eq!(retitled("", TypeChoice::Event, TypeChoice::Focus).as_deref(), Some("Focus time"));
+        assert_eq!(
+            retitled("Focus time", TypeChoice::Focus, TypeChoice::OutOfOffice).as_deref(),
+            Some("Out of office")
+        );
+        assert_eq!(retitled("Out of office", TypeChoice::OutOfOffice, TypeChoice::Event).as_deref(), Some(""));
+    }
+
+    #[test]
+    fn a_typed_title_stays_when_the_type_changes() {
+        assert_eq!(retitled("Deep work", TypeChoice::Focus, TypeChoice::OutOfOffice), None);
+    }
+
+    #[test]
+    fn each_type_has_its_own_toggle() {
+        for choice in draft::TYPE_ORDER {
+            assert_eq!(toggle_choice(toggle_name(choice)), choice);
+        }
     }
 
     #[test]

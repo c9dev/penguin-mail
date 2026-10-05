@@ -16,37 +16,89 @@ use mailrs_domain::calendar::{
 };
 use mailrs_domain::translate::gettext;
 use mailrs_domain::{AccountId, EpochMillis};
+use mailrs_sync::Offers;
 
 const DAY: EpochMillis = 86_400_000;
 const HOUR: EpochMillis = 3_600_000;
 
 /// The editor's Type choice for a new event.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum TypeChoice {
     Event,
     OutOfOffice,
     Focus,
 }
 
-/// The Type choices a new event on `address`'s account may take. Google
-/// Calendar offers out of office only on work and school accounts, and
-/// focus time only on some Google Workspace editions, so a personal
-/// address (`gmail.com`, `googlemail.com`) makes ordinary events alone.
-/// Any other domain may or may not be Workspace, and which edition it
-/// runs is not known ahead of time: it is offered every type, and a
-/// save Google turns down says why in the toast.
-pub fn creatable_types(address: &str) -> Vec<TypeChoice> {
-    let domain = address.trim().rsplit_once('@').map_or("", |(_, domain)| domain);
-    if domain.eq_ignore_ascii_case("gmail.com") || domain.eq_ignore_ascii_case("googlemail.com") {
-        vec![TypeChoice::Event]
+/// The order every list of types shows them in: the editor's Type row,
+/// the New Event menu and quick add's switch.
+pub const TYPE_ORDER: [TypeChoice; 3] = [TypeChoice::Event, TypeChoice::Focus, TypeChoice::OutOfOffice];
+
+/// The types the account's primary calendar takes.
+pub fn account_types(offers: &Offers) -> Vec<TypeChoice> {
+    TYPE_ORDER
+        .into_iter()
+        .filter(|t| match t {
+            TypeChoice::Event => true,
+            TypeChoice::Focus => offers.focus_time,
+            TypeChoice::OutOfOffice => offers.out_of_office,
+        })
+        .collect()
+}
+
+/// The Type choices a new entry on `calendar` may take, by what its
+/// account's provider keeps (`Offers`). Event always; focus time and out
+/// of office only on a primary calendar, the one calendar Google and
+/// Outlook keep them on, and only where the provider stores them.
+pub fn creatable_types(offers: &Offers, calendar: &Calendar) -> Vec<TypeChoice> {
+    if calendar.primary && calendar.access.can_write() {
+        account_types(offers)
     } else {
-        vec![TypeChoice::Event, TypeChoice::OutOfOffice, TypeChoice::Focus]
+        vec![TypeChoice::Event]
     }
+}
+
+/// The Type choices quick add's switch shows for `calendar`, or `None`
+/// when it takes events alone and the switch would offer nothing.
+pub fn type_switch(offers: &Offers, calendar: &Calendar) -> Option<Vec<TypeChoice>> {
+    Some(creatable_types(offers, calendar)).filter(|types| types.len() > 1)
+}
+
+/// `choice`, when `types` still holds it, else an ordinary event: quick
+/// add keeps the type across a change of calendar only where the new
+/// calendar takes it.
+pub fn kept_type(choice: TypeChoice, types: &[TypeChoice]) -> TypeChoice {
+    if types.contains(&choice) { choice } else { TypeChoice::Event }
+}
+
+/// What the New Event menu offers: each type at least one of the
+/// `offered` calendars takes, in the order the menu lists them.
+pub fn menu_types(offered: &[(AccountId, String, Calendar)], offers: impl Fn(AccountId) -> Offers) -> Vec<TypeChoice> {
+    let taken: HashSet<TypeChoice> =
+        offered.iter().flat_map(|(account, _, calendar)| creatable_types(&offers(*account), calendar)).collect();
+    TYPE_ORDER.into_iter().filter(|t| *t == TypeChoice::Event || taken.contains(t)).collect()
+}
+
+/// The calendar a new entry of type `choice` goes on: `default` when it
+/// takes the type, else the first of `offered` that does.
+pub fn calendar_for(
+    choice: TypeChoice,
+    offered: &[(AccountId, String, Calendar)],
+    offers: impl Fn(AccountId) -> Offers,
+    default: &(AccountId, Calendar),
+) -> Option<(AccountId, Calendar)> {
+    let takes = |account: AccountId, calendar: &Calendar| creatable_types(&offers(account), calendar).contains(&choice);
+    if takes(default.0, &default.1) {
+        return Some(default.clone());
+    }
+    offered
+        .iter()
+        .find(|(account, _, calendar)| takes(*account, calendar))
+        .map(|(account, _, calendar)| (*account, calendar.clone()))
 }
 
 /// The title a Type choice fills in: "Out of office", "Focus time", or
 /// nothing for an ordinary event.
-fn type_title(choice: TypeChoice) -> String {
+pub fn type_title(choice: TypeChoice) -> String {
     match choice {
         TypeChoice::Event => String::new(),
         TypeChoice::OutOfOffice => gettext("Out of office"),
@@ -325,6 +377,52 @@ impl Draft {
         if choice != TypeChoice::Event {
             self.set_all_day(false);
             self.busy = true;
+        }
+    }
+
+    /// Makes a new draft `choice` with the type's own defaults, for the
+    /// New Event menu and quick add. Focus time runs at least two hours
+    /// from the picked time. Out of office covers whole days, from today
+    /// through the picked day (or the picked day alone when it is past),
+    /// midnight to midnight in the reader's zone, since Google refuses
+    /// one all day. Where the provider keeps no decline choice
+    /// (`declines` false, as on Outlook), the entry declines nothing.
+    pub fn new_as(&mut self, choice: TypeChoice, today: NaiveDate, declines: bool) {
+        self.set_type(choice);
+        if !declines {
+            self.clear_declines();
+        }
+        match choice {
+            TypeChoice::Event => {}
+            TypeChoice::Focus => {
+                if self.end - self.start <= HOUR {
+                    self.end = self.start + 2 * HOUR;
+                }
+            }
+            TypeChoice::OutOfOffice => {
+                let picked = local_day(self.start, self.view_zone);
+                let first = today.min(picked);
+                let midnight = |day: NaiveDate| {
+                    let at = day.and_hms_opt(0, 0, 0).expect("midnight exists");
+                    // A zone that skips midnight starts the day at the
+                    // first instant it has.
+                    self.view_zone
+                        .from_local_datetime(&at)
+                        .earliest()
+                        .or_else(|| self.view_zone.from_local_datetime(&(at + Duration::hours(1))).earliest())
+                        .map_or(utc_midnight(day), |t| t.timestamp_millis())
+                };
+                self.start = midnight(first);
+                self.end = midnight(picked + Duration::days(1));
+            }
+        }
+    }
+
+    /// Makes an out-of-office or focus-time draft decline nothing, with no
+    /// message, for a provider that keeps neither.
+    pub fn clear_declines(&mut self) {
+        if let Kind::OutOfOffice(decline) | Kind::Focus(decline) = &mut self.kind {
+            *decline = Decline::default();
         }
     }
 
@@ -703,6 +801,7 @@ mod tests {
     use chrono_tz::Europe::Lisbon;
     use mailrs_domain::calendar::{Reminder, ReminderMethod};
     use mailrs_domain::invitation::Answer;
+    use mailrs_sync::Offers;
 
     fn at(d: u32, h: u32, m: u32) -> EpochMillis {
         Lisbon
@@ -1290,26 +1389,158 @@ mod tests {
         assert!(!Draft::open(&weekly(), &weekly().event.rules, Lisbon).offers_type(true), "Google never changes a type");
     }
 
-    #[test]
-    fn a_personal_google_account_makes_only_events() {
-        for address in ["dana@gmail.com", "Dana.Reyes@GMAIL.com", " old@googlemail.com "] {
-            assert_eq!(creatable_types(address), vec![TypeChoice::Event], "{address}");
-        }
+    fn workspace() -> Offers {
+        Offers { out_of_office: true, focus_time: true, declines: true, ..Offers::EVERYTHING }
+    }
+
+    fn outlook() -> Offers {
+        Offers { out_of_office: true, ..Offers::EVERYTHING }
+    }
+
+    fn team() -> Calendar {
+        Calendar { id: "team".into(), name: "Team".into(), primary: false, ..personal() }
     }
 
     #[test]
-    fn an_account_on_its_own_domain_is_offered_every_type() {
-        // It may be Google Workspace or not; nothing ahead of time says,
-        // so the types are offered and Google's answer settles it.
+    fn a_workspace_primary_calendar_takes_every_type() {
         assert_eq!(
-            creatable_types("dana@fernwood.example"),
-            vec![TypeChoice::Event, TypeChoice::OutOfOffice, TypeChoice::Focus]
+            creatable_types(&workspace(), &personal()),
+            vec![TypeChoice::Event, TypeChoice::Focus, TypeChoice::OutOfOffice]
         );
     }
 
     #[test]
-    fn a_domain_that_only_ends_like_gmail_is_not_personal() {
-        assert_eq!(creatable_types("dana@notgmail.com").len(), 3);
+    fn a_calendar_that_is_not_primary_takes_only_events() {
+        assert_eq!(creatable_types(&workspace(), &team()), vec![TypeChoice::Event]);
+    }
+
+    #[test]
+    fn an_outlook_calendar_takes_events_and_out_of_office() {
+        assert_eq!(creatable_types(&outlook(), &personal()), vec![TypeChoice::Event, TypeChoice::OutOfOffice]);
+    }
+
+    #[test]
+    fn a_provider_that_keeps_no_types_takes_only_events() {
+        // Offers::EVERYTHING is a personal Gmail account; CalDAV and POP3
+        // keep no types either.
+        assert_eq!(creatable_types(&Offers::EVERYTHING, &personal()), vec![TypeChoice::Event]);
+    }
+
+    fn offered() -> Vec<(AccountId, String, Calendar)> {
+        vec![
+            (1, "dana@gmail.com".into(), personal()),
+            (2, "dana@fernwood.example".into(), Calendar { id: "dana@fernwood.example".into(), ..personal() }),
+            (3, "dana@outlook.com".into(), Calendar { id: "outlook".into(), ..personal() }),
+        ]
+    }
+
+    fn offers_of(account: AccountId) -> Offers {
+        match account {
+            2 => workspace(),
+            3 => outlook(),
+            _ => Offers::EVERYTHING,
+        }
+    }
+
+    #[test]
+    fn the_new_event_menu_offers_each_type_some_calendar_takes() {
+        assert_eq!(
+            menu_types(&offered(), offers_of),
+            vec![TypeChoice::Event, TypeChoice::Focus, TypeChoice::OutOfOffice]
+        );
+    }
+
+    #[test]
+    fn the_new_event_menu_holds_only_event_when_no_calendar_takes_a_type() {
+        assert_eq!(menu_types(&offered()[..1], offers_of), vec![TypeChoice::Event]);
+    }
+
+    #[test]
+    fn a_type_goes_on_the_default_calendar_when_it_takes_it() {
+        let default = (3, offered()[2].2.clone());
+        assert_eq!(calendar_for(TypeChoice::OutOfOffice, &offered(), offers_of, &default), Some(default.clone()));
+    }
+
+    #[test]
+    fn a_type_the_default_calendar_cannot_take_goes_on_the_first_that_can() {
+        let default = (1, personal());
+        let (account, calendar) = calendar_for(TypeChoice::Focus, &offered(), offers_of, &default).unwrap();
+        assert_eq!((account, calendar.id.as_str()), (2, "dana@fernwood.example"));
+        assert_eq!(calendar_for(TypeChoice::Event, &offered(), offers_of, &default), Some(default));
+    }
+
+    #[test]
+    fn quick_add_shows_the_type_switch_only_where_a_calendar_takes_several_types() {
+        assert_eq!(
+            type_switch(&outlook(), &personal()),
+            Some(vec![TypeChoice::Event, TypeChoice::OutOfOffice])
+        );
+        assert_eq!(type_switch(&Offers::EVERYTHING, &personal()), None);
+        assert_eq!(type_switch(&workspace(), &team()), None);
+    }
+
+    #[test]
+    fn a_calendar_that_cannot_take_the_picked_type_goes_back_to_event() {
+        let types = [TypeChoice::Event, TypeChoice::OutOfOffice];
+        assert_eq!(kept_type(TypeChoice::Focus, &types), TypeChoice::Event);
+        assert_eq!(kept_type(TypeChoice::OutOfOffice, &types), TypeChoice::OutOfOffice);
+    }
+
+    fn day(d: u32) -> NaiveDate {
+        NaiveDate::from_ymd_opt(2026, 9, d).unwrap()
+    }
+
+    #[test]
+    fn focus_time_from_a_click_runs_two_hours_from_the_picked_time() {
+        let mut draft = fresh();
+        draft.new_as(TypeChoice::Focus, day(23), true);
+        assert_eq!((draft.start, draft.end), (at(23, 15, 0), at(23, 17, 0)));
+        assert!(draft.busy && !draft.all_day);
+        assert_eq!(draft.title, "Focus time");
+        assert_eq!(draft.type_choice(), TypeChoice::Focus);
+    }
+
+    #[test]
+    fn focus_time_keeps_a_longer_span_the_person_dragged() {
+        let mut draft = Draft::new(1, &personal(), at(23, 9, 0), at(23, 12, 0), Lisbon);
+        draft.new_as(TypeChoice::Focus, day(23), true);
+        assert_eq!((draft.start, draft.end), (at(23, 9, 0), at(23, 12, 0)));
+    }
+
+    #[test]
+    fn out_of_office_runs_whole_days_from_today_through_the_picked_day() {
+        let mut draft = fresh();
+        draft.new_as(TypeChoice::OutOfOffice, day(21), true);
+        // Google refuses an all-day out of office, so it runs midnight to
+        // midnight in the reader's zone.
+        assert_eq!((draft.start, draft.end), (at(21, 0, 0), at(24, 0, 0)));
+        assert!(draft.busy && !draft.all_day);
+        assert_eq!(draft.title, "Out of office");
+    }
+
+    #[test]
+    fn out_of_office_on_a_day_already_past_covers_that_day_alone() {
+        let mut draft = fresh();
+        draft.new_as(TypeChoice::OutOfOffice, day(25), true);
+        assert_eq!((draft.start, draft.end), (at(23, 0, 0), at(24, 0, 0)));
+    }
+
+    #[test]
+    fn out_of_office_declines_meetings_where_the_provider_keeps_it() {
+        use mailrs_domain::calendar::{Decline, Declines};
+        let mut draft = fresh();
+        draft.new_as(TypeChoice::OutOfOffice, day(23), true);
+        assert_eq!(draft.kind.decline().map(|d| d.meetings), Some(Declines::All));
+        let mut outlook = fresh();
+        outlook.new_as(TypeChoice::OutOfOffice, day(23), false);
+        assert_eq!(outlook.kind, Kind::OutOfOffice(Decline::default()), "Outlook keeps no decline choice");
+    }
+
+    #[test]
+    fn an_event_from_the_menu_keeps_its_slot() {
+        let mut draft = fresh();
+        draft.new_as(TypeChoice::Event, day(23), true);
+        assert_eq!((draft.start, draft.end, draft.title.as_str()), (at(23, 15, 0), at(23, 16, 0), ""));
     }
 
     #[test]

@@ -743,6 +743,23 @@ button.calendar-today {
    other 6; with no vertical margin the bar cannot stretch it into an
    ellipse. */
 button.new-event { min-width: 32px; min-height: 32px; padding: 0; margin: 0 0 0 6px; }
+/* New Event with its menu of types, where a calendar takes focus time or
+   out of office: the circle grows into a 32 px pill, the "+" half the
+   width of the circle and the arrow a narrower half. */
+splitbutton.new-event-split { margin: 0 0 0 6px; }
+splitbutton.new-event-split > button {
+  min-width: 30px;
+  min-height: 32px;
+  padding: 0 2px 0 4px;
+  border-radius: 16px 0 0 16px;
+}
+splitbutton.new-event-split > menubutton > button {
+  min-width: 22px;
+  min-height: 32px;
+  padding: 0 6px 0 2px;
+  border-radius: 0 16px 16px 0;
+}
+.calendar-narrow splitbutton.new-event-split { margin-left: 0; }
 /* The view switch and the sidebar's Mail / Calendar switch: 13 px
    labels, the unchosen ones dimmed at weight 600. */
 toggle-group.view-switch > toggle,
@@ -1061,12 +1078,28 @@ list.waiting-list > row.waiting-card:last-child { margin-bottom: 0; }
 /* The agenda: a coloured dot per row, tinted the way an event block's
    bar is, and a heading row per date. */
 .agenda-row { padding: 0 4px; }
+/* Each mark takes 12 px, the width of the icons below, so every title
+   starts at the same place. */
 .agenda-dot {
   min-width: 8px;
   min-height: 8px;
+  margin: 0 2px;
   border-radius: 99px;
   background: var(--cal-colour, var(--accent-bg-color));
 }
+/* Out of office: a rounded square striped in the calendar's colour, the
+   week view's stripes at the dot's size. */
+.agenda-dot.away {
+  min-width: 10px;
+  min-height: 10px;
+  margin: 0 1px;
+  border-radius: 3px;
+  background-color: color-mix(in srgb, var(--cal-colour) 30%, transparent);
+  background-image: repeating-linear-gradient(135deg,
+    var(--cal-colour) 0px, var(--cal-colour) 2px, transparent 2px, transparent 4px);
+}
+/* Focus time's target and a birthday's cake take the dot's place. */
+.agenda-kind { color: var(--cal-colour); }
 .agenda-heading { font-weight: 800; opacity: 0.75; }
 
 /* Small secondary text: the sidebar's section and account headings, the

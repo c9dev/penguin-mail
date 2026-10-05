@@ -238,14 +238,28 @@ fn all_day_height(rows: usize) -> f32 {
 /// is the one before it; both come from the event's own UTC date, never
 /// converted to local time, which would move them a day west of UTC.
 fn all_day_span(o: &Occurrence, days: &[NaiveDate]) -> Option<(usize, usize)> {
-    all_day_columns(o.start, o.end, days)
+    if o.event.all_day {
+        return all_day_columns(o.start, o.end, days);
+    }
+    let (first, last) = layout::whole_days(o.start, o.end, &chrono::Local)?;
+    date_columns(first, last, days)
+}
+
+/// Whether the strip draws `o` rather than the grid: an all-day event,
+/// or a timed entry that covers whole days (`layout::whole_days`).
+pub fn in_strip(o: &Occurrence) -> bool {
+    o.event.all_day || layout::whole_days(o.start, o.end, &chrono::Local).is_some()
 }
 
 /// [`all_day_span`] for an all-day span from `start` to `end`.
 fn all_day_columns(start: EpochMillis, end: EpochMillis, days: &[NaiveDate]) -> Option<(usize, usize)> {
+    date_columns(utc_date(start)?, utc_date(end)?.checked_sub_days(Days::new(1))?, days)
+}
+
+/// The columns from `start_date` through `end_date` among `days`, clipped
+/// to them.
+fn date_columns(start_date: NaiveDate, end_date: NaiveDate, days: &[NaiveDate]) -> Option<(usize, usize)> {
     let (&first, &last) = (days.first()?, days.last()?);
-    let start_date = utc_date(start)?;
-    let end_date = utc_date(end)?.checked_sub_days(Days::new(1))?;
     if end_date < first || start_date > last {
         return None;
     }
@@ -920,7 +934,7 @@ impl TimeGrid {
         imp.bounds.replace(bounds.clone());
         let mut by_day: Vec<Vec<(usize, EpochMillis, EpochMillis)>> = vec![Vec::new(); days.len()];
         for (index, o) in occurrences.iter().enumerate() {
-            if o.event.all_day {
+            if in_strip(o) {
                 continue;
             }
             for (column, start, end) in layout::clip_to_days(o.start, o.end, &bounds) {
@@ -2285,7 +2299,7 @@ impl AllDayStrip {
 
         let mut spanning: Vec<(usize, usize, usize)> = Vec::new(); // (occurrence index, start day, end day)
         for (index, o) in occurrences.iter().enumerate() {
-            if !o.event.all_day {
+            if !in_strip(o) {
                 continue;
             }
             if let Some((start, end)) = all_day_span(o, days) {

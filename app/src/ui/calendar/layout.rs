@@ -149,6 +149,18 @@ pub fn clip_to_days(
         .collect()
 }
 
+/// The first and last day a timed entry covers when it runs from one
+/// local midnight to another, as a whole-day out of office does: Google
+/// refuses one all day, so it comes as times. The week and day views
+/// draw such an entry with the all-day ones rather than as a column the
+/// day's height. `None` for an entry that starts or ends inside a day.
+pub fn whole_days<Z: TimeZone>(start: EpochMillis, end: EpochMillis, zone: &Z) -> Option<(NaiveDate, NaiveDate)> {
+    let local = |at: EpochMillis| DateTime::<Utc>::from_timestamp_millis(at).map(|t| t.with_timezone(zone).naive_local());
+    let (from, to) = (local(start)?, local(end)?);
+    let midnight = |t: NaiveDateTime| t.time() == chrono::NaiveTime::MIN;
+    (end > start && midnight(from) && midnight(to)).then(|| (from.date(), to.date() - chrono::Duration::days(1)))
+}
+
 /// Hours from `day_start_local`'s midnight to `at`, by wall clock rather
 /// than elapsed time, so a clock-change day still places a 12:00 event
 /// at 12.0 whether that day held 23, 24 or 25 hours.
@@ -304,6 +316,35 @@ mod tests {
     use super::*;
 
     const H: EpochMillis = 3_600_000;
+
+    fn lisbon(d: u32, h: u32) -> EpochMillis {
+        chrono_tz::Europe::Lisbon
+            .from_local_datetime(&NaiveDate::from_ymd_opt(2026, 10, d).unwrap().and_hms_opt(h, 0, 0).unwrap())
+            .single()
+            .unwrap()
+            .timestamp_millis()
+    }
+
+    #[test]
+    fn a_timed_entry_from_midnight_to_midnight_covers_whole_days() {
+        let zone = chrono_tz::Europe::Lisbon;
+        assert_eq!(whole_days(lisbon(5, 0), lisbon(6, 0), &zone), Some((day(5), day(5))));
+        assert_eq!(whole_days(lisbon(5, 0), lisbon(8, 0), &zone), Some((day(5), day(7))));
+        // The clocks go back on 25 October; that day holds 25 hours.
+        assert_eq!(whole_days(lisbon(25, 0), lisbon(26, 0), &zone), Some((day(25), day(25))));
+    }
+
+    #[test]
+    fn an_entry_that_starts_or_ends_inside_a_day_does_not_cover_whole_days() {
+        let zone = chrono_tz::Europe::Lisbon;
+        assert_eq!(whole_days(lisbon(5, 9), lisbon(6, 0), &zone), None);
+        assert_eq!(whole_days(lisbon(5, 0), lisbon(5, 18), &zone), None);
+        assert_eq!(whole_days(lisbon(5, 0), lisbon(5, 0), &zone), None);
+    }
+
+    fn day(d: u32) -> NaiveDate {
+        NaiveDate::from_ymd_opt(2026, 10, d).unwrap()
+    }
 
     #[test]
     fn an_event_opened_at_14_00_scrolls_the_grid_to_13_00() {

@@ -25,6 +25,7 @@ use mailrs_domain::calendar::repeat::{Custom, Ends, Frequency, Repeat};
 use mailrs_domain::calendar::{self, Attachment, Calendar, Declines, EVENT_COLORS, Reminder, ReminderMethod};
 use mailrs_domain::translate::{date_locale, fill, gettext, ngettext};
 use mailrs_domain::{AccountId, EpochMillis};
+use mailrs_sync::Offers;
 
 use super::attachments::{self, Uploaded};
 use super::draft::{self, Draft, Part, TypeChoice};
@@ -47,6 +48,9 @@ pub struct Choices {
     /// (`Offers::moves_events`). An existing event of any other account
     /// shows its calendar as a label.
     pub moving: HashSet<AccountId>,
+    /// What each writable account's provider keeps, for the Type row and
+    /// the decline choice (`draft::creatable_types`).
+    pub offers: HashMap<AccountId, Offers>,
 }
 
 /// What attaching a file needs from outside the editor: whether the
@@ -124,11 +128,15 @@ struct Editor {
     /// Every calendar by key, to tell whether the draft's is a primary
     /// one, the only kind Google keeps out of office and focus time on.
     calendars: HashMap<(AccountId, String), Calendar>,
-    /// Each writable account's address, for [`draft::creatable_types`].
-    addresses: HashMap<AccountId, String>,
-    /// Event, Out of office or Focus time, for a new event or one of
+    /// What each writable account's provider keeps, for
+    /// [`draft::account_types`] and the decline choice.
+    offers: HashMap<AccountId, Offers>,
+    /// Event, Focus time or Out of office, for a new event or one of
     /// those two types.
     type_row: RefCell<Option<adw::ComboRow>>,
+    /// The types the Type row lists now, in its order: the account's own,
+    /// and an existing entry's type.
+    type_list: RefCell<Vec<TypeChoice>>,
     /// What out of office and focus time decline, and the message: the
     /// group, its Decline row and its Message row.
     decline_group: RefCell<Option<(adw::PreferencesGroup, adw::ComboRow, adw::EntryRow)>>,
@@ -205,8 +213,9 @@ pub fn open(
             ends: Ends::Never,
         }),
         calendars: choices.calendars.clone(),
-        addresses: choices.writable.iter().map(|(account, address, _)| (*account, address.clone())).collect(),
+        offers: choices.offers.clone(),
         type_row: RefCell::new(None),
+        type_list: RefCell::new(Vec::new()),
         decline_group: RefCell::new(None),
         kind_hidden: RefCell::new(Vec::new()),
         attaching: Rc::clone(&choices.attaching),
@@ -427,25 +436,29 @@ impl Editor {
 
     // ---- Type ----
 
-    /// The Type row: Event, Out of office or Focus time. Google never
-    /// changes a type, so an existing out of office or focus time shows
-    /// its own insensitive; `refresh_type` makes it insensitive on a
-    /// calendar that is not primary too.
+    /// The Type row: Event, Focus time or Out of office, as many of them
+    /// as the account's provider keeps (`refresh_type` fills it). Google
+    /// never changes a type, so an existing out of office or focus time
+    /// shows its own insensitive; `refresh_type` makes it insensitive on
+    /// a calendar that is not primary too.
     fn type_row(self: &Rc<Self>) -> adw::ComboRow {
         let row = adw::ComboRow::builder().title(gettext("Type")).build();
         crate::ui::name_combo_row_items(&row);
-        let names = [gettext("Event"), gettext("Out of office"), gettext("Focus time")];
-        let refs: Vec<&str> = names.iter().map(String::as_str).collect();
-        row.set_model(Some(&gtk::StringList::new(&refs)));
-        row.set_selected(type_index(self.draft.borrow().type_choice()));
         let weak = Rc::downgrade(self);
         row.connect_selected_notify(move |row| {
             let Some(this) = weak.upgrade() else { return };
             if this.quiet.get() {
                 return;
             }
-            let choice = TYPES.get(row.selected() as usize).copied().unwrap_or(TypeChoice::Event);
-            this.draft.borrow_mut().set_type(choice);
+            let choice = this.type_list.borrow().get(row.selected() as usize).copied().unwrap_or(TypeChoice::Event);
+            let declines = this.account_offers().declines;
+            {
+                let mut draft = this.draft.borrow_mut();
+                draft.set_type(choice);
+                if !declines {
+                    draft.clear_declines();
+                }
+            }
             this.refresh_type();
             this.refresh_save();
         });
@@ -453,20 +466,28 @@ impl Editor {
         row
     }
 
+    /// What the draft's account keeps. `Offers::EVERYTHING` keeps no
+    /// types, so an account the editor was not told of makes events.
+    fn account_offers(&self) -> Offers {
+        let account = self.draft.borrow().account_id;
+        self.offers.get(&account).copied().unwrap_or(Offers::EVERYTHING)
+    }
+
     /// Shows the rows the draft's type takes and hides the ones Google
     /// refuses on it, turns all day off for out of office and focus time,
     /// and lets the Type row change only a new event on a primary
     /// calendar, putting a new event on another calendar back to Event.
-    /// On an account that can make only events (`draft::creatable_types`)
-    /// the row does not show at all.
+    /// On an account that can make only events (`draft::account_types`)
+    /// the row does not show at all, and the decline choice shows only
+    /// where the provider keeps it.
     fn refresh_type(self: &Rc<Self>) {
-        let (primary, creatable) = {
+        let offers = self.account_offers();
+        let creatable = draft::account_types(&offers);
+        let primary = {
             let draft = self.draft.borrow();
-            let primary = self.calendars.get(&(draft.account_id, draft.calendar.clone())).is_some_and(|c| c.primary);
-            let address = self.addresses.get(&draft.account_id).map_or("", String::as_str);
-            (primary, draft::creatable_types(address))
+            self.calendars.get(&(draft.account_id, draft.calendar.clone())).is_some_and(|c| c.primary)
         };
-        let (offers, typed, all_day, title) = {
+        let (offers_type, typed, all_day, title) = {
             let mut draft = self.draft.borrow_mut();
             if draft.is_new() && (!primary || !creatable.contains(&draft.type_choice())) {
                 draft.set_type(TypeChoice::Event);
@@ -484,18 +505,36 @@ impl Editor {
         }
         let row = self.type_row.borrow().clone();
         if let Some(row) = row {
+            let choice = self.draft.borrow().type_choice();
+            let mut list = creatable.clone();
+            if !list.contains(&choice) {
+                list.push(choice);
+            }
+            list.sort_by_key(|t| draft::TYPE_ORDER.iter().position(|o| o == t));
+            // Rebuilding the model runs the row's handler, which the
+            // quiet flag holds off.
+            self.quiet.set(true);
+            if *self.type_list.borrow() != list {
+                let names: Vec<String> = list.iter().map(|t| type_words(*t)).collect();
+                let refs: Vec<&str> = names.iter().map(String::as_str).collect();
+                row.set_model(Some(&gtk::StringList::new(&refs)));
+                self.type_list.replace(list.clone());
+            }
+            let index = list.iter().position(|t| *t == choice).unwrap_or(0) as u32;
+            if row.selected() != index {
+                row.set_selected(index);
+            }
+            self.quiet.set(false);
             row.set_visible(typed || creatable.len() > 1);
-            row.set_sensitive(offers);
-            let note = match (offers, typed) {
-                (false, false) => gettext("Out of office and focus time go on a primary calendar"),
+            row.set_sensitive(offers_type);
+            let note = match (offers_type, typed) {
+                (false, false) if creatable.contains(&TypeChoice::Focus) => {
+                    gettext("Out of office and focus time go on a primary calendar")
+                }
+                (false, false) => gettext("Out of office goes on a primary calendar"),
                 _ => String::new(),
             };
             row.set_subtitle(&note);
-            if !offers && !typed && row.selected() != 0 {
-                self.quiet.set(true);
-                row.set_selected(0);
-                self.quiet.set(false);
-            }
         }
         // Cloned out: `set_active` runs the all-day handler, which borrows
         // the draft, before it returns.
@@ -514,7 +553,7 @@ impl Editor {
         let decline = self.draft.borrow().kind.decline().cloned();
         let group = self.decline_group.borrow().clone();
         if let Some((group, row, text)) = group {
-            group.set_visible(typed);
+            group.set_visible(typed && offers.declines);
             if let Some(decline) = decline {
                 let index = DECLINES.iter().position(|d| *d == decline.meetings).unwrap_or(0) as u32;
                 if row.selected() != index {
@@ -1874,18 +1913,20 @@ const WEEK: [Weekday; 7] = [
     Weekday::Sun,
 ];
 
-/// The Repeats row's index for `repeat` among `presets`: its position, or
-/// the row after them ("Custom…") for one none of them shows.
-/// The Type row's choices, in the order it lists them.
-const TYPES: [TypeChoice; 3] = [TypeChoice::Event, TypeChoice::OutOfOffice, TypeChoice::Focus];
-
 /// The Decline row's choices, in the order it lists them.
 const DECLINES: [Declines; 3] = [Declines::Nothing, Declines::New, Declines::All];
 
-fn type_index(choice: TypeChoice) -> u32 {
-    TYPES.iter().position(|t| *t == choice).unwrap_or(0) as u32
+/// The Type row's name for `choice`.
+fn type_words(choice: TypeChoice) -> String {
+    match choice {
+        TypeChoice::Event => gettext("Event"),
+        TypeChoice::Focus => gettext("Focus time"),
+        TypeChoice::OutOfOffice => gettext("Out of office"),
+    }
 }
 
+/// The Repeats row's index for `repeat` among `presets`: its position, or
+/// the row after them ("Custom…") for one none of them shows.
 fn repeat_index(presets: &[Repeat], repeat: &Repeat) -> u32 {
     presets
         .iter()

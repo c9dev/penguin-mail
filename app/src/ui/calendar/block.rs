@@ -100,7 +100,10 @@ impl EventBlock {
             .build();
 
         let text = gtk::Box::new(gtk::Orientation::Vertical, 0);
-        let row = if event.all_day {
+        // A whole-day out of office comes as midnight to midnight and
+        // sits with the all-day entries, where "00:00" says nothing.
+        let whole_days = event.all_day || super::layout::whole_days(o.start, o.end, zone).is_some();
+        let row = if whole_days {
             let row = TitleRow::new(&title, None);
             text.append(&row);
             row
@@ -131,7 +134,7 @@ impl EventBlock {
             let image = gtk::Image::builder()
                 .icon_name(icon)
                 .pixel_size(12)
-                .valign(if event.all_day || compact { gtk::Align::Center } else { gtk::Align::Start })
+                .valign(if whole_days || compact { gtk::Align::Center } else { gtk::Align::Start })
                 .css_classes(["kind-icon"])
                 .accessible_role(gtk::AccessibleRole::Presentation)
                 .build();
@@ -620,7 +623,7 @@ where
         ),
         None => named,
     };
-    if o.event.all_day {
+    if o.event.all_day || super::layout::whole_days(o.start, o.end, zone).is_some() {
         fill(
             &gettext("{title}, all day, {calendar}"),
             &[("title", &title), ("calendar", calendar_name)],
@@ -820,6 +823,14 @@ mod tests {
         let event = Event { kind: Kind::Birthday, title: "Ana".into(), ..event(true, None) };
         let o = Occurrence { account_id: 1, event: std::sync::Arc::new(event), start: 0, end: 24 * 3_600_000 };
         assert_eq!(accessible_name(&o, "Birthdays", None, &Utc), "Ana, Birthday, all day, Birthdays");
+    }
+
+    #[test]
+    fn an_out_of_office_from_midnight_to_midnight_reads_all_day() {
+        use mailrs_domain::calendar::{Decline, Kind};
+        let event = Event { kind: Kind::OutOfOffice(Decline::default()), title: "Out of office".into(), ..event(false, None) };
+        let o = Occurrence { account_id: 1, event: std::sync::Arc::new(event), start: 0, end: 24 * 3_600_000 };
+        assert_eq!(accessible_name(&o, "Work", None, &Utc), "Out of office, all day, Work");
     }
 
     #[test]
