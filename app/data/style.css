@@ -711,7 +711,10 @@ button.invitation-pill buttoncontent > box { border-spacing: 8px; }
    pill, and the view switch. */
 .range-title { margin: 0 10px 0 16px; }
 .range-title .bold { font-weight: 800; font-size: 1.43em; }
-.range-title .dim { font-size: 1.43em; font-weight: 400; opacity: 0.4; }
+/* The mockup's 40 % left the year at 2.2:1 on the light header. At 72 %
+   it reads 5.1:1 in light and 8.7:1 in dark, and the weight still sets
+   it below the month. */
+.range-title .dim { font-size: 1.43em; font-weight: 400; opacity: 0.72; }
 .range-title .week { font-size: 0.85em; font-weight: 700; }
 /* A phone's header: the month in a smaller size, closer to the sidebar
    button, so "September" fits beside New Event, Search and the window's

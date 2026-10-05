@@ -294,6 +294,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - Answering an invitation in the calendar keeps the hours where you had scrolled them, rather than jumping back to midnight.
 - An event's tooltip no longer covers the bubble you just opened from it.
 - The time on a calendar event is darker in light mode and brighter in dark mode, so it reads clearly on every event colour.
+- The year beside the month in the calendar header is easier to read in both light and dark mode.
 - A reply's quoted message folds behind "•••" again, including replies Penguin Mail sent earlier with each quoted paragraph set apart.
 - The calendar sidebar shows a newly listed calendar as soon as it arrives, even before any of its events do.
 - The assistant's button in the mail and calendar headers is a plain button
