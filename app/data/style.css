@@ -918,9 +918,19 @@ button.event-block.away {
 .app-dark .day-heading:not(.today) .day-place { opacity: 0.64; }
 .day-heading .date { font-weight: 800; font-size: 0.95em; }
 button.day-heading { min-height: 26px; padding: 0 14px; border-radius: 13px; }
+/* Today's text is the accent darkened to an OKLab lightness of 0.45 at
+   most. Scaling a and b with the lightness keeps the hue and stays in
+   gamut; lowering the lightness alone clipped Yaru's orange to a red.
+   The accent text read 3.7:1 on the pill in light; darkened, every
+   desktop accent, Yaru's included, reads 5.3:1 or better on the pill
+   over the view and the window. Dark keeps libadwaita's lifted accent,
+   which reads 5.8:1 or better. */
 .day-heading.today {
   background: color-mix(in srgb, var(--accent-bg-color) 18%, transparent);
   border-radius: 999px;
+  color: oklab(from var(--accent-bg-color) min(l, 0.45) calc(a * min(1, 0.45 / l)) calc(b * min(1, 0.45 / l)));
+}
+.app-dark .day-heading.today {
   color: var(--accent-color);
 }
 .day-heading.today .weekday { font-weight: 700; opacity: 1; }
