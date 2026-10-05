@@ -73,6 +73,8 @@ pub fn present(
         return;
     }
     let (core, email, account_id) = (Rc::clone(core), account.email.clone(), account.id);
+    // Sieve's vacation has no way to say it (RFC 5230); Gmail's reply does.
+    let can_limit_to_contacts = account.provider != mailrs_domain::Provider::Imap;
     let settings = core.gmail_settings();
     glib::spawn_future_local(async move {
         let loaded = {
@@ -103,7 +105,7 @@ pub fn present(
                 return;
             }
         };
-        let form = Form::new(&reply);
+        let form = Form::new(&reply, can_limit_to_contacts);
         stack.add_named(&form.page, Some("form"));
         stack.set_visible_child_name("form");
         save.set_sensitive(true);
@@ -170,7 +172,7 @@ struct Form {
 }
 
 impl Form {
-    fn new(reply: &AutomaticReply) -> Rc<Form> {
+    fn new(reply: &AutomaticReply, can_limit_to_contacts: bool) -> Rc<Form> {
         let page = adw::PreferencesPage::new();
 
         let enabled = adw::SwitchRow::builder()
@@ -242,6 +244,9 @@ impl Form {
             .build();
         let who = adw::PreferencesGroup::new();
         who.add(&contacts_only);
+        // When the row is hidden the saved reply keeps `contacts_only` as
+        // read, so nothing changes for it.
+        who.set_visible(can_limit_to_contacts);
         page.add(&who);
 
         for widget in [

@@ -2,6 +2,36 @@
 
 use mailrs_domain::translate::{fill, gettext};
 use mailrs_domain::{Filter, FilterAction, FilterCriteria, MailSet, Role};
+use mailrs_sync::RulesPlace;
+
+use crate::offered::Filing;
+
+/// The line under the rules list saying where they run.
+pub fn place_line(place: RulesPlace, provider: &str) -> String {
+    match place {
+        RulesPlace::ThisComputer => {
+            gettext("These rules run on this computer while Penguin Mail is open.")
+        }
+        RulesPlace::Server => fill(
+            &gettext("{provider} runs these on new mail as it arrives, even when this computer is off."),
+            &[("provider", provider)],
+        ),
+    }
+}
+
+/// The line that says the rules server is not answering.
+pub fn waiting_line(provider: &str) -> String {
+    fill(
+        &gettext("{provider} is not answering. Changes wait here and go out when it does."),
+        &[("provider", provider)],
+    )
+}
+
+/// Whether the form offers "Never Send to Spam". A rule on a folder
+/// server runs after the server's spam filter, so it cannot promise it.
+pub fn offers_never_spam(filing: Filing) -> bool {
+    filing == Filing::Labels
+}
 
 /// What the rule form collects.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -275,6 +305,28 @@ fn lower_first(text: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_rules_say_where_they_run() {
+        assert_eq!(
+            place_line(RulesPlace::ThisComputer, "Fastmail"),
+            "These rules run on this computer while Penguin Mail is open."
+        );
+        assert_eq!(
+            place_line(RulesPlace::Server, "mailbox.org"),
+            "mailbox.org runs these on new mail as it arrives, even when this computer is off."
+        );
+        assert_eq!(
+            waiting_line("mailbox.org"),
+            "mailbox.org is not answering. Changes wait here and go out when it does."
+        );
+    }
+
+    #[test]
+    fn never_send_to_spam_is_for_label_accounts() {
+        assert!(offers_never_spam(Filing::Labels));
+        assert!(!offers_never_spam(Filing::Folders));
+    }
 
     #[test]
     fn the_form_becomes_a_gmail_filter() {

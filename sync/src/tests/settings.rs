@@ -443,3 +443,21 @@ async fn an_account_without_rules_says_the_server_cannot() {
     ));
     assert_eq!(h.fake.with(|s| s.usage.calls_to("users.settings.filters.list")), 0);
 }
+
+#[tokio::test]
+async fn a_gmail_account_lists_its_rules_as_run_by_the_server() {
+    let h = harness().await;
+    let settings = settings(&h);
+    let made = settings
+        .add_rule(h.account_id, Filter::block("pest@example.com"))
+        .await
+        .unwrap();
+    let Permitted::Done(made) = made else { panic!("permission") };
+    let Permitted::Done(list) = settings.rule_list(h.account_id).await.unwrap() else {
+        panic!("permission")
+    };
+    assert_eq!(list.rules, vec![made]);
+    assert_eq!(list.place, crate::RulesPlace::Server);
+    assert!(list.elsewhere.is_empty());
+    assert!(!list.waiting);
+}

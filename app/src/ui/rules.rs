@@ -1,5 +1,7 @@
-//! The Rules dialog: Gmail filters for one account, listed in plain words,
-//! with a form to add one or edit one.
+//! The Rules dialog: an account's rules, listed in plain words, with a form
+//! to add one or edit one. Gmail keeps them as filters, a ManageSieve
+//! server in the app's Sieve script, and an account whose server runs none
+//! on this computer.
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -7,21 +9,32 @@ use std::rc::Rc;
 use adw::prelude::*;
 use gtk::glib;
 use mailrs_domain::{Account, Filter, Label, LabelKind};
-use mailrs_sync::{Permitted, Replaced};
+use mailrs_sync::{BackendError, Permitted, Replaced, RuleList, SyncError};
 
 use crate::core::Core;
 use crate::permission::Permission;
-use crate::rules::{RuleForm, Unshown, describe_action, describe_criteria};
+use crate::offered::Filing;
+use crate::rules::{
+    RuleForm, Unshown, describe_action, describe_criteria, offers_never_spam, place_line,
+    waiting_line,
+};
 use crate::ui::permission;
 use mailrs_domain::translate::{fill, gettext, with_reason};
+
+/// The save to repeat once the person has agreed to replace a script.
+type Retry = dyn Fn(&Rc<Rules>);
 
 struct Rules {
     core: Rc<Core>,
     account: Account,
     labels: Vec<Label>,
+    filing: Filing,
     nav: adw::NavigationView,
     stack: gtk::Stack,
+    page: adw::PreferencesPage,
     list: adw::PreferencesGroup,
+    /// The group of rules written elsewhere, removed on each reload.
+    elsewhere: RefCell<Option<adw::PreferencesGroup>>,
     /// Rows in `list` now, removed on each reload.
     shown: RefCell<Vec<adw::ActionRow>>,
     toasts: adw::ToastOverlay,
@@ -35,6 +48,7 @@ pub fn present(
     core: &Rc<Core>,
     account: &Account,
     labels: Vec<Label>,
+    filing: Filing,
     parent: &impl IsA<gtk::Widget>,
     grant: impl Fn() + 'static,
 ) {
@@ -50,11 +64,7 @@ pub fn present(
             .build(),
         Some("loading"),
     );
-    let list = adw::PreferencesGroup::builder()
-        .description(gettext(
-            "Gmail runs these on new mail as it arrives, even when this computer is off.",
-        ))
-        .build();
+    let list = adw::PreferencesGroup::new();
     let page = adw::PreferencesPage::new();
     page.add(&list);
     stack.add_named(&page, Some("list"));
@@ -95,9 +105,12 @@ pub fn present(
         core: Rc::clone(core),
         account: account.clone(),
         labels,
+        filing,
         nav,
         stack,
+        page,
         list,
+        elsewhere: RefCell::new(None),
         shown: RefCell::new(Vec::new()),
         toasts,
         grant: Box::new(grant),
@@ -146,21 +159,35 @@ impl Rules {
         glib::spawn_future_local(async move {
             let loaded = this
                 .core
-                .call(async move { settings.rules(account_id).await })
+                .call(async move { settings.rule_list(account_id).await })
                 .await;
             match loaded {
-                Ok(Permitted::Done(filters)) => this.show_list(filters),
+                Ok(Permitted::Done(list)) => this.show_list(list),
                 Ok(Permitted::NeedsPermission) => this.ask_for_access(),
                 Err(err) => this.problem(&err.to_string()),
             }
         });
     }
 
-    fn show_list(self: &Rc<Self>, filters: Vec<Filter>) {
+    fn show_list(self: &Rc<Self>, list: RuleList) {
         for row in self.shown.borrow_mut().drain(..) {
             self.list.remove(&row);
         }
-        if filters.is_empty() {
+        if let Some(old) = self.elsewhere.borrow_mut().take() {
+            self.page.remove(&old);
+        }
+        let provider = mailrs_discover::resolved_provider_name(self.account.provider_name());
+        self.list.set_description(Some(&place_line(list.place, &provider)));
+        if list.waiting {
+            let row = adw::ActionRow::builder()
+                .title(glib::markup_escape_text(&waiting_line(&provider)))
+                .css_classes(["warning"])
+                .build();
+            row.add_prefix(&gtk::Image::from_icon_name("network-offline-symbolic"));
+            self.list.add(&row);
+            self.shown.borrow_mut().push(row);
+        }
+        if list.rules.is_empty() {
             let row = adw::ActionRow::builder()
                 .title(gettext("No rules yet"))
                 .subtitle(gettext("Add one with the + button."))
@@ -168,7 +195,7 @@ impl Rules {
             self.list.add(&row);
             self.shown.borrow_mut().push(row);
         }
-        for filter in filters {
+        for filter in list.rules {
             let criteria = describe_criteria(&filter.criteria);
             let row = adw::ActionRow::builder()
                 .title(glib::markup_escape_text(&criteria))
@@ -230,6 +257,28 @@ impl Rules {
             row.add_suffix(&gtk::Image::from_icon_name("go-next-symbolic"));
             self.list.add(&row);
             self.shown.borrow_mut().push(row);
+        }
+        if !list.elsewhere.is_empty() {
+            let group = adw::PreferencesGroup::builder()
+                .title(gettext("Rules Written Elsewhere"))
+                .description(gettext(
+                    "Penguin Mail keeps these as they are. Change them where they were written.",
+                ))
+                .build();
+            for block in &list.elsewhere {
+                let first = block
+                    .lines()
+                    .map(str::trim)
+                    .find(|l| !l.is_empty() && !l.starts_with('#'))
+                    .unwrap_or(block.as_str());
+                let row = adw::ActionRow::builder()
+                    .title(glib::markup_escape_text(first))
+                    .build();
+                row.add_suffix(&gtk::Image::from_icon_name("changes-prevent-symbolic"));
+                group.add(&row);
+            }
+            self.page.add(&group);
+            *self.elsewhere.borrow_mut() = Some(group);
         }
         self.stack.set_visible_child_name("list");
     }
@@ -314,11 +363,15 @@ impl Rules {
             switch(&gettext("Never Send to Spam")),
             switch(&gettext("Delete It")),
         );
-        let mut names = vec![gettext("Don't Apply a Label")];
+        let (label_title, no_label) = match self.filing {
+            Filing::Labels => (gettext("Apply Label"), gettext("Don't Apply a Label")),
+            Filing::Folders => (gettext("Move to Folder"), gettext("Don't Move")),
+        };
+        let mut names = vec![no_label];
         names.extend(self.labels.iter().map(|l| l.name.replace('/', " › ")));
         let refs: Vec<&str> = names.iter().map(String::as_str).collect();
         let label = adw::ComboRow::builder()
-            .title(gettext("Apply Label"))
+            .title(label_title)
             .model(&gtk::StringList::new(&refs))
             .build();
         let then = adw::PreferencesGroup::builder()
@@ -328,7 +381,9 @@ impl Rules {
             then.add(row);
         }
         then.add(&label);
-        then.add(&never_spam);
+        if offers_never_spam(self.filing) {
+            then.add(&never_spam);
+        }
         then.add(&trash);
 
         let page = adw::PreferencesPage::new();
@@ -435,6 +490,7 @@ impl Rules {
         let (this, settings, account_id) =
             (Rc::clone(self), self.core.gmail_settings(), self.account.id);
         glib::spawn_future_local(async move {
+            let again = filter.clone();
             let added = this
                 .core
                 .call(async move { settings.add_rule(account_id, filter).await })
@@ -447,7 +503,16 @@ impl Rules {
                 }
                 Err(err) => {
                     button.set_sensitive(true);
-                    this.failed(&gettext("Could not add the rule: {reason}"), &err);
+                    match would_replace(&err) {
+                        Some(script) => {
+                            let retry = button.clone();
+                            this.ask_to_replace(script, move |rules| {
+                                retry.set_sensitive(false);
+                                rules.add(again.clone(), retry.clone());
+                            });
+                        }
+                        None => this.failed(&gettext("Could not add the rule: {reason}"), &err),
+                    }
                 }
             }
         });
@@ -458,6 +523,7 @@ impl Rules {
         let (this, settings, account_id) =
             (Rc::clone(self), self.core.gmail_settings(), self.account.id);
         glib::spawn_future_local(async move {
+            let (old_again, filter_again) = (old.clone(), filter.clone());
             let replaced = this
                 .core
                 .call(async move { settings.replace_rule(account_id, &old, filter).await })
@@ -480,10 +546,59 @@ impl Rules {
                 }
                 Err(err) => {
                     button.set_sensitive(true);
-                    this.failed(&gettext("Could not save the rule: {reason}"), &err);
+                    match would_replace(&err) {
+                        Some(script) => {
+                            let retry = button.clone();
+                            this.ask_to_replace(script, move |rules| {
+                                retry.set_sensitive(false);
+                                rules.replace(old_again.clone(), filter_again.clone(), retry.clone());
+                            });
+                        }
+                        None => this.failed(&gettext("Could not save the rule: {reason}"), &err),
+                    }
                 }
             }
         });
+    }
+
+    /// Asks before Penguin Mail's rules take the place of the script the
+    /// person runs on a server that runs one script and cannot include
+    /// another. `retry` repeats the save that was refused, after the
+    /// takeover. Cancel changes nothing on the server.
+    fn ask_to_replace(self: &Rc<Self>, script: String, retry: impl Fn(&Rc<Self>) + 'static) {
+        let provider = mailrs_discover::resolved_provider_name(self.account.provider_name());
+        let dialog = adw::AlertDialog::builder()
+            .heading(fill(&gettext("Replace “{script}”?"), &[("script", &script)]))
+            .body(fill(
+                &gettext("{provider} runs one set of rules at a time, and it runs “{script}” now. Penguin Mail's rules would take its place; “{script}” stays on the server, switched off."),
+                &[("provider", &provider), ("script", &script)],
+            ))
+            .build();
+        dialog.add_responses(&[("cancel", &gettext("Cancel")), ("replace", &gettext("Replace"))]);
+        dialog.set_response_appearance("replace", adw::ResponseAppearance::Destructive);
+        dialog.set_default_response(Some("cancel"));
+        dialog.set_close_response("cancel");
+        let retry: Rc<Retry> = Rc::new(retry);
+        let weak = Rc::downgrade(self);
+        dialog.connect_response(None, move |_, response| {
+            let Some(rules) = weak.upgrade() else { return };
+            if response != "replace" {
+                return;
+            }
+            let (settings, account_id) = (rules.core.gmail_settings(), rules.account.id);
+            let retry = Rc::clone(&retry);
+            glib::spawn_future_local(async move {
+                let taken = rules
+                    .core
+                    .call(async move { settings.take_over_rules(account_id).await })
+                    .await;
+                match taken {
+                    Ok(()) => retry(&rules),
+                    Err(err) => rules.failed(&gettext("Could not add the rule: {reason}"), &err),
+                }
+            });
+        });
+        dialog.present(Some(&self.dialog));
     }
 
     /// Back to the list after a save, which it then shows again.
@@ -491,5 +606,13 @@ impl Rules {
         self.nav.pop();
         self.toast(said);
         self.reload();
+    }
+}
+
+/// The name of the script a refused write would replace.
+fn would_replace(err: &anyhow::Error) -> Option<String> {
+    match err.downcast_ref::<SyncError>() {
+        Some(SyncError::Backend(BackendError::WouldReplace { script })) => Some(script.clone()),
+        _ => None,
     }
 }

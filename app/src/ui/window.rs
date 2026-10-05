@@ -3362,7 +3362,8 @@ impl MainWindow {
     fn show_rules(self: &Rc<Self>, account: Account) {
         let labels = self.labels_of(account.id);
         let (grant, email) = (Rc::downgrade(self), account.email.clone());
-        super::rules::present(&self.core, &account, labels, &self.window, move || {
+        let filing = crate::offered::Filing::of([self.offers(account.id)]);
+        super::rules::present(&self.core, &account, labels, filing, &self.window, move || {
             if let Some(win) = grant.upgrade() {
                 win.grant(email.clone());
             }
