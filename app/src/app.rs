@@ -12,10 +12,11 @@ use adw::prelude::*;
 use gtk::{gio, glib};
 use ksni::TrayMethods;
 use mailrs_domain::translate::{fill, gettext};
-use mailrs_domain::{Account, AccountId, Address, ChangeEvent, Label, MailSet, Role};
+use mailrs_domain::{Account, AccountId, Address, ChangeEvent, Label, MailSet, Provider, Role};
 use mailrs_store::{accounts, labels, messages, threads};
 use mailrs_sync::{History, MovedFrom};
 
+use crate::app::announce::still_news;
 use crate::compose::Identity;
 use crate::core::Core;
 use crate::notify;
@@ -32,6 +33,7 @@ const BLOCK_REMOTE_RULES: &str = r#"[
   {"trigger": {"url-filter": "^ftp:"}, "action": {"type": "block"}}
 ]"#;
 
+mod announce;
 mod calendar_file;
 mod composing;
 mod hidden;
@@ -219,6 +221,7 @@ impl App {
         app.start_event_reminders();
         app.watch_contacts();
         app.watch_calendars();
+        app.watch_rules();
         app.start_update_checks();
         if !app.core.demo {
             crate::assistant::preload_keys();
@@ -1170,7 +1173,7 @@ impl App {
                         message_ids,
                     } => {
                         this.contacts_stale.set(true);
-                        this.announce(*account_id, message_ids.clone());
+                        this.after_rules(*account_id, message_ids.clone());
                     }
                     ChangeEvent::ThreadsChanged { .. }
                     | ChangeEvent::AccountStateChanged { .. } => this.update_tray(),
@@ -1236,6 +1239,91 @@ impl App {
                 "a notification's button failed"
             );
         }
+    }
+
+    /// Runs local rules over new mail before it is announced, so mail a
+    /// rule files away or marks read raises no notification. An account
+    /// whose rules run on the server announces at once.
+    fn after_rules(self: &Rc<Self>, account_id: AccountId, message_ids: Vec<String>) {
+        if !self.core.rules_here(account_id) {
+            return self.announce(account_id, message_ids);
+        }
+        let this = Rc::clone(self);
+        glib::spawn_future_local(async move {
+            if let Err(err) = this.core.run_rules(account_id).await {
+                tracing::warn!(account = account_id, %err, "local rules did not run");
+            }
+            let ids = message_ids.clone();
+            let kept = this
+                .core
+                .read(move |c| {
+                    Ok(messages::by_ids(c, account_id, &ids)?
+                        .into_iter()
+                        .filter(|m| still_news(m.in_role(Role::Inbox), m.is_unread()))
+                        .map(|m| m.id)
+                        .collect::<Vec<String>>())
+                })
+                .await
+                .unwrap_or(message_ids);
+            if !kept.is_empty() {
+                this.announce(account_id, kept);
+            }
+        });
+    }
+
+    /// Every minute: local rules over mail that came while the app was
+    /// closed or arrived already read, which no new-mail event names, and
+    /// rule changes that waited for a ManageSieve server. Ten seconds
+    /// after start first, once the accounts have started.
+    fn watch_rules(self: &Rc<Self>) {
+        let weak = Rc::downgrade(self);
+        glib::timeout_add_seconds_local_once(10, {
+            let weak = weak.clone();
+            move || {
+                if let Some(app) = weak.upgrade() {
+                    app.rules_tick();
+                }
+            }
+        });
+        glib::timeout_add_seconds_local(60, move || match weak.upgrade() {
+            Some(app) => {
+                app.rules_tick();
+                glib::ControlFlow::Continue
+            }
+            None => glib::ControlFlow::Break,
+        });
+    }
+
+    fn rules_tick(self: &Rc<Self>) {
+        let accounts: Vec<AccountId> = self
+            .accounts
+            .borrow()
+            .iter()
+            .filter(|a| a.provider == Provider::Imap)
+            .map(|a| a.id)
+            .collect();
+        let this = Rc::clone(self);
+        glib::spawn_future_local(async move {
+            for account_id in accounts {
+                if this.core.rules_here(account_id) {
+                    if let Err(err) = this.core.run_rules(account_id).await {
+                        tracing::warn!(account = account_id, %err, "local rules did not run");
+                    }
+                    continue;
+                }
+                if !this.core.network() {
+                    continue;
+                }
+                match this.core.send_rule_changes(account_id).await {
+                    Ok(sent) => {
+                        for words in sent.refused {
+                            this.tell_window(Notice::RuleRefused(words));
+                        }
+                    }
+                    Err(err) => tracing::info!(account = account_id, %err, "rule changes still wait"),
+                }
+            }
+        });
     }
 
     fn announce(self: &Rc<Self>, account_id: AccountId, message_ids: Vec<String>) {

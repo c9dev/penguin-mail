@@ -107,6 +107,7 @@ pub struct Core {
     calendar: Arc<mailrs_sync::Calendar<RunningEngine>>,
     calendar_copy: Arc<CalendarCopy>,
     outbox: Arc<Waiting>,
+    rules: Arc<mailrs_sync::rules::RulesEngine<RunningEngine>>,
     /// The sync settings and, for accounts added through the old setup
     /// page, their own Google client.
     config: RefCell<Config>,
@@ -242,6 +243,7 @@ impl Core {
         };
         let actions = Arc::new(MailActions::new(Arc::clone(&engine), db.clone(), one_click));
         let lists = Arc::new(Mailboxes::new(Arc::clone(&engine), db.clone()));
+        let rules = Arc::new(mailrs_sync::rules::RulesEngine::new(Arc::clone(&engine), db.clone(), Arc::clone(&actions)));
         let gmail_settings = Arc::new(AccountSettings::new(Arc::clone(&engine), db.clone()));
         let photo_dir = contact_photo_dir(demo, &dir);
         if demo {
@@ -275,6 +277,7 @@ impl Core {
             calendar,
             calendar_copy,
             outbox,
+            rules,
             config: RefCell::new(config),
             pgp: Pgp::find().ok(),
             smime: Smime::find().ok(),
@@ -526,6 +529,25 @@ impl Core {
 
     pub fn account(&self, account_id: AccountId) -> Option<Arc<Sync>> {
         self.engine.account(account_id)
+    }
+
+    /// Whether the account's rules run on this computer.
+    pub fn rules_here(&self, account_id: AccountId) -> bool {
+        self.account(account_id)
+            .and_then(|sync| sync.services().rules.as_ref().map(|r| r.place()))
+            == Some(mailrs_sync::RulesPlace::ThisComputer)
+    }
+
+    /// Runs the account's local rules over its new Inbox mail.
+    pub async fn run_rules(&self, account_id: AccountId) -> Result<mailrs_sync::rules::Ran> {
+        let rules = Arc::clone(&self.rules);
+        self.call(async move { rules.run_due(account_id).await }).await
+    }
+
+    /// Sends rule changes that waited for a ManageSieve server.
+    pub async fn send_rule_changes(&self, account_id: AccountId) -> Result<mailrs_sync::SentRules> {
+        let settings = Arc::clone(&self.gmail_settings);
+        self.call(async move { settings.send_rule_changes(account_id).await }).await
     }
 
     /// Mail actions and the undo stack behind them. See
