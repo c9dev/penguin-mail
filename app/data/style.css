@@ -1509,3 +1509,11 @@ list.post-field.post-wrong > row:focus-within label.subtitle { color: var(--post
 .post-card.with-source .post-links { margin-top: 18px; margin-bottom: 4px; }
 .post-card.trouble .post-links { margin-bottom: 4px; }
 .post-fields > list.post-list.post-after-refusal { margin-top: 37px; }
+
+/* The list in Messages That Will Not Download. libadwaita leaves 18 px
+   above an alert's extra child (10 px of spacing and an 8 px margin) and
+   21 px below it (9 px under the message area and 12 px over the
+   buttons), and 14 and 18 px in a short window. The difference goes on
+   top, so the list sits midway between the words and the button. */
+dialog.alert .failing-list { margin-top: 3px; }
+dialog.alert.short .failing-list { margin-top: 4px; }
