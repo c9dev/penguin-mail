@@ -7,6 +7,20 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### New
 
+- Add Outlook.com, Hotmail and Microsoft 365 accounts: choose Microsoft in
+  Add Account, or on the first page, and sign in on Microsoft's own page.
+- Outlook accounts get their calendars, with repeating events, invitations
+  and the calendar list, and their contacts, rules and automatic reply.
+- Outlook accounts get a Tags button and Focused and Other tabs over the
+  inbox.
+- Fastmail, iCloud, Yahoo and other accounts added with a password get their
+  calendars and contacts: Penguin Mail finds their CalDAV and CardDAV
+  servers, and Preferences shows what it found and lets you type an address
+  it missed.
+- Rules for accounts added with a password: on the mail server where it runs
+  them, with the automatic reply beside them, or on this computer while
+  Penguin Mail is open where it does not. A rule change made while the server
+  is not answering goes out once it does.
 - Markdown you paste into a rich text message arrives formatted, with Paste
   as Plain Text on the notice that follows if you wanted the marks. Markdown
   you type shows a bar with a Format button that turns it into rich text.
