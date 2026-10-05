@@ -61,6 +61,16 @@ pub struct Uidl {
     pub uidl: String,
 }
 
+/// A `UIDL` answer.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct UidlListing {
+    /// Each message's number and name, in the server's order.
+    pub messages: Vec<Uidl>,
+    /// Lines that did not read as a number and a name, each logged. The
+    /// messages they stood for are missing from `messages`.
+    pub unreadable: usize,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ListItem {
     pub id: u32,
@@ -74,10 +84,12 @@ pub trait Pop3Api: Send + Sync + 'static {
     /// that cannot answer `UIDL` with `Unsupported("UIDL")`.
     fn connect(&self) -> impl Future<Output = Result<Capabilities, Pop3Error>> + Send;
     fn stat(&self) -> impl Future<Output = Result<Stat, Pop3Error>> + Send;
-    fn uidl(&self) -> impl Future<Output = Result<Vec<Uidl>, Pop3Error>> + Send;
+    fn uidl(&self) -> impl Future<Output = Result<UidlListing, Pop3Error>> + Send;
     fn list(&self) -> impl Future<Output = Result<Vec<ListItem>, Pop3Error>> + Send;
     /// The whole message, its dots undone, up to [`MOST_MESSAGE_BYTES`].
-    fn retr(&self, id: u32) -> impl Future<Output = Result<Vec<u8>, Pop3Error>> + Send;
+    /// `octets` is the size `LIST` gave, which sizes the buffer; a longer
+    /// answer still reads, up to the cap.
+    fn retr(&self, id: u32, octets: u64) -> impl Future<Output = Result<Vec<u8>, Pop3Error>> + Send;
     fn top(&self, id: u32, lines: u32) -> impl Future<Output = Result<Vec<u8>, Pop3Error>> + Send;
     /// Marks message `id` for deletion at a clean `QUIT`.
     fn dele(&self, id: u32) -> impl Future<Output = Result<(), Pop3Error>> + Send;
@@ -190,9 +202,12 @@ impl Session {
     }
 
     /// A multiline answer's body, its dots undone, its lines ending CRLF,
-    /// up to `cap` bytes.
-    async fn multiline(&mut self, cap: u64) -> Result<Vec<u8>, Pop3Error> {
-        let mut body = Vec::new();
+    /// up to `cap` bytes. `expected` bytes are set aside at the start, so
+    /// an answer of the size the server announced takes one allocation,
+    /// where growing by doubling could hold twice the message at the end.
+    async fn multiline(&mut self, cap: u64, expected: u64) -> Result<Vec<u8>, Pop3Error> {
+        let room = usize::try_from(expected.min(cap)).unwrap_or(0);
+        let mut body = Vec::with_capacity(room);
         let mut line = Vec::new();
         loop {
             line.clear();
@@ -210,6 +225,11 @@ impl Session {
             }
             let text = trimmed(&line);
             if text == b"." {
+                // A server that announced more than it sent leaves room to
+                // give back.
+                if body.capacity() - body.len() > body.len() / 8 {
+                    body.shrink_to_fit();
+                }
                 return Ok(body);
             }
             body.extend_from_slice(wire::undot(text));
@@ -223,7 +243,7 @@ impl Session {
     /// A multiline answer read as text lines.
     async fn listing(&mut self, command: &str) -> Result<Vec<String>, Pop3Error> {
         self.command(command).await?;
-        let body = self.multiline(MOST_MESSAGE_BYTES).await?;
+        let body = self.multiline(MOST_MESSAGE_BYTES, 0).await?;
         Ok(String::from_utf8_lossy(&body).lines().map(str::to_string).collect())
     }
 
@@ -353,13 +373,22 @@ impl<C: Connect> Pop3Api for Pop3Client<C> {
         kept(&mut held, answer)
     }
 
-    async fn uidl(&self) -> Result<Vec<Uidl>, Pop3Error> {
+    async fn uidl(&self) -> Result<UidlListing, Pop3Error> {
         let mut held = self.session.lock().await;
         let session = held.as_mut().ok_or_else(no_session)?;
-        let answer = session
-            .listing("UIDL\r\n")
-            .await
-            .map(|lines| lines.iter().filter_map(|l| wire::uidl_line(l)).collect());
+        let answer = session.listing("UIDL\r\n").await.map(|lines| {
+            let mut listing = UidlListing::default();
+            for line in &lines {
+                match wire::uidl_line(line) {
+                    Some(uidl) => listing.messages.push(uidl),
+                    None => {
+                        tracing::warn!(line, "a UIDL line that does not read");
+                        listing.unreadable += 1;
+                    }
+                }
+            }
+            listing
+        });
         kept(&mut held, answer)
     }
 
@@ -373,11 +402,11 @@ impl<C: Connect> Pop3Api for Pop3Client<C> {
         kept(&mut held, answer)
     }
 
-    async fn retr(&self, id: u32) -> Result<Vec<u8>, Pop3Error> {
+    async fn retr(&self, id: u32, octets: u64) -> Result<Vec<u8>, Pop3Error> {
         let mut held = self.session.lock().await;
         let session = held.as_mut().ok_or_else(no_session)?;
         let answer = match session.command(&format!("RETR {id}\r\n")).await {
-            Ok(_) => session.multiline(MOST_MESSAGE_BYTES).await,
+            Ok(_) => session.multiline(MOST_MESSAGE_BYTES, octets).await,
             Err(err) => Err(err),
         };
         kept(&mut held, answer)
@@ -387,7 +416,7 @@ impl<C: Connect> Pop3Api for Pop3Client<C> {
         let mut held = self.session.lock().await;
         let session = held.as_mut().ok_or_else(no_session)?;
         let answer = match session.command(&format!("TOP {id} {lines}\r\n")).await {
-            Ok(_) => session.multiline(MOST_MESSAGE_BYTES).await,
+            Ok(_) => session.multiline(MOST_MESSAGE_BYTES, 0).await,
             Err(err) => Err(err),
         };
         kept(&mut held, answer)
@@ -481,14 +510,14 @@ mod tests {
         assert!(caps.uidl && caps.sasl_plain && caps.top && !caps.stls);
         assert_eq!(client.stat().await.unwrap(), Stat { count: 2, octets: 150 });
         assert_eq!(
-            client.uidl().await.unwrap(),
+            client.uidl().await.unwrap().messages,
             [Uidl { id: 1, uidl: "a1".into() }, Uidl { id: 2, uidl: "a2".into() }]
         );
         assert_eq!(
             client.list().await.unwrap(),
             [ListItem { id: 1, octets: 120 }, ListItem { id: 2, octets: 30 }]
         );
-        assert_eq!(client.retr(1).await.unwrap(), b"Subject: test\r\n\r\n.dot line\r\n");
+        assert_eq!(client.retr(1, 31).await.unwrap(), b"Subject: test\r\n\r\n.dot line\r\n");
         assert_eq!(client.top(2, 0).await.unwrap(), b"Subject: two\r\n\r\n");
         client.dele(1).await.unwrap();
         client.quit().await.unwrap();
@@ -574,8 +603,50 @@ mod tests {
             ],
         );
         client.connect().await.unwrap();
-        assert_eq!(client.retr(3).await, Err(Pop3Error::Refused("no such message".into())));
+        assert_eq!(client.retr(3, 0).await, Err(Pop3Error::Refused("no such message".into())));
         client.dele(2).await.unwrap();
+    }
+
+    /// A buffer grown by doubling can hold twice the message at its last
+    /// step. LIST says how large the message is, so one allocation holds it.
+    #[tokio::test]
+    async fn a_retr_answer_fills_one_buffer_of_the_size_list_gave() {
+        let body = format!("{}\r\n", "x".repeat(98)).repeat(6_000);
+        let answer: &'static str = Box::leak(format!("+OK\r\n{body}.\r\n").into_boxed_str());
+        let (client, _server) = scripted(
+            false,
+            vec![
+                ("CAPA", "+OK\r\nUIDL\r\nUSER\r\n.\r\n"),
+                ("USER me", "+OK\r\n"),
+                ("PASS pw", "+OK\r\n"),
+                ("RETR 1", answer),
+            ],
+        );
+        client.connect().await.unwrap();
+        let raw = client.retr(1, body.len() as u64).await.unwrap();
+        assert_eq!(raw.len(), body.len());
+        assert_eq!(raw.capacity(), body.len(), "no room past the message");
+    }
+
+    #[tokio::test]
+    async fn a_uidl_line_that_does_not_read_is_counted() {
+        let (client, _server) = scripted(
+            false,
+            vec![
+                ("CAPA", "+OK\r\nUIDL\r\nUSER\r\n.\r\n"),
+                ("USER me", "+OK\r\n"),
+                ("PASS pw", "+OK\r\n"),
+                ("UIDL", "+OK\r\n1 a1\r\n2\r\nx a3\r\n4 a4\r\n.\r\n"),
+            ],
+        );
+        client.connect().await.unwrap();
+        assert_eq!(
+            client.uidl().await.unwrap(),
+            UidlListing {
+                messages: vec![Uidl { id: 1, uidl: "a1".into() }, Uidl { id: 4, uidl: "a4".into() }],
+                unreadable: 2,
+            }
+        );
     }
 
     #[tokio::test]
@@ -583,7 +654,7 @@ mod tests {
         let (ours, mut theirs) = tokio::io::duplex(1024);
         theirs.write_all(b"line one\r\nline two\r\n.\r\n").await.unwrap();
         let mut session = Session::new(Box::new(ours));
-        assert_eq!(session.multiline(12).await, Err(Pop3Error::TooLarge));
+        assert_eq!(session.multiline(12, 0).await, Err(Pop3Error::TooLarge));
     }
 
     #[tokio::test]
@@ -602,7 +673,7 @@ mod tests {
     #[tokio::test]
     async fn a_call_before_connect_has_no_session() {
         let (client, _server) = scripted(false, vec![]);
-        assert!(matches!(client.retr(1).await, Err(Pop3Error::Protocol(_))));
+        assert!(matches!(client.retr(1, 0).await, Err(Pop3Error::Protocol(_))));
     }
 
     #[test]
@@ -617,7 +688,7 @@ mod tests {
     fn every_future_is_send(client: &Pop3Client) {
         is_send(&client.connect());
         is_send(&client.uidl());
-        is_send(&client.retr(1));
+        is_send(&client.retr(1, 0));
         is_send(&client.quit());
     }
 }

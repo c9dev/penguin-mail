@@ -907,11 +907,81 @@ fn migration_50_counts_an_account_with_downloaded_mail_as_finished() {
     .unwrap();
     drop(conn);
 
-    let conn = open_with(&path, MIGRATIONS).unwrap();
+    let conn = open_with(&path, &MIGRATIONS[..50]).unwrap();
     assert_eq!(schema_version(&conn).unwrap(), 50);
     let finished = |id: i64| -> i64 {
         conn.query_row("SELECT pop3_first_check_done FROM accounts WHERE id = ?1", [id], |row| row.get(0)).unwrap()
     };
     assert_eq!(finished(2), 1, "it has downloaded mail already");
     assert_eq!(finished(3), 0, "it has downloaded nothing");
+}
+
+/// Migration 51 gives each downloaded UIDL the store id of the message it
+/// brought, so a removal asked for by message finds its row without
+/// reading the UIDL out of the id. Rows from before held `pop3/<uidl>`.
+#[test]
+fn migration_51_names_the_message_each_downloaded_uidl_brought() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("mail.db");
+    let conn = open_with(&path, &MIGRATIONS[..50]).unwrap();
+    conn.execute_batch(
+        "INSERT INTO accounts (id, email, added_at, provider, provider_name) VALUES
+             (2, 'me@example.org', 0, 'pop3', 'Example');
+         INSERT INTO pop3_seen (account_id, uidl, downloaded_at) VALUES (2, 'u1', 0), (2, 'a/b', 0);",
+    )
+    .unwrap();
+    drop(conn);
+
+    let conn = open_with(&path, &MIGRATIONS[..51]).unwrap();
+    assert_eq!(schema_version(&conn).unwrap(), 51);
+    let named: Vec<(String, String)> = conn
+        .prepare("SELECT uidl, message_id FROM pop3_seen ORDER BY uidl")
+        .unwrap()
+        .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))
+        .unwrap()
+        .collect::<rusqlite::Result<_>>()
+        .unwrap();
+    assert_eq!(
+        named,
+        [("a/b".to_string(), "pop3/a/b".to_string()), ("u1".to_string(), "pop3/u1".to_string())]
+    );
+}
+
+/// Migration 52 keeps why each message failed as a code, translated when
+/// shown. An over-size failure stored before it held the words in English
+/// or European Portuguese, which become the code.
+#[test]
+fn migration_52_turns_stored_over_size_words_into_a_reason() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("mail.db");
+    let conn = open_with(&path, &MIGRATIONS[..51]).unwrap();
+    conn.execute_batch(
+        "INSERT INTO accounts (id, email, added_at, provider, provider_name) VALUES
+             (2, 'me@example.org', 0, 'pop3', 'Example');
+         INSERT INTO pop3_failures (account_id, uidl, failures, last_error) VALUES
+             (2, 'big', 3, 'The message is larger than Penguin Mail downloads.'),
+             (2, 'grande', 3, 'A mensagem é maior do que o Penguin Mail transfere.'),
+             (2, 'locked', 3, 'mailbox locked');",
+    )
+    .unwrap();
+    drop(conn);
+
+    let conn = open_with(&path, &MIGRATIONS[..52]).unwrap();
+    assert_eq!(schema_version(&conn).unwrap(), 52);
+    let rows: Vec<(String, String, String)> = conn
+        .prepare("SELECT uidl, reason, last_error FROM pop3_failures ORDER BY uidl")
+        .unwrap()
+        .query_map([], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)))
+        .unwrap()
+        .collect::<rusqlite::Result<_>>()
+        .unwrap();
+    let row = |uidl: &str, reason: &str, words: &str| (uidl.to_string(), reason.to_string(), words.to_string());
+    assert_eq!(
+        rows,
+        [row("big", "too_large", ""), row("grande", "too_large", ""), row("locked", "refused", "mailbox locked")]
+    );
+    assert!(
+        conn.execute("UPDATE pop3_failures SET reason = 'tired'", []).is_err(),
+        "a reason is one of the codes"
+    );
 }

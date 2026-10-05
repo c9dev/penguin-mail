@@ -12,6 +12,7 @@ mod wire;
 
 pub use client::{
     Capabilities, Connect, Io, ListItem, Login, Pop3Api, Pop3Client, Pop3Tls, Stat, Stream, Uidl,
+    UidlListing,
 };
 pub use error::Pop3Error;
 

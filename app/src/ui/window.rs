@@ -2923,10 +2923,7 @@ impl MainWindow {
                 &gettext("Remove {account}?"),
                 &[("account", &account.email)],
             ),
-            &gettext(
-                "Its downloaded mail and saved sign-in are deleted from this computer. \
-                 Nothing changes in Gmail.",
-            ),
+            &crate::offered::remove_account_body(&account),
             &gettext("Remove"),
             Tone::Destructive,
         );

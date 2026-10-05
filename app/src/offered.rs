@@ -3,6 +3,7 @@
 
 use mailrs_domain::translate::{fill, gettext};
 use mailrs_domain::{Account, AccountId, Category, Provider};
+use mailrs_store::pop3::{FailReason, Failing};
 use mailrs_sync::{AccountServices, Mailbox, Missing, Offers, Withheld};
 
 /// What an account offers. An account that is not running yet has no
@@ -478,18 +479,63 @@ pub fn missing_name(address: &str, reason: &str) -> String {
 }
 
 /// One line per message a POP3 server would not hand over after three
-/// tries, with the server's own words.
-pub fn failing_lines(failing: &[(String, String)]) -> Vec<String> {
+/// tries: its subject and sender where a `TOP` read them, else its place
+/// in the list, then why, in the server's own words for a refusal.
+pub fn failing_lines(failing: &[Failing]) -> Vec<String> {
     failing
         .iter()
         .enumerate()
-        .map(|(n, (_, words))| {
-            fill(
-                &gettext("Message {number}: {words}"),
-                &[("number", &(n + 1).to_string()), ("words", words)],
-            )
+        .map(|(n, failed)| {
+            let words = match failed.reason {
+                FailReason::Refused if !failed.words.is_empty() => failed.words.clone(),
+                FailReason::Refused => gettext("The server would not hand it over."),
+                FailReason::TooLarge => {
+                    gettext("The message is larger than Penguin Mail downloads.")
+                }
+                FailReason::Unreadable => {
+                    gettext("Penguin Mail could not read the server's answer.")
+                }
+                FailReason::Dropped => {
+                    gettext("The connection closed while the message downloaded.")
+                }
+            };
+            let number = (n + 1).to_string();
+            match (failed.subject.as_deref(), failed.sender.as_deref()) {
+                (Some(subject), Some(sender)) => fill(
+                    &gettext("“{subject}” from {sender}: {words}"),
+                    &[("subject", subject), ("sender", sender), ("words", &words)],
+                ),
+                (Some(subject), None) => fill(
+                    &gettext("“{subject}”: {words}"),
+                    &[("subject", subject), ("words", &words)],
+                ),
+                (None, Some(sender)) => fill(
+                    &gettext("A message from {sender}: {words}"),
+                    &[("sender", sender), ("words", &words)],
+                ),
+                (None, None) => fill(
+                    &gettext("Message {number}: {words}"),
+                    &[("number", &number), ("words", &words)],
+                ),
+            }
         })
         .collect()
+}
+
+/// What Remove Account's confirmation says happens to `account`'s mail.
+/// A POP3 account's mail lives only in the store, and under a removal
+/// setting the server has let go of it, so removing the account loses it.
+pub fn remove_account_body(account: &Account) -> String {
+    match account.provider {
+        Provider::Pop3 => gettext(
+            "Its mail exists only on this computer, and removing the account deletes it \
+             with the saved sign-in. Nothing changes on the server.",
+        ),
+        _ => gettext(
+            "Its downloaded mail and saved sign-in are deleted from this computer. \
+             Nothing changes in Gmail.",
+        ),
+    }
 }
 
 /// About's line for each account whose mail lives only in the store.
@@ -500,7 +546,7 @@ pub fn kept_here_lines(accounts: &[Account]) -> Vec<String> {
         .map(|account| {
             fill(
                 &gettext(
-                    "Mail from {address} is kept only on this computer; back up this file to keep it.",
+                    "Mail from {address} is kept only on this computer. To keep a copy, quit Penguin Mail, then back up this file.",
                 ),
                 &[("address", &account.email)],
             )
@@ -519,10 +565,12 @@ pub fn reads_send_as(account: &Account) -> bool {
 #[cfg(test)]
 mod tests {
     use mailrs_domain::{Account, AccountState, Provider};
+    use mailrs_store::pop3::{FailReason, Failing};
     use mailrs_sync::{Missing, Offers};
 
     use super::{
-        failing_lines, hides_addresses, kept_here_lines, offers_for, reason, shows_space_switch,
+        failing_lines, hides_addresses, kept_here_lines, offers_for, reason, remove_account_body,
+        shows_space_switch,
         withheld_for,
     };
     use crate::settings::Space;
@@ -554,15 +602,52 @@ mod tests {
         );
     }
 
+    fn failed(reason: FailReason, words: &str, sender: Option<&str>, subject: Option<&str>) -> Failing {
+        Failing {
+            uidl: "u1".into(),
+            reason,
+            words: words.into(),
+            sender: sender.map(Into::into),
+            subject: subject.map(Into::into),
+        }
+    }
+
     #[test]
-    fn each_message_that_will_not_download_reads_with_the_servers_words() {
+    fn each_message_that_will_not_download_reads_with_its_name_and_reason() {
         let failing = [
-            ("u1".to_string(), "no such message".to_string()),
-            ("u9".to_string(), "locked".to_string()),
+            failed(FailReason::Refused, "no such message", Some("Ana Lima"), Some("Photos")),
+            failed(FailReason::TooLarge, "", None, Some("Scans")),
+            failed(FailReason::Dropped, "", Some("Bo"), None),
+            failed(FailReason::Unreadable, "", None, None),
+            failed(FailReason::Refused, "", None, None),
         ];
         assert_eq!(
             failing_lines(&failing),
-            ["Message 1: no such message", "Message 2: locked"]
+            [
+                "“Photos” from Ana Lima: no such message",
+                "“Scans”: The message is larger than Penguin Mail downloads.",
+                "A message from Bo: The connection closed while the message downloaded.",
+                "Message 4: Penguin Mail could not read the server's answer.",
+                "Message 5: The server would not hand it over.",
+            ]
+        );
+    }
+
+    #[test]
+    fn removing_a_pop3_account_says_its_mail_goes_with_it() {
+        assert_eq!(
+            remove_account_body(&pop3_account()),
+            "Its mail exists only on this computer, and removing the account deletes it \
+             with the saved sign-in. Nothing changes on the server."
+        );
+        let gmail = Account {
+            provider: Provider::Gmail,
+            ..pop3_account()
+        };
+        assert_eq!(
+            remove_account_body(&gmail),
+            "Its downloaded mail and saved sign-in are deleted from this computer. \
+             Nothing changes in Gmail."
         );
     }
 
@@ -575,7 +660,7 @@ mod tests {
         };
         assert_eq!(
             kept_here_lines(&[imap, pop3_account()]),
-            ["Mail from dana@example.org is kept only on this computer; back up this file to keep it."]
+            ["Mail from dana@example.org is kept only on this computer. To keep a copy, quit Penguin Mail, then back up this file."]
         );
     }
 

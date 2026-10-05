@@ -171,180 +171,180 @@ msgstr ""
 msgid "Penguin Mail cannot reach {provider} yet."
 msgstr "O Penguin Mail ainda não consegue aceder a {provider}."
 
-#: app/src/add_account.rs:415
+#: app/src/add_account.rs:430
 msgid "{provider} also offers POP3"
 msgstr "{provider} também oferece POP3"
 
-#: app/src/add_account.rs:424
+#: app/src/add_account.rs:439
 msgid "Incoming"
 msgstr "Receção"
 
-#: app/src/add_account.rs:425
+#: app/src/add_account.rs:440
 msgid "Incoming over {protocol}"
 msgstr "Receção por {protocol}"
 
-#: app/src/add_account.rs:433
+#: app/src/add_account.rs:448
 msgid "Penguin Mail found no mail servers for {domain}. Enter them below."
 msgstr ""
 "O Penguin Mail não encontrou servidores de correio para {domain}. Introduza-"
 "os abaixo."
 
-#: app/src/add_account.rs:458
+#: app/src/add_account.rs:473
 msgid "{provider} needs an app password."
 msgstr "{provider} precisa de uma palavra-passe de aplicação."
 
-#: app/src/add_account.rs:460
+#: app/src/add_account.rs:475
 msgid "With two-step sign-in on, {provider} needs an app password."
 msgstr ""
 "Com a verificação em dois passos ativa, {provider} precisa de uma palavra-"
 "passe de aplicação."
 
-#: app/src/add_account.rs:466
+#: app/src/add_account.rs:481
 msgid "Make one in {provider}'s settings."
 msgstr "Crie uma nas definições de {provider}."
 
-#: app/src/add_account.rs:476
+#: app/src/add_account.rs:491
 msgid "App Password"
 msgstr "Palavra-passe de aplicação"
 
-#: app/src/add_account.rs:477
+#: app/src/add_account.rs:492
 msgid "Password"
 msgstr "Palavra-passe"
 
-#: app/src/add_account.rs:512
+#: app/src/add_account.rs:527
 msgid "{host} · port {port} · {security}"
 msgstr "{host} · porta {port} · {security}"
 
-#: app/src/add_account.rs:529 app/src/add_account.rs:533
+#: app/src/add_account.rs:544 app/src/add_account.rs:548
 msgid "{first} and {host}"
 msgstr "{first} e {host}"
 
-#: app/src/add_account.rs:541
+#: app/src/add_account.rs:556
 msgid "{first} and {second}"
 msgstr "{first} e {second}"
 
-#: app/src/add_account.rs:549
+#: app/src/add_account.rs:564
 msgid "{hosts} · {security}"
 msgstr "{hosts} · {security}"
 
-#: app/src/add_account.rs:559
+#: app/src/add_account.rs:574
 msgid ""
 "Penguin Mail's own list knows this provider. Nothing has left this computer."
 msgstr ""
 "A lista do Penguin Mail conhece este fornecedor. Nada saiu deste computador."
 
-#: app/src/add_account.rs:561
+#: app/src/add_account.rs:576
 msgid "Found by its mail servers. Nothing else was asked."
 msgstr ""
 "Encontrado pelos seus servidores de correio. Não se perguntou mais nada."
 
-#: app/src/add_account.rs:563
+#: app/src/add_account.rs:578
 msgid "Found in the domain's own settings."
 msgstr "Encontrado nas definições do próprio domínio."
 
-#: app/src/add_account.rs:565
+#: app/src/add_account.rs:580
 msgid "Found in Mozilla's provider list."
 msgstr "Encontrado na lista de fornecedores da Mozilla."
 
-#: app/src/add_account.rs:566
+#: app/src/add_account.rs:581
 msgid "Found by trying common server names."
 msgstr "Encontrado ao experimentar nomes de servidor habituais."
 
-#: app/src/add_account.rs:567
+#: app/src/add_account.rs:582
 msgid "The servers you gave."
 msgstr "Os servidores que indicou."
 
-#: app/src/add_account.rs:576
+#: app/src/add_account.rs:591
 msgid "{time} left"
 msgstr "faltam {time}"
 
-#: app/src/add_account.rs:585
+#: app/src/add_account.rs:600
 msgid "two"
 msgstr "duas"
 
-#: app/src/add_account.rs:586
+#: app/src/add_account.rs:601
 msgid "three"
 msgstr "três"
 
-#: app/src/add_account.rs:587
+#: app/src/add_account.rs:602
 msgid "four"
 msgstr "quatro"
 
-#: app/src/add_account.rs:588
+#: app/src/add_account.rs:603
 msgid "five"
 msgstr "cinco"
 
-#: app/src/add_account.rs:589
+#: app/src/add_account.rs:604
 msgid "six"
 msgstr "seis"
 
-#: app/src/add_account.rs:590
+#: app/src/add_account.rs:605
 msgid "seven"
 msgstr "sete"
 
-#: app/src/add_account.rs:591
+#: app/src/add_account.rs:606
 msgid "eight"
 msgstr "oito"
 
-#: app/src/add_account.rs:592
+#: app/src/add_account.rs:607
 msgid "nine"
 msgstr "nove"
 
-#: app/src/add_account.rs:601
+#: app/src/add_account.rs:616
 msgid "Waiting"
 msgstr "À espera"
 
-#: app/src/add_account.rs:604
+#: app/src/add_account.rs:619
 msgid "{count} conversation"
 msgid_plural "{count} conversations"
 msgstr[0] "{count} conversa"
 msgstr[1] "{count} conversas"
 
-#: app/src/add_account.rs:734
+#: app/src/add_account.rs:749
 msgid "Could not sign in"
 msgstr "Não foi possível iniciar sessão"
 
-#: app/src/add_account.rs:747
+#: app/src/add_account.rs:762
 msgid "Could not sign in: {reason}"
 msgstr "Não foi possível iniciar sessão: {reason}"
 
-#: app/src/add_account.rs:754
+#: app/src/add_account.rs:769
 msgid "The server refused the password."
 msgstr "O servidor recusou a palavra-passe."
 
-#: app/src/add_account.rs:762
+#: app/src/add_account.rs:777
 msgid "IMAP is off for this account."
 msgstr "O IMAP está desativado nesta conta."
 
-#: app/src/add_account.rs:765
+#: app/src/add_account.rs:780
 msgid "IMAP is off for this account"
 msgstr "O IMAP está desligado nesta conta"
 
-#: app/src/add_account.rs:768
+#: app/src/add_account.rs:783
 msgid "Turn on IMAP in {provider}'s settings, then choose Sign In."
 msgstr "Ligue o IMAP nas definições de {provider} e escolha Iniciar sessão."
 
-#: app/src/add_account.rs:771
+#: app/src/add_account.rs:786
 msgid "Turn on IMAP in your mail settings, then choose Sign In."
 msgstr "Ligue o IMAP nas definições do seu correio e escolha Iniciar sessão."
 
-#: app/src/add_account.rs:779
+#: app/src/add_account.rs:794
 msgid "The server's certificate does not match {host}."
 msgstr "O certificado do servidor não corresponde a {host}."
 
-#: app/src/add_account.rs:784
+#: app/src/add_account.rs:799
 msgid "The certificate does not match"
 msgstr "O certificado não corresponde"
 
-#: app/src/add_account.rs:790
+#: app/src/add_account.rs:805
 msgid "Could not reach {host}: {reason}"
 msgstr "Não foi possível contactar {host}: {reason}"
 
-#: app/src/add_account.rs:794
+#: app/src/add_account.rs:809
 msgid "No answer on port {port}"
 msgstr "Sem resposta na porta {port}"
 
-#: app/src/add_account.rs:798
+#: app/src/add_account.rs:813
 msgid ""
 "The server did not answer. Check the server name and port, or try again when "
 "you are online."
@@ -352,7 +352,7 @@ msgstr ""
 "O servidor não respondeu. Verifique o nome do servidor e a porta, ou tente "
 "de novo quando estiver ligado à Internet."
 
-#: app/src/add_account.rs:818
+#: app/src/add_account.rs:833
 msgid ""
 "{host} answered but turned down another connection. Try again in a few "
 "minutes."
@@ -360,11 +360,11 @@ msgstr ""
 "{host} respondeu mas recusou outra ligação. Tente de novo dentro de alguns "
 "minutos."
 
-#: app/src/add_account.rs:822
+#: app/src/add_account.rs:837
 msgid "Too many connections"
 msgstr "Demasiadas ligações"
 
-#: app/src/add_account.rs:845
+#: app/src/add_account.rs:860
 msgid ""
 "Penguin Mail cannot save your sign-in until the snap can reach your keyring. "
 "Run this command in a terminal, restart Penguin Mail, then add the account "
@@ -374,19 +374,19 @@ msgstr ""
 "tiver acesso ao porta-chaves. Execute este comando num terminal, reinicie o "
 "Penguin Mail e volte a adicionar a conta."
 
-#: app/src/add_account.rs:850
+#: app/src/add_account.rs:865
 msgid "Connect Your Keyring"
 msgstr "Ligue o porta-chaves"
 
-#: app/src/add_account.rs:879
+#: app/src/add_account.rs:894
 msgid "{provider} refused the password"
 msgstr "{provider} recusou a palavra-passe"
 
-#: app/src/add_account.rs:882
+#: app/src/add_account.rs:897
 msgid "The server refused the password"
 msgstr "O servidor recusou a palavra-passe"
 
-#: app/src/add_account.rs:890
+#: app/src/add_account.rs:905
 msgid ""
 "{provider} wants an app password here, not your website password. Make one, "
 "paste it above, then choose Sign In."
@@ -394,35 +394,35 @@ msgstr ""
 "{provider} quer aqui uma palavra-passe de aplicação, não a palavra-passe do "
 "site. Crie uma, cole-a acima e escolha Iniciar sessão."
 
-#: app/src/add_account.rs:894
+#: app/src/add_account.rs:909
 msgid "Check the password, then choose Sign In."
 msgstr "Verifique a palavra-passe e escolha Iniciar sessão."
 
-#: app/src/add_account.rs:911
+#: app/src/add_account.rs:926
 msgid "The server said: {reason}"
 msgstr "O servidor respondeu: {reason}"
 
-#: app/src/add_account.rs:931
+#: app/src/add_account.rs:946
 msgid "Make an App Password"
 msgstr "Criar palavra-passe de aplicação"
 
-#: app/src/add_account.rs:935
+#: app/src/add_account.rs:950
 msgid "Turn On IMAP"
 msgstr "Ligar o IMAP"
 
-#: app/src/add_account.rs:1081
+#: app/src/add_account.rs:1096
 msgid "{host} is not a server name."
 msgstr "{host} não é um nome de servidor."
 
-#: app/src/add_account.rs:1087
+#: app/src/add_account.rs:1102
 msgid "Type the incoming server's name."
 msgstr "Escreva o nome do servidor de entrada."
 
-#: app/src/add_account.rs:1088
+#: app/src/add_account.rs:1103
 msgid "Type the outgoing server's name."
 msgstr "Escreva o nome do servidor de saída."
 
-#: app/src/add_account.rs:1220
+#: app/src/add_account.rs:1235
 msgid ""
 "Newest mail comes first. Older mail keeps coming in the background, even "
 "with the window closed."
@@ -430,7 +430,7 @@ msgstr ""
 "O correio mais recente chega primeiro. O mais antigo continua a chegar em "
 "segundo plano, mesmo com a janela fechada."
 
-#: app/src/add_account.rs:1227
+#: app/src/add_account.rs:1242
 msgid ""
 "Penguin Mail downloads the server's mail into Inbox and keeps checking in "
 "the background, even with the window closed. Mail stays on the server."
@@ -439,7 +439,7 @@ msgstr ""
 "continua a verificar em segundo plano, mesmo com a janela fechada. O correio "
 "fica no servidor."
 
-#: app/src/add_account.rs:1230
+#: app/src/add_account.rs:1245
 msgid ""
 "Penguin Mail downloads the server's mail into Inbox and keeps checking in "
 "the background, even with the window closed. It removes each message from "
@@ -449,7 +449,7 @@ msgstr ""
 "continua a verificar em segundo plano, mesmo com a janela fechada. Remove "
 "cada mensagem do servidor depois de a transferir."
 
-#: app/src/add_account.rs:1233
+#: app/src/add_account.rs:1248
 msgid ""
 "Penguin Mail downloads the server's mail into Inbox and keeps checking in "
 "the background, even with the window closed. It removes each message from "
@@ -467,7 +467,7 @@ msgstr[1] ""
 "continua a verificar em segundo plano, mesmo com a janela fechada. Remove "
 "cada mensagem do servidor {days} dias depois de a transferir."
 
-#: app/src/add_account.rs:1245
+#: app/src/add_account.rs:1260
 msgid "Penguin Mail needs the password for {address} again."
 msgstr "O Penguin Mail precisa de novo da palavra-passe de {address}."
 
@@ -1912,7 +1912,7 @@ msgstr "penguin-mail: opção desconhecida {option}"
 msgid "Penguin Mail Could Not Start"
 msgstr "O Penguin Mail não conseguiu arrancar"
 
-#: app/src/main.rs:285 app/src/ui/about.rs:174
+#: app/src/main.rs:285 app/src/ui/about.rs:176
 msgid "Report a Problem"
 msgstr "Comunicar um problema"
 
@@ -1960,242 +1960,286 @@ msgstr "De {senders}"
 msgid "Open"
 msgstr "Abrir"
 
-#: app/src/offered.rs:235 app/src/ui/window/shortcuts.rs:446
+#: app/src/offered.rs:236 app/src/ui/window/shortcuts.rs:446
 msgid "Labels"
 msgstr "Etiquetas"
 
-#: app/src/offered.rs:236
+#: app/src/offered.rs:237
 msgid "Move to folder"
 msgstr "Mover para pasta"
 
-#: app/src/offered.rs:242
+#: app/src/offered.rs:243
 msgid "Labels…"
 msgstr "Etiquetas…"
 
-#: app/src/offered.rs:243
+#: app/src/offered.rs:244
 msgid "Move to Folder…"
 msgstr "Mover para pasta…"
 
-#: app/src/offered.rs:250
+#: app/src/offered.rs:251
 msgid "Labels (L)"
 msgstr "Etiquetas (L)"
 
-#: app/src/offered.rs:251
+#: app/src/offered.rs:252
 msgid "Move to Folder (L)"
 msgstr "Mover para pasta (L)"
 
-#: app/src/offered.rs:268
+#: app/src/offered.rs:269
 msgid "New Label…"
 msgstr "Nova etiqueta…"
 
-#: app/src/offered.rs:269
+#: app/src/offered.rs:270
 msgid "New Folder…"
 msgstr "Nova pasta…"
 
-#: app/src/offered.rs:277
+#: app/src/offered.rs:278
 msgid "New Label Inside…"
 msgstr "Nova etiqueta dentro desta…"
 
-#: app/src/offered.rs:278
+#: app/src/offered.rs:279
 msgid "New Folder Inside…"
 msgstr "Nova pasta dentro desta…"
 
-#: app/src/offered.rs:285
+#: app/src/offered.rs:286
 msgid "Label Options for {name}"
 msgstr "Opções da etiqueta {name}"
 
-#: app/src/offered.rs:286
+#: app/src/offered.rs:287
 msgid "Folder Options for {name}"
 msgstr "Opções da pasta {name}"
 
-#: app/src/offered.rs:293
+#: app/src/offered.rs:294
 msgid "Label options"
 msgstr "Opções da etiqueta"
 
-#: app/src/offered.rs:294
+#: app/src/offered.rs:295
 msgid "Folder options"
 msgstr "Opções da pasta"
 
-#: app/src/offered.rs:301
+#: app/src/offered.rs:302
 msgid "A label cannot go inside a label nested under it"
 msgstr ""
 "Uma etiqueta não pode ir para dentro de uma etiqueta que está dentro dela"
 
-#: app/src/offered.rs:302
+#: app/src/offered.rs:303
 msgid "A folder cannot go inside a folder nested under it"
 msgstr "Uma pasta não pode ir para dentro de uma pasta que está dentro dela"
 
-#: app/src/offered.rs:310
+#: app/src/offered.rs:311
 msgid "There is a label called “{name}” already"
 msgstr "Já existe uma etiqueta chamada “{name}”"
 
-#: app/src/offered.rs:312
+#: app/src/offered.rs:313
 msgid "There is a folder called “{name}” already"
 msgstr "Já existe uma pasta chamada “{name}”"
 
-#: app/src/offered.rs:320
+#: app/src/offered.rs:321
 msgid "New Label"
 msgstr "Nova etiqueta"
 
-#: app/src/offered.rs:321
+#: app/src/offered.rs:322
 msgid "New Folder"
 msgstr "Nova pasta"
 
-#: app/src/offered.rs:329
+#: app/src/offered.rs:330
 msgid "Could not create the label: {reason}"
 msgstr "Não foi possível criar a etiqueta: {reason}"
 
-#: app/src/offered.rs:330
+#: app/src/offered.rs:331
 msgid "Could not create the folder: {reason}"
 msgstr "Não foi possível criar a pasta: {reason}"
 
-#: app/src/offered.rs:337
+#: app/src/offered.rs:338
 msgid "Open or select mail to label it."
 msgstr "Abra ou selecione correio para o etiquetar."
 
-#: app/src/offered.rs:338
+#: app/src/offered.rs:339
 msgid "Open or select mail to move it."
 msgstr "Abra ou selecione correio para o mover."
 
-#: app/src/offered.rs:346
+#: app/src/offered.rs:347
 msgid "Select mail from one account to label it."
 msgstr "Selecione correio de uma só conta para o etiquetar."
 
-#: app/src/offered.rs:347
+#: app/src/offered.rs:348
 msgid "Select mail from one account to move it."
 msgstr "Selecione correio de uma só conta para o mover."
 
-#: app/src/offered.rs:353
+#: app/src/offered.rs:354
 msgid "Rename Label"
 msgstr "Mudar o nome da etiqueta"
 
-#: app/src/offered.rs:354
+#: app/src/offered.rs:355
 msgid "Rename Folder"
 msgstr "Mudar o nome da pasta"
 
-#: app/src/offered.rs:360
+#: app/src/offered.rs:361
 msgid "Labels nested under it move along."
 msgstr "As etiquetas aninhadas nela acompanham-na."
 
-#: app/src/offered.rs:361
+#: app/src/offered.rs:362
 msgid "Folders nested under it move along."
 msgstr "As pastas aninhadas nela acompanham-na."
 
-#: app/src/offered.rs:369
+#: app/src/offered.rs:370
 msgid "Could not rename the label: {reason}"
 msgstr "Não foi possível mudar o nome da etiqueta: {reason}"
 
-#: app/src/offered.rs:370
+#: app/src/offered.rs:371
 msgid "Could not rename the folder: {reason}"
 msgstr "Não foi possível mudar o nome da pasta: {reason}"
 
-#: app/src/offered.rs:380
+#: app/src/offered.rs:381
 msgid "Its mail stays in Gmail, without the label. Nested labels stay too."
 msgstr ""
 "O correio dela fica no Gmail, sem a etiqueta. As etiquetas aninhadas também "
 "ficam."
 
-#: app/src/offered.rs:382
+#: app/src/offered.rs:383
 msgid "The mail in the folder is deleted with it."
 msgstr "O correio da pasta é eliminado com ela."
 
-#: app/src/offered.rs:390
+#: app/src/offered.rs:391
 msgid "Could not delete the label: {reason}"
 msgstr "Não foi possível eliminar a etiqueta: {reason}"
 
-#: app/src/offered.rs:391
+#: app/src/offered.rs:392
 msgid "Could not delete the folder: {reason}"
 msgstr "Não foi possível eliminar a pasta: {reason}"
 
-#: app/src/offered.rs:398
+#: app/src/offered.rs:399
 msgid "This account has no labels yet."
 msgstr "Esta conta ainda não tem etiquetas."
 
-#: app/src/offered.rs:399
+#: app/src/offered.rs:400
 msgid "This account has no folders yet."
 msgstr "Esta conta ainda não tem pastas."
 
-#: app/src/offered.rs:413
+#: app/src/offered.rs:414
 msgid "Your organization does not allow Penguin Mail to use this calendar."
 msgstr "A sua organização não permite que o Penguin Mail use este calendário."
 
-#: app/src/offered.rs:416
+#: app/src/offered.rs:417
 msgid "Your organization does not allow Penguin Mail to read these contacts."
 msgstr "A sua organização não permite que o Penguin Mail leia estes contactos."
 
-#: app/src/offered.rs:419
+#: app/src/offered.rs:420
 msgid "Your organization does not allow Penguin Mail to change these rules."
 msgstr "A sua organização não permite que o Penguin Mail altere estas regras."
 
-#: app/src/offered.rs:422
+#: app/src/offered.rs:423
 msgid ""
 "Your organization does not allow Penguin Mail to change the automatic reply."
 msgstr ""
 "A sua organização não permite que o Penguin Mail altere a resposta "
 "automática."
 
-#: app/src/offered.rs:425
+#: app/src/offered.rs:426
 msgid "Penguin Mail found no calendar server for {provider}."
 msgstr ""
 "O Penguin Mail não encontrou nenhum servidor de calendário para {provider}."
 
-#: app/src/offered.rs:428
+#: app/src/offered.rs:429
 msgid "Penguin Mail found no contacts server for {provider}."
 msgstr ""
 "O Penguin Mail não encontrou nenhum servidor de contactos para {provider}."
 
-#: app/src/offered.rs:431
+#: app/src/offered.rs:432
 msgid "{provider} cannot send automatic replies over POP3."
 msgstr "{provider} não consegue enviar respostas automáticas por POP3."
 
-#: app/src/offered.rs:434
+#: app/src/offered.rs:435
 msgid "{provider} cannot send automatic replies."
 msgstr "{provider} não consegue enviar respostas automáticas."
 
-#: app/src/offered.rs:436
+#: app/src/offered.rs:437
 msgid "{provider} has no calendar that other apps can reach."
 msgstr ""
 "{provider} não tem um calendário a que outras aplicações possam aceder."
 
-#: app/src/offered.rs:438
+#: app/src/offered.rs:439
 msgid "{provider} keeps no contacts that other apps can reach."
 msgstr "{provider} não guarda contactos a que outras aplicações possam aceder."
 
-#: app/src/offered.rs:440
+#: app/src/offered.rs:441
 msgid "{provider} has no rules that other apps can change."
 msgstr "{provider} não tem regras que outras aplicações possam alterar."
 
-#: app/src/offered.rs:442
+#: app/src/offered.rs:443
 msgid "{provider} has no automatic reply that other apps can change."
 msgstr ""
 "{provider} não tem uma resposta automática que outras aplicações possam "
 "alterar."
 
-#: app/src/offered.rs:445
+#: app/src/offered.rs:446
 msgid "{provider} cannot delete mail for good. Delete moves it to the Trash."
 msgstr ""
 "{provider} não consegue eliminar mensagens definitivamente. Eliminar move-as "
 "para o Lixo."
 
-#: app/src/offered.rs:447
+#: app/src/offered.rs:448
 msgid "{provider} does not sort the inbox into categories."
 msgstr "{provider} não organiza a caixa de entrada em categorias."
 
-#: app/src/offered.rs:475
+#: app/src/offered.rs:476
 msgid "{address}: {reason}"
 msgstr "{address}: {reason}"
 
-#: app/src/offered.rs:488
+#: app/src/offered.rs:491
+msgid "The server would not hand it over."
+msgstr "O servidor não a entregou."
+
+#: app/src/offered.rs:493
+msgid "The message is larger than Penguin Mail downloads."
+msgstr "A mensagem é maior do que o Penguin Mail transfere."
+
+#: app/src/offered.rs:496
+msgid "Penguin Mail could not read the server's answer."
+msgstr "O Penguin Mail não conseguiu ler a resposta do servidor."
+
+#: app/src/offered.rs:499
+msgid "The connection closed while the message downloaded."
+msgstr "A ligação fechou-se durante a transferência da mensagem."
+
+#: app/src/offered.rs:505
+msgid "“{subject}” from {sender}: {words}"
+msgstr "“{subject}” de {sender}: {words}"
+
+#: app/src/offered.rs:509
+msgid "“{subject}”: {words}"
+msgstr "“{subject}”: {words}"
+
+#: app/src/offered.rs:513
+msgid "A message from {sender}: {words}"
+msgstr "Uma mensagem de {sender}: {words}"
+
+#: app/src/offered.rs:517
 msgid "Message {number}: {words}"
 msgstr "Mensagem {number}: {words}"
 
-#: app/src/offered.rs:503
+#: app/src/offered.rs:531
 msgid ""
-"Mail from {address} is kept only on this computer; back up this file to keep "
-"it."
+"Its mail exists only on this computer, and removing the account deletes it "
+"with the saved sign-in. Nothing changes on the server."
 msgstr ""
-"O correio de {address} só existe neste computador; faça uma cópia de "
-"segurança deste ficheiro para o manter."
+"O correio desta conta só existe neste computador, e remover a conta elimina-"
+"o com a sessão guardada. Nada muda no servidor."
+
+#: app/src/offered.rs:535
+msgid ""
+"Its downloaded mail and saved sign-in are deleted from this computer. "
+"Nothing changes in Gmail."
+msgstr ""
+"O correio transferido e a sessão guardada são eliminados deste computador. "
+"Nada muda no Gmail."
+
+#: app/src/offered.rs:549
+msgid ""
+"Mail from {address} is kept only on this computer. To keep a copy, quit "
+"Penguin Mail, then back up this file."
+msgstr ""
+"O correio de {address} só existe neste computador. Para guardar uma cópia, "
+"saia do Penguin Mail e faça depois uma cópia de segurança deste ficheiro."
 
 #: app/src/open_thread/run/translation.rs:121
 msgid "The model sent nothing back to put in the message."
@@ -3068,7 +3112,7 @@ msgstr "Subscrição do Claude"
 #. The header in both spaces carries a button for this now (R12);
 #. the menu item stays too, so Ctrl+J shows here as well.
 #: app/src/settings/mod.rs:215 app/src/ui/assistant.rs:99
-#: app/src/ui/window.rs:3134
+#: app/src/ui/window.rs:3131
 msgid "Assistant"
 msgstr "Assistente"
 
@@ -3393,7 +3437,7 @@ msgstr "Abrir o Penguin Mail"
 msgid "New Message"
 msgstr "Nova mensagem"
 
-#: app/src/tray.rs:208 app/src/ui/sidebar.rs:1605 app/src/ui/window.rs:3137
+#: app/src/tray.rs:208 app/src/ui/sidebar.rs:1605 app/src/ui/window.rs:3134
 msgid "Check for Mail"
 msgstr "Procurar correio"
 
@@ -3405,13 +3449,13 @@ msgstr "Instalar a atualização {version}"
 msgid "What's New in {version}"
 msgstr "Novidades da versão {version}"
 
-#: app/src/tray.rs:219 app/src/ui/about.rs:113 app/src/ui/about.rs:220
-#: app/src/ui/about.rs:228 app/src/ui/about.rs:235
+#: app/src/tray.rs:219 app/src/ui/about.rs:115 app/src/ui/about.rs:222
+#: app/src/ui/about.rs:230 app/src/ui/about.rs:237
 #: app/src/ui/preferences.rs:730 app/src/update/mod.rs:108
 msgid "Check for Updates"
 msgstr "Procurar atualizações"
 
-#: app/src/tray.rs:224 app/src/ui/window.rs:3149
+#: app/src/tray.rs:224 app/src/ui/window.rs:3146
 #: app/src/ui/window/shortcuts.rs:625
 msgid "Quit"
 msgstr "Sair"
@@ -3424,64 +3468,64 @@ msgstr "Versão {version}"
 msgid "Mail and calendar for Linux. Your mail stays on your computer."
 msgstr "Correio e calendário para Linux. O seu correio fica no seu computador."
 
-#: app/src/ui/about.rs:168
+#: app/src/ui/about.rs:170
 msgid "What's New"
 msgstr "Novidades"
 
-#: app/src/ui/about.rs:172
+#: app/src/ui/about.rs:174
 msgid "Website"
 msgstr "Página web"
 
-#: app/src/ui/about.rs:179
+#: app/src/ui/about.rs:181
 msgid "License"
 msgstr "Licença"
 
-#: app/src/ui/about.rs:196 app/src/ui/window.rs:3148
+#: app/src/ui/about.rs:198 app/src/ui/window.rs:3145
 msgid "About Penguin Mail"
 msgstr "Acerca do Penguin Mail"
 
-#: app/src/ui/about.rs:226
+#: app/src/ui/about.rs:228
 msgid "Checking…"
 msgstr "A procurar…"
 
-#: app/src/ui/about.rs:232
+#: app/src/ui/about.rs:234
 msgid "Penguin Mail is up to date"
 msgstr "O Penguin Mail está atualizado"
 
-#: app/src/ui/about.rs:240
+#: app/src/ui/about.rs:242
 msgid "Could not reach GitHub. Check your connection and try again."
 msgstr ""
 "Não foi possível contactar o GitHub. Verifique a ligação e tente de novo."
 
-#: app/src/ui/about.rs:245
+#: app/src/ui/about.rs:247
 msgid "Install {version}"
 msgstr "Instalar a {version}"
 
-#: app/src/ui/about.rs:252
+#: app/src/ui/about.rs:254
 msgid "Version {version} is available"
 msgstr "A versão {version} está disponível"
 
-#: app/src/ui/about.rs:257
+#: app/src/ui/about.rs:259
 msgid "Installing…"
 msgstr "A instalar…"
 
-#: app/src/ui/about.rs:262
+#: app/src/ui/about.rs:264
 msgid "Installing version {version}"
 msgstr "A instalar a versão {version}"
 
-#: app/src/ui/about.rs:267 app/src/update/mod.rs:104
+#: app/src/ui/about.rs:269 app/src/update/mod.rs:104
 msgid "Restart to Update"
 msgstr "Reiniciar para atualizar"
 
-#: app/src/ui/about.rs:272
+#: app/src/ui/about.rs:274
 msgid "Version {version} is installed"
 msgstr "A versão {version} está instalada"
 
-#: app/src/ui/about.rs:277 app/src/update/mod.rs:137
+#: app/src/ui/about.rs:279 app/src/update/mod.rs:137
 msgid "Show Log"
 msgstr "Mostrar registo"
 
-#: app/src/ui/about.rs:282 app/src/update/mod.rs:134
+#: app/src/ui/about.rs:284 app/src/update/mod.rs:134
 msgid "The update to {version} failed"
 msgstr "A atualização para a versão {version} falhou"
 
@@ -3842,7 +3886,7 @@ msgstr ""
 "Este servidor não distingue as suas mensagens, por isso o Penguin Mail não "
 "pode transferir dele com segurança."
 
-#: app/src/ui/assistant.rs:31 app/src/ui/window.rs:3216
+#: app/src/ui/assistant.rs:31 app/src/ui/window.rs:3213
 msgid "Summarize this conversation"
 msgstr "Resume esta conversa"
 
@@ -3986,7 +4030,7 @@ msgstr "Editar {server}"
 
 #: app/src/ui/assistant_mcp_prefs.rs:121 app/src/ui/calendar/editor.rs:1532
 #: app/src/ui/composer/mod.rs:1662 app/src/ui/composer/recipients.rs:304
-#: app/src/ui/window.rs:2930
+#: app/src/ui/window.rs:2927
 msgid "Remove"
 msgstr "Remover"
 
@@ -6665,7 +6709,7 @@ msgstr "Não foi possível eliminar o endereço: {reason}"
 msgid "Allow Hide My Email"
 msgstr "Permitir Ocultar o meu e-mail"
 
-#: app/src/ui/hide_my_email.rs:335 app/src/ui/window.rs:3264
+#: app/src/ui/hide_my_email.rs:335 app/src/ui/window.rs:3261
 msgid "Add an account first"
 msgstr "Adicione primeiro uma conta"
 
@@ -7684,7 +7728,7 @@ msgstr "Assinatura…"
 msgid "Rules…"
 msgstr "Regras…"
 
-#: app/src/ui/sidebar.rs:1517 app/src/ui/window.rs:3140
+#: app/src/ui/sidebar.rs:1517 app/src/ui/window.rs:3137
 msgid "Hide My Email…"
 msgstr "Ocultar o meu e-mail…"
 
@@ -8356,67 +8400,59 @@ msgstr "Obter uma versão"
 msgid "Remove {account}?"
 msgstr "Remover {account}?"
 
-#: app/src/ui/window.rs:2927
-msgid ""
-"Its downloaded mail and saved sign-in are deleted from this computer. "
-"Nothing changes in Gmail."
-msgstr ""
-"O correio transferido e a sessão guardada são eliminados deste computador. "
-"Nada muda no Gmail."
-
-#: app/src/ui/window.rs:2943
+#: app/src/ui/window.rs:2940
 msgid "Removed {account}"
 msgstr "{account} removida"
 
-#: app/src/ui/window.rs:2945
+#: app/src/ui/window.rs:2942
 msgid "Could not remove {account}: {reason}"
 msgstr "Não foi possível remover {account}: {reason}"
 
-#: app/src/ui/window.rs:3121
+#: app/src/ui/window.rs:3118
 msgid "Refresh"
 msgstr "Atualizar"
 
-#: app/src/ui/window.rs:3125
+#: app/src/ui/window.rs:3122
 msgid "Show Declined Events"
 msgstr "Mostrar eventos recusados"
 
-#: app/src/ui/window.rs:3138
+#: app/src/ui/window.rs:3135
 msgid "Add Account…"
 msgstr "Adicionar conta…"
 
-#: app/src/ui/window.rs:3139
+#: app/src/ui/window.rs:3136
 msgid "New Smart Mailbox…"
 msgstr "Nova caixa inteligente…"
 
-#: app/src/ui/window.rs:3146 app/src/ui/window/shortcuts.rs:602
+#: app/src/ui/window.rs:3143 app/src/ui/window/shortcuts.rs:602
 msgid "Preferences"
 msgstr "Preferências"
 
-#: app/src/ui/window.rs:3147
+#: app/src/ui/window.rs:3144
 msgid "Keyboard Shortcuts"
 msgstr "Atalhos de teclado"
 
-#: app/src/ui/window.rs:3155 app/src/ui/window.rs:3157
+#: app/src/ui/window.rs:3152 app/src/ui/window.rs:3154
 msgid "Main Menu"
 msgstr "Menu principal"
 
-#: app/src/ui/window.rs:3539
+#: app/src/ui/window.rs:3536
 msgid "Open a message from the person first"
 msgstr "Abra primeiro uma mensagem dessa pessoa"
 
-#: app/src/ui/window.rs:3615
+#: app/src/ui/window.rs:3612
 msgid "Penguin Mail shows the new language after a restart"
 msgstr "O Penguin Mail mostra o novo idioma depois de reiniciar"
 
-#: app/src/ui/window.rs:3617 app/src/update/mod.rs:130
+#: app/src/ui/window.rs:3614 app/src/update/mod.rs:130
 msgid "Restart"
 msgstr "Reiniciar"
 
-#: app/src/ui/window.rs:3650
+#: app/src/ui/window.rs:3647
 msgid "Messages That Will Not Download"
 msgstr "Mensagens que não se transferem"
 
-#: app/src/ui/window.rs:3652
+#: app/src/ui/window.rs:3649
 msgid ""
 "{address}'s server would not hand these over after three tries. Penguin Mail "
 "tries again at each check."
@@ -8424,7 +8460,7 @@ msgstr ""
 "O servidor de {address} não entregou estas mensagens após três tentativas. O "
 "Penguin Mail tenta de novo em cada verificação."
 
-#: app/src/ui/window.rs:3672
+#: app/src/ui/window.rs:3669
 msgid "Close"
 msgstr "Fechar"
 
@@ -9501,10 +9537,6 @@ msgstr "Está por ler"
 msgid "Is flagged"
 msgstr "Está marcada"
 
-#: sync/src/account/pop3.rs:221
-msgid "The message is larger than Penguin Mail downloads."
-msgstr "A mensagem é maior do que o Penguin Mail transfere."
-
 #: sync/src/account/writes.rs:756
 msgid "{provider} is busy. Still working on {conversations}."
 msgstr "{provider} está ocupado. Ainda a trabalhar em {conversations}."
@@ -9845,14 +9877,14 @@ msgstr ""
 msgid "Outlook's rules cannot do that."
 msgstr "As regras do Outlook não conseguem fazer isso."
 
-#: sync/src/services/pop3/mod.rs:350
+#: sync/src/services/pop3/mod.rs:338
 msgid ""
 "Penguin Mail keeps the names of Inbox, Sent, Drafts, Trash, Junk and Archive."
 msgstr ""
 "O Penguin Mail mantém os nomes de Caixa de entrada, Enviadas, Rascunhos, "
 "Lixo, Spam e Arquivo."
 
-#: sync/src/services/pop3/mod.rs:366
+#: sync/src/services/pop3/mod.rs:354
 msgid "Penguin Mail keeps Inbox, Sent, Drafts, Trash, Junk and Archive."
 msgstr ""
 "O Penguin Mail mantém Caixa de entrada, Enviadas, Rascunhos, Lixo, Spam e "
@@ -9945,6 +9977,24 @@ msgstr "Marcar como não sendo spam"
 #: sync/src/triage.rs:70
 msgid "Move to {folder}"
 msgstr "Mover para {folder}"
+
+#~ msgid ""
+#~ "{address}'s server would not hand these over after three tries. Penguin "
+#~ "Mail tries again at each check.\n"
+#~ "\n"
+#~ "{lines}"
+#~ msgstr ""
+#~ "O servidor de {address} não entregou estas mensagens após três "
+#~ "tentativas. O Penguin Mail tenta de novo em cada verificação.\n"
+#~ "\n"
+#~ "{lines}"
+
+#~ msgid ""
+#~ "Mail from {address} is kept only on this computer; back up this file to "
+#~ "keep it."
+#~ msgstr ""
+#~ "O correio de {address} só existe neste computador; faça uma cópia de "
+#~ "segurança deste ficheiro para o manter."
 
 #~ msgid "Microsoft accounts come in a later version of Penguin Mail."
 #~ msgstr "As contas Microsoft chegam numa versão futura do Penguin Mail."

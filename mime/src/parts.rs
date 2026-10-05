@@ -216,7 +216,7 @@ fn text(part: &Part) -> Option<String> {
         .map(|bytes| decode_charset(bytes, part.charset.as_deref()))
 }
 
-fn is_readable(mime: &str) -> bool {
+pub(crate) fn is_readable(mime: &str) -> bool {
     mime == "text/plain" || mime == "text/html"
 }
 
@@ -241,7 +241,7 @@ const STRUCTURAL: &[&str] = &[
 /// make it one. So does any part that is not text and not structural:
 /// Gmail sent those by reference, which is how the app listed them
 /// before it read raw mail.
-fn is_attachment(part: &Part) -> bool {
+pub(crate) fn is_attachment(part: &Part) -> bool {
     part.filename.as_deref().is_some_and(|n| !n.is_empty())
         || (part.content_id.is_some() && !is_readable(&part.mime_type))
         || part.attachment

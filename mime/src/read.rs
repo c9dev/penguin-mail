@@ -8,10 +8,13 @@ use base64::Engine;
 use base64::alphabet;
 use base64::engine::{DecodePaddingMode, GeneralPurpose, GeneralPurposeConfig};
 use mail_parser::decoders::quoted_printable::quoted_printable_decode;
+use mail_parser::parsers::MessageStream;
 use mail_parser::{Message, MessageParser, MessagePart, MimeHeaders, PartType};
 use mailrs_domain::MessageBody;
 
-use crate::parts::{MAX_DEPTH, Part, Parts, body, content_id, numbered};
+use crate::parts::{
+    MAX_DEPTH, Part, Parts, body, content_id, is_attachment, is_calendar, is_readable, numbered,
+};
 
 const BASE64: GeneralPurpose = GeneralPurpose::new(
     &alphabet::STANDARD,
@@ -41,6 +44,106 @@ pub fn parts(raw: &[u8]) -> Option<Parts> {
         root,
         incomplete: false,
     })
+}
+
+/// The parts of `raw` with the bytes of its text alone: the text and HTML a
+/// body may show, and any calendar. A file keeps `data` at `None` and is
+/// never decoded, as in a server's structure. Each part's headers are read
+/// on their own, and its end found by scanning for the boundary as
+/// mail-parser does, so a message with a large file costs its own bytes
+/// and its text. A forwarded message is one file; nothing inside it is
+/// read. `None` for bytes mail-parser cannot read at all.
+pub(crate) fn skim(raw: &[u8]) -> Option<Parts> {
+    let message = MessageParser::default().parse_headers(raw)?;
+    let headers = message
+        .headers_raw()
+        .map(|(name, value)| (name.to_string(), unfold(value)))
+        .collect();
+    let root_path = match mime_type(message.root_part()).starts_with("multipart/") {
+        true => String::new(),
+        false => "1".to_string(),
+    };
+    Some(Parts {
+        headers,
+        root: skim_part(raw, root_path, 0),
+        incomplete: false,
+    })
+}
+
+/// One part from `bytes`, its headers and body, `depth` levels below the
+/// root.
+fn skim_part(bytes: &[u8], path: String, depth: usize) -> Part {
+    let parser = MessageParser::default();
+    // A headers-only parse puts the body offset at the end of its input,
+    // so the stream says where the headers stop.
+    let mut stream = MessageStream::new(bytes);
+    stream.parse_headers(&parser, &mut Vec::new());
+    let body = bytes.get(stream.offset()..).unwrap_or_default();
+    let Some(message) = parser.parse_headers(bytes) else {
+        // A part with no headers is plain text (RFC 2045 section 5.2).
+        let text = bytes
+            .strip_prefix(b"\r\n")
+            .or_else(|| bytes.strip_prefix(b"\n"))
+            .unwrap_or(bytes);
+        return Part {
+            path,
+            mime_type: "text/plain".into(),
+            size: text.len() as i64,
+            data: Some(text.to_vec()),
+            ..Part::default()
+        };
+    };
+    let part = message.root_part();
+    let attribute = |name: &str| {
+        part.content_type()
+            .and_then(|ct| ct.attribute(name))
+            .map(str::to_string)
+    };
+    let mut skimmed = Part {
+        mime_type: mime_type(part),
+        charset: attribute("charset"),
+        protocol: attribute("protocol"),
+        smime_type: attribute("smime-type"),
+        filename: part.attachment_name().map(str::to_string),
+        content_id: part.content_id().map(content_id),
+        attachment: part.content_disposition().is_some_and(|d| d.is_attachment()),
+        ..Part::default()
+    };
+    if skimmed.mime_type.starts_with("multipart/") {
+        if let (Some(boundary), true) = (attribute("boundary"), depth < MAX_DEPTH) {
+            skimmed.children = skim_children(body, boundary.as_bytes(), &path, depth);
+        }
+    } else if skimmed.mime_type != "message/rfc822" {
+        let name = skimmed.filename.as_deref().unwrap_or_default();
+        let wanted = (is_readable(&skimmed.mime_type) && !is_attachment(&skimmed))
+            || is_calendar(&skimmed.mime_type, name);
+        if wanted {
+            skimmed.data = undo_transfer_encoding(part.content_transfer_encoding(), body);
+            skimmed.size = skimmed.data.as_ref().map_or(0, |d| d.len() as i64);
+        }
+    }
+    skimmed.path = path;
+    skimmed
+}
+
+/// The parts a multipart `body` holds between its `boundary` lines. The
+/// line break before a boundary belongs to the boundary.
+fn skim_children(body: &[u8], boundary: &[u8], path: &str, depth: usize) -> Vec<Part> {
+    let mut stream = MessageStream::new(body);
+    if !stream.seek_next_part(boundary) {
+        return Vec::new();
+    }
+    stream.skip_crlf();
+    let mut children = Vec::new();
+    loop {
+        let start = stream.offset();
+        let (end, found) = stream.seek_part_end(Some(boundary));
+        let child = body.get(start..end.min(body.len())).unwrap_or_default();
+        children.push(skim_part(child, numbered(path, children.len()), depth + 1));
+        if !found || stream.is_multipart_end() {
+            return children;
+        }
+    }
 }
 
 /// Drops a parsed message one level at a time. mail-parser parses a

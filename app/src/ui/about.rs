@@ -84,7 +84,9 @@ impl About {
         content.append(&comments);
 
         // A POP3 account's mail lives only in the store, so About names the
-        // file to back up and says whose mail it holds.
+        // file to back up and says whose mail it holds. The store runs in
+        // WAL mode: while the app runs, a copy of this file alone can miss
+        // the newest mail, so the line says to quit first.
         if !kept_here.is_empty() {
             let path = gtk::Label::builder()
                 .label(store.display().to_string())

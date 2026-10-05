@@ -56,17 +56,12 @@ pub fn summary(raw: &[u8]) -> Summary {
             .map(|value| value.split_whitespace().collect::<Vec<_>>().join(" "))
             .filter(|value| !value.is_empty())
     };
-    let body = crate::read(raw);
-    let snippet = body
-        .text
-        .as_deref()
-        .unwrap_or_default()
-        .split_whitespace()
-        .collect::<Vec<_>>()
-        .join(" ")
-        .chars()
-        .take(SNIPPET_CHARS)
-        .collect();
+    // Only the text parts are decoded: a full read would decode every
+    // file in the message, twice over, to learn whether there is one.
+    let body = crate::read::skim(raw)
+        .map(|parts| crate::body(&parts))
+        .unwrap_or_default();
+    let snippet = preview(body.text.as_deref());
     Summary {
         message_id: header("Message-ID"),
         from: addresses(message.from()).into_iter().next(),
@@ -89,6 +84,17 @@ pub fn summary(raw: &[u8]) -> Summary {
         has_files: !body.attachments.is_empty(),
         snippet,
     }
+}
+
+/// The start of `text`, its white space folded to single spaces.
+fn preview(text: Option<&str>) -> String {
+    text.unwrap_or_default()
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+        .chars()
+        .take(SNIPPET_CHARS)
+        .collect()
 }
 
 #[cfg(test)]
@@ -152,5 +158,80 @@ Content-Transfer-Encoding: base64\r\n\r\nJVBERg==\r\n--b--\r\n";
     #[test]
     fn bytes_that_are_no_mail_give_an_empty_summary() {
         assert_eq!(summary(b""), Summary::default());
+    }
+
+    const MIXED: &[u8] = b"From: a@example.org\r\nSubject: file\r\nMIME-Version: 1.0\r\n\
+Content-Type: multipart/mixed; boundary=b\r\n\r\npreamble\r\n--b\r\nContent-Type: text/plain\r\n\r\nSee attached.\r\n\
+--b\r\nContent-Type: application/pdf\r\nContent-Disposition: attachment; filename=a.pdf\r\n\
+Content-Transfer-Encoding: base64\r\n\r\nJVBERg==\r\n--b--\r\nepilogue\r\n";
+
+    /// Message shapes a summary meets: alternatives, charsets, transfer
+    /// encodings, nesting, signatures, invitations, forwarded mail, a part
+    /// without headers, a boundary never closed.
+    const SHAPES: &[&[u8]] = &[
+        MAIL,
+        MIXED,
+        b"Subject: alt\r\nContent-Type: multipart/alternative; boundary=\"x y\"\r\n\r\n--x y\r\n\
+Content-Type: text/plain; charset=iso-8859-1\r\nContent-Transfer-Encoding: quoted-printable\r\n\r\n\
+Ol=E1, at=E9 j=E1.\r\n--x y\r\nContent-Type: text/html\r\n\r\n<p>Ol\xc3\xa1</p>\r\n--x y--\r\n",
+        b"Subject: nest\r\nContent-Type: multipart/mixed; boundary=outer\r\n\r\n--outer\r\n\
+Content-Type: multipart/related; boundary=inner\r\n\r\n--inner\r\nContent-Type: text/html\r\n\r\n\
+<img src=cid:logo>\r\n--inner\r\nContent-Type: image/png\r\nContent-ID: <logo>\r\n\
+Content-Transfer-Encoding: base64\r\n\r\niVBORw0KGgo=\r\n--inner--\r\n--outer\r\nContent-Type: text/plain\r\n\r\n\
+Second text.\r\n--outer--\r\n",
+        b"Subject: signed\r\nContent-Type: multipart/signed; protocol=\"application/pgp-signature\"; boundary=s\r\n\r\n\
+--s\r\nContent-Type: text/plain\r\n\r\nSigned words.\r\n--s\r\nContent-Type: application/pgp-signature\r\n\r\n\
+-----BEGIN PGP SIGNATURE-----\r\nxyz\r\n-----END PGP SIGNATURE-----\r\n--s--\r\n",
+        b"Subject: invite\r\nContent-Type: multipart/mixed; boundary=m\r\n\r\n--m\r\n\
+Content-Type: multipart/alternative; boundary=a\r\n\r\n--a\r\nContent-Type: text/plain\r\n\r\nLunch?\r\n--a\r\n\
+Content-Type: text/calendar; method=REQUEST\r\n\r\nBEGIN:VCALENDAR\r\nUID:1\r\nEND:VCALENDAR\r\n--a--\r\n--m\r\n\
+Content-Type: application/ics; name=invite.ics\r\nContent-Disposition: attachment; filename=invite.ics\r\n\r\n\
+BEGIN:VCALENDAR\r\nUID:1\r\nEND:VCALENDAR\r\n--m--\r\n",
+        b"Subject: fwd\r\nContent-Type: multipart/mixed; boundary=f\r\n\r\n--f\r\nContent-Type: text/plain\r\n\r\n\
+See below.\r\n--f\r\nContent-Type: message/rfc822\r\n\r\nSubject: inner\r\nFrom: b@example.org\r\n\r\n\
+Inner body.\r\n--f--\r\n",
+        b"Subject: bare\r\nContent-Type: multipart/mixed; boundary=n\r\n\r\n--n\r\n\r\nNo headers here.\r\n--n--\r\n",
+        b"Subject: open\r\nContent-Type: multipart/mixed; boundary=o\r\n\r\n--o\r\nContent-Type: text/plain\r\n\r\n\
+Never closed.\r\n--o\r\nContent-Type: image/gif\r\nContent-Transfer-Encoding: base64\r\n\r\nR0lGODlh\r\n",
+        b"Subject: b64\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Transfer-Encoding: base64\r\n\r\n\
+T2zDoSwgbXVuZG8hCg==\r\n",
+        b"Subject: html\r\nContent-Type: text/html\r\n\r\n<p>Only HTML.</p>\r\n",
+        b"Subject: lf\nContent-Type: multipart/mixed; boundary=l\n\n--l\nContent-Type: text/plain\n\nBare line feeds.\n\
+--l\nContent-Type: application/zip\n\nPK\n--l--\n",
+        b"Subject: none\r\nContent-Type: multipart/mixed\r\n\r\nA multipart with no boundary.\r\n",
+    ];
+
+    /// What a summary's snippet and files were before it skimmed: from a
+    /// full read, which decodes every part.
+    fn by_full_read(raw: &[u8]) -> (String, bool) {
+        let body = crate::read(raw);
+        (preview(body.text.as_deref()), !body.attachments.is_empty())
+    }
+
+    #[test]
+    fn skimming_gives_the_snippet_and_files_a_full_read_gives() {
+        for raw in SHAPES {
+            let s = summary(raw);
+            assert_eq!(
+                (s.snippet, s.has_files),
+                by_full_read(raw),
+                "{}",
+                String::from_utf8_lossy(raw)
+            );
+        }
+    }
+
+    #[test]
+    fn a_file_is_never_decoded_to_summarize_its_message() {
+        let parts = crate::read::skim(MIXED).expect("parts");
+        assert_eq!(
+            parts.find("1").and_then(|p| p.data.as_deref()),
+            Some(&b"See attached."[..])
+        );
+        assert_eq!(
+            parts.find("2").map(|p| p.data.is_none()),
+            Some(true),
+            "the PDF stays encoded and unread"
+        );
     }
 }

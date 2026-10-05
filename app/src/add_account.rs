@@ -334,19 +334,28 @@ fn proposal_from(candidate: Candidate, remaining: Vec<Candidate>, address: &Addr
         .then(|| candidate.provider.as_ref().map(|info| info.name.clone()))
         .flatten()
         .unwrap_or_else(|| address.domain.clone());
+    // A provider that offers POP3 and no IMAP signs in over POP3, leaving
+    // mail on the server until the person picks otherwise.
+    let (protocol, incoming, pop3_offer, pop3_remove) = match (candidate.imap, candidate.pop3) {
+        (Some(imap), pop3) => (Protocol::Imap, imap, pop3, None),
+        (None, Some(pop3)) => (Protocol::Pop3, pop3, None, Some(RemoveSetting::Never)),
+        // Discovery never makes a candidate with neither; the usual host
+        // names stand in.
+        (None, None) => return usual_servers(address),
+    };
     Proposal {
         provider_name,
         info: candidate.provider,
-        protocol: Protocol::Imap,
-        incoming: candidate.imap,
+        protocol,
+        incoming,
         smtp: candidate.smtp,
         incoming_user: None,
         smtp_user: None,
         confirm: candidate.confirm,
         source: Some(candidate.source),
         remaining,
-        pop3_offer: candidate.pop3,
-        pop3_remove: None,
+        pop3_offer,
+        pop3_remove,
     }
 }
 
@@ -363,6 +372,12 @@ pub fn guess(address: &Address) -> Proposal {
     {
         return proposal_from(candidate, Vec::new(), address);
     }
+    usual_servers(address)
+}
+
+/// The host names most servers use, on the ports with TLS from the first
+/// byte.
+fn usual_servers(address: &Address) -> Proposal {
     let server = |host: String, port| Server {
         host,
         port,
@@ -1379,7 +1394,7 @@ mod tests {
             candidates: vec![Candidate {
                 source,
                 provider,
-                imap: server("imap.example.org", 993),
+                imap: Some(server("imap.example.org", 993)),
                 smtp: server("smtp.example.org", 465),
                 pop3: None,
                 confirm,
@@ -1894,7 +1909,7 @@ mod tests {
                 Candidate {
                     source: Source::Autoconfig,
                     provider: None,
-                    imap: server("imap1.example.org", 993),
+                    imap: Some(server("imap1.example.org", 993)),
                     smtp: server("smtp1.example.org", 465),
                     pop3: None,
                     confirm: false,
@@ -1902,13 +1917,39 @@ mod tests {
                 Candidate {
                     source: Source::Probe,
                     provider: None,
-                    imap: server("imap2.example.org", 993),
+                    imap: Some(server("imap2.example.org", 993)),
                     smtp: server("smtp2.example.org", 465),
                     pop3: None,
                     confirm: second_confirm,
                 },
             ],
         }
+    }
+
+    /// A provider that offers POP3 and no IMAP: the password step signs in
+    /// to its POP3 server, leaving mail on the server.
+    #[test]
+    fn a_pop3_only_provider_goes_to_the_password_step_on_pop3() {
+        let found = Found {
+            verdict: Verdict::Servers,
+            candidates: vec![Candidate {
+                source: Source::Srv,
+                provider: None,
+                imap: None,
+                smtp: server("smtp.example.org", 465),
+                pop3: Some(server("pop.example.org", 995)),
+                confirm: false,
+            }],
+        };
+        let address = Address::parse("ann@example.org").unwrap();
+        let Next::Password(proposal) = after_discovery(found, &address, true) else {
+            panic!("expected the password step");
+        };
+        assert_eq!(proposal.protocol, Protocol::Pop3);
+        assert_eq!(proposal.incoming, server("pop.example.org", 995));
+        assert_eq!(proposal.pop3_remove, Some(RemoveSetting::Never));
+        assert_eq!(proposal.pop3_offer, None, "nothing to offer beside it");
+        assert_eq!(incoming_title(&proposal), "Incoming over POP3");
     }
 
     #[test]

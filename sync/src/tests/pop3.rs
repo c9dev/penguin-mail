@@ -54,6 +54,11 @@ pub(crate) async fn pop3_harness(fake: FakePop3, remove: RemoveSetting) -> Pop3H
 }
 
 impl Pop3Harness {
+    /// The store's database file.
+    pub fn db_path(&self) -> std::path::PathBuf {
+        self._dir.path().join("mail.db")
+    }
+
     /// Another sync over the same store and fakes, as a restart makes.
     pub fn again(&self) -> AccountSync {
         self.with_server(Arc::clone(&self.fake))
@@ -70,18 +75,19 @@ impl Pop3Harness {
     /// Stores `raw` in `mailbox` as downloaded message `uidl`, received at
     /// `received`, and answers its id.
     pub async fn keep(&self, uidl: &str, raw: &[u8], mailbox: &str, received: EpochMillis) -> String {
-        let id = crate::services::pop3::downloaded_id(uidl);
         let account_id = self.account_id;
-        let (meta, links) = local_meta(account_id, &id, raw, mailbox, &[], received, false);
         let (raw, uidl) = (raw.to_vec(), uidl.to_string());
+        let mailbox = mailbox.to_string();
         self.db
             .write(move |c| {
+                let id = pop3::download_id(c, account_id, &uidl)?;
+                let (meta, links) = local_meta(account_id, &id, &raw, &mailbox, &[], received, false);
                 keep_local(c, account_id, meta, links, &raw)?;
-                pop3::mark_downloaded(c, account_id, &uidl, received)
+                pop3::mark_downloaded(c, account_id, &uidl, &id, received)?;
+                Ok(id)
             })
             .await
-            .unwrap();
-        id
+            .unwrap()
     }
 
     /// The stored ids in `set`, sorted.

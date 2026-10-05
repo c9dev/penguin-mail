@@ -4,7 +4,7 @@ use std::sync::LazyLock;
 
 use serde::Deserialize;
 
-use crate::{Found, PasswordKind, ProviderInfo, Server, Source, Unreachable, Verdict, pairs, with_pop3};
+use crate::{Found, PasswordKind, ProviderInfo, Server, Source, Unreachable, Verdict, pairs};
 
 static BUILT_IN: LazyLock<Table> = LazyLock::new(|| {
     Table::parse(include_str!("../providers.toml")).unwrap_or_else(|error| {
@@ -241,15 +241,13 @@ impl Entry {
                     },
                 };
                 let provider = self.info();
-                Found::servers(with_pop3(
-                    pairs(
-                        source,
-                        Some(&provider),
-                        std::slice::from_ref(imap),
-                        smtp,
-                        false,
-                    ),
+                Found::servers(pairs(
+                    source,
+                    Some(&provider),
+                    std::slice::from_ref(imap),
+                    smtp,
                     self.pop3.as_ref(),
+                    false,
                 ))
                 .unwrap_or_else(Found::nothing)
             }
@@ -447,7 +445,7 @@ mod tests {
             .by_domain("me.com")
             .unwrap()
             .found(Source::Table, false);
-        assert_eq!(found.candidates[0].imap.user_name, UserName::LocalPartFirst);
+        assert_eq!(found.candidates[0].imap.as_ref().unwrap().user_name, UserName::LocalPartFirst);
         assert_eq!(found.candidates[0].smtp.user_name, UserName::Address);
     }
 
@@ -458,8 +456,8 @@ mod tests {
         let table = table();
         let icloud = table.by_mx(&["mx01.mail.icloud.com".to_string()]).unwrap();
         let found = icloud.found(Source::Mx, true);
-        assert_eq!(found.candidates[0].imap.host, "imap.mail.me.com");
-        assert_eq!(found.candidates[0].imap.user_name, UserName::Address);
+        assert_eq!(found.candidates[0].imap.as_ref().unwrap().host, "imap.mail.me.com");
+        assert_eq!(found.candidates[0].imap.as_ref().unwrap().user_name, UserName::Address);
         assert_eq!(found.candidates[0].smtp.host, "smtp.mail.me.com");
         assert_eq!(found.candidates[0].smtp.user_name, UserName::Address);
     }
@@ -527,7 +525,7 @@ mod tests {
                 .unwrap_or_else(|| panic!("mx.zoho.{center} is Zoho's"));
             let found = zoho.found(Source::Mx, true);
             assert_eq!(
-                found.candidates[0].imap.host,
+                found.candidates[0].imap.as_ref().unwrap().host,
                 format!("imappro.zoho.{center}")
             );
             assert_eq!(
@@ -536,7 +534,7 @@ mod tests {
             );
             assert_eq!(found.candidates[0].source, Source::Mx);
             let own = zoho.found(Source::Table, false);
-            assert_eq!(own.candidates[0].imap.host, format!("imap.zoho.{center}"));
+            assert_eq!(own.candidates[0].imap.as_ref().unwrap().host, format!("imap.zoho.{center}"));
         }
     }
 
@@ -550,7 +548,7 @@ mod tests {
                 .by_domain(domain)
                 .unwrap_or_else(|| panic!("{domain} is in the table"))
                 .found(Source::Table, false);
-            assert_eq!(found.candidates[0].imap.host, host, "{domain}");
+            assert_eq!(found.candidates[0].imap.as_ref().unwrap().host, host, "{domain}");
         }
     }
 

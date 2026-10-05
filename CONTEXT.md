@@ -70,7 +70,7 @@ Terms the code and its docs use for Gmail mail. The `domain` crate holds the cod
 
 **Local mailbox**: a mailbox that exists only in the store, as a POP3 account's Inbox, Sent, Drafts, Trash, Junk, Archive and the folders a person makes. A move or a flag is complete once the store has it; nothing goes to a server (`MailCapabilities::local_mailboxes`). Rules for such an account are Local rules. _Avoid_: local folder, offline folder.
 
-**UIDL**: the name a POP3 server gives one message, which stays the same across sessions while the message numbers do not (RFC 1939). `pop3_seen` keeps each UIDL an account downloaded until the server stops listing it, so nothing downloads twice; a message's store id is `pop3/<uidl>`. _Avoid_: message number, POP3 id.
+**UIDL**: the name a POP3 server gives one message, which stays the same across sessions while the message numbers do not (RFC 1939). `pop3_seen` keeps each UIDL an account downloaded until the server stops listing it, so nothing downloads twice, with the store id of the message it brought. That id is `pop3/<uidl>`, or `pop3/<uidl>/<n>` when an older message holds it: a server may give a UIDL to a new message once the old one has left it. _Avoid_: message number, POP3 id.
 
 **Removal setting**: what a POP3 account does with mail on the server once it is here: Leave on Server (the default), Remove After Downloading, or Remove After {n} Days. Removal sends `DELE` and takes effect at a clean `QUIT`; the copy here stays either way. Add Account sets it in Server Settings, and signing in again changes it. `mailrs_domain::RemoveSetting`, in `accounts.pop3_remove`. _Avoid_: delete from server, keep on server.
 

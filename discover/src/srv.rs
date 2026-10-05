@@ -1,7 +1,7 @@
 //! Servers from SRV records, as RFC 6186 and RFC 8314 name them.
 
 use crate::name::{host, is_within};
-use crate::{Candidate, Net, Security, Server, Source, SrvRecord, UserName, pairs, with_pop3};
+use crate::{Candidate, Net, Security, Server, Source, SrvRecord, UserName, pairs};
 
 /// Looks up the domain's IMAP, submission and POP3 records and pairs what they
 /// name, TLS from the first byte ahead of STARTTLS. Only the TLS labels
@@ -24,21 +24,34 @@ pub(crate) async fn lookup<N: Net>(net: &N, domain: &str) -> Vec<Candidate> {
     let pop3 = servers(pop3s, Security::Tls)
         .into_iter()
         .find(|server| is_within(&server.host, domain));
-    with_pop3(candidates(domain, imaps, submissions, submission), pop3.as_ref())
+    paired(domain, imaps, submissions, submission, pop3.as_ref())
 }
 
+#[cfg(test)]
 pub(crate) fn candidates(
     domain: &str,
     imaps: Vec<SrvRecord>,
     submissions: Vec<SrvRecord>,
     submission: Vec<SrvRecord>,
 ) -> Vec<Candidate> {
+    paired(domain, imaps, submissions, submission, None)
+}
+
+/// The records' IMAP servers with their submission servers, each with
+/// `pop3` beside it.
+fn paired(
+    domain: &str,
+    imaps: Vec<SrvRecord>,
+    submissions: Vec<SrvRecord>,
+    submission: Vec<SrvRecord>,
+    pop3: Option<&Server>,
+) -> Vec<Candidate> {
     let imap = servers(imaps, Security::Tls);
     let smtp: Vec<Server> = servers(submissions, Security::Tls)
         .into_iter()
         .chain(servers(submission, Security::StartTls))
         .collect();
-    if imap.is_empty() || smtp.is_empty() {
+    if smtp.is_empty() || (imap.is_empty() && pop3.is_none()) {
         return Vec::new();
     }
     // RFC 6186 section 6: DNS without DNSSEC can be forged, so a target
@@ -47,7 +60,7 @@ pub(crate) fn candidates(
         .iter()
         .chain(&smtp)
         .any(|server| !is_within(&server.host, domain));
-    pairs(Source::Srv, None, &imap, &smtp, confirm)
+    pairs(Source::Srv, None, &imap, &smtp, pop3, confirm)
 }
 
 /// The records' servers, best first: lower priority, then higher weight.
@@ -109,6 +122,20 @@ mod tests {
         assert_eq!(outside[0].pop3, None, "a host outside the domain never gets the password unasked");
     }
 
+    #[tokio::test]
+    async fn records_that_name_pop3_and_no_imap_give_a_pop3_candidate() {
+        use crate::fake::FakeNet;
+        let net = FakeNet::default()
+            .answer_srv("_submissions._tcp.example.org", vec![record(0, 1, 465, "smtp.example.org.")])
+            .answer_srv("_pop3s._tcp.example.org", vec![record(0, 1, 995, "pop.example.org.")]);
+        let found = lookup(&net, "example.org").await;
+        assert_eq!(found.len(), 1);
+        assert_eq!(found[0].imap, None);
+        assert_eq!(found[0].pop3.as_ref().map(|s| s.host.as_str()), Some("pop.example.org"));
+        assert_eq!(found[0].smtp.host, "smtp.example.org");
+        assert!(!found[0].confirm, "both inside the domain");
+    }
+
     #[test]
     fn records_inside_the_domain_need_no_confirmation() {
         let found = candidates(
@@ -123,8 +150,8 @@ mod tests {
             .collect();
         assert_eq!(smtp, [(465, Security::Tls), (587, Security::StartTls)]);
         assert!(found.iter().all(|c| !c.confirm && c.source == Source::Srv));
-        assert_eq!(found[0].imap.host, "imap.fastmail.com");
-        assert_eq!(found[0].imap.user_name, UserName::Address);
+        assert_eq!(found[0].imap.as_ref().unwrap().host, "imap.fastmail.com");
+        assert_eq!(found[0].imap.as_ref().unwrap().user_name, UserName::Address);
     }
 
     #[test]
@@ -187,7 +214,7 @@ mod tests {
             vec![record(0, 1, 465, "smtp.example.org.")],
             vec![],
         );
-        assert_eq!(found[0].imap.host, "a.example.org");
+        assert_eq!(found[0].imap.as_ref().unwrap().host, "a.example.org");
     }
 
     #[test]
@@ -224,6 +251,6 @@ mod tests {
             vec![record(0, 1, 465, "smtp.example.org.")],
             vec![],
         );
-        assert_eq!(found[0].imap.host, "imap2.example.org");
+        assert_eq!(found[0].imap.as_ref().unwrap().host, "imap2.example.org");
     }
 }

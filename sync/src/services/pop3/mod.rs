@@ -55,13 +55,6 @@ const POLL_TRAY: Duration = Duration::from_secs(5 * 60);
 /// The most messages one change names; the store takes any number.
 const BATCH_LIMIT: usize = 1000;
 
-const DOWNLOADED: &str = "pop3/";
-
-/// The store id of the message the server calls `uidl`.
-pub(crate) fn downloaded_id(uidl: &str) -> String {
-    format!("{DOWNLOADED}{uidl}")
-}
-
 /// A new store id for a message made here: a sent copy or a draft.
 fn made_here_id() -> String {
     format!("local/{:016x}", rand::random::<u64>())
@@ -152,12 +145,7 @@ fn ask_removal(c: &Connection, account_id: AccountId, ids: &[String]) -> mailrs_
     if accounts::pop3_remove(c, account_id)? == RemoveSetting::Never {
         return Ok(());
     }
-    let uidls: Vec<String> = ids
-        .iter()
-        .filter_map(|id| id.strip_prefix(DOWNLOADED))
-        .map(str::to_string)
-        .collect();
-    mailrs_store::pop3::want_removed(c, account_id, &uidls)
+    mailrs_store::pop3::want_removed_of(c, account_id, ids)
 }
 
 impl From<Pop3Error> for BackendError {

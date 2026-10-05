@@ -51,17 +51,37 @@ pub fn finish_first_check(conn: &Connection, account_id: AccountId) -> Result<()
     Ok(())
 }
 
-/// Records `uidl` as downloaded at `at` and drops its failure count.
+/// The store id for a download of `uidl`: `pop3/<uidl>`, or while a
+/// message holds that id, `pop3/<uidl>/<n>` with the first free `n` from 2.
+/// A server may give a UIDL to a new message once the old one has left it
+/// (RFC 1939 section 7), and the old message here may be the only copy.
+pub fn download_id(conn: &Connection, account_id: AccountId, uidl: &str) -> Result<String> {
+    let mut stmt = conn.prepare_cached(
+        "SELECT EXISTS (SELECT 1 FROM messages WHERE account_id = ?1 AND id = ?2) \
+         OR EXISTS (SELECT 1 FROM local_messages WHERE account_id = ?1 AND message_id = ?2)",
+    )?;
+    let mut id = format!("pop3/{uidl}");
+    let mut n = 1;
+    while stmt.query_row(params![account_id, id], |row| row.get::<_, bool>(0))? {
+        n += 1;
+        id = format!("pop3/{uidl}/{n}");
+    }
+    Ok(id)
+}
+
+/// Records `uidl` as downloaded at `at` into message `message_id`, and
+/// drops its failure count.
 pub fn mark_downloaded(
     conn: &Connection,
     account_id: AccountId,
     uidl: &str,
+    message_id: &str,
     at: EpochMillis,
 ) -> Result<()> {
     conn.execute(
-        "INSERT INTO pop3_seen (account_id, uidl, downloaded_at) VALUES (?1, ?2, ?3) \
+        "INSERT INTO pop3_seen (account_id, uidl, downloaded_at, message_id) VALUES (?1, ?2, ?3, ?4) \
          ON CONFLICT (account_id, uidl) DO NOTHING",
-        params![account_id, uidl, at],
+        params![account_id, uidl, at, message_id],
     )?;
     conn.execute(
         "DELETE FROM pop3_failures WHERE account_id = ?1 AND uidl = ?2",
@@ -77,6 +97,23 @@ pub fn want_removed(conn: &Connection, account_id: AccountId, uidls: &[String]) 
         "UPDATE pop3_seen SET remove_wanted = 1 WHERE account_id = ?1 AND removed = 0 \
          AND uidl IN (SELECT value FROM json_each(?2))",
         params![account_id, json(uidls)],
+    )?;
+    Ok(())
+}
+
+/// Asks for a DELE of the downloads that brought `message_ids`, for Delete
+/// Forever on an account that removes mail from the server. A message
+/// made here, or one whose UIDL the server has since given to another
+/// message, has no row and is left alone.
+pub fn want_removed_of(
+    conn: &Connection,
+    account_id: AccountId,
+    message_ids: &[String],
+) -> Result<()> {
+    conn.execute(
+        "UPDATE pop3_seen SET remove_wanted = 1 WHERE account_id = ?1 AND removed = 0 \
+         AND message_id IN (SELECT value FROM json_each(?2))",
+        params![account_id, json(message_ids)],
     )?;
     Ok(())
 }
@@ -158,31 +195,166 @@ pub fn forget_gone(
     }
 }
 
-/// Counts one refused RETR of `uidl` with the server's words, and answers
-/// how many there have been.
+/// Drops the failure count of every UIDL `listed`, the server's whole list,
+/// lacks, a page at a time. Such a message will never download, so it
+/// leaves the account's menu. True when one that the menu showed went.
+///
+/// A message the server lists again later starts its count from nothing
+/// and reaches the menu again at its third failure. To this account it is
+/// a new arrival: the server may have given its UIDL to another message.
+pub fn forget_gone_failures(
+    conn: &Connection,
+    account_id: AccountId,
+    listed: &HashSet<String>,
+) -> Result<bool> {
+    let mut after = String::new();
+    let mut shown_went = false;
+    loop {
+        let page: Vec<(String, i64)> = conn
+            .prepare_cached(
+                "SELECT uidl, failures FROM pop3_failures WHERE account_id = ?1 AND uidl > ?2 \
+                 ORDER BY uidl LIMIT ?3",
+            )?
+            .query_map(params![account_id, after, PAGE as i64], |row| {
+                Ok((row.get(0)?, row.get(1)?))
+            })?
+            .collect::<rusqlite::Result<_>>()?;
+        let Some((last, _)) = page.last() else {
+            return Ok(shown_went);
+        };
+        after = last.clone();
+        let gone: Vec<String> = page
+            .into_iter()
+            .filter(|(uidl, _)| !listed.contains(uidl))
+            .map(|(uidl, failures)| {
+                shown_went |= failures >= SHOWN_AFTER;
+                uidl
+            })
+            .collect();
+        conn.execute(
+            "DELETE FROM pop3_failures WHERE account_id = ?1 AND uidl IN (SELECT value FROM json_each(?2))",
+            params![account_id, json(&gone)],
+        )?;
+    }
+}
+
+/// Why a message did not download. Stored as a code, so the window shows
+/// it in the language it runs in.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum FailReason {
+    /// The server answered `-ERR`, in the words kept beside it.
+    Refused,
+    /// `LIST` or the answer itself was past what Penguin Mail reads.
+    TooLarge,
+    /// The server's answer was not POP3.
+    Unreadable,
+    /// The connection dropped while the message came down.
+    Dropped,
+}
+
+impl FailReason {
+    fn code(self) -> &'static str {
+        match self {
+            FailReason::Refused => "refused",
+            FailReason::TooLarge => "too_large",
+            FailReason::Unreadable => "unreadable",
+            FailReason::Dropped => "dropped",
+        }
+    }
+
+    fn from_code(code: &str) -> FailReason {
+        match code {
+            "too_large" => FailReason::TooLarge,
+            "unreadable" => FailReason::Unreadable,
+            "dropped" => FailReason::Dropped,
+            _ => FailReason::Refused,
+        }
+    }
+}
+
+/// A message that failed [`SHOWN_AFTER`] times or more.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Failing {
+    pub uidl: String,
+    /// Why it failed the last time.
+    pub reason: FailReason,
+    /// The server's words for a refusal; empty for the other reasons.
+    pub words: String,
+    /// Who sent it and its subject, once a `TOP` has read its headers.
+    pub sender: Option<String>,
+    pub subject: Option<String>,
+}
+
+/// Counts one failed RETR of `uidl`, keeping why and, for a refusal, the
+/// server's words. Answers how many there have been.
 pub fn record_failure(
     conn: &Connection,
     account_id: AccountId,
     uidl: &str,
-    error: &str,
+    reason: FailReason,
+    words: &str,
 ) -> Result<i64> {
     Ok(conn.query_row(
-        "INSERT INTO pop3_failures (account_id, uidl, failures, last_error) VALUES (?1, ?2, 1, ?3) \
-         ON CONFLICT (account_id, uidl) DO UPDATE SET failures = failures + 1, last_error = excluded.last_error \
+        "INSERT INTO pop3_failures (account_id, uidl, failures, last_error, reason) VALUES (?1, ?2, 1, ?3, ?4) \
+         ON CONFLICT (account_id, uidl) DO UPDATE SET failures = failures + 1, \
+         last_error = excluded.last_error, reason = excluded.reason \
          RETURNING failures",
-        params![account_id, uidl, error],
+        params![account_id, uidl, words, reason.code()],
         |row| row.get(0),
     )?)
 }
 
-/// The UIDLs refused [`SHOWN_AFTER`] times or more, each with the server's
-/// last words, for the account's menu.
-pub fn failing(conn: &Connection, account_id: AccountId) -> Result<Vec<(String, String)>> {
+/// Keeps who sent the failing message `uidl` and its subject, read from
+/// its headers, so the account's menu can name it.
+pub fn name_failure(
+    conn: &Connection,
+    account_id: AccountId,
+    uidl: &str,
+    sender: Option<&str>,
+    subject: Option<&str>,
+) -> Result<()> {
+    conn.execute(
+        "UPDATE pop3_failures SET sender = ?3, subject = ?4 WHERE account_id = ?1 AND uidl = ?2",
+        params![account_id, uidl, sender, subject],
+    )?;
+    Ok(())
+}
+
+/// The UIDLs among `uidls` that have failed before, each with why it
+/// failed the last time, in UIDL order.
+pub fn failure_reasons(
+    conn: &Connection,
+    account_id: AccountId,
+    uidls: &[String],
+) -> Result<Vec<(String, FailReason)>> {
     let mut stmt = conn.prepare_cached(
-        "SELECT uidl, last_error FROM pop3_failures WHERE account_id = ?1 AND failures >= ?2 ORDER BY uidl",
+        "SELECT uidl, reason FROM pop3_failures \
+         WHERE account_id = ?1 AND uidl IN (SELECT value FROM json_each(?2)) ORDER BY uidl",
+    )?;
+    let rows = stmt.query_map(params![account_id, json(uidls)], |row| {
+        Ok((
+            row.get(0)?,
+            FailReason::from_code(&row.get::<_, String>(1)?),
+        ))
+    })?;
+    Ok(rows.collect::<rusqlite::Result<_>>()?)
+}
+
+/// The messages that failed [`SHOWN_AFTER`] times or more, for the
+/// account's menu.
+pub fn failing(conn: &Connection, account_id: AccountId) -> Result<Vec<Failing>> {
+    let mut stmt = conn.prepare_cached(
+        "SELECT uidl, reason, last_error, sender, subject FROM pop3_failures \
+         WHERE account_id = ?1 AND failures >= ?2 ORDER BY uidl",
     )?;
     let rows = stmt.query_map(params![account_id, SHOWN_AFTER], |row| {
-        Ok((row.get(0)?, row.get(1)?))
+        Ok(Failing {
+            uidl: row.get(0)?,
+            reason: FailReason::from_code(&row.get::<_, String>(1)?),
+            words: row.get(2)?,
+            sender: row.get(3)?,
+            subject: row.get(4)?,
+        })
     })?;
     Ok(rows.collect::<rusqlite::Result<_>>()?)
 }
