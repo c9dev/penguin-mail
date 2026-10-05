@@ -273,6 +273,13 @@ pub fn explain(err: &SmimeError) -> String {
             &[("address", address)],
         ),
         SmimeError::NotSmime => gettext("This part holds no S/MIME data."),
+        SmimeError::NotACertificate => gettext("This file holds no certificate."),
+        SmimeError::WrongPassphrase => {
+            gettext("That passphrase does not open this file. Nothing was imported.")
+        }
+        SmimeError::NoPassphrase => {
+            gettext("The file needs its passphrase, and none was given. Nothing was imported.")
+        }
         SmimeError::Gpgsm(reason) => {
             fill(&gettext("gpgsm failed: {reason}"), &[("reason", reason)])
         }

@@ -9,6 +9,7 @@
 mod error;
 pub mod gnupg;
 mod gpg;
+mod import;
 pub mod inline;
 pub mod keys;
 pub mod mime;

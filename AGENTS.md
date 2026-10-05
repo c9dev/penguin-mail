@@ -56,7 +56,10 @@ Installing for the owner: `NO_AUTOSTART=1 scripts/install.sh`.
   trust dialog on the owner's screen. In product code, every `gpg` and
   `gpgsm` run goes through `mailrs_pgp::gnupg::Program::run`, which takes
   `Pinentry::Never` (`--pinentry-mode error`) or `Pinentry::MayAsk`; only
-  decrypting and signing may ask for a passphrase.
+  decrypting, signing and importing a file the person picked may ask for
+  a passphrase. A test that imports a passphrase-protected PKCS#12 file
+  names a pinentry script that answers from the fixture
+  (`smime/tests/import.rs`), so nobody is asked.
 - **Sandbox tests** for skill scripts run real `bwrap` and skip when it
   is missing or cannot start, as in an unprivileged container.
   `PENGUIN_MAIL_REQUIRE_SANDBOX=1` turns the skip into a failure.

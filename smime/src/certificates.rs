@@ -120,12 +120,12 @@ impl Smime {
 
 /// One certificate out of a `--with-colons` listing.
 #[derive(Default)]
-struct Listed {
+pub(crate) struct Listed {
     validity: String,
     capabilities: String,
-    fingerprint: String,
-    subject: String,
-    emails: Vec<String>,
+    pub(crate) fingerprint: String,
+    pub(crate) subject: String,
+    pub(crate) emails: Vec<String>,
 }
 
 impl Listed {
@@ -147,7 +147,7 @@ impl Listed {
 /// The fields are the ones GnuPG documents in `doc/DETAILS`: a record's kind
 /// first, then its validity, and at the twelfth field what the certificate
 /// can do. A lower case `e` or `s` there means encryption or signing.
-fn certificates(listing: &str) -> Vec<Listed> {
+pub(crate) fn certificates(listing: &str) -> Vec<Listed> {
     let mut found: Vec<Listed> = Vec::new();
     for record in listing.lines() {
         let fields: Vec<&str> = record.split(':').collect();
