@@ -12,7 +12,7 @@ use serde_json::json;
 
 use super::super::Permission;
 use super::super::fake::{Harness, ME, NOW, labelled, meta};
-use super::super::manage::query_words;
+use super::super::manage::{query_words, unstored_id};
 use super::{harness, mail, target};
 
 /// One account whose server takes no search syntax of its own, as an IMAP
@@ -334,7 +334,7 @@ async fn create_contact_writes_to_google_and_the_address_book() {
     assert_eq!(
         h.asked().questions,
         [format!(
-            "Add Priya Shah to the Google contacts of {ME}?\n\n\
+            "Add Priya Shah to the contacts of {ME}?\n\n\
              Name: Priya Shah\nAddresses: priya@fernwood.example\n\
              Phones: +351 21 000 0000\nOrganization: Fernwood"
         )]
@@ -377,7 +377,7 @@ async fn update_contact_finds_the_contact_by_address_and_changes_what_it_names()
     assert_eq!(changed["updated"]["phone"], "+351 91 000 0000");
     assert_eq!(
         h.asked().questions[1],
-        format!("Change Priya Shah in the Google contacts of {ME}?\n\nPhones: +351 91 000 0000")
+        format!("Change Priya Shah in the contacts of {ME}?\n\nPhones: +351 91 000 0000")
     );
     let google = h.gmail.with(|s| s.contacts[0].clone());
     assert_eq!(google.phone.as_deref(), Some("+351 91 000 0000"));
@@ -393,6 +393,23 @@ async fn update_contact_finds_the_contact_by_address_and_changes_what_it_names()
         .await
         .is_err()
     );
+}
+
+/// With contacts off the book holds nothing, so `update_contact` sends
+/// the id `create_contact` gave straight to the server. Each provider
+/// shapes its ids its own way, and a CardDAV path can hold the owner's
+/// address.
+#[test]
+fn any_id_but_a_bare_address_goes_to_the_server_as_it_is() {
+    for id in [
+        "people/c1",
+        "AAkALgAAAAAAHYQDEapmEc2byACqAC-EWg0A",
+        "/dav/addressbooks/user/ann@fastmail.com/Default/42.vcf",
+    ] {
+        assert_eq!(unstored_id(id), Some(id), "{id}");
+    }
+    assert_eq!(unstored_id("priya@fernwood.example"), None);
+    assert_eq!(unstored_id(" "), None);
 }
 
 #[tokio::test]

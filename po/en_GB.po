@@ -1146,38 +1146,38 @@ msgid "Delete the template “{name}”?"
 msgstr "Delete the template “{name}”?"
 
 #: app/src/assistant/run/manage.rs:494
-msgid "Add {contact} to the Google contacts of {account}?"
-msgstr "Add {contact} to the Google contacts of {account}?"
+msgid "Add {contact} to the contacts of {account}?"
+msgstr "Add {contact} to the contacts of {account}?"
 
-#: app/src/assistant/run/manage.rs:548
-msgid "Change {contact} in the Google contacts of {account}?"
-msgstr "Change {contact} in the Google contacts of {account}?"
+#: app/src/assistant/run/manage.rs:550
+msgid "Change {contact} in the contacts of {account}?"
+msgstr "Change {contact} in the contacts of {account}?"
 
-#: app/src/assistant/run/manage.rs:595
+#: app/src/assistant/run/manage.rs:597
 msgid "Always load images from anyone at {domain}?"
 msgstr "Always load images from anyone at {domain}?"
 
-#: app/src/assistant/run/manage.rs:599
+#: app/src/assistant/run/manage.rs:601
 msgid "Always load images from {sender}?"
 msgstr "Always load images from {sender}?"
 
-#: app/src/assistant/run/manage.rs:605
+#: app/src/assistant/run/manage.rs:607
 msgid "Loading a remote image tells the sender when you opened their mail."
 msgstr "Loading a remote image tells the sender when you opened their mail."
 
-#: app/src/assistant/run/manage.rs:630
+#: app/src/assistant/run/manage.rs:632
 msgid "Stop loading images from {sender}?"
 msgstr "Stop loading images from {sender}?"
 
-#: app/src/assistant/run/manage.rs:665
+#: app/src/assistant/run/manage.rs:667
 msgid "Export {what} to {file}?"
 msgstr "Export {what} to {file}?"
 
-#: app/src/assistant/run/manage.rs:671
+#: app/src/assistant/run/manage.rs:673
 msgid "A file with that name is there already, and exporting replaces it."
 msgstr "A file with that name is there already, and exporting replaces it."
 
-#: app/src/assistant/run/manage.rs:750
+#: app/src/assistant/run/manage.rs:752
 msgid "the message “{subject}”"
 msgstr "the message “{subject}”"
 

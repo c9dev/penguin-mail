@@ -1,5 +1,5 @@
 //! The tools that look after what the user keeps rather than the mail
-//! itself: labels, smart mailboxes, templates, Google contacts, the senders
+//! itself: labels, smart mailboxes, templates, contacts, the senders
 //! whose remote images load, and files of exported mail. Each one works
 //! through the module the window uses for the same thing, and every change
 //! asks first.
@@ -491,7 +491,7 @@ impl<A: Accounts> Tools<A> {
         let question = format!(
             "{}\n\n{}",
             fill(
-                &gettext("Add {contact} to the Google contacts of {account}?"),
+                &gettext("Add {contact} to the contacts of {account}?"),
                 &[("contact", &who), ("account", &account.email)],
             ),
             contact_lines(&fields)
@@ -534,18 +534,20 @@ impl<A: Accounts> Tools<A> {
             .await?;
         let (resource, who) = match stored {
             Some(contact) => (contact.resource.clone(), contact.display().to_string()),
-            None if wanted.starts_with("people/") => (wanted.clone(), wanted.clone()),
-            None => {
-                return Err(format!(
-                    "{} has no contact {wanted} on this computer. find_contact gives the id to use; an account with contacts off in Preferences shows none.",
-                    account.email
-                ));
-            }
+            None => match unstored_id(&wanted) {
+                Some(id) => (id.to_string(), id.to_string()),
+                None => {
+                    return Err(format!(
+                        "{} has no contact {wanted} on this computer. Give the id find_contact or create_contact gave; an account with contacts off in Preferences keeps none here, so only its id works.",
+                        account.email
+                    ));
+                }
+            },
         };
         let question = format!(
             "{}\n\n{}",
             fill(
-                &gettext("Change {contact} in the Google contacts of {account}?"),
+                &gettext("Change {contact} in the contacts of {account}?"),
                 &[("contact", &who), ("account", &account.email)],
             ),
             contact_lines(&fields)
@@ -752,6 +754,16 @@ impl<A: Accounts> Tools<A> {
         );
         Ok((export::file_name(&subject, date, "eml"), what))
     }
+}
+
+/// The id `update_contact` sends to the server when the book on this
+/// computer has no such contact, as when the account's contacts are off.
+/// Google's ids start `people/`, Graph's are opaque, and a CardDAV path
+/// can hold an address, so anything but a bare address counts.
+pub(super) fn unstored_id(wanted: &str) -> Option<&str> {
+    let wanted = wanted.trim();
+    let address = wanted.contains('@') && !wanted.contains('/');
+    (!wanted.is_empty() && !address).then_some(wanted)
 }
 
 #[cfg(test)]

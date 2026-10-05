@@ -268,7 +268,7 @@ pub(super) fn catalog<A: Accounts>() -> Vec<MailTool<A>> {
             input: || {
                 json!({
                     "mailbox": {"type": "string", "enum": MailboxName::ALL.map(MailboxName::key), "description": "follow_up lists sent mail that has waited 3 to 30 days for a reply."},
-                    "category": {"type": "string", "enum": categories(), "description": "Narrow the inbox to one of its categories, which only Gmail accounts have."},
+                    "category": {"type": "string", "enum": categories(), "description": "Narrow the inbox to one of its categories. A Gmail account has primary, updates, promotions, and social, and a Microsoft account has focused and other."},
                     "label": {"type": "string", "description": "The label's name, when mailbox is \"label\"."},
                     "name": {"type": "string", "description": "The smart mailbox's name, when mailbox is \"smart\"."},
                     "account": account("Limit to one account. All accounts when left out."),
@@ -601,7 +601,7 @@ pub(super) fn catalog<A: Accounts>() -> Vec<MailTool<A>> {
         MailTool {
             name: "create_contact",
             label: || gettext("Adding a contact"),
-            description: "Adds a person to a Gmail account's contacts. Give a name or an address at least. The user approves it first.",
+            description: "Adds a person to an account's contacts. Give a name or an address at least. The user approves it first.",
             input: || {
                 json!({
                     "account": account("The account whose contacts get the person. Defaults to the default account."),
@@ -617,10 +617,10 @@ pub(super) fn catalog<A: Accounts>() -> Vec<MailTool<A>> {
         MailTool {
             name: "update_contact",
             label: || gettext("Changing a contact"),
-            description: "Changes a person in a Gmail account's contacts. Only the fields given change; emails and phones replace the whole list, and an empty string clears a field. The user approves it first.",
+            description: "Changes a person in an account's contacts. Only the fields given change; emails and phones replace the whole list, and an empty string clears a field. The user approves it first.",
             input: || {
                 json!({
-                    "contact": {"type": "string", "description": "The id find_contact gave, or one of the contact's addresses."},
+                    "contact": {"type": "string", "description": "The id find_contact or create_contact gave, or one of the contact's addresses. On an account whose contacts are off in Preferences only the id works."},
                     "account": account("The account the contact belongs to. Defaults to the default account."),
                     "name": {"type": "string"},
                     "emails": {"type": "array", "items": {"type": "string"}},
@@ -746,7 +746,7 @@ pub(super) fn catalog<A: Accounts>() -> Vec<MailTool<A>> {
         MailTool {
             name: "categorize_sender",
             label: || gettext("Sorting a sender"),
-            description: "Moves a sender's mail into an inbox category and sorts their future mail there with a filter. Only Gmail accounts have categories.",
+            description: "Moves a sender's mail into an inbox category and sorts their future mail there. A Gmail account takes primary, updates, promotions, or social, and a Microsoft account takes focused or other.",
             input: || {
                 json!({
                     "account": account("The account."),
