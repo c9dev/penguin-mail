@@ -166,7 +166,7 @@ mod tests {
                     // Counts the tries under an id no account uses.
                     answers.entry(account.id + 1000).or_default().push(Answer::Ready);
                     let mine = answers.entry(account.id).or_default();
-                    (!mine.is_empty()).then(|| mine.remove(0)).unwrap_or(Answer::Hang)
+                    if mine.is_empty() { Answer::Hang } else { mine.remove(0) }
                 };
                 Box::pin(async move {
                     match next {
