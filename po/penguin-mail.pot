@@ -9598,12 +9598,12 @@ msgstr ""
 msgid "Outlook answered but did not keep the automatic reply."
 msgstr ""
 
-#: sync/src/services/pop3/mod.rs:339
+#: sync/src/services/pop3/mod.rs:416
 msgid ""
 "Penguin Mail keeps the names of Inbox, Sent, Drafts, Trash, Junk and Archive."
 msgstr ""
 
-#: sync/src/services/pop3/mod.rs:355
+#: sync/src/services/pop3/mod.rs:432
 msgid "Penguin Mail keeps Inbox, Sent, Drafts, Trash, Junk and Archive."
 msgstr ""
 

@@ -4,6 +4,7 @@
 //! removing the account take the bytes too.
 
 use mailrs_domain::AccountId;
+use rusqlite::blob::Blob;
 use rusqlite::{Connection, MAIN_DB, OptionalExtension, params};
 
 use crate::Result;
@@ -30,15 +31,36 @@ pub fn put(conn: &Connection, account_id: AccountId, message_id: &str, raw: &[u8
     Ok(())
 }
 
-/// The bytes kept for `message_id`, or `None`.
+/// The bytes kept for `message_id`, or `None`. Read through incremental
+/// blob I/O into one buffer of their length: a column read would have
+/// SQLite assemble the whole value in its own memory first, and the
+/// caller copy it from there.
 pub fn get(conn: &Connection, account_id: AccountId, message_id: &str) -> Result<Option<Vec<u8>>> {
-    Ok(conn
+    let Some(blob) = open(conn, account_id, message_id)? else {
+        return Ok(None);
+    };
+    let mut raw = vec![0; blob.len()];
+    blob.read_at_exact(&mut raw, 0)?;
+    Ok(Some(raw))
+}
+
+/// The bytes kept for `message_id`, open to read a piece at a time with
+/// `Read` and `Seek`, or `None`.
+pub fn open<'c>(
+    conn: &'c Connection,
+    account_id: AccountId,
+    message_id: &str,
+) -> Result<Option<Blob<'c>>> {
+    let row: Option<i64> = conn
         .query_row(
-            "SELECT raw FROM local_messages WHERE account_id = ?1 AND message_id = ?2",
+            "SELECT rowid FROM local_messages WHERE account_id = ?1 AND message_id = ?2",
             params![account_id, message_id],
             |row| row.get(0),
         )
-        .optional()?)
+        .optional()?;
+    Ok(row
+        .map(|row| conn.blob_open(MAIN_DB, c"local_messages", c"raw", row, true))
+        .transpose()?)
 }
 
 pub fn delete(conn: &Connection, account_id: AccountId, message_id: &str) -> Result<()> {

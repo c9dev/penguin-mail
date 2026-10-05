@@ -6,10 +6,11 @@
 //! session itself. Sending goes over SMTP, as an IMAP account's does, and
 //! the copy, drafts and every write land in the store.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, VecDeque};
+use std::io::Cursor;
 use std::ops::RangeInclusive;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Duration;
 
 use mailrs_domain::mailbox::keyword;
@@ -19,7 +20,7 @@ use mailrs_domain::{
     RemoveSetting, Role,
 };
 use mailrs_gmail::LabelColor;
-use mailrs_mime::Parts;
+use mailrs_mime::{Parts, Spans};
 use mailrs_pop3::{Pop3Api, Pop3Error};
 use mailrs_store::messages::{self, Change};
 use mailrs_store::threading::Links;
@@ -54,6 +55,17 @@ const POLL_TRAY: Duration = Duration::from_secs(5 * 60);
 
 /// The most messages one change names; the store takes any number.
 const BATCH_LIMIT: usize = 1000;
+
+/// How many opened messages keep the spans of their parts.
+const OUTLINES_KEPT: usize = 8;
+
+/// Where the parts of a message opened lately lie in its stored copy, which
+/// was `length` bytes long then.
+struct Outlined {
+    id: String,
+    length: u64,
+    spans: Arc<Spans>,
+}
 
 /// A new store id for a message made here: a sent copy or a draft.
 fn made_here_id() -> String {
@@ -176,6 +188,9 @@ pub struct Pop3<S, P> {
     client: Arc<P>,
     settings: Arc<Pop3Settings>,
     tray_only: Arc<AtomicBool>,
+    /// The spans of the messages opened last, newest at the back, so a
+    /// file asked for after its message opened is read alone.
+    outlines: Arc<Mutex<VecDeque<Outlined>>>,
 }
 
 impl<S, P> Clone for Pop3<S, P> {
@@ -187,6 +202,7 @@ impl<S, P> Clone for Pop3<S, P> {
             client: Arc::clone(&self.client),
             settings: Arc::clone(&self.settings),
             tray_only: Arc::clone(&self.tray_only),
+            outlines: Arc::clone(&self.outlines),
         }
     }
 }
@@ -206,6 +222,7 @@ impl<S, P> Pop3<S, P> {
             client,
             settings: Arc::new(settings),
             tray_only: Arc::default(),
+            outlines: Arc::default(),
         }
     }
 
@@ -235,6 +252,66 @@ impl<S, P> Pop3<S, P> {
         self.read(move |c, a| local_messages::get(c, a, &id))
             .await?
             .ok_or(BackendError::NotFound)
+    }
+
+    /// Keeps the spans of message `id`, whose stored copy is `length`
+    /// bytes long.
+    fn remember(&self, id: &str, length: u64, spans: Spans) {
+        let mut outlines = self.outlines.lock().unwrap_or_else(PoisonError::into_inner);
+        outlines.retain(|o| o.id != id);
+        if outlines.len() == OUTLINES_KEPT {
+            outlines.pop_front();
+        }
+        outlines.push_back(Outlined {
+            id: id.to_string(),
+            length,
+            spans: Arc::new(spans),
+        });
+    }
+
+    /// The spans kept for message `id`, with the length its copy had.
+    fn remembered(&self, id: &str) -> Option<(u64, Arc<Spans>)> {
+        let outlines = self.outlines.lock().unwrap_or_else(PoisonError::into_inner);
+        outlines
+            .iter()
+            .find(|o| o.id == id)
+            .map(|o| (o.length, Arc::clone(&o.spans)))
+    }
+
+    /// Part `path` of message `id`, decoded from its stored copy a piece at
+    /// a time, when the message was opened lately and the part lies in the
+    /// copy as it did then. `None` sends the caller to the whole copy.
+    async fn part_alone(&self, id: &str, path: &str) -> Result<Option<Vec<u8>>, BackendError> {
+        let Some((length, spans)) = self.remembered(id) else {
+            return Ok(None);
+        };
+        let Some(span) = spans.get(path).cloned() else {
+            return Ok(None);
+        };
+        let id = id.to_string();
+        let decoded = self
+            .read(move |c, a| {
+                let Some(mut blob) = local_messages::open(c, a, &id)? else {
+                    return Ok(None);
+                };
+                // A copy of another length is not the one the spans name.
+                if blob.len() as u64 != length {
+                    return Ok(None);
+                }
+                Ok(Some(mailrs_mime::decode_span(&mut blob, &span)))
+            })
+            .await?;
+        match decoded {
+            Some(Ok(Some(bytes))) => Ok(Some(bytes)),
+            Some(Ok(None)) => Err(BackendError::NotFound),
+            // A read that failed partway, as when the message went
+            // meanwhile, tries the whole copy instead.
+            Some(Err(err)) => {
+                tracing::info!(%err, "could not read a part alone from the stored copy");
+                Ok(None)
+            }
+            None => Ok(None),
+        }
     }
 
     fn role_of(id: &str) -> Option<Role> {
@@ -529,12 +606,35 @@ impl<S: Submit, P: Pop3Api> MailBackend for Pop3<S, P> {
         Ok(id)
     }
 
+    /// Read from the stored copy without decoding a file, as a server's
+    /// structure gives it, and the spans of its parts kept for
+    /// `fetch_part`. A full read would decode every file in the message,
+    /// three and a half times its size in memory for one large file.
     async fn fetch_structure(&self, id: &str) -> Result<Parts, BackendError> {
-        mailrs_mime::parts(&self.raw(id).await?).ok_or(BackendError::NotFound)
+        let raw = self.raw(id).await?;
+        let (parts, spans) = mailrs_mime::outline(&raw).ok_or(BackendError::NotFound)?;
+        self.remember(id, raw.len() as u64, spans);
+        Ok(parts)
     }
 
+    /// Decodes this part alone. After the message opened, only the part's
+    /// own bytes are read from the store; otherwise the copy is read whole
+    /// once, to find the part.
     async fn fetch_part(&self, id: &str, path: &str) -> Result<Vec<u8>, BackendError> {
-        mailrs_mime::part(&self.raw(id).await?, path).ok_or(BackendError::NotFound)
+        if let Some(bytes) = self.part_alone(id, path).await? {
+            return Ok(bytes);
+        }
+        let raw = self.raw(id).await?;
+        let (_, spans) = mailrs_mime::outline(&raw).ok_or(BackendError::NotFound)?;
+        let found = match spans.get(path) {
+            Some(span) => mailrs_mime::decode_span(&mut Cursor::new(raw.as_slice()), span)
+                .map_err(|err| BackendError::Refused(err.to_string()))?,
+            // Inside a forwarded message sent with a transfer encoding,
+            // whose parts lie only in its decoded copy.
+            None => mailrs_mime::part(&raw, path),
+        };
+        self.remember(id, raw.len() as u64, spans);
+        found.ok_or(BackendError::NotFound)
     }
 
     fn mailbox_for(&self, role: Role) -> Option<String> {

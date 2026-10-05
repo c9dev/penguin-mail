@@ -55,6 +55,8 @@ struct Inner {
     gone: bool,
     retr_calls: Vec<u32>,
     deleted: Vec<u32>,
+    /// Every command a session sent after signing in, by its POP3 name.
+    commands: Vec<&'static str>,
     connects: usize,
     in_flight: usize,
     most_in_flight: usize,
@@ -89,6 +91,7 @@ impl Default for FakePop3 {
                 gone: false,
                 retr_calls: Vec::new(),
                 deleted: Vec::new(),
+                commands: Vec::new(),
                 connects: 0,
                 in_flight: 0,
                 most_in_flight: 0,
@@ -227,6 +230,16 @@ impl FakePop3 {
         self.lock().deleted.clone()
     }
 
+    /// Every command sent after signing in, by its POP3 name, in order,
+    /// since the fake was made or the last [`FakePop3::clear_commands`].
+    pub fn commands(&self) -> Vec<&'static str> {
+        self.lock().commands.clone()
+    }
+
+    pub fn clear_commands(&self) {
+        self.lock().commands.clear();
+    }
+
     pub fn connects(&self) -> usize {
         self.lock().connects
     }
@@ -328,14 +341,16 @@ impl Pop3Api for FakePop3 {
     }
 
     async fn stat(&self) -> Result<Stat, Pop3Error> {
-        let inner = self.lock();
+        let mut inner = self.lock();
+        inner.commands.push("STAT");
         inner.session()?;
         let live: Vec<u64> = inner.live().map(|(_, _, raw)| raw.len() as u64).collect();
         Ok(Stat { count: live.len() as u32, octets: live.iter().sum() })
     }
 
     async fn uidl(&self) -> Result<UidlListing, Pop3Error> {
-        let inner = self.lock();
+        let mut inner = self.lock();
+        inner.commands.push("UIDL");
         inner.session()?;
         let (garbled, messages): (Vec<Uidl>, Vec<Uidl>) = inner
             .live()
@@ -345,7 +360,8 @@ impl Pop3Api for FakePop3 {
     }
 
     async fn list(&self) -> Result<Vec<ListItem>, Pop3Error> {
-        let inner = self.lock();
+        let mut inner = self.lock();
+        inner.commands.push("LIST");
         inner.session()?;
         Ok(inner
             .live()
@@ -359,6 +375,7 @@ impl Pop3Api for FakePop3 {
     async fn retr(&self, id: u32, _octets: u64) -> Result<Vec<u8>, Pop3Error> {
         let hold = {
             let mut inner = self.lock();
+            inner.commands.push("RETR");
             inner.session()?;
             inner.retr_calls.push(id);
             inner.hold.take()
@@ -387,6 +404,7 @@ impl Pop3Api for FakePop3 {
 
     async fn top(&self, id: u32, lines: u32) -> Result<Vec<u8>, Pop3Error> {
         let mut inner = self.lock();
+        inner.commands.push("TOP");
         let uidl = inner.uidl_of(id)?;
         if let Some(err) = inner.broken_top.get(&uidl).cloned() {
             inner.end_session();
@@ -404,6 +422,7 @@ impl Pop3Api for FakePop3 {
 
     async fn dele(&self, id: u32) -> Result<(), Pop3Error> {
         let mut inner = self.lock();
+        inner.commands.push("DELE");
         inner.uidl_of(id)?;
         if let Some(look) = &inner.on_dele {
             look();
@@ -415,6 +434,7 @@ impl Pop3Api for FakePop3 {
 
     async fn quit(&self) -> Result<(), Pop3Error> {
         let mut inner = self.lock();
+        inner.commands.push("QUIT");
         inner.session()?;
         if inner.drop_before_quit {
             inner.end_session();
