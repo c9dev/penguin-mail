@@ -7,6 +7,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### New
 
+- Address suggestions show which account each contact comes from, and
+  after you send a message you can save its new recipients to that
+  account's contacts with one press.
 - Import your OpenPGP keys and S/MIME certificates in Preferences, under
   Writing: choose Import beside either row and pick an .asc, .p12 or .pem
   file.

@@ -1,10 +1,11 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use mailrs_domain::Address;
 use mailrs_gmail::{GmailError, Person};
 use mailrs_store::address_book;
 
-use super::{Connected, Harness, harness};
+use super::{Connected, Harness, ServedBy, harness};
 use crate::contacts::{ContactBook, REFRESH_AFTER, Refreshed};
 use crate::settings::Permitted;
 
@@ -300,4 +301,144 @@ async fn turning_contacts_off_leaves_nothing_behind() {
     assert!(b.book.card("mara@example.org").await.unwrap().is_none());
     let left = h.db.read(address_book::list).await.unwrap();
     assert!(left.is_empty());
+}
+
+fn to(name: Option<&str>, email: &str) -> Address {
+    Address {
+        name: name.map(str::to_string),
+        email: email.into(),
+    }
+}
+
+fn emails(people: &[Address]) -> Vec<&str> {
+    people.iter().map(|a| a.email.as_str()).collect()
+}
+
+#[tokio::test]
+async fn a_recipient_already_in_the_sending_accounts_address_book_is_not_new() {
+    let h = harness().await;
+    let b = book(&h);
+    h.fake.with(|s| {
+        s.contacts = vec![person("people/c1", "Mara Okafor", &["mara@example.org"], None)];
+    });
+    b.book.refresh(h.account_id).await.unwrap();
+
+    let new = b
+        .book
+        .new_recipients(
+            h.account_id,
+            &[
+                to(Some("Mara"), "MARA@example.org"),
+                to(Some("Ana Lima"), "ana@example.pt"),
+                to(None, "ana@example.pt"),
+                to(None, "me@example.com"),
+                to(None, "no-reply@shop.example"),
+                to(None, "not an address"),
+            ],
+        )
+        .await
+        .unwrap();
+    assert_eq!(emails(&new), ["ana@example.pt"]);
+    assert_eq!(new[0].name.as_deref(), Some("Ana Lima"));
+}
+
+#[tokio::test]
+async fn an_account_without_contacts_is_offered_nobody() {
+    let h = harness().await;
+    let mut services = crate::AccountServices::fake(Arc::clone(&h.fake));
+    services.contacts = None;
+    let dir = tempfile::tempdir().unwrap();
+    let book = ContactBook::new(
+        Arc::new(ServedBy::new(h.account_id, Arc::clone(&h.sync), services)),
+        h.db.clone(),
+        dir.path().join("photos"),
+    );
+    let new = book
+        .new_recipients(h.account_id, &[to(Some("Ana Lima"), "ana@example.pt")])
+        .await
+        .unwrap();
+    assert!(new.is_empty());
+}
+
+#[tokio::test]
+async fn a_declined_offer_is_not_made_again_for_that_account() {
+    let h = harness().await;
+    let b = book(&h);
+    b.book
+        .decline_recipients(h.account_id, &["Ana@example.pt".into()])
+        .await
+        .unwrap();
+    let new = b
+        .book
+        .new_recipients(
+            h.account_id,
+            &[to(None, "ana@example.pt"), to(None, "rui@example.pt")],
+        )
+        .await
+        .unwrap();
+    assert_eq!(emails(&new), ["rui@example.pt"]);
+}
+
+#[tokio::test]
+async fn save_makes_a_contact_of_each_recipient_on_the_sending_account() {
+    let h = harness().await;
+    let b = book(&h);
+    let saved = b
+        .book
+        .save_recipients(
+            h.account_id,
+            &[to(Some("Ana Lima"), "ana@example.pt"), to(None, "rui@example.pt")],
+        )
+        .await
+        .unwrap();
+    let Permitted::Done(saved) = saved else {
+        panic!("the fake grants every scope");
+    };
+    assert_eq!(saved.saved.len(), 2);
+    assert!(saved.failed.is_empty());
+    let made: Vec<(Option<String>, Vec<String>)> =
+        h.fake.with(|s| s.contacts.iter().map(|p| (p.name.clone(), p.emails.clone())).collect());
+    assert_eq!(
+        made,
+        [
+            (Some("Ana Lima".into()), vec!["ana@example.pt".into()]),
+            (None, vec!["rui@example.pt".into()]),
+        ]
+    );
+    // The address book on this computer has them at once, and neither is
+    // offered again.
+    let account_id = h.account_id;
+    let held = h
+        .db
+        .read(move |c| address_book::holds(c, account_id, "ana@example.pt"))
+        .await
+        .unwrap();
+    assert!(held);
+    let new = b
+        .book
+        .new_recipients(h.account_id, &[to(None, "rui@example.pt")])
+        .await
+        .unwrap();
+    assert!(new.is_empty());
+}
+
+#[tokio::test]
+async fn save_without_the_permission_asks_for_it_and_writes_nothing() {
+    let h = harness().await;
+    let b = book(&h);
+    h.fake.withhold(mailrs_gmail::CONTACTS_WRITE_SCOPE);
+    let saved = b
+        .book
+        .save_recipients(h.account_id, &[to(Some("Ana Lima"), "ana@example.pt")])
+        .await
+        .unwrap();
+    assert_eq!(saved, Permitted::NeedsPermission);
+    assert!(h.fake.with(|s| s.contacts.is_empty()));
+    // Nothing was answered, so the next message offers Ana again.
+    let new = b
+        .book
+        .new_recipients(h.account_id, &[to(None, "ana@example.pt")])
+        .await
+        .unwrap();
+    assert_eq!(emails(&new), ["ana@example.pt"]);
 }

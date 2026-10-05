@@ -31,7 +31,7 @@ pub fn suggestions(text: &str, contacts: &[Person], labels: &[String]) -> Vec<Su
         label: fill(&gettext("Subject contains “{words}”"), &[("words", word)]),
         query: with(format!("subject:{word}")),
     }];
-    let people = suggest(contacts, word, &[], 4);
+    let people = suggest(contacts, word, &[], 4, None);
     for person in &people {
         let name = person.name.as_deref().unwrap_or(&person.email);
         out.push(Suggestion {
@@ -85,7 +85,7 @@ mod tests {
             email: "ann@example.com".into(),
             organization: None,
             photo_file: None,
-            known: true,
+            accounts: vec![1],
             score: 3,
             last_seen: 0,
         }];

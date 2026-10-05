@@ -1921,6 +1921,8 @@ fn fastmail_cards() -> Vec<(String, String)> {
         ("tomas", "Tomás Faria", "tomas@climbing.example"),
         ("rui", "Rui Pinto", "rui@bookclub.example"),
         ("ines", INES.0, INES.1),
+        // Also in a Gmail address book, so a suggestion shows two accounts.
+        ("priya", "Priya Raman", "priya@fernwood.example"),
     ]
     .into_iter()
     .map(|(uid, name, email)| {
@@ -2899,12 +2901,18 @@ mod tests {
 
         let known: Vec<&str> = suggestions
             .iter()
-            .take_while(|s| s.known)
+            .take_while(|s| s.known())
             .map(|s| s.email.as_str())
             .collect();
-        // Four Gmail contacts, the three in the Fastmail address book and the two at Outlook.
+        // Four Gmail contacts, the four in the Fastmail address book (one of
+        // them Priya again) and the two at Outlook.
         assert_eq!(known.len(), 9, "every demo contact comes before the rest");
         assert!(known.contains(&"jonas@fernwood.example"));
+        let priya = suggestions
+            .iter()
+            .find(|s| s.email == "priya@fernwood.example")
+            .expect("Priya is a demo contact");
+        assert_eq!(priya.accounts.len(), 2, "two address books hold Priya");
     }
 
     #[tokio::test]

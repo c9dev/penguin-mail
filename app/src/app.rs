@@ -786,6 +786,12 @@ impl App {
         Rc::clone(&self.contacts)
     }
 
+    /// Loads the suggestions again after the person added contacts.
+    pub fn contacts_added(self: &Rc<Self>) {
+        self.contacts_stale.set(true);
+        self.reload_contacts();
+    }
+
     /// Refreshes the suggestions composers offer. Open composers see the
     /// new list once it loads.
     fn reload_contacts(self: &Rc<Self>) {

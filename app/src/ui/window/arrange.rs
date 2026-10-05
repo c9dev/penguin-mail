@@ -43,6 +43,14 @@ impl MainWindow {
             .filter_map(|(email, index)| Some((find(email)?, *index)))
             .collect();
         crate::format::set_account_colors(colors);
+        let named: Vec<(AccountId, &str, Option<&str>)> = sorted
+            .iter()
+            .map(|(a, _)| {
+                let name = settings.account_names.get(&a.email).map(String::as_str);
+                (a.id, a.email.as_str(), name)
+            })
+            .collect();
+        crate::format::set_account_labels(crate::format::account_labels(&named));
         let extras = Extras {
             vips: settings
                 .vips

@@ -5,7 +5,7 @@
 
 use std::rc::Rc;
 
-use mailrs_domain::ChangeEvent;
+use mailrs_domain::{AccountId, Address, ChangeEvent};
 use mailrs_domain::translate::{fill, gettext};
 use mailrs_sync::{MailAction, Outcome};
 
@@ -46,8 +46,13 @@ pub enum Notice<'a> {
         seconds: u32,
         undo: Box<dyn Fn()>,
     },
-    /// A message the person wrote went out.
-    Sent,
+    /// A message the person wrote went out from `account_id`, to
+    /// `recipients`. `said` is the toast's first sentence.
+    Sent {
+        said: String,
+        account_id: AccountId,
+        recipients: Vec<Address>,
+    },
     /// The Send Later, Outbox or Reminders lists changed.
     OutboxChanged,
     Toast(String),
@@ -82,7 +87,11 @@ impl MainWindow {
             } => self.explain_api_off(service, enable_url),
             Notice::FilterReady(filter) => self.conversation.set_filter(filter),
             Notice::UndoSend { seconds, undo } => self.offer_undo_send(seconds, undo),
-            Notice::Sent => self.toast(&gettext("Message sent")),
+            Notice::Sent {
+                said,
+                account_id,
+                recipients,
+            } => self.sent(said, account_id, recipients),
             Notice::OutboxChanged => self.scheduled_changed(),
             Notice::Toast(text) => self.toast(&text),
             Notice::RuleRefused(words) => self.toast(&fill(

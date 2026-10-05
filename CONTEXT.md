@@ -137,7 +137,9 @@ Terms the code and its docs use for Gmail mail. The `domain` crate holds the cod
 
 **Correspondent**: someone Penguin Mail found by reading stored mail rather than an address book. `mailrs_store::contacts::Correspondent` scores them by how often they come up, weighing someone written to above someone who only wrote. _Avoid_: contact, sender.
 
-**Recipient suggestion**: one row of what the composer offers while an address is typed, and what search offers for a name. `mailrs_store::contacts::Suggestion` merges the address books with the correspondents: a contact comes first whatever the mail says, and mail orders the contacts among themselves. _Avoid_: completion, autocomplete entry.
+**Recipient suggestion**: one row of what the composer offers while an address is typed, and what search offers for a name. `mailrs_store::contacts::Suggestion` merges the address books with the correspondents: a contact comes first whatever the mail says, and mail orders the contacts among themselves. Each suggestion names the accounts whose address books hold it, and the composer puts the From account's contacts first; the row shows each account's colour dot and short name, or "from mail" for a correspondent (`mailrs::contacts::cue`). _Avoid_: completion, autocomplete entry.
+
+**Contact offer**: the question in the toast after a message goes out, whether to save its new recipients to the contacts of the account that sent it. A recipient is new when that account's address book lacks them and the person has not answered an offer about them on that account (`mailrs_sync::contacts::ContactBook::new_recipients`). Save makes the contacts; a toast that goes without Save counts as no. Either answer is kept per account and address in `mailrs_store::contact_offers`, so nobody is asked about twice. An account with no contacts service, or with contacts off in Preferences, gets no offer. _Avoid_: prompt, nag, suggestion.
 
 **Recipient chip**: one address in a composer address field, drawn as a pill with a close button. The chips stay out of the Tab chain; Left from the start of the entry reaches them. `mailrs::ui::composer::recipients`. _Avoid_: tag, token, bubble.
 

@@ -250,7 +250,11 @@ impl App {
                     this.contacts_stale.set(true);
                     this.core.poke(draft.account_id);
                     this.scheduled_changed();
-                    this.tell_window(Notice::Sent);
+                    this.tell_window(Notice::Sent {
+                        said: gettext("Message sent"),
+                        account_id: draft.account_id,
+                        recipients: crate::contacts::recipients_of(&draft),
+                    });
                 }
                 Ok(Posted::Waiting(_)) => {
                     this.scheduled_changed();
@@ -356,10 +360,19 @@ impl App {
                         this.core.poke(message.account_id);
                     }
                     for message in &drained.sent {
-                        this.tell_window(Notice::Toast(fill(
-                            &gettext("Sent {message}"),
-                            &[("message", &named(&message.subject))],
-                        )));
+                        // The outbox keeps the draft the message was
+                        // written from, which names everyone it went to.
+                        let recipients = serde_json::from_str::<Draft>(&message.composer)
+                            .map(|draft| crate::contacts::recipients_of(&draft))
+                            .unwrap_or_default();
+                        this.tell_window(Notice::Sent {
+                            said: fill(
+                                &gettext("Sent {message}"),
+                                &[("message", &named(&message.subject))],
+                            ),
+                            account_id: message.account_id,
+                            recipients,
+                        });
                     }
                     for message in &drained.stuck {
                         this.tell_window(Notice::Toast(fill(

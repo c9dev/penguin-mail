@@ -1,19 +1,27 @@
 //! Recipient suggestions under the composer's address fields and the event
 //! editor's Guests field. Typing shows matching correspondents; arrows
-//! move, Enter or Tab picks, Esc closes.
+//! move, Enter or Tab picks, Esc closes. Each row says which accounts'
+//! contacts hold the person, or that only mail found them.
 
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 use adw::prelude::*;
 use gtk::{gdk, glib, pango};
+use mailrs_domain::AccountId;
+use mailrs_domain::translate::{fill, gettext};
 use mailrs_store::contacts::Suggestion;
 
 use crate::compose::{format_recipients, parse_recipients};
-use crate::contacts::{current_token, suggest};
+use crate::contacts::{cue, current_token, suggest};
+use crate::format::{account_color_index, account_label};
 
 /// Shared, replaceable list of people to suggest.
 pub type Contacts = Rc<RefCell<Rc<Vec<Suggestion>>>>;
+
+/// The account a message goes out from, which the field's owner keeps
+/// current. Its contacts come first in the list.
+pub type Sending = Rc<Cell<Option<AccountId>>>;
 
 /// Runs with the field's text once a suggestion is picked, in place of
 /// the field showing it.
@@ -26,14 +34,16 @@ struct Completion {
     popover: gtk::Popover,
     list: gtk::ListBox,
     contacts: Contacts,
+    sending: Sending,
     shown: RefCell<Vec<Suggestion>>,
     on_pick: Option<Box<OnPick>>,
 }
 
-/// Adds suggestions to `entry`. A pick writes the address into the
-/// field, followed by a comma, for the field to read.
-pub fn attach(entry: &gtk::Entry, contacts: Contacts) {
-    attach_with(entry, contacts, None);
+/// Adds suggestions to `entry`, for a message that goes out from the
+/// account `sending` holds. A pick writes the address into the field,
+/// followed by a comma, for the field to read.
+pub fn attach(entry: &gtk::Entry, contacts: Contacts, sending: Sending) {
+    attach_with(entry, contacts, sending, None);
 }
 
 /// Adds suggestions to `entry`, and hands the field's text with the
@@ -41,10 +51,15 @@ pub fn attach(entry: &gtk::Entry, contacts: Contacts) {
 /// that turns an address into something else at once, such as the event
 /// editor's guest list.
 pub fn attach_picking(entry: &gtk::Entry, contacts: Contacts, on_pick: impl Fn(&str) + 'static) {
-    attach_with(entry, contacts, Some(Box::new(on_pick)));
+    attach_with(entry, contacts, Sending::default(), Some(Box::new(on_pick)));
 }
 
-fn attach_with(entry: &gtk::Entry, contacts: Contacts, on_pick: Option<Box<OnPick>>) {
+fn attach_with(
+    entry: &gtk::Entry,
+    contacts: Contacts,
+    sending: Sending,
+    on_pick: Option<Box<OnPick>>,
+) {
     let list = gtk::ListBox::builder()
         .selection_mode(gtk::SelectionMode::Single)
         .css_classes(["navigation-sidebar"])
@@ -71,6 +86,7 @@ fn attach_with(entry: &gtk::Entry, contacts: Contacts, on_pick: Option<Box<OnPic
         popover,
         list,
         contacts,
+        sending,
         shown: RefCell::new(Vec::new()),
         on_pick,
     });
@@ -149,7 +165,8 @@ impl Completion {
             .map(|a| a.email)
             .collect();
         let contacts = Rc::clone(&self.contacts.borrow());
-        let found: Vec<Suggestion> = suggest(&contacts, token, &entered, SHOWN)
+        let from = self.sending.get();
+        let found: Vec<Suggestion> = suggest(&contacts, token, &entered, SHOWN, from)
             .into_iter()
             .cloned()
             .collect();
@@ -159,12 +176,12 @@ impl Completion {
         }
         self.list.remove_all();
         for contact in &found {
-            self.list.append(&row(contact));
+            self.list.append(&row(contact, from));
         }
         self.list.select_row(self.list.row_at_index(0).as_ref());
         *self.shown.borrow_mut() = found;
         self.list
-            .set_size_request(self.entry.width().clamp(280, 460), -1);
+            .set_size_request(self.entry.width().clamp(360, 460), -1);
         self.popover
             .set_pointing_to(Some(&gdk::Rectangle::new(0, 0, 1, self.entry.height())));
         self.popover.popup();
@@ -209,36 +226,97 @@ fn focused(entry: &gtk::Entry) -> bool {
     entry.state_flags().contains(gtk::StateFlags::FOCUS_WITHIN)
 }
 
-fn row(contact: &Suggestion) -> gtk::ListBoxRow {
+/// One suggestion: the name, then the address with the account cue at the
+/// end of the same line. A person without a name shows the address on top
+/// and the cue alone below it.
+fn row(contact: &Suggestion, from: Option<AccountId>) -> gtk::ListBoxRow {
     let content = gtk::Box::builder()
         .orientation(gtk::Orientation::Vertical)
         .spacing(2)
         .margin_top(4)
         .margin_bottom(4)
         .build();
-    let name = contact.name.as_deref().unwrap_or(&contact.email);
+    let named = contact.name.as_deref().filter(|n| !n.trim().is_empty());
     content.append(
         &gtk::Label::builder()
-            .label(name)
+            .label(named.unwrap_or(&contact.email))
             .xalign(0.0)
             .ellipsize(pango::EllipsizeMode::End)
             .css_classes(["heading"])
             .build(),
     );
-    if contact.name.is_some() {
-        content.append(
+    let detail = gtk::Box::builder().spacing(12).build();
+    if named.is_some() {
+        detail.append(
             &gtk::Label::builder()
                 .label(&contact.email)
                 .xalign(0.0)
+                .hexpand(true)
                 .ellipsize(pango::EllipsizeMode::End)
                 .css_classes(["dim-label", "caption"])
                 .build(),
         );
     }
-    gtk::ListBoxRow::builder()
+    let shown = cue(&contact.accounts, from, account_label);
+    let source = gtk::Box::builder()
+        .spacing(4)
+        .hexpand(named.is_none())
+        .halign(gtk::Align::End)
+        .css_classes(["suggestion-source"])
+        .build();
+    if let Some(all) = &shown.tooltip {
+        source.set_tooltip_text(Some(all));
+    }
+    let dots = gtk::Box::builder()
+        .spacing(2)
+        .valign(gtk::Align::Center)
+        .build();
+    for account in &shown.dots {
+        dots.append(
+            &gtk::Box::builder()
+                .valign(gtk::Align::Center)
+                .css_classes([
+                    "account-dot".to_string(),
+                    format!("account-{}", account_color_index(*account)),
+                ])
+                .build(),
+        );
+    }
+    if !shown.dots.is_empty() {
+        source.append(&dots);
+    }
+    source.append(
+        &gtk::Label::builder()
+            .label(&shown.text)
+            .ellipsize(pango::EllipsizeMode::Middle)
+            .max_width_chars(24)
+            // Held at its full width up to that cap, so the address
+            // beside it gives way first.
+            .width_chars(shown.text.chars().count().min(24) as i32)
+            .css_classes(["dim-label", "caption"])
+            .build(),
+    );
+    detail.append(&source);
+    content.append(&detail);
+    let row = gtk::ListBoxRow::builder()
         .child(&content)
         .can_focus(false)
-        .build()
+        .build();
+    let person = match named {
+        Some(name) => fill(
+            &gettext("{name}, {address}"),
+            &[("name", name), ("address", &contact.email)],
+        ),
+        None => contact.email.clone(),
+    };
+    super::name(
+        &row,
+        &fill(
+            &gettext("{person}, {source}"),
+            &[("person", &person), ("source", &shown.spoken)],
+        ),
+    );
+    row
 }
 
 #[cfg(test)]

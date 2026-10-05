@@ -6,7 +6,7 @@
 
 use std::collections::{HashMap, HashSet};
 
-use mailrs_domain::{Address, EpochMillis};
+use mailrs_domain::{AccountId, Address, EpochMillis};
 use rusqlite::Connection;
 
 use crate::Result;
@@ -33,13 +33,19 @@ pub struct Suggestion {
     pub organization: Option<String>,
     /// The file under the photo directory holding this person's photo.
     pub photo_file: Option<String>,
-    /// Set for someone in an account's address book. These rank first.
-    pub known: bool,
+    /// The accounts whose address books hold this address, in id order.
+    /// Empty for someone known only from mail. Contacts rank first.
+    pub accounts: Vec<AccountId>,
     pub score: i64,
     pub last_seen: EpochMillis,
 }
 
 impl Suggestion {
+    /// Whether an address book holds this address.
+    pub fn known(&self) -> bool {
+        !self.accounts.is_empty()
+    }
+
     pub fn address(&self) -> Address {
         Address {
             name: self.name.clone(),
@@ -66,15 +72,18 @@ pub fn suggestions(conn: &Connection) -> Result<Vec<Suggestion>> {
             if key.is_empty() {
                 continue;
             }
-            found.entry(key).or_insert_with(|| Suggestion {
+            let held = found.entry(key).or_insert_with(|| Suggestion {
                 name: contact.name.clone(),
                 email: email.clone(),
                 organization: contact.organization.clone(),
                 photo_file: contact.photo_file.clone(),
-                known: true,
+                accounts: Vec::new(),
                 score: 0,
                 last_seen: 0,
             });
+            if let Err(at) = held.accounts.binary_search(&contact.account_id) {
+                held.accounts.insert(at, contact.account_id);
+            }
         }
     }
     for person in list_correspondents(conn)? {
@@ -98,7 +107,7 @@ pub fn suggestions(conn: &Connection) -> Result<Vec<Suggestion>> {
                         email: person.email,
                         organization: None,
                         photo_file: None,
-                        known: false,
+                        accounts: Vec::new(),
                         score: person.score,
                         last_seen: person.last_seen,
                     },
@@ -108,8 +117,8 @@ pub fn suggestions(conn: &Connection) -> Result<Vec<Suggestion>> {
     }
     let mut all: Vec<Suggestion> = found.into_values().collect();
     all.sort_by(|a, b| {
-        b.known
-            .cmp(&a.known)
+        b.known()
+            .cmp(&a.known())
             .then(b.score.cmp(&a.score))
             .then(b.last_seen.cmp(&a.last_seen))
             .then_with(|| a.email.cmp(&b.email))
@@ -194,7 +203,7 @@ pub fn list_correspondents(conn: &Connection) -> Result<Vec<Correspondent>> {
 }
 
 /// Addresses nobody writes to: no-reply senders and notification robots.
-fn is_automated(email: &str) -> bool {
+pub fn is_automated(email: &str) -> bool {
     let local = email.split('@').next().unwrap_or(email);
     [
         "noreply",
@@ -298,11 +307,59 @@ mod tests {
         let all = suggestions(&conn).unwrap();
         let emails: Vec<&str> = all.iter().map(|s| s.email.as_str()).collect();
         assert_eq!(emails, ["mara@example.org", "theo@example.org"]);
-        assert!(all[0].known);
+        assert!(all[0].known());
         assert_eq!(all[0].organization.as_deref(), Some("Fernwood"));
         assert_eq!(all[0].photo_file.as_deref(), Some("1-c1.jpg"));
-        assert!(!all[1].known);
+        assert!(!all[1].known());
         assert_eq!(all[1].score, 10);
+    }
+
+    #[test]
+    fn a_suggestion_names_each_account_whose_address_book_holds_it() {
+        let conn = open_in_memory().unwrap();
+        let home = accounts::insert_account(&conn, "dana@example.com", 0).unwrap();
+        let work = accounts::insert_account(&conn, "dana@work.example", 0).unwrap();
+        list_gmail_roles(&conn, home);
+        messages::apply(
+            &conn,
+            home,
+            &[messages::Change::Upsert {
+                meta: Box::new(message(
+                    home,
+                    "m1",
+                    ("Theo Lang", "theo@example.org"),
+                    &[("Dana", "dana@example.com")],
+                    gmail::INBOX,
+                )),
+                generation: 1,
+            }],
+        )
+        .unwrap();
+        let contact = |account_id, resource: &str, email: &str| address_book::Contact {
+            account_id,
+            resource: resource.into(),
+            name: Some("Mara Okafor".into()),
+            emails: vec![email.into()],
+            ..address_book::Contact::default()
+        };
+        address_book::save(
+            &conn,
+            &[
+                contact(work, "people/w1", "Mara@Example.org"),
+                contact(home, "people/h1", "mara@example.org"),
+                contact(work, "people/w2", "ana@work.example"),
+            ],
+        )
+        .unwrap();
+
+        let all = suggestions(&conn).unwrap();
+        let accounts_of = |email: &str| -> Vec<mailrs_domain::AccountId> {
+            all.iter().find(|s| s.email.eq_ignore_ascii_case(email)).unwrap().accounts.clone()
+        };
+        assert_eq!(accounts_of("mara@example.org"), [home, work]);
+        assert_eq!(accounts_of("ana@work.example"), [work]);
+        assert!(accounts_of("theo@example.org").is_empty(), "Theo is known only from mail");
+        assert!(!all.iter().find(|s| s.email == "theo@example.org").unwrap().known());
     }
 
     #[test]
@@ -357,7 +414,7 @@ mod tests {
         .unwrap();
 
         let all = suggestions(&conn).unwrap();
-        assert!(all.iter().all(|s| s.known));
+        assert!(all.iter().all(|s| s.known()));
         // Writing to Theo weighs five times a message from Mara.
         assert_eq!(all[0].email, "theo@example.org");
         assert_eq!(all[0].name.as_deref(), Some("Theo Lang"));
