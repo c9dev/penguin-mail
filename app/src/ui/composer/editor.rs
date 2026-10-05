@@ -13,6 +13,7 @@ use std::rc::Rc;
 
 use gtk::prelude::*;
 
+use super::removals::{Removal, Removals};
 use super::richbuffer::{self, Anchors};
 use crate::compose::{
     LineChange, LinePrefix, OutgoingAttachment, Unfolding, markdown_to_html, signature_change,
@@ -62,6 +63,11 @@ pub struct Editor {
     /// True while the editor changes the buffer itself, so its own edits
     /// are not styled as typing.
     busy: Cell<bool>,
+    /// The tags of text deleted from a rich body, which Undo and Redo put
+    /// back with the text, since GTK's undo history keeps no tags.
+    removals: RefCell<Removals<gtk::TextTag>>,
+    /// True while an Undo or Redo changes the buffer.
+    replaying: Cell<bool>,
     /// Where the history the writer unfolded starts in the buffer, and
     /// its blocks, to style them again after a Redo.
     history_start: RefCell<Option<(gtk::TextMark, RichBody)>>,
@@ -89,6 +95,8 @@ impl Editor {
             typing: RefCell::new(None),
             inserted: RefCell::new(Vec::new()),
             busy: Cell::new(false),
+            removals: RefCell::new(Removals::default()),
+            replaying: Cell::new(false),
             history_start: RefCell::new(None),
             touched: Cell::new(None),
             #[cfg(test)]
@@ -114,11 +122,23 @@ impl Editor {
         });
         // The line a deletion joins up is the one left to look at.
         let weak = Rc::downgrade(self);
-        self.buffer.connect_delete_range(move |_, start, _| {
+        self.buffer.connect_delete_range(move |_, start, end| {
             if let Some(editor) = weak.upgrade() {
                 editor.touch(start.line(), start.line());
+                editor.keep_removal(start, end);
             }
         });
+        for signal in ["undo", "redo"] {
+            for (after, replaying) in [(false, true), (true, false)] {
+                let weak = Rc::downgrade(self);
+                self.buffer.connect_local(signal, after, move |_| {
+                    if let Some(editor) = weak.upgrade() {
+                        editor.replaying.set(replaying);
+                    }
+                    None
+                });
+            }
+        }
         let weak = Rc::downgrade(self);
         self.buffer.connect_changed(move |_| {
             if let Some(editor) = weak.upgrade() {
@@ -139,6 +159,36 @@ impl Editor {
                 editor.cursor_moved();
             }
         });
+    }
+
+    /// Keeps the tags of rich text about to be deleted, for an Undo or a
+    /// Redo that brings the text back.
+    fn keep_removal(&self, start: &gtk::TextIter, end: &gtk::TextIter) {
+        if self.format.get() != ComposeFormat::Rich {
+            return;
+        }
+        self.removals.borrow_mut().removed(Removal {
+            at: start.offset(),
+            text: self.buffer.slice(start, end, true).to_string(),
+            runs: richbuffer::tag_runs(start, end),
+        });
+    }
+
+    /// Gives text an Undo or a Redo just put back the tags it had when it
+    /// left. False when the text is not one the editor saw deleted.
+    fn put_back(&self, offset: i32, length: i32) -> bool {
+        let buffer = &self.buffer;
+        let text = buffer.slice(
+            &buffer.iter_at_offset(offset),
+            &buffer.iter_at_offset(offset + length),
+            true,
+        );
+        let runs = match self.removals.borrow().find(offset, &text) {
+            Some(removal) => removal.runs.clone(),
+            None => return false,
+        };
+        richbuffer::apply_runs(buffer, offset, &runs);
+        true
     }
 
     fn touch(&self, first: i32, last: i32) {
@@ -195,6 +245,8 @@ impl Editor {
             }
         }
         self.buffer.place_cursor(&self.buffer.start_iter());
+        // The text the draft replaced is beyond the reach of Undo.
+        self.removals.borrow_mut().clear();
         self.busy.set(false);
     }
 
@@ -453,6 +505,20 @@ impl Editor {
     /// styled body out as source.
     pub fn switch_format(&self, to: ComposeFormat, attachments: &[OutgoingAttachment]) {
         match to {
+            // Formatting a rich body again is one step of Undo, which gives
+            // back the body as it was, styles and all.
+            ComposeFormat::Rich if self.format.get() == ComposeFormat::Rich => {
+                let body = RichBody::from_markdown(&self.source());
+                let buffer = &self.buffer;
+                self.busy.set(true);
+                buffer.begin_user_action();
+                let (mut start, mut end) = buffer.bounds();
+                buffer.delete(&mut start, &mut end);
+                self.anchors.borrow_mut().clear();
+                richbuffer::insert(buffer, &body);
+                buffer.end_user_action();
+                self.busy.set(false);
+            }
             ComposeFormat::Rich => {
                 let body = RichBody::from_markdown(&self.source());
                 self.format.set(ComposeFormat::Rich);
@@ -463,6 +529,7 @@ impl Editor {
                     attachments,
                     &mut self.anchors.borrow_mut(),
                 );
+                self.removals.borrow_mut().clear();
                 self.busy.set(false);
             }
             ComposeFormat::Markdown => {
@@ -470,6 +537,7 @@ impl Editor {
                     return;
                 }
                 let markdown = self.rich().to_markdown();
+                self.removals.borrow_mut().clear();
                 self.format.set(ComposeFormat::Markdown);
                 self.busy.set(true);
                 self.anchors.borrow_mut().clear();
@@ -910,7 +978,11 @@ impl Editor {
             return;
         }
         self.busy.set(true);
+        let replaying = self.replaying.get();
         for (offset, length) in ranges {
+            if replaying && self.put_back(offset, length) {
+                continue;
+            }
             let (from, to) = (
                 buffer.iter_at_offset(offset),
                 buffer.iter_at_offset(offset + length),
@@ -931,9 +1003,14 @@ impl Editor {
             buffer.apply_tag_by_name(richbuffer::block_tag(kind), &from, &to);
             *self.typing.borrow_mut() = Some((to.offset(), style, link));
         }
-        let _looked = richbuffer::renumber(buffer, first, last);
-        #[cfg(test)]
-        self.looked_at.set(self.looked_at.get() + _looked);
+        // Undo and Redo bring the markers back as text with the rest, and
+        // a change of ours in between would leave GTK's history out of
+        // step with the buffer.
+        if !replaying {
+            let _looked = richbuffer::renumber(buffer, first, last);
+            #[cfg(test)]
+            self.looked_at.set(self.looked_at.get() + _looked);
+        }
         self.busy.set(false);
     }
 
@@ -1089,6 +1166,88 @@ pub(super) mod checks {
         format_keeps_styled_words_and_the_quote();
         pasted_markdown_arrives_styled_and_goes_back_to_plain();
         a_markdown_draft_opens_styled();
+        undo_after_format_brings_the_earlier_styles_back();
+        undo_after_format_markdown_brings_the_earlier_body_back();
+        undo_brings_deleted_words_back_with_their_styles();
+    }
+
+    /// The Markdown bar's Format, undone in one step, gives back the body
+    /// as it was, bold word and all, and Redo gives back the lists.
+    fn undo_after_format_brings_the_earlier_styles_back() {
+        let (_view, editor) = opened("Hi **Ann**.");
+        editor.buffer.place_cursor(&editor.buffer.end_iter());
+        editor.buffer.insert_at_cursor("\n- soup\n- salad");
+        let before = editor.rich();
+        assert!(editor.format_stray_markdown());
+        let formatted = editor.rich();
+        assert_eq!(formatted.blocks[2].kind, BlockKind::Bullet, "{formatted:?}");
+        editor.buffer.undo();
+        assert_eq!(editor.rich(), before, "{}", editor.markdown());
+        editor.buffer.redo();
+        assert_eq!(editor.rich(), formatted, "{}", editor.markdown());
+        editor.buffer.undo();
+        assert_eq!(editor.rich(), before, "{}", editor.markdown());
+    }
+
+    /// Format Markdown in a rich body is one step of Undo too, and the
+    /// step puts back the styles the body had.
+    fn undo_after_format_markdown_brings_the_earlier_body_back() {
+        let (_view, editor) = opened("Hi **Ann**.");
+        editor.buffer.place_cursor(&editor.buffer.end_iter());
+        editor.buffer.insert_at_cursor("\n# Plan");
+        let before = editor.rich();
+        editor.switch_format(ComposeFormat::Rich, &[]);
+        let formatted = editor.rich();
+        assert_eq!(
+            formatted.blocks[2].kind,
+            BlockKind::Heading(1),
+            "{formatted:?}"
+        );
+        editor.buffer.undo();
+        assert_eq!(editor.rich(), before, "{}", editor.markdown());
+        editor.buffer.redo();
+        assert_eq!(editor.rich(), formatted, "{}", editor.markdown());
+    }
+
+    /// Words typed over, deleted with Backspace or with Delete come back
+    /// on Undo with the styles they had.
+    fn undo_brings_deleted_words_back_with_their_styles() {
+        let (_view, editor) = opened("plain **words** end");
+        let before = editor.rich();
+        select(&editor, 6, 11);
+        editor.buffer.begin_user_action();
+        editor.buffer.delete_selection(true, true);
+        editor.buffer.insert_interactive_at_cursor("x", true);
+        editor.buffer.end_user_action();
+        editor.buffer.undo();
+        assert_eq!(editor.rich(), before, "{}", editor.markdown());
+
+        let (_view, editor) = opened("plain **words**");
+        let before = editor.rich();
+        for _ in 0..5 {
+            editor.buffer.begin_user_action();
+            let mut end = editor.buffer.end_iter();
+            editor.buffer.backspace(&mut end, true, true);
+            editor.buffer.end_user_action();
+        }
+        while editor.buffer.can_undo() && editor.source() != "plain words" {
+            editor.buffer.undo();
+        }
+        assert_eq!(editor.rich(), before, "{}", editor.markdown());
+
+        let (_view, editor) = opened("**bold** *it*");
+        let before = editor.rich();
+        for _ in 0..4 {
+            editor.buffer.begin_user_action();
+            let (mut from, mut to) = (editor.buffer.start_iter(), editor.buffer.iter_at_offset(1));
+            editor.buffer.delete_interactive(&mut from, &mut to, true);
+            editor.buffer.end_user_action();
+        }
+        assert_eq!(editor.source(), " it");
+        while editor.buffer.can_undo() && editor.source() != "bold it" {
+            editor.buffer.undo();
+        }
+        assert_eq!(editor.rich(), before, "{}", editor.markdown());
     }
 
     fn typed_markdown_formats_in_place_as_one_undo_step() {

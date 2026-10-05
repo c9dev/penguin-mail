@@ -9,6 +9,7 @@
 
 mod editor;
 mod recipients;
+mod removals;
 mod richbuffer;
 pub mod spell;
 
