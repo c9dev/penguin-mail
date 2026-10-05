@@ -3174,7 +3174,10 @@ impl CalendarView {
             .into_iter()
             .map(|(account, _, ids)| (account, ids.into_iter().collect()))
             .collect();
-        let accounts = sidebar::take_off_the_list(sidebar::sidebar_accounts(&rows), &unlisted);
+        let accounts = sidebar::take_off_the_list(
+            sidebar::sidebar_accounts(&rows, |id| self.core.missed(id, mailrs_sync::Missing::Calendar)),
+            &unlisted,
+        );
         self.hidden.replace(
             accounts
                 .iter()

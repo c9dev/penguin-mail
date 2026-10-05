@@ -3,6 +3,7 @@
 //! UI hands futures to `Core::call` and awaits the result on the main loop.
 
 use std::cell::{Cell, RefCell};
+use std::collections::HashMap;
 use std::future::Future;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
@@ -20,7 +21,7 @@ use mailrs_gmail::{
 use mailrs_graph::GraphError;
 use mailrs_pgp::{Pgp, PgpError};
 use mailrs_smime::{Smime, SmimeError};
-use mailrs_store::services::{FoundService, ServiceKind};
+use mailrs_store::services::{FoundService, Miss, ServiceKind};
 use mailrs_store::{Db, StoreError, accounts};
 use mailrs_sync::config::{Config, config_path, data_dir, migrate_old_dirs};
 use mailrs_sync::lock::{LockError, SyncLock};
@@ -129,6 +130,10 @@ pub struct Core {
     /// What the engines said about signed messages this run, so reopening
     /// one does not start gpg again. Memory only.
     pub verdicts: RefCell<crate::protection::remembered::Verdicts>,
+    /// Why the last search found no calendar or contacts server for an
+    /// account, read from the store at startup and kept by each search, so
+    /// Preferences words its Not Available lines without waiting.
+    misses: RefCell<HashMap<(AccountId, ServiceKind), Miss>>,
     tokens: Arc<dyn TokenStore>,
     /// IMAP passwords: the keyring, or memory in the demo, which never
     /// touches the person's keyring.
@@ -275,6 +280,11 @@ impl Core {
             db.clone(),
             Arc::clone(&calendar_copy),
         ));
+        let misses = runtime
+            .block_on(db.read(mailrs_store::services::all_misses))?
+            .into_iter()
+            .map(|(account, kind, miss)| ((account, kind), miss))
+            .collect();
         let core = Rc::new(Core {
             runtime,
             db,
@@ -295,6 +305,7 @@ impl Core {
             pgp: Pgp::find().ok(),
             smime: Smime::find().ok(),
             verdicts: RefCell::default(),
+            misses: RefCell::new(misses),
             tokens: Arc::new(KeyringTokenStore::new()),
             passwords: Arc::new(match demo {
                 true => Passwords::Memory(MemoryPasswords::default()),
@@ -1056,7 +1067,8 @@ impl Core {
             self.engine.current(),
         );
         let window_days = self.config.borrow().engine_config().window_days;
-        self.call(async move {
+        let account_id = account.id;
+        let found = self.call(async move {
             let (host, user, password) = incoming_login(&db, &passwords, account.id).await?;
             let net = RealNet::new()?;
             let mut found = finding::find_services(
@@ -1082,9 +1094,30 @@ impl Core {
                 calendar: found.caldav.is_some_and(|f| f.confirmed),
                 contacts: found.carddav.is_some_and(|f| f.confirmed),
                 rules_on_server: found.sieve.is_some(),
+                calendar_missed: found.caldav_missed,
+                contacts_missed: found.carddav_missed,
             })
         })
-        .await
+        .await?;
+        let mut misses = self.misses.borrow_mut();
+        for (kind, missed) in [(ServiceKind::CalDav, found.calendar_missed), (ServiceKind::CardDav, found.contacts_missed)] {
+            match missed {
+                Some(miss) => misses.insert((account_id, kind), miss),
+                None => misses.remove(&(account_id, kind)),
+            };
+        }
+        Ok(found)
+    }
+
+    /// Why the last search found no server for `missing`, a calendar or
+    /// contacts, on `account_id`.
+    pub fn missed(&self, account_id: AccountId, missing: mailrs_sync::Missing) -> Option<Miss> {
+        let kind = match missing {
+            mailrs_sync::Missing::Calendar => ServiceKind::CalDav,
+            mailrs_sync::Missing::Contacts => ServiceKind::CardDav,
+            _ => return None,
+        };
+        self.misses.borrow().get(&(account_id, kind)).copied()
     }
 
     /// What was found for the account, for the Preferences rows.
@@ -1205,6 +1238,10 @@ pub struct ServicesFound {
     pub calendar: bool,
     pub contacts: bool,
     pub rules_on_server: bool,
+    /// Why no calendar server was found, when none was.
+    pub calendar_missed: Option<Miss>,
+    /// Why no contacts server was found, when none was.
+    pub contacts_missed: Option<Miss>,
 }
 
 /// The incoming server's host, the user name it took, and the password in

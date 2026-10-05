@@ -45,7 +45,7 @@ pub fn present(
     let dialog = adw::PreferencesDialog::builder()
         .search_enabled(true)
         .build();
-    dialog.add(&general_page(app, &settings, &missing_lines(&offered)));
+    dialog.add(&general_page(app, &settings, &missing_lines(&offered, |id, missing| app.core.missed(id, missing))));
     let writing = writing_page(app, &settings, accounts, signature_of, &dialog);
     dialog.add(&writing);
     dialog.add(&super::contacts_prefs::page(

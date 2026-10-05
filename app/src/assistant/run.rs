@@ -594,11 +594,13 @@ impl<A: Accounts> Tools<A> {
 
     /// The answer for a tool the account cannot serve: why, in the words
     /// Preferences uses, as a result the model reads rather than an error.
+    /// The run holds no store, so it gives the general reason and not why
+    /// the last search for a calendar or contacts server failed.
     fn unavailable(&self, account: &Account, missing: Missing) -> Option<Value> {
         self.offers(account.id)
             .missing()
             .contains(&missing)
-            .then(|| json!({"unavailable": crate::offered::reason(account, missing)}))
+            .then(|| json!({"unavailable": crate::offered::reason(account, missing, None)}))
     }
 
     fn offers(&self, account_id: AccountId) -> mailrs_sync::Offers {
