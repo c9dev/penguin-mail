@@ -194,12 +194,6 @@ struct Invite {
     /// The version of the meeting this one updates, which the demo has
     /// already seen.
     replaces: Option<Older>,
-    /// The series the meeting belongs to, as the calendar holds it: its
-    /// rule and when each occurrence starts.
-    series: Option<fn(EpochMillis) -> Series>,
-    /// Whether Google already holds the event, so an answer finds it. A
-    /// ticket the sender only published is on no calendar until added.
-    answerable: bool,
 }
 
 /// A series' rule, and when each of its occurrences starts.
@@ -641,8 +635,6 @@ fn samples() -> Vec<Sample> {
                 uid: TICKET_UID,
                 ics: ticket_ics,
                 replaces: None,
-                series: None,
-                answerable: false,
             }),
             ..PLAIN
         },
@@ -661,8 +653,6 @@ fn samples() -> Vec<Sample> {
                 uid: INVITE_UID,
                 ics: invitation_ics,
                 replaces: None,
-                series: None,
-                answerable: true,
             }),
             ..PLAIN
         },
@@ -684,8 +674,6 @@ fn samples() -> Vec<Sample> {
                     message_id: "planning-0",
                     starts: planning_was,
                 }),
-                series: Some(planning_series),
-                answerable: true,
             }),
             ..PLAIN
         },
@@ -2276,16 +2264,6 @@ impl Sample {
                 state
                     .draft_messages
                     .insert(draft_id.into(), meta.id.clone());
-            }
-            if let Some(invite) = &self.invitation {
-                // Google puts an invitation on the guest's calendar as it
-                // arrives, so the demo has an event to answer.
-                if invite.answerable {
-                    state.calendar.insert(invite.uid.into(), None);
-                }
-                if let Some(series) = invite.series {
-                    state.series.insert(invite.uid.into(), series(now));
-                }
             }
             state.bodies.insert(meta.id.clone(), body);
             state.messages.insert(meta.id.clone(), meta);

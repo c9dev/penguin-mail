@@ -19,10 +19,10 @@ use mailrs_domain::mailbox::keyword;
 use mailrs_domain::{EpochMillis, Filter, MailSet, MailboxKind, RemoteMailbox, Role, Vacation};
 use mailrs_gmail::labels as gmail;
 use mailrs_gmail::{
-    Answered, Busy, CALENDAR_LIST_SCOPE, CALENDAR_LIST_WRITE_SCOPE, CALENDAR_SCOPE, CALENDARS_SCOPE,
+    CALENDAR_LIST_SCOPE, CALENDAR_LIST_WRITE_SCOPE, CALENDAR_SCOPE, CALENDARS_SCOPE,
     CONTACTS_SCOPE, CONTACTS_WRITE_SCOPE,
-    ConnectionsPage, ContactFields, DELETE_SCOPE, DRIVE_FILE_SCOPE, Event, EventFields, GmailError, Granted,
-    LabelColor, Person, RemoteLabel, SETTINGS_SCOPE, SendAs, Series, limiter, structure,
+    ConnectionsPage, ContactFields, DELETE_SCOPE, DRIVE_FILE_SCOPE, GmailError, Granted,
+    LabelColor, Person, RemoteLabel, SETTINGS_SCOPE, SendAs, limiter, structure,
 };
 use mailrs_mime::Parts;
 use mailrs_mime::html::html_to_text;
@@ -527,57 +527,6 @@ fn remote_mailbox(label: RemoteLabel) -> RemoteMailbox {
 }
 
 impl<G: GmailApi> CalendarService for Google<G> {
-    async fn answer_invitation(
-        &self,
-        ical_uid: &str,
-        me: &str,
-        answer: Answer,
-        occurrence: Option<EpochMillis>,
-        note: Option<&str>,
-    ) -> Result<Answered, BackendError> {
-        Ok(paced(
-            self.gmail
-                .answer_invitation(ical_uid, me, answer, occurrence, note),
-        )
-        .await?)
-    }
-
-    async fn busy_between(
-        &self,
-        from: EpochMillis,
-        to: EpochMillis,
-    ) -> Result<Vec<Busy>, BackendError> {
-        Ok(paced(self.gmail.busy_between(from, to)).await?)
-    }
-
-    async fn series(
-        &self,
-        ical_uid: &str,
-        from: EpochMillis,
-    ) -> Result<Option<Series>, BackendError> {
-        Ok(paced(self.gmail.series(ical_uid, from)).await?)
-    }
-
-    async fn events_between(
-        &self,
-        from: EpochMillis,
-        to: EpochMillis,
-    ) -> Result<Vec<Event>, BackendError> {
-        Ok(paced(self.gmail.events_between(from, to)).await?)
-    }
-
-    async fn create_event(&self, fields: &EventFields) -> Result<Event, BackendError> {
-        Ok(paced(self.gmail.create_event(fields)).await?)
-    }
-
-    async fn update_event(&self, id: &str, fields: &EventFields) -> Result<Event, BackendError> {
-        paced(self.gmail.update_event(id, fields)).await.map_err(gone_is_not_found)
-    }
-
-    async fn delete_event(&self, id: &str) -> Result<(), BackendError> {
-        paced(self.gmail.delete_event(id)).await.map_err(gone_is_not_found)
-    }
-
     async fn calendars(&self) -> Result<Vec<model::Calendar>, BackendError> {
         Ok(paced(self.gmail.calendars()).await?)
     }
@@ -674,15 +623,6 @@ impl<G: GmailApi> CalendarService for Google<G> {
         edit: &model::list::ListEdit,
     ) -> Result<Option<model::Calendar>, BackendError> {
         paced(self.gmail.edit_calendar_list(calendar, edit)).await.map_err(calendar_write_error)
-    }
-}
-
-/// A live write's error, with 410 Gone read as the event being gone
-/// rather than as the expired sync token the client takes it for.
-fn gone_is_not_found(err: GmailError) -> BackendError {
-    match err {
-        GmailError::ExpiredSyncToken => BackendError::NotFound,
-        other => other.into(),
     }
 }
 

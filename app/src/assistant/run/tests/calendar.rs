@@ -22,6 +22,13 @@ fn at(day: NaiveDate, time: &str) -> String {
     format!("{}T{time}", day.format("%Y-%m-%d"))
 }
 
+/// How many events `list_events` finds on `day`.
+async fn listed_on(h: &Harness, day: NaiveDate) -> u64 {
+    let day = day.format("%Y-%m-%d").to_string();
+    let listed = h.ok("list_events", json!({"from": day, "to": day})).await;
+    listed["count"].as_u64().unwrap_or_default()
+}
+
 async fn kite_day(h: &Harness, day: NaiveDate) -> Value {
     h.ok(
         "create_event",
@@ -53,10 +60,12 @@ async fn an_event_is_asked_about_made_and_listed_in_local_time() {
             question.starts_with(&format!("Add “Kite day” to the calendar for {ME}, ")),
             "{question}"
         );
+        // The same words serve a Google, Microsoft or CalDAV account.
         assert!(
-            question.ends_with("Google sends an invitation to ann@example.com."),
+            question.ends_with("Guests get an invitation: ann@example.com."),
             "{question}"
         );
+        assert!(!question.contains("Google"), "{question}");
     }
 
     let listed = h
@@ -97,11 +106,12 @@ async fn an_all_day_event_names_its_last_day() {
         last.format("%Y-%m-%d").to_string(),
         "the tools name the last day, not Google's day after"
     );
+    h.copy.send(h.account_id).await.expect("the queue goes out");
+    let after_last = (last + Duration::days(1)).and_hms_opt(0, 0, 0).expect("midnight").and_utc().timestamp_millis();
     assert_eq!(
-        h.gmail.with(|i| i.events[0].end.clone()),
-        Some(mailrs_gmail::EventTime::Day(
-            (last + Duration::days(1)).format("%Y-%m-%d").to_string()
-        ))
+        h.gmail.with(|i| i.calendar_events.iter().map(|e| (e.all_day, e.end)).collect::<Vec<_>>()),
+        [(true, after_last)],
+        "the calendar keeps the day after the last"
     );
 
     assert_eq!(
@@ -216,7 +226,7 @@ async fn an_event_changes_and_goes_once_the_user_agrees() {
             .await,
         Err("The user declined.".into())
     );
-    assert_eq!(h.gmail.with(|i| i.events.len()), 1, "a no keeps the event");
+    assert_eq!(listed_on(&h, day).await, 1, "a no keeps the event");
 
     h.effects.asked.borrow_mut().approves = true;
     assert_eq!(
@@ -224,7 +234,7 @@ async fn an_event_changes_and_goes_once_the_user_agrees() {
             .await,
         json!({"account": ME, "deleted": id})
     );
-    assert!(h.gmail.with(|i| i.events.is_empty()));
+    assert_eq!(listed_on(&h, day).await, 0);
     assert_eq!(
         h.asked().questions.last().map(String::as_str),
         Some(

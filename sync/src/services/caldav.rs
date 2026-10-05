@@ -22,7 +22,6 @@ use mailrs_domain::calendar::{self as model, Access, Notify, split_occurrence_id
 use mailrs_domain::invitation::{self, Answer, Invitation, Method, Occurrence, Scope, When};
 use mailrs_domain::translate::gettext;
 use mailrs_domain::{Address, EpochMillis};
-use mailrs_gmail::{Answered, Busy, Event as GoogleEvent, EventFields, Series};
 
 use super::dav_read::{Reads, TOKEN_CTAG, TOKEN_SYNC, backend};
 use super::{CalendarService, MailBackend};
@@ -347,48 +346,6 @@ impl<D: DavApi, B: MailBackend + Clone> CalDav<D, B> {
 }
 
 impl<D: DavApi, B: MailBackend + Clone> CalendarService for CalDav<D, B> {
-    async fn answer_invitation(&self, ical_uid: &str, me: &str, answer: Answer, occurrence: Option<EpochMillis>, note: Option<&str>) -> Result<Answered, BackendError> {
-        if locked(&self.listed).is_empty() {
-            self.calendars().await?;
-        }
-        let listed = locked(&self.listed).clone();
-        for calendar in listed {
-            let Some(found) = self.api.find_uid(&calendar, ical_uid).await.map_err(|e| self.err(e))? else { continue };
-            let id = resource_id(&found.href);
-            return Ok(match self.answer_in(&calendar, found, &id, me, answer, occurrence, note).await? {
-                Some(_) => Answered::Done,
-                None => Answered::NotOnCalendar,
-            });
-        }
-        Ok(Answered::NotOnCalendar)
-    }
-
-    /// The copy answers the clash line once it has read the account,
-    /// within a minute of its start.
-    async fn busy_between(&self, _from: EpochMillis, _to: EpochMillis) -> Result<Vec<Busy>, BackendError> {
-        Ok(Vec::new())
-    }
-
-    async fn series(&self, _ical_uid: &str, _from: EpochMillis) -> Result<Option<Series>, BackendError> {
-        Ok(None)
-    }
-
-    async fn events_between(&self, _from: EpochMillis, _to: EpochMillis) -> Result<Vec<GoogleEvent>, BackendError> {
-        Err(BackendError::Unsupported)
-    }
-
-    async fn create_event(&self, _fields: &EventFields) -> Result<GoogleEvent, BackendError> {
-        Err(BackendError::Unsupported)
-    }
-
-    async fn update_event(&self, _id: &str, _fields: &EventFields) -> Result<GoogleEvent, BackendError> {
-        Err(BackendError::Unsupported)
-    }
-
-    async fn delete_event(&self, _id: &str) -> Result<(), BackendError> {
-        Err(BackendError::Unsupported)
-    }
-
     async fn calendars(&self) -> Result<Vec<model::Calendar>, BackendError> {
         let homes = self.api.homes().await.map_err(|e| self.err(e))?;
         let home = homes.calendar.ok_or(BackendError::Unsupported)?;

@@ -7,9 +7,8 @@ use mailrs_domain::{AccountId, EpochMillis, Filter, MessageMeta, Vacation};
 use mailrs_gmail::convert::message_meta;
 use mailrs_gmail::model::Message;
 use mailrs_gmail::{
-    AccountQuota, Answered, Busy, ConnectionsPage, ContactFields, Event, EventFields, GmailClient,
-    GmailError, Granted, HistoryPage, LabelColor, MessagePage, Person, Profile, RemoteLabel,
-    SendAs, Series,
+    AccountQuota, ConnectionsPage, ContactFields, GmailClient, GmailError, Granted, HistoryPage,
+    LabelColor, MessagePage, Person, Profile, RemoteLabel, SendAs,
 };
 
 /// Gmail operations for one account.
@@ -217,69 +216,6 @@ pub trait GmailApi: Send + Sync + 'static {
         resource: &str,
         fields: &ContactFields,
     ) -> impl Future<Output = Result<Person, GmailError>> + Send;
-    /// Answers the event `ical_uid` names as `me`, through Google
-    /// Calendar, and lets Google tell the organizer. Answers
-    /// `GmailError::MissingScope` until the account grants the calendar
-    /// permission, so a caller offers to ask for it rather than showing an
-    /// error.
-    /// `occurrence` is the start of the one occurrence to answer, for an
-    /// invitation to a single occurrence of a repeating event; `None`
-    /// answers the series. `note` goes to the organizer with the answer.
-    fn answer_invitation(
-        &self,
-        ical_uid: &str,
-        me: &str,
-        answer: Answer,
-        occurrence: Option<EpochMillis>,
-        note: Option<&str>,
-    ) -> impl Future<Output = Result<Answered, GmailError>> + Send;
-
-    /// What the account's calendar already holds between `from` and `to`.
-    /// Answers `GmailError::MissingScope` until the account grants the
-    /// calendar permission, the same as answering does.
-    fn busy_between(
-        &self,
-        from: EpochMillis,
-        to: EpochMillis,
-    ) -> impl Future<Output = Result<Vec<Busy>, GmailError>> + Send;
-
-    /// How the repeating event `ical_uid` names repeats, with the
-    /// occurrences still to come from `from` counted when its rule stops
-    /// after a number of them. `None` when the calendar holds no such
-    /// event or it does not repeat. Answers `GmailError::MissingScope`
-    /// until the account grants the calendar permission.
-    fn series(
-        &self,
-        ical_uid: &str,
-        from: EpochMillis,
-    ) -> impl Future<Output = Result<Option<Series>, GmailError>> + Send;
-
-    /// Every event on the account's primary calendar that overlaps `from`
-    /// to `to`, in the order they start. Answers `GmailError::MissingScope`
-    /// until the account grants the calendar permission, as the other
-    /// calendar calls do.
-    fn events_between(
-        &self,
-        from: EpochMillis,
-        to: EpochMillis,
-    ) -> impl Future<Output = Result<Vec<Event>, GmailError>> + Send;
-
-    /// Puts a new event on the primary calendar and invites its guests.
-    fn create_event(
-        &self,
-        fields: &EventFields,
-    ) -> impl Future<Output = Result<Event, GmailError>> + Send;
-
-    /// Changes the fields `fields` sets on event `id` and tells its guests.
-    fn update_event(
-        &self,
-        id: &str,
-        fields: &EventFields,
-    ) -> impl Future<Output = Result<Event, GmailError>> + Send;
-
-    /// Takes event `id` off the primary calendar and tells its guests.
-    fn delete_event(&self, id: &str) -> impl Future<Output = Result<(), GmailError>> + Send;
-
     /// Every calendar on the account. Answers `GmailError::MissingScope`
     /// until the account grants the calendar list permission.
     fn calendars(&self) -> impl Future<Output = Result<Vec<calendar::Calendar>, GmailError>> + Send;
@@ -575,76 +511,13 @@ impl GmailApi for AccountClient {
         self.client.set_vacation(vacation).await
     }
 
-    async fn answer_invitation(
-        &self,
-        ical_uid: &str,
-        me: &str,
-        answer: Answer,
-        occurrence: Option<EpochMillis>,
-        note: Option<&str>,
-    ) -> Result<Answered, GmailError> {
-        let occurrence = occurrence.and_then(rfc3339);
-        self.client
-            .answer_invitation(ical_uid, me, answer, occurrence.as_deref(), note)
-            .await
-    }
-
-    /// The Calendar API takes its window as RFC 3339, so the instants turn
-    /// into timestamps here rather than in the client, which keeps a clock
-    /// out of the Gmail crate.
-    async fn busy_between(
-        &self,
-        from: EpochMillis,
-        to: EpochMillis,
-    ) -> Result<Vec<Busy>, GmailError> {
-        let (Some(from), Some(to)) = (rfc3339(from), rfc3339(to)) else {
-            return Ok(Vec::new());
-        };
-        self.client.busy_between(&from, &to).await
-    }
-
-    async fn series(
-        &self,
-        ical_uid: &str,
-        from: EpochMillis,
-    ) -> Result<Option<Series>, GmailError> {
-        let Some(from) = rfc3339(from) else {
-            return Ok(None);
-        };
-        self.client.series(ical_uid, &from).await
-    }
-
-    async fn events_between(
-        &self,
-        from: EpochMillis,
-        to: EpochMillis,
-    ) -> Result<Vec<Event>, GmailError> {
-        let (Some(from), Some(to)) = (rfc3339(from), rfc3339(to)) else {
-            return Ok(Vec::new());
-        };
-        self.client.events_between(&from, &to).await
-    }
-
-    async fn create_event(&self, fields: &EventFields) -> Result<Event, GmailError> {
-        self.client.create_event(fields).await
-    }
-
-    async fn update_event(&self, id: &str, fields: &EventFields) -> Result<Event, GmailError> {
-        self.client.update_event(id, fields).await
-    }
-
-    async fn delete_event(&self, id: &str) -> Result<(), GmailError> {
-        self.client.delete_event(id).await
-    }
-
     async fn calendars(&self) -> Result<Vec<calendar::Calendar>, GmailError> {
         self.client.calendar_list().await
     }
 
     /// The Calendar API takes `time_min` as RFC 3339; an instant this
     /// computer's clock could not read becomes the zero time rather than
-    /// missing the call, since `from` is required here, unlike
-    /// `busy_between`'s window.
+    /// missing the call, since `from` is required here.
     async fn event_changes(
         &self,
         calendar: &str,

@@ -9,7 +9,6 @@ use mailrs_dav::Kind;
 use mailrs_domain::calendar::list::ListEdit;
 use mailrs_domain::calendar::{Access, Attachment, Event, Notify, occurrence_id};
 use mailrs_domain::invitation::Answer;
-use mailrs_gmail::Answered;
 
 use crate::fake::{FakeImap, FakeSmtp};
 use crate::services::{CalDav, Imap};
@@ -329,32 +328,15 @@ async fn a_move_puts_the_event_on_the_other_calendar_and_takes_it_off_this_one()
 }
 
 #[tokio::test]
-async fn an_answer_the_server_schedules_is_saved_and_not_mailed() {
-    let (dav, smtp, caldav) = adapter().await;
-    dav.set_auto_schedule(true);
-    dav.put_resource(&format!("{WORK}standup.ics"), &invitation_ics("invite-uid", "Standup"));
-    caldav.calendars().await.unwrap();
-    let answered = caldav.answer_invitation("invite-uid", ME, Answer::Yes, None, None).await.unwrap();
-    assert_eq!(answered, Answered::Done);
-    let body = dav.body(&format!("{WORK}standup.ics")).unwrap();
-    assert!(body.contains("PARTSTAT=ACCEPTED") && !body.contains("SCHEDULE-AGENT"), "{body}");
-    assert!(smtp.sent().is_empty(), "the server mails the organizer");
-}
-
-#[tokio::test]
 async fn an_answer_to_a_server_that_does_not_schedule_is_mailed_to_the_organizer() {
     let (dav, smtp, caldav) = adapter().await;
     dav.put_resource(&format!("{WORK}standup.ics"), &invitation_ics("invite-uid", "Standup"));
-    caldav.calendars().await.unwrap();
-    let answered = caldav.answer_invitation("invite-uid", ME, Answer::Yes, None, Some("See you there")).await.unwrap();
-    assert_eq!(answered, Answered::Done);
+    caldav.answer_event(WORK, "standup", ME, Answer::Yes, Some("See you there")).await.unwrap();
     assert!(dav.body(&format!("{WORK}standup.ics")).unwrap().contains("PARTSTAT=ACCEPTED"));
     let sent = smtp.sent();
     assert_eq!(sent.len(), 1);
     assert_eq!(sent[0].to, [BOSS]);
     assert!(String::from_utf8_lossy(&sent[0].raw).contains("Subject: Accepted: Standup"));
-    let none = caldav.answer_invitation("no-such-uid", ME, Answer::Yes, None, None).await.unwrap();
-    assert_eq!(none, Answered::NotOnCalendar);
 }
 
 #[tokio::test]

@@ -11,10 +11,10 @@ use std::collections::HashMap;
 
 use chrono::{DateTime, Datelike, Local, NaiveDate, NaiveTime, TimeZone, Utc};
 use mailrs_domain::calendar as model;
+use mailrs_domain::calendar::EventEdit;
 use mailrs_domain::invitation::Answer;
-use mailrs_gmail::{EventFields, EventTime};
 use mailrs_sync::Told;
-use mailrs_sync::calendar::{NoPick, at, writable_named};
+use mailrs_sync::calendar::{NoPick, writable_named};
 
 use super::*;
 
@@ -196,17 +196,17 @@ fn guests(input: &Value) -> Option<Vec<String>> {
     )
 }
 
-/// A start or an end as Google takes it. The tools name the last day of
-/// an all-day event, and Google the day after it.
-fn event_time(moment: Moment, end: bool) -> Result<EventTime, String> {
+/// A start or an end as an event keeps it. The tools name the last day
+/// of an all-day event, and an event ends at midnight UTC after it.
+fn edge(moment: Moment, end: bool) -> Result<EpochMillis, String> {
     match moment {
-        Moment::At(instant) => at(instant).ok_or_else(|| "That time is out of range.".into()),
+        Moment::At(instant) => Ok(instant),
         Moment::Day(day) => {
             let day = match end {
                 true => day.succ_opt().ok_or("That day is out of range.")?,
                 false => day,
             };
-            Ok(EventTime::Day(day.format("%Y-%m-%d").to_string()))
+            Ok(day.and_time(NaiveTime::MIN).and_utc().timestamp_millis())
         }
     }
 }
@@ -457,11 +457,12 @@ impl<A: Accounts> Tools<A> {
             Some(wanted) => Some(self.writable_calendar(&account, &wanted).await?),
             None => None,
         };
-        let fields = EventFields {
-            summary: Some(title.clone()),
-            start: Some(event_time(start, false)?),
-            end: Some(event_time(end, true)?),
-            location: text(input, "location"),
+        let edit = EventEdit {
+            title: Some(title.clone()),
+            start: Some(edge(start, false)?),
+            end: Some(edge(end, true)?),
+            all_day: Some(matches!(start, Moment::Day(_))),
+            place: text(input, "location"),
             description: text(input, "description"),
             guests: guests(input),
         };
@@ -481,10 +482,10 @@ impl<A: Accounts> Tools<A> {
                 &[("title", &title), ("account", &account.email), ("when", &when)],
             ),
         };
-        if let Some(invited) = fields.guests.as_ref().filter(|g| !g.is_empty()) {
+        if let Some(invited) = edit.guests.as_ref().filter(|g| !g.is_empty()) {
             question.push_str("\n\n");
             question.push_str(&fill(
-                &gettext("Google sends an invitation to {guests}."),
+                &gettext("Guests get an invitation: {guests}."),
                 &[("guests", &invited.join(", "))],
             ));
         }
@@ -494,7 +495,7 @@ impl<A: Accounts> Tools<A> {
             let on = chosen.as_ref().map(|c| c.id.clone());
             let made = self
                 .permitted(&account, Permission::Calendar, async move {
-                    calendar.create(account_id, on.as_deref(), &fields).await
+                    calendar.create(account_id, on.as_deref(), &edit).await
                 })
                 .await?;
             let names = self.calendar_names(account_id).await?;
@@ -513,11 +514,12 @@ impl<A: Accounts> Tools<A> {
             text(input, key).map(|t| moment(&t)).transpose()
         };
         let (start, end) = (moment_of("start")?, moment_of("end")?);
-        let fields = EventFields {
-            summary: text(input, "title"),
-            start: start.map(|m| event_time(m, false)).transpose()?,
-            end: end.map(|m| event_time(m, true)).transpose()?,
-            location: input
+        let edit = EventEdit {
+            title: text(input, "title"),
+            start: start.map(|m| edge(m, false)).transpose()?,
+            end: end.map(|m| edge(m, true)).transpose()?,
+            all_day: start.map(|m| matches!(m, Moment::Day(_))),
+            place: input
                 .get("location")
                 .and_then(Value::as_str)
                 .map(str::to_string),
@@ -527,7 +529,7 @@ impl<A: Accounts> Tools<A> {
                 .map(str::to_string),
             guests: guests(input),
         };
-        if fields == EventFields::default() {
+        if edit.is_empty() {
             return Err(
                 "Say what to change: a title, a time, a place, guests or a description.".into(),
             );
@@ -536,7 +538,7 @@ impl<A: Accounts> Tools<A> {
         let mut line = |label: String, value: &str| {
             changes.push(fill(&label, &[("value", value)]));
         };
-        if let Some(title) = &fields.summary {
+        if let Some(title) = &edit.title {
             line(gettext("Title: {value}"), title);
         }
         if let Some(start) = start {
@@ -545,13 +547,13 @@ impl<A: Accounts> Tools<A> {
         if let Some(end) = end {
             line(gettext("Ends: {value}"), &moment_text(end));
         }
-        if let Some(location) = &fields.location {
+        if let Some(location) = &edit.place {
             line(gettext("Where: {value}"), location);
         }
-        if let Some(guests) = &fields.guests {
+        if let Some(guests) = &edit.guests {
             line(gettext("Guests: {value}"), &guests.join(", "));
         }
-        if let Some(description) = &fields.description {
+        if let Some(description) = &edit.description {
             let preview: String = description.chars().take(160).collect();
             line(gettext("Description: {value}"), &preview);
         }
@@ -572,7 +574,7 @@ impl<A: Accounts> Tools<A> {
             let account_id = account.id;
             let changed = self
                 .permitted(&account, Permission::Calendar, async move {
-                    calendar.update(account_id, &id, &fields).await
+                    calendar.update(account_id, &id, &edit).await
                 })
                 .await?;
             let names = self.calendar_names(account_id).await?;
@@ -657,7 +659,7 @@ impl<A: Accounts> Tools<A> {
             );
         };
         let went = match sent.told {
-            Told::Calendar => "Google Calendar recorded the answer and told the organizer.",
+            Told::Calendar => "The calendar took the answer and tells the organizer.",
             Told::Organizer => "The answer went to the organizer by email.",
             Told::Nobody => {
                 return Err(

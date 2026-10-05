@@ -323,21 +323,6 @@ async fn an_event_gone_from_graph_is_listed_as_removed_on_the_next_read() {
 }
 
 #[tokio::test]
-async fn answering_an_invitation_tells_graph() {
-    let h = outlook().await;
-    h.fake.put_event("cal-1", GraphEvent { id: "i1".into(), ical_uid: Some("party@example".into()), ..GraphEvent::default() });
-    let calendar = h.sync.services().calendar.clone().unwrap();
-    calendar.answer_invitation("party@example", "me@outlook.com", Answer::Yes, None, Some("See you")).await.unwrap();
-    assert_eq!(
-        h.fake.with(|s| s.events["i1"].1.response_status.clone()),
-        Some(ResponseStatus { response: "accepted".into() })
-    );
-    assert_eq!(h.fake.with(|s| s.responses[0].comment.clone()).as_deref(), Some("See you"));
-    let none = calendar.answer_invitation("nothing@example", "me@outlook.com", Answer::No, None, None).await.unwrap();
-    assert_eq!(none, mailrs_gmail::Answered::NotOnCalendar);
-}
-
-#[tokio::test]
 async fn answering_an_event_on_the_calendar_answers_the_event() {
     let h = outlook().await;
     h.fake.put_event("cal-1", GraphEvent { id: "i1".into(), subject: Some("Party".into()), ..GraphEvent::default() });
@@ -401,7 +386,7 @@ async fn an_event_range_pages_one_calendar() {
 }
 
 #[tokio::test]
-async fn busy_time_leaves_out_free_cancelled_declined_and_all_day_events() {
+async fn the_clash_line_leaves_out_free_cancelled_declined_and_all_day_events() {
     let h = outlook().await;
     let timed = |id: &str, hour: u32| GraphEvent {
         id: id.into(),
@@ -416,22 +401,16 @@ async fn busy_time_leaves_out_free_cancelled_declined_and_all_day_events() {
     h.fake.put_event("cal-1", GraphEvent { is_cancelled: true, ..timed("cancelled", 11) });
     h.fake.put_event("cal-1", GraphEvent { response_status: Some(ResponseStatus { response: "declined".into() }), ..timed("declined", 12) });
     h.fake.put_event("cal-1", GraphEvent { is_all_day: true, ..timed("allday", 13) });
-    let calendar = h.sync.services().calendar.clone().unwrap();
-    let busy = calendar.busy_between(millis("2026-10-05T00:00:00Z"), millis("2026-10-06T00:00:00Z")).await.unwrap();
-    assert_eq!(busy.iter().map(|b| b.summary.as_str()).collect::<Vec<_>>(), ["busy"]);
-}
-
-#[tokio::test]
-async fn a_series_says_how_it_repeats_and_how_many_are_left() {
-    let h = outlook().await;
-    h.fake.put_event("cal-1", weekly_standup());
-    let calendar = h.sync.services().calendar.clone().unwrap();
-    let series = calendar.series("standup@contoso", millis("2026-10-14T00:00:00Z")).await.unwrap().unwrap();
-    assert_eq!(series.rule, "FREQ=WEEKLY;INTERVAL=1;BYDAY=MO;COUNT=10");
-    // Ten Mondays from the 5th, less the 12th, which Graph cancelled, less
-    // the 5th, which is before the 14th: eight remain.
-    assert_eq!(series.left, Some(8));
-    assert!(calendar.series("nothing@x", 0).await.unwrap().is_none());
+    let connected = Arc::new(Connected(HashMap::from([(h.account_id, Arc::clone(&h.sync))])));
+    let copy = Arc::new(CalendarCopy::new(Arc::clone(&connected), h.db.clone()));
+    copy.refresh(h.account_id, millis("2026-10-01T00:00:00Z")).await.unwrap();
+    let invitation = mailrs_domain::invitation::read(
+        "BEGIN:VCALENDAR\r\nMETHOD:REQUEST\r\nBEGIN:VEVENT\r\nUID:offsite@contoso\r\nSUMMARY:Offsite\r\n\
+         DTSTART:20261005T080000Z\r\nDTEND:20261005T140000Z\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n",
+    )
+    .unwrap();
+    let busy = crate::Invitations::new(connected, h.db.clone(), copy).busy(h.account_id, &invitation).await.unwrap();
+    assert_eq!(busy, ["busy"]);
 }
 
 /// The card's series line reads the copy, so opening an invitation to one
@@ -458,32 +437,6 @@ async fn the_series_line_comes_from_the_copy_with_no_graph_call() {
         invitations.series(h.account_id, &invitation, millis("2026-10-14T00:00:00Z")).await.unwrap().as_deref(),
         Some("Every Monday, 8 left")
     );
-}
-
-#[tokio::test]
-async fn the_assistants_events_come_from_the_default_calendar() {
-    let h = outlook().await;
-    let calendar = h.sync.services().calendar.clone().unwrap();
-    let fields = mailrs_gmail::EventFields {
-        summary: Some("Lunch".into()),
-        start: Some(mailrs_gmail::EventTime::At("2026-10-06T12:00:00Z".into())),
-        end: Some(mailrs_gmail::EventTime::At("2026-10-06T13:00:00Z".into())),
-        guests: Some(vec!["ana@example.com".into()]),
-        ..mailrs_gmail::EventFields::default()
-    };
-    let made = calendar.create_event(&fields).await.unwrap();
-    assert_eq!(made.summary, "Lunch");
-    assert_eq!(h.fake.with(|s| s.events[&made.id].0.clone()), "cal-1");
-    let changed = calendar
-        .update_event(&made.id, &mailrs_gmail::EventFields { summary: Some("Late lunch".into()), ..Default::default() })
-        .await
-        .unwrap();
-    assert_eq!(changed.summary, "Late lunch");
-    let listed = calendar.events_between(millis("2026-10-06T00:00:00Z"), millis("2026-10-07T00:00:00Z")).await.unwrap();
-    assert_eq!(listed.len(), 1);
-    assert_eq!(listed[0].guests.len(), 1);
-    calendar.delete_event(&made.id).await.unwrap();
-    assert!(h.fake.with(|s| s.events.is_empty()));
 }
 
 #[tokio::test]

@@ -258,7 +258,6 @@ async fn an_answer_reaches_the_calendar_and_comes_back_on_reopening() {
 async fn an_answer_from_the_calendar_marks_the_copy_and_the_card_and_waits_to_go_out() {
     let h = harness().await;
     let invitations = invitations(&h);
-    h.fake.with(|s| s.calendar.insert(UID.into(), None));
     // A card only shows the answer once the message has been opened, as
     // it does in the app: opening writes the invitations row `answer`
     // updates.

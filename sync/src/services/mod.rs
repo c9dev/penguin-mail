@@ -55,9 +55,7 @@ use mailrs_domain::query::Query;
 use mailrs_domain::{
     AccountId, EpochMillis, Filter, Location, MailSet, Membership, MessageMeta, RemoteMailbox, Role, Vacation,
 };
-use mailrs_gmail::{
-    Answered, Busy, ConnectionsPage, ContactFields, Event, EventFields, LabelColor, Person, Series,
-};
+use mailrs_gmail::{ConnectionsPage, ContactFields, LabelColor, Person};
 use mailrs_imap::{ImapClient, SmtpClient, UidSet};
 use mailrs_mime::Parts;
 use mailrs_pop3::Pop3Client;
@@ -1085,63 +1083,12 @@ pub trait MailBackend: Send + Sync + 'static {
     fn list_drafts(&self) -> impl Future<Output = Result<Vec<DraftRef>, BackendError>> + Send;
 }
 
-/// The account's calendar. Every call answers
-/// `BackendError::NeedsPermission` until the account grants the calendar
-/// permission.
+/// The account's calendar, as the local copy reads and writes it. Every
+/// call answers `BackendError::NeedsPermission` until the account grants
+/// the calendar permission. Nothing outside `CalendarCopy` and the
+/// calendar file import calls it: every other reader goes through the
+/// copy.
 pub trait CalendarService: Send + Sync + 'static {
-    /// Answers the event `ical_uid` names as `me`, and lets the server
-    /// tell the organizer. `occurrence` is the start of the one occurrence
-    /// to answer; `None` answers the series. `note` goes to the organizer
-    /// with the answer.
-    fn answer_invitation(
-        &self,
-        ical_uid: &str,
-        me: &str,
-        answer: Answer,
-        occurrence: Option<EpochMillis>,
-        note: Option<&str>,
-    ) -> impl Future<Output = Result<Answered, BackendError>> + Send;
-
-    /// What the calendar already holds between `from` and `to`.
-    fn busy_between(
-        &self,
-        from: EpochMillis,
-        to: EpochMillis,
-    ) -> impl Future<Output = Result<Vec<Busy>, BackendError>> + Send;
-
-    /// How the repeating event `ical_uid` names repeats, with what is left
-    /// of it from `from`. `None` when there is no such event or it does
-    /// not repeat.
-    fn series(
-        &self,
-        ical_uid: &str,
-        from: EpochMillis,
-    ) -> impl Future<Output = Result<Option<Series>, BackendError>> + Send;
-
-    /// Every event on the primary calendar that overlaps `from` to `to`,
-    /// in the order they start.
-    fn events_between(
-        &self,
-        from: EpochMillis,
-        to: EpochMillis,
-    ) -> impl Future<Output = Result<Vec<Event>, BackendError>> + Send;
-
-    /// Puts a new event on the primary calendar and invites its guests.
-    fn create_event(
-        &self,
-        fields: &EventFields,
-    ) -> impl Future<Output = Result<Event, BackendError>> + Send;
-
-    /// Changes what `fields` sets on event `id` and tells its guests.
-    fn update_event(
-        &self,
-        id: &str,
-        fields: &EventFields,
-    ) -> impl Future<Output = Result<Event, BackendError>> + Send;
-
-    /// Takes event `id` off the primary calendar and tells its guests.
-    fn delete_event(&self, id: &str) -> impl Future<Output = Result<(), BackendError>> + Send;
-
     /// Every calendar on the account, for the local copy.
     fn calendars(&self) -> impl Future<Output = Result<Vec<model::Calendar>, BackendError>> + Send;
 
@@ -1466,6 +1413,6 @@ mod tests {
         let identities = services.identities.identities().await.unwrap();
         assert_eq!(identities[0].email, "me@example.com");
         let calendar = services.calendar.as_ref().expect("Gmail has a calendar");
-        assert!(calendar.events_between(0, 1).await.unwrap().is_empty());
+        assert!(calendar.calendars().await.unwrap().is_empty());
     }
 }
