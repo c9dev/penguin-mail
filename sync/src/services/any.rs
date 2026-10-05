@@ -722,6 +722,34 @@ impl AutoReplyService for AnyAutoReply {
     async fn set_vacation(&self, vacation: &Vacation) -> Result<(), BackendError> {
         forward_reply!(self, set_vacation(vacation))
     }
+
+    fn keeps_subject(&self) -> bool {
+        match self {
+            AnyAutoReply::Google(adapter) => adapter.keeps_subject(),
+            #[cfg(any(test, feature = "fake"))]
+            AnyAutoReply::Fake(adapter) => adapter.keeps_subject(),
+            AnyAutoReply::Microsoft(adapter) => adapter.keeps_subject(),
+            #[cfg(any(test, feature = "fake"))]
+            AnyAutoReply::FakeMicrosoft(adapter) => adapter.keeps_subject(),
+            AnyAutoReply::Sieve(adapter) => adapter.keeps_subject(),
+            #[cfg(any(test, feature = "fake"))]
+            AnyAutoReply::FakeSieve(adapter) => adapter.keeps_subject(),
+        }
+    }
+
+    fn limits_to_contacts(&self) -> bool {
+        match self {
+            AnyAutoReply::Google(adapter) => adapter.limits_to_contacts(),
+            #[cfg(any(test, feature = "fake"))]
+            AnyAutoReply::Fake(adapter) => adapter.limits_to_contacts(),
+            AnyAutoReply::Microsoft(adapter) => adapter.limits_to_contacts(),
+            #[cfg(any(test, feature = "fake"))]
+            AnyAutoReply::FakeMicrosoft(adapter) => adapter.limits_to_contacts(),
+            AnyAutoReply::Sieve(adapter) => adapter.limits_to_contacts(),
+            #[cfg(any(test, feature = "fake"))]
+            AnyAutoReply::FakeSieve(adapter) => adapter.limits_to_contacts(),
+        }
+    }
 }
 
 impl IdentityService for AnyIdentities {

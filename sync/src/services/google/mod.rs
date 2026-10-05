@@ -754,6 +754,14 @@ impl<G: GmailApi> AutoReplyService for Google<G> {
     async fn set_vacation(&self, vacation: &Vacation) -> Result<(), BackendError> {
         Ok(paced(self.gmail.set_vacation(vacation)).await?)
     }
+
+    fn keeps_subject(&self) -> bool {
+        true
+    }
+
+    fn limits_to_contacts(&self) -> bool {
+        true
+    }
 }
 
 impl<G: GmailApi> IdentityService for Google<G> {

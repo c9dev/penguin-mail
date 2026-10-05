@@ -1014,6 +1014,8 @@ mod tests {
         let bare = Offers {
             rules: false,
             auto_reply: false,
+            auto_reply_subject: false,
+            auto_reply_contacts_only: false,
             ..Offers::EVERYTHING
         };
         assert_eq!(
@@ -1041,6 +1043,8 @@ mod tests {
         let bare = Offers {
             rules: false,
             auto_reply: false,
+            auto_reply_subject: false,
+            auto_reply_contacts_only: false,
             ..Offers::EVERYTHING
         };
         assert!(!account_action_on("account-rules", bare));
@@ -1061,6 +1065,8 @@ mod tests {
             contacts: false,
             rules: false,
             auto_reply: false,
+            auto_reply_subject: false,
+            auto_reply_contacts_only: false,
             ..Offers::EVERYTHING
         };
         assert_eq!(
@@ -1168,6 +1174,8 @@ mod tests {
         let lacking = Offers {
             rules: false,
             auto_reply: false,
+            auto_reply_subject: false,
+            auto_reply_contacts_only: false,
             ..Offers::EVERYTHING
         };
         let lines = missing_lines(&[(gmail(), Offers::EVERYTHING), (bare.clone(), lacking)], |_, _| None);
@@ -1196,6 +1204,8 @@ mod tests {
             calendar: false,
             contacts: false,
             auto_reply: false,
+            auto_reply_subject: false,
+            auto_reply_contacts_only: false,
             ..Offers::EVERYTHING
         };
         let lines = missing_lines(&[(fastmail(), lacking), (pop3, lacking)], |_, _| None);
@@ -1212,6 +1222,8 @@ mod tests {
             calendar: false,
             contacts: false,
             auto_reply: false,
+            auto_reply_subject: false,
+            auto_reply_contacts_only: false,
             ..Offers::EVERYTHING
         };
         let lines = missing_lines(&[(fastmail(), imap)], |_, _| None);

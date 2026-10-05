@@ -256,4 +256,12 @@ impl<M: ManageSieveApi, B: MailBackend + Clone> AutoReplyService for SieveRules<
         script.vacation = Some(vacation.clone());
         self.store(script, &ext, running).await
     }
+
+    fn keeps_subject(&self) -> bool {
+        true
+    }
+
+    fn limits_to_contacts(&self) -> bool {
+        false
+    }
 }

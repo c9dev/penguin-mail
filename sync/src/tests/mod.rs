@@ -1,4 +1,5 @@
 mod actions;
+mod auto_reply_offers;
 mod basics;
 mod bootstrap;
 mod caldav;
