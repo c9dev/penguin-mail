@@ -6,7 +6,7 @@
 use std::rc::Rc;
 
 use mailrs_domain::ChangeEvent;
-use mailrs_domain::translate::gettext;
+use mailrs_domain::translate::{fill, gettext};
 use mailrs_sync::{MailAction, Outcome};
 
 use super::MainWindow;
@@ -51,6 +51,9 @@ pub enum Notice<'a> {
     /// The Send Later, Outbox or Reminders lists changed.
     OutboxChanged,
     Toast(String),
+    /// A rule change that waited for the server was refused; the server's
+    /// words.
+    RuleRefused(String),
 }
 
 impl MainWindow {
@@ -82,6 +85,10 @@ impl MainWindow {
             Notice::Sent => self.toast(&gettext("Message sent")),
             Notice::OutboxChanged => self.scheduled_changed(),
             Notice::Toast(text) => self.toast(&text),
+            Notice::RuleRefused(words) => self.toast(&fill(
+                &gettext("A rule that waited was refused: {reason}"),
+                &[("reason", &words)],
+            )),
         }
     }
 }
