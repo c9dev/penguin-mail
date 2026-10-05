@@ -1,67 +1,17 @@
-//! The one question a move, a change or a delete of an event asks before
-//! it is written: whether to go ahead, which occurrences of a repeating
-//! event it covers, and whether the guests are mailed. The person
-//! answers all of it in one dialog. The rules are pure functions under
-//! tests; `ask` only shows them.
+//! The dialog for the one question a move, a change or a delete of an
+//! event asks before it is written: whether to go ahead, which
+//! occurrences of a repeating event it covers, and whether the guests
+//! are mailed. What to ask is the calendar copy's rule
+//! (`CalendarCopy::ask_before`); this module words it, lays out its
+//! buttons and reads the one pressed. The rules for the buttons are pure
+//! functions under tests; `ask` only shows them.
 
 use adw::prelude::*;
 use mailrs_domain::calendar::series::RepeatScope;
-use mailrs_domain::calendar::{Event, Guest, Notify};
+use mailrs_domain::calendar::{Event, Notify};
 use mailrs_domain::translate::{fill, gettext};
-
-/// What the person did to the event.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Action {
-    /// A drag, a keyboard nudge, or a new time in the editor.
-    Move,
-    /// Any other change in the editor.
-    Edit,
-    Delete,
-    /// A guest's Yes, Maybe or No. Only the organizer hears of it, so
-    /// it asks which occurrences it covers and nothing about the guests.
-    Answer,
-}
-
-/// What the dialog asks. Built by [`question`], which answers `None`
-/// when nothing needs asking.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Question {
-    pub action: Action,
-    /// The occurrences the change may cover, for a repeating event.
-    pub scopes: Vec<RepeatScope>,
-    /// Offer "Send an update to the guests" and "Don't send".
-    pub ask_guests: bool,
-    /// The account mails the guests whatever the person says, so the
-    /// dialog says so instead of offering a choice.
-    pub mailed: bool,
-    /// The guests hear of it whatever the person says, because the change
-    /// adds guests and their invitation is that mail.
-    pub told: bool,
-    /// Cancel reads "Keep Old Time": the save changed more than the
-    /// time, and turning the new time down still writes the rest.
-    pub keeps: bool,
-    /// Whether the rest, written at the old time, reaches the guests.
-    pub rest_seen: bool,
-}
-
-/// What an editor save changes, beyond the kind of action. A drag, a
-/// nudge and a delete pass the default.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
-pub struct Change {
-    /// The guests see the change (`draft::reaches_guests`). A move and a
-    /// delete reach them whatever this says.
-    pub seen: bool,
-    /// The change invites someone new.
-    pub adds_guests: bool,
-    /// A move that also changes something besides the time.
-    pub more_than_time: bool,
-    /// Those other changes reach the guests on their own.
-    pub rest_seen: bool,
-    /// The account mails the guests of every change it writes and has no
-    /// way to send nobody (`Offers::quiet_changes` is false), so no choice
-    /// about the guests is offered.
-    pub always_mails: bool,
-}
+pub use mailrs_sync::calendar_copy::event_change::{Action, Question};
+use mailrs_sync::calendar_copy::event_change::Choice;
 
 /// What the person answered.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -70,6 +20,19 @@ pub struct Answer {
     pub notify: Notify,
     /// Write the other edits at the time the event had.
     pub keep_time: bool,
+}
+
+impl Answer {
+    /// The scope and notify the calendar copy writes the change with.
+    pub fn choice(self) -> Choice {
+        Choice { scope: self.scope, notify: self.notify }
+    }
+}
+
+impl From<Choice> for Answer {
+    fn from(choice: Choice) -> Answer {
+        Answer { scope: choice.scope, notify: choice.notify, keep_time: false }
+    }
 }
 
 /// How a response button looks.
@@ -85,51 +48,6 @@ pub struct Response {
     pub id: &'static str,
     pub label: String,
     pub look: Look,
-}
-
-/// Whether anyone but the account itself is on the event's guest list.
-pub fn has_other_guests(guests: &[Guest]) -> bool {
-    guests.iter().any(|g| !g.me)
-}
-
-/// Whether `after` holds an address `before` does not.
-pub fn adds_guests(before: &[Guest], after: &[Guest]) -> bool {
-    after.iter().any(|a| !before.iter().any(|b| b.email.eq_ignore_ascii_case(&a.email)))
-}
-
-/// The question for `action` on an event with `guests`, offering
-/// `scopes` (from `series::scopes`; empty for an event that does not
-/// repeat). Every move asks, so a drag that slipped can be taken back.
-/// A delete, and an edit the guests see, ask when the event repeats or
-/// has guests; any other edit only when it repeats. A change that adds
-/// guests tells every guest without a choice, since the new ones need
-/// their invitation.
-pub fn question(action: Action, scopes: &[RepeatScope], guests: &[Guest], change: Change) -> Option<Question> {
-    let seen = action != Action::Edit || change.seen;
-    let guests_hear = action != Action::Answer && has_other_guests(guests) && seen;
-    let ask_guests = guests_hear && !change.adds_guests && !change.always_mails;
-    let mailed = guests_hear && !change.adds_guests && change.always_mails;
-    let needed = match action {
-        Action::Move => true,
-        Action::Delete | Action::Edit | Action::Answer => !scopes.is_empty() || ask_guests || mailed,
-    };
-    needed.then(|| Question {
-        action,
-        scopes: scopes.to_vec(),
-        ask_guests,
-        mailed,
-        told: guests_hear && change.adds_guests,
-        keeps: action == Action::Move && change.more_than_time,
-        rest_seen: change.rest_seen,
-    })
-}
-
-/// What a change nobody was asked about sends: nothing for an edit the
-/// guests do not see, an update otherwise. An account that always mails
-/// cannot send nothing, so it says `Guests` and the account decides.
-pub fn unasked(action: Action, change: Change) -> Answer {
-    let notify = if action == Action::Edit && !change.seen && !change.always_mails { Notify::Nobody } else { Notify::Guests };
-    Answer { scope: None, notify, keep_time: false }
 }
 
 /// Whether the guests choice shows as a check button, because the
@@ -332,6 +250,9 @@ pub async fn ask(parent: &impl IsA<gtk::Widget>, question: &Question, event: &Ev
 
 #[cfg(test)]
 mod tests {
+    use mailrs_domain::calendar::Guest;
+    use mailrs_sync::calendar_copy::event_change::{Facts, question};
+
     use super::*;
 
     fn ann() -> Guest {
@@ -350,7 +271,7 @@ mod tests {
 
     #[test]
     fn moving_an_event_without_guests_asks_only_to_confirm() {
-        let q = question(Action::Move, &[], &[me()], Change::default()).unwrap();
+        let q = question(Action::Move, &[], &[me()], Facts::default()).unwrap();
         assert_eq!(ids(&q), ["cancel", "go"]);
         assert_eq!(responses(&q)[1].label, "Move");
         assert_eq!(answer(&q, "go", None, true), Some(Answer { scope: None, notify: Notify::Guests, keep_time: false }));
@@ -358,7 +279,7 @@ mod tests {
 
     #[test]
     fn moving_a_meeting_asks_whether_to_send_an_update() {
-        let q = question(Action::Move, &[], &[me(), ann()], Change::default()).unwrap();
+        let q = question(Action::Move, &[], &[me(), ann()], Facts::default()).unwrap();
         assert_eq!(ids(&q), ["cancel", "quiet", "send"]);
         assert_eq!(responses(&q)[2].label, "Send an update to the guests");
         assert_eq!(responses(&q)[1].label, "Don't send");
@@ -369,7 +290,7 @@ mod tests {
 
     #[test]
     fn cancel_answers_nothing() {
-        let q = question(Action::Move, &[], &[ann()], Change::default()).unwrap();
+        let q = question(Action::Move, &[], &[ann()], Facts::default()).unwrap();
         assert_eq!(answer(&q, "cancel", None, true), None);
         assert_eq!(answer(&q, "close", None, true), None);
     }
@@ -378,7 +299,7 @@ mod tests {
     /// occurrences become options and the buttons carry the guests.
     #[test]
     fn a_repeating_meeting_asks_both_questions_at_once() {
-        let q = question(Action::Move, &EVERY, &[ann()], Change::default()).unwrap();
+        let q = question(Action::Move, &EVERY, &[ann()], Facts::default()).unwrap();
         assert!(scope_options(&q));
         assert_eq!(ids(&q), ["cancel", "quiet", "send"]);
         assert_eq!(
@@ -389,7 +310,7 @@ mod tests {
 
     #[test]
     fn a_repeating_event_without_guests_keeps_one_button_per_choice() {
-        let q = question(Action::Edit, &EVERY, &[], Change::default()).unwrap();
+        let q = question(Action::Edit, &EVERY, &[], Facts::default()).unwrap();
         assert!(!scope_options(&q));
         assert_eq!(ids(&q), ["cancel", "this", "following", "all"]);
         assert_eq!(answer(&q, "all", None, true), Some(Answer { scope: Some(RepeatScope::All), notify: Notify::Guests, keep_time: false }));
@@ -397,33 +318,18 @@ mod tests {
 
     #[test]
     fn answering_a_repeating_invitation_offers_this_event_or_all_events() {
-        let q = question(Action::Answer, &[RepeatScope::This, RepeatScope::All], &[ann()], Change::default()).unwrap();
+        let q = question(Action::Answer, &[RepeatScope::This, RepeatScope::All], &[ann()], Facts::default()).unwrap();
         assert_eq!(ids(&q), ["cancel", "this", "all"]);
         assert!(!q.ask_guests, "only the organizer hears an answer");
         assert_eq!(answer(&q, "this", None, true).and_then(|a| a.scope), Some(RepeatScope::This));
         assert_eq!(answer(&q, "all", None, true).and_then(|a| a.scope), Some(RepeatScope::All));
     }
 
-    #[test]
-    fn answering_a_one_off_invitation_asks_nothing() {
-        assert_eq!(question(Action::Answer, &[], &[ann()], Change::default()), None);
-    }
-
-    #[test]
-    fn an_edit_that_keeps_the_time_asks_nothing_of_a_one_off_meeting() {
-        assert_eq!(question(Action::Edit, &[], &[ann()], Change::default()), None);
-    }
-
-    #[test]
-    fn deleting_a_one_off_event_without_guests_asks_nothing() {
-        assert_eq!(question(Action::Delete, &[], &[me()], Change::default()), None);
-    }
-
     /// Cancelling a meeting you organize tells the guests unless you say
     /// otherwise.
     #[test]
     fn deleting_a_meeting_offers_the_cancellation_and_defaults_to_sending_it() {
-        let q = question(Action::Delete, &[], &[me(), ann()], Change::default()).unwrap();
+        let q = question(Action::Delete, &[], &[me(), ann()], Facts::default()).unwrap();
         assert_eq!(ids(&q), ["cancel", "quiet", "send"]);
         assert_eq!(responses(&q)[2].label, "Send a cancellation to the guests");
         assert_eq!(default_response(&q), "send");
@@ -432,40 +338,26 @@ mod tests {
 
     #[test]
     fn a_move_that_adds_guests_tells_them_without_a_choice() {
-        let q = question(Action::Move, &[], &[ann()], Change { adds_guests: true, ..Change::default() }).unwrap();
+        let q = question(Action::Move, &[], &[ann()], Facts { adds_guests: true, ..Facts::default() }).unwrap();
         assert!(q.told);
         assert_eq!(ids(&q), ["cancel", "go"]);
         assert_eq!(answer(&q, "go", None, true).unwrap().notify, Notify::Guests);
     }
 
-    #[test]
-    fn the_account_alone_on_the_list_is_no_guest() {
-        assert!(!has_other_guests(&[me()]));
-        assert!(has_other_guests(&[me(), ann()]));
-    }
-
-    #[test]
-    fn a_guest_counts_as_added_whatever_the_case_of_the_address() {
-        let bo = Guest { email: "bo@example.com".into(), ..Guest::default() };
-        let loud = Guest { email: "ANN@example.com".into(), ..Guest::default() };
-        assert!(!adds_guests(&[ann()], &[loud]));
-        assert!(adds_guests(&[ann()], &[ann(), bo]));
-    }
-
-    fn seen() -> Change {
-        Change { seen: true, ..Change::default() }
+    fn seen() -> Facts {
+        Facts { seen: true, ..Facts::default() }
     }
 
     /// An account that mails the guests whatever the person picks, as
     /// Microsoft does, gets no choice to send nobody or to send an update.
-    fn mails() -> Change {
-        Change { always_mails: true, ..Change::default() }
+    fn mails() -> Facts {
+        Facts { always_mails: true, ..Facts::default() }
     }
 
     #[test]
     fn an_account_that_always_mails_offers_no_choice_about_the_guests() {
         for action in [Action::Move, Action::Delete, Action::Edit] {
-            let change = Change { seen: true, ..mails() };
+            let change = Facts { seen: true, ..mails() };
             let q = question(action, &[], &[me(), ann()], change).unwrap();
             assert!(!q.ask_guests, "{action:?}");
             assert!(q.mailed, "{action:?}");
@@ -484,23 +376,11 @@ mod tests {
 
     #[test]
     fn a_move_with_other_changes_on_such_an_account_has_no_send_check() {
-        let change = Change { more_than_time: true, rest_seen: true, ..mails() };
+        let change = Facts { more_than_time: true, rest_seen: true, ..mails() };
         let q = question(Action::Move, &[], &[me(), ann()], change).unwrap();
         assert!(q.keeps && !send_check(&q));
         assert_eq!(answer(&q, "go", None, true).unwrap().notify, Notify::Guests);
         assert_eq!(answer(&q, "keep", None, true).unwrap().notify, Notify::Guests);
-    }
-
-    #[test]
-    fn an_unasked_edit_on_such_an_account_never_promises_nobody() {
-        assert_eq!(unasked(Action::Edit, Change::default()).notify, Notify::Nobody);
-        assert_eq!(unasked(Action::Edit, mails()).notify, Notify::Guests);
-    }
-
-    #[test]
-    fn an_account_that_always_mails_with_no_other_guests_asks_nothing_extra() {
-        assert_eq!(question(Action::Delete, &[], &[me()], mails()), None);
-        assert!(!question(Action::Move, &[], &[me()], mails()).unwrap().mailed);
     }
 
     /// A new title on a meeting reaches the guests, so the save asks
@@ -515,40 +395,14 @@ mod tests {
     }
 
     #[test]
-    fn an_edit_the_guests_see_asks_nothing_of_an_event_without_guests() {
-        assert_eq!(question(Action::Edit, &[], &[me()], seen()), None);
-    }
-
-    /// Reminders, colour and busy or free are the account's own.
-    #[test]
-    fn an_edit_only_the_account_sees_asks_nothing_and_mails_nobody() {
-        assert_eq!(question(Action::Edit, &[], &[me(), ann()], Change::default()), None);
-        assert_eq!(unasked(Action::Edit, Change::default()).notify, Notify::Nobody);
-    }
-
-    #[test]
-    fn an_edit_the_guests_see_that_nobody_is_asked_about_still_tells_them() {
-        assert_eq!(unasked(Action::Edit, seen()).notify, Notify::Guests);
-        assert_eq!(unasked(Action::Move, Change::default()).notify, Notify::Guests);
-    }
-
-    #[test]
     fn a_repeating_meeting_edit_asks_the_occurrences_and_the_guests_at_once() {
         let q = question(Action::Edit, &EVERY, &[ann()], seen()).unwrap();
         assert!(scope_options(&q));
         assert_eq!(ids(&q), ["cancel", "quiet", "send"]);
     }
 
-    #[test]
-    fn a_meeting_that_loses_a_guest_still_asks() {
-        // The caller passes the list from before the edit when it had
-        // guests, so the removed guest hears of it.
-        let q = question(Action::Edit, &[], &[ann()], seen()).unwrap();
-        assert!(q.ask_guests);
-    }
-
-    fn move_and_more(rest_seen: bool) -> Change {
-        Change { seen: true, more_than_time: true, rest_seen, ..Change::default() }
+    fn move_and_more(rest_seen: bool) -> Facts {
+        Facts { seen: true, more_than_time: true, rest_seen, ..Facts::default() }
     }
 
     /// An editor save that moves the event and changes more: one dialog,
