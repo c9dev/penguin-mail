@@ -406,6 +406,12 @@ flowboxchild:focus-visible > .recipient-chip {
    4.8:1 or better in light and 5.2:1 or better in dark. The icon keeps
    the plain accent: a shape needs 3:1, which it has. */
 .mailboxes > row { margin: 0 8px 2px; padding: 0; min-height: 0; border-radius: 9px; }
+/* libadwaita's focus ring, on the row the arrow keys moved to
+   (`Sidebar::mark_keyed` says why it needs a class of its own). */
+.mailboxes > row.keyed:focus {
+  outline: 2px solid color-mix(in srgb, var(--accent-color) 50%, transparent);
+  outline-offset: -2px;
+}
 .mailboxes > row:selected {
   background-color: alpha(var(--accent-bg-color), 0.18);
   color: oklab(from var(--accent-bg-color) min(l, 0.45) calc(a * min(1, 0.45 / l)) calc(b * min(1, 0.45 / l)));

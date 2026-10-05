@@ -1,5 +1,6 @@
 //! Mailboxes: the unified views, then one section per account.
 
+mod keys;
 mod sections;
 pub(crate) mod tree;
 
@@ -19,6 +20,7 @@ use super::{FolderLook, LABEL_COLORS, Mailbox, Standard, describe, label_color_n
 use crate::format::{PALETTE, account_color_index, palette_name};
 use crate::offered::Filing;
 use crate::settings::Space;
+use keys::ListKey;
 use sections::{Place, Section};
 use tree::label_rows;
 
@@ -293,6 +295,8 @@ pub struct Sidebar {
     scroller: gtk::ScrolledWindow,
     /// Colours for label icons, rewritten on each rebuild.
     label_css: gtk::CssProvider,
+    /// The row the arrow keys last moved the focus to (`mark_keyed`).
+    keyed: RefCell<Option<gtk::ListBoxRow>>,
     rows: RefCell<Vec<Row>>,
     headings: RefCell<Vec<Heading>>,
     /// Accounts whose sections the user expanded or collapsed.
@@ -430,6 +434,7 @@ impl Sidebar {
             content,
             list,
             scroller: scroller.clone(),
+            keyed: RefCell::new(None),
             label_css: {
                 let css = gtk::CssProvider::new();
                 if let Some(display) = gdk::Display::default() {
@@ -485,6 +490,37 @@ impl Sidebar {
                 sidebar.apply_expansion();
             }
         });
+        // The list is one Tab stop and the arrows move inside it without
+        // opening each mailbox they pass (keys.rs). Capture runs before
+        // the list's own key bindings, which would select every row.
+        let keys = gtk::EventControllerKey::new();
+        keys.set_propagation_phase(gtk::PropagationPhase::Capture);
+        let weak = Rc::downgrade(&sidebar);
+        keys.connect_key_pressed(move |_, key, _, state| {
+            let Some(sidebar) = weak.upgrade() else {
+                return glib::Propagation::Proceed;
+            };
+            let handled = match keys::list_key(key, state) {
+                Some(ListKey::Leave { forward }) => sidebar.leave_list(forward),
+                Some(ListKey::Step(step)) => sidebar.step_focus(step),
+                Some(ListKey::Open) => sidebar.open_focused(),
+                Some(ListKey::Menu) => sidebar.open_options(),
+                None => false,
+            };
+            if handled { glib::Propagation::Stop } else { glib::Propagation::Proceed }
+        });
+        sidebar.list.add_controller(keys);
+        // A press in the list puts the pointer in charge, so the keyboard's
+        // ring goes.
+        let press = gtk::GestureClick::new();
+        press.set_propagation_phase(gtk::PropagationPhase::Capture);
+        let weak = Rc::downgrade(&sidebar);
+        press.connect_pressed(move |_, _, _, _| {
+            if let Some(sidebar) = weak.upgrade() {
+                sidebar.mark_keyed(None);
+            }
+        });
+        sidebar.list.add_controller(press);
         // A slide that closes a revealer ends here, and only then may the
         // revealer and the foot go without cutting it short.
         for revealer in [&sidebar.next.revealer, &sidebar.undo.revealer] {
@@ -498,6 +534,108 @@ impl Sidebar {
         // Neither the next event nor Undo Send has anything to show yet.
         sidebar.sync_foot();
         sidebar
+    }
+
+    /// The list's rows in order.
+    fn list_rows(&self) -> Vec<gtk::ListBoxRow> {
+        let mut rows = Vec::new();
+        let mut child = self.list.first_child();
+        while let Some(widget) = child {
+            child = widget.next_sibling();
+            if let Ok(row) = widget.downcast::<gtk::ListBoxRow>() {
+                rows.push(row);
+            }
+        }
+        rows
+    }
+
+    /// The row the keyboard focus is on itself, not on a button inside it.
+    fn focused_row(&self) -> Option<gtk::ListBoxRow> {
+        let focus = self.list.root().and_then(|root| root.focus())?;
+        focus.downcast::<gtk::ListBoxRow>().ok().filter(|row| row.parent().as_ref() == Some(self.list.upcast_ref()))
+    }
+
+    /// Moves the focus out of the list, to the next control after it or
+    /// the one before. The list stops taking the focus while the window
+    /// looks for that control, so the search passes over its rows.
+    fn leave_list(&self, forward: bool) -> bool {
+        let Some(root) = self.list.root() else { return false };
+        let direction = if forward { gtk::DirectionType::TabForward } else { gtk::DirectionType::TabBackward };
+        self.list.set_can_focus(false);
+        if !root.child_focus(direction) {
+            // Past the window's last control: start again from its first,
+            // as GTK's own Tab does.
+            root.set_focus(None::<&gtk::Widget>);
+            root.child_focus(direction);
+        }
+        self.list.set_can_focus(true);
+        self.mark_keyed(None);
+        true
+    }
+
+    /// Moves the focus `step` reachable rows down or up, without
+    /// selecting, so nothing loads until Enter or Space.
+    fn step_focus(&self, step: i32) -> bool {
+        let rows = self.list_rows();
+        let reachable: Vec<bool> = rows
+            .iter()
+            .map(|row| row.is_visible() && row.is_sensitive() && (row.is_selectable() || row.is_activatable()))
+            .collect();
+        let from = self
+            .focused_row()
+            .or_else(|| self.list.selected_row())
+            .and_then(|row| rows.iter().position(|r| *r == row));
+        let Some(from) = from else { return false };
+        if let Some(to) = keys::step_to(&reachable, from, step) {
+            self.mark_keyed(Some(&rows[to]));
+            rows[to].grab_focus();
+        }
+        true
+    }
+
+    /// Puts the `keyed` class on the row the arrows moved the focus to,
+    /// and takes it off the one before. A row focused by `grab_focus`
+    /// carries GTK's focus-visible state, but GTK 4.22 drew libadwaita's
+    /// ring only for a row Tab reached (checked 2026-10-05), so the
+    /// stylesheet draws the same ring on `.keyed:focus`. A click clears
+    /// it, and the ring needs the focus too, so it shows only where the
+    /// keyboard is.
+    fn mark_keyed(&self, row: Option<&gtk::ListBoxRow>) {
+        if let Some(old) = self.keyed.replace(row.cloned()) {
+            old.remove_css_class("keyed");
+        }
+        if let Some(row) = row {
+            row.add_css_class("keyed");
+        }
+    }
+
+    /// Opens the menu of the focused row's options button, the one an
+    /// account heading or a label shows on hover. A row without one keeps
+    /// the key for its own right-click menu (`context_menu`).
+    fn open_options(&self) -> bool {
+        let Some(row) = self.focused_row() else { return false };
+        let mut stack: Vec<gtk::Widget> = row.first_child().into_iter().collect();
+        while let Some(widget) = stack.pop() {
+            if let Some(button) = widget.downcast_ref::<gtk::MenuButton>() {
+                button.popup();
+                return true;
+            }
+            stack.extend(widget.next_sibling());
+            stack.extend(widget.first_child());
+        }
+        false
+    }
+
+    /// Opens the mailbox under the focus, or opens or closes the account
+    /// whose heading has it.
+    fn open_focused(&self) -> bool {
+        let Some(row) = self.focused_row() else { return false };
+        if row.is_selectable() {
+            self.list.select_row(Some(&row));
+        } else if row.is_activatable() {
+            row.activate();
+        }
+        true
     }
 
     /// Shows the switch, or "Mailboxes" in its place.
@@ -1500,8 +1638,21 @@ fn context_menu(row: &gtk::ListBoxRow, menu: &gio::Menu) {
     // Touch only: a mouse has the right click, and a held mouse button is
     // how a label drag starts.
     let press = gtk::GestureLongPress::builder().touch_only(true).build();
-    press.connect_pressed(move |_, x, y| show(x, y));
+    let held = show.clone();
+    press.connect_pressed(move |_, x, y| held(x, y));
     row.add_controller(press);
+    // The keyboard's way in: the Menu key or Shift+F10 on the focused
+    // row, which the list leaves to the row (`Sidebar::open_options`).
+    let keys = gtk::EventControllerKey::new();
+    keys.connect_key_pressed(move |controller, key, _, state| {
+        if keys::list_key(key, state) != Some(ListKey::Menu) {
+            return glib::Propagation::Proceed;
+        }
+        let Some(row) = controller.widget() else { return glib::Propagation::Proceed };
+        show(f64::from(row.width()) / 2.0, f64::from(row.height()) / 2.0);
+        glib::Propagation::Stop
+    });
+    row.add_controller(keys);
     row.connect_destroy(move |_| popover.unparent());
 }
 
