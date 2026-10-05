@@ -75,16 +75,26 @@ impl CategoryBar {
             // The icon and the name sit in the chip's content; the badge
             // rides the content's top end corner, above the pill, so a
             // count arriving or growing never moves the icons.
-            let content = gtk::Box::builder().css_classes(["category-chip"]).build();
-            let image = gtk::Image::from_icon_name(icon(category));
-            image.set_pixel_size(16);
+            let content = gtk::Box::builder()
+                .css_classes(["category-chip"])
+                .build();
+            if set.len() == Category::FOCUS.len() {
+                content.add_css_class("category-tab");
+            }
+            // Focused and Other are worded alone, as Outlook words them;
+            // Gmail's categories keep an icon each.
+            let tabs = set.len() == Category::FOCUS.len();
             let name = slider(
                 &gtk::Label::builder()
                     .label(category.name())
                     .css_classes(["category-name"])
                     .build(),
             );
-            content.append(&image);
+            if !tabs {
+                let image = gtk::Image::from_icon_name(icon(category));
+                image.set_pixel_size(16);
+                content.append(&image);
+            }
             content.append(&name);
             let count = gtk::Label::builder()
                 .css_classes(["category-count", "no-mail"])
@@ -114,6 +124,9 @@ impl CategoryBar {
             .visible(false)
             .build();
         let strip = CategoryStrip::new(&group, names);
+        if set.len() == Category::FOCUS.len() {
+            strip.show_every_name();
+        }
         strip.set_hexpand(true);
         bar.append(&strip);
         group.set_active_name(Some(chosen.key()));

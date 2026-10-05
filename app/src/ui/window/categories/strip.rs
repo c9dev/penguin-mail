@@ -23,6 +23,9 @@ mod imp {
         pub chosen: Cell<usize>,
         /// Whether the last width handed over held the chosen name too.
         pub roomy: Cell<bool>,
+        /// Every name shows, not just the chosen one: the two tabs of an
+        /// inbox that splits into Focused and Other have room for both.
+        pub every: Cell<bool>,
     }
 
     #[glib::object_subclass]
@@ -98,10 +101,14 @@ mod imp {
             let names = self.names.borrow();
             let showing: i32 = names.iter().map(|n| n.measure(horizontal, -1).1).sum();
             let icons = natural - showing;
-            let chosen = names
-                .get(self.chosen.get())
-                .and_then(|n| n.child())
-                .map_or(0, |name| name.measure(horizontal, -1).1);
+            let width = |name: &gtk::Revealer| {
+                name.child()
+                    .map_or(0, |name| name.measure(horizontal, -1).1)
+            };
+            let chosen = match self.every.get() {
+                true => names.iter().map(width).sum(),
+                false => names.get(self.chosen.get()).map_or(0, width),
+            };
             (icons, icons + chosen)
         }
 
@@ -110,7 +117,7 @@ mod imp {
         pub fn show_names(&self) {
             let (chosen, roomy) = (self.chosen.get(), self.roomy.get());
             for (index, name) in self.names.borrow().iter().enumerate() {
-                let open = roomy && index == chosen;
+                let open = roomy && (index == chosen || self.every.get());
                 if open
                     && !name.reveals_child()
                     && let Some(label) = name.child()
@@ -150,6 +157,13 @@ impl CategoryStrip {
         strip.imp().group.replace(Some(group.clone()));
         strip.imp().names.replace(names);
         strip
+    }
+
+    /// Shows every name while the row fits them, not only the chosen one.
+    pub fn show_every_name(&self) {
+        self.imp().every.set(true);
+        self.imp().show_names();
+        self.queue_resize();
     }
 
     /// Makes the name at `index` the one shown while it fits.
