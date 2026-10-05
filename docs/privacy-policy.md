@@ -4,8 +4,8 @@ Last updated: 29 September 2026
 
 Penguin Mail is a mail and calendar app for Linux, published by Pivotd
 (https://pivotd.com), at https://penguin-mail.com. It works with Google
-accounts, through Google's APIs, and with other mail providers over IMAP and
-SMTP. It runs on your own computer. This policy explains what it accesses,
+accounts, through Google's APIs, with Microsoft accounts, through Microsoft
+Graph, and with other mail providers over IMAP and SMTP. It runs on your own computer. This policy explains what it accesses,
 where that data goes, and how it is protected.
 
 ## What Penguin Mail accesses in a Google account
@@ -46,6 +46,41 @@ feature, with a Grant Access button that asks Google again. An account
 added before Penguin Mail asked for all of them at once gets a bar at the
 top of its mail list that names what it lacks and offers the same button.
 
+## What Penguin Mail accesses in a Microsoft account
+
+This covers Outlook.com, Hotmail, Live and Microsoft 365 accounts. You
+grant access through Microsoft's own sign-in page. Adding an account asks
+for every permission Penguin Mail uses, in one visit:
+
+- `openid` and `User.Read`, to learn your address and whether the account
+  is a personal one or an organization's.
+- `offline_access`, to keep you signed in without asking for your password
+  again.
+- `Mail.ReadWrite` and `Mail.Send`, to read your messages, folders and
+  drafts so it can show them; to move, flag, categorize and delete mail
+  when you do so in Penguin Mail; to save drafts; and to send the messages
+  you write.
+- `MailboxSettings.ReadWrite`, to read and change your inbox rules, your
+  Focused Inbox choices and your automatic reply, when you change them in
+  Penguin Mail.
+- `Calendars.ReadWrite`, to read your calendars and show your events; to
+  make, change and delete events and calendars when you do so in Penguin
+  Mail; to answer a meeting invitation; and to let the assistant read and
+  change events when you ask it.
+- `Contacts.ReadWrite`, to show your contacts' names and suggest
+  recipients, once you turn contacts on in Preferences, and to add or
+  change a contact when you ask the assistant to.
+
+You may leave any of these unticked on Microsoft's screen. Penguin Mail
+then turns off the feature that needs it and says why where you would use
+that feature, with a Grant Access button that asks Microsoft again.
+
+Your mail and events are downloaded from Microsoft straight to your
+computer and kept in the same local database as for a Google account.
+For these accounts Penguin Mail talks only to `graph.microsoft.com` and
+`login.microsoftonline.com`. Microsoft's refresh token stays in your
+desktop's keyring, as described below.
+
 ## Where your data goes
 
 - Your mail is downloaded from Google straight to your computer and kept in
@@ -55,14 +90,15 @@ top of its mail list that names what it lacks and offers the same button.
   third party, and Penguin Mail contains no analytics, tracking or
   advertising.
 - Penguin Mail connects to Google's Gmail, People, Calendar and Drive APIs,
-  and to
+  to Microsoft Graph and Microsoft's sign-in service for a Microsoft
+  account, and to
   GitHub once a day to check for a new version of the app. The update check
   sends nothing about you or your mail.
 - When you choose to load remote images in a message, your computer fetches
   those images from wherever the sender hosted them. When you click
   Unsubscribe, Penguin Mail contacts the address the mailing list gave for
   that purpose.
-- When you add an account from a provider other than Google, Penguin Mail
+- When you add an account from a provider other than Google or Microsoft, Penguin Mail
   looks for its mail servers using the part of your address after the @,
   never the whole address. For a provider it knows, such as Fastmail or
   iCloud, it asks nobody. Otherwise it asks your DNS servers for the
@@ -108,10 +144,10 @@ top of its mail list that names what it lacks and offers the same button.
 
 ## How your data is protected
 
-- **In transit.** Every connection to Google uses HTTPS with TLS. Sign-in
+- **In transit.** Every connection to Google or Microsoft uses HTTPS with TLS. Sign-in
   uses OAuth 2.0 with PKCE through your web browser, so Penguin Mail never
-  sees your Google password.
-- **Sign-in tokens.** Google's refresh tokens, an IMAP account's password,
+  sees your Google or Microsoft password.
+- **Sign-in tokens.** Google's and Microsoft's refresh tokens, an IMAP account's password,
   any assistant API keys, and the tokens of MCP servers you add are stored
   in your desktop's keyring (GNOME Keyring or another Secret Service),
   which encrypts them with your login password. The Flatpak keeps them in
@@ -145,7 +181,9 @@ Penguin Mail deletes its downloaded mail and its sign-in token from your
 computer. Uninstalling the app and deleting `~/.local/share/penguin-mail`,
 `~/.config/penguin-mail` and `~/.cache/penguin-mail` removes everything else.
 To revoke Penguin Mail's access on Google's side, visit
-https://myaccount.google.com/permissions.
+https://myaccount.google.com/permissions. On Microsoft's side, visit
+https://account.live.com/consent/Manage for a personal account, or your
+organization's My Apps page for a work or school account.
 
 ## Google API Services User Data Policy
 

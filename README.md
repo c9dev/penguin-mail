@@ -19,12 +19,13 @@ Mail and calendar for Linux, written in Rust.
 
 </div>
 
-Penguin Mail is mail and calendar for Linux. It reads Gmail accounts and
+Penguin Mail is mail and calendar for Linux. It reads Gmail accounts,
+Microsoft accounts (Outlook.com, Hotmail, Live and Microsoft 365) and
 any IMAP and SMTP account, such as Fastmail, iCloud and Yahoo, and finds the
 server settings for you. It syncs from the system tray, shows your accounts
 in one inbox or one at a time, and keeps your mail on your own computer.
-Gmail and Google Calendar accounts talk to Google directly, so no other
-server sees your mail.
+Gmail and Google Calendar accounts talk to Google directly, and Microsoft
+accounts talk to Microsoft Graph, so no other server sees your mail.
 
 It is built with GTK and libadwaita and fits best on GNOME. It runs on any
 Linux desktop, and the tray icon and every other feature work outside GNOME.
@@ -33,9 +34,9 @@ Linux desktop, and the tray icon and every other feature work outside GNOME.
 
 ## Features
 
-Penguin Mail has mail for Gmail and IMAP accounts, a calendar, contacts,
-OpenPGP and S/MIME, rules, and an optional assistant. Coming: Microsoft
-accounts, CalDAV and CardDAV, POP3.
+Penguin Mail has mail for Gmail, Microsoft (Outlook.com, Hotmail, Live and
+Microsoft 365) and IMAP accounts, a calendar, contacts, OpenPGP and S/MIME,
+rules, and an optional assistant. Coming: CalDAV and CardDAV, POP3.
 
 ### Reading
 

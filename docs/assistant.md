@@ -31,7 +31,9 @@ It reads mail with the same tools you use: it lists mailboxes, searches
 each account's server, and reads conversations. On an account from
 another provider it files mail in folders, and when you ask for
 something only a Gmail account has, such as categories or Hide My Email,
-it tells you why that account cannot. Every account has rules. Gmail and
+it tells you why that account cannot. On a Microsoft account it adds and
+takes off tags and moves mail between folders, and Categorize Sender sorts
+a sender into Focused or Other. Every account has rules. Gmail and
 servers that run Sieve keep them on the server; for other providers
 Penguin Mail runs them on this computer while it is open, and the
 assistant says which when it lists them. It looks people up in your address book,
