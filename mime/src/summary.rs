@@ -224,7 +224,14 @@ T2zDoSwgbXVuZG8hCg==\r\n",
     #[test]
     fn a_file_is_never_decoded_to_summarize_its_message() {
         let parts = crate::read::skim(MIXED).expect("parts");
-        assert_eq!(parts.find("1").and_then(|p| p.data.as_deref()), Some(&b"See attached."[..]));
-        assert_eq!(parts.find("2").map(|p| p.data.is_none()), Some(true), "the PDF stays encoded and unread");
+        assert_eq!(
+            parts.find("1").and_then(|p| p.data.as_deref()),
+            Some(&b"See attached."[..])
+        );
+        assert_eq!(
+            parts.find("2").map(|p| p.data.is_none()),
+            Some(true),
+            "the PDF stays encoded and unread"
+        );
     }
 }

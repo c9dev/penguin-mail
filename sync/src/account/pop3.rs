@@ -131,7 +131,10 @@ impl AccountSync {
             }
             pop3.connect().await.map_err(BackendError::from)?;
         };
-        let UidlListing { messages: listed, unreadable } = listing;
+        let UidlListing {
+            messages: listed,
+            unreadable,
+        } = listing;
         if let RemoveSetting::Days(days) = remove {
             let cutoff = now_millis() - i64::from(days) * DAY;
             self.db
@@ -149,7 +152,10 @@ impl AccountSync {
             if self.db.checkpoint().await? {
                 self.send_deles(pop3, &listed, done).await?;
             } else {
-                tracing::warn!(account = account_id, "the downloads are not on disk yet; removal from the server waits for the next check");
+                tracing::warn!(
+                    account = account_id,
+                    "the downloads are not on disk yet; removal from the server waits for the next check"
+                );
             }
         }
         // A line that did not read left its message out of the listing,
@@ -157,7 +163,11 @@ impl AccountSync {
         if unreadable == 0 {
             done.listed = listed.into_iter().map(|u| u.uidl).collect();
         } else {
-            tracing::warn!(account = account_id, unreadable, "the UIDL answer had lines that do not read; nothing is forgotten this check");
+            tracing::warn!(
+                account = account_id,
+                unreadable,
+                "the UIDL answer had lines that do not read; nothing is forgotten this check"
+            );
         }
         Ok(())
     }
@@ -210,7 +220,12 @@ impl AccountSync {
             let failed: HashMap<String, FailReason> = failed.into_iter().collect();
             for listing in page.iter().filter(|u| new.contains(&u.uidl)) {
                 if !taken.insert(&listing.uidl) {
-                    tracing::warn!(account = account_id, uidl = listing.uidl, message = listing.id, "the server listed this UIDL twice; only its first message downloads");
+                    tracing::warn!(
+                        account = account_id,
+                        uidl = listing.uidl,
+                        message = listing.id,
+                        "the server listed this UIDL twice; only its first message downloads"
+                    );
                     continue;
                 }
                 if let Some(reason) = failed.get(&listing.uidl) {
@@ -237,7 +252,16 @@ impl AccountSync {
         for (listing, reason) in retry {
             let size = sizes.get(&listing.id).copied();
             if !self
-                .download_one(pop3, listing, size, Some(reason), first, remove, handled, done)
+                .download_one(
+                    pop3,
+                    listing,
+                    size,
+                    Some(reason),
+                    first,
+                    remove,
+                    handled,
+                    done,
+                )
                 .await?
             {
                 return Ok(None);
@@ -249,7 +273,10 @@ impl AccountSync {
     /// Downloads one listed message of `size` octets, or counts why it did
     /// not come down. `earlier` is why it failed last time. False when the
     /// answer left the session unreadable and the check must open another.
-    #[expect(clippy::too_many_arguments, reason = "one step of the pass, which holds all of these")]
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "one step of the pass, which holds all of these"
+    )]
     async fn download_one<P: Pop3Api>(
         &self,
         pop3: &P,
@@ -391,11 +418,19 @@ impl AccountSync {
                     let subject = Some(summary.subject).filter(|s| !s.is_empty());
                     self.db
                         .write(move |c| {
-                            pop3::name_failure(c, account_id, &named, sender.as_deref(), subject.as_deref())
+                            pop3::name_failure(
+                                c,
+                                account_id,
+                                &named,
+                                sender.as_deref(),
+                                subject.as_deref(),
+                            )
                         })
                         .await?;
                 }
-                Err(err) => tracing::info!(account = account_id, uidl = named, %err, "could not read the failing message's headers"),
+                Err(err) => {
+                    tracing::info!(account = account_id, uidl = named, %err, "could not read the failing message's headers")
+                }
             }
         }
         Ok(shown)

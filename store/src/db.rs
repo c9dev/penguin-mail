@@ -116,7 +116,11 @@ impl Db {
         let job: Job = Box::new(move |conn| {
             let outcome = conn
                 .query_row("PRAGMA wal_checkpoint(FULL)", [], |row| {
-                    Ok((row.get::<_, i64>(0)?, row.get::<_, i64>(1)?, row.get::<_, i64>(2)?))
+                    Ok((
+                        row.get::<_, i64>(0)?,
+                        row.get::<_, i64>(1)?,
+                        row.get::<_, i64>(2)?,
+                    ))
                 })
                 .map(|(busy, log, copied)| busy == 0 && log == copied)
                 .map_err(StoreError::from);

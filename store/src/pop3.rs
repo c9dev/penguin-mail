@@ -332,7 +332,10 @@ pub fn failure_reasons(
          WHERE account_id = ?1 AND uidl IN (SELECT value FROM json_each(?2)) ORDER BY uidl",
     )?;
     let rows = stmt.query_map(params![account_id, json(uidls)], |row| {
-        Ok((row.get(0)?, FailReason::from_code(&row.get::<_, String>(1)?)))
+        Ok((
+            row.get(0)?,
+            FailReason::from_code(&row.get::<_, String>(1)?),
+        ))
     })?;
     Ok(rows.collect::<rusqlite::Result<_>>()?)
 }
