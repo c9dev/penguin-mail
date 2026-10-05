@@ -1439,7 +1439,8 @@ impl CalendarView {
             draft.land(start, end, all_day);
             let offered = series::scopes(&o.event, false);
             let when = words::landing_words(start, end, all_day, &draft::local_zone());
-            let answer = match scope::question(scope::Action::Move, &offered, &o.event.guests, scope::Change::default()) {
+            let change = this.guest_change(o.account_id);
+            let answer = match scope::question(scope::Action::Move, &offered, &o.event.guests, change) {
                 Some(question) => match scope::ask(&this.page, &question, &o.event, Some(&when)).await {
                     Some(answer) => answer,
                     None => {
@@ -1447,7 +1448,7 @@ impl CalendarView {
                         return;
                     }
                 },
-                None => scope::unasked(scope::Action::Move, scope::Change::default()),
+                None => scope::unasked(scope::Action::Move, change),
             };
             let scope = answer.scope;
             let event = draft.to_event(
@@ -1506,6 +1507,19 @@ impl CalendarView {
     /// account can write to, the account must offer a calendar and not
     /// have withheld it, and the event itself must allow it (not a
     /// guest's own event, not on its way out).
+    /// The guests-choice facts of `account_id`'s calendar: a Microsoft
+    /// account mails the guests of every change and cannot send nobody.
+    /// An account not listed keeps Google's choice.
+    fn guest_change(&self, account_id: AccountId) -> scope::Change {
+        let quiet = self
+            .accounts
+            .borrow()
+            .iter()
+            .find(|(a, _, _)| a.id == account_id)
+            .is_none_or(|(_, offers, _)| offers.quiet_changes);
+        scope::Change { always_mails: !quiet, ..scope::Change::default() }
+    }
+
     fn can_move(&self, o: &Occurrence) -> bool {
         let access = self
             .calendars
@@ -2444,12 +2458,13 @@ impl CalendarView {
                 offered.retain(|s| *s != RepeatScope::Following);
             }
             let guests: &[Guest] = if guest { &[] } else { &o.event.guests };
-            let answer = match scope::question(scope::Action::Delete, &offered, guests, scope::Change::default()) {
+            let change = this.guest_change(o.account_id);
+            let answer = match scope::question(scope::Action::Delete, &offered, guests, change) {
                 Some(question) => match scope::ask(&this.page, &question, &o.event, None).await {
                     Some(answer) => answer,
                     None => return,
                 },
-                None => scope::unasked(scope::Action::Delete, scope::Change::default()),
+                None => scope::unasked(scope::Action::Delete, change),
             };
             let copy = this.core.calendar_copy();
             let (account_id, occurrence) = (o.account_id, o.clone());
@@ -2948,10 +2963,15 @@ impl CalendarView {
             let offered = draft.scopes();
             let action = if draft.moved() { scope::Action::Move } else { scope::Action::Edit };
             let before = draft.before();
+            let always_mails = match weak.upgrade() {
+                Some(view) => view.guest_change(draft.account_id).always_mails,
+                None => return,
+            };
             let change = match &before {
                 Some(before) => {
                     let rest = draft.without_move();
                     scope::Change {
+                        always_mails,
                         seen: draft::reaches_guests(before, &draft),
                         adds_guests: scope::adds_guests(&before.guests, &draft.guests),
                         more_than_time: action == scope::Action::Move && rest != *before,
@@ -2959,7 +2979,7 @@ impl CalendarView {
                     }
                 }
                 // A new event's guests get their invitation.
-                None => scope::Change { seen: true, ..scope::Change::default() },
+                None => scope::Change { seen: true, always_mails, ..scope::Change::default() },
             };
             // A guest the edit removed still hears of it.
             let guests = match &before {

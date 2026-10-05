@@ -1,11 +1,11 @@
-//! Asking for a Google permission on screen. `crate::permission` holds the
+//! Asking for a permission on screen. `crate::permission` holds the
 //! words and the rule for how often to ask; this puts them in a dialog, or
 //! on the page a dialog of its own shows in place of its content.
 
 use std::cell::RefCell;
 
 use adw::prelude::*;
-use mailrs_domain::AccountId;
+use mailrs_domain::{AccountId, Provider};
 use mailrs_domain::translate::gettext;
 
 use crate::permission::{Asked, Occasion, Permission};
@@ -24,6 +24,7 @@ pub async fn ask(
     parent: &impl IsA<gtk::Widget>,
     account_id: AccountId,
     account: &str,
+    provider: Provider,
     permission: Permission,
     occasion: Occasion,
 ) -> bool {
@@ -34,7 +35,7 @@ pub async fn ask(
     }) {
         return false;
     }
-    let words = permission.wording(occasion, account);
+    let words = permission.wording(occasion, account, provider);
     confirm(
         &words.heading,
         &words.body,
@@ -46,19 +47,20 @@ pub async fn ask(
     .await
 }
 
-/// The page a settings dialog shows when Gmail wants `permission` first:
+/// The page a settings dialog shows when the provider wants `permission` first:
 /// `title`, the permission's words for `account`, and a Grant Access
 /// button that runs `grant`.
 pub fn page(
     title: &str,
     permission: Permission,
     account: &str,
+    provider: Provider,
     grant: impl Fn() + 'static,
 ) -> adw::StatusPage {
     let page = adw::StatusPage::builder()
         .icon_name("mail-send-symbolic")
         .title(title)
-        .description(permission.wording(Occasion::Needed, account).body)
+        .description(permission.wording(Occasion::Needed, account, provider).body)
         .build();
     let button = gtk::Button::builder()
         .label(gettext("Grant Access"))

@@ -1813,8 +1813,23 @@ fn report(outcome: &Outcome) -> ToolResult {
 
 /// The question before the assistant moves `sender`'s mail into
 /// `category` in `account` and adds a rule on the account's server for
-/// the mail still to come.
+/// the mail still to come. Microsoft keeps no rule for it: Focused and
+/// Other follow a per-sender override, so its question says where the
+/// future mail goes.
 fn categorize_question(sender: &str, category: &str, account: &Account) -> String {
+    if account.provider == mailrs_domain::Provider::Microsoft {
+        return fill(
+            &gettext(
+                "Move mail from {sender} to {category} in {account}, and send their future \
+                 mail there too?",
+            ),
+            &[
+                ("sender", sender),
+                ("category", category),
+                ("account", &account.email),
+            ],
+        );
+    }
     fill(
         &gettext(
             "Move mail from {sender} to {category} in {account}, and add a {provider} \

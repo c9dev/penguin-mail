@@ -6,7 +6,7 @@ use std::rc::Rc;
 
 use adw::prelude::*;
 use gtk::glib;
-use mailrs_domain::{Account, AccountId};
+use mailrs_domain::{Account, AccountId, Provider};
 use mailrs_sync::{Offers, Permitted};
 use mailrs_sync::hidden::HiddenAddress;
 
@@ -304,11 +304,17 @@ impl Dialog {
 
     fn ask_for_access(self: &Rc<Self>, account: &str) {
         self.nav.pop_to_page(&self.home);
+        let provider = self
+            .accounts
+            .iter()
+            .find(|a| a.email == account)
+            .map_or(Provider::Gmail, |a| a.provider);
         let (weak, email) = (Rc::downgrade(self), account.to_string());
         let page = permission::page(
             &gettext("Allow Hide My Email"),
             Permission::Settings,
             account,
+            provider,
             move || {
                 if let Some(this) = weak.upgrade() {
                     this.dialog.close();

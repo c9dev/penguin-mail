@@ -1259,7 +1259,11 @@ impl MainWindow {
             if let Some(banner) = widgets.get(&account.id) {
                 // The same widget stays; only its words follow what is
                 // still missing.
-                banner.set_title(&crate::permission::grant_bar_title(&account.email, &missing));
+                banner.set_title(&crate::permission::grant_bar_title(
+                    &account.email,
+                    &missing,
+                    account.provider,
+                ));
                 continue;
             }
             tracing::info!(
@@ -1268,7 +1272,11 @@ impl MainWindow {
                 "showing the Grant Access banner"
             );
             let banner = adw::Banner::builder()
-                .title(crate::permission::grant_bar_title(&account.email, &missing))
+                .title(crate::permission::grant_bar_title(
+                    &account.email,
+                    &missing,
+                    account.provider,
+                ))
                 .button_label(gettext("Grant Access"))
                 .revealed(true)
                 .build();
@@ -1917,7 +1925,7 @@ impl MainWindow {
     }
 
     /// Explains what `permission` adds for the account and offers to ask
-    /// Google for it. Every `Permitted::NeedsPermission` answer the window
+    /// the provider for it. Every `Permitted::NeedsPermission` answer the window
     /// or the assistant gets comes here; `occasion` decides whether the
     /// question comes each time or once a run.
     pub fn ask_permission(
@@ -1932,7 +1940,8 @@ impl MainWindow {
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
             let email = &account.email;
-            if permission::ask(&this.window, account_id, email, permission, occasion).await {
+            if permission::ask(&this.window, account_id, email, account.provider, permission, occasion)
+                .await {
                 this.grant(account.email);
             }
         });
