@@ -1635,7 +1635,7 @@ msgstr "Archive"
 
 #: app/src/notify.rs:50 app/src/ui/conversation.rs:405
 #: app/src/ui/conversation.rs:1168 app/src/ui/preferences.rs:140
-#: app/src/ui/rules.rs:312 app/src/ui/window/message_menu.rs:128
+#: app/src/ui/rules.rs:361 app/src/ui/window/message_menu.rs:128
 msgid "Mark as Read"
 msgstr "Mark as Read"
 
@@ -1671,195 +1671,195 @@ msgstr "From {senders}"
 msgid "Open"
 msgstr "Open"
 
-#: app/src/offered.rs:226 app/src/ui/window/shortcuts.rs:446
+#: app/src/offered.rs:235 app/src/ui/window/shortcuts.rs:446
 msgid "Labels"
 msgstr "Labels"
 
-#: app/src/offered.rs:227
+#: app/src/offered.rs:236
 msgid "Move to folder"
 msgstr "Move to folder"
 
-#: app/src/offered.rs:233
+#: app/src/offered.rs:242
 msgid "Labels…"
 msgstr "Labels…"
 
-#: app/src/offered.rs:234
+#: app/src/offered.rs:243
 msgid "Move to Folder…"
 msgstr "Move to Folder…"
 
-#: app/src/offered.rs:241
+#: app/src/offered.rs:250
 msgid "Labels (L)"
 msgstr "Labels (L)"
 
-#: app/src/offered.rs:242
+#: app/src/offered.rs:251
 msgid "Move to Folder (L)"
 msgstr "Move to Folder (L)"
 
-#: app/src/offered.rs:259
+#: app/src/offered.rs:268
 msgid "New Label…"
 msgstr "New Label…"
 
-#: app/src/offered.rs:260
+#: app/src/offered.rs:269
 msgid "New Folder…"
 msgstr "New Folder…"
 
-#: app/src/offered.rs:268
+#: app/src/offered.rs:277
 msgid "New Label Inside…"
 msgstr "New Label Inside…"
 
-#: app/src/offered.rs:269
+#: app/src/offered.rs:278
 msgid "New Folder Inside…"
 msgstr "New Folder Inside…"
 
-#: app/src/offered.rs:276
+#: app/src/offered.rs:285
 msgid "Label Options for {name}"
 msgstr "Label Options for {name}"
 
-#: app/src/offered.rs:277
+#: app/src/offered.rs:286
 msgid "Folder Options for {name}"
 msgstr "Folder Options for {name}"
 
-#: app/src/offered.rs:284
+#: app/src/offered.rs:293
 msgid "Label options"
 msgstr "Label options"
 
-#: app/src/offered.rs:285
+#: app/src/offered.rs:294
 msgid "Folder options"
 msgstr "Folder options"
 
-#: app/src/offered.rs:292
+#: app/src/offered.rs:301
 msgid "A label cannot go inside a label nested under it"
 msgstr "A label cannot go inside a label nested under it"
 
-#: app/src/offered.rs:293
+#: app/src/offered.rs:302
 msgid "A folder cannot go inside a folder nested under it"
 msgstr "A folder cannot go inside a folder nested under it"
 
-#: app/src/offered.rs:301
+#: app/src/offered.rs:310
 msgid "There is a label called “{name}” already"
 msgstr "There is a label called “{name}” already"
 
-#: app/src/offered.rs:303
+#: app/src/offered.rs:312
 msgid "There is a folder called “{name}” already"
 msgstr "There is a folder called “{name}” already"
 
-#: app/src/offered.rs:311
+#: app/src/offered.rs:320
 msgid "New Label"
 msgstr "New Label"
 
-#: app/src/offered.rs:312
+#: app/src/offered.rs:321
 msgid "New Folder"
 msgstr "New Folder"
 
-#: app/src/offered.rs:320
+#: app/src/offered.rs:329
 msgid "Could not create the label: {reason}"
 msgstr "Could not create the label: {reason}"
 
-#: app/src/offered.rs:321
+#: app/src/offered.rs:330
 msgid "Could not create the folder: {reason}"
 msgstr "Could not create the folder: {reason}"
 
-#: app/src/offered.rs:328
+#: app/src/offered.rs:337
 msgid "Open or select mail to label it."
 msgstr "Open or select mail to label it."
 
-#: app/src/offered.rs:329
+#: app/src/offered.rs:338
 msgid "Open or select mail to move it."
 msgstr "Open or select mail to move it."
 
-#: app/src/offered.rs:337
+#: app/src/offered.rs:346
 msgid "Select mail from one account to label it."
 msgstr "Select mail from one account to label it."
 
-#: app/src/offered.rs:338
+#: app/src/offered.rs:347
 msgid "Select mail from one account to move it."
 msgstr "Select mail from one account to move it."
 
-#: app/src/offered.rs:344
+#: app/src/offered.rs:353
 msgid "Rename Label"
 msgstr "Rename Label"
 
-#: app/src/offered.rs:345
+#: app/src/offered.rs:354
 msgid "Rename Folder"
 msgstr "Rename Folder"
 
-#: app/src/offered.rs:351
+#: app/src/offered.rs:360
 msgid "Labels nested under it move along."
 msgstr "Labels nested under it move along."
 
-#: app/src/offered.rs:352
+#: app/src/offered.rs:361
 msgid "Folders nested under it move along."
 msgstr "Folders nested under it move along."
 
-#: app/src/offered.rs:360
+#: app/src/offered.rs:369
 msgid "Could not rename the label: {reason}"
 msgstr "Could not rename the label: {reason}"
 
-#: app/src/offered.rs:361
+#: app/src/offered.rs:370
 msgid "Could not rename the folder: {reason}"
 msgstr "Could not rename the folder: {reason}"
 
-#: app/src/offered.rs:371
+#: app/src/offered.rs:380
 msgid "Its mail stays in Gmail, without the label. Nested labels stay too."
 msgstr "Its mail stays in Gmail, without the label. Nested labels stay too."
 
-#: app/src/offered.rs:373
+#: app/src/offered.rs:382
 msgid "The mail in the folder is deleted with it."
 msgstr "The mail in the folder is deleted with it."
 
-#: app/src/offered.rs:381
+#: app/src/offered.rs:390
 msgid "Could not delete the label: {reason}"
 msgstr "Could not delete the label: {reason}"
 
-#: app/src/offered.rs:382
+#: app/src/offered.rs:391
 msgid "Could not delete the folder: {reason}"
 msgstr "Could not delete the folder: {reason}"
 
-#: app/src/offered.rs:389
+#: app/src/offered.rs:398
 msgid "This account has no labels yet."
 msgstr "This account has no labels yet."
 
-#: app/src/offered.rs:390
+#: app/src/offered.rs:399
 msgid "This account has no folders yet."
 msgstr "This account has no folders yet."
 
-#: app/src/offered.rs:402
-msgid "{provider}'s calendar comes in a later version."
-msgstr "{provider}'s calendar comes in a later version."
+#: app/src/offered.rs:412
+msgid "Penguin Mail found no calendar server for {provider}."
+msgstr "Penguin Mail found no calendar server for {provider}."
 
-#: app/src/offered.rs:405
-msgid "{provider}'s contacts come in a later version."
-msgstr "{provider}'s contacts come in a later version."
+#: app/src/offered.rs:415
+msgid "Penguin Mail found no contacts server for {provider}."
+msgstr "Penguin Mail found no contacts server for {provider}."
 
-#: app/src/offered.rs:408
-msgid "Rules and automatic replies need a server that runs them."
-msgstr "Rules and automatic replies need a server that runs them."
+#: app/src/offered.rs:418
+msgid "{provider} cannot send automatic replies."
+msgstr "{provider} cannot send automatic replies."
 
-#: app/src/offered.rs:410
+#: app/src/offered.rs:420
 msgid "{provider} has no calendar that other apps can reach."
 msgstr "{provider} has no calendar that other apps can reach."
 
-#: app/src/offered.rs:412
+#: app/src/offered.rs:422
 msgid "{provider} keeps no contacts that other apps can reach."
 msgstr "{provider} keeps no contacts that other apps can reach."
 
-#: app/src/offered.rs:414
+#: app/src/offered.rs:424
 msgid "{provider} has no rules that other apps can change."
 msgstr "{provider} has no rules that other apps can change."
 
-#: app/src/offered.rs:416
+#: app/src/offered.rs:426
 msgid "{provider} has no automatic reply that other apps can change."
 msgstr "{provider} has no automatic reply that other apps can change."
 
-#: app/src/offered.rs:419
+#: app/src/offered.rs:429
 msgid "{provider} cannot delete mail for good. Delete moves it to the Trash."
 msgstr "{provider} cannot delete mail for good. Delete moves it to the Trash."
 
-#: app/src/offered.rs:421
+#: app/src/offered.rs:431
 msgid "{provider} does not sort the inbox into categories."
 msgstr "{provider} does not sort the inbox into categories."
 
-#: app/src/offered.rs:450
+#: app/src/offered.rs:459
 msgid "{address}: {reason}"
 msgstr "{address}: {reason}"
 
@@ -2337,7 +2337,7 @@ msgstr "Draft not saved. An encrypted message waits in Drafts encrypted to your 
 msgid "That account is not connected."
 msgstr "That account is not connected."
 
-#: app/src/protection/draft.rs:156 app/src/ui/vacation.rs:144
+#: app/src/protection/draft.rs:156 app/src/ui/vacation.rs:146
 msgid "Could not save: {reason}"
 msgstr "Could not save: {reason}"
 
@@ -2479,79 +2479,91 @@ msgstr "me"
 msgid "Show trimmed content"
 msgstr "Show trimmed content"
 
-#: app/src/rules.rs:173
+#: app/src/rules.rs:13
+msgid "These rules run on this computer while Penguin Mail is open."
+msgstr "These rules run on this computer while Penguin Mail is open."
+
+#: app/src/rules.rs:16
+msgid "{provider} runs these on new mail as it arrives, even when this computer is off."
+msgstr "{provider} runs these on new mail as it arrives, even when this computer is off."
+
+#: app/src/rules.rs:25
+msgid "{provider} is not answering. Changes wait here and go out when it does."
+msgstr "{provider} is not answering. Changes wait here and go out when it does."
+
+#: app/src/rules.rs:203
 msgid "From {address}"
 msgstr "From {address}"
 
-#: app/src/rules.rs:176
+#: app/src/rules.rs:206
 msgid "To {address}"
 msgstr "To {address}"
 
-#: app/src/rules.rs:180
+#: app/src/rules.rs:210
 msgid "Subject has “{words}”"
 msgstr "Subject has “{words}”"
 
-#: app/src/rules.rs:185
+#: app/src/rules.rs:215
 msgid "Has “{words}”"
 msgstr "Has “{words}”"
 
-#: app/src/rules.rs:189
+#: app/src/rules.rs:219
 msgid "Doesn't have “{words}”"
 msgstr "Doesn't have “{words}”"
 
-#: app/src/rules.rs:194
+#: app/src/rules.rs:224
 msgid "Has an attachment"
 msgstr "Has an attachment"
 
-#: app/src/rules.rs:199
+#: app/src/rules.rs:229
 msgid "Smaller than {size}"
 msgstr "Smaller than {size}"
 
-#: app/src/rules.rs:200
+#: app/src/rules.rs:230
 msgid "Larger than {size}"
 msgstr "Larger than {size}"
 
-#: app/src/rules.rs:205
+#: app/src/rules.rs:235
 msgid "All mail"
 msgstr "All mail"
 
-#: app/src/rules.rs:225
+#: app/src/rules.rs:255
 msgid "Delete it"
 msgstr "Delete it"
 
-#: app/src/rules.rs:227 app/src/ui/rules.rs:311
+#: app/src/rules.rs:257 app/src/ui/rules.rs:360
 msgid "Skip the Inbox"
 msgstr "Skip the Inbox"
 
-#: app/src/rules.rs:232
+#: app/src/rules.rs:262
 msgid "Apply {label}"
 msgstr "Apply {label}"
 
-#: app/src/rules.rs:238
+#: app/src/rules.rs:268
 msgid "Star it"
 msgstr "Star it"
 
-#: app/src/rules.rs:241
+#: app/src/rules.rs:271
 msgid "Mark as read"
 msgstr "Mark as read"
 
-#: app/src/rules.rs:244
+#: app/src/rules.rs:274
 msgid "Mark as important"
 msgstr "Mark as important"
 
-#: app/src/rules.rs:247
+#: app/src/rules.rs:277
 msgid "Never mark as important"
 msgstr "Never mark as important"
 
-#: app/src/rules.rs:250
+#: app/src/rules.rs:280
 msgid "Never send to Spam"
 msgstr "Never send to Spam"
 
-#: app/src/rules.rs:253
+#: app/src/rules.rs:283
 msgid "Forward to {address}"
 msgstr "Forward to {address}"
 
-#: app/src/rules.rs:256
+#: app/src/rules.rs:286
 msgid "Nothing"
 msgstr "Nothing"
 
@@ -3086,9 +3098,9 @@ msgstr "Try Again"
 #: app/src/ui/calendar/scope.rs:164 app/src/ui/composer/mod.rs:1494
 #: app/src/ui/composer/mod.rs:1563 app/src/ui/composer/mod.rs:1881
 #: app/src/ui/composer/mod.rs:2314 app/src/ui/confirm.rs:29
-#: app/src/ui/rules.rs:381 app/src/ui/smart_editor.rs:150
-#: app/src/ui/templates.rs:239 app/src/ui/unsubscribe.rs:95
-#: app/src/ui/vacation.rs:45 app/src/ui/when.rs:52
+#: app/src/ui/rules.rs:436 app/src/ui/rules.rs:577
+#: app/src/ui/smart_editor.rs:150 app/src/ui/templates.rs:239
+#: app/src/ui/unsubscribe.rs:95 app/src/ui/vacation.rs:45 app/src/ui/when.rs:52
 #: app/src/ui/window/arrange.rs:136 app/src/ui/window/images.rs:101
 #: app/src/ui/window/organize.rs:73 app/src/ui/window/organize.rs:122
 msgid "Cancel"
@@ -3503,7 +3515,7 @@ msgstr "Test"
 
 #: app/src/ui/assistant_mcp_prefs.rs:341 app/src/ui/calendar/editor.rs:163
 #: app/src/ui/calendar/quick.rs:103 app/src/ui/calendar/scope.rs:183
-#: app/src/ui/composer/mod.rs:2314 app/src/ui/rules.rs:374
+#: app/src/ui/composer/mod.rs:2314 app/src/ui/rules.rs:429
 #: app/src/ui/smart_editor.rs:144 app/src/ui/templates.rs:233
 #: app/src/ui/vacation.rs:41 app/src/ui/window/arrange.rs:136
 msgid "Save"
@@ -3950,7 +3962,7 @@ msgid "None"
 msgstr "None"
 
 #: app/src/ui/calendar/editor.rs:550 app/src/ui/composer/mod.rs:409
-#: app/src/ui/vacation.rs:224 app/src/ui/vacation.rs:233
+#: app/src/ui/vacation.rs:226 app/src/ui/vacation.rs:235
 msgid "Message"
 msgstr "Message"
 
@@ -4523,7 +4535,7 @@ msgid "A calendar of your own on {account}, in Google Calendar on every device."
 msgstr "A calendar of your own on {account}, in Google Calendar on every device."
 
 #: app/src/ui/calendar/manage.rs:303 app/src/ui/hide_my_email.rs:357
-#: app/src/ui/rules.rs:375 app/src/ui/smart_editor.rs:146
+#: app/src/ui/rules.rs:430 app/src/ui/smart_editor.rs:146
 #: app/src/ui/templates.rs:235 app/src/ui/window/organize.rs:74
 #: app/src/ui/window/organize.rs:347
 msgid "Create"
@@ -5209,8 +5221,8 @@ msgid "Blind carbon copy"
 msgstr "Blind carbon copy"
 
 #: app/src/ui/composer/mod.rs:357 app/src/ui/composer/mod.rs:396
-#: app/src/ui/rules.rs:297 app/src/ui/templates.rs:192
-#: app/src/ui/vacation.rs:213
+#: app/src/ui/rules.rs:346 app/src/ui/templates.rs:192
+#: app/src/ui/vacation.rs:215
 msgid "Subject"
 msgstr "Subject"
 
@@ -5222,11 +5234,11 @@ msgstr "Cc/Bcc"
 msgid "Show Cc and Bcc"
 msgstr "Show Cc and Bcc"
 
-#: app/src/ui/composer/mod.rs:375 app/src/ui/rules.rs:295
+#: app/src/ui/composer/mod.rs:375 app/src/ui/rules.rs:344
 msgid "From"
 msgstr "From"
 
-#: app/src/ui/composer/mod.rs:380 app/src/ui/rules.rs:296
+#: app/src/ui/composer/mod.rs:380 app/src/ui/rules.rs:345
 msgid "To"
 msgstr "To"
 
@@ -6669,129 +6681,153 @@ msgstr "This message has not been sent"
 msgid "This message is waiting to be sent"
 msgstr "This message is waiting to be sent"
 
-#: app/src/ui/rules.rs:55
-msgid "Gmail runs these on new mail as it arrives, even when this computer is off."
-msgstr "Gmail runs these on new mail as it arrives, even when this computer is off."
-
-#: app/src/ui/rules.rs:63 app/src/ui/rules.rs:65 app/src/ui/rules.rs:375
+#: app/src/ui/rules.rs:73 app/src/ui/rules.rs:75 app/src/ui/rules.rs:430
 msgid "New Rule"
 msgstr "New Rule"
 
-#: app/src/ui/rules.rs:75
+#: app/src/ui/rules.rs:85
 msgid "Rules for {account}"
 msgstr "Rules for {account}"
 
-#: app/src/ui/rules.rs:141 app/src/ui/vacation.rs:70
+#: app/src/ui/rules.rs:154 app/src/ui/vacation.rs:70
 msgid "This account is not syncing yet."
 msgstr "This account is not syncing yet."
 
-#: app/src/ui/rules.rs:165
+#: app/src/ui/rules.rs:192
 msgid "No rules yet"
 msgstr "No rules yet"
 
-#: app/src/ui/rules.rs:166
+#: app/src/ui/rules.rs:193
 msgid "Add one with the + button."
 msgstr "Add one with the + button."
 
-#: app/src/ui/rules.rs:187
+#: app/src/ui/rules.rs:214
 msgid "Made elsewhere. Change it where you made it."
 msgstr "Made elsewhere. Change it where you made it."
 
-#: app/src/ui/rules.rs:201
+#: app/src/ui/rules.rs:228
 msgid "Edit the rule for {mail}"
 msgstr "Edit the rule for {mail}"
 
-#: app/src/ui/rules.rs:212
+#: app/src/ui/rules.rs:239
 msgid "Delete Rule"
 msgstr "Delete Rule"
 
-#: app/src/ui/rules.rs:219
+#: app/src/ui/rules.rs:246
 msgid "Delete the rule for {mail}"
 msgstr "Delete the rule for {mail}"
 
-#: app/src/ui/rules.rs:247
+#: app/src/ui/rules.rs:263
+msgid "Rules Written Elsewhere"
+msgstr "Rules Written Elsewhere"
+
+#: app/src/ui/rules.rs:265
+msgid "Penguin Mail keeps these as they are. Change them where they were written."
+msgstr "Penguin Mail keeps these as they are. Change them where they were written."
+
+#: app/src/ui/rules.rs:296
 msgid "Rule deleted"
 msgstr "Rule deleted"
 
-#: app/src/ui/rules.rs:251
+#: app/src/ui/rules.rs:300
 msgid "Could not delete the rule: {reason}"
 msgstr "Could not delete the rule: {reason}"
 
-#: app/src/ui/rules.rs:259
+#: app/src/ui/rules.rs:308
 msgid "Could Not Load the Rules"
 msgstr "Could Not Load the Rules"
 
-#: app/src/ui/rules.rs:268
+#: app/src/ui/rules.rs:317
 msgid "Allow Rules"
 msgstr "Allow Rules"
 
-#: app/src/ui/rules.rs:298
+#: app/src/ui/rules.rs:347
 msgid "Has the Words"
 msgstr "Has the Words"
 
-#: app/src/ui/rules.rs:299
+#: app/src/ui/rules.rs:348
 msgid "Doesn't Have"
 msgstr "Doesn't Have"
 
-#: app/src/ui/rules.rs:301
+#: app/src/ui/rules.rs:350
 msgid "Has an Attachment"
 msgstr "Has an Attachment"
 
-#: app/src/ui/rules.rs:303
+#: app/src/ui/rules.rs:352
 msgid "When Mail Matches"
 msgstr "When Mail Matches"
 
-#: app/src/ui/rules.rs:313
+#: app/src/ui/rules.rs:362
 msgid "Star It"
 msgstr "Star It"
 
-#: app/src/ui/rules.rs:314
+#: app/src/ui/rules.rs:363
 msgid "Never Send to Spam"
 msgstr "Never Send to Spam"
 
-#: app/src/ui/rules.rs:315
+#: app/src/ui/rules.rs:364
 msgid "Delete It"
 msgstr "Delete It"
 
-#: app/src/ui/rules.rs:317
-msgid "Don't Apply a Label"
-msgstr "Don't Apply a Label"
-
-#: app/src/ui/rules.rs:321
+#: app/src/ui/rules.rs:367
 msgid "Apply Label"
 msgstr "Apply Label"
 
-#: app/src/ui/rules.rs:325
+#: app/src/ui/rules.rs:367
+msgid "Don't Apply a Label"
+msgstr "Don't Apply a Label"
+
+#: app/src/ui/rules.rs:368
+msgid "Don't Move"
+msgstr "Don't Move"
+
+#: app/src/ui/rules.rs:368
+msgid "Move to Folder"
+msgstr "Move to Folder"
+
+#: app/src/ui/rules.rs:378
 msgid "Do This"
 msgstr "Do This"
 
-#: app/src/ui/rules.rs:363
+#: app/src/ui/rules.rs:418
 msgid "This rule also does things this form can't show. Saving keeps them."
 msgstr "This rule also does things this form can't show. Saving keeps them."
 
-#: app/src/ui/rules.rs:374
+#: app/src/ui/rules.rs:429
 msgid "Edit Rule"
 msgstr "Edit Rule"
 
-#: app/src/ui/rules.rs:443
+#: app/src/ui/rules.rs:499
 msgid "Rule added"
 msgstr "Rule added"
 
-#: app/src/ui/rules.rs:450
+#: app/src/ui/rules.rs:514 app/src/ui/rules.rs:597
 msgid "Could not add the rule: {reason}"
 msgstr "Could not add the rule: {reason}"
 
-#: app/src/ui/rules.rs:466
+#: app/src/ui/rules.rs:532
 msgid "Rule saved"
 msgstr "Rule saved"
 
-#: app/src/ui/rules.rs:471
+#: app/src/ui/rules.rs:537
 msgid "Saved, but Gmail kept the old rule too, so both run now: {reason}"
 msgstr "Saved, but Gmail kept the old rule too, so both run now: {reason}"
 
-#: app/src/ui/rules.rs:483
+#: app/src/ui/rules.rs:557
 msgid "Could not save the rule: {reason}"
 msgstr "Could not save the rule: {reason}"
+
+#: app/src/ui/rules.rs:571
+msgid "Replace “{script}”?"
+msgstr "Replace “{script}”?"
+
+#: app/src/ui/rules.rs:573
+msgid "{provider} runs one set of rules at a time, and it runs “{script}” now. Penguin Mail's rules would take its place; “{script}” stays on the server, switched off."
+msgstr "{provider} runs one set of rules at a time, and it runs “{script}” now. Penguin Mail's rules would take its place; “{script}” stays on the server, switched off."
+
+#: app/src/ui/rules.rs:577
+msgid "Replace"
+msgstr "Replace"
 
 #: app/src/ui/sidebar.rs:69
 msgid "Stop the message from going out"
@@ -7194,55 +7230,55 @@ msgstr "Could not unsubscribe from {sender}: {reason}"
 msgid "Automatic Reply"
 msgstr "Automatic Reply"
 
-#: app/src/ui/vacation.rs:88
+#: app/src/ui/vacation.rs:90
 msgid "Allow Automatic Replies"
 msgstr "Allow Automatic Replies"
 
-#: app/src/ui/vacation.rs:131
+#: app/src/ui/vacation.rs:133
 msgid "Automatic reply is on"
 msgstr "Automatic reply is on"
 
-#: app/src/ui/vacation.rs:133
+#: app/src/ui/vacation.rs:135
 msgid "Automatic reply is off"
 msgstr "Automatic reply is off"
 
-#: app/src/ui/vacation.rs:139
+#: app/src/ui/vacation.rs:141
 msgid "Penguin Mail needs permission to change Gmail settings"
 msgstr "Penguin Mail needs permission to change Gmail settings"
 
-#: app/src/ui/vacation.rs:156
+#: app/src/ui/vacation.rs:158
 msgid "Could Not Load the Automatic Reply"
 msgstr "Could Not Load the Automatic Reply"
 
-#: app/src/ui/vacation.rs:177
+#: app/src/ui/vacation.rs:179
 msgid "Send Automatic Replies"
 msgstr "Send Automatic Replies"
 
-#: app/src/ui/vacation.rs:179
+#: app/src/ui/vacation.rs:181
 msgid "Gmail answers new mail while you are away, even when this computer is off"
 msgstr "Gmail answers new mail while you are away, even when this computer is off"
 
-#: app/src/ui/vacation.rs:194
+#: app/src/ui/vacation.rs:196
 msgid "Only Between These Dates"
 msgstr "Only Between These Dates"
 
-#: app/src/ui/vacation.rs:197
+#: app/src/ui/vacation.rs:199
 msgid "First Day"
 msgstr "First Day"
 
-#: app/src/ui/vacation.rs:198
+#: app/src/ui/vacation.rs:200
 msgid "Last Day"
 msgstr "Last Day"
 
-#: app/src/ui/vacation.rs:206
+#: app/src/ui/vacation.rs:208
 msgid "Dates"
 msgstr "Dates"
 
-#: app/src/ui/vacation.rs:240
+#: app/src/ui/vacation.rs:242
 msgid "Only Reply to My Contacts"
 msgstr "Only Reply to My Contacts"
 
-#: app/src/ui/vacation.rs:332
+#: app/src/ui/vacation.rs:337
 msgid "%a, %-d %b %Y"
 msgstr "%a, %-d %b %Y"
 
@@ -7544,15 +7580,15 @@ msgstr "Keyboard Shortcuts"
 msgid "Main Menu"
 msgstr "Main Menu"
 
-#: app/src/ui/window.rs:3418
+#: app/src/ui/window.rs:3419
 msgid "Open a message from the person first"
 msgstr "Open a message from the person first"
 
-#: app/src/ui/window.rs:3494
+#: app/src/ui/window.rs:3495
 msgid "Penguin Mail shows the new language after a restart"
 msgstr "Penguin Mail shows the new language after a restart"
 
-#: app/src/ui/window.rs:3496 app/src/update/mod.rs:130
+#: app/src/ui/window.rs:3497 app/src/update/mod.rs:130
 msgid "Restart"
 msgstr "Restart"
 
