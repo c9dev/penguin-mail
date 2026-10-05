@@ -355,6 +355,11 @@ impl AccountSync {
                 .await?
         };
         self.emit_threads(threads.clone());
+        // Mailboxes kept only here have nothing to tell: the store write
+        // above is the whole change.
+        if self.services.mail.capabilities().local_mailboxes {
+            return Ok(applied);
+        }
         if to_server.is_empty() {
             return Ok(applied);
         }

@@ -112,6 +112,11 @@ pub struct MailCapabilities {
     pub tags: bool,
     /// The server sorts the inbox into Focused and Other.
     pub focus: bool,
+    /// The account's mailboxes live only in the store, as a POP3 account's
+    /// do. A move, a flag or a mailbox change is complete once the store
+    /// has it, so the engine sends nothing, and nothing prunes or relists
+    /// the account's mail.
+    pub local_mailboxes: bool,
 }
 
 /// How far a write got before the server refused the rest: the first
@@ -530,10 +535,9 @@ impl AccountServices {
             contacts: self.contacts.is_some() && !refused.contacts,
             rules: self.rules.is_some() && !refused.rules,
             auto_reply: self.auto_reply.is_some() && !refused.auto_reply,
-            // Gmail searches in its own syntax and IMAP with SEARCH. POP3,
-            // in part 6, keeps no mail on the server to search, and adds a
-            // capability for it then.
-            search: true,
+            // Gmail, IMAP and Graph search on the server. A POP3 account's
+            // server keeps nothing to search; its mail is all in the store.
+            search: !caps.local_mailboxes,
             tags: caps.tags,
             focused: caps.focus,
             event_files: features.event_files,
@@ -647,8 +651,9 @@ pub struct Offers {
     pub contacts: bool,
     pub rules: bool,
     pub auto_reply: bool,
-    /// The server searches past the mail kept on this computer. The
-    /// window reads nothing of it yet, since every account so far can.
+    /// The server searches past the mail kept on this computer. False for
+    /// an account whose mailboxes are local, whose whole mail the store
+    /// holds.
     pub search: bool,
     /// The account keeps tags beside its folders, so the window offers
     /// Tags… beside Move to Folder.
@@ -1223,6 +1228,7 @@ mod tests {
                 restates: false,
                 tags: false,
                 focus: false,
+                local_mailboxes: false,
             }
         );
     }
@@ -1262,6 +1268,7 @@ mod tests {
             labels: false,
             tags: true,
             focus: true,
+            local_mailboxes: false,
             ..AccountServices::fake(Arc::clone(&gmail)).capabilities()
         };
         let offers = AccountServices::fake_with_capabilities(gmail, caps).offers();
@@ -1286,14 +1293,19 @@ mod tests {
     }
 
     #[test]
-    fn gmail_and_imap_both_search_on_the_server() {
-        let gmail = AccountServices::fake(Arc::new(FakeGmail::new()));
-        assert!(gmail.offers().search);
+    fn an_account_searches_on_its_server_unless_its_mailboxes_are_local() {
+        let gmail = Arc::new(FakeGmail::new());
+        assert!(AccountServices::fake(Arc::clone(&gmail)).offers().search);
         let imap = AccountServices::fake_imap(
             Arc::new(crate::fake::FakeImap::new()),
             Arc::new(crate::fake::FakeSmtp::default()),
         );
-        assert!(imap.offers().search);
+        assert!(imap.offers().search, "IMAP answers native_search false and still searches on the server");
+        let caps = MailCapabilities {
+            local_mailboxes: true,
+            ..AccountServices::fake(Arc::clone(&gmail)).capabilities()
+        };
+        assert!(!AccountServices::fake_with_capabilities(gmail, caps).offers().search);
     }
 
     #[tokio::test]

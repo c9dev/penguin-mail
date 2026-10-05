@@ -57,6 +57,7 @@ const MICROSOFT: MailCapabilities = MailCapabilities {
     restates: true,
     tags: true,
     focus: true,
+    local_mailboxes: false,
 };
 
 /// What the adapter needs to know about its account.

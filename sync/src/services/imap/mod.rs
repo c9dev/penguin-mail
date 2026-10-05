@@ -327,6 +327,7 @@ impl<I: ImapApi, S: Submit> MailBackend for Imap<I, S> {
             restates: false,
             tags: false,
             focus: false,
+            local_mailboxes: false,
         }
     }
 

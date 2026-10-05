@@ -1012,6 +1012,29 @@ async fn a_flag_or_reminder_on_many_conversations_writes_the_store_once() {
 }
 
 #[tokio::test]
+async fn a_change_on_an_account_with_local_mailboxes_reaches_no_server() {
+    let local = |fake: Arc<FakeGmail>| {
+        let caps = MailCapabilities {
+            local_mailboxes: true,
+            ..AccountServices::fake(Arc::clone(&fake)).capabilities()
+        };
+        AccountServices::fake_with_capabilities(fake, caps)
+    };
+    let h = super::harness_with(local).await;
+    h.fake.seed(meta("a", "t1", now_millis(), &["INBOX", "UNREAD"]));
+    h.bootstrap_all().await;
+    let target = Target::thread(h.account_id, "t1");
+    let read = MailAction::Triage(TriageAction::MarkRead);
+    for action in [ARCHIVE, read] {
+        let outcome = actions(&h).run(std::slice::from_ref(&target), action, History::Record).await;
+        assert_eq!(outcome.done, std::slice::from_ref(&target));
+    }
+    assert!(h.threads(MailSet::Role(Role::Inbox)).await.is_empty(), "the store archived it");
+    let writes = h.fake.with(|s| s.usage.calls_to("users.messages.batchModify") + s.usage.calls_to("users.messages.modify"));
+    assert_eq!(writes, 0);
+}
+
+#[tokio::test]
 async fn deleting_forever_where_the_server_cannot_is_unsupported() {
     let h = harness().await;
     h.fake.seed(meta("m1", "t1", 1, &["TRASH"]));

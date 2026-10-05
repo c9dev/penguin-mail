@@ -8967,37 +8967,37 @@ msgstr ""
 msgid "Is flagged"
 msgstr ""
 
-#: sync/src/account/writes.rs:751
+#: sync/src/account/writes.rs:756
 msgid "{provider} is busy. Still working on {conversations}."
 msgstr ""
 
-#: sync/src/account/writes.rs:773
+#: sync/src/account/writes.rs:778
 msgid ""
 "{provider} is busy, so {action} did not go through for {conversations}. Try "
 "again in a moment."
 msgstr ""
 
-#: sync/src/account/writes.rs:782
+#: sync/src/account/writes.rs:787
 msgid ""
 "{provider} stayed busy for {waited}, so {action} did not go through for "
 "{conversations}."
 msgstr ""
 
-#: sync/src/account/writes.rs:789
+#: sync/src/account/writes.rs:794
 msgid "{action} failed: {reason}"
 msgstr ""
 
-#: sync/src/account/writes.rs:807
+#: sync/src/account/writes.rs:812
 msgid "a moment"
 msgstr ""
 
-#: sync/src/account/writes.rs:809
+#: sync/src/account/writes.rs:814
 msgid "{count} second"
 msgid_plural "{count} seconds"
 msgstr[0] ""
 msgstr[1] ""
 
-#: sync/src/account/writes.rs:814
+#: sync/src/account/writes.rs:819
 msgid "a minute"
 msgstr ""
 
