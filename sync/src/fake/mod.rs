@@ -19,7 +19,7 @@ mod sent;
 pub use mailrs_dav::fake::FakeDav;
 pub use mailrs_dav::client::Kind as DavKind;
 pub use mailrs_sieve::fake::FakeSieve;
-pub use graph::{Area, FakeGraph, FakeMail, GraphState};
+pub use graph::{Area, FakeGraph, FakeMail, GraphState, ReplyWrites};
 pub use imap::{
     FakeImap, FakeMailbox, FakeMessage, FakeSmtp, ImapState, SmtpState, Submitted, raw_message,
 };

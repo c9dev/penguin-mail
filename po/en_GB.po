@@ -9317,6 +9317,10 @@ msgstr "Microsoft cannot send a signed or encrypted message larger than 3 MB. Ma
 msgid "Outlook's rules cannot do that."
 msgstr "Outlook's rules cannot do that."
 
+#: sync/src/services/microsoft/settings.rs:169
+msgid "Outlook answered but did not keep the automatic reply."
+msgstr "Outlook answered but did not keep the automatic reply."
+
 #: sync/src/services/pop3/mod.rs:338
 msgid "Penguin Mail keeps the names of Inbox, Sent, Drafts, Trash, Junk and Archive."
 msgstr "Penguin Mail keeps the names of Inbox, Sent, Drafts, Trash, Junk and Archive."

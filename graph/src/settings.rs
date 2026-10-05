@@ -81,6 +81,14 @@ pub struct AutomaticReplies {
     pub external_reply_message: String,
 }
 
+/// The part of a mailbox settings answer the automatic reply needs.
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct MailboxSettings {
+    #[serde(default)]
+    automatic_replies_setting: Option<AutomaticReplies>,
+}
+
 impl Graph {
     pub async fn rules(&self) -> Result<Vec<MessageRule>, GraphError> {
         let page: Page<MessageRule> = self.get("me/mailFolders/inbox/messageRules", &[]).await?;
@@ -119,14 +127,42 @@ impl Graph {
         .await
     }
 
+    /// Writes `replies` and answers what the mailbox kept. Graph answers 200
+    /// to a write it does not keep (Outlook.com leaves an `alwaysEnabled`
+    /// reply off), so the caller compares the answer with what it sent. The
+    /// answer comes from the PATCH's body, or from a read when that body
+    /// leaves the setting out.
     pub async fn set_automatic_replies(
         &self,
         replies: &AutomaticReplies,
-    ) -> Result<(), GraphError> {
+    ) -> Result<AutomaticReplies, GraphError> {
+        // The messages stay out of the log: they are the person's words.
+        tracing::debug!(
+            status = %replies.status,
+            external_audience = %replies.external_audience,
+            start = ?replies.scheduled_start_date_time,
+            end = ?replies.scheduled_end_date_time,
+            internal_bytes = replies.internal_reply_message.len(),
+            external_bytes = replies.external_reply_message.len(),
+            "PATCH me/mailboxSettings automaticRepliesSetting"
+        );
         let body = json!({ "automaticRepliesSetting": replies });
-        self.send::<Value>(Method::Patch, "me/mailboxSettings", Some(&body), &[])
-            .await
-            .map(|_| ())
+        let answer: Option<MailboxSettings> = self
+            .send(Method::Patch, "me/mailboxSettings", Some(&body), &[])
+            .await?;
+        let kept = match answer.and_then(|a| a.automatic_replies_setting) {
+            Some(kept) => kept,
+            None => self.automatic_replies().await?,
+        };
+        tracing::debug!(
+            status = %kept.status,
+            external_audience = %kept.external_audience,
+            start = ?kept.scheduled_start_date_time,
+            end = ?kept.scheduled_end_date_time,
+            internal_bytes = kept.internal_reply_message.len(),
+            "Graph kept automaticRepliesSetting"
+        );
+        Ok(kept)
     }
 
     pub async fn overrides(&self) -> Result<Vec<Override>, GraphError> {

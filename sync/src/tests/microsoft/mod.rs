@@ -5,6 +5,7 @@ mod calendar;
 mod contacts;
 mod mail;
 mod outgoing;
+mod replies;
 mod rules;
 mod writes;
 

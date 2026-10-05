@@ -2,7 +2,7 @@
 
 use mailrs_graph::{AutomaticReplies, EmailAddress, GraphError, MessageRule, Override};
 
-use super::{Answer, Area, GraphState};
+use super::{Answer, Area, GraphState, ReplyWrites};
 
 pub(super) fn rules(s: &mut GraphState) -> Answer<Vec<MessageRule>> {
     s.refuses(Area::Rules)?;
@@ -28,10 +28,22 @@ pub(super) fn automatic_replies(s: &mut GraphState) -> Answer<AutomaticReplies> 
     Ok(s.replies.clone())
 }
 
-pub(super) fn set_automatic_replies(s: &mut GraphState, replies: &AutomaticReplies) -> Answer<()> {
+pub(super) fn set_automatic_replies(s: &mut GraphState, replies: &AutomaticReplies) -> Answer<AutomaticReplies> {
     s.refuses(Area::Replies)?;
-    s.replies = replies.clone();
-    Ok(())
+    s.replies_sent.push(replies.clone());
+    let keeps = match s.reply_writes {
+        ReplyWrites::Kept => true,
+        ReplyWrites::Ignored => false,
+        ReplyWrites::Personal => match replies.status.as_str() {
+            "alwaysEnabled" => false,
+            "disabled" => s.replies.status != "scheduled" || replies.scheduled_start_date_time.is_some(),
+            _ => true,
+        },
+    };
+    if keeps {
+        s.replies = replies.clone();
+    }
+    Ok(s.replies.clone())
 }
 
 pub(super) fn overrides(s: &mut GraphState) -> Answer<Vec<Override>> {

@@ -36,6 +36,21 @@ pub enum Area {
     Replies,
 }
 
+/// How the mailbox takes a write of its automatic reply. Every kind
+/// answers 200 with what it kept.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum ReplyWrites {
+    /// A work or school mailbox: it keeps what it is sent.
+    #[default]
+    Kept,
+    /// An Outlook.com mailbox. It keeps nothing of an `alwaysEnabled`
+    /// reply (seen live on 2026-10-05), and a `disabled` one sent without
+    /// a schedule leaves a scheduled reply scheduled.
+    Personal,
+    /// A mailbox that keeps nothing.
+    Ignored,
+}
+
 /// A mail folder.
 #[derive(Debug, Clone)]
 pub struct FakeFolder {
@@ -118,6 +133,9 @@ pub struct GraphState {
     pub photos: HashMap<String, Vec<u8>>,
     pub rules: Vec<MessageRule>,
     pub replies: AutomaticReplies,
+    pub reply_writes: ReplyWrites,
+    /// Every automatic reply written, as sent.
+    pub replies_sent: Vec<AutomaticReplies>,
     pub overrides: Vec<Override>,
     /// Queries a next link points back to, by position.
     pub pending: Vec<Pending>,
@@ -553,7 +571,7 @@ impl GraphApi for FakeGraph {
         self.with(settings::automatic_replies)
     }
 
-    async fn set_automatic_replies(&self, replies: &AutomaticReplies) -> Answer<()> {
+    async fn set_automatic_replies(&self, replies: &AutomaticReplies) -> Answer<AutomaticReplies> {
         self.with(|s| settings::set_automatic_replies(s, replies))
     }
 
