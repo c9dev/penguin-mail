@@ -206,3 +206,35 @@ async fn a_redirect_within_the_site_keeps_the_password() {
     let seen = same_site.received_requests().await.unwrap();
     assert!(seen[0].headers.contains_key("authorization"));
 }
+
+fn one_event_answer(href: &str) -> String {
+    format!(
+        r#"<?xml version="1.0"?><d:multistatus xmlns:d="DAV:"><d:response><d:href>{href}</d:href>
+<d:propstat><d:prop><d:getetag>"1"</d:getetag></d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat></d:response>
+<d:sync-token>t1</d:sync-token></d:multistatus>"#
+    )
+}
+
+#[tokio::test]
+async fn an_encoded_href_in_an_answer_comes_back_decoded() {
+    let server = MockServer::start().await;
+    Mock::given(method("REPORT")).and(path("/me@example.test/work/"))
+        .respond_with(multistatus(one_event_answer("/me%40example.test/work/e1.ics"))).mount(&server).await;
+    let synced = client(&server).sync("/me@example.test/work/", "").await.unwrap();
+    assert_eq!(synced.changed[0].href, format!("{}/me@example.test/work/e1.ics", server.uri()));
+}
+
+#[tokio::test]
+async fn a_request_for_an_href_with_a_space_or_an_at_sign_is_encoded_on_the_wire() {
+    let server = MockServer::start().await;
+    Mock::given(method("GET")).and(path("/me@example.test/my%20work/a%20b.ics"))
+        .respond_with(ResponseTemplate::new(200).insert_header("ETag", "\"1\"").set_body_string("BEGIN:VCALENDAR\r\nEND:VCALENDAR\r\n"))
+        .expect(2)
+        .mount(&server)
+        .await;
+    let dav = client(&server);
+    // The canonical form, and the server's own spelling of it, reach one URL.
+    let fetched = dav.get("/me@example.test/my work/a b.ics").await.unwrap();
+    dav.get("/me%40example.test/my%20work/a%20b.ics").await.unwrap();
+    assert_eq!(fetched.href, format!("{}/me@example.test/my work/a b.ics", server.uri()));
+}

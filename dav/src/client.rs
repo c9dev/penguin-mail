@@ -11,7 +11,7 @@ use mailrs_domain::EpochMillis;
 use reqwest::{Method, StatusCode};
 use url::Url;
 
-use crate::ids::path_of;
+use crate::ids::{canonical_href, path_of, wire_href};
 use crate::xml::{self, Multistatus, body};
 use crate::{DavError, MOST_BYTES, MOST_RESOURCE_BYTES, MULTIGET_BATCH};
 
@@ -179,7 +179,9 @@ impl DavClient {
     }
 
     fn url(&self, href: &str) -> Result<Url, DavError> {
-        self.base.join(href).map_err(|err| DavError::Parse(err.to_string()))
+        // The path is encoded here, once, from its canonical form: `join`
+        // alone would leave a stray `?` or `#` to start a query.
+        self.base.join(&wire_href(href)).map_err(|err| DavError::Parse(err.to_string()))
     }
 
     async fn send(&self, method: &str, href: &str, depth: Option<&str>, body: Option<String>, headers: &[(&str, String)]) -> Result<Answer, DavError> {
@@ -237,8 +239,10 @@ impl DavClient {
 }
 
 /// `href` as an absolute URL, read against the URL that answered it.
+/// The path is canonical (decoded), so the same resource has one string
+/// whichever way the server spelled its escapes.
 fn absolute(asked: &Url, href: &str) -> String {
-    asked.join(href).map(String::from).unwrap_or_else(|_| href.to_string())
+    asked.join(&wire_href(href)).map(|url| canonical_href(url.as_str())).unwrap_or_else(|_| canonical_href(href))
 }
 
 fn check(answer: Answer) -> Result<Answer, DavError> {
@@ -263,7 +267,7 @@ fn color(raw: &str) -> Option<String> {
 
 impl DavApi for DavClient {
     async fn homes(&self) -> Result<Homes, DavError> {
-        let found = self.multistatus("PROPFIND", self.base.path(), "0", body::principal().into()).await?;
+        let found = self.multistatus("PROPFIND", &path_of(self.base.as_str()), "0", body::principal().into()).await?;
         let principal = found
             .responses
             .iter()
@@ -379,7 +383,7 @@ impl DavApi for DavClient {
         if answer.body.len() > MOST_RESOURCE_BYTES {
             return Err(DavError::TooLarge(MOST_RESOURCE_BYTES));
         }
-        Ok(Fetched { href: String::from(self.url(href)?), etag: answer.etag.unwrap_or_default(), body: answer.body })
+        Ok(Fetched { href: canonical_href(self.url(href)?.as_str()), etag: answer.etag.unwrap_or_default(), body: answer.body })
     }
 
     async fn put(&self, href: &str, body: &str, kind: Kind, when: Precondition) -> Result<Option<String>, DavError> {
@@ -427,7 +431,7 @@ impl DavApi for DavClient {
     }
 
     async fn auto_schedule(&self) -> Result<bool, DavError> {
-        let answer = self.send("OPTIONS", self.base.path(), None, None, &[]).await?;
+        let answer = self.send("OPTIONS", &path_of(self.base.as_str()), None, None, &[]).await?;
         Ok(answer.dav.is_some_and(|header| header.split(',').any(|token| token.trim().eq_ignore_ascii_case("calendar-auto-schedule"))))
     }
 
