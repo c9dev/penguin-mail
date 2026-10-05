@@ -686,14 +686,22 @@ def walk_calendar(keys):
             keys.resize(1400, 900)
             settle()
 
-    # The narrow window shows the list in place of Week and Month.
+    # The narrow window shows the agenda in place of Week and Month. Its
+    # switch says Agenda as the wide one does, so wait for Week to go too.
     show_view("Week")
     keys.resize(600, 900)
-    if not wait_until(lambda: find_first(lambda role, name: role in ACTS and name == "List") is not None, 5.0):
-        print("A narrow window never offered the list.", file=sys.stderr)
+
+    def narrow_switch():
+        def named(label):
+            return find_first(lambda role, name: role in ACTS and name == label) is not None
+
+        return named("Agenda") and not named("Week")
+
+    if not wait_until(narrow_switch, 5.0):
+        print("A narrow window never offered the agenda.", file=sys.stderr)
         sys.exit(2)
     settle()
-    walk_view("List")
+    walk_view("Agenda")
     keys.resize(1400, 900)
     settle()
 
