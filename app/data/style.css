@@ -1148,6 +1148,14 @@ list.waiting-list > row.waiting-card:last-child { margin-bottom: 0; }
   border-radius: 99px;
   background: var(--cal-colour, var(--accent-bg-color));
 }
+/* An invitation not answered yet: a ring in the calendar's colour, as
+   Week and Month draw the event dashed. */
+.agenda-dot.unanswered {
+  background: none;
+  border: 2px solid var(--cal-colour, var(--accent-bg-color));
+  min-width: 4px;
+  min-height: 4px;
+}
 /* Out of office: a rounded square striped in the calendar's colour, the
    week view's stripes at the dot's size. */
 .agenda-dot.away {
@@ -1162,6 +1170,16 @@ list.waiting-list > row.waiting-card:last-child { margin-bottom: 0; }
 /* Focus time's target and a birthday's cake take the dot's place. */
 .agenda-kind { color: var(--cal-colour); }
 .agenda-heading { font-weight: 800; opacity: 0.75; }
+/* Today's date in the accent at full strength, as the grids mark today.
+   The accent darkened in light (L at most 0.45, a and b scaled with it)
+   and lifted in dark (L at least 0.8) reads 4.5:1 or better on the view
+   for every libadwaita and Yaru accent; the raw Yaru orange read 3.5:1
+   on white. */
+.agenda-heading.today {
+  opacity: 1;
+  color: oklab(from var(--accent-bg-color) min(l, 0.45) calc(a * min(1, 0.45 / l)) calc(b * min(1, 0.45 / l)));
+}
+.app-dark .agenda-heading.today { color: oklab(from var(--accent-bg-color) max(l, 0.8) a b); }
 
 /* Small secondary text: the sidebar's section and account headings, the
    calendar's hour labels, week tag and ALL-DAY, the mini month's weekday

@@ -197,33 +197,49 @@ fn accent_share(selector: &str) -> f64 {
     number_in(&background, "var(--accent-bg-color),", ')')
 }
 
+/// How a rule's `color` draws `accent` for text. Light darkens it: L, a
+/// and b in OKLab scaled down together until L is under a limit, which
+/// keeps the hue and stays in gamut. Dark lifts L to a floor and keeps a
+/// and b; GTK clips what falls out of gamut. The rule must be written in
+/// exactly one of those two shapes.
+fn accent_text(selector: &str, dark: bool, accent: &str) -> String {
+    let rule = property(selector, "color").unwrap_or_else(|| panic!("{selector} sets a colour"));
+    let [l, a, b] = oklab(accent);
+    if dark {
+        let floor = number_in(&rule, "max(l,", ')');
+        assert_eq!(rule, format!("oklab(from var(--accent-bg-color) max(l, {floor}) a b)"));
+        from_oklab([l.max(floor), a, b])
+    } else {
+        let limit = number_in(&rule, "min(l,", ')');
+        let scale = format!("min(1, {limit} / l)");
+        assert_eq!(rule, format!("oklab(from var(--accent-bg-color) min(l, {limit}) calc(a * {scale}) calc(b * {scale}))"));
+        let f = (limit / l).min(1.0);
+        from_oklab([l * f, a * f, b * f])
+    }
+}
+
 #[test]
 fn the_selected_mailboxs_name_and_count_pass_aa_for_every_accent() {
-    // Light darkens the accent: L, a and b in OKLab scaled down together
-    // until L is under a limit, which keeps the hue and stays in gamut.
-    let light = property(".mailboxes > row:selected", "color").expect("a light text colour");
-    let limit = number_in(&light, "min(l,", ')');
-    let scale = format!("min(1, {limit} / l)");
-    assert_eq!(light, format!("oklab(from var(--accent-bg-color) min(l, {limit}) calc(a * {scale}) calc(b * {scale}))"));
-    // Dark lifts L to a floor and keeps a and b; GTK clips what falls
-    // out of gamut.
-    let dark = property(".app-dark .mailboxes > row:selected", "color").expect("a dark text colour");
-    let floor = number_in(&dark, "max(l,", ')');
-    assert_eq!(dark, format!("oklab(from var(--accent-bg-color) max(l, {floor}) a b)"));
-    for (is_dark, selector) in [(false, ".mailboxes > row:selected"), (true, ".app-dark .mailboxes > row:selected")] {
-        let sidebar = surface(is_dark, "--sidebar-bg-color");
+    for (dark, selector) in [(false, ".mailboxes > row:selected"), (true, ".app-dark .mailboxes > row:selected")] {
+        let sidebar = surface(dark, "--sidebar-bg-color");
         let share = accent_share(selector);
         for accent in ACCENTS {
-            let [l, a, b] = oklab(accent);
-            let drawn = if is_dark {
-                from_oklab([l.max(floor), a, b])
-            } else {
-                let f = (limit / l).min(1.0);
-                from_oklab([l * f, a * f, b * f])
-            };
+            let drawn = accent_text(selector, dark, accent);
             let under = tint(accent, share, &sidebar);
             let ratio = contrast(&drawn, &under);
             assert!(ratio >= AA, "{selector} in {accent}: {drawn} on {under} is {ratio:.2}:1");
+        }
+    }
+}
+
+#[test]
+fn todays_heading_in_the_agenda_passes_aa_for_every_accent() {
+    for (dark, selector) in [(false, ".agenda-heading.today"), (true, ".app-dark .agenda-heading.today")] {
+        let view = surface(dark, "--view-bg-color");
+        for accent in ACCENTS {
+            let drawn = accent_text(selector, dark, accent);
+            let ratio = contrast(&drawn, &view);
+            assert!(ratio >= AA, "{selector} in {accent}: {drawn} on {view} is {ratio:.2}:1");
         }
     }
 }

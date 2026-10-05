@@ -499,7 +499,7 @@ pub fn is_compact(start: EpochMillis, end: EpochMillis) -> bool {
 /// Whether nobody has answered `event` yet, or the reader declined it,
 /// for the dashed outline and the strike-through.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum AnswerState {
+pub(super) enum AnswerState {
     Unanswered,
     Declined,
     Answered,
@@ -507,7 +507,7 @@ enum AnswerState {
 
 /// Unanswered: the account is a guest, not the organizer, and has not
 /// answered. Declined: the account's own answer was No.
-fn answer_state(event: &Event) -> AnswerState {
+pub(super) fn answer_state(event: &Event) -> AnswerState {
     if event.my_answer == Some(Answer::No) {
         return AnswerState::Declined;
     }
