@@ -187,14 +187,24 @@ pub enum Next {
     Closed(String),
     /// A Google Workspace domain: the Google sign-in serves it.
     Google,
+    /// An Outlook.com or Microsoft 365 domain: Microsoft's sign-in serves
+    /// it.
+    Microsoft,
     /// Nothing found: Server Settings, filled with a guess, under a line.
     Manual { proposal: Proposal, line: String },
+}
+
+/// What Add Account says for a Microsoft address in a build without
+/// Microsoft's client.
+pub fn no_microsoft_line() -> String {
+    gettext("This copy of Penguin Mail was built without Microsoft sign-in.")
 }
 
 /// Where discovery's answer for `address` leads. The best candidate comes
 /// first in `found`, so it is the one step 2 offers; the rest wait in its
 /// `Proposal::remaining` for a connection or a TLS failure to reach for.
-pub fn after_discovery(found: Found, address: &Address) -> Next {
+/// `microsoft` is whether the build can sign in to Microsoft.
+pub fn after_discovery(found: Found, address: &Address, microsoft: bool) -> Next {
     match found.verdict {
         Verdict::Servers => {
             let mut candidates = found.candidates.into_iter();
@@ -218,9 +228,8 @@ pub fn after_discovery(found: Found, address: &Address) -> Next {
             &[("provider", &provider)],
         )),
         Verdict::Google => Next::Google,
-        Verdict::Microsoft => Next::Closed(gettext(
-            "Microsoft accounts come in a later version of Penguin Mail.",
-        )),
+        Verdict::Microsoft if microsoft => Next::Microsoft,
+        Verdict::Microsoft => Next::Closed(no_microsoft_line()),
         Verdict::NothingFound => nothing_found(address),
     }
 }
@@ -1091,7 +1100,7 @@ mod tests {
     }
 
     fn fastmail() -> Proposal {
-        match after_discovery(found(Some(fastmail_info()), Source::Table, false), &dana()) {
+        match after_discovery(found(Some(fastmail_info()), Source::Table, false), &dana(), true) {
             Next::Password(proposal) => proposal,
             other => panic!("{other:?}"),
         }
@@ -1133,7 +1142,7 @@ mod tests {
     #[test]
     fn a_server_nobody_lists_is_named_after_the_domain_and_asks_first() {
         let address = Address::parse("me@example.org").unwrap();
-        let Next::Password(proposal) = after_discovery(found(None, Source::Srv, true), &address)
+        let Next::Password(proposal) = after_discovery(found(None, Source::Srv, true), &address, true)
         else {
             panic!("expected the password step");
         };
@@ -1152,7 +1161,7 @@ mod tests {
             ..gmx_info()
         };
         let found = found(Some(info), Source::Autoconfig, false);
-        let Next::Password(proposal) = after_discovery(found, &address) else {
+        let Next::Password(proposal) = after_discovery(found, &address, true) else {
             panic!("expected the password step");
         };
         assert_eq!(proposal.provider_name, "example.org");
@@ -1171,7 +1180,7 @@ mod tests {
             reason: Unreachable::NoImap,
         });
         assert_eq!(
-            after_discovery(tuta, &dana()),
+            after_discovery(tuta, &dana(), true),
             Next::Closed("Tuta has no IMAP, so other mail apps cannot reach it.".into())
         );
     }
@@ -1183,20 +1192,28 @@ mod tests {
             reason: Unreachable::NotYet,
         });
         assert_eq!(
-            after_discovery(proton, &dana()),
+            after_discovery(proton, &dana(), true),
             Next::Closed("Penguin Mail cannot reach Proton Mail yet.".into())
         );
     }
 
     #[test]
-    fn a_google_domain_goes_to_the_google_sign_in_and_microsoft_waits() {
+    fn a_microsoft_domain_goes_to_microsofts_sign_in() {
         assert_eq!(
-            after_discovery(verdict(Verdict::Google), &dana()),
+            after_discovery(verdict(Verdict::Microsoft), &dana(), true),
+            Next::Microsoft
+        );
+        assert_eq!(
+            after_discovery(verdict(Verdict::Microsoft), &dana(), false),
+            Next::Closed("This copy of Penguin Mail was built without Microsoft sign-in.".into())
+        );
+        assert_eq!(
+            after_discovery(verdict(Verdict::Google), &dana(), true),
             Next::Google
         );
         assert_eq!(
-            after_discovery(verdict(Verdict::Microsoft), &dana()),
-            Next::Closed("Microsoft accounts come in a later version of Penguin Mail.".into())
+            no_microsoft_line(),
+            "This copy of Penguin Mail was built without Microsoft sign-in."
         );
     }
 
@@ -1235,7 +1252,7 @@ mod tests {
     fn nothing_found_opens_server_settings_with_a_guess() {
         let address = Address::parse("me@example.org").unwrap();
         let Next::Manual { proposal, line } =
-            after_discovery(verdict(Verdict::NothingFound), &address)
+            after_discovery(verdict(Verdict::NothingFound), &address, true)
         else {
             panic!("expected Server Settings");
         };
@@ -1593,7 +1610,7 @@ mod tests {
     #[test]
     fn the_first_candidates_port_is_blocked_the_second_signs_in() {
         let address = Address::parse("ann@example.org").unwrap();
-        let Next::Password(first) = after_discovery(two_candidates(false), &address) else {
+        let Next::Password(first) = after_discovery(two_candidates(false), &address, true) else {
             panic!("expected the password step");
         };
         assert_eq!(first.imap.host, "imap1.example.org");
@@ -1610,7 +1627,7 @@ mod tests {
     #[test]
     fn a_refused_password_never_reaches_for_another_candidate() {
         let address = Address::parse("ann@example.org").unwrap();
-        let Next::Password(first) = after_discovery(two_candidates(false), &address) else {
+        let Next::Password(first) = after_discovery(two_candidates(false), &address, true) else {
             panic!("expected the password step");
         };
         let refused = anyhow::Error::new(CheckError::Imap(ImapError::Auth { text: "no".into() }));
@@ -1623,7 +1640,7 @@ mod tests {
     #[test]
     fn a_candidate_needing_confirmation_still_needs_it_after_a_retry() {
         let address = Address::parse("ann@example.org").unwrap();
-        let Next::Password(first) = after_discovery(two_candidates(true), &address) else {
+        let Next::Password(first) = after_discovery(two_candidates(true), &address, true) else {
             panic!("expected the password step");
         };
         let blocked = anyhow::Error::new(CheckError::Imap(ImapError::Tls {

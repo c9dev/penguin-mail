@@ -1,6 +1,7 @@
 //! The first-run page: the band and the provider tiles across the empty
 //! window, to add the first account. A tile opens Add Account on its
-//! step: the browser sign-in for Google, the address for the rest.
+//! step: the browser sign-in for Google and Microsoft, the address for
+//! the rest.
 
 use adw::prelude::*;
 use mailrs_domain::translate::gettext;
@@ -14,8 +15,9 @@ use crate::ui::post_band::PostBand;
 const BAND: i32 = 250;
 const SCALE: f32 = 1.25;
 
-/// Offers to add the first account from one of the tiles.
-pub fn first_account_page(on_tile: impl Fn(Tile) + 'static) -> gtk::Widget {
+/// Offers to add the first account from one of the tiles. `microsoft` is
+/// whether the build can sign in to Microsoft, whose tile shows only then.
+pub fn first_account_page(microsoft: bool, on_tile: impl Fn(Tile) + 'static) -> gtk::Widget {
     let band = PostBand::new(BAND, SCALE);
     band.show(Band::Idle, None, None);
     let title = gtk::Label::builder()
@@ -33,7 +35,7 @@ pub fn first_account_page(on_tile: impl Fn(Tile) + 'static) -> gtk::Widget {
         .justify(gtk::Justification::Center)
         .css_classes(["post-first-lede"])
         .build();
-    let grid = tiles(136);
+    let grid = tiles(136, microsoft);
     let on_tile = std::rc::Rc::new(on_tile);
     for (tile, button, _) in &grid.buttons {
         let (tile, on_tile) = (*tile, std::rc::Rc::clone(&on_tile));

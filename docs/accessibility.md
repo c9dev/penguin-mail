@@ -64,6 +64,19 @@ Focused and Other are the category bar's toggles, the same control as
 Gmail's categories, and each is named with its unread count, as in
 "Focused, 6 unread". Only one of the two bars shows over an inbox.
 
+## Add Account
+
+Each provider tile in Add Account and on the first-run page is one
+button, named with its title, its subtitle and how it signs in, as in
+"Microsoft, Outlook, 365, signs in through your browser". The globe on
+the Google and Microsoft tiles is drawn without a name, since the name
+already says it. A copy built without Microsoft's client shows no
+Microsoft tile; typing an Outlook or Microsoft 365 address there shows a
+card that says the copy cannot sign in to Microsoft. The page that waits
+for the browser lists each provider's own steps, two for Microsoft and
+three for Google, and the band above it is read as "Waiting for your
+browser, Microsoft".
+
 ## The composer from the keyboard
 
 Tab goes From, To, Cc and Bcc while they show, Subject, the formatting

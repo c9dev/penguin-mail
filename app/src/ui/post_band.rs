@@ -191,7 +191,9 @@ mod imp {
                 gtk::Orientation::Horizontal => ART_W * scale,
                 _ => ART_H * scale,
             };
-            (size as i32, size as i32, -1, -1)
+            // `Art` gives the marks the art's own box, smaller in a narrow
+            // window, so they ask for no minimum.
+            (0, size as i32, -1, -1)
         }
 
         fn map(&self) {
@@ -209,7 +211,7 @@ mod imp {
                 return;
             };
             let obj = self.obj();
-            let scale = self.scale.get().max(1.0);
+            let scale = self.drawn_scale();
             // The art sits in the middle of the widget at its own size
             // times `scale`, as the picture below it does.
             let left = (obj.width() as f32 - ART_W * scale) / 2.0;
@@ -251,6 +253,12 @@ mod imp {
     }
 
     impl Marks {
+        /// The scale the art draws at: the band's own, or less when the
+        /// widget is narrower than the art.
+        pub fn drawn_scale(&self) -> f32 {
+            fitted_scale(self.obj().width() as f32, self.scale.get().max(1.0))
+        }
+
         fn draw_stamps(&self, snapshot: &gtk::Snapshot, env: Env) {
             let swap = self.swap.get() as f32;
             if let Some(old) = self.old_stamp.get()
@@ -496,6 +504,74 @@ glib::wrapper! {
         @implements gtk::Accessible, gtk::Buildable, gtk::ConstraintTarget;
 }
 
+mod art_imp {
+    use super::*;
+
+    #[derive(Default)]
+    pub struct Art {
+        pub scale: Cell<f32>,
+    }
+
+    #[glib::object_subclass]
+    impl ObjectSubclass for Art {
+        const NAME: &'static str = "MailrsPostArt";
+        type Type = super::Art;
+        type ParentType = gtk::Widget;
+    }
+
+    impl ObjectImpl for Art {
+        fn dispose(&self) {
+            while let Some(child) = self.obj().first_child() {
+                child.unparent();
+            }
+        }
+    }
+
+    impl WidgetImpl for Art {
+        fn measure(&self, orientation: gtk::Orientation, _for_size: i32) -> (i32, i32, i32, i32) {
+            let scale = self.scale.get().max(1.0);
+            match orientation {
+                // Any width will do: the art shrinks to fit it.
+                gtk::Orientation::Horizontal => (0, (ART_W * scale) as i32, -1, -1),
+                _ => (0, (ART_H * scale) as i32, -1, -1),
+            }
+        }
+
+        fn size_allocate(&self, width: i32, height: i32, _baseline: i32) {
+            // The art keeps its proportions at the scale its width allows,
+            // centred across the band and sitting on its bottom edge,
+            // where the pages below meet it.
+            let scale = fitted_scale(width as f32, self.scale.get().max(1.0));
+            let (art_w, art_h) = ((ART_W * scale).round() as i32, (ART_H * scale).round() as i32);
+            let x = (width - art_w) / 2;
+            let y = height - art_h;
+            let mut child = self.obj().first_child();
+            while let Some(widget) = child {
+                widget.size_allocate(&gtk::Allocation::new(x, y, art_w, art_h), -1);
+                child = widget.next_sibling();
+            }
+        }
+    }
+}
+
+glib::wrapper! {
+    /// The pose and the marks over it, scaled down together when the band
+    /// is narrower than the art.
+    pub struct Art(ObjectSubclass<art_imp::Art>)
+        @extends gtk::Widget,
+        @implements gtk::Accessible, gtk::Buildable, gtk::ConstraintTarget;
+}
+
+impl Art {
+    fn new(scale: f32, poses: &gtk::Stack, marks: &Marks) -> Art {
+        let art: Art = glib::Object::builder().property("hexpand", true).build();
+        art.imp().scale.set(scale);
+        poses.set_parent(&art);
+        marks.set_parent(&art);
+        art
+    }
+}
+
 /// Whether the desktop lets things move.
 fn animations_on() -> bool {
     gtk::Settings::default().is_some_and(|s| s.is_gtk_enable_animations())
@@ -641,41 +717,24 @@ impl PostBand {
             .transition_type(gtk::StackTransitionType::Crossfade)
             .transition_duration(200)
             .can_target(false)
-            .halign(gtk::Align::Center)
-            .valign(gtk::Align::End)
             .build();
-        let size = ((ART_W * scale) as i32, (ART_H * scale) as i32);
         for band in Band::ALL {
             let picture = gtk::Picture::builder()
                 .content_fit(gtk::ContentFit::Contain)
-                .can_shrink(false)
-                .width_request(size.0)
-                .height_request(size.1)
+                .can_shrink(true)
                 .accessible_role(gtk::AccessibleRole::Presentation)
                 .build();
             poses.add_named(&picture, Some(band.name()));
         }
         let marks = Marks::new(scale);
-        marks.set_halign(gtk::Align::Center);
-        marks.set_valign(gtk::Align::End);
-        let art = gtk::Overlay::builder().child(&poses).build();
-        art.add_overlay(&marks);
+        let art = Art::new(scale, &poses, &marks);
         let widget = gtk::Box::builder()
             .height_request(height)
             .valign(gtk::Align::Start)
             .accessible_role(gtk::AccessibleRole::Img)
             .css_classes(["post-band"])
             .build();
-        // The art keeps its own width: a picture measured for the whole
-        // band's width would keep its aspect and grow taller than the band.
-        // It is centred by the band's own box, which gives a child that
-        // does not expand only its natural width.
-        let left = gtk::Box::builder().hexpand(true).build();
-        let right = gtk::Box::builder().hexpand(true).build();
-        art.set_valign(gtk::Align::End);
-        widget.append(&left);
         widget.append(&art);
-        widget.append(&right);
         let band = PostBand {
             widget,
             poses,
@@ -737,7 +796,7 @@ impl PostBand {
             return;
         };
         let imp = self.marks.imp();
-        let scale = imp.scale.get().max(1.0);
+        let scale = imp.drawn_scale();
         let left = (self.marks.width() as f32 - ART_W * scale) / 2.0;
         let top = (self.marks.height() as f32 - ART_H * scale) / 2.0;
         let x = (point.x() - left) / scale;
@@ -796,6 +855,13 @@ impl PostBand {
     }
 }
 
+/// The scale the art draws at in a band `width` wide: `scale` while the
+/// art fits, and smaller in a narrow window, so the mark and the
+/// wordmark shrink together rather than run off the edge.
+fn fitted_scale(width: f32, scale: f32) -> f32 {
+    scale.min(width.max(0.0) / ART_W)
+}
+
 /// Draws each pose's SVG into its picture at `scale` times the art's
 /// size, for a display at `factor`.
 fn load_poses(poses: &gtk::Stack, scale: f32, factor: i32) {
@@ -814,5 +880,24 @@ fn load_poses(poses: &gtk::Stack, scale: f32, factor: i32) {
             Ok(pixbuf) => picture.set_paintable(Some(&gdk::Texture::for_pixbuf(&pixbuf))),
             Err(err) => tracing::warn!(%path, error = %err, "could not draw a band pose"),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_art_keeps_its_scale_while_it_fits() {
+        assert_eq!(fitted_scale(480.0, 1.0), 1.0);
+        assert_eq!(fitted_scale(ART_W, 1.0), 1.0);
+        assert_eq!(fitted_scale(1400.0, 1.25), 1.25);
+    }
+
+    #[test]
+    fn a_narrow_band_shrinks_the_art_to_its_width() {
+        assert_eq!(fitted_scale(ART_W / 2.0, 1.0), 0.5);
+        assert_eq!(fitted_scale(ART_W, 1.25), 1.0);
+        assert_eq!(fitted_scale(0.0, 1.0), 0.0);
     }
 }
