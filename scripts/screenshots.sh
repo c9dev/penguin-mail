@@ -60,6 +60,12 @@ export HOME="$sandbox/home"
 export XDG_RUNTIME_DIR="$sandbox/run"
 mkdir -p "$HOME" "$XDG_RUNTIME_DIR"
 chmod 700 "$XDG_RUNTIME_DIR"
+# A GnuPG home of the run's own. With only HOME moved, gpg still takes
+# $HOME/.gnupg for the default home and talks to the agent already running
+# for the person's own keys, so a secret key the run imports would land in
+# their keyring. A home by another name gets an agent of its own.
+export GNUPGHOME="$sandbox/gnupg"
+mkdir -m 700 "$GNUPGHOME"
 # GSettings in a file inside the sandbox, which the desktop portal reads
 # too: the accent colour and the light or dark preference it hands the app
 # come from here, not from the machine the script runs on.

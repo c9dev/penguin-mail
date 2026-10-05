@@ -53,6 +53,12 @@ share=$HOME/.local/share
 mkdir -p "$XDG_RUNTIME_DIR" "$share/applications" "$share/icons/hicolor/scalable/apps" \
     "$share/gnome-shell/extensions/tour@penguinmail.dev" "$share/backgrounds"
 chmod 700 "$XDG_RUNTIME_DIR"
+# A GnuPG home of the run's own. With only HOME moved, gpg still takes
+# $HOME/.gnupg for the default home and talks to the agent already running
+# for the person's own keys, so a secret key the run imports would land in
+# their keyring. A home by another name gets an agent of its own.
+export GNUPGHOME="$sandbox/gnupg"
+mkdir -m 700 "$GNUPGHOME"
 cp "$here"/extension/* "$share/gnome-shell/extensions/tour@penguinmail.dev/"
 cp app/data/icons/scalable/apps/*.svg "$share/icons/hicolor/scalable/apps/"
 # The dock and the overview match a window to its app by these files. The

@@ -66,6 +66,12 @@ export HOME="$sandbox/home"
 export XDG_RUNTIME_DIR="$sandbox/run"
 mkdir -p "$HOME" "$XDG_RUNTIME_DIR"
 chmod 700 "$XDG_RUNTIME_DIR"
+# A GnuPG home of the run's own. With only HOME moved, gpg still takes
+# $HOME/.gnupg for the default home and talks to the agent already running
+# for the person's own keys, so a secret key the run imports would land in
+# their keyring. A home by another name gets an agent of its own.
+export GNUPGHOME="$sandbox/gnupg"
+mkdir -m 700 "$GNUPGHOME"
 export GSETTINGS_BACKEND=memory
 export PENGUIN_MAIL_LOCALE_DIR="$PWD/target/locale"
 

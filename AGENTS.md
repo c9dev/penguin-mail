@@ -92,6 +92,9 @@ recipe, including waiting for the window to reach the accessibility bus.
 Take screenshots of the hidden display with `scripts/demo-shot.sh out.png`
 (`--run drive.py` clicks or types first). It takes down the accessibility
 registry it starts; a hand-made recipe leaves one running for every shot.
+The scripts also set `GNUPGHOME` to a folder in their sandbox. A recipe
+that only moves `HOME` still reaches the owner's own gpg-agent, and a
+secret key it imports lands in their keyring.
 Render SVGs with `rsvg-convert`: ImageMagick mangles gradients and makes
 a good icon look broken.
 
