@@ -10,6 +10,8 @@ mod parts;
 mod read;
 pub mod provenance;
 pub mod snippet;
+mod summary;
 
 pub use parts::{MAX_DEPTH, Part, Parts, body, content_id, is_calendar, numbered};
 pub use read::{files, part, parts, read, undo_transfer_encoding};
+pub use summary::{Summary, summary};
