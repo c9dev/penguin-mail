@@ -90,6 +90,10 @@ jobs:
       # --nocapture keeps each profile's IDLE time in the log.
       - name: The adapter against Dovecot
         run: cargo test -p mailrs-sync --test dovecot -- --nocapture
+      - name: CalDAV and CardDAV against Radicale
+        run: cargo test -p mailrs-dav --test radicale && cargo test -p mailrs-sync --test radicale
+      - name: ManageSieve against Dovecot
+        run: cargo test -p mailrs-sieve --test dovecot && cargo test -p mailrs-sync --test managesieve
 
   flatpak:
     name: Flatpak builds and starts
