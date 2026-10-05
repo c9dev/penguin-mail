@@ -131,6 +131,49 @@ pub fn link_tag(buffer: &gtk::TextBuffer, url: &str) -> gtk::TextTag {
     tag
 }
 
+/// Whether `tag` belongs to the rich body: a style, a link, a line kind or
+/// a list marker. The spelling checker's tags do not.
+fn is_body_tag(tag: &gtk::TextTag) -> bool {
+    tag.name().is_some_and(|name| {
+        STYLES.contains(&name.as_str())
+            || BLOCKS.contains(&name.as_str())
+            || name == MARKER
+            || name.starts_with(LINK)
+    })
+}
+
+/// The body's tags on the text from `from` to `to`, as runs: a length in
+/// characters and the tags over it.
+pub fn tag_runs(from: &gtk::TextIter, to: &gtk::TextIter) -> Vec<(i32, Vec<gtk::TextTag>)> {
+    let mut runs = Vec::new();
+    let mut at = *from;
+    while at < *to {
+        let mut next = at;
+        if !next.forward_to_tag_toggle(None::<&gtk::TextTag>) || next > *to {
+            next = *to;
+        }
+        let tags: Vec<gtk::TextTag> = at.tags().into_iter().filter(is_body_tag).collect();
+        runs.push((next.offset() - at.offset(), tags));
+        at = next;
+    }
+    runs
+}
+
+/// Puts `runs`, as [`tag_runs`] read them, on the text from offset `at`.
+pub fn apply_runs(buffer: &gtk::TextBuffer, at: i32, runs: &[(i32, Vec<gtk::TextTag>)]) {
+    let mut start = at;
+    for (length, tags) in runs {
+        let (from, to) = (
+            buffer.iter_at_offset(start),
+            buffer.iter_at_offset(start + length),
+        );
+        for tag in tags {
+            buffer.apply_tag(tag, &from, &to);
+        }
+        start += length;
+    }
+}
+
 /// The styles and link on the character at `iter`.
 pub fn style_at(iter: &gtk::TextIter) -> (Style, Option<String>) {
     let mut style = Style::default();
