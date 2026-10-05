@@ -61,6 +61,7 @@ pub trait GraphApi: Send + Sync + 'static {
     fn contact_delta(&self, folder: &str, link: Option<&str>) -> impl Future<Output = Answer<DeltaPage<GraphContact>>> + Send;
     fn contact_photo(&self, id: &str, limit: usize) -> impl Future<Output = Answer<Option<Vec<u8>>>> + Send;
     fn create_contact(&self, body: &Value) -> impl Future<Output = Answer<GraphContact>> + Send;
+    fn contact_name(&self, id: &str) -> impl Future<Output = Answer<GraphContact>> + Send;
     fn update_contact(&self, id: &str, body: &Value) -> impl Future<Output = Answer<GraphContact>> + Send;
 
     fn rules(&self) -> impl Future<Output = Answer<Vec<MessageRule>>> + Send;
@@ -247,6 +248,10 @@ impl GraphApi for Graph {
 
     async fn create_contact(&self, body: &Value) -> Answer<GraphContact> {
         Graph::create_contact(self, body).await
+    }
+
+    async fn contact_name(&self, id: &str) -> Answer<GraphContact> {
+        Graph::contact_name(self, id).await
     }
 
     async fn update_contact(&self, id: &str, body: &Value) -> Answer<GraphContact> {

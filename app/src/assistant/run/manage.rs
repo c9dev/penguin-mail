@@ -535,7 +535,7 @@ impl<A: Accounts> Tools<A> {
         let (resource, who) = match stored {
             Some(contact) => (contact.resource.clone(), contact.display().to_string()),
             None => match unstored_id(&wanted) {
-                Some(id) => (id.to_string(), id.to_string()),
+                Some(id) => (id.to_string(), gettext("this contact")),
                 None => {
                     return Err(format!(
                         "{} has no contact {wanted} on this computer. Give the id find_contact or create_contact gave; an account with contacts off in Preferences keeps none here, so only its id works.",

@@ -96,6 +96,7 @@ async fn adding_and_changing_a_contact_write_graphs_fields() {
         .unwrap();
     assert_eq!(changed.organization.as_deref(), Some("Fabrikam"));
     assert_eq!(changed.emails, ["cy@example.com"], "a change touches only what it names");
+    assert_eq!(changed.name.as_deref(), Some("Cy"), "Outlook would name the contact after its company");
 }
 
 #[tokio::test]

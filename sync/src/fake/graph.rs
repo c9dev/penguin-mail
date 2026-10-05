@@ -550,6 +550,10 @@ impl GraphApi for FakeGraph {
         self.with(|s| contacts::create_contact(s, body))
     }
 
+    async fn contact_name(&self, id: &str) -> Answer<GraphContact> {
+        self.with(|s| contacts::contact_name(s, id))
+    }
+
     async fn update_contact(&self, id: &str, body: &Value) -> Answer<GraphContact> {
         self.with(|s| contacts::update_contact(s, id, body))
     }

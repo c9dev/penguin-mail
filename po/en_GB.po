@@ -1149,6 +1149,10 @@ msgstr "Delete the template “{name}”?"
 msgid "Add {contact} to the contacts of {account}?"
 msgstr "Add {contact} to the contacts of {account}?"
 
+#: app/src/assistant/run/manage.rs:538
+msgid "this contact"
+msgstr "this contact"
+
 #: app/src/assistant/run/manage.rs:550
 msgid "Change {contact} in the contacts of {account}?"
 msgstr "Change {contact} in the contacts of {account}?"

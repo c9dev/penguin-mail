@@ -413,6 +413,21 @@ fn any_id_but_a_bare_address_goes_to_the_server_as_it_is() {
 }
 
 #[tokio::test]
+async fn a_contact_kept_only_on_the_server_changes_by_its_id() {
+    let h = harness().await;
+    let made = h.ok("create_contact", json!({"name": "Bo", "emails": ["bo@example.com"]})).await;
+    let id = made["created"]["id"].as_str().expect("an id").to_string();
+
+    let changed = h.ok("update_contact", json!({"contact": id, "organization": "Fernwood"})).await;
+    assert_eq!(changed["updated"]["organization"], "Fernwood");
+    assert_eq!(
+        h.asked().questions[1],
+        format!("Change this contact in the contacts of {ME}?\n\nOrganization: Fernwood"),
+        "the question names no id a person cannot read"
+    );
+}
+
+#[tokio::test]
 async fn writing_a_contact_asks_for_the_permission_it_lacks() {
     let h = harness().await;
     h.gmail.withhold(mailrs_gmail::CONTACTS_WRITE_SCOPE);

@@ -1204,6 +1204,10 @@ msgstr ""
 msgid "Add {contact} to the contacts of {account}?"
 msgstr ""
 
+#: app/src/assistant/run/manage.rs:538
+msgid "this contact"
+msgstr ""
+
 #: app/src/assistant/run/manage.rs:550
 msgid "Change {contact} in the contacts of {account}?"
 msgstr ""

@@ -113,10 +113,26 @@ pub(super) fn create_contact(s: &mut GraphState, body: &Value) -> Answer<GraphCo
     Ok(contact)
 }
 
+pub(super) fn contact_name(s: &mut GraphState, id: &str) -> Answer<GraphContact> {
+    s.refuses(Area::Contacts)?;
+    let (_, contact) = s.contacts.get(id).ok_or(GraphError::NotFound)?;
+    Ok(GraphContact { id: id.into(), display_name: contact.display_name.clone(), ..GraphContact::default() })
+}
+
 pub(super) fn update_contact(s: &mut GraphState, id: &str, body: &Value) -> Answer<GraphContact> {
     s.refuses(Area::Contacts)?;
     let (folder, contact) = s.contacts.get_mut(id).ok_or(GraphError::NotFound)?;
     read_body(contact, body);
+    // Outlook.com rebuilds the display name from the name parts, or the
+    // company when there are none, on a change that leaves it out. Graph's
+    // contact reference says to send it with every update to keep it.
+    if body.get("displayName").is_none() {
+        let parts = [contact.given_name.as_deref(), contact.surname.as_deref()].into_iter().flatten().collect::<Vec<_>>().join(" ");
+        let rebuilt = Some(parts).filter(|p| !p.is_empty()).or_else(|| contact.company_name.clone());
+        if rebuilt.is_some() {
+            contact.display_name = rebuilt;
+        }
+    }
     let (folder, contact) = (folder.clone(), contact.clone());
     log(s, &folder, id);
     Ok(contact)

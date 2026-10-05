@@ -184,9 +184,21 @@ impl<G: GraphApi> ContactsService for Microsoft<G> {
     }
 
     async fn update_contact(&self, resource: &str, fields: &ContactFields) -> Result<Person, BackendError> {
+        let err = |e| self.service_error(Service::Contacts, e);
+        let mut body = body_of(fields);
+        // Outlook.com rebuilds a display name a change leaves out, from the
+        // name parts or else the company, so a new company would become the
+        // contact's name. Graph's contact reference says to send the name
+        // with every update.
+        if fields.name.is_none() {
+            let current = self.graph.contact_name(resource).await.map_err(err)?;
+            if let Some(name) = current.display_name {
+                body["displayName"] = json!(name);
+            }
+        }
         let changed = self
             .graph
-            .update_contact(resource, &body_of(fields))
+            .update_contact(resource, &body)
             .await
             .map_err(|e| self.service_error(Service::Contacts, e))?;
         Ok(person_of(&changed))

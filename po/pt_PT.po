@@ -1313,6 +1313,10 @@ msgstr "Eliminar o modelo “{name}”?"
 msgid "Add {contact} to the contacts of {account}?"
 msgstr "Adicionar {contact} aos contactos de {account}?"
 
+#: app/src/assistant/run/manage.rs:538
+msgid "this contact"
+msgstr "este contacto"
+
 #: app/src/assistant/run/manage.rs:550
 msgid "Change {contact} in the contacts of {account}?"
 msgstr "Alterar {contact} nos contactos de {account}?"
