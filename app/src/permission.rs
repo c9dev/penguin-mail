@@ -1,4 +1,4 @@
-//! The Google permissions an account grants after sign-in, and the words
+//! The permissions an account grants after sign-in, and the words
 //! the window uses to ask for one. The window and the assistant both name
 //! a permission with [`Permission`]; `crate::ui::permission` puts the
 //! question on screen, and `MainWindow::ask_permission` is the one place a
@@ -9,13 +9,14 @@
 
 use std::collections::HashSet;
 
-use mailrs_domain::AccountId;
+use mailrs_domain::{AccountId, Provider};
 use mailrs_domain::translate::{fill, gettext};
 use mailrs_gmail::SIGN_IN_SCOPES;
 use mailrs_sync::{Offers, Withheld};
 
-/// A Google permission sign-in leaves out, or one a caller can find
-/// missing. CONTEXT.md describes each.
+/// A permission sign-in leaves out, or one a caller can find missing.
+/// CONTEXT.md describes each. A Microsoft account never meets `Drive`:
+/// its consent has no such scope.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Permission {
     /// Reading and changing the account's Gmail settings.
@@ -58,6 +59,22 @@ pub struct Wording {
     pub body: String,
 }
 
+/// Who asks for the consent, as the person knows the company.
+fn company(provider: Provider) -> &'static str {
+    match provider {
+        Provider::Microsoft => "Microsoft",
+        Provider::Gmail | Provider::Imap => "Google",
+    }
+}
+
+/// Whose settings the settings permission changes.
+fn settings_of(provider: Provider) -> &'static str {
+    match provider {
+        Provider::Microsoft => "Outlook",
+        Provider::Gmail | Provider::Imap => "Gmail",
+    }
+}
+
 impl Permission {
     #[cfg(test)]
     pub const ALL: [Permission; 7] = [
@@ -75,7 +92,7 @@ impl Permission {
     /// reads English, so this is not translated.
     pub fn purpose(self) -> &'static str {
         match self {
-            Permission::Settings => "change Gmail settings",
+            Permission::Settings => "change the account's mail settings",
             Permission::Delete => "delete mail for good",
             Permission::Contacts => "read contacts",
             Permission::ChangeContacts => "add and change contacts",
@@ -88,26 +105,29 @@ impl Permission {
     /// The question the window asks `account` on this occasion. Only the
     /// calendar has an offer of its own; the others ask the same way on
     /// either occasion.
-    pub fn wording(self, occasion: Occasion, account: &str) -> Wording {
+    pub fn wording(self, occasion: Occasion, account: &str, provider: Provider) -> Wording {
         let (heading, body) = match (self, occasion) {
             (Permission::Settings, _) => (
-                gettext("Allow Changes to Gmail Settings"),
+                fill(
+                    &gettext("Allow Changes to {service} Settings"),
+                    &[("service", settings_of(provider))],
+                ),
                 gettext(
-                    "Penguin Mail needs permission to change Gmail settings for {account}. \
-                     Google asks you to confirm in your browser.",
+                    "Penguin Mail needs permission to change {service} settings for {account}. \
+                     {company} asks you to confirm in your browser.",
                 ),
             ),
             (Permission::Delete, _) => (
                 gettext("Allow Penguin Mail to Delete Mail"),
                 gettext(
                     "Deleting mail for good needs one more permission for {account}. \
-                     Google asks you to confirm in your browser.",
+                     {company} asks you to confirm in your browser.",
                 ),
             ),
             (Permission::Contacts, _) => (
                 gettext("Allow Penguin Mail to Read Your Contacts"),
                 gettext(
-                    "Reading the contacts of {account} needs one more permission. Google \
+                    "Reading the contacts of {account} needs one more permission. {company} \
                      asks you to confirm in your browser. Names and photos stay on this \
                      computer.",
                 ),
@@ -116,14 +136,14 @@ impl Permission {
                 gettext("Allow Penguin Mail to Change Your Contacts"),
                 gettext(
                     "The assistant needs permission to add and change the contacts of \
-                     {account}. Google asks you to confirm in your browser.",
+                     {account}. {company} asks you to confirm in your browser.",
                 ),
             ),
             (Permission::Calendar, Occasion::Needed) => (
                 gettext("Allow Penguin Mail to Use Your Calendar"),
                 gettext(
                     "The assistant needs permission to read and change events on the \
-                     calendar for {account}. Google asks you to confirm in your browser.",
+                     calendar for {account}. {company} asks you to confirm in your browser.",
                 ),
             ),
             (Permission::Calendar, Occasion::Offer) => (
@@ -131,14 +151,14 @@ impl Permission {
                 gettext(
                     "Your reply went to the organizer as mail. With permission to change \
                      events on the calendar for {account}, the meeting is marked on your \
-                     own calendar too. Google asks you to confirm in your browser.",
+                     own calendar too. {company} asks you to confirm in your browser.",
                 ),
             ),
             (Permission::ManageCalendars, _) => (
                 gettext("Allow Penguin Mail to Manage Your Calendars"),
                 gettext(
                     "Making, renaming and deleting calendars, and subscribing to one, needs \
-                     one more permission for {account}. Google asks you to confirm in your \
+                     one more permission for {account}. {company} asks you to confirm in your \
                      browser.",
                 ),
             ),
@@ -153,7 +173,14 @@ impl Permission {
         };
         Wording {
             heading,
-            body: fill(&body, &[("account", account)]),
+            body: fill(
+                &body,
+                &[
+                    ("account", account),
+                    ("company", company(provider)),
+                    ("service", settings_of(provider)),
+                ],
+            ),
         }
     }
 }
@@ -204,9 +231,12 @@ pub fn withheld_permissions(withheld: Withheld) -> Vec<Permission> {
 impl Permission {
     /// What the permission lets Penguin Mail do, in words that finish
     /// "has not allowed Penguin Mail to".
-    fn allows(self) -> String {
+    fn allows(self, provider: Provider) -> String {
         match self {
-            Permission::Settings => gettext("change Gmail settings"),
+            Permission::Settings => fill(
+                &gettext("change {service} settings"),
+                &[("service", settings_of(provider))],
+            ),
             Permission::Delete => gettext("delete mail for good"),
             Permission::Contacts => gettext("read contacts"),
             Permission::ChangeContacts => gettext("add and change contacts"),
@@ -220,8 +250,15 @@ impl Permission {
 impl Permission {
     /// The row Add Account shows for this permission when the sign-in
     /// left it out: what stays off, and what that covers.
-    pub fn feature(self) -> (String, String) {
+    pub fn feature(self, provider: Provider) -> (String, String) {
         let (title, covers) = match self {
+            Permission::Settings if provider == Provider::Microsoft => (
+                fill(
+                    &gettext("Change {service} settings"),
+                    &[("service", settings_of(provider))],
+                ),
+                gettext("Rules and automatic reply"),
+            ),
             Permission::Settings => (
                 gettext("Change Gmail settings"),
                 gettext("Rules, automatic reply, send-as addresses"),
@@ -270,8 +307,8 @@ impl Permission {
 
 /// What an account's Grant Access bar says: the account and each
 /// feature its consent left out.
-pub fn grant_bar_title(account: &str, missing: &[Permission]) -> String {
-    let allows: Vec<String> = missing.iter().map(|p| p.allows()).collect();
+pub fn grant_bar_title(account: &str, missing: &[Permission], provider: Provider) -> String {
+    let allows: Vec<String> = missing.iter().map(|p| p.allows(provider)).collect();
     let allows: Vec<&str> = allows.iter().map(String::as_str).collect();
     fill(
         &gettext("{account} has not allowed Penguin Mail to {missing}"),
@@ -281,7 +318,7 @@ pub fn grant_bar_title(account: &str, missing: &[Permission]) -> String {
 
 /// Whether the account's Grant Access banner shows: something is
 /// withheld, and `asked` (the account's `asked_scopes` row) does not
-/// already cover every [`SIGN_IN_SCOPES`] entry. An account asked for
+/// already cover every scope of either provider's sign-in. An account asked for
 /// everything and unticked a box gets no banner; the feature it lacks
 /// says so where it lives instead.
 pub fn wants_banner(withheld: Withheld, asked: Option<&str>) -> bool {
@@ -291,8 +328,10 @@ pub fn wants_banner(withheld: Withheld, asked: Option<&str>) -> bool {
     let Some(asked) = asked else {
         return true;
     };
-    let asked: HashSet<&str> = asked.split_whitespace().collect();
-    !SIGN_IN_SCOPES.iter().all(|scope| asked.contains(scope))
+    let asked: HashSet<String> = asked.split_whitespace().map(str::to_ascii_lowercase).collect();
+    // Microsoft names its scopes in mixed case and may answer in another.
+    let covers = |scopes: &[&str]| scopes.iter().all(|s| asked.contains(&s.to_ascii_lowercase()));
+    !(covers(&SIGN_IN_SCOPES) || covers(&mailrs_graph::SCOPES))
 }
 
 /// Whether an invitation's card offers Grant Access: the account has a
@@ -313,21 +352,21 @@ mod tests {
     #[test]
     fn add_account_names_each_feature_left_off_in_the_mockups_words() {
         assert_eq!(
-            Permission::Settings.feature(),
+            Permission::Settings.feature(Provider::Gmail),
             (
                 "Change Gmail settings".to_string(),
                 "Rules, automatic reply, send-as addresses".to_string()
             )
         );
         assert_eq!(
-            Permission::ManageCalendars.feature(),
+            Permission::ManageCalendars.feature(Provider::Gmail),
             (
                 "Manage calendars".to_string(),
                 "New calendars, colors, subscriptions".to_string()
             )
         );
         for permission in Permission::ALL {
-            assert!(!permission.feature().1.is_empty(), "{permission:?}");
+            assert!(!permission.feature(Provider::Gmail).1.is_empty(), "{permission:?}");
             assert!(permission.feature_icon().ends_with("-symbolic"));
         }
     }
@@ -337,7 +376,8 @@ mod tests {
         assert_eq!(
             grant_bar_title(
                 "d.reyes@uni.example",
-                &[Permission::Settings, Permission::Delete, Permission::Calendar]
+                &[Permission::Settings, Permission::Delete, Permission::Calendar],
+                Provider::Gmail
             ),
             "d.reyes@uni.example has not allowed Penguin Mail to change Gmail settings, \
              delete mail for good and use the calendar"
@@ -347,7 +387,7 @@ mod tests {
     #[test]
     fn the_grant_bar_names_one_missing_feature_alone() {
         assert_eq!(
-            grant_bar_title("a@example.com", &[Permission::Contacts]),
+            grant_bar_title("a@example.com", &[Permission::Contacts], Provider::Gmail),
             "a@example.com has not allowed Penguin Mail to read contacts"
         );
     }
@@ -357,7 +397,7 @@ mod tests {
         for permission in Permission::ALL {
             assert!(!permission.purpose().is_empty(), "{permission:?}");
             for occasion in OCCASIONS {
-                let words = permission.wording(occasion, "ana@example.com");
+                let words = permission.wording(occasion, "ana@example.com", Provider::Gmail);
                 assert!(!words.heading.is_empty(), "{permission:?}");
                 assert!(
                     words.body.contains("ana@example.com"),
@@ -371,11 +411,54 @@ mod tests {
 
     #[test]
     fn the_calendar_offer_explains_the_reply_already_went() {
-        let offer = Permission::Calendar.wording(Occasion::Offer, "a@example.com");
-        let needed = Permission::Calendar.wording(Occasion::Needed, "a@example.com");
+        let offer = Permission::Calendar.wording(Occasion::Offer, "a@example.com", Provider::Gmail);
+        let needed = Permission::Calendar.wording(Occasion::Needed, "a@example.com", Provider::Gmail);
         assert_eq!(offer.heading, needed.heading);
         assert!(offer.body.starts_with("Your reply went to the organizer"));
         assert!(needed.body.starts_with("The assistant needs permission"));
+    }
+
+    #[test]
+    fn a_microsoft_account_hears_of_microsoft_and_outlook() {
+        let words = Permission::Settings.wording(Occasion::Needed, "d@outlook.com", Provider::Microsoft);
+        assert!(words.body.contains("Microsoft asks you to confirm"), "{}", words.body);
+        assert!(words.body.contains("Outlook settings"));
+        assert!(!words.body.contains("Google") && !words.body.contains("Gmail"));
+        let google = Permission::Settings.wording(Occasion::Needed, "d@gmail.com", Provider::Gmail);
+        assert!(google.body.contains("Google asks you to confirm") && google.body.contains("Gmail settings"));
+        assert_eq!(
+            grant_bar_title(
+                "d@outlook.com",
+                &[Permission::Settings, Permission::Calendar],
+                Provider::Microsoft
+            ),
+            "d@outlook.com has not allowed Penguin Mail to change Outlook settings and use the calendar"
+        );
+    }
+
+    #[test]
+    fn no_word_a_microsoft_account_reads_names_google_or_gmail() {
+        // Drive is Google's alone: Microsoft never asks for it.
+        for permission in Permission::ALL.into_iter().filter(|p| *p != Permission::Drive) {
+            let (title, covers) = permission.feature(Provider::Microsoft);
+            let mut said = vec![title, covers];
+            for occasion in OCCASIONS {
+                let words = permission.wording(occasion, "d@outlook.com", Provider::Microsoft);
+                said.extend([words.heading, words.body]);
+            }
+            said.push(grant_bar_title("d@outlook.com", &[permission], Provider::Microsoft));
+            for text in said {
+                assert!(!text.contains("Google") && !text.contains("Gmail"), "{permission:?}: {text}");
+            }
+        }
+        assert!(!Permission::Settings.purpose().contains("Gmail"));
+    }
+
+    #[test]
+    fn a_microsoft_consent_that_asked_for_everything_shows_no_banner() {
+        let withheld = Withheld { calendar: true, ..Withheld::NONE };
+        assert!(!wants_banner(withheld, Some(&mailrs_graph::SCOPES.join(" "))));
+        assert!(wants_banner(withheld, Some("openid Mail.ReadWrite")));
     }
 
     #[test]
@@ -472,7 +555,7 @@ mod tests {
         assert!(wants_banner(withheld, consent.asked.as_deref()));
         assert_eq!(withheld_permissions(withheld), [Permission::ManageCalendars, Permission::Drive]);
         assert_eq!(
-            grant_bar_title("ana@example.com", &withheld_permissions(withheld)),
+            grant_bar_title("ana@example.com", &withheld_permissions(withheld), Provider::Gmail),
             "ana@example.com has not allowed Penguin Mail to manage calendars and add files to Google Drive"
         );
     }
@@ -508,7 +591,7 @@ mod tests {
 
     #[test]
     fn asking_for_drive_says_what_it_reaches() {
-        let wording = Permission::Drive.wording(Occasion::Needed, "ana@example.com");
+        let wording = Permission::Drive.wording(Occasion::Needed, "ana@example.com", Provider::Gmail);
         assert_eq!(wording.heading, "Allow Penguin Mail to Add Files to Google Drive");
         assert_eq!(
             wording.body,

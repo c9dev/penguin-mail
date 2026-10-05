@@ -317,6 +317,7 @@ impl Rules {
             &gettext("Allow Rules"),
             Permission::Settings,
             &self.account.email,
+            self.account.provider,
             move || {
                 if let Some(rules) = weak.upgrade() {
                     rules.dialog.close();

@@ -2562,17 +2562,28 @@ impl Dialog {
                 &gettext("{account} is added"),
                 &[("account", &account.email)],
             ));
-            page.lede.set_text(&fill_plural(
-                "Mail is downloading. You left one box unticked on Google's page, so this feature stays off:",
-                "Mail is downloading. You left {count} boxes unticked on Google's page, so these features stay off:",
-                missing.len(),
-                &[("count", &add_account::small_number(missing.len()))],
-            ));
+            let spoken = add_account::small_number(missing.len());
+            let count = [("count", spoken.as_str())];
+            page.lede.set_text(&if account.provider == mailrs_domain::Provider::Microsoft {
+                fill_plural(
+                    "Mail is downloading. You left one box unticked on Microsoft's page, so this feature stays off:",
+                    "Mail is downloading. You left {count} boxes unticked on Microsoft's page, so these features stay off:",
+                    missing.len(),
+                    &count,
+                )
+            } else {
+                fill_plural(
+                    "Mail is downloading. You left one box unticked on Google's page, so this feature stays off:",
+                    "Mail is downloading. You left {count} boxes unticked on Google's page, so these features stay off:",
+                    missing.len(),
+                    &count,
+                )
+            });
             while let Some(child) = page.withheld.first_child() {
                 page.withheld.remove(&child);
             }
             for permission in missing {
-                let (title, covers) = permission.feature();
+                let (title, covers) = permission.feature(account.provider);
                 page.withheld
                     .append(&icon_row(permission.feature_icon(), &title, &covers, false));
             }

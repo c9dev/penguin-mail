@@ -710,7 +710,7 @@ async fn gmail_settings_ask_for_the_permission_instead_of_failing() {
     assert_eq!(
         answer,
         Err(format!(
-            "Penguin Mail needs permission to change Gmail settings for {ME}. \
+            "Penguin Mail needs permission to change the account's mail settings for {ME}. \
              The user was asked to grant it; try again once they have."
         ))
     );
@@ -915,6 +915,21 @@ fn the_categorize_question_names_the_accounts_provider() {
         format!(
             "Move mail from The Kite Shop to Social in {ME}, and add a Gmail rule for their future mail?"
         )
+    );
+}
+
+#[test]
+fn the_categorize_question_for_a_microsoft_account_makes_no_mention_of_a_rule() {
+    let account = mailrs_domain::Account {
+        id: 1,
+        email: "dana@outlook.com".into(),
+        state: mailrs_domain::AccountState::Ok,
+        provider: mailrs_domain::Provider::Microsoft,
+        provider_name: Some("Outlook".into()),
+    };
+    assert_eq!(
+        super::categorize_question("The Kite Shop", "Other", &account),
+        "Move mail from The Kite Shop to Other in dana@outlook.com, and send their future mail there too?"
     );
 }
 

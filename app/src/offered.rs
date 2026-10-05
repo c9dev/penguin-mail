@@ -407,7 +407,20 @@ pub fn reason(account: &Account, missing: Missing) -> String {
         // IMAP carries mail; a calendar and contacts come from CalDAV and
         // CardDAV servers the app looks for, and Preferences says where
         // it looked. Rules always have a place, on the server or here.
-        // Part 4 adds the Microsoft arms beside these.
+        // A Microsoft account offers every service; one it lacks is one
+        // its organization refused (`Refused`).
+        (Provider::Microsoft, Missing::Calendar) => {
+            gettext("Your organization does not allow Penguin Mail to use this calendar.")
+        }
+        (Provider::Microsoft, Missing::Contacts) => {
+            gettext("Your organization does not allow Penguin Mail to read these contacts.")
+        }
+        (Provider::Microsoft, Missing::Rules) => {
+            gettext("Your organization does not allow Penguin Mail to change these rules.")
+        }
+        (Provider::Microsoft, Missing::AutoReply) => {
+            gettext("Your organization does not allow Penguin Mail to change the automatic reply.")
+        }
         (Provider::Imap, Missing::Calendar) => {
             gettext("Penguin Mail found no calendar server for {provider}.")
         }
@@ -544,6 +557,31 @@ mod tests {
         assert_eq!(
             reason(&fastmail(), Missing::Contacts),
             "Penguin Mail found no contacts server for Fastmail."
+        );
+    }
+
+    #[test]
+    fn a_refusal_on_a_microsoft_account_names_the_organization() {
+        let account = Account {
+            provider: Provider::Microsoft,
+            provider_name: Some("Microsoft 365".into()),
+            ..gmail()
+        };
+        assert_eq!(
+            reason(&account, Missing::Calendar),
+            "Your organization does not allow Penguin Mail to use this calendar."
+        );
+        assert_eq!(
+            reason(&account, Missing::Contacts),
+            "Your organization does not allow Penguin Mail to read these contacts."
+        );
+        assert_eq!(
+            reason(&account, Missing::Rules),
+            "Your organization does not allow Penguin Mail to change these rules."
+        );
+        assert_eq!(
+            reason(&account, Missing::AutoReply),
+            "Your organization does not allow Penguin Mail to change the automatic reply."
         );
     }
 

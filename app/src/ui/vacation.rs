@@ -7,7 +7,7 @@ use std::sync::Arc;
 
 use adw::prelude::*;
 use gtk::glib;
-use mailrs_domain::Account;
+use mailrs_domain::{Account, Provider};
 use mailrs_sync::{AutomaticReply, Permitted};
 
 use crate::core::Core;
@@ -74,7 +74,7 @@ pub fn present(
     }
     let (core, email, account_id) = (Rc::clone(core), account.email.clone(), account.id);
     // Sieve's vacation has no way to say it (RFC 5230); Gmail's reply does.
-    let can_limit_to_contacts = account.provider != mailrs_domain::Provider::Imap;
+    let provider = account.provider;
     let settings = core.gmail_settings();
     glib::spawn_future_local(async move {
         let loaded = {
@@ -90,6 +90,7 @@ pub fn present(
                     &gettext("Allow Automatic Replies"),
                     Permission::Settings,
                     &email,
+                    provider,
                     move || {
                         closer.close();
                         grant();
@@ -105,7 +106,7 @@ pub fn present(
                 return;
             }
         };
-        let form = Form::new(&reply, can_limit_to_contacts);
+        let form = Form::new(&reply, provider);
         stack.add_named(&form.page, Some("form"));
         stack.set_visible_child_name("form");
         save.set_sensitive(true);
@@ -160,6 +161,18 @@ fn problem(message: &str) -> adw::StatusPage {
         .build()
 }
 
+/// Whether the account's automatic reply has a subject of its own.
+/// Microsoft's keeps only the message.
+fn keeps_subject(provider: Provider) -> bool {
+    provider != Provider::Microsoft
+}
+
+/// The subject a save sends: what was typed when the row shows, and what
+/// the reply already held when it does not, so a hidden row never blanks it.
+fn subject_to_save(shown: bool, typed: &str, kept: &str) -> String {
+    if shown { typed.to_string() } else { kept.to_string() }
+}
+
 struct Form {
     page: adw::PreferencesPage,
     enabled: adw::SwitchRow,
@@ -167,19 +180,28 @@ struct Form {
     first: DateButton,
     last: DateButton,
     subject: adw::EntryRow,
+    /// Whether the subject row shows, and so whether its text is saved.
+    keeps_subject: bool,
     body: gtk::TextView,
     contacts_only: adw::SwitchRow,
 }
 
 impl Form {
-    fn new(reply: &AutomaticReply, can_limit_to_contacts: bool) -> Rc<Form> {
+    fn new(reply: &AutomaticReply, provider: Provider) -> Rc<Form> {
+        let can_limit_to_contacts = provider != Provider::Imap;
+        let keeps_subject = keeps_subject(provider);
         let page = adw::PreferencesPage::new();
 
         let enabled = adw::SwitchRow::builder()
             .title(gettext("Send Automatic Replies"))
-            .subtitle(gettext(
-                "Gmail answers new mail while you are away, even when this computer is off",
-            ))
+            .subtitle(match provider {
+                Provider::Microsoft => gettext(
+                    "Outlook answers new mail while you are away, even when this computer is off",
+                ),
+                _ => gettext(
+                    "Gmail answers new mail while you are away, even when this computer is off",
+                ),
+            })
             .active(reply.enabled)
             .build();
         let top = adw::PreferencesGroup::new();
@@ -234,7 +256,14 @@ impl Form {
         let message = adw::PreferencesGroup::builder()
             .title(gettext("Message"))
             .build();
-        message.add(&subject);
+        // Outlook keeps a reply's text but not its subject.
+        if keeps_subject {
+            message.add(&subject);
+        } else {
+            message.set_description(Some(&gettext(
+                "The same reply goes to people inside and outside your organization.",
+            )));
+        }
         message.add(&frame);
         page.add(&message);
 
@@ -266,6 +295,7 @@ impl Form {
             first,
             last,
             subject,
+            keeps_subject,
             body,
             contacts_only,
         })
@@ -279,7 +309,7 @@ impl Form {
         let last = midnight(&self.last.date()).max(first);
         AutomaticReply {
             enabled: self.enabled.is_active(),
-            subject: self.subject.text().trim().to_string(),
+            subject: subject_to_save(self.keeps_subject, self.subject.text().trim(), &base.subject),
             body: buffer
                 .text(&buffer.start_iter(), &buffer.end_iter(), false)
                 .trim_end()
@@ -352,4 +382,22 @@ fn midnight(day: &glib::DateTime) -> i64 {
     glib::DateTime::from_local(year, month, date, 0, 0, 0.0)
         .map(|d| d.to_unix() * 1000)
         .unwrap_or_default()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn only_a_microsoft_reply_has_no_subject_row() {
+        assert!(keeps_subject(Provider::Gmail));
+        assert!(keeps_subject(Provider::Imap));
+        assert!(!keeps_subject(Provider::Microsoft));
+    }
+
+    #[test]
+    fn a_hidden_subject_row_leaves_the_subject_as_it_was() {
+        assert_eq!(subject_to_save(false, "", "Away"), "Away");
+        assert_eq!(subject_to_save(true, "Back soon", "Away"), "Back soon");
+    }
 }
