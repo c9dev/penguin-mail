@@ -83,10 +83,11 @@ parts:
       # The release workflow fills these from GitHub's secrets before it
       # builds, since the snap builds in its own container and cannot
       # read them. A build from this recipe as it stands keeps them empty
-      # and says it cannot sign in to Google, where a stand-in value
+      # and says it cannot sign in to Google or Microsoft, where a stand-in value
       # would send people to a sign-in Google refuses.
       - PENGUIN_MAIL_GOOGLE_CLIENT_ID: ""
       - PENGUIN_MAIL_GOOGLE_CLIENT_SECRET: ""
+      - PENGUIN_MAIL_MICROSOFT_CLIENT_ID: ""
     build-packages:
       - ca-certificates
       - curl

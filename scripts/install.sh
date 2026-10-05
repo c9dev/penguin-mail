@@ -9,7 +9,8 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 # The project's Google and Microsoft clients, for the owner's own builds.
-# The file is gitignored; without it the build cannot add Google accounts.
+# The file is gitignored; without it the build cannot add Google or
+# Microsoft accounts.
 if [ -f packaging/secrets.env ]; then
     set -a
     # shellcheck source=/dev/null

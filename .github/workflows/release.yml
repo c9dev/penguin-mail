@@ -103,7 +103,7 @@ jobs:
         env:
           PENGUIN_MAIL_GOOGLE_CLIENT_ID: ${{ secrets.PENGUIN_MAIL_GOOGLE_CLIENT_ID }}
           PENGUIN_MAIL_GOOGLE_CLIENT_SECRET: ${{ secrets.PENGUIN_MAIL_GOOGLE_CLIENT_SECRET }}
-          PENGUIN_MAIL_MICROSOFT_CLIENT_ID: ${{ secrets.PENGUIN_MAIL_MICROSOFT_CLIENT_ID }}
+          PENGUIN_MAIL_MICROSOFT_CLIENT_ID: ${{ secrets.MICROSOFT_CLIENT_ID }}
         run: cargo build --release -p mailrs -p mailrs-cli
       - name: Pack
         run: |
@@ -155,7 +155,7 @@ jobs:
           EVENT: ${{ github.event_name }}
           PENGUIN_MAIL_GOOGLE_CLIENT_ID: ${{ secrets.PENGUIN_MAIL_GOOGLE_CLIENT_ID }}
           PENGUIN_MAIL_GOOGLE_CLIENT_SECRET: ${{ secrets.PENGUIN_MAIL_GOOGLE_CLIENT_SECRET }}
-          PENGUIN_MAIL_MICROSOFT_CLIENT_ID: ${{ secrets.PENGUIN_MAIL_MICROSOFT_CLIENT_ID }}
+          PENGUIN_MAIL_MICROSOFT_CLIENT_ID: ${{ secrets.MICROSOFT_CLIENT_ID }}
         run: |
           if [ -z "$APT_SIGNING_KEY" ]; then
             if [ "$EVENT" = push ]; then
@@ -219,7 +219,7 @@ jobs:
         env:
           PENGUIN_MAIL_GOOGLE_CLIENT_ID: ${{ secrets.PENGUIN_MAIL_GOOGLE_CLIENT_ID }}
           PENGUIN_MAIL_GOOGLE_CLIENT_SECRET: ${{ secrets.PENGUIN_MAIL_GOOGLE_CLIENT_SECRET }}
-          PENGUIN_MAIL_MICROSOFT_CLIENT_ID: ${{ secrets.PENGUIN_MAIL_MICROSOFT_CLIENT_ID }}
+          PENGUIN_MAIL_MICROSOFT_CLIENT_ID: ${{ secrets.MICROSOFT_CLIENT_ID }}
         run: scripts/package-arch.sh "$VERSION" dist
       # Installs the package the way a person would and starts it on a
       # virtual display, which catches a Depends the PKGBUILD forgot.
@@ -245,17 +245,18 @@ jobs:
       # not reach, so they go into the recipe it builds from. The recipe
       # in the repository keeps empty values. A run without the secrets,
       # such as one from a fork, leaves them empty, and that snap says it
-      # cannot sign in to Google.
-      - name: Put the Google client into the recipe
+      # cannot sign in to Google or Microsoft.
+      - name: Put the Google and Microsoft clients into the recipe
         env:
           PENGUIN_MAIL_GOOGLE_CLIENT_ID: ${{ secrets.PENGUIN_MAIL_GOOGLE_CLIENT_ID }}
           PENGUIN_MAIL_GOOGLE_CLIENT_SECRET: ${{ secrets.PENGUIN_MAIL_GOOGLE_CLIENT_SECRET }}
+          PENGUIN_MAIL_MICROSOFT_CLIENT_ID: ${{ secrets.MICROSOFT_CLIENT_ID }}
         run: |
           python3 - <<'PY'
           import json, os
           path = "snap/snapcraft.yaml"
           recipe = open(path).read()
-          for name in ("PENGUIN_MAIL_GOOGLE_CLIENT_ID", "PENGUIN_MAIL_GOOGLE_CLIENT_SECRET"):
+          for name in ("PENGUIN_MAIL_GOOGLE_CLIENT_ID", "PENGUIN_MAIL_GOOGLE_CLIENT_SECRET", "PENGUIN_MAIL_MICROSOFT_CLIENT_ID"):
               empty = f'{name}: ""'
               if recipe.count(empty) != 1:
                   raise SystemExit(f"snap/snapcraft.yaml has no single empty {name}")
