@@ -67,7 +67,8 @@ pub trait GraphApi: Send + Sync + 'static {
     fn create_rule(&self, rule: &MessageRule) -> impl Future<Output = Answer<MessageRule>> + Send;
     fn delete_rule(&self, id: &str) -> impl Future<Output = Answer<()>> + Send;
     fn automatic_replies(&self) -> impl Future<Output = Answer<AutomaticReplies>> + Send;
-    fn set_automatic_replies(&self, replies: &AutomaticReplies) -> impl Future<Output = Answer<()>> + Send;
+    /// Writes the reply and answers what the mailbox kept, which may differ.
+    fn set_automatic_replies(&self, replies: &AutomaticReplies) -> impl Future<Output = Answer<AutomaticReplies>> + Send;
     fn overrides(&self) -> impl Future<Output = Answer<Vec<Override>>> + Send;
     fn set_override(&self, address: &str, other: bool) -> impl Future<Output = Answer<Override>> + Send;
     fn delete_override(&self, id: &str) -> impl Future<Output = Answer<()>> + Send;
@@ -269,7 +270,7 @@ impl GraphApi for Graph {
         Graph::automatic_replies(self).await
     }
 
-    async fn set_automatic_replies(&self, replies: &AutomaticReplies) -> Answer<()> {
+    async fn set_automatic_replies(&self, replies: &AutomaticReplies) -> Answer<AutomaticReplies> {
         Graph::set_automatic_replies(self, replies).await
     }
 
