@@ -4,28 +4,24 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::process::{Command as Process, Stdio};
-use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::{Context, Result, anyhow, bail};
 use clap::{Parser, Subcommand};
 use mailrs_domain::{Account, AccountId, ChangeEvent, EpochMillis, MailSet, Provider};
-use mailrs_gmail::{
-    GMAIL_API_BASE, Granted, KeyringTokenStore, OAuthClient, SIGN_IN_SCOPES, TokenStore, authorize,
-    built_in_client,
-};
+use mailrs_gmail::{GMAIL_API_BASE, Granted, SIGN_IN_SCOPES, authorize, built_in_client};
 use mailrs_store::threads::{self, ThreadFilter};
 use mailrs_store::{Db, accounts, messages};
-use mailrs_sync::passwords::{KeyringPasswords, PasswordStore};
+use mailrs_sync::passwords::Secrets;
 use mailrs_sync::{
-    AccountServices, AccountSync, BackendError, SyncEngine, SyncError, TriageAction,
-    connect_account, connect_imap, connect_microsoft, connect_pop3, export, now_millis,
+    AccountServices, AccountSync, BackendError, Clients, Connected, Connector, Lacks, SyncEngine,
+    TriageAction, export, now_millis,
 };
 
 use mailrs_sync::config::{Config, config_path, data_dir, migrate_old_dirs, secure_dirs};
 use mailrs_sync::lock::{LockError, SyncLock};
 use mailrs_sync::mailbox::Standard;
-use mailrs_sync::sign_in::{account_client, google_signed_in};
+use mailrs_sync::sign_in::google_signed_in;
 
 /// How long `account add` waits for the browser.
 const CONSENT_TIMEOUT: Duration = Duration::from_secs(300);
@@ -172,50 +168,37 @@ fn load_config() -> Result<Config> {
     }
 }
 
-/// The client `account` signs in with, or an error that says what to do.
-/// An account left with none is marked as needing a new sign-in.
-async fn oauth_for(db: &Db, config: &Config, account: &Account) -> Result<OAuthClient> {
-    account_client(db, config, built_in_client(), account)
-        .await?
-        .ok_or_else(|| {
-            anyhow!(
-                "{} needs to sign in again: run `penguin-mail-cli account add`",
-                account.email
-            )
-        })
+/// What connecting and forgetting accounts needs: the store, the settings,
+/// the build's clients and the keyring.
+fn connector(db: &Db, config: &Config) -> Connector {
+    Connector {
+        db: db.clone(),
+        config: config.clone(),
+        clients: Clients::built_in(),
+        secrets: Secrets::keyring(),
+    }
 }
 
-fn token_store() -> Arc<dyn TokenStore> {
-    Arc::new(KeyringTokenStore::new())
-}
-
-fn passwords() -> Arc<KeyringPasswords> {
-    Arc::new(KeyringPasswords::new())
-}
-
-fn microsoft_tokens() -> Arc<KeyringPasswords> {
-    Arc::new(KeyringPasswords::microsoft())
-}
-
-/// A Microsoft account's services. Adding one stays in the app, which has
-/// a browser to hand the sign-in page to; a build with no Microsoft client
-/// cannot refresh the account's token.
-async fn connect_microsoft_account(
-    db: &Db,
-    account: &Account,
-    window_days: i64,
-) -> Result<AccountServices> {
-    let Some(client) = mailrs_graph::built_in_client() else {
-        bail!("this build has no Microsoft client, so it cannot sync this account");
-    };
-    connect_microsoft(db, microsoft_tokens(), client, account, window_days)
-        .await
-        .map_err(|err| match err {
-            SyncError::Backend(BackendError::NeedsReauth) => {
-                anyhow!("needs to sign in again in Penguin Mail")
+/// The account's services, or a line saying what the person can do about
+/// an account that needs a new sign-in. Adding a Google account works
+/// here; every other kind signs in again in the app, which has a browser
+/// or a form to hand the sign-in to.
+async fn connect(connector: &Connector, account: &Account) -> Result<AccountServices> {
+    let email = &account.email;
+    let connected = connector.connect(account).await.map_err(|err| anyhow!("{email}: {err}"))?;
+    match connected {
+        Connected::Ready(services) => Ok(services),
+        Connected::NeedsSignIn(lacks) => Err(match (account.provider, lacks) {
+            (Provider::Gmail, Lacks::Client) => {
+                anyhow!("{email} needs to sign in again: run `penguin-mail-cli account add`")
             }
-            err => err.into(),
-        })
+            (Provider::Gmail, Lacks::Secret) => anyhow!("{email}: {}", BackendError::NeedsReauth),
+            (Provider::Microsoft, Lacks::Client) => {
+                anyhow!("{email}: this build has no Microsoft client, so it cannot sync this account")
+            }
+            _ => anyhow!("{email}: needs to sign in again in Penguin Mail"),
+        }),
+    }
 }
 
 async fn add_account(db: &Db) -> Result<()> {
@@ -237,7 +220,7 @@ async fn add_account(db: &Db) -> Result<()> {
         .context("gave up waiting for the browser after five minutes")??;
     let account = google_signed_in(
         db,
-        token_store(),
+        Secrets::keyring().google,
         &authorized.email,
         &authorized.refresh_token,
         now_millis(),
@@ -273,27 +256,19 @@ async fn remove_account(db: &Db, email: &str) -> Result<()> {
     let account = find_account(db, email).await?;
     let id = account.id;
     db.write(move |c| accounts::delete_account(c, id)).await?;
-    match account.provider {
-        Provider::Gmail => {
-            let (tokens, owned) = (token_store(), email.to_string());
-            tokio::task::spawn_blocking(move || tokens.delete(&owned)).await??;
-            println!(
+    Secrets::keyring().forget(&account).await?;
+    println!(
+        "{}",
+        match account.provider {
+            Provider::Gmail => format!(
                 "Removed {email}. Revoke Google's side at https://myaccount.google.com/permissions if you want."
-            );
-        }
-        Provider::Imap | Provider::Pop3 => {
-            let passwords = passwords();
-            tokio::task::spawn_blocking(move || passwords.delete(id)).await??;
-            println!("Removed {email} and its password.");
-        }
-        Provider::Microsoft => {
-            let tokens = microsoft_tokens();
-            tokio::task::spawn_blocking(move || tokens.delete(id)).await??;
-            println!(
+            ),
+            Provider::Imap | Provider::Pop3 => format!("Removed {email} and its password."),
+            Provider::Microsoft => format!(
                 "Removed {email} and its sign-in. Revoke Microsoft's side at https://account.live.com/consent/Manage if you want."
-            );
+            ),
         }
-    }
+    );
     Ok(())
 }
 
@@ -313,43 +288,12 @@ async fn run_sync(db: &Db, dir: &Path, config: &Config) -> Result<()> {
     if all.is_empty() {
         bail!("no accounts; run `penguin-mail-cli account add` first");
     }
-    let engine_config = config.engine_config();
-    let window_days = engine_config.window_days;
-    let (engine, events) = SyncEngine::new(db.clone(), engine_config);
-    let (tokens, passwords) = (token_store(), passwords());
+    let (engine, events) = SyncEngine::new(db.clone(), config.engine_config());
+    let connector = connector(db, config);
     for account in &all {
-        let connected = match account.provider {
-            Provider::Gmail => match oauth_for(db, config, account).await {
-                Ok(oauth) => connect_account(oauth, Arc::clone(&tokens), account, db)
-                    .await
-                    .map(AccountServices::google)
-                    .map_err(anyhow::Error::from),
-                Err(err) => {
-                    eprintln!("{err}");
-                    continue;
-                }
-            },
-            Provider::Imap => connect_imap(db, Arc::clone(&passwords), account, window_days)
-                .await
-                .map_err(|err| match err {
-                    SyncError::Backend(BackendError::NeedsReauth) => {
-                        anyhow!("needs to sign in again in Penguin Mail")
-                    }
-                    err => err.into(),
-                }),
-            Provider::Microsoft => connect_microsoft_account(db, account, window_days).await,
-            Provider::Pop3 => connect_pop3(db, Arc::clone(&passwords), account)
-                .await
-                .map_err(|err| match err {
-                    SyncError::Backend(BackendError::NeedsReauth) => {
-                        anyhow!("needs to sign in again in Penguin Mail")
-                    }
-                    err => err.into(),
-                }),
-        };
-        match connected {
+        match connect(&connector, account).await {
             Ok(services) => engine.start_account(account.id, services),
-            Err(err) => eprintln!("{}: {err}", account.email),
+            Err(err) => eprintln!("{err}"),
         }
     }
     let emails: HashMap<AccountId, String> = all.iter().map(|a| (a.id, a.email.clone())).collect();
@@ -652,15 +596,7 @@ async fn triage(
 async fn account_sync(db: &Db, config: &Config, email: &str) -> Result<AccountSync> {
     let account = find_account(db, email).await?;
     let engine = config.engine_config();
-    let services = match account.provider {
-        Provider::Gmail => {
-            let oauth = oauth_for(db, config, &account).await?;
-            AccountServices::google(connect_account(oauth, token_store(), &account, db).await?)
-        }
-        Provider::Imap => connect_imap(db, passwords(), &account, engine.window_days).await?,
-        Provider::Microsoft => connect_microsoft_account(db, &account, engine.window_days).await?,
-        Provider::Pop3 => connect_pop3(db, passwords(), &account).await?,
-    };
+    let services = connect(&connector(db, config), &account).await?;
     let (events, _) = async_channel::unbounded();
     Ok(
         AccountSync::new(account.id, services, db.clone(), events)

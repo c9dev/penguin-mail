@@ -15,6 +15,7 @@ use mailrs_domain::{
     Provider, RemoveSetting,
     Role, Target, ThreadSummary,
 };
+use mailrs_sync::sign_in::{Browser, Wanted};
 use mailrs_sync::{
     History, Listing, Loaded, MailAction, MovedFrom, Offers, Permitted, Scope, TriageAction, View,
     Withheld,
@@ -333,6 +334,23 @@ fn vip_message(added: bool, who: &str) -> String {
 /// What a mailbox that would not load says.
 fn load_failed(err: &impl std::fmt::Display) -> String {
     with_reason(&gettext("Could not load mail: {reason}"), err, &[])
+}
+
+/// What the window says once `browser`'s sign-in comes back. Google's
+/// consent adds the account or finds the one already here, and says
+/// "Added" either way; Microsoft's runs from here only for an account
+/// already added.
+fn signed_in_toast(browser: Browser, account: &Account) -> String {
+    match browser {
+        Browser::Google => fill(
+            &gettext("Added {account}. Downloading mail…"),
+            &[("account", &account.email)],
+        ),
+        Browser::Microsoft => fill(
+            &gettext("{account} is signed in again."),
+            &[("account", &account.email)],
+        ),
+    }
 }
 
 /// Where release builds, which carry the Google client, are published.
@@ -1990,16 +2008,18 @@ impl MainWindow {
     /// Mail uses, so this is the one path a permission or the banner
     /// needs. An IMAP or POP3 account has no consent to run.
     fn grant(self: &Rc<Self>, email: String) {
-        let provider = self
+        let account = self
             .accounts()
             .into_iter()
-            .find(|account| account.email.eq_ignore_ascii_case(&email))
-            .map(|account| account.provider);
-        match provider {
-            Some(Provider::Microsoft) => self.authorize_microsoft(email),
-            Some(Provider::Imap | Provider::Pop3) => {}
+            .find(|account| account.email.eq_ignore_ascii_case(&email));
+        match account {
+            Some(account) => {
+                if let Some(browser) = Browser::of(account.provider) {
+                    self.sign_in_in_browser(browser, Some(email));
+                }
+            }
             // An address no account has yet goes to Google, as before.
-            Some(Provider::Gmail) | None => self.authorize_with(Some(email)),
+            None => self.sign_in_in_browser(Browser::Google, Some(email)),
         }
     }
 
@@ -2685,8 +2705,9 @@ impl MainWindow {
 
     // ---- Accounts ----------------------------------------------------------
 
+    /// Adds a Google account, or signs in again the one at `expected`.
     fn authorize(self: &Rc<Self>, expected: Option<String>) {
-        self.authorize_with(expected);
+        self.sign_in_in_browser(Browser::Google, expected);
     }
 
     /// Asks which kind of account to add, then adds it.
@@ -2727,13 +2748,13 @@ impl MainWindow {
         });
     }
 
-    /// Signs `account` in again the way it signed in first: Google's
-    /// browser flow, or step 2 of Another Provider with its servers.
+    /// Signs `account` in again the way it signed in first: its
+    /// provider's page in the browser, or step 2 of Another Provider with
+    /// its servers.
     fn sign_in_again(self: &Rc<Self>, account: Account) {
-        match account.provider {
-            Provider::Gmail => self.authorize(Some(account.email)),
-            Provider::Imap | Provider::Pop3 => self.present_add_account(Opening::Again(account)),
-            Provider::Microsoft => self.authorize_microsoft(account.email),
+        match Browser::of(account.provider) {
+            Some(browser) => self.sign_in_in_browser(browser, Some(account.email)),
+            None => self.present_add_account(Opening::Again(account)),
         }
     }
 
@@ -2792,13 +2813,20 @@ impl MainWindow {
         });
     }
 
-    /// Runs the consent flow, asking Google for every scope Penguin Mail
-    /// uses in one visit.
-    fn authorize_with(self: &Rc<Self>, expected: Option<String>) {
-        // Without the build's Google client the browser would open for
-        // nothing, so say why at once. The demo goes on to its own message.
-        if !self.core.demo && !self.core.built_with_google_sign_in() {
-            return self.no_google_sign_in();
+    /// Runs `browser`'s sign-in for Sign In Again, Grant Access and the
+    /// banner. With `address`, a sign-in that comes back as another
+    /// address is refused. Add Account runs its own sign-in inside the
+    /// dialog.
+    fn sign_in_in_browser(self: &Rc<Self>, browser: Browser, address: Option<String>) {
+        // Without the build's client the browser would open for nothing,
+        // so say why at once. The demo goes on to its own message.
+        if !self.core.demo && !self.core.built_with_sign_in(browser) {
+            return match browser {
+                Browser::Google => self.no_google_sign_in(),
+                Browser::Microsoft => self.no_sign_in(&gettext(
+                    "This copy of Penguin Mail was built without Microsoft sign-in.",
+                )),
+            };
         }
         if self.authorizing.replace(true) {
             return;
@@ -2814,62 +2842,14 @@ impl MainWindow {
         // The wait runs until the browser comes back or gives up; nothing
         // here cancels it, so the sender lives as long as the run.
         let (keep, cancel) = async_channel::bounded::<()>(1);
+        let wanted = address.map_or(Wanted::Anyone, Wanted::Only);
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
-            let signed = this.core.authorize_account(urls, expected, cancel).await;
-            drop(keep);
-            match signed {
-                Ok(account) => {
-                    this.toast(&fill(
-                        &gettext("Added {account}. Downloading mail…"),
-                        &[("account", &account.email)],
-                    ));
-                    if let Some(app) = this.app.upgrade() {
-                        app.signed_in(&account);
-                    }
-                    this.refresh_accounts(Reload::Yes);
-                }
-                Err(err) => this.toast(&err.to_string()),
-            }
-            this.authorizing.set(false);
-        });
-    }
-
-    /// Runs Microsoft's sign-in in the browser for the account at `email`,
-    /// for Sign In Again and Grant Access. A sign-in that comes back as
-    /// another address is refused. Add Account runs its own sign-in
-    /// inside the dialog.
-    fn authorize_microsoft(self: &Rc<Self>, email: String) {
-        if !self.core.demo && !self.core.built_with_microsoft_sign_in() {
-            return self.no_sign_in(&gettext(
-                "This copy of Penguin Mail was built without Microsoft sign-in.",
-            ));
-        }
-        if self.authorizing.replace(true) {
-            return;
-        }
-        let (urls, opened) = async_channel::unbounded::<String>();
-        let window = self.window.clone();
-        glib::spawn_future_local(async move {
-            while let Ok(url) = opened.recv().await {
-                gtk::UriLauncher::new(&url).launch(Some(&window), gio::Cancellable::NONE, |_| {});
-            }
-        });
-        self.toast(&gettext("Continue in your browser"));
-        let (keep, cancel) = async_channel::bounded::<()>(1);
-        let this = Rc::clone(self);
-        glib::spawn_future_local(async move {
-            let signed = this
-                .core
-                .authorize_microsoft(urls, Some(email), true, cancel)
-                .await;
+            let signed = this.core.sign_in_in_browser(browser, urls, wanted, cancel).await;
             drop(keep);
             match signed {
                 Ok((account, _)) => {
-                    this.toast(&fill(
-                        &gettext("{account} is signed in again."),
-                        &[("account", &account.email)],
-                    ));
+                    this.toast(&signed_in_toast(browser, &account));
                     if let Some(app) = this.app.upgrade() {
                         app.signed_in(&account);
                     }
