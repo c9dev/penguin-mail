@@ -88,11 +88,14 @@ impl About {
         // WAL mode: while the app runs, a copy of this file alone can miss
         // the newest mail, so the line says to quit first.
         if !kept_here.is_empty() {
+            // A path breaks only after a "/": broken anywhere, "mailrs."
+            // and "db" landed on two lines and read as two names.
             let path = gtk::Label::builder()
-                .label(store.display().to_string())
+                .label(path_markup(&store.display().to_string()))
+                .use_markup(true)
                 .selectable(true)
                 .wrap(true)
-                .wrap_mode(gtk::pango::WrapMode::Char)
+                .wrap_mode(gtk::pango::WrapMode::Word)
                 .justify(gtk::Justification::Center)
                 .margin_top(12)
                 .build();
@@ -307,5 +310,54 @@ impl About {
             }
             None => self.status.set_visible(false),
         }
+    }
+}
+
+/// `path` as Pango markup that lets a line break only after a "/". Each
+/// name between separators goes in a span that forbids breaks inside
+/// it, so "mailrs.db" or "penguin-mail" never splits, and the label's
+/// text, the one a selection copies, stays the path itself. The
+/// separators stay outside the spans: GTK merges touching spans that
+/// forbid breaks into one, which forbade every break in the path.
+fn path_markup(path: &str) -> String {
+    path.split('/')
+        .map(|name| match name {
+            "" => String::new(),
+            name => format!(
+                "<span allow_breaks=\"false\">{}</span>",
+                gtk::glib::markup_escape_text(name)
+            ),
+        })
+        .collect::<Vec<_>>()
+        .join("/")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::path_markup;
+
+    #[test]
+    fn a_path_may_break_only_after_a_separator() {
+        assert_eq!(
+            path_markup("/tmp/penguin-mail-demo/mailrs.db"),
+            "/<span allow_breaks=\"false\">tmp</span>\
+             /<span allow_breaks=\"false\">penguin-mail-demo</span>\
+             /<span allow_breaks=\"false\">mailrs.db</span>"
+        );
+    }
+
+    #[test]
+    fn a_path_is_escaped_for_markup() {
+        assert_eq!(
+            path_markup("/home/r&d/<x>"),
+            "/<span allow_breaks=\"false\">home</span>\
+             /<span allow_breaks=\"false\">r&amp;d</span>\
+             /<span allow_breaks=\"false\">&lt;x&gt;</span>"
+        );
+    }
+
+    #[test]
+    fn a_path_keeps_every_separator_once() {
+        assert_eq!(path_markup("a//b/"), "<span allow_breaks=\"false\">a</span>//<span allow_breaks=\"false\">b</span>/");
     }
 }
