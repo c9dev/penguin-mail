@@ -51,8 +51,8 @@ fn slider(child: &impl IsA<gtk::Widget>) -> gtk::Revealer {
 }
 
 /// The switcher above an inbox's thread list. Each chip shows its icon,
-/// its name and its unread count, wrapping onto a second line when one
-/// does not hold them. Past two lines, and in the phone layout, only the
+/// its name and its unread count, wrapping onto a second and third line when
+/// one does not hold them. Past three lines, and in the phone layout, only the
 /// chosen chip keeps its name. Focused and Other are worded tabs with no
 /// icon.
 pub(super) struct CategoryBar {

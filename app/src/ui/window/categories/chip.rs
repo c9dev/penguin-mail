@@ -35,7 +35,7 @@ pub fn spoken(category: Category, unread: i64) -> String {
 pub const GAP: i32 = 6;
 
 /// The most lines the chips may take with every name showing.
-pub const MOST_LINES: usize = 2;
+pub const MOST_LINES: usize = 3;
 
 /// Which chips show their names beside their icons.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -107,10 +107,17 @@ mod tests {
     }
 
     #[test]
-    fn only_the_chosen_chip_keeps_its_name_past_two_lines() {
-        // The narrowest list beside a conversation needs three lines.
+    fn every_chip_keeps_its_name_on_three_lines() {
+        // The narrowest list beside a conversation needs three lines, as
+        // the Portuguese names do at the default width.
         assert_eq!(lines(&NAMED, 276).len(), 3);
-        assert_eq!(names_for(276, &NAMED, false, false), Names::Chosen);
+        assert_eq!(names_for(276, &NAMED, false, false), Names::Every);
+    }
+
+    #[test]
+    fn only_the_chosen_chip_keeps_its_name_past_three_lines() {
+        assert_eq!(lines(&NAMED, 230).len(), 4);
+        assert_eq!(names_for(230, &NAMED, false, false), Names::Chosen);
     }
 
     #[test]

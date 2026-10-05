@@ -465,10 +465,10 @@ toolbarview.sidebar-card.undershoot-bottom > .bottom-bar { box-shadow: none; bor
 .assistant-suggestion { padding: 6px 10px; border-radius: 10px; }
 .assistant-confirm label { font-weight: 600; }
 
-/* Inbox categories as chips that wrap onto a second line, 6 px apart
+/* Inbox categories as chips that wrap onto up to three lines, 6 px apart
    both ways (strip.rs). The chosen one is a filled accent pill; the
    others are neutral pills in the `pill` surface. Each shows its icon,
-   name and unread count; past two lines, and in the phone layout, the
+   name and unread count; past three lines, and in the phone layout, the
    others fold to icons with the count as a small accent badge riding
    the pill's top end corner. */
 .category-chips > button.category-toggle {
