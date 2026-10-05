@@ -167,6 +167,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   Ctrl+R.
 
 ### Improved
+- A message that names no font of its own reads in your desktop's interface font, the one the rest of the window uses, rather than Liberation Sans.
 - A person without a photo has one avatar colour, picked from their address, in the list, the conversation and their contact card.
 - In a window as narrow as a phone, the mail list's title shows whole: the unread line under it goes and New Message moves to a bar at the foot of the list.
 - Dates read one way across the app: "Mon, 5 Oct" in Automatic Reply and Hide My Email, with the year when it is not this year, and "Monday, 5 October 2026 at 13:36" in a message's details and on an invitation, with the time in your desktop's clock.

@@ -26,6 +26,26 @@ pub struct Theme {
     /// Whether the head offers Summarize, which asks the assistant. A
     /// change of it changes the head, so the page loads whole.
     pub summarize: bool,
+    /// The desktop's interface font family as a quoted CSS name
+    /// ([`css_family`]), or empty when it is not known. The page and every
+    /// body that names no font of its own read in it.
+    pub font: String,
+}
+
+/// The family of a GTK font name such as "Ubuntu Sans 11", quoted for
+/// CSS. Quotes, braces, semicolons, angle brackets and backslashes drop
+/// out, so a setting cannot close the string or the rule it sits in.
+pub fn css_family(gtk_font_name: &str) -> String {
+    let description = gtk::pango::FontDescription::from_string(gtk_font_name);
+    let family = description.family().map(|f| f.to_string()).unwrap_or_default();
+    let clean: String = family
+        .chars()
+        .filter(|c| !matches!(c, '"' | '\'' | '{' | '}' | ';' | '<' | '>' | '\\'))
+        .collect();
+    match clean.trim() {
+        "" => String::new(),
+        name => format!("\"{name}\""),
+    }
 }
 
 pub enum BodyState<'a> {
@@ -686,7 +706,7 @@ pub fn escape(s: &str) -> String {
 const HTML_BODY_CSS: &str = "@font-face{font-family:Helvetica;src:local(\"Liberation Sans\"),local(\"Arimo\"),local(\"Helvetica\")}\
 :host{all:initial;display:block;contain:content}\
 :host(.plain) .root{color:var(--fg)}:host(.plain) a{color:var(--accent-text)}\
-.root{font:14px/1.5 -apple-system,\"Adwaita Sans\",Cantarell,\"Segoe UI\",Roboto,Helvetica,Arial,sans-serif;\
+.root{font:14px/1.5 var(--ui-font,-apple-system),\"Adwaita Sans\",Cantarell,\"Segoe UI\",Roboto,Helvetica,Arial,sans-serif;\
 color:#1d1d20;overflow-wrap:break-word;overflow-x:auto;container-type:inline-size}\
 img{max-width:100cqw !important;height:auto !important}\
 table{max-width:100%}a{color:#1c71d8}";
@@ -735,10 +755,10 @@ fn page_css(theme: &Theme) -> String {
         )
     };
     format!(
-        ":root{{color-scheme:{scheme};--bg:{bg};--fg:{fg};--dim:{dim};--card:{card};--line:{line};--hover:{hover};--surface:{surface};--accent:{accent};--accent-text:{accent_text}}}\
+        ":root{{color-scheme:{scheme};--bg:{bg};--fg:{fg};--dim:{dim};--card:{card};--line:{line};--hover:{hover};--surface:{surface};--accent:{accent};--accent-text:{accent_text}{font}}}\
 html{{background:var(--bg)}}\
 body{{margin:0 auto;max-width:980px;padding:20px 36px 64px;color:var(--fg);\
-font:15px/1.5 \"Adwaita Sans\",Cantarell,system-ui,sans-serif;-webkit-font-smoothing:antialiased}}\
+font:15px/1.5 var(--ui-font,\"Adwaita Sans\"),Cantarell,system-ui,sans-serif;-webkit-font-smoothing:antialiased}}\
 .thread h1{{font-size:22px;line-height:1.25;font-weight:800;letter-spacing:-0.01em;margin:0}}\
 .thread .headline{{display:flex;align-items:flex-start;gap:12px}}\
 .thread .headline h1{{flex:1;min-width:0}}\
@@ -838,6 +858,12 @@ color:inherit;text-decoration:none;min-width:0}}\
         scheme = if theme.dark { "dark" } else { "light" },
         accent = theme.accent,
         accent_text = theme.accent_text,
+        // Without a font from the desktop, var(--ui-font) falls back to
+        // the stack after it.
+        font = match theme.font.is_empty() {
+            true => String::new(),
+            false => format!(";--ui-font:{}", theme.font),
+        },
     )
 }
 
@@ -942,7 +968,35 @@ mod tests {
             accent: "#3584e4".into(),
             accent_text: "#1a5fb4".into(),
             summarize: false,
+            font: String::new(),
         }
+    }
+
+    #[test]
+    fn the_desktop_font_family_comes_from_gtk_font_name() {
+        assert_eq!(css_family("Ubuntu Sans 11"), "\"Ubuntu Sans\"");
+    }
+
+    #[test]
+    fn a_font_name_cannot_break_out_of_the_stylesheet() {
+        let family = css_family("Evil\";}body{x:<y\\ 11");
+        let inside = &family[1..family.len() - 1];
+        assert!(!inside.contains(['"', '}', '{', ';', '<', '\\']), "{family}");
+    }
+
+    #[test]
+    fn the_page_puts_the_desktop_font_first() {
+        let css = page_css(&Theme {
+            font: css_family("Ubuntu Sans 11"),
+            ..theme()
+        });
+        assert!(css.contains("--ui-font:\"Ubuntu Sans\""), "{css}");
+        assert!(css.contains("font:15px/1.5 var(--ui-font,\"Adwaita Sans\")"), "{css}");
+    }
+
+    #[test]
+    fn a_mail_body_that_names_no_font_takes_the_desktop_font() {
+        assert!(HTML_BODY_CSS.contains("font:14px/1.5 var(--ui-font,-apple-system)"));
     }
 
     /// Ruling R8: a plain-text body sits on the page as the mockup draws
@@ -1788,6 +1842,7 @@ mod tests {
             accent: "#fff".into(),
             accent_text: "#fff".into(),
             summarize: false,
+            font: String::new(),
         });
         assert!(dark.contains("color-scheme:dark") && dark.contains("#1e1e21"));
     }

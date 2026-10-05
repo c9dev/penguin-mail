@@ -484,6 +484,7 @@ mod tests {
             accent: "#3584e4".to_string(),
             accent_text: "#1a5fb4".to_string(),
             summarize: false,
+            font: String::new(),
         }
     }
 

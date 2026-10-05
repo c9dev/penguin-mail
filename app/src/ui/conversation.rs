@@ -1570,6 +1570,10 @@ impl ConversationView {
                 .to_string(),
             // A conversation in its own window has no assistant beside it.
             summarize: self.summarize.get() && !self.detached.get(),
+            font: gtk::Settings::default()
+                .and_then(|settings| settings.gtk_font_name())
+                .map(|name| crate::render::css_family(&name))
+                .unwrap_or_default(),
         };
         let page = open.page(&theme);
         let background = if theme.dark {
