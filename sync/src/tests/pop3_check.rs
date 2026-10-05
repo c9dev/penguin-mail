@@ -548,6 +548,39 @@ async fn a_download_is_in_the_database_file_before_its_dele_goes_out() {
     assert_eq!(kept, 1, "the downloaded bytes were on disk when the DELE went out");
 }
 
+/// A reader on an older snapshot keeps the download in the log past the
+/// checkpoint's busy timeout, so its DELE waits for a later check. Takes
+/// that five-second timeout.
+#[tokio::test]
+async fn the_deles_wait_while_the_downloads_cannot_reach_the_database_file() {
+    let h = pop3_harness(FakePop3::default().with_message("u1", &pop3_mail(1)), RemoveSetting::Downloaded).await;
+    let reader = rusqlite::Connection::open(h.db_path()).unwrap();
+    reader.execute_batch("BEGIN").unwrap();
+    let _: i64 = reader.query_row("SELECT COUNT(*) FROM pop3_seen", [], |row| row.get(0)).unwrap();
+    h.sync.pop3_check().await.unwrap();
+    assert_eq!(h.ids_in(MailSet::Role(Role::Inbox)).await, ["pop3/u1"]);
+    assert!(h.fake.deleted().is_empty(), "no DELE while the download is only in the log");
+    assert_eq!(pending(&h).await, ["u1"]);
+    reader.execute_batch("COMMIT").unwrap();
+    h.sync.pop3_check().await.unwrap();
+    assert_eq!(h.fake.deleted(), [1]);
+    assert!(h.fake.held().is_empty());
+}
+
+/// A checkpoint syncs the database file and can hold the writer for the
+/// busy timeout, so a check with no DELE to send runs none.
+#[tokio::test]
+async fn a_check_with_no_removal_pending_leaves_the_database_file_alone() {
+    let h = pop3_harness(FakePop3::default().with_message("u1", &pop3_mail(1)), RemoveSetting::Downloaded).await;
+    h.sync.pop3_check().await.unwrap();
+    assert!(h.fake.held().is_empty());
+    // The first check's last write, which marked u1 removed, is in the log
+    // alone; a checkpoint would copy it into the file.
+    let before = std::fs::read(h.db_path()).unwrap();
+    h.sync.pop3_check().await.unwrap();
+    assert!(std::fs::read(h.db_path()).unwrap() == before, "no checkpoint ran");
+}
+
 /// The process's highest resident memory since the last reset, in bytes.
 fn resident_peak() -> usize {
     let status = std::fs::read_to_string("/proc/self/status").unwrap_or_default();

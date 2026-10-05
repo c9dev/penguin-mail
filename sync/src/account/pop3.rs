@@ -155,8 +155,16 @@ impl AccountSync {
                 .await?;
         }
         // Leave on Server sends no DELE, even for a row an earlier setting
-        // marked.
-        if remove != RemoveSetting::Never {
+        // marked. A checkpoint syncs the database file and can hold the
+        // writer for the busy timeout, so a check with no DELE to send
+        // runs none.
+        let pending = remove != RemoveSetting::Never
+            && !self
+                .db
+                .read(move |c| pop3::pending_removal(c, account_id, None, 1))
+                .await?
+                .is_empty();
+        if pending {
             // The store commits without syncing, and a DELE lets the server
             // drop the other copy at QUIT. A power cut after that QUIT and
             // before SQLite's own checkpoint would lose the message from

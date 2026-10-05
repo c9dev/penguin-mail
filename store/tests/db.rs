@@ -177,6 +177,30 @@ fn the_write_ahead_log_shrinks_back_after_a_checkpoint() {
     assert!((1..=64 << 20).contains(&limit), "{limit}");
 }
 
+/// A reader on an older snapshot keeps the commits after it in the log, and
+/// a caller about to delete the other copy must hear that they are not in
+/// the database file yet. Takes the writer's five-second busy timeout.
+#[tokio::test]
+async fn a_checkpoint_answers_false_while_a_reader_holds_an_older_snapshot() {
+    let (db, dir) = open();
+    db.write(|c| accounts::insert_account(c, "a@example.com", 0))
+        .await
+        .unwrap();
+    assert!(db.checkpoint().await.unwrap());
+    let reader = rusqlite::Connection::open(dir.path().join("mail.db")).unwrap();
+    reader.execute_batch("BEGIN").unwrap();
+    let before: i64 = reader
+        .query_row("SELECT COUNT(*) FROM accounts", [], |row| row.get(0))
+        .unwrap();
+    assert_eq!(before, 1);
+    db.write(|c| accounts::insert_account(c, "b@example.com", 0))
+        .await
+        .unwrap();
+    assert!(!db.checkpoint().await.unwrap(), "the second account is only in the log");
+    reader.execute_batch("COMMIT").unwrap();
+    assert!(db.checkpoint().await.unwrap());
+}
+
 /// A bootstrap writes thousands of rows into a store that had none, and
 /// the plans made from the empty tables' statistics would be wrong.
 #[tokio::test]
