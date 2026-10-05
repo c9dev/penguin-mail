@@ -1,0 +1,16 @@
+[package]
+name = "mailrs-pop3"
+version.workspace = true
+license.workspace = true
+repository.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+mailrs-discover.workspace = true
+base64.workspace = true
+rustls.workspace = true
+rustls-platform-verifier.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+tokio-rustls.workspace = true

@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["domain", "mime", "gmail", "graph", "discover", "imap", "dav", "sieve", "store", "sync", "pgp", "smime", "ai", "cli", "app", "testmail"]
+members = ["domain", "mime", "gmail", "graph", "discover", "imap", "dav", "sieve", "pop3", "store", "sync", "pgp", "smime", "ai", "cli", "app", "testmail"]
 
 [workspace.package]
 version = "0.3.0"
@@ -18,6 +18,7 @@ mailrs-discover = { path = "discover" }
 mailrs-imap = { path = "imap" }
 mailrs-dav = { path = "dav" }
 mailrs-sieve = { path = "sieve" }
+mailrs-pop3 = { path = "pop3" }
 mailrs-store = { path = "store" }
 mailrs-sync = { path = "sync" }
 mailrs-pgp = { path = "pgp" }
