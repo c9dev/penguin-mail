@@ -106,6 +106,7 @@ impl ThreadList {
                 .downcast_ref::<gtk::ListItem>()
                 .expect("list items are ListItems");
             let row = ThreadRow::default();
+            row.set_item(item);
             context_menu(&row, item, &picked, &menu);
             // Dragging a selected row takes the whole selection along.
             let source = gtk::DragSource::new();

@@ -41,6 +41,9 @@ mod imp {
         /// Opens the row's menu: at a point for a click, over the whole
         /// row for a key.
         pub menu: RefCell<Option<super::OpenMenu>>,
+        /// The list item that holds the row, which takes the row's
+        /// spoken name.
+        pub item: glib::WeakRef<gtk::ListItem>,
     }
 
     #[glib::object_subclass]
@@ -306,6 +309,11 @@ impl ThreadRow {
         self.imp().menu.replace(Some(open));
     }
 
+    /// Remembers the list item that holds the row.
+    pub fn set_item(&self, item: &gtk::ListItem) {
+        self.imp().item.set(Some(item));
+    }
+
     /// Opens the row's menu over the row, and says whether it has one.
     pub fn open_menu(&self) -> bool {
         let open = self.imp().menu.borrow().clone();
@@ -403,6 +411,11 @@ impl ThreadRow {
             &thread.snippet,
         );
         self.update_property(&[gtk::accessible::Property::Label(&described)]);
+        // The keyboard focus sits on the list item GTK wraps the row in,
+        // so that item carries the same words for a screen reader to say.
+        if let Some(item) = imp.item.upgrade() {
+            item.set_accessible_label(&described);
+        }
     }
 }
 
