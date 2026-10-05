@@ -141,7 +141,8 @@ pub async fn seed_pop3(
         })
         .await?;
     let fake = FakePop3::default();
-    for letter in INBOX.iter().chain(&CLUB).chain(&REFUSED) {
+    // The refused two come first, so their message numbers read 1 and 2.
+    for letter in REFUSED.iter().chain(&INBOX).chain(&CLUB) {
         fake.add(letter.uidl, &raw(letter, now));
     }
     let fake = REFUSED.iter().fold(fake, |fake, letter| fake.failing_retr(letter.uidl));

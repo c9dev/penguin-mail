@@ -616,6 +616,81 @@ def outlook():
     return run
 
 
+# The demo's POP3 account is the sixth and last, so its id is 6 and its
+# section is at the foot of the sidebar. Its Inbox row has no name that
+# tells it from the other Inboxes, so the shots click where it lands once
+# the list is scrolled to the end.
+POP3_ID = 6
+POP3_ADDRESS = "dana@reyes-home.example"
+POP3_FAILURES = {"MAILRS_DEMO_ACTION": "account-not-downloading(int64 %d)" % POP3_ID}
+
+
+def pop3_sidebar():
+    """The POP3 account in the sidebar, its Inbox open on a message."""
+    run = launch()
+    window = main_window()
+    scroll_down(150, 500, 80)
+    click(94, 483)
+    settle(2)
+    click(480, 100)
+    settle(5)
+    capture(window, "pop3-demo-sidebar")
+    return run
+
+
+def pop3_menu():
+    """The POP3 account's menu, with Messages That Will Not Download."""
+    run = launch()
+    window = main_window()
+    scroll_down(150, 500, 80)
+    act(name="Options for " + POP3_ADDRESS)
+    settle(2)
+    capture(window, "pop3-demo-menu", nudge=False, whole_screen=True)
+    return run
+
+
+def pop3_failures(name="pop3-demo-failures", size=None):
+    run = launch(env=POP3_FAILURES)
+    window = main_window()
+    find(contains="would not hand these over")
+    if size:
+        resize(window, *size)
+    settle(3)
+    capture(window, name, nudge=False)
+    return run
+
+
+def pop3_failures_narrow():
+    return pop3_failures("pop3-demo-failures-narrow", (360, 640))
+
+
+def pop3_failures_short():
+    """A window too short for the dialog's list, to see it scroll."""
+    return pop3_failures("pop3-demo-failures-short", (420, 360))
+
+
+def pop3_reply():
+    """Preferences, where Not Available says why the POP3 account has no
+    automatic reply."""
+    run = launch(env={"MAILRS_DEMO_ACTION": "preferences"})
+    window = main_window()
+    find("page tab", name="General")
+    scroll_down(720, 450, 40)
+    find(contains="cannot send automatic replies over POP3")
+    settle(2)
+    capture(window, "pop3-demo-reply", nudge=False)
+    return run
+
+
+def pop3_about():
+    run = launch(env={"MAILRS_DEMO_ACTION": "about"})
+    window = main_window()
+    find(contains="kept only on this computer")
+    settle(2)
+    capture(window, "pop3-demo-about", nudge=False)
+    return run
+
+
 def to_calendar(view="Week"):
     act("radio button", contains="Calendar, ")
     find("radio button", name=view)
@@ -692,6 +767,13 @@ SHOTS = {
     "vips": vips,
     "categories": categories,
     "outlook": outlook,
+    "pop3-sidebar": pop3_sidebar,
+    "pop3-menu": pop3_menu,
+    "pop3-failures": pop3_failures,
+    "pop3-failures-narrow": pop3_failures_narrow,
+    "pop3-failures-short": pop3_failures_short,
+    "pop3-reply": pop3_reply,
+    "pop3-about": pop3_about,
     "automatic-reply": automatic_reply,
     "rules": rules,
     "assistant": assistant,
