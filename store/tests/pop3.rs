@@ -49,9 +49,7 @@ fn a_raw_copy_goes_with_its_message() {
 #[test]
 fn only_uidls_never_downloaded_count_as_new() {
     let (conn, id) = pop3_account(RemoveSetting::Never);
-    assert!(!pop3::has_downloaded(&conn, id).unwrap());
     pop3::mark_downloaded(&conn, id, "u1", 10).unwrap();
-    assert!(pop3::has_downloaded(&conn, id).unwrap());
     assert_eq!(
         pop3::unseen(&conn, id, &uidls(&["u1", "u2", "u3"])).unwrap(),
         uidls(&["u2", "u3"])
@@ -215,4 +213,14 @@ fn a_pop3_account_keeps_its_removal_setting_and_its_address() {
     let account = accounts::account(&conn, id).unwrap().unwrap();
     assert_eq!(account.provider, mailrs_domain::Provider::Pop3);
     assert_eq!(account.provider_name(), "Example");
+}
+
+#[test]
+fn a_first_check_is_unfinished_until_it_is_marked() {
+    let (conn, id) = pop3_account(RemoveSetting::Never);
+    assert!(!pop3::first_check_finished(&conn, id).unwrap());
+    pop3::mark_downloaded(&conn, id, "u1", 10).unwrap();
+    assert!(!pop3::first_check_finished(&conn, id).unwrap(), "a download alone does not finish it");
+    pop3::finish_first_check(&conn, id).unwrap();
+    assert!(pop3::first_check_finished(&conn, id).unwrap());
 }

@@ -859,7 +859,7 @@ fn migration_49_adds_the_pop3_tables_and_columns() {
     .unwrap();
     drop(conn);
 
-    let conn = open_with(&path, MIGRATIONS).unwrap();
+    let conn = open_with(&path, &MIGRATIONS[..49]).unwrap();
     assert_eq!(schema_version(&conn).unwrap(), 49);
     let (mode, days): (String, Option<i64>) = conn
         .query_row("SELECT pop3_remove, pop3_remove_days FROM accounts WHERE id = 2", [], |row| {
@@ -887,4 +887,31 @@ fn migration_49_adds_the_pop3_tables_and_columns() {
             .unwrap();
         assert_eq!(left, 0, "{table}");
     }
+}
+
+/// Migration 50 records whether a POP3 account's first check finished. An
+/// account that already holds downloaded mail counts as finished, so it
+/// does not start announcing the mail it already has; one with nothing
+/// downloaded has not finished.
+#[test]
+fn migration_50_counts_an_account_with_downloaded_mail_as_finished() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("mail.db");
+    let conn = open_with(&path, &MIGRATIONS[..49]).unwrap();
+    conn.execute_batch(
+        "INSERT INTO accounts (id, email, added_at, provider, provider_name) VALUES
+             (2, 'old@example.org', 0, 'imap', 'Example'),
+             (3, 'new@example.org', 0, 'imap', 'Example');
+         INSERT INTO pop3_seen (account_id, uidl, downloaded_at) VALUES (2, 'u1', 0);",
+    )
+    .unwrap();
+    drop(conn);
+
+    let conn = open_with(&path, MIGRATIONS).unwrap();
+    assert_eq!(schema_version(&conn).unwrap(), 50);
+    let finished = |id: i64| -> i64 {
+        conn.query_row("SELECT pop3_first_check_done FROM accounts WHERE id = ?1", [id], |row| row.get(0)).unwrap()
+    };
+    assert_eq!(finished(2), 1, "it has downloaded mail already");
+    assert_eq!(finished(3), 0, "it has downloaded nothing");
 }
