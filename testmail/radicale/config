@@ -17,6 +17,3 @@ type = owner_only
 
 [storage]
 filesystem_folder = /var/lib/radicale/collections
-
-[logging]
-level = debug
