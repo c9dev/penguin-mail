@@ -79,9 +79,6 @@ struct RefusedNow {
 }
 
 /// A service a tenant can refuse.
-// The calendar uses its variant; the contacts, rules and automatic reply
-// use theirs when they are written, and the attribute goes then.
-#[allow(dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum Service {
     Calendar,
