@@ -15,6 +15,8 @@ mod one_click;
 mod query;
 mod sent;
 
+pub use mailrs_dav::fake::FakeDav;
+pub use mailrs_sieve::fake::FakeSieve;
 pub use graph::{Area, FakeGraph, FakeMail, GraphState};
 pub use imap::{
     FakeImap, FakeMailbox, FakeMessage, FakeSmtp, ImapState, SmtpState, Submitted, raw_message,

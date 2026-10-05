@@ -162,6 +162,13 @@ impl<A: Accounts> AccountSettings<A> {
         permitted(self.rules_service(account_id)?.create_filter(&rule).await)
     }
 
+    /// The person said yes to replacing the rules script they run on a
+    /// server that cannot include it; the next rule write goes ahead.
+    pub async fn take_over_rules(&self, account_id: AccountId) -> Result<(), SyncError> {
+        self.rules_service(account_id)?.take_over().await;
+        Ok(())
+    }
+
     /// Deletes a filter. A filter the server no longer has counts as
     /// deleted.
     pub async fn delete_rule(

@@ -1,14 +1,20 @@
 use std::sync::Arc;
 
+use mailrs_dav::{DavClient, Login as DavLogin};
 use mailrs_discover::{Security, Server, UserName};
 use mailrs_domain::{Account, AccountState};
 use mailrs_gmail::{Granted, GmailClient, GmailError, OAuthClient, TokenStore};
 use mailrs_imap::{ImapClient, Login, SmtpClient};
+use mailrs_sieve::client::{Login as SieveLogin, ManageSieveClient};
 use mailrs_store::servers::{self, Saved, Servers};
+use mailrs_store::services::{FoundService, ServiceKind};
 use mailrs_store::{Db, accounts};
 
 use crate::passwords::{PasswordError, PasswordStore};
-use crate::{AccountClient, AccountServices, BackendError, ImapSettings, SyncError};
+use crate::{
+    AccountClient, AccountServices, AnyAutoReply, AnyCalendar, AnyContacts, AnyRules, BackendError,
+    CalDav, CardDav, ImapSettings, LocalRules, SieveRules, SyncError,
+};
 
 /// A Gmail client for `account`, built from its refresh token in `tokens`
 /// and seeded with the scopes `db` last recorded for it. Fails with
@@ -51,7 +57,10 @@ pub async fn connect_account(
 /// for it and the password in `passwords`. Without either, the account
 /// needs to sign in again: the store records that before this answers
 /// `NeedsReauth`, since the engine never runs the account to say so.
-/// Nothing here connects; the clients log in when sync first asks. The
+/// It adds the calendar, contacts and rules servers found for the account,
+/// each only once confirmed; an account whose server runs no rules keeps
+/// them on this computer. Nothing here connects; the clients log in when
+/// sync first asks. The
 /// provider's sent-copy rule comes from the provider table at each start,
 /// so a corrected table reaches accounts added before the correction.
 pub async fn connect_imap<P: PasswordStore + 'static>(
@@ -86,21 +95,87 @@ pub async fn connect_imap<P: PasswordStore + 'static>(
     // Building the SMTP client refuses only a host name lettre cannot
     // use, which a saved server never has; the error still reaches the
     // log through the engine rather than a panic.
+    let secret = password.clone();
     let smtp = SmtpClient::new(
         &server_of(&saved.smtp),
         &Login::new(saved.smtp.user_name.as_str(), password),
     )
     .map_err(BackendError::from)?;
-    Ok(AccountServices::imap(
+    let mut services = AccountServices::imap(
         imap,
         smtp,
         ImapSettings {
             address: account.email.clone(),
-            provider_name,
+            provider_name: provider_name.clone(),
             files_sent_mail,
             window_days,
         },
-    ))
+    );
+    let found = db.read(move |c| mailrs_store::services::load(c, id)).await?;
+    // The password goes only to a server the person confirmed.
+    for service in found.into_iter().filter(|f| f.confirmed) {
+        services = attach(services, &service, &secret, account, &provider_name);
+    }
+    if services.rules.is_none() {
+        services = services.with_rules(AnyRules::Local(LocalRules::new(db.clone(), id)));
+    }
+    Ok(services)
+}
+
+/// `services` with the server `service` names put behind the service it
+/// offers. A server that cannot be set up is logged and left out, so the
+/// account keeps its mail.
+fn attach(
+    services: AccountServices,
+    service: &FoundService,
+    secret: &str,
+    account: &Account,
+    provider_name: &str,
+) -> AccountServices {
+    let id = account.id;
+    match service.kind {
+        ServiceKind::CalDav => {
+            let Some(mail) = services.imap_adapter() else {
+                return services;
+            };
+            match DavClient::new(&service.url, DavLogin::new(&service.user_name, secret)) {
+                Ok(client) => {
+                    let calendar = CalDav::new(Arc::new(client), mail, vec![account.email.clone()]);
+                    services.with_calendar(AnyCalendar::Dav(calendar))
+                }
+                Err(err) => {
+                    tracing::warn!(account = id, %err, "could not set up the calendar server");
+                    services
+                }
+            }
+        }
+        ServiceKind::CardDav => {
+            match DavClient::new(&service.url, DavLogin::new(&service.user_name, secret)) {
+                Ok(client) => services.with_contacts(AnyContacts::Dav(CardDav::new(Arc::new(client)))),
+                Err(err) => {
+                    tracing::warn!(account = id, %err, "could not set up the contacts server");
+                    services
+                }
+            }
+        }
+        ServiceKind::Sieve => {
+            let Some(mail) = services.imap_adapter() else {
+                return services;
+            };
+            let (host, port) = match service.url.rsplit_once(':') {
+                Some((host, port)) => (host, port.parse().unwrap_or(mailrs_sieve::PORT)),
+                None => (service.url.as_str(), mailrs_sieve::PORT),
+            };
+            let client = ManageSieveClient::new(host, port, SieveLogin::new(&service.user_name, secret));
+            let rules = SieveRules::new(
+                Arc::new(client),
+                mail,
+                account.email.clone(),
+                provider_name.to_string(),
+            );
+            services.with_rules(AnyRules::Sieve(rules.clone())).with_auto_reply(AnyAutoReply::Sieve(rules))
+        }
+    }
 }
 
 /// The servers to keep for an account that logged in as `imap_user` on
