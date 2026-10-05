@@ -586,7 +586,9 @@ impl CalendarView {
         page.add_top_bar(&header_room);
         page.add_top_bar(&search_bar);
         page.set_content(Some(&bin));
-        let bottom_row = gtk::Box::new(gtk::Orientation::Horizontal, 12);
+        // 6 px apart: with New Event beside Today, the arrows and the
+        // switch, a phone has no room for more.
+        let bottom_row = gtk::Box::new(gtk::Orientation::Horizontal, 6);
         bottom_slot.set_child(Some(&bottom_row));
         page.add_bottom_bar(&bottom_slot);
         page.set_reveal_bottom_bars(false);

@@ -1652,3 +1652,4 @@ row.guest-field:focus-within {
    30 px each rather than 36, so the bar fits 360 px. */
 .composer-narrow .format-bar button { padding: 2px 1px; }
 .composer-narrow .format-group { padding: 0 3px; }
+.calendar-narrow button.calendar-today { padding: 0 10px; }
