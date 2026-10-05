@@ -58,6 +58,9 @@ fn an_imap_account_offers_mail_alone() {
             moves_events: false,
             calendar_list: false,
             quiet_changes: false,
+            out_of_office: false,
+            focus_time: false,
+            declines: false,
         }
     );
 }

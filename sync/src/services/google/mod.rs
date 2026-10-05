@@ -165,6 +165,22 @@ impl<G: GmailApi> Google<G> {
     pub fn withheld(&self) -> Withheld {
         withheld(self.gmail.granted().as_ref())
     }
+
+    /// Whether the account is on Google Workspace, which keeps out of
+    /// office and focus time; a personal account keeps neither.
+    pub fn workspace(&self) -> bool {
+        self.gmail.workspace()
+    }
+}
+
+/// Whether `address` belongs to a Google Workspace account rather than a
+/// personal one: Google gives a personal account an address at
+/// `gmail.com` or `googlemail.com`. Any other domain may be Workspace; which
+/// edition it runs cannot be read with the scopes the app holds, so a
+/// save Google turns down still says why.
+pub fn is_workspace(address: &str) -> bool {
+    let domain = address.trim().rsplit_once('@').map_or("", |(_, domain)| domain);
+    !domain.is_empty() && !domain.eq_ignore_ascii_case("gmail.com") && !domain.eq_ignore_ascii_case("googlemail.com")
 }
 
 /// What `granted` leaves out, by the scope table CONTEXT.md's Withheld

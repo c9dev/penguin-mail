@@ -3204,8 +3204,8 @@ msgstr "Encontrado em {host}. Usar?"
 msgid "{host} refused the login: {reason}"
 msgstr "{host} recusou o início de sessão: {reason}"
 
-#: app/src/servers.rs:34 app/src/ui/calendar/editor.rs:1065
-#: app/src/ui/calendar/editor.rs:1141 app/src/ui/contacts_prefs.rs:249
+#: app/src/servers.rs:34 app/src/ui/calendar/editor.rs:1104
+#: app/src/ui/calendar/editor.rs:1180 app/src/ui/contacts_prefs.rs:249
 #: app/src/ui/sidebar.rs:352 app/src/ui/sidebar.rs:1244
 #: app/src/ui/window/shortcuts.rs:236
 msgid "Calendar"
@@ -3305,11 +3305,11 @@ msgstr "Markdown"
 msgid "Automatic"
 msgstr "Automático"
 
-#: app/src/settings/mod.rs:524 app/src/ui/calendar/editor.rs:1920
+#: app/src/settings/mod.rs:524 app/src/ui/calendar/editor.rs:1961
 msgid "Monday"
 msgstr "segunda-feira"
 
-#: app/src/settings/mod.rs:525 app/src/ui/calendar/editor.rs:1926
+#: app/src/settings/mod.rs:525 app/src/ui/calendar/editor.rs:1967
 msgid "Sunday"
 msgstr "domingo"
 
@@ -3769,7 +3769,7 @@ msgid "Try Again"
 msgstr "Tentar de novo"
 
 #: app/src/ui/add_account.rs:797 app/src/ui/assistant_mcp_prefs.rs:347
-#: app/src/ui/calendar/editor.rs:167 app/src/ui/calendar/manage.rs:184
+#: app/src/ui/calendar/editor.rs:175 app/src/ui/calendar/manage.rs:184
 #: app/src/ui/calendar/manage.rs:303 app/src/ui/calendar/manage.rs:346
 #: app/src/ui/calendar/scope.rs:174 app/src/ui/composer/mod.rs:1504
 #: app/src/ui/composer/mod.rs:1573 app/src/ui/composer/mod.rs:1891
@@ -3868,7 +3868,7 @@ msgstr "Adicionar outra conta"
 msgid "Not Now"
 msgstr "Agora não"
 
-#: app/src/ui/add_account.rs:1147 app/src/ui/calendar/editor.rs:1499
+#: app/src/ui/add_account.rs:1147 app/src/ui/calendar/editor.rs:1538
 #: app/src/ui/calendar/sidebar.rs:917 app/src/ui/contacts_prefs.rs:336
 #: app/src/ui/invitation.rs:461 app/src/ui/permission.rs:42
 #: app/src/ui/permission.rs:66 app/src/ui/window.rs:1287
@@ -4107,7 +4107,7 @@ msgstr "Entrada"
 msgid "Running"
 msgstr "Em curso"
 
-#: app/src/ui/assistant.rs:921 app/src/ui/calendar/editor.rs:242
+#: app/src/ui/assistant.rs:921 app/src/ui/calendar/editor.rs:251
 #: app/src/ui/hide_my_email.rs:465
 msgid "Done"
 msgstr "Concluído"
@@ -4147,7 +4147,7 @@ msgstr "Editar"
 msgid "Edit {server}"
 msgstr "Editar {server}"
 
-#: app/src/ui/assistant_mcp_prefs.rs:121 app/src/ui/calendar/editor.rs:1532
+#: app/src/ui/assistant_mcp_prefs.rs:121 app/src/ui/calendar/editor.rs:1571
 #: app/src/ui/composer/mod.rs:1672 app/src/ui/composer/recipients.rs:315
 #: app/src/ui/window.rs:2941
 msgid "Remove"
@@ -4224,8 +4224,8 @@ msgstr "Testar o servidor"
 msgid "Test"
 msgstr "Testar"
 
-#: app/src/ui/assistant_mcp_prefs.rs:341 app/src/ui/calendar/editor.rs:163
-#: app/src/ui/calendar/quick.rs:103 app/src/ui/calendar/scope.rs:193
+#: app/src/ui/assistant_mcp_prefs.rs:341 app/src/ui/calendar/editor.rs:171
+#: app/src/ui/calendar/quick.rs:158 app/src/ui/calendar/scope.rs:193
 #: app/src/ui/composer/mod.rs:2324 app/src/ui/dav_edit.rs:26
 #: app/src/ui/rules.rs:430 app/src/ui/smart_editor.rs:144
 #: app/src/ui/templates.rs:233 app/src/ui/vacation.rs:41
@@ -4570,7 +4570,7 @@ msgstr "Chave de API do Brave Search (guardada)"
 msgid "Brave Search API Key"
 msgstr "Chave de API do Brave Search"
 
-#: app/src/ui/autocomplete.rs:307 app/src/ui/calendar/editor.rs:2147
+#: app/src/ui/autocomplete.rs:307 app/src/ui/calendar/editor.rs:2188
 #: app/src/ui/composer/recipients.rs:50
 msgid "{name}, {address}"
 msgstr "{name}, {address}"
@@ -4579,11 +4579,15 @@ msgstr "{name}, {address}"
 msgid "{person}, {source}"
 msgstr "{person}, {source}"
 
-#: app/src/ui/calendar/agenda.rs:417
+#: app/src/ui/calendar/agenda.rs:442 app/src/ui/calendar/block.rs:615
+msgid "{title}, {kind}"
+msgstr "{title}, {kind}"
+
+#: app/src/ui/calendar/agenda.rs:448
 msgid "{title}, {when}, {calendar}"
 msgstr "{title}, {when}, {calendar}"
 
-#: app/src/ui/calendar/agenda.rs:531
+#: app/src/ui/calendar/agenda.rs:562
 msgid "Nothing earlier on this computer"
 msgstr "Nada mais antigo neste computador"
 
@@ -4623,66 +4627,62 @@ msgstr "Abrir {file} no navegador"
 msgid "Open in Browser"
 msgstr "Abrir no navegador"
 
-#: app/src/ui/calendar/block.rs:528
+#: app/src/ui/calendar/block.rs:531
 msgid "Waiting to be sent"
 msgstr "À espera de ser enviado"
 
-#: app/src/ui/calendar/block.rs:531 app/src/ui/calendar/popover.rs:766
+#: app/src/ui/calendar/block.rs:534 app/src/ui/calendar/popover.rs:766
 msgid "Not answered yet"
 msgstr "Ainda sem resposta"
 
-#: app/src/ui/calendar/block.rs:532
+#: app/src/ui/calendar/block.rs:535
 msgid "Declined"
 msgstr "Recusado"
 
-#: app/src/ui/calendar/block.rs:573 app/src/ui/calendar/words.rs:149
+#: app/src/ui/calendar/block.rs:576 app/src/ui/calendar/words.rs:164
 #: app/src/ui/preferences.rs:917
 msgid "{start}–{end}"
 msgstr "{start}–{end}"
 
-#: app/src/ui/calendar/block.rs:612
-msgid "{title}, {kind}"
-msgstr "{title}, {kind}"
-
-#: app/src/ui/calendar/block.rs:618
+#: app/src/ui/calendar/block.rs:621
 msgid "{title}, {day}"
 msgstr "{title}, {day}"
 
-#: app/src/ui/calendar/block.rs:625
+#: app/src/ui/calendar/block.rs:628
 msgid "{title}, all day, {calendar}"
 msgstr "{title}, todo o dia, {calendar}"
 
-#: app/src/ui/calendar/block.rs:630 app/src/ui/calendar/words.rs:133
+#: app/src/ui/calendar/block.rs:633 app/src/ui/calendar/words.rs:148
 msgid "{title}, {start} to {end}, {calendar}"
 msgstr "{title}, {start} às {end}, {calendar}"
 
-#: app/src/ui/calendar/draft.rs:52 app/src/ui/calendar/editor.rs:437
+#: app/src/ui/calendar/draft.rs:104 app/src/ui/calendar/editor.rs:1924
 #: app/src/ui/calendar/kinds.rs:59
 msgid "Out of office"
 msgstr "Fora do escritório"
 
-#: app/src/ui/calendar/draft.rs:53 app/src/ui/calendar/editor.rs:437
+#: app/src/ui/calendar/draft.rs:105 app/src/ui/calendar/editor.rs:1923
 #: app/src/ui/calendar/kinds.rs:60
 msgid "Focus time"
 msgstr "Tempo de concentração"
 
-#: app/src/ui/calendar/draft.rs:321
+#: app/src/ui/calendar/draft.rs:373
 msgid "Declined because I am out of office"
 msgstr "Recusado porque estou fora do escritório"
 
-#: app/src/ui/calendar/editor.rs:158
+#: app/src/ui/calendar/editor.rs:166
 msgid "New Event"
 msgstr "Novo evento"
 
-#: app/src/ui/calendar/editor.rs:160
+#: app/src/ui/calendar/editor.rs:168
 msgid "Edit Event"
 msgstr "Editar evento"
 
-#: app/src/ui/calendar/editor.rs:251
+#: app/src/ui/calendar/editor.rs:260
 msgid "Custom Repeat"
 msgstr "Repetição personalizada"
 
-#: app/src/ui/calendar/editor.rs:375
+#: app/src/ui/calendar/editor.rs:384
 msgid ""
 "{organizer} organizes this event, so its time, place and guests stay as they "
 "set them."
@@ -4690,355 +4690,362 @@ msgstr ""
 "{organizer} organiza este evento, por isso a hora, o local e os convidados "
 "ficam como os definiu."
 
-#: app/src/ui/calendar/editor.rs:401 app/src/ui/calendar/quick.rs:78
+#: app/src/ui/calendar/editor.rs:410 app/src/ui/calendar/quick.rs:127
 msgid "Title"
 msgstr "Título"
 
-#: app/src/ui/calendar/editor.rs:435
+#: app/src/ui/calendar/editor.rs:445 app/src/ui/calendar/quick.rs:140
 msgid "Type"
 msgstr "Tipo"
 
-#: app/src/ui/calendar/editor.rs:437
-msgid "Event"
-msgstr "Evento"
-
-#: app/src/ui/calendar/editor.rs:490
+#: app/src/ui/calendar/editor.rs:532
 msgid "Out of office and focus time go on a primary calendar"
 msgstr ""
 "Fora do escritório e tempo de concentração ficam num calendário principal"
 
 #: app/src/ui/calendar/editor.rs:534
+msgid "Out of office goes on a primary calendar"
+msgstr ""
+"Fora do escritório fica num calendário principalFora do escritório e tempo "
+"de concentração ficam num calendário principal"
+
+#: app/src/ui/calendar/editor.rs:573
 msgid "Meetings"
 msgstr "Reuniões"
 
-#: app/src/ui/calendar/editor.rs:542
+#: app/src/ui/calendar/editor.rs:581
 msgid "Decline"
 msgstr "Recusar"
 
 #. The row's title says Decline, so each choice names only which
 #. meetings, short enough not to be cut off.
-#: app/src/ui/calendar/editor.rs:546
+#: app/src/ui/calendar/editor.rs:585
 msgid "New and existing"
 msgstr "Novas e existentes"
 
 #. The row's title says Decline, so each choice names only which
 #. meetings, short enough not to be cut off.
-#: app/src/ui/calendar/editor.rs:546
+#: app/src/ui/calendar/editor.rs:585
 msgid "New only"
 msgstr "Só novas"
 
 #. The row's title says Decline, so each choice names only which
 #. meetings, short enough not to be cut off.
-#: app/src/ui/calendar/editor.rs:546
+#: app/src/ui/calendar/editor.rs:585
 msgid "None"
 msgstr "Nenhuma"
 
-#: app/src/ui/calendar/editor.rs:550 app/src/ui/composer/mod.rs:415
+#: app/src/ui/calendar/editor.rs:589 app/src/ui/composer/mod.rs:415
 #: app/src/ui/vacation.rs:246 app/src/ui/vacation.rs:255
 msgid "Message"
 msgstr "Mensagem"
 
-#: app/src/ui/calendar/editor.rs:577 app/src/ui/calendar/words.rs:66
-#: app/src/ui/calendar/words.rs:146
+#: app/src/ui/calendar/editor.rs:616 app/src/ui/calendar/words.rs:66
+#: app/src/ui/calendar/words.rs:161
 msgid "All day"
 msgstr "Todo o dia"
 
-#: app/src/ui/calendar/editor.rs:591
+#: app/src/ui/calendar/editor.rs:630
 msgid "Start date"
 msgstr "Data de início"
 
-#: app/src/ui/calendar/editor.rs:600
+#: app/src/ui/calendar/editor.rs:639
 msgid "Start time"
 msgstr "Hora de início"
 
-#: app/src/ui/calendar/editor.rs:620
+#: app/src/ui/calendar/editor.rs:659
 msgid "End date"
 msgstr "Data de fim"
 
-#: app/src/ui/calendar/editor.rs:642
+#: app/src/ui/calendar/editor.rs:681
 msgid "End time"
 msgstr "Hora de fim"
 
-#: app/src/ui/calendar/editor.rs:656 app/src/ui/preferences.rs:1007
+#: app/src/ui/calendar/editor.rs:695 app/src/ui/preferences.rs:1007
 msgid "Starts"
 msgstr "Início"
 
-#: app/src/ui/calendar/editor.rs:659 app/src/ui/preferences.rs:1009
+#: app/src/ui/calendar/editor.rs:698 app/src/ui/preferences.rs:1009
 msgid "Ends"
 msgstr "Fim"
 
-#: app/src/ui/calendar/editor.rs:751
+#: app/src/ui/calendar/editor.rs:790
 msgid "Repeats"
 msgstr "Repetição"
 
-#: app/src/ui/calendar/editor.rs:794
+#: app/src/ui/calendar/editor.rs:833
 msgid "Custom…"
 msgstr "Personalizar…"
 
-#: app/src/ui/calendar/editor.rs:848
+#: app/src/ui/calendar/editor.rs:887
 msgid "Every"
 msgstr "A cada"
 
-#: app/src/ui/calendar/editor.rs:852
+#: app/src/ui/calendar/editor.rs:891
 msgid "Unit"
 msgstr "Unidade"
 
-#: app/src/ui/calendar/editor.rs:856
+#: app/src/ui/calendar/editor.rs:895
 msgid "On"
 msgstr "Nos dias"
 
-#: app/src/ui/calendar/editor.rs:908
+#: app/src/ui/calendar/editor.rs:947
 msgid "Stops"
 msgstr "Termina"
 
-#: app/src/ui/calendar/editor.rs:915 app/src/ui/calendar/editor.rs:920
-#: app/src/ui/calendar/words.rs:425
+#: app/src/ui/calendar/editor.rs:954 app/src/ui/calendar/editor.rs:959
+#: app/src/ui/calendar/words.rs:440
 msgid "Never"
 msgstr "Nunca"
 
-#: app/src/ui/calendar/editor.rs:916 app/src/ui/calendar/editor.rs:939
+#: app/src/ui/calendar/editor.rs:955 app/src/ui/calendar/editor.rs:978
 msgid "On a date"
 msgstr "Numa data"
 
-#: app/src/ui/calendar/editor.rs:917 app/src/ui/calendar/editor.rs:965
+#: app/src/ui/calendar/editor.rs:956 app/src/ui/calendar/editor.rs:1004
 msgid "After"
 msgstr "Depois de"
 
-#: app/src/ui/calendar/editor.rs:929
+#: app/src/ui/calendar/editor.rs:968
 msgid "End date of the repeat"
 msgstr "Data de fim da repetição"
 
-#: app/src/ui/calendar/editor.rs:952 app/src/ui/calendar/editor.rs:961
+#: app/src/ui/calendar/editor.rs:991 app/src/ui/calendar/editor.rs:1000
 msgid "time"
 msgid_plural "times"
 msgstr[0] "vez"
 msgstr[1] "vezes"
 
-#: app/src/ui/calendar/editor.rs:953
+#: app/src/ui/calendar/editor.rs:992
 msgid "Number of times"
 msgstr "Número de vezes"
 
-#: app/src/ui/calendar/editor.rs:1153
+#: app/src/ui/calendar/editor.rs:1192
 msgid "Place"
 msgstr "Local"
 
-#: app/src/ui/calendar/editor.rs:1168
+#: app/src/ui/calendar/editor.rs:1207
 msgid "Guests"
 msgstr "Convidados"
 
-#: app/src/ui/calendar/editor.rs:1171 app/src/ui/calendar/editor.rs:1173
+#: app/src/ui/calendar/editor.rs:1210 app/src/ui/calendar/editor.rs:1212
 msgid "Add guests"
 msgstr "Adicionar convidados"
 
-#: app/src/ui/calendar/editor.rs:1219
+#: app/src/ui/calendar/editor.rs:1258
 msgid "Not an address: {text}"
 msgstr "Não é um endereço: {text}"
 
-#: app/src/ui/calendar/editor.rs:1242
+#: app/src/ui/calendar/editor.rs:1281
 msgid "{address} · {answer}"
 msgstr "{address} · {answer}"
 
-#: app/src/ui/calendar/editor.rs:1260
+#: app/src/ui/calendar/editor.rs:1299
 msgid "Remove {guest}"
 msgstr "Remover {guest}"
 
-#: app/src/ui/calendar/editor.rs:1292
+#: app/src/ui/calendar/editor.rs:1331
 msgid "Reminders"
 msgstr "Lembretes"
 
-#: app/src/ui/calendar/editor.rs:1320
+#: app/src/ui/calendar/editor.rs:1359
 msgid "The calendar's default"
 msgstr "A predefinição do calendário"
 
-#: app/src/ui/calendar/editor.rs:1336
+#: app/src/ui/calendar/editor.rs:1375
 msgid "Add Reminder"
 msgstr "Adicionar lembrete"
 
-#: app/src/ui/calendar/editor.rs:1372
+#: app/src/ui/calendar/editor.rs:1411
 msgid "By email"
 msgstr "Por email"
 
-#: app/src/ui/calendar/editor.rs:1379
+#: app/src/ui/calendar/editor.rs:1418
 msgid "Remove reminder"
 msgstr "Remover lembrete"
 
-#: app/src/ui/calendar/editor.rs:1423 app/src/ui/calendar/editor.rs:1434
+#: app/src/ui/calendar/editor.rs:1462 app/src/ui/calendar/editor.rs:1473
 #: app/src/ui/calendar/popover.rs:266
 msgid "Notes"
 msgstr "Notas"
 
-#: app/src/ui/calendar/editor.rs:1449
+#: app/src/ui/calendar/editor.rs:1488
 msgid "Attachments"
 msgstr "Anexos"
 
-#: app/src/ui/calendar/editor.rs:1454 app/src/ui/calendar/editor.rs:1460
+#: app/src/ui/calendar/editor.rs:1493 app/src/ui/calendar/editor.rs:1499
 msgid "Attach File…"
 msgstr "Anexar ficheiro…"
 
-#: app/src/ui/calendar/editor.rs:1503
+#: app/src/ui/calendar/editor.rs:1542
 msgid "Grant access to upload {file}"
 msgstr "Conceder acesso para enviar {file}"
 
-#: app/src/ui/calendar/editor.rs:1516
+#: app/src/ui/calendar/editor.rs:1555
 msgid "Share with guests"
 msgstr "Partilhar com os convidados"
 
-#: app/src/ui/calendar/editor.rs:1518
+#: app/src/ui/calendar/editor.rs:1557
 msgid "Share {file} with the guests"
 msgstr "Partilhar {file} com os convidados"
 
-#: app/src/ui/calendar/editor.rs:1534 app/src/ui/composer/mod.rs:1676
+#: app/src/ui/calendar/editor.rs:1573 app/src/ui/composer/mod.rs:1676
 msgid "Remove {file}"
 msgstr "Remover {file}"
 
-#: app/src/ui/calendar/editor.rs:1567
+#: app/src/ui/calendar/editor.rs:1606
 msgid "Cancel Upload"
 msgstr "Cancelar envio"
 
-#: app/src/ui/calendar/editor.rs:1569
+#: app/src/ui/calendar/editor.rs:1608
 msgid "Cancel upload of {file}"
 msgstr "Cancelar o envio de {file}"
 
-#: app/src/ui/calendar/editor.rs:1594
+#: app/src/ui/calendar/editor.rs:1633
 msgid "Attach File"
 msgstr "Anexar ficheiro"
 
-#: app/src/ui/calendar/editor.rs:1608
+#: app/src/ui/calendar/editor.rs:1647
 msgid "Penguin Mail can attach only a file saved on this computer."
 msgstr ""
 "O Penguin Mail só consegue anexar um ficheiro guardado neste computador."
 
-#: app/src/ui/calendar/editor.rs:1636
+#: app/src/ui/calendar/editor.rs:1675
 msgid "Uploading {file}"
 msgstr "A enviar {file}"
 
-#: app/src/ui/calendar/editor.rs:1667
+#: app/src/ui/calendar/editor.rs:1706
 msgid "Could not attach {file}: {reason}"
 msgstr "Não foi possível anexar {file}: {reason}"
 
-#: app/src/ui/calendar/editor.rs:1710
+#: app/src/ui/calendar/editor.rs:1749
 msgid "More"
 msgstr "Mais"
 
-#: app/src/ui/calendar/editor.rs:1714
+#: app/src/ui/calendar/editor.rs:1753
 msgid "Time zone"
 msgstr "Fuso horário"
 
-#: app/src/ui/calendar/editor.rs:1754
+#: app/src/ui/calendar/editor.rs:1793
 msgid "Show as busy"
 msgstr "Mostrar como ocupado"
 
-#: app/src/ui/calendar/editor.rs:1768
+#: app/src/ui/calendar/editor.rs:1807
 msgid "Private"
 msgstr "Privado"
 
-#: app/src/ui/calendar/editor.rs:1770
+#: app/src/ui/calendar/editor.rs:1809
 msgid "Only people who can change this calendar see the details"
 msgstr "Só quem pode alterar este calendário vê os detalhes"
 
-#: app/src/ui/calendar/editor.rs:1784 app/src/ui/calendar/manage.rs:282
+#: app/src/ui/calendar/editor.rs:1823 app/src/ui/calendar/manage.rs:282
 #: app/src/ui/calendar/sidebar.rs:1222 app/src/ui/sidebar.rs:1423
 #: app/src/ui/sidebar.rs:1622
 msgid "Color"
 msgstr "Cor"
 
-#: app/src/ui/calendar/editor.rs:1788
+#: app/src/ui/calendar/editor.rs:1827
 msgid "Calendar color"
 msgstr "Cor do calendário"
 
-#: app/src/ui/calendar/editor.rs:1825
+#: app/src/ui/calendar/editor.rs:1864
 msgid "Google Meet"
 msgstr "Google Meet"
 
-#: app/src/ui/calendar/editor.rs:1832
+#: app/src/ui/calendar/editor.rs:1871
 msgid "Add Google Meet"
 msgstr "Adicionar Google Meet"
 
-#: app/src/ui/calendar/editor.rs:1905
+#: app/src/ui/calendar/editor.rs:1922 app/src/ui/calendar/mod.rs:2798
+#: app/src/ui/calendar/quick.rs:54
+msgid "Event"
+msgstr "Evento"
+
+#: app/src/ui/calendar/editor.rs:1946
 msgid "day"
 msgid_plural "days"
 msgstr[0] "dia"
 msgstr[1] "dias"
 
-#: app/src/ui/calendar/editor.rs:1906
+#: app/src/ui/calendar/editor.rs:1947
 msgid "week"
 msgid_plural "weeks"
 msgstr[0] "semana"
 msgstr[1] "semanas"
 
-#: app/src/ui/calendar/editor.rs:1907
+#: app/src/ui/calendar/editor.rs:1948
 msgid "month"
 msgid_plural "months"
 msgstr[0] "mês"
 msgstr[1] "meses"
 
-#: app/src/ui/calendar/editor.rs:1908
+#: app/src/ui/calendar/editor.rs:1949
 msgid "year"
 msgid_plural "years"
 msgstr[0] "ano"
 msgstr[1] "anos"
 
-#: app/src/ui/calendar/editor.rs:1921
+#: app/src/ui/calendar/editor.rs:1962
 msgid "Tuesday"
 msgstr "terça-feira"
 
-#: app/src/ui/calendar/editor.rs:1922
+#: app/src/ui/calendar/editor.rs:1963
 msgid "Wednesday"
 msgstr "quarta-feira"
 
-#: app/src/ui/calendar/editor.rs:1923
+#: app/src/ui/calendar/editor.rs:1964
 msgid "Thursday"
 msgstr "quinta-feira"
 
-#: app/src/ui/calendar/editor.rs:1924
+#: app/src/ui/calendar/editor.rs:1965
 msgid "Friday"
 msgstr "sexta-feira"
 
-#: app/src/ui/calendar/editor.rs:1925
+#: app/src/ui/calendar/editor.rs:1966
 msgid "Saturday"
 msgstr "sábado"
 
-#: app/src/ui/calendar/editor.rs:1937
+#: app/src/ui/calendar/editor.rs:1978
 msgid "Lavender"
 msgstr "Lavanda"
 
-#: app/src/ui/calendar/editor.rs:1938
+#: app/src/ui/calendar/editor.rs:1979
 msgid "Sage"
 msgstr "Salva"
 
-#: app/src/ui/calendar/editor.rs:1939
+#: app/src/ui/calendar/editor.rs:1980
 msgid "Grape"
 msgstr "Uva"
 
-#: app/src/ui/calendar/editor.rs:1940
+#: app/src/ui/calendar/editor.rs:1981
 msgid "Flamingo"
 msgstr "Flamingo"
 
-#: app/src/ui/calendar/editor.rs:1941
+#: app/src/ui/calendar/editor.rs:1982
 msgid "Banana"
 msgstr "Banana"
 
-#: app/src/ui/calendar/editor.rs:1942
+#: app/src/ui/calendar/editor.rs:1983
 msgid "Tangerine"
 msgstr "Tangerina"
 
-#: app/src/ui/calendar/editor.rs:1943
+#: app/src/ui/calendar/editor.rs:1984
 msgid "Peacock"
 msgstr "Pavão"
 
-#: app/src/ui/calendar/editor.rs:1944
+#: app/src/ui/calendar/editor.rs:1985
 msgid "Graphite"
 msgstr "Grafite"
 
-#: app/src/ui/calendar/editor.rs:1945
+#: app/src/ui/calendar/editor.rs:1986
 msgid "Blueberry"
 msgstr "Mirtilo"
 
-#: app/src/ui/calendar/editor.rs:1946
+#: app/src/ui/calendar/editor.rs:1987
 msgid "Basil"
 msgstr "Manjericão"
 
-#: app/src/ui/calendar/editor.rs:1947
+#: app/src/ui/calendar/editor.rs:1988
 msgid "Tomato"
 msgstr "Tomate"
 
@@ -5382,116 +5389,129 @@ msgstr "Adicionar os feriados de {region}"
 msgid "Could not add the holidays: {reason}"
 msgstr "Não foi possível adicionar os feriados: {reason}"
 
-#: app/src/ui/calendar/mod.rs:384 app/src/ui/calendar/mod.rs:409
+#: app/src/ui/calendar/mod.rs:391 app/src/ui/calendar/mod.rs:416
 msgid "View"
 msgstr "Vista"
 
-#: app/src/ui/calendar/mod.rs:397 app/src/ui/calendar/mod.rs:1230
-#: app/src/ui/calendar/mod.rs:1261
+#: app/src/ui/calendar/mod.rs:404 app/src/ui/calendar/mod.rs:1272
+#: app/src/ui/calendar/mod.rs:1303
 msgid "Day"
 msgstr "Dia"
 
-#: app/src/ui/calendar/mod.rs:398 app/src/ui/calendar/mod.rs:1231
-#: app/src/ui/calendar/mod.rs:1262
+#: app/src/ui/calendar/mod.rs:405 app/src/ui/calendar/mod.rs:1273
+#: app/src/ui/calendar/mod.rs:1304
 msgid "Week"
 msgstr "Semana"
 
-#: app/src/ui/calendar/mod.rs:399 app/src/ui/calendar/mod.rs:1233
-#: app/src/ui/calendar/mod.rs:1263
+#: app/src/ui/calendar/mod.rs:406 app/src/ui/calendar/mod.rs:1275
+#: app/src/ui/calendar/mod.rs:1305
 msgid "Month"
 msgstr "Mês"
 
-#: app/src/ui/calendar/mod.rs:400 app/src/ui/calendar/mod.rs:1232
-#: app/src/ui/calendar/mod.rs:1265
+#: app/src/ui/calendar/mod.rs:407 app/src/ui/calendar/mod.rs:1274
+#: app/src/ui/calendar/mod.rs:1307
 msgid "Agenda"
 msgstr "Agenda"
 
-#: app/src/ui/calendar/mod.rs:424 app/src/ui/calendar/mod.rs:2733
+#: app/src/ui/calendar/mod.rs:431 app/src/ui/calendar/mod.rs:439
+#: app/src/ui/calendar/mod.rs:2786
 msgid "New Event (N)"
 msgstr "Novo evento (N)"
 
-#: app/src/ui/calendar/mod.rs:427 app/src/ui/calendar/mod.rs:429
+#: app/src/ui/calendar/mod.rs:436
+msgid "New Focus Time or Out of Office"
+msgstr "Novo tempo de concentração ou fora do escritório"
+
+#: app/src/ui/calendar/mod.rs:445 app/src/ui/calendar/mod.rs:447
 msgid "Search the Calendar (Ctrl+F)"
 msgstr "Pesquisar no calendário (Ctrl+F)"
 
-#: app/src/ui/calendar/mod.rs:432 app/src/ui/calendar/mod.rs:435
+#: app/src/ui/calendar/mod.rs:450 app/src/ui/calendar/mod.rs:453
 msgid "Show Calendars"
 msgstr "Mostrar os calendários"
 
-#: app/src/ui/calendar/mod.rs:441 app/src/ui/calendar/mod.rs:445
+#: app/src/ui/calendar/mod.rs:459 app/src/ui/calendar/mod.rs:463
 #: app/src/ui/conversation.rs:525 app/src/ui/conversation.rs:529
 msgid "Assistant (Ctrl+J)"
 msgstr "Assistente (Ctrl+J)"
 
-#: app/src/ui/calendar/mod.rs:478 app/src/ui/calendar/mod.rs:480
+#: app/src/ui/calendar/mod.rs:496 app/src/ui/calendar/mod.rs:498
 msgid "Search the Calendar"
 msgstr "Pesquisar no calendário"
 
-#: app/src/ui/calendar/mod.rs:547 app/src/ui/calendar/mod.rs:989
+#: app/src/ui/calendar/mod.rs:565 app/src/ui/calendar/mod.rs:1031
 msgid "Loading older events"
 msgstr "A carregar eventos mais antigos"
 
-#: app/src/ui/calendar/mod.rs:988
+#: app/src/ui/calendar/mod.rs:1030
 msgid "Older events can't load while offline"
 msgstr "Os eventos mais antigos não carregam sem ligação"
 
-#: app/src/ui/calendar/mod.rs:1022 app/src/ui/window/shortcuts.rs:567
+#: app/src/ui/calendar/mod.rs:1064 app/src/ui/window/shortcuts.rs:567
 msgid "Go to date"
 msgstr "Ir para uma data"
 
-#: app/src/ui/calendar/mod.rs:1229 app/src/ui/calendar/mod.rs:1264
+#: app/src/ui/calendar/mod.rs:1271 app/src/ui/calendar/mod.rs:1306
 msgid "List"
 msgstr "Lista"
 
-#: app/src/ui/calendar/mod.rs:1473
+#: app/src/ui/calendar/mod.rs:1521
 msgid "Moved “{title}”"
 msgstr "“{title}” movido"
 
-#: app/src/ui/calendar/mod.rs:1482
+#: app/src/ui/calendar/mod.rs:1530
 msgid "Could not move the event: {reason}"
 msgstr "Não foi possível mover o evento: {reason}"
 
-#: app/src/ui/calendar/mod.rs:1603
+#: app/src/ui/calendar/mod.rs:1651
 msgid "All-day events"
 msgstr "Eventos de dia inteiro"
 
-#: app/src/ui/calendar/mod.rs:1605
+#: app/src/ui/calendar/mod.rs:1653
 msgid "All-day"
 msgstr "Dia inteiro"
 
-#: app/src/ui/calendar/mod.rs:2001 app/src/ui/calendar/mod.rs:3307
-#: app/src/ui/calendar/sidebar.rs:309 app/src/ui/calendar/words.rs:332
+#: app/src/ui/calendar/mod.rs:2049 app/src/ui/calendar/mod.rs:3422
+#: app/src/ui/calendar/sidebar.rs:309 app/src/ui/calendar/words.rs:347
 #: app/src/ui/preferences.rs:931 app/src/ui/preferences.rs:1044
 msgid "%a"
 msgstr "%a"
 
-#: app/src/ui/calendar/mod.rs:2489
+#: app/src/ui/calendar/mod.rs:2537
 msgid "Removed “{title}” from your calendar"
 msgstr "“{title}” removido do seu calendário"
 
-#: app/src/ui/calendar/mod.rs:2490
+#: app/src/ui/calendar/mod.rs:2538
 msgid "Deleted “{title}”"
 msgstr "“{title}” eliminado"
 
-#: app/src/ui/calendar/mod.rs:2495
+#: app/src/ui/calendar/mod.rs:2543
 msgid "Could not delete the event: {reason}"
 msgstr "Não foi possível eliminar o evento: {reason}"
 
-#: app/src/ui/calendar/mod.rs:2539 app/src/ui/composer/mod.rs:1123
+#: app/src/ui/calendar/mod.rs:2587 app/src/ui/composer/mod.rs:1123
 #: app/src/ui/window.rs:2093 app/src/ui/window/scheduled.rs:98
 #: app/src/ui/window/shortcuts.rs:454
 msgid "Undo"
 msgstr "Anular"
 
-#: app/src/ui/calendar/mod.rs:2681
+#: app/src/ui/calendar/mod.rs:2729
 msgid "Could not send your answer: {reason}"
 msgstr "Não foi possível enviar a sua resposta: {reason}"
 
-#: app/src/ui/calendar/mod.rs:2735
+#: app/src/ui/calendar/mod.rs:2788
 msgid "None of your calendars take new events"
 msgstr "Nenhum dos seus calendários aceita eventos novos"
 
-#: app/src/ui/calendar/mod.rs:3039
+#: app/src/ui/calendar/mod.rs:2799 app/src/ui/calendar/quick.rs:55
+msgid "Focus Time"
+msgstr "Tempo de concentração"
+
+#: app/src/ui/calendar/mod.rs:2800 app/src/ui/calendar/quick.rs:56
+msgid "Out of Office"
+msgstr "Fora do escritório"
+
+#: app/src/ui/calendar/mod.rs:3154
 msgid "Could not save the event: {reason}"
 msgstr "Não foi possível guardar o evento: {reason}"
 
@@ -5584,15 +5604,15 @@ msgstr "Remover do meu calendário"
 msgid "Your answer"
 msgstr "A sua resposta"
 
-#: app/src/ui/calendar/quick.rs:74
+#: app/src/ui/calendar/quick.rs:123
 msgid "Add title"
 msgstr "Adicionar título"
 
-#: app/src/ui/calendar/quick.rs:99
+#: app/src/ui/calendar/quick.rs:154
 msgid "More Details"
 msgstr "Mais detalhes"
 
-#: app/src/ui/calendar/quick.rs:261
+#: app/src/ui/calendar/quick.rs:339
 msgid "Calendar: {name}"
 msgstr "Calendário: {name}"
 
@@ -5608,7 +5628,7 @@ msgstr "%B %Y"
 msgid "%B"
 msgstr "%B"
 
-#: app/src/ui/calendar/range.rs:123 app/src/ui/calendar/words.rs:177
+#: app/src/ui/calendar/range.rs:123 app/src/ui/calendar/words.rs:192
 msgid "{first} – {last}"
 msgstr "{first} – {last}"
 
@@ -5817,13 +5837,13 @@ msgid_plural "{count} hidden calendars"
 msgstr[0] "{count} calendário escondido"
 msgstr[1] "{count} calendários escondidos"
 
-#: app/src/ui/calendar/time_grid.rs:280
+#: app/src/ui/calendar/time_grid.rs:294
 msgid "{count} more event"
 msgid_plural "{count} more events"
 msgstr[0] "mais {count} evento"
 msgstr[1] "mais {count} eventos"
 
-#: app/src/ui/calendar/time_grid.rs:306
+#: app/src/ui/calendar/time_grid.rs:320
 msgid ""
 "Shift+Up or Shift+Down moves it; Shift+Alt+Up or Shift+Alt+Down changes when "
 "it ends."
@@ -5831,137 +5851,137 @@ msgstr ""
 "Shift+Up ou Shift+Down move-o; Shift+Alt+Up ou Shift+Alt+Down altera quando "
 "termina."
 
-#: app/src/ui/calendar/time_grid.rs:311
+#: app/src/ui/calendar/time_grid.rs:325
 msgid "{base} {hint}"
 msgstr "{base} {hint}"
 
-#: app/src/ui/calendar/words.rs:115
+#: app/src/ui/calendar/words.rs:130
 msgid "{title}, {days}, all day, {calendar}"
 msgstr "{title}, {days}, todo o dia, {calendar}"
 
-#: app/src/ui/calendar/words.rs:160
+#: app/src/ui/calendar/words.rs:175
 msgid "{place} · {calendar}"
 msgstr "{place} · {calendar}"
 
-#: app/src/ui/calendar/words.rs:200
+#: app/src/ui/calendar/words.rs:215
 msgid "{yes} of {count} said yes"
 msgid_plural "{yes} of {count} said yes"
 msgstr[0] "{yes} de {count} disse que sim"
 msgstr[1] "{yes} de {count} disseram que sim"
 
 #. The calendar's popover words its people line the same way.
-#: app/src/ui/calendar/words.rs:216 app/src/ui/calendar/words.rs:551
+#: app/src/ui/calendar/words.rs:231 app/src/ui/calendar/words.rs:566
 #: app/src/ui/invitation.rs:1193
 msgid "{name}, organizer"
 msgstr "{name}, organizador"
 
-#: app/src/ui/calendar/words.rs:220
+#: app/src/ui/calendar/words.rs:235
 msgid "{organizer} · {answers}"
 msgstr "{organizer} · {answers}"
 
-#: app/src/ui/calendar/words.rs:231
+#: app/src/ui/calendar/words.rs:246
 msgid "and {count} more"
 msgid_plural "and {count} more"
 msgstr[0] "e mais {count}"
 msgstr[1] "e mais {count}"
 
-#: app/src/ui/calendar/words.rs:242
+#: app/src/ui/calendar/words.rs:257
 msgid "Join with Google Meet"
 msgstr "Participar com o Google Meet"
 
-#: app/src/ui/calendar/words.rs:244
+#: app/src/ui/calendar/words.rs:259
 msgid "Join Call"
 msgstr "Participar na chamada"
 
-#: app/src/ui/calendar/words.rs:256
+#: app/src/ui/calendar/words.rs:271
 msgid "Open {place} in Maps"
 msgstr "Abrir {place} no mapa"
 
-#: app/src/ui/calendar/words.rs:271
+#: app/src/ui/calendar/words.rs:286
 msgid "{count} more"
 msgid_plural "{count} more"
 msgstr[0] "mais {count}"
 msgstr[1] "mais {count}"
 
-#: app/src/ui/calendar/words.rs:282
+#: app/src/ui/calendar/words.rs:297
 msgid "{count} more event on {date}"
 msgid_plural "{count} more events on {date}"
 msgstr[0] "mais {count} evento a {date}"
 msgstr[1] "mais {count} eventos a {date}"
 
-#: app/src/ui/calendar/words.rs:297
+#: app/src/ui/calendar/words.rs:312
 msgid "{date}, has events"
 msgstr "{date}, tem eventos"
 
-#: app/src/ui/calendar/words.rs:316
+#: app/src/ui/calendar/words.rs:331
 msgid "Offline, last updated {time}"
 msgstr "Offline, atualizado pela última vez às {time}"
 
-#: app/src/ui/calendar/words.rs:317 app/src/ui/sidebar.rs:1702
+#: app/src/ui/calendar/words.rs:332 app/src/ui/sidebar.rs:1702
 msgid "Offline"
 msgstr "Sem ligação"
 
-#: app/src/ui/calendar/words.rs:337
+#: app/src/ui/calendar/words.rs:352
 msgid "{weekday} {time}"
 msgstr "{weekday} {time}"
 
-#: app/src/ui/calendar/words.rs:358
+#: app/src/ui/calendar/words.rs:373
 msgid "{day}, {time}"
 msgstr "{day}, {time}"
 
-#: app/src/ui/calendar/words.rs:376
+#: app/src/ui/calendar/words.rs:391
 msgid "Open the invitation for “{title}” in Mail"
 msgstr "Abrir o convite de “{title}” no Correio"
 
-#: app/src/ui/calendar/words.rs:388
+#: app/src/ui/calendar/words.rs:403
 msgid "At the start"
 msgstr "No início"
 
-#: app/src/ui/calendar/words.rs:390
+#: app/src/ui/calendar/words.rs:405
 msgid "{count} week before"
 msgid_plural "{count} weeks before"
 msgstr[0] "{count} semana antes"
 msgstr[1] "{count} semanas antes"
 
-#: app/src/ui/calendar/words.rs:396
+#: app/src/ui/calendar/words.rs:411
 msgid "{count} day before"
 msgid_plural "{count} days before"
 msgstr[0] "{count} dia antes"
 msgstr[1] "{count} dias antes"
 
-#: app/src/ui/calendar/words.rs:402
+#: app/src/ui/calendar/words.rs:417
 msgid "{count} hour before"
 msgid_plural "{count} hours before"
 msgstr[0] "{count} hora antes"
 msgstr[1] "{count} horas antes"
 
-#: app/src/ui/calendar/words.rs:408
+#: app/src/ui/calendar/words.rs:423
 msgid "{count} minute before"
 msgid_plural "{count} minutes before"
 msgstr[0] "{count} minuto antes"
 msgstr[1] "{count} minutos antes"
 
-#: app/src/ui/calendar/words.rs:427
+#: app/src/ui/calendar/words.rs:442
 msgid "Every weekday"
 msgstr "Todos os dias úteis"
 
-#: app/src/ui/calendar/words.rs:432
+#: app/src/ui/calendar/words.rs:447
 msgid "A rule set in another app"
 msgstr "Uma regra definida noutra aplicação"
 
-#: app/src/ui/calendar/words.rs:515
+#: app/src/ui/calendar/words.rs:530
 msgid "Organizer"
 msgstr "Organizador"
 
-#: app/src/ui/calendar/words.rs:525
+#: app/src/ui/calendar/words.rs:540
 msgid "No answer yet"
 msgstr "Ainda sem resposta"
 
-#: app/src/ui/calendar/words.rs:547 app/src/ui/invitation.rs:1271
+#: app/src/ui/calendar/words.rs:562 app/src/ui/invitation.rs:1271
 msgid "You"
 msgstr "Você"
 
-#: app/src/ui/calendar/words.rs:651
+#: app/src/ui/calendar/words.rs:666
 msgid "{time} {city}"
 msgstr "{time} {city}"
 
@@ -10212,6 +10232,32 @@ msgstr "Marcar como não sendo spam"
 #: sync/src/triage.rs:70
 msgid "Move to {folder}"
 msgstr "Mover para {folder}"
+
+#~ msgid ""
+#~ "Mail is downloading. You left one box unticked on Microsoft's page, so "
+#~ "this feature stays off:"
+#~ msgid_plural ""
+#~ "Mail is downloading. You left {count} boxes unticked on Microsoft's page, "
+#~ "so these features stay off:"
+#~ msgstr[0] ""
+#~ "O correio está a ser transferido. Deixou uma caixa por marcar na página "
+#~ "da Microsoft, por isso esta funcionalidade fica desligada:"
+#~ msgstr[1] ""
+#~ "O correio está a ser transferido. Deixou {count} caixas por marcar na "
+#~ "página da Microsoft, por isso estas funcionalidades ficam desligadas:"
+
+#~ msgid ""
+#~ "Mail is downloading. You left one box unticked on Google's page, so this "
+#~ "feature stays off:"
+#~ msgid_plural ""
+#~ "Mail is downloading. You left {count} boxes unticked on Google's page, so "
+#~ "these features stay off:"
+#~ msgstr[0] ""
+#~ "O correio está a ser transferido. Deixou uma caixa por marcar na página "
+#~ "da Google, por isso esta funcionalidade fica desligada:"
+#~ msgstr[1] ""
+#~ "O correio está a ser transferido. Deixou {count} caixas por marcar na "
+#~ "página da Google, por isso estas funcionalidades ficam desligadas:"
 
 #~ msgid ""
 #~ "{address}'s server would not hand these over after three tries. Penguin "

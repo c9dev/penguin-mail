@@ -1096,6 +1096,11 @@ if ! bwrap --ro-bind / / true 2>/dev/null; then
     echo "bubblewrap cannot start here, so the demo runs without WebKit's sandbox" >&2
     webkit=WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS=1
 fi
+# New events start on the demo's Google Workspace calendar, whose editor
+# has the Type row the walk opens. The demo's first account plays a
+# personal Gmail one, which makes events alone.
+printf 'last_calendar_account = "dana@fernwood.example"\n' >"$sandbox/settings.toml"
+export MAILRS_SETTINGS="$sandbox/settings.toml"
 inside="
 $launcher --launch-immediately &
 sleep 1

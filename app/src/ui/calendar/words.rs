@@ -99,7 +99,22 @@ pub fn when_words<Z: TimeZone>(o: &Occurrence, zone: &Z) -> String
 where
     Z::Offset: std::fmt::Display,
 {
-    span_words(o.start, o.end, o.event.all_day, zone)
+    let (start, end, all_day) = as_days(o, zone);
+    span_words(start, end, all_day, zone)
+}
+
+/// `o`'s span the way the words read it: a timed entry that runs from one
+/// local midnight to another, as a whole-day out of office does, reads as
+/// all day over the days it covers.
+fn as_days<Z: TimeZone>(o: &Occurrence, zone: &Z) -> (EpochMillis, EpochMillis, bool) {
+    let utc_midnight = |day: NaiveDate| day.and_hms_opt(0, 0, 0).map(|t| t.and_utc().timestamp_millis());
+    if !o.event.all_day
+        && let Some((first, last)) = super::layout::whole_days(o.start, o.end, zone)
+        && let (Some(start), Some(end)) = (utc_midnight(first), utc_midnight(last + chrono::Duration::days(1)))
+    {
+        return (start, end, true);
+    }
+    (o.start, o.end, o.event.all_day)
 }
 
 /// A month bar's spoken name: the title, the days the whole event
@@ -142,7 +157,7 @@ pub fn agenda_span_words<Z: TimeZone>(o: &Occurrence, zone: &Z) -> String
 where
     Z::Offset: std::fmt::Display,
 {
-    if o.event.all_day {
+    if as_days(o, zone).2 {
         gettext("All day")
     } else {
         fill(
@@ -805,6 +820,16 @@ mod tests {
         mailrs_domain::translate::set_date_locale("en_US");
         let o = occurrence(true, midnight(d(2026, 9, 23)), midnight(d(2026, 9, 24)));
         assert_eq!(when_words(&o, &Utc), "All day");
+    }
+
+    #[test]
+    fn an_out_of_office_from_midnight_to_midnight_reads_as_all_day() {
+        mailrs_domain::translate::set_date_locale("en_US");
+        let one = occurrence(false, midnight(d(2026, 9, 23)), midnight(d(2026, 9, 24)));
+        assert_eq!(agenda_span_words(&one, &Utc), "All day");
+        assert_eq!(when_words(&one, &Utc), "All day");
+        let three = occurrence(false, midnight(d(2026, 9, 23)), midnight(d(2026, 9, 26)));
+        assert_eq!(when_words(&three, &Utc), "Wednesday 23 – Friday 25 September");
     }
 
     #[test]

@@ -198,8 +198,15 @@ pub struct CalendarView {
     bottom_row: gtk::Box,
     header: adw::HeaderBar,
     /// The orange "+" button: the editor on a new event at the slot.
-    /// Hidden while no calendar takes new events.
+    /// Insensitive while no calendar takes new events. Shown while no
+    /// calendar takes another type; `new_split` stands in for it then.
     new_event: gtk::Button,
+    /// New Event with a menu of the types some calendar takes: Event,
+    /// Focus Time, Out of Office. Its main part does what `new_event`
+    /// does.
+    new_split: adw::SplitButton,
+    /// The types `new_split`'s menu lists now.
+    new_types: RefCell<Vec<draft::TypeChoice>>,
     search_bar: gtk::SearchBar,
     search_entry: gtk::SearchEntry,
     views: gtk::Stack,
@@ -422,6 +429,17 @@ impl CalendarView {
             .valign(gtk::Align::Center)
             .build();
         crate::ui::name_with_shortcut(&new_event, &gettext("New Event (N)"));
+        let new_split = adw::SplitButton::builder()
+            .icon_name("list-add-symbolic")
+            .css_classes(["suggested-action", "new-event-split"])
+            .valign(gtk::Align::Center)
+            .dropdown_tooltip(gettext("New Focus Time or Out of Office"))
+            .visible(false)
+            .build();
+        crate::ui::name_with_shortcut(&new_split, &gettext("New Event (N)"));
+        let new_slot = gtk::Box::builder().valign(gtk::Align::Center).build();
+        new_slot.append(&new_event);
+        new_slot.append(&new_split);
         let search_button = gtk::ToggleButton::builder()
             .icon_name("system-search-symbolic")
             .tooltip_text(gettext("Search the Calendar (Ctrl+F)"))
@@ -458,7 +476,7 @@ impl CalendarView {
         // The assistant toggle sits at the header's outer right edge.
         header.pack_end(&assistant_toggle);
         header.pack_end(&search_button);
-        header.pack_end(&new_event);
+        header.pack_end(&new_slot);
         header.pack_end(&switch_slot);
         // When the room runs short the header drops its extras, and then
         // folds the view switch into its drop-down, rather than lose New
@@ -641,6 +659,8 @@ impl CalendarView {
                 bottom_row,
                 header: header.clone(),
                 new_event: new_event.clone(),
+                new_split: new_split.clone(),
+                new_types: RefCell::new(Vec::new()),
                 search_bar,
                 search_entry,
                 views,
@@ -699,6 +719,28 @@ impl CalendarView {
                 view.new_event();
             }
         });
+        let weak = Rc::downgrade(&view);
+        new_split.connect_clicked(move |_| {
+            if let Some(view) = weak.upgrade() {
+                view.new_event();
+            }
+        });
+        // The split button's menu picks a type by name: "event", "focus"
+        // or "away".
+        let new_as = gio::SimpleAction::new("as", Some(glib::VariantTy::STRING));
+        let weak = Rc::downgrade(&view);
+        new_as.connect_activate(move |_, target| {
+            let Some(view) = weak.upgrade() else { return };
+            let choice = match target.and_then(|t| t.str()) {
+                Some("focus") => draft::TypeChoice::Focus,
+                Some("away") => draft::TypeChoice::OutOfOffice,
+                _ => draft::TypeChoice::Event,
+            };
+            view.new_event_as(choice);
+        });
+        let new_actions = gio::SimpleActionGroup::new();
+        new_actions.add_action(&new_as);
+        new_slot.insert_action_group("new", Some(&new_actions));
         let weak = Rc::downgrade(&view);
         view.quick.popover.connect_closed(move |_| {
             if let Some(view) = weak.upgrade() {
@@ -1360,10 +1402,16 @@ impl CalendarView {
     /// Clears the ghost span quick create's popover marks, on whichever
     /// page is on screen: the only one it can be showing on.
     fn clear_ghost(&self) {
+        self.show_ghost(None);
+    }
+
+    /// Marks `span` on the time grid now on screen with a ghost card, or
+    /// takes the ghost away.
+    fn show_ghost(&self, span: Option<(EpochMillis, EpochMillis)>) {
         if let Some(page) = self.pages.borrow().get(1)
             && let PageView::Grid(grid) = &*page.view.borrow()
         {
-            grid.grid.show_ghost(None);
+            grid.grid.show_ghost(span);
         }
     }
 
@@ -1897,7 +1945,7 @@ impl CalendarView {
                 // opens at its first event.
                 let opening = block
                     .as_ref()
-                    .filter(|(_, o)| !o.event.all_day)
+                    .filter(|(_, o)| !time_grid::in_strip(o))
                     .map(|(_, o)| layout::open_hour(o.start, &chrono::Local));
                 let hour = match opening {
                     Some(hour) => Some(hour),
@@ -2726,14 +2774,46 @@ impl CalendarView {
     /// Insensitive, with why, while no calendar takes new events: an
     /// IMAP-only setup, or every account still starting or waiting on
     /// the calendar permission.
+    ///
+    /// Where some calendar also takes focus time or out of office, the
+    /// split button stands in for the plain one and its menu lists the
+    /// types the calendars take (`draft::menu_types`).
     fn update_new_event(&self) {
-        let can = !self.offered().is_empty();
+        let offered = self.offered();
+        let can = !offered.is_empty();
         self.new_event.set_sensitive(can);
         if can {
             crate::ui::name_with_shortcut(&self.new_event, &gettext("New Event (N)"));
         } else {
             crate::ui::name(&self.new_event, &gettext("None of your calendars take new events"));
         }
+        let types = draft::menu_types(&offered, |id| self.offers_of(id));
+        let split = types.len() > 1;
+        self.new_event.set_visible(!split);
+        self.new_split.set_visible(split);
+        if *self.new_types.borrow() != types {
+            let menu = gio::Menu::new();
+            for choice in &types {
+                let (label, target) = match choice {
+                    draft::TypeChoice::Event => (gettext("Event"), "event"),
+                    draft::TypeChoice::Focus => (gettext("Focus Time"), "focus"),
+                    draft::TypeChoice::OutOfOffice => (gettext("Out of Office"), "away"),
+                };
+                menu.append(Some(&label), Some(&format!("new.as::{target}")));
+            }
+            self.new_split.set_menu_model(Some(&menu));
+            self.new_types.replace(types);
+        }
+    }
+
+    /// What `account_id`'s provider keeps, or what an account still
+    /// starting is assumed to: no types beyond events.
+    fn offers_of(&self, account_id: AccountId) -> Offers {
+        self.accounts
+            .borrow()
+            .iter()
+            .find(|(a, _, _)| a.id == account_id)
+            .map_or(Offers::EVERYTHING, |(_, offers, _)| *offers)
     }
 
     /// The draft for a new event from `start` to `end` on the default
@@ -2785,6 +2865,22 @@ impl CalendarView {
         if let Some(draft) = self.fresh_draft(start, end) {
             self.edit(draft);
         }
+    }
+
+    /// The New Event menu: the editor on a new entry of type `choice` at
+    /// the slot, with the type's defaults, on the default calendar when
+    /// it takes the type, else on the first calendar that does.
+    pub fn new_event_as(self: &Rc<Self>, choice: draft::TypeChoice) {
+        let (start, end) = self.slot();
+        let offered = self.offered();
+        let last = (self.settings)().last_calendar_account;
+        let Some(default) = draft::default_calendar(&offered, last.as_deref()) else { return };
+        let Some((account, calendar)) = draft::calendar_for(choice, &offered, |id| self.offers_of(id), &default) else {
+            return;
+        };
+        let mut draft = Draft::new(account, &calendar, start, end, draft::local_zone());
+        draft.new_as(choice, chrono::Local::now().date_naive(), self.offers_of(account).declines);
+        self.edit(draft);
     }
 
     /// N: the quick-create popover at the slot, in Day and Week, or on
@@ -2878,19 +2974,36 @@ impl CalendarView {
             .iter()
             .position(|(a, _, c)| *a == draft.account_id && c.id == draft.calendar)
             .unwrap_or(0);
-        let when = words::span_words(start, end, false, &chrono::Local);
+        let today = chrono::Local::now().date_naive();
+        let types: Vec<_> =
+            choices.iter().map(|(account, _, calendar)| draft::type_switch(&self.offers_of(*account), calendar)).collect();
+        let declines: Vec<bool> = choices.iter().map(|(account, _, _)| self.offers_of(*account).declines).collect();
+        // The time line and the ghost card follow the type: focus time
+        // runs two hours, out of office whole days, which the all-day row
+        // shows rather than the grid.
+        let shaped = draft.clone();
+        let marked = Rc::downgrade(self);
+        let when = move |choice| {
+            let mut shaped = shaped.clone();
+            shaped.new_as(choice, today, true);
+            if let Some(view) = marked.upgrade() {
+                view.show_ghost((choice != draft::TypeChoice::OutOfOffice).then_some((shaped.start, shaped.end)));
+            }
+            words::span_words(shaped.start, shaped.end, shaped.all_day, &chrono::Local)
+        };
         let (save_view, more_view) = (Rc::clone(self), Rc::clone(self));
         let picked = Rc::new(choices.clone());
         let (save_picked, more_picked) = (Rc::clone(&picked), picked);
         // A calendar picked in the popover starts the draft again on it,
         // so its zone and reminders follow, as the editor's choice does.
-        let on = move |choices: &[(AccountId, String, Calendar)], index: usize, title: String| {
+        let on = move |choices: &[(AccountId, String, Calendar)], index: usize, title: String, choice| {
             let mut draft = match choices.get(index) {
                 Some((account, _, calendar)) if index != current => {
                     Draft::new(*account, calendar, start, end, draft::local_zone())
                 }
                 _ => draft.clone(),
             };
+            draft.new_as(choice, today, declines.get(index).copied().unwrap_or(false));
             draft.title = title;
             draft
         };
@@ -2899,11 +3012,12 @@ impl CalendarView {
             &anchor,
             &rect,
             side,
-            &when,
+            when,
             choices,
+            types,
             current,
-            move |title, index| save_view.save_draft(on(&save_picked, index, title)),
-            move |title, index| more_view.edit(on_more(&more_picked, index, title)),
+            move |title, index, choice| save_view.save_draft(on(&save_picked, index, title, choice)),
+            move |title, index, choice| more_view.edit(on_more(&more_picked, index, title, choice)),
         );
     }
 
@@ -2922,6 +3036,7 @@ impl CalendarView {
                 .filter(|(_, offers, _)| offers.moves_events)
                 .map(|(account, _, _)| account.id)
                 .collect(),
+            offers: self.accounts.borrow().iter().map(|(account, offers, _)| (account.id, *offers)).collect(),
         };
         let this = Rc::clone(self);
         editor::open(&self.page, draft, choices, contacts, move |draft| this.save_draft(draft));
@@ -3330,7 +3445,7 @@ fn first_hour(found: &[Occurrence], range: Range) -> f64 {
     let (from, to) = range.span(&chrono::Local);
     let starts: Vec<f64> = found
         .iter()
-        .filter(|o| !o.event.all_day && o.start >= from && o.start < to)
+        .filter(|o| !time_grid::in_strip(o) && o.start >= from && o.start < to)
         .filter_map(|o| {
             let local = DateTime::<Utc>::from_timestamp_millis(o.start)?.with_timezone(&chrono::Local);
             let midnight = local.date_naive().and_hms_opt(0, 0, 0)?;

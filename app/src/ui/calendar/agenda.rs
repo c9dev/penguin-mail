@@ -252,8 +252,9 @@ mod model {
     }
 }
 
-/// The widget one occurrence's row draws: a coloured dot, the time (or
-/// "All day"), the title, and the place dimmed. A `gtk::Box` subclass so
+/// The widget one occurrence's row draws: a coloured dot (striped for out
+/// of office, or the target of focus time and the cake of a birthday in
+/// its place), the time (or "All day"), the title, and the place dimmed. A `gtk::Box` subclass so
 /// the row factory's bind step can reach its own labels back out, the
 /// same reason `ThreadRow` is one (`app/src/ui/mod.rs`).
 mod row {
@@ -269,6 +270,9 @@ mod row {
             /// The date's heading, shown on the date's first row only.
             pub heading: OnceCell<gtk::Label>,
             pub dot: OnceCell<gtk::Box>,
+            /// Focus time's target or a birthday's cake, shown instead of
+            /// the dot, as the week and month blocks show them.
+            pub kind: OnceCell<gtk::Image>,
             pub time: OnceCell<gtk::Label>,
             pub title: OnceCell<gtk::Label>,
             pub place: OnceCell<gtk::Label>,
@@ -320,6 +324,13 @@ mod row {
                     .valign(gtk::Align::Center)
                     .css_classes(["agenda-dot"])
                     .build();
+                let kind = gtk::Image::builder()
+                    .pixel_size(12)
+                    .valign(gtk::Align::Center)
+                    .css_classes(["agenda-kind"])
+                    .accessible_role(gtk::AccessibleRole::Presentation)
+                    .visible(false)
+                    .build();
                 let time = gtk::Label::builder()
                     .css_classes(["dim-label", "caption"])
                     // Wide enough for "10:00–11:30" without wrapping;
@@ -343,6 +354,7 @@ mod row {
                     .build();
                 for widget in [
                     dot.upcast_ref::<gtk::Widget>(),
+                    kind.upcast_ref(),
                     time.upcast_ref(),
                     title.upcast_ref(),
                     place.upcast_ref(),
@@ -350,6 +362,7 @@ mod row {
                     row.append(widget);
                 }
                 let _ = self.dot.set(dot);
+                let _ = self.kind.set(kind);
                 let _ = self.time.set(time);
                 let _ = self.title.set(title);
                 let _ = self.place.set(place);
@@ -397,7 +410,16 @@ mod row {
             let (colour, calendar_name) = calendar_of(o, calendars);
 
             let dot = imp.dot.get().expect("built in constructed");
-            dot.set_css_classes(&["agenda-dot", &tint::css_class(colour)]);
+            let tinted = tint::css_class(colour);
+            let look = crate::ui::calendar::kinds::look(&o.event.kind);
+            let mut classes = vec!["agenda-dot", tinted.as_str()];
+            classes.extend(look.css_class());
+            dot.set_css_classes(&classes);
+            let kind = imp.kind.get().expect("built in constructed");
+            kind.set_css_classes(&["agenda-kind", &tinted]);
+            kind.set_icon_name(look.icon());
+            kind.set_visible(look.icon().is_some());
+            dot.set_visible(look.icon().is_none());
 
             imp.time
                 .get()
@@ -413,10 +435,19 @@ mod row {
             place.set_visible(!subtitle.is_empty());
             place.set_label(&subtitle);
 
+            // Out of office and focus time say so, since the stripes and
+            // the icon that show it are not spoken.
+            let titled = match crate::ui::calendar::kinds::kind_words(&o.event.kind) {
+                Some(kind) if !kind.eq_ignore_ascii_case(o.event.title.trim()) => mailrs_domain::translate::fill(
+                    &gettext("{title}, {kind}"),
+                    &[("title", &o.event.title), ("kind", &kind)],
+                ),
+                _ => o.event.title.clone(),
+            };
             let name = mailrs_domain::translate::fill(
                 &gettext("{title}, {when}, {calendar}"),
                 &[
-                    ("title", &o.event.title),
+                    ("title", &titled),
                     ("when", &words::when_words(o, &chrono::Local)),
                     ("calendar", calendar_name),
                 ],
