@@ -316,10 +316,14 @@ pub(super) static SHORTCUTS: &[Shortcut] = &[
     Shortcut {
         section: Section::Reading,
         description: || gettext("Search"),
-        keys: &[
-            letter("slash", "win.search"),
-            main("<Control><Alt>f", "win.search"),
-        ],
+        keys: &[letter("slash", "win.search")],
+    },
+    // A line of its own: the dialog draws "/" between two keys, and
+    // beside the "/" key it read as one key, "/ /".
+    Shortcut {
+        section: Section::Reading,
+        description: || gettext("Search from a text field"),
+        keys: &[main("<Control><Alt>f", "win.search")],
     },
     Shortcut {
         section: Section::Reading,
@@ -1276,7 +1280,8 @@ mod tests {
             line("Bigger or smaller text"),
             "<Control>plus <Control>minus"
         );
-        assert_eq!(line("Search"), "slash <Control><Alt>f");
+        assert_eq!(line("Search"), "slash");
+        assert_eq!(line("Search from a text field"), "<Control><Alt>f");
         assert_eq!(line("Day, week, month or agenda"), "d w m a");
         assert_eq!(line("Show the calendar"), "<Alt>2");
     }
