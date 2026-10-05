@@ -91,7 +91,7 @@ pub fn present_page(
 fn general_page(
     app: &Rc<App>,
     settings: &Settings,
-    missing: &[(String, String)],
+    missing: &[(String, Vec<String>)],
 ) -> adw::PreferencesPage {
     let page = adw::PreferencesPage::builder()
         .title(gettext("General"))
@@ -234,12 +234,14 @@ fn general_page(
         let unavailable = adw::PreferencesGroup::builder()
             .title(gettext("Not Available"))
             .build();
-        for (address, reason) in missing {
+        // One row for each account, its reasons one to a line, so an
+        // account that lacks three things shows its address once.
+        for (address, reasons) in missing {
             let row = adw::ActionRow::builder()
                 .title(address)
-                .subtitle(reason)
+                .subtitle(reasons.join("\n"))
                 .build();
-            crate::ui::name(&row, &crate::offered::missing_name(address, reason));
+            crate::ui::name(&row, &crate::offered::missing_name(address, reasons));
             unavailable.add(&row);
         }
         page.add(&unavailable);
