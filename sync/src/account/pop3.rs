@@ -29,6 +29,9 @@ struct Done {
     new_mail: Vec<String>,
     /// A message reached its third refused RETR.
     failing_grew: bool,
+    /// Messages that reached the menu when their answer had ended the
+    /// session, for the next session to name through `TOP`.
+    unnamed: Vec<String>,
 }
 
 /// What counting one failed message did.
@@ -74,6 +77,8 @@ impl AccountSync {
             threads,
             new_mail,
             failing_grew,
+            // Left unnamed when the check ended before another session.
+            unnamed: _,
         } = done;
         // What was stored stays stored whatever went wrong after it, so
         // the window and the local rules hear of it either way.
@@ -202,6 +207,17 @@ impl AccountSync {
             .into_iter()
             .map(|item| (item.id, item.octets))
             .collect();
+        // Named before any RETR, which could end this session too. Each is
+        // tried once, so a TOP that breaks every session cannot keep the
+        // check opening new ones.
+        for uidl in std::mem::take(&mut done.unnamed) {
+            let Some(listing) = listed.iter().find(|u| u.uidl == uidl) else {
+                continue;
+            };
+            if !self.name_failing(pop3, listing.id, &uidl).await? {
+                return Ok(None);
+            }
+        }
         // A server should never list one UIDL twice in a session, but a
         // buggy one can. The first listing downloads and the rest are
         // skipped, so neither body replaces the other.
@@ -335,7 +351,10 @@ impl AccountSync {
             // ends the check.
             Err(err @ (Pop3Error::TooLarge | Pop3Error::Protocol(_) | Pop3Error::Network(_))) => {
                 tracing::warn!(account = account_id, uidl, %err, "could not read a message's answer");
-                done.failing_grew |= self.count_failure(pop3, *id, uidl, &err, false).await?.shown;
+                if self.count_failure(pop3, *id, uidl, &err, false).await?.shown {
+                    done.failing_grew = true;
+                    done.unnamed.push(uidl.clone());
+                }
                 return Ok(false);
             }
             Err(err) => return Err(BackendError::from(err).into()),

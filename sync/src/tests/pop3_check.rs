@@ -475,6 +475,31 @@ async fn a_message_the_connection_drops_on_is_recorded_and_the_check_carries_on(
     assert_eq!(h.fake.retr_calls(), [1, 2, 3, 1, 1]);
 }
 
+/// An answer that breaks the session leaves no session for TOP, so the
+/// next session names the message before it downloads anything.
+#[tokio::test]
+async fn a_message_that_breaks_the_session_is_named_at_its_third_failure() {
+    for (err, reason) in [
+        (Pop3Error::Protocol("+GARBAGE".into()), FailReason::Unreadable),
+        (Pop3Error::Network("the connection dropped".into()), FailReason::Dropped),
+    ] {
+        let h = pop3_harness(three().breaking_retr("u1", err), RemoveSetting::Never).await;
+        for _ in 0..3 {
+            h.sync.pop3_check().await.unwrap();
+        }
+        assert_eq!(
+            failing(&h).await,
+            [Failing {
+                uidl: "u1".into(),
+                reason,
+                words: String::new(),
+                sender: Some("Ana".into()),
+                subject: Some("Hello 1".into()),
+            }]
+        );
+    }
+}
+
 /// The TOP that names a failing message at its third failure can break the
 /// session too. The next message must not pay for it.
 #[tokio::test]
