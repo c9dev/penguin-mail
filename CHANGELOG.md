@@ -167,6 +167,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   Ctrl+R.
 
 ### Improved
+- The category chips over the inbox show each category's name and unread count, "Primary 2", when the list is wide enough for all five, and fold to icons in a narrow one.
 - The mini month marks today with the only fill and the day you're viewing with a ring, and tints the week in view only in Week view.
 - Section headings in the sidebar and the calendar's hour labels, week number, ALL-DAY, account names, days outside the month and agenda times are dark enough to read in light and dark.
 - Conversations in the list light up under the pointer, as the sidebar's rows do.

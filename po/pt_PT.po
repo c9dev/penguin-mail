@@ -8756,26 +8756,26 @@ msgstr "Abrir noutro programa"
 msgid "{file}, preview"
 msgstr "{file}, pré-visualização"
 
-#: app/src/ui/window/categories.rs:281
+#: app/src/ui/window/categories.rs:305
 msgid "Open a message from the sender first"
 msgstr "Abra primeiro uma mensagem do remetente"
 
-#: app/src/ui/window/categories.rs:325
+#: app/src/ui/window/categories.rs:349
 msgid "Mail from {sender} now goes to {category}"
 msgstr "O correio de {sender} passa a ir para {category}"
 
-#: app/src/ui/window/categories.rs:330
+#: app/src/ui/window/categories.rs:354
 msgid "Moved mail from {sender} to {category}"
 msgstr "Correio de {sender} movido para {category}"
 
-#: app/src/ui/window/categories.rs:337
+#: app/src/ui/window/categories.rs:361
 msgid ""
 "Moved mail from {sender} to {category}, but could not sort new mail: {reason}"
 msgstr ""
 "Correio de {sender} movido para {category}, mas não foi possível organizar o "
 "correio novo: {reason}"
 
-#: app/src/ui/window/categories/chip.rs:26
+#: app/src/ui/window/categories/chip.rs:27
 msgid "{name}, {count} unread"
 msgid_plural "{name}, {count} unread"
 msgstr[0] "{name}, {count} por ler"

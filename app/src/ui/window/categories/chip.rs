@@ -1,7 +1,8 @@
-//! What a category chip says: the badge on its corner, and the name the
-//! tooltip and a screen reader give it. Only the chosen chip shows its
-//! name on screen, so every chip's spoken name carries it, with the
-//! whole unread count even when the badge stops at 99.
+//! What a category chip says: its unread badge, the name the tooltip and
+//! a screen reader give it, and which chips show their names in the room
+//! the row has. A narrow row folds the names away, so every chip's spoken
+//! name carries it, with the whole unread count even when the badge stops
+//! at 99.
 
 use mailrs_domain::Category;
 use mailrs_domain::translate::fill_plural;
@@ -30,9 +31,71 @@ pub fn spoken(category: Category, unread: i64) -> String {
     )
 }
 
+/// Which chips show their names beside their icons.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Names {
+    /// Every chip: "Primary 2", "Updates", "Social 1".
+    Every,
+    /// Only the chosen chip; the others show an icon and a corner badge.
+    Chosen,
+    /// No chip; each shows an icon, and its name lives in the tooltip and
+    /// the spoken name.
+    Icons,
+}
+
+/// The width the row of chips needs in each of the three ways to draw it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Needs {
+    pub icons: i32,
+    pub chosen: i32,
+    pub every: i32,
+}
+
+/// The most names a row `width` pixels wide holds. Focused and Other are
+/// worded tabs with no icon to fall back to, so they keep their names and
+/// leave the row to clip them.
+pub fn names_for(width: i32, needs: Needs, worded: bool) -> Names {
+    if worded || width >= needs.every {
+        Names::Every
+    } else if width >= needs.chosen {
+        Names::Chosen
+    } else {
+        Names::Icons
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    const NEEDS: Needs = Needs {
+        icons: 240,
+        chosen: 290,
+        every: 520,
+    };
+
+    #[test]
+    fn every_chip_shows_its_name_when_the_row_holds_them_all() {
+        assert_eq!(names_for(520, NEEDS, false), Names::Every);
+        assert_eq!(names_for(900, NEEDS, false), Names::Every);
+    }
+
+    #[test]
+    fn only_the_chosen_chip_keeps_its_name_when_the_rest_do_not_fit() {
+        assert_eq!(names_for(519, NEEDS, false), Names::Chosen);
+        assert_eq!(names_for(290, NEEDS, false), Names::Chosen);
+    }
+
+    #[test]
+    fn the_chips_fall_back_to_icons_when_no_name_fits() {
+        assert_eq!(names_for(289, NEEDS, false), Names::Icons);
+        assert_eq!(names_for(100, NEEDS, false), Names::Icons);
+    }
+
+    #[test]
+    fn worded_tabs_keep_their_names_since_they_have_no_icon() {
+        assert_eq!(names_for(100, NEEDS, true), Names::Every);
+    }
 
     #[test]
     fn a_focused_inbox_slice_reads_with_its_unread_count() {
