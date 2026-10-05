@@ -651,3 +651,101 @@ async fn a_first_download_holds_one_message_at_a_time() {
     assert_eq!(h.ids_in(MailSet::Role(Role::Inbox)).await.len(), 200);
     assert!(peak < 16 << 20, "the check held {peak} bytes; 200 messages come to 50 MB");
 }
+
+/// A check after a clean one, with no new mail, no removal due and no
+/// failure to retry.
+const QUIET: [&str; 2] = ["STAT", "QUIT"];
+
+/// Leave on Server checks every minute, and listing a large maildrop costs
+/// megabytes each time.
+#[tokio::test]
+async fn a_check_finding_the_server_as_it_was_sends_only_stat_and_quit() {
+    let fake = FakePop3::default().with_message("u1", &pop3_mail(1)).with_message("u2", &pop3_mail(2));
+    let h = pop3_harness(fake, RemoveSetting::Never).await;
+    h.sync.pop3_check().await.unwrap();
+    h.fake.clear_commands();
+    h.sync.pop3_check().await.unwrap();
+    assert_eq!(h.fake.commands(), QUIET);
+    assert_eq!(h.fake.in_flight(), 0, "the session ended");
+}
+
+#[tokio::test]
+async fn new_mail_after_a_quiet_check_brings_the_listing_back() {
+    let h = pop3_harness(FakePop3::default().with_message("u1", &pop3_mail(1)), RemoveSetting::Never).await;
+    h.sync.pop3_check().await.unwrap();
+    h.sync.pop3_check().await.unwrap();
+    h.fake.add("u2", &pop3_mail(2));
+    h.fake.clear_commands();
+    h.sync.pop3_check().await.unwrap();
+    assert_eq!(h.fake.commands(), ["STAT", "UIDL", "LIST", "RETR", "QUIT"]);
+    assert_eq!(h.ids_in(MailSet::Role(Role::Inbox)).await, ["pop3/u1", "pop3/u2"]);
+    h.fake.clear_commands();
+    h.sync.pop3_check().await.unwrap();
+    assert_eq!(h.fake.commands(), QUIET, "the new mail is down, so the next check is quiet again");
+}
+
+#[tokio::test]
+async fn a_removal_coming_due_brings_the_listing_back() {
+    let h = pop3_harness(FakePop3::default().with_message("u1", &pop3_mail(1)), RemoveSetting::Days(30)).await;
+    h.sync.pop3_check().await.unwrap();
+    h.fake.clear_commands();
+    h.sync.pop3_check().await.unwrap();
+    assert_eq!(h.fake.commands(), QUIET, "not thirty days yet");
+    let account_id = h.account_id;
+    let long_ago = now_millis() - 40 * DAY;
+    h.db.write(move |c| {
+        c.execute(
+            "UPDATE pop3_seen SET downloaded_at = ?2 WHERE account_id = ?1",
+            rusqlite::params![account_id, long_ago],
+        )?;
+        Ok(())
+    })
+    .await
+    .unwrap();
+    h.sync.pop3_check().await.unwrap();
+    assert_eq!(h.fake.deleted(), [1], "forty days on, the DELE goes");
+    assert!(h.fake.held().is_empty());
+}
+
+#[tokio::test]
+async fn delete_forever_after_a_quiet_check_brings_the_listing_back() {
+    let h = pop3_harness(FakePop3::default().with_message("u1", &pop3_mail(1)), RemoveSetting::Days(30)).await;
+    h.sync.pop3_check().await.unwrap();
+    h.sync.pop3_check().await.unwrap();
+    let thread = h.thread_of("pop3/u1").await;
+    h.sync.erase_all(&[Target::thread(h.account_id, thread)]).await.unwrap();
+    h.sync.pop3_check().await.unwrap();
+    assert_eq!(h.fake.deleted(), [1]);
+}
+
+#[tokio::test]
+async fn a_message_to_try_again_keeps_the_listing_at_every_check() {
+    let fake = FakePop3::default()
+        .with_message("u1", &pop3_mail(1))
+        .with_message("u2", &pop3_mail(2))
+        .failing_retr("u2");
+    let h = pop3_harness(fake, RemoveSetting::Never).await;
+    for _ in 0..3 {
+        h.sync.pop3_check().await.unwrap();
+    }
+    assert_eq!(h.fake.retr_calls(), [1, 2, 2, 2], "u2 is asked for at each check");
+}
+
+/// Two maildrops can match in count and octets: a message another client
+/// removed and a new one of the same size. A full listing once an hour
+/// finds the new one.
+#[tokio::test]
+async fn a_quiet_server_is_listed_in_full_once_an_hour() {
+    let h = pop3_harness(FakePop3::default().with_message("u1", &pop3_mail(1)), RemoveSetting::Never).await;
+    h.sync.pop3_check().await.unwrap();
+    h.fake.take("u1");
+    h.fake.add("u9", &pop3_mail(1));
+    h.fake.clear_commands();
+    h.sync.pop3_check().await.unwrap();
+    assert_eq!(h.fake.commands(), QUIET, "STAT cannot tell the two apart");
+    tokio::time::pause();
+    tokio::time::advance(Duration::from_secs(61 * 60)).await;
+    h.sync.pop3_check().await.unwrap();
+    assert!(h.fake.commands().contains(&"UIDL"));
+    assert_eq!(h.ids_in(MailSet::Role(Role::Inbox)).await, ["pop3/u1", "pop3/u9"]);
+}
