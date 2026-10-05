@@ -1,5 +1,7 @@
 //! Suggestions while typing a search, as Apple Mail offers them.
 
+pub mod typing;
+
 use mailrs_store::contacts::Suggestion as Person;
 
 use crate::contacts::suggest;

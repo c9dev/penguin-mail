@@ -168,6 +168,10 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Improved
 - Schedule focus time or out of office from the New Event button's menu or the type switch in quick add, offered only on calendars that can keep them: Google Workspace has both, Outlook has out of office.
+- The category chips over the inbox show each category's name and unread count, "Primary 2", wrapping onto a second line when one is too short, and fold to icons in a narrow window.
+- Mail search shows results as you type: a moment after you stop, the mail on this computer shows first and the servers' results follow from three letters on. Enter still searches at once.
+- The composer's header holds Attach Files, a More menu and Send. More has Templates, Preview, Sign and Encrypt, and a shield shows beside Attach Files while the message goes out signed or encrypted.
+- Today's day, date and place over the calendar's days are dark enough to read on their tint in light.
 - The mini month marks today with the only fill and the day you're viewing with a ring, and tints the week in view only in Week view.
 - Section headings in the sidebar and the calendar's hour labels, week number, ALL-DAY, account names, days outside the month and agenda times are dark enough to read in light and dark.
 - Conversations in the list light up under the pointer, as the sidebar's rows do.

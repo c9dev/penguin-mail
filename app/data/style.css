@@ -55,9 +55,18 @@ window.accent-orange { --accent-fill: #c64b00; }
    it does in the mockup, not on the window colour of a header bar. */
 headerbar.conversation-header { background: var(--view-bg-color); box-shadow: none; }
 
-/* The composer's signing button, when the message goes out signed or
+/* The composer's shield, shown while the message goes out signed or
    encrypted. Its icon carries the accent so the state reads at a glance. */
 .protected image { color: var(--accent-color); }
+/* Under Encrypt in the composer's More menu: why it cannot be chosen, or
+   what it encrypts to. Indented to the item labels past the check mark
+   column, and at 80 % rather than .dim-label's 55 %, which reads under
+   4.5:1 at this size in light. */
+.menu-note {
+  margin: 0 12px 6px 34px;
+  font-size: 0.85em;
+  opacity: 0.8;
+}
 
 /* Movement. A pointer landing on a row, and a row becoming the selected
    one, fade rather than snap: short enough to keep the list feeling
@@ -456,26 +465,27 @@ toolbarview.sidebar-card.undershoot-bottom > .bottom-bar { box-shadow: none; bor
 .assistant-suggestion { padding: 6px 10px; border-radius: 10px; }
 .assistant-confirm label { font-weight: 600; }
 
-/* Inbox categories as a row of chips. The chosen one is a filled accent
-   pill with its icon and name; the others are neutral pills in the
-   `pill` surface with their icon, and the unread count as a small
-   accent badge riding the pill's top end corner. */
-toggle-group.category-chips { background: none; padding: 0; box-shadow: none; }
-.category-chips > separator { min-width: 6px; background: none; }
-.category-chips > toggle {
+/* Inbox categories as chips that wrap onto a second line, 6 px apart
+   both ways (strip.rs). The chosen one is a filled accent pill; the
+   others are neutral pills in the `pill` surface. Each shows its icon,
+   name and unread count; past two lines, and in the phone layout, the
+   others fold to icons with the count as a small accent badge riding
+   the pill's top end corner. */
+.category-chips > button.category-toggle {
   min-width: 44px;
   min-height: 30px;
   padding: 0;
+  border: none;
   border-radius: 15px;
   background: #e3e3e7;
   box-shadow: none;
   transition: background-color 120ms ease;
 }
-.app-dark .category-chips > toggle { background: #3a3a40; }
-.category-chips > toggle:hover { background: color-mix(in srgb, currentColor 8%, #e3e3e7); }
-.app-dark .category-chips > toggle:hover { background: color-mix(in srgb, currentColor 8%, #3a3a40); }
-.category-chips > toggle:checked { background: var(--accent-fill); color: var(--accent-fg-color); }
-.category-chips .category-chip { padding: 0 14px; min-height: 30px; }
+.app-dark .category-chips > button.category-toggle { background: #3a3a40; }
+.category-chips > button.category-toggle:hover { background: color-mix(in srgb, currentColor 8%, #e3e3e7); }
+.app-dark .category-chips > button.category-toggle:hover { background: color-mix(in srgb, currentColor 8%, #3a3a40); }
+.category-chips > button.category-toggle:checked { background: var(--accent-fill); color: var(--accent-fg-color); }
+.category-chips .category-chip { padding: 0 12px; min-height: 30px; }
 .category-chips .category-tab .category-name { margin-left: 0; }
 .category-chips .category-name { margin-left: 6px; font-weight: 700; font-size: 0.89em; }
 /* The mockup's badge rides the pill's top end corner and rises 3px
@@ -495,7 +505,16 @@ toggle-group.category-chips { background: none; padding: 0; box-shadow: none; }
   background: var(--accent-fill);
   transition: opacity 160ms cubic-bezier(0.23, 1, 0.32, 1);
 }
-.category-chips > toggle:checked .category-count { opacity: 0; }
+/* While a chip shows its name the count follows it, "Primary 2"; on the
+   chosen chip the badge turns white with the fill's colour in it, which
+   holds the same contrast as the white name on the fill. Folded to an
+   icon, the chosen chip drops its corner badge, as before. */
+.category-chips .category-count.inline { margin: 0 0 0 6px; }
+.category-chips > button.category-toggle:checked .category-count.inline {
+  color: var(--accent-fill);
+  background: var(--accent-fg-color);
+}
+.category-chips > button.category-toggle:checked .category-count.corner { opacity: 0; }
 .category-chips .category-count.no-mail { opacity: 0; }
 /* Focused and Other carry their badge in the row after the name
    (categories.rs). The 20 px each side of the name match: the start
@@ -925,9 +944,19 @@ button.event-block.away {
 .app-dark .day-heading:not(.today) .day-place { opacity: 0.64; }
 .day-heading .date { font-weight: 800; font-size: 0.95em; }
 button.day-heading { min-height: 26px; padding: 0 14px; border-radius: 13px; }
+/* Today's text is the accent darkened to an OKLab lightness of 0.45 at
+   most. Scaling a and b with the lightness keeps the hue and stays in
+   gamut; lowering the lightness alone clipped Yaru's orange to a red.
+   The accent text read 3.7:1 on the pill in light; darkened, every
+   desktop accent, Yaru's included, reads 5.3:1 or better on the pill
+   over the view and the window. Dark keeps libadwaita's lifted accent,
+   which reads 5.8:1 or better. */
 .day-heading.today {
   background: color-mix(in srgb, var(--accent-bg-color) 18%, transparent);
   border-radius: 999px;
+  color: oklab(from var(--accent-bg-color) min(l, 0.45) calc(a * min(1, 0.45 / l)) calc(b * min(1, 0.45 / l)));
+}
+.app-dark .day-heading.today {
   color: var(--accent-color);
 }
 .day-heading.today .weekday { font-weight: 700; opacity: 1; }

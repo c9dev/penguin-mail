@@ -73,6 +73,7 @@ mod reminders;
 mod reveal;
 mod save_contacts;
 mod scheduled;
+mod searching;
 mod senders;
 mod shortcuts;
 mod spaces;
@@ -191,6 +192,15 @@ pub struct MainWindow {
     /// follow, so a reload does not fetch a folder's window again: the
     /// slow poll covers it from here. Cleared for an account that stops.
     followed: RefCell<HashMap<AccountId, HashSet<String>>>,
+    /// The search field between keys: when a pause runs a search, and how
+    /// far it reaches.
+    typing: RefCell<crate::search::typing::Typing>,
+    /// The search the field last ran, which says how far the listing of
+    /// that search reaches.
+    searched: RefCell<Option<crate::search::typing::Run>>,
+    /// The server search in flight and the ticket it lists under, stopped
+    /// once a key or a newer search makes its answer stale.
+    search_stop: RefCell<Option<(Ticket, mailrs_sync::Stop)>>,
     /// Undo Send: the sends waiting out their delay, and what calls each
     /// one back.
     undo_sends: RefCell<scheduled::UndoSends>,
@@ -496,7 +506,7 @@ impl MainWindow {
                 },
                 move |query| {
                     if let Some(win) = s.upgrade() {
-                        win.search(query);
+                        win.search_entered(query);
                     }
                 },
             );
@@ -840,6 +850,9 @@ impl MainWindow {
                 detached: RefCell::new(Vec::new()),
                 previews: previews::Previews::default(),
                 followed: RefCell::new(HashMap::new()),
+                typing: RefCell::default(),
+                searched: RefCell::new(None),
+                search_stop: RefCell::new(None),
                 undo_sends: RefCell::new(scheduled::UndoSends::default()),
                 next_up: RefCell::new(None),
                 next_reads: across::Reads::default(),
@@ -915,6 +928,7 @@ impl MainWindow {
         });
         window.install_follow_ups();
         window.install_categories();
+        window.install_search_typing();
         window.offer_summary();
         window.sync_assistant_toggle();
         window.install_undo_send();
@@ -1456,6 +1470,10 @@ impl MainWindow {
             && newly_followed(&mut self.followed.borrow_mut(), account_id, server_mailbox.clone())
         {
             self.follow_mailbox(account_id, server_mailbox);
+        }
+        if let Mailbox::Search { query, account_id } = &mailbox {
+            let spinner = waiting == Waiting::Spinner;
+            return self.search_first_page(ticket, query.clone(), *account_id, spinner);
         }
         if mailbox.is_remote() && waiting == Waiting::Spinner {
             self.list.show_loading();
@@ -3342,7 +3360,7 @@ impl MainWindow {
             if let Ok(query) = std::env::var("MAILRS_DEMO_SEARCH") {
                 this.list.open_search();
                 this.list.search_entry.set_text(&query);
-                this.search(query);
+                this.search_entered(query);
             }
             if let Ok(thread_id) = std::env::var("MAILRS_DEMO_OPEN") {
                 let finder = Rc::clone(&this);

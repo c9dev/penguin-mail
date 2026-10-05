@@ -6,6 +6,7 @@
 
 use std::borrow::Borrow;
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
@@ -587,6 +588,28 @@ impl RemotePage {
     }
 }
 
+/// Set by whoever started a server search once they no longer want its
+/// answer, such as the window when the person types on. The listing asks
+/// the servers nothing more after that.
+#[derive(Debug, Clone, Default)]
+pub struct Stop(Arc<AtomicBool>);
+
+impl Stop {
+    pub fn stop(&self) {
+        self.0.store(true, Ordering::Relaxed);
+    }
+
+    pub fn stopped(&self) -> bool {
+        self.0.load(Ordering::Relaxed)
+    }
+}
+
+/// Where a page of a server search starts, and what stops it.
+struct Reading<'a> {
+    from: usize,
+    stop: &'a Stop,
+}
+
 /// Reads mailboxes. One instance serves the window and the assistant.
 pub struct Mailboxes<A: Accounts> {
     accounts: Arc<A>,
@@ -619,6 +642,71 @@ impl<A: Accounts> Mailboxes<A> {
         view: &View,
         held: Loaded,
     ) -> Result<Listing, SyncError> {
+        self.list_until(mailbox, scope, view, held, &Stop::default())
+            .await
+    }
+
+    /// The stored mail a search typed as `query` finds, newest first, in
+    /// the accounts in scope or only in `only`. It asks no server, so the
+    /// window can show it while the person is still typing and the
+    /// servers' answer is on its way.
+    pub async fn stored_search(
+        &self,
+        query: &str,
+        only: Option<AccountId>,
+        scope: &Scope,
+        view: &View,
+    ) -> Result<Listing, SyncError> {
+        let mailbox = Mailbox::Search {
+            query: query.to_string(),
+            account_id: only,
+        };
+        let accounts: Vec<AccountId> = scope.searched(only).iter().map(|a| a.id).collect();
+        let (text, now) = (query.to_string(), Local::now());
+        let hits = self
+            .db
+            .read(move |c| {
+                let mut hits = Vec::new();
+                for account_id in accounts {
+                    let names: Vec<String> = mailrs_store::labels::list_labels(c, account_id)?
+                        .into_iter()
+                        .map(|label| label.name)
+                        .collect();
+                    let tree = mailrs_domain::query::resolve_names(
+                        mailrs_domain::query::parse(&text),
+                        &names,
+                    );
+                    let matched =
+                        mailrs_store::query::matching(c, account_id, &tree, &now, SEARCH_LIMIT)?;
+                    let ids: Vec<String> = matched.into_iter().map(|m| m.message_id).collect();
+                    hits.extend(mailrs_store::messages::by_ids(c, account_id, &ids)?);
+                }
+                Ok(hits)
+            })
+            .await?;
+        let mut rows = summarize_search(hits, view.threading);
+        rows.truncate(SEARCH_LIMIT);
+        Ok(Listing {
+            title: mailbox.title(),
+            subtitle: query.to_string(),
+            empty: mailbox.empty(),
+            rows,
+            ..Listing::default()
+        })
+    }
+
+    /// [`Mailboxes::list`], giving up on a server search once `stop` is
+    /// set: no request goes out after that, and one already out finishes
+    /// so its connection stays usable. What came back by then is kept for
+    /// the next listing of the same search.
+    pub async fn list_until(
+        &self,
+        mailbox: &Mailbox,
+        scope: &Scope,
+        view: &View,
+        held: Loaded,
+        stop: &Stop,
+    ) -> Result<Listing, SyncError> {
         let from = held.count;
         let base = Listing {
             title: mailbox.title(),
@@ -628,7 +716,7 @@ impl<A: Accounts> Mailboxes<A> {
         match mailbox {
             Mailbox::Folder { account_id, folder } => {
                 let query = SearchQuery::Tree(folder.query());
-                self.remote(&query, *account_id, scope, view, base, from)
+                self.remote(&query, *account_id, scope, view, base, Reading { from, stop })
                     .await
             }
             Mailbox::Search { query, account_id } => {
@@ -643,7 +731,7 @@ impl<A: Accounts> Mailboxes<A> {
                             ..view.clone()
                         },
                         base,
-                        from,
+                        Reading { from, stop },
                     )
                     .await?;
                 Ok(Listing {
@@ -660,7 +748,8 @@ impl<A: Accounts> Mailboxes<A> {
                 };
                 let only = smart.account.as_deref().and_then(|e| scope.id_of(e));
                 let query = SearchQuery::Tree(query);
-                self.remote(&query, only, scope, view, base, from).await
+                self.remote(&query, only, scope, view, base, Reading { from, stop })
+                    .await
             }
             Mailbox::Scheduled => self.scheduled(view, base, from).await,
             Mailbox::Outbox => self.outbox(view, base, from).await,
@@ -899,7 +988,7 @@ impl<A: Accounts> Mailboxes<A> {
         scope: &Scope,
         view: &View,
         base: Listing,
-        from: usize,
+        Reading { from, stop }: Reading<'_>,
     ) -> Result<Listing, SyncError> {
         let limit = view.limit.unwrap_or(REMOTE_LIMIT);
         let targets = scope.searched(only);
@@ -932,8 +1021,9 @@ impl<A: Accounts> Mailboxes<A> {
         // reader wants has rows in it or Gmail has no more ids.
         let mut wanted = (from + REMOTE_PAGE).min(limit);
         let mut rows = Self::rows(&listing, view, limit);
-        while rows.len() <= from && !listing.complete(wanted) {
-            self.fetch_page(&mut listing, &targets, limit, wanted).await;
+        while rows.len() <= from && !listing.complete(wanted) && !stop.stopped() {
+            self.fetch_page(&mut listing, &targets, limit, wanted, stop)
+                .await;
             rows = Self::rows(&listing, view, limit);
             wanted = (wanted + REMOTE_PAGE).min(limit);
             if wanted >= limit && listing.complete(wanted) {
@@ -961,6 +1051,7 @@ impl<A: Accounts> Mailboxes<A> {
         targets: &[&Account],
         limit: usize,
         wanted: usize,
+        stop: &Stop,
     ) {
         if listing.pages.is_empty() {
             listing.pages = targets.iter().map(|_| RemotePage::default()).collect();
@@ -976,6 +1067,9 @@ impl<A: Accounts> Mailboxes<A> {
                         return Ok((page, false));
                     };
                     let mut store_only = false;
+                    if stop.stopped() {
+                        return Ok((page, store_only));
+                    }
                     if !page.listed {
                         let found = sync.search_listing(&query, limit).await?;
                         page.ids = found.refs;
@@ -983,7 +1077,7 @@ impl<A: Accounts> Mailboxes<A> {
                         page.listed = true;
                     }
                     let take = wanted.min(page.ids.len());
-                    if take > page.fetched {
+                    if take > page.fetched && !stop.stopped() {
                         let next = sync.metadata_of(&page.ids[page.fetched..take]).await?;
                         page.metas.extend(next);
                         page.fetched = take;
