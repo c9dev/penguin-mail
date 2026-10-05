@@ -5,7 +5,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use adw::prelude::*;
-use mailrs_domain::translate::{fill, gettext};
+use mailrs_domain::translate::{fill, gettext, pgettext};
 use gtk::glib;
 use mailrs_domain::{Account, AccountId, Provider};
 use mailrs_store::services::{Miss, ServiceKind};
@@ -34,7 +34,11 @@ pub fn page(
         .build();
     page.add(&contacts(app, settings, accounts, &withheld, grant.clone()));
     let missed = |id, missing| app.core.missed(id, missing);
-    page.add(&calendar(accounts, &withheld, &missed, grant, calendar_rows));
+    let (calendar, online) = calendar(accounts, &withheld, &missed, grant, calendar_rows);
+    page.add(&calendar);
+    if let Some(online) = online {
+        page.add(&online);
+    }
     if let Some(group) = servers(app, accounts) {
         page.add(&group);
     }
@@ -238,21 +242,31 @@ enum CalendarRow {
 /// whose server has no calendar, or whose own consent withheld it, gets
 /// a row that says so instead. `settings_rows`, the calendar's own
 /// settings, sit above the accounts.
+///
+/// The Online Accounts rows go in a group of their own, the second one
+/// returned, so they do not sit among Event Reminders and Working Hours
+/// under no heading. It is `None` when there are none.
 fn calendar(
     accounts: &[(Account, Offers)],
     withheld: &impl Fn(AccountId) -> Withheld,
     missed: &impl Fn(AccountId, Missing) -> Option<Miss>,
     grant: impl Fn(AccountId) + Clone + 'static,
     settings_rows: &[gtk::Widget],
-) -> adw::PreferencesGroup {
+) -> (adw::PreferencesGroup, Option<adw::PreferencesGroup>) {
     let group = adw::PreferencesGroup::builder()
         .title(gettext("Calendar"))
         .description(gettext(
-            "Penguin Mail shows each account's meetings and reminds you before they start. \
-             To see them in GNOME Calendar and the clock too, add the account to GNOME \
-             Online Accounts.",
+            "Penguin Mail shows each account's meetings and reminds you before they start.",
         ))
         .build();
+    let online = adw::PreferencesGroup::builder()
+        .title(gettext("GNOME Online Accounts"))
+        .description(gettext(
+            "Add an account to GNOME Online Accounts to see its meetings in GNOME \
+             Calendar and the clock too.",
+        ))
+        .build();
+    let mut online_rows = 0;
     // The calendar's own settings come first, above the accounts.
     for row in settings_rows {
         group.add(row);
@@ -286,11 +300,11 @@ fn calendar(
         };
         let row = adw::ActionRow::builder().title(&account.email).build();
         if known {
-            row.set_subtitle(&gettext("In GNOME Online Accounts"));
+            row.set_subtitle(&pgettext("an account in Online Accounts", "Added"));
         } else {
-            row.set_subtitle(&gettext("Not in GNOME Online Accounts"));
+            row.set_subtitle(&pgettext("an account in Online Accounts", "Not added"));
             let add = gtk::Button::builder()
-                .label(gettext("Add…"))
+                .label(gettext("Add to Online Accounts…"))
                 .valign(gtk::Align::Center)
                 .build();
             crate::ui::name(
@@ -307,9 +321,10 @@ fn calendar(
             });
             row.add_suffix(&add);
         }
-        group.add(&row);
+        online.add(&row);
+        online_rows += 1;
     }
-    group
+    (group, (online_rows > 0).then_some(online))
 }
 
 /// Why `account`'s calendar row is not the Online Accounts row: the
