@@ -36,7 +36,9 @@ Linux desktop, and the tray icon and every other feature work outside GNOME.
 
 Penguin Mail has mail for Gmail, Microsoft (Outlook.com, Hotmail, Live and
 Microsoft 365) and IMAP accounts, a calendar, contacts, OpenPGP and S/MIME,
-rules, and an optional assistant. Coming: CalDAV and CardDAV, POP3.
+rules, and an optional assistant. An IMAP account gets its calendar and
+contacts over CalDAV and CardDAV, and its rules over ManageSieve, where the
+provider offers them. Coming: POP3.
 
 ### Reading
 

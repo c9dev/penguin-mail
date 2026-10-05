@@ -1,6 +1,6 @@
 # Penguin Mail privacy policy
 
-Last updated: 29 September 2026
+Last updated: 5 October 2026
 
 Penguin Mail is a mail and calendar app for Linux, published by Pivotd
 (https://pivotd.com), at https://penguin-mail.com. It works with Google
@@ -108,6 +108,12 @@ desktop's keyring, as described below.
   asks the same of the company that receives the domain's mail, and tries
   to connect to the usual mail server names at the domain. It sends your
   password only to the servers you then sign in to.
+- After an account from another provider signs in, Penguin Mail looks for
+  the same provider's calendar, contacts and rules servers (CalDAV, CardDAV
+  and ManageSieve) the same way: through its own list of providers, the
+  domain's DNS records and web server, and the mail server's own name. It
+  signs in to one inside your address's domain with the account's login,
+  and to one outside it only after you agree.
 - Penguin Mail has three AI features: the assistant, translation, and help
   with unsubscribe pages. Each is off until you choose a model for it, and
   each sends what it reads to the model chosen for it, which may run on
