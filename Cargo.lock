@@ -2633,6 +2633,7 @@ version = "0.3.0"
 dependencies = [
  "base64 0.23.1",
  "mailrs-discover",
+ "mailrs-testmail",
  "rustls",
  "rustls-platform-verifier",
  "thiserror 2.0.20",

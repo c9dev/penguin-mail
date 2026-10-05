@@ -96,6 +96,8 @@ jobs:
         run: cargo test -p mailrs-dav --test radicale && cargo test -p mailrs-sync --test radicale
       - name: ManageSieve against Dovecot
         run: cargo test -p mailrs-sieve --test dovecot && cargo test -p mailrs-sync --test managesieve
+      - name: POP3 against Dovecot
+        run: cargo test -p mailrs-pop3 --test dovecot && cargo test -p mailrs-sync --test pop3
 
   flatpak:
     name: Flatpak builds and starts

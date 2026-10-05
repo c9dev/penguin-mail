@@ -14,3 +14,6 @@ rustls-platform-verifier.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
 tokio-rustls.workspace = true
+
+[dev-dependencies]
+mailrs-testmail.workspace = true
