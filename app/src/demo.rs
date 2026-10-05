@@ -23,8 +23,12 @@ use mailrs_gmail::{LabelColor, RemoteLabel, SendAs};
 use mailrs_store::servers::{self, Saved, Security, Servers};
 use mailrs_store::{Db, Result, StoreError, accounts, address_book, invitations};
 use mailrs_sync::calendar_copy::CalendarCopy;
-use mailrs_sync::fake::{FakeGmail, FakeImap, FakeSmtp, fill_store};
-use mailrs_sync::{AccountServices, AccountSync, DEFAULT_WINDOW_DAYS, ImapSettings, SyncError};
+use mailrs_sync::fake::{DavKind, FakeDav, FakeGmail, FakeImap, FakeSmtp, fill_store};
+use mailrs_store::services::{FoundService, ServiceKind};
+use mailrs_sync::{
+    AccountServices, AccountSync, AnyCalendar, AnyContacts, AnyRules, CalDav, CardDav, ContactBook, DEFAULT_WINDOW_DAYS,
+    Imap, ImapSettings, LocalRules, SyncError,
+};
 use rusqlite::Connection;
 
 pub mod folder;
@@ -737,7 +741,12 @@ pub struct DemoMail(HashMap<AccountId, DemoServer>);
 
 enum DemoServer {
     Gmail(Arc<FakeGmail>),
-    Imap(Arc<FakeImap>, Arc<FakeSmtp>),
+    Imap {
+        imap: Arc<FakeImap>,
+        smtp: Arc<FakeSmtp>,
+        dav: Arc<FakeDav>,
+        db: Db,
+    },
 }
 
 impl DemoMail {
@@ -745,11 +754,7 @@ impl DemoMail {
     pub fn services(&self, account_id: AccountId) -> Option<AccountServices> {
         Some(match self.0.get(&account_id)? {
             DemoServer::Gmail(gmail) => AccountServices::fake(Arc::clone(gmail)),
-            DemoServer::Imap(imap, smtp) => AccountServices::fake_imap_with(
-                Arc::clone(imap),
-                Arc::clone(smtp),
-                fastmail_settings(),
-            ),
+            DemoServer::Imap { imap, smtp, dav, db } => imap_services(imap, smtp, dav, db, account_id),
         })
     }
 
@@ -758,7 +763,7 @@ impl DemoMail {
     fn gmail(&self, account_id: AccountId) -> Option<Arc<FakeGmail>> {
         match self.0.get(&account_id)? {
             DemoServer::Gmail(gmail) => Some(Arc::clone(gmail)),
-            DemoServer::Imap(..) => None,
+            DemoServer::Imap { .. } => None,
         }
     }
 }
@@ -824,19 +829,30 @@ pub async fn seed(db: &Db, now: EpochMillis) -> std::result::Result<DemoMail, Sy
         syncing.insert(account_id, Arc::clone(&sync));
         mail.insert(account_id, DemoServer::Gmail(fake));
     }
-    let (account_id, server) = seed_fastmail(db, now).await?;
+    let (account_id, server, sync) = seed_fastmail(db, now).await?;
+    // The Fastmail account's sync is built over plain mail services, so
+    // the copy and the address book read its calendar and contacts from
+    // the demo's own.
+    let mut own_services = HashMap::new();
+    if let DemoServer::Imap { imap, smtp, dav, db } = &server {
+        own_services.insert(account_id, imap_services(imap, smtp, dav, db, account_id));
+    }
+    syncing.insert(account_id, sync);
     mail.insert(account_id, server);
 
-    // Reads each Gmail account's calendars into the store now, so the
-    // demo opens already synced: the assistant and the invitation
-    // card's clash line read the copy from the first screen, and the
-    // Fastmail account, which never joins `syncing`, stays unsynced with
-    // no calendars at all.
-    let gmail_accounts: Vec<AccountId> = syncing.keys().copied().collect();
-    let copy = CalendarCopy::new(Arc::new(Seeding(syncing)), db.clone());
-    for account_id in gmail_accounts {
+    // Reads each account's calendars into the store now, so the demo
+    // opens already synced: the assistant and the invitation card's clash
+    // line read the copy from the first screen.
+    let accounts_synced: Vec<AccountId> = syncing.keys().copied().collect();
+    let seeding = Arc::new(Seeding { syncing, own_services });
+    let copy = CalendarCopy::new(Arc::clone(&seeding), db.clone());
+    for account_id in accounts_synced {
         copy.refresh(account_id, now).await?;
     }
+    // The demo's cards carry no photos, so the address book writes none
+    // and the photo folder is never touched.
+    let book = ContactBook::new(seeding, db.clone(), std::env::temp_dir());
+    book.refresh(account_id).await?;
     // Parents' evening is a change made on this computer and not sent
     // yet, as the mockup draws it. It goes straight into the copy with no
     // queued change, so the demo never sends it and it stays waiting;
@@ -865,11 +881,23 @@ pub async fn seed(db: &Db, now: EpochMillis) -> std::result::Result<DemoMail, Sy
 /// `mailrs_sync::fake::Connected`-alike test harnesses live in `sync`'s
 /// own test module and are not reachable from here, so `seed` keeps this
 /// small one instead.
-struct Seeding(HashMap<AccountId, Arc<AccountSync>>);
+struct Seeding {
+    syncing: HashMap<AccountId, Arc<AccountSync>>,
+    /// Accounts whose services hold more than their sync's do: the
+    /// Fastmail account's calendar, contacts and rules.
+    own_services: HashMap<AccountId, AccountServices>,
+}
 
 impl mailrs_sync::Accounts for Seeding {
     fn account(&self, account_id: AccountId) -> Option<Arc<AccountSync>> {
-        self.0.get(&account_id).cloned()
+        self.syncing.get(&account_id).cloned()
+    }
+
+    fn services(&self, account_id: AccountId) -> Option<AccountServices> {
+        self.own_services
+            .get(&account_id)
+            .cloned()
+            .or_else(|| self.account(account_id).map(|sync| sync.services().clone()))
     }
 }
 
@@ -1746,7 +1774,7 @@ fn fastmail_servers() -> Servers {
 async fn seed_fastmail(
     db: &Db,
     now: EpochMillis,
-) -> std::result::Result<(AccountId, DemoServer), SyncError> {
+) -> std::result::Result<(AccountId, DemoServer, Arc<AccountSync>), SyncError> {
     let account_id = db
         .write(move |c| {
             // The store is new, so nothing else holds the address.
@@ -1757,6 +1785,39 @@ async fn seed_fastmail(
                 },
             )?;
             servers::save(c, id, &fastmail_servers())?;
+            for (kind, url) in [
+                (ServiceKind::CalDav, "https://caldav.fastmail.example/"),
+                (ServiceKind::CardDav, "https://carddav.fastmail.example/"),
+            ] {
+                mailrs_store::services::save(
+                    c,
+                    id,
+                    &FoundService {
+                        kind,
+                        url: url.into(),
+                        user_name: FASTMAIL.into(),
+                        confirmed: true,
+                        source: "table".into(),
+                    },
+                )?;
+            }
+            mailrs_store::local_rules::add(
+                c,
+                id,
+                &Filter {
+                    id: Some("local-demo-receipts".into()),
+                    criteria: FilterCriteria {
+                        subject: Some("receipt".into()),
+                        ..FilterCriteria::default()
+                    },
+                    action: FilterAction {
+                        add: vec![MailSet::Mailbox("Receipts".into())],
+                        ..FilterAction::default()
+                    },
+                    ..Filter::default()
+                },
+            )?;
+            mailrs_store::local_rules::start_running(c, id, now)?;
             Ok(id)
         })
         .await?;
@@ -1773,15 +1834,89 @@ async fn seed_fastmail(
         }
     }
     let smtp = Arc::new(FakeSmtp::default());
+    let dav = Arc::new(FakeDav::new());
+    dav.add_collection("/cal/personal/", DavKind::Calendar, "Personal", Some("#e66100"));
+    dav.add_collection("/card/default/", DavKind::AddressBook, "Contacts", None);
+    for (href, body) in fastmail_calendar(now).into_iter().chain(fastmail_cards()) {
+        dav.put_resource(&href, &body);
+    }
     let (events, _) = async_channel::unbounded();
-    let sync = AccountSync::new(
+    let sync = Arc::new(AccountSync::new(
         account_id,
-        AccountServices::fake_imap_with(Arc::clone(&imap), Arc::clone(&smtp), fastmail_settings()),
+        imap_services(&imap, &smtp, &dav, db, account_id),
         db.clone(),
         events,
-    );
+    ));
     fill_store(&sync).await?;
-    Ok((account_id, DemoServer::Imap(imap, smtp)))
+    Ok((account_id, DemoServer::Imap { imap, smtp, dav, db: db.clone() }, sync))
+}
+
+/// The Fastmail account's services: its IMAP server for mail, a CalDAV and
+/// a CardDAV server for the calendar and contacts, and rules kept on this
+/// computer. The calendar answers an invitation through the same mail
+/// adapter, as a real account's does. Fastmail has no ManageSieve here,
+/// so there is no automatic reply.
+fn imap_services(
+    imap: &Arc<FakeImap>,
+    smtp: &Arc<FakeSmtp>,
+    dav: &Arc<FakeDav>,
+    db: &Db,
+    account_id: AccountId,
+) -> AccountServices {
+    let mail = Imap::new(Arc::clone(imap), Arc::clone(smtp), fastmail_settings());
+    AccountServices::fake_imap_with(Arc::clone(imap), Arc::clone(smtp), fastmail_settings())
+        .with_calendar(AnyCalendar::FakeDav(CalDav::new(Arc::clone(dav), mail, vec![FASTMAIL.to_string()])))
+        .with_contacts(AnyContacts::FakeDav(CardDav::new(Arc::clone(dav))))
+        .with_rules(AnyRules::Local(LocalRules::new(db.clone(), account_id)))
+}
+
+/// The Fastmail account's own calendar this week: climbing on Tuesday,
+/// the dentist on Thursday, and a book club every Wednesday, written as a
+/// CalDAV server holds them.
+fn fastmail_calendar(now: EpochMillis) -> Vec<(String, String)> {
+    let monday = week_monday(now);
+    let stamp = |at: EpochMillis| {
+        chrono::DateTime::<chrono::Utc>::from_timestamp_millis(at)
+            .unwrap_or_default()
+            .format("%Y%m%dT%H%M%SZ")
+            .to_string()
+    };
+    let event = |uid: &str, title: &str, start: EpochMillis, minutes: i64, rule: &str| {
+        format!(
+            "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Fastmail//EN\r\nBEGIN:VEVENT\r\nUID:{uid}\r\nDTSTAMP:{}\r\n\
+             DTSTART:{}\r\nDTEND:{}\r\n{rule}SUMMARY:{title}\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n",
+            stamp(now),
+            stamp(start),
+            stamp(start + minutes * 60_000),
+        )
+    };
+    vec![
+        ("/cal/personal/climbing.ics".into(), event("climbing", "Climbing", at_week(monday, 1, 18, 30), 90, "")),
+        ("/cal/personal/dentist.ics".into(), event("dentist", "Dentist", at_week(monday, 3, 10, 0), 45, "")),
+        (
+            "/cal/personal/book-club.ics".into(),
+            event("book-club", "Book club", at_week(monday, 2, 19, 0), 120, "RRULE:FREQ=WEEKLY\r\n"),
+        ),
+    ]
+}
+
+/// The Fastmail account's address book, as vCards.
+fn fastmail_cards() -> Vec<(String, String)> {
+    [
+        ("tomas", "Tomás Faria", "tomas@climbing.example"),
+        ("rui", "Rui Pinto", "rui@bookclub.example"),
+        ("ines", INES.0, INES.1),
+    ]
+    .into_iter()
+    .map(|(uid, name, email)| {
+        (
+            format!("/card/default/{uid}.vcf"),
+            format!(
+                "BEGIN:VCARD\r\nVERSION:3.0\r\nUID:{uid}\r\nFN:{name}\r\nEMAIL;TYPE=INTERNET:{email}\r\nEND:VCARD\r\n"
+            ),
+        )
+    })
+    .collect()
 }
 
 /// Puts two messages in the first account's outbox, so the Outbox and
@@ -2541,20 +2676,29 @@ mod tests {
             .offers();
         assert!(!offers.labels);
         assert!(!offers.categories);
-        assert!(!offers.calendar && !offers.contacts && !offers.rules && !offers.auto_reply);
+        assert!(offers.calendar && offers.contacts && offers.rules);
+        assert!(!offers.auto_reply, "Fastmail runs no ManageSieve here");
     }
 
     #[tokio::test]
-    async fn the_fastmail_account_has_no_calendar_and_stays_unsynced() {
+    async fn the_fastmail_account_has_a_calendar_contacts_and_rules_here() {
         let demo = demo().await;
-        let id = demo.fastmail().await;
-        let calendars = demo
-            .db
-            .read(move |c| mailrs_store::calendar::calendars(c, id))
-            .await
-            .unwrap();
-        assert!(calendars.is_empty(), "{calendars:?}");
-        assert!(!demo.db.read(move |c| mailrs_store::calendar::synced(c, id)).await.unwrap());
+        let fastmail = demo.fastmail().await;
+        let services = demo.mail.services(fastmail).expect("the demo serves it");
+        assert!(matches!(services.calendar, Some(mailrs_sync::AnyCalendar::FakeDav(_))));
+        assert!(matches!(services.contacts, Some(mailrs_sync::AnyContacts::FakeDav(_))));
+        assert_eq!(
+            services.rules.as_ref().map(mailrs_sync::AnyRules::place),
+            Some(mailrs_sync::RulesPlace::ThisComputer)
+        );
+        assert!(services.auto_reply.is_none(), "Fastmail runs no ManageSieve");
+        let calendars = demo.db.read(move |c| mailrs_store::calendar::calendars(c, fastmail)).await.unwrap();
+        assert_eq!(calendars.len(), 1, "the calendar was read at seed");
+        assert!(demo.db.read(move |c| mailrs_store::calendar::synced(c, fastmail)).await.unwrap());
+        let people = demo.db.read(mailrs_store::address_book::list).await.unwrap();
+        assert!(people.iter().any(|p| p.account_id == fastmail && p.name.as_deref() == Some("Tomás Faria")));
+        let rules = demo.db.read(move |c| mailrs_store::local_rules::list(c, fastmail)).await.unwrap();
+        assert_eq!(rules.len(), 1);
     }
 
     #[tokio::test]
@@ -2675,7 +2819,8 @@ mod tests {
             .take_while(|s| s.known)
             .map(|s| s.email.as_str())
             .collect();
-        assert_eq!(known.len(), 4, "every demo contact comes before the rest");
+        // Four Gmail contacts and the three in the Fastmail address book.
+        assert_eq!(known.len(), 7, "every demo contact comes before the rest");
         assert!(known.contains(&"jonas@fernwood.example"));
     }
 
