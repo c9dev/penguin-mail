@@ -136,3 +136,100 @@ fn the_free_hour_verdict_passes_aa_on_the_card() {
     }
 }
 
+
+fn to_linear(c: f64) -> f64 {
+    if c <= 0.04045 { c / 12.92 } else { ((c + 0.055) / 1.055).powf(2.4) }
+}
+
+fn from_linear(c: f64) -> f64 {
+    let c = c.clamp(0.0, 1.0);
+    if c <= 0.003_130_8 { 12.92 * c } else { 1.055 * c.powf(1.0 / 2.4) - 0.055 }
+}
+
+/// `hex` in OKLab.
+fn oklab(hex: &str) -> [f64; 3] {
+    let [r, g, b] = channels(hex).map(|c| to_linear(c / 255.0));
+    let l = (0.412_221_470_8 * r + 0.536_332_536_3 * g + 0.051_445_992_9 * b).cbrt();
+    let m = (0.211_903_498_2 * r + 0.680_699_545_1 * g + 0.107_396_956_6 * b).cbrt();
+    let s = (0.088_302_461_9 * r + 0.281_718_837_6 * g + 0.629_978_700_5 * b).cbrt();
+    [
+        0.210_454_255_3 * l + 0.793_617_785 * m - 0.004_072_046_8 * s,
+        1.977_998_495_1 * l - 2.428_592_205 * m + 0.450_593_709_9 * s,
+        0.025_904_037_1 * l + 0.782_771_766_2 * m - 0.808_675_766 * s,
+    ]
+}
+
+/// An OKLab colour back in sRGB hex, clipped to the gamut as GTK does.
+fn from_oklab([lightness, a, b]: [f64; 3]) -> String {
+    let l = (lightness + 0.396_337_777_4 * a + 0.215_803_757_3 * b).powi(3);
+    let m = (lightness - 0.105_561_345_8 * a - 0.063_854_172_8 * b).powi(3);
+    let s = (lightness - 0.089_484_177_5 * a - 1.291_485_548 * b).powi(3);
+    let rgb = [
+        4.076_741_662_1 * l - 3.307_711_591_3 * m + 0.230_969_929_2 * s,
+        -1.268_438_004_6 * l + 2.609_757_401_1 * m - 0.341_319_396_5 * s,
+        -0.004_196_086_3 * l - 0.703_418_614_7 * m + 1.707_614_701 * s,
+    ];
+    let hex: Vec<String> = rgb.iter().map(|c| format!("{:02x}", (from_linear(*c) * 255.0).round() as u8)).collect();
+    format!("#{}", hex.concat())
+}
+
+/// The number after `before` in `text`, up to `until`.
+fn number_in(text: &str, before: &str, until: char) -> f64 {
+    let at = text.find(before).unwrap_or_else(|| panic!("{text} holds {before}")) + before.len();
+    let after = &text[at..];
+    after[..after.find(until).expect("an end")].trim().parse().expect("a number")
+}
+
+/// The value of the property `name` in the rule for `selector`, matched
+/// as a whole name, so `color` does not find `background-color`.
+fn property(selector: &str, name: &str) -> Option<String> {
+    let (_, body) = rules().into_iter().find(|(head, _)| head.trim() == selector)?;
+    body.split(';').find_map(|declaration| {
+        let (key, value) = declaration.split_once(':')?;
+        (key.trim() == name).then(|| value.trim().to_string())
+    })
+}
+
+/// The share of the accent a rule's `alpha(var(--accent-bg-color), x)`
+/// background gives.
+fn accent_share(selector: &str) -> f64 {
+    let background = custom_property(selector, "background-color").unwrap_or_else(|| panic!("{selector} tints"));
+    number_in(&background, "var(--accent-bg-color),", ')')
+}
+
+#[test]
+fn the_selected_mailboxs_name_and_count_pass_aa_for_every_accent() {
+    // Light darkens the accent: L, a and b in OKLab scaled down together
+    // until L is under a limit, which keeps the hue and stays in gamut.
+    let light = property(".mailboxes > row:selected", "color").expect("a light text colour");
+    let limit = number_in(&light, "min(l,", ')');
+    let scale = format!("min(1, {limit} / l)");
+    assert_eq!(light, format!("oklab(from var(--accent-bg-color) min(l, {limit}) calc(a * {scale}) calc(b * {scale}))"));
+    // Dark lifts L to a floor and keeps a and b; GTK clips what falls
+    // out of gamut.
+    let dark = property(".app-dark .mailboxes > row:selected", "color").expect("a dark text colour");
+    let floor = number_in(&dark, "max(l,", ')');
+    assert_eq!(dark, format!("oklab(from var(--accent-bg-color) max(l, {floor}) a b)"));
+    for (is_dark, selector) in [(false, ".mailboxes > row:selected"), (true, ".app-dark .mailboxes > row:selected")] {
+        let sidebar = surface(is_dark, "--sidebar-bg-color");
+        let share = accent_share(selector);
+        for accent in ACCENTS {
+            let [l, a, b] = oklab(accent);
+            let drawn = if is_dark {
+                from_oklab([l.max(floor), a, b])
+            } else {
+                let f = (limit / l).min(1.0);
+                from_oklab([l * f, a * f, b * f])
+            };
+            let under = tint(accent, share, &sidebar);
+            let ratio = contrast(&drawn, &under);
+            assert!(ratio >= AA, "{selector} in {accent}: {drawn} on {under} is {ratio:.2}:1");
+        }
+    }
+}
+
+#[test]
+fn the_selected_mailboxs_count_takes_the_rows_colour() {
+    let count = property(".mailboxes > row:selected .mailbox-row .count", "color");
+    assert_eq!(count.as_deref(), Some("inherit"));
+}

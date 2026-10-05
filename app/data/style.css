@@ -395,15 +395,27 @@ flowboxchild:focus-visible > .recipient-chip {
 /* The selected mailbox is a rounded card tinted with the accent, 8 px in
    from each side of the card: 18 % in light mode, 28 % in dark, over the
    sidebar shade (mockups.py's `tint + 0.04`, not the calendar event's
-   14 %/24 %). Its icon, name and count take the accent colour. */
+   14 %/24 %). Its icon, name and count take the accent colour.
+
+   The accent text read 3.2:1 on the card in light and 3.7:1 in dark, with
+   Yaru's orange; WCAG AA asks 4.5:1 for the name and the count. So the
+   words take the accent darkened in light, with L, a and b in OKLab
+   scaled down together until L is 0.45 at most, which keeps the hue, as
+   today's heading in the calendar does; and lifted in dark, to an L of
+   0.9 with a and b kept. Every libadwaita and Yaru accent then reads
+   4.8:1 or better in light and 5.2:1 or better in dark. The icon keeps
+   the plain accent: a shape needs 3:1, which it has. */
 .mailboxes > row { margin: 0 8px 2px; padding: 0; min-height: 0; border-radius: 9px; }
 .mailboxes > row:selected {
   background-color: alpha(var(--accent-bg-color), 0.18);
-  color: var(--accent-color);
+  color: oklab(from var(--accent-bg-color) min(l, 0.45) calc(a * min(1, 0.45 / l)) calc(b * min(1, 0.45 / l)));
 }
 .mailboxes > row:selected image { color: var(--accent-color); }
-.mailboxes > row:selected .mailbox-row .count { opacity: 1; color: var(--accent-color); }
-.app-dark .mailboxes > row:selected { background-color: alpha(var(--accent-bg-color), 0.28); }
+.mailboxes > row:selected .mailbox-row .count { opacity: 1; color: inherit; }
+.app-dark .mailboxes > row:selected {
+  background-color: alpha(var(--accent-bg-color), 0.28);
+  color: oklab(from var(--accent-bg-color) max(l, 0.9) a b);
+}
 
 /* A6/B2: the foot of the sidebar, shared by both spaces since it is
    `Sidebar::page`'s own bottom bar, and hidden whole (`Sidebar::sync_foot`)
