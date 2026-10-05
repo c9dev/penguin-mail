@@ -33,6 +33,7 @@ use rusqlite::Connection;
 
 pub mod folder;
 mod outlook;
+mod pop3;
 mod pages;
 
 /// The id of the draft behind the sample draft message, as Gmail would hold it.
@@ -749,6 +750,7 @@ enum DemoServer {
         db: Db,
     },
     Microsoft(Arc<FakeGraph>),
+    Pop3 { server: pop3::Pop3Server, db: Db },
 }
 
 impl DemoMail {
@@ -760,6 +762,7 @@ impl DemoMail {
             DemoServer::Microsoft(graph) => {
                 AccountServices::fake_microsoft_with(Arc::clone(graph), outlook::settings())
             }
+            DemoServer::Pop3 { server, db } => server.services(db, account_id),
         })
     }
 
@@ -768,7 +771,7 @@ impl DemoMail {
     fn gmail(&self, account_id: AccountId) -> Option<Arc<FakeGmail>> {
         match self.0.get(&account_id)? {
             DemoServer::Gmail(gmail) => Some(Arc::clone(gmail)),
-            DemoServer::Imap { .. } | DemoServer::Microsoft(_) => None,
+            DemoServer::Imap { .. } | DemoServer::Microsoft(_) | DemoServer::Pop3 { .. } => None,
         }
     }
 }
@@ -847,6 +850,9 @@ pub async fn seed(db: &Db, now: EpochMillis) -> std::result::Result<DemoMail, Sy
     let (outlook_id, graph, sync) = outlook::seed_outlook(db, now).await?;
     syncing.insert(outlook_id, sync);
     mail.insert(outlook_id, DemoServer::Microsoft(graph));
+    let (pop3_id, server, sync) = pop3::seed_pop3(db, now).await?;
+    syncing.insert(pop3_id, sync);
+    mail.insert(pop3_id, DemoServer::Pop3 { server, db: db.clone() });
 
     // Reads each account's calendars into the store now, so the demo
     // opens already synced: the assistant and the invitation card's clash
@@ -2690,6 +2696,30 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn the_demo_has_a_pop3_account_with_messages_that_will_not_download() {
+        let demo = demo().await;
+        let account = demo
+            .db
+            .read(|c| accounts::account_by_email(c, pop3::POP3))
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(account.provider, mailrs_domain::Provider::Pop3);
+        assert!(demo.mail.services(account.id).is_some(), "the demo serves it");
+        let id = account.id;
+        let failing = demo.db.read(move |c| mailrs_store::pop3::failing(c, id)).await.unwrap();
+        assert_eq!(failing.len(), 2, "{failing:?}");
+        let inbox = demo
+            .db
+            .read(move |c| mailrs_store::messages::held_by(c, id, &MailSet::Role(Role::Inbox)))
+            .await
+            .unwrap();
+        assert!(inbox.len() >= 4, "{inbox:?}");
+        let own = demo.db.read(move |c| mailrs_store::labels::list_labels(c, id)).await.unwrap();
+        assert!(own.iter().any(|l| l.name == pop3::FOLDER), "{own:?}");
+    }
+
+    #[tokio::test]
     async fn the_demo_has_an_outlook_account_with_tags_focus_and_a_calendar() {
         let demo = demo().await;
         let account = demo
@@ -3051,7 +3081,7 @@ mod tests {
         assert_eq!(threads[0].id, "t-hike");
         let accounts_seen: std::collections::HashSet<_> =
             threads.iter().map(|t| t.account_id).collect();
-        assert_eq!(accounts_seen.len(), 5);
+        assert_eq!(accounts_seen.len(), 6);
         assert_eq!(
             demo.threads(ThreadFilter::unified(MailSet::Role(Role::Drafts)))
                 .await

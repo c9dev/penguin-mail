@@ -3649,10 +3649,26 @@ impl MainWindow {
             let dialog = adw::AlertDialog::builder()
                 .heading(gettext("Messages That Will Not Download"))
                 .body(fill(
-                    &gettext("{address}'s server would not hand these over after three tries. Penguin Mail tries again at each check.\n\n{lines}"),
-                    &[("address", &account.email), ("lines", &lines)],
+                    &gettext("{address}'s server would not hand these over after three tries. Penguin Mail tries again at each check."),
+                    &[("address", &account.email)],
                 ))
                 .build();
+            // The body does not scroll, so a long list goes in its own
+            // scrolled area and the dialog stops growing at its height.
+            let list = gtk::Label::builder()
+                .label(&lines)
+                .wrap(true)
+                .wrap_mode(gtk::pango::WrapMode::WordChar)
+                .xalign(0.0)
+                .halign(gtk::Align::Center)
+                .build();
+            let scroller = gtk::ScrolledWindow::builder()
+                .child(&list)
+                .hscrollbar_policy(gtk::PolicyType::Never)
+                .propagate_natural_height(true)
+                .max_content_height(220)
+                .build();
+            dialog.set_extra_child(Some(&scroller));
             dialog.add_responses(&[("close", &gettext("Close"))]);
             dialog.set_close_response("close");
             dialog.present(Some(&win.window));
