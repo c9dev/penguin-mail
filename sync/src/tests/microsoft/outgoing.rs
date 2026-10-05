@@ -97,6 +97,29 @@ async fn a_large_message_goes_as_a_draft_with_its_file_uploaded() {
 }
 
 #[tokio::test]
+async fn a_large_message_keeps_its_inline_picture_inline() {
+    let h = outlook().await;
+    h.bootstrap_all().await;
+    let raw = mail_builder::MessageBuilder::new()
+        .from("me@outlook.com")
+        .to("ann@example.com")
+        .subject("Photo")
+        .message_id("pic@outlook.example")
+        .html_body("<p>Look <img src=\"cid:pic\"></p>")
+        .inline("image/jpeg", "pic", vec![b'x'; 3_500_000])
+        .write_to_vec()
+        .unwrap();
+    h.sync.services().mail.send(&raw, None).await.unwrap();
+    let sent = h
+        .fake
+        .with(|s| s.messages.values().find(|m| m.folder == s.well_known["sentitems"]).cloned())
+        .unwrap();
+    assert_eq!(sent.files.len(), 1);
+    assert!(sent.files[0].0.is_inline);
+    assert_eq!(sent.files[0].0.content_id.as_deref(), Some("pic"));
+}
+
+#[tokio::test]
 async fn a_large_signed_message_is_refused_with_a_reason() {
     let h = outlook().await;
     h.bootstrap_all().await;

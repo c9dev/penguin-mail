@@ -35,7 +35,7 @@ pub trait GraphApi: Send + Sync + 'static {
     fn send_mime(&self, raw: &[u8]) -> impl Future<Output = Answer<()>> + Send;
     fn create_draft_mime(&self, raw: &[u8]) -> impl Future<Output = Answer<Message>> + Send;
     fn create_draft(&self, draft: &Value) -> impl Future<Output = Answer<Message>> + Send;
-    fn upload_session(&self, message: &str, name: &str, size: u64) -> impl Future<Output = Answer<String>> + Send;
+    fn upload_session(&self, message: &str, name: &str, size: u64, is_inline: bool, content_id: Option<&str>) -> impl Future<Output = Answer<String>> + Send;
     fn upload_chunk(&self, url: &str, offset: u64, total: u64, bytes: &[u8]) -> impl Future<Output = Answer<bool>> + Send;
     fn send_draft(&self, id: &str) -> impl Future<Output = Answer<()>> + Send;
     fn delete_message(&self, id: &str) -> impl Future<Output = Answer<()>> + Send;
@@ -149,8 +149,8 @@ impl GraphApi for Graph {
         Graph::create_draft(self, draft).await
     }
 
-    async fn upload_session(&self, message: &str, name: &str, size: u64) -> Answer<String> {
-        Graph::upload_session(self, message, name, size).await
+    async fn upload_session(&self, message: &str, name: &str, size: u64, is_inline: bool, content_id: Option<&str>) -> Answer<String> {
+        Graph::upload_session(self, message, name, size, is_inline, content_id).await
     }
 
     async fn upload_chunk(&self, url: &str, offset: u64, total: u64, bytes: &[u8]) -> Answer<bool> {

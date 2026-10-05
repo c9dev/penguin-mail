@@ -48,6 +48,14 @@ fn take_data(part: &mut Part, path: &str) -> Option<Vec<u8>> {
     part.children.iter_mut().find_map(|child| take_data(child, path))
 }
 
+/// Whether the part at `path` says `Content-Disposition: attachment`.
+fn is_attachment(part: &Part, path: &str) -> bool {
+    match part.path == path {
+        true => part.attachment,
+        false => part.children.iter().any(|child| is_attachment(child, path)),
+    }
+}
+
 impl<G: GraphApi> Microsoft<G> {
     pub(super) async fn send_raw(&self, raw: &[u8]) -> Result<String, BackendError> {
         let id = message_id_of(raw).ok_or_else(|| BackendError::Refused("the message has no Message-ID".into()))?;
@@ -100,7 +108,11 @@ impl<G: GraphApi> Microsoft<G> {
             let Some(bytes) = take_data(&mut parts.root, &file.part_id) else { continue };
             let name = if file.filename.is_empty() { "file" } else { file.filename.as_str() };
             let total = bytes.len() as u64;
-            let url = self.graph().upload_session(draft, name, total).await.map_err(backend)?;
+            // A picture the HTML refers to by `cid:` stays inline. A part
+            // with a Content-ID and no `attachment` disposition is one.
+            let inline = file.content_id.is_some() && !is_attachment(&parts.root, &file.part_id);
+            let content_id = file.content_id.as_deref().filter(|_| inline);
+            let url = self.graph().upload_session(draft, name, total, inline, content_id).await.map_err(backend)?;
             let mut offset = 0;
             for piece in bytes.chunks(CHUNK) {
                 let done = self.graph().upload_chunk(&url, offset, total, piece).await.map_err(backend)?;
