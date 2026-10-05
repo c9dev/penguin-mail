@@ -1439,7 +1439,7 @@ impl<A: Accounts> Tools<A> {
             id => labels.iter().find(|l| l.id == id).map(|l| l.name.clone()),
         };
         let summary = fill(
-            &gettext("Create a Gmail rule for {account}: {when} → {then}?"),
+            &gettext("Create a rule for {account}: {when} → {then}?"),
             &[
                 ("account", &account.email),
                 ("when", &describe_criteria(&filter.criteria)),
@@ -1482,7 +1482,7 @@ impl<A: Accounts> Tools<A> {
         }
         let id = required(input, "id")?;
         let question = fill(
-            &gettext("Delete a Gmail rule from {account}?"),
+            &gettext("Delete a rule from {account}?"),
             &[("account", &account.email)],
         );
         Ok(Plan::ask(question, async move {

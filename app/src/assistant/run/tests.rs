@@ -747,7 +747,7 @@ async fn rules_are_made_listed_and_deleted() {
     assert_eq!(
         h.asked().questions,
         [format!(
-            "Create a Gmail rule for {ME}: From shop@example.com → skip the inbox, apply kites?"
+            "Create a rule for {ME}: From shop@example.com → skip the inbox, apply kites?"
         )]
     );
 
@@ -795,7 +795,7 @@ async fn a_declined_rule_leaves_no_new_label_behind() {
     assert_eq!(
         h.asked().questions,
         [format!(
-            "Create a Gmail rule for {ME}: From shop@example.com → apply receipts?"
+            "Create a rule for {ME}: From shop@example.com → apply receipts?"
         )]
     );
 }

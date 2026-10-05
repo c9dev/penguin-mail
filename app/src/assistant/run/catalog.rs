@@ -412,7 +412,7 @@ pub(super) fn catalog<A: Accounts>() -> Vec<MailTool<A>> {
         MailTool {
             name: "block_sender",
             label: || gettext("Blocking a sender"),
-            description: "Sends all future mail from an address straight to the Trash, with a filter on a Gmail account.",
+            description: "Sends all future mail from an address straight to the Trash, with a rule.",
             input: || {
                 json!({
                     "account": account("The account to block the sender in."),
@@ -459,7 +459,7 @@ pub(super) fn catalog<A: Accounts>() -> Vec<MailTool<A>> {
         MailTool {
             name: "create_rule",
             label: || gettext("Creating a rule"),
-            description: "Creates a rule, as a filter on a Gmail account. Give at least one condition and one action.",
+            description: "Creates a rule. Give at least one condition and one action.",
             input: || {
                 json!({
                     "account": account("The account."),
