@@ -234,6 +234,65 @@ async fn a_withheld_calendar_permission_writes_nothing() {
     assert_eq!(on_day(&h, 0).await.len(), 1);
 }
 
+// ---- A held change while a send of an earlier one lands -----------------
+
+/// An edit of the review queued and on its way to Google, then a second
+/// edit held on its Undo toast while that send is in flight. Answers once
+/// the send has finished, with the held change.
+async fn held_while_a_send_lands(h: &Harness) -> (CalendarCopy<Connected>, crate::calendar_copy::Held) {
+    let copy = read(h, vec![event("review")]).await;
+    let opened = on_day(h, 0).await.remove(0);
+    let first = Event { title: "First".into(), ..Event::clone(&opened.event) };
+    done(copy.apply(h.account_id, vec![mailrs_domain::calendar::series::Step::Save(first)]).await.unwrap());
+
+    let mut in_flight = h.fake.hold("calendar.events.patch");
+    let account_id = h.account_id;
+    let send = copy.send(account_id);
+    let second = async {
+        in_flight.entered().await;
+        let opened = on_day(h, 0).await.remove(0);
+        let edited = Event { title: "Second".into(), ..Event::clone(&opened.event) };
+        let change = EventChange::Edit { occurrence: opened, edited, how: Edit { seen: true, ..Edit::default() } };
+        let choice = Choice { scope: None, notify: Notify::Guests };
+        let changed = done(copy.change(account_id, change, choice, Undo::Offer).await.unwrap());
+        in_flight.release();
+        changed
+    };
+    let (sent, changed) = tokio::join!(send, second);
+    assert!(sent.unwrap().is_empty(), "Google took the first edit");
+    let Changed::Held(held) = changed else { panic!("Undo was offered") };
+    (copy, held)
+}
+
+fn on_google(h: &Harness, id: &str) -> Option<Event> {
+    h.fake.with(|s| s.calendar_events.iter().find(|e| e.id == id).cloned())
+}
+
+#[tokio::test]
+async fn a_send_that_lands_while_a_change_is_held_leaves_the_held_rows_alone() {
+    let h = harness().await;
+    let (copy, held) = held_while_a_send_lands(&h).await;
+    assert_eq!(on_day(&h, 0).await[0].event.title, "Second", "the grid still shows the held change");
+
+    copy.commit(held).await.unwrap();
+    assert!(copy.send(h.account_id).await.unwrap().is_empty(), "nothing is turned down");
+    assert_eq!(on_google(&h, "review").map(|e| e.title), Some("Second".to_string()));
+    assert!(queue(&h).await.is_empty());
+}
+
+#[tokio::test]
+async fn undo_after_a_send_landed_shows_what_google_took() {
+    let h = harness().await;
+    let (copy, held) = held_while_a_send_lands(&h).await;
+    copy.revert(held).await.unwrap();
+
+    let shown = on_day(&h, 0).await.remove(0);
+    let google = on_google(&h, "review").unwrap();
+    assert_eq!((shown.event.title.as_str(), shown.event.pending), ("First", false));
+    assert_eq!(shown.event.etag, google.etag, "the next edit goes against Google's version");
+    assert!(queue(&h).await.is_empty());
+}
+
 // ---- A Microsoft account, against the in-memory Graph -------------------
 
 mod outlook {

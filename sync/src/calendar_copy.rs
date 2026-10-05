@@ -124,8 +124,15 @@ pub struct CalendarCopy<A: Accounts> {
     reaching: tokio::sync::Mutex<()>,
     /// The rows of held changes, which a read leaves alone as it leaves
     /// queued ones. One entry per step, so two changes touching one row
-    /// each release only their own.
-    held: Mutex<Vec<HeldKey>>,
+    /// each release only their own. Shared with the store's writer, where
+    /// a send's answer checks it.
+    held: Arc<Mutex<Vec<HeldKey>>>,
+    /// The provider's answers to sends that finished on a row a held
+    /// change owns. The write that applies a send's answer leaves such a
+    /// row alone and keeps the answer here: a commit queues the held change
+    /// against the answer's etag, and a revert puts the answer back in
+    /// place of the row as it was before the hold.
+    landed: Arc<Mutex<Vec<Landed>>>,
     /// The one held change whose Undo toast is up. Holding another commits
     /// it first. Locked for the whole of `hold`, `commit` and `revert`, so
     /// two of them never interleave their writes.
@@ -222,7 +229,8 @@ impl<A: Accounts> CalendarCopy<A> {
             tried: Mutex::new(HashMap::new()),
             running: tokio::sync::Mutex::new(()),
             reaching: tokio::sync::Mutex::new(()),
-            held: Mutex::new(Vec::new()),
+            held: Arc::new(Mutex::new(Vec::new())),
+            landed: Arc::new(Mutex::new(Vec::new())),
             waiting: tokio::sync::Mutex::new(None),
             serial: AtomicU64::new(0),
         }
@@ -837,6 +845,7 @@ impl<A: Accounts> CalendarCopy<A> {
                     if renamed.is_some() {
                         attempted.id = sent.id.clone();
                     }
+                    let (held, landed) = (Arc::clone(&self.held), Arc::clone(&self.landed));
                     let waiting = self
                         .db
                         .write(move |c| {
@@ -850,7 +859,13 @@ impl<A: Accounts> CalendarCopy<A> {
                             // An edit or a delete made while this change
                             // was in flight wins over the answer.
                             if store::finish_change(c, account_id, seq, &attempted, &new_etag)? {
-                                store::save_events(c, account_id, &[sent], crate::now_millis())?;
+                                // A held change owns the row, and its commit
+                                // or revert settles it with this answer.
+                                if owns(&held, account_id, &sent.calendar, &sent.id) {
+                                    keep_landed(&landed, account_id, sent);
+                                } else {
+                                    store::save_events(c, account_id, &[sent], crate::now_millis())?;
+                                }
                             }
                             store::first_waiting_on(c, seq)
                         })
@@ -1150,9 +1165,11 @@ impl<A: Accounts> CalendarCopy<A> {
         let Some(held) = waiting.take_if(|w| w.serial == held.serial) else {
             return Ok(());
         };
-        let _release = Release { held: &self.held, keys: held.keys() };
+        let keys = held.keys();
+        let _release = Release { held: &self.held, keys: keys.clone() };
         let Held { account_id, steps, before, .. } = held;
         let now = crate::now_millis();
+        let landed = Arc::clone(&self.landed);
         self.db
             .write(move |c| {
                 // A row the change made, such as a new series or a first
@@ -1167,6 +1184,9 @@ impl<A: Accounts> CalendarCopy<A> {
                     }
                 }
                 store::save_events(c, account_id, &before, now)?;
+                // A send that finished while the change was held answered
+                // for these rows, so they show what the provider took.
+                store::save_events(c, account_id, &take_landed(&landed, &keys), now)?;
                 store::clear_holding(c, account_id)?;
                 Ok(())
             })
@@ -1256,10 +1276,17 @@ impl<A: Accounts> CalendarCopy<A> {
     /// Queues a held change's steps ([`enqueue_steps`]) and releases its
     /// rows to reads.
     async fn queue_held(&self, held: Held) -> Result<(), SyncError> {
-        let _release = Release { held: &self.held, keys: held.keys() };
-        let Held { account_id, steps, before, notify, .. } = held;
+        let keys = held.keys();
+        let _release = Release { held: &self.held, keys: keys.clone() };
+        let Held { account_id, mut steps, mut before, notify, .. } = held;
+        let landed = Arc::clone(&self.landed);
         self.db
             .write(move |c| {
+                // Taken in the same transaction as the queue row, so no
+                // answer lands between the two and is lost.
+                for answer in take_landed(&landed, &keys) {
+                    with_etag(&mut steps, &mut before, &answer);
+                }
                 enqueue_steps(c, account_id, &steps, &before, notify)?;
                 store::clear_holding(c, account_id)?;
                 Ok(())
@@ -1379,6 +1406,56 @@ impl<A: Accounts> CalendarCopy<A> {
             .await?
             .ok_or(SyncError::UnknownAccount(account_id))?
             .email)
+    }
+}
+
+/// A provider's answer that finished on a row a held change owns.
+struct Landed {
+    account_id: AccountId,
+    answer: Event,
+}
+
+/// Whether a held change owns event `id` on `calendar`.
+fn owns(held: &Mutex<Vec<HeldKey>>, account_id: AccountId, calendar: &str, id: &str) -> bool {
+    let held = held.lock().expect("copy poisoned");
+    held.iter().any(|k| k.account_id == account_id && k.calendar == calendar && k.id == id)
+}
+
+/// Keeps `answer` for the held change that owns its row, in place of an
+/// earlier answer for the same row.
+fn keep_landed(landed: &Mutex<Vec<Landed>>, account_id: AccountId, answer: Event) {
+    let mut landed = landed.lock().expect("copy poisoned");
+    landed.retain(|l| {
+        !(l.account_id == account_id && l.answer.calendar == answer.calendar && l.answer.id == answer.id)
+    });
+    landed.push(Landed { account_id, answer });
+}
+
+/// Takes the answers that landed on the rows `keys` name.
+fn take_landed(landed: &Mutex<Vec<Landed>>, keys: &[HeldKey]) -> Vec<Event> {
+    let mut landed = landed.lock().expect("copy poisoned");
+    let named = |l: &Landed| {
+        keys.iter().any(|k| k.account_id == l.account_id && k.calendar == l.answer.calendar && k.id == l.answer.id)
+    };
+    let (taken, kept): (Vec<Landed>, Vec<Landed>) = landed.drain(..).partition(named);
+    *landed = kept;
+    taken.into_iter().map(|l| l.answer).collect()
+}
+
+/// Gives every step and earlier row for `answer`'s event the etag the
+/// provider answered with, so the held change goes out against the
+/// version the provider now holds.
+fn with_etag(steps: &mut [Step], before: &mut [Event], answer: &Event) {
+    let same = |e: &Event| e.calendar == answer.calendar && e.id == answer.id;
+    for step in steps.iter_mut() {
+        if let Step::Save(event) | Step::Cancel(event) = step
+            && same(event)
+        {
+            event.etag = answer.etag.clone();
+        }
+    }
+    for event in before.iter_mut().filter(|e| same(e)) {
+        event.etag = answer.etag.clone();
     }
 }
 
