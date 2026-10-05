@@ -1028,7 +1028,14 @@ impl Radicale {
         path
     }
 
-    /// Puts `body` at `path` as another client would.
+    /// Radicale's own log, for a test that fails on what it stored.
+    pub async fn logs(&self) -> String {
+        self.container.logs().await
+    }
+
+    /// Puts `body` at `path` as another client would, and answers the
+    /// status, so a test can tell a replaced resource (204) from a new
+    /// one (201).
     pub async fn put(
         &self,
         user: &str,
@@ -1036,7 +1043,7 @@ impl Radicale {
         path: &str,
         body: &str,
         content_type: &str,
-    ) {
+    ) -> u16 {
         let put = self
             .http
             .put(self.url() + path.trim_start_matches('/'))
@@ -1047,6 +1054,7 @@ impl Radicale {
             .await
             .expect("Radicale answers PUT");
         assert!(put.status().is_success(), "PUT {path}: {}", put.status());
+        put.status().as_u16()
     }
 }
 

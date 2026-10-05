@@ -46,12 +46,13 @@ fn the_client_speaks_caldav_and_carddav_to_radicale() {
         };
         let next = client.sync(&calendar, &first.token).await.expect("a second sync");
         assert_eq!(next.changed.len(), 1, "{next:?}");
-        radicale.put(USER, &password, &href, &EVENT.replace("Lunch", "Lunch, theirs"), "text/calendar").await;
+        let status = radicale.put(USER, &password, &href, &EVENT.replace("Lunch", "Lunch, theirs"), "text/calendar").await;
         // The other client's write must reach the same resource and give
         // it a new etag, or the stale put below proves nothing.
         let theirs = client.get(&href).await.expect("a get after their put");
-        assert!(theirs.body.contains("theirs"), "{href}: {theirs:?}");
-        assert_ne!(theirs.etag, etag, "{href}: their put kept the etag");
+        if !theirs.body.contains("theirs") || theirs.etag == etag {
+            panic!("{href}: their put answered {status}, we read {theirs:?}\n{}", radicale.logs().await);
+        }
         let stale = client.put(&href, EVENT, Kind::Calendar, Precondition::Match(etag)).await;
         assert!(matches!(stale, Err(DavError::Changed)), "{stale:?}");
         let fetched = client.fetch(&calendar, Kind::Calendar, &[next.changed[0].href.clone()]).await.expect("a fetch");
