@@ -1938,7 +1938,7 @@ msgstr "Marcar como lida"
 
 #: app/src/notify.rs:51 app/src/ui/calendar/manage.rs:223
 #: app/src/ui/calendar/popover.rs:211 app/src/ui/calendar/popover.rs:213
-#: app/src/ui/calendar/popover.rs:684 app/src/ui/calendar/scope.rs:194
+#: app/src/ui/calendar/popover.rs:706 app/src/ui/calendar/scope.rs:194
 #: app/src/ui/conversation.rs:537 app/src/ui/hide_my_email.rs:288
 #: app/src/ui/queued.rs:58 app/src/ui/templates.rs:149
 #: app/src/ui/window/arrange.rs:98 app/src/ui/window/organize.rs:204
@@ -4552,7 +4552,7 @@ msgstr "Não partilhado com os convidados"
 msgid "Open {file} in the browser"
 msgstr "Abrir {file} no navegador"
 
-#: app/src/ui/calendar/attachments.rs:132 app/src/ui/calendar/popover.rs:851
+#: app/src/ui/calendar/attachments.rs:132 app/src/ui/calendar/popover.rs:873
 msgid "Open in Browser"
 msgstr "Abrir no navegador"
 
@@ -4560,7 +4560,7 @@ msgstr "Abrir no navegador"
 msgid "Waiting to be sent"
 msgstr "À espera de ser enviado"
 
-#: app/src/ui/calendar/block.rs:531 app/src/ui/calendar/popover.rs:744
+#: app/src/ui/calendar/block.rs:531 app/src/ui/calendar/popover.rs:766
 msgid "Not answered yet"
 msgstr "Ainda sem resposta"
 
@@ -5480,11 +5480,11 @@ msgstr "Mostrar tudo"
 #. The button reads "Show all"; a screen reader also hears how
 #. many are still hidden, in the same words the tooltip used
 #. to give before this list replaced it.
-#: app/src/ui/calendar/popover.rs:294 app/src/ui/calendar/popover.rs:822
+#: app/src/ui/calendar/popover.rs:294 app/src/ui/calendar/popover.rs:844
 msgid "Show all guests"
 msgstr "Mostrar todos os convidados"
 
-#: app/src/ui/calendar/popover.rs:313 app/src/ui/calendar/popover.rs:746
+#: app/src/ui/calendar/popover.rs:313 app/src/ui/calendar/popover.rs:768
 #: app/src/ui/invitation.rs:317
 msgid "Answer"
 msgstr "Resposta"
@@ -5509,15 +5509,15 @@ msgstr "Propor outra hora"
 msgid "Open the invitation in Mail"
 msgstr "Abrir o convite no Correio"
 
-#: app/src/ui/calendar/popover.rs:669
+#: app/src/ui/calendar/popover.rs:691
 msgid "{when}, {zone}"
 msgstr "{when}, {zone}"
 
-#: app/src/ui/calendar/popover.rs:685
+#: app/src/ui/calendar/popover.rs:707
 msgid "Remove from My Calendar"
 msgstr "Remover do meu calendário"
 
-#: app/src/ui/calendar/popover.rs:760
+#: app/src/ui/calendar/popover.rs:782
 msgid "Your answer"
 msgstr "A sua resposta"
 
