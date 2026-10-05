@@ -193,7 +193,7 @@ impl<M: ManageSieveApi, B: MailBackend + Clone> SieveRules<M, B> {
 
     fn fresh(filter: &Filter) -> Filter {
         Filter {
-            id: Some(format!("sieve-{:016x}", rand::random::<u64>())),
+            id: Some(filter.id.clone().unwrap_or_else(|| format!("sieve-{:016x}", rand::random::<u64>()))),
             ..filter.clone()
         }
     }

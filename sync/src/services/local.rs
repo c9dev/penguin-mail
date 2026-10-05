@@ -49,7 +49,7 @@ impl RulesService for LocalRules {
 
     async fn create_filter(&self, filter: &Filter) -> Result<Filter, BackendError> {
         let account_id = self.account_id;
-        let made = Filter { id: Some(new_id()), ..filter.clone() };
+        let made = Filter { id: Some(filter.id.clone().unwrap_or_else(new_id)), ..filter.clone() };
         let kept = made.clone();
         let now = crate::now_millis();
         self.db
