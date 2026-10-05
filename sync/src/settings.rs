@@ -6,7 +6,8 @@
 //! and filters a hidden address needs, and what Gmail answers when the
 //! account has not granted the settings permission.
 
-use std::sync::Arc;
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 
 use chrono::{Local, TimeZone};
 use mailrs_domain::{
@@ -18,6 +19,7 @@ use mailrs_store::rule_changes::{self, RuleChange};
 
 use crate::actions::label_id;
 use crate::hidden::{self, HiddenAddress};
+use crate::services::RulesPlace;
 use crate::{
     AccountServices, AccountSync, Accounts, AnyAutoReply, AnyRules, AutoReplyService, BackendError,
     IdentityService, RulesService, SendAsAddress, SyncError, now_millis,
@@ -108,9 +110,39 @@ pub enum Replaced {
     BothRun { new: Filter, error: SyncError },
 }
 
+/// An account's rules as the Rules dialog shows them.
+#[derive(Debug, Clone, PartialEq)]
+pub struct RuleList {
+    /// The rules that run, with changes still waiting to go out applied.
+    pub rules: Vec<Filter>,
+    /// Text on a Sieve server that nobody here wrote, kept as it is.
+    pub elsewhere: Vec<String>,
+    pub place: RulesPlace,
+    /// Some changes wait for the server to answer.
+    pub waiting: bool,
+}
+
+/// `rules` as they will stand once `queued` has gone out.
+pub(crate) fn with_queued(mut rules: Vec<Filter>, queued: &[rule_changes::QueuedRule]) -> Vec<Filter> {
+    for waiting in queued {
+        match &waiting.change {
+            RuleChange::Create(rule) => rules.push(rule.clone()),
+            RuleChange::Delete(id) => rules.retain(|r| r.id.as_deref() != Some(id)),
+        }
+    }
+    rules
+}
+
+/// The rules and the foreign Sieve blocks one read returned.
+type Listing = (Vec<Filter>, Vec<String>);
+
 pub struct AccountSettings<A: Accounts> {
     accounts: Arc<A>,
     db: Db,
+    /// The last listing of each account whose server queues changes, for
+    /// showing the rules while the server does not answer. One entry per
+    /// account.
+    last_read: Mutex<HashMap<AccountId, Listing>>,
 }
 
 /// The value, or an early return when Gmail wants the permission first.
@@ -125,7 +157,7 @@ macro_rules! done {
 
 impl<A: Accounts> AccountSettings<A> {
     pub fn new(accounts: Arc<A>, db: Db) -> Self {
-        AccountSettings { accounts, db }
+        AccountSettings { accounts, db, last_read: Mutex::default() }
     }
 
     /// The automatic reply the server holds, in whole days.
@@ -151,6 +183,43 @@ impl<A: Accounts> AccountSettings<A> {
     /// The account's filters, newest last, as the server returns them.
     pub async fn rules(&self, account_id: AccountId) -> Result<Permitted<Vec<Filter>>, SyncError> {
         permitted(self.rules_service(account_id)?.filters().await)
+    }
+
+    /// The account's rules for the Rules dialog: what the server holds
+    /// and the changes waiting to go out. A ManageSieve server that does
+    /// not answer shows the rules last read with the waiting changes on
+    /// top, and `waiting` set.
+    pub async fn rule_list(&self, account_id: AccountId) -> Result<Permitted<RuleList>, SyncError> {
+        let service = self.rules_service(account_id)?;
+        let place = service.place();
+        let queued = if service.queues_offline() {
+            self.db.read(move |c| rule_changes::queued(c, account_id)).await?
+        } else {
+            Vec::new()
+        };
+        let (rules, elsewhere) = match service.listing().await {
+            Ok(read) => {
+                if service.queues_offline() {
+                    self.last_read.lock().unwrap_or_else(|e| e.into_inner()).insert(account_id, read.clone());
+                }
+                read
+            }
+            Err(err) if err.is_transient() && service.queues_offline() => {
+                let kept = self.last_read.lock().unwrap_or_else(|e| e.into_inner()).get(&account_id).cloned();
+                match kept {
+                    Some(read) => read,
+                    None if !queued.is_empty() => (Vec::new(), Vec::new()),
+                    None => return Err(err.into()),
+                }
+            }
+            Err(err) => return permitted(Err::<RuleList, _>(err)),
+        };
+        Ok(Permitted::Done(RuleList {
+            rules: with_queued(rules, &queued),
+            elsewhere,
+            place,
+            waiting: !queued.is_empty(),
+        }))
     }
 
     /// Adds a filter. The server gives the stored one an id.

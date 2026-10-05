@@ -443,3 +443,33 @@ async fn an_account_without_rules_says_the_server_cannot() {
     ));
     assert_eq!(h.fake.with(|s| s.usage.calls_to("users.settings.filters.list")), 0);
 }
+
+#[tokio::test]
+async fn a_gmail_account_lists_its_rules_as_run_by_the_server() {
+    let h = harness().await;
+    let settings = settings(&h);
+    let made = settings
+        .add_rule(h.account_id, Filter::block("pest@example.com"))
+        .await
+        .unwrap();
+    let Permitted::Done(made) = made else { panic!("permission") };
+    let Permitted::Done(list) = settings.rule_list(h.account_id).await.unwrap() else {
+        panic!("permission")
+    };
+    assert_eq!(list.rules, vec![made]);
+    assert_eq!(list.place, crate::RulesPlace::Server);
+    assert!(list.elsewhere.is_empty());
+    assert!(!list.waiting);
+}
+
+#[test]
+fn waiting_changes_show_in_the_list_before_they_go_out() {
+    use mailrs_store::rule_changes::{QueuedRule, RuleChange};
+    let old = Filter { id: Some("sieve-1".into()), ..Filter::block("a@example.com") };
+    let new = Filter { id: Some("sieve-2".into()), ..Filter::block("b@example.com") };
+    let queued = [
+        QueuedRule { seq: 1, change: RuleChange::Create(new.clone()) },
+        QueuedRule { seq: 2, change: RuleChange::Delete("sieve-1".into()) },
+    ];
+    assert_eq!(crate::settings::with_queued(vec![old], &queued), vec![new]);
+}

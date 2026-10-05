@@ -128,11 +128,12 @@ pub fn sender_actions(offers: Offers) -> [(&'static str, bool); 2] {
 /// account's menu.
 pub fn account_actions(offers: &[Offers]) -> [(&'static str, bool); 4] {
     let rules = offers.iter().any(|o| o.rules);
+    let hides = offers.iter().any(|o| hides_addresses(*o));
     let auto_reply = offers.iter().any(|o| o.auto_reply);
     [
-        ("hide-my-email", rules),
+        ("hide-my-email", hides),
         ("account-rules", rules),
-        ("account-hide-my-email", rules),
+        ("account-hide-my-email", hides),
         ("account-vacation", auto_reply),
     ]
 }
@@ -141,11 +142,12 @@ pub fn account_actions(offers: &[Offers]) -> [(&'static str, bool); 4] {
 /// `offers`. An account's menu reaches these through its own actions
 /// ([`account_menu_actions`]), which are off where the account lacks what
 /// they open, but the demo's script activates the `win.` action with any
-/// account's id. Hide My Email writes a rule for each address, so it
-/// needs rules.
+/// account's id. Hide My Email needs rules and labels
+/// ([`hides_addresses`]).
 pub fn account_action_on(name: &str, offers: Offers) -> bool {
     match name {
-        "account-rules" | "account-hide-my-email" => offers.rules,
+        "account-rules" => offers.rules,
+        "account-hide-my-email" => hides_addresses(offers),
         "account-vacation" => offers.auto_reply,
         _ => true,
     }
@@ -161,8 +163,15 @@ pub fn account_menu_actions(offers: Offers) -> [(&'static str, bool); 3] {
     [
         ("vacation", offers.auto_reply),
         ("rules", offers.rules),
-        ("hide-my-email", offers.rules),
+        ("hide-my-email", hides_addresses(offers)),
     ]
+}
+
+/// Whether Hide My Email works for an account: each hidden address is a
+/// plus address with a rule behind it, and only Gmail keeps both a label
+/// for it and plus addressing everywhere.
+pub fn hides_addresses(offers: Offers) -> bool {
+    offers.rules && offers.labels
 }
 
 /// How the accounts on screen file mail: with labels, several at once, or
@@ -395,17 +404,18 @@ impl Filing {
 /// One line saying why `account` lacks `missing`, naming who serves it.
 pub fn reason(account: &Account, missing: Missing) -> String {
     let template = match (account.provider, missing) {
-        // IMAP carries mail and nothing else. A calendar and contacts
-        // need CalDAV and CardDAV, and rules need a server that runs
-        // them, which a later version brings to these accounts.
+        // IMAP carries mail; a calendar and contacts come from CalDAV and
+        // CardDAV servers the app looks for, and Preferences says where
+        // it looked. Rules always have a place, on the server or here.
+        // Part 4 adds the Microsoft arms beside these.
         (Provider::Imap, Missing::Calendar) => {
-            gettext("{provider}'s calendar comes in a later version.")
+            gettext("Penguin Mail found no calendar server for {provider}.")
         }
         (Provider::Imap, Missing::Contacts) => {
-            gettext("{provider}'s contacts come in a later version.")
+            gettext("Penguin Mail found no contacts server for {provider}.")
         }
-        (Provider::Imap, Missing::Rules | Missing::AutoReply) => {
-            gettext("Rules and automatic replies need a server that runs them.")
+        (Provider::Imap, Missing::AutoReply) => {
+            gettext("{provider} cannot send automatic replies.")
         }
         (_, Missing::Calendar) => gettext("{provider} has no calendar that other apps can reach."),
         (_, Missing::Contacts) => {
@@ -426,8 +436,7 @@ pub fn reason(account: &Account, missing: Missing) -> String {
 
 /// The lines Preferences shows under Not Available: everything an
 /// account lacks but the category bar, which needs no line because it is
-/// not there, each as the account's address and the reason. An IMAP
-/// account gives rules and the automatic reply one reason, shown once.
+/// not there, each as the account's address and the reason.
 pub fn missing_lines(accounts: &[(Account, Offers)]) -> Vec<(String, String)> {
     let mut lines: Vec<(String, String)> = accounts
         .iter()
@@ -465,7 +474,7 @@ mod tests {
     use mailrs_domain::{Account, AccountState, Provider};
     use mailrs_sync::{Missing, Offers};
 
-    use super::{offers_for, reason, shows_space_switch, withheld_for};
+    use super::{hides_addresses, offers_for, reason, shows_space_switch, withheld_for};
     use crate::settings::Space;
 
     const NO_CALENDAR: Offers = Offers {
@@ -527,25 +536,34 @@ mod tests {
     }
 
     #[test]
-    fn an_imap_account_says_its_calendar_and_contacts_come_later() {
+    fn an_imap_account_without_a_calendar_server_says_none_was_found() {
         assert_eq!(
             reason(&fastmail(), Missing::Calendar),
-            "Fastmail's calendar comes in a later version."
+            "Penguin Mail found no calendar server for Fastmail."
         );
         assert_eq!(
             reason(&fastmail(), Missing::Contacts),
-            "Fastmail's contacts come in a later version."
+            "Penguin Mail found no contacts server for Fastmail."
         );
     }
 
     #[test]
-    fn an_imap_account_says_rules_need_a_server_that_runs_them() {
-        for missing in [Missing::Rules, Missing::AutoReply] {
-            assert_eq!(
-                reason(&fastmail(), missing),
-                "Rules and automatic replies need a server that runs them."
-            );
-        }
+    fn an_imap_account_without_sieve_cannot_send_automatic_replies() {
+        assert_eq!(
+            reason(&fastmail(), Missing::AutoReply),
+            "Fastmail cannot send automatic replies."
+        );
+    }
+
+    #[test]
+    fn hide_my_email_needs_rules_and_labels() {
+        let folders = Offers { labels: false, ..Offers::EVERYTHING };
+        assert!(hides_addresses(Offers::EVERYTHING));
+        assert!(!hides_addresses(folders));
+        assert_eq!(account_menu_actions(folders)[2], ("hide-my-email", false));
+        assert!(!account_action_on("account-hide-my-email", folders));
+        assert!(account_action_on("account-rules", folders), "rules stay on for a folder account");
+        assert_eq!(account_actions(&[folders])[0], ("hide-my-email", false));
     }
 
     #[test]
@@ -851,7 +869,6 @@ mod tests {
             categories: false,
             calendar: false,
             contacts: false,
-            rules: false,
             auto_reply: false,
             ..Offers::EVERYTHING
         };
@@ -860,9 +877,9 @@ mod tests {
         assert_eq!(
             said,
             [
-                "Fastmail's calendar comes in a later version.",
-                "Fastmail's contacts come in a later version.",
-                "Rules and automatic replies need a server that runs them.",
+                "Penguin Mail found no calendar server for Fastmail.",
+                "Penguin Mail found no contacts server for Fastmail.",
+                "Fastmail cannot send automatic replies.",
             ]
         );
     }
@@ -872,9 +889,9 @@ mod tests {
         assert_eq!(
             super::missing_name(
                 "dana@fastmail.example",
-                "Fastmail's calendar comes in a later version."
+                "Penguin Mail found no calendar server for Fastmail."
             ),
-            "dana@fastmail.example: Fastmail's calendar comes in a later version."
+            "dana@fastmail.example: Penguin Mail found no calendar server for Fastmail."
         );
     }
 

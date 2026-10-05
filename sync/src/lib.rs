@@ -83,7 +83,7 @@ pub use services::{
     RulesService, SendAsAddress, SyncState, Unapplied, Changes, RAW_LIMIT, Submit, Withheld,
     background, withheld_by_grant, CalDav, CardDav, LocalRules, RulesPlace, SieveRules,
 };
-pub use settings::{AccountSettings, AutomaticReply, HIDE_MY_EMAIL_LABEL, Permitted, Replaced};
+pub use settings::{AccountSettings, AutomaticReply, HIDE_MY_EMAIL_LABEL, Permitted, Replaced, RuleList};
 pub use triage::TriageAction;
 pub use unsubscribe::{Leave, Unsubscribe};
 
