@@ -412,7 +412,7 @@ pub(super) fn catalog<A: Accounts>() -> Vec<MailTool<A>> {
         MailTool {
             name: "block_sender",
             label: || gettext("Blocking a sender"),
-            description: "Sends all future mail from an address straight to the Trash, with a filter on a Gmail account.",
+            description: "Sends all future mail from an address straight to the Trash, with a rule.",
             input: || {
                 json!({
                     "account": account("The account to block the sender in."),
@@ -451,7 +451,7 @@ pub(super) fn catalog<A: Accounts>() -> Vec<MailTool<A>> {
         MailTool {
             name: "list_rules",
             label: || gettext("Reading rules"),
-            description: "Lists an account's rules, the filters of a Gmail account, described in words, with their ids.",
+            description: "Lists an account's rules in words, with their ids, and says whether the server runs them or this computer does.",
             input: || json!({"account": account("The account.")}),
             required: &["account"],
             run: Run::Now(|t, input| Box::pin(t.list_rules(input))),
@@ -459,7 +459,7 @@ pub(super) fn catalog<A: Accounts>() -> Vec<MailTool<A>> {
         MailTool {
             name: "create_rule",
             label: || gettext("Creating a rule"),
-            description: "Creates a rule, as a filter on a Gmail account. Give at least one condition and one action.",
+            description: "Creates a rule. Give at least one condition and one action.",
             input: || {
                 json!({
                     "account": account("The account."),
@@ -1013,7 +1013,7 @@ pub(super) fn catalog<A: Accounts>() -> Vec<MailTool<A>> {
         MailTool {
             name: "find_contact",
             label: || gettext("Looking up a contact"),
-            description: "Looks people up by name, address, or organization: first in the address books Penguin Mail keeps from the contacts of Gmail accounts, then among the people in stored mail.",
+            description: "Looks people up by name, address, or organization: first in the address books Penguin Mail keeps from each account's contacts, then among the people in stored mail.",
             input: || json!({"query": {"type": "string", "description": "Words to find, such as \"priya\" or \"fernwood\"."}}),
             required: &["query"],
             run: Run::Now(|t, input| Box::pin(t.find_contact(input))),
@@ -1183,6 +1183,14 @@ mod tests {
             }
             _ => {}
         }
+    }
+
+    #[test]
+    fn rules_are_not_said_to_belong_to_gmail_alone() {
+        let prompt = crate::assistant::SYSTEM_PROMPT;
+        assert!(!prompt.contains("filters belong to Gmail accounts"), "{prompt}");
+        let rules = specs().into_iter().find(|t| t.name == "list_rules").unwrap();
+        assert!(!rules.description.contains("the filters of a Gmail account"));
     }
 
     /// Accounts come from Gmail and from IMAP providers, and the prompt

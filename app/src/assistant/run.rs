@@ -1362,11 +1362,15 @@ impl<A: Accounts> Tools<A> {
         let labels = self.labels_of(account.id);
         let account_id = account.id;
         let listed = self
-            .call(async move { settings.rules(account_id).await })
+            .call(async move { settings.rule_list(account_id).await })
             .await;
         match listed {
-            Ok(Permitted::Done(filters)) => Ok(json!({
-                "rules": filters.iter().map(|f| json!({
+            Ok(Permitted::Done(list)) => Ok(json!({
+                "runs": match list.place {
+                    mailrs_sync::RulesPlace::Server => "server",
+                    mailrs_sync::RulesPlace::ThisComputer => "this_computer",
+                },
+                "rules": list.rules.iter().map(|f| json!({
                     "id": f.id,
                     "when": describe_criteria(&f.criteria),
                     "then": describe_action(&f.action, |id| {
@@ -1435,7 +1439,7 @@ impl<A: Accounts> Tools<A> {
             id => labels.iter().find(|l| l.id == id).map(|l| l.name.clone()),
         };
         let summary = fill(
-            &gettext("Create a Gmail rule for {account}: {when} → {then}?"),
+            &gettext("Create a rule for {account}: {when} → {then}?"),
             &[
                 ("account", &account.email),
                 ("when", &describe_criteria(&filter.criteria)),
@@ -1478,7 +1482,7 @@ impl<A: Accounts> Tools<A> {
         }
         let id = required(input, "id")?;
         let question = fill(
-            &gettext("Delete a Gmail rule from {account}?"),
+            &gettext("Delete a rule from {account}?"),
             &[("account", &account.email)],
         );
         Ok(Plan::ask(question, async move {
@@ -1676,6 +1680,9 @@ impl<A: Accounts> Tools<A> {
         if let Some(answer) = self.unavailable(&account, Missing::Rules) {
             return Ok(answer);
         }
+        if !crate::offered::hides_addresses(self.offers(account.id)) {
+            return Ok(json!({"unavailable": gettext("Hide My Email works with Gmail accounts.")}));
+        }
         let note = text(input, "note").unwrap_or_default();
         let taken = self.desk.settings().hidden_addresses;
         let (account_id, email) = (account.id, account.email.clone());
@@ -1706,6 +1713,9 @@ impl<A: Accounts> Tools<A> {
         let (account, settings) = self.settings_for(&hidden.account)?;
         if let Some(answer) = self.unavailable(&account, Missing::Rules) {
             return Ok(answer);
+        }
+        if !crate::offered::hides_addresses(self.offers(account.id)) {
+            return Ok(json!({"unavailable": gettext("Hide My Email works with Gmail accounts.")}));
         }
         let account_id = account.id;
         let changed = self

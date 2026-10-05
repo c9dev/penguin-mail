@@ -734,7 +734,7 @@ async fn rules_are_made_listed_and_deleted() {
     let h = harness().await;
     assert_eq!(
         h.ok("list_rules", json!({"account": ME})).await,
-        json!({"rules": []})
+        json!({"rules": [], "runs": "server"})
     );
 
     let made = h
@@ -747,7 +747,7 @@ async fn rules_are_made_listed_and_deleted() {
     assert_eq!(
         h.asked().questions,
         [format!(
-            "Create a Gmail rule for {ME}: From shop@example.com → skip the inbox, apply kites?"
+            "Create a rule for {ME}: From shop@example.com → skip the inbox, apply kites?"
         )]
     );
 
@@ -761,7 +761,7 @@ async fn rules_are_made_listed_and_deleted() {
     );
     assert_eq!(
         h.ok("list_rules", json!({"account": ME})).await,
-        json!({"rules": []})
+        json!({"rules": [], "runs": "server"})
     );
 }
 
@@ -795,7 +795,7 @@ async fn a_declined_rule_leaves_no_new_label_behind() {
     assert_eq!(
         h.asked().questions,
         [format!(
-            "Create a Gmail rule for {ME}: From shop@example.com → apply receipts?"
+            "Create a rule for {ME}: From shop@example.com → apply receipts?"
         )]
     );
 }
@@ -1320,5 +1320,24 @@ async fn a_declined_question_changes_nothing() {
     assert_eq!(
         h.ok("get_automatic_reply", json!({"account": ME})).await,
         reply
+    );
+}
+
+#[tokio::test]
+async fn hidden_addresses_are_refused_on_a_folder_account_with_the_reason() {
+    use mailrs_sync::fake::{FakeImap, FakeSieve, FakeSmtp};
+    use mailrs_sync::{AccountServices, AnyRules, SieveRules};
+    use std::sync::Arc;
+
+    let h = Harness::with_services(|_, services| {
+        let imap = AccountServices::fake_imap(Arc::new(FakeImap::new()), Arc::new(FakeSmtp::default()));
+        let adapter = imap.fake_imap_adapter().expect("an IMAP account");
+        let sieve = SieveRules::new(Arc::new(FakeSieve::new("fileinto vacation")), adapter, ME.into(), "Example".into());
+        *services = imap.with_rules(AnyRules::FakeSieve(sieve));
+    })
+    .await;
+    assert_eq!(
+        h.run("create_hidden_address", json!({"account": ME, "note": "shop"})).await,
+        Ok(json!({"unavailable": "Hide My Email works with Gmail accounts."}))
     );
 }
