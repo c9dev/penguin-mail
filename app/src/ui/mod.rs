@@ -26,6 +26,7 @@ pub mod invitation;
 pub mod key_import;
 pub mod list_feed;
 pub mod moving;
+pub mod narrow_header;
 pub mod permission;
 pub mod pgp;
 pub mod preferences;

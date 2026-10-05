@@ -795,13 +795,16 @@ impl MainWindow {
             );
             let (on, off) = (Rc::clone(&conversation), Rc::clone(&conversation));
             let (calendar_on, calendar_off) = (Rc::clone(&calendar), Rc::clone(&calendar));
+            let (list_on, list_off) = (Rc::clone(&list), Rc::clone(&list));
             narrow.connect_apply(move |_| {
                 on.set_compact(true);
                 calendar_on.set_narrow(true);
+                list_on.set_narrow(true);
             });
             narrow.connect_unapply(move |_| {
                 off.set_compact(false);
                 calendar_off.set_narrow(false);
+                list_off.set_narrow(false);
             });
             window.add_breakpoint(narrow);
 

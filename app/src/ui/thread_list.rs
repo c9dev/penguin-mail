@@ -53,6 +53,13 @@ pub struct ThreadList {
     /// "All Inboxes", and under it the unread count and category.
     title: gtk::Label,
     subtitle: gtk::Label,
+    /// The header and the bar at the page's foot, between which New moves
+    /// as the window narrows ([`super::narrow_header`]).
+    header: adw::HeaderBar,
+    compose_button: gtk::Button,
+    bottom_slot: adw::Bin,
+    toolbar: adw::ToolbarView,
+    narrow: Cell<bool>,
     stack: gtk::Stack,
     empty: adw::StatusPage,
     store: gio::ListStore,
@@ -289,6 +296,13 @@ impl ThreadList {
         let grant_bars = gtk::Box::new(gtk::Orientation::Vertical, 0);
         toolbar.add_top_bar(&grant_bars);
         toolbar.set_content(Some(&stack));
+        let bottom_slot = adw::Bin::builder()
+            .halign(gtk::Align::Center)
+            .margin_top(6)
+            .margin_bottom(6)
+            .build();
+        toolbar.add_bottom_bar(&bottom_slot);
+        toolbar.set_reveal_bottom_bars(false);
         let page = adw::NavigationPage::builder()
             .title(gettext("Mail"))
             .tag("list")
@@ -306,6 +320,11 @@ impl ThreadList {
             search_bar,
             title,
             subtitle,
+            header,
+            compose_button,
+            bottom_slot,
+            toolbar,
+            narrow: Cell::new(false),
             stack,
             empty,
             store,
@@ -340,8 +359,50 @@ impl ThreadList {
     pub fn set_title(&self, title: &str, subtitle: &str) {
         self.title.set_label(title);
         self.subtitle.set_label(subtitle);
-        self.subtitle.set_visible(!subtitle.is_empty());
+        let layout = super::narrow_header::header_layout(self.narrow.get());
+        self.subtitle.set_visible(layout.subtitle && !subtitle.is_empty());
         self.page.set_title(title);
+    }
+
+    /// Lays the header out for a phone or for a wider window. On a phone
+    /// the unread line goes, the title shrinks a step, and New Message
+    /// moves to a bar at the foot of the list with its name beside the
+    /// icon.
+    pub fn set_narrow(&self, narrow: bool) {
+        if self.narrow.replace(narrow) == narrow {
+            return;
+        }
+        let layout = super::narrow_header::header_layout(narrow);
+        self.subtitle
+            .set_visible(layout.subtitle && !self.subtitle.label().is_empty());
+        match layout.small_title {
+            true => self.title.add_css_class("small"),
+            false => self.title.remove_css_class("small"),
+        }
+        if layout.new_below {
+            self.header.remove(&self.compose_button);
+            let content = adw::ButtonContent::builder()
+                .icon_name("mail-message-new-symbolic")
+                .label(gettext("New Message"))
+                .build();
+            self.compose_button.set_child(Some(&content));
+            for class in ["suggested-action", "pill", "bottom-new"] {
+                self.compose_button.add_css_class(class);
+            }
+            self.bottom_slot.set_child(Some(&self.compose_button));
+        } else {
+            self.bottom_slot.set_child(None::<&gtk::Widget>);
+            self.compose_button.set_icon_name("mail-message-new-symbolic");
+            for class in ["suggested-action", "pill", "bottom-new"] {
+                self.compose_button.remove_css_class(class);
+            }
+            // New sits at the outer end with Search inside it, so Search
+            // comes off and goes back after New.
+            self.header.remove(&self.search_button);
+            self.header.pack_end(&self.compose_button);
+            self.header.pack_end(&self.search_button);
+        }
+        self.toolbar.set_reveal_bottom_bars(layout.new_below);
     }
 
     pub fn set_show_accounts(&self, show: bool) {

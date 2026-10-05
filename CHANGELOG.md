@@ -167,6 +167,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   Ctrl+R.
 
 ### Improved
+- In a window as narrow as a phone, the mail list's title shows whole: the unread line under it goes and New Message moves to a bar at the foot of the list.
 - Dates read one way across the app: "Mon, 5 Oct" in Automatic Reply and Hide My Email, with the year when it is not this year, and "Monday, 5 October 2026 at 13:36" in a message's details and on an invitation, with the time in your desktop's clock.
 - Schedule focus time or out of office from the New Event button's menu or the type switch in quick add, offered only on calendars that can keep them: Google Workspace has both, Outlook has out of office.
 - The category chips over the inbox show each category's name and unread count, "Primary 2", wrapping onto a second line when one is too short, and fold to icons in a narrow window.

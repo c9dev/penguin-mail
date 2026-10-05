@@ -193,10 +193,13 @@ pub struct CalendarView {
     switch_slot: gtk::Box,
     /// Holds the header bar and decides which of its extras fit.
     header_room: HeaderRoom,
-    /// The bar under a narrow window's view: Today, the arrows and the
-    /// switch.
+    /// The bar under a narrow window's view: Today, the arrows, the
+    /// switch and New Event.
     bottom_row: gtk::Box,
     header: adw::HeaderBar,
+    /// New Event and its split twin, which move to the bottom bar on a
+    /// narrow window ([`crate::ui::narrow_header`]).
+    new_slot: gtk::Box,
     /// The orange "+" button: the editor on a new event at the slot.
     /// Insensitive while no calendar takes new events. Shown while no
     /// calendar takes another type; `new_split` stands in for it then.
@@ -658,6 +661,7 @@ impl CalendarView {
                 header_room: header_room.clone(),
                 bottom_row,
                 header: header.clone(),
+                new_slot: new_slot.clone(),
                 new_event: new_event.clone(),
                 new_split: new_split.clone(),
                 new_types: RefCell::new(Vec::new()),
@@ -1151,9 +1155,10 @@ impl CalendarView {
             return;
         }
         self.narrow.set(narrow);
-        // A phone's header keeps its title, New Event, Search and the
-        // window's buttons; Today and the arrows go down beside the
+        // A phone's header keeps its title, Search and the window's
+        // buttons; Today, the arrows and New Event go down beside the
         // switch.
+        let layout = crate::ui::narrow_header::header_layout(narrow);
         if narrow {
             self.switch_slot.remove(&self.switch);
             self.header.remove(&self.today_button);
@@ -1161,6 +1166,10 @@ impl CalendarView {
             self.bottom_row.append(&self.today_button);
             self.bottom_row.append(&self.arrows);
             self.bottom_row.append(&self.switch);
+            if layout.new_below {
+                self.header.remove(&self.new_slot);
+                self.bottom_row.append(&self.new_slot);
+            }
         } else {
             for widget in [
                 self.today_button.upcast_ref::<gtk::Widget>(),
@@ -1172,6 +1181,14 @@ impl CalendarView {
             self.switch_slot.prepend(&self.switch);
             self.header.pack_start(&self.today_button);
             self.header.pack_start(&self.arrows);
+            if self.new_slot.parent().is_some_and(|p| p == *self.bottom_row.upcast_ref::<gtk::Widget>()) {
+                // New Event goes back between the switch and Search, so
+                // the switch comes off and follows it.
+                self.bottom_row.remove(&self.new_slot);
+                self.header.remove(&self.switch_slot);
+                self.header.pack_end(&self.new_slot);
+                self.header.pack_end(&self.switch_slot);
+            }
         }
         self.switch_slot.set_visible(!narrow);
         self.header_room.want(Extra::Switch, !narrow);
@@ -1182,6 +1199,7 @@ impl CalendarView {
         }
         self.build_switch();
         self.show_range();
+        self.show_extras();
         if self.showing() == Showing::List {
             self.fill_list();
         }
@@ -1283,9 +1301,12 @@ impl CalendarView {
     /// Shows the header's extras it has room for and hides the rest.
     fn show_extras(&self) {
         let room = &self.header_room;
-        self.title_dim.set_visible(room.keeps(Extra::Year));
-        self.title_week
-            .set_visible(!self.title_week.label().is_empty() && room.keeps(Extra::Week));
+        // A phone drops the year and the week whatever the room.
+        let subtitle = crate::ui::narrow_header::header_layout(self.narrow.get()).subtitle;
+        self.title_dim.set_visible(subtitle && room.keeps(Extra::Year));
+        self.title_week.set_visible(
+            subtitle && !self.title_week.label().is_empty() && room.keeps(Extra::Week),
+        );
         let whole = room.keeps(Extra::Switch);
         self.switch.set_visible(whole || self.narrow.get());
         self.view_menu.set_visible(!whole);

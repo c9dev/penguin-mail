@@ -1592,3 +1592,10 @@ list.post-field.post-wrong > row:focus-within label.subtitle { color: var(--post
    top, so the list sits midway between the words and the button. */
 dialog.alert .failing-list { margin-top: 3px; }
 dialog.alert.short .failing-list { margin-top: 4px; }
+
+/* A phone's mail header: no unread line under the title, which is a step
+   smaller and sits in the middle of the bar, so "All Inboxes" fits beside
+   Search and the window's buttons at 360 px. New Message moves to the
+   bar at the foot of the list. */
+.list-header-title .title.small { font-size: 1em; margin-top: 1px; }
+button.bottom-new { min-height: 32px; padding: 0 16px; }
