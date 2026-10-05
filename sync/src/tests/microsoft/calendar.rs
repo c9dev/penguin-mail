@@ -467,3 +467,42 @@ async fn graph_mails_guests_whatever_the_person_chose_so_nobody_is_not_offered()
     calendar.put_event(&held, None, false, Notify::Nobody).await.unwrap();
     assert_eq!(h.fake.with(|s| s.events["g1"].1.subject.clone()).as_deref(), Some("Moved"));
 }
+
+async fn weekly_made_here(h: &super::Outlook) -> Event {
+    let calendar = h.sync.services().calendar.clone().unwrap();
+    let local = Event {
+        calendar: "cal-1".into(),
+        id: "pmrepeat".into(),
+        title: "Weekly".into(),
+        start: millis("2026-10-05T08:00:00Z"),
+        end: millis("2026-10-05T08:30:00Z"),
+        zone: "UTC".into(),
+        busy: true,
+        rules: vec!["RRULE:FREQ=WEEKLY;BYDAY=MO".into()],
+        ..Event::default()
+    };
+    calendar.put_event(&local, None, true, Notify::Guests).await.unwrap()
+}
+
+#[tokio::test]
+async fn saving_a_series_with_no_repeat_tells_outlook_to_stop_repeating_it() {
+    let h = outlook().await;
+    let made = weekly_made_here(&h).await;
+    assert!(h.fake.with(|s| s.events[&made.id].1.recurrence.is_some()));
+    let calendar = h.sync.services().calendar.clone().unwrap();
+    calendar.put_event(&Event { rules: Vec::new(), ..made.clone() }, None, false, Notify::Guests).await.unwrap();
+    let sent = h.fake.with(|s| s.event_bodies.last().cloned()).unwrap();
+    assert_eq!(sent.get("recurrence"), Some(&serde_json::Value::Null), "{sent}");
+    assert!(h.fake.with(|s| s.events[&made.id].1.recurrence.is_none()));
+}
+
+#[tokio::test]
+async fn an_edit_that_keeps_the_repeat_sends_it_again() {
+    let h = outlook().await;
+    let made = weekly_made_here(&h).await;
+    let calendar = h.sync.services().calendar.clone().unwrap();
+    calendar.put_event(&Event { title: "Weekly, renamed".into(), ..made.clone() }, None, false, Notify::Guests).await.unwrap();
+    let sent = h.fake.with(|s| s.event_bodies.last().cloned()).unwrap();
+    assert!(sent["recurrence"].is_object(), "{sent}");
+    assert!(h.fake.with(|s| s.events[&made.id].1.recurrence.is_some()));
+}

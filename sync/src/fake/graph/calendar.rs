@@ -109,7 +109,10 @@ fn read_body(event: &mut GraphEvent, body: &Value) {
     if let Some(attendees) = field::<Vec<Attendee>>(body, "attendees") {
         event.attendees = attendees;
     }
-    if let Some(recurrence) = field::<PatternedRecurrence>(body, "recurrence") {
+    if body.get("recurrence").is_some_and(Value::is_null) {
+        event.recurrence = None;
+        event.kind = Some("singleInstance".into());
+    } else if let Some(recurrence) = field::<PatternedRecurrence>(body, "recurrence") {
         event.recurrence = Some(recurrence);
         event.kind = Some("seriesMaster".into());
     }
@@ -183,6 +186,7 @@ pub(super) fn create_event(s: &mut GraphState, calendar: &str, body: &Value) -> 
     if !s.calendars.iter().any(|c| c.id == calendar) {
         return Err(GraphError::NotFound);
     }
+    s.event_bodies.push(body.clone());
     let transaction = body["transactionId"].as_str();
     if let Some(made) = transaction.and_then(|t| s.transactions.get(t)).and_then(|id| s.events.get(id)) {
         return Ok(made.1.clone());
@@ -218,6 +222,7 @@ pub(super) fn update_event(s: &mut GraphState, id: &str, body: &Value, etag: Opt
     s.refuses(Area::Calendar)?;
     let (calendar, mut event) = s.events.get(id).cloned().ok_or(GraphError::NotFound)?;
     check_etag(&event, etag)?;
+    s.event_bodies.push(body.clone());
     read_body(&mut event, body);
     tagged(s, &mut event);
     s.events.insert(id.to_string(), (calendar.clone(), event.clone()));

@@ -315,9 +315,15 @@ impl<G: GraphApi> Microsoft<G> {
             let day = DateTime::<Utc>::from_timestamp_millis(event.start).unwrap_or_default().with_timezone(&zone).date_naive();
             let repeat = recurrence::recurrence_of(&event.rules, day, zone)
                 .map_err(|_| refused(gettext("Outlook cannot repeat an event that way.")))?;
-            if let Some(mut repeat) = repeat {
-                repeat.range.recurrence_time_zone = Some(name.to_string());
-                body["recurrence"] = serde_json::to_value(repeat).unwrap_or(Value::Null);
+            match repeat {
+                Some(mut repeat) => {
+                    repeat.range.recurrence_time_zone = Some(name.to_string());
+                    body["recurrence"] = serde_json::to_value(repeat).unwrap_or(Value::Null);
+                }
+                // A change that leaves no rule ends the repeat on Outlook's
+                // side too; a patch without the key would keep it.
+                None if !create => body["recurrence"] = Value::Null,
+                None => {}
             }
         }
         if create {

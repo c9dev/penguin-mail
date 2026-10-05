@@ -266,3 +266,16 @@ async fn an_edit_through_the_settings_keeps_its_place_among_local_rules() {
     assert_eq!(all.len(), 2);
     assert!(format!("{:?}", all[0]).contains("c@example.com"), "{all:?}");
 }
+
+#[tokio::test]
+async fn a_caldav_account_offers_quiet_changes() {
+    let h = imap_harness().await;
+    let dav = Arc::new(FakeDav::new());
+    let mail = h.sync.services().fake_imap_adapter().expect("an IMAP account");
+    let services = h
+        .sync
+        .services()
+        .clone()
+        .with_calendar(AnyCalendar::FakeDav(CalDav::new(dav, mail, vec!["me@example.com".into()])));
+    assert!(services.offers().quiet_changes);
+}
