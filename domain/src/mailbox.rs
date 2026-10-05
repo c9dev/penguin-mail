@@ -20,10 +20,15 @@ pub enum Provider {
     /// Outlook.com and Microsoft 365, through Microsoft Graph. The
     /// account's provider name says which.
     Microsoft,
+    /// A server that speaks POP3 for incoming mail and SMTP for sending.
+    /// The store holds the account's only copy of its mail; who runs the
+    /// server is the account's provider name.
+    Pop3,
 }
 
 impl Provider {
-    pub const ALL: [Provider; 3] = [Provider::Gmail, Provider::Imap, Provider::Microsoft];
+    pub const ALL: [Provider; 4] =
+        [Provider::Gmail, Provider::Imap, Provider::Microsoft, Provider::Pop3];
 
     /// The stored form, in `accounts.provider`.
     pub fn as_str(self) -> &'static str {
@@ -31,6 +36,7 @@ impl Provider {
             Provider::Gmail => "gmail",
             Provider::Imap => "imap",
             Provider::Microsoft => "microsoft",
+            Provider::Pop3 => "pop3",
         }
     }
 
@@ -42,6 +48,7 @@ impl Provider {
             Provider::Gmail => "Gmail",
             Provider::Imap => "IMAP",
             Provider::Microsoft => "Microsoft",
+            Provider::Pop3 => "POP3",
         }
     }
 }
@@ -54,6 +61,40 @@ impl FromStr for Provider {
             .into_iter()
             .find(|p| p.as_str() == s)
             .ok_or_else(|| UnknownVariant(s.to_string()))
+    }
+}
+
+/// What a POP3 account does with mail on the server once it is here.
+/// Leaving it is the default; the store keeps every message either way.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum RemoveSetting {
+    #[default]
+    Never,
+    /// `DELE` each message the check after it arrived here.
+    Downloaded,
+    /// `DELE` a message once it has been here this many days.
+    Days(u32),
+}
+
+impl RemoveSetting {
+    /// The stored form: `accounts.pop3_remove` and `pop3_remove_days`.
+    pub fn columns(self) -> (&'static str, Option<u32>) {
+        match self {
+            RemoveSetting::Never => ("never", None),
+            RemoveSetting::Downloaded => ("downloaded", None),
+            RemoveSetting::Days(days) => ("days", Some(days)),
+        }
+    }
+
+    /// The setting the two columns hold, or `None` for a pair no write
+    /// makes, such as `days` with no count.
+    pub fn from_columns(mode: &str, days: Option<u32>) -> Option<RemoveSetting> {
+        match (mode, days) {
+            ("never", _) => Some(RemoveSetting::Never),
+            ("downloaded", _) => Some(RemoveSetting::Downloaded),
+            ("days", Some(days)) if days > 0 => Some(RemoveSetting::Days(days)),
+            _ => None,
+        }
     }
 }
 
@@ -280,6 +321,26 @@ impl Applied {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_pop3_provider_is_stored_and_read_back() {
+        assert_eq!(Provider::Pop3.as_str(), "pop3");
+        assert_eq!("pop3".parse::<Provider>().unwrap(), Provider::Pop3);
+        assert_eq!(Provider::Pop3.name(), "POP3");
+    }
+
+    #[test]
+    fn the_removal_setting_round_trips_through_its_two_columns() {
+        for setting in [RemoveSetting::Never, RemoveSetting::Downloaded, RemoveSetting::Days(14)] {
+            let (mode, days) = setting.columns();
+            assert_eq!(RemoveSetting::from_columns(mode, days), Some(setting));
+        }
+        assert_eq!(RemoveSetting::Days(14).columns(), ("days", Some(14)));
+        assert_eq!(RemoveSetting::from_columns("days", None), None, "days with no count");
+        assert_eq!(RemoveSetting::from_columns("days", Some(0)), None);
+        assert_eq!(RemoveSetting::from_columns("sometimes", None), None);
+        assert_eq!(RemoveSetting::default(), RemoveSetting::Never);
+    }
 
     #[test]
     fn sorted_memberships_compare_equal_whatever_their_order() {

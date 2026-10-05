@@ -24,7 +24,8 @@ pub mod translate;
 pub use category::Category;
 pub use folder::Folder;
 pub use mailbox::{
-    Applied, MailSet, MailboxKind, Membership, Memberships, Provider, RemoteMailbox, Role,
+    Applied, MailSet, MailboxKind, Membership, Memberships, Provider, RemoteMailbox, RemoveSetting,
+    Role,
 };
 pub use invitation::Invitation;
 pub use location::Location;
@@ -104,7 +105,7 @@ pub struct Account {
     #[serde(default)]
     pub provider: Provider,
     /// Who runs the account's server as the person knows them, such as
-    /// "Fastmail". Only an IMAP account has one; a Gmail account's name
+    /// "Fastmail". Only an IMAP, Microsoft or POP3 account has one; a Gmail account's name
     /// comes from its provider.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub provider_name: Option<String>,

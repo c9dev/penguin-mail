@@ -1950,7 +1950,7 @@ impl MainWindow {
     /// Sends `email` through its provider's consent again, once the person
     /// has chosen Grant Access. Each consent asks for every scope Penguin
     /// Mail uses, so this is the one path a permission or the banner
-    /// needs. An IMAP account has no consent to run.
+    /// needs. An IMAP or POP3 account has no consent to run.
     fn grant(self: &Rc<Self>, email: String) {
         let provider = self
             .accounts()
@@ -1959,7 +1959,7 @@ impl MainWindow {
             .map(|account| account.provider);
         match provider {
             Some(Provider::Microsoft) => self.authorize_microsoft(email),
-            Some(Provider::Imap) => {}
+            Some(Provider::Imap | Provider::Pop3) => {}
             // An address no account has yet goes to Google, as before.
             Some(Provider::Gmail) | None => self.authorize_with(Some(email)),
         }
@@ -2694,7 +2694,7 @@ impl MainWindow {
     fn sign_in_again(self: &Rc<Self>, account: Account) {
         match account.provider {
             Provider::Gmail => self.authorize(Some(account.email)),
-            Provider::Imap => self.present_add_account(Opening::Again(account)),
+            Provider::Imap | Provider::Pop3 => self.present_add_account(Opening::Again(account)),
             Provider::Microsoft => self.authorize_microsoft(account.email),
         }
     }

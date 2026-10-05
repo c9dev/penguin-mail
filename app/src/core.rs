@@ -418,6 +418,8 @@ impl Core {
                             started => started.map_err(Into::into),
                         }
                     }
+                    // T7 connects POP3 accounts; until then one stays idle.
+                    (None, Provider::Pop3) => Err(anyhow!("POP3 accounts are not connected yet")),
                     (None, Provider::Microsoft) => {
                         let Some(client) = mailrs_graph::built_in_client() else {
                             // This build cannot refresh the account's token.
@@ -1122,7 +1124,7 @@ impl Core {
                         tokio::task::spawn_blocking(move || tokens.delete(&account.email))
                             .await??
                     }
-                    Provider::Imap => {
+                    Provider::Imap | Provider::Pop3 => {
                         tokio::task::spawn_blocking(move || passwords.delete(account.id))
                             .await??
                     }

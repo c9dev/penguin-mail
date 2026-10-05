@@ -1433,51 +1433,51 @@ msgstr ""
 msgid "Penguin Mail could not update its mail store, and kept the old one."
 msgstr ""
 
-#: app/src/core.rs:763 app/src/core.rs:846 app/src/core.rs:949
+#: app/src/core.rs:765 app/src/core.rs:848 app/src/core.rs:951
 msgid "Demo mode cannot add real accounts."
 msgstr ""
 
-#: app/src/core.rs:767
+#: app/src/core.rs:769
 msgid ""
 "This copy of Penguin Mail was built without Google sign-in. Get a release "
 "from github.com/c9dev/penguin-mail/releases."
 msgstr ""
 
-#: app/src/core.rs:783 app/src/core.rs:872
+#: app/src/core.rs:785 app/src/core.rs:874
 msgid "Canceled."
 msgstr ""
 
-#: app/src/core.rs:788 app/src/core.rs:877
+#: app/src/core.rs:790 app/src/core.rs:879
 msgid "Gave up waiting for the browser after five minutes."
 msgstr ""
 
-#: app/src/core.rs:793
+#: app/src/core.rs:795
 msgid ""
 "Penguin Mail cannot work without access to your mail. Sign in again and "
 "leave the Gmail permission ticked."
 msgstr ""
 
-#: app/src/core.rs:803 app/src/core.rs:897
+#: app/src/core.rs:805 app/src/core.rs:899
 msgid "You signed in as {account}. Choose {wanted} to reconnect that account."
 msgstr ""
 
-#: app/src/core.rs:850
+#: app/src/core.rs:852
 msgid ""
 "This copy of Penguin Mail was built without Microsoft sign-in. Get a release "
 "from github.com/c9dev/penguin-mail/releases."
 msgstr ""
 
-#: app/src/core.rs:882
+#: app/src/core.rs:884
 msgid "Your organization's administrator must approve Penguin Mail."
 msgstr ""
 
-#: app/src/core.rs:885
+#: app/src/core.rs:887
 msgid ""
 "Penguin Mail cannot work without access to your mail. Sign in again and "
 "allow it."
 msgstr ""
 
-#: app/src/core.rs:888
+#: app/src/core.rs:890
 msgid ""
 "This mailbox is on your organization's own Exchange server, which Penguin "
 "Mail cannot reach."

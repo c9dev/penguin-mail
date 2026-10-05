@@ -1,6 +1,6 @@
 //! Accounts and their sync cursors.
 
-use mailrs_domain::{Account, AccountId, AccountState, EpochMillis, Provider, SignInClient};
+use mailrs_domain::{Account, AccountId, AccountState, EpochMillis, Provider, RemoveSetting, SignInClient};
 use rusqlite::{Connection, OptionalExtension, params};
 
 use crate::{Result, StoreError};
@@ -101,6 +101,58 @@ pub fn insert_imap_account(
         params![email, now, Provider::Imap.as_str(), provider_name],
     )?;
     Ok(Some(conn.last_insert_rowid()))
+}
+
+/// Adds a POP3 account with its removal setting, or finds the one already
+/// here for the address and takes the new `provider_name`. `None` when an
+/// account of another provider holds the address. Signing in again keeps
+/// the setting the account had; Server Settings changes it through
+/// [`set_pop3_remove`].
+pub fn insert_pop3_account(
+    conn: &Connection,
+    email: &str,
+    provider_name: &str,
+    remove: RemoveSetting,
+    now: EpochMillis,
+) -> Result<Option<AccountId>> {
+    if let Some(existing) = account_by_email(conn, email)? {
+        if existing.provider != Provider::Pop3 {
+            return Ok(None);
+        }
+        conn.execute(
+            "UPDATE accounts SET provider_name = ?2 WHERE id = ?1",
+            params![existing.id, provider_name],
+        )?;
+        return Ok(Some(existing.id));
+    }
+    let (mode, days) = remove.columns();
+    conn.execute(
+        "INSERT INTO accounts (email, added_at, provider, provider_name, pop3_remove, pop3_remove_days) \
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+        params![email, now, Provider::Pop3.as_str(), provider_name, mode, days],
+    )?;
+    Ok(Some(conn.last_insert_rowid()))
+}
+
+/// What a POP3 account does with mail on the server. Any other account
+/// answers `Never`, the column's default.
+pub fn pop3_remove(conn: &Connection, id: AccountId) -> Result<RemoveSetting> {
+    let (mode, days): (String, Option<i64>) = conn.query_row(
+        "SELECT pop3_remove, pop3_remove_days FROM accounts WHERE id = ?1",
+        params![id],
+        |row| Ok((row.get(0)?, row.get(1)?)),
+    )?;
+    let days = days.and_then(|d| u32::try_from(d).ok());
+    RemoveSetting::from_columns(&mode, days).ok_or(StoreError::Corrupt { column: "accounts.pop3_remove", value: mode })
+}
+
+pub fn set_pop3_remove(conn: &Connection, id: AccountId, setting: RemoveSetting) -> Result<()> {
+    let (mode, days) = setting.columns();
+    conn.execute(
+        "UPDATE accounts SET pop3_remove = ?2, pop3_remove_days = ?3 WHERE id = ?1",
+        params![id, mode, days],
+    )?;
+    Ok(())
 }
 
 /// Adds a Microsoft account, or finds the one already here for the address
