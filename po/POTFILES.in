@@ -155,6 +155,7 @@ sync/src/services/sieve.rs
 sync/src/services/microsoft/errors.rs
 sync/src/services/caldav.rs
 sync/src/services/finding.rs
+sync/src/services/pop3/mod.rs
 sync/src/services/microsoft/calendar.rs
 app/src/servers.rs
 app/src/ui/dav_edit.rs

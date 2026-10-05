@@ -25,6 +25,7 @@ mod microsoft;
 mod newsletters;
 mod outbox;
 mod parity;
+mod pop3;
 mod priority;
 mod quota;
 mod rsvp;

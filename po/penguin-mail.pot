@@ -1423,61 +1423,61 @@ msgstr ""
 msgid "On {date}, {sender} wrote:"
 msgstr ""
 
-#: app/src/core.rs:209
+#: app/src/core.rs:210
 msgid ""
 "Another copy of Penguin Mail, or penguin-mail-cli sync, is syncing your "
 "mail. Stop it, then open Penguin Mail again."
 msgstr ""
 
-#: app/src/core.rs:221
+#: app/src/core.rs:222
 msgid "Penguin Mail could not update its mail store, and kept the old one."
 msgstr ""
 
-#: app/src/core.rs:765 app/src/core.rs:848 app/src/core.rs:951
+#: app/src/core.rs:773 app/src/core.rs:856 app/src/core.rs:959
 msgid "Demo mode cannot add real accounts."
 msgstr ""
 
-#: app/src/core.rs:769
+#: app/src/core.rs:777
 msgid ""
 "This copy of Penguin Mail was built without Google sign-in. Get a release "
 "from github.com/c9dev/penguin-mail/releases."
 msgstr ""
 
-#: app/src/core.rs:785 app/src/core.rs:874
+#: app/src/core.rs:793 app/src/core.rs:882
 msgid "Canceled."
 msgstr ""
 
-#: app/src/core.rs:790 app/src/core.rs:879
+#: app/src/core.rs:798 app/src/core.rs:887
 msgid "Gave up waiting for the browser after five minutes."
 msgstr ""
 
-#: app/src/core.rs:795
+#: app/src/core.rs:803
 msgid ""
 "Penguin Mail cannot work without access to your mail. Sign in again and "
 "leave the Gmail permission ticked."
 msgstr ""
 
-#: app/src/core.rs:805 app/src/core.rs:899
+#: app/src/core.rs:813 app/src/core.rs:907
 msgid "You signed in as {account}. Choose {wanted} to reconnect that account."
 msgstr ""
 
-#: app/src/core.rs:852
+#: app/src/core.rs:860
 msgid ""
 "This copy of Penguin Mail was built without Microsoft sign-in. Get a release "
 "from github.com/c9dev/penguin-mail/releases."
 msgstr ""
 
-#: app/src/core.rs:884
+#: app/src/core.rs:892
 msgid "Your organization's administrator must approve Penguin Mail."
 msgstr ""
 
-#: app/src/core.rs:887
+#: app/src/core.rs:895
 msgid ""
 "Penguin Mail cannot work without access to your mail. Sign in again and "
 "allow it."
 msgstr ""
 
-#: app/src/core.rs:890
+#: app/src/core.rs:898
 msgid ""
 "This mailbox is on your organization's own Exchange server, which Penguin "
 "Mail cannot reach."
@@ -2748,13 +2748,13 @@ msgid "{host} refused the login: {reason}"
 msgstr ""
 
 #: app/src/servers.rs:34 app/src/ui/calendar/editor.rs:1065
-#: app/src/ui/calendar/editor.rs:1141 app/src/ui/contacts_prefs.rs:243
+#: app/src/ui/calendar/editor.rs:1141 app/src/ui/contacts_prefs.rs:247
 #: app/src/ui/sidebar.rs:350 app/src/ui/sidebar.rs:1236
 #: app/src/ui/window/shortcuts.rs:236
 msgid "Calendar"
 msgstr ""
 
-#: app/src/servers.rs:35 app/src/ui/contacts_prefs.rs:154
+#: app/src/servers.rs:35 app/src/ui/contacts_prefs.rs:158
 msgid "Contacts"
 msgstr ""
 
@@ -3385,7 +3385,7 @@ msgid "Not Now"
 msgstr ""
 
 #: app/src/ui/add_account.rs:1138 app/src/ui/calendar/editor.rs:1499
-#: app/src/ui/calendar/sidebar.rs:911 app/src/ui/contacts_prefs.rs:330
+#: app/src/ui/calendar/sidebar.rs:911 app/src/ui/contacts_prefs.rs:334
 #: app/src/ui/invitation.rs:461 app/src/ui/permission.rs:42
 #: app/src/ui/permission.rs:66 app/src/ui/window.rs:1280
 msgid "Grant Access"
@@ -5210,7 +5210,7 @@ msgstr ""
 msgid "Options for {calendar}"
 msgstr ""
 
-#: app/src/ui/calendar/sidebar.rs:1084 app/src/ui/contacts_prefs.rs:336
+#: app/src/ui/calendar/sidebar.rs:1084 app/src/ui/contacts_prefs.rs:340
 msgid "Grant Access for {account}"
 msgstr ""
 
@@ -5831,34 +5831,34 @@ msgstr ""
 msgid "Contacts & Calendar"
 msgstr ""
 
-#: app/src/ui/contacts_prefs.rs:52
+#: app/src/ui/contacts_prefs.rs:56
 msgid "Calendar, Contacts and Rules Servers"
 msgstr ""
 
-#: app/src/ui/contacts_prefs.rs:53
+#: app/src/ui/contacts_prefs.rs:57
 msgid ""
 "Penguin Mail looks for these when you add an account. The login is the "
 "account's own."
 msgstr ""
 
-#: app/src/ui/contacts_prefs.rs:82
+#: app/src/ui/contacts_prefs.rs:86
 msgid "Use It"
 msgstr ""
 
-#: app/src/ui/contacts_prefs.rs:83
+#: app/src/ui/contacts_prefs.rs:87
 msgid "Use {host} for {account}"
 msgstr ""
 
-#: app/src/ui/contacts_prefs.rs:100
+#: app/src/ui/contacts_prefs.rs:104
 msgid "Find Again"
 msgstr ""
 
-#: app/src/ui/contacts_prefs.rs:101 app/src/ui/conversation.rs:535
+#: app/src/ui/contacts_prefs.rs:105 app/src/ui/conversation.rs:535
 #: app/src/ui/queued.rs:60 app/src/ui/sidebar.rs:1306
 msgid "Edit…"
 msgstr ""
 
-#: app/src/ui/contacts_prefs.rs:156
+#: app/src/ui/contacts_prefs.rs:160
 msgid ""
 "Penguin Mail can read an account's contacts: names, email addresses, photos, "
 "organizations, and phone numbers. It uses them to suggest recipients, to "
@@ -5867,34 +5867,34 @@ msgid ""
 "contacts."
 msgstr ""
 
-#: app/src/ui/contacts_prefs.rs:165
+#: app/src/ui/contacts_prefs.rs:169
 msgid "No accounts yet"
 msgstr ""
 
-#: app/src/ui/contacts_prefs.rs:245
+#: app/src/ui/contacts_prefs.rs:249
 msgid ""
 "Penguin Mail shows each account's meetings and reminds you before they "
 "start. To see them in GNOME Calendar and the clock too, add the account to "
 "GNOME Online Accounts."
 msgstr ""
 
-#: app/src/ui/contacts_prefs.rs:283
+#: app/src/ui/contacts_prefs.rs:287
 msgid "In GNOME Online Accounts"
 msgstr ""
 
-#: app/src/ui/contacts_prefs.rs:285
+#: app/src/ui/contacts_prefs.rs:289
 msgid "Not in GNOME Online Accounts"
 msgstr ""
 
-#: app/src/ui/contacts_prefs.rs:287
+#: app/src/ui/contacts_prefs.rs:291
 msgid "Add…"
 msgstr ""
 
-#: app/src/ui/contacts_prefs.rs:293
+#: app/src/ui/contacts_prefs.rs:297
 msgid "Add {account} to GNOME Online Accounts"
 msgstr ""
 
-#: app/src/ui/contacts_prefs.rs:327
+#: app/src/ui/contacts_prefs.rs:331
 msgid "Not allowed when you signed in"
 msgstr ""
 
@@ -9239,7 +9239,7 @@ msgstr ""
 msgid "Penguin Mail reaches calendar and contact servers over HTTPS only."
 msgstr ""
 
-#: sync/src/services/imap/outgoing.rs:85
+#: sync/src/services/imap/outgoing.rs:86
 msgid "The message names nobody to send it to."
 msgstr ""
 
@@ -9289,6 +9289,15 @@ msgstr ""
 
 #: sync/src/services/microsoft/rules.rs:96
 msgid "Outlook's rules cannot do that."
+msgstr ""
+
+#: sync/src/services/pop3/mod.rs:352
+msgid ""
+"Penguin Mail keeps the names of Inbox, Sent, Drafts, Trash, Junk and Archive."
+msgstr ""
+
+#: sync/src/services/pop3/mod.rs:368
+msgid "Penguin Mail keeps Inbox, Sent, Drafts, Trash, Junk and Archive."
 msgstr ""
 
 #: sync/src/services/sieve.rs:88

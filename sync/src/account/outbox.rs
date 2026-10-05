@@ -1,6 +1,8 @@
 //! Sending, drafts, search, attachments and exports: mail calls the UI makes
 //! on demand rather than as part of the sync loop.
 
+use std::collections::BTreeSet;
+
 use mailrs_domain::Role;
 use mailrs_store::messages::Change;
 use mailrs_store::{drafts, messages};
@@ -39,7 +41,25 @@ impl AccountSync {
             }
             self.forget_draft(&draft_id).await;
         }
+        self.tell_local(&message_id).await;
         Ok(message_id)
+    }
+
+    /// On an account whose mailboxes are local the adapter wrote the
+    /// change to the store itself, and no sync follows to say so, so the
+    /// window hears of the thread here.
+    async fn tell_local(&self, message_id: &str) {
+        if !self.services.mail.capabilities().local_mailboxes {
+            return;
+        }
+        let (account_id, id) = (self.account_id, message_id.to_string());
+        if let Ok(Some(thread)) = self
+            .db
+            .read(move |c| messages::thread_id_of(c, account_id, &id))
+            .await
+        {
+            self.emit_threads(BTreeSet::from([thread]));
+        }
     }
 
     /// Files a copy of `raw` in Sent for a server that does not file what
@@ -114,6 +134,7 @@ impl AccountSync {
         // out of that listing.
         self.remember_draft(&saved.draft_id, &saved.message_id)
             .await;
+        self.tell_local(&saved.message_id).await;
         Ok(saved)
     }
 
@@ -141,6 +162,9 @@ impl AccountSync {
             (sent, _) => sent,
         };
         self.forget_draft(draft_id).await;
+        if let Some(id) = &sent {
+            self.tell_local(id).await;
+        }
         Ok(sent)
     }
 

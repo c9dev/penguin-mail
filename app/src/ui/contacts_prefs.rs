@@ -40,19 +40,23 @@ pub fn page(
     page
 }
 
-/// Where each IMAP account's calendar, contacts and rules are, with Find
+/// Where each IMAP or POP3 account's calendar, contacts and rules are, with Find
 /// Again and Edit. A server found outside the address's domain waits here
 /// for a yes before the password goes to it.
 fn servers(app: &Rc<App>, accounts: &[(Account, Offers)]) -> Option<adw::PreferencesGroup> {
-    let imap: Vec<&Account> = accounts.iter().map(|(a, _)| a).filter(|a| a.provider == Provider::Imap).collect();
-    if imap.is_empty() {
+    let found_for: Vec<&Account> = accounts
+        .iter()
+        .map(|(a, _)| a)
+        .filter(|a| matches!(a.provider, Provider::Imap | Provider::Pop3))
+        .collect();
+    if found_for.is_empty() {
         return None;
     }
     let group = adw::PreferencesGroup::builder()
         .title(gettext("Calendar, Contacts and Rules Servers"))
         .description(gettext("Penguin Mail looks for these when you add an account. The login is the account's own."))
         .build();
-    for account in imap {
+    for account in found_for {
         let row = adw::ExpanderRow::builder().title(&account.email).build();
         group.add(&row);
         let shown: Shown = Rc::default();

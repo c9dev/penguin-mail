@@ -1299,7 +1299,7 @@ impl App {
             .accounts
             .borrow()
             .iter()
-            .filter(|a| a.provider == Provider::Imap)
+            .filter(|a| matches!(a.provider, Provider::Imap | Provider::Pop3))
             .map(|a| a.id)
             .collect();
         let this = Rc::clone(self);

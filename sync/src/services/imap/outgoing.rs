@@ -58,38 +58,45 @@ fn message_id_of(raw: &[u8]) -> Option<String> {
     })
 }
 
+/// Hands `raw` to the SMTP server `smtp` and answers its Message-ID, which
+/// is all the server says about it. The envelope goes from the address in
+/// the From header, or `address` when there is none, to every address in
+/// To, Cc and Bcc; the Bcc header itself stays out of what is sent.
+pub(crate) async fn submit_over<S: Submit>(smtp: &S, address: &str, raw: &[u8]) -> Result<String, BackendError> {
+    let parts = mailrs_mime::parts(raw).unwrap_or_default();
+    let from = parts
+        .header("From")
+        .map(parse_address_list)
+        .unwrap_or_default()
+        .into_iter()
+        .next()
+        .map(|a| a.email)
+        .unwrap_or_else(|| address.to_string());
+    let mut to: Vec<String> = parts
+        .headers
+        .iter()
+        .filter(|(name, _)| ["To", "Cc", "Bcc"].iter().any(|h| name.eq_ignore_ascii_case(h)))
+        .flat_map(|(_, value)| parse_address_list(value))
+        .map(|a| a.email)
+        .collect();
+    to.sort();
+    to.dedup();
+    if to.is_empty() {
+        return Err(BackendError::Refused(gettext(
+            "The message names nobody to send it to.",
+        )));
+    }
+    smtp.submit(&from, &to, &without_bcc(raw)).await?;
+    Ok(parts
+        .header("Message-ID")
+        .map(|id| id.trim().to_string())
+        .unwrap_or_default())
+}
+
 impl<I: ImapApi, S: Submit> Imap<I, S> {
-    /// Hands `raw` to the SMTP server and answers its Message-ID, which
-    /// is all the server says about it.
+    /// Hands `raw` to the SMTP server and answers its Message-ID.
     pub(super) async fn submit(&self, raw: &[u8]) -> Result<String, BackendError> {
-        let parts = mailrs_mime::parts(raw).unwrap_or_default();
-        let from = parts
-            .header("From")
-            .map(parse_address_list)
-            .unwrap_or_default()
-            .into_iter()
-            .next()
-            .map(|a| a.email)
-            .unwrap_or_else(|| self.settings.address.clone());
-        let mut to: Vec<String> = parts
-            .headers
-            .iter()
-            .filter(|(name, _)| ["To", "Cc", "Bcc"].iter().any(|h| name.eq_ignore_ascii_case(h)))
-            .flat_map(|(_, value)| parse_address_list(value))
-            .map(|a| a.email)
-            .collect();
-        to.sort();
-        to.dedup();
-        if to.is_empty() {
-            return Err(BackendError::Refused(gettext(
-                "The message names nobody to send it to.",
-            )));
-        }
-        self.smtp.submit(&from, &to, &without_bcc(raw)).await?;
-        Ok(parts
-            .header("Message-ID")
-            .map(|id| id.trim().to_string())
-            .unwrap_or_default())
+        submit_over(&*self.smtp, &self.settings.address, raw).await
     }
 
     /// Files `raw` in `mailbox` with `flags` and answers the copy's name:
