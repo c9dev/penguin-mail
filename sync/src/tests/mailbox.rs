@@ -14,7 +14,7 @@ use mailrs_store::{flags, reminders};
 
 use super::{Connected, Harness, harness};
 use crate::fake::meta;
-use crate::mailbox::{Listing, Loaded, Mailbox, Mailboxes, Scope, Standard, View};
+use crate::mailbox::{Listing, Loaded, Mailbox, Mailboxes, Scope, Standard, Stop, View};
 use crate::now_millis;
 
 const DAY: i64 = 24 * 60 * 60 * 1000;
@@ -789,4 +789,68 @@ fn a_mailbox_names_the_place_its_mail_is_moved_from() {
     for (mailbox, from) in cases {
         assert_eq!(mailbox.moved_from(), from, "{mailbox:?}");
     }
+}
+
+/// Two stored threads about kites, one about bread, and a kite thread
+/// Gmail holds that the store does not.
+async fn kites() -> Harness {
+    let h = harness().await;
+    let now = now_millis();
+    for (id, at, subject) in [
+        ("k1", 3000, "Kites for Sunday"),
+        ("k2", 2000, "Bread recipe"),
+        ("k3", 1000, "Kite repair"),
+    ] {
+        let mut m = meta(id, id, now - at, &["INBOX"]);
+        m.subject = subject.into();
+        h.fake.seed(m);
+    }
+    h.bootstrap_all().await;
+    let mut late = meta("k4", "k4", now - 500, &["INBOX"]);
+    late.subject = "Kite festival".into();
+    h.fake.seed(late);
+    h.fake.with(|s| s.page_size = 1000);
+    h
+}
+
+#[tokio::test]
+async fn a_search_answers_from_the_store_first_without_asking_gmail() {
+    let h = kites().await;
+    let before = h.fake.usage();
+
+    let found = lists(&h)
+        .stored_search("kite", None, &scope(&h), &view())
+        .await
+        .expect("the store answers");
+
+    assert_eq!(ids(&found), ["k3", "k1"]);
+    assert_eq!(
+        (found.title.as_str(), found.subtitle.as_str()),
+        ("Search", "kite")
+    );
+    assert_eq!(h.fake.usage().calls, before.calls, "Gmail heard nothing");
+}
+
+#[tokio::test]
+async fn a_stopped_search_asks_gmail_nothing_and_leaves_the_next_one_whole() {
+    let h = kites().await;
+    let search = Mailbox::Search {
+        query: "kite".into(),
+        account_id: None,
+    };
+    let before = h.fake.usage().calls;
+    let stop = Stop::default();
+    stop.stop();
+
+    lists(&h)
+        .list_until(&search, &scope(&h), &view(), Loaded::nothing(), &stop)
+        .await
+        .expect("a stopped search still answers");
+    assert_eq!(h.fake.usage().calls, before, "Gmail heard nothing");
+
+    let found = lists(&h)
+        .list_until(&search, &scope(&h), &view(), Loaded::nothing(), &Stop::default())
+        .await
+        .expect("the search lists");
+    assert!(ids(&found).contains(&"k4".to_string()), "{:?}", ids(&found));
 }

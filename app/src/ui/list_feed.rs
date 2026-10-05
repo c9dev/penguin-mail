@@ -235,7 +235,9 @@ impl<R> ListFeed<R> {
         Some(thread)
     }
 
-    fn current(&self, ticket: Ticket) -> bool {
+    /// Whether an answer under `ticket` still belongs on screen, for a
+    /// listing that shows a first answer before its first page lands.
+    pub fn current(&self, ticket: Ticket) -> bool {
         ticket.0 == self.generation
     }
 }

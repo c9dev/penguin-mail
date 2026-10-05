@@ -168,6 +168,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Improved
 - The category chips over the inbox show each category's name and unread count, "Primary 2", when the list is wide enough for all five, and fold to icons in a narrow one.
+- Mail search shows results as you type: a moment after you stop, the mail on this computer shows first and the servers' results follow from three letters on. Enter still searches at once.
 - The composer's header holds Attach Files, a More menu and Send. More has Templates, Preview, Sign and Encrypt, and a shield shows beside Attach Files while the message goes out signed or encrypted.
 - Today's day, date and place over the calendar's days are dark enough to read on their tint in light.
 - The mini month marks today with the only fill and the day you're viewing with a ring, and tints the week in view only in Week view.
