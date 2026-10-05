@@ -41,6 +41,8 @@ struct Inner {
     /// `retr` of these fails without `-ERR`, and the session ends, as the
     /// real client ends it on an answer it cannot read to the end.
     broken: BTreeMap<String, Pop3Error>,
+    /// `top` of these fails with the error kept, and the session ends.
+    broken_top: BTreeMap<String, Pop3Error>,
     /// Messages whose `UIDL` line does not read, so the listing leaves
     /// them out and counts them.
     garbled: BTreeSet<String>,
@@ -80,6 +82,7 @@ impl Default for FakePop3 {
                 refuse_sign_in: false,
                 failing: BTreeSet::new(),
                 broken: BTreeMap::new(),
+                broken_top: BTreeMap::new(),
                 garbled: BTreeSet::new(),
                 drop_before_quit: false,
                 drop_after_retrs: None,
@@ -140,6 +143,13 @@ impl FakePop3 {
     /// drops on this message (`Network`).
     pub fn breaking_retr(self, uidl: &str, err: Pop3Error) -> Self {
         self.lock().broken.insert(uidl.to_string(), err);
+        self
+    }
+
+    /// `top` of this message fails with `err`, which is not `-ERR`, and the
+    /// session ends.
+    pub fn breaking_top(self, uidl: &str, err: Pop3Error) -> Self {
+        self.lock().broken_top.insert(uidl.to_string(), err);
         self
     }
 
@@ -376,8 +386,12 @@ impl Pop3Api for FakePop3 {
     }
 
     async fn top(&self, id: u32, lines: u32) -> Result<Vec<u8>, Pop3Error> {
-        let inner = self.lock();
-        inner.uidl_of(id)?;
+        let mut inner = self.lock();
+        let uidl = inner.uidl_of(id)?;
+        if let Some(err) = inner.broken_top.get(&uidl).cloned() {
+            inner.end_session();
+            return Err(err);
+        }
         let raw = inner.raw_at(id);
         let split = raw.windows(4).position(|w| w == b"\r\n\r\n").map_or(raw.len(), |p| p + 4);
         let (head, body) = raw.split_at(split);

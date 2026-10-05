@@ -475,6 +475,26 @@ async fn a_message_the_connection_drops_on_is_recorded_and_the_check_carries_on(
     assert_eq!(h.fake.retr_calls(), [1, 2, 3, 1, 1]);
 }
 
+/// The TOP that names a failing message at its third failure can break the
+/// session too. The next message must not pay for it.
+#[tokio::test]
+async fn a_top_that_breaks_the_session_charges_nothing_to_the_next_message() {
+    let fake = FakePop3::default()
+        .with_message("bad1", &pop3_mail(1))
+        .with_message("bad2", &pop3_mail(2))
+        .failing_retr("bad1")
+        .failing_retr("bad2")
+        .breaking_top("bad1", Pop3Error::Protocol("+GARBAGE".into()));
+    let h = pop3_harness(fake, RemoveSetting::Never).await;
+    for _ in 0..3 {
+        h.sync.pop3_check().await.unwrap();
+    }
+    assert_eq!(failed_as(&h, "bad2").await, [("bad2".to_string(), FailReason::Refused)]);
+    let failing = failing(&h).await;
+    assert_eq!(failing.len(), 2, "both reached their third failure");
+    assert_eq!(failing[1].subject.as_deref(), Some("Hello 2"), "a new session named bad2");
+}
+
 /// The store commits without waiting for the disk (WAL, synchronous
 /// NORMAL). Once a DELE goes out, the server may delete its copy at QUIT,
 /// so by then the download must be in the database file itself.
