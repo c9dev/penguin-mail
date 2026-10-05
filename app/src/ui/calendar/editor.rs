@@ -23,7 +23,7 @@ use chrono_tz::{TZ_VARIANTS, Tz};
 use gtk::glib;
 use mailrs_domain::calendar::repeat::{Custom, Ends, Frequency, Repeat};
 use mailrs_domain::calendar::{self, Attachment, Calendar, Declines, EVENT_COLORS, Reminder, ReminderMethod};
-use mailrs_domain::translate::{date_locale, fill, gettext, ngettext};
+use mailrs_domain::translate::{fill, gettext, ngettext};
 use mailrs_domain::{AccountId, EpochMillis};
 use mailrs_sync::Offers;
 
@@ -2038,8 +2038,7 @@ pub(super) fn day_to_glib(day: NaiveDate) -> glib::DateTime {
 }
 
 fn format_date(day: NaiveDate) -> String {
-    day.format_localized(&gettext("%a %-d %b"), date_locale())
-        .to_string()
+    crate::format::short_date(day, chrono::Local::now().date_naive())
 }
 
 fn time_dropdown(current: NaiveTime) -> gtk::DropDown {
