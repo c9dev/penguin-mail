@@ -143,6 +143,14 @@ pub fn recipients_of(draft: &crate::compose::Draft) -> Vec<Address> {
         .collect()
 }
 
+/// Everyone a message from the outbox goes to, read from the draft the
+/// outbox keeps beside its bytes. A draft that does not read gives nobody.
+pub fn queued_recipients(message: &mailrs_store::outbox::Queued) -> Vec<Address> {
+    serde_json::from_str::<crate::compose::Draft>(&message.composer)
+        .map(|draft| recipients_of(&draft))
+        .unwrap_or_default()
+}
+
 /// The question the sent toast asks about `people`, the new recipients,
 /// for the account named `account`.
 pub fn offer_title(people: &[Address], account: &str) -> String {
@@ -400,6 +408,24 @@ mod tests {
             failed_title(&[ana, rui], "Work"),
             "Could not save 2 people to contacts in Work"
         );
+    }
+
+    #[test]
+    fn a_waiting_message_is_offered_to_whoever_its_draft_names() {
+        let mut draft = crate::compose::Draft::new(1, address(None, "dana@example.com"));
+        draft.to = vec![address(Some("Ana Lima"), "ana@example.pt")];
+        draft.bcc = vec![address(None, "eva@example.pt")];
+        let queued = mailrs_store::outbox::Queued {
+            composer: serde_json::to_string(&draft).unwrap(),
+            ..Default::default()
+        };
+        let all: Vec<String> = queued_recipients(&queued).into_iter().map(|a| a.email).collect();
+        assert_eq!(all, ["ana@example.pt", "eva@example.pt"]);
+        let unreadable = mailrs_store::outbox::Queued {
+            composer: "not a draft".into(),
+            ..Default::default()
+        };
+        assert!(queued_recipients(&unreadable).is_empty());
     }
 
     #[test]

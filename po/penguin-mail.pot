@@ -636,19 +636,19 @@ msgstr ""
 msgid "Will send {when}"
 msgstr ""
 
-#: app/src/app/sending.rs:370
+#: app/src/app/sending.rs:366
 msgid "Sent {message}"
 msgstr ""
 
-#: app/src/app/sending.rs:379
+#: app/src/app/sending.rs:375
 msgid "Still in the Outbox: {message}"
 msgstr ""
 
-#: app/src/app/sending.rs:488
+#: app/src/app/sending.rs:484
 msgid "your message"
 msgstr ""
 
-#: app/src/app/sending.rs:490
+#: app/src/app/sending.rs:486
 msgid "“{subject}”"
 msgstr ""
 
@@ -1498,31 +1498,31 @@ msgstr[1] ""
 msgid "contact in {accounts}"
 msgstr ""
 
-#: app/src/contacts.rs:151
+#: app/src/contacts.rs:159
 msgid "Save {name} to contacts in {account}?"
 msgstr ""
 
-#: app/src/contacts.rs:155
+#: app/src/contacts.rs:163
 msgid "Save {count} person to contacts in {account}?"
 msgid_plural "Save {count} people to contacts in {account}?"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/contacts.rs:184
+#: app/src/contacts.rs:192
 msgid "Saved {name} to contacts in {account}"
 msgstr ""
 
-#: app/src/contacts.rs:188
+#: app/src/contacts.rs:196
 msgid "Saved {count} person to contacts in {account}"
 msgid_plural "Saved {count} people to contacts in {account}"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/contacts.rs:200
+#: app/src/contacts.rs:208
 msgid "Could not save {name} to contacts in {account}"
 msgstr ""
 
-#: app/src/contacts.rs:204
+#: app/src/contacts.rs:212
 msgid "Could not save {count} person to contacts in {account}"
 msgid_plural "Could not save {count} people to contacts in {account}"
 msgstr[0] ""
@@ -8581,31 +8581,31 @@ msgstr ""
 msgid "Only Where It Exists"
 msgstr ""
 
-#: app/src/ui/window/outbox.rs:105
+#: app/src/ui/window/outbox.rs:116
 msgid "Still not sent. It stays in the Outbox."
 msgstr ""
 
-#: app/src/ui/window/outbox.rs:129
+#: app/src/ui/window/outbox.rs:140
 msgid "That message is no longer waiting."
 msgstr ""
 
-#: app/src/ui/window/outbox.rs:133
+#: app/src/ui/window/outbox.rs:144
 msgid "Penguin Mail cannot reopen this message. Send it as it is."
 msgstr ""
 
-#: app/src/ui/window/outbox.rs:142
+#: app/src/ui/window/outbox.rs:153
 msgid "Could not open it: {reason}"
 msgstr ""
 
-#: app/src/ui/window/outbox.rs:166
+#: app/src/ui/window/outbox.rs:177
 msgid "Could not delete: {reason}"
 msgstr ""
 
-#: app/src/ui/window/outbox.rs:172
+#: app/src/ui/window/outbox.rs:183
 msgid "Deleted. It will not be sent."
 msgstr ""
 
-#: app/src/ui/window/outbox.rs:174
+#: app/src/ui/window/outbox.rs:185
 msgid "Deleted. They will not be sent."
 msgstr ""
 

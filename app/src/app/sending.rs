@@ -360,11 +360,7 @@ impl App {
                         this.core.poke(message.account_id);
                     }
                     for message in &drained.sent {
-                        // The outbox keeps the draft the message was
-                        // written from, which names everyone it went to.
-                        let recipients = serde_json::from_str::<Draft>(&message.composer)
-                            .map(|draft| crate::contacts::recipients_of(&draft))
-                            .unwrap_or_default();
+                        let recipients = crate::contacts::queued_recipients(message);
                         this.tell_window(Notice::Sent {
                             said: fill(
                                 &gettext("Sent {message}"),
