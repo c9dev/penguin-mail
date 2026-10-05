@@ -4,7 +4,7 @@
 use roxmltree::{Document, Node, ParsingOptions};
 
 use crate::name::{host, is_within};
-use crate::{Candidate, PasswordKind, ProviderInfo, Security, Server, Source, UserName, pairs};
+use crate::{Candidate, PasswordKind, ProviderInfo, Security, Server, Source, UserName, pairs, with_pop3};
 
 /// A config file is a few kilobytes. A bigger document is not one, and
 /// parsing it would only cost memory.
@@ -17,6 +17,7 @@ pub(crate) struct Config {
     pub(crate) name: Option<String>,
     pub(crate) imap: Vec<Server>,
     pub(crate) smtp: Vec<Server>,
+    pub(crate) pop3: Vec<Server>,
     pub(crate) enable_imap_url: Option<String>,
     pub(crate) documentation_url: Option<String>,
 }
@@ -47,6 +48,7 @@ pub(crate) fn parse(xml: &str, domain: &str) -> Option<Config> {
         name: text_of(provider, "displayShortName").or_else(|| text_of(provider, "displayName")),
         imap: servers("incomingServer", "imap"),
         smtp: servers("outgoingServer", "smtp"),
+        pop3: servers("incomingServer", "pop3"),
         enable_imap_url: provider
             .children()
             .filter(|n| n.has_tag_name("enable"))
@@ -84,7 +86,13 @@ impl Config {
                     || !is_within(&candidate.smtp.host, domain);
             }
         }
-        candidates
+        // A file found through the MX hosts names a POP3 server outside the
+        // domain with no yes to ask for it, so such a server is left out.
+        let pop3 = self
+            .pop3
+            .iter()
+            .find(|server| source != Source::MxAutoconfig || is_within(&server.host, domain));
+        with_pop3(candidates, pop3)
     }
 }
 
@@ -205,11 +213,14 @@ mod tests {
     }
 
     #[test]
-    fn posteo_leaves_pop3_out() {
+    fn posteo_keeps_its_pop3_server_apart_from_imap() {
         let config =
             parse(include_str!("../tests/fixtures/posteo.de.xml"), "posteo.de").expect("a config");
         assert_eq!(config.imap, [server("posteo.de", 993, Security::Tls)]);
         assert_eq!(config.smtp, [server("posteo.de", 465, Security::Tls)]);
+        assert_eq!(config.pop3, [server("posteo.de", 995, Security::Tls)]);
+        let candidates = config.candidates(Source::Autoconfig, "posteo.de");
+        assert_eq!(candidates[0].pop3, Some(server("posteo.de", 995, Security::Tls)));
     }
 
     #[test]

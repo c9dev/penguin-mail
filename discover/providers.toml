@@ -18,6 +18,9 @@
 #   plain connection upgraded by command. user_name "address" is the whole
 #   address, "local_part_first" the part before @ and then the whole
 #   address. smtp lists the servers in the order to try them.
+# - pop3: the POP3 server, TLS from the first byte on 995, for a provider
+#   whose own page or autoconfig file names one. Add Account offers it
+#   beside IMAP.
 # - custom_domain_imap, custom_domain_smtp: servers for a custom domain
 #   found by MX, where they differ from those for the provider's own
 #   domains.
@@ -70,6 +73,7 @@ domains = [
 ]
 mx = ["*.messagingengine.com"]
 imap = { host = "imap.fastmail.com", port = 993, security = "tls", user_name = "address" }
+pop3 = { host = "pop.fastmail.com", port = 995, security = "tls", user_name = "address" }
 caldav = "https://caldav.fastmail.com/"
 carddav = "https://carddav.fastmail.com/"
 smtp = [
@@ -127,6 +131,7 @@ domains = [
 # exact host below wins over them.
 mx = ["*.am0.yahoodns.net", "*.gm0.yahoodns.net"]
 imap = { host = "imap.mail.yahoo.com", port = 993, security = "tls", user_name = "address" }
+pop3 = { host = "pop.mail.yahoo.com", port = 995, security = "tls", user_name = "address" }
 caldav = "https://caldav.calendar.yahoo.com/"
 carddav = "https://carddav.address.yahoo.com/"
 smtp = [
@@ -154,6 +159,7 @@ domains = [
 ]
 mx = ["mx-aol.mail.gm0.yahoodns.net"]
 imap = { host = "imap.aol.com", port = 993, security = "tls", user_name = "address" }
+pop3 = { host = "pop.aol.com", port = 995, security = "tls", user_name = "address" }
 caldav = "https://caldav.aol.com/"
 carddav = "https://carddav.aol.com/"
 smtp = [
@@ -409,6 +415,7 @@ domains = [
 ]
 mx = ["mx00.emig.gmx.net", "mx01.emig.gmx.net"]
 imap = { host = "imap.gmx.net", port = 993, security = "tls", user_name = "address" }
+pop3 = { host = "pop.gmx.net", port = 995, security = "tls", user_name = "address" }
 caldav = "https://caldav.gmx.net/"
 carddav = "https://carddav.gmx.net/"
 smtp = [
@@ -435,6 +442,7 @@ domains = [
 ]
 mx = ["mx00.gmx.net", "mx01.gmx.net"]
 imap = { host = "imap.gmx.com", port = 993, security = "tls", user_name = "address" }
+pop3 = { host = "pop.gmx.com", port = 995, security = "tls", user_name = "address" }
 caldav = "https://caldav.gmx.com/"
 carddav = "https://carddav.gmx.com/"
 smtp = [
@@ -455,6 +463,7 @@ kind = "imap"
 domains = ["web.de"]
 mx = ["*.web.de"]
 imap = { host = "imap.web.de", port = 993, security = "tls", user_name = "address" }
+pop3 = { host = "pop3.web.de", port = 995, security = "tls", user_name = "address" }
 caldav = "https://caldav.web.de/"
 carddav = "https://carddav.web.de/"
 smtp = [
@@ -482,6 +491,7 @@ domains = [
 ]
 mx = ["mx00.mail.com", "mx01.mail.com"]
 imap = { host = "imap.mail.com", port = 993, security = "tls", user_name = "address" }
+pop3 = { host = "pop.mail.com", port = 995, security = "tls", user_name = "address" }
 caldav = "https://caldav.mail.com/"
 carddav = "https://carddav.mail.com/"
 smtp = [
@@ -526,6 +536,7 @@ kind = "imap"
 domains = ["mailbox.org"]
 mx = ["*.mailbox.org"]
 imap = { host = "imap.mailbox.org", port = 993, security = "tls", user_name = "address" }
+pop3 = { host = "pop3.mailbox.org", port = 995, security = "tls", user_name = "address" }
 caldav = "https://dav.mailbox.org/"
 carddav = "https://dav.mailbox.org/"
 sieve = { host = "imap.mailbox.org", port = 4190 }
@@ -564,6 +575,7 @@ domains = [
 ]
 mx = ["*.posteo.de"]
 imap = { host = "posteo.de", port = 993, security = "tls", user_name = "address" }
+pop3 = { host = "posteo.de", port = 995, security = "tls", user_name = "address" }
 caldav = "https://posteo.de:8443/"
 carddav = "https://posteo.de:8843/"
 smtp = [

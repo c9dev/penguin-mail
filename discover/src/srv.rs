@@ -1,9 +1,9 @@
 //! Servers from SRV records, as RFC 6186 and RFC 8314 name them.
 
 use crate::name::{host, is_within};
-use crate::{Candidate, Net, Security, Server, Source, SrvRecord, UserName, pairs};
+use crate::{Candidate, Net, Security, Server, Source, SrvRecord, UserName, pairs, with_pop3};
 
-/// Looks up the domain's IMAP and submission records and pairs what they
+/// Looks up the domain's IMAP, submission and POP3 records and pairs what they
 /// name, TLS from the first byte ahead of STARTTLS. Only the TLS labels
 /// count: a server found through `_imap._tcp` could be one without TLS.
 pub(crate) async fn lookup<N: Net>(net: &N, domain: &str) -> Vec<Candidate> {
@@ -11,10 +11,20 @@ pub(crate) async fn lookup<N: Net>(net: &N, domain: &str) -> Vec<Candidate> {
         format!("_imaps._tcp.{domain}"),
         format!("_submissions._tcp.{domain}"),
         format!("_submission._tcp.{domain}"),
+        format!("_pop3s._tcp.{domain}"),
     ];
-    let (imaps, submissions, submission) =
-        tokio::join!(net.srv(&names[0]), net.srv(&names[1]), net.srv(&names[2]));
-    candidates(domain, imaps, submissions, submission)
+    let (imaps, submissions, submission, pop3s) = tokio::join!(
+        net.srv(&names[0]),
+        net.srv(&names[1]),
+        net.srv(&names[2]),
+        net.srv(&names[3])
+    );
+    // A POP3 server outside the domain would get the password without the
+    // yes that an IMAP or SMTP target outside it asks for, so it is left out.
+    let pop3 = servers(pop3s, Security::Tls)
+        .into_iter()
+        .find(|server| is_within(&server.host, domain));
+    with_pop3(candidates(domain, imaps, submissions, submission), pop3.as_ref())
 }
 
 pub(crate) fn candidates(
@@ -81,6 +91,22 @@ mod tests {
             port,
             target: target.into(),
         }
+    }
+
+    #[tokio::test]
+    async fn a_pop3s_record_inside_the_domain_rides_along_and_one_outside_does_not() {
+        use crate::fake::FakeNet;
+        let net = |target: &str| {
+            FakeNet::default()
+                .answer_srv("_imaps._tcp.example.org", vec![record(0, 1, 993, "imap.example.org.")])
+                .answer_srv("_submissions._tcp.example.org", vec![record(0, 1, 465, "smtp.example.org.")])
+                .answer_srv("_pop3s._tcp.example.org", vec![record(0, 1, 995, target)])
+        };
+        let inside = lookup(&net("pop.example.org."), "example.org").await;
+        let pop3 = inside[0].pop3.as_ref().expect("a POP3 server");
+        assert_eq!((pop3.host.as_str(), pop3.port, pop3.security), ("pop.example.org", 995, Security::Tls));
+        let outside = lookup(&net("pop.hoster.net."), "example.org").await;
+        assert_eq!(outside[0].pop3, None, "a host outside the domain never gets the password unasked");
     }
 
     #[test]

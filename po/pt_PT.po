@@ -3648,7 +3648,7 @@ msgstr "Deixe-os vazios para iniciar sessão com o seu endereço."
 msgid "Use These Settings"
 msgstr "Usar estas definições"
 
-#: app/src/ui/add_account.rs:1717 app/src/ui/add_account.rs:2771
+#: app/src/ui/add_account.rs:1717 app/src/ui/add_account.rs:2772
 msgid "Looking up {domain}"
 msgstr "A procurar {domain}"
 

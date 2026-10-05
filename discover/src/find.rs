@@ -243,6 +243,14 @@ mod tests {
     }
 
     #[test]
+    fn a_table_domain_offers_its_pop3_server_beside_imap() {
+        let found = table_only("fastmail.com");
+        let pop3 = found.candidates[0].pop3.as_ref().expect("Fastmail lists POP3");
+        assert_eq!((pop3.host.as_str(), pop3.port, pop3.security), ("pop.fastmail.com", 995, Security::Tls));
+        assert_eq!(found.candidates[0].imap.host, "imap.fastmail.com", "IMAP stays first");
+    }
+
+    #[test]
     fn table_only_says_nothing_for_a_domain_the_table_does_not_list() {
         assert_eq!(table_only("example.com"), Found::nothing());
     }

@@ -2,10 +2,11 @@
 
 use futures::future::join_all;
 
-use crate::{Candidate, Net, Security, Server, Source, UserName, pairs};
+use crate::{Candidate, Net, Security, Server, Source, UserName, pairs, with_pop3};
 
 /// Tries `imap.`, `mail.` and the bare domain on 993, and `smtp.` and
-/// `mail.` on 465, then on 587 with STARTTLS, all at once. Each answer
+/// `mail.` on 465, then on 587 with STARTTLS, and `pop.` and `pop3.` on 995,
+/// all at once. Each answer
 /// needs a certificate valid for the host. What answers is a guess, so
 /// the person confirms it before the password goes out.
 pub(crate) async fn probe<N: Net>(net: &N, domain: &str) -> Vec<Candidate> {
@@ -25,10 +26,21 @@ pub(crate) async fn probe<N: Net>(net: &N, domain: &str) -> Vec<Candidate> {
                 .map(move |host| server(host, port, security))
         })
         .collect();
-    let (imap, smtp) = tokio::join!(answering(net, imap_tries), answering(net, smtp_tries));
+    let pop3_tries: Vec<Server> = [format!("pop.{domain}"), format!("pop3.{domain}")]
+        .into_iter()
+        .map(|host| server(host, 995, Security::Tls))
+        .collect();
+    let (imap, smtp, pop3) = tokio::join!(
+        answering(net, imap_tries),
+        answering(net, smtp_tries),
+        answering(net, pop3_tries)
+    );
     // The first IMAP host that answered, with every submission server that
-    // answered, in the order tried.
-    pairs(Source::Probe, None, &imap[..imap.len().min(1)], &smtp, true)
+    // answered, in the order tried, and the first POP3 host beside them.
+    with_pop3(
+        pairs(Source::Probe, None, &imap[..imap.len().min(1)], &smtp, true),
+        pop3.first(),
+    )
 }
 
 fn server(host: String, port: u16, security: Security) -> Server {
@@ -98,7 +110,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn the_probe_tries_seven_servers_and_no_plain_ports() {
+    async fn the_probe_tries_nine_servers_and_no_plain_ports() {
         let net = FakeNet::default();
         probe(&net, "example.org").await;
         let mut tried: Vec<(String, u16)> = net
@@ -116,6 +128,8 @@ mod tests {
             ("mail.example.org", 465),
             ("mail.example.org", 587),
             ("mail.example.org", 993),
+            ("pop.example.org", 995),
+            ("pop3.example.org", 995),
             ("smtp.example.org", 465),
             ("smtp.example.org", 587),
         ]
@@ -123,5 +137,15 @@ mod tests {
         .map(|(h, p)| (h.to_string(), p))
         .collect();
         assert_eq!(tried, expected);
+    }
+
+    #[tokio::test]
+    async fn the_first_pop3_host_that_answers_rides_along() {
+        let net = FakeNet::default()
+            .accept("imap.example.org", 993, Security::Tls)
+            .accept("smtp.example.org", 465, Security::Tls)
+            .accept("pop3.example.org", 995, Security::Tls);
+        let found = probe(&net, "example.org").await;
+        assert_eq!(found[0].pop3.as_ref().map(|s| s.host.as_str()), Some("pop3.example.org"));
     }
 }

@@ -1083,6 +1083,7 @@ mod tests {
                 provider,
                 imap: server("imap.example.org", 993),
                 smtp: server("smtp.example.org", 465),
+                pop3: None,
                 confirm,
             }],
         }
@@ -1594,6 +1595,7 @@ mod tests {
                     provider: None,
                     imap: server("imap1.example.org", 993),
                     smtp: server("smtp1.example.org", 465),
+                    pop3: None,
                     confirm: false,
                 },
                 Candidate {
@@ -1601,6 +1603,7 @@ mod tests {
                     provider: None,
                     imap: server("imap2.example.org", 993),
                     smtp: server("smtp2.example.org", 465),
+                    pop3: None,
                     confirm: second_confirm,
                 },
             ],
