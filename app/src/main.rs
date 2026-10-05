@@ -36,6 +36,7 @@ mod richtext;
 mod rules;
 mod sanitize;
 mod search;
+mod servers;
 mod settings;
 mod smime;
 mod stray_markdown;
