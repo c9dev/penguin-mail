@@ -50,6 +50,9 @@ const DOVECOT_IMAP: u16 = 31143;
 const MAILPIT_SMTP: u16 = 1025;
 const MAILPIT_API: u16 = 8025;
 const DOVECOT_SIEVE: u16 = 34190;
+/// POP3 with STLS and over TLS, inside the container.
+const DOVECOT_POP3: u16 = 31110;
+const DOVECOT_POP3S: u16 = 31995;
 const RADICALE_PORT: u16 = 5232;
 
 /// Skips, or fails when [`REQUIRE`] is set. Returns `None` for the caller
@@ -474,6 +477,11 @@ pub struct Dovecot {
     pub imap: u16,
     /// The host port for ManageSieve, mapped for [`Profile::Sieve`] only.
     pub sieve: Option<u16>,
+    /// The host port for POP3 with STLS, mapped for [`Profile::Full`] and
+    /// [`Profile::Sieve`].
+    pub pop3: Option<u16>,
+    /// The host port for POP3 over TLS from the first byte.
+    pub pop3s: Option<u16>,
 }
 
 impl Dovecot {
@@ -493,6 +501,15 @@ impl Dovecot {
         ];
         if profile == Profile::Sieve {
             options.extend(["-p".into(), format!("127.0.0.1::{DOVECOT_SIEVE}")]);
+        }
+        let serves_pop3 = matches!(profile, Profile::Full | Profile::Sieve);
+        if serves_pop3 {
+            options.extend([
+                "-p".into(),
+                format!("127.0.0.1::{DOVECOT_POP3}"),
+                "-p".into(),
+                format!("127.0.0.1::{DOVECOT_POP3S}"),
+            ]);
         }
         let container = Container::start(
             &options,
@@ -514,11 +531,20 @@ impl Dovecot {
             Profile::Sieve => Some(container.port(DOVECOT_SIEVE).await),
             _ => None,
         };
+        let (pop3, pop3s) = match serves_pop3 {
+            true => (
+                Some(container.port(DOVECOT_POP3).await),
+                Some(container.port(DOVECOT_POP3S).await),
+            ),
+            false => (None, None),
+        };
         Some(Dovecot {
             container,
             imaps,
             imap,
             sieve,
+            pop3,
+            pop3s,
         })
     }
 
