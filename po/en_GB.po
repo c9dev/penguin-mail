@@ -8985,6 +8985,10 @@ msgstr "Outlook cannot subscribe to a calendar by its address."
 msgid "Outlook has no other calendars to add."
 msgstr "Outlook has no other calendars to add."
 
+#: sync/src/services/microsoft/outgoing.rs:77
+msgid "Microsoft cannot send a signed or encrypted message larger than 3 MB. Make the files smaller or send them apart."
+msgstr "Microsoft cannot send a signed or encrypted message larger than 3 MB. Make the files smaller or send them apart."
+
 #: sync/src/services/microsoft/rules.rs:96
 msgid "Outlook's rules cannot do that."
 msgstr "Outlook's rules cannot do that."

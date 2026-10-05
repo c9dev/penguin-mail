@@ -9623,6 +9623,14 @@ msgstr "O Outlook não consegue subscrever um calendário pelo endereço."
 msgid "Outlook has no other calendars to add."
 msgstr "O Outlook não tem outros calendários para adicionar."
 
+#: sync/src/services/microsoft/outgoing.rs:77
+msgid ""
+"Microsoft cannot send a signed or encrypted message larger than 3 MB. Make "
+"the files smaller or send them apart."
+msgstr ""
+"A Microsoft não consegue enviar uma mensagem assinada ou cifrada com mais de "
+"3 MB. Reduza os ficheiros ou envie-os à parte."
+
 #: sync/src/services/microsoft/rules.rs:96
 msgid "Outlook's rules cannot do that."
 msgstr "As regras do Outlook não conseguem fazer isso."

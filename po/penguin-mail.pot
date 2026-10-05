@@ -9215,6 +9215,12 @@ msgstr ""
 msgid "Outlook has no other calendars to add."
 msgstr ""
 
+#: sync/src/services/microsoft/outgoing.rs:77
+msgid ""
+"Microsoft cannot send a signed or encrypted message larger than 3 MB. Make "
+"the files smaller or send them apart."
+msgstr ""
+
 #: sync/src/services/microsoft/rules.rs:96
 msgid "Outlook's rules cannot do that."
 msgstr ""
