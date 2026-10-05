@@ -82,6 +82,7 @@ fn the_dim_labels_of_the_list_header_sidebar_and_next_event_pass_aa() {
             // The next event's card is the view colour on the sidebar.
             (".next-event .when", "--view-bg-color"),
             (".popover-when", "--view-bg-color"),
+            (".quick-account", "--view-bg-color"),
             ("popover.event-popover .popover-kind", "--view-bg-color"),
         ] {
             assert_passes(dark, &format!("{prefix}{part}"), &[surface(dark, under)]);

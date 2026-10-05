@@ -1082,6 +1082,13 @@ checkbutton.calendar-check > check:checked {
 }
 /* Quick create's plain colour dot, beside the calendar's name. */
 .checked-dot { min-width: 10px; min-height: 10px; border-radius: 99px; background: var(--cal-colour); }
+/* The quick add's calendar, on its button and in its list: the account
+   under the name, in the dim token, where calendars of several accounts
+   can share a name. */
+.quick-account { opacity: 0.75; }
+.app-dark .quick-account { opacity: 0.64; }
+.quick-calendars { min-width: 220px; }
+.quick-calendars > row { padding: 6px 8px; }
 /* The calendar sidebar's "Waiting for your answer" section: a small
    capitals heading and a lifted card per invitation, each a door into
    the event it names, and, when the store still holds the message, a

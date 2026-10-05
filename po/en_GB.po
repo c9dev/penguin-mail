@@ -2624,7 +2624,7 @@ msgstr[1] "{count} messages"
 msgid "Summarize"
 msgstr "Summarise"
 
-#: app/src/render.rs:191 app/src/ui/thread_row.rs:291
+#: app/src/render.rs:191 app/src/ui/thread_row.rs:316
 msgid "Unknown sender"
 msgstr "Unknown sender"
 
@@ -2640,7 +2640,7 @@ msgstr "Contact"
 msgid "Contact card for {person}"
 msgstr "Contact card for {person}"
 
-#: app/src/render.rs:269 app/src/ui/thread_row.rs:116
+#: app/src/render.rs:269 app/src/ui/thread_row.rs:140
 msgid "Invitation"
 msgstr "Invitation"
 
@@ -3826,7 +3826,7 @@ msgid "Test"
 msgstr "Test"
 
 #: app/src/ui/assistant_mcp_prefs.rs:341 app/src/ui/calendar/editor.rs:171
-#: app/src/ui/calendar/quick.rs:158 app/src/ui/calendar/scope.rs:193
+#: app/src/ui/calendar/quick.rs:211 app/src/ui/calendar/scope.rs:193
 #: app/src/ui/composer/mod.rs:2324 app/src/ui/dav_edit.rs:26
 #: app/src/ui/rules.rs:430 app/src/ui/smart_editor.rs:144
 #: app/src/ui/templates.rs:233 app/src/ui/vacation.rs:41
@@ -4134,15 +4134,15 @@ msgstr "{name}, {address}"
 msgid "{person}, {source}"
 msgstr "{person}, {source}"
 
-#: app/src/ui/calendar/agenda.rs:442 app/src/ui/calendar/block.rs:615
+#: app/src/ui/calendar/agenda.rs:454 app/src/ui/calendar/block.rs:615
 msgid "{title}, {kind}"
 msgstr "{title}, {kind}"
 
-#: app/src/ui/calendar/agenda.rs:448
+#: app/src/ui/calendar/agenda.rs:460
 msgid "{title}, {when}, {calendar}"
 msgstr "{title}, {when}, {calendar}"
 
-#: app/src/ui/calendar/agenda.rs:562
+#: app/src/ui/calendar/agenda.rs:579
 msgid "Nothing earlier on this computer"
 msgstr "Nothing earlier on this computer"
 
@@ -4241,11 +4241,11 @@ msgstr "Custom Repeat"
 msgid "{organizer} organizes this event, so its time, place and guests stay as they set them."
 msgstr "{organizer} organises this event, so its time, place and guests stay as they set them."
 
-#: app/src/ui/calendar/editor.rs:410 app/src/ui/calendar/quick.rs:127
+#: app/src/ui/calendar/editor.rs:410 app/src/ui/calendar/quick.rs:176
 msgid "Title"
 msgstr "Title"
 
-#: app/src/ui/calendar/editor.rs:445 app/src/ui/calendar/quick.rs:140
+#: app/src/ui/calendar/editor.rs:445 app/src/ui/calendar/quick.rs:182
 msgid "Type"
 msgstr "Type"
 
@@ -4478,7 +4478,7 @@ msgid "Only people who can change this calendar see the details"
 msgstr "Only people who can change this calendar see the details"
 
 #: app/src/ui/calendar/editor.rs:1818 app/src/ui/calendar/manage.rs:282
-#: app/src/ui/calendar/sidebar.rs:1222 app/src/ui/sidebar.rs:1423
+#: app/src/ui/calendar/sidebar.rs:1232 app/src/ui/sidebar.rs:1423
 #: app/src/ui/sidebar.rs:1622
 msgid "Color"
 msgstr "Colour"
@@ -5102,15 +5102,19 @@ msgstr "Remove from My Calendar"
 msgid "Your answer"
 msgstr "Your answer"
 
-#: app/src/ui/calendar/quick.rs:123
+#: app/src/ui/calendar/quick.rs:82
+msgid "{name}, {account}"
+msgstr "{name}, {account}"
+
+#: app/src/ui/calendar/quick.rs:172
 msgid "Add title"
 msgstr "Add title"
 
-#: app/src/ui/calendar/quick.rs:154
+#: app/src/ui/calendar/quick.rs:207
 msgid "More Details"
 msgstr "More Details"
 
-#: app/src/ui/calendar/quick.rs:339
+#: app/src/ui/calendar/quick.rs:417
 msgid "Calendar: {name}"
 msgstr "Calendar: {name}"
 
@@ -5278,73 +5282,73 @@ msgstr "Grant Access to show shared calendars"
 msgid "Penguin Mail cannot see this account's calendars"
 msgstr "Penguin Mail cannot see this account's calendars"
 
-#: app/src/ui/calendar/sidebar.rs:976
+#: app/src/ui/calendar/sidebar.rs:986
 msgid "Show or hide this account's calendars"
 msgstr "Show or hide this account's calendars"
 
-#: app/src/ui/calendar/sidebar.rs:1022
+#: app/src/ui/calendar/sidebar.rs:1032
 msgid "You can only read this calendar"
 msgstr "You can only read this calendar"
 
-#: app/src/ui/calendar/sidebar.rs:1046
+#: app/src/ui/calendar/sidebar.rs:1056
 msgid "Calendar options"
 msgstr "Calendar options"
 
-#: app/src/ui/calendar/sidebar.rs:1050
+#: app/src/ui/calendar/sidebar.rs:1060
 msgid "Options for {calendar}"
 msgstr "Options for {calendar}"
 
-#: app/src/ui/calendar/sidebar.rs:1090 app/src/ui/contacts_prefs.rs:342
+#: app/src/ui/calendar/sidebar.rs:1100 app/src/ui/contacts_prefs.rs:342
 msgid "Grant Access for {account}"
 msgstr "Grant Access for {account}"
 
-#: app/src/ui/calendar/sidebar.rs:1166
+#: app/src/ui/calendar/sidebar.rs:1176
 msgid "New Calendar…"
 msgstr "New Calendar…"
 
-#: app/src/ui/calendar/sidebar.rs:1167
+#: app/src/ui/calendar/sidebar.rs:1177
 msgid "Subscribe to Calendar…"
 msgstr "Subscribe to Calendar…"
 
-#: app/src/ui/calendar/sidebar.rs:1168
+#: app/src/ui/calendar/sidebar.rs:1178
 msgid "Holiday Calendars…"
 msgstr "Holiday Calendars…"
 
-#: app/src/ui/calendar/sidebar.rs:1179 app/src/ui/calendar/sidebar.rs:1187
+#: app/src/ui/calendar/sidebar.rs:1189 app/src/ui/calendar/sidebar.rs:1197
 msgid "Add Calendar"
 msgstr "Add Calendar"
 
-#: app/src/ui/calendar/sidebar.rs:1201
+#: app/src/ui/calendar/sidebar.rs:1211
 msgid "Hide from the List"
 msgstr "Hide from the List"
 
-#: app/src/ui/calendar/sidebar.rs:1214
+#: app/src/ui/calendar/sidebar.rs:1224
 msgid "Original Color"
 msgstr "Original Colour"
 
-#: app/src/ui/calendar/sidebar.rs:1226 app/src/ui/sidebar.rs:1412
+#: app/src/ui/calendar/sidebar.rs:1236 app/src/ui/sidebar.rs:1412
 #: app/src/ui/sidebar.rs:1612
 msgid "Rename…"
 msgstr "Rename…"
 
-#: app/src/ui/calendar/sidebar.rs:1227 app/src/ui/sidebar.rs:1322
+#: app/src/ui/calendar/sidebar.rs:1237 app/src/ui/sidebar.rs:1322
 #: app/src/ui/sidebar.rs:1438
 msgid "Delete…"
 msgstr "Delete…"
 
-#: app/src/ui/calendar/sidebar.rs:1228 app/src/ui/conversation.rs:583
+#: app/src/ui/calendar/sidebar.rs:1238 app/src/ui/conversation.rs:583
 msgid "Unsubscribe…"
 msgstr "Unsubscribe…"
 
-#: app/src/ui/calendar/sidebar.rs:1252
+#: app/src/ui/calendar/sidebar.rs:1262
 msgid "Show {calendar}"
 msgstr "Show {calendar}"
 
-#: app/src/ui/calendar/sidebar.rs:1268
+#: app/src/ui/calendar/sidebar.rs:1278
 msgid "Hidden Calendars"
 msgstr "Hidden Calendars"
 
-#: app/src/ui/calendar/sidebar.rs:1288
+#: app/src/ui/calendar/sidebar.rs:1298
 msgid "{count} hidden calendar"
 msgid_plural "{count} hidden calendars"
 msgstr[0] "{count} hidden calendar"
@@ -6714,7 +6718,7 @@ msgstr[1] "And {count} more"
 msgid "Could not read {file}: {reason}"
 msgstr "Could not read {file}: {reason}"
 
-#: app/src/ui/mod.rs:377
+#: app/src/ui/mod.rs:409
 msgid "Gray"
 msgstr "Grey"
 
@@ -6734,15 +6738,15 @@ msgstr "The mail is already in All Mail"
 msgid "Mail cannot go there"
 msgstr "Mail cannot go there"
 
-#: app/src/ui/pgp.rs:110
+#: app/src/ui/pgp.rs:105
 msgid "Checked"
 msgstr "Checked"
 
-#: app/src/ui/pgp.rs:111
+#: app/src/ui/pgp.rs:106
 msgid "Warning"
 msgstr "Warning"
 
-#: app/src/ui/pgp.rs:112
+#: app/src/ui/pgp.rs:107
 msgid "Not checked"
 msgstr "Not checked"
 
@@ -7147,11 +7151,11 @@ msgstr "No signature"
 msgid "Cancel Send"
 msgstr "Cancel Send"
 
-#: app/src/ui/queued.rs:97
+#: app/src/ui/queued.rs:92
 msgid "This message has not been sent"
 msgstr "This message has not been sent"
 
-#: app/src/ui/queued.rs:98
+#: app/src/ui/queued.rs:93
 msgid "This message is waiting to be sent"
 msgstr "This message is waiting to be sent"
 
@@ -7581,68 +7585,68 @@ msgstr "Search (/)"
 msgid "Search mail"
 msgstr "Search mail"
 
-#: app/src/ui/thread_row.rs:87
+#: app/src/ui/thread_row.rs:93
 msgid "VIP"
 msgstr "VIP"
 
-#: app/src/ui/thread_row.rs:94 app/src/ui/window.rs:370
+#: app/src/ui/thread_row.rs:118 app/src/ui/window.rs:370
 msgid "Muted"
 msgstr "Muted"
 
-#: app/src/ui/thread_row.rs:231
+#: app/src/ui/thread_row.rs:256
 msgid "Unread invitation, {sender}, {subject}, {snippet}"
 msgstr "Unread invitation, {sender}, {subject}, {snippet}"
 
-#: app/src/ui/thread_row.rs:232
+#: app/src/ui/thread_row.rs:257
 msgid "Unread, {sender}, {subject}, {snippet}"
 msgstr "Unread, {sender}, {subject}, {snippet}"
 
-#: app/src/ui/thread_row.rs:233
+#: app/src/ui/thread_row.rs:258
 msgid "Invitation, {sender}, {subject}, {snippet}"
 msgstr "Invitation, {sender}, {subject}, {snippet}"
 
-#: app/src/ui/thread_row.rs:234
+#: app/src/ui/thread_row.rs:259
 msgid "{sender}, {subject}, {snippet}"
 msgstr "{sender}, {subject}, {snippet}"
 
-#: app/src/ui/translation.rs:50 app/src/ui/translation.rs:90
-#: app/src/ui/translation.rs:130
+#: app/src/ui/translation.rs:50 app/src/ui/translation.rs:85
+#: app/src/ui/translation.rs:125
 msgid "Translate"
 msgstr "Translate"
 
-#: app/src/ui/translation.rs:84
+#: app/src/ui/translation.rs:79
 msgid "This message is in {language}"
 msgstr "This message is in {language}"
 
-#: app/src/ui/translation.rs:87
+#: app/src/ui/translation.rs:82
 msgid "This message is in another language"
 msgstr "This message is in another language"
 
-#: app/src/ui/translation.rs:97
+#: app/src/ui/translation.rs:92
 msgid "Translating…"
 msgstr "Translating…"
 
-#: app/src/ui/translation.rs:106
+#: app/src/ui/translation.rs:101
 msgid "Showing the message as it arrived"
 msgstr "Showing the message as it arrived"
 
-#: app/src/ui/translation.rs:108
+#: app/src/ui/translation.rs:103
 msgid "Translated from {language}"
 msgstr "Translated from {language}"
 
-#: app/src/ui/translation.rs:111
+#: app/src/ui/translation.rs:106
 msgid "Translated"
 msgstr "Translated"
 
-#: app/src/ui/translation.rs:114
+#: app/src/ui/translation.rs:109
 msgid "The message was long, so only the start of it was translated."
 msgstr "The message was long, so only the start of it was translated."
 
-#: app/src/ui/translation.rs:119
+#: app/src/ui/translation.rs:114
 msgid "Show Original"
 msgstr "Show Original"
 
-#: app/src/ui/translation.rs:120
+#: app/src/ui/translation.rs:115
 msgid "Show Translation"
 msgstr "Show Translation"
 
