@@ -242,8 +242,8 @@ pub struct CalendarView {
     /// The day the view is on; every range is the one around it.
     day: Cell<NaiveDate>,
     kind: Cell<ViewKind>,
-    /// The week or month the person had before Day, which List stands
-    /// for in a narrow window.
+    /// The week or month the person had before Day, which the "list"
+    /// toggle stands for in a narrow window.
     before_day: Cell<ViewKind>,
     narrow: Cell<bool>,
     accounts: RefCell<Vec<CalendarAccount>>,
@@ -400,13 +400,8 @@ impl CalendarView {
         let view_actions = gio::SimpleActionGroup::new();
         view_actions.add_action(&view_action);
         let view_items = gio::Menu::new();
-        for (name, label) in [
-            ("day", gettext("Day")),
-            ("week", gettext("Week")),
-            ("month", gettext("Month")),
-            ("agenda", gettext("Agenda")),
-        ] {
-            let item = gio::MenuItem::new(Some(&label), None);
+        for name in ["day", "week", "month", "agenda"] {
+            let item = gio::MenuItem::new(Some(&shown::toggle_label(name)), None);
             item.set_action_and_target_value(Some("calendar-view.view"), Some(&name.to_variant()));
             view_items.append_item(&item);
         }
@@ -945,7 +940,7 @@ impl CalendarView {
     /// the range's first day, or for the list its first day.
     fn wanted_from(&self) -> EpochMillis {
         let day = match self.showing() {
-            Showing::List => range::agenda_window(self.day.get()).0,
+            Showing::Agenda => range::agenda_window(self.day.get()).0,
             _ => return Range::around(self.effective_kind(), self.day.get()).span(&chrono::Local).0,
         };
         day_span(day, day).0
@@ -1083,7 +1078,7 @@ impl CalendarView {
     /// the carousel to its neighbour page along the same spring a swipe
     /// settles with; the page change then brings the pages round.
     pub fn step(self: &Rc<Self>, by: i32) {
-        if self.showing() == Showing::List {
+        if self.showing() == Showing::Agenda {
             self.go_to(shown::stepped(ViewKind::Month, self.day.get(), by));
             return;
         }
@@ -1182,7 +1177,7 @@ impl CalendarView {
         }
         self.build_switch();
         self.show_range();
-        if self.showing() == Showing::List {
+        if self.showing() == Showing::Agenda {
             self.fill_list();
         }
         self.reach_current();
@@ -1232,9 +1227,9 @@ impl CalendarView {
     }
 
     /// The grid actually on screen: the kind the person picked, unless
-    /// the breakpoint replaced it. List draws Month's grid behind its
-    /// own agenda page (unused while List is on screen, but built all
-    /// the same). Every page built from the current range, and anything
+    /// the breakpoint replaced it. The narrow agenda draws Month's grid
+    /// behind its own page (unused while the agenda is on screen, but
+    /// built all the same). Every page built from the current range, and anything
     /// that steps by or matches against it, follows this rather than the
     /// raw [`kind`](Self::kind), so what such code does lines up with
     /// what the reader sees.
@@ -1242,7 +1237,7 @@ impl CalendarView {
         match self.showing() {
             Showing::Day => ViewKind::Day,
             Showing::Week => ViewKind::Week,
-            Showing::Month | Showing::List => ViewKind::Month,
+            Showing::Month | Showing::Agenda => ViewKind::Month,
         }
     }
 
@@ -1267,13 +1262,7 @@ impl CalendarView {
             if !on {
                 continue;
             }
-            let label = match name {
-                "list" => gettext("List"),
-                "day" => gettext("Day"),
-                "week" => gettext("Week"),
-                "agenda" => gettext("Agenda"),
-                _ => gettext("Month"),
-            };
+            let label = shown::toggle_label(name);
             self.switch.add(adw::Toggle::builder().name(name).label(&label).build());
         }
         self.switch.set_active_name(Some(self.active_toggle()));
@@ -1299,13 +1288,7 @@ impl CalendarView {
         self.switching.set(false);
         let active = self.active_toggle();
         self.view_action.set_state(&active.to_variant());
-        self.view_menu.set_label(&match active {
-            "day" => gettext("Day"),
-            "week" => gettext("Week"),
-            "month" => gettext("Month"),
-            "list" => gettext("List"),
-            _ => gettext("Agenda"),
-        });
+        self.view_menu.set_label(&shown::toggle_label(active));
         // The list names its month the way a month's title does. So does
         // a narrow window's Day, whose heading under the header already
         // names the day.
@@ -1327,10 +1310,10 @@ impl CalendarView {
         self.next.set_tooltip_text(Some(&forward));
         // The list loads its earlier days as it scrolls, so it has no
         // arrows of its own.
-        self.arrows.set_visible(showing != Showing::List);
+        self.arrows.set_visible(showing != Showing::Agenda);
         if !self.search_open() {
             self.views.set_visible_child_name(match showing {
-                Showing::List => "list",
+                Showing::Agenda => "list",
                 _ => "grid",
             });
         }
@@ -1858,7 +1841,7 @@ impl CalendarView {
                 self.fill(page);
             }
         }
-        if self.showing() == Showing::List {
+        if self.showing() == Showing::Agenda {
             self.fill_list();
         }
     }
@@ -2827,7 +2810,7 @@ impl CalendarView {
     /// The occurrence whose block has the keyboard focus, wherever it is
     /// shown now: the middle page's grid or month, or the narrow list.
     fn focused(&self) -> Option<Occurrence> {
-        if self.showing() == Showing::List {
+        if self.showing() == Showing::Agenda {
             return self.list.focused();
         }
         let page = self.pages.borrow().get(1)?.clone();
@@ -3302,7 +3285,7 @@ impl CalendarView {
         self.update_new_event();
         let day = self.day.get();
         let band = match self.showing() {
-            Showing::List => None,
+            Showing::Agenda => None,
             _ => sidebar::in_view(self.effective_kind(), day),
         };
         self.calendar_sidebar.show(day, band, today, &busy_days, &accounts);

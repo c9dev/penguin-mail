@@ -21,25 +21,26 @@ pub enum Showing {
     Month,
     /// The agenda, which a narrow window shows in place of a week or a
     /// month.
-    List,
+    Agenda,
 }
 
 /// The view a window gets for the grid the person picked. A narrow
 /// window has no room for seven columns, so a week or a month becomes the
-/// list; a day still fits.
+/// agenda; a day still fits.
 pub fn showing(kind: ViewKind, narrow: bool) -> Showing {
     match (kind, narrow) {
         (ViewKind::Day, _) => Showing::Day,
-        (ViewKind::Agenda, _) | (_, true) => Showing::List,
+        (ViewKind::Agenda, _) | (_, true) => Showing::Agenda,
         (ViewKind::Week, false) => Showing::Week,
         (ViewKind::Month, false) => Showing::Month,
     }
 }
 
 /// The view switch's toggles by name, in the order they sit, and whether
-/// each one is offered: List and Day in a narrow window, Day, Week, Month
-/// and Agenda in a wider one. A narrow window drops Agenda, since the
-/// list it shows is the agenda.
+/// each one is offered: "list" and Day in a narrow window, Day, Week,
+/// Month and Agenda in a wider one. Both "list" and "agenda" show the
+/// agenda and both say Agenda; they differ in what a wider window goes
+/// back to (`kind_for`), so a narrow window offers only "list".
 pub fn offered(narrow: bool) -> [(&'static str, bool); 5] {
     [
         ("list", narrow),
@@ -56,21 +57,33 @@ pub fn toggle_name(showing: Showing) -> &'static str {
         Showing::Day => "day",
         Showing::Week => "week",
         Showing::Month => "month",
-        Showing::List => "list",
+        Showing::Agenda => "list",
+    }
+}
+
+/// The words on the toggle named `name`, and on the view menu while it
+/// stands for that toggle. Both "list", a narrow window's toggle, and
+/// "agenda" show the agenda, so both say Agenda.
+pub fn toggle_label(name: &str) -> String {
+    match name {
+        "day" => gettext("Day"),
+        "week" => gettext("Week"),
+        "month" => gettext("Month"),
+        _ => gettext("Agenda"),
     }
 }
 
 /// The toggle to mark for the view the person picked in a window of this
-/// width: the agenda is List's toggle in a narrow window and Agenda's in
-/// a wide one.
+/// width: the agenda is the "list" toggle in a narrow window and the
+/// "agenda" toggle in a wide one.
 pub fn active_toggle(kind: ViewKind, narrow: bool) -> &'static str {
     match showing(kind, narrow) {
-        Showing::List if !narrow => "agenda",
+        Showing::Agenda if !narrow => "agenda",
         other => toggle_name(other),
     }
 }
 
-/// The grid a toggle picks. List is not a grid of its own: it stands for
+/// The grid a toggle picks. "list" is not a grid of its own: it stands for
 /// the week or month the person had before Day, `before_day`, which a
 /// wider window shows again.
 pub fn kind_for(name: &str, before_day: ViewKind) -> Option<ViewKind> {
@@ -98,7 +111,7 @@ pub fn arrow_names(showing: Showing) -> (String, String) {
     match showing {
         Showing::Day => (gettext("Previous Day"), gettext("Next Day")),
         Showing::Week => (gettext("Previous Week"), gettext("Next Week")),
-        Showing::Month | Showing::List => (gettext("Previous Month"), gettext("Next Month")),
+        Showing::Month | Showing::Agenda => (gettext("Previous Month"), gettext("Next Month")),
     }
 }
 
@@ -419,8 +432,8 @@ mod tests {
 
     #[test]
     fn a_narrow_window_lists_in_place_of_the_week_and_the_month() {
-        assert_eq!(showing(ViewKind::Week, true), Showing::List);
-        assert_eq!(showing(ViewKind::Month, true), Showing::List);
+        assert_eq!(showing(ViewKind::Week, true), Showing::Agenda);
+        assert_eq!(showing(ViewKind::Month, true), Showing::Agenda);
         assert_eq!(showing(ViewKind::Day, true), Showing::Day);
     }
 
@@ -451,8 +464,23 @@ mod tests {
 
     #[test]
     fn a_wide_window_shows_the_agenda_as_the_list() {
-        assert_eq!(showing(ViewKind::Agenda, false), Showing::List);
-        assert_eq!(showing(ViewKind::Agenda, true), Showing::List);
+        assert_eq!(showing(ViewKind::Agenda, false), Showing::Agenda);
+        assert_eq!(showing(ViewKind::Agenda, true), Showing::Agenda);
+    }
+
+    #[test]
+    fn both_toggles_that_show_the_agenda_say_agenda() {
+        // A narrow window's "list" toggle shows the same view the wide
+        // switch calls Agenda, so it carries the same word.
+        assert_eq!(toggle_label("list"), "Agenda");
+        assert_eq!(toggle_label("agenda"), "Agenda");
+    }
+
+    #[test]
+    fn the_grid_toggles_name_their_grid() {
+        assert_eq!(toggle_label("day"), "Day");
+        assert_eq!(toggle_label("week"), "Week");
+        assert_eq!(toggle_label("month"), "Month");
     }
 
     #[test]
@@ -488,10 +516,10 @@ mod tests {
 
     #[test]
     fn each_view_names_the_toggle_that_shows_it() {
-        for view in [Showing::Day, Showing::Week, Showing::Month, Showing::List] {
+        for view in [Showing::Day, Showing::Week, Showing::Month, Showing::Agenda] {
             let name = toggle_name(view);
             assert!(
-                offered(view == Showing::List)
+                offered(view == Showing::Agenda)
                     .iter()
                     .any(|(n, on)| *n == name && *on)
             );
