@@ -3350,7 +3350,7 @@ msgstr "Leave them empty to sign in with your address."
 msgid "Use These Settings"
 msgstr "Use These Settings"
 
-#: app/src/ui/add_account.rs:1717 app/src/ui/add_account.rs:2771
+#: app/src/ui/add_account.rs:1717 app/src/ui/add_account.rs:2772
 msgid "Looking up {domain}"
 msgstr "Looking up {domain}"
 

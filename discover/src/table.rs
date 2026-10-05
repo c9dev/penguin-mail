@@ -4,7 +4,7 @@ use std::sync::LazyLock;
 
 use serde::Deserialize;
 
-use crate::{Found, PasswordKind, ProviderInfo, Server, Source, Unreachable, Verdict, pairs};
+use crate::{Found, PasswordKind, ProviderInfo, Server, Source, Unreachable, Verdict, pairs, with_pop3};
 
 static BUILT_IN: LazyLock<Table> = LazyLock::new(|| {
     Table::parse(include_str!("../providers.toml")).unwrap_or_else(|error| {
@@ -38,6 +38,7 @@ pub(crate) struct Entry {
     pub(crate) custom_domain_imap: Option<Server>,
     #[serde(default)]
     pub(crate) custom_domain_smtp: Vec<Server>,
+    pub(crate) pop3: Option<Server>,
     pub(crate) password: Option<PasswordKind>,
     pub(crate) app_password_url: Option<String>,
     pub(crate) enable_imap_url: Option<String>,
@@ -65,8 +66,8 @@ pub struct ProviderServices {
     pub sieve: Option<(String, u16)>,
 }
 
-/// The table's servers beside mail for the account whose IMAP server is
-/// `imap_host`: the entry whose IMAP host it is, or whose domain list
+/// The table's servers beside mail for the account whose IMAP or POP3
+/// server is `imap_host`: the entry whose IMAP host it is, or whose domain list
 /// holds it. The host tells GMX's two families and each Zoho data center
 /// apart, which the provider's name cannot. A host the table does not
 /// know gets nothing, and the caller asks the domain instead.
@@ -81,6 +82,10 @@ pub fn services_of(imap_host: &str) -> ProviderServices {
                     .imap
                     .as_ref()
                     .is_some_and(|server| server.host == host)
+                    || entry
+                        .pop3
+                        .as_ref()
+                        .is_some_and(|server| server.host == host)
                     || entry.domains.contains(&host))
         })
         .map(|entry| ProviderServices {
@@ -236,12 +241,15 @@ impl Entry {
                     },
                 };
                 let provider = self.info();
-                Found::servers(pairs(
-                    source,
-                    Some(&provider),
-                    std::slice::from_ref(imap),
-                    smtp,
-                    false,
+                Found::servers(with_pop3(
+                    pairs(
+                        source,
+                        Some(&provider),
+                        std::slice::from_ref(imap),
+                        smtp,
+                        false,
+                    ),
+                    self.pop3.as_ref(),
                 ))
                 .unwrap_or_else(Found::nothing)
             }
@@ -268,6 +276,7 @@ mod tests {
             .chain(&entry.smtp)
             .chain(&entry.custom_domain_imap)
             .chain(&entry.custom_domain_smtp)
+            .chain(&entry.pop3)
             .collect()
     }
 

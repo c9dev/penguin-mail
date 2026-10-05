@@ -79,6 +79,11 @@ pub struct Candidate {
     pub provider: Option<ProviderInfo>,
     pub imap: Server,
     pub smtp: Server,
+    /// The POP3 server the same source names, which Add Account offers
+    /// beside IMAP. Discovery offers POP3 only beside an IMAP server: a
+    /// provider with POP3 alone has no candidate, and the person types
+    /// its servers in Server Settings.
+    pub pop3: Option<Server>,
     /// The person must confirm these host names before the password goes out.
     pub confirm: bool,
 }
@@ -156,8 +161,18 @@ pub(crate) fn pairs(
                 provider: provider.cloned(),
                 imap: imap.clone(),
                 smtp: smtp.clone(),
+                pop3: None,
                 confirm,
             })
         })
         .collect()
+}
+
+/// `candidates`, each with `pop3` beside its IMAP server, for a source
+/// that names one.
+pub(crate) fn with_pop3(mut candidates: Vec<Candidate>, pop3: Option<&Server>) -> Vec<Candidate> {
+    for candidate in &mut candidates {
+        candidate.pop3 = pop3.cloned();
+    }
+    candidates
 }

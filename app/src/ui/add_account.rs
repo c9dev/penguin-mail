@@ -2719,6 +2719,7 @@ fn preview(this: &Rc<Dialog>, stage: &str) {
                 provider: mailrs_discover::provider_named("Fastmail"),
                 imap: server("imap.fastmail.com", 993),
                 smtp: server("smtp.fastmail.com", 465),
+                pop3: None,
                 confirm: false,
             }],
         };
