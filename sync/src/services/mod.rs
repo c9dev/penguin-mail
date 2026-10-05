@@ -19,6 +19,7 @@ mod google;
 pub use google::withheld as withheld_by_grant;
 pub mod imap;
 pub mod microsoft;
+pub mod pop3;
 pub(crate) mod local;
 mod pacing;
 mod sieve;
@@ -30,6 +31,7 @@ pub use local::LocalRules;
 pub use google::{Google, ID_PAGE_SIZE, LIST_PAGE_SIZE};
 pub use imap::{Imap, ImapApi, ImapSettings, Submit};
 pub use microsoft::{GraphApi, Microsoft, MicrosoftSettings};
+pub use pop3::{Pop3, Pop3Settings};
 pub use pacing::{Priority, background, priority};
 pub use sieve::SieveRules;
 
@@ -51,18 +53,20 @@ use mailrs_domain::calendar as model;
 use mailrs_domain::invitation::Answer;
 use mailrs_domain::query::Query;
 use mailrs_domain::{
-    EpochMillis, Filter, Location, MailSet, Membership, MessageMeta, RemoteMailbox, Role, Vacation,
+    AccountId, EpochMillis, Filter, Location, MailSet, Membership, MessageMeta, RemoteMailbox, Role, Vacation,
 };
 use mailrs_gmail::{
     Answered, Busy, ConnectionsPage, ContactFields, Event, EventFields, LabelColor, Person, Series,
 };
 use mailrs_imap::{ImapClient, SmtpClient, UidSet};
 use mailrs_mime::Parts;
+use mailrs_pop3::Pop3Client;
+use mailrs_store::Db;
 use mailrs_store::threading::Links;
 
 use crate::api::{AccountClient, DraftRef, SavedDraft};
 #[cfg(any(test, feature = "fake"))]
-use crate::fake::{FakeGmail, FakeGraph, FakeImap, FakeSmtp};
+use crate::fake::{FakeGmail, FakeGraph, FakeImap, FakePop3, FakeSmtp};
 use crate::{BackendError, MailOp};
 
 /// One address an account may send mail as: its own, or an alias whose
@@ -512,6 +516,64 @@ impl AccountServices {
         }
     }
 
+    /// A POP3 account: its mail and address, over the store, with rules
+    /// kept on this computer. `connect_pop3` adds the calendar and
+    /// contacts found for it.
+    pub fn pop3(
+        db: Db,
+        account_id: AccountId,
+        client: Pop3Client,
+        smtp: SmtpClient,
+        settings: Pop3Settings,
+    ) -> Self {
+        let adapter = Pop3::new(db.clone(), account_id, Arc::new(smtp), Arc::new(client), settings);
+        AccountServices {
+            mail: AnyMail::Pop3(adapter.clone()),
+            calendar: None,
+            contacts: None,
+            rules: Some(AnyRules::Local(LocalRules::new(db, account_id))),
+            auto_reply: None,
+            identities: AnyIdentities::Pop3(adapter),
+        }
+    }
+
+    /// The POP3 adapter an account's mail runs on, for its CalDAV replies
+    /// and its downloader.
+    pub fn pop3_adapter(&self) -> Option<Pop3<SmtpClient, Pop3Client>> {
+        match &self.mail {
+            AnyMail::Pop3(adapter) => Some(adapter.clone()),
+            _ => None,
+        }
+    }
+
+    /// A POP3 account over the in-memory POP3 server and SMTP sink.
+    #[cfg(any(test, feature = "fake"))]
+    pub fn fake_pop3(
+        db: Db,
+        account_id: AccountId,
+        client: Arc<FakePop3>,
+        smtp: Arc<FakeSmtp>,
+        settings: Pop3Settings,
+    ) -> Self {
+        let adapter = Pop3::new(db.clone(), account_id, smtp, client, settings);
+        AccountServices {
+            mail: AnyMail::FakePop3(adapter.clone()),
+            calendar: None,
+            contacts: None,
+            rules: Some(AnyRules::Local(LocalRules::new(db, account_id))),
+            auto_reply: None,
+            identities: AnyIdentities::FakePop3(adapter),
+        }
+    }
+
+    #[cfg(any(test, feature = "fake"))]
+    pub fn fake_pop3_adapter(&self) -> Option<Pop3<FakeSmtp, FakePop3>> {
+        match &self.mail {
+            AnyMail::FakePop3(adapter) => Some(adapter.clone()),
+            _ => None,
+        }
+    }
+
     pub fn capabilities(&self) -> MailCapabilities {
         self.mail.capabilities()
     }
@@ -591,6 +653,9 @@ impl CalendarFeatures {
             Some(AnyCalendar::Dav(_)) => CalendarFeatures::CALDAV,
             #[cfg(any(test, feature = "fake"))]
             Some(AnyCalendar::FakeDav(_)) => CalendarFeatures::CALDAV,
+            Some(AnyCalendar::Pop3Dav(_)) => CalendarFeatures::CALDAV,
+            #[cfg(any(test, feature = "fake"))]
+            Some(AnyCalendar::FakePop3Dav(_)) => CalendarFeatures::CALDAV,
         }
     }
 }

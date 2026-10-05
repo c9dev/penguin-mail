@@ -5,7 +5,8 @@
 //! over `FakeGmail`, for tests and the demo. `Imap` and `FakeImap` do the
 //! same for an IMAP account's mail and identity. `Microsoft` and
 //! `FakeMicrosoft` hold the Graph adapter, over the real client and over
-//! `FakeGraph`.
+//! `FakeGraph`. `Pop3` and `FakePop3` hold the POP3 adapter, over the real
+//! POP3 and SMTP clients and over the fakes.
 
 use std::ops::RangeInclusive;
 use std::time::Duration;
@@ -19,17 +20,18 @@ use mailrs_gmail::{
 use mailrs_dav::DavClient;
 use mailrs_imap::{ImapClient, SmtpClient};
 use mailrs_mime::Parts;
+use mailrs_pop3::Pop3Client;
 use mailrs_sieve::client::ManageSieveClient;
 
 use super::local::LocalRules;
 use super::{
     AutoReplyService, Backfill, CalDav, CalendarService, CardDav, Changes, ContactsService, Found,
-    Google, IdentityService, Imap, KeywordsPage, RulesPlace, SieveRules, MailBackend, MailCapabilities, Microsoft, RawMessage,
+    Google, IdentityService, Imap, KeywordsPage, Pop3, RulesPlace, SieveRules, MailBackend, MailCapabilities, Microsoft, RawMessage,
     Refused, Relocated, RemoteRef, RulesService, SearchQuery, SendAsAddress, SyncState, Unapplied, Want, Withheld,
 };
 use crate::api::{AccountClient, DraftRef, SavedDraft};
 #[cfg(any(test, feature = "fake"))]
-use crate::fake::{FakeDav, FakeGmail, FakeGraph, FakeImap, FakeSieve, FakeSmtp};
+use crate::fake::{FakeDav, FakeGmail, FakeGraph, FakeImap, FakePop3, FakeSieve, FakeSmtp};
 use crate::{BackendError, MailOp};
 
 /// Awaits `$method` on whichever adapter `$self`, a calendar or an
@@ -46,6 +48,27 @@ macro_rules! forward_dav {
             $enum::Dav(adapter) => adapter.$method($($arg),*).await,
             #[cfg(any(test, feature = "fake"))]
             $enum::FakeDav(adapter) => adapter.$method($($arg),*).await,
+        }
+    };
+}
+
+/// As `forward_dav!`, for a calendar, which a POP3 account's CalDAV server
+/// also serves.
+macro_rules! forward_calendar {
+    ($self:ident, $method:ident($($arg:expr),*)) => {
+        match $self {
+            AnyCalendar::Google(adapter) => adapter.$method($($arg),*).await,
+            #[cfg(any(test, feature = "fake"))]
+            AnyCalendar::Fake(adapter) => adapter.$method($($arg),*).await,
+            AnyCalendar::Microsoft(adapter) => adapter.$method($($arg),*).await,
+            #[cfg(any(test, feature = "fake"))]
+            AnyCalendar::FakeMicrosoft(adapter) => adapter.$method($($arg),*).await,
+            AnyCalendar::Dav(adapter) => adapter.$method($($arg),*).await,
+            #[cfg(any(test, feature = "fake"))]
+            AnyCalendar::FakeDav(adapter) => adapter.$method($($arg),*).await,
+            AnyCalendar::Pop3Dav(adapter) => adapter.$method($($arg),*).await,
+            #[cfg(any(test, feature = "fake"))]
+            AnyCalendar::FakePop3Dav(adapter) => adapter.$method($($arg),*).await,
         }
     };
 }
@@ -90,6 +113,9 @@ macro_rules! forward_reply {
 type RealImap = Imap<ImapClient, SmtpClient>;
 #[cfg(any(test, feature = "fake"))]
 type FakedImap = Imap<FakeImap, FakeSmtp>;
+type RealPop3 = Pop3<SmtpClient, Pop3Client>;
+#[cfg(any(test, feature = "fake"))]
+type FakedPop3 = Pop3<FakeSmtp, FakePop3>;
 
 /// As `forward!`, for an enum that also holds the IMAP adapter.
 macro_rules! forward_all {
@@ -104,6 +130,9 @@ macro_rules! forward_all {
             $enum::Microsoft(adapter) => adapter.$method($($arg),*).await,
             #[cfg(any(test, feature = "fake"))]
             $enum::FakeMicrosoft(adapter) => adapter.$method($($arg),*).await,
+            $enum::Pop3(adapter) => adapter.$method($($arg),*).await,
+            #[cfg(any(test, feature = "fake"))]
+            $enum::FakePop3(adapter) => adapter.$method($($arg),*).await,
         }
     };
 }
@@ -121,6 +150,9 @@ macro_rules! forward_all_now {
             $enum::Microsoft(adapter) => adapter.$method($($arg),*),
             #[cfg(any(test, feature = "fake"))]
             $enum::FakeMicrosoft(adapter) => adapter.$method($($arg),*),
+            $enum::Pop3(adapter) => adapter.$method($($arg),*),
+            #[cfg(any(test, feature = "fake"))]
+            $enum::FakePop3(adapter) => adapter.$method($($arg),*),
         }
     };
 }
@@ -137,6 +169,9 @@ pub enum AnyMail {
     Microsoft(Microsoft<mailrs_graph::Graph>),
     #[cfg(any(test, feature = "fake"))]
     FakeMicrosoft(Microsoft<FakeGraph>),
+    Pop3(RealPop3),
+    #[cfg(any(test, feature = "fake"))]
+    FakePop3(FakedPop3),
 }
 
 /// An account's calendar.
@@ -151,6 +186,11 @@ pub enum AnyCalendar {
     Dav(CalDav<DavClient, RealImap>),
     #[cfg(any(test, feature = "fake"))]
     FakeDav(CalDav<FakeDav, FakedImap>),
+    /// A POP3 account's CalDAV server, whose replies go out through the
+    /// account's SMTP.
+    Pop3Dav(CalDav<DavClient, RealPop3>),
+    #[cfg(any(test, feature = "fake"))]
+    FakePop3Dav(CalDav<FakeDav, FakedPop3>),
 }
 
 /// An account's address book.
@@ -208,6 +248,9 @@ pub enum AnyIdentities {
     Microsoft(Microsoft<mailrs_graph::Graph>),
     #[cfg(any(test, feature = "fake"))]
     FakeMicrosoft(Microsoft<FakeGraph>),
+    Pop3(RealPop3),
+    #[cfg(any(test, feature = "fake"))]
+    FakePop3(FakedPop3),
 }
 
 impl AnyMail {
@@ -225,6 +268,9 @@ impl AnyMail {
             AnyMail::Microsoft(adapter) => adapter.withheld(),
             #[cfg(any(test, feature = "fake"))]
             AnyMail::FakeMicrosoft(adapter) => adapter.withheld(),
+            AnyMail::Pop3(_) => Withheld::NONE,
+            #[cfg(any(test, feature = "fake"))]
+            AnyMail::FakePop3(_) => Withheld::NONE,
         }
     }
 
@@ -432,8 +478,7 @@ impl CalendarService for AnyCalendar {
         occurrence: Option<EpochMillis>,
         note: Option<&str>,
     ) -> Result<Answered, BackendError> {
-        forward_dav!(
-            AnyCalendar,
+        forward_calendar!(
             self,
             answer_invitation(ical_uid, me, answer, occurrence, note)
         )
@@ -444,7 +489,7 @@ impl CalendarService for AnyCalendar {
         from: EpochMillis,
         to: EpochMillis,
     ) -> Result<Vec<Busy>, BackendError> {
-        forward_dav!(AnyCalendar, self, busy_between(from, to))
+        forward_calendar!(self, busy_between(from, to))
     }
 
     async fn series(
@@ -452,7 +497,7 @@ impl CalendarService for AnyCalendar {
         ical_uid: &str,
         from: EpochMillis,
     ) -> Result<Option<Series>, BackendError> {
-        forward_dav!(AnyCalendar, self, series(ical_uid, from))
+        forward_calendar!(self, series(ical_uid, from))
     }
 
     async fn events_between(
@@ -460,23 +505,23 @@ impl CalendarService for AnyCalendar {
         from: EpochMillis,
         to: EpochMillis,
     ) -> Result<Vec<Event>, BackendError> {
-        forward_dav!(AnyCalendar, self, events_between(from, to))
+        forward_calendar!(self, events_between(from, to))
     }
 
     async fn create_event(&self, fields: &EventFields) -> Result<Event, BackendError> {
-        forward_dav!(AnyCalendar, self, create_event(fields))
+        forward_calendar!(self, create_event(fields))
     }
 
     async fn update_event(&self, id: &str, fields: &EventFields) -> Result<Event, BackendError> {
-        forward_dav!(AnyCalendar, self, update_event(id, fields))
+        forward_calendar!(self, update_event(id, fields))
     }
 
     async fn delete_event(&self, id: &str) -> Result<(), BackendError> {
-        forward_dav!(AnyCalendar, self, delete_event(id))
+        forward_calendar!(self, delete_event(id))
     }
 
     async fn calendars(&self) -> Result<Vec<model::Calendar>, BackendError> {
-        forward_dav!(AnyCalendar, self, calendars())
+        forward_calendar!(self, calendars())
     }
 
     async fn event_changes(
@@ -486,7 +531,7 @@ impl CalendarService for AnyCalendar {
         page: Option<&str>,
         from: EpochMillis,
     ) -> Result<model::EventPage, BackendError> {
-        forward_dav!(AnyCalendar, self, event_changes(calendar, token, page, from))
+        forward_calendar!(self, event_changes(calendar, token, page, from))
     }
 
     async fn event_range(
@@ -496,7 +541,7 @@ impl CalendarService for AnyCalendar {
         to: EpochMillis,
         page: Option<&str>,
     ) -> Result<model::EventPage, BackendError> {
-        forward_dav!(AnyCalendar, self, event_range(calendar, from, to, page))
+        forward_calendar!(self, event_range(calendar, from, to, page))
     }
 
     async fn put_event(
@@ -506,7 +551,7 @@ impl CalendarService for AnyCalendar {
         create: bool,
         notify: model::Notify,
     ) -> Result<model::Event, BackendError> {
-        forward_dav!(AnyCalendar, self, put_event(event, etag, create, notify))
+        forward_calendar!(self, put_event(event, etag, create, notify))
     }
 
     async fn remove_event(
@@ -516,11 +561,11 @@ impl CalendarService for AnyCalendar {
         etag: Option<&str>,
         notify: model::Notify,
     ) -> Result<(), BackendError> {
-        forward_dav!(AnyCalendar, self, remove_event(calendar, id, etag, notify))
+        forward_calendar!(self, remove_event(calendar, id, etag, notify))
     }
 
     async fn import_event(&self, event: &model::Event) -> Result<model::Event, BackendError> {
-        forward_dav!(AnyCalendar, self, import_event(event))
+        forward_calendar!(self, import_event(event))
     }
 
     async fn upload_attachment(
@@ -528,11 +573,11 @@ impl CalendarService for AnyCalendar {
         file: &model::Attachment,
         sent: std::sync::Arc<std::sync::atomic::AtomicU64>,
     ) -> Result<model::Attachment, BackendError> {
-        forward_dav!(AnyCalendar, self, upload_attachment(file, sent))
+        forward_calendar!(self, upload_attachment(file, sent))
     }
 
     async fn share_file(&self, file_id: &str, email: &str) -> Result<(), BackendError> {
-        forward_dav!(AnyCalendar, self, share_file(file_id, email))
+        forward_calendar!(self, share_file(file_id, email))
     }
 
     async fn move_event(
@@ -541,7 +586,7 @@ impl CalendarService for AnyCalendar {
         destination: &str,
         notify: model::Notify,
     ) -> Result<model::Event, BackendError> {
-        forward_dav!(AnyCalendar, self, move_event(event, destination, notify))
+        forward_calendar!(self, move_event(event, destination, notify))
     }
 
     async fn answer_event(
@@ -552,7 +597,7 @@ impl CalendarService for AnyCalendar {
         answer: Answer,
         note: Option<&str>,
     ) -> Result<model::Event, BackendError> {
-        forward_dav!(AnyCalendar, self, answer_event(calendar, id, me, answer, note))
+        forward_calendar!(self, answer_event(calendar, id, me, answer, note))
     }
 
     async fn edit_list(
@@ -560,7 +605,7 @@ impl CalendarService for AnyCalendar {
         calendar: &str,
         edit: &model::list::ListEdit,
     ) -> Result<Option<model::Calendar>, BackendError> {
-        forward_dav!(AnyCalendar, self, edit_list(calendar, edit))
+        forward_calendar!(self, edit_list(calendar, edit))
     }
 }
 
@@ -649,6 +694,9 @@ impl AnyCalendar {
             AnyCalendar::Dav(adapter) => adapter.login_refused(),
             #[cfg(any(test, feature = "fake"))]
             AnyCalendar::FakeDav(adapter) => adapter.login_refused(),
+            AnyCalendar::Pop3Dav(adapter) => adapter.login_refused(),
+            #[cfg(any(test, feature = "fake"))]
+            AnyCalendar::FakePop3Dav(adapter) => adapter.login_refused(),
             _ => None,
         }
     }

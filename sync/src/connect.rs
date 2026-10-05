@@ -6,15 +6,16 @@ use mailrs_domain::{Account, AccountState};
 use mailrs_gmail::{Granted, GmailClient, GmailError, OAuthClient, TokenStore};
 use mailrs_graph::MicrosoftClient;
 use mailrs_imap::{ImapClient, Login, SmtpClient};
+use mailrs_pop3::Pop3Client;
 use mailrs_sieve::client::{Login as SieveLogin, ManageSieveClient};
-use mailrs_store::servers::{self, Saved, Servers};
+use mailrs_store::servers::{self, Pop3Servers, Saved, Servers};
 use mailrs_store::services::{FoundService, ServiceKind};
 use mailrs_store::{Db, accounts};
 
 use crate::passwords::{PasswordError, PasswordStore};
 use crate::{
     AccountClient, AccountServices, AnyAutoReply, AnyCalendar, AnyContacts, AnyRules, BackendError,
-    CalDav, CardDav, ImapSettings, LocalRules, MicrosoftSettings, SieveRules, SyncError,
+    CalDav, CardDav, ImapSettings, LocalRules, MicrosoftSettings, Pop3Settings, SieveRules, SyncError,
 };
 
 /// A Gmail client for `account`, built from its refresh token in `tokens`
@@ -192,6 +193,90 @@ pub async fn connect_imap<P: PasswordStore + 'static>(
     Ok(services)
 }
 
+/// The services for a POP3 account, from the servers the store keeps for
+/// it and the password in `passwords`. Without either, the store records
+/// that the account needs to sign in again before this answers
+/// `NeedsReauth`. Its rules stay on this computer; a confirmed CalDAV or
+/// CardDAV server found for it serves its calendar and contacts. A Sieve
+/// row is passed over: POP3 mail never reaches server rules. Nothing here
+/// connects.
+pub async fn connect_pop3<P: PasswordStore + 'static>(
+    db: &Db,
+    passwords: Arc<P>,
+    account: &Account,
+) -> Result<AccountServices, SyncError> {
+    let id = account.id;
+    let saved = db.read(move |c| servers::load_pop3(c, id)).await?;
+    let password = tokio::task::spawn_blocking(move || passwords.load(id))
+        .await
+        .map_err(|err| PasswordError::Keyring(err.to_string()))??;
+    let (Some(saved), Some(password)) = (saved, password) else {
+        db.write(move |c| accounts::set_state(c, id, AccountState::NeedsReauth))
+            .await?;
+        return Err(BackendError::NeedsReauth.into());
+    };
+    let provider_name = mailrs_discover::resolved_provider_name(account.provider_name());
+    let client = Pop3Client::new(
+        &server_of(&saved.pop3),
+        mailrs_pop3::Login::new(saved.pop3.user_name.as_str(), password.as_str()),
+    );
+    let secret = password.clone();
+    let smtp = SmtpClient::new(
+        &server_of(&saved.smtp),
+        &Login::new(saved.smtp.user_name.as_str(), password),
+    )
+    .map_err(BackendError::from)?;
+    let mut services = AccountServices::pop3(
+        db.clone(),
+        id,
+        client,
+        smtp,
+        Pop3Settings {
+            address: account.email.clone(),
+            provider_name,
+        },
+    );
+    let found = db.read(move |c| mailrs_store::services::load(c, id)).await?;
+    // The password goes only to a server the person confirmed.
+    for service in found.into_iter().filter(|f| f.confirmed) {
+        services = attach_pop3(services, &service, &secret, account);
+    }
+    Ok(services)
+}
+
+/// `services` with the CalDAV or CardDAV server `service` names put behind
+/// it. A server that cannot be set up is logged and left out, so the
+/// account keeps its mail.
+fn attach_pop3(
+    services: AccountServices,
+    service: &FoundService,
+    secret: &str,
+    account: &Account,
+) -> AccountServices {
+    let id = account.id;
+    if service.kind == ServiceKind::Sieve {
+        return services;
+    }
+    let client = match DavClient::new(&service.url, DavLogin::new(&service.user_name, secret)) {
+        Ok(client) => Arc::new(client),
+        Err(err) => {
+            tracing::warn!(account = id, %err, "could not set up a calendar or contacts server");
+            return services;
+        }
+    };
+    match service.kind {
+        ServiceKind::CalDav => match services.pop3_adapter() {
+            Some(mail) => {
+                let calendar = CalDav::new(client, mail, vec![account.email.clone()]);
+                services.with_calendar(AnyCalendar::Pop3Dav(calendar))
+            }
+            None => services,
+        },
+        ServiceKind::CardDav => services.with_contacts(AnyContacts::Dav(CardDav::new(client))),
+        ServiceKind::Sieve => services,
+    }
+}
+
 /// `services` with the server `service` names put behind the service it
 /// offers. A server that cannot be set up is logged and left out, so the
 /// account keeps its mail.
@@ -266,6 +351,16 @@ pub fn servers_for(imap: &Server, imap_user: &str, smtp: &Server, smtp_user: &st
     Servers {
         imap: saved(imap, imap_user),
         smtp: saved(smtp, smtp_user),
+    }
+}
+
+/// The servers to keep for a POP3 account that logged in as `pop3_user`
+/// and `smtp_user`.
+pub fn pop3_servers_for(pop3: &Server, pop3_user: &str, smtp: &Server, smtp_user: &str) -> Pop3Servers {
+    let both = servers_for(pop3, pop3_user, smtp, smtp_user);
+    Pop3Servers {
+        pop3: both.imap,
+        smtp: both.smtp,
     }
 }
 

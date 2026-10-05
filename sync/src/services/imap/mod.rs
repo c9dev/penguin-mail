@@ -19,6 +19,7 @@ mod window;
 mod writes;
 
 pub use api::{ImapApi, Submit};
+pub(crate) use outgoing::submit_over;
 
 use std::collections::{BTreeSet, HashMap, VecDeque};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};

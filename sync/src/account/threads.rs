@@ -44,6 +44,11 @@ impl AccountSync {
     /// only in part does not count: history speaks for the messages the
     /// store has, not for older ones it never fetched.
     async fn stored_and_current(&self, thread_id: &str) -> Result<bool, SyncError> {
+        // The store is the whole of an account whose mailboxes are local;
+        // there is no server to ask.
+        if self.services.mail.capabilities().local_mailboxes {
+            return Ok(true);
+        }
         let fresh = self
             .caught_up
             .lock()

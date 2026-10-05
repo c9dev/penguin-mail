@@ -61,7 +61,8 @@ pub use api::{AccountClient, DraftRef, GmailApi, SavedDraft};
 pub use backoff::{MOST_TRIES, backoff_delay, poll_offset, retry_delay, with_jitter};
 pub use calendar::{Added, Calendar};
 pub use connect::{
-    connect_account, connect_imap, connect_microsoft, connect_microsoft_at, server_of, servers_for,
+    connect_account, connect_imap, connect_microsoft, connect_microsoft_at, connect_pop3, pop3_servers_for,
+    server_of, servers_for,
 };
 pub use contacts::{Card, ContactBook, Refreshed};
 pub use engine::{EngineConfig, SyncEngine};
@@ -80,7 +81,7 @@ pub use services::{
     AccountServices, AnyAutoReply, Backfill, Found, ID_PAGE_SIZE, LIST_PAGE_SIZE, RawMessage,
     RemoteRef, SearchQuery, Want, AnyCalendar, AnyContacts, AnyIdentities, AnyMail, AnyRules,
     AutoReplyService, CalendarService, ContactsService, Google, GraphApi, Imap, ImapApi, ImapSettings,
-    IdentityService, KeywordsOf, KeywordsPage, MailBackend, MailCapabilities, Microsoft, MicrosoftSettings, Missing, Offers, Refused,
+    IdentityService, KeywordsOf, KeywordsPage, MailBackend, MailCapabilities, Microsoft, MicrosoftSettings, Missing, Offers, Pop3, Pop3Settings, Refused,
     Priority, Relocated, RemoteChange,
     RulesService, SendAsAddress, SyncState, Unapplied, Changes, RAW_LIMIT, Submit, Withheld,
     background, withheld_by_grant, CalDav, CardDav, LocalRules, RulesPlace, SieveRules,

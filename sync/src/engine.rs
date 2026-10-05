@@ -370,21 +370,37 @@ async fn run_account(
 /// Gmail's and list the labels when due, then load one backfill page. The
 /// account's mail service may set its own gap between polls, as an IMAP
 /// server with IDLE does. Returns true when more backfill pages remain.
-async fn tick(
+/// An account whose mailboxes are local lists them and nothing more.
+pub(crate) async fn tick(
     sync: &AccountSync,
     next_poll: &mut Instant,
     next_prune: &mut Instant,
     stagger: &mut Duration,
     config: &EngineConfig,
 ) -> Result<bool, SyncError> {
+    // An account whose mailboxes live only in the store is never pruned,
+    // relisted or paged: the store is its only copy. It lists its
+    // mailboxes once an hour, the first time before anything else, so the
+    // Inbox exists before mail arrives.
+    let local = sync.services().mail.capabilities().local_mailboxes;
+    if local && Instant::now() >= *next_prune {
+        sync.refresh_labels().await?;
+        *next_prune = Instant::now() + PRUNE_INTERVAL;
+        sync.set_checked_at(now_millis()).await?;
+    }
     if Instant::now() >= *next_poll {
-        sync.incremental().await?;
+        if !local {
+            sync.incremental().await?;
+        }
         let every = sync
             .services()
             .mail
             .poll_interval()
             .unwrap_or(config.poll_interval);
         *next_poll = Instant::now() + every + std::mem::take(stagger);
+    }
+    if local {
+        return Ok(false);
     }
     if Instant::now() >= *next_prune {
         sync.prune(now_millis()).await?;
