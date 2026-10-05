@@ -542,6 +542,101 @@ pub fn insert(buffer: &gtk::TextBuffer, body: &RichBody) {
     buffer.delete_mark(&end);
 }
 
+/// Puts `body` in place of the whole lines from `from` to `to`, styled,
+/// and leaves the cursor after them. Each picture on those lines stays in
+/// its own anchor: the first picture `body` names goes where the first
+/// anchor is, and so on, and an anchor `body` has no place for ends up at
+/// the end of the new lines.
+///
+/// Only the text around the anchors is deleted and written again. GTK's
+/// undo history records no anchor going into the buffer, so a picture
+/// deleted and drawn anew would leave every later Undo step one character
+/// out of place.
+pub fn rewrite(
+    buffer: &gtk::TextBuffer,
+    from: &gtk::TextIter,
+    to: &gtk::TextIter,
+    body: &RichBody,
+) {
+    let start = buffer.create_mark(None, from, true);
+    let end = buffer.create_mark(None, to, false);
+    let mut anchors = Vec::new();
+    let mut iter = *from;
+    while iter < *to {
+        if let Some(anchor) = iter.child_anchor() {
+            anchors.push(anchor);
+        }
+        iter.forward_char();
+    }
+    // The text between the anchors goes, last stretch first, which leaves
+    // the anchors side by side at the start.
+    for index in (0..=anchors.len()).rev() {
+        let mut after = match index {
+            0 => buffer.iter_at_mark(&start),
+            _ => {
+                let mut iter = buffer.iter_at_child_anchor(&anchors[index - 1]);
+                iter.forward_char();
+                iter
+            }
+        };
+        let mut before = match anchors.get(index) {
+            Some(anchor) => buffer.iter_at_child_anchor(anchor),
+            None => buffer.iter_at_mark(&end),
+        };
+        if after < before {
+            buffer.delete(&mut after, &mut before);
+        }
+    }
+    let first = buffer.iter_at_mark(&start).line();
+    let mut at = buffer.iter_at_mark(&start);
+    let mut kept = anchors.iter();
+    for (index, block) in body.blocks.iter().enumerate() {
+        if index > 0 {
+            buffer.insert(&mut at, "\n");
+        }
+        for span in &block.spans {
+            if span.image.is_none() {
+                insert_spans(buffer, &mut at, std::slice::from_ref(span), block.kind);
+            } else if let Some(anchor) = kept.next() {
+                at = buffer.iter_at_child_anchor(anchor);
+                at.forward_char();
+            }
+        }
+    }
+    let last = first + body.blocks.len().max(1) as i32 - 1;
+    for (index, block) in body.blocks.iter().enumerate() {
+        set_kind(buffer, first + index as i32, block.kind);
+    }
+    renumber(buffer, first, last);
+    buffer.place_cursor(&buffer.iter_at_mark(&end));
+    buffer.delete_mark(&start);
+    buffer.delete_mark(&end);
+}
+
+/// The rich body's tags on the picture at `iter`, when one is there.
+pub fn picture_tags(iter: &gtk::TextIter) -> Option<Vec<gtk::TextTag>> {
+    iter.child_anchor()?;
+    Some(iter.tags().into_iter().filter(is_body_tag).collect())
+}
+
+/// Gives the picture at `offset`, when one is there, `tags` in place of
+/// the body tags it has. GTK's undo history keeps no tags, and a picture
+/// stays in the buffer while Undo and Redo change the words around it, so
+/// the line kind Format gave it would otherwise outlast an Undo.
+pub fn retag_picture(buffer: &gtk::TextBuffer, offset: i32, tags: &[gtk::TextTag]) {
+    let at = buffer.iter_at_offset(offset);
+    if at.child_anchor().is_none() {
+        return;
+    }
+    let after = buffer.iter_at_offset(offset + 1);
+    for tag in at.tags().iter().filter(|tag| is_body_tag(tag)) {
+        buffer.remove_tag(tag, &at, &after);
+    }
+    for tag in tags {
+        buffer.apply_tag(tag, &at, &after);
+    }
+}
+
 /// Puts `spans` in at `at`, styled and tagged as a line of `kind`, and
 /// leaves `at` after them. Pictures are left out, since a span carries no
 /// bytes to draw one from.

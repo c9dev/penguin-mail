@@ -160,6 +160,34 @@ pub fn pending_removal(
     Ok(rows.collect::<rusqlite::Result<_>>()?)
 }
 
+/// Whether the account owes the server a DELE: one wanted and not yet
+/// confirmed, or with `before`, for Remove After {n} Days, a download
+/// older than that.
+pub fn removal_due(
+    conn: &Connection,
+    account_id: AccountId,
+    before: Option<EpochMillis>,
+) -> Result<bool> {
+    Ok(conn.query_row(
+        "SELECT EXISTS (SELECT 1 FROM pop3_seen WHERE account_id = ?1 AND removed = 0 \
+         AND (remove_wanted = 1 OR downloaded_at < ?2))",
+        params![account_id, before.unwrap_or(i64::MIN)],
+        |row| row.get(0),
+    )?)
+}
+
+/// Whether a check would ask for a message that failed before. A message
+/// whose answer ran past the cap is never asked for again, and once it
+/// shows in the menu, counting it again changes nothing.
+pub fn retry_due(conn: &Connection, account_id: AccountId) -> Result<bool> {
+    Ok(conn.query_row(
+        "SELECT EXISTS (SELECT 1 FROM pop3_failures WHERE account_id = ?1 \
+         AND (reason != 'too_large' OR failures < ?2))",
+        params![account_id, SHOWN_AFTER],
+        |row| row.get(0),
+    )?)
+}
+
 /// Records that a clean QUIT took each of `uidls` off the server.
 pub fn mark_removed(conn: &Connection, account_id: AccountId, uidls: &[String]) -> Result<()> {
     conn.execute(

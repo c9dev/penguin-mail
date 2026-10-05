@@ -144,7 +144,7 @@ impl<A: Accounts> Tools<A> {
         // come second, as the recipient suggestions put them.
         let from_mail: Vec<Value> = suggested
             .iter()
-            .filter(|s| !s.known)
+            .filter(|s| !s.known())
             .filter(|s| {
                 let text =
                     format!("{} {}", s.name.as_deref().unwrap_or_default(), s.email).to_lowercase();

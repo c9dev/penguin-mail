@@ -98,7 +98,7 @@ fn preview(text: Option<&str>) -> String {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
 
     const MAIL: &[u8] = b"From: Ana Lima <ana@example.org>\r\n\
@@ -165,10 +165,11 @@ Content-Type: multipart/mixed; boundary=b\r\n\r\npreamble\r\n--b\r\nContent-Type
 --b\r\nContent-Type: application/pdf\r\nContent-Disposition: attachment; filename=a.pdf\r\n\
 Content-Transfer-Encoding: base64\r\n\r\nJVBERg==\r\n--b--\r\nepilogue\r\n";
 
-    /// Message shapes a summary meets: alternatives, charsets, transfer
-    /// encodings, nesting, signatures, invitations, forwarded mail, a part
-    /// without headers, a boundary never closed.
-    const SHAPES: &[&[u8]] = &[
+    /// Message shapes a reader meets: alternatives, charsets, transfer
+    /// encodings, nesting, signatures, invitations, forwarded mail with and
+    /// without files and a transfer encoding, a part without headers, a
+    /// boundary never closed, base64 padded on every line.
+    pub(crate) const SHAPES: &[&[u8]] = &[
         MAIL,
         MIXED,
         b"Subject: alt\r\nContent-Type: multipart/alternative; boundary=\"x y\"\r\n\r\n--x y\r\n\
@@ -199,6 +200,21 @@ T2zDoSwgbXVuZG8hCg==\r\n",
         b"Subject: lf\nContent-Type: multipart/mixed; boundary=l\n\n--l\nContent-Type: text/plain\n\nBare line feeds.\n\
 --l\nContent-Type: application/zip\n\nPK\n--l--\n",
         b"Subject: none\r\nContent-Type: multipart/mixed\r\n\r\nA multipart with no boundary.\r\n",
+        b"Subject: fwd file\r\nContent-Type: multipart/mixed; boundary=f\r\n\r\n--f\r\nContent-Type: text/plain\r\n\r\n\
+See below.\r\n--f\r\nContent-Type: message/rfc822\r\n\r\nSubject: inner\r\n\
+Content-Type: multipart/mixed; boundary=g\r\n\r\n--g\r\nContent-Type: text/plain\r\n\r\nInner body.\r\n\
+--g\r\nContent-Type: application/pdf; name=in.pdf\r\nContent-Transfer-Encoding: base64\r\n\r\nSU5ORVI=\r\n--g--\r\n\
+--f--\r\n",
+        b"Subject: fwd b64\r\nContent-Type: multipart/mixed; boundary=f\r\n\r\n--f\r\nContent-Type: text/plain\r\n\r\n\
+See below.\r\n--f\r\nContent-Type: message/rfc822\r\nContent-Transfer-Encoding: base64\r\n\r\n\
+U3ViamVjdDogaW5uZXINCkNvbnRlbnQtVHlwZTogYXBwbGljYXRpb24vemlwOyBuYW1lPWEuemlwDQoNClBLAwQ=\r\n--f--\r\n",
+        b"Subject: qp file\r\nContent-Type: multipart/mixed; boundary=q\r\n\r\n--q\r\nContent-Type: text/plain\r\n\r\nHi.\r\n\
+--q\r\nContent-Type: text/csv; name=a.csv\r\nContent-Transfer-Encoding: quoted-printable\r\n\r\n\
+a,b=3Dc\r\n1,2=\r\n3\r\n--q--\r\n",
+        b"Subject: padded\r\nContent-Type: multipart/mixed; boundary=p\r\n\r\n--p\r\nContent-Type: text/plain\r\n\r\nHi.\r\n\
+--p\r\nContent-Type: image/png; name=p.png\r\nContent-Transfer-Encoding: base64\r\n\r\nQUI=\r\nQ0Q=\r\nRQ==\r\n--p--\r\n",
+        b"Subject: wrapped\r\nContent-Type: multipart/mixed; boundary=w\r\n\r\n--w\r\nContent-Type: text/plain\r\n\r\nHi.\r\n\
+--w\r\nContent-Type: image/gif; name=w.gif\r\nContent-Transfer-Encoding: base64\r\n\r\nR0lGO\r\nDlhAQ\r\nABAA\r\n--w--\r\n",
     ];
 
     /// What a summary's snippet and files were before it skimmed: from a

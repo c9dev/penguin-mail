@@ -975,6 +975,36 @@ fn migration_53_keeps_why_a_server_was_not_found() {
     assert_eq!(left, 0, "the rows go with the account");
 }
 
+/// Migration 54 keeps what the person answered when offered to save a
+/// sent message's new recipients, one row per account and address, gone
+/// with the account.
+#[test]
+fn migration_54_keeps_the_answers_to_saving_new_recipients() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("mail.db");
+    let conn = open_with(&path, &MIGRATIONS[..53]).unwrap();
+    conn.execute_batch(
+        "INSERT INTO accounts (id, email, added_at) VALUES (2, 'me@example.org', 0);",
+    )
+    .unwrap();
+    drop(conn);
+
+    let conn = open_with(&path, &MIGRATIONS[..54]).unwrap();
+    assert_eq!(schema_version(&conn).unwrap(), 54);
+    let offer = |email: &str, answer: &str| {
+        conn.execute(
+            "INSERT INTO contact_offers (account_id, email, answer, answered_at) VALUES (2, ?1, ?2, 1)",
+            [email, answer],
+        )
+    };
+    offer("ana@example.pt", "declined").unwrap();
+    offer("rui@example.pt", "saved").unwrap();
+    assert!(offer("eva@example.pt", "maybe").is_err(), "an answer is one of the codes");
+    conn.execute("DELETE FROM accounts WHERE id = 2", []).unwrap();
+    let left: i64 = conn.query_row("SELECT count(*) FROM contact_offers", [], |row| row.get(0)).unwrap();
+    assert_eq!(left, 0, "the rows go with the account");
+}
+
 /// Migration 52 keeps why each message failed as a code, translated when
 /// shown. An over-size failure stored before it held the words in English
 /// or European Portuguese, which become the code.

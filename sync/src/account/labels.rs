@@ -17,12 +17,34 @@ impl AccountSync {
     /// call, 1 quota unit on Gmail. Says whether anything changed, and only
     /// then tells the window, since the sidebar redraws on `LabelsChanged`.
     pub async fn refresh_labels(&self) -> Result<bool, SyncError> {
-        let account_id = self.account_id;
         let remote = self.services.mail.mailboxes().await?;
+        self.store_listing(remote).await
+    }
+
+    /// Brings the stored mailboxes in line with `remote`, the server's
+    /// listing.
+    pub(crate) async fn store_listing(&self, remote: Vec<RemoteMailbox>) -> Result<bool, SyncError> {
+        let account_id = self.account_id;
+        // A store-only account's listing is a read of the store, and its
+        // folders change only through the person, who stores each change
+        // as they make it. A listing read before they made, renamed or
+        // deleted one is out of date by the time it is stored, so only a
+        // role mailbox not yet stored comes from it.
+        let local = self.services.mail.capabilities().local_mailboxes;
         let (changed, threads) = self
             .db
             .write(move |c| {
                 let stored = mailboxes::listed(c, account_id)?;
+                if local {
+                    let mut changed = false;
+                    for mailbox in remote.iter().filter(|r| {
+                        r.role.is_some() && stored.iter().all(|s| s.id != r.id)
+                    }) {
+                        mailboxes::upsert(c, account_id, mailbox)?;
+                        changed = true;
+                    }
+                    return Ok((changed, Vec::new()));
+                }
                 let mut threads = Vec::new();
                 let mut changed = false;
                 for gone in stored

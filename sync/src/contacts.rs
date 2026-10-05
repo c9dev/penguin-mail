@@ -12,13 +12,16 @@
 //! stays with its contact for as long as Google serves it from the same
 //! URL.
 
+use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use mailrs_domain::{AccountId, EpochMillis};
+use mailrs_domain::{AccountId, Address, EpochMillis};
 use mailrs_gmail::{ContactFields, GmailError, Person};
 use mailrs_store::Db;
 use mailrs_store::address_book::{self, Contact};
+use mailrs_store::contact_offers::{self, Answer};
+use mailrs_store::contacts::is_automated;
 
 use crate::settings::Permitted;
 use crate::{Accounts, AnyContacts, BackendError, ContactsService, SyncError, now_millis};
@@ -50,6 +53,16 @@ pub struct Card {
     pub contact: Contact,
     /// The photo on disk, when there is one.
     pub photo: Option<PathBuf>,
+}
+
+/// What saving a sent message's new recipients did.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct SavedRecipients {
+    /// The contacts made, in the order asked.
+    pub saved: Vec<Contact>,
+    /// The people the provider would not take, for a reason other than a
+    /// missing permission.
+    pub failed: Vec<Address>,
 }
 
 pub struct ContactBook<A: Accounts> {
@@ -213,6 +226,123 @@ impl<A: Accounts> ContactBook<A> {
                 .await?;
         }
         Ok(Permitted::Done(contact))
+    }
+
+    /// The recipients of a message `account_id` sent that are worth
+    /// offering to save to its contacts.
+    ///
+    /// Someone counts as new when this account's address book lacks them
+    /// and the person has not answered an offer about them on this account
+    /// before. Correspondents found in mail count as new: only an address
+    /// book entry makes someone a contact. An account that keeps no
+    /// contacts is offered nobody, and neither are the accounts' own
+    /// addresses or no-reply senders. Each address comes once, with the
+    /// first name given for it.
+    pub async fn new_recipients(
+        &self,
+        account_id: AccountId,
+        recipients: &[Address],
+    ) -> Result<Vec<Address>, SyncError> {
+        if self.contacts(account_id).is_err() {
+            return Ok(Vec::new());
+        }
+        let wanted = recipients.to_vec();
+        let new = self
+            .db
+            .read(move |c| {
+                let answered = contact_offers::answered(c, account_id)?;
+                let own: HashSet<String> = mailrs_store::accounts::list_accounts(c)?
+                    .into_iter()
+                    .map(|a| a.email.to_lowercase())
+                    .collect();
+                let mut new: Vec<Address> = Vec::new();
+                for person in wanted {
+                    let key = person.email.trim().to_lowercase();
+                    let usable = key.contains('@')
+                        && !key.contains(char::is_whitespace)
+                        && !own.contains(&key)
+                        && !is_automated(&key)
+                        && !answered.contains(&key);
+                    if !usable || address_book::holds(c, account_id, &key)? {
+                        continue;
+                    }
+                    match new.iter_mut().find(|n| n.email.eq_ignore_ascii_case(&key)) {
+                        Some(seen) => {
+                            if seen.name.is_none() {
+                                seen.name = name_of(&person);
+                            }
+                        }
+                        None => new.push(Address {
+                            name: name_of(&person),
+                            email: person.email.trim().to_string(),
+                        }),
+                    }
+                }
+                Ok(new)
+            })
+            .await?;
+        Ok(new)
+    }
+
+    /// Makes a contact of each of `people` on `account_id`, and keeps it in
+    /// the address book on this computer, so none of them is offered
+    /// again. A missing permission stops the run before anyone else is
+    /// tried; whoever was saved by then stays saved.
+    pub async fn save_recipients(
+        &self,
+        account_id: AccountId,
+        people: &[Address],
+    ) -> Result<Permitted<SavedRecipients>, SyncError> {
+        let mut done = SavedRecipients::default();
+        let mut stopped = false;
+        for person in people {
+            let fields = ContactFields {
+                name: name_of(person),
+                emails: Some(vec![person.email.trim().to_string()]),
+                ..ContactFields::default()
+            };
+            match self.create(account_id, &fields, true).await {
+                Ok(Permitted::Done(contact)) => done.saved.push(contact),
+                Ok(Permitted::NeedsPermission) => {
+                    stopped = true;
+                    break;
+                }
+                Err(err) => {
+                    tracing::warn!(error = %err, "could not save a recipient to contacts");
+                    done.failed.push(person.clone());
+                }
+            }
+        }
+        let saved: Vec<String> = done
+            .saved
+            .iter()
+            .filter_map(|contact| contact.email().map(str::to_string))
+            .collect();
+        if !saved.is_empty() {
+            let at = now_millis();
+            self.db
+                .write(move |c| contact_offers::record(c, account_id, &saved, Answer::Saved, at))
+                .await?;
+        }
+        Ok(match stopped {
+            true => Permitted::NeedsPermission,
+            false => Permitted::Done(done),
+        })
+    }
+
+    /// Records that the person let the offer to save `emails` to
+    /// `account_id` go without saving, so it is not made again.
+    pub async fn decline_recipients(
+        &self,
+        account_id: AccountId,
+        emails: &[String],
+    ) -> Result<(), SyncError> {
+        let emails = emails.to_vec();
+        let at = now_millis();
+        self.db
+            .write(move |c| contact_offers::record(c, account_id, &emails, Answer::Declined, at))
+            .await?;
+        Ok(())
     }
 
     /// The contact holding `email`, for a card.
@@ -393,6 +523,17 @@ impl<A: Accounts> ContactBook<A> {
             .contacts
             .ok_or(SyncError::Backend(BackendError::Unsupported))
     }
+}
+
+/// The name a header gave `person`, unless it is empty or only repeats an
+/// address.
+fn name_of(person: &Address) -> Option<String> {
+    person
+        .name
+        .as_deref()
+        .map(str::trim)
+        .filter(|n| !n.is_empty() && !n.contains('@'))
+        .map(str::to_string)
 }
 
 /// The file one contact's photo goes in. Google's resource names are

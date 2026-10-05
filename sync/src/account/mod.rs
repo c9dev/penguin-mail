@@ -66,8 +66,9 @@ pub struct AccountSync {
     /// Held for a POP3 account's whole check. Most POP3 servers lock the
     /// maildrop for one session, so a second check started meanwhile, by
     /// the timer or by Check for Mail, waits here rather than meeting the
-    /// lock and failing.
-    pop3_checking: tokio::sync::Mutex<()>,
+    /// lock and failing. It keeps what the last clean check found, so a
+    /// check that finds the server as it was can stop at `STAT`.
+    pop3_checking: tokio::sync::Mutex<Option<pop3::Quiet>>,
     /// Counts the changes to this account's mail, so a search kept to
     /// list a folder can tell it no longer says what the folder holds.
     mail_changes: AtomicU64,
@@ -100,7 +101,7 @@ impl AccountSync {
             hits: Mutex::default(),
             raw: Arc::new(Mutex::new(RawCache::new(RAW_CACHE_BYTES))),
             moving: tokio::sync::Mutex::new(()),
-            pop3_checking: tokio::sync::Mutex::new(()),
+            pop3_checking: tokio::sync::Mutex::new(None),
             mail_changes: AtomicU64::new(0),
         }
     }

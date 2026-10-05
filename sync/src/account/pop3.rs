@@ -2,12 +2,16 @@
 //! download what is new a message at a time, ask for the DELEs the
 //! account's setting wants, and sign off. Each message's bytes are written
 //! before the next is asked for, and the server's list is compared with
-//! the store a page at a time.
+//! the store a page at a time. When `STAT` finds the server as the last
+//! clean check left it and the store owes it nothing, the check signs off
+//! without listing.
 
 use std::collections::{BTreeSet, HashMap, HashSet};
+use std::time::Duration;
 
 use mailrs_domain::{ChangeEvent, RemoveSetting};
-use mailrs_pop3::{MOST_MESSAGE_BYTES, Pop3Api, Pop3Error, Uidl, UidlListing};
+use mailrs_pop3::{MOST_MESSAGE_BYTES, Pop3Api, Pop3Error, Stat, Uidl, UidlListing};
+use tokio::time::Instant;
 use mailrs_store::pop3::FailReason;
 use mailrs_store::{accounts, pop3};
 
@@ -17,12 +21,33 @@ use crate::{AnyMail, BackendError, SyncError, now_millis};
 
 const DAY: i64 = 24 * 60 * 60 * 1000;
 
+/// How long `STAT` alone may stand for the server's list. Two maildrops
+/// match in count and octets when another client removed a message and a
+/// new one of the same size came, and only a full listing tells them
+/// apart.
+const FULL_LISTING_EVERY: Duration = Duration::from_secs(60 * 60);
+
+/// What the last clean check found, so the next one can stop at `STAT`
+/// when the server holds what it held then.
+pub(super) struct Quiet {
+    stat: Stat,
+    /// When the server's list was last read in full.
+    listed_at: Instant,
+}
+
+/// Downloads older than this go under Remove After `days` Days.
+fn removal_cutoff(days: u32) -> i64 {
+    now_millis() - i64::from(days) * DAY
+}
+
 /// What a check did before its QUIT.
 #[derive(Default)]
 struct Done {
     /// Every UIDL the server listed, once the listing came back whole and
     /// every line of it read. Empty otherwise, and nothing is forgotten.
     listed: HashSet<String>,
+    /// The listing came back whole and every line of it read.
+    listed_whole: bool,
     /// The UIDLs a DELE went out for this session.
     removed: Vec<String>,
     threads: BTreeSet<String>,
@@ -56,15 +81,53 @@ impl AccountSync {
 
     /// The check over `pop3`, one at a time for this account.
     pub(crate) async fn check_with<P: Pop3Api>(&self, pop3: &P) -> Result<(), SyncError> {
-        let _one = self.pop3_checking.lock().await;
+        let mut quiet = self.pop3_checking.lock().await;
         let account_id = self.account_id;
-        // Read at each check: Server Settings for the account can change
-        // it between checks.
-        let remove = self
+        // The setting is read at each check: Server Settings for the
+        // account can change it between checks. Work the store owes the
+        // server makes the check list the server whatever `STAT` says.
+        let (remove, owed) = self
             .db
-            .read(move |c| accounts::pop3_remove(c, account_id))
+            .read(move |c| {
+                let remove = accounts::pop3_remove(c, account_id)?;
+                let removal = match remove {
+                    // Leave on Server sends no DELE, even for a row an
+                    // earlier setting marked.
+                    RemoveSetting::Never => false,
+                    RemoveSetting::Downloaded => pop3::removal_due(c, account_id, None)?,
+                    RemoveSetting::Days(days) => {
+                        pop3::removal_due(c, account_id, Some(removal_cutoff(days)))?
+                    }
+                };
+                let owed = removal
+                    || pop3::retry_due(c, account_id)?
+                    || !pop3::first_check_finished(c, account_id)?;
+                Ok((remove, owed))
+            })
             .await?;
+        // A check that fails from here on leaves nothing to compare with.
+        let last = quiet.take();
         pop3.connect().await.map_err(BackendError::from)?;
+        let stat = match pop3.stat().await {
+            Ok(stat) => Some(stat),
+            // RFC 1939 requires STAT, and a server that refuses it gets
+            // the full listing at every check.
+            Err(Pop3Error::Refused(_)) => None,
+            Err(err) => {
+                let _ = pop3.quit().await;
+                return Err(BackendError::from(err).into());
+            }
+        };
+        if let (Some(stat), Some(last)) = (stat, last)
+            && !owed
+            && stat == last.stat
+            && last.listed_at.elapsed() < FULL_LISTING_EVERY
+        {
+            pop3.quit().await.map_err(BackendError::from)?;
+            *quiet = Some(last);
+            return Ok(());
+        }
+        let listed_at = Instant::now();
         let mut done = Done::default();
         let checked = self.check_session(pop3, remove, &mut done).await;
         // After a failure, QUIT still lets go of the server's lock. A DELE
@@ -73,6 +136,7 @@ impl AccountSync {
         let quit = pop3.quit().await;
         let Done {
             listed,
+            listed_whole,
             removed,
             threads,
             new_mail,
@@ -97,6 +161,13 @@ impl AccountSync {
         // A QUIT that did not come back carried out no DELE; the rows still
         // want removal, and the next check sends them again.
         quit.map_err(BackendError::from)?;
+        // The DELEs a clean QUIT carried out changed the maildrop after its
+        // STAT, and a listing with a line that did not read may hide a
+        // message, so neither check is one to compare with.
+        *quiet = match (stat, removed.is_empty() && listed_whole) {
+            (Some(stat), true) => Some(Quiet { stat, listed_at }),
+            _ => None,
+        };
         let menu_changed = self
             .db
             .write(move |c| {
@@ -150,7 +221,7 @@ impl AccountSync {
             unreadable,
         } = listing;
         if let RemoveSetting::Days(days) = remove {
-            let cutoff = now_millis() - i64::from(days) * DAY;
+            let cutoff = removal_cutoff(days);
             self.db
                 .write(move |c| pop3::want_removed_before(c, account_id, cutoff))
                 .await?;
@@ -183,6 +254,7 @@ impl AccountSync {
         // A line that did not read left its message out of the listing,
         // and forgetting what the listing lacks would forget that one too.
         if unreadable == 0 {
+            done.listed_whole = true;
             done.listed = listed.into_iter().map(|u| u.uidl).collect();
         } else {
             tracing::warn!(

@@ -591,17 +591,9 @@ fn resident_peak() -> usize {
         .map_or(0, |kb| kb * 1024)
 }
 
-/// Run alone, so other tests add nothing to the process's peak:
-/// `cargo test -p mailrs-sync --lib -- --ignored a_large_message_downloads`
-///
-/// One message of 32 MB, nearly all of it a base64 file. Downloading it
-/// should hold the message once, plus what reading its headers and first
-/// text part takes; the Rust heap peak leaves out SQLite's own memory,
-/// which the resident peak shows.
-#[tokio::test]
-#[ignore = "a measurement of the whole process, run alone"]
-async fn a_large_message_downloads_holding_it_about_once() {
-    use crate::tests::heap::ProcessMark;
+/// A server holding one message of 32 MB, nearly all of it a base64 file
+/// of the letter A, as part "2". Answers the message's size.
+fn large_message() -> (FakePop3, usize) {
     let line = format!("{}\r\n", "QUFB".repeat(19));
     let lines = (32 << 20) / line.len();
     let mut raw = String::with_capacity(lines * line.len() + 1024);
@@ -616,8 +608,61 @@ async fn a_large_message_downloads_holding_it_about_once() {
     }
     raw.push_str("--b--\r\n");
     let size = raw.len();
-    let fake = FakePop3::default().with_message("big", raw.as_bytes());
-    drop(raw);
+    (FakePop3::default().with_message("big", raw.as_bytes()), size)
+}
+
+/// Run alone, so other tests add nothing to the process's peak:
+/// `cargo test -p mailrs-sync --lib -- --ignored a_large_message_opens`
+///
+/// Opening the message reads its structure and text; saving its file
+/// reads that part alone. Neither should decode the file on the way, nor
+/// hold the message more than once.
+#[tokio::test]
+#[ignore = "a measurement of the whole process, run alone"]
+async fn a_large_message_opens_and_saves_its_file_holding_it_at_most_once() {
+    use crate::tests::heap::ProcessMark;
+    let (fake, size) = large_message();
+    let h = pop3_harness(fake, RemoveSetting::Never).await;
+    h.sync.pop3_check().await.unwrap();
+
+    let _ = std::fs::write("/proc/self/clear_refs", "5");
+    let resident = resident_peak();
+    let mark = ProcessMark::start();
+    let body = h.sync.body("pop3/big").await.unwrap();
+    let (open_heap, open_resident) = (mark.peak(), resident_peak().saturating_sub(resident));
+    eprintln!("opening a {size}-byte message: heap peak {open_heap} bytes, resident peak {open_resident} bytes");
+    assert_eq!(body.text.as_deref(), Some("The scans are attached."));
+    let file = &body.attachments[0];
+    assert_eq!(file.filename, "scans.pdf");
+
+    let _ = std::fs::write("/proc/self/clear_refs", "5");
+    let resident = resident_peak();
+    let mark = ProcessMark::start();
+    let bytes = h.sync.attachment("pop3/big", &file.part_id).await.unwrap();
+    let (save_heap, save_resident) = (mark.peak(), resident_peak().saturating_sub(resident));
+    eprintln!("saving its {}-byte file: heap peak {save_heap} bytes, resident peak {save_resident} bytes", bytes.len());
+    assert_eq!(bytes.len() as i64, file.size);
+    assert!(bytes.iter().all(|b| *b == b'A'));
+
+    assert!(open_heap < size * 6 / 5, "opening held {open_heap} bytes for a {size}-byte message");
+    assert!(open_resident < size * 3 / 2, "opening raised resident memory {open_resident} bytes");
+    // The file decoded is three quarters of the message.
+    assert!(save_heap < size * 4 / 5, "saving the file held {save_heap} bytes for a {size}-byte message");
+    assert!(save_resident < size, "saving the file raised resident memory {save_resident} bytes");
+}
+
+/// Run alone, so other tests add nothing to the process's peak:
+/// `cargo test -p mailrs-sync --lib -- --ignored a_large_message_downloads`
+///
+/// One message of 32 MB, nearly all of it a base64 file. Downloading it
+/// should hold the message once, plus what reading its headers and first
+/// text part takes; the Rust heap peak leaves out SQLite's own memory,
+/// which the resident peak shows.
+#[tokio::test]
+#[ignore = "a measurement of the whole process, run alone"]
+async fn a_large_message_downloads_holding_it_about_once() {
+    use crate::tests::heap::ProcessMark;
+    let (fake, size) = large_message();
     let h = pop3_harness(fake, RemoveSetting::Never).await;
     let _ = std::fs::write("/proc/self/clear_refs", "5");
     let resident = resident_peak();
@@ -650,4 +695,102 @@ async fn a_first_download_holds_one_message_at_a_time() {
     eprintln!("200 messages of 250 KB held {peak} bytes at the peak");
     assert_eq!(h.ids_in(MailSet::Role(Role::Inbox)).await.len(), 200);
     assert!(peak < 16 << 20, "the check held {peak} bytes; 200 messages come to 50 MB");
+}
+
+/// A check after a clean one, with no new mail, no removal due and no
+/// failure to retry.
+const QUIET: [&str; 2] = ["STAT", "QUIT"];
+
+/// Leave on Server checks every minute, and listing a large maildrop costs
+/// megabytes each time.
+#[tokio::test]
+async fn a_check_finding_the_server_as_it_was_sends_only_stat_and_quit() {
+    let fake = FakePop3::default().with_message("u1", &pop3_mail(1)).with_message("u2", &pop3_mail(2));
+    let h = pop3_harness(fake, RemoveSetting::Never).await;
+    h.sync.pop3_check().await.unwrap();
+    h.fake.clear_commands();
+    h.sync.pop3_check().await.unwrap();
+    assert_eq!(h.fake.commands(), QUIET);
+    assert_eq!(h.fake.in_flight(), 0, "the session ended");
+}
+
+#[tokio::test]
+async fn new_mail_after_a_quiet_check_brings_the_listing_back() {
+    let h = pop3_harness(FakePop3::default().with_message("u1", &pop3_mail(1)), RemoveSetting::Never).await;
+    h.sync.pop3_check().await.unwrap();
+    h.sync.pop3_check().await.unwrap();
+    h.fake.add("u2", &pop3_mail(2));
+    h.fake.clear_commands();
+    h.sync.pop3_check().await.unwrap();
+    assert_eq!(h.fake.commands(), ["STAT", "UIDL", "LIST", "RETR", "QUIT"]);
+    assert_eq!(h.ids_in(MailSet::Role(Role::Inbox)).await, ["pop3/u1", "pop3/u2"]);
+    h.fake.clear_commands();
+    h.sync.pop3_check().await.unwrap();
+    assert_eq!(h.fake.commands(), QUIET, "the new mail is down, so the next check is quiet again");
+}
+
+#[tokio::test]
+async fn a_removal_coming_due_brings_the_listing_back() {
+    let h = pop3_harness(FakePop3::default().with_message("u1", &pop3_mail(1)), RemoveSetting::Days(30)).await;
+    h.sync.pop3_check().await.unwrap();
+    h.fake.clear_commands();
+    h.sync.pop3_check().await.unwrap();
+    assert_eq!(h.fake.commands(), QUIET, "not thirty days yet");
+    let account_id = h.account_id;
+    let long_ago = now_millis() - 40 * DAY;
+    h.db.write(move |c| {
+        c.execute(
+            "UPDATE pop3_seen SET downloaded_at = ?2 WHERE account_id = ?1",
+            rusqlite::params![account_id, long_ago],
+        )?;
+        Ok(())
+    })
+    .await
+    .unwrap();
+    h.sync.pop3_check().await.unwrap();
+    assert_eq!(h.fake.deleted(), [1], "forty days on, the DELE goes");
+    assert!(h.fake.held().is_empty());
+}
+
+#[tokio::test]
+async fn delete_forever_after_a_quiet_check_brings_the_listing_back() {
+    let h = pop3_harness(FakePop3::default().with_message("u1", &pop3_mail(1)), RemoveSetting::Days(30)).await;
+    h.sync.pop3_check().await.unwrap();
+    h.sync.pop3_check().await.unwrap();
+    let thread = h.thread_of("pop3/u1").await;
+    h.sync.erase_all(&[Target::thread(h.account_id, thread)]).await.unwrap();
+    h.sync.pop3_check().await.unwrap();
+    assert_eq!(h.fake.deleted(), [1]);
+}
+
+#[tokio::test]
+async fn a_message_to_try_again_keeps_the_listing_at_every_check() {
+    let fake = FakePop3::default()
+        .with_message("u1", &pop3_mail(1))
+        .with_message("u2", &pop3_mail(2))
+        .failing_retr("u2");
+    let h = pop3_harness(fake, RemoveSetting::Never).await;
+    for _ in 0..3 {
+        h.sync.pop3_check().await.unwrap();
+    }
+    assert_eq!(h.fake.retr_calls(), [1, 2, 2, 2], "u2 is asked for at each check");
+}
+
+/// Two maildrops can match in count and octets: a message another client
+/// removed and a new one of the same size. A full listing once an hour
+/// finds the new one.
+#[tokio::test]
+async fn a_quiet_server_is_listed_in_full_once_an_hour() {
+    let h = pop3_harness(FakePop3::default().with_message("u1", &pop3_mail(1)), RemoveSetting::Never).await;
+    h.sync.pop3_check().await.unwrap();
+    h.fake.take("u1");
+    h.fake.add("u9", &pop3_mail(1));
+    h.fake.clear_commands();
+    h.sync.pop3_check().await.unwrap();
+    assert_eq!(h.fake.commands(), QUIET, "STAT cannot tell the two apart");
+    tokio::time::pause();
+    tokio::time::advance(Duration::from_secs(61 * 60)).await;
+    h.sync.pop3_check().await.unwrap();
+    assert!(h.fake.commands().contains(&"UIDL"));
+    assert_eq!(h.ids_in(MailSet::Role(Role::Inbox)).await, ["pop3/u1", "pop3/u9"]);
 }

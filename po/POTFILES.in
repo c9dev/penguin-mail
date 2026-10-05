@@ -23,6 +23,7 @@ app/src/assistant/sources/web.rs
 app/src/assistant/turn.rs
 app/src/autostart.rs
 app/src/compose.rs
+app/src/contacts.rs
 app/src/core.rs
 app/src/event_reminders/notice.rs
 app/src/format.rs
@@ -51,6 +52,7 @@ app/src/ui/assistant_prefs.rs
 app/src/ui/assistant.rs
 app/src/ui/assistant_skills_prefs.rs
 app/src/ui/assistant_web_prefs.rs
+app/src/ui/autocomplete.rs
 app/src/ui/calendar/agenda.rs
 app/src/ui/calendar/attachments.rs
 app/src/ui/calendar/block.rs
@@ -120,6 +122,7 @@ app/src/ui/window/outbox.rs
 app/src/ui/window/press.rs
 app/src/ui/window/reminders.rs
 app/src/ui/window/reveal.rs
+app/src/ui/window/save_contacts.rs
 app/src/ui/window.rs
 app/src/ui/window/scheduled.rs
 app/src/ui/window/senders.rs

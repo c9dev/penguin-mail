@@ -164,6 +164,20 @@ pub fn find(conn: &Connection, email: &str) -> Result<Option<Contact>> {
     Ok(found.into_iter().next())
 }
 
+/// Whether `account_id`'s address book has a contact with the address
+/// `email`, whatever its case.
+pub fn holds(conn: &Connection, account_id: AccountId, email: &str) -> Result<bool> {
+    let key = email.trim().to_lowercase();
+    Ok(conn
+        .query_row(
+            "SELECT 1 FROM contact_addresses WHERE email = ?1 AND account_id = ?2 LIMIT 1",
+            params![key, account_id],
+            |_| Ok(()),
+        )
+        .optional()?
+        .is_some())
+}
+
 /// The photos Google serves that are not on disk yet, as resource and URL.
 pub fn missing_photos(conn: &Connection, account_id: AccountId) -> Result<Vec<(String, String)>> {
     let mut stmt = conn.prepare(
@@ -289,6 +303,20 @@ mod tests {
             "{plan:?}"
         );
         assert!(!plan.iter().any(|p| p.starts_with("SCAN c")), "{plan:?}");
+    }
+
+    #[test]
+    fn an_address_book_holds_only_its_own_contacts_addresses() {
+        let conn = open_in_memory().unwrap();
+        let home = accounts::insert_account(&conn, "dana@example.com", 0).unwrap();
+        let work = accounts::insert_account(&conn, "dana@work.example", 0).unwrap();
+        save(
+            &conn,
+            &[contact(work, "people/c1", "Mara Okafor", &["mara@example.org"])],
+        )
+        .unwrap();
+        assert!(holds(&conn, work, " MARA@example.org").unwrap());
+        assert!(!holds(&conn, home, "mara@example.org").unwrap());
     }
 
     #[test]
