@@ -99,6 +99,23 @@ the focus goes back to the entry once no chip is left. Each chip reads as
 its name and address with "Press Delete to remove" after it, and carries
 a `recipient.remove` action a screen reader can run; its close button
 runs the same action.
+
+## The thread list from the keyboard
+
+The thread list is one Tab stop, like the mailbox list. Its list view
+uses GTK's `ListTabBehavior::Item`, so Tab and Shift+Tab leave it, and
+Up, Down, Home, End, Page Up and Page Down move between rows. Moving
+selects the row and opens its conversation, as a click does, since the
+reading pane is where the row's content is. With nothing open, the
+first arrow opens the row under the focus rather than the next one;
+GTK's list view does that. Enter opens the
+conversation in a window of its own. Tab lands on the open
+conversation's row, or the first row when none is open: GTK would go
+back to the row the focus last left, which a reload can leave somewhere
+else (`thread_list/entry.rs`). Each list item carries the row's spoken
+name, so a screen reader reads the row the focus reaches. GTK draws
+libadwaita's focus ring on a row the arrows reach in a list view, so
+this list needs none of the sidebar's `keyed` class.
 ## Menus
 
 A thread row's menu holds `Export…`, and in the Outbox `Edit…`, `Send

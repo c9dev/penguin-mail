@@ -41,8 +41,8 @@ mod imp {
         /// Opens the row's menu: at a point for a click, over the whole
         /// row for a key.
         pub menu: RefCell<Option<super::OpenMenu>>,
-        /// The list item that holds the row, which takes the row's
-        /// spoken name.
+        /// The list item that holds the row, so the list can ask which
+        /// position the focused row shows.
         pub item: glib::WeakRef<gtk::ListItem>,
     }
 
@@ -312,6 +312,13 @@ impl ThreadRow {
     /// Remembers the list item that holds the row.
     pub fn set_item(&self, item: &gtk::ListItem) {
         self.imp().item.set(Some(item));
+    }
+
+    /// The position in the list the row shows, or `None` while it shows
+    /// nothing.
+    pub fn position(&self) -> Option<u32> {
+        let position = self.imp().item.upgrade()?.position();
+        (position != gtk::INVALID_LIST_POSITION).then_some(position)
     }
 
     /// Opens the row's menu over the row, and says whether it has one.

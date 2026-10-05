@@ -2,6 +2,8 @@
 //! One page of rows loads at a time; scrolling near the end asks for more.
 //! Every row is held once, behind an `Rc`, and shared with the list model.
 
+mod entry;
+
 use std::cell::{Cell, RefCell};
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
@@ -184,8 +186,13 @@ impl ThreadList {
             .factory(&factory)
             .css_classes(["navigation-sidebar", "thread-list"])
             .single_click_activate(false)
+            // One Tab stop for the whole list: Tab and Shift+Tab leave it,
+            // and the arrows, Home, End, Page Up and Page Down move
+            // between rows, opening each as before.
+            .tab_behavior(gtk::ListTabBehavior::Item)
             .build();
         view.add_controller(menu_keys());
+        land_on_selection(&view, &selection);
         let scroller = gtk::ScrolledWindow::builder()
             .hscrollbar_policy(gtk::PolicyType::Never)
             .vexpand(true)
@@ -855,6 +862,47 @@ fn menu_keys() -> gtk::ShortcutController {
         controller.add_shortcut(gtk::Shortcut::new(trigger, Some(action)));
     }
     controller
+}
+
+/// Moves the focus to the open conversation's row when Tab brings it
+/// into the list, or to the first row when none is open (`entry`). GTK
+/// would go back to the row the focus last left, which a reload or a
+/// selection made elsewhere can leave somewhere else. A press in the list
+/// brings the focus in to the row under the pointer, so that way in is
+/// left alone.
+fn land_on_selection(view: &gtk::ListView, selection: &gtk::MultiSelection) {
+    let pressed = Rc::new(Cell::new(false));
+    let press = gtk::GestureClick::builder().button(0).build();
+    press.set_propagation_phase(gtk::PropagationPhase::Capture);
+    let held = Rc::clone(&pressed);
+    press.connect_pressed(move |_, _, _, _| held.set(true));
+    view.add_controller(press);
+    let focus = gtk::EventControllerFocus::new();
+    let held = Rc::clone(&pressed);
+    focus.connect_leave(move |_| held.set(false));
+    let (list, selection) = (view.downgrade(), selection.clone());
+    focus.connect_enter(move |_| {
+        if pressed.replace(false) {
+            return;
+        }
+        // The move waits for GTK to finish the focus change under way.
+        let (list, selection) = (list.clone(), selection.clone());
+        glib::idle_add_local_once(move || {
+            let Some(list) = list.upgrade() else { return };
+            let Some(row) = list.focus_child() else { return };
+            let focused = row
+                .first_child()
+                .and_downcast::<ThreadRow>()
+                .and_then(|row| row.position());
+            let chosen = selection.selection();
+            let first = (!chosen.is_empty()).then(|| chosen.minimum());
+            let held = focused.is_some_and(|at| chosen.contains(at));
+            if let Some(to) = entry::landing(selection.n_items(), focused, held, first) {
+                list.scroll_to(to, gtk::ListScrollFlags::FOCUS, None);
+            }
+        });
+    });
+    view.add_controller(focus);
 }
 
 /// The positions of the rows whose keys are in `keys`, in order.
