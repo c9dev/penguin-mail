@@ -47,8 +47,10 @@ struct Inner {
     /// Every `quit` fails as a dropped connection would.
     drop_before_quit: bool,
     /// After this many answered `retr`s, the next one fails as a dropped
-    /// connection would.
+    /// connection would, and the server stays out of reach.
     drop_after_retrs: Option<usize>,
+    /// Every `connect` fails as an unreachable server's would.
+    gone: bool,
     retr_calls: Vec<u32>,
     deleted: Vec<u32>,
     connects: usize,
@@ -81,6 +83,7 @@ impl Default for FakePop3 {
                 garbled: BTreeSet::new(),
                 drop_before_quit: false,
                 drop_after_retrs: None,
+                gone: false,
                 retr_calls: Vec::new(),
                 deleted: Vec::new(),
                 connects: 0,
@@ -170,8 +173,9 @@ impl FakePop3 {
     }
 
     /// Once `answered` `retr`s have gone through, the next one fails as a
-    /// dropped connection would, and the session ends.
-    pub fn dropping_after_retrs(self, answered: usize) -> Self {
+    /// dropped connection would, the session ends, and the server cannot
+    /// be reached again.
+    pub fn going_away_after_retrs(self, answered: usize) -> Self {
         self.lock().drop_after_retrs = Some(answered);
         self
     }
@@ -293,6 +297,9 @@ impl Pop3Api for FakePop3 {
     async fn connect(&self) -> Result<Capabilities, Pop3Error> {
         let mut inner = self.lock();
         inner.connects += 1;
+        if inner.gone {
+            return Err(Pop3Error::Network("the server cannot be reached".into()));
+        }
         if inner.refuse_sign_in {
             return Err(Pop3Error::Auth { text: "invalid login".into() });
         }
@@ -354,6 +361,7 @@ impl Pop3Api for FakePop3 {
         let mut inner = self.lock();
         if inner.drop_after_retrs.is_some_and(|n| inner.retr_calls.len() > n) {
             inner.end_session();
+            inner.gone = true;
             return Err(Pop3Error::Network("the connection dropped".into()));
         }
         let uidl = inner.uidl_of(id)?;

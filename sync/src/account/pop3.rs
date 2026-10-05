@@ -314,21 +314,17 @@ impl AccountSync {
                 tracing::warn!(account = account_id, uidl, %err, "the server would not hand over a message");
                 done.failing_grew |= self.count_failure(pop3, *id, uidl, &err, true).await?;
             }
-            // An answer past the cap that LIST put under it, or one that is
-            // not POP3, leaves the rest of it unread, and the client has
-            // dropped the session. The message is counted and another
-            // session carries on with the rest.
-            Err(err @ (Pop3Error::TooLarge | Pop3Error::Protocol(_))) => {
+            // An answer past the cap that LIST put under it, one that is not
+            // POP3, or a connection that drops partway leaves the rest of it
+            // unread, and the client has dropped the session. The message is
+            // counted and another session carries on with the rest, so a
+            // server that drops on one message every time still gets its
+            // DELEs. A server that is down fails that session's connect and
+            // ends the check.
+            Err(err @ (Pop3Error::TooLarge | Pop3Error::Protocol(_) | Pop3Error::Network(_))) => {
                 tracing::warn!(account = account_id, uidl, %err, "could not read a message's answer");
                 done.failing_grew |= self.count_failure(pop3, *id, uidl, &err, false).await?;
                 return Ok(false);
-            }
-            // A connection that drops ends the check. Counting the message
-            // in flight puts it after the rest at the next check, in case
-            // it is what the server drops on.
-            Err(err @ Pop3Error::Network(_)) => {
-                done.failing_grew |= self.count_failure(pop3, *id, uidl, &err, false).await?;
-                return Err(BackendError::from(err).into());
             }
             Err(err) => return Err(BackendError::from(err).into()),
         }

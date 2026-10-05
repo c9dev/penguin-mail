@@ -329,8 +329,8 @@ fn five() -> FakePop3 {
 
 #[tokio::test]
 async fn a_first_check_cut_short_carries_on_as_a_first_check() {
-    let h = pop3_harness(five().dropping_after_retrs(2), RemoveSetting::Never).await;
-    assert!(h.sync.pop3_check().await.is_err(), "the connection dropped");
+    let h = pop3_harness(five().going_away_after_retrs(2), RemoveSetting::Never).await;
+    assert!(h.sync.pop3_check().await.is_err(), "the connection dropped and the server cannot be reached");
     assert!(!first_check_finished(&h).await, "two of five is not the first check done");
     drain(&h);
 
@@ -454,22 +454,25 @@ async fn a_garbled_retr_answer_is_counted_and_the_rest_download() {
     assert_eq!(failed_as(&h, "u2").await, [("u2".to_string(), FailReason::Unreadable)]);
 }
 
-/// A connection that drops on one message every time must not stop every
-/// message listed after it.
+/// A connection that drops on one message every time, as a corrupt file in
+/// the maildrop can make it, must not stop the messages listed after it
+/// or the removals the account wants.
 #[tokio::test]
-async fn a_message_the_connection_drops_on_is_recorded_and_tried_after_the_rest() {
+async fn a_message_the_connection_drops_on_is_recorded_and_the_check_carries_on() {
     let dropping = three().breaking_retr("u1", Pop3Error::Network("the connection dropped".into()));
-    let h = pop3_harness(dropping, RemoveSetting::Never).await;
-    assert!(h.sync.pop3_check().await.is_err(), "the connection dropped");
+    let h = pop3_harness(dropping, RemoveSetting::Downloaded).await;
+    h.sync.pop3_check().await.unwrap();
     assert_eq!(failed_as(&h, "u1").await, [("u1".to_string(), FailReason::Dropped)]);
-    assert!(h.sync.pop3_check().await.is_err(), "it drops on u1 again");
-    assert_eq!(h.fake.retr_calls(), [1, 2, 3, 1], "u2 and u3 come down before u1 is tried again");
+    assert_eq!(h.fake.connects(), 2, "a second session for the rest");
     assert_eq!(h.ids_in(MailSet::Role(Role::Inbox)).await, ["pop3/u2", "pop3/u3"]);
+    assert_eq!(h.fake.held(), ["u1"], "u2 and u3 left the server");
     assert!(first_check_finished(&h).await, "all that is left is a recorded failure");
+    h.sync.pop3_check().await.unwrap();
     drain(&h);
-    assert!(h.sync.pop3_check().await.is_err());
+    h.sync.pop3_check().await.unwrap();
     assert!(drain(&h).iter().any(|e| matches!(e, ChangeEvent::LabelsChanged { .. })), "the third drop puts it in the menu");
     assert_eq!(failing(&h).await.len(), 1);
+    assert_eq!(h.fake.retr_calls(), [1, 2, 3, 1, 1]);
 }
 
 /// The store commits without waiting for the disk (WAL, synchronous
