@@ -1,4 +1,4 @@
-use mailrs_domain::mailbox::keyword::{FLAGGED, SEEN};
+use mailrs_domain::mailbox::keyword::{FLAGGED, MUTED, SEEN};
 use mailrs_domain::{Target, category};
 use mailrs_gmail::LabelColor;
 
@@ -151,4 +151,24 @@ async fn a_folder_renames_in_place_and_goes_away_but_a_tag_does_neither() {
     assert!(h.fake.with(|s| !s.folders.contains_key(&made.id)));
     assert!(matches!(mail.rename_mailbox("category:Red", "Blue").await, Err(crate::BackendError::Unsupported)));
     assert!(matches!(mail.delete_mailbox("category:Red").await, Err(crate::BackendError::Unsupported)));
+}
+
+/// Graph stores no `$muted`, so the mark stays on this computer: the
+/// sidebar's Muted mailbox lists the thread, and the feed, which restates
+/// each message whole, leaves the mark alone.
+#[tokio::test]
+async fn a_muted_thread_stays_muted_on_this_computer() {
+    let h = outlook().await;
+    let id = h.fake.deliver(&h.fake.folder_id("inbox"), fresh());
+    h.bootstrap_all().await;
+    let thread = h.fake.with(|s| s.messages[&id].message.conversation_id.clone().unwrap());
+    h.sync.triage_all(&[Target::thread(h.account_id, thread)], &TriageAction::Mute, None).await.unwrap();
+    assert_eq!(h.fake.with(|s| s.messages[&id].folder.clone()), h.fake.folder_id("archive"));
+
+    h.fake.mark(&id, Some(true), None);
+    h.look().await;
+
+    let held = h.held(&id).await;
+    assert!(held.keywords.contains(&SEEN.to_string()), "the feed reached it: {held:?}");
+    assert!(held.keywords.contains(&MUTED.to_string()), "{held:?}");
 }
