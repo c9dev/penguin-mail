@@ -9403,6 +9403,11 @@ msgid "Penguin Mail cannot change the calendar list of a CalDAV server."
 msgstr ""
 "O Penguin Mail não pode alterar a lista de calendários de um servidor CalDAV."
 
+#: sync/src/services/finding.rs:166
+msgid "Penguin Mail reaches calendar and contact servers over HTTPS only."
+msgstr ""
+"O Penguin Mail só acede a servidores de calendário e contactos por HTTPS."
+
 #: sync/src/services/imap/outgoing.rs:85
 msgid "The message names nobody to send it to."
 msgstr "A mensagem não indica a quem a enviar."
@@ -9419,7 +9424,7 @@ msgstr ""
 "Esta caixa de correio está no servidor Exchange da sua organização, ao qual "
 "o Penguin Mail não consegue chegar."
 
-#: sync/src/services/sieve.rs:81
+#: sync/src/services/sieve.rs:88
 msgid ""
 "{provider} offers no encrypted connection for rules, so Penguin Mail does "
 "not send your password there."
@@ -9427,7 +9432,7 @@ msgstr ""
 "{provider} não oferece uma ligação cifrada para regras, por isso o Penguin "
 "Mail não envia lá a sua palavra-passe."
 
-#: sync/src/services/sieve.rs:94
+#: sync/src/services/sieve.rs:101
 msgid ""
 "{provider} cannot run this rule: its server lacks the Sieve extension "
 "“{extension}”."
@@ -9435,31 +9440,31 @@ msgstr ""
 "{provider} não consegue executar esta regra: o servidor não tem a extensão "
 "Sieve “{extension}”."
 
-#: sync/src/services/sieve.rs:99
+#: sync/src/services/sieve.rs:106
 msgid "The folder this rule files into is not on the server yet."
 msgstr "A pasta para onde esta regra arquiva ainda não está no servidor."
 
-#: sync/src/services/sieve.rs:102
+#: sync/src/services/sieve.rs:109
 msgid "A rule on {provider} cannot keep mail out of Spam."
 msgstr "Uma regra em {provider} não consegue manter mensagens fora do Spam."
 
-#: sync/src/services/sieve.rs:106
+#: sync/src/services/sieve.rs:113
 msgid "{provider} does not mark mail as important."
 msgstr "{provider} não marca mensagens como importantes."
 
-#: sync/src/services/sieve.rs:110
+#: sync/src/services/sieve.rs:117
 msgid "A rule can file mail into one folder."
 msgstr "Uma regra pode arquivar mensagens numa só pasta."
 
-#: sync/src/services/sieve.rs:113
+#: sync/src/services/sieve.rs:120
 msgid "Say which mail the rule is for"
 msgstr "Indique a que mensagens se aplica a regra"
 
-#: sync/src/services/sieve.rs:115
+#: sync/src/services/sieve.rs:122
 msgid "Choose what the rule does"
 msgstr "Escolha o que a regra faz"
 
-#: sync/src/services/sieve.rs:182
+#: sync/src/services/sieve.rs:189
 msgid "The rule is read-only."
 msgstr "A regra é só de leitura."
 

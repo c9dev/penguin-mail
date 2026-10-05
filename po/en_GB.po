@@ -8797,6 +8797,10 @@ msgstr "You are not a guest of this event."
 msgid "Penguin Mail cannot change the calendar list of a CalDAV server."
 msgstr "Penguin Mail cannot change the calendar list of a CalDAV server."
 
+#: sync/src/services/finding.rs:166
+msgid "Penguin Mail reaches calendar and contact servers over HTTPS only."
+msgstr "Penguin Mail reaches calendar and contact servers over HTTPS only."
+
 #: sync/src/services/imap/outgoing.rs:85
 msgid "The message names nobody to send it to."
 msgstr "The message names nobody to send it to."
@@ -8809,39 +8813,39 @@ msgstr "This rule is read-only, so Penguin Mail leaves it as it is."
 msgid "This mailbox is on your organization's own Exchange server, which Penguin Mail cannot reach."
 msgstr "This mailbox is on your organisation's own Exchange server, which Penguin Mail cannot reach."
 
-#: sync/src/services/sieve.rs:81
+#: sync/src/services/sieve.rs:88
 msgid "{provider} offers no encrypted connection for rules, so Penguin Mail does not send your password there."
 msgstr "{provider} offers no encrypted connection for rules, so Penguin Mail does not send your password there."
 
-#: sync/src/services/sieve.rs:94
+#: sync/src/services/sieve.rs:101
 msgid "{provider} cannot run this rule: its server lacks the Sieve extension “{extension}”."
 msgstr "{provider} cannot run this rule: its server lacks the Sieve extension “{extension}”."
 
-#: sync/src/services/sieve.rs:99
+#: sync/src/services/sieve.rs:106
 msgid "The folder this rule files into is not on the server yet."
 msgstr "The folder this rule files into is not on the server yet."
 
-#: sync/src/services/sieve.rs:102
+#: sync/src/services/sieve.rs:109
 msgid "A rule on {provider} cannot keep mail out of Spam."
 msgstr "A rule on {provider} cannot keep mail out of Spam."
 
-#: sync/src/services/sieve.rs:106
+#: sync/src/services/sieve.rs:113
 msgid "{provider} does not mark mail as important."
 msgstr "{provider} does not mark mail as important."
 
-#: sync/src/services/sieve.rs:110
+#: sync/src/services/sieve.rs:117
 msgid "A rule can file mail into one folder."
 msgstr "A rule can file mail into one folder."
 
-#: sync/src/services/sieve.rs:113
+#: sync/src/services/sieve.rs:120
 msgid "Say which mail the rule is for"
 msgstr "Say which mail the rule is for"
 
-#: sync/src/services/sieve.rs:115
+#: sync/src/services/sieve.rs:122
 msgid "Choose what the rule does"
 msgstr "Choose what the rule does"
 
-#: sync/src/services/sieve.rs:182
+#: sync/src/services/sieve.rs:189
 msgid "The rule is read-only."
 msgstr "The rule is read-only."
 
