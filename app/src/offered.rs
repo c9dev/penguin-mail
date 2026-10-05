@@ -546,7 +546,7 @@ pub fn kept_here_lines(accounts: &[Account]) -> Vec<String> {
         .map(|account| {
             fill(
                 &gettext(
-                    "Mail from {address} is kept only on this computer; back up this file to keep it.",
+                    "Mail from {address} is kept only on this computer. To keep a copy, quit Penguin Mail, then back up this file.",
                 ),
                 &[("address", &account.email)],
             )
@@ -660,7 +660,7 @@ mod tests {
         };
         assert_eq!(
             kept_here_lines(&[imap, pop3_account()]),
-            ["Mail from dana@example.org is kept only on this computer; back up this file to keep it."]
+            ["Mail from dana@example.org is kept only on this computer. To keep a copy, quit Penguin Mail, then back up this file."]
         );
     }
 

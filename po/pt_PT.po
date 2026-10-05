@@ -1912,7 +1912,7 @@ msgstr "penguin-mail: opção desconhecida {option}"
 msgid "Penguin Mail Could Not Start"
 msgstr "O Penguin Mail não conseguiu arrancar"
 
-#: app/src/main.rs:285 app/src/ui/about.rs:174
+#: app/src/main.rs:285 app/src/ui/about.rs:176
 msgid "Report a Problem"
 msgstr "Comunicar um problema"
 
@@ -2221,7 +2221,9 @@ msgstr "Mensagem {number}: {words}"
 msgid ""
 "Its mail exists only on this computer, and removing the account deletes it "
 "with the saved sign-in. Nothing changes on the server."
-msgstr "O correio desta conta só existe neste computador, e remover a conta elimina-o com a sessão guardada. Nada muda no servidor."
+msgstr ""
+"O correio desta conta só existe neste computador, e remover a conta elimina-"
+"o com a sessão guardada. Nada muda no servidor."
 
 #: app/src/offered.rs:535
 msgid ""
@@ -2233,11 +2235,9 @@ msgstr ""
 
 #: app/src/offered.rs:549
 msgid ""
-"Mail from {address} is kept only on this computer; back up this file to keep "
-"it."
-msgstr ""
-"O correio de {address} só existe neste computador; faça uma cópia de "
-"segurança deste ficheiro para o manter."
+"Mail from {address} is kept only on this computer. To keep a copy, quit "
+"Penguin Mail, then back up this file."
+msgstr "O correio de {address} só existe neste computador. Para guardar uma cópia, saia do Penguin Mail e faça depois uma cópia de segurança deste ficheiro."
 
 #: app/src/open_thread/run/translation.rs:121
 msgid "The model sent nothing back to put in the message."
@@ -3447,8 +3447,8 @@ msgstr "Instalar a atualização {version}"
 msgid "What's New in {version}"
 msgstr "Novidades da versão {version}"
 
-#: app/src/tray.rs:219 app/src/ui/about.rs:113 app/src/ui/about.rs:220
-#: app/src/ui/about.rs:228 app/src/ui/about.rs:235
+#: app/src/tray.rs:219 app/src/ui/about.rs:115 app/src/ui/about.rs:222
+#: app/src/ui/about.rs:230 app/src/ui/about.rs:237
 #: app/src/ui/preferences.rs:730 app/src/update/mod.rs:108
 msgid "Check for Updates"
 msgstr "Procurar atualizações"
@@ -3466,64 +3466,64 @@ msgstr "Versão {version}"
 msgid "Mail and calendar for Linux. Your mail stays on your computer."
 msgstr "Correio e calendário para Linux. O seu correio fica no seu computador."
 
-#: app/src/ui/about.rs:168
+#: app/src/ui/about.rs:170
 msgid "What's New"
 msgstr "Novidades"
 
-#: app/src/ui/about.rs:172
+#: app/src/ui/about.rs:174
 msgid "Website"
 msgstr "Página web"
 
-#: app/src/ui/about.rs:179
+#: app/src/ui/about.rs:181
 msgid "License"
 msgstr "Licença"
 
-#: app/src/ui/about.rs:196 app/src/ui/window.rs:3145
+#: app/src/ui/about.rs:198 app/src/ui/window.rs:3145
 msgid "About Penguin Mail"
 msgstr "Acerca do Penguin Mail"
 
-#: app/src/ui/about.rs:226
+#: app/src/ui/about.rs:228
 msgid "Checking…"
 msgstr "A procurar…"
 
-#: app/src/ui/about.rs:232
+#: app/src/ui/about.rs:234
 msgid "Penguin Mail is up to date"
 msgstr "O Penguin Mail está atualizado"
 
-#: app/src/ui/about.rs:240
+#: app/src/ui/about.rs:242
 msgid "Could not reach GitHub. Check your connection and try again."
 msgstr ""
 "Não foi possível contactar o GitHub. Verifique a ligação e tente de novo."
 
-#: app/src/ui/about.rs:245
+#: app/src/ui/about.rs:247
 msgid "Install {version}"
 msgstr "Instalar a {version}"
 
-#: app/src/ui/about.rs:252
+#: app/src/ui/about.rs:254
 msgid "Version {version} is available"
 msgstr "A versão {version} está disponível"
 
-#: app/src/ui/about.rs:257
+#: app/src/ui/about.rs:259
 msgid "Installing…"
 msgstr "A instalar…"
 
-#: app/src/ui/about.rs:262
+#: app/src/ui/about.rs:264
 msgid "Installing version {version}"
 msgstr "A instalar a versão {version}"
 
-#: app/src/ui/about.rs:267 app/src/update/mod.rs:104
+#: app/src/ui/about.rs:269 app/src/update/mod.rs:104
 msgid "Restart to Update"
 msgstr "Reiniciar para atualizar"
 
-#: app/src/ui/about.rs:272
+#: app/src/ui/about.rs:274
 msgid "Version {version} is installed"
 msgstr "A versão {version} está instalada"
 
-#: app/src/ui/about.rs:277 app/src/update/mod.rs:137
+#: app/src/ui/about.rs:279 app/src/update/mod.rs:137
 msgid "Show Log"
 msgstr "Mostrar registo"
 
-#: app/src/ui/about.rs:282 app/src/update/mod.rs:134
+#: app/src/ui/about.rs:284 app/src/update/mod.rs:134
 msgid "The update to {version} failed"
 msgstr "A atualização para a versão {version} falhou"
 
