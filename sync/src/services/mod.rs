@@ -28,7 +28,7 @@ pub use caldav::CalDav;
 pub use any::{AnyAutoReply, AnyCalendar, AnyContacts, AnyIdentities, AnyMail, AnyRules};
 pub use carddav::CardDav;
 pub use local::LocalRules;
-pub use google::{Google, ID_PAGE_SIZE, LIST_PAGE_SIZE};
+pub use google::{Google, ID_PAGE_SIZE, LIST_PAGE_SIZE, is_workspace};
 pub use imap::{Imap, ImapApi, ImapSettings, Submit};
 pub use microsoft::{GraphApi, Microsoft, MicrosoftSettings};
 pub use pop3::{Pop3, Pop3Settings};
@@ -610,6 +610,9 @@ impl AccountServices {
             moves_events: features.moves_events,
             calendar_list: features.calendar_list,
             quiet_changes: features.quiet_changes,
+            out_of_office: features.out_of_office,
+            focus_time: features.focus_time,
+            declines: features.declines,
         }
     }
 }
@@ -626,29 +629,80 @@ struct CalendarFeatures {
     /// A change can go without mailing the guests. Graph mails them on
     /// every change an organizer makes and has no switch against it.
     quiet_changes: bool,
+    /// The primary calendar keeps an out-of-office entry: Google's
+    /// `outOfOffice` event type, or Graph's `showAs: oof`.
+    out_of_office: bool,
+    /// The primary calendar keeps a focus-time entry, Google's
+    /// `focusTime`. Graph has no such entry.
+    focus_time: bool,
+    /// Out of office and focus time keep which meetings they decline and
+    /// the message that goes with each refusal. Graph's `showAs` keeps
+    /// neither.
+    declines: bool,
 }
 
 impl CalendarFeatures {
-    const NONE: CalendarFeatures =
-        CalendarFeatures { event_files: false, moves_events: false, calendar_list: false, quiet_changes: false };
-    const MICROSOFT: CalendarFeatures =
-        CalendarFeatures { event_files: false, moves_events: false, calendar_list: true, quiet_changes: false };
-    const GOOGLE: CalendarFeatures =
-        CalendarFeatures { event_files: true, moves_events: true, calendar_list: true, quiet_changes: true };
+    const NONE: CalendarFeatures = CalendarFeatures {
+        event_files: false,
+        moves_events: false,
+        calendar_list: false,
+        quiet_changes: false,
+        out_of_office: false,
+        focus_time: false,
+        declines: false,
+    };
+    const MICROSOFT: CalendarFeatures = CalendarFeatures {
+        event_files: false,
+        moves_events: false,
+        calendar_list: true,
+        quiet_changes: false,
+        out_of_office: true,
+        focus_time: false,
+        declines: false,
+    };
+    /// A personal Google account. [`CalendarFeatures::google`] adds what
+    /// a Workspace one keeps.
+    const GOOGLE: CalendarFeatures = CalendarFeatures {
+        event_files: true,
+        moves_events: true,
+        calendar_list: true,
+        quiet_changes: true,
+        out_of_office: false,
+        focus_time: false,
+        declines: false,
+    };
     /// CalDAV keeps no files, moves an event by copying its resource, which
     /// the queue must not rely on, and lists the calendars its server
     /// holds without letting the app edit the list.
-    const CALDAV: CalendarFeatures =
-        CalendarFeatures { event_files: false, moves_events: false, calendar_list: false, quiet_changes: true };
+    const CALDAV: CalendarFeatures = CalendarFeatures {
+        event_files: false,
+        moves_events: false,
+        calendar_list: false,
+        quiet_changes: true,
+        out_of_office: false,
+        focus_time: false,
+        declines: false,
+    };
+
+    /// Google's calendar: a Workspace account keeps out of office and
+    /// focus time with their declines, a personal one keeps neither.
+    fn google(workspace: bool) -> CalendarFeatures {
+        CalendarFeatures {
+            out_of_office: workspace,
+            focus_time: workspace,
+            declines: workspace,
+            ..CalendarFeatures::GOOGLE
+        }
+    }
 
     /// The match has no wildcard, so an adapter added to `AnyCalendar`
     /// has to say what it can do.
     fn of(calendar: Option<&AnyCalendar>) -> CalendarFeatures {
         match calendar {
             None => CalendarFeatures::NONE,
-            Some(AnyCalendar::Google(_)) => CalendarFeatures::GOOGLE,
+            Some(AnyCalendar::Google(google)) => CalendarFeatures::google(google.workspace()),
             #[cfg(any(test, feature = "fake"))]
-            Some(AnyCalendar::Fake(_)) => CalendarFeatures::GOOGLE,
+            Some(AnyCalendar::Fake(google)) => CalendarFeatures::google(google.workspace()),
             // Graph holds no files for an event and keeps each event in
             // its calendar, but it lists, makes and changes calendars.
             Some(AnyCalendar::Microsoft(_)) => CalendarFeatures::MICROSOFT,
@@ -739,6 +793,13 @@ pub struct Offers {
     /// A change to an event can go without mailing its guests, so the
     /// window may offer to send none. Outlook mails them on every change.
     pub quiet_changes: bool,
+    /// A new entry on the primary calendar can be out of office.
+    pub out_of_office: bool,
+    /// A new entry on the primary calendar can be focus time.
+    pub focus_time: bool,
+    /// Out of office and focus time keep which meetings they decline and
+    /// a message, so the editor offers both.
+    pub declines: bool,
 }
 
 impl Offers {
@@ -759,6 +820,11 @@ impl Offers {
         moves_events: true,
         calendar_list: true,
         quiet_changes: true,
+        // A personal Gmail account keeps neither type, and an account
+        // still starting offers none until it says it keeps them.
+        out_of_office: false,
+        focus_time: false,
+        declines: false,
     };
 
     /// What the account lacks, in the order Preferences lists it.
@@ -1326,7 +1392,10 @@ mod tests {
 
     #[test]
     fn gmail_offers_everything() {
-        let services = AccountServices::fake(Arc::new(FakeGmail::new()));
+        let gmail = Arc::new(FakeGmail::new());
+        // A personal account: Workspace adds out of office and focus time.
+        gmail.with(|s| s.email = "dana@gmail.com".into());
+        let services = AccountServices::fake(gmail);
         assert_eq!(services.offers(), Offers::EVERYTHING);
         assert!(services.offers().missing().is_empty());
     }

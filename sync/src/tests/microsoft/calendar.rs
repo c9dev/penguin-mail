@@ -560,6 +560,32 @@ async fn saving_a_series_with_no_repeat_tells_outlook_to_stop_repeating_it() {
 }
 
 #[tokio::test]
+async fn an_out_of_office_made_here_goes_to_graph_as_oof_and_comes_back_as_one() {
+    use mailrs_domain::calendar::{Decline, Kind};
+    let h = outlook().await;
+    let calendar = h.sync.services().calendar.clone().unwrap();
+    let away = Event {
+        calendar: "cal-1".into(),
+        id: "pmaway".into(),
+        title: "Out of office".into(),
+        start: crate::now_millis() + 86_400_000,
+        end: crate::now_millis() + 2 * 86_400_000,
+        zone: "UTC".into(),
+        busy: true,
+        kind: Kind::OutOfOffice(Decline::default()),
+        ..Event::default()
+    };
+    let made = calendar.put_event(&away, None, true, Notify::Guests).await.unwrap();
+    let sent = h.fake.with(|s| s.event_bodies.last().cloned()).unwrap();
+    assert_eq!(sent["showAs"], "oof");
+    assert_eq!(made.kind, Kind::OutOfOffice(Decline::default()), "Graph's answer reads back as out of office");
+    let page = read_all(&h).await;
+    let read = page.events.iter().find(|e| e.id == made.id).unwrap();
+    assert!(matches!(read.kind, Kind::OutOfOffice(_)), "the next read keeps it");
+    assert!(read.busy);
+}
+
+#[tokio::test]
 async fn an_edit_that_keeps_the_repeat_sends_it_again() {
     let h = outlook().await;
     let made = weekly_made_here(&h).await;

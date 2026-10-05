@@ -93,6 +93,9 @@ impl Held {
 
 pub struct FakeState {
     pub email: String,
+    /// Play a personal Google account whatever the address's domain, as
+    /// the demo's `.example` addresses need.
+    pub personal: bool,
     pub history_id: u64,
     /// `history` answers 404 for starts below this, as Gmail does once history ages out.
     pub history_floor: u64,
@@ -361,6 +364,7 @@ impl FakeGmail {
             limit: None,
             state: Mutex::new(FakeState {
                 email: "me@example.com".into(),
+                personal: false,
                 history_id: 100,
                 history_floor: 0,
                 // Gmail lists its role labels, and a message's roles come
@@ -917,6 +921,10 @@ impl GmailApi for FakeGmail {
     /// `CALENDAR_LIST_WRITE_SCOPE` alone plays an account that granted
     /// the older read-only list, which still reads every calendar;
     /// withholding `CALENDAR_LIST_SCOPE` plays one that granted neither.
+    fn workspace(&self) -> bool {
+        self.with(|s| !s.personal && crate::services::is_workspace(&s.email))
+    }
+
     fn granted(&self) -> Option<Granted> {
         Some(self.with(|s| {
             let mut scopes: Vec<&str> = mailrs_gmail::SIGN_IN_SCOPES

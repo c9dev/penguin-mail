@@ -11,6 +11,7 @@ mod carddav;
 mod connect;
 mod contacts;
 mod engine;
+mod event_types;
 mod export;
 mod finding;
 pub(crate) mod heap;

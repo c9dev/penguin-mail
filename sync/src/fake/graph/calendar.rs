@@ -100,6 +100,9 @@ fn read_body(event: &mut GraphEvent, body: &Value) {
     if let Some(all_day) = body["isAllDay"].as_bool() {
         event.is_all_day = all_day;
     }
+    if let Some(show_as) = body["showAs"].as_str() {
+        event.show_as = Some(show_as.into());
+    }
     if let Some(place) = body["location"]["displayName"].as_str() {
         event.location = Some(Location { display_name: place.into() });
     }

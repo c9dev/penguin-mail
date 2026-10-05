@@ -29,6 +29,14 @@ pub trait GmailApi: Send + Sync + 'static {
         None
     }
 
+    /// Whether the account is on Google Workspace rather than a personal
+    /// Google account, which decides whether its calendar keeps out of
+    /// office and focus time. A client that cannot tell answers `false`,
+    /// so nothing is offered that Google may turn down.
+    fn workspace(&self) -> bool {
+        false
+    }
+
     fn profile(&self) -> impl Future<Output = Result<Profile, GmailError>> + Send;
 
     fn labels(&self) -> impl Future<Output = Result<Vec<RemoteLabel>, GmailError>> + Send;
@@ -399,6 +407,8 @@ pub struct SavedDraft {
 /// The real Gmail client, bound to a local account id.
 pub struct AccountClient {
     pub account_id: AccountId,
+    /// The address the account signed in as.
+    pub address: String,
     pub client: GmailClient,
 }
 
@@ -409,6 +419,10 @@ impl GmailApi for AccountClient {
 
     fn granted(&self) -> Option<Granted> {
         self.client.granted()
+    }
+
+    fn workspace(&self) -> bool {
+        crate::services::is_workspace(&self.address)
     }
 
     async fn profile(&self) -> Result<Profile, GmailError> {

@@ -112,6 +112,7 @@ pub(crate) async fn connect_account_within(
         });
     Ok(AccountClient {
         account_id: account.id,
+        address: account.email.clone(),
         client,
     })
 }

@@ -84,6 +84,9 @@ struct SampleAccount {
     /// Addresses the account sends as beyond its own, as a Gmail account
     /// with verified aliases does.
     aliases: &'static [Alias],
+    /// A personal Google account, which keeps neither out of office nor
+    /// focus time. Its `.example` address would read as Workspace.
+    personal: bool,
 }
 
 struct Alias {
@@ -108,6 +111,7 @@ const ACCOUNTS: [SampleAccount; 3] = [
             ("Label_bugs", "Work/bugs", None),
         ],
         aliases: &[],
+        personal: true,
     },
     SampleAccount {
         email: "dana@fernwood.example",
@@ -131,11 +135,13 @@ const ACCOUNTS: [SampleAccount; 3] = [
                 confirmed: false,
             },
         ],
+        personal: false,
     },
     SampleAccount {
         email: "d.reyes@uni.example",
         labels: &[],
         aliases: &[],
+        personal: false,
     },
 ];
 
@@ -2167,6 +2173,7 @@ impl SampleAccount {
         let fake = FakeGmail::new();
         fake.with(|state| {
             state.email = self.email.into();
+            state.personal = self.personal;
             state.display_name = Some(DISPLAY_NAME.into());
             state.signature = Some(format!("{DISPLAY_NAME}\nSent from Penguin Mail"));
             state.send_as = self
