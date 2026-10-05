@@ -1929,8 +1929,8 @@ msgid "Mark as Read"
 msgstr "Marcar como lida"
 
 #: app/src/notify.rs:51 app/src/ui/calendar/manage.rs:223
-#: app/src/ui/calendar/popover.rs:212 app/src/ui/calendar/popover.rs:214
-#: app/src/ui/calendar/popover.rs:683 app/src/ui/calendar/scope.rs:194
+#: app/src/ui/calendar/popover.rs:211 app/src/ui/calendar/popover.rs:213
+#: app/src/ui/calendar/popover.rs:684 app/src/ui/calendar/scope.rs:194
 #: app/src/ui/conversation.rs:537 app/src/ui/hide_my_email.rs:288
 #: app/src/ui/queued.rs:58 app/src/ui/templates.rs:149
 #: app/src/ui/window/arrange.rs:98 app/src/ui/window/organize.rs:204
@@ -3355,8 +3355,11 @@ msgid "That passphrase does not open this file. Nothing was imported."
 msgstr "Essa frase-passe não abre este ficheiro. Não foi importado nada."
 
 #: app/src/smime.rs:281
-msgid "The file needs its passphrase, and none was given. Nothing was imported."
-msgstr "O ficheiro precisa da frase-passe e não foi indicada nenhuma. Não foi importado nada."
+msgid ""
+"The file needs its passphrase, and none was given. Nothing was imported."
+msgstr ""
+"O ficheiro precisa da frase-passe e não foi indicada nenhuma. Não foi "
+"importado nada."
 
 #: app/src/smime.rs:284
 msgid "gpgsm failed: {reason}"
@@ -4046,8 +4049,8 @@ msgstr "Adicionar servidor"
 msgid "Use {server}"
 msgstr "Usar {server}"
 
-#: app/src/ui/assistant_mcp_prefs.rs:111 app/src/ui/calendar/popover.rs:204
-#: app/src/ui/calendar/popover.rs:206
+#: app/src/ui/assistant_mcp_prefs.rs:111 app/src/ui/calendar/popover.rs:203
+#: app/src/ui/calendar/popover.rs:205
 msgid "Edit"
 msgstr "Editar"
 
@@ -4518,7 +4521,7 @@ msgstr "Não partilhado com os convidados"
 msgid "Open {file} in the browser"
 msgstr "Abrir {file} no navegador"
 
-#: app/src/ui/calendar/attachments.rs:132 app/src/ui/calendar/popover.rs:850
+#: app/src/ui/calendar/attachments.rs:132 app/src/ui/calendar/popover.rs:851
 msgid "Open in Browser"
 msgstr "Abrir no navegador"
 
@@ -4526,7 +4529,7 @@ msgstr "Abrir no navegador"
 msgid "Waiting to be sent"
 msgstr "À espera de ser enviado"
 
-#: app/src/ui/calendar/block.rs:531 app/src/ui/calendar/popover.rs:743
+#: app/src/ui/calendar/block.rs:531 app/src/ui/calendar/popover.rs:744
 msgid "Not answered yet"
 msgstr "Ainda sem resposta"
 
@@ -4762,7 +4765,7 @@ msgid "Remove reminder"
 msgstr "Remover lembrete"
 
 #: app/src/ui/calendar/editor.rs:1423 app/src/ui/calendar/editor.rs:1434
-#: app/src/ui/calendar/popover.rs:267
+#: app/src/ui/calendar/popover.rs:266
 msgid "Notes"
 msgstr "Notas"
 
@@ -5427,63 +5430,63 @@ msgstr "A seguir · daqui a {hours} h {minutes} min"
 msgid "{when}: {what}"
 msgstr "{when}: {what}"
 
-#: app/src/ui/calendar/popover.rs:241
+#: app/src/ui/calendar/popover.rs:240
 msgid "Open in Maps"
 msgstr "Abrir no mapa"
 
-#: app/src/ui/calendar/popover.rs:269
+#: app/src/ui/calendar/popover.rs:268
 msgid "Show more"
 msgstr "Mostrar mais"
 
-#: app/src/ui/calendar/popover.rs:275
+#: app/src/ui/calendar/popover.rs:274
 msgid "Show more of the notes"
 msgstr "Mostrar mais notas"
 
-#: app/src/ui/calendar/popover.rs:289
+#: app/src/ui/calendar/popover.rs:288
 msgid "Show all"
 msgstr "Mostrar tudo"
 
 #. The button reads "Show all"; a screen reader also hears how
 #. many are still hidden, in the same words the tooltip used
 #. to give before this list replaced it.
-#: app/src/ui/calendar/popover.rs:295 app/src/ui/calendar/popover.rs:821
+#: app/src/ui/calendar/popover.rs:294 app/src/ui/calendar/popover.rs:822
 msgid "Show all guests"
 msgstr "Mostrar todos os convidados"
 
-#: app/src/ui/calendar/popover.rs:314 app/src/ui/calendar/popover.rs:745
+#: app/src/ui/calendar/popover.rs:313 app/src/ui/calendar/popover.rs:746
 #: app/src/ui/invitation.rs:317
 msgid "Answer"
 msgstr "Resposta"
 
-#: app/src/ui/calendar/popover.rs:328 app/src/ui/invitation.rs:328
+#: app/src/ui/calendar/popover.rs:327 app/src/ui/invitation.rs:328
 msgid "Add a note"
 msgstr "Adicionar uma nota"
 
-#: app/src/ui/calendar/popover.rs:332 app/src/ui/invitation.rs:332
+#: app/src/ui/calendar/popover.rs:331 app/src/ui/invitation.rs:332
 msgid "Note with your answer"
 msgstr "Nota com a sua resposta"
 
-#: app/src/ui/calendar/popover.rs:332 app/src/ui/invitation.rs:332
+#: app/src/ui/calendar/popover.rs:331 app/src/ui/invitation.rs:332
 msgid "The organizer reads it with your answer"
 msgstr "O organizador lê-a com a sua resposta"
 
-#: app/src/ui/calendar/popover.rs:338 app/src/ui/calendar/popover.rs:345
+#: app/src/ui/calendar/popover.rs:337 app/src/ui/calendar/popover.rs:344
 msgid "Propose a New Time"
 msgstr "Propor outra hora"
 
-#: app/src/ui/calendar/popover.rs:354 app/src/ui/calendar/popover.rs:361
+#: app/src/ui/calendar/popover.rs:353 app/src/ui/calendar/popover.rs:360
 msgid "Open the invitation in Mail"
 msgstr "Abrir o convite no Correio"
 
-#: app/src/ui/calendar/popover.rs:668
+#: app/src/ui/calendar/popover.rs:669
 msgid "{when}, {zone}"
 msgstr "{when}, {zone}"
 
-#: app/src/ui/calendar/popover.rs:684
+#: app/src/ui/calendar/popover.rs:685
 msgid "Remove from My Calendar"
 msgstr "Remover do meu calendário"
 
-#: app/src/ui/calendar/popover.rs:759
+#: app/src/ui/calendar/popover.rs:760
 msgid "Your answer"
 msgstr "A sua resposta"
 
@@ -7104,8 +7107,12 @@ msgid "gpgsm already holds everything in this file."
 msgstr "O gpgsm já tem tudo o que este ficheiro contém."
 
 #: app/src/ui/key_import.rs:316
-msgid "You can sign and decrypt with the secret key now. gpg asks for its passphrase the first time."
-msgstr "Já pode assinar e desencriptar com a chave secreta. O gpg pede a frase-passe da primeira vez."
+msgid ""
+"You can sign and decrypt with the secret key now. gpg asks for its "
+"passphrase the first time."
+msgstr ""
+"Já pode assinar e desencriptar com a chave secreta. O gpg pede a frase-passe "
+"da primeira vez."
 
 #: app/src/ui/key_import.rs:319
 msgid "You can sign and decrypt with the secret key now."
@@ -7115,13 +7122,16 @@ msgstr "Já pode assinar e desencriptar com a chave secreta."
 msgid "You can encrypt to this person and check their signatures."
 msgid_plural "You can encrypt to these people and check their signatures."
 msgstr[0] "Já pode encriptar para esta pessoa e verificar as assinaturas dela."
-msgstr[1] "Já pode encriptar para estas pessoas e verificar as assinaturas delas."
+msgstr[1] ""
+"Já pode encriptar para estas pessoas e verificar as assinaturas delas."
 
 #: app/src/ui/key_import.rs:327
 msgid "Penguin Mail can check signatures made with this certificate."
 msgid_plural "Penguin Mail can check signatures made with these certificates."
-msgstr[0] "O Penguin Mail pode verificar as assinaturas feitas com este certificado."
-msgstr[1] "O Penguin Mail pode verificar as assinaturas feitas com estes certificados."
+msgstr[0] ""
+"O Penguin Mail pode verificar as assinaturas feitas com este certificado."
+msgstr[1] ""
+"O Penguin Mail pode verificar as assinaturas feitas com estes certificados."
 
 #: app/src/ui/key_import.rs:350
 msgid "New, with secret key"
