@@ -7855,8 +7855,8 @@ msgid "Messages That Will Not Download"
 msgstr "Messages That Will Not Download"
 
 #: app/src/ui/window.rs:3649
-msgid "{address}'s server would not hand these over after three tries. Penguin Mail tries again at each check."
-msgstr "{address}'s server would not hand these over after three tries. Penguin Mail tries again at each check."
+msgid "Penguin Mail could not download these from {address}'s server. It tries again at each check, except for a message too large to download."
+msgstr "Penguin Mail could not download these from {address}'s server. It tries again at each check, except for a message too large to download."
 
 #: app/src/ui/window.rs:3669
 msgid "Close"

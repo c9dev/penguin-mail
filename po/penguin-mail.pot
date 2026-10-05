@@ -8073,8 +8073,8 @@ msgstr ""
 
 #: app/src/ui/window.rs:3649
 msgid ""
-"{address}'s server would not hand these over after three tries. Penguin Mail "
-"tries again at each check."
+"Penguin Mail could not download these from {address}'s server. It tries "
+"again at each check, except for a message too large to download."
 msgstr ""
 
 #: app/src/ui/window.rs:3669

@@ -8454,11 +8454,12 @@ msgstr "Mensagens que não se transferem"
 
 #: app/src/ui/window.rs:3649
 msgid ""
-"{address}'s server would not hand these over after three tries. Penguin Mail "
-"tries again at each check."
+"Penguin Mail could not download these from {address}'s server. It tries "
+"again at each check, except for a message too large to download."
 msgstr ""
-"O servidor de {address} não entregou estas mensagens após três tentativas. O "
-"Penguin Mail tenta de novo em cada verificação."
+"O Penguin Mail não conseguiu transferir estas mensagens do servidor de "
+"{address}. Volta a tentar em cada verificação, exceto se a mensagem for "
+"grande demais para transferir."
 
 #: app/src/ui/window.rs:3669
 msgid "Close"
@@ -9977,6 +9978,13 @@ msgstr "Marcar como não sendo spam"
 #: sync/src/triage.rs:70
 msgid "Move to {folder}"
 msgstr "Mover para {folder}"
+
+#~ msgid ""
+#~ "{address}'s server would not hand these over after three tries. Penguin "
+#~ "Mail tries again at each check."
+#~ msgstr ""
+#~ "O servidor de {address} não entregou estas mensagens após três "
+#~ "tentativas. O Penguin Mail tenta de novo em cada verificação."
 
 #~ msgid ""
 #~ "{address}'s server would not hand these over after three tries. Penguin "

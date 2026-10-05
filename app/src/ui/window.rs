@@ -3646,7 +3646,7 @@ impl MainWindow {
             let dialog = adw::AlertDialog::builder()
                 .heading(gettext("Messages That Will Not Download"))
                 .body(fill(
-                    &gettext("{address}'s server would not hand these over after three tries. Penguin Mail tries again at each check."),
+                    &gettext("Penguin Mail could not download these from {address}'s server. It tries again at each check, except for a message too large to download."),
                     &[("address", &account.email)],
                 ))
                 .build();
