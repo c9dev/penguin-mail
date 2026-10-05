@@ -491,6 +491,13 @@ toggle-group.category-chips { background: none; padding: 0; box-shadow: none; }
 }
 .category-chips > toggle:checked .category-count { opacity: 0; }
 .category-chips .category-count.no-mail { opacity: 0; }
+/* Focused and Other carry their badge in the row after the name
+   (categories.rs). The 20 px each side of the name match: the start
+   padding on one side, and the badge's 3 px gaps around its 14 px on
+   the other, so a chip whose badge is hidden still reads centred and
+   never changes width when one comes or goes. */
+.category-chips .category-chip.category-tab { padding: 0 0 0 20px; }
+.category-chips .category-tab .category-count { margin: 1px 3px 0 3px; }
 
 /* The list header's title, packed at the header's start instead of
    centred: "All Inboxes" leads, the unread count and category sit under

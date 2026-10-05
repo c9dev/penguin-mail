@@ -102,7 +102,14 @@ impl CategoryBar {
                 .valign(gtk::Align::Start)
                 .build();
             let chip = gtk::Overlay::builder().child(&content).build();
-            chip.add_overlay(&count);
+            // An icon chip keeps its badge over the end padding, clear of a
+            // 16 px icon. A name runs into that padding, so a worded tab
+            // lays its badge out after the name instead, where it takes
+            // its own width and can never cover a letter.
+            match tabs {
+                true => content.append(&count),
+                false => chip.add_overlay(&count),
+            }
             group.add(
                 adw::Toggle::builder()
                     .name(category.key())
