@@ -4,9 +4,10 @@
 //! never the secret.
 
 use std::collections::HashMap;
-use std::sync::{Mutex, PoisonError};
+use std::sync::{Arc, Mutex, PoisonError};
 
-use mailrs_domain::AccountId;
+use mailrs_domain::{Account, AccountId, Provider};
+use mailrs_gmail::{KeyringTokenStore, MemoryTokenStore, TokenStore};
 use mailrs_domain::translate::{fill, gettext};
 
 /// The keyring would not read, keep or delete a password.
@@ -177,6 +178,67 @@ impl PasswordStore for Passwords {
             Passwords::Keyring(store) => store.delete(account_id),
             Passwords::Memory(store) => store.delete(account_id),
         }
+    }
+}
+
+/// Where each kind of account keeps what signs it in: a Google account's
+/// refresh token under its address, an IMAP or POP3 account's password
+/// and a Microsoft account's refresh token under its id. Clones share the
+/// stores.
+#[derive(Clone)]
+pub struct Secrets {
+    pub google: Arc<dyn TokenStore>,
+    pub passwords: Arc<Passwords>,
+    pub microsoft: Arc<Passwords>,
+}
+
+impl Secrets {
+    /// The desktop keyring, under the service names every earlier version
+    /// used, so existing accounts find their secrets.
+    pub fn keyring() -> Self {
+        Secrets {
+            google: Arc::new(KeyringTokenStore::new()),
+            passwords: Arc::new(Passwords::Keyring(KeyringPasswords::new())),
+            microsoft: Arc::new(Passwords::Keyring(KeyringPasswords::microsoft())),
+        }
+    }
+
+    /// Memory, for the demo and tests, which must never reach the
+    /// person's keyring.
+    pub fn memory() -> Self {
+        Secrets {
+            google: Arc::new(MemoryTokenStore::default()),
+            passwords: Arc::new(Passwords::Memory(MemoryPasswords::default())),
+            microsoft: Arc::new(Passwords::Memory(MemoryPasswords::default())),
+        }
+    }
+
+    /// Deletes what signs `account` in from the store its provider keeps
+    /// it in, off the runtime. Succeeds when nothing was kept.
+    pub async fn forget(&self, account: &Account) -> Result<(), PasswordError> {
+        let id = account.id;
+        let delete: Box<dyn FnOnce() -> Result<(), PasswordError> + Send> = match account.provider {
+            Provider::Gmail => {
+                let (tokens, email) = (Arc::clone(&self.google), account.email.clone());
+                Box::new(move || {
+                    tokens.delete(&email).map_err(|err| match err {
+                        mailrs_gmail::GmailError::Keyring(reason) => PasswordError::Keyring(reason),
+                        err => PasswordError::Keyring(err.to_string()),
+                    })
+                })
+            }
+            Provider::Imap | Provider::Pop3 => {
+                let passwords = Arc::clone(&self.passwords);
+                Box::new(move || passwords.delete(id))
+            }
+            Provider::Microsoft => {
+                let tokens = Arc::clone(&self.microsoft);
+                Box::new(move || tokens.delete(id))
+            }
+        };
+        tokio::task::spawn_blocking(delete)
+            .await
+            .map_err(|err| PasswordError::Keyring(err.to_string()))?
     }
 }
 

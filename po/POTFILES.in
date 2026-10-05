@@ -155,6 +155,7 @@ sync/src/mailbox.rs
 sync/src/passwords.rs
 sync/src/services/imap/outgoing.rs
 sync/src/sign_in.rs
+sync/src/sign_in/browser.rs
 sync/src/triage.rs
 # the template from the crate roots and warns when this list has drifted
 sync/src/rules/forward.rs

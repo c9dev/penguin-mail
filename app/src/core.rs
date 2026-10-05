@@ -14,27 +14,21 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use anyhow::{Context, Result, anyhow, bail};
 use mailrs_discover::{Found, Net, RealNet, Security, SrvRecord};
 use mailrs_domain::{Account, AccountId, AccountState, ChangeEvent, Provider, Target};
-use mailrs_gmail::{
-    GMAIL_API_BASE, GmailError, Granted, KeyringTokenStore, SIGN_IN_SCOPES, TokenStore, authorize,
-    built_in_client,
-};
-use mailrs_graph::GraphError;
 use mailrs_pgp::{Pgp, PgpError};
 use mailrs_smime::{Smime, SmimeError};
 use mailrs_store::services::{FoundService, Miss, ServiceKind};
 use mailrs_store::{Db, StoreError, accounts};
 use mailrs_sync::config::{Config, config_path, data_dir, migrate_old_dirs};
 use mailrs_sync::lock::{LockError, SyncLock};
-use mailrs_sync::passwords::{KeyringPasswords, MemoryPasswords, PasswordStore, Passwords};
+use mailrs_sync::passwords::{PasswordStore, Passwords, Secrets};
 use mailrs_sync::services::finding;
 use mailrs_sync::sign_in::{
-    NewImap, NewMicrosoft, NewPop3, account_client, check_pop3, google_signed_in, imap_signed_in,
-    microsoft_signed_in, pop3_signed_in,
+    Browser, NewImap, NewPop3, Wanted, check_pop3, imap_signed_in, in_browser, pop3_signed_in,
 };
 use mailrs_sync::{
-    AccountServices, AccountSettings, AccountSync, Accounts, BackendError, ContactBook, Failure,
-    History, Invitations, MailAction, MailActions, Mailboxes, MovedFrom, OneClick, Outbox, Outcome,
-    SyncEngine, SyncError, Undone, connect_account, connect_imap, connect_microsoft, connect_pop3,
+    AccountServices, AccountSettings, AccountSync, Accounts, BackendError, Clients, ContactBook,
+    Connector, Failure, History, Invitations, MailAction, MailActions, Mailboxes, MovedFrom,
+    OneClick, Outbox, Outcome, SyncEngine, SyncError, Undone, connect_imap, connect_pop3,
     now_millis, pop3_servers_for, servers_for,
 };
 
@@ -43,7 +37,7 @@ use crate::add_account::lookup::{Check, Heard, check_of_url};
 use crate::assistant::run::{Background, Modules};
 use crate::demo::{self, DemoMail};
 use crate::starting::{self, Connected, Starting};
-use mailrs_domain::translate::{fill, gettext};
+use mailrs_domain::translate::gettext;
 
 /// The store could not be updated to this version, and the copy taken
 /// before the attempt was put back. Startup shows this with a way to
@@ -135,13 +129,9 @@ pub struct Core {
     /// account, read from the store at startup and kept by each search, so
     /// Preferences words its Not Available lines without waiting.
     misses: RefCell<HashMap<(AccountId, ServiceKind), Miss>>,
-    tokens: Arc<dyn TokenStore>,
-    /// IMAP passwords: the keyring, or memory in the demo, which never
-    /// touches the person's keyring.
-    passwords: Arc<Passwords>,
-    /// Microsoft's refresh tokens, kept like `passwords` and under their own
-    /// keyring service.
-    microsoft_tokens: Arc<Passwords>,
+    /// Where each kind of account keeps what signs it in: the keyring, or
+    /// memory in the demo, which never touches the person's keyring.
+    secrets: Secrets,
     events_tx: async_channel::Sender<ChangeEvent>,
     pub events: async_channel::Receiver<ChangeEvent>,
     in_flight: Arc<AtomicUsize>,
@@ -307,15 +297,10 @@ impl Core {
             smime: Smime::find().ok(),
             verdicts: RefCell::default(),
             misses: RefCell::new(misses),
-            tokens: Arc::new(KeyringTokenStore::new()),
-            passwords: Arc::new(match demo {
-                true => Passwords::Memory(MemoryPasswords::default()),
-                false => Passwords::Keyring(KeyringPasswords::new()),
-            }),
-            microsoft_tokens: Arc::new(match demo {
-                true => Passwords::Memory(MemoryPasswords::default()),
-                false => Passwords::Keyring(KeyringPasswords::microsoft()),
-            }),
+            secrets: match demo {
+                true => Secrets::memory(),
+                false => Secrets::keyring(),
+            },
             events_tx,
             events,
             in_flight: Arc::new(AtomicUsize::new(0)),
@@ -328,17 +313,26 @@ impl Core {
         Ok(core)
     }
 
-    /// Whether this copy was built with the Google client that every
-    /// sign-in goes through. A copy built from source without the release
-    /// values has none and cannot add a Google account.
-    pub fn built_with_google_sign_in(&self) -> bool {
-        built_in_client().is_some()
+    /// Whether this copy was built with the client that every sign-in on
+    /// `browser`'s page goes through. A copy built from source without the
+    /// release values has none and cannot add such an account.
+    pub fn built_with_sign_in(&self, browser: Browser) -> bool {
+        let clients = Clients::built_in();
+        match browser {
+            Browser::Google => clients.google.is_some(),
+            Browser::Microsoft => clients.microsoft.is_some(),
+        }
     }
 
-    /// Whether this copy was built with the Microsoft client that every
-    /// Microsoft sign-in goes through.
-    pub fn built_with_microsoft_sign_in(&self) -> bool {
-        mailrs_graph::built_in_client().is_some()
+    /// What connecting, signing in and forgetting an account needs, with
+    /// the settings as they are now.
+    fn connector(&self) -> Connector {
+        Connector {
+            db: self.db.clone(),
+            config: self.config.borrow().clone(),
+            clients: Clients::built_in(),
+            secrets: self.secrets.clone(),
+        }
     }
 
     /// The sync section of `config.toml`.
@@ -383,11 +377,12 @@ impl Core {
             }
         });
         let reach = Arc::new(Reach {
-            db: self.db.clone(),
-            config,
-            tokens: Arc::clone(&self.tokens),
-            passwords: Arc::clone(&self.passwords),
-            microsoft_tokens: Arc::clone(&self.microsoft_tokens),
+            connector: Connector {
+                db: self.db.clone(),
+                config,
+                clients: Clients::built_in(),
+                secrets: self.secrets.clone(),
+            },
             demo: self.demo_mail.clone(),
         });
         let port = Arc::new(EnginePort {
@@ -704,176 +699,47 @@ impl Core {
         self.lists.forget_remote();
     }
 
-    /// Runs the browser consent flow, stores the refresh token, and starts
-    /// syncing the account. `urls` receives the consent URL to open. When
-    /// `expected` is set, the user must pick that account. The consent asks
-    /// for every scope Penguin Mail uses in one visit; Google keeps what
-    /// the account already granted, so signing in again asks nothing new.
-    /// Every sign-in, first or again, goes through the build's client and
-    /// records it for the account. Dropping the sender behind `cancel`
-    /// stops the wait for the browser, as Cancel on the waiting page does.
-    pub async fn authorize_account(
+    /// Runs `browser`'s sign-in, keeps the account and its refresh token,
+    /// and starts syncing it. `urls` receives the page to open. Each
+    /// sign-in asks for every permission Penguin Mail uses; the provider
+    /// keeps what the account already granted, so signing in again asks
+    /// nothing new. Answers the account and the name the provider knows
+    /// the person by. Dropping the sender behind `cancel` stops the wait
+    /// for the browser, as Cancel on the waiting page does.
+    pub async fn sign_in_in_browser(
         &self,
+        browser: Browser,
         urls: async_channel::Sender<String>,
-        expected: Option<String>,
-        cancel: async_channel::Receiver<()>,
-    ) -> Result<Account> {
-        if self.demo {
-            bail!(gettext("Demo mode cannot add real accounts."));
-        }
-        let oauth = built_in_client().ok_or_else(|| {
-            anyhow!(gettext(
-                "This copy of Penguin Mail was built without Google sign-in. \
-                 Get a release from github.com/c9dev/penguin-mail/releases."
-            ))
-        })?;
-        let engine = self
-            .engine
-            .current()
-            .ok_or_else(|| anyhow!("sync is not running"))?;
-        let (db, tokens) = (self.db.clone(), Arc::clone(&self.tokens));
-        let calendar_copy = self.calendar_copy();
-        self.call(async move {
-            let flow = authorize(&oauth, GMAIL_API_BASE, move |url: &str| {
-                let _ = urls.try_send(url.to_string());
-            });
-            let waited = tokio::select! {
-                waited = tokio::time::timeout(BROWSER_WAIT, flow) => waited,
-                _ = cancel.recv() => bail!(gettext("Canceled.")),
-            };
-            let authorized = waited
-                .map_err(|_| {
-                    anyhow!(gettext(
-                        "Gave up waiting for the browser after five minutes."
-                    ))
-                })?
-                .map_err(|err| match err {
-                    GmailError::MailNotGranted => anyhow!(gettext(
-                        "Penguin Mail cannot work without access to your mail. Sign in \
-                         again and leave the Gmail permission ticked.",
-                    )),
-                    err => err.into(),
-                })?;
-            if let Some(expected) = expected
-                && !expected.eq_ignore_ascii_case(&authorized.email)
-            {
-                bail!(fill(
-                    &gettext(
-                        "You signed in as {account}. Choose {wanted} to reconnect that \
-                         account.",
-                    ),
-                    &[("account", &authorized.email), ("wanted", &expected)],
-                ));
-            }
-            let granted = authorized.granted.as_ref().map(Granted::to_scope);
-            let asked = SIGN_IN_SCOPES.join(" ");
-            let account = google_signed_in(
-                &db,
-                Arc::clone(&tokens),
-                &authorized.email,
-                &authorized.refresh_token,
-                now_millis(),
-                granted.as_deref(),
-                &asked,
-            )
-            .await?;
-            let services = AccountServices::google(
-                connect_account(oauth, tokens, &account, &db).await?,
-            );
-            engine.start_account(account.id, services);
-            // The sign-in may have granted the calendar permission, so the
-            // copy stops waiting out an earlier refusal.
-            calendar_copy.permission_changed(account.id);
-            Ok::<_, anyhow::Error>(account)
-        })
-        .await
-    }
-
-    /// Microsoft's sign-in in the browser, then the account, its token and
-    /// its sync. `address` fills the page's address field; with `again`,
-    /// a sign-in that comes back as another address is refused. Answers
-    /// the account and the name Microsoft knows the person by. Dropping
-    /// the sender behind `cancel` stops the wait for the browser.
-    pub async fn authorize_microsoft(
-        &self,
-        urls: async_channel::Sender<String>,
-        address: Option<String>,
-        again: bool,
+        wanted: Wanted,
         cancel: async_channel::Receiver<()>,
     ) -> Result<(Account, Option<String>)> {
         if self.demo {
             bail!(gettext("Demo mode cannot add real accounts."));
         }
-        let client = mailrs_graph::built_in_client().ok_or_else(|| {
-            anyhow!(gettext(
-                "This copy of Penguin Mail was built without Microsoft sign-in. \
-                 Get a release from github.com/c9dev/penguin-mail/releases."
-            ))
-        })?;
         let engine = self
             .engine
             .current()
             .ok_or_else(|| anyhow!("sync is not running"))?;
-        let (db, tokens) = (self.db.clone(), Arc::clone(&self.microsoft_tokens));
-        let window_days = self.config.borrow().engine_config().window_days;
+        let connector = self.connector();
         let calendar_copy = self.calendar_copy();
         self.call(async move {
-            let flow = mailrs_graph::authorize(
-                &client,
-                mailrs_graph::GRAPH_BASE,
-                address.as_deref(),
-                move |url: &str| {
-                    let _ = urls.try_send(url.to_string());
-                },
-            );
+            let run = in_browser(&connector, browser, wanted, move |url: &str| {
+                let _ = urls.try_send(url.to_string());
+            });
             let waited = tokio::select! {
-                waited = tokio::time::timeout(BROWSER_WAIT, flow) => waited,
+                waited = tokio::time::timeout(BROWSER_WAIT, run) => waited,
                 _ = cancel.recv() => bail!(gettext("Canceled.")),
             };
-            let authorized = waited
-                .map_err(|_| {
-                    anyhow!(gettext(
-                        "Gave up waiting for the browser after five minutes."
-                    ))
-                })?
-                .map_err(|err| match err {
-                    GraphError::AdminApproval => anyhow!(gettext(
-                        "Your organization's administrator must approve Penguin Mail."
-                    )),
-                    GraphError::Declined | GraphError::MailNotGranted => anyhow!(gettext(
-                        "Penguin Mail cannot work without access to your mail. Sign in again and allow it."
-                    )),
-                    GraphError::MailboxOnPremises => anyhow!(gettext(
-                        "This mailbox is on your organization's own Exchange server, which Penguin Mail cannot reach."
-                    )),
-                    err => err.into(),
-                })?;
-            if let Some(expected) = address.filter(|_| again)
-                && !expected.eq_ignore_ascii_case(&authorized.email)
-            {
-                bail!(fill(
-                    &gettext(
-                        "You signed in as {account}. Choose {wanted} to reconnect that \
-                         account.",
-                    ),
-                    &[("account", &authorized.email), ("wanted", &expected)],
-                ));
-            }
-            let new = NewMicrosoft {
-                address: authorized.email.clone(),
-                provider_name: authorized.tenant.provider_name().to_string(),
-                refresh_token: authorized.refresh_token,
-                granted: authorized.granted.as_ref().map(mailrs_graph::Granted::to_scope),
-            };
-            let asked = mailrs_graph::SCOPES.join(" ");
-            let account =
-                microsoft_signed_in(&db, Arc::clone(&tokens), new, now_millis(), &asked).await?;
-            let services = connect_microsoft(&db, tokens, client, &account, window_days).await?;
-            engine.start_account(account.id, services);
+            let signed = waited.map_err(|_| {
+                anyhow!(gettext(
+                    "Gave up waiting for the browser after five minutes."
+                ))
+            })??;
+            engine.start_account(signed.account.id, signed.services);
             // The sign-in may have granted the calendar permission, so the
             // copy stops waiting out an earlier refusal.
-            calendar_copy.permission_changed(account.id);
-            Ok::<_, anyhow::Error>((account, authorized.name))
+            calendar_copy.permission_changed(signed.account.id);
+            Ok::<_, anyhow::Error>((signed.account, signed.name))
         })
         .await
     }
@@ -911,7 +777,7 @@ impl Core {
             .engine
             .current()
             .ok_or_else(|| anyhow!("sync is not running"))?;
-        let (db, passwords) = (self.db.clone(), Arc::clone(&self.passwords));
+        let (db, passwords) = (self.db.clone(), Arc::clone(&self.secrets.passwords));
         let window_days = self.config.borrow().engine_config().window_days;
         self.call(async move {
             let Attempt {
@@ -956,7 +822,7 @@ impl Core {
             .engine
             .current()
             .ok_or_else(|| anyhow!("sync is not running"))?;
-        let (db, passwords) = (self.db.clone(), Arc::clone(&self.passwords));
+        let (db, passwords) = (self.db.clone(), Arc::clone(&self.secrets.passwords));
         self.call(async move {
             let Attempt {
                 address,
@@ -998,10 +864,10 @@ impl Core {
         }
         let (db, passwords, engine) = (
             self.db.clone(),
-            Arc::clone(&self.passwords),
+            Arc::clone(&self.secrets.passwords),
             self.engine.current(),
         );
-        let window_days = self.config.borrow().engine_config().window_days;
+        let connector = self.connector();
         let account_id = account.id;
         let found = self.call(async move {
             let (host, user, password) = incoming_login(&db, &passwords, account.id).await?;
@@ -1023,7 +889,7 @@ impl Core {
             }
             let changed = finding::keep_found(&db, account.id, &found).await?;
             if changed {
-                restart_services(&db, passwords, engine, &account, window_days).await?;
+                restart_services(&connector, engine, &account).await?;
             }
             Ok::<_, anyhow::Error>(ServicesFound {
                 calendar: found.caldav.is_some_and(|f| f.confirmed),
@@ -1074,10 +940,10 @@ impl Core {
     ) -> Result<()> {
         let (db, passwords, engine) = (
             self.db.clone(),
-            Arc::clone(&self.passwords),
+            Arc::clone(&self.secrets.passwords),
             self.engine.current(),
         );
-        let window_days = self.config.borrow().engine_config().window_days;
+        let connector = self.connector();
         self.call(async move {
             let (_, user, password) = incoming_login(&db, &passwords, account.id).await?;
             finding::use_typed(
@@ -1090,7 +956,7 @@ impl Core {
                 &password,
             )
             .await?;
-            restart_services(&db, passwords, engine, &account, window_days).await
+            restart_services(&connector, engine, &account).await
         })
         .await
     }
@@ -1099,15 +965,15 @@ impl Core {
     pub async fn confirm_server(&self, account: Account, kind: ServiceKind) -> Result<()> {
         let (db, passwords, engine) = (
             self.db.clone(),
-            Arc::clone(&self.passwords),
+            Arc::clone(&self.secrets.passwords),
             self.engine.current(),
         );
-        let window_days = self.config.borrow().engine_config().window_days;
+        let connector = self.connector();
         self.call(async move {
             let (_, _, password) = incoming_login(&db, &passwords, account.id).await?;
             finding::confirm_found(&finding::RealProbe, &db, account.id, kind, &password)
                 .await?;
-            restart_services(&db, passwords, engine, &account, window_days).await
+            restart_services(&connector, engine, &account).await
         })
         .await
     }
@@ -1135,32 +1001,13 @@ impl Core {
         // Nothing is left to reverse the account's actions through, and
         // its mail goes with it.
         self.actions.forget_account(account.id);
-        let (db, tokens, passwords, microsoft_tokens, demo) = (
-            self.db.clone(),
-            Arc::clone(&self.tokens),
-            Arc::clone(&self.passwords),
-            Arc::clone(&self.microsoft_tokens),
-            self.demo,
-        );
+        let (db, secrets) = (self.db.clone(), self.secrets.clone());
         self.call(async move {
-            db.write(move |c| accounts::delete_account(c, account.id))
-                .await?;
-            if !demo {
-                match account.provider {
-                    Provider::Gmail => {
-                        tokio::task::spawn_blocking(move || tokens.delete(&account.email))
-                            .await??
-                    }
-                    Provider::Imap | Provider::Pop3 => {
-                        tokio::task::spawn_blocking(move || passwords.delete(account.id))
-                            .await??
-                    }
-                    Provider::Microsoft => {
-                        tokio::task::spawn_blocking(move || microsoft_tokens.delete(account.id))
-                            .await??
-                    }
-                }
-            }
+            let id = account.id;
+            db.write(move |c| accounts::delete_account(c, id)).await?;
+            // The demo's secrets live in memory, so this never reaches the
+            // person's keyring.
+            secrets.forget(&account).await?;
             Ok::<_, anyhow::Error>(())
         })
         .await
@@ -1205,18 +1052,15 @@ async fn incoming_login(
 /// Builds the account's services again from the store and restarts its
 /// loop on them, so a server found or typed serves at once.
 async fn restart_services(
-    db: &Db,
-    passwords: Arc<Passwords>,
+    connector: &Connector,
     engine: Option<Arc<SyncEngine>>,
     account: &Account,
-    window_days: i64,
 ) -> anyhow::Result<()> {
     let Some(engine) = engine else { return Ok(()) };
-    let services = match account.provider {
-        Provider::Pop3 => connect_pop3(db, passwords, account).await?,
-        _ => connect_imap(db, passwords, account, window_days).await?,
-    };
-    engine.start_account(account.id, services);
+    match connector.connect(account).await? {
+        mailrs_sync::Connected::Ready(services) => engine.start_account(account.id, services),
+        mailrs_sync::Connected::NeedsSignIn(_) => return Err(SyncError::Backend(BackendError::NeedsReauth).into()),
+    }
     Ok(())
 }
 
@@ -1248,13 +1092,9 @@ fn contact_photo_dir(demo: bool, data_dir: &std::path::Path) -> PathBuf {
 /// Tells the window that `account_id` needs a new sign-in, for an account
 /// the engine never starts and so never reports on.
 /// What connecting an account at startup needs: the store, the settings,
-/// and the places each kind of account keeps its secret.
+/// the build's clients and the secrets, or the demo's sample servers.
 struct Reach {
-    db: Db,
-    config: Config,
-    tokens: Arc<dyn TokenStore>,
-    passwords: Arc<Passwords>,
-    microsoft_tokens: Arc<Passwords>,
+    connector: Connector,
     demo: Option<Arc<DemoMail>>,
 }
 
@@ -1263,53 +1103,24 @@ impl Reach {
     /// missing token or password is recorded in the store by the connect
     /// that finds it.
     async fn connect(&self, account: &Account) -> Result<Connected<AccountServices>> {
-        let window_days = self.config.engine_config().window_days;
-        let db = &self.db;
-        let started = match (self.demo.as_deref(), account.provider) {
-            // The demo's accounts talk to their sample servers and need no
-            // Google client and no password.
+        if let Some(demo) = self.demo.as_deref() {
             // `MAILRS_DEMO_STUCK_KEYRING` names an account whose start
             // waits on a keyring that never answers, to see what the
             // sidebar says then.
-            (Some(_), _)
-                if std::env::var("MAILRS_DEMO_STUCK_KEYRING").is_ok_and(|id| id == account.id.to_string()) =>
-            {
+            if std::env::var("MAILRS_DEMO_STUCK_KEYRING").is_ok_and(|id| id == account.id.to_string()) {
                 return Err(SyncError::NoAnswer(mailrs_sync::KEYRING).into());
             }
-            (Some(demo), _) => {
-                return demo
-                    .services(account.id)
-                    .map(Connected::Ready)
-                    .ok_or_else(|| anyhow!("the demo has no mailbox for {}", account.email));
-            }
-            (None, Provider::Gmail) => {
-                let oauth = account_client(db, &self.config, built_in_client(), account)
-                    .await
-                    .context("could not read the account's Google client")?;
-                let Some(oauth) = oauth else {
-                    tracing::warn!(account = %account.email, "no Google client for this account");
-                    return Ok(Connected::NeedsSignIn);
-                };
-                connect_account(oauth, Arc::clone(&self.tokens), account, db)
-                    .await
-                    .map(AccountServices::google)
-            }
-            (None, Provider::Imap) => connect_imap(db, Arc::clone(&self.passwords), account, window_days).await,
-            (None, Provider::Pop3) => connect_pop3(db, Arc::clone(&self.passwords), account).await,
-            (None, Provider::Microsoft) => {
-                let Some(client) = mailrs_graph::built_in_client() else {
-                    // This build cannot refresh the account's token.
-                    tracing::warn!(account = %account.email, "no Microsoft client in this build");
-                    return Ok(Connected::NeedsSignIn);
-                };
-                connect_microsoft(db, Arc::clone(&self.microsoft_tokens), client, account, window_days).await
-            }
-        };
-        match started {
-            Ok(services) => Ok(Connected::Ready(services)),
-            Err(SyncError::Backend(BackendError::NeedsReauth)) => Ok(Connected::NeedsSignIn),
-            Err(err) => Err(err.into()),
+            // The demo's accounts talk to their sample servers and need no
+            // client and no secret.
+            return demo
+                .services(account.id)
+                .map(Connected::Ready)
+                .ok_or_else(|| anyhow!("the demo has no mailbox for {}", account.email));
         }
+        Ok(match self.connector.connect(account).await? {
+            mailrs_sync::Connected::Ready(services) => Connected::Ready(services),
+            mailrs_sync::Connected::NeedsSignIn(_) => Connected::NeedsSignIn,
+        })
     }
 }
 
