@@ -2525,6 +2525,10 @@ msgid "This text holds no OpenPGP block."
 msgstr "Este texto não contém nenhum bloco OpenPGP."
 
 #: app/src/pgp.rs:267
+msgid "This file holds no OpenPGP key."
+msgstr "Este ficheiro não contém nenhuma chave OpenPGP."
+
+#: app/src/pgp.rs:268
 msgid "gpg failed: {reason}"
 msgstr "O gpg falhou: {reason}"
 
@@ -3342,7 +3346,19 @@ msgstr ""
 msgid "This part holds no S/MIME data."
 msgstr "Esta parte não contém dados S/MIME."
 
-#: app/src/smime.rs:277
+#: app/src/smime.rs:276
+msgid "This file holds no certificate."
+msgstr "Este ficheiro não contém nenhum certificado."
+
+#: app/src/smime.rs:278
+msgid "That passphrase does not open this file. Nothing was imported."
+msgstr "Essa frase-passe não abre este ficheiro. Não foi importado nada."
+
+#: app/src/smime.rs:281
+msgid "The file needs its passphrase, and none was given. Nothing was imported."
+msgstr "O ficheiro precisa da frase-passe e não foi indicada nenhuma. Não foi importado nada."
+
+#: app/src/smime.rs:284
 msgid "gpgsm failed: {reason}"
 msgstr "O gpgsm falhou: {reason}"
 
@@ -3461,7 +3477,7 @@ msgstr "Novidades da versão {version}"
 
 #: app/src/tray.rs:219 app/src/ui/about.rs:115 app/src/ui/about.rs:222
 #: app/src/ui/about.rs:230 app/src/ui/about.rs:237
-#: app/src/ui/preferences.rs:730 app/src/update/mod.rs:108
+#: app/src/ui/preferences.rs:795 app/src/update/mod.rs:108
 msgid "Check for Updates"
 msgstr "Procurar atualizações"
 
@@ -3624,6 +3640,7 @@ msgid "Copy Link"
 msgstr "Copiar ligação"
 
 #: app/src/ui/add_account.rs:792 app/src/ui/add_account.rs:917
+#: app/src/ui/key_import.rs:213
 msgid "Try Again"
 msgstr "Tentar de novo"
 
@@ -3756,7 +3773,7 @@ msgstr ""
 "O Penguin Mail guarda neste computador todas as mensagens que transfere."
 
 #: app/src/ui/add_account.rs:1301 app/src/ui/add_account.rs:1302
-#: app/src/ui/preferences.rs:969
+#: app/src/ui/preferences.rs:1034
 msgid "Days"
 msgstr "Dias"
 
@@ -4518,7 +4535,7 @@ msgid "Declined"
 msgstr "Recusado"
 
 #: app/src/ui/calendar/block.rs:573 app/src/ui/calendar/words.rs:149
-#: app/src/ui/preferences.rs:850
+#: app/src/ui/preferences.rs:915
 msgid "{start}–{end}"
 msgstr "{start}–{end}"
 
@@ -4641,11 +4658,11 @@ msgstr "Data de fim"
 msgid "End time"
 msgstr "Hora de fim"
 
-#: app/src/ui/calendar/editor.rs:656 app/src/ui/preferences.rs:940
+#: app/src/ui/calendar/editor.rs:656 app/src/ui/preferences.rs:1005
 msgid "Starts"
 msgstr "Início"
 
-#: app/src/ui/calendar/editor.rs:659 app/src/ui/preferences.rs:942
+#: app/src/ui/calendar/editor.rs:659 app/src/ui/preferences.rs:1007
 msgid "Ends"
 msgstr "Fim"
 
@@ -5347,7 +5364,7 @@ msgstr "Dia inteiro"
 
 #: app/src/ui/calendar/mod.rs:2001 app/src/ui/calendar/mod.rs:3304
 #: app/src/ui/calendar/sidebar.rs:303 app/src/ui/calendar/words.rs:332
-#: app/src/ui/preferences.rs:864 app/src/ui/preferences.rs:976
+#: app/src/ui/preferences.rs:929 app/src/ui/preferences.rs:1041
 msgid "%a"
 msgstr "%a"
 
@@ -7025,7 +7042,114 @@ msgstr[1] "Coincide com {event} e mais {count}"
 msgid "This meeting"
 msgstr "Esta reunião"
 
-#: app/src/ui/mod.rs:375
+#: app/src/ui/key_import.rs:34
+msgid "Import…"
+msgstr "Importar…"
+
+#: app/src/ui/key_import.rs:43 app/src/ui/key_import.rs:83
+msgid "Import OpenPGP Keys"
+msgstr "Importar chaves OpenPGP"
+
+#: app/src/ui/key_import.rs:44 app/src/ui/key_import.rs:88
+msgid "Import S/MIME Certificates"
+msgstr "Importar certificados S/MIME"
+
+#: app/src/ui/key_import.rs:84
+msgid "OpenPGP Keys"
+msgstr "Chaves OpenPGP"
+
+#: app/src/ui/key_import.rs:89
+msgid "Certificates"
+msgstr "Certificados"
+
+#: app/src/ui/key_import.rs:99
+msgid "All Files"
+msgstr "Todos os ficheiros"
+
+#: app/src/ui/key_import.rs:213 app/src/ui/key_import.rs:217
+#: app/src/ui/window.rs:3680
+msgid "Close"
+msgstr "Fechar"
+
+#: app/src/ui/key_import.rs:279
+msgid "Key Not Imported"
+msgstr "Chave não importada"
+
+#: app/src/ui/key_import.rs:280
+msgid "Certificate Not Imported"
+msgstr "Certificado não importado"
+
+#: app/src/ui/key_import.rs:298
+msgid "Already Imported"
+msgstr "Já importado"
+
+#: app/src/ui/key_import.rs:300
+msgid "Key Imported"
+msgid_plural "{count} Keys Imported"
+msgstr[0] "Chave importada"
+msgstr[1] "{count} chaves importadas"
+
+#: app/src/ui/key_import.rs:306
+msgid "Certificate Imported"
+msgid_plural "{count} Certificates Imported"
+msgstr[0] "Certificado importado"
+msgstr[1] "{count} certificados importados"
+
+#: app/src/ui/key_import.rs:313
+msgid "gpg already holds everything in this file."
+msgstr "O gpg já tem tudo o que este ficheiro contém."
+
+#: app/src/ui/key_import.rs:314
+msgid "gpgsm already holds everything in this file."
+msgstr "O gpgsm já tem tudo o que este ficheiro contém."
+
+#: app/src/ui/key_import.rs:316
+msgid "You can sign and decrypt with the secret key now. gpg asks for its passphrase the first time."
+msgstr "Já pode assinar e desencriptar com a chave secreta. O gpg pede a frase-passe da primeira vez."
+
+#: app/src/ui/key_import.rs:319
+msgid "You can sign and decrypt with the secret key now."
+msgstr "Já pode assinar e desencriptar com a chave secreta."
+
+#: app/src/ui/key_import.rs:321
+msgid "You can encrypt to this person and check their signatures."
+msgid_plural "You can encrypt to these people and check their signatures."
+msgstr[0] "Já pode encriptar para esta pessoa e verificar as assinaturas dela."
+msgstr[1] "Já pode encriptar para estas pessoas e verificar as assinaturas delas."
+
+#: app/src/ui/key_import.rs:327
+msgid "Penguin Mail can check signatures made with this certificate."
+msgid_plural "Penguin Mail can check signatures made with these certificates."
+msgstr[0] "O Penguin Mail pode verificar as assinaturas feitas com este certificado."
+msgstr[1] "O Penguin Mail pode verificar as assinaturas feitas com estes certificados."
+
+#: app/src/ui/key_import.rs:350
+msgid "New, with secret key"
+msgstr "Nova, com chave secreta"
+
+#: app/src/ui/key_import.rs:351
+msgid "New"
+msgstr "Nova"
+
+#: app/src/ui/key_import.rs:352
+msgid "Updated"
+msgstr "Atualizada"
+
+#: app/src/ui/key_import.rs:353
+msgid "Already here"
+msgstr "Já existia"
+
+#: app/src/ui/key_import.rs:378
+msgid "And {count} more"
+msgid_plural "And {count} more"
+msgstr[0] "E mais {count}"
+msgstr[1] "E mais {count}"
+
+#: app/src/ui/key_import.rs:388
+msgid "Could not read {file}: {reason}"
+msgstr "Não foi possível ler {file}: {reason}"
+
+#: app/src/ui/mod.rs:376
 msgid "Gray"
 msgstr "Cinzento"
 
@@ -7257,11 +7381,11 @@ msgstr "O Gmail não tem assinatura para esta conta"
 msgid "Could not import: {reason}"
 msgstr "Não foi possível importar: {reason}"
 
-#: app/src/ui/preferences.rs:474
+#: app/src/ui/preferences.rs:475
 msgid "Signing and Encryption"
 msgstr "Assinatura e encriptação"
 
-#: app/src/ui/preferences.rs:476
+#: app/src/ui/preferences.rs:477
 msgid ""
 "Penguin Mail signs and encrypts through GnuPG, which holds your keys and "
 "asks for your passphrase itself."
@@ -7269,47 +7393,47 @@ msgstr ""
 "O Penguin Mail assina e encripta através do GnuPG, que guarda as suas chaves "
 "e pede a frase-passe por si."
 
-#: app/src/ui/preferences.rs:481
+#: app/src/ui/preferences.rs:482
 msgid "Your OpenPGP Keys"
 msgstr "As suas chaves OpenPGP"
 
-#: app/src/ui/preferences.rs:482
+#: app/src/ui/preferences.rs:483
 msgid "Asking gpg…"
 msgstr "A perguntar ao gpg…"
 
-#: app/src/ui/preferences.rs:486
+#: app/src/ui/preferences.rs:487
 msgid "Your S/MIME Certificates"
 msgstr "Os seus certificados S/MIME"
 
-#: app/src/ui/preferences.rs:487
+#: app/src/ui/preferences.rs:488
 msgid "Asking gpgsm…"
 msgstr "A perguntar ao gpgsm…"
 
-#: app/src/ui/preferences.rs:494
+#: app/src/ui/preferences.rs:495
 msgid "Sign My Messages by Default"
 msgstr "Assinar as minhas mensagens por predefinição"
 
-#: app/src/ui/preferences.rs:495
+#: app/src/ui/preferences.rs:496
 msgid "New messages open with Sign turned on"
 msgstr "As mensagens novas abrem com Assinar ligado"
 
-#: app/src/ui/preferences.rs:501
+#: app/src/ui/preferences.rs:502
 msgid "Encrypt When I Can"
 msgstr "Encriptar sempre que puder"
 
-#: app/src/ui/preferences.rs:503
+#: app/src/ui/preferences.rs:504
 msgid "Turn Encrypt on as soon as every recipient has a key or a certificate"
 msgstr "Ligar Encriptar assim que cada destinatário tiver chave ou certificado"
 
-#: app/src/ui/preferences.rs:526
+#: app/src/ui/preferences.rs:593
 msgid "gpg could not be asked: {reason}"
 msgstr "Não foi possível perguntar ao gpg: {reason}"
 
-#: app/src/ui/preferences.rs:545
+#: app/src/ui/preferences.rs:612
 msgid "gpgsm could not be asked: {reason}"
 msgstr "Não foi possível perguntar ao gpgsm: {reason}"
 
-#: app/src/ui/preferences.rs:554
+#: app/src/ui/preferences.rs:621
 msgid ""
 "Penguin Mail signs and encrypts through {programs}, which holds your keys "
 "and asks for your passphrase itself."
@@ -7317,11 +7441,11 @@ msgstr ""
 "O Penguin Mail assina e encripta através do {programs}, que guarda as suas "
 "chaves e pede a frase-passe por si."
 
-#: app/src/ui/preferences.rs:585
+#: app/src/ui/preferences.rs:650
 msgid "Spelling"
 msgstr "Ortografia"
 
-#: app/src/ui/preferences.rs:588
+#: app/src/ui/preferences.rs:653
 msgid ""
 "No dictionaries are installed, so Penguin Mail is not checking spelling. "
 "Install a Hunspell dictionary, such as hunspell-en-us or hunspell-pt-pt, and "
@@ -7331,155 +7455,155 @@ msgstr ""
 "a ortografia. Instale um dicionário Hunspell, como o hunspell-pt-pt ou o "
 "hunspell-en-us, e reabra o editor."
 
-#: app/src/ui/preferences.rs:594
+#: app/src/ui/preferences.rs:659
 msgid "Dictionaries found: {languages}."
 msgstr "Dicionários encontrados: {languages}."
 
-#: app/src/ui/preferences.rs:607
+#: app/src/ui/preferences.rs:672
 msgid "Follow the System Language ({language})"
 msgstr "Seguir o idioma do sistema ({language})"
 
-#: app/src/ui/preferences.rs:634
+#: app/src/ui/preferences.rs:699
 msgid "Check Spelling In"
 msgstr "Verificar a ortografia em"
 
-#: app/src/ui/preferences.rs:658
+#: app/src/ui/preferences.rs:723
 msgid "Sync"
 msgstr "Sincronização"
 
-#: app/src/ui/preferences.rs:664
+#: app/src/ui/preferences.rs:729
 msgid "Checking"
 msgstr "Verificação"
 
-#: app/src/ui/preferences.rs:670
+#: app/src/ui/preferences.rs:735
 msgid "Check for New Mail"
 msgstr "Procurar correio novo"
 
-#: app/src/ui/preferences.rs:679
+#: app/src/ui/preferences.rs:744
 msgid "Storage"
 msgstr "Armazenamento"
 
-#: app/src/ui/preferences.rs:684
+#: app/src/ui/preferences.rs:749
 msgid "Keep Mail on This Computer For"
 msgstr "Guardar o correio neste computador por"
 
-#: app/src/ui/preferences.rs:686
+#: app/src/ui/preferences.rs:751
 msgid "Everything in your inbox stays too, and older mail remains searchable"
 msgstr ""
 "Tudo o que está na caixa de entrada também fica, e o correio mais antigo "
 "continua pesquisável"
 
-#: app/src/ui/preferences.rs:695
+#: app/src/ui/preferences.rs:760
 msgid "Message Cache"
 msgstr "Cache de mensagens"
 
-#: app/src/ui/preferences.rs:697
+#: app/src/ui/preferences.rs:762
 msgid "Bodies of mail you have read, kept for opening offline"
 msgstr "O corpo do correio que já leu, guardado para abrir sem ligação"
 
-#: app/src/ui/preferences.rs:706
+#: app/src/ui/preferences.rs:771
 msgid "Startup"
 msgstr "Arranque"
 
-#: app/src/ui/preferences.rs:709
+#: app/src/ui/preferences.rs:774
 msgid "Start in the Tray at Login"
 msgstr "Arrancar na área de notificação ao iniciar sessão"
 
-#: app/src/ui/preferences.rs:723
+#: app/src/ui/preferences.rs:788
 msgid "Not available in demo mode"
 msgstr "Indisponível no modo de demonstração"
 
-#: app/src/ui/preferences.rs:731
+#: app/src/ui/preferences.rs:796
 msgid "Look for a new release once a day"
 msgstr "Procurar uma versão nova uma vez por dia"
 
-#: app/src/ui/preferences.rs:738
+#: app/src/ui/preferences.rs:803
 msgid "Updates"
 msgstr "Atualizações"
 
-#: app/src/ui/preferences.rs:752
+#: app/src/ui/preferences.rs:817
 msgid "Senders Who May Load Images"
 msgstr "Remetentes que podem carregar imagens"
 
-#: app/src/ui/preferences.rs:753 app/src/ui/preferences.rs:761
+#: app/src/ui/preferences.rs:818 app/src/ui/preferences.rs:826
 msgid "Nobody yet"
 msgstr "Ainda ninguém"
 
-#: app/src/ui/preferences.rs:763
+#: app/src/ui/preferences.rs:828
 msgid "{count} sender"
 msgid_plural "{count} senders"
 msgstr[0] "{count} remetente"
 msgstr[1] "{count} remetentes"
 
-#: app/src/ui/preferences.rs:773
+#: app/src/ui/preferences.rs:838
 msgid "Anyone at this domain"
 msgstr "Qualquer pessoa deste domínio"
 
-#: app/src/ui/preferences.rs:775
+#: app/src/ui/preferences.rs:840
 msgid "This address"
 msgstr "Este endereço"
 
-#: app/src/ui/preferences.rs:780
+#: app/src/ui/preferences.rs:845
 msgid "Stop Loading Images from This Sender"
 msgstr "Deixar de carregar imagens deste remetente"
 
-#: app/src/ui/preferences.rs:787
+#: app/src/ui/preferences.rs:852
 msgid "Stop loading images from {sender}"
 msgstr "Deixar de carregar imagens de {sender}"
 
-#: app/src/ui/preferences.rs:857
+#: app/src/ui/preferences.rs:922
 msgid "Monday to Friday"
 msgstr "Segunda a sexta-feira"
 
-#: app/src/ui/preferences.rs:858
+#: app/src/ui/preferences.rs:923
 msgid "Every day of the week"
 msgstr "Todos os dias da semana"
 
-#: app/src/ui/preferences.rs:859
+#: app/src/ui/preferences.rs:924
 msgid "No days"
 msgstr "Nenhum dia"
 
-#: app/src/ui/preferences.rs:866
+#: app/src/ui/preferences.rs:931
 msgid ", "
 msgstr ", "
 
-#: app/src/ui/preferences.rs:868
+#: app/src/ui/preferences.rs:933
 msgid "{time}, {days}"
 msgstr "{time}, {days}"
 
-#: app/src/ui/preferences.rs:894
+#: app/src/ui/preferences.rs:959
 msgid "Week Starts On"
 msgstr "A semana começa em"
 
-#: app/src/ui/preferences.rs:899
+#: app/src/ui/preferences.rs:964
 msgid "Automatic follows the locale's own first day of the week"
 msgstr "O automático segue o primeiro dia da semana da definição regional"
 
-#: app/src/ui/preferences.rs:915
+#: app/src/ui/preferences.rs:980
 msgid "Working Hours"
 msgstr "Horário de Trabalho"
 
-#: app/src/ui/preferences.rs:933
+#: app/src/ui/preferences.rs:998
 msgid "Hours"
 msgstr "Horas"
 
-#: app/src/ui/preferences.rs:964
+#: app/src/ui/preferences.rs:1029
 msgid "–"
 msgstr "–"
 
-#: app/src/ui/preferences.rs:1047
+#: app/src/ui/preferences.rs:1112
 msgid "Follow System"
 msgstr "Seguir o sistema"
 
-#: app/src/ui/preferences.rs:1051
+#: app/src/ui/preferences.rs:1116
 msgid "Language"
 msgstr "Idioma"
 
-#: app/src/ui/preferences.rs:1052
+#: app/src/ui/preferences.rs:1117
 msgid "Penguin Mail shows a new language after a restart"
 msgstr "O Penguin Mail mostra o novo idioma depois de reiniciar"
 
-#: app/src/ui/preferences.rs:1124
+#: app/src/ui/preferences.rs:1189
 msgid "No signature"
 msgstr "Sem assinatura"
 
@@ -8470,10 +8594,6 @@ msgstr ""
 "O Penguin Mail não conseguiu transferir estas mensagens do servidor de "
 "{address}. Volta a tentar em cada verificação, exceto se a mensagem for "
 "grande demais para transferir."
-
-#: app/src/ui/window.rs:3680
-msgid "Close"
-msgstr "Fechar"
 
 #: app/src/ui/window/arrange.rs:96 app/src/ui/window/organize.rs:202
 msgid "Delete “{name}”?"
@@ -10315,9 +10435,6 @@ msgstr "Mover para {folder}"
 
 #~ msgid "Add a recipient whose certificate gpgsm holds."
 #~ msgstr "Adicione um destinatário de quem o gpgsm tenha o certificado."
-
-#~ msgid "gpgsm holds no certificate for {addresses}."
-#~ msgstr "O gpgsm não tem certificado para {addresses}."
 
 #~ msgid "Penguin Mail asks the sender to take you off the list."
 #~ msgstr "O Penguin Mail pede ao remetente que o retire da lista."

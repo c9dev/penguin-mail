@@ -447,7 +447,7 @@ fn writing_page(
     page.add(&signatures);
     page.add(&super::templates::group(app));
     page.add(&spelling_group(app, settings, accounts));
-    if let Some(protection) = protection_group(app, settings, accounts) {
+    if let Some(protection) = protection_group(app, settings, accounts, dialog) {
         page.add(&protection);
     }
     page
@@ -466,6 +466,7 @@ fn protection_group(
     app: &Rc<App>,
     settings: &Settings,
     accounts: &[Account],
+    dialog: &adw::PreferencesDialog,
 ) -> Option<adw::PreferencesGroup> {
     if !app.core.has_gpg() && !app.core.has_gpgsm() {
         return None;
@@ -506,58 +507,122 @@ fn protection_group(
         Change::EncryptWhenPossible,
     ));
     // Every answer here means running a program, so the group goes up
-    // saying so and fills itself in.
+    // saying so and fills itself in, and again after an import.
     let mut addresses: Vec<String> = accounts.iter().map(|a| a.email.clone()).collect();
     for alias in settings.send_as.values().flatten() {
         addresses.push(alias.email.clone());
     }
     addresses.sort();
     addresses.dedup();
-    let (app, filling) = (Rc::clone(app), group.clone());
-    glib::spawn_future_local(async move {
-        let mut programs = Vec::new();
-        if app.core.has_gpg() {
-            let version = app.core.gpg(|pgp| Ok(crate::pgp::version(pgp))).await;
-            programs.push(named("gpg", version.ok().flatten()));
-            let wanted = addresses.clone();
-            match app.core.gpg(move |pgp| pgp.keys_for(&wanted)).await {
-                Ok(held) => keys.set_subtitle(&crate::pgp::own_keys(&held)),
-                Err(err) => keys.set_subtitle(&fill(
-                    &gettext("gpg could not be asked: {reason}"),
-                    &[("reason", &err.to_string())],
-                )),
-            }
+    let rows = Rows {
+        group: group.clone(),
+        keys: keys.clone(),
+        certificates: certificates.clone(),
+        addresses: Rc::new(addresses),
+    };
+    // The buttons sit in these rows, so the refill holds them weakly
+    // rather than keeping them alive in a cycle.
+    let refill = {
+        let (weak, group, keys, certificates, addresses) = (
+            Rc::downgrade(app),
+            group.downgrade(),
+            keys.downgrade(),
+            certificates.downgrade(),
+            Rc::clone(&rows.addresses),
+        );
+        move || {
+            let (Some(app), Some(group), Some(keys), Some(certificates)) = (
+                weak.upgrade(),
+                group.upgrade(),
+                keys.upgrade(),
+                certificates.upgrade(),
+            ) else {
+                return;
+            };
+            let rows = Rows {
+                group,
+                keys,
+                certificates,
+                addresses: Rc::clone(&addresses),
+            };
+            glib::spawn_future_local(fill_protection(app, rows));
         }
-        if app.core.has_gpgsm() {
-            let version = app
-                .core
-                .gpgsm(|smime| Ok(crate::smime::version(smime)))
-                .await;
-            programs.push(named("gpgsm", version.ok().flatten()));
-            let wanted = addresses.clone();
-            match app
-                .core
-                .gpgsm(move |smime| smime.signing_certificates(&wanted))
-                .await
-            {
-                Ok(held) => certificates.set_subtitle(&crate::smime::own_certificates(&held)),
-                Err(err) => certificates.set_subtitle(&fill(
-                    &gettext("gpgsm could not be asked: {reason}"),
-                    &[("reason", &err.to_string())],
-                )),
-            }
-        }
-        let named =
-            crate::protection::joined(&programs.iter().map(String::as_str).collect::<Vec<_>>());
-        filling.set_description(Some(&fill(
-            &gettext(
-                "Penguin Mail signs and encrypts through {programs}, which holds your \
-                 keys and asks for your passphrase itself.",
-            ),
-            &[("programs", &named)],
-        )));
-    });
+    };
+    keys.add_suffix(&super::key_import::button(
+        app,
+        super::key_import::Kind::Pgp,
+        dialog,
+        refill.clone(),
+    ));
+    certificates.add_suffix(&super::key_import::button(
+        app,
+        super::key_import::Kind::Smime,
+        dialog,
+        refill,
+    ));
+    glib::spawn_future_local(fill_protection(Rc::clone(app), rows));
     Some(group)
+}
+
+/// The rows of the signing group that say what gpg and gpgsm hold.
+struct Rows {
+    group: adw::PreferencesGroup,
+    keys: adw::ActionRow,
+    certificates: adw::ActionRow,
+    /// Every address the person sends from.
+    addresses: Rc<Vec<String>>,
+}
+
+/// Asks gpg and gpgsm what they hold for the addresses the person sends
+/// from, and which versions they are, and writes the answers into `rows`.
+async fn fill_protection(app: Rc<App>, rows: Rows) {
+    let Rows {
+        group: filling,
+        keys,
+        certificates,
+        addresses,
+    } = rows;
+    let mut programs = Vec::new();
+    if app.core.has_gpg() {
+        let version = app.core.gpg(|pgp| Ok(crate::pgp::version(pgp))).await;
+        programs.push(named("gpg", version.ok().flatten()));
+        let wanted = addresses.as_ref().clone();
+        match app.core.gpg(move |pgp| pgp.keys_for(&wanted)).await {
+            Ok(held) => keys.set_subtitle(&crate::pgp::own_keys(&held)),
+            Err(err) => keys.set_subtitle(&fill(
+                &gettext("gpg could not be asked: {reason}"),
+                &[("reason", &err.to_string())],
+            )),
+        }
+    }
+    if app.core.has_gpgsm() {
+        let version = app
+            .core
+            .gpgsm(|smime| Ok(crate::smime::version(smime)))
+            .await;
+        programs.push(named("gpgsm", version.ok().flatten()));
+        let wanted = addresses.as_ref().clone();
+        match app
+            .core
+            .gpgsm(move |smime| smime.signing_certificates(&wanted))
+            .await
+        {
+            Ok(held) => certificates.set_subtitle(&crate::smime::own_certificates(&held)),
+            Err(err) => certificates.set_subtitle(&fill(
+                &gettext("gpgsm could not be asked: {reason}"),
+                &[("reason", &err.to_string())],
+            )),
+        }
+    }
+    let named =
+        crate::protection::joined(&programs.iter().map(String::as_str).collect::<Vec<_>>());
+    filling.set_description(Some(&fill(
+        &gettext(
+            "Penguin Mail signs and encrypts through {programs}, which holds your \
+             keys and asks for your passphrase itself.",
+        ),
+        &[("programs", &named)],
+    )));
 }
 
 /// One program with the version it reported, for the line naming what the
