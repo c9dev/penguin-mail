@@ -58,8 +58,6 @@ const BATCH_LIMIT: usize = 1000;
 const DOWNLOADED: &str = "pop3/";
 
 /// The store id of the message the server calls `uidl`.
-// Only the tests store downloads until the downloader arrives.
-#[cfg_attr(not(test), expect(dead_code))]
 pub(crate) fn downloaded_id(uidl: &str) -> String {
     format!("{DOWNLOADED}{uidl}")
 }

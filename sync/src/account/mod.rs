@@ -6,6 +6,7 @@ mod history;
 mod labels;
 mod listed;
 mod outbox;
+mod pop3;
 mod refs;
 mod threads;
 mod window;
@@ -61,6 +62,11 @@ pub struct AccountSync {
     /// look that can delete mail. A look in between would read a moved
     /// message's old place as expunged and delete it.
     moving: tokio::sync::Mutex<()>,
+    /// Held for a POP3 account's whole check. Most POP3 servers lock the
+    /// maildrop for one session, so a second check started meanwhile, by
+    /// the timer or by Check for Mail, waits here rather than meeting the
+    /// lock and failing.
+    pop3_checking: tokio::sync::Mutex<()>,
     /// Counts the changes to this account's mail, so a search kept to
     /// list a folder can tell it no longer says what the folder holds.
     mail_changes: AtomicU64,
@@ -93,6 +99,7 @@ impl AccountSync {
             hits: Mutex::default(),
             raw: Arc::new(Mutex::new(RawCache::new(RAW_CACHE_BYTES))),
             moving: tokio::sync::Mutex::new(()),
+            pop3_checking: tokio::sync::Mutex::new(()),
             mail_changes: AtomicU64::new(0),
         }
     }
