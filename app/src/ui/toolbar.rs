@@ -23,10 +23,11 @@ pub enum Slot {
     Read,
     Flag,
     Labels,
+    Tags,
 }
 
 impl Slot {
-    pub const ALL: [Slot; 10] = [
+    pub const ALL: [Slot; 11] = [
         Slot::Reply,
         Slot::ReplyAll,
         Slot::Forward,
@@ -37,6 +38,7 @@ impl Slot {
         Slot::Read,
         Slot::Flag,
         Slot::Labels,
+        Slot::Tags,
     ];
 }
 
@@ -61,6 +63,8 @@ pub struct On {
     /// A conversation in a window of its own. Labels stay with the main
     /// window, which has the list the label popover works on.
     pub detached: bool,
+    /// The mail open comes from one account that keeps tags.
+    pub tags: bool,
 }
 
 /// The capsules from the start of the header bar, in the mockup's order:
@@ -70,7 +74,7 @@ pub const CAPSULES: [&[Slot]; 5] = [
     &[Slot::Reply, Slot::ReplyAll, Slot::Forward],
     &[Slot::Edit],
     &[Slot::Archive, Slot::Trash, Slot::Junk],
-    &[Slot::Labels],
+    &[Slot::Labels, Slot::Tags],
     &[Slot::Flag],
 ];
 
@@ -89,6 +93,9 @@ pub fn shows(slot: Slot, on: On) -> bool {
         Slot::Read => false,
         Slot::Flag => any && wide,
         Slot::Labels => any && wide && !on.detached,
+        // Tags sit with the Labels button, in the same window, and show
+        // only where the account keeps tags.
+        Slot::Tags => any && wide && !on.detached && on.tags,
     }
 }
 
@@ -123,6 +130,7 @@ mod tests {
             holds,
             compact: false,
             detached: false,
+            tags: false,
         }
     }
 
@@ -181,6 +189,26 @@ mod tests {
         };
         assert!(!shows(Labels, apart));
         assert_eq!(groups(apart).last(), Some(&vec![Flag]));
+    }
+
+    #[test]
+    fn tags_join_the_filing_capsule_only_where_the_account_keeps_them() {
+        let tagged = On {
+            tags: true,
+            ..on(Holds::Message)
+        };
+        assert_eq!(groups(tagged)[2], vec![Labels, Tags]);
+        assert!(!shows(Tags, on(Holds::Message)));
+        let apart = On {
+            detached: true,
+            ..tagged
+        };
+        assert!(!shows(Tags, apart), "tags stay with the main window");
+        let narrow = On {
+            compact: true,
+            ..tagged
+        };
+        assert!(!shows(Tags, narrow));
     }
 
     #[test]

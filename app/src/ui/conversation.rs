@@ -196,7 +196,12 @@ struct Buttons {
 }
 
 /// The widget behind one slot of the header bar.
-fn slot_widget(buttons: &Buttons, labels: &adw::SplitButton, slot: toolbar::Slot) -> gtk::Widget {
+fn slot_widget(
+    buttons: &Buttons,
+    labels: &adw::SplitButton,
+    tags: &gtk::MenuButton,
+    slot: toolbar::Slot,
+) -> gtk::Widget {
     use toolbar::Slot;
     match slot {
         Slot::Reply => buttons.reply.clone().upcast(),
@@ -209,6 +214,20 @@ fn slot_widget(buttons: &Buttons, labels: &adw::SplitButton, slot: toolbar::Slot
         Slot::Read => buttons.read.clone().upcast(),
         Slot::Flag => buttons.star.clone().upcast(),
         Slot::Labels => labels.clone().upcast(),
+        Slot::Tags => tags.clone().upcast(),
+    }
+}
+
+/// Fills `menu` with one Categorize Sender item for each of `set`. The key
+/// is the provider's own name for the category and stays as it is.
+fn fill_categorize(menu: &gio::Menu, set: &[Category]) {
+    for category in set {
+        let item = gio::MenuItem::new(Some(&category.name()), None);
+        item.set_action_and_target_value(
+            Some("win.categorize-sender"),
+            Some(&category.key().to_variant()),
+        );
+        menu.append_item(&item);
     }
 }
 
@@ -218,6 +237,10 @@ pub struct ConversationView {
     /// button like the flag's beside it, whose two parts both open the
     /// labels.
     pub label_button: adw::SplitButton,
+    /// Applies or removes tags on an account that keeps them; the window
+    /// fills its popover each time it opens. Shown only where
+    /// `toolbar::shows` says, beside the Labels button.
+    pub tag_button: gtk::MenuButton,
     /// Opens or closes the assistant beside the mail. The window wires
     /// it to the assistant panel's own toggle path (R12) and hides it
     /// with `set_detached`, since a conversation of its own has no
@@ -305,6 +328,8 @@ pub struct ConversationView {
     held: RefCell<Vec<(Address, webkit::URISchemeRequest)>>,
     compact: Cell<bool>,
     detached: Cell<bool>,
+    /// The mail the header acts on comes from one account that keeps tags.
+    tags: Cell<bool>,
     /// Whether the head of the page offers Summarize.
     summarize: Cell<bool>,
     /// This view, for the answers WebKit gives later.
@@ -536,6 +561,11 @@ impl ConversationView {
         marks.append(Some(&gettext("Mute")), Some("win.mute"));
         // set_filing words this one for how the accounts file mail.
         marks.append(Some(&Filing::Labels.menu_item()), Some("win.label"));
+        // Only an account that keeps tags has this; the item is hidden
+        // while the window disables the action.
+        let tags_item = gio::MenuItem::new(Some(&gettext("Tags…")), Some("win.tag"));
+        tags_item.set_attribute_value("hidden-when", Some(&"action-disabled".to_variant()));
+        marks.append_item(&tags_item);
         let remind_menu = gio::Menu::new();
         marks.append_submenu(Some(&gettext("Remind Me")), &remind_menu);
         more.append_section(None, &marks);
@@ -561,15 +591,7 @@ impl ConversationView {
         block.set_attribute_value("hidden-when", Some(&"action-disabled".to_variant()));
         sender.append_item(&block);
         let categories = gio::Menu::new();
-        // The key is Gmail's own name for the category and stays as it is.
-        for category in Category::ALL.iter().filter(|c| **c != Category::All) {
-            let item = gio::MenuItem::new(Some(&category.name()), None);
-            item.set_action_and_target_value(
-                Some("win.categorize-sender"),
-                Some(&category.key().to_variant()),
-            );
-            categories.append_item(&item);
-        }
+        fill_categorize(&categories, &crate::offered::categorize_choices(mailrs_sync::Offers::EVERYTHING));
         sender.append_submenu(Some(&gettext("Categorize Sender")), &categories);
         more.append_section(None, &sender);
         buttons.more.set_menu_model(Some(&more));
@@ -593,6 +615,13 @@ impl ConversationView {
         // opens the same list as the arrow, as the whole button did
         // before it took the flag's shape.
         label_button.connect_clicked(|button| button.popup());
+        // The window fills the popover each time it opens, so it lists the
+        // tags and ticks of the mail the button reaches then.
+        let tag_button = gtk::MenuButton::builder()
+            .icon_name("penguin-mail-tag-symbolic")
+            .tooltip_text(gettext("Tags"))
+            .build();
+        name(&tag_button, &gettext("Tags"));
         // The capsules run from the start of the bar in the order the
         // mockup gives them; More stays a round button at the end.
         let capsules: Vec<gtk::Box> = toolbar::CAPSULES
@@ -609,7 +638,7 @@ impl ConversationView {
                     .valign(gtk::Align::Center)
                     .build();
                 for &slot in slots.iter() {
-                    let widget = slot_widget(&buttons, &label_button, slot);
+                    let widget = slot_widget(&buttons, &label_button, &tag_button, slot);
                     // Edit Draft keeps its suggested look; the rest sit
                     // flat inside the capsule's one pill.
                     if !draft {
@@ -677,6 +706,7 @@ impl ConversationView {
         let view = Rc::new_cyclic(|this| ConversationView {
             page,
             label_button,
+            tag_button,
             assistant_toggle,
             header: header.clone(),
             many,
@@ -719,6 +749,7 @@ impl ConversationView {
             held: RefCell::new(Vec::new()),
             compact: Cell::new(false),
             detached: Cell::new(false),
+            tags: Cell::new(false),
             summarize: Cell::new(false),
             this: this.clone(),
         });
@@ -1010,6 +1041,7 @@ impl ConversationView {
     /// For a conversation in its own window: labels stay in the main window.
     pub fn set_detached(&self) {
         self.label_button.set_visible(false);
+        self.tag_button.set_visible(false);
         self.assistant_toggle.set_visible(false);
         self.detached.set(true);
     }
@@ -1768,9 +1800,29 @@ impl ConversationView {
         name_with_shortcut(&self.buttons.read, &said);
     }
 
+    /// Shows the Tags button when the mail the header acts on comes from
+    /// one account that keeps tags, and hides it otherwise.
+    pub fn set_tags_on(&self, on: bool) {
+        if self.tags.replace(on) != on {
+            self.follow_holds();
+        }
+    }
+
+    /// Rebuilds Categorize Sender for the slices the account offers:
+    /// Gmail's four, or Focused and Other.
+    pub fn set_categorize_choices(&self, set: &[Category]) {
+        self.categorize_menu.remove_all();
+        fill_categorize(&self.categorize_menu, set);
+    }
+
     /// On phone widths, secondary actions move into the "more" menu.
     pub fn set_compact(&self, compact: bool) {
         self.compact.set(compact);
+        self.follow_holds();
+    }
+
+    /// Shows the header buttons for what the pane holds now.
+    fn follow_holds(&self) {
         if self.showing_many() {
             return self.apply_toolbar(Holds::Many);
         }
@@ -1788,9 +1840,10 @@ impl ConversationView {
             holds,
             compact: self.compact.get(),
             detached: self.detached.get(),
+            tags: self.tags.get(),
         };
         for slot in toolbar::Slot::ALL {
-            slot_widget(&self.buttons, &self.label_button, slot)
+            slot_widget(&self.buttons, &self.label_button, &self.tag_button, slot)
                 .set_visible(toolbar::shows(slot, on));
         }
         for (capsule, slots) in self.capsules.iter().zip(toolbar::CAPSULES) {

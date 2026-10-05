@@ -11,7 +11,8 @@ use adw::prelude::*;
 use gtk::{gio, glib};
 use mailrs_domain::translate::{fill, fill_plural, gettext, with_reason};
 use mailrs_domain::{
-    Account, AccountId, AccountState, ChangeEvent, EpochMillis, Label, MessageBody, Provider,
+    Account, AccountId, AccountState, Category, ChangeEvent, EpochMillis, Label, MessageBody,
+    Provider,
     Role, Target, ThreadSummary,
 };
 use mailrs_sync::{
@@ -169,6 +170,8 @@ pub struct MainWindow {
     assistant: Rc<super::assistant::AssistantPane>,
     assistant_split: adw::OverlaySplitView,
     categories: categories::CategoryBar,
+    /// Focused and Other, over one Microsoft account's inbox.
+    focus: categories::CategoryBar,
     follow_up: followup::FollowUpBanner,
     /// The inline images and the attachment rows' pictures already
     /// fetched.
@@ -825,7 +828,11 @@ impl MainWindow {
                 authorizing: Cell::new(false),
                 assistant,
                 assistant_split,
-                categories: categories::CategoryBar::new(app.settings_with(|s| s.default_category)),
+                categories: categories::CategoryBar::new(
+                    app.settings_with(|s| s.default_category),
+                    &Category::ALL,
+                ),
+                focus: categories::CategoryBar::new(Category::Focused, &Category::FOCUS),
                 follow_up: followup::FollowUpBanner::new(),
                 pictures: Rc::new(pictures::Pictures::new(Rc::clone(&app.core))),
                 image_senders: RefCell::new(Vec::new()),
@@ -851,6 +858,12 @@ impl MainWindow {
                 }
             });
         }
+        let weak = Rc::downgrade(&window);
+        window.conversation.tag_button.set_create_popup_func(move |button| {
+            if let Some(win) = weak.upgrade() {
+                button.set_popover(Some(&win.tag_popover()));
+            }
+        });
         // Both header buttons run the same toggle_assistant path as
         // Ctrl+J and the menu (R12); the panel's own show-sidebar keeps
         // them in the pressed state it puts on screen, whatever opened
@@ -1396,8 +1409,9 @@ impl MainWindow {
             self.follow_follow_ups();
         }
         if redraw.category {
-            self.categories
-                .show_names(self.screen.borrow().category());
+            let category = self.screen.borrow().category();
+            self.categories.show_names(category);
+            self.focus.show_names(category);
         }
         if let Some(ticket) = redraw.list {
             self.list_first_page(ticket, Waiting::Spinner);
@@ -2255,6 +2269,108 @@ impl MainWindow {
         content.append(&gtk::Separator::new(gtk::Orientation::Horizontal));
         content.append(&create);
         popover.set_child(Some(&content));
+        popover
+    }
+
+    /// The tag list for what the Tags button reaches: the selection, or
+    /// the open conversation.
+    fn tag_popover(self: &Rc<Self>) -> gtk::Popover {
+        let view = Rc::clone(&self.conversation);
+        let targets = self.reach(&view).targets;
+        let applied: HashSet<String> = match targets.len() {
+            1 => view
+                .read(|o| {
+                    o.messages
+                        .iter()
+                        .flat_map(|m| m.held.mailboxes.clone())
+                        .collect()
+                })
+                .unwrap_or_default(),
+            _ => HashSet::new(),
+        };
+        self.tag_popover_for(targets, applied, Some(view))
+    }
+
+    /// The tags of the targets' account, with `applied` already ticked. A
+    /// tag is added or taken off, never moved to, and none is made here:
+    /// Outlook makes them. `follow` is the conversation to move on from
+    /// when a change takes its mail out of the mailbox on screen.
+    pub(super) fn tag_popover_for(
+        self: &Rc<Self>,
+        targets: Vec<Target>,
+        applied: HashSet<String>,
+        follow: Option<Rc<ConversationView>>,
+    ) -> gtk::Popover {
+        let popover = gtk::Popover::new();
+        let accounts: HashSet<AccountId> = targets.iter().map(|t| t.account_id).collect();
+        let message = |text: &str| {
+            gtk::Label::builder()
+                .label(text)
+                .wrap(true)
+                .max_width_chars(28)
+                .margin_top(12)
+                .margin_bottom(12)
+                .margin_start(12)
+                .margin_end(12)
+                .build()
+        };
+        let Some(&account_id) = accounts.iter().next().filter(|_| accounts.len() == 1) else {
+            popover.set_child(Some(&message(&gettext(
+                "Select mail from one account to tag it.",
+            ))));
+            return popover;
+        };
+        let mut tags: Vec<Label> = self
+            .labels_of(account_id)
+            .into_iter()
+            .filter(|l| l.kind == mailrs_domain::LabelKind::Tag)
+            .collect();
+        tags.sort_by_key(|l| l.name.to_lowercase());
+        if tags.is_empty() {
+            popover.set_child(Some(&message(&gettext(
+                "This account has no tags yet. Make one in Outlook.",
+            ))));
+            return popover;
+        }
+        let list = gtk::ListBox::builder()
+            .css_classes(["navigation-sidebar"])
+            .selection_mode(gtk::SelectionMode::None)
+            .build();
+        for tag in &tags {
+            let row = gtk::Box::builder().spacing(10).build();
+            let check = gtk::Image::from_icon_name("object-select-symbolic");
+            check.set_opacity(if applied.contains(&tag.id) { 1.0 } else { 0.0 });
+            row.append(&check);
+            row.append(&gtk::Label::builder().label(&tag.name).xalign(0.0).build());
+            let row = gtk::ListBoxRow::builder()
+                .child(&row)
+                .activatable(true)
+                .build();
+            // The tick is drawn at zero opacity when the tag is off, which
+            // says nothing out loud.
+            crate::ui::name(&row, &label_row_name(&tag.name, applied.contains(&tag.id)));
+            list.append(&row);
+        }
+        let (weak, pop) = (Rc::downgrade(self), popover.clone());
+        list.connect_row_activated(move |_, row| {
+            let (Some(win), Some(tag)) = (weak.upgrade(), tags.get(row.index() as usize)) else {
+                return;
+            };
+            pop.popdown();
+            win.press_label(
+                targets.clone(),
+                filing_choice(Filing::Labels, &tag.id, &tag.name, applied.contains(&tag.id)),
+                follow.as_ref(),
+            );
+        });
+        let scroller = gtk::ScrolledWindow::builder()
+            .child(&list)
+            .hscrollbar_policy(gtk::PolicyType::Never)
+            .propagate_natural_height(true)
+            .max_content_height(360)
+            .min_content_width(220)
+            .build();
+        popover.set_child(Some(&scroller));
         popover
     }
 

@@ -107,6 +107,8 @@ pub(super) enum Item {
     /// Label's place on an account that files in folders: the same picker,
     /// which there moves the message into one folder.
     MoveToFolder,
+    /// Opens the tags of an account that keeps them beside its folders.
+    Tags,
     Export,
     CopyAddress,
 }
@@ -130,6 +132,7 @@ impl Item {
             Item::FlagColor => gettext("Flag Color"),
             Item::Label => Filing::Labels.menu_item(),
             Item::MoveToFolder => Filing::Folders.menu_item(),
+            Item::Tags => gettext("Tags…"),
             Item::Export => gettext("Export…"),
             Item::CopyAddress => gettext("Copy Address"),
         }
@@ -150,6 +153,7 @@ impl Item {
             Item::Flag | Item::Unflag => "win.message-flag",
             Item::FlagColor => return None,
             Item::Label | Item::MoveToFolder => "win.message-label",
+            Item::Tags => "win.message-tag",
             Item::Export => "win.message-export",
             Item::CopyAddress => "win.message-copy-address",
         })
@@ -171,7 +175,7 @@ pub(super) fn groups(message: &Message, mailbox: &Mailbox, offers: Offers) -> Ve
         false => Item::MarkUnread,
     });
     groups.push(filing);
-    groups.push(vec![
+    let mut marks = vec![
         match message.flagged {
             true => Item::Unflag,
             false => Item::Flag,
@@ -181,7 +185,11 @@ pub(super) fn groups(message: &Message, mailbox: &Mailbox, offers: Offers) -> Ve
             true => Item::Label,
             false => Item::MoveToFolder,
         },
-    ]);
+    ];
+    if offers.tags {
+        marks.push(Item::Tags);
+    }
+    groups.push(marks);
     let mut out = vec![Item::Export];
     if message.sender.is_some() {
         out.push(Item::CopyAddress);
@@ -344,6 +352,24 @@ impl MainWindow {
         // No conversation to move on from: the thread keeps its other
         // messages, so the reader stays where they are.
         let popover = self.label_popover_for(vec![target], applied, None);
+        view.popup_where_menu_was(&popover);
+    }
+
+    /// Opens the tag list over one message, which adds and removes that
+    /// message's tags rather than the conversation's.
+    pub(super) fn tag_message(self: &Rc<Self>, view: &Rc<ConversationView>, message_id: &str) {
+        let Some(target) = self.message_target(view, message_id) else {
+            return;
+        };
+        let applied = view
+            .find(|open| {
+                open.messages
+                    .iter()
+                    .find(|m| m.id == message_id)
+                    .map(|m| m.held.mailboxes.iter().cloned().collect())
+            })
+            .unwrap_or_default();
+        let popover = self.tag_popover_for(vec![target], applied, None);
         view.popup_where_menu_was(&popover);
     }
 
@@ -535,6 +561,15 @@ mod tests {
         assert!(!items.contains(&Item::Label));
         let gmail: Vec<Item> = groups(&message(), &inbox(), Offers::EVERYTHING).concat();
         assert!(gmail.contains(&Item::Label));
+    }
+
+    #[test]
+    fn a_tag_account_offers_tags_beside_move_to_folder() {
+        let tags = Offers { labels: false, tags: true, ..Offers::EVERYTHING };
+        let items: Vec<Item> = groups(&message(), &inbox(), tags).concat();
+        assert!(items.contains(&Item::MoveToFolder) && items.contains(&Item::Tags));
+        let gmail: Vec<Item> = groups(&message(), &inbox(), Offers::EVERYTHING).concat();
+        assert!(!gmail.contains(&Item::Tags));
     }
 
     #[test]

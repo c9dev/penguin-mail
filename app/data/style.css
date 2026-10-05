@@ -470,6 +470,7 @@ toggle-group.category-chips { background: none; padding: 0; box-shadow: none; }
 .app-dark .category-chips > toggle:hover { background: color-mix(in srgb, currentColor 8%, #3a3a40); }
 .category-chips > toggle:checked { background: var(--accent-fill); color: var(--accent-fg-color); }
 .category-chips .category-chip { padding: 0 14px; min-height: 30px; }
+.category-chips .category-tab .category-name { margin-left: 0; }
 .category-chips .category-name { margin-left: 6px; font-weight: 700; font-size: 0.89em; }
 /* The mockup's badge rides the pill's top end corner and rises 3px
    above it, but `CategoryStrip` clips its own bounds to a frame

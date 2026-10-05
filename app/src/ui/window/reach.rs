@@ -6,6 +6,8 @@
 //! mailbox it was opened from. [`Reach::new`] holds that rule with no
 //! widget in sight; [`MainWindow::reach`] feeds it what a view shows.
 
+use gtk::gio;
+use gtk::prelude::*;
 use mailrs_domain::{AccountId, Target, ThreadSummary};
 
 use super::MainWindow;
@@ -104,6 +106,18 @@ impl MainWindow {
         let reached: Vec<AccountId> = accounts.into_iter().collect();
         let shown = self.accounts_of(&self.mailbox_of(view));
         view.set_filing(Filing::picker(&reached, &shown, |id| self.offers(id)));
+        let tags = crate::offered::tags_on(
+            if reached.is_empty() { &shown } else { &reached },
+            |id| self.offers(id),
+        );
+        view.set_tags_on(tags);
+        // The action belongs to the main window; a conversation in a
+        // window of its own has none, and its Tags… item stays hidden.
+        if !view.detached()
+            && let Some(action) = self.actions.lookup_action("tag").and_downcast::<gio::SimpleAction>()
+        {
+            action.set_enabled(tags);
+        }
     }
 
     /// Sets again what each conversation on screen offers, from what its

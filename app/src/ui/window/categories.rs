@@ -10,6 +10,7 @@ use mailrs_domain::{AccountId, Category};
 use mailrs_sync::{Categorized, Permitted};
 
 use super::MainWindow;
+use crate::offered::InboxBar;
 use crate::permission::{Occasion, Permission};
 use crate::ui::Mailbox;
 use crate::ui::conversation::ConversationView;
@@ -55,31 +56,45 @@ pub(super) struct CategoryBar {
     bar: gtk::Box,
     group: adw::ToggleGroup,
     strip: CategoryStrip,
+    /// The categories the bar holds, in order: Gmail's five, or Focused
+    /// and Other.
+    set: &'static [Category],
     counts: HashMap<Category, gtk::Label>,
 }
 
 impl CategoryBar {
-    /// `chosen` is the category the window opens on, from Preferences.
-    pub(super) fn new(chosen: Category) -> CategoryBar {
+    /// `chosen` is the category the window opens on, from Preferences, and
+    /// `set` the categories the bar holds.
+    pub(super) fn new(chosen: Category, set: &'static [Category]) -> CategoryBar {
         let group = adw::ToggleGroup::builder()
             .homogeneous(false)
             .css_classes(["category-bar", "category-chips"])
             .build();
         let (mut names, mut counts) = (Vec::new(), HashMap::new());
-        for category in Category::ALL {
+        for &category in set {
             // The icon and the name sit in the chip's content; the badge
             // rides the content's top end corner, above the pill, so a
             // count arriving or growing never moves the icons.
-            let content = gtk::Box::builder().css_classes(["category-chip"]).build();
-            let image = gtk::Image::from_icon_name(icon(category));
-            image.set_pixel_size(16);
+            let content = gtk::Box::builder()
+                .css_classes(["category-chip"])
+                .build();
+            if set.len() == Category::FOCUS.len() {
+                content.add_css_class("category-tab");
+            }
+            // Focused and Other are worded alone, as Outlook words them;
+            // Gmail's categories keep an icon each.
+            let tabs = set.len() == Category::FOCUS.len();
             let name = slider(
                 &gtk::Label::builder()
                     .label(category.name())
                     .css_classes(["category-name"])
                     .build(),
             );
-            content.append(&image);
+            if !tabs {
+                let image = gtk::Image::from_icon_name(icon(category));
+                image.set_pixel_size(16);
+                content.append(&image);
+            }
             content.append(&name);
             let count = gtk::Label::builder()
                 .css_classes(["category-count", "no-mail"])
@@ -109,6 +124,9 @@ impl CategoryBar {
             .visible(false)
             .build();
         let strip = CategoryStrip::new(&group, names);
+        if set.len() == Category::FOCUS.len() {
+            strip.show_every_name();
+        }
         strip.set_hexpand(true);
         bar.append(&strip);
         group.set_active_name(Some(chosen.key()));
@@ -116,6 +134,7 @@ impl CategoryBar {
             bar,
             group,
             strip,
+            set,
             counts,
         };
         this.show_names(chosen);
@@ -124,7 +143,7 @@ impl CategoryBar {
 
     /// Opens the name of `chosen` and closes the others.
     pub(super) fn show_names(&self, chosen: Category) {
-        if let Some(index) = Category::ALL.iter().position(|&c| c == chosen) {
+        if let Some(index) = self.set.iter().position(|&c| c == chosen) {
             self.strip.choose(index);
         }
     }
@@ -157,11 +176,10 @@ impl MainWindow {
         // The chips sit right under the header, in the slot `ThreadList`
         // reserves before its banners, so a sign-in or Grant Access banner
         // never lands between the header and the chips.
-        self.list.categories_slot.append(&self.categories.bar);
-        let weak = Rc::downgrade(self);
-        self.categories
-            .group
-            .connect_active_name_notify(move |group| {
+        for bar in [&self.categories, &self.focus] {
+            self.list.categories_slot.append(&bar.bar);
+            let weak = Rc::downgrade(self);
+            bar.group.connect_active_name_notify(move |group| {
                 let Some(win) = weak.upgrade() else { return };
                 let Some(category) = group.active_name().and_then(|k| Category::from_key(&k))
                 else {
@@ -169,19 +187,26 @@ impl MainWindow {
                 };
                 win.change_screen(|screen| screen.choose_category(category));
             });
+        }
     }
 
-    /// Whether `mailbox` splits into categories on screen: the person has
+    /// The switcher `mailbox` shows on screen, if any: the person has
     /// categories on, and an account the mailbox lists sorts its inbox
-    /// that way.
-    pub(super) fn shows_categories(&self, mailbox: &Mailbox) -> bool {
+    /// into Gmail's categories or into Focused and Other.
+    pub(super) fn inbox_bar(&self, mailbox: &Mailbox) -> Option<InboxBar> {
         let ids: Vec<AccountId> = self.accounts().iter().map(|a| a.id).collect();
-        crate::offered::shows_categories(
+        crate::offered::inbox_bar(
             self.settings_with(|s| s.inbox_categories),
             mailbox,
             &ids,
             |id| self.offers(id),
         )
+    }
+
+    /// Whether `mailbox` splits into categories or Focused and Other on
+    /// screen, which is when a listing takes a slice.
+    pub(super) fn shows_categories(&self, mailbox: &Mailbox) -> bool {
+        self.inbox_bar(mailbox).is_some()
     }
 
     /// Enables Block Sender and Categorize Sender only while `account_id`
@@ -199,20 +224,38 @@ impl MainWindow {
                 self.conversation.offer_categorize_sender(enabled);
             }
         }
+        self.conversation.set_categorize_choices(&crate::offered::categorize_choices(
+            self.offers(account_id),
+        ));
     }
 
-    /// Shows the switcher when the list holds an inbox, and hides it elsewhere.
+    /// Shows Gmail's categories or Focused and Other over the list, as
+    /// `offered::inbox_bar` rules, and moves the slice on screen to one the
+    /// shown bar has.
     pub(super) fn follow_categories(self: &Rc<Self>) {
-        let shown = self.shows_categories(&self.shown());
-        self.categories.bar.set_visible(shown);
-        if shown {
-            self.refresh_counts();
+        let bar = self.inbox_bar(&self.shown());
+        self.categories
+            .bar
+            .set_visible(bar == Some(InboxBar::Categories));
+        self.focus.bar.set_visible(bar == Some(InboxBar::Focus));
+        let Some(bar) = bar else { return };
+        let current = self.screen.borrow().category();
+        let default = self.settings_with(|s| s.default_category);
+        let next = crate::offered::category_after(bar, current, default);
+        if next != current {
+            self.change_screen(|screen| screen.choose_category(next));
         }
+        match bar {
+            InboxBar::Categories => self.categories.show_names(next),
+            InboxBar::Focus => self.focus.show_names(next),
+        }
+        self.refresh_counts();
     }
 
     /// Shows how much unread mail each category holds.
     pub(super) fn set_category_counts(&self, unread: &HashMap<Category, i64>) {
         self.categories.set_counts(unread);
+        self.focus.set_counts(unread);
     }
 
     /// Moves every stored conversation from the open message's sender into

@@ -780,6 +780,24 @@ impl Sidebar {
                 label_menu(&row, account.id, label, Filing::of([account_offers]), moves);
                 self.label_drag(&row, account.id, &label.id, entry.opens.then_some(dest));
             }
+            // Tags follow the folders, flat, with no menu and no drag: they
+            // cannot nest or move, and the person makes and renames them in
+            // Outlook.
+            for tag in tree::tag_rows(labels) {
+                let mailbox = Mailbox::Label {
+                    account_id: account.id,
+                    label_id: tag.id.clone(),
+                    name: tag.name.clone(),
+                };
+                let row = self.add_mailbox(mailbox, &tag.name, "penguin-mail-tag-symbolic", 1);
+                if let Some(color) = tag.color.as_deref().and_then(css_hex)
+                    && let Some(icon) = row.child().and_then(|c| c.first_child())
+                {
+                    let class = format!("label-color-{color}");
+                    label_rules.push_str(&format!(".{class} {{ color: #{color}; }}\n"));
+                    icon.add_css_class(&class);
+                }
+            }
         }
         self.label_css.load_from_string(&label_rules);
         self.select(selected);

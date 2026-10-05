@@ -69,6 +69,16 @@ pub fn label_rows<'a>(labels: &'a [Label], positions: &HashMap<String, i64>) -> 
     rows
 }
 
+/// An account's tags in the order the sidebar lists them, after its
+/// labels and folders. Tags are flat: Outlook's master categories do not
+/// nest, so a slash in a name is part of the name, and they stay out of
+/// [`label_rows`], whose moves and drops all assume a tree.
+pub fn tag_rows(labels: &[Label]) -> Vec<&Label> {
+    let mut tags: Vec<&Label> = labels.iter().filter(|l| l.kind == LabelKind::Tag).collect();
+    tags.sort_by_cached_key(|l| l.name.to_lowercase());
+    tags
+}
+
 /// Which part of a row a dragged label is over.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Zone {
@@ -243,6 +253,19 @@ mod tests {
             name: name.to_string(),
             order: ids(order),
         }))
+    }
+
+    #[test]
+    fn tags_list_flat_by_name_and_never_join_the_tree_of_labels() {
+        let labels = vec![
+            label("Work", LabelKind::User),
+            label("zebra/crossing", LabelKind::Tag),
+            label("Blue", LabelKind::Tag),
+        ];
+        let names: Vec<&str> = super::tag_rows(&labels).iter().map(|l| l.name.as_str()).collect();
+        assert_eq!(names, ["Blue", "zebra/crossing"]);
+        let rows = label_rows(&labels, &HashMap::new());
+        assert_eq!(rows.len(), 1);
     }
 
     #[test]
