@@ -377,6 +377,8 @@ impl ConversationView {
             .build();
         webview.set_vexpand(true);
         webview.set_hexpand(true);
+        keep_key_text_out_of_tab(&webview);
+        webview.connect_realize(keep_key_text_out_of_tab);
 
         let empty = adw::StatusPage::builder()
             .icon_name("penguin-mail-mark-symbolic")
@@ -2084,6 +2086,23 @@ fn answer(request: &webkit::URISchemeRequest, served: Served) {
 fn refuse(request: &webkit::URISchemeRequest) {
     let mut error = glib::Error::new(gio::IOErrorEnum::NotFound, "no such picture");
     request.finish_error(&mut error);
+}
+
+/// WebKit keeps a `gtk::TextView` of its own inside the web view, at no
+/// size, to turn key bindings such as Ctrl+C into editing commands. It
+/// was focusable, so Tab moved into it from the page and stayed there:
+/// focus sat on nothing a person could see, the page stopped getting the
+/// keys, and the window took single-letter shortcuts for typing. The
+/// bindings reach it without the focus, so it gives the focus up.
+fn keep_key_text_out_of_tab(webview: &webkit::WebView) {
+    let mut stack: Vec<gtk::Widget> = webview.first_child().into_iter().collect();
+    while let Some(widget) = stack.pop() {
+        if widget.is::<gtk::TextView>() {
+            widget.set_focusable(false);
+        }
+        stack.extend(widget.next_sibling());
+        stack.extend(widget.first_child());
+    }
 }
 
 fn run_script(webview: &webkit::WebView, script: &str) {

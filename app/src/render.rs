@@ -689,7 +689,8 @@ const HTML_BODY_CSS: &str = "@font-face{font-family:Helvetica;src:local(\"Libera
 .root{font:14px/1.5 -apple-system,\"Adwaita Sans\",Cantarell,\"Segoe UI\",Roboto,Helvetica,Arial,sans-serif;\
 color:#1d1d20;overflow-wrap:break-word;overflow-x:auto;container-type:inline-size}\
 img{max-width:100cqw !important;height:auto !important}\
-table{max-width:100%}a{color:#1c71d8}";
+table{max-width:100%}a{color:#1c71d8}\
+a:focus-visible{outline:2px solid var(--accent,#1c71d8);outline-offset:2px}";
 
 /// The button that shows the quoted history, drawn in the page's colours
 /// and, on mail that keeps its white page, in the grey Gmail uses. It sits
@@ -790,6 +791,7 @@ column-gap:12px;align-items:center;color:inherit}}\
 transition:transform 200ms cubic-bezier(0.23,1,0.32,1),opacity 120ms ease}}\
 .message:hover .chev,.toggle:focus-visible~.chev{{opacity:.7}}\
 .expanded .chev{{transform:rotate(180deg)}}\
+a:focus-visible,summary:focus-visible,.event-slot:focus-visible{{outline:2px solid var(--accent);outline-offset:2px}}\
 .toggle:focus-visible{{outline:2px solid var(--accent);outline-offset:-3px;border-radius:12px}}\
 .toggle{{position:absolute;inset:0;border-radius:12px}}\
 .expanded .header{{position:relative}}\
@@ -1131,6 +1133,20 @@ mod tests {
     /// track that cannot be smaller than nothing is sized from the item's
     /// current height. Both ends keep the same shape so the row still
     /// animates between them.
+    /// Tab walks the page's links, its summaries and the invitation's
+    /// slot. Each kind has to show where the focus is, or a keyboard user
+    /// presses Tab with nothing on screen changing.
+    #[test]
+    fn every_kind_of_stop_tab_reaches_in_the_page_shows_a_focus_ring() {
+        let css = page_css(&theme());
+        for stop in ["a:focus-visible", "summary:focus-visible", ".event-slot:focus-visible"] {
+            assert!(css.contains(stop), "no ring for {stop}");
+        }
+        // An HTML body sits in a shadow root the page's rules do not
+        // reach, so its links need a ring of their own.
+        assert!(HTML_BODY_CSS.contains("a:focus-visible"), "no ring for links in an HTML body");
+    }
+
     #[test]
     fn the_fold_row_follows_the_content_when_the_width_changes() {
         let css = page_css(&theme());
