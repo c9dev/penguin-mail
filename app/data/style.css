@@ -805,10 +805,15 @@ button.event-block:active {
 }
 .event-block .bar { min-width: 4px; border-radius: 2px; background: var(--cal-colour); }
 .event-block .title { font-weight: 700; font-size: 0.85em; margin-top: 3px; }
+/* The mockup's 64 % gave the time 3.9:1 on a red tint in light. At 85 %
+   it keeps 4.5:1 on the tint of every colour in Google's calendar and
+   event palettes, hovered too, in both themes, with room for the thin
+   strokes of its small digits, and stays below the title by size and
+   weight. */
 .event-block .time {
   font-weight: 500;
   font-size: 0.75em;
-  opacity: 0.64;
+  opacity: 0.85;
   font-feature-settings: "tnum";
 }
 /* Under 45 minutes the block is too short for two lines, so the title
