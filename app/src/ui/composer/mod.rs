@@ -671,6 +671,8 @@ impl Composer {
         // the time these run.
         let mark = mark_dirty.clone();
         self.body.buffer().connect_changed(move |_| mark());
+        let mark = mark_dirty.clone();
+        self.editor.connect_described(mark);
         let weak = Rc::downgrade(self);
         self.body.buffer().connect_cursor_position_notify(move |_| {
             if let Some(c) = weak.upgrade() {
@@ -2137,7 +2139,8 @@ impl Composer {
                     .map(|m| m.to_string())
                     .unwrap_or_else(|| "application/octet-stream".into());
                 if inline && mime_type.starts_with("image/") {
-                    self.add_inline_image(filename, mime_type, bytes.to_vec());
+                    let alt = pictures::alt_from_file_name(&filename);
+                    self.add_inline_image(filename, &alt, mime_type, bytes.to_vec());
                 } else {
                     self.attachments.borrow_mut().push(OutgoingAttachment {
                         filename,
@@ -2155,10 +2158,16 @@ impl Composer {
     }
 
     /// Adds an image and shows it at the cursor, or names it there while
-    /// the body is Markdown.
-    fn add_inline_image(self: &Rc<Self>, filename: String, mime_type: String, data: Vec<u8>) {
+    /// the body is Markdown, described by `alt`.
+    fn add_inline_image(
+        self: &Rc<Self>,
+        filename: String,
+        alt: &str,
+        mime_type: String,
+        data: Vec<u8>,
+    ) {
         let cid = format!("{}@mailrs", mailrs_gmail::random_token(9));
-        self.editor.insert_image(&cid, &filename, &data);
+        self.editor.insert_image(&cid, alt, &data);
         self.attachments.borrow_mut().push(OutgoingAttachment {
             filename,
             mime_type,
@@ -2209,8 +2218,12 @@ impl Composer {
                 match clipboard.read_texture_future().await {
                     Ok(Some(texture)) => {
                         let png = texture.save_to_png_bytes();
+                        // The file name is made up, so it says nothing of
+                        // the picture. The writer can describe it from its
+                        // menu.
                         c.add_inline_image(
                             "pasted-image.png".into(),
+                            "",
                             "image/png".into(),
                             png.to_vec(),
                         );

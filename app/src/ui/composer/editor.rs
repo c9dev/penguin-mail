@@ -11,7 +11,9 @@
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
-use gtk::prelude::*;
+use adw::prelude::*;
+use gtk::{gdk, gio, glib};
+use mailrs_domain::translate::gettext;
 
 use super::pictures;
 use super::removals::{Removal, Removals};
@@ -20,7 +22,7 @@ use crate::compose::{
     LineChange, LinePrefix, OutgoingAttachment, Unfolding, markdown_to_html, signature_change,
     toggle_prefix,
 };
-use crate::richtext::{Block, BlockKind, RichBody, Span, Style};
+use crate::richtext::{Block, BlockKind, RichBody, Style};
 use crate::settings::ComposeFormat;
 use crate::stray_markdown;
 
@@ -52,6 +54,16 @@ pub struct Held {
     pub text: String,
 }
 
+/// A picture deleted from the body, kept for an Undo or a Redo that puts
+/// back the character that stood for it: the widget that showed it, the
+/// `cid:` the message knows it by, and the words that describe it.
+#[derive(Debug, Clone)]
+struct KeptPicture {
+    widget: gtk::Widget,
+    cid: String,
+    alt: String,
+}
+
 pub struct Editor {
     view: gtk::TextView,
     buffer: gtk::TextBuffer,
@@ -64,9 +76,21 @@ pub struct Editor {
     /// True while the editor changes the buffer itself, so its own edits
     /// are not styled as typing.
     busy: Cell<bool>,
-    /// The tags of text deleted from a rich body, which Undo and Redo put
-    /// back with the text, since GTK's undo history keeps no tags.
-    removals: RefCell<Removals<gtk::TextTag>>,
+    /// The tags and pictures of text deleted from a rich body, which Undo
+    /// and Redo put back with the text, since GTK's undo history keeps
+    /// neither.
+    removals: RefCell<Removals<gtk::TextTag, KeptPicture>>,
+    /// A picture going into the body, with the offset of the character
+    /// that stands for it while [`Editor::insert_image`] makes its step
+    /// of Undo.
+    placing: RefCell<Option<(i32, KeptPicture)>>,
+    /// Pictures to show again once the insertion under way is over, each
+    /// with the offset of the bare character standing in for it.
+    swaps: RefCell<Vec<(i32, KeptPicture)>>,
+    /// The picture whose menu is open.
+    describing: RefCell<Option<gtk::TextChildAnchor>>,
+    /// Told when the writer changes the words that describe a picture.
+    on_described: RefCell<Option<Box<dyn Fn()>>>,
     /// True while an Undo or Redo changes the buffer.
     replaying: Cell<bool>,
     /// Where the history the writer unfolded starts in the buffer, and
@@ -97,6 +121,10 @@ impl Editor {
             inserted: RefCell::new(Vec::new()),
             busy: Cell::new(false),
             removals: RefCell::new(Removals::default()),
+            placing: RefCell::new(None),
+            swaps: RefCell::new(Vec::new()),
+            describing: RefCell::new(None),
+            on_described: RefCell::new(None),
             replaying: Cell::new(false),
             history_start: RefCell::new(None),
             touched: Cell::new(None),
@@ -120,6 +148,16 @@ impl Editor {
                 let breaks = text.matches('\n').count() as i32;
                 editor.touch(at.line(), at.line() + breaks);
             }
+        });
+        // Connected last of the buffer's handlers that run after GTK's own,
+        // so nothing after it reads the iterator a swap makes stale. GTK's
+        // replay of a step is still under way, and it records none of it.
+        let weak = Rc::downgrade(self);
+        self.buffer.connect_local("insert-text", true, move |_| {
+            if let Some(editor) = weak.upgrade() {
+                editor.swap_pictures();
+            }
+            None
         });
         // The line a deletion joins up is the one left to look at.
         let weak = Rc::downgrade(self);
@@ -160,12 +198,138 @@ impl Editor {
                 editor.cursor_moved();
             }
         });
+        self.wire_picture_menu();
+    }
+
+    /// A right-click on a picture opens a menu of its own, which offers to
+    /// change the words that describe it.
+    fn wire_picture_menu(self: &Rc<Self>) {
+        let actions = gio::SimpleActionGroup::new();
+        let describe = gio::SimpleAction::new("describe", None);
+        let weak = Rc::downgrade(self);
+        describe.connect_activate(move |_, _| {
+            if let Some(editor) = weak.upgrade() {
+                editor.ask_description();
+            }
+        });
+        actions.add_action(&describe);
+        self.view.insert_action_group("picture", Some(&actions));
+        // Capture phase, so the press reaches here before the text view
+        // opens its own menu, which has nothing for a picture.
+        let gesture = gtk::GestureClick::new();
+        gesture.set_button(gdk::BUTTON_SECONDARY);
+        gesture.set_propagation_phase(gtk::PropagationPhase::Capture);
+        let weak = Rc::downgrade(self);
+        gesture.connect_pressed(move |gesture, _, x, y| {
+            if let Some(editor) = weak.upgrade()
+                && editor.offer_picture_menu(x, y)
+            {
+                gesture.set_state(gtk::EventSequenceState::Claimed);
+            }
+        });
+        self.view.add_controller(gesture);
+    }
+
+    /// Opens the picture menu at `x`, `y` in the view, when a picture is
+    /// there. False when there is none.
+    fn offer_picture_menu(&self, x: f64, y: f64) -> bool {
+        let (bx, by) =
+            self.view
+                .window_to_buffer_coords(gtk::TextWindowType::Widget, x as i32, y as i32);
+        let Some(anchor) = self
+            .view
+            .iter_at_location(bx, by)
+            .and_then(|iter| iter.child_anchor())
+        else {
+            return false;
+        };
+        if !self.anchors.borrow().iter().any(|p| p.anchor == anchor) {
+            return false;
+        }
+        self.describing.replace(Some(anchor));
+        let menu = gio::Menu::new();
+        menu.append(
+            Some(&gettext("Describe Picture\u{2026}")),
+            Some("picture.describe"),
+        );
+        let popover = gtk::PopoverMenu::from_model(Some(&menu));
+        popover.set_parent(&self.view);
+        popover.set_has_arrow(false);
+        popover.set_pointing_to(Some(&gdk::Rectangle::new(x as i32, y as i32, 1, 1)));
+        // A closed menu lets go of the view on the next turn of the main
+        // loop, once the item that closed it has done its work.
+        popover.connect_closed(|popover| {
+            let popover = popover.clone();
+            glib::idle_add_local_once(move || popover.unparent());
+        });
+        popover.popup();
+        true
+    }
+
+    /// Asks for the words that describe the picture the menu was opened
+    /// on, in a dialog that starts with the words it has.
+    fn ask_description(self: &Rc<Self>) {
+        let Some(anchor) = self.describing.take() else {
+            return;
+        };
+        let alt = self
+            .anchors
+            .borrow()
+            .iter()
+            .find(|p| p.anchor == anchor)
+            .map(|p| p.alt.clone())
+            .unwrap_or_default();
+        let dialog = adw::AlertDialog::new(
+            Some(&gettext("Describe Picture")),
+            Some(&gettext(
+                "Screen readers read these words in place of the picture, and they show where the picture does not load.",
+            )),
+        );
+        let entry = gtk::Entry::builder()
+            .placeholder_text(gettext("Description"))
+            .text(&alt)
+            .activates_default(true)
+            .build();
+        entry.update_property(&[gtk::accessible::Property::Label(&gettext("Description"))]);
+        dialog.set_extra_child(Some(&entry));
+        dialog.add_responses(&[("cancel", &gettext("Cancel")), ("save", &gettext("Save"))]);
+        dialog.set_response_appearance("save", adw::ResponseAppearance::Suggested);
+        dialog.set_default_response(Some("save"));
+        dialog.set_close_response("cancel");
+        let (sender, answer) = async_channel::bounded(1);
+        dialog.connect_response(None, move |_, response| {
+            let _ = sender.try_send(response.to_string());
+        });
+        dialog.present(Some(&self.view));
+        // An alert dialog puts the focus on its first button once it
+        // shows, and the writer came here to type.
+        dialog.set_focus(Some(&entry));
+        let this = Rc::clone(self);
+        glib::spawn_future_local(async move {
+            let chosen = answer.recv().await.unwrap_or_default();
+            if chosen == "save" && !anchor.is_deleted() {
+                this.describe_picture(&anchor, &entry.text());
+                if let Some(described) = this.on_described.borrow().as_ref() {
+                    described();
+                }
+            }
+            this.view.grab_focus();
+        });
+    }
+
+    /// Calls `described` each time the writer changes the words that
+    /// describe a picture, which changes the message without changing its
+    /// text.
+    pub fn connect_described(&self, described: impl Fn() + 'static) {
+        self.on_described.replace(Some(Box::new(described)));
     }
 
     /// Keeps the tags of rich text about to be deleted, for an Undo or a
     /// Redo that brings the text back.
     fn keep_removal(&self, start: &gtk::TextIter, end: &gtk::TextIter) {
-        if self.format.get() != ComposeFormat::Rich {
+        // While a step replays, the editor's own deletions only swap a
+        // bare character for the picture it stands for.
+        if self.format.get() != ComposeFormat::Rich || (self.replaying.get() && self.busy.get()) {
             return;
         }
         let mut before = *start;
@@ -175,13 +339,56 @@ impl Editor {
             true => richbuffer::picture_tags(&before),
             false => None,
         };
+        let text = self.buffer.slice(start, end, true).to_string();
+        let pictures = self.pictures_in(start.offset(), &text);
         self.removals.borrow_mut().removed(Removal {
             at: start.offset(),
-            text: self.buffer.slice(start, end, true).to_string(),
+            text,
             runs: richbuffer::tag_runs(start, end),
             picture_before,
             picture_after: richbuffer::picture_tags(end),
+            pictures,
         });
+    }
+
+    /// The pictures in `text`, which starts at offset `at`, each with its
+    /// place in `text`: those the buffer shows, and the one going in.
+    fn pictures_in(&self, at: i32, text: &str) -> Vec<(i32, KeptPicture)> {
+        // The list is out on loan while a whole body is written in, which
+        // empties GTK's history, so no Undo will ask for these pictures.
+        let Ok(anchors) = self.anchors.try_borrow() else {
+            return Vec::new();
+        };
+        let placing = self.placing.borrow();
+        let mut found = Vec::new();
+        for (index, character) in text.chars().enumerate() {
+            if character != pictures::HELD {
+                continue;
+            }
+            let offset = at + index as i32;
+            let shown = self
+                .buffer
+                .iter_at_offset(offset)
+                .child_anchor()
+                .and_then(|anchor| {
+                    let placed = anchors.iter().find(|p| p.anchor == anchor)?;
+                    Some(KeptPicture {
+                        widget: anchor.widgets().into_iter().next()?,
+                        cid: placed.cid.clone(),
+                        alt: placed.alt.clone(),
+                    })
+                });
+            let going_in = || {
+                placing
+                    .as_ref()
+                    .filter(|(place, _)| *place == offset)
+                    .map(|(_, picture)| picture.clone())
+            };
+            if let Some(picture) = shown.or_else(going_in) {
+                found.push((index as i32, picture));
+            }
+        }
+        found
     }
 
     /// Gives text an Undo or a Redo just put back the tags it had when it
@@ -196,6 +403,12 @@ impl Editor {
         let Some(removal) = self.removals.borrow().find(offset, &text).cloned() else {
             return false;
         };
+        self.swaps.borrow_mut().extend(
+            removal
+                .pictures
+                .iter()
+                .map(|(index, picture)| (offset + index, picture.clone())),
+        );
         richbuffer::apply_runs(buffer, offset, &removal.runs);
         if let Some(tags) = &removal.picture_before {
             richbuffer::retag_picture(buffer, offset - 1, tags);
@@ -204,6 +417,34 @@ impl Editor {
             richbuffer::retag_picture(buffer, offset + length, tags);
         }
         true
+    }
+
+    /// Shows the pictures [`Editor::put_back`] found again, each in place
+    /// of the bare character an Undo or a Redo put back for it. It runs
+    /// once the insertion that brought the characters is over: a change
+    /// made while the `insert-text` signal is still going leaves the
+    /// handlers after it holding a stale iterator.
+    fn swap_pictures(&self) {
+        let swaps: Vec<(i32, KeptPicture)> = self.swaps.borrow_mut().drain(..).collect();
+        if swaps.is_empty() {
+            return;
+        }
+        self.busy.set(true);
+        for (offset, picture) in swaps {
+            if let Some(anchor) =
+                richbuffer::put_picture_back(&self.view, offset, &picture.widget)
+            {
+                richbuffer::keep_placed(
+                    &mut self.anchors.borrow_mut(),
+                    richbuffer::Placed {
+                        anchor,
+                        cid: picture.cid,
+                        alt: picture.alt,
+                    },
+                );
+            }
+        }
+        self.busy.set(false);
     }
 
     fn touch(&self, first: i32, last: i32) {
@@ -520,20 +761,12 @@ impl Editor {
     /// styled body out as source.
     pub fn switch_format(&self, to: ComposeFormat, attachments: &[OutgoingAttachment]) {
         match to {
-            // Formatting a rich body again is one step of Undo, which gives
-            // back the body as it was, styles and all. Each picture goes
-            // through the Markdown as a placeholder and stays in its anchor.
+            // Formatting a rich body again reads the Markdown in its plain
+            // lines and leaves the styles the writer gave alone, as one step
+            // of Undo.
             ComposeFormat::Rich if self.format.get() == ComposeFormat::Rich => {
-                let (source, held) = self.source_holding_pictures();
-                let mut body = RichBody::from_markdown(&source);
-                pictures::restore(&mut body, &held);
-                let buffer = &self.buffer;
-                self.busy.set(true);
-                buffer.begin_user_action();
-                let (start, end) = buffer.bounds();
-                richbuffer::rewrite(buffer, &start, &end, &body);
-                buffer.end_user_action();
-                self.busy.set(false);
+                let lines = self.rich();
+                self.format_lines(&lines, stray_markdown::every_conversion);
             }
             ComposeFormat::Rich => {
                 let body = RichBody::from_markdown(&self.source());
@@ -645,12 +878,22 @@ impl Editor {
         if self.format.get() != ComposeFormat::Rich {
             return false;
         }
+        let lines = self.written_lines();
+        self.format_lines(&lines, stray_markdown::conversions)
+    }
+
+    /// Rewrites the runs of `lines`, the buffer's lines from the top, that
+    /// `convert` finds, as one step of Undo. False when it found none.
+    fn format_lines(
+        &self,
+        lines: &RichBody,
+        convert: fn(&RichBody) -> Vec<stray_markdown::Conversion>,
+    ) -> bool {
         // A picture goes through as a placeholder, which no Markdown reads
         // as anything, and stays in its anchor where the placeholder lands.
-        let lines = self.written_lines();
         let mut held_lines = lines.clone();
         pictures::hold(&mut held_lines);
-        let mut found = stray_markdown::conversions(&held_lines);
+        let mut found = convert(&held_lines);
         if found.is_empty() {
             return false;
         }
@@ -803,30 +1046,102 @@ impl Editor {
     }
 
     /// Shows the picture in `data` at the cursor, or names it there while
-    /// the body is Markdown. `cid` is what the message calls it.
-    pub fn insert_image(&self, cid: &str, filename: &str, data: &[u8]) {
-        self.busy.set(true);
+    /// the body is Markdown. `cid` is what the message calls it, and `alt`
+    /// the words that describe it.
+    pub fn insert_image(&self, cid: &str, alt: &str, data: &[u8]) {
         match self.format.get() {
+            ComposeFormat::Rich if self.buffer.enables_undo() => {
+                self.place_picture(cid, alt, data);
+            }
             ComposeFormat::Rich => {
                 let mut at = self.buffer.iter_at_mark(&self.buffer.get_insert());
+                self.busy.set(true);
                 richbuffer::insert_image(
                     &self.view,
                     &mut at,
                     cid,
+                    alt,
                     data,
                     &mut self.anchors.borrow_mut(),
                 );
+                self.busy.set(false);
             }
             ComposeFormat::Markdown => {
-                let alt: String = filename
-                    .chars()
-                    .filter(|c| !matches!(c, '[' | ']'))
-                    .collect();
+                // A bracket would end the Markdown picture's words early.
+                let alt: String = alt.chars().filter(|c| !matches!(c, '[' | ']')).collect();
+                self.busy.set(true);
                 self.buffer
                     .insert_at_cursor(&format!("![{alt}](cid:{cid})"));
+                self.busy.set(false);
             }
         }
+    }
+
+    /// Puts a picture in at the cursor as a step of Undo of its own.
+    ///
+    /// GTK's undo history records no anchor going into the buffer, so an
+    /// anchor put in plainly would outlast every Undo. The picture goes in
+    /// first as the bare character that stands for one, which the history
+    /// does record. One Undo and one Redo then replay that step, and the
+    /// Redo, like any Redo, swaps the character for the picture's anchor
+    /// in [`Editor::swap_pictures`]. The history is back where it was, ending
+    /// with the picture's own step, and nothing is left to redo.
+    fn place_picture(&self, cid: &str, alt: &str, data: &[u8]) {
+        let buffer = &self.buffer;
+        let at = buffer.iter_at_mark(&buffer.get_insert());
+        let offset = at.offset();
+        let picture = richbuffer::new_picture(alt, data);
+        self.placing.replace(Some((
+            offset,
+            KeptPicture {
+                widget: picture.upcast(),
+                cid: cid.to_string(),
+                alt: alt.to_string(),
+            },
+        )));
+        self.busy.set(true);
+        // GTK joins a step of one change onto the step before it, as it
+        // joins typed letters into a word, and Undo would then take the
+        // last word typed out with the picture. Two changes that cannot
+        // join stay a step of their own: the picture's character with a
+        // zero-width space after it, and the space going again.
+        buffer.begin_user_action();
+        let mut at = at;
+        buffer.insert(&mut at, &format!("{}{SPACER}", pictures::HELD));
+        let (mut from, mut to) = (
+            buffer.iter_at_offset(offset + 1),
+            buffer.iter_at_offset(offset + 2),
+        );
+        buffer.delete(&mut from, &mut to);
+        buffer.end_user_action();
         self.busy.set(false);
+        buffer.undo();
+        buffer.redo();
+        // Redo leaves behind the barrier that kept later changes out of
+        // the step, and the next change would join it. An empty user
+        // action ends the step again, which puts a new barrier after it.
+        buffer.begin_user_action();
+        buffer.end_user_action();
+        self.placing.replace(None);
+        buffer.place_cursor(&buffer.iter_at_offset(offset + 1));
+    }
+
+    /// Gives the picture in `anchor` `alt` as the words that describe it.
+    pub fn describe_picture(&self, anchor: &gtk::TextChildAnchor, alt: &str) {
+        let alt = alt.trim();
+        if let Some(placed) = self
+            .anchors
+            .borrow_mut()
+            .iter_mut()
+            .find(|placed| placed.anchor == *anchor)
+        {
+            placed.alt = alt.to_string();
+        }
+        for widget in anchor.widgets() {
+            if let Ok(picture) = widget.downcast::<gtk::Picture>() {
+                richbuffer::describe(&picture, alt);
+            }
+        }
     }
 
     /// Puts the signature of `new` in place of `old`'s, when the one under
@@ -932,33 +1247,6 @@ impl Editor {
         self.buffer
             .text(&self.buffer.start_iter(), &self.buffer.end_iter(), false)
             .to_string()
-    }
-
-    /// The buffer's text as [`Editor::source`] reads it, with a
-    /// placeholder where each picture's anchor sits, and those pictures in
-    /// order.
-    fn source_holding_pictures(&self) -> (String, Vec<Span>) {
-        let buffer = &self.buffer;
-        let anchors = self.anchors.borrow();
-        let text = buffer.slice(&buffer.start_iter(), &buffer.end_iter(), true);
-        let mut source = String::with_capacity(text.len());
-        let mut held = Vec::new();
-        for (offset, character) in text.chars().enumerate() {
-            if character != pictures::HELD {
-                source.push(character);
-                continue;
-            }
-            let Some(anchor) = buffer.iter_at_offset(offset as i32).child_anchor() else {
-                continue;
-            };
-            let cid = anchors
-                .iter()
-                .find(|(a, _)| *a == anchor)
-                .map_or("", |(_, cid)| cid.as_str());
-            source.push(pictures::HELD);
-            held.push(Span::image("image", format!("cid:{cid}")));
-        }
-        (source, held)
     }
 
     /// The styled body. Only rich text has one to read.
@@ -1081,6 +1369,11 @@ impl Editor {
     }
 }
 
+/// The character that keeps a picture's step of Undo apart from the one
+/// before it, in [`Editor::place_picture`]. Nobody sees it: it is gone
+/// again in the same step.
+const SPACER: char = '\u{200b}';
+
 /// Where `line` ends, before its line break.
 fn line_end(buffer: &gtk::TextBuffer, line: i32) -> gtk::TextIter {
     let mut end = buffer
@@ -1202,6 +1495,7 @@ fn style_quotes(buffer: &gtk::TextBuffer, first: i32, last: i32) -> usize {
 pub(super) mod checks {
     use super::*;
     use crate::compose::restyle_signature;
+    use crate::richtext::Span;
 
     pub fn run() {
         a_style_goes_on_the_selection_and_comes_off_again();
@@ -1224,6 +1518,212 @@ pub(super) mod checks {
         undo_brings_deleted_words_back_with_their_styles();
         format_markdown_keeps_pictures_through_undo_and_redo();
         format_keeps_a_picture_in_the_lines_it_rewrites();
+        format_markdown_keeps_the_styles_the_words_had();
+        undo_takes_out_a_picture_just_inserted_and_redo_puts_it_back();
+        undo_brings_a_deleted_picture_back();
+        backspace_over_a_picture_comes_back_on_undo();
+        a_picture_keeps_the_words_that_describe_it();
+    }
+
+    /// The anchor of the `index`th picture the buffer shows.
+    fn anchor(editor: &Editor, index: usize) -> gtk::TextChildAnchor {
+        let buffer = &editor.buffer;
+        let mut found = Vec::new();
+        let mut iter = buffer.start_iter();
+        loop {
+            if let Some(anchor) = iter.child_anchor() {
+                found.push(anchor);
+            }
+            if !iter.forward_char() {
+                break;
+            }
+        }
+        found.swap_remove(index)
+    }
+
+    /// The picture widget the `index`th anchor shows.
+    fn picture(editor: &Editor, index: usize) -> gtk::Picture {
+        anchor(editor, index)
+            .widgets()
+            .into_iter()
+            .find_map(|widget| widget.downcast::<gtk::Picture>().ok())
+            .expect("a picture sits in the anchor")
+    }
+
+    /// A word made bold with Ctrl+B, and a list line made with the bar,
+    /// keep their look through Format Markdown, beside a heading it makes.
+    fn format_markdown_keeps_the_styles_the_words_had() {
+        let (_view, editor) = opened("- soup\n\nHi Ann");
+        editor.buffer.place_cursor(&editor.buffer.end_iter());
+        editor.buffer.insert_at_cursor("\n# Plan");
+        let ann = editor.source().chars().take_while(|c| *c != 'A').count() as i32;
+        select(&editor, ann, ann + 3);
+        editor.toggle("bold");
+        let before = editor.rich();
+        assert_eq!(before.blocks[0].kind, BlockKind::Bullet, "{before:?}");
+        editor.switch_format(ComposeFormat::Rich, &[]);
+        let formatted = editor.rich();
+        assert_eq!(formatted.blocks[0], before.blocks[0], "{formatted:?}");
+        let ann = formatted
+            .blocks
+            .iter()
+            .flat_map(|b| &b.spans)
+            .find(|s| s.text == "Ann")
+            .unwrap_or_else(|| panic!("{formatted:?}"));
+        assert!(ann.style.bold, "{formatted:?}");
+        assert_eq!(
+            formatted.blocks.last().map(|b| b.kind),
+            Some(BlockKind::Heading(1)),
+            "{formatted:?}"
+        );
+        editor.buffer.undo();
+        assert_eq!(editor.rich(), before, "{}", editor.markdown());
+    }
+
+    /// Undo right after a picture goes in takes it out, as it would a
+    /// typed word, and Redo puts the same picture back.
+    fn undo_takes_out_a_picture_just_inserted_and_redo_puts_it_back() {
+        let (_view, editor) = opened("Look");
+        editor.buffer.place_cursor(&editor.buffer.end_iter());
+        editor.buffer.begin_user_action();
+        editor.buffer.insert_interactive_at_cursor(" here", true);
+        editor.buffer.end_user_action();
+        let before = editor.rich();
+        editor.insert_image("dot@mailrs", "dot", &png());
+        let with = editor.rich();
+        let pictures = shown(&editor);
+        assert_eq!(pictures.len(), 1, "{with:?}");
+        assert!(!editor.buffer.can_redo(), "inserting leaves nothing to redo");
+        // The cursor sits after the picture, ready for the next word.
+        let cursor = editor.buffer.iter_at_mark(&editor.buffer.get_insert());
+        assert!(cursor.is_end(), "{}", cursor.offset());
+        editor.buffer.undo();
+        assert_eq!(shown(&editor), vec![], "{}", editor.markdown());
+        assert_eq!(editor.rich(), before, "{}", editor.markdown());
+        editor.buffer.redo();
+        assert_eq!(shown(&editor), pictures);
+        assert_eq!(editor.rich(), with, "{}", editor.markdown());
+        // The typing before the picture is a step of its own.
+        editor.buffer.undo();
+        editor.buffer.undo();
+        assert_eq!(editor.source(), "Look");
+        assert_eq!(shown(&editor), vec![]);
+    }
+
+    /// A picture deleted with the words around it comes back on Undo as
+    /// the picture it was, not as an empty character, and goes again on
+    /// Redo.
+    fn undo_brings_a_deleted_picture_back() {
+        let (_view, editor) = opened("Look");
+        editor.buffer.place_cursor(&editor.buffer.end_iter());
+        editor.insert_image("dot@mailrs", "dot", &png());
+        editor.buffer.begin_user_action();
+        editor.buffer.insert_interactive_at_cursor(" there", true);
+        editor.buffer.end_user_action();
+        let before = editor.rich();
+        let pictures = shown(&editor);
+        select(&editor, 2, 7);
+        editor.buffer.begin_user_action();
+        editor.buffer.delete_selection(true, true);
+        editor.buffer.end_user_action();
+        let after = editor.rich();
+        assert_eq!(shown(&editor), vec![]);
+        editor.buffer.undo();
+        assert_eq!(shown(&editor), pictures, "{}", editor.markdown());
+        assert_eq!(editor.rich(), before, "{}", editor.markdown());
+        editor.buffer.redo();
+        assert_eq!(shown(&editor), vec![]);
+        assert_eq!(editor.rich(), after, "{}", editor.markdown());
+        editor.buffer.undo();
+        assert_eq!(shown(&editor), pictures, "{}", editor.markdown());
+        assert_eq!(editor.rich(), before, "{}", editor.markdown());
+    }
+
+    /// Backspace presses over a word and the picture before it come back
+    /// together on Undo, picture included.
+    fn backspace_over_a_picture_comes_back_on_undo() {
+        let (_view, editor) = opened("Look");
+        editor.buffer.place_cursor(&editor.buffer.end_iter());
+        editor.insert_image("dot@mailrs", "dot", &png());
+        editor.buffer.begin_user_action();
+        editor.buffer.insert_interactive_at_cursor("ab", true);
+        editor.buffer.end_user_action();
+        let before = editor.rich();
+        let pictures = shown(&editor);
+        for _ in 0..4 {
+            editor.buffer.begin_user_action();
+            let mut end = editor.buffer.end_iter();
+            editor.buffer.backspace(&mut end, true, true);
+            editor.buffer.end_user_action();
+        }
+        assert_eq!(editor.source(), "Loo");
+        // The text leaves the picture out.
+        while editor.buffer.can_undo() && editor.source() != "Lookab" {
+            editor.buffer.undo();
+        }
+        assert_eq!(shown(&editor), pictures, "{}", editor.markdown());
+        assert_eq!(editor.rich(), before, "{}", editor.markdown());
+    }
+
+    /// A picture keeps the words that describe it: from the body it came
+    /// in, from the name of the file it was inserted from, and from the
+    /// writer, who can change them. They go out as its alt text and name
+    /// it for a screen reader.
+    fn a_picture_keeps_the_words_that_describe_it() {
+        let (_view, editor) = opened("Look");
+        editor.buffer.place_cursor(&editor.buffer.end_iter());
+        editor.insert_image("dot@mailrs", "Beach at dusk", &png());
+        let alt = |editor: &Editor| {
+            editor
+                .rich()
+                .blocks
+                .iter()
+                .flat_map(|b| b.spans.clone())
+                .find(|s| s.image.is_some())
+                .map(|s| s.text)
+        };
+        assert_eq!(alt(&editor).as_deref(), Some("Beach at dusk"));
+        assert_eq!(
+            picture(&editor, 0).alternative_text().as_deref(),
+            Some("Beach at dusk")
+        );
+        assert!(
+            editor.html().contains("alt=\"Beach at dusk\""),
+            "{}",
+            editor.html()
+        );
+        editor.describe_picture(&anchor(&editor, 0), "The pier at sunset");
+        assert_eq!(alt(&editor).as_deref(), Some("The pier at sunset"));
+        assert_eq!(
+            picture(&editor, 0).alternative_text().as_deref(),
+            Some("The pier at sunset")
+        );
+        // Format and Undo carry the words along with the picture.
+        editor.buffer.insert_at_cursor("\n# Plan");
+        editor.switch_format(ComposeFormat::Rich, &[]);
+        assert_eq!(alt(&editor).as_deref(), Some("The pier at sunset"));
+        editor.buffer.undo();
+        assert_eq!(alt(&editor).as_deref(), Some("The pier at sunset"));
+        // A body that arrives with a picture keeps its words too.
+        let view = gtk::TextView::new();
+        let editor = Editor::new(&view, ComposeFormat::Rich);
+        let attachment = OutgoingAttachment {
+            filename: "map.png".into(),
+            mime_type: "image/png".into(),
+            data: png(),
+            content_id: Some("map@mailrs".into()),
+        };
+        let body = RichBody::from_html(
+            "<p>See <img src=\"cid:map@mailrs\" alt=\"Map of the venue\"></p>",
+        );
+        editor.fill("", Some(&body), &[attachment]);
+        assert_eq!(alt(&editor).as_deref(), Some("Map of the venue"));
+        // A Markdown body names the picture the same way.
+        let view = gtk::TextView::new();
+        let editor = Editor::new(&view, ComposeFormat::Markdown);
+        editor.fill("", None, &[]);
+        editor.insert_image("dot@mailrs", "Beach at dusk", &png());
+        assert_eq!(editor.source(), "![Beach at dusk](cid:dot@mailrs)");
     }
 
     /// A small picture as a PNG file holds it.
@@ -1251,8 +1751,8 @@ pub(super) mod checks {
             {
                 let cid = anchors
                     .iter()
-                    .find(|(a, _)| *a == anchor)
-                    .map_or_else(String::new, |(_, cid)| cid.clone());
+                    .find(|placed| placed.anchor == anchor)
+                    .map_or_else(String::new, |placed| placed.cid.clone());
                 found.push((cid, widget.size_request()));
             }
             if !iter.forward_char() {
@@ -1270,9 +1770,9 @@ pub(super) mod checks {
     fn format_markdown_keeps_pictures_through_undo_and_redo() {
         let (_view, editor) = opened("Look here:");
         editor.buffer.place_cursor(&editor.buffer.end_iter());
-        editor.insert_image("dot@mailrs", "dot.png", &png());
+        editor.insert_image("dot@mailrs", "dot", &png());
         editor.buffer.insert_at_cursor(" and\n# Plan\n```\n");
-        editor.insert_image("dot2@mailrs", "dot.png", &png());
+        editor.insert_image("dot2@mailrs", "dot", &png());
         editor.buffer.insert_at_cursor("\n```");
         let before = editor.rich();
         let pictures = shown(&editor);
@@ -1300,7 +1800,7 @@ pub(super) mod checks {
     fn format_keeps_a_picture_in_the_lines_it_rewrites() {
         let (_view, editor) = opened("");
         editor.buffer.insert_at_cursor("# Plan ");
-        editor.insert_image("dot@mailrs", "dot.png", &png());
+        editor.insert_image("dot@mailrs", "dot", &png());
         editor.buffer.insert_at_cursor("\n\n- soup\n- salad");
         let before = editor.rich();
         let pictures = shown(&editor);
@@ -1313,7 +1813,7 @@ pub(super) mod checks {
         );
         assert_eq!(
             formatted.blocks[0].spans.last(),
-            Some(&Span::image("image", "cid:dot@mailrs")),
+            Some(&Span::image("dot", "cid:dot@mailrs")),
             "{formatted:?}"
         );
         assert_eq!(shown(&editor), pictures);

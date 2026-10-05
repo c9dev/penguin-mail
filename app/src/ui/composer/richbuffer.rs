@@ -9,12 +9,41 @@
 use gtk::prelude::*;
 use gtk::{gdk, glib, pango};
 
+use mailrs_domain::translate::gettext;
+
 use crate::compose::OutgoingAttachment;
 use crate::richtext::{Block, BlockKind, RichBody, Span, Style};
 
-/// The pictures shown in the text: the anchor each one sits in, and the
-/// `cid:` the message refers to it by.
-pub type Anchors = Vec<(gtk::TextChildAnchor, String)>;
+/// A picture shown in the text: the anchor it sits in, the `cid:` the
+/// message refers to it by, and the words that describe it, which go out
+/// as its alt text.
+#[derive(Debug, Clone)]
+pub struct Placed {
+    pub anchor: gtk::TextChildAnchor,
+    pub cid: String,
+    pub alt: String,
+}
+
+impl Placed {
+    /// The picture as a span of the body.
+    pub fn span(&self) -> Span {
+        Span::image(self.alt.as_str(), format!("cid:{}", self.cid))
+    }
+}
+
+/// The pictures shown in the text.
+pub type Anchors = Vec<Placed>;
+
+/// Names `picture` for a screen reader by `alt`, the words that describe
+/// it, or as a picture when there are none.
+pub fn describe(picture: &gtk::Picture, alt: &str) {
+    picture.set_alternative_text(Some(alt));
+    let name = match alt.trim() {
+        "" => gettext("Picture"),
+        alt => alt.to_string(),
+    };
+    picture.update_property(&[gtk::accessible::Property::Label(&name)]);
+}
 
 /// The tag on the bullet or number a list line starts with.
 pub const MARKER: &str = "marker";
@@ -394,9 +423,9 @@ pub fn read_until(buffer: &gtk::TextBuffer, anchors: &Anchors, end: i32) -> Rich
                 from = index + character.len_utf8();
                 let placed = buffer.iter_at_offset(iter.offset() + at as i32);
                 if let Some(anchor) = placed.child_anchor()
-                    && let Some((_, cid)) = anchors.iter().find(|(a, _)| *a == anchor)
+                    && let Some(picture) = anchors.iter().find(|p| p.anchor == anchor)
                 {
-                    spans.push(Span::image("image", format!("cid:{cid}")));
+                    spans.push(picture.span());
                 }
             }
             push_text(&mut spans, &text[from..], style, &link);
@@ -464,7 +493,7 @@ pub fn write(
                 match found {
                     Some(attachment) => {
                         let start = at.offset();
-                        insert_image(view, &mut at, cid, &attachment.data, anchors);
+                        insert_image(view, &mut at, cid, &span.text, &attachment.data, anchors);
                         let (from, to) = (buffer.iter_at_offset(start), buffer.end_iter());
                         buffer.apply_tag_by_name(tag, &from, &to);
                     }
@@ -669,22 +698,101 @@ pub fn insert_spans(
 }
 
 /// Puts the picture in `data` at `at`, held by an anchor the reader maps
-/// back to `cid`. A PNG or JPEG shows at once. Any other format shows a
-/// placeholder until a worker thread has decoded it, since GDK hands
-/// those to a sandboxed loader that can keep the GTK thread waiting; one
-/// that never decodes keeps the placeholder and still goes out with the
-/// message.
+/// back to `cid`, described by `alt`.
 pub fn insert_image(
     view: &gtk::TextView,
     at: &mut gtk::TextIter,
     cid: &str,
+    alt: &str,
     data: &[u8],
     anchors: &mut Anchors,
 ) {
-    let bytes = glib::Bytes::from(data);
+    let picture = new_picture(alt, data);
     let anchor = view.buffer().create_child_anchor(at);
+    view.add_child_at_anchor(&picture, &anchor);
+    picture.set_visible(true);
+    keep_placed(
+        anchors,
+        Placed {
+            anchor,
+            cid: cid.to_string(),
+            alt: alt.to_string(),
+        },
+    );
+}
+
+/// Adds `placed` to `anchors`, and lets go of pictures no longer in the
+/// buffer. An Undo that brings one back gives it a new anchor.
+pub fn keep_placed(anchors: &mut Anchors, placed: Placed) {
+    anchors.retain(|kept| !kept.anchor.is_deleted());
+    anchors.push(placed);
+}
+
+/// Shows `picture` again at `offset`, where an Undo or a Redo has put back
+/// the object replacement character that stood for it. GTK's undo history
+/// keeps a deleted picture as that bare character. Swapping the character
+/// for an anchor keeps the buffer's length, so the history stays in step
+/// with it. Returns the new anchor, or `None` when no bare character is
+/// there.
+pub fn put_picture_back(
+    view: &gtk::TextView,
+    offset: i32,
+    picture: &gtk::Widget,
+) -> Option<gtk::TextChildAnchor> {
+    let buffer = view.buffer();
+    let (mut from, mut to) = (
+        buffer.iter_at_offset(offset),
+        buffer.iter_at_offset(offset + 1),
+    );
+    if from.char() != '\u{fffc}' || from.child_anchor().is_some() {
+        return None;
+    }
+    let tags = from.tags();
+    buffer.delete(&mut from, &mut to);
+    let anchor = buffer.create_child_anchor(&mut from);
+    let (at, after) = (
+        buffer.iter_at_offset(offset),
+        buffer.iter_at_offset(offset + 1),
+    );
+    for tag in &tags {
+        buffer.apply_tag(tag, &at, &after);
+    }
+    // The text view lets go of a deleted anchor's widget, so the picture
+    // that was there goes back as it was, decoding or not.
+    let widget = match picture.parent() {
+        None => picture.clone(),
+        Some(_) => copy_picture(picture),
+    };
+    view.add_child_at_anchor(&widget, &anchor);
+    widget.set_visible(true);
+    Some(anchor)
+}
+
+/// A picture showing what `picture` shows, for when `picture` itself is
+/// still in place elsewhere.
+fn copy_picture(picture: &gtk::Widget) -> gtk::Widget {
+    let copy = gtk::Picture::new();
+    copy.set_can_shrink(true);
+    if let Some(picture) = picture.downcast_ref::<gtk::Picture>() {
+        copy.set_content_fit(picture.content_fit());
+        copy.set_paintable(picture.paintable().as_ref());
+        describe(&copy, &picture.alternative_text().unwrap_or_default());
+    }
+    let (width, height) = picture.size_request();
+    copy.set_size_request(width, height);
+    copy.upcast()
+}
+
+/// A picture of `data`, described by `alt`, not yet in the text. A PNG or
+/// JPEG shows at once. Any other format shows a placeholder until a
+/// worker thread has decoded it, since GDK hands those to a sandboxed
+/// loader that can keep the GTK thread waiting; one that never decodes
+/// keeps the placeholder and still goes out with the message.
+pub fn new_picture(alt: &str, data: &[u8]) -> gtk::Picture {
+    let bytes = glib::Bytes::from(data);
     let picture = gtk::Picture::new();
     picture.set_can_shrink(true);
+    describe(&picture, alt);
     match crate::ui::texture::here(&bytes) {
         Some(texture) => show_picture(&picture, &texture),
         None => {
@@ -703,9 +811,7 @@ pub fn insert_image(
             });
         }
     }
-    view.add_child_at_anchor(&picture, &anchor);
-    picture.set_visible(true);
-    anchors.push((anchor, cid.to_string()));
+    picture
 }
 
 /// Shows `texture` in `picture`, brought down to a size the writer can
@@ -1012,11 +1118,19 @@ mod tests {
         let mut body = RichBody::from_markdown("Look **here** and there");
         body.blocks[0]
             .spans
-            .insert(2, Span::image("image", "cid:dot@mailrs"));
+            .insert(2, Span::image("A red dot", "cid:dot@mailrs"));
         write(&view, &body, &[attachment], &mut anchors);
         assert_eq!(anchors.len(), 1);
         let read_back = read(&buffer, &anchors);
         assert_eq!(read_back, body, "{}", read_back.to_markdown());
+        // A screen reader names the picture by the words that describe it.
+        let picture = anchors[0]
+            .anchor
+            .widgets()
+            .into_iter()
+            .find_map(|widget| widget.downcast::<gtk::Picture>().ok())
+            .expect("a picture sits in the anchor");
+        assert_eq!(picture.alternative_text().as_deref(), Some("A red dot"));
     }
 
     /// Bytes GDK does not read itself would go to glycin's sandboxed
@@ -1027,10 +1141,10 @@ mod tests {
     fn a_picture_gdk_cannot_read_itself_waits_in_a_placeholder() {
         let (view, buffer, mut anchors) = buffer();
         let mut at = buffer.end_iter();
-        insert_image(&view, &mut at, "odd@mailrs", b"plain words", &mut anchors);
+        insert_image(&view, &mut at, "odd@mailrs", "odd", b"plain words", &mut anchors);
         assert_eq!(anchors.len(), 1, "the picture has its place in the text");
         let picture = anchors[0]
-            .0
+            .anchor
             .widgets()
             .into_iter()
             .find_map(|widget| widget.downcast::<gtk::Picture>().ok())

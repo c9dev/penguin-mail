@@ -286,6 +286,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - An account that cannot start syncing no longer stops the accounts after it, as when Penguin Mail restarts itself in the tray; it shows as retrying and starts once it can.
 - Penguin Mail finds the calendars and contacts of Fastmail, GMX, WEB.DE, mail.com and Zoho accounts, and when it finds none, Preferences says whether the password was refused or the server did not answer.
 - Undo in the composer brings words back with the styles they had, after Format and after typing over or deleting them, and Redo brings back the lists Format made.
+- Undo in the composer takes out a picture you just inserted and brings back one you deleted, and Redo does the reverse.
+- Format Markdown in the composer keeps the bold, italics, links and lists you had already made.
+- Pictures in a message keep the words that describe them, which go out with the message for people who cannot see the picture. A picture inserted from a file starts with the file's name, and Describe Picture on its right-click menu changes the words.
 - An invitation's buttons move onto a second line in a narrow reading pane, so the card no longer runs past the edge.
 - A message's details can be selected and copied. Only the Details button, now with a chevron, opens and closes them, and a collapsed message opens from a click anywhere on it.
 - In Month view, the clock on an event waiting to be sent no longer covers its time, and an unanswered invitation's dashed outline no longer cuts through its time.
