@@ -610,10 +610,14 @@ pub fn small_number(count: usize) -> String {
 }
 
 /// How far a folder's first sync has got: waiting, or how many
-/// conversations are in.
-pub fn folder_line(conversations: usize) -> String {
+/// conversations are in. A folder still empty when the download ends has
+/// nothing to wait for, so it says so.
+pub fn folder_line(conversations: usize, done: bool) -> String {
     if conversations == 0 {
-        return gettext("Waiting");
+        return match done {
+            false => gettext("Waiting"),
+            true => gettext("Empty"),
+        };
     }
     mailrs_domain::translate::fill_plural(
         "{count} conversation",
@@ -1231,6 +1235,34 @@ fn ready_lede(done: bool) -> String {
     }
 }
 
+/// The lede of the page that offers Grant Access: how the first download
+/// stands, then which boxes the person left unticked on the provider's
+/// page. It follows the download as the ready page's lede does.
+pub fn grant_lede(provider: Provider, missing: usize, done: bool) -> String {
+    let spoken = small_number(missing);
+    let count = [("count", spoken.as_str())];
+    let left = if provider == Provider::Microsoft {
+        fill_plural(
+            "You left one box unticked on Microsoft's page, so this feature stays off:",
+            "You left {count} boxes unticked on Microsoft's page, so these features stay off:",
+            missing,
+            &count,
+        )
+    } else {
+        fill_plural(
+            "You left one box unticked on Google's page, so this feature stays off:",
+            "You left {count} boxes unticked on Google's page, so these features stay off:",
+            missing,
+            &count,
+        )
+    };
+    let download = match done {
+        false => gettext("Mail is downloading."),
+        true => gettext("Your mail is here."),
+    };
+    format!("{download} {left}")
+}
+
 /// Decides the added page's words and progress for a new account.
 /// Gmail, IMAP and Microsoft accounts are done when the backfill has
 /// finished. A POP3 account never sets that marker; its first check does.
@@ -1241,11 +1273,17 @@ pub fn added_page(
     pop3_first_check_done: bool,
 ) -> AddedPage {
     if provider != Provider::Pop3 {
-        return AddedPage {
-            lede: ready_lede(backfill_done),
-            note: gettext(
+        // Once the backfill has finished no older mail is on its way, only
+        // new mail, which the periodic check brings.
+        let note = match backfill_done {
+            false => gettext(
                 "Newest mail comes first. Older mail keeps coming in the background, even with the window closed.",
             ),
+            true => gettext("Penguin Mail keeps checking for new mail, even with the window closed."),
+        };
+        return AddedPage {
+            lede: ready_lede(backfill_done),
+            note,
             done: backfill_done,
         };
     }
@@ -2337,9 +2375,61 @@ mod tests {
 
     #[test]
     fn a_folder_waits_then_counts_its_conversations() {
-        assert_eq!(folder_line(0), "Waiting");
-        assert_eq!(folder_line(1), "1 conversation");
-        assert_eq!(folder_line(312), "312 conversations");
+        assert_eq!(folder_line(0, false), "Waiting");
+        assert_eq!(folder_line(1, false), "1 conversation");
+        assert_eq!(folder_line(312, false), "312 conversations");
+    }
+
+    #[test]
+    fn a_folder_with_nothing_in_it_is_empty_once_the_download_ends() {
+        assert_eq!(folder_line(0, true), "Empty");
+        assert_eq!(folder_line(1, true), "1 conversation");
+        assert_eq!(folder_line(312, true), "312 conversations");
+    }
+
+    #[test]
+    fn the_note_stops_promising_older_mail_once_the_download_ends() {
+        for provider in [Provider::Gmail, Provider::Imap, Provider::Microsoft] {
+            let running = added_page(provider, RemoveSetting::Never, false, false).note;
+            assert!(running.contains("Older mail keeps coming"), "{provider:?}");
+            let done = added_page(provider, RemoveSetting::Never, true, false).note;
+            assert_eq!(
+                done,
+                "Penguin Mail keeps checking for new mail, even with the window closed.",
+                "{provider:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn the_pop3_note_is_the_same_before_and_after_the_first_check() {
+        let before = added_page(Provider::Pop3, RemoveSetting::Never, false, false).note;
+        let after = added_page(Provider::Pop3, RemoveSetting::Never, false, true).note;
+        assert_eq!(before, after);
+    }
+
+    #[test]
+    fn the_grant_lede_follows_the_first_download_as_the_ready_lede_does() {
+        assert_eq!(
+            grant_lede(Provider::Gmail, 2, false),
+            "Mail is downloading. You left two boxes unticked on Google's page, so these features stay off:"
+        );
+        assert_eq!(
+            grant_lede(Provider::Gmail, 2, true),
+            "Your mail is here. You left two boxes unticked on Google's page, so these features stay off:"
+        );
+        assert_eq!(
+            grant_lede(Provider::Gmail, 1, true),
+            "Your mail is here. You left one box unticked on Google's page, so this feature stays off:"
+        );
+        assert_eq!(
+            grant_lede(Provider::Microsoft, 3, true),
+            "Your mail is here. You left three boxes unticked on Microsoft's page, so these features stay off:"
+        );
+        assert_eq!(
+            grant_lede(Provider::Microsoft, 1, false),
+            "Mail is downloading. You left one box unticked on Microsoft's page, so this feature stays off:"
+        );
     }
 
     fn suggested(typed: &str) -> Option<String> {

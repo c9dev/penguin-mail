@@ -18,7 +18,7 @@ use std::time::{Duration, Instant};
 use adw::prelude::*;
 use gtk::{gio, glib, graphene};
 use mailrs_discover::Server;
-use mailrs_domain::translate::{fill, fill_plural, gettext};
+use mailrs_domain::translate::{fill, gettext};
 use mailrs_domain::{Account, AccountId, MailSet, Provider, RemoveSetting, Role as MailRole};
 use mailrs_store::{accounts, servers};
 
@@ -1528,9 +1528,9 @@ struct Dialog {
     /// The account the last page follows, and the timer that reads its
     /// counts.
     added: Cell<Option<AccountId>>,
-    /// Whether the last page offers Grant Access, whose lede names the
-    /// features left off and stays as it is.
-    granting: Cell<bool>,
+    /// Set while the last page offers Grant Access, with the provider and
+    /// how many features were left off, which its lede names.
+    granting: Cell<Option<(Provider, usize)>>,
     count_timer: RefCell<Option<glib::SourceId>>,
     pick: PickPage,
     address: AddressPage,
@@ -1595,7 +1595,7 @@ impl Dialog {
             browser_expected: RefCell::new(None),
             browser_provider: Cell::new(Browser::Google),
             added: Cell::new(None),
-            granting: Cell::new(false),
+            granting: Cell::new(None),
             count_timer: RefCell::new(None),
             pick: pick_page(signs_in_to_microsoft(core)),
             address: address_page(),
@@ -2782,7 +2782,8 @@ impl Dialog {
         self.added.set(Some(account.id));
         let missing = withheld.unwrap_or_default();
         let grant = !missing.is_empty();
-        self.granting.set(grant);
+        self.granting
+            .set(grant.then_some((account.provider, missing.len())));
         page.title.set_xalign(if grant { 0.0 } else { 0.5 });
         page.lede.set_xalign(if grant { 0.0 } else { 0.5 });
         if grant {
@@ -2790,23 +2791,13 @@ impl Dialog {
                 &gettext("{account} is added"),
                 &[("account", &account.email)],
             ));
-            let spoken = add_account::small_number(missing.len());
-            let count = [("count", spoken.as_str())];
-            page.lede.set_text(&if account.provider == mailrs_domain::Provider::Microsoft {
-                fill_plural(
-                    "Mail is downloading. You left one box unticked on Microsoft's page, so this feature stays off:",
-                    "Mail is downloading. You left {count} boxes unticked on Microsoft's page, so these features stay off:",
-                    missing.len(),
-                    &count,
-                )
-            } else {
-                fill_plural(
-                    "Mail is downloading. You left one box unticked on Google's page, so this feature stays off:",
-                    "Mail is downloading. You left {count} boxes unticked on Google's page, so these features stay off:",
-                    missing.len(),
-                    &count,
-                )
-            });
+            // The first download has not been read yet, so the lede says it
+            // runs; `show_words` follows it.
+            page.lede.set_text(&add_account::grant_lede(
+                account.provider,
+                missing.len(),
+                false,
+            ));
             while let Some(child) = page.withheld.first_child() {
                 page.withheld.remove(&child);
             }
@@ -2844,7 +2835,7 @@ impl Dialog {
             if let Some(row) = folder.row.parent() {
                 row.set_visible(shown);
             }
-            folder.state.set_text(&add_account::folder_line(0));
+            folder.state.set_text(&add_account::folder_line(0, false));
             folder.progress.set_fraction(0.0);
         }
         let provider = account.provider_name().to_string();
@@ -2903,13 +2894,15 @@ impl Dialog {
     }
 
     /// Puts `page`'s words on the last page. The lede follows the first
-    /// download, which it said was still running after it had ended;
-    /// Grant Access keeps its own.
+    /// download, which it said was still running after it had ended.
+    /// Grant Access has a lede of its own that follows it the same way.
     fn show_words(&self, page: &add_account::AddedPage) {
         self.finished.note.set_text(&page.note);
-        if !self.granting.get() {
-            self.finished.lede.set_text(&page.lede);
-        }
+        let lede = match self.granting.get() {
+            Some((provider, missing)) => add_account::grant_lede(provider, missing, page.done),
+            None => page.lede.clone(),
+        };
+        self.finished.lede.set_text(&lede);
     }
 
     fn show_counts(&self, account_id: AccountId, counts: &mailrs_store::threads::MailCounts, done: bool) {
@@ -2918,7 +2911,7 @@ impl Dialog {
                 .account(account_id, &MailSet::Role(folder.role))
                 .threads
                 .max(0) as usize;
-            folder.state.set_text(&add_account::folder_line(count));
+            folder.state.set_text(&add_account::folder_line(count, done));
             if done {
                 folder.progress.set_fraction(1.0);
             } else if count > 0 {
@@ -3178,7 +3171,7 @@ fn preview(this: &Rc<Dialog>, stage: &str) {
                     this.band.set_letters(true);
                     let counts = [312, 0, 0];
                     for (folder, count) in this.finished.folders.iter().zip(counts) {
-                        folder.state.set_text(&add_account::folder_line(count));
+                        folder.state.set_text(&add_account::folder_line(count, false));
                         folder.progress.set_fraction(if count > 0 { 0.26 } else { 0.0 });
                     }
                 }

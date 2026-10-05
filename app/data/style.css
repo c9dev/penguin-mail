@@ -260,6 +260,12 @@ flowboxchild:focus-visible > .recipient-chip {
 }
 .recipient-entry { padding-left: 2px; }
 
+/* The seven weekday toggles in Preferences. A button's own padding and
+   minimum width make them 344 px together, wider than the row has in a
+   window 360 px wide, and that sets the whole dialog's minimum. A letter
+   needs far less. */
+.day-toggles button { min-width: 32px; padding-left: 0; padding-right: 0; }
+
 /* The formatting bar: one group of buttons per kind of formatting. */
 .format-bar { padding: 1px 2px; }
 .format-group { padding: 0 6px; }
