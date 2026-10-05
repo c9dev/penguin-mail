@@ -618,11 +618,14 @@ async fn fill_protection(app: Rc<App>, rows: Rows) {
     }
     let named =
         crate::protection::joined(&programs.iter().map(String::as_str).collect::<Vec<_>>());
-    filling.set_description(Some(&fill(
-        &gettext(
-            "Penguin Mail signs and encrypts through {programs}, which holds your \
-             keys and asks for your passphrase itself.",
-        ),
+    // The verb agrees with the programs: "gpg, which holds" but "gpg and
+    // gpgsm, which hold".
+    filling.set_description(Some(&fill_plural(
+        "Penguin Mail signs and encrypts through {programs}, which holds your \
+         keys and asks for your passphrase itself.",
+        "Penguin Mail signs and encrypts through {programs}, which hold your \
+         keys and ask for your passphrase themselves.",
+        programs.len(),
         &[("programs", &named)],
     )));
 }

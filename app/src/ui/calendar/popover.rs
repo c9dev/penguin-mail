@@ -124,7 +124,7 @@ pub struct EventPopover {
     /// "Add a note", under the answer buttons: words the organizer reads
     /// with the answer. Emptied each time the popover opens.
     note: gtk::Entry,
-    /// "Propose a New Time", for a guest of a timed event with an
+    /// "Propose New Time", for a guest of a timed event with an
     /// organizer to ask.
     propose_row: gtk::Button,
     on_propose: RefCell<Option<Box<dyn Fn()>>>,
@@ -334,14 +334,14 @@ impl EventPopover {
             .xalign(0.0)
             .wrap(true)
             .hexpand(true)
-            .label(gettext("Propose a New Time"))
+            .label(gettext("Propose New Time"))
             .build();
         let propose_row = gtk::Button::builder()
             .child(&row_with_icon("penguin-mail-calendar-symbolic", &propose_label, false))
             .css_classes(["flat", "popover-open-mail"])
             .visible(false)
             .build();
-        crate::ui::name(&propose_row, &gettext("Propose a New Time"));
+        crate::ui::name(&propose_row, &gettext("Propose New Time"));
 
         // "Open the invitation in Mail", under the answer row, only for
         // an event that arrived by mail; an icon-and-text link
@@ -656,7 +656,7 @@ impl EventPopover {
     /// Maybe or No, with the note they wrote; the caller asks which
     /// occurrences it covers and sends it through
     /// `Invitations::answer_event`. `on_propose`, when given, puts
-    /// "Propose a New Time" under the answers.
+    /// "Propose New Time" under the answers.
     #[expect(clippy::too_many_arguments, reason = "each is a separate door the popover opens")]
     pub fn show(
         self: &Rc<Self>,

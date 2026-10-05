@@ -328,7 +328,7 @@ pub(super) static SHORTCUTS: &[Shortcut] = &[
     },
     Shortcut {
         section: Section::Reading,
-        description: || gettext("Get new mail"),
+        description: || gettext("Check for mail"),
         keys: &[
             main("<Control><Shift>n", "win.check"),
             main("F5", "win.check"),

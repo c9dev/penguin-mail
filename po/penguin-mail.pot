@@ -1683,15 +1683,15 @@ msgstr ""
 msgid "%H:%M"
 msgstr ""
 
-#: app/src/format.rs:36 app/src/format.rs:194
+#: app/src/format.rs:36 app/src/format.rs:213
 msgid "Yesterday"
 msgstr ""
 
-#: app/src/format.rs:38 app/src/format.rs:195
+#: app/src/format.rs:38 app/src/format.rs:214
 msgid "%A"
 msgstr ""
 
-#: app/src/format.rs:39 app/src/format.rs:175
+#: app/src/format.rs:39
 msgid "%-d %b"
 msgstr ""
 
@@ -1711,11 +1711,11 @@ msgstr ""
 msgid "Tomorrow at %H:%M"
 msgstr ""
 
-#: app/src/format.rs:58 app/src/format.rs:85
+#: app/src/format.rs:58 app/src/format.rs:111
 msgid "%a %-d %b at %H:%M"
 msgstr ""
 
-#: app/src/format.rs:59 app/src/format.rs:86
+#: app/src/format.rs:59 app/src/format.rs:112
 msgid "%-d %b %Y at %H:%M"
 msgstr ""
 
@@ -1723,107 +1723,111 @@ msgstr ""
 msgid "%-d %b %Y"
 msgstr ""
 
-#: app/src/format.rs:69
-msgid "%A, %-d %B %Y at %H:%M"
+#: app/src/format.rs:70
+msgid "%a, %-d %b"
 msgstr ""
 
-#: app/src/format.rs:82
-msgid "today at %H:%M"
+#: app/src/format.rs:71
+msgid "%a, %-d %b %Y"
 msgstr ""
 
-#: app/src/format.rs:83
-msgid "tomorrow at %H:%M"
-msgstr ""
-
-#: app/src/format.rs:84
-msgid "%A at %H:%M"
-msgstr ""
-
-#: app/src/format.rs:96
-msgid "Send {when}"
-msgstr ""
-
-#: app/src/format.rs:103
-msgid "In 1 Hour"
-msgstr ""
-
-#: app/src/format.rs:123
-msgid "Tonight at 21:00"
-msgstr ""
-
-#: app/src/format.rs:127
-msgid "Tomorrow at 08:00"
-msgstr ""
-
-#: app/src/format.rs:134
-msgid "Monday at 08:00"
-msgstr ""
-
-#: app/src/format.rs:149
-msgid "{date} · All day"
-msgstr ""
-
-#: app/src/format.rs:161
-msgid "%A %-d %B %Y"
-msgstr ""
-
-#: app/src/format.rs:166
-msgid "{date} · {start}"
-msgstr ""
-
-#: app/src/format.rs:173
-msgid "{date} {time}"
-msgstr ""
-
-#: app/src/format.rs:181
-msgid "{date} · {start}–{end}"
-msgstr ""
-
-#: app/src/format.rs:196
-msgid "%A, %-d %B"
-msgstr ""
-
-#: app/src/format.rs:197
+#: app/src/format.rs:79 app/src/format.rs:216
 msgid "%A, %-d %B %Y"
 msgstr ""
 
-#: app/src/format.rs:213
+#: app/src/format.rs:87
+msgid "{date} at {time}"
+msgstr ""
+
+#: app/src/format.rs:108
+msgid "today at %H:%M"
+msgstr ""
+
+#: app/src/format.rs:109
+msgid "tomorrow at %H:%M"
+msgstr ""
+
+#: app/src/format.rs:110
+msgid "%A at %H:%M"
+msgstr ""
+
+#: app/src/format.rs:122
+msgid "Send {when}"
+msgstr ""
+
+#: app/src/format.rs:129
+msgid "In 1 Hour"
+msgstr ""
+
+#: app/src/format.rs:149
+msgid "Tonight at 21:00"
+msgstr ""
+
+#: app/src/format.rs:153
+msgid "Tomorrow at 08:00"
+msgstr ""
+
+#: app/src/format.rs:160
+msgid "Monday at 08:00"
+msgstr ""
+
+#: app/src/format.rs:174
+msgid "{date} · All day"
+msgstr ""
+
+#: app/src/format.rs:185
+msgid "{date} · {start}"
+msgstr ""
+
+#: app/src/format.rs:192
+msgid "{date} {time}"
+msgstr ""
+
+#: app/src/format.rs:200
+msgid "{date} · {start}–{end}"
+msgstr ""
+
+#: app/src/format.rs:215
+msgid "%A, %-d %B"
+msgstr ""
+
+#: app/src/format.rs:232
 msgid "{day} {time}"
 msgstr ""
 
-#: app/src/format.rs:272
+#: app/src/format.rs:291
 msgid "Blue"
 msgstr ""
 
-#: app/src/format.rs:273
+#: app/src/format.rs:292
 msgid "Teal"
 msgstr ""
 
-#: app/src/format.rs:274
+#: app/src/format.rs:293
 msgid "Green"
 msgstr ""
 
-#: app/src/format.rs:275
+#: app/src/format.rs:294
 msgid "Yellow"
 msgstr ""
 
-#: app/src/format.rs:276
+#: app/src/format.rs:295
 msgid "Orange"
 msgstr ""
 
-#: app/src/format.rs:277
+#: app/src/format.rs:296
 msgid "Red"
 msgstr ""
 
-#: app/src/format.rs:278
+#: app/src/format.rs:297
 msgid "Pink"
 msgstr ""
 
-#: app/src/format.rs:279
+#: app/src/format.rs:298
 msgid "Purple"
 msgstr ""
 
-#: app/src/format.rs:280
+#: app/src/format.rs:299
 msgid "Slate"
 msgstr ""
 
@@ -1873,7 +1877,7 @@ msgstr ""
 #: app/src/notify.rs:51 app/src/ui/calendar/manage.rs:223
 #: app/src/ui/calendar/popover.rs:211 app/src/ui/calendar/popover.rs:213
 #: app/src/ui/calendar/popover.rs:706 app/src/ui/calendar/scope.rs:194
-#: app/src/ui/conversation.rs:537 app/src/ui/hide_my_email.rs:288
+#: app/src/ui/conversation.rs:537 app/src/ui/hide_my_email.rs:289
 #: app/src/ui/queued.rs:58 app/src/ui/templates.rs:149
 #: app/src/ui/window/arrange.rs:106 app/src/ui/window/organize.rs:204
 msgid "Delete"
@@ -3015,7 +3019,7 @@ msgid "Off"
 msgstr ""
 
 #: app/src/settings/mod.rs:188
-msgid "Local server"
+msgid "Local Server"
 msgstr ""
 
 #: app/src/settings/mod.rs:189
@@ -3023,7 +3027,7 @@ msgid "Anthropic API"
 msgstr ""
 
 #: app/src/settings/mod.rs:190
-msgid "Claude subscription"
+msgid "Claude Subscription"
 msgstr ""
 
 #. The header in both spaces carries a button for this now (R12);
@@ -3369,7 +3373,7 @@ msgstr ""
 
 #: app/src/tray.rs:219 app/src/ui/about.rs:118 app/src/ui/about.rs:225
 #: app/src/ui/about.rs:233 app/src/ui/about.rs:240
-#: app/src/ui/preferences.rs:797 app/src/update/mod.rs:108
+#: app/src/ui/preferences.rs:800 app/src/update/mod.rs:108
 msgid "Check for Updates"
 msgstr ""
 
@@ -3659,7 +3663,7 @@ msgid "Penguin Mail keeps every message it downloads on this computer."
 msgstr ""
 
 #: app/src/ui/add_account.rs:1301 app/src/ui/add_account.rs:1302
-#: app/src/ui/preferences.rs:1036
+#: app/src/ui/preferences.rs:1039
 msgid "Days"
 msgstr ""
 
@@ -3815,8 +3819,8 @@ msgstr ""
 
 #: app/src/ui/assistant.rs:183
 msgid ""
-"Use a local model from LM Studio, Ollama, or Unsloth, an Anthropic API key, "
-"or your Claude subscription."
+"Use a local model from LM Studio, Ollama, or any server with OpenAI's API. "
+"You can also use an Anthropic API key or your Claude subscription."
 msgstr ""
 
 #: app/src/ui/assistant.rs:445
@@ -3860,7 +3864,7 @@ msgid "Running"
 msgstr ""
 
 #: app/src/ui/assistant.rs:921 app/src/ui/calendar/editor.rs:251
-#: app/src/ui/hide_my_email.rs:465
+#: app/src/ui/hide_my_email.rs:466
 msgid "Done"
 msgstr ""
 
@@ -4291,7 +4295,7 @@ msgstr ""
 msgid "Brave Search API Key"
 msgstr ""
 
-#: app/src/ui/autocomplete.rs:307 app/src/ui/calendar/editor.rs:2188
+#: app/src/ui/autocomplete.rs:307 app/src/ui/calendar/editor.rs:2187
 #: app/src/ui/composer/recipients.rs:50
 msgid "{name}, {address}"
 msgstr ""
@@ -4361,7 +4365,7 @@ msgid "Declined"
 msgstr ""
 
 #: app/src/ui/calendar/block.rs:576 app/src/ui/calendar/words.rs:164
-#: app/src/ui/preferences.rs:917
+#: app/src/ui/preferences.rs:920
 msgid "{start}–{end}"
 msgstr ""
 
@@ -4477,11 +4481,11 @@ msgstr ""
 msgid "End time"
 msgstr ""
 
-#: app/src/ui/calendar/editor.rs:695 app/src/ui/preferences.rs:1007
+#: app/src/ui/calendar/editor.rs:695 app/src/ui/preferences.rs:1010
 msgid "Starts"
 msgstr ""
 
-#: app/src/ui/calendar/editor.rs:698 app/src/ui/preferences.rs:1009
+#: app/src/ui/calendar/editor.rs:698 app/src/ui/preferences.rs:1012
 msgid "Ends"
 msgstr ""
 
@@ -4971,8 +4975,8 @@ msgstr[1] ""
 msgid "Could not change the calendar list: {reason}"
 msgstr ""
 
-#: app/src/ui/calendar/manage.rs:99
-msgid "Could not change the colour: {reason}"
+#: app/src/ui/calendar/manage.rs:99 app/src/ui/window/organize.rs:254
+msgid "Could not change the color: {reason}"
 msgstr ""
 
 #: app/src/ui/calendar/manage.rs:180
@@ -5031,7 +5035,7 @@ msgid ""
 "A calendar of your own on {account}, in Google Calendar on every device."
 msgstr ""
 
-#: app/src/ui/calendar/manage.rs:303 app/src/ui/hide_my_email.rs:363
+#: app/src/ui/calendar/manage.rs:303 app/src/ui/hide_my_email.rs:364
 #: app/src/ui/rules.rs:431 app/src/ui/smart_editor.rs:146
 #: app/src/ui/templates.rs:235 app/src/ui/window/organize.rs:74
 #: app/src/ui/window/organize.rs:347
@@ -5173,7 +5177,7 @@ msgstr ""
 
 #: app/src/ui/calendar/mod.rs:2049 app/src/ui/calendar/mod.rs:3422
 #: app/src/ui/calendar/sidebar.rs:309 app/src/ui/calendar/words.rs:347
-#: app/src/ui/preferences.rs:931 app/src/ui/preferences.rs:1044
+#: app/src/ui/preferences.rs:934 app/src/ui/preferences.rs:1047
 msgid "%a"
 msgstr ""
 
@@ -5285,7 +5289,8 @@ msgid "The organizer reads it with your answer"
 msgstr ""
 
 #: app/src/ui/calendar/popover.rs:337 app/src/ui/calendar/popover.rs:344
-msgid "Propose a New Time"
+#: app/src/ui/invitation.rs:358
+msgid "Propose New Time"
 msgstr ""
 
 #: app/src/ui/calendar/popover.rs:353 app/src/ui/calendar/popover.rs:360
@@ -6440,7 +6445,7 @@ msgid ""
 msgstr ""
 
 #: app/src/ui/hide_my_email.rs:73 app/src/ui/hide_my_email.rs:75
-#: app/src/ui/hide_my_email.rs:373
+#: app/src/ui/hide_my_email.rs:374
 msgid "Create Address"
 msgstr ""
 
@@ -6452,117 +6457,117 @@ msgstr ""
 msgid "Created {date}"
 msgstr ""
 
-#: app/src/ui/hide_my_email.rs:164
+#: app/src/ui/hide_my_email.rs:165
 msgid "No addresses yet"
 msgstr ""
 
-#: app/src/ui/hide_my_email.rs:165
+#: app/src/ui/hide_my_email.rs:166
 msgid "Create one with the + button."
 msgstr ""
 
-#: app/src/ui/hide_my_email.rs:185
+#: app/src/ui/hide_my_email.rs:186
 msgid "Off: mail goes to the Trash"
 msgstr ""
 
-#: app/src/ui/hide_my_email.rs:207 app/src/ui/window/message_menu.rs:137
+#: app/src/ui/hide_my_email.rs:208 app/src/ui/window/message_menu.rs:137
 msgid "Copy Address"
 msgstr ""
 
-#: app/src/ui/hide_my_email.rs:208
+#: app/src/ui/hide_my_email.rs:209
 msgid "Copy {address}"
 msgstr ""
 
-#: app/src/ui/hide_my_email.rs:215 app/src/ui/hide_my_email.rs:449
+#: app/src/ui/hide_my_email.rs:216 app/src/ui/hide_my_email.rs:450
 msgid "Address copied"
 msgstr ""
 
-#: app/src/ui/hide_my_email.rs:223
+#: app/src/ui/hide_my_email.rs:224
 msgid "Receive Mail"
 msgstr ""
 
-#: app/src/ui/hide_my_email.rs:228
+#: app/src/ui/hide_my_email.rs:229
 msgid "Receive mail at {address}"
 msgstr ""
 
-#: app/src/ui/hide_my_email.rs:243
+#: app/src/ui/hide_my_email.rs:244
 msgid "Mail to this address reaches you again"
 msgstr ""
 
-#: app/src/ui/hide_my_email.rs:246
+#: app/src/ui/hide_my_email.rs:247
 msgid "Mail to this address now goes to the Trash"
 msgstr ""
 
-#: app/src/ui/hide_my_email.rs:250
+#: app/src/ui/hide_my_email.rs:251
 msgid "Could not change the address: {reason}"
 msgstr ""
 
-#: app/src/ui/hide_my_email.rs:261
+#: app/src/ui/hide_my_email.rs:262
 msgid "Delete Address"
 msgstr ""
 
-#: app/src/ui/hide_my_email.rs:263
+#: app/src/ui/hide_my_email.rs:264
 msgid "Delete {address}"
 msgstr ""
 
-#: app/src/ui/hide_my_email.rs:280
+#: app/src/ui/hide_my_email.rs:281
 msgid "Delete Address?"
 msgstr ""
 
-#: app/src/ui/hide_my_email.rs:283
+#: app/src/ui/hide_my_email.rs:284
 msgid ""
 "Mail sent to {address} arrives in your inbox again, without the Hide My "
 "Email label. To stop that mail, turn the address off instead."
 msgstr ""
 
-#: app/src/ui/hide_my_email.rs:297
+#: app/src/ui/hide_my_email.rs:298
 msgid "Address deleted"
 msgstr ""
 
-#: app/src/ui/hide_my_email.rs:299
+#: app/src/ui/hide_my_email.rs:300
 msgid "Could not delete the address: {reason}"
 msgstr ""
 
-#: app/src/ui/hide_my_email.rs:314
+#: app/src/ui/hide_my_email.rs:315
 msgid "Allow Hide My Email"
 msgstr ""
 
-#: app/src/ui/hide_my_email.rs:335 app/src/ui/window.rs:3291
+#: app/src/ui/hide_my_email.rs:336 app/src/ui/window.rs:3291
 msgid "Add an account first"
 msgstr ""
 
-#: app/src/ui/hide_my_email.rs:339
+#: app/src/ui/hide_my_email.rs:340
 msgid ""
 "You get a new address that ends in your own, such as "
 "name+kite.fern482@gmail.com. Give it to one site only."
 msgstr ""
 
-#: app/src/ui/hide_my_email.rs:345
+#: app/src/ui/hide_my_email.rs:346
 msgid "Account"
 msgstr ""
 
-#: app/src/ui/hide_my_email.rs:356
+#: app/src/ui/hide_my_email.rs:357
 msgid "Where Did You Use It?"
 msgstr ""
 
-#: app/src/ui/hide_my_email.rs:401
+#: app/src/ui/hide_my_email.rs:402
 msgid "Could not create the address: {reason}"
 msgstr ""
 
-#: app/src/ui/hide_my_email.rs:426
+#: app/src/ui/hide_my_email.rs:427
 msgid "Your New Address"
 msgstr ""
 
-#: app/src/ui/hide_my_email.rs:441
+#: app/src/ui/hide_my_email.rs:442
 msgid "Copy"
 msgstr ""
 
-#: app/src/ui/hide_my_email.rs:456
+#: app/src/ui/hide_my_email.rs:457
 msgid ""
 "It is on your clipboard. Mail sent to it gets the Hide My Email label in "
 "Gmail."
 msgstr ""
 
-#: app/src/ui/hide_my_email.rs:480
+#: app/src/ui/hide_my_email.rs:481
 msgid "Address Created"
 msgstr ""
 
@@ -6632,10 +6637,6 @@ msgstr ""
 
 #: app/src/ui/invitation.rs:346
 msgid "All Events"
-msgstr ""
-
-#: app/src/ui/invitation.rs:358
-msgid "Propose New Time"
 msgstr ""
 
 #: app/src/ui/invitation.rs:371 app/src/ui/invitation.rs:376
@@ -7198,170 +7199,176 @@ msgstr ""
 msgid "gpgsm could not be asked: {reason}"
 msgstr ""
 
-#: app/src/ui/preferences.rs:623
+#. The verb agrees with the programs: "gpg, which holds" but "gpg and
+#. gpgsm, which hold".
+#: app/src/ui/preferences.rs:624
 msgid ""
 "Penguin Mail signs and encrypts through {programs}, which holds your keys "
 "and asks for your passphrase itself."
-msgstr ""
+msgid_plural ""
+"Penguin Mail signs and encrypts through {programs}, which hold your keys and "
+"ask for your passphrase themselves."
+msgstr[0] ""
+msgstr[1] ""
 
-#: app/src/ui/preferences.rs:652
+#: app/src/ui/preferences.rs:655
 msgid "Spelling"
 msgstr ""
 
-#: app/src/ui/preferences.rs:655
+#: app/src/ui/preferences.rs:658
 msgid ""
 "No dictionaries are installed, so Penguin Mail is not checking spelling. "
 "Install a Hunspell dictionary, such as hunspell-en-us or hunspell-pt-pt, and "
 "reopen the composer."
 msgstr ""
 
-#: app/src/ui/preferences.rs:661
+#: app/src/ui/preferences.rs:664
 msgid "Dictionaries found: {languages}."
 msgstr ""
 
-#: app/src/ui/preferences.rs:674
+#: app/src/ui/preferences.rs:677
 msgid "Follow the System Language ({language})"
 msgstr ""
 
-#: app/src/ui/preferences.rs:701
+#: app/src/ui/preferences.rs:704
 msgid "Check Spelling In"
 msgstr ""
 
-#: app/src/ui/preferences.rs:725
+#: app/src/ui/preferences.rs:728
 msgid "Sync"
 msgstr ""
 
-#: app/src/ui/preferences.rs:731
+#: app/src/ui/preferences.rs:734
 msgid "Checking"
 msgstr ""
 
-#: app/src/ui/preferences.rs:737
+#: app/src/ui/preferences.rs:740
 msgid "Check for New Mail"
 msgstr ""
 
-#: app/src/ui/preferences.rs:746
+#: app/src/ui/preferences.rs:749
 msgid "Storage"
 msgstr ""
 
-#: app/src/ui/preferences.rs:751
+#: app/src/ui/preferences.rs:754
 msgid "Keep Mail on This Computer For"
 msgstr ""
 
-#: app/src/ui/preferences.rs:753
+#: app/src/ui/preferences.rs:756
 msgid "Everything in your inbox stays too, and older mail remains searchable"
 msgstr ""
 
-#: app/src/ui/preferences.rs:762
+#: app/src/ui/preferences.rs:765
 msgid "Message Cache"
 msgstr ""
 
-#: app/src/ui/preferences.rs:764
+#: app/src/ui/preferences.rs:767
 msgid "Bodies of mail you have read, kept for opening offline"
 msgstr ""
 
-#: app/src/ui/preferences.rs:773
+#: app/src/ui/preferences.rs:776
 msgid "Startup"
 msgstr ""
 
-#: app/src/ui/preferences.rs:776
+#: app/src/ui/preferences.rs:779
 msgid "Start in the Tray at Login"
 msgstr ""
 
-#: app/src/ui/preferences.rs:790
+#: app/src/ui/preferences.rs:793
 msgid "Not available in demo mode"
 msgstr ""
 
-#: app/src/ui/preferences.rs:798
+#: app/src/ui/preferences.rs:801
 msgid "Look for a new release once a day"
 msgstr ""
 
-#: app/src/ui/preferences.rs:805
+#: app/src/ui/preferences.rs:808
 msgid "Updates"
 msgstr ""
 
-#: app/src/ui/preferences.rs:819
+#: app/src/ui/preferences.rs:822
 msgid "Senders Who May Load Images"
 msgstr ""
 
-#: app/src/ui/preferences.rs:820 app/src/ui/preferences.rs:828
+#: app/src/ui/preferences.rs:823 app/src/ui/preferences.rs:831
 msgid "Nobody yet"
 msgstr ""
 
-#: app/src/ui/preferences.rs:830
+#: app/src/ui/preferences.rs:833
 msgid "{count} sender"
 msgid_plural "{count} senders"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/preferences.rs:840
+#: app/src/ui/preferences.rs:843
 msgid "Anyone at this domain"
 msgstr ""
 
-#: app/src/ui/preferences.rs:842
+#: app/src/ui/preferences.rs:845
 msgid "This address"
 msgstr ""
 
-#: app/src/ui/preferences.rs:847
+#: app/src/ui/preferences.rs:850
 msgid "Stop Loading Images from This Sender"
 msgstr ""
 
-#: app/src/ui/preferences.rs:854
+#: app/src/ui/preferences.rs:857
 msgid "Stop loading images from {sender}"
 msgstr ""
 
-#: app/src/ui/preferences.rs:924
+#: app/src/ui/preferences.rs:927
 msgid "Monday to Friday"
 msgstr ""
 
-#: app/src/ui/preferences.rs:925
+#: app/src/ui/preferences.rs:928
 msgid "Every day of the week"
 msgstr ""
 
-#: app/src/ui/preferences.rs:926
+#: app/src/ui/preferences.rs:929
 msgid "No days"
 msgstr ""
 
-#: app/src/ui/preferences.rs:933
+#: app/src/ui/preferences.rs:936
 msgid ", "
 msgstr ""
 
-#: app/src/ui/preferences.rs:935
+#: app/src/ui/preferences.rs:938
 msgid "{time}, {days}"
 msgstr ""
 
-#: app/src/ui/preferences.rs:961
+#: app/src/ui/preferences.rs:964
 msgid "Week Starts On"
 msgstr ""
 
-#: app/src/ui/preferences.rs:966
+#: app/src/ui/preferences.rs:969
 msgid "Automatic follows the locale's own first day of the week"
 msgstr ""
 
-#: app/src/ui/preferences.rs:982
+#: app/src/ui/preferences.rs:985
 msgid "Working Hours"
 msgstr ""
 
-#: app/src/ui/preferences.rs:1000
+#: app/src/ui/preferences.rs:1003
 msgid "Hours"
 msgstr ""
 
-#: app/src/ui/preferences.rs:1031
+#: app/src/ui/preferences.rs:1034
 msgid "–"
 msgstr ""
 
-#: app/src/ui/preferences.rs:1115
+#: app/src/ui/preferences.rs:1118
 msgid "Follow System"
 msgstr ""
 
-#: app/src/ui/preferences.rs:1119
+#: app/src/ui/preferences.rs:1122
 msgid "Language"
 msgstr ""
 
-#: app/src/ui/preferences.rs:1120
+#: app/src/ui/preferences.rs:1123
 msgid "Penguin Mail shows a new language after a restart"
 msgstr ""
 
-#: app/src/ui/preferences.rs:1192
+#: app/src/ui/preferences.rs:1195
 msgid "No signature"
 msgstr ""
 
@@ -8001,10 +8008,6 @@ msgstr ""
 msgid "Only Reply to My Contacts"
 msgstr ""
 
-#: app/src/ui/vacation.rs:365
-msgid "%a, %-d %b %Y"
-msgstr ""
-
 #: app/src/ui/welcome.rs:24
 msgid "Add your first account"
 msgstr ""
@@ -8614,10 +8617,6 @@ msgstr ""
 msgid "Deleted “{name}”"
 msgstr ""
 
-#: app/src/ui/window/organize.rs:254
-msgid "Could not change the color: {reason}"
-msgstr ""
-
 #: app/src/ui/window/organize.rs:349
 msgid "Only Where It Exists"
 msgstr ""
@@ -8848,7 +8847,7 @@ msgid "Open mailbox 1 to 9"
 msgstr ""
 
 #: app/src/ui/window/shortcuts.rs:331
-msgid "Get new mail"
+msgid "Check for mail"
 msgstr ""
 
 #: app/src/ui/window/shortcuts.rs:339
