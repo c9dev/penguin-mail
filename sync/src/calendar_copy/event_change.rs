@@ -155,23 +155,38 @@ pub fn adds_guests(before: &[Guest], after: &[Guest]) -> bool {
 /// tells every guest without a choice, since the new ones need their
 /// invitation.
 pub fn question(action: Action, scopes: &[RepeatScope], guests: &[Guest], facts: Facts) -> Option<Question> {
-    let seen = action != Action::Edit || facts.seen;
-    let guests_hear = action != Action::Answer && has_other_guests(guests) && seen;
-    let ask_guests = guests_hear && !facts.adds_guests && !facts.always_mails;
-    let mailed = guests_hear && !facts.adds_guests && facts.always_mails;
+    let question = whole_question(action, scopes, guests, facts);
     let needed = match action {
         Action::Move => true,
-        Action::Delete | Action::Edit | Action::Answer => !scopes.is_empty() || ask_guests || mailed,
+        Action::Delete | Action::Edit | Action::Answer => {
+            !scopes.is_empty() || question.ask_guests || question.mailed
+        }
     };
-    needed.then(|| Question {
+    needed.then_some(question)
+}
+
+/// Every part of the question, whether or not anything needs asking.
+fn whole_question(action: Action, scopes: &[RepeatScope], guests: &[Guest], facts: Facts) -> Question {
+    let seen = action != Action::Edit || facts.seen;
+    let guests_hear = action != Action::Answer && has_other_guests(guests) && seen;
+    Question {
         action,
         scopes: scopes.to_vec(),
-        ask_guests,
-        mailed,
+        ask_guests: guests_hear && !facts.adds_guests && !facts.always_mails,
+        mailed: guests_hear && !facts.adds_guests && facts.always_mails,
         told: guests_hear && facts.adds_guests,
         keeps: action == Action::Move && facts.more_than_time,
         rest_seen: facts.rest_seen,
-    })
+    }
+}
+
+impl Question {
+    /// Whether the guests hear of the change when the person goes ahead:
+    /// an update or a cancellation they may be spared, one the account
+    /// mails anyway, or the invitation new guests need.
+    pub fn guests_hear(&self) -> bool {
+        self.ask_guests || self.mailed || self.told
+    }
 }
 
 /// What a change nobody was asked about sends: nothing for an edit the
@@ -185,10 +200,30 @@ pub fn unasked(action: Action, facts: Facts) -> Choice {
 /// What to ask before `change`, on an account that mails the guests of
 /// every change when `always_mails`.
 pub fn asking(change: &EventChange, always_mails: bool) -> Ask {
+    let (action, scopes, guests, facts) = read(change, always_mails);
+    match question(action, &scopes, guests, facts) {
+        Some(question) => Ask::Question(question),
+        None => Ask::Settled(unasked(action, facts)),
+    }
+}
+
+/// The question for a caller that confirms every change itself, as the
+/// assistant does: what the window would ask, even where it would ask
+/// nothing, so the confirmation can say who hears of the change.
+pub fn confirmation(change: &EventChange, always_mails: bool) -> Question {
+    let (action, scopes, guests, facts) = read(change, always_mails);
+    whole_question(action, &scopes, guests, facts)
+}
+
+/// What the question rule reads from `change`: the action, the scopes on
+/// offer, the guests who may hear of it, and the facts.
+fn read(change: &EventChange, always_mails: bool) -> (Action, Vec<RepeatScope>, &[Guest], Facts) {
     let base = Facts { always_mails, ..Facts::default() };
-    let (action, scopes, guests, facts) = match change {
-        // A new event's guests get their invitation.
-        EventChange::New(_) => return Ask::Settled(unasked(Action::Edit, Facts { seen: true, ..base })),
+    match change {
+        // Every guest of a new event is new, and gets their invitation.
+        EventChange::New(event) => {
+            (Action::Edit, Vec::new(), &event.guests, Facts { seen: true, adds_guests: true, ..base })
+        }
         EventChange::Edit { occurrence, edited, how } => {
             let before = &occurrence.event;
             let action = if how.moves { Action::Move } else { Action::Edit };
@@ -199,21 +234,22 @@ pub fn asking(change: &EventChange, always_mails: bool) -> Ask {
                 rest_seen: how.rest_seen,
                 ..base
             };
-            // A guest the edit removed still hears of it.
-            let guests = if has_other_guests(&before.guests) { &before.guests } else { &edited.guests };
-            (action, edit_scopes(before, edited, how.rule_changed), guests.as_slice(), facts)
+            // A guest the edit removed still hears of it. A guest of
+            // someone else's event changes only their own copy, which
+            // nobody else hears of.
+            let guests: &[Guest] = match (before.limited(), has_other_guests(&before.guests)) {
+                (true, _) => &[],
+                (false, true) => &before.guests,
+                (false, false) => &edited.guests,
+            };
+            (action, edit_scopes(before, edited, how.rule_changed), guests, facts)
         }
         EventChange::Remove(occurrence) => {
             let event = &occurrence.event;
-            // A guest's removal takes only their own copy, so the other
-            // guests hear nothing of it.
+            // A guest's removal takes only their own copy.
             let guests: &[Guest] = if event.limited() { &[] } else { &event.guests };
             (Action::Delete, own_scopes(event, series::scopes(event, false)), guests, base)
         }
-    };
-    match question(action, &scopes, guests, facts) {
-        Some(question) => Ask::Question(question),
-        None => Ask::Settled(unasked(action, facts)),
     }
 }
 
