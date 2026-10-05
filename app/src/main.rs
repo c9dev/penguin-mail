@@ -2,6 +2,8 @@
 
 #[cfg(test)]
 mod accent_contrast;
+#[cfg(test)]
+mod text_contrast;
 mod add_account;
 mod app;
 mod assistant;

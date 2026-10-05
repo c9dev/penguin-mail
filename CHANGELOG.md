@@ -391,6 +391,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   an event that ran off the end of the wrong day.
 - Double-clicking a calendar event opens its editor, instead of leaving
   only its popover open.
+- In light mode, message previews, dates, mailbox counts and the grey
+  sender lines above each message are darker and easier to read.
 
 ## 0.3.0 (2026-09-24)
 

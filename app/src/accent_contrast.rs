@@ -14,9 +14,9 @@ const DESKTOP_ORANGE: &str = "#ed5b00";
 /// The mockups' orange, kept for large shapes, icons, bars and tints.
 const MOCKUP_ORANGE: &str = "#e8660c";
 const WHITE: &str = "#ffffff";
-const AA: f64 = 4.5;
+pub(crate) const AA: f64 = 4.5;
 
-fn channels(hex: &str) -> [f64; 3] {
+pub(crate) fn channels(hex: &str) -> [f64; 3] {
     let hex = hex.trim_start_matches('#');
     let byte = |at: usize| f64::from(u8::from_str_radix(&hex[at..at + 2], 16).expect("hex digits"));
     [byte(0), byte(2), byte(4)]
@@ -30,13 +30,13 @@ fn luminance(hex: &str) -> f64 {
     0.2126 * r + 0.7152 * g + 0.0722 * b
 }
 
-fn contrast(a: &str, b: &str) -> f64 {
+pub(crate) fn contrast(a: &str, b: &str) -> f64 {
     let (a, b) = (luminance(a), luminance(b));
     (a.max(b) + 0.05) / (a.min(b) + 0.05)
 }
 
 /// The value a custom property takes inside the rule for `selector`.
-fn custom_property(selector: &str, name: &str) -> Option<String> {
+pub(crate) fn custom_property(selector: &str, name: &str) -> Option<String> {
     let start = STYLE.find(&format!("{selector} {{"))?;
     let block = &STYLE[start..start + STYLE[start..].find('}')?];
     let after = &block[block.find(&format!("{name}:"))? + name.len() + 1..];
@@ -44,7 +44,7 @@ fn custom_property(selector: &str, name: &str) -> Option<String> {
 }
 
 /// Every rule as (selector, body).
-fn rules() -> Vec<(&'static str, &'static str)> {
+pub(crate) fn rules() -> Vec<(&'static str, &'static str)> {
     let mut rules = Vec::new();
     let mut rest = STYLE;
     while let Some(open) = rest.find('{') {
@@ -98,7 +98,7 @@ fn no_filled_control_carries_white_text_on_the_raw_accent() {
 
 /// The contrast of text drawn at `opacity` over `background`: in light
 /// libadwaita's text is `rgb(0 0 6 / 80%)`, in dark it is white.
-fn dimmed_text_contrast(dark: bool, opacity: f64, background: &str) -> f64 {
+pub(crate) fn dimmed_text_contrast(dark: bool, opacity: f64, background: &str) -> f64 {
     let (text, alpha) = if dark { ([255.0; 3], opacity) } else { ([0.0, 0.0, 6.0], 0.8 * opacity) };
     let back = channels(background);
     let mixed: Vec<String> = (0..3)

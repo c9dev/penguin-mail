@@ -709,31 +709,51 @@ background:color-mix(in srgb,var(--fg) 20%,transparent)}\
 :host(.plain) details.trimmed>summary:focus-visible,.text details.trimmed>summary:focus-visible{\
 outline-color:var(--accent)}";
 
-fn page_css(theme: &Theme) -> String {
-    // A message sits on a surface a step away from the page: lighter in a
-    // dark window, darker in a light one, so an open message reads as a
-    // sheet rather than as more page.
-    let (bg, fg, dim, card, line, hover, surface) = if theme.dark {
-        (
-            "#1e1e21",
-            "#ffffff",
-            "rgba(255,255,255,0.58)",
-            "rgba(255,255,255,0.08)",
-            "rgba(255,255,255,0.09)",
-            "rgba(255,255,255,0.04)",
-            "#2b2b30",
-        )
+/// The conversation page's colours in one theme.
+pub(crate) struct PagePalette {
+    pub bg: &'static str,
+    pub fg: &'static str,
+    /// Secondary text: counts, addresses, dates, recipients, quotes.
+    pub dim: &'static str,
+    pub card: &'static str,
+    pub line: &'static str,
+    pub hover: &'static str,
+    /// What a message sits on.
+    pub surface: &'static str,
+}
+
+/// A message sits on a surface a step away from the page: lighter in a
+/// dark window, darker in a light one, so an open message reads as a
+/// sheet rather than as more page.
+pub(crate) fn page_palette(dark: bool) -> PagePalette {
+    if dark {
+        PagePalette {
+            bg: "#1e1e21",
+            fg: "#ffffff",
+            dim: "rgba(255,255,255,0.58)",
+            card: "rgba(255,255,255,0.08)",
+            line: "rgba(255,255,255,0.09)",
+            hover: "rgba(255,255,255,0.04)",
+            surface: "#2b2b30",
+        }
     } else {
-        (
-            "#ffffff",
-            "rgba(0,0,6,0.84)",
-            "rgba(0,0,6,0.52)",
-            "rgba(0,0,6,0.05)",
-            "rgba(0,0,6,0.08)",
-            "rgba(0,0,6,0.03)",
-            "#f4f4f6",
-        )
-    };
+        PagePalette {
+            bg: "#ffffff",
+            fg: "rgba(0,0,6,0.84)",
+            // At 52 % the dim text read 4.3:1 on the page, under the
+            // 4.5:1 WCAG asks of 12.5 px text; 60 % reads 5.7:1 there and
+            // 5.2:1 on a message's surface, and stays well under the body.
+            dim: "rgba(0,0,6,0.6)",
+            card: "rgba(0,0,6,0.05)",
+            line: "rgba(0,0,6,0.08)",
+            hover: "rgba(0,0,6,0.03)",
+            surface: "#f4f4f6",
+        }
+    }
+}
+
+fn page_css(theme: &Theme) -> String {
+    let PagePalette { bg, fg, dim, card, line, hover, surface } = page_palette(theme.dark);
     format!(
         ":root{{color-scheme:{scheme};--bg:{bg};--fg:{fg};--dim:{dim};--card:{card};--line:{line};--hover:{hover};--surface:{surface};--accent:{accent};--accent-text:{accent_text}}}\
 html{{background:var(--bg)}}\

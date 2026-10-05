@@ -14,8 +14,15 @@
    - line: #ececef light, #2c2c31 dark (hairlines, about 5 %).
    - line2: #dedee3 light, #39393f dark (capsule separators, card
      borders).
-   - text: dim is the text at 64 % opacity, faint at 40 %. libadwaita's
-     `dim-label` is 55 %, which is neither.
+   - text: dim is the text at 75 % opacity in light and 64 % in dark,
+     faint at 40 %. libadwaita's `dim-label` is 55 %, which is neither.
+     The mockup's 64 % read 4.1:1 in light, under the 4.5:1 WCAG asks of
+     small text, because light text is already 80 % ink; 75 % reads 5.4:1
+     on the sidebar and more on the window and the view. Dark text is
+     white at full strength, so 64 % there reads 6.5:1 or better. A dim
+     rule therefore comes in two, the light value and an `.app-dark` twin
+     that puts 64 % back, and `text_contrast.rs` checks each pair on the
+     surface it sits on.
    - accent tints: the sidebar's selected row, 18 % light and 28 % dark
      over the sidebar shade; the selected thread, 16 % and 26 %; the
      Undo Send pill, 16 % over the sidebar; the Summarize pill, 12 %
@@ -107,8 +114,17 @@ row.account-heading { transition: background-color 120ms ease, color 120ms ease;
    text (R4): it lets a person spot a look-alike name. */
 .thread-row .subject { font-weight: 500; }
 .thread-row.unread .subject { font-weight: 700; }
-.thread-row .snippet { opacity: 0.6; font-size: 0.93em; }
-.thread-row .date { opacity: 0.6; font-size: 0.86em; font-feature-settings: "tnum"; }
+/* At 60 % the preview and a read date measured 3.6:1 on the list in
+   light and 3.4:1 on a selected card. At 75 % they read 5.6:1 on the
+   list and 5.1:1 or better on the card under the pointer, whatever the
+   accent. Dark keeps 60 %, which reads 6.4:1 on the list and 4.7:1 or
+   better on the card. The subject stays ahead by weight and full ink. */
+.thread-row .snippet { opacity: 0.75; font-size: 0.93em; }
+.thread-row .date { opacity: 0.75; font-size: 0.86em; font-feature-settings: "tnum"; }
+/* Before the unread date's rule, which has the same weight and has to
+   win. */
+.app-dark .thread-row .snippet,
+.app-dark .thread-row .date { opacity: 0.6; }
 .thread-row .unread.date { opacity: 1; color: var(--accent-color); font-weight: 700; }
 .thread-row .count {
   font-size: 0.78em; font-weight: 700; padding: 0 6px; border-radius: 999px;
@@ -123,11 +139,14 @@ row.account-heading { transition: background-color 120ms ease, color 120ms ease;
    count is bold, not only an unread one); an unread count takes the
    accent instead. */
 .mailbox-row .count {
-  opacity: 0.64;
+  opacity: 0.75;
   font-size: 0.85em;
   font-weight: 700;
   font-feature-settings: "tnum";
 }
+/* Before the unread count's rule, which has the same weight and has to
+   win. */
+.app-dark .mailbox-row .count { opacity: 0.64; }
 .mailbox-row .count.unread { opacity: 1; color: var(--accent-color); }
 /* An account row is a row like any other: same height, same hover, same
    gap to its neighbour. The heading above the accounts separates them
@@ -511,7 +530,8 @@ toggle-group.category-chips { background: none; padding: 0; box-shadow: none; }
    the subtitle's baseline at 47, as mockups.py draws them. */
 .list-header-title { margin: 8px 0 -7px 2px; }
 .list-header-title .title { font-size: 1.16em; font-weight: 800; }
-.list-header-title .subtitle { font-size: 0.85em; font-weight: 500; opacity: 0.64; }
+.list-header-title .subtitle { font-size: 0.85em; font-weight: 500; opacity: 0.75; }
+.app-dark .list-header-title .subtitle { opacity: 0.64; }
 
 /* Follow Up: the banner above All Inboxes. */
 .follow-up-banner {
@@ -1002,7 +1022,8 @@ button.calendar-heading.folded .calendar-chevron { opacity: 0.5; }
    lines up with the headings above. */
 .hidden-calendars { margin-left: -6px; }
 .hidden-calendars > button { padding: 2px 6px; min-height: 0; }
-.hidden-calendars .calendar-name { opacity: 0.64; }
+.hidden-calendars .calendar-name { opacity: 0.75; }
+.app-dark .hidden-calendars .calendar-name { opacity: 0.64; }
 .hidden-count { font-size: 0.85em; font-weight: 700; font-feature-settings: "tnum"; }
 .calendar-lock { opacity: 0.4; }
 .mini-month { margin-top: -2px; }
@@ -1163,12 +1184,14 @@ listview.agenda-list > row:focus-visible .agenda-row {
 popover.event-popover > contents { border-radius: 16px; padding: 0; }
 .popover-bar { min-width: 4px; border-radius: 2px; background: var(--cal-colour); }
 .popover-title { font-weight: 800; font-size: 1.16em; }
-.popover-when { font-size: 0.85em; font-weight: 500; opacity: 0.64; }
+.popover-when { font-size: 0.85em; font-weight: 500; opacity: 0.75; }
+.app-dark .popover-when { opacity: 0.64; }
 popover.event-popover label { font-size: 0.89em; }
 popover.event-popover .popover-title { font-size: 1.16em; }
 popover.event-popover .popover-when { font-size: 0.85em; }
 /* What sort of entry it is, at the dimmed text strength of the time. */
-popover.event-popover .popover-kind { opacity: 0.64; }
+popover.event-popover .popover-kind { opacity: 0.75; }
+.app-dark popover.event-popover .popover-kind { opacity: 0.64; }
 /* GTK adds a button's own padding to its min-height; the mockup's
    buttons are 34 px in all. */
 button.popover-join, button.popover-answer {
@@ -1289,7 +1312,8 @@ popover.event-popover button.popover-open-mail {
   box-shadow: 0 1px 2px alpha(black, 0.1);
 }
 .next-event .bar { min-width: 3.5px; border-radius: 2px; background: var(--cal-colour); }
-.next-event .when { font-size: 0.78em; font-weight: 600; opacity: 0.64; }
+.next-event .when { font-size: 0.78em; font-weight: 600; opacity: 0.75; }
+.app-dark .next-event .when { opacity: 0.64; }
 .next-event .what { font-size: 0.92em; font-weight: 700; }
 .next-event image { opacity: 0.55; margin-right: 10px; }
 /* "Show more" and "Show all": a small text link under the notes or the
