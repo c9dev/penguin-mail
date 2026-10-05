@@ -12,6 +12,7 @@
 mod graph;
 mod imap;
 mod one_click;
+mod pop3;
 mod query;
 mod sent;
 
@@ -23,6 +24,7 @@ pub use imap::{
     FakeImap, FakeMailbox, FakeMessage, FakeSmtp, ImapState, SmtpState, Submitted, raw_message,
 };
 pub use one_click::FakeOneClick;
+pub use pop3::{FakePop3, Release, pop3_mail};
 pub use sent::read_sent;
 
 use std::collections::{BTreeMap, BTreeSet, HashMap, VecDeque};

@@ -2705,6 +2705,7 @@ dependencies = [
  "mailrs-graph",
  "mailrs-imap",
  "mailrs-mime",
+ "mailrs-pop3",
  "mailrs-sieve",
  "mailrs-store",
  "mailrs-testmail",
