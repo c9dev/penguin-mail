@@ -359,7 +359,11 @@ impl AccountSync {
             // ends the check.
             Err(err @ (Pop3Error::TooLarge | Pop3Error::Protocol(_) | Pop3Error::Network(_))) => {
                 tracing::warn!(account = account_id, uidl, %err, "could not read a message's answer");
-                if self.count_failure(pop3, *id, uidl, &err, false).await?.shown {
+                if self
+                    .count_failure(pop3, *id, uidl, &err, false)
+                    .await?
+                    .shown
+                {
                     done.failing_grew = true;
                     done.unnamed.push(uidl.clone());
                 }
