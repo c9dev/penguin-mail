@@ -8,6 +8,7 @@
 //! the other.
 
 mod editor;
+mod pictures;
 mod recipients;
 mod removals;
 mod richbuffer;

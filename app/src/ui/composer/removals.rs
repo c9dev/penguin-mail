@@ -8,6 +8,11 @@
 //! at the same place, it applies those tags again. GTK joins a run of
 //! Backspace or Delete presses into one step, so a deletion next to the one
 //! before it is also kept joined to it.
+//!
+//! A picture beside a deleted stretch stays in the buffer, since its anchor
+//! is not text. Format changes its line kind all the same, so the stretch
+//! also keeps the tags of a picture at either end, for Undo and Redo to
+//! give back to it.
 
 use std::collections::VecDeque;
 
@@ -23,6 +28,10 @@ pub struct Removal<T> {
     pub at: i32,
     pub text: String,
     pub runs: Vec<(i32, Vec<T>)>,
+    /// The tags of a picture just before the stretch, and of one just
+    /// after it.
+    pub picture_before: Option<Vec<T>>,
+    pub picture_after: Option<Vec<T>>,
 }
 
 impl<T: Clone> Removal<T> {
@@ -36,6 +45,8 @@ impl<T: Clone> Removal<T> {
             at: self.at,
             text: format!("{}{}", self.text, after.text),
             runs: self.runs.iter().chain(&after.runs).cloned().collect(),
+            picture_before: self.picture_before.clone(),
+            picture_after: after.picture_after.clone(),
         }
     }
 }
@@ -103,7 +114,25 @@ mod tests {
             at,
             text: text.to_string(),
             runs: runs.iter().map(|(n, tag)| (*n, vec![*tag])).collect(),
+            picture_before: None,
+            picture_after: None,
         }
+    }
+
+    #[test]
+    fn a_joined_stretch_keeps_the_pictures_at_both_ends() {
+        let mut kept = Removals::default();
+        kept.removed(Removal {
+            picture_after: Some(vec!["code-block"]),
+            ..removal(7, "b", &[(1, "plain")])
+        });
+        kept.removed(Removal {
+            picture_before: Some(vec!["heading1"]),
+            ..removal(6, "a", &[(1, "plain")])
+        });
+        let found = kept.find(6, "ab").expect("joined");
+        assert_eq!(found.picture_before, Some(vec!["heading1"]));
+        assert_eq!(found.picture_after, Some(vec!["code-block"]));
     }
 
     #[test]

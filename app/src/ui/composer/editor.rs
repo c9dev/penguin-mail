@@ -13,13 +13,14 @@ use std::rc::Rc;
 
 use gtk::prelude::*;
 
+use super::pictures;
 use super::removals::{Removal, Removals};
 use super::richbuffer::{self, Anchors};
 use crate::compose::{
     LineChange, LinePrefix, OutgoingAttachment, Unfolding, markdown_to_html, signature_change,
     toggle_prefix,
 };
-use crate::richtext::{Block, BlockKind, RichBody, Style};
+use crate::richtext::{Block, BlockKind, RichBody, Span, Style};
 use crate::settings::ComposeFormat;
 use crate::stray_markdown;
 
@@ -167,10 +168,19 @@ impl Editor {
         if self.format.get() != ComposeFormat::Rich {
             return;
         }
+        let mut before = *start;
+        // A picture beside the text keeps the tags it has now, since Undo
+        // and Redo leave it in place and change only the text.
+        let picture_before = match before.backward_char() {
+            true => richbuffer::picture_tags(&before),
+            false => None,
+        };
         self.removals.borrow_mut().removed(Removal {
             at: start.offset(),
             text: self.buffer.slice(start, end, true).to_string(),
             runs: richbuffer::tag_runs(start, end),
+            picture_before,
+            picture_after: richbuffer::picture_tags(end),
         });
     }
 
@@ -183,11 +193,16 @@ impl Editor {
             &buffer.iter_at_offset(offset + length),
             true,
         );
-        let runs = match self.removals.borrow().find(offset, &text) {
-            Some(removal) => removal.runs.clone(),
-            None => return false,
+        let Some(removal) = self.removals.borrow().find(offset, &text).cloned() else {
+            return false;
         };
-        richbuffer::apply_runs(buffer, offset, &runs);
+        richbuffer::apply_runs(buffer, offset, &removal.runs);
+        if let Some(tags) = &removal.picture_before {
+            richbuffer::retag_picture(buffer, offset - 1, tags);
+        }
+        if let Some(tags) = &removal.picture_after {
+            richbuffer::retag_picture(buffer, offset + length, tags);
+        }
         true
     }
 
@@ -506,16 +521,17 @@ impl Editor {
     pub fn switch_format(&self, to: ComposeFormat, attachments: &[OutgoingAttachment]) {
         match to {
             // Formatting a rich body again is one step of Undo, which gives
-            // back the body as it was, styles and all.
+            // back the body as it was, styles and all. Each picture goes
+            // through the Markdown as a placeholder and stays in its anchor.
             ComposeFormat::Rich if self.format.get() == ComposeFormat::Rich => {
-                let body = RichBody::from_markdown(&self.source());
+                let (source, held) = self.source_holding_pictures();
+                let mut body = RichBody::from_markdown(&source);
+                pictures::restore(&mut body, &held);
                 let buffer = &self.buffer;
                 self.busy.set(true);
                 buffer.begin_user_action();
-                let (mut start, mut end) = buffer.bounds();
-                buffer.delete(&mut start, &mut end);
-                self.anchors.borrow_mut().clear();
-                richbuffer::insert(buffer, &body);
+                let (start, end) = buffer.bounds();
+                richbuffer::rewrite(buffer, &start, &end, &body);
                 buffer.end_user_action();
                 self.busy.set(false);
             }
@@ -629,9 +645,21 @@ impl Editor {
         if self.format.get() != ComposeFormat::Rich {
             return false;
         }
-        let found = stray_markdown::conversions(&self.written_lines());
+        // A picture goes through as a placeholder, which no Markdown reads
+        // as anything, and stays in its anchor where the placeholder lands.
+        let lines = self.written_lines();
+        let mut held_lines = lines.clone();
+        pictures::hold(&mut held_lines);
+        let mut found = stray_markdown::conversions(&held_lines);
         if found.is_empty() {
             return false;
+        }
+        for conversion in &mut found {
+            let mut part = RichBody {
+                blocks: lines.blocks[conversion.lines.clone()].to_vec(),
+            };
+            let held = pictures::hold(&mut part);
+            pictures::restore(&mut conversion.body, &held);
         }
         let buffer = &self.buffer;
         // A cursor inside a run that is rewritten ends up after the new
@@ -645,13 +673,11 @@ impl Editor {
                 conversion.lines.start as i32,
                 conversion.lines.end as i32 - 1,
             );
-            let mut from = buffer
+            let from = buffer
                 .iter_at_line(first)
                 .unwrap_or_else(|| buffer.end_iter());
-            let mut to = line_end(buffer, last);
-            buffer.delete(&mut from, &mut to);
-            buffer.place_cursor(&from);
-            richbuffer::insert(buffer, &conversion.body);
+            let to = line_end(buffer, last);
+            richbuffer::rewrite(buffer, &from, &to, &conversion.body);
         }
         buffer.end_user_action();
         self.busy.set(false);
@@ -906,6 +932,33 @@ impl Editor {
         self.buffer
             .text(&self.buffer.start_iter(), &self.buffer.end_iter(), false)
             .to_string()
+    }
+
+    /// The buffer's text as [`Editor::source`] reads it, with a
+    /// placeholder where each picture's anchor sits, and those pictures in
+    /// order.
+    fn source_holding_pictures(&self) -> (String, Vec<Span>) {
+        let buffer = &self.buffer;
+        let anchors = self.anchors.borrow();
+        let text = buffer.slice(&buffer.start_iter(), &buffer.end_iter(), true);
+        let mut source = String::with_capacity(text.len());
+        let mut held = Vec::new();
+        for (offset, character) in text.chars().enumerate() {
+            if character != pictures::HELD {
+                source.push(character);
+                continue;
+            }
+            let Some(anchor) = buffer.iter_at_offset(offset as i32).child_anchor() else {
+                continue;
+            };
+            let cid = anchors
+                .iter()
+                .find(|(a, _)| *a == anchor)
+                .map_or("", |(_, cid)| cid.as_str());
+            source.push(pictures::HELD);
+            held.push(Span::image("image", format!("cid:{cid}")));
+        }
+        (source, held)
     }
 
     /// The styled body. Only rich text has one to read.
@@ -1169,6 +1222,107 @@ pub(super) mod checks {
         undo_after_format_brings_the_earlier_styles_back();
         undo_after_format_markdown_brings_the_earlier_body_back();
         undo_brings_deleted_words_back_with_their_styles();
+        format_markdown_keeps_pictures_through_undo_and_redo();
+        format_keeps_a_picture_in_the_lines_it_rewrites();
+    }
+
+    /// A small picture as a PNG file holds it.
+    fn png() -> Vec<u8> {
+        let texture = gtk::gdk::MemoryTexture::new(
+            3,
+            2,
+            gtk::gdk::MemoryFormat::R8g8b8a8,
+            &gtk::glib::Bytes::from(&[255u8, 0, 0, 255].repeat(6)[..]),
+            12,
+        );
+        texture.save_to_png_bytes().to_vec()
+    }
+
+    /// The pictures the buffer shows, in order: the `cid:` of each and the
+    /// size it is drawn at.
+    fn shown(editor: &Editor) -> Vec<(String, (i32, i32))> {
+        let buffer = &editor.buffer;
+        let anchors = editor.anchors.borrow();
+        let mut found = Vec::new();
+        let mut iter = buffer.start_iter();
+        loop {
+            if let Some(anchor) = iter.child_anchor()
+                && let Some(widget) = anchor.widgets().first()
+            {
+                let cid = anchors
+                    .iter()
+                    .find(|(a, _)| *a == anchor)
+                    .map_or_else(String::new, |(_, cid)| cid.clone());
+                found.push((cid, widget.size_request()));
+            }
+            if !iter.forward_char() {
+                break;
+            }
+        }
+        found
+    }
+
+    /// Format Markdown styles the lines around a picture and leaves the
+    /// picture where it was, at its size. Undo gives back the body before
+    /// with the picture, and Redo formats again with it. The second picture
+    /// starts a line that Format makes a code block, which Undo makes a
+    /// plain line again.
+    fn format_markdown_keeps_pictures_through_undo_and_redo() {
+        let (_view, editor) = opened("Look here:");
+        editor.buffer.place_cursor(&editor.buffer.end_iter());
+        editor.insert_image("dot@mailrs", "dot.png", &png());
+        editor.buffer.insert_at_cursor(" and\n# Plan\n```\n");
+        editor.insert_image("dot2@mailrs", "dot.png", &png());
+        editor.buffer.insert_at_cursor("\n```");
+        let before = editor.rich();
+        let pictures = shown(&editor);
+        assert_eq!(pictures.len(), 2, "{before:?}");
+        editor.switch_format(ComposeFormat::Rich, &[]);
+        let formatted = editor.rich();
+        assert_eq!(formatted.blocks[0], before.blocks[0], "{formatted:?}");
+        let kinds: Vec<BlockKind> = formatted.blocks.iter().map(|b| b.kind).collect();
+        assert!(kinds.contains(&BlockKind::Heading(1)), "{formatted:?}");
+        assert_eq!(kinds.last(), Some(&BlockKind::Code), "{formatted:?}");
+        assert_eq!(shown(&editor), pictures);
+        editor.buffer.undo();
+        assert_eq!(editor.rich(), before, "{}", editor.markdown());
+        assert_eq!(shown(&editor), pictures);
+        editor.buffer.redo();
+        assert_eq!(editor.rich(), formatted, "{}", editor.markdown());
+        assert_eq!(shown(&editor), pictures);
+        editor.buffer.undo();
+        assert_eq!(editor.rich(), before, "{}", editor.markdown());
+        assert_eq!(shown(&editor), pictures);
+    }
+
+    /// The bar's Format keeps a picture that sits in a line it rewrites,
+    /// through Undo and Redo as well.
+    fn format_keeps_a_picture_in_the_lines_it_rewrites() {
+        let (_view, editor) = opened("");
+        editor.buffer.insert_at_cursor("# Plan ");
+        editor.insert_image("dot@mailrs", "dot.png", &png());
+        editor.buffer.insert_at_cursor("\n\n- soup\n- salad");
+        let before = editor.rich();
+        let pictures = shown(&editor);
+        assert!(editor.format_stray_markdown());
+        let formatted = editor.rich();
+        assert_eq!(
+            formatted.blocks[0].kind,
+            BlockKind::Heading(1),
+            "{formatted:?}"
+        );
+        assert_eq!(
+            formatted.blocks[0].spans.last(),
+            Some(&Span::image("image", "cid:dot@mailrs")),
+            "{formatted:?}"
+        );
+        assert_eq!(shown(&editor), pictures);
+        editor.buffer.undo();
+        assert_eq!(editor.rich(), before, "{}", editor.markdown());
+        assert_eq!(shown(&editor), pictures);
+        editor.buffer.redo();
+        assert_eq!(editor.rich(), formatted, "{}", editor.markdown());
+        assert_eq!(shown(&editor), pictures);
     }
 
     /// The Markdown bar's Format, undone in one step, gives back the body
