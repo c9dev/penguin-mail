@@ -49,7 +49,7 @@ fn a_raw_copy_goes_with_its_message() {
 #[test]
 fn only_uidls_never_downloaded_count_as_new() {
     let (conn, id) = pop3_account(RemoveSetting::Never);
-    pop3::mark_downloaded(&conn, id, "u1", 10).unwrap();
+    pop3::mark_downloaded(&conn, id, "u1", "pop3/u1", 10).unwrap();
     assert_eq!(
         pop3::unseen(&conn, id, &uidls(&["u1", "u2", "u3"])).unwrap(),
         uidls(&["u2", "u3"])
@@ -59,8 +59,8 @@ fn only_uidls_never_downloaded_count_as_new() {
 #[test]
 fn leave_on_server_never_marks_a_downloaded_message_for_removal() {
     let (conn, id) = pop3_account(RemoveSetting::Never);
-    pop3::mark_downloaded(&conn, id, "u1", 10).unwrap();
-    pop3::mark_downloaded(&conn, id, "u2", 10).unwrap();
+    pop3::mark_downloaded(&conn, id, "u1", "pop3/u1", 10).unwrap();
+    pop3::mark_downloaded(&conn, id, "u2", "pop3/u2", 10).unwrap();
     assert!(
         pop3::pending_removal(&conn, id, None, pop3::PAGE)
             .unwrap()
@@ -72,7 +72,7 @@ fn leave_on_server_never_marks_a_downloaded_message_for_removal() {
 fn a_wanted_removal_waits_until_a_clean_quit_confirms_it() {
     let (conn, id) = pop3_account(RemoveSetting::Downloaded);
     for uidl in ["u1", "u2", "u3"] {
-        pop3::mark_downloaded(&conn, id, uidl, 10).unwrap();
+        pop3::mark_downloaded(&conn, id, uidl, &format!("pop3/{uidl}"), 10).unwrap();
     }
     pop3::want_removed(&conn, id, &uidls(&["u1", "u3"])).unwrap();
     assert_eq!(
@@ -94,8 +94,8 @@ fn a_wanted_removal_waits_until_a_clean_quit_confirms_it() {
 #[test]
 fn removal_after_days_wants_only_the_old_ones() {
     let (conn, id) = pop3_account(RemoveSetting::Days(30));
-    pop3::mark_downloaded(&conn, id, "old", 1_000).unwrap();
-    pop3::mark_downloaded(&conn, id, "new", 9_000).unwrap();
+    pop3::mark_downloaded(&conn, id, "old", "pop3/old", 1_000).unwrap();
+    pop3::mark_downloaded(&conn, id, "new", "pop3/new", 9_000).unwrap();
     assert_eq!(pop3::want_removed_before(&conn, id, 5_000).unwrap(), 1);
     assert_eq!(
         pop3::pending_removal(&conn, id, None, pop3::PAGE).unwrap(),
@@ -132,7 +132,7 @@ fn a_refused_retr_is_counted_apart_from_what_was_downloaded() {
         [("u9".to_string(), "-ERR still gone".to_string())]
     );
     assert_eq!(pop3::accounts_failing(&conn).unwrap(), [id]);
-    pop3::mark_downloaded(&conn, id, "u9", 10).unwrap();
+    pop3::mark_downloaded(&conn, id, "u9", "pop3/u9", 10).unwrap();
     assert!(
         pop3::failing(&conn, id).unwrap().is_empty(),
         "a download clears the count"
@@ -143,7 +143,7 @@ fn a_refused_retr_is_counted_apart_from_what_was_downloaded() {
 fn a_uidl_the_server_no_longer_lists_is_forgotten() {
     let (conn, id) = pop3_account(RemoveSetting::Never);
     for n in 0..(pop3::PAGE + 3) {
-        pop3::mark_downloaded(&conn, id, &format!("u{n:04}"), 10).unwrap();
+        pop3::mark_downloaded(&conn, id, &format!("u{n:04}"), &format!("pop3/u{n:04}"), 10).unwrap();
     }
     let listed: HashSet<String> = (0..pop3::PAGE).map(|n| format!("u{n:04}")).collect();
     assert_eq!(pop3::forget_gone(&conn, id, &listed).unwrap(), 3);
@@ -219,8 +219,40 @@ fn a_pop3_account_keeps_its_removal_setting_and_its_address() {
 fn a_first_check_is_unfinished_until_it_is_marked() {
     let (conn, id) = pop3_account(RemoveSetting::Never);
     assert!(!pop3::first_check_finished(&conn, id).unwrap());
-    pop3::mark_downloaded(&conn, id, "u1", 10).unwrap();
+    pop3::mark_downloaded(&conn, id, "u1", "pop3/u1", 10).unwrap();
     assert!(!pop3::first_check_finished(&conn, id).unwrap(), "a download alone does not finish it");
     pop3::finish_first_check(&conn, id).unwrap();
     assert!(pop3::first_check_finished(&conn, id).unwrap());
+}
+
+#[test]
+fn a_uidl_whose_store_id_is_taken_gets_a_fresh_one() {
+    let (conn, id) = pop3_account(RemoveSetting::Never);
+    assert_eq!(pop3::download_id(&conn, id, "u1").unwrap(), "pop3/u1");
+    store(&conn, &[meta(id, "pop3/u1", "t1", 1, &[])]);
+    assert_eq!(
+        pop3::download_id(&conn, id, "u1").unwrap(),
+        "pop3/u1/2",
+        "the server gave u1 to a new message; the old one keeps its id"
+    );
+    store(&conn, &[meta(id, "pop3/u1/2", "t2", 2, &[])]);
+    assert_eq!(pop3::download_id(&conn, id, "u1").unwrap(), "pop3/u1/3");
+}
+
+#[test]
+fn a_removal_asked_for_a_message_reaches_its_own_download_only() {
+    let (conn, id) = pop3_account(RemoveSetting::Downloaded);
+    pop3::mark_downloaded(&conn, id, "u1", "pop3/u1/2", 10).unwrap();
+    pop3::want_removed_of(&conn, id, &uidls(&["pop3/u1"])).unwrap();
+    assert!(
+        pop3::pending_removal(&conn, id, None, pop3::PAGE)
+            .unwrap()
+            .is_empty(),
+        "pop3/u1 is an older message the server once called u1"
+    );
+    pop3::want_removed_of(&conn, id, &uidls(&["pop3/u1/2"])).unwrap();
+    assert_eq!(
+        pop3::pending_removal(&conn, id, None, pop3::PAGE).unwrap(),
+        uidls(&["u1"])
+    );
 }

@@ -299,6 +299,39 @@ async fn a_first_check_with_a_refused_message_still_finishes() {
     assert!(first_check_finished(&h).await, "a refused message is recorded as failed, so the check dealt with it");
 }
 
+async fn raw(h: &Pop3Harness, id: &str) -> Option<Vec<u8>> {
+    let (account_id, id) = (h.account_id, id.to_string());
+    h.db.read(move |c| local_messages::get(c, account_id, &id)).await.unwrap()
+}
+
+/// RFC 1939 lets a server give a UIDL to a new message once the old one
+/// is gone. The old message may be the only copy left.
+#[tokio::test]
+async fn a_reused_uidl_keeps_the_old_message_and_stores_the_new_one_beside_it() {
+    let fake = FakePop3::default().with_message("u1", &pop3_mail(1)).with_message("u2", &pop3_mail(2));
+    let h = pop3_harness(fake, RemoveSetting::Never).await;
+    h.sync.pop3_check().await.unwrap();
+    h.fake.take("u1");
+    h.sync.pop3_check().await.unwrap();
+    h.fake.add("u1", &pop3_mail(3));
+    h.sync.pop3_check().await.unwrap();
+    assert_eq!(h.ids_in(MailSet::Role(Role::Inbox)).await, ["pop3/u1", "pop3/u1/2", "pop3/u2"]);
+    assert_eq!(raw(&h, "pop3/u1").await, Some(pop3_mail(1)), "the first message keeps its bytes");
+    assert_eq!(raw(&h, "pop3/u1/2").await, Some(pop3_mail(3)));
+    assert_eq!(meta(&h, "pop3/u1").await.subject, "Hello 1", "and its row");
+}
+
+#[tokio::test]
+async fn a_uidl_listed_twice_in_one_session_downloads_once_and_removes_only_that_one() {
+    let fake = FakePop3::default().with_message("d", &pop3_mail(1)).with_message("d", &pop3_mail(2));
+    let h = pop3_harness(fake, RemoveSetting::Downloaded).await;
+    h.sync.pop3_check().await.unwrap();
+    assert_eq!(h.fake.retr_calls(), [1], "the second listing is skipped");
+    assert_eq!(h.ids_in(MailSet::Role(Role::Inbox)).await, ["pop3/d"]);
+    assert_eq!(raw(&h, "pop3/d").await, Some(pop3_mail(1)));
+    assert_eq!(h.fake.deleted(), [1], "the DELE goes to the message that came down, not the skipped one");
+}
+
 /// Run alone, so other tests add nothing to the process's peak:
 /// `cargo test -p mailrs-sync --lib -- --ignored a_first_download_holds`
 #[tokio::test]

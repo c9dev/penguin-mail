@@ -28,8 +28,9 @@ struct Inner {
     messages: Vec<(String, Vec<u8>)>,
     /// Sizes `LIST` reports in place of a message's real length.
     claimed: BTreeMap<String, u64>,
-    /// This session's numbering: message `n` is `numbered[n - 1]`.
-    numbered: Vec<String>,
+    /// This session's numbering: message `n` is `numbered[n - 1]`, with
+    /// its own bytes, so a UIDL listed twice answers two messages.
+    numbered: Vec<(String, Vec<u8>)>,
     marked: BTreeSet<u32>,
     in_session: bool,
     capabilities: Capabilities,
@@ -190,21 +191,22 @@ impl Inner {
         self.session()?;
         let index = usize::try_from(id).ok().and_then(|n| n.checked_sub(1));
         match index.and_then(|i| self.numbered.get(i)) {
-            Some(uidl) if !self.marked.contains(&id) => Ok(uidl.clone()),
+            Some((uidl, _)) if !self.marked.contains(&id) => Ok(uidl.clone()),
             _ => Err(Pop3Error::Refused(format!("no such message {id}"))),
         }
     }
 
-    fn raw_of(&self, uidl: &str) -> Vec<u8> {
-        self.messages.iter().find(|(u, _)| u == uidl).map(|(_, raw)| raw.clone()).unwrap_or_default()
+    /// The bytes of message `id` this session.
+    fn raw_at(&self, id: u32) -> Vec<u8> {
+        self.numbered.get(id as usize - 1).map(|(_, raw)| raw.clone()).unwrap_or_default()
     }
 
-    fn live(&self) -> impl Iterator<Item = (u32, &String)> {
+    fn live(&self) -> impl Iterator<Item = (u32, &String, &Vec<u8>)> {
         self.numbered
             .iter()
             .enumerate()
-            .map(|(i, uidl)| (i as u32 + 1, uidl))
-            .filter(|(id, _)| !self.marked.contains(id))
+            .map(|(i, (uidl, raw))| (i as u32 + 1, uidl, raw))
+            .filter(|(id, _, _)| !self.marked.contains(id))
     }
 
     fn end_session(&mut self) {
@@ -231,21 +233,21 @@ impl Pop3Api for FakePop3 {
         inner.in_session = true;
         inner.in_flight += 1;
         inner.most_in_flight = inner.most_in_flight.max(inner.in_flight);
-        inner.numbered = inner.messages.iter().map(|(uidl, _)| uidl.clone()).collect();
+        inner.numbered = inner.messages.clone();
         Ok(inner.capabilities)
     }
 
     async fn stat(&self) -> Result<Stat, Pop3Error> {
         let inner = self.lock();
         inner.session()?;
-        let live: Vec<u64> = inner.live().map(|(_, uidl)| inner.raw_of(uidl).len() as u64).collect();
+        let live: Vec<u64> = inner.live().map(|(_, _, raw)| raw.len() as u64).collect();
         Ok(Stat { count: live.len() as u32, octets: live.iter().sum() })
     }
 
     async fn uidl(&self) -> Result<Vec<Uidl>, Pop3Error> {
         let inner = self.lock();
         inner.session()?;
-        Ok(inner.live().map(|(id, uidl)| Uidl { id, uidl: uidl.clone() }).collect())
+        Ok(inner.live().map(|(id, uidl, _)| Uidl { id, uidl: uidl.clone() }).collect())
     }
 
     async fn list(&self) -> Result<Vec<ListItem>, Pop3Error> {
@@ -253,9 +255,9 @@ impl Pop3Api for FakePop3 {
         inner.session()?;
         Ok(inner
             .live()
-            .map(|(id, uidl)| ListItem {
+            .map(|(id, uidl, raw)| ListItem {
                 id,
-                octets: inner.claimed.get(uidl).copied().unwrap_or(inner.raw_of(uidl).len() as u64),
+                octets: inner.claimed.get(uidl).copied().unwrap_or(raw.len() as u64),
             })
             .collect())
     }
@@ -279,12 +281,13 @@ impl Pop3Api for FakePop3 {
         if inner.failing.contains(&uidl) {
             return Err(Pop3Error::Refused(format!("message {id} cannot be read")));
         }
-        Ok(inner.raw_of(&uidl))
+        Ok(inner.raw_at(id))
     }
 
     async fn top(&self, id: u32, lines: u32) -> Result<Vec<u8>, Pop3Error> {
         let inner = self.lock();
-        let raw = inner.raw_of(&inner.uidl_of(id)?);
+        inner.uidl_of(id)?;
+        let raw = inner.raw_at(id);
         let split = raw.windows(4).position(|w| w == b"\r\n\r\n").map_or(raw.len(), |p| p + 4);
         let (head, body) = raw.split_at(split);
         let mut out = head.to_vec();
@@ -309,8 +312,14 @@ impl Pop3Api for FakePop3 {
             inner.end_session();
             return Err(Pop3Error::Network("the connection dropped".into()));
         }
-        let gone: BTreeSet<String> = inner.marked.iter().filter_map(|id| inner.numbered.get(*id as usize - 1).cloned()).collect();
-        inner.messages.retain(|(uidl, _)| !gone.contains(uidl));
+        // Messages are numbered in the order they were added, and tests add
+        // none during a session, so a marked number is a place in the list.
+        let marked = std::mem::take(&mut inner.marked);
+        let mut place = 0;
+        inner.messages.retain(|_| {
+            place += 1;
+            !marked.contains(&place)
+        });
         inner.end_session();
         Ok(())
     }

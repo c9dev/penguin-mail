@@ -12,7 +12,7 @@ use mailrs_pop3::{MOST_MESSAGE_BYTES, Pop3Api, Pop3Error, Uidl};
 use mailrs_store::{accounts, pop3};
 
 use super::AccountSync;
-use crate::services::pop3::{downloaded_id, keep_local, local_meta};
+use crate::services::pop3::{keep_local, local_meta};
 use crate::{AnyMail, BackendError, SyncError, now_millis};
 
 const DAY: i64 = 24 * 60 * 60 * 1000;
@@ -112,6 +112,10 @@ impl AccountSync {
             .into_iter()
             .map(|item| (item.id, item.octets))
             .collect();
+        // A server should never list one UIDL twice in a session, but a
+        // buggy one can. The first listing downloads and the rest are
+        // skipped, so neither body replaces the other.
+        let mut taken: HashSet<&str> = HashSet::new();
         // Decided by the marker, not by whether anything is downloaded: a
         // first download that failed partway leaves mail here that is still
         // old mail.
@@ -128,6 +132,10 @@ impl AccountSync {
                 .into_iter()
                 .collect();
             for Uidl { id, uidl } in page.iter().filter(|u| new.contains(&u.uidl)) {
+                if !taken.insert(uidl) {
+                    tracing::warn!(account = account_id, uidl, message = id, "the server listed this UIDL twice; only its first message downloads");
+                    continue;
+                }
                 // A message over the cap is never asked for.
                 if sizes
                     .get(id)
@@ -186,22 +194,27 @@ impl AccountSync {
     ) -> Result<(), SyncError> {
         let account_id = self.account_id;
         let received = now_millis();
-        let id = downloaded_id(uidl);
         // A first download takes each message's own date, which stands
         // for the INTERNALDATE a server would keep. Later mail is dated
         // when it arrived here, so a message whose Date header is older
-        // than the rules' watermark still runs through them.
-        let (meta, links) = local_meta(account_id, &id, &raw, "inbox", &[], received, first);
+        // than the rules' watermark still runs through them. The store id
+        // is chosen in the write below, so the row gets it there.
+        let (mut meta, links) = local_meta(account_id, "", &raw, "inbox", &[], received, first);
         let uidl = uidl.to_string();
-        let threads = self
+        let (id, threads) = self
             .db
             .write(move |c| {
+                // Never `pop3/<uidl>` blindly: that id may belong to an
+                // older message the server once gave the same UIDL.
+                let id = pop3::download_id(c, account_id, &uidl)?;
+                meta.id.clone_from(&id);
+                meta.thread_id.clone_from(&id);
                 let threads = keep_local(c, account_id, meta, links, &raw)?;
-                pop3::mark_downloaded(c, account_id, &uidl, received)?;
+                pop3::mark_downloaded(c, account_id, &uidl, &id, received)?;
                 if remove == RemoveSetting::Downloaded {
                     pop3::want_removed(c, account_id, std::slice::from_ref(&uidl))?;
                 }
-                Ok(threads)
+                Ok((id, threads))
             })
             .await?;
         done.threads.extend(threads);
@@ -239,7 +252,12 @@ impl AccountSync {
         listed: &[Uidl],
         done: &mut Done,
     ) -> Result<(), SyncError> {
-        let numbers: HashMap<&str, u32> = listed.iter().map(|u| (u.uidl.as_str(), u.id)).collect();
+        // A UIDL listed twice maps to its first number, the message that
+        // came down; the skipped one stays on the server.
+        let mut numbers: HashMap<&str, u32> = HashMap::with_capacity(listed.len());
+        for Uidl { id, uidl } in listed {
+            numbers.entry(uidl.as_str()).or_insert(*id);
+        }
         let account_id = self.account_id;
         let mut after: Option<String> = None;
         loop {

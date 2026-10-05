@@ -815,6 +815,16 @@ ALTER TABLE accounts ADD COLUMN pop3_first_check_done INTEGER NOT NULL DEFAULT 0
 UPDATE accounts SET pop3_first_check_done = 1
     WHERE EXISTS (SELECT 1 FROM pop3_seen WHERE pop3_seen.account_id = accounts.id);
 "#,
+    // A POP3 server may give a UIDL to a new message once the old one has
+    // left it (RFC 1939 section 7), so a download's store id is
+    // `pop3/<uidl>` only while that id is free. `pop3_seen.message_id`
+    // names the message each UIDL brought, and a removal asked for by
+    // message finds its row through it. Rows from before hold the old form.
+    r#"
+ALTER TABLE pop3_seen ADD COLUMN message_id TEXT;
+UPDATE pop3_seen SET message_id = 'pop3/' || uidl;
+CREATE INDEX pop3_seen_message ON pop3_seen (account_id, message_id);
+"#,
 ];
 
 /// How long the copy taken before a migration stays once the store has

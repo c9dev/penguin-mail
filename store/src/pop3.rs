@@ -51,17 +51,37 @@ pub fn finish_first_check(conn: &Connection, account_id: AccountId) -> Result<()
     Ok(())
 }
 
-/// Records `uidl` as downloaded at `at` and drops its failure count.
+/// The store id for a download of `uidl`: `pop3/<uidl>`, or while a
+/// message holds that id, `pop3/<uidl>/<n>` with the first free `n` from 2.
+/// A server may give a UIDL to a new message once the old one has left it
+/// (RFC 1939 section 7), and the old message here may be the only copy.
+pub fn download_id(conn: &Connection, account_id: AccountId, uidl: &str) -> Result<String> {
+    let mut stmt = conn.prepare_cached(
+        "SELECT EXISTS (SELECT 1 FROM messages WHERE account_id = ?1 AND id = ?2) \
+         OR EXISTS (SELECT 1 FROM local_messages WHERE account_id = ?1 AND message_id = ?2)",
+    )?;
+    let mut id = format!("pop3/{uidl}");
+    let mut n = 1;
+    while stmt.query_row(params![account_id, id], |row| row.get::<_, bool>(0))? {
+        n += 1;
+        id = format!("pop3/{uidl}/{n}");
+    }
+    Ok(id)
+}
+
+/// Records `uidl` as downloaded at `at` into message `message_id`, and
+/// drops its failure count.
 pub fn mark_downloaded(
     conn: &Connection,
     account_id: AccountId,
     uidl: &str,
+    message_id: &str,
     at: EpochMillis,
 ) -> Result<()> {
     conn.execute(
-        "INSERT INTO pop3_seen (account_id, uidl, downloaded_at) VALUES (?1, ?2, ?3) \
+        "INSERT INTO pop3_seen (account_id, uidl, downloaded_at, message_id) VALUES (?1, ?2, ?3, ?4) \
          ON CONFLICT (account_id, uidl) DO NOTHING",
-        params![account_id, uidl, at],
+        params![account_id, uidl, at, message_id],
     )?;
     conn.execute(
         "DELETE FROM pop3_failures WHERE account_id = ?1 AND uidl = ?2",
@@ -77,6 +97,23 @@ pub fn want_removed(conn: &Connection, account_id: AccountId, uidls: &[String]) 
         "UPDATE pop3_seen SET remove_wanted = 1 WHERE account_id = ?1 AND removed = 0 \
          AND uidl IN (SELECT value FROM json_each(?2))",
         params![account_id, json(uidls)],
+    )?;
+    Ok(())
+}
+
+/// Asks for a DELE of the downloads that brought `message_ids`, for Delete
+/// Forever on an account that removes mail from the server. A message
+/// made here, or one whose UIDL the server has since given to another
+/// message, has no row and is left alone.
+pub fn want_removed_of(
+    conn: &Connection,
+    account_id: AccountId,
+    message_ids: &[String],
+) -> Result<()> {
+    conn.execute(
+        "UPDATE pop3_seen SET remove_wanted = 1 WHERE account_id = ?1 AND removed = 0 \
+         AND message_id IN (SELECT value FROM json_each(?2))",
+        params![account_id, json(message_ids)],
     )?;
     Ok(())
 }
