@@ -28,6 +28,7 @@ mailrs-sieve.workspace = true
 mailrs-store.workspace = true
 async-channel.workspace = true
 chrono.workspace = true
+chrono-tz.workspace = true
 dirs.workspace = true
 futures.workspace = true
 keyring.workspace = true

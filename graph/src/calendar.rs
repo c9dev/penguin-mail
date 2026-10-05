@@ -136,6 +136,9 @@ pub struct GraphEvent {
     /// For an occurrence or an exception, the start it had in the series,
     /// as an instant.
     pub original_start: Option<String>,
+    /// The Windows (or IANA) name of the zone the event was made in,
+    /// which a series' wall-clock times follow.
+    pub original_start_time_zone: Option<String>,
     /// On a series master, the occurrences taken out of it, as Graph names
     /// them: `OID.<master id>.<YYYY-MM-DD>`.
     pub cancelled_occurrences: Vec<String>,
