@@ -269,9 +269,9 @@ impl Core {
             runtime.block_on(db.write(move |c| demo::seed_contacts(c, &photos)))?;
         }
         let contacts = Arc::new(ContactBook::new(Arc::clone(&engine), db.clone(), photo_dir));
-        let invitations = Arc::new(Invitations::new(Arc::clone(&engine), db.clone()));
         let outbox = Arc::new(Outbox::new(Arc::clone(&engine), db.clone()));
         let calendar_copy = Arc::new(CalendarCopy::new(Arc::clone(&engine), db.clone()));
+        let invitations = Arc::new(Invitations::new(Arc::clone(&engine), db.clone(), Arc::clone(&calendar_copy)));
         // A change still waiting on its Undo toast when the app last
         // stopped has no toast left to close over it, so this run queues
         // it before anything reads or sends the account it belongs to.

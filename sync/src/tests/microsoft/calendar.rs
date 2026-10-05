@@ -434,6 +434,32 @@ async fn a_series_says_how_it_repeats_and_how_many_are_left() {
     assert!(calendar.series("nothing@x", 0).await.unwrap().is_none());
 }
 
+/// The card's series line reads the copy, so opening an invitation to one
+/// Monday of the stand-up asks Graph nothing.
+#[tokio::test]
+async fn the_series_line_comes_from_the_copy_with_no_graph_call() {
+    let h = outlook().await;
+    h.fake.put_event("cal-1", weekly_standup());
+    h.fake.put_event("cal-1", occurrence("o1", "2026-10-05T09:00:00.0000000", "Standup", "occurrence"));
+    let connected = Arc::new(Connected(HashMap::from([(h.account_id, Arc::clone(&h.sync))])));
+    let copy = Arc::new(CalendarCopy::new(Arc::clone(&connected), h.db.clone()));
+    copy.refresh(h.account_id, millis("2026-10-01T00:00:00Z")).await.unwrap();
+    h.fake.refuse(Area::Calendar, GraphError::Network("Graph was asked".into()));
+    let invitations = crate::Invitations::new(connected, h.db.clone(), copy);
+    let invitation = mailrs_domain::invitation::read(
+        "BEGIN:VCALENDAR\r\nMETHOD:REQUEST\r\nBEGIN:VEVENT\r\nUID:standup@contoso\r\n\
+         RECURRENCE-ID:20261019T090000Z\r\nSUMMARY:Standup\r\nDTSTART:20261019T090000Z\r\n\
+         DTEND:20261019T091500Z\r\nORGANIZER:mailto:boss@contoso.com\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n",
+    )
+    .unwrap();
+    // Ten Mondays from the 5th, less the 12th, which Graph cancelled, less
+    // the 5th, which is before the 14th: eight remain.
+    assert_eq!(
+        invitations.series(h.account_id, &invitation, millis("2026-10-14T00:00:00Z")).await.unwrap().as_deref(),
+        Some("Every Monday, 8 left")
+    );
+}
+
 #[tokio::test]
 async fn the_assistants_events_come_from_the_default_calendar() {
     let h = outlook().await;

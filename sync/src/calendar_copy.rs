@@ -304,6 +304,22 @@ impl<A: Accounts> CalendarCopy<A> {
         crate::background(self.refresh_calendars(&calendar, account_id, now)).await
     }
 
+    /// Reads the account's calendars now when the copy has never read
+    /// its primary calendar, and waits for the read; answers at once when
+    /// it has. Every reader of the copy calls this first, so a question
+    /// asked in the first minute after an account is added gets the
+    /// calendar's answer rather than an empty one. `NeedsPermission` when
+    /// the account withholds the calendar.
+    pub async fn ready(&self, account_id: AccountId, now: EpochMillis) -> Result<Permitted<()>, SyncError> {
+        if self.db.read(move |c| store::synced(c, account_id)).await? {
+            return Ok(Permitted::Done(()));
+        }
+        Ok(match self.refresh(account_id, now).await? {
+            Permitted::Done(_) => Permitted::Done(()),
+            Permitted::NeedsPermission => Permitted::NeedsPermission,
+        })
+    }
+
     async fn refresh_calendars(
         &self,
         calendar: &AnyCalendar,
