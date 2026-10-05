@@ -1,4 +1,4 @@
-//! The automatic reply dialog: what Gmail answers new mail with for one
+//! The automatic reply dialog: what the server answers new mail with for one
 //! account, and the days it runs between. `mailrs_sync::AccountSettings`
 //! reads and stores it.
 
@@ -8,14 +8,14 @@ use std::sync::Arc;
 use adw::prelude::*;
 use gtk::glib;
 use mailrs_domain::{Account, Provider};
-use mailrs_sync::{AutomaticReply, Permitted};
+use mailrs_sync::{AutomaticReply, Offers, Permitted};
 
 use crate::core::Core;
 use crate::permission::Permission;
 use crate::ui::permission;
-use mailrs_domain::translate::{gettext, with_reason};
+use mailrs_domain::translate::{fill, gettext, with_reason};
 
-/// Shows the dialog for `account`. `grant` runs when Gmail says Penguin Mail lacks
+/// Shows the dialog for `account`. `grant` runs when the server says Penguin Mail lacks
 /// the settings permission, to send the user through consent again. `saved`
 /// receives a confirmation to show once the reply is stored.
 pub fn present(
@@ -73,8 +73,9 @@ pub fn present(
         return;
     }
     let (core, email, account_id) = (Rc::clone(core), account.email.clone(), account.id);
-    // Sieve's vacation has no way to say it (RFC 5230); Gmail's reply does.
     let provider = account.provider;
+    let provider_name = account.provider_name().to_string();
+    let offers = crate::offered::offers_for(core.account(account.id).as_ref().map(|sync| sync.services()));
     let settings = core.gmail_settings();
     glib::spawn_future_local(async move {
         let loaded = {
@@ -106,7 +107,7 @@ pub fn present(
                 return;
             }
         };
-        let form = Form::new(&reply, provider);
+        let form = Form::new(&reply, offers, &provider_name);
         stack.add_named(&form.page, Some("form"));
         stack.set_visible_child_name("form");
         save.set_sensitive(true);
@@ -159,10 +160,19 @@ fn problem(message: &str) -> adw::StatusPage {
         .build()
 }
 
-/// Whether the account's automatic reply has a subject of its own.
-/// Microsoft's keeps only the message.
-fn keeps_subject(provider: Provider) -> bool {
-    provider != Provider::Microsoft
+/// The switch's subtitle: who answers while the person is away. An IMAP
+/// account with no provider name has only "IMAP" to call its server, which
+/// reads badly as a subject, so it says "Your mail server".
+fn away_subtitle(provider_name: &str) -> String {
+    let who = if provider_name == Provider::Imap.name() {
+        gettext("Your mail server")
+    } else {
+        provider_name.to_string()
+    };
+    fill(
+        &gettext("{provider} answers new mail while you are away, even when this computer is off"),
+        &[("provider", &who)],
+    )
 }
 
 /// The subject a save sends: what was typed when the row shows, and what
@@ -185,21 +195,14 @@ struct Form {
 }
 
 impl Form {
-    fn new(reply: &AutomaticReply, provider: Provider) -> Rc<Form> {
-        let can_limit_to_contacts = provider != Provider::Imap;
-        let keeps_subject = keeps_subject(provider);
+    fn new(reply: &AutomaticReply, offers: Offers, provider_name: &str) -> Rc<Form> {
+        let can_limit_to_contacts = offers.auto_reply_contacts_only;
+        let keeps_subject = offers.auto_reply_subject;
         let page = adw::PreferencesPage::new();
 
         let enabled = adw::SwitchRow::builder()
             .title(gettext("Send Automatic Replies"))
-            .subtitle(match provider {
-                Provider::Microsoft => gettext(
-                    "Outlook answers new mail while you are away, even when this computer is off",
-                ),
-                _ => gettext(
-                    "Gmail answers new mail while you are away, even when this computer is off",
-                ),
-            })
+            .subtitle(away_subtitle(provider_name))
             .active(reply.enabled)
             .build();
         let top = adw::PreferencesGroup::new();
@@ -384,10 +387,19 @@ mod tests {
     use super::*;
 
     #[test]
-    fn only_a_microsoft_reply_has_no_subject_row() {
-        assert!(keeps_subject(Provider::Gmail));
-        assert!(keeps_subject(Provider::Imap));
-        assert!(!keeps_subject(Provider::Microsoft));
+    fn the_subtitle_names_the_provider_that_answers() {
+        let off = "while you are away, even when this computer is off";
+        assert_eq!(away_subtitle("Gmail"), format!("Gmail answers new mail {off}"));
+        assert_eq!(away_subtitle("Outlook"), format!("Outlook answers new mail {off}"));
+        assert_eq!(away_subtitle("Fastmail"), format!("Fastmail answers new mail {off}"));
+    }
+
+    #[test]
+    fn an_imap_account_with_no_provider_name_says_its_mail_server_answers() {
+        assert_eq!(
+            away_subtitle(Provider::Imap.name()),
+            "Your mail server answers new mail while you are away, even when this computer is off"
+        );
     }
 
     #[test]

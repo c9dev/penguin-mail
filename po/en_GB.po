@@ -2642,7 +2642,7 @@ msgstr "Draft not saved. An encrypted message waits in Drafts encrypted to your 
 msgid "That account is not connected."
 msgstr "That account is not connected."
 
-#: app/src/protection/draft.rs:156 app/src/ui/vacation.rs:145
+#: app/src/protection/draft.rs:156 app/src/ui/vacation.rs:146
 msgid "Could not save: {reason}"
 msgstr "Could not save: {reason}"
 
@@ -4322,7 +4322,7 @@ msgid "None"
 msgstr "None"
 
 #: app/src/ui/calendar/editor.rs:592 app/src/ui/composer/mod.rs:449
-#: app/src/ui/vacation.rs:246 app/src/ui/vacation.rs:255
+#: app/src/ui/vacation.rs:249 app/src/ui/vacation.rs:258
 msgid "Message"
 msgstr "Message"
 
@@ -5631,7 +5631,7 @@ msgid "Bcc"
 msgstr "Bcc"
 
 #: app/src/ui/composer/mod.rs:436 app/src/ui/rules.rs:355
-#: app/src/ui/templates.rs:192 app/src/ui/vacation.rs:235
+#: app/src/ui/templates.rs:192 app/src/ui/vacation.rs:238
 msgid "Subject"
 msgstr "Subject"
 
@@ -7763,55 +7763,55 @@ msgstr "Could not unsubscribe from {sender}: {reason}"
 msgid "Automatic Reply"
 msgstr "Automatic Reply"
 
-#: app/src/ui/vacation.rs:90
+#: app/src/ui/vacation.rs:91
 msgid "Allow Automatic Replies"
 msgstr "Allow Automatic Replies"
 
-#: app/src/ui/vacation.rs:134
+#: app/src/ui/vacation.rs:135
 msgid "Automatic reply is on"
 msgstr "Automatic reply is on"
 
-#: app/src/ui/vacation.rs:136
+#: app/src/ui/vacation.rs:137
 msgid "Automatic reply is off"
 msgstr "Automatic reply is off"
 
-#: app/src/ui/vacation.rs:157
+#: app/src/ui/vacation.rs:158
 msgid "Could Not Load the Automatic Reply"
 msgstr "Could Not Load the Automatic Reply"
 
-#: app/src/ui/vacation.rs:194
+#: app/src/ui/vacation.rs:168
+msgid "Your mail server"
+msgstr "Your mail server"
+
+#: app/src/ui/vacation.rs:173
+msgid "{provider} answers new mail while you are away, even when this computer is off"
+msgstr "{provider} answers new mail while you are away, even when this computer is off"
+
+#: app/src/ui/vacation.rs:204
 msgid "Send Automatic Replies"
 msgstr "Send Automatic Replies"
 
-#: app/src/ui/vacation.rs:197
-msgid "Outlook answers new mail while you are away, even when this computer is off"
-msgstr "Outlook answers new mail while you are away, even when this computer is off"
-
-#: app/src/ui/vacation.rs:200
-msgid "Gmail answers new mail while you are away, even when this computer is off"
-msgstr "Gmail answers new mail while you are away, even when this computer is off"
-
-#: app/src/ui/vacation.rs:216
+#: app/src/ui/vacation.rs:219
 msgid "Only Between These Dates"
 msgstr "Only Between These Dates"
 
-#: app/src/ui/vacation.rs:219
+#: app/src/ui/vacation.rs:222
 msgid "First Day"
 msgstr "First Day"
 
-#: app/src/ui/vacation.rs:220
+#: app/src/ui/vacation.rs:223
 msgid "Last Day"
 msgstr "Last Day"
 
-#: app/src/ui/vacation.rs:228
+#: app/src/ui/vacation.rs:231
 msgid "Dates"
 msgstr "Dates"
 
-#: app/src/ui/vacation.rs:262
+#: app/src/ui/vacation.rs:265
 msgid "The same reply goes to people inside and outside your organization."
 msgstr "The same reply goes to people inside and outside your organisation."
 
-#: app/src/ui/vacation.rs:269
+#: app/src/ui/vacation.rs:272
 msgid "Only Reply to My Contacts"
 msgstr "Only Reply to My Contacts"
 
