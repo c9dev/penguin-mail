@@ -1529,6 +1529,7 @@ impl MainWindow {
             self.toast(notice);
         }
         let rows = listing.rows.into_iter().map(Rc::new).collect();
+        self.list.set_empty_description(&listing.empty.description);
         self.list
             .set_rows(rows, &listing.empty.title, listing.empty.icon);
         self.follow_selection();

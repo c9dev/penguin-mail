@@ -511,6 +511,13 @@ impl ThreadList {
         self.stack.set_visible_child_name("loading");
     }
 
+    /// The line under the empty list's title, saying what fills the
+    /// mailbox; empty for none.
+    pub fn set_empty_description(&self, description: &str) {
+        self.empty
+            .set_description((!description.is_empty()).then_some(description));
+    }
+
     /// Updates the list with one splice, keeping the selected rows selected
     /// when they are still present.
     pub fn set_rows(&self, rows: Vec<Row>, empty_title: &str, empty_icon: &str) {

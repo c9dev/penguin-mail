@@ -382,7 +382,8 @@ impl ConversationView {
             .icon_name("penguin-mail-mark-symbolic")
             .title(gettext("No Conversation Selected"))
             .build();
-        empty.add_css_class("dim-label");
+        // libadwaita dims a status page's icon itself; the title stays at
+        // full strength, like the empty list's title beside it.
         let banner = adw::Banner::builder()
             .title(gettext("Remote images are hidden to protect your privacy"))
             .button_label(gettext("Load Images"))
