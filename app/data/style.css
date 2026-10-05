@@ -55,9 +55,18 @@ window.accent-orange { --accent-fill: #c64b00; }
    it does in the mockup, not on the window colour of a header bar. */
 headerbar.conversation-header { background: var(--view-bg-color); box-shadow: none; }
 
-/* The composer's signing button, when the message goes out signed or
+/* The composer's shield, shown while the message goes out signed or
    encrypted. Its icon carries the accent so the state reads at a glance. */
 .protected image { color: var(--accent-color); }
+/* Under Encrypt in the composer's More menu: why it cannot be chosen, or
+   what it encrypts to. Indented to the item labels past the check mark
+   column, and at 80 % rather than .dim-label's 55 %, which reads under
+   4.5:1 at this size in light. */
+.menu-note {
+  margin: 0 12px 6px 34px;
+  font-size: 0.85em;
+  opacity: 0.8;
+}
 
 /* Movement. A pointer landing on a row, and a row becoming the selected
    one, fade rather than snap: short enough to keep the list feeling

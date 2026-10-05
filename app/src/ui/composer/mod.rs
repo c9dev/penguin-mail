@@ -73,6 +73,43 @@ pub enum Remembered {
 
 type ComposerAction = Box<dyn Fn(&Rc<Composer>)>;
 
+/// A check item in the More menu: a stateful action, so the menu draws the
+/// check mark and a screen reader hears the item as checked. Activating it
+/// flips the state, which is what a click on the item does.
+struct Check(gio::SimpleAction);
+
+impl Check {
+    fn new(name: &str, on: bool) -> Check {
+        Check(gio::SimpleAction::new_stateful(name, None, &on.to_variant()))
+    }
+
+    fn is_active(&self) -> bool {
+        self.0.state().and_then(|state| state.get()).unwrap_or(false)
+    }
+
+    /// Changes the state as a click would, and calls the `connect_toggled`
+    /// handler when it moved.
+    fn set_active(&self, on: bool) {
+        self.0.set_state(&on.to_variant());
+    }
+
+    fn set_sensitive(&self, sensitive: bool) {
+        self.0.set_enabled(sensitive);
+    }
+
+    fn is_sensitive(&self) -> bool {
+        self.0.is_enabled()
+    }
+
+    /// Runs `toggled` with the new state each time it changes, from a
+    /// click or from `set_active`.
+    fn connect_toggled(&self, toggled: impl Fn(bool) + 'static) {
+        self.0.connect_state_notify(move |action| {
+            toggled(action.state().and_then(|state| state.get()).unwrap_or(false));
+        });
+    }
+}
+
 /// The space above and below the words in the body.
 const BODY_MARGIN: i32 = 18;
 /// The room under the last line for the "•••" row, and the gap above it.
@@ -149,15 +186,19 @@ pub struct Composer {
     forward_box: gtk::Box,
     forward_page: RefCell<Option<webkit::WebView>>,
     send: adw::SplitButton,
-    /// Sign and Encrypt, which this computer's gpg and gpgsm answer for.
-    /// Both stay out of the window when there is neither to run. One pair
-    /// covers the two standards, since which of them carries a message is
-    /// not the writer's problem.
-    sign: gtk::ToggleButton,
-    encrypt: gtk::ToggleButton,
-    /// The header button the two above hang from. Its icon and its name
-    /// say what is on, since the toggles themselves are behind it.
-    protection: gtk::MenuButton,
+    /// Sign and Encrypt, check items in the More menu, which this
+    /// computer's gpg and gpgsm answer for. Both stay out of the menu when
+    /// there is neither to run. One pair covers the two standards, since
+    /// which of them carries a message is not the writer's problem.
+    sign: Check,
+    encrypt: Check,
+    /// Under Encrypt in the menu: why it cannot be chosen, while it cannot.
+    encrypt_note: gtk::Label,
+    /// The More menu beside Send: Templates, Preview, Sign and Encrypt.
+    more_menu: gtk::MenuButton,
+    /// The shield in the header while the message goes out signed or
+    /// encrypted. Its icon and its name say which; it opens More.
+    protection: gtk::Button,
     /// The addresses the key check last asked about, so a writer typing an
     /// address does not start an engine for every letter.
     asked_keys: RefCell<Asked>,
@@ -260,10 +301,6 @@ impl Composer {
             .icon_name("mail-attachment-symbolic")
             .tooltip_text(gettext("Attach Files (Ctrl+Shift+A)"))
             .build();
-        let preview_toggle = gtk::ToggleButton::builder()
-            .icon_name("view-reveal-symbolic")
-            .tooltip_text(gettext("Preview"))
-            .build();
         let template_items = gio::Menu::new();
         let template_menu = gio::Menu::new();
         template_menu.append_section(None, &template_items);
@@ -273,71 +310,66 @@ impl Composer {
             Some("composer.save-template"),
         );
         template_menu.append_section(None, &saving);
-        let template_button = gtk::MenuButton::builder()
-            .icon_name("insert-text-symbolic")
-            .tooltip_text(gettext("Templates"))
-            .menu_model(&template_menu)
+        let sign = Check::new("sign", has_engine && (sign_by_default || draft.sign));
+        let encrypt = Check::new("encrypt", false);
+        encrypt.set_sensitive(false);
+        // Templates, Preview, Sign and Encrypt stood in the header as four
+        // icon buttons left of Send. They share one menu now, so the bar
+        // holds Attach Files, More and Send, and the shield while the
+        // message goes out signed or encrypted.
+        let menu = gio::Menu::new();
+        let writing = gio::Menu::new();
+        writing.append_submenu(Some(&gettext("Templates")), &template_menu);
+        writing.append(Some(&gettext("Preview")), Some("composer.preview"));
+        menu.append_section(None, &writing);
+        let guarding = gio::Menu::new();
+        guarding.append(Some(&gettext("Sign")), Some("composer.sign"));
+        guarding.append(Some(&gettext("Encrypt")), Some("composer.encrypt"));
+        let note_item = gio::MenuItem::new(None, None);
+        note_item.set_attribute_value("custom", Some(&"encrypt-note".to_variant()));
+        guarding.append_item(&note_item);
+        if has_engine {
+            menu.append_section(None, &guarding);
+        }
+        let more = gtk::MenuButton::builder()
+            .icon_name("view-more-symbolic")
+            .tooltip_text(gettext("More"))
+            .menu_model(&menu)
             .build();
-        let sign = gtk::ToggleButton::builder()
-            .label(gettext("Sign"))
-            .tooltip_text(gettext("Sign this message with your own key"))
-            .active(has_engine && (sign_by_default || draft.sign))
+        // A menu item says nothing past its label, so the reason Encrypt
+        // cannot be chosen sits under it, where its tooltip used to be.
+        let encrypt_note = gtk::Label::builder()
+            .label(gettext("Add a recipient this computer can encrypt to."))
+            .wrap(true)
+            .max_width_chars(28)
+            .xalign(0.0)
+            .css_classes(["menu-note"])
             .build();
-        let encrypt = gtk::ToggleButton::builder()
-            .label(gettext("Encrypt"))
-            .tooltip_text(gettext("Add a recipient this computer can encrypt to."))
-            .sensitive(false)
-            .build();
+        if let Some(popover) = more.popover().and_downcast::<gtk::PopoverMenu>() {
+            popover.add_child(&encrypt_note, "encrypt-note");
+        }
         // The tooltips say what these do, with the keys in a bracket at
         // the end; the spoken name is the words and the keys go in a
         // property of their own.
         for button in [
             send.upcast_ref::<gtk::Widget>(),
             attach.upcast_ref(),
-            preview_toggle.upcast_ref(),
-            template_button.upcast_ref(),
+            more.upcast_ref(),
         ] {
             let tip = button.tooltip_text().unwrap_or_default();
             name_with_shortcut(button, &tip);
         }
         super::name_menu_items_of(&send);
-        super::name_menu_items_of(&template_button);
-        // Sign and Encrypt used to stand in the header as two labelled
-        // toggles, which took more of the bar than the rest of the
-        // buttons together and pushed the title off centre. They live in
-        // a popover now; the button they hang from says what is on.
-        let choices = gtk::Box::builder()
-            .orientation(gtk::Orientation::Vertical)
-            .spacing(6)
-            .margin_top(8)
-            .margin_bottom(8)
-            .margin_start(8)
-            .margin_end(8)
+        super::name_menu_items_of(&more);
+        let protection = gtk::Button::builder()
+            .icon_name("security-high-symbolic")
+            .css_classes(["flat", "protected"])
+            .visible(false)
             .build();
-        sign.add_css_class("flat");
-        encrypt.add_css_class("flat");
-        for toggle in [&sign, &encrypt] {
-            toggle.set_halign(gtk::Align::Fill);
-            if let Some(label) = toggle.child().and_downcast::<gtk::Label>() {
-                label.set_xalign(0.0);
-            }
-            choices.append(toggle);
-        }
-        let protection = gtk::MenuButton::builder()
-            .icon_name("security-medium-symbolic")
-            .tooltip_text(gettext("Signing and encryption"))
-            .popover(&gtk::Popover::builder().child(&choices).build())
-            .visible(has_engine)
-            .build();
-        name_with_shortcut(
-            protection.upcast_ref::<gtk::Widget>(),
-            &gettext("Signing and encryption"),
-        );
         let header = adw::HeaderBar::builder().title_widget(&title).build();
         header.pack_end(&send);
-        header.pack_end(&preview_toggle);
+        header.pack_end(&more);
         header.pack_end(&attach);
-        header.pack_end(&template_button);
         header.pack_end(&protection);
 
         let from = from_dropdown(&identities);
@@ -547,6 +579,8 @@ impl Composer {
             send,
             sign,
             encrypt,
+            encrypt_note,
+            more_menu: more.clone(),
             protection,
             asked_keys: RefCell::new(Asked::default()),
             encrypting_with: Cell::new(Standard::default()),
@@ -577,7 +611,7 @@ impl Composer {
         composer.refresh_files();
         composer.update_title();
         composer.show_more(composer.more_button.is_active());
-        composer.wire(&attach, &preview_toggle);
+        composer.wire(&attach);
         composer.wire_history();
         composer.wire_markdown();
         composer.refresh_history();
@@ -590,7 +624,7 @@ impl Composer {
         // Preferences may add a template while this window is open, so the
         // list is read again each time the menu is asked for.
         let weak = Rc::downgrade(&composer);
-        template_button.set_create_popup_func(move |_| {
+        more.set_create_popup_func(move |_| {
             if let Some(c) = weak.upgrade() {
                 c.load_templates();
             }
@@ -623,7 +657,7 @@ impl Composer {
             .fill(&markdown, rich.as_ref(), &self.attachments.borrow());
     }
 
-    fn wire(self: &Rc<Self>, attach: &gtk::Button, preview_toggle: &gtk::ToggleButton) {
+    fn wire(self: &Rc<Self>, attach: &gtk::Button) {
         let weak = Rc::downgrade(self);
         let mark_dirty = move || {
             if let Some(c) = weak.upgrade() {
@@ -704,14 +738,14 @@ impl Composer {
             }
         });
         let weak = Rc::downgrade(self);
-        self.encrypt.connect_toggled(move |toggle| {
+        self.encrypt.connect_toggled(move |on| {
             let Some(c) = weak.upgrade() else { return };
             // Only the writer's own click changes what they want. "Encrypt
             // when I can" turning it on is a chance taken, not a wish, and
             // a missing key turning it off changes nothing they asked for.
             if !c.filling_keys.get() {
                 c.encrypt_chosen.set(true);
-                c.secret.set(toggle.is_active());
+                c.secret.set(on);
             }
             c.dirty.set(true);
             c.show_protection();
@@ -777,6 +811,21 @@ impl Composer {
             });
             actions.add_action(&action);
         }
+        let preview = Check::new("preview", false);
+        let weak = Rc::downgrade(self);
+        preview.connect_toggled(move |on| {
+            let Some(c) = weak.upgrade() else { return };
+            if on {
+                let html = c.page(&gettext("Preview"), &c.with_inline_images(c.html()));
+                c.preview.load_html(&html, None);
+                c.stack.set_visible_child_name("preview");
+            } else {
+                c.stack.set_visible_child_name("edit");
+            }
+        });
+        for check in [&self.sign, &self.encrypt, &preview] {
+            actions.add_action(&check.0);
+        }
         self.window.insert_action_group("composer", Some(&actions));
 
         let weak = Rc::downgrade(self);
@@ -785,15 +834,12 @@ impl Composer {
                 c.pick_files();
             }
         });
-        let weak = Rc::downgrade(self);
-        preview_toggle.connect_toggled(move |toggle| {
-            let Some(c) = weak.upgrade() else { return };
-            if toggle.is_active() {
-                let html = c.page(&gettext("Preview"), &c.with_inline_images(c.html()));
-                c.preview.load_html(&html, None);
-                c.stack.set_visible_child_name("preview");
-            } else {
-                c.stack.set_visible_child_name("edit");
+        // The shield says the message goes out signed or encrypted, and
+        // opens the menu that holds the two choices.
+        let more = self.more_menu.downgrade();
+        self.protection.connect_clicked(move |_| {
+            if let Some(more) = more.upgrade() {
+                more.popup();
             }
         });
 
@@ -1284,27 +1330,17 @@ impl Composer {
         }
     }
 
-    /// Says on the header button what the message goes out as, since the
-    /// two toggles that decide it sit behind that button.
+    /// Shows the shield in the header while the message goes out signed or
+    /// encrypted, since the two choices that decide it sit in More.
     fn show_protection(&self) {
-        let (sign, encrypt) = (self.sign.is_active(), self.encrypt.is_active());
-        let said = match (sign, encrypt) {
-            (true, true) => gettext("Signed and encrypted"),
-            (true, false) => gettext("Signed"),
-            (false, true) => gettext("Encrypted"),
-            (false, false) => gettext("Not signed or encrypted"),
+        let Some(shield) = protection::shield(self.sign.is_active(), self.encrypt.is_active())
+        else {
+            return self.protection.set_visible(false);
         };
-        self.protection.set_icon_name(match (sign, encrypt) {
-            (_, true) => "channel-secure-symbolic",
-            (true, false) => "security-high-symbolic",
-            (false, false) => "security-medium-symbolic",
-        });
-        match sign || encrypt {
-            true => self.protection.add_css_class("protected"),
-            false => self.protection.remove_css_class("protected"),
-        }
-        self.protection.set_tooltip_text(Some(&said));
-        super::name(self.protection.upcast_ref::<gtk::Widget>(), &said);
+        self.protection.set_icon_name(shield.icon);
+        self.protection.set_tooltip_text(Some(&shield.said));
+        super::name(self.protection.upcast_ref::<gtk::Widget>(), &shield.said);
+        self.protection.set_visible(true);
     }
 
     /// Offers encryption when one of the standards can do it, and says
@@ -1315,10 +1351,10 @@ impl Composer {
             self.encrypting_with.set(standard);
         }
         self.encrypt.set_sensitive(choice.is_ok());
-        self.encrypt.set_tooltip_text(Some(&match &choice {
+        self.encrypt_note.set_label(&match &choice {
             Ok(standard) => protection::encrypting_with(*standard),
             Err(problem) => problem.clone(),
-        }));
+        });
         self.filling_keys.set(true);
         if choice.is_err() {
             self.encrypt.set_active(false);
@@ -1492,7 +1528,7 @@ impl Composer {
     /// on. True for Send Readable; closing the dialog leaves the message
     /// open.
     async fn confirm_readable(&self) -> bool {
-        let reason = self.encrypt.tooltip_text().unwrap_or_default();
+        let reason = self.encrypt_note.label();
         let dialog = adw::AlertDialog::new(
             Some(&gettext("Send Without Encryption?")),
             Some(&fill(
@@ -2483,6 +2519,43 @@ fn now_secs() -> i64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// What a check item's handler heard, in order.
+    fn heard(check: &Check) -> Rc<RefCell<Vec<bool>>> {
+        let heard = Rc::new(RefCell::new(Vec::new()));
+        let log = Rc::clone(&heard);
+        check.connect_toggled(move |on| log.borrow_mut().push(on));
+        heard
+    }
+
+    #[test]
+    fn a_click_on_a_check_item_flips_it_and_tells_the_composer() {
+        let sign = Check::new("sign", false);
+        let heard = heard(&sign);
+        sign.0.activate(None);
+        assert!(sign.is_active());
+        sign.0.activate(None);
+        assert_eq!(*heard.borrow(), [true, false]);
+    }
+
+    #[test]
+    fn setting_a_check_item_to_its_own_state_tells_nobody() {
+        // Encrypt is set from the key check again and again; only a real
+        // change may mark the draft changed.
+        let encrypt = Check::new("encrypt", true);
+        let heard = heard(&encrypt);
+        encrypt.set_active(true);
+        encrypt.set_active(false);
+        assert_eq!(*heard.borrow(), [false]);
+    }
+
+    #[test]
+    fn a_check_item_that_cannot_be_chosen_ignores_a_click() {
+        let encrypt = Check::new("encrypt", false);
+        encrypt.set_sensitive(false);
+        encrypt.0.activate(None);
+        assert!(!encrypt.is_active() && !encrypt.is_sensitive());
+    }
 
     /// The defect this pins: an address moved from To to Bcc leaves the
     /// sorted, deduped address list identical, so a memo built from the

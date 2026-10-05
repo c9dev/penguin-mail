@@ -168,6 +168,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Improved
 - The category chips over the inbox show each category's name and unread count, "Primary 2", when the list is wide enough for all five, and fold to icons in a narrow one.
+- The composer's header holds Attach Files, a More menu and Send. More has Templates, Preview, Sign and Encrypt, and a shield shows beside Attach Files while the message goes out signed or encrypted.
 - Today's day, date and place over the calendar's days are dark enough to read on their tint in light.
 - The mini month marks today with the only fill and the day you're viewing with a ring, and tints the week in view only in Week view.
 - Section headings in the sidebar and the calendar's hour labels, week number, ALL-DAY, account names, days outside the month and agenda times are dark enough to read in light and dark.

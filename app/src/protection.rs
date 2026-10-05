@@ -283,6 +283,28 @@ pub async fn signing_for(core: &Core, from: &str) -> Standard {
     signing(&held)
 }
 
+/// The shield a composer's header shows while its message goes out
+/// signed or encrypted: the icon and what it says to the pointer and a
+/// screen reader.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Shield {
+    pub icon: &'static str,
+    pub said: String,
+}
+
+/// The shield for a message that goes out signed, encrypted, both, or
+/// neither. A plain message shows none: the header keeps the room, and
+/// More holds the choices.
+pub fn shield(sign: bool, encrypt: bool) -> Option<Shield> {
+    let (icon, said) = match (sign, encrypt) {
+        (false, false) => return None,
+        (true, false) => ("security-high-symbolic", gettext("Signed")),
+        (false, true) => ("channel-secure-symbolic", gettext("Encrypted")),
+        (true, true) => ("channel-secure-symbolic", gettext("Signed and encrypted")),
+    };
+    Some(Shield { icon, said })
+}
+
 /// What the Encrypt button says once it works, which names the standard
 /// the message would go out under rather than making the writer guess.
 pub fn encrypting_with(standard: Standard) -> String {
@@ -1000,6 +1022,25 @@ mod tests {
     use mailrs_smime::Certificate;
 
     use super::*;
+
+    #[test]
+    fn a_plain_message_shows_no_shield() {
+        assert_eq!(shield(false, false), None);
+    }
+
+    #[test]
+    fn a_signed_message_shows_the_signing_shield() {
+        let shown = shield(true, false).expect("a shield");
+        assert_eq!((shown.icon, shown.said.as_str()), ("security-high-symbolic", "Signed"));
+    }
+
+    #[test]
+    fn an_encrypted_message_shows_the_lock_whether_or_not_it_is_signed() {
+        let encrypted = shield(false, true).expect("a shield");
+        assert_eq!((encrypted.icon, encrypted.said.as_str()), ("channel-secure-symbolic", "Encrypted"));
+        let both = shield(true, true).expect("a shield");
+        assert_eq!((both.icon, both.said.as_str()), ("channel-secure-symbolic", "Signed and encrypted"));
+    }
 
     fn certificate(address: &str, held: bool) -> mailrs_smime::Recipient {
         mailrs_smime::Recipient {

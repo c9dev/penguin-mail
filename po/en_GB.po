@@ -2368,229 +2368,241 @@ msgstr "This computer has nothing to encrypt with."
 msgid "S/MIME names every recipient inside an encrypted message, so a blind copy would not stay blind."
 msgstr "S/MIME names every recipient inside an encrypted message, so a blind copy would not stay blind."
 
-#: app/src/protection.rs:290
+#: app/src/protection.rs:301
+msgid "Signed"
+msgstr "Signed"
+
+#: app/src/protection.rs:302
+msgid "Encrypted"
+msgstr "Encrypted"
+
+#: app/src/protection.rs:303
+msgid "Signed and encrypted"
+msgstr "Signed and encrypted"
+
+#: app/src/protection.rs:312
 msgid "Encrypt this message to the recipients' keys"
 msgstr "Encrypt this message to the recipients' keys"
 
-#: app/src/protection.rs:291
+#: app/src/protection.rs:313
 msgid "Encrypt this message to the recipients' certificates"
 msgstr "Encrypt this message to the recipients' certificates"
 
-#: app/src/protection.rs:317
+#: app/src/protection.rs:339
 msgid "gpg holds no key and gpgsm no trusted certificate for {addresses}."
 msgstr "gpg holds no key and gpgsm no trusted certificate for {addresses}."
 
-#: app/src/protection.rs:325
+#: app/src/protection.rs:347
 msgid "A message goes out under one standard or the other. {pgp} {smime}"
 msgstr "A message goes out under one standard or the other. {pgp} {smime}"
 
-#: app/src/protection.rs:585
+#: app/src/protection.rs:607
 msgid "This key does not name {sender}, the address the message says it is from."
 msgstr "This key does not name {sender}, the address the message says it is from."
 
-#: app/src/protection.rs:589
+#: app/src/protection.rs:611
 msgid "This certificate does not name {sender}, the address the message says it is from."
 msgstr "This certificate does not name {sender}, the address the message says it is from."
 
-#: app/src/protection.rs:598
+#: app/src/protection.rs:620
 msgid "Signed by {signer}"
 msgstr "Signed by {signer}"
 
-#: app/src/protection.rs:604
+#: app/src/protection.rs:626
 msgid "This message changed after it was signed"
 msgstr "This message changed after it was signed"
 
-#: app/src/protection.rs:606
+#: app/src/protection.rs:628
 msgid "The signature of {signer} does not match what arrived."
 msgstr "The signature of {signer} does not match what arrived."
 
-#: app/src/protection.rs:613
+#: app/src/protection.rs:635
 msgid "Signed by {signer}, whose key has expired"
 msgstr "Signed by {signer}, whose key has expired"
 
-#: app/src/protection.rs:617
+#: app/src/protection.rs:639
 msgid "The text is as it was written, and the key behind it ran out."
 msgstr "The text is as it was written, and the key behind it ran out."
 
-#: app/src/protection.rs:623
+#: app/src/protection.rs:645
 msgid "Signed by {signer}, whose certificate has run out"
 msgstr "Signed by {signer}, whose certificate has run out"
 
-#: app/src/protection.rs:627
+#: app/src/protection.rs:649
 msgid "The text is as it was written, and the certificate behind it has expired."
 msgstr "The text is as it was written, and the certificate behind it has expired."
 
-#: app/src/protection.rs:633
+#: app/src/protection.rs:655
 msgid "Signed by {signer}, who took this key back"
 msgstr "Signed by {signer}, who took this key back"
 
-#: app/src/protection.rs:637
+#: app/src/protection.rs:659
 msgid "The owner revoked it, so it says nothing about who wrote this."
 msgstr "The owner revoked it, so it says nothing about who wrote this."
 
-#: app/src/protection.rs:643
+#: app/src/protection.rs:665
 msgid "Signed by {signer}, whose certificate was taken back"
 msgstr "Signed by {signer}, whose certificate was taken back"
 
-#: app/src/protection.rs:647
+#: app/src/protection.rs:669
 msgid "Whoever issued it revoked it, so it says nothing about who wrote this."
 msgstr "Whoever issued it revoked it, so it says nothing about who wrote this."
 
-#: app/src/protection.rs:653
+#: app/src/protection.rs:675
 msgid "Signed by {signer}, and the signature has run out"
 msgstr "Signed by {signer}, and the signature has run out"
 
-#: app/src/protection.rs:657
+#: app/src/protection.rs:679
 msgid "It carried a date to stop being good on, and that date has passed."
 msgstr "It carried a date to stop being good on, and that date has passed."
 
-#: app/src/protection.rs:662
+#: app/src/protection.rs:684
 msgid "Signed by a key this computer does not hold"
 msgstr "Signed by a key this computer does not hold"
 
-#: app/src/protection.rs:664
+#: app/src/protection.rs:686
 msgid "Nothing here can check it. Ask gpg for key {key}."
 msgstr "Nothing here can check it. Ask gpg for key {key}."
 
-#: app/src/protection.rs:671
+#: app/src/protection.rs:693
 msgid "it names"
 msgstr "it names"
 
-#: app/src/protection.rs:677
+#: app/src/protection.rs:699
 msgid "Signed by a certificate this computer does not hold"
 msgstr "Signed by a certificate this computer does not hold"
 
-#: app/src/protection.rs:679
+#: app/src/protection.rs:701
 msgid "The message carried none either, so there is nothing here to check it against."
 msgstr "The message carried none either, so there is nothing here to check it against."
 
-#: app/src/protection.rs:685
+#: app/src/protection.rs:707
 msgid "gpg could not check this signature"
 msgstr "gpg could not check this signature"
 
-#: app/src/protection.rs:690
+#: app/src/protection.rs:712
 msgid "gpgsm could not check this signature"
 msgstr "gpgsm could not check this signature"
 
-#: app/src/protection.rs:713
+#: app/src/protection.rs:735
 msgid "Encrypted, and signed by {signer}"
 msgstr "Encrypted, and signed by {signer}"
 
-#: app/src/protection.rs:722
+#: app/src/protection.rs:744
 msgid "Encrypted. {what}"
 msgstr "Encrypted. {what}"
 
-#: app/src/protection.rs:728
+#: app/src/protection.rs:750
 msgid "This message arrived encrypted"
 msgstr "This message arrived encrypted"
 
-#: app/src/protection.rs:730
+#: app/src/protection.rs:752
 msgid "Nobody signed it, so it says nothing about who sent it."
 msgstr "Nobody signed it, so it says nothing about who sent it."
 
-#: app/src/protection.rs:738
+#: app/src/protection.rs:760
 msgid "{detail} {files}"
 msgstr "{detail} {files}"
 
-#: app/src/protection.rs:752
+#: app/src/protection.rs:774
 msgid "This message is encrypted to a key you do not hold"
 msgstr "This message is encrypted to a key you do not hold"
 
-#: app/src/protection.rs:754
+#: app/src/protection.rs:776
 msgid "Whoever sent it used a key gpg has no secret half of."
 msgstr "Whoever sent it used a key gpg has no secret half of."
 
-#: app/src/protection.rs:759
+#: app/src/protection.rs:781
 msgid "This message is encrypted to a certificate you do not hold"
 msgstr "This message is encrypted to a certificate you do not hold"
 
-#: app/src/protection.rs:761
+#: app/src/protection.rs:783
 msgid "Whoever sent it used a certificate gpgsm has no secret key for."
 msgstr "Whoever sent it used a certificate gpgsm has no secret key for."
 
-#: app/src/protection.rs:767
+#: app/src/protection.rs:789
 msgid "This message says it is OpenPGP and is not"
 msgstr "This message says it is OpenPGP and is not"
 
-#: app/src/protection.rs:768
+#: app/src/protection.rs:790
 msgid "This message says it is S/MIME and is not"
 msgstr "This message says it is S/MIME and is not"
 
-#: app/src/protection.rs:771
+#: app/src/protection.rs:793
 msgid "Its parts are not where a signed or encrypted message keeps them."
 msgstr "Its parts are not where a signed or encrypted message keeps them."
 
-#: app/src/protection.rs:777
+#: app/src/protection.rs:799
 msgid "gpg could not open this message"
 msgstr "gpg could not open this message"
 
-#: app/src/protection.rs:778
+#: app/src/protection.rs:800
 msgid "gpgsm could not open this message"
 msgstr "gpgsm could not open this message"
 
-#: app/src/protection.rs:791
+#: app/src/protection.rs:813
 msgid "You marked this key as one not to trust."
 msgstr "You marked this key as one not to trust."
 
-#: app/src/protection.rs:792
+#: app/src/protection.rs:814
 msgid "This is one of your own keys."
 msgstr "This is one of your own keys."
 
-#: app/src/protection.rs:793
+#: app/src/protection.rs:815
 msgid "You have vouched for this key."
 msgstr "You have vouched for this key."
 
-#: app/src/protection.rs:795
+#: app/src/protection.rs:817
 msgid "Only people you partly trust have vouched for this key, so it is not fully checked."
 msgstr "Only people you partly trust have vouched for this key, so it is not fully checked."
 
-#: app/src/protection.rs:798
+#: app/src/protection.rs:820
 msgid "Nobody has vouched for this key, so it names no one."
 msgstr "Nobody has vouched for this key, so it names no one."
 
-#: app/src/protection.rs:801
+#: app/src/protection.rs:823
 msgid "Its certificate leads back to an authority you trust, but this computer could not check whether it was revoked."
 msgstr "Its certificate leads back to an authority you trust, but this computer could not check whether it was revoked."
 
-#: app/src/protection.rs:805
+#: app/src/protection.rs:827
 msgid "Its certificate leads back to an authority you trust."
 msgstr "Its certificate leads back to an authority you trust."
 
-#: app/src/protection.rs:808
+#: app/src/protection.rs:830
 msgid "Its certificate leads back to nobody you trust, so it names no one."
 msgstr "Its certificate leads back to nobody you trust, so it names no one."
 
-#: app/src/protection.rs:811
+#: app/src/protection.rs:833
 msgid "Nothing here says who that certificate belongs to."
 msgstr "Nothing here says who that certificate belongs to."
 
-#: app/src/protection.rs:847
+#: app/src/protection.rs:869
 msgid "key {key}"
 msgstr "key {key}"
 
-#: app/src/protection.rs:850
+#: app/src/protection.rs:872
 msgid "a key gpg would not name"
 msgstr "a key gpg would not name"
 
-#: app/src/protection.rs:851
+#: app/src/protection.rs:873
 msgid "a certificate gpgsm would not name"
 msgstr "a certificate gpgsm would not name"
 
-#: app/src/protection.rs:862
+#: app/src/protection.rs:884
 msgid "It carries a file, kept in this window only."
 msgstr "It carries a file, kept in this window only."
 
-#: app/src/protection.rs:864
+#: app/src/protection.rs:886
 msgid "It carries {count} file, kept in this window only."
 msgid_plural "It carries {count} files, kept in this window only."
 msgstr[0] "It carries {count} file, kept in this window only."
 msgstr[1] "It carries {count} files, kept in this window only."
 
-#: app/src/protection.rs:895
+#: app/src/protection.rs:917
 msgid "{names} or {last}"
 msgstr "{names} or {last}"
 
-#: app/src/protection.rs:907
+#: app/src/protection.rs:929
 msgid "{names} and {last}"
 msgstr "{names} and {last}"
 
@@ -2696,7 +2708,7 @@ msgstr "Standard encryption (TLS)"
 msgid "Not encrypted in transit"
 msgstr "Not encrypted in transit"
 
-#: app/src/render.rs:427 app/src/ui/composer/mod.rs:1636
+#: app/src/render.rs:427 app/src/ui/composer/mod.rs:1672
 msgid "{count} attachment"
 msgid_plural "{count} attachments"
 msgstr[0] "{count} attachment"
@@ -2743,8 +2755,8 @@ msgstr[1] "{named}, and {count} others"
 msgid "me"
 msgstr "me"
 
-#: app/src/render.rs:577 app/src/ui/composer/mod.rs:448
-#: app/src/ui/composer/mod.rs:452
+#: app/src/render.rs:577 app/src/ui/composer/mod.rs:480
+#: app/src/ui/composer/mod.rs:484
 msgid "Show trimmed content"
 msgstr "Show trimmed content"
 
@@ -3223,8 +3235,8 @@ msgstr "Penguin Mail: {summary}"
 msgid "Open Penguin Mail"
 msgstr "Open Penguin Mail"
 
-#: app/src/tray.rs:207 app/src/ui/composer/mod.rs:234
-#: app/src/ui/composer/mod.rs:504 app/src/ui/composer/mod.rs:1210
+#: app/src/tray.rs:207 app/src/ui/composer/mod.rs:275
+#: app/src/ui/composer/mod.rs:536 app/src/ui/composer/mod.rs:1256
 #: app/src/ui/contact_card.rs:157
 msgid "New Message"
 msgstr "New Message"
@@ -3412,9 +3424,9 @@ msgstr "Try Again"
 #: app/src/ui/add_account.rs:797 app/src/ui/assistant_mcp_prefs.rs:347
 #: app/src/ui/calendar/editor.rs:167 app/src/ui/calendar/manage.rs:184
 #: app/src/ui/calendar/manage.rs:303 app/src/ui/calendar/manage.rs:346
-#: app/src/ui/calendar/scope.rs:174 app/src/ui/composer/mod.rs:1504
-#: app/src/ui/composer/mod.rs:1573 app/src/ui/composer/mod.rs:1891
-#: app/src/ui/composer/mod.rs:2324 app/src/ui/confirm.rs:29
+#: app/src/ui/calendar/scope.rs:174 app/src/ui/composer/mod.rs:1540
+#: app/src/ui/composer/mod.rs:1609 app/src/ui/composer/mod.rs:1927
+#: app/src/ui/composer/mod.rs:2360 app/src/ui/confirm.rs:29
 #: app/src/ui/rules.rs:437 app/src/ui/rules.rs:578
 #: app/src/ui/smart_editor.rs:150 app/src/ui/templates.rs:239
 #: app/src/ui/unsubscribe.rs:95 app/src/ui/vacation.rs:45 app/src/ui/when.rs:52
@@ -3659,7 +3671,7 @@ msgstr "Ask Penguin Mail…"
 
 #: app/src/ui/assistant.rs:156 app/src/ui/assistant.rs:160
 #: app/src/ui/assistant.rs:446 app/src/ui/calendar/scope.rs:195
-#: app/src/ui/composer/mod.rs:251 app/src/ui/window/shortcuts.rs:488
+#: app/src/ui/composer/mod.rs:292 app/src/ui/window/shortcuts.rs:488
 msgid "Send"
 msgstr "Send"
 
@@ -3755,7 +3767,7 @@ msgid "Edit {server}"
 msgstr "Edit {server}"
 
 #: app/src/ui/assistant_mcp_prefs.rs:121 app/src/ui/calendar/editor.rs:1532
-#: app/src/ui/composer/mod.rs:1672 app/src/ui/composer/recipients.rs:315
+#: app/src/ui/composer/mod.rs:1708 app/src/ui/composer/recipients.rs:315
 #: app/src/ui/window.rs:2941
 msgid "Remove"
 msgstr "Remove"
@@ -3791,7 +3803,7 @@ msgid "A command runs on this computer and talks over its input and output, as i
 msgstr "A command runs on this computer and talks over its input and output, as in npx -y @modelcontextprotocol/server-filesystem ~/Documents. Put NAME=value in front for the environment. A URL reaches a server over HTTP."
 
 #: app/src/ui/assistant_mcp_prefs.rs:254 app/src/ui/calendar/manage.rs:277
-#: app/src/ui/composer/mod.rs:2319 app/src/ui/smart_editor.rs:37
+#: app/src/ui/composer/mod.rs:2355 app/src/ui/smart_editor.rs:37
 #: app/src/ui/templates.rs:190
 msgid "Name"
 msgstr "Name"
@@ -3827,7 +3839,7 @@ msgstr "Test"
 
 #: app/src/ui/assistant_mcp_prefs.rs:341 app/src/ui/calendar/editor.rs:163
 #: app/src/ui/calendar/quick.rs:103 app/src/ui/calendar/scope.rs:193
-#: app/src/ui/composer/mod.rs:2324 app/src/ui/dav_edit.rs:26
+#: app/src/ui/composer/mod.rs:2360 app/src/ui/dav_edit.rs:26
 #: app/src/ui/rules.rs:430 app/src/ui/smart_editor.rs:144
 #: app/src/ui/templates.rs:233 app/src/ui/vacation.rs:41
 #: app/src/ui/window/arrange.rs:146 app/src/ui/window/save_contacts.rs:94
@@ -4283,7 +4295,7 @@ msgstr "New only"
 msgid "None"
 msgstr "None"
 
-#: app/src/ui/calendar/editor.rs:550 app/src/ui/composer/mod.rs:415
+#: app/src/ui/calendar/editor.rs:550 app/src/ui/composer/mod.rs:447
 #: app/src/ui/vacation.rs:246 app/src/ui/vacation.rs:255
 msgid "Message"
 msgstr "Message"
@@ -4437,7 +4449,7 @@ msgstr "Share with guests"
 msgid "Share {file} with the guests"
 msgstr "Share {file} with the guests"
 
-#: app/src/ui/calendar/editor.rs:1534 app/src/ui/composer/mod.rs:1676
+#: app/src/ui/calendar/editor.rs:1534 app/src/ui/composer/mod.rs:1712
 msgid "Remove {file}"
 msgstr "Remove {file}"
 
@@ -4465,7 +4477,7 @@ msgstr "Uploading {file}"
 msgid "Could not attach {file}: {reason}"
 msgstr "Could not attach {file}: {reason}"
 
-#: app/src/ui/calendar/editor.rs:1710
+#: app/src/ui/calendar/editor.rs:1710 app/src/ui/composer/mod.rs:336
 msgid "More"
 msgstr "More"
 
@@ -4996,7 +5008,7 @@ msgstr "Deleted “{title}”"
 msgid "Could not delete the event: {reason}"
 msgstr "Could not delete the event: {reason}"
 
-#: app/src/ui/calendar/mod.rs:2539 app/src/ui/composer/mod.rs:1123
+#: app/src/ui/calendar/mod.rs:2539 app/src/ui/composer/mod.rs:1169
 #: app/src/ui/window.rs:2093 app/src/ui/window/scheduled.rs:98
 #: app/src/ui/window/shortcuts.rs:454
 msgid "Undo"
@@ -5479,370 +5491,346 @@ msgstr "You"
 msgid "{time} {city}"
 msgstr "{time} {city}"
 
-#: app/src/ui/composer/mod.rs:243 app/src/ui/conversation.rs:1744
+#: app/src/ui/composer/mod.rs:284 app/src/ui/conversation.rs:1744
 msgid "Choose a Time…"
 msgstr "Choose a Time…"
 
-#: app/src/ui/composer/mod.rs:255 app/src/ui/composer/mod.rs:1519
+#: app/src/ui/composer/mod.rs:296 app/src/ui/composer/mod.rs:1555
 #: app/src/ui/sidebar.rs:886
 msgid "Send Later"
 msgstr "Send Later"
 
-#: app/src/ui/composer/mod.rs:257 app/src/ui/composer/mod.rs:1239
+#: app/src/ui/composer/mod.rs:298 app/src/ui/composer/mod.rs:1285
 msgid "Send (Ctrl+Enter)"
 msgstr "Send (Ctrl+Enter)"
 
-#: app/src/ui/composer/mod.rs:261
+#: app/src/ui/composer/mod.rs:302
 msgid "Attach Files (Ctrl+Shift+A)"
 msgstr "Attach Files (Ctrl+Shift+A)"
 
-#: app/src/ui/composer/mod.rs:265 app/src/ui/composer/mod.rs:792
-msgid "Preview"
-msgstr "Preview"
-
-#: app/src/ui/composer/mod.rs:272
+#: app/src/ui/composer/mod.rs:309
 msgid "Save as Template…"
 msgstr "Save as Template…"
 
-#: app/src/ui/composer/mod.rs:278 app/src/ui/templates.rs:23
+#: app/src/ui/composer/mod.rs:322 app/src/ui/templates.rs:23
 msgid "Templates"
 msgstr "Templates"
 
-#: app/src/ui/composer/mod.rs:282
+#: app/src/ui/composer/mod.rs:323 app/src/ui/composer/mod.rs:819
+msgid "Preview"
+msgstr "Preview"
+
+#: app/src/ui/composer/mod.rs:326
 msgid "Sign"
 msgstr "Sign"
 
-#: app/src/ui/composer/mod.rs:283
-msgid "Sign this message with your own key"
-msgstr "Sign this message with your own key"
-
-#: app/src/ui/composer/mod.rs:287
+#: app/src/ui/composer/mod.rs:327
 msgid "Encrypt"
 msgstr "Encrypt"
 
-#: app/src/ui/composer/mod.rs:288
+#: app/src/ui/composer/mod.rs:342
 msgid "Add a recipient this computer can encrypt to."
 msgstr "Add a recipient this computer can encrypt to."
 
-#: app/src/ui/composer/mod.rs:328 app/src/ui/composer/mod.rs:334
-msgid "Signing and encryption"
-msgstr "Signing and encryption"
-
-#: app/src/ui/composer/mod.rs:355
+#: app/src/ui/composer/mod.rs:387
 msgid "Recipients"
 msgstr "Recipients"
 
-#: app/src/ui/composer/mod.rs:356
+#: app/src/ui/composer/mod.rs:388
 msgid "Carbon copy"
 msgstr "Carbon copy"
 
-#: app/src/ui/composer/mod.rs:357
+#: app/src/ui/composer/mod.rs:389
 msgid "Blind carbon copy"
 msgstr "Blind carbon copy"
 
-#: app/src/ui/composer/mod.rs:363 app/src/ui/composer/mod.rs:402
+#: app/src/ui/composer/mod.rs:395 app/src/ui/composer/mod.rs:434
 #: app/src/ui/rules.rs:347 app/src/ui/templates.rs:192
 #: app/src/ui/vacation.rs:235
 msgid "Subject"
 msgstr "Subject"
 
-#: app/src/ui/composer/mod.rs:370
+#: app/src/ui/composer/mod.rs:402
 msgid "Cc/Bcc"
 msgstr "Cc/Bcc"
 
-#: app/src/ui/composer/mod.rs:371 app/src/ui/composer/mod.rs:915
+#: app/src/ui/composer/mod.rs:403 app/src/ui/composer/mod.rs:961
 msgid "Show Cc and Bcc"
 msgstr "Show Cc and Bcc"
 
-#: app/src/ui/composer/mod.rs:381 app/src/ui/rules.rs:345
+#: app/src/ui/composer/mod.rs:413 app/src/ui/rules.rs:345
 msgid "From"
 msgstr "From"
 
-#: app/src/ui/composer/mod.rs:386 app/src/ui/rules.rs:346
+#: app/src/ui/composer/mod.rs:418 app/src/ui/rules.rs:346
 msgid "To"
 msgstr "To"
 
-#: app/src/ui/composer/mod.rs:390
+#: app/src/ui/composer/mod.rs:422
 msgid "Cc"
 msgstr "Cc"
 
-#: app/src/ui/composer/mod.rs:392
+#: app/src/ui/composer/mod.rs:424
 msgid "Bcc"
 msgstr "Bcc"
 
-#: app/src/ui/composer/mod.rs:473
+#: app/src/ui/composer/mod.rs:505
 msgid "Formatting"
 msgstr "Formatting"
 
-#: app/src/ui/composer/mod.rs:492 app/src/ui/composer/mod.rs:1083
+#: app/src/ui/composer/mod.rs:524 app/src/ui/composer/mod.rs:1129
 msgid "Forwarded Message"
 msgstr "Forwarded Message"
 
-#: app/src/ui/composer/mod.rs:913
+#: app/src/ui/composer/mod.rs:959
 msgid "Hide Cc and Bcc"
 msgstr "Hide Cc and Bcc"
 
-#: app/src/ui/composer/mod.rs:998
+#: app/src/ui/composer/mod.rs:1044
 msgid "Remove Quoted Text"
 msgstr "Remove Quoted Text"
 
-#: app/src/ui/composer/mod.rs:999
+#: app/src/ui/composer/mod.rs:1045
 msgid "Do Not Forward the Original"
 msgstr "Do Not Forward the Original"
 
-#: app/src/ui/composer/mod.rs:1118
+#: app/src/ui/composer/mod.rs:1164
 msgid "Quoted text removed"
 msgstr "Quoted text removed"
 
-#: app/src/ui/composer/mod.rs:1119
+#: app/src/ui/composer/mod.rs:1165
 msgid "Forwarded message removed"
 msgstr "Forwarded message removed"
 
-#: app/src/ui/composer/mod.rs:1218
+#: app/src/ui/composer/mod.rs:1264
 msgid "Scheduled to send {when}"
 msgstr "Scheduled to send {when}"
 
-#: app/src/ui/composer/mod.rs:1229
+#: app/src/ui/composer/mod.rs:1275
 msgid "No account to send from."
 msgstr "No account to send from."
 
-#: app/src/ui/composer/mod.rs:1292
-msgid "Signed and encrypted"
-msgstr "Signed and encrypted"
-
-#: app/src/ui/composer/mod.rs:1293
-msgid "Signed"
-msgstr "Signed"
-
-#: app/src/ui/composer/mod.rs:1294
-msgid "Encrypted"
-msgstr "Encrypted"
-
-#: app/src/ui/composer/mod.rs:1295
-msgid "Not signed or encrypted"
-msgstr "Not signed or encrypted"
-
-#: app/src/ui/composer/mod.rs:1471
+#: app/src/ui/composer/mod.rs:1507
 msgid "Attachment Missing?"
 msgstr "Attachment Missing?"
 
-#: app/src/ui/composer/mod.rs:1473
+#: app/src/ui/composer/mod.rs:1509
 msgid "The message says “{sentence}” and carries no file."
 msgstr "The message says “{sentence}” and carries no file."
 
-#: app/src/ui/composer/mod.rs:1478
+#: app/src/ui/composer/mod.rs:1514
 msgid "Add Attachment"
 msgstr "Add Attachment"
 
-#: app/src/ui/composer/mod.rs:1479
+#: app/src/ui/composer/mod.rs:1515
 msgid "Send Anyway"
 msgstr "Send Anyway"
 
-#: app/src/ui/composer/mod.rs:1497
+#: app/src/ui/composer/mod.rs:1533
 msgid "Send Without Encryption?"
 msgstr "Send Without Encryption?"
 
-#: app/src/ui/composer/mod.rs:1499
+#: app/src/ui/composer/mod.rs:1535
 msgid "This message was to go out encrypted, and it cannot be. {reason}"
 msgstr "This message was to go out encrypted, and it cannot be. {reason}"
 
-#: app/src/ui/composer/mod.rs:1505
+#: app/src/ui/composer/mod.rs:1541
 msgid "Send Readable"
 msgstr "Send Readable"
 
-#: app/src/ui/composer/mod.rs:1520
+#: app/src/ui/composer/mod.rs:1556
 msgid "Penguin Mail sends it at this time while it runs, even in the tray."
 msgstr "Penguin Mail sends it at this time while it runs, even in the tray."
 
-#: app/src/ui/composer/mod.rs:1521
+#: app/src/ui/composer/mod.rs:1557
 msgid "Schedule"
 msgstr "Schedule"
 
-#: app/src/ui/composer/mod.rs:1554
+#: app/src/ui/composer/mod.rs:1590
 msgid "Draft saved, encrypted to your own key"
 msgstr "Draft saved, encrypted to your own key"
 
-#: app/src/ui/composer/mod.rs:1556
+#: app/src/ui/composer/mod.rs:1592
 msgid "Draft saved"
 msgstr "Draft saved"
 
-#: app/src/ui/composer/mod.rs:1566
+#: app/src/ui/composer/mod.rs:1602
 msgid "Save as Draft?"
 msgstr "Save as Draft?"
 
-#: app/src/ui/composer/mod.rs:1568
+#: app/src/ui/composer/mod.rs:1604
 msgid "The draft is kept in Gmail, so you can finish it later on any device."
 msgstr "The draft is kept in Gmail, so you can finish it later on any device."
 
-#: app/src/ui/composer/mod.rs:1572
+#: app/src/ui/composer/mod.rs:1608
 msgid "Discard"
 msgstr "Discard"
 
-#: app/src/ui/composer/mod.rs:1574
+#: app/src/ui/composer/mod.rs:1610
 msgid "Save Draft"
 msgstr "Save Draft"
 
-#: app/src/ui/composer/mod.rs:1595
+#: app/src/ui/composer/mod.rs:1631
 msgid "Attach Files"
 msgstr "Attach Files"
 
-#: app/src/ui/composer/mod.rs:1631
+#: app/src/ui/composer/mod.rs:1667
 msgid "{files}  ·  {size}"
 msgstr "{files}  ·  {size}"
 
-#: app/src/ui/composer/mod.rs:1713
+#: app/src/ui/composer/mod.rs:1749
 msgid "Bold (Ctrl+B)"
 msgstr "Bold (Ctrl+B)"
 
-#: app/src/ui/composer/mod.rs:1714
+#: app/src/ui/composer/mod.rs:1750
 msgid "Italic (Ctrl+I)"
 msgstr "Italic (Ctrl+I)"
 
-#: app/src/ui/composer/mod.rs:1717
+#: app/src/ui/composer/mod.rs:1753
 msgid "Strikethrough (Ctrl+Shift+X)"
 msgstr "Strikethrough (Ctrl+Shift+X)"
 
-#: app/src/ui/composer/mod.rs:1720
+#: app/src/ui/composer/mod.rs:1756
 msgid "Code (Ctrl+E)"
 msgstr "Code (Ctrl+E)"
 
-#: app/src/ui/composer/mod.rs:1757
+#: app/src/ui/composer/mod.rs:1793
 msgid "Link (Ctrl+K)"
 msgstr "Link (Ctrl+K)"
 
-#: app/src/ui/composer/mod.rs:1767
+#: app/src/ui/composer/mod.rs:1803
 msgid "Bulleted List (Ctrl+Shift+8)"
 msgstr "Bulleted List (Ctrl+Shift+8)"
 
-#: app/src/ui/composer/mod.rs:1772
+#: app/src/ui/composer/mod.rs:1808
 msgid "Numbered List (Ctrl+Shift+7)"
 msgstr "Numbered List (Ctrl+Shift+7)"
 
-#: app/src/ui/composer/mod.rs:1777
+#: app/src/ui/composer/mod.rs:1813
 msgid "Quote (Ctrl+Shift+9)"
 msgstr "Quote (Ctrl+Shift+9)"
 
-#: app/src/ui/composer/mod.rs:1794
+#: app/src/ui/composer/mod.rs:1830
 msgid "Insert Image (Ctrl+Shift+P)"
 msgstr "Insert Image (Ctrl+Shift+P)"
 
-#: app/src/ui/composer/mod.rs:1804
+#: app/src/ui/composer/mod.rs:1840
 msgid "Paragraph"
 msgstr "Paragraph"
 
-#: app/src/ui/composer/mod.rs:1805
+#: app/src/ui/composer/mod.rs:1841
 msgid "Heading 1"
 msgstr "Heading 1"
 
-#: app/src/ui/composer/mod.rs:1806
+#: app/src/ui/composer/mod.rs:1842
 msgid "Heading 2"
 msgstr "Heading 2"
 
-#: app/src/ui/composer/mod.rs:1807
+#: app/src/ui/composer/mod.rs:1843
 msgid "Heading 3"
 msgstr "Heading 3"
 
-#: app/src/ui/composer/mod.rs:1808
+#: app/src/ui/composer/mod.rs:1844
 msgid "Code Block"
 msgstr "Code Block"
 
-#: app/src/ui/composer/mod.rs:1817
+#: app/src/ui/composer/mod.rs:1853
 msgid "Format Markdown"
 msgstr "Format Markdown"
 
-#: app/src/ui/composer/mod.rs:1821
+#: app/src/ui/composer/mod.rs:1857
 msgid "Clear Formatting"
 msgstr "Clear Formatting"
 
-#: app/src/ui/composer/mod.rs:1827
+#: app/src/ui/composer/mod.rs:1863
 msgid "Edit as Markdown"
 msgstr "Edit as Markdown"
 
-#: app/src/ui/composer/mod.rs:1833 app/src/ui/composer/mod.rs:1837
+#: app/src/ui/composer/mod.rs:1869 app/src/ui/composer/mod.rs:1873
 msgid "More Formatting"
 msgstr "More Formatting"
 
-#: app/src/ui/composer/mod.rs:1874
+#: app/src/ui/composer/mod.rs:1910
 msgid "Add a Link"
 msgstr "Add a Link"
 
-#: app/src/ui/composer/mod.rs:1880
+#: app/src/ui/composer/mod.rs:1916
 msgid "Text"
 msgstr "Text"
 
-#: app/src/ui/composer/mod.rs:1892
+#: app/src/ui/composer/mod.rs:1928
 msgid "Add Link"
 msgstr "Add Link"
 
-#: app/src/ui/composer/mod.rs:1928
+#: app/src/ui/composer/mod.rs:1964
 msgid "Markdown formatted"
 msgstr "Markdown formatted"
 
-#: app/src/ui/composer/mod.rs:2044
+#: app/src/ui/composer/mod.rs:2080
 msgid "Pasted as rich text"
 msgstr "Pasted as rich text"
 
-#: app/src/ui/composer/mod.rs:2045
+#: app/src/ui/composer/mod.rs:2081
 msgid "Paste as Plain Text"
 msgstr "Paste as Plain Text"
 
-#: app/src/ui/composer/mod.rs:2079
+#: app/src/ui/composer/mod.rs:2115
 msgid "Editing as Markdown"
 msgstr "Editing as Markdown"
 
-#: app/src/ui/composer/mod.rs:2105
+#: app/src/ui/composer/mod.rs:2141
 msgid "Images"
 msgstr "Images"
 
-#: app/src/ui/composer/mod.rs:2110
+#: app/src/ui/composer/mod.rs:2146
 msgid "Insert Image"
 msgstr "Insert Image"
 
-#: app/src/ui/composer/mod.rs:2153
+#: app/src/ui/composer/mod.rs:2189
 msgid "Could not read the file: {reason}"
 msgstr "Could not read the file: {reason}"
 
-#: app/src/ui/composer/mod.rs:2218
+#: app/src/ui/composer/mod.rs:2254
 msgid "Could not paste the image"
 msgstr "Could not paste the image"
 
-#: app/src/ui/composer/mod.rs:2263
+#: app/src/ui/composer/mod.rs:2299
 msgid "No Templates Yet"
 msgstr "No Templates Yet"
 
-#: app/src/ui/composer/mod.rs:2313
+#: app/src/ui/composer/mod.rs:2349
 msgid "Save as Template"
 msgstr "Save as Template"
 
-#: app/src/ui/composer/mod.rs:2315
+#: app/src/ui/composer/mod.rs:2351
 msgid "Placeholders such as {{first_name}} fill in each time you use it."
 msgstr "Placeholders such as {{first_name}} fill in each time you use it."
 
-#: app/src/ui/composer/mod.rs:2338 app/src/ui/templates.rs:280
+#: app/src/ui/composer/mod.rs:2374 app/src/ui/templates.rs:280
 msgid "Give the template a name"
 msgstr "Give the template a name"
 
-#: app/src/ui/composer/mod.rs:2346
+#: app/src/ui/composer/mod.rs:2382
 msgid "Template saved"
 msgstr "Template saved"
 
-#: app/src/ui/composer/mod.rs:2349
+#: app/src/ui/composer/mod.rs:2385
 msgid "Template not saved: {reason}"
 msgstr "Template not saved: {reason}"
 
-#: app/src/ui/composer/mod.rs:2419
+#: app/src/ui/composer/mod.rs:2455
 msgid "This looks like Markdown"
 msgstr "This looks like Markdown"
 
-#: app/src/ui/composer/mod.rs:2425
+#: app/src/ui/composer/mod.rs:2461
 msgid "Format"
 msgstr "Format"
 
-#: app/src/ui/composer/mod.rs:2426
+#: app/src/ui/composer/mod.rs:2462
 msgid "Turn the Markdown into rich text"
 msgstr "Turn the Markdown into rich text"
 
-#: app/src/ui/composer/mod.rs:2432 app/src/ui/composer/mod.rs:2436
+#: app/src/ui/composer/mod.rs:2468 app/src/ui/composer/mod.rs:2472
 msgid "Dismiss"
 msgstr "Dismiss"
 
