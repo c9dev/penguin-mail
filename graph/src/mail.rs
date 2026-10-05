@@ -562,9 +562,15 @@ impl Graph {
         message: &str,
         name: &str,
         size: u64,
+        is_inline: bool,
+        content_id: Option<&str>,
     ) -> Result<String, GraphError> {
-        let body =
-            json!({ "AttachmentItem": { "attachmentType": "file", "name": name, "size": size } });
+        let mut item =
+            json!({ "attachmentType": "file", "name": name, "size": size, "isInline": is_inline });
+        if let Some(id) = content_id {
+            item["contentId"] = json!(id);
+        }
+        let body = json!({ "AttachmentItem": item });
         let answer: Value = self
             .send(
                 Method::Post,

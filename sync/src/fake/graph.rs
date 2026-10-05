@@ -84,6 +84,8 @@ pub struct Upload {
     pub message: String,
     pub name: String,
     pub size: u64,
+    pub is_inline: bool,
+    pub content_id: Option<String>,
     pub bytes: Vec<u8>,
 }
 
@@ -430,8 +432,8 @@ impl GraphApi for FakeGraph {
         self.with(|s| mail::create_draft(s, draft))
     }
 
-    async fn upload_session(&self, message: &str, name: &str, size: u64) -> Answer<String> {
-        self.with(|s| mail::upload_session(s, message, name, size))
+    async fn upload_session(&self, message: &str, name: &str, size: u64, is_inline: bool, content_id: Option<&str>) -> Answer<String> {
+        self.with(|s| mail::upload_session(s, message, name, size, is_inline, content_id))
     }
 
     async fn upload_chunk(&self, url: &str, offset: u64, total: u64, bytes: &[u8]) -> Answer<bool> {

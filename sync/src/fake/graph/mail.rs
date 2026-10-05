@@ -573,6 +573,9 @@ pub(super) fn create_draft(s: &mut GraphState, draft: &Value) -> Answer<Message>
         .from(s.me.as_str())
         .subject(draft["subject"].as_str().unwrap_or_default())
         .text_body(draft["body"]["content"].as_str().unwrap_or_default());
+    if let Some(id) = draft["internetMessageId"].as_str() {
+        builder = builder.message_id(id.trim_matches(['<', '>']));
+    }
     for to in draft["toRecipients"].as_array().into_iter().flatten() {
         if let Some(address) = to["emailAddress"]["address"].as_str() {
             builder = builder.to(address);
@@ -582,14 +585,28 @@ pub(super) fn create_draft(s: &mut GraphState, draft: &Value) -> Answer<Message>
     draft_message(s, raw)
 }
 
-pub(super) fn upload_session(s: &mut GraphState, message: &str, name: &str, size: u64) -> Answer<String> {
+pub(super) fn upload_session(
+    s: &mut GraphState,
+    message: &str,
+    name: &str,
+    size: u64,
+    is_inline: bool,
+    content_id: Option<&str>,
+) -> Answer<String> {
     s.refuses(Area::Mail)?;
     held(s, message)?;
     s.next_id += 1;
     let url = format!("fake:upload:{}", s.next_id);
     s.uploads.insert(
         url.clone(),
-        Upload { message: message.into(), name: name.into(), size, bytes: Vec::new() },
+        Upload {
+            message: message.into(),
+            name: name.into(),
+            size,
+            is_inline,
+            content_id: content_id.map(str::to_string),
+            bytes: Vec::new(),
+        },
     );
     Ok(url)
 }
@@ -611,7 +628,8 @@ pub(super) fn upload_chunk(s: &mut GraphState, url: &str, offset: u64, total: u6
         name: done.name,
         content_type: "application/octet-stream".into(),
         size: done.bytes.len() as i64,
-        ..AttachmentInfo::default()
+        is_inline: done.is_inline,
+        content_id: done.content_id,
     };
     held.files.push((info, done.bytes));
     held.message.has_attachments = Some(true);
@@ -776,7 +794,7 @@ mod tests {
     async fn an_upload_in_pieces_adds_the_file_to_the_draft() {
         let fake = FakeGraph::new();
         let draft = fake.create_draft(&serde_json::json!({"subject": "With file"})).await.unwrap();
-        let url = fake.upload_session(&draft.id, "a.txt", 4).await.unwrap();
+        let url = fake.upload_session(&draft.id, "a.txt", 4, false, None).await.unwrap();
         assert!(!fake.upload_chunk(&url, 0, 4, b"ab").await.unwrap());
         assert!(fake.upload_chunk(&url, 1, 4, b"cd").await.is_err(), "a gap is refused");
         assert!(fake.upload_chunk(&url, 2, 4, b"cd").await.unwrap());
