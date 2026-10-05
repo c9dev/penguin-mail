@@ -24,6 +24,7 @@ use mailrs_domain::invitation::Answer;
 use mailrs_domain::translate::{fill, gettext};
 
 use super::attachments;
+use super::block::BlockButton;
 use super::draft;
 use super::kinds;
 use super::shown::{self, Refocus};
@@ -568,7 +569,7 @@ impl EventPopover {
         // popover's own realize finds, rather than per `show`.
         let outside = gtk::GestureClick::builder().propagation_phase(gtk::PropagationPhase::Capture).build();
         let weak = Rc::downgrade(&this);
-        outside.connect_pressed(move |gesture, _, _, _| {
+        outside.connect_pressed(move |gesture, _, x, y| {
             let Some(this) = weak.upgrade() else { return };
             // The popover draws on a surface of its own. Under GNOME Shell
             // on Wayland a press there never reaches this gesture, and the
@@ -577,9 +578,20 @@ impl EventPopover {
             // lies under the popover instead, such as a label in the grid.
             let pressed_on = gesture.current_event().and_then(|event| event.surface());
             let inside = pressed_on.is_some_and(|surface| this.popover.surface().as_ref() == Some(&surface));
-            if !inside {
-                this.popover.popdown();
+            if inside {
+                return;
             }
+            // The press is outside, so picking its point finds the widget
+            // it would reach. Claiming it here, in the capture phase,
+            // keeps it and its release from every widget below.
+            let on_event = gesture
+                .widget()
+                .and_then(|root| root.pick(x, y, gtk::PickFlags::DEFAULT))
+                .is_some_and(|picked| picked.ancestor(BlockButton::static_type()).is_some());
+            if !shown::press_goes_on(on_event) {
+                gesture.set_state(gtk::EventSequenceState::Claimed);
+            }
+            this.popover.popdown();
         });
         let weak = Rc::downgrade(&this);
         this.popover.connect_realize(move |popover| {
