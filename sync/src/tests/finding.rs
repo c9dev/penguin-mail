@@ -1,13 +1,13 @@
 //! Finding the servers beside mail, with a network and a probe held in
 //! memory.
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::sync::Mutex;
 
 use mailrs_dav::Kind;
 use mailrs_discover::fake::FakeNet;
 use mailrs_sieve::script::Extensions;
-use mailrs_store::services::{self, ServiceKind};
+use mailrs_store::services::{self, Miss, ServiceKind};
 
 use crate::services::finding::{ServiceProbe, confirm_found, find_services, keep_found, use_typed};
 use crate::BackendError;
@@ -38,7 +38,7 @@ impl ServiceProbe for Probe {
 #[tokio::test]
 async fn a_table_provider_is_found_with_the_user_name_that_works() {
     let probe = Probe {
-        open: [("https://caldav.fastmail.com/".to_string(), "me@fastmail.com".to_string())].into(),
+        open: [("https://caldav.fastmail.com/dav/calendars".to_string(), "me@fastmail.com".to_string())].into(),
         ..Probe::default()
     };
     let found = find_services(&FakeNet::default(), &probe, "me@fastmail.com", "Fastmail", "imap.fastmail.com", "me", "pw").await;
@@ -98,4 +98,75 @@ async fn saying_yes_probes_then_confirms() {
     confirm_found(&probe, &db.0, account_id, ServiceKind::CardDav, "pw").await.unwrap();
     let kept = db.0.read(move |c| services::load(c, account_id)).await.unwrap();
     assert!(kept[0].confirmed);
+}
+
+/// Answers each user name's try with its own error.
+struct Failing(HashMap<&'static str, BackendError>);
+
+impl ServiceProbe for Failing {
+    async fn dav(&self, _url: &str, user: &str, _password: &str, _kind: Kind) -> Result<(), BackendError> {
+        Err(self.0.get(user).cloned().unwrap_or(BackendError::Unsupported))
+    }
+
+    async fn sieve(&self, _host: &str, _port: u16, _user: &str, _password: &str) -> Result<Extensions, BackendError> {
+        Err(BackendError::Offline("closed".into()))
+    }
+}
+
+async fn missed_with(errors: [(&'static str, BackendError); 2]) -> Option<Miss> {
+    let probe = Failing(errors.into_iter().collect());
+    find_services(&FakeNet::default(), &probe, "me@fastmail.com", "Fastmail", "imap.fastmail.com", "me", "pw").await.caldav_missed
+}
+
+#[tokio::test]
+async fn a_refused_login_is_why_nothing_was_found_over_no_answer() {
+    let missed = missed_with([("me", BackendError::NeedsReauth), ("me@fastmail.com", BackendError::Offline("down".into()))]).await;
+    assert_eq!(missed, Some(Miss::Refused));
+}
+
+#[tokio::test]
+async fn nothing_found_is_why_over_no_answer() {
+    let missed = missed_with([("me", BackendError::Offline("down".into())), ("me@fastmail.com", BackendError::Unsupported)]).await;
+    assert_eq!(missed, Some(Miss::NotFound));
+}
+
+#[tokio::test]
+async fn no_answer_anywhere_is_why() {
+    let down = || BackendError::Offline("down".into());
+    let missed = missed_with([("me", down()), ("me@fastmail.com", down())]).await;
+    assert_eq!(missed, Some(Miss::Unreachable));
+}
+
+#[tokio::test]
+async fn no_place_to_look_is_nothing_found() {
+    let found = find_services(&FakeNet::default(), &Probe::default(), "me@example.org", "example.org", "mail.example.org", "me", "pw").await;
+    assert_eq!(found.caldav, None);
+    assert_eq!(found.carddav_missed, Some(Miss::NotFound));
+}
+
+#[tokio::test]
+async fn a_found_server_has_no_miss() {
+    let probe = Probe {
+        open: [("https://caldav.fastmail.com/dav/calendars".to_string(), "me".to_string())].into(),
+        ..Probe::default()
+    };
+    let found = find_services(&FakeNet::default(), &probe, "me@fastmail.com", "Fastmail", "imap.fastmail.com", "me", "pw").await;
+    assert!(found.caldav.is_some());
+    assert_eq!(found.caldav_missed, None);
+}
+
+#[tokio::test]
+async fn the_store_keeps_why_until_a_server_is_found() {
+    let db = crate::tests::store_with_imap_account().await;
+    let account_id = db.1;
+    let missed = crate::services::finding::FoundServices { caldav_missed: Some(Miss::Refused), ..Default::default() };
+    keep_found(&db.0, account_id, &missed).await.unwrap();
+    let kept = db.0.read(services::all_misses).await.unwrap();
+    assert_eq!(kept, [(account_id, ServiceKind::CalDav, Miss::Refused)]);
+    let found = crate::services::finding::FoundServices {
+        caldav: Some(services::FoundService { kind: ServiceKind::CalDav, url: "https://dav.example.org/".into(), user_name: "me".into(), confirmed: true, source: "table".into() }),
+        ..Default::default()
+    };
+    keep_found(&db.0, account_id, &found).await.unwrap();
+    assert!(db.0.read(services::all_misses).await.unwrap().is_empty());
 }

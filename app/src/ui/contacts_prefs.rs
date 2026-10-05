@@ -8,7 +8,7 @@ use adw::prelude::*;
 use mailrs_domain::translate::{fill, gettext};
 use gtk::glib;
 use mailrs_domain::{Account, AccountId, Provider};
-use mailrs_store::services::ServiceKind;
+use mailrs_store::services::{Miss, ServiceKind};
 use mailrs_sync::{Missing, Offers, Withheld};
 
 use crate::app::App;
@@ -33,7 +33,8 @@ pub fn page(
         .name("contacts")
         .build();
     page.add(&contacts(app, settings, accounts, &withheld, grant.clone()));
-    page.add(&calendar(accounts, &withheld, grant, calendar_rows));
+    let missed = |id, missing| app.core.missed(id, missing);
+    page.add(&calendar(accounts, &withheld, &missed, grant, calendar_rows));
     if let Some(group) = servers(app, accounts) {
         page.add(&group);
     }
@@ -171,7 +172,7 @@ fn contacts(
         );
     }
     for (account, offers) in accounts {
-        match contacts_row(account, *offers, withheld(account.id)) {
+        match contacts_row(account, *offers, withheld(account.id), app.core.missed(account.id, Missing::Contacts)) {
             ContactsRow::Withheld => {
                 group.add(&grant_access_row(account, grant.clone()));
             }
@@ -209,9 +210,9 @@ fn contacts(
 /// The subtitle of `account`'s contacts switch, and whether the switch
 /// works: it does not on a server that keeps no contacts, and then the
 /// subtitle says why.
-fn contacts_row(account: &Account, offers: Offers, withheld: Withheld) -> ContactsRow {
+fn contacts_row(account: &Account, offers: Offers, withheld: Withheld, missed: Option<Miss>) -> ContactsRow {
     if !offers.contacts {
-        return ContactsRow::NotOffered(reason(account, Missing::Contacts));
+        return ContactsRow::NotOffered(reason(account, Missing::Contacts, missed));
     }
     if withheld.contacts {
         return ContactsRow::Withheld;
@@ -240,6 +241,7 @@ enum CalendarRow {
 fn calendar(
     accounts: &[(Account, Offers)],
     withheld: &impl Fn(AccountId) -> Withheld,
+    missed: &impl Fn(AccountId, Missing) -> Option<Miss>,
     grant: impl Fn(AccountId) + Clone + 'static,
     settings_rows: &[gtk::Widget],
 ) -> adw::PreferencesGroup {
@@ -257,7 +259,7 @@ fn calendar(
     }
     let mut online_accounts = true;
     for (account, offers) in accounts {
-        match calendar_lack(account, *offers, withheld(account.id)) {
+        match calendar_lack(account, *offers, withheld(account.id), missed(account.id, Missing::Calendar)) {
             CalendarRow::NotOffered(lack) => {
                 group.add(
                     &adw::ActionRow::builder()
@@ -312,9 +314,9 @@ fn calendar(
 
 /// Why `account`'s calendar row is not the Online Accounts row: the
 /// server has none, or the person's own consent withheld it.
-fn calendar_lack(account: &Account, offers: Offers, withheld: Withheld) -> CalendarRow {
+fn calendar_lack(account: &Account, offers: Offers, withheld: Withheld, missed: Option<Miss>) -> CalendarRow {
     if !offers.calendar {
-        return CalendarRow::NotOffered(reason(account, Missing::Calendar));
+        return CalendarRow::NotOffered(reason(account, Missing::Calendar, missed));
     }
     if withheld.calendar || withheld.calendar_list {
         return CalendarRow::Withheld;
@@ -366,11 +368,11 @@ mod tests {
     #[test]
     fn a_granted_account_switches_its_contacts_as_before() {
         assert_eq!(
-            contacts_row(&account(), Offers::EVERYTHING, Withheld::NONE),
+            contacts_row(&account(), Offers::EVERYTHING, Withheld::NONE, None),
             ContactsRow::Switch
         );
         assert_eq!(
-            calendar_lack(&account(), Offers::EVERYTHING, Withheld::NONE),
+            calendar_lack(&account(), Offers::EVERYTHING, Withheld::NONE, None),
             CalendarRow::Available
         );
     }
@@ -383,12 +385,12 @@ mod tests {
             ..Offers::EVERYTHING
         };
         assert_eq!(
-            contacts_row(&account(), bare, Withheld::NONE),
-            ContactsRow::NotOffered(reason(&account(), Missing::Contacts))
+            contacts_row(&account(), bare, Withheld::NONE, None),
+            ContactsRow::NotOffered(reason(&account(), Missing::Contacts, None))
         );
         assert_eq!(
-            calendar_lack(&account(), bare, Withheld::NONE),
-            CalendarRow::NotOffered(reason(&account(), Missing::Calendar))
+            calendar_lack(&account(), bare, Withheld::NONE, None),
+            CalendarRow::NotOffered(reason(&account(), Missing::Calendar, None))
         );
     }
 
@@ -396,17 +398,17 @@ mod tests {
     fn a_withheld_account_gets_a_grant_access_row() {
         let withheld_contacts = Withheld { contacts: true, ..Withheld::NONE };
         assert_eq!(
-            contacts_row(&account(), Offers::EVERYTHING, withheld_contacts),
+            contacts_row(&account(), Offers::EVERYTHING, withheld_contacts, None),
             ContactsRow::Withheld
         );
         let withheld_calendar = Withheld { calendar: true, ..Withheld::NONE };
         assert_eq!(
-            calendar_lack(&account(), Offers::EVERYTHING, withheld_calendar),
+            calendar_lack(&account(), Offers::EVERYTHING, withheld_calendar, None),
             CalendarRow::Withheld
         );
         let withheld_list = Withheld { calendar_list: true, ..Withheld::NONE };
         assert_eq!(
-            calendar_lack(&account(), Offers::EVERYTHING, withheld_list),
+            calendar_lack(&account(), Offers::EVERYTHING, withheld_list, None),
             CalendarRow::Withheld
         );
     }

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use mailrs_dav::{DavClient, Login as DavLogin};
+use mailrs_dav::{DavClient, Kind as DavKind, Login as DavLogin};
 use mailrs_discover::{Security, Server, UserName};
 use mailrs_domain::{Account, AccountState};
 use mailrs_gmail::{Granted, GmailClient, GmailError, OAuthClient, TokenStore};
@@ -254,10 +254,12 @@ fn attach_pop3(
     account: &Account,
 ) -> AccountServices {
     let id = account.id;
-    if service.kind == ServiceKind::Sieve {
-        return services;
-    }
-    let client = match DavClient::new(&service.url, DavLogin::new(&service.user_name, secret)) {
+    let kind = match service.kind {
+        ServiceKind::CalDav => DavKind::Calendar,
+        ServiceKind::CardDav => DavKind::AddressBook,
+        ServiceKind::Sieve => return services,
+    };
+    let client = match DavClient::new(&service.url, kind, DavLogin::new(&service.user_name, secret)) {
         Ok(client) => Arc::new(client),
         Err(err) => {
             tracing::warn!(account = id, %err, "could not set up a calendar or contacts server");
@@ -293,7 +295,7 @@ fn attach(
             let Some(mail) = services.imap_adapter() else {
                 return services;
             };
-            match DavClient::new(&service.url, DavLogin::new(&service.user_name, secret)) {
+            match DavClient::new(&service.url, DavKind::Calendar, DavLogin::new(&service.user_name, secret)) {
                 Ok(client) => {
                     let calendar = CalDav::new(Arc::new(client), mail, vec![account.email.clone()]);
                     services.with_calendar(AnyCalendar::Dav(calendar))
@@ -305,7 +307,7 @@ fn attach(
             }
         }
         ServiceKind::CardDav => {
-            match DavClient::new(&service.url, DavLogin::new(&service.user_name, secret)) {
+            match DavClient::new(&service.url, DavKind::AddressBook, DavLogin::new(&service.user_name, secret)) {
                 Ok(client) => services.with_contacts(AnyContacts::Dav(CardDav::new(Arc::new(client)))),
                 Err(err) => {
                     tracing::warn!(account = id, %err, "could not set up the contacts server");

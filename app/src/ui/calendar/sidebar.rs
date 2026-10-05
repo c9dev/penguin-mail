@@ -14,6 +14,7 @@ use mailrs_domain::calendar::Calendar;
 use mailrs_domain::calendar::list;
 use mailrs_domain::translate::{date_locale, fill, fill_plural, gettext};
 use mailrs_domain::{Account, AccountId, EpochMillis};
+use mailrs_store::services::Miss;
 use mailrs_sync::{Missing, Offers, Waiting, Withheld};
 
 use super::range::{Range, ViewKind};
@@ -60,12 +61,17 @@ pub struct SidebarAccount {
 /// account before it starts.
 pub fn sidebar_accounts(
     accounts: &[(Account, Offers, Withheld, Vec<Calendar>)],
+    missed: impl Fn(AccountId) -> Option<Miss>,
 ) -> Vec<SidebarAccount> {
     accounts
         .iter()
         .map(|(account, offers, withheld, calendars)| {
             let reach = if !offers.calendar {
-                CalendarReach::NotOffered(crate::offered::reason(account, Missing::Calendar))
+                CalendarReach::NotOffered(crate::offered::reason(
+                    account,
+                    Missing::Calendar,
+                    missed(account.id),
+                ))
             } else if withheld.calendar {
                 CalendarReach::Withheld
             } else if withheld.calendar_list {
@@ -1373,7 +1379,7 @@ mod tests {
             Offers::EVERYTHING,
             Withheld::NONE,
             vec![calendar("primary"), calendar("team")],
-        )]);
+        )], |_| None);
         assert_eq!(
             rows,
             vec![SidebarAccount {
@@ -1397,7 +1403,7 @@ mod tests {
             Offers::EVERYTHING,
             withheld,
             vec![calendar("primary")],
-        )]);
+        )], |_| None);
         assert_eq!(rows[0].reach, CalendarReach::Withheld);
     }
 
@@ -1412,7 +1418,7 @@ mod tests {
             Offers::EVERYTHING,
             withheld,
             vec![calendar("primary")],
-        )]);
+        )], |_| None);
         assert_eq!(
             rows[0].reach,
             CalendarReach::PrimaryOnly(vec![calendar("primary")])
@@ -1430,12 +1436,13 @@ mod tests {
             offers,
             Withheld::NONE,
             Vec::new(),
-        )]);
+        )], |_| None);
         assert_eq!(
             rows[0].reach,
             CalendarReach::NotOffered(crate::offered::reason(
                 &imap(1, "dana@fastmail.example"),
-                Missing::Calendar
+                Missing::Calendar,
+                None
             ))
         );
     }
@@ -1447,7 +1454,7 @@ mod tests {
             crate::offered::offers_for(None),
             crate::offered::withheld_for(None),
             Vec::new(),
-        )]);
+        )], |_| None);
         assert_eq!(rows[0].reach, CalendarReach::Calendars(Vec::new()));
     }
 
@@ -1467,7 +1474,7 @@ mod tests {
             Offers::EVERYTHING,
             Withheld::NONE,
             vec![calendar("primary"), calendar("holidays")],
-        )]);
+        )], |_| None);
         let unlisted = HashMap::from([(1, HashSet::from(["holidays".to_string()]))]);
         let rows = take_off_the_list(rows, &unlisted);
         assert_eq!(listed_ids(&rows[0].reach), vec!["primary"]);
@@ -1481,7 +1488,7 @@ mod tests {
             Offers::EVERYTHING,
             Withheld::NONE,
             vec![calendar("primary")],
-        )]);
+        )], |_| None);
         let rows = take_off_the_list(rows, &HashMap::new());
         assert_eq!(listed_ids(&rows[0].reach), vec!["primary"]);
         assert!(rows[0].hidden.is_empty());
@@ -1492,7 +1499,7 @@ mod tests {
         let rows = sidebar_accounts(&[
             (account(1, "dana@example.com"), Offers::EVERYTHING, Withheld::NONE, vec![calendar("a")]),
             (account(2, "d.reyes@uni.example"), Offers::EVERYTHING, Withheld::NONE, vec![calendar("b")]),
-        ]);
+        ], |_| None);
         let unlisted = HashMap::from([
             (1, HashSet::from(["a".to_string()])),
             (2, HashSet::from(["b".to_string()])),
@@ -1508,7 +1515,7 @@ mod tests {
             Offers::EVERYTHING,
             Withheld::NONE,
             vec![calendar("primary")],
-        )]);
+        )], |_| None);
         let rows = take_off_the_list(rows, &HashMap::from([(1, HashSet::from(["primary".to_string()]))]));
         assert!(!shows_heading(&rows[0]));
         assert_eq!(hidden_count(&rows), 1, "Hidden Calendars still brings it back");
@@ -1521,14 +1528,14 @@ mod tests {
             Offers::EVERYTHING,
             Withheld::NONE,
             vec![calendar("primary"), calendar("team")],
-        )]);
+        )], |_| None);
         let rows = take_off_the_list(rows, &HashMap::from([(1, HashSet::from(["team".to_string()]))]));
         assert!(shows_heading(&rows[0]));
     }
 
     #[test]
     fn an_account_not_synced_yet_keeps_its_heading() {
-        let rows = sidebar_accounts(&[(account(1, "dana@example.com"), Offers::EVERYTHING, Withheld::NONE, Vec::new())]);
+        let rows = sidebar_accounts(&[(account(1, "dana@example.com"), Offers::EVERYTHING, Withheld::NONE, Vec::new())], |_| None);
         assert!(shows_heading(&rows[0]));
     }
 
@@ -1577,7 +1584,7 @@ mod tests {
         let rows = sidebar_accounts(&[
             (account(1, "dana@example.com"), Offers::EVERYTHING, Withheld::NONE, vec![calendar("primary")]),
             (account(2, "ana@outlook.example"), fixed, Withheld::NONE, vec![calendar("primary")]),
-        ]);
+        ], |_| None);
         assert_eq!(adding_accounts(&rows), [(1, "dana@example.com".to_string())]);
     }
 
@@ -1593,7 +1600,7 @@ mod tests {
             ),
             (account(3, "no@example.com"), Offers::EVERYTHING, Withheld { calendar: true, ..Withheld::NONE }, vec![]),
             (imap(4, "imap@example.com"), Offers { calendar: false, ..Offers::EVERYTHING }, Withheld::NONE, vec![]),
-        ]);
+        ], |_| None);
         assert_eq!(
             adding_accounts(&rows),
             [(1, "dana@example.com".to_string()), (2, "old@example.com".to_string())]

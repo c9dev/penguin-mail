@@ -840,6 +840,17 @@ UPDATE pop3_failures SET reason = 'too_large', last_error = ''
     WHERE last_error IN ('The message is larger than Penguin Mail downloads.',
                          'A mensagem é maior do que o Penguin Mail transfere.');
 "#,
+    // Why the last search found no calendar or contacts server for an
+    // account: the server refused the login, nothing answered as one, or
+    // nothing could be reached. Preferences words its line by it.
+    r#"
+CREATE TABLE service_misses (
+    account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    service    TEXT NOT NULL CHECK (service IN ('caldav', 'carddav')),
+    reason     TEXT NOT NULL CHECK (reason IN ('refused', 'not_found', 'unreachable')),
+    PRIMARY KEY (account_id, service)
+);
+"#,
 ];
 
 /// How long the copy taken before a migration stays once the store has

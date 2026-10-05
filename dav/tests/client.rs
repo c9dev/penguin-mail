@@ -14,7 +14,11 @@ fn multistatus(body: String) -> ResponseTemplate {
 }
 
 fn client(server: &MockServer) -> DavClient {
-    DavClient::over(url::Url::parse(&server.uri()).unwrap(), Login::new("me", "pw")).unwrap()
+    client_of(server, Kind::Calendar)
+}
+
+fn client_of(server: &MockServer, kind: Kind) -> DavClient {
+    DavClient::over(url::Url::parse(&server.uri()).unwrap(), kind, Login::new("me", "pw")).unwrap()
 }
 
 #[tokio::test]
@@ -104,7 +108,7 @@ async fn an_answer_past_the_limit_is_refused_without_reading_it_whole() {
 
 #[test]
 fn a_plain_http_context_is_refused() {
-    assert!(DavClient::new("http://dav.example.org/", Login::new("me", "pw")).is_err());
+    assert!(DavClient::new("http://dav.example.org/", Kind::Calendar, Login::new("me", "pw")).is_err());
 }
 
 #[test]
@@ -237,4 +241,132 @@ async fn a_request_for_an_href_with_a_space_or_an_at_sign_is_encoded_on_the_wire
     let fetched = dav.get("/me@example.test/my work/a b.ics").await.unwrap();
     dav.get("/me%40example.test/my%20work/a%20b.ics").await.unwrap();
     assert_eq!(fetched.href, format!("{}/me@example.test/my work/a b.ics", server.uri()));
+}
+
+fn principal_answer(at: &str, principal: &str) -> ResponseTemplate {
+    multistatus(format!(
+        r#"<?xml version="1.0"?><d:multistatus xmlns:d="DAV:"><d:response><d:href>{at}</d:href>
+<d:propstat><d:prop><d:current-user-principal><d:href>{principal}</d:href></d:current-user-principal></d:prop>
+<d:status>HTTP/1.1 200 OK</d:status></d:propstat></d:response></d:multistatus>"#
+    ))
+}
+
+fn homes_answer(principal: &str) -> ResponseTemplate {
+    multistatus(format!(
+        r#"<?xml version="1.0"?><d:multistatus xmlns:d="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav" xmlns:CR="urn:ietf:params:xml:ns:carddav">
+<d:response><d:href>{principal}</d:href><d:propstat><d:prop>
+<C:calendar-home-set><d:href>/dav/calendars/user/me/</d:href></C:calendar-home-set>
+<CR:addressbook-home-set><d:href>/dav/addressbooks/user/me/</d:href></CR:addressbook-home-set>
+</d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat></d:response></d:multistatus>"#
+    ))
+}
+
+/// Fastmail's shape: the host's root answers 404, and
+/// `/.well-known/caldav` redirects to the DAV tree, which knows the
+/// principal once the login is in.
+async fn fastmail_like(server: &MockServer, service: &str, tree: &str) {
+    Mock::given(method("PROPFIND")).and(path("/")).respond_with(ResponseTemplate::new(404)).mount(server).await;
+    Mock::given(method("PROPFIND")).and(path(format!("/.well-known/{service}")))
+        .respond_with(ResponseTemplate::new(301).insert_header("Location", tree)).mount(server).await;
+    Mock::given(method("PROPFIND")).and(path(tree)).and(header("Depth", "0"))
+        .respond_with(principal_answer(tree, "/dav/principals/user/me/")).mount(server).await;
+    Mock::given(method("PROPFIND")).and(path("/dav/principals/user/me/"))
+        .respond_with(homes_answer("/dav/principals/user/me/")).mount(server).await;
+}
+
+#[tokio::test]
+async fn a_root_that_answers_404_finds_the_principal_through_the_well_known_url() {
+    let server = MockServer::start().await;
+    fastmail_like(&server, "caldav", "/dav/calendars").await;
+    let homes = client_of(&server, Kind::Calendar).homes().await.unwrap();
+    assert_eq!(homes.principal, "/dav/principals/user/me/");
+    assert_eq!(homes.calendar.as_deref(), Some("/dav/calendars/user/me/"));
+}
+
+#[tokio::test]
+async fn an_address_book_client_asks_the_carddav_well_known_url() {
+    let server = MockServer::start().await;
+    fastmail_like(&server, "carddav", "/dav/addressbooks").await;
+    let homes = client_of(&server, Kind::AddressBook).homes().await.unwrap();
+    assert_eq!(homes.addressbook.as_deref(), Some("/dav/addressbooks/user/me/"));
+}
+
+#[tokio::test]
+async fn the_well_known_url_gets_the_password_on_the_same_site() {
+    let server = MockServer::start().await;
+    fastmail_like(&server, "caldav", "/dav/calendars").await;
+    client_of(&server, Kind::Calendar).homes().await.unwrap();
+    let seen = server.received_requests().await.unwrap();
+    let tree = seen.iter().find(|r| r.url.path() == "/dav/calendars").expect("the redirect was followed");
+    assert!(tree.headers.contains_key("authorization"));
+}
+
+#[tokio::test]
+async fn a_refused_login_at_the_well_known_url_is_unauthorized() {
+    let server = MockServer::start().await;
+    Mock::given(method("PROPFIND")).and(path("/")).respond_with(ResponseTemplate::new(404)).mount(&server).await;
+    Mock::given(method("PROPFIND")).and(path("/.well-known/caldav"))
+        .respond_with(ResponseTemplate::new(301).insert_header("Location", "/dav/calendars")).mount(&server).await;
+    Mock::given(method("PROPFIND")).and(path("/dav/calendars")).respond_with(ResponseTemplate::new(401)).mount(&server).await;
+    let refused = client(&server).homes().await.unwrap_err();
+    assert!(matches!(refused, DavError::Unauthorized), "{refused:?}");
+}
+
+#[tokio::test]
+async fn a_root_without_a_principal_tries_the_well_known_url() {
+    let server = MockServer::start().await;
+    Mock::given(method("PROPFIND")).and(path("/"))
+        .respond_with(multistatus(r#"<d:multistatus xmlns:d="DAV:"/>"#.into())).mount(&server).await;
+    Mock::given(method("PROPFIND")).and(path("/.well-known/caldav"))
+        .respond_with(principal_answer("/.well-known/caldav", "/dav/principals/user/me/")).mount(&server).await;
+    Mock::given(method("PROPFIND")).and(path("/dav/principals/user/me/"))
+        .respond_with(homes_answer("/dav/principals/user/me/")).mount(&server).await;
+    assert!(client(&server).homes().await.unwrap().calendar.is_some());
+}
+
+#[tokio::test]
+async fn a_root_that_answers_501_tries_the_well_known_url() {
+    let server = MockServer::start().await;
+    Mock::given(method("PROPFIND")).and(path("/")).respond_with(ResponseTemplate::new(501)).mount(&server).await;
+    Mock::given(method("PROPFIND")).and(path("/.well-known/caldav"))
+        .respond_with(principal_answer("/.well-known/caldav", "/dav/principals/user/me/")).mount(&server).await;
+    Mock::given(method("PROPFIND")).and(path("/dav/principals/user/me/"))
+        .respond_with(homes_answer("/dav/principals/user/me/")).mount(&server).await;
+    assert!(client(&server).homes().await.unwrap().calendar.is_some());
+}
+
+#[tokio::test]
+async fn a_refused_login_at_the_root_asks_nothing_more() {
+    let server = MockServer::start().await;
+    Mock::given(method("PROPFIND")).respond_with(ResponseTemplate::new(401)).mount(&server).await;
+    let refused = client(&server).homes().await.unwrap_err();
+    assert!(matches!(refused, DavError::Unauthorized), "{refused:?}");
+    assert_eq!(server.received_requests().await.unwrap().len(), 1);
+}
+
+#[tokio::test]
+async fn nothing_at_the_root_or_the_well_known_url_is_not_found() {
+    let server = MockServer::start().await;
+    Mock::given(method("PROPFIND")).respond_with(ResponseTemplate::new(404)).mount(&server).await;
+    let missing = client(&server).homes().await.unwrap_err();
+    assert!(matches!(missing, DavError::NotFound), "{missing:?}");
+}
+
+#[tokio::test]
+async fn a_principal_on_another_host_of_the_site_is_asked_there() {
+    let origin = MockServer::start().await;
+    let other = MockServer::start().await;
+    let port = other.address().port();
+    // 127.0.0.1 and 127.0.0.1 on another port: the same site, another origin.
+    let tree = format!("http://127.0.0.1:{port}/dav/calendars");
+    Mock::given(method("PROPFIND")).and(path("/")).respond_with(ResponseTemplate::new(404)).mount(&origin).await;
+    Mock::given(method("PROPFIND")).and(path("/.well-known/caldav"))
+        .respond_with(ResponseTemplate::new(301).insert_header("Location", tree.as_str())).mount(&origin).await;
+    Mock::given(method("PROPFIND")).and(path("/dav/calendars"))
+        .respond_with(principal_answer("/dav/calendars", "/dav/principals/user/me/")).mount(&other).await;
+    Mock::given(method("PROPFIND")).and(path("/dav/principals/user/me/"))
+        .respond_with(homes_answer("/dav/principals/user/me/")).mount(&other).await;
+    let homes = client(&origin).homes().await.unwrap();
+    assert_eq!(homes.principal, format!("http://127.0.0.1:{port}/dav/principals/user/me/"));
+    assert_eq!(homes.calendar, Some(format!("http://127.0.0.1:{port}/dav/calendars/user/me/")));
 }

@@ -4,6 +4,7 @@
 use mailrs_domain::translate::{fill, gettext};
 use mailrs_domain::{Account, AccountId, Category, Provider, RemoveSetting};
 use mailrs_store::pop3::{FailReason, Failing};
+use mailrs_store::services::Miss;
 use mailrs_sync::{AccountServices, Mailbox, Missing, Offers, Withheld};
 
 /// What an account offers. An account that is not running yet has no
@@ -403,7 +404,9 @@ impl Filing {
 }
 
 /// One line saying why `account` lacks `missing`, naming who serves it.
-pub fn reason(account: &Account, missing: Missing) -> String {
+/// `missed` is why the last search found no calendar or contacts server
+/// for an IMAP or POP3 account, when the store kept a reason.
+pub fn reason(account: &Account, missing: Missing, missed: Option<Miss>) -> String {
     let template = match (account.provider, missing) {
         // IMAP carries mail; a calendar and contacts come from CalDAV and
         // CardDAV servers the app looks for, and Preferences says where
@@ -422,12 +425,30 @@ pub fn reason(account: &Account, missing: Missing) -> String {
         (Provider::Microsoft, Missing::AutoReply) => {
             gettext("Your organization does not allow Penguin Mail to change the automatic reply.")
         }
-        (Provider::Imap | Provider::Pop3, Missing::Calendar) => {
-            gettext("Penguin Mail found no calendar server for {provider}.")
-        }
-        (Provider::Imap | Provider::Pop3, Missing::Contacts) => {
-            gettext("Penguin Mail found no contacts server for {provider}.")
-        }
+        (Provider::Imap | Provider::Pop3, Missing::Calendar) => match missed {
+            Some(Miss::Refused) => gettext(
+                "{provider} refused the password for calendars. Some providers need an app \
+                 password with access to calendars and contacts.",
+            ),
+            Some(Miss::Unreachable) => {
+                gettext("Penguin Mail could not reach the calendar server for {provider}.")
+            }
+            Some(Miss::NotFound) | None => {
+                gettext("Penguin Mail found no calendar server for {provider}.")
+            }
+        },
+        (Provider::Imap | Provider::Pop3, Missing::Contacts) => match missed {
+            Some(Miss::Refused) => gettext(
+                "{provider} refused the password for contacts. Some providers need an app \
+                 password with access to calendars and contacts.",
+            ),
+            Some(Miss::Unreachable) => {
+                gettext("Penguin Mail could not reach the contacts server for {provider}.")
+            }
+            Some(Miss::NotFound) | None => {
+                gettext("Penguin Mail found no contacts server for {provider}.")
+            }
+        },
         (Provider::Pop3, Missing::AutoReply) => {
             gettext("{provider} cannot send automatic replies over POP3.")
         }
@@ -453,8 +474,13 @@ pub fn reason(account: &Account, missing: Missing) -> String {
 
 /// The lines Preferences shows under Not Available: everything an
 /// account lacks but the category bar, which needs no line because it is
-/// not there, each as the account's address and the reason.
-pub fn missing_lines(accounts: &[(Account, Offers)]) -> Vec<(String, String)> {
+/// not there, each as the account's address and the reason. `missed`
+/// says why the search for an account's calendar or contacts server
+/// failed, where the store kept a reason.
+pub fn missing_lines(
+    accounts: &[(Account, Offers)],
+    missed: impl Fn(AccountId, Missing) -> Option<Miss>,
+) -> Vec<(String, String)> {
     let mut lines: Vec<(String, String)> = accounts
         .iter()
         .flat_map(|(account, offers)| {
@@ -462,7 +488,7 @@ pub fn missing_lines(accounts: &[(Account, Offers)]) -> Vec<(String, String)> {
                 .missing()
                 .into_iter()
                 .filter(|m| *m != Missing::Categories)
-                .map(|m| (account.email.clone(), reason(account, m)))
+                .map(|m| (account.email.clone(), reason(account, m, missed(account.id, m))))
         })
         .collect();
     lines.dedup();
@@ -575,6 +601,7 @@ pub fn reads_send_as(account: &Account) -> bool {
 mod tests {
     use mailrs_domain::{Account, AccountState, Provider, RemoveSetting};
     use mailrs_store::pop3::{FailReason, Failing};
+    use mailrs_store::services::Miss;
     use mailrs_sync::{Missing, Offers};
 
     use super::{
@@ -602,11 +629,11 @@ mod tests {
     #[test]
     fn a_pop3_account_says_why_it_has_no_automatic_reply() {
         assert_eq!(
-            reason(&pop3_account(), Missing::AutoReply),
+            reason(&pop3_account(), Missing::AutoReply, None),
             "example.org cannot send automatic replies over POP3."
         );
         assert_eq!(
-            reason(&pop3_account(), Missing::Calendar),
+            reason(&pop3_account(), Missing::Calendar, None),
             "Penguin Mail found no calendar server for example.org."
         );
     }
@@ -737,7 +764,7 @@ mod tests {
             Missing::DeleteForever,
             Missing::Categories,
         ] {
-            let said = reason(&gmail(), missing);
+            let said = reason(&gmail(), missing, None);
             assert!(said.starts_with("Gmail "), "{said}");
             assert!(said.ends_with('.'), "{said}");
         }
@@ -746,13 +773,53 @@ mod tests {
     #[test]
     fn an_imap_account_without_a_calendar_server_says_none_was_found() {
         assert_eq!(
-            reason(&fastmail(), Missing::Calendar),
+            reason(&fastmail(), Missing::Calendar, None),
             "Penguin Mail found no calendar server for Fastmail."
         );
         assert_eq!(
-            reason(&fastmail(), Missing::Contacts),
+            reason(&fastmail(), Missing::Contacts, None),
             "Penguin Mail found no contacts server for Fastmail."
         );
+    }
+
+    #[test]
+    fn a_refused_login_says_so_and_names_the_app_password() {
+        assert_eq!(
+            reason(&fastmail(), Missing::Calendar, Some(Miss::Refused)),
+            "Fastmail refused the password for calendars. Some providers need an app \
+             password with access to calendars and contacts."
+        );
+        assert_eq!(
+            reason(&fastmail(), Missing::Contacts, Some(Miss::Refused)),
+            "Fastmail refused the password for contacts. Some providers need an app \
+             password with access to calendars and contacts."
+        );
+    }
+
+    #[test]
+    fn no_answer_says_the_server_could_not_be_reached() {
+        assert_eq!(
+            reason(&fastmail(), Missing::Calendar, Some(Miss::Unreachable)),
+            "Penguin Mail could not reach the calendar server for Fastmail."
+        );
+        assert_eq!(
+            reason(&fastmail(), Missing::Contacts, Some(Miss::Unreachable)),
+            "Penguin Mail could not reach the contacts server for Fastmail."
+        );
+        assert_eq!(
+            reason(&fastmail(), Missing::Contacts, Some(Miss::NotFound)),
+            "Penguin Mail found no contacts server for Fastmail."
+        );
+    }
+
+    #[test]
+    fn preferences_words_each_line_by_why_the_search_failed() {
+        let imap = Offers { calendar: false, contacts: false, ..Offers::EVERYTHING };
+        let lines = missing_lines(&[(fastmail(), imap)], |_, missing| {
+            (missing == Missing::Calendar).then_some(Miss::Refused)
+        });
+        assert!(lines[0].1.starts_with("Fastmail refused the password for calendars."), "{lines:?}");
+        assert_eq!(lines[1].1, "Penguin Mail found no contacts server for Fastmail.");
     }
 
     #[test]
@@ -763,19 +830,19 @@ mod tests {
             ..gmail()
         };
         assert_eq!(
-            reason(&account, Missing::Calendar),
+            reason(&account, Missing::Calendar, None),
             "Your organization does not allow Penguin Mail to use this calendar."
         );
         assert_eq!(
-            reason(&account, Missing::Contacts),
+            reason(&account, Missing::Contacts, None),
             "Your organization does not allow Penguin Mail to read these contacts."
         );
         assert_eq!(
-            reason(&account, Missing::Rules),
+            reason(&account, Missing::Rules, None),
             "Your organization does not allow Penguin Mail to change these rules."
         );
         assert_eq!(
-            reason(&account, Missing::AutoReply),
+            reason(&account, Missing::AutoReply, None),
             "Your organization does not allow Penguin Mail to change the automatic reply."
         );
     }
@@ -783,7 +850,7 @@ mod tests {
     #[test]
     fn an_imap_account_without_sieve_cannot_send_automatic_replies() {
         assert_eq!(
-            reason(&fastmail(), Missing::AutoReply),
+            reason(&fastmail(), Missing::AutoReply, None),
             "Fastmail cannot send automatic replies."
         );
     }
@@ -1085,12 +1152,12 @@ mod tests {
             auto_reply: false,
             ..Offers::EVERYTHING
         };
-        let lines = missing_lines(&[(gmail(), Offers::EVERYTHING), (bare.clone(), lacking)]);
+        let lines = missing_lines(&[(gmail(), Offers::EVERYTHING), (bare.clone(), lacking)], |_, _| None);
         assert_eq!(
             lines,
             [
-                ("me@example.com".to_string(), reason(&bare, Missing::Rules)),
-                ("me@example.com".to_string(), reason(&bare, Missing::AutoReply)),
+                ("me@example.com".to_string(), reason(&bare, Missing::Rules, None)),
+                ("me@example.com".to_string(), reason(&bare, Missing::AutoReply, None)),
             ]
         );
     }
@@ -1105,7 +1172,7 @@ mod tests {
             auto_reply: false,
             ..Offers::EVERYTHING
         };
-        let lines = missing_lines(&[(fastmail(), imap)]);
+        let lines = missing_lines(&[(fastmail(), imap)], |_, _| None);
         let said: Vec<&str> = lines.iter().map(|(_, line)| line.as_str()).collect();
         assert_eq!(
             said,

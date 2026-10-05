@@ -947,6 +947,34 @@ fn migration_51_names_the_message_each_downloaded_uidl_brought() {
     );
 }
 
+/// Migration 53 keeps why a calendar or contacts server was not found,
+/// one row per account and service, gone with the account.
+#[test]
+fn migration_53_keeps_why_a_server_was_not_found() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("mail.db");
+    let conn = open_with(&path, &MIGRATIONS[..52]).unwrap();
+    conn.execute_batch(
+        "INSERT INTO accounts (id, email, added_at, provider, provider_name) VALUES
+             (2, 'me@fastmail.com', 0, 'imap', 'Fastmail');",
+    )
+    .unwrap();
+    drop(conn);
+
+    let conn = open_with(&path, &MIGRATIONS[..53]).unwrap();
+    assert_eq!(schema_version(&conn).unwrap(), 53);
+    conn.execute("INSERT INTO service_misses (account_id, service, reason) VALUES (2, 'caldav', 'refused')", [])
+        .unwrap();
+    assert!(
+        conn.execute("INSERT INTO service_misses (account_id, service, reason) VALUES (2, 'carddav', 'tired')", [])
+            .is_err(),
+        "a reason is one of the codes"
+    );
+    conn.execute("DELETE FROM accounts WHERE id = 2", []).unwrap();
+    let left: i64 = conn.query_row("SELECT count(*) FROM service_misses", [], |row| row.get(0)).unwrap();
+    assert_eq!(left, 0, "the rows go with the account");
+}
+
 /// Migration 52 keeps why each message failed as a code, translated when
 /// shown. An over-size failure stored before it held the words in English
 /// or European Portuguese, which become the code.

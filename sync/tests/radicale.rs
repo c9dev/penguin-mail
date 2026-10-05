@@ -44,7 +44,7 @@ fn the_caldav_adapter_reads_and_writes_radicale() {
         let path = radicale.make_calendar(USER, &password, "work").await;
         let href = format!("{path}standup.ics");
         radicale.put(USER, &password, &href, &series("Standup"), "text/calendar").await;
-        let client = Arc::new(DavClient::new(&radicale.url(), Login::new(USER, &password)).expect("a client"));
+        let client = Arc::new(DavClient::new(&radicale.url(), mailrs_dav::Kind::Calendar, Login::new(USER, &password)).expect("a client"));
 
         // The mail adapter is for replying to invitations, which no step
         // here does, so its clients never connect.

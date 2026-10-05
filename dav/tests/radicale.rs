@@ -1,6 +1,7 @@
 //! DavClient against Radicale: principal and homes, collections, a
 //! sync-collection round, If-Match refusing a stale etag, a wrong
-//! password, a vCard, and the DAV header that says whether the server
+//! password, a vCard, a context URL it does not serve, which the
+//! well-known URL stands in for, and the DAV header that says whether the server
 //! schedules invitations itself.
 //!
 //! One test, because it points `SSL_CERT_FILE` at a root made for the
@@ -26,7 +27,7 @@ fn the_client_speaks_caldav_and_carddav_to_radicale() {
         let Some(radicale) = Radicale::start(&certs, USER, &password).await else { return };
         let calendar = radicale.make_calendar(USER, &password, "work").await;
         let book = radicale.make_address_book(USER, &password, "people").await;
-        let client = DavClient::new(&radicale.url(), Login::new(USER, &password)).expect("a client");
+        let client = DavClient::new(&radicale.url(), Kind::Calendar, Login::new(USER, &password)).expect("a client");
         let homes = client.homes().await.expect("the homes");
         let home = homes.calendar.expect("a calendar home");
         let found = client.collections(&home, Kind::Calendar).await.expect("the calendars");
@@ -68,7 +69,15 @@ fn the_client_speaks_caldav_and_carddav_to_radicale() {
             .expect("a vCard put");
         assert_eq!(client.members(&book, Kind::AddressBook, None).await.expect("the members").len(), 1);
 
-        let wrong = DavClient::new(&radicale.url(), Login::new(USER, "wrong")).expect("a client");
+        // Radicale answers 404 for a path of the user's it does not hold,
+        // and redirects /.well-known/carddav to its root, where the
+        // principal is: the client finds the homes from there.
+        let elsewhere = format!("{}{USER}/nowhere/", radicale.url());
+        let bootstrapped = DavClient::new(&elsewhere, Kind::AddressBook, Login::new(USER, &password)).expect("a client");
+        let homes = bootstrapped.homes().await.expect("the homes through the well-known URL");
+        assert!(homes.addressbook.is_some(), "{homes:?}");
+
+        let wrong = DavClient::new(&radicale.url(), Kind::Calendar, Login::new(USER, "wrong")).expect("a client");
         assert!(matches!(wrong.homes().await, Err(DavError::Unauthorized)));
     });
 }

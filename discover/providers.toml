@@ -32,7 +32,9 @@
 #   Where no source says, the entry says false and the app files the copy:
 #   a duplicate in Sent costs less than a sent message missing from it.
 # - caldav, carddav: the CalDAV and CardDAV context URL; the principal is asked
-#   there. sieve: the ManageSieve host and port, only where a first-party page
+#   there, and at the host's /.well-known/ URL when the context URL has none.
+#   Each is the URL that answers a PROPFIND without a login with 401, so the
+#   login goes there first. sieve: the ManageSieve host and port, only where a first-party page
 #   says the server runs one.
 
 [[provider]]
@@ -74,8 +76,10 @@ domains = [
 mx = ["*.messagingengine.com"]
 imap = { host = "imap.fastmail.com", port = 993, security = "tls", user_name = "address" }
 pop3 = { host = "pop.fastmail.com", port = 995, security = "tls", user_name = "address" }
-caldav = "https://caldav.fastmail.com/"
-carddav = "https://carddav.fastmail.com/"
+# Fastmail's settings page gives the hosts' roots, which answer 404 to a
+# PROPFIND. Their /.well-known/ URLs lead here, where the login is asked.
+caldav = "https://caldav.fastmail.com/dav/calendars"
+carddav = "https://carddav.fastmail.com/dav/addressbooks"
 smtp = [
   { host = "smtp.fastmail.com", port = 465, security = "tls", user_name = "address" },
   { host = "smtp.fastmail.com", port = 587, security = "start_tls", user_name = "address" },
@@ -183,10 +187,11 @@ kind = "imap"
 domains = ["zoho.com", "zohomail.com"]
 mx = ["*.zoho.com"]
 imap = { host = "imap.zoho.com", port = 993, security = "tls", user_name = "address" }
-# Zoho's page says the CalDAV host varies by data centre and names none;
-# these follow its CardDAV page's pattern and are confirmed by the principal
-# lookup before use.
-caldav = "https://calendar.zoho.com/"
+# Zoho's CalDAV page (zoho.com/calendar/help/setup-caldav-sync.html) gives
+# /.well-known/caldav as the account address, the host varying by data
+# center; the root answers 501. Its CardDAV page (help.zoho.com, Zoho
+# Contacts, "CardDAV") gives /carddav per region.
+caldav = "https://calendar.zoho.com/.well-known/caldav"
 carddav = "https://contacts.zoho.com/carddav"
 smtp = [
   { host = "smtp.zoho.com", port = 465, security = "tls", user_name = "address" },
@@ -212,7 +217,7 @@ kind = "imap"
 domains = ["zoho.eu", "zohomail.eu"]
 mx = ["*.zoho.eu"]
 imap = { host = "imap.zoho.eu", port = 993, security = "tls", user_name = "address" }
-caldav = "https://calendar.zoho.eu/"
+caldav = "https://calendar.zoho.eu/.well-known/caldav"
 carddav = "https://contacts.zoho.eu/carddav"
 smtp = [
   { host = "smtp.zoho.eu", port = 465, security = "tls", user_name = "address" },
@@ -236,7 +241,7 @@ kind = "imap"
 domains = ["zoho.in", "zohomail.in"]
 mx = ["*.zoho.in"]
 imap = { host = "imap.zoho.in", port = 993, security = "tls", user_name = "address" }
-caldav = "https://calendar.zoho.in/"
+caldav = "https://calendar.zoho.in/.well-known/caldav"
 carddav = "https://contacts.zoho.in/carddav"
 smtp = [
   { host = "smtp.zoho.in", port = 465, security = "tls", user_name = "address" },
@@ -260,7 +265,7 @@ kind = "imap"
 domains = ["zoho.com.au", "zohomail.com.au"]
 mx = ["*.zoho.com.au"]
 imap = { host = "imap.zoho.com.au", port = 993, security = "tls", user_name = "address" }
-caldav = "https://calendar.zoho.com.au/"
+caldav = "https://calendar.zoho.com.au/.well-known/caldav"
 carddav = "https://contacts.zoho.com.au/carddav"
 smtp = [
   { host = "smtp.zoho.com.au", port = 465, security = "tls", user_name = "address" },
@@ -284,7 +289,7 @@ kind = "imap"
 domains = ["zoho.jp", "zohomail.jp"]
 mx = ["*.zoho.jp"]
 imap = { host = "imap.zoho.jp", port = 993, security = "tls", user_name = "address" }
-caldav = "https://calendar.zoho.jp/"
+caldav = "https://calendar.zoho.jp/.well-known/caldav"
 carddav = "https://contacts.zoho.jp/carddav"
 smtp = [
   { host = "smtp.zoho.jp", port = 465, security = "tls", user_name = "address" },
@@ -308,7 +313,7 @@ kind = "imap"
 domains = ["zohocloud.ca", "zohomailcloud.ca"]
 mx = ["*.zohocloud.ca"]
 imap = { host = "imap.zohocloud.ca", port = 993, security = "tls", user_name = "address" }
-caldav = "https://calendar.zohocloud.ca/"
+caldav = "https://calendar.zohocloud.ca/.well-known/caldav"
 carddav = "https://contacts.zohocloud.ca/carddav"
 smtp = [
   { host = "smtp.zohocloud.ca", port = 465, security = "tls", user_name = "address" },
@@ -334,7 +339,7 @@ kind = "imap"
 domains = ["zoho.sa", "zohomail.sa"]
 mx = ["*.zoho.sa"]
 imap = { host = "imap.zoho.sa", port = 993, security = "tls", user_name = "address" }
-caldav = "https://calendar.zoho.sa/"
+caldav = "https://calendar.zoho.sa/.well-known/caldav"
 carddav = "https://contacts.zoho.sa/carddav"
 smtp = [
   { host = "smtp.zoho.sa", port = 465, security = "tls", user_name = "address" },
@@ -360,7 +365,7 @@ kind = "imap"
 # domains. A custom domain reaches it by MX.
 mx = ["*.zoho.uk"]
 imap = { host = "imap.zoho.uk", port = 993, security = "tls", user_name = "address" }
-caldav = "https://calendar.zoho.uk/"
+caldav = "https://calendar.zoho.uk/.well-known/caldav"
 carddav = "https://contacts.zoho.uk/carddav"
 smtp = [
   { host = "smtp.zoho.uk", port = 465, security = "tls", user_name = "address" },
@@ -386,7 +391,7 @@ kind = "imap"
 domains = ["zoho.com.cn", "zohomail.com.cn"]
 mx = ["*.zoho.com.cn"]
 imap = { host = "imap.zoho.com.cn", port = 993, security = "tls", user_name = "address" }
-caldav = "https://calendar.zoho.com.cn/"
+caldav = "https://calendar.zoho.com.cn/.well-known/caldav"
 carddav = "https://contacts.zoho.com.cn/carddav"
 smtp = [
   { host = "smtp.zoho.com.cn", port = 465, security = "tls", user_name = "address" },
@@ -416,8 +421,9 @@ domains = [
 mx = ["mx00.emig.gmx.net", "mx01.emig.gmx.net"]
 imap = { host = "imap.gmx.net", port = 993, security = "tls", user_name = "address" }
 pop3 = { host = "pop.gmx.net", port = 995, security = "tls", user_name = "address" }
-caldav = "https://caldav.gmx.net/"
-carddav = "https://carddav.gmx.net/"
+# The roots redirect or send a web page; /.well-known/ leads to these.
+caldav = "https://caldav.gmx.net/begenda/dav/users"
+carddav = "https://carddav.gmx.net/CardDavProxy/carddav"
 smtp = [
   { host = "mail.gmx.net", port = 465, security = "tls", user_name = "address" },
   { host = "mail.gmx.net", port = 587, security = "start_tls", user_name = "address" },
@@ -443,8 +449,9 @@ domains = [
 mx = ["mx00.gmx.net", "mx01.gmx.net"]
 imap = { host = "imap.gmx.com", port = 993, security = "tls", user_name = "address" }
 pop3 = { host = "pop.gmx.com", port = 995, security = "tls", user_name = "address" }
-caldav = "https://caldav.gmx.com/"
-carddav = "https://carddav.gmx.com/"
+# The roots redirect or send a web page; /.well-known/ leads to these.
+caldav = "https://caldav.gmx.com/begenda/dav/users"
+carddav = "https://carddav.gmx.com/CardDavProxy/carddav"
 smtp = [
   { host = "mail.gmx.com", port = 587, security = "start_tls", user_name = "address" },
   { host = "mail.gmx.com", port = 465, security = "tls", user_name = "address" },
@@ -464,8 +471,9 @@ domains = ["web.de"]
 mx = ["*.web.de"]
 imap = { host = "imap.web.de", port = 993, security = "tls", user_name = "address" }
 pop3 = { host = "pop3.web.de", port = 995, security = "tls", user_name = "address" }
-caldav = "https://caldav.web.de/"
-carddav = "https://carddav.web.de/"
+# The roots redirect or send a web page; /.well-known/ leads to these.
+caldav = "https://caldav.web.de/begenda/dav/users"
+carddav = "https://carddav.web.de/CardDavProxy/carddav"
 smtp = [
   { host = "smtp.web.de", port = 465, security = "tls", user_name = "address" },
   { host = "smtp.web.de", port = 587, security = "start_tls", user_name = "address" },
@@ -492,8 +500,9 @@ domains = [
 mx = ["mx00.mail.com", "mx01.mail.com"]
 imap = { host = "imap.mail.com", port = 993, security = "tls", user_name = "address" }
 pop3 = { host = "pop.mail.com", port = 995, security = "tls", user_name = "address" }
-caldav = "https://caldav.mail.com/"
-carddav = "https://carddav.mail.com/"
+# The roots redirect or send a web page; /.well-known/ leads to these.
+caldav = "https://caldav.mail.com/begenda/dav/users"
+carddav = "https://carddav.mail.com/CardDavProxy/carddav"
 smtp = [
   { host = "smtp.mail.com", port = 587, security = "start_tls", user_name = "address" },
   { host = "smtp.mail.com", port = 465, security = "tls", user_name = "address" },

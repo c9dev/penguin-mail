@@ -1,5 +1,5 @@
-//! The found servers, local rules with their watermark, and the queue of
-//! rule changes, as the store keeps them.
+//! The found servers and why one was not found, local rules with their
+//! watermark, and the queue of rule changes, as the store keeps them.
 
 mod common;
 
@@ -8,7 +8,7 @@ use mailrs_domain::{Filter, FilterAction, FilterCriteria, MailSet, Role};
 use mailrs_store::local_rules::{self, OVERLAP};
 use mailrs_store::messages::{self, Change};
 use mailrs_store::rule_changes::{self, RuleChange};
-use mailrs_store::services::{self, FoundService, ServiceKind};
+use mailrs_store::services::{self, FoundService, Miss, ServiceKind};
 
 fn rule(id: &str, from: &str) -> Filter {
     Filter {
@@ -35,6 +35,26 @@ fn a_found_service_is_kept_with_its_user_and_whether_it_is_confirmed() {
     assert_eq!(services::load(&conn, a).unwrap(), [moved], "a second save replaces the first");
     services::remove(&conn, a, ServiceKind::CalDav).unwrap();
     assert!(services::load(&conn, a).unwrap().is_empty());
+}
+
+#[test]
+fn why_a_service_was_not_found_is_kept_until_it_is_found() {
+    let (conn, a) = db();
+    services::save_miss(&conn, a, ServiceKind::CalDav, Some(Miss::Refused)).unwrap();
+    services::save_miss(&conn, a, ServiceKind::CardDav, Some(Miss::NotFound)).unwrap();
+    services::save_miss(&conn, a, ServiceKind::CardDav, Some(Miss::Unreachable)).unwrap();
+    assert_eq!(
+        services::all_misses(&conn).unwrap(),
+        [(a, ServiceKind::CalDav, Miss::Refused), (a, ServiceKind::CardDav, Miss::Unreachable)]
+    );
+    services::save_miss(&conn, a, ServiceKind::CalDav, None).unwrap();
+    assert_eq!(services::all_misses(&conn).unwrap(), [(a, ServiceKind::CardDav, Miss::Unreachable)]);
+}
+
+#[test]
+fn a_refused_login_outranks_nothing_found_which_outranks_no_answer() {
+    assert!(Miss::Refused > Miss::NotFound);
+    assert!(Miss::NotFound > Miss::Unreachable);
 }
 
 #[test]

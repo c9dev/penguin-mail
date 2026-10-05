@@ -277,6 +277,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   it last updated, instead of leaving you guessing.
 
 ### Fixed
+- Penguin Mail finds the calendars and contacts of Fastmail, GMX, WEB.DE, mail.com and Zoho accounts, and when it finds none, Preferences says whether the password was refused or the server did not answer.
 - Undo in the composer brings words back with the styles they had, after Format and after typing over or deleting them, and Redo brings back the lists Format made.
 - An invitation's buttons move onto a second line in a narrow reading pane, so the card no longer runs past the edge.
 - A message's details can be selected and copied. Only the Details button, now with a chevron, opens and closes them, and a collapsed message opens from a click anywhere on it.

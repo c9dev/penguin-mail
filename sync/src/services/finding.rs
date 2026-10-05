@@ -5,6 +5,9 @@
 //! account's login, the IMAP user name first and the whole address
 //! second, ten seconds a try. A hint outside the address's domain is kept
 //! unconfirmed and gets the password only after the person says yes.
+//! When no CalDAV or CardDAV server takes the login, the finder keeps the
+//! strongest reason a try gave: a refused login, then nothing found, then
+//! no answer, so Preferences can say which.
 
 use std::future::Future;
 use std::time::Duration;
@@ -15,7 +18,7 @@ use mailrs_domain::AccountId;
 use mailrs_sieve::client::{ManageSieveApi, ManageSieveClient, SieveError};
 use mailrs_sieve::script::Extensions;
 use mailrs_store::Db;
-use mailrs_store::services::{self, FoundService, ServiceKind};
+use mailrs_store::services::{self, FoundService, Miss, ServiceKind};
 
 use crate::{BackendError, SyncError};
 
@@ -31,7 +34,7 @@ pub struct RealProbe;
 
 impl ServiceProbe for RealProbe {
     async fn dav(&self, url: &str, user: &str, password: &str, kind: Kind) -> Result<(), BackendError> {
-        let client = DavClient::new(url, mailrs_dav::Login::new(user, password)).map_err(|e| BackendError::Refused(e.to_string()))?;
+        let client = DavClient::new(url, kind, mailrs_dav::Login::new(user, password)).map_err(|e| BackendError::Refused(e.to_string()))?;
         let homes = client.homes().await.map_err(|e| match e {
             mailrs_dav::DavError::Unauthorized => BackendError::NeedsReauth,
             mailrs_dav::DavError::Network(detail) => BackendError::Offline(detail),
@@ -59,6 +62,21 @@ pub struct FoundServices {
     pub caldav: Option<FoundService>,
     pub carddav: Option<FoundService>,
     pub sieve: Option<FoundService>,
+    /// Why no CalDAV server was found, when none was.
+    pub caldav_missed: Option<Miss>,
+    /// Why no CardDAV server was found, when none was.
+    pub carddav_missed: Option<Miss>,
+}
+
+/// What one try's failure says about the search: a refused login, a
+/// server that answered as no calendar or contacts server, or no answer.
+fn miss_of(tried: Result<Result<(), BackendError>, tokio::time::error::Elapsed>) -> Option<Miss> {
+    match tried {
+        Ok(Ok(())) => None,
+        Ok(Err(BackendError::NeedsReauth)) => Some(Miss::Refused),
+        Ok(Err(BackendError::Offline(_))) | Err(_) => Some(Miss::Unreachable),
+        Ok(Err(_)) => Some(Miss::NotFound),
+    }
 }
 
 fn source_word(source: Source) -> &'static str {
@@ -81,8 +99,11 @@ fn users(imap_user: &str, address: &str) -> Vec<String> {
     users
 }
 
-async fn dav<P: ServiceProbe>(probe: &P, hints: &[Hint], users: &[String], password: &str, kind: Kind, service: ServiceKind) -> Option<FoundService> {
+/// The first hint that takes a login, or one that waits for the person's
+/// yes; failing both, why, the strongest reason any try gave.
+async fn dav<P: ServiceProbe>(probe: &P, hints: &[Hint], users: &[String], password: &str, kind: Kind, service: ServiceKind) -> Result<FoundService, Miss> {
     let mut waiting = None;
+    let mut missed: Option<Miss> = None;
     for hint in hints {
         if hint.confirm {
             waiting.get_or_insert_with(|| FoundService {
@@ -96,12 +117,16 @@ async fn dav<P: ServiceProbe>(probe: &P, hints: &[Hint], users: &[String], passw
         }
         for user in users {
             let tried = tokio::time::timeout(PROBE_LIMIT, probe.dav(&hint.url, user, password, kind)).await;
-            if matches!(tried, Ok(Ok(()))) {
-                return Some(FoundService { kind: service, url: hint.url.clone(), user_name: user.clone(), confirmed: true, source: source_word(hint.source).into() });
+            match miss_of(tried) {
+                None => {
+                    return Ok(FoundService { kind: service, url: hint.url.clone(), user_name: user.clone(), confirmed: true, source: source_word(hint.source).into() });
+                }
+                miss => missed = missed.max(miss),
             }
         }
     }
-    waiting
+    // With no hint to try, nothing was found.
+    waiting.ok_or(missed.unwrap_or(Miss::NotFound))
 }
 
 async fn sieve<P: ServiceProbe>(probe: &P, hints: &[SieveHint], users: &[String], password: &str) -> Option<FoundService> {
@@ -133,7 +158,7 @@ pub async fn find_services<N: Net, P: ServiceProbe>(net: &N, probe: &P, address:
         dav(probe, &hints.carddav, &users, password, Kind::AddressBook, ServiceKind::CardDav),
         sieve(probe, &hints.sieve, &users, password),
     );
-    FoundServices { caldav, carddav, sieve }
+    FoundServices { caldav: caldav.clone().ok(), carddav: carddav.clone().ok(), sieve, caldav_missed: caldav.err(), carddav_missed: carddav.err() }
 }
 
 /// Keeps what was found, leaving a URL the person typed as it is and a
@@ -145,6 +170,12 @@ pub async fn keep_found(db: &Db, account_id: AccountId, found: &FoundServices) -
     Ok(db
         .write(move |c| {
             let held = services::load(c, account_id)?;
+            for (kind, found, missed) in [
+                (ServiceKind::CalDav, &found.caldav, found.caldav_missed),
+                (ServiceKind::CardDav, &found.carddav, found.carddav_missed),
+            ] {
+                services::save_miss(c, account_id, kind, missed.filter(|_| found.is_none()))?;
+            }
             let mut changed = false;
             for new in [found.caldav, found.carddav, found.sieve].into_iter().flatten() {
                 let old = held.iter().find(|h| h.kind == new.kind);
