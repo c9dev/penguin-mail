@@ -1,12 +1,17 @@
-//! Which Google client an account signs in with, and keeping an IMAP or
-//! Microsoft account that just signed in.
+//! Which Google client an account signs in with, and keeping an IMAP, POP3
+//! or Microsoft account that just signed in.
 
 use std::sync::Arc;
 
 use mailrs_domain::translate::{fill, gettext};
-use mailrs_domain::{Account, AccountId, AccountState, EpochMillis, Provider, SignInClient};
+use mailrs_discover::Server;
+use mailrs_domain::{
+    Account, AccountId, AccountState, EpochMillis, Provider, RemoveSetting, SignInClient,
+};
 use mailrs_gmail::{OAuthClient, TokenStore};
-use mailrs_store::servers::{self, Servers};
+use mailrs_imap::{CheckError, ImapError};
+use mailrs_pop3::{Pop3Api, Pop3Client, Pop3Error};
+use mailrs_store::servers::{self, Pop3Servers, Servers};
 use mailrs_store::{Db, StoreError, accounts};
 
 use crate::config::Config;
@@ -240,6 +245,147 @@ pub async fn imap_signed_in<P: PasswordStore + 'static>(
         .ok_or(ImapSignInError::Store(StoreError::Sqlite(
             rusqlite::Error::QueryReturnedNoRows,
         )))
+}
+
+/// A POP3 account a person just signed in to. No `Debug`: the password
+/// must not reach a log line.
+pub struct NewPop3 {
+    pub address: String,
+    pub provider_name: String,
+    pub servers: Pop3Servers,
+    /// What the account does with mail on the server.
+    pub remove: RemoveSetting,
+    pub password: String,
+}
+
+/// Keeps a POP3 account whose login worked, as [`imap_signed_in`] keeps an
+/// IMAP one: adds it, or finds the one already here for the address, with
+/// its servers, its removal setting and its password. Signing in again
+/// takes the setting Server Settings showed, keeps the mail, and ends
+/// Needs Sign-In.
+pub async fn pop3_signed_in<P: PasswordStore + 'static>(
+    db: &Db,
+    passwords: Arc<P>,
+    new: NewPop3,
+    now: EpochMillis,
+) -> Result<Account, ImapSignInError> {
+    let NewPop3 {
+        address,
+        provider_name,
+        servers,
+        remove,
+        password,
+    } = new;
+    let email = address.clone();
+    let before = db
+        .read(move |c| accounts::account_by_email(c, &email))
+        .await?;
+    let id = match &before {
+        Some(held) if held.provider != Provider::Pop3 => {
+            return Err(ImapSignInError::Taken {
+                address,
+                provider: held.provider_name().to_string(),
+            });
+        }
+        Some(held) => {
+            save_password(Arc::clone(&passwords), held.id, password).await?;
+            held.id
+        }
+        None => {
+            let email = address.clone();
+            let (name, kept) = (provider_name.clone(), servers.clone());
+            let added = db
+                .write(move |c| {
+                    let Some(id) = accounts::insert_pop3_account(c, &email, &name, remove, now)?
+                    else {
+                        // Another provider's account took the address
+                        // between the read and this write.
+                        let held = accounts::account_by_email(c, &email)?;
+                        return Ok(Err(held.map(|a| a.provider_name().to_string())));
+                    };
+                    servers::save_pop3(c, id, &kept)?;
+                    Ok(Ok(id))
+                })
+                .await?;
+            let id = added.map_err(|provider| ImapSignInError::Taken {
+                address: address.clone(),
+                provider: provider.unwrap_or_default(),
+            })?;
+            if let Err(err) = save_password(Arc::clone(&passwords), id, password).await {
+                db.write(move |c| accounts::delete_account(c, id)).await?;
+                return Err(err);
+            }
+            id
+        }
+    };
+    if let Some(held) = before {
+        let email = address.clone();
+        db.write(move |c| {
+            accounts::insert_pop3_account(c, &email, &provider_name, remove, now)?;
+            servers::save_pop3(c, id, &servers)?;
+            // `insert_pop3_account` keeps the setting a row already has;
+            // signing in again takes the one Server Settings showed.
+            accounts::set_pop3_remove(c, id, remove)?;
+            if held.state == AccountState::NeedsReauth {
+                accounts::set_state(c, id, AccountState::Ok)?;
+            }
+            Ok(())
+        })
+        .await?;
+    }
+    db.read(move |c| accounts::account_by_email(c, &address))
+        .await?
+        .ok_or(ImapSignInError::Store(StoreError::Sqlite(
+            rusqlite::Error::QueryReturnedNoRows,
+        )))
+}
+
+/// Signs in to the POP3 server `server` with `password`, trying the user
+/// names its rule allows for `login`, and answers the one it took. A
+/// failure comes back as `CheckError::Imap`, in IMAP's words, so Add
+/// Account names the incoming server with the sentences it already has.
+pub async fn check_pop3(
+    server: &Server,
+    login: &str,
+    password: &str,
+) -> Result<String, CheckError> {
+    let mut refused = None;
+    for user in mailrs_imap::user_names(server.user_name, login) {
+        let client = Pop3Client::new(server, mailrs_pop3::Login::new(user.as_str(), password));
+        match client.connect().await {
+            Ok(_) => {
+                // The sign-in already worked; a QUIT the server drops
+                // changes nothing on it.
+                let _ = client.quit().await;
+                return Ok(user);
+            }
+            Err(err @ Pop3Error::Auth { .. }) => refused = Some(err),
+            Err(err) => return Err(CheckError::Imap(in_imap_words(err))),
+        }
+    }
+    let refused = refused.unwrap_or(Pop3Error::Auth {
+        text: String::new(),
+    });
+    Err(CheckError::Imap(in_imap_words(refused)))
+}
+
+/// A POP3 failure as the IMAP error Add Account already words. A server
+/// without UIDL gets a sentence of its own, since Penguin Mail cannot
+/// tell which messages it already has.
+pub fn in_imap_words(err: Pop3Error) -> ImapError {
+    match err {
+        Pop3Error::Network(detail) => ImapError::Network(detail),
+        Pop3Error::Tls { host, detail } => ImapError::Tls { host, detail },
+        Pop3Error::Auth { text } => ImapError::Auth { text },
+        Pop3Error::InUse(text) => ImapError::TooManyConnections { text },
+        Pop3Error::Refused(text) => ImapError::Refused(text),
+        Pop3Error::Protocol(text) => ImapError::Protocol(text),
+        Pop3Error::Unsupported("UIDL") => ImapError::Refused(gettext(
+            "This server cannot tell its messages apart, so Penguin Mail cannot download from it safely.",
+        )),
+        Pop3Error::Unsupported(what) => ImapError::Unsupported(what),
+        other @ Pop3Error::TooLarge => ImapError::Protocol(other.to_string()),
+    }
 }
 
 /// Keeps a Microsoft account that just signed in: adds it, or finds the

@@ -52,6 +52,22 @@ pub async fn check(
     .await
 }
 
+/// Signs in to `smtp` alone, for an account whose incoming server was
+/// checked by other means, as a POP3 account's is, and answers the user
+/// name it took. `incoming_user` goes first where the rule allows, as in
+/// [`check`].
+pub async fn check_smtp(
+    smtp: &Server,
+    incoming_user: &str,
+    smtp_login: &str,
+    password: &str,
+) -> Result<String, CheckError> {
+    let dial = SmtpTls::new(smtp).map_err(CheckError::Smtp)?;
+    sign_in_smtp((&dial, smtp.user_name), incoming_user, smtp_login, password)
+        .await
+        .map_err(CheckError::Smtp)
+}
+
 /// [`check`] with the dialers given, so a test can hand it scripted
 /// servers.
 async fn check_with<I, S>(
