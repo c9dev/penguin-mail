@@ -1365,6 +1365,10 @@ popover.event-popover button.popover-more {
   outline: 2px solid var(--cal-colour);
   outline-offset: 2px;
 }
+/* The hairline under the last account's calendars, 24 px below them with
+   the row's own spacing; Add Calendar and Hidden Calendars sit under it
+   as actions on the whole list. */
+.calendar-list-end { margin-top: 20px; }
 .add-calendar { margin-left: -6px; }
 .add-calendar > button { padding: 2px 6px; min-height: 0; }
 

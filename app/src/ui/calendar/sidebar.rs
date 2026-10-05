@@ -933,6 +933,16 @@ impl CalendarSidebar {
             self.calendar_list.append(&revealer);
         }
         let adding = adding_accounts(accounts);
+        // A hairline closes the accounts' lists, so Add Calendar and
+        // Hidden Calendars read as acting on the whole list rather than
+        // on the last account, whose note can sit right above them.
+        if !adding.is_empty() || hidden_count(accounts) > 0 {
+            self.calendar_list.append(
+                &gtk::Separator::builder()
+                    .css_classes(["calendar-list-end"])
+                    .build(),
+            );
+        }
         if !adding.is_empty() {
             self.calendar_list.append(&add_menu(&adding));
         }
