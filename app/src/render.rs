@@ -838,6 +838,7 @@ blockquote.quote{{margin:6px 0;padding:0 0 0 12px;border-left:3px solid color-mi
 .signature{{color:var(--dim)}}{trimmed}\
 a{{color:var(--accent-text)}}\
 .attachments{{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 0 52px}}\
+.body.text+.attachments{{margin-left:0}}\
 .attachment{{display:inline-flex;align-items:center;border-radius:10px;background:var(--card);\
 color:inherit;text-decoration:none;font-size:13px;max-width:340px;overflow:hidden}}\
 .attachment:hover{{background:color-mix(in srgb,var(--card) 100%,var(--fg) 6%)}}\
@@ -992,6 +993,11 @@ mod tests {
         });
         assert!(css.contains("--ui-font:\"Ubuntu Sans\""), "{css}");
         assert!(css.contains("font:15px/1.5 var(--ui-font,\"Adwaita Sans\")"), "{css}");
+    }
+
+    #[test]
+    fn attachments_under_a_text_body_start_where_its_words_do() {
+        assert!(page_css(&theme()).contains(".body.text+.attachments{margin-left:0}"));
     }
 
     #[test]

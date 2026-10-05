@@ -291,6 +291,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   it last updated, instead of leaving you guessing.
 
 ### Fixed
+- Attachments under a plain-text message start where its words start, rather than 52 pixels in.
 - The Outbox in the sidebar shows a warning only while a message in it failed to send, and an outbox tray of its own otherwise.
 - Dimmed text in light mode, such as the composer's From and Subject labels and the lines under each row in Preferences, is dark enough to read, and the composer's focused field label reads in both modes.
 - Preferences reads "gpg and gpgsm, which hold your keys" with the verb in the plural, and the assistant's setup page names the same model servers as Preferences.
