@@ -257,7 +257,7 @@ async fn a_signed_out_account_takes_its_undos_with_it() {
     let other = Arc::new(
         AccountSync::new(
             other_id,
-            AccountServices::fake(Arc::clone(&other_fake)),
+            AccountServices::google(Arc::clone(&other_fake)),
             h.db.clone(),
             sender,
         )
@@ -355,7 +355,7 @@ async fn a_failing_account_does_not_stop_the_others() {
     let other = Arc::new(
         AccountSync::new(
             other_id,
-            AccountServices::fake(Arc::clone(&other_fake)),
+            AccountServices::google(Arc::clone(&other_fake)),
             h.db.clone(),
             sender,
         )
@@ -402,7 +402,7 @@ async fn an_account_that_waits_out_its_ceiling_reports_what_it_left() {
     let busy = Arc::new(
         AccountSync::new(
             busy_id,
-            AccountServices::fake(Arc::clone(&busy_fake)),
+            AccountServices::google(Arc::clone(&busy_fake)),
             h.db.clone(),
             sender,
         )
@@ -819,7 +819,7 @@ async fn labelling_by_name_without_creating_skips_accounts_that_lack_the_label()
     let (sender, _events) = async_channel::unbounded();
     let other = Arc::new(AccountSync::new(
         other_id,
-        AccountServices::fake(Arc::clone(&other_fake)),
+        AccountServices::google(Arc::clone(&other_fake)),
         h.db.clone(),
         sender,
     ));
@@ -1016,7 +1016,7 @@ async fn a_change_on_an_account_with_local_mailboxes_reaches_no_server() {
     let local = |fake: Arc<FakeGmail>| {
         let caps = MailCapabilities {
             local_mailboxes: true,
-            ..AccountServices::fake(Arc::clone(&fake)).capabilities()
+            ..AccountServices::google(Arc::clone(&fake)).capabilities()
         };
         AccountServices::fake_with_capabilities(fake, caps)
     };

@@ -221,7 +221,7 @@ async fn restarting_an_account_ends_its_old_session_before_the_new_one_signs_in(
     let (engine, _events) = crate::SyncEngine::new(h.db.clone(), EngineConfig::default());
     let services = || {
         let settings = crate::Pop3Settings { address: "me@example.org".into(), provider_name: "example.org".into() };
-        crate::AccountServices::fake_pop3(h.db.clone(), h.account_id, Arc::clone(&h.fake), Arc::clone(&h.smtp), settings)
+        crate::AccountServices::pop3(h.db.clone(), h.account_id, Arc::clone(&h.fake), Arc::clone(&h.smtp), settings)
     };
     engine.start_account(h.account_id, services());
     let started = Instant::now();

@@ -1,12 +1,11 @@
 //! The closed enums over each service's adapters. Every adapter is known
 //! when the app compiles, so each enum forwards a call to the adapter it
-//! holds with a `match`: no boxed futures and no trait objects. `Google`
-//! holds the adapter over the real client; `Fake` holds the same adapter
-//! over `FakeGmail`, for tests and the demo. `Imap` and `FakeImap` do the
-//! same for an IMAP account's mail and identity. `Microsoft` and
-//! `FakeMicrosoft` hold the Graph adapter, over the real client and over
-//! `FakeGraph`. `Pop3` and `FakePop3` hold the POP3 adapter, over the real
-//! POP3 and SMTP clients and over the fakes.
+//! holds with a `match`: no boxed futures and no trait objects. Each
+//! adapter runs over a client enum from `clients.rs`, the real client or
+//! under the `fake` feature the in-memory one, so it appears here once:
+//! `Google` over Gmail, `Imap` over IMAP and SMTP, `Microsoft` over Graph,
+//! `Pop3` over POP3 and SMTP, `Dav` over CalDAV or CardDAV, and `Sieve`
+//! over ManageSieve.
 
 use std::ops::RangeInclusive;
 use std::time::Duration;
@@ -14,24 +13,18 @@ use std::time::Duration;
 use mailrs_domain::calendar as model;
 use mailrs_domain::invitation::Answer;
 use mailrs_domain::{EpochMillis, Filter, MailSet, RemoteMailbox, Role, Vacation};
-use mailrs_gmail::{
-    ConnectionsPage, ContactFields, LabelColor, Person,
-};
-use mailrs_dav::DavClient;
-use mailrs_imap::{ImapClient, SmtpClient};
+use mailrs_gmail::{ConnectionsPage, ContactFields, LabelColor, Person};
 use mailrs_mime::Parts;
-use mailrs_pop3::Pop3Client;
-use mailrs_sieve::client::ManageSieveClient;
 
+use super::clients::{AnyDav, AnyGmail, AnyGraph, AnyImap, AnyPop3, AnySieve, AnySmtp};
 use super::local::LocalRules;
 use super::{
-    AutoReplyService, Backfill, CalDav, CalendarService, CardDav, Changes, ContactsService, Found,
-    Google, IdentityService, Imap, KeywordsPage, Pop3, RulesPlace, SieveRules, MailBackend, MailCapabilities, Microsoft, RawMessage,
-    Refused, Relocated, RemoteRef, RulesService, SearchQuery, SendAsAddress, SyncState, Unapplied, Want, Withheld,
+    AutoReplyService, Backfill, CalDav, CalendarService, CardDav, Changes, ContactsService, Found, Google,
+    IdentityService, Imap, KeywordsPage, MailBackend, MailCapabilities, Microsoft, Pop3, RawMessage, Refused,
+    Relocated, RemoteRef, RulesPlace, RulesService, SearchQuery, SendAsAddress, SieveRules, SyncState, Unapplied,
+    Want, Withheld,
 };
-use crate::api::{AccountClient, DraftRef, SavedDraft};
-#[cfg(any(test, feature = "fake"))]
-use crate::fake::{FakeDav, FakeGmail, FakeGraph, FakeImap, FakePop3, FakeSieve, FakeSmtp};
+use crate::api::{DraftRef, SavedDraft};
 use crate::{BackendError, MailOp};
 
 /// Awaits `$method` on whichever adapter `$self`, a calendar or an
@@ -40,14 +33,8 @@ macro_rules! forward_dav {
     ($enum:ident, $self:ident, $method:ident($($arg:expr),*)) => {
         match $self {
             $enum::Google(adapter) => adapter.$method($($arg),*).await,
-            #[cfg(any(test, feature = "fake"))]
-            $enum::Fake(adapter) => adapter.$method($($arg),*).await,
             $enum::Microsoft(adapter) => adapter.$method($($arg),*).await,
-            #[cfg(any(test, feature = "fake"))]
-            $enum::FakeMicrosoft(adapter) => adapter.$method($($arg),*).await,
             $enum::Dav(adapter) => adapter.$method($($arg),*).await,
-            #[cfg(any(test, feature = "fake"))]
-            $enum::FakeDav(adapter) => adapter.$method($($arg),*).await,
         }
     };
 }
@@ -58,14 +45,8 @@ macro_rules! forward_rules {
     ($self:ident, $method:ident($($arg:expr),*)) => {
         match $self {
             AnyRules::Google(adapter) => adapter.$method($($arg),*).await,
-            #[cfg(any(test, feature = "fake"))]
-            AnyRules::Fake(adapter) => adapter.$method($($arg),*).await,
             AnyRules::Microsoft(adapter) => adapter.$method($($arg),*).await,
-            #[cfg(any(test, feature = "fake"))]
-            AnyRules::FakeMicrosoft(adapter) => adapter.$method($($arg),*).await,
             AnyRules::Sieve(adapter) => adapter.$method($($arg),*).await,
-            #[cfg(any(test, feature = "fake"))]
-            AnyRules::FakeSieve(adapter) => adapter.$method($($arg),*).await,
             AnyRules::Local(adapter) => adapter.$method($($arg),*).await,
         }
     };
@@ -77,38 +58,20 @@ macro_rules! forward_reply {
     ($self:ident, $method:ident($($arg:expr),*)) => {
         match $self {
             AnyAutoReply::Google(adapter) => adapter.$method($($arg),*).await,
-            #[cfg(any(test, feature = "fake"))]
-            AnyAutoReply::Fake(adapter) => adapter.$method($($arg),*).await,
             AnyAutoReply::Microsoft(adapter) => adapter.$method($($arg),*).await,
-            #[cfg(any(test, feature = "fake"))]
-            AnyAutoReply::FakeMicrosoft(adapter) => adapter.$method($($arg),*).await,
             AnyAutoReply::Sieve(adapter) => adapter.$method($($arg),*).await,
-            #[cfg(any(test, feature = "fake"))]
-            AnyAutoReply::FakeSieve(adapter) => adapter.$method($($arg),*).await,
         }
     };
 }
 
-type RealPop3 = Pop3<SmtpClient, Pop3Client>;
-#[cfg(any(test, feature = "fake"))]
-type FakedPop3 = Pop3<FakeSmtp, FakePop3>;
-
-/// As `forward!`, for an enum that also holds the IMAP adapter.
+/// As `forward_dav!`, for an enum that holds every mail adapter.
 macro_rules! forward_all {
     ($enum:ident, $self:ident, $method:ident($($arg:expr),*)) => {
         match $self {
             $enum::Google(adapter) => adapter.$method($($arg),*).await,
-            #[cfg(any(test, feature = "fake"))]
-            $enum::Fake(adapter) => adapter.$method($($arg),*).await,
             $enum::Imap(adapter) => adapter.$method($($arg),*).await,
-            #[cfg(any(test, feature = "fake"))]
-            $enum::FakeImap(adapter) => adapter.$method($($arg),*).await,
             $enum::Microsoft(adapter) => adapter.$method($($arg),*).await,
-            #[cfg(any(test, feature = "fake"))]
-            $enum::FakeMicrosoft(adapter) => adapter.$method($($arg),*).await,
             $enum::Pop3(adapter) => adapter.$method($($arg),*).await,
-            #[cfg(any(test, feature = "fake"))]
-            $enum::FakePop3(adapter) => adapter.$method($($arg),*).await,
         }
     };
 }
@@ -118,111 +81,68 @@ macro_rules! forward_all_now {
     ($enum:ident, $self:ident, $method:ident($($arg:expr),*)) => {
         match $self {
             $enum::Google(adapter) => adapter.$method($($arg),*),
-            #[cfg(any(test, feature = "fake"))]
-            $enum::Fake(adapter) => adapter.$method($($arg),*),
             $enum::Imap(adapter) => adapter.$method($($arg),*),
-            #[cfg(any(test, feature = "fake"))]
-            $enum::FakeImap(adapter) => adapter.$method($($arg),*),
             $enum::Microsoft(adapter) => adapter.$method($($arg),*),
-            #[cfg(any(test, feature = "fake"))]
-            $enum::FakeMicrosoft(adapter) => adapter.$method($($arg),*),
             $enum::Pop3(adapter) => adapter.$method($($arg),*),
-            #[cfg(any(test, feature = "fake"))]
-            $enum::FakePop3(adapter) => adapter.$method($($arg),*),
         }
     };
 }
 
+type GoogleAdapter = Google<AnyGmail>;
+type ImapAdapter = Imap<AnyImap, AnySmtp>;
+type MicrosoftAdapter = Microsoft<AnyGraph>;
+type Pop3Adapter = Pop3<AnySmtp, AnyPop3>;
+
 /// An account's mail.
 #[derive(Clone)]
 pub enum AnyMail {
-    Google(Google<AccountClient>),
-    #[cfg(any(test, feature = "fake"))]
-    Fake(Google<FakeGmail>),
-    Imap(Imap<ImapClient, SmtpClient>),
-    #[cfg(any(test, feature = "fake"))]
-    FakeImap(Imap<FakeImap, FakeSmtp>),
-    Microsoft(Microsoft<mailrs_graph::Graph>),
-    #[cfg(any(test, feature = "fake"))]
-    FakeMicrosoft(Microsoft<FakeGraph>),
-    Pop3(RealPop3),
-    #[cfg(any(test, feature = "fake"))]
-    FakePop3(FakedPop3),
+    Google(GoogleAdapter),
+    Imap(ImapAdapter),
+    Microsoft(MicrosoftAdapter),
+    Pop3(Pop3Adapter),
 }
 
 /// An account's calendar.
 #[derive(Clone)]
 pub enum AnyCalendar {
-    Google(Google<AccountClient>),
-    #[cfg(any(test, feature = "fake"))]
-    Fake(Google<FakeGmail>),
-    Microsoft(Microsoft<mailrs_graph::Graph>),
-    #[cfg(any(test, feature = "fake"))]
-    FakeMicrosoft(Microsoft<FakeGraph>),
+    Google(GoogleAdapter),
+    Microsoft(MicrosoftAdapter),
     /// A CalDAV server, whose replies go out through the account's mail.
-    Dav(CalDav<DavClient>),
-    #[cfg(any(test, feature = "fake"))]
-    FakeDav(CalDav<FakeDav>),
+    Dav(CalDav<AnyDav>),
 }
 
 /// An account's address book.
 #[derive(Clone)]
 pub enum AnyContacts {
-    Google(Google<AccountClient>),
-    #[cfg(any(test, feature = "fake"))]
-    Fake(Google<FakeGmail>),
-    Microsoft(Microsoft<mailrs_graph::Graph>),
-    #[cfg(any(test, feature = "fake"))]
-    FakeMicrosoft(Microsoft<FakeGraph>),
-    Dav(CardDav<DavClient>),
-    #[cfg(any(test, feature = "fake"))]
-    FakeDav(CardDav<FakeDav>),
+    Google(GoogleAdapter),
+    Microsoft(MicrosoftAdapter),
+    Dav(CardDav<AnyDav>),
 }
 
 /// The rules an account's server runs, or this computer does.
 #[derive(Clone)]
 pub enum AnyRules {
-    Google(Google<AccountClient>),
-    #[cfg(any(test, feature = "fake"))]
-    Fake(Google<FakeGmail>),
-    Microsoft(Microsoft<mailrs_graph::Graph>),
-    #[cfg(any(test, feature = "fake"))]
-    FakeMicrosoft(Microsoft<FakeGraph>),
-    Sieve(SieveRules<ManageSieveClient>),
-    #[cfg(any(test, feature = "fake"))]
-    FakeSieve(SieveRules<FakeSieve>),
+    Google(GoogleAdapter),
+    Microsoft(MicrosoftAdapter),
+    Sieve(SieveRules<AnySieve>),
     Local(LocalRules),
 }
 
 /// An account's automatic reply.
 #[derive(Clone)]
 pub enum AnyAutoReply {
-    Google(Google<AccountClient>),
-    #[cfg(any(test, feature = "fake"))]
-    Fake(Google<FakeGmail>),
-    Microsoft(Microsoft<mailrs_graph::Graph>),
-    #[cfg(any(test, feature = "fake"))]
-    FakeMicrosoft(Microsoft<FakeGraph>),
-    Sieve(SieveRules<ManageSieveClient>),
-    #[cfg(any(test, feature = "fake"))]
-    FakeSieve(SieveRules<FakeSieve>),
+    Google(GoogleAdapter),
+    Microsoft(MicrosoftAdapter),
+    Sieve(SieveRules<AnySieve>),
 }
 
 /// The addresses an account sends as.
 #[derive(Clone)]
 pub enum AnyIdentities {
-    Google(Google<AccountClient>),
-    #[cfg(any(test, feature = "fake"))]
-    Fake(Google<FakeGmail>),
-    Imap(Imap<ImapClient, SmtpClient>),
-    #[cfg(any(test, feature = "fake"))]
-    FakeImap(Imap<FakeImap, FakeSmtp>),
-    Microsoft(Microsoft<mailrs_graph::Graph>),
-    #[cfg(any(test, feature = "fake"))]
-    FakeMicrosoft(Microsoft<FakeGraph>),
-    Pop3(RealPop3),
-    #[cfg(any(test, feature = "fake"))]
-    FakePop3(FakedPop3),
+    Google(GoogleAdapter),
+    Imap(ImapAdapter),
+    Microsoft(MicrosoftAdapter),
+    Pop3(Pop3Adapter),
 }
 
 impl AnyMail {
@@ -232,17 +152,9 @@ impl AnyMail {
     pub fn withheld(&self) -> Withheld {
         match self {
             AnyMail::Google(adapter) => adapter.withheld(),
-            #[cfg(any(test, feature = "fake"))]
-            AnyMail::Fake(adapter) => adapter.withheld(),
             AnyMail::Imap(_) => Withheld::NONE,
-            #[cfg(any(test, feature = "fake"))]
-            AnyMail::FakeImap(_) => Withheld::NONE,
             AnyMail::Microsoft(adapter) => adapter.withheld(),
-            #[cfg(any(test, feature = "fake"))]
-            AnyMail::FakeMicrosoft(adapter) => adapter.withheld(),
             AnyMail::Pop3(_) => Withheld::NONE,
-            #[cfg(any(test, feature = "fake"))]
-            AnyMail::FakePop3(_) => Withheld::NONE,
         }
     }
 
@@ -251,8 +163,6 @@ impl AnyMail {
     pub fn refused(&self) -> Refused {
         match self {
             AnyMail::Microsoft(adapter) => adapter.refused(),
-            #[cfg(any(test, feature = "fake"))]
-            AnyMail::FakeMicrosoft(adapter) => adapter.refused(),
             _ => Refused::default(),
         }
     }
@@ -581,8 +491,6 @@ impl RulesService for AnyRules {
     fn queues_offline(&self) -> bool {
         match self {
             AnyRules::Sieve(adapter) => adapter.queues_offline(),
-            #[cfg(any(test, feature = "fake"))]
-            AnyRules::FakeSieve(adapter) => adapter.queues_offline(),
             _ => false,
         }
     }
@@ -602,8 +510,6 @@ impl AnyRules {
     pub async fn listing(&self) -> Result<(Vec<Filter>, Vec<String>), BackendError> {
         match self {
             AnyRules::Sieve(adapter) => adapter.listing().await,
-            #[cfg(any(test, feature = "fake"))]
-            AnyRules::FakeSieve(adapter) => adapter.listing().await,
             other => Ok((other.filters().await?, Vec::new())),
         }
     }
@@ -614,8 +520,6 @@ impl AnyCalendar {
     pub fn login_refused(&self) -> Option<String> {
         match self {
             AnyCalendar::Dav(adapter) => adapter.login_refused(),
-            #[cfg(any(test, feature = "fake"))]
-            AnyCalendar::FakeDav(adapter) => adapter.login_refused(),
             _ => None,
         }
     }
@@ -626,8 +530,6 @@ impl AnyContacts {
     pub fn login_refused(&self) -> Option<String> {
         match self {
             AnyContacts::Dav(adapter) => adapter.login_refused(),
-            #[cfg(any(test, feature = "fake"))]
-            AnyContacts::FakeDav(adapter) => adapter.login_refused(),
             _ => None,
         }
     }
@@ -645,28 +547,16 @@ impl AutoReplyService for AnyAutoReply {
     fn keeps_subject(&self) -> bool {
         match self {
             AnyAutoReply::Google(adapter) => adapter.keeps_subject(),
-            #[cfg(any(test, feature = "fake"))]
-            AnyAutoReply::Fake(adapter) => adapter.keeps_subject(),
             AnyAutoReply::Microsoft(adapter) => adapter.keeps_subject(),
-            #[cfg(any(test, feature = "fake"))]
-            AnyAutoReply::FakeMicrosoft(adapter) => adapter.keeps_subject(),
             AnyAutoReply::Sieve(adapter) => adapter.keeps_subject(),
-            #[cfg(any(test, feature = "fake"))]
-            AnyAutoReply::FakeSieve(adapter) => adapter.keeps_subject(),
         }
     }
 
     fn limits_to_contacts(&self) -> bool {
         match self {
             AnyAutoReply::Google(adapter) => adapter.limits_to_contacts(),
-            #[cfg(any(test, feature = "fake"))]
-            AnyAutoReply::Fake(adapter) => adapter.limits_to_contacts(),
             AnyAutoReply::Microsoft(adapter) => adapter.limits_to_contacts(),
-            #[cfg(any(test, feature = "fake"))]
-            AnyAutoReply::FakeMicrosoft(adapter) => adapter.limits_to_contacts(),
             AnyAutoReply::Sieve(adapter) => adapter.limits_to_contacts(),
-            #[cfg(any(test, feature = "fake"))]
-            AnyAutoReply::FakeSieve(adapter) => adapter.limits_to_contacts(),
         }
     }
 }

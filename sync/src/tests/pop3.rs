@@ -47,7 +47,7 @@ pub(crate) async fn pop3_harness(fake: FakePop3, remove: RemoveSetting) -> Pop3H
     let (fake, smtp) = (Arc::new(fake), Arc::new(FakeSmtp::default()));
     let (sender, events) = async_channel::unbounded();
     let settings = Pop3Settings { address: "me@example.org".into(), provider_name: "example.org".into() };
-    let services = AccountServices::fake_pop3(db.clone(), account_id, Arc::clone(&fake), Arc::clone(&smtp), settings);
+    let services = AccountServices::pop3(db.clone(), account_id, Arc::clone(&fake), Arc::clone(&smtp), settings);
     let sync = Arc::new(AccountSync::new(account_id, services, db.clone(), sender.clone()));
     sync.refresh_labels().await.unwrap();
     Pop3Harness { fake, smtp, sync, db, events, account_id, sender, _dir: dir }
@@ -68,7 +68,7 @@ impl Pop3Harness {
     /// `fake`.
     pub fn with_server(&self, fake: Arc<FakePop3>) -> AccountSync {
         let settings = Pop3Settings { address: "me@example.org".into(), provider_name: "example.org".into() };
-        let services = AccountServices::fake_pop3(self.db.clone(), self.account_id, fake, Arc::clone(&self.smtp), settings);
+        let services = AccountServices::pop3(self.db.clone(), self.account_id, fake, Arc::clone(&self.smtp), settings);
         AccountSync::new(self.account_id, services, self.db.clone(), self.sender.clone())
     }
 

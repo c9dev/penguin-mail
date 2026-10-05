@@ -15,7 +15,7 @@ use crate::passwords::{MemoryPasswords, PasswordStore};
 use crate::services::{CalDav, CardDav, SieveRules};
 use crate::tests::{ServedBy, imap_harness};
 use crate::{
-    AccountSettings, AnyAutoReply, AnyCalendar, AnyContacts, AnyRules, ContactBook,
+    AccountSettings, AnyAutoReply, AnyCalendar, AnyContacts, AnyDav, AnyRules, AnySieve, ContactBook,
     ContactsService, Permitted, Replaced, RulesPlace, connect_imap,
 };
 
@@ -118,8 +118,8 @@ async fn the_local_copy_reads_a_caldav_calendar_and_sends_an_edit_back() {
          DTEND:20261006T130000Z\r\nSUMMARY:Lunch\r\nX-KEEP:yes\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n",
     );
     let mail = h.sync.services().mail.clone();
-    let services = h.sync.services().clone().with_calendar(AnyCalendar::FakeDav(CalDav::new(
-        Arc::clone(&dav),
+    let services = h.sync.services().clone().with_calendar(AnyCalendar::Dav(CalDav::new(
+        Arc::new(AnyDav::from(Arc::clone(&dav))),
         mail,
         vec!["me@example.com".into()],
     )));
@@ -156,7 +156,7 @@ async fn a_lost_token_reads_the_calendar_whole_once_and_doubles_nothing() {
         .sync
         .services()
         .clone()
-        .with_calendar(AnyCalendar::FakeDav(CalDav::new(Arc::clone(&dav), mail, vec![])));
+        .with_calendar(AnyCalendar::Dav(CalDav::new(Arc::new(AnyDav::from(Arc::clone(&dav))), mail, vec![])));
     let copy = CalendarCopy::new(Arc::new(ServedBy::new(h.account_id, Arc::clone(&h.sync), services)), h.db.clone());
     let now = crate::now_millis();
     copy.refresh(h.account_id, now).await.unwrap();
@@ -176,7 +176,7 @@ async fn an_address_book_that_came_reads_the_contacts_whole() {
     let dav = Arc::new(FakeDav::new());
     dav.add_collection("/card/default/", Kind::AddressBook, "Contacts", None);
     dav.put_resource("/card/default/a.vcf", "BEGIN:VCARD\r\nVERSION:3.0\r\nFN:Ana\r\nEMAIL:ana@example.pt\r\nEND:VCARD\r\n");
-    let services = h.sync.services().clone().with_contacts(AnyContacts::FakeDav(CardDav::new(Arc::clone(&dav))));
+    let services = h.sync.services().clone().with_contacts(AnyContacts::Dav(CardDav::new(Arc::new(AnyDav::from(Arc::clone(&dav))))));
     let accounts = Arc::new(ServedBy::new(h.account_id, Arc::clone(&h.sync), services));
     let photos = tempfile::tempdir().unwrap();
     let book = ContactBook::new(accounts, h.db.clone(), photos.path().to_path_buf());
@@ -195,13 +195,13 @@ async fn the_settings_ask_before_replacing_a_script_and_go_ahead_after_a_yes() {
     let sieve = Arc::new(FakeSieve::new("fileinto vacation imap4flags"));
     sieve.put_elsewhere("mine", "keep;\n", true);
     let imap = h.sync.services().mail.clone();
-    let rules = SieveRules::new(Arc::clone(&sieve), imap, "me@example.com".into(), "Example".into());
+    let rules = SieveRules::new(Arc::new(AnySieve::from(Arc::clone(&sieve))), imap, "me@example.com".into(), "Example".into());
     let services = h
         .sync
         .services()
         .clone()
-        .with_rules(AnyRules::FakeSieve(rules.clone()))
-        .with_auto_reply(AnyAutoReply::FakeSieve(rules));
+        .with_rules(AnyRules::Sieve(rules.clone()))
+        .with_auto_reply(AnyAutoReply::Sieve(rules));
     let settings =
         AccountSettings::new(Arc::new(ServedBy::new(h.account_id, Arc::clone(&h.sync), services)), h.db.clone());
     let refused = settings.add_rule(h.account_id, Filter::block("pest@example.com")).await.unwrap_err();
@@ -218,8 +218,8 @@ async fn an_edit_through_the_settings_keeps_its_place_on_a_sieve_server() {
     let h = imap_harness().await;
     let sieve = Arc::new(FakeSieve::new("fileinto vacation imap4flags"));
     let imap = h.sync.services().mail.clone();
-    let rules = SieveRules::new(Arc::clone(&sieve), imap, "me@example.com".into(), "Example".into());
-    let services = h.sync.services().clone().with_rules(AnyRules::FakeSieve(rules));
+    let rules = SieveRules::new(Arc::new(AnySieve::from(Arc::clone(&sieve))), imap, "me@example.com".into(), "Example".into());
+    let services = h.sync.services().clone().with_rules(AnyRules::Sieve(rules));
     let settings =
         AccountSettings::new(Arc::new(ServedBy::new(h.account_id, Arc::clone(&h.sync), services)), h.db.clone());
     let Permitted::Done(first) = settings.add_rule(h.account_id, Filter::block("a@example.com")).await.unwrap()
@@ -243,7 +243,7 @@ async fn an_edit_through_the_settings_keeps_its_place_on_a_sieve_server() {
 async fn a_contacts_server_that_refuses_the_login_says_so() {
     let dav = Arc::new(FakeDav::new());
     dav.refuse_login(true);
-    let contacts = AnyContacts::FakeDav(CardDav::new(Arc::clone(&dav)));
+    let contacts = AnyContacts::Dav(CardDav::new(Arc::new(AnyDav::from(Arc::clone(&dav)))));
     assert!(contacts.login_refused().is_none());
     let _ = contacts.connections(None, None).await;
     assert!(contacts.login_refused().is_some());
@@ -276,7 +276,7 @@ async fn a_caldav_account_offers_quiet_changes() {
         .sync
         .services()
         .clone()
-        .with_calendar(AnyCalendar::FakeDav(CalDav::new(dav, mail, vec!["me@example.com".into()])));
+        .with_calendar(AnyCalendar::Dav(CalDav::new(Arc::new(AnyDav::from(dav)), mail, vec!["me@example.com".into()])));
     assert!(services.offers().quiet_changes);
 }
 
@@ -306,8 +306,8 @@ async fn a_caldav_invitation_to_one_occurrence_says_how_its_series_runs() {
         ),
     );
     let mail = h.sync.services().mail.clone();
-    let services = h.sync.services().clone().with_calendar(AnyCalendar::FakeDav(CalDav::new(
-        Arc::clone(&dav),
+    let services = h.sync.services().clone().with_calendar(AnyCalendar::Dav(CalDav::new(
+        Arc::new(AnyDav::from(Arc::clone(&dav))),
         mail,
         vec!["me@example.com".into()],
     )));

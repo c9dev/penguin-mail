@@ -7,13 +7,13 @@ use std::sync::Arc;
 use mailrs_dav::fake::FakeDav;
 
 use crate::fake::{FakeGmail, FakeGraph, FakeImap, FakeSmtp};
-use crate::services::{CalDav, Imap};
+use crate::services::CalDav;
 use crate::{AccountServices, AnyCalendar, ImapSettings, Offers};
 
 fn google(address: &str) -> Offers {
     let fake = Arc::new(FakeGmail::new());
     fake.with(|s| s.email = address.into());
-    AccountServices::fake(fake).offers()
+    AccountServices::google(fake).offers()
 }
 
 #[test]
@@ -57,10 +57,10 @@ fn a_caldav_account_stores_only_events_whatever_its_address() {
     let (imap, smtp) = (Arc::new(FakeImap::new()), Arc::new(FakeSmtp::new()));
     // An address on its own domain made the old check offer focus time.
     let settings = imap_settings("dana@fernwood.example");
-    let mail = Imap::new(Arc::clone(&imap), Arc::clone(&smtp), settings.clone());
-    let offers = AccountServices::fake_imap_with(imap, smtp, settings)
-        .with_calendar(AnyCalendar::FakeDav(CalDav::new(Arc::new(FakeDav::new()), crate::AnyMail::FakeImap(mail), vec![])))
-        .offers();
+    let services = AccountServices::imap(imap, smtp, settings);
+    let mail = services.mail.clone();
+    let dav = Arc::new(crate::AnyDav::from(Arc::new(FakeDav::new())));
+    let offers = services.with_calendar(AnyCalendar::Dav(CalDav::new(dav, mail, vec![]))).offers();
     assert!(offers.calendar);
     assert!(!offers.out_of_office && !offers.focus_time && !offers.declines);
 }

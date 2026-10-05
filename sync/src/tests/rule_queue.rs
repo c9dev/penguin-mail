@@ -14,13 +14,13 @@ async fn settings() -> (Arc<FakeSieve>, AccountSettings<ServedBy>, i64, ImapHarn
     let h = imap_harness().await;
     let sieve = Arc::new(FakeSieve::new("fileinto vacation imap4flags copy include"));
     let imap = h.sync.services().mail.clone();
-    let rules = SieveRules::new(Arc::clone(&sieve), imap, "me@example.com".into(), "Example".into());
+    let rules = SieveRules::new(Arc::new(crate::AnySieve::from(Arc::clone(&sieve))), imap, "me@example.com".into(), "Example".into());
     let services = h
         .sync
         .services()
         .clone()
-        .with_rules(AnyRules::FakeSieve(rules.clone()))
-        .with_auto_reply(AnyAutoReply::FakeSieve(rules));
+        .with_rules(AnyRules::Sieve(rules.clone()))
+        .with_auto_reply(AnyAutoReply::Sieve(rules));
     let settings =
         AccountSettings::new(Arc::new(ServedBy::new(h.account_id, Arc::clone(&h.sync), services)), h.db.clone());
     (sieve, settings, h.account_id, h)

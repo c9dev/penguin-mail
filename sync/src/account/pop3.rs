@@ -73,8 +73,6 @@ impl AccountSync {
     pub async fn pop3_check(&self) -> Result<(), SyncError> {
         match &self.services.mail {
             AnyMail::Pop3(adapter) => self.check_with(adapter.client().as_ref()).await,
-            #[cfg(any(test, feature = "fake"))]
-            AnyMail::FakePop3(adapter) => self.check_with(adapter.client().as_ref()).await,
             _ => Ok(()),
         }
     }

@@ -18,7 +18,7 @@ use crate::config::Config;
 use crate::passwords::{PasswordError, PasswordStore, Secrets};
 use crate::sign_in::account_client;
 use crate::{
-    AccountClient, AccountServices, AnyAutoReply, AnyCalendar, AnyContacts, AnyRules, BackendError,
+    AccountClient, AccountServices, AnyAutoReply, AnyCalendar, AnyContacts, AnyDav, AnyRules, AnySieve, BackendError,
     CalDav, CardDav, ImapSettings, LocalRules, MicrosoftSettings, Pop3Settings, SieveRules, SyncError,
 };
 
@@ -440,7 +440,7 @@ fn attach(
         ServiceKind::CalDav => {
             match DavClient::new(&service.url, DavKind::Calendar, DavLogin::new(&service.user_name, secret)) {
                 Ok(client) => {
-                    let calendar = CalDav::new(Arc::new(client), services.mail.clone(), vec![account.email.clone()]);
+                    let calendar = CalDav::new(Arc::new(AnyDav::from(client)), services.mail.clone(), vec![account.email.clone()]);
                     services.with_calendar(AnyCalendar::Dav(calendar))
                 }
                 Err(err) => {
@@ -451,7 +451,7 @@ fn attach(
         }
         ServiceKind::CardDav => {
             match DavClient::new(&service.url, DavKind::AddressBook, DavLogin::new(&service.user_name, secret)) {
-                Ok(client) => services.with_contacts(AnyContacts::Dav(CardDav::new(Arc::new(client)))),
+                Ok(client) => services.with_contacts(AnyContacts::Dav(CardDav::new(Arc::new(AnyDav::from(client))))),
                 Err(err) => {
                     tracing::warn!(account = id, %err, "could not set up the contacts server");
                     services
@@ -466,7 +466,7 @@ fn attach(
             };
             let client = ManageSieveClient::new(host, port, SieveLogin::new(&service.user_name, secret));
             let rules = SieveRules::new(
-                Arc::new(client),
+                Arc::new(AnySieve::from(client)),
                 services.mail.clone(),
                 account.email.clone(),
                 provider_name.to_string(),

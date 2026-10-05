@@ -151,7 +151,7 @@ pub async fn seed_outlook(
     let (events, _) = async_channel::unbounded();
     let sync = Arc::new(AccountSync::new(
         account_id,
-        AccountServices::fake_microsoft_with(Arc::clone(&graph), settings()),
+        AccountServices::microsoft(Arc::clone(&graph), settings()),
         db.clone(),
         events,
     ));

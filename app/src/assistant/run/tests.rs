@@ -1347,8 +1347,8 @@ async fn hidden_addresses_are_refused_on_a_folder_account_with_the_reason() {
     let h = Harness::with_services(|_, services| {
         let imap = AccountServices::fake_imap(Arc::new(FakeImap::new()), Arc::new(FakeSmtp::default()));
         let adapter = imap.mail.clone();
-        let sieve = SieveRules::new(Arc::new(FakeSieve::new("fileinto vacation")), adapter, ME.into(), "Example".into());
-        *services = imap.with_rules(AnyRules::FakeSieve(sieve));
+        let sieve = SieveRules::new(Arc::new(mailrs_sync::AnySieve::from(Arc::new(FakeSieve::new("fileinto vacation")))), adapter, ME.into(), "Example".into());
+        *services = imap.with_rules(AnyRules::Sieve(sieve));
     })
     .await;
     assert_eq!(

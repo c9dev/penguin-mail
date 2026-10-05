@@ -30,7 +30,7 @@ pub struct Pop3Server {
 
 impl Pop3Server {
     pub fn services(&self, db: &Db, account_id: AccountId) -> AccountServices {
-        AccountServices::fake_pop3(
+        AccountServices::pop3(
             db.clone(),
             account_id,
             Arc::clone(&self.pop3),

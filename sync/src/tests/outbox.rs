@@ -689,7 +689,7 @@ async fn a_message_queued_before_a_restart_goes_out_after_one() {
     let outbox_over = |db: &mailrs_store::Db| {
         let sync = Arc::new(crate::AccountSync::new(
             1,
-            AccountServices::fake(Arc::clone(&fake)),
+            AccountServices::google(Arc::clone(&fake)),
             db.clone(),
             sender.clone(),
         ));

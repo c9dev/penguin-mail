@@ -12,6 +12,7 @@
 mod any;
 mod caldav;
 mod carddav;
+mod clients;
 mod dav_read;
 pub mod finding;
 mod google;
@@ -27,6 +28,7 @@ mod sieve;
 pub use caldav::CalDav;
 pub use any::{AnyAutoReply, AnyCalendar, AnyContacts, AnyIdentities, AnyMail, AnyRules};
 pub use carddav::CardDav;
+pub use clients::{AnyDav, AnyGmail, AnyGraph, AnyImap, AnyPop3, AnySieve, AnySmtp};
 pub use local::LocalRules;
 pub use google::{Google, ID_PAGE_SIZE, LIST_PAGE_SIZE, is_workspace};
 pub use imap::{Imap, ImapApi, ImapSettings, Submit};
@@ -56,15 +58,14 @@ use mailrs_domain::{
     AccountId, EpochMillis, Filter, Location, MailSet, Membership, MessageMeta, RemoteMailbox, Role, Vacation,
 };
 use mailrs_gmail::{ConnectionsPage, ContactFields, LabelColor, Person};
-use mailrs_imap::{ImapClient, SmtpClient, UidSet};
+use mailrs_imap::UidSet;
 use mailrs_mime::Parts;
-use mailrs_pop3::Pop3Client;
 use mailrs_store::Db;
 use mailrs_store::threading::Links;
 
-use crate::api::{AccountClient, DraftRef, SavedDraft};
+use crate::api::{DraftRef, SavedDraft};
 #[cfg(any(test, feature = "fake"))]
-use crate::fake::{FakeGmail, FakeGraph, FakeImap, FakePop3, FakeSmtp};
+use crate::fake::{FakeGmail, FakeGraph, FakeImap, FakeSmtp};
 use crate::{BackendError, MailOp};
 
 /// One address an account may send mail as: its own, or an alias whose
@@ -364,9 +365,10 @@ pub struct AccountServices {
 
 impl AccountServices {
     /// A Google account: every service, all over the one client, which
-    /// spends one quota bucket for all of them.
-    pub fn google(client: AccountClient) -> Self {
-        let google = Google::new(Arc::new(client));
+    /// spends one quota bucket for all of them. Tests and the demo hand
+    /// it the in-memory Gmail.
+    pub fn google(client: impl Into<AnyGmail>) -> Self {
+        let google = Google::new(Arc::new(client.into()));
         AccountServices {
             mail: AnyMail::Google(google.clone()),
             calendar: Some(AnyCalendar::Google(google.clone())),
@@ -380,8 +382,8 @@ impl AccountServices {
     /// An account on an IMAP server: its mail and the address it sends
     /// from. `connect_imap` adds the calendar, contacts, rules and
     /// automatic reply the account's servers offer.
-    pub fn imap(imap: ImapClient, smtp: SmtpClient, settings: ImapSettings) -> Self {
-        let adapter = Imap::new(Arc::new(imap), Arc::new(smtp), settings);
+    pub fn imap(imap: impl Into<AnyImap>, smtp: impl Into<AnySmtp>, settings: ImapSettings) -> Self {
+        let adapter = Imap::new(Arc::new(imap.into()), Arc::new(smtp.into()), settings);
         AccountServices {
             mail: AnyMail::Imap(adapter.clone()),
             calendar: None,
@@ -413,8 +415,8 @@ impl AccountServices {
     }
 
     /// A Microsoft account: every service over the one Graph client.
-    pub fn microsoft(graph: mailrs_graph::Graph, settings: MicrosoftSettings) -> Self {
-        let adapter = Microsoft::new(Arc::new(graph), settings);
+    pub fn microsoft(graph: impl Into<AnyGraph>, settings: MicrosoftSettings) -> Self {
+        let adapter = Microsoft::new(Arc::new(graph.into()), settings);
         AccountServices {
             mail: AnyMail::Microsoft(adapter.clone()),
             calendar: Some(AnyCalendar::Microsoft(adapter.clone())),
@@ -433,44 +435,15 @@ impl AccountServices {
             provider_name: "Outlook".into(),
             window_days: crate::DEFAULT_WINDOW_DAYS,
         };
-        AccountServices::fake_microsoft_with(fake, settings)
-    }
-
-    /// The in-memory Graph with `settings`.
-    #[cfg(any(test, feature = "fake"))]
-    pub fn fake_microsoft_with(fake: Arc<FakeGraph>, settings: MicrosoftSettings) -> Self {
-        let adapter = Microsoft::new(fake, settings);
-        AccountServices {
-            mail: AnyMail::FakeMicrosoft(adapter.clone()),
-            calendar: Some(AnyCalendar::FakeMicrosoft(adapter.clone())),
-            contacts: Some(AnyContacts::FakeMicrosoft(adapter.clone())),
-            rules: Some(AnyRules::FakeMicrosoft(adapter.clone())),
-            auto_reply: Some(AnyAutoReply::FakeMicrosoft(adapter.clone())),
-            identities: AnyIdentities::FakeMicrosoft(adapter),
-        }
-    }
-
-    /// The in-memory Gmail, for tests and the demo, through the same
-    /// adapter a real account uses.
-    #[cfg(any(test, feature = "fake"))]
-    pub fn fake(gmail: Arc<FakeGmail>) -> Self {
-        let google = Google::new(gmail);
-        AccountServices {
-            mail: AnyMail::Fake(google.clone()),
-            calendar: Some(AnyCalendar::Fake(google.clone())),
-            contacts: Some(AnyContacts::Fake(google.clone())),
-            rules: Some(AnyRules::Fake(google.clone())),
-            auto_reply: Some(AnyAutoReply::Fake(google.clone())),
-            identities: AnyIdentities::Fake(google),
-        }
+        AccountServices::microsoft(fake, settings)
     }
 
     /// The in-memory Gmail with other capabilities, for tests of an
     /// account whose server does less than Gmail.
     #[cfg(any(test, feature = "fake"))]
     pub fn fake_with_capabilities(gmail: Arc<FakeGmail>, caps: MailCapabilities) -> Self {
-        let mut services = AccountServices::fake(Arc::clone(&gmail));
-        services.mail = AnyMail::Fake(Google::new(gmail).with_capabilities(caps));
+        let mut services = AccountServices::google(Arc::clone(&gmail));
+        services.mail = AnyMail::Google(Google::new(Arc::new(AnyGmail::from(gmail))).with_capabilities(caps));
         services
     }
 
@@ -484,21 +457,7 @@ impl AccountServices {
             files_sent_mail: false,
             window_days: crate::DEFAULT_WINDOW_DAYS,
         };
-        AccountServices::fake_imap_with(imap, smtp, settings)
-    }
-
-    /// The in-memory IMAP server with `settings`.
-    #[cfg(any(test, feature = "fake"))]
-    pub fn fake_imap_with(imap: Arc<FakeImap>, smtp: Arc<FakeSmtp>, settings: ImapSettings) -> Self {
-        let adapter = Imap::new(imap, smtp, settings);
-        AccountServices {
-            mail: AnyMail::FakeImap(adapter.clone()),
-            calendar: None,
-            contacts: None,
-            rules: None,
-            auto_reply: None,
-            identities: AnyIdentities::FakeImap(adapter),
-        }
+        AccountServices::imap(imap, smtp, settings)
     }
 
     /// A POP3 account: its mail and address, over the store, with rules
@@ -507,11 +466,11 @@ impl AccountServices {
     pub fn pop3(
         db: Db,
         account_id: AccountId,
-        client: Pop3Client,
-        smtp: SmtpClient,
+        client: impl Into<AnyPop3>,
+        smtp: impl Into<AnySmtp>,
         settings: Pop3Settings,
     ) -> Self {
-        let adapter = Pop3::new(db.clone(), account_id, Arc::new(smtp), Arc::new(client), settings);
+        let adapter = Pop3::new(db.clone(), account_id, Arc::new(smtp.into()), Arc::new(client.into()), settings);
         AccountServices {
             mail: AnyMail::Pop3(adapter.clone()),
             calendar: None,
@@ -519,26 +478,6 @@ impl AccountServices {
             rules: Some(AnyRules::Local(LocalRules::new(db, account_id))),
             auto_reply: None,
             identities: AnyIdentities::Pop3(adapter),
-        }
-    }
-
-    /// A POP3 account over the in-memory POP3 server and SMTP sink.
-    #[cfg(any(test, feature = "fake"))]
-    pub fn fake_pop3(
-        db: Db,
-        account_id: AccountId,
-        client: Arc<FakePop3>,
-        smtp: Arc<FakeSmtp>,
-        settings: Pop3Settings,
-    ) -> Self {
-        let adapter = Pop3::new(db.clone(), account_id, smtp, client, settings);
-        AccountServices {
-            mail: AnyMail::FakePop3(adapter.clone()),
-            calendar: None,
-            contacts: None,
-            rules: Some(AnyRules::Local(LocalRules::new(db, account_id))),
-            auto_reply: None,
-            identities: AnyIdentities::FakePop3(adapter),
         }
     }
 
@@ -667,16 +606,10 @@ impl CalendarFeatures {
         match calendar {
             None => CalendarFeatures::NONE,
             Some(AnyCalendar::Google(google)) => CalendarFeatures::google(google.workspace()),
-            #[cfg(any(test, feature = "fake"))]
-            Some(AnyCalendar::Fake(google)) => CalendarFeatures::google(google.workspace()),
             // Graph holds no files for an event and keeps each event in
             // its calendar, but it lists, makes and changes calendars.
             Some(AnyCalendar::Microsoft(_)) => CalendarFeatures::MICROSOFT,
-            #[cfg(any(test, feature = "fake"))]
-            Some(AnyCalendar::FakeMicrosoft(_)) => CalendarFeatures::MICROSOFT,
             Some(AnyCalendar::Dav(_)) => CalendarFeatures::CALDAV,
-            #[cfg(any(test, feature = "fake"))]
-            Some(AnyCalendar::FakeDav(_)) => CalendarFeatures::CALDAV,
         }
     }
 }
@@ -1272,7 +1205,7 @@ mod tests {
 
     #[test]
     fn a_google_account_has_every_service() {
-        let services = AccountServices::fake(Arc::new(FakeGmail::new()));
+        let services = AccountServices::google(Arc::new(FakeGmail::new()));
         assert!(services.calendar.is_some());
         assert!(services.contacts.is_some());
         assert!(services.auto_reply.is_some());
@@ -1323,7 +1256,7 @@ mod tests {
         let gmail = Arc::new(FakeGmail::new());
         // A personal account: Workspace adds out of office and focus time.
         gmail.with(|s| s.email = "dana@gmail.com".into());
-        let services = AccountServices::fake(gmail);
+        let services = AccountServices::google(gmail);
         assert_eq!(services.offers(), Offers::EVERYTHING);
         assert!(services.offers().missing().is_empty());
     }
@@ -1336,7 +1269,7 @@ mod tests {
             tags: true,
             focus: true,
             local_mailboxes: false,
-            ..AccountServices::fake(Arc::clone(&gmail)).capabilities()
+            ..AccountServices::google(Arc::clone(&gmail)).capabilities()
         };
         let offers = AccountServices::fake_with_capabilities(gmail, caps).offers();
         assert!(offers.tags && offers.focused && !offers.labels);
@@ -1345,7 +1278,7 @@ mod tests {
 
     #[test]
     fn gmail_offers_all_three_calendar_gates_and_imap_none() {
-        let gmail = AccountServices::fake(Arc::new(FakeGmail::new())).offers();
+        let gmail = AccountServices::google(Arc::new(FakeGmail::new())).offers();
         assert!(gmail.event_files && gmail.moves_events && gmail.calendar_list && gmail.quiet_changes);
         let imap = AccountServices::fake_imap(Arc::new(FakeImap::new()), Arc::new(FakeSmtp::default())).offers();
         assert!(!imap.event_files && !imap.moves_events && !imap.calendar_list && !imap.quiet_changes);
@@ -1353,7 +1286,7 @@ mod tests {
 
     #[test]
     fn an_account_says_what_it_lacks() {
-        let mut services = AccountServices::fake(Arc::new(FakeGmail::new()));
+        let mut services = AccountServices::google(Arc::new(FakeGmail::new()));
         services.calendar = None;
         services.rules = None;
         assert_eq!(services.offers().missing(), [Missing::Calendar, Missing::Rules]);
@@ -1362,7 +1295,7 @@ mod tests {
     #[test]
     fn an_account_searches_on_its_server_unless_its_mailboxes_are_local() {
         let gmail = Arc::new(FakeGmail::new());
-        assert!(AccountServices::fake(Arc::clone(&gmail)).offers().search);
+        assert!(AccountServices::google(Arc::clone(&gmail)).offers().search);
         let imap = AccountServices::fake_imap(
             Arc::new(crate::fake::FakeImap::new()),
             Arc::new(crate::fake::FakeSmtp::default()),
@@ -1370,7 +1303,7 @@ mod tests {
         assert!(imap.offers().search, "IMAP answers native_search false and still searches on the server");
         let caps = MailCapabilities {
             local_mailboxes: true,
-            ..AccountServices::fake(Arc::clone(&gmail)).capabilities()
+            ..AccountServices::google(Arc::clone(&gmail)).capabilities()
         };
         assert!(!AccountServices::fake_with_capabilities(gmail, caps).offers().search);
     }
@@ -1378,7 +1311,7 @@ mod tests {
     #[tokio::test]
     async fn every_service_reaches_the_one_mailbox() {
         let gmail = Arc::new(FakeGmail::new());
-        let services = AccountServices::fake(Arc::clone(&gmail));
+        let services = AccountServices::google(Arc::clone(&gmail));
         let rules = services.rules.as_ref().expect("Gmail has rules");
         rules
             .create_filter(&Filter::block("pest@example.com"))

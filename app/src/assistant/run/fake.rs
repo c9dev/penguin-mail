@@ -598,7 +598,7 @@ impl Harness {
         }
         gmail.keep_sent_copies(account_id);
         let (events, heard) = async_channel::unbounded();
-        let mut services = AccountServices::fake(Arc::clone(&gmail));
+        let mut services = AccountServices::google(Arc::clone(&gmail));
         edit(&gmail, &mut services);
         let sync = Arc::new(AccountSync::new(
             account_id,
@@ -636,7 +636,7 @@ impl Harness {
             }
             let sync = Arc::new(AccountSync::new(
                 id,
-                AccountServices::fake(Arc::clone(&gmail)),
+                AccountServices::google(Arc::clone(&gmail)),
                 db.clone(),
                 events.clone(),
             ));
