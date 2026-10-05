@@ -434,7 +434,7 @@ async fn a_hidden_address_waits_on_the_settings_permission() {
 #[tokio::test]
 async fn an_account_without_rules_says_the_server_cannot() {
     let h = harness().await;
-    let mut services = AccountServices::fake(Arc::clone(&h.fake));
+    let mut services = AccountServices::google(Arc::clone(&h.fake));
     services.rules = None;
     let settings = settings_over(&h, services);
     assert!(matches!(

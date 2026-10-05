@@ -18,7 +18,7 @@ use crate::config::Config;
 use crate::passwords::{PasswordError, PasswordStore, Secrets};
 use crate::sign_in::account_client;
 use crate::{
-    AccountClient, AccountServices, AnyAutoReply, AnyCalendar, AnyContacts, AnyRules, BackendError,
+    AccountClient, AccountServices, AnyAutoReply, AnyCalendar, AnyContacts, AnyDav, AnyRules, AnySieve, BackendError,
     CalDav, CardDav, ImapSettings, LocalRules, MicrosoftSettings, Pop3Settings, SieveRules, SyncError,
 };
 
@@ -412,55 +412,22 @@ pub(crate) async fn connect_pop3_within<P: PasswordStore + 'static>(
         smtp,
         Pop3Settings {
             address: account.email.clone(),
-            provider_name,
+            provider_name: provider_name.clone(),
         },
     );
     let found = bounded(id, "the mail store", wait, db.read(move |c| mailrs_store::services::load(c, id))).await?;
     // The password goes only to a server the person confirmed.
     for service in found.into_iter().filter(|f| f.confirmed) {
-        services = attach_pop3(services, &service, &secret, account);
+        services = attach(services, &service, &secret, account, &provider_name);
     }
     Ok(services)
 }
 
-/// `services` with the CalDAV or CardDAV server `service` names put behind
-/// it. A server that cannot be set up is logged and left out, so the
-/// account keeps its mail.
-fn attach_pop3(
-    services: AccountServices,
-    service: &FoundService,
-    secret: &str,
-    account: &Account,
-) -> AccountServices {
-    let id = account.id;
-    let kind = match service.kind {
-        ServiceKind::CalDav => DavKind::Calendar,
-        ServiceKind::CardDav => DavKind::AddressBook,
-        ServiceKind::Sieve => return services,
-    };
-    let client = match DavClient::new(&service.url, kind, DavLogin::new(&service.user_name, secret)) {
-        Ok(client) => Arc::new(client),
-        Err(err) => {
-            tracing::warn!(account = id, %err, "could not set up a calendar or contacts server");
-            return services;
-        }
-    };
-    match service.kind {
-        ServiceKind::CalDav => match services.pop3_adapter() {
-            Some(mail) => {
-                let calendar = CalDav::new(client, mail, vec![account.email.clone()]);
-                services.with_calendar(AnyCalendar::Pop3Dav(calendar))
-            }
-            None => services,
-        },
-        ServiceKind::CardDav => services.with_contacts(AnyContacts::Dav(CardDav::new(client))),
-        ServiceKind::Sieve => services,
-    }
-}
-
 /// `services` with the server `service` names put behind the service it
 /// offers. A server that cannot be set up is logged and left out, so the
-/// account keeps its mail.
+/// account keeps its mail. A Sieve row is passed over for an account whose
+/// folders live on this computer, as a POP3 account's do: its mail never
+/// reaches server rules.
 fn attach(
     services: AccountServices,
     service: &FoundService,
@@ -471,12 +438,9 @@ fn attach(
     let id = account.id;
     match service.kind {
         ServiceKind::CalDav => {
-            let Some(mail) = services.imap_adapter() else {
-                return services;
-            };
             match DavClient::new(&service.url, DavKind::Calendar, DavLogin::new(&service.user_name, secret)) {
                 Ok(client) => {
-                    let calendar = CalDav::new(Arc::new(client), mail, vec![account.email.clone()]);
+                    let calendar = CalDav::new(Arc::new(AnyDav::from(client)), services.mail.clone(), vec![account.email.clone()]);
                     services.with_calendar(AnyCalendar::Dav(calendar))
                 }
                 Err(err) => {
@@ -487,25 +451,23 @@ fn attach(
         }
         ServiceKind::CardDav => {
             match DavClient::new(&service.url, DavKind::AddressBook, DavLogin::new(&service.user_name, secret)) {
-                Ok(client) => services.with_contacts(AnyContacts::Dav(CardDav::new(Arc::new(client)))),
+                Ok(client) => services.with_contacts(AnyContacts::Dav(CardDav::new(Arc::new(AnyDav::from(client))))),
                 Err(err) => {
                     tracing::warn!(account = id, %err, "could not set up the contacts server");
                     services
                 }
             }
         }
+        ServiceKind::Sieve if services.capabilities().local_mailboxes => services,
         ServiceKind::Sieve => {
-            let Some(mail) = services.imap_adapter() else {
-                return services;
-            };
             let (host, port) = match service.url.rsplit_once(':') {
                 Some((host, port)) => (host, port.parse().unwrap_or(mailrs_sieve::PORT)),
                 None => (service.url.as_str(), mailrs_sieve::PORT),
             };
             let client = ManageSieveClient::new(host, port, SieveLogin::new(&service.user_name, secret));
             let rules = SieveRules::new(
-                Arc::new(client),
-                mail,
+                Arc::new(AnySieve::from(client)),
+                services.mail.clone(),
                 account.email.clone(),
                 provider_name.to_string(),
             );

@@ -9451,39 +9451,39 @@ msgstr "Penguin Mail keeps the names of Inbox, Sent, Drafts, Trash, Junk and Arc
 msgid "Penguin Mail keeps Inbox, Sent, Drafts, Trash, Junk and Archive."
 msgstr "Penguin Mail keeps Inbox, Sent, Drafts, Trash, Junk and Archive."
 
-#: sync/src/services/sieve.rs:88
+#: sync/src/services/sieve.rs:89
 msgid "{provider} offers no encrypted connection for rules, so Penguin Mail does not send your password there."
 msgstr "{provider} offers no encrypted connection for rules, so Penguin Mail does not send your password there."
 
-#: sync/src/services/sieve.rs:101
+#: sync/src/services/sieve.rs:102
 msgid "{provider} cannot run this rule: its server lacks the Sieve extension “{extension}”."
 msgstr "{provider} cannot run this rule: its server lacks the Sieve extension “{extension}”."
 
-#: sync/src/services/sieve.rs:106
+#: sync/src/services/sieve.rs:107
 msgid "The folder this rule files into is not on the server yet."
 msgstr "The folder this rule files into is not on the server yet."
 
-#: sync/src/services/sieve.rs:109
+#: sync/src/services/sieve.rs:110
 msgid "A rule on {provider} cannot keep mail out of Spam."
 msgstr "A rule on {provider} cannot keep mail out of Spam."
 
-#: sync/src/services/sieve.rs:113
+#: sync/src/services/sieve.rs:114
 msgid "{provider} does not mark mail as important."
 msgstr "{provider} does not mark mail as important."
 
-#: sync/src/services/sieve.rs:117
+#: sync/src/services/sieve.rs:118
 msgid "A rule can file mail into one folder."
 msgstr "A rule can file mail into one folder."
 
-#: sync/src/services/sieve.rs:120
+#: sync/src/services/sieve.rs:121
 msgid "Say which mail the rule is for"
 msgstr "Say which mail the rule is for"
 
-#: sync/src/services/sieve.rs:122
+#: sync/src/services/sieve.rs:123
 msgid "Choose what the rule does"
 msgstr "Choose what the rule does"
 
-#: sync/src/services/sieve.rs:189
+#: sync/src/services/sieve.rs:190
 msgid "The rule is read-only."
 msgstr "The rule is read-only."
 

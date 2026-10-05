@@ -55,7 +55,7 @@ async fn backfilling(count: usize, messages: usize) -> Backfilling {
                 )
             });
         }
-        engine.start_account(id, AccountServices::fake(Arc::clone(&fake)));
+        engine.start_account(id, AccountServices::google(Arc::clone(&fake)));
         fakes.push(fake);
         ids.push(id);
     }

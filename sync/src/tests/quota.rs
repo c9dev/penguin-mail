@@ -47,7 +47,7 @@ async fn synced(db: &Db, count: usize, threads: usize, messages: usize) -> Vec<S
         }
         let (sender, _events) = async_channel::unbounded();
         let sync = Arc::new(
-            AccountSync::new(id, AccountServices::fake(Arc::clone(&fake)), db.clone(), sender)
+            AccountSync::new(id, AccountServices::google(Arc::clone(&fake)), db.clone(), sender)
                 .with_retry_max(Duration::from_millis(10)),
         );
         all.push(Synced { id, fake, sync });
@@ -428,7 +428,7 @@ async fn realistic(db: &Db) -> Synced {
     let (sender, _events) = async_channel::unbounded();
     let sync = Arc::new(AccountSync::new(
         id,
-        AccountServices::fake(Arc::clone(&fake)),
+        AccountServices::google(Arc::clone(&fake)),
         db.clone(),
         sender,
     ));

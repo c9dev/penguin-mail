@@ -345,7 +345,7 @@ async fn a_recipient_already_in_the_sending_accounts_address_book_is_not_new() {
 #[tokio::test]
 async fn an_account_without_contacts_is_offered_nobody() {
     let h = harness().await;
-    let mut services = crate::AccountServices::fake(Arc::clone(&h.fake));
+    let mut services = crate::AccountServices::google(Arc::clone(&h.fake));
     services.contacts = None;
     let dir = tempfile::tempdir().unwrap();
     let book = ContactBook::new(

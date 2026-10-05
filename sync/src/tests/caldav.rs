@@ -11,23 +11,23 @@ use mailrs_domain::calendar::{Access, Attachment, Event, Notify, occurrence_id};
 use mailrs_domain::invitation::Answer;
 
 use crate::fake::{FakeImap, FakeSmtp};
-use crate::services::{CalDav, Imap};
+use crate::services::CalDav;
 use crate::tests::fake_settings;
-use crate::{BackendError, CalendarService, MailBackend};
+use crate::{AccountServices, BackendError, CalendarService, MailBackend};
 
 const WORK: &str = "/cal/work/";
 const ME: &str = "me@fastmail.com";
 const BOSS: &str = "boss@fastmail.com";
 
-type Adapter = CalDav<FakeDav, Imap<FakeImap, FakeSmtp>>;
+type Adapter = CalDav<FakeDav>;
 
 async fn adapter() -> (Arc<FakeDav>, Arc<FakeSmtp>, Adapter) {
     let dav = Arc::new(FakeDav::new());
     dav.add_collection(WORK, Kind::Calendar, "Work", Some("#3a87ad"));
     let smtp = Arc::new(FakeSmtp::default());
-    let imap = Imap::new(Arc::new(FakeImap::new()), Arc::clone(&smtp), fake_settings());
-    imap.mailboxes().await.unwrap();
-    let caldav = CalDav::new(Arc::clone(&dav), imap, vec![ME.to_string()]);
+    let mail = AccountServices::imap(Arc::new(FakeImap::new()), Arc::clone(&smtp), fake_settings()).mail;
+    mail.mailboxes().await.unwrap();
+    let caldav = CalDav::new(Arc::clone(&dav), mail, vec![ME.to_string()]);
     (dav, smtp, caldav)
 }
 

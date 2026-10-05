@@ -12,6 +12,18 @@ use crate::services::ImapApi;
 use crate::tests::{fake_settings, imap_harness, imap_harness_on};
 use crate::{AccountServices, AccountSync, EngineConfig, MailBackend, SyncEngine};
 
+/// Runs `body` on a runtime whose threads have the stack the app gives
+/// `SyncEngine`. An account's sync over the IMAP adapter nests deeper in a
+/// debug build than a test thread's 2 MiB allows.
+fn on_worker_stack(body: impl Future<Output = ()> + Send + 'static) {
+    let runtime = tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .thread_stack_size(crate::WORKER_STACK)
+        .build()
+        .expect("a runtime");
+    runtime.block_on(runtime.spawn(body)).expect("the test body");
+}
+
 async fn wait_for(events: &Receiver<ChangeEvent>, wanted: impl Fn(&ChangeEvent) -> bool) {
     tokio::time::timeout(Duration::from_secs(5), async {
         loop {
@@ -234,87 +246,91 @@ async fn a_server_that_floods_every_idle_is_watched_less_and_less_often() {
     assert!(waits[2] > waits[1], "{waits:?}");
 }
 
-#[tokio::test]
-async fn new_mail_arrives_by_idle_without_waiting_for_a_poll() {
-    let dir = tempfile::tempdir().unwrap();
-    let db = Db::open(&dir.path().join("mail.db")).unwrap();
-    db.write(|c| accounts::insert_account(c, "me@example.com", 0))
-        .await
-        .unwrap();
-    let config = EngineConfig {
-        poll_interval: Duration::from_secs(60 * 60),
-        ..EngineConfig::default()
-    };
-    let (engine, events) = SyncEngine::new(db.clone(), config);
-    let imap = Arc::new(FakeImap::new());
-    engine.start_account(
-        1,
-        AccountServices::fake_imap(Arc::clone(&imap), Arc::new(FakeSmtp::default())),
-    );
-    wait_for(&events, |e| {
-        matches!(
-            e,
-            ChangeEvent::AccountStateChanged {
-                state: AccountState::Ok,
-                ..
-            }
-        )
-    })
-    .await;
+#[test]
+fn new_mail_arrives_by_idle_without_waiting_for_a_poll() {
+    on_worker_stack(async move {
+        let dir = tempfile::tempdir().unwrap();
+        let db = Db::open(&dir.path().join("mail.db")).unwrap();
+        db.write(|c| accounts::insert_account(c, "me@example.com", 0))
+            .await
+            .unwrap();
+        let config = EngineConfig {
+            poll_interval: Duration::from_secs(60 * 60),
+            ..EngineConfig::default()
+        };
+        let (engine, events) = SyncEngine::new(db.clone(), config);
+        let imap = Arc::new(FakeImap::new());
+        engine.start_account(
+            1,
+            AccountServices::fake_imap(Arc::clone(&imap), Arc::new(FakeSmtp::default())),
+        );
+        wait_for(&events, |e| {
+            matches!(
+                e,
+                ChangeEvent::AccountStateChanged {
+                    state: AccountState::Ok,
+                    ..
+                }
+            )
+        })
+        .await;
 
-    // The loop waits in IDLE once the window has loaded; mail arriving
-    // before that would be read by the first poll, an hour away here.
-    idling(&imap, 1).await;
-    imap.deliver_flagged("INBOX", &message("a", "Kites", ""), &[], days_ago(0));
+        // The loop waits in IDLE once the window has loaded; mail arriving
+        // before that would be read by the first poll, an hour away here.
+        idling(&imap, 1).await;
+        imap.deliver_flagged("INBOX", &message("a", "Kites", ""), &[], days_ago(0));
 
-    wait_for(&events, |e| matches!(e, ChangeEvent::NewMail { .. })).await;
+        wait_for(&events, |e| matches!(e, ChangeEvent::NewMail { .. })).await;
+    });
 }
 
 /// A poke or a poll between changes leaves the IDLE waiting: the watch
 /// runs on across the loop's turns rather than ending at each one, which
 /// would drop the connection with no DONE and sign in again.
-#[tokio::test]
-async fn a_poke_leaves_the_idle_waiting() {
-    let dir = tempfile::tempdir().unwrap();
-    let db = Db::open(&dir.path().join("mail.db")).unwrap();
-    db.write(|c| accounts::insert_account(c, "me@example.com", 0))
-        .await
-        .unwrap();
-    let config = EngineConfig {
-        poll_interval: Duration::from_secs(60 * 60),
-        ..EngineConfig::default()
-    };
-    let (engine, events) = SyncEngine::new(db.clone(), config);
-    let imap = Arc::new(FakeImap::new());
-    engine.start_account(
-        1,
-        AccountServices::fake_imap(Arc::clone(&imap), Arc::new(FakeSmtp::default())),
-    );
-    wait_for(&events, |e| {
-        matches!(
-            e,
-            ChangeEvent::AccountStateChanged {
-                state: AccountState::Ok,
-                ..
-            }
-        )
-    })
-    .await;
-    idling(&imap, 1).await;
-
-    for _ in 0..3 {
-        let looked = imap.calls_to("select");
-        engine.poke(1);
-        tokio::time::timeout(Duration::from_secs(5), async {
-            while imap.calls_to("select") == looked {
-                tokio::time::sleep(Duration::from_millis(5)).await;
-            }
+#[test]
+fn a_poke_leaves_the_idle_waiting() {
+    on_worker_stack(async move {
+        let dir = tempfile::tempdir().unwrap();
+        let db = Db::open(&dir.path().join("mail.db")).unwrap();
+        db.write(|c| accounts::insert_account(c, "me@example.com", 0))
+            .await
+            .unwrap();
+        let config = EngineConfig {
+            poll_interval: Duration::from_secs(60 * 60),
+            ..EngineConfig::default()
+        };
+        let (engine, events) = SyncEngine::new(db.clone(), config);
+        let imap = Arc::new(FakeImap::new());
+        engine.start_account(
+            1,
+            AccountServices::fake_imap(Arc::clone(&imap), Arc::new(FakeSmtp::default())),
+        );
+        wait_for(&events, |e| {
+            matches!(
+                e,
+                ChangeEvent::AccountStateChanged {
+                    state: AccountState::Ok,
+                    ..
+                }
+            )
         })
-        .await
-        .expect("the poke made the engine look");
-    }
-    tokio::time::sleep(Duration::from_millis(50)).await;
+        .await;
+        idling(&imap, 1).await;
 
-    assert_eq!(imap.calls_to("idle"), 1, "{:?}", imap.calls());
-    engine.shutdown();
+        for _ in 0..3 {
+            let looked = imap.calls_to("select");
+            engine.poke(1);
+            tokio::time::timeout(Duration::from_secs(5), async {
+                while imap.calls_to("select") == looked {
+                    tokio::time::sleep(Duration::from_millis(5)).await;
+                }
+            })
+            .await
+            .expect("the poke made the engine look");
+        }
+        tokio::time::sleep(Duration::from_millis(50)).await;
+
+        assert_eq!(imap.calls_to("idle"), 1, "{:?}", imap.calls());
+        engine.shutdown();
+    });
 }
