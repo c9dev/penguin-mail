@@ -247,3 +247,17 @@ fn an_edit_to_an_event_without_guests_raises_the_sequence() {
     let after = read_resource(&written, "/c/", "/c/a.ics", "e", ME).unwrap().events[0].sequence;
     assert_eq!(after, before + 1, "{written}");
 }
+
+#[test]
+fn an_outlook_exdate_in_a_windows_zone_keeps_the_series_repeating() {
+    let text = fixture("windows-zone.ics").replace(
+        "SUMMARY:Call\r\n",
+        "SUMMARY:Call\r\nRRULE:FREQ=WEEKLY;COUNT=4\r\nEXDATE;TZID=\"W. Europe Standard Time\":20261027T140000\r\n",
+    );
+    let read = read_resource(&text, "/c/", "/c/w.ics", "e", ME).unwrap();
+    let event = &read.events[0];
+    assert!(event.rules[1].starts_with(&format!("EXDATE;TZID={}:", event.zone)), "{:?}", event.rules);
+    let week = 7 * 24 * 3_600_000;
+    let shown = mailrs_domain::calendar::expand(event, event.start, event.start + 5 * week);
+    assert_eq!(shown.len(), 3, "four weeks less the one skipped: {shown:?}");
+}

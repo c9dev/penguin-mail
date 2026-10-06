@@ -886,6 +886,19 @@ fn an_event_from_a_file_keeps_its_uid_zone_and_rules() {
 }
 
 #[test]
+fn an_outlook_skipped_day_is_named_in_an_iana_zone() {
+    let text = outlook_invite().replace(
+        "UID:",
+        "RRULE:FREQ=WEEKLY;COUNT=4\r\nEXDATE;TZID=W. Europe Standard Time:20260312T100000\r\nUID:",
+    );
+    let event = read(&text).unwrap().to_event("primary", "UTC").expect("an event");
+    assert_eq!(
+        event.rules,
+        ["RRULE:FREQ=WEEKLY;COUNT=4", "EXDATE;TZID=Europe/Berlin:20260312T100000"]
+    );
+}
+
+#[test]
 fn a_floating_time_takes_the_calendars_zone() {
     let text = ticket(None).replace(";TZID=Europe/Lisbon", "");
     let event = read(&text).unwrap().to_event("primary", "America/New_York").unwrap();

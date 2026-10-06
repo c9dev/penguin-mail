@@ -727,6 +727,49 @@ pub fn is_rule_line(line: &str) -> bool {
     line.to_ascii_uppercase().starts_with("RRULE")
 }
 
+/// `line` with its `TZID` parameter renamed through `iana`. Outlook writes
+/// an `EXDATE` in a Windows zone ("W. Europe Standard Time"), which `rrule`
+/// cannot read, and one line it cannot read loses the whole series. A name
+/// `iana` does not know stays as written.
+pub fn rename_zone(line: &str, iana: &dyn Fn(&str) -> Option<String>) -> String {
+    // The head ends at the first colon outside a quoted parameter value.
+    let mut quoted = false;
+    let Some(colon) = line.char_indices().find_map(|(i, ch)| {
+        if ch == '"' {
+            quoted = !quoted;
+        }
+        (ch == ':' && !quoted).then_some(i)
+    }) else {
+        return line.to_string();
+    };
+    let (head, value) = line.split_at(colon);
+    let mut parts = Vec::new();
+    let (mut part, mut quoted) = (String::new(), false);
+    for ch in head.chars() {
+        match ch {
+            '"' => {
+                quoted = !quoted;
+                part.push(ch);
+            }
+            ';' if !quoted => parts.push(std::mem::take(&mut part)),
+            _ => part.push(ch),
+        }
+    }
+    parts.push(part);
+    for part in parts.iter_mut().skip(1) {
+        let Some((key, tzid)) = part.split_once('=') else {
+            continue;
+        };
+        if !key.eq_ignore_ascii_case("TZID") {
+            continue;
+        }
+        if let Some(name) = iana(tzid.trim_matches('"')) {
+            *part = format!("TZID={name}");
+        }
+    }
+    format!("{}{value}", parts.join(";"))
+}
+
 /// Whether `line` lists dates to skip or add: `EXDATE` or `RDATE`.
 pub(crate) fn is_date_line(line: &str) -> bool {
     let upper = line.to_ascii_uppercase();
@@ -750,7 +793,10 @@ fn rule_set(event: &Event) -> Option<RRuleSet> {
         rrule::Tz::Tz(tz) => tz.name().to_string(),
         rrule::Tz::Local(_) => "UTC".to_string(),
     };
-    let rules: Vec<String> = event.rules.iter().map(|rule| dates_in_utc(&until_in_utc(rule))).collect();
+    // A zone `rrule` cannot read, such as Outlook's Windows names in rows
+    // stored before the readers renamed them, reads as the series' own.
+    let iana = |tzid: &str| Some(crate::invitation::zone::named(tzid).map_or_else(|| name.clone(), |tz| tz.name().to_string()));
+    let rules: Vec<String> = event.rules.iter().map(|rule| dates_in_utc(&until_in_utc(&rename_zone(rule, &iana)))).collect();
     let text = format!(
         "DTSTART;TZID={name}:{}\n{}",
         start.format("%Y%m%dT%H%M%S"),
@@ -838,6 +884,27 @@ mod tests {
             rules: rules.iter().map(|r| r.to_string()).collect(),
             ..Event::default()
         }
+    }
+
+    #[test]
+    fn a_skipped_day_in_a_windows_zone_still_leaves_the_series() {
+        // Outlook names the zone its own way; the series stays in Lisbon.
+        let event = standup(&[
+            "RRULE:FREQ=DAILY;COUNT=3",
+            "EXDATE;TZID=\"GMT Standard Time\":20261020T090000",
+        ]);
+        let got = expand(&event, lisbon(2026, 10, 19, 0, 0), lisbon(2026, 10, 23, 0, 0));
+        let starts: Vec<EpochMillis> = got.iter().map(|(start, _)| *start).collect();
+        assert_eq!(starts, vec![lisbon(2026, 10, 19, 9, 0), lisbon(2026, 10, 21, 9, 0)]);
+    }
+
+    #[test]
+    fn a_zone_parameter_is_renamed_and_the_rest_kept() {
+        let line = "EXDATE;VALUE=DATE-TIME;TZID=\"W. Europe Standard Time\":20261027T140000";
+        let renamed = rename_zone(line, &|tzid| (tzid == "W. Europe Standard Time").then(|| "Europe/Berlin".to_string()));
+        assert_eq!(renamed, "EXDATE;VALUE=DATE-TIME;TZID=Europe/Berlin:20261027T140000");
+        assert_eq!(rename_zone("RRULE:FREQ=DAILY", &|_| Some("Europe/Berlin".into())), "RRULE:FREQ=DAILY");
+        assert_eq!(rename_zone(line, &|_| None), line);
     }
 
     #[test]

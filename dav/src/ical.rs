@@ -191,7 +191,7 @@ fn event_of(ical: &ICalendar, comp: &ICalendarComponent, zones: &Zones, me: &[St
         .entries
         .iter()
         .filter(|e| matches!(e.name, ICalendarProperty::Rrule | ICalendarProperty::Exdate | ICalendarProperty::Rdate))
-        .map(line_of)
+        .map(|e| mailrs_domain::calendar::rename_zone(&line_of(e), &|tzid| zones.resolve(tzid).map(|tz| tz.name().to_string())))
         .collect();
     Some(Event {
         uid: comp.uid().unwrap_or_default().to_string(),
