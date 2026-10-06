@@ -292,6 +292,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   it last updated, instead of leaving you guessing.
 
 ### Fixed
+- Deleting a calendar, subscribing to one or adding holidays says it worked only once it has, and a holiday calendar that could not be added keeps its Add button.
 - Deleting or making a calendar on an Outlook account no longer says Google Calendar.
 - On an Outlook account, Add Calendar offers only New Calendar and a shared calendar's menu no longer offers Unsubscribe, since Outlook turns down subscriptions and holiday calendars.
 - The event editor shows guests, calendars and attached files whose names hold an ampersand or angle brackets, such as "R&D Team" or "Q&A.pdf", where their rows used to come up blank.
