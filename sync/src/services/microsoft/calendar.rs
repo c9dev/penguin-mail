@@ -468,8 +468,14 @@ impl<G: GraphApi> Microsoft<G> {
         removed.extend(gone);
         events.extend(exceptions.iter().map(|e| self.event_of(e, calendar)));
         let unread: Vec<String> = masters.into_iter().filter(|m| !at.fresh.contains(m)).collect();
-        for master in unread {
-            match self.graph().event(&master).await {
+        // A removal sends the round back to every series the token knows,
+        // up to MOST_SERIES, so the masters come twenty to a request.
+        let read = match unread.is_empty() {
+            true => Vec::new(),
+            false => self.graph().events(&unread).await.map_err(|e| self.service(e))?,
+        };
+        for (master, answer) in unread.into_iter().zip(read) {
+            match answer {
                 Ok(e) => events.push(self.event_of(&e, calendar)),
                 Err(GraphError::NotFound) => removed.push(master.clone()),
                 Err(err) => return Err(self.service(err)),

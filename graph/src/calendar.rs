@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
 use crate::error::GraphError;
-use crate::http::{BatchRequest, DeltaPage, Graph, Method, Page};
+use crate::http::{BatchRequest, DeltaPage, Graph, IMMUTABLE_IDS, Method, Page};
 use crate::mail::with_query;
 use crate::model::{DateTimeZone, EmailAddress, ItemBody, Recipient, Removed};
 
@@ -238,6 +238,32 @@ impl Graph {
                     &format!("me/events/{id}"),
                     &[("$select", "id,originalStart,originalStartTimeZone")],
                 ))
+            })
+            .collect();
+        Ok(self
+            .batch(&requests)
+            .await?
+            .into_iter()
+            .map(|answer| {
+                answer
+                    .into_json::<GraphEvent>()
+                    .and_then(|e| e.ok_or(GraphError::NotFound))
+            })
+            .collect())
+    }
+
+    /// Each event of `ids`, whole and in UTC, in `$batch` calls of 20, one
+    /// answer per id in order; an event Graph no longer has answers
+    /// `NotFound` in its place.
+    pub async fn events(
+        &self,
+        ids: &[String],
+    ) -> Result<Vec<Result<GraphEvent, GraphError>>, GraphError> {
+        let requests: Vec<BatchRequest> = ids
+            .iter()
+            .map(|id| {
+                BatchRequest::get(format!("me/events/{id}"))
+                    .header("Prefer", &format!("{IMMUTABLE_IDS}, {UTC}"))
             })
             .collect();
         Ok(self

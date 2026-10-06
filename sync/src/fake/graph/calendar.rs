@@ -196,6 +196,14 @@ pub(super) fn original_starts(s: &mut GraphState, ids: &[String]) -> Answer<Vec<
         .collect())
 }
 
+/// What Graph's `$batch` of `GET /events/{id}` answers, logged one entry a
+/// request of twenty, as Graph takes them.
+pub(super) fn events(s: &mut GraphState, ids: &[String]) -> Answer<Vec<Answer<GraphEvent>>> {
+    s.refuses(Area::Calendar)?;
+    s.master_reads.extend(ids.chunks(20).map(<[String]>::to_vec));
+    Ok(ids.iter().map(|id| event_of(s, id).cloned()).collect())
+}
+
 pub(super) fn events_by_uid(s: &mut GraphState, calendar: &str, uid: &str) -> Answer<Vec<GraphEvent>> {
     s.refuses(Area::Calendar)?;
     if !s.calendars.iter().any(|c| c.id == calendar) {

@@ -680,6 +680,30 @@ async fn an_exception_stored_without_its_original_start_heals_on_the_next_read()
     assert_eq!(shown_on(&h, "2026-10-05").await, ["08:30"]);
 }
 
+/// A removal sends the adapter back to every series the token knows, since
+/// the delta does not say whose occurrence went; those reads go twenty to
+/// a `$batch` rather than one call each.
+#[tokio::test]
+async fn a_removal_reads_the_series_again_twenty_to_a_request() {
+    let h = outlook().await;
+    // 21 series and their first occurrences fit one page of the delta.
+    for n in 0..21 {
+        let id = format!("s{n}");
+        h.fake.put_event("cal-1", GraphEvent { id: id.clone(), ical_uid: Some(format!("{id}@x")), ..weekly_standup() });
+        let first = GraphEvent { series_master_id: Some(id.clone()), ..occurrence(&format!("{id}o"), "2026-10-05T09:00:00.0000000", "Standup", "occurrence") };
+        h.fake.put_event("cal-1", first);
+    }
+    h.fake.put_event("cal-1", GraphEvent { id: "e1".into(), subject: Some("A".into()), start: Some(at("2026-10-06T10:00:00.0000000")), end: Some(at("2026-10-06T11:00:00.0000000")), ..GraphEvent::default() });
+    let calendar = h.sync.services().calendar.clone().unwrap();
+    let first = calendar.event_changes("cal-1", None, None, crate::now_millis() - 365 * 86_400_000).await.unwrap();
+    assert_eq!(first.events.iter().filter(|e| !e.rules.is_empty()).count(), 21);
+    h.fake.delete_event("e1", None).await.unwrap();
+    let next = calendar.event_changes("cal-1", first.next_sync.as_deref(), None, 0).await.unwrap();
+    assert_eq!(next.removed, ["e1"]);
+    let reads = h.fake.with(|s| s.master_reads.iter().map(Vec::len).collect::<Vec<_>>());
+    assert_eq!(reads, [20, 1, 20, 1]);
+}
+
 /// A weekly all-day series made in Berlin, as Graph answers it in UTC:
 /// each day starts at 22:00 the evening before while summer time lasts.
 fn berlin_all_day() -> GraphEvent {

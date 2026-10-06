@@ -35,7 +35,7 @@ const JSON_LIMIT: usize = 8 << 20;
 /// What an error body may take; Graph's are a few hundred bytes.
 const ERROR_LIMIT: usize = 64 << 10;
 
-const IMMUTABLE_IDS: &str = "IdType=\"ImmutableId\"";
+pub(crate) const IMMUTABLE_IDS: &str = "IdType=\"ImmutableId\"";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Method {
