@@ -57,7 +57,12 @@ pub fn save(conn: &Connection, contacts: &[Contact]) -> Result<()> {
             )
             .optional()?;
         let photo_file = match kept {
-            Some((url, file)) if url == contact.photo_url => file.or(contact.photo_file.clone()),
+            // An empty file means a check found no photo. A contact that
+            // comes back in a refresh has changed, and Graph keeps the same
+            // URL for a photo added later, so ask again.
+            Some((url, file)) if url == contact.photo_url => {
+                file.filter(|f| !f.is_empty()).or(contact.photo_file.clone())
+            }
             _ => contact.photo_file.clone(),
         };
         conn.execute(
@@ -383,6 +388,20 @@ mod tests {
             find(&conn, "mara@example.org").unwrap().unwrap().photo_file,
             None
         );
+    }
+
+    #[test]
+    fn a_refreshed_contact_marked_without_a_photo_is_asked_again() {
+        let conn = open_in_memory().unwrap();
+        let id = accounts::insert_account(&conn, "dana@outlook.com", 0).unwrap();
+        let mara = Contact {
+            photo_url: Some("graph:contact/AAMk-c1".into()),
+            ..contact(id, "AAMk-c1", "Mara Okafor", &["mara@example.org"])
+        };
+        save(&conn, std::slice::from_ref(&mara)).unwrap();
+        set_no_photo(&conn, id, "AAMk-c1").unwrap();
+        save(&conn, &[mara]).unwrap();
+        assert_eq!(missing_photos(&conn, id).unwrap().len(), 1);
     }
 
     #[test]
