@@ -492,6 +492,12 @@ impl AccountServices {
         self.mail.withheld()
     }
 
+    /// Whether Hide from the List reaches the provider's own list. Only
+    /// Google keeps a hidden flag; elsewhere a hide stays on this computer.
+    pub fn hides_calendars(&self) -> bool {
+        CalendarFeatures::of(self.calendar.as_ref()).hides
+    }
+
     pub fn offers(&self) -> Offers {
         let caps = self.capabilities();
         let features = CalendarFeatures::of(self.calendar.as_ref());
@@ -535,6 +541,10 @@ struct CalendarFeatures {
     /// A calendar can join the list by its address or as a public
     /// holiday calendar, and leave it again. Graph has no call for any.
     subscriptions: bool,
+    /// Hide from the List reaches the provider's own list, so the
+    /// person's other devices hide the calendar too. Graph keeps no such
+    /// flag and refuses the call.
+    hides: bool,
     /// A change can go without mailing the guests. Graph mails them on
     /// every change an organizer makes and has no switch against it.
     quiet_changes: bool,
@@ -556,6 +566,7 @@ impl CalendarFeatures {
         moves_events: false,
         calendar_list: false,
         subscriptions: false,
+        hides: false,
         quiet_changes: false,
         out_of_office: false,
         focus_time: false,
@@ -566,6 +577,7 @@ impl CalendarFeatures {
         moves_events: false,
         calendar_list: true,
         subscriptions: false,
+        hides: false,
         quiet_changes: false,
         out_of_office: true,
         focus_time: false,
@@ -578,6 +590,7 @@ impl CalendarFeatures {
         moves_events: true,
         calendar_list: true,
         subscriptions: true,
+        hides: true,
         quiet_changes: true,
         out_of_office: false,
         focus_time: false,
@@ -591,6 +604,7 @@ impl CalendarFeatures {
         moves_events: false,
         calendar_list: false,
         subscriptions: false,
+        hides: false,
         quiet_changes: true,
         out_of_office: false,
         focus_time: false,

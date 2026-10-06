@@ -643,3 +643,34 @@ async fn an_exception_stored_without_its_original_start_heals_on_the_next_read()
     copy.refresh(h.account_id, crate::now_millis()).await.unwrap();
     assert_eq!(shown_on(&h, "2026-10-05").await, ["08:30"]);
 }
+
+/// Outlook keeps no hidden flag on its calendars, so Hide from the List
+/// stays on this computer: nothing waits to go out, where a queued hide
+/// came back refused with a message after every send.
+#[tokio::test]
+async fn hiding_an_outlook_calendar_stays_on_this_computer() {
+    let h = outlook().await;
+    let copy = copy_of(&h);
+    copy.refresh(h.account_id, crate::now_millis()).await.unwrap();
+    assert!(matches!(
+        copy.list_calendar(h.account_id, "cal-1", false).await,
+        Ok(crate::Permitted::Done(()))
+    ));
+    copy.refresh(h.account_id, crate::now_millis() + 24 * 60 * 60 * 1000).await.unwrap();
+    let account = h.account_id;
+    let queued = h
+        .db
+        .read(move |c| mailrs_store::calendar_list::queued_edits(c, account))
+        .await
+        .unwrap();
+    assert!(queued.is_empty(), "{queued:?}");
+    let listed = h
+        .db
+        .read(move |c| store::calendars(c, account))
+        .await
+        .unwrap()
+        .into_iter()
+        .find(|c| c.id == "cal-1")
+        .map(|c| c.shown);
+    assert_eq!(listed, Some(false), "the calendar is off the list here");
+}

@@ -162,7 +162,7 @@ impl<A: Accounts> CalendarCopy<A> {
         listed: bool,
     ) -> Result<Permitted<()>, SyncError> {
         self.service(account_id)?;
-        let everywhere = !self.withheld_all(account_id)?.change_calendar_list;
+        let everywhere = self.hides_everywhere(account_id)?;
         let id = calendar.to_string();
         self.db
             .write(move |c| {
@@ -326,6 +326,13 @@ impl<A: Accounts> CalendarCopy<A> {
     /// whose provider offers none.
     fn service(&self, account_id: AccountId) -> Result<AnyCalendar, SyncError> {
         self.calendar(account_id)?.ok_or(SyncError::Backend(BackendError::Unsupported))
+    }
+
+    /// Whether a hide goes to the provider's own list: the provider keeps
+    /// a hidden flag and the person allowed changes to the list.
+    pub(super) fn hides_everywhere(&self, account_id: AccountId) -> Result<bool, SyncError> {
+        let services = self.accounts.services(account_id).ok_or(SyncError::UnknownAccount(account_id))?;
+        Ok(services.hides_calendars() && !services.withheld().change_calendar_list)
     }
 
     fn withheld_all(&self, account_id: AccountId) -> Result<Withheld, SyncError> {

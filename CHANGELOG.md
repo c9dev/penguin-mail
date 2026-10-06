@@ -296,6 +296,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - Showing a forwarded message in the composer, or the composer's Preview, no longer loads its remote images, and a link in it opens in your browser.
 - A message that quotes an address or a name with "&" or "<" in it, such as "tom&jerry is not an email address", shows its words instead of an empty bar. The same goes for the Grant Access banner, a signature's first line in Preferences, and the addresses and names in Preferences and contact cards.
 - After you untick every event of a calendar file, the next invitation you open has Add to Calendar ready, where it stayed greyed out.
+- Hiding an Outlook calendar from the list keeps it hidden here without a message saying Outlook refused, since Outlook has no way to hide it on your other devices.
 - Saving a rule with nothing filled in says what is missing in your language, not in English.
 - The event editor names an event's call by what it is, Google Meet, Microsoft Teams, Zoom or a video call, where it called every call Google Meet.
 - After adding a work or school Microsoft account whose organization refused some permissions, the last page says so, where it told you that you had left boxes unticked on a page that has none.
