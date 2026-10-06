@@ -62,7 +62,7 @@ fn servers(app: &Rc<App>, accounts: &[(Account, Offers)]) -> Option<adw::Prefere
         .description(gettext("Penguin Mail looks for these when you add an account. The login is the account's own."))
         .build();
     for account in found_for {
-        let row = adw::ExpanderRow::builder().title(&account.email).build();
+        let row = adw::ExpanderRow::builder().use_markup(false).title(&account.email).build();
         group.add(&row);
         let shown: Shown = Rc::default();
         fill_servers(app, &row, account, &shown);
@@ -85,7 +85,7 @@ fn fill_servers(app: &Rc<App>, row: &adw::ExpanderRow, account: &Account, shown:
         }
         let lines = crate::servers::lines(&found, refused_calendar.as_deref(), refused_contacts.as_deref(), rules_here);
         for line in lines {
-            let child = adw::ActionRow::builder().title(&line.title).subtitle(glib::markup_escape_text(&line.subtitle).as_str()).build();
+            let child = adw::ActionRow::builder().use_markup(false).title(&line.title).subtitle(&line.subtitle).build();
             if let Some(kind) = line.ask {
                 let host = found.iter().find(|f| f.kind == kind).map(|f| f.url.clone()).unwrap_or_default();
                 let use_it = gtk::Button::builder().label(gettext("Use It")).valign(gtk::Align::Center).css_classes(["flat"]).build();
@@ -181,7 +181,7 @@ fn contacts(
                 group.add(&grant_access_row(account, grant.clone()));
             }
             ContactsRow::NotOffered(reason) => {
-                let row = adw::SwitchRow::builder()
+                let row = adw::SwitchRow::builder().use_markup(false)
                     .title(&account.email)
                     .subtitle(reason)
                     .active(false)
@@ -190,7 +190,7 @@ fn contacts(
                 group.add(&row);
             }
             ContactsRow::Switch => {
-                let row = adw::SwitchRow::builder()
+                let row = adw::SwitchRow::builder().use_markup(false)
                     .title(&account.email)
                     .active(settings.reads_contacts(&account.email))
                     .build();
@@ -276,7 +276,7 @@ fn calendar(
         match calendar_lack(account, *offers, withheld(account.id), missed(account.id, Missing::Calendar)) {
             CalendarRow::NotOffered(lack) => {
                 group.add(
-                    &adw::ActionRow::builder()
+                    &adw::ActionRow::builder().use_markup(false)
                         .title(&account.email)
                         .subtitle(lack)
                         .build(),
@@ -298,7 +298,7 @@ fn calendar(
             online_accounts = false;
             continue;
         };
-        let row = adw::ActionRow::builder().title(&account.email).build();
+        let row = adw::ActionRow::builder().use_markup(false).title(&account.email).build();
         if known {
             row.set_subtitle(&pgettext("an account in Online Accounts", "Added"));
         } else {
@@ -343,7 +343,7 @@ fn calendar_lack(account: &Account, offers: Offers, withheld: Withheld, missed: 
 /// Grant Access button that runs `grant`, named so a screen reader tells
 /// several such rows apart.
 fn grant_access_row(account: &Account, grant: impl Fn(AccountId) + 'static) -> adw::ActionRow {
-    let row = adw::ActionRow::builder()
+    let row = adw::ActionRow::builder().use_markup(false)
         .title(&account.email)
         .subtitle(gettext("Not allowed when you signed in"))
         .build();

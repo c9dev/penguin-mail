@@ -74,7 +74,7 @@ fn row(
     template: Template,
 ) -> adw::ActionRow {
     let name = template.name.clone();
-    let row = adw::ActionRow::builder()
+    let row = adw::ActionRow::builder().use_markup(false)
         .title(&template.name)
         .subtitle(summary(&template))
         .build();
@@ -277,7 +277,7 @@ fn edit(
                 .to_string(),
         };
         if written.name.is_empty() {
-            toasts.add_toast(adw::Toast::new(&gettext("Give the template a name")));
+            toasts.add_toast(crate::ui::toast(&gettext("Give the template a name")));
             return;
         }
         closer.close();

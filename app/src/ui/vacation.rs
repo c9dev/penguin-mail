@@ -139,12 +139,12 @@ pub fn present(
                     }
                     Ok(Permitted::NeedsPermission) => {
                         button.set_sensitive(true);
-                        toasts.add_toast(adw::Toast::new(&crate::permission::settings_needed(provider)));
+                        toasts.add_toast(crate::ui::toast(&crate::permission::settings_needed(provider)));
                     }
                     Err(err) => {
                         button.set_sensitive(true);
                         let said = with_reason(&gettext("Could not save: {reason}"), &err, &[]);
-                        toasts.add_toast(adw::Toast::new(&said));
+                        toasts.add_toast(crate::ui::toast(&said));
                     }
                 }
             });

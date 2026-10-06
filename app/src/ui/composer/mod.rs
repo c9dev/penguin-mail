@@ -1453,7 +1453,7 @@ impl Composer {
 
     pub fn toast(&self, text: &str) {
         self.toasts
-            .add_toast(adw::Toast::builder().title(text).timeout(4).build());
+            .add_toast(adw::Toast::builder().title(super::window::toast_title(text)).timeout(4).build());
     }
 
     /// Toasts a failure. `said` is `gettext` of the sentence, with

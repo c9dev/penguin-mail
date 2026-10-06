@@ -146,7 +146,7 @@ fn copy(widget: &impl IsA<gtk::Widget>, text: &str) {
 
 impl Dialog {
     fn toast(&self, text: &str) {
-        self.toasts.add_toast(adw::Toast::new(text));
+        self.toasts.add_toast(crate::ui::toast(text));
     }
 
     /// Handles a failed Gmail call with a toast naming what it was doing.

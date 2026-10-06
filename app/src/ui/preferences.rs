@@ -237,7 +237,7 @@ fn general_page(
         // One row for each account, its reasons one to a line, so an
         // account that lacks three things shows its address once.
         for (address, reasons) in missing {
-            let row = adw::ActionRow::builder()
+            let row = adw::ActionRow::builder().use_markup(false)
                 .title(address)
                 .subtitle(reasons.join("\n"))
                 .build();
@@ -359,7 +359,10 @@ fn writing_page(
         .build();
     for account in accounts {
         let text = settings.signature(&account.email).to_string();
+        // The subtitle is the signature's first line, which may hold "&"
+        // or a Markdown link in angle brackets.
         let row = adw::ExpanderRow::builder()
+            .use_markup(false)
             .title(&account.email)
             .subtitle(preview(&text))
             .expanded(signature_of.is_some_and(|e| e.eq_ignore_ascii_case(&account.email)))
@@ -406,7 +409,7 @@ fn writing_page(
         import.connect_clicked(move |button| {
             let Some(app) = weak.upgrade() else { return };
             if app.core.account(account_id).is_none() {
-                toasts.add_toast(adw::Toast::new(&gettext("This account is not syncing yet")));
+                toasts.add_toast(crate::ui::toast(&gettext("This account is not syncing yet")));
                 return;
             }
             let settings = app.core.gmail_settings();
@@ -420,16 +423,16 @@ fn writing_page(
                 {
                     Ok(Some(signature)) => {
                         target.set_text(&signature);
-                        toasts.add_toast(adw::Toast::new(&gettext(
+                        toasts.add_toast(crate::ui::toast(&gettext(
                             "Imported the signature from Gmail",
                         )));
                     }
-                    Ok(None) => toasts.add_toast(adw::Toast::new(&gettext(
+                    Ok(None) => toasts.add_toast(crate::ui::toast(&gettext(
                         "Gmail has no signature for this account",
                     ))),
                     Err(err) => {
                         let said = with_reason(&gettext("Could not import: {reason}"), &err, &[]);
-                        toasts.add_toast(adw::Toast::new(&said));
+                        toasts.add_toast(crate::ui::toast(&said));
                     }
                 }
                 button.set_sensitive(true);
@@ -706,7 +709,7 @@ fn spelling_group(
             .iter()
             .position(|(_, languages)| *languages == current)
             .unwrap_or(0);
-        let row = adw::ComboRow::builder()
+        let row = adw::ComboRow::builder().use_markup(false)
             .title(&account.email)
             .model(&gtk::StringList::new(&labels))
             .selected(selected as u32)

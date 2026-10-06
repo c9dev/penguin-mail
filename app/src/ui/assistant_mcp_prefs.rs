@@ -149,7 +149,7 @@ impl List {
             if let Some(list) = weak.upgrade() {
                 assistant::save_key(&saved.token_key(), "");
                 list.change(Change::RemoveMcpServer(saved.name.clone()));
-                list.dialog.add_toast(adw::Toast::new(&fill(
+                list.dialog.add_toast(crate::ui::toast(&fill(
                     &gettext("Removed {server}"),
                     &[("server", &saved.name)],
                 )));
@@ -430,7 +430,7 @@ fn editor(
         let Some(app) = weak.upgrade() else { return };
         let (server, token) = match reader() {
             Ok(read) => read,
-            Err(problem) => return shown.add_toast(adw::Toast::new(&problem)),
+            Err(problem) => return shown.add_toast(crate::ui::toast(&problem)),
         };
         button.set_sensitive(false);
         result.set_subtitle(&gettext("Connecting…"));
@@ -452,7 +452,7 @@ fn editor(
             closer.close();
             on_save(saved.clone(), server, token);
         }
-        Err(problem) => toasts.add_toast(adw::Toast::new(&problem)),
+        Err(problem) => toasts.add_toast(crate::ui::toast(&problem)),
     });
     dialog.present(Some(parent));
 }

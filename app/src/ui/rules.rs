@@ -133,7 +133,7 @@ pub fn present(
 
 impl Rules {
     fn toast(&self, text: &str) {
-        self.toasts.add_toast(adw::Toast::new(text));
+        self.toasts.add_toast(crate::ui::toast(text));
     }
 
     /// Toasts a failure. `said` is `gettext` of the sentence, with

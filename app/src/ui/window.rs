@@ -769,7 +769,7 @@ impl MainWindow {
             stack.add_named(&first_page, Some("first-account"));
             // An update's banner spans the whole window, above the panes,
             // since it is about the app and not the mail on screen.
-            let update_banner = adw::Banner::builder().revealed(false).build();
+            let update_banner = adw::Banner::builder().use_markup(false).revealed(false).build();
             // The keyring notice is about the app too, and the command it
             // gives needs the width a pane would cut short.
             let keyring_banner = adw::Banner::builder().revealed(false).build();
@@ -1305,7 +1305,9 @@ impl MainWindow {
                 ?missing,
                 "showing the Grant Access banner"
             );
+            // The title holds the address, which may carry an "&".
             let banner = adw::Banner::builder()
+                .use_markup(false)
                 .title(crate::permission::grant_bar_title(
                     &account.email,
                     &missing,

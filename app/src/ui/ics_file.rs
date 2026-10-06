@@ -123,7 +123,7 @@ fn show_events(
             else {
                 return;
             };
-            let toast = |text: &str| toasts.add_toast(adw::Toast::new(text));
+            let toast = |text: &str| toasts.add_toast(crate::ui::toast(text));
             match action {
                 Action::Import(events, target) => import(&app, &card, &toasts, events, target),
                 Action::ShowInCalendar => {
@@ -143,7 +143,7 @@ fn show_events(
                         let toasts = toasts.clone();
                         move |result| {
                             if result.is_err() {
-                                toasts.add_toast(adw::Toast::new(&failed));
+                                toasts.add_toast(crate::ui::toast(&failed));
                             }
                         }
                     });
@@ -250,7 +250,7 @@ fn import(
         let (Some(card), Some(toasts)) = (card.upgrade(), toasts.upgrade()) else {
             return;
         };
-        let say = |text: &str| toasts.add_toast(adw::Toast::new(text));
+        let say = |text: &str| toasts.add_toast(crate::ui::toast(text));
         match done {
             Ok(Permitted::Done(added)) if added.spots.is_empty() => say(&gettext(
                 "Nothing in this file can be added, since its events have no id or start time",
