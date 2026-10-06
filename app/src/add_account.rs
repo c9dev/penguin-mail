@@ -1363,6 +1363,13 @@ impl Asking {
     }
 }
 
+/// Whether the password field keeps what it holds when the password page
+/// opens for `address`: only when the person typed it for that same
+/// address. Otherwise one press would send it to another provider.
+pub fn keeps_password(typed_for: Option<&str>, address: &str) -> bool {
+    typed_for.is_some_and(|typed_for| typed_for.eq_ignore_ascii_case(address))
+}
+
 #[cfg(test)]
 mod tests {
     use mailrs_discover::{
@@ -2454,6 +2461,16 @@ mod tests {
             grant_lede(Provider::Gmail, 1, true),
             "Your mail is here. You left one box unticked on Google's page, so this feature stays off:"
         );
+    }
+
+    #[test]
+    fn a_password_stays_only_for_the_address_it_was_typed_for() {
+        // Back, a new address at another provider, Continue: the first
+        // account's password must not be one Enter away from the second
+        // provider's servers.
+        assert!(!keeps_password(Some("a@fastmail.com"), "b@otherdomain.example"));
+        assert!(!keeps_password(None, "a@fastmail.com"));
+        assert!(keeps_password(Some("a@fastmail.com"), "A@Fastmail.com"));
     }
 
     #[test]

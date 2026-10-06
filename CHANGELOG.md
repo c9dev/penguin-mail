@@ -299,6 +299,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - Hiding an Outlook calendar from the list keeps it hidden here without a message saying Outlook refused, since Outlook has no way to hide it on your other devices.
 - Working Hours in Preferences keeps the end after the start, moving the other time when you pick one past it, and a working day can now end at midnight. A day set to end before it starts used to shade the whole calendar.
 - The offer to save new recipients as contacts stays while the pointer is over it or a screen reader is on it, where it could vanish mid-read.
+- In Add Account, going Back while the address is being looked up stops the lookup and turns Continue back on, and a password typed for one address no longer stays filled in for another.
 - Saving a rule with nothing filled in says what is missing in your language, not in English.
 - The event editor names an event's call by what it is, Google Meet, Microsoft Teams, Zoom or a video call, where it called every call Google Meet.
 - After adding a work or school Microsoft account whose organization refused some permissions, the last page says so, where it told you that you had left boxes unticked on a page that has none.

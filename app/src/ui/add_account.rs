@@ -1520,6 +1520,9 @@ struct Dialog {
     typed: RefCell<Option<Address>>,
     /// What the password page signs in to.
     proposal: RefCell<Option<Proposal>>,
+    /// The address the password page last opened for, whose password the
+    /// field may hold.
+    password_for: RefCell<Option<String>>,
     /// The address the address page offered a correction for, so a second
     /// Continue with it unchanged looks it up as typed.
     declined: RefCell<Option<Address>>,
@@ -1598,6 +1601,7 @@ impl Dialog {
             by_hand: Cell::new(false),
             typed: RefCell::new(None),
             proposal: RefCell::new(None),
+            password_for: RefCell::new(None),
             declined: RefCell::new(None),
             checks: RefCell::new(Checks::default()),
             browser_cancel: RefCell::new(None),
@@ -1737,6 +1741,16 @@ impl Dialog {
         // The band follows the page on screen.
         let shown = on(|this| this.show_band());
         self.nav.connect_visible_page_notify(move |_| shown());
+        // Back from the lookup page ends the lookup: Continue works again,
+        // and an answer that comes later does not push the password page
+        // over the address the person went back to.
+        let back = on(|this| {
+            if this.nav.visible_page().and_then(|page| page.tag()).as_deref() == Some("address") {
+                this.asking.forget();
+                this.address.look.set_sensitive(true);
+            }
+        });
+        self.lookup.banded.page.connect_hidden(move |_| back());
         // Each step opens with the cursor in the field it asks for, so
         // the whole dialog runs from the keyboard.
         let address = self.address.address.clone();
@@ -2107,6 +2121,14 @@ impl Dialog {
         page.password.set_title(&title);
         crate::ui::name(&page.password, &title);
         let typed = self.typed.borrow().clone();
+        let address = match &self.again {
+            Some(account) => account.email.clone(),
+            None => typed.as_ref().map(Address::full).unwrap_or_default(),
+        };
+        if !add_account::keeps_password(self.password_for.borrow().as_deref(), &address) {
+            page.password.set_text("");
+        }
+        self.password_for.replace(Some(address));
         match &self.again {
             Some(account) => {
                 page.title.set_text(&account.email);
