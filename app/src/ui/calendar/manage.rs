@@ -32,16 +32,19 @@ const FIRST_COLOR: usize = 5;
 /// The line under "Delete “Work”?", which says what goes with it.
 pub fn delete_body(events: usize) -> String {
     match events {
-        0 => gettext("The calendar is deleted from Google Calendar on every device. This cannot be undone."),
+        0 => gettext("The calendar is deleted on every device. This cannot be undone."),
         n => fill_plural(
-            "The calendar and its {count} event are deleted from Google Calendar on every device. \
-             This cannot be undone.",
-            "The calendar and its {count} events are deleted from Google Calendar on every device. \
-             This cannot be undone.",
+            "The calendar and its {count} event are deleted on every device. This cannot be undone.",
+            "The calendar and its {count} events are deleted on every device. This cannot be undone.",
             n,
             &[("count", &n.to_string())],
         ),
     }
+}
+
+/// The line under "New Calendar", for the account at `address`.
+pub fn new_calendar_body(address: &str) -> String {
+    fill(&gettext("A calendar of your own on {account}, on every device."), &[("account", address)])
 }
 
 /// The account a change to the calendar list would write to, or `None`
@@ -294,10 +297,7 @@ impl CalendarView {
         super::ensure_tints(crate::ui::LABEL_COLORS.iter().map(|(hex, _)| *hex));
         let dialog = adw::AlertDialog::new(
             Some(&gettext("New Calendar")),
-            Some(&fill(
-                &gettext("A calendar of your own on {account}, in Google Calendar on every device."),
-                &[("account", &self.address_of(account))],
-            )),
+            Some(&new_calendar_body(&self.address_of(account))),
         );
         let name = gtk::Entry::builder()
             .placeholder_text(gettext("Name"))
@@ -461,6 +461,14 @@ mod tests {
     fn deleting_an_empty_calendar_names_no_events() {
         assert!(!delete_body(0).contains('{'));
         assert!(delete_body(0).starts_with("The calendar is deleted"));
+    }
+
+    #[test]
+    fn deleting_a_calendar_names_no_provider_since_outlook_deletes_too() {
+        for events in [0, 1, 12] {
+            assert!(!delete_body(events).contains("Google"), "{}", delete_body(events));
+        }
+        assert!(!new_calendar_body("ana@outlook.example").contains("Google"));
     }
 
     #[test]
