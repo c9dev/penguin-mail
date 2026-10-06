@@ -238,10 +238,16 @@ fn all_day_height(rows: usize) -> f32 {
 /// is the one before it; both come from the event's own UTC date, never
 /// converted to local time, which would move them a day west of UTC.
 fn all_day_span(o: &Occurrence, days: &[NaiveDate]) -> Option<(usize, usize)> {
-    if o.event.all_day {
-        return all_day_columns(o.start, o.end, days);
+    strip_columns(o.start, o.end, o.event.all_day, days)
+}
+
+/// [`all_day_span`] for a span from `start` to `end`: UTC dates for an
+/// all-day one, local dates for a timed one that covers whole days.
+fn strip_columns(start: EpochMillis, end: EpochMillis, all_day: bool, days: &[NaiveDate]) -> Option<(usize, usize)> {
+    if all_day {
+        return all_day_columns(start, end, days);
     }
-    let (first, last) = layout::whole_days(o.start, o.end, &chrono::Local)?;
+    let (first, last) = layout::whole_days(start, end, &chrono::Local)?;
     date_columns(first, last, days)
 }
 
@@ -2232,14 +2238,14 @@ impl AllDayStrip {
             }
             None => {
                 let days = self.column_at(x) as i64 - press_column as i64;
-                let (start, end) = match edge {
-                    None => drag::by_days(o.start, o.end, true, days, Tz::UTC),
-                    Some(edge) => drag::resize_days(o.start, o.end, edge, days),
-                };
-                let columns = all_day_columns(start, end, &imp.dates.borrow());
+                // A timed entry that covers whole days sits here too, and
+                // moves as a timed one in its own zone.
+                let zone: Tz = o.event.zone.parse().unwrap_or(Tz::UTC);
+                let landing = drag::strip_landing(o.start, o.end, o.event.all_day, edge, days, zone);
+                let columns = strip_columns(landing.start, landing.end, landing.all_day, &imp.dates.borrow());
                 let shown = columns.map_or(placement, |(first, last)| (first, last, placement.2));
-                let moved = (start, end) != (o.start, o.end);
-                (moved.then_some(drag::Landing { start, end, all_day: true }), shown)
+                let moved = (landing.start, landing.end) != (o.start, o.end);
+                (moved.then_some(landing), shown)
             }
         };
         if let Some(d) = imp.dragging.borrow_mut().as_mut() {

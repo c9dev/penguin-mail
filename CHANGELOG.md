@@ -292,6 +292,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   it last updated, instead of leaving you guessing.
 
 ### Fixed
+- In Week and Day view, dragging an out-of-office day or another entry that runs midnight to midnight along the all-day row moves it to the day under the pointer, and it stays a timed entry.
 - Turning All day off for an event in the editor shows its new 09:00 start, and the time you then pick is the time it saves at, in your own time zone.
 - Show in Calendar opens the event's popover even when the calendar refreshes at that moment.
 - The automatic reply dialog names the provider that answers for an IMAP
