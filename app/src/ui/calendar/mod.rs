@@ -884,8 +884,7 @@ impl CalendarView {
         let picker = gtk::Calendar::new();
         picker.set_date(&editor::day_to_glib(self.day.get()));
         crate::ui::name(&picker, &gettext("Go to date"));
-        let popover = gtk::Popover::builder().child(&picker).autohide(true).build();
-        popover.set_parent(&self.today_button);
+        let popover = crate::ui::passing_popover(&self.today_button, &picker);
         let weak = Rc::downgrade(self);
         let closing = popover.clone();
         picker.connect_day_selected(move |picker| {
