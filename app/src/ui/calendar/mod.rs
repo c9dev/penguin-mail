@@ -61,6 +61,7 @@ use mailrs_sync::calendar_copy::Listed;
 use mailrs_sync::{Offers, SyncError, Withheld};
 
 use crate::core::Core;
+use crate::permission::Permission;
 use crate::settings::{Change, Settings};
 use crate::ui::autocomplete::Contacts;
 use agenda::Agenda;
@@ -82,29 +83,22 @@ const SEARCH_LIMIT: usize = 50;
 
 /// The window's side of the view: what the view cannot do on its own.
 pub struct Hooks {
-    /// Says something in a toast.
-    pub toast: Box<dyn Fn(&str)>,
+    /// Shows a toast, with a button such as Undo or without.
+    pub toast: Box<dyn Fn(adw::Toast)>,
     /// Saves a settings change.
     pub change: Box<dyn Fn(Change)>,
     /// Asks the account for the permissions it left out.
     pub grant: Box<dyn Fn(AccountId)>,
-    /// Explains that an answer stopped for want of the calendar
-    /// permission and offers to ask for it, as every other refusal of
-    /// that kind does before a browser opens.
-    pub needs_permission: Box<dyn Fn(AccountId)>,
-    /// Shows a toast with a button, such as Undo.
-    pub add_toast: Box<dyn Fn(adw::Toast)>,
+    /// Explains that what the person did needs a permission the account
+    /// withheld, and offers to ask for it, as every other refusal of that
+    /// kind does before a browser opens: the calendar permission for an
+    /// event change or an answer, the management one for the calendar
+    /// list, Drive for a file from this computer.
+    pub ask_permission: Box<dyn Fn(AccountId, Permission)>,
     /// The suggestions the guests field completes from.
     pub contacts: Box<dyn Fn() -> Contacts>,
     /// Sends the account's queued calendar changes now, then reloads.
     pub push: Box<dyn Fn(AccountId)>,
-    /// Explains that making, renaming or deleting a calendar, or
-    /// changing the calendar list, needs a permission the account
-    /// withheld, and offers to ask for it.
-    pub needs_manage_permission: Box<dyn Fn(AccountId)>,
-    /// Explains that attaching a file from this computer needs Drive,
-    /// which the account withheld, and offers to ask for it.
-    pub needs_drive_permission: Box<dyn Fn(AccountId)>,
     /// Opens the mail that carries an invitation, switching away from the
     /// calendar to it: the "Waiting for your answer" card's "Open mail"
     /// door and the event popover's "Open the invitation in Mail" link
@@ -809,6 +803,21 @@ impl CalendarView {
     /// changes, without waiting for the next sync attempt.
     pub fn network_changed(&self) {
         self.show_offline_line();
+    }
+
+    /// Says `text` in a toast.
+    fn say(&self, text: &str) {
+        (self.hooks.toast)(
+            adw::Toast::builder()
+                .title(crate::ui::window::toast_title(text))
+                .timeout(4)
+                .build(),
+        );
+    }
+
+    /// Asks for the permission what the person did needs.
+    fn needs(&self, permission: Permission, account_id: AccountId) {
+        (self.hooks.ask_permission)(account_id, permission);
     }
 
     /// Shows or hides "Offline, last updated 14:32" under the mini
@@ -1927,7 +1936,7 @@ impl CalendarView {
         let Some(o) = self.focused() else { return };
         match self.editing(&o) {
             draft::Editing::Whole | draft::Editing::Guest => self.delete(&o),
-            draft::Editing::NeedsPermission => (self.hooks.needs_permission)(o.account_id),
+            draft::Editing::NeedsPermission => self.needs(Permission::Calendar, o.account_id),
             draft::Editing::None => {}
         }
     }
@@ -1940,7 +1949,7 @@ impl CalendarView {
     fn edit_or_show(self: &Rc<Self>, o: &Occurrence, anchor: Option<&gtk::Widget>) {
         match self.editing(o) {
             draft::Editing::Whole | draft::Editing::Guest => self.open_editor(o),
-            draft::Editing::NeedsPermission => (self.hooks.needs_permission)(o.account_id),
+            draft::Editing::NeedsPermission => self.needs(Permission::Calendar, o.account_id),
             draft::Editing::None => {
                 if let Some(anchor) = anchor {
                     self.show_event(anchor, o);
@@ -2054,7 +2063,7 @@ impl CalendarView {
             }
         });
         self.toast_up.replace(Some(toast.clone()));
-        (self.hooks.add_toast)(toast);
+        (self.hooks.toast)(toast);
         self.watch_held(id);
     }
 
@@ -2177,8 +2186,8 @@ impl CalendarView {
                     view.reload();
                     (view.hooks.push)(account_id);
                 }
-                Ok(Permitted::NeedsPermission) => (view.hooks.needs_permission)(account_id),
-                Err(err) => (view.hooks.toast)(&with_reason(
+                Ok(Permitted::NeedsPermission) => view.needs(Permission::Calendar, account_id),
+                Err(err) => view.say(&with_reason(
                     &gettext("Could not send your answer: {reason}"),
                     &err,
                     &[],
@@ -2515,7 +2524,7 @@ impl CalendarView {
             }),
             ask: Box::new(move |account| {
                 if let Some(view) = ask_view.upgrade() {
-                    (view.hooks.needs_drive_permission)(account);
+                    view.needs(Permission::Drive, account);
                 }
             }),
             upload: Box::new(move |account, file, sent| {

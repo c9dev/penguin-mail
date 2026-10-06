@@ -132,3 +132,9 @@ async fn every_account_the_store_holds_is_named_for_a_read_across_them() {
     let (h, copy) = filled().await;
     assert_eq!(copy.every_account().await.unwrap(), vec![h.account_id]);
 }
+
+#[tokio::test]
+async fn a_calendar_counts_the_events_its_delete_would_take() {
+    let (h, copy) = filled().await;
+    assert_eq!(copy.event_count(h.account_id, "team").await.unwrap(), 1);
+}

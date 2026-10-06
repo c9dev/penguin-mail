@@ -78,6 +78,16 @@ impl<A: Accounts> CalendarCopy<A> {
             .await?)
     }
 
+    /// How many events the copy holds on `calendar`, a series counted
+    /// once, for the question before the calendar is deleted.
+    pub async fn event_count(&self, account_id: AccountId, calendar: &str) -> Result<usize, SyncError> {
+        let calendar = calendar.to_string();
+        Ok(self
+            .db
+            .read(move |c| mailrs_store::calendar_list::event_count(c, account_id, &calendar))
+            .await?)
+    }
+
     /// Every account the store holds, for a read across all of them that
     /// starts before the window knows its accounts, such as the next-event
     /// card's first one.

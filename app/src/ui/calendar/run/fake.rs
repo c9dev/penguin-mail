@@ -25,7 +25,7 @@ use mailrs_sync::calendar_copy::event_change::{EventChange, Undo};
 use mailrs_sync::{Permitted, Waiting};
 use mailrs_sync::calendar_copy::Listed;
 
-use super::{Answer, CalendarRun, SidebarRead, Desk, Effects, Older, PageId, Place, Shows, Unreached, Work};
+use super::{Answer, CalendarRun, Desk, Effects, Older, PageId, Place, Shows, SidebarRead, Unreached, Work};
 use crate::ui::calendar::block::{EventKey, key_of};
 use crate::ui::calendar::range::{Range, ViewKind};
 use crate::ui::calendar::scope;

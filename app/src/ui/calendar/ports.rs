@@ -14,18 +14,19 @@ use chrono::NaiveDate;
 use futures::channel::oneshot;
 use gtk::glib;
 use mailrs_domain::calendar::{Event, Occurrence};
+use mailrs_domain::translate::gettext;
 use mailrs_domain::{AccountId, EpochMillis};
 use mailrs_store::calendar::CalendarScope;
+use mailrs_sync::calendar_copy::Listed;
 use mailrs_sync::calendar_copy::event_change::{Changed, EventChange, Undo};
 use mailrs_sync::{Permitted, Waiting};
-use mailrs_sync::calendar_copy::Listed;
-use mailrs_domain::translate::gettext;
 
 use super::block::EventKey;
 use super::range::{self, Range, ViewKind};
-use super::run::{Answer, Desk, SidebarRead, Effects, Older, PageId, Place, Shows, Unreached, Work};
+use super::run::{Answer, Desk, Effects, Older, PageId, Place, Shows, SidebarRead, Unreached, Work};
 use super::shown::{self, Showing};
 use super::{CalendarView, PageView, SEARCH_LIMIT, scope, sidebar};
+use crate::permission::Permission;
 
 /// The view, as the run sees it.
 pub(super) struct Ports(pub(super) Weak<CalendarView>);
@@ -446,13 +447,13 @@ impl Effects for Ports {
 
     fn needs_permission(&self, account_id: AccountId) {
         if let Some(view) = self.view() {
-            (view.hooks.needs_permission)(account_id);
+            view.needs(Permission::Calendar, account_id);
         }
     }
 
     fn toast(&self, text: String) {
         if let Some(view) = self.view() {
-            (view.hooks.toast)(&text);
+            view.say(&text);
         }
     }
 
