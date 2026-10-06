@@ -43,6 +43,11 @@ pub(crate) fn parse(text: &str) -> Result<ICalendar, DavError> {
     }
 }
 
+/// Whether a VEVENT in `text` has the UID `uid`, compared octet for octet.
+pub(crate) fn holds_uid(text: &str, uid: &str) -> bool {
+    parse(text).is_ok_and(|ical| events_of(&ical).any(|(_, comp)| text_of(comp, ICalendarProperty::Uid).as_deref() == Some(uid)))
+}
+
 fn events_of(ical: &ICalendar) -> impl Iterator<Item = (usize, &ICalendarComponent)> {
     ical.components.iter().enumerate().filter(|(_, c)| c.component_type == ICalendarComponentType::VEvent)
 }
