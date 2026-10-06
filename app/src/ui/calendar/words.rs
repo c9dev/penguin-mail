@@ -266,6 +266,26 @@ pub fn join_words(link: &str) -> String {
     }
 }
 
+/// The name of the service a conference link opens, for the editor's row:
+/// Google Meet, Microsoft Teams or Zoom by the link's host, and a plain
+/// "Video Call" for any other.
+pub fn conference_name(link: &str) -> String {
+    let host = url::Url::parse(link).ok().and_then(|url| url.host_str().map(str::to_ascii_lowercase));
+    let on = |domain: &str| {
+        host.as_deref()
+            .is_some_and(|host| host == domain || host.ends_with(&format!(".{domain}")))
+    };
+    if on("meet.google.com") {
+        gettext("Google Meet")
+    } else if on("teams.microsoft.com") || on("teams.live.com") {
+        gettext("Microsoft Teams")
+    } else if on("zoom.us") || on("zoomgov.com") {
+        gettext("Zoom")
+    } else {
+        gettext("Video Call")
+    }
+}
+
 /// Whether `link` is a Google Meet call.
 pub fn is_meet(link: &str) -> bool {
     link.contains("meet.google.com")
@@ -885,6 +905,22 @@ mod tests {
             "Join with Google Meet"
         );
         assert_eq!(join_words("https://zoom.example/call/1"), "Join Call");
+    }
+
+    #[test]
+    fn a_conference_link_is_named_by_the_service_it_opens() {
+        assert_eq!(conference_name("https://meet.google.com/abc-defg-hij"), "Google Meet");
+        assert_eq!(
+            conference_name("https://teams.microsoft.com/l/meetup-join/19%3ameeting"),
+            "Microsoft Teams"
+        );
+        assert_eq!(conference_name("https://teams.live.com/meet/9876"), "Microsoft Teams");
+        assert_eq!(conference_name("https://us02web.zoom.us/j/123456789"), "Zoom");
+        assert_eq!(conference_name("https://zoom.us/j/123456789"), "Zoom");
+        assert_eq!(conference_name("https://whereby.com/team"), "Video Call");
+        // A host that only mentions a service's name is not that service.
+        assert_eq!(conference_name("https://zoom.us.example.com/j/1"), "Video Call");
+        assert_eq!(conference_name("not a link"), "Video Call");
     }
 
     #[test]
