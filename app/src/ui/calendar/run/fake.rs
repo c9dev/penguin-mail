@@ -52,6 +52,7 @@ pub enum Step {
     DrawSidebar,
     DrawWaiting,
     DrawList,
+    RedrawList,
     PrependList,
     AppendList,
     NoEarlier,
@@ -523,6 +524,11 @@ impl Effects for FakeWindow {
             v.list = titles(&found);
             v.list_firsts.push(first);
         });
+    }
+
+    fn redraw_list(&self, found: Vec<Occurrence>, _first: NaiveDate, _last: NaiveDate) {
+        self.record(Step::RedrawList);
+        self.with(|v| v.list = titles(&found));
     }
 
     fn prepend_list(&self, found: Vec<Occurrence>, first: NaiveDate, _last: NaiveDate, _listed_from: EpochMillis) {

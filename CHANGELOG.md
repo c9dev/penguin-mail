@@ -292,6 +292,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   it last updated, instead of leaving you guessing.
 
 ### Fixed
+- In a narrow window, the calendar's list keeps the days you scrolled to and your place in it when a sync or your own change refreshes it, where it used to jump back to the first days.
 - In Week and Day view, dragging an out-of-office day or another entry that runs midnight to midnight along the all-day row moves it to the day under the pointer, and it stays a timed entry.
 - Turning All day off for an event in the editor shows its new 09:00 start, and the time you then pick is the time it saves at, in your own time zone.
 - Show in Calendar opens the event's popover even when the calendar refreshes at that moment.

@@ -279,6 +279,25 @@ async fn the_list_draws_its_first_window_around_the_day() {
 }
 
 #[tokio::test]
+async fn a_reload_keeps_the_days_the_list_has_loaded_and_its_scroll() {
+    let window = FakeWindow::new();
+    window.with(|v| {
+        v.showing_list = true;
+        v.copy = vec![event_at("Standup", fixture_day(), 9), event_at("Later", fixture_day() + chrono::Days::new(70), 9)];
+    });
+    let run = window.run();
+    run.fill_list();
+    window.settle().await;
+    run.load_later();
+    window.settle().await;
+    run.reload();
+    window.settle().await;
+    let view = window.view.borrow();
+    assert_eq!(view.list, ["Standup", "Later"]);
+    assert_eq!(window.count(Step::DrawList), 1, "only the first window replaced the list");
+}
+
+#[tokio::test]
 async fn earlier_days_read_for_a_list_that_has_since_been_replaced_are_dropped() {
     let window = FakeWindow::new();
     window.with(|v| v.showing_list = true);

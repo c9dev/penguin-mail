@@ -348,6 +348,12 @@ impl Effects for Ports {
         view.list.show(&found, &view.calendars.borrow(), &chrono::Local);
     }
 
+    fn redraw_list(&self, found: Vec<Occurrence>, first: NaiveDate, last: NaiveDate) {
+        let Some(view) = self.view() else { return };
+        let found = view.agenda_events(found, first, last);
+        view.list.replace(&found, &view.calendars.borrow(), &chrono::Local);
+    }
+
     fn prepend_list(&self, found: Vec<Occurrence>, first: NaiveDate, last: NaiveDate, listed_from: EpochMillis) {
         let Some(view) = self.view() else { return };
         let found = view.agenda_events(shown::not_yet_listed(found, listed_from), first, last);

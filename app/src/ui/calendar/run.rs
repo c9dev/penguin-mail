@@ -279,6 +279,9 @@ pub trait Effects {
     fn draw_waiting(&self, waiting: Vec<Waiting>);
     /// Fills the narrow list with `first` to `last`, replacing it.
     fn draw_list(&self, found: Vec<Occurrence>, first: NaiveDate, last: NaiveDate);
+    /// Replaces what the narrow list holds with `first` to `last`, the
+    /// days it already held, and leaves its scroll where it was.
+    fn redraw_list(&self, found: Vec<Occurrence>, first: NaiveDate, last: NaiveDate);
     /// Puts `first` to `last` above what the list holds. `listed_from`
     /// is where the list began, which an event running across it already
     /// shows from.
@@ -638,7 +641,19 @@ impl CalendarRun {
             Err(err) => tracing::warn!(%err, "could not read the calendars"),
         }
         if self.fill_owed.replace(false) {
-            self.fill_all();
+            self.refill_all();
+        }
+    }
+
+    /// Reads every page again, and the list in place when it shows, for a
+    /// change to the copy rather than a move of the view: the list keeps
+    /// the days it loaded and where the reader scrolled it.
+    fn refill_all(self: &Rc<Self>) {
+        for (page, _) in self.desk.pages() {
+            self.fill(page);
+        }
+        if self.desk.showing_list() {
+            self.refill_list();
         }
     }
 
@@ -740,6 +755,33 @@ impl CalendarRun {
         let accounts = self.desk.accounts();
         let this = Rc::clone(self);
         self.spawn(async move { this.list_window(first, last, accounts, ticket).await });
+    }
+
+    /// Reads the days the narrow list holds again and redraws them in
+    /// place. A list whose first window has not landed reads that window.
+    /// Earlier or later days still reading give way to this read, so the
+    /// next scroll to an end asks for them again.
+    fn refill_list(self: &Rc<Self>) {
+        let Some(last) = self.list.last.get() else {
+            self.fill_list();
+            return;
+        };
+        let first = self.list.first.get();
+        let ticket = self.start(Place::List);
+        self.list.earlier.set(false);
+        self.list.later.set(false);
+        let accounts = self.desk.accounts();
+        let this = Rc::clone(self);
+        self.spawn(async move {
+            let wanted = this.wanted(ticket);
+            let (from, to) = day_span(first, last);
+            if let Some(found) = wanted
+                .ask(|e| e.occurrences(accounts, from, to), "could not read the calendar")
+                .await
+            {
+                wanted.on_screen(|e| e.redraw_list(found, first, last));
+            }
+        });
     }
 
     async fn list_window(&self, first: NaiveDate, last: NaiveDate, accounts: Vec<AccountId>, ticket: Ticket) {
