@@ -186,8 +186,9 @@ fn show_events(
         card.cannot_add();
         let note = gtk::Label::builder()
             .label(gettext(
-                "No account here can use Google Calendar. Add a Google account, or allow \
-                 calendar access for one in Preferences, then open the file again.",
+                "No account here has a calendar Penguin Mail can add to. Add an account with \
+                 a calendar, or turn one on in Preferences, under Contacts & Calendar, then \
+                 open the file again.",
             ))
             .wrap(true)
             .xalign(0.0)
