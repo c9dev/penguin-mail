@@ -1040,11 +1040,7 @@ impl CalendarSidebar {
             .build();
         // Two accounts can each have a calendar called Personal; the
         // account address tells them apart.
-        let detail = match calendar.access.can_write() {
-            true => address.to_string(),
-            false => format!("{address}. {}", gettext("You can only read this calendar")),
-        };
-        crate::ui::describe(&check, &calendar.name, &detail);
+        crate::ui::describe(&check, &calendar.name, &calendar_detail(address, calendar.access.can_write()));
         let label = gtk::Label::builder()
             .label(&calendar.name)
             .css_classes(["calendar-name"])
@@ -1176,6 +1172,16 @@ fn list_actions(on_change: &Rc<OnChange>) -> gio::SimpleActionGroup {
         actions.add_action(&action);
     }
     actions
+}
+
+/// What a screen reader hears after a calendar's name: its account's
+/// address, and for one the account only reads, that it does. One string
+/// with the address in it, so a translator can place it.
+pub fn calendar_detail(address: &str, writable: bool) -> String {
+    match writable {
+        true => address.to_string(),
+        false => fill(&gettext("{address}. You can only read this calendar"), &[("address", address)]),
+    }
 }
 
 /// What Add Calendar offers an account: a new calendar, and a
@@ -1620,6 +1626,12 @@ mod tests {
             (account(2, "ana@outlook.example"), fixed, Withheld::NONE, vec![calendar("primary")]),
         ], |_| None);
         assert_eq!(adding_accounts(&rows), [(1, "dana@example.com".to_string())]);
+    }
+
+    #[test]
+    fn a_read_only_calendar_says_its_address_and_that_it_only_reads() {
+        assert_eq!(calendar_detail("dana@example.com", true), "dana@example.com");
+        assert_eq!(calendar_detail("dana@example.com", false), "dana@example.com. You can only read this calendar");
     }
 
     #[test]
