@@ -4,8 +4,10 @@
 //!
 //! [`CalendarView`] is the page itself: a header with the range's title,
 //! Today, the arrows and the view switch; a card holding the grids; and
-//! the sidebar content the window swaps in for the mailbox list. The
-//! grids read the local copy through [`Core::read`] and hold only the
+//! the sidebar content the window swaps in for the mailbox list. Every
+//! read of the local copy goes through the calendar run ([`run`]), which
+//! decides whether an answer still belongs on screen; this module keeps
+//! the widgets and draws what the run hands it. The grids hold only the
 //! ranges they show: the one on screen and one either side, which an
 //! `adw::Carousel` slides between, so a swipe follows the fingers and
 //! settles on a neighbour.
@@ -27,8 +29,10 @@ pub mod month;
 pub mod next;
 pub(crate) mod pager;
 pub mod popover;
+mod ports;
 pub mod quick;
 pub mod range;
+pub mod run;
 pub mod scope;
 pub mod shown;
 pub mod sidebar;
@@ -39,22 +43,21 @@ pub mod words;
 use std::cell::{Cell, RefCell};
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::rc::{Rc, Weak};
-use std::sync::Arc;
 
 use adw::prelude::*;
-use chrono::{DateTime, Datelike, Days, NaiveDate, Utc};
+use chrono::{Datelike, Days, NaiveDate};
 use gtk::{gdk, gio, glib};
 use mailrs_domain::calendar::series::{self, RepeatScope};
 use mailrs_domain::calendar::{Access, Calendar, Event, Occurrence};
 use mailrs_domain::invitation::Answer;
 use mailrs_domain::translate::{date_locale, fill, gettext, with_reason};
 use mailrs_domain::{Account, AccountId, EpochMillis};
-use mailrs_store::calendar::{self as store, CalendarScope};
 use mailrs_sync::Permitted;
 use mailrs_sync::calendar_copy::event_change::{
     self, Action, Ask, Changed, Edit, EventChange, Facts, Undo,
 };
 use mailrs_sync::calendar_copy::{Held, new_event_id};
+use mailrs_sync::calendar_copy::Listed;
 use mailrs_sync::{Offers, SyncError, Withheld};
 
 use crate::core::Core;
@@ -69,16 +72,13 @@ use month::MonthGrid;
 use popover::EventPopover;
 use quick::Quick;
 use range::{Range, ViewKind};
+use run::{CalendarRun, MOST_EVENTS, PageId, date_of, day_span};
 use shown::{Refocus, Showing};
 use sidebar::{CalendarSidebar, ListChange};
 use time_grid::{AllDayStrip, GUTTER, TimeGrid};
 
 /// The most results a search lists.
 const SEARCH_LIMIT: usize = 50;
-
-/// What `occurrences` returns at most, so a read that comes back this
-/// full is known to have been cut (`store::calendar`'s `MOST_EVENTS`).
-const MOST_EVENTS: usize = 500;
 
 /// The window's side of the view: what the view cannot do on its own.
 pub struct Hooks {
@@ -144,25 +144,16 @@ struct GridPage {
     headings: headings::DayHeadings,
     strip: AllDayStrip,
     scroller: gtk::ScrolledWindow,
-    /// Counts the scrolls asked of `scroller`. A scroll waiting for the
-    /// grid's first layout, asked while the page was hidden, must not
-    /// land after a later one, such as Show in Calendar's.
-    scroll_asked: Rc<Cell<u64>>,
     grid: TimeGrid,
 }
 
 /// One page of the carousel and the range it shows.
 struct Page {
+    /// The number the calendar run knows the page by.
+    id: PageId,
     holder: adw::Bin,
     range: Cell<Range>,
     view: RefCell<PageView>,
-    /// The read this page waits for; an answer from an older one is
-    /// dropped, since the page has moved on to another range.
-    generation: Cell<u64>,
-    /// Whether the grid has been scrolled to the range's first hour, so
-    /// a reload of the same range leaves the scroll where the person put
-    /// it.
-    scrolled: Cell<bool>,
 }
 
 pub struct CalendarView {
@@ -221,9 +212,6 @@ pub struct CalendarView {
     older_note: gtk::Box,
     older_spinner: gtk::Spinner,
     older_label: gtk::Label,
-    /// Counts the asks for older events, so an answer that comes back
-    /// after the person moved on leaves the note to the newer ask.
-    older_read: Cell<u64>,
     carousel: adw::Carousel,
     pages: RefCell<Vec<Rc<Page>>>,
     list: Rc<Agenda>,
@@ -257,40 +245,9 @@ pub struct CalendarView {
     /// The calendars the person took off the sidebar's list, by account
     /// and id, which the pickers for a new event leave out.
     hidden: RefCell<HashSet<(AccountId, String)>>,
-    /// Counts every read, so each can tell whether a newer one replaced
-    /// it: an answer can come back after the person moved on.
-    reads: Cell<u64>,
-    sidebar_read: Cell<u64>,
-    /// The latest "Waiting for your answer" read, counted apart from the
-    /// sidebar's so neither drops the other's answer.
-    waiting_read: Cell<u64>,
-    list_read: Cell<u64>,
-    /// The earliest day the narrow list already holds. `load_earlier`
-    /// reads back from here and moves it once the read comes back.
-    list_first: Cell<NaiveDate>,
-    /// Set once `load_earlier` has read down to `range::earliest_agenda_day`,
-    /// so a further scroll to the top asks nothing more.
-    list_exhausted: Cell<bool>,
-    /// Set while an earlier-days read is in flight, so a second scroll
-    /// to the top before it answers does not start another one.
-    list_loading: Cell<bool>,
-    /// The latest day the list already holds, `None` until its first
-    /// read answers. `load_later` reads on from here.
-    list_last: Cell<Option<NaiveDate>>,
-    /// Set while a later-days read is in flight.
-    list_later_loading: Cell<bool>,
-    search_read: Cell<u64>,
-    /// Set by a sidebar read that should fill the pages once it answers.
-    /// A newer read drops the older one's answer, so the flag carries
-    /// the fill over to whichever read answers last.
-    fill_owed: Cell<bool>,
-    /// Counts `open`'s reads, so a newer one, or a move to another range,
-    /// drops an older answer.
-    open_read: Cell<u64>,
-    /// An occurrence to open once the page that holds it has been read:
-    /// the event and the occurrence's own start, since every occurrence
-    /// of an unsplit series shares one row and one id.
-    pending_open: RefCell<Option<(EventKey, EpochMillis)>>,
+    /// Every read the view makes, and the rule for an answer that comes
+    /// back after the person moved on.
+    run: Rc<CalendarRun>,
     /// Set while the view changes its own switch, so the switch's signal
     /// does not echo the change back.
     switching: Cell<bool>,
@@ -307,9 +264,6 @@ pub struct CalendarView {
     /// The toast that change's Undo is on, so a new one can dismiss it
     /// and its own watcher can tell it apart from a later toast.
     toast_up: RefCell<Option<adw::Toast>>,
-    /// Set while a Refresh press has a calendar sync started, so a
-    /// second press before it answers does not start another one.
-    refreshing: Cell<bool>,
     /// Whether the last calendar sync attempt came back with an error,
     /// for the offline line under the mini month.
     sync_failed: Cell<bool>,
@@ -317,26 +271,6 @@ pub struct CalendarView {
     /// offline line's own "last updated" time. `None` before the first
     /// one this run.
     last_synced: Cell<Option<chrono::NaiveTime>>,
-}
-
-/// What an ask for older events came to.
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-enum Older {
-    /// The copy already reaches back far enough, or the ask failed in a
-    /// way the person cannot act on; the view has what there is.
-    Held,
-    /// A fetch ran, so the view may lack events it has not drawn yet.
-    Loaded,
-    /// A fetch was due and the computer has no network.
-    Offline,
-}
-
-/// Whether pressing Refresh should start a calendar sync now: never
-/// while one it started is still running, so two presses in a row, or a
-/// press while the timer's own pass is in flight, do not queue a second
-/// one.
-fn should_refresh(already_refreshing: bool) -> bool {
-    !already_refreshing
 }
 
 impl CalendarView {
@@ -671,7 +605,6 @@ impl CalendarView {
                 older_note,
                 older_spinner,
                 older_label,
-                older_read: Cell::new(0),
                 carousel,
                 pages: RefCell::new(Vec::new()),
                 list,
@@ -693,25 +626,15 @@ impl CalendarView {
                 accounts: RefCell::new(Vec::new()),
                 calendars: RefCell::new(HashMap::new()),
                 hidden: RefCell::new(HashSet::new()),
-                reads: Cell::new(0),
-                sidebar_read: Cell::new(0),
-                waiting_read: Cell::new(0),
-                list_read: Cell::new(0),
-                list_first: Cell::new(today),
-                list_exhausted: Cell::new(false),
-                list_loading: Cell::new(false),
-                list_last: Cell::new(None),
-                list_later_loading: Cell::new(false),
-                search_read: Cell::new(0),
-                fill_owed: Cell::new(false),
-                open_read: Cell::new(0),
-                pending_open: RefCell::new(None),
+                run: {
+                    let ports = Rc::new(ports::Ports(weak.clone()));
+                    Rc::new(CalendarRun::new(ports.clone(), ports))
+                },
                 switching: Cell::new(false),
                 arranging: Cell::new(false),
                 refocus_owed: Cell::new(false),
                 holding: RefCell::new(Holding::new()),
                 toast_up: RefCell::new(None),
-                refreshing: Cell::new(false),
                 sync_failed: Cell::new(false),
                 last_synced: Cell::new(None),
             }
@@ -843,8 +766,7 @@ impl CalendarView {
     /// Reads the calendars and the ranges on screen again, as after the
     /// copy changed.
     pub fn reload(self: &Rc<Self>) {
-        self.read_sidebar(true);
-        self.refresh_waiting();
+        self.run.reload();
     }
 
     /// Redraws the Week and Month grids and the mini month after the
@@ -854,25 +776,21 @@ impl CalendarView {
         self.calendar_sidebar.week_start_changed();
         self.rebuild_pages();
         self.show_range();
-        self.fill_all();
-        self.read_sidebar(false);
+        self.run.fill_all();
+        self.run.read_sidebar(false);
     }
 
     /// The Refresh action: starts a calendar sync for every account,
     /// unless one it started is still running.
     pub fn refresh_now(self: &Rc<Self>) {
-        if !should_refresh(self.refreshing.get()) {
-            return;
-        }
-        self.refreshing.set(true);
-        (self.hooks.refresh)();
+        self.run.refresh_now();
     }
 
     /// What `App::refresh_calendars` calls once its pass over every
     /// account ends, whatever it found, so the next press can start
     /// another one.
     pub fn refresh_done(&self) {
-        self.refreshing.set(false);
+        self.run.refresh_done();
     }
 
     /// What a calendar sync attempt found, for the offline line: `ok`
@@ -907,42 +825,15 @@ impl CalendarView {
     /// mail" door, and after an answer. It leaves the pages and the
     /// open popover alone, so it can run while the view opens an event.
     pub fn refresh_waiting(self: &Rc<Self>) {
-        let read = self.waiting_read.get() + 1;
-        self.waiting_read.set(read);
-        let accounts = sidebar::waiting_accounts(&self.accounts.borrow());
-        let now = chrono::Local::now().timestamp_millis();
-        let weak = Rc::downgrade(self);
-        let core = Rc::clone(&self.core);
-        let invitations = self.core.invitations();
-        glib::spawn_future_local(async move {
-            // `Db::read`'s `spawn_blocking` needs the tokio runtime, which
-            // `call` gives it and the GTK loop does not.
-            let waiting = core
-                .call(async move { invitations.waiting_for_answer(&accounts, now).await })
-                .await;
-            let Some(view) = weak.upgrade() else { return };
-            if view.waiting_read.get() != read {
-                return;
-            }
-            match waiting {
-                Ok(waiting) => {
-                    view.calendar_sidebar.show_waiting(&waiting);
-                    (view.hooks.waiting)(waiting.len());
-                }
-                Err(err) => tracing::warn!(%err, "could not read what is waiting for an answer"),
-            }
-        });
+        self.run.refresh_waiting();
     }
 
     /// Moves the view to the range around `day`.
     pub fn go_to(self: &Rc<Self>, day: NaiveDate) {
-        self.open_read.set(self.next_read());
         self.day.set(day);
         self.place_ranges();
         self.show_range();
-        self.fill_all();
-        self.read_sidebar(false);
-        self.reach_current();
+        self.run.range_moved();
     }
 
     /// The start of what the view shows now, which the copy has to reach:
@@ -953,88 +844,6 @@ impl CalendarView {
             _ => return Range::around(self.effective_kind(), self.day.get()).span(&chrono::Local).0,
         };
         day_span(day, day).0
-    }
-
-    /// Makes sure the copy holds what the view shows now, fetching an
-    /// older range from Google when the person went back further than the
-    /// copy reaches, and draws it again once it arrives.
-    fn reach_current(self: &Rc<Self>) {
-        let from = self.wanted_from();
-        let weak = Rc::downgrade(self);
-        glib::spawn_future_local(async move {
-            let Some(view) = weak.upgrade() else { return };
-            if view.reach_back(from).await == Older::Loaded && view.wanted_from() == from {
-                view.fill_all();
-            }
-        });
-    }
-
-    /// Asks the copy for the events back to `from`, with the note over
-    /// the view saying so while it waits. `Loaded` means a fetch ran, so
-    /// what the view drew before may lack events; `Offline` means one was
-    /// due and could not run.
-    async fn reach_back(self: &Rc<Self>, from: EpochMillis) -> Older {
-        let ask = self.older_read.get() + 1;
-        self.older_read.set(ask);
-        let accounts = self.account_ids();
-        let copy = self.core.calendar_copy();
-        let missing = {
-            let (copy, accounts) = (Arc::clone(&copy), accounts.clone());
-            self.core.call(async move { copy.older_missing(&accounts, from).await }).await
-        };
-        match missing {
-            Ok(true) => {}
-            Ok(false) => {
-                self.show_older_note(ask, None);
-                return Older::Held;
-            }
-            Err(err) => {
-                tracing::warn!(%err, "could not tell whether the copy reaches back far enough");
-                self.show_older_note(ask, None);
-                return Older::Held;
-            }
-        }
-        if !self.core.network() {
-            self.show_older_note(ask, Some(Older::Offline));
-            return Older::Offline;
-        }
-        self.show_older_note(ask, Some(Older::Loaded));
-        let read = self.core.call(async move { copy.reach_back(&accounts, from).await }).await;
-        match read {
-            Ok(_) => {
-                self.show_older_note(ask, None);
-                Older::Loaded
-            }
-            Err(err) => {
-                let offline = err
-                    .downcast_ref::<mailrs_sync::SyncError>()
-                    .is_some_and(|e| matches!(e, mailrs_sync::SyncError::Backend(b) if b.is_transient()));
-                if offline {
-                    self.show_older_note(ask, Some(Older::Offline));
-                    return Older::Offline;
-                }
-                tracing::warn!(%err, "could not fetch older calendar events");
-                self.show_older_note(ask, None);
-                Older::Held
-            }
-        }
-    }
-
-    /// Shows, changes or hides the note over the view, unless a newer ask
-    /// for older events has taken it over. `Loaded` stands for the loading
-    /// line and `Offline` for the offline one.
-    fn show_older_note(&self, ask: u64, saying: Option<Older>) {
-        if self.older_read.get() != ask {
-            return;
-        }
-        let offline = saying == Some(Older::Offline);
-        self.older_spinner.set_visible(!offline);
-        self.older_spinner.set_spinning(saying == Some(Older::Loaded));
-        self.older_label.set_label(&match offline {
-            true => gettext("Older events can't load while offline"),
-            false => gettext("Loading older events"),
-        });
-        self.older_note.set_visible(saying.is_some());
     }
 
     /// Shows a day, a week or a month, around the day the view is on.
@@ -1050,11 +859,11 @@ impl CalendarView {
         (self.hooks.change)(Change::CalendarView(kind));
         self.rebuild_pages();
         self.show_range();
-        self.fill_all();
-        self.reach_current();
+        self.run.fill_all();
+        self.run.reach_current();
         // The mini month's band follows the grid: a week, a month, or
         // none for a single day.
-        self.read_sidebar(false);
+        self.run.read_sidebar(false);
     }
 
     pub fn today(self: &Rc<Self>) {
@@ -1109,42 +918,7 @@ impl CalendarView {
     /// review names that Tuesday, not the series' beginning. Nothing
     /// happens when the store no longer has the event.
     pub fn open(self: &Rc<Self>, account_id: AccountId, calendar: &str, id: &str, start: EpochMillis) {
-        let (calendar, id) = (calendar.to_string(), id.to_string());
-        let key: EventKey = (account_id, calendar.clone(), id.clone());
-        let read = self.next_read();
-        self.open_read.set(read);
-        let weak = Rc::downgrade(self);
-        let core = Rc::clone(&self.core);
-        let asked = read;
-        glib::spawn_future_local(async move {
-            let read = core
-                .read(move |c| store::event(c, account_id, &calendar, &id))
-                .await;
-            let Some(view) = weak.upgrade() else { return };
-            // The person moved on while the store answered: to another
-            // range, another event, or away from the calendar.
-            if view.open_read.get() != asked || !view.page.is_mapped() {
-                return;
-            }
-            match read {
-                Ok(Some(event)) => {
-                    let day = date_of(start, event.all_day);
-                    view.pending_open.replace(Some((key, start)));
-                    view.go_to(day);
-                }
-                Ok(None) => {}
-                Err(err) => tracing::warn!(%err, "could not read the event to open"),
-            }
-        });
-    }
-
-    /// The pending target, in the flat shape [`shown::keep`] matches
-    /// against.
-    fn pending(&self) -> Option<(AccountId, String, String, EpochMillis)> {
-        self.pending_open
-            .borrow()
-            .clone()
-            .map(|((account_id, calendar, id), start)| (account_id, calendar, id, start))
+        self.run.open((account_id, calendar.to_string(), id.to_string()), start);
     }
 
     /// Answers the window's narrow breakpoint: a list in place of Week
@@ -1201,9 +975,9 @@ impl CalendarView {
         self.show_range();
         self.show_extras();
         if self.showing() == Showing::Agenda {
-            self.fill_list();
+            self.run.fill_list();
         }
-        self.reach_current();
+        self.run.reach_current();
     }
 
     /// Puts the focus in the page, on Today, so the calendar's keys
@@ -1268,10 +1042,9 @@ impl CalendarView {
         self.accounts.borrow().iter().map(|(a, _, _)| a.id).collect()
     }
 
-    fn next_read(&self) -> u64 {
-        let read = self.reads.get() + 1;
-        self.reads.set(read);
-        read
+    /// The page the run knows by `id`, while the carousel holds it.
+    fn page_by_id(&self, id: PageId) -> Option<Rc<Page>> {
+        self.pages.borrow().iter().find(|page| page.id == id).cloned()
     }
 
     // ---- The header -----------------------------------------------------
@@ -1361,6 +1134,7 @@ impl CalendarView {
         }
         self.arranging.set(true);
         let old: Vec<Rc<Page>> = self.pages.replace(Vec::new());
+        self.run.forget_pages(old.iter().map(|page| page.id));
         let current = Range::around(self.effective_kind(), self.day.get());
         let ranges = [current.previous(), current, current.next()];
         let views = ranges.map(|_| self.page_view());
@@ -1375,11 +1149,10 @@ impl CalendarView {
             .zip(views)
             .map(|((holder, range), view)| {
                 Rc::new(Page {
+                    id: self.run.new_page(),
                     holder,
                     range: Cell::new(range),
                     view: RefCell::new(view),
-                    generation: Cell::new(0),
-                    scrolled: Cell::new(false),
                 })
             })
             .collect();
@@ -1462,10 +1235,7 @@ impl CalendarView {
         let current = Range::around(self.effective_kind(), self.day.get());
         let pages = self.pages.borrow().clone();
         for (page, range) in pages.iter().zip([current.previous(), current, current.next()]) {
-            if page.range.get() != range {
-                page.range.set(range);
-                page.scrolled.set(false);
-            }
+            page.range.set(range);
         }
         if let Some(middle) = pages.get(1) {
             self.arranging.set(true);
@@ -1557,11 +1327,13 @@ impl CalendarView {
             return o.event.rules.clone();
         };
         let (account, calendar) = (o.account_id, o.event.calendar.clone());
+        let copy = self.core.calendar_copy();
         self.core
-            .read(move |c| Ok(store::event(c, account, &calendar, &series_id)?.map(|e| e.rules)))
+            .call(async move { copy.event(account, &calendar, &series_id).await })
             .await
             .ok()
             .flatten()
+            .map(|e| e.rules)
             .unwrap_or_default()
     }
 
@@ -1767,7 +1539,6 @@ impl CalendarView {
             headings,
             strip,
             scroller,
-            scroll_asked: Rc::new(Cell::new(0)),
             grid,
         }
     }
@@ -1825,7 +1596,6 @@ impl CalendarView {
                 recycled.range.set(range.previous());
             }
         }
-        recycled.scrolled.set(false);
         self.pages.replace(reordered);
         self.carousel
             .scroll_to(&self.pages.borrow()[1].holder, false);
@@ -1843,67 +1613,18 @@ impl CalendarView {
                 self.refocus(&middle, None);
             }
         }
-        self.fill(&recycled);
+        self.run.fill(recycled.id);
         self.show_range();
-        self.read_sidebar(false);
-        self.reach_current();
+        self.run.read_sidebar(false);
+        self.run.reach_current();
     }
 
-    /// Reads every page again, and the list when it shows.
-    fn fill_all(self: &Rc<Self>) {
-        let pages = self.pages.borrow().clone();
-        // The page on screen first, so its read is not queued behind its
-        // neighbours'.
-        for index in [1, 0, 2] {
-            if let Some(page) = pages.get(index) {
-                self.fill(page);
-            }
-        }
-        if self.showing() == Showing::Agenda {
-            self.fill_list();
-        }
-    }
-
-    /// Reads the occurrences of a page's range and shows them, unless the
-    /// page has moved to another range by the time the read comes back.
-    fn fill(self: &Rc<Self>, page: &Rc<Page>) {
-        let read = self.next_read();
-        page.generation.set(read);
-        let range = page.range.get();
-        let (from, to) = range.span(&chrono::Local);
-        let accounts = self.account_ids();
-        let (weak, page) = (Rc::downgrade(self), Rc::downgrade(page));
-        let core = Rc::clone(&self.core);
-        glib::spawn_future_local(async move {
-            let found = core
-                .read(move |c| store::occurrences(c, &accounts, from, to, CalendarScope::Shown))
-                .await;
-            let (Some(view), Some(page)) = (weak.upgrade(), page.upgrade()) else {
-                return;
-            };
-            if page.generation.get() != read {
-                return;
-            }
-            match found {
-                Ok(found) => {
-                    if found.len() >= MOST_EVENTS {
-                        tracing::info!(
-                            first = %range.first,
-                            days = range.days,
-                            "the calendar range holds more events than one read shows"
-                        );
-                    }
-                    view.show_page(&page, found);
-                }
-                Err(err) => tracing::warn!(%err, "could not read the calendar"),
-            }
-        });
-    }
-
-    fn show_page(self: &Rc<Self>, page: &Rc<Page>, found: Vec<Occurrence>) {
+    /// Draws `found` on `page`, keeping the keyboard focus on the event
+    /// that had it. The run scrolls the hours and opens a popover after.
+    fn draw_page(self: &Rc<Self>, page: &Rc<Page>, found: Vec<Occurrence>) {
         let settings = (self.settings)();
         let show_declined = settings.show_declined_events;
-        let pending = self.pending();
+        let pending = self.run.pending();
         let range = page.range.get();
         let days: Vec<NaiveDate> = (0..range.days)
             .map(|i| range.first + Days::new(u64::from(i)))
@@ -1922,7 +1643,7 @@ impl CalendarView {
         let focused = page.view.borrow().focused_key();
         let calendars = self.calendars.borrow().clone();
         let view = page.view.borrow();
-        let block = match &*view {
+        let hours = match &*view {
             PageView::Grid(grid) => {
                 // The grid is a group, which a screen reader names by the
                 // range it holds.
@@ -1936,100 +1657,27 @@ impl CalendarView {
                 grid.strip.show(&days, &found, &calendars);
                 let now = chrono::Local::now().timestamp_millis();
                 grid.grid.show(&days, &found, &calendars, now, &chrono::Local, settings.working_hours);
-                let block = self.pending_block(&found, |key, start| {
-                    grid.grid
-                        .block_at(key, start)
-                        .or_else(|| grid.strip.block_at(key, start))
-                });
-                // An event about to open brings its hour into view, however
-                // far the page was scrolled before; a fresh page otherwise
-                // opens at its first event.
-                let opening = block
-                    .as_ref()
-                    .filter(|(_, o)| !time_grid::in_strip(o))
-                    .map(|(_, o)| layout::open_hour(o.start, &chrono::Local));
-                let hour = match opening {
-                    Some(hour) => Some(hour),
-                    None if !page.scrolled.get() => Some(first_hour(&found, range)),
-                    None => None,
-                };
-                let scroll = hour.map(|hour| {
-                    page.scrolled.set(true);
-                    (
-                        grid.scroller.clone(),
-                        Rc::clone(&grid.scroll_asked),
-                        grid.grid.scroll_to_hour(hour),
-                    )
-                });
-                (block, scroll)
+                Some(grid.scroller.clone())
             }
             PageView::Month(month) => {
                 month.show(range, &found, &places, &calendars, settings.working_hours);
-                let block = self.pending_block(&found, |key, start| month.block_at(key, start));
-                (block, None)
+                None
             }
         };
-        let (block, scroll) = block;
         let is_current = self
             .pages
             .borrow()
             .get(1)
             .is_some_and(|current| Rc::ptr_eq(current, page));
-        let hours = match &*view {
-            PageView::Grid(grid) => Some(grid.scroller.clone()),
-            PageView::Month(_) => None,
-        };
         drop(view);
         if is_current && (had_focus || self.refocus_owed.replace(false)) {
             // A refill asks no scroll of its own, so the hours stay where
-            // the person left them; one that does ask scrolls below.
+            // the person left them; one that does ask scrolls after.
             match hours {
                 Some(hours) => pager::refocus_in_place(&hours, || self.refocus(page, focused)),
                 None => self.refocus(page, focused),
             }
         }
-        let open = match (is_current, block) {
-            (true, Some((anchor, o))) => {
-                self.pending_open.replace(None);
-                let weak = Rc::downgrade(self);
-                Some(move || {
-                    if let Some(view) = weak.upgrade() {
-                        view.show_event(&anchor, &o);
-                    }
-                })
-            }
-            _ => None,
-        };
-        match (scroll, open) {
-            // The popover measures the block when it opens, so it waits
-            // until the scroll has landed and the grid has laid the block
-            // out at its new place.
-            (Some((scroller, asked, y)), Some(open)) => {
-                let after = scroller.clone();
-                scroll_when_ready(&scroller, &asked, y, move || after_layout(&after, open));
-            }
-            (Some((scroller, asked, y)), None) => scroll_when_ready(&scroller, &asked, y, || {}),
-            // The block has no size until the grid lays it out, and a
-            // popover needs one to point at.
-            (None, Some(open)) => {
-                glib::idle_add_local_once(open);
-            }
-            (None, None) => {}
-        }
-    }
-
-    /// The block and occurrence of the event waiting to open, when
-    /// `found` holds it. Matches the occurrence's start as well as its
-    /// key, since every occurrence of an unsplit series shares the same
-    /// key and a page can show several.
-    fn pending_block(
-        &self,
-        found: &[Occurrence],
-        block_at: impl Fn(&EventKey, EpochMillis) -> Option<gtk::Widget>,
-    ) -> Option<(gtk::Widget, Occurrence)> {
-        let (key, start) = self.pending_open.borrow().clone()?;
-        let o = found.iter().find(|o| key_of(o) == key && o.start == start)?;
-        Some((block_at(&key, start)?, o.clone()))
     }
 
     /// The day headings over a grid: "MON 21", today's in a pill, and
@@ -2091,158 +1739,24 @@ impl CalendarView {
             self.go_to(day);
         } else {
             self.set_kind(ViewKind::Day);
-            self.read_sidebar(false);
+            self.run.read_sidebar(false);
         }
     }
 
     // ---- The list, the search and the popovers ---------------------------
 
-    /// Reads the narrow list's first window, replacing whatever it held.
-    fn fill_list(self: &Rc<Self>) {
-        let read = self.next_read();
-        self.list_read.set(read);
-        let (first, last) = range::agenda_window(self.day.get());
-        self.list_first.set(first);
-        self.list_exhausted.set(false);
-        self.list_loading.set(false);
-        self.list_last.set(None);
-        self.list_later_loading.set(false);
-        let (from, to) = day_span(first, last);
-        let accounts = self.account_ids();
-        let weak = Rc::downgrade(self);
-        let core = Rc::clone(&self.core);
-        glib::spawn_future_local(async move {
-            let found = core
-                .read(move |c| store::occurrences(c, &accounts, from, to, CalendarScope::Shown))
-                .await;
-            let Some(view) = weak.upgrade() else { return };
-            if view.list_read.get() != read {
-                return;
-            }
-            match found {
-                Ok(found) => {
-                    let show_declined = (view.settings)().show_declined_events;
-                    let pending = view.pending();
-                    let found =
-                        keep_agenda_events(found, show_declined, pending.as_ref(), first, last);
-                    view.list
-                        .show(&found, &view.calendars.borrow(), &chrono::Local);
-                    view.list_last.set(Some(last));
-                }
-                Err(err) => tracing::warn!(%err, "could not read the calendar"),
-            }
-        });
-    }
-
-    /// Loads the 30 days before what the narrow list already holds, once
-    /// the reader scrolls to its top. Keeps what the list holds bounded
-    /// by loading in these steps rather than all at once, and stops at
-    /// `range::earliest_agenda_day`, fetching the months the copy lacks
-    /// from the provider as it goes.
-    fn load_earlier(self: &Rc<Self>) {
-        if self.list_loading.get() || self.list_exhausted.get() {
-            return;
-        }
-        let cutoff = range::earliest_agenda_day(chrono::Local::now().date_naive());
-        let last = self.list_first.get() - Days::new(1);
-        if last < cutoff {
-            self.list_exhausted.set(true);
-            self.list.show_no_earlier();
-            return;
-        }
-        let first = range::earlier(self.list_first.get()).max(cutoff);
-        self.list_loading.set(true);
-        let read = self.list_read.get();
-        let (from, to) = day_span(first, last);
-        // `to` is where the list's earlier reads began.
-        let listed_from = to;
-        let accounts = self.account_ids();
-        let weak = Rc::downgrade(self);
-        let core = Rc::clone(&self.core);
-        glib::spawn_future_local(async move {
-            // The copy may not reach this far back yet; fetch the months
-            // it lacks before reading, or the list would grow by days that
-            // look empty. Offline, the list stays where it is, so the
-            // next scroll to the top asks again.
-            let Some(view) = weak.upgrade() else { return };
-            let reached = view.reach_back(from).await;
-            if reached == Older::Offline {
-                view.list_loading.set(false);
-                return;
-            }
-            drop(view);
-            let found = core
-                .read(move |c| store::occurrences(c, &accounts, from, to, CalendarScope::Shown))
-                .await;
-            let Some(view) = weak.upgrade() else { return };
-            view.list_loading.set(false);
-            if view.list_read.get() != read {
-                return;
-            }
-            match found {
-                Ok(found) => {
-                    let show_declined = (view.settings)().show_declined_events;
-                    let pending = view.pending();
-                    let found = shown::not_yet_listed(found, listed_from);
-                    let found =
-                        keep_agenda_events(found, show_declined, pending.as_ref(), first, last);
-                    view.list
-                        .prepend(&found, &view.calendars.borrow(), &chrono::Local);
-                    view.list_first.set(first);
-                    if first <= cutoff {
-                        view.list_exhausted.set(true);
-                        view.list.show_no_earlier();
-                    }
-                }
-                Err(err) => tracing::warn!(%err, "could not read the calendar"),
-            }
-        });
-    }
-
-    /// Reads the 30 days after what the list holds once the reader
-    /// scrolls near its end, up to `range::latest_agenda_day`.
-    fn load_later(self: &Rc<Self>) {
-        let Some(held_to) = self.list_last.get() else { return };
-        if self.list_later_loading.get() {
-            return;
-        }
-        let today = chrono::Local::now().date_naive();
-        let Some((first, last)) = range::agenda_later(held_to, today) else { return };
-        self.list_later_loading.set(true);
-        let read = self.list_read.get();
-        let (from, to) = day_span(first, last);
-        let accounts = self.account_ids();
-        let weak = Rc::downgrade(self);
-        let core = Rc::clone(&self.core);
-        glib::spawn_future_local(async move {
-            let found = core
-                .read(move |c| store::occurrences(c, &accounts, from, to, CalendarScope::Shown))
-                .await;
-            let Some(view) = weak.upgrade() else { return };
-            if view.list_read.get() != read {
-                return;
-            }
-            view.list_later_loading.set(false);
-            match found {
-                Ok(found) => {
-                    let show_declined = (view.settings)().show_declined_events;
-                    let pending = view.pending();
-                    let found =
-                        keep_agenda_events(found, show_declined, pending.as_ref(), first, last);
-                    view.list
-                        .append(&found, first, &view.calendars.borrow(), &chrono::Local);
-                    view.list_last.set(Some(last));
-                }
-                Err(err) => tracing::warn!(%err, "could not read the calendar"),
-            }
-        });
+    /// The list's events from `first` to `last`, without the declined
+    /// ones the settings hide.
+    fn agenda_events(&self, found: Vec<Occurrence>, first: NaiveDate, last: NaiveDate) -> Vec<Occurrence> {
+        let show_declined = (self.settings)().show_declined_events;
+        keep_agenda_events(found, show_declined, self.run.pending().as_ref(), first, last)
     }
 
     fn connect_lists(self: &Rc<Self>) {
         let weak = Rc::downgrade(self);
         self.list.connect_near_end(400.0, move || {
             if let Some(view) = weak.upgrade() {
-                view.load_later();
+                view.run.load_later();
             }
         });
         let weak = Rc::downgrade(self);
@@ -2255,7 +1769,7 @@ impl CalendarView {
         let weak = Rc::downgrade(self);
         self.list.connect_scrolled_to_top(move || {
             if let Some(view) = weak.upgrade() {
-                view.load_earlier();
+                view.run.load_earlier();
             }
         });
         let weak = Rc::downgrade(self);
@@ -2271,7 +1785,7 @@ impl CalendarView {
         self.results.connect_event_activated(move |o| {
             let Some(view) = weak.upgrade() else { return };
             view.search_bar.set_search_mode(false);
-            view.pending_open.replace(Some((key_of(o), o.start)));
+            view.run.open_once_drawn(key_of(o), o.start);
             view.go_to(date_of(o.start, o.event.all_day));
         });
     }
@@ -2288,7 +1802,7 @@ impl CalendarView {
             let Some(view) = weak.upgrade() else { return };
             if !bar.is_search_mode() {
                 view.search_entry.set_text("");
-                view.search_read.set(view.next_read());
+                view.run.search("");
                 view.show_range();
             }
         });
@@ -2300,36 +1814,10 @@ impl CalendarView {
 
     /// Lists the events that mention `text`, soonest first.
     fn search(self: &Rc<Self>, text: &str) {
-        let read = self.next_read();
-        self.search_read.set(read);
+        self.run.search(text);
         if text.is_empty() {
             self.show_range();
-            return;
         }
-        let text = text.to_string();
-        let accounts = self.account_ids();
-        let now = mailrs_sync::now_millis();
-        let weak = Rc::downgrade(self);
-        let core = Rc::clone(&self.core);
-        glib::spawn_future_local(async move {
-            let found = core
-                .read(move |c| {
-                    store::search(c, &accounts, &text, now, CalendarScope::Shown, SEARCH_LIMIT)
-                })
-                .await;
-            let Some(view) = weak.upgrade() else { return };
-            if view.search_read.get() != read {
-                return;
-            }
-            match found {
-                Ok(found) => {
-                    view.results
-                        .show(&found, &view.calendars.borrow(), &chrono::Local);
-                    view.views.set_visible_child_name("search");
-                }
-                Err(err) => tracing::warn!(%err, "could not search the calendar"),
-            }
-        });
     }
 
     /// Opens the popover for `o`, pointed at `anchor`. Edit and Delete
@@ -2407,17 +1895,12 @@ impl CalendarView {
         let account_id = o.account_id;
         let weak = Rc::downgrade(self);
         let for_popover = uid.clone();
+        let invitations = self.core.invitations();
         glib::spawn_future_local(async move {
             let Some(view) = weak.upgrade() else { return };
-            let uid_read = uid.clone();
-            let saved = view
-                .core
-                .read(move |c| mailrs_store::invitations::saved(c, account_id, &uid_read))
-                .await;
-            let Ok(Some(saved)) = saved else { return };
             let thread = view
                 .core
-                .read(move |c| mailrs_store::messages::thread_id_of(c, account_id, &saved.message_id))
+                .call(async move { invitations.mail_thread(account_id, &uid).await })
                 .await;
             let Ok(Some(thread_id)) = thread else { return };
             let open_view = Rc::downgrade(&view);
@@ -3149,9 +2632,10 @@ impl CalendarView {
         }
         let weak = Rc::downgrade(self);
         let core = Rc::clone(&self.core);
+        let copy = self.core.calendar_copy();
         glib::spawn_future_local(async move {
             let saved = core
-                .write(move |c| store::set_shown(c, account_id, &calendar, shown))
+                .call(async move { copy.show_calendar(account_id, &calendar, shown).await })
                 .await;
             let Some(view) = weak.upgrade() else { return };
             match saved {
@@ -3164,55 +2648,13 @@ impl CalendarView {
         });
     }
 
-    /// Reads every account's calendars and the mini month's busy days,
-    /// redraws the sidebar, and with `then_fill` reads the pages again,
-    /// since a calendar's colour or shown flag may have changed.
-    fn read_sidebar(self: &Rc<Self>, then_fill: bool) {
-        if then_fill {
-            self.fill_owed.set(true);
-        }
-        let read = self.next_read();
-        self.sidebar_read.set(read);
-        let accounts = self.account_ids();
-        let mini = Range::around(ViewKind::Month, self.day.get());
-        let (from, to) = mini.span(&chrono::Local);
-        let weak = Rc::downgrade(self);
-        let core = Rc::clone(&self.core);
-        glib::spawn_future_local(async move {
-            let found = core
-                .read(move |c| {
-                    let mut calendars = Vec::with_capacity(accounts.len());
-                    for &id in &accounts {
-                        calendars.push((id, store::calendars(c, id)?, store::unlisted(c, id)?));
-                    }
-                    let busy = store::occurrences(c, &accounts, from, to, CalendarScope::Shown)?;
-                    Ok((calendars, busy))
-                })
-                .await;
-            let Some(view) = weak.upgrade() else { return };
-            if view.sidebar_read.get() != read {
-                return;
-            }
-            match found {
-                Ok((calendars, busy)) => view.show_sidebar(calendars, &busy, mini),
-                Err(err) => tracing::warn!(%err, "could not read the calendars"),
-            }
-            if view.fill_owed.replace(false) {
-                view.fill_all();
-            }
-        });
-    }
-
-    fn show_sidebar(
-        &self,
-        calendars: Vec<(AccountId, Vec<Calendar>, Vec<String>)>,
-        busy: &[Occurrence],
-        mini: Range,
-    ) {
+    /// Redraws the calendar list and the mini month from what the copy
+    /// lists and the busy days of the month `mini`.
+    fn show_sidebar(&self, listed: Vec<Listed>, busy: &[Occurrence], mini: Range) {
         let mut by_key: Calendars = HashMap::new();
-        for (account, list, _) in &calendars {
-            for calendar in list {
-                by_key.insert((*account, calendar.id.clone()), calendar.clone());
+        for one in &listed {
+            for calendar in &one.calendars {
+                by_key.insert((one.account_id, calendar.id.clone()), calendar.clone());
             }
         }
         ensure_tints(by_key.values().map(|c| c.color.as_str()));
@@ -3222,16 +2664,16 @@ impl CalendarView {
             .borrow()
             .iter()
             .map(|(account, offers, withheld)| {
-                let list = calendars
+                let list = listed
                     .iter()
-                    .find(|(id, _, _)| *id == account.id)
-                    .map(|(_, list, _)| list.clone())
+                    .find(|one| one.account_id == account.id)
+                    .map(|one| one.calendars.clone())
                     .unwrap_or_default();
                 (account.clone(), *offers, *withheld, list)
             })
             .collect();
         let show_declined = (self.settings)().show_declined_events;
-        let pending = self.pending();
+        let pending = self.run.pending();
         let kept: Vec<Occurrence> = busy
             .iter()
             .filter(|o| shown::keep(o, show_declined, pending.as_ref()))
@@ -3239,9 +2681,9 @@ impl CalendarView {
             .collect();
         let busy_days = shown::busy_days(&kept, mini.first, mini.days, &chrono::Local);
         let today = chrono::Local::now().date_naive();
-        let unlisted = calendars
+        let unlisted = listed
             .into_iter()
-            .map(|(account, _, ids)| (account, ids.into_iter().collect()))
+            .map(|one| (one.account_id, one.unlisted.into_iter().collect()))
             .collect();
         let accounts = sidebar::take_off_the_list(
             sidebar::sidebar_accounts(&rows, |id| self.core.missed(id, mailrs_sync::Missing::Calendar)),
@@ -3343,14 +2785,6 @@ fn draft_change(draft: &Draft) -> EventChange {
     EventChange::Edit { occurrence, edited, how }
 }
 
-/// Local midnight of `first` to local midnight after `last`, for a read
-/// covering whole days.
-fn day_span(first: NaiveDate, last: NaiveDate) -> (EpochMillis, EpochMillis) {
-    let (from, _) = Range::around(ViewKind::Day, first).span(&chrono::Local);
-    let (_, to) = Range::around(ViewKind::Day, last).span(&chrono::Local);
-    (from, to)
-}
-
 /// The word under a day's heading that says where the person works:
 /// "Home", "Office", or the building's name, cut short with an ellipsis
 /// in a narrow column. The heading's own name speaks it.
@@ -3414,84 +2848,6 @@ fn weekday_row() -> gtk::Box {
     row
 }
 
-/// The date an event starts on: its own UTC date when it lasts all day,
-/// the local date otherwise.
-fn date_of(at: EpochMillis, all_day: bool) -> NaiveDate {
-    let utc = DateTime::<Utc>::from_timestamp_millis(at).unwrap_or_default();
-    match all_day {
-        true => utc.date_naive(),
-        false => utc.with_timezone(&chrono::Local).date_naive(),
-    }
-}
-
-/// The hour the grid opens at for `range`: 08:00, or earlier when a
-/// timed event starts earlier on one of its days.
-fn first_hour(found: &[Occurrence], range: Range) -> f64 {
-    let (from, to) = range.span(&chrono::Local);
-    let starts: Vec<f64> = found
-        .iter()
-        .filter(|o| !time_grid::in_strip(o) && o.start >= from && o.start < to)
-        .filter_map(|o| {
-            let local = DateTime::<Utc>::from_timestamp_millis(o.start)?.with_timezone(&chrono::Local);
-            let midnight = local.date_naive().and_hms_opt(0, 0, 0)?;
-            Some(layout::wall_offset(o.start, midnight, &chrono::Local))
-        })
-        .collect();
-    layout::first_hour(&starts)
-}
-
-/// Scrolls `scroller` to `y` once its content has a height to scroll in;
-/// a page that was just filled has not been laid out yet.
-/// Then runs `then`. `asked` counts the scrolls asked of `scroller`: one
-/// still waiting when a later one is asked gives way to it.
-fn scroll_when_ready(
-    scroller: &gtk::ScrolledWindow,
-    asked: &Rc<Cell<u64>>,
-    y: f64,
-    then: impl FnOnce() + 'static,
-) {
-    let mine = asked.get() + 1;
-    asked.set(mine);
-    let adjustment = scroller.vadjustment();
-    if adjustment.page_size() > 0.0 && adjustment.upper() > adjustment.page_size() {
-        adjustment.set_value(y.min(adjustment.upper() - adjustment.page_size()));
-        then();
-        return;
-    }
-    let handler: Rc<RefCell<Option<glib::SignalHandlerId>>> = Rc::new(RefCell::new(None));
-    let slot = Rc::clone(&handler);
-    let then = Cell::new(Some(then));
-    let asked = Rc::clone(asked);
-    let id = adjustment.connect_changed(move |adjustment| {
-        let superseded = asked.get() != mine;
-        if !superseded && (adjustment.page_size() <= 0.0 || adjustment.upper() <= adjustment.page_size()) {
-            return;
-        }
-        let id = slot.borrow_mut().take();
-        if let Some(id) = id {
-            adjustment.disconnect(id);
-        }
-        if superseded {
-            return;
-        }
-        // The scrolled window sets its own value while it lays out the
-        // first time, after this signal, so the scroll waits for that.
-        let adjustment = adjustment.clone();
-        let then = then.take();
-        let asked = Rc::clone(&asked);
-        glib::idle_add_local_once(move || {
-            if asked.get() != mine {
-                return;
-            }
-            adjustment.set_value(y.min(adjustment.upper() - adjustment.page_size()));
-            if let Some(then) = then {
-                then();
-            }
-        });
-    });
-    handler.replace(Some(id));
-}
-
 /// Runs `f` once `widget` has been laid out after the change just made:
 /// a frame's tick comes before its layout, so the second tick follows a
 /// finished one.
@@ -3552,19 +2908,4 @@ fn ensure_tints<'a>(colours: impl IntoIterator<Item = &'a str>) {
 fn within_double_click(since: std::time::Duration) -> bool {
     let millis = gtk::Settings::default().map_or(400, |s| s.gtk_double_click_time());
     since.as_millis() <= millis.max(0) as u128
-}
-
-#[cfg(test)]
-mod refresh_tests {
-    use super::should_refresh;
-
-    #[test]
-    fn a_first_press_starts_a_refresh() {
-        assert!(should_refresh(false));
-    }
-
-    #[test]
-    fn a_press_while_one_is_already_running_does_not_start_a_second() {
-        assert!(!should_refresh(true));
-    }
 }
