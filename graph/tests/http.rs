@@ -225,6 +225,53 @@ async fn a_failed_entry_in_a_batch_keeps_its_own_error() {
     ));
 }
 
+/// Answers `at` with one item, `first`, and a next link to `/next`, and
+/// `/next` with one item, `second`.
+async fn two_pages(server: &MockServer, at: &str, first: Value, second: Value) {
+    let next = format!("{}/v1.0/next?$skiptoken=2", server.uri());
+    Mock::given(method("GET"))
+        .and(path(at.to_string()))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({"value": [first], "@odata.nextLink": next})))
+        .mount(server)
+        .await;
+    Mock::given(method("GET"))
+        .and(path("/v1.0/next"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({"value": [second]})))
+        .mount(server)
+        .await;
+}
+
+#[tokio::test]
+async fn calendars_read_every_page() {
+    let server = MockServer::start().await;
+    token_endpoint(&server, "refresh-0").await;
+    two_pages(&server, "/v1.0/me/calendars", json!({"id": "c1", "name": "One"}), json!({"id": "c2", "name": "Two"})).await;
+    let calendars = graph(&server).calendars().await.unwrap();
+    let ids: Vec<&str> = calendars.iter().map(|c| c.id.as_str()).collect();
+    assert_eq!(ids, ["c1", "c2"]);
+}
+
+#[tokio::test]
+async fn contact_folders_read_every_page() {
+    let server = MockServer::start().await;
+    token_endpoint(&server, "refresh-0").await;
+    two_pages(&server, "/v1.0/me/contactFolders", json!({"id": "f1", "displayName": "A"}), json!({"id": "f2", "displayName": "B"})).await;
+    let folders = graph(&server).contact_folders().await.unwrap();
+    let ids: Vec<&str> = folders.iter().map(|f| f.id.as_str()).collect();
+    assert_eq!(ids, ["f1", "f2"]);
+}
+
+#[tokio::test]
+async fn rules_read_every_page() {
+    let server = MockServer::start().await;
+    token_endpoint(&server, "refresh-0").await;
+    let rule = |id: &str| json!({"id": id, "displayName": id, "sequence": 1, "isEnabled": true});
+    two_pages(&server, "/v1.0/me/mailFolders/inbox/messageRules", rule("r1"), rule("r2")).await;
+    let rules = graph(&server).rules().await.unwrap();
+    let ids: Vec<&str> = rules.iter().map(|r| r.id.as_str()).collect();
+    assert_eq!(ids, ["r1", "r2"]);
+}
+
 #[tokio::test]
 async fn every_batch_entry_asks_for_immutable_ids() {
     let server = MockServer::start().await;

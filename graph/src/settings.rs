@@ -91,8 +91,7 @@ struct MailboxSettings {
 
 impl Graph {
     pub async fn rules(&self) -> Result<Vec<MessageRule>, GraphError> {
-        let page: Page<MessageRule> = self.get("me/mailFolders/inbox/messageRules", &[]).await?;
-        Ok(page.value)
+        self.get_all("me/mailFolders/inbox/messageRules", &[]).await
     }
 
     pub async fn create_rule(&self, rule: &MessageRule) -> Result<MessageRule, GraphError> {

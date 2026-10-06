@@ -37,6 +37,10 @@ const ERROR_LIMIT: usize = 64 << 10;
 
 const IMMUTABLE_IDS: &str = "IdType=\"ImmutableId\"";
 
+/// The most pages [`Graph::get_all`] reads: a thousand calendars, contact
+/// folders or rules at a hundred a page.
+const MOST_LIST_PAGES: usize = 10;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Method {
     Get,
@@ -288,6 +292,30 @@ impl Graph {
         query: &[(&str, &str)],
     ) -> Result<T, GraphError> {
         self.get_with(path, query, &[]).await
+    }
+
+    /// Every page of the listing at `path`, following next links up to
+    /// [`MOST_LIST_PAGES`]. A listing longer than that is refused rather
+    /// than cut short, since a caller may take an entry it did not see
+    /// for one that is gone.
+    pub async fn get_all<T: DeserializeOwned>(
+        &self,
+        path: &str,
+        query: &[(&str, &str)],
+    ) -> Result<Vec<T>, GraphError> {
+        let mut page: Page<T> = self.get(path, query).await?;
+        let mut all = std::mem::take(&mut page.value);
+        for _ in 1..MOST_LIST_PAGES {
+            let Some(next) = page.next_link.take() else {
+                return Ok(all);
+            };
+            page = self.follow(&next, &[]).await?;
+            all.append(&mut page.value);
+        }
+        match page.next_link {
+            None => Ok(all),
+            Some(_) => Err(GraphError::Decode(format!("{path} ran past {MOST_LIST_PAGES} pages"))),
+        }
     }
 
     /// A GET with more `Prefer` values, such as `odata.maxpagesize=50`.
