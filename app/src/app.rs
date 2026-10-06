@@ -78,6 +78,9 @@ pub struct App {
     tray_started: Cell<bool>,
     /// Holds the tray's recount while a burst of changes goes by.
     tray_recount: crate::tray::Burst,
+    /// Accounts whose waiting rule would replace a script of the person's
+    /// own and were asked about it this run, so the minute timer asks once.
+    asked_to_replace: RefCell<std::collections::HashSet<AccountId>>,
     settings: RefCell<Settings>,
     /// Writes each saved change off the main thread.
     settings_saver: crate::settings::Saver,
@@ -153,6 +156,7 @@ impl App {
             pending_file: RefCell::new(calendar_file),
             tray_started: Cell::new(false),
             tray_recount: crate::tray::Burst::default(),
+            asked_to_replace: RefCell::default(),
             settings: RefCell::new(Settings {
                 // The demo's contacts are already in its throwaway store,
                 // so the switch shows what the mail on screen is using.
@@ -1325,11 +1329,54 @@ impl App {
                         for words in sent.refused {
                             this.tell_window(Notice::RuleRefused(words));
                         }
+                        if let Some(script) = sent.would_replace {
+                            this.ask_to_replace(account_id, &script);
+                        }
                     }
                     Err(err) => tracing::info!(account = account_id, %err, "rule changes still wait"),
                 }
             }
         });
+    }
+
+    /// Asks once a run whether a rule that waited may take the place of
+    /// `script`, the person's own rules on a server that runs one script.
+    /// The rule keeps waiting, and shows in Rules, until they say yes;
+    /// then it goes out at once.
+    fn ask_to_replace(self: &Rc<Self>, account_id: AccountId, script: &str) {
+        let (Some(window), Some(account)) = (self.window(), self.account(account_id)) else {
+            return;
+        };
+        if !self.asked_to_replace.borrow_mut().insert(account_id) {
+            return;
+        }
+        let dialog = crate::ui::rules::replace_question(&account, script);
+        let this = Rc::clone(self);
+        dialog.connect_response(None, move |_, response| {
+            if response != "replace" {
+                return;
+            }
+            let this = Rc::clone(&this);
+            glib::spawn_future_local(async move {
+                let settings = this.core.gmail_settings();
+                let sent = this
+                    .core
+                    .call(async move {
+                        settings.take_over_rules(account_id).await?;
+                        settings.send_rule_changes(account_id).await
+                    })
+                    .await;
+                match sent {
+                    Ok(sent) => {
+                        for words in sent.refused {
+                            this.tell_window(Notice::RuleRefused(words));
+                        }
+                    }
+                    Err(err) => this.tell_window(Notice::RuleRefused(err.to_string())),
+                }
+            });
+        });
+        dialog.present(Some(&window.window));
     }
 
     fn announce(self: &Rc<Self>, account_id: AccountId, message_ids: Vec<String>) {

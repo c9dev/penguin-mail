@@ -575,18 +575,7 @@ impl Rules {
     /// another. `retry` repeats the save that was refused, after the
     /// takeover. Cancel changes nothing on the server.
     fn ask_to_replace(self: &Rc<Self>, script: String, retry: impl Fn(&Rc<Self>) + 'static) {
-        let provider = mailrs_discover::resolved_provider_name(self.account.provider_name());
-        let dialog = adw::AlertDialog::builder()
-            .heading(fill(&gettext("Replace “{script}”?"), &[("script", &script)]))
-            .body(fill(
-                &gettext("{provider} runs one set of rules at a time, and it runs “{script}” now. Penguin Mail's rules would take its place; “{script}” stays on the server, switched off."),
-                &[("provider", &provider), ("script", &script)],
-            ))
-            .build();
-        dialog.add_responses(&[("cancel", &gettext("Cancel")), ("replace", &gettext("Replace"))]);
-        dialog.set_response_appearance("replace", adw::ResponseAppearance::Destructive);
-        dialog.set_default_response(Some("cancel"));
-        dialog.set_close_response("cancel");
+        let dialog = replace_question(&self.account, &script);
         let retry: Rc<Retry> = Rc::new(retry);
         let weak = Rc::downgrade(self);
         dialog.connect_response(None, move |_, response| {
@@ -616,6 +605,25 @@ impl Rules {
         self.toast(said);
         self.reload();
     }
+}
+
+/// The question before Penguin Mail's rules take the place of `script`,
+/// the person's own, on `account`'s server, which runs one script and
+/// cannot include another. "replace" is the answer that goes ahead.
+pub fn replace_question(account: &Account, script: &str) -> adw::AlertDialog {
+    let provider = mailrs_discover::resolved_provider_name(account.provider_name());
+    let dialog = adw::AlertDialog::builder()
+        .heading(fill(&gettext("Replace “{script}”?"), &[("script", script)]))
+        .body(fill(
+            &gettext("{provider} runs one set of rules at a time, and it runs “{script}” now. Penguin Mail's rules would take its place; “{script}” stays on the server, switched off."),
+            &[("provider", &provider), ("script", script)],
+        ))
+        .build();
+    dialog.add_responses(&[("cancel", &gettext("Cancel")), ("replace", &gettext("Replace"))]);
+    dialog.set_response_appearance("replace", adw::ResponseAppearance::Destructive);
+    dialog.set_default_response(Some("cancel"));
+    dialog.set_close_response("cancel");
+    dialog
 }
 
 /// The name of the script a refused write would replace.

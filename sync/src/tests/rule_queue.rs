@@ -11,8 +11,13 @@ use crate::tests::{ImapHarness, ServedBy, imap_harness};
 use crate::{AccountSettings, AnyAutoReply, AnyRules, Permitted, Replaced, RulesPlace};
 
 async fn settings() -> (Arc<FakeSieve>, AccountSettings<ServedBy>, i64, ImapHarness) {
+    settings_on("fileinto vacation imap4flags copy include").await
+}
+
+/// The same, on a server whose extensions are `capabilities`.
+async fn settings_on(capabilities: &str) -> (Arc<FakeSieve>, AccountSettings<ServedBy>, i64, ImapHarness) {
     let h = imap_harness().await;
-    let sieve = Arc::new(FakeSieve::new("fileinto vacation imap4flags copy include"));
+    let sieve = Arc::new(FakeSieve::new(capabilities));
     let imap = h.sync.services().mail.clone();
     let rules = SieveRules::new(Arc::new(crate::AnySieve::from(Arc::clone(&sieve))), imap, "me@example.com".into(), "Example".into());
     let services = h
@@ -120,4 +125,20 @@ async fn a_change_stays_queued_while_the_server_still_does_not_answer() {
     assert_eq!(settings.send_rule_changes(account).await.unwrap().sent, 0);
     sieve.set_down(false);
     assert_eq!(settings.send_rule_changes(account).await.unwrap().sent, 1, "it stayed queued");
+}
+
+#[tokio::test]
+async fn a_waiting_rule_that_would_replace_the_persons_script_stays_and_asks() {
+    let (sieve, settings, account, _h) = settings_on("fileinto vacation imap4flags").await;
+    sieve.set_down(true);
+    settings.add_rule(account, Filter::block("a@example.com")).await.unwrap();
+    sieve.set_down(false);
+    sieve.put_elsewhere("mine", "keep;\n", true);
+    let sent = settings.send_rule_changes(account).await.unwrap();
+    assert_eq!(sent.would_replace.as_deref(), Some("mine"));
+    assert!(sent.refused.is_empty(), "{:?}", sent.refused);
+    let Permitted::Done(list) = settings.rule_list(account).await.unwrap() else { panic!() };
+    assert_eq!(list.rules.len(), 1, "the rule still waits and shows");
+    settings.take_over_rules(account).await.unwrap();
+    assert_eq!(settings.send_rule_changes(account).await.unwrap().sent, 1);
 }
