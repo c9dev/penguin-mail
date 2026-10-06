@@ -296,6 +296,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - Showing a forwarded message in the composer, or the composer's Preview, no longer loads its remote images, and a link in it opens in your browser.
 - A message that quotes an address or a name with "&" or "<" in it, such as "tom&jerry is not an email address", shows its words instead of an empty bar. The same goes for the Grant Access banner, a signature's first line in Preferences, and the addresses and names in Preferences and contact cards.
 - After you untick every event of a calendar file, the next invitation you open has Add to Calendar ready, where it stayed greyed out.
+- Opening a calendar file by a relative path from a terminal, such as `penguin-mail invite.ics`, works while Penguin Mail runs in the tray, and so does a file whose name is not UTF-8.
 - The assistant's panel no longer runs off the right edge of a smaller
   window. The mailboxes fold away to make room for it, and in a window
   too narrow for both, the panel slides over the mail instead.

@@ -1110,13 +1110,14 @@ impl App {
             }
         });
         self.gio.add_action(&compose_to);
-        let open_file = gio::SimpleAction::new("open-calendar-file", Some(glib::VariantTy::STRING));
+        // A byte string, so a file name that is not UTF-8 arrives whole.
+        let open_file = gio::SimpleAction::new("open-calendar-file", Some(glib::VariantTy::BYTE_STRING));
         let weak = Rc::downgrade(self);
         open_file.connect_activate(move |_, parameter| {
             if let (Some(app), Some(path)) =
-                (weak.upgrade(), parameter.and_then(|p| p.get::<String>()))
+                (weak.upgrade(), parameter.and_then(crate::path_from_variant))
             {
-                app.open_calendar_file(std::path::Path::new(&path));
+                app.open_calendar_file(&path);
             }
         });
         self.gio.add_action(&open_file);
@@ -1135,7 +1136,7 @@ impl App {
         let Ok(exe) = crate::exe::launcher() else {
             return;
         };
-        let args: Vec<String> = std::env::args().skip(1).collect();
+        let args: Vec<std::ffi::OsString> = std::env::args_os().skip(1).collect();
         match std::process::Command::new(exe).args(args).spawn() {
             Ok(_) => self.quit(),
             Err(err) => tracing::warn!(error = %err, "could not start the new copy"),
