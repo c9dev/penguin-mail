@@ -202,7 +202,7 @@ async fn a_rate_limit_that_outlasts_the_ceiling_reports_plainly() {
         .collect();
     assert_eq!(
         told,
-        ["Gmail stayed busy for a moment, so move to trash did not go through for 1 conversation."]
+        ["Gmail stayed busy for a moment, so “Move to trash” did not go through for 1 conversation."]
     );
     assert_eq!(h.threads(MailSet::Role(Role::Inbox)).await, ["t1"], "the thread comes back");
 }

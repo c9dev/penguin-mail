@@ -9372,33 +9372,33 @@ msgstr ""
 msgid "{provider} is busy. Still working on {conversations}."
 msgstr ""
 
-#: sync/src/account/writes.rs:778
+#: sync/src/account/writes.rs:779
 msgid ""
-"{provider} is busy, so {action} did not go through for {conversations}. Try "
-"again in a moment."
+"{provider} is busy, so “{action}” did not go through for {conversations}. "
+"Try again in a moment."
 msgstr ""
 
-#: sync/src/account/writes.rs:787
+#: sync/src/account/writes.rs:788
 msgid ""
-"{provider} stayed busy for {waited}, so {action} did not go through for "
+"{provider} stayed busy for {waited}, so “{action}” did not go through for "
 "{conversations}."
 msgstr ""
 
-#: sync/src/account/writes.rs:794
+#: sync/src/account/writes.rs:795
 msgid "{action} failed: {reason}"
 msgstr ""
 
-#: sync/src/account/writes.rs:812
+#: sync/src/account/writes.rs:813
 msgid "a moment"
 msgstr ""
 
-#: sync/src/account/writes.rs:814
+#: sync/src/account/writes.rs:815
 msgid "{count} second"
 msgid_plural "{count} seconds"
 msgstr[0] ""
 msgstr[1] ""
 
-#: sync/src/account/writes.rs:819
+#: sync/src/account/writes.rs:820
 msgid "a minute"
 msgstr ""
 

@@ -292,6 +292,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   it last updated, instead of leaving you guessing.
 
 ### Fixed
+- When your mail server is too busy to move mail, the message names the folder as you spelled it.
 - A rule you add while your mail server is not answering, on a server that runs only one set of rules, now waits and asks before replacing the rules you run there, instead of vanishing with an English error.
 - Deleting an event on an Outlook calendar with many repeating meetings no longer costs a call to Microsoft for each of them on the next refresh, which could get the account slowed down.
 - A day moved in an all-day repeating Outlook event made outside UTC, such as in Berlin, no longer shows on both days, and changing or deleting one day of such a series finds it.

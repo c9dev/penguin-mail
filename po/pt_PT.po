@@ -9813,37 +9813,33 @@ msgstr "Está marcada"
 msgid "{provider} is busy. Still working on {conversations}."
 msgstr "{provider} está ocupado. Ainda a trabalhar em {conversations}."
 
-#: sync/src/account/writes.rs:778
+#: sync/src/account/writes.rs:779
 msgid ""
-"{provider} is busy, so {action} did not go through for {conversations}. Try "
-"again in a moment."
-msgstr ""
-"{provider} está ocupado, por isso {action} não chegou a acontecer em "
-"{conversations}. Tente de novo daqui a pouco."
+"{provider} is busy, so “{action}” did not go through for {conversations}. "
+"Try again in a moment."
+msgstr "{provider} está ocupado, por isso “{action}” não chegou a acontecer em {conversations}. Tente de novo daqui a pouco."
 
-#: sync/src/account/writes.rs:787
+#: sync/src/account/writes.rs:788
 msgid ""
-"{provider} stayed busy for {waited}, so {action} did not go through for "
+"{provider} stayed busy for {waited}, so “{action}” did not go through for "
 "{conversations}."
-msgstr ""
-"{provider} esteve ocupado durante {waited}, por isso {action} não chegou a "
-"acontecer em {conversations}."
+msgstr "{provider} esteve ocupado durante {waited}, por isso “{action}” não chegou a acontecer em {conversations}."
 
-#: sync/src/account/writes.rs:794
+#: sync/src/account/writes.rs:795
 msgid "{action} failed: {reason}"
 msgstr "{action} falhou: {reason}"
 
-#: sync/src/account/writes.rs:812
+#: sync/src/account/writes.rs:813
 msgid "a moment"
 msgstr "um momento"
 
-#: sync/src/account/writes.rs:814
+#: sync/src/account/writes.rs:815
 msgid "{count} second"
 msgid_plural "{count} seconds"
 msgstr[0] "{count} segundo"
 msgstr[1] "{count} segundos"
 
-#: sync/src/account/writes.rs:819
+#: sync/src/account/writes.rs:820
 msgid "a minute"
 msgstr "um minuto"
 

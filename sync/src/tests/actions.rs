@@ -440,7 +440,7 @@ async fn an_account_that_waits_out_its_ceiling_reports_what_it_left() {
         .collect();
     assert_eq!(
         told,
-        ["Gmail stayed busy for a moment, so move to trash did not go through for 1 conversation."]
+        ["Gmail stayed busy for a moment, so “Move to trash” did not go through for 1 conversation."]
     );
     assert!(h.threads(MailSet::Role(Role::Inbox)).await.is_empty(), "t1 went to the trash");
 }
