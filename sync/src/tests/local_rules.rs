@@ -1,16 +1,16 @@
 //! Local rules through the engine: new Inbox mail runs through them once,
 //! oldest first, through the same mail actions the window uses, and Undo
-//! takes a rule's change back.
+//! leaves a rule's change alone.
 
 use std::sync::Arc;
 
-use mailrs_domain::{Filter, FilterAction, FilterCriteria, MailSet, Role};
+use mailrs_domain::{Filter, FilterAction, FilterCriteria, MailSet, Role, Target};
 
 use crate::fake::FakeImap;
 use crate::rules::RulesEngine;
 use crate::services::local::LocalRules;
 use crate::tests::{Connected, imap_harness, imap_harness_on};
-use crate::{BackendError, MailActions, OneClick, RulesService};
+use crate::{BackendError, History, MailAction, MailActions, OneClick, RulesService, TriageAction};
 
 fn archive_from(address: &str) -> Filter {
     Filter {
@@ -93,17 +93,35 @@ async fn a_pass_cut_short_runs_the_rest_at_the_next_start() {
 }
 
 #[tokio::test]
-async fn undo_takes_a_rule_s_change_back() {
+async fn undo_after_a_rule_ran_takes_back_the_person_s_own_change() {
     let h = imap_harness().await;
     h.bootstrap().await;
     let (engine, rules) = engine_for(&h).await;
     rules.create_filter(&archive_from("news@example.com")).await.unwrap();
-    h.imap.deliver("INBOX", letter(1, "news@example.com"), crate::now_millis() + 1_000);
+    h.imap.deliver("INBOX", letter(1, "ann@example.com"), crate::now_millis() + 1_000);
     h.sync.incremental().await.unwrap();
-    engine.run_due(h.account_id).await.unwrap();
-    let undone = engine.actions().undo().await.expect("the rule's change is on the undo stack");
+    let account_id = h.account_id;
+    let mine = h
+        .db
+        .read(move |c| {
+            let ids: Vec<String> = mailrs_store::messages::held_by(c, account_id, &MailSet::Role(Role::Inbox))?.into_iter().collect();
+            mailrs_store::messages::by_ids(c, account_id, &ids)
+        })
+        .await
+        .unwrap()
+        .pop()
+        .unwrap();
+    let target = Target { account_id, thread_id: mine.thread_id.clone(), message_id: Some(mine.id.clone()) };
+    let archive = MailAction::Triage(TriageAction::Relabel { add: Vec::new(), remove: vec![MailSet::Role(Role::Inbox)] });
+    assert!(engine.actions().run(&[target], archive, History::Record).await.first_error().is_none());
+    h.imap.deliver("INBOX", letter(2, "news@example.com"), crate::now_millis() + 2_000);
+    h.sync.incremental().await.unwrap();
+    assert_eq!(engine.run_due(h.account_id).await.unwrap().acted_on.len(), 1);
+    let undone = engine.actions().undo().await.expect("the person's archive is on the undo stack");
     assert!(undone.outcome.failed.is_empty());
-    assert!(h.imap.messages_in("INBOX").iter().any(|m| m.contains("Note 1")));
+    let inbox = h.imap.messages_in("INBOX");
+    assert!(inbox.iter().any(|m| m.contains("Note 1")), "the person's archive is undone");
+    assert!(!inbox.iter().any(|m| m.contains("Note 2")), "the rule's change stays");
 }
 
 #[tokio::test]

@@ -2,8 +2,9 @@
 //! rules, while Penguin Mail runs. It looks at the Inbox messages past
 //! the account's watermark, oldest first and at most [`PASS`] at a time,
 //! runs every rule over each in the order they were made, and turns a
-//! match into the same mail action the window would run, so it queues,
-//! syncs and undoes like any other. A message is recorded as seen once
+//! match into the same mail action the window would run, so it queues
+//! and syncs like any other. It stays off the undo stack the window
+//! shares. A message is recorded as seen once
 //! its rules ran, whatever they did, so it never runs twice; a restart
 //! halfway picks up where the last pass stopped.
 
@@ -102,7 +103,9 @@ impl<A: Accounts> RulesEngine<A> {
                     add: action.add.clone(),
                     remove: action.remove.clone(),
                 });
-                let outcome = self.actions.run(std::slice::from_ref(&target), relabel, History::Record).await;
+                // The window shares this undo stack, and Undo there takes back
+                // what the person did last, not a change they never saw.
+                let outcome = self.actions.run(std::slice::from_ref(&target), relabel, History::Skip).await;
                 if let Some(error) = outcome.first_error() {
                     return Err(SyncError::Backend(BackendError::Refused(error.to_string())));
                 }
