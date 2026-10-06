@@ -8,6 +8,7 @@
 use std::collections::BTreeSet;
 
 use mailrs_domain::mailbox::keyword::{FLAGGED, SEEN};
+use mailrs_domain::translate::gettext;
 use mailrs_domain::{MailboxKind, RemoteMailbox, Role, category};
 use mailrs_gmail::LabelColor;
 use mailrs_graph::{GraphError, MessagePatch, Write};
@@ -159,7 +160,7 @@ impl<G: GraphApi> Microsoft<G> {
             };
             parent = Some(id);
         }
-        let id = parent.ok_or_else(|| BackendError::Refused("a folder needs a name".into()))?;
+        let id = parent.ok_or_else(|| BackendError::Refused(gettext("A folder needs a name.")))?;
         Ok(RemoteMailbox { id, name: path, kind: MailboxKind::Folder, role: None, color: None, hidden: false })
     }
 

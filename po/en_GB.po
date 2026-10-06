@@ -9446,6 +9446,14 @@ msgstr "Outlook has no other calendars to add."
 msgid "This mailbox is on your organization's own Exchange server, which Penguin Mail cannot reach."
 msgstr "This mailbox is on your organisation's own Exchange server, which Penguin Mail cannot reach."
 
+#: sync/src/services/microsoft/outgoing.rs:61
+msgid "The message has no Message-ID."
+msgstr "The message has no Message-ID."
+
+#: sync/src/services/microsoft/outgoing.rs:74
+msgid "The message cannot be read."
+msgstr "The message cannot be read."
+
 #: sync/src/services/microsoft/outgoing.rs:77
 msgid "Microsoft cannot send a signed or encrypted message larger than 3 MB. Make the files smaller or send them apart."
 msgstr "Microsoft cannot send a signed or encrypted message larger than 3 MB. Make the files smaller or send them apart."
@@ -9457,6 +9465,10 @@ msgstr "Outlook's rules cannot do that."
 #: sync/src/services/microsoft/settings.rs:169
 msgid "Outlook answered but did not keep the automatic reply."
 msgstr "Outlook answered but did not keep the automatic reply."
+
+#: sync/src/services/microsoft/writes.rs:163
+msgid "A folder needs a name."
+msgstr "A folder needs a name."
 
 #: sync/src/services/pop3/mod.rs:416
 msgid "Penguin Mail keeps the names of Inbox, Sent, Drafts, Trash, Junk and Archive."

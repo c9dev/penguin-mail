@@ -10169,6 +10169,14 @@ msgstr ""
 "Esta caixa de correio está no servidor Exchange da sua organização, ao qual "
 "o Penguin Mail não consegue chegar."
 
+#: sync/src/services/microsoft/outgoing.rs:61
+msgid "The message has no Message-ID."
+msgstr "A mensagem não tem Message-ID."
+
+#: sync/src/services/microsoft/outgoing.rs:74
+msgid "The message cannot be read."
+msgstr "Não é possível ler a mensagem."
+
 #: sync/src/services/microsoft/outgoing.rs:77
 msgid ""
 "Microsoft cannot send a signed or encrypted message larger than 3 MB. Make "
@@ -10184,6 +10192,10 @@ msgstr "As regras do Outlook não conseguem fazer isso."
 #: sync/src/services/microsoft/settings.rs:169
 msgid "Outlook answered but did not keep the automatic reply."
 msgstr "O Outlook respondeu, mas não guardou a resposta automática."
+
+#: sync/src/services/microsoft/writes.rs:163
+msgid "A folder needs a name."
+msgstr "Uma pasta precisa de um nome."
 
 #: sync/src/services/pop3/mod.rs:416
 msgid ""

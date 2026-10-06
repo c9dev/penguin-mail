@@ -10,6 +10,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 use chrono::{Local, TimeZone};
+use mailrs_domain::translate::gettext;
 use mailrs_domain::{
     AccountId, EpochMillis, Filter, FilterAction, FilterCriteria, Label, MailSet, Role, Vacation,
 };
@@ -328,9 +329,9 @@ impl<A: Accounts> AccountSettings<A> {
             return Ok(Permitted::Done(Replaced::Swapped(old.clone())));
         }
         if old.read_only {
-            return Err(SyncError::Backend(BackendError::Refused(
-                "the rule is read-only".into(),
-            )));
+            return Err(SyncError::Backend(BackendError::Refused(gettext(
+                "Made elsewhere. Change it where you made it.",
+            ))));
         }
         let old_id = old
             .id

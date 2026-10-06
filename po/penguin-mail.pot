@@ -9711,6 +9711,14 @@ msgid ""
 "Mail cannot reach."
 msgstr ""
 
+#: sync/src/services/microsoft/outgoing.rs:61
+msgid "The message has no Message-ID."
+msgstr ""
+
+#: sync/src/services/microsoft/outgoing.rs:74
+msgid "The message cannot be read."
+msgstr ""
+
 #: sync/src/services/microsoft/outgoing.rs:77
 msgid ""
 "Microsoft cannot send a signed or encrypted message larger than 3 MB. Make "
@@ -9723,6 +9731,10 @@ msgstr ""
 
 #: sync/src/services/microsoft/settings.rs:169
 msgid "Outlook answered but did not keep the automatic reply."
+msgstr ""
+
+#: sync/src/services/microsoft/writes.rs:163
+msgid "A folder needs a name."
 msgstr ""
 
 #: sync/src/services/pop3/mod.rs:416

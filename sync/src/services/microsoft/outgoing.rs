@@ -58,7 +58,7 @@ fn is_attachment(part: &Part, path: &str) -> bool {
 
 impl<G: GraphApi> Microsoft<G> {
     pub(super) async fn send_raw(&self, raw: &[u8]) -> Result<String, BackendError> {
-        let id = message_id_of(raw).ok_or_else(|| BackendError::Refused("the message has no Message-ID".into()))?;
+        let id = message_id_of(raw).ok_or_else(|| BackendError::Refused(gettext("The message has no Message-ID.")))?;
         match raw.len() > MIME_LIMIT {
             false => self.graph().send_mime(raw).await.map_err(backend)?,
             true => self.send_large(raw, &id).await?,
@@ -71,7 +71,7 @@ impl<G: GraphApi> Microsoft<G> {
     /// `References` on a draft made this way, so a reply sent here does
     /// not thread by header.
     async fn send_large(&self, raw: &[u8], id: &str) -> Result<(), BackendError> {
-        let mut parts = mailrs_mime::parts(raw).ok_or_else(|| BackendError::Refused("the message cannot be read".into()))?;
+        let mut parts = mailrs_mime::parts(raw).ok_or_else(|| BackendError::Refused(gettext("The message cannot be read.")))?;
         if PROTECTED.contains(&parts.root.mime_type.as_str()) {
             return Err(BackendError::Refused(gettext(
                 "Microsoft cannot send a signed or encrypted message larger than 3 MB. Make the files smaller or send them apart.",
