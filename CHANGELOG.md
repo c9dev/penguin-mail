@@ -292,6 +292,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   it last updated, instead of leaving you guessing.
 
 ### Fixed
+- After Show all in an event's details opens the full guest list, Escape still closes the details.
 - Deleting a calendar, subscribing to one or adding holidays says it worked only once it has, and a holiday calendar that could not be added keeps its Add button.
 - Deleting or making a calendar on an Outlook account no longer says Google Calendar.
 - On an Outlook account, Add Calendar offers only New Calendar and a shared calendar's menu no longer offers Unsubscribe, since Outlook turns down subscriptions and holiday calendars.
