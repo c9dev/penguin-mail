@@ -292,6 +292,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   it last updated, instead of leaving you guessing.
 
 ### Fixed
+- Answering an invitation on a Fastmail or other CalDAV account leaves the meeting's revision number to the organizer, so their calendar matches your answer to the meeting they sent.
 - Adding a ticket or booking to a Fastmail or other CalDAV calendar no longer overwrites another event whose id happens to contain the new one's.
 - A rule that moves mail to the Trash, kept on a mail server whose account has no Trash folder, now makes one instead of deleting the mail for good.
 - An automatic reply of more than one line on an IMAP account with Sieve keeps showing in Penguin Mail after you save it, and saving it again no longer leaves the server with two replies.

@@ -362,16 +362,33 @@ fn master_of(ical: &ICalendar, zones: &Zones, me: &[String]) -> Option<(usize, E
         .and_then(|(at, comp)| event_of(ical, comp, zones, me).map(|e| (at, e)))
 }
 
-/// DTSTAMP and LAST-MODIFIED to now, and SEQUENCE one up.
-fn stamp(ical: &mut ICalendar, at: usize, now: EpochMillis) -> Result<(), DavError> {
+/// Whether the account may raise this VEVENT's SEQUENCE: it organizes the
+/// event, or the event has no organizer or no guests. RFC 5546 leaves
+/// SEQUENCE to the organizer, and a guest's raised number reaches the
+/// organizer in the reply a scheduling server sends.
+fn may_sequence(comp: &ICalendarComponent, me: &[String]) -> bool {
+    let organizer = comp.property(&ICalendarProperty::Organizer).and_then(address_of);
+    let guests = comp.properties(&ICalendarProperty::Attendee).next().is_some();
+    match organizer {
+        Some(organizer) if guests => me.iter().any(|m| m.eq_ignore_ascii_case(&organizer)),
+        _ => true,
+    }
+}
+
+/// DTSTAMP and LAST-MODIFIED to now, and SEQUENCE one up when `me` may
+/// raise it (see [`may_sequence`]).
+fn stamp(ical: &mut ICalendar, at: usize, now: EpochMillis, me: &[String]) -> Result<(), DavError> {
+    let stamp = DateTime::<Utc>::from_timestamp_millis(now).unwrap_or_default().format("%Y%m%dT%H%M%SZ").to_string();
+    replace(ical, at, ICalendarProperty::Dtstamp, &[format!("DTSTAMP:{stamp}")])?;
+    replace(ical, at, ICalendarProperty::LastModified, &[format!("LAST-MODIFIED:{stamp}")])?;
+    if !may_sequence(&ical.components[at], me) {
+        return Ok(());
+    }
     let sequence = ical.components[at]
         .property(&ICalendarProperty::Sequence)
         .and_then(|e| e.values.first())
         .and_then(|v| v.as_integer())
         .unwrap_or(0);
-    let stamp = DateTime::<Utc>::from_timestamp_millis(now).unwrap_or_default().format("%Y%m%dT%H%M%SZ").to_string();
-    replace(ical, at, ICalendarProperty::Dtstamp, &[format!("DTSTAMP:{stamp}")])?;
-    replace(ical, at, ICalendarProperty::LastModified, &[format!("LAST-MODIFIED:{stamp}")])?;
     replace(ical, at, ICalendarProperty::Sequence, &[format!("SEQUENCE:{}", sequence + 1)])
 }
 
@@ -586,7 +603,7 @@ pub fn write_event_notifying(existing: Option<&str>, event: &Event, me: &[String
     }
     if changed || existing.is_none() {
         let at = find_again(&ical, event)?;
-        stamp(&mut ical, at, now)?;
+        stamp(&mut ical, at, now, me)?;
     }
     ical.add_missing_timezones();
     Ok(ical.to_string())
@@ -606,8 +623,11 @@ pub fn cancel_occurrence(existing: &str, original_start: EpochMillis, now: Epoch
         .collect();
     ical.remove_component_ids(&changed);
     let zones = Zones::of(&ical);
-    if let Some((at, _)) = master_of(&ical, &zones, &[]) {
-        stamp(&mut ical, at, now)?;
+    if let Some((at, master)) = master_of(&ical, &zones, &[]) {
+        // Only the organizer cancels an occurrence for everyone, so the
+        // sequence goes up as for the organizer.
+        let organizer: Vec<String> = master.organizer.into_iter().collect();
+        stamp(&mut ical, at, now, &organizer)?;
     }
     Ok(Some(ical.to_string()))
 }
@@ -625,7 +645,7 @@ pub fn answer_scheduled(existing: &str, me: &[String], answer: Answer, now: Epoc
     let events: Vec<usize> = events_of(&ical).map(|(at, _)| at).collect();
     for at in events {
         if set_partstat(&mut ical.components[at], me, answer, !server_schedules)? {
-            stamp(&mut ical, at, now)?;
+            stamp(&mut ical, at, now, me)?;
             any = true;
         }
     }
