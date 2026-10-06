@@ -10,9 +10,12 @@
 //! So a run cannot forget the question, and an answer nobody is waiting
 //! for has nowhere to go.
 //!
-//! The key is a [`Target`]: the account, the thread, and the one message
-//! when the view shows a message rather than the whole thread. Opening
-//! one message of the thread on screen is opening something else.
+//! For the mail runs the key is a [`Target`]: the account, the thread,
+//! and the one message when the view shows a message rather than the
+//! whole thread. Opening one message of the thread on screen is opening
+//! something else. The calendar run keys on a ticket for the part of the
+//! page a read fills (`ui::calendar::run::Ticket`), so the same rule
+//! answers for a week, the list or a search.
 
 use std::future::Future;
 use std::pin::Pin;
@@ -23,22 +26,22 @@ use mailrs_domain::Target;
 /// their answers need no `Send`.
 pub type Answer<'a, T> = Pin<Box<dyn Future<Output = T> + 'a>>;
 
-/// What a late answer asks the window: whether the conversation it
-/// belongs to is still the one on screen.
-pub trait Screen {
-    fn is_showing(&self, target: &Target) -> bool;
+/// What a late answer asks the window: whether what it belongs to, the
+/// conversation or another key `K`, is still the one on screen.
+pub trait Screen<K = Target> {
+    fn is_showing(&self, target: &K) -> bool;
 }
 
-/// The conversation an answer belongs to, and the only way a run reaches
-/// its effect port `E`.
-pub struct Wanted<'a, E: ?Sized> {
-    screen: &'a dyn Screen,
+/// What an answer belongs to, and the only way a run reaches its effect
+/// port `E`.
+pub struct Wanted<'a, E: ?Sized, K = Target> {
+    screen: &'a dyn Screen<K>,
     effects: &'a E,
-    target: Target,
+    target: K,
 }
 
-impl<'a, E: ?Sized> Wanted<'a, E> {
-    pub fn new(screen: &'a dyn Screen, effects: &'a E, target: Target) -> Wanted<'a, E> {
+impl<'a, E: ?Sized, K> Wanted<'a, E, K> {
+    pub fn new(screen: &'a dyn Screen<K>, effects: &'a E, target: K) -> Wanted<'a, E, K> {
         Wanted {
             screen,
             effects,
@@ -46,8 +49,8 @@ impl<'a, E: ?Sized> Wanted<'a, E> {
         }
     }
 
-    /// The conversation this run started on.
-    pub fn target(&self) -> &Target {
+    /// What this run started on.
+    pub fn target(&self) -> &K {
         &self.target
     }
 
