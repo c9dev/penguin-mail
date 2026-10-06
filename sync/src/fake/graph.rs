@@ -113,6 +113,8 @@ pub struct GraphState {
     pub categories: Vec<MasterCategory>,
     pub messages: BTreeMap<String, FakeMessage>,
     pub mail_log: Vec<Logged>,
+    /// The ids of each metadata fetch, one entry a call.
+    pub meta_fetches: Vec<Vec<String>>,
     pub sent: Vec<Vec<u8>>,
     pub uploads: HashMap<String, Upload>,
     pub calendars: Vec<GraphCalendar>,

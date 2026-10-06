@@ -888,6 +888,8 @@ pub trait MailBackend: Send + Sync + 'static {
     ) -> impl Future<Output = Result<Vec<RemoteRef>, BackendError>> + Send;
 
     /// Every message in the inbox, whatever its age, ids only.
+    /// `Unsupported` when the inbox is too large to list whole, which
+    /// leaves nothing to compare.
     fn inbox_ids(&self) -> impl Future<Output = Result<Vec<RemoteRef>, BackendError>> + Send;
 
     /// At most `limit` messages `query` matches, newest first.

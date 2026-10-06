@@ -425,6 +425,7 @@ pub(super) fn list_messages(
 
 pub(super) fn messages(s: &mut GraphState, ids: &[String]) -> Answer<Vec<Answer<Message>>> {
     s.refuses(Area::Mail)?;
+    s.meta_fetches.push(ids.to_vec());
     Ok(ids.iter().map(|id| held(s, id).map(|m| m.message.clone())).collect())
 }
 

@@ -157,6 +157,20 @@ impl<G: GraphApi> Microsoft<G> {
         self.list_all(&listing, MOST_IDS, remote_ref).await
     }
 
+    /// Every id in the Inbox, or `Unsupported` for an Inbox larger than a
+    /// listing returns: the newest [`MOST_IDS`] alone would make every
+    /// older stored message look gone, and the hourly check would fetch
+    /// them all again each time.
+    pub(super) async fn inbox_listing(&self) -> Result<Vec<RemoteRef>, BackendError> {
+        let inbox = self.known().roles.get(&Role::Inbox).cloned();
+        let listing = Listing { folder: inbox, top: 1000, fields: Fields::Ids, ..Listing::default() };
+        let ids = self.list_all(&listing, MOST_IDS + 1, remote_ref).await?;
+        match ids.len() > MOST_IDS {
+            true => Err(BackendError::Unsupported),
+            false => Ok(ids),
+        }
+    }
+
     pub(super) async fn sent_with(&self, message_id: &str) -> Result<Option<String>, BackendError> {
         let Some(sent) = self.known().roles.get(&Role::Sent).cloned() else {
             return Ok(None);
