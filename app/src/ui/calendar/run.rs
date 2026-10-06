@@ -17,7 +17,10 @@
 //! The run also owns what the reads share: the occurrence waiting to open
 //! once its page has drawn, how far the narrow list reaches, whether a
 //! grid page has been scrolled to its first hour, and whether a calendar
-//! list read owes the pages a refill.
+//! list read owes the pages a refill. It makes a move, a delete or an
+//! editor save as one event change ([`CalendarRun::change`]), and the
+//! next-event card at the foot of the mail sidebar reads under the same
+//! rule ([`NextCard`]).
 //!
 //! Nothing here touches GTK. The view is one adapter behind the ports
 //! and the tests are another.
@@ -682,7 +685,10 @@ impl CalendarRun {
 
     /// Asks the copy's question about a change, writes it, and reads the
     /// view again. A held change gets its Undo toast; one written for good
-    /// goes out at once.
+    /// goes out at once. The question, the toast and the permission prompt
+    /// belong to the window rather than to a part of the page, so this
+    /// waits for no ticket: the person stays to answer the question, and a
+    /// write they made counts wherever they have moved since.
     pub async fn change(self: &Rc<Self>, changing: Changing) -> Outcome {
         let Changing { account_id, change, kept_time, shown, when, undo, said, failed } = changing;
         let title = shown.title.clone();
