@@ -252,10 +252,20 @@ impl Graph {
             .collect())
     }
 
-    pub async fn events_by_uid(&self, uid: &str) -> Result<Vec<GraphEvent>, GraphError> {
+    /// The events on `calendar` with iCalendar UID `uid`: single events
+    /// and series masters, since a list of events names no occurrence.
+    pub async fn events_by_uid(
+        &self,
+        calendar: &str,
+        uid: &str,
+    ) -> Result<Vec<GraphEvent>, GraphError> {
         let filter = format!("iCalUId eq '{}'", uid.replace('\'', "''"));
         let page: Page<GraphEvent> = self
-            .get_with("me/events", &[("$filter", &filter)], &[UTC])
+            .get_with(
+                &format!("me/calendars/{calendar}/events"),
+                &[("$filter", &filter)],
+                &[UTC],
+            )
             .await?;
         Ok(page.value)
     }

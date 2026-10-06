@@ -455,6 +455,42 @@ async fn importing_a_known_uid_updates_it_and_a_new_one_invites_nobody() {
 }
 
 #[tokio::test]
+async fn importing_a_file_for_a_meeting_on_the_calendar_keeps_its_guests_and_its_repeat() {
+    let h = outlook().await;
+    let guest = Attendee {
+        email_address: EmailAddress { name: None, address: Some("ann@example.com".into()) },
+        status: None,
+        kind: Some("required".into()),
+    };
+    h.fake.put_event("cal-1", GraphEvent { attendees: vec![guest], is_organizer: true, ..weekly_standup() });
+    let calendar = h.sync.services().calendar.clone().unwrap();
+    let file = Event {
+        calendar: "cal-1".into(),
+        uid: "standup@contoso".into(),
+        title: "Standup, from the file".into(),
+        start: millis("2026-10-19T09:00:00Z"),
+        end: millis("2026-10-19T09:15:00Z"),
+        ..Event::default()
+    };
+    calendar.import_event(&file).await.unwrap();
+    let held = h.fake.with(|s| s.events["m1"].1.clone());
+    assert_eq!(held.attendees.len(), 1, "no guest is dropped, so nobody is mailed a cancellation");
+    assert!(held.recurrence.is_some(), "a file without a repeat leaves the series repeating");
+    assert_eq!(held.start, weekly_standup().start, "the series does not move to one occurrence's time");
+}
+
+#[tokio::test]
+async fn importing_a_known_uid_answers_with_the_calendar_that_holds_it() {
+    let h = outlook().await;
+    h.fake.with(|s| s.calendars.push(GraphCalendar { id: "cal-2".into(), name: "Team".into(), can_edit: true, ..GraphCalendar::default() }));
+    h.fake.put_event("cal-2", GraphEvent { id: "k2".into(), ical_uid: Some("team@x".into()), subject: Some("Old".into()), ..GraphEvent::default() });
+    let calendar = h.sync.services().calendar.clone().unwrap();
+    let file = Event { calendar: "cal-1".into(), uid: "team@x".into(), title: "New".into(), ..Event::default() };
+    let kept = calendar.import_event(&file).await.unwrap();
+    assert_eq!((kept.id.as_str(), kept.calendar.as_str()), ("k2", "cal-2"));
+}
+
+#[tokio::test]
 async fn the_calendar_list_can_be_made_renamed_recolored_and_deleted() {
     let h = outlook().await;
     let calendar = h.sync.services().calendar.clone().unwrap();
@@ -642,4 +678,66 @@ async fn an_exception_stored_without_its_original_start_heals_on_the_next_read()
     assert_eq!(shown_on(&h, "2026-10-05").await, ["08:00", "08:30"], "the owner's store before the fix");
     copy.refresh(h.account_id, crate::now_millis()).await.unwrap();
     assert_eq!(shown_on(&h, "2026-10-05").await, ["08:30"]);
+}
+
+/// A Teams meeting the account organizes: an HTML body with the join
+/// block, an optional guest and a booked room.
+fn teams_meeting() -> GraphEvent {
+    let attendee = |address: &str, kind: &str| Attendee {
+        email_address: EmailAddress { name: None, address: Some(address.into()) },
+        status: None,
+        kind: Some(kind.into()),
+    };
+    GraphEvent {
+        id: "t1".into(),
+        ical_uid: Some("teams@contoso".into()),
+        subject: Some("Planning".into()),
+        body: Some(mailrs_graph::ItemBody {
+            content_type: "html".into(),
+            content: "<html><body><p>Agenda</p><a href=\"https://teams.example/join\">Join</a></body></html>".into(),
+        }),
+        start: Some(at("2026-10-07T10:00:00.0000000")),
+        end: Some(at("2026-10-07T11:00:00.0000000")),
+        is_organizer: true,
+        attendees: vec![attendee("ann@example.com", "optional"), attendee("room4@example.com", "resource")],
+        ..GraphEvent::default()
+    }
+}
+
+#[tokio::test]
+async fn an_edit_that_leaves_the_description_keeps_graphs_html_body() {
+    let h = outlook().await;
+    h.fake.put_event("cal-1", teams_meeting());
+    let read = read_all(&h).await.events.into_iter().find(|e| e.id == "t1").unwrap();
+    let calendar = h.sync.services().calendar.clone().unwrap();
+    let later = Event { start: read.start + 3_600_000, end: read.end + 3_600_000, ..read.clone() };
+    calendar.put_event(&later, None, false, Notify::Guests).await.unwrap();
+    let sent = h.fake.with(|s| s.event_bodies.last().cloned()).unwrap();
+    assert!(sent.get("body").is_none(), "{sent}");
+    calendar.put_event(&Event { description: "New agenda".into(), ..read }, None, false, Notify::Guests).await.unwrap();
+    let sent = h.fake.with(|s| s.event_bodies.last().cloned()).unwrap();
+    assert_eq!(sent["body"]["content"], "New agenda");
+}
+
+#[tokio::test]
+async fn an_edit_keeps_each_attendees_type() {
+    let h = outlook().await;
+    h.fake.put_event("cal-1", teams_meeting());
+    let read = read_all(&h).await.events.into_iter().find(|e| e.id == "t1").unwrap();
+    let calendar = h.sync.services().calendar.clone().unwrap();
+    calendar.put_event(&Event { title: "Planning, renamed".into(), ..read.clone() }, None, false, Notify::Guests).await.unwrap();
+    let sent = h.fake.with(|s| s.event_bodies.last().cloned()).unwrap();
+    assert!(sent.get("attendees").is_none(), "an unchanged guest list is left alone: {sent}");
+    let mut guests = read.guests.clone();
+    guests.push(mailrs_domain::calendar::Guest { email: "bo@example.com".into(), ..Default::default() });
+    calendar.put_event(&Event { guests, ..read }, None, false, Notify::Guests).await.unwrap();
+    let sent = h.fake.with(|s| s.event_bodies.last().cloned()).unwrap();
+    let kinds: Vec<(String, String)> = sent["attendees"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|a| (a["emailAddress"]["address"].as_str().unwrap().to_string(), a["type"].as_str().unwrap().to_string()))
+        .collect();
+    let want = [("ann@example.com", "optional"), ("room4@example.com", "resource"), ("bo@example.com", "required")];
+    assert_eq!(kinds, want.map(|(a, k)| (a.to_string(), k.to_string())));
 }

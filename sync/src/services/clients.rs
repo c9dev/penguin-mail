@@ -197,7 +197,7 @@ either_client! {
         fn event(id: &str) -> Graphed<GraphEvent>;
         fn instances(series: &str, start: &str, end: &str) -> Graphed<Vec<GraphEvent>>;
         fn original_starts(ids: &[String]) -> Graphed<Vec<Graphed<GraphEvent>>>;
-        fn events_by_uid(uid: &str) -> Graphed<Vec<GraphEvent>>;
+        fn events_by_uid(calendar: &str, uid: &str) -> Graphed<Vec<GraphEvent>>;
         fn create_event(calendar: &str, body: &Value) -> Graphed<GraphEvent>;
         fn update_event(id: &str, body: &Value, etag: Option<&str>) -> Graphed<GraphEvent>;
         fn delete_event(id: &str, etag: Option<&str>) -> Graphed<()>;
