@@ -21,11 +21,11 @@ pub enum ClockFormat {
 pub fn format_time(at: NaiveTime, format: ClockFormat, locale: Locale) -> String {
     let pattern = match format {
         ClockFormat::Hour24 => gettext("%H:%M"),
-        // A leading zero on the hour would read "03:05 PM" where every
-        // 12-hour clock on the desktop reads "3:05 PM".
         ClockFormat::Hour12 => {
             let (am, pm) = periods(locale);
             let word = if at.hour() < 12 { am } else { pm };
+            // A leading zero on the hour would read "03:05 PM" where every
+            // 12-hour clock on the desktop reads "3:05 PM".
             gettext("%-I:%M %p").replace("%p", &word.replace('%', "%%"))
         }
     };

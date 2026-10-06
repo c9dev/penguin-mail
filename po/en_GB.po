@@ -8866,7 +8866,7 @@ msgstr "Checking the release's signature needs gpgv or gpg, and neither is insta
 
 #. A leading zero on the hour would read "03:05 PM" where ever"
 #. 12-hour clock on the desktop reads "3:05 PM""
-#: domain/src/calendar/clock.rs:26
+#: domain/src/calendar/clock.rs:29
 msgid "%-I:%M %p"
 msgstr "%-I:%M %p"
 
