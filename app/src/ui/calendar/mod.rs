@@ -2106,6 +2106,7 @@ impl CalendarView {
             let copy = this.core.calendar_copy();
             if let Err(err) = this.core.call(async move { copy.revert(held).await }).await {
                 tracing::warn!(%err, "could not take a calendar change back");
+                this.say(&words::undo_failed(&err));
             }
             this.reload();
         });
