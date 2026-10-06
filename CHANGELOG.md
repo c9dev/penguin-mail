@@ -292,6 +292,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   it last updated, instead of leaving you guessing.
 
 ### Fixed
+- An automatic reply of more than one line on an IMAP account with Sieve keeps showing in Penguin Mail after you save it, and saving it again no longer leaves the server with two replies.
 - An Outlook message no longer shows twice in the list when Penguin Mail fetched it in a batch after first seeing it in a sync.
 - Show in Calendar opens the event's popover even when the calendar refreshes at that moment.
 - The automatic reply dialog names the provider that answers for an IMAP

@@ -169,3 +169,32 @@ fn strings_are_quoted_so_a_quote_cannot_end_them() {
     let text = write(&script, "me@example.com", &folder, &ext()).unwrap();
     assert!(text.contains("\"Invoice \\\"May\\\"\""), "{text}");
 }
+
+#[test]
+fn a_reply_of_several_lines_comes_back_with_the_rule_after_it() {
+    let vacation = Vacation { enabled: true, subject: "Away".into(), body: "Hi\nAway until Monday".into(), ..Vacation::default() };
+    let rules = every_rule_the_app_makes()[..1].to_vec();
+    let script = Script { vacation: Some(vacation.clone()), rules: rules.clone(), ..Script::default() };
+    let back = read(&write(&script, "me@example.com", &folder, &ext()).unwrap());
+    assert_eq!(back.vacation, Some(vacation));
+    assert_eq!(back.rules, rules);
+    assert!(back.foreign.is_empty(), "{:?}", back.foreign);
+}
+
+#[test]
+fn a_dated_reply_whose_lines_hold_braces_and_hashes_comes_back() {
+    let vacation = Vacation {
+        enabled: true,
+        subject: "Away".into(),
+        body: "Hi;\n} back soon {\n# not a comment\nwrite to text:\nme".into(),
+        start: Some(1_790_000_000_000),
+        end: Some(1_790_600_000_000),
+        ..Vacation::default()
+    };
+    let rules = every_rule_the_app_makes()[..2].to_vec();
+    let script = Script { vacation: Some(vacation.clone()), rules: rules.clone(), ..Script::default() };
+    let back = read(&write(&script, "me@example.com", &folder, &ext()).unwrap());
+    assert_eq!(back.vacation, Some(vacation));
+    assert_eq!(back.rules, rules);
+    assert!(back.foreign.is_empty(), "{:?}", back.foreign);
+}

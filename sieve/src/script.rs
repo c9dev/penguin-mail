@@ -273,16 +273,19 @@ struct Piece {
 
 /// Splits a script into top-level statements. A statement ends at a `;`
 /// or at a `}` that closes its last block, unless `elsif` or `else`
-/// follows. Strings, `text:` literals and comments cannot end one.
+/// follows. Strings, `text:` literals and comments cannot end one. A
+/// quoted string may run over several lines (RFC 5228 section 2.4.2), as
+/// a reply's body does, so the string state carries from line to line.
 fn pieces(text: &str) -> Vec<Piece> {
     let mut out = Vec::new();
     let mut comments = Vec::new();
     let mut statement = String::new();
     let mut depth = 0i32;
+    let (mut in_string, mut escaped) = (false, false);
     let mut lines = text.lines().peekable();
     while let Some(line) = lines.next() {
         let trimmed = line.trim();
-        if statement.is_empty() && (trimmed.starts_with('#') || trimmed.is_empty()) {
+        if statement.is_empty() && !in_string && (trimmed.starts_with('#') || trimmed.is_empty()) {
             if trimmed.starts_with('#') {
                 comments.push(trimmed.to_string());
             }
@@ -290,17 +293,7 @@ fn pieces(text: &str) -> Vec<Piece> {
         }
         statement.push_str(line);
         statement.push('\n');
-        // `text:` runs to a line holding a lone dot.
-        if trimmed.ends_with("text:") {
-            for more in lines.by_ref() {
-                statement.push_str(more);
-                statement.push('\n');
-                if more.trim_end() == "." {
-                    break;
-                }
-            }
-        }
-        let (mut in_string, mut escaped, mut ended) = (false, false, false);
+        let mut ended = false;
         for ch in line.chars() {
             match (in_string, escaped, ch) {
                 (true, true, _) => escaped = false,
@@ -315,6 +308,17 @@ fn pieces(text: &str) -> Vec<Piece> {
                 }
                 (false, _, ';') if depth == 0 => ended = true,
                 _ => {}
+            }
+        }
+        // `text:` runs to a line holding a lone dot. Inside a quoted
+        // string the same letters are only words.
+        if !in_string && trimmed.ends_with("text:") {
+            for more in lines.by_ref() {
+                statement.push_str(more);
+                statement.push('\n');
+                if more.trim_end() == "." {
+                    break;
+                }
             }
         }
         let continues = lines.peek().is_some_and(|next| {
