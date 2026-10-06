@@ -1311,6 +1311,27 @@ async fn waiting_for_answer_links_to_the_message_the_invitation_arrived_in() {
 }
 
 #[tokio::test]
+async fn the_mail_an_invitation_arrived_in_is_found_by_its_uid() {
+    let h = harness().await;
+    read_copy(&h, vec![Ev { guests: vec![me_guest()], ..on_copy("ev1", TENTH) }]).await;
+    invitations(&h)
+        .open(h.account_id, "m1", &invite(0, "20300310T090000Z"), MARCH)
+        .await
+        .unwrap();
+    store_message(&h, "m1", "t1").await;
+    let thread = invitations(&h).mail_thread(h.account_id, UID).await.unwrap();
+    assert_eq!(thread.as_deref(), Some("t1"));
+}
+
+#[tokio::test]
+async fn an_event_no_mail_brought_has_no_mail_to_open() {
+    let h = harness().await;
+    read_copy(&h, vec![Ev { guests: vec![me_guest()], ..on_copy("ev1", TENTH) }]).await;
+    let thread = invitations(&h).mail_thread(h.account_id, UID).await.unwrap();
+    assert_eq!(thread, None);
+}
+
+#[tokio::test]
 async fn waiting_for_answer_keeps_the_row_with_no_mail_to_open() {
     let h = harness().await;
     read_copy(&h, vec![Ev { guests: vec![me_guest()], ..on_copy("ev1", TENTH) }]).await;
