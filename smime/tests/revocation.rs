@@ -94,7 +94,20 @@ impl Home {
         // a test must never put one on somebody's screen.
         std::fs::write(
             dir.path().join("gpg-agent.conf"),
-            "pinentry-program /bin/false\n",
+            format!(
+                "pinentry-program /bin/false\nlog-file {}\n",
+                dir.path().join("agent.log").display()
+            ),
+        )
+        .expect("write");
+        // These two logs are what `explain` prints when a test fails on a
+        // machine where it could not be made to fail again.
+        std::fs::write(
+            dir.path().join("dirmngr.conf"),
+            format!(
+                "log-file {}\ndebug-level basic\n",
+                dir.path().join("dirmngr.log").display()
+            ),
         )
         .expect("write");
         let home = Home {
@@ -287,6 +300,31 @@ impl Home {
             .expect("gpgsm runs");
         assert!(out.status.success(), "gpgsm could not sign");
         mailrs_smime::mime::base64(&out.stdout)
+    }
+
+    /// Prints what gpgsm, dirmngr and gpg-agent said about `signature`,
+    /// for a test that failed. The CRL tests have failed now and then on
+    /// a CI runner and never when run again, so the failure itself has to
+    /// carry the evidence.
+    fn explain(&self, signature: &[u8]) {
+        let dir = self.dir.path();
+        std::fs::write(dir.join("part"), PART).expect("write");
+        std::fs::write(dir.join("part.sig"), signature).expect("write");
+        let status = Command::new(self.smime.program())
+            .args(["--batch", "--no-tty", "--status-fd", "1", "--assume-base64", "--homedir"])
+            .arg(dir)
+            .arg("--verify")
+            .arg(dir.join("part.sig"))
+            .arg(dir.join("part"))
+            .stderr(Stdio::piped())
+            .output()
+            .expect("gpgsm runs");
+        eprintln!("gpgsm status:\n{}", String::from_utf8_lossy(&status.stdout));
+        eprintln!("gpgsm stderr:\n{}", String::from_utf8_lossy(&status.stderr));
+        for log in ["dirmngr.log", "agent.log"] {
+            let text = std::fs::read_to_string(dir.join(log)).unwrap_or_default();
+            eprintln!("{log}:\n{text}");
+        }
     }
 
     /// gpgsm as the test drives it, rather than as the code under test
@@ -496,6 +534,9 @@ fn a_crl_that_lists_nothing_leaves_the_chain_trusted() {
         .with_revocation_wait(CRL_FETCH)
         .verify(PART, &signature).expect("a verdict");
 
+    if found.chain != Chain::Trusted {
+        home.explain(&signature);
+    }
     assert_eq!(found.verdict, Verdict::Good);
     assert_eq!(found.chain, Chain::Trusted);
 }
@@ -526,6 +567,10 @@ fn a_certificate_the_crl_lists_is_revoked() {
         .with_revocation_wait(CRL_FETCH)
         .verify(PART, &signature).expect("a verdict");
 
+    if found.verdict != Verdict::RevokedCertificate {
+        eprintln!("chain: {:?}", found.chain);
+        home.explain(&signature);
+    }
     assert_eq!(found.verdict, Verdict::RevokedCertificate);
     assert!(!found.is_good());
     assert_eq!(
