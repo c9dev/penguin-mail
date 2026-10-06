@@ -17,13 +17,13 @@ use mailrs_domain::AccountId;
 use mailrs_domain::calendar::Calendar;
 use mailrs_domain::calendar::list;
 use mailrs_domain::translate::{fill, fill_plural, gettext, with_reason};
-use mailrs_store::calendar_list as store_list;
 use mailrs_sync::{Permitted, SyncError, Withheld};
 
 use super::CalendarView;
 use super::holidays::{self, Region};
 use super::sidebar::{AddKind, ListChange};
 use super::tint;
+use crate::permission::Permission;
 use crate::ui::confirm::{Tone, confirm};
 
 /// The colour a new calendar starts in: Blue, the fifth label colour.
@@ -135,8 +135,8 @@ impl CalendarView {
                     }
                     (view.hooks.push)(account);
                 }
-                Ok(Permitted::NeedsPermission) => (view.hooks.needs_manage_permission)(account),
-                Err(err) => (view.hooks.toast)(&with_reason(&failed, &err, &[])),
+                Ok(Permitted::NeedsPermission) => view.needs(Permission::ManageCalendars, account),
+                Err(err) => view.say(&with_reason(&failed, &err, &[])),
             }
         });
     }
@@ -175,7 +175,7 @@ impl CalendarView {
     fn ask_rename(self: &Rc<Self>, account: AccountId, calendar: &str) {
         let Some(held) = self.calendar_of(account, calendar) else { return };
         if self.withheld_of(account).calendars {
-            return (self.hooks.needs_manage_permission)(account);
+            return self.needs(Permission::ManageCalendars, account);
         }
         let dialog = adw::AlertDialog::new(Some(&gettext("Rename Calendar")), None);
         let name = gtk::Entry::builder().text(&held.name).activates_default(true).build();
@@ -207,14 +207,15 @@ impl CalendarView {
     fn ask_delete(self: &Rc<Self>, account: AccountId, calendar: &str) {
         let Some(held) = self.calendar_of(account, calendar) else { return };
         if self.withheld_of(account).calendars {
-            return (self.hooks.needs_manage_permission)(account);
+            return self.needs(Permission::ManageCalendars, account);
         }
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
             let id = held.id.clone();
+            let copy = this.core.calendar_copy();
             let events = this
                 .core
-                .read(move |c| store_list::event_count(c, account, &id))
+                .call(async move { copy.event_count(account, &id).await })
                 .await
                 .unwrap_or(0);
             let question = confirm(
@@ -230,14 +231,14 @@ impl CalendarView {
             this.run_list_edit(account, true, gettext("Could not delete the calendar: {reason}"), async move {
                 copy.delete_calendar(account, &id).await
             });
-            (this.hooks.toast)(&fill(&gettext("Deleted “{calendar}”"), &[("calendar", &held.name)]));
+            this.say(&fill(&gettext("Deleted “{calendar}”"), &[("calendar", &held.name)]));
         });
     }
 
     fn ask_unsubscribe(self: &Rc<Self>, account: AccountId, calendar: &str) {
         let Some(held) = self.calendar_of(account, calendar) else { return };
         if self.withheld_of(account).change_calendar_list {
-            return (self.hooks.needs_manage_permission)(account);
+            return self.needs(Permission::ManageCalendars, account);
         }
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
@@ -263,7 +264,7 @@ impl CalendarView {
     fn ask_new(self: &Rc<Self>, account: AccountId) {
         let withheld = self.withheld_of(account);
         if withheld.calendars || withheld.change_calendar_list {
-            return (self.hooks.needs_manage_permission)(account);
+            return self.needs(Permission::ManageCalendars, account);
         }
         super::ensure_tints(crate::ui::LABEL_COLORS.iter().map(|(hex, _)| *hex));
         let dialog = adw::AlertDialog::new(
@@ -326,7 +327,7 @@ impl CalendarView {
 
     fn ask_subscribe(self: &Rc<Self>, account: AccountId) {
         if self.withheld_of(account).change_calendar_list {
-            return (self.hooks.needs_manage_permission)(account);
+            return self.needs(Permission::ManageCalendars, account);
         }
         let dialog = adw::AlertDialog::new(
             Some(&gettext("Subscribe to Calendar")),
@@ -361,13 +362,13 @@ impl CalendarView {
             this.run_list_edit(account, false, gettext("Could not subscribe: {reason}"), async move {
                 copy.subscribe(account, &typed).await
             });
-            (this.hooks.toast)(&gettext("Subscribed. The events arrive once Google Calendar reads the address."));
+            this.say(&gettext("Subscribed. The events arrive once Google Calendar reads the address."));
         });
     }
 
     fn show_holidays(self: &Rc<Self>, account: AccountId) {
         if self.withheld_of(account).change_calendar_list {
-            return (self.hooks.needs_manage_permission)(account);
+            return self.needs(Permission::ManageCalendars, account);
         }
         let group = adw::PreferencesGroup::builder()
             .description(fill(

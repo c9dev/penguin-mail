@@ -6,6 +6,7 @@ mod caldav;
 mod calendar;
 mod calendar_attach;
 mod calendar_copy;
+mod calendar_read;
 mod calendar_list;
 mod calendar_series;
 mod carddav;

@@ -366,8 +366,7 @@ impl<A: Accounts> Calendar<A> {
         if let Permitted::NeedsPermission = self.ready(account_id).await? {
             return Ok(Permitted::NeedsPermission);
         }
-        let occurrences = self.db.read(move |c| store::occurrences(c, &[account_id], from, to, scope)).await?;
-        Ok(Permitted::Done(occurrences))
+        Ok(Permitted::Done(self.copy.occurrences(&[account_id], from, to, scope).await?))
     }
 
     /// Waits for the copy's first read of the account when it has none

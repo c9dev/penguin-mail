@@ -367,12 +367,7 @@ impl<A: Accounts> Invitations<A> {
                 let found = calendar_store::waiting(c, &accounts, now, MOST_WAITING)?;
                 let mut waiting = Vec::with_capacity(found.len());
                 for occurrence in found {
-                    let thread_id = store::saved(c, occurrence.account_id, &occurrence.event.uid)?
-                        .and_then(|saved| {
-                            messages::thread_id_of(c, occurrence.account_id, &saved.message_id)
-                                .ok()
-                                .flatten()
-                        });
+                    let thread_id = mail_thread_of(c, occurrence.account_id, &occurrence.event.uid)?;
                     waiting.push(Waiting {
                         account_id: occurrence.account_id,
                         calendar: occurrence.event.calendar.clone(),
@@ -386,6 +381,14 @@ impl<A: Accounts> Invitations<A> {
                 Ok(waiting)
             })
             .await?)
+    }
+
+    /// The thread of the mail an event's invitation arrived in, found by
+    /// the event's uid, for "Open the invitation in Mail". `None` when no
+    /// mail brought it, or the mail has left the store.
+    pub async fn mail_thread(&self, account_id: AccountId, uid: &str) -> Result<Option<String>, SyncError> {
+        let uid = uid.to_string();
+        Ok(self.db.read(move |c| mail_thread_of(c, account_id, &uid)).await?)
     }
 
     /// Reads the `text/calendar` part of a message, records the version of
@@ -875,4 +878,17 @@ fn answered_row(
     };
     let changed = calendar_store::changed_occurrences(c, account_id, &event.calendar, &series_id)?;
     Ok(series::answered(&whole, &changed, picked, scope, answer))
+}
+
+/// The thread the mail that carried `uid`'s invitation sits in. A failed
+/// thread lookup counts as no mail: the caller offers no way to it then.
+fn mail_thread_of(
+    c: &rusqlite::Connection,
+    account_id: AccountId,
+    uid: &str,
+) -> mailrs_store::Result<Option<String>> {
+    let Some(saved) = store::saved(c, account_id, uid)? else {
+        return Ok(None);
+    };
+    Ok(messages::thread_id_of(c, account_id, &saved.message_id).ok().flatten())
 }

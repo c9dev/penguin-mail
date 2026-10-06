@@ -208,8 +208,8 @@ pub struct MainWindow {
     /// The event the next-event card shows, so a click on it knows where
     /// to open the calendar. `None` while the card is hidden.
     next_up: RefCell<Option<crate::ui::calendar::next::NextUp>>,
-    /// The next-event reads under way; only the newest writes the card.
-    next_reads: across::Reads,
+    /// The next-event card's reads; only the newest writes the card.
+    next_card: Rc<crate::ui::calendar::run::NextCard>,
 }
 
 /// The class that marks a toplevel window dark. `@media
@@ -550,13 +550,11 @@ impl MainWindow {
                 // the sidebar in a 1,440 px window.
                 .sidebar_width_fraction(0.331)
                 .build();
-            let (t, g, n, a, m) = (weak.clone(), weak.clone(), weak.clone(), weak.clone(), weak.clone());
+            let (t, g, n, m) = (weak.clone(), weak.clone(), weak.clone(), weak.clone());
             let (read_settings, change_settings) = (Rc::downgrade(app), Rc::downgrade(app));
             let (contacts_app, push_app) = (Rc::downgrade(app), Rc::downgrade(app));
             let refresh_app = Rc::downgrade(app);
             let p = weak.clone();
-            let manage_weak = weak.clone();
-            let drive_weak = weak.clone();
             let calendar = CalendarView::new(
                 Rc::clone(&app.core),
                 move || {
@@ -566,9 +564,9 @@ impl MainWindow {
                         .unwrap_or_default()
                 },
                 Hooks {
-                    toast: Box::new(move |text| {
+                    toast: Box::new(move |toast| {
                         if let Some(win) = t.upgrade() {
-                            win.toast(text);
+                            win.toasts.add_toast(toast);
                         }
                     }),
                     change: Box::new(move |change| {
@@ -581,24 +579,9 @@ impl MainWindow {
                             win.grant_access(account_id);
                         }
                     }),
-                    needs_permission: Box::new(move |account_id| {
+                    ask_permission: Box::new(move |account_id, permission| {
                         if let Some(win) = n.upgrade() {
-                            win.ask_permission(account_id, Permission::Calendar, Occasion::Needed);
-                        }
-                    }),
-                    needs_manage_permission: Box::new(move |account_id| {
-                        if let Some(win) = manage_weak.upgrade() {
-                            win.ask_permission(account_id, Permission::ManageCalendars, Occasion::Needed);
-                        }
-                    }),
-                    needs_drive_permission: Box::new(move |account_id| {
-                        if let Some(win) = drive_weak.upgrade() {
-                            win.ask_permission(account_id, Permission::Drive, Occasion::Needed);
-                        }
-                    }),
-                    add_toast: Box::new(move |toast| {
-                        if let Some(win) = a.upgrade() {
-                            win.toasts.add_toast(toast);
+                            win.ask_permission(account_id, permission, Occasion::Needed);
                         }
                     }),
                     contacts: Box::new(move || {
@@ -885,7 +868,7 @@ impl MainWindow {
                 search_stop: RefCell::new(None),
                 undo_sends: RefCell::new(scheduled::UndoSends::default()),
                 next_up: RefCell::new(None),
-                next_reads: across::Reads::default(),
+                next_card: across::next_card(weak.clone()),
             }
         });
         if window.core.demo {
