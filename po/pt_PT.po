@@ -38,10 +38,12 @@ msgstr ""
 "vez, e guarda o seu correio no seu próprio computador."
 
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:23
-msgid "One inbox for every account, with Gmail's categories, labels and search"
+msgid ""
+"One inbox for every account, with Gmail's categories, Outlook's Focused and "
+"Other tabs, labels and search"
 msgstr ""
-"Uma caixa de entrada para todas as contas, com as categorias, etiquetas e "
-"pesquisa do Gmail"
+"Uma caixa de entrada para todas as contas, com as categorias do Gmail, os "
+"separadores Destaques e Outros do Outlook, etiquetas e pesquisa"
 
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:24
 msgid ""
@@ -69,20 +71,25 @@ msgstr "Marcas em sete cores, VIP, caixas inteligentes e lembretes"
 
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:28
 msgid ""
-"Gmail's rules, automatic replies and plus addresses, changed from the app"
+"Rules and automatic replies for every account, kept on Gmail, Outlook or a "
+"Sieve server, or run by the app on its own"
 msgstr ""
-"As regras, respostas automáticas e endereços com + do Gmail, alterados a "
-"partir da aplicação"
+"Regras e respostas automáticas em todas as contas, guardadas no Gmail, no "
+"Outlook ou num servidor Sieve, ou aplicadas pela própria aplicação"
 
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:29
+msgid "Plus addresses to give out instead of your own"
+msgstr "Endereços com «+» para dar em vez do seu"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:30
 msgid "OpenPGP and S/MIME signing and encryption through your own GnuPG"
 msgstr "Assinatura e cifra OpenPGP e S/MIME através do seu próprio GnuPG"
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:30
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:31
 msgid "Remote images blocked until you ask for them"
 msgstr "Imagens remotas bloqueadas até as pedir"
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:31
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:32
 msgid ""
 "An assistant that runs on a local model or on Claude, off until you pick one"
 msgstr ""
@@ -90,6 +97,14 @@ msgstr ""
 "escolher um"
 
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:33
+msgid ""
+"Every control named for screen readers and reachable from the keyboard, in "
+"English and European Portuguese"
+msgstr ""
+"Todos os controlos com nome para leitores de ecrã e acessíveis pelo teclado, "
+"em inglês e em português europeu"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:35
 msgid ""
 "Adding a Gmail or Microsoft account takes one sign-in in your browser. "
 "Penguin Mail is built with GTK and libadwaita and fits best on GNOME, but it "
@@ -99,44 +114,44 @@ msgstr ""
 "navegador. O Penguin Mail é feito com GTK e libadwaita e integra-se melhor "
 "no GNOME, mas funciona em qualquer ambiente de trabalho Linux."
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:51
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:53
 msgid "gmail"
 msgstr "gmail"
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:52
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:54
 msgid "email"
 msgstr "e-mail"
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:53
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:55
 msgid "mail"
 msgstr "correio"
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:54
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:56
 msgid "inbox"
 msgstr "caixa de entrada"
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:83
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:85
 msgid "All your accounts in one inbox, with a reply open"
 msgstr "Todas as contas numa caixa de entrada, com uma resposta aberta"
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:87
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:89
 msgid "The same inbox in dark mode"
 msgstr "A mesma caixa de entrada no modo escuro"
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:91
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:93
 msgid "The calendar's week, with working hours and where you work"
 msgstr ""
 "A semana do calendário, com o horário de trabalho e o local onde trabalha"
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:95
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:97
 msgid "An invitation in a message, with the hours around the meeting"
 msgstr "Um convite numa mensagem, com as horas em redor da reunião"
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:99
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:101
 msgid "Replying, with the quoted history folded away"
 msgstr "A responder, com o texto citado recolhido"
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:103
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:105
 msgid "The assistant beside your mail"
 msgstr "O assistente ao lado do correio"
 
@@ -10354,6 +10369,12 @@ msgstr "Marcar como não sendo spam"
 #: sync/src/triage.rs:70
 msgid "Move to {folder}"
 msgstr "Mover para {folder}"
+
+#~ msgid ""
+#~ "Gmail's rules, automatic replies and plus addresses, changed from the app"
+#~ msgstr ""
+#~ "As regras, respostas automáticas e endereços com + do Gmail, alterados a "
+#~ "partir da aplicação"
 
 #~ msgid ""
 #~ "{provider} is busy, so {action} did not go through for {conversations}. "

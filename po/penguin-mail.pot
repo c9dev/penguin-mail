@@ -28,7 +28,9 @@ msgid ""
 msgstr ""
 
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:23
-msgid "One inbox for every account, with Gmail's categories, labels and search"
+msgid ""
+"One inbox for every account, with Gmail's categories, Outlook's Focused and "
+"Other tabs, labels and search"
 msgstr ""
 
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:24
@@ -52,66 +54,77 @@ msgstr ""
 
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:28
 msgid ""
-"Gmail's rules, automatic replies and plus addresses, changed from the app"
+"Rules and automatic replies for every account, kept on Gmail, Outlook or a "
+"Sieve server, or run by the app on its own"
 msgstr ""
 
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:29
-msgid "OpenPGP and S/MIME signing and encryption through your own GnuPG"
+msgid "Plus addresses to give out instead of your own"
 msgstr ""
 
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:30
-msgid "Remote images blocked until you ask for them"
+msgid "OpenPGP and S/MIME signing and encryption through your own GnuPG"
 msgstr ""
 
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:31
+msgid "Remote images blocked until you ask for them"
+msgstr ""
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:32
 msgid ""
 "An assistant that runs on a local model or on Claude, off until you pick one"
 msgstr ""
 
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:33
 msgid ""
+"Every control named for screen readers and reachable from the keyboard, in "
+"English and European Portuguese"
+msgstr ""
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:35
+msgid ""
 "Adding a Gmail or Microsoft account takes one sign-in in your browser. "
 "Penguin Mail is built with GTK and libadwaita and fits best on GNOME, but it "
 "runs on any Linux desktop."
 msgstr ""
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:51
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:53
 msgid "gmail"
 msgstr ""
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:52
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:54
 msgid "email"
 msgstr ""
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:53
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:55
 msgid "mail"
 msgstr ""
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:54
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:56
 msgid "inbox"
 msgstr ""
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:83
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:85
 msgid "All your accounts in one inbox, with a reply open"
 msgstr ""
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:87
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:89
 msgid "The same inbox in dark mode"
 msgstr ""
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:91
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:93
 msgid "The calendar's week, with working hours and where you work"
 msgstr ""
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:95
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:97
 msgid "An invitation in a message, with the hours around the meeting"
 msgstr ""
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:99
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:101
 msgid "Replying, with the quoted history folded away"
 msgstr ""
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:103
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:105
 msgid "The assistant beside your mail"
 msgstr ""
 

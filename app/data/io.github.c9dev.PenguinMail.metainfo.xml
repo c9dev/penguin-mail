@@ -20,15 +20,17 @@
       own computer.
     </p>
     <ul>
-      <li>One inbox for every account, with Gmail's categories, labels and search</li>
+      <li>One inbox for every account, with Gmail's categories, Outlook's Focused and Other tabs, labels and search</li>
       <li>A calendar with Google Calendar, Outlook and any CalDAV server: Day, Week, Month and Agenda views, invitations answered in the mail, and reminders</li>
       <li>Contacts from Google, Outlook and any CardDAV server</li>
       <li>A composer that shows formatting as you write, with Undo Send and Send Later</li>
       <li>Flags in seven colors, VIPs, smart mailboxes and reminders</li>
-      <li>Gmail's rules, automatic replies and plus addresses, changed from the app</li>
+      <li>Rules and automatic replies for every account, kept on Gmail, Outlook or a Sieve server, or run by the app on its own</li>
+      <li>Plus addresses to give out instead of your own</li>
       <li>OpenPGP and S/MIME signing and encryption through your own GnuPG</li>
       <li>Remote images blocked until you ask for them</li>
       <li>An assistant that runs on a local model or on Claude, off until you pick one</li>
+      <li>Every control named for screen readers and reachable from the keyboard, in English and European Portuguese</li>
     </ul>
     <p>
       Adding a Gmail or Microsoft account takes one sign-in in your browser.
