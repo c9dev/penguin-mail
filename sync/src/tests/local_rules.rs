@@ -145,6 +145,32 @@ async fn rules_run_in_the_order_they_were_made() {
 }
 
 #[tokio::test]
+async fn a_forward_that_comes_back_is_not_forwarded_again() {
+    let h = imap_harness().await;
+    h.bootstrap().await;
+    let (engine, rules) = engine_for(&h).await;
+    let forward = Filter {
+        criteria: FilterCriteria { subject: Some("Note".into()), ..FilterCriteria::default() },
+        action: FilterAction { forward: Some("me@example.com".into()), ..FilterAction::default() },
+        ..Filter::default()
+    };
+    rules.create_filter(&forward).await.unwrap();
+    h.imap.deliver("INBOX", letter(1, "ann@example.com"), crate::now_millis() + 1_000);
+    h.sync.incremental().await.unwrap();
+    engine.run_due(h.account_id).await.unwrap();
+    assert_eq!(h.smtp.sent().len(), 1);
+    let back = h.smtp.sent()[0].raw.clone();
+    h.imap.deliver("INBOX", back.clone(), crate::now_millis() + 2_000);
+    // A list that rewrites the sender keeps the forward's own headers.
+    let relayed = String::from_utf8_lossy(&back).replacen("From: <me@example.com>", "From: <list@example.org>", 1);
+    assert!(relayed.contains("list@example.org"), "{relayed}");
+    h.imap.deliver("INBOX", relayed.into_bytes(), crate::now_millis() + 3_000);
+    h.sync.incremental().await.unwrap();
+    engine.run_due(h.account_id).await.unwrap();
+    assert_eq!(h.smtp.sent().len(), 1, "a forward is never forwarded again");
+}
+
+#[tokio::test]
 async fn a_rule_that_reads_the_size_runs_on_big_mail_only() {
     let h = imap_harness().await;
     h.bootstrap().await;

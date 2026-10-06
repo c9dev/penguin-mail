@@ -292,6 +292,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   it last updated, instead of leaving you guessing.
 
 ### Fixed
+- A rule on this computer that forwards mail no longer forwards its own forwards when they come back to the Inbox, which could repeat without end.
 - Undo takes back what you did last, even after a rule on this computer has moved new mail since.
 - Deleting one date of a repeating meeting on a CalDAV account mails nobody when you pick Don't send, and deleting one date you were invited to keeps the other dates you were invited to.
 - Declining one date of a repeating meeting on a Fastmail or other CalDAV account declines only that date. It used to answer the whole series.

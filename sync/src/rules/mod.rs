@@ -112,8 +112,16 @@ impl<A: Accounts> RulesEngine<A> {
                 acted = true;
             }
             if let Some(to) = &action.forward {
-                let raw = sync.raw_message(&meta.id).await?;
                 let from = self.address(meta.account_id).await?;
+                // Mail from the account itself, or a forward that came
+                // back, would be forwarded again each time it returned.
+                if meta.from.as_ref().is_some_and(|f| f.email.eq_ignore_ascii_case(&from)) {
+                    continue;
+                }
+                let raw = sync.raw_message(&meta.id).await?;
+                if forward::is_forward(&raw) {
+                    continue;
+                }
                 let message = forward::forwarded(&raw, &from, to, crate::now_millis())?;
                 // No copy in Sent: a server-side rule's forward leaves none.
                 sync.services().mail.send(&message, None).await?;
