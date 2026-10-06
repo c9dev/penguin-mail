@@ -80,8 +80,10 @@ Section: mail
 Priority: optional
 Homepage: https://github.com/c9dev/penguin-mail
 Description: Mail and calendar for Linux
- Reads, sorts and sends mail for several Gmail accounts, keeps them in
- sync from the system tray, and signs and encrypts with OpenPGP or S/MIME.
+ Reads, sorts and sends mail for Gmail, Outlook.com and Microsoft 365, and
+ any IMAP or POP3 account, with their calendars and contacts. Keeps every
+ account in sync from the system tray, and signs and encrypts with OpenPGP
+ or S/MIME.
 CONTROL
 # dpkg drops the files an earlier .deb shipped under the old app ID. The
 # rm catches the same names when something else left them, such as
