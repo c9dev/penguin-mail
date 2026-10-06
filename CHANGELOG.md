@@ -292,6 +292,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   it last updated, instead of leaving you guessing.
 
 ### Fixed
+- New mail on an IMAP account whose connection keeps dropping while it waits for mail arrives within a minute, rather than up to a quarter of an hour late.
 - Answering an invitation to one date of a repeating meeting that your calendar has not caught up with yet mails the answer for that date, instead of answering the nearest date your calendar holds.
 - A rule on this computer that forwards mail no longer forwards its own forwards when they come back to the Inbox, which could repeat without end.
 - Undo takes back what you did last, even after a rule on this computer has moved new mail since.

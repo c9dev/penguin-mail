@@ -413,7 +413,9 @@ impl<I: ImapApi, S: Submit> MailBackend for Imap<I, S> {
 
     fn poll_interval(&self) -> Option<Duration> {
         let known = self.known();
-        let idle = known.capabilities.as_ref().is_some_and(|c| c.idle);
+        // An IDLE that keeps failing waits longer between tries, so the
+        // Inbox is polled each minute meanwhile, as on a server without it.
+        let idle = known.capabilities.as_ref().is_some_and(|c| c.idle) && known.idle_failures == 0;
         Some(cadence::poll_every(idle, known.tray_only))
     }
 

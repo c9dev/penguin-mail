@@ -226,6 +226,28 @@ async fn a_watch_that_keeps_failing_waits_longer_each_time() {
 }
 
 #[tokio::test(start_paused = true)]
+async fn while_idle_keeps_failing_the_inbox_is_polled_each_minute() {
+    let h = imap_harness().await;
+    h.bootstrap().await;
+    h.sync.incremental().await.unwrap();
+    let mail = h.sync.services().mail.clone();
+    for _ in 0..4 {
+        h.imap.fail_on("idle", ImapError::Network("dropped".into()));
+        mail.watch().await;
+    }
+    assert_eq!(mail.poll_interval(), Some(Duration::from_secs(60)), "as on a server without IDLE");
+
+    let watching = tokio::spawn({
+        let mail = mail.clone();
+        async move { mail.watch().await }
+    });
+    idling(&h.imap, 5).await;
+    h.imap.deliver_flagged("INBOX", &message("b", "Moss", ""), &[], days_ago(0));
+    watching.await.unwrap();
+    assert_eq!(mail.poll_interval(), Some(Duration::from_secs(5 * 60)), "IDLE works again");
+}
+
+#[tokio::test(start_paused = true)]
 async fn a_server_that_floods_every_idle_is_watched_less_and_less_often() {
     let h = imap_harness().await;
     h.bootstrap().await;
