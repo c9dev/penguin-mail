@@ -292,6 +292,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   it last updated, instead of leaving you guessing.
 
 ### Fixed
+- An Outlook meeting every other week on Sunday and Monday shows on the same weeks in Penguin Mail as in Outlook.
 - Saving the automatic reply while a waiting rule goes out to a mail server with Sieve keeps both, where one of them could be lost.
 - Archiving on a server that has no Archive folder yet no longer says it failed when the mail did move.
 - When your mail server is too busy to move mail, the message names the folder as you spelled it.

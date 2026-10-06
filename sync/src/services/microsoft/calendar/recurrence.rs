@@ -69,6 +69,13 @@ pub(crate) fn rrule_of(recurrence: &PatternedRecurrence, zone: Tz, all_day: bool
         }
         _ => {}
     }
+    // Which day starts a week decides which weeks an every-other-week
+    // series falls in. Outlook's default is Sunday, iCalendar's Monday.
+    if p.kind == "weekly" && p.interval > 1 {
+        let first = p.first_day_of_week.as_deref().unwrap_or("sunday");
+        let code = DAYS.iter().find(|(name, _)| name.eq_ignore_ascii_case(first)).map_or("SU", |(_, code)| *code);
+        parts.push(format!("WKST={code}"));
+    }
     Some(format!("RRULE:{}", parts.join(";")))
 }
 
@@ -146,7 +153,10 @@ pub(crate) fn recurrence_of(rules: &[String], start: NaiveDate, zone: Tz) -> Res
                 range.kind = "endDate".into();
                 range.end_date = Some(day.format("%Y-%m-%d").to_string());
             }
-            "WKST" => {}
+            "WKST" => {
+                let (name, _) = day_entry(value).filter(|(_, n)| n.is_none()).ok_or_else(refuse)?;
+                pattern.first_day_of_week = Some(name.to_string());
+            }
             _ => return Err(refuse()),
         }
     }
@@ -175,6 +185,11 @@ pub(crate) fn recurrence_of(rules: &[String], start: NaiveDate, zone: Tz) -> Res
         days.push(DAYS[weekday].0.to_string());
     }
     pattern.days_of_week = days;
+    // Without WKST a rule's weeks start on Monday, which Outlook has to be
+    // told, since its own default is Sunday.
+    if kind == "weekly" && pattern.interval > 1 && pattern.first_day_of_week.is_none() {
+        pattern.first_day_of_week = Some("monday".into());
+    }
     Ok(Some(PatternedRecurrence { pattern, range }))
 }
 
@@ -213,7 +228,7 @@ mod tests {
                 pattern: RecurrencePattern { days_of_week: vec!["monday".into(), "wednesday".into()], interval: 2, ..pattern("weekly") },
                 range: RecurrenceRange { number_of_occurrences: 10, ..range("numbered") },
             },
-            "RRULE:FREQ=WEEKLY;INTERVAL=2;BYDAY=MO,WE;COUNT=10",
+            "RRULE:FREQ=WEEKLY;INTERVAL=2;BYDAY=MO,WE;COUNT=10;WKST=SU",
         );
         both_ways(
             PatternedRecurrence { pattern: RecurrencePattern { day_of_month: 15, ..pattern("absoluteMonthly") }, range: range("noEnd") },
@@ -237,6 +252,25 @@ mod tests {
             },
             "RRULE:FREQ=YEARLY;INTERVAL=1;BYMONTH=3;BYDAY=FR;BYSETPOS=-1",
         );
+    }
+
+    /// Outlook starts a week on Sunday unless told otherwise, and iCalendar
+    /// on Monday, which moves an every-other-week series on Sunday and
+    /// Monday by a week on one side.
+    #[test]
+    fn an_every_other_week_series_keeps_the_day_its_week_starts() {
+        let monday_weeks = RecurrencePattern {
+            days_of_week: vec!["sunday".into(), "monday".into()],
+            interval: 2,
+            first_day_of_week: Some("monday".into()),
+            ..pattern("weekly")
+        };
+        both_ways(
+            PatternedRecurrence { pattern: monday_weeks, range: range("noEnd") },
+            "RRULE:FREQ=WEEKLY;INTERVAL=2;BYDAY=SU,MO;WKST=MO",
+        );
+        let written = recurrence_of(&["RRULE:FREQ=WEEKLY;INTERVAL=2;BYDAY=SU,MO".into()], start(), UTC).unwrap().unwrap();
+        assert_eq!(written.pattern.first_day_of_week.as_deref(), Some("monday"), "iCalendar's own start of the week");
     }
 
     #[test]
