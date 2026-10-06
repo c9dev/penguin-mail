@@ -37,7 +37,7 @@ const DEFAULT_COLOR: &str = "#3584e4";
 
 /// Rounds of `sync-collection` one read follows when the server cuts an
 /// answer short. Twenty cover a calendar far past any person's.
-const SYNC_ROUNDS: usize = 20;
+pub(super) const SYNC_ROUNDS: usize = 20;
 
 pub struct CalDav<D> {
     api: Arc<D>,
