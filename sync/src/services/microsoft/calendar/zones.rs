@@ -1,7 +1,9 @@
 //! Outlook names time zones the Windows way ("GMT Standard Time"); the
 //! copy expands a series in an IANA zone ("Europe/London"). The table is
 //! CLDR's `windowsZones` for the zones Outlook offers, one IANA name per
-//! row. A name that is not in it reads as UTC rather than as a guess.
+//! row. A Windows name that is not in it reads as UTC rather than as a
+//! guess; an IANA zone that is not in it goes as the row whose clock it
+//! keeps.
 
 use chrono_tz::Tz;
 
@@ -187,14 +189,38 @@ pub(super) fn zone_named(name: &str) -> Option<Tz> {
 }
 
 /// The Windows name Graph takes for the IANA zone `zone`, or `None` for a
-/// zone the table does not know, which a write then sends as UTC.
+/// zone whose clock no row keeps, which a write then sends as UTC.
 pub(super) fn windows_name(zone: Tz) -> Option<&'static str> {
     let iana = zone.name();
     if iana == "UTC" || iana == "Etc/UTC" {
         return Some("UTC");
     }
     let exact = ZONES.iter().find(|(_, i)| *i == iana).map(|(w, _)| *w);
-    exact.or_else(|| ALSO.iter().find(|(i, _)| *i == iana).map(|(_, w)| *w))
+    exact
+        .or_else(|| ALSO.iter().find(|(i, _)| *i == iana).map(|(_, w)| *w))
+        .or_else(|| same_clock(zone))
+}
+
+/// The first Windows zone in the table whose clock reads as `zone`'s
+/// does, compared every three hours from 2025 to 2033: a series written
+/// with that name keeps its wall-clock times across each clock change.
+/// CLDR maps hundreds of IANA zones to these rows; matching the clock
+/// covers them without carrying that whole table.
+fn same_clock(zone: Tz) -> Option<&'static str> {
+    use chrono::{Duration, TimeZone, Utc};
+    let start = Utc.with_ymd_and_hms(2025, 1, 1, 0, 0, 0).single()?;
+    let end = Utc.with_ymd_and_hms(2033, 1, 1, 0, 0, 0).single()?;
+    ZONES.iter().find_map(|(windows, iana)| {
+        let other: Tz = iana.parse().ok()?;
+        let mut at = start;
+        while at < end {
+            if at.with_timezone(&zone).naive_local() != at.with_timezone(&other).naive_local() {
+                return None;
+            }
+            at += Duration::hours(3);
+        }
+        Some(*windows)
+    })
 }
 
 #[cfg(test)]
@@ -219,7 +245,23 @@ mod tests {
         assert_eq!(zone_named("Not A Zone"), None);
         assert_eq!(windows_name(chrono_tz::Europe::Lisbon), Some("GMT Standard Time"));
         assert_eq!(windows_name(chrono_tz::America::New_York), Some("Eastern Standard Time"));
-        assert_eq!(windows_name(chrono_tz::Africa::Accra), None);
+        assert_eq!(windows_name(chrono_tz::Africa::Accra), Some("UTC"), "a zone whose clock is UTC");
+    }
+
+    /// A zone the table leaves out goes as a Windows zone with the same
+    /// clock, so a weekly 09:00 there stays at 09:00 after a clock change.
+    #[test]
+    fn a_zone_the_table_lacks_goes_as_one_with_the_same_clock() {
+        use chrono::{Datelike, Duration, TimeZone, Utc};
+        for zone in [chrono_tz::Europe::Sofia, chrono_tz::America::Detroit, chrono_tz::Europe::Vilnius] {
+            let name = windows_name(zone).unwrap_or_else(|| panic!("{zone} has a Windows name"));
+            let mapped = zone_named(name).unwrap();
+            let mut at = Utc.with_ymd_and_hms(2026, 1, 1, 12, 0, 0).unwrap();
+            while at.year() < 2029 {
+                assert_eq!(at.with_timezone(&zone).naive_local(), at.with_timezone(&mapped).naive_local(), "{zone} as {name} at {at}");
+                at += Duration::hours(6);
+            }
+        }
     }
 
     #[test]

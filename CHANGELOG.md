@@ -292,6 +292,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   it last updated, instead of leaving you guessing.
 
 ### Fixed
+- A repeating Outlook meeting made in a time zone such as Sofia or Detroit stays at its time after the clocks change.
 - An Outlook meeting every other week on Sunday and Monday shows on the same weeks in Penguin Mail as in Outlook.
 - Saving the automatic reply while a waiting rule goes out to a mail server with Sieve keeps both, where one of them could be lost.
 - Archiving on a server that has no Archive folder yet no longer says it failed when the mail did move.
