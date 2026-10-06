@@ -21,12 +21,14 @@ use futures::channel::oneshot;
 use futures::stream::FuturesUnordered;
 use mailrs_domain::calendar::{Calendar, Event, Occurrence};
 use mailrs_domain::{AccountId, EpochMillis};
-use mailrs_sync::Waiting;
+use mailrs_sync::calendar_copy::event_change::{EventChange, Undo};
+use mailrs_sync::{Permitted, Waiting};
 use mailrs_sync::calendar_copy::Listed;
 
 use super::{Answer, CalendarRun, SidebarRead, Desk, Effects, Older, PageId, Place, Shows, Unreached, Work};
 use crate::ui::calendar::block::{EventKey, key_of};
 use crate::ui::calendar::range::{Range, ViewKind};
+use crate::ui::calendar::scope;
 
 /// The one account every fixture belongs to.
 pub const ACCOUNT: AccountId = 1;
@@ -57,6 +59,12 @@ pub enum Step {
     OlderNote,
     GoTo,
     Refresh,
+    Choose,
+    Write,
+    OfferUndo,
+    NeedsPermission,
+    Toast,
+    Push,
 }
 
 /// Something that happens while a call waits for its answer.
@@ -99,6 +107,17 @@ pub struct View {
     pub notes: Vec<Option<Older>>,
     pub went_to: Vec<NaiveDate>,
     pub refreshes: usize,
+    /// What the question over a change answers.
+    pub chosen: Result<Option<scope::Answer>, String>,
+    /// What writing a change answers: the Undo it is held for, if any.
+    pub written: Result<Permitted<Option<u64>>, String>,
+    /// The title each written change left its event with.
+    pub writes: Vec<String>,
+    /// The Undo toasts offered, with the held change each is for.
+    pub undos: Vec<(String, u64)>,
+    pub pushed: Vec<AccountId>,
+    pub permissions_asked: Vec<AccountId>,
+    pub toasts: Vec<String>,
     holds: HashMap<Step, VecDeque<oneshot::Receiver<()>>>,
     during: HashMap<Step, VecDeque<During>>,
     spawned: Vec<Work>,
@@ -187,6 +206,17 @@ impl FakeWindow {
                 notes: Vec::new(),
                 went_to: Vec::new(),
                 refreshes: 0,
+                chosen: Ok(Some(scope::Answer {
+                    scope: None,
+                    notify: mailrs_domain::calendar::Notify::Nobody,
+                    keep_time: false,
+                })),
+                written: Ok(Permitted::Done(None)),
+                writes: Vec::new(),
+                undos: Vec::new(),
+                pushed: Vec::new(),
+                permissions_asked: Vec::new(),
+                toasts: Vec::new(),
                 holds: HashMap::new(),
                 during: HashMap::new(),
                 spawned: Vec::new(),
@@ -544,5 +574,54 @@ impl Effects for FakeWindow {
     fn refresh(&self) {
         self.record(Step::Refresh);
         self.with(|v| v.refreshes += 1);
+    }
+
+    fn choose(
+        &self,
+        _account_id: AccountId,
+        _change: EventChange,
+        _shown: Event,
+        _when: Option<String>,
+    ) -> Answer<'_, Result<Option<scope::Answer>, String>> {
+        let chosen = self.view.borrow().chosen.clone();
+        self.answer(Step::Choose, chosen)
+    }
+
+    fn write(
+        &self,
+        _account_id: AccountId,
+        change: EventChange,
+        _answer: scope::Answer,
+        _undo: Undo,
+    ) -> Answer<'_, Result<Permitted<Option<u64>>, String>> {
+        let title = match &change {
+            EventChange::New(event) | EventChange::Edit { edited: event, .. } => event.title.clone(),
+            EventChange::Remove(o) => o.event.title.clone(),
+        };
+        let written = self.with(|v| {
+            v.writes.push(title);
+            v.written.clone()
+        });
+        self.answer(Step::Write, written)
+    }
+
+    fn offer_undo(&self, said: String, held: u64) {
+        self.record(Step::OfferUndo);
+        self.with(|v| v.undos.push((said, held)));
+    }
+
+    fn needs_permission(&self, account_id: AccountId) {
+        self.record(Step::NeedsPermission);
+        self.with(|v| v.permissions_asked.push(account_id));
+    }
+
+    fn toast(&self, text: String) {
+        self.record(Step::Toast);
+        self.with(|v| v.toasts.push(text));
+    }
+
+    fn push(&self, account_id: AccountId) {
+        self.record(Step::Push);
+        self.with(|v| v.pushed.push(account_id));
     }
 }

@@ -31,13 +31,15 @@ use std::rc::Rc;
 use chrono::{DateTime, NaiveDate, Utc};
 use mailrs_domain::calendar::{Event, Occurrence};
 use mailrs_domain::{AccountId, EpochMillis};
-use mailrs_sync::Waiting;
+use mailrs_domain::translate::{fill, with_reason};
 use mailrs_sync::calendar_copy::Listed;
+use mailrs_sync::calendar_copy::event_change::{EventChange, Undo};
+use mailrs_sync::{Permitted, Waiting};
 
 use super::block::{EventKey, key_of};
 use super::range::{self, Range, ViewKind};
 use super::next::{self, NextUp};
-use super::{layout, time_grid};
+use super::{layout, scope, time_grid};
 pub use crate::wanted::Answer;
 use crate::wanted::{Screen, Wanted};
 
@@ -47,6 +49,8 @@ mod fake;
 mod tests;
 #[cfg(test)]
 mod next_tests;
+#[cfg(test)]
+mod change_tests;
 
 /// What `occurrences` returns at most, so a read that comes back this
 /// full is known to have been cut (`store::calendar`'s `MOST_EVENTS`).
@@ -288,6 +292,66 @@ pub trait Effects {
     fn go_to(&self, day: NaiveDate);
     /// Starts a calendar sync of every account.
     fn refresh(&self);
+
+    /// What the person chose about `change`: the copy's question over the
+    /// page about `shown`, with `when` naming a new time, or what the copy
+    /// settles on when nothing needs asking. `None` for Cancel.
+    fn choose(
+        &self,
+        account_id: AccountId,
+        change: EventChange,
+        shown: Event,
+        when: Option<String>,
+    ) -> Answer<'_, Result<Option<scope::Answer>, String>>;
+    /// Writes `change` through the copy with what the person answered.
+    /// `Some` names the held change an Undo toast can take back.
+    fn write(
+        &self,
+        account_id: AccountId,
+        change: EventChange,
+        answer: scope::Answer,
+        undo: Undo,
+    ) -> Answer<'_, Result<Permitted<Option<u64>>, String>>;
+    /// Puts up the Undo toast for the held change `held`.
+    fn offer_undo(&self, said: String, held: u64);
+    /// Explains that the change needs the calendar permission the account
+    /// withheld, and offers to ask for it.
+    fn needs_permission(&self, account_id: AccountId);
+    /// Says something at the bottom of the window.
+    fn toast(&self, text: String);
+    /// Sends the account's queued calendar changes now.
+    fn push(&self, account_id: AccountId);
+}
+
+/// A change of an event the person made in the view: a move, an edit or
+/// a delete.
+#[derive(Debug, Clone)]
+pub struct Changing {
+    pub account_id: AccountId,
+    pub change: EventChange,
+    /// The change to write instead when the person keeps the old time:
+    /// the other edits, at the time the event had.
+    pub kept_time: Option<EventChange>,
+    /// The event the question is about.
+    pub shown: Event,
+    /// The new time, in words, for a change that moves the event.
+    pub when: Option<String>,
+    /// Whether an Undo toast holds the change.
+    pub undo: Undo,
+    /// What the Undo toast says, with `{title}` for the event's title.
+    pub said: String,
+    /// What a failure says, with `{reason}` for why.
+    pub failed: String,
+}
+
+/// What a change came to, for what the view does around it: a dragged
+/// block springs back unless it is `Done`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Outcome {
+    Done,
+    Canceled,
+    NeedsPermission,
+    Failed,
 }
 
 /// The calendar run, and the one way the view reads the copy.
@@ -612,6 +676,48 @@ impl CalendarRun {
     /// The sync a Refresh press started has ended, whatever it found.
     pub fn refresh_done(&self) {
         self.refreshing.set(false);
+    }
+
+    // ---- Changing events ----------------------------------------------------
+
+    /// Asks the copy's question about a change, writes it, and reads the
+    /// view again. A held change gets its Undo toast; one written for good
+    /// goes out at once.
+    pub async fn change(self: &Rc<Self>, changing: Changing) -> Outcome {
+        let Changing { account_id, change, kept_time, shown, when, undo, said, failed } = changing;
+        let title = shown.title.clone();
+        let asked = self.effects.choose(account_id, change.clone(), shown, when).await;
+        let answer = match asked {
+            Ok(Some(answer)) => answer,
+            Ok(None) => return Outcome::Canceled,
+            Err(err) => {
+                self.effects.toast(with_reason(&failed, &err, &[]));
+                return Outcome::Failed;
+            }
+        };
+        let change = match (answer.keep_time, kept_time) {
+            (true, Some(kept)) => kept,
+            _ => change,
+        };
+        match self.effects.write(account_id, change, answer, undo).await {
+            Ok(Permitted::Done(held)) => {
+                self.reload();
+                match held {
+                    Some(held) => self.effects.offer_undo(fill(&said, &[("title", &title)]), held),
+                    None if undo == Undo::Skip => self.effects.push(account_id),
+                    None => {}
+                }
+                Outcome::Done
+            }
+            Ok(Permitted::NeedsPermission) => {
+                self.effects.needs_permission(account_id);
+                Outcome::NeedsPermission
+            }
+            Err(err) => {
+                self.effects.toast(with_reason(&failed, &err, &[]));
+                Outcome::Failed
+            }
+        }
     }
 
     // ---- The list -----------------------------------------------------------

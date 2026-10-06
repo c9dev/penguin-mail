@@ -2,7 +2,7 @@
 //! view does, lets a second read overtake the first where the race needs
 //! it, and checks what reached the page.
 
-use super::fake::{ACCOUNT, FakeWindow, Step, event_at, fixture_day};
+use super::fake::{FakeWindow, Step, event_at, fixture_day};
 use super::{Older, PageId, Unreached};
 use crate::ui::calendar::block::key_of;
 use crate::ui::calendar::range::{Range, ViewKind};
@@ -416,5 +416,4 @@ async fn a_page_the_view_took_away_draws_nothing() {
     run.fill(ON_SCREEN);
     window.settle().await;
     assert!(window.view.borrow().drawn.is_empty());
-    let _ = ACCOUNT;
 }

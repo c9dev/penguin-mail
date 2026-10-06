@@ -50,11 +50,11 @@ use gtk::{gdk, gio, glib};
 use mailrs_domain::calendar::series::{self, RepeatScope};
 use mailrs_domain::calendar::{Access, Calendar, Event, Occurrence};
 use mailrs_domain::invitation::Answer;
-use mailrs_domain::translate::{date_locale, fill, gettext, with_reason};
+use mailrs_domain::translate::{date_locale, gettext, with_reason};
 use mailrs_domain::{Account, AccountId, EpochMillis};
 use mailrs_sync::Permitted;
 use mailrs_sync::calendar_copy::event_change::{
-    self, Action, Ask, Changed, Edit, EventChange, Facts, Undo,
+    self, Action, Ask, Edit, EventChange, Facts, Undo,
 };
 use mailrs_sync::calendar_copy::{Held, new_event_id};
 use mailrs_sync::calendar_copy::Listed;
@@ -72,7 +72,7 @@ use month::MonthGrid;
 use popover::EventPopover;
 use quick::Quick;
 use range::{Range, ViewKind};
-use run::{CalendarRun, MOST_EVENTS, PageId, date_of, day_span};
+use run::{CalendarRun, Changing, MOST_EVENTS, Outcome, PageId, date_of, day_span};
 use shown::{Refocus, Showing};
 use sidebar::{CalendarSidebar, ListChange};
 use time_grid::{AllDayStrip, GUTTER, TimeGrid};
@@ -1267,38 +1267,21 @@ impl CalendarView {
             let when = words::landing_words(start, end, all_day, &draft::local_zone());
             let edited = draft.to_event(&new_event_id(), &new_event_id());
             let how = Edit { moves: true, ..Edit::default() };
-            let change = EventChange::Edit { occurrence: o.clone(), edited, how };
-            let account_id = o.account_id;
-            let written = match this.choose(account_id, &change, &o.event, Some(&when)).await {
-                Ok(Some(answer)) => write(&this.core, account_id, change, answer, Undo::Offer).await,
-                Ok(None) => {
-                    spring_back();
-                    return;
-                }
-                Err(err) => Err(err.into()),
+            let changing = Changing {
+                account_id: o.account_id,
+                change: EventChange::Edit { occurrence: o.clone(), edited, how },
+                kept_time: None,
+                shown: Event::clone(&o.event),
+                when: Some(when),
+                undo: Undo::Offer,
+                said: gettext("Moved “{title}”"),
+                failed: gettext("Could not move the event: {reason}"),
             };
-            match written {
-                Ok(Permitted::Done(changed)) => {
-                    // A drop from the all-day row marked its hour in the
-                    // grid, which a refill keeps for quick create.
-                    this.clear_ghost();
-                    this.reload();
-                    if let Changed::Held(held) = changed {
-                        this.offer_undo(fill(&gettext("Moved “{title}”"), &[("title", &o.event.title)]), held);
-                    }
-                }
-                Ok(Permitted::NeedsPermission) => {
-                    spring_back();
-                    (this.hooks.needs_permission)(account_id);
-                }
-                Err(err) => {
-                    spring_back();
-                    (this.hooks.toast)(&with_reason(
-                        &gettext("Could not move the event: {reason}"),
-                        &err,
-                        &[],
-                    ));
-                }
+            match this.run.change(changing).await {
+                // A drop from the all-day row marked its hour in the grid,
+                // which a refill keeps for quick create.
+                Outcome::Done => this.clear_ghost(),
+                Outcome::Canceled | Outcome::NeedsPermission | Outcome::Failed => spring_back(),
             }
         });
     }
@@ -1993,27 +1976,25 @@ impl CalendarView {
         let this = Rc::clone(self);
         let o = o.clone();
         glib::spawn_future_local(async move {
-            let account_id = o.account_id;
-            let change = EventChange::Remove(o.clone());
-            let written = match this.choose(account_id, &change, &o.event, None).await {
-                Ok(Some(answer)) => write(&this.core, account_id, change, answer, Undo::Offer).await,
-                Ok(None) => return,
-                Err(err) => Err(err.into()),
+            let said = match draft::limited(&o.event) {
+                true => gettext("Removed “{title}” from your calendar"),
+                false => gettext("Deleted “{title}”"),
             };
-            match written {
-                Ok(Permitted::Done(changed)) => {
-                    this.focus_past(&key_of(&o));
-                    this.reload();
-                    let said = match draft::limited(&o.event) {
-                        true => gettext("Removed “{title}” from your calendar"),
-                        false => gettext("Deleted “{title}”"),
-                    };
-                    if let Changed::Held(held) = changed {
-                        this.offer_undo(fill(&said, &[("title", &o.event.title)]), held);
-                    }
-                }
-                Ok(Permitted::NeedsPermission) => (this.hooks.needs_permission)(account_id),
-                Err(err) => (this.hooks.toast)(&with_reason(&gettext("Could not delete the event: {reason}"), &err, &[])),
+            // The block leaves with the refill the change starts, so the
+            // focus moves off it first.
+            let key = key_of(&o);
+            let changing = Changing {
+                account_id: o.account_id,
+                change: EventChange::Remove(o.clone()),
+                kept_time: None,
+                shown: Event::clone(&o.event),
+                when: None,
+                undo: Undo::Offer,
+                said,
+                failed: gettext("Could not delete the event: {reason}"),
+            };
+            if this.run.change(changing).await == Outcome::Done {
+                this.focus_past(&key);
             }
         });
     }
@@ -2045,7 +2026,7 @@ impl CalendarView {
     /// toast shows at a time, so two Undo offers never stack: holding
     /// another dismisses this one, whose own `dismissed` handler queues
     /// it.
-    fn offer_undo(self: &Rc<Self>, said: String, held: Held) {
+    fn offer_undo(self: &Rc<Self>, said: String, id: u64) {
         // Take the toast out in a statement of its own: `dismiss` runs the
         // toast's dismissed handler at once, which borrows `toast_up`
         // again, and a borrow held across the call panics inside a GTK
@@ -2054,7 +2035,6 @@ impl CalendarView {
         if let Some(toast) = before {
             toast.dismiss();
         }
-        let id = self.holding.borrow_mut().hold(held);
         let toast = adw::Toast::builder()
             .title(crate::ui::window::toast_title(&said))
             .button_label(gettext("Undo"))
@@ -2553,45 +2533,29 @@ impl CalendarView {
     /// turns only the new time down: the other edits go out at the old
     /// time.
     pub fn save_draft(self: &Rc<Self>, draft: Draft) {
+        let run = Rc::clone(&self.run);
         let weak = Rc::downgrade(self);
-        let core = Rc::clone(&self.core);
         glib::spawn_future_local(async move {
             let account_id = draft.account_id;
-            let change = draft_change(&draft);
-            let asked = {
-                let Some(view) = weak.upgrade() else { return };
-                let when = draft
+            let changing = Changing {
+                account_id,
+                change: draft_change(&draft),
+                // Keep Old Time writes the other edits at the time the
+                // event had.
+                kept_time: Some(draft_change(&draft.without_move())),
+                shown: draft.base.clone().unwrap_or_default(),
+                when: draft
                     .moved()
-                    .then(|| words::span_words(draft.start, draft.end, draft.all_day, &draft::local_zone()));
-                let shown = draft.base.clone().unwrap_or_default();
-                match view.choose(account_id, &change, &shown, when.as_deref()).await {
-                    Ok(Some(answer)) => answer,
-                    Ok(None) => return,
-                    Err(err) => {
-                        (view.hooks.toast)(&with_reason(&gettext("Could not save the event: {reason}"), &err, &[]));
-                        return;
-                    }
-                }
+                    .then(|| words::span_words(draft.start, draft.end, draft.all_day, &draft::local_zone())),
+                undo: Undo::Skip,
+                said: String::new(),
+                failed: gettext("Could not save the event: {reason}"),
             };
-            // Keep Old Time writes the other edits at the time the event had.
-            let change = if asked.keep_time { draft_change(&draft.without_move()) } else { change };
-            let is_new = draft.is_new();
-            let written = write(&core, account_id, change, asked, Undo::Skip).await;
-            let Some(view) = weak.upgrade() else { return };
-            match written {
-                Ok(Permitted::Done(_)) => {
-                    if is_new {
-                        view.remember_account(account_id);
-                    }
-                    view.reload();
-                    (view.hooks.push)(account_id);
-                }
-                Ok(Permitted::NeedsPermission) => (view.hooks.needs_permission)(account_id),
-                Err(err) => (view.hooks.toast)(&with_reason(
-                    &gettext("Could not save the event: {reason}"),
-                    &err,
-                    &[],
-                )),
+            if run.change(changing).await == Outcome::Done
+                && draft.is_new()
+                && let Some(view) = weak.upgrade()
+            {
+                view.remember_account(account_id);
             }
         });
     }
@@ -2752,19 +2716,6 @@ impl PageView {
             }
         }
     }
-}
-
-/// Writes `change` through the calendar copy with what the person
-/// answered.
-async fn write(
-    core: &Core,
-    account_id: AccountId,
-    change: EventChange,
-    answer: scope::Answer,
-    undo: Undo,
-) -> anyhow::Result<Permitted<Changed>> {
-    let copy = core.calendar_copy();
-    core.call(async move { copy.change(account_id, change, answer.choice(), undo).await }).await
 }
 
 /// The change an editor save makes. Only the draft can tell what the

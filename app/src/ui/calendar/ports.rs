@@ -16,7 +16,8 @@ use gtk::glib;
 use mailrs_domain::calendar::{Event, Occurrence};
 use mailrs_domain::{AccountId, EpochMillis};
 use mailrs_store::calendar::CalendarScope;
-use mailrs_sync::Waiting;
+use mailrs_sync::calendar_copy::event_change::{Changed, EventChange, Undo};
+use mailrs_sync::{Permitted, Waiting};
 use mailrs_sync::calendar_copy::Listed;
 use mailrs_domain::translate::gettext;
 
@@ -24,7 +25,7 @@ use super::block::EventKey;
 use super::range::{self, Range, ViewKind};
 use super::run::{Answer, Desk, SidebarRead, Effects, Older, PageId, Place, Shows, Unreached, Work};
 use super::shown::{self, Showing};
-use super::{CalendarView, PageView, SEARCH_LIMIT, sidebar};
+use super::{CalendarView, PageView, SEARCH_LIMIT, scope, sidebar};
 
 /// The view, as the run sees it.
 pub(super) struct Ports(pub(super) Weak<CalendarView>);
@@ -392,6 +393,72 @@ impl Effects for Ports {
     fn refresh(&self) {
         if let Some(view) = self.view() {
             (view.hooks.refresh)();
+        }
+    }
+
+    fn choose(
+        &self,
+        account_id: AccountId,
+        change: EventChange,
+        shown: Event,
+        when: Option<String>,
+    ) -> Answer<'_, Result<Option<scope::Answer>, String>> {
+        let Some(view) = self.view() else { return Box::pin(async { closed() }) };
+        Box::pin(async move {
+            view.choose(account_id, &change, &shown, when.as_deref())
+                .await
+                .map_err(|err| err.to_string())
+        })
+    }
+
+    fn write(
+        &self,
+        account_id: AccountId,
+        change: EventChange,
+        answer: scope::Answer,
+        undo: Undo,
+    ) -> Answer<'_, Result<Permitted<Option<u64>>, String>> {
+        let Some(view) = self.view() else { return Box::pin(async { closed() }) };
+        let (core, copy) = (Rc::clone(&view.core), view.core.calendar_copy());
+        let weak = Rc::downgrade(&view);
+        Box::pin(async move {
+            let written = core
+                .call(async move { copy.change(account_id, change, answer.choice(), undo).await })
+                .await
+                .map_err(|err| err.to_string())?;
+            Ok(match written {
+                // The view keeps the held change until its toast closes.
+                Permitted::Done(Changed::Held(held)) => match weak.upgrade() {
+                    Some(view) => Permitted::Done(Some(view.holding.borrow_mut().hold(held))),
+                    None => Permitted::Done(None),
+                },
+                Permitted::Done(Changed::Queued(_)) => Permitted::Done(None),
+                Permitted::NeedsPermission => Permitted::NeedsPermission,
+            })
+        })
+    }
+
+    fn offer_undo(&self, said: String, held: u64) {
+        if let Some(view) = self.view() {
+            view.offer_undo(said, held);
+        }
+    }
+
+    fn needs_permission(&self, account_id: AccountId) {
+        if let Some(view) = self.view() {
+            (view.hooks.needs_permission)(account_id);
+        }
+    }
+
+    fn toast(&self, text: String) {
+        if let Some(view) = self.view() {
+            (view.hooks.toast)(&text);
+        }
+    }
+
+    fn push(&self, account_id: AccountId) {
+        if let Some(view) = self.view() {
+            (view.hooks.push)(account_id);
         }
     }
 }
