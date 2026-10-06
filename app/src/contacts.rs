@@ -185,6 +185,26 @@ pub fn declines(end: OfferEnd) -> bool {
     end == OfferEnd::Closed
 }
 
+/// What the offer's timer does when its time is up.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum OfferTimer {
+    /// Ends the offer as timed out.
+    End,
+    /// Looks again later: someone is reading the toast.
+    Wait,
+}
+
+/// What the offer's timer does once its time is up, given whether the
+/// pointer is over the toast and whether the keyboard focus is inside
+/// it. libadwaita's own timeout pauses for both; the offer runs its own
+/// timer, so it pauses here.
+pub fn offer_timer(hovered: bool, focused: bool) -> OfferTimer {
+    match hovered || focused {
+        true => OfferTimer::Wait,
+        false => OfferTimer::End,
+    }
+}
+
 /// What the window says once Save has made contacts of `people`.
 pub fn saved_title(people: &[Address], account: &str) -> String {
     match people {
@@ -242,6 +262,15 @@ mod tests {
 
     fn emails(found: Vec<&Suggestion>) -> Vec<String> {
         found.into_iter().map(|c| c.email.clone()).collect()
+    }
+
+    #[test]
+    fn the_offer_waits_while_the_pointer_or_the_focus_is_on_it() {
+        // WCAG 2.2.1: a person reading the question, by pointer or with a
+        // screen reader on the toast, must not have it vanish mid-read.
+        assert_eq!(offer_timer(false, false), OfferTimer::End);
+        assert_eq!(offer_timer(true, false), OfferTimer::Wait);
+        assert_eq!(offer_timer(false, true), OfferTimer::Wait);
     }
 
     #[test]
