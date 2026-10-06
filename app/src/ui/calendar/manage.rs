@@ -58,6 +58,16 @@ fn list_edit_of(change: &ListChange) -> Option<AccountId> {
     }
 }
 
+/// The account a change subscribes or unsubscribes, which only a provider
+/// with `Offers::subscriptions` takes.
+fn subscription_of(change: &ListChange) -> Option<AccountId> {
+    match change {
+        ListChange::Unsubscribe { account, .. }
+        | ListChange::Add { account, kind: AddKind::Subscribe | AddKind::Holidays } => Some(*account),
+        _ => None,
+    }
+}
+
 /// Shows `dialog` over `parent` with the keyboard focus in `field`, and
 /// answers the response the person chose. An alert dialog puts its own
 /// focus on its first button once it shows, so the field takes it back
@@ -84,6 +94,11 @@ impl CalendarView {
         // before any adapter is asked.
         if let Some(account) = list_edit_of(&change)
             && !self.changeable(account)
+        {
+            return;
+        }
+        if let Some(account) = subscription_of(&change)
+            && !self.subscribes(account)
         {
             return;
         }
@@ -149,6 +164,16 @@ impl CalendarView {
             .iter()
             .find(|(a, _, _)| a.id == account)
             .is_none_or(|(_, offers, _)| offers.calendar_list)
+    }
+
+    /// Whether the account subscribes to calendars and adds holiday ones
+    /// (`Offers::subscriptions`); an account not yet started does.
+    fn subscribes(&self, account: AccountId) -> bool {
+        self.accounts
+            .borrow()
+            .iter()
+            .find(|(a, _, _)| a.id == account)
+            .is_none_or(|(_, offers, _)| offers.subscriptions)
     }
 
     fn withheld_of(&self, account: AccountId) -> Withheld {
@@ -452,5 +477,15 @@ mod tests {
         assert_eq!(list_edit_of(&ListChange::Color { account, calendar: calendar.clone(), color: None }), Some(7));
         assert_eq!(list_edit_of(&ListChange::Add { account, kind: AddKind::Subscribe }), Some(7));
         assert_eq!(list_edit_of(&ListChange::Shown { account, calendar, shown: true }), None);
+    }
+
+    #[test]
+    fn subscribing_unsubscribing_and_holidays_need_an_account_that_takes_subscriptions() {
+        let (account, calendar) = (7, "fixtures".to_string());
+        assert_eq!(subscription_of(&ListChange::Add { account, kind: AddKind::Subscribe }), Some(7));
+        assert_eq!(subscription_of(&ListChange::Add { account, kind: AddKind::Holidays }), Some(7));
+        assert_eq!(subscription_of(&ListChange::Unsubscribe { account, calendar: calendar.clone() }), Some(7));
+        assert_eq!(subscription_of(&ListChange::Add { account, kind: AddKind::New }), None);
+        assert_eq!(subscription_of(&ListChange::Delete { account, calendar }), None);
     }
 }
