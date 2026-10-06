@@ -92,6 +92,12 @@ struct Editor {
     /// from the draft whenever the start moves it (Step 3).
     end_date: RefCell<Option<(gtk::MenuButton, gtk::Calendar)>>,
     end_time: RefCell<Option<gtk::DropDown>>,
+    /// The start row's date button, its calendar and its time, set again
+    /// from the draft when All day changes the start.
+    start_date: RefCell<Option<(gtk::MenuButton, gtk::Calendar)>>,
+    start_time: RefCell<Option<gtk::DropDown>>,
+    /// The Time zone row, shown only for a timed event.
+    zone_row: RefCell<Option<adw::ComboRow>>,
     /// Set while a handler is writing a widget from the draft rather than
     /// the other way round, so that write does not read back as a change.
     quiet: Cell<bool>,
@@ -192,6 +198,9 @@ pub fn open(
         view_zone,
         end_date: RefCell::new(None),
         end_time: RefCell::new(None),
+        start_date: RefCell::new(None),
+        start_time: RefCell::new(None),
+        zone_row: RefCell::new(None),
         quiet: Cell::new(false),
         zone_touched: Cell::new(false),
         title_row: RefCell::new(None),
@@ -633,11 +642,16 @@ impl Editor {
         let start_date = date_button(start_day, &gettext("Start date"), {
             let weak = Rc::downgrade(self);
             move |day| {
-                if let Some(this) = weak.upgrade() {
+                if let Some(this) = weak.upgrade()
+                    && !this.quiet.get()
+                {
                     this.set_start_date(day);
                 }
             }
         });
+        if let Some(calendar) = start_date.popover().and_then(|p| p.child()).and_downcast::<gtk::Calendar>() {
+            *self.start_date.borrow_mut() = Some((start_date.clone(), calendar));
+        }
         let start_time_drop = time_dropdown(start_time);
         ui::name(&start_time_drop, &gettext("Start time"));
         let weak = Rc::downgrade(self);
@@ -694,6 +708,7 @@ impl Editor {
             this.set_end_time(time);
         });
         *self.end_time.borrow_mut() = Some(end_time_drop.clone());
+        *self.start_time.borrow_mut() = Some(start_time_drop.clone());
 
         let starts = adw::ActionRow::builder().title(gettext("Starts")).build();
         starts.add_suffix(&start_date);
@@ -709,7 +724,11 @@ impl Editor {
             this.draft.borrow_mut().set_all_day(row.is_active());
             t1.set_visible(!row.is_active());
             t2.set_visible(!row.is_active());
+            // Leaving all day moves the start to 09:00 and can move the
+            // zone off UTC, so the start row and the zone row follow.
+            this.show_start();
             this.show_end();
+            this.show_zone();
         });
         start_time_drop.set_visible(!all_day.is_active());
         end_time_drop.set_visible(!all_day.is_active());
@@ -766,6 +785,44 @@ impl Editor {
         };
         let at = layout::instant_at(day, time_to_hours(time), &zone);
         self.draft.borrow_mut().set_end(at);
+    }
+
+    /// Sets the start row's widgets from the draft without their own
+    /// handlers reading the change back in.
+    fn show_start(&self) {
+        self.quiet.set(true);
+        let zone: Tz = self.draft.borrow().zone.parse().unwrap_or(self.view_zone);
+        let start = self.draft.borrow().start;
+        let day = local_day(start, zone);
+        if let Some((button, calendar)) = self.start_date.borrow().as_ref() {
+            button.set_label(&format_date(day));
+            calendar.set_date(&day_to_glib(day));
+        }
+        if let Some(drop) = self.start_time.borrow().as_ref() {
+            select_time(drop, local_time(start, zone));
+        }
+        self.quiet.set(false);
+    }
+
+    /// Shows the Time zone row for a timed event only, on the draft's
+    /// zone once the row has its list.
+    fn show_zone(&self) {
+        let Some(row) = self.zone_row.borrow().clone() else { return };
+        let (all_day, zone) = {
+            let draft = self.draft.borrow();
+            (draft.all_day, draft.zone.clone())
+        };
+        row.set_visible(!all_day);
+        if row.model().is_some()
+            && let Some(i) = TZ_VARIANTS.iter().position(|tz| tz.name() == zone)
+            && row.selected() != i as u32
+        {
+            // The row's handler would mark the zone as the person's own
+            // pick; the quiet flag holds it off.
+            self.quiet.set(true);
+            row.set_selected(i as u32);
+            self.quiet.set(false);
+        }
     }
 
     /// Sets the end row's widgets from the draft without their own
@@ -1792,6 +1849,9 @@ impl Editor {
             let weak = Rc::downgrade(&this);
             zone_row_for_expand.connect_selected_notify(move |row| {
                 let Some(this) = weak.upgrade() else { return };
+                if this.quiet.get() {
+                    return;
+                }
                 if let Some(tz) = TZ_VARIANTS.get(row.selected() as usize) {
                     this.draft.borrow_mut().zone = tz.name().to_string();
                     this.zone_touched.set(true);
@@ -1799,6 +1859,7 @@ impl Editor {
             });
         });
         more.add_row(&zone_row);
+        *self.zone_row.borrow_mut() = Some(zone_row.clone());
 
         let busy = adw::SwitchRow::builder()
             .title(gettext("Show as busy"))

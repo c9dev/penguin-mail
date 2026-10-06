@@ -292,6 +292,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   it last updated, instead of leaving you guessing.
 
 ### Fixed
+- Turning All day off for an event in the editor shows its new 09:00 start, and the time you then pick is the time it saves at, in your own time zone.
 - Show in Calendar opens the event's popover even when the calendar refreshes at that moment.
 - The automatic reply dialog names the provider that answers for an IMAP
   account with Sieve, where it used to say Gmail.

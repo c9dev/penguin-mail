@@ -285,10 +285,16 @@ impl Draft {
 
     /// An all-day event runs from midnight UTC of its first day to
     /// midnight UTC after its last, whatever zone the reader is in. Leaving
-    /// all day starts the first day at 09:00 for an hour.
+    /// all day starts the first day at 09:00 for an hour, in the reader's
+    /// zone when the event was in the "UTC" zone all-day events are
+    /// written in, as [`Draft::land`] does: the editor reads the times the
+    /// person picks next in the draft's zone.
     pub fn set_all_day(&mut self, on: bool) {
         if on == self.all_day {
             return;
+        }
+        if !on && self.zone.parse::<Tz>().is_ok_and(|z| z == Tz::UTC) {
+            self.zone = self.view_zone.name().to_string();
         }
         let first = local_day(self.start, self.view_zone);
         if on {
@@ -1167,6 +1173,19 @@ mod tests {
         draft.land(at(24, 14, 0), at(24, 15, 0), false);
         let event = draft.to_event("new", "meet");
         assert_eq!((event.all_day, event.start, event.end, event.zone.as_str()), (false, at(24, 14, 0), at(24, 15, 0), "Europe/Lisbon"));
+    }
+
+    #[test]
+    fn an_all_day_event_turned_timed_takes_the_viewer_s_zone() {
+        let mut o = weekly();
+        let mut event = (*o.event).clone();
+        (event.all_day, event.zone, event.rules) = (true, "UTC".into(), Vec::new());
+        o.event = Arc::new(event);
+        (o.start, o.end) = (utc_midnight(24), utc_midnight(25));
+        let mut draft = Draft::open(&o, &[], Lisbon);
+        draft.set_all_day(false);
+        let event = draft.to_event("new", "meet");
+        assert_eq!((event.start, event.zone.as_str()), (at(24, 9, 0), "Europe/Lisbon"));
     }
 
     #[test]
