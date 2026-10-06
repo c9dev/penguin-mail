@@ -5,6 +5,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ## Unreleased
 
+## 1.0.0 (2026-10-06)
+
 ### New
 
 - Address suggestions show which account each contact comes from, and

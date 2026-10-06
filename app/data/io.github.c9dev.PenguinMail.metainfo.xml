@@ -107,6 +107,264 @@
 
   <!-- scripts/metainfo.sh writes this list from CHANGELOG.md. -->
   <releases>
+    <release version="1.0.0" date="2026-10-06">
+      <url type="details">https://github.com/c9dev/penguin-mail/releases/tag/v1.0.0</url>
+      <description translate="no">
+        <p>New</p>
+        <ul>
+          <li>Address suggestions show which account each contact comes from, and after you send a message you can save its new recipients to that account's contacts with one press.</li>
+          <li>Import your OpenPGP keys and S/MIME certificates in Preferences, under Writing: choose Import beside either row and pick an .asc, .p12 or .pem file.</li>
+          <li>Add a POP3 account for a provider that offers only POP3, or to keep an account's mail on this computer alone: choose Other, then Enter Server Settings, and pick POP3. Mail stays on the server unless you choose to remove it after downloading or after some days. A message the server will not hand over after three tries appears in the account's menu with the server's own words, and About names the file that holds mail kept only on this computer.</li>
+          <li>Add Outlook.com, Hotmail and Microsoft 365 accounts: choose Microsoft in Add Account, or on the first page, and sign in on Microsoft's own page.</li>
+          <li>Outlook accounts get their calendars, with repeating events, invitations and the calendar list, and their contacts, rules and automatic reply.</li>
+          <li>Outlook accounts get a Tags button and Focused and Other tabs over the inbox.</li>
+          <li>Fastmail, iCloud, Yahoo and other accounts added with a password get their calendars and contacts: Penguin Mail finds their CalDAV and CardDAV servers, and Preferences shows what it found and lets you type an address it missed.</li>
+          <li>Rules for accounts added with a password: on the mail server where it runs them, with the automatic reply beside them, or on this computer while Penguin Mail is open where it does not. A rule change made while the server is not answering goes out once it does.</li>
+          <li>Markdown you paste into a rich text message arrives formatted, with Paste as Plain Text on the notice that follows if you wanted the marks. Markdown you type shows a bar with a Format button that turns it into rich text.</li>
+          <li>Edit a rule: click it in Rules, or press Enter on it, to change what it matches or does. Parts the form can't show, such as a forward set up in Gmail, stay as they were.</li>
+          <li>Each label in the sidebar has a ⋯ button on hover with Rename, New Label Inside, Color, Move Up, Move Down and Delete, the same menu a right click opens.</li>
+          <li>Drag a label in the sidebar to put it in the order you like, or drop it on another label to nest it there. Folder accounts work the same way.</li>
+          <li>Events show their attached files, such as Google Drive documents, in the event popover and the editor. Click one to open it in the browser.</li>
+          <li>Attach a file from this computer to an event with Attach File… in the editor. It uploads to your Google Drive with a progress bar you can cancel, large files included, and the event's guests can open it unless you untick sharing. A file attached while offline uploads when you are back online. Removing a file takes it off the event and leaves it in Drive.</li>
+          <li>A file that cannot upload, for want of Drive access or because it moved, no longer holds up your other calendar changes. It shows "Waiting for access" or "File not found" in the editor, with Grant Access or Remove.</li>
+          <li>A calendar file that is not an invitation, such as a train ticket or a booking, now shows an event card in the message with Add to Calendar. Pick the calendar, and for a file with several events, which of them to add. Adding the same file twice does not repeat the events, and the card then says "Added to" the calendar and offers Show in Calendar.</li>
+          <li>Penguin Mail opens .ics files from Files. The file shows the same card in a small window, and says so when no Google account can use its calendar.</li>
+          <li>A reply or a forward opens with the quoted message folded behind a "•••" button under your words, as in Gmail, and still sends with it. Click "•••" to read it, and in a reply to trim it, or × to send without it.</li>
+          <li>The calendar has an Agenda view beside Day, Week and Month, on the A key. It lists the coming days in a centered column, with today at the top, earlier days above and more days loading as you scroll down. A narrow window still shows this list in place of Week and Month.</li>
+          <li>Fold an account's calendars away by clicking its address in the calendar sidebar. The list stays folded the next time you open the app.</li>
+          <li>Right-click a calendar, or use its "⋮" button, to hide it from the list and the grid, or to give it a color of your own. Hidden Calendars at the foot of the list brings one back.</li>
+          <li>Make a calendar of your own with Add Calendar at the foot of the calendar list, and rename or delete one you own from its "⋮" menu. A color or a hidden calendar now changes in Google Calendar too, so your phone shows the same. Each change shows at once and reaches Google when you are next online.</li>
+          <li>Subscribe to a calendar someone publishes by pasting its https or webcal address, or add public holidays from Holiday Calendars, Portugal first. Both stay read-only here and show on every device, and Unsubscribe in the calendar's "⋮" menu takes one off again.</li>
+          <li>The Mail and Calendar switch shows how much unread mail waits while you are in the calendar, and how many invitations wait for your answer while you are in mail.</li>
+          <li>The mini month marks the day the calendar shows and, in Week or Month, the days in view. Click a day there to go to it.</li>
+          <li>Out of office shows as a striped block, focus time with a target and a birthday with a cake, and where you work each day (Home, Office or the building) sits under the day's heading instead of in the all-day row.</li>
+          <li>On a work or school account, make an out-of-office or focus-time entry from the event editor's new Type row, and choose whether it declines new or existing meetings and what the message to the organizer says.</li>
+          <li>The earlier messages quoted under a reply or forward fold away behind a small "•••" button, as in Gmail; click it to read them in place.</li>
+          <li>An invitation's card shows the hours around the meeting from your calendar and says whether anything else is on then.</li>
+          <li>Answer one occurrence of a repeating invitation: after Yes, Maybe or No in the calendar, choose This event only or All events. An answer given offline goes out once you are back online, even after a restart.</li>
+          <li>Add a note to your answer, in the event popover or on the invitation in your mail. The organizer reads it next to your Yes, Maybe or No.</li>
+          <li>Propose a New Time from the calendar's event popover, the same way as from the invitation in your mail.</li>
+          <li>Remove an invitation from your calendar with Remove in its popover or the Delete key. The organizer sees that you declined, and nobody else gets mail about it. Edit in the same popover changes your own reminders, color and busy or free.</li>
+          <li>Move an event to another of your calendars: pick it in the editor's Calendar row and save. A new event from a quick drag can go on any of your calendars too.</li>
+          <li>Penguin Mail comes as a package for Arch Linux: download the <code>.pkg.tar.zst</code> from the releases page and install it with <code>sudo pacman -U</code>.</li>
+          <li>A calendar beside the mail: switch to it at the top of the sidebar or with Alt+2 to see your Google calendars by day, week or month, or as a scrolling list on a narrow window. Answer an invitation from its event and search your events.</li>
+          <li>Add a mail account from Fastmail, iCloud, Yahoo or any other provider with IMAP: choose Add Account, then Another Provider, and type your address and password. Penguin Mail finds the servers, says when the provider wants an app password, and offers gmail.com when you type gmial.com. Archiving on a server with no Archive folder makes one, and a message says so; opening a folder lists its mail right away. Folders that only hold other folders show in the sidebar with their folders under them; you cannot open them or drop mail on them.</li>
+          <li>Calendar events remind you with a notification before they start, with Join for video calls and Snooze for five minutes. Preferences can turn them off.</li>
+          <li>Make, move and delete calendar events: press New Event or N to add one, click an empty slot or day, drag across a day to sketch one out, drag a block to move or stretch it, or open an event and press the pencil or the trash icon. A short event keeps a readable card however briefly it runs. Deleting or dragging offers Undo, and changing or deleting one date of a repeating event asks which occurrences it covers first. Moving a repeating event to another weekday moves its other dates with it, and setting it to not repeat leaves only the one you changed. When Google turns down part of a change to several dates of a repeating event, the event goes back to how it was and a message says why. Double-click an invitation to change its reminders, color and busy status.</li>
+          <li>The assistant can tell you which calendars you have and put an event on the one you name, such as "the Family calendar".</li>
+          <li>The calendar sidebar lists invitations you have not answered yet: open one to see it on the calendar, or open its mail when you still have it.</li>
+          <li>Show in Calendar on an invitation opens the calendar on that day, with the event's details open. Its popover offers Open the invitation in Mail back to the message it arrived in.</li>
+          <li>A Summarize button above a conversation asks the assistant for a summary, when the assistant is set up.</li>
+          <li>The next event on your calendar shows at the foot of the mail sidebar from three hours before it starts; a click opens it in the calendar.</li>
+          <li>An event's popover shows its notes under the place, as readable text with clickable links, and a repeating event says when, such as "Weekly on Wednesday". Its guest list shows every guest's own answer and marks the organizer, with Show all past a few names.</li>
+          <li>Preferences has a Week Starts On choice, next to Working Hours: Automatic follows your locale, or pick Monday or Sunday yourself.</li>
+          <li>Refresh syncs your calendars now, from the calendar's menu, F5, or Ctrl+R.</li>
+        </ul>
+        <p>Improved</p>
+        <ul>
+          <li>The composer fits a window as narrow as a phone: its title and Send's word give way and the formatting buttons pack closer. Its formatting menu marks the paragraph style the cursor is in and names its Markdown items by what they do, and the Subject field no longer says "Subject" twice.</li>
+          <li>An empty search, Remind Me or Drafts says what to do next, and "No Conversation Selected" reads at full strength like the empty list beside it.</li>
+          <li>Preferences names spelling dictionaries by language, "English (Australia)" rather than "en_AU", with each account's address as its row's title, and an address chosen in a drop-down shows whole rather than cut short with room to spare.</li>
+          <li>A message that names no font of its own reads in your desktop's interface font, the one the rest of the window uses, rather than Liberation Sans.</li>
+          <li>A person without a photo has one avatar colour, picked from their address, in the list, the conversation and their contact card.</li>
+          <li>In a window as narrow as a phone, the mail list's title shows whole: the unread line under it goes and New Message moves to a bar at the foot of the list.</li>
+          <li>Dates read one way across the app: "Mon, 5 Oct" in Automatic Reply and Hide My Email, with the year when it is not this year, and "Monday, 5 October 2026 at 13:36" in a message's details and on an invitation, with the time in your desktop's clock.</li>
+          <li>Schedule focus time or out of office from the New Event button's menu or the type switch in quick add, offered only on calendars that can keep them: Google Workspace has both, Outlook has out of office.</li>
+          <li>The category chips over the inbox show each category's name and unread count, "Primary 2", wrapping onto a second or third line when one is too short, and fold to icons in a narrow window.</li>
+          <li>Mail search shows results as you type: a moment after you stop, the mail on this computer shows first and the servers' results follow from three letters on. Enter still searches at once.</li>
+          <li>The composer's header holds Attach Files, a More menu and Send. More has Templates, Preview, Sign and Encrypt, and a shield shows beside Attach Files while the message goes out signed or encrypted.</li>
+          <li>Today's day, date and place over the calendar's days are dark enough to read on their tint in light.</li>
+          <li>The mini month marks today with the only fill and the day you're viewing with a ring, and tints the week in view only in Week view.</li>
+          <li>Section headings in the sidebar and the calendar's hour labels, week number, ALL-DAY, account names, days outside the month and agenda times are dark enough to read in light and dark.</li>
+          <li>Conversations in the list light up under the pointer, as the sidebar's rows do.</li>
+          <li>An event's bubble lists each guest once, calls you "You", marks guests who haven't answered with a clock, and shows a map pin beside the place.</li>
+          <li>The Google tile shows Google's logo and the iCloud tile a cloud, in place of a colored letter.</li>
+          <li>In the snap, when Penguin Mail cannot reach your keyring, the window and Add Account give the command that connects it, with a Copy button, in place of a keyring error. The snap's GnuPG now keeps its own keyring, so keys and certificates in <code>~/.gnupg</code> no longer appear there.</li>
+          <li>The tray menu lists only the accounts with unread mail, and choosing one opens its inbox. With nothing unread it says "No unread mail" instead of listing every address.</li>
+          <li>Add Account and the first window have a new look: pick your provider from a tile, see what it needs before you continue, and follow Google's sign-in, the server lookup and the first download on their own pages, with Cancel and Try Again where you need them.</li>
+          <li>Penguin Mail now describes itself as mail and calendar for Linux, in the About window and in app stores.</li>
+          <li>A new icon and logo.</li>
+          <li>The page your browser shows after you sign in to Google says so with the Penguin Mail icon, in light or dark, and says how to try again if you didn't allow access.</li>
+          <li>With an orange accent, buttons and pills that carry white text, such as Yes on an invitation and the chosen inbox category, are darker so the text reads clearly. Links and small accent text in mail follow the contrast the desktop sets for text.</li>
+          <li>The calendar goes back as far as you look. Go to an older week, month or date, or scroll the Agenda up, and the events of that time load from Google once and stay on this computer. While they load, a small note says so, and offline it says older events can't load, instead of showing an empty week.</li>
+          <li>Resize an event from its top edge as well as its bottom in Day and Week, or change its start with Ctrl+Shift+Up and Ctrl+Shift+Down.</li>
+          <li>Drag an event to another day in Month. It keeps its time and length.</li>
+          <li>Drag an all-day event to another day in Week, or stretch it from either end.</li>
+          <li>Drop an event on the all-day row to make it all-day, or drag an all-day event into the hours to give it an hour at that time.</li>
+          <li>Event reminders, the first day of the week and working hours now sit in the Calendar section of Preferences, on the Contacts &amp; Calendar page.</li>
+          <li>The Labels button in the reading pane has the same shape as the Flag button beside it, an icon and an arrow in one pill.</li>
+          <li>An invitation's card now sits inside its message, under the sender and above the text, and scrolls with it.</li>
+          <li>The mailboxes sit in their own rounded panel under Favorites, Mailboxes and Accounts, and the one you are in is tinted with your accent color.</li>
+          <li>A plain-text message sits on the page, lined up with the sender's avatar, with no grey box around it. HTML mail keeps its white sheet.</li>
+          <li>The inbox categories are chips: the one you are in shows its name on an accent pill, and the others show their unread count on the corner.</li>
+          <li>The conversation you are reading is a tinted card in the list, and an invitation you have opened shows a calendar mark on its row.</li>
+          <li>In Month, an event over several days draws as one bar across them, and a busy week gets more room than an empty one before it folds into "N more".</li>
+          <li>Adding a Google account asks for every permission Penguin Mail uses in one visit to Google, and anything you leave unticked says why it is off, with Grant Access where you would use it. An account added earlier shows a bar above its mail that names what it lacks, until you go through Google's screen once more.</li>
+          <li>The assistant and the invitation card read your Google calendars from this computer, so they answer without the network. A change the assistant makes waits there until Google takes it, even one to a single meeting of a repeating series, which leaves the others alone.</li>
+          <li>An invitation no longer asks you to add the account to GNOME Online Accounts. When Penguin Mail lacks permission to read that calendar, the card offers Grant Access, so the event can show in Calendar.</li>
+          <li>Moving an event, by dragging it, with Shift and an arrow key, or with a new time in the editor, asks first, and you can Cancel to leave it where it was. When the event has guests, the same question asks whether to send them an update; deleting one asks whether to send them a cancellation. A repeating event asks which dates it covers in that same question.</li>
+          <li>Pressing Shift and an arrow key several times asks once, about the whole move. Changing the title, place, notes or guests of a meeting asks whether to tell the guests, and Keep Old Time in the editor's move question saves your other changes at the time the event had; Escape there throws the whole edit away.</li>
+          <li>With Claude Opus 5 or newer, translating a message and reading an unsubscribe page take less time, because those quick jobs no longer think at length.</li>
+          <li>The buttons above a conversation sit in rounded groups: replying, filing, moving and flagging.</li>
+          <li>Undo Send sits at the foot of the sidebar with the seconds left. In a window too narrow for the sidebar it stays a toast.</li>
+          <li>The message header is shorter: who sent it, who it went to, and Details for the rest.</li>
+          <li>A sparkle button beside More opens the assistant from the reading pane, and the calendar's header carries the same button.</li>
+          <li>The Day, Week and Month grids shade the hours and days outside your working hours, which you set in Preferences next to Event Reminders. The assistant's free-time tool now looks inside the same hours.</li>
+          <li>The week starts on the day your locale expects, and every time the calendar shows follows your desktop's clock, 12-hour or 24-hour.</li>
+          <li>The editor's Repeats menu offers "Monthly on the second Tuesday" or "the last Friday" worked out from the event's own date, and keeps showing such a rule from Google as that choice instead of a rule it cannot open. Moving the whole series a day still follows the right weekday.</li>
+          <li>G opens a small date picker and jumps to the day you pick; Ctrl+Z undoes your last calendar change while its Undo toast is still up; and Shift with the Left or Right arrow moves the focused event a day earlier or later. The Keyboard Shortcuts window now lists every calendar key, including the ones that move or resize an event.</li>
+          <li>The event popover names the event's own time zone beside the time when it differs from your desktop's, such as "09:00 New York".</li>
+          <li>Offline, or when a calendar sync fails, the sidebar says so and when it last updated, instead of leaving you guessing.</li>
+        </ul>
+        <p>Fixed</p>
+        <ul>
+          <li>A repeating Outlook meeting made in a time zone such as Sofia or Detroit stays at its time after the clocks change.</li>
+          <li>An Outlook meeting every other week on Sunday and Monday shows on the same weeks in Penguin Mail as in Outlook.</li>
+          <li>Saving the automatic reply while a waiting rule goes out to a mail server with Sieve keeps both, where one of them could be lost.</li>
+          <li>Archiving on a server that has no Archive folder yet no longer says it failed when the mail did move.</li>
+          <li>When your mail server is too busy to move mail, the message names the folder as you spelled it.</li>
+          <li>A rule you add while your mail server is not answering, on a server that runs only one set of rules, now waits and asks before replacing the rules you run there, instead of vanishing with an English error.</li>
+          <li>Deleting an event on an Outlook calendar with many repeating meetings no longer costs a call to Microsoft for each of them on the next refresh, which could get the account slowed down.</li>
+          <li>A day moved in an all-day repeating Outlook event made outside UTC, such as in Berlin, no longer shows on both days, and changing or deleting one day of such a series finds it.</li>
+          <li>Add to Calendar on an Outlook account, for a file about a meeting already on your calendar, no longer drops its guests or turns a repeating meeting into one event, and says which calendar holds it.</li>
+          <li>Editing an Outlook meeting keeps its formatted description, such as a Teams join link, when you leave the description alone, and keeps optional guests optional and booked rooms as rooms.</li>
+          <li>New mail on an IMAP account whose connection keeps dropping while it waits for mail arrives within a minute, rather than up to a quarter of an hour late.</li>
+          <li>Answering an invitation to one date of a repeating meeting that your calendar has not caught up with yet mails the answer for that date, instead of answering the nearest date your calendar holds.</li>
+          <li>A rule on this computer that forwards mail no longer forwards its own forwards when they come back to the Inbox, which could repeat without end.</li>
+          <li>Undo takes back what you did last, even after a rule on this computer has moved new mail since.</li>
+          <li>Deleting one date of a repeating meeting on a CalDAV account mails nobody when you pick Don't send, and deleting one date you were invited to keeps the other dates you were invited to.</li>
+          <li>Declining one date of a repeating meeting on a Fastmail or other CalDAV account declines only that date. It used to answer the whole series.</li>
+          <li>An Outlook account with categories keeps syncing after Microsoft loses track of what changed, where it used to stop syncing for good.</li>
+          <li>The arrow keys stop on a folder that holds only other folders, and Enter opens its menu, so you can rename, move or delete it from the keyboard.</li>
+          <li>The arrow keys move through an account's or a label's menu in the mailbox list, where they used to jump back to the list after the first item.</li>
+          <li>Showing a forwarded message in the composer, or the composer's Preview, no longer loads its remote images, and a link in it opens in your browser.</li>
+          <li>A message that quotes an address or a name with "&amp;" or "&lt;" in it, such as "tom&amp;jerry is not an email address", shows its words instead of an empty bar. The same goes for the Grant Access banner, a signature's first line in Preferences, and the addresses and names in Preferences and contact cards.</li>
+          <li>After you untick every event of a calendar file, the next invitation you open has Add to Calendar ready, where it stayed greyed out.</li>
+          <li>Hiding an Outlook calendar from the list keeps it hidden here without a message saying Outlook refused, since Outlook has no way to hide it on your other devices.</li>
+          <li>Working Hours in Preferences keeps the end after the start, moving the other time when you pick one past it, and a working day can now end at midnight. A day set to end before it starts used to shade the whole calendar.</li>
+          <li>The offer to save new recipients as contacts stays while the pointer is over it or a screen reader is on it, where it could vanish mid-read.</li>
+          <li>In Add Account, going Back while the address is being looked up stops the lookup and turns Continue back on, and a password typed for one address no longer stays filled in for another.</li>
+          <li>Saving a rule with nothing filled in says what is missing in your language, not in English.</li>
+          <li>The event editor names an event's call by what it is, Google Meet, Microsoft Teams, Zoom or a video call, where it called every call Google Meet.</li>
+          <li>After adding a work or school Microsoft account whose organization refused some permissions, the last page says so, where it told you that you had left boxes unticked on a page that has none.</li>
+          <li>Opening a calendar file by a relative path from a terminal, such as <code>penguin-mail invite.ics</code>, works while Penguin Mail runs in the tray, and so does a file whose name is not UTF-8.</li>
+          <li>The assistant's panel no longer runs off the right edge of a smaller window. The mailboxes fold away to make room for it, and in a window too narrow for both, the panel slides over the mail instead.</li>
+          <li>The calendar's Day, Week and Month switch keeps its full width on a smaller screen. The week number, the year and the search button make way for it instead.</li>
+          <li>Searching the calendar finds two new events you made before the server answered, instead of showing only one of them.</li>
+          <li>A photo added to an Outlook contact after Penguin Mail first checked for one now shows up.</li>
+          <li>A server that sends a message's flags and date apart from its headers no longer leaves the message unread and dated 1970.</li>
+          <li>Add Account words a server's unreadable answer in your own language, where it showed an English sentence.</li>
+          <li>Switching between the 12-hour and 24-hour clock in GNOME's settings changes the calendar's hours and event times at once.</li>
+          <li>When Undo cannot take back a calendar move or delete, a message now says the change stays and why.</li>
+          <li>After Show all in an event's details opens the full guest list, Escape still closes the details.</li>
+          <li>Deleting a calendar, subscribing to one or adding holidays says it worked only once it has, and a holiday calendar that could not be added keeps its Add button.</li>
+          <li>Deleting or making a calendar on an Outlook account no longer says Google Calendar.</li>
+          <li>On an Outlook account, Add Calendar offers only New Calendar and a shared calendar's menu no longer offers Unsubscribe, since Outlook turns down subscriptions and holiday calendars.</li>
+          <li>The event editor shows guests, calendars and attached files whose names hold an ampersand or angle brackets, such as "R&amp;D Team" or "Q&amp;A.pdf", where their rows used to come up blank.</li>
+          <li>In a narrow window, Show in Calendar, a search result or a Waiting card opens the event's details over the calendar's list, where they used to point at the hidden month grid.</li>
+          <li>In a narrow window, scrolling to the top of the calendar's list while it starts over no longer shows the same earlier days twice.</li>
+          <li>In a narrow window, the calendar's list keeps the days you scrolled to and your place in it when a sync or your own change refreshes it, where it used to jump back to the first days.</li>
+          <li>In Week and Day view, dragging an out-of-office day or another entry that runs midnight to midnight along the all-day row moves it to the day under the pointer, and it stays a timed entry.</li>
+          <li>Turning All day off for an event in the editor shows its new 09:00 start, and the time you then pick is the time it saves at, in your own time zone.</li>
+          <li>Changing a Google Calendar meeting you organize, even only its title, keeps optional guests optional and keeps a public event public.</li>
+          <li>A POP3 server that accepts the connection and then never starts the encrypted session no longer stalls that account's mail checks until you restart Penguin Mail; the check gives up after 30 seconds.</li>
+          <li>With the interface in Portuguese or German and a 12-hour clock, times show AM and PM, and the event editor's time choices work again.</li>
+          <li>A repeating Outlook meeting with one date cancelled shows every other date in the calendar again, where it showed only the first.</li>
+          <li>Answering an invitation on a Fastmail or other CalDAV account leaves the meeting's revision number to the organizer, so their calendar matches your answer to the meeting they sent.</li>
+          <li>Adding a ticket or booking to a Fastmail or other CalDAV calendar no longer overwrites another event whose id happens to contain the new one's.</li>
+          <li>Saving rules or the automatic reply on a Sieve server that stops answering after the save no longer leaves the dialog waiting.</li>
+          <li>A rule that moves mail to the Trash, kept on a mail server whose account has no Trash folder, files the mail into a new Trash folder, or leaves it in the inbox, instead of deleting it for good.</li>
+          <li>An automatic reply of more than one line on an IMAP account with Sieve keeps showing in Penguin Mail after you save it, and saving it again no longer leaves the server with two replies.</li>
+          <li>In the snap, keys and certificates you import stay when you revert the snap to an earlier revision.</li>
+          <li>An Outlook account with more than a hundred calendars, contact folders or rules shows all of them.</li>
+          <li>An Outlook message no longer shows twice in the list when Penguin Mail fetched it in a batch after first seeing it in a sync.</li>
+          <li>Show in Calendar opens the event's popover even when the calendar refreshes at that moment.</li>
+          <li>The automatic reply dialog names the provider that answers for an IMAP account with Sieve, where it used to say Gmail.</li>
+          <li>An invitation to one date of a repeating meeting on a Fastmail or other CalDAV account says how the series runs, such as "Every Tuesday, 6 left". On an Outlook account the same line no longer waits on Microsoft each time you open the message.</li>
+          <li>When the assistant asks before adding an event with guests, it says the guests get an invitation, and no longer names Google on an Outlook or CalDAV account.</li>
+          <li>The assistant mails an event's guests only when the calendar would: a change they would not notice, or one to your copy of someone else's meeting, goes out without mail, and its question says who hears of the change.</li>
+          <li>An edit you make to an event while an earlier edit of it is still on its way to the server no longer disappears from the calendar, and Undo then shows what the server took.</li>
+          <li>A new colour, reminder or busy setting on one date of your own repeating meeting no longer mails its guests.</li>
+          <li>The conversation list is one Tab stop: Tab lands on the open conversation and the next Tab leaves the list, while the arrow keys, Home, End, Page Up and Page Down move between conversations. A screen reader reads each conversation the focus reaches.</li>
+          <li>The assistant can change a contact on an Outlook or CardDAV account, even with that account's contacts off in Preferences, and it no longer calls an Outlook account's contacts or categories Gmail's.</li>
+          <li>Changing an Outlook contact's company or phone keeps its name. Outlook used to rename the contact after its company.</li>
+          <li>Attachments under a plain-text message start where its words start, rather than 52 pixels in.</li>
+          <li>The Outbox in the sidebar shows a warning only while a message in it failed to send, and an outbox tray of its own otherwise.</li>
+          <li>Dimmed text in light mode, such as the composer's From and Subject labels and the lines under each row in Preferences, is dark enough to read, and the composer's focused field label reads in both modes.</li>
+          <li>Preferences reads "gpg and gpgsm, which hold your keys" with the verb in the plural, and the assistant's setup page names the same model servers as Preferences.</li>
+          <li>Inserting a GIF or WebP picture into a message, or showing a contact photo in such a format, no longer holds up the window while it loads. The composer shows a placeholder until the picture is ready.</li>
+          <li>Muting a conversation on an Outlook, IMAP or POP3 account keeps its later replies out of the Inbox: each goes to the Archive, read and without a notification, while Penguin Mail runs.</li>
+          <li>Format and Format Markdown in the composer keep the pictures in your message where they were, and Undo and Redo keep them too.</li>
+          <li>An account that cannot start syncing no longer stops the accounts after it, as when Penguin Mail restarts itself in the tray; it shows as retrying and starts once it can.</li>
+          <li>Penguin Mail finds the calendars and contacts of Fastmail, GMX, WEB.DE, mail.com and Zoho accounts, and when it finds none, Preferences says whether the password was refused or the server did not answer.</li>
+          <li>Undo in the composer brings words back with the styles they had, after Format and after typing over or deleting them, and Redo brings back the lists Format made.</li>
+          <li>Undo in the composer takes out a picture you just inserted and brings back one you deleted, and Redo does the reverse.</li>
+          <li>Format Markdown in the composer keeps the bold, italics, links and lists you had already made.</li>
+          <li>Pictures in a message keep the words that describe them, which go out with the message for people who cannot see the picture. A picture inserted from a file starts with the file's name, and Describe Picture on its right-click menu changes the words.</li>
+          <li>An invitation's buttons move onto a second line in a narrow reading pane, so the card no longer runs past the edge.</li>
+          <li>A message's details can be selected and copied. Only the Details button, now with a chevron, opens and closes them, and a collapsed message opens from a click anywhere on it.</li>
+          <li>In Month view, the clock on an event waiting to be sent no longer covers its time, and an unanswered invitation's dashed outline no longer cuts through its time.</li>
+          <li>In Month view, an event with a short name such as Gym shows its time again.</li>
+          <li>A label's menu offers Move Up or Move Down only when the label has somewhere to move.</li>
+          <li>Yes no longer looks already chosen on an invitation you haven't answered. The three answers look alike until you pick one.</li>
+          <li>An invitation in a message and the same event in the calendar give the same date, time and count of guests who said yes.</li>
+          <li>The week number in the calendar header is the same in Week and Day view for every day of the week, whichever day your weeks start on.</li>
+          <li>Two short events at the same time in Week or Day show their whole titles on two lines when the column has room, rather than "Sprint p…" and "Call wit…".</li>
+          <li>The calendar's Agenda opens with today's heading at the top, rather than with the day's first event and no day above it.</li>
+          <li>The calendar's view switch always shows the view on screen. When the header runs short it becomes one button, such as "Week", that lists Day, Week, Month and Agenda, and the week keeps all seven days in view.</li>
+          <li>On a phone-width window the calendar keeps New Event, Search and the window buttons in its header, with Today and the arrows beside List and Day at the bottom, and agenda rows fit their card.</li>
+          <li>A window too narrow for the mail list beside the conversation shows one at a time, with a back button, instead of cutting off the conversation's right side.</li>
+          <li>On a phone-width window the mail list and the open conversation fit the screen again, with times, New Message and the window buttons in view.</li>
+          <li>Double-clicking an event opens the editor without leaving the event's bubble open beside it.</li>
+          <li>Show more in an event's bubble opens the rest of the notes instead of closing the bubble. Notes too long for the screen scroll inside it, and Escape still closes it afterwards.</li>
+          <li>A click on empty time in the calendar while an event's bubble is open closes the bubble and nothing more, so it no longer opens a new event that your next click has to close.</li>
+          <li>Answering an invitation in the calendar keeps the hours where you had scrolled them, rather than jumping back to midnight.</li>
+          <li>An event's tooltip no longer covers the bubble you just opened from it.</li>
+          <li>The time on a calendar event is darker in light mode and brighter in dark mode, so it reads clearly on every event colour.</li>
+          <li>The year beside the month in the calendar header is easier to read in both light and dark mode.</li>
+          <li>A reply's quoted message folds behind "•••" again, including replies Penguin Mail sent earlier with each quoted paragraph set apart.</li>
+          <li>The calendar sidebar shows a newly listed calendar as soon as it arrives, even before any of its events do.</li>
+          <li>The assistant's button in the mail and calendar headers is a plain button like its neighbours; only its sparkle turns orange while the panel is open.</li>
+          <li>Switching the calendar between Day, Week and Month no longer jumps months back to an empty range. It stays on the day you were looking at.</li>
+          <li>The calendar's header no longer flickers, with the search button appearing and disappearing, at some window widths.</li>
+          <li>A message opened in a wide window is no longer cut short when you narrow the window: the whole text stays readable.</li>
+          <li>Newsletters keep their own layout: a narrow table column no longer breaks a word one letter per line, and a message designed at a set width keeps it.</li>
+          <li>The page title some mail carries no longer shows as a stray line above the message.</li>
+          <li>Mail that sets its font and colors for the whole message, as GitHub's notifications do, shows in that font, as in Gmail. Small icons in a message's tables no longer vanish, and a count beside one sits level with it.</li>
+          <li>A message with a wide space character, such as some bank and shop receipts, opens again instead of leaving the reading pane stuck.</li>
+          <li>Events side by side in a narrow week lane stay inside their blocks. A title that does not fit ends in "…", and the time shortens to the start, or leaves, when the lane has no room for it.</li>
+          <li>In dark mode, a reply with quoted text shows on the dark page instead of in a white box.</li>
+          <li>Picking a contact from the suggestions in an event's Guests field adds the guest at once and empties the field, with a gap above it; the start and end times now stand as tall as the dates beside them.</li>
+          <li>Calendar search keeps the events that matter even when a common word matches hundreds of past ones: upcoming events first, then the most recent past ones, instead of whichever rows happened to load first.</li>
+          <li>Calendar search matches an event's notes as the text they show, not Google's HTML tags: a <code>&lt;br&gt;</code> no longer matches a search for "br", and a word a tag splits still matches.</li>
+          <li>The assistant's calendar tools read an event's notes as the text they show, not Google's HTML tags.</li>
+          <li>Calendar search results and the "N more" popover show each event's end time and calendar, not just when it starts.</li>
+          <li>At 700 pixels wide, the calendar's Day, Week and Month switch no longer squeezes its labels into each other; Week gives way to Month until the window is wide enough for all three.</li>
+          <li>The month view's "N more" popover lets a long event title use the room it has before cutting it short.</li>
+          <li>An event's notes from Google Calendar show as readable text in the editor instead of HTML tags, and their links still work after you save.</li>
+          <li>A Google event made outside Google Calendar shows at its real time and zone in the editor, not in UTC, and saving it keeps that zone.</li>
+          <li>Dragging a weekday event to another day with All events keeps it on Monday to Friday, even after the series was split with This and following.</li>
+          <li>A guest you add to an event gets Google's invitation, even when you pick them from the suggestions and press Save without pressing Enter.</li>
+          <li>Archive, Junk, Trash, All Mail, smart mailboxes and searches show mail you delete, junk, archive or move as soon as you open them, and no longer bring back mail that left them.</li>
+          <li>Marking a Gmail message as junk from the Trash moves it to Junk, and deleting one from Junk moves it to the Trash, instead of leaving it in neither.</li>
+          <li>Moving or changing a second calendar event while the first one's Undo is still showing no longer closes Penguin Mail.</li>
+          <li>The Flatpak keeps its Google sign-in, IMAP passwords and AI keys in its own encrypted store instead of the desktop's shared keyring, which it no longer opens for every app to read; sign in again once to move an existing account over.</li>
+          <li><code>penguin-mail --demo</code> removes its sample store when it closes, and clears what earlier demo runs left in the temporary folder, which often lives in memory.</li>
+          <li>The message after Undo names the label, such as Receipts, where it showed a code such as Label_5.</li>
+          <li>Archiving or moving a whole conversation on an IMAP account no longer pulls your own reply out of Sent, or an old message out of Trash.</li>
+          <li>Archiving, deleting or moving a conversation on an IMAP account moves only its messages in the folder you are looking at. A message filed in another folder stays there.</li>
+          <li>An account set up manually under a listed provider, such as Fastmail, shows that provider's name and rules instead of its bare domain.</li>
+          <li><code>penguin-mail --demo</code>'s sample invitation keeps its series ending on the same time of day it started; the clocks going back used to move it an hour earlier.</li>
+          <li>Send Later, Remind Me and Follow Up stay listed in the sidebar when empty, so the rows below them no longer jump.</li>
+          <li>Dragging across empty time on the calendar stays in the day and column where it started, instead of scrolling the grid and offering to create an event that ran off the end of the wrong day.</li>
+          <li>Double-clicking a calendar event opens its editor, instead of leaving only its popover open.</li>
+          <li>In light mode, message previews, dates, mailbox counts and the grey sender lines above each message are darker and easier to read.</li>
+          <li>Tab moves through a conversation's messages and links with a ring on the one it reaches, then on out of the page, instead of stopping on something invisible where letter shortcuts no longer worked.</li>
+          <li>The mailbox list is one Tab stop: the arrow keys move through it without opening each mailbox on the way, Enter or Space opens one, and the Menu key or Shift+F10 opens a row's menu.</li>
+          <li>The card above an unsent or translated message lines up with the message under it, instead of running past it on both sides.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.3.0" date="2026-09-24">
       <url type="details">https://github.com/c9dev/penguin-mail/releases/tag/v0.3.0</url>
       <description translate="no">
