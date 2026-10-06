@@ -828,6 +828,7 @@ async fn an_edit_keeps_each_attendees_type() {
         .collect();
     let want = [("ann@example.com", "optional"), ("room4@example.com", "resource"), ("bo@example.com", "required")];
     assert_eq!(kinds, want.map(|(a, k)| (a.to_string(), k.to_string())));
+}
 
 /// Outlook keeps no hidden flag on its calendars, so Hide from the List
 /// stays on this computer: nothing waits to go out, where a queued hide
