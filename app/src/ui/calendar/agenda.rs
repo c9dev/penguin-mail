@@ -639,6 +639,26 @@ impl Agenda {
         self.scrolled.vadjustment().set_value(0.0);
     }
 
+    /// Replaces the rows with `occurrences`, read again for the days the
+    /// agenda already holds, and keeps the scroll and the line that says
+    /// nothing older loads: a reload after a sync redraws what the reader
+    /// is looking at rather than taking them back to the top.
+    pub fn replace(
+        &self,
+        occurrences: &[Occurrence],
+        calendars: &HashMap<(AccountId, String), Calendar>,
+        zone: &chrono::Local,
+    ) {
+        *self.calendars.borrow_mut() = calendars.clone();
+        let adjustment = self.scrolled.vadjustment();
+        let value = adjustment.value();
+        let rows = sorted_rows(occurrences, zone);
+        let dates: Vec<NaiveDate> = rows.iter().map(|row| row.date).collect();
+        let sections = sections_of(&dates);
+        self.model.set_rows(rows, sections);
+        adjustment.set_value(value);
+    }
+
     /// Inserts `occurrences` before the agenda's earliest row and
     /// scrolls so the row that was first stays first: `ListView::scroll_to`
     /// with its new index, once GTK has laid the inserted rows out.

@@ -479,8 +479,11 @@ impl DavApi for DavClient {
     async fn find_uid(&self, collection: &str, uid: &str) -> Result<Option<Fetched>, DavError> {
         let found = self.multistatus("REPORT", collection, "1", body::uid_query(uid)).await?;
         let asked = self.url(collection)?;
+        // A CalDAV text-match finds the UID as a substring (RFC 4791
+        // section 9.7.5), so "12345" also matches "order-12345@shop".
         Ok(found.responses.into_iter().find_map(|r| {
-            Some(Fetched { etag: r.props.etag.unwrap_or_default(), body: r.props.calendar_data?, href: absolute(&asked, &r.href) })
+            let body = r.props.calendar_data.filter(|data| crate::ical::holds_uid(data, uid))?;
+            Some(Fetched { etag: r.props.etag.unwrap_or_default(), body, href: absolute(&asked, &r.href) })
         }))
     }
 

@@ -211,6 +211,47 @@ async fn a_redirect_within_the_site_keeps_the_password() {
     assert!(seen[0].headers.contains_key("authorization"));
 }
 
+fn uid_answer(events: &[(&str, &str)]) -> String {
+    let responses: String = events
+        .iter()
+        .map(|(href, uid)| {
+            format!(
+                r#"<d:response><d:href>{href}</d:href><d:propstat><d:prop><d:getetag>"1"</d:getetag>
+<c:calendar-data>BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+UID:{uid}
+DTSTART:20261101T090000Z
+END:VEVENT
+END:VCALENDAR
+</c:calendar-data></d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat></d:response>"#
+            )
+        })
+        .collect();
+    format!(r#"<?xml version="1.0"?><d:multistatus xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav">{responses}</d:multistatus>"#)
+}
+
+#[tokio::test]
+async fn find_uid_ignores_an_event_whose_uid_only_contains_the_one_asked() {
+    let server = MockServer::start().await;
+    Mock::given(method("REPORT")).and(path("/cal/work/"))
+        .respond_with(multistatus(uid_answer(&[("/cal/work/order.ics", "order-12345@shop.example"), ("/cal/work/t.ics", "12345")])))
+        .mount(&server)
+        .await;
+    let found = client(&server).find_uid("/cal/work/", "12345").await.unwrap().unwrap();
+    assert_eq!(found.href, format!("{}/cal/work/t.ics", server.uri()));
+}
+
+#[tokio::test]
+async fn find_uid_finds_nothing_when_only_a_longer_uid_matched() {
+    let server = MockServer::start().await;
+    Mock::given(method("REPORT")).and(path("/cal/work/"))
+        .respond_with(multistatus(uid_answer(&[("/cal/work/order.ics", "order-12345@shop.example")])))
+        .mount(&server)
+        .await;
+    assert!(client(&server).find_uid("/cal/work/", "12345").await.unwrap().is_none());
+}
+
 fn one_event_answer(href: &str) -> String {
     format!(
         r#"<?xml version="1.0"?><d:multistatus xmlns:d="DAV:"><d:response><d:href>{href}</d:href>

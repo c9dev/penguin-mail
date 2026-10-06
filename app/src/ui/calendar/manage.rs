@@ -32,16 +32,40 @@ const FIRST_COLOR: usize = 5;
 /// The line under "Delete “Work”?", which says what goes with it.
 pub fn delete_body(events: usize) -> String {
     match events {
-        0 => gettext("The calendar is deleted from Google Calendar on every device. This cannot be undone."),
+        0 => gettext("The calendar is deleted on every device. This cannot be undone."),
         n => fill_plural(
-            "The calendar and its {count} event are deleted from Google Calendar on every device. \
-             This cannot be undone.",
-            "The calendar and its {count} events are deleted from Google Calendar on every device. \
-             This cannot be undone.",
+            "The calendar and its {count} event are deleted on every device. This cannot be undone.",
+            "The calendar and its {count} events are deleted on every device. This cannot be undone.",
             n,
             &[("count", &n.to_string())],
         ),
     }
+}
+
+/// What the view does once a change to the calendar list has run.
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum Afterwards {
+    /// The copy took it: reload, and say `Some` words.
+    Done(Option<String>),
+    /// The account withheld the permission it needs: ask for it.
+    NeedsPermission,
+    /// It failed: say why.
+    Failed(String),
+}
+
+/// What follows `done`, a change to the calendar list: `said` once the
+/// copy took it, the permission question, or `failed` with the reason.
+fn afterwards<T, E: std::fmt::Display>(done: Result<Permitted<T>, E>, said: Option<String>, failed: &str) -> Afterwards {
+    match done {
+        Ok(Permitted::Done(_)) => Afterwards::Done(said),
+        Ok(Permitted::NeedsPermission) => Afterwards::NeedsPermission,
+        Err(err) => Afterwards::Failed(with_reason(failed, &err, &[])),
+    }
+}
+
+/// The line under "New Calendar", for the account at `address`.
+pub fn new_calendar_body(address: &str) -> String {
+    fill(&gettext("A calendar of your own on {account}, on every device."), &[("account", address)])
 }
 
 /// The account a change to the calendar list would write to, or `None`
@@ -55,6 +79,16 @@ fn list_edit_of(change: &ListChange) -> Option<AccountId> {
         | ListChange::Unsubscribe { account, .. }
         | ListChange::Add { account, .. } => Some(*account),
         ListChange::Listed { .. } | ListChange::Shown { .. } | ListChange::Folded { .. } => None,
+    }
+}
+
+/// The account a change subscribes or unsubscribes, which only a provider
+/// with `Offers::subscriptions` takes.
+fn subscription_of(change: &ListChange) -> Option<AccountId> {
+    match change {
+        ListChange::Unsubscribe { account, .. }
+        | ListChange::Add { account, kind: AddKind::Subscribe | AddKind::Holidays } => Some(*account),
+        _ => None,
     }
 }
 
@@ -84,6 +118,11 @@ impl CalendarView {
         // before any adapter is asked.
         if let Some(account) = list_edit_of(&change)
             && !self.changeable(account)
+        {
+            return;
+        }
+        if let Some(account) = subscription_of(&change)
+            && !self.subscribes(account)
         {
             return;
         }
@@ -122,21 +161,40 @@ impl CalendarView {
         failed: String,
         edit: impl Future<Output = Result<Permitted<T>, SyncError>> + Send + 'static,
     ) {
+        self.run_list_edit_then(account, next_event, None, failed, edit, |_| {});
+    }
+
+    /// [`Self::run_list_edit`], saying `said` once the copy took the
+    /// change, and then telling `finished` whether it did.
+    fn run_list_edit_then<T: Send + 'static>(
+        self: &Rc<Self>,
+        account: AccountId,
+        next_event: bool,
+        said: Option<String>,
+        failed: String,
+        edit: impl Future<Output = Result<Permitted<T>, SyncError>> + Send + 'static,
+        finished: impl FnOnce(bool) + 'static,
+    ) {
         let weak = Rc::downgrade(self);
         let core = Rc::clone(&self.core);
         glib::spawn_future_local(async move {
             let done = core.call(edit).await;
             let Some(view) = weak.upgrade() else { return };
-            match done {
-                Ok(Permitted::Done(_)) => {
+            let afterwards = afterwards(done, said, &failed);
+            finished(matches!(afterwards, Afterwards::Done(_)));
+            match afterwards {
+                Afterwards::Done(said) => {
                     view.reload();
                     if next_event {
                         (view.hooks.next_event)();
                     }
                     (view.hooks.push)(account);
+                    if let Some(said) = said {
+                        view.say(&said);
+                    }
                 }
-                Ok(Permitted::NeedsPermission) => view.needs(Permission::ManageCalendars, account),
-                Err(err) => view.say(&with_reason(&failed, &err, &[])),
+                Afterwards::NeedsPermission => view.needs(Permission::ManageCalendars, account),
+                Afterwards::Failed(words) => view.say(&words),
             }
         });
     }
@@ -149,6 +207,16 @@ impl CalendarView {
             .iter()
             .find(|(a, _, _)| a.id == account)
             .is_none_or(|(_, offers, _)| offers.calendar_list)
+    }
+
+    /// Whether the account subscribes to calendars and adds holiday ones
+    /// (`Offers::subscriptions`); an account not yet started does.
+    fn subscribes(&self, account: AccountId) -> bool {
+        self.accounts
+            .borrow()
+            .iter()
+            .find(|(a, _, _)| a.id == account)
+            .is_none_or(|(_, offers, _)| offers.subscriptions)
     }
 
     fn withheld_of(&self, account: AccountId) -> Withheld {
@@ -228,10 +296,15 @@ impl CalendarView {
                 return;
             }
             let (copy, id) = (this.core.calendar_copy(), held.id.clone());
-            this.run_list_edit(account, true, gettext("Could not delete the calendar: {reason}"), async move {
-                copy.delete_calendar(account, &id).await
-            });
-            this.say(&fill(&gettext("Deleted “{calendar}”"), &[("calendar", &held.name)]));
+            let said = fill(&gettext("Deleted “{calendar}”"), &[("calendar", &held.name)]);
+            this.run_list_edit_then(
+                account,
+                true,
+                Some(said),
+                gettext("Could not delete the calendar: {reason}"),
+                async move { copy.delete_calendar(account, &id).await },
+                |_| {},
+            );
         });
     }
 
@@ -269,10 +342,7 @@ impl CalendarView {
         super::ensure_tints(crate::ui::LABEL_COLORS.iter().map(|(hex, _)| *hex));
         let dialog = adw::AlertDialog::new(
             Some(&gettext("New Calendar")),
-            Some(&fill(
-                &gettext("A calendar of your own on {account}, in Google Calendar on every device."),
-                &[("account", &self.address_of(account))],
-            )),
+            Some(&new_calendar_body(&self.address_of(account))),
         );
         let name = gtk::Entry::builder()
             .placeholder_text(gettext("Name"))
@@ -359,10 +429,14 @@ impl CalendarView {
                 return;
             }
             let (copy, typed) = (this.core.calendar_copy(), address.text().to_string());
-            this.run_list_edit(account, false, gettext("Could not subscribe: {reason}"), async move {
-                copy.subscribe(account, &typed).await
-            });
-            this.say(&gettext("Subscribed. The events arrive once Google Calendar reads the address."));
+            this.run_list_edit_then(
+                account,
+                false,
+                Some(gettext("Subscribed. The events arrive once Google Calendar reads the address.")),
+                gettext("Could not subscribe: {reason}"),
+                async move { copy.subscribe(account, &typed).await },
+                |_| {},
+            );
         });
     }
 
@@ -396,7 +470,7 @@ impl CalendarView {
     /// One region's row: its name, and Add, or "Added" once the account
     /// has the region's calendar.
     fn holiday_row(self: &Rc<Self>, account: AccountId, region: Region) -> adw::ActionRow {
-        let row = adw::ActionRow::builder().title(&region.name).build();
+        let row = crate::ui::plain_row().title(&region.name).build();
         let added = || gtk::Label::builder().label(gettext("Added")).css_classes(["dim-label"]).build();
         if self.calendar_of(account, &region.calendar_id()).is_some() {
             row.add_suffix(&added());
@@ -416,13 +490,27 @@ impl CalendarView {
             let Some(view) = weak.upgrade() else { return };
             let copy = view.core.calendar_copy();
             let (id, name) = (region.calendar_id(), region.calendar_name());
-            view.run_list_edit(account, false, gettext("Could not add the holidays: {reason}"), async move {
-                copy.add_public(account, &id, &name).await
-            });
-            add.set_visible(false);
-            if let Some(row) = held_row.upgrade() {
-                row.add_suffix(&added());
-            }
+            // Add waits for the copy's answer, and comes back when the
+            // holidays could not be added, so it can be pressed again.
+            add.set_sensitive(false);
+            let (pressed, held_row) = (add.downgrade(), held_row.clone());
+            view.run_list_edit_then(
+                account,
+                false,
+                None,
+                gettext("Could not add the holidays: {reason}"),
+                async move { copy.add_public(account, &id, &name).await },
+                move |done| {
+                    let Some(add) = pressed.upgrade() else { return };
+                    add.set_sensitive(!done);
+                    if done {
+                        add.set_visible(false);
+                        if let Some(row) = held_row.upgrade() {
+                            row.add_suffix(&added());
+                        }
+                    }
+                },
+            );
         });
         row
     }
@@ -439,6 +527,27 @@ mod tests {
     }
 
     #[test]
+    fn deleting_a_calendar_names_no_provider_since_outlook_deletes_too() {
+        for events in [0, 1, 12] {
+            assert!(!delete_body(events).contains("Google"), "{}", delete_body(events));
+        }
+        assert!(!new_calendar_body("ana@outlook.example").contains("Google"));
+    }
+
+    #[test]
+    fn a_list_edit_says_it_is_done_only_once_the_copy_took_it() {
+        let said = Some("Deleted “Work”".to_string());
+        let failed = "Could not delete the calendar: {reason}";
+        assert_eq!(afterwards(Ok::<_, SyncError>(Permitted::Done(())), said.clone(), failed), Afterwards::Done(said.clone()));
+        assert_eq!(afterwards(Ok::<_, SyncError>(Permitted::<()>::NeedsPermission), said.clone(), failed), Afterwards::NeedsPermission);
+        let err = SyncError::NoCalendar("work".into());
+        assert_eq!(
+            afterwards(Err::<Permitted<()>, _>(err), said, failed),
+            Afterwards::Failed("Could not delete the calendar: there is no calendar work to put the event on".into())
+        );
+    }
+
+    #[test]
     fn deleting_a_calendar_says_how_many_events_go() {
         assert!(delete_body(1).contains("its 1 event are"), "{}", delete_body(1));
         assert!(delete_body(12).contains("its 12 events"));
@@ -452,5 +561,15 @@ mod tests {
         assert_eq!(list_edit_of(&ListChange::Color { account, calendar: calendar.clone(), color: None }), Some(7));
         assert_eq!(list_edit_of(&ListChange::Add { account, kind: AddKind::Subscribe }), Some(7));
         assert_eq!(list_edit_of(&ListChange::Shown { account, calendar, shown: true }), None);
+    }
+
+    #[test]
+    fn subscribing_unsubscribing_and_holidays_need_an_account_that_takes_subscriptions() {
+        let (account, calendar) = (7, "fixtures".to_string());
+        assert_eq!(subscription_of(&ListChange::Add { account, kind: AddKind::Subscribe }), Some(7));
+        assert_eq!(subscription_of(&ListChange::Add { account, kind: AddKind::Holidays }), Some(7));
+        assert_eq!(subscription_of(&ListChange::Unsubscribe { account, calendar: calendar.clone() }), Some(7));
+        assert_eq!(subscription_of(&ListChange::Add { account, kind: AddKind::New }), None);
+        assert_eq!(subscription_of(&ListChange::Delete { account, calendar }), None);
     }
 }

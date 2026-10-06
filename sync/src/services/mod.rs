@@ -514,6 +514,7 @@ impl AccountServices {
             event_files: features.event_files,
             moves_events: features.moves_events,
             calendar_list: features.calendar_list,
+            subscriptions: features.subscriptions,
             quiet_changes: features.quiet_changes,
             out_of_office: features.out_of_office,
             focus_time: features.focus_time,
@@ -531,6 +532,9 @@ struct CalendarFeatures {
     event_files: bool,
     moves_events: bool,
     calendar_list: bool,
+    /// A calendar can join the list by its address or as a public
+    /// holiday calendar, and leave it again. Graph has no call for any.
+    subscriptions: bool,
     /// A change can go without mailing the guests. Graph mails them on
     /// every change an organizer makes and has no switch against it.
     quiet_changes: bool,
@@ -551,6 +555,7 @@ impl CalendarFeatures {
         event_files: false,
         moves_events: false,
         calendar_list: false,
+        subscriptions: false,
         quiet_changes: false,
         out_of_office: false,
         focus_time: false,
@@ -560,6 +565,7 @@ impl CalendarFeatures {
         event_files: false,
         moves_events: false,
         calendar_list: true,
+        subscriptions: false,
         quiet_changes: false,
         out_of_office: true,
         focus_time: false,
@@ -571,6 +577,7 @@ impl CalendarFeatures {
         event_files: true,
         moves_events: true,
         calendar_list: true,
+        subscriptions: true,
         quiet_changes: true,
         out_of_office: false,
         focus_time: false,
@@ -583,6 +590,7 @@ impl CalendarFeatures {
         event_files: false,
         moves_events: false,
         calendar_list: false,
+        subscriptions: false,
         quiet_changes: true,
         out_of_office: false,
         focus_time: false,
@@ -692,6 +700,10 @@ pub struct Offers {
     /// The calendar list can change: a new calendar, a rename, a colour,
     /// a subscription, removing one.
     pub calendar_list: bool,
+    /// A calendar can join the list by its address or as a public holiday
+    /// calendar, and a subscribed one can leave it. Google offers these;
+    /// Outlook changes its list but has no call for them.
+    pub subscriptions: bool,
     /// A change to an event can go without mailing its guests, so the
     /// window may offer to send none. Outlook mails them on every change.
     pub quiet_changes: bool,
@@ -723,6 +735,7 @@ impl Offers {
         event_files: true,
         moves_events: true,
         calendar_list: true,
+        subscriptions: true,
         quiet_changes: true,
         // A personal Gmail account keeps neither type, and an account
         // still starting offers none until it says it keeps them.

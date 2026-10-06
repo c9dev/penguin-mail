@@ -373,12 +373,63 @@ fn flag_strings(list: &[Cow<'_, str>]) -> Result<Vec<String>, ImapError> {
     }
 }
 
+/// The items a FETCH answer carries besides the header section.
+#[derive(Default)]
+struct Meta {
+    flags: Option<Vec<String>>,
+    internal_date: Option<EpochMillis>,
+    size: Option<u64>,
+    modseq: Option<u64>,
+}
+
+impl Meta {
+    fn of(attributes: &[AttributeValue<'_>]) -> Result<Meta, ImapError> {
+        let mut meta = Meta::default();
+        for attribute in attributes {
+            match attribute {
+                AttributeValue::Flags(list) => meta.flags = Some(flag_strings(list)?),
+                AttributeValue::InternalDate(date) => meta.internal_date = internal_date(date),
+                AttributeValue::Rfc822Size(size) => meta.size = Some(u64::from(*size)),
+                AttributeValue::ModSeq(m) => meta.modseq = Some(*m),
+                _ => {}
+            }
+        }
+        Ok(meta)
+    }
+
+    /// Takes every item `later` has, keeping its own for the rest.
+    fn merge(&mut self, later: Meta) {
+        self.flags = later.flags.or(self.flags.take());
+        self.internal_date = later.internal_date.or(self.internal_date);
+        self.size = later.size.or(self.size);
+        self.modseq = later.modseq.or(self.modseq);
+    }
+
+    fn put_on(self, fetched: &mut Fetched) {
+        if let Some(flags) = self.flags {
+            fetched.flags = flags;
+        }
+        fetched.internal_date = self.internal_date.or(fetched.internal_date);
+        fetched.size = self.size.or(fetched.size);
+        fetched.modseq = self.modseq.or(fetched.modseq);
+    }
+
+    fn flag_count(&self) -> usize {
+        self.flags.as_ref().map_or(0, Vec::len)
+    }
+}
+
 /// The header fetch that lists messages: one [`Fetched`] per UID asked
-/// for, lowest first, the last answer for a UID replacing any before it,
-/// the others dropped as [`FlagsReader`] drops them.
+/// for, lowest first. A server may answer one message in several FETCH
+/// responses, the header section in one and the flags and dates in
+/// another, in either order, so the items of every response for a UID
+/// merge, a later item replacing an earlier one. A UID that never gets a
+/// header is dropped, as [`FlagsReader`] drops what it did not ask for.
 pub(crate) struct HeadersReader {
     wanted: UidSet,
     fetched: BTreeMap<u32, Fetched>,
+    /// Items that arrived before their message's header section.
+    early: BTreeMap<u32, Meta>,
     flag_budget: FlagBudget,
     error: Option<ImapError>,
 }
@@ -388,6 +439,7 @@ impl HeadersReader {
         HeadersReader {
             wanted: uids.clone(),
             fetched: BTreeMap::new(),
+            early: BTreeMap::new(),
             flag_budget: FlagBudget::default(),
             error: None,
         }
@@ -395,6 +447,42 @@ impl HeadersReader {
 
     pub(crate) fn finish(self) -> Vec<Fetched> {
         self.fetched.into_values().collect()
+    }
+
+    fn take(&mut self, uid: u32, attributes: &[AttributeValue<'_>]) -> Result<(), ImapError> {
+        let mut meta = Meta::of(attributes)?;
+        let header = attributes.iter().find_map(|a| match a {
+            AttributeValue::BodySection {
+                data: Some(data), ..
+            } => Some(data.as_ref()),
+            _ => None,
+        });
+        let early = self.early.remove(&uid);
+        let early_flags = early.as_ref().map_or(0, Meta::flag_count);
+        if let Some(header) = header {
+            let mut fetched = Fetched::from_header(uid, header);
+            if let Some(mut early) = early {
+                early.merge(meta);
+                meta = early;
+            }
+            let after = meta.flag_count();
+            meta.put_on(&mut fetched);
+            let before = self.fetched.get(&uid).map_or(0, |f| f.flags.len()) + early_flags;
+            self.flag_budget.swap(before, after)?;
+            self.fetched.insert(uid, fetched);
+        } else if let Some(fetched) = self.fetched.get_mut(&uid) {
+            // The header came first; this response adds to it.
+            let before = fetched.flags.len();
+            let after = meta.flags.as_ref().map_or(before, Vec::len);
+            meta.put_on(fetched);
+            self.flag_budget.swap(before, after)?;
+        } else {
+            let mut early = early.unwrap_or_default();
+            early.merge(meta);
+            self.flag_budget.swap(early_flags, early.flag_count())?;
+            self.early.insert(uid, early);
+        }
+        Ok(())
     }
 }
 
@@ -420,39 +508,9 @@ impl Reads for HeadersReader {
         if !self.wanted.contains(uid) {
             return;
         }
-        let header = attributes.iter().find_map(|a| match a {
-            AttributeValue::BodySection {
-                data: Some(data), ..
-            } => Some(data.as_ref()),
-            _ => None,
-        });
-        let Some(header) = header else {
-            // A FETCH with a UID and no header is a flag report, not an
-            // answer to this command.
-            return;
-        };
-        let mut fetched = Fetched::from_header(uid, header);
-        for attribute in attributes {
-            match attribute {
-                AttributeValue::Flags(list) => match flag_strings(list) {
-                    Ok(flags) => fetched.flags = flags,
-                    Err(err) => {
-                        self.error = Some(err);
-                        return;
-                    }
-                },
-                AttributeValue::InternalDate(date) => fetched.internal_date = internal_date(date),
-                AttributeValue::Rfc822Size(size) => fetched.size = Some(u64::from(*size)),
-                AttributeValue::ModSeq(m) => fetched.modseq = Some(*m),
-                _ => {}
-            }
-        }
-        let before = self.fetched.get(&uid).map_or(0, |f| f.flags.len());
-        if let Err(err) = self.flag_budget.swap(before, fetched.flags.len()) {
+        if let Err(err) = self.take(uid, attributes) {
             self.error = Some(err);
-            return;
         }
-        self.fetched.insert(uid, fetched);
     }
 }
 
@@ -880,6 +938,25 @@ pub(crate) mod tests {
             fetched.from.as_ref().map(|a| a.email.as_str()),
             Some("a@b.pt")
         );
+    }
+
+    #[test]
+    fn a_message_answered_in_two_fetches_keeps_the_items_of_both() {
+        let header = "BODY[HEADER.FIELDS (FROM SUBJECT)] {32}\r\nFrom: a@b.pt\r\nSubject: hello\r\n\r\n)\r\n";
+        let meta = "FLAGS (\\Seen) INTERNALDATE \" 7-Feb-2026 10:00:00 +0100\" RFC822.SIZE 900";
+        for lines in [
+            [format!("* 5 FETCH (UID 12 {meta})\r\n"), format!("* 5 FETCH (UID 12 {header}")],
+            [format!("* 5 FETCH (UID 12 {header}"), format!("* 5 FETCH (UID 12 {meta})\r\n")],
+        ] {
+            let mut reader = HeadersReader::new(&UidSet::from_uids([12]));
+            feed(&mut reader, &[lines[0].as_str(), lines[1].as_str()]);
+            let fetched = reader.finish();
+            assert_eq!(fetched.len(), 1);
+            assert_eq!(fetched[0].flags, ["\\Seen"]);
+            assert_eq!(fetched[0].internal_date, Some(1_770_454_800_000));
+            assert_eq!(fetched[0].size, Some(900));
+            assert_eq!(fetched[0].subject, "hello");
+        }
     }
 
     #[test]

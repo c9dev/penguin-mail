@@ -329,6 +329,14 @@ impl Effects for Ports {
         true
     }
 
+    fn open_in_list(&self, o: &Occurrence) {
+        let Some(view) = self.view() else { return };
+        // The list recycles its rows, so the popover points at the list,
+        // as it does when the reader picks a row.
+        let anchor = view.list.widget.clone().upcast::<gtk::Widget>();
+        view.show_event(&anchor, o);
+    }
+
     fn draw_sidebar(&self, listed: Vec<Listed>, busy: Vec<Occurrence>, mini: Range) {
         if let Some(view) = self.view() {
             view.show_sidebar(listed, &busy, mini);
@@ -346,6 +354,12 @@ impl Effects for Ports {
         let Some(view) = self.view() else { return };
         let found = view.agenda_events(found, first, last);
         view.list.show(&found, &view.calendars.borrow(), &chrono::Local);
+    }
+
+    fn redraw_list(&self, found: Vec<Occurrence>, first: NaiveDate, last: NaiveDate) {
+        let Some(view) = self.view() else { return };
+        let found = view.agenda_events(found, first, last);
+        view.list.replace(&found, &view.calendars.borrow(), &chrono::Local);
     }
 
     fn prepend_list(&self, found: Vec<Occurrence>, first: NaiveDate, last: NaiveDate, listed_from: EpochMillis) {

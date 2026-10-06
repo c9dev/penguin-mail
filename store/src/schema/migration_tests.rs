@@ -568,6 +568,49 @@ fn bodies_with_files_named_by_gmail_handles_are_fetched_again() {
     assert_eq!(files, 0);
 }
 
+/// A 0.3.0 store is at version 31. Every later migration alters accounts,
+/// indexes remote_refs, adds a trigger on messages or rebuilds a table,
+/// so a store holding mail must come through all of them with its rows.
+/// The calendar tables arrive at version 33 and are empty after the climb.
+#[test]
+fn a_0_3_0_store_with_mail_keeps_every_row_through_every_migration() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("mail.db");
+    let conn = open_with(&path, &MIGRATIONS[..31]).unwrap();
+    assert_eq!(schema_version(&conn).unwrap(), 31);
+    conn.execute_batch(
+        "INSERT INTO accounts (id, email, added_at) VALUES (1, 'me@gmail.com', 0), (2, 'you@gmail.com', 0);
+         INSERT INTO messages (account_id, id, thread_id, to_addrs, cc_addrs, subject, date,
+             snippet, size, has_attachments, sync_gen)
+             VALUES (1, 'a', 't1', '[]', '[]', 'One', 100, '', 1, 0, 1),
+                    (1, 'b', 't1', '[]', '[]', 'Two', 200, '', 1, 1, 1),
+                    (2, 'c', 't2', '[]', '[]', 'Three', 300, '', 1, 0, 1);
+         INSERT INTO bodies (account_id, message_id, text, size, fetched_at, accessed_at)
+             VALUES (1, 'a', 'first', 5, 0, 0), (2, 'c', 'third', 5, 0, 0);
+         INSERT INTO remote_refs (account_id, message_id, remote) VALUES
+             (1, 'a', 'a'), (1, 'b', 'b'), (2, 'c', 'c');
+         INSERT INTO invitations (account_id, uid, sequence, summary, message_id, seen_at)
+             VALUES (1, 'uid-1@example.com', 0, 'Lunch', 'a', 0);",
+    )
+    .unwrap();
+    drop(conn);
+
+    let conn = open_with(&path, MIGRATIONS).unwrap();
+    assert_eq!(schema_version(&conn).unwrap(), MIGRATIONS.len() as i64);
+    assert_eq!(strings(&conn, "SELECT email FROM accounts ORDER BY id", []), ["me@gmail.com", "you@gmail.com"]);
+    assert_eq!(strings(&conn, "SELECT id FROM messages ORDER BY id", []), ["a", "b", "c"]);
+    assert_eq!(strings(&conn, "SELECT subject FROM messages ORDER BY id", []), ["One", "Two", "Three"]);
+    assert_eq!(strings(&conn, "SELECT text FROM bodies ORDER BY message_id", []), ["first", "third"]);
+    assert_eq!(strings(&conn, "SELECT message_id FROM remote_refs ORDER BY message_id", []), ["a", "b", "c"]);
+    assert_eq!(strings(&conn, "SELECT summary FROM invitations", []), ["Lunch"]);
+    assert_eq!(strings(&conn, "SELECT provider FROM accounts ORDER BY id", []), ["gmail", "gmail"]);
+    // One copy is taken before the climb, named for the version it ends
+    // on, and it still holds the 0.3.0 mail.
+    let copy = Connection::open(dir.path().join(format!("mail.db.before-{}", MIGRATIONS.len()))).unwrap();
+    assert_eq!(schema_version(&copy).unwrap(), 31);
+    assert_eq!(strings(&copy, "SELECT id FROM messages ORDER BY id", []), ["a", "b", "c"]);
+}
+
 /// Migration 32 adds IMAP's columns and table. A Gmail account from
 /// before it stays a Gmail account with no provider name, and the store
 /// is copied first, as before every migration of a store with mail.

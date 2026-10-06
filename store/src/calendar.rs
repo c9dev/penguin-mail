@@ -863,7 +863,10 @@ pub fn search(
             let (start, end) = next_showing(&event, from);
             let past = start < from;
             let rank = if past { -start } else { start };
-            let key = (account_id, event.calendar.clone(), event.uid.clone());
+            // An event made here has no uid until the provider answers, so
+            // its own id keeps it apart from other new events.
+            let same = if event.uid.is_empty() { event.id.clone() } else { event.uid.to_lowercase() };
+            let key = (account_id, event.calendar.clone(), same);
             let keep = ranked.get(&key).is_none_or(|(p, r, ..)| (past, rank) < (*p, *r));
             if keep {
                 ranked.insert(key, (past, rank, account_id, event, start, end));
@@ -2114,6 +2117,20 @@ mod tests {
         let found = search(&conn, &[id], "standup", MONDAY, CalendarScope::Shown, 505).unwrap();
         let kept_soon = found.iter().filter(|o| o.event.id.starts_with("standup-soon")).count();
         assert_eq!(kept_soon, 5, "every upcoming match must survive the cap, not just whichever 500 rows came first");
+    }
+
+    #[test]
+    fn two_new_events_with_no_uid_yet_are_two_search_results() {
+        let (conn, id) = store();
+        let mut lunch = event("primary", "pmlocal1", MONDAY + 12 * HOUR, 1);
+        lunch.uid.clear();
+        lunch.title = "Team lunch".into();
+        let mut sync = event("primary", "pmlocal2", MONDAY + 14 * HOUR, 1);
+        sync.uid.clear();
+        sync.title = "Team sync".into();
+        save_events(&conn, id, &[lunch, sync], 0).unwrap();
+        let found = search(&conn, &[id], "team", MONDAY, CalendarScope::Shown, 10).unwrap();
+        assert_eq!(found.len(), 2);
     }
 
     #[test]

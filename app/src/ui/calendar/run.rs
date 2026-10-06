@@ -273,12 +273,17 @@ pub trait Effects {
     /// Opens the popover of `o` on its block in `page`. `false` when the
     /// page has no block for it.
     fn open_popover(&self, page: PageId, o: &Occurrence) -> bool;
+    /// Opens the popover of `o` over the narrow list.
+    fn open_in_list(&self, o: &Occurrence);
     /// Redraws the calendar list and the mini month.
     fn draw_sidebar(&self, listed: Vec<Listed>, busy: Vec<Occurrence>, mini: Range);
     /// Redraws "Waiting for your answer".
     fn draw_waiting(&self, waiting: Vec<Waiting>);
     /// Fills the narrow list with `first` to `last`, replacing it.
     fn draw_list(&self, found: Vec<Occurrence>, first: NaiveDate, last: NaiveDate);
+    /// Replaces what the narrow list holds with `first` to `last`, the
+    /// days it already held, and leaves its scroll where it was.
+    fn redraw_list(&self, found: Vec<Occurrence>, first: NaiveDate, last: NaiveDate);
     /// Puts `first` to `last` above what the list holds. `listed_from`
     /// is where the list began, which an event running across it already
     /// shows from.
@@ -512,12 +517,18 @@ impl CalendarRun {
     }
 
     /// The occurrence waiting to open, when `page` is the one on screen
-    /// and `found` holds it.
+    /// and `found` holds it. In a narrow window the list covers the
+    /// pages, and the list opens it instead ([`Self::list_window`]).
     fn opens_on(&self, page: PageId, found: &[Occurrence]) -> Option<Occurrence> {
         let on_screen = self.desk.pages().first().is_some_and(|(id, _)| *id == page);
-        if !on_screen {
+        if !on_screen || self.desk.showing_list() {
             return None;
         }
+        self.pending_in(found)
+    }
+
+    /// The occurrence waiting to open, when `found` holds it.
+    fn pending_in(&self, found: &[Occurrence]) -> Option<Occurrence> {
         let (key, start) = self.pending.borrow().clone()?;
         found.iter().find(|o| key_of(o) == key && o.start == start).cloned()
     }
@@ -638,7 +649,19 @@ impl CalendarRun {
             Err(err) => tracing::warn!(%err, "could not read the calendars"),
         }
         if self.fill_owed.replace(false) {
-            self.fill_all();
+            self.refill_all();
+        }
+    }
+
+    /// Reads every page again, and the list in place when it shows, for a
+    /// change to the copy rather than a move of the view: the list keeps
+    /// the days it loaded and where the reader scrolled it.
+    fn refill_all(self: &Rc<Self>) {
+        for (page, _) in self.desk.pages() {
+            self.fill(page);
+        }
+        if self.desk.showing_list() {
+            self.refill_list();
         }
     }
 
@@ -742,6 +765,33 @@ impl CalendarRun {
         self.spawn(async move { this.list_window(first, last, accounts, ticket).await });
     }
 
+    /// Reads the days the narrow list holds again and redraws them in
+    /// place. A list whose first window has not landed reads that window.
+    /// Earlier or later days still reading give way to this read, so the
+    /// next scroll to an end asks for them again.
+    fn refill_list(self: &Rc<Self>) {
+        let Some(last) = self.list.last.get() else {
+            self.fill_list();
+            return;
+        };
+        let first = self.list.first.get();
+        let ticket = self.start(Place::List);
+        self.list.earlier.set(false);
+        self.list.later.set(false);
+        let accounts = self.desk.accounts();
+        let this = Rc::clone(self);
+        self.spawn(async move {
+            let wanted = this.wanted(ticket);
+            let (from, to) = day_span(first, last);
+            if let Some(found) = wanted
+                .ask(|e| e.occurrences(accounts, from, to), "could not read the calendar")
+                .await
+            {
+                wanted.on_screen(|e| e.redraw_list(found, first, last));
+            }
+        });
+    }
+
     async fn list_window(&self, first: NaiveDate, last: NaiveDate, accounts: Vec<AccountId>, ticket: Ticket) {
         let wanted = self.wanted(ticket);
         let (from, to) = day_span(first, last);
@@ -751,8 +801,21 @@ impl CalendarRun {
         else {
             return;
         };
-        if wanted.on_screen(|e| e.draw_list(found, first, last)).is_some() {
-            self.list.last.set(Some(last));
+        let opens = self.pending_in(&found);
+        if wanted.on_screen(|e| e.draw_list(found, first, last)).is_none() {
+            return;
+        }
+        self.list.last.set(Some(last));
+        let Some(o) = opens else { return };
+        // The popover needs the list laid out to point at.
+        if wanted.wait(|e| e.idle()).await.is_none() {
+            return;
+        }
+        if wanted.on_screen(|e| e.open_in_list(&o)).is_some() {
+            let mut pending = self.pending.borrow_mut();
+            if pending.as_ref() == Some(&(key_of(&o), o.start)) {
+                *pending = None;
+            }
         }
     }
 
@@ -787,16 +850,23 @@ impl CalendarRun {
         accounts: Vec<AccountId>,
         ticket: Ticket,
     ) {
-        let wanted = self.wanted(ticket);
+        // A read for a list that has started over leaves the flag to the
+        // newer list's own read of earlier days.
+        let done = |ticket: &Ticket| {
+            if self.ledger.is_newest(ticket) {
+                self.list.earlier.set(false);
+            }
+        };
+        let wanted = self.wanted(ticket.clone());
         let (from, to) = day_span(first, last);
         // The copy may not reach this far back yet. Offline, the list
         // stays where it is, so the next scroll to the top asks again.
         if self.reach_back(from).await == Older::Offline {
-            self.list.earlier.set(false);
+            done(&ticket);
             return;
         }
         let found = wanted.wait(|e| e.occurrences(accounts, from, to)).await;
-        self.list.earlier.set(false);
+        done(&ticket);
         let found = match found {
             Some(Ok(found)) => found,
             Some(Err(err)) => {

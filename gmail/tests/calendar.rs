@@ -384,6 +384,75 @@ async fn a_series_saved_without_rules_stops_repeating_on_google() {
 }
 
 #[tokio::test]
+async fn an_organizer_edit_keeps_what_google_holds_on_each_guest_and_the_visibility() {
+    use mailrs_domain::calendar::Guest;
+    let server = MockServer::start().await;
+    mount_token(&server).await;
+    Mock::given(method("GET"))
+        .and(path(format!("{CALENDAR}/calendars/work/events/review")))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "id": "review",
+            "visibility": "public",
+            "attendees": [
+                {"email": "me@example.com", "organizer": true, "responseStatus": "accepted"},
+                {"email": "Ann@Example.com", "optional": true, "additionalGuests": 2, "responseStatus": "tentative"},
+            ]
+        })))
+        .mount(&server)
+        .await;
+    Mock::given(method("PATCH"))
+        .and(path(format!("{CALENDAR}/calendars/work/events/review")))
+        .respond_with(|request: &Request| {
+            let body: Value = serde_json::from_slice(&request.body).unwrap();
+            assert_eq!(body["visibility"], "public", "{body}");
+            let ann = body["attendees"].as_array().unwrap().iter().find(|g| g["email"] == "ann@example.com").unwrap();
+            assert_eq!(ann["optional"], true, "{body}");
+            assert_eq!(ann["additionalGuests"], 2, "{body}");
+            assert_eq!(ann["responseStatus"], "tentative", "{body}");
+            let bob = body["attendees"].as_array().unwrap().iter().find(|g| g["email"] == "bob@example.com").unwrap();
+            assert!(bob.get("optional").is_none(), "{body}");
+            ResponseTemplate::new(200).set_body_json(json!({"id": "review", "etag": "\"3\""}))
+        })
+        .expect(1)
+        .mount(&server)
+        .await;
+    let event = mailrs_domain::calendar::Event {
+        calendar: "work".into(),
+        id: "review".into(),
+        zone: "UTC".into(),
+        title: "Review, renamed".into(),
+        organizer: Some("me@example.com".into()),
+        guests: vec![
+            Guest { email: "me@example.com".into(), organizer: true, me: true, answer: Some(Answer::Yes), ..Guest::default() },
+            Guest { email: "ann@example.com".into(), answer: Some(Answer::Maybe), ..Guest::default() },
+            Guest { email: "bob@example.com".into(), ..Guest::default() },
+        ],
+        ..Default::default()
+    };
+    client(&server).put_event(&event, Some("\"2\""), false, Notify::Guests).await.unwrap();
+}
+
+#[tokio::test]
+async fn an_event_made_private_goes_out_private_whatever_google_held() {
+    let server = MockServer::start().await;
+    mount_token(&server).await;
+    Mock::given(method("GET"))
+        .and(path(format!("{CALENDAR}/calendars/work/events/a")))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({"id": "a", "visibility": "public"})))
+        .mount(&server)
+        .await;
+    Mock::given(method("PATCH"))
+        .and(path(format!("{CALENDAR}/calendars/work/events/a")))
+        .and(body_partial_json(json!({"visibility": "private"})))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({"id": "a"})))
+        .expect(1)
+        .mount(&server)
+        .await;
+    let event = mailrs_domain::calendar::Event { calendar: "work".into(), id: "a".into(), zone: "UTC".into(), private: true, ..Default::default() };
+    client(&server).put_event(&event, None, false, Notify::Guests).await.unwrap();
+}
+
+#[tokio::test]
 async fn an_event_colour_goes_out_as_googles_colour_id() {
     let server = MockServer::start().await;
     mount_token(&server).await;
@@ -479,9 +548,11 @@ fn moved_standup() -> mailrs_domain::calendar::Event {
 /// Answers any GET or PUT with a 500, so a test sees a retry that should
 /// not happen as a failure of its own.
 async fn refuse_any_retry(server: &MockServer) {
-    for verb in ["GET", "PUT"] {
-        Mock::given(method(verb)).respond_with(ResponseTemplate::new(500)).expect(0).mount(server).await;
-    }
+    // The read of the guests Google holds comes before the PATCH and is
+    // no retry.
+    let not_the_guest_read = |request: &Request| !request.url.query().unwrap_or_default().contains("fields=attendees");
+    Mock::given(method("GET")).and(not_the_guest_read).respond_with(ResponseTemplate::new(500)).expect(0).mount(server).await;
+    Mock::given(method("PUT")).respond_with(ResponseTemplate::new(500)).expect(0).mount(server).await;
 }
 
 #[tokio::test]

@@ -49,9 +49,11 @@ pub enum Step {
     DrawPage,
     ScrollTo,
     OpenPopover,
+    OpenInList,
     DrawSidebar,
     DrawWaiting,
     DrawList,
+    RedrawList,
     PrependList,
     AppendList,
     NoEarlier,
@@ -97,6 +99,8 @@ pub struct View {
     pub drawn: Vec<(PageId, Vec<String>)>,
     pub scrolls: Vec<(PageId, f64)>,
     pub popovers: Vec<(PageId, EventKey, EpochMillis)>,
+    /// The popovers opened from the narrow list.
+    pub list_popovers: Vec<(EventKey, EpochMillis)>,
     /// The calendar lists drawn, by the number of accounts in each.
     pub sidebars: Vec<usize>,
     pub waiting_drawn: Vec<usize>,
@@ -198,6 +202,7 @@ impl FakeWindow {
                 drawn: Vec::new(),
                 scrolls: Vec::new(),
                 popovers: Vec::new(),
+                list_popovers: Vec::new(),
                 sidebars: Vec::new(),
                 waiting_drawn: Vec::new(),
                 list: Vec::new(),
@@ -507,6 +512,11 @@ impl Effects for FakeWindow {
         })
     }
 
+    fn open_in_list(&self, o: &Occurrence) {
+        self.record(Step::OpenInList);
+        self.with(|v| v.list_popovers.push((key_of(o), o.start)));
+    }
+
     fn draw_sidebar(&self, listed: Vec<Listed>, _busy: Vec<Occurrence>, _mini: Range) {
         self.record(Step::DrawSidebar);
         self.with(|v| v.sidebars.push(listed.len()));
@@ -523,6 +533,11 @@ impl Effects for FakeWindow {
             v.list = titles(&found);
             v.list_firsts.push(first);
         });
+    }
+
+    fn redraw_list(&self, found: Vec<Occurrence>, _first: NaiveDate, _last: NaiveDate) {
+        self.record(Step::RedrawList);
+        self.with(|v| v.list = titles(&found));
     }
 
     fn prepend_list(&self, found: Vec<Occurrence>, first: NaiveDate, _last: NaiveDate, _listed_from: EpochMillis) {

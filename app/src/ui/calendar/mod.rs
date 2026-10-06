@@ -725,7 +725,7 @@ impl CalendarView {
         let weak = Rc::downgrade(&view);
         *view.clock_watch.borrow_mut() = crate::clock_format::watch(move || {
             if let Some(view) = weak.upgrade() {
-                view.show_range();
+                view.clock_format_changed();
             }
         });
         let weak = Rc::downgrade(&view);
@@ -772,6 +772,16 @@ impl CalendarView {
         self.show_range();
         self.run.fill_all();
         self.run.read_sidebar(false);
+    }
+
+    /// Redraws everything that shows a time after GNOME's clock format
+    /// changes: the header, the grids' hour labels, which a grid builds
+    /// once, and the times on the cards and in the list, which come from
+    /// the last fill.
+    fn clock_format_changed(self: &Rc<Self>) {
+        self.rebuild_pages();
+        self.show_range();
+        self.run.fill_all();
     }
 
     /// The Refresh action: starts a calendar sync for every account,
@@ -884,8 +894,7 @@ impl CalendarView {
         let picker = gtk::Calendar::new();
         picker.set_date(&editor::day_to_glib(self.day.get()));
         crate::ui::name(&picker, &gettext("Go to date"));
-        let popover = gtk::Popover::builder().child(&picker).autohide(true).build();
-        popover.set_parent(&self.today_button);
+        let popover = crate::ui::passing_popover(&self.today_button, &picker);
         let weak = Rc::downgrade(self);
         let closing = popover.clone();
         picker.connect_day_selected(move |picker| {
@@ -2107,6 +2116,7 @@ impl CalendarView {
             let copy = this.core.calendar_copy();
             if let Err(err) = this.core.call(async move { copy.revert(held).await }).await {
                 tracing::warn!(%err, "could not take a calendar change back");
+                this.say(&words::undo_failed(&err));
             }
             this.reload();
         });

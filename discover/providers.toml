@@ -11,7 +11,7 @@
 # Fields:
 # - kind: "imap" (servers below), "no_imap" (the provider serves no IMAP),
 #   "not_yet" (the app cannot reach it yet), "google" (the Google sign-in
-#   serves it), "microsoft" (a later version serves it).
+#   serves it), "microsoft" (the Microsoft sign-in serves it).
 # - mx: a host name, or "*.suffix" for any host under that suffix. An exact
 #   host wins over every pattern, and a longer suffix over a shorter one.
 # - imap, smtp: security "tls" is TLS from the first byte, "start_tls" a

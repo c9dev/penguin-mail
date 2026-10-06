@@ -51,6 +51,10 @@ pub struct SidebarAccount {
     /// When it does not, the rows keep Hide from the List and lose Color,
     /// Rename, Delete and Unsubscribe, and Add Calendar skips the account.
     pub changeable: bool,
+    /// Whether the account subscribes to calendars by address and adds
+    /// holiday calendars (`Offers::subscriptions`). When it does not, Add
+    /// Calendar offers only New Calendar and the rows lose Unsubscribe.
+    pub subscribes: bool,
 }
 
 /// The sidebar's rows from each account's provider offers, its own
@@ -85,6 +89,7 @@ pub fn sidebar_accounts(
                 reach,
                 hidden: Vec::new(),
                 changeable: offers.calendar_list,
+                subscribes: offers.subscriptions,
             }
         })
         .collect()
@@ -141,7 +146,7 @@ pub enum RowItem {
 /// Whether the account granted the permission for
 /// them is asked when the person picks one, so an item that needs it
 /// says why rather than going missing.
-pub fn row_menu(calendar: &Calendar, changeable: bool) -> Vec<RowItem> {
+pub fn row_menu(calendar: &Calendar, changeable: bool, subscribes: bool) -> Vec<RowItem> {
     let mut items = vec![RowItem::Hide];
     if !changeable {
         return items;
@@ -154,7 +159,7 @@ pub fn row_menu(calendar: &Calendar, changeable: bool) -> Vec<RowItem> {
     if allows.delete {
         items.push(RowItem::Delete);
     }
-    if allows.unsubscribe {
+    if allows.unsubscribe && subscribes {
         items.push(RowItem::Unsubscribe);
     }
     items
@@ -895,12 +900,12 @@ impl CalendarSidebar {
             match &account.reach {
                 CalendarReach::Calendars(calendars) => {
                     for calendar in calendars {
-                        body.append(&self.calendar_row(account.id, &account.address, calendar, account.changeable));
+                        body.append(&self.calendar_row(account, calendar));
                     }
                 }
                 CalendarReach::PrimaryOnly(calendars) => {
                     for calendar in calendars {
-                        body.append(&self.calendar_row(account.id, &account.address, calendar, account.changeable));
+                        body.append(&self.calendar_row(account, calendar));
                     }
                     body.append(&self.grant_row(
                         account.id,
@@ -944,6 +949,13 @@ impl CalendarSidebar {
             );
         }
         if !adding.is_empty() {
+            let adding: Vec<(AccountId, String, bool)> = adding
+                .into_iter()
+                .map(|(id, address)| {
+                    let subscribes = accounts.iter().any(|a| a.id == id && a.subscribes);
+                    (id, address, subscribes)
+                })
+                .collect();
             self.calendar_list.append(&add_menu(&adding));
         }
         if hidden_count(accounts) > 0 {
@@ -1016,7 +1028,8 @@ impl CalendarSidebar {
         button
     }
 
-    fn calendar_row(&self, account_id: AccountId, address: &str, calendar: &Calendar, changeable: bool) -> gtk::Box {
+    fn calendar_row(&self, account: &SidebarAccount, calendar: &Calendar) -> gtk::Box {
+        let (account_id, address) = (account.id, account.address.as_str());
         let row = gtk::Box::builder()
             .spacing(8)
             .css_classes(["calendar-row"])
@@ -1027,11 +1040,7 @@ impl CalendarSidebar {
             .build();
         // Two accounts can each have a calendar called Personal; the
         // account address tells them apart.
-        let detail = match calendar.access.can_write() {
-            true => address.to_string(),
-            false => format!("{address}. {}", gettext("You can only read this calendar")),
-        };
-        crate::ui::describe(&check, &calendar.name, &detail);
+        crate::ui::describe(&check, &calendar.name, &calendar_detail(address, calendar.access.can_write()));
         let label = gtk::Label::builder()
             .label(&calendar.name)
             .css_classes(["calendar-name"])
@@ -1050,7 +1059,7 @@ impl CalendarSidebar {
         }
         let options = gtk::MenuButton::builder()
             .icon_name("view-more-symbolic")
-            .menu_model(&calendar_menu(account_id, calendar, changeable))
+            .menu_model(&calendar_menu(account_id, calendar, account.changeable, account.subscribes))
             .css_classes(["flat", "circular", "calendar-options"])
             .valign(gtk::Align::Center)
             .tooltip_text(gettext("Calendar options"))
@@ -1165,18 +1174,38 @@ fn list_actions(on_change: &Rc<OnChange>) -> gio::SimpleActionGroup {
     actions
 }
 
+/// What a screen reader hears after a calendar's name: its account's
+/// address, and for one the account only reads, that it does. One string
+/// with the address in it, so a translator can place it.
+pub fn calendar_detail(address: &str, writable: bool) -> String {
+    match writable {
+        true => address.to_string(),
+        false => fill(&gettext("{address}. You can only read this calendar"), &[("address", address)]),
+    }
+}
+
+/// What Add Calendar offers an account: a new calendar, and a
+/// subscription and the holiday calendars where the provider takes them.
+pub fn add_items(subscribes: bool) -> Vec<AddKind> {
+    match subscribes {
+        true => vec![AddKind::New, AddKind::Subscribe, AddKind::Holidays],
+        false => vec![AddKind::New],
+    }
+}
+
 /// Add Calendar at the foot of the list: a new calendar, a subscription
 /// and the holiday calendars, under each account's address when more
 /// than one account can take them.
-fn add_menu(accounts: &[(AccountId, String)]) -> gtk::MenuButton {
+fn add_menu(accounts: &[(AccountId, String, bool)]) -> gtk::MenuButton {
     let menu = gio::Menu::new();
-    for (account, address) in accounts {
+    for (account, address, subscribes) in accounts {
         let section = gio::Menu::new();
-        for (label, action) in [
-            (gettext("New Calendar…"), "calendars.new"),
-            (gettext("Subscribe to Calendar…"), "calendars.subscribe"),
-            (gettext("Holiday Calendars…"), "calendars.holidays"),
-        ] {
+        for kind in add_items(*subscribes) {
+            let (label, action) = match kind {
+                AddKind::New => (gettext("New Calendar…"), "calendars.new"),
+                AddKind::Subscribe => (gettext("Subscribe to Calendar…"), "calendars.subscribe"),
+                AddKind::Holidays => (gettext("Holiday Calendars…"), "calendars.holidays"),
+            };
             let item = gio::MenuItem::new(Some(&label), None);
             item.set_action_and_target_value(Some(action), Some(&account.to_variant()));
             section.append_item(&item);
@@ -1203,8 +1232,8 @@ fn add_menu(accounts: &[(AccountId, String)]) -> gtk::MenuButton {
 /// Gmail's label colours and the calendar's own colour back, and for a
 /// calendar the account owns, Rename and Delete in a section of their
 /// own.
-fn calendar_menu(account_id: AccountId, calendar: &Calendar, changeable: bool) -> gio::Menu {
-    let items = row_menu(calendar, changeable);
+fn calendar_menu(account_id: AccountId, calendar: &Calendar, changeable: bool, subscribes: bool) -> gio::Menu {
+    let items = row_menu(calendar, changeable, subscribes);
     let target = (account_id, calendar.id.as_str()).to_variant();
     let calendar = calendar.id.as_str();
     let menu = gio::Menu::new();
@@ -1398,6 +1427,7 @@ mod tests {
                 reach: CalendarReach::Calendars(vec![calendar("primary"), calendar("team")]),
                 hidden: Vec::new(),
                 changeable: true,
+                subscribes: true,
             }]
         );
     }
@@ -1561,7 +1591,7 @@ mod tests {
     #[test]
     fn an_owned_calendar_can_be_renamed_and_deleted_from_its_menu() {
         assert_eq!(
-            row_menu(&calendar("team"), true),
+            row_menu(&calendar("team"), true, true),
             [RowItem::Hide, RowItem::Color, RowItem::Rename, RowItem::Delete]
         );
     }
@@ -1569,14 +1599,14 @@ mod tests {
     #[test]
     fn the_primary_calendar_is_renamed_but_never_deleted() {
         let primary = Calendar { primary: true, ..calendar("primary") };
-        assert_eq!(row_menu(&primary, true), [RowItem::Hide, RowItem::Color, RowItem::Rename]);
+        assert_eq!(row_menu(&primary, true, true), [RowItem::Hide, RowItem::Color, RowItem::Rename]);
     }
 
     #[test]
     fn a_subscribed_or_shared_calendar_offers_unsubscribe_in_place_of_delete() {
         for access in [Access::Reader, Access::Writer, Access::FreeBusy] {
             let other = Calendar { access, ..calendar("fixtures") };
-            assert_eq!(row_menu(&other, true), [RowItem::Hide, RowItem::Color, RowItem::Unsubscribe], "{access:?}");
+            assert_eq!(row_menu(&other, true, true), [RowItem::Hide, RowItem::Color, RowItem::Unsubscribe], "{access:?}");
         }
     }
 
@@ -1584,7 +1614,7 @@ mod tests {
     fn an_account_that_cannot_change_its_list_keeps_hide_and_nothing_else() {
         for access in [Access::Owner, Access::Reader] {
             let held = Calendar { access, ..calendar("team") };
-            assert_eq!(row_menu(&held, false), [RowItem::Hide], "{access:?}");
+            assert_eq!(row_menu(&held, false, true), [RowItem::Hide], "{access:?}");
         }
     }
 
@@ -1596,6 +1626,24 @@ mod tests {
             (account(2, "ana@outlook.example"), fixed, Withheld::NONE, vec![calendar("primary")]),
         ], |_| None);
         assert_eq!(adding_accounts(&rows), [(1, "dana@example.com".to_string())]);
+    }
+
+    #[test]
+    fn a_read_only_calendar_says_its_address_and_that_it_only_reads() {
+        assert_eq!(calendar_detail("dana@example.com", true), "dana@example.com");
+        assert_eq!(calendar_detail("dana@example.com", false), "dana@example.com. You can only read this calendar");
+    }
+
+    #[test]
+    fn add_calendar_offers_subscriptions_only_where_the_provider_takes_them() {
+        assert_eq!(add_items(true), [AddKind::New, AddKind::Subscribe, AddKind::Holidays]);
+        assert_eq!(add_items(false), [AddKind::New]);
+    }
+
+    #[test]
+    fn an_account_with_no_subscriptions_offers_no_unsubscribe() {
+        let other = Calendar { access: Access::Reader, ..calendar("team") };
+        assert_eq!(row_menu(&other, true, false), [RowItem::Hide, RowItem::Color]);
     }
 
     #[test]

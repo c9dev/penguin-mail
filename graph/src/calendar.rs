@@ -157,19 +157,17 @@ pub enum Response {
 
 impl Graph {
     pub async fn calendars(&self) -> Result<Vec<GraphCalendar>, GraphError> {
-        let page: Page<GraphCalendar> = self
-            .get(
-                "me/calendars",
-                &[
-                    ("$top", "100"),
-                    (
-                        "$select",
-                        "id,name,hexColor,color,canEdit,isDefaultCalendar,owner",
-                    ),
-                ],
-            )
-            .await?;
-        Ok(page.value)
+        self.get_all(
+            "me/calendars",
+            &[
+                ("$top", "100"),
+                (
+                    "$select",
+                    "id,name,hexColor,color,canEdit,isDefaultCalendar,owner",
+                ),
+            ],
+        )
+        .await
     }
 
     /// One page of `calendar`'s view between `start` and `end` (RFC 3339),

@@ -66,6 +66,14 @@ fn a_caldav_account_stores_only_events_whatever_its_address() {
 }
 
 #[test]
+fn only_google_subscribes_to_calendars_by_address_or_adds_holidays() {
+    assert!(google("dana@gmail.com").subscriptions);
+    let outlook = AccountServices::fake_microsoft(Arc::new(FakeGraph::new())).offers();
+    assert!(outlook.calendar_list, "Outlook makes, renames and deletes calendars");
+    assert!(!outlook.subscriptions, "Graph has no call to subscribe or unsubscribe");
+}
+
+#[test]
 fn an_account_with_no_calendar_stores_no_types() {
     let offers = AccountServices::fake_imap(Arc::new(FakeImap::new()), Arc::new(FakeSmtp::new())).offers();
     assert!(!offers.out_of_office && !offers.focus_time && !offers.declines);
