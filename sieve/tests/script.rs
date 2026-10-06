@@ -91,11 +91,12 @@ fn deleting_without_a_trash_folder_makes_one_and_never_discards() {
     let text = write(&block, "me@example.com", &|_| None, &ext()).unwrap();
     assert!(text.contains("fileinto :create \"Trash\";"), "{text}");
     assert!(!text.contains("discard"), "{text}");
+    // A server that cannot make the folder keeps the mail in the inbox
+    // when the fileinto fails, which still loses nothing.
     let without_mailbox = Extensions::parse("fileinto vacation imap4flags");
-    assert!(matches!(
-        write(&block, "me@example.com", &|_| None, &without_mailbox),
-        Err(WriteError::NoFolder(_))
-    ));
+    let text = write(&block, "me@example.com", &|_| None, &without_mailbox).unwrap();
+    assert!(text.contains("fileinto \"Trash\";"), "{text}");
+    assert!(!text.contains("discard"), "{text}");
 }
 
 #[test]
