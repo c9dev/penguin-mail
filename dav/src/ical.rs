@@ -626,3 +626,66 @@ pub fn answer_scheduled(existing: &str, me: &[String], answer: Answer, now: Epoc
     }
     Ok(any.then(|| ical.to_string()))
 }
+
+/// [`answer_scheduled`] for one occurrence of a series: PARTSTAT changes
+/// only on the VEVENT whose RECURRENCE-ID is `original_start`. When the
+/// resource holds no such VEVENT, one is made from the master: its lines
+/// without the rules that repeat it, starting at `original_start` and
+/// lasting as long. Answers `None` when the account is not a guest.
+pub fn answer_occurrence(
+    existing: &str,
+    me: &[String],
+    answer: Answer,
+    original_start: EpochMillis,
+    now: EpochMillis,
+    server_schedules: bool,
+) -> Result<Option<String>, DavError> {
+    let mut ical = parse(existing)?;
+    let zones = Zones::of(&ical);
+    let found = events_of(&ical)
+        .find(|(_, comp)| recurrence_of(comp, &zones) == Some(original_start))
+        .map(|(at, _)| at);
+    let at = match found {
+        Some(at) => at,
+        None => {
+            let Some((master_at, master)) = master_of(&ical, &zones, me) else {
+                return Ok(None);
+            };
+            let mut comp = ical.components[master_at].clone();
+            let has_end = comp.property(&ICalendarProperty::Dtend).is_some();
+            comp.entries.retain(|e| {
+                !matches!(
+                    e.name,
+                    ICalendarProperty::Rrule
+                        | ICalendarProperty::Rdate
+                        | ICalendarProperty::Exdate
+                        | ICalendarProperty::Dtstart
+                        | ICalendarProperty::Dtend
+                        | ICalendarProperty::RecurrenceId
+                )
+            });
+            // The master's alarms stay with the master: a child index
+            // shared by two components would be written twice.
+            comp.component_ids.clear();
+            let mut lines = vec![
+                time_line("RECURRENCE-ID", original_start, &master.zone, master.all_day),
+                time_line("DTSTART", original_start, &master.zone, master.all_day),
+            ];
+            if has_end {
+                let end = original_start + (master.end - master.start);
+                lines.push(time_line("DTEND", end, &master.zone, master.all_day));
+            }
+            comp.entries.extend(entries(&lines)?);
+            ical.components.push(comp);
+            let at = ical.components.len() - 1;
+            ical.components[0].component_ids.push(at as u32);
+            at
+        }
+    };
+    if !set_partstat(&mut ical.components[at], me, answer, !server_schedules)? {
+        return Ok(None);
+    }
+    stamp(&mut ical, at, now)?;
+    ical.add_missing_timezones();
+    Ok(Some(ical.to_string()))
+}

@@ -352,6 +352,29 @@ async fn an_answer_from_the_calendar_view_follows_the_same_rule() {
 }
 
 #[tokio::test]
+async fn answering_one_occurrence_leaves_the_rest_of_the_series_unanswered() {
+    let (dav, smtp, caldav) = adapter().await;
+    dav.put_resource(&format!("{WORK}standup.ics"), &invitation_ics("invite-uid", "Standup"));
+    let (events, _, _, _) = read_all(&caldav, None).await.unwrap();
+    let master = events[0].clone();
+    let original = master.start + 7 * 24 * 3_600_000;
+    let one = occurrence_id(&master, original);
+    let answered = caldav.answer_event(WORK, &one, ME, Answer::No, None).await.unwrap();
+    assert_eq!((answered.id.as_str(), answered.my_answer), (one.as_str(), Some(Answer::No)));
+    let (events, _, _, _) = read_all(&caldav, None).await.unwrap();
+    let series = events.iter().find(|e| e.id == master.id).unwrap();
+    assert_eq!(series.my_answer, None, "the series stays unanswered");
+    let changed = events.iter().find(|e| e.original_start == Some(original)).unwrap();
+    assert_eq!((changed.start, changed.end - changed.start), (original, master.end - master.start));
+    assert_eq!(changed.my_answer, Some(Answer::No));
+    let body = dav.body(&format!("{WORK}standup.ics")).unwrap();
+    assert!(body.contains("RECURRENCE-ID:20261012T093000Z"), "{body}");
+    assert_eq!(body.matches("RRULE").count(), 1, "the changed occurrence does not repeat");
+    let sent = String::from_utf8_lossy(&smtp.sent()[0].raw).to_string();
+    assert!(sent.contains("RECURRENCE-ID"), "the reply names the one occurrence");
+}
+
+#[tokio::test]
 async fn an_event_without_an_organizer_has_nobody_to_tell() {
     let (dav, smtp, caldav) = adapter().await;
     dav.put_resource(&format!("{WORK}standup.ics"), &series_ics("s", "Standup"));

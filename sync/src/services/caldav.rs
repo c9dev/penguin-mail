@@ -276,7 +276,11 @@ impl<D: DavApi> CalDav<D> {
         who.extend(self.me.iter().cloned());
         let schedules = self.api.auto_schedule().await.map_err(|e| self.err(e))?;
         let now = crate::now_millis();
-        let Some(text) = ical::answer_scheduled(&found.body, &who, answer, now, schedules).map_err(refused)? else {
+        let written = match occurrence {
+            Some(original) => ical::answer_occurrence(&found.body, &who, answer, original, now, schedules),
+            None => ical::answer_scheduled(&found.body, &who, answer, now, schedules),
+        };
+        let Some(text) = written.map_err(refused)? else {
             return Ok(None);
         };
         let etag = self.write(&found.href, &text, Precondition::Match(found.etag)).await?;
