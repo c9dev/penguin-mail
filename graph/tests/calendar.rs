@@ -249,7 +249,7 @@ async fn instances_ask_for_their_original_start() {
     common::token_endpoint(&server, "r").await;
     Mock::given(method("GET"))
         .and(path("/v1.0/me/events/s1/instances"))
-        .and(query_param("$select", "id,type,seriesMasterId,start,end,originalStart"))
+        .and(query_param("$select", "id,type,seriesMasterId,start,end,isAllDay,originalStart,originalStartTimeZone"))
         .respond_with(ResponseTemplate::new(200).set_body_json(json!({
             "value": [{"id": "x1", "originalStart": "2026-10-05T08:00:00Z"}],
         })))

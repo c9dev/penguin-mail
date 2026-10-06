@@ -179,6 +179,20 @@ fn calendar_of(c: &GraphCalendar) -> model::Calendar {
     }
 }
 
+/// The start an occurrence or an exception had in its series, as the copy
+/// expands the series. An all-day series expands in UTC, while Graph
+/// answers the day's midnight in the zone it was made in, so a day in
+/// Berlin arrives at 22:00 the evening before and is taken back to its own
+/// date, as its start is.
+fn original_start_of(e: &GraphEvent) -> Option<i64> {
+    let at = DateTime::parse_from_rfc3339(e.original_start.as_deref()?).ok()?.timestamp_millis();
+    if !e.is_all_day {
+        return Some(at);
+    }
+    let zone = e.original_start_time_zone.as_deref().and_then(zones::zone_named).unwrap_or(chrono_tz::UTC);
+    Some(day_of(at, zone))
+}
+
 /// An event's body as the copy keeps it: plain text.
 fn description_of(e: &GraphEvent) -> String {
     e.body
@@ -290,11 +304,7 @@ impl<G: GraphApi> Microsoft<G> {
             conference: e.online_meeting.as_ref().and_then(|m| m.join_url.clone()),
             rules,
             series: (e.kind.as_deref() == Some("exception")).then(|| e.series_master_id.clone()).flatten(),
-            original_start: e
-                .original_start
-                .as_deref()
-                .and_then(|t| DateTime::parse_from_rfc3339(t).ok())
-                .map(|t| t.timestamp_millis()),
+            original_start: original_start_of(e),
             pending: false,
             meet_request: None,
             kind: if e.show_as.as_deref() == Some("oof") { Kind::OutOfOffice(Default::default()) } else { Kind::default() },
@@ -394,13 +404,7 @@ impl<G: GraphApi> Microsoft<G> {
             .instances(series, &iso(original - 60_000), &iso(original + DAY))
             .await
             .map_err(|e| self.service(e))?;
-        found
-            .into_iter()
-            .find(|e| {
-                e.original_start.as_deref().and_then(|t| DateTime::parse_from_rfc3339(t).ok()).map(|t| t.timestamp_millis())
-                    == Some(original)
-            })
-            .ok_or(BackendError::NotFound)
+        found.into_iter().find(|e| original_start_of(e) == Some(original)).ok_or(BackendError::NotFound)
     }
 
     async fn changes_of(

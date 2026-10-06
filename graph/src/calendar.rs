@@ -215,7 +215,7 @@ impl Graph {
                 &[
                     ("startDateTime", start),
                     ("endDateTime", end),
-                    ("$select", "id,type,seriesMasterId,start,end,originalStart"),
+                    ("$select", "id,type,seriesMasterId,start,end,isAllDay,originalStart,originalStartTimeZone"),
                     ("$top", "100"),
                 ],
                 &[UTC],

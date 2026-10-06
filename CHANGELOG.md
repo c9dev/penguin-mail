@@ -292,6 +292,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   it last updated, instead of leaving you guessing.
 
 ### Fixed
+- A day moved in an all-day repeating Outlook event made outside UTC, such as in Berlin, no longer shows on both days, and changing or deleting one day of such a series finds it.
 - Add to Calendar on an Outlook account, for a file about a meeting already on your calendar, no longer drops its guests or turns a repeating meeting into one event, and says which calendar holds it.
 - Editing an Outlook meeting keeps its formatted description, such as a Teams join link, when you leave the description alone, and keeps optional guests optional and booked rooms as rooms.
 - New mail on an IMAP account whose connection keeps dropping while it waits for mail arrives within a minute, rather than up to a quarter of an hour late.

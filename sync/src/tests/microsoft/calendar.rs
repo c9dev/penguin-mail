@@ -680,6 +680,70 @@ async fn an_exception_stored_without_its_original_start_heals_on_the_next_read()
     assert_eq!(shown_on(&h, "2026-10-05").await, ["08:30"]);
 }
 
+/// A weekly all-day series made in Berlin, as Graph answers it in UTC:
+/// each day starts at 22:00 the evening before while summer time lasts.
+fn berlin_all_day() -> GraphEvent {
+    GraphEvent {
+        id: "b1".into(),
+        ical_uid: Some("berlin@contoso".into()),
+        subject: Some("Remote day".into()),
+        start: Some(at("2026-10-04T22:00:00.0000000")),
+        end: Some(at("2026-10-05T22:00:00.0000000")),
+        is_all_day: true,
+        kind: Some("seriesMaster".into()),
+        original_start_time_zone: Some("W. Europe Standard Time".into()),
+        recurrence: Some(PatternedRecurrence {
+            pattern: RecurrencePattern { kind: "weekly".into(), interval: 1, days_of_week: vec!["monday".into()], ..Default::default() },
+            range: RecurrenceRange { kind: "numbered".into(), start_date: "2026-10-05".into(), number_of_occurrences: 4, ..Default::default() },
+        }),
+        ..GraphEvent::default()
+    }
+}
+
+/// One day of `berlin_all_day`, which started on `original` (Berlin's
+/// midnight in UTC) and now runs from `start` to `end`.
+fn berlin_day(id: &str, kind: &str, original: &str, start: &str, end: &str) -> GraphEvent {
+    GraphEvent {
+        id: id.into(),
+        subject: Some("Remote day".into()),
+        start: Some(at(start)),
+        end: Some(at(end)),
+        is_all_day: true,
+        kind: Some(kind.into()),
+        series_master_id: Some("b1".into()),
+        original_start: Some(original.into()),
+        original_start_time_zone: Some("W. Europe Standard Time".into()),
+        ..GraphEvent::default()
+    }
+}
+
+#[tokio::test]
+async fn a_day_moved_in_an_all_day_berlin_series_leaves_its_own_day() {
+    let h = outlook().await;
+    h.fake.put_event("cal-1", berlin_all_day());
+    h.fake.put_event(
+        "cal-1",
+        berlin_day("b1x", "exception", "2026-10-11T22:00:00Z", "2026-10-12T22:00:00.0000000", "2026-10-13T22:00:00.0000000"),
+    );
+    copy_of(&h).refresh(h.account_id, crate::now_millis()).await.unwrap();
+    assert_eq!(shown_on(&h, "2026-10-12").await, Vec::<String>::new(), "the day it moved from is empty");
+    assert_eq!(shown_on(&h, "2026-10-13").await, ["00:00"]);
+}
+
+#[tokio::test]
+async fn deleting_one_day_of_an_all_day_berlin_series_finds_graphs_instance() {
+    let h = outlook().await;
+    h.fake.put_event("cal-1", berlin_all_day());
+    h.fake.put_event(
+        "cal-1",
+        berlin_day("b1o3", "occurrence", "2026-10-18T22:00:00Z", "2026-10-18T22:00:00.0000000", "2026-10-19T22:00:00.0000000"),
+    );
+    let series = read_all(&h).await.events.into_iter().find(|e| e.id == "b1").unwrap();
+    let id = occurrence_id(&series, millis("2026-10-19T00:00:00Z"));
+    h.sync.services().calendar.clone().unwrap().remove_event("cal-1", &id, None, Notify::Guests).await.unwrap();
+    assert!(h.fake.with(|s| !s.events.contains_key("b1o3")));
+}
+
 /// A Teams meeting the account organizes: an HTML body with the join
 /// block, an optional guest and a booked room.
 fn teams_meeting() -> GraphEvent {
