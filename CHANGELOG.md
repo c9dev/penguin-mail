@@ -292,6 +292,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   it last updated, instead of leaving you guessing.
 
 ### Fixed
+- Show in Calendar opens the event's popover even when the calendar refreshes at that moment.
 - The automatic reply dialog names the provider that answers for an IMAP
   account with Sieve, where it used to say Gmail.
 - An invitation to one date of a repeating meeting on a Fastmail or other CalDAV account says how the series runs, such as "Every Tuesday, 6 left". On an Outlook account the same line no longer waits on Microsoft each time you open the message.
