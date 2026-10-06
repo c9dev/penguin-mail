@@ -169,6 +169,16 @@ fn event_json(occurrence: &model::Occurrence, calendar_name: &HashMap<String, St
     })
 }
 
+/// When the working day ends, as a time of day. A day that ends at
+/// midnight reads its end as a second before it, since a time of day
+/// cannot say 24:00 and 00:00 would come before the start.
+pub(super) fn working_day_end(hours: &mailrs_domain::calendar::hours::WorkingHours) -> NaiveTime {
+    match hours.end_minutes >= 24 * 60 {
+        true => NaiveTime::from_hms_opt(23, 59, 59).unwrap_or_default(),
+        false => hours.end_time(),
+    }
+}
+
 /// One calendar, in the shape `list_calendars` writes.
 fn calendar_json(calendar: &model::Calendar) -> Value {
     json!({
@@ -303,7 +313,7 @@ impl<A: Accounts> Tools<A> {
             }
         };
         let starts = hour("day_starts", working_hours.start_time())?;
-        let ends = hour("day_ends", working_hours.end_time())?;
+        let ends = hour("day_ends", working_day_end(&working_hours))?;
         if ends <= starts {
             return Err("`day_ends` must come after `day_starts`.".into());
         }

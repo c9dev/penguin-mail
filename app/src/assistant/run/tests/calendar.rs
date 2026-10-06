@@ -550,6 +550,15 @@ async fn a_declined_event_reads_as_free() {
     assert_eq!(listed["events"][0]["busy"], false);
 }
 
+#[test]
+fn a_working_day_that_ends_at_midnight_ends_after_its_last_hour() {
+    let hours = mailrs_domain::calendar::hours::WorkingHours { start_minutes: 19 * 60, end_minutes: 24 * 60, ..Default::default() };
+    let end = super::super::calendar::working_day_end(&hours);
+    assert!(end > chrono::NaiveTime::from_hms_opt(23, 0, 0).unwrap(), "{end}");
+    let usual = mailrs_domain::calendar::hours::WorkingHours::default();
+    assert_eq!(super::super::calendar::working_day_end(&usual), chrono::NaiveTime::from_hms_opt(18, 0, 0).unwrap());
+}
+
 #[tokio::test]
 async fn an_events_call_link_reaches_the_model() {
     let h = harness().await;
