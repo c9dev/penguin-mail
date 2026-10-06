@@ -103,7 +103,7 @@ fn utc_offset(text: &str) -> Option<i32> {
 }
 
 /// The zone a `TZID` names, by its IANA name or its Windows one.
-fn named(tzid: &str) -> Option<chrono_tz::Tz> {
+pub(crate) fn named(tzid: &str) -> Option<chrono_tz::Tz> {
     let tzid = tzid.trim();
     if let Ok(zone) = tzid.parse::<chrono_tz::Tz>() {
         return Some(zone);

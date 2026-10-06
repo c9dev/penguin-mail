@@ -9555,7 +9555,7 @@ msgstr ""
 
 #. A leading zero on the hour would read "03:05 PM" where every
 #. 12-hour clock on the desktop reads "3:05 PM".
-#: domain/src/calendar/clock.rs:26
+#: domain/src/calendar/clock.rs:29
 msgid "%-I:%M %p"
 msgstr "%-I:%M %p"
 

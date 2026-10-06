@@ -116,28 +116,32 @@ pub struct Pop3Tls {
     host: String,
     port: u16,
     security: Security,
+    /// How long the TCP connect and the TLS handshake may each take.
+    limit: Duration,
 }
 
 impl Pop3Tls {
     pub fn new(server: &Server) -> Pop3Tls {
-        Pop3Tls { host: server.host.clone(), port: server.port, security: server.security }
+        Pop3Tls { host: server.host.clone(), port: server.port, security: server.security, limit: COMMAND_LIMIT }
     }
 }
 
 impl Connect for Pop3Tls {
     async fn open(&self) -> Result<(Stream, bool), Pop3Error> {
-        let tcp = within(COMMAND_LIMIT, async {
+        let tcp = within(self.limit, async {
             TcpStream::connect((self.host.as_str(), self.port)).await.map_err(network)
         })
         .await?;
         match self.security {
-            Security::Tls => Ok((Box::new(crate::tls::handshake(&self.host, tcp).await?), false)),
+            Security::Tls => Ok((Box::new(within(self.limit, crate::tls::handshake(&self.host, tcp)).await?), false)),
             Security::StartTls => Ok((Box::new(tcp), true)),
         }
     }
 
     async fn upgrade(&self, plain: Stream) -> Result<Stream, Pop3Error> {
-        Ok(Box::new(crate::tls::handshake(&self.host, plain).await?))
+        // A server that takes the connection and never answers the
+        // ClientHello would otherwise hold the session lock for good.
+        Ok(Box::new(within(self.limit, crate::tls::handshake(&self.host, plain)).await?))
     }
 }
 
@@ -486,6 +490,16 @@ mod tests {
         });
         let connect = Scripted { stream: Mutex::new(Some(ours)), stls };
         (Pop3Client::with_connect(connect, Login::new("me", "pw")), server)
+    }
+
+    #[tokio::test]
+    async fn a_tls_handshake_the_server_never_answers_gives_up() {
+        let tls = Pop3Tls { host: "localhost".into(), port: 995, security: Security::StartTls, limit: Duration::from_millis(100) };
+        let (ours, _silent) = tokio::io::duplex(1024);
+        let upgraded = tokio::time::timeout(Duration::from_secs(10), tls.upgrade(Box::new(ours)))
+            .await
+            .expect("the handshake stops at its own limit");
+        assert!(matches!(upgraded, Err(Pop3Error::Network(_))));
     }
 
     #[tokio::test]

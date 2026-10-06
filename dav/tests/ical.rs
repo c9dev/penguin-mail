@@ -85,7 +85,6 @@ fn an_edit_keeps_every_line_it_did_not_touch() {
         assert!(written.contains(kept), "lost {kept}:\n{written}");
     }
     assert!(written.contains("SUMMARY:Standup (short)"));
-    assert!(written.contains("SEQUENCE:3"), "the master's sequence goes up by one:\n{written}");
     assert_eq!(written.matches("BEGIN:VALARM").count(), 1, "an unchanged reminder is not rewritten");
     let again = read_resource(&written, "/cal/work/", "/cal/work/standup.ics", "\"8\"", &me()).unwrap();
     assert_eq!(again.events[0].title, "Standup (short)");
@@ -202,4 +201,63 @@ fn an_answer_for_a_scheduling_server_leaves_the_scheduling_to_it() {
     let written = answer_scheduled(&text, &me(), Answer::Yes, NOW, true).unwrap().expect("I am a guest");
     assert!(written.contains("PARTSTAT=ACCEPTED"), "{written}");
     assert!(!written.contains("SCHEDULE-AGENT"), "{written}");
+}
+
+#[test]
+fn an_edit_by_the_organizer_raises_the_sequence() {
+    let text = fixture("google-series.ics");
+    let ann = vec!["ann@example.com".to_string()];
+    let read = read_resource(&text, "/c/", "/c/standup.ics", "e", &ann).unwrap();
+    let mut master = read.events[0].clone();
+    master.title = "Standup (short)".into();
+    let written = write_event(Some(&text), &master, &ann, NOW).unwrap();
+    assert_eq!(written.matches("SEQUENCE:2").count(), 0, "{written}");
+    assert_eq!(written.matches("SEQUENCE:3").count(), 2, "{written}");
+}
+
+#[test]
+fn an_edit_by_a_guest_keeps_the_organizer_sequence() {
+    let text = fixture("google-series.ics");
+    let read = read_resource(&text, "/c/", "/c/standup.ics", "e", &me()).unwrap();
+    let mut master = read.events[0].clone();
+    master.title = "Standup (short)".into();
+    let written = write_event(Some(&text), &master, &me(), NOW).unwrap();
+    assert!(written.contains("SUMMARY:Standup (short)"), "{written}");
+    assert_eq!(written.matches("SEQUENCE:2").count(), 1, "{written}");
+    assert_eq!(written.matches("SEQUENCE:3").count(), 1, "{written}");
+}
+
+#[test]
+fn an_answer_keeps_the_organizer_sequence() {
+    let text = fixture("google-series.ics");
+    let written = answer_scheduled(&text, &me(), Answer::Yes, NOW, true).unwrap().expect("I am a guest");
+    assert_eq!(written.matches("SEQUENCE:2").count(), 1, "{written}");
+    assert_eq!(written.matches("SEQUENCE:3").count(), 1, "{written}");
+    assert!(!written.contains("SEQUENCE:4"), "{written}");
+}
+
+#[test]
+fn an_edit_to_an_event_without_guests_raises_the_sequence() {
+    let text = fixture("apple-event.ics");
+    let read = read_resource(&text, "/c/", "/c/a.ics", "e", ME).unwrap();
+    let mut event = read.events[0].clone();
+    event.title = "Renamed".into();
+    let written = write_event(Some(&text), &event, ME, NOW).unwrap();
+    let before = read.events[0].sequence;
+    let after = read_resource(&written, "/c/", "/c/a.ics", "e", ME).unwrap().events[0].sequence;
+    assert_eq!(after, before + 1, "{written}");
+}
+
+#[test]
+fn an_outlook_exdate_in_a_windows_zone_keeps_the_series_repeating() {
+    let text = fixture("windows-zone.ics").replace(
+        "SUMMARY:Call\r\n",
+        "SUMMARY:Call\r\nRRULE:FREQ=WEEKLY;COUNT=4\r\nEXDATE;TZID=\"W. Europe Standard Time\":20261027T140000\r\n",
+    );
+    let read = read_resource(&text, "/c/", "/c/w.ics", "e", ME).unwrap();
+    let event = &read.events[0];
+    assert!(event.rules[1].starts_with(&format!("EXDATE;TZID={}:", event.zone)), "{:?}", event.rules);
+    let week = 7 * 24 * 3_600_000;
+    let shown = mailrs_domain::calendar::expand(event, event.start, event.start + 5 * week);
+    assert_eq!(shown.len(), 3, "four weeks less the one skipped: {shown:?}");
 }
