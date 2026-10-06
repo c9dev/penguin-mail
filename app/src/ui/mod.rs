@@ -120,6 +120,13 @@ pub fn page_column(card: &impl IsA<gtk::Widget>, class: &str) -> adw::Breakpoint
     bin
 }
 
+/// A toast that shows `text` as written. libadwaita reads a toast's title
+/// as Pango markup, so a reason with "&" or "<" in it, such as an address
+/// typed as "tom&jerry" or a server's error, would leave the toast blank.
+pub fn toast(text: &str) -> adw::Toast {
+    adw::Toast::new(&window::toast_title(text))
+}
+
 /// An action row that shows its title and subtitle as written. A row
 /// reads both as Pango markup by default, so a name from a server, such
 /// as a guest called "R&D Team" or a file "Q&A.pdf", failed to parse and

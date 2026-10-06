@@ -500,7 +500,8 @@ impl Sidebar {
             let Some(sidebar) = weak.upgrade() else {
                 return glib::Propagation::Proceed;
             };
-            let handled = match keys::list_key(key, state) {
+            let focus = focus_at(sidebar.list.upcast_ref());
+            let handled = match keys::route(key, state, focus) {
                 Some(ListKey::Leave { forward }) => sidebar.leave_list(forward),
                 Some(ListKey::Step(step)) => sidebar.step_focus(step),
                 Some(ListKey::Open) => sidebar.open_focused(),
@@ -577,10 +578,7 @@ impl Sidebar {
     /// selecting, so nothing loads until Enter or Space.
     fn step_focus(&self, step: i32) -> bool {
         let rows = self.list_rows();
-        let reachable: Vec<bool> = rows
-            .iter()
-            .map(|row| row.is_visible() && row.is_sensitive() && (row.is_selectable() || row.is_activatable()))
-            .collect();
+        let reachable: Vec<bool> = rows.iter().map(|row| keys::reachable(row_keys(row))).collect();
         let from = self
             .focused_row()
             .or_else(|| self.list.selected_row())
@@ -630,6 +628,9 @@ impl Sidebar {
     /// whose heading has it.
     fn open_focused(&self) -> bool {
         let Some(row) = self.focused_row() else { return false };
+        if keys::on_enter(row_keys(&row)) == Some(ListKey::Menu) {
+            return self.open_options();
+        }
         if row.is_selectable() {
             self.list.select_row(Some(&row));
         } else if row.is_activatable() {
@@ -1059,6 +1060,8 @@ impl Sidebar {
     fn add_group(&self, mailbox: Mailbox, name: &str, depth: u32) -> gtk::ListBoxRow {
         let row = self.add_row(mailbox, name, "folder-symbolic", depth, false);
         row.set_tooltip_text(Some(&gettext("Holds folders, not mail")));
+        // The keys stop on it and Enter opens its menu (`row_keys`).
+        row.add_css_class(GROUP_CLASS);
         row
     }
 
@@ -1649,7 +1652,8 @@ fn context_menu(row: &gtk::ListBoxRow, menu: &gio::Menu) {
     // row, which the list leaves to the row (`Sidebar::open_options`).
     let keys = gtk::EventControllerKey::new();
     keys.connect_key_pressed(move |controller, key, _, state| {
-        if keys::list_key(key, state) != Some(ListKey::Menu) {
+        let focus = controller.widget().map_or(keys::Focus::InList, |row| focus_at(&row));
+        if keys::route(key, state, focus) != Some(ListKey::Menu) {
             return glib::Propagation::Proceed;
         }
         let Some(row) = controller.widget() else { return glib::Propagation::Proceed };
@@ -1658,6 +1662,36 @@ fn context_menu(row: &gtk::ListBoxRow, menu: &gio::Menu) {
     });
     row.add_controller(keys);
     row.connect_destroy(move |_| popover.unparent());
+}
+
+/// The class on a group row, a server folder that holds only folders.
+const GROUP_CLASS: &str = "mailbox-group";
+
+/// What the keys need to know of `row`.
+fn row_keys(row: &gtk::ListBoxRow) -> keys::Row {
+    keys::Row {
+        shown: row.is_visible(),
+        sensitive: row.is_sensitive(),
+        opens: row.is_selectable() || row.is_activatable(),
+        group: row.has_css_class(GROUP_CLASS),
+    }
+}
+
+/// Where the keyboard focus sits relative to `within`, a widget that
+/// holds menus: inside one of its popovers, or anywhere else. The walk
+/// goes from the focused widget up its parents and stops at `within`.
+fn focus_at(within: &gtk::Widget) -> keys::Focus {
+    let mut at = within.root().and_then(|root| root.focus());
+    while let Some(widget) = at {
+        if &widget == within {
+            break;
+        }
+        if widget.is::<gtk::Popover>() {
+            return keys::Focus::InPopover;
+        }
+        at = widget.parent();
+    }
+    keys::Focus::InList
 }
 
 /// The settings section of an account's menu, as words and actions. Every

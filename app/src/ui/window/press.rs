@@ -409,7 +409,7 @@ fn erase_question(count: usize, threaded: bool, erasers: &[&str], kept: &[&str])
     let body = match kept {
         [] => body,
         _ => {
-            let accounts = kept.join(", ");
+            let accounts = crate::protection::joined(kept);
             let stays = fill_plural(
                 "Mail in {accounts} stays in the Trash, since its server cannot delete mail for good.",
                 "Mail in {accounts} stays in the Trash, since their servers cannot delete mail for good.",
@@ -775,6 +775,19 @@ mod tests {
             "Gmail deletes them from every device and cannot bring them back. \
              Mail in me2@gmail.com stays in the Trash, since its server cannot \
              delete mail for good."
+        );
+    }
+
+    #[test]
+    fn delete_forever_lists_the_accounts_it_leaves_as_every_other_list_does() {
+        let question = erase_question(1, true, &["Gmail"], &["a@x.org", "b@y.org", "c@z.org"]);
+        assert!(
+            question.body.ends_with(
+                "Mail in a@x.org, b@y.org and c@z.org stays in the Trash, since their servers \
+                 cannot delete mail for good."
+            ),
+            "{}",
+            question.body
         );
     }
 

@@ -1089,8 +1089,6 @@ fn contact_photo_dir(demo: bool, data_dir: &std::path::Path) -> PathBuf {
         .join("contact-photos")
 }
 
-/// Tells the window that `account_id` needs a new sign-in, for an account
-/// the engine never starts and so never reports on.
 /// What connecting an account at startup needs: the store, the settings,
 /// the build's clients and the secrets, or the demo's sample servers.
 struct Reach {
@@ -1239,10 +1237,11 @@ mod tests {
 
     use super::Core;
 
-    /// `Core::open(true)` keeps the demo's store at a path keyed by this
-    /// process's id, since the app assumes only one demo runs at a time.
-    /// Two tests opening it at once race on the same file, so every test
-    /// here holds this for as long as its core lives.
+    /// Each `Core::open(true)` makes a demo folder of its own
+    /// (`DemoFolder::make` numbers them), so the tests here share no file.
+    /// Each core also starts a runtime and seeds a whole demo store, so the
+    /// tests hold this for as long as a core lives and the run keeps one
+    /// in memory at a time.
     static DEMO: Mutex<()> = Mutex::new(());
 
     #[test]

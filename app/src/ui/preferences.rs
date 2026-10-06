@@ -5,7 +5,6 @@ use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 use adw::prelude::*;
-use chrono::Timelike;
 use gtk::glib;
 use mailrs_domain::calendar::hours::WorkingHours;
 use mailrs_domain::calendar::week::WeekStart;
@@ -237,7 +236,7 @@ fn general_page(
         // One row for each account, its reasons one to a line, so an
         // account that lacks three things shows its address once.
         for (address, reasons) in missing {
-            let row = adw::ActionRow::builder()
+            let row = adw::ActionRow::builder().use_markup(false)
                 .title(address)
                 .subtitle(reasons.join("\n"))
                 .build();
@@ -359,7 +358,10 @@ fn writing_page(
         .build();
     for account in accounts {
         let text = settings.signature(&account.email).to_string();
+        // The subtitle is the signature's first line, which may hold "&"
+        // or a Markdown link in angle brackets.
         let row = adw::ExpanderRow::builder()
+            .use_markup(false)
             .title(&account.email)
             .subtitle(preview(&text))
             .expanded(signature_of.is_some_and(|e| e.eq_ignore_ascii_case(&account.email)))
@@ -406,7 +408,7 @@ fn writing_page(
         import.connect_clicked(move |button| {
             let Some(app) = weak.upgrade() else { return };
             if app.core.account(account_id).is_none() {
-                toasts.add_toast(adw::Toast::new(&gettext("This account is not syncing yet")));
+                toasts.add_toast(crate::ui::toast(&gettext("This account is not syncing yet")));
                 return;
             }
             let settings = app.core.gmail_settings();
@@ -420,16 +422,16 @@ fn writing_page(
                 {
                     Ok(Some(signature)) => {
                         target.set_text(&signature);
-                        toasts.add_toast(adw::Toast::new(&gettext(
+                        toasts.add_toast(crate::ui::toast(&gettext(
                             "Imported the signature from Gmail",
                         )));
                     }
-                    Ok(None) => toasts.add_toast(adw::Toast::new(&gettext(
+                    Ok(None) => toasts.add_toast(crate::ui::toast(&gettext(
                         "Gmail has no signature for this account",
                     ))),
                     Err(err) => {
                         let said = with_reason(&gettext("Could not import: {reason}"), &err, &[]);
-                        toasts.add_toast(adw::Toast::new(&said));
+                        toasts.add_toast(crate::ui::toast(&said));
                     }
                 }
                 button.set_sensitive(true);
@@ -706,7 +708,7 @@ fn spelling_group(
             .iter()
             .position(|(_, languages)| *languages == current)
             .unwrap_or(0);
-        let row = adw::ComboRow::builder()
+        let row = adw::ComboRow::builder().use_markup(false)
             .title(&account.email)
             .model(&gtk::StringList::new(&labels))
             .selected(selected as u32)
@@ -946,10 +948,13 @@ fn working_hours_words(hours: &WorkingHours) -> String {
 
 /// A drop-down of the day's 24 whole hours, in the clock
 /// [`crate::clock_format::current`] names, `current`'s own hour selected.
-fn hour_dropdown(current: chrono::NaiveTime) -> gtk::DropDown {
-    let labels: Vec<String> = (0..24)
+/// A drop-down of whole hours, `hours` in order, on `current`. Hour 24 is
+/// midnight at the day's end and reads as midnight does.
+fn hour_dropdown(hours: &[u32], current: u32) -> gtk::DropDown {
+    let labels: Vec<String> = hours
+        .iter()
         .map(|hour| {
-            crate::clock_format::time_text(chrono::NaiveTime::from_hms_opt(hour, 0, 0).unwrap_or_default())
+            crate::clock_format::time_text(chrono::NaiveTime::from_hms_opt(hour % 24, 0, 0).unwrap_or_default())
         })
         .collect();
     let refs: Vec<&str> = labels.iter().map(String::as_str).collect();
@@ -957,8 +962,43 @@ fn hour_dropdown(current: chrono::NaiveTime) -> gtk::DropDown {
         .model(&gtk::StringList::new(&refs))
         .valign(gtk::Align::Center)
         .build();
-    drop.set_selected(current.hour());
+    let at = hours.iter().position(|h| *h == current).unwrap_or(0);
+    drop.set_selected(u32::try_from(at).unwrap_or(0));
     drop
+}
+
+/// The hours the working day may start at.
+fn start_hours() -> Vec<u32> {
+    (0..24).collect()
+}
+
+/// The hours the working day may end at: an hour after midnight at the
+/// earliest, and midnight at the day's end at the latest.
+fn end_hours() -> Vec<u32> {
+    (1..=24).collect()
+}
+
+/// `hours` starting at `hour`. An end at or before it moves to an hour
+/// after it, so the working day never runs backwards, which would shade
+/// the whole day.
+fn starting_at(mut hours: WorkingHours, hour: u32) -> WorkingHours {
+    let start = u16::try_from(hour.min(23) * 60).unwrap_or(0);
+    hours.start_minutes = start;
+    if hours.end_minutes <= start {
+        hours.end_minutes = start + 60;
+    }
+    hours
+}
+
+/// `hours` ending at `hour`. A start at or after it moves to an hour
+/// before it.
+fn ending_at(mut hours: WorkingHours, hour: u32) -> WorkingHours {
+    let end = u16::try_from(hour.clamp(1, 24) * 60).unwrap_or(24 * 60);
+    hours.end_minutes = end;
+    if hours.start_minutes >= end {
+        hours.start_minutes = end - 60;
+    }
+    hours
 }
 
 /// The "Week Starts On" row: Automatic follows the locale's own first
@@ -1012,27 +1052,37 @@ fn working_hours_row(
         .spacing(6)
         .valign(gtk::Align::Center)
         .build();
-    let start = hour_dropdown(hours.start_time());
+    let (starts, ends) = (start_hours(), end_hours());
+    let start = hour_dropdown(&starts, u32::from(hours.start_minutes / 60));
     crate::ui::name(&start, &gettext("Starts"));
-    let end = hour_dropdown(hours.end_time());
+    let end = hour_dropdown(&ends, u32::from(hours.end_minutes / 60));
     crate::ui::name(&end, &gettext("Ends"));
+    // Each drop-down moves the other when the day would run backwards.
+    // The other's own handler then finds the order right and changes
+    // nothing more.
     {
         let stored = Rc::clone(&stored);
         let commit = commit.clone();
+        let (end, ends) = (end.downgrade(), ends.clone());
         start.connect_selected_notify(move |drop| {
-            let mut hours = stored.get();
-            hours.start_minutes = drop.selected() as u16 * 60;
+            let hours = starting_at(stored.get(), starts.get(drop.selected() as usize).copied().unwrap_or(0));
             stored.set(hours);
+            if let (Some(end), Some(at)) = (end.upgrade(), ends.iter().position(|h| *h == u32::from(hours.end_minutes / 60))) {
+                end.set_selected(u32::try_from(at).unwrap_or(0));
+            }
             commit();
         });
     }
     {
         let stored = Rc::clone(&stored);
         let commit = commit.clone();
+        let start = start.downgrade();
         end.connect_selected_notify(move |drop| {
-            let mut hours = stored.get();
-            hours.end_minutes = drop.selected() as u16 * 60;
+            let hours = ending_at(stored.get(), ends.get(drop.selected() as usize).copied().unwrap_or(24));
             stored.set(hours);
+            if let Some(start) = start.upgrade() {
+                start.set_selected(u32::from(hours.start_minutes / 60));
+            }
             commit();
         });
     }
@@ -1199,4 +1249,44 @@ fn preview(signature: &str) -> String {
         .lines()
         .find(|l| !l.trim().is_empty())
         .map_or_else(|| gettext("No signature"), |l| l.trim().to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use mailrs_domain::calendar::hours::WorkingHours;
+
+    use super::{end_hours, starting_at, ending_at};
+
+    fn nine_to_six() -> WorkingHours {
+        WorkingHours::default()
+    }
+
+    #[test]
+    fn a_start_past_the_end_moves_the_end_an_hour_after_it() {
+        let hours = starting_at(nine_to_six(), 19);
+        assert_eq!((hours.start_minutes, hours.end_minutes), (19 * 60, 20 * 60));
+    }
+
+    #[test]
+    fn a_start_at_the_last_hour_ends_the_day_at_midnight() {
+        let hours = starting_at(nine_to_six(), 23);
+        assert_eq!((hours.start_minutes, hours.end_minutes), (23 * 60, 24 * 60));
+    }
+
+    #[test]
+    fn an_end_before_the_start_moves_the_start_an_hour_before_it() {
+        let hours = ending_at(nine_to_six(), 8);
+        assert_eq!((hours.start_minutes, hours.end_minutes), (7 * 60, 8 * 60));
+    }
+
+    #[test]
+    fn a_change_that_keeps_the_order_moves_nothing_else() {
+        let hours = ending_at(starting_at(nine_to_six(), 8), 17);
+        assert_eq!((hours.start_minutes, hours.end_minutes), (8 * 60, 17 * 60));
+    }
+
+    #[test]
+    fn the_day_can_end_at_midnight_and_not_at_its_first_hour() {
+        assert_eq!(end_hours(), (1..=24).collect::<Vec<u32>>());
+    }
 }

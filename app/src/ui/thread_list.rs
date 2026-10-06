@@ -295,7 +295,7 @@ impl ThreadList {
         header.pack_end(&search_button);
 
         let categories_slot = gtk::Box::new(gtk::Orientation::Vertical, 0);
-        let banner = adw::Banner::builder().revealed(false).build();
+        let banner = adw::Banner::builder().use_markup(false).revealed(false).build();
         let toolbar = adw::ToolbarView::new();
         toolbar.add_top_bar(&header);
         toolbar.add_top_bar(&categories_slot);

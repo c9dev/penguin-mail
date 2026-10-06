@@ -170,14 +170,21 @@ impl<A: Accounts> Tools<A> {
         // Group by account, as the window's own plan does: only the
         // accounts that can erase for good take part, and the count and
         // the question's wording follow what is left once they are
-        // dropped.
+        // dropped. The answer names the threads left behind, so the model
+        // does not report them as deleted.
         let mut erasing: Vec<Target> = Vec::new();
         let mut erasers: Vec<String> = Vec::new();
+        let mut left: Vec<Value> = Vec::new();
         for target in &targets {
             let Some(account) = accounts.iter().find(|a| a.id == target.account_id) else {
                 continue;
             };
             if self.unavailable(account, Missing::DeleteForever).is_some() {
+                left.push(json!({
+                    "account": account.email,
+                    "thread_id": target.thread_id,
+                    "unavailable": crate::offered::reason(account, Missing::DeleteForever, None),
+                }));
                 continue;
             }
             erasing.push(target.clone());
@@ -203,10 +210,12 @@ impl<A: Accounts> Tools<A> {
             .ok_or("That account is gone.")?;
         let refs: Vec<&str> = erasers.iter().map(String::as_str).collect();
         let question = erase_question(erasing.len(), &refs);
-        Ok(Plan::ask(question, self.erase(account, erasing)))
+        Ok(Plan::ask(question, self.erase(account, erasing, left)))
     }
 
-    async fn erase(&self, account: Account, targets: Vec<Target>) -> ToolResult {
+    /// Erases `targets` for good. `left` names the threads of the call
+    /// that stayed, on accounts that cannot erase.
+    async fn erase(&self, account: Account, targets: Vec<Target>, left: Vec<Value>) -> ToolResult {
         let mail = Arc::clone(&self.modules.mail);
         let outcome = self
             .permitted(&account, Permission::Delete, async move {
@@ -227,6 +236,9 @@ impl<A: Accounts> Tools<A> {
                 .iter()
                 .map(|f| json!({"thread_id": f.target.thread_id, "error": f.error}))
                 .collect();
+        }
+        if !left.is_empty() {
+            result["left"] = Value::Array(left);
         }
         Ok(result)
     }

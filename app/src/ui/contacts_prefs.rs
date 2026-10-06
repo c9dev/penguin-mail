@@ -62,7 +62,7 @@ fn servers(app: &Rc<App>, accounts: &[(Account, Offers)]) -> Option<adw::Prefere
         .description(gettext("Penguin Mail looks for these when you add an account. The login is the account's own."))
         .build();
     for account in found_for {
-        let row = adw::ExpanderRow::builder().title(&account.email).build();
+        let row = adw::ExpanderRow::builder().use_markup(false).title(&account.email).build();
         group.add(&row);
         let shown: Shown = Rc::default();
         fill_servers(app, &row, account, &shown);
@@ -70,41 +70,51 @@ fn servers(app: &Rc<App>, accounts: &[(Account, Offers)]) -> Option<adw::Prefere
     Some(group)
 }
 
-type Shown = Rc<RefCell<Vec<adw::ActionRow>>>;
+/// The rows an earlier fill put in an account's row. They are held
+/// weakly, as is the account's row in the buttons' handlers: the buttons
+/// live inside those rows, so a strong hold would keep every row, button
+/// and the app alive after Preferences closes.
+type Shown = Rc<RefCell<Vec<glib::WeakRef<adw::ActionRow>>>>;
 
 /// Fills `row` with `account`'s server lines and its two buttons, after
 /// taking out what an earlier fill put there.
 fn fill_servers(app: &Rc<App>, row: &adw::ExpanderRow, account: &Account, shown: &Shown) {
-    let (app, row, account, shown) = (Rc::clone(app), row.clone(), account.clone(), Rc::clone(shown));
+    let (app, weak_row, account, shown) = (Rc::clone(app), row.downgrade(), account.clone(), Rc::clone(shown));
     glib::spawn_future_local(async move {
         let found = app.core.services_found(account.id).await.unwrap_or_default();
         let (refused_calendar, refused_contacts) = app.core.login_refusals(account.id);
         let rules_here = app.core.rules_here(account.id);
+        // Preferences may have closed while the store answered.
+        let Some(row) = weak_row.upgrade() else { return };
         for old in shown.borrow_mut().drain(..) {
-            row.remove(&old);
+            if let Some(old) = old.upgrade() {
+                row.remove(&old);
+            }
         }
         let lines = crate::servers::lines(&found, refused_calendar.as_deref(), refused_contacts.as_deref(), rules_here);
         for line in lines {
-            let child = adw::ActionRow::builder().title(&line.title).subtitle(glib::markup_escape_text(&line.subtitle).as_str()).build();
+            let child = adw::ActionRow::builder().use_markup(false).title(&line.title).subtitle(&line.subtitle).build();
             if let Some(kind) = line.ask {
                 let host = found.iter().find(|f| f.kind == kind).map(|f| f.url.clone()).unwrap_or_default();
                 let use_it = gtk::Button::builder().label(gettext("Use It")).valign(gtk::Align::Center).css_classes(["flat"]).build();
                 crate::ui::name(&use_it, &fill(&gettext("Use {host} for {account}"), &[("host", &host), ("account", &account.email)]));
-                let (app, row, account, shown) = (Rc::clone(&app), row.clone(), account.clone(), Rc::clone(&shown));
+                let (app, weak_row, account, shown) = (Rc::clone(&app), weak_row.clone(), account.clone(), Rc::clone(&shown));
                 use_it.connect_clicked(move |button| {
                     button.set_sensitive(false);
-                    let (app, row, account, shown) = (Rc::clone(&app), row.clone(), account.clone(), Rc::clone(&shown));
+                    let (app, weak_row, account, shown) = (Rc::clone(&app), weak_row.clone(), account.clone(), Rc::clone(&shown));
                     glib::spawn_future_local(async move {
                         if let Err(err) = app.core.confirm_server(account.clone(), kind).await {
                             tracing::info!(account = %account.email, %err, "the server did not take the login");
                         }
-                        fill_servers(&app, &row, &account, &shown);
+                        if let Some(row) = weak_row.upgrade() {
+                            fill_servers(&app, &row, &account, &shown);
+                        }
                     });
                 });
                 child.add_suffix(&use_it);
             }
             row.add_row(&child);
-            shown.borrow_mut().push(child);
+            shown.borrow_mut().push(child.downgrade());
         }
         let again = gtk::Button::builder().label(gettext("Find Again")).valign(gtk::Align::Center).build();
         let edit = gtk::Button::builder().label(gettext("Edit…")).valign(gtk::Align::Center).build();
@@ -112,26 +122,30 @@ fn fill_servers(app: &Rc<App>, row: &adw::ExpanderRow, account: &Account, shown:
         holder.add_suffix(&again);
         holder.add_suffix(&edit);
         row.add_row(&holder);
-        shown.borrow_mut().push(holder);
+        shown.borrow_mut().push(holder.downgrade());
         {
-            let (app, row, account, shown) = (Rc::clone(&app), row.clone(), account.clone(), Rc::clone(&shown));
+            let (app, weak_row, account, shown) = (Rc::clone(&app), weak_row.clone(), account.clone(), Rc::clone(&shown));
             again.connect_clicked(move |button| {
                 button.set_sensitive(false);
-                let (app, row, account, shown) = (Rc::clone(&app), row.clone(), account.clone(), Rc::clone(&shown));
+                let (app, weak_row, account, shown) = (Rc::clone(&app), weak_row.clone(), account.clone(), Rc::clone(&shown));
                 glib::spawn_future_local(async move {
                     if let Err(err) = app.core.find_services(account.clone()).await {
                         tracing::info!(account = %account.email, %err, "the search for servers failed");
                     }
-                    fill_servers(&app, &row, &account, &shown);
+                    if let Some(row) = weak_row.upgrade() {
+                        fill_servers(&app, &row, &account, &shown);
+                    }
                 });
             });
         }
         let calendar = found.iter().find(|f| f.kind == ServiceKind::CalDav).map(|f| f.url.clone()).unwrap_or_default();
         let contacts = found.iter().find(|f| f.kind == ServiceKind::CardDav).map(|f| f.url.clone()).unwrap_or_default();
         edit.connect_clicked(move |button| {
-            let (again_app, again_row, again_account, again_shown) = (Rc::clone(&app), row.clone(), account.clone(), Rc::clone(&shown));
+            let (again_app, again_row, again_account, again_shown) = (Rc::clone(&app), weak_row.clone(), account.clone(), Rc::clone(&shown));
             super::dav_edit::present(&app, &account, &calendar, &contacts, button, move || {
-                fill_servers(&again_app, &again_row, &again_account, &again_shown)
+                if let Some(row) = again_row.upgrade() {
+                    fill_servers(&again_app, &row, &again_account, &again_shown);
+                }
             });
         });
     });
@@ -181,7 +195,7 @@ fn contacts(
                 group.add(&grant_access_row(account, grant.clone()));
             }
             ContactsRow::NotOffered(reason) => {
-                let row = adw::SwitchRow::builder()
+                let row = adw::SwitchRow::builder().use_markup(false)
                     .title(&account.email)
                     .subtitle(reason)
                     .active(false)
@@ -190,7 +204,7 @@ fn contacts(
                 group.add(&row);
             }
             ContactsRow::Switch => {
-                let row = adw::SwitchRow::builder()
+                let row = adw::SwitchRow::builder().use_markup(false)
                     .title(&account.email)
                     .active(settings.reads_contacts(&account.email))
                     .build();
@@ -276,7 +290,7 @@ fn calendar(
         match calendar_lack(account, *offers, withheld(account.id), missed(account.id, Missing::Calendar)) {
             CalendarRow::NotOffered(lack) => {
                 group.add(
-                    &adw::ActionRow::builder()
+                    &adw::ActionRow::builder().use_markup(false)
                         .title(&account.email)
                         .subtitle(lack)
                         .build(),
@@ -298,7 +312,7 @@ fn calendar(
             online_accounts = false;
             continue;
         };
-        let row = adw::ActionRow::builder().title(&account.email).build();
+        let row = adw::ActionRow::builder().use_markup(false).title(&account.email).build();
         if known {
             row.set_subtitle(&pgettext("an account in Online Accounts", "Added"));
         } else {
@@ -343,7 +357,7 @@ fn calendar_lack(account: &Account, offers: Offers, withheld: Withheld, missed: 
 /// Grant Access button that runs `grant`, named so a screen reader tells
 /// several such rows apart.
 fn grant_access_row(account: &Account, grant: impl Fn(AccountId) + 'static) -> adw::ActionRow {
-    let row = adw::ActionRow::builder()
+    let row = adw::ActionRow::builder().use_markup(false)
         .title(&account.email)
         .subtitle(gettext("Not allowed when you signed in"))
         .build();

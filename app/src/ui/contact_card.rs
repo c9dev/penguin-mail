@@ -100,7 +100,7 @@ pub fn present(parent: &impl IsA<gtk::Widget>, person: Person, chose: impl Fn(Ch
 
     let details = adw::PreferencesGroup::new();
     for address in &person.addresses {
-        let row = adw::ActionRow::builder()
+        let row = adw::ActionRow::builder().use_markup(false)
             .title(address)
             .subtitle(if address == &person.email {
                 gettext("Email")
@@ -123,7 +123,7 @@ pub fn present(parent: &impl IsA<gtk::Widget>, person: Person, chose: impl Fn(Ch
         details.add(&row);
     }
     if let Some(phone) = person.phone.as_deref() {
-        let row = adw::ActionRow::builder()
+        let row = adw::ActionRow::builder().use_markup(false)
             .title(phone)
             .subtitle(gettext("Phone"))
             .build();

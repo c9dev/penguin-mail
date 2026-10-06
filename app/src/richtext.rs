@@ -369,7 +369,6 @@ fn lines_to_html(blocks: &[Block]) -> String {
         .join("<br />")
 }
 
-/// Groups of lines with the blank ones between them dropped.
 /// How many of `blocks`, which start with a quoted line, belong to that
 /// quote. A blank line between quoted paragraphs has no quote of its own
 /// in the editor, but it stays inside the quote while quoted lines follow
@@ -386,6 +385,7 @@ fn quote_run(blocks: &[Block]) -> usize {
     end
 }
 
+/// Groups of lines with the blank ones between them dropped.
 fn split_on_blanks(blocks: &[Block]) -> Vec<&[Block]> {
     blocks
         .split(|b| b.is_blank())

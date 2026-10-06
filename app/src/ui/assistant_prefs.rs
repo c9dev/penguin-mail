@@ -97,7 +97,7 @@ pub fn page(app: &Rc<App>, dialog: &adw::PreferencesDialog) -> adw::PreferencesP
         row.connect_apply(move |row| {
             let key = row.text();
             assistant::save_key(name, &key);
-            toasts.add_toast(adw::Toast::new(&if key.trim().is_empty() {
+            toasts.add_toast(crate::ui::toast(&if key.trim().is_empty() {
                 gettext("Removed the key")
             } else {
                 gettext("Saved in the keyring")
@@ -270,7 +270,7 @@ fn test_row(
         let ai = app.settings().ai;
         let config = match typed.config(ai.clone(), connection, &model_to_test(&ai, connection)) {
             Ok(config) => config,
-            Err(problem) => return toasts.add_toast(adw::Toast::new(&problem)),
+            Err(problem) => return toasts.add_toast(crate::ui::toast(&problem)),
         };
         button.set_sensitive(false);
         let (button, toasts) = (button.clone(), toasts.clone());
@@ -280,7 +280,7 @@ fn test_row(
                 .call(async move { mailrs_ai::test(&config).await })
                 .await;
             button.set_sensitive(true);
-            toasts.add_toast(adw::Toast::new(&match result {
+            toasts.add_toast(crate::ui::toast(&match result {
                 Ok(answer) => answer,
                 Err(err) => fill(
                     &gettext("No answer: {reason}"),
@@ -789,7 +789,7 @@ fn detected_group(
                     &[("model", &item.models[0]), ("count", &(n - 1).to_string())],
                 ),
             };
-            let row = adw::ActionRow::builder()
+            let row = adw::ActionRow::builder().use_markup(false)
                 .title(&item.label)
                 .subtitle(&subtitle)
                 .build();

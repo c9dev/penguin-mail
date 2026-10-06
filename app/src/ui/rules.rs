@@ -133,7 +133,7 @@ pub fn present(
 
 impl Rules {
     fn toast(&self, text: &str) {
-        self.toasts.add_toast(adw::Toast::new(text));
+        self.toasts.add_toast(crate::ui::toast(text));
     }
 
     /// Toasts a failure. `said` is `gettext` of the sentence, with
@@ -485,7 +485,10 @@ impl Rules {
             };
             let filter = match form.filter_keeping(&unshown) {
                 Ok(filter) => filter,
-                Err(reason) => return rules.toast(reason),
+                // The form answers in English, which the assistant hands to
+                // the model; sync's Sieve code puts both lines in the
+                // catalogue.
+                Err(reason) => return rules.toast(&gettext(reason)),
             };
             button.set_sensitive(false);
             match editing.clone() {

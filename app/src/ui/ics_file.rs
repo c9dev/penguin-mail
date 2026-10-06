@@ -123,7 +123,7 @@ fn show_events(
             else {
                 return;
             };
-            let toast = |text: &str| toasts.add_toast(adw::Toast::new(text));
+            let toast = |text: &str| toasts.add_toast(crate::ui::toast(text));
             match action {
                 Action::Import(events, target) => import(&app, &card, &toasts, events, target),
                 Action::ShowInCalendar => {
@@ -143,7 +143,7 @@ fn show_events(
                         let toasts = toasts.clone();
                         move |result| {
                             if result.is_err() {
-                                toasts.add_toast(adw::Toast::new(&failed));
+                                toasts.add_toast(crate::ui::toast(&failed));
                             }
                         }
                     });
@@ -186,8 +186,9 @@ fn show_events(
         card.cannot_add();
         let note = gtk::Label::builder()
             .label(gettext(
-                "No account here can use Google Calendar. Add a Google account, or allow \
-                 calendar access for one in Preferences, then open the file again.",
+                "No account here has a calendar Penguin Mail can add to. Add an account with \
+                 a calendar, or turn one on in Preferences, under Contacts & Calendar, then \
+                 open the file again.",
             ))
             .wrap(true)
             .xalign(0.0)
@@ -250,7 +251,7 @@ fn import(
         let (Some(card), Some(toasts)) = (card.upgrade(), toasts.upgrade()) else {
             return;
         };
-        let say = |text: &str| toasts.add_toast(adw::Toast::new(text));
+        let say = |text: &str| toasts.add_toast(crate::ui::toast(text));
         match done {
             Ok(Permitted::Done(added)) if added.spots.is_empty() => say(&gettext(
                 "Nothing in this file can be added, since its events have no id or start time",

@@ -260,6 +260,24 @@ impl Forwarded {
     }
 }
 
+/// `body` as the page the composer's Preview and its forwarded message
+/// show, drawn dark when `dark`. A forwarded message is mail from outside,
+/// so the body goes through the reader's cleaner and the page refuses
+/// every remote load, as the conversation view does before the reader
+/// allows remote images. Inline pictures must already be `data:` images.
+/// `title` is the name a screen reader gives the page.
+pub fn preview_page(title: &str, body: &str, dark: bool) -> String {
+    format!(
+        "<!doctype html><html><head><meta charset=\"utf-8\">\
+         <meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; script-src 'none'; \
+         style-src 'unsafe-inline'; img-src data:; font-src data:\">\
+         <title>{}</title><style>body{{margin:24px;{}}}</style></head><body>{}</body></html>",
+        richtext::escape(title),
+        if dark { "background:#1e1e1e;filter:invert(0.92) hue-rotate(180deg)" } else { "background:#fff" },
+        crate::sanitize::sanitize_html(body, None)
+    )
+}
+
 /// Splits a saved draft's HTML at the forwarded message, if it holds one.
 /// Returns what the writer wrote and the forwarded block as it stands.
 fn split_forwarded_html(html: &str) -> (String, Option<String>) {
@@ -1489,6 +1507,42 @@ mod tests {
 
     fn me() -> Address {
         addr(Some("Dana Reyes"), "dana@example.com")
+    }
+
+    /// A forwarded newsletter as it might arrive: a tracking pixel, a
+    /// remote stylesheet, a frame and a script.
+    const HOSTILE: &str = "<p>Hello</p><img src=\"https://tracker.example/p.gif\">\
+        <link rel=\"stylesheet\" href=\"https://tracker.example/s.css\">\
+        <iframe src=\"https://tracker.example/f\"></iframe><script>alert(1)</script>\
+        <img src=\"data:image/png;base64,AAAA\">";
+
+    #[test]
+    fn the_composer_page_refuses_every_remote_load() {
+        let page = preview_page("Forwarded Message", HOSTILE, false);
+        let policy = page
+            .split("Content-Security-Policy\" content=\"")
+            .nth(1)
+            .and_then(|rest| rest.split('"').next())
+            .expect("the page carries a content policy");
+        assert!(policy.contains("default-src 'none'"), "{policy}");
+        assert!(policy.contains("img-src data:;"), "{policy}");
+        assert!(!policy.contains("http"), "{policy}");
+    }
+
+    #[test]
+    fn the_composer_page_drops_frames_scripts_and_remote_stylesheets() {
+        let page = preview_page("Forwarded Message", HOSTILE, false);
+        for gone in ["<iframe", "<script", "alert(1)", "<link"] {
+            assert!(!page.contains(gone), "{gone} in {page}");
+        }
+        assert!(page.contains("Hello"), "{page}");
+        assert!(page.contains("data:image/png;base64,AAAA"), "{page}");
+    }
+
+    #[test]
+    fn the_composer_page_escapes_its_title() {
+        let page = preview_page("R&D <b>", "", true);
+        assert!(page.contains("<title>R&amp;D &lt;b&gt;</title>"), "{page}");
     }
 
     fn message(id: &str, from: Address, to: Vec<Address>, cc: Vec<Address>) -> MessageMeta {

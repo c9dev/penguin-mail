@@ -11,7 +11,7 @@ use mailrs_sync::{AccountServices, MailAction, MailCapabilities, TriageAction};
 use serde_json::json;
 
 use super::super::Permission;
-use super::super::fake::{Harness, ME, NOW, labelled, meta};
+use super::super::fake::{Harness, ME, NOW, YOU, labelled, meta};
 use super::super::mail::{Kind, kind_of, pdf_text};
 use super::{harness, mail, target};
 
@@ -189,6 +189,40 @@ async fn delete_forever_on_a_server_that_cannot_says_why_and_asks_nothing() {
         }))
     );
     assert!(h.asked().questions.is_empty());
+}
+
+/// A call that spans an account that erases and one that cannot erases
+/// what it can and names what it left, so the model does not report the
+/// rest as deleted.
+#[tokio::test]
+async fn delete_forever_names_the_threads_it_left_on_an_account_that_cannot_erase() {
+    let theirs = labelled(
+        meta("s1", "u1", "kim@example.com", "Kite club", NOW),
+        &[gmail::INBOX],
+    );
+    let h = Harness::with_second_services(super::mail(), vec![theirs], |gmail, services| {
+        let caps = MailCapabilities {
+            delete_forever: false,
+            ..services.capabilities()
+        };
+        *services = AccountServices::fake_with_capabilities(Arc::clone(gmail), caps);
+    })
+    .await;
+    let done = h
+        .ok(
+            "delete_forever",
+            json!({"targets": [target("t2"), {"account": YOU, "thread_id": "u1"}]}),
+        )
+        .await;
+    assert_eq!(done["deleted"], 1);
+    assert_eq!(
+        done["left"],
+        json!([{
+            "account": YOU,
+            "thread_id": "u1",
+            "unavailable": "Gmail cannot delete mail for good. Delete moves it to the Trash."
+        }])
+    );
 }
 
 /// One account whose server files mail in folders, as IMAP does.

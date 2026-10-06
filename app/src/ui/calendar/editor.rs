@@ -1933,7 +1933,7 @@ impl Editor {
             .is_some_and(|o| mailrs_domain::calendar::series::in_series(&o.event));
         if let Some(link) = has_conference {
             let row = ui::plain_row()
-                .title(gettext("Google Meet"))
+                .title(words::conference_name(&link))
                 .subtitle(link)
                 .build();
             row.set_sensitive(self.may(Part::Meet));

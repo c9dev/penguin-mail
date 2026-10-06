@@ -18,13 +18,29 @@ use mailrs_domain::{AccountId, Address};
 use mailrs_sync::Permitted;
 
 use super::MainWindow;
-use crate::contacts::{OfferEnd, declines, failed_title, offer_title, saved_title};
+use crate::contacts::{OfferEnd, OfferTimer, declines, failed_title, offer_timer, offer_title, saved_title};
 use crate::format::account_label;
 use crate::permission::{Occasion, Permission};
 
 /// How long the offer stays, in seconds: longer than a plain toast, since
 /// it asks something and the question takes a moment to read.
 const OFFER_SECONDS: u32 = 10;
+
+/// How long the offer stays after the pointer or the focus leaves it.
+const AFTER_READING_SECONDS: u32 = 3;
+
+/// The toast's own widget around `title`, whose state says whether the
+/// pointer is over any part of the toast, its Save button included.
+fn toast_widget(title: gtk::Widget) -> gtk::Widget {
+    let mut at = Some(title.clone());
+    while let Some(widget) = at {
+        if widget.css_name() == "toast" {
+            return widget;
+        }
+        at = widget.parent();
+    }
+    title
+}
 
 impl MainWindow {
     /// Says a message went out, and offers to save whoever it went to
@@ -109,13 +125,34 @@ impl MainWindow {
                 win.save_recipients(account_id, who.to_vec());
             }
         });
-        let (timer, held) = (toast.downgrade(), Rc::clone(&ended));
-        glib::timeout_add_seconds_local_once(OFFER_SECONDS, move || {
-            if held.get().is_none()
-                && let Some(toast) = timer.upgrade()
-            {
-                held.set(Some(OfferEnd::TimedOut));
-                toast.dismiss();
+        // The timer looks once a second. Once the time is up it waits while
+        // the pointer is over the toast or the focus is in it, as
+        // libadwaita's own timeout does, and then gives a few seconds more.
+        let (timer, held, anchor) = (toast.downgrade(), Rc::clone(&ended), title.downgrade());
+        let waited = Cell::new(0);
+        glib::timeout_add_seconds_local(1, move || {
+            if held.get().is_some() {
+                return glib::ControlFlow::Break;
+            }
+            let Some(toast) = timer.upgrade() else { return glib::ControlFlow::Break };
+            waited.set(waited.get() + 1);
+            if waited.get() < OFFER_SECONDS {
+                return glib::ControlFlow::Continue;
+            }
+            let shown = anchor.upgrade().map(|title| toast_widget(title.upcast()));
+            let flags = shown.map(|w| w.state_flags()).unwrap_or(gtk::StateFlags::NORMAL);
+            let hovered = flags.contains(gtk::StateFlags::PRELIGHT);
+            let focused = flags.contains(gtk::StateFlags::FOCUS_WITHIN);
+            match offer_timer(hovered, focused) {
+                OfferTimer::Wait => {
+                    waited.set(OFFER_SECONDS - AFTER_READING_SECONDS);
+                    glib::ControlFlow::Continue
+                }
+                OfferTimer::End => {
+                    held.set(Some(OfferEnd::TimedOut));
+                    toast.dismiss();
+                    glib::ControlFlow::Break
+                }
             }
         });
         let win = Rc::downgrade(self);

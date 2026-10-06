@@ -23,6 +23,26 @@ pub enum ListKey {
     Menu,
 }
 
+/// Where the keyboard focus sits when a key reaches the list.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Focus {
+    /// On a row of the list, or on a control inside one.
+    InList,
+    /// Inside a popover the list holds, such as a row's options menu or
+    /// the menu a right click opens. Its keys reach the list's capture
+    /// handler first, because the popover is a child of a row.
+    InPopover,
+}
+
+/// What a key press asks of the list, given where the focus is. A menu
+/// open over the list keeps its own keys, so its items can be walked.
+pub fn route(key: gdk::Key, state: gdk::ModifierType, focus: Focus) -> Option<ListKey> {
+    match focus {
+        Focus::InPopover => None,
+        Focus::InList => list_key(key, state),
+    }
+}
+
 /// The list's own reading of `key`, or `None` for a key it leaves to
 /// GTK and the window, such as Ctrl+Tab or a letter.
 pub fn list_key(key: gdk::Key, state: gdk::ModifierType) -> Option<ListKey> {
@@ -42,6 +62,35 @@ pub fn list_key(key: gdk::Key, state: gdk::ModifierType) -> Option<ListKey> {
             Some(ListKey::Open)
         }
         _ => None,
+    }
+}
+
+/// What the keys need to know of one row of the list.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Row {
+    pub shown: bool,
+    pub sensitive: bool,
+    /// The row opens a mailbox or an account: it is selectable or
+    /// activatable.
+    pub opens: bool,
+    /// The row is a server folder that holds only folders. It opens
+    /// nothing, but has a menu.
+    pub group: bool,
+}
+
+/// Whether the arrows stop on `row`: a shown row a person can act on,
+/// which leaves out section titles.
+pub fn reachable(row: Row) -> bool {
+    row.shown && row.sensitive && (row.opens || row.group)
+}
+
+/// What Enter or Space does on `row`: open it, or for a group, which
+/// opens nothing, open its menu.
+pub fn on_enter(row: Row) -> Option<ListKey> {
+    match (row.opens, row.group) {
+        (true, _) => Some(ListKey::Open),
+        (false, true) => Some(ListKey::Menu),
+        (false, false) => None,
     }
 }
 
@@ -99,6 +148,31 @@ mod tests {
     fn a_chord_or_a_letter_is_left_to_the_window() {
         assert_eq!(list_key(gdk::Key::Tab, gdk::ModifierType::CONTROL_MASK), None);
         assert_eq!(list_key(gdk::Key::e, gdk::ModifierType::empty()), None);
+    }
+
+    #[test]
+    fn keys_inside_an_open_menu_are_left_to_the_menu() {
+        // A row's options menu is a popover inside the list, so its keys
+        // pass the list's capture handler first. The arrows must move
+        // between the menu's items, and Tab must stay in the menu.
+        let none = gdk::ModifierType::empty();
+        for key in [gdk::Key::Down, gdk::Key::Up, gdk::Key::Tab, gdk::Key::Return, gdk::Key::Menu] {
+            assert_eq!(route(key, none, Focus::InPopover), None, "{key:?}");
+        }
+        assert_eq!(route(gdk::Key::Down, none, Focus::InList), Some(ListKey::Step(1)));
+    }
+
+    #[test]
+    fn a_group_row_takes_the_focus_and_enter_opens_its_menu() {
+        // A server folder that holds only folders opens no mailbox, but
+        // its menu has Rename, New Folder Inside, Move and Delete.
+        let group = Row { shown: true, sensitive: true, opens: false, group: true };
+        assert!(reachable(group));
+        assert_eq!(on_enter(group), Some(ListKey::Menu));
+        let title = Row { shown: true, sensitive: true, opens: false, group: false };
+        assert!(!reachable(title));
+        let mailbox = Row { opens: true, group: false, ..title };
+        assert_eq!(on_enter(mailbox), Some(ListKey::Open));
     }
 
     #[test]

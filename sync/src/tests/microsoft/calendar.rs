@@ -828,4 +828,34 @@ async fn an_edit_keeps_each_attendees_type() {
         .collect();
     let want = [("ann@example.com", "optional"), ("room4@example.com", "resource"), ("bo@example.com", "required")];
     assert_eq!(kinds, want.map(|(a, k)| (a.to_string(), k.to_string())));
+
+/// Outlook keeps no hidden flag on its calendars, so Hide from the List
+/// stays on this computer: nothing waits to go out, where a queued hide
+/// came back refused with a message after every send.
+#[tokio::test]
+async fn hiding_an_outlook_calendar_stays_on_this_computer() {
+    let h = outlook().await;
+    let copy = copy_of(&h);
+    copy.refresh(h.account_id, crate::now_millis()).await.unwrap();
+    assert!(matches!(
+        copy.list_calendar(h.account_id, "cal-1", false).await,
+        Ok(crate::Permitted::Done(()))
+    ));
+    copy.refresh(h.account_id, crate::now_millis() + 24 * 60 * 60 * 1000).await.unwrap();
+    let account = h.account_id;
+    let queued = h
+        .db
+        .read(move |c| mailrs_store::calendar_list::queued_edits(c, account))
+        .await
+        .unwrap();
+    assert!(queued.is_empty(), "{queued:?}");
+    let listed = h
+        .db
+        .read(move |c| store::calendars(c, account))
+        .await
+        .unwrap()
+        .into_iter()
+        .find(|c| c.id == "cal-1")
+        .map(|c| c.shown);
+    assert_eq!(listed, Some(false), "the calendar is off the list here");
 }

@@ -13,15 +13,16 @@
 
   <description>
     <p>
-      Penguin Mail reads Gmail accounts and any IMAP and SMTP account, such as
-      Fastmail, iCloud and Yahoo, and finds the server settings for you. It
-      syncs from the system tray, shows your accounts in one inbox or one at a
-      time, and keeps your mail on your own computer.
+      Penguin Mail reads Gmail, Outlook.com and Microsoft 365 accounts, and any
+      IMAP or POP3 account with SMTP, such as Fastmail, iCloud and Yahoo, and
+      finds the server settings for you. It syncs from the system tray, shows
+      your accounts in one inbox or one at a time, and keeps your mail on your
+      own computer.
     </p>
     <ul>
       <li>One inbox for every account, with Gmail's categories, labels and search</li>
-      <li>A calendar with Google Calendar: Day, Week, Month and Agenda views, invitations answered in the mail, and reminders</li>
-      <li>Contacts</li>
+      <li>A calendar with Google Calendar, Outlook and any CalDAV server: Day, Week, Month and Agenda views, invitations answered in the mail, and reminders</li>
+      <li>Contacts from Google, Outlook and any CardDAV server</li>
       <li>A composer that shows formatting as you write, with Undo Send and Send Later</li>
       <li>Flags in seven colors, VIPs, smart mailboxes and reminders</li>
       <li>Gmail's rules, automatic replies and plus addresses, changed from the app</li>
@@ -30,7 +31,7 @@
       <li>An assistant that runs on a local model or on Claude, off until you pick one</li>
     </ul>
     <p>
-      Adding a Gmail account takes one sign-in with Google in your browser.
+      Adding a Gmail or Microsoft account takes one sign-in in your browser.
       Penguin Mail is built with GTK and libadwaita and fits best on GNOME, but
       it runs on any Linux desktop.
     </p>
@@ -129,8 +130,6 @@
         </ul>
         <p>Fixed</p>
         <ul>
-          <li>The assistant's panel no longer runs off the right edge of a smaller window. The mailboxes fold away to make room for it, and in a window too narrow for both, the panel slides over the mail instead.</li>
-          <li>The calendar's Day, Week and Month switch keeps its full width on a smaller screen. The week number, the year and the search button make way for it instead.</li>
           <li>The assistant stays closed when a narrowed window grows wide again, where it used to open by itself.</li>
           <li>Always Allow on a skill's command allows that one command. It used to let the skill run any command without asking, and Penguin Mail forgets any Always Allow saved that way.</li>
           <li>An S/MIME message whose certificate could not be checked for revocation is checked again when you open it next, so the card no longer says "could not check" until you restart.</li>

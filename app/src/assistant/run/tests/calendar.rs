@@ -550,6 +550,41 @@ async fn a_declined_event_reads_as_free() {
     assert_eq!(listed["events"][0]["busy"], false);
 }
 
+#[test]
+fn a_working_day_that_ends_at_midnight_ends_after_its_last_hour() {
+    let hours = mailrs_domain::calendar::hours::WorkingHours { start_minutes: 19 * 60, end_minutes: 24 * 60, ..Default::default() };
+    let end = super::super::calendar::working_day_end(&hours);
+    assert!(end > chrono::NaiveTime::from_hms_opt(23, 0, 0).unwrap(), "{end}");
+    let usual = mailrs_domain::calendar::hours::WorkingHours::default();
+    assert_eq!(super::super::calendar::working_day_end(&usual), chrono::NaiveTime::from_hms_opt(18, 0, 0).unwrap());
+}
+
+#[tokio::test]
+async fn an_events_call_link_reaches_the_model() {
+    let h = harness().await;
+    let day = monday();
+    let start = local_millis(day, 10);
+    let call = mailrs_domain::calendar::Event {
+        calendar: "primary".into(),
+        id: "sync".into(),
+        title: "Weekly sync".into(),
+        zone: "UTC".into(),
+        start,
+        end: start + 30 * 60_000,
+        conference: Some("https://meet.google.com/abc-defg-hij".into()),
+        ..mailrs_domain::calendar::Event::default()
+    };
+    copy_of(&h, vec![call], start).await;
+
+    let listed = h
+        .ok(
+            "list_events",
+            json!({"from": day.format("%Y-%m-%d").to_string(), "to": day.format("%Y-%m-%d").to_string()}),
+        )
+        .await;
+    assert_eq!(listed["events"][0]["link"], "https://meet.google.com/abc-defg-hij");
+}
+
 #[tokio::test]
 async fn a_calendar_tool_on_an_account_without_a_calendar_says_why() {
     let h = Harness::with_services(|_, services| services.calendar = None).await;

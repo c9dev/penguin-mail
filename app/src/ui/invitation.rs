@@ -795,6 +795,9 @@ impl EventCard {
         }
         let mut picks = self.picks.borrow_mut();
         picks.clear();
+        // The card is reused from message to message, and unticking every
+        // event of the last file turned Add to Calendar off.
+        self.add.set_sensitive(true);
         if showing.also.is_empty() {
             return;
         }
@@ -817,7 +820,6 @@ impl EventCard {
             self.events.append(&check);
             picks.push(check);
         }
-        self.add.set_sensitive(true);
     }
 
     /// Takes Add to Calendar off the card, for a window that has no

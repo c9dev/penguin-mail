@@ -1246,15 +1246,17 @@ fn ready_lede(done: bool) -> String {
 }
 
 /// The lede of the page that offers Grant Access: how the first download
-/// stands, then which boxes the person left unticked on the provider's
-/// page. It follows the download as the ready page's lede does.
+/// stands, then which boxes the person left unticked on Google's page, or
+/// for Microsoft, which permissions the organization refused: Microsoft's
+/// page has no boxes to untick. It follows the download as the ready
+/// page's lede does.
 pub fn grant_lede(provider: Provider, missing: usize, done: bool) -> String {
     let spoken = small_number(missing);
     let count = [("count", spoken.as_str())];
     let left = if provider == Provider::Microsoft {
         fill_plural(
-            "You left one box unticked on Microsoft's page, so this feature stays off:",
-            "You left {count} boxes unticked on Microsoft's page, so these features stay off:",
+            "Your organization did not allow one of the permissions Penguin Mail asked for, so this feature stays off:",
+            "Your organization did not allow {count} of the permissions Penguin Mail asked for, so these features stay off:",
             missing,
             &count,
         )
@@ -1359,6 +1361,13 @@ impl Asking {
     pub fn wants(&self, ticket: Ticket) -> bool {
         !self.closed.get() && self.last.get() == ticket.0
     }
+}
+
+/// Whether the password field keeps what it holds when the password page
+/// opens for `address`: only when the person typed it for that same
+/// address. Otherwise one press would send it to another provider.
+pub fn keeps_password(typed_for: Option<&str>, address: &str) -> bool {
+    typed_for.is_some_and(|typed_for| typed_for.eq_ignore_ascii_case(address))
 }
 
 #[cfg(test)]
@@ -2452,13 +2461,29 @@ mod tests {
             grant_lede(Provider::Gmail, 1, true),
             "Your mail is here. You left one box unticked on Google's page, so this feature stays off:"
         );
+    }
+
+    #[test]
+    fn a_password_stays_only_for_the_address_it_was_typed_for() {
+        // Back, a new address at another provider, Continue: the first
+        // account's password must not be one Enter away from the second
+        // provider's servers.
+        assert!(!keeps_password(Some("a@fastmail.com"), "b@otherdomain.example"));
+        assert!(!keeps_password(None, "a@fastmail.com"));
+        assert!(keeps_password(Some("a@fastmail.com"), "A@Fastmail.com"));
+    }
+
+    #[test]
+    fn the_microsoft_grant_lede_names_the_organization_not_a_box() {
+        // Microsoft's consent page has no boxes to untick. A permission a
+        // Microsoft account lacks is one its organization refused.
         assert_eq!(
             grant_lede(Provider::Microsoft, 3, true),
-            "Your mail is here. You left three boxes unticked on Microsoft's page, so these features stay off:"
+            "Your mail is here. Your organization did not allow three of the permissions Penguin Mail asked for, so these features stay off:"
         );
         assert_eq!(
             grant_lede(Provider::Microsoft, 1, false),
-            "Mail is downloading. You left one box unticked on Microsoft's page, so this feature stays off:"
+            "Mail is downloading. Your organization did not allow one of the permissions Penguin Mail asked for, so this feature stays off:"
         );
     }
 

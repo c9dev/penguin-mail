@@ -309,6 +309,25 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - Deleting one date of a repeating meeting on a CalDAV account mails nobody when you pick Don't send, and deleting one date you were invited to keeps the other dates you were invited to.
 - Declining one date of a repeating meeting on a Fastmail or other CalDAV account declines only that date. It used to answer the whole series.
 - An Outlook account with categories keeps syncing after Microsoft loses track of what changed, where it used to stop syncing for good.
+- The arrow keys stop on a folder that holds only other folders, and Enter opens its menu, so you can rename, move or delete it from the keyboard.
+- The arrow keys move through an account's or a label's menu in the mailbox list, where they used to jump back to the list after the first item.
+- Showing a forwarded message in the composer, or the composer's Preview, no longer loads its remote images, and a link in it opens in your browser.
+- A message that quotes an address or a name with "&" or "<" in it, such as "tom&jerry is not an email address", shows its words instead of an empty bar. The same goes for the Grant Access banner, a signature's first line in Preferences, and the addresses and names in Preferences and contact cards.
+- After you untick every event of a calendar file, the next invitation you open has Add to Calendar ready, where it stayed greyed out.
+- Hiding an Outlook calendar from the list keeps it hidden here without a message saying Outlook refused, since Outlook has no way to hide it on your other devices.
+- Working Hours in Preferences keeps the end after the start, moving the other time when you pick one past it, and a working day can now end at midnight. A day set to end before it starts used to shade the whole calendar.
+- The offer to save new recipients as contacts stays while the pointer is over it or a screen reader is on it, where it could vanish mid-read.
+- In Add Account, going Back while the address is being looked up stops the lookup and turns Continue back on, and a password typed for one address no longer stays filled in for another.
+- Saving a rule with nothing filled in says what is missing in your language, not in English.
+- The event editor names an event's call by what it is, Google Meet, Microsoft Teams, Zoom or a video call, where it called every call Google Meet.
+- After adding a work or school Microsoft account whose organization refused some permissions, the last page says so, where it told you that you had left boxes unticked on a page that has none.
+- Opening a calendar file by a relative path from a terminal, such as `penguin-mail invite.ics`, works while Penguin Mail runs in the tray, and so does a file whose name is not UTF-8.
+- The assistant's panel no longer runs off the right edge of a smaller
+  window. The mailboxes fold away to make room for it, and in a window
+  too narrow for both, the panel slides over the mail instead.
+- The calendar's Day, Week and Month switch keeps its full width on a
+  smaller screen. The week number, the year and the search button make
+  way for it instead.
 - Searching the calendar finds two new events you made before the server
   answered, instead of showing only one of them.
 - A photo added to an Outlook contact after Penguin Mail first checked
@@ -506,12 +525,6 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Fixed
 
-- The assistant's panel no longer runs off the right edge of a smaller
-  window. The mailboxes fold away to make room for it, and in a window
-  too narrow for both, the panel slides over the mail instead.
-- The calendar's Day, Week and Month switch keeps its full width on a
-  smaller screen. The week number, the year and the search button make
-  way for it instead.
 - The assistant stays closed when a narrowed window grows wide again,
   where it used to open by itself.
 - Always Allow on a skill's command allows that one command. It used

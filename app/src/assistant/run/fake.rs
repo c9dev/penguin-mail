@@ -508,13 +508,24 @@ impl Harness {
     /// A Gmail holding `mail`, and a store filled from it by a first sync,
     /// with one account connected.
     pub async fn with(mail: Vec<MessageMeta>) -> Harness {
-        Harness::connect(mail, None, |_, _| {}).await
+        Harness::connect(mail, None, |_, _| {}, |_, _| {}).await
     }
 
     /// As [`Harness::with`], plus a second account, [`YOU`], whose Gmail
     /// holds `second` and no labels of its own.
     pub async fn with_second(mail: Vec<MessageMeta>, second: Vec<MessageMeta>) -> Harness {
-        Harness::connect(mail, Some(second), |_, _| {}).await
+        Harness::connect(mail, Some(second), |_, _| {}, |_, _| {}).await
+    }
+
+    /// As [`Harness::with_second`], with the second account's services
+    /// changed by `edit_second` before it connects, as
+    /// [`Harness::with_services`] changes the first's.
+    pub async fn with_second_services(
+        mail: Vec<MessageMeta>,
+        second: Vec<MessageMeta>,
+        edit_second: impl FnOnce(&Arc<FakeGmail>, &mut AccountServices),
+    ) -> Harness {
+        Harness::connect(mail, Some(second), |_, _| {}, edit_second).await
     }
 
     /// One account with no mail, whose services `edit` changes before it
@@ -525,7 +536,7 @@ impl Harness {
     pub async fn with_services(
         edit: impl FnOnce(&Arc<FakeGmail>, &mut AccountServices),
     ) -> Harness {
-        Harness::connect(Vec::new(), None, edit).await
+        Harness::connect(Vec::new(), None, edit, |_, _| {}).await
     }
 
     /// One account on `imap`, a server that files mail in folders, loaded
@@ -550,6 +561,7 @@ impl Harness {
         mail: Vec<MessageMeta>,
         second: Option<Vec<MessageMeta>>,
         edit: impl FnOnce(&Arc<FakeGmail>, &mut AccountServices),
+        edit_second: impl FnOnce(&Arc<FakeGmail>, &mut AccountServices),
     ) -> Harness {
         let dir = tempfile::tempdir().expect("a temp dir");
         let db = Db::open(&dir.path().join("mail.db")).expect("an empty store");
@@ -634,9 +646,11 @@ impl Harness {
                     ..message
                 });
             }
+            let mut services = AccountServices::google(Arc::clone(&gmail));
+            edit_second(&gmail, &mut services);
             let sync = Arc::new(AccountSync::new(
                 id,
-                AccountServices::google(Arc::clone(&gmail)),
+                services,
                 db.clone(),
                 events.clone(),
             ));

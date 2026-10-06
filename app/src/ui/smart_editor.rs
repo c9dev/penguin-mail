@@ -190,11 +190,11 @@ pub fn present(
                 .collect(),
         };
         if result.name.is_empty() {
-            toasts.add_toast(adw::Toast::new(&gettext("Give the mailbox a name")));
+            toasts.add_toast(crate::ui::toast(&gettext("Give the mailbox a name")));
             return;
         }
         if result.query().is_none() {
-            toasts.add_toast(adw::Toast::new(&gettext("Add a condition with a value")));
+            toasts.add_toast(crate::ui::toast(&gettext("Add a condition with a value")));
             return;
         }
         closer.close();

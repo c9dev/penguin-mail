@@ -1187,12 +1187,6 @@ mod tests {
         assert!(html.contains("&lt;script&gt;"));
     }
 
-    /// WebKit sizes a plain `1fr` track from a cache that a change of the
-    /// page's width does not clear, so a fold laid out wide stayed as short
-    /// as it was after the window narrowed and clipped the text below. A
-    /// track that cannot be smaller than nothing is sized from the item's
-    /// current height. Both ends keep the same shape so the row still
-    /// animates between them.
     /// Tab walks the page's links, its summaries and the invitation's
     /// slot. Each kind has to show where the focus is, or a keyboard user
     /// presses Tab with nothing on screen changing.
@@ -1207,6 +1201,12 @@ mod tests {
         assert!(HTML_BODY_CSS.contains("a:focus-visible"), "no ring for links in an HTML body");
     }
 
+    /// WebKit sizes a plain `1fr` track from a cache that a change of the
+    /// page's width does not clear, so a fold laid out wide stayed as short
+    /// as it was after the window narrowed and clipped the text below. A
+    /// track that cannot be smaller than nothing is sized from the item's
+    /// current height. Both ends keep the same shape so the row still
+    /// animates between them.
     #[test]
     fn the_fold_row_follows_the_content_when_the_width_changes() {
         let css = page_css(&theme());

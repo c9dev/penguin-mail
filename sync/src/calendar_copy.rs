@@ -424,7 +424,7 @@ impl<A: Accounts> CalendarCopy<A> {
             } else {
                 match calendar.calendars().await {
                     Ok(list) => {
-                        let everywhere = !withheld.change_calendar_list;
+                        let everywhere = self.hides_everywhere(account_id)?;
                         self.db
                             .write(move |c| {
                                 mailrs_store::calendar_list::save_calendar_list(c, account_id, &list)?;

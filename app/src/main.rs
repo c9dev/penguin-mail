@@ -54,6 +54,7 @@ mod update;
 mod wanted;
 
 use std::cell::RefCell;
+use std::ffi::OsString;
 use std::rc::Rc;
 
 use adw::prelude::*;
@@ -92,7 +93,11 @@ fn main() -> glib::ExitCode {
             )
             .finish(),
     ));
-    let args: Vec<String> = std::env::args().collect();
+    // `std::env::args` panics on an argument that is not UTF-8, such as a
+    // calendar file's name in an old encoding. The flags read the lossy
+    // copy; the file keeps its bytes.
+    let raw_args: Vec<OsString> = std::env::args_os().collect();
+    let args: Vec<String> = raw_args.iter().map(|a| a.to_string_lossy().into_owned()).collect();
     // Claude Code starts this binary as the assistant's MCP server. It only
     // relays tool calls to the running window, so it needs no GTK.
     if args.get(1).map(String::as_str) == Some("--mcp-bridge") {
@@ -144,7 +149,9 @@ fn main() -> glib::ExitCode {
         .iter()
         .find_map(|a| a.strip_prefix("mailto:").map(mailto_recipient))
         .or_else(|| args.iter().any(|a| a == "--compose").then(String::new));
-    let file = calendar_file(&args);
+    let file = std::env::current_dir()
+        .ok()
+        .and_then(|here| calendar_file(&raw_args, &here));
     let demo = args.iter().any(|a| a == "--demo");
     let background = args.iter().any(|a| a == "--background");
     if !demo {
@@ -176,7 +183,7 @@ fn main() -> glib::ExitCode {
         .map(|to| ("compose-to", to.to_variant()))
         .or_else(|| {
             file.as_ref()
-                .map(|path| ("open-calendar-file", path.to_string_lossy().to_variant()))
+                .map(|path| ("open-calendar-file", path.to_variant()))
         });
     let state: Rc<RefCell<Option<Rc<app::App>>>> = Rc::new(RefCell::new(None));
     let started = Rc::clone(&state);
@@ -219,16 +226,26 @@ fn main() -> glib::ExitCode {
 
 /// The calendar file the desktop asked this launch to open: the first
 /// argument that is neither a flag nor a `mailto:` link, as a path or as
-/// the `file://` URI Files passes for `%u`.
-fn calendar_file(args: &[String]) -> Option<std::path::PathBuf> {
-    let named = args
-        .iter()
-        .skip(1)
-        .find(|a| !a.starts_with('-') && !a.starts_with("mailto:"))?;
-    match named.starts_with("file://") {
-        true => gio::File::for_uri(named).path(),
-        false => Some(std::path::PathBuf::from(named)),
-    }
+/// the `file://` URI Files passes for `%u`. A relative path is taken from
+/// `here`, the folder the launch started in, since a copy already running
+/// would read it from its own. The argument's bytes are kept as they are,
+/// so a name that is not UTF-8 still opens.
+fn calendar_file(args: &[OsString], here: &std::path::Path) -> Option<std::path::PathBuf> {
+    let named = args.iter().skip(1).find(|a| {
+        let a = a.to_string_lossy();
+        !a.starts_with('-') && !a.starts_with("mailto:")
+    })?;
+    let path = match named.to_str().filter(|n| n.starts_with("file://")) {
+        Some(uri) => gio::File::for_uri(uri).path()?,
+        None => std::path::PathBuf::from(named),
+    };
+    Some(here.join(path))
+}
+
+/// The calendar file in the `open-calendar-file` action's parameter, a
+/// byte string so a path that is not UTF-8 arrives whole.
+fn path_from_variant(parameter: &glib::Variant) -> Option<std::path::PathBuf> {
+    parameter.get::<std::path::PathBuf>()
 }
 
 /// The address part of a `mailto:` URI, percent-decoded.
@@ -311,25 +328,55 @@ fn show_fatal(gio_app: &gio::Application, message: &str, report: bool) {
 
 #[cfg(test)]
 mod tests {
-    use super::{calendar_file, mailto_recipient};
+    use std::ffi::OsString;
+    use std::path::{Path, PathBuf};
 
-    fn args(list: &[&str]) -> Vec<String> {
-        std::iter::once("penguin-mail").chain(list.iter().copied()).map(String::from).collect()
+    use super::{calendar_file, mailto_recipient, path_from_variant};
+
+    fn args(list: &[&str]) -> Vec<OsString> {
+        std::iter::once("penguin-mail").chain(list.iter().copied()).map(OsString::from).collect()
+    }
+
+    /// The folder the launch was typed in.
+    const HERE: &str = "/home/ann/Downloads";
+
+    fn file(list: &[&str]) -> Option<PathBuf> {
+        calendar_file(&args(list), Path::new(HERE))
     }
 
     #[test]
     fn files_hands_over_a_calendar_file_as_a_path_or_a_uri() {
-        let path = Some(std::path::PathBuf::from("/tmp/my ticket.ics"));
-        assert_eq!(calendar_file(&args(&["/tmp/my ticket.ics"])), path);
-        assert_eq!(calendar_file(&args(&["file:///tmp/my%20ticket.ics"])), path);
+        let path = Some(PathBuf::from("/tmp/my ticket.ics"));
+        assert_eq!(file(&["/tmp/my ticket.ics"]), path);
+        assert_eq!(file(&["file:///tmp/my%20ticket.ics"]), path);
+    }
+
+    #[test]
+    fn a_relative_calendar_file_is_found_from_where_the_launch_was_typed() {
+        // The running copy opens the path from its own folder, so a bare
+        // name would point at a file that is not there.
+        assert_eq!(file(&["invite.ics"]), Some(PathBuf::from("/home/ann/Downloads/invite.ics")));
+        assert_eq!(file(&["./trips/invite.ics"]), Some(PathBuf::from("/home/ann/Downloads/trips/invite.ics")));
+    }
+
+    #[test]
+    fn a_calendar_file_whose_name_is_not_utf8_reaches_the_running_copy_unchanged() {
+        use std::os::unix::ffi::OsStrExt;
+        let name = std::ffi::OsStr::from_bytes(b"/tmp/f\xe9rias.ics");
+        let mut list = args(&[]);
+        list.push(name.to_os_string());
+        let path = calendar_file(&list, Path::new(HERE)).expect("a calendar file");
+        assert_eq!(path.as_os_str(), name);
+        let handed = gtk::glib::prelude::ToVariant::to_variant(&path);
+        assert_eq!(path_from_variant(&handed), Some(path));
     }
 
     #[test]
     fn flags_and_mail_links_are_no_calendar_file() {
-        assert_eq!(calendar_file(&args(&[])), None);
-        assert_eq!(calendar_file(&args(&["--background", "--demo"])), None);
-        assert_eq!(calendar_file(&args(&["mailto:ann@example.com"])), None);
-        assert_eq!(calendar_file(&args(&["--compose", "mailto:ann@example.com"])), None);
+        assert_eq!(file(&[]), None);
+        assert_eq!(file(&["--background", "--demo"]), None);
+        assert_eq!(file(&["mailto:ann@example.com"]), None);
+        assert_eq!(file(&["--compose", "mailto:ann@example.com"]), None);
     }
 
     #[test]
