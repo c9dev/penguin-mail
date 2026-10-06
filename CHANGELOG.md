@@ -292,6 +292,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   it last updated, instead of leaving you guessing.
 
 ### Fixed
+- The arrow keys stop on a folder that holds only other folders, and Enter opens its menu, so you can rename, move or delete it from the keyboard.
 - The arrow keys move through an account's or a label's menu in the mailbox list, where they used to jump back to the list after the first item.
 - Showing a forwarded message in the composer, or the composer's Preview, no longer loads its remote images, and a link in it opens in your browser.
 - A message that quotes an address or a name with "&" or "<" in it, such as "tom&jerry is not an email address", shows its words instead of an empty bar. The same goes for the Grant Access banner, a signature's first line in Preferences, and the addresses and names in Preferences and contact cards.

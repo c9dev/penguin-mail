@@ -578,10 +578,7 @@ impl Sidebar {
     /// selecting, so nothing loads until Enter or Space.
     fn step_focus(&self, step: i32) -> bool {
         let rows = self.list_rows();
-        let reachable: Vec<bool> = rows
-            .iter()
-            .map(|row| row.is_visible() && row.is_sensitive() && (row.is_selectable() || row.is_activatable()))
-            .collect();
+        let reachable: Vec<bool> = rows.iter().map(|row| keys::reachable(row_keys(row))).collect();
         let from = self
             .focused_row()
             .or_else(|| self.list.selected_row())
@@ -631,6 +628,9 @@ impl Sidebar {
     /// whose heading has it.
     fn open_focused(&self) -> bool {
         let Some(row) = self.focused_row() else { return false };
+        if keys::on_enter(row_keys(&row)) == Some(ListKey::Menu) {
+            return self.open_options();
+        }
         if row.is_selectable() {
             self.list.select_row(Some(&row));
         } else if row.is_activatable() {
@@ -1060,6 +1060,8 @@ impl Sidebar {
     fn add_group(&self, mailbox: Mailbox, name: &str, depth: u32) -> gtk::ListBoxRow {
         let row = self.add_row(mailbox, name, "folder-symbolic", depth, false);
         row.set_tooltip_text(Some(&gettext("Holds folders, not mail")));
+        // The keys stop on it and Enter opens its menu (`row_keys`).
+        row.add_css_class(GROUP_CLASS);
         row
     }
 
@@ -1660,6 +1662,19 @@ fn context_menu(row: &gtk::ListBoxRow, menu: &gio::Menu) {
     });
     row.add_controller(keys);
     row.connect_destroy(move |_| popover.unparent());
+}
+
+/// The class on a group row, a server folder that holds only folders.
+const GROUP_CLASS: &str = "mailbox-group";
+
+/// What the keys need to know of `row`.
+fn row_keys(row: &gtk::ListBoxRow) -> keys::Row {
+    keys::Row {
+        shown: row.is_visible(),
+        sensitive: row.is_sensitive(),
+        opens: row.is_selectable() || row.is_activatable(),
+        group: row.has_css_class(GROUP_CLASS),
+    }
 }
 
 /// Where the keyboard focus sits relative to `within`, a widget that

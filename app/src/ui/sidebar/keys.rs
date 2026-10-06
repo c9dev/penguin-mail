@@ -65,6 +65,35 @@ pub fn list_key(key: gdk::Key, state: gdk::ModifierType) -> Option<ListKey> {
     }
 }
 
+/// What the keys need to know of one row of the list.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Row {
+    pub shown: bool,
+    pub sensitive: bool,
+    /// The row opens a mailbox or an account: it is selectable or
+    /// activatable.
+    pub opens: bool,
+    /// The row is a server folder that holds only folders. It opens
+    /// nothing, but has a menu.
+    pub group: bool,
+}
+
+/// Whether the arrows stop on `row`: a shown row a person can act on,
+/// which leaves out section titles.
+pub fn reachable(row: Row) -> bool {
+    row.shown && row.sensitive && (row.opens || row.group)
+}
+
+/// What Enter or Space does on `row`: open it, or for a group, which
+/// opens nothing, open its menu.
+pub fn on_enter(row: Row) -> Option<ListKey> {
+    match (row.opens, row.group) {
+        (true, _) => Some(ListKey::Open),
+        (false, true) => Some(ListKey::Menu),
+        (false, false) => None,
+    }
+}
+
 /// The row the focus moves to from `from` by `step`, among rows whose
 /// `reachable` flag says a person can act on them (a shown mailbox or
 /// account heading, not a section title or a hidden row). Stays put at
@@ -131,6 +160,19 @@ mod tests {
             assert_eq!(route(key, none, Focus::InPopover), None, "{key:?}");
         }
         assert_eq!(route(gdk::Key::Down, none, Focus::InList), Some(ListKey::Step(1)));
+    }
+
+    #[test]
+    fn a_group_row_takes_the_focus_and_enter_opens_its_menu() {
+        // A server folder that holds only folders opens no mailbox, but
+        // its menu has Rename, New Folder Inside, Move and Delete.
+        let group = Row { shown: true, sensitive: true, opens: false, group: true };
+        assert!(reachable(group));
+        assert_eq!(on_enter(group), Some(ListKey::Menu));
+        let title = Row { shown: true, sensitive: true, opens: false, group: false };
+        assert!(!reachable(title));
+        let mailbox = Row { opens: true, group: false, ..title };
+        assert_eq!(on_enter(mailbox), Some(ListKey::Open));
     }
 
     #[test]
