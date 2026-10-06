@@ -6,7 +6,7 @@ use mailrs_domain::{Address, Memberships, MessageMeta, Role, category};
 use mailrs_graph::{Fields, GraphError, Listing, Message, Recipient};
 use mailrs_mime::{Part, Parts};
 
-use super::{GraphApi, Microsoft, backend, tag_id};
+use super::{GraphApi, Microsoft, backend, tag_id, tag_name};
 use crate::BackendError;
 use crate::services::{Backfill, Found, LIST_PAGE_SIZE, RawMessage, RemoteRef, Want};
 
@@ -147,7 +147,13 @@ impl<G: GraphApi> Microsoft<G> {
 
     pub(super) async fn ids_in(&self, days: Option<i64>, folder: Option<String>) -> Result<Vec<RemoteRef>, BackendError> {
         let since = days.map(|d| (chrono::Utc::now() - chrono::Duration::days(d.max(1))).to_rfc3339_opts(chrono::SecondsFormat::Secs, true));
-        let listing = Listing { folder, received_since: since, top: 1000, fields: Fields::Ids, ..Listing::default() };
+        // A category's tag id is no folder: Graph refuses it in a folder's
+        // place, so a tag lists the whole mailbox filtered by its name.
+        let (folder, category) = match folder.as_deref().and_then(tag_name) {
+            Some(name) => (None, Some(name.to_string())),
+            None => (folder, None),
+        };
+        let listing = Listing { folder, category, received_since: since, top: 1000, fields: Fields::Ids, ..Listing::default() };
         self.list_all(&listing, MOST_IDS, remote_ref).await
     }
 

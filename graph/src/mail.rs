@@ -171,7 +171,8 @@ pub enum Fields {
 }
 
 /// One listing of messages: in one folder or the whole mailbox, received
-/// since a moment, in one conversation, with one `Message-ID`, or a
+/// since a moment, in one conversation, with one `Message-ID` or one
+/// category, or a
 /// `$search`. Graph refuses `$orderby` and `$filter` beside `$search`, so
 /// a search leaves both out and answers in Graph's relevance order.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -182,6 +183,8 @@ pub struct Listing {
     pub conversation: Option<String>,
     /// With its angle brackets, as Graph keeps it.
     pub internet_message_id: Option<String>,
+    /// The name of an Outlook category the messages carry.
+    pub category: Option<String>,
     /// KQL, without the quotes Graph wants around it.
     pub search: Option<String>,
     pub top: u32,
@@ -399,6 +402,9 @@ impl Graph {
                 }
                 if let Some(id) = &listing.internet_message_id {
                     filters.push(format!("internetMessageId eq '{}'", id.replace('\'', "''")));
+                }
+                if let Some(name) = &listing.category {
+                    filters.push(format!("categories/any(c:c eq '{}')", name.replace('\'', "''")));
                 }
                 if !filters.is_empty() {
                     query.push(("$filter", filters.join(" and ")));

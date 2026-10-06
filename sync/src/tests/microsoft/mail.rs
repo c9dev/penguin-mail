@@ -101,11 +101,14 @@ async fn marks_changed_elsewhere_come_back_whole() {
 #[tokio::test]
 async fn a_refused_delta_link_lists_the_mail_again_under_the_same_ids() {
     let h = outlook().await;
+    h.fake.add_category("Red", "preset0");
     let id = h.fake.deliver(&h.fake.folder_id("inbox"), fresh());
+    h.fake.tag(&id, &["Red"]);
     h.bootstrap_all().await;
     h.fake.expire_links();
     h.look().await;
     assert!(h.stored(&id).await, "listed again under the id it had");
+    assert!(h.held(&id).await.mailboxes.contains(&"category:Red".to_string()), "the tag stays");
     // The feed has its place back: the next look answers from new links.
     h.fake.mark(&id, Some(true), None);
     h.look().await;

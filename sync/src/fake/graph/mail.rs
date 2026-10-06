@@ -382,6 +382,18 @@ pub(super) fn list_messages(
         }
         None => (listing.clone(), 0, None),
     };
+    // Graph takes only a folder's own id or a well-known name in the path,
+    // and refuses anything else, such as a category's tag id.
+    if let Some(folder) = &listing.folder
+        && !s.folders.contains_key(folder)
+        && !s.well_known.contains_key(folder)
+    {
+        return Err(GraphError::Http {
+            status: 400,
+            code: "ErrorInvalidIdMalformed".into(),
+            message: "Id is malformed.".into(),
+        });
+    }
     let since = listing.received_since.as_deref().map(millis);
     let mut found: Vec<&FakeMessage> = s
         .messages
@@ -393,6 +405,7 @@ pub(super) fn list_messages(
             listing.internet_message_id.as_ref().is_none_or(|i| m.message.internet_message_id.as_ref() == Some(i))
         })
         .filter(|m| listing.search.as_deref().is_none_or(|kql| matches_search(m, kql)))
+        .filter(|m| listing.category.as_ref().is_none_or(|c| m.message.categories.iter().flatten().any(|n| n == c)))
         .collect();
     found.sort_by_key(|m| std::cmp::Reverse(m.message.received_millis()));
     let top = listing.top.clamp(1, 1000) as usize;

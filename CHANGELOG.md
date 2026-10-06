@@ -292,6 +292,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   it last updated, instead of leaving you guessing.
 
 ### Fixed
+- An Outlook account with categories keeps syncing after Microsoft loses track of what changed, where it used to stop syncing for good.
 - Show in Calendar opens the event's popover even when the calendar refreshes at that moment.
 - The automatic reply dialog names the provider that answers for an IMAP
   account with Sieve, where it used to say Gmail.
