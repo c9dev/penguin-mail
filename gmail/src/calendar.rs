@@ -178,7 +178,20 @@ impl GmailClient {
         notify: Notify,
     ) -> Result<calendar::Event, GmailError> {
         let base = format!("{}/calendars/{}/events", self.calendar_base_url, encode(&event.calendar));
-        let body = event_json(event, create);
+        let mut body = event_json(event, create);
+        if !create && body.get("attendees").is_some() {
+            // A PATCH replaces the guest list whole, and the model holds
+            // only part of each guest. Reading what Google holds first
+            // keeps an optional guest optional after a new title.
+            let url = format!("{base}/{}", encode(&event.id));
+            let held: Result<Value, GmailError> = self
+                .call_at(&url, |url| self.http().get(url).query(&[("fields", "attendees,visibility")]))
+                .await;
+            match held {
+                Ok(held) => keep_held_fields(&mut body, &held),
+                Err(err) => tracing::warn!(%err, "could not read the event's guests before changing it"),
+            }
+        }
         // Google reads conferenceData only when told which version of it
         // the body speaks.
         // Without supportsAttachments Google ignores a change to the
@@ -619,6 +632,39 @@ fn own_fields_into(body: &mut Value, event: &calendar::Event, create: bool) {
         // calendar's again. A new event has nothing to clear.
         None if !create => body["colorId"] = Value::Null,
         None => {}
+    }
+}
+
+/// The attendee fields the model does not hold, kept from `held`, the
+/// event as Google has it.
+const HELD_GUEST_FIELDS: [&str; 4] = ["optional", "additionalGuests", "comment", "resource"];
+
+/// Copies onto `body` what Google holds and the model cannot say: each
+/// guest's fields in [`HELD_GUEST_FIELDS`], matched by address, and a
+/// visibility that means the same as the one `body` asks for. The model
+/// knows only private or not, so "public" stays public and "confidential"
+/// stays confidential unless the person changed the private switch.
+fn keep_held_fields(body: &mut Value, held: &Value) {
+    let held_guests = held["attendees"].as_array().map(Vec::as_slice).unwrap_or_default();
+    if let Some(guests) = body["attendees"].as_array_mut() {
+        for guest in guests {
+            let email = guest["email"].as_str().unwrap_or_default().to_string();
+            let Some(was) = held_guests.iter().find(|g| g["email"].as_str().is_some_and(|e| e.eq_ignore_ascii_case(&email))) else {
+                continue;
+            };
+            for field in HELD_GUEST_FIELDS {
+                if let Some(value) = was.get(field) {
+                    guest[field] = value.clone();
+                }
+            }
+        }
+    }
+    let (Some(asked), Some(was)) = (body["visibility"].as_str(), held["visibility"].as_str()) else {
+        return;
+    };
+    let private = |v: &str| matches!(v, "private" | "confidential");
+    if private(asked) == private(was) {
+        body["visibility"] = json!(was);
     }
 }
 
