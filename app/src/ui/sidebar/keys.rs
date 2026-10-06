@@ -23,6 +23,26 @@ pub enum ListKey {
     Menu,
 }
 
+/// Where the keyboard focus sits when a key reaches the list.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Focus {
+    /// On a row of the list, or on a control inside one.
+    InList,
+    /// Inside a popover the list holds, such as a row's options menu or
+    /// the menu a right click opens. Its keys reach the list's capture
+    /// handler first, because the popover is a child of a row.
+    InPopover,
+}
+
+/// What a key press asks of the list, given where the focus is. A menu
+/// open over the list keeps its own keys, so its items can be walked.
+pub fn route(key: gdk::Key, state: gdk::ModifierType, focus: Focus) -> Option<ListKey> {
+    match focus {
+        Focus::InPopover => None,
+        Focus::InList => list_key(key, state),
+    }
+}
+
 /// The list's own reading of `key`, or `None` for a key it leaves to
 /// GTK and the window, such as Ctrl+Tab or a letter.
 pub fn list_key(key: gdk::Key, state: gdk::ModifierType) -> Option<ListKey> {
@@ -99,6 +119,18 @@ mod tests {
     fn a_chord_or_a_letter_is_left_to_the_window() {
         assert_eq!(list_key(gdk::Key::Tab, gdk::ModifierType::CONTROL_MASK), None);
         assert_eq!(list_key(gdk::Key::e, gdk::ModifierType::empty()), None);
+    }
+
+    #[test]
+    fn keys_inside_an_open_menu_are_left_to_the_menu() {
+        // A row's options menu is a popover inside the list, so its keys
+        // pass the list's capture handler first. The arrows must move
+        // between the menu's items, and Tab must stay in the menu.
+        let none = gdk::ModifierType::empty();
+        for key in [gdk::Key::Down, gdk::Key::Up, gdk::Key::Tab, gdk::Key::Return, gdk::Key::Menu] {
+            assert_eq!(route(key, none, Focus::InPopover), None, "{key:?}");
+        }
+        assert_eq!(route(gdk::Key::Down, none, Focus::InList), Some(ListKey::Step(1)));
     }
 
     #[test]

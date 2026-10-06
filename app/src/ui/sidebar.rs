@@ -500,7 +500,8 @@ impl Sidebar {
             let Some(sidebar) = weak.upgrade() else {
                 return glib::Propagation::Proceed;
             };
-            let handled = match keys::list_key(key, state) {
+            let focus = focus_at(sidebar.list.upcast_ref());
+            let handled = match keys::route(key, state, focus) {
                 Some(ListKey::Leave { forward }) => sidebar.leave_list(forward),
                 Some(ListKey::Step(step)) => sidebar.step_focus(step),
                 Some(ListKey::Open) => sidebar.open_focused(),
@@ -1649,7 +1650,8 @@ fn context_menu(row: &gtk::ListBoxRow, menu: &gio::Menu) {
     // row, which the list leaves to the row (`Sidebar::open_options`).
     let keys = gtk::EventControllerKey::new();
     keys.connect_key_pressed(move |controller, key, _, state| {
-        if keys::list_key(key, state) != Some(ListKey::Menu) {
+        let focus = controller.widget().map_or(keys::Focus::InList, |row| focus_at(&row));
+        if keys::route(key, state, focus) != Some(ListKey::Menu) {
             return glib::Propagation::Proceed;
         }
         let Some(row) = controller.widget() else { return glib::Propagation::Proceed };
@@ -1658,6 +1660,23 @@ fn context_menu(row: &gtk::ListBoxRow, menu: &gio::Menu) {
     });
     row.add_controller(keys);
     row.connect_destroy(move |_| popover.unparent());
+}
+
+/// Where the keyboard focus sits relative to `within`, a widget that
+/// holds menus: inside one of its popovers, or anywhere else. The walk
+/// goes from the focused widget up its parents and stops at `within`.
+fn focus_at(within: &gtk::Widget) -> keys::Focus {
+    let mut at = within.root().and_then(|root| root.focus());
+    while let Some(widget) = at {
+        if &widget == within {
+            break;
+        }
+        if widget.is::<gtk::Popover>() {
+            return keys::Focus::InPopover;
+        }
+        at = widget.parent();
+    }
+    keys::Focus::InList
 }
 
 /// The settings section of an account's menu, as words and actions. Every
