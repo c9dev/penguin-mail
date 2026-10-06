@@ -13,6 +13,7 @@ mod connect;
 mod connector;
 mod contacts;
 mod engine;
+mod event_change;
 mod event_types;
 mod export;
 mod finding;

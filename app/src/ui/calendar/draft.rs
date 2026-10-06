@@ -10,7 +10,6 @@ use chrono::{NaiveDate, NaiveTime, TimeZone};
 use chrono::Duration;
 use chrono_tz::Tz;
 use mailrs_domain::calendar::repeat::Repeat;
-use mailrs_domain::calendar::series::{self, RepeatScope};
 use mailrs_domain::calendar::{
     Access, Attachment, Calendar, Decline, Declines, Event, Guest, Kind, Occurrence, Reminder,
 };
@@ -254,11 +253,6 @@ impl Draft {
         self.base.is_none()
     }
 
-    /// Whether the person picked another calendar for an existing event.
-    pub fn changes_calendar(&self) -> bool {
-        self.base.as_ref().is_some_and(|base| base.calendar != self.calendar)
-    }
-
     /// Moves the start and takes the end along, keeping the length.
     pub fn set_start(&mut self, at: EpochMillis) {
         let length = self.end - self.start;
@@ -483,28 +477,6 @@ impl Draft {
 
     pub fn rule_changed(&self) -> bool {
         self.repeat != self.opened.repeat
-    }
-
-    /// The answers the repeat question offers for this draft. A guest
-    /// changes only their own copy of someone else's series, so "This and
-    /// following", which would start a new series they organize, is not
-    /// among them.
-    ///
-    /// Google moves a series to another calendar whole, so a new calendar
-    /// leaves only "All events".
-    pub fn scopes(&self) -> Vec<RepeatScope> {
-        let Some(o) = &self.occurrence else {
-            return Vec::new();
-        };
-        let offered = series::scopes(&o.event, self.rule_changed());
-        if self.changes_calendar() {
-            return offered.into_iter().filter(|s| *s == RepeatScope::All).collect();
-        }
-        if self.base.as_ref().is_some_and(limited) {
-            offered.into_iter().filter(|s| *s != RepeatScope::Following).collect()
-        } else {
-            offered
-        }
     }
 
     /// The event the draft stands for. A new one takes `new_id`; a Meet
@@ -1260,7 +1232,7 @@ mod tests {
             assert_eq!(draft.repeat, Repeat::EveryWeekday);
             draft.set_span(start, end);
             assert_eq!(draft.to_event("pmnew", "pmmeet").rules, o.event.rules);
-            assert_eq!(draft.scopes(), vec![RepeatScope::This, RepeatScope::Following, RepeatScope::All]);
+            assert!(!draft.rule_changed());
         }
     }
 
@@ -1619,19 +1591,6 @@ mod tests {
     }
 
     #[test]
-    fn a_guest_is_never_offered_this_and_following() {
-        let draft = Draft::open(&invitation(), &invitation().event.rules, Lisbon);
-        assert_eq!(draft.scopes(), vec![RepeatScope::This, RepeatScope::All]);
-    }
-
-    #[test]
-    fn an_owner_is_offered_every_scope() {
-        let draft = Draft::open(&weekly(), &weekly().event.rules, Lisbon);
-        assert_eq!(draft.scopes(), vec![RepeatScope::This, RepeatScope::Following, RepeatScope::All]);
-        assert!(fresh().scopes().is_empty(), "a new event asks nothing");
-    }
-
-    #[test]
     fn writable_calendars_sort_by_account_then_primary_then_name() {
         let named = |id: &str, name: &str, primary: bool| Calendar { id: id.into(), name: name.into(), primary, ..personal() };
         let mut writable = vec![
@@ -1693,16 +1652,6 @@ mod tests {
         assert_eq!(Editing::Whole.popover(), Some(Popover { edit: true, removal: Removal::Event }));
         assert_eq!(Editing::NeedsPermission.popover(), None);
         assert_eq!(Editing::None.popover(), None);
-    }
-
-    #[test]
-    fn a_series_moving_to_another_calendar_moves_whole() {
-        let weekly = weekly();
-        let mut draft = Draft::open(&weekly, &weekly.event.rules, Lisbon);
-        assert_eq!(draft.scopes().len(), 3);
-        draft.calendar = "team".into();
-        assert!(draft.changes_calendar());
-        assert_eq!(draft.scopes(), [RepeatScope::All]);
     }
 
     #[test]

@@ -296,6 +296,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   account with Sieve, where it used to say Gmail.
 - An invitation to one date of a repeating meeting on a Fastmail or other CalDAV account says how the series runs, such as "Every Tuesday, 6 left". On an Outlook account the same line no longer waits on Microsoft each time you open the message.
 - When the assistant asks before adding an event with guests, it says the guests get an invitation, and no longer names Google on an Outlook or CalDAV account.
+- The assistant mails an event's guests only when the calendar would: a change they would not notice, or one to your copy of someone else's meeting, goes out without mail, and its question says who hears of the change.
+- An edit you make to an event while an earlier edit of it is still on its way to the server no longer disappears from the calendar, and Undo then shows what the server took.
+- A new colour, reminder or busy setting on one date of your own repeating meeting no longer mails its guests.
 - The conversation list is one Tab stop: Tab lands on the open conversation and the next Tab leaves the list, while the arrow keys, Home, End, Page Up and Page Down move between conversations. A screen reader reads each conversation the focus reaches.
 - The assistant can change a contact on an Outlook or CardDAV account, even with that account's contacts off in Preferences, and it no longer calls an Outlook account's contacts or categories Gmail's.
 - Changing an Outlook contact's company or phone keeps its name. Outlook used to rename the contact after its company.

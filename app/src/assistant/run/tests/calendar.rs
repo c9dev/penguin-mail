@@ -243,6 +243,44 @@ async fn an_event_changes_and_goes_once_the_user_agrees() {
     );
 }
 
+/// The confirmation says who gets mail from the same rule the window's
+/// question uses: nobody for an event with no other guests, and the new
+/// guests' invitation when a change adds one.
+#[tokio::test]
+async fn the_confirmation_says_who_hears_of_a_change() {
+    let h = harness().await;
+    let day = monday();
+    let made = h
+        .ok("create_event", json!({"title": "Dentist", "start": at(day, "09:00"), "end": at(day, "10:00")}))
+        .await;
+    let id = made["created"]["id"].as_str().expect("an id").to_string();
+
+    h.ok("update_event", json!({"id": id, "current_title": "Dentist", "attendees": ["bo@example.com"]})).await;
+    let invited = h.asked().questions.last().cloned().unwrap_or_default();
+    assert!(
+        invited.starts_with(&format!(
+            "Change “Dentist” on the calendar for {ME}? The new guests get their invitation, and the others get an update."
+        )),
+        "{invited}"
+    );
+
+    let kite = kite_day(&h, day).await;
+    let kite = kite["created"]["id"].as_str().expect("an id").to_string();
+    h.ok("update_event", json!({"id": kite, "current_title": "Kite day", "title": "Kite day"})).await;
+    let unchanged = h.asked().questions.last().cloned().unwrap_or_default();
+    assert!(unchanged.starts_with(&format!("Change “Kite day” on the calendar for {ME}?\n\n")), "{unchanged}");
+
+    let solo = h
+        .ok("create_event", json!({"title": "Solo", "start": at(day, "12:00"), "end": at(day, "13:00")}))
+        .await;
+    let solo = solo["created"]["id"].as_str().expect("an id").to_string();
+    h.ok("delete_event", json!({"id": solo, "title": "Solo"})).await;
+    assert_eq!(
+        h.asked().questions.last().map(String::as_str),
+        Some(format!("Delete “Solo” from the calendar for {ME}?").as_str())
+    );
+}
+
 #[tokio::test]
 async fn a_missing_calendar_permission_is_asked_for() {
     let h = harness().await;

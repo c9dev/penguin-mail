@@ -9,6 +9,7 @@ use mailrs_domain::calendar::{Access, Calendar, Event, Notify, Occurrence, Statu
 use mailrs_store::calendar as store;
 
 use super::{Connected, Harness, harness, imap_harness};
+use crate::calendar_copy::event_change::{Changed, Choice, EventChange, Undo};
 use crate::calendar_copy::{CalendarCopy, LIST_EVERY, READ_EVERY_OPEN, READ_EVERY_TRAY, new_event_id};
 use crate::settings::Permitted;
 
@@ -1669,7 +1670,10 @@ async fn a_guests_removal_deletes_their_copy_quietly_and_answers_nothing() {
     let opened = on_day(&h, 0).await.remove(0);
     // The person was asked nothing about the guests; a guest's removal
     // is quiet whatever the caller passes.
-    let change = held(copy.hold_removal(h.account_id, &opened, None, Notify::Guests).await.unwrap());
+    let choice = Choice { scope: None, notify: Notify::Guests };
+    let Changed::Held(change) = held(copy.change(h.account_id, EventChange::Remove(opened), choice, Undo::Offer).await.unwrap()) else {
+        panic!("Undo was offered");
+    };
     assert!(stored(&h, "primary", "review").await.is_none());
     copy.commit(change).await.unwrap();
     copy.send(h.account_id).await.unwrap();
@@ -1687,7 +1691,10 @@ async fn an_organizers_removal_keeps_their_choice_about_the_guests() {
     let copy = copy(&h);
     copy.refresh(h.account_id, NOW).await.unwrap();
     let opened = on_day(&h, 0).await.remove(0);
-    let change = held(copy.hold_removal(h.account_id, &opened, None, Notify::Guests).await.unwrap());
+    let choice = Choice { scope: None, notify: Notify::Guests };
+    let Changed::Held(change) = held(copy.change(h.account_id, EventChange::Remove(opened), choice, Undo::Offer).await.unwrap()) else {
+        panic!("Undo was offered");
+    };
     copy.commit(change).await.unwrap();
     copy.send(h.account_id).await.unwrap();
     assert_eq!(notices(&h), [("review".to_string(), Notify::Guests)]);

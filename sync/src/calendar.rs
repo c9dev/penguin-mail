@@ -27,6 +27,7 @@ use mailrs_domain::{AccountId, EpochMillis};
 use mailrs_store::Db;
 use mailrs_store::calendar as store;
 
+use crate::calendar_copy::event_change::{self, Changed, Choice, Edit, EventChange, Question, Undo};
 use crate::calendar_copy::{CalendarCopy, new_event_id};
 use crate::{Accounts, AnyCalendar, BackendError, CalendarService, Permitted, Spot, SyncError};
 use mailrs_domain::invitation::Invitation;
@@ -218,21 +219,23 @@ impl<A: Accounts> Calendar<A> {
         if let Permitted::NeedsPermission = self.ready(account_id).await? {
             return Ok(Permitted::NeedsPermission);
         }
-        let mut event = self.new_event(account_id, calendar, edit).await?;
-        self.copy.save(account_id, event.clone()).await?;
+        let event = self.new_event(account_id, calendar, edit).await?;
+        let change = EventChange::New(event.clone());
+        let choice = Choice { scope: None, notify: model::Notify::Guests };
+        if let Permitted::NeedsPermission = self.copy.change(account_id, change, choice, Undo::Skip).await? {
+            return Ok(Permitted::NeedsPermission);
+        }
         self.copy.send_soon(account_id);
-        // `save` marks its own copy of `event` pending; this one is
-        // what the caller sees, so it carries the same word.
-        event.pending = true;
-        Ok(Permitted::Done(event))
+        Ok(Permitted::Done(model::Event { pending: true, ..event }))
     }
 
-    /// Changes what `edit` sets on event `id` and tells its guests,
-    /// through the copy's queue, the same way `create` does. An
-    /// occurrence id (`<series>_<start>`) names one occurrence of a series
-    /// in the copy: the change queues as a changed occurrence, for that
-    /// occurrence alone, as the window's "This event only" does. An id
-    /// the copy does not hold is `BackendError::NotFound`.
+    /// Changes what `edit` sets on event `id`, through the copy's queue,
+    /// the same way `create` does. The guests hear of it when the window
+    /// would tell them ([`Self::question`]). An occurrence id
+    /// (`<series>_<start>`) names one occurrence of a series in the copy:
+    /// the change queues as a changed occurrence, for that occurrence
+    /// alone, as the window's "This event only" does. An id the copy does
+    /// not hold is `BackendError::NotFound`.
     pub async fn update(
         &self,
         account_id: AccountId,
@@ -242,75 +245,113 @@ impl<A: Accounts> Calendar<A> {
         if let Permitted::NeedsPermission = self.ready(account_id).await? {
             return Ok(Permitted::NeedsPermission);
         }
+        let Permitted::Done(changed) = self.write(account_id, id, Some(edit)).await? else {
+            return Ok(Permitted::NeedsPermission);
+        };
+        let Changed::Queued(steps) = changed else {
+            return Err(SyncError::Backend(BackendError::NotFound));
+        };
+        steps
+            .into_iter()
+            .find_map(|step| match step {
+                Step::Save(event) => Some(Permitted::Done(model::Event { pending: true, ..event })),
+                _ => None,
+            })
+            .ok_or(SyncError::Backend(BackendError::NotFound))
+    }
+
+    /// Takes event `id` off the calendar through the queue, with a
+    /// cancellation to its guests when the window would send one. An
+    /// occurrence id names one occurrence of a series, which the queue
+    /// cancels alone (see [`Self::update`]).
+    pub async fn delete(&self, account_id: AccountId, id: &str) -> Result<Permitted<()>, SyncError> {
+        if let Permitted::NeedsPermission = self.ready(account_id).await? {
+            return Ok(Permitted::NeedsPermission);
+        }
+        match self.write(account_id, id, None).await? {
+            Permitted::Done(_) => Ok(Permitted::Done(())),
+            Permitted::NeedsPermission => Ok(Permitted::NeedsPermission),
+        }
+    }
+
+    /// What the window would ask before changing event `id` by `edit`, or
+    /// deleting it when `edit` is `None`, for the assistant to say in its
+    /// confirmation who hears of it. Read from the copy as it stands, with
+    /// no wait for a first read.
+    pub async fn question(
+        &self,
+        account_id: AccountId,
+        id: &str,
+        edit: Option<&EventEdit>,
+    ) -> Result<Question, SyncError> {
+        let (change, _) = self.change_of(account_id, id, edit).await?;
+        Ok(event_change::confirmation(&change, self.always_mails(account_id)?))
+    }
+
+    /// Writes the assistant's change of event `id` and starts a send. The
+    /// person agreed to the confirmation [`Self::question`] words, so the
+    /// guests hear of it when that says they do.
+    async fn write(
+        &self,
+        account_id: AccountId,
+        id: &str,
+        edit: Option<&EventEdit>,
+    ) -> Result<Permitted<Changed>, SyncError> {
+        let (change, scope) = self.change_of(account_id, id, edit).await?;
+        let notify = match event_change::confirmation(&change, self.always_mails(account_id)?).guests_hear() {
+            true => model::Notify::Guests,
+            false => model::Notify::Nobody,
+        };
+        let written = self.copy.change(account_id, change, Choice { scope, notify }, Undo::Skip).await?;
+        if let Permitted::Done(_) = written {
+            self.copy.send_soon(account_id);
+        }
+        Ok(written)
+    }
+
+    /// The change `edit` makes to event `id`, or its removal when `edit` is
+    /// `None`, with the repeat scope it covers: the event as it is for an
+    /// id the copy holds, or that occurrence alone for an occurrence id.
+    async fn change_of(
+        &self,
+        account_id: AccountId,
+        id: &str,
+        edit: Option<&EventEdit>,
+    ) -> Result<(EventChange, Option<RepeatScope>), SyncError> {
         let found = {
             let id = id.to_string();
             self.db.read(move |c| store::find_event(c, account_id, &id)).await?
         };
-        if let Some(mut event) = found {
-            made_here(&event)?;
-            edit.apply(&mut event);
-            self.copy.save(account_id, event.clone()).await?;
-            self.copy.send_soon(account_id);
-            event.pending = true;
-            return Ok(Permitted::Done(event));
-        }
-        let Some(occurrence) = self.occurrence(account_id, id).await? else {
-            return Err(SyncError::Backend(BackendError::NotFound));
+        let (occurrence, scope) = match found {
+            Some(event) => {
+                let (start, end) = (event.start, event.end);
+                (model::Occurrence { account_id, event: Arc::new(event), start, end }, None)
+            }
+            None => match self.occurrence(account_id, id).await? {
+                Some(occurrence) => (occurrence, Some(RepeatScope::This)),
+                None => return Err(SyncError::Backend(BackendError::NotFound)),
+            },
         };
         made_here(&occurrence.event)?;
-        let mut edited = model::Event {
+        let Some(edit) = edit else {
+            return Ok((EventChange::Remove(occurrence), scope));
+        };
+        let before = model::Event {
             start: occurrence.start,
             end: occurrence.end,
             ..model::Event::clone(&occurrence.event)
         };
+        let mut edited = before.clone();
         edit.apply(&mut edited);
-        let steps = self
-            .copy
-            .change_steps(account_id, &occurrence, edited, Some(RepeatScope::This))
-            .await?;
-        let saved = steps.iter().find_map(|step| match step {
-            Step::Save(event) => Some(model::Event { pending: true, ..event.clone() }),
-            _ => None,
-        });
-        if let Permitted::NeedsPermission = self.copy.apply(account_id, steps).await? {
-            return Ok(Permitted::NeedsPermission);
-        }
-        self.copy.send_soon(account_id);
-        saved.map(Permitted::Done).ok_or(SyncError::Backend(BackendError::NotFound))
+        let how = seen_by_guests(&before, &edited);
+        Ok((EventChange::Edit { occurrence, edited, how }, scope))
     }
 
-    /// Takes event `id` off the calendar and tells its guests, through
-    /// the queue. An occurrence id names one occurrence of a series, which
-    /// the queue cancels alone (see [`Self::update`]).
-    pub async fn delete(
-        &self,
-        account_id: AccountId,
-        id: &str,
-    ) -> Result<Permitted<()>, SyncError> {
-        if let Permitted::NeedsPermission = self.ready(account_id).await? {
-            return Ok(Permitted::NeedsPermission);
-        }
-        let found = {
-            let id = id.to_string();
-            self.db.read(move |c| store::find_event(c, account_id, &id)).await?
-        };
-        if let Some(event) = found {
-            made_here(&event)?;
-            self.copy.remove(account_id, &event.calendar, id).await?;
-            self.copy.send_soon(account_id);
-            return Ok(Permitted::Done(()));
-        }
-        let Some(occurrence) = self.occurrence(account_id, id).await? else {
-            return Err(SyncError::Backend(BackendError::NotFound));
-        };
-        made_here(&occurrence.event)?;
-        let steps = self.copy.delete_steps(account_id, &occurrence, Some(RepeatScope::This)).await?;
-        let notify = model::removal_notify(&occurrence.event, model::Notify::Guests);
-        if let Permitted::NeedsPermission = self.copy.apply_with(account_id, steps, notify).await? {
-            return Ok(Permitted::NeedsPermission);
-        }
-        self.copy.send_soon(account_id);
-        Ok(Permitted::Done(()))
+    /// Whether the account mails the guests of every change, as Graph
+    /// does.
+    fn always_mails(&self, account_id: AccountId) -> Result<bool, SyncError> {
+        let services = self.accounts.services(account_id).ok_or(SyncError::UnknownAccount(account_id))?;
+        Ok(!services.offers().quiet_changes)
     }
 
     /// Occurrences over `from` to `to` on the calendars `scope` names,
@@ -413,6 +454,21 @@ impl<A: Accounts> Calendar<A> {
             .calendar
             .ok_or(SyncError::Backend(BackendError::Unsupported))
     }
+}
+
+/// What an assistant's edit from `before` to `after` changes as the
+/// guests see it. Every field a tool sets is one the guests see, so a
+/// field counts only when its value differs.
+fn seen_by_guests(before: &model::Event, after: &model::Event) -> Edit {
+    let moves = (before.start, before.end, before.all_day) != (after.start, after.end, after.all_day);
+    let guests = event_change::adds_guests(&before.guests, &after.guests)
+        || event_change::adds_guests(&after.guests, &before.guests);
+    let seen = moves
+        || guests
+        || before.title != after.title
+        || before.place != after.place
+        || before.description != after.description;
+    Edit { moves, seen, ..Edit::default() }
 }
 
 /// Refuses a change to a birthday or a working location, which only

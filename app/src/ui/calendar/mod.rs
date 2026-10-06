@@ -45,14 +45,17 @@ use adw::prelude::*;
 use chrono::{DateTime, Datelike, Days, NaiveDate, Utc};
 use gtk::{gdk, gio, glib};
 use mailrs_domain::calendar::series::{self, RepeatScope};
-use mailrs_domain::calendar::{Access, Calendar, Guest, Occurrence};
+use mailrs_domain::calendar::{Access, Calendar, Event, Occurrence};
 use mailrs_domain::invitation::Answer;
 use mailrs_domain::translate::{date_locale, fill, gettext, with_reason};
 use mailrs_domain::{Account, AccountId, EpochMillis};
 use mailrs_store::calendar::{self as store, CalendarScope};
 use mailrs_sync::Permitted;
-use mailrs_sync::calendar_copy::Held;
-use mailrs_sync::{Offers, Withheld};
+use mailrs_sync::calendar_copy::event_change::{
+    self, Action, Ask, Changed, Edit, EventChange, Facts, Undo,
+};
+use mailrs_sync::calendar_copy::{Held, new_event_id};
+use mailrs_sync::{Offers, SyncError, Withheld};
 
 use crate::core::Core;
 use crate::settings::{Change, Settings};
@@ -1491,40 +1494,28 @@ impl CalendarView {
             let rules = this.series_rules(&o).await;
             let mut draft = Draft::open(&o, &rules, draft::local_zone());
             draft.land(start, end, all_day);
-            let offered = series::scopes(&o.event, false);
             let when = words::landing_words(start, end, all_day, &draft::local_zone());
-            let change = this.guest_change(o.account_id);
-            let answer = match scope::question(scope::Action::Move, &offered, &o.event.guests, change) {
-                Some(question) => match scope::ask(&this.page, &question, &o.event, Some(&when)).await {
-                    Some(answer) => answer,
-                    None => {
-                        spring_back();
-                        return;
-                    }
-                },
-                None => scope::unasked(scope::Action::Move, change),
+            let edited = draft.to_event(&new_event_id(), &new_event_id());
+            let how = Edit { moves: true, ..Edit::default() };
+            let change = EventChange::Edit { occurrence: o.clone(), edited, how };
+            let account_id = o.account_id;
+            let written = match this.choose(account_id, &change, &o.event, Some(&when)).await {
+                Ok(Some(answer)) => write(&this.core, account_id, change, answer, Undo::Offer).await,
+                Ok(None) => {
+                    spring_back();
+                    return;
+                }
+                Err(err) => Err(err.into()),
             };
-            let scope = answer.scope;
-            let event = draft.to_event(
-                &mailrs_sync::calendar_copy::new_event_id(),
-                &mailrs_sync::calendar_copy::new_event_id(),
-            );
-            let copy = this.core.calendar_copy();
-            let (account_id, occurrence) = (o.account_id, o.clone());
-            let held = this
-                .core
-                .call(async move {
-                    let steps = copy.change_steps(account_id, &occurrence, event, scope).await?;
-                    copy.hold_with(account_id, steps, answer.notify).await
-                })
-                .await;
-            match held {
-                Ok(Permitted::Done(held)) => {
+            match written {
+                Ok(Permitted::Done(changed)) => {
                     // A drop from the all-day row marked its hour in the
                     // grid, which a refill keeps for quick create.
                     this.clear_ghost();
                     this.reload();
-                    this.offer_undo(fill(&gettext("Moved “{title}”"), &[("title", &o.event.title)]), held);
+                    if let Changed::Held(held) = changed {
+                        this.offer_undo(fill(&gettext("Moved “{title}”"), &[("title", &o.event.title)]), held);
+                    }
                 }
                 Ok(Permitted::NeedsPermission) => {
                     spring_back();
@@ -1540,6 +1531,23 @@ impl CalendarView {
                 }
             }
         });
+    }
+
+    /// What the person chose about `change`: the calendar copy's question
+    /// shown over the page about `shown`, with `when` naming a new time,
+    /// or what the copy settles on when nothing needs asking. `None` for
+    /// Cancel.
+    async fn choose(
+        &self,
+        account_id: AccountId,
+        change: &EventChange,
+        shown: &Event,
+        when: Option<&str>,
+    ) -> Result<Option<scope::Answer>, SyncError> {
+        Ok(match self.core.calendar_copy().ask_before(account_id, change)? {
+            Ask::Question(question) => scope::ask(&self.page, &question, shown, when).await,
+            Ask::Settled(choice) => Some(choice.into()),
+        })
     }
 
     /// The rules of the series `o` belongs to: its own, or for a changed
@@ -1561,19 +1569,6 @@ impl CalendarView {
     /// account can write to, the account must offer a calendar and not
     /// have withheld it, and the event itself must allow it (not a
     /// guest's own event, not on its way out).
-    /// The guests-choice facts of `account_id`'s calendar: a Microsoft
-    /// account mails the guests of every change and cannot send nobody.
-    /// An account not listed keeps Google's choice.
-    fn guest_change(&self, account_id: AccountId) -> scope::Change {
-        let quiet = self
-            .accounts
-            .borrow()
-            .iter()
-            .find(|(a, _, _)| a.id == account_id)
-            .is_none_or(|(_, offers, _)| offers.quiet_changes);
-        scope::Change { always_mails: !quiet, ..scope::Change::default() }
-    }
-
     fn can_move(&self, o: &Occurrence) -> bool {
         let access = self
             .calendars
@@ -2515,35 +2510,24 @@ impl CalendarView {
         let this = Rc::clone(self);
         let o = o.clone();
         glib::spawn_future_local(async move {
-            let guest = draft::limited(&o.event);
-            let mut offered = series::scopes(&o.event, false);
-            if guest {
-                offered.retain(|s| *s != RepeatScope::Following);
-            }
-            let guests: &[Guest] = if guest { &[] } else { &o.event.guests };
-            let change = this.guest_change(o.account_id);
-            let answer = match scope::question(scope::Action::Delete, &offered, guests, change) {
-                Some(question) => match scope::ask(&this.page, &question, &o.event, None).await {
-                    Some(answer) => answer,
-                    None => return,
-                },
-                None => scope::unasked(scope::Action::Delete, change),
+            let account_id = o.account_id;
+            let change = EventChange::Remove(o.clone());
+            let written = match this.choose(account_id, &change, &o.event, None).await {
+                Ok(Some(answer)) => write(&this.core, account_id, change, answer, Undo::Offer).await,
+                Ok(None) => return,
+                Err(err) => Err(err.into()),
             };
-            let copy = this.core.calendar_copy();
-            let (account_id, occurrence) = (o.account_id, o.clone());
-            let held = this
-                .core
-                .call(async move { copy.hold_removal(account_id, &occurrence, answer.scope, answer.notify).await })
-                .await;
-            match held {
-                Ok(Permitted::Done(held)) => {
+            match written {
+                Ok(Permitted::Done(changed)) => {
                     this.focus_past(&key_of(&o));
                     this.reload();
-                    let said = match guest {
+                    let said = match draft::limited(&o.event) {
                         true => gettext("Removed “{title}” from your calendar"),
                         false => gettext("Deleted “{title}”"),
                     };
-                    this.offer_undo(fill(&said, &[("title", &o.event.title)]), held);
+                    if let Changed::Held(held) = changed {
+                        this.offer_undo(fill(&said, &[("title", &o.event.title)]), held);
+                    }
                 }
                 Ok(Permitted::NeedsPermission) => (this.hooks.needs_permission)(account_id),
                 Err(err) => (this.hooks.toast)(&with_reason(&gettext("Could not delete the event: {reason}"), &err, &[])),
@@ -2714,7 +2698,7 @@ impl CalendarView {
         let page = self.page.clone();
         glib::spawn_future_local(async move {
             let offered = series::answer_scopes(&o.event);
-            let scope = match scope::question(scope::Action::Answer, &offered, &[], scope::Change::default()) {
+            let scope = match event_change::question(Action::Answer, &offered, &[], Facts::default()) {
                 Some(question) => match scope::ask(&page, &question, &o.event, None).await {
                     Some(picked) => picked.scope.unwrap_or(RepeatScope::All),
                     None => return,
@@ -3089,66 +3073,30 @@ impl CalendarView {
         let weak = Rc::downgrade(self);
         let core = Rc::clone(&self.core);
         glib::spawn_future_local(async move {
-            let occurrence = draft.occurrence.clone();
-            let offered = draft.scopes();
-            let action = if draft.moved() { scope::Action::Move } else { scope::Action::Edit };
-            let before = draft.before();
-            let always_mails = match weak.upgrade() {
-                Some(view) => view.guest_change(draft.account_id).always_mails,
-                None => return,
-            };
-            let change = match &before {
-                Some(before) => {
-                    let rest = draft.without_move();
-                    scope::Change {
-                        always_mails,
-                        seen: draft::reaches_guests(before, &draft),
-                        adds_guests: scope::adds_guests(&before.guests, &draft.guests),
-                        more_than_time: action == scope::Action::Move && rest != *before,
-                        rest_seen: draft::reaches_guests(before, &rest),
-                    }
-                }
-                // A new event's guests get their invitation.
-                None => scope::Change { seen: true, always_mails, ..scope::Change::default() },
-            };
-            // A guest the edit removed still hears of it.
-            let guests = match &before {
-                Some(before) if scope::has_other_guests(&before.guests) => before.guests.clone(),
-                _ => draft.guests.clone(),
-            };
-            let asked = match (&draft.base, scope::question(action, &offered, &guests, change)) {
-                (Some(base), Some(question)) => {
-                    let Some(view) = weak.upgrade() else { return };
-                    let when = words::span_words(draft.start, draft.end, draft.all_day, &draft::local_zone());
-                    let when = (action == scope::Action::Move).then_some(when);
-                    match scope::ask(&view.page, &question, base, when.as_deref()).await {
-                        Some(answer) => answer,
-                        None => return,
-                    }
-                }
-                _ => scope::unasked(action, change),
-            };
-            let draft = if asked.keep_time { draft.without_move() } else { draft };
-            let (scope, notify) = (asked.scope, asked.notify);
-            let event = draft.to_event(
-                &mailrs_sync::calendar_copy::new_event_id(),
-                &mailrs_sync::calendar_copy::new_event_id(),
-            );
             let account_id = draft.account_id;
+            let change = draft_change(&draft);
+            let asked = {
+                let Some(view) = weak.upgrade() else { return };
+                let when = draft
+                    .moved()
+                    .then(|| words::span_words(draft.start, draft.end, draft.all_day, &draft::local_zone()));
+                let shown = draft.base.clone().unwrap_or_default();
+                match view.choose(account_id, &change, &shown, when.as_deref()).await {
+                    Ok(Some(answer)) => answer,
+                    Ok(None) => return,
+                    Err(err) => {
+                        (view.hooks.toast)(&with_reason(&gettext("Could not save the event: {reason}"), &err, &[]));
+                        return;
+                    }
+                }
+            };
+            // Keep Old Time writes the other edits at the time the event had.
+            let change = if asked.keep_time { draft_change(&draft.without_move()) } else { change };
             let is_new = draft.is_new();
-            let copy = core.calendar_copy();
-            let written = core
-                .call(async move {
-                    let steps = match &occurrence {
-                        Some(o) => copy.change_steps(account_id, o, event, scope).await?,
-                        None => vec![series::Step::Save(event)],
-                    };
-                    copy.apply_with(account_id, steps, notify).await
-                })
-                .await;
+            let written = write(&core, account_id, change, asked, Undo::Skip).await;
             let Some(view) = weak.upgrade() else { return };
             match written {
-                Ok(Permitted::Done(())) => {
+                Ok(Permitted::Done(_)) => {
                     if is_new {
                         view.remember_account(account_id);
                     }
@@ -3362,6 +3310,37 @@ impl PageView {
             }
         }
     }
+}
+
+/// Writes `change` through the calendar copy with what the person
+/// answered.
+async fn write(
+    core: &Core,
+    account_id: AccountId,
+    change: EventChange,
+    answer: scope::Answer,
+    undo: Undo,
+) -> anyhow::Result<Permitted<Changed>> {
+    let copy = core.calendar_copy();
+    core.call(async move { copy.change(account_id, change, answer.choice(), undo).await }).await
+}
+
+/// The change an editor save makes. Only the draft can tell what the
+/// guests see of it, by comparing itself with the draft it opened as.
+fn draft_change(draft: &Draft) -> EventChange {
+    let edited = draft.to_event(&new_event_id(), &new_event_id());
+    let (Some(occurrence), Some(before)) = (draft.occurrence.clone(), draft.before()) else {
+        return EventChange::New(edited);
+    };
+    let rest = draft.without_move();
+    let how = Edit {
+        moves: draft.moved(),
+        seen: draft::reaches_guests(&before, draft),
+        more_than_time: rest != before,
+        rest_seen: draft::reaches_guests(&before, &rest),
+        rule_changed: draft.rule_changed(),
+    };
+    EventChange::Edit { occurrence, edited, how }
 }
 
 /// Local midnight of `first` to local midnight after `last`, for a read

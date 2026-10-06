@@ -766,3 +766,113 @@ async fn an_import_without_the_calendar_permission_asks_for_it() {
     let refused = calendar(&h).import(h.account_id, None, &[ticket("a@x", "Outbound")]).await.unwrap();
     assert!(matches!(refused, Permitted::NeedsPermission));
 }
+
+// ---- Who hears of the assistant's changes ---------------------------------
+
+/// A meeting this account organizes, with Ann invited.
+fn meeting() -> Ev {
+    use mailrs_domain::calendar::Guest;
+    Ev {
+        calendar: primary().id,
+        id: "review".into(),
+        title: "Review".into(),
+        start: 1_790_000_000_000,
+        end: 1_790_003_600_000,
+        zone: "UTC".into(),
+        guests: vec![
+            Guest { email: "me@example.com".into(), me: true, organizer: true, ..Guest::default() },
+            Guest { email: "ann@example.com".into(), ..Guest::default() },
+        ],
+        ..Ev::default()
+    }
+}
+
+/// Rita organizes the review and this account is only a guest.
+fn invited() -> Ev {
+    use mailrs_domain::calendar::Guest;
+    Ev {
+        guests: vec![
+            Guest { email: "rita@example.com".into(), organizer: true, ..Guest::default() },
+            Guest { email: "me@example.com".into(), me: true, ..Guest::default() },
+        ],
+        organizer: Some("rita@example.com".into()),
+        ..meeting()
+    }
+}
+
+async fn read_into_copy(h: &Harness, event: Ev) -> (Calendar<Connected>, Arc<CalendarCopy<Connected>>) {
+    h.fake.with(|s| s.calendars = vec![primary()]);
+    h.fake.put_calendar_event(event);
+    let (calendar, copy) = calendar_with_copy(h);
+    copy.refresh(h.account_id, 1_790_000_000_000).await.unwrap();
+    (calendar, copy)
+}
+
+fn notices(h: &Harness) -> Vec<(String, mailrs_domain::calendar::Notify)> {
+    h.fake.with(|s| s.calendar_notices.clone())
+}
+
+fn titled(title: &str) -> EventEdit {
+    EventEdit { title: Some(title.into()), ..EventEdit::default() }
+}
+
+#[tokio::test]
+async fn the_assistant_tells_the_guests_of_a_change_they_see() {
+    use mailrs_domain::calendar::Notify;
+    let h = harness().await;
+    let (calendar, copy) = read_into_copy(&h, meeting()).await;
+    calendar.update(h.account_id, "review", &titled("Design review")).await.unwrap().done().unwrap();
+    copy.send(h.account_id).await.unwrap();
+    assert_eq!(notices(&h), [("review".to_string(), Notify::Guests)]);
+}
+
+/// The window sends nobody mail about an edit the guests would not see,
+/// and the assistant now follows the same rule.
+#[tokio::test]
+async fn the_assistant_mails_nobody_about_a_change_the_guests_would_not_see() {
+    use mailrs_domain::calendar::Notify;
+    let h = harness().await;
+    let (calendar, copy) = read_into_copy(&h, meeting()).await;
+    calendar.update(h.account_id, "review", &titled("Review")).await.unwrap().done().unwrap();
+    copy.send(h.account_id).await.unwrap();
+    assert_eq!(notices(&h), [("review".to_string(), Notify::Nobody)]);
+}
+
+/// A guest's change reaches only their own copy, so the organizer and the
+/// other guests get no mail of it.
+#[tokio::test]
+async fn the_assistant_changes_a_guests_own_copy_quietly() {
+    use mailrs_domain::calendar::Notify;
+    let h = harness().await;
+    let (calendar, copy) = read_into_copy(&h, invited()).await;
+    calendar.update(h.account_id, "review", &titled("Rita's review")).await.unwrap().done().unwrap();
+    copy.send(h.account_id).await.unwrap();
+    assert_eq!(notices(&h), [("review".to_string(), Notify::Nobody)]);
+}
+
+#[tokio::test]
+async fn the_assistants_confirmation_hears_who_gets_mail_from_the_same_rule() {
+    let h = harness().await;
+    let (calendar, _copy) = read_into_copy(&h, meeting()).await;
+    let removal = calendar.question(h.account_id, "review", None).await.unwrap();
+    assert!(removal.ask_guests, "{removal:?}");
+    let invite = EventEdit {
+        guests: Some(vec!["ann@example.com".into(), "bo@example.com".into()]),
+        ..EventEdit::default()
+    };
+    let adding = calendar.question(h.account_id, "review", Some(&invite)).await.unwrap();
+    assert!(adding.told && !adding.ask_guests, "{adding:?}");
+    let same = calendar.question(h.account_id, "review", Some(&titled("Review"))).await.unwrap();
+    assert!(!same.ask_guests && !same.told && !same.mailed, "{same:?}");
+}
+
+#[tokio::test]
+async fn the_assistants_confirmation_promises_no_mail_for_a_guests_own_copy() {
+    let h = harness().await;
+    let (calendar, _copy) = read_into_copy(&h, invited()).await;
+    let removal = calendar.question(h.account_id, "review", None).await.unwrap();
+    let renamed = calendar.question(h.account_id, "review", Some(&titled("Mine"))).await.unwrap();
+    for q in [removal, renamed] {
+        assert!(!q.ask_guests && !q.told && !q.mailed, "{q:?}");
+    }
+}
