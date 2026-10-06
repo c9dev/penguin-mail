@@ -283,6 +283,31 @@ pub fn resize_days(start: EpochMillis, end: EpochMillis, edge: Edge, days: i64) 
     }
 }
 
+/// Where a card in the all-day row lands after a drag of `days` columns,
+/// by its body (`edge` `None`) or by one end. An all-day event moves by
+/// UTC days, as its dates are UTC dates. A timed entry that covers whole
+/// days, as a whole-day out of office does, stays timed and moves by
+/// calendar days in `zone`, its own, so it keeps starting and ending at
+/// midnight across a clock change; a stretch never leaves it shorter
+/// than one day.
+pub fn strip_landing(
+    start: EpochMillis,
+    end: EpochMillis,
+    all_day: bool,
+    edge: Option<Edge>,
+    days: i64,
+    zone: Tz,
+) -> Landing {
+    let (start, end) = match (all_day, edge) {
+        (true, None) => by_days(start, end, true, days, zone),
+        (true, Some(edge)) => resize_days(start, end, edge, days),
+        (false, None) => nudge_days(start, end, days, zone),
+        (false, Some(Edge::Start)) => (shift_days(start, days, zone).min(shift_days(end, -1, zone)), end),
+        (false, Some(Edge::End)) => (start, shift_days(end, days, zone).max(shift_days(start, 1, zone))),
+    };
+    Landing { start, end, all_day }
+}
+
 /// The span of an event made all-day on `day`: UTC midnight to the next,
 /// the way an all-day event keeps its dates.
 pub fn all_day_on(day: NaiveDate) -> (EpochMillis, EpochMillis) {
@@ -739,6 +764,32 @@ mod tests {
         let (moved, _) = by_days(start, start + H, false, 3, lisbon);
         let after = lisbon.with_ymd_and_hms(2026, 10, 26, 10, 0, 0).unwrap().timestamp_millis();
         assert_eq!(moved, after);
+    }
+
+    #[test]
+    fn a_timed_whole_day_card_moved_in_the_all_day_row_stays_timed_from_midnight() {
+        let lisbon = chrono_tz::Europe::Lisbon;
+        let midnight = |d| lisbon.with_ymd_and_hms(2026, 10, d, 0, 0, 0).unwrap().timestamp_millis();
+        // The clocks go back in Lisbon on 25 October.
+        let landing = strip_landing(midnight(24), midnight(25), false, None, 1, lisbon);
+        assert_eq!(landing, Landing { start: midnight(25), end: midnight(26), all_day: false });
+    }
+
+    #[test]
+    fn a_timed_whole_day_card_stretched_in_the_all_day_row_ends_at_midnight() {
+        let lisbon = chrono_tz::Europe::Lisbon;
+        let midnight = |d| lisbon.with_ymd_and_hms(2026, 10, d, 0, 0, 0).unwrap().timestamp_millis();
+        let landing = strip_landing(midnight(24), midnight(25), false, Some(Edge::End), 2, lisbon);
+        assert_eq!(landing, Landing { start: midnight(24), end: midnight(27), all_day: false });
+        let landing = strip_landing(midnight(24), midnight(26), false, Some(Edge::Start), 5, lisbon);
+        assert_eq!(landing, Landing { start: midnight(25), end: midnight(26), all_day: false });
+    }
+
+    #[test]
+    fn an_all_day_card_moved_in_the_all_day_row_moves_by_utc_days() {
+        let (start, end) = (utc_day(2026, 10, 1), utc_day(2026, 10, 3));
+        let landing = strip_landing(start, end, true, None, 1, chrono_tz::Asia::Tokyo);
+        assert_eq!(landing, Landing { start: utc_day(2026, 10, 2), end: utc_day(2026, 10, 4), all_day: true });
     }
 
     #[test]

@@ -86,6 +86,24 @@ async fn show_in_calendar_goes_to_the_day_and_opens_the_popover() {
     assert!(run.pending().is_none());
 }
 
+#[tokio::test]
+async fn show_in_calendar_in_a_narrow_window_opens_the_popover_from_the_list() {
+    let window = FakeWindow::new();
+    let later = fixture_day() + chrono::Days::new(14);
+    let meeting = event_at("Design review", later, 15);
+    window.with(|v| {
+        v.copy = vec![meeting.clone()];
+        v.showing_list = true;
+    });
+    let run = window.run();
+    run.open(key_of(&meeting), meeting.start);
+    window.settle().await;
+    let view = window.view.borrow();
+    assert!(view.popovers.is_empty(), "the grid pages are hidden behind the list");
+    assert_eq!(view.list_popovers, vec![(key_of(&meeting), meeting.start)]);
+    assert!(run.pending().is_none());
+}
+
 /// 0ca63cbe: a reload that started while Show in Calendar's page was
 /// reading took the page over, and the popover never opened.
 #[tokio::test]
@@ -279,6 +297,25 @@ async fn the_list_draws_its_first_window_around_the_day() {
 }
 
 #[tokio::test]
+async fn a_reload_keeps_the_days_the_list_has_loaded_and_its_scroll() {
+    let window = FakeWindow::new();
+    window.with(|v| {
+        v.showing_list = true;
+        v.copy = vec![event_at("Standup", fixture_day(), 9), event_at("Later", fixture_day() + chrono::Days::new(70), 9)];
+    });
+    let run = window.run();
+    run.fill_list();
+    window.settle().await;
+    run.load_later();
+    window.settle().await;
+    run.reload();
+    window.settle().await;
+    let view = window.view.borrow();
+    assert_eq!(view.list, ["Standup", "Later"]);
+    assert_eq!(window.count(Step::DrawList), 1, "only the first window replaced the list");
+}
+
+#[tokio::test]
 async fn earlier_days_read_for_a_list_that_has_since_been_replaced_are_dropped() {
     let window = FakeWindow::new();
     window.with(|v| v.showing_list = true);
@@ -290,6 +327,69 @@ async fn earlier_days_read_for_a_list_that_has_since_been_replaced_are_dropped()
     run.load_earlier();
     window.settle().await;
     assert_eq!(window.count(Step::PrependList), 0);
+}
+
+#[tokio::test]
+async fn a_stale_read_of_earlier_days_leaves_the_newer_read_s_flag_alone() {
+    let window = FakeWindow::new();
+    window.with(|v| v.showing_list = true);
+    let run = window.run();
+    run.fill_list();
+    window.settle().await;
+    // While the first read of earlier days runs, the list starts over and
+    // a new read of earlier days begins, which a third scroll to the top
+    // must not start again.
+    window.during(Step::Occurrences, |_, run| {
+        run.fill_list();
+        run.load_earlier();
+    });
+    run.load_earlier();
+    window.during(Step::Occurrences, |_, run| run.load_earlier());
+    window.settle().await;
+    assert_eq!(window.count(Step::PrependList), 1);
+}
+
+#[tokio::test]
+async fn later_days_read_for_a_list_that_has_since_been_replaced_are_dropped() {
+    let window = FakeWindow::new();
+    window.with(|v| v.showing_list = true);
+    let run = window.run();
+    run.fill_list();
+    window.settle().await;
+    window.during(Step::Occurrences, |_, run| run.fill_list());
+    run.load_later();
+    window.settle().await;
+    assert_eq!(window.count(Step::AppendList), 0);
+}
+
+#[tokio::test]
+async fn a_second_scroll_near_the_end_while_later_days_load_asks_nothing_more() {
+    let window = FakeWindow::new();
+    window.with(|v| v.showing_list = true);
+    let run = window.run();
+    run.fill_list();
+    window.settle().await;
+    window.during(Step::Occurrences, |_, run| run.load_later());
+    run.load_later();
+    window.settle().await;
+    assert_eq!(window.count(Step::AppendList), 1);
+    assert_eq!(window.count(Step::Occurrences), 2, "the first window and one later read");
+}
+
+#[tokio::test]
+async fn the_list_stops_loading_later_days_two_years_ahead() {
+    let window = FakeWindow::new();
+    window.with(|v| v.showing_list = true);
+    let run = window.run();
+    run.fill_list();
+    window.settle().await;
+    for _ in 0..40 {
+        run.load_later();
+        window.settle().await;
+    }
+    // 60 days, then 30 at a time up to 730 days ahead: 23 reads, the
+    // last one cut short.
+    assert_eq!(window.count(Step::AppendList), 23);
 }
 
 #[tokio::test]

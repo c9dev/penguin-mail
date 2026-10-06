@@ -292,6 +292,18 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   it last updated, instead of leaving you guessing.
 
 ### Fixed
+- Switching between the 12-hour and 24-hour clock in GNOME's settings changes the calendar's hours and event times at once.
+- When Undo cannot take back a calendar move or delete, a message now says the change stays and why.
+- After Show all in an event's details opens the full guest list, Escape still closes the details.
+- Deleting a calendar, subscribing to one or adding holidays says it worked only once it has, and a holiday calendar that could not be added keeps its Add button.
+- Deleting or making a calendar on an Outlook account no longer says Google Calendar.
+- On an Outlook account, Add Calendar offers only New Calendar and a shared calendar's menu no longer offers Unsubscribe, since Outlook turns down subscriptions and holiday calendars.
+- The event editor shows guests, calendars and attached files whose names hold an ampersand or angle brackets, such as "R&D Team" or "Q&A.pdf", where their rows used to come up blank.
+- In a narrow window, Show in Calendar, a search result or a Waiting card opens the event's details over the calendar's list, where they used to point at the hidden month grid.
+- In a narrow window, scrolling to the top of the calendar's list while it starts over no longer shows the same earlier days twice.
+- In a narrow window, the calendar's list keeps the days you scrolled to and your place in it when a sync or your own change refreshes it, where it used to jump back to the first days.
+- In Week and Day view, dragging an out-of-office day or another entry that runs midnight to midnight along the all-day row moves it to the day under the pointer, and it stays a timed entry.
+- Turning All day off for an event in the editor shows its new 09:00 start, and the time you then pick is the time it saves at, in your own time zone.
 - Show in Calendar opens the event's popover even when the calendar refreshes at that moment.
 - The automatic reply dialog names the provider that answers for an IMAP
   account with Sieve, where it used to say Gmail.

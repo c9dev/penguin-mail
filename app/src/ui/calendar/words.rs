@@ -240,6 +240,12 @@ pub fn people_words(organizer: Option<&str>, guests: &[Guest]) -> String {
     }
 }
 
+/// What a toast says when Undo could not take a held change back: the
+/// change stays, and goes to the provider as if nobody had pressed Undo.
+pub fn undo_failed(reason: &impl std::fmt::Display) -> String {
+    mailrs_domain::translate::with_reason(&gettext("Could not undo, so the change stays: {reason}"), reason, &[])
+}
+
 /// "and 3 more", for the popover's guest list once it passes five names.
 pub fn more_guests_words(count: usize) -> String {
     fill_plural(
@@ -703,6 +709,13 @@ mod tests {
     use mailrs_domain::calendar::Event;
 
     use super::*;
+
+    #[test]
+    fn a_failed_undo_says_the_change_stays_and_why() {
+        let said = undo_failed(&"the disk is full");
+        assert!(said.contains("the disk is full"), "{said}");
+        assert!(said.contains("stays"), "{said}");
+    }
 
     fn d(y: i32, m: u32, day: u32) -> NaiveDate {
         NaiveDate::from_ymd_opt(y, m, day).unwrap()

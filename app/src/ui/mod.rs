@@ -120,6 +120,14 @@ pub fn page_column(card: &impl IsA<gtk::Widget>, class: &str) -> adw::Breakpoint
     bin
 }
 
+/// An action row that shows its title and subtitle as written. A row
+/// reads both as Pango markup by default, so a name from a server, such
+/// as a guest called "R&D Team" or a file "Q&A.pdf", failed to parse and
+/// left the row blank, and tags in a name styled the row.
+pub fn plain_row() -> adw::builders::ActionRowBuilder {
+    adw::ActionRow::builder().use_markup(false)
+}
+
 /// Gives `widget` the name a screen reader says for it.
 ///
 /// A button carrying only an icon has no name of its own, and GTK never
@@ -409,6 +417,57 @@ pub fn label_color_name(index: usize) -> String {
         6 => gettext("Purple"),
         7 => gettext("Pink"),
         _ => gettext("Gray"),
+    }
+}
+
+/// A popover over `parent` holding `child`, for a picker built afresh
+/// each time it opens, such as Go to Date. It leaves `parent` once it
+/// closes, or every use would leave one more popover on the widget for
+/// the life of the window.
+pub fn passing_popover(parent: &impl IsA<gtk::Widget>, child: &impl IsA<gtk::Widget>) -> gtk::Popover {
+    let popover = gtk::Popover::builder().child(child).autohide(true).build();
+    popover.set_parent(parent);
+    // `closed` runs while GTK is still hiding the popover, so it leaves
+    // its parent from an idle, once the hiding has finished.
+    popover.connect_closed(|popover| {
+        let popover = popover.clone();
+        glib::idle_add_local_once(move || popover.unparent());
+    });
+    popover
+}
+
+/// Widget checks, run from the one GTK test (`composer::richbuffer`).
+#[cfg(test)]
+pub(crate) mod checks {
+    use std::time::{Duration, Instant};
+
+    use super::*;
+
+    pub fn run() {
+        a_passing_popover_leaves_its_parent_once_closed();
+    }
+
+    fn a_passing_popover_leaves_its_parent_once_closed() {
+        let window = gtk::Window::new();
+        let button = gtk::Button::with_label("Today");
+        window.set_child(Some(&button));
+        window.present();
+        let popover = passing_popover(&button, &gtk::Label::new(Some("picker")));
+        popover.popup();
+        spin(Duration::from_millis(200));
+        popover.popdown();
+        spin(Duration::from_millis(200));
+        assert!(popover.parent().is_none(), "the closed popover stayed on the button");
+        window.destroy();
+    }
+
+    fn spin(time: Duration) {
+        let context = glib::MainContext::default();
+        let end = Instant::now() + time;
+        while Instant::now() < end {
+            while context.iteration(false) {}
+            std::thread::sleep(Duration::from_millis(5));
+        }
     }
 }
 

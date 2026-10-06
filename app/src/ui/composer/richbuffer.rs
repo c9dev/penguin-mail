@@ -902,6 +902,8 @@ mod tests {
         super::super::spell::checks::run();
         crate::ui::calendar::pager::checks::run();
         crate::ui::calendar::popover::checks::run();
+        crate::ui::calendar::attachments::checks::run();
+        crate::ui::checks::run();
         // The extraction script needs a real engine to run in, and this
         // is the one test binary that starts one.
         an_unsubscribe_page_reads_back_as_its_fixture();

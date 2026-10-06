@@ -284,6 +284,8 @@ impl EventPopover {
             .orientation(gtk::Orientation::Vertical)
             .spacing(6)
             .build();
+        // Named for the moment Show all hands it the focus.
+        crate::ui::name(&guests_box, &gettext("Guests"));
         let guests_more = gtk::Button::builder()
             .label(gettext("Show all"))
             .css_classes(["flat", "popover-more"])
@@ -508,6 +510,11 @@ impl EventPopover {
         let weak = Rc::downgrade(&this);
         this.guests_more.connect_clicked(move |_| {
             let Some(this) = weak.upgrade() else { return };
+            // Show all hides itself, and a hidden button that keeps the
+            // focus leaves the popover deaf to Escape, so the list it
+            // opened takes the focus first, as the notes do for Show more.
+            this.guests_box.set_focusable(true);
+            this.guests_box.grab_focus();
             this.rebuild_guests(usize::MAX);
         });
         let weak = Rc::downgrade(&this);
@@ -725,6 +732,7 @@ impl EventPopover {
         self.notes_scroll.vadjustment().set_value(0.0);
         // Only "Show more" makes the notes a stop for the Tab key.
         self.notes_scroll.set_focusable(false);
+        self.guests_box.set_focusable(false);
         let overflows = notes_visible && words::notes_need_more(&notes);
         if notes_visible {
             self.notes_label.set_markup(&words::notes_markup(&words::notes_collapsed(&notes)));
@@ -964,6 +972,7 @@ pub(crate) mod checks {
     pub fn run() {
         show_more_keeps_the_popover_short_enough_to_place();
         show_more_hands_the_focus_on_as_it_hides();
+        show_all_hands_the_focus_on_as_it_hides();
         the_block_keeps_its_tooltip_off_the_popover();
         a_closed_popover_leaves_presses_to_the_window();
     }
@@ -1077,13 +1086,38 @@ pub(crate) mod checks {
         assert!(focus.is_some_and(|w| w.get_visible()), "the focus went nowhere");
         window.destroy();
     }
+
+    /// The guests' Show all hides itself as Show more does, and must hand
+    /// the focus on too, or Escape no longer closes the popover.
+    fn show_all_hands_the_focus_on_as_it_hides() {
+        let window = gtk::Window::new();
+        let parent = gtk::Box::new(gtk::Orientation::Vertical, 0);
+        let anchor = gtk::Button::new();
+        parent.append(&anchor);
+        window.set_child(Some(&parent));
+        let popover = EventPopover::new(&parent, &parent);
+        let guests = (0..7).map(|n| super::tests::guest(&format!("{n}@example.com"))).collect();
+        let event = Event { title: "All hands".to_string(), guests, ..Event::default() };
+        let o = Occurrence { account_id: 1, event: Arc::new(event), start: 0, end: 3_600_000 };
+        popover.show(anchor.upcast_ref(), &o, &Calendar::default(), |_, _| {}, None, None, None);
+        popover.popover.set_visible(true);
+        let more = popover.guests_more.clone().upcast::<gtk::Widget>();
+        assert!(more.grab_focus(), "Show all should take the focus to begin with");
+
+        popover.guests_more.emit_clicked();
+
+        let focus = gtk::prelude::GtkWindowExt::focus(&window);
+        assert_ne!(focus.as_ref(), Some(&more), "the hidden Show all kept the focus");
+        assert!(focus.is_some_and(|w| w.get_visible()), "the focus went nowhere");
+        window.destroy();
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    fn guest(email: &str) -> Guest {
+    pub(super) fn guest(email: &str) -> Guest {
         Guest { email: email.to_string(), ..Guest::default() }
     }
 
