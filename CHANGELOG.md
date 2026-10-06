@@ -292,6 +292,14 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   it last updated, instead of leaving you guessing.
 
 ### Fixed
+- Searching the calendar finds two new events you made before the server
+  answered, instead of showing only one of them.
+- A photo added to an Outlook contact after Penguin Mail first checked
+  for one now shows up.
+- A server that sends a message's flags and date apart from its headers no
+  longer leaves the message unread and dated 1970.
+- Add Account words a server's unreadable answer in your own language,
+  where it showed an English sentence.
 - Switching between the 12-hour and 24-hour clock in GNOME's settings changes the calendar's hours and event times at once.
 - When Undo cannot take back a calendar move or delete, a message now says the change stays and why.
 - After Show all in an event's details opens the full guest list, Escape still closes the details.

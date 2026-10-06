@@ -840,14 +840,24 @@ fn failure_given(err: &anyhow::Error, proposal: &Proposal, plug: Plug) -> Failur
             );
             Failure::plain(line.clone(), gettext("Too many connections"), line)
         }
-        ImapError::Protocol(reason) | ImapError::Refused(reason) | ImapError::NoMailbox(reason) => {
-            could_not_sign_in(reason)
+        // The crate writes these two in English for the log, so the
+        // dialog words them itself and leaves the detail to the log.
+        ImapError::Protocol(_) => {
+            let line = fill(
+                &gettext("{host} answered in a way this app cannot work with."),
+                &[("host", host)],
+            );
+            Failure::plain(line.clone(), could_not.clone(), line)
         }
+        ImapError::Refused(reason) | ImapError::NoMailbox(reason) => could_not_sign_in(reason),
         ImapError::Unsupported(what) => could_not_sign_in(what),
         // A value the client refused before it went anywhere: the
         // proposal itself could not carry a login, which is not a
         // failure Server Settings or an app password can fix.
-        ImapError::Invalid(reason) => could_not_sign_in(reason),
+        ImapError::Invalid(_) => {
+            let line = gettext("This app cannot send these sign-in details to the server.");
+            Failure::plain(line.clone(), could_not.clone(), line)
+        }
     }
 }
 
@@ -2274,6 +2284,26 @@ mod tests {
                 password_sent: true,
             }
         );
+    }
+
+    #[test]
+    fn the_crates_english_for_the_log_never_reaches_the_card() {
+        let server = fastmail();
+        let host = server.incoming.host.clone();
+        for err in [
+            ImapError::Protocol("the server takes neither LOGIN nor AUTHENTICATE PLAIN".into()),
+            ImapError::Invalid("\"bad flag\" is not a flag".into()),
+        ] {
+            let said = failure(&anyhow::Error::new(CheckError::Imap(err)), &server);
+            for text in [&said.line, &said.body] {
+                assert!(!text.contains("LOGIN") && !text.contains("flag"), "{text}");
+            }
+        }
+        let said = failure(
+            &anyhow::Error::new(CheckError::Imap(ImapError::Protocol("garbled".into()))),
+            &server,
+        );
+        assert_eq!(said.body, format!("{host} answered in a way this app cannot work with."));
     }
 
     #[test]
