@@ -295,6 +295,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - The arrow keys move through an account's or a label's menu in the mailbox list, where they used to jump back to the list after the first item.
 - Showing a forwarded message in the composer, or the composer's Preview, no longer loads its remote images, and a link in it opens in your browser.
 - A message that quotes an address or a name with "&" or "<" in it, such as "tom&jerry is not an email address", shows its words instead of an empty bar. The same goes for the Grant Access banner, a signature's first line in Preferences, and the addresses and names in Preferences and contact cards.
+- After you untick every event of a calendar file, the next invitation you open has Add to Calendar ready, where it stayed greyed out.
 - Switching between the 12-hour and 24-hour clock in GNOME's settings changes the calendar's hours and event times at once.
 - When Undo cannot take back a calendar move or delete, a message now says the change stays and why.
 - After Show all in an event's details opens the full guest list, Escape still closes the details.
