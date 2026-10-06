@@ -829,16 +829,23 @@ impl CalendarRun {
         accounts: Vec<AccountId>,
         ticket: Ticket,
     ) {
-        let wanted = self.wanted(ticket);
+        // A read for a list that has started over leaves the flag to the
+        // newer list's own read of earlier days.
+        let done = |ticket: &Ticket| {
+            if self.ledger.is_newest(ticket) {
+                self.list.earlier.set(false);
+            }
+        };
+        let wanted = self.wanted(ticket.clone());
         let (from, to) = day_span(first, last);
         // The copy may not reach this far back yet. Offline, the list
         // stays where it is, so the next scroll to the top asks again.
         if self.reach_back(from).await == Older::Offline {
-            self.list.earlier.set(false);
+            done(&ticket);
             return;
         }
         let found = wanted.wait(|e| e.occurrences(accounts, from, to)).await;
-        self.list.earlier.set(false);
+        done(&ticket);
         let found = match found {
             Some(Ok(found)) => found,
             Some(Err(err)) => {

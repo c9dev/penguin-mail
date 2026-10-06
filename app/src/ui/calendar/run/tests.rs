@@ -312,6 +312,26 @@ async fn earlier_days_read_for_a_list_that_has_since_been_replaced_are_dropped()
 }
 
 #[tokio::test]
+async fn a_stale_read_of_earlier_days_leaves_the_newer_read_s_flag_alone() {
+    let window = FakeWindow::new();
+    window.with(|v| v.showing_list = true);
+    let run = window.run();
+    run.fill_list();
+    window.settle().await;
+    // While the first read of earlier days runs, the list starts over and
+    // a new read of earlier days begins, which a third scroll to the top
+    // must not start again.
+    window.during(Step::Occurrences, |_, run| {
+        run.fill_list();
+        run.load_earlier();
+    });
+    run.load_earlier();
+    window.during(Step::Occurrences, |_, run| run.load_earlier());
+    window.settle().await;
+    assert_eq!(window.count(Step::PrependList), 1);
+}
+
+#[tokio::test]
 async fn earlier_days_go_above_what_the_list_holds() {
     let window = FakeWindow::new();
     window.with(|v| {
