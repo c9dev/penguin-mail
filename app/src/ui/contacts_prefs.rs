@@ -70,18 +70,26 @@ fn servers(app: &Rc<App>, accounts: &[(Account, Offers)]) -> Option<adw::Prefere
     Some(group)
 }
 
-type Shown = Rc<RefCell<Vec<adw::ActionRow>>>;
+/// The rows an earlier fill put in an account's row. They are held
+/// weakly, as is the account's row in the buttons' handlers: the buttons
+/// live inside those rows, so a strong hold would keep every row, button
+/// and the app alive after Preferences closes.
+type Shown = Rc<RefCell<Vec<glib::WeakRef<adw::ActionRow>>>>;
 
 /// Fills `row` with `account`'s server lines and its two buttons, after
 /// taking out what an earlier fill put there.
 fn fill_servers(app: &Rc<App>, row: &adw::ExpanderRow, account: &Account, shown: &Shown) {
-    let (app, row, account, shown) = (Rc::clone(app), row.clone(), account.clone(), Rc::clone(shown));
+    let (app, weak_row, account, shown) = (Rc::clone(app), row.downgrade(), account.clone(), Rc::clone(shown));
     glib::spawn_future_local(async move {
         let found = app.core.services_found(account.id).await.unwrap_or_default();
         let (refused_calendar, refused_contacts) = app.core.login_refusals(account.id);
         let rules_here = app.core.rules_here(account.id);
+        // Preferences may have closed while the store answered.
+        let Some(row) = weak_row.upgrade() else { return };
         for old in shown.borrow_mut().drain(..) {
-            row.remove(&old);
+            if let Some(old) = old.upgrade() {
+                row.remove(&old);
+            }
         }
         let lines = crate::servers::lines(&found, refused_calendar.as_deref(), refused_contacts.as_deref(), rules_here);
         for line in lines {
@@ -90,21 +98,23 @@ fn fill_servers(app: &Rc<App>, row: &adw::ExpanderRow, account: &Account, shown:
                 let host = found.iter().find(|f| f.kind == kind).map(|f| f.url.clone()).unwrap_or_default();
                 let use_it = gtk::Button::builder().label(gettext("Use It")).valign(gtk::Align::Center).css_classes(["flat"]).build();
                 crate::ui::name(&use_it, &fill(&gettext("Use {host} for {account}"), &[("host", &host), ("account", &account.email)]));
-                let (app, row, account, shown) = (Rc::clone(&app), row.clone(), account.clone(), Rc::clone(&shown));
+                let (app, weak_row, account, shown) = (Rc::clone(&app), weak_row.clone(), account.clone(), Rc::clone(&shown));
                 use_it.connect_clicked(move |button| {
                     button.set_sensitive(false);
-                    let (app, row, account, shown) = (Rc::clone(&app), row.clone(), account.clone(), Rc::clone(&shown));
+                    let (app, weak_row, account, shown) = (Rc::clone(&app), weak_row.clone(), account.clone(), Rc::clone(&shown));
                     glib::spawn_future_local(async move {
                         if let Err(err) = app.core.confirm_server(account.clone(), kind).await {
                             tracing::info!(account = %account.email, %err, "the server did not take the login");
                         }
-                        fill_servers(&app, &row, &account, &shown);
+                        if let Some(row) = weak_row.upgrade() {
+                            fill_servers(&app, &row, &account, &shown);
+                        }
                     });
                 });
                 child.add_suffix(&use_it);
             }
             row.add_row(&child);
-            shown.borrow_mut().push(child);
+            shown.borrow_mut().push(child.downgrade());
         }
         let again = gtk::Button::builder().label(gettext("Find Again")).valign(gtk::Align::Center).build();
         let edit = gtk::Button::builder().label(gettext("Edit…")).valign(gtk::Align::Center).build();
@@ -112,26 +122,30 @@ fn fill_servers(app: &Rc<App>, row: &adw::ExpanderRow, account: &Account, shown:
         holder.add_suffix(&again);
         holder.add_suffix(&edit);
         row.add_row(&holder);
-        shown.borrow_mut().push(holder);
+        shown.borrow_mut().push(holder.downgrade());
         {
-            let (app, row, account, shown) = (Rc::clone(&app), row.clone(), account.clone(), Rc::clone(&shown));
+            let (app, weak_row, account, shown) = (Rc::clone(&app), weak_row.clone(), account.clone(), Rc::clone(&shown));
             again.connect_clicked(move |button| {
                 button.set_sensitive(false);
-                let (app, row, account, shown) = (Rc::clone(&app), row.clone(), account.clone(), Rc::clone(&shown));
+                let (app, weak_row, account, shown) = (Rc::clone(&app), weak_row.clone(), account.clone(), Rc::clone(&shown));
                 glib::spawn_future_local(async move {
                     if let Err(err) = app.core.find_services(account.clone()).await {
                         tracing::info!(account = %account.email, %err, "the search for servers failed");
                     }
-                    fill_servers(&app, &row, &account, &shown);
+                    if let Some(row) = weak_row.upgrade() {
+                        fill_servers(&app, &row, &account, &shown);
+                    }
                 });
             });
         }
         let calendar = found.iter().find(|f| f.kind == ServiceKind::CalDav).map(|f| f.url.clone()).unwrap_or_default();
         let contacts = found.iter().find(|f| f.kind == ServiceKind::CardDav).map(|f| f.url.clone()).unwrap_or_default();
         edit.connect_clicked(move |button| {
-            let (again_app, again_row, again_account, again_shown) = (Rc::clone(&app), row.clone(), account.clone(), Rc::clone(&shown));
+            let (again_app, again_row, again_account, again_shown) = (Rc::clone(&app), weak_row.clone(), account.clone(), Rc::clone(&shown));
             super::dav_edit::present(&app, &account, &calendar, &contacts, button, move || {
-                fill_servers(&again_app, &again_row, &again_account, &again_shown)
+                if let Some(row) = again_row.upgrade() {
+                    fill_servers(&again_app, &row, &again_account, &again_shown);
+                }
             });
         });
     });
