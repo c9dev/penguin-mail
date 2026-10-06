@@ -36,6 +36,7 @@ use mailrs_sync::calendar_copy::Listed;
 
 use super::block::{EventKey, key_of};
 use super::range::{self, Range, ViewKind};
+use super::next::{self, NextUp};
 use super::{layout, time_grid};
 pub use crate::wanted::Answer;
 use crate::wanted::{Screen, Wanted};
@@ -44,6 +45,8 @@ use crate::wanted::{Screen, Wanted};
 mod fake;
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod next_tests;
 
 /// What `occurrences` returns at most, so a read that comes back this
 /// full is known to have been cut (`store::calendar`'s `MOST_EVENTS`).
@@ -76,6 +79,8 @@ pub enum Place {
     Open,
     /// The note over the view about older events.
     Older,
+    /// The next-event card at the foot of the mail sidebar.
+    Next,
 }
 
 /// What a place shows, which it must still show when a read's answer
@@ -844,4 +849,73 @@ fn first_hour(found: &[Occurrence], range: Range) -> f64 {
         })
         .collect();
     layout::first_hour(&starts)
+}
+
+/// What the next-event card reads: the occurrences on the shown calendars
+/// of every account, and each calendar's colour by account and id.
+pub type CardRead = (Vec<Occurrence>, HashMap<(AccountId, String), String>);
+
+/// The next-event card at the foot of the mail sidebar, as the window
+/// holds it. A test answers with what it likes and records the rest.
+pub trait Card {
+    fn now(&self) -> EpochMillis;
+    /// The occurrences from `from` to `to`, with the calendars' colours.
+    fn read(&self, from: EpochMillis, to: EpochMillis) -> Answer<'_, Result<CardRead, String>>;
+    /// Puts the next event on the card with its colour, or takes the card
+    /// down.
+    fn show(&self, next: Option<(NextUp, String)>);
+    /// Runs `work` on the main loop.
+    fn spawn(&self, work: Work);
+}
+
+/// The next-event card's reads, under the calendar run's rule: the minute
+/// timer and a sync can each start one, and only the newest writes the
+/// card.
+pub struct NextCard {
+    card: Rc<dyn Card>,
+    ledger: Ledger,
+}
+
+impl Screen<Ticket> for NextCard {
+    fn is_showing(&self, ticket: &Ticket) -> bool {
+        self.ledger.is_newest(ticket)
+    }
+}
+
+impl NextCard {
+    pub fn new(card: Rc<dyn Card>) -> NextCard {
+        NextCard { card, ledger: Ledger::default() }
+    }
+
+    /// Reads the next event and puts it on the card, or takes the card
+    /// down when nothing is under way or due today within three hours.
+    pub fn refresh(self: &Rc<Self>) {
+        let ticket = self.ledger.start(Place::Next, Shows::Anything);
+        let now = self.card.now();
+        let Some(day_ends) = local_midnight_after(now) else { return };
+        let this = Rc::clone(self);
+        self.card.spawn(Box::pin(async move {
+            let wanted = Wanted::new(&*this as &dyn Screen<Ticket>, &*this.card, ticket);
+            let Some((found, colours)) = wanted
+                .ask(|card| card.read(now, now + next::AHEAD), "could not read the next event")
+                .await
+            else {
+                return;
+            };
+            let up = next::next_up(&found, now, day_ends).map(|up| {
+                let colour = next::colour(up.occurrence(), &colours);
+                (up, colour)
+            });
+            wanted.on_screen(|card| card.show(up));
+        }));
+    }
+}
+
+/// The local midnight after `now`.
+fn local_midnight_after(now: EpochMillis) -> Option<EpochMillis> {
+    crate::format::local(now)
+        .and_then(|today| today.date_naive().succ_opt())
+        .and_then(|day| day.and_hms_opt(0, 0, 0))
+        .and_then(|midnight| midnight.and_local_timezone(chrono::Local).earliest())
+        .map(|midnight| midnight.timestamp_millis())
 }

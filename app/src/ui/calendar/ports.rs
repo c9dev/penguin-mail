@@ -78,7 +78,9 @@ impl Desk for Ports {
                 true => Shows::Calendar,
                 false => Shows::Away,
             },
-            Place::Scroll(_) | Place::Sidebar | Place::Waiting | Place::List | Place::Older => Shows::Anything,
+            Place::Scroll(_) | Place::Sidebar | Place::Waiting | Place::List | Place::Older | Place::Next => {
+                Shows::Anything
+            }
         }
     }
 

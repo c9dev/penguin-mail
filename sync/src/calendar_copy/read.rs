@@ -78,6 +78,16 @@ impl<A: Accounts> CalendarCopy<A> {
             .await?)
     }
 
+    /// Every account the store holds, for a read across all of them that
+    /// starts before the window knows its accounts, such as the next-event
+    /// card's first one.
+    pub async fn every_account(&self) -> Result<Vec<AccountId>, SyncError> {
+        Ok(self
+            .db
+            .read(|c| Ok(mailrs_store::accounts::list_accounts(c)?.into_iter().map(|a| a.id).collect()))
+            .await?)
+    }
+
     /// Shows or hides a calendar's events on this computer. The provider
     /// never hears of it.
     pub async fn show_calendar(&self, account_id: AccountId, calendar: &str, shown: bool) -> Result<(), SyncError> {

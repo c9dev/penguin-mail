@@ -126,3 +126,9 @@ async fn showing_a_calendar_again_brings_its_events_back_into_a_range_read() {
         .unwrap();
     assert_eq!(found.len(), 2);
 }
+
+#[tokio::test]
+async fn every_account_the_store_holds_is_named_for_a_read_across_them() {
+    let (h, copy) = filled().await;
+    assert_eq!(copy.every_account().await.unwrap(), vec![h.account_id]);
+}
