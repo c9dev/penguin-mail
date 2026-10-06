@@ -385,12 +385,20 @@ fn hold(listener: TcpListener) {
     });
 }
 
-/// Answers every request with `crl`.
+/// Answers every request with `crl`, once the whole request is in: a
+/// socket closed with bytes still unread is reset rather than closed, and
+/// the client loses the end of the answer.
 fn serve(listener: TcpListener, crl: Vec<u8>) {
     std::thread::spawn(move || {
         for mut stream in listener.incoming().flatten() {
-            let mut request = [0u8; 1024];
-            let _ = stream.read(&mut request);
+            let mut request = Vec::new();
+            let mut chunk = [0u8; 1024];
+            while !request.windows(4).any(|w| w == b"\r\n\r\n") {
+                match stream.read(&mut chunk) {
+                    Ok(0) | Err(_) => break,
+                    Ok(n) => request.extend_from_slice(&chunk[..n]),
+                }
+            }
             let _ = write!(
                 stream,
                 "HTTP/1.0 200 OK\r\nContent-Type: application/pkix-crl\r\n\
@@ -432,6 +440,32 @@ fn require_crypto() {
 }
 
 const PART: &[u8] = b"Content-Type: text/plain\r\n\r\nMeet at six.\r\n";
+
+/// dirmngr's request sometimes reaches the CRL server in two pieces. A
+/// server that answered after the first and closed with the rest unread
+/// made the kernel reset the connection, and dirmngr read a cut-off CRL
+/// ("ksba_crl_parse failed: End of file") on a CI runner.
+#[test]
+fn the_crl_server_answers_a_request_that_arrives_in_pieces() {
+    let crl = vec![0x5a; 200_000];
+    let listener = TcpListener::bind("127.0.0.1:0").expect("a port");
+    let address = listener.local_addr().expect("an address");
+    serve(listener, crl.clone());
+
+    let mut stream = TcpStream::connect(address).expect("a connection");
+    stream.write_all(b"GET /ca.crl HTTP/1.0\r\n").expect("write");
+    std::thread::sleep(Duration::from_millis(100));
+    stream.write_all(b"Host: 127.0.0.1\r\n\r\n").expect("write");
+    let mut answer = Vec::new();
+    stream.read_to_end(&mut answer).expect("the whole answer");
+
+    let body = answer
+        .windows(4)
+        .position(|w| w == b"\r\n\r\n")
+        .map(|end| &answer[end + 4..])
+        .expect("headers");
+    assert_eq!(body.len(), crl.len());
+}
 
 #[test]
 fn a_crl_server_that_never_answers_holds_the_check_up_for_the_limit_only() {
