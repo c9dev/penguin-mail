@@ -162,7 +162,8 @@ fn event_json(occurrence: &model::Occurrence, calendar_name: &HashMap<String, St
         // all-day event reads as free, as it did before the copy.
         "busy": event.blocks_time(),
         "cancelled": event.status == model::Status::Cancelled,
-        "link": Value::Null,
+        // The video call's address, so the model can hand it over.
+        "link": event.conference,
         "calendar": calendar_name.get(&event.calendar).cloned().unwrap_or_else(|| event.calendar.clone()),
         "pending": event.pending,
     })

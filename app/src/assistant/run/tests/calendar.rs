@@ -551,6 +551,32 @@ async fn a_declined_event_reads_as_free() {
 }
 
 #[tokio::test]
+async fn an_events_call_link_reaches_the_model() {
+    let h = harness().await;
+    let day = monday();
+    let start = local_millis(day, 10);
+    let call = mailrs_domain::calendar::Event {
+        calendar: "primary".into(),
+        id: "sync".into(),
+        title: "Weekly sync".into(),
+        zone: "UTC".into(),
+        start,
+        end: start + 30 * 60_000,
+        conference: Some("https://meet.google.com/abc-defg-hij".into()),
+        ..mailrs_domain::calendar::Event::default()
+    };
+    copy_of(&h, vec![call], start).await;
+
+    let listed = h
+        .ok(
+            "list_events",
+            json!({"from": day.format("%Y-%m-%d").to_string(), "to": day.format("%Y-%m-%d").to_string()}),
+        )
+        .await;
+    assert_eq!(listed["events"][0]["link"], "https://meet.google.com/abc-defg-hij");
+}
+
+#[tokio::test]
 async fn a_calendar_tool_on_an_account_without_a_calendar_says_why() {
     let h = Harness::with_services(|_, services| services.calendar = None).await;
     let answer = h
