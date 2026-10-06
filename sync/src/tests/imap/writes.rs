@@ -137,11 +137,11 @@ async fn a_refused_write_rolls_back_even_when_its_moves_cannot_be_recorded() {
     h.imap
         .deliver_flagged("INBOX", &message("a", "Kites", ""), &[], days_ago(2));
     h.imap
-        .deliver_flagged("Sent", &message("b", "Moss", ""), &[], days_ago(1));
+        .deliver_flagged("Archive", &message("b", "Moss", ""), &[], days_ago(1));
     h.bootstrap().await;
     // Made elsewhere since the mailboxes were last listed.
     h.imap.add_mailbox("Projects", None);
-    let ids = ["INBOX/1001/1", "Sent/1002/1"];
+    let ids = ["INBOX/1001/1", "Archive/1006/1"];
     let mut targets = Vec::new();
     for id in ids {
         let thread = h.thread_of(id).await.unwrap();
@@ -403,6 +403,28 @@ async fn delete_forever_expunges_the_message() {
     assert!(erased[0].is_ok());
     assert!(h.imap.search("INBOX", "ALL").await.unwrap().is_empty());
     assert!(h.ids().await.is_empty());
+}
+
+/// The server took the move; a failure afterwards to list the Archive it
+/// made is no failure of the archive, which happened.
+#[tokio::test]
+async fn an_archive_the_server_took_succeeds_when_listing_the_new_archive_fails() {
+    let h = imap_harness().await;
+    h.imap.delete("Archive").await.unwrap();
+    h.imap
+        .deliver_flagged("INBOX", &message("a", "Kites", ""), &[], days_ago(2));
+    h.bootstrap().await;
+    let thread = h.thread_of("INBOX/1001/1").await.unwrap();
+    let before = h.imap.calls_to("list");
+    // The move lists the mailboxes once after it makes the Archive; the
+    // second listing is the one that records the new Archive.
+    h.imap.fail_on_later("list", 1, ImapError::Network("dropped".into()));
+
+    let archived = h.sync.triage_thread(&thread, &TriageAction::Archive).await;
+
+    assert!(h.imap.calls_to("list") > before, "the new Archive was listed");
+    assert!(archived.is_ok(), "{archived:?}");
+    assert!(h.imap.search("INBOX", "ALL").await.unwrap().is_empty(), "the server moved it");
 }
 
 #[tokio::test]

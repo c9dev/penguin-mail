@@ -404,7 +404,11 @@ impl AccountSync {
             }
             return Err(err.into());
         }
-        relocated?;
+        // The server took every change and the store shows it, so a failure
+        // to record where the mail went is no failure of the action.
+        if let Err(lost) = relocated {
+            tracing::warn!(account = account_id, error = %lost, "could not record where the server moved mail");
+        }
         Ok(applied)
     }
 
