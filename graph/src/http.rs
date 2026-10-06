@@ -404,10 +404,19 @@ impl Graph {
             .iter()
             .enumerate()
             .map(|(i, r)| {
+                // Graph applies none of the outer request's headers to the
+                // entries in a batch, so each entry asks for immutable ids
+                // itself, ahead of any preference it brings.
+                let mut prefer = vec![IMMUTABLE_IDS.to_string()];
                 let mut headers = serde_json::Map::new();
                 for (name, value) in &r.headers {
-                    headers.insert(name.clone(), Value::String(value.clone()));
+                    if name.eq_ignore_ascii_case("Prefer") {
+                        prefer.push(value.clone());
+                    } else {
+                        headers.insert(name.clone(), Value::String(value.clone()));
+                    }
                 }
+                headers.insert("Prefer".into(), Value::String(prefer.join(", ")));
                 if r.body.is_some() && !headers.contains_key("Content-Type") {
                     headers.insert(
                         "Content-Type".into(),

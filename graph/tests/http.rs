@@ -224,3 +224,37 @@ async fn a_failed_entry_in_a_batch_keeps_its_own_error() {
         Err(GraphError::NotFound)
     ));
 }
+
+#[tokio::test]
+async fn every_batch_entry_asks_for_immutable_ids() {
+    let server = MockServer::start().await;
+    token_endpoint(&server, "refresh-0").await;
+    Mock::given(method("POST"))
+        .and(path("/v1.0/$batch"))
+        .respond_with(|request: &Request| {
+            let body: Value = serde_json::from_slice(&request.body).unwrap();
+            let answers: Vec<Value> = body["requests"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|r| json!({"id": r["id"], "status": 200, "body": {"headers": r["headers"]}}))
+                .collect();
+            ResponseTemplate::new(200).set_body_json(json!({"responses": answers}))
+        })
+        .mount(&server)
+        .await;
+    let requests = [
+        BatchRequest::get("me/messages/a".into()),
+        BatchRequest::get("me/events/b".into()).header("Prefer", "outlook.timezone=\"UTC\""),
+    ];
+    let answers = graph(&server).batch(&requests).await.unwrap();
+    let prefers: Vec<String> = answers
+        .into_iter()
+        .map(|a| {
+            let body: Value = a.into_json().unwrap().unwrap();
+            body["headers"]["Prefer"].as_str().unwrap_or_default().to_string()
+        })
+        .collect();
+    assert_eq!(prefers[0], "IdType=\"ImmutableId\"");
+    assert_eq!(prefers[1], "IdType=\"ImmutableId\", outlook.timezone=\"UTC\"");
+}
