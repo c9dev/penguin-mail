@@ -448,10 +448,7 @@ impl Composer {
             .build();
         name(&body, &gettext("Message"));
         let editor = Editor::new(&body, format);
-        let settings = webkit::Settings::new();
-        settings.set_enable_javascript(false);
-        let preview = webkit::WebView::builder().settings(&settings).build();
-        preview.set_vexpand(true);
+        let preview = sealed_view();
         let stack = gtk::Stack::builder()
             .transition_type(gtk::StackTransitionType::Crossfade)
             .vexpand(true)
@@ -1150,10 +1147,7 @@ impl Composer {
         if let Some(html) = html {
             let page = self.forward_page.borrow().clone();
             let page = page.unwrap_or_else(|| {
-                let settings = webkit::Settings::new();
-                settings.set_enable_javascript(false);
-                let page = webkit::WebView::builder().settings(&settings).build();
-                page.set_vexpand(true);
+                let page = sealed_view();
                 self.forward_box.append(&page);
                 self.forward_page.replace(Some(page.clone()));
                 page
@@ -1170,13 +1164,7 @@ impl Composer {
     /// dark when the app is. `title` is the name a screen reader gives the
     /// page.
     fn page(&self, title: &str, body: &str) -> String {
-        let dark = adw::StyleManager::default().is_dark();
-        format!(
-            "<!doctype html><html><head><meta charset=\"utf-8\"><title>{}</title><style>body{{margin:24px;{}}}</style></head><body>{}</body></html>",
-            crate::richtext::escape(title),
-            if dark { "background:#1e1e1e;filter:invert(0.92) hue-rotate(180deg)" } else { "background:#fff" },
-            body
-        )
+        crate::compose::preview_page(title, body, adw::StyleManager::default().is_dark())
     }
 
     /// Drops the folded history, so the message goes without it, and
@@ -2538,6 +2526,50 @@ fn markdown_bar() -> (gtk::Revealer, gtk::Button, gtk::Button) {
         .child(&row)
         .build();
     (bar, format, close)
+}
+
+/// A web view for the Preview and the forwarded message. It shares the
+/// conversation view's ephemeral network session, so nothing it touches
+/// lands on disk, and it never navigates: a click on a web link opens it
+/// in the browser, and anything else is ignored. The page itself refuses
+/// remote loads (`compose::preview_page`).
+fn sealed_view() -> webkit::WebView {
+    let settings = webkit::Settings::new();
+    settings.set_enable_javascript(false);
+    settings.set_enable_javascript_markup(false);
+    let view = webkit::WebView::builder()
+        .network_session(&super::conversation::network_session())
+        .settings(&settings)
+        .build();
+    view.set_vexpand(true);
+    super::conversation::keep_key_text_out_of_tab(&view);
+    view.connect_realize(super::conversation::keep_key_text_out_of_tab);
+    view.connect_decide_policy(|view, decision, kind| {
+        use webkit::PolicyDecisionType as Kind;
+        if !matches!(kind, Kind::NavigationAction | Kind::NewWindowAction) {
+            return false;
+        }
+        let Some(navigation) = decision.downcast_ref::<webkit::NavigationPolicyDecision>() else {
+            return false;
+        };
+        let uri = navigation
+            .navigation_action()
+            .and_then(|action| action.request())
+            .and_then(|request| request.uri())
+            .map(|uri| uri.to_string())
+            .unwrap_or_default();
+        if kind == Kind::NavigationAction && uri == "about:blank" {
+            decision.use_();
+            return true;
+        }
+        decision.ignore();
+        if uri.starts_with("https://") || uri.starts_with("http://") {
+            let window = view.root().and_downcast::<gtk::Window>();
+            gtk::UriLauncher::new(&uri).launch(window.as_ref(), gio::Cancellable::NONE, |_| {});
+        }
+        true
+    });
+    view
 }
 
 fn line() -> gtk::Separator {

@@ -2130,7 +2130,7 @@ fn refuse(request: &webkit::URISchemeRequest) {
 /// focus sat on nothing a person could see, the page stopped getting the
 /// keys, and the window took single-letter shortcuts for typing. The
 /// bindings reach it without the focus, so it gives the focus up.
-fn keep_key_text_out_of_tab(webview: &webkit::WebView) {
+pub(crate) fn keep_key_text_out_of_tab(webview: &webkit::WebView) {
     let mut stack: Vec<gtk::Widget> = webview.first_child().into_iter().collect();
     while let Some(widget) = stack.pop() {
         if widget.is::<gtk::TextView>() {
@@ -2155,7 +2155,7 @@ fn script_safe(id: &str) -> String {
 /// One network session for every conversation view. Each session runs its
 /// own WebKit network process, and a detached window needs no second one.
 /// Ephemeral keeps cookies and caches in memory, so nothing lands on disk.
-fn network_session() -> webkit::NetworkSession {
+pub(crate) fn network_session() -> webkit::NetworkSession {
     thread_local! {
         static SESSION: webkit::NetworkSession = webkit::NetworkSession::new_ephemeral();
     }
