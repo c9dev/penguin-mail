@@ -3,7 +3,7 @@
 //! module only turns that choice into text, so the choosing needs no
 //! display to test.
 
-use chrono::{Locale, NaiveDate, NaiveTime};
+use chrono::{Locale, NaiveDate, NaiveTime, Timelike};
 
 use crate::translate::gettext;
 
@@ -15,15 +15,19 @@ pub enum ClockFormat {
 }
 
 /// `at`'s time of day in `format`, with `locale` naming the day period's
-/// own words ("AM"/"PM" in English, "a.m."/"p.m." in Portuguese). Paired
-/// with a fixed date, since neither `NaiveTime` nor `NaiveDateTime` has
-/// `format_localized` and a time pattern names no day.
+/// own words ("AM"/"PM" in English). Paired with a fixed date, since
+/// neither `NaiveTime` nor `NaiveDateTime` has `format_localized` and a
+/// time pattern names no day.
 pub fn format_time(at: NaiveTime, format: ClockFormat, locale: Locale) -> String {
     let pattern = match format {
         ClockFormat::Hour24 => gettext("%H:%M"),
         // A leading zero on the hour would read "03:05 PM" where every
         // 12-hour clock on the desktop reads "3:05 PM".
-        ClockFormat::Hour12 => gettext("%-I:%M %p"),
+        ClockFormat::Hour12 => {
+            let (am, pm) = periods(locale);
+            let word = if at.hour() < 12 { am } else { pm };
+            gettext("%-I:%M %p").replace("%p", &word.replace('%', "%%"))
+        }
     };
     fixed_date()
         .and_time(at)
@@ -33,13 +37,60 @@ pub fn format_time(at: NaiveTime, format: ClockFormat, locale: Locale) -> String
 }
 
 /// Reads `text` back as a time of day, trying the 24-hour pattern and
-/// then the 12-hour one: a dropdown built by [`format_time`] round-trips
-/// through whichever clock was current when it was built, even after the
-/// clock changes under it.
-pub fn parse_time(text: &str) -> Option<NaiveTime> {
-    NaiveTime::parse_from_str(text, "%H:%M")
-        .or_else(|_| NaiveTime::parse_from_str(text, "%I:%M %p"))
-        .ok()
+/// then the 12-hour one with `locale`'s day period words or English
+/// ones: a dropdown built by [`format_time`] round-trips through
+/// whichever clock was current when it was built, even after the clock
+/// changes under it.
+pub fn parse_time(text: &str, locale: Locale) -> Option<NaiveTime> {
+    let text = text.trim();
+    if let Ok(at) = NaiveTime::parse_from_str(text, "%H:%M") {
+        return Some(at);
+    }
+    let (am, pm) = periods(locale);
+    let words = [(pm, 12), (am, 0), ("PM".to_string(), 12), ("AM".to_string(), 0)];
+    words.iter().find_map(|(word, add)| {
+        let clock = strip_word(text, word)?;
+        let (hour, minute) = clock.split_once(':')?;
+        let (hour, minute): (u32, u32) = (hour.trim().parse().ok()?, minute.trim().parse().ok()?);
+        if !(1..=12).contains(&hour) {
+            return None;
+        }
+        NaiveTime::from_hms_opt(hour % 12 + add, minute, 0)
+    })
+}
+
+/// `text` without `word` at its end or its start, ignoring case.
+fn strip_word<'a>(text: &'a str, word: &str) -> Option<&'a str> {
+    let lower = text.to_lowercase();
+    let word = word.to_lowercase();
+    // Lowercasing keeps byte lengths for the scripts chrono's locales
+    // spell their day periods in; when it does not, nothing matches.
+    if lower.len() != text.len() || word.is_empty() {
+        return None;
+    }
+    if lower.ends_with(&word) {
+        return Some(&text[..text.len() - word.len()]);
+    }
+    lower.starts_with(&word).then(|| &text[word.len()..])
+}
+
+/// `locale`'s words for morning and afternoon. chrono gives empty words
+/// for some locales, Portuguese and German among them, and a 12-hour
+/// clock without them reads 03:00 and 15:00 the same, so those get the
+/// English "AM" and "PM".
+fn periods(locale: Locale) -> (String, String) {
+    let word = |hour| {
+        fixed_date()
+            .and_hms_opt(hour, 0, 0)
+            .map(|at| at.and_utc().format_localized("%p", locale).to_string().trim().to_string())
+            .unwrap_or_default()
+    };
+    let (am, pm) = (word(1), word(13));
+    if am.is_empty() || pm.is_empty() || am == pm {
+        ("AM".to_string(), "PM".to_string())
+    } else {
+        (am, pm)
+    }
 }
 
 /// Whether glibc's `T_FMT` (the locale's own `strftime` pattern for a
@@ -78,17 +129,37 @@ mod tests {
 
     #[test]
     fn a_24_hour_time_reads_back_the_same_time() {
-        assert_eq!(parse_time("15:05"), NaiveTime::from_hms_opt(15, 5, 0));
+        assert_eq!(parse_time("15:05", Locale::en_US), NaiveTime::from_hms_opt(15, 5, 0));
     }
 
     #[test]
     fn a_12_hour_time_reads_back_the_same_time() {
-        assert_eq!(parse_time("3:05 PM"), NaiveTime::from_hms_opt(15, 5, 0));
+        assert_eq!(parse_time("3:05 PM", Locale::en_US), NaiveTime::from_hms_opt(15, 5, 0));
     }
 
     #[test]
     fn nonsense_text_reads_back_nothing() {
-        assert_eq!(parse_time("not a time"), None);
+        assert_eq!(parse_time("not a time", Locale::en_US), None);
+        assert_eq!(parse_time("13:05 PM", Locale::en_US), None);
+    }
+
+    #[test]
+    fn a_locale_without_day_period_words_tells_morning_from_afternoon() {
+        let morning = format_time(NaiveTime::from_hms_opt(3, 0, 0).unwrap(), ClockFormat::Hour12, Locale::pt_PT);
+        let afternoon = format_time(NaiveTime::from_hms_opt(15, 0, 0).unwrap(), ClockFormat::Hour12, Locale::pt_PT);
+        assert_ne!(morning, afternoon);
+        assert_eq!(afternoon, "3:00 PM");
+    }
+
+    #[test]
+    fn every_12_hour_time_reads_back_in_its_own_locale() {
+        for locale in [Locale::en_US, Locale::pt_PT, Locale::de_DE, Locale::el_GR, Locale::ko_KR] {
+            for hour in 0..24 {
+                let at = NaiveTime::from_hms_opt(hour, 30, 0).unwrap();
+                let text = format_time(at, ClockFormat::Hour12, locale);
+                assert_eq!(parse_time(&text, locale), Some(at), "{text} in {locale:?}");
+            }
+        }
     }
 
     #[test]

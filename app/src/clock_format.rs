@@ -82,5 +82,5 @@ pub fn time_text(at: NaiveTime) -> String {
 /// Reads `text` back as a time of day, in either clock: a dropdown a
 /// person may have typed into as well as picked from.
 pub fn parse_time_text(text: &str) -> Option<NaiveTime> {
-    mailrs_domain::calendar::clock::parse_time(text)
+    mailrs_domain::calendar::clock::parse_time(text, date_locale())
 }

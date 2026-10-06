@@ -292,6 +292,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   it last updated, instead of leaving you guessing.
 
 ### Fixed
+- With the interface in Portuguese or German and a 12-hour clock, times show AM and PM, and the event editor's time choices work again.
 - A repeating Outlook meeting with one date cancelled shows every other date in the calendar again, where it showed only the first.
 - Answering an invitation on a Fastmail or other CalDAV account leaves the meeting's revision number to the organizer, so their calendar matches your answer to the meeting they sent.
 - Adding a ticket or booking to a Fastmail or other CalDAV calendar no longer overwrites another event whose id happens to contain the new one's.
