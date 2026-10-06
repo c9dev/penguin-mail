@@ -10,7 +10,7 @@ use hickory_resolver::proto::rr::RData;
 use rustls::ClientConfig;
 use rustls::pki_types::ServerName;
 use rustls_platform_verifier::BuilderVerifierExt;
-use tokio::io::{AsyncBufRead, AsyncBufReadExt, AsyncRead, AsyncWrite, AsyncWriteExt, BufReader};
+use tokio::io::{AsyncBufRead, AsyncBufReadExt, AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, BufReader};
 use tokio::net::TcpStream;
 use tokio_rustls::TlsConnector;
 
@@ -280,6 +280,9 @@ where
     reply(stream).await.is_some_and(|r| r.starts_with("220"))
 }
 
+/// The most one SMTP reply may hold, all its lines together.
+const REPLY_LIMIT: usize = 4096;
+
 /// One SMTP reply, all its lines, or `None` when the server hangs up or
 /// sends more than a reply can hold.
 async fn reply<S>(stream: &mut S) -> Option<String>
@@ -288,11 +291,16 @@ where
 {
     let mut all = String::new();
     loop {
-        let mut line = String::new();
-        let read = stream.read_line(&mut line).await.ok()?;
-        if read == 0 || all.len() > 4096 {
+        // The limit applies while the line is read, so a server that never
+        // sends a newline cannot make the probe buffer more than a reply
+        // may hold.
+        let budget = REPLY_LIMIT.checked_sub(all.len())? as u64;
+        let mut bytes = Vec::new();
+        let read = (&mut *stream).take(budget).read_until(b'\n', &mut bytes).await.ok()?;
+        if read == 0 || !bytes.ends_with(b"\n") {
             return None;
         }
+        let line = String::from_utf8(bytes).ok()?;
         // "250-" continues a reply; "250 " ends it.
         let last = line.as_bytes().get(3) != Some(&b'-');
         all.push_str(&line);
@@ -304,9 +312,20 @@ where
 
 #[cfg(test)]
 mod tests {
-    use tokio::io::{AsyncReadExt, BufReader, duplex};
+    use tokio::io::{AsyncReadExt, BufReader, duplex, repeat};
 
     use super::*;
+
+    #[tokio::test]
+    async fn a_line_with_no_end_is_cut_off_at_the_reply_limit() {
+        let mut stream = BufReader::new(repeat(b'a').take(1 << 20));
+        assert_eq!(reply(&mut stream).await, None);
+        assert!(
+            stream.get_ref().limit() > (1 << 20) - 16 * 1024,
+            "the probe read {} bytes of a line that never ended",
+            (1u64 << 20) - stream.get_ref().limit()
+        );
+    }
 
     #[test]
     fn mx_hosts_sort_by_their_number() {

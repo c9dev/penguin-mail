@@ -62,7 +62,7 @@ pub enum Verdict {
     },
     /// A Google Workspace domain, found by MX: the Google sign-in serves it.
     Google,
-    /// A Microsoft 365 or Outlook domain: a later version serves it.
+    /// A Microsoft 365 or Outlook domain: the Microsoft sign-in serves it.
     Microsoft,
     NothingFound,
 }
