@@ -177,6 +177,14 @@ impl<G: GraphApi> Microsoft<G> {
         }
         let leaf = name.rsplit('/').next().unwrap_or(name);
         self.graph().rename_folder(id, leaf).await.map_err(backend)?;
+        // The folders under it move with it, so a later `Journeys/2026`
+        // finds the child before the next listing does.
+        let below = format!("{old}/");
+        for path in self.known().names.values_mut() {
+            if let Some(rest) = path.strip_prefix(&below) {
+                *path = format!("{name}/{rest}");
+            }
+        }
         self.known().names.insert(id.to_string(), name.to_string());
         Ok(RemoteMailbox { id: id.to_string(), name: name.to_string(), kind: MailboxKind::Folder, role: None, color: None, hidden: false })
     }

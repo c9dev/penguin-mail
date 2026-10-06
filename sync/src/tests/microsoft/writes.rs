@@ -153,6 +153,18 @@ async fn a_folder_renames_in_place_and_goes_away_but_a_tag_does_neither() {
     assert!(matches!(mail.delete_mailbox("category:Red").await, Err(crate::BackendError::Unsupported)));
 }
 
+#[tokio::test]
+async fn a_renamed_folder_takes_its_children_to_the_new_path() {
+    let h = outlook().await;
+    let mail = &h.sync.services().mail;
+    mail.mailboxes().await.unwrap();
+    let child = mail.create_mailbox("Trips/2026").await.unwrap();
+    let parent = h.fake.with(|s| s.folders[&child.id].parent.clone()).unwrap();
+    mail.rename_mailbox(&parent, "Journeys").await.unwrap();
+    let again = mail.create_mailbox("Journeys/2026").await.unwrap();
+    assert_eq!(again.id, child.id, "the child is found under its parent's new name");
+}
+
 /// Graph stores no `$muted`, so the mark stays on this computer: the
 /// sidebar's Muted mailbox lists the thread, and the feed, which restates
 /// each message whole, leaves the mark alone.
