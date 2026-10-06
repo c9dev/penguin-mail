@@ -90,6 +90,9 @@ pub trait ManageSieveApi: Send + Sync + 'static {
 /// The longest line read; a capability line is short.
 const LINE_LIMIT: u64 = 8192;
 const REQUEST_LIMIT: Duration = Duration::from_secs(20);
+/// How long LOGOUT waits for its answer. The work already went through,
+/// so a server slow to say goodbye only gets its connection dropped.
+const LOGOUT_LIMIT: Duration = Duration::from_secs(2);
 
 fn network(err: std::io::Error) -> SieveError {
     SieveError::Network(err.to_string())
@@ -253,7 +256,7 @@ impl<S: AsyncRead + AsyncWrite + Unpin> Session<S> {
     }
 
     pub async fn logout(mut self) {
-        let _ = self.simple("LOGOUT\r\n".into()).await;
+        let _ = tokio::time::timeout(LOGOUT_LIMIT, self.simple("LOGOUT\r\n".into())).await;
     }
 }
 
@@ -387,6 +390,13 @@ mod tests {
         // The literal's closing CRLF is read too, so the next answer
         // starts on its own status line.
         assert!(session.simple("NOOP\r\n".into()).await.is_ok());
+    }
+
+    #[tokio::test]
+    async fn a_logout_the_server_never_answers_ends_on_its_own() {
+        let (ours, _silent) = tokio::io::duplex(1024);
+        let ended = tokio::time::timeout(LOGOUT_LIMIT + Duration::from_secs(5), Session::new(ours).logout()).await;
+        assert!(ended.is_ok(), "logout waited past its limit");
     }
 
     #[test]
