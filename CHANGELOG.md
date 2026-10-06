@@ -292,6 +292,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   it last updated, instead of leaving you guessing.
 
 ### Fixed
+- Answering an invitation to one date of a repeating meeting that your calendar has not caught up with yet mails the answer for that date, instead of answering the nearest date your calendar holds.
 - A rule on this computer that forwards mail no longer forwards its own forwards when they come back to the Inbox, which could repeat without end.
 - Undo takes back what you did last, even after a rule on this computer has moved new mail since.
 - Deleting one date of a repeating meeting on a CalDAV account mails nobody when you pick Don't send, and deleting one date you were invited to keeps the other dates you were invited to.

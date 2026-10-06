@@ -1399,6 +1399,24 @@ async fn an_answer_to_one_occurrence_leaves_the_rest_of_the_series_waiting() {
     assert_eq!(found, vec![waiting(&h, "series", TENTH - WEEK)]);
 }
 
+#[tokio::test]
+async fn an_answer_to_an_occurrence_the_copy_lacks_goes_by_mail() {
+    let h = harness().await;
+    read_copy(&h, vec![Ev { guests: vec![me_guest()], ..weekly(TENTH - WEEK) }]).await;
+    // An occurrence the organizer added on the 13th, which the copy has
+    // not read yet.
+    let added = read(&invite(0, "20300313T090000Z").replace("SEQUENCE:0", "SEQUENCE:0\r\nRECURRENCE-ID:20300313T090000Z"));
+
+    let sent = invitations(&h)
+        .answer(h.account_id, &added, &me(), Answer::Yes, Scope::Occurrence, None, MARCH)
+        .await
+        .unwrap();
+
+    assert_eq!(sent.told, Told::Organizer, "no other day's meeting is answered");
+    let found = invitations(&h).on_calendar(h.account_id, &added, MARCH).await.unwrap();
+    assert!(found.is_some(), "Show in Calendar still opens the nearest day");
+}
+
 fn booking(uid_of_return: &str) -> String {
     format!(
         "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nMETHOD:PUBLISH\r\n\
