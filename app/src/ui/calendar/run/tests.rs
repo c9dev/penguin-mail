@@ -86,6 +86,24 @@ async fn show_in_calendar_goes_to_the_day_and_opens_the_popover() {
     assert!(run.pending().is_none());
 }
 
+#[tokio::test]
+async fn show_in_calendar_in_a_narrow_window_opens_the_popover_from_the_list() {
+    let window = FakeWindow::new();
+    let later = fixture_day() + chrono::Days::new(14);
+    let meeting = event_at("Design review", later, 15);
+    window.with(|v| {
+        v.copy = vec![meeting.clone()];
+        v.showing_list = true;
+    });
+    let run = window.run();
+    run.open(key_of(&meeting), meeting.start);
+    window.settle().await;
+    let view = window.view.borrow();
+    assert!(view.popovers.is_empty(), "the grid pages are hidden behind the list");
+    assert_eq!(view.list_popovers, vec![(key_of(&meeting), meeting.start)]);
+    assert!(run.pending().is_none());
+}
+
 /// 0ca63cbe: a reload that started while Show in Calendar's page was
 /// reading took the page over, and the popover never opened.
 #[tokio::test]

@@ -329,6 +329,14 @@ impl Effects for Ports {
         true
     }
 
+    fn open_in_list(&self, o: &Occurrence) {
+        let Some(view) = self.view() else { return };
+        // The list recycles its rows, so the popover points at the list,
+        // as it does when the reader picks a row.
+        let anchor = view.list.widget.clone().upcast::<gtk::Widget>();
+        view.show_event(&anchor, o);
+    }
+
     fn draw_sidebar(&self, listed: Vec<Listed>, busy: Vec<Occurrence>, mini: Range) {
         if let Some(view) = self.view() {
             view.show_sidebar(listed, &busy, mini);
