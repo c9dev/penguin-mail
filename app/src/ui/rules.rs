@@ -485,7 +485,10 @@ impl Rules {
             };
             let filter = match form.filter_keeping(&unshown) {
                 Ok(filter) => filter,
-                Err(reason) => return rules.toast(reason),
+                // The form answers in English, which the assistant hands to
+                // the model; sync's Sieve code puts both lines in the
+                // catalogue.
+                Err(reason) => return rules.toast(&gettext(reason)),
             };
             button.set_sensitive(false);
             match editing.clone() {
