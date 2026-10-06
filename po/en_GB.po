@@ -589,7 +589,7 @@ msgstr "{provider} signs in through your browser"
 msgid "Continue opens {provider}'s sign-in page in your browser."
 msgstr "Continue opens {provider}'s sign-in page in your browser."
 
-#: app/src/app.rs:369
+#: app/src/app.rs:373
 msgid "Your preferences could not be read, so Penguin Mail started from the defaults. The old file is kept as {file}."
 msgstr "Your preferences could not be read, so Penguin Mail started from the defaults. The old file is kept as {file}."
 
@@ -3431,7 +3431,7 @@ msgstr "Try Again"
 #: app/src/ui/calendar/scope.rs:92 app/src/ui/composer/editor.rs:343
 #: app/src/ui/composer/mod.rs:1573 app/src/ui/composer/mod.rs:1642
 #: app/src/ui/composer/mod.rs:1965 app/src/ui/composer/mod.rs:2416
-#: app/src/ui/confirm.rs:29 app/src/ui/rules.rs:445 app/src/ui/rules.rs:586
+#: app/src/ui/confirm.rs:29 app/src/ui/rules.rs:445 app/src/ui/rules.rs:622
 #: app/src/ui/smart_editor.rs:150 app/src/ui/templates.rs:239
 #: app/src/ui/unsubscribe.rs:95 app/src/ui/vacation.rs:45 app/src/ui/when.rs:52
 #: app/src/ui/window/arrange.rs:146 app/src/ui/window/images.rs:101
@@ -7306,7 +7306,7 @@ msgstr "Edit Rule"
 msgid "Rule added"
 msgstr "Rule added"
 
-#: app/src/ui/rules.rs:523 app/src/ui/rules.rs:606
+#: app/src/ui/rules.rs:523 app/src/ui/rules.rs:595
 msgid "Could not add the rule: {reason}"
 msgstr "Could not add the rule: {reason}"
 
@@ -7322,15 +7322,15 @@ msgstr "Saved, but Gmail kept the old rule too, so both run now: {reason}"
 msgid "Could not save the rule: {reason}"
 msgstr "Could not save the rule: {reason}"
 
-#: app/src/ui/rules.rs:580
+#: app/src/ui/rules.rs:616
 msgid "Replace “{script}”?"
 msgstr "Replace “{script}”?"
 
-#: app/src/ui/rules.rs:582
+#: app/src/ui/rules.rs:618
 msgid "{provider} runs one set of rules at a time, and it runs “{script}” now. Penguin Mail's rules would take its place; “{script}” stays on the server, switched off."
 msgstr "{provider} runs one set of rules at a time, and it runs “{script}” now. Penguin Mail's rules would take its place; “{script}” stays on the server, switched off."
 
-#: app/src/ui/rules.rs:586
+#: app/src/ui/rules.rs:622
 msgid "Replace"
 msgstr "Replace"
 
@@ -9171,7 +9171,18 @@ msgid_plural "{accounts} will get new labels."
 msgstr[0] "{accounts} will get a new label."
 msgstr[1] "{accounts} will get new labels."
 
-#: sync/src/calendar_copy.rs:1673
+#: sync/src/calendar_copy.rs:905 sync/src/calendar_copy.rs:974
+#: sync/src/calendar_copy.rs:1019
+msgid "deleted elsewhere"
+msgstr "deleted elsewhere"
+
+#. A new event's id cannot be missing, so it is the
+#. calendar that went: its rows in the queue outlive it.
+#: sync/src/calendar_copy.rs:910
+msgid "the calendar is gone"
+msgstr "the calendar is gone"
+
+#: sync/src/calendar_copy.rs:1671
 msgid "Google Calendar offers out of office and focus time only on some work and school accounts ({reason})"
 msgstr "Google Calendar offers out of office and focus time only on some work and school accounts ({reason})"
 
@@ -9361,27 +9372,27 @@ msgstr "{problem}. Penguin Mail stopped trying"
 msgid "The keyring refused: {reason}"
 msgstr "The keyring refused: {reason}"
 
-#: sync/src/rules/forward.rs:18
+#: sync/src/rules/forward.rs:28
 msgid "A rule on this computer forwarded the attached message from {address}."
 msgstr "A rule on this computer forwarded the attached message from {address}."
 
-#: sync/src/services/caldav.rs:438
+#: sync/src/services/caldav.rs:443
 msgid "An event needs an ID to be imported."
 msgstr "An event needs an ID to be imported."
 
-#: sync/src/services/caldav.rs:459
+#: sync/src/services/caldav.rs:464
 msgid "A CalDAV calendar cannot store attached files."
 msgstr "A CalDAV calendar cannot store attached files."
 
-#: sync/src/services/caldav.rs:463
+#: sync/src/services/caldav.rs:468
 msgid "A CalDAV calendar has no files to share."
 msgstr "A CalDAV calendar has no files to share."
 
-#: sync/src/services/caldav.rs:493
+#: sync/src/services/caldav.rs:498
 msgid "You are not a guest of this event."
 msgstr "You are not a guest of this event."
 
-#: sync/src/services/caldav.rs:497
+#: sync/src/services/caldav.rs:502
 msgid "Penguin Mail cannot change the calendar list of a CalDAV server."
 msgstr "Penguin Mail cannot change the calendar list of a CalDAV server."
 
@@ -9397,37 +9408,37 @@ msgstr "The message names nobody to send it to."
 msgid "This rule is read-only, so Penguin Mail leaves it as it is."
 msgstr "This rule is read-only, so Penguin Mail leaves it as it is."
 
-#: sync/src/services/microsoft/calendar.rs:307
+#: sync/src/services/microsoft/calendar.rs:359
 msgid "Outlook cannot repeat an event that way."
 msgstr "Outlook cannot repeat an event that way."
 
-#: sync/src/services/microsoft/calendar.rs:564
+#: sync/src/services/microsoft/calendar.rs:651
 msgid "Outlook cannot attach a file to an event."
 msgstr "Outlook cannot attach a file to an event."
 
-#: sync/src/services/microsoft/calendar.rs:568
+#: sync/src/services/microsoft/calendar.rs:655
 msgid "Outlook has no files to share."
 msgstr "Outlook has no files to share."
 
-#: sync/src/services/microsoft/calendar.rs:577
+#: sync/src/services/microsoft/calendar.rs:664
 msgid "Outlook cannot move an event to another calendar."
 msgstr "Outlook cannot move an event to another calendar."
 
 #. What Outlook has no call for is a refusal, not `Unsupported`:
 #. that answer would keep the change in the queue for good.
-#: sync/src/services/microsoft/calendar.rs:611
+#: sync/src/services/microsoft/calendar.rs:698
 msgid "Outlook cannot take a calendar off the list."
 msgstr "Outlook cannot take a calendar off the list."
 
-#: sync/src/services/microsoft/calendar.rs:612
+#: sync/src/services/microsoft/calendar.rs:699
 msgid "Outlook cannot hide a calendar on all your devices."
 msgstr "Outlook cannot hide a calendar on all your devices."
 
-#: sync/src/services/microsoft/calendar.rs:613
+#: sync/src/services/microsoft/calendar.rs:700
 msgid "Outlook cannot subscribe to a calendar by its address."
 msgstr "Outlook cannot subscribe to a calendar by its address."
 
-#: sync/src/services/microsoft/calendar.rs:614
+#: sync/src/services/microsoft/calendar.rs:701
 msgid "Outlook has no other calendars to add."
 msgstr "Outlook has no other calendars to add."
 
