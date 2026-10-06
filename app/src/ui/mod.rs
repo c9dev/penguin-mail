@@ -120,6 +120,14 @@ pub fn page_column(card: &impl IsA<gtk::Widget>, class: &str) -> adw::Breakpoint
     bin
 }
 
+/// An action row that shows its title and subtitle as written. A row
+/// reads both as Pango markup by default, so a name from a server, such
+/// as a guest called "R&D Team" or a file "Q&A.pdf", failed to parse and
+/// left the row blank, and tags in a name styled the row.
+pub fn plain_row() -> adw::builders::ActionRowBuilder {
+    adw::ActionRow::builder().use_markup(false)
+}
+
 /// Gives `widget` the name a screen reader says for it.
 ///
 /// A button carrying only an icon has no name of its own, and GTK never

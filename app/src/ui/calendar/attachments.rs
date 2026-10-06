@@ -120,7 +120,7 @@ pub fn open_words(file: &Attachment) -> String {
 /// A row for `file`: its icon, its title, what happens to it if it still
 /// waits to upload, and a click that opens it when it has a link.
 pub fn row(file: &Attachment) -> adw::ActionRow {
-    let row = adw::ActionRow::builder().title(title(file)).title_lines(1).build();
+    let row = ui::plain_row().title(title(file)).title_lines(1).build();
     if let Some(note) = note(file) {
         row.set_subtitle(&note);
     }
@@ -135,6 +135,25 @@ pub fn row(file: &Attachment) -> adw::ActionRow {
         row.connect_activated(move |row| open(&opened, row));
     }
     row
+}
+
+/// Widget checks, run from the one GTK test (`composer::richbuffer`).
+#[cfg(test)]
+pub(crate) mod checks {
+    use super::*;
+
+    pub fn run() {
+        a_file_name_with_markup_characters_shows_as_written();
+    }
+
+    /// A row reads its title as Pango markup unless told otherwise, and a
+    /// Drive file called "Q&A.pdf" failed to parse and showed no title.
+    fn a_file_name_with_markup_characters_shows_as_written() {
+        let file = Attachment { title: "Q&A <draft>.pdf".into(), ..Attachment::default() };
+        let row = row(&file);
+        assert!(!row.uses_markup(), "a file's name is shown as text, not markup");
+        assert_eq!(row.title(), "Q&A <draft>.pdf");
+    }
 }
 
 #[cfg(test)]

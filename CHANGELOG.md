@@ -292,6 +292,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   it last updated, instead of leaving you guessing.
 
 ### Fixed
+- The event editor shows guests, calendars and attached files whose names hold an ampersand or angle brackets, such as "R&D Team" or "Q&A.pdf", where their rows used to come up blank.
 - In a narrow window, Show in Calendar, a search result or a Waiting card opens the event's details over the calendar's list, where they used to point at the hidden month grid.
 - In a narrow window, scrolling to the top of the calendar's list while it starts over no longer shows the same earlier days twice.
 - In a narrow window, the calendar's list keeps the days you scrolled to and your place in it when a sync or your own change refreshes it, where it used to jump back to the first days.

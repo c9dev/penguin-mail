@@ -1236,7 +1236,7 @@ impl Editor {
                 .get(&(draft.account_id, draft.calendar.clone()))
                 .map(|c| c.name.clone())
                 .unwrap_or_default();
-            let row = adw::ActionRow::builder()
+            let row = ui::plain_row()
                 .title(gettext("Calendar"))
                 .subtitle(name)
                 .build();
@@ -1362,7 +1362,7 @@ impl Editor {
                     ("answer", &words::answer_words(guest)),
                 ],
             );
-            let row = adw::ActionRow::builder()
+            let row = ui::plain_row()
                 .title(shown.clone())
                 .subtitle(subtitle)
                 .build();
@@ -1657,7 +1657,7 @@ impl Editor {
             .map(|u| (u.id, attachments::title(&u.file), u.bar.clone()))
             .collect();
         for (id, title, bar) in uploading {
-            let row = adw::ActionRow::builder().title(title.clone()).title_lines(1).build();
+            let row = ui::plain_row().title(title.clone()).title_lines(1).build();
             let icon = gtk::Image::from_icon_name("mail-attachment-symbolic");
             icon.add_css_class("dim-label");
             row.add_prefix(&icon);
@@ -1932,7 +1932,7 @@ impl Editor {
             .as_ref()
             .is_some_and(|o| mailrs_domain::calendar::series::in_series(&o.event));
         if let Some(link) = has_conference {
-            let row = adw::ActionRow::builder()
+            let row = ui::plain_row()
                 .title(gettext("Google Meet"))
                 .subtitle(link)
                 .build();
