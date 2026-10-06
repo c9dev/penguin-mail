@@ -292,6 +292,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   it last updated, instead of leaving you guessing.
 
 ### Fixed
+- Deleting one date of a repeating meeting on a CalDAV account mails nobody when you pick Don't send, and deleting one date you were invited to keeps the other dates you were invited to.
 - Declining one date of a repeating meeting on a Fastmail or other CalDAV account declines only that date. It used to answer the whole series.
 - An Outlook account with categories keeps syncing after Microsoft loses track of what changed, where it used to stop syncing for good.
 - Show in Calendar opens the event's popover even when the calendar refreshes at that moment.

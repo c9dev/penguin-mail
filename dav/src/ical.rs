@@ -587,11 +587,22 @@ pub fn write_event_notifying(existing: Option<&str>, event: &Event, me: &[String
     Ok(ical.to_string())
 }
 
+/// The resource without the occurrence at `original_start`: an EXDATE on
+/// the master, or without the master, that occurrence's VEVENT gone.
+/// Answers `None` when nothing would be left, so the resource is deleted.
 pub fn cancel_occurrence(existing: &str, original_start: EpochMillis, now: EpochMillis) -> Result<Option<String>, DavError> {
     let mut ical = parse(existing)?;
     let zones = Zones::of(&ical);
     let Some((master_at, master)) = master_of(&ical, &zones, &[]) else {
-        return Ok(None);
+        // A guest invited to single occurrences holds them with no
+        // master: only the one named goes, and the resource goes only
+        // once it holds nothing else.
+        let gone: Vec<u32> = events_of(&ical)
+            .filter(|(_, comp)| recurrence_of(comp, &zones) == Some(original_start))
+            .map(|(at, _)| at as u32)
+            .collect();
+        ical.remove_component_ids(&gone);
+        return Ok(events_of(&ical).next().is_some().then(|| ical.to_string()));
     };
     let entry = entries(&[time_line("EXDATE", original_start, &master.zone, master.all_day)])?;
     ical.components[master_at].entries.extend(entry);

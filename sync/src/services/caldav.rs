@@ -422,6 +422,7 @@ impl<D: DavApi> CalendarService for CalDav<D> {
             let href = resource_href(calendar, series);
             let current = self.api.get(&href).await.map_err(|e| self.err(e))?;
             self.current(&href, etag, &current.etag)?;
+            let current = self.silenced(calendar, current, notify).await?;
             return match ical::cancel_occurrence(&current.body, original, now).map_err(refused)? {
                 Some(text) => {
                     self.write(&href, &text, Precondition::Match(current.etag)).await?;

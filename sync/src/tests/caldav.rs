@@ -283,6 +283,45 @@ async fn cancelling_one_occurrence_writes_an_exdate_and_deleting_the_series_remo
 }
 
 #[tokio::test]
+async fn cancelling_one_occurrence_with_nobody_told_silences_the_guests_first() {
+    let (dav, _, caldav) = adapter().await;
+    let meeting = meeting_ics("review").replace("SUMMARY:Review\r\n", "SUMMARY:Review\r\nRRULE:FREQ=WEEKLY\r\n");
+    dav.put_resource(&format!("{WORK}review.ics"), &meeting);
+    let (events, _, _, _) = read_all(&caldav, None).await.unwrap();
+    let one = occurrence_id(&events[0], events[0].start + 7 * 24 * 3_600_000);
+    caldav.remove_event(WORK, &one, None, Notify::Nobody).await.unwrap();
+    let body = dav.body(&format!("{WORK}review.ics")).unwrap();
+    assert!(body.contains("EXDATE"), "{body}");
+    assert!(body.contains("SCHEDULE-AGENT=CLIENT"), "the server tells nobody: {body}");
+    dav.put_resource(&format!("{WORK}review.ics"), &meeting);
+    caldav.remove_event(WORK, &one, None, Notify::Guests).await.unwrap();
+    assert!(!dav.body(&format!("{WORK}review.ics")).unwrap().contains("SCHEDULE-AGENT"), "the server mails the cancellation");
+}
+
+#[tokio::test]
+async fn cancelling_one_of_two_invited_occurrences_keeps_the_other() {
+    let (dav, _, caldav) = adapter().await;
+    let occurrence = |day: &str| {
+        format!(
+            "BEGIN:VEVENT\r\nUID:theirs\r\nRECURRENCE-ID:202610{day}T093000Z\r\nDTSTART:202610{day}T093000Z\r\n\
+             DTEND:202610{day}T100000Z\r\nSUMMARY:Standup\r\nORGANIZER:mailto:{BOSS}\r\n\
+             ATTENDEE;PARTSTAT=NEEDS-ACTION:mailto:{ME}\r\nEND:VEVENT\r\n"
+        )
+    };
+    let body = format!("BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//test//EN\r\n{}{}END:VCALENDAR\r\n", occurrence("05"), occurrence("12"));
+    dav.put_resource(&format!("{WORK}theirs.ics"), &body);
+    let (events, _, _, _) = read_all(&caldav, None).await.unwrap();
+    assert_eq!(events.len(), 2);
+    let first = events.iter().find(|e| e.id.ends_with("20261005T093000Z")).unwrap().id.clone();
+    caldav.remove_event(WORK, &first, None, Notify::Guests).await.unwrap();
+    let left = dav.body(&format!("{WORK}theirs.ics")).expect("the other occurrence stays");
+    assert!(!left.contains("20261005T093000Z") && left.contains("RECURRENCE-ID:20261012T093000Z"), "{left}");
+    let (events, _, _, _) = read_all(&caldav, None).await.unwrap();
+    caldav.remove_event(WORK, &events[0].id, None, Notify::Guests).await.unwrap();
+    assert!(dav.body(&format!("{WORK}theirs.ics")).is_none(), "nothing left, so the resource goes");
+}
+
+#[tokio::test]
 async fn deleting_with_nobody_told_silences_the_guests_first() {
     let (dav, _, caldav) = adapter().await;
     dav.put_resource(&format!("{WORK}review.ics"), &meeting_ics("review"));
