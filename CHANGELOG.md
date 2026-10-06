@@ -292,6 +292,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   it last updated, instead of leaving you guessing.
 
 ### Fixed
+- A POP3 server that accepts the connection and then never starts the encrypted session no longer stalls that account's mail checks until you restart Penguin Mail; the check gives up after 30 seconds.
 - With the interface in Portuguese or German and a 12-hour clock, times show AM and PM, and the event editor's time choices work again.
 - A repeating Outlook meeting with one date cancelled shows every other date in the calendar again, where it showed only the first.
 - Answering an invitation on a Fastmail or other CalDAV account leaves the meeting's revision number to the organizer, so their calendar matches your answer to the meeting they sent.
