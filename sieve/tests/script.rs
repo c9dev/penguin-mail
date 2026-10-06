@@ -79,12 +79,24 @@ fn a_size_rule_uses_over_and_under() {
 }
 
 #[test]
-fn deleting_files_into_the_trash_and_discards_only_without_one() {
+fn deleting_files_into_the_trash() {
     let block = Script { rules: vec![Filter { id: Some("b".into()), ..Filter::block("pest@example.com") }], ..Script::default() };
     let text = write(&block, "me@example.com", &folder, &ext()).unwrap();
     assert!(text.contains("fileinto \"Trash\";"), "{text}");
+}
+
+#[test]
+fn deleting_without_a_trash_folder_makes_one_and_never_discards() {
+    let block = Script { rules: vec![Filter { id: Some("b".into()), ..Filter::block("pest@example.com") }], ..Script::default() };
     let text = write(&block, "me@example.com", &|_| None, &ext()).unwrap();
-    assert!(text.contains("discard;"), "{text}");
+    assert!(text.contains("fileinto :create \"Trash\";"), "{text}");
+    assert!(!text.contains("discard"), "{text}");
+    // A server that cannot make the folder keeps the mail in the inbox
+    // when the fileinto fails, which still loses nothing.
+    let without_mailbox = Extensions::parse("fileinto vacation imap4flags");
+    let text = write(&block, "me@example.com", &|_| None, &without_mailbox).unwrap();
+    assert!(text.contains("fileinto \"Trash\";"), "{text}");
+    assert!(!text.contains("discard"), "{text}");
 }
 
 #[test]
@@ -168,4 +180,33 @@ fn strings_are_quoted_so_a_quote_cannot_end_them() {
     let script = Script { rules: vec![every_rule_the_app_makes()[6].clone()], ..Script::default() };
     let text = write(&script, "me@example.com", &folder, &ext()).unwrap();
     assert!(text.contains("\"Invoice \\\"May\\\"\""), "{text}");
+}
+
+#[test]
+fn a_reply_of_several_lines_comes_back_with_the_rule_after_it() {
+    let vacation = Vacation { enabled: true, subject: "Away".into(), body: "Hi\nAway until Monday".into(), ..Vacation::default() };
+    let rules = every_rule_the_app_makes()[..1].to_vec();
+    let script = Script { vacation: Some(vacation.clone()), rules: rules.clone(), ..Script::default() };
+    let back = read(&write(&script, "me@example.com", &folder, &ext()).unwrap());
+    assert_eq!(back.vacation, Some(vacation));
+    assert_eq!(back.rules, rules);
+    assert!(back.foreign.is_empty(), "{:?}", back.foreign);
+}
+
+#[test]
+fn a_dated_reply_whose_lines_hold_braces_and_hashes_comes_back() {
+    let vacation = Vacation {
+        enabled: true,
+        subject: "Away".into(),
+        body: "Hi;\n} back soon {\n# not a comment\nwrite to text:\nme".into(),
+        start: Some(1_790_000_000_000),
+        end: Some(1_790_600_000_000),
+        ..Vacation::default()
+    };
+    let rules = every_rule_the_app_makes()[..2].to_vec();
+    let script = Script { vacation: Some(vacation.clone()), rules: rules.clone(), ..Script::default() };
+    let back = read(&write(&script, "me@example.com", &folder, &ext()).unwrap());
+    assert_eq!(back.vacation, Some(vacation));
+    assert_eq!(back.rules, rules);
+    assert!(back.foreign.is_empty(), "{:?}", back.foreign);
 }

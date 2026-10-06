@@ -39,8 +39,7 @@ impl Graph {
     /// The folders below the default one. The default "Contacts" folder is
     /// not among them; see [`Graph::default_contact_folder`].
     pub async fn contact_folders(&self) -> Result<Vec<ContactFolder>, GraphError> {
-        let page: Page<ContactFolder> = self.get("me/contactFolders", &[("$top", "100")]).await?;
-        Ok(page.value)
+        self.get_all("me/contactFolders", &[("$top", "100")]).await
     }
 
     /// The default folder's id, read off one of its contacts, or `None`

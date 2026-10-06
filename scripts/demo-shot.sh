@@ -75,24 +75,24 @@ mkdir -m 700 "$GNUPGHOME"
 export GSETTINGS_BACKEND=memory
 export PENGUIN_MAIL_LOCALE_DIR="$PWD/target/locale"
 
-webkit=
 if ! bwrap --ro-bind / / true 2>/dev/null; then
-    webkit=WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS=1
+    export WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS=1
 fi
-drive=
-if [ -n "$run" ]; then
-    drive="python3 $run"
-fi
-inside="
-$launcher --launch-immediately &
+# The paths reach the hidden session as variables, quoted where it uses
+# them, so a space or a `;` in a file name stays part of the name.
+export DEMO_LAUNCHER=$launcher DEMO_REGISTRY=$registry DEMO_APP=$PWD/target/debug/penguin-mail
+export DEMO_LOG=$sandbox/app.log DEMO_WAIT=$wait DEMO_RUN=$run DEMO_OUT=$out
+# shellcheck disable=SC2016 # The variables expand in the inner shell.
+inside='
+"$DEMO_LAUNCHER" --launch-immediately &
 sleep 1
-$registry &
+"$DEMO_REGISTRY" &
 sleep 1
-env $webkit $PWD/target/debug/penguin-mail --demo >$sandbox/app.log 2>&1 &
-sleep $wait
-$drive
-import -window root $out
-"
+"$DEMO_APP" --demo >"$DEMO_LOG" 2>&1 &
+sleep "$DEMO_WAIT"
+if [ -n "$DEMO_RUN" ]; then python3 "$DEMO_RUN"; fi
+import -window root "$DEMO_OUT"
+'
 xvfb-run -a --server-args="-screen 0 ${size}x24" \
     dbus-run-session -- bash -c "$inside"
 echo "wrote $out"

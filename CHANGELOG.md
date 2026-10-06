@@ -306,6 +306,14 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - The calendar's Day, Week and Month switch keeps its full width on a
   smaller screen. The week number, the year and the search button make
   way for it instead.
+- Searching the calendar finds two new events you made before the server
+  answered, instead of showing only one of them.
+- A photo added to an Outlook contact after Penguin Mail first checked
+  for one now shows up.
+- A server that sends a message's flags and date apart from its headers no
+  longer leaves the message unread and dated 1970.
+- Add Account words a server's unreadable answer in your own language,
+  where it showed an English sentence.
 - Switching between the 12-hour and 24-hour clock in GNOME's settings changes the calendar's hours and event times at once.
 - When Undo cannot take back a calendar move or delete, a message now says the change stays and why.
 - After Show all in an event's details opens the full guest list, Escape still closes the details.
@@ -318,6 +326,18 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - In a narrow window, the calendar's list keeps the days you scrolled to and your place in it when a sync or your own change refreshes it, where it used to jump back to the first days.
 - In Week and Day view, dragging an out-of-office day or another entry that runs midnight to midnight along the all-day row moves it to the day under the pointer, and it stays a timed entry.
 - Turning All day off for an event in the editor shows its new 09:00 start, and the time you then pick is the time it saves at, in your own time zone.
+- Changing a Google Calendar meeting you organize, even only its title, keeps optional guests optional and keeps a public event public.
+- A POP3 server that accepts the connection and then never starts the encrypted session no longer stalls that account's mail checks until you restart Penguin Mail; the check gives up after 30 seconds.
+- With the interface in Portuguese or German and a 12-hour clock, times show AM and PM, and the event editor's time choices work again.
+- A repeating Outlook meeting with one date cancelled shows every other date in the calendar again, where it showed only the first.
+- Answering an invitation on a Fastmail or other CalDAV account leaves the meeting's revision number to the organizer, so their calendar matches your answer to the meeting they sent.
+- Adding a ticket or booking to a Fastmail or other CalDAV calendar no longer overwrites another event whose id happens to contain the new one's.
+- Saving rules or the automatic reply on a Sieve server that stops answering after the save no longer leaves the dialog waiting.
+- A rule that moves mail to the Trash, kept on a mail server whose account has no Trash folder, files the mail into a new Trash folder, or leaves it in the inbox, instead of deleting it for good.
+- An automatic reply of more than one line on an IMAP account with Sieve keeps showing in Penguin Mail after you save it, and saving it again no longer leaves the server with two replies.
+- In the snap, keys and certificates you import stay when you revert the snap to an earlier revision.
+- An Outlook account with more than a hundred calendars, contact folders or rules shows all of them.
+- An Outlook message no longer shows twice in the list when Penguin Mail fetched it in a batch after first seeing it in a sync.
 - Show in Calendar opens the event's popover even when the calendar refreshes at that moment.
 - The automatic reply dialog names the provider that answers for an IMAP
   account with Sieve, where it used to say Gmail.

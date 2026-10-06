@@ -12,7 +12,7 @@
 
 pub mod recurrence;
 mod reply;
-mod zone;
+pub(crate) mod zone;
 
 #[cfg(test)]
 mod tests;
@@ -443,7 +443,7 @@ fn invitation_of(event: &Block<'_>, method: Method, zones: &Zones) -> Invitation
             .properties
             .get("DTSTART")
             .and_then(|start| zone_of(start, zones)),
-        rules: rules_of(event),
+        rules: rules_of(event, zones),
     }
 }
 
@@ -458,8 +458,10 @@ fn zone_of(start: &Property, zones: &Zones) -> Option<String> {
 }
 
 /// The lines that make an event repeat, each whole with its parameters,
-/// which is how Google's `recurrence` holds them.
-fn rules_of(event: &Block<'_>) -> Vec<String> {
+/// which is how Google's `recurrence` holds them. A `TZID` goes through
+/// [`Zones::iana`] as the `DTSTART`'s does, so an Outlook `EXDATE` names a
+/// zone `rrule` can read.
+fn rules_of(event: &Block<'_>, zones: &Zones) -> Vec<String> {
     let mut lines = Vec::new();
     for name in ["RRULE", "RDATE", "EXDATE"] {
         let single = event.properties.get(name).into_iter();
@@ -475,7 +477,7 @@ fn rules_of(event: &Block<'_>) -> Vec<String> {
             }
             line.push(':');
             line.push_str(property.value().trim());
-            lines.push(line);
+            lines.push(crate::calendar::rename_zone(&line, &|tzid| zones.iana(tzid)));
         }
     }
     lines

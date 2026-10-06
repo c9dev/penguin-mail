@@ -46,9 +46,9 @@ pub enum WeekStart {
 
 /// The weekday a calendar grid starts its week on: `locale` for
 /// [`WeekStart::Automatic`], or the fixed day the person chose instead.
-/// Every place that draws a week's columns — Week, Month and the mini
-/// month — calls this one function, so a Preferences change and the
-/// locale's own answer are read the same way everywhere.
+/// Week, Month and the mini month draw their columns through this one
+/// function, so they read a Preferences change and the locale's own
+/// answer the same way.
 pub fn week_start(setting: WeekStart, locale: Weekday) -> Weekday {
     match setting {
         WeekStart::Automatic => locale,
