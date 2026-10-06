@@ -725,7 +725,7 @@ impl CalendarView {
         let weak = Rc::downgrade(&view);
         *view.clock_watch.borrow_mut() = crate::clock_format::watch(move || {
             if let Some(view) = weak.upgrade() {
-                view.show_range();
+                view.clock_format_changed();
             }
         });
         let weak = Rc::downgrade(&view);
@@ -772,6 +772,16 @@ impl CalendarView {
         self.show_range();
         self.run.fill_all();
         self.run.read_sidebar(false);
+    }
+
+    /// Redraws everything that shows a time after GNOME's clock format
+    /// changes: the header, the grids' hour labels, which a grid builds
+    /// once, and the times on the cards and in the list, which come from
+    /// the last fill.
+    fn clock_format_changed(self: &Rc<Self>) {
+        self.rebuild_pages();
+        self.show_range();
+        self.run.fill_all();
     }
 
     /// The Refresh action: starts a calendar sync for every account,

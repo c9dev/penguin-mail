@@ -292,6 +292,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   it last updated, instead of leaving you guessing.
 
 ### Fixed
+- Switching between the 12-hour and 24-hour clock in GNOME's settings changes the calendar's hours and event times at once.
 - When Undo cannot take back a calendar move or delete, a message now says the change stays and why.
 - After Show all in an event's details opens the full guest list, Escape still closes the details.
 - Deleting a calendar, subscribing to one or adding holidays says it worked only once it has, and a holiday calendar that could not be added keeps its Add button.
