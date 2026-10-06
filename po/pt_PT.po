@@ -10221,7 +10221,7 @@ msgstr ""
 "O Penguin Mail mantém Caixa de entrada, Enviadas, Rascunhos, Lixo, Spam e "
 "Arquivo."
 
-#: sync/src/services/sieve.rs:89
+#: sync/src/services/sieve.rs:95
 msgid ""
 "{provider} offers no encrypted connection for rules, so Penguin Mail does "
 "not send your password there."
@@ -10229,7 +10229,7 @@ msgstr ""
 "{provider} não oferece uma ligação cifrada para regras, por isso o Penguin "
 "Mail não envia lá a sua palavra-passe."
 
-#: sync/src/services/sieve.rs:102
+#: sync/src/services/sieve.rs:108
 msgid ""
 "{provider} cannot run this rule: its server lacks the Sieve extension "
 "“{extension}”."
@@ -10237,31 +10237,31 @@ msgstr ""
 "{provider} não consegue executar esta regra: o servidor não tem a extensão "
 "Sieve “{extension}”."
 
-#: sync/src/services/sieve.rs:107
+#: sync/src/services/sieve.rs:113
 msgid "The folder this rule files into is not on the server yet."
 msgstr "A pasta para onde esta regra arquiva ainda não está no servidor."
 
-#: sync/src/services/sieve.rs:110
+#: sync/src/services/sieve.rs:116
 msgid "A rule on {provider} cannot keep mail out of Spam."
 msgstr "Uma regra em {provider} não consegue manter mensagens fora do Spam."
 
-#: sync/src/services/sieve.rs:114
+#: sync/src/services/sieve.rs:120
 msgid "{provider} does not mark mail as important."
 msgstr "{provider} não marca mensagens como importantes."
 
-#: sync/src/services/sieve.rs:118
+#: sync/src/services/sieve.rs:124
 msgid "A rule can file mail into one folder."
 msgstr "Uma regra pode arquivar mensagens numa só pasta."
 
-#: sync/src/services/sieve.rs:121
+#: sync/src/services/sieve.rs:127
 msgid "Say which mail the rule is for"
 msgstr "Indique a que mensagens se aplica a regra"
 
-#: sync/src/services/sieve.rs:123
+#: sync/src/services/sieve.rs:129
 msgid "Choose what the rule does"
 msgstr "Escolha o que a regra faz"
 
-#: sync/src/services/sieve.rs:190
+#: sync/src/services/sieve.rs:196
 msgid "The rule is read-only."
 msgstr "A regra é só de leitura."
 
