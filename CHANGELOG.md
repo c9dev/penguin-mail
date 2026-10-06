@@ -292,6 +292,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   it last updated, instead of leaving you guessing.
 
 ### Fixed
+- Saving the automatic reply while a waiting rule goes out to a mail server with Sieve keeps both, where one of them could be lost.
 - Archiving on a server that has no Archive folder yet no longer says it failed when the mail did move.
 - When your mail server is too busy to move mail, the message names the folder as you spelled it.
 - A rule you add while your mail server is not answering, on a server that runs only one set of rules, now waits and asks before replacing the rules you run there, instead of vanishing with an English error.
