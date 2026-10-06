@@ -6,7 +6,7 @@ use mailrs_domain::{Address, Memberships, MessageMeta, Role, category};
 use mailrs_graph::{Fields, GraphError, Listing, Message, Recipient};
 use mailrs_mime::{Part, Parts};
 
-use super::{GraphApi, Microsoft, backend, tag_id};
+use super::{GraphApi, Microsoft, backend, tag_id, tag_name};
 use crate::BackendError;
 use crate::services::{Backfill, Found, LIST_PAGE_SIZE, RawMessage, RemoteRef, Want};
 
@@ -147,8 +147,28 @@ impl<G: GraphApi> Microsoft<G> {
 
     pub(super) async fn ids_in(&self, days: Option<i64>, folder: Option<String>) -> Result<Vec<RemoteRef>, BackendError> {
         let since = days.map(|d| (chrono::Utc::now() - chrono::Duration::days(d.max(1))).to_rfc3339_opts(chrono::SecondsFormat::Secs, true));
-        let listing = Listing { folder, received_since: since, top: 1000, fields: Fields::Ids, ..Listing::default() };
+        // A category's tag id is no folder: Graph refuses it in a folder's
+        // place, so a tag lists the whole mailbox filtered by its name.
+        let (folder, category) = match folder.as_deref().and_then(tag_name) {
+            Some(name) => (None, Some(name.to_string())),
+            None => (folder, None),
+        };
+        let listing = Listing { folder, category, received_since: since, top: 1000, fields: Fields::Ids, ..Listing::default() };
         self.list_all(&listing, MOST_IDS, remote_ref).await
+    }
+
+    /// Every id in the Inbox, or `Unsupported` for an Inbox larger than a
+    /// listing returns: the newest [`MOST_IDS`] alone would make every
+    /// older stored message look gone, and the hourly check would fetch
+    /// them all again each time.
+    pub(super) async fn inbox_listing(&self) -> Result<Vec<RemoteRef>, BackendError> {
+        let inbox = self.known().roles.get(&Role::Inbox).cloned();
+        let listing = Listing { folder: inbox, top: 1000, fields: Fields::Ids, ..Listing::default() };
+        let ids = self.list_all(&listing, MOST_IDS + 1, remote_ref).await?;
+        match ids.len() > MOST_IDS {
+            true => Err(BackendError::Unsupported),
+            false => Ok(ids),
+        }
     }
 
     pub(super) async fn sent_with(&self, message_id: &str) -> Result<Option<String>, BackendError> {

@@ -98,7 +98,11 @@ impl ManageSieveApi for FakeSieve {
 
     async fn get(&self, name: &str) -> Result<String, SieveError> {
         self.up()?;
-        self.script(name).ok_or(SieveError::NotFound)
+        let text = self.script(name).ok_or(SieveError::NotFound);
+        // A real read waits on the network, so another write can run
+        // between this read and the put after it.
+        tokio::task::yield_now().await;
+        text
     }
 
     async fn put(&self, name: &str, script: &str) -> Result<(), SieveError> {

@@ -504,7 +504,6 @@ fn keyword_changes(
 /// The most messages one step of a relisting fetches and matches.
 const RELIST_BATCH: usize = 500;
 
-/// Unread mail that someone else sent to the inbox.
 /// What one replay of the feed stored.
 #[derive(Default)]
 struct Replayed {
@@ -512,6 +511,7 @@ struct Replayed {
     new_mail: Vec<String>,
 }
 
+/// Unread mail that someone else sent to the inbox.
 fn is_new_inbox_mail(meta: &MessageMeta) -> bool {
     meta.in_role(Role::Inbox)
         && meta.is_unread()

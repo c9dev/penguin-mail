@@ -172,3 +172,5 @@ app/src/ui/dav_edit.rs
 sync/src/services/microsoft/rules.rs
 sync/src/services/microsoft/outgoing.rs
 sync/src/services/microsoft/settings.rs
+sync/src/services/microsoft/writes.rs
+sync/src/settings.rs

@@ -360,8 +360,7 @@ impl<G: GraphApi> MailBackend for Microsoft<G> {
     }
 
     async fn inbox_ids(&self) -> Result<Vec<RemoteRef>, BackendError> {
-        let inbox = self.known().roles.get(&Role::Inbox).cloned();
-        self.ids_in(None, inbox).await
+        self.inbox_listing().await
     }
 
     async fn search(&self, query: &SearchQuery, limit: usize) -> Result<Vec<RemoteRef>, BackendError> {

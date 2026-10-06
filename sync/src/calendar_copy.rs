@@ -902,12 +902,12 @@ impl<A: Accounts> CalendarCopy<A> {
                     }
                 }
                 (store::ChangeKind::Save, Err(BackendError::NotFound)) => {
-                    turned_down.push(self.drop_gone(&change, "deleted elsewhere").await?);
+                    turned_down.push(self.drop_gone(&change, gettext("deleted elsewhere")).await?);
                 }
                 (store::ChangeKind::Create, Err(BackendError::NotFound)) => {
                     // A new event's id cannot be missing, so it is the
                     // calendar that went: its rows in the queue outlive it.
-                    turned_down.push(self.drop_gone(&change, "the calendar is gone").await?);
+                    turned_down.push(self.drop_gone(&change, gettext("the calendar is gone")).await?);
                 }
                 (_, Err(BackendError::Changed)) => {
                     turned_down.push(self.take_theirs(&calendar, &change, None).await?);
@@ -971,7 +971,7 @@ impl<A: Accounts> CalendarCopy<A> {
                 Ok(waiting)
             }
             Err(BackendError::NotFound) => {
-                turned_down.push(self.drop_gone(change, "deleted elsewhere").await?);
+                turned_down.push(self.drop_gone(change, gettext("deleted elsewhere")).await?);
                 Ok(None)
             }
             Err(err) if holds_the_queue(&err) => Err(err.into()),
@@ -1016,7 +1016,7 @@ impl<A: Accounts> CalendarCopy<A> {
                     .write(move |c| store::finish_answer(c, account_id, seq, &cal, &id, &written.etag))
                     .await?;
             }
-            Err(BackendError::NotFound) => turned_down.push(self.drop_gone(change, "deleted elsewhere").await?),
+            Err(BackendError::NotFound) => turned_down.push(self.drop_gone(change, gettext("deleted elsewhere")).await?),
             Err(err) if holds_the_queue(&err) => return Err(err.into()),
             Err(BackendError::Refused(reason)) => {
                 turned_down.push(self.take_theirs(calendar, change, Some(reason)).await?)
@@ -1028,7 +1028,7 @@ impl<A: Accounts> CalendarCopy<A> {
 
     /// Drops a change whose event, or whose calendar, the provider no
     /// longer has, and takes the event off the copy.
-    async fn drop_gone(&self, change: &store::QueuedChange, reason: &str) -> Result<TurnedDown, SyncError> {
+    async fn drop_gone(&self, change: &store::QueuedChange, reason: String) -> Result<TurnedDown, SyncError> {
         let account_id = change.account_id;
         let (seq, cal, id) = (change.seq, change.calendar.clone(), change.event.clone());
         self.db
@@ -1043,7 +1043,7 @@ impl<A: Accounts> CalendarCopy<A> {
             calendar: change.calendar.clone(),
             event: change.event.clone(),
             title: title_of(change),
-            reason: Some(reason.to_string()),
+            reason: Some(reason),
             left_out: None,
         })
     }
@@ -1582,8 +1582,6 @@ fn enqueue_steps(
     Ok(())
 }
 
-/// The occurrence a person picked: a changed occurrence knows its place
-/// in the series, and a plain one starts where the series put it.
 /// Stores one page of a calendar read, leaving alone every event a queued
 /// or held change of ours still owns, and every occurrence of a series on
 /// its way out, which a read must not bring back to stand alone.
@@ -1616,6 +1614,8 @@ pub(crate) fn store_page(
     Ok(())
 }
 
+/// The occurrence a person picked: a changed occurrence knows its place
+/// in the series, and a plain one starts where the series put it.
 fn picked(occurrence: &Occurrence) -> Picked {
     Picked { original_start: occurrence.event.original_start.unwrap_or(occurrence.start), start: occurrence.start }
 }
@@ -1656,8 +1656,6 @@ fn cut_series<'a>(steps: &[Step], before: &'a [Event]) -> Option<&'a Event> {
         .filter(|old| !old.rules.is_empty() && old.rules != cut.rules)
 }
 
-/// The title of the event a queued change writes, to say which one the
-/// provider turned down.
 /// The provider's reason for turning `change` down, in words the person
 /// can act on. A new out-of-office or focus-time entry is refused on an
 /// account Google Calendar does not offer them on, which nothing could
@@ -1675,6 +1673,8 @@ fn refusal_words(change: &store::QueuedChange, reason: String) -> String {
     )
 }
 
+/// The title of the event a queued change writes, to say which one the
+/// provider turned down.
 fn title_of(change: &store::QueuedChange) -> String {
     match (&change.body, &change.answer) {
         (Some(body), _) => body.title.clone(),

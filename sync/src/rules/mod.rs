@@ -2,8 +2,9 @@
 //! rules, while Penguin Mail runs. It looks at the Inbox messages past
 //! the account's watermark, oldest first and at most [`PASS`] at a time,
 //! runs every rule over each in the order they were made, and turns a
-//! match into the same mail action the window would run, so it queues,
-//! syncs and undoes like any other. A message is recorded as seen once
+//! match into the same mail action the window would run, so it queues
+//! and syncs like any other. It stays off the undo stack the window
+//! shares. A message is recorded as seen once
 //! its rules ran, whatever they did, so it never runs twice; a restart
 //! halfway picks up where the last pass stopped.
 
@@ -102,15 +103,25 @@ impl<A: Accounts> RulesEngine<A> {
                     add: action.add.clone(),
                     remove: action.remove.clone(),
                 });
-                let outcome = self.actions.run(std::slice::from_ref(&target), relabel, History::Record).await;
+                // The window shares this undo stack, and Undo there takes back
+                // what the person did last, not a change they never saw.
+                let outcome = self.actions.run(std::slice::from_ref(&target), relabel, History::Skip).await;
                 if let Some(error) = outcome.first_error() {
                     return Err(SyncError::Backend(BackendError::Refused(error.to_string())));
                 }
                 acted = true;
             }
             if let Some(to) = &action.forward {
-                let raw = sync.raw_message(&meta.id).await?;
                 let from = self.address(meta.account_id).await?;
+                // Mail from the account itself, or a forward that came
+                // back, would be forwarded again each time it returned.
+                if meta.from.as_ref().is_some_and(|f| f.email.eq_ignore_ascii_case(&from)) {
+                    continue;
+                }
+                let raw = sync.raw_message(&meta.id).await?;
+                if forward::is_forward(&raw) {
+                    continue;
+                }
                 let message = forward::forwarded(&raw, &from, to, crate::now_millis())?;
                 // No copy in Sent: a server-side rule's forward leaves none.
                 sync.services().mail.send(&message, None).await?;

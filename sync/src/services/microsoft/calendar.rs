@@ -179,6 +179,69 @@ fn calendar_of(c: &GraphCalendar) -> model::Calendar {
     }
 }
 
+/// The start an occurrence or an exception had in its series, as the copy
+/// expands the series. An all-day series expands in UTC, while Graph
+/// answers the day's midnight in the zone it was made in, so a day in
+/// Berlin arrives at 22:00 the evening before and is taken back to its own
+/// date, as its start is.
+fn original_start_of(e: &GraphEvent) -> Option<i64> {
+    let at = DateTime::parse_from_rfc3339(e.original_start.as_deref()?).ok()?.timestamp_millis();
+    if !e.is_all_day {
+        return Some(at);
+    }
+    let zone = e.original_start_time_zone.as_deref().and_then(zones::zone_named).unwrap_or(chrono_tz::UTC);
+    Some(day_of(at, zone))
+}
+
+/// An event's body as the copy keeps it: plain text.
+fn description_of(e: &GraphEvent) -> String {
+    e.body
+        .as_ref()
+        .map(|b| match b.content_type.as_str() {
+            "html" => mailrs_mime::html::html_to_text(&b.content),
+            _ => b.content.clone(),
+        })
+        .unwrap_or_default()
+}
+
+/// Trims an edit's `body` against the event Graph holds, since the copy
+/// keeps less than Graph does. A description left as it was stays out, so
+/// an HTML body, such as a Teams meeting's join block, is not rewritten as
+/// plain text. A guest list left as it was stays out too; a changed one
+/// keeps each remaining attendee's type (optional, a booked room) and
+/// makes only the new ones required.
+fn trim_edit(body: &mut Value, event: &model::Event, current: &GraphEvent, me: &str) {
+    let Some(map) = body.as_object_mut() else {
+        return;
+    };
+    if description_of(current) == event.description {
+        map.remove("body");
+    }
+    let address = |a: &mailrs_graph::Attendee| a.email_address.address.clone().unwrap_or_default().to_ascii_lowercase();
+    let kinds: std::collections::HashMap<String, String> =
+        current.attendees.iter().map(|a| (address(a), a.kind.clone().unwrap_or_else(|| "required".into()))).collect();
+    let Some(Value::Array(attendees)) = map.get_mut("attendees") else {
+        return;
+    };
+    let sent: BTreeSet<String> = attendees
+        .iter()
+        .filter_map(|a| a["emailAddress"]["address"].as_str())
+        .map(str::to_ascii_lowercase)
+        .collect();
+    let organizer = current.organizer.as_ref().and_then(|o| o.email_address.address.clone()).unwrap_or_default().to_ascii_lowercase();
+    let held: BTreeSet<String> = kinds.keys().filter(|a| **a != organizer && !a.eq_ignore_ascii_case(me)).cloned().collect();
+    if sent == held {
+        map.remove("attendees");
+        return;
+    }
+    for attendee in attendees.iter_mut() {
+        let known = attendee["emailAddress"]["address"].as_str().map(str::to_ascii_lowercase).and_then(|a| kinds.get(&a).cloned());
+        if let Some(kind) = known {
+            attendee["type"] = json!(kind);
+        }
+    }
+}
+
 fn refused(line: String) -> BackendError {
     BackendError::Refused(line)
 }
@@ -210,14 +273,7 @@ impl<G: GraphApi> Microsoft<G> {
             all_day: e.is_all_day,
             title: e.subject.clone().unwrap_or_default(),
             place: e.location.as_ref().map(|l| l.display_name.clone()).unwrap_or_default(),
-            description: e
-                .body
-                .as_ref()
-                .map(|b| match b.content_type.as_str() {
-                    "html" => mailrs_mime::html::html_to_text(&b.content),
-                    _ => b.content.clone(),
-                })
-                .unwrap_or_default(),
+            description: description_of(e),
             color: None,
             busy: e.show_as.as_deref() != Some("free"),
             status: if e.is_cancelled { Status::Cancelled } else { Status::Confirmed },
@@ -248,11 +304,7 @@ impl<G: GraphApi> Microsoft<G> {
             conference: e.online_meeting.as_ref().and_then(|m| m.join_url.clone()),
             rules,
             series: (e.kind.as_deref() == Some("exception")).then(|| e.series_master_id.clone()).flatten(),
-            original_start: e
-                .original_start
-                .as_deref()
-                .and_then(|t| DateTime::parse_from_rfc3339(t).ok())
-                .map(|t| t.timestamp_millis()),
+            original_start: original_start_of(e),
             pending: false,
             meet_request: None,
             kind: if e.show_as.as_deref() == Some("oof") { Kind::OutOfOffice(Default::default()) } else { Kind::default() },
@@ -322,6 +374,25 @@ impl<G: GraphApi> Microsoft<G> {
         Ok(body)
     }
 
+    /// The event with iCalendar UID `uid` and the calendar that holds it,
+    /// looking on `first` before the account's other calendars.
+    async fn known_by_uid(&self, first: &str, uid: &str) -> Result<Option<(String, GraphEvent)>, BackendError> {
+        let mut calendars = vec![first.to_string()];
+        let mut listed = false;
+        while let Some(calendar) = calendars.pop() {
+            let found = self.graph().events_by_uid(&calendar, uid).await.map_err(|e| self.service(e))?;
+            if let Some(known) = found.into_iter().find(|e| !matches!(e.kind.as_deref(), Some("occurrence" | "exception"))) {
+                return Ok(Some((calendar, known)));
+            }
+            if !listed {
+                listed = true;
+                let all = self.graph().calendars().await.map_err(|e| self.service(e))?;
+                calendars.extend(all.into_iter().map(|c| c.id).filter(|id| id != first));
+            }
+        }
+        Ok(None)
+    }
+
     fn service(&self, err: GraphError) -> BackendError {
         self.service_error(Service::Calendar, err)
     }
@@ -333,13 +404,7 @@ impl<G: GraphApi> Microsoft<G> {
             .instances(series, &iso(original - 60_000), &iso(original + DAY))
             .await
             .map_err(|e| self.service(e))?;
-        found
-            .into_iter()
-            .find(|e| {
-                e.original_start.as_deref().and_then(|t| DateTime::parse_from_rfc3339(t).ok()).map(|t| t.timestamp_millis())
-                    == Some(original)
-            })
-            .ok_or(BackendError::NotFound)
+        found.into_iter().find(|e| original_start_of(e) == Some(original)).ok_or(BackendError::NotFound)
     }
 
     async fn changes_of(
@@ -403,8 +468,14 @@ impl<G: GraphApi> Microsoft<G> {
         removed.extend(gone);
         events.extend(exceptions.iter().map(|e| self.event_of(e, calendar)));
         let unread: Vec<String> = masters.into_iter().filter(|m| !at.fresh.contains(m)).collect();
-        for master in unread {
-            match self.graph().event(&master).await {
+        // A removal sends the round back to every series the token knows,
+        // up to MOST_SERIES, so the masters come twenty to a request.
+        let read = match unread.is_empty() {
+            true => Vec::new(),
+            false => self.graph().events(&unread).await.map_err(|e| self.service(e))?,
+        };
+        for (master, answer) in unread.into_iter().zip(read) {
+            match answer {
                 Ok(e) => events.push(self.event_of(&e, calendar)),
                 Err(GraphError::NotFound) => removed.push(master.clone()),
                 Err(err) => return Err(self.service(err)),
@@ -520,8 +591,12 @@ impl<G: GraphApi> CalendarService for Microsoft<G> {
             if let Some(map) = body.as_object_mut() {
                 map.remove("recurrence");
             }
+            let current = self.graph().event(&instance.id).await.map_err(|e| self.service(e))?;
+            trim_edit(&mut body, event, &current, &self.settings().address);
             self.graph().update_event(&instance.id, &body, None).await
         } else {
+            let current = self.graph().event(&event.id).await.map_err(|e| self.service(e))?;
+            trim_edit(&mut body, event, &current, &self.settings().address);
             self.graph().update_event(&event.id, &body, etag).await
         };
         Ok(self.event_of(&written.map_err(|e| self.service(e))?, calendar))
@@ -541,19 +616,31 @@ impl<G: GraphApi> CalendarService for Microsoft<G> {
         self.graph().delete_event(id, etag).await.map_err(|e| self.service(e))
     }
 
-    /// Finds the event by its UID and updates it, or makes it with no
-    /// attendees, so importing a file mails nobody.
+    /// Finds the event by its UID, on the calendar asked for first and
+    /// then on the others, and updates it there, or makes it with no
+    /// attendees, so importing a file mails nobody. An update leaves the
+    /// guests and the repeat as Outlook holds them: a file names neither
+    /// the guests of a meeting the person organizes nor, for one
+    /// occurrence, the series it belongs to. Such a file, one with no
+    /// repeat for an event that repeats, leaves the series alone, rather
+    /// than turning it into one event at that occurrence's time.
     async fn import_event(&self, event: &model::Event) -> Result<model::Event, BackendError> {
-        let calendar = event.calendar.as_str();
-        let found = self.graph().events_by_uid(&event.uid).await.map_err(|e| self.service(e))?;
-        let known = found.iter().find(|e| !matches!(e.kind.as_deref(), Some("occurrence" | "exception")));
-        let quiet = model::Event { guests: Vec::new(), ..event.clone() };
-        let body = self.body_of(&quiet, known.is_none())?;
-        let written = match known {
-            Some(known) => self.graph().update_event(&known.id, &body, None).await,
-            None => self.graph().create_event(calendar, &body).await,
+        let Some((calendar, known)) = self.known_by_uid(&event.calendar, &event.uid).await? else {
+            let quiet = model::Event { guests: Vec::new(), ..event.clone() };
+            let body = self.body_of(&quiet, true)?;
+            let made = self.graph().create_event(&event.calendar, &body).await.map_err(|e| self.service(e))?;
+            return Ok(self.event_of(&made, &event.calendar));
         };
-        Ok(self.event_of(&written.map_err(|e| self.service(e))?, calendar))
+        if known.recurrence.is_some() && event.rules.is_empty() {
+            return Ok(self.event_of(&known, &calendar));
+        }
+        let mut body = self.body_of(event, false)?;
+        if let Some(map) = body.as_object_mut() {
+            map.remove("attendees");
+            map.remove("recurrence");
+        }
+        let written = self.graph().update_event(&known.id, &body, None).await.map_err(|e| self.service(e))?;
+        Ok(self.event_of(&written, &calendar))
     }
 
     async fn upload_attachment(

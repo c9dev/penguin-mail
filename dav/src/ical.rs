@@ -609,11 +609,22 @@ pub fn write_event_notifying(existing: Option<&str>, event: &Event, me: &[String
     Ok(ical.to_string())
 }
 
+/// The resource without the occurrence at `original_start`: an EXDATE on
+/// the master, or without the master, that occurrence's VEVENT gone.
+/// Answers `None` when nothing would be left, so the resource is deleted.
 pub fn cancel_occurrence(existing: &str, original_start: EpochMillis, now: EpochMillis) -> Result<Option<String>, DavError> {
     let mut ical = parse(existing)?;
     let zones = Zones::of(&ical);
     let Some((master_at, master)) = master_of(&ical, &zones, &[]) else {
-        return Ok(None);
+        // A guest invited to single occurrences holds them with no
+        // master: only the one named goes, and the resource goes only
+        // once it holds nothing else.
+        let gone: Vec<u32> = events_of(&ical)
+            .filter(|(_, comp)| recurrence_of(comp, &zones) == Some(original_start))
+            .map(|(at, _)| at as u32)
+            .collect();
+        ical.remove_component_ids(&gone);
+        return Ok(events_of(&ical).next().is_some().then(|| ical.to_string()));
     };
     let entry = entries(&[time_line("EXDATE", original_start, &master.zone, master.all_day)])?;
     ical.components[master_at].entries.extend(entry);
@@ -650,4 +661,67 @@ pub fn answer_scheduled(existing: &str, me: &[String], answer: Answer, now: Epoc
         }
     }
     Ok(any.then(|| ical.to_string()))
+}
+
+/// [`answer_scheduled`] for one occurrence of a series: PARTSTAT changes
+/// only on the VEVENT whose RECURRENCE-ID is `original_start`. When the
+/// resource holds no such VEVENT, one is made from the master: its lines
+/// without the rules that repeat it, starting at `original_start` and
+/// lasting as long. Answers `None` when the account is not a guest.
+pub fn answer_occurrence(
+    existing: &str,
+    me: &[String],
+    answer: Answer,
+    original_start: EpochMillis,
+    now: EpochMillis,
+    server_schedules: bool,
+) -> Result<Option<String>, DavError> {
+    let mut ical = parse(existing)?;
+    let zones = Zones::of(&ical);
+    let found = events_of(&ical)
+        .find(|(_, comp)| recurrence_of(comp, &zones) == Some(original_start))
+        .map(|(at, _)| at);
+    let at = match found {
+        Some(at) => at,
+        None => {
+            let Some((master_at, master)) = master_of(&ical, &zones, me) else {
+                return Ok(None);
+            };
+            let mut comp = ical.components[master_at].clone();
+            let has_end = comp.property(&ICalendarProperty::Dtend).is_some();
+            comp.entries.retain(|e| {
+                !matches!(
+                    e.name,
+                    ICalendarProperty::Rrule
+                        | ICalendarProperty::Rdate
+                        | ICalendarProperty::Exdate
+                        | ICalendarProperty::Dtstart
+                        | ICalendarProperty::Dtend
+                        | ICalendarProperty::RecurrenceId
+                )
+            });
+            // The master's alarms stay with the master: a child index
+            // shared by two components would be written twice.
+            comp.component_ids.clear();
+            let mut lines = vec![
+                time_line("RECURRENCE-ID", original_start, &master.zone, master.all_day),
+                time_line("DTSTART", original_start, &master.zone, master.all_day),
+            ];
+            if has_end {
+                let end = original_start + (master.end - master.start);
+                lines.push(time_line("DTEND", end, &master.zone, master.all_day));
+            }
+            comp.entries.extend(entries(&lines)?);
+            ical.components.push(comp);
+            let at = ical.components.len() - 1;
+            ical.components[0].component_ids.push(at as u32);
+            at
+        }
+    };
+    if !set_partstat(&mut ical.components[at], me, answer, !server_schedules)? {
+        return Ok(None);
+    }
+    stamp(&mut ical, at, now, me)?;
+    ical.add_missing_timezones();
+    Ok(Some(ical.to_string()))
 }

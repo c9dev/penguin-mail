@@ -50,6 +50,18 @@ async fn every_address_book_reads_as_one() {
 }
 
 #[tokio::test]
+async fn a_server_that_always_says_more_is_asked_a_bounded_number_of_times() {
+    let (dav, carddav) = adapter();
+    let first = read_all(&carddav, None).await.unwrap();
+    dav.with(|s| s.always_more = true);
+    let read = tokio::time::timeout(std::time::Duration::from_secs(5), read_all(&carddav, first.next_sync_token.as_deref()))
+        .await
+        .expect("the read ends");
+    assert!(read.is_ok(), "{read:?}");
+    assert!(dav.with(|s| s.syncs) <= 2 * 20, "{}", dav.with(|s| s.syncs));
+}
+
+#[tokio::test]
 async fn a_later_read_brings_changes_and_deletions_from_each_book() {
     let (dav, carddav) = adapter();
     dav.put_resource("/card/default/ana.vcf", &card("a", "Ana Rocha", "ana@example.pt"));

@@ -288,7 +288,10 @@ impl AccountSync {
         if !cursor.backfill_done || cursor.state.is_none() {
             return Ok(());
         }
-        let inbox = self.services.mail.inbox_ids().await?;
+        let inbox = match self.services.mail.inbox_ids().await {
+            Err(BackendError::Unsupported) => return Ok(()),
+            listed => listed?,
+        };
         let remote: HashSet<String> = self
             .listing_as_stored(inbox, HashMap::new())
             .await?

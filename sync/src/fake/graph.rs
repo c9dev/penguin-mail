@@ -113,6 +113,8 @@ pub struct GraphState {
     pub categories: Vec<MasterCategory>,
     pub messages: BTreeMap<String, FakeMessage>,
     pub mail_log: Vec<Logged>,
+    /// The ids of each metadata fetch, one entry a call.
+    pub meta_fetches: Vec<Vec<String>>,
     pub sent: Vec<Vec<u8>>,
     pub uploads: HashMap<String, Upload>,
     pub calendars: Vec<GraphCalendar>,
@@ -126,6 +128,8 @@ pub struct GraphState {
     pub event_bodies: Vec<serde_json::Value>,
     /// The ids each `original_starts` call looked up, one entry a call.
     pub start_lookups: Vec<Vec<String>>,
+    /// The ids of each `$batch` request of whole events, twenty at most.
+    pub master_reads: Vec<Vec<String>>,
     pub contact_folders: Vec<ContactFolder>,
     /// Contact id to its folder and the contact.
     pub contacts: BTreeMap<String, (String, GraphContact)>,
@@ -489,8 +493,12 @@ impl GraphApi for FakeGraph {
         self.with(|s| calendar::original_starts(s, ids))
     }
 
-    async fn events_by_uid(&self, uid: &str) -> Answer<Vec<GraphEvent>> {
-        self.with(|s| calendar::events_by_uid(s, uid))
+    async fn events(&self, ids: &[String]) -> Answer<Vec<Answer<GraphEvent>>> {
+        self.with(|s| calendar::events(s, ids))
+    }
+
+    async fn events_by_uid(&self, calendar: &str, uid: &str) -> Answer<Vec<GraphEvent>> {
+        self.with(|s| calendar::events_by_uid(s, calendar, uid))
     }
 
     async fn create_event(&self, calendar: &str, body: &Value) -> Answer<GraphEvent> {

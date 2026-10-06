@@ -292,6 +292,23 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   it last updated, instead of leaving you guessing.
 
 ### Fixed
+- A repeating Outlook meeting made in a time zone such as Sofia or Detroit stays at its time after the clocks change.
+- An Outlook meeting every other week on Sunday and Monday shows on the same weeks in Penguin Mail as in Outlook.
+- Saving the automatic reply while a waiting rule goes out to a mail server with Sieve keeps both, where one of them could be lost.
+- Archiving on a server that has no Archive folder yet no longer says it failed when the mail did move.
+- When your mail server is too busy to move mail, the message names the folder as you spelled it.
+- A rule you add while your mail server is not answering, on a server that runs only one set of rules, now waits and asks before replacing the rules you run there, instead of vanishing with an English error.
+- Deleting an event on an Outlook calendar with many repeating meetings no longer costs a call to Microsoft for each of them on the next refresh, which could get the account slowed down.
+- A day moved in an all-day repeating Outlook event made outside UTC, such as in Berlin, no longer shows on both days, and changing or deleting one day of such a series finds it.
+- Add to Calendar on an Outlook account, for a file about a meeting already on your calendar, no longer drops its guests or turns a repeating meeting into one event, and says which calendar holds it.
+- Editing an Outlook meeting keeps its formatted description, such as a Teams join link, when you leave the description alone, and keeps optional guests optional and booked rooms as rooms.
+- New mail on an IMAP account whose connection keeps dropping while it waits for mail arrives within a minute, rather than up to a quarter of an hour late.
+- Answering an invitation to one date of a repeating meeting that your calendar has not caught up with yet mails the answer for that date, instead of answering the nearest date your calendar holds.
+- A rule on this computer that forwards mail no longer forwards its own forwards when they come back to the Inbox, which could repeat without end.
+- Undo takes back what you did last, even after a rule on this computer has moved new mail since.
+- Deleting one date of a repeating meeting on a CalDAV account mails nobody when you pick Don't send, and deleting one date you were invited to keeps the other dates you were invited to.
+- Declining one date of a repeating meeting on a Fastmail or other CalDAV account declines only that date. It used to answer the whole series.
+- An Outlook account with categories keeps syncing after Microsoft loses track of what changed, where it used to stop syncing for good.
 - Searching the calendar finds two new events you made before the server
   answered, instead of showing only one of them.
 - A photo added to an Outlook contact after Penguin Mail first checked

@@ -8,6 +8,7 @@
 use std::collections::BTreeSet;
 
 use mailrs_domain::mailbox::keyword::{FLAGGED, SEEN};
+use mailrs_domain::translate::gettext;
 use mailrs_domain::{MailboxKind, RemoteMailbox, Role, category};
 use mailrs_gmail::LabelColor;
 use mailrs_graph::{GraphError, MessagePatch, Write};
@@ -159,7 +160,7 @@ impl<G: GraphApi> Microsoft<G> {
             };
             parent = Some(id);
         }
-        let id = parent.ok_or_else(|| BackendError::Refused("a folder needs a name".into()))?;
+        let id = parent.ok_or_else(|| BackendError::Refused(gettext("A folder needs a name.")))?;
         Ok(RemoteMailbox { id, name: path, kind: MailboxKind::Folder, role: None, color: None, hidden: false })
     }
 
@@ -176,6 +177,14 @@ impl<G: GraphApi> Microsoft<G> {
         }
         let leaf = name.rsplit('/').next().unwrap_or(name);
         self.graph().rename_folder(id, leaf).await.map_err(backend)?;
+        // The folders under it move with it, so a later `Journeys/2026`
+        // finds the child before the next listing does.
+        let below = format!("{old}/");
+        for path in self.known().names.values_mut() {
+            if let Some(rest) = path.strip_prefix(&below) {
+                *path = format!("{name}/{rest}");
+            }
+        }
         self.known().names.insert(id.to_string(), name.to_string());
         Ok(RemoteMailbox { id: id.to_string(), name: name.to_string(), kind: MailboxKind::Folder, role: None, color: None, hidden: false })
     }

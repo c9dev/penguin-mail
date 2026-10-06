@@ -1,7 +1,7 @@
 //! A VCALENDAR resource read into Penguin Mail's events, and written back
 //! with only the edited lines changed.
 
-use mailrs_dav::ical::{answer, answer_scheduled, cancel_occurrence, read_resource, write_event, write_event_notifying};
+use mailrs_dav::ical::{answer, answer_occurrence, answer_scheduled, cancel_occurrence, read_resource, write_event, write_event_notifying};
 use mailrs_domain::calendar::{Notify, Reminder, ReminderMethod, Status};
 use mailrs_domain::invitation::Answer;
 
@@ -151,6 +151,25 @@ fn an_answer_marks_my_attendee_and_keeps_the_server_quiet() {
     assert!(written.contains("SCHEDULE-AGENT=CLIENT"));
     assert!(written.contains("PARTSTAT=ACCEPTED:mailto:ann@example.com"), "Ann's answer stays hers");
     assert_eq!(answer(&text, &["nobody@example.com".to_string()], Answer::Yes, NOW).unwrap(), None);
+}
+
+#[test]
+fn an_occurrence_answer_marks_only_that_occurrence() {
+    let text = fixture("google-series.ics");
+    let moved_original = MONDAY_0930 + 2 * 24 * 3_600_000;
+    let written = answer_occurrence(&text, &me(), Answer::No, moved_original, NOW, false).unwrap().expect("I am a guest");
+    let read = read_resource(&written, "/cal/work/", "/cal/work/standup.ics", "e", &me()).unwrap();
+    assert_eq!(read.events.len(), 2, "the changed occurrence is answered in place");
+    assert_eq!(read.events[0].my_answer, None, "the series stays unanswered");
+    assert_eq!(read.events[1].my_answer, Some(Answer::No));
+    let week_later = MONDAY_0930 + 14 * 24 * 3_600_000;
+    let written = answer_occurrence(&text, &me(), Answer::Yes, week_later, NOW, false).unwrap().expect("I am a guest");
+    assert!(written.contains("RECURRENCE-ID;TZID=Europe/Lisbon:20261019T093000"), "{written}");
+    let read = read_resource(&written, "/cal/work/", "/cal/work/standup.ics", "e", &me()).unwrap();
+    let new = read.events.iter().find(|e| e.original_start == Some(week_later)).expect("an occurrence made from the series");
+    assert_eq!((new.start, new.end - new.start, new.my_answer), (week_later, 15 * 60_000, Some(Answer::Yes)));
+    assert!(new.rules.is_empty(), "{:?}", new.rules);
+    assert_eq!(read.events[0].my_answer, None);
 }
 
 #[test]

@@ -303,7 +303,7 @@ impl<A: Accounts> Invitations<A> {
         if !services.offers().calendar {
             return Ok(None);
         }
-        Ok(self.found_on_copy(account_id, invitation, now).await?.map(|o| Spot {
+        Ok(self.found_on_copy(account_id, invitation, now, Near::Nearest).await?.map(|o| Spot {
             account_id,
             calendar: o.event.calendar.clone(),
             id: o.event.id.clone(),
@@ -319,6 +319,7 @@ impl<A: Accounts> Invitations<A> {
         account_id: AccountId,
         invitation: &Invitation,
         now: EpochMillis,
+        near: Near,
     ) -> Result<Option<Occurrence>, SyncError> {
         if invitation.uid.trim().is_empty() {
             return Ok(None);
@@ -341,7 +342,7 @@ impl<A: Accounts> Invitations<A> {
                 mailrs_store::calendar::with_uid(c, account_id, &uid, around - LOOK_AROUND, around + LOOK_AROUND)
             })
             .await?;
-        Ok(pick(found, occurrence, from))
+        Ok(pick(found, occurrence, from, near))
     }
 
     /// The invitations still waiting for the account's answer, each at
@@ -487,7 +488,14 @@ impl<A: Accounts> Invitations<A> {
             _ => Some(RepeatScope::All),
         };
         if let Some(reach) = reach {
-            match self.held_on_calendar(account_id, invitation, now).await? {
+            // An answer to one occurrence the copy has not read yet, such
+            // as one the organizer just added, would otherwise answer
+            // another day's meeting; the mailed reply names the right one.
+            let near = match reach {
+                RepeatScope::This => Near::Exact,
+                _ => Near::Nearest,
+            };
+            match self.held_on_calendar(account_id, invitation, now, near).await? {
                 Held::On(found) => {
                     self.queue_answer(account_id, &found, reach, answer, note, me.email.clone())
                         .await?;
@@ -603,6 +611,7 @@ impl<A: Accounts> Invitations<A> {
         account_id: AccountId,
         invitation: &Invitation,
         now: EpochMillis,
+        near: Near,
     ) -> Result<Held, SyncError> {
         let services = self
             .accounts
@@ -622,7 +631,7 @@ impl<A: Accounts> Invitations<A> {
             }
             Err(err) => return Err(err),
         }
-        Ok(match self.found_on_copy(account_id, invitation, now).await? {
+        Ok(match self.found_on_copy(account_id, invitation, now, near).await? {
             Some(found) => Held::On(found),
             None => Held::Missing,
         })
@@ -780,17 +789,28 @@ impl<A: Accounts> Invitations<A> {
     }
 }
 
-/// The occurrence Show in Calendar opens. For an invitation to one
-/// occurrence, the one that replaced it or starts at it, else the nearest;
-/// otherwise the first that has not ended by `from`, or the last one when
-/// every occurrence has.
-fn pick(found: Vec<Occurrence>, occurrence: Option<EpochMillis>, from: EpochMillis) -> Option<Occurrence> {
+/// Whether an invitation to one occurrence may settle for the nearest one
+/// when the copy holds none at its instant.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Near {
+    /// Show in Calendar: the nearest day is still the right place to look.
+    Nearest,
+    /// An answer: only the occurrence the invitation names will do.
+    Exact,
+}
+
+/// The occurrence Show in Calendar opens or an answer goes to. For an
+/// invitation to one occurrence, the one that replaced it or starts at it,
+/// else the nearest when `near` allows it; otherwise the first that has
+/// not ended by `from`, or the last one when every occurrence has.
+fn pick(found: Vec<Occurrence>, occurrence: Option<EpochMillis>, from: EpochMillis, near: Near) -> Option<Occurrence> {
     if let Some(at) = occurrence {
         let exact = found.iter().position(|o| {
             o.event.original_start == Some(at) || (o.event.original_start.is_none() && o.start == at)
         });
         return match exact {
             Some(index) => found.into_iter().nth(index),
+            None if near == Near::Exact => None,
             None => found.into_iter().min_by_key(|o| (o.start - at).abs()),
         };
     }

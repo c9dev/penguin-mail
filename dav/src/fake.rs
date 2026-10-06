@@ -31,6 +31,11 @@ pub struct FakeState {
     pub refuse_login: bool,
     pub puts: usize,
     pub gets: usize,
+    /// Every `sync-collection` answer says more follows, as a server stuck
+    /// answering 507 does.
+    pub always_more: bool,
+    /// How many `sync-collection` reports were asked.
+    pub syncs: usize,
 }
 
 #[derive(Default)]
@@ -191,10 +196,11 @@ impl DavApi for FakeDav {
 
     async fn sync(&self, collection: &str, token: &str) -> Result<Synced, DavError> {
         let collection = canonical_href(collection);
-        let s = self.open()?;
+        let mut s = self.open()?;
         if s.no_sync {
             return Err(DavError::NoSyncCollection);
         }
+        s.syncs += 1;
         let since = match token {
             "" => None,
             t => Some(t.strip_prefix('t').and_then(|n| n.parse::<u64>().ok()).ok_or(DavError::InvalidSyncToken)?),
@@ -202,7 +208,7 @@ impl DavApi for FakeDav {
         if since.is_some_and(|n| n < s.forgotten_below) {
             return Err(DavError::InvalidSyncToken);
         }
-        let mut synced = Synced { token: format!("t{}", s.seq), ..Synced::default() };
+        let mut synced = Synced { token: format!("t{}", s.seq), more: s.always_more, ..Synced::default() };
         match since {
             None => {
                 for (href, (etag, _)) in s.resources.iter().filter(|(h, _)| collection_of(h) == collection) {

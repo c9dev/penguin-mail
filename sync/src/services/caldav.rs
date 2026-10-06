@@ -37,7 +37,7 @@ const DEFAULT_COLOR: &str = "#3584e4";
 
 /// Rounds of `sync-collection` one read follows when the server cuts an
 /// answer short. Twenty cover a calendar far past any person's.
-const SYNC_ROUNDS: usize = 20;
+pub(super) const SYNC_ROUNDS: usize = 20;
 
 pub struct CalDav<D> {
     api: Arc<D>,
@@ -276,7 +276,11 @@ impl<D: DavApi> CalDav<D> {
         who.extend(self.me.iter().cloned());
         let schedules = self.api.auto_schedule().await.map_err(|e| self.err(e))?;
         let now = crate::now_millis();
-        let Some(text) = ical::answer_scheduled(&found.body, &who, answer, now, schedules).map_err(refused)? else {
+        let written = match occurrence {
+            Some(original) => ical::answer_occurrence(&found.body, &who, answer, original, now, schedules),
+            None => ical::answer_scheduled(&found.body, &who, answer, now, schedules),
+        };
+        let Some(text) = written.map_err(refused)? else {
             return Ok(None);
         };
         let etag = self.write(&found.href, &text, Precondition::Match(found.etag)).await?;
@@ -418,6 +422,7 @@ impl<D: DavApi> CalendarService for CalDav<D> {
             let href = resource_href(calendar, series);
             let current = self.api.get(&href).await.map_err(|e| self.err(e))?;
             self.current(&href, etag, &current.etag)?;
+            let current = self.silenced(calendar, current, notify).await?;
             return match ical::cancel_occurrence(&current.body, original, now).map_err(refused)? {
                 Some(text) => {
                     self.write(&href, &text, Precondition::Match(current.etag)).await?;

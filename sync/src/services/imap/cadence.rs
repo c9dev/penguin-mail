@@ -2,7 +2,8 @@
 //! IDLE on the Inbox (RFC 2177) and wakes the engine when the server
 //! reports a change; the other mailboxes wait for the slow poll, every
 //! five minutes while the window is open and every fifteen while only the
-//! tray runs. A server without IDLE has its Inbox polled every minute.
+//! tray runs. A server without IDLE, or one whose IDLE keeps failing, has
+//! its Inbox polled every minute.
 
 use std::time::Duration;
 

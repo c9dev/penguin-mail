@@ -95,9 +95,10 @@ impl<D: DavApi> CardDav<D> {
             match held {
                 Some(t) if t.starts_with(TOKEN_SYNC) => {
                     // A server that cuts its answer short (507) is asked again
-                    // from the token it gave.
+                    // from the token it gave, as often as a calendar is; a
+                    // read that stops there goes on from that token next time.
                     let mut from = t[TOKEN_SYNC.len()..].to_string();
-                    loop {
+                    for _ in 0..super::caldav::SYNC_ROUNDS {
                         let synced = self.api.sync(&book, &from).await.map_err(|e| self.err(e))?;
                         pending.queue.extend(synced.changed.into_iter().map(|m| (book.clone(), m.href)));
                         pending.deleted.extend(synced.removed);

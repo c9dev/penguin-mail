@@ -204,6 +204,37 @@ fn a_hex_maps_to_the_nearest_outlook_color() {
     assert_eq!(nearest_color("not a color"), "lightBlue");
 }
 
+/// Whole events come in `$batch` entries that each ask for UTC and for
+/// ids that do not change, as a single GET does.
+#[tokio::test]
+async fn whole_events_come_in_batches_in_utc() {
+    let server = MockServer::start().await;
+    common::token_endpoint(&server, "r").await;
+    Mock::given(method("POST"))
+        .and(path("/v1.0/$batch"))
+        .respond_with(|request: &wiremock::Request| {
+            let body: serde_json::Value = serde_json::from_slice(&request.body).unwrap();
+            let answers: Vec<serde_json::Value> = body["requests"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|r| {
+                    let prefer = r["headers"]["Prefer"].as_str().unwrap();
+                    assert!(prefer.contains("ImmutableId") && prefer.contains("outlook.timezone=\"UTC\""), "{prefer}");
+                    let id = r["url"].as_str().unwrap().trim_start_matches("/me/events/");
+                    json!({"id": r["id"], "status": 200, "body": {"id": id, "subject": "Standup"}})
+                })
+                .collect();
+            ResponseTemplate::new(200).set_body_json(json!({"responses": answers}))
+        })
+        .mount(&server)
+        .await;
+    let ids: Vec<String> = (0..3).map(|n| format!("m{n}")).collect();
+    let found = common::graph(&server).events(&ids).await.unwrap();
+    assert_eq!(found[2].as_ref().unwrap().id, "m2");
+    assert_eq!(found[0].as_ref().unwrap().subject.as_deref(), Some("Standup"));
+}
+
 /// The calendar-view delta leaves `originalStart` out of an exception; a
 /// GET of the event has it. Twenty-five exceptions take two `$batch` posts.
 #[tokio::test]
@@ -249,7 +280,7 @@ async fn instances_ask_for_their_original_start() {
     common::token_endpoint(&server, "r").await;
     Mock::given(method("GET"))
         .and(path("/v1.0/me/events/s1/instances"))
-        .and(query_param("$select", "id,type,seriesMasterId,start,end,originalStart"))
+        .and(query_param("$select", "id,type,seriesMasterId,start,end,isAllDay,originalStart,originalStartTimeZone"))
         .respond_with(ResponseTemplate::new(200).set_body_json(json!({
             "value": [{"id": "x1", "originalStart": "2026-10-05T08:00:00Z"}],
         })))

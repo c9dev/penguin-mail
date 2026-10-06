@@ -10,6 +10,16 @@ use mailrs_domain::translate::{fill, gettext};
 
 use crate::SyncError;
 
+/// The header every forward carries, so a forward that comes back to the
+/// Inbox, through a list that rewrites its sender or not, is not forwarded
+/// again and again.
+pub const MARK: &str = "X-Penguin-Mail-Forwarded";
+
+/// Whether `raw` is a forward a local rule made.
+pub fn is_forward(raw: &[u8]) -> bool {
+    mailrs_mime::parts(raw).is_some_and(|p| p.header(MARK).is_some())
+}
+
 pub fn forwarded(raw: &[u8], from: &str, to: &str, now: EpochMillis) -> Result<Vec<u8>, SyncError> {
     let subject = mailrs_mime::parts(raw)
         .and_then(|p| p.header("Subject").map(str::to_string))
@@ -22,6 +32,7 @@ pub fn forwarded(raw: &[u8], from: &str, to: &str, now: EpochMillis) -> Result<V
         .from(Address::new_address(None::<&str>, from))
         .to(Address::new_address(None::<&str>, to))
         .subject(format!("Fwd: {subject}"))
+        .header(MARK, mail_builder::headers::raw::Raw::new("yes"))
         .date(now / 1000)
         .text_body(note)
         .attachment("message/rfc822", "forwarded.eml", raw.to_vec())
@@ -42,5 +53,6 @@ mod tests {
         assert_eq!(parsed.from().and_then(|f| f.first()).and_then(|a| a.address()), Some("me@example.com"));
         assert_eq!(parsed.to().and_then(|f| f.first()).and_then(|a| a.address()), Some("you@example.org"));
         assert!(String::from_utf8_lossy(&sent).contains("message/rfc822"));
+        assert!(is_forward(&sent) && !is_forward(original));
     }
 }

@@ -72,6 +72,9 @@ pub struct ImapState {
     /// Errors aimed at one method, such as `select`: each answers the next
     /// call to that method and no other.
     pub aimed: Vec<(String, ImapError)>,
+    /// Errors aimed at a later call to one method: the count says how many
+    /// calls to it pass first.
+    pub aimed_later: Vec<(String, usize, ImapError)>,
     /// The next IDLE ends at once as `Woke::Dropped`, as the real client
     /// answers when the server sends more during an IDLE than the guard
     /// lets through and the connection is dropped.
@@ -258,6 +261,7 @@ impl FakeImap {
                 failures: VecDeque::new(),
                 calls: VecDeque::new(),
                 aimed: Vec::new(),
+                aimed_later: Vec::new(),
                 overflow_idle: false,
                 hold_move: None,
                 omit_uidnext: false,
@@ -386,6 +390,12 @@ impl FakeImap {
         self.with(|s| s.aimed.push((method.to_string(), err)));
     }
 
+    /// As [`Self::fail_on`], for the call to `method` after `pass` more
+    /// have gone through.
+    pub fn fail_on_later(&self, method: &str, pass: usize, err: ImapError) {
+        self.with(|s| s.aimed_later.push((method.to_string(), pass, err)));
+    }
+
     /// The next IDLE ends at once as `Woke::Dropped`, as when the guard
     /// stops an IDLE that brought more than its budget.
     pub fn overflow_next_idle(&self) {
@@ -442,12 +452,22 @@ impl FakeImap {
         f: impl FnOnce(&mut ImapState) -> Result<T, ImapError>,
     ) -> Result<T, ImapError> {
         self.with(|s| {
-            let aimed = s.aimed.iter().position(|(m, _)| {
-                line == *m
-                    || line
-                        .strip_prefix(m.as_str())
-                        .is_some_and(|r| r.starts_with(' '))
-            });
+            let names = |m: &str| line == m || line.strip_prefix(m).is_some_and(|r| r.starts_with(' '));
+            let aimed = s.aimed.iter().position(|(m, _)| names(m));
+            let mut later = None;
+            for (at, (m, pass, _)) in s.aimed_later.iter_mut().enumerate() {
+                if names(m) {
+                    match *pass {
+                        0 => later = later.or(Some(at)),
+                        _ => *pass -= 1,
+                    }
+                }
+            }
+            if let Some(at) = later {
+                let (_, _, err) = s.aimed_later.remove(at);
+                s.calls.push_back(line);
+                return Err(err);
+            }
             s.calls.push_back(line);
             if s.calls.len() > MAX_CALLS {
                 s.calls.pop_front();

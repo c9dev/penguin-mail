@@ -33,6 +33,19 @@ async fn adapter(extensions: &str) -> (Arc<FakeSieve>, Adapter) {
     (sieve, rules)
 }
 
+#[tokio::test]
+async fn a_rule_and_the_automatic_reply_saved_together_both_stay() {
+    let (sieve, rules) = adapter(DOVECOT).await;
+    rules.create_filter(&from("first@example.com")).await.unwrap();
+    let away = Vacation { enabled: true, subject: "Away".into(), body: "Back on Monday.".into(), ..Vacation::default() };
+    let second = from("second@example.com");
+    let (made, set) = tokio::join!(rules.create_filter(&second), rules.set_vacation(&away));
+    made.unwrap();
+    set.unwrap();
+    let text = sieve.script(SCRIPT_NAME).unwrap();
+    assert!(text.contains("second@example.com") && text.contains("Back on Monday."), "{text}");
+}
+
 fn from(who: &str) -> Filter {
     Filter::block(who)
 }

@@ -101,15 +101,36 @@ async fn marks_changed_elsewhere_come_back_whole() {
 #[tokio::test]
 async fn a_refused_delta_link_lists_the_mail_again_under_the_same_ids() {
     let h = outlook().await;
+    h.fake.add_category("Red", "preset0");
     let id = h.fake.deliver(&h.fake.folder_id("inbox"), fresh());
+    h.fake.tag(&id, &["Red"]);
     h.bootstrap_all().await;
     h.fake.expire_links();
     h.look().await;
     assert!(h.stored(&id).await, "listed again under the id it had");
+    assert!(h.held(&id).await.mailboxes.contains(&"category:Red".to_string()), "the tag stays");
     // The feed has its place back: the next look answers from new links.
     h.fake.mark(&id, Some(true), None);
     h.look().await;
     assert_eq!(h.held(&id).await.keywords, [mailrs_domain::mailbox::keyword::SEEN]);
+}
+
+/// An Inbox past the most ids a listing returns leaves the hourly check
+/// nothing to compare, rather than fetching every message past the cut
+/// again each hour.
+#[tokio::test]
+async fn an_inbox_too_large_to_list_is_not_compared() {
+    let h = outlook().await;
+    let inbox = h.fake.folder_id("inbox");
+    let old = h.fake.deliver(&inbox, FakeMail { at: now_millis() - 86_400_000, ..FakeMail::default() });
+    h.bootstrap_all().await;
+    assert!(h.stored(&old).await);
+    for i in 0..20_000 {
+        h.fake.deliver(&inbox, FakeMail { at: now_millis() - i, ..FakeMail::default() });
+    }
+    let before = h.fake.with(|s| s.meta_fetches.len());
+    h.sync.reconcile_inbox().await.unwrap();
+    assert_eq!(h.fake.with(|s| s.meta_fetches.len()), before, "nothing fetched again");
 }
 
 #[tokio::test]

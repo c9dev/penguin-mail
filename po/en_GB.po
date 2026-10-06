@@ -597,7 +597,7 @@ msgstr "{provider} signs in through your browser"
 msgid "Continue opens {provider}'s sign-in page in your browser."
 msgstr "Continue opens {provider}'s sign-in page in your browser."
 
-#: app/src/app.rs:369
+#: app/src/app.rs:373
 msgid "Your preferences could not be read, so Penguin Mail started from the defaults. The old file is kept as {file}."
 msgstr "Your preferences could not be read, so Penguin Mail started from the defaults. The old file is kept as {file}."
 
@@ -3439,7 +3439,7 @@ msgstr "Try Again"
 #: app/src/ui/calendar/scope.rs:92 app/src/ui/composer/editor.rs:343
 #: app/src/ui/composer/mod.rs:1573 app/src/ui/composer/mod.rs:1642
 #: app/src/ui/composer/mod.rs:1965 app/src/ui/composer/mod.rs:2416
-#: app/src/ui/confirm.rs:29 app/src/ui/rules.rs:445 app/src/ui/rules.rs:586
+#: app/src/ui/confirm.rs:29 app/src/ui/rules.rs:445 app/src/ui/rules.rs:622
 #: app/src/ui/smart_editor.rs:150 app/src/ui/templates.rs:239
 #: app/src/ui/unsubscribe.rs:95 app/src/ui/vacation.rs:45 app/src/ui/when.rs:52
 #: app/src/ui/window/arrange.rs:146 app/src/ui/window/images.rs:101
@@ -7319,7 +7319,7 @@ msgstr "Edit Rule"
 msgid "Rule added"
 msgstr "Rule added"
 
-#: app/src/ui/rules.rs:523 app/src/ui/rules.rs:606
+#: app/src/ui/rules.rs:523 app/src/ui/rules.rs:595
 msgid "Could not add the rule: {reason}"
 msgstr "Could not add the rule: {reason}"
 
@@ -7335,15 +7335,15 @@ msgstr "Saved, but Gmail kept the old rule too, so both run now: {reason}"
 msgid "Could not save the rule: {reason}"
 msgstr "Could not save the rule: {reason}"
 
-#: app/src/ui/rules.rs:580
+#: app/src/ui/rules.rs:616
 msgid "Replace “{script}”?"
 msgstr "Replace “{script}”?"
 
-#: app/src/ui/rules.rs:582
+#: app/src/ui/rules.rs:618
 msgid "{provider} runs one set of rules at a time, and it runs “{script}” now. Penguin Mail's rules would take its place; “{script}” stays on the server, switched off."
 msgstr "{provider} runs one set of rules at a time, and it runs “{script}” now. Penguin Mail's rules would take its place; “{script}” stays on the server, switched off."
 
-#: app/src/ui/rules.rs:586
+#: app/src/ui/rules.rs:622
 msgid "Replace"
 msgstr "Replace"
 
@@ -9126,33 +9126,33 @@ msgstr "Is unread"
 msgid "Is flagged"
 msgstr "Is flagged"
 
-#: sync/src/account/writes.rs:756
+#: sync/src/account/writes.rs:760
 msgid "{provider} is busy. Still working on {conversations}."
 msgstr "{provider} is busy. Still working on {conversations}."
 
-#: sync/src/account/writes.rs:778
-msgid "{provider} is busy, so {action} did not go through for {conversations}. Try again in a moment."
-msgstr "{provider} is busy, so {action} did not go through for {conversations}. Try again in a moment."
+#: sync/src/account/writes.rs:783
+msgid "{provider} is busy, so “{action}” did not go through for {conversations}. Try again in a moment."
+msgstr "{provider} is busy, so “{action}” did not go through for {conversations}. Try again in a moment."
 
-#: sync/src/account/writes.rs:787
-msgid "{provider} stayed busy for {waited}, so {action} did not go through for {conversations}."
-msgstr "{provider} stayed busy for {waited}, so {action} did not go through for {conversations}."
+#: sync/src/account/writes.rs:792
+msgid "{provider} stayed busy for {waited}, so “{action}” did not go through for {conversations}."
+msgstr "{provider} stayed busy for {waited}, so “{action}” did not go through for {conversations}."
 
-#: sync/src/account/writes.rs:794
+#: sync/src/account/writes.rs:799
 msgid "{action} failed: {reason}"
 msgstr "{action} failed: {reason}"
 
-#: sync/src/account/writes.rs:812
+#: sync/src/account/writes.rs:817
 msgid "a moment"
 msgstr "a moment"
 
-#: sync/src/account/writes.rs:814
+#: sync/src/account/writes.rs:819
 msgid "{count} second"
 msgid_plural "{count} seconds"
 msgstr[0] "{count} second"
 msgstr[1] "{count} seconds"
 
-#: sync/src/account/writes.rs:819
+#: sync/src/account/writes.rs:824
 msgid "a minute"
 msgstr "a minute"
 
@@ -9184,7 +9184,18 @@ msgid_plural "{accounts} will get new labels."
 msgstr[0] "{accounts} will get a new label."
 msgstr[1] "{accounts} will get new labels."
 
-#: sync/src/calendar_copy.rs:1673
+#: sync/src/calendar_copy.rs:905 sync/src/calendar_copy.rs:974
+#: sync/src/calendar_copy.rs:1019
+msgid "deleted elsewhere"
+msgstr "deleted elsewhere"
+
+#. A new event's id cannot be missing, so it is the
+#. calendar that went: its rows in the queue outlive it.
+#: sync/src/calendar_copy.rs:910
+msgid "the calendar is gone"
+msgstr "the calendar is gone"
+
+#: sync/src/calendar_copy.rs:1671
 msgid "Google Calendar offers out of office and focus time only on some work and school accounts ({reason})"
 msgstr "Google Calendar offers out of office and focus time only on some work and school accounts ({reason})"
 
@@ -9374,27 +9385,27 @@ msgstr "{problem}. Penguin Mail stopped trying"
 msgid "The keyring refused: {reason}"
 msgstr "The keyring refused: {reason}"
 
-#: sync/src/rules/forward.rs:18
+#: sync/src/rules/forward.rs:28
 msgid "A rule on this computer forwarded the attached message from {address}."
 msgstr "A rule on this computer forwarded the attached message from {address}."
 
-#: sync/src/services/caldav.rs:438
+#: sync/src/services/caldav.rs:443
 msgid "An event needs an ID to be imported."
 msgstr "An event needs an ID to be imported."
 
-#: sync/src/services/caldav.rs:459
+#: sync/src/services/caldav.rs:464
 msgid "A CalDAV calendar cannot store attached files."
 msgstr "A CalDAV calendar cannot store attached files."
 
-#: sync/src/services/caldav.rs:463
+#: sync/src/services/caldav.rs:468
 msgid "A CalDAV calendar has no files to share."
 msgstr "A CalDAV calendar has no files to share."
 
-#: sync/src/services/caldav.rs:493
+#: sync/src/services/caldav.rs:498
 msgid "You are not a guest of this event."
 msgstr "You are not a guest of this event."
 
-#: sync/src/services/caldav.rs:497
+#: sync/src/services/caldav.rs:502
 msgid "Penguin Mail cannot change the calendar list of a CalDAV server."
 msgstr "Penguin Mail cannot change the calendar list of a CalDAV server."
 
@@ -9410,43 +9421,51 @@ msgstr "The message names nobody to send it to."
 msgid "This rule is read-only, so Penguin Mail leaves it as it is."
 msgstr "This rule is read-only, so Penguin Mail leaves it as it is."
 
-#: sync/src/services/microsoft/calendar.rs:307
+#: sync/src/services/microsoft/calendar.rs:359
 msgid "Outlook cannot repeat an event that way."
 msgstr "Outlook cannot repeat an event that way."
 
-#: sync/src/services/microsoft/calendar.rs:564
+#: sync/src/services/microsoft/calendar.rs:651
 msgid "Outlook cannot attach a file to an event."
 msgstr "Outlook cannot attach a file to an event."
 
-#: sync/src/services/microsoft/calendar.rs:568
+#: sync/src/services/microsoft/calendar.rs:655
 msgid "Outlook has no files to share."
 msgstr "Outlook has no files to share."
 
-#: sync/src/services/microsoft/calendar.rs:577
+#: sync/src/services/microsoft/calendar.rs:664
 msgid "Outlook cannot move an event to another calendar."
 msgstr "Outlook cannot move an event to another calendar."
 
 #. What Outlook has no call for is a refusal, not `Unsupported`:
 #. that answer would keep the change in the queue for good.
-#: sync/src/services/microsoft/calendar.rs:611
+#: sync/src/services/microsoft/calendar.rs:698
 msgid "Outlook cannot take a calendar off the list."
 msgstr "Outlook cannot take a calendar off the list."
 
-#: sync/src/services/microsoft/calendar.rs:612
+#: sync/src/services/microsoft/calendar.rs:699
 msgid "Outlook cannot hide a calendar on all your devices."
 msgstr "Outlook cannot hide a calendar on all your devices."
 
-#: sync/src/services/microsoft/calendar.rs:613
+#: sync/src/services/microsoft/calendar.rs:700
 msgid "Outlook cannot subscribe to a calendar by its address."
 msgstr "Outlook cannot subscribe to a calendar by its address."
 
-#: sync/src/services/microsoft/calendar.rs:614
+#: sync/src/services/microsoft/calendar.rs:701
 msgid "Outlook has no other calendars to add."
 msgstr "Outlook has no other calendars to add."
 
 #: sync/src/services/microsoft/errors.rs:18
 msgid "This mailbox is on your organization's own Exchange server, which Penguin Mail cannot reach."
 msgstr "This mailbox is on your organisation's own Exchange server, which Penguin Mail cannot reach."
+
+#: sync/src/services/microsoft/outgoing.rs:61
+msgid "The message has no Message-ID."
+msgstr "The message has no Message-ID."
+
+#: sync/src/services/microsoft/outgoing.rs:74
+msgid "The message cannot be read."
+msgstr "The message cannot be read."
 
 #: sync/src/services/microsoft/outgoing.rs:77
 msgid "Microsoft cannot send a signed or encrypted message larger than 3 MB. Make the files smaller or send them apart."
@@ -9460,6 +9479,10 @@ msgstr "Outlook's rules cannot do that."
 msgid "Outlook answered but did not keep the automatic reply."
 msgstr "Outlook answered but did not keep the automatic reply."
 
+#: sync/src/services/microsoft/writes.rs:163
+msgid "A folder needs a name."
+msgstr "A folder needs a name."
+
 #: sync/src/services/pop3/mod.rs:416
 msgid "Penguin Mail keeps the names of Inbox, Sent, Drafts, Trash, Junk and Archive."
 msgstr "Penguin Mail keeps the names of Inbox, Sent, Drafts, Trash, Junk and Archive."
@@ -9468,39 +9491,39 @@ msgstr "Penguin Mail keeps the names of Inbox, Sent, Drafts, Trash, Junk and Arc
 msgid "Penguin Mail keeps Inbox, Sent, Drafts, Trash, Junk and Archive."
 msgstr "Penguin Mail keeps Inbox, Sent, Drafts, Trash, Junk and Archive."
 
-#: sync/src/services/sieve.rs:89
+#: sync/src/services/sieve.rs:95
 msgid "{provider} offers no encrypted connection for rules, so Penguin Mail does not send your password there."
 msgstr "{provider} offers no encrypted connection for rules, so Penguin Mail does not send your password there."
 
-#: sync/src/services/sieve.rs:102
+#: sync/src/services/sieve.rs:108
 msgid "{provider} cannot run this rule: its server lacks the Sieve extension “{extension}”."
 msgstr "{provider} cannot run this rule: its server lacks the Sieve extension “{extension}”."
 
-#: sync/src/services/sieve.rs:107
+#: sync/src/services/sieve.rs:113
 msgid "The folder this rule files into is not on the server yet."
 msgstr "The folder this rule files into is not on the server yet."
 
-#: sync/src/services/sieve.rs:110
+#: sync/src/services/sieve.rs:116
 msgid "A rule on {provider} cannot keep mail out of Spam."
 msgstr "A rule on {provider} cannot keep mail out of Spam."
 
-#: sync/src/services/sieve.rs:114
+#: sync/src/services/sieve.rs:120
 msgid "{provider} does not mark mail as important."
 msgstr "{provider} does not mark mail as important."
 
-#: sync/src/services/sieve.rs:118
+#: sync/src/services/sieve.rs:124
 msgid "A rule can file mail into one folder."
 msgstr "A rule can file mail into one folder."
 
-#: sync/src/services/sieve.rs:121
+#: sync/src/services/sieve.rs:127
 msgid "Say which mail the rule is for"
 msgstr "Say which mail the rule is for"
 
-#: sync/src/services/sieve.rs:123
+#: sync/src/services/sieve.rs:129
 msgid "Choose what the rule does"
 msgstr "Choose what the rule does"
 
-#: sync/src/services/sieve.rs:190
+#: sync/src/services/sieve.rs:196
 msgid "The rule is read-only."
 msgstr "The rule is read-only."
 

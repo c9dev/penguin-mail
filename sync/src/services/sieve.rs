@@ -24,6 +24,10 @@ pub struct SieveRules<M> {
     address: String,
     provider: String,
     state: Arc<Mutex<State>>,
+    /// Held from a write's read of the script through its put, so a rule
+    /// sent by the timer and the automatic reply saved at the same moment
+    /// do not both start from the same script and lose one change.
+    writing: Arc<tokio::sync::Mutex<()>>,
 }
 
 #[derive(Default)]
@@ -40,6 +44,7 @@ impl<M> Clone for SieveRules<M> {
             address: self.address.clone(),
             provider: self.provider.clone(),
             state: Arc::clone(&self.state),
+            writing: Arc::clone(&self.writing),
         }
     }
 }
@@ -59,6 +64,7 @@ impl<M: ManageSieveApi> SieveRules<M> {
             address,
             provider,
             state: Arc::default(),
+            writing: Arc::default(),
         }
     }
 
@@ -207,6 +213,7 @@ impl<M: ManageSieveApi> RulesService for SieveRules<M> {
 
     async fn create_filter(&self, filter: &Filter) -> Result<Filter, BackendError> {
         Self::refuse_read_only(filter)?;
+        let _writing = self.writing.lock().await;
         let (mut script, ext, running) = self.load().await?;
         let made = Self::fresh(filter);
         script.rules.push(made.clone());
@@ -215,6 +222,7 @@ impl<M: ManageSieveApi> RulesService for SieveRules<M> {
     }
 
     async fn delete_filter(&self, id: &str) -> Result<(), BackendError> {
+        let _writing = self.writing.lock().await;
         let (mut script, ext, running) = self.load().await?;
         let before = script.rules.len();
         script.rules.retain(|r| r.id.as_deref() != Some(id));
@@ -226,6 +234,7 @@ impl<M: ManageSieveApi> RulesService for SieveRules<M> {
 
     async fn replace_filter(&self, old_id: &str, new: &Filter) -> Result<Filter, BackendError> {
         Self::refuse_read_only(new)?;
+        let _writing = self.writing.lock().await;
         let (mut script, ext, running) = self.load().await?;
         let slot = script
             .rules
@@ -253,6 +262,7 @@ impl<M: ManageSieveApi> AutoReplyService for SieveRules<M> {
     }
 
     async fn set_vacation(&self, vacation: &Vacation) -> Result<(), BackendError> {
+        let _writing = self.writing.lock().await;
         let (mut script, ext, running) = self.load().await?;
         script.vacation = Some(vacation.clone());
         self.store(script, &ext, running).await

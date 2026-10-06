@@ -111,6 +111,39 @@ async fn a_search_leaves_out_the_order_graph_refuses_beside_it() {
 }
 
 #[tokio::test]
+async fn a_category_listing_filters_by_name_after_the_date() {
+    let server = MockServer::start().await;
+    common::token_endpoint(&server, "r").await;
+    Mock::given(method("GET"))
+        .and(path("/v1.0/me/messages"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({"value": []})))
+        .mount(&server)
+        .await;
+    let listing = Listing {
+        received_since: Some("2026-08-28T00:00:00Z".into()),
+        category: Some("Ann's".into()),
+        top: 1000,
+        ..Listing::default()
+    };
+    common::graph(&server)
+        .list_messages(&listing, None)
+        .await
+        .unwrap();
+    let asked = server.received_requests().await.unwrap();
+    let url = &asked
+        .iter()
+        .find(|r| r.url.path() == "/v1.0/me/messages")
+        .unwrap()
+        .url;
+    let pairs: std::collections::HashMap<_, _> = url.query_pairs().into_owned().collect();
+    assert_eq!(
+        pairs["$filter"],
+        "receivedDateTime ge 2026-08-28T00:00:00Z and categories/any(c:c eq 'Ann''s')"
+    );
+    assert_eq!(pairs["$orderby"], "receivedDateTime desc");
+}
+
+#[tokio::test]
 async fn metadata_fetches_keep_each_answer_in_its_place() {
     let server = MockServer::start().await;
     common::token_endpoint(&server, "r").await;

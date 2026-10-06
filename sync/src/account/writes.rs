@@ -404,7 +404,11 @@ impl AccountSync {
             }
             return Err(err.into());
         }
-        relocated?;
+        // The server took every change and the store shows it, so a failure
+        // to record where the mail went is no failure of the action.
+        if let Err(lost) = relocated {
+            tracing::warn!(account = account_id, error = %lost, "could not record where the server moved mail");
+        }
         Ok(applied)
     }
 
@@ -763,19 +767,20 @@ fn still_waiting(writing: &Writing) -> String {
 
 /// What the toast says when a write did not land. A rate limit that
 /// outlasted the waiting names how long the action held on and how much
-/// of it did not go through, so nobody has to guess what to redo.
+/// of it did not go through, so nobody has to guess what to redo. The
+/// action keeps its words in quotes, as the menu writes them: it can name
+/// a folder, whose name lowercasing would misspell.
 fn write_failure(writing: &Writing, err: &BackendError, waited: Duration) -> String {
-    let what = writing.what.to_lowercase();
     let many = conversations(writing.conversations);
     let values = [
-        ("action", what.as_str()),
+        ("action", writing.what.as_str()),
         ("conversations", many.as_str()),
         ("provider", writing.provider.as_str()),
     ];
     match err {
         BackendError::RateLimited(_) if waited.is_zero() => fill(
             &gettext(
-                "{provider} is busy, so {action} did not go through for {conversations}. \
+                "{provider} is busy, so “{action}” did not go through for {conversations}. \
                  Try again in a moment.",
             ),
             &values,
@@ -784,7 +789,7 @@ fn write_failure(writing: &Writing, err: &BackendError, waited: Duration) -> Str
             let waited = roughly(waited);
             fill(
                 &gettext(
-                    "{provider} stayed busy for {waited}, so {action} did not go through \
+                    "{provider} stayed busy for {waited}, so “{action}” did not go through \
                      for {conversations}.",
                 ),
                 &[("waited", waited.as_str()), values[0], values[1], values[2]],
@@ -846,11 +851,18 @@ mod tests {
         let err = BackendError::RateLimited(None);
         assert_eq!(
             write_failure(&writing("Fastmail"), &err, Duration::ZERO),
-            "Fastmail is busy, so archive did not go through for 1 conversation. Try again in a moment."
+            "Fastmail is busy, so “Archive” did not go through for 1 conversation. Try again in a moment."
         );
         assert_eq!(
             write_failure(&writing("Fastmail"), &err, Duration::from_secs(5)),
-            "Fastmail stayed busy for 5 seconds, so archive did not go through for 1 conversation."
+            "Fastmail stayed busy for 5 seconds, so “Archive” did not go through for 1 conversation."
         );
+    }
+
+    #[test]
+    fn a_rate_limit_failure_keeps_the_folder_name_as_the_person_wrote_it() {
+        let moving = Writing { what: "Move to Work Projects".into(), ..writing("Fastmail") };
+        let said = write_failure(&moving, &BackendError::RateLimited(None), Duration::ZERO);
+        assert!(said.contains("“Move to Work Projects”"), "{said}");
     }
 }

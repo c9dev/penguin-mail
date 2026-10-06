@@ -10,6 +10,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 use chrono::{Local, TimeZone};
+use mailrs_domain::translate::gettext;
 use mailrs_domain::{
     AccountId, EpochMillis, Filter, FilterAction, FilterCriteria, Label, MailSet, Role, Vacation,
 };
@@ -127,6 +128,11 @@ pub struct SentRules {
     pub sent: usize,
     /// The server's words for each waiting change it refused.
     pub refused: Vec<String>,
+    /// The script of the person's own that the next waiting change would
+    /// replace on a server that runs one script and cannot include it.
+    /// The change stays waiting until the person says to replace it
+    /// (`take_over_rules`).
+    pub would_replace: Option<String>,
 }
 
 pub struct AccountSettings<A: Accounts> {
@@ -276,8 +282,9 @@ impl<A: Accounts> AccountSettings<A> {
     }
 
     /// Sends the changes that waited for the server, in order. It stops at
-    /// a failure that may pass and drops a change the server refused,
-    /// keeping its words for the caller to show.
+    /// a failure that may pass, and at a change that would replace the
+    /// person's own script, which waits for them to say so. It drops a
+    /// change the server refused, keeping its words for the caller to show.
     pub async fn send_rule_changes(&self, account_id: AccountId) -> Result<SentRules, SyncError> {
         let service = self.rules_service(account_id)?;
         let queued = self.db.read(move |c| rule_changes::queued(c, account_id)).await?;
@@ -290,6 +297,13 @@ impl<A: Accounts> AccountSettings<A> {
             match answer {
                 Ok(()) => sent.sent += 1,
                 Err(err) if err.is_transient() => break,
+                Err(BackendError::WouldReplace { script }) => {
+                    sent.would_replace = Some(script);
+                    break;
+                }
+                // The server's own words, without the English the error's
+                // Display puts before them.
+                Err(BackendError::Refused(words)) => sent.refused.push(words),
                 Err(err) => sent.refused.push(err.to_string()),
             }
             let seq = queued.seq;
@@ -315,9 +329,9 @@ impl<A: Accounts> AccountSettings<A> {
             return Ok(Permitted::Done(Replaced::Swapped(old.clone())));
         }
         if old.read_only {
-            return Err(SyncError::Backend(BackendError::Refused(
-                "the rule is read-only".into(),
-            )));
+            return Err(SyncError::Backend(BackendError::Refused(gettext(
+                "Made elsewhere. Change it where you made it.",
+            ))));
         }
         let old_id = old
             .id

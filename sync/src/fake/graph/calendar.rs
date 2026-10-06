@@ -196,9 +196,25 @@ pub(super) fn original_starts(s: &mut GraphState, ids: &[String]) -> Answer<Vec<
         .collect())
 }
 
-pub(super) fn events_by_uid(s: &mut GraphState, uid: &str) -> Answer<Vec<GraphEvent>> {
+/// What Graph's `$batch` of `GET /events/{id}` answers, logged one entry a
+/// request of twenty, as Graph takes them.
+pub(super) fn events(s: &mut GraphState, ids: &[String]) -> Answer<Vec<Answer<GraphEvent>>> {
     s.refuses(Area::Calendar)?;
-    Ok(s.events.values().map(|(_, e)| e).filter(|e| e.ical_uid.as_deref() == Some(uid)).cloned().collect())
+    s.master_reads.extend(ids.chunks(20).map(<[String]>::to_vec));
+    Ok(ids.iter().map(|id| event_of(s, id).cloned()).collect())
+}
+
+pub(super) fn events_by_uid(s: &mut GraphState, calendar: &str, uid: &str) -> Answer<Vec<GraphEvent>> {
+    s.refuses(Area::Calendar)?;
+    if !s.calendars.iter().any(|c| c.id == calendar) {
+        return Err(GraphError::NotFound);
+    }
+    Ok(s.events
+        .values()
+        .filter(|(on, e)| on == calendar && e.ical_uid.as_deref() == Some(uid))
+        .map(|(_, e)| e)
+        .cloned()
+        .collect())
 }
 
 pub(super) fn create_event(s: &mut GraphState, calendar: &str, body: &Value) -> Answer<GraphEvent> {
