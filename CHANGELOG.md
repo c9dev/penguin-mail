@@ -301,6 +301,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - Saving rules or the automatic reply on a Sieve server that stops answering after the save no longer leaves the dialog waiting.
 - A rule that moves mail to the Trash, kept on a mail server whose account has no Trash folder, now makes one instead of deleting the mail for good.
 - An automatic reply of more than one line on an IMAP account with Sieve keeps showing in Penguin Mail after you save it, and saving it again no longer leaves the server with two replies.
+- In the snap, keys and certificates you import stay when you revert the snap to an earlier revision.
 - An Outlook account with more than a hundred calendars, contact folders or rules shows all of them.
 - An Outlook message no longer shows twice in the list when Penguin Mail fetched it in a batch after first seeing it in a sync.
 - Show in Calendar opens the event's popover even when the calendar refreshes at that moment.
