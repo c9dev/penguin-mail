@@ -173,13 +173,20 @@ fn rule_statement(
             }
         }
         [] => {}
-        [MailSet::Role(Role::Trash)] => match folder(&MailSet::Role(Role::Trash)) {
-            Some(name) => {
-                need("fileinto")?;
-                actions.push(format!("fileinto {};", quote(&name)));
+        // Without a Trash folder the rule makes one. `discard` would drop
+        // the mail with no copy anywhere, where the person asked for a
+        // move they can undo.
+        [MailSet::Role(Role::Trash)] => {
+            need("fileinto")?;
+            match folder(&MailSet::Role(Role::Trash)) {
+                Some(name) => actions.push(format!("fileinto {};", quote(&name))),
+                None if ext.has("mailbox") => {
+                    needs.insert("mailbox");
+                    actions.push("fileinto :create \"Trash\";".to_string());
+                }
+                None => return Err(WriteError::NoFolder("Trash".into())),
             }
-            None => actions.push("discard;".to_string()),
-        },
+        }
         [set] => {
             need("fileinto")?;
             let name = folder(set).ok_or_else(|| WriteError::NoFolder(format!("{set:?}")))?;

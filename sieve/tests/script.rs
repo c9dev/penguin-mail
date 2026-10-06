@@ -79,12 +79,23 @@ fn a_size_rule_uses_over_and_under() {
 }
 
 #[test]
-fn deleting_files_into_the_trash_and_discards_only_without_one() {
+fn deleting_files_into_the_trash() {
     let block = Script { rules: vec![Filter { id: Some("b".into()), ..Filter::block("pest@example.com") }], ..Script::default() };
     let text = write(&block, "me@example.com", &folder, &ext()).unwrap();
     assert!(text.contains("fileinto \"Trash\";"), "{text}");
+}
+
+#[test]
+fn deleting_without_a_trash_folder_makes_one_and_never_discards() {
+    let block = Script { rules: vec![Filter { id: Some("b".into()), ..Filter::block("pest@example.com") }], ..Script::default() };
     let text = write(&block, "me@example.com", &|_| None, &ext()).unwrap();
-    assert!(text.contains("discard;"), "{text}");
+    assert!(text.contains("fileinto :create \"Trash\";"), "{text}");
+    assert!(!text.contains("discard"), "{text}");
+    let without_mailbox = Extensions::parse("fileinto vacation imap4flags");
+    assert!(matches!(
+        write(&block, "me@example.com", &|_| None, &without_mailbox),
+        Err(WriteError::NoFolder(_))
+    ));
 }
 
 #[test]
