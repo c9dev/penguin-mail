@@ -1240,6 +1240,43 @@ pub fn build_mime(draft: &Draft, date_secs: i64, message_id: &str) -> Result<Vec
         .map_err(|e| e.to_string())
 }
 
+/// `draft` made into the request that leaves a mailing list: to `to`
+/// alone, with the subject and body the list asked for. The address came
+/// from a sender's header, so anything that reads as more than one
+/// recipient, or as none, is refused rather than trimmed.
+pub fn request_draft(
+    mut draft: Draft,
+    to: &str,
+    subject: String,
+    body: String,
+) -> Result<Draft, String> {
+    let recipients = parse_recipients(to);
+    let refused = || gettext("The list did not give one address to write to.");
+    let [one] = recipients.as_slice() else {
+        return Err(refused());
+    };
+    if !one.email.contains('@') {
+        return Err(refused());
+    }
+    draft.to = vec![Address {
+        name: None,
+        email: one.email.clone(),
+    }];
+    draft.subject = subject;
+    draft.markdown = body;
+    Ok(draft)
+}
+
+/// The RFC 822 bytes of a list request: one `text/plain` part holding
+/// `draft.markdown` as written. The words are the sender's, so they are
+/// never read as Markdown and no HTML part goes out with them.
+pub fn build_request(draft: &Draft, date_secs: i64, message_id: &str) -> Result<Vec<u8>, String> {
+    envelope(draft, date_secs, message_id)
+        .body(MimePart::new("text/plain", draft.markdown.clone()))
+        .write_to_vec()
+        .map_err(|e| e.to_string())
+}
+
 /// The RFC 822 bytes Gmail keeps for `draft` in Drafts: the message
 /// [`build_mime`] writes, with [`QUOTE_MARK`] where a folded quote starts,
 /// so the draft reopens folded.
@@ -1950,6 +1987,49 @@ mod tests {
         assert!(sent.contains("<b>From:</b> Ann &lt;ann@example.com&gt;"));
         let plain = parsed.body_text(0).unwrap();
         assert!(plain.contains("Sale *now* on"));
+    }
+
+    /// The request that leaves a mailing list carries the sender's words,
+    /// so they go out as the text they are, never read as Markdown or
+    /// HTML.
+    #[test]
+    fn a_list_request_goes_out_as_plain_text_only() {
+        let body = "Hi,\n\n<a href=\"https://elsewhere.example/\">Open</a> **now**";
+        let draft = request_draft(
+            Draft::new(1, me()),
+            "leave@news.example",
+            "Remove me".into(),
+            body.into(),
+        )
+        .expect("one address");
+        let raw = build_request(&draft, 0, "id@example.com").expect("built");
+        let parsed = MessageParser::default().parse(&raw).expect("parsed");
+
+        assert_eq!(parsed.parts.len(), 1, "{}", String::from_utf8_lossy(&raw));
+        let kind = parsed.content_type().expect("a content type");
+        assert_eq!((kind.ctype(), kind.subtype()), ("text", Some("plain")));
+        let sent = parsed.body_text(0).expect("a text body").replace("\r\n", "\n");
+        assert_eq!(sent, body);
+        assert_eq!(parsed.subject(), Some("Remove me"));
+        let to = parsed.to().and_then(|to| to.as_list()).expect("a To list");
+        assert_eq!(to.len(), 1);
+        assert_eq!(to[0].address(), Some("leave@news.example"));
+        assert!(!String::from_utf8_lossy(&raw).contains("text/html"));
+    }
+
+    #[test]
+    fn a_list_request_to_more_than_one_address_is_refused() {
+        for to in [
+            "a@list.example, b@corp.example",
+            "a@list.example;b@corp.example",
+            "",
+            "not an address",
+        ] {
+            assert!(
+                request_draft(Draft::new(1, me()), to, "s".into(), "b".into()).is_err(),
+                "{to}"
+            );
+        }
     }
 
     #[test]
