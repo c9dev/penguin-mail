@@ -5,6 +5,11 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ## Unreleased
 
+### Fixed
+
+- The snap shows its text in your desktop's normal sans-serif font again,
+  not in a fixed-width fallback, on desktops other than Ubuntu 26.04.
+
 ## 1.0.0 (2026-10-06)
 
 ### New
