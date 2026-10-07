@@ -30,7 +30,7 @@ fn icon(category: Category) -> &'static str {
         Category::Promotions => "penguin-mail-tag-symbolic",
         Category::Social => "system-users-symbolic",
         Category::Focused => "starred-symbolic",
-        Category::Other => "mail-archive-symbolic",
+        Category::Other => "penguin-mail-archive-symbolic",
     }
 }
 

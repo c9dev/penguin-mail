@@ -9,6 +9,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 - The snap shows its text in your desktop's normal sans-serif font again,
   not in a fixed-width fallback, on desktops other than Ubuntu 26.04.
+- Buttons and lists show their icons on desktops whose icon theme the
+  snap or Flatpak cannot see, such as Cinnamon on Linux Mint or Pop!_OS.
 
 ## 1.0.0 (2026-10-06)
 

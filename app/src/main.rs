@@ -18,6 +18,7 @@ mod diff;
 mod event_reminders;
 mod exe;
 mod format;
+mod icon_theme;
 mod goa;
 mod images;
 mod keyring_plug;
@@ -278,8 +279,14 @@ pub fn ensure_gtk() {
     gtk::init().expect("GTK starts on this display");
     adw::init().expect("libadwaita starts");
     if let Some(display) = gdk::Display::default() {
-        gtk::IconTheme::for_display(&display)
-            .add_resource_path("/io/github/c9dev/PenguinMail/icons");
+        let icons = gtk::IconTheme::for_display(&display);
+        icons.add_resource_path("/io/github/c9dev/PenguinMail/icons");
+        let theme = icons.theme_name();
+        if icon_theme::needs_fallback(&theme, |name| icons.has_icon(name)) {
+            tracing::info!(%theme, "the icon theme lacks the app's icons; using Adwaita");
+            gtk::Settings::for_display(&display)
+                .set_gtk_icon_theme_name(Some(icon_theme::FALLBACK));
+        }
         let css = gtk::CssProvider::new();
         css.load_from_resource("/io/github/c9dev/PenguinMail/style.css");
         gtk::style_context_add_provider_for_display(
