@@ -195,7 +195,10 @@ impl App {
                 window.calendar.commit_all_now();
             }
         });
-        if !app.core.demo {
+        // The tray is a D-Bus service of Linux desktops. macOS has no
+        // session bus, and GIO answers a watch on it with a vanished
+        // callback that holds no connection.
+        if !app.core.demo && cfg!(target_os = "linux") {
             app.watch_for_tray_host();
         }
         let weak = Rc::downgrade(&app);

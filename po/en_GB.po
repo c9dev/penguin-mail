@@ -609,7 +609,7 @@ msgstr "{provider} signs in through your browser"
 msgid "Continue opens {provider}'s sign-in page in your browser."
 msgstr "Continue opens {provider}'s sign-in page in your browser."
 
-#: app/src/app.rs:373
+#: app/src/app.rs:376
 msgid "Your preferences could not be read, so Penguin Mail started from the defaults. The old file is kept as {file}."
 msgstr "Your preferences could not be read, so Penguin Mail started from the defaults. The old file is kept as {file}."
 
