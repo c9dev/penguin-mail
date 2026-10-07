@@ -3245,10 +3245,7 @@ impl MainWindow {
 
     /// True when the focus is in the message itself, where Ctrl+A selects text.
     fn reading_text(&self) -> bool {
-        GtkWindowExt::focus(&self.window).is_some_and(|focus| {
-            focus.is::<webkit::WebView>()
-                || focus.ancestor(webkit::WebView::static_type()).is_some()
-        })
+        GtkWindowExt::focus(&self.window).is_some_and(|focus| crate::web::holds_focus(&focus))
     }
 
     fn typing(&self) -> bool {

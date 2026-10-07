@@ -29,7 +29,6 @@ use adw::prelude::*;
 use gtk::{gdk, gio, glib};
 use mailrs_domain::translate::{fill, fill_plural, gettext};
 use mailrs_domain::{Category, FlagColor, Folder, MessageMeta, Target};
-use webkit::prelude::*;
 
 use super::card_place::Host as CardHost;
 use super::find::FindBar;
@@ -48,6 +47,7 @@ use crate::protection::run::{Claimed, Installed};
 use crate::protection::{self};
 use crate::render::{FOLD_MS, Theme};
 use crate::translation::Translation;
+use crate::web::{self, WebView};
 
 pub enum Action {
     /// The event card asked for something: an answer, or a hand-off to the
@@ -256,8 +256,7 @@ pub struct ConversationView {
     many_junk: gtk::Button,
     many_trash: gtk::Button,
     stack: gtk::Stack,
-    webview: webkit::WebView,
-    content: webkit::UserContentManager,
+    webview: WebView,
     banner: adw::Banner,
     /// The event card, shown inside the message that carries an
     /// invitation.
@@ -308,7 +307,7 @@ pub struct ConversationView {
     /// The popover an item led to, such as the label list. Held so the one
     /// before it lets go of the view.
     menu_popover: RefCell<Option<gtk::Popover>>,
-    filter: RefCell<Option<webkit::UserContentFilter>>,
+    filter: RefCell<Option<web::Filter>>,
     open: RefCell<Option<OpenThread>>,
     /// Counts the threads asked for, so a store read that answers after a
     /// later click can tell it lost.
@@ -325,7 +324,7 @@ pub struct ConversationView {
     /// Articles waiting for the latest page to be parsed.
     waiting: RefCell<Vec<Article>>,
     /// The page's requests for pictures that have not arrived yet.
-    held: RefCell<Vec<(Address, webkit::URISchemeRequest)>>,
+    held: RefCell<Vec<(Address, web::Request)>>,
     compact: Cell<bool>,
     detached: Cell<bool>,
     /// The mail the header acts on comes from one account that keeps tags.
@@ -339,46 +338,21 @@ pub struct ConversationView {
 impl ConversationView {
     pub fn new(on_action: impl Fn(Action) + 'static) -> Rc<ConversationView> {
         let on_action: Rc<dyn Fn(Action)> = Rc::new(on_action);
-        let content = webkit::UserContentManager::new();
+        // The page asks for its pictures before the view around it exists,
+        // so the handler finds the view through this once it does.
+        let owner: Rc<RefCell<Weak<ConversationView>>> = Rc::default();
+        let webview = {
+            let owner = Rc::clone(&owner);
+            WebView::reading(inline::SCHEME, move |request| {
+                match owner.borrow().upgrade() {
+                    Some(view) => view.serve(request),
+                    None => request.refuse(),
+                }
+            })
+        };
         for script in [MENU_SCRIPT, READY_SCRIPT] {
-            content.add_script(&webkit::UserScript::new(
-                script,
-                webkit::UserContentInjectedFrames::TopFrame,
-                webkit::UserScriptInjectionTime::End,
-                &[],
-                &[],
-            ));
+            webview.add_script(script);
         }
-        content.register_script_message_handler("mailrsReady", None);
-        let settings = webkit::Settings::new();
-        settings.set_enable_javascript(true);
-        settings.set_enable_javascript_markup(false);
-        settings.set_javascript_can_open_windows_automatically(false);
-        settings.set_enable_developer_extras(false);
-        settings.set_enable_html5_local_storage(false);
-        settings.set_enable_html5_database(false);
-        settings.set_enable_page_cache(false);
-        settings.set_enable_media(false);
-        settings.set_enable_mediasource(false);
-        settings.set_enable_encrypted_media(false);
-        settings.set_enable_webaudio(false);
-        settings.set_enable_webgl(false);
-        settings.set_enable_webrtc(false);
-        settings.set_enable_fullscreen(false);
-        settings.set_enable_back_forward_navigation_gestures(false);
-        settings.set_allow_file_access_from_file_urls(false);
-        settings.set_enable_smooth_scrolling(true);
-        settings.set_auto_load_images(true);
-        let session = network_session();
-        let webview = webkit::WebView::builder()
-            .network_session(&session)
-            .user_content_manager(&content)
-            .settings(&settings)
-            .build();
-        webview.set_vexpand(true);
-        webview.set_hexpand(true);
-        keep_key_text_out_of_tab(&webview);
-        webview.connect_realize(keep_key_text_out_of_tab);
 
         let empty = adw::StatusPage::builder()
             .icon_name("penguin-mail-mark-symbolic")
@@ -460,7 +434,7 @@ impl ConversationView {
         web_box.append(&translate.widget);
         // The event card sits inside the message that carries the
         // invitation, laid over the place the page keeps for it.
-        let card_host = CardHost::new(&webview, &content, &card.widget);
+        let card_host = CardHost::new(&webview, &card.widget);
         web_box.append(&card_host.overlay);
         let stack = gtk::Stack::builder()
             .transition_type(gtk::StackTransitionType::Crossfade)
@@ -673,7 +647,7 @@ impl ConversationView {
         super::name_menu_items(&menu_popover);
         menu_popover.set_has_arrow(false);
         menu_popover.set_halign(gtk::Align::Start);
-        menu_popover.set_parent(&webview);
+        menu_popover.set_parent(&webview.widget());
         let find = FindBar::new(&webview);
         let toolbar = adw::ToolbarView::new();
         toolbar.add_top_bar(&header);
@@ -726,7 +700,6 @@ impl ConversationView {
             many_trash,
             stack,
             webview,
-            content,
             banner,
             card,
             card_host,
@@ -764,16 +737,11 @@ impl ConversationView {
         });
 
         view.apply_toolbar(Holds::Nothing);
-        VIEWS.with(|views| {
-            let mut views = views.borrow_mut();
-            views.retain(|view| view.strong_count() > 0);
-            views.push(Rc::downgrade(&view));
-        });
-        serve_pictures();
+        *owner.borrow_mut() = Rc::downgrade(&view);
         // A popover parented on a widget has to let go of it before the
         // widget goes, or GTK finalizes a widget that still has a parent.
         let weak = Rc::downgrade(&view);
-        view.webview.connect_destroy(move |_| {
+        view.webview.widget().connect_destroy(move |_| {
             let Some(view) = weak.upgrade() else { return };
             view.menu.unparent();
             if let Some(popover) = view.menu_popover.take() {
@@ -782,50 +750,24 @@ impl ConversationView {
         });
         let weak = Rc::downgrade(&view);
         let actions = Rc::clone(&on_action);
-        view.webview
-            .connect_decide_policy(move |_, decision, kind| {
-                use webkit::PolicyDecisionType as Kind;
-                if !matches!(kind, Kind::NavigationAction | Kind::NewWindowAction) {
-                    return false;
-                }
-                let Some(navigation) = decision.downcast_ref::<webkit::NavigationPolicyDecision>()
-                else {
-                    return false;
-                };
-                let uri = navigation
-                    .navigation_action()
-                    .and_then(|action| action.request())
-                    .and_then(|request| request.uri())
-                    .map(|uri| uri.to_string())
-                    .unwrap_or_default();
-                if kind == Kind::NavigationAction && uri == "about:blank" {
-                    decision.use_();
-                    return true;
-                }
-                decision.ignore();
-                if let Some(view) = weak.upgrade() {
-                    view.follow(&uri, &actions);
-                }
-                true
-            });
-        let weak = Rc::downgrade(&view);
-        view.content
-            .connect_script_message_received(Some("mailrsReady"), move |_, value| {
-                if let (Some(view), Ok(load)) = (weak.upgrade(), value.to_str().parse()) {
-                    view.page_ready(load);
-                }
-            });
-        let weak = Rc::downgrade(&view);
-        view.webview.connect_load_changed(move |webview, event| {
-            if event != webkit::LoadEvent::Finished {
-                return;
+        view.webview.on_navigate(move |uri| {
+            if let Some(view) = weak.upgrade() {
+                view.follow(uri, &actions);
             }
+        });
+        let weak = Rc::downgrade(&view);
+        view.webview.on_message("mailrsReady", move |value| {
+            if let (Some(view), Ok(load)) = (weak.upgrade(), value.parse()) {
+                view.page_ready(load);
+            }
+        });
+        let weak = Rc::downgrade(&view);
+        view.webview.on_loaded(move || {
             let Some(view) = weak.upgrade() else { return };
             // The pictures above the message have come in by now and may
             // have pushed it down. A reader who scrolled meanwhile stays.
             if let Some(id) = view.scrolled.take() {
-                run_script(
-                    webview,
+                view.webview.run(
                     &format!(
                         "(function(){{var m=document.getElementById('m-{id}');\
                          if(m&&window.mailrsAt===window.scrollY){{m.scrollIntoView({{block:'start'}});\
@@ -835,34 +777,12 @@ impl ConversationView {
             }
         });
         let weak = Rc::downgrade(&view);
-        view.webview.connect_web_process_terminated(move |_, _| {
+        view.webview.on_crashed(move || {
             // Whatever the page held went with the process, so the next
             // change draws the whole page rather than patching nothing.
             if let Some(view) = weak.upgrade() {
                 view.change(OpenThread::page_lost);
             }
-        });
-        view.webview.connect_context_menu(|webview, menu, _| {
-            use webkit::ContextMenuAction as Item;
-            for item in menu.items() {
-                if !matches!(
-                    item.stock_action(),
-                    Item::Copy
-                        | Item::CopyLinkToClipboard
-                        | Item::CopyImageToClipboard
-                        | Item::SelectAll
-                ) {
-                    menu.remove(&item);
-                }
-            }
-            if menu.items().is_empty() {
-                return true;
-            }
-            // WebKit builds this menu as a popover of the web view once
-            // the signal returns, and its items carry no names.
-            let webview = webview.clone();
-            glib::idle_add_local_once(move || super::name_menu_items_under(&webview));
-            false
         });
         let weak = Rc::downgrade(&view);
         adw::StyleManager::default().connect_dark_notify(move |_| {
@@ -894,13 +814,8 @@ impl ConversationView {
             };
             let menu_key = key == gdk::Key::Menu
                 || (key == gdk::Key::F10 && state.contains(gdk::ModifierType::SHIFT_MASK));
-            if menu_key
-                && view
-                    .webview
-                    .state_flags()
-                    .contains(gtk::StateFlags::FOCUS_WITHIN)
-            {
-                run_script(&view.webview, MENU_KEY_SCRIPT);
+            if menu_key && view.webview.has_focus() {
+                view.webview.run(MENU_KEY_SCRIPT);
                 return glib::Propagation::Stop;
             }
             if key != gdk::Key::Escape || !view.find.is_open() {
@@ -992,7 +907,7 @@ impl ConversationView {
     /// asked from. The page measures in CSS pixels and the widget in its
     /// own, so the zoom level stands between the two.
     pub fn popup_message_menu(&self, model: &gio::Menu, x: f64, y: f64) {
-        let zoom = self.webview.zoom_level();
+        let zoom = self.webview.zoom();
         let at = ((x * zoom) as i32, (y * zoom) as i32);
         self.menu_at.set(at);
         self.menu.set_menu_model(Some(model));
@@ -1010,7 +925,7 @@ impl ConversationView {
         let (x, y) = self.menu_at.get();
         popover.set_has_arrow(false);
         popover.set_halign(gtk::Align::Start);
-        popover.set_parent(&self.webview);
+        popover.set_parent(&self.webview.widget());
         popover.set_pointing_to(Some(&gdk::Rectangle::new(x, y, 1, 1)));
         popover.popup();
     }
@@ -1020,8 +935,7 @@ impl ConversationView {
     /// goes through the page rather than around it, so a screenshot shows
     /// what a reader's own click shows.
     pub fn ask_message_menu(&self, position: usize) {
-        run_script(
-            &self.webview,
+        self.webview.run(
             &format!(
                 "(function(){{var m=document.querySelectorAll('.message')[{}];if(!m)return;\
                  var b=m.getBoundingClientRect();\
@@ -1038,7 +952,7 @@ impl ConversationView {
             return;
         }
         let window = self.page.root().and_downcast::<gtk::Window>();
-        webkit::PrintOperation::new(&self.webview).run_dialog(window.as_ref());
+        self.webview.print(window.as_ref());
     }
 
     /// For a conversation in its own window: labels stay in the main window.
@@ -1080,8 +994,8 @@ impl ConversationView {
     }
 
     /// Installs the compiled filter that blocks remote content.
-    pub fn set_filter(&self, filter: webkit::UserContentFilter) {
-        self.content.add_filter(&filter);
+    pub fn set_filter(&self, filter: web::Filter) {
+        self.webview.set_filter(Some(&filter));
         *self.filter.borrow_mut() = Some(filter);
     }
 
@@ -1216,7 +1130,7 @@ impl ConversationView {
     /// view loads its next message.
     pub fn stop_rendering(&self) {
         self.clear();
-        self.webview.terminate_web_process();
+        self.webview.stop();
     }
 
     /// Puts the find bar over the message and the cursor in it. Nothing
@@ -1349,7 +1263,7 @@ impl ConversationView {
     }
 
     pub fn set_zoom(&self, zoom: f64) {
-        self.webview.set_zoom_level(zoom);
+        self.webview.set_zoom(zoom);
     }
 
     /// Starts loading a thread into this view and returns its ticket. Two
@@ -1555,13 +1469,10 @@ impl ConversationView {
     pub fn render(&self, scroll: bool) {
         let mut open = self.open.borrow_mut();
         let Some(open) = open.as_mut() else { return };
-        let manager = &self.content;
-        manager.remove_all_filters();
-        if !open.images_allowed
-            && let Some(filter) = self.filter.borrow().as_ref()
-        {
-            manager.add_filter(filter);
-        }
+        let blocks = self.filter.borrow();
+        self.webview
+            .set_filter(blocks.as_ref().filter(|_| !open.images_allowed));
+        drop(blocks);
         let style = adw::StyleManager::default();
         let theme = Theme {
             dark: style.is_dark(),
@@ -1585,7 +1496,7 @@ impl ConversationView {
         } else {
             gdk::RGBA::WHITE
         };
-        self.webview.set_background_color(&background);
+        self.webview.set_background(&background);
         match page {
             Page::Whole(document) => {
                 if scroll && open.messages.len() > 2 {
@@ -1604,7 +1515,7 @@ impl ConversationView {
                     " data-load=\"{load}\"{}",
                     self.card_host.root_style()
                 ));
-                self.webview.load_html(&html, None);
+                self.webview.load_html(&html);
             }
             Page::Patch(patch) if patch.is_empty() => {}
             Page::Patch(patch) => match self.ready.get() == self.loads.get() {
@@ -1635,8 +1546,7 @@ impl ConversationView {
             self.patch(waiting);
         }
         if let Some(id) = self.scroll_to.take() {
-            run_script(
-                &self.webview,
+            self.webview.run(
                 &format!(
                     "(function(){{var m=document.getElementById('m-{id}');\
                      if(m){{m.scrollIntoView({{block:'start'}});window.mailrsAt=window.scrollY;}}}})()"
@@ -1661,27 +1571,21 @@ impl ConversationView {
         let script = [PATCH_SCRIPT[0], &json, PATCH_SCRIPT[1]].concat();
         let load = self.loads.get();
         let this = self.this.clone();
-        self.webview.evaluate_javascript(
-            &script,
-            None,
-            None,
-            gio::Cancellable::NONE,
-            move |done| {
-                let Some(view) = this.upgrade() else { return };
-                let whole = match done {
-                    Ok(value) => value.to_str() == "whole",
-                    Err(err) => {
-                        tracing::warn!(error = %err, "could not patch the conversation");
-                        true
-                    }
-                };
-                // A later load already holds everything this carried.
-                if whole && load == view.loads.get() {
-                    view.change(OpenThread::page_lost);
-                    view.render(false);
+        self.webview.eval(&script, move |done| {
+            let Some(view) = this.upgrade() else { return };
+            let whole = match done {
+                Ok(value) => value == "whole",
+                Err(err) => {
+                    tracing::warn!(error = %err, "could not patch the conversation");
+                    true
                 }
-            },
-        );
+            };
+            // A later load already holds everything this carried.
+            if whole && load == view.loads.get() {
+                view.change(OpenThread::page_lost);
+                view.render(false);
+            }
+        });
         // The find bar's highlights in the other articles stay. The count
         // may have changed with the words.
         self.find.recount();
@@ -1690,13 +1594,13 @@ impl ConversationView {
     /// Answers the page's request for an inline picture, or holds it until
     /// the thread's pictures arrive. A request for another account, or for
     /// a message or version no longer on screen, reaches nothing.
-    fn serve(&self, request: &webkit::URISchemeRequest) {
+    fn serve(&self, request: web::Request) {
         let Some(address) = request.uri().and_then(|uri| Address::parse(&uri)) else {
-            return refuse(request);
+            return request.refuse();
         };
         match self.served(&address) {
-            Served::Waiting => self.held.borrow_mut().push((address, request.clone())),
-            served => answer(request, served),
+            Served::Waiting => self.held.borrow_mut().push((address, request)),
+            served => answer(&request, served),
         }
     }
 
@@ -1726,7 +1630,7 @@ impl ConversationView {
     /// about leaves the view.
     fn refuse_held(&self) {
         for (_, request) in self.held.take() {
-            refuse(&request);
+            request.refuse();
         }
     }
 
@@ -1964,8 +1868,7 @@ impl ConversationView {
             true => ("expanded", "'collapsed','shut'"),
             false => ("collapsed", "'expanded'"),
         };
-        run_script(
-            &self.webview,
+        self.webview.run(
             &format!(
                 "(function(){{var m=document.getElementById('m-{id}');\
                    if(m){{m.classList.add('{add}');m.classList.remove({remove});}}}})()"
@@ -1978,8 +1881,7 @@ impl ConversationView {
         let settled = std::time::Duration::from_millis(u64::from(FOLD_MS) + 40);
         glib::timeout_add_local_once(settled, move || {
             if let Some(webview) = webview.upgrade() {
-                run_script(
-                    &webview,
+                webview.run(
                     &format!(
                         "(function(){{var m=document.getElementById('m-{id}');\
                          if(m&&m.classList.contains('collapsed'))m.classList.add('shut');}})()"
@@ -2074,75 +1976,12 @@ fn color_index(color: FlagColor) -> usize {
     FlagColor::ALL.iter().position(|c| *c == color).unwrap_or(0)
 }
 
-thread_local! {
-    /// The views alive on this thread, so the one handler WebKit takes for
-    /// a scheme can find the view a request came from.
-    static VIEWS: RefCell<Vec<Weak<ConversationView>>> = const { RefCell::new(Vec::new()) };
-}
-
-/// Registers the `mailrs-cid` scheme with WebKit, once: a second handler
-/// for the same scheme is refused.
-fn serve_pictures() {
-    thread_local! {
-        static REGISTERED: Cell<bool> = const { Cell::new(false) };
-    }
-    if REGISTERED.replace(true) {
-        return;
-    }
-    let Some(context) = webkit::WebContext::default() else {
-        return;
-    };
-    context.register_uri_scheme(inline::SCHEME, |request| {
-        let asking = request.web_view();
-        let view = VIEWS.with(|views| {
-            views
-                .borrow()
-                .iter()
-                .filter_map(Weak::upgrade)
-                .find(|view| asking.as_ref() == Some(&view.webview))
-        });
-        match view {
-            Some(view) => view.serve(request),
-            None => refuse(request),
-        }
-    });
-}
-
 /// Gives the page a picture, or says there is none.
-fn answer(request: &webkit::URISchemeRequest, served: Served) {
-    let Served::Ready(picture) = served else {
-        return refuse(request);
-    };
-    let bytes = glib::Bytes::from_owned(picture.bytes);
-    let length = i64::try_from(bytes.len()).unwrap_or(-1);
-    let stream = gio::MemoryInputStream::from_bytes(&bytes);
-    request.finish(&stream, length, Some(&picture.mime));
-}
-
-fn refuse(request: &webkit::URISchemeRequest) {
-    let mut error = glib::Error::new(gio::IOErrorEnum::NotFound, "no such picture");
-    request.finish_error(&mut error);
-}
-
-/// WebKit keeps a `gtk::TextView` of its own inside the web view, at no
-/// size, to turn key bindings such as Ctrl+C into editing commands. It
-/// was focusable, so Tab moved into it from the page and stayed there:
-/// focus sat on nothing a person could see, the page stopped getting the
-/// keys, and the window took single-letter shortcuts for typing. The
-/// bindings reach it without the focus, so it gives the focus up.
-pub(crate) fn keep_key_text_out_of_tab(webview: &webkit::WebView) {
-    let mut stack: Vec<gtk::Widget> = webview.first_child().into_iter().collect();
-    while let Some(widget) = stack.pop() {
-        if widget.is::<gtk::TextView>() {
-            widget.set_focusable(false);
-        }
-        stack.extend(widget.next_sibling());
-        stack.extend(widget.first_child());
+fn answer(request: &web::Request, served: Served) {
+    match served {
+        Served::Ready(picture) => request.finish(picture.bytes, &picture.mime),
+        _ => request.refuse(),
     }
-}
-
-fn run_script(webview: &webkit::WebView, script: &str) {
-    webview.evaluate_javascript(script, None, None, gio::Cancellable::NONE, |_| {});
 }
 
 /// Keeps only characters that are safe inside a quoted script string.
@@ -2150,14 +1989,4 @@ fn script_safe(id: &str) -> String {
     id.chars()
         .filter(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '_'))
         .collect()
-}
-
-/// One network session for every conversation view. Each session runs its
-/// own WebKit network process, and a detached window needs no second one.
-/// Ephemeral keeps cookies and caches in memory, so nothing lands on disk.
-pub(crate) fn network_session() -> webkit::NetworkSession {
-    thread_local! {
-        static SESSION: webkit::NetworkSession = webkit::NetworkSession::new_ephemeral();
-    }
-    SESSION.with(|s| s.clone())
 }

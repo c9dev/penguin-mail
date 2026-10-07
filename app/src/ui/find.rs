@@ -1,7 +1,7 @@
 //! The find bar over an open conversation.
 //!
-//! WebKit does the finding, through the `FindController` of the view's
-//! WebView. What is kept here is the query, the place among the matches,
+//! The web engine does the finding, through the page's [`Finder`]. What
+//! is kept here is the query, the place among the matches,
 //! and the words the count reads: WebKit counts the matches but never
 //! says which one it highlighted, so the bar counts the steps itself.
 
@@ -10,12 +10,8 @@ use std::rc::Rc;
 
 use adw::prelude::*;
 use mailrs_domain::translate::{fill_plural, gettext};
-use webkit::prelude::*;
-
 use crate::ui::name;
-
-/// How many matches WebKit may highlight and count. Nothing is capped.
-const MATCH_LIMIT: u32 = u32::MAX;
+use crate::web::{Finder, WebView};
 
 /// Where a search stands: the query, how many matches the page holds,
 /// and which one is highlighted.
@@ -101,15 +97,6 @@ fn case_sensitive(query: &str) -> bool {
     query.chars().any(char::is_uppercase)
 }
 
-/// How WebKit should search for `query`.
-fn options(query: &str) -> webkit::FindOptions {
-    let mut options = webkit::FindOptions::WRAP_AROUND;
-    if !case_sensitive(query) {
-        options |= webkit::FindOptions::CASE_INSENSITIVE;
-    }
-    options
-}
-
 /// The entry, the count, and the two arrows, over one WebView.
 pub struct FindBar {
     pub widget: gtk::SearchBar,
@@ -117,13 +104,13 @@ pub struct FindBar {
     count: gtk::Label,
     previous: gtk::Button,
     next: gtk::Button,
-    find: webkit::FindController,
+    find: Finder,
     place: RefCell<Place>,
     running: RefCell<Rc<dyn Fn(bool)>>,
 }
 
 impl FindBar {
-    pub fn new(webview: &webkit::WebView) -> Rc<FindBar> {
+    pub fn new(webview: &WebView) -> Rc<FindBar> {
         let entry = gtk::SearchEntry::builder()
             .placeholder_text(gettext("Find in the conversation"))
             .hexpand(true)
@@ -163,9 +150,7 @@ impl FindBar {
             .build();
         widget.connect_entry(&entry);
 
-        let find = webview
-            .find_controller()
-            .expect("a WebView has a find controller");
+        let find = webview.finder();
         let this = Rc::new(FindBar {
             widget,
             entry,
@@ -217,21 +202,21 @@ impl FindBar {
             }
         });
         let weak = Rc::downgrade(&this);
-        this.find.connect_found_text(move |_, _| {
+        this.find.on_found(move || {
             if let Some(bar) = weak.upgrade() {
                 bar.place.borrow_mut().found();
                 bar.update();
             }
         });
         let weak = Rc::downgrade(&this);
-        this.find.connect_counted_matches(move |_, matches| {
+        this.find.on_counted(move |matches| {
             if let Some(bar) = weak.upgrade() {
-                bar.place.borrow_mut().counted(matches as usize);
+                bar.place.borrow_mut().counted(matches);
                 bar.update();
             }
         });
         let weak = Rc::downgrade(&this);
-        this.find.connect_failed_to_find_text(move |_| {
+        this.find.on_failed(move || {
             if let Some(bar) = weak.upgrade() {
                 bar.place.borrow_mut().missed();
                 bar.update();
@@ -272,7 +257,7 @@ impl FindBar {
             return;
         }
         self.widget.set_search_mode(false);
-        self.find.search_finish();
+        self.find.finish();
         self.place.borrow_mut().start("");
         self.update();
         self.tell_running(false);
@@ -292,8 +277,7 @@ impl FindBar {
     pub fn recount(&self) {
         let query = self.entry.text().to_string();
         if self.is_open() && !query.is_empty() {
-            self.find
-                .count_matches(&query, options(&query).bits(), MATCH_LIMIT);
+            self.find.count(&query, case_sensitive(&query));
         }
     }
 
@@ -301,12 +285,8 @@ impl FindBar {
         let query = self.entry.text().to_string();
         self.place.borrow_mut().start(&query);
         match query.is_empty() {
-            true => self.find.search_finish(),
-            false => {
-                let options = options(&query).bits();
-                self.find.search(&query, options, MATCH_LIMIT);
-                self.find.count_matches(&query, options, MATCH_LIMIT);
-            }
+            true => self.find.finish(),
+            false => self.find.search(&query, case_sensitive(&query)),
         }
         self.update();
     }
@@ -317,8 +297,8 @@ impl FindBar {
         }
         self.place.borrow_mut().step(forward);
         match forward {
-            true => self.find.search_next(),
-            false => self.find.search_previous(),
+            true => self.find.next(),
+            false => self.find.previous(),
         }
         self.update();
     }

@@ -52,6 +52,7 @@ mod unsubscribe;
 mod unsubscribe_page;
 mod update;
 mod wanted;
+mod web;
 
 use std::cell::RefCell;
 use std::ffi::OsString;

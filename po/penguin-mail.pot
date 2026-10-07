@@ -1845,7 +1845,7 @@ msgstr ""
 msgid "{language} ({country})"
 msgstr ""
 
-#: app/src/main.rs:70
+#: app/src/main.rs:71
 msgid ""
 "Usage: penguin-mail [--background] [--demo] [--compose [mailto:ADDRESS]] "
 "[FILE.ics]\n"
@@ -1858,26 +1858,26 @@ msgid ""
 "  FILE.ics       open a calendar file, to add its events to a calendar"
 msgstr ""
 
-#: app/src/main.rs:141
+#: app/src/main.rs:142
 msgid "penguin-mail: unknown option {option}"
 msgstr ""
 
-#: app/src/main.rs:301
+#: app/src/main.rs:302
 msgid "Penguin Mail Could Not Start"
 msgstr ""
 
-#: app/src/main.rs:306 app/src/ui/about.rs:179
+#: app/src/main.rs:307 app/src/ui/about.rs:179
 msgid "Report a Problem"
 msgstr ""
 
-#: app/src/notify.rs:49 app/src/ui/conversation.rs:407
-#: app/src/ui/conversation.rs:559 app/src/ui/conversation.rs:1127
+#: app/src/notify.rs:49 app/src/ui/conversation.rs:381
+#: app/src/ui/conversation.rs:533 app/src/ui/conversation.rs:1041
 #: app/src/ui/window/message_menu.rs:125 app/src/ui/window/shortcuts.rs:392
 msgid "Archive"
 msgstr ""
 
-#: app/src/notify.rs:50 app/src/ui/conversation.rs:408
-#: app/src/ui/conversation.rs:1171 app/src/ui/preferences.rs:139
+#: app/src/notify.rs:50 app/src/ui/conversation.rs:382
+#: app/src/ui/conversation.rs:1085 app/src/ui/preferences.rs:139
 #: app/src/ui/rules.rs:370 app/src/ui/window/message_menu.rs:128
 msgid "Mark as Read"
 msgstr ""
@@ -1885,13 +1885,13 @@ msgstr ""
 #: app/src/notify.rs:51 app/src/ui/calendar/manage.rs:292
 #: app/src/ui/calendar/popover.rs:211 app/src/ui/calendar/popover.rs:213
 #: app/src/ui/calendar/popover.rs:713 app/src/ui/calendar/scope.rs:112
-#: app/src/ui/conversation.rs:545 app/src/ui/hide_my_email.rs:289
+#: app/src/ui/conversation.rs:519 app/src/ui/hide_my_email.rs:289
 #: app/src/ui/queued.rs:58 app/src/ui/templates.rs:149
 #: app/src/ui/window/arrange.rs:106 app/src/ui/window/organize.rs:204
 msgid "Delete"
 msgstr ""
 
-#: app/src/notify.rs:52 app/src/ui/conversation.rs:553
+#: app/src/notify.rs:52 app/src/ui/conversation.rs:527
 #: app/src/ui/window/message_menu.rs:122 app/src/ui/window/shortcuts.rs:471
 msgid "Reply"
 msgstr ""
@@ -4118,7 +4118,7 @@ msgid ""
 "such as automatic replies and rules"
 msgstr ""
 
-#: app/src/ui/assistant_prefs.rs:177 app/src/ui/conversation.rs:683
+#: app/src/ui/assistant_prefs.rs:177 app/src/ui/conversation.rs:657
 #: app/src/ui/window/detached.rs:65
 msgid "Conversation"
 msgstr ""
@@ -5050,7 +5050,7 @@ msgid ""
 "subscribe to it again later."
 msgstr ""
 
-#: app/src/ui/calendar/manage.rs:324 app/src/ui/conversation.rs:396
+#: app/src/ui/calendar/manage.rs:324 app/src/ui/conversation.rs:370
 #: app/src/ui/unsubscribe.rs:96
 msgid "Unsubscribe"
 msgstr ""
@@ -5143,7 +5143,7 @@ msgid "Show Calendars"
 msgstr ""
 
 #: app/src/ui/calendar/mod.rs:388 app/src/ui/calendar/mod.rs:392
-#: app/src/ui/conversation.rs:533 app/src/ui/conversation.rs:537
+#: app/src/ui/conversation.rs:507 app/src/ui/conversation.rs:511
 msgid "Assistant (Ctrl+J)"
 msgstr ""
 
@@ -5543,7 +5543,7 @@ msgstr ""
 msgid "Delete…"
 msgstr ""
 
-#: app/src/ui/calendar/sidebar.rs:1267 app/src/ui/conversation.rs:591
+#: app/src/ui/calendar/sidebar.rs:1267 app/src/ui/conversation.rs:565
 msgid "Unsubscribe…"
 msgstr ""
 
@@ -5745,7 +5745,7 @@ msgstr ""
 msgid "Description"
 msgstr ""
 
-#: app/src/ui/composer/mod.rs:287 app/src/ui/conversation.rs:1751
+#: app/src/ui/composer/mod.rs:287 app/src/ui/conversation.rs:1655
 msgid "Choose a Time…"
 msgstr ""
 
@@ -6165,7 +6165,7 @@ msgstr ""
 msgid "Find Again"
 msgstr ""
 
-#: app/src/ui/contacts_prefs.rs:120 app/src/ui/conversation.rs:543
+#: app/src/ui/contacts_prefs.rs:120 app/src/ui/conversation.rs:517
 #: app/src/ui/queued.rs:60 app/src/ui/sidebar.rs:1461
 msgid "Edit…"
 msgstr ""
@@ -6220,229 +6220,229 @@ msgstr ""
 msgid "Not allowed when you signed in"
 msgstr ""
 
-#: app/src/ui/conversation.rs:385
+#: app/src/ui/conversation.rs:359
 msgid "No Conversation Selected"
 msgstr ""
 
-#: app/src/ui/conversation.rs:390
+#: app/src/ui/conversation.rs:364
 msgid "Remote images are hidden to protect your privacy"
 msgstr ""
 
-#: app/src/ui/conversation.rs:391
+#: app/src/ui/conversation.rs:365
 msgid "Load Images"
 msgstr ""
 
-#: app/src/ui/conversation.rs:395
+#: app/src/ui/conversation.rs:369
 msgid "This message is from a mailing list"
 msgstr ""
 
-#: app/src/ui/conversation.rs:409 app/src/ui/conversation.rs:1178
+#: app/src/ui/conversation.rs:383 app/src/ui/conversation.rs:1092
 #: app/src/ui/window/message_menu.rs:130
 msgid "Flag"
 msgstr ""
 
-#: app/src/ui/conversation.rs:410 app/src/ui/conversation.rs:569
-#: app/src/ui/conversation.rs:957 app/src/ui/conversation.rs:1183
+#: app/src/ui/conversation.rs:384 app/src/ui/conversation.rs:543
+#: app/src/ui/conversation.rs:872 app/src/ui/conversation.rs:1097
 msgid "Mute"
 msgstr ""
 
-#: app/src/ui/conversation.rs:411 app/src/ui/conversation.rs:561
-#: app/src/ui/conversation.rs:1120 app/src/ui/window/shortcuts.rs:411
+#: app/src/ui/conversation.rs:385 app/src/ui/conversation.rs:535
+#: app/src/ui/conversation.rs:1034 app/src/ui/window/shortcuts.rs:411
 msgid "Junk"
 msgstr ""
 
-#: app/src/ui/conversation.rs:412 app/src/ui/conversation.rs:560
-#: app/src/ui/conversation.rs:1115 app/src/ui/window/message_menu.rs:126
+#: app/src/ui/conversation.rs:386 app/src/ui/conversation.rs:534
+#: app/src/ui/conversation.rs:1029 app/src/ui/window/message_menu.rs:126
 msgid "Move to Trash"
 msgstr ""
 
-#: app/src/ui/conversation.rs:439
+#: app/src/ui/conversation.rs:413
 msgid "Several Conversations Selected"
 msgstr ""
 
-#: app/src/ui/conversation.rs:441
+#: app/src/ui/conversation.rs:415
 msgid "Actions and shortcuts apply to all of them. Esc clears the selection."
 msgstr ""
 
-#: app/src/ui/conversation.rs:483
+#: app/src/ui/conversation.rs:457
 msgid "Archive (E or Ctrl+Alt+A)"
 msgstr ""
 
-#: app/src/ui/conversation.rs:485 app/src/ui/conversation.rs:1098
+#: app/src/ui/conversation.rs:459 app/src/ui/conversation.rs:1012
 msgid "Move to Trash (Delete)"
 msgstr ""
 
-#: app/src/ui/conversation.rs:486 app/src/ui/conversation.rs:1108
+#: app/src/ui/conversation.rs:460 app/src/ui/conversation.rs:1022
 msgid "Junk (Ctrl+Shift+J)"
 msgstr ""
 
-#: app/src/ui/conversation.rs:489
+#: app/src/ui/conversation.rs:463
 msgid "Mark as Unread (Ctrl+Shift+U)"
 msgstr ""
 
-#: app/src/ui/conversation.rs:494 app/src/ui/conversation.rs:498
-#: app/src/ui/conversation.rs:1791
+#: app/src/ui/conversation.rs:468 app/src/ui/conversation.rs:472
+#: app/src/ui/conversation.rs:1695
 msgid "Flag (Ctrl+Shift+L)"
 msgstr ""
 
-#: app/src/ui/conversation.rs:495 app/src/ui/conversation.rs:501
+#: app/src/ui/conversation.rs:469 app/src/ui/conversation.rs:475
 msgid "Choose Flag Color"
 msgstr ""
 
-#: app/src/ui/conversation.rs:502
+#: app/src/ui/conversation.rs:476
 msgid "Flags it in the color you chose last, or takes the flag off"
 msgstr ""
 
-#: app/src/ui/conversation.rs:506
+#: app/src/ui/conversation.rs:480
 msgid "Reply (Ctrl+R)"
 msgstr ""
 
-#: app/src/ui/conversation.rs:509
+#: app/src/ui/conversation.rs:483
 msgid "Reply All (Ctrl+Shift+R)"
 msgstr ""
 
-#: app/src/ui/conversation.rs:511
+#: app/src/ui/conversation.rs:485
 msgid "Forward (Ctrl+Shift+F)"
 msgstr ""
 
-#: app/src/ui/conversation.rs:513
+#: app/src/ui/conversation.rs:487
 msgid "Edit Draft"
 msgstr ""
 
-#: app/src/ui/conversation.rs:520 app/src/ui/conversation.rs:523
+#: app/src/ui/conversation.rs:494 app/src/ui/conversation.rs:497
 msgid "More Actions"
 msgstr ""
 
-#: app/src/ui/conversation.rs:544 app/src/ui/queued.rs:56
+#: app/src/ui/conversation.rs:518 app/src/ui/queued.rs:56
 msgid "Send Now"
 msgstr ""
 
-#: app/src/ui/conversation.rs:554 app/src/ui/window/message_menu.rs:123
+#: app/src/ui/conversation.rs:528 app/src/ui/window/message_menu.rs:123
 msgid "Reply All"
 msgstr ""
 
-#: app/src/ui/conversation.rs:555 app/src/ui/window/message_menu.rs:124
+#: app/src/ui/conversation.rs:529 app/src/ui/window/message_menu.rs:124
 #: app/src/ui/window/shortcuts.rs:484
 msgid "Forward"
 msgstr ""
 
-#: app/src/ui/conversation.rs:564
+#: app/src/ui/conversation.rs:538
 msgid "Flag or Unflag"
 msgstr ""
 
-#: app/src/ui/conversation.rs:566
+#: app/src/ui/conversation.rs:540
 msgid "Mark Read or Unread"
 msgstr ""
 
-#: app/src/ui/conversation.rs:574 app/src/ui/window/message_menu.rs:135
+#: app/src/ui/conversation.rs:548 app/src/ui/window/message_menu.rs:135
 msgid "Tags…"
 msgstr ""
 
-#: app/src/ui/conversation.rs:578 app/src/ui/sidebar.rs:1030
+#: app/src/ui/conversation.rs:552 app/src/ui/sidebar.rs:1030
 #: app/src/ui/window/reminders.rs:25 app/src/ui/window/reminders.rs:30
 msgid "Remind Me"
 msgstr ""
 
-#: app/src/ui/conversation.rs:582
+#: app/src/ui/conversation.rs:556
 msgid "Open in New Window"
 msgstr ""
 
-#: app/src/ui/conversation.rs:585
+#: app/src/ui/conversation.rs:559
 msgid "Print…"
 msgstr ""
 
-#: app/src/ui/conversation.rs:586
+#: app/src/ui/conversation.rs:560
 msgid "View Source"
 msgstr ""
 
-#: app/src/ui/conversation.rs:587 app/src/ui/window/message_menu.rs:136
+#: app/src/ui/conversation.rs:561 app/src/ui/window/message_menu.rs:136
 msgid "Export…"
 msgstr ""
 
-#: app/src/ui/conversation.rs:590 app/src/ui/conversation.rs:924
+#: app/src/ui/conversation.rs:564 app/src/ui/conversation.rs:839
 msgid "Add Sender to VIPs"
 msgstr ""
 
-#: app/src/ui/conversation.rs:593
+#: app/src/ui/conversation.rs:567
 msgid "Always Load Images…"
 msgstr ""
 
 #. Both sender items leave a rule on the server, so an account
 #. without rules turns them off, and the menu leaves them out.
-#: app/src/ui/conversation.rs:598
+#: app/src/ui/conversation.rs:572
 msgid "Block Sender…"
 msgstr ""
 
-#: app/src/ui/conversation.rs:603 app/src/ui/conversation.rs:944
+#: app/src/ui/conversation.rs:577 app/src/ui/conversation.rs:859
 msgid "Categorize Sender"
 msgstr ""
 
-#: app/src/ui/conversation.rs:631 app/src/ui/conversation.rs:633
+#: app/src/ui/conversation.rs:605 app/src/ui/conversation.rs:607
 msgid "Tags"
 msgstr ""
 
-#: app/src/ui/conversation.rs:922
+#: app/src/ui/conversation.rs:837
 msgid "Remove Sender from VIPs"
 msgstr ""
 
-#: app/src/ui/conversation.rs:955 app/src/ui/conversation.rs:1181
+#: app/src/ui/conversation.rs:870 app/src/ui/conversation.rs:1095
 msgid "Unmute"
 msgstr ""
 
-#: app/src/ui/conversation.rs:1097
+#: app/src/ui/conversation.rs:1011
 msgid "Delete Forever (Delete)"
 msgstr ""
 
-#: app/src/ui/conversation.rs:1106
+#: app/src/ui/conversation.rs:1020
 msgid "Not Junk (Ctrl+Shift+J)"
 msgstr ""
 
-#: app/src/ui/conversation.rs:1114 app/src/ui/window/message_menu.rs:127
+#: app/src/ui/conversation.rs:1028 app/src/ui/window/message_menu.rs:127
 #: app/src/ui/window/press.rs:425
 msgid "Delete Forever"
 msgstr ""
 
-#: app/src/ui/conversation.rs:1119
+#: app/src/ui/conversation.rs:1033
 msgid "Not Junk"
 msgstr ""
 
-#: app/src/ui/conversation.rs:1173 app/src/ui/window/message_menu.rs:129
+#: app/src/ui/conversation.rs:1087 app/src/ui/window/message_menu.rs:129
 msgid "Mark as Unread"
 msgstr ""
 
-#: app/src/ui/conversation.rs:1176 app/src/ui/window/message_menu.rs:131
+#: app/src/ui/conversation.rs:1090 app/src/ui/window/message_menu.rs:131
 msgid "Unflag"
 msgstr ""
 
-#: app/src/ui/conversation.rs:1192
+#: app/src/ui/conversation.rs:1106
 msgid "{count} Conversation Selected"
 msgid_plural "{count} Conversations Selected"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/conversation.rs:1198
+#: app/src/ui/conversation.rs:1112
 msgid "{count} Message Selected"
 msgid_plural "{count} Messages Selected"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/conversation.rs:1790
+#: app/src/ui/conversation.rs:1694
 msgid "Unflag (Ctrl+Shift+L)"
 msgstr ""
 
-#: app/src/ui/conversation.rs:1803
+#: app/src/ui/conversation.rs:1707
 msgid "Mark as Read (U)"
 msgstr ""
 
-#: app/src/ui/conversation.rs:1804
+#: app/src/ui/conversation.rs:1708
 msgid "Mark as Unread (U)"
 msgstr ""
 
-#: app/src/ui/conversation.rs:2029
+#: app/src/ui/conversation.rs:1931
 msgid "{color} (Ctrl+Alt+{number})"
 msgstr ""
 
-#: app/src/ui/conversation.rs:2046 app/src/ui/window/message_menu.rs:258
+#: app/src/ui/conversation.rs:1948 app/src/ui/window/message_menu.rs:258
 msgid "Clear Flag"
 msgstr ""
 
@@ -6466,26 +6466,26 @@ msgstr ""
 msgid "Could not use that server: {reason}"
 msgstr ""
 
-#: app/src/ui/find.rs:81
+#: app/src/ui/find.rs:77
 msgid "No matches"
 msgstr ""
 
-#: app/src/ui/find.rs:89
+#: app/src/ui/find.rs:85
 msgid "{position} of {total} match"
 msgid_plural "{position} of {total} matches"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/ui/find.rs:128 app/src/ui/find.rs:143
+#: app/src/ui/find.rs:115 app/src/ui/find.rs:130
 #: app/src/ui/window/shortcuts.rs:330
 msgid "Find in the conversation"
 msgstr ""
 
-#: app/src/ui/find.rs:141 app/src/ui/find.rs:144
+#: app/src/ui/find.rs:128 app/src/ui/find.rs:131
 msgid "Previous Match"
 msgstr ""
 
-#: app/src/ui/find.rs:142 app/src/ui/find.rs:145
+#: app/src/ui/find.rs:129 app/src/ui/find.rs:132
 msgid "Next Match"
 msgstr ""
 
@@ -6584,7 +6584,7 @@ msgstr ""
 msgid "Allow Hide My Email"
 msgstr ""
 
-#: app/src/ui/hide_my_email.rs:336 app/src/ui/window.rs:3269
+#: app/src/ui/hide_my_email.rs:336 app/src/ui/window.rs:3266
 msgid "Add an account first"
 msgstr ""
 
@@ -6897,7 +6897,7 @@ msgid "All Files"
 msgstr ""
 
 #: app/src/ui/key_import.rs:213 app/src/ui/key_import.rs:217
-#: app/src/ui/window.rs:3680
+#: app/src/ui/window.rs:3677
 msgid "Close"
 msgstr ""
 
@@ -8357,23 +8357,23 @@ msgstr ""
 msgid "Main Menu"
 msgstr ""
 
-#: app/src/ui/window.rs:3544
+#: app/src/ui/window.rs:3541
 msgid "Open a message from the person first"
 msgstr ""
 
-#: app/src/ui/window.rs:3620
+#: app/src/ui/window.rs:3617
 msgid "Penguin Mail shows the new language after a restart"
 msgstr ""
 
-#: app/src/ui/window.rs:3622 app/src/update/mod.rs:130
+#: app/src/ui/window.rs:3619 app/src/update/mod.rs:130
 msgid "Restart"
 msgstr ""
 
-#: app/src/ui/window.rs:3655
+#: app/src/ui/window.rs:3652
 msgid "Messages That Will Not Download"
 msgstr ""
 
-#: app/src/ui/window.rs:3657
+#: app/src/ui/window.rs:3654
 msgid ""
 "Penguin Mail could not download these from {address}'s server. It tries "
 "again at each check, except for a message too large to download."

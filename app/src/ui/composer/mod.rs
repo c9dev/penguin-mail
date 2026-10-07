@@ -20,7 +20,6 @@ use std::rc::Rc;
 use adw::prelude::*;
 use gtk::{gdk, gio, glib};
 use mailrs_store::templates::Template;
-use webkit::prelude::*;
 
 use self::editor::Editor;
 use self::recipients::Recipients;
@@ -38,6 +37,7 @@ use crate::richtext::{BlockKind, RichBody};
 use crate::settings::ComposeFormat;
 use crate::stray_markdown;
 use crate::templates::{self, Filling};
+use crate::web::WebView;
 use mailrs_domain::translate::{fill, fill_plural, gettext, with_reason};
 
 pub use crate::compose::Identity;
@@ -158,7 +158,7 @@ pub struct Composer {
     /// The body's buffer and every edit made to it.
     editor: Rc<Editor>,
     stack: gtk::Stack,
-    preview: webkit::WebView,
+    preview: WebView,
     /// The bar above the text that offers to format Markdown written in a
     /// rich body, with its Format and close buttons.
     markdown_bar: gtk::Revealer,
@@ -184,7 +184,7 @@ pub struct Composer {
     /// Where "•••" shows a forwarded message as it arrived, read-only,
     /// under the editor. The page is made the first time it is asked for.
     forward_box: gtk::Box,
-    forward_page: RefCell<Option<webkit::WebView>>,
+    forward_page: RefCell<Option<WebView>>,
     send: adw::SplitButton,
     /// Sign and Encrypt, check items in the More menu, which this
     /// computer's gpg and gpgsm answer for. Both stay out of the menu when
@@ -448,7 +448,7 @@ impl Composer {
             .build();
         name(&body, &gettext("Message"));
         let editor = Editor::new(&body, format);
-        let preview = sealed_view();
+        let preview = WebView::sealed();
         let stack = gtk::Stack::builder()
             .transition_type(gtk::StackTransitionType::Crossfade)
             .vexpand(true)
@@ -457,7 +457,7 @@ impl Composer {
             &gtk::ScrolledWindow::builder().child(&body).build(),
             Some("edit"),
         );
-        stack.add_named(&preview, Some("preview"));
+        stack.add_named(&preview.widget(), Some("preview"));
 
         let files = gtk::Box::builder()
             .orientation(gtk::Orientation::Vertical)
@@ -847,7 +847,7 @@ impl Composer {
             let Some(c) = weak.upgrade() else { return };
             if on {
                 let html = c.page(&gettext("Preview"), &c.with_inline_images(c.html()));
-                c.preview.load_html(&html, None);
+                c.preview.load_html(&html);
                 c.stack.set_visible_child_name("preview");
             } else {
                 c.stack.set_visible_child_name("edit");
@@ -1147,13 +1147,13 @@ impl Composer {
         if let Some(html) = html {
             let page = self.forward_page.borrow().clone();
             let page = page.unwrap_or_else(|| {
-                let page = sealed_view();
-                self.forward_box.append(&page);
+                let page = WebView::sealed();
+                self.forward_box.append(&page.widget());
                 self.forward_page.replace(Some(page.clone()));
                 page
             });
             let body = self.with_inline_images(html);
-            page.load_html(&self.page(&gettext("Forwarded Message"), &body), None);
+            page.load_html(&self.page(&gettext("Forwarded Message"), &body));
         }
         self.forward_box.set_visible(shown);
         self.unfold
@@ -2526,50 +2526,6 @@ fn markdown_bar() -> (gtk::Revealer, gtk::Button, gtk::Button) {
         .child(&row)
         .build();
     (bar, format, close)
-}
-
-/// A web view for the Preview and the forwarded message. It shares the
-/// conversation view's ephemeral network session, so nothing it touches
-/// lands on disk, and it never navigates: a click on a web link opens it
-/// in the browser, and anything else is ignored. The page itself refuses
-/// remote loads (`compose::preview_page`).
-fn sealed_view() -> webkit::WebView {
-    let settings = webkit::Settings::new();
-    settings.set_enable_javascript(false);
-    settings.set_enable_javascript_markup(false);
-    let view = webkit::WebView::builder()
-        .network_session(&super::conversation::network_session())
-        .settings(&settings)
-        .build();
-    view.set_vexpand(true);
-    super::conversation::keep_key_text_out_of_tab(&view);
-    view.connect_realize(super::conversation::keep_key_text_out_of_tab);
-    view.connect_decide_policy(|view, decision, kind| {
-        use webkit::PolicyDecisionType as Kind;
-        if !matches!(kind, Kind::NavigationAction | Kind::NewWindowAction) {
-            return false;
-        }
-        let Some(navigation) = decision.downcast_ref::<webkit::NavigationPolicyDecision>() else {
-            return false;
-        };
-        let uri = navigation
-            .navigation_action()
-            .and_then(|action| action.request())
-            .and_then(|request| request.uri())
-            .map(|uri| uri.to_string())
-            .unwrap_or_default();
-        if kind == Kind::NavigationAction && uri == "about:blank" {
-            decision.use_();
-            return true;
-        }
-        decision.ignore();
-        if uri.starts_with("https://") || uri.starts_with("http://") {
-            let window = view.root().and_downcast::<gtk::Window>();
-            gtk::UriLauncher::new(&uri).launch(window.as_ref(), gio::Cancellable::NONE, |_| {});
-        }
-        true
-    });
-    view
 }
 
 fn line() -> gtk::Separator {

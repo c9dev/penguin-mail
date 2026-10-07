@@ -50,7 +50,7 @@ pub struct App {
     pub gio: gio::Application,
     pub core: Rc<Core>,
     window: RefCell<Option<Rc<MainWindow>>>,
-    filter: RefCell<Option<webkit::UserContentFilter>>,
+    filter: RefCell<Option<crate::web::Filter>>,
     /// The accounts in the store, in the order the store lists them, and
     /// each one's labels. The window's sidebar, list and dialogs all read
     /// this one copy.
@@ -466,7 +466,7 @@ impl App {
         }
     }
 
-    pub fn filter(&self) -> Option<webkit::UserContentFilter> {
+    pub fn filter(&self) -> Option<crate::web::Filter> {
         self.filter.borrow().clone()
     }
 
@@ -1152,16 +1152,9 @@ impl App {
             .join(mailrs_sync::config::DIR_NAME)
             .join("content-filters");
         let _ = std::fs::create_dir_all(&dir);
-        let store = webkit::UserContentFilterStore::new(&dir.to_string_lossy());
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
-            match store
-                .save_future(
-                    "block-remote",
-                    &glib::Bytes::from_static(BLOCK_REMOTE_RULES.as_bytes()),
-                )
-                .await
-            {
+            match crate::web::compile_filter(&dir, "block-remote", BLOCK_REMOTE_RULES).await {
                 Ok(filter) => {
                     *this.filter.borrow_mut() = Some(filter.clone());
                     this.tell_window(Notice::FilterReady(filter));
