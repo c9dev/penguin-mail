@@ -306,20 +306,16 @@ too.
 
 ### On Arch
 
-Download the `.pkg.tar.zst` from the
-[latest release](https://github.com/c9dev/penguin-mail/releases/latest) and
-install it, replacing `X.Y.Z` with the version:
+[![penguin-mail on AUR](https://img.shields.io/aur/version/penguin-mail?label=penguin-mail)](https://aur.archlinux.org/packages/penguin-mail/)
+[![penguin-mail-bin on AUR](https://img.shields.io/aur/version/penguin-mail-bin?label=penguin-mail-bin)](https://aur.archlinux.org/packages/penguin-mail-bin/)
 
-```sh
-sudo pacman -U ./penguin-mail-X.Y.Z-1-x86_64.pkg.tar.zst
+```bash
+# Build release package from source
+yay -S penguin-mail
+
+# OR install the binary release
+yay -S penguin-mail-bin
 ```
-
-pacman pulls in the libraries it needs. There is no Penguin Mail
-repository for Arch yet, so a new release means downloading and
-installing its `.pkg.tar.zst` again.
-[packaging/aur/PKGBUILD](packaging/aur/PKGBUILD) is a ready AUR package
-once someone publishes it, which would bring updates through an AUR
-helper instead.
 
 ### From the Snap Store
 
