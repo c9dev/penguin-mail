@@ -685,7 +685,7 @@ pub(super) fn catalog<A: Accounts>() -> Vec<MailTool<A>> {
         MailTool {
             name: "change_setting",
             label: || gettext("Changing a setting"),
-            description: "Changes one app setting. Use the names and value shapes get_settings returns.",
+            description: "Changes one app setting. Use the names and value shapes get_settings returns. The user approves it first.",
             input: || {
                 json!({
                     "name": {"type": "string"},
@@ -693,15 +693,15 @@ pub(super) fn catalog<A: Accounts>() -> Vec<MailTool<A>> {
                 })
             },
             required: &["name", "value"],
-            run: Run::Now(|t, input| Box::pin(ready(t.change_setting(input)))),
+            run: Run::AsksFirst(|t, input| Box::pin(ready(t.change_setting(input)))),
         },
         MailTool {
             name: "set_signature",
             label: || gettext("Setting a signature"),
-            description: "Sets the Markdown signature added to new mail from an account. Empty removes it.",
+            description: "Sets the Markdown signature added to new mail from an account. Empty removes it. The user approves it first.",
             input: || json!({"account": account("The account."), "text": {"type": "string"}}),
             required: &["account", "text"],
-            run: Run::Now(|t, input| Box::pin(ready(t.signature(input)))),
+            run: Run::AsksFirst(|t, input| Box::pin(ready(t.signature(input)))),
         },
         MailTool {
             name: "vip",
@@ -790,10 +790,10 @@ pub(super) fn catalog<A: Accounts>() -> Vec<MailTool<A>> {
         MailTool {
             name: "set_hidden_address",
             label: || gettext("Changing a hidden address"),
-            description: "Turns a Hide My Email address off (its mail goes to the Trash) or back on.",
+            description: "Turns a Hide My Email address off (its mail goes to the Trash) or back on. The user approves it first.",
             input: || json!({"address": {"type": "string"}, "active": {"type": "boolean"}}),
             required: &["address", "active"],
-            run: Run::Now(|t, input| Box::pin(t.hidden_set(input))),
+            run: Run::AsksFirst(|t, input| Box::pin(t.hidden_set(input))),
         },
         MailTool {
             name: "open_conversation",
