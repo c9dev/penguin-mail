@@ -61,7 +61,7 @@ jobs:
       # The snap builds only when a release is tagged, and 1.0.1's failed
       # there because an edit dropped this file's executable bit.
       - name: The snap's launcher is executable
-        run: git ls-files -s snap/local/launcher | grep -q '^100755'
+        run: test -x snap/local/launcher
       - name: Every control has an accessible name
         run: scripts/a11y-names.sh
 
