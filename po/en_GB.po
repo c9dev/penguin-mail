@@ -752,15 +752,49 @@ msgstr "Create a rule for {account}: {when} → {then}?"
 msgid "Delete a rule from {account}?"
 msgstr "Delete a rule from {account}?"
 
-#: app/src/assistant/run.rs:1686 app/src/assistant/run.rs:1720
+#: app/src/assistant/run.rs:1538
+msgid "Load remote images from every sender?"
+msgstr "Load remote images from every sender?"
+
+#: app/src/assistant/run.rs:1539 app/src/assistant/run/manage.rs:607
+msgid "Loading a remote image tells the sender when you opened their mail."
+msgstr "Loading a remote image tells the sender when you opened their mail."
+
+#: app/src/assistant/run.rs:1546
+msgid "Change the setting {name} to {value}?"
+msgstr "Change the setting {name} to {value}?"
+
+#: app/src/assistant/run.rs:1568
+msgid "Remove your signature for {account}?"
+msgstr "Remove your signature for {account}?"
+
+#: app/src/assistant/run.rs:1572
+msgid ""
+"Change your signature for {account} to:\n"
+"\n"
+"{text}"
+msgstr ""
+"Change your signature for {account} to:\n"
+"\n"
+"{text}"
+
+#: app/src/assistant/run.rs:1720 app/src/assistant/run.rs:1758
 msgid "Hide My Email works with Gmail accounts."
 msgstr "Hide My Email works with Gmail accounts."
 
-#: app/src/assistant/run.rs:1825
+#: app/src/assistant/run.rs:1763
+msgid "Turn off {address}? Mail sent to it will go to the Trash."
+msgstr "Turn off {address}? Mail sent to it will go to the Trash."
+
+#: app/src/assistant/run.rs:1767
+msgid "Turn {address} back on? Mail sent to it will arrive again."
+msgstr "Turn {address} back on? Mail sent to it will arrive again."
+
+#: app/src/assistant/run.rs:1876
 msgid "Move mail from {sender} to {category} in {account}, and send their future mail there too?"
 msgstr "Move mail from {sender} to {category} in {account}, and send their future mail there too?"
 
-#: app/src/assistant/run.rs:1837
+#: app/src/assistant/run.rs:1888
 msgid "Move mail from {sender} to {category} in {account}, and add a {provider} rule for their future mail?"
 msgstr "Move mail from {sender} to {category} in {account}, and add a {provider} rule for their future mail?"
 
@@ -1197,10 +1231,6 @@ msgstr "Always load images from anyone at {domain}?"
 msgid "Always load images from {sender}?"
 msgstr "Always load images from {sender}?"
 
-#: app/src/assistant/run/manage.rs:607
-msgid "Loading a remote image tells the sender when you opened their mail."
-msgstr "Loading a remote image tells the sender when you opened their mail."
-
 #: app/src/assistant/run/manage.rs:632
 msgid "Stop loading images from {sender}?"
 msgstr "Stop loading images from {sender}?"
@@ -1422,17 +1452,31 @@ msgstr ""
 "\n"
 "It runs in a sandbox with no access to your mail or home folder. {network} Always Allow covers this exact command only."
 
-#: app/src/assistant/sources/web.rs:60
+#: app/src/assistant/sources/web.rs:64
 msgid "Add a Brave Search API key."
 msgstr "Add a Brave Search API key."
 
-#: app/src/assistant/sources/web.rs:62
+#: app/src/assistant/sources/web.rs:66
 msgid "Enter the address of a SearXNG server."
 msgstr "Enter the address of a SearXNG server."
 
-#: app/src/assistant/sources/web.rs:66
+#: app/src/assistant/sources/web.rs:70
 msgid "Choose Brave Search or SearXNG for a local model to search with."
 msgstr "Choose Brave Search or SearXNG for a local model to search with."
+
+#: app/src/assistant/sources/web.rs:333
+msgid ""
+"Open this web page?\n"
+"\n"
+"{address}\n"
+"\n"
+"The site receives the whole address, including anything after a question mark. Always Allow covers this exact address only."
+msgstr ""
+"Open this web page?\n"
+"\n"
+"{address}\n"
+"\n"
+"The site receives the whole address, including anything after a question mark. Always Allow covers this exact address only."
 
 #: app/src/assistant/turn.rs:57
 msgid "Waiting for the model…"
@@ -3727,48 +3771,48 @@ msgstr "Use a local model from LM Studio, Ollama, or any server with OpenAI's AP
 msgid "Stop"
 msgstr "Stop"
 
-#: app/src/ui/assistant.rs:550
+#: app/src/ui/assistant.rs:553
 msgid "Don't Allow"
 msgstr "Don't Allow"
 
-#: app/src/ui/assistant.rs:552
+#: app/src/ui/assistant.rs:555
 msgid "Allow"
 msgstr "Allow"
 
-#: app/src/ui/assistant.rs:556
+#: app/src/ui/assistant.rs:559
 msgid "Always Allow"
 msgstr "Always Allow"
 
-#: app/src/ui/assistant.rs:592
+#: app/src/ui/assistant.rs:595
 msgid "Allowed"
 msgstr "Allowed"
 
-#: app/src/ui/assistant.rs:593
+#: app/src/ui/assistant.rs:596
 msgid "Always allowed"
 msgstr "Always allowed"
 
-#: app/src/ui/assistant.rs:594
+#: app/src/ui/assistant.rs:597
 msgid "Not allowed"
 msgstr "Not allowed"
 
-#: app/src/ui/assistant.rs:834
+#: app/src/ui/assistant.rs:837
 msgid "Result"
 msgstr "Result"
 
-#: app/src/ui/assistant.rs:842
+#: app/src/ui/assistant.rs:845
 msgid "Input"
 msgstr "Input"
 
-#: app/src/ui/assistant.rs:920
+#: app/src/ui/assistant.rs:923
 msgid "Running"
 msgstr "Running"
 
-#: app/src/ui/assistant.rs:921 app/src/ui/calendar/editor.rs:263
+#: app/src/ui/assistant.rs:924 app/src/ui/calendar/editor.rs:263
 #: app/src/ui/hide_my_email.rs:467
 msgid "Done"
 msgstr "Done"
 
-#: app/src/ui/assistant.rs:922
+#: app/src/ui/assistant.rs:925
 msgid "Failed"
 msgstr "Failed"
 

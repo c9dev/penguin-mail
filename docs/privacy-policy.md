@@ -1,6 +1,6 @@
 # Penguin Mail privacy policy
 
-Last updated: 5 October 2026
+Last updated: 7 October 2026
 
 Penguin Mail is a mail and calendar app for Linux, published by Pivotd
 (https://pivotd.com), at https://penguin-mail.com. It works with Google
@@ -133,9 +133,10 @@ desktop's keyring, as described below.
   sends its words to the search engine in use: Anthropic, when the
   assistant runs on Claude; Brave, when you chose Brave Search for a local
   model; or the SearXNG server you named. The words of a search come from
-  your request and can include what the assistant read in your mail. When
-  it reads a page, the site that serves it sees a request from your
-  computer, or from Anthropic's servers when the assistant runs on Claude.
+  your request and can include what the assistant read in your mail. The
+  assistant asks you before it reads a page and shows the whole address.
+  When you allow it, the site that serves the page sees a request from
+  your computer, with everything in the address.
 - On the AI page you can add MCP servers: programs on your computer or
   services on the web that give the assistant more tools. Penguin Mail adds
   none by itself. A server you add receives what the assistant sends it in
