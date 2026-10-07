@@ -738,9 +738,9 @@ async fn web_search_runs_on_anthropic_and_goes_back_unchanged() {
         json!({"type": "web_search_20260318", "name": "web_search", "max_uses": 8,
             "allowed_callers": ["direct"]})
     );
-    assert_eq!(tools[3]["type"], json!("web_fetch_20260318"));
-    assert_eq!(tools[3]["name"], json!("web_fetch"));
-    assert_eq!(tools[3]["allowed_callers"], json!(["direct"]));
+    // Pages come through the app's own fetch_page, which asks the person
+    // first, so Anthropic's page fetch is never declared.
+    assert_eq!(tools.len(), 3, "{tools:?}");
 
     let seen = drain(&rx);
     let rows: Vec<AgentEvent> = seen

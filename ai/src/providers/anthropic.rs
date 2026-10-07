@@ -24,16 +24,11 @@ const THINKING_BUDGET: u32 = 16_000;
 const MODEL_PAGE: u32 = 1000;
 /// Pages read before the list stops, so a runaway cursor cannot loop.
 const MAX_MODEL_PAGES: usize = 20;
-/// Anthropic's own web search and page fetch, run on its servers. These
-/// are the newest versions the docs list.
+/// Anthropic's own web search, run on its servers. This is the newest
+/// version the docs list.
 pub(crate) const WEB_SEARCH_TOOL: &str = "web_search_20260318";
-pub(crate) const WEB_FETCH_TOOL: &str = "web_fetch_20260318";
-/// Searches and fetches the model may run in one request.
+/// Searches the model may run in one request.
 const WEB_USES: u32 = 8;
-/// Tokens of one fetched page that reach the model. A page goes back with
-/// every later request of the chat, so a long one would crowd out the mail
-/// the chat is about.
-const FETCH_TOKENS: u32 = 20_000;
 /// Characters of a fetched page the tool row shows.
 const FETCH_SHOWN: usize = 2_000;
 
@@ -293,29 +288,23 @@ async fn run_tools(
     results
 }
 
-/// Anthropic's web search and page fetch, as the request declares them.
+/// Anthropic's web search, as the request declares it.
 ///
-/// Both run as direct calls. From their 2026 versions on they default to
-/// running inside Anthropic's code execution, which filters what comes back
-/// but refuses models older than Claude 4.6 and adds code blocks and a
-/// container to the chat. Direct calls work on every model that has the
-/// tools, and the page size cap does the filtering's job.
+/// The request leaves out Anthropic's page fetch. A page comes through the
+/// app's own `fetch_page`, which shows the person the whole address and
+/// asks first, because an address the model writes can carry mail out to
+/// whoever runs the site. A search sends only its query to Anthropic.
+///
+/// The search runs as a direct call. From its 2026 version on it defaults to
+/// running inside Anthropic's code execution, which refuses models older
+/// than Claude 4.6 and adds code blocks and a container to the chat.
 pub(crate) fn web_tools() -> Vec<Value> {
-    vec![
-        json!({
-            "type": WEB_SEARCH_TOOL,
-            "name": "web_search",
-            "max_uses": WEB_USES,
-            "allowed_callers": ["direct"],
-        }),
-        json!({
-            "type": WEB_FETCH_TOOL,
-            "name": "web_fetch",
-            "max_uses": WEB_USES,
-            "max_content_tokens": FETCH_TOKENS,
-            "allowed_callers": ["direct"],
-        }),
-    ]
+    vec![json!({
+        "type": WEB_SEARCH_TOOL,
+        "name": "web_search",
+        "max_uses": WEB_USES,
+        "allowed_callers": ["direct"],
+    })]
 }
 
 /// The tool row for a server tool's result block, such as

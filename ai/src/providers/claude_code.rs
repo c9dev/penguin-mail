@@ -197,12 +197,17 @@ pub(crate) struct ClaudeCodeChat {
     session_id: Option<String>,
     work_dir: PathBuf,
     bridge_command: Option<PathBuf>,
-    /// Let Claude Code search the web and read pages with its own tools.
+    /// Let Claude Code search the web with its own tool.
     pub(crate) web: bool,
 }
 
-/// Claude Code's built-in web tools, as `--tools` names them.
-const WEB_TOOLS: &str = "WebSearch,WebFetch";
+/// Claude Code's built-in web tools, as `--tools` names them. WebSearch
+/// sends only a query to Anthropic's search and reads back results, so it
+/// runs without a prompt. WebFetch stays off: it would download any address
+/// the model writes, and an address can carry mail out to whoever runs the
+/// site. Pages come through the app's `fetch_page` over the bridge instead,
+/// which shows the person the whole address and asks first.
+const WEB_TOOLS: &str = "WebSearch";
 
 impl ClaudeCodeChat {
     pub(crate) fn new(
@@ -322,8 +327,8 @@ impl ClaudeCodeChat {
             "--strict-mcp-config",
             "--mcp-config",
             mcp_config,
-            // No shell and no file access. The web tools only read, so they
-            // join the mail tools when web search is on.
+            // No shell, no file access and no page fetch. Search joins the
+            // mail tools when web search is on.
             "--tools",
             if self.web { WEB_TOOLS } else { "" },
             "--allowedTools",
@@ -331,7 +336,9 @@ impl ClaudeCodeChat {
                 true => format!("mcp__{SERVER_NAME},{WEB_TOOLS}"),
                 false => format!("mcp__{SERVER_NAME}"),
             },
-            // Anything not allowed above is refused without a prompt.
+            // Anything not allowed above is refused without a prompt. The
+            // bridge's tools are all allowed here, and the app asks the
+            // person itself before a call that needs it.
             "--permission-mode",
             "dontAsk",
             "--system-prompt",
