@@ -5,6 +5,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ## Unreleased
 
+## 1.0.3 (2026-10-07)
+
 ### Fixed
 
 - The assistant asks before it opens a web page, and shows you the whole
