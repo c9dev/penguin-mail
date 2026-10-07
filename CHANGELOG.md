@@ -13,6 +13,10 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   snap or Flatpak cannot see, such as Cinnamon on Linux Mint or Pop!_OS.
 - The tray shows the Penguin Mail icon on Cinnamon and other panels that
   cannot find the app's icon by name, instead of a blank circle.
+- Closing the window before you add an account quits Penguin Mail, rather
+  than leaving it running in the background with nothing to sync.
+- In the snap, the notice about connecting your keyring goes away once
+  you connect it and open the window again.
 
 ## 1.0.0 (2026-10-06)
 

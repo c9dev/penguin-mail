@@ -1225,12 +1225,12 @@ impl MainWindow {
         self.accounts_for_calendar(&accounts);
     }
 
-    /// Asks snapd whether the snap can reach the keyring, and when it
-    /// cannot, puts a notice across the top of the window that stays for
-    /// the rest of the run: connecting the plug takes a restart.
-    /// Outside a snap this asks nothing. `MAILRS_DEMO_KEYRING_UNPLUGGED`
-    /// shows the notice in the demo.
-    fn check_keyring_plug(self: &Rc<Self>) {
+    /// Asks snapd whether the snap can reach the keyring, and puts a
+    /// notice across the top of the window while it cannot. The app asks
+    /// again each time the window is presented, and takes the notice down
+    /// once the plug is connected. Outside a snap this asks nothing.
+    /// `MAILRS_DEMO_KEYRING_UNPLUGGED` shows the notice in the demo.
+    pub fn check_keyring_plug(self: &Rc<Self>) {
         let unplugged_demo =
             self.core.demo && std::env::var_os("MAILRS_DEMO_KEYRING_UNPLUGGED").is_some();
         let weak = Rc::downgrade(self);
@@ -1239,22 +1239,28 @@ impl MainWindow {
             let Some(win) = weak.upgrade() else { return };
             if plug.wants_notice() {
                 win.show_keyring_notice();
+            } else {
+                win.keyring_banner.set_revealed(false);
             }
         });
     }
 
     fn show_keyring_notice(self: &Rc<Self>) {
         let banner = &self.keyring_banner;
-        banner.set_use_markup(true);
-        banner.set_title(&crate::keyring_plug::notice_markup());
-        banner.set_button_label(Some(&gettext("Copy Command")));
-        let weak = Rc::downgrade(self);
-        banner.connect_button_clicked(move |banner| {
-            banner.clipboard().set_text(crate::keyring_plug::COMMAND);
-            if let Some(win) = weak.upgrade() {
-                win.toast(&gettext("Command copied"));
-            }
-        });
+        // A later check can show the notice again after hiding it; the
+        // button keeps the one handler it got the first time.
+        if banner.button_label().is_none() {
+            banner.set_use_markup(true);
+            banner.set_title(&crate::keyring_plug::notice_markup());
+            banner.set_button_label(Some(&gettext("Copy Command")));
+            let weak = Rc::downgrade(self);
+            banner.connect_button_clicked(move |banner| {
+                banner.clipboard().set_text(crate::keyring_plug::COMMAND);
+                if let Some(win) = weak.upgrade() {
+                    win.toast(&gettext("Command copied"));
+                }
+            });
+        }
         banner.set_revealed(true);
     }
 
