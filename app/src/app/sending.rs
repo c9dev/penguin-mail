@@ -118,10 +118,18 @@ impl App {
         if let Some(identity) = alias {
             draft.from = identity.address;
         }
-        draft.to = crate::compose::parse_recipients(to);
-        draft.subject = subject;
-        draft.markdown = body;
-        let raw = self.raw_for(&draft, None).await?;
+        let draft = crate::compose::request_draft(draft, to, subject, body)?;
+        // Plain text, built here rather than through `raw_for`: the words
+        // are the list's, and the composer's path would read them as
+        // Markdown and send an HTML part beside them.
+        let message_id = crate::compose::new_message_id(&draft.from.email);
+        let raw = crate::compose::build_request(&draft, now_millis() / 1000, &message_id)
+            .map_err(|err| {
+                fill(
+                    &gettext("Could not build the message: {reason}"),
+                    &[("reason", &err)],
+                )
+            })?;
         let outbox = self.core.outbox();
         let message = queued(&draft, raw, now_millis());
         let posted = self

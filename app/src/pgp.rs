@@ -88,8 +88,12 @@ pub fn open(pgp: &Pgp, opening: Opening, raw: &[u8], body: &MessageBody) -> Resu
                 encrypted: !matches!(inline::armor(text), Some(inline::Armor::Clearsigned)),
                 signatures: opened.signatures.iter().map(signed).collect(),
                 // The armor said nothing about a character set, so these
-                // bytes are read the way a body with no charset is.
-                part: Part::Text(decode_charset(&opened.text, None)),
+                // bytes are read the way a body with no charset is. Text
+                // that is UTF-8 already becomes the string without a copy.
+                part: Part::Text(
+                    String::from_utf8(opened.text)
+                        .unwrap_or_else(|err| decode_charset(err.as_bytes(), None)),
+                ),
             })
         }
     }
@@ -233,6 +237,7 @@ fn refusal(err: PgpError) -> Refusal {
     match err {
         PgpError::NotForYou => Refusal::NotForYou,
         PgpError::NotPgp => Refusal::Unreadable,
+        PgpError::TooLarge => Refusal::TooLarge,
         other => Refusal::Failed(explain(&other)),
     }
 }
@@ -265,6 +270,7 @@ pub fn explain(err: &PgpError) -> String {
         ),
         PgpError::NotPgp => gettext("This text holds no OpenPGP block."),
         PgpError::NotAKey => gettext("This file holds no OpenPGP key."),
+        PgpError::TooLarge => gettext("This message is too large to open."),
         PgpError::Gpg(reason) => fill(&gettext("gpg failed: {reason}"), &[("reason", reason)]),
     }
 }
@@ -598,6 +604,58 @@ mod tests {
             mark.detail,
             Some(explain(&PgpError::Gpg("bad armor".into())))
         );
+    }
+
+    /// Armor holding 80 MiB of zeros, stored without encryption and
+    /// compressed to a few kilobytes. The zeros reach gpg through a pipe.
+    fn expanding(home: &Home) -> String {
+        let mut gpg = Command::new(home.pgp.program())
+            .args(["--batch", "--no-tty", "--homedir"])
+            .arg(home.dir.path())
+            .args(["--store", "--compress-algo", "bzip2", "--armor"])
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::null())
+            .spawn()
+            .expect("gpg runs");
+        let mut stdin = gpg.stdin.take().expect("gpg's input");
+        let writer = std::thread::spawn(move || {
+            use std::io::Write;
+            let zeros = vec![0u8; 1 << 20];
+            for _ in 0..80 {
+                stdin.write_all(&zeros).expect("gpg reads");
+            }
+        });
+        let out = gpg.wait_with_output().expect("gpg ends");
+        writer.join().expect("the writer ends");
+        assert!(out.status.success(), "gpg could not store the zeros");
+        String::from_utf8(out.stdout).expect("armor is ascii")
+    }
+
+    #[test]
+    fn armor_that_opens_to_more_than_the_cap_shows_a_card_and_no_body() {
+        let Some(home) = Home::new() else {
+            return;
+        };
+        let body = MessageBody {
+            text: Some(format!("Hello\n{}", expanding(&home))),
+            ..MessageBody::default()
+        };
+
+        let read = read(&home.pgp, Opening::Inline, b"", &body);
+
+        assert_eq!(read.mark.title, "This message is too large to open");
+        assert!(
+            read.mark
+                .detail
+                .as_deref()
+                .is_some_and(|detail| detail.contains("64 MB")),
+            "{:?}",
+            read.mark.detail
+        );
+        assert_eq!(read.mark.tone, Tone::Unchecked);
+        assert!(read.body.is_none());
+        assert!(explain(&PgpError::TooLarge).contains("too large"));
     }
 
     #[test]

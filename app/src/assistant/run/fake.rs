@@ -33,7 +33,7 @@ use super::{Answer, Background, Desk, Effects, Modules, OnScreen, Permission, To
 use crate::compose::{self, Draft};
 use crate::protection::{self, Held, Standard};
 use crate::settings::{Change, Settings};
-use crate::ui::unsubscribe::{ListLine, Way, line_text};
+use crate::ui::unsubscribe::{ListLine, Way, line_text, request_text};
 use crate::unsubscribe::RequestSent;
 use crate::unsubscribe_page::fake::FakeBrowser;
 use crate::unsubscribe_page::{Adviser, Browser, PageForm, Plan};
@@ -276,7 +276,18 @@ impl Effects for FakeEffects {
                 names
                     .iter()
                     .zip(&ways)
-                    .map(|(name, way)| format!("{name}: {}", line_text(way)))
+                    // What the dialog shows for the line, the request
+                    // under it included.
+                    .map(|(name, way)| match request_text(way) {
+                        Some(request) => format!(
+                            "{name}: {} | {} | {} | {}",
+                            line_text(way),
+                            request.to,
+                            request.subject,
+                            request.body
+                        ),
+                        None => format!("{name}: {}", line_text(way)),
+                    })
                     .collect(),
             );
             asked

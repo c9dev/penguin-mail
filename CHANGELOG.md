@@ -13,6 +13,10 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   whatever address it is given.
 - The assistant asks before it changes a setting, your signature, or a
   Hide My Email address.
+- Opening an OpenPGP or S/MIME message that expands to an enormous size
+  shows "This message is too large to open" instead of using up memory.
+- Unsubscribing by email shows the address, the subject and the message
+  before sending, and sends only to that one address, as plain text.
 
 ## 1.0.2 (2026-10-07)
 

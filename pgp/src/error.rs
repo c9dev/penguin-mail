@@ -24,6 +24,10 @@ pub enum PgpError {
     /// A file handed to import holds no OpenPGP key gpg could read.
     #[error("this file holds no OpenPGP key")]
     NotAKey,
+    /// What gpg opened came to more than
+    /// [`crate::gnupg::MOST_OUTPUT`], and the run stopped it there.
+    #[error("the message is too large to open")]
+    TooLarge,
     #[error("gpg failed: {0}")]
     Gpg(String),
 }

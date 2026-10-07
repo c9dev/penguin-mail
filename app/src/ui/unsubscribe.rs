@@ -38,11 +38,22 @@ pub enum Way {
     Reading,
     /// The sender promised RFC 8058, and one request is the whole of it.
     OneClick,
-    /// A request goes out as mail from `from`.
-    Mail { from: String },
+    /// A request goes out as mail from `from` to `to`, with the subject
+    /// and body the list asked for. The dialog shows all of it, since the
+    /// list chose every word but `from`.
+    Mail {
+        from: String,
+        to: String,
+        subject: String,
+        body: String,
+    },
     /// The page was read and decided on.
     Page(Prepared),
 }
+
+/// The width of the list when it shows a request mail. A 360-pixel phone
+/// screen less the dialog's margins still holds it.
+const REQUEST_WIDTH: i32 = 300;
 
 /// The response that goes ahead. Cancel, Escape and closing the dialog
 /// all answer something else, and none of them submits anything.
@@ -83,6 +94,9 @@ pub async fn confirm(
         row.add_prefix(&check);
         row.add_suffix(&spinner);
         list.append(&row);
+        if let Some(request) = request_text(&line.way) {
+            list.append(&request_row(&request));
+        }
         rows.push(Line {
             check,
             row,
@@ -91,6 +105,16 @@ pub async fn confirm(
         ways.borrow_mut().push(line.way);
     }
     dialog.set_extra_child(Some(&list));
+    // A request shows an address whole, and at the dialog's usual width a
+    // long one breaks at its hyphens. This widens it as far as a phone's
+    // screen still holds.
+    if ways
+        .borrow()
+        .iter()
+        .any(|way| matches!(way, Way::Mail { .. }))
+    {
+        list.set_width_request(REQUEST_WIDTH);
+    }
     dialog.add_responses(&[
         ("cancel", &gettext("Cancel")),
         (GO, &gettext("Unsubscribe")),
@@ -120,6 +144,41 @@ pub async fn confirm(
             .filter(|(at, _)| rows[*at].check.is_active())
             .collect(),
     )
+}
+
+/// The row under a request line that shows the mail word for word, laid
+/// out as a mail reads: the address, the subject, then the body. Every
+/// label takes its text as it is, never as markup. `mailrs_sync` keeps a
+/// body only up to a thousand characters, and the dialog scrolls when that
+/// makes it tall.
+fn request_row(request: &RequestText) -> gtk::ListBoxRow {
+    let label = |text: &str, class: &str| {
+        gtk::Label::builder()
+            .label(text)
+            .xalign(0.0)
+            .wrap(true)
+            .wrap_mode(gtk::pango::WrapMode::WordChar)
+            .css_classes([class])
+            .build()
+    };
+    let column = gtk::Box::builder()
+        .orientation(gtk::Orientation::Vertical)
+        .spacing(4)
+        .margin_top(12)
+        .margin_bottom(12)
+        .margin_start(12)
+        .margin_end(12)
+        .build();
+    column.append(&label(&request.to, "body"));
+    column.append(&label(&request.subject, "body"));
+    let body = label(&request.body, "monospace");
+    body.set_margin_top(8);
+    column.append(&body);
+    gtk::ListBoxRow::builder()
+        .child(&column)
+        .activatable(false)
+        .selectable(false)
+        .build()
 }
 
 /// One line's widgets, kept so that a page arriving late can fill the
@@ -189,12 +248,40 @@ pub fn line_text(way: &Way) -> String {
     match way {
         Way::Reading => gettext("Reading the page…"),
         Way::OneClick => gettext("ask the sender to take you off the list"),
-        Way::Mail { from } => fill(
-            &gettext("send a request from {address}"),
+        Way::Mail { from, .. } => fill(
+            &gettext("send this request from {address}"),
             &[("address", &mask(from))],
         ),
         Way::Page(prepared) => page_text(prepared),
     }
+}
+
+/// The mail a request line sends, as the dialog shows it under the line.
+/// The address it goes to is shown whole, since it is the one thing the
+/// person has to check.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RequestText {
+    /// "To: leave@news.example"
+    pub to: String,
+    /// "Subject: unsubscribe"
+    pub subject: String,
+    /// The body as the plain text that goes out.
+    pub body: String,
+}
+
+/// The mail `way` sends, or `None` for the ways that send no mail.
+pub fn request_text(way: &Way) -> Option<RequestText> {
+    let Way::Mail {
+        to, subject, body, ..
+    } = way
+    else {
+        return None;
+    };
+    Some(RequestText {
+        to: fill(&gettext("To: {address}"), &[("address", to)]),
+        subject: fill(&gettext("Subject: {subject}"), &[("subject", subject)]),
+        body: body.clone(),
+    })
 }
 
 /// What a page that has been read will have done to it. A page the rules
@@ -356,12 +443,24 @@ mod tests {
             line_text(&Way::OneClick),
             "ask the sender to take you off the list"
         );
+        let mail = Way::Mail {
+            from: "dana@gmail.com".to_string(),
+            to: "leave@news.example".to_string(),
+            subject: "Remove me".to_string(),
+            body: "Please take me off.\n<b>Thanks</b>".to_string(),
+        };
+        assert_eq!(line_text(&mail), "send this request from d…@gmail.com");
+        // The address the mail goes to is shown whole: it is the one the
+        // person has to check.
         assert_eq!(
-            line_text(&Way::Mail {
-                from: "dana@gmail.com".to_string()
-            }),
-            "send a request from d…@gmail.com"
+            request_text(&mail),
+            Some(RequestText {
+                to: "To: leave@news.example".to_string(),
+                subject: "Subject: Remove me".to_string(),
+                body: "Please take me off.\n<b>Thanks</b>".to_string(),
+            })
         );
+        assert_eq!(request_text(&Way::OneClick), None);
         assert_eq!(line_text(&Way::Reading), "Reading the page…");
     }
 

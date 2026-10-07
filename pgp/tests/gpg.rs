@@ -603,6 +603,68 @@ fn a_body_with_no_armor_in_it_is_not_opened() {
     );
 }
 
+/// Armor holding 160 MiB of zeros, compressed and stored without
+/// encryption, as `gpg --store` writes it. Anyone can open it, no key
+/// needed, and it comes to a few kilobytes. The zeros go to gpg through a
+/// pipe, so this process never holds them.
+fn expanding(home: &Home) -> String {
+    let mut gpg = Command::new(home.pgp.program())
+        .args(["--batch", "--no-tty", "--homedir"])
+        .arg(home.dir.path())
+        .args(["--store", "--compress-algo", "bzip2", "--armor"])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .spawn()
+        .expect("gpg runs");
+    let mut stdin = gpg.stdin.take().expect("gpg's input");
+    let writer = std::thread::spawn(move || {
+        use std::io::Write;
+        let zeros = vec![0u8; 1 << 20];
+        for _ in 0..160 {
+            stdin.write_all(&zeros).expect("gpg reads");
+        }
+    });
+    let out = gpg.wait_with_output().expect("gpg ends");
+    writer.join().expect("the writer ends");
+    assert!(out.status.success(), "gpg could not store the zeros");
+    String::from_utf8(out.stdout).expect("armor is ascii")
+}
+
+#[test]
+fn armor_that_expands_past_the_cap_is_too_large_to_open() {
+    let Some(home) = Home::new("Ada Lovelace", "ada@example.test") else {
+        return;
+    };
+    let armor = expanding(&home);
+    assert!(armor.len() < 64 << 10, "the armor is {} bytes", armor.len());
+    let started = std::time::Instant::now();
+
+    let inline = home
+        .pgp
+        .open_inline(&format!("Hello\n{armor}"))
+        .map(|opened| opened.text.len());
+    let wrapped = home
+        .pgp
+        .decrypt(armor.as_bytes())
+        .map(|opened| opened.part.len());
+
+    for answer in [inline, wrapped] {
+        match answer {
+            Ok(bytes) => panic!("opened {bytes} bytes"),
+            Err(err) => assert!(
+                matches!(err, mailrs_pgp::PgpError::TooLarge),
+                "expected TooLarge, got {err}"
+            ),
+        }
+    }
+    let waited = started.elapsed();
+    assert!(
+        waited < std::time::Duration::from_secs(30),
+        "took {waited:?}"
+    );
+}
+
 /// The armored public key of `home`'s own key, for another home to import.
 fn public_key(home: &Home) -> Vec<u8> {
     let out = Command::new(home.pgp.program())
