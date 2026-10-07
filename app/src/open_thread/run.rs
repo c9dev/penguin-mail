@@ -125,6 +125,9 @@ pub trait Desk: Screen {
     /// Where a message's words would go to be translated, in the words the
     /// card uses, or why they have nowhere to go.
     fn translation_destination(&self) -> Result<String, String>;
+    /// The languages, by code, the person reads as they are, whose
+    /// messages get no card.
+    fn never_translate(&self) -> Vec<String>;
 }
 
 /// What the run asks of the store, Gmail and the view. A test answers with

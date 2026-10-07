@@ -132,7 +132,9 @@ app/src/ui/window/scheduled.rs
 app/src/ui/window/senders.rs
 app/src/ui/window/shortcuts.rs
 app/src/ui/window/spaces.rs
+app/src/ui/window/translation.rs
 app/src/unsubscribe_page.rs
+app/src/unsubscribe_page/hidden.rs
 app/src/unsubscribe_page/webkit.rs
 app/src/update/mod.rs
 app/src/update/signature.rs

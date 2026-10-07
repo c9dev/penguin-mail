@@ -251,6 +251,12 @@ impl Desk for Ports {
             .ok_or_else(|| "the window has closed".to_string())?;
         window.settings_with(|s| translation::destination(&s.ai).map(|(_, goes)| goes))
     }
+
+    fn never_translate(&self) -> Vec<String> {
+        self.window()
+            .map(|window| window.settings_with(|s| s.never_translate.clone()))
+            .unwrap_or_default()
+    }
 }
 
 impl Effects for Ports {

@@ -40,6 +40,12 @@ pub enum Change {
     },
     /// Notifications before calendar events.
     EventReminders(bool),
+    /// Stops offering to translate messages in one language, by its code
+    /// such as `pt`, or starts again.
+    NeverTranslate {
+        language: String,
+        never: bool,
+    },
     UndoSend(UndoSend),
     /// The address new messages come from; `None` means the first account.
     DefaultAccount(Option<String>),
@@ -246,6 +252,9 @@ impl Change {
                 settings.show_notification_button(button, show)
             }
             Change::EventReminders(on) => settings.event_reminders = on,
+            Change::NeverTranslate { language, never } => {
+                settings.never_translate(&language, never)
+            }
             Change::UndoSend(delay) => settings.undo_send = delay,
             Change::DefaultAccount(email) => settings.default_account = email,
             Change::InboxCategories(on) => settings.inbox_categories = on,
@@ -581,6 +590,8 @@ settable! {
         // Which buttons a notification carries is a list, and a setting the
         // assistant changes by name holds one value.
         notification_buttons,
+        // A list too, of the languages the person reads as they are.
+        never_translate,
         send_as,
         // When Gmail last answered is the app's own bookkeeping.
         send_as_checked,
@@ -646,12 +657,15 @@ pub enum Effect {
     Language,
     /// Where the week starts, which an open calendar redraws for at once.
     Calendar,
+    /// Which languages get no translation card, which the open
+    /// conversation's card reads.
+    Translation,
 }
 
 impl Effect {
     /// In the order the window applies them: accounts first, because the
     /// rows and the smart mailbox on screen read what it sets.
-    pub const ALL: [Effect; 13] = [
+    pub const ALL: [Effect; 14] = [
         Effect::ListShape,
         Effect::Accounts,
         Effect::RowColors,
@@ -665,6 +679,7 @@ impl Effect {
         Effect::Theme,
         Effect::Language,
         Effect::Calendar,
+        Effect::Translation,
     ];
 }
 
@@ -752,6 +767,7 @@ impl Effects {
             notify_vips_only,
             notification_buttons,
             event_reminders,
+            never_translate,
             smart_mailboxes,
             account_order,
             account_colors,
@@ -883,6 +899,7 @@ impl Effects {
                 Effect::Theme => *color_scheme != before.color_scheme,
                 Effect::Language => *language != before.language,
                 Effect::Calendar => *week_start != before.week_start,
+                Effect::Translation => *never_translate != before.never_translate,
             })
             .collect();
         Effects {
@@ -900,6 +917,24 @@ mod tests {
 
     fn effects(change: Change) -> Effects {
         change.apply(&mut Settings::default())
+    }
+
+    #[test]
+    fn languages_are_never_translated_one_at_a_time() {
+        let mut settings = Settings::default();
+        let never = |language: &str, never| Change::NeverTranslate {
+            language: language.into(),
+            never,
+        };
+        let effects = never("pt", true).apply(&mut settings);
+        assert!(effects.has(Effect::Translation));
+        never("es", true).apply(&mut settings);
+        // Turning one on twice keeps it once.
+        let again = never("pt", true).apply(&mut settings);
+        assert!(again.is_empty());
+        assert_eq!(settings.never_translate, ["pt", "es"]);
+        never("pt", false).apply(&mut settings);
+        assert_eq!(settings.never_translate, ["es"]);
     }
 
     #[test]
@@ -1272,6 +1307,7 @@ mod tests {
         after.color_scheme = ColorScheme::Dark;
         after.language = "pt_PT".into();
         after.week_start = mailrs_domain::calendar::week::WeekStart::Monday;
+        after.never_translate = vec!["pt".into()];
         let effects = Effects::between(&before, &after);
         assert_eq!(effects.iter().collect::<Vec<_>>(), Effect::ALL);
     }
@@ -1442,6 +1478,10 @@ mod tests {
             Change::ColorScheme(ColorScheme::Light),
             Change::Language("pt_PT".into()),
             Change::WeekStart(mailrs_domain::calendar::week::WeekStart::Monday),
+            Change::NeverTranslate {
+                language: "pt".into(),
+                never: true,
+            },
         ];
         let mut seen: Vec<Effect> = Vec::new();
         for change in changes {

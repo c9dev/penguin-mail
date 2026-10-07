@@ -127,6 +127,8 @@ pub struct Screen {
     pub delay: Option<u32>,
     pub interface: Option<Language>,
     pub destination: Result<String, String>,
+    /// The languages the person never translates, by code.
+    pub never: Vec<String>,
     /// The step the reader opens something else during.
     pub moves_on: Option<Step>,
     /// What opening something else does to the thread on screen. Another
@@ -415,6 +417,7 @@ impl FakeWindow {
             delay: Some(2),
             interface: Some(english()),
             destination: Ok("The message goes to a model on this computer.".to_string()),
+            never: Vec::new(),
             moves_on: None,
             moving: |open| open.thread_id = ELSEWHERE.to_string(),
             steps: Vec::new(),
@@ -616,6 +619,10 @@ impl Desk for FakeWindow {
 
     fn translation_destination(&self) -> Result<String, String> {
         self.with(|screen| screen.destination.clone())
+    }
+
+    fn never_translate(&self) -> Vec<String> {
+        self.with(|screen| screen.never.clone())
     }
 }
 

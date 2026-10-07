@@ -174,6 +174,17 @@ pub const DUTCH: Language = Language {
     ],
 };
 
+/// Every language the app can name, for the person to pick the ones they
+/// read as they are.
+pub fn named_languages() -> impl Iterator<Item = Language> {
+    KNOWN.into_iter().chain(BY_SCRIPT)
+}
+
+/// The language with `code`, when the app can name it.
+pub fn named(code: &str) -> Option<Language> {
+    named_languages().find(|language| language.code == code)
+}
+
 /// The languages whose words the app counts. A language outside this list
 /// is named by its script or not at all.
 const KNOWN: [Language; 7] = [ENGLISH, PORTUGUESE, SPANISH, FRENCH, GERMAN, ITALIAN, DUTCH];

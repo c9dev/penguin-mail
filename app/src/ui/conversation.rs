@@ -92,6 +92,9 @@ pub enum Action {
     /// The translation card's button: translate the open message, or turn
     /// the translation it already has over.
     Translate,
+    /// The translation card's Never Translate: stop offering to translate
+    /// messages in this language, by its code.
+    NeverTranslate(&'static str),
 }
 
 /// The one script the page carries of its own accord. WebKit injects it
@@ -423,7 +426,11 @@ impl ConversationView {
         let seal = PgpCard::new();
         let translate = {
             let on_action = Rc::clone(&on_action);
-            TranslationCard::new(move || on_action(Action::Translate))
+            let never = Rc::clone(&on_action);
+            TranslationCard::new(
+                move || on_action(Action::Translate),
+                move |code| never(Action::NeverTranslate(code)),
+            )
         };
         let queued = QueuedCard::new();
         let web_box = gtk::Box::new(gtk::Orientation::Vertical, 0);

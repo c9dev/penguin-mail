@@ -5,6 +5,12 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ## Unreleased
 
+### New
+
+- Pick the languages you read as they are, under Never Translate in
+  Preferences or with Never Translate on a message's translation card,
+  and their messages stop offering a translation.
+
 ## 1.0.0 (2026-10-06)
 
 ### New

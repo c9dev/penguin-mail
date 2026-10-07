@@ -1722,6 +1722,7 @@ impl MainWindow {
                 self.open_message_menu(view, &message_id, x, y)
             }
             Action::Translate => self.translate_message(view),
+            Action::NeverTranslate(language) => self.never_translate(language),
         }
     }
 
@@ -3605,6 +3606,11 @@ impl MainWindow {
             Effect::Theme => {}
             Effect::Language => self.offer_restart(),
             Effect::Calendar => self.calendar.week_start_changed(),
+            Effect::Translation => {
+                for view in self.views() {
+                    self.thread_run(&view).offer_translation_again();
+                }
+            }
         }
     }
 
