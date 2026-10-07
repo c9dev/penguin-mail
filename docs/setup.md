@@ -185,9 +185,10 @@ decides where updates come from and whether skills run.
   Flatpak keeps them in its own encrypted file instead, through the
   Secret portal, so no other app on the desktop can read them; the snap
   still uses the desktop's keyring, the same as the .deb. The snap reaches
-  it only once you run `snap connect penguin-mail:password-manager-service`
-  and restart the app. Until then it cannot save a sign-in, and a bar
-  across the top of the window says so and gives the command.
+  it only once you run `snap connect penguin-mail:password-manager-service`.
+  Until then it cannot save a sign-in, and a bar across the top of the
+  window says so and gives the command. The app asks snapd again each
+  time the window opens, and the bar goes once the plug is connected.
 - **Skills.** A skill's scripts run under bubblewrap, which cannot start
   inside Flatpak's or a strict snap's sandbox. Running them without one
   would hand a skill your mail and keys, so both packages turn skills off
