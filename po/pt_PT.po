@@ -899,11 +899,46 @@ msgstr "Criar uma regra para {account}: {when} → {then}?"
 msgid "Delete a rule from {account}?"
 msgstr "Eliminar uma regra de {account}?"
 
-#: app/src/assistant/run.rs:1686 app/src/assistant/run.rs:1720
+#: app/src/assistant/run.rs:1538
+msgid "Load remote images from every sender?"
+msgstr "Carregar as imagens remotas de todos os remetentes?"
+
+#: app/src/assistant/run.rs:1539 app/src/assistant/run/manage.rs:607
+msgid "Loading a remote image tells the sender when you opened their mail."
+msgstr ""
+"Carregar uma imagem remota diz ao remetente quando abriu o correio dele."
+
+#: app/src/assistant/run.rs:1546
+msgid "Change the setting {name} to {value}?"
+msgstr "Mudar a definição {name} para {value}?"
+
+#: app/src/assistant/run.rs:1568
+msgid "Remove your signature for {account}?"
+msgstr "Remover a sua assinatura de {account}?"
+
+#: app/src/assistant/run.rs:1572
+msgid ""
+"Change your signature for {account} to:\n"
+"\n"
+"{text}"
+msgstr ""
+"Mudar a sua assinatura de {account} para:\n"
+"\n"
+"{text}"
+
+#: app/src/assistant/run.rs:1720 app/src/assistant/run.rs:1758
 msgid "Hide My Email works with Gmail accounts."
 msgstr "O Ocultar o meu e-mail funciona com contas Gmail."
 
-#: app/src/assistant/run.rs:1825
+#: app/src/assistant/run.rs:1763
+msgid "Turn off {address}? Mail sent to it will go to the Trash."
+msgstr "Desativar {address}? O correio enviado para lá passa a ir para o lixo."
+
+#: app/src/assistant/run.rs:1767
+msgid "Turn {address} back on? Mail sent to it will arrive again."
+msgstr "Reativar {address}? O correio enviado para lá volta a chegar."
+
+#: app/src/assistant/run.rs:1876
 msgid ""
 "Move mail from {sender} to {category} in {account}, and send their future "
 "mail there too?"
@@ -911,7 +946,7 @@ msgstr ""
 "Mover o correio de {sender} para {category} em {account} e enviar também "
 "para lá o correio futuro?"
 
-#: app/src/assistant/run.rs:1837
+#: app/src/assistant/run.rs:1888
 msgid ""
 "Move mail from {sender} to {category} in {account}, and add a {provider} "
 "rule for their future mail?"
@@ -1370,11 +1405,6 @@ msgstr "Carregar sempre as imagens de qualquer remetente em {domain}?"
 msgid "Always load images from {sender}?"
 msgstr "Carregar sempre as imagens de {sender}?"
 
-#: app/src/assistant/run/manage.rs:607
-msgid "Loading a remote image tells the sender when you opened their mail."
-msgstr ""
-"Carregar uma imagem remota diz ao remetente quando abriu o correio dele."
-
 #: app/src/assistant/run/manage.rs:632
 msgid "Stop loading images from {sender}?"
 msgstr "Deixar de carregar imagens de {sender}?"
@@ -1608,17 +1638,33 @@ msgstr ""
 "Corre numa área isolada, sem acesso ao seu correio nem à sua pasta pessoal. "
 "{network} Permitir sempre aplica-se só a este comando, tal como está."
 
-#: app/src/assistant/sources/web.rs:60
+#: app/src/assistant/sources/web.rs:64
 msgid "Add a Brave Search API key."
 msgstr "Adicione uma chave de API do Brave Search."
 
-#: app/src/assistant/sources/web.rs:62
+#: app/src/assistant/sources/web.rs:66
 msgid "Enter the address of a SearXNG server."
 msgstr "Introduza o endereço de um servidor SearXNG."
 
-#: app/src/assistant/sources/web.rs:66
+#: app/src/assistant/sources/web.rs:70
 msgid "Choose Brave Search or SearXNG for a local model to search with."
 msgstr "Escolha o Brave Search ou o SearXNG para um modelo local pesquisar."
+
+#: app/src/assistant/sources/web.rs:333
+msgid ""
+"Open this web page?\n"
+"\n"
+"{address}\n"
+"\n"
+"The site receives the whole address, including anything after a question "
+"mark. Always Allow covers this exact address only."
+msgstr ""
+"Abrir esta página web?\n"
+"\n"
+"{address}\n"
+"\n"
+"O site recebe o endereço completo, incluindo tudo o que vem depois de um "
+"ponto de interrogação. Permitir sempre cobre apenas este endereço exato."
 
 #: app/src/assistant/turn.rs:57
 msgid "Waiting for the model…"
@@ -4111,48 +4157,48 @@ msgstr ""
 msgid "Stop"
 msgstr "Parar"
 
-#: app/src/ui/assistant.rs:550
+#: app/src/ui/assistant.rs:553
 msgid "Don't Allow"
 msgstr "Não permitir"
 
-#: app/src/ui/assistant.rs:552
+#: app/src/ui/assistant.rs:555
 msgid "Allow"
 msgstr "Permitir"
 
-#: app/src/ui/assistant.rs:556
+#: app/src/ui/assistant.rs:559
 msgid "Always Allow"
 msgstr "Permitir sempre"
 
-#: app/src/ui/assistant.rs:592
+#: app/src/ui/assistant.rs:595
 msgid "Allowed"
 msgstr "Permitido"
 
-#: app/src/ui/assistant.rs:593
+#: app/src/ui/assistant.rs:596
 msgid "Always allowed"
 msgstr "Sempre permitido"
 
-#: app/src/ui/assistant.rs:594
+#: app/src/ui/assistant.rs:597
 msgid "Not allowed"
 msgstr "Não permitido"
 
-#: app/src/ui/assistant.rs:834
+#: app/src/ui/assistant.rs:837
 msgid "Result"
 msgstr "Resultado"
 
-#: app/src/ui/assistant.rs:842
+#: app/src/ui/assistant.rs:845
 msgid "Input"
 msgstr "Entrada"
 
-#: app/src/ui/assistant.rs:920
+#: app/src/ui/assistant.rs:923
 msgid "Running"
 msgstr "Em curso"
 
-#: app/src/ui/assistant.rs:921 app/src/ui/calendar/editor.rs:263
+#: app/src/ui/assistant.rs:924 app/src/ui/calendar/editor.rs:263
 #: app/src/ui/hide_my_email.rs:467
 msgid "Done"
 msgstr "Concluído"
 
-#: app/src/ui/assistant.rs:922
+#: app/src/ui/assistant.rs:925
 msgid "Failed"
 msgstr "Falhou"
 

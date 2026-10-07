@@ -1522,7 +1522,9 @@ impl<A: Accounts> Tools<A> {
         })
     }
 
-    fn change_setting(&self, input: &Value) -> ToolResult {
+    /// Plans one settings change. The model reads mail that strangers
+    /// write, so the person sees each change before it happens.
+    fn change_setting(&self, input: &Value) -> Result<Plan<'_>, String> {
         let name = required(input, "name")?;
         let setting = Setting::named(&name)
             .ok_or_else(|| format!("{name} is not a setting the assistant can change."))?;
@@ -1530,22 +1532,54 @@ impl<A: Accounts> Tools<A> {
         let change = setting
             .change(&value)
             .map_err(|e| format!("{value} is not a valid value for {name}: {e}"))?;
-        self.effects.change_settings(change)?;
-        Ok(json!({"changed": name, "value": value}))
+        let question = match &change {
+            Change::RemoteImages(RemoteImages::Always) => format!(
+                "{} {}",
+                gettext("Load remote images from every sender?"),
+                gettext("Loading a remote image tells the sender when you opened their mail.")
+            ),
+            _ => {
+                let shown = value
+                    .as_str()
+                    .map_or_else(|| value.to_string(), str::to_string);
+                fill(
+                    &gettext("Change the setting {name} to {value}?"),
+                    &[("name", &name), ("value", &shown)],
+                )
+            }
+        };
+        Ok(Plan::ask(question, async move {
+            self.effects.change_settings(change)?;
+            Ok(json!({"changed": name, "value": value}))
+        }))
     }
 
-    fn signature(&self, input: &Value) -> ToolResult {
+    /// Plans a new signature. It goes out under every new message, so the
+    /// person reads the text before it is saved.
+    fn signature(&self, input: &Value) -> Result<Plan<'_>, String> {
         let account = self.account_named(&required(input, "account")?)?;
         let text = input
             .get("text")
             .and_then(Value::as_str)
             .unwrap_or_default()
             .to_string();
-        self.effects.change_settings(Change::Signature {
-            email: account.email.clone(),
-            text,
-        })?;
-        Ok(json!({"signature_set_for": account.email}))
+        let question = match text.trim() {
+            "" => fill(
+                &gettext("Remove your signature for {account}?"),
+                &[("account", &account.email)],
+            ),
+            shown => fill(
+                &gettext("Change your signature for {account} to:\n\n{text}"),
+                &[("account", &account.email), ("text", shown)],
+            ),
+        };
+        Ok(Plan::ask(question, async move {
+            self.effects.change_settings(Change::Signature {
+                email: account.email.clone(),
+                text,
+            })?;
+            Ok(json!({"signature_set_for": account.email}))
+        }))
     }
 
     fn vip(&self, input: &Value) -> ToolResult {
@@ -1705,7 +1739,10 @@ impl<A: Accounts> Tools<A> {
         Ok(json!({"address": address, "copied": true}))
     }
 
-    async fn hidden_set(&self, input: &Value) -> ToolResult {
+    /// Plans turning a hidden address off or on. Off adds a filter to the
+    /// account that sends the address's mail to the Trash, so it asks like
+    /// any other rule.
+    async fn hidden_set<'a>(&'a self, input: &'a Value) -> Result<Plan<'a>, String> {
         let address = required(input, "address")?;
         let active = flag(input, "active").ok_or("`active` is missing")?;
         let kept = self.desk.settings().hidden_addresses;
@@ -1714,25 +1751,39 @@ impl<A: Accounts> Tools<A> {
             .ok_or_else(|| format!("{address} is not a Hide My Email address."))?;
         let (account, settings) = self.settings_for(&hidden.account)?;
         if let Some(answer) = self.unavailable(&account, Missing::Rules) {
-            return Ok(answer);
+            return Ok(Plan::without_asking(std::future::ready(Ok(answer))));
         }
         if !crate::offered::hides_addresses(self.offers(account.id)) {
-            return Ok(json!({"unavailable": gettext("Hide My Email works with Gmail accounts.")}));
+            let answer =
+                json!({"unavailable": gettext("Hide My Email works with Gmail accounts.")});
+            return Ok(Plan::without_asking(std::future::ready(Ok(answer))));
         }
-        let account_id = account.id;
-        let changed = self
-            .call(async move {
-                settings
-                    .set_hidden_address_active(account_id, &hidden, active)
-                    .await
-            })
-            .await?;
-        let Permitted::Done(changed) = changed else {
-            return Err(self.needs_permission(&account));
+        let question = match active {
+            false => fill(
+                &gettext("Turn off {address}? Mail sent to it will go to the Trash."),
+                &[("address", &address)],
+            ),
+            true => fill(
+                &gettext("Turn {address} back on? Mail sent to it will arrive again."),
+                &[("address", &address)],
+            ),
         };
-        self.effects
-            .change_settings(Change::SaveHiddenAddress(changed))?;
-        Ok(json!({"address": address, "active": active}))
+        Ok(Plan::ask(question, async move {
+            let account_id = account.id;
+            let changed = self
+                .call(async move {
+                    settings
+                        .set_hidden_address_active(account_id, &hidden, active)
+                        .await
+                })
+                .await?;
+            let Permitted::Done(changed) = changed else {
+                return Err(self.needs_permission(&account));
+            };
+            self.effects
+                .change_settings(Change::SaveHiddenAddress(changed))?;
+            Ok(json!({"address": address, "active": active}))
+        }))
     }
 }
 

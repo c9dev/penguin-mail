@@ -218,10 +218,11 @@ runs on your Pro or Max plan with no API key. Penguin Mail looks for
 `claude` on your PATH and in `~/.local/bin`.
 
 Penguin Mail starts `claude -p` for each message and hands it the mail
-tools over MCP. It turns off Claude Code's own tools for files and the
-shell, allows only the mail tools plus WebSearch and WebFetch while web
-search is on, and uses `--permission-mode dontAsk`, so nothing outside that
-list runs. Claude Code still reads your global
+tools over MCP. It turns off Claude Code's own tools for files, the
+shell and fetching pages, allows only the mail tools plus WebSearch while
+web search is on, and uses `--permission-mode dontAsk`, so nothing outside
+that list runs. Claude reads a page through Penguin Mail's own page tool,
+over the same bridge, which asks you first. Claude Code still reads your global
 `~/.claude/CLAUDE.md` and runs your hooks, as it does in any session.
 
 The model field lists what your `claude` install offers: its own default,
@@ -236,8 +237,8 @@ message. Pick how under **Web Search** on the AI page:
 
 - **Off**: no web tools for any model.
 - **Claude's own only**, the default: Claude searches with Anthropic's
-  tools, through the API or your subscription. A local model can read a
-  page you point it at but cannot search.
+  search, through the API or your subscription. A local model can read a
+  page but cannot search.
 - **Brave Search**: Claude still uses Anthropic's search, and a local
   model searches with Brave. Get a key at
   [brave.com/search/api](https://brave.com/search/api/) and paste it into
@@ -250,12 +251,25 @@ message. Pick how under **Web Search** on the AI page:
 **Test** runs one search and shows the first result's title, or what went
 wrong.
 
-A local model reads a page through Penguin Mail: it downloads up to 2 MB
-in 20 seconds and reads the text, without scripts or styles. It will not
-open an address on your computer or your home network, so a message cannot
-send the model to your router. Neither tool asks before it runs, since both
-only read. The model is told that search results and pages are written by
-strangers and that it must not follow instructions in them.
+Every model reads a page through Penguin Mail: it downloads up to 2 MB in
+20 seconds and reads the text, without scripts or styles. Before each page
+the assistant asks you, and shows the whole address. Read it before you
+press **Allow**: anything written into an address, such as the text after
+a `?`, reaches whoever runs that site, and a message the model read could
+have told it to put your mail there. **Always Allow** covers that exact
+address only.
+
+Penguin Mail will not open a page on your computer or your home network.
+It looks the site's name up first and refuses when any address it finds is
+local, then connects only to the addresses it checked, and does the same
+for every redirect. A page download skips any proxy your system sets,
+because a proxy would look the name up out of Penguin Mail's sight.
+
+A search runs without asking. Its query goes to the search provider you
+chose: Brave, your SearXNG server, or Anthropic for Claude. The model is
+told that search results and pages are written by strangers and that it
+must not follow instructions in them.
+
 ## Add MCP servers
 
 An MCP server gives the assistant tools from outside Penguin Mail, such as
@@ -330,7 +344,15 @@ By default, the assistant asks you before it:
 - saves a template, saying when it replaces one, or deletes one,
 - adds or changes a Google contact,
 - lets a sender's images load, or stops them,
+- changes a setting, such as loading remote images from every sender,
+- changes or removes your signature, showing the new text,
+- turns a Hide My Email address off or back on,
 - writes mail to a file, naming the file.
+
+It also asks before it opens a web page, showing the whole address, and
+before it runs a tool from an MCP server or a skill's command. Those
+questions come whatever Ask Before Acting says, and they offer **Always
+Allow**.
 
 Deleting forever needs one more Google permission, which Penguin Mail
 asks for the first time, as the Delete Forever button does.

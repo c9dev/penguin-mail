@@ -150,7 +150,7 @@ async fn runs_claude_headless_and_maps_its_stream() {
 }
 
 #[tokio::test]
-async fn web_search_turns_on_claude_codes_own_web_tools() {
+async fn web_search_turns_on_claude_codes_own_search_and_never_its_fetch() {
     let dir = tempfile::tempdir().unwrap();
     let bin = dir.path().join("bin");
     std::fs::create_dir(&bin).unwrap();
@@ -166,10 +166,10 @@ async fn web_search_turns_on_claude_codes_own_web_tools() {
     let (tx, _rx) = async_channel::unbounded();
     chat.send("news?".into(), host.clone(), &tx).await.unwrap();
     let args = argv(&bin, 0);
-    assert_eq!(flag(&args, "--tools"), Some("WebSearch,WebFetch"));
+    assert_eq!(flag(&args, "--tools"), Some("WebSearch"));
     assert_eq!(
         flag(&args, "--allowedTools"),
-        Some("mcp__penguin-mail,WebSearch,WebFetch")
+        Some("mcp__penguin-mail,WebSearch")
     );
     // Turned off, the next run has no built-in tools again.
     chat.web = false;

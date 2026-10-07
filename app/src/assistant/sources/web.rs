@@ -1,27 +1,31 @@
-//! Web search and page reading for a model with no web tools of its own.
+//! Web search and page reading.
 //!
-//! Claude brings its own: through the API the Anthropic provider declares
-//! Anthropic's server tools, and Claude Code runs its WebSearch and
-//! WebFetch. A local model gets `web_search`, which asks the engine chosen
-//! on the AI page, and `fetch_page`, which downloads one page and turns it
-//! into text. Offering these to Claude as well would put two searches in
-//! front of it, so the source stays away there.
+//! A local model gets `web_search`, which asks the engine chosen on the AI
+//! page. Claude searches with its own tool: Anthropic's server tool through
+//! the API, and Claude Code's WebSearch. Every model reads a page through
+//! `fetch_page`, which downloads one page and turns it into text.
 //!
-//! Both tools only read, so neither asks the person first. What they bring
-//! back is written by strangers, and the result says so to the model.
+//! `fetch_page` asks the person first and shows the whole address. The model
+//! picks the address, often from mail it just read, and anything written
+//! into the address reaches whoever runs the site. A search sends only its
+//! query to the engine the person chose, so it runs without asking. What
+//! either tool brings back is written by strangers, and the result says so
+//! to the model.
 
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::sync::Arc;
 use std::time::Duration;
 
-use mailrs_ai::{BoxFuture, ProviderConfig, ToolOutcome, ToolSpec};
-use mailrs_domain::translate::gettext;
+use mailrs_ai::{BoxFuture, ToolOutcome, ToolSpec};
+use mailrs_domain::translate::{fill, gettext};
 use reqwest::Url;
+use reqwest::dns::{Addrs, Name, Resolve, Resolving};
 use serde_json::{Value, json};
 use url::Host;
 
 use super::Source;
 use crate::assistant::{self, BRAVE_KEY};
-use crate::settings::{AiSettings, Feature, Settings, WebSearch};
+use crate::settings::{AiProvider, AiSettings, Feature, Settings, WebSearch};
 
 /// Brave's API, which the tests point elsewhere.
 pub const BRAVE_BASE: &str = "https://api.search.brave.com";
@@ -101,7 +105,11 @@ pub struct Page {
 /// set up.
 pub struct Web {
     engine: Option<SearchEngine>,
-    client: reqwest::Client,
+    /// Asks the search engine, which may sit on the person's own network.
+    search: reqwest::Client,
+    /// Downloads pages through a [`Guard`]. `Err` says why the client could
+    /// not be built, and then no page is read.
+    pages: Result<reqwest::Client, String>,
     /// Whether a page may come from this computer or the local network. A
     /// page the model picks comes from mail it read, and a message could
     /// point it at a router or a server on the person's own network, so
@@ -110,17 +118,18 @@ pub struct Web {
 }
 
 /// The web source for the assistant's model, or `None` when web search is
-/// off or the model is Claude, which uses Anthropic's own tools.
+/// off. Claude searches with Anthropic's own tool, so it gets `fetch_page`
+/// alone.
 pub fn for_settings(settings: &Settings) -> Option<Arc<dyn Source>> {
     let ai = &settings.ai;
     if ai.web_search == WebSearch::Off {
         return None;
     }
-    match assistant::model_for(ai, Feature::Assistant) {
-        Ok(ProviderConfig::OpenAiCompatible { .. }) => {}
-        _ => return None,
-    }
-    let engine = SearchEngine::chosen(ai, assistant::load_key(BRAVE_KEY)).ok();
+    let engine = match ai.resolved(Feature::Assistant).0 {
+        AiProvider::Off => return None,
+        AiProvider::Local => SearchEngine::chosen(ai, assistant::load_key(BRAVE_KEY)).ok(),
+        AiProvider::Anthropic | AiProvider::ClaudeCode => None,
+    };
     Some(Arc::new(Web::new(engine)))
 }
 
@@ -139,15 +148,37 @@ impl Web {
     fn build(engine: Option<SearchEngine>, local: bool) -> Web {
         Web {
             engine,
-            client: client(local),
+            search: search_client(),
+            pages: page_client(Guard::system(local)),
             local,
         }
     }
+
+    /// The address `fetch_page` was given, as the person reads it in the
+    /// question. Parsing writes a foreign host name in its ASCII form, so a
+    /// look-alike letter cannot pass for a familiar site.
+    fn address(input: &Value) -> String {
+        let given = input["url"].as_str().unwrap_or_default().trim();
+        Url::parse(given).map_or_else(|_| given.to_string(), |url| url.to_string())
+    }
 }
 
-/// An HTTP client with a time limit, which checks every redirect a page
-/// takes against the same rule as the address the model asked for.
-fn client(local: bool) -> reqwest::Client {
+/// The client that asks a search engine. It follows the system proxy and
+/// reaches a SearXNG server on the local network, because the person typed
+/// that address in Preferences.
+fn search_client() -> reqwest::Client {
+    let policy = reqwest::redirect::Policy::limited(MAX_REDIRECTS);
+    builder().redirect(policy).build().unwrap_or_default()
+}
+
+/// The client that downloads pages. Every name it connects to goes through
+/// `guard`, which looks it up and refuses a local address, and the client
+/// connects only to the addresses the guard checked, for the first request
+/// and every redirect. An address written as numbers skips the lookup, so
+/// the redirect policy checks those. A proxy would look the name up itself,
+/// out of the guard's sight, so this client uses none.
+fn page_client(guard: Guard) -> Result<reqwest::Client, String> {
+    let local = guard.local;
     let policy = reqwest::redirect::Policy::custom(move |attempt| {
         if attempt.previous().len() >= MAX_REDIRECTS {
             attempt.error("the page redirected too many times")
@@ -157,18 +188,93 @@ fn client(local: bool) -> reqwest::Client {
             attempt.follow()
         }
     });
+    builder()
+        .redirect(policy)
+        .no_proxy()
+        .dns_resolver(guard)
+        .build()
+        .map_err(|e| format!("Could not set up downloads: {e}"))
+}
+
+/// A client builder with the time limits and the user agent both clients share.
+fn builder() -> reqwest::ClientBuilder {
     reqwest::Client::builder()
         .timeout(TIMEOUT)
         .connect_timeout(Duration::from_secs(10))
-        .redirect(policy)
         .user_agent(concat!(
             "PenguinMail/",
             env!("CARGO_PKG_VERSION"),
             " (+https://github.com/c9dev/penguin-mail)"
         ))
-        .build()
-        .unwrap_or_default()
 }
+
+/// Looks a host name up and gives back its addresses.
+type Lookup = Arc<dyn Fn(String) -> BoxFuture<std::io::Result<Vec<SocketAddr>>> + Send + Sync>;
+
+/// The page client's resolver. It looks a name up once and hands the client
+/// the addresses it checked, so a second lookup cannot answer differently
+/// between the check and the connection.
+struct Guard {
+    lookup: Lookup,
+    /// Which addresses a page may not come from.
+    refuse: fn(IpAddr) -> bool,
+    /// Whether the redirect policy lets an address on the local network
+    /// through. It matches `refuse` outside the tests.
+    local: bool,
+}
+
+impl Guard {
+    fn new(lookup: Lookup, local: bool) -> Guard {
+        Guard {
+            lookup,
+            refuse: if local { |_| false } else { is_local_ip },
+            local,
+        }
+    }
+
+    /// A guard over the system's own lookup, which reads /etc/hosts too.
+    fn system(local: bool) -> Guard {
+        let lookup: Lookup = Arc::new(|name: String| {
+            Box::pin(async move {
+                tokio::net::lookup_host((name.as_str(), 0))
+                    .await
+                    .map(|found| found.collect())
+            })
+        });
+        Guard::new(lookup, local)
+    }
+}
+
+impl Resolve for Guard {
+    fn resolve(&self, name: Name) -> Resolving {
+        let looking = (self.lookup)(name.as_str().to_string());
+        let refuse = self.refuse;
+        Box::pin(async move {
+            let found = looking.await?;
+            // One local address is enough to refuse: the connection could
+            // try any of them.
+            if found.iter().any(|address| refuse(address.ip())) {
+                return Err(Box::new(LocalAddress) as Box<dyn std::error::Error + Send + Sync>);
+            }
+            Ok(Box::new(found.into_iter()) as Addrs)
+        })
+    }
+}
+
+/// What the guard answers when a name leads to this computer or the local
+/// network.
+#[derive(Debug)]
+struct LocalAddress;
+
+impl std::fmt::Display for LocalAddress {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(LOCAL_REFUSAL)
+    }
+}
+
+impl std::error::Error for LocalAddress {}
+
+const LOCAL_REFUSAL: &str = "fetch_page does not read pages on this computer or the local network.";
 
 impl Source for Web {
     fn id(&self) -> String {
@@ -217,12 +323,36 @@ impl Source for Web {
         specs
     }
 
-    fn ask(&self, _name: &str, _input: &Value) -> Option<String> {
-        None
+    fn ask(&self, name: &str, input: &Value) -> Option<String> {
+        // A search sends only its query, to the engine the person chose.
+        if name != "fetch_page" {
+            return None;
+        }
+        Some(fill(
+            &gettext(
+                "Open this web page?\n\n{address}\n\nThe site receives the whole address, including anything after a question mark. Always Allow covers this exact address only.",
+            ),
+            &[("address", &Web::address(input))],
+        ))
+    }
+
+    /// One address for `fetch_page`, as `web/fetch_page <address>`. A key
+    /// per tool would let one Always answer open any address the model
+    /// writes next, with any data in it.
+    fn key(&self, name: &str, input: &Value) -> String {
+        match name {
+            "fetch_page" => format!("{}/{name} {}", self.id(), Web::address(input)),
+            _ => format!("{}/{name}", self.id()),
+        }
     }
 
     fn call(&self, name: String, input: Value) -> BoxFuture<ToolOutcome> {
-        let (client, engine, local) = (self.client.clone(), self.engine.clone(), self.local);
+        let (search_client, pages, engine, local) = (
+            self.search.clone(),
+            self.pages.clone(),
+            self.engine.clone(),
+            self.local,
+        );
         Box::pin(async move {
             let result = match name.as_str() {
                 "web_search" => {
@@ -241,15 +371,19 @@ impl Source for Web {
                         .as_u64()
                         .unwrap_or(DEFAULT_COUNT)
                         .clamp(1, MAX_COUNT);
-                    search(&client, &engine, &query, count)
+                    search(&search_client, &engine, &query, count)
                         .await
                         .map(|hits| hits_text(&engine, &hits))
                 }
                 "fetch_page" => {
-                    let url = input["url"].as_str().unwrap_or_default().trim().to_string();
-                    fetch(&client, &url, local)
-                        .await
-                        .map(|page| page_text(&page))
+                    // The address the person approved, in the same form.
+                    let url = Web::address(&input);
+                    match pages {
+                        Ok(client) => fetch(&client, &url, local)
+                            .await
+                            .map(|page| page_text(&page)),
+                        Err(problem) => Err(problem),
+                    }
                 }
                 other => Err(format!("The web source has no tool called {other}.")),
             };
@@ -264,7 +398,7 @@ impl Source for Web {
 /// Runs one search for the Test button on the AI page and gives back the
 /// first result's title.
 pub async fn test(engine: SearchEngine) -> Result<String, String> {
-    let hits = search(&client(false), &engine, "Penguin Mail", 1).await?;
+    let hits = search(&search_client(), &engine, "Penguin Mail", 1).await?;
     hits.into_iter()
         .next()
         .map(|hit| hit.title)
@@ -337,6 +471,9 @@ pub async fn fetch(client: &reqwest::Client, url: &str, local: bool) -> Result<P
     let url = Url::parse(url).map_err(|e| format!("{url} is not a web address: {e}"))?;
     allowed(&url, local)?;
     let mut response = client.get(url).send().await.map_err(|e| {
+        if refused_by_guard(&e) {
+            return LOCAL_REFUSAL.to_string();
+        }
         // A redirect the policy refused carries its reason as the source.
         let reason = std::error::Error::source(&e)
             .map(|s| s.to_string())
@@ -410,13 +547,27 @@ fn allowed(url: &Url, local: bool) -> Result<(), String> {
         ));
     }
     if !local && is_local(url) {
-        return Err("fetch_page does not read pages on this computer or the local network.".into());
+        return Err(LOCAL_REFUSAL.into());
     }
     Ok(())
 }
 
-/// Whether the address names this computer or a private network. A name
-/// that only resolves to one is not caught; the ones people type are.
+/// Whether a download failed because the guard refused the address a name
+/// led to. reqwest wraps the resolver's error a few layers down.
+fn refused_by_guard(error: &reqwest::Error) -> bool {
+    let mut cause: Option<&(dyn std::error::Error + 'static)> = Some(error);
+    while let Some(now) = cause {
+        if now.is::<LocalAddress>() {
+            return true;
+        }
+        cause = now.source();
+    }
+    false
+}
+
+/// Whether the address, as written, names this computer or a private
+/// network. It refuses early, with a clear reason. A name that only
+/// resolves to such an address is the [`Guard`]'s to catch.
 fn is_local(url: &Url) -> bool {
     match url.host() {
         None => true,
@@ -427,28 +578,58 @@ fn is_local(url: &Url) -> bool {
                     .iter()
                     .any(|end| name.ends_with(end))
         }
-        Some(Host::Ipv4(ip)) => local_v4(ip),
-        Some(Host::Ipv6(ip)) => match ip.to_ipv4_mapped() {
-            Some(v4) => local_v4(v4),
-            None => {
-                let first = ip.segments()[0];
-                ip.is_loopback()
-                    || ip.is_unspecified()
-                    // Unique local (fc00::/7) and link-local (fe80::/10).
-                    || first & 0xfe00 == 0xfc00
-                    || first & 0xffc0 == 0xfe80
-            }
-        },
+        Some(Host::Ipv4(ip)) => is_local_ip(IpAddr::V4(ip)),
+        Some(Host::Ipv6(ip)) => is_local_ip(IpAddr::V6(ip)),
     }
 }
 
-fn local_v4(ip: std::net::Ipv4Addr) -> bool {
+/// Whether an address belongs to this computer, a private network, or a
+/// range no public web page lives on.
+fn is_local_ip(ip: IpAddr) -> bool {
+    match ip {
+        IpAddr::V4(v4) => local_v4(v4),
+        IpAddr::V6(v6) => {
+            let segments = v6.segments();
+            let [a, b, c, d, e, f, ..] = segments;
+            let low_v4 = || {
+                let [.., g, h] = segments;
+                Ipv4Addr::new((g >> 8) as u8, g as u8, (h >> 8) as u8, h as u8)
+            };
+            if let Some(v4) = v6.to_ipv4_mapped() {
+                return local_v4(v4);
+            }
+            // NAT64 (64:ff9b::/96) and the old IPv4-compatible form
+            // (::/96) carry an IPv4 address in their last 32 bits, and a
+            // gateway or the system may route them there.
+            let nat64 = [a, b, c, d, e, f] == [0x64, 0xff9b, 0, 0, 0, 0];
+            let compatible = [a, b, c, d, e, f] == [0; 6];
+            if (nat64 || compatible) && local_v4(low_v4()) {
+                return true;
+            }
+            v6.is_loopback()
+                || v6.is_unspecified()
+                || v6.is_multicast()
+                // Unique local (fc00::/7), link-local (fe80::/10) and the
+                // old site-local (fec0::/10).
+                || a & 0xfe00 == 0xfc00
+                || a & 0xffc0 == 0xfe80
+                || a & 0xffc0 == 0xfec0
+        }
+    }
+}
+
+fn local_v4(ip: Ipv4Addr) -> bool {
     let [a, b, ..] = ip.octets();
     ip.is_loopback()
         || ip.is_private()
         || ip.is_link_local()
         || ip.is_unspecified()
         || ip.is_broadcast()
+        || ip.is_multicast()
+        // "This network", 0.0.0.0/8, which Linux treats as this computer.
+        || a == 0
+        // Reserved, 240.0.0.0/4.
+        || a >= 240
         // Carrier-grade NAT, 100.64.0.0/10, which some home networks use.
         || (a == 100 && (64..128).contains(&b))
 }

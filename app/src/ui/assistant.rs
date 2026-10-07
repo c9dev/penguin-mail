@@ -535,6 +535,9 @@ impl AssistantPane {
             &gtk::Label::builder()
                 .label(question)
                 .wrap(true)
+                // A web address or a command line has no spaces to break
+                // at, and the person has to read all of it.
+                .wrap_mode(gtk::pango::WrapMode::WordChar)
                 .xalign(0.0)
                 .margin_top(12)
                 .margin_start(12)

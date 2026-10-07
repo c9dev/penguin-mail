@@ -5,6 +5,15 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ## Unreleased
 
+### Fixed
+
+- The assistant asks before it opens a web page, and shows you the whole
+  address, with Claude as well as with a local model.
+- The assistant never opens a page on your computer or your home network,
+  whatever address it is given.
+- The assistant asks before it changes a setting, your signature, or a
+  Hide My Email address.
+
 ## 1.0.2 (2026-10-07)
 
 ### Fixed
