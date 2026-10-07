@@ -475,6 +475,9 @@ pub enum Refusal {
     NotForYou,
     /// Its parts are not where the standard keeps them.
     Unreadable,
+    /// What the engine opened came to more than its runner reads, so it
+    /// stopped there.
+    TooLarge,
     /// The engine failed, for the reason given, in words a person reads.
     Failed(String),
 }
@@ -503,11 +506,13 @@ pub fn read(
             };
         }
     };
-    let (mut body, files) = match &found.part {
-        Part::Entity(entity) => opened_body(entity),
+    // The part moves out rather than being copied: an opened message can
+    // run to tens of megabytes, and the entity goes once it is parsed.
+    let (mut body, files) = match found.part {
+        Part::Entity(entity) => opened_body(&entity),
         Part::Text(text) => (
             MessageBody {
-                text: Some(text.clone()),
+                text: Some(text),
                 ..MessageBody::default()
             },
             Vec::new(),
@@ -791,6 +796,17 @@ fn refused(standard: Standard, refusal: &Refusal) -> Mark {
             },
             detail: Some(gettext(
                 "Its parts are not where a signed or encrypted message keeps them.",
+            )),
+            tone: Tone::Unchecked,
+        },
+        Refusal::TooLarge => Mark {
+            title: gettext("This message is too large to open"),
+            detail: Some(fill(
+                &gettext("It opens to more than {size} MB, so Penguin Mail stopped reading it."),
+                &[(
+                    "size",
+                    &(mailrs_pgp::gnupg::MOST_OUTPUT >> 20).to_string(),
+                )],
             )),
             tone: Tone::Unchecked,
         },

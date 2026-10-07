@@ -5,6 +5,11 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ## Unreleased
 
+### Fixed
+
+- Opening an OpenPGP or S/MIME message that expands to an enormous size
+  shows "This message is too large to open" instead of using up memory.
+
 ## 1.0.2 (2026-10-07)
 
 ### Fixed

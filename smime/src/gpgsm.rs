@@ -108,6 +108,9 @@ impl Smime {
     }
 
     pub(crate) fn cannot_run(&self, err: &std::io::Error) -> SmimeError {
+        if err.kind() == std::io::ErrorKind::FileTooLarge {
+            return SmimeError::TooLarge;
+        }
         SmimeError::CannotRun {
             program: self.program.path().display().to_string(),
             reason: err.to_string(),

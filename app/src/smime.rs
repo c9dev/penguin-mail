@@ -241,6 +241,7 @@ fn refusal(err: SmimeError) -> Refusal {
     match err {
         SmimeError::NotForYou => Refusal::NotForYou,
         SmimeError::NotSmime => Refusal::Unreadable,
+        SmimeError::TooLarge => Refusal::TooLarge,
         other => Refusal::Failed(explain(&other)),
     }
 }
@@ -274,6 +275,7 @@ pub fn explain(err: &SmimeError) -> String {
         ),
         SmimeError::NotSmime => gettext("This part holds no S/MIME data."),
         SmimeError::NotACertificate => gettext("This file holds no certificate."),
+        SmimeError::TooLarge => gettext("This message is too large to open."),
         SmimeError::WrongPassphrase => {
             gettext("That passphrase does not open this file. Nothing was imported.")
         }
@@ -662,6 +664,25 @@ mod tests {
             let said = explain(&err);
             assert!(said.contains(names), "{said}");
         }
+    }
+
+    #[test]
+    fn a_message_too_large_to_open_says_so_where_the_message_would_be() {
+        let read = protection::read(
+            Standard::Smime,
+            Err(refusal(SmimeError::TooLarge)),
+            &MessageBody::default(),
+            None,
+        );
+        assert_eq!(read.mark.title, "This message is too large to open");
+        assert!(
+            read.mark.detail.as_deref().is_some_and(|detail| detail.contains("64 MB")),
+            "{:?}",
+            read.mark.detail
+        );
+        assert_eq!(read.mark.tone, Tone::Unchecked);
+        assert!(read.body.is_none());
+        assert!(explain(&SmimeError::TooLarge).contains("too large"));
     }
 
     #[test]

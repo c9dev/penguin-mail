@@ -34,6 +34,10 @@ pub enum SmimeError {
     /// canceled, or no pinentry could ask.
     #[error("no passphrase was given for this file")]
     NoPassphrase,
+    /// What gpgsm opened came to more than
+    /// [`mailrs_pgp::gnupg::MOST_OUTPUT`], and the run stopped it there.
+    #[error("the message is too large to open")]
+    TooLarge,
     #[error("gpgsm failed: {0}")]
     Gpgsm(String),
 }
