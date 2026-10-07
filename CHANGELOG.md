@@ -5,6 +5,11 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ## Unreleased
 
+### Fixed
+
+- The snap builds again, so the font, icon, tray icon and closing fixes
+  from 1.0.1 reach snap users too.
+
 ## 1.0.1 (2026-10-07)
 
 ### Fixed
