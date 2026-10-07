@@ -2008,7 +2008,10 @@ mod tests {
         assert_eq!(parsed.parts.len(), 1, "{}", String::from_utf8_lossy(&raw));
         let kind = parsed.content_type().expect("a content type");
         assert_eq!((kind.ctype(), kind.subtype()), ("text", Some("plain")));
-        let sent = parsed.body_text(0).expect("a text body").replace("\r\n", "\n");
+        let sent = parsed
+            .body_text(0)
+            .expect("a text body")
+            .replace("\r\n", "\n");
         assert_eq!(sent, body);
         assert_eq!(parsed.subject(), Some("Remove me"));
         let to = parsed.to().and_then(|to| to.as_list()).expect("a To list");

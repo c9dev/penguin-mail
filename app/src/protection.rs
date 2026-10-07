@@ -803,10 +803,7 @@ fn refused(standard: Standard, refusal: &Refusal) -> Mark {
             title: gettext("This message is too large to open"),
             detail: Some(fill(
                 &gettext("It opens to more than {size} MB, so Penguin Mail stopped reading it."),
-                &[(
-                    "size",
-                    &(mailrs_pgp::gnupg::MOST_OUTPUT >> 20).to_string(),
-                )],
+                &[("size", &(mailrs_pgp::gnupg::MOST_OUTPUT >> 20).to_string())],
             )),
             tone: Tone::Unchecked,
         },

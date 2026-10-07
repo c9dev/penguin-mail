@@ -646,7 +646,10 @@ mod tests {
 
         assert_eq!(read.mark.title, "This message is too large to open");
         assert!(
-            read.mark.detail.as_deref().is_some_and(|detail| detail.contains("64 MB")),
+            read.mark
+                .detail
+                .as_deref()
+                .is_some_and(|detail| detail.contains("64 MB")),
             "{:?}",
             read.mark.detail
         );

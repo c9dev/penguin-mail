@@ -1485,7 +1485,7 @@ msgstr "Running a command in the sandbox"
 msgid "Penguin Mail keeps syncing with no window open"
 msgstr "Penguin Mail keeps syncing with no window open"
 
-#: app/src/compose.rs:548 app/src/compose.rs:2622
+#: app/src/compose.rs:548 app/src/compose.rs:2625
 msgid "Add at least one recipient."
 msgstr "Add at least one recipient."
 
@@ -1493,7 +1493,7 @@ msgstr "Add at least one recipient."
 msgid "“{address}” is not an email address."
 msgstr "“{address}” is not an email address."
 
-#: app/src/compose.rs:783 app/src/compose.rs:2628
+#: app/src/compose.rs:783 app/src/compose.rs:2631
 msgid "Choose a time in the future"
 msgstr "Choose a time in the future"
 
@@ -2571,77 +2571,77 @@ msgstr "This message is too large to open"
 msgid "It opens to more than {size} MB, so Penguin Mail stopped reading it."
 msgstr "It opens to more than {size} MB, so Penguin Mail stopped reading it."
 
-#: app/src/protection.rs:815
+#: app/src/protection.rs:812
 msgid "gpg could not open this message"
 msgstr "gpg could not open this message"
 
-#: app/src/protection.rs:816
+#: app/src/protection.rs:813
 msgid "gpgsm could not open this message"
 msgstr "gpgsm could not open this message"
 
-#: app/src/protection.rs:829
+#: app/src/protection.rs:826
 msgid "You marked this key as one not to trust."
 msgstr "You marked this key as one not to trust."
 
-#: app/src/protection.rs:830
+#: app/src/protection.rs:827
 msgid "This is one of your own keys."
 msgstr "This is one of your own keys."
 
-#: app/src/protection.rs:831
+#: app/src/protection.rs:828
 msgid "You have vouched for this key."
 msgstr "You have vouched for this key."
 
-#: app/src/protection.rs:833
+#: app/src/protection.rs:830
 msgid "Only people you partly trust have vouched for this key, so it is not fully checked."
 msgstr "Only people you partly trust have vouched for this key, so it is not fully checked."
 
-#: app/src/protection.rs:836
+#: app/src/protection.rs:833
 msgid "Nobody has vouched for this key, so it names no one."
 msgstr "Nobody has vouched for this key, so it names no one."
 
-#: app/src/protection.rs:839
+#: app/src/protection.rs:836
 msgid "Its certificate leads back to an authority you trust, but this computer could not check whether it was revoked."
 msgstr "Its certificate leads back to an authority you trust, but this computer could not check whether it was revoked."
 
-#: app/src/protection.rs:843
+#: app/src/protection.rs:840
 msgid "Its certificate leads back to an authority you trust."
 msgstr "Its certificate leads back to an authority you trust."
 
-#: app/src/protection.rs:846
+#: app/src/protection.rs:843
 msgid "Its certificate leads back to nobody you trust, so it names no one."
 msgstr "Its certificate leads back to nobody you trust, so it names no one."
 
-#: app/src/protection.rs:849
+#: app/src/protection.rs:846
 msgid "Nothing here says who that certificate belongs to."
 msgstr "Nothing here says who that certificate belongs to."
 
-#: app/src/protection.rs:885
+#: app/src/protection.rs:882
 msgid "key {key}"
 msgstr "key {key}"
 
-#: app/src/protection.rs:888
+#: app/src/protection.rs:885
 msgid "a key gpg would not name"
 msgstr "a key gpg would not name"
 
-#: app/src/protection.rs:889
+#: app/src/protection.rs:886
 msgid "a certificate gpgsm would not name"
 msgstr "a certificate gpgsm would not name"
 
-#: app/src/protection.rs:900
+#: app/src/protection.rs:897
 msgid "It carries a file, kept in this window only."
 msgstr "It carries a file, kept in this window only."
 
-#: app/src/protection.rs:902
+#: app/src/protection.rs:899
 msgid "It carries {count} file, kept in this window only."
 msgid_plural "It carries {count} files, kept in this window only."
 msgstr[0] "It carries {count} file, kept in this window only."
 msgstr[1] "It carries {count} files, kept in this window only."
 
-#: app/src/protection.rs:933
+#: app/src/protection.rs:930
 msgid "{names} or {last}"
 msgstr "{names} or {last}"
 
-#: app/src/protection.rs:945
+#: app/src/protection.rs:942
 msgid "{names} and {last}"
 msgstr "{names} and {last}"
 

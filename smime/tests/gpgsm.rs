@@ -727,7 +727,10 @@ fn output_past_the_cap_is_too_large_to_open() {
         }
     }
     let waited = started.elapsed();
-    assert!(waited < std::time::Duration::from_secs(20), "took {waited:?}");
+    assert!(
+        waited < std::time::Duration::from_secs(20),
+        "took {waited:?}"
+    );
 }
 
 #[cfg(unix)]

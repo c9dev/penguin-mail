@@ -1547,7 +1547,7 @@ msgstr ""
 msgid "Penguin Mail keeps syncing with no window open"
 msgstr ""
 
-#: app/src/compose.rs:548 app/src/compose.rs:2622
+#: app/src/compose.rs:548 app/src/compose.rs:2625
 msgid "Add at least one recipient."
 msgstr ""
 
@@ -1555,7 +1555,7 @@ msgstr ""
 msgid "“{address}” is not an email address."
 msgstr ""
 
-#: app/src/compose.rs:783 app/src/compose.rs:2628
+#: app/src/compose.rs:783 app/src/compose.rs:2631
 msgid "Choose a time in the future"
 msgstr ""
 
@@ -2670,81 +2670,81 @@ msgstr ""
 msgid "It opens to more than {size} MB, so Penguin Mail stopped reading it."
 msgstr ""
 
-#: app/src/protection.rs:815
+#: app/src/protection.rs:812
 msgid "gpg could not open this message"
 msgstr ""
 
-#: app/src/protection.rs:816
+#: app/src/protection.rs:813
 msgid "gpgsm could not open this message"
 msgstr ""
 
-#: app/src/protection.rs:829
+#: app/src/protection.rs:826
 msgid "You marked this key as one not to trust."
 msgstr ""
 
-#: app/src/protection.rs:830
+#: app/src/protection.rs:827
 msgid "This is one of your own keys."
 msgstr ""
 
-#: app/src/protection.rs:831
+#: app/src/protection.rs:828
 msgid "You have vouched for this key."
 msgstr ""
 
-#: app/src/protection.rs:833
+#: app/src/protection.rs:830
 msgid ""
 "Only people you partly trust have vouched for this key, so it is not fully "
 "checked."
 msgstr ""
 
-#: app/src/protection.rs:836
+#: app/src/protection.rs:833
 msgid "Nobody has vouched for this key, so it names no one."
 msgstr ""
 
-#: app/src/protection.rs:839
+#: app/src/protection.rs:836
 msgid ""
 "Its certificate leads back to an authority you trust, but this computer "
 "could not check whether it was revoked."
 msgstr ""
 
-#: app/src/protection.rs:843
+#: app/src/protection.rs:840
 msgid "Its certificate leads back to an authority you trust."
 msgstr ""
 
-#: app/src/protection.rs:846
+#: app/src/protection.rs:843
 msgid "Its certificate leads back to nobody you trust, so it names no one."
 msgstr ""
 
-#: app/src/protection.rs:849
+#: app/src/protection.rs:846
 msgid "Nothing here says who that certificate belongs to."
 msgstr ""
 
-#: app/src/protection.rs:885
+#: app/src/protection.rs:882
 msgid "key {key}"
 msgstr ""
 
-#: app/src/protection.rs:888
+#: app/src/protection.rs:885
 msgid "a key gpg would not name"
 msgstr ""
 
-#: app/src/protection.rs:889
+#: app/src/protection.rs:886
 msgid "a certificate gpgsm would not name"
 msgstr ""
 
-#: app/src/protection.rs:900
+#: app/src/protection.rs:897
 msgid "It carries a file, kept in this window only."
 msgstr ""
 
-#: app/src/protection.rs:902
+#: app/src/protection.rs:899
 msgid "It carries {count} file, kept in this window only."
 msgid_plural "It carries {count} files, kept in this window only."
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/protection.rs:933
+#: app/src/protection.rs:930
 msgid "{names} or {last}"
 msgstr ""
 
-#: app/src/protection.rs:945
+#: app/src/protection.rs:942
 msgid "{names} and {last}"
 msgstr ""
 

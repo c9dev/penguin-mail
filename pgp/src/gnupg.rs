@@ -309,7 +309,9 @@ pub const MOST_OUTPUT: usize = 64 << 20;
 /// reading stops.
 fn capped(pipe: impl std::io::Read) -> Option<Vec<u8>> {
     let mut bytes = Vec::new();
-    let limit = u64::try_from(MOST_OUTPUT).unwrap_or(u64::MAX).saturating_add(1);
+    let limit = u64::try_from(MOST_OUTPUT)
+        .unwrap_or(u64::MAX)
+        .saturating_add(1);
     let _ = pipe.take(limit).read_to_end(&mut bytes);
     (bytes.len() <= MOST_OUTPUT).then_some(bytes)
 }

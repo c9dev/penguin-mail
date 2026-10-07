@@ -447,7 +447,8 @@ mod tests {
     #[test]
     fn a_request_keeps_a_short_subject_and_body_and_drops_long_ones() {
         let long = "x".repeat(MOST_SUBJECT + 1);
-        let header = format!("<mailto:leave@news.example?subject={long}&body=Remove%20me%0Aplease>");
+        let header =
+            format!("<mailto:leave@news.example?subject={long}&body=Remove%20me%0Aplease>");
         assert_eq!(
             choose(&header, false),
             Some(Unsubscribe::Email {
@@ -457,8 +458,7 @@ mod tests {
             })
         );
         let long = "y".repeat(MOST_BODY + 1);
-        let header = format!("<mailto:leave@news.example?subject=Bye&body={long}");
-        let header = format!("{header}>");
+        let header = format!("<mailto:leave@news.example?subject=Bye&body={long}>");
         assert_eq!(
             choose(&header, false),
             Some(Unsubscribe::Email {
