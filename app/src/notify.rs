@@ -5,8 +5,6 @@
 //! touches GTK or the store, so the routing and the state check live under
 //! unit tests even though the notification daemon does not.
 
-use std::sync::OnceLock;
-
 use mailrs_domain::{MessageMeta, Role, Target};
 use mailrs_sync::{MailAction, TriageAction};
 use serde::{Deserialize, Serialize};
@@ -188,7 +186,10 @@ fn show(
             .appname("Penguin Mail")
             .summary(&summary)
             .body(&escape(&body))
-            .icon(APP_ID)
+            .icon(APP_ID);
+        // The desktop's notification daemon reads these; macOS has none.
+        #[cfg(target_os = "linux")]
+        notification
             .hint(notify_rust::Hint::Category("email.arrived".into()))
             .hint(notify_rust::Hint::DesktopEntry(APP_ID.into()));
         if target.is_some() {
@@ -227,8 +228,9 @@ fn choice_of(key: &str, buttons: &[Button]) -> Option<Choice> {
 /// Whether the running notification daemon invokes actions, asked once.
 /// Without that capability the buttons would sit on screen doing nothing,
 /// so a plain notification goes out instead.
+#[cfg(target_os = "linux")]
 fn takes_actions() -> bool {
-    static TAKES: OnceLock<bool> = OnceLock::new();
+    static TAKES: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
     *TAKES.get_or_init(|| match notify_rust::get_capabilities() {
         Ok(capabilities) => capabilities.iter().any(|c| c == "actions"),
         Err(err) => {
@@ -236,6 +238,12 @@ fn takes_actions() -> bool {
             false
         }
     })
+}
+
+/// macOS's notification centre always answers a click.
+#[cfg(target_os = "macos")]
+fn takes_actions() -> bool {
+    true
 }
 
 /// Notification bodies accept a little markup, so text must be escaped.

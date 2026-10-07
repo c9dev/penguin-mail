@@ -25,7 +25,7 @@ use crate::protection::{self, Held, Standard};
 use crate::settings::{Change, Settings};
 use crate::ui::unsubscribe::{self, ListLine, Way};
 use crate::unsubscribe::RequestSent;
-use crate::unsubscribe_page::{Adviser, Browser, WebkitBrowser, model_adviser};
+use crate::unsubscribe_page::{Adviser, Browser, PageBrowser, model_adviser};
 
 impl MainWindow {
     /// Runs one tool call from the assistant.
@@ -142,7 +142,7 @@ impl Effects for Ports {
     }
 
     fn page_browser(&self) -> Rc<dyn Browser> {
-        Rc::new(WebkitBrowser::new())
+        Rc::new(PageBrowser::new())
     }
 
     fn page_adviser(&self) -> Option<Box<dyn Adviser>> {

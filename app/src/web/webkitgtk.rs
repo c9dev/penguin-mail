@@ -11,6 +11,9 @@ use webkit::prelude::*;
 /// How many matches WebKit may highlight and count. Nothing is capped.
 const MATCH_LIMIT: u32 = u32::MAX;
 
+/// Readies the engine before GTK starts. WebKitGTK needs nothing.
+pub fn prepare() {}
+
 /// One page, and the handle every clone of it shares.
 #[derive(Clone)]
 pub struct WebView {

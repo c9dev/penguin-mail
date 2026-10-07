@@ -1845,7 +1845,7 @@ msgstr ""
 msgid "{language} ({country})"
 msgstr ""
 
-#: app/src/main.rs:71
+#: app/src/main.rs:73
 msgid ""
 "Usage: penguin-mail [--background] [--demo] [--compose [mailto:ADDRESS]] "
 "[FILE.ics]\n"
@@ -1858,31 +1858,31 @@ msgid ""
 "  FILE.ics       open a calendar file, to add its events to a calendar"
 msgstr ""
 
-#: app/src/main.rs:142
+#: app/src/main.rs:148
 msgid "penguin-mail: unknown option {option}"
 msgstr ""
 
-#: app/src/main.rs:302
+#: app/src/main.rs:308
 msgid "Penguin Mail Could Not Start"
 msgstr ""
 
-#: app/src/main.rs:307 app/src/ui/about.rs:179
+#: app/src/main.rs:313 app/src/ui/about.rs:179
 msgid "Report a Problem"
 msgstr ""
 
-#: app/src/notify.rs:49 app/src/ui/conversation.rs:381
+#: app/src/notify.rs:47 app/src/ui/conversation.rs:381
 #: app/src/ui/conversation.rs:533 app/src/ui/conversation.rs:1041
 #: app/src/ui/window/message_menu.rs:125 app/src/ui/window/shortcuts.rs:392
 msgid "Archive"
 msgstr ""
 
-#: app/src/notify.rs:50 app/src/ui/conversation.rs:382
+#: app/src/notify.rs:48 app/src/ui/conversation.rs:382
 #: app/src/ui/conversation.rs:1085 app/src/ui/preferences.rs:139
 #: app/src/ui/rules.rs:370 app/src/ui/window/message_menu.rs:128
 msgid "Mark as Read"
 msgstr ""
 
-#: app/src/notify.rs:51 app/src/ui/calendar/manage.rs:292
+#: app/src/notify.rs:49 app/src/ui/calendar/manage.rs:292
 #: app/src/ui/calendar/popover.rs:211 app/src/ui/calendar/popover.rs:213
 #: app/src/ui/calendar/popover.rs:713 app/src/ui/calendar/scope.rs:112
 #: app/src/ui/conversation.rs:519 app/src/ui/hide_my_email.rs:289
@@ -1891,26 +1891,26 @@ msgstr ""
 msgid "Delete"
 msgstr ""
 
-#: app/src/notify.rs:52 app/src/ui/conversation.rs:527
+#: app/src/notify.rs:50 app/src/ui/conversation.rs:527
 #: app/src/ui/window/message_menu.rs:122 app/src/ui/window/shortcuts.rs:471
 msgid "Reply"
 msgstr ""
 
-#: app/src/notify.rs:112 app/src/notify.rs:151
+#: app/src/notify.rs:110 app/src/notify.rs:149
 msgid "{count} new message"
 msgid_plural "{count} new messages"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/src/notify.rs:127 app/src/ui/window/shortcuts.rs:463
+#: app/src/notify.rs:125 app/src/ui/window/shortcuts.rs:463
 msgid "New message"
 msgstr ""
 
-#: app/src/notify.rs:157
+#: app/src/notify.rs:155
 msgid "From {senders}"
 msgstr ""
 
-#: app/src/notify.rs:195 app/src/ui/window.rs:2668
+#: app/src/notify.rs:196 app/src/ui/window.rs:2668
 msgid "Open"
 msgstr ""
 
@@ -6981,7 +6981,7 @@ msgstr[1] ""
 msgid "Could not read {file}: {reason}"
 msgstr ""
 
-#: app/src/ui/mod.rs:426
+#: app/src/ui/mod.rs:427
 msgid "Gray"
 msgstr ""
 
@@ -9083,27 +9083,27 @@ msgstr ""
 msgid "Show Event"
 msgstr ""
 
-#: app/src/unsubscribe_page.rs:171
+#: app/src/unsubscribe_page.rs:181
 msgid "the page took longer than 20 seconds"
 msgstr ""
 
-#: app/src/unsubscribe_page.rs:173
+#: app/src/unsubscribe_page.rs:183
 msgid "the page did not load: {reason}"
 msgstr ""
 
-#: app/src/unsubscribe_page.rs:177
+#: app/src/unsubscribe_page.rs:187
 msgid "the page could not be read: {reason}"
 msgstr ""
 
-#: app/src/unsubscribe_page.rs:180
+#: app/src/unsubscribe_page.rs:190
 msgid "the page changed while it was waiting to be asked"
 msgstr ""
 
-#: app/src/unsubscribe_page/webkit.rs:304
+#: app/src/unsubscribe_page/hidden.rs:211
 msgid "the view went away"
 msgstr ""
 
-#: app/src/unsubscribe_page/webkit.rs:404
+#: app/src/unsubscribe_page/hidden.rs:303
 msgid "the plan would type something other than the address"
 msgstr ""
 
@@ -9123,7 +9123,7 @@ msgstr ""
 msgid "Penguin Mail {version} is available"
 msgstr ""
 
-#: app/src/update/mod.rs:119 app/src/update/mod.rs:212
+#: app/src/update/mod.rs:119 app/src/update/mod.rs:211
 msgid "Install"
 msgstr ""
 

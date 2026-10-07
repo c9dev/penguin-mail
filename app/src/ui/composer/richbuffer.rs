@@ -916,7 +916,7 @@ mod tests {
     /// on somebody's newsletter.
     fn an_unsubscribe_page_reads_back_as_its_fixture() {
         use crate::unsubscribe_page::{
-            Browser, Outcome, PageForm, Pick, WebkitBrowser, finish, pick, prepare, says_done,
+            Browser, Outcome, PageForm, Pick, PageBrowser, finish, pick, prepare, says_done,
         };
 
         const DIR: &str = concat!(
@@ -949,7 +949,7 @@ mod tests {
                 include_str!("../../unsubscribe_page/fixtures/link_only.json"),
             ),
         ];
-        let browser = WebkitBrowser::new();
+        let browser = PageBrowser::new();
         for (name, written) in pages {
             let url = format!("file://{DIR}{name}.html");
             let read = glib::MainContext::default()

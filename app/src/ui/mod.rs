@@ -265,7 +265,8 @@ pub fn name_menu_items_of(button: &impl IsA<gtk::Widget>) {
 }
 
 /// Names the items of a menu open under `widget` that another library
-/// built, such as the one WebKit shows on a right click in a page.
+/// built, such as the one WebKitGTK shows on a right click in a page.
+#[cfg(target_os = "linux")]
 pub fn name_menu_items_under(widget: &impl IsA<gtk::Widget>) {
     name_model_buttons(widget.as_ref());
 }

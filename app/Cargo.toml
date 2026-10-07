@@ -58,7 +58,20 @@ tracing.workspace = true
 tracing-subscriber.workspace = true
 # The web source checks a page's host before it downloads anything.
 url.workspace = true
+
+# WebKitGTK draws the conversation on Linux. It does not exist on macOS,
+# where WKWebView draws it instead; see src/web.
+[target.'cfg(target_os = "linux")'.dependencies]
 webkit.workspace = true
+
+[target.'cfg(target_os = "macos")'.dependencies]
+block2.workspace = true
+objc2.workspace = true
+objc2-app-kit.workspace = true
+objc2-core-graphics.workspace = true
+objc2-foundation.workspace = true
+objc2-quartz-core.workspace = true
+objc2-web-kit.workspace = true
 
 [dev-dependencies]
 mail-parser.workspace = true

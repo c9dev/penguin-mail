@@ -14,6 +14,8 @@ mod compose;
 mod contacts;
 mod core;
 mod demo;
+#[cfg(all(target_os = "macos", debug_assertions))]
+mod drive;
 mod diff;
 mod event_reminders;
 mod exe;
@@ -80,6 +82,10 @@ fn usage() -> String {
 }
 
 fn main() -> glib::ExitCode {
+    // On macOS this has to come before GTK starts; see `web`.
+    web::prepare();
+    #[cfg(all(target_os = "macos", debug_assertions))]
+    drive::from_env();
     // async-imap logs passwords and mail at trace level; `quiet` drops
     // those lines whatever RUST_LOG says.
     tracing_subscriber::util::SubscriberInitExt::init(mailrs_imap::quiet(
