@@ -1452,6 +1452,7 @@ impl App {
             commands,
             can_update: self.updater.is_some(),
             update: None,
+            pixmaps: crate::tray::pixmaps(),
         };
         let slot = Arc::clone(&self.tray);
         // The restart that returns memory execs in place and keeps the pid,
