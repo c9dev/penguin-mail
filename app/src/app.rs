@@ -421,7 +421,10 @@ impl App {
         if open == 0 {
             self.core.set_window_open(false);
         }
-        if open > 0 || self.core.demo {
+        // macOS brings a closed app back from the Dock, which takes the
+        // Cocoa event loop GDK runs; a copy restarted in the background
+        // runs none and could never be reopened.
+        if open > 0 || self.core.demo || cfg!(target_os = "macos") {
             return;
         }
         let generation = self.shed_generation.get() + 1;

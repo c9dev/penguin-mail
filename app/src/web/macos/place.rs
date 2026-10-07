@@ -168,6 +168,7 @@ fn attach(inner: &Rc<Inner>, window: Retained<NSWindow>) {
     };
     inner.clip.removeFromSuperview();
     content.addSubview(&inner.clip);
+    super::events::answer_reopen();
     *inner.float.window.borrow_mut() = Some(window);
     if inner.float.focused.get() {
         give_keyboard(inner, true);

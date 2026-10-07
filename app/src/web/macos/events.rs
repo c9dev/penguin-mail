@@ -19,13 +19,15 @@
 //! reading, and goes on to the page when GTK leaves it, as it does around
 //! WebKitGTK on Linux.
 
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::rc::{Rc, Weak};
 
 use objc2::rc::Retained;
-use objc2::{ClassType, MainThreadMarker, MainThreadOnly, define_class, msg_send};
+use gtk::gio::prelude::ApplicationExt;
+use gtk::{gio, glib};
+use objc2::{ClassType, MainThreadMarker, MainThreadOnly, define_class, msg_send, sel};
 use objc2_app_kit::{NSApplication, NSEvent, NSEventMask, NSEventModifierFlags, NSEventType};
-use objc2_foundation::{NSDate, NSString};
+use objc2_foundation::{NSAppleEventDescriptor, NSAppleEventManager, NSDate, NSString};
 
 use super::Inner;
 
@@ -45,6 +47,37 @@ pub fn prepare() {
         return;
     };
     let _: Retained<App> = unsafe { msg_send![App::class(), sharedApplication] };
+}
+
+/// Has a click on the Dock icon, or opening the app again from the
+/// Finder, bring the window back. Closing the last window leaves Penguin
+/// Mail running, and AppKit asks a running app to reopen through an Apple
+/// event. It goes in once the first window is up: AppKit puts in handlers
+/// of its own as it finishes launching, which GDK has it do then.
+pub(super) fn answer_reopen() {
+    thread_local! {
+        static ANSWERING: Cell<bool> = const { Cell::new(false) };
+    }
+    if ANSWERING.replace(true) {
+        return;
+    }
+    let Some(mtm) = MainThreadMarker::new() else {
+        return;
+    };
+    let app = NSApplication::sharedApplication(mtm);
+    // 'aevt' and 'rapp', the core suite's Reopen Application.
+    const CORE: u32 = u32::from_be_bytes(*b"aevt");
+    const REOPEN: u32 = u32::from_be_bytes(*b"rapp");
+    let manager = NSAppleEventManager::sharedAppleEventManager();
+    let _: () = unsafe {
+        msg_send![
+            &manager,
+            setEventHandler: &*app,
+            andSelector: sel!(handleReopen:withReplyEvent:),
+            forEventClass: CORE,
+            andEventID: REOPEN
+        ]
+    };
 }
 
 pub(super) fn register(inner: &Rc<Inner>) {
@@ -119,6 +152,15 @@ define_class!(
     pub(super) struct App;
 
     impl App {
+        #[unsafe(method(handleReopen:withReplyEvent:))]
+        fn reopen(&self, _event: &NSAppleEventDescriptor, _reply: &NSAppleEventDescriptor) {
+            glib::idle_add_local_once(|| {
+                if let Some(app) = gio::Application::default() {
+                    app.activate();
+                }
+            });
+        }
+
         #[unsafe(method(nextEventMatchingMask:untilDate:inMode:dequeue:))]
         fn next_event(
             &self,
