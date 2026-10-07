@@ -5,6 +5,19 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ## Unreleased
 
+### Fixed
+
+- The snap shows its text in your desktop's normal sans-serif font again,
+  not in a fixed-width fallback, on desktops other than Ubuntu 26.04.
+- Buttons and lists show their icons on desktops whose icon theme the
+  snap or Flatpak cannot see, such as Cinnamon on Linux Mint or Pop!_OS.
+- The tray shows the Penguin Mail icon on Cinnamon and other panels that
+  cannot find the app's icon by name, instead of a blank circle.
+- Closing the window before you add an account quits Penguin Mail, rather
+  than leaving it running in the background with nothing to sync.
+- In the snap, the notice about connecting your keyring goes away once
+  you connect it and open the window again.
+
 ## 1.0.0 (2026-10-06)
 
 ### New

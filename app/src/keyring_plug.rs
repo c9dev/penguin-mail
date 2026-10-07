@@ -5,7 +5,7 @@
 //! keyring fails, so the window says what to run, and Add Account says the
 //! same in place of the keyring's own error.
 
-use std::sync::OnceLock;
+use std::sync::Mutex;
 
 use gtk::{gio, glib};
 use mailrs_domain::translate::{fill, gettext};
@@ -43,6 +43,12 @@ impl Plug {
     pub fn explains_refusal(self) -> bool {
         matches!(self, Plug::Disconnected | Plug::Unknown)
     }
+
+    /// Whether the answer holds for the rest of the run, so `check` need
+    /// not ask snapd again.
+    pub fn settled(self) -> bool {
+        matches!(self, Plug::Connected | Plug::NotNeeded)
+    }
 }
 
 /// Reads the plug for a build of `packaging`. `ask` runs `snapctl
@@ -77,27 +83,30 @@ fn ask_snapctl() -> Option<i32> {
     }
 }
 
-/// The answer for this process, once `check` has one.
-static CHECKED: OnceLock<Plug> = OnceLock::new();
+/// The answer from the last `check`.
+static CHECKED: Mutex<Option<Plug>> = Mutex::new(None);
+
+fn last_checked() -> Option<Plug> {
+    *CHECKED.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
+}
 
 /// The plug as the last check found it; `Unknown` in a snap before the
 /// check has run.
 pub fn current() -> Plug {
-    CHECKED
-        .get()
-        .copied()
-        .unwrap_or(match crate::packaging::BUILT_FOR {
-            Packaging::Snap => Plug::Unknown,
-            _ => Plug::NotNeeded,
-        })
+    last_checked().unwrap_or(match crate::packaging::BUILT_FOR {
+        Packaging::Snap => Plug::Unknown,
+        _ => Plug::NotNeeded,
+    })
 }
 
-/// Reads the plug once per process, off the main thread, since snapctl
-/// talks to snapd. `unplugged_demo` stands in a disconnected plug for the
-/// demo, so its notice can be seen without a snap.
+/// Reads the plug off the main thread, since snapctl talks to snapd. A
+/// settled answer is kept for the run; any other is asked again, since
+/// the person may have connected the plug while the app ran.
+/// `unplugged_demo` stands in a disconnected plug for the demo, so its
+/// notice can be seen without a snap.
 pub async fn check(unplugged_demo: bool) -> Plug {
-    if let Some(plug) = CHECKED.get() {
-        return *plug;
+    if let Some(plug) = last_checked().filter(|plug| plug.settled()) {
+        return plug;
     }
     let plug = if unplugged_demo {
         Plug::Disconnected
@@ -109,7 +118,8 @@ pub async fn check(unplugged_demo: bool) -> Plug {
     if plug != Plug::NotNeeded {
         tracing::info!(?plug, "read the password-manager-service plug");
     }
-    *CHECKED.get_or_init(|| plug)
+    *CHECKED.lock().unwrap_or_else(|poisoned| poisoned.into_inner()) = Some(plug);
+    plug
 }
 
 /// Whether `err` says the keyring would not keep a Google refresh token
@@ -142,6 +152,19 @@ mod tests {
     use mailrs_store::StoreError;
 
     use super::*;
+
+    #[test]
+    fn a_plug_that_was_off_or_unanswered_is_asked_about_again() {
+        // The person may have run the command since.
+        assert!(!Plug::Disconnected.settled());
+        assert!(!Plug::Unknown.settled());
+    }
+
+    #[test]
+    fn a_connected_plug_or_a_build_without_one_is_not_asked_again() {
+        assert!(Plug::Connected.settled());
+        assert!(Plug::NotNeeded.settled());
+    }
 
     fn never_asked() -> Option<i32> {
         panic!("only a snap asks snapd")

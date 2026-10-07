@@ -217,7 +217,10 @@ uses a tool from outside the app, and it is off until you pick a model.
 Penguin Mail runs on Linux, x86_64. The .deb, the rpm and the Arch
 package need GTK 4.20, libadwaita 1.8 and WebKitGTK 6.0 from your
 distribution, as Ubuntu 26.04, Fedora 43 and Arch's own repositories
-have; the snap brings its own. Penguin Mail is not on Flathub yet. The
+have; the snap brings its own. On Ubuntu 24.04 and the releases built on
+it, such as Pop!_OS 24.04 and Linux Mint 22, apt refuses the .deb for its
+older GTK and libadwaita; install the snap there. Penguin Mail is not on
+Flathub yet. The
 tray icon needs a StatusNotifier host, which Ubuntu's AppIndicator
 extension provides.
 

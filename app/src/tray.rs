@@ -107,6 +107,58 @@ fn account_lines(accounts: &[AccountUnread]) -> Vec<AccountLine> {
     }
 }
 
+/// The app icon at the sizes trays draw, for a host that cannot find the
+/// icon by name. A snap's or Flatpak's icons are not on the host, and
+/// Cinnamon's tray shows a blank picture when neither the name nor a
+/// pixmap gives it one. The colour icon reads on light and dark panels.
+const PIXMAPS: [(u32, &[u8]); 5] = [
+    (16, include_bytes!("../data/tray/16.png")),
+    (22, include_bytes!("../data/tray/22.png")),
+    (24, include_bytes!("../data/tray/24.png")),
+    (32, include_bytes!("../data/tray/32.png")),
+    (48, include_bytes!("../data/tray/48.png")),
+];
+
+/// `rgba`, rows of `stride` bytes holding `width` pixels of straight
+/// RGBA, as the ARGB32 in network byte order that a tray pixmap takes.
+/// Empty when `rgba` holds fewer rows than `height`.
+fn argb_from_rgba(width: usize, height: usize, stride: usize, rgba: &[u8]) -> Vec<u8> {
+    let row = width * 4;
+    if height > 0 && (stride < row || rgba.len() < stride * (height - 1) + row) {
+        return Vec::new();
+    }
+    let mut argb = Vec::with_capacity(row * height);
+    for y in 0..height {
+        for [r, g, b, a] in rgba[y * stride..y * stride + row].as_chunks::<4>().0 {
+            argb.extend_from_slice(&[*a, *r, *g, *b]);
+        }
+    }
+    argb
+}
+
+/// The tray pictures decoded, for `MailTray::pixmaps`. Runs on the GTK
+/// thread, where GDK decodes PNG itself.
+pub fn pixmaps() -> Vec<ksni::Icon> {
+    use gtk::gdk;
+    use gtk::prelude::*;
+    PIXMAPS
+        .iter()
+        .filter_map(|(_, png)| {
+            let texture = crate::ui::texture::here(&gtk::glib::Bytes::from_static(png))?;
+            let mut downloader = gdk::TextureDownloader::new(&texture);
+            downloader.set_format(gdk::MemoryFormat::R8g8b8a8);
+            let (bytes, stride) = downloader.download_bytes();
+            let (width, height) = (texture.width(), texture.height());
+            let data = argb_from_rgba(width as usize, height as usize, stride, &bytes);
+            (!data.is_empty()).then_some(ksni::Icon {
+                width,
+                height,
+                data,
+            })
+        })
+        .collect()
+}
+
 pub struct MailTray {
     pub unread: i64,
     /// Each account's id, address and unread INBOX count.
@@ -116,6 +168,8 @@ pub struct MailTray {
     pub can_update: bool,
     /// A newer release waiting to be installed.
     pub update: Option<String>,
+    /// The app icon for a host that cannot find `icon_name`; see `pixmaps`.
+    pub pixmaps: Vec<ksni::Icon>,
 }
 
 impl MailTray {
@@ -147,6 +201,10 @@ impl ksni::Tray for MailTray {
             "mail-read-symbolic"
         }
         .into()
+    }
+
+    fn icon_pixmap(&self) -> Vec<ksni::Icon> {
+        self.pixmaps.clone()
     }
 
     fn tool_tip(&self) -> ksni::ToolTip {
@@ -226,9 +284,61 @@ impl ksni::Tray for MailTray {
     }
 }
 
+/// Checks that need GTK, run from the one GTK test in
+/// `ui::composer::richbuffer`.
+#[cfg(test)]
+pub mod checks {
+    pub fn run() {
+        the_tray_pictures_decode_to_argb();
+    }
+
+    fn the_tray_pictures_decode_to_argb() {
+        let icons = super::pixmaps();
+        let sizes: Vec<i32> = icons.iter().map(|icon| icon.width).collect();
+        assert_eq!(sizes, [16, 22, 24, 32, 48]);
+        for icon in &icons {
+            let (w, h) = (icon.width as usize, icon.height as usize);
+            assert_eq!(icon.data.len(), w * h * 4);
+            // The middle of the icon is the penguin's face: opaque paper,
+            // alpha first.
+            let middle = ((h / 2) * w + w / 2) * 4;
+            assert_eq!(icon.data[middle], 255, "{w} px icon is opaque in the middle");
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{AccountId, AccountLine, AccountUnread, Burst, account_line, account_lines, summary};
+
+    #[test]
+    fn a_pixmap_turns_rgba_rows_into_argb_and_drops_the_padding() {
+        // Two pixels a row, then two bytes of padding to a stride of 10.
+        let rgba = [
+            1, 2, 3, 4, 5, 6, 7, 8, 0, 0, //
+            9, 10, 11, 12, 13, 14, 15, 16, 0, 0,
+        ];
+        assert_eq!(
+            super::argb_from_rgba(2, 2, 10, &rgba),
+            [4, 1, 2, 3, 8, 5, 6, 7, 12, 9, 10, 11, 16, 13, 14, 15]
+        );
+    }
+
+    #[test]
+    fn a_pixmap_short_of_rows_is_none() {
+        assert_eq!(super::argb_from_rgba(2, 2, 8, &[0; 12]), Vec::<u8>::new());
+    }
+
+    #[test]
+    fn each_tray_picture_is_the_size_it_is_sent_as() {
+        for (size, png) in super::PIXMAPS {
+            // A PNG's width and height are the two big-endian words after
+            // the signature and the IHDR chunk's length and name.
+            let width = u32::from_be_bytes(png[16..20].try_into().unwrap());
+            let height = u32::from_be_bytes(png[20..24].try_into().unwrap());
+            assert_eq!((width, height), (size, size));
+        }
+    }
 
     #[test]
     fn a_burst_of_changes_counts_once() {
@@ -315,6 +425,7 @@ mod tests {
             commands,
             can_update: false,
             update: None,
+            pixmaps: Vec::new(),
         };
         let menu = tray.menu();
         let MenuItem::Standard(line) = &menu[0] else {

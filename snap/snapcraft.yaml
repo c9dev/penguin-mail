@@ -75,6 +75,7 @@ parts:
     source: snap/local
     organize:
       launcher: bin/launcher
+      fonts.conf: etc/fonts/penguin-mail.conf
 
   penguin-mail:
     plugin: nil
