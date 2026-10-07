@@ -109,6 +109,15 @@
 
   <!-- scripts/metainfo.sh writes this list from CHANGELOG.md. -->
   <releases>
+    <release version="1.0.2" date="2026-10-07">
+      <url type="details">https://github.com/c9dev/penguin-mail/releases/tag/v1.0.2</url>
+      <description translate="no">
+        <p>Fixed</p>
+        <ul>
+          <li>The snap builds again, so the font, icon, tray icon and closing fixes from 1.0.1 reach snap users too.</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.0.1" date="2026-10-07">
       <url type="details">https://github.com/c9dev/penguin-mail/releases/tag/v1.0.1</url>
       <description translate="no">
