@@ -129,8 +129,8 @@ fn argb_from_rgba(width: usize, height: usize, stride: usize, rgba: &[u8]) -> Ve
     }
     let mut argb = Vec::with_capacity(row * height);
     for y in 0..height {
-        for pixel in rgba[y * stride..y * stride + row].chunks_exact(4) {
-            argb.extend_from_slice(&[pixel[3], pixel[0], pixel[1], pixel[2]]);
+        for [r, g, b, a] in rgba[y * stride..y * stride + row].as_chunks::<4>().0 {
+            argb.extend_from_slice(&[*a, *r, *g, *b]);
         }
     }
     argb
