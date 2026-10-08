@@ -109,6 +109,15 @@
 
   <!-- scripts/metainfo.sh writes this list from CHANGELOG.md. -->
   <releases>
+    <release version="1.0.5" date="2026-10-08">
+      <url type="details">https://github.com/c9dev/penguin-mail/releases/tag/v1.0.5</url>
+      <description translate="no">
+        <p>Improved</p>
+        <ul>
+          <li>New-mail notifications offer Mark as Read, Delete and Reply out of the box, since GNOME shows only three buttons; Archive is still one switch away in Preferences.</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.0.4" date="2026-10-08">
       <url type="details">https://github.com/c9dev/penguin-mail/releases/tag/v1.0.4</url>
       <description translate="no">

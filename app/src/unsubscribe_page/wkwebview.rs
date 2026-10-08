@@ -1,15 +1,13 @@
 //! The WKWebView engine behind the hidden page, on macOS. The run it
 //! serves, and what the page may and may not do, are in
 //! [`super::hidden`].
-//!
-//! WKWebView has no switch for loading pictures, so this page loads them
-//! where the Linux one does not; it reads text either way.
 
-use std::cell::Cell;
+use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 use block2::{DynBlock, RcBlock};
 use futures::future::LocalBoxFuture;
+use gtk::glib;
 use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, Bool, NSObject, ProtocolObject};
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send};
@@ -25,10 +23,22 @@ use objc2_web_kit::{
 
 use super::hidden::{Engine, State};
 
+// The hidden page must never signal an open by fetching a tracking picture.
+const BLOCK_IMAGES: &str = r#"[{"trigger":{"url-filter":".*","resource-type":["image"]},"action":{"type":"block"}}]"#;
+
 pub struct WkEngine {
     view: Retained<WKWebView>,
     /// WebKit holds its delegates weakly.
     _keeper: Retained<Keeper>,
+    loading: RefCell<Option<glib::JoinHandle<()>>>,
+}
+
+impl Drop for WkEngine {
+    fn drop(&mut self) {
+        if let Some(load) = self.loading.get_mut().take() {
+            load.abort();
+        }
+    }
 }
 
 pub struct KeeperIvars {
@@ -187,24 +197,50 @@ impl Engine for WkEngine {
         WkEngine {
             view,
             _keeper: keeper,
+            loading: RefCell::new(None),
         }
     }
 
     fn load(&self, url: &str) {
+        if let Some(load) = self.loading.borrow_mut().take() {
+            load.abort();
+        }
         let address = NSString::from_str(url);
         let Some(target) = NSURL::URLWithString(&address) else {
             self._keeper.ivars().state.arrived(Err(format!("not an address: {url}")));
             return;
         };
-        unsafe {
-            if target.isFileURL() {
-                // A file may read its own folder and nothing beside it.
-                let folder = target.URLByDeletingLastPathComponent().unwrap_or(target.clone());
-                self.view.loadFileURL_allowingReadAccessToURL(&target, &folder);
-            } else {
-                self.view.loadRequest(&NSURLRequest::requestWithURL(&target));
+        let view = self.view.clone();
+        let state = Rc::clone(&self._keeper.ivars().state);
+        let load = glib::spawn_future_local(async move {
+            let dir = glib::user_cache_dir()
+                .join(mailrs_sync::config::DIR_NAME)
+                .join("content-filters");
+            let filter = async {
+                std::fs::create_dir_all(&dir).map_err(|err| err.to_string())?;
+                crate::web::compile_filter(&dir, "unsubscribe-block-images", BLOCK_IMAGES).await
+            }.await;
+            let filter = match filter {
+                Ok(filter) => filter,
+                Err(err) => {
+                    state.arrived(Err(err));
+                    return;
+                }
+            };
+            unsafe {
+                let content = view.configuration().userContentController();
+                content.removeAllContentRuleLists();
+                content.addContentRuleList(&filter.0);
+                if target.isFileURL() {
+                    // A file may read its own folder and nothing beside it.
+                    let folder = target.URLByDeletingLastPathComponent().unwrap_or(target.clone());
+                    view.loadFileURL_allowingReadAccessToURL(&target, &folder);
+                } else {
+                    view.loadRequest(&NSURLRequest::requestWithURL(&target));
+                }
             }
-        }
+        });
+        *self.loading.borrow_mut() = Some(load);
     }
 
     fn at(&self) -> String {

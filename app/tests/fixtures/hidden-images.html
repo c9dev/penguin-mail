@@ -1,0 +1,7 @@
+<!doctype html>
+<title>Unsubscribe fixture</title>
+<style>body { background-image: url('/background.png'); }</style>
+<p id="result">Waiting for the picture</p>
+<img src="/pixel.png" alt="" onload="document.getElementById('result').textContent = 'Picture loaded'"
+     onerror="document.getElementById('result').textContent = 'Pictures blocked'">
+<form><button>Unsubscribe</button></form>

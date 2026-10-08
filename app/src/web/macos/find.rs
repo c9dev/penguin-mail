@@ -73,6 +73,13 @@ impl Finder {
 
     /// Counts the matches again, leaving the selection where it is.
     pub fn count(&self, query: &str, case_sensitive: bool) {
+        if query.is_empty() {
+            let counted = self.listeners.borrow().counted.clone();
+            if let Some(counted) = counted {
+                counted(0);
+            }
+            return;
+        }
         let Some(page) = self.page.upgrade() else { return };
         let (Ok(query), Ok(sensitive)) = (
             serde_json::to_string(query),
@@ -155,5 +162,22 @@ impl Finder {
 
     pub fn on_failed(&self, failed: impl Fn() + 'static) {
         self.listeners.borrow_mut().failed = Some(Rc::new(failed));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::cell::Cell;
+    use std::rc::Weak;
+
+    #[test]
+    fn an_empty_query_counts_zero_without_a_page() {
+        let finder = Finder::new(WeakWebView(Weak::new()));
+        let answer = Rc::new(Cell::new(None));
+        let heard = Rc::clone(&answer);
+        finder.on_counted(move |count| heard.set(Some(count)));
+        finder.count("", false);
+        assert_eq!(answer.get(), Some(0));
     }
 }
