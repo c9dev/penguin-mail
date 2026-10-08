@@ -33,9 +33,6 @@ finish-args:
   - --device=dri
   # The tray icon.
   - --talk-name=org.kde.StatusNotifierWatcher
-  # New-mail notifications with their Archive, Mark as Read, Delete and
-  # Reply buttons, which the notification portal cannot carry.
-  - --talk-name=org.freedesktop.Notifications
   # Saved attachments and exports land in Downloads; everything else goes
   # through the file chooser portal.
   - --filesystem=xdg-download

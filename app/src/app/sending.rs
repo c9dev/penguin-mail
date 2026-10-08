@@ -432,11 +432,10 @@ impl App {
         let settings = self.settings();
         if settings.notifications {
             for message in returned.iter().filter_map(|r| r.newest.clone()) {
-                crate::notify::announce(
+                self.announce_mail(
                     vec![message],
                     settings.notification_previews,
                     settings.notification_buttons.clone(),
-                    self.chosen.clone(),
                 );
             }
         }

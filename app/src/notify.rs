@@ -1,18 +1,26 @@
 //! Desktop notifications for new mail, and the buttons on them.
 //!
-//! A notification the user acts on sends a [`Request`] back over an
-//! `async-channel`, which the app reads on the GTK loop. Nothing here
-//! touches GTK or the store, so the routing and the state check live under
-//! unit tests even though the notification daemon does not.
+//! This module says what each notification shows and which message its
+//! clicks act on; the app posts them as `gio::Notification`s, which go
+//! through the notification portal inside a Flatpak and straight to the
+//! desktop outside one. A click comes back as the app action [`CHOSEN`]
+//! with a token the app handed out, and [`Issued`] turns that token back
+//! into a [`Request`]. Nothing here touches GTK or the store, so the
+//! routing and the state check live under unit tests.
 
-use std::sync::OnceLock;
+use std::collections::{HashMap, VecDeque};
 
 use mailrs_domain::{MessageMeta, Role, Target};
 use mailrs_sync::{MailAction, TriageAction};
 use serde::{Deserialize, Serialize};
 
-use crate::APP_ID;
 use mailrs_domain::translate::{fill, fill_plural, gettext};
+
+/// The app action every click on a new-mail notification activates, with
+/// `<token>/<key>` as its parameter: the token [`Issued::issue`] gave the
+/// notification, and the key of the button pressed, or `default` for the
+/// notification itself.
+pub const CHOSEN: &str = "notification-chosen";
 
 /// A button a new-mail notification can carry. Clicking the body opens the
 /// conversation, so that is not one of these.
@@ -26,6 +34,11 @@ pub enum Button {
 }
 
 impl Button {
+    /// The buttons a new copy shows. GNOME Shell draws at most three on a
+    /// notification and drops the rest, so the default is three, with
+    /// Reply among them rather than Archive.
+    pub const DEFAULT: [Button; 3] = [Button::MarkRead, Button::Delete, Button::Reply];
+
     /// Every button, in the order a notification shows them.
     pub const ALL: [Button; 4] = [
         Button::Archive,
@@ -34,8 +47,8 @@ impl Button {
         Button::Reply,
     ];
 
-    /// The action key the daemon sends back when the button is clicked.
-    fn key(self) -> &'static str {
+    /// The key a click on this button sends back.
+    pub fn key(self) -> &'static str {
         match self {
             Button::Archive => "archive",
             Button::MarkRead => "mark-read",
@@ -96,72 +109,68 @@ pub fn still_applies(button: Button, message: &MessageMeta) -> bool {
     }
 }
 
-/// Shows notifications for `messages`: one each for up to three, one
-/// summary beyond that. Clicking one sends its thread to `chosen`, as does
-/// each of `buttons`. With `previews` off, notifications say only how much
-/// mail arrived.
-pub fn announce(
-    messages: Vec<MessageMeta>,
-    previews: bool,
-    buttons: Vec<Button>,
-    chosen: async_channel::Sender<Request>,
-) {
-    if !previews {
-        let count = messages.len();
-        let summary = fill_plural(
+/// One new-mail notification: what it says, the message its clicks act
+/// on, and its buttons. A summary of several messages has no message and
+/// no buttons.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Notice {
+    pub title: String,
+    pub body: String,
+    pub target: Option<Target>,
+    pub buttons: Vec<Button>,
+}
+
+/// The notifications for `messages`: one each for up to three, one summary
+/// beyond that. With `previews` off, they say only how much mail arrived.
+pub fn notices(messages: Vec<MessageMeta>, previews: bool, buttons: Vec<Button>) -> Vec<Notice> {
+    let notice = |title, body, target: Option<Target>| Notice {
+        title,
+        body,
+        buttons: if target.is_some() { buttons.clone() } else { Vec::new() },
+        target,
+    };
+    let count = messages.len();
+    let how_many = || {
+        fill_plural(
             "{count} new message",
             "{count} new messages",
             count,
             &[("count", &count.to_string())],
-        );
-        let target = (messages.len() == 1).then(|| target_of(&messages[0]));
-        show(summary, String::new(), target, buttons, chosen);
-        return;
+        )
+    };
+    if !previews {
+        let target = (count == 1).then(|| target_of(&messages[0]));
+        return vec![notice(how_many(), String::new(), target)];
     }
-    if messages.len() <= 3 {
-        for message in messages {
-            let sender = message
-                .from
-                .as_ref()
-                .map(|a| a.display().to_string())
-                .unwrap_or_else(|| gettext("New message"));
-            let subject = if message.subject.trim().is_empty() {
-                gettext("(no subject)")
-            } else {
-                message.subject.clone()
-            };
-            let body = format!("{subject}\n{}", message.snippet);
-            show(
-                sender,
-                body,
-                Some(target_of(&message)),
-                buttons.clone(),
-                chosen.clone(),
-            );
-        }
-    } else {
-        let senders: Vec<String> = messages
+    if count <= 3 {
+        return messages
             .iter()
-            .filter_map(|m| m.from.as_ref().map(|a| a.display().to_string()))
-            .take(3)
+            .map(|message| {
+                let sender = message
+                    .from
+                    .as_ref()
+                    .map(|a| a.display().to_string())
+                    .unwrap_or_else(|| gettext("New message"));
+                let subject = if message.subject.trim().is_empty() {
+                    gettext("(no subject)")
+                } else {
+                    message.subject.clone()
+                };
+                let body = format!("{subject}\n{}", message.snippet);
+                notice(sender, body, Some(target_of(message)))
+            })
             .collect();
-        let count = messages.len();
-        show(
-            fill_plural(
-                "{count} new message",
-                "{count} new messages",
-                count,
-                &[("count", &count.to_string())],
-            ),
-            fill(
-                &gettext("From {senders}"),
-                &[("senders", &senders.join(", "))],
-            ),
-            None,
-            buttons,
-            chosen,
-        );
     }
+    let senders: Vec<String> = messages
+        .iter()
+        .filter_map(|m| m.from.as_ref().map(|a| a.display().to_string()))
+        .take(3)
+        .collect();
+    let body = fill(
+        &gettext("From {senders}"),
+        &[("senders", &senders.join(", "))],
+    );
+    vec![notice(how_many(), body, None)]
 }
 
 /// The message a notification announced, not its whole thread: archiving
@@ -174,75 +183,63 @@ fn target_of(message: &MessageMeta) -> Target {
     }
 }
 
-fn show(
-    summary: String,
-    body: String,
-    target: Option<Target>,
-    buttons: Vec<Button>,
-    chosen: async_channel::Sender<Request>,
-) {
-    std::thread::spawn(move || {
-        let target = target.filter(|_| takes_actions());
-        let mut notification = notify_rust::Notification::new();
-        notification
-            .appname("Penguin Mail")
-            .summary(&summary)
-            .body(&escape(&body))
-            .icon(APP_ID)
-            .hint(notify_rust::Hint::Category("email.arrived".into()))
-            .hint(notify_rust::Hint::DesktopEntry(APP_ID.into()));
-        if target.is_some() {
-            notification.action("default", &gettext("Open"));
-            for button in &buttons {
-                notification.action(button.key(), &button.label());
-            }
-        }
-        match notification.show() {
-            Ok(handle) => {
-                let Some(target) = target else { return };
-                handle.wait_for_action(|key| {
-                    if let Some(choice) = choice_of(key, &buttons) {
-                        let _ = chosen.send_blocking(Request { target, choice });
-                    }
-                });
-            }
-            Err(err) => tracing::warn!(error = %err, "could not show a notification"),
-        }
-    });
+/// The parameter [`CHOSEN`] carries for a click on `key` of the
+/// notification `token` was issued for.
+pub fn parameter(token: &str, key: &str) -> String {
+    format!("{token}/{key}")
 }
 
-/// The choice an action key stands for. A daemon also reports a closed
-/// notification through this path, and one closed without a click asks for
-/// nothing.
+/// The key a click on the notification itself sends.
+pub const OPEN_KEY: &str = "default";
+
+/// The notifications on screen, by the token each was posted with. The app
+/// action that brings a click back can be activated by any program on the
+/// session bus, so it carries only a token, and only a token handed out
+/// here, for a button that notification offered, asks for anything: the
+/// message a click acts on comes from this list, never from the caller.
+#[derive(Debug, Default)]
+pub struct Issued {
+    order: VecDeque<String>,
+    shown: HashMap<String, (Target, Vec<Button>)>,
+}
+
+impl Issued {
+    /// How many notifications keep answering. A desktop keeps far fewer on
+    /// screen, and the oldest goes once this many are newer.
+    const KEPT: usize = 200;
+
+    /// Records a notification posted under `token`, which the caller makes
+    /// unguessable.
+    pub fn issue(&mut self, token: String, target: Target, buttons: Vec<Button>) {
+        if self.order.len() == Self::KEPT
+            && let Some(oldest) = self.order.pop_front()
+        {
+            self.shown.remove(&oldest);
+        }
+        self.order.push_back(token.clone());
+        self.shown.insert(token, (target, buttons));
+    }
+
+    /// What a click with `parameter` asks for, or `None` for a token this
+    /// copy never issued or a button its notification did not show.
+    pub fn request(&self, parameter: &str) -> Option<Request> {
+        let (token, key) = parameter.split_once('/')?;
+        let (target, buttons) = self.shown.get(token)?;
+        let choice = choice_of(key, buttons)?;
+        Some(Request { target: target.clone(), choice })
+    }
+}
+
+/// The choice an action key stands for, among the buttons a notification
+/// showed.
 fn choice_of(key: &str, buttons: &[Button]) -> Option<Choice> {
-    if key == "default" {
+    if key == OPEN_KEY {
         return Some(Choice::Open);
     }
     buttons
         .iter()
         .find(|button| button.key() == key)
         .map(|button| Choice::Button(*button))
-}
-
-/// Whether the running notification daemon invokes actions, asked once.
-/// Without that capability the buttons would sit on screen doing nothing,
-/// so a plain notification goes out instead.
-fn takes_actions() -> bool {
-    static TAKES: OnceLock<bool> = OnceLock::new();
-    *TAKES.get_or_init(|| match notify_rust::get_capabilities() {
-        Ok(capabilities) => capabilities.iter().any(|c| c == "actions"),
-        Err(err) => {
-            tracing::warn!(error = %err, "could not ask the notification daemon what it does");
-            false
-        }
-    })
-}
-
-/// Notification bodies accept a little markup, so text must be escaped.
-fn escape(text: &str) -> String {
-    text.replace('&', "&amp;")
-        .replace('<', "&lt;")
-        .replace('>', "&gt;")
 }
 
 #[cfg(test)]
@@ -267,6 +264,85 @@ mod tests {
         assert_eq!(choice_of("__closed", &Button::ALL), None);
         assert_eq!(choice_of("archive", &[]), None, "a button nobody offered");
         assert_eq!(choice_of("", &Button::ALL), None);
+    }
+
+    fn thread(id: &str) -> Target {
+        Target {
+            account_id: 1,
+            thread_id: id.into(),
+            message_id: Some(format!("{id}-m")),
+        }
+    }
+
+    #[test]
+    fn a_click_comes_back_to_the_message_its_notification_announced() {
+        let mut issued = Issued::default();
+        issued.issue("tok1".into(), thread("t1"), vec![Button::Archive]);
+        assert_eq!(
+            issued.request(&parameter("tok1", Button::Archive.key())),
+            Some(Request { target: thread("t1"), choice: Choice::Button(Button::Archive) })
+        );
+        assert_eq!(
+            issued.request(&parameter("tok1", OPEN_KEY)),
+            Some(Request { target: thread("t1"), choice: Choice::Open })
+        );
+    }
+
+    /// Any program on the session bus can activate the app's actions, so
+    /// a made-up token, or a button the notification never showed, must
+    /// not reach the mail.
+    #[test]
+    fn only_a_token_this_copy_issued_asks_for_anything() {
+        let mut issued = Issued::default();
+        issued.issue("tok1".into(), thread("t1"), vec![Button::MarkRead]);
+        assert_eq!(issued.request(&parameter("guess", Button::MarkRead.key())), None);
+        assert_eq!(
+            issued.request(&parameter("tok1", Button::Delete.key())),
+            None,
+            "Delete was not on that notification"
+        );
+        assert_eq!(issued.request("tok1"), None, "no key at all");
+    }
+
+    #[test]
+    fn the_oldest_notification_stops_answering_once_enough_are_newer() {
+        let mut issued = Issued::default();
+        for n in 0..=Issued::KEPT {
+            issued.issue(format!("tok{n}"), thread(&format!("t{n}")), vec![]);
+        }
+        assert_eq!(issued.request(&parameter("tok0", OPEN_KEY)), None);
+        let newest = format!("tok{}", Issued::KEPT);
+        assert!(issued.request(&parameter(&newest, OPEN_KEY)).is_some());
+    }
+
+    #[test]
+    fn a_summary_of_many_messages_has_no_buttons_and_acts_on_nothing() {
+        use mailrs_sync::fake::meta;
+        let four: Vec<_> = (0..4)
+            .map(|n| meta(&format!("m{n}"), &format!("t{n}"), 0, &["INBOX", "UNREAD"]))
+            .collect();
+        let shown = notices(four, true, Button::ALL.to_vec());
+        assert_eq!(shown.len(), 1);
+        assert_eq!(shown[0].target, None);
+        assert!(shown[0].buttons.is_empty());
+
+        let two: Vec<_> = (0..2)
+            .map(|n| meta(&format!("m{n}"), &format!("t{n}"), 0, &["INBOX"]))
+            .collect();
+        let shown = notices(two, true, vec![Button::Archive]);
+        assert_eq!(shown.len(), 2);
+        assert!(shown.iter().all(|n| n.target.is_some() && n.buttons == [Button::Archive]));
+    }
+
+    #[test]
+    fn without_previews_one_message_still_gets_its_buttons() {
+        use mailrs_sync::fake::meta;
+        let one = vec![meta("m1", "t1", 0, &["INBOX"])];
+        let shown = notices(one, false, vec![Button::Reply]);
+        assert_eq!(shown.len(), 1);
+        assert_eq!(shown[0].body, "");
+        assert_eq!(shown[0].buttons, [Button::Reply]);
+        assert_eq!(shown[0].target.as_ref().map(|t| t.thread_id.as_str()), Some("t1"));
     }
 
     #[test]

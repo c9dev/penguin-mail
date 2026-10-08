@@ -609,7 +609,7 @@ msgstr "{provider} signs in through your browser"
 msgid "Continue opens {provider}'s sign-in page in your browser."
 msgstr "Continue opens {provider}'s sign-in page in your browser."
 
-#: app/src/app.rs:378
+#: app/src/app.rs:382
 msgid "Your preferences could not be read, so Penguin Mail started from the defaults. The old file is kept as {file}."
 msgstr "Your preferences could not be read, so Penguin Mail started from the defaults. The old file is kept as {file}."
 
@@ -657,11 +657,11 @@ msgstr "Sent {message}"
 msgid "Still in the Outbox: {message}"
 msgstr "Still in the Outbox: {message}"
 
-#: app/src/app/sending.rs:492
+#: app/src/app/sending.rs:491
 msgid "your message"
 msgstr "your message"
 
-#: app/src/app/sending.rs:494
+#: app/src/app/sending.rs:493
 msgid "“{subject}”"
 msgstr "“{subject}”"
 
@@ -1859,19 +1859,19 @@ msgstr "Penguin Mail Could Not Start"
 msgid "Report a Problem"
 msgstr "Report a Problem"
 
-#: app/src/notify.rs:49 app/src/ui/conversation.rs:407
+#: app/src/notify.rs:62 app/src/ui/conversation.rs:407
 #: app/src/ui/conversation.rs:559 app/src/ui/conversation.rs:1127
 #: app/src/ui/window/message_menu.rs:125 app/src/ui/window/shortcuts.rs:392
 msgid "Archive"
 msgstr "Archive"
 
-#: app/src/notify.rs:50 app/src/ui/conversation.rs:408
+#: app/src/notify.rs:63 app/src/ui/conversation.rs:408
 #: app/src/ui/conversation.rs:1171 app/src/ui/preferences.rs:139
 #: app/src/ui/rules.rs:370 app/src/ui/window/message_menu.rs:128
 msgid "Mark as Read"
 msgstr "Mark as Read"
 
-#: app/src/notify.rs:51 app/src/ui/calendar/manage.rs:292
+#: app/src/notify.rs:64 app/src/ui/calendar/manage.rs:292
 #: app/src/ui/calendar/popover.rs:211 app/src/ui/calendar/popover.rs:213
 #: app/src/ui/calendar/popover.rs:713 app/src/ui/calendar/scope.rs:112
 #: app/src/ui/conversation.rs:545 app/src/ui/hide_my_email.rs:289
@@ -1880,28 +1880,24 @@ msgstr "Mark as Read"
 msgid "Delete"
 msgstr "Delete"
 
-#: app/src/notify.rs:52 app/src/ui/conversation.rs:553
+#: app/src/notify.rs:65 app/src/ui/conversation.rs:553
 #: app/src/ui/window/message_menu.rs:122 app/src/ui/window/shortcuts.rs:471
 msgid "Reply"
 msgstr "Reply"
 
-#: app/src/notify.rs:112 app/src/notify.rs:151
+#: app/src/notify.rs:135
 msgid "{count} new message"
 msgid_plural "{count} new messages"
 msgstr[0] "{count} new message"
 msgstr[1] "{count} new messages"
 
-#: app/src/notify.rs:127 app/src/ui/window/shortcuts.rs:463
+#: app/src/notify.rs:153 app/src/ui/window/shortcuts.rs:463
 msgid "New message"
 msgstr "New message"
 
-#: app/src/notify.rs:157
+#: app/src/notify.rs:170
 msgid "From {senders}"
 msgstr "From {senders}"
-
-#: app/src/notify.rs:195 app/src/ui/window.rs:2674
-msgid "Open"
-msgstr "Open"
 
 #: app/src/offered.rs:237 app/src/ui/window/shortcuts.rs:450
 msgid "Labels"
@@ -8137,6 +8133,10 @@ msgstr "Downloading {file}…"
 #: app/src/ui/window.rs:2671 app/src/ui/window/attachments.rs:229
 msgid "Saved {file} to Downloads"
 msgstr "Saved {file} to Downloads"
+
+#: app/src/ui/window.rs:2674
+msgid "Open"
+msgstr "Open"
 
 #: app/src/ui/window.rs:2689 app/src/ui/window/attachments.rs:234
 msgid "Could not save {file}: {reason}"
