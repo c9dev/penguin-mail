@@ -120,7 +120,8 @@ pub fn open_words(file: &Attachment) -> String {
 /// A row for `file`: its icon, its title, what happens to it if it still
 /// waits to upload, and a click that opens it when it has a link.
 pub fn row(file: &Attachment) -> adw::ActionRow {
-    let row = ui::plain_row().title(title(file)).title_lines(1).build();
+    let row = ui::plain_row().title_lines(1).build();
+    row.set_title(&title(file));
     if let Some(note) = note(file) {
         row.set_subtitle(&note);
     }

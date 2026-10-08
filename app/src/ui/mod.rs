@@ -130,7 +130,9 @@ pub fn toast(text: &str) -> adw::Toast {
 /// An action row that shows its title and subtitle as written. A row
 /// reads both as Pango markup by default, so a name from a server, such
 /// as a guest called "R&D Team" or a file "Q&A.pdf", failed to parse and
-/// left the row blank, and tags in a name styled the row.
+/// left the row blank, and tags in a name styled the row. Set the title
+/// with `set_title` once the row is built: given to the builder, it
+/// reaches the label before markup is off, and GTK warns as it parses it.
 pub fn plain_row() -> adw::builders::ActionRowBuilder {
     adw::ActionRow::builder().use_markup(false)
 }

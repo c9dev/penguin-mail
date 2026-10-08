@@ -3390,11 +3390,11 @@ msgstr "Markdown"
 msgid "Automatic"
 msgstr "Automático"
 
-#: app/src/settings/mod.rs:524 app/src/ui/calendar/editor.rs:2033
+#: app/src/settings/mod.rs:524 app/src/ui/calendar/editor.rs:2034
 msgid "Monday"
 msgstr "segunda-feira"
 
-#: app/src/settings/mod.rs:525 app/src/ui/calendar/editor.rs:2039
+#: app/src/settings/mod.rs:525 app/src/ui/calendar/editor.rs:2040
 msgid "Sunday"
 msgstr "domingo"
 
@@ -4338,7 +4338,7 @@ msgstr "Testar"
 msgid "Save"
 msgstr "Guardar"
 
-#: app/src/ui/assistant_mcp_prefs.rs:343 app/src/ui/calendar/manage.rs:483
+#: app/src/ui/assistant_mcp_prefs.rs:343 app/src/ui/calendar/manage.rs:484
 msgid "Add"
 msgstr "Adicionar"
 
@@ -4675,7 +4675,7 @@ msgstr "Chave de API do Brave Search (guardada)"
 msgid "Brave Search API Key"
 msgstr "Chave de API do Brave Search"
 
-#: app/src/ui/autocomplete.rs:307 app/src/ui/calendar/editor.rs:2273
+#: app/src/ui/autocomplete.rs:307 app/src/ui/calendar/editor.rs:2274
 #: app/src/ui/composer/recipients.rs:50
 msgid "{name}, {address}"
 msgstr "{name}, {address}"
@@ -4728,7 +4728,7 @@ msgstr "Não partilhado com os convidados"
 msgid "Open {file} in the browser"
 msgstr "Abrir {file} no navegador"
 
-#: app/src/ui/calendar/attachments.rs:132 app/src/ui/calendar/popover.rs:881
+#: app/src/ui/calendar/attachments.rs:133 app/src/ui/calendar/popover.rs:881
 msgid "Open in Browser"
 msgstr "Abrir no navegador"
 
@@ -4761,12 +4761,12 @@ msgstr "{title}, todo o dia, {calendar}"
 msgid "{title}, {start} to {end}, {calendar}"
 msgstr "{title}, {start} às {end}, {calendar}"
 
-#: app/src/ui/calendar/draft.rs:103 app/src/ui/calendar/editor.rs:1996
+#: app/src/ui/calendar/draft.rs:103 app/src/ui/calendar/editor.rs:1997
 #: app/src/ui/calendar/kinds.rs:59
 msgid "Out of office"
 msgstr "Fora do escritório"
 
-#: app/src/ui/calendar/draft.rs:104 app/src/ui/calendar/editor.rs:1995
+#: app/src/ui/calendar/draft.rs:104 app/src/ui/calendar/editor.rs:1996
 #: app/src/ui/calendar/kinds.rs:60
 msgid "Focus time"
 msgstr "Tempo de concentração"
@@ -4991,168 +4991,168 @@ msgstr "Partilhar {file} com os convidados"
 msgid "Remove {file}"
 msgstr "Remover {file}"
 
-#: app/src/ui/calendar/editor.rs:1674
+#: app/src/ui/calendar/editor.rs:1675
 msgid "Cancel Upload"
 msgstr "Cancelar envio"
 
-#: app/src/ui/calendar/editor.rs:1676
+#: app/src/ui/calendar/editor.rs:1677
 msgid "Cancel upload of {file}"
 msgstr "Cancelar o envio de {file}"
 
-#: app/src/ui/calendar/editor.rs:1701
+#: app/src/ui/calendar/editor.rs:1702
 msgid "Attach File"
 msgstr "Anexar ficheiro"
 
-#: app/src/ui/calendar/editor.rs:1715
+#: app/src/ui/calendar/editor.rs:1716
 msgid "Penguin Mail can attach only a file saved on this computer."
 msgstr ""
 "O Penguin Mail só consegue anexar um ficheiro guardado neste computador."
 
-#: app/src/ui/calendar/editor.rs:1743
+#: app/src/ui/calendar/editor.rs:1744
 msgid "Uploading {file}"
 msgstr "A enviar {file}"
 
-#: app/src/ui/calendar/editor.rs:1774
+#: app/src/ui/calendar/editor.rs:1775
 msgid "Could not attach {file}: {reason}"
 msgstr "Não foi possível anexar {file}: {reason}"
 
-#: app/src/ui/calendar/editor.rs:1817 app/src/ui/composer/mod.rs:339
+#: app/src/ui/calendar/editor.rs:1818 app/src/ui/composer/mod.rs:339
 msgid "More"
 msgstr "Mais"
 
-#: app/src/ui/calendar/editor.rs:1821
+#: app/src/ui/calendar/editor.rs:1822
 msgid "Time zone"
 msgstr "Fuso horário"
 
-#: app/src/ui/calendar/editor.rs:1865
+#: app/src/ui/calendar/editor.rs:1866
 msgid "Show as busy"
 msgstr "Mostrar como ocupado"
 
-#: app/src/ui/calendar/editor.rs:1879
+#: app/src/ui/calendar/editor.rs:1880
 msgid "Private"
 msgstr "Privado"
 
-#: app/src/ui/calendar/editor.rs:1881
+#: app/src/ui/calendar/editor.rs:1882
 msgid "Only people who can change this calendar see the details"
 msgstr "Só quem pode alterar este calendário vê os detalhes"
 
-#: app/src/ui/calendar/editor.rs:1895 app/src/ui/calendar/manage.rs:353
+#: app/src/ui/calendar/editor.rs:1896 app/src/ui/calendar/manage.rs:353
 #: app/src/ui/calendar/sidebar.rs:1261 app/src/ui/sidebar.rs:1568
 #: app/src/ui/sidebar.rs:1811
 msgid "Color"
 msgstr "Cor"
 
-#: app/src/ui/calendar/editor.rs:1899
+#: app/src/ui/calendar/editor.rs:1900
 msgid "Calendar color"
 msgstr "Cor do calendário"
 
-#: app/src/ui/calendar/editor.rs:1943
+#: app/src/ui/calendar/editor.rs:1944
 msgid "Add Google Meet"
 msgstr "Adicionar Google Meet"
 
-#: app/src/ui/calendar/editor.rs:1994 app/src/ui/calendar/mod.rs:2270
+#: app/src/ui/calendar/editor.rs:1995 app/src/ui/calendar/mod.rs:2270
 #: app/src/ui/calendar/quick.rs:54
 msgid "Event"
 msgstr "Evento"
 
-#: app/src/ui/calendar/editor.rs:2018
+#: app/src/ui/calendar/editor.rs:2019
 msgid "day"
 msgid_plural "days"
 msgstr[0] "dia"
 msgstr[1] "dias"
 
-#: app/src/ui/calendar/editor.rs:2019
+#: app/src/ui/calendar/editor.rs:2020
 msgid "week"
 msgid_plural "weeks"
 msgstr[0] "semana"
 msgstr[1] "semanas"
 
-#: app/src/ui/calendar/editor.rs:2020
+#: app/src/ui/calendar/editor.rs:2021
 msgid "month"
 msgid_plural "months"
 msgstr[0] "mês"
 msgstr[1] "meses"
 
-#: app/src/ui/calendar/editor.rs:2021
+#: app/src/ui/calendar/editor.rs:2022
 msgid "year"
 msgid_plural "years"
 msgstr[0] "ano"
 msgstr[1] "anos"
 
-#: app/src/ui/calendar/editor.rs:2034
+#: app/src/ui/calendar/editor.rs:2035
 msgid "Tuesday"
 msgstr "terça-feira"
 
-#: app/src/ui/calendar/editor.rs:2035
+#: app/src/ui/calendar/editor.rs:2036
 msgid "Wednesday"
 msgstr "quarta-feira"
 
-#: app/src/ui/calendar/editor.rs:2036
+#: app/src/ui/calendar/editor.rs:2037
 msgid "Thursday"
 msgstr "quinta-feira"
 
-#: app/src/ui/calendar/editor.rs:2037
+#: app/src/ui/calendar/editor.rs:2038
 msgid "Friday"
 msgstr "sexta-feira"
 
-#: app/src/ui/calendar/editor.rs:2038
+#: app/src/ui/calendar/editor.rs:2039
 msgid "Saturday"
 msgstr "sábado"
 
-#: app/src/ui/calendar/editor.rs:2050
+#: app/src/ui/calendar/editor.rs:2051
 msgid "Lavender"
 msgstr "Lavanda"
 
-#: app/src/ui/calendar/editor.rs:2051
+#: app/src/ui/calendar/editor.rs:2052
 msgid "Sage"
 msgstr "Salva"
 
-#: app/src/ui/calendar/editor.rs:2052
+#: app/src/ui/calendar/editor.rs:2053
 msgid "Grape"
 msgstr "Uva"
 
-#: app/src/ui/calendar/editor.rs:2053
+#: app/src/ui/calendar/editor.rs:2054
 msgid "Flamingo"
 msgstr "Flamingo"
 
-#: app/src/ui/calendar/editor.rs:2054
+#: app/src/ui/calendar/editor.rs:2055
 msgid "Banana"
 msgstr "Banana"
 
-#: app/src/ui/calendar/editor.rs:2055
+#: app/src/ui/calendar/editor.rs:2056
 msgid "Tangerine"
 msgstr "Tangerina"
 
-#: app/src/ui/calendar/editor.rs:2056
+#: app/src/ui/calendar/editor.rs:2057
 msgid "Peacock"
 msgstr "Pavão"
 
-#: app/src/ui/calendar/editor.rs:2057
+#: app/src/ui/calendar/editor.rs:2058
 msgid "Graphite"
 msgstr "Grafite"
 
-#: app/src/ui/calendar/editor.rs:2058
+#: app/src/ui/calendar/editor.rs:2059
 msgid "Blueberry"
 msgstr "Mirtilo"
 
-#: app/src/ui/calendar/editor.rs:2059
+#: app/src/ui/calendar/editor.rs:2060
 msgid "Basil"
 msgstr "Manjericão"
 
-#: app/src/ui/calendar/editor.rs:2060
+#: app/src/ui/calendar/editor.rs:2061
 msgid "Tomato"
 msgstr "Tomate"
 
-#: app/src/ui/calendar/editor.rs:2068 app/src/ui/calendar/editor.rs:2302
+#: app/src/ui/calendar/editor.rs:2069 app/src/ui/calendar/editor.rs:2303
 msgid "By email"
 msgstr "Por email"
 
-#: app/src/ui/calendar/editor.rs:2069 app/src/ui/calendar/editor.rs:2299
-#: app/src/ui/calendar/editor.rs:2302
+#: app/src/ui/calendar/editor.rs:2070 app/src/ui/calendar/editor.rs:2300
+#: app/src/ui/calendar/editor.rs:2303
 msgid "Reminder"
 msgstr "Lembrete"
 
-#: app/src/ui/calendar/editor.rs:2075
+#: app/src/ui/calendar/editor.rs:2076
 msgid "Uses the calendar's default"
 msgstr "Usa a predefinição do calendário"
 
@@ -5479,15 +5479,15 @@ msgstr "Feriados públicos do Google Calendar, adicionados a {account}."
 msgid "Holiday Calendars"
 msgstr "Calendários de feriados"
 
-#: app/src/ui/calendar/manage.rs:474
+#: app/src/ui/calendar/manage.rs:475
 msgid "Added"
 msgstr "Adicionado"
 
-#: app/src/ui/calendar/manage.rs:486
+#: app/src/ui/calendar/manage.rs:487
 msgid "Add holidays in {region}"
 msgstr "Adicionar os feriados de {region}"
 
-#: app/src/ui/calendar/manage.rs:501
+#: app/src/ui/calendar/manage.rs:502
 msgid "Could not add the holidays: {reason}"
 msgstr "Não foi possível adicionar os feriados: {reason}"
 
@@ -7399,7 +7399,7 @@ msgstr[1] "E mais {count}"
 msgid "Could not read {file}: {reason}"
 msgstr "Não foi possível ler {file}: {reason}"
 
-#: app/src/ui/mod.rs:426
+#: app/src/ui/mod.rs:428
 msgid "Gray"
 msgstr "Cinzento"
 
