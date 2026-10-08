@@ -10,6 +10,10 @@
 //! keys and scrolls GTK would otherwise claim on their way to it.
 
 mod bridge;
+#[cfg(debug_assertions)]
+mod checks;
+#[cfg(debug_assertions)]
+pub use checks::check_macos;
 mod events;
 mod find;
 mod place;
@@ -435,6 +439,12 @@ struct RequestInner {
     bridge: Retained<Bridge>,
 }
 
+impl Drop for RequestInner {
+    fn drop(&mut self) {
+        self.bridge.done(&self.stopped);
+    }
+}
+
 impl Request {
     fn new(
         task: Retained<ProtocolObject<dyn WKURLSchemeTask>>,
@@ -501,7 +511,7 @@ impl Request {
 
 /// The compiled rules that block remote content, shared by every page.
 #[derive(Clone)]
-pub struct Filter(Retained<WKContentRuleList>);
+pub struct Filter(pub(crate) Retained<WKContentRuleList>);
 
 /// Compiles `rules`, WebKit's content blocker JSON, into a filter kept in
 /// `dir` under `id`.

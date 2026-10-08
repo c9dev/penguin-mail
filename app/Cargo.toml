@@ -40,7 +40,8 @@ futures.workspace = true
 # Startup binds the text domain; the words themselves go through
 # `mailrs_domain::translate`.
 gettext-rs.workspace = true
-gtk.workspace = true
+# Notification categories need GIO even when WebKitGTK is not linked.
+gtk = { workspace = true, features = ["gio_v2_80"] }
 ksni.workspace = true
 mail-builder.workspace = true
 # The message inside an encrypted one arrives as MIME, not through Gmail.

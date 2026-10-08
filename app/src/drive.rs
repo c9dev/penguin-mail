@@ -22,6 +22,7 @@
 //! type Lisbon           text, one key each
 //! shot open-thread      saves open-thread.png
 //! check-menu            checks the native Settings menu and opens its dialog
+//! check-web URL         checks scheme task cleanup and a local image-blocking fixture
 //! log anything          says it on stderr
 //! quit
 //! ```
@@ -52,6 +53,7 @@ enum Step {
     Type(String),
     Shot(String),
     CheckMenu,
+    CheckWeb(String),
     Log(String),
     Quit,
 }
@@ -102,6 +104,7 @@ fn parse(script: &str) -> Result<Vec<Step>, String> {
             "type" => Step::Type(rest.to_string()),
             "shot" => Step::Shot(rest.to_string()),
             "check-menu" => Step::CheckMenu,
+            "check-web" => Step::CheckWeb(rest.to_string()),
             "log" => Step::Log(rest.to_string()),
             "quit" => Step::Quit,
             _ => return Err(format!("line {}: no step called {word}", number + 1)),
@@ -270,6 +273,7 @@ impl Driver {
                 glib::timeout_future(Duration::from_millis(300)).await;
                 self.shot(&name);
             }
+            Step::CheckWeb(url) => crate::web::check_macos(&url).await,
             Step::Log(words) => eprintln!("drive: {words}"),
             Step::CheckMenu => {
                 let native = NSApplication::sharedApplication(MainThreadMarker::new().unwrap());

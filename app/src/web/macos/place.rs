@@ -157,6 +157,7 @@ fn ns_window(surface: &gtk::gdk::Surface) -> Option<Retained<NSWindow>> {
         return None;
     }
     let raw = unsafe { gdk_macos_surface_get_native_window(surface.to_glib_none().0) };
+    // SAFETY: This live GdkMacos surface owns the borrowed NSWindow; retaining it keeps it alive.
     unsafe { Retained::retain(raw.cast::<NSWindow>()) }
 }
 

@@ -18,6 +18,13 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 ### Fixed
 
 - macOS shows Penguin Mail's own menu, with Settings available through Command-comma.
+- On macOS, Tab leaves a message, clearing Find cannot hang the page, and hidden unsubscribe pages block pictures.
+
+## 1.0.5 (2026-10-08)
+
+### Improved
+
+- New-mail notifications offer Mark as Read, Delete and Reply out of the box, since GNOME shows only three buttons; Archive is still one switch away in Preferences.
 
 ## 1.0.4 (2026-10-08)
 

@@ -68,6 +68,9 @@ pub struct App {
     tray: Arc<Mutex<Option<ksni::Handle<MailTray>>>>,
     /// What somebody picked on a new-mail notification.
     chosen: async_channel::Sender<notify::Request>,
+    /// The new-mail notifications posted this run, by token, so a click
+    /// acts only on mail this copy announced.
+    issued: RefCell<notify::Issued>,
     skip_first_window: Cell<bool>,
     filter_requested: Cell<bool>,
     /// Main window plus open composers.
@@ -152,6 +155,7 @@ impl App {
             names: RefCell::new(HashMap::new()),
             tray: Arc::new(Mutex::new(None)),
             chosen,
+            issued: RefCell::default(),
             skip_first_window: Cell::new(background),
             filter_requested: Cell::new(false),
             open_windows: Cell::new(0),
@@ -1224,12 +1228,59 @@ impl App {
     }
 
     fn listen_for_notifications(self: &Rc<Self>, picked: async_channel::Receiver<notify::Request>) {
+        let action = gio::SimpleAction::new(notify::CHOSEN, Some(glib::VariantTy::STRING));
+        let weak = Rc::downgrade(self);
+        action.connect_activate(move |_, parameter| {
+            let Some(app) = weak.upgrade() else { return };
+            let request = parameter
+                .and_then(|p| p.get::<String>())
+                .and_then(|p| app.issued.borrow().request(&p));
+            if let Some(request) = request {
+                let _ = app.chosen.try_send(request);
+            }
+        });
+        self.gio.add_action(&action);
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
             while let Ok(request) = picked.recv().await {
                 this.carry_out(request).await;
             }
         });
+    }
+
+    /// Posts the new-mail notifications for `messages`. Each one that acts
+    /// on a message gets a fresh token, which its clicks carry back.
+    pub(crate) fn announce_mail(
+        &self,
+        messages: Vec<mailrs_domain::MessageMeta>,
+        previews: bool,
+        buttons: Vec<notify::Button>,
+    ) {
+        use rand::distr::{Alphanumeric, SampleString};
+        for notice in notify::notices(messages, previews, buttons) {
+            let notification = gio::Notification::new(&notice.title);
+            if !notice.body.is_empty() {
+                notification.set_body(Some(&notice.body));
+            }
+            notification.set_icon(&gio::ThemedIcon::new(crate::APP_ID));
+            notification.set_category(Some("email.arrived"));
+            let action = format!("app.{}", notify::CHOSEN);
+            let token = Alphanumeric.sample_string(&mut rand::rng(), 24);
+            if let Some(target) = notice.target {
+                let open = notify::parameter(&token, notify::OPEN_KEY);
+                notification.set_default_action_and_target_value(&action, Some(&open.to_variant()));
+                for button in &notice.buttons {
+                    let pressed = notify::parameter(&token, button.key());
+                    notification.add_button_with_target_value(
+                        &button.label(),
+                        &action,
+                        Some(&pressed.to_variant()),
+                    );
+                }
+                self.issued.borrow_mut().issue(token.clone(), target, notice.buttons);
+            }
+            self.gio.send_notification(Some(&token), &notification);
+        }
     }
 
     /// Does what somebody picked on a notification. The mail may have been
@@ -1447,7 +1498,7 @@ impl App {
             if let Ok(found) = found
                 && !found.is_empty()
             {
-                notify::announce(found, previews, buttons, this.chosen.clone());
+                this.announce_mail(found, previews, buttons);
             }
         });
     }

@@ -12,11 +12,27 @@ shots=${2:-$(dirname "$script")}
 mkdir -p "$shots"
 cd "$(dirname "$0")/.."
 cargo build -q -p mailrs --ignore-rust-version
+cleanup() {
+    [ -z "${runner:-}" ] || kill "$runner" 2>/dev/null || true
+    [ -z "${watchdog:-}" ] || kill "$watchdog" 2>/dev/null || true
+}
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 PENGUIN_MAIL_DRIVE=$script PENGUIN_MAIL_DRIVE_SHOTS=$(cd "$shots" && pwd) \
-    ./target/debug/penguin-mail --demo 2>&1 | grep '^drive:' &
+    ./target/debug/penguin-mail --demo &
 runner=$!
 # A script that never says quit still ends: two minutes is plenty.
-( sleep 120; pkill -f 'target/debug/penguin-mail --demo' ) 2>/dev/null &
+(
+    sleep 120 &
+    timer=$!
+    trap 'kill "$timer" 2>/dev/null || true' EXIT
+    trap 'exit 0' INT TERM
+    wait "$timer"
+    kill "$runner" 2>/dev/null || true
+) &
 watchdog=$!
-wait "$runner" || true
-kill "$watchdog" 2>/dev/null || true
+status=0
+wait "$runner" || status=$?
+runner=
+exit "$status"

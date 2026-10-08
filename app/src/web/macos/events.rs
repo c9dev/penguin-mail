@@ -4,7 +4,7 @@
 //! GTK event, and passes the native event on to AppKit, and so to the page,
 //! only when no GTK controller claimed it. Clicks arrive that way: nothing
 //! in GTK claims a click on the empty anchor. Two kinds would not. Some
-//! ancestor of the anchor claims every scroll, and the window binds Tab,
+//! ancestor of the anchor claims every scroll, and the window binds
 //! the arrows, Space and Return to moving and activating its own focus.
 //!
 //! NSApp is an instance of [`App`], a subclass made before GTK starts
@@ -32,9 +32,9 @@ use objc2_foundation::{NSAppleEventDescriptor, NSAppleEventManager, NSDate, NSSt
 use super::Inner;
 
 /// The keys a page with the focus takes before GTK, by AppKit key code:
-/// Tab, Return, Space, the keypad's Enter, Page Up, Page Down, Home, End
+/// Return, Space, the keypad's Enter, Page Up, Page Down, Home, End
 /// and the four arrows.
-const PAGE_KEYS: [u16; 12] = [48, 36, 49, 76, 116, 121, 115, 119, 123, 124, 125, 126];
+const PAGE_KEYS: [u16; 11] = [36, 49, 76, 116, 121, 115, 119, 123, 124, 125, 126];
 
 thread_local! {
     /// Every page there is, for the filter to ask.
@@ -185,3 +185,14 @@ define_class!(
         }
     }
 );
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn tab_and_shift_tab_stay_with_gtk() {
+        assert!(!PAGE_KEYS.contains(&48));
+        assert!(PAGE_KEYS.contains(&125));
+    }
+}

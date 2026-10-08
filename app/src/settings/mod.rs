@@ -450,7 +450,7 @@ impl Default for Settings {
             flag_color: mailrs_domain::FlagColor::Red,
             vips: BTreeMap::new(),
             notify_vips_only: false,
-            notification_buttons: crate::notify::Button::ALL.to_vec(),
+            notification_buttons: crate::notify::Button::DEFAULT.to_vec(),
             event_reminders: true,
             smart_mailboxes: Vec::new(),
             account_order: Vec::new(),
@@ -1266,6 +1266,15 @@ mod tests {
         assert_eq!(MarkRead::from_index(99), MarkRead::Immediately);
         assert_eq!(nearest(&poll_choices(), 45), 0);
         assert_eq!(nearest(&window_choices(), 100), 2);
+    }
+
+    #[test]
+    fn a_new_copy_shows_three_buttons_with_reply_among_them() {
+        use crate::notify::Button;
+        let buttons = Settings::default().notification_buttons;
+        assert_eq!(buttons.len(), 3, "GNOME Shell shows no more than three");
+        assert!(buttons.contains(&Button::Reply));
+        assert!(!buttons.contains(&Button::Archive));
     }
 
     #[test]

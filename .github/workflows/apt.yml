@@ -1,8 +1,7 @@
 name: Package repositories
 
-# Rebuilds the apt and dnf repositories on GitHub Pages from the newest
-# releases: apt at the site's root, where it has always been, and dnf under
-# /rpm. It runs after each tagged release, and by hand from the Actions tab
+# Rebuilds the apt, dnf and Flatpak repositories on GitHub Pages from release
+# assets. It runs after each tagged release, and by hand from the Actions tab
 # to publish again without a new release.
 on:
   workflow_run:
@@ -38,9 +37,10 @@ jobs:
         # that fails stops the job.
         run: |
           set -euo pipefail
-          mkdir debs rpms
+          mkdir debs rpms flatpaks
           tags=$(gh release list --exclude-drafts --exclude-pre-releases --limit 5 \
               --json tagName --jq '.[].tagName')
+          flatpak_found=false
           for tag in $tags; do
               gh release download "$tag" --pattern '*.deb' --dir debs
               assets=$(gh release view "$tag" --json assets --jq '.assets[].name')
@@ -49,10 +49,16 @@ jobs:
               else
                   echo "$tag has no rpm"
               fi
+              # Only the newest Flatpak belongs on the stable branch. A
+              # fresh OSTree repository is made from it on each deploy.
+              if [ "$flatpak_found" = false ] && grep -q '\.flatpak$' <<<"$assets"; then
+                  gh release download "$tag" --pattern '*.flatpak' --dir flatpaks
+                  flatpak_found=true
+              fi
           done
-          ls -l debs rpms
-      - name: Install createrepo_c
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends createrepo-c
+          ls -l debs rpms flatpaks
+      - name: Install repository tools
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends createrepo-c flatpak ostree
       - name: Import the signing key
         env:
           APT_SIGNING_KEY: ${{ secrets.APT_SIGNING_KEY }}
@@ -66,6 +72,14 @@ jobs:
           scripts/apt-repo.sh debs site
           if compgen -G 'rpms/*.rpm' >/dev/null; then
               scripts/rpm-repo.sh rpms site/rpm
+          fi
+          if compgen -G 'flatpaks/*.flatpak' >/dev/null; then
+              scripts/flatpak-repo.sh flatpaks site/flatpak FE3C3B6E699AF939DC4670DCF3A853035C3E2B8E
+          fi
+          bytes=$(du -sb site | cut -f1)
+          if [ "$bytes" -ge 1000000000 ]; then
+              echo "::error::The Pages site is $bytes bytes; its published size must stay under 1 GB"
+              exit 1
           fi
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
