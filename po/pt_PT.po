@@ -1713,7 +1713,7 @@ msgstr "A ler um ficheiro de uma competência"
 msgid "Running a command in the sandbox"
 msgstr "A correr um comando na área isolada"
 
-#: app/src/autostart.rs:50
+#: app/src/autostart.rs:52
 msgid "Penguin Mail keeps syncing with no window open"
 msgstr "O Penguin Mail continua a sincronizar sem nenhuma janela aberta"
 
@@ -2026,7 +2026,7 @@ msgstr ""
 msgid "{language} ({country})"
 msgstr "{language} ({country})"
 
-#: app/src/main.rs:71
+#: app/src/main.rs:89
 msgid ""
 "Usage: penguin-mail [--background] [--demo] [--compose [mailto:ADDRESS]] "
 "[FILE.ics]\n"
@@ -2050,15 +2050,15 @@ msgstr ""
 "  FICHEIRO.ics   abre um ficheiro de calendário, para adicionar os seus "
 "eventos a um calendário"
 
-#: app/src/main.rs:142
+#: app/src/main.rs:160
 msgid "penguin-mail: unknown option {option}"
 msgstr "penguin-mail: opção desconhecida {option}"
 
-#: app/src/main.rs:308
+#: app/src/main.rs:320
 msgid "Penguin Mail Could Not Start"
 msgstr "O Penguin Mail não conseguiu arrancar"
 
-#: app/src/main.rs:313 app/src/ui/about.rs:179
+#: app/src/main.rs:325 app/src/ui/about.rs:179
 msgid "Report a Problem"
 msgstr "Comunicar um problema"
 
@@ -4684,15 +4684,15 @@ msgstr "{name}, {address}"
 msgid "{person}, {source}"
 msgstr "{person}, {source}"
 
-#: app/src/ui/calendar/agenda.rs:454 app/src/ui/calendar/block.rs:615
+#: app/src/ui/calendar/agenda.rs:458 app/src/ui/calendar/block.rs:615
 msgid "{title}, {kind}"
 msgstr "{title}, {kind}"
 
-#: app/src/ui/calendar/agenda.rs:460
+#: app/src/ui/calendar/agenda.rs:464
 msgid "{title}, {when}, {calendar}"
 msgstr "{title}, {when}, {calendar}"
 
-#: app/src/ui/calendar/agenda.rs:579
+#: app/src/ui/calendar/agenda.rs:583
 msgid "Nothing earlier on this computer"
 msgstr "Nada mais antigo neste computador"
 

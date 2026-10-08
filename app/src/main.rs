@@ -64,7 +64,25 @@ use mailrs_domain::translate::{fill, gettext};
 
 use settings::Settings;
 
-pub const APP_ID: &str = "io.github.c9dev.PenguinMail";
+/// The ID this copy registers on the bus and names its desktop file and
+/// icon by. Flathub asks for one ending in the repository's name, and
+/// a Flatpak may own only names under its own ID, so the Flatpak is
+/// `io.github.c9dev.penguin-mail` while every other package keeps the ID
+/// people's launchers, login items and mail handlers already name.
+/// `scripts/stage.sh` installs the files under the same ID.
+pub const APP_ID: &str = if cfg!(feature = "packaging-flatpak") {
+    "io.github.c9dev.penguin-mail"
+} else {
+    "io.github.c9dev.PenguinMail"
+};
+
+/// The demo's own ID, so `--demo` runs beside a real copy. It sits under
+/// `APP_ID`, as a Flatpak requires of every name it owns.
+const DEMO_ID: &str = if cfg!(feature = "packaging-flatpak") {
+    "io.github.c9dev.penguin-mail.Demo"
+} else {
+    "io.github.c9dev.PenguinMail.Demo"
+};
 
 fn usage() -> String {
     gettext(
@@ -161,19 +179,13 @@ fn main() -> glib::ExitCode {
 
     // Wayland and X11 name the window after the program; matching the
     // desktop entry lets the dock show the right icon.
-    glib::set_prgname(Some(if demo {
-        "io.github.c9dev.PenguinMail.Demo"
-    } else {
+    glib::set_prgname(Some(if demo { DEMO_ID } else {
         APP_ID
     }));
     // A plain GApplication: GTK starts only when a window is first needed,
     // so a process running in the tray never loads the graphics stack.
     let gio_app = gio::Application::builder()
-        .application_id(if demo {
-            "io.github.c9dev.PenguinMail.Demo"
-        } else {
-            APP_ID
-        })
+        .application_id(if demo { DEMO_ID } else { APP_ID })
         .build();
     // A second launch with --compose or a calendar file hands the request
     // to the running copy; the check waits until the handlers below are

@@ -74,7 +74,7 @@ install -Dm644 $here/LICENSE %{buildroot}/usr/share/licenses/penguin-mail/LICENS
 /usr/share/metainfo/io.github.c9dev.PenguinMail.metainfo.xml
 /usr/share/icons/hicolor/scalable/apps/io.github.c9dev.PenguinMail.svg
 /usr/share/icons/hicolor/symbolic/apps/io.github.c9dev.PenguinMail-symbolic.svg
-/usr/share/icons/hicolor/16x16/apps/io.github.c9dev.PenguinMail.svg
+/usr/share/icons/hicolor/16x16/apps/io.github.c9dev.PenguinMail.png
 /usr/share/locale/*/LC_MESSAGES/penguin-mail.mo
 /etc/pki/rpm-gpg/RPM-GPG-KEY-penguin-mail
 # dnf keeps a .repo file the person edited or removed, as dpkg keeps a

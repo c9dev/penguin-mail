@@ -6,7 +6,7 @@
 #   scripts/flatpak-sources.sh                 rewrite cargo-sources.json
 #   scripts/flatpak-sources.sh --check         say whether it matches Cargo.lock
 #   scripts/flatpak-sources.sh --flathub vX.Y.Z <dir>
-#       also write the files for the flathub/io.github.c9dev.PenguinMail
+#       also write the files for the flathub/io.github.c9dev.penguin-mail
 #       repository into <dir>: the manifest building that tag, and the
 #       two files beside it. The manifest gets the Google client from
 #       PENGUIN_MAIL_GOOGLE_CLIENT_ID and _SECRET, and the Microsoft
@@ -22,7 +22,7 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 flatpak=packaging/flatpak
-manifest=$flatpak/io.github.c9dev.PenguinMail.yml
+manifest=$flatpak/io.github.c9dev.penguin-mail.yml
 tools_commit=41c20aa10819cdb2a4f3ca171758a96d1955c018
 mode=${1:-}
 
@@ -87,7 +87,7 @@ case $mode in
     # not cargo-sources.json, and a release that changed Cargo.lock would
     # then fail to build. Each release runs this script and opens the pull
     # request by hand instead.
-    python3 - "$manifest" "$out/io.github.c9dev.PenguinMail.yml" "$tag" "$commit" <<'PY'
+    python3 - "$manifest" "$out/io.github.c9dev.penguin-mail.yml" "$tag" "$commit" <<'PY'
 import json
 import os
 import sys

@@ -7,7 +7,7 @@
 #
 #   scripts/smoke-start.sh <command...>
 #   scripts/smoke-start.sh /usr/bin/penguin-mail
-#   scripts/smoke-start.sh flatpak run io.github.c9dev.PenguinMail
+#   scripts/smoke-start.sh flatpak run io.github.c9dev.penguin-mail
 #
 # Needs Xvfb and dbus-run-session.
 set -euo pipefail

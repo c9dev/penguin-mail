@@ -1,15 +1,16 @@
 # Builds Penguin Mail as a Flatpak from this checkout:
 #   flatpak-builder --user --install --force-clean build-dir \
-#       packaging/flatpak/io.github.c9dev.PenguinMail.yml
+#       packaging/flatpak/io.github.c9dev.penguin-mail.yml
 # Flathub builds from a released tag instead; scripts/flatpak-sources.sh
 # --flathub writes that copy of this file. Flathub allows no network during
 # a build, so cargo reads every crate from cargo-sources.json, which the
 # same script writes from Cargo.lock.
-id: io.github.c9dev.PenguinMail
+id: io.github.c9dev.penguin-mail
 runtime: org.gnome.Platform
-# GNOME 50 has GTK 4.22, past the 4.20 the app needs, libadwaita 1.8 or
-# newer, and WebKitGTK 6.0.
-runtime-version: '50'
+# GNOME 51 has GTK 4.24, past the 4.20 the app needs, libadwaita 1.10,
+# past 1.8, and WebKitGTK 6.0. Flathub asks a new submission for the
+# latest GNOME runtime.
+runtime-version: '51'
 sdk: org.gnome.Sdk
 sdk-extensions:
   - org.freedesktop.Sdk.Extension.rust-stable
@@ -73,7 +74,7 @@ modules:
     build-commands:
       - cargo --offline build --release --locked -p mailrs -p mailrs-cli
         --features mailrs/packaging-flatpak,mailrs-cli/packaging-flatpak
-      - scripts/stage.sh /app
+      - scripts/stage.sh /app io.github.c9dev.penguin-mail
     sources:
       - cargo-sources.json
       - type: dir

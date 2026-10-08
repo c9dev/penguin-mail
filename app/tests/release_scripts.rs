@@ -200,3 +200,56 @@ fn a_staged_tree_installs_from_the_tarball_folder() {
         assert!(launcher.contains("Name[pt_PT]="), "{launcher}");
     }
 }
+
+/// The Flatpak's manifest stages under Flathub's ID. Every file it installs
+/// takes that name, and nothing inside them still names the ID the other
+/// packages use, since a launcher whose icon or window class named the old
+/// one would show a blank icon in the dock.
+#[test]
+fn a_flatpak_tree_installs_under_flathubs_id() {
+    const FLATHUB_ID: &str = "io.github.c9dev.penguin-mail";
+    let dir = tempfile::tempdir().unwrap();
+    let target = dir.path().join("target");
+    std::fs::create_dir_all(target.join("release")).unwrap();
+    for name in ["penguin-mail", "penguin-mail-cli"] {
+        std::fs::write(target.join("release").join(name), "").unwrap();
+    }
+    let tree = dir.path().join("app");
+    succeeded(
+        &Command::new(scripts().join("stage.sh"))
+            .arg(&tree)
+            .arg(FLATHUB_ID)
+            .env("CARGO_TARGET_DIR", &target)
+            .output()
+            .unwrap(),
+    );
+    let share = tree.join("share");
+    for file in [
+        format!("applications/{FLATHUB_ID}.desktop"),
+        format!("metainfo/{FLATHUB_ID}.metainfo.xml"),
+        format!("icons/hicolor/scalable/apps/{FLATHUB_ID}.svg"),
+        format!("icons/hicolor/symbolic/apps/{FLATHUB_ID}-symbolic.svg"),
+        format!("icons/hicolor/16x16/apps/{FLATHUB_ID}.png"),
+    ] {
+        assert!(share.join(&file).is_file(), "{file}");
+    }
+    let launcher =
+        std::fs::read_to_string(share.join(format!("applications/{FLATHUB_ID}.desktop"))).unwrap();
+    assert!(launcher.contains(&format!("\nIcon={FLATHUB_ID}\n")), "{launcher}");
+    assert!(
+        launcher.contains(&format!("\nStartupWMClass={FLATHUB_ID}\n")),
+        "{launcher}"
+    );
+    let metainfo =
+        std::fs::read_to_string(share.join(format!("metainfo/{FLATHUB_ID}.metainfo.xml"))).unwrap();
+    assert!(metainfo.contains(&format!("<id>{FLATHUB_ID}</id>")), "{metainfo}");
+    assert!(
+        metainfo.contains(&format!(
+            "<launchable type=\"desktop-id\">{FLATHUB_ID}.desktop</launchable>"
+        )),
+        "{metainfo}"
+    );
+    for text in [&launcher, &metainfo] {
+        assert!(!text.contains(ID), "{text}");
+    }
+}

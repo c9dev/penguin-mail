@@ -53,7 +53,7 @@ push_release() {
     echo "Flathub builds from its own repository, so update it by hand:"
     echo "  scripts/flatpak-sources.sh --flathub v$version <dir>"
     echo "then copy the three files into a checkout of"
-    echo "https://github.com/flathub/io.github.c9dev.PenguinMail and open a pull request."
+    echo "https://github.com/flathub/io.github.c9dev.penguin-mail and open a pull request."
 }
 
 # A commit "Release X.Y.Z" that origin lacks is a release an earlier run

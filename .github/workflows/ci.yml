@@ -106,11 +106,11 @@ jobs:
   flatpak:
     name: Flatpak builds and starts
     runs-on: ubuntu-latest
-    # Flathub's own image, with flatpak-builder and the GNOME 50 SDK the
+    # Flathub's own image, with flatpak-builder and the GNOME 51 SDK the
     # manifest names. flatpak-builder needs the privileges to make its own
     # sandbox inside the container.
     container:
-      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-50
+      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-51
       options: --privileged
     timeout-minutes: 60
     steps:
@@ -120,7 +120,7 @@ jobs:
       - uses: flatpak/flatpak-github-actions/flatpak-builder@79327416609af08178ad73b352877e51450790b3 # v6.8
         with:
           bundle: penguin-mail.flatpak
-          manifest-path: packaging/flatpak/io.github.c9dev.PenguinMail.yml
+          manifest-path: packaging/flatpak/io.github.c9dev.penguin-mail.yml
           cache-key: flatpak-builder-${{ hashFiles('Cargo.lock') }}
       # Starting the app with the manifest's permissions catches one it
       # needs and lacks before Flathub's reviewers or a user do. It starts
@@ -131,4 +131,4 @@ jobs:
         run: |
           command -v Xvfb dbus-run-session || dnf install -y xorg-x11-server-Xvfb dbus-tools
           flatpak install --noninteractive -y --bundle penguin-mail.flatpak
-          scripts/smoke-start.sh flatpak run io.github.c9dev.PenguinMail
+          scripts/smoke-start.sh flatpak run io.github.c9dev.penguin-mail
