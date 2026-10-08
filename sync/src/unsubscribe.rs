@@ -41,6 +41,12 @@ const LEAVING: [&str; 8] = [
     "deixar de receber",
 ];
 
+/// The longest subject a request keeps from the header, in characters.
+pub const MOST_SUBJECT: usize = 200;
+
+/// The longest body a request keeps from the header, in characters.
+pub const MOST_BODY: usize = 1000;
+
 /// The best way the header offers, if any. A page comes before a mail
 /// request: senders answer a page and often ignore the mail.
 pub fn choose(header: &str, one_click: bool) -> Option<Unsubscribe> {
@@ -71,25 +77,94 @@ pub fn choose(header: &str, one_click: bool) -> Option<Unsubscribe> {
     if let Some(url) = web {
         return Some(Unsubscribe::Page(url));
     }
-    if let Some(mailto) = links.iter().find_map(|l| strip_prefix_ci(l, "mailto:")) {
-        let (address, query) = mailto.split_once('?').unwrap_or((mailto, ""));
-        let param = |name: &str| {
-            query.split('&').find_map(|pair| {
-                let (key, value) = pair.split_once('=')?;
-                key.eq_ignore_ascii_case(name)
-                    .then(|| percent_decode(value))
-            })
-        };
-        let to = percent_decode(address);
-        if to.contains('@') {
-            return Some(Unsubscribe::Email {
-                to,
-                subject: param("subject").unwrap_or_else(|| "unsubscribe".into()),
-                body: param("body").unwrap_or_else(|| "unsubscribe".into()),
-            });
-        }
+    let mailto = links.iter().find_map(|l| strip_prefix_ci(l, "mailto:"))?;
+    mail_request(mailto)
+}
+
+/// The request a `mailto:` link describes, when it is one Penguin Mail
+/// will send. It goes from the person's own account, so the link may name
+/// one plain address and no other recipient; a link that names more, in
+/// any spelling, gets no request at all. The subject and body come from
+/// the sender, so each is kept only while it is short, and the subject
+/// only as one line.
+fn mail_request(mailto: &str) -> Option<Unsubscribe> {
+    let (address, query) = mailto.split_once('?').unwrap_or((mailto, ""));
+    let fields: Vec<(&str, String)> = query
+        .split('&')
+        .filter_map(|pair| {
+            let (key, value) = pair.split_once('=')?;
+            Some((key, percent_decode(value)))
+        })
+        .collect();
+    // RFC 6068 lets the query add recipients of its own.
+    if fields.iter().any(|(key, _)| {
+        ["to", "cc", "bcc"]
+            .iter()
+            .any(|named| key.eq_ignore_ascii_case(named))
+    }) {
+        return None;
     }
-    None
+    let to = percent_decode(address);
+    if !plain_address(&to) {
+        return None;
+    }
+    let field = |name: &str| {
+        fields
+            .iter()
+            .find(|(key, _)| key.eq_ignore_ascii_case(name))
+            .map(|(_, value)| value.as_str())
+    };
+    let subject = field("subject")
+        .map(one_line)
+        .filter(|subject| !subject.is_empty() && subject.chars().count() <= MOST_SUBJECT)
+        .unwrap_or_else(|| "unsubscribe".into());
+    let body = field("body")
+        .map(plain_text)
+        .filter(|body| !body.trim().is_empty() && body.chars().count() <= MOST_BODY)
+        .unwrap_or_else(|| "unsubscribe".into());
+    Some(Unsubscribe::Email { to, subject, body })
+}
+
+/// Whether `text` is one bare address, `local@domain.tld`, with nothing a
+/// mail program could read as a name, a comment, a second address or a
+/// group. The local part takes RFC 5322's atom characters and dots; the
+/// domain takes letters, digits, hyphens and at least one dot.
+fn plain_address(text: &str) -> bool {
+    let Some((local, domain)) = text.split_once('@') else {
+        return false;
+    };
+    let atom = |c: char| c.is_ascii_alphanumeric() || "!#$%&'*+-/=?^_`{|}~".contains(c);
+    let labels: Vec<&str> = domain.split('.').collect();
+    !local.is_empty()
+        && local.chars().all(|c| atom(c) || c == '.')
+        && !local.starts_with('.')
+        && !local.ends_with('.')
+        && !local.contains("..")
+        && labels.len() >= 2
+        && labels.iter().all(|label| {
+            !label.is_empty()
+                && !label.starts_with('-')
+                && !label.ends_with('-')
+                && label.chars().all(|c| c.is_ascii_alphanumeric() || c == '-')
+        })
+}
+
+/// `text` as one line: line breaks and other control characters become
+/// spaces, and runs of spaces become one.
+fn one_line(text: &str) -> String {
+    text.split(|c: char| c.is_whitespace() || c.is_control())
+        .filter(|word| !word.is_empty())
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+/// `text` without control characters other than line breaks and tabs,
+/// with every line break as `\n`.
+fn plain_text(text: &str) -> String {
+    text.replace("\r\n", "\n")
+        .chars()
+        .filter(|c| !c.is_control() || matches!(c, '\n' | '\t'))
+        .collect()
 }
 
 /// The best way out of a list: what the header offers, else a link in
@@ -272,7 +347,9 @@ fn percent_decode(text: &str) -> String {
             i += 3;
             continue;
         }
-        out.push(if bytes[i] == b'+' { b' ' } else { bytes[i] });
+        // A `+` is itself in a mailto link (RFC 6068), as in
+        // `list+leave@news.example`, unlike in a web form.
+        out.push(bytes[i]);
         i += 1;
     }
     String::from_utf8_lossy(&out).into_owned()
@@ -327,6 +404,82 @@ mod tests {
             Some(Unsubscribe::Page("http://plain.example/u".into()))
         );
         assert_eq!(choose("", false), None);
+    }
+
+    /// A request goes from the person's own account, so it may go to one
+    /// address and no more, whichever way a header spells a second one.
+    #[test]
+    fn a_mail_request_goes_to_one_address_or_not_at_all() {
+        for header in [
+            "<mailto:a@list.example%2Cb@corp.example>",
+            "<mailto:a@list.example%2cb@corp.example>",
+            "<mailto:a@list.example;b@corp.example>",
+            "<mailto:a@list.example%3Bb@corp.example>",
+            "<mailto:a@list.example%20b@corp.example>",
+            "<mailto:a@list.example%0Ab@corp.example>",
+            "<mailto:Ann%20%3Ca@list.example%3E>",
+            "<mailto:a@list.example?to=b@corp.example>",
+            "<mailto:a@list.example?cc=b@corp.example>",
+            "<mailto:a@list.example?BCC=b@corp.example>",
+            "<mailto:a@b@list.example>",
+            "<mailto:@list.example>",
+            "<mailto:a@>",
+            "<mailto:a@list>",
+            "<mailto:a(note)@list.example>",
+            "<mailto:\"a b\"@list.example>",
+        ] {
+            assert_eq!(choose(header, false), None, "{header}");
+        }
+    }
+
+    #[test]
+    fn a_plain_address_still_makes_a_request() {
+        assert_eq!(
+            choose("<mailto:list+leave.9f2@news.example.co.uk>", false),
+            Some(Unsubscribe::Email {
+                to: "list+leave.9f2@news.example.co.uk".into(),
+                subject: "unsubscribe".into(),
+                body: "unsubscribe".into(),
+            })
+        );
+    }
+
+    #[test]
+    fn a_request_keeps_a_short_subject_and_body_and_drops_long_ones() {
+        let long = "x".repeat(MOST_SUBJECT + 1);
+        let header =
+            format!("<mailto:leave@news.example?subject={long}&body=Remove%20me%0Aplease>");
+        assert_eq!(
+            choose(&header, false),
+            Some(Unsubscribe::Email {
+                to: "leave@news.example".into(),
+                subject: "unsubscribe".into(),
+                body: "Remove me\nplease".into(),
+            })
+        );
+        let long = "y".repeat(MOST_BODY + 1);
+        let header = format!("<mailto:leave@news.example?subject=Bye&body={long}>");
+        assert_eq!(
+            choose(&header, false),
+            Some(Unsubscribe::Email {
+                to: "leave@news.example".into(),
+                subject: "Bye".into(),
+                body: "unsubscribe".into(),
+            })
+        );
+    }
+
+    #[test]
+    fn a_request_subject_is_one_line_of_text() {
+        let header = "<mailto:leave@news.example?subject=Bye%0D%0ABcc:%20x@y.example%07>";
+        assert_eq!(
+            choose(header, false),
+            Some(Unsubscribe::Email {
+                to: "leave@news.example".into(),
+                subject: "Bye Bcc: x@y.example".into(),
+                body: "unsubscribe".into(),
+            })
+        );
     }
 
     #[test]

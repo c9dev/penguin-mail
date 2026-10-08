@@ -7,9 +7,11 @@
 //! lines, the pipes and the rule about asking the person anything are the
 //! same for both, and live here once.
 
-use std::io::Write;
+use std::io::{Read as _, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc;
 use std::time::{Duration, Instant};
 
@@ -94,6 +96,10 @@ impl Program {
     /// beside the human messages on stderr. Those messages quote whatever
     /// a sender put in a user id, a subject or a file name, and a line in
     /// one that looked like a status line would otherwise be read as one.
+    ///
+    /// The run reads at most [`MOST_OUTPUT`] bytes from each pipe. When the
+    /// program writes more, the run kills it and returns an error of kind
+    /// [`std::io::ErrorKind::FileTooLarge`].
     pub fn run(
         &self,
         input: &[u8],
@@ -116,26 +122,41 @@ impl Program {
         // the program fills an output pipe, which a message of any size
         // does. One thread writes and one reads the status lines while this
         // one reads stdout.
-        let (output, status) = std::thread::scope(|scope| {
+        let Some(mut stdout) = child.stdout.take() else {
+            let _ = child.kill();
+            let _ = child.wait();
+            return Err(std::io::Error::other("no stdout to read"));
+        };
+        let (out, status) = std::thread::scope(|scope| {
             scope.spawn(move || {
                 // The program closing the pipe early, as it does when it
                 // turns the arguments down, is not worth reporting: the
                 // status lines say why.
                 let _ = stdin.write_all(input);
             });
-            let status = scope.spawn(move || {
-                let mut lines = Vec::new();
-                let _ = std::io::Read::read_to_end(&mut status_reader, &mut lines);
-                lines
-            });
-            let output = child.wait_with_output();
-            (output, status.join().unwrap_or_default())
+            let status = scope.spawn(move || capped(&mut status_reader));
+            let out = capped(&mut stdout);
+            if out.is_none() {
+                // Stopping it here, by its pid, ends the decompression at
+                // once, and closes the status pipe the other thread waits
+                // on. The kill comes before stdout closes: a closed pipe
+                // would let the program move on, and start something that
+                // holds the status pipe open, before the kill lands.
+                let _ = child.kill();
+            }
+            drop(stdout);
+            (out, status.join().ok().flatten())
         });
-        let output = output?;
+        let exit = child.wait();
+        let (Some(out), Some(status)) = (out, status) else {
+            let _ = child.kill();
+            let _ = child.wait();
+            return Err(too_large());
+        };
         Ok(Run {
-            out: output.stdout,
+            out,
             status: status_lines(&status),
-            ok: output.status.success(),
+            ok: exit?.success(),
         })
     }
 
@@ -149,7 +170,9 @@ impl Program {
     /// process group are killed, the program is reaped so no zombie stays
     /// behind, and the answer is an error of kind
     /// [`std::io::ErrorKind::TimedOut`]. The agent and dirmngr leave the
-    /// group as they start, so they keep running for the next call.
+    /// group as they start, so they keep running for the next call. Output
+    /// past [`MOST_OUTPUT`] ends the run the same way, with an error of
+    /// kind [`std::io::ErrorKind::FileTooLarge`].
     pub fn run_within(
         &self,
         limit: Duration,
@@ -179,11 +202,17 @@ impl Program {
             let _ = stdin.write_all(&input);
         });
         let (sent, received) = mpsc::channel();
-        let read = |mut pipe: Box<dyn std::io::Read + Send>, which: Pipe| {
+        // Set by a reader that passed the cap, for the loop below to stop
+        // the program rather than wait for it to finish writing.
+        let over = Arc::new(AtomicBool::new(false));
+        let read = |pipe: Box<dyn std::io::Read + Send>, which: Pipe| {
             let sent = sent.clone();
+            let over = Arc::clone(&over);
             std::thread::spawn(move || {
-                let mut bytes = Vec::new();
-                let _ = pipe.read_to_end(&mut bytes);
+                let bytes = capped(pipe).unwrap_or_else(|| {
+                    over.store(true, Ordering::Relaxed);
+                    Vec::new()
+                });
                 let _ = sent.send((which, bytes));
             });
         };
@@ -191,6 +220,11 @@ impl Program {
         read(Box::new(status_reader), Pipe::Status);
         drop(sent);
         let exit = loop {
+            if over.load(Ordering::Relaxed) {
+                kill_group(group, &mut child);
+                let _ = child.wait();
+                return Err(too_large());
+            }
             if let Some(exit) = child.try_wait()? {
                 break exit;
             }
@@ -215,6 +249,11 @@ impl Program {
                     return Err(timed_out(limit));
                 }
             }
+        }
+        // The program can exit on its own once a reader stops at the cap
+        // and closes its end of the pipe, before the loop above sees it.
+        if over.load(Ordering::Relaxed) {
+            return Err(too_large());
         }
         Ok(Run {
             out,
@@ -257,6 +296,33 @@ const POLL: Duration = Duration::from_millis(5);
 enum Pipe {
     Out,
     Status,
+}
+
+/// The most a run reads from the program's stdout, or from its status
+/// pipe. OpenPGP data can hold compressed packets, so a message of a few
+/// kilobytes can open to gigabytes, and gpg writes whatever it opens. 64
+/// MiB is the cap the POP3 reader puts on one message, and Gmail and most
+/// servers refuse mail above 25 to 50 MB, so no real message opens to more.
+pub const MOST_OUTPUT: usize = 64 << 20;
+
+/// What `pipe` holds, or `None` once it passes [`MOST_OUTPUT`], where the
+/// reading stops.
+fn capped(pipe: impl std::io::Read) -> Option<Vec<u8>> {
+    let mut bytes = Vec::new();
+    let limit = u64::try_from(MOST_OUTPUT)
+        .unwrap_or(u64::MAX)
+        .saturating_add(1);
+    let _ = pipe.take(limit).read_to_end(&mut bytes);
+    (bytes.len() <= MOST_OUTPUT).then_some(bytes)
+}
+
+/// The error a run returns when the program wrote more than
+/// [`MOST_OUTPUT`]. Callers match on its kind.
+fn too_large() -> std::io::Error {
+    std::io::Error::new(
+        std::io::ErrorKind::FileTooLarge,
+        format!("the output passed {} MiB", MOST_OUTPUT >> 20),
+    )
 }
 
 fn timed_out(limit: Duration) -> std::io::Error {

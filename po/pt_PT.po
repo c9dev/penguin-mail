@@ -747,7 +747,7 @@ msgid "Continue opens {provider}'s sign-in page in your browser."
 msgstr ""
 "Continuar abre a página de início de sessão de {provider} no navegador."
 
-#: app/src/app.rs:376
+#: app/src/app.rs:381
 msgid ""
 "Your preferences could not be read, so Penguin Mail started from the "
 "defaults. The old file is kept as {file}."
@@ -759,51 +759,51 @@ msgstr ""
 msgid "That account is not connected. Check its status in the sidebar."
 msgstr "Essa conta não está ligada. Veja o estado dela na barra lateral."
 
-#: app/src/app/sending.rs:156
+#: app/src/app/sending.rs:129 app/src/app/sending.rs:164
 msgid "Could not build the message: {reason}"
 msgstr "Não foi possível montar a mensagem: {reason}"
 
-#: app/src/app/sending.rs:171 app/src/app/sending.rs:223
+#: app/src/app/sending.rs:179 app/src/app/sending.rs:231
 msgid "Not encrypted, so not sent: {reason}"
 msgstr "Não foi encriptada, por isso não foi enviada: {reason}"
 
-#: app/src/app/sending.rs:224
+#: app/src/app/sending.rs:232
 msgid "Not signed, so not sent: {reason}"
 msgstr "Não foi assinada, por isso não foi enviada: {reason}"
 
-#: app/src/app/sending.rs:254
+#: app/src/app/sending.rs:262
 msgid "Message sent"
 msgstr "Mensagem enviada"
 
-#: app/src/app/sending.rs:262
+#: app/src/app/sending.rs:270
 msgid "Waiting in the Outbox. It goes out as soon as it can."
 msgstr "À espera na caixa de saída. Sai assim que for possível."
 
-#: app/src/app/sending.rs:267 app/src/app/sending.rs:272
+#: app/src/app/sending.rs:275 app/src/app/sending.rs:280
 msgid "Not sent: {reason}"
 msgstr "Não enviada: {reason}"
 
-#: app/src/app/sending.rs:302 app/src/app/sending.rs:315
+#: app/src/app/sending.rs:310 app/src/app/sending.rs:323
 msgid "Not scheduled: {reason}"
 msgstr "Não agendada: {reason}"
 
-#: app/src/app/sending.rs:308
+#: app/src/app/sending.rs:316
 msgid "Will send {when}"
 msgstr "Envia {when}"
 
-#: app/src/app/sending.rs:366
+#: app/src/app/sending.rs:374
 msgid "Sent {message}"
 msgstr "{message} enviada"
 
-#: app/src/app/sending.rs:375
+#: app/src/app/sending.rs:383
 msgid "Still in the Outbox: {message}"
 msgstr "Continua na caixa de saída: {message}"
 
-#: app/src/app/sending.rs:484
+#: app/src/app/sending.rs:492
 msgid "your message"
 msgstr "a sua mensagem"
 
-#: app/src/app/sending.rs:486
+#: app/src/app/sending.rs:494
 msgid "“{subject}”"
 msgstr "“{subject}”"
 
@@ -899,11 +899,46 @@ msgstr "Criar uma regra para {account}: {when} → {then}?"
 msgid "Delete a rule from {account}?"
 msgstr "Eliminar uma regra de {account}?"
 
-#: app/src/assistant/run.rs:1686 app/src/assistant/run.rs:1720
+#: app/src/assistant/run.rs:1538
+msgid "Load remote images from every sender?"
+msgstr "Carregar as imagens remotas de todos os remetentes?"
+
+#: app/src/assistant/run.rs:1539 app/src/assistant/run/manage.rs:607
+msgid "Loading a remote image tells the sender when you opened their mail."
+msgstr ""
+"Carregar uma imagem remota diz ao remetente quando abriu o correio dele."
+
+#: app/src/assistant/run.rs:1546
+msgid "Change the setting {name} to {value}?"
+msgstr "Mudar a definição {name} para {value}?"
+
+#: app/src/assistant/run.rs:1568
+msgid "Remove your signature for {account}?"
+msgstr "Remover a sua assinatura de {account}?"
+
+#: app/src/assistant/run.rs:1572
+msgid ""
+"Change your signature for {account} to:\n"
+"\n"
+"{text}"
+msgstr ""
+"Mudar a sua assinatura de {account} para:\n"
+"\n"
+"{text}"
+
+#: app/src/assistant/run.rs:1720 app/src/assistant/run.rs:1758
 msgid "Hide My Email works with Gmail accounts."
 msgstr "O Ocultar o meu e-mail funciona com contas Gmail."
 
-#: app/src/assistant/run.rs:1825
+#: app/src/assistant/run.rs:1763
+msgid "Turn off {address}? Mail sent to it will go to the Trash."
+msgstr "Desativar {address}? O correio enviado para lá passa a ir para o lixo."
+
+#: app/src/assistant/run.rs:1767
+msgid "Turn {address} back on? Mail sent to it will arrive again."
+msgstr "Reativar {address}? O correio enviado para lá volta a chegar."
+
+#: app/src/assistant/run.rs:1876
 msgid ""
 "Move mail from {sender} to {category} in {account}, and send their future "
 "mail there too?"
@@ -911,7 +946,7 @@ msgstr ""
 "Mover o correio de {sender} para {category} em {account} e enviar também "
 "para lá o correio futuro?"
 
-#: app/src/assistant/run.rs:1837
+#: app/src/assistant/run.rs:1888
 msgid ""
 "Move mail from {sender} to {category} in {account}, and add a {provider} "
 "rule for their future mail?"
@@ -1370,11 +1405,6 @@ msgstr "Carregar sempre as imagens de qualquer remetente em {domain}?"
 msgid "Always load images from {sender}?"
 msgstr "Carregar sempre as imagens de {sender}?"
 
-#: app/src/assistant/run/manage.rs:607
-msgid "Loading a remote image tells the sender when you opened their mail."
-msgstr ""
-"Carregar uma imagem remota diz ao remetente quando abriu o correio dele."
-
 #: app/src/assistant/run/manage.rs:632
 msgid "Stop loading images from {sender}?"
 msgstr "Deixar de carregar imagens de {sender}?"
@@ -1462,7 +1492,7 @@ msgstr[1] "Trazer {count} conversas de volta {when}, em vez da hora marcada?"
 msgid "Undo “{action}”?"
 msgstr "Anular “{action}”?"
 
-#: app/src/assistant/run/unsubscribe.rs:373
+#: app/src/assistant/run/unsubscribe.rs:376
 msgid "this list"
 msgstr "esta lista"
 
@@ -1608,17 +1638,33 @@ msgstr ""
 "Corre numa área isolada, sem acesso ao seu correio nem à sua pasta pessoal. "
 "{network} Permitir sempre aplica-se só a este comando, tal como está."
 
-#: app/src/assistant/sources/web.rs:60
+#: app/src/assistant/sources/web.rs:64
 msgid "Add a Brave Search API key."
 msgstr "Adicione uma chave de API do Brave Search."
 
-#: app/src/assistant/sources/web.rs:62
+#: app/src/assistant/sources/web.rs:66
 msgid "Enter the address of a SearXNG server."
 msgstr "Introduza o endereço de um servidor SearXNG."
 
-#: app/src/assistant/sources/web.rs:66
+#: app/src/assistant/sources/web.rs:70
 msgid "Choose Brave Search or SearXNG for a local model to search with."
 msgstr "Escolha o Brave Search ou o SearXNG para um modelo local pesquisar."
+
+#: app/src/assistant/sources/web.rs:333
+msgid ""
+"Open this web page?\n"
+"\n"
+"{address}\n"
+"\n"
+"The site receives the whole address, including anything after a question "
+"mark. Always Allow covers this exact address only."
+msgstr ""
+"Abrir esta página web?\n"
+"\n"
+"{address}\n"
+"\n"
+"O site recebe o endereço completo, incluindo tudo o que vem depois de um "
+"ponto de interrogação. Permitir sempre cobre apenas este endereço exato."
 
 #: app/src/assistant/turn.rs:57
 msgid "Waiting for the model…"
@@ -1671,7 +1717,7 @@ msgstr "A correr um comando na área isolada"
 msgid "Penguin Mail keeps syncing with no window open"
 msgstr "O Penguin Mail continua a sincronizar sem nenhuma janela aberta"
 
-#: app/src/compose.rs:548 app/src/compose.rs:2542
+#: app/src/compose.rs:548 app/src/compose.rs:2625
 msgid "Add at least one recipient."
 msgstr "Adicione pelo menos um destinatário."
 
@@ -1679,13 +1725,17 @@ msgstr "Adicione pelo menos um destinatário."
 msgid "“{address}” is not an email address."
 msgstr "“{address}” não é um endereço de e-mail."
 
-#: app/src/compose.rs:783 app/src/compose.rs:2548
+#: app/src/compose.rs:783 app/src/compose.rs:2631
 msgid "Choose a time in the future"
 msgstr "Escolha uma hora no futuro"
 
 #: app/src/compose.rs:988
 msgid "On {date}, {sender} wrote:"
 msgstr "A {date}, {sender} escreveu:"
+
+#: app/src/compose.rs:1254
+msgid "The list did not give one address to write to."
+msgstr "A lista não indicou um único endereço para onde escrever."
 
 #: app/src/contacts.rs:96
 msgid "from mail"
@@ -1963,7 +2013,7 @@ msgstr "Roxo"
 msgid "Slate"
 msgstr "Ardósia"
 
-#: app/src/keyring_plug.rs:128
+#: app/src/keyring_plug.rs:138
 msgid ""
 "Penguin Mail cannot save sign-ins until the snap can reach your keyring. Run "
 "{command} in a terminal, then restart Penguin Mail."
@@ -1976,7 +2026,7 @@ msgstr ""
 msgid "{language} ({country})"
 msgstr "{language} ({country})"
 
-#: app/src/main.rs:73
+#: app/src/main.rs:74
 msgid ""
 "Usage: penguin-mail [--background] [--demo] [--compose [mailto:ADDRESS]] "
 "[FILE.ics]\n"
@@ -2000,15 +2050,15 @@ msgstr ""
 "  FICHEIRO.ics   abre um ficheiro de calendário, para adicionar os seus "
 "eventos a um calendário"
 
-#: app/src/main.rs:148
+#: app/src/main.rs:149
 msgid "penguin-mail: unknown option {option}"
 msgstr "penguin-mail: opção desconhecida {option}"
 
-#: app/src/main.rs:308
+#: app/src/main.rs:315
 msgid "Penguin Mail Could Not Start"
 msgstr "O Penguin Mail não conseguiu arrancar"
 
-#: app/src/main.rs:313 app/src/ui/about.rs:179
+#: app/src/main.rs:320 app/src/ui/about.rs:179
 msgid "Report a Problem"
 msgstr "Comunicar um problema"
 
@@ -2052,7 +2102,7 @@ msgstr "Nova mensagem"
 msgid "From {senders}"
 msgstr "De {senders}"
 
-#: app/src/notify.rs:196 app/src/ui/window.rs:2669
+#: app/src/notify.rs:196 app/src/ui/window.rs:2675
 msgid "Open"
 msgstr "Abrir"
 
@@ -2604,62 +2654,66 @@ msgstr "Ficheiros anexados a eventos"
 msgid "{account} has not allowed Penguin Mail to {missing}"
 msgstr "{account} não autorizou o Penguin Mail a {missing}"
 
-#: app/src/pgp.rs:110
+#: app/src/pgp.rs:114
 msgid "Add a recipient whose key gpg holds."
 msgstr "Adicione um destinatário de quem o gpg tenha a chave."
 
-#: app/src/pgp.rs:119
+#: app/src/pgp.rs:123
 msgid "gpg holds no key for {addresses}."
 msgstr "O gpg não tem chave para {addresses}."
 
-#: app/src/pgp.rs:136
+#: app/src/pgp.rs:140
 msgid "gpg holds no key for any of the addresses you send from."
 msgstr "O gpg não tem chave para nenhum dos endereços de onde envia."
 
-#: app/src/pgp.rs:138
+#: app/src/pgp.rs:142
 msgid "gpg holds a key for {addresses}."
 msgstr "O gpg tem chave para {addresses}."
 
-#: app/src/pgp.rs:142
+#: app/src/pgp.rs:146
 msgid "gpg holds a key for {addresses}, and none for {without}."
 msgstr "O gpg tem chave para {addresses} e nenhuma para {without}."
 
-#: app/src/pgp.rs:245
+#: app/src/pgp.rs:250
 msgid "This computer has no gpg. Install GnuPG to read or send OpenPGP mail."
 msgstr ""
 "Este computador não tem gpg. Instale o GnuPG para ler ou enviar correio "
 "OpenPGP."
 
-#: app/src/pgp.rs:248 app/src/smime.rs:257
+#: app/src/pgp.rs:253 app/src/smime.rs:258
 msgid "Could not run {program}: {reason}"
 msgstr "Não foi possível executar {program}: {reason}"
 
-#: app/src/pgp.rs:252 app/src/smime.rs:261
+#: app/src/pgp.rs:257 app/src/smime.rs:262
 msgid "Could not write a temporary file: {reason}"
 msgstr "Não foi possível escrever um ficheiro temporário: {reason}"
 
-#: app/src/pgp.rs:256
+#: app/src/pgp.rs:261
 msgid "This message is encrypted to a key this computer does not hold."
 msgstr ""
 "Esta mensagem está encriptada para uma chave que este computador não tem."
 
-#: app/src/pgp.rs:259
+#: app/src/pgp.rs:264
 msgid "gpg holds no secret key to sign as {address}."
 msgstr "O gpg não tem chave secreta para assinar como {address}."
 
-#: app/src/pgp.rs:263
+#: app/src/pgp.rs:268
 msgid "gpg holds no key it can encrypt to for {address}."
 msgstr "O gpg não tem chave para encriptar para {address}."
 
-#: app/src/pgp.rs:266
+#: app/src/pgp.rs:271
 msgid "This text holds no OpenPGP block."
 msgstr "Este texto não contém nenhum bloco OpenPGP."
 
-#: app/src/pgp.rs:267
+#: app/src/pgp.rs:272
 msgid "This file holds no OpenPGP key."
 msgstr "Este ficheiro não contém nenhuma chave OpenPGP."
 
-#: app/src/pgp.rs:268
+#: app/src/pgp.rs:273 app/src/smime.rs:278
+msgid "This message is too large to open."
+msgstr "Esta mensagem é demasiado grande para abrir."
+
+#: app/src/pgp.rs:274
 msgid "gpg failed: {reason}"
 msgstr "O gpg falhou: {reason}"
 
@@ -2708,14 +2762,14 @@ msgstr ""
 msgid "A message goes out under one standard or the other. {pgp} {smime}"
 msgstr "Uma mensagem sai por uma norma ou pela outra. {pgp} {smime}"
 
-#: app/src/protection.rs:607
+#: app/src/protection.rs:612
 msgid ""
 "This key does not name {sender}, the address the message says it is from."
 msgstr ""
 "Esta chave não identifica {sender}, o endereço de onde a mensagem diz que "
 "vem."
 
-#: app/src/protection.rs:611
+#: app/src/protection.rs:616
 msgid ""
 "This certificate does not name {sender}, the address the message says it is "
 "from."
@@ -2723,78 +2777,78 @@ msgstr ""
 "Este certificado não identifica {sender}, o endereço de onde a mensagem diz "
 "que vem."
 
-#: app/src/protection.rs:620
+#: app/src/protection.rs:625
 msgid "Signed by {signer}"
 msgstr "Assinada por {signer}"
 
-#: app/src/protection.rs:626
+#: app/src/protection.rs:631
 msgid "This message changed after it was signed"
 msgstr "Esta mensagem mudou depois de ter sido assinada"
 
-#: app/src/protection.rs:628
+#: app/src/protection.rs:633
 msgid "The signature of {signer} does not match what arrived."
 msgstr "A assinatura de {signer} não corresponde ao que chegou."
 
-#: app/src/protection.rs:635
+#: app/src/protection.rs:640
 msgid "Signed by {signer}, whose key has expired"
 msgstr "Assinada por {signer}, cuja chave expirou"
 
-#: app/src/protection.rs:639
+#: app/src/protection.rs:644
 msgid "The text is as it was written, and the key behind it ran out."
 msgstr "O texto está como foi escrito e a chave por trás dele expirou."
 
-#: app/src/protection.rs:645
+#: app/src/protection.rs:650
 msgid "Signed by {signer}, whose certificate has run out"
 msgstr "Assinada por {signer}, cujo certificado expirou"
 
-#: app/src/protection.rs:649
+#: app/src/protection.rs:654
 msgid ""
 "The text is as it was written, and the certificate behind it has expired."
 msgstr "O texto está como foi escrito e o certificado por trás dele expirou."
 
-#: app/src/protection.rs:655
+#: app/src/protection.rs:660
 msgid "Signed by {signer}, who took this key back"
 msgstr "Assinada por {signer}, que revogou esta chave"
 
-#: app/src/protection.rs:659
+#: app/src/protection.rs:664
 msgid "The owner revoked it, so it says nothing about who wrote this."
 msgstr "O dono revogou-a, por isso não diz nada sobre quem escreveu isto."
 
-#: app/src/protection.rs:665
+#: app/src/protection.rs:670
 msgid "Signed by {signer}, whose certificate was taken back"
 msgstr "Assinada por {signer}, cujo certificado foi revogado"
 
-#: app/src/protection.rs:669
+#: app/src/protection.rs:674
 msgid "Whoever issued it revoked it, so it says nothing about who wrote this."
 msgstr ""
 "Quem o emitiu revogou-o, por isso não diz nada sobre quem escreveu isto."
 
-#: app/src/protection.rs:675
+#: app/src/protection.rs:680
 msgid "Signed by {signer}, and the signature has run out"
 msgstr "Assinada por {signer}, e a assinatura expirou"
 
-#: app/src/protection.rs:679
+#: app/src/protection.rs:684
 msgid "It carried a date to stop being good on, and that date has passed."
 msgstr ""
 "Levava uma data a partir da qual deixava de valer, e essa data já passou."
 
-#: app/src/protection.rs:684
+#: app/src/protection.rs:689
 msgid "Signed by a key this computer does not hold"
 msgstr "Assinada por uma chave que este computador não tem"
 
-#: app/src/protection.rs:686
+#: app/src/protection.rs:691
 msgid "Nothing here can check it. Ask gpg for key {key}."
 msgstr "Nada aqui a consegue verificar. Peça ao gpg a chave {key}."
 
-#: app/src/protection.rs:693
+#: app/src/protection.rs:698
 msgid "it names"
 msgstr "que indica"
 
-#: app/src/protection.rs:699
+#: app/src/protection.rs:704
 msgid "Signed by a certificate this computer does not hold"
 msgstr "Assinada por um certificado que este computador não tem"
 
-#: app/src/protection.rs:701
+#: app/src/protection.rs:706
 msgid ""
 "The message carried none either, so there is nothing here to check it "
 "against."
@@ -2802,85 +2856,94 @@ msgstr ""
 "A mensagem também não o trazia, por isso não há aqui nada com que a "
 "verificar."
 
-#: app/src/protection.rs:707
+#: app/src/protection.rs:712
 msgid "gpg could not check this signature"
 msgstr "O gpg não conseguiu verificar esta assinatura"
 
-#: app/src/protection.rs:712
+#: app/src/protection.rs:717
 msgid "gpgsm could not check this signature"
 msgstr "O gpgsm não conseguiu verificar esta assinatura"
 
-#: app/src/protection.rs:735
+#: app/src/protection.rs:740
 msgid "Encrypted, and signed by {signer}"
 msgstr "Encriptada e assinada por {signer}"
 
-#: app/src/protection.rs:744
+#: app/src/protection.rs:749
 msgid "Encrypted. {what}"
 msgstr "Encriptada. {what}"
 
-#: app/src/protection.rs:750
+#: app/src/protection.rs:755
 msgid "This message arrived encrypted"
 msgstr "Esta mensagem chegou encriptada"
 
-#: app/src/protection.rs:752
+#: app/src/protection.rs:757
 msgid "Nobody signed it, so it says nothing about who sent it."
 msgstr "Ninguém a assinou, por isso não diz nada sobre quem a enviou."
 
-#: app/src/protection.rs:760
+#: app/src/protection.rs:765
 msgid "{detail} {files}"
 msgstr "{detail} {files}"
 
-#: app/src/protection.rs:774
+#: app/src/protection.rs:779
 msgid "This message is encrypted to a key you do not hold"
 msgstr "Esta mensagem está encriptada para uma chave que não tem"
 
-#: app/src/protection.rs:776
+#: app/src/protection.rs:781
 msgid "Whoever sent it used a key gpg has no secret half of."
 msgstr "Quem a enviou usou uma chave de que o gpg não tem a metade secreta."
 
-#: app/src/protection.rs:781
+#: app/src/protection.rs:786
 msgid "This message is encrypted to a certificate you do not hold"
 msgstr "Esta mensagem está encriptada para um certificado que não tem"
 
-#: app/src/protection.rs:783
+#: app/src/protection.rs:788
 msgid "Whoever sent it used a certificate gpgsm has no secret key for."
 msgstr ""
 "Quem a enviou usou um certificado de que o gpgsm não tem a chave secreta."
 
-#: app/src/protection.rs:789
+#: app/src/protection.rs:794
 msgid "This message says it is OpenPGP and is not"
 msgstr "Esta mensagem diz ser OpenPGP e não é"
 
-#: app/src/protection.rs:790
+#: app/src/protection.rs:795
 msgid "This message says it is S/MIME and is not"
 msgstr "Esta mensagem diz ser S/MIME e não é"
 
-#: app/src/protection.rs:793
+#: app/src/protection.rs:798
 msgid "Its parts are not where a signed or encrypted message keeps them."
 msgstr ""
 "As partes dela não estão onde uma mensagem assinada ou encriptada as guarda."
 
-#: app/src/protection.rs:799
+#: app/src/protection.rs:803
+msgid "This message is too large to open"
+msgstr "Esta mensagem é demasiado grande para abrir"
+
+#: app/src/protection.rs:805
+msgid "It opens to more than {size} MB, so Penguin Mail stopped reading it."
+msgstr ""
+"Aberta, ocupa mais de {size} MB, por isso o Penguin Mail parou de a ler."
+
+#: app/src/protection.rs:812
 msgid "gpg could not open this message"
 msgstr "O gpg não conseguiu abrir esta mensagem"
 
-#: app/src/protection.rs:800
+#: app/src/protection.rs:813
 msgid "gpgsm could not open this message"
 msgstr "O gpgsm não conseguiu abrir esta mensagem"
 
-#: app/src/protection.rs:813
+#: app/src/protection.rs:826
 msgid "You marked this key as one not to trust."
 msgstr "Marcou esta chave como não fiável."
 
-#: app/src/protection.rs:814
+#: app/src/protection.rs:827
 msgid "This is one of your own keys."
 msgstr "Esta é uma das suas chaves."
 
-#: app/src/protection.rs:815
+#: app/src/protection.rs:828
 msgid "You have vouched for this key."
 msgstr "Confirmou esta chave."
 
-#: app/src/protection.rs:817
+#: app/src/protection.rs:830
 msgid ""
 "Only people you partly trust have vouched for this key, so it is not fully "
 "checked."
@@ -2888,11 +2951,11 @@ msgstr ""
 "Só pessoas em quem confia em parte confirmaram esta chave, por isso não está "
 "totalmente verificada."
 
-#: app/src/protection.rs:820
+#: app/src/protection.rs:833
 msgid "Nobody has vouched for this key, so it names no one."
 msgstr "Ninguém confirmou esta chave, por isso não identifica ninguém."
 
-#: app/src/protection.rs:823
+#: app/src/protection.rs:836
 msgid ""
 "Its certificate leads back to an authority you trust, but this computer "
 "could not check whether it was revoked."
@@ -2900,47 +2963,47 @@ msgstr ""
 "O certificado dela remete para uma autoridade em que confia, mas este "
 "computador não conseguiu verificar se foi revogado."
 
-#: app/src/protection.rs:827
+#: app/src/protection.rs:840
 msgid "Its certificate leads back to an authority you trust."
 msgstr "O certificado dela remete para uma autoridade em que confia."
 
-#: app/src/protection.rs:830
+#: app/src/protection.rs:843
 msgid "Its certificate leads back to nobody you trust, so it names no one."
 msgstr ""
 "O certificado dela não remete para ninguém em quem confie, por isso não "
 "identifica ninguém."
 
-#: app/src/protection.rs:833
+#: app/src/protection.rs:846
 msgid "Nothing here says who that certificate belongs to."
 msgstr "Nada aqui diz a quem pertence esse certificado."
 
-#: app/src/protection.rs:869
+#: app/src/protection.rs:882
 msgid "key {key}"
 msgstr "chave {key}"
 
-#: app/src/protection.rs:872
+#: app/src/protection.rs:885
 msgid "a key gpg would not name"
 msgstr "uma chave que o gpg não identificou"
 
-#: app/src/protection.rs:873
+#: app/src/protection.rs:886
 msgid "a certificate gpgsm would not name"
 msgstr "um certificado que o gpgsm não identificou"
 
-#: app/src/protection.rs:884
+#: app/src/protection.rs:897
 msgid "It carries a file, kept in this window only."
 msgstr "Leva um ficheiro, guardado apenas nesta janela."
 
-#: app/src/protection.rs:886
+#: app/src/protection.rs:899
 msgid "It carries {count} file, kept in this window only."
 msgid_plural "It carries {count} files, kept in this window only."
 msgstr[0] "Leva {count} ficheiro, guardado apenas nesta janela."
 msgstr[1] "Leva {count} ficheiros, guardados apenas nesta janela."
 
-#: app/src/protection.rs:917
+#: app/src/protection.rs:930
 msgid "{names} or {last}"
 msgstr "{names} ou {last}"
 
-#: app/src/protection.rs:929
+#: app/src/protection.rs:942
 msgid "{names} and {last}"
 msgstr "{names} e {last}"
 
@@ -2965,7 +3028,7 @@ msgstr "Essa conta não está ligada."
 msgid "Could not save: {reason}"
 msgstr "Não foi possível guardar: {reason}"
 
-#: app/src/protection/draft.rs:200 app/src/ui/window.rs:2587
+#: app/src/protection/draft.rs:200 app/src/ui/window.rs:2593
 msgid "Could not open the draft: {reason}"
 msgstr "Não foi possível abrir o rascunho: {reason}"
 
@@ -3269,7 +3332,7 @@ msgstr "Subscrição do Claude"
 #. The header in both spaces carries a button for this now (R12);
 #. the menu item stays too, so Ctrl+J shows here as well.
 #: app/src/settings/mod.rs:218 app/src/ui/assistant.rs:99
-#: app/src/ui/window.rs:3140
+#: app/src/ui/window.rs:3146
 msgid "Assistant"
 msgstr "Assistente"
 
@@ -3464,47 +3527,47 @@ msgstr "O gpgsm tem certificado para {addresses}."
 msgid "gpgsm holds a certificate for {addresses}, and none for {without}."
 msgstr "O gpgsm tem certificado para {addresses} e nenhum para {without}."
 
-#: app/src/smime.rs:254
+#: app/src/smime.rs:255
 msgid "This computer has no gpgsm. Install GnuPG to read or send S/MIME mail."
 msgstr ""
 "Este computador não tem gpgsm. Instale o GnuPG para ler ou enviar correio S/"
 "MIME."
 
-#: app/src/smime.rs:265
+#: app/src/smime.rs:266
 msgid "This message is encrypted to a certificate this computer does not hold."
 msgstr ""
 "Esta mensagem está encriptada para um certificado que este computador não "
 "tem."
 
-#: app/src/smime.rs:268
+#: app/src/smime.rs:269
 msgid "gpgsm holds no secret key to sign as {address}."
 msgstr "O gpgsm não tem chave secreta para assinar como {address}."
 
-#: app/src/smime.rs:272
+#: app/src/smime.rs:273
 msgid "gpgsm holds no trusted certificate it can encrypt to for {address}."
 msgstr ""
 "O gpgsm não tem certificado de confiança para encriptar para {address}."
 
-#: app/src/smime.rs:275
+#: app/src/smime.rs:276
 msgid "This part holds no S/MIME data."
 msgstr "Esta parte não contém dados S/MIME."
 
-#: app/src/smime.rs:276
+#: app/src/smime.rs:277
 msgid "This file holds no certificate."
 msgstr "Este ficheiro não contém nenhum certificado."
 
-#: app/src/smime.rs:278
+#: app/src/smime.rs:280
 msgid "That passphrase does not open this file. Nothing was imported."
 msgstr "Essa frase-passe não abre este ficheiro. Não foi importado nada."
 
-#: app/src/smime.rs:281
+#: app/src/smime.rs:283
 msgid ""
 "The file needs its passphrase, and none was given. Nothing was imported."
 msgstr ""
 "O ficheiro precisa da frase-passe e não foi indicada nenhuma. Não foi "
 "importado nada."
 
-#: app/src/smime.rs:284
+#: app/src/smime.rs:286
 msgid "gpgsm failed: {reason}"
 msgstr "O gpgsm falhou: {reason}"
 
@@ -3595,39 +3658,39 @@ msgid_plural "{account}, {count} unread messages"
 msgstr[0] "{account}, {count} mensagem por ler"
 msgstr[1] "{account}, {count} mensagens por ler"
 
-#: app/src/tray.rs:138 app/src/tray.rs:155
+#: app/src/tray.rs:192 app/src/tray.rs:213
 msgid "Penguin Mail: {summary}"
 msgstr "Penguin Mail: {summary}"
 
-#: app/src/tray.rs:206
+#: app/src/tray.rs:264
 msgid "Open Penguin Mail"
 msgstr "Abrir o Penguin Mail"
 
-#: app/src/tray.rs:207 app/src/ui/composer/mod.rs:278
+#: app/src/tray.rs:265 app/src/ui/composer/mod.rs:278
 #: app/src/ui/composer/mod.rs:535 app/src/ui/composer/mod.rs:1277
 #: app/src/ui/contact_card.rs:158 app/src/ui/thread_list.rs:394
 msgid "New Message"
 msgstr "Nova mensagem"
 
-#: app/src/tray.rs:208 app/src/ui/sidebar.rs:1794 app/src/ui/window.rs:3143
+#: app/src/tray.rs:266 app/src/ui/sidebar.rs:1794 app/src/ui/window.rs:3149
 msgid "Check for Mail"
 msgstr "Procurar correio"
 
-#: app/src/tray.rs:212 app/src/update/mod.rs:98
+#: app/src/tray.rs:270 app/src/update/mod.rs:98
 msgid "Install Update {version}"
 msgstr "Instalar a atualização {version}"
 
-#: app/src/tray.rs:215
+#: app/src/tray.rs:273
 msgid "What's New in {version}"
 msgstr "Novidades da versão {version}"
 
-#: app/src/tray.rs:219 app/src/ui/about.rs:118 app/src/ui/about.rs:225
+#: app/src/tray.rs:277 app/src/ui/about.rs:118 app/src/ui/about.rs:225
 #: app/src/ui/about.rs:233 app/src/ui/about.rs:240
 #: app/src/ui/preferences.rs:809 app/src/update/mod.rs:108
 msgid "Check for Updates"
 msgstr "Procurar atualizações"
 
-#: app/src/tray.rs:224 app/src/ui/window.rs:3155
+#: app/src/tray.rs:282 app/src/ui/window.rs:3161
 #: app/src/ui/window/shortcuts.rs:629
 msgid "Quit"
 msgstr "Sair"
@@ -3652,7 +3715,7 @@ msgstr "Página web"
 msgid "License"
 msgstr "Licença"
 
-#: app/src/ui/about.rs:201 app/src/ui/window.rs:3154
+#: app/src/ui/about.rs:201 app/src/ui/window.rs:3160
 msgid "About Penguin Mail"
 msgstr "Acerca do Penguin Mail"
 
@@ -3701,11 +3764,11 @@ msgstr "Mostrar registo"
 msgid "The update to {version} failed"
 msgstr "A atualização para a versão {version} falhou"
 
-#: app/src/ui/add_account.rs:401 app/src/ui/window.rs:1250
+#: app/src/ui/add_account.rs:401 app/src/ui/window.rs:1255
 msgid "Copy Command"
 msgstr "Copiar comando"
 
-#: app/src/ui/add_account.rs:409 app/src/ui/window.rs:1255
+#: app/src/ui/add_account.rs:409 app/src/ui/window.rs:1260
 msgid "Command copied"
 msgstr "Comando copiado"
 
@@ -3799,9 +3862,10 @@ msgstr "Tentar de novo"
 #: app/src/ui/composer/mod.rs:1953 app/src/ui/composer/mod.rs:2404
 #: app/src/ui/confirm.rs:29 app/src/ui/rules.rs:445 app/src/ui/rules.rs:625
 #: app/src/ui/smart_editor.rs:150 app/src/ui/templates.rs:239
-#: app/src/ui/unsubscribe.rs:95 app/src/ui/vacation.rs:45 app/src/ui/when.rs:52
-#: app/src/ui/window/arrange.rs:146 app/src/ui/window/images.rs:101
-#: app/src/ui/window/organize.rs:73 app/src/ui/window/organize.rs:122
+#: app/src/ui/unsubscribe.rs:119 app/src/ui/vacation.rs:45
+#: app/src/ui/when.rs:52 app/src/ui/window/arrange.rs:146
+#: app/src/ui/window/images.rs:101 app/src/ui/window/organize.rs:73
+#: app/src/ui/window/organize.rs:122
 msgid "Cancel"
 msgstr "Cancelar"
 
@@ -3894,7 +3958,7 @@ msgstr "Agora não"
 #: app/src/ui/add_account.rs:1159 app/src/ui/calendar/editor.rs:1606
 #: app/src/ui/calendar/sidebar.rs:922 app/src/ui/contacts_prefs.rs:365
 #: app/src/ui/invitation.rs:461 app/src/ui/permission.rs:42
-#: app/src/ui/permission.rs:66 app/src/ui/window.rs:1316
+#: app/src/ui/permission.rs:66 app/src/ui/window.rs:1322
 msgid "Grant Access"
 msgstr "Conceder acesso"
 
@@ -4044,7 +4108,7 @@ msgstr ""
 "Este servidor não distingue as suas mensagens, por isso o Penguin Mail não "
 "pode transferir dele com segurança."
 
-#: app/src/ui/assistant.rs:31 app/src/ui/window.rs:3222
+#: app/src/ui/assistant.rs:31 app/src/ui/window.rs:3228
 msgid "Summarize this conversation"
 msgstr "Resume esta conversa"
 
@@ -4111,48 +4175,48 @@ msgstr ""
 msgid "Stop"
 msgstr "Parar"
 
-#: app/src/ui/assistant.rs:550
+#: app/src/ui/assistant.rs:553
 msgid "Don't Allow"
 msgstr "Não permitir"
 
-#: app/src/ui/assistant.rs:552
+#: app/src/ui/assistant.rs:555
 msgid "Allow"
 msgstr "Permitir"
 
-#: app/src/ui/assistant.rs:556
+#: app/src/ui/assistant.rs:559
 msgid "Always Allow"
 msgstr "Permitir sempre"
 
-#: app/src/ui/assistant.rs:592
+#: app/src/ui/assistant.rs:595
 msgid "Allowed"
 msgstr "Permitido"
 
-#: app/src/ui/assistant.rs:593
+#: app/src/ui/assistant.rs:596
 msgid "Always allowed"
 msgstr "Sempre permitido"
 
-#: app/src/ui/assistant.rs:594
+#: app/src/ui/assistant.rs:597
 msgid "Not allowed"
 msgstr "Não permitido"
 
-#: app/src/ui/assistant.rs:834
+#: app/src/ui/assistant.rs:837
 msgid "Result"
 msgstr "Resultado"
 
-#: app/src/ui/assistant.rs:842
+#: app/src/ui/assistant.rs:845
 msgid "Input"
 msgstr "Entrada"
 
-#: app/src/ui/assistant.rs:920
+#: app/src/ui/assistant.rs:923
 msgid "Running"
 msgstr "Em curso"
 
-#: app/src/ui/assistant.rs:921 app/src/ui/calendar/editor.rs:263
+#: app/src/ui/assistant.rs:924 app/src/ui/calendar/editor.rs:263
 #: app/src/ui/hide_my_email.rs:467
 msgid "Done"
 msgstr "Concluído"
 
-#: app/src/ui/assistant.rs:922
+#: app/src/ui/assistant.rs:925
 msgid "Failed"
 msgstr "Falhou"
 
@@ -4189,7 +4253,7 @@ msgstr "Editar {server}"
 
 #: app/src/ui/assistant_mcp_prefs.rs:121 app/src/ui/calendar/editor.rs:1639
 #: app/src/ui/composer/mod.rs:1729 app/src/ui/composer/recipients.rs:315
-#: app/src/ui/window.rs:2938
+#: app/src/ui/window.rs:2944
 msgid "Remove"
 msgstr "Remover"
 
@@ -5354,7 +5418,7 @@ msgstr ""
 "Pode subscrevê-lo outra vez mais tarde."
 
 #: app/src/ui/calendar/manage.rs:324 app/src/ui/conversation.rs:373
-#: app/src/ui/unsubscribe.rs:96
+#: app/src/ui/unsubscribe.rs:120
 msgid "Unsubscribe"
 msgstr "Cancelar subscrição"
 
@@ -5500,7 +5564,7 @@ msgid "Could not delete the event: {reason}"
 msgstr "Não foi possível eliminar o evento: {reason}"
 
 #: app/src/ui/calendar/mod.rs:2058 app/src/ui/composer/mod.rs:1190
-#: app/src/ui/window.rs:2130 app/src/ui/window/scheduled.rs:98
+#: app/src/ui/window.rs:2136 app/src/ui/window/scheduled.rs:98
 #: app/src/ui/window/shortcuts.rs:458
 msgid "Undo"
 msgstr "Anular"
@@ -6918,7 +6982,7 @@ msgstr "Não foi possível eliminar o endereço: {reason}"
 msgid "Allow Hide My Email"
 msgstr "Permitir Ocultar o meu e-mail"
 
-#: app/src/ui/hide_my_email.rs:336 app/src/ui/window.rs:3267
+#: app/src/ui/hide_my_email.rs:336 app/src/ui/window.rs:3273
 msgid "Add an account first"
 msgstr "Adicione primeiro uma conta"
 
@@ -7246,7 +7310,7 @@ msgid "All Files"
 msgstr "Todos os ficheiros"
 
 #: app/src/ui/key_import.rs:213 app/src/ui/key_import.rs:217
-#: app/src/ui/window.rs:3683
+#: app/src/ui/window.rs:3689
 msgid "Close"
 msgstr "Fechar"
 
@@ -8063,7 +8127,7 @@ msgstr "Assinatura…"
 msgid "Rules…"
 msgstr "Regras…"
 
-#: app/src/ui/sidebar.rs:1706 app/src/ui/window.rs:3146
+#: app/src/ui/sidebar.rs:1706 app/src/ui/window.rs:3152
 msgid "Hide My Email…"
 msgstr "Ocultar o meu e-mail…"
 
@@ -8339,70 +8403,74 @@ msgstr "Mostrar o original"
 msgid "Show Translation"
 msgstr "Mostrar a tradução"
 
-#: app/src/ui/unsubscribe.rs:165
+#: app/src/ui/unsubscribe.rs:224
 msgid "Unsubscribe from {sender}?"
 msgstr "Cancelar a subscrição de {sender}?"
 
-#: app/src/ui/unsubscribe.rs:169
+#: app/src/ui/unsubscribe.rs:228
 msgid "Unsubscribe from {count} list?"
 msgid_plural "Unsubscribe from {count} lists?"
 msgstr[0] "Cancelar a subscrição de {count} lista?"
 msgstr[1] "Cancelar a subscrição de {count} listas?"
 
-#: app/src/ui/unsubscribe.rs:184
+#: app/src/ui/unsubscribe.rs:243
 msgid "Loading a page tells the sender you acted, as opening it yourself does."
 msgstr ""
 "Carregar uma página diz ao remetente que agiu, tal como abri-la você mesmo."
 
-#: app/src/ui/unsubscribe.rs:190
+#: app/src/ui/unsubscribe.rs:249
 msgid "Reading the page…"
 msgstr "A ler a página…"
 
-#: app/src/ui/unsubscribe.rs:191
+#: app/src/ui/unsubscribe.rs:250
 msgid "ask the sender to take you off the list"
 msgstr "pedir ao remetente que o retire da lista"
 
-#: app/src/ui/unsubscribe.rs:193
-msgid "send a request from {address}"
-msgstr "enviar um pedido de {address}"
+#: app/src/ui/unsubscribe.rs:252
+msgid "send this request from {address}"
+msgstr "enviar este pedido de {address}"
 
-#: app/src/ui/unsubscribe.rs:205
+#: app/src/ui/unsubscribe.rs:281
+msgid "To: {address}"
+msgstr "Para: {address}"
+
+#: app/src/ui/unsubscribe.rs:292
 msgid "nothing: the page says you are off the list already"
 msgstr "nada: a página diz que já não está na lista"
 
-#: app/src/ui/unsubscribe.rs:206
+#: app/src/ui/unsubscribe.rs:293
 msgid "open the page in the browser"
 msgstr "abrir a página no navegador"
 
-#: app/src/ui/unsubscribe.rs:219
+#: app/src/ui/unsubscribe.rs:306
 msgid "press “{button}” on {site} with {address}, all emails"
 msgstr "carregar em “{button}” em {site} com {address}, todos os emails"
 
-#: app/src/ui/unsubscribe.rs:223
+#: app/src/ui/unsubscribe.rs:310
 msgid "press “{button}” on {site} with {address}"
 msgstr "carregar em “{button}” em {site} com {address}"
 
-#: app/src/ui/unsubscribe.rs:226
+#: app/src/ui/unsubscribe.rs:313
 msgid "press “{button}” on {site}, all emails"
 msgstr "carregar em “{button}” em {site}, todos os emails"
 
-#: app/src/ui/unsubscribe.rs:227
+#: app/src/ui/unsubscribe.rs:314
 msgid "press “{button}” on {site}"
 msgstr "carregar em “{button}” em {site}"
 
-#: app/src/ui/unsubscribe.rs:236
+#: app/src/ui/unsubscribe.rs:323
 msgid "Unsubscribed from {sender}"
 msgstr "Subscrição de {sender} cancelada"
 
-#: app/src/ui/unsubscribe.rs:237
+#: app/src/ui/unsubscribe.rs:324
 msgid "Sent, but the page did not say it worked"
 msgstr "Enviado, mas a página não disse que resultou"
 
-#: app/src/ui/unsubscribe.rs:238
+#: app/src/ui/unsubscribe.rs:325
 msgid "The page needs you to finish it"
 msgstr "A página precisa de si para terminar"
 
-#: app/src/ui/unsubscribe.rs:240
+#: app/src/ui/unsubscribe.rs:327
 msgid "Could not unsubscribe from {sender}: {reason}"
 msgstr "Não foi possível cancelar a subscrição de {sender}: {reason}"
 
@@ -8513,7 +8581,7 @@ msgstr "Não foi possível carregar o correio: {reason}"
 msgid "Added {account}. Downloading mail…"
 msgstr "{account} adicionada. A transferir correio…"
 
-#: app/src/ui/window.rs:350 app/src/ui/window.rs:2728
+#: app/src/ui/window.rs:350 app/src/ui/window.rs:2734
 msgid "{account} is signed in again."
 msgstr "Sessão iniciada novamente em {account}."
 
@@ -8663,15 +8731,15 @@ msgstr "Não foi possível ler as contas: {reason}"
 msgid "Sign in again to keep {account} syncing"
 msgstr "Inicie sessão de novo para {account} continuar a sincronizar"
 
-#: app/src/ui/window.rs:1942
+#: app/src/ui/window.rs:1948
 msgid "Could not delete the mail: {reason}"
 msgstr "Não foi possível eliminar o correio: {reason}"
 
-#: app/src/ui/window.rs:2026
+#: app/src/ui/window.rs:2032
 msgid "Turn On the {service}"
 msgstr "Ligar a {service}"
 
-#: app/src/ui/window.rs:2029
+#: app/src/ui/window.rs:2035
 msgid ""
 "The Google Cloud project Penguin Mail signs in with has the {service} "
 "switched off, so Google refuses before it can ask for your permission. Turn "
@@ -8681,111 +8749,111 @@ msgstr ""
 "{service} desligada, por isso a Google recusa antes de poder pedir a sua "
 "autorização. Ligue-a, espere um minuto e tente de novo."
 
-#: app/src/ui/window.rs:2035
+#: app/src/ui/window.rs:2041
 msgid "Open Google Cloud"
 msgstr "Abrir o Google Cloud"
 
-#: app/src/ui/window.rs:2151
+#: app/src/ui/window.rs:2157
 msgid "Nothing to undo"
 msgstr "Nada para anular"
 
-#: app/src/ui/window.rs:2157
+#: app/src/ui/window.rs:2163
 msgid "{action} undone"
 msgstr "Anulado: {action}"
 
-#: app/src/ui/window.rs:2383
+#: app/src/ui/window.rs:2389
 msgid "Select mail from one account to tag it."
 msgstr "Selecione mensagens de uma só conta para as marcar."
 
-#: app/src/ui/window.rs:2395
+#: app/src/ui/window.rs:2401
 msgid "This account has no tags yet. Make one in Outlook."
 msgstr "Esta conta ainda não tem marcadores. Crie um no Outlook."
 
-#: app/src/ui/window.rs:2534
+#: app/src/ui/window.rs:2540
 msgid "Could not include {file}: {reason}"
 msgstr "Não foi possível incluir {file}: {reason}"
 
-#: app/src/ui/window.rs:2645
+#: app/src/ui/window.rs:2651
 msgid "Downloading {file}…"
 msgstr "A transferir {file}…"
 
-#: app/src/ui/window.rs:2666 app/src/ui/window/attachments.rs:229
+#: app/src/ui/window.rs:2672 app/src/ui/window/attachments.rs:229
 msgid "Saved {file} to Downloads"
 msgstr "{file} guardado nas transferências"
 
-#: app/src/ui/window.rs:2684 app/src/ui/window/attachments.rs:234
+#: app/src/ui/window.rs:2690 app/src/ui/window/attachments.rs:234
 msgid "Could not save {file}: {reason}"
 msgstr "Não foi possível guardar {file}: {reason}"
 
-#: app/src/ui/window.rs:2827
+#: app/src/ui/window.rs:2833
 msgid "Continue in your browser"
 msgstr "Continue no seu navegador"
 
-#: app/src/ui/window.rs:2854
+#: app/src/ui/window.rs:2860
 msgid "This copy of Penguin Mail was built without Google sign-in."
 msgstr "Esta cópia do Penguin Mail foi compilada sem início de sessão Google."
 
-#: app/src/ui/window.rs:2862
+#: app/src/ui/window.rs:2868
 msgid "Get a Release"
 msgstr "Obter uma versão"
 
-#: app/src/ui/window.rs:2934
+#: app/src/ui/window.rs:2940
 msgid "Remove {account}?"
 msgstr "Remover {account}?"
 
-#: app/src/ui/window.rs:2949
+#: app/src/ui/window.rs:2955
 msgid "Removed {account}"
 msgstr "{account} removida"
 
-#: app/src/ui/window.rs:2951
+#: app/src/ui/window.rs:2957
 msgid "Could not remove {account}: {reason}"
 msgstr "Não foi possível remover {account}: {reason}"
 
-#: app/src/ui/window.rs:3127
+#: app/src/ui/window.rs:3133
 msgid "Refresh"
 msgstr "Atualizar"
 
-#: app/src/ui/window.rs:3131
+#: app/src/ui/window.rs:3137
 msgid "Show Declined Events"
 msgstr "Mostrar eventos recusados"
 
-#: app/src/ui/window.rs:3144
+#: app/src/ui/window.rs:3150
 msgid "Add Account…"
 msgstr "Adicionar conta…"
 
-#: app/src/ui/window.rs:3145
+#: app/src/ui/window.rs:3151
 msgid "New Smart Mailbox…"
 msgstr "Nova caixa inteligente…"
 
-#: app/src/ui/window.rs:3152 app/src/ui/window/shortcuts.rs:606
+#: app/src/ui/window.rs:3158 app/src/ui/window/shortcuts.rs:606
 msgid "Preferences"
 msgstr "Preferências"
 
-#: app/src/ui/window.rs:3153
+#: app/src/ui/window.rs:3159
 msgid "Keyboard Shortcuts"
 msgstr "Atalhos de teclado"
 
-#: app/src/ui/window.rs:3161 app/src/ui/window.rs:3163
+#: app/src/ui/window.rs:3167 app/src/ui/window.rs:3169
 msgid "Main Menu"
 msgstr "Menu principal"
 
-#: app/src/ui/window.rs:3542
+#: app/src/ui/window.rs:3548
 msgid "Open a message from the person first"
 msgstr "Abra primeiro uma mensagem dessa pessoa"
 
-#: app/src/ui/window.rs:3623
+#: app/src/ui/window.rs:3629
 msgid "Penguin Mail shows the new language after a restart"
 msgstr "O Penguin Mail mostra o novo idioma depois de reiniciar"
 
-#: app/src/ui/window.rs:3625 app/src/update/mod.rs:130
+#: app/src/ui/window.rs:3631 app/src/update/mod.rs:130
 msgid "Restart"
 msgstr "Reiniciar"
 
-#: app/src/ui/window.rs:3658
+#: app/src/ui/window.rs:3664
 msgid "Messages That Will Not Download"
 msgstr "Mensagens que não se transferem"
 
-#: app/src/ui/window.rs:3660
+#: app/src/ui/window.rs:3666
 msgid ""
 "Penguin Mail could not download these from {address}'s server. It tries "
 "again at each check, except for a message too large to download."
@@ -8885,7 +8953,7 @@ msgstr "Abra primeiro uma conversa"
 #: app/src/ui/window/export.rs:138 app/src/ui/window/organize.rs:89
 #: app/src/ui/window/organize.rs:138 app/src/ui/window/organize.rs:180
 #: app/src/ui/window/organize.rs:213 app/src/ui/window/organize.rs:241
-#: app/src/ui/window/senders.rs:285
+#: app/src/ui/window/senders.rs:288
 msgid "That account is not connected"
 msgstr "Essa conta não está ligada"
 
@@ -9291,7 +9359,7 @@ msgstr ""
 msgid "This message has no unsubscribe link"
 msgstr "Esta mensagem não tem ligação para cancelar a subscrição"
 
-#: app/src/ui/window/senders.rs:141
+#: app/src/ui/window/senders.rs:144
 msgid ""
 "The request to leave {sender} waits in the Outbox. It goes out as soon as it "
 "can."
@@ -9299,23 +9367,23 @@ msgstr ""
 "O pedido para sair de {sender} está à espera na caixa de saída. Sai assim "
 "que for possível."
 
-#: app/src/ui/window/senders.rs:207
+#: app/src/ui/window/senders.rs:210
 msgid "Open Page"
 msgstr "Abrir Página"
 
-#: app/src/ui/window/senders.rs:244
+#: app/src/ui/window/senders.rs:247
 msgid "The app is closing."
 msgstr "A aplicação está a fechar."
 
-#: app/src/ui/window/senders.rs:262
+#: app/src/ui/window/senders.rs:265
 msgid "Open a message from the sender to block"
 msgstr "Abra uma mensagem do remetente a bloquear"
 
-#: app/src/ui/window/senders.rs:268
+#: app/src/ui/window/senders.rs:271
 msgid "Block {sender}?"
 msgstr "Bloquear {sender}?"
 
-#: app/src/ui/window/senders.rs:271
+#: app/src/ui/window/senders.rs:274
 msgid ""
 "New mail from {email} goes straight to the Trash. This conversation moves "
 "there now. Remove the rule under Rules to unblock."
@@ -9323,15 +9391,15 @@ msgstr ""
 "O correio novo de {email} vai direto para o lixo. Esta conversa muda para lá "
 "agora. Remova a regra em Regras para desbloquear."
 
-#: app/src/ui/window/senders.rs:276
+#: app/src/ui/window/senders.rs:279
 msgid "Block"
 msgstr "Bloquear"
 
-#: app/src/ui/window/senders.rs:303
+#: app/src/ui/window/senders.rs:306
 msgid "Blocked {sender}"
 msgstr "{sender} bloqueado"
 
-#: app/src/ui/window/senders.rs:310
+#: app/src/ui/window/senders.rs:313
 msgid "Could not block the sender: {reason}"
 msgstr "Não foi possível bloquear o remetente: {reason}"
 

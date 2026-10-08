@@ -74,9 +74,12 @@ impl MainWindow {
         let address = unsubscribe::sent_to(&sent_to, &mine, &account);
         let (way, page) = match &method {
             Unsubscribe::OneClick(_) => (Way::OneClick, None),
-            Unsubscribe::Email { .. } => (
+            Unsubscribe::Email { to, subject, body } => (
                 Way::Mail {
                     from: address.clone(),
+                    to: to.clone(),
+                    subject: subject.clone(),
+                    body: body.clone(),
                 },
                 None,
             ),

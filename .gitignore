@@ -22,3 +22,4 @@ docs/adr/
 # The owner's build values for the Google and Microsoft clients.
 packaging/secrets.env
 __pycache__/
+CLAUDE.local.md

@@ -197,8 +197,11 @@ impl<A: Accounts> Tools<A> {
             };
             let way = match how {
                 Unsubscribe::OneClick(_) => Way::OneClick,
-                Unsubscribe::Email { .. } => Way::Mail {
+                Unsubscribe::Email { to, subject, body } => Way::Mail {
                     from: address.clone(),
+                    to: to.clone(),
+                    subject: subject.clone(),
+                    body: body.clone(),
                 },
                 Unsubscribe::Page(url) | Unsubscribe::BodyLink(url) => {
                     pages.push((lines.len(), url.clone(), address.clone()));

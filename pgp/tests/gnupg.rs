@@ -82,6 +82,64 @@ fn a_program_that_writes_a_lot_does_not_hold_up_its_input() {
     assert!(run.ok);
 }
 
+/// A message can carry compressed data that a few kilobytes of mail expand
+/// into gigabytes. The runner stops reading at its cap, stops the program,
+/// and says the output was too large, rather than holding all of it.
+#[cfg(target_os = "linux")]
+#[test]
+fn a_program_that_writes_past_the_cap_is_stopped() {
+    let dir = tempfile::tempdir().expect("a temp directory");
+    let pid = dir.path().join("pid");
+    // About 95 MiB, then a long wait: a runner that reads everything
+    // waits out the sleep and answers with all of it.
+    let (_stand_in, program) = stand_in(&format!(
+        "echo $$ > {pid}\nhead -c 100000000 /dev/zero\nsleep 30",
+        pid = pid.display(),
+    ));
+    let started = std::time::Instant::now();
+
+    let err = match program.run(b"", Pinentry::Never, |_| {}) {
+        Ok(run) => panic!("read {} bytes past the cap", run.out.len()),
+        Err(err) => err,
+    };
+
+    assert_eq!(err.kind(), std::io::ErrorKind::FileTooLarge, "{err}");
+    let waited = started.elapsed();
+    assert!(
+        waited < std::time::Duration::from_secs(10),
+        "gave up after {waited:?}"
+    );
+    let pid = std::fs::read_to_string(&pid).expect("the stand-in wrote its pid");
+    assert!(
+        !Path::new(&format!("/proc/{}", pid.trim())).exists(),
+        "the stand-in was left behind"
+    );
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn a_run_with_a_limit_stops_a_program_that_writes_past_the_cap() {
+    let (_dir, program) = stand_in("head -c 100000000 /dev/zero\nsleep 30");
+    let started = std::time::Instant::now();
+
+    let err = match program.run_within(
+        std::time::Duration::from_secs(20),
+        b"",
+        Pinentry::Never,
+        |_| {},
+    ) {
+        Ok(run) => panic!("read {} bytes past the cap", run.out.len()),
+        Err(err) => err,
+    };
+
+    assert_eq!(err.kind(), std::io::ErrorKind::FileTooLarge, "{err}");
+    let waited = started.elapsed();
+    assert!(
+        waited < std::time::Duration::from_secs(10),
+        "gave up after {waited:?}"
+    );
+}
+
 /// Whether the process `pid` still runs. One that has exited and not been
 /// reaped yet is a zombie, which runs nothing, so it counts as gone here;
 /// the tests that care about zombies look for the entry itself.
@@ -266,5 +324,7 @@ fn reading_a_message_never_goes_looking_for_a_key() {
     for run in runs {
         assert!(run.contains("--no-auto-key-retrieve"), "{run}");
         assert!(run.contains("--no-auto-key-import"), "{run}");
+        // gpg's own limit on what it writes, beside the runner's cap.
+        assert!(run.contains("--max-output"), "{run}");
     }
 }

@@ -11,6 +11,43 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   Preferences or with Never Translate on a message's translation card,
   and their messages stop offering a translation.
 
+## 1.0.3 (2026-10-07)
+
+### Fixed
+
+- The assistant asks before it opens a web page, and shows you the whole
+  address, with Claude as well as with a local model.
+- The assistant never opens a page on your computer or your home network,
+  whatever address it is given.
+- The assistant asks before it changes a setting, your signature, or a
+  Hide My Email address.
+- Opening an OpenPGP or S/MIME message that expands to an enormous size
+  shows "This message is too large to open" instead of using up memory.
+- Unsubscribing by email shows the address, the subject and the message
+  before sending, and sends only to that one address, as plain text.
+
+## 1.0.2 (2026-10-07)
+
+### Fixed
+
+- The snap builds again, so the font, icon, tray icon and closing fixes
+  from 1.0.1 reach snap users too.
+
+## 1.0.1 (2026-10-07)
+
+### Fixed
+
+- The snap shows its text in your desktop's normal sans-serif font again,
+  not in a fixed-width fallback, on desktops other than Ubuntu 26.04.
+- Buttons and lists show their icons on desktops whose icon theme the
+  snap or Flatpak cannot see, such as Cinnamon on Linux Mint or Pop!_OS.
+- The tray shows the Penguin Mail icon on Cinnamon and other panels that
+  cannot find the app's icon by name, instead of a blank circle.
+- Closing the window before you add an account quits Penguin Mail, rather
+  than leaving it running in the background with nothing to sync.
+- In the snap, the notice about connecting your keyring goes away once
+  you connect it and open the window again.
+
 ## 1.0.0 (2026-10-06)
 
 ### New

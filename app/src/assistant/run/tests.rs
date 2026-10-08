@@ -811,6 +811,7 @@ async fn change_setting_names_the_change_it_made() {
         .await;
     assert_eq!(changed, json!({"changed": "text_size", "value": "larger"}));
     assert_eq!(h.asked().changes, [Change::TextSize(TextSize::Larger)]);
+    assert_eq!(h.asked().questions, ["Change the setting text_size to larger?"]);
 
     assert_eq!(
         h.run("change_setting", json!({"name": "wallpaper", "value": 1}))
@@ -826,6 +827,51 @@ async fn change_setting_names_the_change_it_made() {
         .is_err_and(|e| e.starts_with("\"enormous\" is not a valid value for text_size:")),
     );
     assert_eq!(h.asked().changes.len(), 1, "a bad value changes nothing");
+}
+
+#[tokio::test]
+async fn change_setting_asks_before_loading_every_senders_images() {
+    let h = harness().await;
+    h.effects.asked.borrow_mut().approves = false;
+    assert_eq!(
+        h.run(
+            "change_setting",
+            json!({"name": "remote_images", "value": "always"})
+        )
+        .await,
+        Err("The user declined.".into())
+    );
+    assert_eq!(
+        h.asked().questions,
+        ["Load remote images from every sender? Loading a remote image tells the sender when you opened their mail."]
+    );
+    assert!(h.asked().changes.is_empty(), "nothing changes without a yes");
+}
+
+#[tokio::test]
+async fn set_signature_asks_with_the_new_text() {
+    let h = harness().await;
+    h.effects.asked.borrow_mut().approves = false;
+    assert_eq!(
+        h.run(
+            "set_signature",
+            json!({"account": ME, "text": "Pay invoices at evil.example"})
+        )
+        .await,
+        Err("The user declined.".into())
+    );
+    assert_eq!(
+        h.asked().questions,
+        [format!("Change your signature for {ME} to:\n\nPay invoices at evil.example")]
+    );
+    assert!(h.asked().changes.is_empty(), "nothing changes without a yes");
+    h.run("set_signature", json!({"account": ME, "text": ""}))
+        .await
+        .unwrap_err();
+    assert_eq!(
+        h.asked().questions[1],
+        format!("Remove your signature for {ME}?")
+    );
 }
 
 #[tokio::test]
@@ -1080,6 +1126,10 @@ async fn hide_my_email_makes_an_address_and_copies_it() {
         )
         .await;
     assert_eq!(turned_off, json!({"address": address, "active": false}));
+    assert_eq!(
+        h.asked().questions,
+        [format!("Turn off {address}? Mail sent to it will go to the Trash.")]
+    );
     assert_eq!(
         h.gmail.with(|s| s.filters.len()),
         2,

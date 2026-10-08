@@ -204,7 +204,7 @@ async fn three_lists_leave_in_one_call_once_the_dialog_says_yes() {
         [[
             "Trail Notes: ask the sender to take you off the list".to_string(),
             "Shop News: press “Unsubscribe” on shop.example with d…@example.com".to_string(),
-            "Old Forum: send a request from d…@example.com".to_string(),
+            "Old Forum: send this request from d…@example.com | To: leave@forum.example | Subject: bye | unsubscribe".to_string(),
         ]],
         "the dialog names the button and the address before anything goes in"
     );
@@ -368,8 +368,27 @@ async fn a_request_goes_from_the_alias_the_list_writes_to() {
     assert_eq!(requests[0].1, ALIAS, "the request goes from the alias");
     assert_eq!(
         h.asked().lists_asked,
-        [["Old Forum: send a request from d…@studio.example".to_string()]]
+        [["Old Forum: send this request from d…@studio.example | To: leave@forum.example | Subject: bye | unsubscribe".to_string()]]
     );
+}
+
+/// The assistant reads the same header the window does, so a request to
+/// more than one address is no way out here either: nothing reaches the
+/// dialog, and nothing is sent.
+#[tokio::test]
+async fn a_mail_request_to_several_addresses_is_no_way_out() {
+    let mut forum = newsletters().remove(2);
+    forum.list_unsubscribe =
+        Some("<mailto:leave@forum.example%2Cboss@corp.example?subject=bye>".into());
+    let h = Harness::with(vec![forum]).await;
+
+    let answer = h
+        .ok("unsubscribe", json!({"conversations": [conversation("tn3")]}))
+        .await;
+
+    assert_eq!(outcomes(&answer)[0].1, "failed");
+    assert!(h.asked().requests.is_empty(), "no request went out");
+    assert!(h.asked().lists_asked.is_empty(), "the dialog never asked");
 }
 
 #[tokio::test]

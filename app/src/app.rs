@@ -55,6 +55,9 @@ pub struct App {
     /// each one's labels. The window's sidebar, list and dialogs all read
     /// this one copy.
     accounts: RefCell<Vec<Account>>,
+    /// Whether `accounts` holds what the store does, rather than the empty
+    /// list the app starts with.
+    accounts_read: Cell<bool>,
     labels: RefCell<HashMap<AccountId, Vec<Label>>>,
     /// Where the person put each account's labels among their siblings.
     label_order: RefCell<HashMap<AccountId, HashMap<String, i64>>>,
@@ -142,6 +145,7 @@ impl App {
             window: RefCell::new(None),
             filter: RefCell::new(None),
             accounts: RefCell::new(Vec::new()),
+            accounts_read: Cell::new(false),
             labels: RefCell::new(HashMap::new()),
             label_order: RefCell::new(HashMap::new()),
             consent: RefCell::new(HashMap::new()),
@@ -350,6 +354,7 @@ impl App {
         self.core.set_window_open(true);
         if let Some(window) = self.window.borrow().as_ref() {
             window.present();
+            window.check_keyring_plug();
             return Rc::clone(window);
         }
         // WebKit starts its graphics stack when first used, which costs
@@ -418,6 +423,8 @@ impl App {
     /// Once no window has been open for a minute, restarts the process in
     /// the background. GTK, the graphics drivers, and WebKit cannot be
     /// unloaded, so this is how a closed window gives its memory back.
+    /// With no accounts there is nothing to keep running for, and the
+    /// process ends instead.
     fn window_closed(self: &Rc<Self>) {
         let open = self.open_windows.get().saturating_sub(1);
         self.open_windows.set(open);
@@ -427,8 +434,21 @@ impl App {
         // macOS brings a closed app back from the Dock, which takes the
         // Cocoa event loop GDK runs; a copy restarted in the background
         // runs none and could never be reopened.
-        if open > 0 || self.core.demo || cfg!(target_os = "macos") {
+        if open > 0 || cfg!(target_os = "macos") {
             return;
+        }
+        let accounts = self
+            .accounts_read
+            .get()
+            .then(|| self.accounts.borrow().len());
+        match after_last_window(self.core.demo, accounts) {
+            AfterLastWindow::Stay => return,
+            AfterLastWindow::Quit => {
+                tracing::info!("the window closed with no accounts; quitting");
+                self.quit();
+                return;
+            }
+            AfterLastWindow::Shed => {}
         }
         let generation = self.shed_generation.get() + 1;
         self.shed_generation.set(generation);
@@ -717,6 +737,7 @@ impl App {
         *self.label_order.borrow_mut() = order;
         let known: Vec<AccountId> = self.accounts.borrow().iter().map(|a| a.id).collect();
         *self.accounts.borrow_mut() = loaded.iter().map(|(a, _)| a.clone()).collect();
+        self.accounts_read.set(true);
         *self.labels.borrow_mut() = loaded.iter().map(|(a, l)| (a.id, l.clone())).collect();
         *self.consent.borrow_mut() = consent;
         // A settings change that touches the accounts reloads them too, and
@@ -1451,6 +1472,7 @@ impl App {
             commands,
             can_update: self.updater.is_some(),
             update: None,
+            pixmaps: crate::tray::pixmaps(),
         };
         let slot = Arc::clone(&self.tray);
         // The restart that returns memory execs in place and keeps the pid,
@@ -1561,5 +1583,52 @@ fn api_off(err: &anyhow::Error) -> Option<(String, String)> {
             } => Some((service.clone(), enable_url.clone())),
             _ => None,
         },
+    }
+}
+
+/// What the app does once its last window has closed.
+#[derive(Debug, PartialEq, Eq)]
+enum AfterLastWindow {
+    /// Nothing to sync and nothing to show in the tray: the process ends.
+    Quit,
+    /// Keep syncing in the background, and restart within a minute to
+    /// give the window's memory back.
+    Shed,
+    /// The demo stays as it is.
+    Stay,
+}
+
+/// `accounts` is how many accounts the store holds, `None` until the app
+/// has read them.
+fn after_last_window(demo: bool, accounts: Option<usize>) -> AfterLastWindow {
+    match (demo, accounts) {
+        (true, _) => AfterLastWindow::Stay,
+        (false, Some(0)) => AfterLastWindow::Quit,
+        (false, _) => AfterLastWindow::Shed,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{AfterLastWindow, after_last_window};
+
+    #[test]
+    fn closing_the_window_with_no_accounts_quits() {
+        assert_eq!(after_last_window(false, Some(0)), AfterLastWindow::Quit);
+    }
+
+    #[test]
+    fn closing_the_window_with_accounts_keeps_syncing() {
+        assert_eq!(after_last_window(false, Some(2)), AfterLastWindow::Shed);
+    }
+
+    #[test]
+    fn a_window_closed_before_the_accounts_are_read_does_not_quit() {
+        assert_eq!(after_last_window(false, None), AfterLastWindow::Shed);
+    }
+
+    #[test]
+    fn the_demo_stays_open_in_the_background() {
+        assert_eq!(after_last_window(true, Some(0)), AfterLastWindow::Stay);
     }
 }

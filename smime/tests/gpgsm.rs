@@ -690,6 +690,49 @@ fn reading_a_message_never_asks_the_person_anything() {
     );
 }
 
+/// gpgsm runs through the same runner as gpg, and its output stops at the
+/// same cap. A stand-in that writes about 95 MiB plays a message that opens
+/// to more than any real one.
+#[cfg(unix)]
+#[test]
+fn output_past_the_cap_is_too_large_to_open() {
+    let dir = tempfile::tempdir().expect("a temp directory");
+    let script = dir.path().join("gpgsm");
+    // A child `sh` writes the script, so no handle this process holds open
+    // for writing reaches a test forking at the same moment ("Text file
+    // busy").
+    let wrote = Command::new("sh")
+        .args([
+            "-c",
+            "printf '#!/bin/sh\\nhead -c 100000000 /dev/zero\\nsleep 30\\n' > \"$1\" && chmod 700 \"$1\"",
+            "sh",
+        ])
+        .arg(&script)
+        .status()
+        .expect("sh runs");
+    assert!(wrote.success(), "sh wrote the stand-in");
+    let smime = Smime::find_on(&dir.path().to_string_lossy()).expect("the stand-in");
+    let started = std::time::Instant::now();
+
+    let opened = smime.decrypt(b"enveloped").map(|out| out.len());
+    let checked = smime.verify(b"part", b"signature").map(|_| 0);
+
+    for answer in [opened, checked] {
+        match answer {
+            Ok(bytes) => panic!("read {bytes} bytes past the cap"),
+            Err(err) => assert!(
+                matches!(err, mailrs_smime::SmimeError::TooLarge),
+                "expected TooLarge, got {err}"
+            ),
+        }
+    }
+    let waited = started.elapsed();
+    assert!(
+        waited < std::time::Duration::from_secs(20),
+        "took {waited:?}"
+    );
+}
+
 #[cfg(unix)]
 fn permit_run(path: &Path) {
     use std::os::unix::fs::PermissionsExt;

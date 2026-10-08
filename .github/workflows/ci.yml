@@ -58,6 +58,10 @@ jobs:
           scripts/metainfo.sh --check
       - name: Every package build gets the Microsoft client id
         run: scripts/check-secrets.sh
+      # The snap builds only when a release is tagged, and 1.0.1's failed
+      # there because an edit dropped this file's executable bit.
+      - name: The snap's launcher is executable
+        run: test -x snap/local/launcher
       - name: Every control has an accessible name
         run: scripts/a11y-names.sh
 

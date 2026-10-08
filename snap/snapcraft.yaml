@@ -75,6 +75,13 @@ parts:
     source: snap/local
     organize:
       launcher: bin/launcher
+      fonts.conf: etc/fonts/penguin-mail.conf
+    # The launcher runs before the app, so it must be executable whatever
+    # mode git kept: 1.0.1's snap failed to build after an edit dropped the
+    # file's executable bit.
+    override-prime: |
+      craftctl default
+      chmod 755 bin/launcher
 
   penguin-mail:
     plugin: nil

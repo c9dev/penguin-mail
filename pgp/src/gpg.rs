@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use crate::error::PgpError;
-use crate::gnupg::{Pinentry, Program, Run, named};
+use crate::gnupg::{MOST_OUTPUT, Pinentry, Program, Run, named};
 
 /// The person's own GnuPG: their keys, their agent, their pinentry, their
 /// trust database. Penguin Mail never holds a key or a passphrase itself.
@@ -55,11 +55,23 @@ impl Pgp {
     ) -> Result<Run, PgpError> {
         self.program
             .run(input, pinentry, args)
-            .map_err(|err| PgpError::CannotRun {
-                program: self.program.path().display().to_string(),
-                reason: err.to_string(),
+            .map_err(|err| match err.kind() {
+                std::io::ErrorKind::FileTooLarge => PgpError::TooLarge,
+                _ => PgpError::CannotRun {
+                    program: self.program.path().display().to_string(),
+                    reason: err.to_string(),
+                },
             })
     }
+}
+
+/// The `--max-output` every read passes: a little over the runner's own cap,
+/// so the runner sees the output pass [`MOST_OUTPUT`] and names the reason,
+/// while gpg still stops decompressing by itself if nothing reads its
+/// output any more. gpg checks the limit before each block it writes, so it
+/// stops short of the number it is given.
+fn most_written() -> String {
+    (MOST_OUTPUT + (1 << 20)).to_string()
 }
 
 /// What every run that reads a message adds. The person's gpg.conf may
@@ -68,8 +80,11 @@ impl Pgp {
 /// receipt, sent the moment the message opens. `auto-key-import` would put
 /// a key that travelled inside the signature into the keyring, where the
 /// composer would offer it for encryption. Opening a message does neither.
+/// A compressed packet can open to any size the sender likes, so gpg also
+/// gets a limit on what it writes.
 pub(crate) fn reading(command: &mut Command) {
     command.args(["--no-auto-key-retrieve", "--no-auto-key-import"]);
+    command.arg("--max-output").arg(most_written());
 }
 
 /// What to report when gpg would not do what it was asked. The status
