@@ -213,7 +213,11 @@ mod model {
             let new = self.imp().items.borrow().len() as u32;
             self.imp().sections.replace(sections);
             self.items_changed(0, old, new);
-            self.sections_changed(0, new);
+            // GTK 4.24 refuses a section change over no rows, and an empty
+            // agenda has no sections to redraw.
+            if new > 0 {
+                self.sections_changed(0, new);
+            }
         }
 
         /// Adds `items` (already sorted) after the last row and
