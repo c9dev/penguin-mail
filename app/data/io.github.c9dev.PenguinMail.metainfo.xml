@@ -109,6 +109,15 @@
 
   <!-- scripts/metainfo.sh writes this list from CHANGELOG.md. -->
   <releases>
+    <release version="1.0.4" date="2026-10-08">
+      <url type="details">https://github.com/c9dev/penguin-mail/releases/tag/v1.0.4</url>
+      <description translate="no">
+        <p>Improved</p>
+        <ul>
+          <li>Penguin Mail now builds as a Flatpak on GNOME 51, ready for Flathub, and signs in to Google and Microsoft accounts inside it.</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.0.3" date="2026-10-07">
       <url type="details">https://github.com/c9dev/penguin-mail/releases/tag/v1.0.3</url>
       <description translate="no">
