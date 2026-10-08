@@ -5,6 +5,10 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ## Unreleased
 
+### Improved
+
+- New-mail notifications offer Mark as Read, Delete and Reply out of the box, since GNOME shows only three buttons; Archive is still one switch away in Preferences.
+
 ## 1.0.4 (2026-10-08)
 
 ### Improved
