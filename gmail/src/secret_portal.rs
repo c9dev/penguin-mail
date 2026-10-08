@@ -12,6 +12,7 @@
 
 use std::collections::HashMap;
 use std::future::Future;
+use std::sync::OnceLock;
 
 use oo7::{Keyring, Secret};
 
@@ -32,10 +33,11 @@ fn as_text(secret: &Secret) -> Result<String, String> {
 
 /// Reads a secret through the portal, or `None` when there is none.
 pub fn load(service: &str, user: &str) -> Result<Option<String>, String> {
-    run(async {
+    let (service, user) = (service.to_string(), user.to_string());
+    run(async move {
         let keyring = Keyring::new().await.map_err(|err| err.to_string())?;
         let items = keyring
-            .search_items(&attributes(service, user))
+            .search_items(&attributes(&service, &user))
             .await
             .map_err(|err| err.to_string())?;
         let Some(item) = items.first() else {
@@ -49,10 +51,12 @@ pub fn load(service: &str, user: &str) -> Result<Option<String>, String> {
 /// Writes a secret through the portal, replacing one already there under
 /// the same service and user.
 pub fn save(service: &str, user: &str, secret: &str) -> Result<(), String> {
-    run(async {
+    let (service, user) = (service.to_string(), user.to_string());
+    let secret = Secret::text(secret);
+    run(async move {
         let keyring = Keyring::new().await.map_err(|err| err.to_string())?;
         keyring
-            .create_item(user, &attributes(service, user), secret, true)
+            .create_item(&user, &attributes(&service, &user), secret, true)
             .await
             .map_err(|err| err.to_string())
     })
@@ -61,25 +65,44 @@ pub fn save(service: &str, user: &str, secret: &str) -> Result<(), String> {
 /// Removes a secret through the portal. Succeeds when there is nothing to
 /// remove.
 pub fn delete(service: &str, user: &str) -> Result<(), String> {
-    run(async {
+    let (service, user) = (service.to_string(), user.to_string());
+    run(async move {
         let keyring = Keyring::new().await.map_err(|err| err.to_string())?;
         keyring
-            .delete(&attributes(service, user))
+            .delete(&attributes(&service, &user))
             .await
             .map_err(|err| err.to_string())
     })
 }
 
-/// Runs a portal call to completion on a runtime of its own. Callers
-/// already run off the GTK thread, the way they do for the desktop
-/// keyring, so blocking here costs nothing a caller has not already
-/// budgeted for.
-fn run<F: Future>(fut: F) -> F::Output {
-    tokio::runtime::Builder::new_current_thread()
-        .enable_all()
-        .build()
-        .expect("a one-shot runtime for the secret portal")
-        .block_on(fut)
+/// Runs a portal call to completion on the one runtime every portal call
+/// shares. Callers already run off the GTK thread, the way they do for the
+/// desktop keyring, so blocking here costs nothing a caller has not
+/// already budgeted for.
+///
+/// The runtime must outlive every call. ashpd opens one session bus
+/// connection per process and keeps it, and zbus reads that connection on
+/// a task of the runtime that opened it. A runtime per call ended that
+/// task with the first call, so every later call sent its request and
+/// waited for an answer nothing read: signing in hung after the browser
+/// said it was done, with no error.
+fn run<T: Send + 'static>(fut: impl Future<Output = T> + Send + 'static) -> T {
+    static RUNTIME: OnceLock<tokio::runtime::Runtime> = OnceLock::new();
+    let runtime = RUNTIME.get_or_init(|| {
+        tokio::runtime::Builder::new_multi_thread()
+            .worker_threads(1)
+            .thread_name("secret-portal")
+            .enable_all()
+            .build()
+            .expect("a runtime for the secret portal")
+    });
+    // Spawned rather than block_on, so a caller on any thread, inside a
+    // runtime or not, waits the same way.
+    let (tx, rx) = std::sync::mpsc::channel();
+    runtime.spawn(async move {
+        let _ = tx.send(fut.await);
+    });
+    rx.recv().expect("the secret portal's runtime dropped a call")
 }
 
 #[cfg(test)]
@@ -88,6 +111,27 @@ mod tests {
 
     use super::*;
 
+    /// zbus reads ashpd's one connection on a task of the runtime that
+    /// opened it. A task one call starts must still run at the next call,
+    /// or every call after the first waits for an answer nobody reads.
+    #[test]
+    // The block hands back the task's handle on purpose, to look at it
+    // from the next call rather than wait for it.
+    #[allow(clippy::async_yields_async)]
+    fn a_task_one_call_starts_outlives_it() {
+        let reader = run(async {
+            tokio::spawn(async {
+                loop {
+                    tokio::time::sleep(std::time::Duration::from_secs(60)).await;
+                }
+            })
+        });
+        let alive = run(async move {
+            tokio::task::yield_now().await;
+            !reader.is_finished()
+        });
+        assert!(alive);
+    }
     async fn empty_keyring() -> UnlockedKeyring {
         UnlockedKeyring::temporary(Secret::random().expect("random bytes for a test secret"))
             .await
