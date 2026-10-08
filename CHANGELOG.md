@@ -5,6 +5,10 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ## Unreleased
 
+### Improved
+
+- Penguin Mail now builds as a Flatpak on GNOME 51, ready for Flathub, and signs in to Google and Microsoft accounts inside it.
+
 ## 1.0.3 (2026-10-07)
 
 ### Fixed
