@@ -17,6 +17,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Fixed
 
+- Earlier messages in IMAP conversations expand when clicked.
+- IMAP search results open their conversation instead of showing zero messages.
 - macOS shows Penguin Mail's own menu, with Settings available through Command-comma.
 - On macOS, Tab leaves a message, clearing Find cannot hang the page, and hidden unsubscribe pages block pictures.
 

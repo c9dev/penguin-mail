@@ -15,6 +15,70 @@ fn ids(refs: &[crate::RemoteRef]) -> Vec<&str> {
 }
 
 #[tokio::test]
+async fn search_hits_open_under_their_local_threads() {
+    use mailrs_store::messages;
+
+    for cached_parent in [true, false] {
+        let h = imap_harness().await;
+        let parent_id = if cached_parent {
+            "INBOX/1001/1"
+        } else {
+            "Sent/1002/1"
+        };
+        h.imap.deliver_flagged(
+            if cached_parent { "INBOX" } else { "Sent" },
+            &message("parent", "Kites", ""),
+            &["\\Seen"],
+            days_ago(if cached_parent { 1 } else { 400 }),
+        );
+        h.imap.deliver_flagged(
+            "Archive",
+            &message(
+                "reply", "Re: Kites", "References: <parent@example.com>\r\n",
+            ),
+            &["\\Seen"],
+            days_ago(400),
+        );
+        h.imap.deliver_flagged(
+            "Archive",
+            &message("alone", "Kites receipt", ""),
+            &["\\Seen"],
+            days_ago(400),
+        );
+        h.bootstrap().await;
+        assert_eq!(h.ids().await.len(), usize::from(cached_parent));
+
+        let searched = h.sync
+            .search_listing(&SearchQuery::Native("subject:kites".into()), 10)
+            .await
+            .unwrap();
+        let hits = h.sync.metadata_of(&searched.refs).await.unwrap();
+        let parent = hits.iter().find(|m| m.id == parent_id).unwrap();
+        let reply = hits.iter().find(|m| m.id == "Archive/1006/1").unwrap();
+        assert_eq!(parent.thread_id, reply.thread_id);
+
+        for grouped in [true, false] {
+            let rows = crate::mailbox::summarize_search(hits.clone(), grouped);
+            assert_eq!(rows.len(), if grouped { 2 } else { 3 });
+            for row in rows {
+                h.sync.open_thread(&row.id).await.unwrap();
+                let account_id = h.account_id;
+                let stored = h.db
+                    .read(move |c| messages::thread_messages(c, account_id, &row.id))
+                    .await
+                    .unwrap();
+                if row.subject == "Kites receipt" {
+                    assert_eq!(stored.len(), 1);
+                } else {
+                    assert_eq!(stored.len(), 2);
+                    assert!(stored.iter().any(|m| m.id == "Archive/1006/1"));
+                }
+            }
+        }
+    }
+}
+
+#[tokio::test]
 async fn a_search_past_the_window_asks_the_server() {
     let h = imap_harness().await;
     h.imap.deliver_flagged(

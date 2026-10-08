@@ -265,6 +265,8 @@ impl AccountSync {
     /// Two or more hits in one thread the store lacks come from one
     /// `threads.get`, which is kept for opening; each other hit costs a
     /// `messages.get`. Messages Gmail no longer has are left out.
+    /// Locally threaded hits are stored first so their rows name the
+    /// thread they will still belong to when opened.
     pub async fn metadata_of(&self, refs: &[RemoteRef]) -> Result<Vec<MessageMeta>, SyncError> {
         let account_id = self.account_id;
         let wanted: Vec<String> = refs.iter().map(|r| r.id.clone()).collect();
@@ -280,6 +282,18 @@ impl AccountSync {
             .map(Want::from)
             .collect();
         let fetched = self.fetch(wants).await?;
+        if self.local_threads() {
+            if !fetched.metas.is_empty() {
+                let (stored, touched) = self
+                    .db
+                    .write(move |c| fetched.store_missing(c, account_id))
+                    .await?;
+                metas.extend(stored);
+                self.emit_threads(touched);
+            }
+            metas.sort_by(|a, b| b.date.cmp(&a.date).then_with(|| a.id.cmp(&b.id)));
+            return Ok(metas);
+        }
         let mut kept = self.listed.lock().expect("listed threads poisoned");
         kept.retain(|_, listed| listed.at.elapsed() < KEPT_FOR);
         for whole in fetched.whole {

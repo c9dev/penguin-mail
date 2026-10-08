@@ -49,6 +49,25 @@ impl Fetched {
             placing: Placing::new(local, found.links, found.located),
         }
     }
+
+    /// Gives search hits stable local threads before a listing names them.
+    /// A copy that arrived while the fetch ran keeps its metadata and ref.
+    pub(super) fn store_missing(
+        mut self,
+        c: &Connection,
+        account_id: AccountId,
+    ) -> mailrs_store::Result<(Vec<MessageMeta>, BTreeSet<String>)> {
+        let ids: Vec<String> = self.metas.iter().map(|m| m.id.clone()).collect();
+        let held: BTreeSet<String> = messages::by_ids(c, account_id, &ids)?
+            .into_iter()
+            .map(|m| m.id)
+            .collect();
+        self.metas.retain(|m| !held.contains(&m.id));
+        self.placing.located.retain(|id, _| !held.contains(id));
+        let generation = accounts::sync_cursor(c, account_id)?.sync_gen;
+        let touched = store_fetched(c, account_id, generation, &self.metas, &[], &self.placing)?;
+        Ok((messages::by_ids(c, account_id, &ids)?, touched))
+    }
 }
 
 /// How fetched messages go into the store: under the thread the server
@@ -204,8 +223,41 @@ mod tests {
     use mailrs_store::messages::Change;
     use mailrs_store::threading::Links;
 
-    use super::Placing;
+    use super::{Fetched, Placing};
     use crate::fake::meta;
+
+    #[test]
+    fn a_search_fetch_keeps_a_copy_and_ref_written_while_it_was_running() {
+        use mailrs_domain::Location;
+        use mailrs_store::{accounts, messages, remote_refs};
+
+        let c = mailrs_store::open_in_memory().unwrap();
+        let account_id = accounts::insert_account(&c, "me@example.com", 0).unwrap();
+        let id = "INBOX/1001/1";
+        let mut current = meta(id, id, 0, &[]);
+        current.subject = "Newer copy".into();
+        let changes = [Placing::default().upsert(account_id, &current, 0)];
+        messages::apply(&c, account_id, &changes).unwrap();
+        let moved = Location::parse("Archive/1006/5").unwrap();
+        remote_refs::locate(&c, account_id, id, &moved).unwrap();
+
+        let fetched = Fetched {
+            metas: vec![meta(id, id, 0, &[])],
+            placing: Placing::new(
+                true,
+                HashMap::new(),
+                HashMap::from([(id.into(), Location::parse(id).unwrap())]),
+            ),
+            ..Fetched::default()
+        };
+        let (hits, touched) = fetched.store_missing(&c, account_id).unwrap();
+        assert!(touched.is_empty());
+        assert_eq!(hits[0].subject, "Newer copy");
+        assert_eq!(
+            remote_refs::remotes_of(&c, account_id, &[id.into()]).unwrap()[id],
+            moved.to_string()
+        );
+    }
 
     fn links() -> HashMap<String, Links> {
         HashMap::from([(
