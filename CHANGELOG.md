@@ -11,6 +11,20 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
   Preferences or with Never Translate on a message's translation card,
   and their messages stop offering a translation.
 
+### Improved
+
+- Mailbox names and messages in the list use larger text on macOS.
+
+### Fixed
+
+- macOS shows Penguin Mail's own menu, with Settings available through Command-comma.
+
+## 1.0.4 (2026-10-08)
+
+### Improved
+
+- Penguin Mail now builds as a Flatpak on GNOME 51, ready for Flathub, and signs in to Google and Microsoft accounts inside it.
+
 ## 1.0.3 (2026-10-07)
 
 ### Fixed

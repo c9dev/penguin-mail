@@ -66,6 +66,8 @@ EXEC=$exec awk '
 chmod 644 "$apps/$id.desktop"
 
 rm -f "$prefix/bin/mailrs" "$prefix/bin/mailrs-cli"
+# 1.0.3 and earlier installed the 16 px icon as an SVG; it is a PNG now.
+rm -f "$icons/16x16/apps/$id.svg"
 for old_id in "${old_ids[@]}"; do
     rm -f "$apps/$old_id.desktop" \
         "$icons/scalable/apps/$old_id.svg" \

@@ -9,6 +9,7 @@ for id in io.github.c9dev.PenguinMail dev.penguinmail.PenguinMail dev.mailrs.Mai
         "$prefix/share/icons/hicolor/scalable/apps/$id.svg" \
         "$prefix/share/icons/hicolor/symbolic/apps/$id-symbolic.svg" \
         "$prefix/share/icons/hicolor/16x16/apps/$id.svg" \
+        "$prefix/share/icons/hicolor/16x16/apps/$id.png" \
         "$HOME/.config/autostart/$id.desktop"
 done
 rm -f "$prefix/bin/penguin-mail" "$prefix/bin/penguin-mail-cli" \

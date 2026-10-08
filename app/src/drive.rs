@@ -21,6 +21,7 @@
 //! key f cmd             a key by name, with cmd, ctrl, alt or shift
 //! type Lisbon           text, one key each
 //! shot open-thread      saves open-thread.png
+//! check-menu            checks the native Settings menu and opens its dialog
 //! log anything          says it on stderr
 //! quit
 //! ```
@@ -31,7 +32,8 @@
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
-use gtk::glib;
+use adw::prelude::*;
+use gtk::{gio, glib};
 use objc2::MainThreadMarker;
 use objc2::rc::Retained;
 use objc2_app_kit::{NSApplication, NSEvent, NSEventModifierFlags, NSEventType, NSWindow};
@@ -49,6 +51,7 @@ enum Step {
     Key { name: String, modifiers: Vec<String> },
     Type(String),
     Shot(String),
+    CheckMenu,
     Log(String),
     Quit,
 }
@@ -98,6 +101,7 @@ fn parse(script: &str) -> Result<Vec<Step>, String> {
             }
             "type" => Step::Type(rest.to_string()),
             "shot" => Step::Shot(rest.to_string()),
+            "check-menu" => Step::CheckMenu,
             "log" => Step::Log(rest.to_string()),
             "quit" => Step::Quit,
             _ => return Err(format!("line {}: no step called {word}", number + 1)),
@@ -267,6 +271,26 @@ impl Driver {
                 self.shot(&name);
             }
             Step::Log(words) => eprintln!("drive: {words}"),
+            Step::CheckMenu => {
+                let native = NSApplication::sharedApplication(MainThreadMarker::new().unwrap());
+                let menu = native.mainMenu().expect("the application owns a native menu");
+                let app_menu = menu.itemArray().firstObject().unwrap().submenu().unwrap();
+                let settings = app_menu.itemArray().iter()
+                    .find(|item| item.keyEquivalent().to_string() == ",")
+                    .expect("Settings has the Command-comma shortcut");
+                assert!(settings.keyEquivalentModifierMask().contains(NSEventModifierFlags::Command));
+                let app = gio::Application::default().unwrap().downcast::<gtk::Application>().unwrap();
+                let window = app.active_window().expect("GTK tracks the active window")
+                    .downcast::<adw::Window>().unwrap();
+                assert!(app.is_action_enabled("preferences"));
+                assert!(window.visible_dialog().is_none());
+                app_menu.performActionForItemAtIndex(app_menu.indexOfItem(&settings));
+                glib::timeout_future(Duration::from_millis(400)).await;
+                let dialog = window.visible_dialog().expect("the native menu opens Settings");
+                assert!(dialog.is::<adw::PreferencesDialog>());
+                dialog.close();
+                eprintln!("drive: native Settings menu and Command-comma passed");
+            }
             Step::Quit => {
                 eprintln!("drive: done");
                 std::process::exit(0);
@@ -390,7 +414,7 @@ mod tests {
     fn a_script_reads_as_its_steps() {
         let steps = parse(
             "# open the first thread\nwait 500\nclick 528 350\nrclick 10 20\n\
-             scroll 700 400 -300\nkey f cmd shift\ntype Lisbon\nshot open\nquit\n",
+             scroll 700 400 -300\nkey f cmd shift\ntype Lisbon\nshot open\ncheck-menu\nquit\n",
         )
         .unwrap();
         assert_eq!(
@@ -403,6 +427,7 @@ mod tests {
                 Step::Key { name: "f".into(), modifiers: vec!["cmd".into(), "shift".into()] },
                 Step::Type("Lisbon".into()),
                 Step::Shot("open".into()),
+                Step::CheckMenu,
                 Step::Quit,
             ]
         );

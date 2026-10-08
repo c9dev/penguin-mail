@@ -1131,6 +1131,15 @@ impl App {
         );
         add("compose", Box::new(|app| app.compose_to("")));
         add("check", Box::new(|app| app.core.poke_all()));
+        // GTK's native macOS menu names these application actions, even
+        // when the main window is closed or a composer has the focus.
+        #[cfg(target_os = "macos")]
+        for name in ["preferences", "about"] {
+            add(name, Box::new(move |app| {
+                let window = app.show_window();
+                let _ = window.window.activate_action(&format!("win.{name}"), None);
+            }));
+        }
         let compose_to = gio::SimpleAction::new("compose-to", Some(glib::VariantTy::STRING));
         let weak = Rc::downgrade(self);
         compose_to.connect_activate(move |_, parameter| {

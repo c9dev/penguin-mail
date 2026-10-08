@@ -13,10 +13,12 @@ use mailrs_domain::translate::gettext;
 
 use crate::packaging::{BUILT_FOR, Packaging};
 
-const FILE: &str = "io.github.c9dev.PenguinMail.desktop";
-
 pub fn path() -> Option<PathBuf> {
-    Some(dirs_config()?.join("autostart").join(FILE))
+    Some(
+        dirs_config()?
+            .join("autostart")
+            .join(format!("{}.desktop", crate::APP_ID)),
+    )
 }
 
 fn dirs_config() -> Option<PathBuf> {
@@ -91,8 +93,9 @@ pub fn set_enabled(path: &Path, exe: &Path, enabled: bool) -> std::io::Result<()
         path,
         format!(
             "[Desktop Entry]\nType=Application\nName=Penguin Mail\nComment=Keeps Gmail in sync from the system tray\n\
-             Exec={} --background\nIcon=io.github.c9dev.PenguinMail\nNoDisplay=true\nX-GNOME-Autostart-enabled=true\n",
-            exec_argument(exe)
+             Exec={} --background\nIcon={}\nNoDisplay=true\nX-GNOME-Autostart-enabled=true\n",
+            exec_argument(exe),
+            crate::APP_ID
         ),
     )
 }

@@ -1657,7 +1657,8 @@ impl Editor {
             .map(|u| (u.id, attachments::title(&u.file), u.bar.clone()))
             .collect();
         for (id, title, bar) in uploading {
-            let row = ui::plain_row().title(title.clone()).title_lines(1).build();
+            let row = ui::plain_row().title_lines(1).build();
+            row.set_title(&title);
             let icon = gtk::Image::from_icon_name("mail-attachment-symbolic");
             icon.add_css_class("dim-label");
             row.add_prefix(&icon);

@@ -67,7 +67,25 @@ use mailrs_domain::translate::{fill, gettext};
 
 use settings::Settings;
 
-pub const APP_ID: &str = "io.github.c9dev.PenguinMail";
+/// The ID this copy registers on the bus and names its desktop file and
+/// icon by. Flathub asks for one ending in the repository's name, and
+/// a Flatpak may own only names under its own ID, so the Flatpak is
+/// `io.github.c9dev.penguin-mail` while every other package keeps the ID
+/// people's launchers, login items and mail handlers already name.
+/// `scripts/stage.sh` installs the files under the same ID.
+pub const APP_ID: &str = if cfg!(feature = "packaging-flatpak") {
+    "io.github.c9dev.penguin-mail"
+} else {
+    "io.github.c9dev.PenguinMail"
+};
+
+/// The demo's own ID, so `--demo` runs beside a real copy. It sits under
+/// `APP_ID`, as a Flatpak requires of every name it owns.
+const DEMO_ID: &str = if cfg!(feature = "packaging-flatpak") {
+    "io.github.c9dev.penguin-mail.Demo"
+} else {
+    "io.github.c9dev.PenguinMail.Demo"
+};
 
 fn usage() -> String {
     gettext(
@@ -168,19 +186,21 @@ fn main() -> glib::ExitCode {
 
     // Wayland and X11 name the window after the program; matching the
     // desktop entry lets the dock show the right icon.
-    glib::set_prgname(Some(if demo {
-        "io.github.c9dev.PenguinMail.Demo"
-    } else {
+    glib::set_prgname(Some(if demo { DEMO_ID } else {
         APP_ID
     }));
-    // A plain GApplication: GTK starts only when a window is first needed,
-    // so a process running in the tray never loads the graphics stack.
+    #[cfg(target_os = "macos")]
+    glib::set_application_name(&gettext("Penguin Mail"));
+    // Linux starts GTK only when a window is needed. macOS needs
+    // GtkApplication to own the native menu and route its actions.
+    #[cfg(target_os = "macos")]
+    let gio_app: gio::Application = gtk::Application::builder()
+        .application_id(if demo { DEMO_ID } else { APP_ID })
+        .build()
+        .upcast();
+    #[cfg(not(target_os = "macos"))]
     let gio_app = gio::Application::builder()
-        .application_id(if demo {
-            "io.github.c9dev.PenguinMail.Demo"
-        } else {
-            APP_ID
-        })
+        .application_id(if demo { DEMO_ID } else { APP_ID })
         .build();
     // A second launch with --compose or a calendar file hands the request
     // to the running copy; the check waits until the handlers below are
@@ -280,7 +300,12 @@ fn mailto_recipient(rest: &str) -> String {
 /// Starts GTK and libadwaita and loads the app's icons and stylesheet.
 /// Safe to call more than once.
 pub fn ensure_gtk() {
-    if gtk::is_initialized_main_thread() {
+    // GtkApplication may have started GTK before our resources were
+    // registered, so GTK being initialized does not mean our style is.
+    thread_local! {
+        static STYLED: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+    }
+    if STYLED.replace(true) {
         return;
     }
     gtk::init().expect("GTK starts on this display");
@@ -301,6 +326,16 @@ pub fn ensure_gtk() {
             &css,
             gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
         );
+        #[cfg(target_os = "macos")]
+        {
+            let css = gtk::CssProvider::new();
+            css.load_from_string(include_str!("../data/macos.css"));
+            gtk::style_context_add_provider_for_display(
+                &display,
+                &css,
+                gtk::STYLE_PROVIDER_PRIORITY_APPLICATION + 1,
+            );
+        }
     }
     gtk::Window::set_default_icon_name(APP_ID);
 }

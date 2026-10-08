@@ -470,7 +470,8 @@ impl CalendarView {
     /// One region's row: its name, and Add, or "Added" once the account
     /// has the region's calendar.
     fn holiday_row(self: &Rc<Self>, account: AccountId, region: Region) -> adw::ActionRow {
-        let row = crate::ui::plain_row().title(&region.name).build();
+        let row = crate::ui::plain_row().build();
+        row.set_title(&region.name);
         let added = || gtk::Label::builder().label(gettext("Added")).css_classes(["dim-label"]).build();
         if self.calendar_of(account, &region.calendar_id()).is_some() {
             row.add_suffix(&added());

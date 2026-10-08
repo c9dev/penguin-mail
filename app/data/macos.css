@@ -1,0 +1,8 @@
+/* Loaded only on macOS. Keep the desktop font and enlarge the two lists
+   to the reading size of native mail clients, without changing Linux. */
+.mailboxes,
+.thread-list { font-size: 1.2em; }
+
+.mailbox-row > label { font-size: 1em; }
+.thread-row .from { font-size: 1.08em; }
+.thread-row .date { font-size: 0.95em; }

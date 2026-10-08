@@ -39,14 +39,20 @@ this repository:
 
 ```sh
 flatpak-builder --user --install --force-clean build-dir \
-  packaging/flatpak/io.github.c9dev.PenguinMail.yml
+  packaging/flatpak/io.github.c9dev.penguin-mail.yml
 ```
 
 The manifest here carries no Google client, so this Flatpak cannot sign in
-to Gmail; `flatpak run io.github.c9dev.PenguinMail --demo` shows the app on
+to Gmail; `flatpak run io.github.c9dev.penguin-mail --demo` shows the app on
 sample data. It reads and writes `~/.gnupg` and reaches your gpg-agent, so
 signing and encryption use your own keys, and it keeps its mail and
-settings under `~/.var/app/io.github.c9dev.PenguinMail`.
+settings under `~/.var/app/io.github.c9dev.penguin-mail`.
+
+The Flatpak's ID differs from every other package's
+(`io.github.c9dev.PenguinMail`): Flathub takes an `io.github` ID from the
+repository's name. The `packaging-flatpak` feature sets
+`APP_ID` to it, and `scripts/stage.sh /app io.github.c9dev.penguin-mail`
+installs the desktop file, icons and metainfo under it.
 
 ## How it is built
 
@@ -150,7 +156,7 @@ and dnf repositories on GitHub Pages from the five newest releases with
 tab to publish again without a release.
 
 Flathub, once Penguin Mail is there, builds from its own repository,
-flathub/io.github.c9dev.PenguinMail. `scripts/flatpak-sources.sh --flathub
+flathub/io.github.c9dev.penguin-mail. `scripts/flatpak-sources.sh --flathub
 vX.Y.Z <dir>` writes the manifest, `cargo-sources.json` and `flathub.json`
 for a pull request there, with the Google client from
 `packaging/secrets.env`.

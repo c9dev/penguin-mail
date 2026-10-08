@@ -9,7 +9,7 @@ if grep -n 'secrets.PENGUIN_MAIL_MICROSOFT_CLIENT_ID' .github/workflows/*.yml; t
     echo "The Microsoft client id's secret is MICROSOFT_CLIENT_ID." >&2
     status=1
 fi
-for file in snap/snapcraft.yaml packaging/flatpak/io.github.c9dev.PenguinMail.yml; do
+for file in snap/snapcraft.yaml packaging/flatpak/io.github.c9dev.penguin-mail.yml; do
     if ! grep -q 'PENGUIN_MAIL_MICROSOFT_CLIENT_ID: ""' "$file"; then
         echo "$file does not pass PENGUIN_MAIL_MICROSOFT_CLIENT_ID." >&2
         status=1
