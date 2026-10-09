@@ -6,7 +6,7 @@
 
 use std::borrow::Borrow;
 use std::collections::HashMap;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
@@ -639,6 +639,15 @@ struct UnreadCounts {
     at: Instant,
     changes: u64,
     counts: HashMap<MailSet, i64>,
+    pending: bool,
+    request: u64,
+    task: tokio::task::AbortHandle,
+}
+
+impl Drop for UnreadCounts {
+    fn drop(&mut self) {
+        self.task.abort();
+    }
 }
 
 /// Reads mailboxes. One instance serves the window and the assistant.
@@ -648,8 +657,9 @@ pub struct Mailboxes<A: Accounts> {
     /// The last Gmail search, kept so a folder that reloads a second later
     /// costs nothing.
     remote: Mutex<Option<RemoteListing>>,
-    unread: tokio::sync::Mutex<HashMap<AccountId, UnreadCounts>>,
-    forget_unread: AtomicBool,
+    unread: Arc<Mutex<HashMap<AccountId, UnreadCounts>>>,
+    unread_request: AtomicU64,
+    unread_changed: tokio::sync::watch::Sender<()>,
 }
 
 impl<A: Accounts> Mailboxes<A> {
@@ -658,8 +668,9 @@ impl<A: Accounts> Mailboxes<A> {
             accounts,
             db,
             remote: Mutex::new(None),
-            unread: tokio::sync::Mutex::new(HashMap::new()),
-            forget_unread: AtomicBool::new(false),
+            unread: Arc::new(Mutex::new(HashMap::new())),
+            unread_request: AtomicU64::new(0),
+            unread_changed: tokio::sync::watch::channel(()).0,
         }
     }
 
@@ -667,7 +678,7 @@ impl<A: Accounts> Mailboxes<A> {
     /// again. The window calls this when the reader asks for a refresh.
     pub fn forget_remote(&self) {
         *self.remote.lock().expect("remote listing poisoned") = None;
-        self.forget_unread.store(true, Ordering::Release);
+        self.unread.lock().expect("unread counts poisoned").clear();
     }
 
     /// The page of `mailbox` that follows the rows the caller holds.
@@ -795,6 +806,61 @@ impl<A: Accounts> Mailboxes<A> {
         }
     }
 
+    /// Wakes the window when a background account count is ready.
+    pub fn counts_changed(&self) -> tokio::sync::watch::Receiver<()> {
+        self.unread_changed.subscribe()
+    }
+
+    fn server_counts(&self, sidebar: &[Mailbox]) -> HashMap<AccountId, HashMap<MailSet, i64>> {
+        let ids: std::collections::BTreeSet<_> =
+            sidebar.iter().filter_map(Mailbox::account).collect();
+        let mut cached = self.unread.lock().expect("unread counts poisoned");
+        cached.retain(|id, _| ids.contains(id));
+        let mut counts = HashMap::new();
+        for id in ids {
+            let Some(sync) = self.accounts.account(id) else {
+                cached.remove(&id);
+                continue;
+            };
+            let changes = sync.mail_changes();
+            if let Some(kept) = cached.get(&id) {
+                if kept.changes == changes {
+                    counts.insert(id, kept.counts.clone());
+                }
+                if kept.pending || (kept.changes == changes && kept.at.elapsed() < REMOTE_FRESH) {
+                    continue;
+                }
+            }
+            let request = self.unread_request.fetch_add(1, Ordering::Relaxed);
+            let state = Arc::downgrade(&self.unread);
+            let changed = self.unread_changed.clone();
+            // Each account updates on its own; no network await holds up local badges.
+            let task = tokio::spawn(async move {
+                let answer = sync.services().mail.unread_counts().await.unwrap_or_default();
+                let Some(state) = state.upgrade() else { return };
+                let mut cached = state.lock().expect("unread counts poisoned");
+                if let Some(kept) = cached.get_mut(&id)
+                    && kept.request == request
+                {
+                    kept.counts = answer;
+                    kept.at = Instant::now();
+                    kept.pending = false;
+                    drop(cached);
+                    changed.send_replace(());
+                }
+            });
+            cached.insert(id, UnreadCounts {
+                at: Instant::now(),
+                changes,
+                counts: counts.get(&id).cloned().unwrap_or_default(),
+                pending: true,
+                request,
+                task: task.abort_handle(),
+            });
+        }
+        counts
+    }
+
     /// Counts for every sidebar mailbox, plus the categories of the inbox
     /// on screen. Grouped queries cover the labels, the flags and the VIPs,
     /// so this costs a handful of queries rather than one per mailbox.
@@ -805,34 +871,7 @@ impl<A: Accounts> Mailboxes<A> {
         view: &View,
     ) -> Result<Counts, SyncError> {
         let sidebar = sidebar.to_vec();
-        let ids: std::collections::BTreeSet<_> =
-            sidebar.iter().filter_map(Mailbox::account).collect();
-        let mut remote_counts = HashMap::new();
-        let mut cached = self.unread.lock().await;
-        if self.forget_unread.swap(false, Ordering::AcqRel) {
-            cached.clear();
-        }
-        cached.retain(|id, _| ids.contains(id));
-        for id in ids {
-            let Some(sync) = self.accounts.account(id) else {
-                continue;
-            };
-            let changes = sync.mail_changes();
-            let fresh = cached
-                .get(&id)
-                .is_some_and(|kept| kept.changes == changes && kept.at.elapsed() < REMOTE_FRESH);
-            if !fresh {
-                // Counts must not leave the sidebar waiting for an offline server.
-                let counts = tokio::time::timeout(
-                    Duration::from_secs(10), sync.services().mail.unread_counts(),
-                ).await.ok().and_then(Result::ok).unwrap_or_default();
-                cached.insert(id, UnreadCounts { at: Instant::now(), changes, counts });
-            }
-            if let Some(kept) = cached.get(&id) {
-                remote_counts.insert(id, kept.counts.clone());
-            }
-        }
-        drop(cached);
+        let remote_counts = self.server_counts(&sidebar);
         let category_base = view
             .category
             .is_some()

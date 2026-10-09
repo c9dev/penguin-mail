@@ -994,6 +994,14 @@ impl MainWindow {
         window
             .conversation
             .set_zoom(app.settings_with(|s| s.text_size.zoom()));
+        let mut counts_changed = window.core.lists().counts_changed();
+        let weak = Rc::downgrade(&window);
+        glib::spawn_future_local(async move {
+            while counts_changed.changed().await.is_ok() {
+                let Some(window) = weak.upgrade() else { break };
+                window.refresh_counts();
+            }
+        });
         window.refresh_accounts(Reload::Yes);
         window.reload_image_senders();
         window.check_keyring_plug();
@@ -1333,7 +1341,7 @@ impl MainWindow {
         }
     }
 
-    /// What the sidebar and the category switcher show. Two grouped
+    /// What the sidebar and the category switcher show. Grouped
     /// queries replace the one-per-mailbox counting this used to do, and
     /// every request made before they start shares them.
     fn refresh_counts(self: &Rc<Self>) {

@@ -7,6 +7,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Fixed
 
+- Show local unread counts while IMAP servers are answering, and keep completed folder counts if a request times out.
 - Show nested folders under their own Inbox or other parent mailbox, including servers that mix Inbox and INBOX, and unread counts beside folders, including unopened IMAP folders.
 
 ## 1.0.6 (2026-10-09)

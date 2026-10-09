@@ -362,30 +362,33 @@ impl<I: ImapApi, S: Submit> MailBackend for Imap<I, S> {
 
     async fn unread_counts(&self) -> Result<HashMap<MailSet, i64>, BackendError> {
         use futures::{StreamExt, stream};
+        use tokio::time::timeout;
 
-        self.ensure_listed().await?;
-        let folders: Vec<_> = self
-            .known()
-            .folders
-            .iter()
+        let limit = Duration::from_secs(10);
+        let Ok(listed) = timeout(limit, self.ensure_listed()).await else {
+            return Ok(HashMap::new());
+        };
+        listed?;
+        let folders: Vec<_> = self.known().folders.iter()
             .filter(|f| !f.parent_only)
             .map(|f| (f.id.clone(), f.role))
             .collect();
         let mut counts = HashMap::new();
         let mut replies = stream::iter(folders).map(|(id, role)| async move {
-            let count = self.api.unread(&id).await;
+            let count = timeout(limit, self.api.unread(&id)).await;
             (id, role, count)
         }).buffer_unordered(2);
         while let Some((id, role, count)) = replies.next().await {
             match count {
-                Ok(count) => {
+                Ok(Ok(count)) => {
                     counts.insert(MailSet::Mailbox(id), i64::from(count));
                     if let Some(role) = role {
                         counts.insert(MailSet::Role(role), i64::from(count));
                     }
                 }
-                Err(ImapError::NoMailbox(_) | ImapError::Refused(_)) => continue,
-                Err(err) => return Err(err.into()),
+                Ok(Err(ImapError::NoMailbox(_) | ImapError::Refused(_))) => continue,
+                // Keep the folders already counted if the connection stops answering.
+                Ok(Err(_)) | Err(_) => break,
             }
         }
         Ok(counts)
