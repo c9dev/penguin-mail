@@ -2504,7 +2504,7 @@ impl MainWindow {
         let forwarded_html = html.clone();
         // Every address the account sends as, so the reply comes from the
         // one the message was written to.
-        let mine = app.my_addresses(account_id);
+        let mine = app.my_addresses(account_id, &target);
         let mut draft = compose::respond(
             kind,
             account_id,
@@ -2765,20 +2765,22 @@ impl MainWindow {
         self.look_for_servers(account);
     }
 
-    /// Keeps `name` as the account's one send-as address, for a provider
+    /// Keeps `name` on the account's own send-as address, for a provider
     /// that does not tell the client what its person sends as. Microsoft
     /// gives a name at sign-in, and `offered::reads_send_as` asks only
     /// Gmail.
     fn keep_send_as_name(&self, account: &Account, name: Option<String>) {
         if let (Some(app), Some(name)) = (self.app.upgrade(), name) {
+            let mut addresses = app.settings().senders(&account.email);
+            if let Some(own) = addresses
+                .iter_mut()
+                .find(|a| a.email.eq_ignore_ascii_case(&account.email))
+            {
+                own.name = Some(name);
+            }
             app.change_settings(Change::SendAsAddresses {
                 account: account.email.clone(),
-                addresses: vec![crate::compose::SendAsAddress {
-                    email: account.email.clone(),
-                    name: Some(name),
-                    signature: String::new(),
-                    default: true,
-                }],
+                addresses,
                 at: mailrs_sync::now_millis(),
             });
         }

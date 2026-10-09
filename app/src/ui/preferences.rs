@@ -351,6 +351,8 @@ fn writing_page(
     ));
     page.add(&sending);
 
+    super::sender_prefs::groups(app, accounts, &page);
+
     let signatures = adw::PreferencesGroup::builder()
         .title(gettext("Signatures"))
         .description(gettext(

@@ -428,10 +428,24 @@ impl<A: Accounts> Tools<A> {
             let found = self
                 .read(move |c| messages::thread_messages(c, account.id, &key))
                 .await?;
-            let parent = found
-                .iter()
-                .rev()
-                .find(|m| !m.in_role(Role::Drafts));
+            let parent = found.iter().rev().find(|m| !m.in_role(Role::Drafts));
+            if let Some(parent) = parent {
+                let mine =
+                    compose::reply_addresses(&self.desk.settings().senders(&account.email), parent);
+                if let Some(from) = compose::reply_from(&mine, parent) {
+                    draft.from = from.clone();
+                }
+                draft.to.retain(|to| {
+                    !mine
+                        .iter()
+                        .any(|own| own.email.eq_ignore_ascii_case(&to.email))
+                });
+                draft.cc.retain(|cc| {
+                    !mine
+                        .iter()
+                        .any(|own| own.email.eq_ignore_ascii_case(&cc.email))
+                });
+            }
             draft.thread_id = Some(thread_id);
             draft.in_reply_to = parent.and_then(|m| m.rfc822_msgid.clone());
             draft.references = found
