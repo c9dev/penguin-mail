@@ -25,6 +25,9 @@ if [ -f packaging/secrets.env ]; then
     set +a
 fi
 
+# Signing is handled after the build; Cargo and its dependencies do not need
+# the certificate or notarization credentials.
+unset MACOS_CERTIFICATE_P12 MACOS_CERTIFICATE_PASSWORD APPLE_ID APPLE_TEAM_ID APPLE_APP_SPECIFIC_PASSWORD
 cargo build --release -p mailrs "$@"
 
 version=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)

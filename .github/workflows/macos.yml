@@ -42,17 +42,24 @@ jobs:
           python3 scripts/test-macos-package.py
           cargo test -p mailrs --bin penguin-mail bundle::tests
           cargo clippy --workspace --all-targets -- -D warnings
-      - name: Build and pack
+      - name: Build the app bundle
         env:
           PENGUIN_MAIL_GOOGLE_CLIENT_ID: ${{ secrets.PENGUIN_MAIL_GOOGLE_CLIENT_ID }}
           PENGUIN_MAIL_GOOGLE_CLIENT_SECRET: ${{ secrets.PENGUIN_MAIL_GOOGLE_CLIENT_SECRET }}
           PENGUIN_MAIL_MICROSOFT_CLIENT_ID: ${{ secrets.MICROSOFT_CLIENT_ID }}
+          APP_DIR: ${{ github.workspace }}/dist
+        run: |
+          mkdir -p dist
+          scripts/install-macos.sh
+          python3 scripts/bundle-macos.py "dist/Penguin Mail.app"
+      - name: Sign and pack the app
+        env:
           MACOS_CERTIFICATE_P12: ${{ secrets.MACOS_CERTIFICATE_P12 }}
           MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
-        run: scripts/package-macos.sh dist
+        run: scripts/sign-macos.sh "dist/Penguin Mail.app" dist
       - name: Start the archived app without Homebrew
         run: python3 scripts/check-macos-bundle.py dist/*.zip
       - name: Read the version
