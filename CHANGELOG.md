@@ -7,6 +7,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### New
 
+- Install Penguin Mail from its signed Flatpak repository and get later releases with `flatpak update`.
 - macOS releases include apps for Apple Silicon and Intel, with their GTK libraries and translations bundled.
 - Pick the languages you read as they are, under Never Translate in
   Preferences or with Never Translate on a message's translation card,
