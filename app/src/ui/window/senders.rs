@@ -12,7 +12,7 @@ use crate::ui::confirm::{Tone, confirm};
 use crate::ui::conversation::ConversationView;
 use crate::ui::unsubscribe::{self, ListLine, Way, summary};
 use crate::unsubscribe::{RequestSent, Unsubscribe, choose_with_body};
-use crate::unsubscribe_page::{Adviser, Outcome, WebkitBrowser, finish, model_adviser, prepare};
+use crate::unsubscribe_page::{Adviser, Outcome, PageBrowser, finish, model_adviser, prepare};
 use mailrs_domain::translate::{fill, gettext};
 
 /// How leaving a list without a page ended in the window.
@@ -99,7 +99,7 @@ impl MainWindow {
 
         // One hidden view for the run, held by both halves: the read that
         // fills the dialog in, and the submission after the yes.
-        let browser = page.as_ref().map(|_| Rc::new(WebkitBrowser::new()));
+        let browser = page.as_ref().map(|_| Rc::new(PageBrowser::new()));
         let (tell, hear) = async_channel::bounded(1);
         match (page, browser.clone()) {
             (Some(url), Some(browser)) => {

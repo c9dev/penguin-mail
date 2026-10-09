@@ -891,6 +891,8 @@ mod tests {
         if gtk::init().is_err() {
             return;
         }
+        #[cfg(target_os = "linux")]
+        crate::web::check_scheme_after_last_view_closes();
         a_body_reads_back_the_same();
         list_markers_stay_out_of_the_text();
         a_line_changes_kind_and_the_numbers_follow();
@@ -917,7 +919,7 @@ mod tests {
     /// on somebody's newsletter.
     fn an_unsubscribe_page_reads_back_as_its_fixture() {
         use crate::unsubscribe_page::{
-            Browser, Outcome, PageForm, Pick, WebkitBrowser, finish, pick, prepare, says_done,
+            Browser, Outcome, PageForm, Pick, PageBrowser, finish, pick, prepare, says_done,
         };
 
         const DIR: &str = concat!(
@@ -950,7 +952,7 @@ mod tests {
                 include_str!("../../unsubscribe_page/fixtures/link_only.json"),
             ),
         ];
-        let browser = WebkitBrowser::new();
+        let browser = PageBrowser::new();
         for (name, written) in pages {
             let url = format!("file://{DIR}{name}.html");
             let read = glib::MainContext::default()

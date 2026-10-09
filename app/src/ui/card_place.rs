@@ -16,8 +16,9 @@ use std::cell::Cell;
 use std::rc::Rc;
 
 use adw::prelude::*;
-use gtk::{gdk, gio, glib};
-use webkit::prelude::*;
+use gtk::{gdk, glib};
+
+use crate::web::WebView;
 
 /// Where the page's place for the card is, in CSS pixels from the top
 /// left of the web view's visible area.
@@ -168,7 +169,7 @@ const WHEEL_STEP: f64 = 60.0;
 pub struct Host {
     pub overlay: gtk::Overlay,
     holder: gtk::Box,
-    webview: webkit::WebView,
+    webview: WebView,
     place: Cell<Option<Place>>,
     /// The card's height the page was last told, in CSS pixels.
     told: Cell<Option<i32>>,
@@ -178,28 +179,18 @@ pub struct Host {
 }
 
 impl Host {
-    pub fn new(
-        webview: &webkit::WebView,
-        content: &webkit::UserContentManager,
-        card: &impl IsA<gtk::Widget>,
-    ) -> Rc<Host> {
-        content.add_script(&webkit::UserScript::new(
-            SCRIPT,
-            webkit::UserContentInjectedFrames::TopFrame,
-            webkit::UserScriptInjectionTime::End,
-            &[],
-            &[],
-        ));
-        content.register_script_message_handler(HANDLER, None);
+    pub fn new(webview: &WebView, card: &impl IsA<gtk::Widget>) -> Rc<Host> {
+        webview.add_script(SCRIPT);
         let holder = gtk::Box::builder()
             .orientation(gtk::Orientation::Vertical)
             .visible(false)
             .can_focus(false)
             .build();
         holder.append(card);
-        let overlay = gtk::Overlay::builder().child(webview).build();
+        let overlay = gtk::Overlay::builder().child(&webview.widget()).build();
         overlay.add_overlay(&holder);
         overlay.set_clip_overlay(&holder, true);
+        webview.cover(&holder);
         let host = Rc::new(Host {
             overlay,
             holder,
@@ -217,8 +208,8 @@ impl Host {
                 .flatten()
         });
         let weak = Rc::downgrade(&host);
-        content.connect_script_message_received(Some(HANDLER), move |_, value| {
-            let said = Said::parse(&value.to_str());
+        webview.on_message(HANDLER, move |value| {
+            let said = Said::parse(value);
             if let (Some(host), Some(said)) = (weak.upgrade(), said) {
                 host.heard(said);
             }
@@ -285,12 +276,10 @@ impl Host {
             };
             let step = match scroll.unit() {
                 gdk::ScrollUnit::Wheel => WHEEL_STEP,
-                _ => 1.0 / host.webview.zoom_level(),
+                _ => 1.0 / host.webview.zoom(),
             };
-            run_script(
-                &host.webview,
-                &format!("window.scrollBy({},{})", dx * step, dy * step),
-            );
+            host.webview
+                .run(&format!("window.scrollBy({},{})", dx * step, dy * step));
             glib::Propagation::Stop
         });
         host.holder.add_controller(scroll);
@@ -310,7 +299,7 @@ impl Host {
     /// GTK would put it while the page has no place showing.
     fn position(&self) -> Option<gdk::Rectangle> {
         let place = self.place.get()?;
-        let zoom = self.webview.zoom_level();
+        let zoom = self.webview.zoom();
         let (least, _, _, _) = self.holder.measure(gtk::Orientation::Horizontal, -1);
         let (x, y, width) = frame(place, zoom, least);
         let (_, height, _, _) = self.holder.measure(gtk::Orientation::Vertical, width);
@@ -327,10 +316,9 @@ impl Host {
         let webview = self.webview.downgrade();
         glib::idle_add_local_once(move || {
             if let Some(webview) = webview.upgrade() {
-                run_script(
-                    &webview,
-                    &format!("window.mailrsCardHeight&&window.mailrsCardHeight({height})"),
-                );
+                webview.run(&format!(
+                    "window.mailrsCardHeight&&window.mailrsCardHeight({height})"
+                ));
             }
         });
     }
@@ -384,21 +372,16 @@ impl Host {
         }
         let webview = self.webview.clone();
         let root = self.overlay.root();
-        self.webview.evaluate_javascript(
-            &format!("window.mailrsLeaveCard({backward})"),
-            None,
-            None,
-            gio::Cancellable::NONE,
-            move |done| {
-                if done.is_ok_and(|value| value.to_str() == "moved") {
+        self.webview
+            .eval(&format!("window.mailrsLeaveCard({backward})"), move |done| {
+                if done.is_ok_and(|value| value == "moved") {
                     webview.grab_focus();
                 } else if let Some(root) = root {
                     // Nothing in the page on that side: the focus goes on
                     // to whatever follows the conversation.
                     root.child_focus(direction);
                 }
-            },
-        );
+            });
         glib::Propagation::Stop
     }
 }
@@ -411,10 +394,6 @@ impl Host {
 /// lands on the title or the strip, which take no focus of their own.
 fn keeps_focus_after_click(state: gtk::StateFlags) -> bool {
     state.contains(gtk::StateFlags::FOCUS_WITHIN)
-}
-
-fn run_script(webview: &webkit::WebView, script: &str) {
-    webview.evaluate_javascript(script, None, None, gio::Cancellable::NONE, |_| {});
 }
 
 #[cfg(test)]

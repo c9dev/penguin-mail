@@ -50,7 +50,7 @@ pub struct App {
     pub gio: gio::Application,
     pub core: Rc<Core>,
     window: RefCell<Option<Rc<MainWindow>>>,
-    filter: RefCell<Option<webkit::UserContentFilter>>,
+    filter: RefCell<Option<crate::web::Filter>>,
     /// The accounts in the store, in the order the store lists them, and
     /// each one's labels. The window's sidebar, list and dialogs all read
     /// this one copy.
@@ -203,7 +203,10 @@ impl App {
                 window.calendar.commit_all_now();
             }
         });
-        if !app.core.demo {
+        // The tray is a D-Bus service of Linux desktops. macOS has no
+        // session bus, and GIO answers a watch on it with a vanished
+        // callback that holds no connection.
+        if !app.core.demo && cfg!(target_os = "linux") {
             app.watch_for_tray_host();
         }
         let weak = Rc::downgrade(&app);
@@ -432,7 +435,10 @@ impl App {
         if open == 0 {
             self.core.set_window_open(false);
         }
-        if open > 0 {
+        // macOS brings a closed app back from the Dock, which takes the
+        // Cocoa event loop GDK runs; a copy restarted in the background
+        // runs none and could never be reopened.
+        if open > 0 || cfg!(target_os = "macos") {
             return;
         }
         let accounts = self
@@ -490,7 +496,7 @@ impl App {
         }
     }
 
-    pub fn filter(&self) -> Option<webkit::UserContentFilter> {
+    pub fn filter(&self) -> Option<crate::web::Filter> {
         self.filter.borrow().clone()
     }
 
@@ -1129,6 +1135,15 @@ impl App {
         );
         add("compose", Box::new(|app| app.compose_to("")));
         add("check", Box::new(|app| app.core.poke_all()));
+        // GTK's native macOS menu names these application actions, even
+        // when the main window is closed or a composer has the focus.
+        #[cfg(target_os = "macos")]
+        for name in ["preferences", "about"] {
+            add(name, Box::new(move |app| {
+                let window = app.show_window();
+                let _ = window.window.activate_action(&format!("win.{name}"), None);
+            }));
+        }
         let compose_to = gio::SimpleAction::new("compose-to", Some(glib::VariantTy::STRING));
         let weak = Rc::downgrade(self);
         compose_to.connect_activate(move |_, parameter| {
@@ -1177,16 +1192,9 @@ impl App {
             .join(mailrs_sync::config::DIR_NAME)
             .join("content-filters");
         let _ = std::fs::create_dir_all(&dir);
-        let store = webkit::UserContentFilterStore::new(&dir.to_string_lossy());
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
-            match store
-                .save_future(
-                    "block-remote",
-                    &glib::Bytes::from_static(BLOCK_REMOTE_RULES.as_bytes()),
-                )
-                .await
-            {
+            match crate::web::compile_filter(&dir, "block-remote", BLOCK_REMOTE_RULES).await {
                 Ok(filter) => {
                     *this.filter.borrow_mut() = Some(filter.clone());
                     this.tell_window(Notice::FilterReady(filter));

@@ -5,6 +5,24 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ## Unreleased
 
+### New
+
+- macOS releases include apps for Apple Silicon and Intel, with their GTK libraries and translations bundled.
+- Pick the languages you read as they are, under Never Translate in
+  Preferences or with Never Translate on a message's translation card,
+  and their messages stop offering a translation.
+
+### Improved
+
+- Mailbox names and messages in the list use larger text on macOS.
+
+### Fixed
+
+- Inline pictures keep loading after every conversation window has been closed and reopened on Linux.
+- Resizing a window on macOS keeps the message visible around cards drawn over it.
+- macOS shows Penguin Mail's own menu, with Settings available through Command-comma.
+- On macOS, Tab leaves a message, clearing Find cannot hang the page, and hidden unsubscribe pages block pictures.
+
 ## 1.0.5 (2026-10-08)
 
 ### Improved

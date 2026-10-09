@@ -595,6 +595,28 @@ async fn a_short_answer_from_someone_else_borrows_nothing() {
 }
 
 #[tokio::test]
+async fn a_language_the_reader_never_translates_gets_no_card() {
+    let window = FakeWindow::with_body(portuguese());
+    window.with(|screen| screen.never = vec!["es".to_string(), "pt".to_string()]);
+    window.run().open(row(THREAD)).await;
+    assert_eq!(window.0.borrow().cards.last(), Some(&Card::Hidden));
+}
+
+#[tokio::test]
+async fn taking_a_language_off_the_list_offers_its_card_again() {
+    let window = FakeWindow::with_body(portuguese());
+    window.with(|screen| screen.never = vec!["pt".to_string()]);
+    window.run().open(row(THREAD)).await;
+    window.with(|screen| screen.never.clear());
+    window.run().offer_translation_again();
+    let last = window.0.borrow().cards.last().cloned();
+    assert!(
+        matches!(last, Some(Card::Offered { from: Some(from), .. }) if from.code == "pt"),
+        "{last:?}"
+    );
+}
+
+#[tokio::test]
 async fn a_message_in_the_interface_language_gets_no_card() {
     let window = FakeWindow::new();
     window.run().open(row(THREAD)).await;

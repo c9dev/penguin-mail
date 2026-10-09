@@ -14,6 +14,11 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  macos:
+    name: macOS apps build and start
+    uses: ./.github/workflows/macos.yml
+    # Pull requests exercise packaging without the release credentials.
+
   gate:
     name: Tests, clippy, translations, accessibility
     runs-on: ubuntu-latest

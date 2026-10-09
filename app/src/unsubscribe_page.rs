@@ -12,10 +12,11 @@
 //! the newsletter was sent to.
 //!
 //! Nothing here starts a widget or a network request. [`Browser`] is the
-//! one way out to WebKit, with the hidden view behind it and a table in
-//! memory behind the fake, and [`prepare`] and [`finish`] are the run the
-//! window and the assistant share: prepare reads the page and decides,
-//! the person confirms, finish submits and reads the page back.
+//! one way out to a web engine, with the hidden view behind it
+//! ([`PageBrowser`]) and a table in memory behind the fake, and
+//! [`prepare`] and [`finish`] are the run the window and the assistant
+//! share: prepare reads the page and decides, the person confirms, finish
+//! submits and reads the page back.
 //!
 //! The dialog and the toasts are the window's words, not this module's.
 //! The one exception is [`PageError`]: its text becomes the reason in an
@@ -26,17 +27,26 @@ use mailrs_domain::translate::{fill, gettext};
 use serde::{Deserialize, Serialize};
 
 mod adviser;
+mod hidden;
 mod rules;
 mod run;
+#[cfg(target_os = "linux")]
 mod webkit;
 pub mod words;
+#[cfg(target_os = "macos")]
+mod wkwebview;
 
 #[cfg(test)]
 pub mod fake;
 #[cfg(test)]
 mod tests;
 
-pub use self::webkit::WebkitBrowser;
+/// The hidden page that loads a real unsubscribe page.
+#[cfg(target_os = "linux")]
+pub type PageBrowser = hidden::Hidden<webkit::WebkitEngine>;
+/// The hidden page that loads a real unsubscribe page.
+#[cfg(target_os = "macos")]
+pub type PageBrowser = hidden::Hidden<wkwebview::WkEngine>;
 pub use adviser::model_adviser;
 pub use run::{Adviser, Answer, Browser, Prepared, Step, finish, prepare};
 // The run is what the window and the assistant use, and the rules under

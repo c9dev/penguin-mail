@@ -171,6 +171,7 @@ fn general_page(
         Change::ColorScheme,
     ));
     appearance.add(&language_row(app, settings));
+    appearance.add(&never_translate_row(app, settings));
     page.add(&appearance);
 
     let notifications = adw::PreferencesGroup::builder()
@@ -1163,6 +1164,33 @@ fn switch_with(
             flip(&app, row.is_active());
         }
     });
+    row
+}
+
+/// The languages whose messages get no offer to translate them, a switch
+/// each, in the order their names sort in.
+fn never_translate_row(app: &Rc<App>, settings: &Settings) -> adw::ExpanderRow {
+    let row = adw::ExpanderRow::builder()
+        .title(gettext("Never Translate"))
+        .subtitle(gettext(
+            "Messages in these languages get no offer to translate them",
+        ))
+        .build();
+    let mut languages: Vec<_> = crate::translation::named_languages().collect();
+    languages.sort_by_key(|language| language.name());
+    for language in languages {
+        let code = language.code;
+        row.add_row(&switch(
+            app,
+            &language.name(),
+            None,
+            settings.never_translate.iter().any(|never| never == code),
+            move |never| Change::NeverTranslate {
+                language: code.to_string(),
+                never,
+            },
+        ));
+    }
     row
 }
 

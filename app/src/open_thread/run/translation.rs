@@ -55,10 +55,31 @@ impl ThreadRun {
         let Reading::Other(from) = self.read_message(&message_id, &prose, interface) else {
             return Card::Hidden;
         };
+        // A language the app cannot name is never on the list, so its
+        // card still comes up.
+        if let Some(language) = from
+            && self
+                .desk
+                .never_translate()
+                .iter()
+                .any(|code| code == language.code)
+        {
+            return Card::Hidden;
+        }
         Card::Offered {
             from,
             goes: self.desk.translation_destination(),
         }
+    }
+
+    /// Puts the card up again from what the settings say now, after the
+    /// person changed which languages they never translate.
+    pub fn offer_translation_again(&self) {
+        let Some(wanted) = self.on_screen() else {
+            return;
+        };
+        let card = self.translation_offer();
+        wanted.on_screen(|effects| effects.translation_card(card));
     }
 
     /// The language of the message on screen, with its writer's other

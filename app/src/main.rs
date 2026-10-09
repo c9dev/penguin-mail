@@ -14,6 +14,8 @@ mod compose;
 mod contacts;
 mod core;
 mod demo;
+#[cfg(all(target_os = "macos", debug_assertions))]
+mod drive;
 mod diff;
 mod event_reminders;
 mod exe;
@@ -53,6 +55,9 @@ mod unsubscribe;
 mod unsubscribe_page;
 mod update;
 mod wanted;
+mod web;
+#[cfg(target_os = "macos")]
+mod bundle;
 
 use std::cell::RefCell;
 use std::ffi::OsString;
@@ -98,6 +103,12 @@ fn usage() -> String {
 }
 
 fn main() -> glib::ExitCode {
+    #[cfg(target_os = "macos")]
+    bundle::prepare().expect("could not prepare the application bundle");
+    // On macOS this has to come before GTK starts; see `web`.
+    web::prepare();
+    #[cfg(all(target_os = "macos", debug_assertions))]
+    drive::from_env();
     // async-imap logs passwords and mail at trace level; `quiet` drops
     // those lines whatever RUST_LOG says.
     tracing_subscriber::util::SubscriberInitExt::init(mailrs_imap::quiet(
@@ -182,8 +193,16 @@ fn main() -> glib::ExitCode {
     glib::set_prgname(Some(if demo { DEMO_ID } else {
         APP_ID
     }));
-    // A plain GApplication: GTK starts only when a window is first needed,
-    // so a process running in the tray never loads the graphics stack.
+    #[cfg(target_os = "macos")]
+    glib::set_application_name(&gettext("Penguin Mail"));
+    // Linux starts GTK only when a window is needed. macOS needs
+    // GtkApplication to own the native menu and route its actions.
+    #[cfg(target_os = "macos")]
+    let gio_app: gio::Application = gtk::Application::builder()
+        .application_id(if demo { DEMO_ID } else { APP_ID })
+        .build()
+        .upcast();
+    #[cfg(not(target_os = "macos"))]
     let gio_app = gio::Application::builder()
         .application_id(if demo { DEMO_ID } else { APP_ID })
         .build();
@@ -285,7 +304,12 @@ fn mailto_recipient(rest: &str) -> String {
 /// Starts GTK and libadwaita and loads the app's icons and stylesheet.
 /// Safe to call more than once.
 pub fn ensure_gtk() {
-    if gtk::is_initialized_main_thread() {
+    // GtkApplication may have started GTK before our resources were
+    // registered, so GTK being initialized does not mean our style is.
+    thread_local! {
+        static STYLED: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+    }
+    if STYLED.replace(true) {
         return;
     }
     gtk::init().expect("GTK starts on this display");
@@ -306,6 +330,16 @@ pub fn ensure_gtk() {
             &css,
             gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
         );
+        #[cfg(target_os = "macos")]
+        {
+            let css = gtk::CssProvider::new();
+            css.load_from_string(include_str!("../data/macos.css"));
+            gtk::style_context_add_provider_for_display(
+                &display,
+                &css,
+                gtk::STYLE_PROVIDER_PRIORITY_APPLICATION + 1,
+            );
+        }
     }
     gtk::Window::set_default_icon_name(APP_ID);
 }

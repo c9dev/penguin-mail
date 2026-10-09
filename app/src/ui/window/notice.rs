@@ -39,7 +39,7 @@ pub enum Notice<'a> {
         enable_url: &'a str,
     },
     /// The filter that blocks remote content compiled.
-    FilterReady(webkit::UserContentFilter),
+    FilterReady(crate::web::Filter),
     /// A message waits out its Undo Send delay of `seconds`; `undo` takes
     /// it back.
     UndoSend {

@@ -35,6 +35,12 @@ Read exit statuses from the command itself. `cargo test | tail` reports
 file and check `$?`. Never pipe `scripts/a11y-names.sh`: its Xvfb child
 holds the pipe open and the command hangs.
 
+Installing for the owner: `NO_AUTOSTART=1 scripts/install.sh`. On macOS,
+`scripts/install-macos.sh` builds `/Applications/Penguin Mail.app` against
+Homebrew's GTK; `scripts/drive-macos.sh` drives the demo there without
+touching the person's mouse or keyboard, and `scripts/clippy-linux.sh`
+lints the Linux build from macOS. Neither runs Linux's tests.
+
 ## Testing traps
 
 - **One GTK test per test binary.** GTK belongs to the thread that

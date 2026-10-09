@@ -238,6 +238,10 @@ const ACCENT_ORANGE_CLASS: &str = "accent-orange";
 /// inherits these colours through the CSS custom properties already set
 /// there.
 pub(crate) fn track_dark_class(window: &adw::Window) {
+    // The macOS menu follows the application's active window, including
+    // composers and separate conversations, rather than a floating window.
+    #[cfg(target_os = "macos")]
+    window.set_application(gio::Application::default().and_downcast::<gtk::Application>().as_ref());
     window.add_css_class(SURFACES_CLASS);
     let style = adw::StyleManager::default();
     let target = window.downgrade();
@@ -1728,6 +1732,7 @@ impl MainWindow {
                 self.open_message_menu(view, &message_id, x, y)
             }
             Action::Translate => self.translate_message(view),
+            Action::NeverTranslate(language) => self.never_translate(language),
         }
     }
 
@@ -3251,10 +3256,7 @@ impl MainWindow {
 
     /// True when the focus is in the message itself, where Ctrl+A selects text.
     fn reading_text(&self) -> bool {
-        GtkWindowExt::focus(&self.window).is_some_and(|focus| {
-            focus.is::<webkit::WebView>()
-                || focus.ancestor(webkit::WebView::static_type()).is_some()
-        })
+        GtkWindowExt::focus(&self.window).is_some_and(|focus| crate::web::holds_focus(&focus))
     }
 
     fn typing(&self) -> bool {
@@ -3614,6 +3616,11 @@ impl MainWindow {
             Effect::Theme => {}
             Effect::Language => self.offer_restart(),
             Effect::Calendar => self.calendar.week_start_changed(),
+            Effect::Translation => {
+                for view in self.views() {
+                    self.thread_run(&view).offer_translation_again();
+                }
+            }
         }
     }
 

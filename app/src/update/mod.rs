@@ -208,8 +208,9 @@ pub fn announce(version: Version, install: async_channel::Sender<()>) {
             ))
             .body(&gettext("Install it now, or later from the tray."))
             .icon(APP_ID)
-            .hint(notify_rust::Hint::DesktopEntry(APP_ID.into()))
             .action("install", &gettext("Install"));
+        #[cfg(target_os = "linux")]
+        notification.hint(notify_rust::Hint::DesktopEntry(APP_ID.into()));
         match notification.show() {
             Ok(handle) => handle.wait_for_action(|key| {
                 if key == "install" {
@@ -225,12 +226,14 @@ pub fn announce(version: Version, install: async_channel::Sender<()>) {
 /// Updates.
 pub fn tell(summary: String) {
     std::thread::spawn(move || {
-        let shown = notify_rust::Notification::new()
+        let mut notification = notify_rust::Notification::new();
+        notification
             .appname("Penguin Mail")
             .summary(&summary)
-            .icon(APP_ID)
-            .hint(notify_rust::Hint::DesktopEntry(APP_ID.into()))
-            .show();
+            .icon(APP_ID);
+        #[cfg(target_os = "linux")]
+        notification.hint(notify_rust::Hint::DesktopEntry(APP_ID.into()));
+        let shown = notification.show();
         if let Err(err) = shown {
             tracing::warn!(error = %err, "could not show a notification");
         }

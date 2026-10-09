@@ -17,9 +17,17 @@
 </head>
 <body>
 <h1>Penguin Mail packages</h1>
-<p>Penguin Mail is mail and calendar for Linux. This site holds its apt
-repository for Ubuntu, dnf repository for Fedora and Flatpak repository,
-all for x86_64 and signed with the key below.</p>
+<p>Penguin Mail is mail and calendar for Linux and macOS. This site holds
+its apt repository for Ubuntu, dnf repository for Fedora and Flatpak
+repository, all for Linux x86_64 and signed with the key below. macOS apps
+are on the <a href="https://github.com/c9dev/penguin-mail/releases/latest">releases page</a>.</p>
+
+<h2>macOS</h2>
+<p>Download the macOS zip for Apple Silicon (<code>arm64</code>) or Intel
+(<code>x86_64</code>), unzip it, and move <code>Penguin Mail.app</code> to
+Applications. The app includes its GTK libraries. A zip ending in
+<code>-unsigned</code> is a test build without Apple notarization and macOS
+may block it. Replace the app with the next release to update.</p>
 
 <h2>Ubuntu, with apt</h2>
 <pre><code>sudo curl -fsSLo /usr/share/keyrings/penguin-mail-archive-keyring.gpg \
