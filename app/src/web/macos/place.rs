@@ -74,6 +74,8 @@ pub(super) struct Float {
     pub covers: RefCell<Vec<glib::WeakRef<gtk::Widget>>>,
     /// Where the page is cut away for them, from its top left.
     pub holes: RefCell<Vec<Rect>>,
+    /// The page size used by the mask, even while its holes stay put.
+    mask_size: Cell<Option<(f64, f64)>>,
     /// Whether the anchor holds GTK's focus.
     pub focused: Cell<bool>,
     /// The toast overlays around the anchor, whose toasts are covers too.
@@ -335,7 +337,8 @@ fn let_through(inner: &Inner, page: Rect) {
         }
     }
     let rects: Vec<Rect> = holes.iter().map(|(hole, _)| hole.meet(whole)).collect();
-    if *inner.float.holes.borrow() == rects {
+    let size = (page.w, page.h);
+    if *inner.float.holes.borrow() == rects && inner.float.mask_size.get() == Some(size) {
         return;
     }
     let Some(layer) = inner.view.layer() else {
@@ -381,6 +384,7 @@ fn let_through(inner: &Inner, page: Rect) {
         unsafe { layer.setMask(Some(&mask)) };
     }
     *inner.float.holes.borrow_mut() = rects;
+    inner.float.mask_size.set(Some(size));
 }
 
 /// Swaps the live page for a picture of it, so GTK can draw a dialog and
