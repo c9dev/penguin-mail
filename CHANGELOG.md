@@ -18,6 +18,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Fixed
 
+- Earlier messages in IMAP conversations expand when clicked.
+- IMAP search results open their conversation instead of showing zero messages.
 - Inline pictures keep loading after every conversation window has been closed and reopened on Linux.
 - Resizing a window on macOS keeps the message visible around cards drawn over it.
 - macOS shows Penguin Mail's own menu, with Settings available through Command-comma.

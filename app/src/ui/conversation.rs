@@ -776,7 +776,7 @@ impl ConversationView {
             if let Some(id) = view.scrolled.take() {
                 view.webview.run(
                     &format!(
-                        "(function(){{var m=document.getElementById('m-{id}');\
+                        "(function(){{var m=document.getElementById({id});\
                          if(m&&window.mailrsAt===window.scrollY){{m.scrollIntoView({{block:'start'}});\
                          window.mailrsAt=window.scrollY;}}}})()"
                     ),
@@ -1511,7 +1511,7 @@ impl ConversationView {
                         .messages
                         .iter()
                         .find(|m| open.expanded.contains(&m.id))
-                        .map(|m| script_safe(&m.id));
+                        .map(|m| script_id(&m.id));
                 }
                 // The new page holds everything a waiting patch would put
                 // in it.
@@ -1555,7 +1555,7 @@ impl ConversationView {
         if let Some(id) = self.scroll_to.take() {
             self.webview.run(
                 &format!(
-                    "(function(){{var m=document.getElementById('m-{id}');\
+                    "(function(){{var m=document.getElementById({id});\
                      if(m){{m.scrollIntoView({{block:'start'}});window.mailrsAt=window.scrollY;}}}})()"
                 ),
             );
@@ -1870,14 +1870,14 @@ impl ConversationView {
     /// takes its body out of layout. Shutting it at once would leave the
     /// fold no height to close from.
     fn show_message(&self, id: &str, expanded: bool) {
-        let id = script_safe(id);
+        let id = script_id(id);
         let (add, remove) = match expanded {
             true => ("expanded", "'collapsed','shut'"),
             false => ("collapsed", "'expanded'"),
         };
         self.webview.run(
             &format!(
-                "(function(){{var m=document.getElementById('m-{id}');\
+                "(function(){{var m=document.getElementById({id});\
                    if(m){{m.classList.add('{add}');m.classList.remove({remove});}}}})()"
             ),
         );
@@ -1890,7 +1890,7 @@ impl ConversationView {
             if let Some(webview) = webview.upgrade() {
                 webview.run(
                     &format!(
-                        "(function(){{var m=document.getElementById('m-{id}');\
+                        "(function(){{var m=document.getElementById({id});\
                          if(m&&m.classList.contains('collapsed'))m.classList.add('shut');}})()"
                     ),
                 );
@@ -1991,9 +1991,33 @@ fn answer(request: &web::Request, served: Served) {
     }
 }
 
-/// Keeps only characters that are safe inside a quoted script string.
+/// Quotes the DOM id without changing the server's message id.
+fn script_id(id: &str) -> String {
+    serde_json::to_string(&format!("m-{id}")).expect("a message id is a JSON string")
+}
+
+/// Keeps only characters accepted by the message menu's link format.
 fn script_safe(id: &str) -> String {
     id.chars()
         .filter(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '_'))
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::script_id;
+
+    #[test]
+    fn message_scripts_keep_imap_paths_and_quote_special_characters() {
+        assert_eq!(script_id("INBOX/1001/42"), r#""m-INBOX/1001/42""#);
+        assert_eq!(script_id("Work/Clients/1007/1"), r#""m-Work/Clients/1007/1""#);
+        for id in ["Šablony/1008/1", "O'Brien/1009/2", "x\");throw 'bad';//\\\n/1/2"] {
+            let quoted = script_id(id);
+            assert_eq!(
+                serde_json::from_str::<String>(&quoted).unwrap(),
+                format!("m-{id}")
+            );
+            assert!(!quoted.contains('\n'));
+        }
+    }
 }
