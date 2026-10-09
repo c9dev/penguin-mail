@@ -232,6 +232,7 @@ either_client! {
     AnyImap(ImapClient, FakeImap): ImapApi;
     now {}
     later {
+        fn unread(mailbox: &str) -> Result<u32, ImapError>;
         fn capabilities() -> Imapped<Capabilities>;
         fn list() -> Imapped<Vec<Listed>>;
         fn select(mailbox: &str, since: Option<Since>) -> Imapped<Selected>;

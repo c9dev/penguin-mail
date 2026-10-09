@@ -4012,6 +4012,7 @@ mod tests {
             provider_name: None,
         };
         let label = |account_id| Label {
+            role: None,
             account_id,
             id: "Label_1".into(),
             name: "Work".into(),

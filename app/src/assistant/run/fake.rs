@@ -582,6 +582,7 @@ impl Harness {
             .expect("the account goes in");
         assert_eq!(account_id, 1, "fixture mail belongs to account 1");
         let known = vec![Label {
+            role: None,
             account_id,
             id: "Label_kites".into(),
             name: "Kites".into(),

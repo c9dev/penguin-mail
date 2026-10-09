@@ -219,6 +219,7 @@ async fn list_mail_finds_gmails_own_labels_by_name() {
             gmail::CATEGORY_PROMOTIONS,
         ] {
             known.push(mailrs_domain::Label {
+                role: None,
                 account_id: h.account_id,
                 id: id.into(),
                 name: id.into(),
@@ -272,6 +273,7 @@ async fn list_mail_says_why_a_system_label_is_empty_on_an_unsynced_account() {
         screen.labels.insert(
             cold_id,
             vec![mailrs_domain::Label {
+                role: None,
                 account_id: cold_id,
                 id: gmail::UNREAD.into(),
                 name: "UNREAD".into(),

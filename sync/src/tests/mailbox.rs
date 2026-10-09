@@ -679,7 +679,10 @@ async fn counts_cover_the_sidebar_and_the_categories() {
         .await
         .expect("the counts read");
     assert_eq!(counts.mailboxes[&inbox], 1, "the inbox counts unread mail");
-    assert_eq!(counts.mailboxes[&label], 1, "a label counts every thread");
+    assert_eq!(
+        counts.mailboxes[&label], 0,
+        "read mail adds no unread badge"
+    );
     assert_eq!(counts.mailboxes[&Mailbox::Flag(FlagColor::Green)], 0);
     assert_eq!(counts.mailboxes[&Mailbox::FollowUp], 0);
     assert_eq!(counts.mailboxes[&Mailbox::Scheduled], 0);
@@ -725,13 +728,13 @@ fn each_standard_mailbox_draws_from_its_mail_set() {
 }
 
 #[test]
-fn only_an_inbox_counts_unread_and_takes_categories() {
+fn other_mailboxes_count_unread_but_only_an_inbox_takes_categories() {
     let unified = Mailbox::Unified(Standard::Inbox);
     let mine = Mailbox::Standard { account_id: 1, which: Standard::Inbox };
     let sent = Mailbox::Standard { account_id: 1, which: Standard::Sent };
     assert!(unified.counts_unread() && unified.takes_categories());
     assert!(mine.counts_unread() && mine.takes_categories());
-    assert!(!sent.counts_unread() && !sent.takes_categories());
+    assert!(sent.counts_unread() && !sent.takes_categories());
     assert_eq!(mine.account(), Some(1));
     assert_eq!(unified.account(), None);
 }
@@ -853,4 +856,89 @@ async fn a_stopped_search_asks_gmail_nothing_and_leaves_the_next_one_whole() {
         .await
         .expect("the search lists");
     assert!(ids(&found).contains(&"k4".to_string()), "{:?}", ids(&found));
+}
+
+#[tokio::test]
+async fn imap_counts_include_unopened_folders_and_mail_before_the_local_window() {
+    let h = super::imap_harness().await;
+    h.imap.add_mailbox("INBOX/Lists", None);
+    h.imap.add_mailbox("Parent", None);
+    h.imap.with(|s| s.mailbox_mut("Parent").no_select = true);
+    for folder in ["INBOX/Lists", "Trash", "Sent"] {
+        h.imap.deliver(
+            folder,
+            b"Subject: old unread\r\n\r\nHello".to_vec(),
+            now_millis() - 365 * DAY,
+        );
+        h.imap.deliver_flagged(
+            folder,
+            b"Subject: read\r\n\r\nHello",
+            &["\\Seen"],
+            now_millis(),
+        );
+    }
+    h.sync.refresh_labels().await.unwrap();
+    let service = Mailboxes::new(
+        Arc::new(Connected(HashMap::from([(
+            h.account_id,
+            Arc::clone(&h.sync),
+        )]))),
+        h.db.clone(),
+    );
+    let folder = Mailbox::Label {
+        account_id: h.account_id,
+        label_id: "INBOX/Lists".into(),
+        name: "Lists".into(),
+    };
+    let trash = Mailbox::Folder {
+        account_id: Some(h.account_id),
+        folder: Folder::Trash,
+    };
+    let sent = Mailbox::Standard {
+        account_id: h.account_id,
+        which: Standard::Sent,
+    };
+    let all_sent = Mailbox::Unified(Standard::Sent);
+    let all_trash = Mailbox::Folder {
+        account_id: None,
+        folder: Folder::Trash,
+    };
+    let sidebar = vec![
+        folder.clone(),
+        trash.clone(),
+        sent.clone(),
+        all_sent.clone(),
+        all_trash.clone(),
+    ];
+    let counts = service.counts(&sidebar, &folder, &view()).await.unwrap();
+    for mailbox in &sidebar {
+        assert_eq!(counts.mailboxes[mailbox], 1, "{mailbox:?}");
+    }
+    let calls = h.imap.with(|s| s.calls.clone());
+    assert!(
+        !calls
+            .iter()
+            .any(|call| call.starts_with("select ") || call.starts_with("headers "))
+    );
+    assert!(!calls.contains(&"unread Parent".into()));
+    service.counts(&sidebar, &folder, &view()).await.unwrap();
+    assert_eq!(
+        h.imap.with(|s| s.calls.clone()),
+        calls,
+        "fresh counts reuse STATUS results"
+    );
+    service.forget_remote();
+    h.imap.set_flags("INBOX/Lists", 1, &["\\Seen"]);
+    let counts = service.counts(&sidebar, &folder, &view()).await.unwrap();
+    assert_eq!(counts.mailboxes[&folder], 0);
+    assert_eq!(counts.mailboxes[&trash], 1);
+    h.imap.deliver("INBOX", b"Subject: New mail\r\n\r\nHi".to_vec(), now_millis());
+    h.bootstrap().await;
+    h.imap.set_flags("INBOX/Lists", 1, &[]);
+    let counts = service.counts(&sidebar, &folder, &view()).await.unwrap();
+    assert_eq!(counts.mailboxes[&folder], 1, "a sync change expires cached server counts");
+    service.forget_remote();
+    h.imap.with(|s| s.aimed.push(("unread".into(), mailrs_imap::ImapError::Network("offline".into()))));
+    let counts = service.counts(&sidebar, &folder, &view()).await.unwrap();
+    assert_eq!(counts.mailboxes[&folder], 0, "offline counts fall back to the stored mail");
 }

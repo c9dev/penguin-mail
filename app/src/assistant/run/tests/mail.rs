@@ -317,6 +317,7 @@ async fn work_and_travel() -> (Harness, String, String, String) {
         sync.follow_mailbox(folder).await.expect("the folder syncs");
     }
     let folder = |name: &str| Label {
+            role: None,
         account_id: h.account_id,
         id: name.into(),
         name: name.into(),

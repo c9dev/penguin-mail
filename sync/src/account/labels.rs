@@ -247,6 +247,7 @@ impl AccountSync {
     /// A person's mailbox as the label the window and the assistant read.
     fn user_label(&self, remote: &RemoteMailbox) -> Label {
         Label {
+            role: remote.role,
             account_id: self.account_id,
             id: remote.id.clone(),
             name: remote.name.clone(),

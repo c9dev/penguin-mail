@@ -19,7 +19,7 @@ use mailrs_domain::{
 use mailrs_store::threads::ThreadFilter;
 use mailrs_store::{Db, flags, follow_ups, outbox, reminders, threads};
 
-use crate::{Accounts, MovedFrom, SearchQuery, SyncError};
+use crate::{Accounts, MailBackend, MovedFrom, SearchQuery, SyncError};
 
 /// Rows in one page of a stored mailbox.
 pub const PAGE: usize = 500;
@@ -277,9 +277,14 @@ impl Mailbox {
         }
     }
 
-    /// Unread counts matter for inboxes; drafts show how many there are.
+    /// Mailboxes show unread counts; drafts keep their total.
     pub fn counts_unread(&self) -> bool {
-        self.standard() == Some(Standard::Inbox) || matches!(self, Mailbox::Vips { .. })
+        self.standard()
+            .is_some_and(|which| which != Standard::Drafts)
+            || matches!(
+                self,
+                Mailbox::Vips { .. } | Mailbox::Label { .. } | Mailbox::Folder { .. }
+            )
     }
 
     /// Whether this mailbox splits into inbox categories.
@@ -629,6 +634,13 @@ struct Reading<'a> {
     stop: &'a Stop,
 }
 
+/// A server count expires after a mail change or a minute.
+struct UnreadCounts {
+    at: Instant,
+    changes: u64,
+    counts: HashMap<MailSet, i64>,
+}
+
 /// Reads mailboxes. One instance serves the window and the assistant.
 pub struct Mailboxes<A: Accounts> {
     accounts: Arc<A>,
@@ -636,6 +648,8 @@ pub struct Mailboxes<A: Accounts> {
     /// The last Gmail search, kept so a folder that reloads a second later
     /// costs nothing.
     remote: Mutex<Option<RemoteListing>>,
+    unread: tokio::sync::Mutex<HashMap<AccountId, UnreadCounts>>,
+    forget_unread: AtomicBool,
 }
 
 impl<A: Accounts> Mailboxes<A> {
@@ -644,6 +658,8 @@ impl<A: Accounts> Mailboxes<A> {
             accounts,
             db,
             remote: Mutex::new(None),
+            unread: tokio::sync::Mutex::new(HashMap::new()),
+            forget_unread: AtomicBool::new(false),
         }
     }
 
@@ -651,6 +667,7 @@ impl<A: Accounts> Mailboxes<A> {
     /// again. The window calls this when the reader asks for a refresh.
     pub fn forget_remote(&self) {
         *self.remote.lock().expect("remote listing poisoned") = None;
+        self.forget_unread.store(true, Ordering::Release);
     }
 
     /// The page of `mailbox` that follows the rows the caller holds.
@@ -788,6 +805,34 @@ impl<A: Accounts> Mailboxes<A> {
         view: &View,
     ) -> Result<Counts, SyncError> {
         let sidebar = sidebar.to_vec();
+        let ids: std::collections::BTreeSet<_> =
+            sidebar.iter().filter_map(Mailbox::account).collect();
+        let mut remote_counts = HashMap::new();
+        let mut cached = self.unread.lock().await;
+        if self.forget_unread.swap(false, Ordering::AcqRel) {
+            cached.clear();
+        }
+        cached.retain(|id, _| ids.contains(id));
+        for id in ids {
+            let Some(sync) = self.accounts.account(id) else {
+                continue;
+            };
+            let changes = sync.mail_changes();
+            let fresh = cached
+                .get(&id)
+                .is_some_and(|kept| kept.changes == changes && kept.at.elapsed() < REMOTE_FRESH);
+            if !fresh {
+                // Counts must not leave the sidebar waiting for an offline server.
+                let counts = tokio::time::timeout(
+                    Duration::from_secs(10), sync.services().mail.unread_counts(),
+                ).await.ok().and_then(Result::ok).unwrap_or_default();
+                cached.insert(id, UnreadCounts { at: Instant::now(), changes, counts });
+            }
+            if let Some(kept) = cached.get(&id) {
+                remote_counts.insert(id, kept.counts.clone());
+            }
+        }
+        drop(cached);
         let category_base = view
             .category
             .is_some()
@@ -799,6 +844,17 @@ impl<A: Accounts> Mailboxes<A> {
             .db
             .read(move |c| {
                 let labels = threads::mail_counts(c)?;
+                let mut folders = HashMap::new();
+                for folder in Folder::ALL {
+                    folders.insert(folder, mailrs_store::query::folder_unread(c, folder)?);
+                }
+                let unread = |account, set: &MailSet| {
+                    remote_counts
+                        .get(&account)
+                        .and_then(|counts| counts.get(set))
+                        .copied()
+                        .unwrap_or_else(|| labels.account(account, set).unread)
+                };
                 let flagged = flags::mailbox_counts(c)?;
                 let waiting = if follow_ups {
                     follow_ups::waiting_count(c, now)?
@@ -827,6 +883,14 @@ impl<A: Accounts> Mailboxes<A> {
                             let count = labels.unified(&which.set());
                             if mailbox.counts_unread() {
                                 count.unread
+                                    + remote_counts
+                                        .iter()
+                                        .filter_map(|(id, counts)| {
+                                            counts.get(&which.set()).map(|remote| {
+                                                remote - labels.account(*id, &which.set()).unread
+                                            })
+                                        })
+                                        .sum::<i64>()
                             } else {
                                 count.threads
                             }
@@ -834,7 +898,7 @@ impl<A: Accounts> Mailboxes<A> {
                         Mailbox::Standard { account_id, which } => {
                             let count = labels.account(*account_id, &which.set());
                             if mailbox.counts_unread() {
-                                count.unread
+                                unread(*account_id, &which.set())
                             } else {
                                 count.threads
                             }
@@ -847,9 +911,36 @@ impl<A: Accounts> Mailboxes<A> {
                             let count = labels
                                 .account(*account_id, &MailSet::Mailbox(label_id.clone()));
                             if mailbox.counts_unread() {
-                                count.unread
+                                unread(*account_id, &MailSet::Mailbox(label_id.clone()))
                             } else {
                                 count.threads
+                            }
+                        }
+                        Mailbox::Folder { account_id, folder } => {
+                            let role = match folder {
+                                Folder::Archive => Role::Archive,
+                                Folder::Junk => Role::Junk,
+                                Folder::Trash => Role::Trash,
+                                Folder::AllMail => Role::All,
+                            };
+                            let local = &folders[folder];
+                            let one = |id| {
+                                remote_counts
+                                    .get(&id)
+                                    .and_then(|counts| counts.get(&MailSet::Role(role)))
+                                    .copied()
+                                    .unwrap_or_else(|| local.get(&id).copied().unwrap_or(0))
+                            };
+                            match account_id {
+                                Some(id) => one(*id),
+                                None => local
+                                    .keys()
+                                    .chain(remote_counts.keys())
+                                    .copied()
+                                    .collect::<std::collections::BTreeSet<_>>()
+                                    .into_iter()
+                                    .map(one)
+                                    .sum(),
                             }
                         }
                         Mailbox::Flag(color) => flagged.get(color).copied().unwrap_or(0),

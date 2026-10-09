@@ -571,6 +571,22 @@ fn check_search(keys: &str) -> Result<(), ImapError> {
 }
 
 impl ImapApi for FakeImap {
+    async fn unread(&self, mailbox: &str) -> Result<u32, ImapError> {
+        check_name(mailbox)?;
+        self.call(format!("unread {mailbox}"), |s| {
+            let folder = s
+                .mailboxes
+                .get(mailbox)
+                .ok_or_else(|| ImapError::NoMailbox(mailbox.into()))?;
+            Ok(folder
+                .messages
+                .values()
+                .filter(|m| !m.flags.contains("\\Seen"))
+                .count() as u32)
+        })
+    }
+
+
     /// The real client answers from what the server said at sign-in, so
     /// this is no server call: it is not logged and uses up no planned
     /// failure.

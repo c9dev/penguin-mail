@@ -360,6 +360,37 @@ impl<I: ImapApi, S: Submit> MailBackend for Imap<I, S> {
             .is_none_or(|f| f.role.is_none() && !f.flagged)
     }
 
+    async fn unread_counts(&self) -> Result<HashMap<MailSet, i64>, BackendError> {
+        use futures::{StreamExt, stream};
+
+        self.ensure_listed().await?;
+        let folders: Vec<_> = self
+            .known()
+            .folders
+            .iter()
+            .filter(|f| !f.parent_only)
+            .map(|f| (f.id.clone(), f.role))
+            .collect();
+        let mut counts = HashMap::new();
+        let mut replies = stream::iter(folders).map(|(id, role)| async move {
+            let count = self.api.unread(&id).await;
+            (id, role, count)
+        }).buffer_unordered(2);
+        while let Some((id, role, count)) = replies.next().await {
+            match count {
+                Ok(count) => {
+                    counts.insert(MailSet::Mailbox(id), i64::from(count));
+                    if let Some(role) = role {
+                        counts.insert(MailSet::Role(role), i64::from(count));
+                    }
+                }
+                Err(ImapError::NoMailbox(_) | ImapError::Refused(_)) => continue,
+                Err(err) => return Err(err.into()),
+            }
+        }
+        Ok(counts)
+    }
+
     async fn mailboxes(&self) -> Result<Vec<RemoteMailbox>, BackendError> {
         self.list_mailboxes().await
     }

@@ -3,7 +3,7 @@
 
 use std::collections::{BTreeSet, HashMap};
 
-use mailrs_domain::{AccountId, Label, LabelKind, MailboxKind};
+use mailrs_domain::{AccountId, Label, LabelKind, MailboxKind, Role};
 use rusqlite::{Connection, params};
 
 use crate::{Result, StoreError};
@@ -12,7 +12,7 @@ use crate::{Result, StoreError};
 /// listing named count.
 pub fn list_labels(conn: &Connection, account_id: AccountId) -> Result<Vec<Label>> {
     let mut stmt = conn.prepare(
-        "SELECT id, name, kind, color FROM mailboxes WHERE account_id = ?1 AND named = 1 \
+        "SELECT id, name, kind, color, role FROM mailboxes WHERE account_id = ?1 AND named = 1 \
          ORDER BY kind <> 'system', name",
     )?;
     let rows = stmt.query_map(params![account_id], |row| {
@@ -21,10 +21,19 @@ pub fn list_labels(conn: &Connection, account_id: AccountId) -> Result<Vec<Label
             row.get::<_, String>(1)?,
             row.get::<_, String>(2)?,
             row.get::<_, Option<String>>(3)?,
+            row.get::<_, Option<String>>(4)?,
         ))
     })?;
     rows.map(|row| {
-        let (id, name, kind, color) = row?;
+        let (id, name, kind, color, role) = row?;
+        let role = role
+            .map(|value| {
+                value.parse::<Role>().map_err(|_| StoreError::Corrupt {
+                    column: "mailboxes.role",
+                    value,
+                })
+            })
+            .transpose()?;
         let kind = match kind.parse::<MailboxKind>() {
             Ok(MailboxKind::System) => LabelKind::System,
             Ok(MailboxKind::Label | MailboxKind::Folder) => LabelKind::User,
@@ -38,6 +47,7 @@ pub fn list_labels(conn: &Connection, account_id: AccountId) -> Result<Vec<Label
             }
         };
         Ok(Label {
+            role,
             account_id,
             id,
             name,
@@ -84,6 +94,20 @@ mod tests {
             color: None,
             hidden: false,
         }
+    }
+
+    #[test]
+    fn label_rows_keep_the_role_of_a_server_named_parent() {
+        let conn = crate::open_in_memory().unwrap();
+        let me = accounts::insert_account(&conn, "me@example.com", 0).unwrap();
+        let mut inbox = folder("inbox-id");
+        inbox.name = "Posteingang".into();
+        inbox.kind = MailboxKind::System;
+        inbox.role = Some(mailrs_domain::Role::Inbox);
+        mailboxes::upsert(&conn, me, &inbox).unwrap();
+        let labels = super::list_labels(&conn, me).unwrap();
+        assert_eq!(labels[0].role, inbox.role);
+        assert_eq!(labels[0].name, "Posteingang");
     }
 
     #[test]

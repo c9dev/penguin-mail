@@ -5,6 +5,10 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ## Unreleased
 
+### Fixed
+
+- Show nested folders under their own Inbox or other parent mailbox, and unread counts beside folders, including unopened IMAP folders.
+
 ## 1.0.6 (2026-10-09)
 
 ### New

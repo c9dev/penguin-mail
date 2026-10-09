@@ -261,6 +261,9 @@ impl FromStr for FlagColor {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Label {
+    /// The server mailbox role, independent of its name or id.
+    #[serde(default)]
+    pub role: Option<Role>,
     pub account_id: AccountId,
     pub id: String,
     pub name: String,

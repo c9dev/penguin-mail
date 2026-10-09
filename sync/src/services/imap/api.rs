@@ -18,6 +18,9 @@ pub trait ImapApi: Send + Sync + 'static {
     /// Every mailbox, parents that hold no mail among them.
     fn list(&self) -> impl Future<Output = Result<Vec<Listed>, ImapError>> + Send;
 
+    /// Counts unread messages without downloading or selecting the mailbox.
+    fn unread(&self, mailbox: &str) -> impl Future<Output = Result<u32, ImapError>> + Send;
+
     /// Selects `mailbox` (with QRESYNC parameters when given) and reports its state and, under QRESYNC, what changed.
     /// Without QRESYNC, or when `since` names another UIDVALIDITY, `since`
     /// goes unused and `vanished` and `changed` stay empty.
@@ -144,6 +147,10 @@ pub trait Submit: Send + Sync + 'static {
 }
 
 impl ImapApi for ImapClient {
+    async fn unread(&self, mailbox: &str) -> Result<u32, ImapError> {
+        self.unread(mailbox).await
+    }
+
     async fn capabilities(&self) -> Result<Capabilities, ImapError> {
         ImapClient::capabilities(self).await
     }

@@ -5,11 +5,13 @@
 
 use std::collections::HashMap;
 
-use mailrs_domain::{Label, LabelKind};
+use mailrs_domain::{Label, LabelKind, Role};
 
 /// One of an account's own labels or folders as the sidebar lists it.
 #[derive(Debug, PartialEq, Eq)]
 pub struct LabelRow<'a> {
+    /// The standard mailbox above this subtree, when its parent has a role.
+    pub under: Option<Role>,
     pub label: &'a Label,
     /// The part of the name after the last slash.
     pub leaf: &'a str,
@@ -34,14 +36,25 @@ fn leaf(name: &str) -> &str {
 /// gave them, from `positions` by id, and the ones never moved follow by
 /// name, ignoring case.
 pub fn label_rows<'a>(labels: &'a [Label], positions: &HashMap<String, i64>) -> Vec<LabelRow<'a>> {
+    let parents: HashMap<&str, Role> = labels.iter().filter_map(|label| {
+        label.role.filter(|role| *role != Role::Important).map(|role| (label.name.as_str(), role))
+    }).collect();
     let mut rows: Vec<LabelRow<'a>> = labels
         .iter()
         .filter(|l| matches!(l.kind, LabelKind::User | LabelKind::Group))
-        .map(|label| LabelRow {
-            label,
-            leaf: leaf(&label.name),
-            depth: 1 + label.name.matches('/').count() as u32,
-            opens: label.kind == LabelKind::User,
+        .map(|label| {
+            let ancestor = label.name.match_indices('/').rev().find_map(|(at, _)| {
+                parents.get(&label.name[..at]).map(|role| (at, *role))
+            });
+            LabelRow {
+                under: ancestor.map(|(_, role)| role),
+                label,
+                leaf: leaf(&label.name),
+                depth: 1 + label.name[ancestor.map_or(0, |(at, _)| at)..]
+                    .matches('/')
+                    .count() as u32,
+                opens: label.kind == LabelKind::User,
+            }
         })
         .collect();
     let by_name: HashMap<&str, &str> = rows
@@ -220,6 +233,7 @@ mod tests {
 
     fn label(name: &str, kind: LabelKind) -> Label {
         Label {
+            role: None,
             account_id: 1,
             id: format!("id:{name}"),
             name: name.to_string(),
@@ -266,6 +280,41 @@ mod tests {
         assert_eq!(names, ["Blue", "zebra/crossing"]);
         let rows = label_rows(&labels, &HashMap::new());
         assert_eq!(rows.len(), 1);
+    }
+
+    #[test]
+    fn inbox_children_follow_the_role_not_the_previous_alphabetical_folder() {
+        let mut inbox = label("INBOX", LabelKind::System);
+        inbox.role = Some(mailrs_domain::Role::Inbox);
+        let mut sent = label("INBOX/Sent Items", LabelKind::System);
+        sent.role = Some(mailrs_domain::Role::Sent);
+        let labels = [
+            inbox,
+            sent,
+            label("Google", LabelKind::User),
+            label("INBOX/Aliexpress", LabelKind::User),
+            label("INBOX/Lists", LabelKind::User),
+            label("INBOX/Lists/Rust", LabelKind::User),
+            label("INBOX/Sent Items/Receipts", LabelKind::User),
+            label("Postmaster", LabelKind::User),
+            label("Postmaster/dmarc", LabelKind::User),
+        ];
+        let rows = label_rows(&labels, &HashMap::new());
+        let under = |role| {
+            rows.iter()
+                .filter(|row| row.under == role)
+                .map(|row| (row.leaf, row.depth))
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(
+            under(Some(mailrs_domain::Role::Inbox)),
+            [("Aliexpress", 2), ("Lists", 2), ("Rust", 3)]
+        );
+        assert_eq!(under(Some(mailrs_domain::Role::Sent)), [("Receipts", 2)]);
+        assert_eq!(
+            under(None),
+            [("Google", 1), ("Postmaster", 1), ("dmarc", 2)]
+        );
     }
 
     #[test]
