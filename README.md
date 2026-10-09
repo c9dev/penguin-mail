@@ -7,7 +7,7 @@
 
 # Penguin Mail
 
-Mail and calendar for Linux, written in Rust.
+Mail and calendar for Linux and macOS, written in Rust.
 
 [![CI](https://github.com/c9dev/penguin-mail/actions/workflows/ci.yml/badge.svg)](https://github.com/c9dev/penguin-mail/actions/workflows/ci.yml)
 [![Latest release](https://img.shields.io/github/v/release/c9dev/penguin-mail?sort=semver&label=release)](https://github.com/c9dev/penguin-mail/releases/latest)
@@ -19,16 +19,18 @@ Mail and calendar for Linux, written in Rust.
 
 </div>
 
-Penguin Mail is mail and calendar for Linux. It reads Gmail accounts,
-Microsoft accounts (Outlook.com, Hotmail, Live and Microsoft 365) and
-any IMAP and SMTP account, such as Fastmail, iCloud and Yahoo, and finds the
-server settings for you. It syncs from the system tray, shows your accounts
-in one inbox or one at a time, and keeps your mail on your own computer.
+Penguin Mail is mail and calendar for Linux and macOS. It reads Gmail
+accounts, Microsoft accounts (Outlook.com, Hotmail, Live and Microsoft 365)
+and any IMAP and SMTP account, such as Fastmail, iCloud and Yahoo, and finds
+the server settings for you. It shows your accounts in one inbox or one at
+a time and keeps your mail on your own computer. On Linux, it can sync from
+the system tray.
 Gmail and Google Calendar accounts talk to Google directly, and Microsoft
 accounts talk to Microsoft Graph, so no other server sees your mail.
 
-It is built with GTK and libadwaita and fits best on GNOME. It runs on any
-Linux desktop, and the tray icon and every other feature work outside GNOME.
+It is built with GTK and libadwaita and fits best on GNOME. It also runs on
+other Linux desktops and macOS. On macOS, Settings lives in the native app
+menu.
 
 [![A two-minute tour of Penguin Mail: play the video](docs/screenshots/tour.png)](https://youtu.be/0PyJCsw1FSE)
 
@@ -164,17 +166,20 @@ uses a tool from outside the app, and it is off until you pick a model.
 
 ### On the desktop
 
-- **Tray and notifications.** An unread count in the tray, and new-mail
+- **Tray and notifications on Linux.** An unread count in the tray, and new-mail
   notifications with Archive, Mark Read, Delete and Reply buttons.
-- **Light on memory.** In the tray Penguin Mail uses about 55 MB. A minute
+- **Light on memory on Linux.** In the tray Penguin Mail uses about 55 MB. A minute
   after you close the window, it restarts itself in the background to give
   back the memory the window used.
-- **Apple Mail's shortcuts** with Ctrl in place of Command, plus Gmail's
+- **Apple Mail's shortcuts on Linux** with Ctrl in place of Command, plus Gmail's
   single keys.
 - **English and European Portuguese**, chosen in Preferences, with the
   window's controls named for screen readers.
 
 ## Screenshots
+
+The screenshots show the Linux build. The macOS app uses the same views
+with a native app menu.
 
 ![All accounts in one inbox, with a reply open and its quoted history folded](docs/screenshots/inbox.png)
 
@@ -214,29 +219,44 @@ uses a tool from outside the app, and it is off until you pick a model.
 
 ## Install
 
-Penguin Mail runs on Linux, x86_64. The .deb, the rpm and the Arch
-package need GTK 4.20, libadwaita 1.8 and WebKitGTK 6.0 from your
-distribution, as Ubuntu 26.04, Fedora 43 and Arch's own repositories
+Penguin Mail runs on Linux x86_64 and macOS Apple Silicon and Intel. On
+Linux, the .deb, the rpm and the Arch package need GTK 4.20, libadwaita
+1.8 and WebKitGTK 6.0 from your distribution, as Ubuntu 26.04, Fedora 43
+and Arch's own repositories
 have; the snap brings its own. On Ubuntu 24.04 and the releases built on
 it, such as Pop!_OS 24.04 and Linux Mint 22, apt refuses the .deb for its
-older GTK and libadwaita; install the snap there. Penguin Mail is not on
-Flathub yet. The
-tray icon needs a StatusNotifier host, which Ubuntu's AppIndicator
-extension provides.
+older GTK and libadwaita; install the snap there. The Flatpak comes from
+Penguin Mail's own repository, not Flathub. On Linux, the tray icon needs a
+StatusNotifier host, which Ubuntu's AppIndicator extension provides.
 
-| | .deb | rpm | Arch | Snap |
-|---|---|---|---|---|
-| Updates | Install in the app, or `apt upgrade` | `dnf upgrade` | Download the new `.pkg.tar.zst` | Snap Store |
-| GnuPG | the system's | the system's | the system's | the snap's, on your `~/.gnupg` |
-| Assistant skills | yes | yes | yes | no |
-| Claude Code, and MCP servers you run as a command | yes | yes | yes | no |
-| Tray icon | yes | yes | yes | yes |
+| | .deb | rpm | Arch | Flatpak | Snap |
+|---|---|---|---|---|---|
+| Updates | Install in the app, or `apt upgrade` | `dnf upgrade` | Download the new `.pkg.tar.zst` | `flatpak update` | Snap Store |
+| GnuPG | the system's | the system's | the system's | the runtime's, on your `~/.gnupg` | the snap's, on your `~/.gnupg` |
+| Assistant skills | yes | yes | yes | no | no |
+| Claude Code, and MCP servers you run as a command | yes | yes | yes | no | no |
+| Tray icon | yes | yes | yes | yes | yes |
 
-Skills are off in the snap because a skill's scripts run in a sandbox of
-their own, which cannot start inside the one the snap runs in. That
-sandbox also keeps the app from starting programs installed on your
+Skills are off in the Flatpak and snap because a skill's scripts run in a
+sandbox of their own, which cannot start inside either package's sandbox.
+Those sandboxes also keep the app from starting programs installed on your
 system, such as Claude Code. [docs/setup.md](docs/setup.md#which-package)
 has the details.
+
+### On macOS
+
+Download the macOS zip for your computer from the
+[latest release](https://github.com/c9dev/penguin-mail/releases/latest):
+`macos-arm64` for Apple Silicon or `macos-x86_64` for an Intel Mac. Unzip it,
+move `Penguin Mail.app` to Applications, and open it from Finder. The bundle
+includes its GTK libraries, so you do not need Homebrew to run it. The app
+bundle records the minimum macOS version each build requires.
+
+A zip ending in `-unsigned` is a test build without Apple notarization;
+macOS may block it. Download a signed, notarized zip for normal use. To
+update, download the next macOS zip and replace the app in Applications.
+Your mail and settings stay in your user folder. The macOS app has no tray
+icon. GnuPG and command-line assistants are not bundled.
 
 ### With apt (recommended on Ubuntu)
 
@@ -304,6 +324,18 @@ dnf asks you to accept the key the first time. `sudo dnf upgrade` brings
 each new version, and the `.rpm` on the releases page adds the repository
 too.
 
+### With Flatpak
+
+Install from Penguin Mail's signed Flatpak repository:
+
+```sh
+flatpak install --user https://c9dev.github.io/penguin-mail/flatpak/penguin-mail.flatpakref
+```
+
+The install adds the repository, so `flatpak update` brings later versions.
+The GNOME runtime comes from Flathub. The repository uses the signing key
+shown under apt above.
+
 ### On Arch
 
 [![penguin-mail on AUR](https://img.shields.io/aur/version/penguin-mail?label=penguin-mail)](https://aur.archlinux.org/packages/penguin-mail/)
@@ -345,8 +377,8 @@ request for Gmail access; choose **Advanced**, then continue.
 
 ### Updates
 
-A Penguin Mail installed from the .deb, the tarball or source checks GitHub
-for a new release once a day. When one is out, it says so in a
+A Penguin Mail installed on Linux from the .deb, tarball or source checks
+GitHub for a new release once a day. When one is out, it says so in a
 notification, a banner across the window, and the tray menu, and
 **Install** does the rest:
 
@@ -374,6 +406,9 @@ The rpm leaves updates to dnf, and the snap to the Snap Store. Those
 copies never check GitHub and offer no Install of their own; Preferences
 and the About window say who brings updates.
 
+The macOS app has no in-app installer. Download the next macOS zip from the
+releases page and replace `Penguin Mail.app` in Applications.
+
 To update by hand, download the new release and install it the same way as
 the first time. For a copy built from source, pull and run
 `scripts/install.sh` again.
@@ -384,6 +419,9 @@ the first time. For a copy built from source, pull and run
 penguin-mail --demo
 ```
 
+On macOS, run `"/Applications/Penguin Mail.app/Contents/MacOS/penguin-mail" --demo`
+from Terminal instead.
+
 The demo opens three sample accounts in a throwaway store. Search, triage,
 the composer and attachments all work against sample data, and nothing
 talks to Google.
@@ -392,8 +430,10 @@ talks to Google.
 
 ### Keyboard
 
-Apple Mail's shortcuts work with Ctrl in place of Command. Gmail's single
-keys work whenever you are not typing. `Ctrl+?` lists every shortcut.
+On Linux, Apple Mail's shortcuts work with Ctrl in place of Command.
+Gmail's single keys work whenever you are not typing. `Ctrl+?` lists every
+shortcut. On macOS, open **Keyboard Shortcuts** from the window's main menu
+to see the keys for that build.
 
 | Key | Action | Key | Action |
 |---|---|---|---|
@@ -413,19 +453,19 @@ keys work whenever you are not typing. `Ctrl+?` lists every shortcut.
 ### Command line
 
 ```sh
-penguin-mail --background             # start in the tray, no window
+penguin-mail --background             # on Linux, start in the tray
 penguin-mail --compose                # new message
 penguin-mail mailto:ann@example.com   # new message to Ann
 penguin-mail --version
 ```
 
-To make Penguin Mail open `mailto:` links:
+On Linux, to make Penguin Mail open `mailto:` links:
 
 ```sh
 xdg-mime default io.github.c9dev.PenguinMail.desktop x-scheme-handler/mailto
 ```
 
-The running app answers D-Bus actions, for custom shortcuts:
+On Linux, the running app answers D-Bus actions, for custom shortcuts:
 
 ```sh
 gdbus call --session --dest io.github.c9dev.PenguinMail --object-path /io/github/c9dev/PenguinMail \
@@ -434,21 +474,22 @@ gdbus call --session --dest io.github.c9dev.PenguinMail --object-path /io/github
 
 The actions are `show-window`, `hide-window`, `compose`, `check` and `quit`.
 
-`penguin-mail-cli` drives the same sync core without a window: `account add`,
-`sync`, `threads`, `show`, `triage` and `export`.
+When built from source, `penguin-mail-cli` drives the same sync core without
+a window: `account add`, `sync`, `threads`, `show`, `triage` and `export`.
 
 ## Privacy
 
 - Penguin Mail talks to Google's APIs straight from your computer. No
   Penguin Mail server sits in between.
-- Refresh tokens live in the GNOME keyring. The config file holds sync
-  settings and, for accounts added through the old setup page, their Google
-  client ID and secret, readable by you alone.
-- Mail is cached in `~/.local/share/penguin-mail`: the last 30 days plus
-  everything in your inbox. Opening an older thread fetches it on demand.
+- Refresh tokens live in Keychain on macOS or the desktop keyring on Linux.
+  The config file holds sync settings and, for accounts added through the
+  old setup page, their Google client ID and secret, readable by you alone.
+- Mail is cached in `~/.local/share/penguin-mail` on Linux or
+  `~/Library/Application Support/penguin-mail` on macOS: the last 30 days
+  plus everything in your inbox. Opening an older thread fetches it on demand.
 - The assistant is off until you pick a model. A local model keeps mail on
   your computer; the Anthropic API and Claude Code send what the assistant
-  reads to Anthropic. API keys live in the GNOME keyring.
+  reads to Anthropic. API keys live in the same credential store.
 
 The full policy is in [docs/privacy-policy.md](docs/privacy-policy.md).
 

@@ -43,7 +43,7 @@ jobs:
     name: CI passed on this commit
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
-    timeout-minutes: 75
+    timeout-minutes: 105
     permissions:
       actions: read
     steps:
@@ -53,7 +53,7 @@ jobs:
           REPO: ${{ github.repository }}
           SHA: ${{ github.sha }}
         run: |
-          for _ in $(seq 140); do
+          for _ in $(seq 200); do
             # A failed call is asked again on the next round.
             states=$(gh api "repos/$REPO/actions/workflows/ci.yml/runs?head_sha=$SHA&per_page=50" \
                 --jq '.workflow_runs[] | "\(.status) \(.conclusion)"') || states=
@@ -67,7 +67,7 @@ jobs:
             fi
             sleep 30
           done
-          echo "::error::CI on $SHA had not finished after 70 minutes"
+          echo "::error::CI on $SHA had not finished after 100 minutes"
           exit 1
 
   build:
@@ -234,6 +234,72 @@ jobs:
           path: dist/*.pkg.tar.zst
           if-no-files-found: error
 
+  flatpak:
+    name: Build the Flatpak
+    needs: version
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-51
+      options: --privileged
+    timeout-minutes: 90
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # The checked-in manifest leaves these empty. A tagged release must
+      # include the Google client, just as the .deb and rpm do.
+      - name: Put the Google and Microsoft clients into the manifest
+        env:
+          EVENT: ${{ github.event_name }}
+          PENGUIN_MAIL_GOOGLE_CLIENT_ID: ${{ secrets.PENGUIN_MAIL_GOOGLE_CLIENT_ID }}
+          PENGUIN_MAIL_GOOGLE_CLIENT_SECRET: ${{ secrets.PENGUIN_MAIL_GOOGLE_CLIENT_SECRET }}
+          PENGUIN_MAIL_MICROSOFT_CLIENT_ID: ${{ secrets.MICROSOFT_CLIENT_ID }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          names = (
+              "PENGUIN_MAIL_GOOGLE_CLIENT_ID",
+              "PENGUIN_MAIL_GOOGLE_CLIENT_SECRET",
+              "PENGUIN_MAIL_MICROSOFT_CLIENT_ID",
+          )
+          if os.environ["EVENT"] == "push" and any(not os.environ[name] for name in names[:2]):
+              raise SystemExit("A released Flatpak needs the Google client ID and secret")
+          path = Path("packaging/flatpak/io.github.c9dev.penguin-mail.yml")
+          recipe = path.read_text(encoding="utf-8")
+          for name in names:
+              empty = f'{name}: ""'
+              if recipe.count(empty) != 1:
+                  raise SystemExit(f"{path} has no single empty {name}")
+              recipe = recipe.replace(empty, f"{name}: {json.dumps(os.environ[name])}")
+          path.write_text(recipe, encoding="utf-8")
+          PY
+      - uses: flatpak/flatpak-github-actions/flatpak-builder@79327416609af08178ad73b352877e51450790b3 # v6.8
+        with:
+          bundle: penguin-mail.flatpak
+          manifest-path: packaging/flatpak/io.github.c9dev.penguin-mail.yml
+          branch: stable
+          cache-key: flatpak-builder-${{ hashFiles('Cargo.lock') }}
+          upload-artifact: false
+      - name: Name the release bundle
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          bundles=(*.flatpak)
+          if [ ${#bundles[@]} -ne 1 ]; then
+              echo "::error::Expected one Flatpak bundle, found ${#bundles[@]}"
+              exit 1
+          fi
+          mkdir -p dist
+          mv "${bundles[0]}" "dist/penguin-mail-$VERSION-x86_64.flatpak"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: penguin-mail-${{ needs.version.outputs.version }}-flatpak
+          path: dist/*.flatpak
+          if-no-files-found: error
+
   snap:
     name: Build the snap
     needs: version
@@ -285,9 +351,14 @@ jobs:
           path: ${{ steps.snapcraft.outputs.snap }}
           if-no-files-found: error
 
+  macos:
+    name: Build the macOS apps
+    uses: ./.github/workflows/macos.yml
+    secrets: inherit
+
   publish:
     name: Publish the release
-    needs: [version, ci, build, rpm, arch]
+    needs: [version, ci, build, rpm, arch, flatpak, macos]
     # Only a pushed tag publishes. A trial run from the Actions tab builds
     # everything and publishes nothing, whichever ref it ran on.
     if: github.event_name == 'push' && github.ref_type == 'tag'
@@ -321,7 +392,7 @@ jobs:
           fi
           cd dist
           rm -f SHA256SUMS SHA256SUMS.asc
-          sha256sum -- *.deb *.rpm *.pkg.tar.zst *.tar.gz *.zip > SHA256SUMS
+          sha256sum -- *.deb *.rpm *.pkg.tar.zst *.tar.gz *.zip *.flatpak > SHA256SUMS
           cat SHA256SUMS
           signing=$(mktemp -d)
           trap 'gpgconf --homedir "$signing" --kill all; rm -rf "$signing"' EXIT
@@ -344,6 +415,7 @@ jobs:
             dist/*.pkg.tar.zst
             dist/*.tar.gz
             dist/*.zip
+            dist/*.flatpak
             dist/SHA256SUMS
             dist/SHA256SUMS.asc
 
