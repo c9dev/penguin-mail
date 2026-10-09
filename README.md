@@ -17,6 +17,8 @@ Mail and calendar for Linux and macOS, written in Rust.
 
 [Website](https://penguin-mail.com) · [Watch the tour](https://youtu.be/0PyJCsw1FSE) · [Install](#install) · [Features](#features) · [Screenshots](#screenshots) · [Changelog](CHANGELOG.md)
 
+[![Penguin Mail | AlternativeTo](https://alternativeto.net/static/badges/badge-wide-dark.svg)](https://alternativeto.net/software/penguin-mail/about/?utm_source=badge&utm_medium=referral)
+
 </div>
 
 Penguin Mail is mail and calendar for Linux and macOS. It reads Gmail
