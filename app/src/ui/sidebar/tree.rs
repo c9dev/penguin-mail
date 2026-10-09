@@ -30,6 +30,11 @@ fn leaf(name: &str) -> &str {
     name.rsplit_once('/').map_or(name, |(_, leaf)| leaf)
 }
 
+fn parent_key(name: &str) -> &str {
+    // IMAP's Inbox is case insensitive; other folder names are not.
+    if name.eq_ignore_ascii_case("INBOX") { "INBOX" } else { name }
+}
+
 /// An account's labels and folders with the groups that hold folders, each
 /// under its parent, so "Work/Clients" sits under "Work" even where the
 /// server keeps no mail in "Work". Siblings go in the order the person
@@ -37,14 +42,14 @@ fn leaf(name: &str) -> &str {
 /// name, ignoring case.
 pub fn label_rows<'a>(labels: &'a [Label], positions: &HashMap<String, i64>) -> Vec<LabelRow<'a>> {
     let parents: HashMap<&str, Role> = labels.iter().filter_map(|label| {
-        label.role.filter(|role| *role != Role::Important).map(|role| (label.name.as_str(), role))
+        label.role.filter(|role| *role != Role::Important).map(|role| (parent_key(&label.name), role))
     }).collect();
     let mut rows: Vec<LabelRow<'a>> = labels
         .iter()
         .filter(|l| matches!(l.kind, LabelKind::User | LabelKind::Group))
         .map(|label| {
             let ancestor = label.name.match_indices('/').rev().find_map(|(at, _)| {
-                parents.get(&label.name[..at]).map(|role| (at, *role))
+                parents.get(parent_key(&label.name[..at])).map(|role| (at, *role))
             });
             LabelRow {
                 under: ancestor.map(|(_, role)| role),
@@ -227,7 +232,7 @@ pub fn moves(rows: &[LabelRow<'_>], id: &str) -> Moves {
 mod tests {
     use std::collections::HashMap;
 
-    use mailrs_domain::{Label, LabelKind};
+    use mailrs_domain::{Label, LabelKind, Role};
 
     use super::{Placement, Refusal, Zone, label_rows, moves, place, step, zone};
 
@@ -315,6 +320,33 @@ mod tests {
             under(None),
             [("Google", 1), ("Postmaster", 1), ("dmarc", 2)]
         );
+    }
+
+    #[test]
+    fn inbox_children_accept_the_servers_mixed_case_prefix() {
+        for name in ["INBOX", "Inbox", "inbox"] {
+            let mut inbox = label(name, LabelKind::System);
+            inbox.role = Some(Role::Inbox);
+            let mut archive = label("Archive", LabelKind::System);
+            archive.role = Some(Role::Archive);
+            let labels = [
+                inbox,
+                archive,
+                label("Google", LabelKind::User),
+                label("Inbox/Aliexpress", LabelKind::User),
+                label("Inbox/Allegro", LabelKind::User),
+                label("Inbox/Lists", LabelKind::User),
+                label("Inbox/Lists/Rust", LabelKind::User),
+                label("archive/Separate", LabelKind::User),
+            ];
+            let rows = label_rows(&labels, &HashMap::new());
+            let children: Vec<_> = rows.iter()
+                .filter(|row| row.under == Some(Role::Inbox))
+                .map(|row| (row.leaf, row.depth))
+                .collect();
+            assert_eq!(children, [("Aliexpress", 2), ("Allegro", 2), ("Lists", 2), ("Rust", 3)]);
+            assert!(rows.iter().find(|row| row.leaf == "Separate").unwrap().under.is_none());
+        }
     }
 
     #[test]
