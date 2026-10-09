@@ -219,22 +219,22 @@ package need GTK 4.20, libadwaita 1.8 and WebKitGTK 6.0 from your
 distribution, as Ubuntu 26.04, Fedora 43 and Arch's own repositories
 have; the snap brings its own. On Ubuntu 24.04 and the releases built on
 it, such as Pop!_OS 24.04 and Linux Mint 22, apt refuses the .deb for its
-older GTK and libadwaita; install the snap there. Penguin Mail is not on
-Flathub yet. The
-tray icon needs a StatusNotifier host, which Ubuntu's AppIndicator
+older GTK and libadwaita; install the snap there. The Flatpak comes from
+Penguin Mail's own repository, not Flathub. The tray icon needs a
+StatusNotifier host, which Ubuntu's AppIndicator
 extension provides.
 
-| | .deb | rpm | Arch | Snap |
-|---|---|---|---|---|
-| Updates | Install in the app, or `apt upgrade` | `dnf upgrade` | Download the new `.pkg.tar.zst` | Snap Store |
-| GnuPG | the system's | the system's | the system's | the snap's, on your `~/.gnupg` |
-| Assistant skills | yes | yes | yes | no |
-| Claude Code, and MCP servers you run as a command | yes | yes | yes | no |
-| Tray icon | yes | yes | yes | yes |
+| | .deb | rpm | Arch | Flatpak | Snap |
+|---|---|---|---|---|---|
+| Updates | Install in the app, or `apt upgrade` | `dnf upgrade` | Download the new `.pkg.tar.zst` | `flatpak update` | Snap Store |
+| GnuPG | the system's | the system's | the system's | the runtime's, on your `~/.gnupg` | the snap's, on your `~/.gnupg` |
+| Assistant skills | yes | yes | yes | no | no |
+| Claude Code, and MCP servers you run as a command | yes | yes | yes | no | no |
+| Tray icon | yes | yes | yes | yes | yes |
 
-Skills are off in the snap because a skill's scripts run in a sandbox of
-their own, which cannot start inside the one the snap runs in. That
-sandbox also keeps the app from starting programs installed on your
+Skills are off in the Flatpak and snap because a skill's scripts run in a
+sandbox of their own, which cannot start inside either package's sandbox.
+Those sandboxes also keep the app from starting programs installed on your
 system, such as Claude Code. [docs/setup.md](docs/setup.md#which-package)
 has the details.
 
@@ -303,6 +303,18 @@ sudo dnf install penguin-mail
 dnf asks you to accept the key the first time. `sudo dnf upgrade` brings
 each new version, and the `.rpm` on the releases page adds the repository
 too.
+
+### With Flatpak
+
+Install from Penguin Mail's signed Flatpak repository:
+
+```sh
+flatpak install --user https://c9dev.github.io/penguin-mail/flatpak/penguin-mail.flatpakref
+```
+
+The install adds the repository, so `flatpak update` brings later versions.
+The GNOME runtime comes from Flathub. The repository uses the signing key
+shown under apt above.
 
 ### On Arch
 

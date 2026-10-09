@@ -153,7 +153,7 @@ decides where updates come from and whether skills run.
 
 | | .deb | rpm | Arch | Flatpak | Snap |
 |---|---|---|---|---|---|
-| Updates | Install in the app, or the apt repository | the dnf repository | pacman, by hand | Flathub | Snap Store |
+| Updates | Install in the app, or the apt repository | the dnf repository | pacman, by hand | the Flatpak remote | Snap Store |
 | GnuPG | system | system | system | runtime's `gpg`, on `~/.gnupg` | snap's `gpg`, on a keyring inside the snap |
 | Assistant skills | yes | yes | yes | no | no |
 | Claude Code, MCP servers run as a command | yes | yes | yes | no | no |
@@ -167,8 +167,9 @@ decides where updates come from and whether skills run.
   dnf, and the Arch package to pacman, though there is no Arch
   repository yet, so that means downloading and installing the new
   `.pkg.tar.zst` by hand; see `packaging/aur/PKGBUILD` for what an AUR
-  package would add. The Flatpak and the snap leave updates to their
-  store. Preferences and the About window say which applies.
+  package would add. The Flatpak gets updates from its remote, and the
+  snap from the Snap Store. Preferences and the About window say which
+  applies.
 - **GnuPG.** The Flatpak reaches two places for signing and encryption:
   `~/.gnupg`, read and written, and the gpg-agent socket folder under
   `$XDG_RUNTIME_DIR/gnupg`, read-only, so your own agent and pinentry

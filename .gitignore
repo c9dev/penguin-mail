@@ -11,6 +11,7 @@ graphify-out/
 # The owner's own working notes and agent setup stay on their machine.
 .agents/
 .claude/
+.codex/
 skills-lock.json
 docs/agents/
 docs/superpowers/

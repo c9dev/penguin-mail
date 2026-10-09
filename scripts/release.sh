@@ -49,6 +49,7 @@ push_release() {
     fi
     echo "Pushed v$version. GitHub builds and publishes it:"
     echo "  https://github.com/c9dev/penguin-mail/actions/workflows/release.yml"
+    echo "The apt, dnf and Flatpak repositories update from that release."
     echo
     echo "Flathub builds from its own repository, so update it by hand:"
     echo "  scripts/flatpak-sources.sh --flathub v$version <dir>"
