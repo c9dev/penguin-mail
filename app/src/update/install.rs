@@ -18,6 +18,13 @@ pub fn method_for(packaging: Packaging, exe: &Path) -> Option<Method> {
     if packaging.updated_by().is_some() {
         return None;
     }
+    // A macOS app is replaced as a signed bundle, never by the Linux installer.
+    if exe
+        .parent()
+        .is_some_and(|folder| folder.ends_with("Contents/MacOS"))
+    {
+        return None;
+    }
     if exe.starts_with("/usr") {
         return Some(Method::Deb);
     }
@@ -147,6 +154,10 @@ mod tests {
             })
         );
         assert_eq!(native("/home/ann/mail/target/release/penguin-mail"), None);
+        assert_eq!(
+            native("/Applications/Penguin Mail.app/Contents/MacOS/penguin-mail"),
+            None
+        );
     }
 
     #[test]

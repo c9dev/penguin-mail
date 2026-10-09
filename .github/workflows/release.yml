@@ -43,7 +43,7 @@ jobs:
     name: CI passed on this commit
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
-    timeout-minutes: 75
+    timeout-minutes: 105
     permissions:
       actions: read
     steps:
@@ -53,7 +53,7 @@ jobs:
           REPO: ${{ github.repository }}
           SHA: ${{ github.sha }}
         run: |
-          for _ in $(seq 140); do
+          for _ in $(seq 200); do
             # A failed call is asked again on the next round.
             states=$(gh api "repos/$REPO/actions/workflows/ci.yml/runs?head_sha=$SHA&per_page=50" \
                 --jq '.workflow_runs[] | "\(.status) \(.conclusion)"') || states=
@@ -67,7 +67,7 @@ jobs:
             fi
             sleep 30
           done
-          echo "::error::CI on $SHA had not finished after 70 minutes"
+          echo "::error::CI on $SHA had not finished after 100 minutes"
           exit 1
 
   build:
@@ -351,9 +351,14 @@ jobs:
           path: ${{ steps.snapcraft.outputs.snap }}
           if-no-files-found: error
 
+  macos:
+    name: Build the macOS apps
+    uses: ./.github/workflows/macos.yml
+    secrets: inherit
+
   publish:
     name: Publish the release
-    needs: [version, ci, build, rpm, arch, flatpak]
+    needs: [version, ci, build, rpm, arch, flatpak, macos]
     # Only a pushed tag publishes. A trial run from the Actions tab builds
     # everything and publishes nothing, whichever ref it ran on.
     if: github.event_name == 'push' && github.ref_type == 'tag'

@@ -56,6 +56,8 @@ mod unsubscribe_page;
 mod update;
 mod wanted;
 mod web;
+#[cfg(target_os = "macos")]
+mod bundle;
 
 use std::cell::RefCell;
 use std::ffi::OsString;
@@ -101,6 +103,8 @@ fn usage() -> String {
 }
 
 fn main() -> glib::ExitCode {
+    #[cfg(target_os = "macos")]
+    bundle::prepare().expect("could not prepare the application bundle");
     // On macOS this has to come before GTK starts; see `web`.
     web::prepare();
     #[cfg(all(target_os = "macos", debug_assertions))]

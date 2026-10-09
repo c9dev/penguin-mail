@@ -1886,7 +1886,7 @@ msgstr ""
 msgid "{language} ({country})"
 msgstr ""
 
-#: app/src/main.rs:92
+#: app/src/main.rs:94
 msgid ""
 "Usage: penguin-mail [--background] [--demo] [--compose [mailto:ADDRESS]] "
 "[FILE.ics]\n"
@@ -1899,15 +1899,15 @@ msgid ""
 "  FILE.ics       open a calendar file, to add its events to a calendar"
 msgstr ""
 
-#: app/src/main.rs:167
+#: app/src/main.rs:171
 msgid "penguin-mail: unknown option {option}"
 msgstr ""
 
-#: app/src/main.rs:350
+#: app/src/main.rs:354
 msgid "Penguin Mail Could Not Start"
 msgstr ""
 
-#: app/src/main.rs:355 app/src/ui/about.rs:179
+#: app/src/main.rs:359 app/src/ui/about.rs:179
 msgid "Report a Problem"
 msgstr ""
 

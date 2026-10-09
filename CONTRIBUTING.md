@@ -129,6 +129,9 @@ Both run on the demo's sample accounts, and nothing talks to Google.
 
 ## Releasing
 
+The [macOS release guide](docs/macos-release.md) covers the portable app,
+optional Developer ID signing and notarization, and the GitHub secrets.
+
 `scripts/release.sh` bumps the version, opens the changelog draft in your
 editor, writes the store listings' release notes with
 `scripts/metainfo.sh`, runs the checks, then commits, tags and pushes. If
