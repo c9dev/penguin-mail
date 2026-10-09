@@ -1,6 +1,7 @@
 //! The Linux adapter: WebKitGTK, whose page is a GTK widget of its own.
 
 use std::cell::RefCell;
+use std::collections::HashSet;
 use std::path::Path;
 use std::rc::Rc;
 
@@ -318,6 +319,8 @@ impl Request {
 type Serve = Rc<dyn Fn(Request)>;
 
 thread_local! {
+    // Every page uses the default context, which outlives its views.
+    static REGISTERED: RefCell<HashSet<&'static str>> = RefCell::new(HashSet::new());
     /// Who answers each page's scheme. WebKit takes one handler per scheme
     /// for the whole process, and that handler finds the page asking here.
     static SERVED: RefCell<Vec<(&'static str, glib::WeakRef<webkit::WebView>, Serve)>> =
@@ -328,19 +331,17 @@ thread_local! {
 /// scheme with WebKit the first time: a second handler for the same scheme
 /// is refused.
 fn serve_scheme(scheme: &'static str, view: &webkit::WebView, serve: Serve) {
-    let first = SERVED.with(|served| {
+    SERVED.with(|served| {
         let mut served = served.borrow_mut();
         served.retain(|(_, view, _)| view.upgrade().is_some());
-        let first = !served.iter().any(|(name, _, _)| *name == scheme);
         served.push((scheme, view.downgrade(), serve));
-        first
     });
-    if !first {
-        return;
-    }
     let Some(context) = webkit::WebContext::default() else {
         return;
     };
+    if !REGISTERED.with(|registered| registered.borrow_mut().insert(scheme)) {
+        return;
+    }
     context.register_uri_scheme(scheme, move |request| {
         let asking = request.web_view();
         let serve = SERVED.with(|served| {
@@ -354,6 +355,41 @@ fn serve_scheme(scheme: &'static str, view: &webkit::WebView, serve: Serve) {
         match serve {
             Some(serve) => serve(request),
             None => request.refuse(),
+        }
+    });
+}
+
+/// Runs on the existing GTK test thread so WebKit keeps its main thread.
+#[cfg(test)]
+pub(crate) fn check_scheme_after_last_view_closes() {
+    use std::cell::Cell;
+    use std::time::Duration;
+
+    glib::MainContext::default().block_on(async {
+        for _ in 0..3 {
+            let received = Rc::new(Cell::new(false));
+            let answer = received.clone();
+            let page = WebView::reading("mailrs-reopen-check", move |request| {
+                answer.set(true);
+                request.refuse();
+            });
+            page.load_html("<img src='mailrs-reopen-check:picture'>");
+            for _ in 0..100 {
+                if received.get() {
+                    break;
+                }
+                glib::timeout_future(Duration::from_millis(50)).await;
+            }
+            assert!(received.get(), "the new view receives its scheme request");
+            let weak = page.downgrade();
+            drop(page);
+            for _ in 0..100 {
+                if weak.upgrade().is_none() {
+                    break;
+                }
+                glib::timeout_future(Duration::from_millis(50)).await;
+            }
+            assert!(weak.upgrade().is_none(), "the last view was destroyed");
         }
     });
 }
