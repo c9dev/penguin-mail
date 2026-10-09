@@ -5,6 +5,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ## Unreleased
 
+## 1.0.6 (2026-10-09)
+
 ### New
 
 - Install Penguin Mail from its signed Flatpak repository and get later releases with `flatpak update`.

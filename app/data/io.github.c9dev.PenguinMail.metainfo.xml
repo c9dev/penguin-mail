@@ -109,6 +109,30 @@
 
   <!-- scripts/metainfo.sh writes this list from CHANGELOG.md. -->
   <releases>
+    <release version="1.0.6" date="2026-10-09">
+      <url type="details">https://github.com/c9dev/penguin-mail/releases/tag/v1.0.6</url>
+      <description translate="no">
+        <p>New</p>
+        <ul>
+          <li>Install Penguin Mail from its signed Flatpak repository and get later releases with <code>flatpak update</code>.</li>
+          <li>macOS releases include apps for Apple Silicon and Intel, with their GTK libraries and translations bundled.</li>
+          <li>Pick the languages you read as they are, under Never Translate in Preferences or with Never Translate on a message's translation card, and their messages stop offering a translation.</li>
+        </ul>
+        <p>Improved</p>
+        <ul>
+          <li>Mailbox names and messages in the list use larger text on macOS.</li>
+        </ul>
+        <p>Fixed</p>
+        <ul>
+          <li>Earlier messages in IMAP conversations expand when clicked.</li>
+          <li>IMAP search results open their conversation instead of showing zero messages.</li>
+          <li>Inline pictures keep loading after every conversation window has been closed and reopened on Linux.</li>
+          <li>Resizing a window on macOS keeps the message visible around cards drawn over it.</li>
+          <li>macOS shows Penguin Mail's own menu, with Settings available through Command-comma.</li>
+          <li>On macOS, Tab leaves a message, clearing Find cannot hang the page, and hidden unsubscribe pages block pictures.</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.0.5" date="2026-10-08">
       <url type="details">https://github.com/c9dev/penguin-mail/releases/tag/v1.0.5</url>
       <description translate="no">
