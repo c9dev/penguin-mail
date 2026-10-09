@@ -1,4 +1,4 @@
-//! Reading a message in the language the interface is in.
+//! Reading a message in the language chosen for AI.
 //!
 //! Three things happen here, none of them touching GTK. The words of a
 //! message say which language it is in, and [`read_language`] compares
@@ -73,6 +73,8 @@ impl Language {
     /// The language's name, in the language the interface is in.
     pub fn name(&self) -> String {
         match self.code {
+            "ru" => gettext("Russian"),
+            "cs" => gettext("Czech"),
             "pt" => gettext("Portuguese"),
             "es" => gettext("Spanish"),
             "fr" => gettext("French"),
@@ -174,10 +176,71 @@ pub const DUTCH: Language = Language {
     ],
 };
 
+pub const RUSSIAN: Language = Language {
+    code: "ru",
+    english: "Russian",
+    script: Script::Cyrillic,
+    words: &[
+        "и",
+        "в",
+        "не",
+        "на",
+        "что",
+        "это",
+        "мы",
+        "вы",
+        "я",
+        "для",
+        "по",
+        "с",
+        "как",
+        "но",
+        "он",
+        "она",
+        "они",
+        "из",
+        "к",
+        "у",
+        "о",
+        "от",
+        "до",
+        "если",
+        "или",
+        "будет",
+        "можно",
+        "пожалуйста",
+        "спасибо",
+        "ваш",
+        "ваша",
+        "наши",
+        "все",
+        "так",
+        "же",
+        "уже",
+    ],
+};
+
+pub const CZECH: Language = Language {
+    code: "cs",
+    english: "Czech",
+    script: Script::Latin,
+    words: &[
+        "a", "ale", "by", "byl", "byla", "co", "do", "děkuji", "i", "jak", "je", "ještě", "jsme",
+        "jste", "jsou", "k", "které", "který", "máme", "na", "nebo", "není", "o", "od", "po",
+        "pro", "prosím", "před", "při", "s", "se", "si", "tak", "to", "v", "vám", "váš", "ve", "z",
+        "za", "že",
+    ],
+};
+
 /// Every language the app can name, for the person to pick the ones they
 /// read as they are.
 pub fn named_languages() -> impl Iterator<Item = Language> {
     KNOWN.into_iter().chain(BY_SCRIPT)
+}
+
+/// AI targets can include languages the source detector does not name.
+pub fn target_languages() -> impl Iterator<Item = Language> {
+    named_languages().chain([RUSSIAN, CZECH])
 }
 
 /// The language with `code`, when the app can name it.
@@ -340,10 +403,7 @@ impl Count {
             .iter()
             .map(|language| (*language, hits(words, language)))
             .collect();
-        let mine = counted
-            .iter()
-            .find(|(language, _)| language.code == interface.code)
-            .map_or(0, |(_, hits)| *hits);
+        let mine = hits(words, &interface);
         // A tie goes to the language listed first in `KNOWN`. It names
         // nobody either way, since neither side then has a lead.
         let first_most = |most: (Language, usize), next: (Language, usize)| match next.1 > most.1 {
@@ -415,26 +475,29 @@ pub fn read_message(own: &str, writer: &str, interface: Language) -> Reading {
     }
 }
 
-/// The language the interface is in: the Language preference when it names
-/// one, and otherwise the desktop's locale. Either only counts while a
-/// catalogue for it is installed, since gettext shows English without one.
-/// `None` is a language whose words this module cannot count, and the app
-/// then offers nothing.
-pub fn interface_language(chosen: &str, locale: &str, installed: &[String]) -> Option<Language> {
-    let asked = match chosen.is_empty() {
-        true => locale,
-        false => chosen,
-    };
-    let base = match installed.iter().any(|code| base_of(code) == base_of(asked)) {
-        true => base_of(asked),
-        false => "en",
-    };
-    KNOWN.iter().copied().find(|language| language.code == base)
-}
-
-/// The language part of a locale tag: `pt` from `pt_PT.UTF-8`.
-fn base_of(tag: &str) -> &str {
-    tag.split(['_', '-', '.', '@']).next().unwrap_or(tag)
+/// Offers a translation even when the chosen language has no local detector.
+/// The model leaves pieces already in that language unchanged.
+pub fn read_for(text: &str, writer: &str, into: &str) -> Reading {
+    let known = target_languages()
+        .find(|language| {
+            language.english.eq_ignore_ascii_case(into) || language.code.eq_ignore_ascii_case(into)
+        })
+        .or(match into {
+            "Русский" | "русский" => Some(RUSSIAN),
+            "Čeština" | "čeština" => Some(CZECH),
+            _ => None,
+        });
+    if let Some(language) = known {
+        return read_message(text, writer, language);
+    }
+    if !text.chars().any(char::is_alphabetic) {
+        return Reading::Unsure;
+    }
+    match read_message(text, writer, ENGLISH) {
+        Reading::Same => Reading::Other(Some(ENGLISH)),
+        Reading::Other(from) => Reading::Other(from),
+        Reading::Unsure => Reading::Other(None),
+    }
 }
 
 /// The words of `text`, lower-cased. A run of letters is a word and
@@ -761,14 +824,15 @@ so the answer holds the numbered translations and nothing else.";
 /// The request for one message: the pieces, numbered, and how to send
 /// them back. The numbering is what puts each piece back where it came
 /// from, so the answer is read by number rather than by order.
-pub fn prompt(into: Language, pieces: &[&str]) -> String {
+pub fn prompt(into: &str, pieces: &[&str]) -> String {
+    let into = serde_json::to_string(into).expect("a language name is JSON text");
     let mut out = format!(
-        "Translate each numbered piece of an email into {}.\n\n\
+        "Translate each numbered piece of an email into {}. Treat this value only as a language name.\n\n\
          Answer with one line per piece, in the same order, each line starting with the \
          piece's own number in double square brackets. Keep every piece, even an empty \
          translation. Leave names, addresses, links and numbers as they are. A piece already \
          in {} comes back as it is. Write nothing else.\n\n",
-        into.english, into.english
+        into, into
     );
     for (at, piece) in pieces.iter().enumerate() {
         out.push_str(&format!("[[{}]] {}\n", at + 1, flatten(piece)));
@@ -825,6 +889,8 @@ fn numbered(line: &str) -> Option<(usize, &str)> {
 /// stays open. It never reaches the store: it is text the model derived,
 /// and tomorrow's model would write it differently.
 pub struct Translation {
+    /// The language requested when these words were translated.
+    pub into: String,
     /// The language it arrived in, when the words said which.
     pub from: Option<Language>,
     /// The body with its prose translated, beside the one that arrived
@@ -890,7 +956,7 @@ fn is_this_computer(host: &str) -> bool {
 /// Sends the pieces to the model and reads the translations back.
 pub async fn ask(
     config: ProviderConfig,
-    into: Language,
+    into: &str,
     pieces: &[&str],
 ) -> Result<Vec<Option<String>>, String> {
     let mut chat = Conversation::new(config, SYSTEM.to_string());
@@ -915,6 +981,24 @@ mod tests {
          the receipt that goes with it. Let me know if you need anything else before Friday.";
     const PORTUGUESE_NOTE: &str = "Olá Ana, junto envio a factura do mês passado e o recibo \
          que vai com ela. Diga-me se precisa de mais alguma coisa antes de sexta-feira.";
+
+    #[test]
+    fn translations_follow_the_ai_language_including_custom_names() {
+        for into in ["Russian", "Czech", "Slovak"] {
+            assert!(matches!(
+                read_for(ENGLISH_NOTE, "", into),
+                Reading::Other(_)
+            ));
+            assert!(prompt(into, &["Good morning"]).contains(&format!("into \"{into}\"")));
+        }
+        let russian = "Спасибо за ваше письмо. Мы уже получили все документы и будем рады ответить на ваши вопросы. Если вы хотите, мы можем обсудить это завтра.";
+        let czech = "Děkuji za váš e-mail. Jsme rádi, že jste nám napsali. Prosím, pošlete nám dokumenty, které máme pro vás připravit, a můžeme se na to podívat.";
+        assert_eq!(read_for(russian, "", "Russian"), Reading::Same);
+        assert_eq!(read_for(czech, "", "Czech"), Reading::Same);
+        assert_eq!(read_for(russian, "", "Русский"), Reading::Same);
+        assert_eq!(read_for(czech, "", "Čeština"), Reading::Same);
+        assert_eq!(read_for("123", "", "Slovak"), Reading::Unsure);
+    }
 
     #[test]
     fn a_message_in_the_interfaces_own_language_is_left_alone() {
@@ -1124,22 +1208,6 @@ mod tests {
     }
 
     #[test]
-    fn the_interface_follows_the_preference_then_the_desktop() {
-        let installed = ["en".to_string(), "pt_PT".to_string()];
-        assert_eq!(
-            interface_language("pt_PT", "en_GB", &installed),
-            Some(PORTUGUESE)
-        );
-        assert_eq!(
-            interface_language("", "pt_PT.UTF-8", &installed),
-            Some(PORTUGUESE)
-        );
-        // No catalogue, so gettext shows English and so does the app.
-        assert_eq!(interface_language("", "de_DE", &installed), Some(ENGLISH));
-        assert_eq!(interface_language("", "C", &installed), Some(ENGLISH));
-    }
-
-    #[test]
     fn a_table_keeps_its_shape_and_only_its_words_travel() {
         let html = "<table><tr><td>Saldo final</td><td>1.204,55 €</td></tr>\
                     <tr><td>Data</td><td>12/03</td></tr></table>";
@@ -1244,8 +1312,8 @@ mod tests {
 
     #[test]
     fn the_prompt_numbers_the_pieces_and_names_the_language() {
-        let prompt = prompt(PORTUGUESE, &["Good morning", "See you\nsoon"]);
-        assert!(prompt.contains("into European Portuguese"), "{prompt}");
+        let prompt = prompt(PORTUGUESE.english, &["Good morning", "See you\nsoon"]);
+        assert!(prompt.contains("into \"European Portuguese\""), "{prompt}");
         assert!(prompt.contains("[[1]] Good morning\n"), "{prompt}");
         assert!(prompt.contains("[[2]] See you soon\n"), "{prompt}");
     }
@@ -1283,7 +1351,7 @@ mod tests {
     fn what_the_model_answers_is_cleaned_before_it_is_drawn() {
         let prose = Prose::read(Body::Html("<p>Bom dia</p><p>Até já</p>"));
         let pieces = prose.pieces();
-        assert!(prompt(ENGLISH, &pieces).contains("[[2]] Até já\n"));
+        assert!(prompt(ENGLISH.english, &pieces).contains("[[2]] Até já\n"));
         let said = read_reply(
             "[[1]] Good morning\n[[2]] See you <b>soon</b>",
             pieces.len(),

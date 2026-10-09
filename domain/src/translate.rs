@@ -98,7 +98,7 @@ pub fn set_date_locale(code: &str) {
 
 /// The `Language` field of the catalogue in use, such as `pt_PT`, or
 /// nothing when the interface is in the English of the source.
-fn catalogue_language() -> String {
+pub fn catalogue_language() -> String {
     // gettext answers the empty message id with the header of the
     // catalogue it chose. The id goes in as a value rather than a literal
     // so xgettext does not take it for a word to translate.

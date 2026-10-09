@@ -162,9 +162,31 @@ Each row folds to one line. Click it, or press Space on it, to see the
 thinking, or the tool's input and the result the model read. While the
 model works, a line at the bottom says what it is doing now.
 
+## Choose the AI language
+
+Under **Preferences > AI > AI Language**, choose the language for answers,
+summaries and translations. **Same as Interface** is the default. The list
+includes Russian and Czech even with an English interface; choosing one
+does not require a translation of the app. **Other…** accepts a language
+name, such as Slovak or Brazilian Portuguese.
+
+The next chat message uses the new language and keeps the conversation's
+history. A response already being generated finishes with its original
+instructions. Email replies and drafts prefer the language of the
+correspondence, and an explicit request such as "write the reply in Czech"
+takes precedence over the preference.
+
+Changing the language clears translations of the open thread in the old
+language. The original mail stays unchanged; press Translate to request
+the new language. A late answer in the old language is discarded. For a
+custom language the app cannot recognize, it offers translation for any
+message with text and asks the model to leave text already in that
+language unchanged. **Never Translate** still applies to source languages
+the app recognizes.
+
 ## Pick a model
 
-Open Preferences (Ctrl+,) and go to the AI page. It has two groups:
+Open Preferences (Ctrl+,) and go to the AI page. Models are chosen in two groups:
 
 - **Connections** holds each place a model can run: a local server, the
   Anthropic API, and your Claude subscription. Set up each one once, with

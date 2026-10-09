@@ -815,29 +815,29 @@ msgstr "O Penguin Mail {version} está atualizado"
 msgid "Could not reach GitHub to check for updates"
 msgstr "Não foi possível contactar o GitHub para procurar atualizações"
 
-#: app/src/assistant/mod.rs:119
+#: app/src/assistant/mod.rs:120
 msgid "The assistant is off. Choose a model in Preferences."
 msgstr "O assistente está desligado. Escolha um modelo nas Preferências."
 
-#: app/src/assistant/mod.rs:121
+#: app/src/assistant/mod.rs:122
 msgid "Translation has no model. Choose one in Preferences, on the AI page."
 msgstr "A tradução não tem modelo. Escolha um nas Preferências, na página IA."
 
-#: app/src/assistant/mod.rs:124
+#: app/src/assistant/mod.rs:125
 msgid "Unsubscribing has no model. Choose one in Preferences, on the AI page."
 msgstr ""
 "O cancelamento de subscrições não tem modelo. Escolha um nas Preferências, "
 "na página IA."
 
-#: app/src/assistant/mod.rs:130
+#: app/src/assistant/mod.rs:131
 msgid "Choose a model for the local server in Preferences."
 msgstr "Escolha um modelo para o servidor local nas Preferências."
 
-#: app/src/assistant/mod.rs:142
+#: app/src/assistant/mod.rs:143
 msgid "Add an Anthropic API key in Preferences."
 msgstr "Adicione uma chave de API da Anthropic nas Preferências."
 
-#: app/src/assistant/mod.rs:149
+#: app/src/assistant/mod.rs:150
 msgid "Claude Code is not installed. Install it and sign in, then try again."
 msgstr ""
 "O Claude Code não está instalado. Instale-o, inicie sessão e tente de novo."
@@ -2428,11 +2428,11 @@ msgstr ""
 "O correio de {address} só existe neste computador. Para guardar uma cópia, "
 "saia do Penguin Mail e faça depois uma cópia de segurança deste ficheiro."
 
-#: app/src/open_thread/run/translation.rs:142
+#: app/src/open_thread/run/translation.rs:149
 msgid "The model sent nothing back to put in the message."
 msgstr "O modelo não devolveu nada para pôr na mensagem."
 
-#: app/src/open_thread/run/translation.rs:146
+#: app/src/open_thread/run/translation.rs:153
 msgid "The model could not translate this: {reason}"
 msgstr "O modelo não conseguiu traduzir isto: {reason}"
 
@@ -3308,8 +3308,8 @@ msgstr "Neste computador, enquanto o Penguin Mail estiver aberto"
 msgid "On the server"
 msgstr "No servidor"
 
-#: app/src/settings/mod.rs:190 app/src/settings/mod.rs:365
-#: app/src/settings/mod.rs:660 app/src/ui/assistant_mcp_prefs.rs:184
+#: app/src/settings/mod.rs:190 app/src/settings/mod.rs:372
+#: app/src/settings/mod.rs:667 app/src/ui/assistant_mcp_prefs.rs:184
 msgid "Off"
 msgstr "Desligado"
 
@@ -3362,139 +3362,139 @@ msgstr ""
 msgid "Same as the Assistant"
 msgstr "O mesmo do assistente"
 
-#: app/src/settings/mod.rs:366
+#: app/src/settings/mod.rs:373
 msgid "Claude's own only"
 msgstr "Apenas a do próprio Claude"
 
-#: app/src/settings/mod.rs:367
+#: app/src/settings/mod.rs:374
 msgid "Brave Search"
 msgstr "Brave Search"
 
-#: app/src/settings/mod.rs:368
+#: app/src/settings/mod.rs:375
 msgid "SearXNG"
 msgstr "SearXNG"
 
-#: app/src/settings/mod.rs:507
+#: app/src/settings/mod.rs:514
 msgid "Rich text"
 msgstr "Texto formatado"
 
-#: app/src/settings/mod.rs:508
+#: app/src/settings/mod.rs:515
 msgid "Markdown"
 msgstr "Markdown"
 
-#: app/src/settings/mod.rs:527
+#: app/src/settings/mod.rs:534
 msgid "Automatic"
 msgstr "Automático"
 
-#: app/src/settings/mod.rs:528 app/src/ui/calendar/editor.rs:2034
+#: app/src/settings/mod.rs:535 app/src/ui/calendar/editor.rs:2034
 msgid "Monday"
 msgstr "segunda-feira"
 
-#: app/src/settings/mod.rs:529 app/src/ui/calendar/editor.rs:2040
+#: app/src/settings/mod.rs:536 app/src/ui/calendar/editor.rs:2040
 msgid "Sunday"
 msgstr "domingo"
 
-#: app/src/settings/mod.rs:567
+#: app/src/settings/mod.rs:574
 msgid "When opened"
 msgstr "Ao abrir"
 
-#: app/src/settings/mod.rs:568
+#: app/src/settings/mod.rs:575
 msgid "After 2 seconds"
 msgstr "Ao fim de 2 segundos"
 
-#: app/src/settings/mod.rs:569
+#: app/src/settings/mod.rs:576
 msgid "Only when I choose"
 msgstr "Apenas quando eu escolher"
 
-#: app/src/settings/mod.rs:585
+#: app/src/settings/mod.rs:592
 msgid "Ask each time"
 msgstr "Perguntar de cada vez"
 
-#: app/src/settings/mod.rs:586
+#: app/src/settings/mod.rs:593
 msgid "Always load"
 msgstr "Carregar sempre"
 
-#: app/src/settings/mod.rs:620
+#: app/src/settings/mod.rs:627
 msgid "Small"
 msgstr "Pequeno"
 
-#: app/src/settings/mod.rs:621
+#: app/src/settings/mod.rs:628
 msgid "Default"
 msgstr "Predefinido"
 
-#: app/src/settings/mod.rs:622
+#: app/src/settings/mod.rs:629
 msgid "Large"
 msgstr "Grande"
 
-#: app/src/settings/mod.rs:623
+#: app/src/settings/mod.rs:630
 msgid "Larger"
 msgstr "Maior"
 
-#: app/src/settings/mod.rs:661
+#: app/src/settings/mod.rs:668
 msgid "5 seconds"
 msgstr "5 segundos"
 
-#: app/src/settings/mod.rs:662
+#: app/src/settings/mod.rs:669
 msgid "10 seconds"
 msgstr "10 segundos"
 
-#: app/src/settings/mod.rs:663
+#: app/src/settings/mod.rs:670
 msgid "20 seconds"
 msgstr "20 segundos"
 
-#: app/src/settings/mod.rs:664
+#: app/src/settings/mod.rs:671
 msgid "30 seconds"
 msgstr "30 segundos"
 
-#: app/src/settings/mod.rs:681
+#: app/src/settings/mod.rs:688
 msgid "Follow system"
 msgstr "Seguir o sistema"
 
-#: app/src/settings/mod.rs:682
+#: app/src/settings/mod.rs:689
 msgid "Light"
 msgstr "Claro"
 
-#: app/src/settings/mod.rs:683
+#: app/src/settings/mod.rs:690
 msgid "Dark"
 msgstr "Escuro"
 
-#: app/src/settings/mod.rs:717
+#: app/src/settings/mod.rs:724
 msgid "Every second"
 msgid_plural "Every {count} seconds"
 msgstr[0] "A cada segundo"
 msgstr[1] "A cada {count} segundos"
 
-#: app/src/settings/mod.rs:725
+#: app/src/settings/mod.rs:732
 msgid "Every minute"
 msgid_plural "Every {count} minutes"
 msgstr[0] "A cada minuto"
 msgstr[1] "A cada {count} minutos"
 
-#: app/src/settings/mod.rs:742
+#: app/src/settings/mod.rs:749
 msgid "2 weeks"
 msgstr "2 semanas"
 
-#: app/src/settings/mod.rs:743
+#: app/src/settings/mod.rs:750
 msgid "30 days"
 msgstr "30 dias"
 
-#: app/src/settings/mod.rs:744
+#: app/src/settings/mod.rs:751
 msgid "90 days"
 msgstr "90 dias"
 
-#: app/src/settings/mod.rs:745
+#: app/src/settings/mod.rs:752
 msgid "1 year"
 msgstr "1 ano"
 
-#: app/src/settings/mod.rs:752
+#: app/src/settings/mod.rs:759
 msgid "256 MB"
 msgstr "256 MB"
 
-#: app/src/settings/mod.rs:753
+#: app/src/settings/mod.rs:760
 msgid "1 GB"
 msgstr "1 GB"
 
-#: app/src/settings/mod.rs:754
+#: app/src/settings/mod.rs:761
 msgid "4 GB"
 msgstr "4 GB"
 
@@ -3572,66 +3572,74 @@ msgid "%-d %B %Y"
 msgstr "%-d de %B de %Y"
 
 #: app/src/translation.rs:76
+msgid "Russian"
+msgstr "Russo"
+
+#: app/src/translation.rs:77
+msgid "Czech"
+msgstr "Checo"
+
+#: app/src/translation.rs:78
 msgid "Portuguese"
 msgstr "português"
 
-#: app/src/translation.rs:77
+#: app/src/translation.rs:79
 msgid "Spanish"
 msgstr "espanhol"
 
-#: app/src/translation.rs:78
+#: app/src/translation.rs:80
 msgid "French"
 msgstr "francês"
 
-#: app/src/translation.rs:79
+#: app/src/translation.rs:81
 msgid "German"
 msgstr "alemão"
 
-#: app/src/translation.rs:80
+#: app/src/translation.rs:82
 msgid "Italian"
 msgstr "italiano"
 
-#: app/src/translation.rs:81
+#: app/src/translation.rs:83
 msgid "Dutch"
 msgstr "neerlandês"
 
-#: app/src/translation.rs:82
+#: app/src/translation.rs:84
 msgid "Greek"
 msgstr "grego"
 
-#: app/src/translation.rs:83
+#: app/src/translation.rs:85
 msgid "Hebrew"
 msgstr "hebraico"
 
-#: app/src/translation.rs:84
+#: app/src/translation.rs:86
 msgid "Japanese"
 msgstr "japonês"
 
-#: app/src/translation.rs:85
+#: app/src/translation.rs:87
 msgid "Korean"
 msgstr "coreano"
 
-#: app/src/translation.rs:86
+#: app/src/translation.rs:88
 msgid "Chinese"
 msgstr "chinês"
 
-#: app/src/translation.rs:87
+#: app/src/translation.rs:89
 msgid "English"
 msgstr "inglês"
 
-#: app/src/translation.rs:854
+#: app/src/translation.rs:920
 msgid "The message goes to {host}, for {model} to read."
 msgstr "A mensagem vai para {host}, para ser lida por {model}."
 
-#: app/src/translation.rs:858
+#: app/src/translation.rs:924
 msgid "The message goes to {model} on this computer and no further."
 msgstr "A mensagem vai para {model} neste computador e não sai daqui."
 
-#: app/src/translation.rs:863
+#: app/src/translation.rs:929
 msgid "The message goes to Anthropic, for {model} to read."
 msgstr "A mensagem vai para a Anthropic, para ser lida por {model}."
 
-#: app/src/translation.rs:867
+#: app/src/translation.rs:933
 msgid ""
 "The message goes to Anthropic, for Claude to read through your subscription."
 msgstr ""
@@ -4141,7 +4149,7 @@ msgid "Ask Penguin Mail…"
 msgstr "Pergunte ao Penguin Mail…"
 
 #: app/src/ui/assistant.rs:156 app/src/ui/assistant.rs:160
-#: app/src/ui/assistant.rs:446 app/src/ui/calendar/scope.rs:113
+#: app/src/ui/assistant.rs:454 app/src/ui/calendar/scope.rs:113
 #: app/src/ui/composer/mod.rs:295 app/src/ui/window/shortcuts.rs:492
 msgid "Send"
 msgstr "Enviar"
@@ -4167,52 +4175,52 @@ msgstr ""
 "API da OpenAI. Também pode usar uma chave de API da Anthropic ou a sua "
 "subscrição do Claude."
 
-#: app/src/ui/assistant.rs:445
+#: app/src/ui/assistant.rs:453
 msgid "Stop"
 msgstr "Parar"
 
-#: app/src/ui/assistant.rs:553
+#: app/src/ui/assistant.rs:561
 msgid "Don't Allow"
 msgstr "Não permitir"
 
-#: app/src/ui/assistant.rs:555
+#: app/src/ui/assistant.rs:563
 msgid "Allow"
 msgstr "Permitir"
 
-#: app/src/ui/assistant.rs:559
+#: app/src/ui/assistant.rs:567
 msgid "Always Allow"
 msgstr "Permitir sempre"
 
-#: app/src/ui/assistant.rs:595
+#: app/src/ui/assistant.rs:603
 msgid "Allowed"
 msgstr "Permitido"
 
-#: app/src/ui/assistant.rs:596
+#: app/src/ui/assistant.rs:604
 msgid "Always allowed"
 msgstr "Sempre permitido"
 
-#: app/src/ui/assistant.rs:597
+#: app/src/ui/assistant.rs:605
 msgid "Not allowed"
 msgstr "Não permitido"
 
-#: app/src/ui/assistant.rs:837
+#: app/src/ui/assistant.rs:845
 msgid "Result"
 msgstr "Resultado"
 
-#: app/src/ui/assistant.rs:845
+#: app/src/ui/assistant.rs:853
 msgid "Input"
 msgstr "Entrada"
 
-#: app/src/ui/assistant.rs:923
+#: app/src/ui/assistant.rs:931
 msgid "Running"
 msgstr "Em curso"
 
-#: app/src/ui/assistant.rs:924 app/src/ui/calendar/editor.rs:263
+#: app/src/ui/assistant.rs:932 app/src/ui/calendar/editor.rs:263
 #: app/src/ui/hide_my_email.rs:467
 msgid "Done"
 msgstr "Concluído"
 
-#: app/src/ui/assistant.rs:925
+#: app/src/ui/assistant.rs:933
 msgid "Failed"
 msgstr "Falhou"
 
@@ -4319,7 +4327,7 @@ msgstr "Token de acesso (opcional)"
 msgid "Test the Server"
 msgstr "Testar o servidor"
 
-#: app/src/ui/assistant_mcp_prefs.rs:272 app/src/ui/assistant_prefs.rs:257
+#: app/src/ui/assistant_mcp_prefs.rs:272 app/src/ui/assistant_prefs.rs:332
 #: app/src/ui/assistant_web_prefs.rs:59
 msgid "Test"
 msgstr "Testar"
@@ -4431,15 +4439,15 @@ msgstr "Usado para"
 msgid "Each feature sends what it reads to the model chosen for it."
 msgstr "Cada funcionalidade envia o que lê ao modelo escolhido para ela."
 
-#: app/src/ui/assistant_prefs.rs:151
+#: app/src/ui/assistant_prefs.rs:152
 msgid "Safety"
 msgstr "Segurança"
 
-#: app/src/ui/assistant_prefs.rs:154
+#: app/src/ui/assistant_prefs.rs:155
 msgid "Ask Before Acting"
 msgstr "Perguntar antes de agir"
 
-#: app/src/ui/assistant_prefs.rs:156
+#: app/src/ui/assistant_prefs.rs:157
 msgid ""
 "Approve each message the assistant sends and each change to Gmail settings, "
 "such as automatic replies and rules"
@@ -4447,25 +4455,59 @@ msgstr ""
 "Aprovar cada mensagem que o assistente envia e cada alteração às definições "
 "do Gmail, como respostas automáticas e regras"
 
-#: app/src/ui/assistant_prefs.rs:177 app/src/ui/conversation.rs:664
+#: app/src/ui/assistant_prefs.rs:178 app/src/ui/conversation.rs:664
 #: app/src/ui/window/detached.rs:65
 msgid "Conversation"
 msgstr "Conversa"
 
-#: app/src/ui/assistant_prefs.rs:180
+#: app/src/ui/assistant_prefs.rs:181
 msgid "Show Details Expanded"
 msgstr "Mostrar os detalhes abertos"
 
-#: app/src/ui/assistant_prefs.rs:182
+#: app/src/ui/assistant_prefs.rs:183
 msgid "Open the model's thinking and each tool it runs as they appear"
 msgstr ""
 "Abrir o raciocínio do modelo e cada ferramenta que usa à medida que aparecem"
 
-#: app/src/ui/assistant_prefs.rs:202
+#: app/src/ui/assistant_prefs.rs:205 app/src/ui/assistant_prefs.rs:226
+msgid "AI Language"
+msgstr "Idioma da IA"
+
+#: app/src/ui/assistant_prefs.rs:207
+msgid ""
+"Language for assistant responses, summaries, and translations. Email replies "
+"and drafts follow the language of the correspondence unless you ask "
+"otherwise."
+msgstr ""
+"Idioma das respostas do assistente, dos resumos e das traduções. As "
+"respostas e os rascunhos de e-mail seguem o idioma da correspondência, salvo "
+"indicação em contrário."
+
+#: app/src/ui/assistant_prefs.rs:212
+msgid "Same as Interface"
+msgstr "Igual ao da interface"
+
+#: app/src/ui/assistant_prefs.rs:214
+msgid "Other…"
+msgstr "Outro…"
+
+#: app/src/ui/assistant_prefs.rs:231
+msgid "Language Name"
+msgstr "Nome do idioma"
+
+#: app/src/ui/assistant_prefs.rs:259
+msgid ""
+"Enter a language name of up to 80 characters, using letters, spaces, "
+"hyphens, apostrophes, or parentheses."
+msgstr ""
+"Introduza um nome de idioma com até 80 caracteres, usando letras, espaços, "
+"hífenes, apóstrofos ou parênteses."
+
+#: app/src/ui/assistant_prefs.rs:277
 msgid "Always Allowed"
 msgstr "Sempre permitidas"
 
-#: app/src/ui/assistant_prefs.rs:204
+#: app/src/ui/assistant_prefs.rs:279
 msgid ""
 "Tools from outside sources that run without asking. Remove one to be asked "
 "again next time."
@@ -4473,67 +4515,67 @@ msgstr ""
 "Ferramentas de fontes externas que correm sem perguntar. Remova uma para "
 "voltar a ser perguntado da próxima vez."
 
-#: app/src/ui/assistant_prefs.rs:220
+#: app/src/ui/assistant_prefs.rs:295
 msgid "Ask Again"
 msgstr "Perguntar de novo"
 
-#: app/src/ui/assistant_prefs.rs:224
+#: app/src/ui/assistant_prefs.rs:299
 msgid "Ask again before {tool}"
 msgstr "Perguntar de novo antes de {tool}"
 
-#: app/src/ui/assistant_prefs.rs:261
+#: app/src/ui/assistant_prefs.rs:336
 msgid "Test the Connection"
 msgstr "Testar a ligação"
 
-#: app/src/ui/assistant_prefs.rs:286 app/src/ui/assistant_web_prefs.rs:90
+#: app/src/ui/assistant_prefs.rs:361 app/src/ui/assistant_web_prefs.rs:90
 msgid "No answer: {reason}"
 msgstr "Sem resposta: {reason}"
 
-#: app/src/ui/assistant_prefs.rs:346
+#: app/src/ui/assistant_prefs.rs:421
 msgid "Connection"
 msgstr "Ligação"
 
-#: app/src/ui/assistant_prefs.rs:492
+#: app/src/ui/assistant_prefs.rs:567
 msgid "Claude Code's own default"
 msgstr "A predefinição do próprio Claude Code"
 
-#: app/src/ui/assistant_prefs.rs:500
+#: app/src/ui/assistant_prefs.rs:575
 msgid "Model"
 msgstr "Modelo"
 
-#: app/src/ui/assistant_prefs.rs:519 app/src/ui/assistant_prefs.rs:523
+#: app/src/ui/assistant_prefs.rs:594 app/src/ui/assistant_prefs.rs:598
 msgid "Models You Can Use"
 msgstr "Modelos que pode usar"
 
-#: app/src/ui/assistant_prefs.rs:544
+#: app/src/ui/assistant_prefs.rs:619
 msgid "Search models"
 msgstr "Pesquisar modelos"
 
-#: app/src/ui/assistant_prefs.rs:561
+#: app/src/ui/assistant_prefs.rs:636
 msgid "Asking for the model list…"
 msgstr "A pedir a lista de modelos…"
 
-#: app/src/ui/assistant_prefs.rs:677
+#: app/src/ui/assistant_prefs.rs:752
 msgid "This provider lists no models. Type a name in the field instead."
 msgstr "Este fornecedor não lista modelos. Escreva antes um nome no campo."
 
-#: app/src/ui/assistant_prefs.rs:712
+#: app/src/ui/assistant_prefs.rs:787
 msgid "alias"
 msgstr "alcunha"
 
-#: app/src/ui/assistant_prefs.rs:752
+#: app/src/ui/assistant_prefs.rs:827
 msgid "Found on This Computer"
 msgstr "Encontrado neste computador"
 
-#: app/src/ui/assistant_prefs.rs:756
+#: app/src/ui/assistant_prefs.rs:831
 msgid "Looking for LM Studio, Ollama, Unsloth, and Claude Code…"
 msgstr "À procura do LM Studio, do Ollama, do Unsloth e do Claude Code…"
 
-#: app/src/ui/assistant_prefs.rs:772
+#: app/src/ui/assistant_prefs.rs:847
 msgid "Nothing found"
 msgstr "Nada encontrado"
 
-#: app/src/ui/assistant_prefs.rs:774
+#: app/src/ui/assistant_prefs.rs:849
 msgid ""
 "Start LM Studio's server or Ollama, or install Claude Code, then open "
 "Preferences again."
@@ -4541,17 +4583,17 @@ msgstr ""
 "Inicie o servidor do LM Studio ou o Ollama, ou instale o Claude Code, e "
 "volte a abrir as Preferências."
 
-#: app/src/ui/assistant_prefs.rs:786
+#: app/src/ui/assistant_prefs.rs:861
 msgid "{model} and {count} more"
 msgid_plural "{model} and {count} more"
 msgstr[0] "{model} e mais {count}"
 msgstr[1] "{model} e mais {count}"
 
-#: app/src/ui/assistant_prefs.rs:797
+#: app/src/ui/assistant_prefs.rs:872
 msgid "Use"
 msgstr "Usar"
 
-#: app/src/ui/assistant_prefs.rs:802
+#: app/src/ui/assistant_prefs.rs:877
 msgid "Use {provider}"
 msgstr "Usar {provider}"
 
@@ -6116,7 +6158,7 @@ msgstr ""
 msgid "Description"
 msgstr "Descrição"
 
-#: app/src/ui/composer/mod.rs:287 app/src/ui/conversation.rs:1662
+#: app/src/ui/composer/mod.rs:287 app/src/ui/conversation.rs:1669
 msgid "Choose a Time…"
 msgstr "Escolher uma hora…"
 
@@ -6667,7 +6709,7 @@ msgid "Mark as Unread (Ctrl+Shift+U)"
 msgstr "Marcar como não lida (Ctrl+Shift+U)"
 
 #: app/src/ui/conversation.rs:475 app/src/ui/conversation.rs:479
-#: app/src/ui/conversation.rs:1702
+#: app/src/ui/conversation.rs:1709
 msgid "Flag (Ctrl+Shift+L)"
 msgstr "Marcar (Ctrl+Shift+L)"
 
@@ -6812,23 +6854,23 @@ msgid_plural "{count} Messages Selected"
 msgstr[0] "{count} mensagem selecionada"
 msgstr[1] "{count} mensagens selecionadas"
 
-#: app/src/ui/conversation.rs:1701
+#: app/src/ui/conversation.rs:1708
 msgid "Unflag (Ctrl+Shift+L)"
 msgstr "Desmarcar (Ctrl+Shift+L)"
 
-#: app/src/ui/conversation.rs:1714
+#: app/src/ui/conversation.rs:1721
 msgid "Mark as Read (U)"
 msgstr "Marcar como lida (U)"
 
-#: app/src/ui/conversation.rs:1715
+#: app/src/ui/conversation.rs:1722
 msgid "Mark as Unread (U)"
 msgstr "Marcar como não lida (U)"
 
-#: app/src/ui/conversation.rs:1938
+#: app/src/ui/conversation.rs:1945
 msgid "{color} (Ctrl+Alt+{number})"
 msgstr "{color} (Ctrl+Alt+{number})"
 
-#: app/src/ui/conversation.rs:1955 app/src/ui/window/message_menu.rs:258
+#: app/src/ui/conversation.rs:1962 app/src/ui/window/message_menu.rs:258
 msgid "Clear Flag"
 msgstr "Retirar a marca"
 
@@ -9599,7 +9641,7 @@ msgstr "A sua alteração a “{title}” não foi guardada: {reason}"
 msgid "Show Event"
 msgstr "Mostrar evento"
 
-#: app/src/ui/window/translation.rs:46
+#: app/src/ui/window/translation.rs:29
 msgid "Messages in {language} will no longer offer a translation"
 msgstr "As mensagens em {language} deixam de oferecer tradução"
 
@@ -10828,9 +10870,6 @@ msgstr "Mover para {folder}"
 
 #~ msgid "Google asks your permission the first time"
 #~ msgstr "A Google pede-lhe permissão da primeira vez"
-
-#~ msgid "Same as incoming"
-#~ msgstr "Igual ao de entrada"
 
 #~ msgid "Unsubscribed from {count} list"
 #~ msgid_plural "Unsubscribed from {count} lists"

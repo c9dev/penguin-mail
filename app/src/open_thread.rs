@@ -427,6 +427,13 @@ impl OpenThread {
             .map(|said| (said.from, said.cut, said.shown))
     }
 
+    /// Removes translations in a language that is no longer selected.
+    pub fn keep_translations(&mut self, into: &str) -> bool {
+        let before = self.translations.len();
+        self.translations.retain(|_, said| said.into == into);
+        self.translations.len() != before
+    }
+
     /// Turns a translated message over, and answers with what the card
     /// should now say. `None` when the message has no translation.
     pub fn turn_translation(&mut self, message_id: &str) -> Option<(Option<Language>, bool, bool)> {

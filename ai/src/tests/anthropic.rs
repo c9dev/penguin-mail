@@ -813,3 +813,44 @@ async fn web_search_runs_on_anthropic_and_goes_back_unchanged() {
         json!("Eo8BCioIAhgBIiQy")
     );
 }
+
+#[tokio::test]
+async fn changing_the_system_prompt_keeps_the_conversation() {
+    let server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/v1/messages"))
+        .respond_with(text_reply("A summary."))
+        .expect(2)
+        .mount(&server)
+        .await;
+    let mut chat = crate::Conversation {
+        inner: crate::providers::State::Anthropic(chat(&server)),
+    };
+    let (events, _) = async_channel::unbounded();
+    chat.set_system_prompt("Answer in Russian.".into());
+    chat.send(
+        "Summarize this conversation".into(),
+        Arc::new(crate::NoTools),
+        events.clone(),
+    )
+    .await
+    .unwrap();
+    chat.set_system_prompt("Answer in Czech.".into());
+    chat.send("Make it shorter".into(), Arc::new(crate::NoTools), events)
+        .await
+        .unwrap();
+    let requests = server.received_requests().await.unwrap();
+    let first: Value = requests[0].body_json().unwrap();
+    let second: Value = requests[1].body_json().unwrap();
+    assert_eq!(first["system"][0]["text"], "Answer in Russian.");
+    assert_eq!(second["system"][0]["text"], "Answer in Czech.");
+    assert_eq!(
+        second["messages"][0]["content"],
+        "Summarize this conversation"
+    );
+    assert_eq!(second["messages"][1]["content"][0]["text"], "A summary.");
+    assert_eq!(
+        second["messages"][2]["content"][0]["text"],
+        "Make it shorter"
+    );
+}
