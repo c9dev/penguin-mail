@@ -1110,7 +1110,23 @@ async fn changing_language_during_translation_discards_the_old_answer_and_error(
     ] {
         let window = FakeWindow::with_body(portuguese());
         window.with(|screen| {
-            screen.language_during_translation = Some("Russian".into());
+            screen.languages_during_translation = vec!["Russian".into()];
+            screen.translation = reply;
+        });
+        window.run().open(row(THREAD)).await;
+        window.run().translate().await;
+        assert!(!window.took(Step::Translated));
+        assert!(window.0.borrow().toasts.is_empty());
+        assert_eq!(window.open(|open| open.translations.len()), Some(0));
+    }
+}
+
+#[tokio::test]
+async fn returning_to_the_original_language_drops_the_in_flight_answer_and_error() {
+    for reply in [Ok(vec![Some("Old translation".into())]), Err("offline".into())] {
+        let window = FakeWindow::with_body(portuguese());
+        window.with(|screen| {
+            screen.languages_during_translation = vec!["Czech".into(), "English".into()];
             screen.translation = reply;
         });
         window.run().open(row(THREAD)).await;

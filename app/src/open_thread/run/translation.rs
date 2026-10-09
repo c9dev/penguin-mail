@@ -103,6 +103,7 @@ impl ThreadRun {
         let Some(into) = self.desk.translation_language() else {
             return;
         };
+        let revision = self.desk.translation_revision();
         wanted.on_screen(|effects| effects.keep_translations(&into));
         if wanted.on_screen(|effects| effects.turn_translation(&message_id)) == Some(true) {
             return;
@@ -138,7 +139,9 @@ impl ThreadRun {
             .anyway(|effects| effects.translate(into.clone(), asked))
             .await;
         // A settings change can outlive a request, even in the same conversation.
-        if self.desk.translation_language().as_deref() != Some(into.as_str()) {
+        if self.desk.translation_revision() != revision
+            || self.desk.translation_language().as_deref() != Some(into.as_str())
+        {
             return;
         }
         let said = match reply {

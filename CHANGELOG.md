@@ -5,6 +5,10 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ## Unreleased
 
+### Fixed
+
+- Discard pending translations after changing the AI language, even when changing back before the answer arrives.
+
 ### New
 
 - Choose a language for AI answers, summaries and translations without changing the interface language.

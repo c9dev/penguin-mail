@@ -121,6 +121,8 @@ pub trait Desk: Screen {
     fn arrived(&self, message_id: &str) -> Option<(MessageBody, String)>;
     /// The chosen AI language. `None` when the window has closed.
     fn translation_language(&self) -> Option<String>;
+    /// Changes whenever the AI language changes, even if it later returns.
+    fn translation_revision(&self) -> Option<u64>;
     /// Where a message's words would go to be translated, in the words the
     /// card uses, or why they have nowhere to go.
     fn translation_destination(&self) -> Result<String, String>;

@@ -127,7 +127,8 @@ pub struct Screen {
     pub delay: Option<u32>,
     pub language: Option<String>,
     pub requested_languages: Vec<String>,
-    pub language_during_translation: Option<String>,
+    pub languages_during_translation: Vec<String>,
+    pub language_revision: u64,
     pub destination: Result<String, String>,
     /// The languages the person never translates, by code.
     pub never: Vec<String>,
@@ -414,7 +415,8 @@ impl FakeWindow {
             delay: Some(2),
             language: Some("English".into()),
             requested_languages: Vec::new(),
-            language_during_translation: None,
+            languages_during_translation: Vec::new(),
+            language_revision: 0,
             destination: Ok("The message goes to a model on this computer.".to_string()),
             never: Vec::new(),
             moves_on: None,
@@ -616,6 +618,10 @@ impl Desk for FakeWindow {
         self.with(|screen| screen.language.clone())
     }
 
+    fn translation_revision(&self) -> Option<u64> {
+        Some(self.with(|screen| screen.language_revision))
+    }
+
     fn translation_destination(&self) -> Result<String, String> {
         self.with(|screen| screen.destination.clone())
     }
@@ -791,7 +797,8 @@ impl Effects for FakeWindow {
         self.reached(Step::Translate);
         self.with(|screen| {
             screen.requested_languages.push(into);
-            if let Some(language) = screen.language_during_translation.take() {
+            for language in std::mem::take(&mut screen.languages_during_translation) {
+                screen.language_revision += 1;
                 screen.language = Some(language);
             }
         });

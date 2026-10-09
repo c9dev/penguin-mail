@@ -2183,11 +2183,11 @@ msgstr "Its downloaded mail and saved sign-in are deleted from this computer. No
 msgid "Mail from {address} is kept only on this computer. To keep a copy, quit Penguin Mail, then back up this file."
 msgstr "Mail from {address} is kept only on this computer. To keep a copy, quit Penguin Mail, then back up this file."
 
-#: app/src/open_thread/run/translation.rs:146
+#: app/src/open_thread/run/translation.rs:149
 msgid "The model sent nothing back to put in the message."
 msgstr "The model sent nothing back to put in the message."
 
-#: app/src/open_thread/run/translation.rs:150
+#: app/src/open_thread/run/translation.rs:153
 msgid "The model could not translate this: {reason}"
 msgstr "The model could not translate this: {reason}"
 
@@ -2978,8 +2978,8 @@ msgstr "On this computer, while Penguin Mail is open"
 msgid "On the server"
 msgstr "On the server"
 
-#: app/src/settings/mod.rs:190 app/src/settings/mod.rs:368
-#: app/src/settings/mod.rs:663 app/src/ui/assistant_mcp_prefs.rs:184
+#: app/src/settings/mod.rs:190 app/src/settings/mod.rs:372
+#: app/src/settings/mod.rs:667 app/src/ui/assistant_mcp_prefs.rs:184
 msgid "Off"
 msgstr "Off"
 
@@ -3030,139 +3030,139 @@ msgstr "Reads a newsletter's unsubscribe page when the rules cannot"
 msgid "Same as the Assistant"
 msgstr "Same as the Assistant"
 
-#: app/src/settings/mod.rs:369
+#: app/src/settings/mod.rs:373
 msgid "Claude's own only"
 msgstr "Claude's own only"
 
-#: app/src/settings/mod.rs:370
+#: app/src/settings/mod.rs:374
 msgid "Brave Search"
 msgstr "Brave Search"
 
-#: app/src/settings/mod.rs:371
+#: app/src/settings/mod.rs:375
 msgid "SearXNG"
 msgstr "SearXNG"
 
-#: app/src/settings/mod.rs:510
+#: app/src/settings/mod.rs:514
 msgid "Rich text"
 msgstr "Rich text"
 
-#: app/src/settings/mod.rs:511
+#: app/src/settings/mod.rs:515
 msgid "Markdown"
 msgstr "Markdown"
 
-#: app/src/settings/mod.rs:530
+#: app/src/settings/mod.rs:534
 msgid "Automatic"
 msgstr "Automatic"
 
-#: app/src/settings/mod.rs:531 app/src/ui/calendar/editor.rs:2034
+#: app/src/settings/mod.rs:535 app/src/ui/calendar/editor.rs:2034
 msgid "Monday"
 msgstr "Monday"
 
-#: app/src/settings/mod.rs:532 app/src/ui/calendar/editor.rs:2040
+#: app/src/settings/mod.rs:536 app/src/ui/calendar/editor.rs:2040
 msgid "Sunday"
 msgstr "Sunday"
 
-#: app/src/settings/mod.rs:570
+#: app/src/settings/mod.rs:574
 msgid "When opened"
 msgstr "When opened"
 
-#: app/src/settings/mod.rs:571
+#: app/src/settings/mod.rs:575
 msgid "After 2 seconds"
 msgstr "After 2 seconds"
 
-#: app/src/settings/mod.rs:572
+#: app/src/settings/mod.rs:576
 msgid "Only when I choose"
 msgstr "Only when I choose"
 
-#: app/src/settings/mod.rs:588
+#: app/src/settings/mod.rs:592
 msgid "Ask each time"
 msgstr "Ask each time"
 
-#: app/src/settings/mod.rs:589
+#: app/src/settings/mod.rs:593
 msgid "Always load"
 msgstr "Always load"
 
-#: app/src/settings/mod.rs:623
+#: app/src/settings/mod.rs:627
 msgid "Small"
 msgstr "Small"
 
-#: app/src/settings/mod.rs:624
+#: app/src/settings/mod.rs:628
 msgid "Default"
 msgstr "Default"
 
-#: app/src/settings/mod.rs:625
+#: app/src/settings/mod.rs:629
 msgid "Large"
 msgstr "Large"
 
-#: app/src/settings/mod.rs:626
+#: app/src/settings/mod.rs:630
 msgid "Larger"
 msgstr "Larger"
 
-#: app/src/settings/mod.rs:664
+#: app/src/settings/mod.rs:668
 msgid "5 seconds"
 msgstr "5 seconds"
 
-#: app/src/settings/mod.rs:665
+#: app/src/settings/mod.rs:669
 msgid "10 seconds"
 msgstr "10 seconds"
 
-#: app/src/settings/mod.rs:666
+#: app/src/settings/mod.rs:670
 msgid "20 seconds"
 msgstr "20 seconds"
 
-#: app/src/settings/mod.rs:667
+#: app/src/settings/mod.rs:671
 msgid "30 seconds"
 msgstr "30 seconds"
 
-#: app/src/settings/mod.rs:684
+#: app/src/settings/mod.rs:688
 msgid "Follow system"
 msgstr "Follow system"
 
-#: app/src/settings/mod.rs:685
+#: app/src/settings/mod.rs:689
 msgid "Light"
 msgstr "Light"
 
-#: app/src/settings/mod.rs:686
+#: app/src/settings/mod.rs:690
 msgid "Dark"
 msgstr "Dark"
 
-#: app/src/settings/mod.rs:720
+#: app/src/settings/mod.rs:724
 msgid "Every second"
 msgid_plural "Every {count} seconds"
 msgstr[0] "Every second"
 msgstr[1] "Every {count} seconds"
 
-#: app/src/settings/mod.rs:728
+#: app/src/settings/mod.rs:732
 msgid "Every minute"
 msgid_plural "Every {count} minutes"
 msgstr[0] "Every minute"
 msgstr[1] "Every {count} minutes"
 
-#: app/src/settings/mod.rs:745
+#: app/src/settings/mod.rs:749
 msgid "2 weeks"
 msgstr "2 weeks"
 
-#: app/src/settings/mod.rs:746
+#: app/src/settings/mod.rs:750
 msgid "30 days"
 msgstr "30 days"
 
-#: app/src/settings/mod.rs:747
+#: app/src/settings/mod.rs:751
 msgid "90 days"
 msgstr "90 days"
 
-#: app/src/settings/mod.rs:748
+#: app/src/settings/mod.rs:752
 msgid "1 year"
 msgstr "1 year"
 
-#: app/src/settings/mod.rs:755
+#: app/src/settings/mod.rs:759
 msgid "256 MB"
 msgstr "256 MB"
 
-#: app/src/settings/mod.rs:756
+#: app/src/settings/mod.rs:760
 msgid "1 GB"
 msgstr "1 GB"
 
-#: app/src/settings/mod.rs:757
+#: app/src/settings/mod.rs:761
 msgid "4 GB"
 msgstr "4 GB"
 

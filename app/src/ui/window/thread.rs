@@ -248,6 +248,10 @@ impl Desk for Ports {
         )
     }
 
+    fn translation_revision(&self) -> Option<u64> {
+        Some(self.window()?.settings_with(|s| s.ai.language_revision))
+    }
+
     fn translation_destination(&self) -> Result<String, String> {
         let window = self
             .window()
