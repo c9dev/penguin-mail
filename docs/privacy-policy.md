@@ -1,12 +1,13 @@
 # Penguin Mail privacy policy
 
-Last updated: 7 October 2026
+Last updated: 9 October 2026
 
-Penguin Mail is a mail and calendar app for Linux, published by Pivotd
-(https://pivotd.com), at https://penguin-mail.com. It works with Google
+Penguin Mail is a mail and calendar app for Linux and macOS, published by
+Pivotd (https://pivotd.com), at https://penguin-mail.com. It works with Google
 accounts, through Google's APIs, with Microsoft accounts, through Microsoft
-Graph, and with other mail providers over IMAP and SMTP. It runs on your own computer. This policy explains what it accesses,
-where that data goes, and how it is protected.
+Graph, and with other mail providers over IMAP and SMTP. It runs on your
+own computer. This policy explains what it accesses, where that data goes,
+and how it is protected.
 
 ## What Penguin Mail accesses in a Google account
 
@@ -92,8 +93,9 @@ desktop's keyring, as described below.
 - Penguin Mail connects to Google's Gmail, People, Calendar and Drive APIs,
   to Microsoft Graph and Microsoft's sign-in service for a Microsoft
   account, and to
-  GitHub once a day to check for a new version of the app. The update check
-  sends nothing about you or your mail.
+  GitHub once a day on Linux installs that check for a new version of the
+  app. The update check sends nothing about you or your mail. On macOS,
+  you download updates from the releases page yourself.
 - When you choose to load remote images in a message, your computer fetches
   those images from wherever the sender hosted them. When you click
   Unsubscribe, Penguin Mail contacts the address the mailing list gave for
@@ -147,7 +149,8 @@ desktop's keyring, as described below.
   and turn on yourself. A skill's scripts run on your computer in a
   sandbox that has no access to your mail, your keys or your home folder,
   and no network unless you allow it for that skill. The assistant asks
-  before each script runs.
+  before each script runs. Skill scripts are unavailable in the Flatpak,
+  snap and macOS app because their sandbox cannot run there.
 
 ## How your data is protected
 
@@ -156,16 +159,15 @@ desktop's keyring, as described below.
   sees your Google or Microsoft password.
 - **Sign-in tokens.** Google's and Microsoft's refresh tokens, an IMAP account's password,
   any assistant API keys, and the tokens of MCP servers you add are stored
-  in your desktop's keyring (GNOME Keyring or another Secret Service),
-  which encrypts them with your login password. The Flatpak keeps them in
+  in your desktop's credential store (Keychain on macOS, GNOME Keyring or
+  another Secret Service on Linux). The Flatpak keeps them in
   its own encrypted store instead, through the Secret portal, so no other
   app on your desktop can read them. Short-lived access tokens are kept in
   memory only and never written to disk.
 - **Files on disk.** The folders Penguin Mail keeps its data in are readable
   by your user account alone, and its configuration file is written the
   same way. Penguin Mail does not add its own encryption to the local mail
-  database, so we recommend turning on full-disk encryption, which Ubuntu
-  offers during installation.
+  database, so we recommend turning on full-disk encryption.
 - **Logs.** Penguin Mail writes problems to your system log so they can be
   diagnosed. It masks email addresses there, keeping only their first
   letter and domain, and it never logs message text or sign-in tokens.
@@ -176,8 +178,9 @@ desktop's keyring, as described below.
 - **Encryption and signatures.** OpenPGP and S/MIME are handled by your own
   GnuPG installation. Penguin Mail never holds your private keys or asks
   for their passphrases.
-- **Updates.** New versions are downloaded from GitHub over HTTPS and checked
-  against a published SHA-256 checksum before they are installed.
+- **Updates.** The in-app Linux updater downloads new versions from GitHub
+  over HTTPS and checks a published SHA-256 checksum before installing them.
+  On macOS, you download and replace the app yourself.
 - **Security reports.** Vulnerabilities can be reported privately, as
   described at https://github.com/c9dev/penguin-mail/security.
 
@@ -185,8 +188,11 @@ desktop's keyring, as described below.
 
 Your data stays on your computer until you remove it. Removing an account in
 Penguin Mail deletes its downloaded mail and its sign-in token from your
-computer. Uninstalling the app and deleting `~/.local/share/penguin-mail`,
-`~/.config/penguin-mail` and `~/.cache/penguin-mail` removes everything else.
+computer. On Linux, uninstalling the app and deleting
+`~/.local/share/penguin-mail`, `~/.config/penguin-mail` and
+`~/.cache/penguin-mail` removes everything else. On macOS, remove
+`Penguin Mail.app`, `~/Library/Application Support/penguin-mail` and
+`~/Library/Caches/penguin-mail`; remove its saved entries from Keychain too.
 To revoke Penguin Mail's access on Google's side, visit
 https://myaccount.google.com/permissions. On Microsoft's side, visit
 https://account.live.com/consent/Manage for a personal account, or your

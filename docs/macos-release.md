@@ -1,5 +1,22 @@
 # macOS releases
 
+## Installing a release
+
+Choose `macos-arm64` on an Apple Silicon Mac or `macos-x86_64` on an Intel
+Mac from the [latest release](https://github.com/c9dev/penguin-mail/releases/latest).
+Unzip the download, move `Penguin Mail.app` to Applications, and open it in
+Finder. The app includes its GTK libraries and does not need Homebrew on
+the computer where you use it. The bundle's `Contents/Info.plist` records
+the minimum macOS version, which depends on the libraries in that build.
+
+A zip with `-unsigned` in its name is an ad hoc signed test build without
+Apple notarization. macOS may block it. Use a signed, notarized zip for
+normal use. To update, download the next macOS zip and replace the app in
+Applications. Your mail and settings remain in
+`~/Library/Application Support/penguin-mail/`; sign-in tokens stay in
+Keychain. The macOS app has no tray icon or in-app installer. GnuPG and
+command-line assistants need separate installs.
+
 The release workflow builds separate Apple Silicon (`arm64`) and Intel
 (`x86_64`) apps on GitHub's macOS 15 runners. Each zip contains
 `Penguin Mail.app`, including GTK, libadwaita, image loaders, icons, fonts

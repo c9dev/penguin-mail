@@ -32,6 +32,23 @@ signs in to Google only with a Google client compiled in;
 one. `cargo run -p mailrs -- --demo` opens the app on sample accounts, with
 no client needed.
 
+### macOS
+
+On a Mac, install Rust 1.98 and the Homebrew build dependencies, then build
+a portable app:
+
+```sh
+brew install gtk4 libadwaita adwaita-icon-theme gettext librsvg pkgconf
+scripts/package-macos.sh dist
+```
+
+The zip in `dist` includes the GTK libraries. `scripts/install-macos.sh`
+instead installs a copy linked to your local Homebrew libraries, for
+development on that Mac. The [macOS release guide](docs/macos-release.md)
+covers signing and notarization. Without the OAuth variables described in
+[setup](docs/setup.md#building-your-own-copy), the app builds but cannot
+add a Google or Microsoft account; use `--demo` to explore it.
+
 ### The Flatpak
 
 Penguin Mail is not on Flathub. To build and install the Flatpak from
@@ -99,7 +116,8 @@ scripts/a11y-names.sh                                 # every control has a name
 
 CI runs those four on every push, in an Ubuntu 26.04 container set up by
 `scripts/ci-deps.sh`, validates the AppStream metainfo and the desktop
-entry, and builds and starts the Flatpak. The OpenPGP and S/MIME tests
+entry, builds and starts the Flatpak, and checks the app on Apple Silicon
+and Intel macOS runners. The OpenPGP and S/MIME tests
 build a throwaway GnuPG keyring and skip when `gpg` or `gpgsm` is missing.
 `PENGUIN_MAIL_REQUIRE_CRYPTO=1`, which CI sets, turns that skip into a
 failure. The IMAP and SMTP tests start Dovecot and Mailpit in Docker and
@@ -148,6 +166,9 @@ The tag starts the release workflow:
   `APT_SIGNING_KEY` secret that also signs the repositories.
 - It builds the snap and sends it to the Snap Store's edge channel once the
   `SNAPCRAFT_STORE_CREDENTIALS` secret exists.
+- It builds portable macOS apps for Apple Silicon and Intel. With Apple
+  signing credentials, it signs and notarizes them before publication;
+  otherwise it marks their zips `-unsigned` for testing.
 - Every package gets the Google client from the
   `PENGUIN_MAIL_GOOGLE_CLIENT_ID` and `PENGUIN_MAIL_GOOGLE_CLIENT_SECRET`
   secrets. For the snap, the workflow writes them into

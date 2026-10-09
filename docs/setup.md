@@ -61,7 +61,8 @@ client, and the `[oauth]` section can go once none of them uses it.
 
 Penguin Mail needs no config file. To change how often it checks for mail,
 how many days of mail it keeps, or how much message text it caches, write
-`~/.config/penguin-mail/config.toml`:
+`~/.config/penguin-mail/config.toml` on Linux or
+`~/Library/Application Support/penguin-mail/config.toml` on macOS:
 
 ```toml
 # These are the defaults.
@@ -71,9 +72,9 @@ window_days = 30
 body_cache_mb = 1024
 ```
 
-Penguin Mail keeps your refresh tokens in the GNOME keyring, not in this
-file. The Flatpak keeps them in its own store instead, through the Secret
-portal; see "Which package" below.
+Penguin Mail keeps your refresh tokens in Keychain on macOS or the desktop
+keyring on Linux, not in this file. The Flatpak keeps them in its own store
+instead, through the Secret portal; see "Which package" below.
 
 ## Building your own copy
 
@@ -86,9 +87,10 @@ project's client, from these variables:
 
 The release workflow takes them from the secrets
 `PENGUIN_MAIL_GOOGLE_CLIENT_ID`, `PENGUIN_MAIL_GOOGLE_CLIENT_SECRET` and
-`MICROSOFT_CLIENT_ID`. `scripts/install.sh` reads them from
-`packaging/secrets.env` when that file exists. A copy built without them
-works in every other way and says so when you try to add a Google account.
+`MICROSOFT_CLIENT_ID`. `scripts/install.sh` and `scripts/install-macos.sh`
+read them from `packaging/secrets.env` when that file exists. A copy built
+without them works in every other way and says so when you try to add a
+Google account.
 A copy built without the Microsoft one hides Microsoft in Add Account.
 
 To build with a client of your own instead, make one in a Google Cloud
@@ -146,19 +148,20 @@ cargo run --release -p mailrs-cli -- triage you@gmail.com <thread-id> archive
 
 ## Which package
 
-Every package is the same app, built with a cargo feature that says what
-kind it is (`packaging-rpm`, `packaging-arch`, `packaging-flatpak`,
-`packaging-snap`, or none for the .deb and the tarball). The feature
-decides where updates come from and whether skills run.
+Every package is the same app. The Linux packages use a cargo feature that
+says what kind they are (`packaging-rpm`, `packaging-arch`,
+`packaging-flatpak`, `packaging-snap`, or none for the .deb and tarball).
+The macOS app uses the native build. Its WebKit view and app menu use macOS
+instead of Linux's WebKitGTK and tray.
 
-| | .deb | rpm | Arch | Flatpak | Snap |
-|---|---|---|---|---|---|
-| Updates | Install in the app, or the apt repository | the dnf repository | pacman, by hand | the Flatpak remote | Snap Store |
-| GnuPG | system | system | system | runtime's `gpg`, on `~/.gnupg` | snap's `gpg`, on a keyring inside the snap |
-| Assistant skills | yes | yes | yes | no | no |
-| Claude Code, MCP servers run as a command | yes | yes | yes | no | no |
-| Tray icon | yes | yes | yes | yes | yes |
-| Start at login | autostart file | autostart file | autostart file | Background portal | snapd autostart |
+| | .deb | rpm | Arch | Flatpak | Snap | macOS app |
+|---|---|---|---|---|---|---|
+| Updates | Install in the app, or the apt repository | the dnf repository | pacman, by hand | the Flatpak remote | Snap Store | replace the app from a release zip |
+| GnuPG | system | system | system | runtime's `gpg`, on `~/.gnupg` | snap's `gpg`, on a keyring inside the snap | install separately |
+| Assistant skills | yes | yes | yes | no | no | no |
+| Claude Code, MCP servers run as a command | yes | yes | yes | no | no | if available on the app's PATH |
+| Tray icon | yes | yes | yes | yes | yes | no |
+| Start at login | autostart file | autostart file | autostart file | Background portal | snapd autostart | no |
 
 - **Updates.** The .deb checks GitHub once a day and offers Install,
   which downloads the new .deb and installs it through apt; `apt upgrade`
@@ -168,8 +171,10 @@ decides where updates come from and whether skills run.
   repository yet, so that means downloading and installing the new
   `.pkg.tar.zst` by hand; see `packaging/aur/PKGBUILD` for what an AUR
   package would add. The Flatpak gets updates from its remote, and the
-  snap from the Snap Store. Preferences and the About window say which
-  applies.
+  snap from the Snap Store. On macOS, download the next zip from the
+  [releases page](https://github.com/c9dev/penguin-mail/releases/latest)
+  and replace `Penguin Mail.app`. Preferences and the About window say
+  which update method applies to the Linux packages.
 - **GnuPG.** The Flatpak reaches two places for signing and encryption:
   `~/.gnupg`, read and written, and the gpg-agent socket folder under
   `$XDG_RUNTIME_DIR/gnupg`, read-only, so your own agent and pinentry
@@ -182,7 +187,8 @@ decides where updates come from and whether skills run.
   certificates does not work in the snap yet.
 - **Secrets.** Outside a sandbox, Google's refresh tokens, an IMAP
   password, and the assistant's API keys and MCP tokens sit in the
-  desktop's keyring, service `mailrs` or `penguin-mail-imap`. The
+  desktop's keyring, service `mailrs` or `penguin-mail-imap`. On macOS,
+  that is Keychain. The
   Flatpak keeps them in its own encrypted file instead, through the
   Secret portal, so no other app on the desktop can read them; the snap
   still uses the desktop's keyring, the same as the .deb. The snap reaches
@@ -191,20 +197,22 @@ decides where updates come from and whether skills run.
   window says so and gives the command. The app asks snapd again each
   time the window opens, and the bar goes once the plug is connected.
 - **Skills.** A skill's scripts run under bubblewrap, which cannot start
-  inside Flatpak's or a strict snap's sandbox. Running them without one
-  would hand a skill your mail and keys, so both packages turn skills off
-  and say so under Preferences, AI, Skills.
+  inside Flatpak's or a strict snap's sandbox and cannot start on macOS.
+  Running scripts without it would hand a skill your mail and keys, so
+  Flatpak and snap turn skills off. On macOS, the sandbox check refuses to
+  run a script.
 - **Programs on your system.** Claude Code, and an MCP server you add as a
   command, run as programs on your computer. The Flatpak and the snap
   cannot see those programs. A local model, the Anthropic API and MCP
-  servers you reach by address work in every package.
+  servers you reach by address work in every package. On macOS, install
+  command-line programs separately and make them available on the app's PATH.
 - **No AppImage.** WebKit draws HTML mail in helper processes it
   sandboxes with bubblewrap, and that sandbox mounts your system's `/usr`,
   where helpers bundled in an AppImage find none of their libraries.
 
 ## Where things live
 
-| What | Where | Override |
+| What on Linux | Where | Override |
 |---|---|---|
 | Config | `~/.config/penguin-mail/config.toml` | `MAILRS_CONFIG` |
 | Mail cache | `~/.local/share/penguin-mail/mailrs.db` | `MAILRS_DATA_DIR` |
@@ -217,6 +225,10 @@ see "Which package" above. A Flatpak installed before this file moved
 those secrets there cannot read what it left in the desktop's keyring, so
 its accounts ask you to sign in again once, and any IMAP password or AI
 key needs typing in again too.
+
+On macOS, the config file and mail database live under
+`~/Library/Application Support/penguin-mail/`. The cache lives under
+`~/Library/Caches/penguin-mail/`, and Keychain holds sign-in tokens.
 
 The Flatpak keeps its config and mail under
 `~/.var/app/io.github.c9dev.PenguinMail/`, in `config/penguin-mail` and
