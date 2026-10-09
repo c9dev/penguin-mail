@@ -45,7 +45,7 @@ pub(crate) struct AnthropicChat {
     base_url: String,
     api_key: String,
     model: String,
-    system_prompt: String,
+    pub(super) system_prompt: String,
     history: History,
     client: reqwest::Client,
     /// Ask the model to think, when it can.

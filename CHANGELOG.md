@@ -5,6 +5,10 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ## Unreleased
 
+### New
+
+- Choose a language for AI answers, summaries and translations without changing the interface language.
+
 ## 1.0.6 (2026-10-09)
 
 ### New

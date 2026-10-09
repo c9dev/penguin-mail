@@ -136,6 +136,11 @@ impl Conversation {
         }
     }
 
+    /// Changes the instructions for the next turn without discarding chat history.
+    pub fn set_system_prompt(&mut self, prompt: String) {
+        self.inner.set_system_prompt(prompt);
+    }
+
     /// Asks the model to think before it answers, where the provider lets
     /// a request ask. The assistant wants this; a translation does not,
     /// because thinking makes a short job slow and costs tokens.

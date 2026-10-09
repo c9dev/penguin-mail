@@ -35,8 +35,8 @@ use mailrs_sync::{Opened, Spot, outbox_id};
 use super::{Cleaned, InlineImage, OpenThread, Unsent};
 use crate::protection::Read;
 use crate::translation::{Language, Prose};
-use crate::ui::invitation::{AddTo, Showing};
 use crate::ui::invitation::strip::Strip;
+use crate::ui::invitation::{AddTo, Showing};
 pub use crate::wanted::Answer;
 use crate::wanted::{Screen, Wanted};
 
@@ -119,9 +119,8 @@ pub trait Desk: Screen {
     /// A message's body as it arrived, with the start of the address of
     /// each picture it names.
     fn arrived(&self, message_id: &str) -> Option<(MessageBody, String)>;
-    /// The language the interface is in, when this app can count its
-    /// words. `None` leaves every message alone.
-    fn interface_language(&self) -> Option<Language>;
+    /// The chosen AI language. `None` when the window has closed.
+    fn translation_language(&self) -> Option<String>;
     /// Where a message's words would go to be translated, in the words the
     /// card uses, or why they have nowhere to go.
     fn translation_destination(&self) -> Result<String, String>;
@@ -217,7 +216,7 @@ pub trait Effects {
     /// Asks the model for the pieces in `into`.
     fn translate(
         &self,
-        into: Language,
+        into: String,
         pieces: Vec<String>,
     ) -> Answer<'_, Result<Vec<Option<String>>, String>>;
     /// Waits this many seconds.
@@ -265,6 +264,8 @@ pub trait Effects {
     fn translation_card(&self, card: Card);
     /// One message's translation, and the redraw that shows it.
     fn translated(&self, message_id: String, translation: crate::translation::Translation);
+    /// Drops cached translations into a language the reader no longer wants.
+    fn keep_translations(&self, into: &str);
     /// Turns a translated message over; `false` when it has none.
     fn turn_translation(&self, message_id: &str) -> bool;
     /// What the engine said, above the message. Answers whether it opened

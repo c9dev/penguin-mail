@@ -258,3 +258,45 @@ fn leaves_out_a_model_the_installed_cli_is_too_old_for() {
 fn a_catalog_with_no_models_lists_nothing() {
     assert!(crate::providers::catalog_models(&json!({}), Some("2.1.278")).is_empty());
 }
+
+#[tokio::test]
+async fn changing_the_system_prompt_resumes_the_same_session() {
+    let dir = tempfile::tempdir().unwrap();
+    let script = write_script(dir.path());
+    for n in 0..2 {
+        std::fs::write(
+            dir.path().join(format!("out-{n}")),
+            lines(&[
+                json!({"type": "result", "subtype": "success", "is_error": false,
+                   "session_id": "same-chat", "result": "A summary."}),
+            ]),
+        )
+        .unwrap();
+    }
+    let state = ClaudeCodeChat::new(script, None, "Answer in Russian.".into())
+        .with_paths(dir.path().join("work"), dir.path().join("penguin-mail"));
+    let mut chat = crate::Conversation {
+        inner: crate::providers::State::ClaudeCode(state),
+    };
+    let (events, _) = async_channel::unbounded();
+    chat.send(
+        "Summarize this conversation".into(),
+        Arc::new(crate::NoTools),
+        events.clone(),
+    )
+    .await
+    .unwrap();
+    chat.set_system_prompt("Answer in Czech.".into());
+    chat.send("Make it shorter".into(), Arc::new(crate::NoTools), events)
+        .await
+        .unwrap();
+    assert_eq!(
+        flag(&argv(dir.path(), 0), "--system-prompt"),
+        Some("Answer in Russian.")
+    );
+    assert_eq!(
+        flag(&argv(dir.path(), 1), "--system-prompt"),
+        Some("Answer in Czech.")
+    );
+    assert_eq!(flag(&argv(dir.path(), 1), "--resume"), Some("same-chat"));
+}
