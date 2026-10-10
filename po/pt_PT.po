@@ -10270,62 +10270,62 @@ msgstr "Todo o correio"
 msgid "This smart mailbox has no conditions"
 msgstr "Esta caixa inteligente não tem condições"
 
-#: sync/src/mailbox.rs:1245
+#: sync/src/mailbox.rs:1262
 msgid "Results for {account} come from the mail on this computer alone"
 msgstr ""
 "Os resultados de {account} vêm apenas do correio guardado neste computador"
 
-#: sync/src/mailbox.rs:1257
+#: sync/src/mailbox.rs:1274
 msgid "Could not load mail for {account}: {reason}"
 msgstr "Não foi possível carregar o correio de {account}: {reason}"
 
-#: sync/src/mailbox.rs:1378
+#: sync/src/mailbox.rs:1395
 msgid "Returns {when}"
 msgstr "Volta {when}"
 
-#: sync/src/mailbox.rs:1421 sync/src/mailbox.rs:1503
+#: sync/src/mailbox.rs:1438 sync/src/mailbox.rs:1520
 msgid "No recipients"
 msgstr "Sem destinatários"
 
-#: sync/src/mailbox.rs:1424 sync/src/mailbox.rs:1506
+#: sync/src/mailbox.rs:1441 sync/src/mailbox.rs:1523
 msgid "To {recipients}"
 msgstr "Para {recipients}"
 
-#: sync/src/mailbox.rs:1466
+#: sync/src/mailbox.rs:1483
 msgid "{count} unread · {category}"
 msgid_plural "{count} unread · {category}"
 msgstr[0] "{count} por ler · {category}"
 msgstr[1] "{count} por ler · {category}"
 
-#: sync/src/mailbox.rs:1471
+#: sync/src/mailbox.rs:1488
 msgid "{count} unread"
 msgid_plural "{count} unread"
 msgstr[0] "{count} por ler"
 msgstr[1] "{count} por ler"
 
-#: sync/src/mailbox.rs:1478
+#: sync/src/mailbox.rs:1495
 msgid "Sent yesterday, no reply yet"
 msgstr "Enviada ontem, ainda sem resposta"
 
-#: sync/src/mailbox.rs:1480
+#: sync/src/mailbox.rs:1497
 msgid "Sent {days} day ago, no reply yet"
 msgid_plural "Sent {days} days ago, no reply yet"
 msgstr[0] "Enviada há {days} dia, ainda sem resposta"
 msgstr[1] "Enviada há {days} dias, ainda sem resposta"
 
-#: sync/src/mailbox.rs:1518
+#: sync/src/mailbox.rs:1535
 msgid "Sends {when}"
 msgstr "Envia {when}"
 
-#: sync/src/mailbox.rs:1522
+#: sync/src/mailbox.rs:1539
 msgid "Not sent"
 msgstr "Não enviada"
 
-#: sync/src/mailbox.rs:1529
+#: sync/src/mailbox.rs:1546
 msgid "{problem}. Trying again {when}"
 msgstr "{problem}. Nova tentativa {when}"
 
-#: sync/src/mailbox.rs:1536
+#: sync/src/mailbox.rs:1553
 msgid "{problem}. Penguin Mail stopped trying"
 msgstr "{problem}. O Penguin Mail deixou de tentar"
 

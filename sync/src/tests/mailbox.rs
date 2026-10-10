@@ -868,6 +868,35 @@ async fn counted_after_server(
     service.counts(sidebar, shown, &view()).await.unwrap()
 }
 
+#[tokio::test(start_paused = true)]
+async fn unopened_imap_folder_counts_refresh_without_local_mail_changes() {
+    use std::time::Duration;
+
+    let h = super::imap_harness().await;
+    h.imap.add_mailbox("INBOX/Lists", None);
+    h.imap.deliver("INBOX/Lists", b"Subject: First\r\n\r\nHi".to_vec(), now_millis());
+    h.sync.refresh_labels().await.unwrap();
+    let service = Mailboxes::new(
+        Arc::new(Connected(HashMap::from([(h.account_id, Arc::clone(&h.sync))]))),
+        h.db.clone(),
+    );
+    let folder = Mailbox::Label {
+        account_id: h.account_id,
+        label_id: "INBOX/Lists".into(),
+        name: "Lists".into(),
+    };
+    let sidebar = std::slice::from_ref(&folder);
+    assert_eq!(counted_after_server(&service, sidebar, &folder).await.mailboxes[&folder], 1);
+
+    let before = h.sync.mail_changes();
+    h.imap.deliver("INBOX/Lists", b"Subject: Second\r\n\r\nHi".to_vec(), now_millis());
+    assert_eq!(h.sync.mail_changes(), before, "the unopened folder sent no local event");
+    let mut changed = service.counts_changed();
+    tokio::time::advance(Duration::from_secs(61)).await;
+    changed.changed().await.unwrap();
+    assert_eq!(counted_after_server(&service, sidebar, &folder).await.mailboxes[&folder], 2);
+}
+
 #[tokio::test]
 async fn imap_counts_include_unopened_folders_and_mail_before_the_local_window() {
     let h = super::imap_harness().await;

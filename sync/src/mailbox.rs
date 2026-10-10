@@ -636,7 +636,7 @@ struct Reading<'a> {
 
 /// A server count expires after a mail change or a minute.
 struct UnreadCounts {
-    at: Instant,
+    at: tokio::time::Instant,
     changes: u64,
     counts: HashMap<MailSet, i64>,
     pending: bool,
@@ -806,7 +806,7 @@ impl<A: Accounts> Mailboxes<A> {
         }
     }
 
-    /// Wakes the window when a background account count is ready.
+    /// Wakes the window when a background account count is ready or expires.
     pub fn counts_changed(&self) -> tokio::sync::watch::Receiver<()> {
         self.unread_changed.subscribe()
     }
@@ -837,20 +837,37 @@ impl<A: Accounts> Mailboxes<A> {
             // Each account updates on its own; no network await holds up local badges.
             let task = tokio::spawn(async move {
                 let answer = sync.services().mail.unread_counts().await.unwrap_or_default();
-                let Some(state) = state.upgrade() else { return };
-                let mut cached = state.lock().expect("unread counts poisoned");
-                if let Some(kept) = cached.get_mut(&id)
-                    && kept.request == request
-                {
-                    kept.counts = answer;
-                    kept.at = Instant::now();
-                    kept.pending = false;
+                let Some(current) = state.upgrade() else { return };
+                let saved = {
+                    let mut cached = current.lock().expect("unread counts poisoned");
+                    if let Some(kept) = cached.get_mut(&id)
+                        && kept.request == request
+                    {
+                        kept.counts = answer;
+                        kept.at = tokio::time::Instant::now();
+                        kept.pending = false;
+                        true
+                    } else {
+                        false
+                    }
+                };
+                if !saved {
+                    return;
+                }
+                changed.send_replace(());
+                // An unopened folder can change without a local mail event.
+                // Wake the window when this server count needs another read.
+                drop(current);
+                tokio::time::sleep(REMOTE_FRESH).await;
+                let Some(current) = state.upgrade() else { return };
+                let cached = current.lock().expect("unread counts poisoned");
+                if cached.get(&id).is_some_and(|kept| kept.request == request) {
                     drop(cached);
                     changed.send_replace(());
                 }
             });
             cached.insert(id, UnreadCounts {
-                at: Instant::now(),
+                at: tokio::time::Instant::now(),
                 changes,
                 counts: counts.get(&id).cloned().unwrap_or_default(),
                 pending: true,
