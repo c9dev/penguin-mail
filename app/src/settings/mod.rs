@@ -292,6 +292,11 @@ impl Use {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct AiSettings {
+    /// Language of answers, summaries and translations. Empty follows the interface.
+    pub language: String,
+    /// Invalidates in-flight translations without persisting a request lifetime.
+    #[serde(skip)]
+    pub language_revision: u64,
     /// The assistant's connection.
     pub provider: AiProvider,
     /// The local server's API address, ending in `/v1`.
@@ -320,6 +325,8 @@ pub struct AiSettings {
 impl Default for AiSettings {
     fn default() -> Self {
         AiSettings {
+            language: String::new(),
+            language_revision: 0,
             provider: AiProvider::Off,
             base_url: "http://localhost:1234/v1".into(),
             local_model: String::new(),

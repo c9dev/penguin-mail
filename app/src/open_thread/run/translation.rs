@@ -2,7 +2,7 @@
 //! steps of the thread run.
 //!
 //! The card goes up only for a message whose words are not the
-//! interface's own, and nothing is sent until the button is pressed. What
+//! chosen AI language, and nothing is sent until the button is pressed. What
 //! the card says before that is where the words would go: a model on this
 //! computer keeps the message here, and Anthropic or a Claude subscription
 //! does not. A translation is kept beside the message for as long as the
@@ -49,10 +49,10 @@ impl ThreadRun {
         if let Some((from, cut, shown)) = self.desk.translation_of(&message_id) {
             return Card::Done { from, cut, shown };
         }
-        let Some(interface) = self.desk.interface_language() else {
+        let Some(into) = self.desk.translation_language() else {
             return Card::Hidden;
         };
-        let Reading::Other(from) = self.read_message(&message_id, &prose, interface) else {
+        let Reading::Other(from) = self.read_message(&message_id, &prose, &into) else {
             return Card::Hidden;
         };
         // A language the app cannot name is never on the list, so its
@@ -78,18 +78,17 @@ impl ThreadRun {
         let Some(wanted) = self.on_screen() else {
             return;
         };
+        if let Some(into) = self.desk.translation_language() {
+            wanted.on_screen(|effects| effects.keep_translations(&into));
+        }
         let card = self.translation_offer();
         wanted.on_screen(|effects| effects.translation_card(card));
     }
 
     /// The language of the message on screen, with its writer's other
     /// messages in the thread to fall back on.
-    fn read_message(&self, message_id: &str, prose: &Prose, interface: Language) -> Reading {
-        translation::read_message(
-            &prose.sample(),
-            &self.desk.same_writer(message_id),
-            interface,
-        )
+    fn read_message(&self, message_id: &str, prose: &Prose, into: &str) -> Reading {
+        translation::read_for(&prose.sample(), &self.desk.same_writer(message_id), into)
     }
 
     /// The card's button: translate the message on screen, or turn over
@@ -101,18 +100,20 @@ impl ThreadRun {
         let Some((message_id, prose)) = self.desk.prose() else {
             return;
         };
+        let Some(into) = self.desk.translation_language() else {
+            return;
+        };
+        let revision = self.desk.translation_revision();
+        wanted.on_screen(|effects| effects.keep_translations(&into));
         if wanted.on_screen(|effects| effects.turn_translation(&message_id)) == Some(true) {
             return;
         }
-        let Some(interface) = self.desk.interface_language() else {
-            return;
-        };
         if let Err(problem) = self.desk.translation_destination() {
             wanted.on_screen(|effects| effects.translation_card(Card::Problem(problem.clone())));
             wanted.anyway(|effects| effects.toast(problem));
             return;
         }
-        let from = match self.read_message(&message_id, &prose, interface) {
+        let from = match self.read_message(&message_id, &prose, &into) {
             Reading::Other(from) => from,
             _ => None,
         };
@@ -134,10 +135,16 @@ impl ThreadRun {
         wanted.on_screen(|effects| effects.translation_card(Card::Working));
         // A failure is told whatever the reader has opened since; the card
         // only hears about it while it still belongs to this thread.
-        let said = match wanted
-            .anyway(|effects| effects.translate(interface, asked))
-            .await
+        let reply = wanted
+            .anyway(|effects| effects.translate(into.clone(), asked))
+            .await;
+        // A settings change can outlive a request, even in the same conversation.
+        if self.desk.translation_revision() != revision
+            || self.desk.translation_language().as_deref() != Some(into.as_str())
         {
+            return;
+        }
+        let said = match reply {
             Ok(said) if said.iter().all(Option::is_none) => Err(gettext(
                 "The model sent nothing back to put in the message.",
             )),
@@ -168,6 +175,7 @@ impl ThreadRun {
             }
         };
         let translation = Translation {
+            into,
             from,
             body,
             clean,

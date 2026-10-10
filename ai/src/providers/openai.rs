@@ -24,7 +24,7 @@ pub(crate) struct OpenAiChat {
     base_url: String,
     api_key: Option<String>,
     model: String,
-    system_prompt: String,
+    pub(super) system_prompt: String,
     history: History,
     /// Set once the server rejects `tools`; later requests leave them out.
     tools_off: bool,

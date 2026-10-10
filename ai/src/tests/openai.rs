@@ -452,3 +452,45 @@ fn think_tags_split_wherever_the_chunks_fall() {
     assert_eq!(tags.push("</thi"), []);
     assert_eq!(tags.finish(), [Piece::Thinking("</thi".into())]);
 }
+
+#[tokio::test]
+async fn changing_the_system_prompt_keeps_the_conversation() {
+    let server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/chat/completions"))
+        .respond_with(stream(&[delta(json!({"content": "A summary."}))]))
+        .expect(2)
+        .mount(&server)
+        .await;
+    let mut chat = crate::Conversation::new(
+        ProviderConfig::OpenAiCompatible {
+            base_url: server.uri(),
+            api_key: None,
+            model: "test".into(),
+        },
+        "Answer in Russian.".into(),
+    );
+    let (events, _) = async_channel::unbounded();
+    chat.send(
+        "Summarize this conversation".into(),
+        Arc::new(crate::NoTools),
+        events.clone(),
+    )
+    .await
+    .unwrap();
+    chat.set_system_prompt("Answer in Czech.".into());
+    chat.send("Make it shorter".into(), Arc::new(crate::NoTools), events)
+        .await
+        .unwrap();
+    let requests = server.received_requests().await.unwrap();
+    let first: Value = requests[0].body_json().unwrap();
+    let second: Value = requests[1].body_json().unwrap();
+    assert_eq!(first["messages"][0]["content"], "Answer in Russian.");
+    assert_eq!(second["messages"][0]["content"], "Answer in Czech.");
+    assert_eq!(
+        second["messages"][1]["content"],
+        "Summarize this conversation"
+    );
+    assert_eq!(second["messages"][2]["content"], "A summary.");
+    assert_eq!(second["messages"][3]["content"], "Make it shorter");
+}

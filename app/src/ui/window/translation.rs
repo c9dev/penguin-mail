@@ -1,6 +1,4 @@
-//! The language the interface is in, which the translation card measures
-//! a message against. The offer and the translation are steps of the
-//! thread run, in `crate::open_thread::run::translation`.
+//! Changes to the languages whose mail the reader leaves untranslated.
 
 use std::rc::Rc;
 
@@ -9,24 +7,9 @@ use mailrs_domain::translate::{fill, gettext};
 
 use super::MainWindow;
 use crate::settings::Change;
-use crate::translation::{self, Language};
-use crate::ui::composer::spell;
+use crate::translation;
 
 impl MainWindow {
-    /// The language the interface is in, when it is one whose words this
-    /// app can count. `None` leaves every message alone.
-    pub(super) fn interface_language(&self) -> Option<Language> {
-        let installed: Vec<String> = crate::language::choices()
-            .into_iter()
-            .map(|language| language.code)
-            .collect();
-        translation::interface_language(
-            &self.settings_with(|s| s.language.clone()),
-            &spell::locale_language(),
-            &installed,
-        )
-    }
-
     /// Stops offering to translate messages in `language`, and says so on
     /// a toast whose Undo starts again. Preferences lists the languages
     /// too, for a later change of mind.
