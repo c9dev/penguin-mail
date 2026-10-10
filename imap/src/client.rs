@@ -186,6 +186,11 @@ impl<D: Dial> ImapClient<D> {
         Ok(capabilities)
     }
 
+    /// The whole mailbox's unread message count, without selecting it.
+    pub async fn unread(&self, mailbox: &str) -> Result<u32, ImapError> {
+        on_worker!(self, conn => conn.unread(mailbox))
+    }
+
     pub async fn list(&self) -> Result<Vec<Listed>, ImapError> {
         on_worker!(self, conn => conn.list())
     }

@@ -71,6 +71,32 @@ pub fn matching<Tz: TimeZone>(
     Ok(rows)
 }
 
+/// Unread threads in each account's folder, including mail outside the inbox.
+pub fn folder_unread(
+    conn: &Connection,
+    folder: mailrs_domain::Folder,
+) -> Result<std::collections::HashMap<AccountId, i64>> {
+    // Folder queries contain only roles, so neither dates nor names enter the condition.
+    let scope = Scope {
+        now: &chrono::DateTime::<chrono::Utc>::UNIX_EPOCH,
+        mailboxes: Vec::new(),
+    };
+    let mut sql = text(
+        "SELECT m.account_id, COUNT(DISTINCT m.thread_id) FROM messages m WHERE m.seen = 0 AND ",
+    );
+    append(
+        &mut sql,
+        condition(&folder.query(), &scope).expect("a folder has a condition"),
+    );
+    sql.push(" GROUP BY m.account_id");
+    let mut stmt = conn.prepare_cached(&sql.text)?;
+    Ok(stmt
+        .query_map(params_from_iter(&sql.params), |row| {
+            Ok((row.get(0)?, row.get(1)?))
+        })?
+        .collect::<rusqlite::Result<_>>()?)
+}
+
 /// What a condition needs beyond the tree: the clock and the account's
 /// mailboxes.
 struct Scope<'a, Tz: TimeZone> {

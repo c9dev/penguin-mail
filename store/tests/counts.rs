@@ -264,3 +264,39 @@ fn sender_counts_match_the_query_per_vip_row() {
         0
     );
 }
+
+#[test]
+fn folder_badges_count_only_unread_mail_in_the_folder() {
+    use mailrs_domain::Folder;
+    let (conn, a, b) = mixed_mail();
+    store(
+        &conn,
+        &[
+            meta(a, "old1", "archived", 1, &["Label_x", "UNREAD"]),
+            meta(a, "old2", "archived", 2, &["Label_x", "UNREAD"]),
+            meta(a, "trash1", "trashed", 3, &["TRASH", "UNREAD"]),
+            meta(b, "junk1", "junked", 4, &["SPAM", "UNREAD"]),
+        ],
+    );
+    for folder in Folder::ALL {
+        let counts = mailrs_store::query::folder_unread(&conn, folder).unwrap();
+        for id in [a, b] {
+            let query = mailrs_domain::query::Query::And(vec![
+                folder.query(),
+                mailrs_domain::query::Query::Term(mailrs_domain::query::Term::Unread),
+            ]);
+            let matched =
+                mailrs_store::query::matching(&conn, id, &query, &chrono::Utc::now(), 1000)
+                    .unwrap();
+            let threads = matched
+                .into_iter()
+                .map(|m| m.thread_id)
+                .collect::<std::collections::HashSet<_>>();
+            assert_eq!(
+                counts.get(&id).copied().unwrap_or(0),
+                threads.len() as i64,
+                "{folder:?} {id}"
+            );
+        }
+    }
+}

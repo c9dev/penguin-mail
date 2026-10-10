@@ -679,7 +679,10 @@ async fn counts_cover_the_sidebar_and_the_categories() {
         .await
         .expect("the counts read");
     assert_eq!(counts.mailboxes[&inbox], 1, "the inbox counts unread mail");
-    assert_eq!(counts.mailboxes[&label], 1, "a label counts every thread");
+    assert_eq!(
+        counts.mailboxes[&label], 0,
+        "read mail adds no unread badge"
+    );
     assert_eq!(counts.mailboxes[&Mailbox::Flag(FlagColor::Green)], 0);
     assert_eq!(counts.mailboxes[&Mailbox::FollowUp], 0);
     assert_eq!(counts.mailboxes[&Mailbox::Scheduled], 0);
@@ -725,13 +728,13 @@ fn each_standard_mailbox_draws_from_its_mail_set() {
 }
 
 #[test]
-fn only_an_inbox_counts_unread_and_takes_categories() {
+fn other_mailboxes_count_unread_but_only_an_inbox_takes_categories() {
     let unified = Mailbox::Unified(Standard::Inbox);
     let mine = Mailbox::Standard { account_id: 1, which: Standard::Inbox };
     let sent = Mailbox::Standard { account_id: 1, which: Standard::Sent };
     assert!(unified.counts_unread() && unified.takes_categories());
     assert!(mine.counts_unread() && mine.takes_categories());
-    assert!(!sent.counts_unread() && !sent.takes_categories());
+    assert!(sent.counts_unread() && !sent.takes_categories());
     assert_eq!(mine.account(), Some(1));
     assert_eq!(unified.account(), None);
 }
@@ -853,4 +856,222 @@ async fn a_stopped_search_asks_gmail_nothing_and_leaves_the_next_one_whole() {
         .await
         .expect("the search lists");
     assert!(ids(&found).contains(&"k4".to_string()), "{:?}", ids(&found));
+}
+
+async fn counted_after_server(
+    service: &Mailboxes<Connected>, sidebar: &[Mailbox], shown: &Mailbox,
+) -> crate::mailbox::Counts {
+    let mut changed = service.counts_changed();
+    service.counts(sidebar, shown, &view()).await.unwrap();
+    tokio::time::timeout(std::time::Duration::from_secs(2), changed.changed())
+        .await.unwrap().unwrap();
+    service.counts(sidebar, shown, &view()).await.unwrap()
+}
+
+#[tokio::test(start_paused = true)]
+async fn unopened_imap_folder_counts_refresh_without_local_mail_changes() {
+    use std::time::Duration;
+
+    let h = super::imap_harness().await;
+    h.imap.add_mailbox("INBOX/Lists", None);
+    h.imap.deliver("INBOX/Lists", b"Subject: First\r\n\r\nHi".to_vec(), now_millis());
+    h.sync.refresh_labels().await.unwrap();
+    let service = Mailboxes::new(
+        Arc::new(Connected(HashMap::from([(h.account_id, Arc::clone(&h.sync))]))),
+        h.db.clone(),
+    );
+    let folder = Mailbox::Label {
+        account_id: h.account_id,
+        label_id: "INBOX/Lists".into(),
+        name: "Lists".into(),
+    };
+    let sidebar = std::slice::from_ref(&folder);
+    assert_eq!(counted_after_server(&service, sidebar, &folder).await.mailboxes[&folder], 1);
+
+    let before = h.sync.mail_changes();
+    h.imap.deliver("INBOX/Lists", b"Subject: Second\r\n\r\nHi".to_vec(), now_millis());
+    assert_eq!(h.sync.mail_changes(), before, "the unopened folder sent no local event");
+    let mut changed = service.counts_changed();
+    tokio::time::advance(Duration::from_secs(61)).await;
+    changed.changed().await.unwrap();
+    assert_eq!(counted_after_server(&service, sidebar, &folder).await.mailboxes[&folder], 2);
+}
+
+#[tokio::test]
+async fn imap_counts_include_unopened_folders_and_mail_before_the_local_window() {
+    let h = super::imap_harness().await;
+    h.imap.add_mailbox("INBOX/Lists", None);
+    h.imap.add_mailbox("Parent", None);
+    h.imap.with(|s| s.mailbox_mut("Parent").no_select = true);
+    for folder in ["INBOX/Lists", "Trash", "Sent"] {
+        h.imap.deliver(
+            folder,
+            b"Subject: old unread\r\n\r\nHello".to_vec(),
+            now_millis() - 365 * DAY,
+        );
+        h.imap.deliver_flagged(
+            folder,
+            b"Subject: read\r\n\r\nHello",
+            &["\\Seen"],
+            now_millis(),
+        );
+    }
+    h.sync.refresh_labels().await.unwrap();
+    let service = Mailboxes::new(
+        Arc::new(Connected(HashMap::from([(
+            h.account_id,
+            Arc::clone(&h.sync),
+        )]))),
+        h.db.clone(),
+    );
+    let folder = Mailbox::Label {
+        account_id: h.account_id,
+        label_id: "INBOX/Lists".into(),
+        name: "Lists".into(),
+    };
+    let trash = Mailbox::Folder {
+        account_id: Some(h.account_id),
+        folder: Folder::Trash,
+    };
+    let sent = Mailbox::Standard {
+        account_id: h.account_id,
+        which: Standard::Sent,
+    };
+    let all_sent = Mailbox::Unified(Standard::Sent);
+    let all_trash = Mailbox::Folder {
+        account_id: None,
+        folder: Folder::Trash,
+    };
+    let sidebar = vec![
+        folder.clone(),
+        trash.clone(),
+        sent.clone(),
+        all_sent.clone(),
+        all_trash.clone(),
+    ];
+    let counts = counted_after_server(&service, &sidebar, &folder).await;
+    for mailbox in &sidebar {
+        assert_eq!(counts.mailboxes[mailbox], 1, "{mailbox:?}");
+    }
+    let calls = h.imap.with(|s| s.calls.clone());
+    assert!(
+        !calls
+            .iter()
+            .any(|call| call.starts_with("select ") || call.starts_with("headers "))
+    );
+    assert!(!calls.contains(&"unread Parent".into()));
+    service.counts(&sidebar, &folder, &view()).await.unwrap();
+    assert_eq!(
+        h.imap.with(|s| s.calls.clone()),
+        calls,
+        "fresh counts reuse STATUS results"
+    );
+    service.forget_remote();
+    h.imap.set_flags("INBOX/Lists", 1, &["\\Seen"]);
+    let counts = counted_after_server(&service, &sidebar, &folder).await;
+    assert_eq!(counts.mailboxes[&folder], 0);
+    assert_eq!(counts.mailboxes[&trash], 1);
+    h.imap.deliver("INBOX", b"Subject: New mail\r\n\r\nHi".to_vec(), now_millis());
+    h.bootstrap().await;
+    h.imap.set_flags("INBOX/Lists", 1, &[]);
+    let counts = counted_after_server(&service, &sidebar, &folder).await;
+    assert_eq!(counts.mailboxes[&folder], 1, "a sync change expires cached server counts");
+    service.forget_remote();
+    h.imap.with(|s| s.aimed.push(("unread".into(), mailrs_imap::ImapError::Network("offline".into()))));
+    let counts = counted_after_server(&service, &sidebar, &folder).await;
+    assert_eq!(counts.mailboxes[&folder], 0, "offline counts fall back to the stored mail");
+}
+
+#[tokio::test]
+async fn local_counts_and_other_accounts_do_not_wait_for_a_slow_server() {
+    use std::time::Duration;
+    use crate::{AccountServices, AccountSync};
+    use crate::fake::{FakeImap, FakeSmtp};
+
+    let h = super::imap_harness().await;
+    h.imap.deliver("INBOX", b"Subject: Stored\r\n\r\nHi".to_vec(), now_millis());
+    h.bootstrap().await;
+    h.imap.deliver("INBOX", b"Subject: New\r\n\r\nHi".to_vec(), now_millis());
+    let hold = h.imap.hold_next_unread();
+    let fast_id = h.db.write(|c| mailrs_store::accounts::insert_account(c, "second@example.com", 0))
+        .await.unwrap();
+    let fast = Arc::new(FakeImap::new());
+    fast.deliver("INBOX", b"Subject: Fast\r\n\r\nHi".to_vec(), now_millis());
+    let services = AccountServices::imap(fast, Arc::new(FakeSmtp::default()), super::fake_settings());
+    let (events, _) = async_channel::unbounded();
+    let second = Arc::new(AccountSync::new(fast_id, services, h.db.clone(), events));
+    let service = Mailboxes::new(Arc::new(Connected(HashMap::from([
+        (h.account_id, Arc::clone(&h.sync)), (fast_id, second),
+    ]))), h.db.clone());
+    let slow_box = Mailbox::Standard { account_id: h.account_id, which: Standard::Inbox };
+    let fast_box = Mailbox::Standard { account_id: fast_id, which: Standard::Inbox };
+    let sidebar = [slow_box.clone(), fast_box.clone()];
+    let mut changed = service.counts_changed();
+    let local = tokio::time::timeout(Duration::from_secs(2), service.counts(&sidebar, &slow_box, &view()))
+        .await.expect("local badges must not wait for STATUS").unwrap();
+    assert_eq!(local.mailboxes[&slow_box], 1);
+    hold.reached().await;
+    tokio::time::timeout(Duration::from_secs(2), changed.changed()).await.unwrap().unwrap();
+    let available = service.counts(&sidebar, &slow_box, &view()).await.unwrap();
+    assert_eq!(available.mailboxes[&fast_box], 1, "another account finishes while the first is held");
+    assert_eq!(available.mailboxes[&slow_box], 1);
+    hold.release();
+    tokio::time::timeout(Duration::from_secs(2), changed.changed()).await.unwrap().unwrap();
+    let remote = service.counts(&sidebar, &slow_box, &view()).await.unwrap();
+    assert_eq!(remote.mailboxes[&slow_box], 2);
+
+    // A manual refresh cancels the held generation before starting its replacement.
+    service.forget_remote();
+    let old = h.imap.hold_next_unread();
+    service.counts(&sidebar, &slow_box, &view()).await.unwrap();
+    old.reached().await;
+    service.forget_remote();
+    h.imap.set_flags("INBOX", 2, &["\\Seen"]);
+    let updated = counted_after_server(&service, std::slice::from_ref(&slow_box), &slow_box).await;
+    assert_eq!(updated.mailboxes[&slow_box], 1);
+    old.release();
+    assert_eq!(service.counts(std::slice::from_ref(&slow_box), &slow_box, &view()).await.unwrap().mailboxes[&slow_box], 1);
+}
+
+#[tokio::test]
+async fn a_mail_change_restarts_pending_counts_for_unopened_folders() {
+    use std::time::Duration;
+
+    let h = super::imap_harness().await;
+    h.imap.add_mailbox("INBOX/Lists", None);
+    h.imap.deliver("INBOX/Lists", b"Subject: Unopened\r\n\r\nHi".to_vec(), now_millis());
+    h.sync.refresh_labels().await.unwrap();
+    let service = Mailboxes::new(
+        Arc::new(Connected(HashMap::from([(h.account_id, Arc::clone(&h.sync))]))),
+        h.db.clone(),
+    );
+    let folder = Mailbox::Label {
+        account_id: h.account_id,
+        label_id: "INBOX/Lists".into(),
+        name: "Lists".into(),
+    };
+    let sidebar = std::slice::from_ref(&folder);
+    let old = h.imap.hold_next_unread();
+    let local = service.counts(sidebar, &folder, &view()).await.unwrap();
+    assert_eq!(local.mailboxes[&folder], 0, "the unopened folder has no local mail");
+    tokio::time::timeout(Duration::from_secs(2), old.reached()).await.unwrap();
+
+    let before = h.sync.mail_changes();
+    h.imap.deliver("INBOX", b"Subject: New mail\r\n\r\nHi".to_vec(), now_millis());
+    h.bootstrap().await;
+    assert_ne!(h.sync.mail_changes(), before);
+    let replacement = h.imap.hold_next_unread();
+    service.counts(sidebar, &folder, &view()).await.unwrap();
+    tokio::time::timeout(Duration::from_secs(2), replacement.reached())
+        .await.expect("changed mail starts a new sweep without waiting for the old one");
+    tokio::time::timeout(Duration::from_secs(2), async {
+        while Arc::strong_count(&old) > 1 {
+            tokio::task::yield_now().await;
+        }
+    }).await.expect("the old STATUS call is canceled, not left running");
+
+    let mut changed = service.counts_changed();
+    replacement.release();
+    tokio::time::timeout(Duration::from_secs(2), changed.changed()).await.unwrap().unwrap();
+    assert_eq!(service.counts(sidebar, &folder, &view()).await.unwrap().mailboxes[&folder], 1);
 }

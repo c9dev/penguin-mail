@@ -282,6 +282,12 @@ impl MailBackend for AnyMail {
         forward_all_now!(AnyMail, self, made_by_person(id))
     }
 
+    async fn unread_counts(
+        &self,
+    ) -> Result<std::collections::HashMap<mailrs_domain::MailSet, i64>, BackendError> {
+        forward_all!(AnyMail, self, unread_counts())
+    }
+
     async fn mailboxes(&self) -> Result<Vec<RemoteMailbox>, BackendError> {
         forward_all!(AnyMail, self, mailboxes())
     }

@@ -5,11 +5,13 @@
 
 use std::collections::HashMap;
 
-use mailrs_domain::{Label, LabelKind};
+use mailrs_domain::{Label, LabelKind, Role};
 
 /// One of an account's own labels or folders as the sidebar lists it.
 #[derive(Debug, PartialEq, Eq)]
 pub struct LabelRow<'a> {
+    /// The standard mailbox above this subtree, when its parent has a role.
+    pub under: Option<Role>,
     pub label: &'a Label,
     /// The part of the name after the last slash.
     pub leaf: &'a str,
@@ -28,34 +30,51 @@ fn leaf(name: &str) -> &str {
     name.rsplit_once('/').map_or(name, |(_, leaf)| leaf)
 }
 
+fn parent_key(name: &str) -> (&str, &str) {
+    // Only the first Inbox component is case insensitive, even in a nested path.
+    let (root, rest) = name.split_at(name.find('/').unwrap_or(name.len()));
+    (if root.eq_ignore_ascii_case("INBOX") { "INBOX" } else { root }, rest)
+}
+
 /// An account's labels and folders with the groups that hold folders, each
 /// under its parent, so "Work/Clients" sits under "Work" even where the
 /// server keeps no mail in "Work". Siblings go in the order the person
 /// gave them, from `positions` by id, and the ones never moved follow by
 /// name, ignoring case.
 pub fn label_rows<'a>(labels: &'a [Label], positions: &HashMap<String, i64>) -> Vec<LabelRow<'a>> {
+    let parents: HashMap<_, Role> = labels.iter().filter_map(|label| {
+        label.role.filter(|role| *role != Role::Important).map(|role| (parent_key(&label.name), role))
+    }).collect();
     let mut rows: Vec<LabelRow<'a>> = labels
         .iter()
         .filter(|l| matches!(l.kind, LabelKind::User | LabelKind::Group))
-        .map(|label| LabelRow {
-            label,
-            leaf: leaf(&label.name),
-            depth: 1 + label.name.matches('/').count() as u32,
-            opens: label.kind == LabelKind::User,
+        .map(|label| {
+            let ancestor = label.name.match_indices('/').rev().find_map(|(at, _)| {
+                parents.get(&parent_key(&label.name[..at])).map(|role| (at, *role))
+            });
+            LabelRow {
+                under: ancestor.map(|(_, role)| role),
+                label,
+                leaf: leaf(&label.name),
+                depth: 1 + label.name[ancestor.map_or(0, |(at, _)| at)..]
+                    .matches('/')
+                    .count() as u32,
+                opens: label.kind == LabelKind::User,
+            }
         })
         .collect();
-    let by_name: HashMap<&str, &str> = rows
+    let by_name: HashMap<_, &str> = rows
         .iter()
-        .map(|row| (row.label.name.as_str(), row.label.id.as_str()))
+        .map(|row| (parent_key(&row.label.name), row.label.id.as_str()))
         .collect();
     // Each row sorts by the place of every label on its path, so a child
     // follows its parent and siblings keep the person's order among them.
     let place = |name: &str| -> Vec<(bool, i64, String, String)> {
         let ends = name.match_indices('/').map(|(at, _)| at).chain([name.len()]);
         ends.map(|end| {
-            let path = &name[..end];
-            let position = by_name.get(path).and_then(|id| positions.get(*id)).copied();
-            let segment = leaf(path);
+            let path = parent_key(&name[..end]);
+            let position = by_name.get(&path).and_then(|id| positions.get(*id)).copied();
+            let segment = if path.1.is_empty() { path.0 } else { leaf(path.1) };
             (
                 position.is_none(),
                 position.unwrap_or(0),
@@ -135,16 +154,22 @@ pub fn place(
         return Ok(None);
     }
     let old = moving.label.name.as_str();
-    if onto.label.name.starts_with(&format!("{old}/")) {
+    if onto.label.name.match_indices('/').any(|(at, _)| {
+        parent_key(&onto.label.name[..at]) == parent_key(old)
+    }) {
         return Err(Refusal::OwnSubtree);
     }
     let under = match zone {
         Zone::Inside => Some(onto.label.name.as_str()),
         Zone::Before | Zone::After => parent(&onto.label.name),
     };
-    let name = match under {
-        Some(under) => format!("{under}/{}", leaf(old)),
-        None => leaf(old).to_string(),
+    let name = if parent(old).map(parent_key) == under.map(parent_key) {
+        old.to_string()
+    } else {
+        match under {
+            Some(under) => format!("{under}/{}", leaf(old)),
+            None => leaf(old).to_string(),
+        }
     };
     // Gmail compares label names ignoring case, so two that differ only
     // in case would clash there.
@@ -174,8 +199,9 @@ pub fn place(
 /// The ids of the rows directly under `under`, or at the top for none, in
 /// sidebar order.
 fn siblings(rows: &[LabelRow<'_>], under: Option<&str>) -> Vec<String> {
+    let under = under.map(parent_key);
     rows.iter()
-        .filter(|row| parent(&row.label.name) == under)
+        .filter(|row| parent(&row.label.name).map(parent_key) == under)
         .map(|row| row.label.id.clone())
         .collect()
 }
@@ -214,12 +240,13 @@ pub fn moves(rows: &[LabelRow<'_>], id: &str) -> Moves {
 mod tests {
     use std::collections::HashMap;
 
-    use mailrs_domain::{Label, LabelKind};
+    use mailrs_domain::{Label, LabelKind, Role};
 
     use super::{Placement, Refusal, Zone, label_rows, moves, place, step, zone};
 
     fn label(name: &str, kind: LabelKind) -> Label {
         Label {
+            role: None,
             account_id: 1,
             id: format!("id:{name}"),
             name: name.to_string(),
@@ -266,6 +293,127 @@ mod tests {
         assert_eq!(names, ["Blue", "zebra/crossing"]);
         let rows = label_rows(&labels, &HashMap::new());
         assert_eq!(rows.len(), 1);
+    }
+
+    #[test]
+    fn inbox_children_follow_the_role_not_the_previous_alphabetical_folder() {
+        let mut inbox = label("INBOX", LabelKind::System);
+        inbox.role = Some(mailrs_domain::Role::Inbox);
+        let mut sent = label("INBOX/Sent Items", LabelKind::System);
+        sent.role = Some(mailrs_domain::Role::Sent);
+        let labels = [
+            inbox,
+            sent,
+            label("Google", LabelKind::User),
+            label("INBOX/Aliexpress", LabelKind::User),
+            label("INBOX/Lists", LabelKind::User),
+            label("INBOX/Lists/Rust", LabelKind::User),
+            label("INBOX/Sent Items/Receipts", LabelKind::User),
+            label("Postmaster", LabelKind::User),
+            label("Postmaster/dmarc", LabelKind::User),
+        ];
+        let rows = label_rows(&labels, &HashMap::new());
+        let under = |role| {
+            rows.iter()
+                .filter(|row| row.under == role)
+                .map(|row| (row.leaf, row.depth))
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(
+            under(Some(mailrs_domain::Role::Inbox)),
+            [("Aliexpress", 2), ("Lists", 2), ("Rust", 3)]
+        );
+        assert_eq!(under(Some(mailrs_domain::Role::Sent)), [("Receipts", 2)]);
+        assert_eq!(
+            under(None),
+            [("Google", 1), ("Postmaster", 1), ("dmarc", 2)]
+        );
+    }
+
+    #[test]
+    fn inbox_children_accept_the_servers_mixed_case_prefix() {
+        for name in ["INBOX", "Inbox", "inbox"] {
+            let mut inbox = label(name, LabelKind::System);
+            inbox.role = Some(Role::Inbox);
+            let mut archive = label("Archive", LabelKind::System);
+            archive.role = Some(Role::Archive);
+            let labels = [
+                inbox,
+                archive,
+                label("Google", LabelKind::User),
+                label("Inbox/Aliexpress", LabelKind::User),
+                label("Inbox/Allegro", LabelKind::User),
+                label("Inbox/Lists", LabelKind::User),
+                label("Inbox/Lists/Rust", LabelKind::User),
+                label("archive/Separate", LabelKind::User),
+            ];
+            let rows = label_rows(&labels, &HashMap::new());
+            let children: Vec<_> = rows.iter()
+                .filter(|row| row.under == Some(Role::Inbox))
+                .map(|row| (row.leaf, row.depth))
+                .collect();
+            assert_eq!(children, [("Aliexpress", 2), ("Allegro", 2), ("Lists", 2), ("Rust", 3)]);
+            assert!(rows.iter().find(|row| row.leaf == "Separate").unwrap().under.is_none());
+        }
+    }
+
+    #[test]
+    fn nested_system_parents_accept_only_the_inbox_prefix_in_mixed_case() {
+        for prefix in ["INBOX", "Inbox", "inbox"] {
+            for child_prefix in ["INBOX", "Inbox", "inbox"] {
+                let mut inbox = label("INBOX", LabelKind::System);
+                inbox.role = Some(Role::Inbox);
+                let mut sent = label(&format!("{prefix}/Sent Items"), LabelKind::System);
+                sent.role = Some(Role::Sent);
+                let labels = [
+                    inbox,
+                    sent,
+                    label(&format!("{child_prefix}/Sent Items/Receipts"), LabelKind::User),
+                    label(&format!("{child_prefix}/Sent Items/Receipts/2026"), LabelKind::User),
+                    label(&format!("{child_prefix}/sent items/Separate"), LabelKind::User),
+                    label("InboxOther/Sent Items/Unrelated", LabelKind::User),
+                ];
+                let rows = label_rows(&labels, &HashMap::new());
+                for (leaf, under, depth) in [
+                    ("Receipts", Some(Role::Sent), 2),
+                    ("2026", Some(Role::Sent), 3),
+                    ("Separate", Some(Role::Inbox), 3),
+                    ("Unrelated", None, 3),
+                ] {
+                    let row = rows.iter().find(|row| row.leaf == leaf).unwrap();
+                    assert_eq!((row.under, row.depth), (under, depth), "{}", row.label.name);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn mixed_case_inbox_children_sort_with_their_parent_and_its_position() {
+        for prefix in ["INBOX", "Inbox", "inbox"] {
+            for child_prefix in ["INBOX", "Inbox", "inbox"] {
+                let mut inbox = label("INBOX", LabelKind::System);
+                inbox.role = Some(Role::Inbox);
+                let lists = label(&format!("{prefix}/Lists"), LabelKind::User);
+                let zebra = label(&format!("{prefix}/Zebra"), LabelKind::User);
+                let ordered = HashMap::from([(lists.id.clone(), 0), (zebra.id.clone(), 1)]);
+                let reversed = HashMap::from([(lists.id.clone(), 1), (zebra.id.clone(), 0)]);
+                let labels = [
+                    inbox,
+                    lists,
+                    zebra,
+                    label(&format!("{child_prefix}/Lists/Rust"), LabelKind::User),
+                ];
+                for (positions, expected) in [
+                    (HashMap::new(), ["Lists", "Rust", "Zebra"]),
+                    (ordered, ["Lists", "Rust", "Zebra"]),
+                    (reversed, ["Zebra", "Lists", "Rust"]),
+                ] {
+                    let rows = label_rows(&labels, &positions);
+                    let leaves: Vec<_> = rows.iter().map(|row| row.leaf).collect();
+                    assert_eq!(leaves, expected, "{prefix}, {child_prefix}, {positions:?}");
+                }
+            }
+        }
     }
 
     #[test]
@@ -367,6 +515,65 @@ mod tests {
             place(&rows, "id:Personal", "id:Personal/bills", Zone::Before),
             Err(Refusal::OwnSubtree)
         );
+    }
+
+    #[test]
+    fn mixed_case_inbox_siblings_move_without_renaming() {
+        for prefix in ["INBOX", "Inbox", "inbox"] {
+            for other_prefix in ["INBOX", "Inbox", "inbox"] {
+                let python = format!("{prefix}/Lists/Python");
+                let rust = format!("{other_prefix}/Lists/Rust");
+                let labels = [
+                    label(&python, LabelKind::User),
+                    label(&rust, LabelKind::User),
+                    label("Inbox/lists/Separate", LabelKind::User),
+                ];
+                let rows = label_rows(&labels, &HashMap::new());
+                let (python_id, rust_id) = (&labels[0].id, &labels[1].id);
+                let offered = |id| {
+                    let m = moves(&rows, id);
+                    (m.up, m.down)
+                };
+                assert_eq!(offered(python_id), (false, true));
+                assert_eq!(offered(rust_id), (true, false));
+                assert_eq!(offered(&labels[2].id), (false, false));
+                let python_down = Placement {
+                    name: python.clone(), order: vec![rust_id.clone(), python_id.clone()],
+                };
+                let rust_up = Placement { name: rust.clone(), order: python_down.order.clone() };
+                assert_eq!(step(&rows, python_id, 1), Some(python_down.clone()));
+                assert_eq!(step(&rows, rust_id, -1), Some(rust_up.clone()));
+                assert_eq!(place(&rows, python_id, rust_id, Zone::After), Ok(Some(python_down)));
+                assert_eq!(place(&rows, rust_id, python_id, Zone::Before), Ok(Some(rust_up)));
+                assert_eq!(place(&rows, python_id, rust_id, Zone::Before), Ok(None));
+                assert_eq!(place(&rows, rust_id, python_id, Zone::After), Ok(None));
+            }
+        }
+    }
+
+    #[test]
+    fn mixed_case_inbox_subtrees_refuse_drops_but_distinct_paths_do_not() {
+        for prefix in ["INBOX", "Inbox", "inbox"] {
+            for child_prefix in ["INBOX", "Inbox", "inbox"] {
+                let labels = [
+                    label(&format!("{prefix}/Lists"), LabelKind::User),
+                    label(&format!("{child_prefix}/Lists/Rust"), LabelKind::User),
+                    label(&format!("{child_prefix}/Lists/Rust/Tools"), LabelKind::User),
+                    label(&format!("{child_prefix}/lists/Rust"), LabelKind::User),
+                    label(&format!("{child_prefix}/ListsMore/Rust"), LabelKind::User),
+                    label("InboxOther/Lists/Rust", LabelKind::User),
+                ];
+                let rows = label_rows(&labels, &HashMap::new());
+                for child in &labels[1..3] {
+                    for zone in [Zone::Inside, Zone::Before, Zone::After] {
+                        assert_eq!(place(&rows, &labels[0].id, &child.id, zone), Err(Refusal::OwnSubtree));
+                    }
+                }
+                for unrelated in &labels[3..] {
+                    assert!(matches!(place(&rows, &labels[0].id, &unrelated.id, Zone::Inside), Ok(Some(_))));
+                }
+            }
+        }
     }
 
     #[test]

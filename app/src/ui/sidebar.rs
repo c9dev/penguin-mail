@@ -12,7 +12,7 @@ use adw::prelude::*;
 use gtk::{gdk, gio, glib, pango};
 use mailrs_domain::translate::{fill, fill_plural, gettext};
 use mailrs_domain::{
-    Account, AccountId, AccountState, FlagColor, Folder, Label, Provider,
+    Account, AccountId, AccountState, FlagColor, Folder, Label, MailSet, Provider, Role,
 };
 use mailrs_sync::Offers;
 
@@ -883,12 +883,51 @@ impl Sidebar {
                 count,
                 actions,
             });
+            let order = extras
+                .label_order
+                .get(&account.id)
+                .cloned()
+                .unwrap_or_default();
+            let rows = label_rows(labels, &order);
+            let mut add_labels = |under| {
+                for entry in rows.iter().filter(|row| row.under == under) {
+                    let label = entry.label;
+                    let mailbox = Mailbox::Label {
+                        account_id: account.id,
+                        label_id: label.id.clone(),
+                        name: label.name.replace('/', " › "),
+                    };
+                    let dest = mailbox.clone();
+                    let row = match entry.opens {
+                        true => self.add_mailbox(
+                            mailbox,
+                            entry.leaf,
+                            label_icon(account_offers),
+                            entry.depth,
+                        ),
+                        false => self.add_group(mailbox, entry.leaf, entry.depth),
+                    };
+                    if let Some(color) = label.color.as_deref().and_then(css_hex)
+                        && let Some(icon) = row.child().and_then(|c| c.first_child())
+                    {
+                        let class = format!("label-color-{color}");
+                        label_rules.push_str(&format!(".{class} {{ color: #{color}; }}\n"));
+                        icon.add_css_class(&class);
+                    }
+                    let moves = tree::moves(&rows, &label.id);
+                    label_menu(&row, account.id, label, Filing::of([account_offers]), moves);
+                    self.label_drag(&row, account.id, &label.id, entry.opens.then_some(dest));
+                }
+            };
             for which in Standard::ALL {
                 let mailbox = Mailbox::Standard {
                     account_id: account.id,
                     which,
                 };
                 self.add_mailbox(mailbox, &which.name(), which.icon(), 1);
+                if let MailSet::Role(role) = which.set() {
+                    add_labels(Some(role));
+                }
             }
             for folder in Folder::ALL {
                 let mailbox = Mailbox::Folder {
@@ -896,37 +935,15 @@ impl Sidebar {
                     folder,
                 };
                 self.add_mailbox(mailbox, &folder.name(), folder.icon(), 1);
-            }
-            // Gmail nests labels with slashes, and an IMAP server's folder
-            // names reach the store with slashes too: "Work/Clients" sits
-            // under "Work".
-            let order = extras.label_order.get(&account.id).cloned().unwrap_or_default();
-            let rows = label_rows(labels, &order);
-            for entry in &rows {
-                let label = entry.label;
-                let mailbox = Mailbox::Label {
-                    account_id: account.id,
-                    label_id: label.id.clone(),
-                    name: label.name.replace('/', " › "),
+                let role = match folder {
+                    Folder::Archive => Role::Archive,
+                    Folder::Junk => Role::Junk,
+                    Folder::Trash => Role::Trash,
+                    Folder::AllMail => Role::All,
                 };
-                let dest = mailbox.clone();
-                let row = match entry.opens {
-                    true => {
-                        self.add_mailbox(mailbox, entry.leaf, label_icon(account_offers), entry.depth)
-                    }
-                    false => self.add_group(mailbox, entry.leaf, entry.depth),
-                };
-                if let Some(color) = label.color.as_deref().and_then(css_hex)
-                    && let Some(icon) = row.child().and_then(|c| c.first_child())
-                {
-                    let class = format!("label-color-{color}");
-                    label_rules.push_str(&format!(".{class} {{ color: #{color}; }}\n"));
-                    icon.add_css_class(&class);
-                }
-                let moves = tree::moves(&rows, &label.id);
-                label_menu(&row, account.id, label, Filing::of([account_offers]), moves);
-                self.label_drag(&row, account.id, &label.id, entry.opens.then_some(dest));
+                add_labels(Some(role));
             }
+            add_labels(None);
             // Tags follow the folders, flat, with no menu and no drag: they
             // cannot nest or move, and the person makes and renames them in
             // Outlook.
@@ -1247,7 +1264,7 @@ impl Sidebar {
             .collect()
     }
 
-    /// Unread counts for inboxes, totals for drafts and Send Later.
+    /// Unread counts for mailboxes, totals for drafts and queued mail.
     pub fn set_counts(&self, counts: &HashMap<Mailbox, i64>) {
         let selected = self.list.selected_row();
         for row in self.rows.borrow().iter() {
