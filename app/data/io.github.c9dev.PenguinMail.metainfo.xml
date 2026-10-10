@@ -109,6 +109,31 @@
 
   <!-- scripts/metainfo.sh writes this list from CHANGELOG.md. -->
   <releases>
+    <release version="1.0.7" date="2026-10-10">
+      <url type="details">https://github.com/c9dev/penguin-mail/releases/tag/v1.0.7</url>
+      <description translate="no">
+        <p>Fixed</p>
+        <ul>
+          <li>Reorder folders with mixed-case Inbox paths without renaming them, and reject moving a folder into its own descendants.</li>
+          <li>Keep Inbox subfolders beside their parent when path casing differs, including with a custom folder order.</li>
+          <li>Keep children under nested system folders when the server mixes Inbox and INBOX in their paths.</li>
+          <li>Restart pending folder counts when mail changes so unopened folders get fresh unread counts.</li>
+          <li>Show local unread counts while IMAP servers are answering, and keep completed folder counts if a request times out.</li>
+          <li>Show nested folders under their own Inbox or other parent mailbox, including servers that mix Inbox and INBOX, and unread counts beside folders, including unopened IMAP folders.</li>
+          <li>Discard pending translations after changing the AI language, even when changing back before the answer arrives.</li>
+          <li>Proton Mail Bridge connections work with its local TLS certificate when you pin that certificate in Penguin Mail.</li>
+          <li>Pictures embedded in IMAP messages appear in the message again.</li>
+          <li>Check for Mail checks Sent and other IMAP folders at once, even if their regular check is not due yet.</li>
+        </ul>
+        <p>New</p>
+        <ul>
+          <li>Traditional Chinese (zh_TW, Taiwan) language support.</li>
+          <li>Open the sponsor page from the main menu or About Penguin Mail.</li>
+          <li>Choose a language for AI answers, summaries and translations without changing the interface language.</li>
+          <li>Add sender addresses to IMAP and POP3 accounts, use optional + or . suffixes, and reply from the address a message was sent to.</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.0.6" date="2026-10-09">
       <url type="details">https://github.com/c9dev/penguin-mail/releases/tag/v1.0.6</url>
       <description translate="no">

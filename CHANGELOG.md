@@ -5,6 +5,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ## Unreleased
 
+## 1.0.7 (2026-10-10)
+
 ### Fixed
 
 - Reorder folders with mixed-case Inbox paths without renaming them, and reject moving a folder into its own descendants.
