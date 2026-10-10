@@ -175,8 +175,9 @@ uses a tool from outside the app, and it is off until you pick a model.
   back the memory the window used.
 - **Apple Mail's shortcuts on Linux** with Ctrl in place of Command, plus Gmail's
   single keys.
-- **English and European Portuguese**, chosen in Preferences, with the
-  window's controls named for screen readers.
+- **American English, British English, European Portuguese and Traditional
+  Chinese (Taiwan)**, chosen in Preferences, with the window's controls named
+  for screen readers.
 
 ## Screenshots
 

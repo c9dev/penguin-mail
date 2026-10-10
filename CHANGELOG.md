@@ -20,6 +20,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### New
 
+- Traditional Chinese (zh_TW, Taiwan) language support.
 - Open the sponsor page from the main menu or About Penguin Mail.
 - Choose a language for AI answers, summaries and translations without changing the interface language.
 - Add sender addresses to IMAP and POP3 accounts, use optional + or . suffixes, and reply from the address a message was sent to.

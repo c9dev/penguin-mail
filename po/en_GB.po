@@ -68,8 +68,8 @@ msgid "An assistant that runs on a local model or on Claude, off until you pick 
 msgstr "An assistant that runs on a local model or on Claude, off until you pick one"
 
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:33
-msgid "Every control named for screen readers and reachable from the keyboard, in English and European Portuguese"
-msgstr "Every control named for screen readers and reachable from the keyboard, in English and European Portuguese"
+msgid "Every control named for screen readers and reachable from the keyboard, in American English, British English, European Portuguese and Traditional Chinese (Taiwan)"
+msgstr "Every control named for screen readers and reachable from the keyboard, in American English, British English, European Portuguese and Traditional Chinese (Taiwan)"
 
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:35
 msgid "Adding a Gmail or Microsoft account takes one sign-in in your browser. Penguin Mail is built with GTK and libadwaita and fits best on GNOME, but it runs on any Linux desktop."
