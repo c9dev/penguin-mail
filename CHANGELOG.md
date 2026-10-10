@@ -7,8 +7,15 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Fixed
 
+- Restart pending folder counts when mail changes so unopened folders get fresh unread counts.
+
 - Show local unread counts while IMAP servers are answering, and keep completed folder counts if a request times out.
 - Show nested folders under their own Inbox or other parent mailbox, including servers that mix Inbox and INBOX, and unread counts beside folders, including unopened IMAP folders.
+- Discard pending translations after changing the AI language, even when changing back before the answer arrives.
+
+### New
+
+- Choose a language for AI answers, summaries and translations without changing the interface language.
 
 ## 1.0.6 (2026-10-09)
 

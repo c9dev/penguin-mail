@@ -1441,6 +1441,13 @@ impl ConversationView {
         self.render(false);
     }
 
+    /// Shows the original wherever the cached translation used another language.
+    pub fn keep_translations(&self, into: &str) {
+        if self.change(|open| open.keep_translations(into)) == Some(true) {
+            self.render(false);
+        }
+    }
+
     /// Turns the message over: the translation, or what arrived, whichever
     /// is not on screen. Both are kept, so this costs no second request.
     /// `false` when the message has no translation to turn.

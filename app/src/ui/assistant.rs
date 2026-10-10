@@ -382,6 +382,13 @@ impl AssistantPane {
         let (events, received) = async_channel::unbounded::<AgentEvent>();
         let (stop, stopped) = async_channel::bounded::<()>(1);
         *self.stop.borrow_mut() = Some(stop);
+        let language = assistant::language::selected(&settings.ai.language);
+        let base = format!(
+            "{}\n\n{}",
+            assistant::SYSTEM_PROMPT,
+            assistant::language::instruction(&language)
+        );
+        let prompt = sources::system_prompt(&base, &chat_sources);
         let web = settings.ai.web_search != crate::settings::WebSearch::Off;
         let host = Arc::new(Toolbox::new(
             Host::new(assistant::run::specs(), self.requests.clone()),
@@ -402,6 +409,7 @@ impl AssistantPane {
                 .core
                 .call(async move {
                     let mut conversation = conversation.lock().await;
+                    conversation.set_system_prompt(prompt);
                     conversation.set_web(web);
                     tokio::select! {
                         reply = conversation.send(text, host, events) => reply.map_err(anyhow::Error::from),

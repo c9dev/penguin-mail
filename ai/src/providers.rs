@@ -56,6 +56,14 @@ impl State {
         }
     }
 
+    pub(crate) fn set_system_prompt(&mut self, prompt: String) {
+        match self {
+            State::OpenAi(chat) => chat.system_prompt = prompt,
+            State::Anthropic(chat) => chat.system_prompt = prompt,
+            State::ClaudeCode(chat) => chat.system_prompt = prompt,
+        }
+    }
+
     /// Only Anthropic's API takes a request for thinking. Claude Code thinks
     /// as its own settings say, and local servers think when their model
     /// does, sending it back as `reasoning_content` or `<think>` spans.

@@ -1003,3 +1003,46 @@ async fn local_counts_and_other_accounts_do_not_wait_for_a_slow_server() {
     old.release();
     assert_eq!(service.counts(std::slice::from_ref(&slow_box), &slow_box, &view()).await.unwrap().mailboxes[&slow_box], 1);
 }
+
+#[tokio::test]
+async fn a_mail_change_restarts_pending_counts_for_unopened_folders() {
+    use std::time::Duration;
+
+    let h = super::imap_harness().await;
+    h.imap.add_mailbox("INBOX/Lists", None);
+    h.imap.deliver("INBOX/Lists", b"Subject: Unopened\r\n\r\nHi".to_vec(), now_millis());
+    h.sync.refresh_labels().await.unwrap();
+    let service = Mailboxes::new(
+        Arc::new(Connected(HashMap::from([(h.account_id, Arc::clone(&h.sync))]))),
+        h.db.clone(),
+    );
+    let folder = Mailbox::Label {
+        account_id: h.account_id,
+        label_id: "INBOX/Lists".into(),
+        name: "Lists".into(),
+    };
+    let sidebar = std::slice::from_ref(&folder);
+    let old = h.imap.hold_next_unread();
+    let local = service.counts(sidebar, &folder, &view()).await.unwrap();
+    assert_eq!(local.mailboxes[&folder], 0, "the unopened folder has no local mail");
+    tokio::time::timeout(Duration::from_secs(2), old.reached()).await.unwrap();
+
+    let before = h.sync.mail_changes();
+    h.imap.deliver("INBOX", b"Subject: New mail\r\n\r\nHi".to_vec(), now_millis());
+    h.bootstrap().await;
+    assert_ne!(h.sync.mail_changes(), before);
+    let replacement = h.imap.hold_next_unread();
+    service.counts(sidebar, &folder, &view()).await.unwrap();
+    tokio::time::timeout(Duration::from_secs(2), replacement.reached())
+        .await.expect("changed mail starts a new sweep without waiting for the old one");
+    tokio::time::timeout(Duration::from_secs(2), async {
+        while Arc::strong_count(&old) > 1 {
+            tokio::task::yield_now().await;
+        }
+    }).await.expect("the old STATUS call is canceled, not left running");
+
+    let mut changed = service.counts_changed();
+    replacement.release();
+    tokio::time::timeout(Duration::from_secs(2), changed.changed()).await.unwrap().unwrap();
+    assert_eq!(service.counts(sidebar, &folder, &view()).await.unwrap().mailboxes[&folder], 1);
+}

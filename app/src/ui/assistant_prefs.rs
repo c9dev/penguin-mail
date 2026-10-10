@@ -140,6 +140,7 @@ pub fn page(app: &Rc<App>, dialog: &adw::PreferencesDialog) -> adw::PreferencesP
         used_for.add(&row.expander);
     }
     page.add(&used_for);
+    page.add(&language_group(app, dialog, &ai));
 
     let assistant_row = rows
         .into_iter()
@@ -193,6 +194,80 @@ pub fn page(app: &Rc<App>, dialog: &adw::PreferencesDialog) -> adw::PreferencesP
     page.add(&details);
     page.add(&always_allowed(app));
     page
+}
+
+fn language_group(
+    app: &Rc<App>,
+    dialog: &adw::PreferencesDialog,
+    ai: &AiSettings,
+) -> adw::PreferencesGroup {
+    let group = adw::PreferencesGroup::builder()
+        .title(gettext("AI Language"))
+        .description(gettext(
+            "Language for assistant responses, summaries, and translations. Email replies \
+             and drafts follow the language of the correspondence unless you ask otherwise.",
+        ))
+        .build();
+    let languages: Rc<Vec<_>> = Rc::new(crate::translation::target_languages().collect());
+    let mut labels = vec![gettext("Same as Interface")];
+    labels.extend(languages.iter().map(|language| language.name()));
+    labels.push(gettext("Other…"));
+    let other = labels.len() as u32 - 1;
+    let selected = if ai.language.is_empty() {
+        0
+    } else {
+        languages
+            .iter()
+            .position(|language| language.english == ai.language)
+            .map_or(other, |at| at as u32 + 1)
+    };
+    let choices: Vec<&str> = labels.iter().map(String::as_str).collect();
+    let pick = adw::ComboRow::builder()
+        .title(gettext("AI Language"))
+        .model(&gtk::StringList::new(&choices))
+        .selected(selected)
+        .build();
+    let custom = adw::EntryRow::builder()
+        .title(gettext("Language Name"))
+        .text(&ai.language)
+        .show_apply_button(true)
+        .visible(selected == other)
+        .build();
+    let field = custom.clone();
+    let weak = Rc::downgrade(app);
+    pick.connect_selected_notify(move |row| {
+        let selected = row.selected();
+        field.set_visible(selected == other);
+        if selected == other {
+            field.grab_focus();
+            return;
+        }
+        let name = selected
+            .checked_sub(1)
+            .and_then(|at| languages.get(at as usize))
+            .map_or("", |language| language.english);
+        if let Some(app) = weak.upgrade() {
+            app.change_settings(Change::Ai(AiChange::Language(name.into())));
+        }
+    });
+    custom.connect_changed(|row| row.remove_css_class("error"));
+    let weak = Rc::downgrade(app);
+    let toasts = dialog.clone();
+    custom.connect_apply(move |row| {
+        let Some(name) = assistant::language::normalize(&row.text()).filter(|name| !name.is_empty()) else {
+            row.add_css_class("error");
+            toasts.add_toast(crate::ui::toast(&gettext("Enter a language name of up to 80 characters, using letters, spaces, hyphens, apostrophes, or parentheses.")));
+            return;
+        };
+        row.remove_css_class("error");
+        row.set_text(&name);
+        if let Some(app) = weak.upgrade() {
+            app.change_settings(Change::Ai(AiChange::Language(name)));
+        }
+    });
+    group.add(&pick);
+    group.add(&custom);
+    group
 }
 
 /// The outside tools answered Always Allow, each with a way to go back to

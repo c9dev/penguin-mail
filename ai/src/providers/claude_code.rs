@@ -193,7 +193,7 @@ fn default_bridge_command() -> std::io::Result<PathBuf> {
 pub(crate) struct ClaudeCodeChat {
     command: PathBuf,
     model: Option<String>,
-    system_prompt: String,
+    pub(super) system_prompt: String,
     session_id: Option<String>,
     work_dir: PathBuf,
     bridge_command: Option<PathBuf>,

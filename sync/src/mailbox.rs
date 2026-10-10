@@ -827,7 +827,7 @@ impl<A: Accounts> Mailboxes<A> {
                 if kept.changes == changes {
                     counts.insert(id, kept.counts.clone());
                 }
-                if kept.pending || (kept.changes == changes && kept.at.elapsed() < REMOTE_FRESH) {
+                if kept.changes == changes && (kept.pending || kept.at.elapsed() < REMOTE_FRESH) {
                     continue;
                 }
             }
