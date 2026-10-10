@@ -3164,6 +3164,7 @@ impl MainWindow {
         second.append(Some(&gettext("Preferences")), Some("win.preferences"));
         second.append(Some(&gettext("Keyboard Shortcuts")), Some("win.shortcuts"));
         second.append(Some(&gettext("About Penguin Mail")), Some("win.about"));
+        second.append(Some(&gettext("Donate")), Some("win.donate"));
         second.append(Some(&gettext("Quit")), Some("win.quit"));
         menu.append_section(None, &second);
         let button = gtk::MenuButton::builder()
