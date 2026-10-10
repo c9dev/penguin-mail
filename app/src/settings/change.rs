@@ -137,6 +137,16 @@ pub enum Change {
         email: String,
         index: usize,
     },
+    /// A send-as address the owner configured for an SMTP account.
+    SaveSender {
+        account: String,
+        was: Option<String>,
+        sender: crate::compose::SendAsAddress,
+    },
+    RemoveSender {
+        account: String,
+        email: String,
+    },
     /// Every address an account may send as, as Gmail just reported them.
     SendAsAddresses {
         account: String,
@@ -359,6 +369,14 @@ impl Change {
             Change::AccountColor { email, index } => {
                 settings.account_colors.insert(email, index);
             }
+            Change::SaveSender {
+                account,
+                was,
+                sender,
+            } => {
+                settings.save_sender(&account, was.as_deref(), sender);
+            }
+            Change::RemoveSender { account, email } => settings.remove_sender(&account, &email),
             Change::SendAsAddresses {
                 account,
                 addresses,

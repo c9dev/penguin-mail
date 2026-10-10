@@ -42,7 +42,7 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
             known.followed.extend(state.mailboxes.keys().cloned());
         }
         let capabilities = self.capabilities_now().await?;
-        let (due, slow) = self.due().await?;
+        let (due, slow, requested) = self.due().await?;
         let mut changes = Vec::new();
         for mailbox in due {
             // A window listing done for this mailbox already, such as a
@@ -81,7 +81,7 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
             }
         }
         if slow {
-            self.slow_poll_done();
+            self.slow_poll_done(requested);
         }
         Ok(Changes {
             changes,

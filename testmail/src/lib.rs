@@ -193,6 +193,11 @@ impl Certs {
         self.dir.path().join("root.crt")
     }
 
+    /// The private key for the throwaway root, for a TLS server in a test.
+    pub fn root_key(&self) -> PathBuf {
+        self.dir.path().join("root.key")
+    }
+
     /// A root that signed nothing the servers present.
     pub fn stranger(&self) -> PathBuf {
         self.dir.path().join("stranger.crt")

@@ -62,14 +62,16 @@ pub(super) fn poll_every(idle: bool, tray_only: bool) -> Duration {
 impl<I: ImapApi, S: Submit> Imap<I, S> {
     /// The mailboxes this look covers, and whether it is the slow poll's
     /// turn: the Inbox every time, the rest when the slow poll is due.
-    pub(super) async fn due(&self) -> Result<(Vec<String>, bool), BackendError> {
+    pub(super) async fn due(&self) -> Result<(Vec<String>, bool, u64), BackendError> {
         let synced = self.synced().await?;
-        let slow = {
+        let (slow, requested) = {
             let known = self.known();
-            known.every_look
+            let slow = known.full_check_requested != known.full_check_completed
+                || known.every_look
                 || known
                     .last_slow
-                    .is_none_or(|at| at.elapsed() >= slow_poll(known.tray_only))
+                    .is_none_or(|at| at.elapsed() >= slow_poll(known.tray_only));
+            (slow, known.full_check_requested)
         };
         let due = match slow {
             true => synced,
@@ -78,12 +80,14 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
                 .filter(|m| m.eq_ignore_ascii_case("INBOX"))
                 .collect(),
         };
-        Ok((due, slow))
+        Ok((due, slow, requested))
     }
 
     /// Notes that the slow poll has looked at every synced mailbox.
-    pub(super) fn slow_poll_done(&self) {
-        self.known().last_slow = Some(Instant::now());
+    pub(super) fn slow_poll_done(&self, requested: u64) {
+        let mut known = self.known();
+        known.last_slow = Some(Instant::now());
+        known.full_check_completed = requested;
     }
 
     /// Waits in IDLE on the Inbox until the server reports a change,
@@ -153,8 +157,13 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
     use std::time::Duration;
 
+    use crate::fake::{FakeImap, FakeSmtp};
+    use crate::services::MailBackend;
+
+    use super::super::Imap;
     use super::{poll_every, slow_poll, watch_retry};
 
     #[test]
@@ -173,5 +182,57 @@ mod tests {
         assert_eq!(watch_retry(1), Duration::from_secs(120));
         assert_eq!(watch_retry(2), Duration::from_secs(240));
         assert_eq!(watch_retry(10), Duration::from_secs(15 * 60));
+    }
+
+    #[tokio::test]
+    async fn a_manual_check_includes_sent_even_before_the_slow_poll_is_due() {
+        let mail = Imap::new(
+            Arc::new(FakeImap::new()),
+            Arc::new(FakeSmtp::default()),
+            crate::tests::fake_settings(),
+        );
+        mail.slow_poll_done(0);
+        let (due, _, _) = mail.due().await.unwrap();
+        assert_eq!(due, ["INBOX"]);
+
+        mail.check_now();
+        let (due, _, _) = mail.due().await.unwrap();
+        assert!(due.iter().any(|mailbox| mailbox == "Sent"));
+
+        mail.check_now();
+        mail.slow_poll_done(0);
+        let (due, _, _) = mail.due().await.unwrap();
+        assert!(due.iter().any(|mailbox| mailbox == "Sent"));
+    }
+
+    #[tokio::test]
+    async fn a_failed_full_check_leaves_sent_due_for_the_next_look() {
+        let mail = Imap::new(
+            Arc::new(FakeImap::new()),
+            Arc::new(FakeSmtp::default()),
+            crate::tests::fake_settings(),
+        );
+        mail.slow_poll_done(0);
+        mail.check_now();
+        let (first, _, _) = mail.due().await.unwrap();
+        assert!(first.iter().any(|mailbox| mailbox == "Sent"));
+        // The feed failed before it could mark the slow poll complete.
+        let (again, _, _) = mail.due().await.unwrap();
+        assert!(again.iter().any(|mailbox| mailbox == "Sent"));
+    }
+
+    #[tokio::test]
+    async fn a_new_manual_check_during_a_poll_stays_due() {
+        let mail = Imap::new(
+            Arc::new(FakeImap::new()),
+            Arc::new(FakeSmtp::default()),
+            crate::tests::fake_settings(),
+        );
+        mail.check_now();
+        let (_, _, requested) = mail.due().await.unwrap();
+        mail.check_now();
+        mail.slow_poll_done(requested);
+        let (due, _, _) = mail.due().await.unwrap();
+        assert!(due.iter().any(|mailbox| mailbox == "Sent"));
     }
 }

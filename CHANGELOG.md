@@ -7,15 +7,19 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Fixed
 
+- Keep children under nested system folders when the server mixes Inbox and INBOX in their paths.
 - Restart pending folder counts when mail changes so unopened folders get fresh unread counts.
-
 - Show local unread counts while IMAP servers are answering, and keep completed folder counts if a request times out.
 - Show nested folders under their own Inbox or other parent mailbox, including servers that mix Inbox and INBOX, and unread counts beside folders, including unopened IMAP folders.
 - Discard pending translations after changing the AI language, even when changing back before the answer arrives.
+- Proton Mail Bridge connections work with its local TLS certificate when you pin that certificate in Penguin Mail.
+- Pictures embedded in IMAP messages appear in the message again.
+- Check for Mail checks Sent and other IMAP folders at once, even if their regular check is not due yet.
 
 ### New
 
 - Choose a language for AI answers, summaries and translations without changing the interface language.
+- Add sender addresses to IMAP and POP3 accounts, use optional + or . suffixes, and reply from the address a message was sent to.
 
 ## 1.0.6 (2026-10-09)
 

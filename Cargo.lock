@@ -2597,6 +2597,7 @@ dependencies = [
  "async-imap",
  "base64 0.23.1",
  "chrono",
+ "dirs",
  "lettre",
  "mail-parser",
  "mailrs-discover",

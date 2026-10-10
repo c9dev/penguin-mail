@@ -30,9 +30,10 @@ fn leaf(name: &str) -> &str {
     name.rsplit_once('/').map_or(name, |(_, leaf)| leaf)
 }
 
-fn parent_key(name: &str) -> &str {
-    // IMAP's Inbox is case insensitive; other folder names are not.
-    if name.eq_ignore_ascii_case("INBOX") { "INBOX" } else { name }
+fn parent_key(name: &str) -> (&str, &str) {
+    // Only the first Inbox component is case insensitive, even in a nested path.
+    let (root, rest) = name.split_at(name.find('/').unwrap_or(name.len()));
+    (if root.eq_ignore_ascii_case("INBOX") { "INBOX" } else { root }, rest)
 }
 
 /// An account's labels and folders with the groups that hold folders, each
@@ -41,7 +42,7 @@ fn parent_key(name: &str) -> &str {
 /// gave them, from `positions` by id, and the ones never moved follow by
 /// name, ignoring case.
 pub fn label_rows<'a>(labels: &'a [Label], positions: &HashMap<String, i64>) -> Vec<LabelRow<'a>> {
-    let parents: HashMap<&str, Role> = labels.iter().filter_map(|label| {
+    let parents: HashMap<_, Role> = labels.iter().filter_map(|label| {
         label.role.filter(|role| *role != Role::Important).map(|role| (parent_key(&label.name), role))
     }).collect();
     let mut rows: Vec<LabelRow<'a>> = labels
@@ -49,7 +50,7 @@ pub fn label_rows<'a>(labels: &'a [Label], positions: &HashMap<String, i64>) -> 
         .filter(|l| matches!(l.kind, LabelKind::User | LabelKind::Group))
         .map(|label| {
             let ancestor = label.name.match_indices('/').rev().find_map(|(at, _)| {
-                parents.get(parent_key(&label.name[..at])).map(|role| (at, *role))
+                parents.get(&parent_key(&label.name[..at])).map(|role| (at, *role))
             });
             LabelRow {
                 under: ancestor.map(|(_, role)| role),
@@ -346,6 +347,36 @@ mod tests {
                 .collect();
             assert_eq!(children, [("Aliexpress", 2), ("Allegro", 2), ("Lists", 2), ("Rust", 3)]);
             assert!(rows.iter().find(|row| row.leaf == "Separate").unwrap().under.is_none());
+        }
+    }
+
+    #[test]
+    fn nested_system_parents_accept_only_the_inbox_prefix_in_mixed_case() {
+        for prefix in ["INBOX", "Inbox", "inbox"] {
+            for child_prefix in ["INBOX", "Inbox", "inbox"] {
+                let mut inbox = label("INBOX", LabelKind::System);
+                inbox.role = Some(Role::Inbox);
+                let mut sent = label(&format!("{prefix}/Sent Items"), LabelKind::System);
+                sent.role = Some(Role::Sent);
+                let labels = [
+                    inbox,
+                    sent,
+                    label(&format!("{child_prefix}/Sent Items/Receipts"), LabelKind::User),
+                    label(&format!("{child_prefix}/Sent Items/Receipts/2026"), LabelKind::User),
+                    label(&format!("{child_prefix}/sent items/Separate"), LabelKind::User),
+                    label("InboxOther/Sent Items/Unrelated", LabelKind::User),
+                ];
+                let rows = label_rows(&labels, &HashMap::new());
+                for (leaf, under, depth) in [
+                    ("Receipts", Some(Role::Sent), 2),
+                    ("2026", Some(Role::Sent), 3),
+                    ("Separate", Some(Role::Inbox), 3),
+                    ("Unrelated", None, 3),
+                ] {
+                    let row = rows.iter().find(|row| row.leaf == leaf).unwrap();
+                    assert_eq!((row.under, row.depth), (under, depth), "{}", row.label.name);
+                }
+            }
         }
     }
 

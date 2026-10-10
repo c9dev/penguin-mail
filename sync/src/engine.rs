@@ -136,12 +136,14 @@ impl SyncEngine {
     /// Polls the account now instead of at the next interval.
     pub fn poke(&self, account_id: AccountId) {
         if let Some(running) = self.lock().get(&account_id) {
+            running.sync.services().mail.check_now();
             running.poke.notify_one();
         }
     }
 
     pub fn poke_all(&self) {
         for running in self.lock().values() {
+            running.sync.services().mail.check_now();
             running.poke.notify_one();
         }
     }

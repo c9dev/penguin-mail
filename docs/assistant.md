@@ -91,6 +91,9 @@ The assistant writes mail the way the composer does:
 A message it drafts opens in a composer for you to finish. One it sends
 waits for you to allow it, and the question names every recipient, the
 blind copies, the files, and whether it goes out signed or encrypted.
+Replies use a configured sender address matching the original To or Cc,
+including suffixes enabled under Preferences > Writing > Sender Addresses.
+
 Signing and encrypting follow your settings under Preferences unless you
 ask otherwise. It encrypts only when it has a key or certificate for
 every recipient, and when one is missing it tells you whose; a Bcc stays
