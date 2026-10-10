@@ -2070,7 +2070,7 @@ msgstr "penguin-mail: opção desconhecida {option}"
 msgid "Penguin Mail Could Not Start"
 msgstr "O Penguin Mail não conseguiu arrancar"
 
-#: app/src/main.rs:359 app/src/ui/about.rs:179
+#: app/src/main.rs:359 app/src/ui/about.rs:181
 msgid "Report a Problem"
 msgstr "Comunicar um problema"
 
@@ -3700,83 +3700,87 @@ msgstr "Instalar a atualização {version}"
 msgid "What's New in {version}"
 msgstr "Novidades da versão {version}"
 
-#: app/src/tray.rs:277 app/src/ui/about.rs:118 app/src/ui/about.rs:225
-#: app/src/ui/about.rs:233 app/src/ui/about.rs:240
+#: app/src/tray.rs:277 app/src/ui/about.rs:119 app/src/ui/about.rs:227
+#: app/src/ui/about.rs:235 app/src/ui/about.rs:242
 #: app/src/ui/preferences.rs:811 app/src/update/mod.rs:108
 msgid "Check for Updates"
 msgstr "Procurar atualizações"
 
-#: app/src/tray.rs:282 app/src/ui/window.rs:3175
+#: app/src/tray.rs:282 app/src/ui/window.rs:3176
 #: app/src/ui/window/shortcuts.rs:629
 msgid "Quit"
 msgstr "Sair"
 
-#: app/src/ui/about.rs:60
+#: app/src/ui/about.rs:61
 msgid "Version {version}"
 msgstr "Versão {version}"
 
-#: app/src/ui/about.rs:77
+#: app/src/ui/about.rs:78
 msgid "Mail and calendar for Linux. Your mail stays on your computer."
 msgstr "Correio e calendário para Linux. O seu correio fica no seu computador."
 
-#: app/src/ui/about.rs:173
+#: app/src/ui/about.rs:174
 msgid "What's New"
 msgstr "Novidades"
 
-#: app/src/ui/about.rs:177
+#: app/src/ui/about.rs:178
 msgid "Website"
 msgstr "Página web"
 
-#: app/src/ui/about.rs:184
+#: app/src/ui/about.rs:179 app/src/ui/window.rs:3175
+msgid "Donate"
+msgstr "Doar"
+
+#: app/src/ui/about.rs:186
 msgid "License"
 msgstr "Licença"
 
-#: app/src/ui/about.rs:201 app/src/ui/window.rs:3174
+#: app/src/ui/about.rs:203 app/src/ui/window.rs:3174
 msgid "About Penguin Mail"
 msgstr "Acerca do Penguin Mail"
 
-#: app/src/ui/about.rs:231
+#: app/src/ui/about.rs:233
 msgid "Checking…"
 msgstr "A procurar…"
 
-#: app/src/ui/about.rs:237
+#: app/src/ui/about.rs:239
 msgid "Penguin Mail is up to date"
 msgstr "O Penguin Mail está atualizado"
 
-#: app/src/ui/about.rs:245
+#: app/src/ui/about.rs:247
 msgid "Could not reach GitHub. Check your connection and try again."
 msgstr ""
 "Não foi possível contactar o GitHub. Verifique a ligação e tente de novo."
 
-#: app/src/ui/about.rs:250
+#: app/src/ui/about.rs:252
 msgid "Install {version}"
 msgstr "Instalar a {version}"
 
-#: app/src/ui/about.rs:257
+#: app/src/ui/about.rs:259
 msgid "Version {version} is available"
 msgstr "A versão {version} está disponível"
 
-#: app/src/ui/about.rs:262
+#: app/src/ui/about.rs:264
 msgid "Installing…"
 msgstr "A instalar…"
 
-#: app/src/ui/about.rs:267
+#: app/src/ui/about.rs:269
 msgid "Installing version {version}"
 msgstr "A instalar a versão {version}"
 
-#: app/src/ui/about.rs:272 app/src/update/mod.rs:104
+#: app/src/ui/about.rs:274 app/src/update/mod.rs:104
 msgid "Restart to Update"
 msgstr "Reiniciar para atualizar"
 
-#: app/src/ui/about.rs:277
+#: app/src/ui/about.rs:279
 msgid "Version {version} is installed"
 msgstr "A versão {version} está instalada"
 
-#: app/src/ui/about.rs:282 app/src/update/mod.rs:137
+#: app/src/ui/about.rs:284 app/src/update/mod.rs:137
 msgid "Show Log"
 msgstr "Mostrar registo"
 
-#: app/src/ui/about.rs:287 app/src/update/mod.rs:134
+#: app/src/ui/about.rs:289 app/src/update/mod.rs:134
 msgid "The update to {version} failed"
 msgstr "A atualização para a versão {version} falhou"
 
@@ -4125,7 +4129,7 @@ msgstr ""
 "Este servidor não distingue as suas mensagens, por isso o Penguin Mail não "
 "pode transferir dele com segurança."
 
-#: app/src/ui/assistant.rs:31 app/src/ui/window.rs:3242
+#: app/src/ui/assistant.rs:31 app/src/ui/window.rs:3243
 msgid "Summarize this conversation"
 msgstr "Resume esta conversa"
 
@@ -7042,7 +7046,7 @@ msgstr "Não foi possível eliminar o endereço: {reason}"
 msgid "Allow Hide My Email"
 msgstr "Permitir Ocultar o meu e-mail"
 
-#: app/src/ui/hide_my_email.rs:336 app/src/ui/window.rs:3287
+#: app/src/ui/hide_my_email.rs:336 app/src/ui/window.rs:3288
 msgid "Add an account first"
 msgstr "Adicione primeiro uma conta"
 
@@ -7370,7 +7374,7 @@ msgid "All Files"
 msgstr "Todos os ficheiros"
 
 #: app/src/ui/key_import.rs:213 app/src/ui/key_import.rs:217
-#: app/src/ui/window.rs:3703
+#: app/src/ui/window.rs:3704
 msgid "Close"
 msgstr "Fechar"
 
@@ -8945,27 +8949,27 @@ msgstr "Preferências"
 msgid "Keyboard Shortcuts"
 msgstr "Atalhos de teclado"
 
-#: app/src/ui/window.rs:3181 app/src/ui/window.rs:3183
+#: app/src/ui/window.rs:3182 app/src/ui/window.rs:3184
 msgid "Main Menu"
 msgstr "Menu principal"
 
-#: app/src/ui/window.rs:3562
+#: app/src/ui/window.rs:3563
 msgid "Open a message from the person first"
 msgstr "Abra primeiro uma mensagem dessa pessoa"
 
-#: app/src/ui/window.rs:3643
+#: app/src/ui/window.rs:3644
 msgid "Penguin Mail shows the new language after a restart"
 msgstr "O Penguin Mail mostra o novo idioma depois de reiniciar"
 
-#: app/src/ui/window.rs:3645 app/src/update/mod.rs:130
+#: app/src/ui/window.rs:3646 app/src/update/mod.rs:130
 msgid "Restart"
 msgstr "Reiniciar"
 
-#: app/src/ui/window.rs:3678
+#: app/src/ui/window.rs:3679
 msgid "Messages That Will Not Download"
 msgstr "Mensagens que não se transferem"
 
-#: app/src/ui/window.rs:3680
+#: app/src/ui/window.rs:3681
 msgid ""
 "Penguin Mail could not download these from {address}'s server. It tries "
 "again at each check, except for a message too large to download."

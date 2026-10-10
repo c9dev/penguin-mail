@@ -11,6 +11,7 @@ use mailrs_domain::translate::{fill, gettext};
 use crate::update::State;
 
 pub(crate) const REPOSITORY: &str = "https://github.com/c9dev/penguin-mail";
+pub(crate) const DONATE_URL: &str = "https://github.com/sponsors/g0shed";
 
 pub struct About {
     pub dialog: adw::Dialog,
@@ -175,6 +176,7 @@ impl About {
             format!("{REPOSITORY}/blob/main/CHANGELOG.md"),
         );
         link(gettext("Website"), None, REPOSITORY.into());
+        link(gettext("Donate"), None, DONATE_URL.into());
         link(
             gettext("Report a Problem"),
             None,
