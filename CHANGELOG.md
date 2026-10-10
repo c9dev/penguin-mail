@@ -7,6 +7,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Fixed
 
+- Keep Inbox subfolders beside their parent when path casing differs, including with a custom folder order.
 - Keep children under nested system folders when the server mixes Inbox and INBOX in their paths.
 - Restart pending folder counts when mail changes so unopened folders get fresh unread counts.
 - Show local unread counts while IMAP servers are answering, and keep completed folder counts if a request times out.

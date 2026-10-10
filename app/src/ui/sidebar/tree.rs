@@ -63,18 +63,18 @@ pub fn label_rows<'a>(labels: &'a [Label], positions: &HashMap<String, i64>) -> 
             }
         })
         .collect();
-    let by_name: HashMap<&str, &str> = rows
+    let by_name: HashMap<_, &str> = rows
         .iter()
-        .map(|row| (row.label.name.as_str(), row.label.id.as_str()))
+        .map(|row| (parent_key(&row.label.name), row.label.id.as_str()))
         .collect();
     // Each row sorts by the place of every label on its path, so a child
     // follows its parent and siblings keep the person's order among them.
     let place = |name: &str| -> Vec<(bool, i64, String, String)> {
         let ends = name.match_indices('/').map(|(at, _)| at).chain([name.len()]);
         ends.map(|end| {
-            let path = &name[..end];
-            let position = by_name.get(path).and_then(|id| positions.get(*id)).copied();
-            let segment = leaf(path);
+            let path = parent_key(&name[..end]);
+            let position = by_name.get(&path).and_then(|id| positions.get(*id)).copied();
+            let segment = if path.1.is_empty() { path.0 } else { leaf(path.1) };
             (
                 position.is_none(),
                 position.unwrap_or(0),
@@ -375,6 +375,35 @@ mod tests {
                 ] {
                     let row = rows.iter().find(|row| row.leaf == leaf).unwrap();
                     assert_eq!((row.under, row.depth), (under, depth), "{}", row.label.name);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn mixed_case_inbox_children_sort_with_their_parent_and_its_position() {
+        for prefix in ["INBOX", "Inbox", "inbox"] {
+            for child_prefix in ["INBOX", "Inbox", "inbox"] {
+                let mut inbox = label("INBOX", LabelKind::System);
+                inbox.role = Some(Role::Inbox);
+                let lists = label(&format!("{prefix}/Lists"), LabelKind::User);
+                let zebra = label(&format!("{prefix}/Zebra"), LabelKind::User);
+                let ordered = HashMap::from([(lists.id.clone(), 0), (zebra.id.clone(), 1)]);
+                let reversed = HashMap::from([(lists.id.clone(), 1), (zebra.id.clone(), 0)]);
+                let labels = [
+                    inbox,
+                    lists,
+                    zebra,
+                    label(&format!("{child_prefix}/Lists/Rust"), LabelKind::User),
+                ];
+                for (positions, expected) in [
+                    (HashMap::new(), ["Lists", "Rust", "Zebra"]),
+                    (ordered, ["Lists", "Rust", "Zebra"]),
+                    (reversed, ["Zebra", "Lists", "Rust"]),
+                ] {
+                    let rows = label_rows(&labels, &positions);
+                    let leaves: Vec<_> = rows.iter().map(|row| row.leaf).collect();
+                    assert_eq!(leaves, expected, "{prefix}, {child_prefix}, {positions:?}");
                 }
             }
         }
