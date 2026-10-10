@@ -167,6 +167,18 @@ impl<S: Stream> Conn<S> {
         Ok(reader.listed)
     }
 
+    pub(crate) async fn unread(&mut self, mailbox: &str) -> Result<u32, ImapError> {
+        let command = format!("STATUS {} (UNSEEN)", quoted(mailbox)?);
+        let mut reader = crate::parse::UnreadReader {
+            mailbox,
+            unread: None,
+        };
+        self.exec(&command, Doing::Other, &mut reader).await?;
+        reader
+            .unread
+            .ok_or_else(|| ImapError::Protocol("STATUS omitted UNSEEN".into()))
+    }
+
     /// Selects `mailbox`. With QRESYNC on and a `since` to start from, the
     /// answer carries what changed; otherwise `since` goes unused.
     pub(crate) async fn select(
@@ -1286,6 +1298,26 @@ mod tests {
         let conn = Conn::login(stream, false, &ann()).await.unwrap();
         let err = conn.idle("INBOX", Duration::from_secs(60)).await.err();
         assert!(matches!(err, Some(ImapError::Network(_))), "{err:?}");
+    }
+
+    #[tokio::test]
+    async fn status_counts_unread_without_selecting_or_accepting_another_mailbox() {
+        let log = log();
+        let stream = pipe(
+            GREETING,
+            server(ALL, log.clone(), |command| match command {
+                c if c.starts_with("STATUS") => vec![
+                    "* STATUS Other (UNSEEN 99)".into(),
+                    "* STATUS \"INBOX/Lists\" (MESSAGES 20 UNSEEN 4)".into(),
+                    "{tag} OK".into(),
+                ],
+                _ => vec!["{tag} OK".into()],
+            }),
+        );
+        let mut conn = Conn::login(stream, false, &ann()).await.unwrap();
+        assert_eq!(conn.unread("INBOX/Lists").await.unwrap(), 4);
+        assert!(seen(&log).contains(&"STATUS \"INBOX/Lists\" (UNSEEN)".to_string()));
+        assert!(!seen(&log).iter().any(|line| line.starts_with("SELECT")));
     }
 
     #[tokio::test]

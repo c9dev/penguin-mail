@@ -157,3 +157,18 @@ async fn a_folder_dropped_into_another_is_renamed_there_and_placed_by_its_new_na
     assert_eq!(order.get("Personal/bills"), Some(&1));
     assert_eq!(order.get("bugs"), None);
 }
+
+#[tokio::test(start_paused = true)]
+async fn unread_counts_keep_completed_folders_when_one_status_times_out() {
+    use crate::MailBackend;
+    use mailrs_domain::{MailSet, Role};
+    let (imap, adapter) = super::adapter(crate::fake::FakeImap::new());
+    super::fill(&imap, "INBOX", 3);
+    let hold = imap.hold_next_unread();
+    let counting = tokio::spawn(async move { adapter.unread_counts().await.unwrap() });
+    hold.reached().await;
+    let counts = tokio::time::timeout(std::time::Duration::from_secs(11), counting)
+        .await.expect("one STATUS cannot hold the count forever").unwrap();
+    assert_eq!(counts[&MailSet::Role(Role::Inbox)], 3);
+    assert!(!counts.contains_key(&MailSet::Role(Role::Archive)));
+}

@@ -64,6 +64,10 @@ Focused and Other are the category bar's toggles, the same control as
 Gmail's categories, and each is named with its unread count, as in
 "Focused, 6 unread". Only one of the two bars shows over an inbox.
 
+Mailbox rows announce their unread count, including custom folders, Sent,
+Junk and Trash. Drafts keep their total count. Nested folders follow the
+server mailbox they belong to, including the account's Inbox.
+
 ## Add Account
 
 Each provider tile in Add Account and on the first-run page is one

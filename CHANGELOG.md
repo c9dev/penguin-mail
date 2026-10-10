@@ -7,6 +7,12 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Fixed
 
+- Reorder folders with mixed-case Inbox paths without renaming them, and reject moving a folder into its own descendants.
+- Keep Inbox subfolders beside their parent when path casing differs, including with a custom folder order.
+- Keep children under nested system folders when the server mixes Inbox and INBOX in their paths.
+- Restart pending folder counts when mail changes so unopened folders get fresh unread counts.
+- Show local unread counts while IMAP servers are answering, and keep completed folder counts if a request times out.
+- Show nested folders under their own Inbox or other parent mailbox, including servers that mix Inbox and INBOX, and unread counts beside folders, including unopened IMAP folders.
 - Discard pending translations after changing the AI language, even when changing back before the answer arrives.
 - Proton Mail Bridge connections work with its local TLS certificate when you pin that certificate in Penguin Mail.
 - Pictures embedded in IMAP messages appear in the message again.

@@ -808,6 +808,13 @@ pub trait MailBackend: Send + Sync + 'static {
     /// mailbox list changed.
     fn made_by_person(&self, id: &str) -> bool;
 
+    /// Whole-mailbox unread message counts where the local window is incomplete.
+    fn unread_counts(
+        &self,
+    ) -> impl Future<Output = Result<HashMap<MailSet, i64>, BackendError>> + Send {
+        async { Ok(HashMap::new()) }
+    }
+
     /// Every mailbox the server lists.
     fn mailboxes(&self) -> impl Future<Output = Result<Vec<RemoteMailbox>, BackendError>> + Send;
 

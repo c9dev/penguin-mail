@@ -118,6 +118,26 @@ pub(crate) trait Reads {
     fn keep(&mut self, _bytes: Vec<u8>) {}
 }
 
+pub(crate) struct UnreadReader<'a> {
+    pub mailbox: &'a str,
+    pub unread: Option<u32>,
+}
+
+impl Reads for UnreadReader<'_> {
+    fn read(&mut self, response: &Response<'_>) {
+        if let Response::MailboxData(MailboxDatum::Status { mailbox, status }) = response
+            && (mailbox == self.mailbox
+                || (self.mailbox.eq_ignore_ascii_case("INBOX") && mailbox.eq_ignore_ascii_case("INBOX")))
+        {
+            for attribute in status {
+                if let async_imap::imap_proto::StatusAttribute::Unseen(count) = attribute {
+                    self.unread = Some(*count);
+                }
+            }
+        }
+    }
+}
+
 /// Reads nothing, for commands whose only answer is OK.
 impl Reads for () {
     fn read(&mut self, _response: &Response<'_>) {}

@@ -82,6 +82,8 @@ pub struct ImapState {
     /// The next MOVE waits here once it has moved the messages, so a test
     /// can run something else between a move and what follows it.
     pub hold_move: Option<Arc<Hold>>,
+    /// One STATUS call waits until the test releases it.
+    pub hold_unread: Option<Arc<Hold>>,
     /// SELECT leaves UIDNEXT out, as RFC 3501 lets a server do.
     pub omit_uidnext: bool,
     /// How many UIDs every SEARCH has answered, in total, so a test can
@@ -264,6 +266,7 @@ impl FakeImap {
                 aimed_later: Vec::new(),
                 overflow_idle: false,
                 hold_move: None,
+                hold_unread: None,
                 omit_uidnext: false,
                 answered: 0,
                 next_uidvalidity: 1000,
@@ -407,6 +410,12 @@ impl FakeImap {
     pub fn hold_next_move(&self) -> Arc<Hold> {
         let hold = Arc::new(Hold::default());
         self.with(|s| s.hold_move = Some(Arc::clone(&hold)));
+        hold
+    }
+
+    pub fn hold_next_unread(&self) -> Arc<Hold> {
+        let hold = Arc::new(Hold::default());
+        self.with(|s| s.hold_unread = Some(Arc::clone(&hold)));
         hold
     }
 
@@ -571,6 +580,26 @@ fn check_search(keys: &str) -> Result<(), ImapError> {
 }
 
 impl ImapApi for FakeImap {
+    async fn unread(&self, mailbox: &str) -> Result<u32, ImapError> {
+        check_name(mailbox)?;
+        let hold = self.with(|s| s.hold_unread.take());
+        if let Some(hold) = hold {
+            hold.wait().await;
+        }
+        self.call(format!("unread {mailbox}"), |s| {
+            let folder = s
+                .mailboxes
+                .get(mailbox)
+                .ok_or_else(|| ImapError::NoMailbox(mailbox.into()))?;
+            Ok(folder
+                .messages
+                .values()
+                .filter(|m| !m.flags.contains("\\Seen"))
+                .count() as u32)
+        })
+    }
+
+
     /// The real client answers from what the server said at sign-in, so
     /// this is no server call: it is not logged and uses up no planned
     /// failure.
