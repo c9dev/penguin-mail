@@ -79,7 +79,7 @@ browser, Microsoft".
 
 ## The composer from the keyboard
 
-Tab goes From, To, Cc and Bcc while they show, Subject, the formatting
+Tab goes From, Address Suffix when enabled, To, Cc and Bcc while they show, Subject, the formatting
 bar, then the body. The bar is one stop: it has the toolbar role, and
 Left, Right, Home and End move between its buttons while Tab leaves it.
 Tab comes back to the button you left it on. `ui::roving` holds this, and

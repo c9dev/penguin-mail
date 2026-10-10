@@ -12,6 +12,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 ### New
 
 - Choose a language for AI answers, summaries and translations without changing the interface language.
+- Add sender addresses to IMAP and POP3 accounts, use optional + or . suffixes, and reply from the address a message was sent to.
 
 ## 1.0.6 (2026-10-09)
 

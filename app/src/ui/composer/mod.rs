@@ -147,6 +147,8 @@ pub struct Composer {
     toasts: adw::ToastOverlay,
     title: adw::WindowTitle,
     from: gtk::DropDown,
+    suffix: gtk::Entry,
+    sender_preview: gtk::Label,
     to: Rc<Recipients>,
     cc: Rc<Recipients>,
     bcc: Rc<Recipients>,
@@ -412,8 +414,34 @@ impl Composer {
         // One size group holds the label column to a single width, so every
         // field starts at the same edge whichever labels are on show.
         let column = gtk::SizeGroup::new(gtk::SizeGroupMode::Horizontal);
-        let from_row = field(&gettext("From"), &from, &column);
-        if identities.len() > 1 {
+        let suffix = gtk::Entry::builder()
+            .placeholder_text(gettext("+suffix or .suffix"))
+            .width_chars(16)
+            .build();
+        crate::ui::name(&suffix, &gettext("Address Suffix"));
+        if let Some(identity) = identities.get(selected) {
+            suffix.set_visible(identity.suffixes.enabled());
+            suffix.set_text(
+                identity
+                    .suffixes
+                    .suffix(&identity.address.email, &draft.from.email)
+                    .unwrap_or(""),
+            );
+        }
+        let sender_preview = gtk::Label::builder()
+            .xalign(0.0)
+            .ellipsize(gtk::pango::EllipsizeMode::Middle)
+            .build();
+        let choices = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+        choices.append(&from);
+        choices.append(&suffix);
+        let sender_fields = gtk::Box::new(gtk::Orientation::Vertical, 4);
+        sender_fields.set_hexpand(true);
+        sender_fields.append(&choices);
+        sender_fields.append(&sender_preview);
+        let from_row = field(&gettext("From"), &sender_fields, &column);
+        crate::ui::name(&from, &gettext("From"));
+        if identities.len() > 1 || identities.iter().any(|i| i.suffixes.enabled()) {
             fields.append(&from_row);
             fields.append(&line());
         }
@@ -573,6 +601,8 @@ impl Composer {
             toasts,
             title,
             from,
+            suffix,
+            sender_preview,
             to,
             cc,
             bcc,
@@ -750,6 +780,14 @@ impl Composer {
         self.from.connect_selected_notify(move |row| {
             if let Some(c) = weak.upgrade() {
                 c.identity_changed(row.selected() as usize);
+            }
+        });
+        let weak = Rc::downgrade(self);
+        self.suffix.connect_changed(move |_| {
+            if let Some(c) = weak.upgrade() {
+                c.dirty.set(true);
+                c.check_send();
+                c.check_own();
             }
         });
         let weak = Rc::downgrade(self);
@@ -1235,14 +1273,26 @@ impl Composer {
             .move_overlay(&self.history, start.x(), end.y() + end.height() + HISTORY_GAP);
     }
 
-    fn identity(&self) -> Option<&Identity> {
-        self.identities.get(self.from.selected() as usize)
+    fn identity(&self) -> Option<Identity> {
+        let mut identity = self.identities.get(self.from.selected() as usize)?.clone();
+        identity.address = identity
+            .suffixes
+            .address(&identity.address, &self.suffix.text())?;
+        Some(identity)
     }
 
     /// Follows the From row with the signature, since Gmail keeps one per
     /// send-as address and a message signed by the wrong one looks careless.
     fn identity_changed(self: &Rc<Self>, to: usize) {
         let was = self.showing.replace(to);
+        self.suffix.set_text("");
+        self.suffix.set_visible(
+            self.identities
+                .get(to)
+                .is_some_and(|i| i.suffixes.enabled()),
+        );
+        self.dirty.set(true);
+        self.check_send();
         let sending = self.identities.get(to).map(|i| i.account_id);
         for field in [&self.to, &self.cc, &self.bcc] {
             field.set_from(sending);
@@ -1292,8 +1342,19 @@ impl Composer {
     /// Greys out Send while the message cannot go anywhere, and says why.
     /// It asks the recipients only, so every keystroke stays cheap.
     fn check_send(&self) {
-        let problem = match self.identity() {
-            None => Some(gettext("No account to send from.")),
+        let identity = self.identity();
+        if identity.is_some() {
+            self.suffix.remove_css_class("error");
+        } else {
+            self.suffix.add_css_class("error");
+        }
+        self.sender_preview.set_visible(self.suffix.get_visible());
+        self.sender_preview
+            .set_text(identity.as_ref().map_or("", |i| i.address.email.as_str()));
+        let problem = match identity {
+            None => Some(gettext(
+                "Choose a sender and enter a permitted address suffix.",
+            )),
             Some(identity) => {
                 let mut draft = Draft::new(identity.account_id, identity.address.clone());
                 draft.to = self.to.addresses();
@@ -1397,7 +1458,9 @@ impl Composer {
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
             let standard = protection::signing_for(&this.core, &from).await;
-            this.signing_with.set(standard);
+            if this.identity().is_some_and(|i| i.address.email == from) {
+                this.signing_with.set(standard);
+            }
         });
     }
 
@@ -1417,7 +1480,7 @@ impl Composer {
 
     /// The draft as the fields describe it now.
     fn collect(&self) -> Option<Draft> {
-        let identity = self.identity()?.clone();
+        let identity = self.identity()?;
         let base = self.base.borrow();
         let mut draft = base.clone();
         if draft.account_id != identity.account_id {
@@ -1590,7 +1653,13 @@ impl Composer {
     /// their own key, since Gmail would otherwise hold it readable until it
     /// went out. `protection::draft` says how, and how it comes back.
     fn save_draft(self: &Rc<Self>, then_close: bool) {
-        let Some(draft) = self.collect() else { return };
+        let Some(draft) = self.collect() else {
+            self.toast(&gettext(
+                "Choose a sender and enter a permitted address suffix.",
+            ));
+            self.suffix.grab_focus();
+            return;
+        };
         let secret = self.secret.get() || draft.encrypt;
         // The recipients choose the standard of an encrypted message, and
         // the writer's own holdings that of one they cannot encrypt yet.

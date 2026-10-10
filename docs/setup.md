@@ -28,6 +28,27 @@ your desktop's keyring, never into a file.
 
 The account appears in the sidebar and starts downloading.
 
+### Sender addresses and suffixes
+
+Under **Preferences > Writing > Sender Addresses**, add the addresses you
+send from through an IMAP or POP3 account. Each uses that account's existing
+SMTP server and credentials. Choose a default address for new messages and
+an optional sender name. Google accounts keep using the addresses verified
+in Gmail.
+
+Enable **Allow +suffix** or **Allow .suffix** for each address whose server
+accepts them. In the composer's **From** row, choose an address and enter a
+suffix including its separator, such as `+shop` or `.orders`. The full
+address appears below it. A suffix inherits its base address's name and
+signature and stays with the saved draft.
+
+Replies select the matching address in the original message's To or Cc,
+including permitted suffixes on the same domain. Reply All leaves those
+addresses out of the recipients. If no address matches, the account's
+default is used. Delivery headers such as Delivered-To are not used, so
+mail received through a blind copy or forwarding may need a manual From
+choice. A reply to your own sent message can keep its original From.
+
 ### Calendars, contacts and rules on other providers
 
 Penguin Mail looks for an IMAP account's calendar (CalDAV), contacts

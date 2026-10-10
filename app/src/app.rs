@@ -512,10 +512,14 @@ impl App {
 
     /// The address and display name mail from this account is sent as.
     fn identity(&self, account_id: AccountId) -> Address {
-        Address {
-            name: self.names.borrow().get(&account_id).cloned(),
-            email: self.account_email(account_id),
-        }
+        self.identities()
+            .into_iter()
+            .find(|identity| identity.account_id == account_id)
+            .map(|identity| identity.address)
+            .unwrap_or_else(|| Address {
+                name: None,
+                email: self.account_email(account_id),
+            })
     }
 
     /// Every address every account may send from, accounts in sidebar order
@@ -540,6 +544,7 @@ impl App {
                         .flatten()
                 });
                 identities.push(Identity {
+                    suffixes: sender.suffixes,
                     account_id: account.id,
                     account_email: email.to_string(),
                     signature: settings.signature_for(email, &sender.email).to_string(),
@@ -555,12 +560,19 @@ impl App {
     }
 
     /// The addresses one account sends as, for picking a reply's sender.
-    pub fn my_addresses(&self, account_id: AccountId) -> Vec<Address> {
-        self.identities()
-            .into_iter()
-            .filter(|i| i.account_id == account_id)
-            .map(|i| i.address)
-            .collect()
+    pub fn my_addresses(
+        &self,
+        account_id: AccountId,
+        original: &mailrs_domain::MessageMeta,
+    ) -> Vec<Address> {
+        let account = self.account_email(account_id);
+        let mut senders = self.settings.borrow().senders(&account);
+        for sender in &mut senders {
+            if sender.name.is_none() && sender.email.eq_ignore_ascii_case(&account) {
+                sender.name = self.names.borrow().get(&account_id).cloned();
+            }
+        }
+        crate::compose::reply_addresses(&senders, original)
     }
 
     /// The dictionaries a composer for `account_id` should check against.
@@ -648,6 +660,7 @@ impl App {
                         name: a.name,
                         signature: a.signature,
                         default: a.default,
+                        ..Default::default()
                     })
                     .collect();
                 if addresses.is_empty() {

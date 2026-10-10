@@ -8,6 +8,9 @@
 //! text: it then decides both parts, HTML from the styled blocks and plain
 //! text stripped from the same blocks.
 
+mod senders;
+pub use senders::{Suffixes, reply_addresses, sender_address, sender_for};
+
 use mail_builder::MessageBuilder;
 use mail_builder::headers::address::Address as MimeAddress;
 use mail_builder::headers::content_type::ContentType;
@@ -24,19 +27,18 @@ use crate::protection::Standard;
 use crate::richtext::{self, Block, RichBody};
 use mailrs_domain::translate::{fill, gettext};
 
-/// One address an account may send mail as, as Gmail last reported it: the
-/// account's own address, or an alias Gmail has verified. Gmail keeps a
-/// display name and a signature per address.
+/// An address reported by Gmail or configured for an SMTP account.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct SendAsAddress {
+    pub suffixes: Suffixes,
     pub email: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
     /// Gmail's signature for this address as plain text, empty when it has none.
     #[serde(skip_serializing_if = "String::is_empty")]
     pub signature: String,
-    /// The address Gmail sends from when the writer picks none.
+    /// The address used for a new message in this account.
     #[serde(skip_serializing_if = "std::ops::Not::not")]
     pub default: bool,
 }
@@ -46,14 +48,14 @@ pub struct SendAsAddress {
 /// picking a row in the composer picks all three.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Identity {
+    pub suffixes: Suffixes,
     pub account_id: AccountId,
     /// The account this address belongs to, which groups the From row.
     pub account_email: String,
     pub address: Address,
     /// What goes below the message, as Markdown. Empty when there is none.
     pub signature: String,
-    /// Gmail's own choice for the account, used when nothing else points
-    /// at an address.
+    /// The account's default, used when nothing else points at an address.
     pub default: bool,
 }
 
@@ -67,6 +69,12 @@ pub fn reply_from<'a>(mine: &'a [Address], original: &MessageMeta) -> Option<&'a
         .iter()
         .chain(&original.cc)
         .find_map(|wrote_to| mine.iter().find(|a| same_address(a, wrote_to)))
+        .or_else(|| {
+            original
+                .from
+                .as_ref()
+                .and_then(|from| mine.iter().find(|a| same_address(a, from)))
+        })
 }
 
 /// Which row the From dropdown starts on. The draft's own address wins,
@@ -84,6 +92,17 @@ pub fn opening_identity(
             .position(|i| i.account_id == account_id && i.address.email.eq_ignore_ascii_case(email))
     };
     find(&from.email)
+        .or_else(|| {
+            identities
+                .iter()
+                .enumerate()
+                .filter(|(_, i)| {
+                    i.account_id == account_id
+                        && i.suffixes.suffix(&i.address.email, &from.email).is_some()
+                })
+                .max_by_key(|(_, i)| i.address.email.len())
+                .map(|(at, _)| at)
+        })
         .or_else(|| last_used.and_then(find))
         .or_else(|| {
             identities
@@ -1699,6 +1718,7 @@ mod tests {
 
     fn identity(account: AccountId, email: &str, signature: &str, default: bool) -> Identity {
         Identity {
+            suffixes: Suffixes::default(),
             account_id: account,
             account_email: format!("own{account}@example.com"),
             address: addr(None, email),
@@ -1762,6 +1782,107 @@ mod tests {
             Some(&sales()),
             "an alias copied in is still the address to answer from"
         );
+    }
+
+    #[test]
+    fn suffix_replies_keep_the_full_address_and_leave_us_out_of_reply_all() {
+        let senders = vec![SendAsAddress {
+            email: "user@second.example".into(),
+            name: Some("Our Name".into()),
+            suffixes: Suffixes {
+                plus: true,
+                dot: true,
+            },
+            ..Default::default()
+        }];
+        for suffix in ["+Shop", ".Shop"] {
+            let email = format!("user{suffix}@second.example");
+            let original = message(
+                "m1",
+                addr(None, "ann@example.com"),
+                vec![addr(Some("Untrusted Name"), &email)],
+                vec![
+                    addr(None, "user+copy@second.example"),
+                    addr(None, "cy@example.com"),
+                ],
+            );
+            let mine = reply_addresses(&senders, &original);
+            let draft = respond(ReplyKind::ReplyAll, 1, &mine, &original, "hello", None, &[]);
+            assert_eq!(draft.from, addr(Some("Our Name"), &email));
+            assert_eq!(draft.to, vec![addr(None, "ann@example.com")]);
+            assert_eq!(draft.cc, vec![addr(None, "cy@example.com")]);
+            let raw = build_mime(&draft, 0, "id@example.com").unwrap();
+            let from = mailrs_mime::parts(&raw)
+                .unwrap()
+                .header("From")
+                .unwrap()
+                .to_string();
+            assert_eq!(parse_recipients(&from), vec![draft.from.clone()]);
+            let reopened: Draft =
+                serde_json::from_str(&serde_json::to_string(&draft).unwrap()).unwrap();
+            let mut identities = vec![identity(1, "user@second.example", "", true)];
+            identities[0].suffixes = senders[0].suffixes;
+            let selected = opening_identity(&identities, 1, &reopened.from, None).unwrap();
+            let base = &identities[selected];
+            let suffix = base
+                .suffixes
+                .suffix(&base.address.email, &reopened.from.email)
+                .unwrap();
+            assert_eq!(
+                base.suffixes.address(&base.address, suffix).unwrap().email,
+                email
+            );
+        }
+    }
+
+    #[test]
+    fn a_suffix_in_cc_is_ours_but_a_similar_address_elsewhere_is_not() {
+        let senders = vec![SendAsAddress {
+            email: "user@example.com".into(),
+            suffixes: Suffixes {
+                plus: true,
+                dot: false,
+            },
+            ..Default::default()
+        }];
+        let original = message(
+            "m1",
+            addr(None, "ann@example.com"),
+            vec![addr(None, "user+shop@other.example")],
+            vec![
+                addr(None, "user+shop@example.com"),
+                addr(None, "user.shop@example.com"),
+            ],
+        );
+        let mine = reply_addresses(&senders, &original);
+        let draft = respond(ReplyKind::ReplyAll, 1, &mine, &original, "", None, &[]);
+        assert_eq!(draft.from.email, "user+shop@example.com");
+        assert!(
+            draft
+                .to
+                .iter()
+                .any(|a| a.email == "user+shop@other.example")
+        );
+        assert_eq!(draft.cc[0].email, "user.shop@example.com");
+    }
+
+    #[test]
+    fn reopening_a_suffix_uses_the_closest_base_in_its_account() {
+        let mut identities = vec![
+            identity(1, "user@example.com", "", true),
+            identity(1, "user.shop@example.com", "Shop", false),
+            identity(2, "user.shop@example.com", "Other", false),
+        ];
+        for identity in &mut identities {
+            identity.suffixes = Suffixes {
+                dot: true,
+                plus: true,
+            };
+        }
+        let from = addr(None, "user.shop+order@example.com");
+        assert_eq!(opening_identity(&identities, 1, &from, None), Some(1));
+        assert_eq!(opening_identity(&identities, 2, &from, None), Some(2));
+        assert_eq!(opening_identity(&identities, 3, &from, None), None);
     }
 
     fn lines(text: &str) -> Vec<String> {

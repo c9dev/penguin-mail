@@ -94,10 +94,8 @@ pub struct Settings {
     /// The send-as address each account last sent from, so the composer
     /// opens where the writer left it.
     pub last_sender: BTreeMap<String, String>,
-    /// Every address each account may send as, as Gmail last reported them,
-    /// keyed by the account's own address. Kept here so the composer opens
-    /// without waiting on the network; the app refreshes it in the
-    /// background.
+    /// Send-as addresses keyed by the account's own address. Gmail refreshes
+    /// its list in the background; SMTP accounts keep the owner's choices.
     pub send_as: BTreeMap<String, Vec<crate::compose::SendAsAddress>>,
     /// When Gmail last reported each account's send-as addresses, in
     /// milliseconds since the epoch, keyed as `send_as` is. The app asks
@@ -930,12 +928,18 @@ impl Settings {
         if !written.is_empty() {
             return written;
         }
-        self.send_as
-            .get(&account.to_lowercase())
-            .into_iter()
-            .flatten()
-            .find(|a| a.email.eq_ignore_ascii_case(email))
-            .map_or("", |a| a.signature.as_str())
+        let Some(senders) = self.send_as.get(&account.to_lowercase()) else {
+            return "";
+        };
+        let Some(sender) = crate::compose::sender_for(senders, email) else {
+            return "";
+        };
+        let base = self.signature(&sender.email);
+        if base.is_empty() {
+            &sender.signature
+        } else {
+            base
+        }
     }
 
     /// Whether the account's send-as addresses are a day old or were
@@ -980,6 +984,66 @@ impl Settings {
         addresses
     }
 
+    /// Keeps locally configured addresses separate from credentials and server setup.
+    pub fn save_sender(
+        &mut self,
+        account: &str,
+        was: Option<&str>,
+        mut sender: crate::compose::SendAsAddress,
+    ) -> bool {
+        sender.email = sender.email.trim().to_string();
+        if !crate::compose::sender_address(&sender.email)
+            || sender
+                .name
+                .as_ref()
+                .is_some_and(|n| n.contains(['\r', '\n']))
+            || was.is_some_and(|old| {
+                old.eq_ignore_ascii_case(account) && !sender.email.eq_ignore_ascii_case(account)
+            })
+        {
+            return false;
+        }
+        let mut senders = self.senders(account);
+        if senders.iter().any(|a| {
+            a.email.eq_ignore_ascii_case(&sender.email)
+                && !was.is_some_and(|old| old.eq_ignore_ascii_case(&a.email))
+        }) {
+            return false;
+        }
+        if let Some(old) = was {
+            let Some(at) = senders
+                .iter()
+                .position(|a| a.email.eq_ignore_ascii_case(old))
+            else {
+                return false;
+            };
+            senders.remove(at);
+        }
+        sender.name = sender
+            .name
+            .map(|n| n.trim().to_string())
+            .filter(|n| !n.is_empty());
+        if sender.default {
+            for other in &mut senders {
+                other.default = false;
+            }
+        }
+        senders.push(sender);
+        ensure_default(&mut senders, account);
+        self.send_as.insert(account.to_lowercase(), senders);
+        true
+    }
+
+    pub fn remove_sender(&mut self, account: &str, email: &str) {
+        if account.eq_ignore_ascii_case(email) {
+            return;
+        }
+        let mut senders = self.senders(account);
+        senders.retain(|a| !a.email.eq_ignore_ascii_case(email));
+        ensure_default(&mut senders, account);
+        self.send_as.insert(account.to_lowercase(), senders);
+    }
+
     pub fn set_signature(&mut self, email: &str, signature: &str) {
         let key = email.to_lowercase();
         if signature.trim().is_empty() {
@@ -991,12 +1055,70 @@ impl Settings {
     }
 }
 
+fn ensure_default(senders: &mut [crate::compose::SendAsAddress], account: &str) {
+    if !senders.iter().any(|s| s.default)
+        && let Some(own) = senders
+            .iter_mut()
+            .find(|s| s.email.eq_ignore_ascii_case(account))
+    {
+        own.default = true;
+    }
+}
+
 #[cfg(test)]
 mod tests {
     // The category bar itself cannot be tested here: the harness gives
     // every test its own thread, GTK refuses a second init from a
     // different one, and `richbuffer` already spends this binary's one
     // GTK test. So what is tested is the setting the bar is built from.
+    #[test]
+    fn local_senders_keep_defaults_suffixes_and_signatures_across_restarts() {
+        use crate::compose::{SendAsAddress, Suffixes};
+        let mut settings = Settings::default();
+        let own = "user@example.com";
+        let extra = SendAsAddress {
+            email: "user@second.example".into(),
+            name: Some("User".into()),
+            default: true,
+            suffixes: Suffixes {
+                plus: true,
+                dot: true,
+            },
+            ..Default::default()
+        };
+        assert!(settings.save_sender(own, None, extra.clone()));
+        assert_eq!(settings.senders(own)[0], extra);
+        assert_eq!(
+            settings.senders(own).iter().filter(|s| s.default).count(),
+            1
+        );
+        assert!(
+            !settings.save_sender(own, None, extra.clone()),
+            "no duplicates"
+        );
+        assert!(
+            !settings.save_sender(own, Some(own), extra.clone()),
+            "cannot rename the account address"
+        );
+        settings.set_signature(&extra.email, "Second domain");
+        assert_eq!(
+            settings.signature_for(own, "user+Shop@second.example"),
+            "Second domain"
+        );
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("settings.toml");
+        settings.save(&path).unwrap();
+        assert_eq!(Settings::load(&path), settings);
+        settings.remove_sender(own, own);
+        assert_eq!(settings.senders(own).len(), 2);
+        settings.remove_sender(own, &extra.email);
+        assert_eq!(settings.senders(own).len(), 1);
+        assert!(settings.senders(own)[0].default);
+        let legacy: SendAsAddress =
+            serde_json::from_str(r#"{"email":"user@example.com"}"#).unwrap();
+        assert!(!legacy.suffixes.enabled());
+    }
+
     #[test]
     fn the_inbox_opens_on_everything_until_somebody_says_otherwise() {
         assert_eq!(Settings::default().default_category, Category::All);
@@ -1383,12 +1505,14 @@ mod tests {
                     name: Some("Dana".into()),
                     signature: "Dana".into(),
                     default: true,
+                    ..Default::default()
                 },
                 crate::compose::SendAsAddress {
                     email: "sales@example.com".into(),
                     name: Some("Sales".into()),
                     signature: "The Sales Desk".into(),
                     default: false,
+                    ..Default::default()
                 },
             ],
         );

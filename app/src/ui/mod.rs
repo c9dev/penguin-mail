@@ -31,6 +31,7 @@ pub mod narrow_header;
 pub mod permission;
 pub mod pgp;
 pub mod preferences;
+pub mod sender_prefs;
 pub mod queued;
 pub mod roving;
 pub mod rules;
