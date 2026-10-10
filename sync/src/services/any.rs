@@ -322,6 +322,10 @@ impl MailBackend for AnyMail {
         forward_all_now!(AnyMail, self, set_window_open(open))
     }
 
+    fn check_now(&self) {
+        forward_all_now!(AnyMail, self, check_now())
+    }
+
     fn poll_interval(&self) -> Option<Duration> {
         forward_all_now!(AnyMail, self, poll_interval())
     }

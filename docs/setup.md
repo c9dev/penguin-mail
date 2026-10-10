@@ -49,6 +49,41 @@ default is used. Delivery headers such as Delivered-To are not used, so
 mail received through a blind copy or forwarding may need a manual From
 choice. A reply to your own sent message can keep its original From.
 
+### Proton Mail Bridge
+
+Proton Mail needs Bridge for IMAP and SMTP. Set up its certificate before
+signing in to Penguin Mail:
+
+1. Start Bridge. Under **Settings > Advanced settings > Export TLS
+   certificates**, export the certificate to a folder only you can access.
+   Bridge also exports a private key. Keep that key out of Penguin Mail's
+   certificate file and remove the exported copy when you no longer need it.
+2. Create Penguin Mail's config directory and copy **only the public
+   certificate** to the path for your installation:
+   - Linux `.deb`, `.rpm`, or source build:
+     `~/.config/penguin-mail/proton-bridge-cert.pem`
+   - Snap: `penguin-mail/proton-bridge-cert.pem` under the snap's config
+     directory (`$XDG_CONFIG_HOME`, or `.config` under its home directory).
+   - Flatpak:
+     `~/.var/app/io.github.c9dev.penguin-mail/config/penguin-mail/proton-bridge-cert.pem`
+   - macOS: `~/Library/Application Support/penguin-mail/proton-bridge-cert.pem`
+
+   The file must contain one PEM `BEGIN CERTIFICATE` block and no private key.
+   Create the parent directory first if it does not exist. You can copy the
+   exported certificate even if Bridge gave it a different file extension.
+3. In Bridge, copy the account's IMAP and SMTP settings and its Bridge
+   password. Choose **Enter Server Settings** in Penguin Mail. Use
+   `127.0.0.1` for both hosts and enter the ports and security types shown
+   by Bridge. Use the Bridge password, not your Proton account password.
+
+Penguin Mail accepts that exact certificate for connections to `127.0.0.1`.
+If Bridge replaces its certificate, export and copy the new public certificate
+before signing in again. Penguin Mail reads the file on each connection, so
+you do not need to restart it. A different certificate on `127.0.0.1`, and
+all certificates on other hosts, still go through the system's certificate
+checks. [Proton's Bridge settings guide](https://proton.me/support/comprehensive-guide-to-bridge-settings)
+describes the export option.
+
 ### Calendars, contacts and rules on other providers
 
 Penguin Mail looks for an IMAP account's calendar (CalDAV), contacts

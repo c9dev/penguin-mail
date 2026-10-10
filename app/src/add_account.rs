@@ -791,18 +791,29 @@ fn failure_given(err: &anyhow::Error, proposal: &Proposal, plug: Plug) -> Failur
             },
             true,
         ),
-        // The spec's one line for a TLS failure. The detail, such as a
-        // server without TLS 1.2, goes to the log with the error.
+        // A TLS failure can be an untrusted certificate, a wrong name, or
+        // an unsupported protocol. Keep the detail in the log.
         ImapError::Tls { host, .. } => {
             let line = fill(
-                &gettext("The server's certificate does not match {host}."),
+                &gettext("Could not verify the secure connection to {host}."),
                 &[("host", host)],
             );
-            Failure::plain(
+            let mut failure = Failure::plain(
                 line.clone(),
-                gettext("The certificate does not match"),
+                gettext("Secure connection failed"),
                 line,
-            )
+            );
+            if host == "127.0.0.1" {
+                failure.body = gettext(
+                    "If you use Proton Mail Bridge, export its TLS certificate and follow the setup guide, then try signing in again.",
+                );
+                failure.line = format!("{} {}", failure.line, failure.body);
+                failure.links.push(Link {
+                    label: gettext("Set Up Proton Mail Bridge"),
+                    url: "https://github.com/c9dev/penguin-mail/blob/main/docs/setup.md#proton-mail-bridge".into(),
+                });
+            }
+            failure
         }
         ImapError::Network(reason) => Failure {
             line: fill(
@@ -1797,7 +1808,7 @@ mod tests {
         let said = failure(&bad, &fastmail());
         assert_eq!(
             said.line,
-            "The server's certificate does not match mail.example.org."
+            "Could not verify the secure connection to mail.example.org."
         );
         assert!(said.links.is_empty());
     }
@@ -2293,6 +2304,29 @@ mod tests {
                 password_sent: true,
             }
         );
+    }
+
+    #[test]
+    fn loopback_tls_failure_points_to_bridge_certificate_setup() {
+        let mut proposal = fastmail();
+        proposal.incoming.host = "127.0.0.1".into();
+        proposal.smtp.host = "127.0.0.1".into();
+        for error in [
+            CheckError::Imap(ImapError::Tls {
+                host: "127.0.0.1".into(),
+                detail: "unknown issuer".into(),
+            }),
+            CheckError::Smtp(ImapError::Tls {
+                host: "127.0.0.1".into(),
+                detail: "unknown issuer".into(),
+            }),
+        ] {
+            let failure = failure(&anyhow::Error::new(error), &proposal);
+            assert!(failure.body.contains("Proton Mail Bridge"));
+            assert!(failure.body.contains("certificate"));
+            assert_eq!(failure.links.len(), 1);
+            assert!(failure.links[0].url.ends_with("docs/setup.md#proton-mail-bridge"));
+        }
     }
 
     #[test]

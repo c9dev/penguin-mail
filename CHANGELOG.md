@@ -8,6 +8,9 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 ### Fixed
 
 - Discard pending translations after changing the AI language, even when changing back before the answer arrives.
+- Proton Mail Bridge connections work with its local TLS certificate when you pin that certificate in Penguin Mail.
+- Pictures embedded in IMAP messages appear in the message again.
+- Check for Mail checks Sent and other IMAP folders at once, even if their regular check is not due yet.
 
 ### New
 

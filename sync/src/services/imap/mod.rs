@@ -109,6 +109,9 @@ struct Known {
     tray_only: bool,
     /// When the slow poll last looked at every synced mailbox.
     last_slow: Option<Instant>,
+    /// Each manual check gets a number so a request during a poll stays due.
+    full_check_requested: u64,
+    full_check_completed: u64,
     /// Every look covers every synced mailbox, for tests that should not
     /// wait for the slow poll.
     every_look: bool,
@@ -409,6 +412,11 @@ impl<I: ImapApi, S: Submit> MailBackend for Imap<I, S> {
 
     fn set_window_open(&self, open: bool) {
         self.known().tray_only = !open;
+    }
+
+    fn check_now(&self) {
+        let mut known = self.known();
+        known.full_check_requested = known.full_check_requested.wrapping_add(1);
     }
 
     fn poll_interval(&self) -> Option<Duration> {

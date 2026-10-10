@@ -304,136 +304,144 @@ msgid "Turn on IMAP in your mail settings, then choose Sign In."
 msgstr "Turn on IMAP in your mail settings, then choose Sign In."
 
 #: app/src/add_account.rs:798
-msgid "The server's certificate does not match {host}."
-msgstr "The server's certificate does not match {host}."
+msgid "Could not verify the secure connection to {host}."
+msgstr "Could not verify the secure connection to {host}."
 
 #: app/src/add_account.rs:803
-msgid "The certificate does not match"
-msgstr "The certificate does not match"
+msgid "Secure connection failed"
+msgstr "Secure connection failed"
 
-#: app/src/add_account.rs:809
+#: app/src/add_account.rs:808
+msgid "If you use Proton Mail Bridge, export its TLS certificate and follow the setup guide, then try signing in again."
+msgstr "If you use Proton Mail Bridge, export its TLS certificate and follow the setup guide, then try signing in again."
+
+#: app/src/add_account.rs:812
+msgid "Set Up Proton Mail Bridge"
+msgstr "Set Up Proton Mail Bridge"
+
+#: app/src/add_account.rs:820
 msgid "Could not reach {host}: {reason}"
 msgstr "Could not reach {host}: {reason}"
 
-#: app/src/add_account.rs:813
+#: app/src/add_account.rs:824
 msgid "No answer on port {port}"
 msgstr "No answer on port {port}"
 
-#: app/src/add_account.rs:817
+#: app/src/add_account.rs:828
 msgid "The server did not answer. Check the server name and port, or try again when you are online."
 msgstr "The server did not answer. Check the server name and port, or try again when you are online."
 
-#: app/src/add_account.rs:837
+#: app/src/add_account.rs:848
 msgid "{host} answered but turned down another connection. Try again in a few minutes."
 msgstr "{host} answered but turned down another connection. Try again in a few minutes."
 
-#: app/src/add_account.rs:841
+#: app/src/add_account.rs:852
 msgid "Too many connections"
 msgstr "Too many connections"
 
-#: app/src/add_account.rs:847
+#: app/src/add_account.rs:858
 msgid "{host} answered in a way this app cannot work with."
 msgstr "{host} answered in a way this app cannot work with."
 
-#: app/src/add_account.rs:858
+#: app/src/add_account.rs:869
 msgid "This app cannot send these sign-in details to the server."
 msgstr "This app cannot send these sign-in details to the server."
 
-#: app/src/add_account.rs:874
+#: app/src/add_account.rs:885
 msgid "Penguin Mail cannot save your sign-in until the snap can reach your keyring. Run this command in a terminal, restart Penguin Mail, then add the account again."
 msgstr "Penguin Mail cannot save your sign-in until the snap can reach your keyring. Run this command in a terminal, restart Penguin Mail, then add the account again."
 
-#: app/src/add_account.rs:879
+#: app/src/add_account.rs:890
 msgid "Connect Your Keyring"
 msgstr "Connect Your Keyring"
 
-#: app/src/add_account.rs:908
+#: app/src/add_account.rs:919
 msgid "{provider} refused the password"
 msgstr "{provider} refused the password"
 
-#: app/src/add_account.rs:911
+#: app/src/add_account.rs:922
 msgid "The server refused the password"
 msgstr "The server refused the password"
 
-#: app/src/add_account.rs:919
+#: app/src/add_account.rs:930
 msgid "{provider} wants an app password here, not your website password. Make one, paste it above, then choose Sign In."
 msgstr "{provider} wants an app password here, not your website password. Make one, paste it above, then choose Sign In."
 
-#: app/src/add_account.rs:923
+#: app/src/add_account.rs:934
 msgid "Check the password, then choose Sign In."
 msgstr "Check the password, then choose Sign In."
 
-#: app/src/add_account.rs:940
+#: app/src/add_account.rs:951
 msgid "The server said: {reason}"
 msgstr "The server said: {reason}"
 
-#: app/src/add_account.rs:960
+#: app/src/add_account.rs:971
 msgid "Make an App Password"
 msgstr "Make an App Password"
 
-#: app/src/add_account.rs:964
+#: app/src/add_account.rs:975
 msgid "Turn On IMAP"
 msgstr "Turn On IMAP"
 
-#: app/src/add_account.rs:1110
+#: app/src/add_account.rs:1121
 msgid "{host} is not a server name."
 msgstr "{host} is not a server name."
 
-#: app/src/add_account.rs:1116
+#: app/src/add_account.rs:1127
 msgid "Type the incoming server's name."
 msgstr "Type the incoming server's name."
 
-#: app/src/add_account.rs:1117
+#: app/src/add_account.rs:1128
 msgid "Type the outgoing server's name."
 msgstr "Type the outgoing server's name."
 
-#: app/src/add_account.rs:1243
+#: app/src/add_account.rs:1254
 msgid "Mail is downloading. You can close this window."
 msgstr "Mail is downloading. You can close this window."
 
-#: app/src/add_account.rs:1244 app/src/add_account.rs:1273
+#: app/src/add_account.rs:1255 app/src/add_account.rs:1284
 msgid "Your mail is here."
 msgstr "Your mail is here."
 
-#: app/src/add_account.rs:1258
+#: app/src/add_account.rs:1269
 msgid "Your organization did not allow one of the permissions Penguin Mail asked for, so this feature stays off:"
 msgid_plural "Your organization did not allow {count} of the permissions Penguin Mail asked for, so these features stay off:"
 msgstr[0] "Your organisation did not allow one of the permissions Penguin Mail asked for, so this feature stays off:"
 msgstr[1] "Your organisation did not allow {count} of the permissions Penguin Mail asked for, so these features stay off:"
 
-#: app/src/add_account.rs:1265
+#: app/src/add_account.rs:1276
 msgid "You left one box unticked on Google's page, so this feature stays off:"
 msgid_plural "You left {count} boxes unticked on Google's page, so these features stay off:"
 msgstr[0] "You left one box unticked on Google's page, so this feature stays off:"
 msgstr[1] "You left {count} boxes unticked on Google's page, so these features stay off:"
 
-#: app/src/add_account.rs:1272
+#: app/src/add_account.rs:1283
 msgid "Mail is downloading."
 msgstr "Mail is downloading."
 
-#: app/src/add_account.rs:1292
+#: app/src/add_account.rs:1303
 msgid "Newest mail comes first. Older mail keeps coming in the background, even with the window closed."
 msgstr "Newest mail comes first. Older mail keeps coming in the background, even with the window closed."
 
-#: app/src/add_account.rs:1294
+#: app/src/add_account.rs:1305
 msgid "Penguin Mail keeps checking for new mail, even with the window closed."
 msgstr "Penguin Mail keeps checking for new mail, even with the window closed."
 
-#: app/src/add_account.rs:1304
+#: app/src/add_account.rs:1315
 msgid "Penguin Mail downloads the server's mail into Inbox and keeps checking in the background, even with the window closed. Mail stays on the server."
 msgstr "Penguin Mail downloads the server's mail into Inbox and keeps checking in the background, even with the window closed. Mail stays on the server."
 
-#: app/src/add_account.rs:1307
+#: app/src/add_account.rs:1318
 msgid "Penguin Mail downloads the server's mail into Inbox and keeps checking in the background, even with the window closed. It removes each message from the server after downloading it."
 msgstr "Penguin Mail downloads the server's mail into Inbox and keeps checking in the background, even with the window closed. It removes each message from the server after downloading it."
 
-#: app/src/add_account.rs:1310
+#: app/src/add_account.rs:1321
 msgid "Penguin Mail downloads the server's mail into Inbox and keeps checking in the background, even with the window closed. It removes each message from the server {days} day after downloading it."
 msgid_plural "Penguin Mail downloads the server's mail into Inbox and keeps checking in the background, even with the window closed. It removes each message from the server {days} days after downloading it."
 msgstr[0] "Penguin Mail downloads the server's mail into Inbox and keeps checking in the background, even with the window closed. It removes each message from the server {days} day after downloading it."
 msgstr[1] "Penguin Mail downloads the server's mail into Inbox and keeps checking in the background, even with the window closed. It removes each message from the server {days} days after downloading it."
 
-#: app/src/add_account.rs:1326
+#: app/src/add_account.rs:1337
 msgid "Penguin Mail needs the password for {address} again."
 msgstr "Penguin Mail needs the password for {address} again."
 

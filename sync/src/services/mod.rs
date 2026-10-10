@@ -856,6 +856,9 @@ pub trait MailBackend: Send + Sync + 'static {
     /// often it looks at mail nobody is watching.
     fn set_window_open(&self, open: bool);
 
+    /// Makes the next check include every mailbox the backend keeps in step.
+    fn check_now(&self) {}
+
     /// How long the engine waits between looks at the change feed. `None`
     /// keeps the engine's own interval.
     fn poll_interval(&self) -> Option<Duration>;
