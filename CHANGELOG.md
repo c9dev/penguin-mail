@@ -7,6 +7,7 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 
 ### Fixed
 
+- Reorder folders with mixed-case Inbox paths without renaming them, and reject moving a folder into its own descendants.
 - Keep Inbox subfolders beside their parent when path casing differs, including with a custom folder order.
 - Keep children under nested system folders when the server mixes Inbox and INBOX in their paths.
 - Restart pending folder counts when mail changes so unopened folders get fresh unread counts.
