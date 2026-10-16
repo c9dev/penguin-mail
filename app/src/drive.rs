@@ -409,8 +409,15 @@ impl Driver {
                 let dialog = window
                     .visible_dialog()
                     .expect("the native menu opens Settings");
-                assert!(dialog.is::<adw::PreferencesDialog>());
+                assert!(dialog.has_css_class("mail-preferences"));
+                app_menu.performActionForItemAtIndex(app_menu.indexOfItem(&settings));
+                glib::timeout_future(Duration::from_millis(400)).await;
                 dialog.close();
+                glib::timeout_future(Duration::from_millis(600)).await;
+                assert!(
+                    window.visible_dialog().is_none(),
+                    "a second Settings press opens no second dialog"
+                );
                 eprintln!("drive: native Settings menu and Command-comma passed");
             }
             Step::Quit => {

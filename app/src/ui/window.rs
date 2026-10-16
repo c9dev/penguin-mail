@@ -139,8 +139,11 @@ pub struct MainWindow {
     /// the one that is waiting.
     update_menu: gio::Menu,
     /// The About window while it is open, so an update's progress reaches
-    /// its button.
+    /// its button and asking for it again opens no second one.
     about: RefCell<Option<Rc<crate::ui::about::About>>>,
+    /// Preferences while it is open, so asking for it again shows the
+    /// open one rather than a second on top.
+    preferences: RefCell<Weak<super::preferences::dialog::Dialog>>,
     stack: gtk::Stack,
     split: adw::OverlaySplitView,
     /// The mail's list and conversation, or the calendar, beside the
@@ -876,6 +879,7 @@ impl MainWindow {
                 storage_banner_widgets: RefCell::new(HashMap::new()),
                 update_menu: gio::Menu::new(),
                 about: RefCell::new(None),
+                preferences: RefCell::new(Weak::new()),
                 stack,
                 split,
                 spaces,
@@ -3687,14 +3691,19 @@ impl MainWindow {
         );
     }
 
+    /// Opens Preferences, on the account `focus` names when given. While
+    /// it is already open, that one stays as it is.
     fn show_preferences_focus(self: &Rc<Self>, focus: Option<super::preferences::Focus<'_>>) {
+        if self.preferences.borrow().upgrade().is_some() {
+            return;
+        }
         let Some(app) = self.app.upgrade() else {
             return;
         };
         // Preferences puts each account on the pages that apply to it.
         let accounts = app.accounts();
         let weak = Rc::downgrade(self);
-        super::preferences::present(
+        let dialog = super::preferences::present(
             &app,
             &accounts,
             |id| self.offers(id),
@@ -3707,6 +3716,7 @@ impl MainWindow {
             &self.window,
             focus,
         );
+        self.preferences.replace(Rc::downgrade(&dialog));
     }
 
     fn show_rules(self: &Rc<Self>, account: Account) {
@@ -3729,12 +3739,15 @@ impl MainWindow {
 
     /// Opens Preferences on one page, such as "assistant".
     fn show_preferences_page(self: &Rc<Self>, page: &str) {
+        if let Some(open) = self.preferences.borrow().upgrade() {
+            return open.set_visible_page_name(page);
+        }
         let Some(app) = self.app.upgrade() else {
             return;
         };
         let accounts = app.accounts();
         let weak = Rc::downgrade(self);
-        super::preferences::present_page(
+        let dialog = super::preferences::present_page(
             &app,
             &accounts,
             |id| self.offers(id),
@@ -3747,6 +3760,7 @@ impl MainWindow {
             &self.window,
             page,
         );
+        self.preferences.replace(Rc::downgrade(&dialog));
     }
 
     fn show_vacation(self: &Rc<Self>, account: Account) {
@@ -3978,6 +3992,9 @@ impl MainWindow {
     }
 
     fn show_about(self: &Rc<Self>) {
+        if self.about.borrow().is_some() {
+            return;
+        }
         let Some(app) = self.app.upgrade() else {
             return;
         };

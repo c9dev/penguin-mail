@@ -129,8 +129,10 @@ pub fn present_page(
     grant: impl Fn(AccountId) + Clone + 'static,
     parent: &impl IsA<gtk::Widget>,
     page: &str,
-) {
-    present(app, accounts, offers, withheld, grant, parent, None).set_visible_page_name(page);
+) -> Rc<dialog::Dialog> {
+    let dialog = present(app, accounts, offers, withheld, grant, parent, None);
+    dialog.set_visible_page_name(page);
+    dialog
 }
 
 fn reading_page(app: &Rc<App>, settings: &Settings) -> adw::PreferencesPage {
