@@ -37,6 +37,19 @@ release workflow reuses that build with the repository's secrets. A manual
 run of **Release** uploads artifacts only; a version tag publishes them
 alongside the Linux packages after CI passes.
 
+## Notifications
+
+New installs use temporary banners. macOS owns their duration and keeps
+an existing notification style when the app is updated. If notifications
+stay on screen, open System Settings → Notifications → Penguin Mail and
+choose the temporary banner style rather than persistent alerts.
+
+The notification's action menu offers the buttons selected in Penguin
+Mail's Preferences. Archive, Mark as Read, Delete and a calendar reminder's
+Snooze run in the background. Reply and clicking a notification open the
+app. The demo and a binary run outside an app bundle do not request
+notification permission or post notifications.
+
 ## Google and Microsoft
 
 The macOS build uses the same repository secrets as Linux:

@@ -5,6 +5,7 @@ import importlib.util
 import os
 from pathlib import Path
 import plistlib
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -17,6 +18,49 @@ spec.loader.exec_module(bundle)
 
 
 class Packaging(unittest.TestCase):
+    @unittest.skipUnless(os.uname().sysname == "Darwin", "NSBundle is a macOS API")
+    def test_local_install_keeps_the_executable_in_its_app_bundle(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder).resolve()
+            (root / "scripts").mkdir()
+            shutil.copy2(scripts / "install-macos.sh", root / "scripts")
+            (root / "Cargo.toml").write_text('version = "1.2.3"\n')
+            binary = root / "target/release/penguin-mail"
+            binary.parent.mkdir(parents=True)
+            source = root / "probe.m"
+            source.write_text('''#import <Foundation/Foundation.h>
+int main(void) {
+    @autoreleasepool {
+        NSBundle *bundle = NSBundle.mainBundle;
+        if (![bundle.bundleIdentifier isEqualToString:@"io.github.c9dev.PenguinMail"])
+            return 1;
+        NSString *actual = [NSProcessInfo.processInfo.arguments[0] stringByResolvingSymlinksInPath];
+        if (![bundle.executablePath.stringByResolvingSymlinksInPath isEqualToString:actual])
+            return 2;
+    }
+    return 0;
+}
+''')
+            subprocess.run(["clang", "-framework", "Foundation", str(source), "-o", str(binary)], check=True)
+            commands = root / "bin"
+            commands.mkdir()
+            for name, body in {
+                "cargo": "exit 0\n",
+                "brew": 'if [ "$1" = --prefix ]; then echo "/test/Homebrew prefix"; fi\n',
+                "rsvg-convert": 'while [ "$1" != -o ]; do shift; done; touch "$2"\n',
+                "iconutil": 'while [ "$1" != -o ]; do shift; done; touch "$2"\n',
+            }.items():
+                command = commands / name
+                command.write_text("#!/bin/sh\n" + body)
+                command.chmod(0o755)
+            env = os.environ | {"PATH": str(commands) + ":" + os.environ["PATH"], "APP_DIR": str(root)}
+            subprocess.run([str(root / "scripts/install-macos.sh")], env=env, check=True, capture_output=True)
+            app = root / "Penguin Mail.app"
+            info = plistlib.loads((app / "Contents/Info.plist").read_bytes())
+            self.assertEqual(info["LSEnvironment"]["XDG_DATA_DIRS"], "/test/Homebrew prefix/share:/usr/local/share:/usr/share")
+            subprocess.run(["codesign", "--verify", "--deep", "--strict", str(app)], check=True)
+            subprocess.run([str(app / "Contents/MacOS" / info["CFBundleExecutable"])], check=True)
+
     def test_dependency_paths_resolve_from_the_owner(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder).resolve()

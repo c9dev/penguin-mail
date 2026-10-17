@@ -1,10 +1,9 @@
 //! Desktop notifications for new mail, and the buttons on them.
 //!
 //! This module says what each notification shows and which message its
-//! clicks act on; the app posts them as `gio::Notification`s, which go
-//! through the notification portal inside a Flatpak and straight to the
-//! desktop outside one. A click comes back as the app action [`CHOSEN`]
-//! with a token the app handed out, and [`Issued`] turns that token back
+//! clicks act on; `app::notifications` posts them through the desktop. A
+//! click comes back as the app action [`CHOSEN`] with a token the app
+//! handed out, and [`Issued`] turns that token back
 //! into a [`Request`]. Nothing here touches GTK or the store, so the
 //! routing and the state check live under unit tests.
 

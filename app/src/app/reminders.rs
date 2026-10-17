@@ -4,10 +4,10 @@
 //! again come from [`crate::event_reminders::plan`]; this file reads the
 //! store, posts, and records.
 //!
-//! Notifications go through `gio::Notification`. GNOME Shell and the
-//! portal hand a click back to the app's bus name, which the process
-//! owns again after the idle restart, so a reminder left in the message
-//! tray still works after it.
+//! `super::notifications` delivers through the platform. On Linux, GNOME
+//! Shell and the portal hand a click back to the app's bus name, which
+//! the process owns again after the idle restart, so a reminder left in
+//! the message tray still works after it.
 
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -117,23 +117,7 @@ impl App {
 
     fn post_reminder(&self, due: &Due, now: EpochMillis) {
         let shown = notice::notice(due, now, &chrono::Local);
-        let notification = gio::Notification::new(&shown.title);
-        notification.set_body(Some(&shown.body));
-        notification.set_priority(gio::NotificationPriority::High);
-        notification.set_icon(&gio::ThemedIcon::new(crate::APP_ID));
-        let target = shown.target.to_variant();
-        notification.set_default_action_and_target_value(
-            &format!("app.{}", notice::SHOW_EVENT),
-            Some(&target),
-        );
-        for button in &shown.buttons {
-            notification.add_button_with_target_value(
-                &button.label(),
-                &format!("app.{}", button.action()),
-                Some(&target),
-            );
-        }
-        self.gio.send_notification(Some(&shown.id), &notification);
+        self.notifications.reminder(&shown);
         tracing::info!(event = %due.key.event, minutes = due.key.minutes, "posted an event reminder");
     }
 
@@ -188,7 +172,7 @@ impl App {
     fn snooze_reminder(self: &Rc<Self>, key: Key) {
         // Some notification servers keep a notification after a button
         // is pressed; this one comes back in five minutes instead.
-        self.gio.withdraw_notification(&plan::notification_id(&key));
+        self.notifications.withdraw(&plan::notification_id(&key));
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
             let now = now_millis();

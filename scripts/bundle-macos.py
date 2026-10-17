@@ -102,8 +102,6 @@ def build(app):
     contents = app / "Contents"
     resources = contents / "Resources"
     executable = contents / "MacOS/penguin-mail"
-    shutil.move(resources / "penguin-mail", executable)
-    (contents / "MacOS/penguin-mail-launcher").unlink()
     shutil.rmtree(contents / "_CodeSignature", ignore_errors=True)
 
     # Query every installed loader, including librsvg's module.
@@ -161,7 +159,7 @@ def build(app):
         output("brew", "info", "--json=v2", *sorted(formulae)))
     info_file = contents / "Info.plist"
     info = plistlib.loads(info_file.read_bytes())
-    info["CFBundleExecutable"] = "penguin-mail"
+    info.pop("LSEnvironment", None)
     info["LSMinimumSystemVersion"] = minimum
     info_file.write_bytes(plistlib.dumps(info))
     print(f"Bundled {len(copied)} libraries and loaders; requires macOS {minimum} or later.")

@@ -272,8 +272,10 @@ PENGUIN_MAIL_GOOGLE_CLIENT_ID=... PENGUIN_MAIL_GOOGLE_CLIENT_SECRET=... \
 "/Applications/Penguin Mail.app/Contents/MacOS/penguin-mail"
 ```
 
-A copy installed with `scripts/install-macos.sh` starts through
-`Contents/MacOS/penguin-mail-launcher` instead.
+A copy installed with `scripts/install-macos.sh` also needs
+`XDG_DATA_DIRS="$(brew --prefix)/share:/usr/local/share:/usr/share"` before
+the command when started from Terminal. Finder sets this through the
+app's `Info.plist`.
 
 ### What Penguin Mail keeps
 

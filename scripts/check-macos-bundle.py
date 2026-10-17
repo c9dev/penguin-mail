@@ -3,6 +3,7 @@
 
 import importlib.util
 import os
+import plistlib
 from pathlib import Path
 import subprocess
 import sys
@@ -19,6 +20,8 @@ def check(archive):
         subprocess.run(["ditto", "-x", "-k", str(archive), str(root)], check=True)
         app = root / "Penguin Mail.app"
         binary = app / "Contents/MacOS/penguin-mail"
+        info = plistlib.loads((app / "Contents/Info.plist").read_bytes())
+        assert info.get("NSUserNotificationAlertStyle") == "banner", "Notifications must default to temporary banners"
         subprocess.run(["codesign", "--verify", "--deep", "--strict", str(app)], check=True)
         for image in [binary, *sorted((app / "Contents/Frameworks").iterdir())]:
             assert not bundle.rpaths(image), f"Unresolved library search paths: {image}"

@@ -41,6 +41,7 @@ mod composing;
 mod dictionaries;
 mod dock_badge;
 mod hidden;
+mod notifications;
 mod reminders;
 mod sending;
 mod storage;
@@ -82,6 +83,7 @@ pub struct App {
     /// The new-mail notifications posted this run, by token, so a click
     /// acts only on mail this copy announced.
     issued: RefCell<notify::Issued>,
+    notifications: notifications::Notifications,
     skip_first_window: Cell<bool>,
     filter_requested: Cell<bool>,
     /// Main window plus open composers.
@@ -176,6 +178,7 @@ impl App {
             tray_unread: tokio::sync::watch::Sender::new((0, Vec::new())),
             chosen,
             issued: RefCell::default(),
+            notifications: notifications::Notifications::new(gio_app, core_demo),
             skip_first_window: Cell::new(background),
             filter_requested: Cell::new(false),
             open_windows: Cell::new(0),
@@ -1376,39 +1379,24 @@ impl App {
     ) {
         use rand::distr::{Alphanumeric, SampleString};
         for notice in notify::notices(messages, previews, buttons) {
-            let notification = gio::Notification::new(&notice.title);
-            if !notice.body.is_empty() {
-                notification.set_body(Some(&notice.body));
-            }
-            notification.set_icon(&gio::ThemedIcon::new(crate::APP_ID));
-            notification.set_category(Some("email.arrived"));
-            let action = format!("app.{}", notify::CHOSEN);
             let token = Alphanumeric.sample_string(&mut rand::rng(), 24);
-            let evicted = if let Some(target) = notice.target {
-                let open = notify::parameter(&token, notify::OPEN_KEY);
-                notification.set_default_action_and_target_value(&action, Some(&open.to_variant()));
-                for button in &notice.buttons {
-                    let pressed = notify::parameter(&token, button.key());
-                    notification.add_button_with_target_value(
-                        &button.label(),
-                        &action,
-                        Some(&pressed.to_variant()),
-                    );
-                }
-                self.issued
-                    .borrow_mut()
-                    .issue(token.clone(), target, notice.buttons)
+            let evicted = if let Some(target) = &notice.target {
+                self.issued.borrow_mut().issue(
+                    token.clone(),
+                    target.clone(),
+                    notice.buttons.clone(),
+                )
             } else {
                 self.issued
                     .borrow_mut()
-                    .issue_summary(token.clone(), notice.counted)
+                    .issue_summary(token.clone(), notice.counted.clone())
             };
             // One pushed out of the list would stay on screen with clicks
             // that do nothing, so it goes now.
             if let Some(evicted) = evicted {
-                self.gio.withdraw_notification(&evicted);
+                self.notifications.withdraw(&evicted);
             }
-            self.gio.send_notification(Some(&token), &notification);
+            self.notifications.mail(&token, &notice);
         }
     }
 
@@ -1443,7 +1431,7 @@ impl App {
             for (token, ids) in asked {
                 let settled = notify::settled_among(&ids, &still);
                 if this.issued.borrow_mut().settle(&token, &settled) {
-                    this.gio.withdraw_notification(&token);
+                    this.notifications.withdraw(&token);
                 }
             }
         });

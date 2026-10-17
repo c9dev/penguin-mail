@@ -75,6 +75,7 @@ objc2-app-kit.workspace = true
 objc2-core-graphics.workspace = true
 objc2-foundation.workspace = true
 objc2-quartz-core.workspace = true
+objc2-user-notifications.workspace = true
 objc2-web-kit.workspace = true
 
 [dev-dependencies]

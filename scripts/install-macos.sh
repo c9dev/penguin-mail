@@ -42,17 +42,8 @@ trap 'rm -rf "$work"' EXIT
 bundle="$work/Penguin Mail.app"
 mkdir -p "$bundle/Contents/MacOS" "$bundle/Contents/Resources"
 
-cp target/release/penguin-mail "$bundle/Contents/Resources/penguin-mail"
-
-# The Finder starts an app with a bare environment. GTK finds Adwaita's
-# icons and GLib's settings schemas through XDG_DATA_DIRS, which then
-# leaves out Homebrew's share folder.
-cat > "$bundle/Contents/MacOS/penguin-mail-launcher" <<LAUNCHER
-#!/bin/sh
-export XDG_DATA_DIRS="\${XDG_DATA_DIRS:-$brew/share:/usr/local/share:/usr/share}"
-exec "\$(dirname "\$0")/../Resources/penguin-mail" "\$@"
-LAUNCHER
-chmod +x "$bundle/Contents/MacOS/penguin-mail-launcher"
+# NSBundle recognizes the app only when its executable is in MacOS.
+cp target/release/penguin-mail "$bundle/Contents/MacOS/penguin-mail"
 
 cat > "$bundle/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
@@ -62,18 +53,22 @@ cat > "$bundle/Contents/Info.plist" <<PLIST
   <key>CFBundleName</key><string>Penguin Mail</string>
   <key>CFBundleDisplayName</key><string>Penguin Mail</string>
   <key>CFBundleIdentifier</key><string>io.github.c9dev.PenguinMail</string>
-  <key>CFBundleExecutable</key><string>penguin-mail-launcher</string>
+  <key>CFBundleExecutable</key><string>penguin-mail</string>
   <key>CFBundleIconFile</key><string>PenguinMail</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleShortVersionString</key><string>$version</string>
   <key>CFBundleVersion</key><string>$version</string>
   <key>LSMinimumSystemVersion</key><string>14.0</string>
   <key>LSApplicationCategoryType</key><string>public.app-category.productivity</string>
-  <key>NSUserNotificationAlertStyle</key><string>alert</string>
+  <key>NSUserNotificationAlertStyle</key><string>banner</string>
   <key>NSHighResolutionCapable</key><true/>
 </dict>
 </plist>
 PLIST
+
+# Finder supplies Homebrew's GTK data paths without a shell launcher.
+/usr/libexec/PlistBuddy -c 'Add :LSEnvironment dict' "$bundle/Contents/Info.plist"
+/usr/libexec/PlistBuddy -c "Add :LSEnvironment:XDG_DATA_DIRS string $brew/share:/usr/local/share:/usr/share" "$bundle/Contents/Info.plist"
 
 # The icon, from the same drawings the Linux packages use: the 16 px copy
 # drawn on whole pixels for the smallest size, the scalable one for the rest.

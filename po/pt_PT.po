@@ -1052,7 +1052,7 @@ msgid "Continue opens {provider}'s sign-in page in your browser."
 msgstr ""
 "Continuar abre a página de início de sessão de {provider} no navegador."
 
-#: app/src/app.rs:413
+#: app/src/app.rs:416
 msgid ""
 "Your preferences could not be read, so Penguin Mail started from the "
 "defaults. The old file is kept as {file}."
@@ -2464,19 +2464,19 @@ msgstr "O Penguin Mail não conseguiu arrancar"
 msgid "Report a Problem"
 msgstr "Comunicar um problema"
 
-#: app/src/notify.rs:62 app/src/ui/conversation.rs:410
+#: app/src/notify.rs:61 app/src/ui/conversation.rs:410
 #: app/src/ui/conversation.rs:566 app/src/ui/conversation.rs:1080
 #: app/src/ui/window/message_menu.rs:125 app/src/ui/window/shortcuts.rs:396
 msgid "Archive"
 msgstr "Arquivar"
 
-#: app/src/notify.rs:63 app/src/ui/conversation.rs:411
+#: app/src/notify.rs:62 app/src/ui/conversation.rs:411
 #: app/src/ui/conversation.rs:1124 app/src/ui/preferences.rs:183
 #: app/src/ui/rules.rs:432 app/src/ui/window/message_menu.rs:128
 msgid "Mark as Read"
 msgstr "Marcar como lida"
 
-#: app/src/notify.rs:64 app/src/ui/calendar/manage.rs:337
+#: app/src/notify.rs:63 app/src/ui/calendar/manage.rs:337
 #: app/src/ui/calendar/popover.rs:217 app/src/ui/calendar/popover.rs:219
 #: app/src/ui/calendar/popover.rs:756 app/src/ui/calendar/scope.rs:151
 #: app/src/ui/conversation.rs:552 app/src/ui/hide_my_email.rs:574
@@ -2486,22 +2486,22 @@ msgstr "Marcar como lida"
 msgid "Delete"
 msgstr "Eliminar"
 
-#: app/src/notify.rs:65 app/src/ui/conversation.rs:560
+#: app/src/notify.rs:64 app/src/ui/conversation.rs:560
 #: app/src/ui/window/message_menu.rs:122 app/src/ui/window/shortcuts.rs:475
 msgid "Reply"
 msgstr "Responder"
 
-#: app/src/notify.rs:159
+#: app/src/notify.rs:158
 msgid "{count} new message"
 msgid_plural "{count} new messages"
 msgstr[0] "{count} mensagem nova"
 msgstr[1] "{count} mensagens novas"
 
-#: app/src/notify.rs:177 app/src/ui/window/shortcuts.rs:467
+#: app/src/notify.rs:176 app/src/ui/window/shortcuts.rs:467
 msgid "New message"
 msgstr "Nova mensagem"
 
-#: app/src/notify.rs:194
+#: app/src/notify.rs:193
 msgid "From {senders}"
 msgstr "De {senders}"
 
