@@ -4498,7 +4498,7 @@ msgid "Check for Updates"
 msgstr "Rechercher des mises à jour"
 
 #: app/src/tray.rs:254 app/src/ui/window.rs:3304
-#: app/src/ui/window/shortcuts.rs:639
+#: app/src/ui/window/shortcuts.rs:644
 msgid "Quit"
 msgstr "Quitter"
 
@@ -11115,14 +11115,18 @@ msgid "Keyboard shortcuts"
 msgstr "Raccourcis clavier"
 
 #: app/src/ui/window/shortcuts.rs:626
+msgid "Show or hide mailboxes"
+msgstr "Afficher ou masquer les boîtes aux lettres"
+
+#: app/src/ui/window/shortcuts.rs:631
 msgid "Show or hide the assistant"
 msgstr "Afficher ou masquer l’assistant"
 
-#: app/src/ui/window/shortcuts.rs:631
+#: app/src/ui/window/shortcuts.rs:636
 msgid "Close window"
 msgstr "Fermer la fenêtre"
 
-#: app/src/ui/window/shortcuts.rs:812
+#: app/src/ui/window/shortcuts.rs:817
 msgid "Checking for mail"
 msgstr "Relève du courrier"
 

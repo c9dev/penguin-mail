@@ -623,6 +623,11 @@ pub(super) static SHORTCUTS: &[Shortcut] = &[
     },
     Shortcut {
         section: Section::General,
+        description: || gettext("Show or hide mailboxes"),
+        keys: &[main("<Primary>b", "win.toggle-mailboxes")],
+    },
+    Shortcut {
+        section: Section::General,
         description: || gettext("Show or hide the assistant"),
         keys: &[main("<Primary>j", "win.assistant")],
     },
@@ -844,6 +849,9 @@ pub(super) static MAIN_ACTIONS: &[(&str, WindowRun)] = &[
         if let Some(app) = win.app.upgrade() {
             app.quit();
         }
+    }),
+    ("toggle-mailboxes", |win| {
+        win.split.set_show_sidebar(!win.split.shows_sidebar())
     }),
 ];
 
@@ -1140,6 +1148,46 @@ mod tests {
     }
 
     #[test]
+    fn primary_b_toggles_mailboxes_only_in_the_main_window() {
+        let shortcut = SHORTCUTS
+            .iter()
+            .find(|s| s.keys.iter().any(|k| k.action == "win.toggle-mailboxes"))
+            .expect("the mailbox toggle is listed in the shortcuts dialog");
+        assert_eq!(shortcut.section, Section::General);
+        assert_eq!(shortcut.accelerators(), "<Primary>b");
+
+        let bound: Vec<_> = keys()
+            .filter(|k| k.trigger == "<Primary>b" && k.place.reaches(Place::Main))
+            .collect();
+        assert_eq!(bound.len(), 1);
+        let key = bound[0];
+        assert_eq!(key.action, "win.toggle-mailboxes");
+        assert_eq!(key.place, Place::Main);
+        assert_eq!(key.argument, None);
+        assert!(!key.letter);
+        assert!(key.shown);
+        assert!(
+            MAIN_ACTIONS
+                .iter()
+                .any(|(name, _)| *name == "toggle-mailboxes")
+        );
+    }
+
+    #[test]
+    fn primary_b_stays_a_composer_formatting_key() {
+        let bound: Vec<_> = keys()
+            .filter(|k| k.trigger == "<Primary>b" && k.place.reaches(Place::Composer))
+            .collect();
+        assert_eq!(bound.len(), 1);
+        assert!(bound[0].action.is_empty());
+        assert!(!bound[0].letter);
+        assert!(bound[0].shown);
+        assert!(
+            !keys().any(|k| { k.trigger == "<Primary>b" && k.place.reaches(Place::Conversation) })
+        );
+    }
+
+    #[test]
     fn the_dialog_lists_the_keys_the_thread_list_opens_a_menu_with() {
         let listed: Vec<&str> = keys()
             .filter(|k| k.place == Place::List)
@@ -1270,6 +1318,7 @@ mod tests {
             "compose",
             "preferences",
             "assistant",
+            "toggle-mailboxes",
             "go-mailbox",
             "show-mail",
         ] {

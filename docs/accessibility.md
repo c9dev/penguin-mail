@@ -108,6 +108,10 @@ runs the same action.
 
 ## The thread list from the keyboard
 
+Ctrl+B (Cmd+B on macOS) shows or hides the sidebar in the main window,
+in both Mail and Calendar. The Keyboard Shortcuts dialog lists it under
+General. In the composer, the same key formats bold text.
+
 The thread list is one Tab stop, like the mailbox list. Its list view
 uses GTK's `ListTabBehavior::Item`, so Tab and Shift+Tab leave it, and
 Up, Down, Home, End, Page Up and Page Down move between rows. Moving

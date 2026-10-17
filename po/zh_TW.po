@@ -4199,7 +4199,7 @@ msgid "Check for Updates"
 msgstr "檢查更新"
 
 #: app/src/tray.rs:254 app/src/ui/window.rs:3304
-#: app/src/ui/window/shortcuts.rs:639
+#: app/src/ui/window/shortcuts.rs:644
 msgid "Quit"
 msgstr "結束"
 
@@ -10533,14 +10533,18 @@ msgid "Keyboard shortcuts"
 msgstr "鍵盤快速鍵"
 
 #: app/src/ui/window/shortcuts.rs:626
+msgid "Show or hide mailboxes"
+msgstr "顯示或隱藏信箱"
+
+#: app/src/ui/window/shortcuts.rs:631
 msgid "Show or hide the assistant"
 msgstr "顯示或隱藏助理"
 
-#: app/src/ui/window/shortcuts.rs:631
+#: app/src/ui/window/shortcuts.rs:636
 msgid "Close window"
 msgstr "關閉視窗"
 
-#: app/src/ui/window/shortcuts.rs:812
+#: app/src/ui/window/shortcuts.rs:817
 msgid "Checking for mail"
 msgstr "正在檢查郵件"
 
