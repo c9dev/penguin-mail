@@ -70,7 +70,8 @@ pub use mailrs_sync::mailbox::Standard;
 use mailrs_sync::mailbox::{folder_icon, folder_name};
 
 /// The modifier the app's shortcuts use: Command on macOS and Control
-/// elsewhere, the way GTK reads `<Primary>` in a trigger.
+/// elsewhere. GTK reads `<Primary>` as Control everywhere, so see
+/// [`primary_accelerator`].
 pub const PRIMARY: gtk::gdk::ModifierType = if cfg!(target_os = "macos") {
     gtk::gdk::ModifierType::META_MASK
 } else {
@@ -84,6 +85,20 @@ pub const SPARE_CONTROL: gtk::gdk::ModifierType = if cfg!(target_os = "macos") {
 } else {
     gtk::gdk::ModifierType::empty()
 };
+
+/// A shortcut trigger for `accelerator`, read by [`primary_accelerator`].
+pub fn primary_trigger(accelerator: &str) -> Option<gtk::ShortcutTrigger> {
+    gtk::ShortcutTrigger::parse_string(&primary_accelerator(accelerator))
+}
+
+/// `accelerator` with `<Primary>` as [`PRIMARY`]: `<Meta>`, GDK's name
+/// for Command, on macOS.
+pub fn primary_accelerator(accelerator: &str) -> String {
+    match cfg!(target_os = "macos") {
+        true => accelerator.replace("<Primary>", "<Meta>"),
+        false => accelerator.to_string(),
+    }
+}
 
 /// The toolbar container above `header`, including its search bar and spacing.
 pub(crate) fn top_bar(header: &adw::HeaderBar) -> Option<gtk::Widget> {

@@ -3284,9 +3284,12 @@ impl MainWindow {
         menu.append_section(None, &calendar);
         let first = gio::Menu::new();
         // The header in both spaces carries a button for this now (R12);
-        // the menu item stays too, so Ctrl+J shows here as well.
+        // the menu item stays too, so its key shows here as well.
         let assistant = gio::MenuItem::new(Some(&gettext("Assistant")), Some("win.assistant"));
-        assistant.set_attribute_value("accel", Some(&"<Primary>j".to_variant()));
+        assistant.set_attribute_value(
+            "accel",
+            Some(&crate::ui::primary_accelerator("<Primary>j").to_variant()),
+        );
         first.append_item(&assistant);
         first.append(Some(&gettext("Check for Mail")), Some("win.check"));
         first.append(Some(&gettext("Add Account…")), Some("win.add-account"));

@@ -1061,7 +1061,7 @@ impl Composer {
         let add = |trigger: &str, run: ComposerAction| {
             let weak = Rc::downgrade(self);
             shortcuts.add_shortcut(gtk::Shortcut::new(
-                gtk::ShortcutTrigger::parse_string(trigger),
+                crate::ui::primary_trigger(trigger),
                 Some(gtk::CallbackAction::new(move |_, _| {
                     if let Some(c) = weak.upgrade() {
                         run(&c);
@@ -1099,7 +1099,7 @@ impl Composer {
         ] {
             let weak = Rc::downgrade(self);
             formatting.add_shortcut(gtk::Shortcut::new(
-                gtk::ShortcutTrigger::parse_string(trigger),
+                crate::ui::primary_trigger(trigger),
                 Some(gtk::CallbackAction::new(move |_, _| {
                     let Some(c) = weak.upgrade() else {
                         return glib::Propagation::Proceed;

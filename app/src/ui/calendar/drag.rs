@@ -398,15 +398,15 @@ pub fn grid_key(key: gtk::gdk::Key, modifiers: gtk::gdk::ModifierType) -> Option
         return None;
     }
     let alt = modifiers.contains(ModifierType::ALT_MASK);
-    let control = modifiers.contains(ModifierType::CONTROL_MASK);
+    let primary = modifiers.contains(crate::ui::PRIMARY);
     let steps = match key {
         Key::Up => -1,
         Key::Down => 1,
-        Key::Left if !alt && !control => return Some(GridKey::Days(-1)),
-        Key::Right if !alt && !control => return Some(GridKey::Days(1)),
+        Key::Left if !alt && !primary => return Some(GridKey::Days(-1)),
+        Key::Right if !alt && !primary => return Some(GridKey::Days(1)),
         _ => return None,
     };
-    match (alt, control) {
+    match (alt, primary) {
         (false, false) => Some(GridKey::Move(steps)),
         (true, false) => Some(GridKey::End(steps)),
         (false, true) => Some(GridKey::Start(steps)),
@@ -1076,7 +1076,7 @@ mod tests {
             Some(GridKey::End(1))
         );
         assert_eq!(
-            grid_key(Key::Up, shift | M::CONTROL_MASK),
+            grid_key(Key::Up, shift | crate::ui::PRIMARY),
             Some(GridKey::Start(-1))
         );
         assert_eq!(grid_key(Key::Right, shift), Some(GridKey::Days(1)));
@@ -1086,9 +1086,9 @@ mod tests {
     fn the_grid_keys_want_shift() {
         use gtk::gdk::{Key, ModifierType as M};
         assert_eq!(grid_key(Key::Up, M::empty()), None);
-        assert_eq!(grid_key(Key::Up, M::CONTROL_MASK), None);
+        assert_eq!(grid_key(Key::Up, crate::ui::PRIMARY), None);
         assert_eq!(
-            grid_key(Key::Up, M::SHIFT_MASK | M::CONTROL_MASK | M::ALT_MASK),
+            grid_key(Key::Up, M::SHIFT_MASK | crate::ui::PRIMARY | M::ALT_MASK),
             None
         );
     }

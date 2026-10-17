@@ -753,7 +753,7 @@ fn chords(window: Place) -> gtk::ShortcutController {
     let controller = gtk::ShortcutController::new();
     for key in keys().filter(|k| !k.letter && k.place.reaches(window)) {
         let shortcut = gtk::Shortcut::new(
-            gtk::ShortcutTrigger::parse_string(key.trigger),
+            crate::ui::primary_trigger(key.trigger),
             Some(gtk::NamedAction::new(key.action)),
         );
         if let Some(argument) = key.argument {
@@ -785,7 +785,7 @@ pub(super) fn dialog(filing: Filing) -> adw::ShortcutsDialog {
         for shortcut in SHORTCUTS.iter().filter(|s| s.section == section) {
             group.add(adw::ShortcutsItem::new(
                 &shortcut.line(filing),
-                &shortcut.accelerators(),
+                &crate::ui::primary_accelerator(&shortcut.accelerators()),
             ));
         }
         dialog.add(group);
