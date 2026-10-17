@@ -211,6 +211,14 @@ const SURFACES_CLASS: &str = "app-surfaces";
 /// Marks a window while the desktop accent is orange, so style.css can
 /// give filled controls the darker orange that holds white text at AA.
 const ACCENT_ORANGE_CLASS: &str = "accent-orange";
+/// What the mailbox sidebar's 256 counts in. GTK on macOS takes 72 dots
+/// per inch, where 256 sp comes out at 192 px: narrower than "Mailboxes"
+/// beside the window's buttons, which share the sidebar's header there.
+const SIDEBAR_UNIT: adw::LengthUnit = if cfg!(target_os = "macos") {
+    adw::LengthUnit::Px
+} else {
+    adw::LengthUnit::Sp
+};
 
 /// Puts [`DARK_CLASS`] on `window` while libadwaita is dark, and keeps it
 /// current for as long as the window lives. Every toplevel `adw::Window`
@@ -641,6 +649,7 @@ impl MainWindow {
                 .sidebar(&sidebar.page)
                 .content(&spaces)
                 .css_classes(["inset-sidebar"])
+                .sidebar_width_unit(SIDEBAR_UNIT)
                 .min_sidebar_width(256.0)
                 .max_sidebar_width(256.0)
                 .sidebar_width_fraction(0.178)
