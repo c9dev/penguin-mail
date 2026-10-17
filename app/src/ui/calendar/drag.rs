@@ -394,6 +394,7 @@ pub enum GridKey {
 /// is one of the grid's own keys, which all hold Shift.
 pub fn grid_key(key: gtk::gdk::Key, modifiers: gtk::gdk::ModifierType) -> Option<GridKey> {
     use gtk::gdk::{Key, ModifierType};
+    let modifiers = crate::ui::command_key::as_control(modifiers);
     if !modifiers.contains(ModifierType::SHIFT_MASK) {
         return None;
     }

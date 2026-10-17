@@ -15,6 +15,8 @@ the [releases page](https://github.com/c9dev/penguin-mail/releases).
 - Microsoft messages with attachments open without the contentId request error.
 - IMAP Junk and Trash show messages on the server even when they have not synced to this computer.
 - Opening Preferences or About while it is already open no longer stacks a second one on top.
+- On macOS, Command works in place of Control for the keys in Keyboard Shortcuts and for pasting a picture, such as Command-W to close a window and Command-Z to undo.
+- On macOS, Command with a letter no longer also runs that letter's one-key shortcut, such as Command-C opening a new message.
 
 ## 1.0.9 (2026-10-16)
 

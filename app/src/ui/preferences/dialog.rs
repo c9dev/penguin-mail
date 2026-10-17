@@ -205,7 +205,10 @@ impl Dialog {
             let Some(this) = weak.upgrade() else {
                 return glib::Propagation::Proceed;
             };
-            if key == gtk::gdk::Key::f && modifiers.contains(gtk::gdk::ModifierType::CONTROL_MASK) {
+            if key == gtk::gdk::Key::f
+                && crate::ui::command_key::as_control(modifiers)
+                    .contains(gtk::gdk::ModifierType::CONTROL_MASK)
+            {
                 this.searching.set_active(true);
                 this.search.grab_focus();
                 return glib::Propagation::Stop;

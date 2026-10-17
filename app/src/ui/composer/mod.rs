@@ -1061,7 +1061,7 @@ impl Composer {
         let add = |trigger: &str, run: ComposerAction| {
             let weak = Rc::downgrade(self);
             shortcuts.add_shortcut(gtk::Shortcut::new(
-                gtk::ShortcutTrigger::parse_string(trigger),
+                crate::ui::command_key::trigger(trigger),
                 Some(gtk::CallbackAction::new(move |_, _| {
                     if let Some(c) = weak.upgrade() {
                         run(&c);
@@ -1099,7 +1099,7 @@ impl Composer {
         ] {
             let weak = Rc::downgrade(self);
             formatting.add_shortcut(gtk::Shortcut::new(
-                gtk::ShortcutTrigger::parse_string(trigger),
+                crate::ui::command_key::trigger(trigger),
                 Some(gtk::CallbackAction::new(move |_, _| {
                     let Some(c) = weak.upgrade() else {
                         return glib::Propagation::Proceed;
@@ -2765,7 +2765,8 @@ impl Composer {
             let Some(c) = weak.upgrade() else {
                 return glib::Propagation::Proceed;
             };
-            let paste = modifiers.contains(gdk::ModifierType::CONTROL_MASK)
+            let paste = crate::ui::command_key::as_control(modifiers)
+                .contains(gdk::ModifierType::CONTROL_MASK)
                 && matches!(key, gdk::Key::v | gdk::Key::V);
             let clipboard = c.body.clipboard();
             let formats = clipboard.formats();

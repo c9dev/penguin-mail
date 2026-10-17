@@ -176,7 +176,9 @@ impl Key {
     /// into `J`'s shortcut. Keys that type no character, such as Delete,
     /// match on the key and ignore Shift. Control names the one modifier a
     /// letter may carry, and then no other: Ctrl+Shift+A is not Ctrl+A.
+    /// On macOS, Command counts as Control.
     pub(super) fn pressed(&self, pressed: gdk::Key, modifiers: gdk::ModifierType) -> bool {
+        let modifiers = crate::ui::command_key::as_control(modifiers);
         let (control, name) = strip(self.trigger, "<Control>");
         let (shift, name) = strip(name, "<Shift>");
         let Some(wanted) = gdk::Key::from_name(name) else {
@@ -749,7 +751,7 @@ fn chords(window: Place) -> gtk::ShortcutController {
     let controller = gtk::ShortcutController::new();
     for key in keys().filter(|k| !k.letter && k.place.reaches(window)) {
         let shortcut = gtk::Shortcut::new(
-            gtk::ShortcutTrigger::parse_string(key.trigger),
+            crate::ui::command_key::trigger(key.trigger),
             Some(gtk::NamedAction::new(key.action)),
         );
         if let Some(argument) = key.argument {
@@ -1029,7 +1031,8 @@ impl MainWindow {
             return glib::Propagation::Proceed;
         };
         // In the message itself, Control keys select and copy its text.
-        if modifiers.contains(gdk::ModifierType::CONTROL_MASK) && self.reading_text() {
+        let control = crate::ui::command_key::as_control(modifiers);
+        if control.contains(gdk::ModifierType::CONTROL_MASK) && self.reading_text() {
             return glib::Propagation::Proceed;
         }
         // Escape belongs to whatever is under it unless there is a
@@ -1364,5 +1367,25 @@ mod tests {
         assert_eq!(action(gdk::Key::a, control | shift), None);
         assert_eq!(action(gdk::Key::e, control), None);
         assert_eq!(action(gdk::Key::e, gdk::ModifierType::ALT_MASK), None);
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn command_stands_for_control_on_macos() {
+        use crate::ui::calendar::drag::{GridKey, grid_key};
+        let command = gdk::ModifierType::META_MASK;
+        let shift = gdk::ModifierType::SHIFT_MASK;
+        let action = |key, modifiers| letter_for(key, modifiers).map(|k| k.action);
+        assert_eq!(action(gdk::Key::z, command), Some("win.undo"));
+        assert_eq!(action(gdk::Key::a, command), Some("win.select-all"));
+        assert_eq!(action(gdk::Key::a, command | shift), None);
+        assert_eq!(
+            calendar_key(gdk::Key::f, command),
+            Some(CalendarKey::Search)
+        );
+        assert_eq!(
+            grid_key(gdk::Key::Up, command | shift),
+            Some(GridKey::Start(-1))
+        );
     }
 }
