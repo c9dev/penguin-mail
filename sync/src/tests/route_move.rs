@@ -4,7 +4,7 @@
 
 use std::sync::{Arc, Mutex};
 
-use mailrs_domain::{MailRoute, Provider, SignInClient};
+use mailrs_domain::{AccountState, MailRoute, Provider, SignInClient};
 use mailrs_gmail::{Authorized, GmailError, Granted, TokenStore};
 use mailrs_store::accounts::{self, Consent, GoogleSignIn, RouteCommit};
 use mailrs_store::outbox::{self, Queued};
@@ -15,7 +15,7 @@ use crate::fake::meta;
 use crate::passwords::{PasswordStore, Secrets};
 use crate::route_move::{DRAIN_WAIT, MoveError, commit, drain, needs_move, to_own_client};
 use crate::sign_in::own_client::OwnClient;
-use crate::{Outbox, TriageAction, now_millis};
+use crate::{Outbox, Posted, TriageAction, now_millis};
 
 const OLD_GRANTED: &str = "openid email gmail.modify";
 const OLD_ASKED: &str = "openid email gmail.modify calendar";
@@ -268,18 +268,7 @@ async fn queued_work_lands_before_the_move() {
         h.fake.seed(meta(message, thread, now, &["INBOX"]));
     }
     h.bootstrap_all().await;
-    let due = Queued {
-        account_id: h.account_id,
-        subject: "Report".into(),
-        recipients: "ann@example.com".into(),
-        send_at: now,
-        raw: Some(b"Subject: Report\r\n\r\nhello".to_vec()),
-        composer: "{}".into(),
-        ..Queued::default()
-    };
-    h.db.write(move |c| outbox::put(c, &due).map(drop))
-        .await
-        .unwrap();
+    queue_due(&h, "Report").await;
 
     // The first write waits at Gmail; the other two queue behind it.
     let mut first = h.fake.hold("users.messages.modify");
@@ -293,21 +282,13 @@ async fn queued_work_lands_before_the_move() {
         tokio::spawn(async move { sync.triage_thread(thread, &action).await })
     });
     first.entered().await;
-    // Long enough for the other two to reach the write lock: they only
-    // read the store before it.
-    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    assert!(eventually(|| h.sync.mail().moves_waiting() == 2).await);
 
-    let outbox = Outbox::new(
-        Arc::new(Connected(
-            [(h.account_id, Arc::clone(&h.sync))].into_iter().collect(),
-        )),
-        h.db.clone(),
-    );
-    // Gmail lets the first write go only once the send went out, so a
-    // drain that stopped after the send would leave all three running.
-    let (drained, ()) = tokio::join!(drain(&h.sync, &outbox, now, DRAIN_WAIT), async {
-        assert!(eventually(|| h.fake.with(|s| s.sent.len()) == 1).await);
-        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+    let outbox = outbox_of(&h);
+    // Gmail lets the first write go only once the drain waits behind the
+    // other two, so a drain that stopped after the send would end first.
+    let (drained, ()) = tokio::join!(drain(&h.sync, &outbox, now_millis(), DRAIN_WAIT), async {
+        assert!(eventually(|| h.sync.mail().moves_waiting() == 3).await);
         first.release()
     });
 
@@ -323,6 +304,131 @@ async fn queued_work_lands_before_the_move() {
     for write in writes {
         write.await.unwrap().unwrap();
     }
+}
+
+/// A message to `subject`'s reader, due now and in no row yet.
+fn due(h: &Harness, subject: &str) -> Queued {
+    Queued {
+        account_id: h.account_id,
+        subject: subject.into(),
+        recipients: "ann@example.com".into(),
+        send_at: now_millis(),
+        raw: Some(format!("Subject: {subject}\r\n\r\nhello").into_bytes()),
+        composer: "{}".into(),
+        ..Queued::default()
+    }
+}
+
+/// Puts a message due now in the outbox and answers its row id.
+async fn queue_due(h: &Harness, subject: &str) -> i64 {
+    let due = due(h, subject);
+    h.db.write(move |c| outbox::put(c, &due)).await.unwrap()
+}
+
+fn outbox_of(h: &Harness) -> Outbox<Connected> {
+    Outbox::new(
+        Arc::new(Connected(
+            [(h.account_id, Arc::clone(&h.sync))].into_iter().collect(),
+        )),
+        h.db.clone(),
+    )
+}
+
+async fn row(h: &Harness, id: i64) -> Queued {
+    h.db.read(move |c| outbox::find(c, id))
+        .await
+        .unwrap()
+        .expect("the message still waits")
+}
+
+/// Whether the row waits as it did before anything tried it.
+fn untried(row: &Queued) -> bool {
+    row.attempts == 0 && row.problem.is_none()
+}
+
+async fn pause(h: &Harness) {
+    let id = h.account_id;
+    h.db.write(move |c| accounts::set_state(c, id, AccountState::MailPaused))
+        .await
+        .unwrap();
+}
+
+/// What the move leaves: the same account, on an own client.
+async fn moved(h: &Harness) {
+    let id = h.account_id;
+    h.db.write(move |c| accounts::set_sign_in_client(c, id, SignInClient::Own))
+        .await
+        .unwrap();
+}
+
+#[tokio::test]
+async fn a_paused_drain_keeps_the_send_for_the_new_route() {
+    let h = harness().await;
+    pause(&h).await;
+    let id = queue_due(&h, "Report").await;
+
+    assert!(drain(&h.sync, &outbox_of(&h), now_millis(), DRAIN_WAIT).await);
+    assert_eq!(h.fake.with(|s| s.usage.calls_to("users.messages.send")), 0);
+    assert!(untried(&row(&h, id).await));
+
+    moved(&h).await;
+    outbox_of(&h).send_due(now_millis()).await.unwrap();
+    assert_eq!(h.fake.with(|s| s.sent.len()), 1);
+}
+
+#[tokio::test]
+async fn a_drain_refused_by_the_old_route_keeps_the_sends_for_the_new_one() {
+    let h = harness().await;
+    let first = queue_due(&h, "Report").await;
+    let second = queue_due(&h, "Minutes").await;
+    h.fake.fail_next(GmailError::NeedsReauth);
+
+    assert!(drain(&h.sync, &outbox_of(&h), now_millis(), DRAIN_WAIT).await);
+    assert_eq!(
+        h.fake.with(|s| s.sent.len()),
+        0,
+        "the drain ended at the refusal"
+    );
+    assert!(untried(&row(&h, first).await));
+    assert!(untried(&row(&h, second).await));
+
+    moved(&h).await;
+    outbox_of(&h).send_due(now_millis()).await.unwrap();
+    assert_eq!(h.fake.with(|s| s.sent.len()), 2);
+}
+
+#[tokio::test]
+async fn the_outbox_leaves_a_paused_accounts_mail_until_it_moves() {
+    let h = harness().await;
+    pause(&h).await;
+    let id = queue_due(&h, "Report").await;
+    let outbox = outbox_of(&h);
+
+    outbox.send_due(now_millis()).await.unwrap();
+    let posted = outbox.send_one(id).await.unwrap();
+    assert_eq!(posted, Posted::Waiting(id));
+    assert_eq!(h.fake.with(|s| s.usage.calls_to("users.messages.send")), 0);
+    assert!(untried(&row(&h, id).await));
+
+    moved(&h).await;
+    outbox.send_due(now_millis()).await.unwrap();
+    assert_eq!(h.fake.with(|s| s.sent.len()), 1);
+}
+
+#[tokio::test]
+async fn a_send_the_old_route_refuses_waits_for_the_new_one() {
+    let h = harness().await;
+    let outbox = outbox_of(&h);
+    h.fake.fail_next(GmailError::MissingScope);
+
+    let Posted::Waiting(id) = outbox.post(due(&h, "Report")).await.unwrap() else {
+        panic!("the message should wait for the new route");
+    };
+    assert!(untried(&row(&h, id).await));
+
+    moved(&h).await;
+    outbox.send_due(now_millis()).await.unwrap();
+    assert_eq!(h.fake.with(|s| s.sent.len()), 1);
 }
 
 #[test]

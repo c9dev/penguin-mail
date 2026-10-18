@@ -49,6 +49,10 @@ pub(crate) struct StoreMail {
     /// folder server read a moved message's old place as expunged and
     /// delete it.
     moving: Arc<Mutex<()>>,
+    /// How many callers wait for `moving` now, for a test that has to know
+    /// a write is queued behind another.
+    #[cfg(test)]
+    waiting: std::sync::atomic::AtomicUsize,
 }
 
 /// The move lock, held: what a write and a sync pass do while holding it.
@@ -118,6 +122,8 @@ impl StoreMail {
             account_id,
             renames,
             moving: Arc::new(Mutex::new(())),
+            #[cfg(test)]
+            waiting: std::sync::atomic::AtomicUsize::new(0),
         }
     }
 
@@ -140,10 +146,23 @@ impl StoreMail {
     /// mail back where it was, on any server. On IMAP a move also renames
     /// the message, which a pass must not read halfway.
     pub(crate) async fn hold_moves(&self) -> Moves<'_> {
+        #[cfg(test)]
+        self.waiting
+            .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        let held = self.moving.lock().await;
+        #[cfg(test)]
+        self.waiting
+            .fetch_sub(1, std::sync::atomic::Ordering::SeqCst);
         Moves {
             mail: self,
-            _held: self.moving.lock().await,
+            _held: held,
         }
+    }
+
+    /// How many callers of [`StoreMail::hold_moves`] wait for the lock.
+    #[cfg(test)]
+    pub(crate) fn moves_waiting(&self) -> usize {
+        self.waiting.load(std::sync::atomic::Ordering::SeqCst)
     }
 
     /// The server's name for each of `ids`, in the same order: what a
