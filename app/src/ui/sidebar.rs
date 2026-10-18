@@ -2050,6 +2050,8 @@ fn status_of(account: &Account) -> Option<(&'static str, String)> {
             "dialog-warning-symbolic",
             gettext("Syncing stopped after an error; restart Penguin Mail to try again"),
         )),
+        // The move banner and the sidebar line come with the route choice.
+        AccountState::MailPaused => None,
         AccountState::Ok => None,
     }
 }

@@ -1,5 +1,5 @@
-use mailrs_domain::{AccountState, Provider, SignInClient};
-use mailrs_store::accounts::{self, SyncCursor};
+use mailrs_domain::{AccountState, MailRoute, Provider, SignInClient};
+use mailrs_store::accounts::{self, GoogleSignIn, RouteCommit, SyncCursor};
 use mailrs_store::{open_connection, open_in_memory, schema_version};
 
 #[test]
@@ -7,10 +7,10 @@ fn migrations_run_once_and_record_the_version() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("mail.db");
     let conn = open_connection(&path).unwrap();
-    assert_eq!(schema_version(&conn).unwrap(), 64);
+    assert_eq!(schema_version(&conn).unwrap(), 65);
     drop(conn);
     let conn = open_connection(&path).unwrap();
-    assert_eq!(schema_version(&conn).unwrap(), 64);
+    assert_eq!(schema_version(&conn).unwrap(), 65);
 }
 
 #[test]
@@ -284,4 +284,88 @@ fn a_microsoft_account_keeps_its_provider_and_name() {
         accounts::insert_microsoft_account(&conn, "dana@gmail.com", "Outlook", 0).unwrap(),
         None
     );
+}
+
+#[test]
+fn a_mail_route_round_trips() {
+    let conn = open_in_memory().unwrap();
+    let id = accounts::insert_account(&conn, "dana@gmail.com", 1).unwrap();
+    assert_eq!(accounts::mail_route(&conn, id).unwrap(), MailRoute::GmailApi);
+    accounts::set_mail_route(&conn, id, MailRoute::Imap).unwrap();
+    assert_eq!(accounts::mail_route(&conn, id).unwrap(), MailRoute::Imap);
+}
+
+#[test]
+fn a_bad_stored_route_reads_as_corrupt() {
+    let conn = open_in_memory().unwrap();
+    let id = accounts::insert_account(&conn, "dana@gmail.com", 1).unwrap();
+    conn.execute("UPDATE accounts SET mail_route = 'pigeon'", []).unwrap();
+    assert!(matches!(
+        accounts::mail_route(&conn, id),
+        Err(mailrs_store::StoreError::Corrupt { column: "accounts.mail_route", .. })
+    ));
+}
+
+#[test]
+fn google_sign_ins_list_only_gmail_rows() {
+    let conn = open_in_memory().unwrap();
+    let gmail = accounts::insert_account(&conn, "dana@gmail.com", 1).unwrap();
+    accounts::insert_imap_account(&conn, "lee@fastmail.com", "Fastmail", 1).unwrap();
+    let all = accounts::google_sign_ins(&conn).unwrap();
+    assert_eq!(all.len(), 1);
+    assert_eq!(
+        all[&gmail],
+        GoogleSignIn { client: SignInClient::BuiltIn, route: MailRoute::GmailApi }
+    );
+}
+
+#[test]
+fn only_a_built_in_gmail_account_on_the_api_needs_a_move() {
+    let sign_in = |client, route| GoogleSignIn { client, route };
+    let api = sign_in(SignInClient::BuiltIn, MailRoute::GmailApi);
+    assert!(api.needs_move(Provider::Gmail));
+    assert!(!api.needs_move(Provider::Imap));
+    assert!(!sign_in(SignInClient::Own, MailRoute::GmailApi).needs_move(Provider::Gmail));
+    assert!(!sign_in(SignInClient::BuiltIn, MailRoute::Imap).needs_move(Provider::Gmail));
+}
+
+#[test]
+fn committing_a_route_restarts_the_sync_and_keeps_the_generation() {
+    let conn = open_in_memory().unwrap();
+    let id = accounts::insert_account(&conn, "dana@gmail.com", 1).unwrap();
+    accounts::set_sync_state(&conn, id, "12345").unwrap();
+    let before = accounts::sync_cursor(&conn, id).unwrap().sync_gen;
+    accounts::commit_route(
+        &conn,
+        id,
+        &RouteCommit {
+            route: MailRoute::Imap,
+            client: SignInClient::BuiltIn,
+            restart_sync: true,
+        },
+    )
+    .unwrap();
+    let cursor = accounts::sync_cursor(&conn, id).unwrap();
+    assert_eq!(cursor.state, None);
+    assert_eq!(cursor.sync_gen, before);
+    assert_eq!(accounts::mail_route(&conn, id).unwrap(), MailRoute::Imap);
+}
+
+#[test]
+fn committing_a_route_without_a_restart_keeps_the_cursor() {
+    let conn = open_in_memory().unwrap();
+    let id = accounts::insert_account(&conn, "dana@gmail.com", 1).unwrap();
+    accounts::set_sync_state(&conn, id, "12345").unwrap();
+    accounts::commit_route(
+        &conn,
+        id,
+        &RouteCommit {
+            route: MailRoute::GmailApi,
+            client: SignInClient::Own,
+            restart_sync: false,
+        },
+    )
+    .unwrap();
+    assert_eq!(accounts::sync_cursor(&conn, id).unwrap().state.as_deref(), Some("12345"));
+    assert_eq!(accounts::sign_in_client(&conn, id).unwrap(), SignInClient::Own);
 }

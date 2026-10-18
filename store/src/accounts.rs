@@ -1,8 +1,11 @@
 //! Accounts and their sync cursors.
 
 use mailrs_domain::{
-    Account, AccountId, AccountState, EpochMillis, Provider, RemoveSetting, SignInClient,
+    Account, AccountId, AccountState, EpochMillis, MailRoute, Provider, RemoveSetting,
+    SignInClient,
 };
+use std::collections::HashMap;
+
 use rusqlite::{Connection, OptionalExtension, params};
 
 use crate::{Result, StoreError};
@@ -304,6 +307,108 @@ pub fn set_sign_in_client(conn: &Connection, id: AccountId, client: SignInClient
     conn.execute(
         "UPDATE accounts SET oauth_client = ?2 WHERE id = ?1",
         params![id, client.as_str()],
+    )?;
+    Ok(())
+}
+
+/// Where `id`'s Gmail mail comes from. Only a Gmail account reads it.
+pub fn mail_route(conn: &Connection, id: AccountId) -> Result<MailRoute> {
+    let value: String = conn.query_row(
+        "SELECT mail_route FROM accounts WHERE id = ?1",
+        params![id],
+        |row| row.get(0),
+    )?;
+    parse_route(value)
+}
+
+fn parse_route(value: String) -> Result<MailRoute> {
+    value.parse().map_err(|_| StoreError::Corrupt {
+        column: "accounts.mail_route",
+        value,
+    })
+}
+
+/// Records where `id`'s Gmail mail comes from.
+pub fn set_mail_route(conn: &Connection, id: AccountId, route: MailRoute) -> Result<()> {
+    conn.execute(
+        "UPDATE accounts SET mail_route = ?2 WHERE id = ?1",
+        params![id, route.as_str()],
+    )?;
+    Ok(())
+}
+
+/// How a Gmail account signs in to Google and where its mail comes from.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct GoogleSignIn {
+    pub client: SignInClient,
+    pub route: MailRoute,
+}
+
+impl GoogleSignIn {
+    /// Whether the account has to choose a new route: a Gmail account on
+    /// the built-in client that still reads its mail through the API.
+    pub fn needs_move(self, provider: Provider) -> bool {
+        provider == Provider::Gmail
+            && self.client == SignInClient::BuiltIn
+            && self.route == MailRoute::GmailApi
+    }
+}
+
+/// The client and route of every Gmail account, read in one query.
+pub fn google_sign_ins(conn: &Connection) -> Result<HashMap<AccountId, GoogleSignIn>> {
+    let mut stmt =
+        conn.prepare("SELECT id, oauth_client, mail_route FROM accounts WHERE provider = ?1")?;
+    let rows = stmt.query_map(params![Provider::Gmail.as_str()], |row| {
+        Ok((
+            row.get::<_, AccountId>(0)?,
+            row.get::<_, String>(1)?,
+            row.get::<_, String>(2)?,
+        ))
+    })?;
+    let mut all = HashMap::new();
+    for row in rows {
+        let (id, client, route) = row?;
+        let client = client.parse().map_err(|_| StoreError::Corrupt {
+            column: "accounts.oauth_client",
+            value: client,
+        })?;
+        all.insert(
+            id,
+            GoogleSignIn {
+                client,
+                route: parse_route(route)?,
+            },
+        );
+    }
+    Ok(all)
+}
+
+/// What a move to another route writes in one step.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct RouteCommit {
+    pub route: MailRoute,
+    pub client: SignInClient,
+    /// Start the account's sync over, because the new route has no cursor
+    /// the old one's would fit. Stored mail stays.
+    pub restart_sync: bool,
+}
+
+/// Writes a route and the client that goes with it in one statement, so a
+/// failure leaves neither half. `sync_gen` stays, as in a switch of folders.
+pub fn commit_route(conn: &Connection, id: AccountId, commit: &RouteCommit) -> Result<()> {
+    conn.execute(
+        "UPDATE accounts SET mail_route = ?2, oauth_client = ?3, \
+         sync_state = CASE WHEN ?4 THEN NULL ELSE sync_state END, \
+         backfill_cursor = CASE WHEN ?4 THEN NULL ELSE backfill_cursor END, \
+         backfill_done = CASE WHEN ?4 THEN 0 ELSE backfill_done END, \
+         backfill_extends = CASE WHEN ?4 THEN 0 ELSE backfill_extends END \
+         WHERE id = ?1",
+        params![
+            id,
+            commit.route.as_str(),
+            commit.client.as_str(),
+            commit.restart_sync
+        ],
     )?;
     Ok(())
 }

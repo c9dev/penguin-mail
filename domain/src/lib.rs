@@ -63,10 +63,13 @@ pub enum AccountState {
     /// Starting the account gave up on a keyring read that did not
     /// answer, and tries again later. The provider is not at fault.
     WaitingForKeyring,
+    /// A Gmail account on the built-in client whose token no longer reads
+    /// mail. Stored mail stays, and the window offers the route choice.
+    MailPaused,
 }
 
 impl AccountState {
-    pub const ALL: [AccountState; 7] = [
+    pub const ALL: [AccountState; 8] = [
         AccountState::Ok,
         AccountState::Bootstrapping,
         AccountState::NeedsReauth,
@@ -74,6 +77,7 @@ impl AccountState {
         AccountState::Offline,
         AccountState::Stopped,
         AccountState::WaitingForKeyring,
+        AccountState::MailPaused,
     ];
 
     pub fn as_str(self) -> &'static str {
@@ -85,6 +89,7 @@ impl AccountState {
             AccountState::Offline => "offline",
             AccountState::Stopped => "stopped",
             AccountState::WaitingForKeyring => "waiting_for_keyring",
+            AccountState::MailPaused => "mail_paused",
         }
     }
 }
@@ -167,6 +172,38 @@ impl FromStr for SignInClient {
         match s {
             "own" => Ok(SignInClient::Own),
             "built_in" => Ok(SignInClient::BuiltIn),
+            other => Err(UnknownVariant(other.to_string())),
+        }
+    }
+}
+
+/// Where a Gmail account's mail comes from. The account stays a Gmail
+/// account either way; [`SignInClient`] still names who issued its token.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum MailRoute {
+    /// The Gmail API, as every Gmail account read before routes existed.
+    #[default]
+    GmailApi,
+    /// Gmail's IMAP and SMTP servers.
+    Imap,
+}
+
+impl MailRoute {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            MailRoute::GmailApi => "gmail_api",
+            MailRoute::Imap => "imap",
+        }
+    }
+}
+
+impl FromStr for MailRoute {
+    type Err = UnknownVariant;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "gmail_api" => Ok(MailRoute::GmailApi),
+            "imap" => Ok(MailRoute::Imap),
             other => Err(UnknownVariant(other.to_string())),
         }
     }
@@ -685,6 +722,26 @@ pub struct Vacation {
 
 #[cfg(test)]
 pub(crate) mod tests {
+    use crate::{AccountState, MailRoute};
+
+    #[test]
+    fn mail_routes_round_trip_through_their_names() {
+        for route in [MailRoute::GmailApi, MailRoute::Imap] {
+            assert_eq!(route.as_str().parse::<MailRoute>(), Ok(route));
+        }
+        assert_eq!(MailRoute::default(), MailRoute::GmailApi);
+        assert!("pigeon".parse::<MailRoute>().is_err());
+    }
+
+    #[test]
+    fn mail_paused_is_a_state_of_its_own() {
+        assert_eq!(
+            "mail_paused".parse::<AccountState>(),
+            Ok(AccountState::MailPaused)
+        );
+        assert!(AccountState::ALL.contains(&AccountState::MailPaused));
+    }
+
     #[test]
     fn a_read_only_rule_says_so_in_json_and_an_ordinary_one_says_nothing() {
         let plain = crate::Filter::block("pest@example.com");
