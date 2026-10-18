@@ -34,9 +34,9 @@ pub use model::{
     is_reserved_label_name,
 };
 pub use oauth::{
-    AccessToken, DELETE_SCOPE, DRIVE_FILE_SCOPE, GMAIL_SCOPE, Granted, LoopbackListener,
-    OAuthClient, Pkce, SETTINGS_SCOPE, SIGN_IN_SCOPES, Tokens, built_in_client, client_from,
-    parse_redirect, random_token,
+    AccessToken, BUILT_IN_SCOPES, DELETE_SCOPE, DRIVE_FILE_SCOPE, FULL_SCOPES, GMAIL_SCOPE,
+    Granted, IdToken, LoopbackListener, OAuthClient, Pkce, SETTINGS_SCOPE, SIGN_IN_SCOPES,
+    ScopeList, Tokens, built_in_client, client_from, parse_redirect, random_token,
 };
 pub use people::{CONTACTS_SCOPE, CONTACTS_WRITE_SCOPE, ConnectionsPage, ContactFields, Person};
 pub use token_store::{KeyringTokenStore, MemoryTokenStore, TokenStore};

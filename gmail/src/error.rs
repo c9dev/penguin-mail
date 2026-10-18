@@ -16,6 +16,10 @@ pub enum GmailError {
     /// anything else.
     #[error("the account did not allow access to its mail")]
     MailNotGranted,
+    /// A sign-in without a mail scope gave no verified address in its ID
+    /// token, and the Gmail profile is out of reach without that scope.
+    #[error("Google did not say which address signed in")]
+    NoAddress,
     /// The Google Cloud project behind the OAuth client has this API
     /// switched off. Google refuses before any question of permission, so
     /// only turning it on at `enable_url` helps.

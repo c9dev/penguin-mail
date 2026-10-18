@@ -74,7 +74,7 @@ pub async fn account_client<P: PasswordStore + 'static>(
 /// start on an IMAP account's row.
 ///
 /// `granted` is the scopes Google's token answer said it carries, and
-/// `asked` the ones this consent asked for: every [`mailrs_gmail::SIGN_IN_SCOPES`]
+/// `asked` the ones this consent asked for: every [`mailrs_gmail::FULL_SCOPES`]
 /// entry, joined with spaces. Both go on the account row so a later
 /// feature can tell a scope the person unticked from one nobody has
 /// asked for yet.

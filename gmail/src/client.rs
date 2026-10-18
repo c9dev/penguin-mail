@@ -1066,12 +1066,16 @@ impl std::fmt::Debug for Authorized {
     }
 }
 
-/// Runs the consent flow for one account, asking for every
-/// [`crate::SIGN_IN_SCOPES`] entry in one visit. `open_browser` receives
-/// Google's consent URL; the flow finishes when the browser redirects
-/// back. Fails with [`GmailError::MailNotGranted`] when the person
-/// unticked mail itself, before asking Gmail for anything that would only
-/// answer 403.
+/// Runs the consent flow for one account, asking for every scope of the
+/// client's list in one visit. `open_browser` receives Google's consent
+/// URL; the flow finishes when the browser redirects back.
+///
+/// With [`crate::ScopeList::Full`] it fails with
+/// [`GmailError::MailNotGranted`] when the person unticked mail itself,
+/// before asking Gmail for anything that would only answer 403, and reads
+/// the address from the profile. With [`crate::ScopeList::BuiltIn`] the
+/// token cannot call the profile, so the address comes from a verified ID
+/// token, and [`GmailError::NoAddress`] answers when there is none.
 pub async fn authorize(
     oauth: &OAuthClient,
     api_base: &str,
@@ -1084,15 +1088,22 @@ pub async fn authorize(
     open_browser(&oauth.authorize_url(&redirect_uri, &pkce, &state)?);
     let code = listener.wait_for_code(&state).await?;
     let tokens = oauth.exchange_code(&code, &redirect_uri, &pkce).await?;
-    if tokens
-        .access
-        .granted
-        .as_ref()
-        .is_some_and(|g| !g.reads_mail())
-    {
+    let granted = tokens.access.granted.clone();
+    if !oauth.scope_list().asks_mail() {
+        let email = tokens
+            .id_token
+            .filter(|id| id.email_verified)
+            .map(|id| id.email)
+            .ok_or(GmailError::NoAddress)?;
+        return Ok(Authorized {
+            email,
+            refresh_token: tokens.refresh_token,
+            granted,
+        });
+    }
+    if granted.as_ref().is_some_and(|g| !g.reads_mail()) {
         return Err(GmailError::MailNotGranted);
     }
-    let granted = tokens.access.granted.clone();
     let client = GmailClient::new(oauth.clone(), tokens.refresh_token.clone())
         .with_base_url(api_base)
         .with_access_token(tokens.access);
