@@ -11,6 +11,7 @@ use mailrs_store::services::{self, FoundService, ServiceKind};
 use mailrs_store::{Db, accounts};
 
 use crate::config::Config;
+use crate::connect::gmail_route::google_side;
 use crate::passwords::{PasswordStore, Secrets};
 use crate::services::{AnyIdentities, AnyMail};
 use crate::sign_in::own_client::{ID_VAR, OwnClient, OwnClientError, SECRET_VAR};
@@ -2179,4 +2180,82 @@ async fn the_calendar_consent_is_refused_for_another_address() {
         "{:?}",
         refused.err()
     );
+}
+
+async fn on_imap_route(db: &Db, me: &Account) {
+    let id = me.id;
+    db.write(move |c| accounts::set_mail_route(c, id, MailRoute::Imap))
+        .await
+        .unwrap();
+}
+
+#[tokio::test]
+async fn an_api_account_gets_every_google_service() {
+    let (db, _dir) = store().await;
+    let me = gmail_account(&db).await;
+    let reach = connector(&db, both_clients());
+    reach.secrets.google.save(&me.email, "rt").unwrap();
+    let Connected::Ready(services) = reach.connect(&me).await.unwrap() else {
+        panic!("not ready")
+    };
+    assert!(matches!(services.mail, AnyMail::Google(_)));
+    assert!(matches!(
+        services.calendar,
+        Some(crate::AnyCalendar::Google(_))
+    ));
+    assert!(matches!(
+        services.contacts,
+        Some(crate::AnyContacts::Google(_))
+    ));
+    assert!(matches!(services.rules, Some(crate::AnyRules::Google(_))));
+    assert!(matches!(
+        services.auto_reply,
+        Some(crate::AnyAutoReply::Google(_))
+    ));
+}
+
+#[tokio::test]
+async fn an_imap_route_account_waits_for_its_mail_adapter() {
+    let (db, _dir) = store().await;
+    let me = gmail_account(&db).await;
+    on_imap_route(&db, &me).await;
+    let reach = connector(&db, both_clients());
+    reach.secrets.google.save(&me.email, "rt").unwrap();
+    let connected = reach.connect(&me).await.unwrap();
+    assert!(matches!(connected, Connected::NeedsSignIn(Lacks::Secret)));
+}
+
+#[tokio::test]
+async fn the_google_side_of_an_imap_route_account_comes_from_its_token() {
+    let (db, _dir) = store().await;
+    let me = gmail_account(&db).await;
+    on_imap_route(&db, &me).await;
+    let reach = connector(&db, both_clients());
+    reach.secrets.google.save(&me.email, "rt").unwrap();
+    let google = google_side(&reach, &me).await.unwrap();
+    assert!(google.is_some());
+}
+
+#[tokio::test]
+async fn an_imap_route_account_without_a_calendar_token_has_no_google_side_and_keeps_its_state() {
+    let (db, _dir) = store().await;
+    let me = gmail_account(&db).await;
+    on_imap_route(&db, &me).await;
+    let before = state(&db, &me).await;
+    let reach = connector(&db, both_clients());
+    assert!(google_side(&reach, &me).await.unwrap().is_none());
+    assert_eq!(state(&db, &me).await, before);
+}
+
+#[tokio::test]
+async fn an_imap_route_account_in_a_build_without_a_client_has_no_google_side_and_keeps_its_state()
+{
+    let (db, _dir) = store().await;
+    let me = gmail_account(&db).await;
+    on_imap_route(&db, &me).await;
+    let before = state(&db, &me).await;
+    let reach = connector(&db, Clients::default());
+    reach.secrets.google.save(&me.email, "rt").unwrap();
+    assert!(google_side(&reach, &me).await.unwrap().is_none());
+    assert_eq!(state(&db, &me).await, before);
 }

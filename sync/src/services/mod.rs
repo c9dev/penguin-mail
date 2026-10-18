@@ -395,6 +395,15 @@ pub struct Refused {
     pub auto_reply: bool,
 }
 
+/// The parts of a Gmail account whose mail comes over IMAP. `google` is
+/// `None` while the account holds no calendar token.
+pub struct GmailImap {
+    pub mail: AnyMail,
+    pub identities: AnyIdentities,
+    pub rules: AnyRules,
+    pub google: Option<Google<AnyGmail>>,
+}
+
 /// The services one account is served by. A provider that lacks one leaves
 /// its field `None`, and the module that needs it answers
 /// `BackendError::Unsupported`.
@@ -421,6 +430,27 @@ impl AccountServices {
             rules: Some(AnyRules::Google(google.clone())),
             auto_reply: Some(AnyAutoReply::Google(google.clone())),
             identities: AnyIdentities::Google(google),
+        }
+    }
+
+    /// A Gmail account whose mail comes over IMAP: the mail and the
+    /// address from `parts`, rules kept on this computer, and the
+    /// calendar and contacts of `parts.google` when the account holds a
+    /// calendar token. Google keeps no automatic reply for it here.
+    pub fn gmail_imap(parts: GmailImap) -> Self {
+        let GmailImap {
+            mail,
+            identities,
+            rules,
+            google,
+        } = parts;
+        AccountServices {
+            mail,
+            calendar: google.clone().map(AnyCalendar::Google),
+            contacts: google.map(AnyContacts::Google),
+            rules: Some(rules),
+            auto_reply: None,
+            identities,
         }
     }
 
@@ -619,7 +649,11 @@ impl AccountServices {
     /// adapter: an IMAP account withholds nothing, since it grants
     /// nothing to Google to begin with.
     pub fn withheld(&self) -> Withheld {
-        self.mail.withheld()
+        match (&self.mail, &self.calendar) {
+            (AnyMail::Google(_), _) => self.mail.withheld(),
+            (_, Some(AnyCalendar::Google(google))) => google.withheld().without_mail(),
+            _ => self.mail.withheld(),
+        }
     }
 
     /// Whether Hide from the List reaches the provider's own list. Only
@@ -830,6 +864,16 @@ impl Withheld {
 
     pub fn is_empty(self) -> bool {
         self == Withheld::NONE
+    }
+
+    /// Without the two grants that belong to mail, which an account
+    /// that reads its mail elsewhere never asked Google for.
+    pub fn without_mail(self) -> Withheld {
+        Withheld {
+            settings: false,
+            delete: false,
+            ..self
+        }
     }
 }
 

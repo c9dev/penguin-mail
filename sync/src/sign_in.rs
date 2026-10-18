@@ -49,6 +49,24 @@ pub async fn account_client<P: PasswordStore + 'static>(
     kept: Arc<P>,
     account: &Account,
 ) -> Result<Option<OAuthClient>, SyncError> {
+    let client = client_of(db, config, built_in, kept, account).await?;
+    if client.is_none() {
+        let id = account.id;
+        db.write(move |c| accounts::set_state(c, id, AccountState::NeedsReauth))
+            .await?;
+    }
+    Ok(client)
+}
+
+/// [`account_client`] without the state write, for an account that can
+/// run without the client.
+pub(crate) async fn client_of<P: PasswordStore + 'static>(
+    db: &Db,
+    config: &Config,
+    built_in: Option<OAuthClient>,
+    kept: Arc<P>,
+    account: &Account,
+) -> Result<Option<OAuthClient>, SyncError> {
     let id = account.id;
     let kind = db.read(move |c| accounts::sign_in_client(c, id)).await?;
     let own = match kind {
@@ -58,15 +76,10 @@ pub async fn account_client<P: PasswordStore + 'static>(
             .and_then(OwnClient::decode),
         SignInClient::BuiltIn => None,
     };
-    let client = match own {
+    Ok(match own {
         Some(own) => Some(own.oauth()),
         None => client_for(kind, config, built_in),
-    };
-    if client.is_none() {
-        db.write(move |c| accounts::set_state(c, id, AccountState::NeedsReauth))
-            .await?;
-    }
-    Ok(client)
+    })
 }
 
 /// Adds the account `email` signed in as, or finds it when it is already

@@ -1,3 +1,4 @@
+pub(crate) mod gmail_route;
 mod storage;
 
 use std::future::Future;
@@ -6,7 +7,7 @@ use std::time::Duration;
 
 use mailrs_dav::{DavClient, Kind as DavKind, Login as DavLogin};
 use mailrs_discover::{Security, Server, UserName};
-use mailrs_domain::{Account, AccountId, AccountState, Provider};
+use mailrs_domain::{Account, AccountId, AccountState, MailRoute, Provider};
 use mailrs_gmail::{GmailClient, GmailError, Granted, OAuthClient, TokenStore};
 use mailrs_graph::MicrosoftClient;
 use mailrs_imap::{ImapClient, Login, SmtpClient};
@@ -177,19 +178,10 @@ impl Connector {
         let db = &self.db;
         let window_days = self.config.engine_config().window_days;
         let started = match account.provider {
-            Provider::Gmail => {
-                let kept = Arc::clone(&self.secrets.google_clients);
-                let Some(oauth) =
-                    account_client(db, &self.config, self.clients.google.clone(), kept, account)
-                        .await?
-                else {
-                    tracing::warn!(account = account.id, "no Google client for this account");
-                    return Ok(Connected::NeedsSignIn(Lacks::Client));
-                };
-                connect_account(oauth, Arc::clone(&self.secrets.google), account, db)
-                    .await
-                    .map(AccountServices::google)
-            }
+            Provider::Gmail => match self.connect_gmail(account).await? {
+                Ok(services) => Ok(services),
+                Err(lacks) => return Ok(Connected::NeedsSignIn(lacks)),
+            },
             Provider::Imap => {
                 connect_imap(
                     db,
@@ -225,6 +217,40 @@ impl Connector {
                 Ok(Connected::NeedsSignIn(Lacks::Secret))
             }
             Err(err) => Err(err),
+        }
+    }
+
+    /// A Gmail account's services, built by where its mail comes from.
+    /// `Err` names what the account lacks to have them.
+    async fn connect_gmail(
+        &self,
+        account: &Account,
+    ) -> Result<Result<AccountServices, Lacks>, SyncError> {
+        let id = account.id;
+        match self.db.read(move |c| accounts::mail_route(c, id)).await? {
+            MailRoute::GmailApi => {
+                let kept = Arc::clone(&self.secrets.google_clients);
+                let Some(oauth) = account_client(
+                    &self.db,
+                    &self.config,
+                    self.clients.google.clone(),
+                    kept,
+                    account,
+                )
+                .await?
+                else {
+                    tracing::warn!(account = account.id, "no Google client for this account");
+                    return Ok(Err(Lacks::Client));
+                };
+                match connect_account(oauth, Arc::clone(&self.secrets.google), account, &self.db)
+                    .await
+                {
+                    Ok(client) => Ok(Ok(AccountServices::google(client))),
+                    Err(SyncError::Backend(BackendError::NeedsReauth)) => Ok(Err(Lacks::Secret)),
+                    Err(err) => Err(err),
+                }
+            }
+            MailRoute::Imap => gmail_route::connect_imap_route(self, account).await,
         }
     }
 
