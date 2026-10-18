@@ -829,6 +829,19 @@ struct BrowserPage {
     buttons: gtk::Box,
 }
 
+impl BrowserPage {
+    /// The sign-in came back and a move is finishing: Cancel and Back no
+    /// longer stop it, and the countdown has nothing left to count.
+    fn finishing(&self) {
+        self.cancel.set_sensitive(false);
+        self.banded.page.set_can_pop(false);
+        self.left.set_text("");
+        self.progress.set_visible(false);
+        self.note
+            .set_text(&gettext("Moving your account. This takes a moment."));
+    }
+}
+
 fn browser_page() -> BrowserPage {
     let banded = banded("browser", &gettext("Sign In in Your Browser"));
     let title = heading("");
@@ -3623,6 +3636,12 @@ impl Dialog {
     }
 
     fn show_routes(self: &Rc<Self>, platform: Platform, ready: Ready, expected: Option<String>) {
+        self.routes_for(platform, ready, expected);
+        self.push(route_page::TAG);
+    }
+
+    /// Fills the route page without showing it.
+    fn routes_for(self: &Rc<Self>, platform: Platform, ready: Ready, expected: Option<String>) {
         self.route_expected.replace(expected);
         let weak = Rc::downgrade(self);
         self.routes.show(
@@ -3636,7 +3655,6 @@ impl Dialog {
         );
         // The closed envelope with no stamp: no provider is picked yet.
         self.set_band(route_page::TAG, Step::Address, None, None);
-        self.push(route_page::TAG);
     }
 
     fn chose_route(self: &Rc<Self>, route: Route) {
@@ -3655,6 +3673,15 @@ impl Dialog {
         }
     }
 
+    /// Stops the countdown and the ways out while the move finishes.
+    fn finishing_move(&self) {
+        let timer = self.browser_timer.borrow_mut().take();
+        if let Some(timer) = timer {
+            timer.remove();
+        }
+        self.browser.finishing();
+    }
+
     /// The account that moved is signed in again, and the walk goes on to
     /// the next account or ends.
     fn moved(self: &Rc<Self>, account: Account) {
@@ -3669,9 +3696,11 @@ impl Dialog {
             self.window.close();
             return;
         }
-        self.back_to(route_page::TAG);
+        // The rows are rebuilt before the page shows again, so the focus
+        // lands on a row that stays.
         let platform = Platform::this();
-        self.show_routes(platform, ready_now(&mailrs_sync::Clients::current()), None);
+        self.routes_for(platform, ready_now(&mailrs_sync::Clients::current()), None);
+        self.back_to(route_page::TAG);
     }
 
     // ---- The browser -------------------------------------------------------------
@@ -3692,6 +3721,9 @@ impl Dialog {
         moving: Option<Account>,
     ) {
         self.stop_browser();
+        self.browser.cancel.set_sensitive(true);
+        self.browser.banded.page.set_can_pop(true);
+        self.browser.progress.set_visible(true);
         self.browser_provider.set(browser);
         let provider = browser.name();
         let page = &self.browser;
@@ -3768,15 +3800,20 @@ impl Dialog {
             let is_move = moving.is_some();
             let signed = match moving {
                 Some(account) => {
-                    let moving = this.core.move_to_own_client(account, urls);
-                    futures::pin_mut!(moving);
-                    let canceled = Box::pin(canceled.recv());
-                    match futures::future::select(moving, canceled).await {
-                        futures::future::Either::Left((moved, _)) => moved.map(|a| (a, None)),
-                        futures::future::Either::Right(_) => {
-                            Err(anyhow::anyhow!(gettext("Canceled.")))
+                    let (committed, signed_in) = async_channel::bounded::<()>(1);
+                    let weak = Rc::downgrade(&this);
+                    glib::spawn_future_local(async move {
+                        if signed_in.recv().await.is_ok()
+                            && let Some(this) = weak.upgrade()
+                            && this.asking.wants(ticket)
+                        {
+                            this.finishing_move();
                         }
-                    }
+                    });
+                    this.core
+                        .move_to_own_client(account, urls, canceled, committed)
+                        .await
+                        .map(|a| (a, None))
                 }
                 None => {
                     this.core
@@ -3845,6 +3882,9 @@ impl Dialog {
 
     fn browser_failed_with(&self, failure: &Failure) {
         let page = &self.browser;
+        // A move that failed while finishing gives its ways out back.
+        page.cancel.set_sensitive(true);
+        page.banded.page.set_can_pop(true);
         page.steps.set_visible(false);
         page.failed.show(
             "trouble",
@@ -4697,6 +4737,21 @@ pub(crate) mod checks {
         the_calendar_password_stays_while_the_browser_leads();
         a_page_without_the_calendar_password_folds_its_list_away();
         unfolding_brings_the_token_switch_back_as_it_was();
+        a_move_cannot_be_left_once_its_sign_in_has_returned();
+    }
+
+    fn a_move_cannot_be_left_once_its_sign_in_has_returned() {
+        let page = browser_page();
+        assert!(page.cancel.is_sensitive() && page.banded.page.can_pop());
+        page.finishing();
+        assert!(!page.cancel.is_sensitive());
+        assert!(!page.banded.page.can_pop());
+        assert_eq!(page.left.text(), "");
+        assert!(!page.progress.get_visible());
+        assert_eq!(
+            page.note.text(),
+            "Moving your account. This takes a moment."
+        );
     }
 
     fn the_calendar_password_stays_while_the_browser_leads() {

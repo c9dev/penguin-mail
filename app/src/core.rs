@@ -8,8 +8,8 @@ use std::future::Future;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::sync::Arc;
-use std::sync::Mutex;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::{Mutex, PoisonError};
 
 use anyhow::{Context, Result, anyhow, bail};
 use mailrs_discover::{Found, JmapFound, Net, RealNet, Security, SrvRecord};
@@ -137,6 +137,8 @@ pub struct Core {
     /// The IMAP accounts whose server also speaks JMAP, with the session
     /// to sign in to, as `look_for_jmap` found them.
     switch_offers: RefCell<HashMap<AccountId, JmapFound>>,
+    /// The accounts a move to their own sign-in is running for.
+    move_leases: MoveLeases,
     /// The accounts `look_for_jmap` has looked at this run, found or not.
     switch_looked: RefCell<HashSet<AccountId>>,
     /// Where each kind of account keeps what signs it in: the keyring, or
@@ -320,6 +322,7 @@ impl Core {
             verdicts: RefCell::default(),
             misses: RefCell::new(misses),
             switch_offers: RefCell::default(),
+            move_leases: MoveLeases::default(),
             switch_looked: RefCell::default(),
             secrets: match demo {
                 true => Secrets::memory(),
@@ -1638,14 +1641,26 @@ impl Core {
     /// stops, what is due goes out and the writes under way finish through
     /// the old sign-in, and the account starts again on the new one. On any
     /// error it starts again as it was.
+    ///
+    /// Closing the channel behind `cancel` ends the browser wait and
+    /// leaves the account as it was. Once the sign-in returns, `committed`
+    /// gets a message and the move can no longer be cancelled. A second
+    /// move of the same account is refused while one runs.
     pub async fn move_to_own_client(
         &self,
         account: Account,
         urls: async_channel::Sender<String>,
+        cancel: async_channel::Receiver<()>,
+        committed: async_channel::Sender<()>,
     ) -> Result<Account> {
         if self.demo {
             bail!(gettext("The demo cannot switch accounts."));
         }
+        let lease = self.move_leases.lease(account.id).ok_or_else(|| {
+            anyhow!(gettext(
+                "This account is already moving to its new sign-in."
+            ))
+        })?;
         let engine = self
             .engine
             .current()
@@ -1660,6 +1675,8 @@ impl Core {
             demo: self.demo_mail.clone(),
         };
         self.call(async move {
+            // Held until the move ends, even when the dialog has gone.
+            let _lease = lease;
             // The own-project setup replaces the environment as the source.
             let own = match Clients::current().own_google {
                 Some(Ok(own)) => own,
@@ -1670,11 +1687,9 @@ impl Core {
                 let _ = urls.try_send(url.to_string());
             };
             let oauth = own.oauth();
-            let signing = mailrs_gmail::authorize(&oauth, mailrs_gmail::GMAIL_API_BASE, open);
-            let authorized = tokio::time::timeout(BROWSER_WAIT, signing)
-                .await
-                .map_err(|_| anyhow!(gettext("Gave up waiting for the browser after five minutes.")))?
-                .map_err(BrowserSignInError::Google)?;
+            let authorized = authorize_until_canceled(&oauth, open, cancel).await?;
+            // From here the move runs to its end.
+            let _ = committed.try_send(());
             let id = account.id;
             // Kept past the stop: the drain sends through it.
             let kept = engine.account(id).ok();
@@ -1727,6 +1742,50 @@ impl Core {
             )
         })
         .await
+    }
+}
+
+/// Signs in through the browser for a move, or gives up when `cancel`
+/// closes or the wait runs out. Dropping the sign-in closes its loopback
+/// listener.
+async fn authorize_until_canceled(
+    oauth: &mailrs_gmail::OAuthClient,
+    open: impl FnOnce(&str),
+    cancel: async_channel::Receiver<()>,
+) -> Result<mailrs_gmail::Authorized> {
+    let signing = mailrs_gmail::authorize(oauth, mailrs_gmail::GMAIL_API_BASE, open);
+    tokio::select! {
+        waited = tokio::time::timeout(BROWSER_WAIT, signing) => waited
+            .map_err(|_| anyhow!(gettext("Gave up waiting for the browser after five minutes.")))?
+            .map_err(|err| BrowserSignInError::Google(err).into()),
+        _ = cancel.recv() => bail!(gettext("Canceled.")),
+    }
+}
+
+/// The accounts with a move running. A lease lasts until its move ends.
+#[derive(Clone, Default)]
+struct MoveLeases(Arc<Mutex<HashSet<AccountId>>>);
+
+struct MoveLease {
+    held: Arc<Mutex<HashSet<AccountId>>>,
+    id: AccountId,
+}
+
+impl MoveLeases {
+    /// The lease for `id`, or None while another move of it runs.
+    fn lease(&self, id: AccountId) -> Option<MoveLease> {
+        let mut held = self.0.lock().unwrap_or_else(PoisonError::into_inner);
+        held.insert(id).then(|| MoveLease {
+            held: Arc::clone(&self.0),
+            id,
+        })
+    }
+}
+
+impl Drop for MoveLease {
+    fn drop(&mut self) {
+        let mut held = self.held.lock().unwrap_or_else(PoisonError::into_inner);
+        held.remove(&self.id);
     }
 }
 
@@ -2429,5 +2488,62 @@ mod tests {
             .unwrap()
             .unwrap();
         assert_eq!(stored.provider, mailrs_domain::Provider::Imap);
+    }
+
+    /// Cancel before the browser answers ends the move and closes the
+    /// loopback listener the sign-in page would have come back to.
+    #[tokio::test]
+    async fn a_move_cancelled_before_the_browser_answers_closes_its_listener() {
+        let oauth = mailrs_gmail::OAuthClient::new("id.apps.googleusercontent.com", "secret");
+        let (urls, opened) = async_channel::unbounded::<String>();
+        let (cancel, canceled) = async_channel::bounded::<()>(1);
+        let waiting = tokio::spawn(async move {
+            let open = move |url: &str| {
+                let _ = urls.try_send(url.to_string());
+            };
+            super::authorize_until_canceled(&oauth, open, canceled)
+                .await
+                .map(|_| ())
+        });
+        let url = opened.recv().await.unwrap();
+        let port: u16 = url
+            .split("127.0.0.1%3A")
+            .nth(1)
+            .and_then(|rest| {
+                rest.chars()
+                    .take_while(char::is_ascii_digit)
+                    .collect::<String>()
+                    .parse()
+                    .ok()
+            })
+            .expect("the redirect names a loopback port");
+        assert!(
+            tokio::net::TcpStream::connect(("127.0.0.1", port))
+                .await
+                .is_ok(),
+            "the listener is up while the browser waits"
+        );
+        drop(cancel);
+        let err = waiting.await.unwrap().unwrap_err();
+        assert_eq!(err.to_string(), "Canceled.");
+        assert!(
+            tokio::net::TcpStream::connect(("127.0.0.1", port))
+                .await
+                .is_err(),
+            "nothing listens once the move is cancelled"
+        );
+    }
+
+    #[test]
+    fn a_second_move_of_one_account_is_refused_while_one_runs() {
+        let leases = super::MoveLeases::default();
+        let first = leases.lease(7).expect("the first move starts");
+        assert!(leases.lease(7).is_none());
+        assert!(leases.lease(8).is_some(), "another account moves freely");
+        drop(first);
+        assert!(
+            leases.lease(7).is_some(),
+            "the account moves again once the first ends"
+        );
     }
 }

@@ -12363,6 +12363,14 @@ msgstr "Todas as funcionalidades do Gmail, em qualquer computador. Cerca de 10 m
 msgid "Recommended"
 msgstr "Recomendado"
 
+#: app/src/core.rs:1661
+msgid "This account is already moving to its new sign-in."
+msgstr "Esta conta já está a mudar para o novo início de sessão."
+
+#: app/src/ui/add_account.rs:841
+msgid "Moving your account. This takes a moment."
+msgstr "A mudar a sua conta. Demora um momento."
+
 #~ msgid "Install Bubblewrap"
 #~ msgstr "Instalar o Bubblewrap"
 
