@@ -45,6 +45,9 @@ pub(crate) trait Starting<S>: Send + Sync + 'static {
     /// Whether the account should still start: it still exists, and the
     /// engine it was meant for still runs.
     fn wanted(&self, account: AccountId) -> impl Future<Output = bool> + Send;
+    /// Whether the account has to pick a new way to get its mail, so a
+    /// missing token pauses its mail and does not ask for a new sign-in.
+    fn needs_move(&self, account: &Account) -> bool;
 }
 
 /// Connects every account in `accounts`, each in a task of its own, and
@@ -85,7 +88,11 @@ where
         let state = match tokio::time::timeout(waits.connect, connect(account.clone())).await {
             Ok(Ok(Connected::Ready(services))) => return port.start(account.id, services),
             Ok(Ok(Connected::NeedsSignIn)) => {
-                return port.report(account.id, AccountState::NeedsReauth).await;
+                let state = match port.needs_move(&account) {
+                    true => AccountState::MailPaused,
+                    false => AccountState::NeedsReauth,
+                };
+                return port.report(account.id, state).await;
             }
             Ok(Err(err)) => {
                 tracing::warn!(
@@ -148,6 +155,7 @@ mod tests {
         started: Mutex<Vec<AccountId>>,
         reported: Mutex<Vec<(AccountId, AccountState)>>,
         unwanted: Mutex<Vec<AccountId>>,
+        moving: Mutex<Vec<AccountId>>,
     }
 
     impl Starting<&'static str> for Record {
@@ -161,6 +169,10 @@ mod tests {
 
         async fn wanted(&self, account: AccountId) -> bool {
             !self.unwanted.lock().unwrap().contains(&account)
+        }
+
+        fn needs_move(&self, account: &Account) -> bool {
+            self.moving.lock().unwrap().contains(&account.id)
         }
     }
 
@@ -340,6 +352,25 @@ mod tests {
             vec![(9, AccountState::NeedsReauth)]
         );
         assert_eq!(script.tries(9), 1);
+    }
+
+    #[tokio::test]
+    async fn an_account_that_needs_a_move_and_has_no_token_is_paused() {
+        let script = Script::default().with(9, &[Answer::SignIn]);
+        let record = Arc::new(Record::default());
+        record.moving.lock().unwrap().push(9);
+        start_each(
+            vec![account(9)],
+            script.connect(),
+            Arc::clone(&record),
+            SHORT,
+        )
+        .await;
+        until(|| !record.reported.lock().unwrap().is_empty()).await;
+        assert_eq!(
+            *record.reported.lock().unwrap(),
+            vec![(9, AccountState::MailPaused)]
+        );
     }
 
     #[tokio::test]

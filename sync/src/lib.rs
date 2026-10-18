@@ -93,7 +93,8 @@ pub use services::{
     MicrosoftSettings, Missing, NoMail, Offers, Pop3, Pop3Settings, Priority, RAW_LIMIT,
     RawMessage, ReceiptOut, Refused, Relocated, RemoteChange, RemoteRef, RulesBeside, RulesPlace,
     RulesService, SERVER_REPLY_SCRIPT, SearchQuery, SendAsAddress, Settled, SieveRules, Storage,
-    Submit, SyncState, Unapplied, Unheld, Want, Withheld, background, withheld_by_grant,
+    Submit, SyncState, Unapplied, Unheld, Want, WhenGrantEnds, Withheld, background,
+    withheld_by_grant,
 };
 pub use settings::{
     AccountSettings, AutomaticReply, HIDE_MY_EMAIL_LABEL, Permitted, Replaced, RuleList, SentRules,

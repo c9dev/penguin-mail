@@ -1905,7 +1905,7 @@ fn heading(
         super::name(&image, &tip);
         if matches!(
             account.state,
-            AccountState::NeedsReauth | AccountState::Stopped
+            AccountState::NeedsReauth | AccountState::Stopped | AccountState::MailPaused
         ) {
             image.add_css_class("warning");
         } else {
@@ -2050,8 +2050,12 @@ fn status_of(account: &Account) -> Option<(&'static str, String)> {
             "dialog-warning-symbolic",
             gettext("Syncing stopped after an error; restart Penguin Mail to try again"),
         )),
-        // The move banner and the sidebar line come with the route choice.
-        AccountState::MailPaused => None,
+        // Translators: the line beside an account whose mail stopped
+        // arriving; the person picks another way to sign in.
+        AccountState::MailPaused => Some((
+            "dialog-warning-symbolic",
+            gettext("Choose how this account signs in to get new mail"),
+        )),
         AccountState::Ok => None,
     }
 }
@@ -2160,6 +2164,24 @@ mod tests {
             Some((
                 "dialog-password-symbolic",
                 "The keyring is not responding; retrying".to_string()
+            ))
+        );
+    }
+
+    #[test]
+    fn a_paused_account_says_how_to_get_mail_back() {
+        let paused = Account {
+            id: 1,
+            email: "me@gmail.com".into(),
+            state: AccountState::MailPaused,
+            provider: Provider::Gmail,
+            provider_name: None,
+        };
+        assert_eq!(
+            status_of(&paused),
+            Some((
+                "dialog-warning-symbolic",
+                "Choose how this account signs in to get new mail".to_string()
             ))
         );
     }

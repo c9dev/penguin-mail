@@ -13,7 +13,7 @@ use crate::calendar_copy::CalendarCopy;
 use crate::fake::{FakeGmail, fill_store, meta};
 use crate::{
     AccountServices, AccountSync, Accounts, BackendError, CalendarService, EngineConfig,
-    SyncEngine, now_millis,
+    SyncEngine, WhenGrantEnds, now_millis,
 };
 
 struct Setup {
@@ -374,4 +374,60 @@ async fn opening_the_window_looks_for_mail_at_once() {
     // The tray's next look is minutes away; showing the window cannot wait for it.
     s.engine.set_window_open(true);
     wait_for(&s.events, |e| matches!(e, ChangeEvent::NewMail { .. })).await;
+}
+
+fn built_in_gmail(s: &Setup) -> AccountServices {
+    AccountServices::google(Arc::clone(&s.fake)).with_when_grant_ends(WhenGrantEnds::PauseMail)
+}
+
+#[tokio::test]
+async fn a_refresh_without_mail_scopes_pauses_mail() {
+    let s = setup().await;
+    s.fake.withhold(mailrs_gmail::DELETE_SCOPE);
+    s.fake.withhold(mailrs_gmail::GMAIL_SCOPE);
+    s.engine.start_account(1, built_in_gmail(&s));
+    wait_for(&s.events, reached(AccountState::MailPaused)).await;
+    assert_eq!(stored_state(&s).await, AccountState::MailPaused);
+}
+
+#[tokio::test]
+async fn an_insufficient_permissions_answer_pauses_mail() {
+    let s = setup().await;
+    s.fake.fail_next(GmailError::MissingScope);
+    s.engine.start_account(1, built_in_gmail(&s));
+    wait_for(&s.events, reached(AccountState::MailPaused)).await;
+    assert_eq!(stored_state(&s).await, AccountState::MailPaused);
+}
+
+#[tokio::test]
+async fn an_invalid_grant_pauses_mail() {
+    let s = setup().await;
+    s.fake.fail_next(GmailError::NeedsReauth);
+    s.engine.start_account(1, built_in_gmail(&s));
+    wait_for(&s.events, reached(AccountState::MailPaused)).await;
+    assert_eq!(stored_state(&s).await, AccountState::MailPaused);
+}
+
+#[tokio::test]
+async fn a_paused_account_still_answers_for_its_calendar() {
+    let s = setup().await;
+    s.fake.fail_next(GmailError::NeedsReauth);
+    s.engine.start_account(1, built_in_gmail(&s));
+    wait_for(&s.events, reached(AccountState::MailPaused)).await;
+    let sync = s
+        .engine
+        .account(1)
+        .expect("the account stays in the engine");
+    assert!(sync.services().calendar.is_some());
+    assert!(sync.services().contacts.is_some());
+}
+
+#[tokio::test]
+async fn an_own_account_whose_token_is_refused_needs_reauth() {
+    let s = setup().await;
+    s.fake.fail_next(GmailError::NeedsReauth);
+    s.engine
+        .start_account(1, AccountServices::google(Arc::clone(&s.fake)));
+    wait_for(&s.events, reached(AccountState::NeedsReauth)).await;
+    assert_eq!(stored_state(&s).await, AccountState::NeedsReauth);
 }

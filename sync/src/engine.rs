@@ -16,8 +16,8 @@ use tokio::time::Instant;
 use crate::account::{DEFAULT_BODY_CACHE_BYTES, DEFAULT_WINDOW_DAYS};
 use crate::raw_cache::{RAW_CACHE_BYTES, RawCache};
 use crate::{
-    AccountServices, AccountSync, BackendError, MailBackend, SyncError, background, backoff_delay,
-    now_millis, poll_offset, with_jitter,
+    AccountServices, AccountSync, BackendError, MailBackend, SyncError, WhenGrantEnds, background,
+    backoff_delay, now_millis, poll_offset, with_jitter,
 };
 
 /// How often an account prunes, checks its inbox against Gmail's, and lists
@@ -225,14 +225,21 @@ impl Drop for SyncEngine {
 
 enum Failure {
     Reauth,
+    /// The mail grant ended and signing in again cannot bring it back.
+    Paused,
     Retry {
         state: AccountState,
         retry_after: Option<Duration>,
     },
 }
 
-fn classify(err: &SyncError) -> Failure {
+fn classify(err: &SyncError, when: WhenGrantEnds) -> Failure {
     match err {
+        SyncError::Backend(BackendError::NeedsReauth | BackendError::NeedsPermission)
+            if when == WhenGrantEnds::PauseMail =>
+        {
+            Failure::Paused
+        }
         SyncError::Backend(BackendError::NeedsReauth) => Failure::Reauth,
         SyncError::Backend(BackendError::Offline(_)) => Failure::Retry {
             state: AccountState::Offline,
@@ -376,7 +383,17 @@ async fn run_account(
                     }
                 }
             }
-            Err(err) => match classify(&err) {
+            Err(err) => match classify(&err, sync.services().when_grant_ends) {
+                // The loop ends and the account stays in the engine, so its
+                // calendar and contacts still answer.
+                Failure::Paused => {
+                    tracing::warn!(
+                        account = sync.account_id(),
+                        "Google ended the mail grant; mail is paused"
+                    );
+                    report(&sync, AccountState::MailPaused).await;
+                    return;
+                }
                 Failure::Reauth => {
                     tracing::warn!(
                         account = sync.account_id(),
@@ -427,6 +444,12 @@ pub(crate) async fn tick(
     // relisted or paged: the store is its only copy. It lists its
     // mailboxes once an hour, the first time before anything else, so the
     // Inbox exists before mail arrives.
+    // Mail the old grant served cannot be asked for, so no call goes out.
+    if sync.services().when_grant_ends == WhenGrantEnds::PauseMail
+        && sync.services().mail.mail_grant_lost()
+    {
+        return Err(BackendError::NeedsPermission.into());
+    }
     let local = sync.services().mail.capabilities().local_mailboxes;
     if local && Instant::now() >= *next_prune {
         sync.refresh_labels().await?;

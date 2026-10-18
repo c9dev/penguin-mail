@@ -415,6 +415,20 @@ pub struct AccountServices {
     pub rules: Option<AnyRules>,
     pub auto_reply: Option<AnyAutoReply>,
     pub identities: AnyIdentities,
+    /// What the account's loop does when Google ends the grant its mail
+    /// runs on.
+    pub when_grant_ends: WhenGrantEnds,
+}
+
+/// What an account does when Google ends the grant its mail runs on.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum WhenGrantEnds {
+    /// The person signs in again: the account stops and says so.
+    SignInAgain,
+    /// Signing in again through the same client cannot bring the mail
+    /// back. The mail loop stops, the calendar and contacts go on, and
+    /// the store keeps everything until the person picks a new route.
+    PauseMail,
 }
 
 impl AccountServices {
@@ -430,6 +444,7 @@ impl AccountServices {
             rules: Some(AnyRules::Google(google.clone())),
             auto_reply: Some(AnyAutoReply::Google(google.clone())),
             identities: AnyIdentities::Google(google),
+            when_grant_ends: WhenGrantEnds::SignInAgain,
         }
     }
 
@@ -451,6 +466,7 @@ impl AccountServices {
             rules: Some(rules),
             auto_reply: None,
             identities,
+            when_grant_ends: WhenGrantEnds::SignInAgain,
         }
     }
 
@@ -470,6 +486,7 @@ impl AccountServices {
             rules: None,
             auto_reply: None,
             identities: AnyIdentities::Imap(adapter),
+            when_grant_ends: WhenGrantEnds::SignInAgain,
         }
     }
 
@@ -486,6 +503,7 @@ impl AccountServices {
             rules: None,
             auto_reply: None,
             identities: AnyIdentities::NoMail(NoMail),
+            when_grant_ends: WhenGrantEnds::SignInAgain,
         }
     }
 
@@ -503,6 +521,11 @@ impl AccountServices {
         self.calendar
             .as_ref()
             .is_none_or(AnyCalendar::tells_organizer)
+    }
+
+    pub fn with_when_grant_ends(mut self, when: WhenGrantEnds) -> Self {
+        self.when_grant_ends = when;
+        self
     }
 
     pub fn with_calendar(mut self, calendar: AnyCalendar) -> Self {
@@ -538,6 +561,7 @@ impl AccountServices {
             rules: None,
             auto_reply: None,
             identities: AnyIdentities::Jmap(adapter),
+            when_grant_ends: WhenGrantEnds::SignInAgain,
         }
     }
 
@@ -577,6 +601,7 @@ impl AccountServices {
             rules: Some(AnyRules::Microsoft(adapter.clone())),
             auto_reply: Some(AnyAutoReply::Microsoft(adapter.clone())),
             identities: AnyIdentities::Microsoft(adapter),
+            when_grant_ends: WhenGrantEnds::SignInAgain,
         }
     }
 
@@ -638,6 +663,7 @@ impl AccountServices {
             rules: Some(AnyRules::Local(LocalRules::new(db, account_id))),
             auto_reply: None,
             identities: AnyIdentities::Pop3(adapter),
+            when_grant_ends: WhenGrantEnds::SignInAgain,
         }
     }
 

@@ -18,7 +18,7 @@ use crate::sign_in::own_client::{ID_VAR, OwnClient, OwnClientError, SECRET_VAR};
 use crate::sign_in::{
     Browser, BrowserSignInError, Wanted, calendar_consent, google_sign_in, in_browser,
 };
-use crate::{Clients, Connected, Connector, Lacks};
+use crate::{Clients, Connected, Connector, Lacks, WhenGrantEnds};
 
 async fn store() -> (Db, tempfile::TempDir) {
     let dir = tempfile::tempdir().unwrap();
@@ -153,6 +153,18 @@ async fn a_google_account_with_its_token_connects_to_google() {
     assert!(
         matches!(connected, Connected::Ready(services) if matches!(services.mail, AnyMail::Google(_)))
     );
+}
+
+#[tokio::test]
+async fn a_built_in_gmail_account_on_the_api_route_pauses_mail_when_its_grant_ends() {
+    let (db, _dir) = store().await;
+    let me = gmail_account(&db).await;
+    let reach = connector(&db, both_clients());
+    reach.secrets.google.save(&me.email, "rt").unwrap();
+    let Connected::Ready(services) = reach.connect(&me).await.unwrap() else {
+        panic!("the account connects");
+    };
+    assert_eq!(services.when_grant_ends, WhenGrantEnds::PauseMail);
 }
 
 #[tokio::test]

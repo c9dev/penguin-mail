@@ -17,7 +17,7 @@ use mailrs_store::services::{FoundService, ServiceKind};
 use super::{
     AccountServices, AnyAutoReply, AnyCalendar, AnyContacts, AnyDav, AnyIdentities, AnyJmap,
     AnyMail, AnyRules, AnySieve, CalDav, CardDav, Jmap, JmapSettings, JmapSieve, LocalRules,
-    RulesBeside, SERVER_REPLY_SCRIPT, SieveRules,
+    RulesBeside, SERVER_REPLY_SCRIPT, SieveRules, WhenGrantEnds,
 };
 
 /// A calendar, contacts or rules server found for the account and
@@ -92,6 +92,7 @@ impl AccountServices {
             rules: None,
             auto_reply: None,
             identities: AnyIdentities::Jmap(adapter.clone()),
+            when_grant_ends: WhenGrantEnds::SignInAgain,
         };
         if sieve {
             let rules = SieveRules::new(

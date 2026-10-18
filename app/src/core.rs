@@ -421,18 +421,36 @@ impl Core {
             },
             demo: self.demo_mail.clone(),
         });
-        let port = Arc::new(EnginePort {
-            engine,
-            running: Arc::clone(&self.engine),
-            db: self.db.clone(),
-            events: self.events_tx.clone(),
-            started: self.started_tx.clone(),
-        });
+        let (running, events, started) = (
+            Arc::clone(&self.engine),
+            self.events_tx.clone(),
+            self.started_tx.clone(),
+        );
         let db = self.db.clone();
         self.runtime.spawn(async move {
-            let Ok(all) = db.read(accounts::list_accounts).await else {
+            let read = db
+                .read(|c| Ok((accounts::list_accounts(c)?, accounts::google_sign_ins(c)?)))
+                .await;
+            let Ok((all, sign_ins)) = read else {
                 return;
             };
+            let moves = all
+                .iter()
+                .filter(|a| {
+                    sign_ins
+                        .get(&a.id)
+                        .is_some_and(|sign_in| sign_in.needs_move(a.provider))
+                })
+                .map(|a| a.id)
+                .collect();
+            let port = Arc::new(EnginePort {
+                engine,
+                running,
+                db,
+                events,
+                started,
+                moves,
+            });
             let connect = move |account: Account| {
                 let reach = Arc::clone(&reach);
                 async move { reach.connect(&account).await }
@@ -1818,6 +1836,8 @@ struct EnginePort {
     db: Db,
     events: async_channel::Sender<ChangeEvent>,
     started: async_channel::Sender<AccountId>,
+    /// The accounts that have to choose a new route, read once at start.
+    moves: HashSet<AccountId>,
 }
 
 impl EnginePort {
@@ -1853,6 +1873,10 @@ impl Starting<AccountServices> for EnginePort {
             .events
             .send(ChangeEvent::AccountStateChanged { account_id, state })
             .await;
+    }
+
+    fn needs_move(&self, account: &Account) -> bool {
+        self.moves.contains(&account.id)
     }
 
     async fn wanted(&self, account_id: AccountId) -> bool {

@@ -9539,6 +9539,12 @@ msgstr "Mensagens que não se transferem…"
 msgid "Sign in again to keep syncing"
 msgstr "Inicie sessão de novo para continuar a sincronizar"
 
+#. Translators: the line beside an account whose mail stopped
+#. arriving; the person picks another way to sign in.
+#: app/src/ui/sidebar.rs:2030
+msgid "Choose how this account signs in to get new mail"
+msgstr "Escolha como esta conta inicia sessão para receber correio novo"
+
 #: app/src/ui/sidebar.rs:2033
 msgid "{provider} is not responding; retrying"
 msgstr "{provider} não responde; a tentar de novo"

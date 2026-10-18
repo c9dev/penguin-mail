@@ -177,6 +177,12 @@ impl<G: GmailApi> Google<G> {
         withheld(self.gmail.granted().as_ref())
     }
 
+    /// Whether the last scopes this account was granted are known and
+    /// leave out mail.
+    pub fn mail_grant_lost(&self) -> bool {
+        self.gmail.granted().is_some_and(|g| !g.reads_mail())
+    }
+
     /// Whether the account is on Google Workspace, which keeps out of
     /// office and focus time; a personal account keeps neither.
     pub fn workspace(&self) -> bool {
