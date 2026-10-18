@@ -34,6 +34,7 @@ pub mod pgp;
 pub mod post_band;
 pub mod preferences;
 pub mod queued;
+pub mod route_page;
 pub mod roving;
 pub mod rules;
 #[cfg(feature = "packaging-appimage")]

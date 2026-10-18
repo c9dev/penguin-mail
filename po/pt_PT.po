@@ -12359,6 +12359,10 @@ msgstr "Configurar o seu próprio projeto Google"
 msgid "Every Gmail feature, on any computer. About 10 minutes, once."
 msgstr "Todas as funcionalidades do Gmail, em qualquer computador. Cerca de 10 minutos, uma só vez."
 
+#: app/src/ui/route_page.rs:94
+msgid "Recommended"
+msgstr "Recomendado"
+
 #~ msgid "Install Bubblewrap"
 #~ msgstr "Instalar o Bubblewrap"
 

@@ -1317,6 +1317,30 @@ pub fn shows_folder(provider: Provider, role: mailrs_domain::Role) -> bool {
     }
 }
 
+/// The Gmail accounts a move walks through, one at a time.
+pub struct MoveWalk {
+    rest: std::collections::VecDeque<Account>,
+}
+
+impl MoveWalk {
+    pub fn new(accounts: Vec<Account>) -> MoveWalk {
+        MoveWalk {
+            rest: accounts.into(),
+        }
+    }
+
+    /// The account the page is choosing for.
+    pub fn current(&self) -> Option<&Account> {
+        self.rest.front()
+    }
+
+    /// Drops the account that just moved and answers the next one.
+    pub fn advance(&mut self) -> Option<&Account> {
+        self.rest.pop_front();
+        self.rest.front()
+    }
+}
+
 /// Whether the calendar page has what a sign-in needs: where the server
 /// is, who signs in, and a password. The password is taken as typed,
 /// since a space may be part of one.
@@ -2338,6 +2362,28 @@ mod tests {
             !signed_in_again(None, &asked),
             "a first sign-in is not a second"
         );
+    }
+
+    /// The move opens on the first account and goes on to the next each
+    /// time one moves; the last one ends the walk.
+    #[test]
+    fn the_move_walks_its_accounts_in_order_and_then_ends() {
+        let first = icloud_account();
+        let second = Account {
+            id: first.id + 1,
+            ..first.clone()
+        };
+        let mut walk = MoveWalk::new(vec![first.clone(), second.clone()]);
+        assert_eq!(walk.current().map(|a| a.id), Some(first.id));
+        assert_eq!(walk.advance().map(|a| a.id), Some(second.id));
+        assert_eq!(walk.current().map(|a| a.id), Some(second.id));
+        assert!(walk.advance().is_none());
+        assert!(walk.current().is_none());
+    }
+
+    #[test]
+    fn a_move_with_no_accounts_has_nothing_to_show() {
+        assert!(MoveWalk::new(Vec::new()).current().is_none());
     }
 
     #[test]

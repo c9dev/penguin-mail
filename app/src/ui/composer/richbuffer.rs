@@ -918,6 +918,7 @@ mod tests {
         crate::ui::copied::checks::run();
         crate::ui::link_preview::checks::run();
         crate::ui::add_account::checks::run();
+        crate::ui::route_page::checks::run();
         // The extraction script needs a real engine to run in, and this
         // is the one test binary that starts one.
         an_unsubscribe_page_reads_back_as_its_fixture();

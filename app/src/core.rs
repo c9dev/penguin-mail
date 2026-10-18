@@ -1638,7 +1638,6 @@ impl Core {
     /// stops, what is due goes out and the writes under way finish through
     /// the old sign-in, and the account starts again on the new one. On any
     /// error it starts again as it was.
-    #[expect(dead_code, reason = "the route page that offers the move calls it")]
     pub async fn move_to_own_client(
         &self,
         account: Account,

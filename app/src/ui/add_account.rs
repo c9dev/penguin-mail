@@ -34,7 +34,9 @@ use crate::add_account::{
 };
 use crate::core::Core;
 use crate::permission::Permission;
+use crate::route_choice::{Goa, Platform, Ready, Route, any_route, footer, ready_now, rows};
 use crate::ui::post_band::PostBand;
+use crate::ui::route_page::{self, RoutePage};
 use crate::ui::tile_grid::TileGrid;
 use mailrs_sync::sign_in::Wanted;
 
@@ -64,6 +66,10 @@ pub enum Opening {
     /// The password page for an IMAP account that needs to sign in again,
     /// or the calendar page for a calendar account that does.
     Again(Account),
+    /// The route page for each of these Gmail accounts in turn, to move
+    /// each to its own sign-in. Closing the dialog ends the walk.
+    #[expect(dead_code, reason = "the sheet and the banner open it in a later task")]
+    Move(Vec<Account>),
     /// A demo stage, for screenshots: see [`preview`].
     Preview(String),
 }
@@ -104,13 +110,23 @@ pub fn present(
     opening: Opening,
     done: impl Fn(Done) + 'static,
 ) {
+    if matches!(&opening, Opening::Move(accounts) if accounts.is_empty()) {
+        return;
+    }
     let again = match &opening {
         Opening::Again(account) => Some(account.clone()),
         _ => None,
     };
     let this = Dialog::new(core, again, Box::new(done));
     this.connect();
+    let routes_first = match &opening {
+        Opening::Move(_) => true,
+        Opening::Browser(Browser::Google) => google_routes().1,
+        _ => false,
+    };
     let root = match &opening {
+        _ if routes_first => route_page::TAG,
+        Opening::Move(_) => route_page::TAG,
         Opening::Pick | Opening::Preview(_) => "pick",
         Opening::Tile(_) | Opening::ByHand => "address",
         Opening::Browser(_) => "browser",
@@ -157,7 +173,13 @@ pub fn present(
         Opening::Pick => {}
         Opening::Tile(tile) => this.open_address(Some(tile), false),
         Opening::ByHand => this.open_address(None, true),
+        Opening::Browser(Browser::Google) => this.offer_routes(None),
         Opening::Browser(browser) => this.start_browser(browser, None),
+        Opening::Move(accounts) => {
+            this.moving
+                .replace(Some(add_account::MoveWalk::new(accounts)));
+            this.offer_routes(None);
+        }
         Opening::Calendar => this.open_calendar(),
         Opening::Again(account) if account.provider == Provider::CalDav => {
             this.load_calendar(account)
@@ -165,17 +187,32 @@ pub fn present(
         Opening::Again(account) => this.load_saved(account),
         Opening::Preview(stage) => preview(&this, &stage),
     }
+    if root == route_page::TAG
+        && this.showing() == Some(route_page::TAG)
+        && let Some(row) = this.routes.first_row()
+    {
+        this.window.set_focus(Some(&row));
+    }
+}
+
+/// The platform and what it can run now, and whether any route shows.
+fn google_routes() -> (Platform, bool) {
+    let platform = Platform::this();
+    (
+        platform,
+        any_route(platform, ready_now(&mailrs_sync::Clients::current())),
+    )
 }
 
 /// A banded page: a flat header over the band, the page's own column
 /// under it.
-struct Banded {
-    page: adw::NavigationPage,
+pub(super) struct Banded {
+    pub(super) page: adw::NavigationPage,
     header: adw::HeaderBar,
-    body: gtk::Box,
+    pub(super) body: gtk::Box,
 }
 
-fn banded(tag: &str, title: &str) -> Banded {
+pub(super) fn banded(tag: &str, title: &str) -> Banded {
     let header = adw::HeaderBar::builder()
         .show_title(false)
         .css_classes(["post-band-header"])
@@ -224,7 +261,7 @@ fn label(text: &str, classes: &[&str]) -> gtk::Label {
         .build()
 }
 
-fn heading(text: &str) -> gtk::Label {
+pub(super) fn heading(text: &str) -> gtk::Label {
     let heading = label(text, &["post-title"]);
     heading.set_accessible_role(gtk::AccessibleRole::Heading);
     heading
@@ -454,7 +491,7 @@ fn link_button(link: &add_account::Link) -> gtk::LinkButton {
 }
 
 /// A boxed list of rows.
-fn boxed_list() -> gtk::ListBox {
+pub(super) fn boxed_list() -> gtk::ListBox {
     gtk::ListBox::builder()
         .selection_mode(gtk::SelectionMode::None)
         .css_classes(["boxed-list", "post-list"])
@@ -1847,7 +1884,13 @@ struct Dialog {
     /// how many features were left off, which its lede names.
     granting: Cell<Option<(Provider, usize)>>,
     count_timer: RefCell<Option<glib::SourceId>>,
+    /// The Gmail accounts a move walks through, while one does.
+    moving: RefCell<Option<add_account::MoveWalk>>,
+    /// The address typed before the route page, for the sign-in it leads
+    /// to.
+    route_expected: RefCell<Option<String>>,
     pick: PickPage,
+    routes: RoutePage,
     address: AddressPage,
     lookup: LookupPage,
     browser: BrowserPage,
@@ -1940,7 +1983,10 @@ impl Dialog {
             added: Cell::new(None),
             granting: Cell::new(None),
             count_timer: RefCell::new(None),
+            moving: RefCell::new(None),
+            route_expected: RefCell::new(None),
             pick: pick_page(signs_in_to_microsoft(core)),
+            routes: RoutePage::new(),
             address: address_page(),
             lookup: lookup_page(),
             browser,
@@ -1952,9 +1998,10 @@ impl Dialog {
         })
     }
 
-    fn pages(&self) -> [(&'static str, adw::NavigationPage); 9] {
+    fn pages(&self) -> [(&'static str, adw::NavigationPage); 10] {
         [
             ("pick", self.pick.banded.page.clone()),
+            (route_page::TAG, self.routes.page.clone()),
             ("address", self.address.banded.page.clone()),
             ("lookup", self.lookup.banded.page.clone()),
             ("browser", self.browser.banded.page.clone()),
@@ -2278,6 +2325,7 @@ impl Dialog {
     fn chose(self: &Rc<Self>, tile: Tile, mark: &gtk::Label) {
         let middle = graphene::Point::new(mark.width() as f32 / 2.0, mark.height() as f32 / 2.0);
         match tile.browser() {
+            Some(Browser::Google) => self.offer_routes(None),
             Some(browser) => self.start_browser(browser, None),
             None => self.open_address(Some(tile), false),
         }
@@ -2373,7 +2421,7 @@ impl Dialog {
                     this.say(&said);
                 }
                 Next::Closed(_) => this.show_closed(&address),
-                Next::Google => this.start_browser(Browser::Google, Some(address.full())),
+                Next::Google => this.offer_routes(Some(address.full())),
                 Next::Microsoft => this.start_browser(Browser::Microsoft, Some(address.full())),
                 Next::Manual { proposal, line } => this.show_manual(&proposal, Some(&line)),
             }
@@ -3560,11 +3608,89 @@ impl Dialog {
         });
     }
 
+    // ---- The routes --------------------------------------------------------------
+
+    /// Asks how a Google account signs in, or goes straight to the browser
+    /// page, which says so, when this computer offers no way. `expected` is
+    /// the address typed, when there was one.
+    fn offer_routes(self: &Rc<Self>, expected: Option<String>) {
+        let platform = Platform::this();
+        let ready = ready_now(&mailrs_sync::Clients::current());
+        if !any_route(platform, ready) {
+            return self.start_browser(Browser::Google, expected);
+        }
+        self.show_routes(platform, ready, expected);
+    }
+
+    fn show_routes(self: &Rc<Self>, platform: Platform, ready: Ready, expected: Option<String>) {
+        self.route_expected.replace(expected);
+        let weak = Rc::downgrade(self);
+        self.routes.show(
+            &rows(platform, ready),
+            footer(platform, ready),
+            move |route| {
+                if let Some(this) = weak.upgrade() {
+                    this.chose_route(route);
+                }
+            },
+        );
+        // The closed envelope with no stamp: no provider is picked yet.
+        self.set_band(route_page::TAG, Step::Address, None, None);
+        self.push(route_page::TAG);
+    }
+
+    fn chose_route(self: &Rc<Self>, route: Route) {
+        match route {
+            Route::OwnProject => {
+                let account = self
+                    .moving
+                    .borrow()
+                    .as_ref()
+                    .and_then(|w| w.current().cloned());
+                let expected = self.route_expected.borrow().clone();
+                self.run_browser(Browser::Google, expected, account);
+            }
+            // Their plans connect these rows; until then no build lists them.
+            Route::Goa | Route::AppPassword => {}
+        }
+    }
+
+    /// The account that moved is signed in again, and the walk goes on to
+    /// the next account or ends.
+    fn moved(self: &Rc<Self>, account: Account) {
+        self.stop_browser();
+        (self.done)(Done::SignedInAgain(account));
+        let next = self
+            .moving
+            .borrow_mut()
+            .as_mut()
+            .and_then(|walk| walk.advance().map(|a| a.id));
+        if next.is_none() {
+            self.window.close();
+            return;
+        }
+        self.back_to(route_page::TAG);
+        let platform = Platform::this();
+        self.show_routes(platform, ready_now(&mailrs_sync::Clients::current()), None);
+    }
+
     // ---- The browser -------------------------------------------------------------
 
     /// `browser`'s sign-in in the browser, with the page that waits for
     /// it. `expected` is the address typed, when there was one.
     fn start_browser(self: &Rc<Self>, browser: Browser, expected: Option<String>) {
+        self.run_browser(browser, expected, None);
+    }
+
+    /// As [`Dialog::start_browser`]; with `moving` the page waits for that
+    /// Gmail account's move to its own sign-in, which keeps the page up
+    /// while the account's queued work finishes.
+    fn run_browser(
+        self: &Rc<Self>,
+        browser: Browser,
+        expected: Option<String>,
+        moving: Option<Account>,
+    ) {
         self.stop_browser();
         self.browser_provider.set(browser);
         let provider = browser.name();
@@ -3639,11 +3765,34 @@ impl Dialog {
                 (Browser::Google, Some(address)) => Wanted::Only(address),
                 (Browser::Microsoft, Some(address)) => Wanted::Suggested(address),
             };
-            let signed = this
-                .core
-                .sign_in_in_browser(browser, urls, wanted, canceled)
-                .await;
+            let is_move = moving.is_some();
+            let signed = match moving {
+                Some(account) => {
+                    let moving = this.core.move_to_own_client(account, urls);
+                    futures::pin_mut!(moving);
+                    let canceled = Box::pin(canceled.recv());
+                    match futures::future::select(moving, canceled).await {
+                        futures::future::Either::Left((moved, _)) => moved.map(|a| (a, None)),
+                        futures::future::Either::Right(_) => {
+                            Err(anyhow::anyhow!(gettext("Canceled.")))
+                        }
+                    }
+                }
+                None => {
+                    this.core
+                        .sign_in_in_browser(browser, urls, wanted, canceled)
+                        .await
+                }
+            };
             match signed {
+                Ok((account, _)) if is_move => {
+                    if this.asking.wants(ticket) {
+                        this.moved(account);
+                    } else {
+                        // The dialog moved on, but the account is moved.
+                        (this.done)(Done::SignedInAgain(account));
+                    }
+                }
                 // The account is kept whether or not the dialog is still
                 // open, so the window hears about it either way.
                 Ok((account, name)) => {
@@ -4443,6 +4592,19 @@ fn preview(this: &Rc<Dialog>, stage: &str) {
                     this.password.name_list.set_visible(false);
                 }
                 _ => {}
+            }
+        }
+        "routes" | "routes-mac" => {
+            // Every row is ready, so the screenshots show them all.
+            let everything = |goa| Ready {
+                goa,
+                app_password: true,
+                own_project: true,
+            };
+            if stage == "routes" {
+                this.show_routes(Platform::Linux, everything(Goa::Holds), None);
+            } else {
+                this.show_routes(Platform::MacOs, everything(Goa::Absent), None);
             }
         }
         "closed" => {

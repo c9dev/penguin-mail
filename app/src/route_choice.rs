@@ -2,14 +2,6 @@
 //! order. Nothing here touches GTK, so the rows, their order and the
 //! footer are tested without a display.
 
-#![cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "the route page and the banner arrive in later tasks"
-    )
-)]
-
 use mailrs_domain::translate::gettext;
 use mailrs_sync::Clients;
 
@@ -39,6 +31,10 @@ pub enum Goa {
     /// Not on this computer.
     Absent,
     /// On this computer, without the address.
+    #[cfg_attr(
+        not(test),
+        expect(dead_code, reason = "the GNOME Online Accounts plan reads it")
+    )]
     Present,
     /// On this computer and already signed in as the address.
     Holds,
