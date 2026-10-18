@@ -68,7 +68,6 @@ pub enum Opening {
     Again(Account),
     /// The route page for each of these Gmail accounts in turn, to move
     /// each to its own sign-in. Closing the dialog ends the walk.
-    #[expect(dead_code, reason = "the sheet and the banner open it in a later task")]
     Move(Vec<Account>),
     /// A demo stage, for screenshots: see [`preview`].
     Preview(String),
@@ -109,9 +108,9 @@ pub fn present(
     parent: &impl IsA<gtk::Widget>,
     opening: Opening,
     done: impl Fn(Done) + 'static,
-) {
+) -> Option<adw::Dialog> {
     if matches!(&opening, Opening::Move(accounts) if accounts.is_empty()) {
-        return;
+        return None;
     }
     let again = match &opening {
         Opening::Again(account) => Some(account.clone()),
@@ -193,6 +192,7 @@ pub fn present(
     {
         this.window.set_focus(Some(&row));
     }
+    Some(this.window.clone())
 }
 
 /// The platform and what it can run now, and whether any route shows.

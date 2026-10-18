@@ -62,6 +62,7 @@ mod in_flight;
 mod invitation;
 mod listing;
 mod message_menu;
+pub(crate) mod move_banner;
 mod notice;
 mod on_screen;
 mod organize;
@@ -130,6 +131,9 @@ pub struct MainWindow {
     /// top of the mail list; see [`crate::permission::wants_banner`].
     /// Rebuilt whenever the accounts are read again.
     grant_banners: gtk::Box,
+    /// The one banner above them that asks Gmail accounts to choose a new
+    /// way to sign in. It is the first child of `grant_banners`.
+    move_banner: move_banner::Bar,
     /// The banner `grant_banners` holds for each account that wants one,
     /// so a later rebuild changes only what changed rather than tearing
     /// every banner down and putting it back: a screen reader can be
@@ -810,6 +814,8 @@ impl MainWindow {
             // gives needs the width a pane would cut short.
             let keyring_banner = adw::Banner::builder().revealed(false).build();
             let grant_banners = list.grant_bars.clone();
+            let move_banner = move_banner::Bar::new();
+            grant_banners.prepend(move_banner.widget());
             let content = gtk::Box::new(gtk::Orientation::Vertical, 0);
             content.append(&update_banner);
             content.append(&keyring_banner);
@@ -880,6 +886,7 @@ impl MainWindow {
                 update_banner,
                 keyring_banner,
                 grant_banners,
+                move_banner,
                 grant_banner_widgets: RefCell::new(HashMap::new()),
                 storage_banner_widgets: RefCell::new(HashMap::new()),
                 update_menu: gio::Menu::new(),
@@ -1067,14 +1074,20 @@ impl MainWindow {
         let weak = Rc::downgrade(&window);
         window.list.banner.connect_button_clicked(move |_| {
             let Some(win) = weak.upgrade() else { return };
+            let waiting = win.waiting_ids();
             let account = win
                 .accounts()
                 .into_iter()
-                .find(|a| a.state == AccountState::NeedsReauth);
+                .find(|a| crate::move_banner::sign_in_banner_wanted(a, &waiting));
             match account {
                 Some(account) => win.sign_in_again(account),
                 None => win.authorize(None),
             }
+        });
+        let weak = Rc::downgrade(&window);
+        window.move_banner.connect_press(move |press| {
+            let Some(win) = weak.upgrade() else { return };
+            win.choose_how_to_sign_in(&press);
         });
         if let Some(filter) = app.filter() {
             window.conversation.set_filter(filter);
@@ -1243,10 +1256,14 @@ impl MainWindow {
         self.stack.set_visible_child_name(page);
         let live: HashSet<AccountId> = data.iter().map(|(a, _)| a.id).collect();
         // Any account can need to sign in again, a calendar account too.
+        // An account that waits for a move has its own banner, and the
+        // built-in sign-in would hand it a token without its mail scope.
+        let waiting = app.waiting_for_move();
+        let waiting_ids: Vec<AccountId> = waiting.iter().map(|w| w.account.id).collect();
         let reauth = data
             .iter()
             .map(|(a, _)| a)
-            .find(|a| a.state == AccountState::NeedsReauth)
+            .find(|a| crate::move_banner::sign_in_banner_wanted(a, &waiting_ids))
             .cloned();
         // A calendar account has no mailboxes, so the mail sidebar and
         // everything worded by what the accounts offer for mail is built
@@ -1359,7 +1376,8 @@ impl MainWindow {
         // same pass as the accounts themselves, so this costs no round
         // trip of its own and settles with everything else above.
         let mut accounts: Vec<Account> = data.iter().map(|(a, _)| a.clone()).collect();
-        self.rebuild_grant_banners(&accounts, &app.consent());
+        self.rebuild_move_banner(&waiting);
+        self.rebuild_grant_banners(&accounts, &app.consent(), &waiting_ids);
         self.rebuild_storage_banners();
         // The mail accounts in the sidebar's order, then the calendar
         // accounts, which the mail sidebar has no place for.
@@ -1418,10 +1436,14 @@ impl MainWindow {
         self: &Rc<Self>,
         accounts: &[Account],
         consent: &HashMap<AccountId, mailrs_store::accounts::Consent>,
+        waiting: &[AccountId],
     ) {
         let wanted: Vec<&Account> = accounts
             .iter()
             .filter(|account| {
+                if !crate::move_banner::grant_banner_wanted(waiting, account.id) {
+                    return false;
+                }
                 let withheld = self.withheld(account.id);
                 let asked = consent.get(&account.id).and_then(|c| c.asked.as_deref());
                 let sign_in = self
@@ -1480,6 +1502,60 @@ impl MainWindow {
             self.grant_banners.append(&banner);
             widgets.insert(account.id, banner);
         }
+    }
+
+    /// Brings the move banner in line with the accounts that wait for a
+    /// move: one banner for all of them, worded for one or several.
+    fn rebuild_move_banner(self: &Rc<Self>, waiting: &[crate::move_banner::Waiting]) {
+        // The GNOME Online Accounts plan reads what the desktop holds and
+        // passes it here; until it lands no address counts as held.
+        let shown = crate::move_banner::banner(waiting, |_| false);
+        self.move_banner.show(shown);
+    }
+
+    /// The accounts that wait for a move, by id.
+    fn waiting_ids(&self) -> Vec<AccountId> {
+        self.app
+            .upgrade()
+            .map(|app| {
+                app.waiting_for_move()
+                    .iter()
+                    .map(|w| w.account.id)
+                    .collect()
+            })
+            .unwrap_or_default()
+    }
+
+    /// The banner's button: the route choice for each waiting account in
+    /// turn. While the dialog is open the button is off, so a second press
+    /// cannot start a second move of the same accounts.
+    fn choose_how_to_sign_in(self: &Rc<Self>, press: &move_banner::Press) {
+        let Some(app) = self.app.upgrade() else {
+            return;
+        };
+        let waiting = app.waiting_for_move();
+        // The ids come in the banner's order, which is the walk's order.
+        let accounts: Vec<Account> = press
+            .accounts
+            .iter()
+            .filter_map(|id| waiting.iter().find(|w| w.account.id == *id))
+            .map(|w| w.account.clone())
+            .collect();
+        // `press.goa_now` is true only when GNOME Online Accounts holds the
+        // address, which no build reports yet. The GNOME Online Accounts
+        // plan replaces this with its one-click move; until then the same
+        // walk opens.
+        self.move_banner.set_busy(true);
+        let Some(dialog) = self.present_add_account(Opening::Move(accounts)) else {
+            self.move_banner.set_busy(false);
+            return;
+        };
+        let weak = Rc::downgrade(self);
+        dialog.connect_closed(move |_| {
+            if let Some(win) = weak.upgrade() {
+                win.move_banner.set_busy(false);
+            }
+        });
     }
 
     /// Asks the app's unread counts again; they come back through
@@ -2767,7 +2843,7 @@ impl MainWindow {
         self.present_add_account(Opening::Pick);
     }
 
-    fn present_add_account(self: &Rc<Self>, opening: Opening) {
+    fn present_add_account(self: &Rc<Self>, opening: Opening) -> Option<adw::Dialog> {
         let weak = Rc::downgrade(self);
         super::add_account::present(&self.core, &self.window, opening, move |done| {
             let Some(win) = weak.upgrade() else { return };
@@ -2813,7 +2889,7 @@ impl MainWindow {
                     }
                 }
             }
-        });
+        })
     }
 
     /// A calendar account signed in. The accounts are read again, and
@@ -2838,9 +2914,22 @@ impl MainWindow {
     /// provider's page in the browser, step 2 of Another Provider with
     /// its servers, or the calendar page for a calendar account.
     fn sign_in_again(self: &Rc<Self>, account: Account) {
+        // An account that waits for a move chooses a route instead: the
+        // built-in sign-in would return a token without its mail scope.
+        let moves = self
+            .app
+            .upgrade()
+            .and_then(|app| app.google_sign_in(account.id))
+            .is_some_and(|sign_in| sign_in.needs_move(account.provider));
+        if moves {
+            self.present_add_account(Opening::Move(vec![account]));
+            return;
+        }
         match Browser::of(account.provider) {
             Some(browser) => self.sign_in_in_browser(browser, Some(account.email)),
-            None => self.present_add_account(Opening::Again(account)),
+            None => {
+                self.present_add_account(Opening::Again(account));
+            }
         }
     }
 

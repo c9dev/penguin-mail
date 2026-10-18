@@ -2,11 +2,6 @@
 //! way to sign in, and the rule for when the sheet shows. Nothing here
 //! touches GTK.
 
-#![cfg_attr(
-    not(test),
-    expect(dead_code, reason = "the banner arrives in a later task")
-)]
-
 use std::collections::HashMap;
 
 use mailrs_domain::translate::{fill, fill_plural, gettext};
@@ -117,8 +112,25 @@ pub fn banner(waiting: &[Waiting], holds: impl Fn(&str) -> bool) -> Option<MoveB
     })
 }
 
+/// Whether `account` gets a Grant Access banner. One that waits for a move
+/// gets none: a consent through the built-in client would return a token
+/// without the mail scope and overwrite the working one.
+pub fn grant_banner_wanted(waiting: &[AccountId], account: AccountId) -> bool {
+    !waiting.contains(&account)
+}
+
+/// Whether `account` gets the Sign In banner: it needs to sign in again and
+/// does not wait for a move, which has its own banner and its own sign-in.
+pub fn sign_in_banner_wanted(account: &Account, waiting: &[AccountId]) -> bool {
+    account.state == AccountState::NeedsReauth && !waiting.contains(&account.id)
+}
+
 /// Whether the sheet shows now: it has not shown before, an account
 /// waits, and some route row can be offered.
+#[cfg_attr(
+    not(test),
+    expect(dead_code, reason = "the sheet arrives in a later task")
+)]
 pub fn sheet_due(shown: bool, waiting: &[Waiting], any_route: bool) -> bool {
     !shown && any_route && !waiting.is_empty()
 }
@@ -285,5 +297,21 @@ mod tests {
             },
         );
         assert_eq!(waiting_for_move(&accounts, &sign_ins, false), []);
+    }
+
+    #[test]
+    fn an_account_that_needs_a_move_gets_no_grant_banner() {
+        assert!(!grant_banner_wanted(&[1, 3], 3));
+        assert!(grant_banner_wanted(&[1, 3], 2));
+        assert!(grant_banner_wanted(&[], 1));
+    }
+
+    #[test]
+    fn an_account_that_needs_a_move_gets_no_sign_in_banner() {
+        let again = account(3, "c@gmail.com", AccountState::NeedsReauth);
+        assert!(!sign_in_banner_wanted(&again, &[3]));
+        assert!(sign_in_banner_wanted(&again, &[1]));
+        let fine = account(3, "c@gmail.com", AccountState::Ok);
+        assert!(!sign_in_banner_wanted(&fine, &[]));
     }
 }

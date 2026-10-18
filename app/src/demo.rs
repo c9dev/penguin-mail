@@ -10,6 +10,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use mailrs_domain::SignInClient;
 use mailrs_domain::calendar::{
     Access, Calendar as CalendarModel, Event as CalendarEvent, Guest as CalendarGuest, Reminder,
     ReminderMethod, Status as CalendarStatus,
@@ -791,6 +792,46 @@ impl DemoMail {
     }
 }
 
+/// Which Gmail accounts the demo asks to choose a new way to sign in, from
+/// `MAILRS_DEMO_GOOGLE_MOVE`. Unset, none does, so no screenshot meets the
+/// banner it did not ask for.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MoveStage {
+    /// One account, with its mail still arriving.
+    Banner,
+    /// All three Gmail accounts.
+    Several,
+    /// One account, whose mail has stopped. The engine runs the demo's
+    /// accounts and would set the state back, so the app words the banner
+    /// for a stopped account itself.
+    Paused,
+}
+
+impl MoveStage {
+    pub fn parse(value: &str) -> Option<MoveStage> {
+        match value {
+            "banner" => Some(MoveStage::Banner),
+            "banner-several" => Some(MoveStage::Several),
+            "banner-paused" => Some(MoveStage::Paused),
+            _ => None,
+        }
+    }
+
+    pub fn asked() -> Option<MoveStage> {
+        std::env::var("MAILRS_DEMO_GOOGLE_MOVE")
+            .ok()
+            .and_then(|value| MoveStage::parse(&value))
+    }
+
+    /// Whether the demo account at `index` waits for a move.
+    fn waits(self, index: usize) -> bool {
+        match self {
+            MoveStage::Banner | MoveStage::Paused => index == 0,
+            MoveStage::Several => true,
+        }
+    }
+}
+
 /// Adds the demo accounts to an empty store, puts the samples in each
 /// one's server, and lets sync fill the store from there. Each Gmail body
 /// the store can hold is read once through sync's cache, so opening a
@@ -808,6 +849,13 @@ pub async fn seed(db: &Db, now: EpochMillis) -> std::result::Result<DemoMail, Sy
         let account_id = db
             .write(move |c| accounts::insert_account(c, email, now))
             .await?;
+        // The demo's Gmail accounts sign in with their own client, so none
+        // waits for a move unless a stage asks for it.
+        let stage = MoveStage::asked();
+        if !stage.is_some_and(|stage| stage.waits(index)) {
+            db.write(move |c| accounts::set_sign_in_client(c, account_id, SignInClient::Own))
+                .await?;
+        }
         let fake = Arc::new(account.gmail());
         fake.keep_sent_copies(account_id);
         if index == 2 && std::env::var_os("MAILRS_DEMO_FULL_CONSENT").is_none() {
@@ -2923,6 +2971,17 @@ fn eight_weeks_later<Z: chrono::TimeZone>(start: chrono::DateTime<Z>) -> EpochMi
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn a_move_stage_picks_which_accounts_wait() {
+        use super::MoveStage;
+        assert_eq!(MoveStage::parse("banner"), Some(MoveStage::Banner));
+        assert_eq!(MoveStage::parse("other"), None);
+        let waiting = |stage: MoveStage| (0..3).filter(|i| stage.waits(*i)).collect::<Vec<_>>();
+        assert_eq!(waiting(MoveStage::Banner), [0]);
+        assert_eq!(waiting(MoveStage::Paused), [0]);
+        assert_eq!(waiting(MoveStage::Several), [0, 1, 2]);
+    }
+
     use mailrs_domain::{Folder, MailSet, Role};
     use mailrs_gmail::labels as gmail;
     use mailrs_store::bodies;

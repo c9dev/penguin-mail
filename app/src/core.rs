@@ -242,7 +242,12 @@ impl Core {
         // A first run has no config file and needs none: new accounts sign
         // in with the client the build carries.
         let config = if demo {
-            Config::default()
+            // The sheet that asks Gmail accounts to choose a sign-in never
+            // opens over a screenshot; the banner does when a stage asks.
+            Config {
+                google_move_shown: true,
+                ..Config::default()
+            }
         } else {
             match Config::load(&config_path()?) {
                 Ok(config) => config,

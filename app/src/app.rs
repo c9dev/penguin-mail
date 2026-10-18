@@ -861,15 +861,26 @@ impl App {
     /// The Gmail accounts that have to choose how they sign in, as
     /// `reload_accounts` last read them. None while this computer offers
     /// no route to choose.
-    #[expect(dead_code, reason = "the move banner reads it in a later task")]
     pub fn waiting_for_move(&self) -> Vec<crate::move_banner::Waiting> {
         use crate::route_choice::{Platform, any_route, ready_now};
-        let ready = ready_now(&mailrs_sync::Clients::current());
-        crate::move_banner::waiting_for_move(
+        let mut ready = ready_now(&mailrs_sync::Clients::current());
+        // A demo stage that asks for the banner counts the own-project row
+        // as ready, so a copy built without its own client can show it.
+        if self.core.demo && crate::demo::MoveStage::asked().is_some() {
+            ready.own_project = true;
+        }
+        let mut waiting = crate::move_banner::waiting_for_move(
             &self.accounts.borrow(),
             &self.google_sign_ins.borrow(),
             any_route(Platform::this(), ready),
-        )
+        );
+        if self.core.demo && crate::demo::MoveStage::asked() == Some(crate::demo::MoveStage::Paused)
+        {
+            for w in &mut waiting {
+                w.paused = true;
+            }
+        }
+        waiting
     }
 
     /// Finds a display name and the send-as addresses for each account
