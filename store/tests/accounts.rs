@@ -290,7 +290,10 @@ fn a_microsoft_account_keeps_its_provider_and_name() {
 fn a_mail_route_round_trips() {
     let conn = open_in_memory().unwrap();
     let id = accounts::insert_account(&conn, "dana@gmail.com", 1).unwrap();
-    assert_eq!(accounts::mail_route(&conn, id).unwrap(), MailRoute::GmailApi);
+    assert_eq!(
+        accounts::mail_route(&conn, id).unwrap(),
+        MailRoute::GmailApi
+    );
     accounts::set_mail_route(&conn, id, MailRoute::Imap).unwrap();
     assert_eq!(accounts::mail_route(&conn, id).unwrap(), MailRoute::Imap);
 }
@@ -299,10 +302,14 @@ fn a_mail_route_round_trips() {
 fn a_bad_stored_route_reads_as_corrupt() {
     let conn = open_in_memory().unwrap();
     let id = accounts::insert_account(&conn, "dana@gmail.com", 1).unwrap();
-    conn.execute("UPDATE accounts SET mail_route = 'pigeon'", []).unwrap();
+    conn.execute("UPDATE accounts SET mail_route = 'pigeon'", [])
+        .unwrap();
     assert!(matches!(
         accounts::mail_route(&conn, id),
-        Err(mailrs_store::StoreError::Corrupt { column: "accounts.mail_route", .. })
+        Err(mailrs_store::StoreError::Corrupt {
+            column: "accounts.mail_route",
+            ..
+        })
     ));
 }
 
@@ -315,7 +322,10 @@ fn google_sign_ins_list_only_gmail_rows() {
     assert_eq!(all.len(), 1);
     assert_eq!(
         all[&gmail],
-        GoogleSignIn { client: SignInClient::BuiltIn, route: MailRoute::GmailApi }
+        GoogleSignIn {
+            client: SignInClient::BuiltIn,
+            route: MailRoute::GmailApi
+        }
     );
 }
 
@@ -366,6 +376,12 @@ fn committing_a_route_without_a_restart_keeps_the_cursor() {
         },
     )
     .unwrap();
-    assert_eq!(accounts::sync_cursor(&conn, id).unwrap().state.as_deref(), Some("12345"));
-    assert_eq!(accounts::sign_in_client(&conn, id).unwrap(), SignInClient::Own);
+    assert_eq!(
+        accounts::sync_cursor(&conn, id).unwrap().state.as_deref(),
+        Some("12345")
+    );
+    assert_eq!(
+        accounts::sign_in_client(&conn, id).unwrap(),
+        SignInClient::Own
+    );
 }

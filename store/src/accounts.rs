@@ -1,8 +1,7 @@
 //! Accounts and their sync cursors.
 
 use mailrs_domain::{
-    Account, AccountId, AccountState, EpochMillis, MailRoute, Provider, RemoveSetting,
-    SignInClient,
+    Account, AccountId, AccountState, EpochMillis, MailRoute, Provider, RemoveSetting, SignInClient,
 };
 use std::collections::HashMap;
 
