@@ -377,6 +377,31 @@ impl Core {
         self.config.borrow().sync.clone()
     }
 
+    /// Whether the sheet that asks Gmail accounts to choose a sign-in
+    /// already showed.
+    #[expect(dead_code, reason = "the move sheet reads it in a later task")]
+    pub fn google_move_shown(&self) -> bool {
+        self.config.borrow().google_move_shown
+    }
+
+    /// Records that the sheet showed, so it never shows again. Demo mode
+    /// keeps this in memory only.
+    #[expect(dead_code, reason = "the move sheet reads it in a later task")]
+    pub fn mark_google_move_shown(&self) -> Result<()> {
+        let updated = {
+            let mut config = self.config.borrow_mut();
+            if config.google_move_shown {
+                return Ok(());
+            }
+            config.google_move_shown = true;
+            config.clone()
+        };
+        if !self.demo {
+            updated.save(&config_path()?)?;
+        }
+        Ok(())
+    }
+
     /// Saves new sync settings and restarts every account's loop with them.
     /// Demo mode keeps them in memory only.
     pub fn update_sync(&self, sync: mailrs_sync::config::SyncConfig) -> Result<()> {

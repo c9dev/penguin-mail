@@ -1424,7 +1424,12 @@ impl MainWindow {
             .filter(|account| {
                 let withheld = self.withheld(account.id);
                 let asked = consent.get(&account.id).and_then(|c| c.asked.as_deref());
-                crate::permission::wants_banner(withheld, asked)
+                let sign_in = self
+                    .app
+                    .upgrade()
+                    .and_then(|a| a.google_sign_in(account.id));
+                let own = crate::permission::own_scopes(account.provider, sign_in);
+                crate::permission::wants_banner(withheld, asked, own)
             })
             .collect();
         let wanted_ids: HashSet<AccountId> = wanted.iter().map(|a| a.id).collect();

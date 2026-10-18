@@ -70,6 +70,8 @@ pub struct App {
     /// Each account's consent, read in the same pass as `accounts` so the
     /// Grant Access banner never waits on a round trip of its own.
     consent: RefCell<HashMap<AccountId, accounts::Consent>>,
+    /// Each Gmail account's client and route, read with the consent.
+    google_sign_ins: RefCell<HashMap<AccountId, accounts::GoogleSignIn>>,
     /// The JMAP accounts that signed in through the browser, as
     /// `reload_accounts` last read them, so signing in again says where.
     through_browser: RefCell<HashSet<AccountId>>,
@@ -172,6 +174,7 @@ impl App {
             labels: RefCell::new(HashMap::new()),
             label_order: RefCell::new(HashMap::new()),
             consent: RefCell::new(HashMap::new()),
+            google_sign_ins: RefCell::default(),
             through_browser: RefCell::default(),
             names: RefCell::new(HashMap::new()),
             tray: Arc::new(Mutex::new(None)),
@@ -789,7 +792,7 @@ impl App {
     /// shown up as a stray unnamed control to a screen reader already
     /// walking the page.
     pub async fn reload_accounts(self: &Rc<Self>) -> anyhow::Result<Vec<(Account, Vec<Label>)>> {
-        let (mut loaded, order, consent, through_browser) = self
+        let (mut loaded, order, consent, google_sign_ins, through_browser) = self
             .core
             .read(|c| {
                 let mut out: Vec<(Account, Vec<Label>)> = Vec::new();
@@ -807,7 +810,8 @@ impl App {
                     out.push((account, account_labels));
                 }
                 let consent = accounts::all_consent(c)?;
-                Ok((out, order, consent, through_browser))
+                let google_sign_ins = accounts::google_sign_ins(c)?;
+                Ok((out, order, consent, google_sign_ins, through_browser))
             })
             .await?;
         loaded.sort_by_key(|(account, _)| self.settings.borrow().account_rank(&account.email));
@@ -824,6 +828,7 @@ impl App {
         self.accounts_read.set(true);
         *self.labels.borrow_mut() = loaded.iter().map(|(a, l)| (a.id, l.clone())).collect();
         *self.consent.borrow_mut() = consent;
+        *self.google_sign_ins.borrow_mut() = google_sign_ins;
         // A settings change that touches the accounts reloads them too, and
         // only an account this run has not seen needs Gmail asked about it.
         let arrived: Vec<Account> = loaded
@@ -845,6 +850,26 @@ impl App {
     /// it was ever asked for every scope, and which scopes it granted.
     pub fn consent(&self) -> HashMap<AccountId, accounts::Consent> {
         self.consent.borrow().clone()
+    }
+
+    /// How `id` signs in to Google, as `reload_accounts` last read it.
+    /// None for an account that is not a Gmail account.
+    pub fn google_sign_in(&self, id: AccountId) -> Option<accounts::GoogleSignIn> {
+        self.google_sign_ins.borrow().get(&id).copied()
+    }
+
+    /// The Gmail accounts that have to choose how they sign in, as
+    /// `reload_accounts` last read them. None while this computer offers
+    /// no route to choose.
+    #[expect(dead_code, reason = "the move banner reads it in a later task")]
+    pub fn waiting_for_move(&self) -> Vec<crate::move_banner::Waiting> {
+        use crate::route_choice::{Platform, any_route, ready_now};
+        let ready = ready_now(&mailrs_sync::Clients::current());
+        crate::move_banner::waiting_for_move(
+            &self.accounts.borrow(),
+            &self.google_sign_ins.borrow(),
+            any_route(Platform::this(), ready),
+        )
     }
 
     /// Finds a display name and the send-as addresses for each account

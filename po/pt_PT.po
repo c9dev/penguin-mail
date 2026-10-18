@@ -12206,7 +12206,7 @@ msgstr ""
 #. the API, and adds none: its token carries no mail, and would replace
 #. one that does.
 #. Translators: Gmail is a name; keep it as it is.
-#: sync/src/sign_in/browser.rs:121
+#: app/src/route_choice.rs:100 sync/src/sign_in/browser.rs:121
 msgid "Choose how Penguin Mail signs in to Gmail"
 msgstr "Escolha como o Penguin Mail inicia sessão no Gmail"
 
@@ -12289,6 +12289,75 @@ msgstr "Marcar como não sendo spam"
 #: sync/src/triage.rs:70
 msgid "Move to {folder}"
 msgstr "Mover para {folder}"
+
+#. Translators: Gmail is a name; keep it as it is.
+#: app/src/move_banner.rs:113 app/src/move_banner.rs:121
+msgid "{count} Gmail account can't get new mail. Choose how each signs in to get your mail back. Nothing on this computer was lost."
+msgid_plural "{count} Gmail accounts can't get new mail. Choose how each signs in to get your mail back. Nothing on this computer was lost."
+msgstr[0] "{count} conta do Gmail não consegue receber correio novo. Escolha como cada uma inicia sessão para recuperar o seu correio. Nada neste computador se perdeu."
+msgstr[1] "{count} contas do Gmail não conseguem receber correio novo. Escolha como cada uma inicia sessão para recuperar o seu correio. Nada neste computador se perdeu."
+
+#. Translators: Gmail is a name; keep it as it is.
+#: app/src/move_banner.rs:128
+msgid "{count} Gmail account needs a new way to sign in"
+msgid_plural "{count} Gmail accounts need a new way to sign in"
+msgstr[0] "{count} conta do Gmail precisa de uma nova forma de iniciar sessão"
+msgstr[1] "{count} contas do Gmail precisam de uma nova forma de iniciar sessão"
+
+#. Translators: {address} is an email address.
+#: app/src/move_banner.rs:98
+msgid "Penguin Mail can't get new mail for {address}. Choose how it signs in to get your mail back. Nothing on this computer was lost."
+msgstr "O Penguin Mail não consegue receber correio novo de {address}. Escolha como inicia sessão para recuperar o seu correio. Nada neste computador se perdeu."
+
+#. Translators: {address} is an email address.
+#: app/src/move_banner.rs:105
+msgid "Choose how {address} signs in to keep your mail arriving."
+msgstr "Escolha como {address} inicia sessão para continuar a receber o seu correio."
+
+#. Translators: GNOME Online Accounts is a name; keep it as it is.
+#: app/src/move_banner.rs:146 app/src/route_choice.rs:141
+msgid "Use GNOME Online Accounts"
+msgstr "Usar as Contas online do GNOME"
+
+#: app/src/move_banner.rs:148
+msgid "Choose…"
+msgstr "Escolher…"
+
+#. Translators: Gmail and Google are names; keep them as they are.
+#: app/src/route_choice.rs:123
+msgid "Want every Gmail feature? Your own Google project gives you all of them, free."
+msgstr "Quer todas as funcionalidades do Gmail? O seu próprio projeto Google dá-lhe todas, sem custos."
+
+#: app/src/route_choice.rs:144
+msgid "Already signed in on this computer"
+msgstr "Sessão já iniciada neste computador"
+
+#: app/src/route_choice.rs:146
+msgid "Recommended. Every feature, signs in through your desktop."
+msgstr "Recomendado. Todas as funcionalidades, inicia sessão através do ambiente de trabalho."
+
+#. Translators: Google is a name; keep it as it is.
+#: app/src/route_choice.rs:156
+msgid "Use a password from Google"
+msgstr "Usar uma palavra-passe da Google"
+
+#: app/src/route_choice.rs:158
+msgid "Quick. Mail, calendar and contacts."
+msgstr "Rápido. Correio, calendário e contactos."
+
+#: app/src/route_choice.rs:160
+msgid "Quickest. About 2 minutes"
+msgstr "O mais rápido. Cerca de 2 minutos"
+
+#. Translators: Google is a name; keep it as it is.
+#: app/src/route_choice.rs:171
+msgid "Set up your own Google project"
+msgstr "Configurar o seu próprio projeto Google"
+
+#. Translators: Gmail is a name; keep it as it is.
+#: app/src/route_choice.rs:173
+msgid "Every Gmail feature, on any computer. About 10 minutes, once."
+msgstr "Todas as funcionalidades do Gmail, em qualquer computador. Cerca de 10 minutos, uma só vez."
 
 #~ msgid "Install Bubblewrap"
 #~ msgstr "Instalar o Bubblewrap"
