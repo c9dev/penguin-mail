@@ -7,6 +7,7 @@ mod browser_grant;
 mod jmap_browser;
 pub mod own_client;
 
+pub(crate) use browser::other_address;
 pub use browser::{
     Browser, BrowserSignInError, SignedIn, Wanted, calendar_consent, google_sign_in, in_browser,
 };
@@ -150,21 +151,25 @@ pub async fn google_signed_in(
     let address = email.to_string();
     let before = db
         .read(move |c| match accounts::account_by_email(c, &address)? {
-            Some(held) if held.provider == Provider::Gmail => {
-                Ok(Some((held.id, accounts::sign_in_client(c, held.id)?)))
-            }
+            Some(held) if held.provider == Provider::Gmail => Ok(Some((
+                accounts::sign_in_client(c, held.id)?,
+                accounts::consent(c, held.id)?,
+            ))),
             _ => Ok(None),
         })
         .await?;
     let account = signed_in(db, email, now, granted, asked, kind).await?;
     // The client goes in before the token: a token kept beside the wrong
     // client cannot refresh. On a failure the account signs in as it did,
-    // and a new one is not kept.
+    // with the consent of its old token, and a new one is not kept.
     let kept = keep_google_secrets(secrets, account.id, email, refresh_token, own).await;
     if let Err(err) = kept {
         let id = account.id;
         db.write(move |c| match before {
-            Some((_, client)) => accounts::set_sign_in_client(c, id, client),
+            Some((client, consent)) => {
+                accounts::set_sign_in_client(c, id, client)?;
+                accounts::set_consent(c, id, &consent)
+            }
             None => accounts::delete_account(c, id),
         })
         .await?;

@@ -146,7 +146,7 @@ fn no_client(browser: Browser) -> String {
     }
 }
 
-fn other_address(signed_in: &str, wanted: &str) -> String {
+pub(crate) fn other_address(signed_in: &str, wanted: &str) -> String {
     fill(
         &gettext(
             "You signed in as {account}. Choose {wanted} to reconnect that \

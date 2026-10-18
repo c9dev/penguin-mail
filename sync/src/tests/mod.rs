@@ -41,6 +41,7 @@ mod pop3_check;
 mod pop3_look;
 mod priority;
 mod quota;
+mod route_move;
 mod rsvp;
 mod rule_queue;
 mod search;

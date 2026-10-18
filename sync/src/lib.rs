@@ -25,6 +25,7 @@ mod ops;
 pub mod outbox;
 pub mod passwords;
 pub mod raw_cache;
+pub mod route_move;
 pub mod rules;
 pub mod services;
 mod settings;

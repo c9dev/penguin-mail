@@ -23,6 +23,7 @@ use mailrs_store::{Db, StoreError, accounts};
 use mailrs_sync::config::{Config, config_path, data_dir, migrate_old_dirs};
 use mailrs_sync::lock::{LockError, SyncLock};
 use mailrs_sync::passwords::{PasswordStore, Secrets};
+use mailrs_sync::route_move;
 use mailrs_sync::services::finding;
 use mailrs_sync::sign_in::{
     Browser, BrowserReady, BrowserSignInError, JmapBrowser, NewCalDav, NewImap, NewJmap, NewPop3,
@@ -1601,6 +1602,77 @@ impl Core {
         // replaced.
         self.actions.forget_account(id);
         Ok(switched)
+    }
+}
+
+impl Core {
+    /// Moves `account`, a Gmail account on the built-in client, to the own
+    /// client the environment names, keeping its id and its mail. The
+    /// browser sign-in runs first, with `urls` getting the page to open,
+    /// and nothing is stored until it succeeds. Then the account's loop
+    /// stops, what is due goes out and the writes under way finish through
+    /// the old sign-in, and the account starts again on the new one. On any
+    /// error it starts again as it was.
+    #[expect(dead_code, reason = "the route page that offers the move calls it")]
+    pub async fn move_to_own_client(
+        &self,
+        account: Account,
+        urls: async_channel::Sender<String>,
+    ) -> Result<Account> {
+        if self.demo {
+            bail!(gettext("The demo cannot switch accounts."));
+        }
+        let engine = self
+            .engine
+            .current()
+            .ok_or_else(|| anyhow!("sync is not running"))?;
+        let (db, secrets, outbox) = (
+            self.db.clone(),
+            self.secrets.clone(),
+            Arc::clone(&self.outbox),
+        );
+        let reach = Reach {
+            connector: self.connector(),
+            demo: self.demo_mail.clone(),
+        };
+        self.call(async move {
+            // The own-project setup replaces the environment as the source.
+            let own = match Clients::current().own_google {
+                Some(Ok(own)) => own,
+                Some(Err(half)) => return Err(BrowserSignInError::from(half).into()),
+                None => return Err(BrowserSignInError::NoClient(Browser::Google).into()),
+            };
+            let open = move |url: &str| {
+                let _ = urls.try_send(url.to_string());
+            };
+            let oauth = own.oauth();
+            let signing = mailrs_gmail::authorize(&oauth, mailrs_gmail::GMAIL_API_BASE, open);
+            let authorized = tokio::time::timeout(BROWSER_WAIT, signing)
+                .await
+                .map_err(|_| anyhow!(gettext("Gave up waiting for the browser after five minutes.")))?
+                .map_err(BrowserSignInError::Google)?;
+            let id = account.id;
+            // Kept past the stop: the drain sends through it.
+            let kept = engine.account(id).ok();
+            engine.stop_account(id);
+            if let Some(sync) = kept {
+                let draining = Outbox::new(Arc::new(route_move::Stopped(Arc::clone(&sync))), db.clone());
+                if !route_move::drain(&sync, &draining, now_millis(), route_move::DRAIN_WAIT).await {
+                    tracing::warn!(account = id, "moving with work still under way on the old sign-in");
+                }
+            }
+            let _held = outbox.hold(id).await;
+            let moved = route_move::to_own_client(&db, &secrets, &account, &own, authorized).await;
+            let now = match &moved {
+                Ok(moved) => Some(moved.clone()),
+                Err(_) => db.read(move |c| accounts::account(c, id)).await.ok().flatten(),
+            };
+            if let Err(err) = start_again(&reach, &engine, &db, &now.unwrap_or(account), false).await {
+                tracing::warn!(account = id, error = %err, "could not start the account again after the move");
+            }
+            Ok::<_, anyhow::Error>(moved?)
+        })
+        .await
     }
 }
 

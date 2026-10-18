@@ -564,6 +564,15 @@ pub fn set_granted(conn: &Connection, id: AccountId, scope: &str) -> Result<()> 
     Ok(())
 }
 
+/// Puts back a consent read with [`consent`], an unknown half included.
+pub fn set_consent(conn: &Connection, id: AccountId, consent: &Consent) -> Result<()> {
+    conn.execute(
+        "UPDATE accounts SET granted_scopes = ?2, asked_scopes = ?3 WHERE id = ?1",
+        params![id, consent.granted, consent.asked],
+    )?;
+    Ok(())
+}
+
 /// Records the scopes the last consent for `id` asked Google for.
 pub fn set_asked(conn: &Connection, id: AccountId, scope: &str) -> Result<()> {
     conn.execute(
