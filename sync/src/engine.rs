@@ -440,16 +440,16 @@ pub(crate) async fn tick(
     stagger: &mut Duration,
     config: &EngineConfig,
 ) -> Result<bool, SyncError> {
-    // An account whose mailboxes live only in the store is never pruned,
-    // relisted or paged: the store is its only copy. It lists its
-    // mailboxes once an hour, the first time before anything else, so the
-    // Inbox exists before mail arrives.
     // Mail the old grant served cannot be asked for, so no call goes out.
     if sync.services().when_grant_ends == WhenGrantEnds::PauseMail
         && sync.services().mail.mail_grant_lost()
     {
         return Err(BackendError::NeedsPermission.into());
     }
+    // An account whose mailboxes live only in the store is never pruned,
+    // relisted or paged: the store is its only copy. It lists its
+    // mailboxes once an hour, the first time before anything else, so the
+    // Inbox exists before mail arrives.
     let local = sync.services().mail.capabilities().local_mailboxes;
     if local && Instant::now() >= *next_prune {
         sync.refresh_labels().await?;

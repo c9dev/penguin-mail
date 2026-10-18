@@ -1654,11 +1654,24 @@ async fn start_again(
         }
         Connected::NeedsSignIn => {
             let id = account.id;
-            db.write(move |c| accounts::set_state(c, id, AccountState::NeedsReauth))
-                .await?;
+            let state = missing_token_state(db, account).await?;
+            db.write(move |c| accounts::set_state(c, id, state)).await?;
         }
     }
     Ok(())
+}
+
+/// The state of an account that has no token or password to start on:
+/// mail paused when it has to choose a new route, else sign in again.
+async fn missing_token_state(db: &Db, account: &Account) -> Result<AccountState> {
+    let (id, provider) = (account.id, account.provider);
+    let sign_in = db
+        .read(move |c| Ok(accounts::google_sign_ins(c)?.remove(&id)))
+        .await?;
+    Ok(match sign_in.is_some_and(|s| s.needs_move(provider)) {
+        true => AccountState::MailPaused,
+        false => AccountState::NeedsReauth,
+    })
 }
 
 /// What a search for an IMAP or POP3 account's other servers found in use.
@@ -1976,6 +1989,44 @@ mod tests {
     use std::sync::{Arc, Mutex, PoisonError};
 
     use super::Core;
+    use mailrs_domain::{AccountState, MailRoute, SignInClient};
+    use mailrs_store::{Db, accounts};
+
+    #[tokio::test]
+    async fn a_restart_without_a_token_pauses_an_account_that_needs_a_move() {
+        let dir = tempfile::tempdir().unwrap();
+        let db = Db::open(&dir.path().join("mail.db")).unwrap();
+        db.write(|c| accounts::insert_account(c, "me@gmail.com", 0))
+            .await
+            .unwrap();
+        let account = db
+            .read(|c| accounts::account_by_email(c, "me@gmail.com"))
+            .await
+            .unwrap()
+            .unwrap();
+        let id = account.id;
+        assert_eq!(
+            super::missing_token_state(&db, &account).await.unwrap(),
+            AccountState::MailPaused
+        );
+        db.write(move |c| accounts::set_sign_in_client(c, id, SignInClient::Own))
+            .await
+            .unwrap();
+        assert_eq!(
+            super::missing_token_state(&db, &account).await.unwrap(),
+            AccountState::NeedsReauth
+        );
+        db.write(move |c| {
+            accounts::set_sign_in_client(c, id, SignInClient::BuiltIn)?;
+            accounts::set_mail_route(c, id, MailRoute::Imap)
+        })
+        .await
+        .unwrap();
+        assert_eq!(
+            super::missing_token_state(&db, &account).await.unwrap(),
+            AccountState::NeedsReauth
+        );
+    }
 
     /// Each `Core::open(true)` makes a demo folder of its own
     /// (`DemoFolder::make` numbers them), so the tests here share no file.

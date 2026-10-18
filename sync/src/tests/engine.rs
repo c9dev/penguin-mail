@@ -431,3 +431,41 @@ async fn an_own_account_whose_token_is_refused_needs_reauth() {
     wait_for(&s.events, reached(AccountState::NeedsReauth)).await;
     assert_eq!(stored_state(&s).await, AccountState::NeedsReauth);
 }
+
+#[tokio::test]
+async fn a_paused_account_still_has_its_calendar_read_and_stays_paused() {
+    use mailrs_domain::calendar::{Access, Calendar};
+
+    let s = setup().await;
+    s.fake.with(|f| {
+        f.calendars = vec![Calendar {
+            id: "primary".into(),
+            name: "Personal".into(),
+            color: "#3584e4".into(),
+            access: Access::Owner,
+            zone: "UTC".into(),
+            primary: true,
+            shown: true,
+            hidden: false,
+            reminders: Vec::new(),
+            all_day_reminders: None,
+        }]
+    });
+    s.fake.fail_next(GmailError::NeedsReauth);
+    s.engine.start_account(1, built_in_gmail(&s));
+    wait_for(&s.events, reached(AccountState::MailPaused)).await;
+    let copy = CalendarCopy::new(Arc::clone(&s.engine), s.db.clone());
+    copy.refresh_due(&[1], NOW, true).await.unwrap();
+    let calendars =
+        s.db.read(|c| mailrs_store::calendar::calendars(c, 1))
+            .await
+            .unwrap();
+    assert_eq!(
+        calendars
+            .iter()
+            .map(|c| c.name.as_str())
+            .collect::<Vec<_>>(),
+        ["Personal"]
+    );
+    assert_eq!(stored_state(&s).await, AccountState::MailPaused);
+}

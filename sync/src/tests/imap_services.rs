@@ -511,6 +511,7 @@ async fn gmail_over_imap_takes_local_rules_and_no_automatic_reply() {
         rules: AnyRules::Local(crate::LocalRules::new(h.db.clone(), h.account_id)),
         google: Some(fake_google(&gmail)),
     });
+    assert_eq!(services.when_grant_ends, crate::WhenGrantEnds::SignInAgain);
     assert!(services.auto_reply.is_none());
     assert!(matches!(services.rules, Some(AnyRules::Local(_))));
     assert!(services.calendar.is_some() && services.contacts.is_some());

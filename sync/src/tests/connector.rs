@@ -168,6 +168,62 @@ async fn a_built_in_gmail_account_on_the_api_route_pauses_mail_when_its_grant_en
 }
 
 #[tokio::test]
+async fn a_gmail_account_on_its_own_client_signs_in_again_when_its_grant_ends() {
+    let (db, _dir) = store().await;
+    let me = gmail_account(&db).await;
+    let id = me.id;
+    db.write(move |c| accounts::set_sign_in_client(c, id, SignInClient::Own))
+        .await
+        .unwrap();
+    let reach = connector(&db, Clients::default());
+    reach.secrets.google.save(&me.email, "rt").unwrap();
+    reach
+        .secrets
+        .google_clients
+        .save(me.id, &OwnClient::new("own", "secret").encode())
+        .unwrap();
+    let Connected::Ready(services) = reach.connect(&me).await.unwrap() else {
+        panic!("the account connects");
+    };
+    assert_eq!(services.when_grant_ends, WhenGrantEnds::SignInAgain);
+}
+
+#[tokio::test]
+async fn a_gmail_account_on_the_imap_route_signs_in_again_when_its_grant_ends() {
+    let (db, _dir) = store().await;
+    let me = gmail_account(&db).await;
+    let id = me.id;
+    db.write(move |c| accounts::set_mail_route(c, id, MailRoute::Imap))
+        .await
+        .unwrap();
+    // The IMAP adapter is built by the app-password plan; until then the
+    // route builds nothing, and the services it will build carry the
+    // default.
+    let connected = connector(&db, both_clients()).connect(&me).await.unwrap();
+    assert!(matches!(connected, Connected::NeedsSignIn(Lacks::Secret)));
+}
+
+#[tokio::test]
+async fn accounts_of_other_providers_sign_in_again_when_their_secret_ends() {
+    let (db, _dir) = store().await;
+    let dana = microsoft_account(&db).await;
+    let reach = connector(&db, both_clients());
+    reach.secrets.microsoft.save(dana.id, "refresh").unwrap();
+    let Connected::Ready(microsoft) = reach.connect(&dana).await.unwrap() else {
+        panic!("the Microsoft account connects");
+    };
+    let fastmail = imap_account(&db).await;
+    reach.secrets.passwords.save(fastmail.id, "secret").unwrap();
+    let Connected::Ready(imap) = reach.connect(&fastmail).await.unwrap() else {
+        panic!("the IMAP account connects");
+    };
+    assert_eq!(
+        (microsoft.when_grant_ends, imap.when_grant_ends),
+        (WhenGrantEnds::SignInAgain, WhenGrantEnds::SignInAgain)
+    );
+}
+
+#[tokio::test]
 async fn a_google_account_without_a_token_needs_to_sign_in() {
     let (db, _dir) = store().await;
     let me = gmail_account(&db).await;
