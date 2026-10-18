@@ -7,7 +7,9 @@ mod browser_grant;
 mod jmap_browser;
 pub mod own_client;
 
-pub use browser::{Browser, BrowserSignInError, SignedIn, Wanted, google_sign_in, in_browser};
+pub use browser::{
+    Browser, BrowserSignInError, SignedIn, Wanted, calendar_consent, google_sign_in, in_browser,
+};
 pub use browser_grant::{BrowserGrant, browser_grant};
 pub use jmap_browser::{BROWSER_WAIT, BrowserReady, JmapBrowser, browser_ready, jmap_in_browser};
 
@@ -74,8 +76,8 @@ pub async fn account_client<P: PasswordStore + 'static>(
 /// start on an IMAP account's row.
 ///
 /// `granted` is the scopes Google's token answer said it carries, and
-/// `asked` the ones this consent asked for: every [`mailrs_gmail::FULL_SCOPES`]
-/// entry, joined with spaces. Both go on the account row so a later
+/// `asked` the ones this consent asked for: the asking client's scopes,
+/// joined with spaces. Both go on the account row so a later
 /// feature can tell a scope the person unticked from one nobody has
 /// asked for yet.
 pub async fn signed_in(

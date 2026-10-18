@@ -75,10 +75,6 @@ pub const BUILT_IN_SCOPES: [&str; 7] = [
     DRIVE_FILE_SCOPE,
 ];
 
-/// Another name for [`FULL_SCOPES`], kept so the crates that still use it
-/// build. Task 4 of the scope split removes it with its last caller.
-pub const SIGN_IN_SCOPES: [&str; 7] = FULL_SCOPES;
-
 /// Which list of scopes a client asks for.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ScopeList {

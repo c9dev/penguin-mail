@@ -11472,65 +11472,73 @@ msgstr ""
 msgid "Choose what the rule does"
 msgstr ""
 
-#: sync/src/sign_in.rs:267
+#: sync/src/sign_in.rs:269
 msgid ""
 "You signed in to a different account than {address}, so nothing changed."
 msgstr ""
 
-#: sync/src/sign_in.rs:274
+#: sync/src/sign_in.rs:276
 msgid "{address} is already in Penguin Mail as a {provider} account."
 msgstr ""
 
-#: sync/src/sign_in.rs:436
+#: sync/src/sign_in.rs:438
 msgid ""
 "A calendar account named {name} is already here, for the server at "
 "{address}. Remove it to add this server under that name."
 msgstr ""
 
-#: sync/src/sign_in.rs:445
+#: sync/src/sign_in.rs:447
 msgid ""
 "A calendar account named {name} is already here, signed in to this server as "
 "{user}. Type {user} to sign it in again, or remove it to sign in as someone "
 "else."
 msgstr ""
 
-#: sync/src/sign_in.rs:454
+#: sync/src/sign_in.rs:456
 msgid ""
 "Sign In Again keeps {name} on the server at {address}. To use another server "
 "or user name, add it as a calendar account of its own."
 msgstr ""
 
 #. The JMAP server publishes no sign-in a browser can run.
-#: sync/src/sign_in/browser.rs:105
+#: sync/src/sign_in/browser.rs:106
 msgid "This server does not offer a sign-in in the browser."
 msgstr ""
 
-#: sync/src/sign_in/browser.rs:112
+#: sync/src/sign_in/browser.rs:113
 msgid ""
 "The server did not let Penguin Mail stay signed in. Sign in with a password "
 "or a token instead."
 msgstr ""
 
+#. The built-in client signs in no account that reads its mail through
+#. the API, and adds none: its token carries no mail, and would replace
+#. one that does.
+#. Translators: Gmail is a name; keep it as it is.
+#: sync/src/sign_in/browser.rs:121
+msgid "Choose how Penguin Mail signs in to Gmail"
+msgstr ""
+
 #. Nobody came back from the browser within the wait.
-#: sync/src/sign_in/browser.rs:117
+#: sync/src/sign_in/browser.rs:124
 msgid "Gave up waiting for the browser after ten minutes."
 msgstr ""
 
-#: sync/src/sign_in/browser.rs:145
+#: sync/src/sign_in/browser.rs:152
 msgid "You signed in as {account}. Choose {wanted} to reconnect that account."
 msgstr ""
 
-#: sync/src/sign_in/browser.rs:155
+#: sync/src/sign_in/browser.rs:162
 msgid ""
 "Penguin Mail cannot work without access to your mail. Sign in again and "
 "leave the Gmail permission ticked."
 msgstr ""
 
-#: sync/src/sign_in/browser.rs:165
+#: sync/src/sign_in/browser.rs:172
 msgid "Your organization's administrator must approve Penguin Mail."
 msgstr ""
 
-#: sync/src/sign_in/browser.rs:168
+#: sync/src/sign_in/browser.rs:175
 msgid ""
 "Penguin Mail cannot work without access to your mail. Sign in again and "
 "allow it."

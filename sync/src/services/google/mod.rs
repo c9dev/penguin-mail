@@ -780,7 +780,7 @@ mod tests {
     use mailrs_gmail::{
         AccountQuota, CALENDAR_LIST_SCOPE, CALENDAR_LIST_WRITE_SCOPE, CALENDAR_SCOPE,
         CALENDARS_SCOPE, CONTACTS_SCOPE, CONTACTS_WRITE_SCOPE, DELETE_SCOPE, DRIVE_FILE_SCOPE,
-        GMAIL_SCOPE, GmailError, Granted, SETTINGS_SCOPE, SIGN_IN_SCOPES, SendAs, limiter,
+        FULL_SCOPES, GMAIL_SCOPE, GmailError, Granted, SETTINGS_SCOPE, SendAs, limiter,
     };
 
     use super::{Google, paced, withheld};
@@ -896,7 +896,7 @@ mod tests {
             Withheld::NONE,
             "an unknown grant withholds nothing"
         );
-        let everything = Granted::parse(&SIGN_IN_SCOPES.join(" "));
+        let everything = Granted::parse(&FULL_SCOPES.join(" "));
         assert_eq!(withheld(Some(&everything)), Withheld::NONE);
         let no_calendar = Granted::parse(&format!(
             "{GMAIL_SCOPE} {SETTINGS_SCOPE} {DELETE_SCOPE} {CALENDAR_LIST_SCOPE}"

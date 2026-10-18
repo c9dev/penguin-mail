@@ -3,7 +3,7 @@
 
 use std::sync::Arc;
 
-use mailrs_domain::{Account, AccountState, Provider, RemoveSetting, SignInClient};
+use mailrs_domain::{Account, AccountState, MailRoute, Provider, RemoveSetting, SignInClient};
 use mailrs_gmail::OAuthClient;
 use mailrs_graph::MicrosoftClient;
 use mailrs_store::servers::{self, Pop3Servers, Saved, Security, Servers};
@@ -14,7 +14,9 @@ use crate::config::Config;
 use crate::passwords::{PasswordStore, Secrets};
 use crate::services::{AnyIdentities, AnyMail};
 use crate::sign_in::own_client::{ID_VAR, OwnClient, OwnClientError, SECRET_VAR};
-use crate::sign_in::{Browser, BrowserSignInError, Wanted, google_sign_in, in_browser};
+use crate::sign_in::{
+    Browser, BrowserSignInError, Wanted, calendar_consent, google_sign_in, in_browser,
+};
 use crate::{Clients, Connected, Connector, Lacks};
 
 async fn store() -> (Db, tempfile::TempDir) {
@@ -1991,4 +1993,190 @@ async fn a_sieve_session_with_no_local_rules_runs_the_script_alone() {
         services.rules,
         Some(crate::AnyRules::JmapSieve(_))
     ));
+}
+
+/// A build whose only Google client is the built-in one: it asks for no
+/// mail, so a sign-in through it cannot read any.
+fn built_in_clients() -> Clients {
+    Clients {
+        google: Some(OAuthClient::new("cid", "secret").asking(mailrs_gmail::ScopeList::BuiltIn)),
+        ..both_clients()
+    }
+}
+
+#[tokio::test]
+async fn the_built_in_client_never_signs_in_an_api_account() {
+    let (db, _dir) = store().await;
+    let me = gmail_account(&db).await;
+    let reach = connector(&db, built_in_clients());
+    let mut opened = false;
+    let refused = in_browser(
+        &reach,
+        Browser::Google,
+        Wanted::Only(me.email.clone()),
+        |_| opened = true,
+    )
+    .await;
+    assert!(matches!(refused, Err(BrowserSignInError::NeedsRoute)));
+    assert!(!opened, "the browser never opened");
+}
+
+#[tokio::test]
+async fn the_built_in_client_adds_no_new_gmail_account() {
+    let (db, _dir) = store().await;
+    let reach = connector(&db, built_in_clients());
+    let mut opened = false;
+    let refused = in_browser(&reach, Browser::Google, Wanted::Anyone, |_| opened = true).await;
+    assert!(matches!(refused, Err(BrowserSignInError::NeedsRoute)));
+    assert!(!opened, "the browser never opened");
+    let held = db.read(accounts::list_accounts).await.unwrap();
+    assert!(held.is_empty(), "{held:?}");
+}
+
+#[tokio::test]
+async fn the_built_in_client_refuses_an_address_with_no_gmail_account() {
+    let (db, _dir) = store().await;
+    let imap = imap_account(&db).await;
+    let reach = connector(&db, built_in_clients());
+    for wanted in [
+        Wanted::Only("nobody@gmail.com".into()),
+        Wanted::Only(imap.email),
+    ] {
+        let refused = in_browser(&reach, Browser::Google, wanted, |url: &str| {
+            panic!("opened {url}")
+        })
+        .await;
+        assert!(matches!(refused, Err(BrowserSignInError::NeedsRoute)));
+    }
+}
+
+fn id_token(email: &str) -> String {
+    use base64::Engine;
+    let claims = serde_json::json!({"email": email, "email_verified": true});
+    let body = base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(claims.to_string());
+    format!("e30.{body}.sig")
+}
+
+/// The built-in client against a token endpoint that answers with an ID
+/// token for `email`. The "browser" is a request to the redirect the
+/// sign-in listens on.
+async fn built_in_clients_answering(server: &wiremock::MockServer, email: &str) -> Clients {
+    use wiremock::matchers::{method, path};
+    wiremock::Mock::given(method("POST"))
+        .and(path("/token"))
+        .respond_with(
+            wiremock::ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "access_token": "at-1",
+                "expires_in": 3600,
+                "refresh_token": "rt-new",
+                "scope": mailrs_gmail::BUILT_IN_SCOPES[2..].join(" "),
+                "id_token": id_token(email),
+            })),
+        )
+        .mount(server)
+        .await;
+    let built_in = OAuthClient::new("cid", "secret")
+        .with_endpoints(
+            format!("{}/auth", server.uri()),
+            format!("{}/token", server.uri()),
+        )
+        .asking(mailrs_gmail::ScopeList::BuiltIn);
+    Clients {
+        google: Some(built_in),
+        ..both_clients()
+    }
+}
+
+fn come_back_from_google(consent_url: &str) {
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    let value = |key: &str| {
+        let (_, rest) = consent_url.split_once(&format!("{key}=")).unwrap();
+        rest.split('&').next().unwrap().to_string()
+    };
+    let redirect = value("redirect_uri")
+        .trim_start_matches("http%3A%2F%2F")
+        .replace("%3A", ":");
+    let state = value("state");
+    tokio::spawn(async move {
+        let mut stream = tokio::net::TcpStream::connect(&redirect).await.unwrap();
+        let request = format!("GET /?code=c&state={state} HTTP/1.1\r\nHost: {redirect}\r\n\r\n");
+        stream.write_all(request.as_bytes()).await.unwrap();
+        let mut response = String::new();
+        stream.read_to_string(&mut response).await.unwrap();
+    });
+}
+
+#[tokio::test]
+async fn the_calendar_consent_keeps_the_route_and_records_the_built_in_list() {
+    let (db, _dir) = store().await;
+    let me = gmail_account(&db).await;
+    let id = me.id;
+    db.write(move |c| accounts::set_mail_route(c, id, MailRoute::Imap))
+        .await
+        .unwrap();
+    let server = wiremock::MockServer::start().await;
+    // The ID token names the address in another case, as Google may.
+    let reach = connector(
+        &db,
+        built_in_clients_answering(&server, "Me@Gmail.com").await,
+    );
+    let signed = calendar_consent(&reach, &me, come_back_from_google)
+        .await
+        .unwrap();
+    assert_eq!(signed.id, me.id);
+    let (route, client, consent) = db
+        .read(move |c| {
+            Ok((
+                accounts::mail_route(c, id)?,
+                accounts::sign_in_client(c, id)?,
+                accounts::consent(c, id)?,
+            ))
+        })
+        .await
+        .unwrap();
+    assert_eq!(route, MailRoute::Imap);
+    assert_eq!(client, SignInClient::BuiltIn);
+    assert_eq!(
+        consent.asked.as_deref(),
+        Some(mailrs_gmail::BUILT_IN_SCOPES.join(" ").as_str())
+    );
+    assert_eq!(
+        reach
+            .secrets
+            .google
+            .load("me@gmail.com")
+            .unwrap()
+            .as_deref(),
+        Some("rt-new")
+    );
+}
+
+#[tokio::test]
+async fn the_calendar_consent_refuses_an_api_account_before_the_browser_opens() {
+    let (db, _dir) = store().await;
+    let me = gmail_account(&db).await;
+    let reach = connector(&db, built_in_clients());
+    let refused = calendar_consent(&reach, &me, |url: &str| panic!("opened {url}")).await;
+    assert!(matches!(refused, Err(BrowserSignInError::NeedsRoute)));
+}
+
+#[tokio::test]
+async fn the_calendar_consent_is_refused_for_another_address() {
+    let (db, _dir) = store().await;
+    let me = gmail_account(&db).await;
+    let id = me.id;
+    db.write(move |c| accounts::set_mail_route(c, id, MailRoute::Imap))
+        .await
+        .unwrap();
+    let server = wiremock::MockServer::start().await;
+    let reach = connector(
+        &db,
+        built_in_clients_answering(&server, "other@gmail.com").await,
+    );
+    let refused = calendar_consent(&reach, &me, come_back_from_google).await;
+    assert!(
+        matches!(refused, Err(BrowserSignInError::OtherAddress { .. })),
+        "{:?}",
+        refused.err()
+    );
 }

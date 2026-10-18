@@ -103,10 +103,10 @@ msgid ""
 "Japanese, Korean, Polish, Russian, Spanish, European Portuguese, Simplified "
 "Chinese, Traditional Chinese (Taiwan), Turkish and Vietnamese"
 msgstr ""
-"Todos os controlos com nome para leitores de ecrã e acessíveis pelo teclado,"
-" em inglês americano, inglês britânico, francês, alemão, indonésio, "
-"italiano, japonês, coreano, polaco, russo, espanhol, português europeu, "
-"chinês simplificado, chinês tradicional (Taiwan), turco e vietnamita"
+"Todos os controlos com nome para leitores de ecrã e acessíveis pelo teclado, "
+"em inglês americano, inglês britânico, francês, alemão, indonésio, italiano, "
+"japonês, coreano, polaco, russo, espanhol, português europeu, chinês "
+"simplificado, chinês tradicional (Taiwan), turco e vietnamita"
 
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:35
 msgid ""
@@ -5424,7 +5424,10 @@ msgstr "Raciocínio"
 msgid ""
 "Ask supported models to think before answering. Turning this off can make "
 "replies faster. Claude Code uses its own settings."
-msgstr "Pedir aos modelos compatíveis que pensem antes de responder. Desativar esta opção pode tornar as respostas mais rápidas. O Claude Code usa as suas próprias definições."
+msgstr ""
+"Pedir aos modelos compatíveis que pensem antes de responder. Desativar esta "
+"opção pode tornar as respostas mais rápidas. O Claude Code usa as suas "
+"próprias definições."
 
 #: app/src/ui/assistant_prefs.rs:186
 msgid "Assistant Chats"
@@ -12143,17 +12146,17 @@ msgstr "Indique a que mensagens se aplica a regra"
 msgid "Choose what the rule does"
 msgstr "Escolha o que a regra faz"
 
-#: sync/src/sign_in.rs:267
+#: sync/src/sign_in.rs:269
 msgid ""
 "You signed in to a different account than {address}, so nothing changed."
 msgstr ""
 "Iniciou sessão numa conta diferente de {address}, por isso nada foi alterado."
 
-#: sync/src/sign_in.rs:274
+#: sync/src/sign_in.rs:276
 msgid "{address} is already in Penguin Mail as a {provider} account."
 msgstr "{address} já está no Penguin Mail como conta {provider}."
 
-#: sync/src/sign_in.rs:436
+#: sync/src/sign_in.rs:438
 msgid ""
 "A calendar account named {name} is already here, for the server at "
 "{address}. Remove it to add this server under that name."
@@ -12161,7 +12164,7 @@ msgstr ""
 "Já existe uma conta de calendário chamada {name}, para o servidor em "
 "{address}. Remova-a para adicionar este servidor com esse nome."
 
-#: sync/src/sign_in.rs:445
+#: sync/src/sign_in.rs:447
 msgid ""
 "A calendar account named {name} is already here, signed in to this server as "
 "{user}. Type {user} to sign it in again, or remove it to sign in as someone "
@@ -12171,7 +12174,7 @@ msgstr ""
 "servidor como {user}. Escreva {user} para iniciar sessão de novo nela, ou "
 "remova-a para iniciar sessão como outra pessoa."
 
-#: sync/src/sign_in.rs:454
+#: sync/src/sign_in.rs:456
 msgid ""
 "Sign In Again keeps {name} on the server at {address}. To use another server "
 "or user name, add it as a calendar account of its own."
@@ -12181,11 +12184,11 @@ msgstr ""
 "calendário própria."
 
 #. The JMAP server publishes no sign-in a browser can run.
-#: sync/src/sign_in/browser.rs:105
+#: sync/src/sign_in/browser.rs:106
 msgid "This server does not offer a sign-in in the browser."
 msgstr "Este servidor não permite iniciar sessão no navegador."
 
-#: sync/src/sign_in/browser.rs:112
+#: sync/src/sign_in/browser.rs:113
 msgid ""
 "The server did not let Penguin Mail stay signed in. Sign in with a password "
 "or a token instead."
@@ -12193,18 +12196,26 @@ msgstr ""
 "O servidor não deixou o Penguin Mail manter a sessão iniciada. Inicie sessão "
 "com uma palavra-passe ou um token."
 
+#. The built-in client signs in no account that reads its mail through
+#. the API, and adds none: its token carries no mail, and would replace
+#. one that does.
+#. Translators: Gmail is a name; keep it as it is.
+#: sync/src/sign_in/browser.rs:121
+msgid "Choose how Penguin Mail signs in to Gmail"
+msgstr "Escolha como o Penguin Mail inicia sessão no Gmail"
+
 #. Nobody came back from the browser within the wait.
-#: sync/src/sign_in/browser.rs:117
+#: sync/src/sign_in/browser.rs:124
 msgid "Gave up waiting for the browser after ten minutes."
 msgstr "Desistiu de esperar pelo navegador ao fim de dez minutos."
 
-#: sync/src/sign_in/browser.rs:145
+#: sync/src/sign_in/browser.rs:152
 msgid "You signed in as {account}. Choose {wanted} to reconnect that account."
 msgstr ""
 "Iniciou sessão como {account}. Escolha {wanted} para voltar a ligar essa "
 "conta."
 
-#: sync/src/sign_in/browser.rs:155
+#: sync/src/sign_in/browser.rs:162
 msgid ""
 "Penguin Mail cannot work without access to your mail. Sign in again and "
 "leave the Gmail permission ticked."
@@ -12212,11 +12223,11 @@ msgstr ""
 "O Penguin Mail não funciona sem acesso ao seu correio. Inicie sessão de novo "
 "e deixe a permissão do Gmail assinalada."
 
-#: sync/src/sign_in/browser.rs:165
+#: sync/src/sign_in/browser.rs:172
 msgid "Your organization's administrator must approve Penguin Mail."
 msgstr "O administrador da sua organização tem de aprovar o Penguin Mail."
 
-#: sync/src/sign_in/browser.rs:168
+#: sync/src/sign_in/browser.rs:175
 msgid ""
 "Penguin Mail cannot work without access to your mail. Sign in again and "
 "allow it."

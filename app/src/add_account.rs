@@ -2172,6 +2172,7 @@ pub fn failure_kind(err: &anyhow::Error) -> &'static str {
     if let Some(browser) = err.downcast_ref::<BrowserSignInError>() {
         return match browser {
             BrowserSignInError::NoClient(_) => "no client",
+            BrowserSignInError::NeedsRoute => "needs route",
             BrowserSignInError::OtherAddress { .. } => "other address",
             BrowserSignInError::Google(_) => "google",
             BrowserSignInError::Microsoft(_) => "microsoft",

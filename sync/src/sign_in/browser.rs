@@ -6,9 +6,10 @@ use std::sync::Arc;
 
 use mailrs_domain::translate::{fill, gettext};
 use mailrs_domain::{Account, Provider, SignInClient};
-use mailrs_gmail::{GMAIL_API_BASE, GmailError, Granted, OAuthClient, SIGN_IN_SCOPES};
+use mailrs_gmail::{GMAIL_API_BASE, GmailError, Granted, OAuthClient, ScopeList};
 use mailrs_graph::GraphError;
 use mailrs_jmap::JmapError;
+use mailrs_store::accounts::{self, GoogleSignIn};
 
 use super::own_client::OwnClientError;
 use super::{
@@ -113,6 +114,12 @@ pub enum BrowserSignInError {
         )
     )]
     NoRefreshToken,
+    /// The built-in client signs in no account that reads its mail through
+    /// the API, and adds none: its token carries no mail, and would replace
+    /// one that does.
+    // Translators: Gmail is a name; keep it as it is.
+    #[error("{}", gettext("Choose how Penguin Mail signs in to Gmail"))]
+    NeedsRoute,
     /// Nobody came back from the browser within the wait.
     #[error("{}", gettext("Gave up waiting for the browser after ten minutes."))]
     GaveUp,
@@ -221,32 +228,99 @@ async fn with_google(
         ..
     } = connector;
     let (oauth, _) = google_sign_in(clients)?;
-    let own = match &clients.own_google {
-        Some(Ok(own)) => Some(own),
-        _ => None,
+    let account = if oauth.scope_list() == ScopeList::BuiltIn {
+        // Only a Gmail account that reads its mail over IMAP may sign in
+        // here. Any other, and a new address, needs a route first.
+        let address = wanted.address().map(str::to_string);
+        let held = match address {
+            Some(address) => db
+                .read(move |c| accounts::account_by_email(c, &address))
+                .await
+                .map_err(SyncError::from)?,
+            None => None,
+        };
+        let held = held
+            .filter(|held| held.provider == Provider::Gmail)
+            .ok_or(BrowserSignInError::NeedsRoute)?;
+        calendar_consent(connector, &held, open).await?
+    } else {
+        let own = match &clients.own_google {
+            Some(Ok(own)) => Some(own),
+            _ => None,
+        };
+        let authorized = mailrs_gmail::authorize(&oauth, GMAIL_API_BASE, open)
+            .await
+            .map_err(BrowserSignInError::Google)?;
+        wanted.check(&authorized.email)?;
+        let granted = authorized.granted.as_ref().map(Granted::to_scope);
+        google_signed_in(
+            db,
+            secrets,
+            &authorized.email,
+            &authorized.refresh_token,
+            now_millis(),
+            granted.as_deref(),
+            &oauth.scopes().join(" "),
+            own,
+        )
+        .await?
     };
-    let authorized = mailrs_gmail::authorize(&oauth, GMAIL_API_BASE, open)
-        .await
-        .map_err(BrowserSignInError::Google)?;
-    wanted.check(&authorized.email)?;
-    let granted = authorized.granted.as_ref().map(Granted::to_scope);
-    let account = google_signed_in(
-        db,
-        secrets,
-        &authorized.email,
-        &authorized.refresh_token,
-        now_millis(),
-        granted.as_deref(),
-        &SIGN_IN_SCOPES.join(" "),
-        own,
-    )
-    .await?;
     let client = connect_account(oauth, Arc::clone(&secrets.google), &account, db).await?;
     Ok(SignedIn {
         account,
         name: None,
         services: AccountServices::google(client),
     })
+}
+
+/// Asks Google, through the built-in client, for the calendar, contacts
+/// and Drive access of `account`, a Gmail account that reads its mail over
+/// IMAP. Its mail route stays as it is. An account on the API route is
+/// refused before the browser opens, since this token carries no mail.
+pub async fn calendar_consent(
+    connector: &Connector,
+    account: &Account,
+    open: impl FnOnce(&str),
+) -> Result<Account, BrowserSignInError> {
+    let Connector {
+        db,
+        clients,
+        secrets,
+        ..
+    } = connector;
+    let oauth = clients
+        .google
+        .clone()
+        .ok_or(BrowserSignInError::NoClient(Browser::Google))?;
+    let (id, provider) = (account.id, account.provider);
+    let route = db
+        .read(move |c| accounts::mail_route(c, id))
+        .await
+        .map_err(SyncError::from)?;
+    // The sign-in is the built-in client's, so only the route is in question.
+    let this_sign_in = GoogleSignIn {
+        client: SignInClient::BuiltIn,
+        route,
+    };
+    if provider != Provider::Gmail || this_sign_in.needs_move(provider) {
+        return Err(BrowserSignInError::NeedsRoute);
+    }
+    let authorized = mailrs_gmail::authorize(&oauth, GMAIL_API_BASE, open)
+        .await
+        .map_err(BrowserSignInError::Google)?;
+    Wanted::Only(account.email.clone()).check(&authorized.email)?;
+    let granted = authorized.granted.as_ref().map(Granted::to_scope);
+    Ok(google_signed_in(
+        db,
+        secrets,
+        &account.email,
+        &authorized.refresh_token,
+        now_millis(),
+        granted.as_deref(),
+        &oauth.scopes().join(" "),
+        None,
+    )
+    .await?)
 }
 
 async fn with_microsoft(

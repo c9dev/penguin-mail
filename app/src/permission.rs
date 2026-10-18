@@ -11,7 +11,7 @@ use std::collections::HashSet;
 
 use mailrs_domain::translate::{fill, gettext};
 use mailrs_domain::{AccountId, Provider};
-use mailrs_gmail::SIGN_IN_SCOPES;
+use mailrs_gmail::FULL_SCOPES;
 use mailrs_sync::{Offers, Withheld};
 
 /// A permission sign-in leaves out, or one a caller can find missing.
@@ -358,7 +358,7 @@ pub fn wants_banner(withheld: Withheld, asked: Option<&str>) -> bool {
             .iter()
             .all(|s| asked.contains(&s.to_ascii_lowercase()))
     };
-    !(covers(&SIGN_IN_SCOPES) || covers(&mailrs_graph::SCOPES))
+    !(covers(&FULL_SCOPES) || covers(&mailrs_graph::SCOPES))
 }
 
 /// Whether an invitation's card offers Grant Access: the account has a
@@ -605,7 +605,7 @@ mod tests {
 
     #[test]
     fn no_banner_once_the_account_was_asked_and_chose() {
-        let asked = SIGN_IN_SCOPES.join(" ");
+        let asked = FULL_SCOPES.join(" ");
         let some_withheld = Withheld {
             calendar: true,
             ..Withheld::NONE
@@ -675,7 +675,7 @@ mod tests {
         let conn = mailrs_store::open_in_memory().unwrap();
         let id = mailrs_store::accounts::insert_account(&conn, "ana@example.com", 0).unwrap();
         mailrs_store::accounts::set_granted(&conn, id, &five_scope_grant()).unwrap();
-        mailrs_store::accounts::set_asked(&conn, id, &SIGN_IN_SCOPES.join(" ")).unwrap();
+        mailrs_store::accounts::set_asked(&conn, id, &FULL_SCOPES.join(" ")).unwrap();
         let consent = mailrs_store::accounts::consent(&conn, id).unwrap();
         let granted = mailrs_gmail::Granted::parse(consent.granted.as_deref().unwrap());
         let withheld = mailrs_sync::withheld_by_grant(Some(&granted));
