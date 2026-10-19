@@ -256,7 +256,9 @@ impl Connector {
             })
             .await?;
         if client == SignInClient::Goa {
-            return gmail_route::goa_services(self, account, route, goa_id).await;
+            // Boxed: the Online Accounts path would make this future large
+            // enough to overflow a test thread's stack.
+            return Box::pin(gmail_route::goa_services(self, account, route, goa_id)).await;
         }
         // Signing in again through the built-in client cannot bring API
         // mail back, so such an account pauses its mail instead.

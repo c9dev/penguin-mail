@@ -442,13 +442,20 @@ impl<D: Dial> ImapClient<D> {
     async fn open(&self) -> Result<Conn<D::Stream>, ImapError> {
         let login = self.inner.login.login(false).await?;
         let (stream, greeted) = self.inner.dial.dial().await?;
-        let conn = match Conn::login(stream, greeted, &login).await {
+        // Boxed: this future is large, and every call that may open a
+        // connection carries it.
+        let conn = match Box::pin(Conn::login(stream, greeted, &login)).await {
             // A token the server turned down may only have run out: ask
             // for a fresh one, once. A password is never tried twice.
+            // Boxed, so the rarely taken retry adds nothing to the size of
+            // every future that opens a connection.
             Err(ImapError::Auth { .. }) if login.oauth => {
-                let login = self.inner.login.login(true).await?;
-                let (stream, greeted) = self.inner.dial.dial().await?;
-                Conn::login(stream, greeted, &login).await?
+                Box::pin(async {
+                    let login = self.inner.login.login(true).await?;
+                    let (stream, greeted) = self.inner.dial.dial().await?;
+                    Box::pin(Conn::login(stream, greeted, &login)).await
+                })
+                .await?
             }
             other => other?,
         };
