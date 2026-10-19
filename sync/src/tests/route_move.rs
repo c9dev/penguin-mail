@@ -1053,6 +1053,7 @@ async fn an_app_password_account_moving_to_goa_drops_its_password_and_servers() 
 #[tokio::test]
 async fn a_send_later_message_whose_draft_is_gone_stays_and_asks_to_check_sent() {
     let h = built_in_account().await;
+    on_goa_imap(&h).await;
     let gone = Queued {
         draft_id: Some("r-gone".into()),
         message_id: Some("gone".into()),
@@ -1072,6 +1073,24 @@ async fn a_send_later_message_whose_draft_is_gone_stays_and_asks_to_check_sent()
         "{:?}",
         kept.problem
     );
+}
+
+#[tokio::test]
+async fn a_send_later_message_whose_draft_is_gone_counts_as_sent_off_the_imap_route() {
+    let h = built_in_account().await;
+    let gone = Queued {
+        draft_id: Some("r-gone".into()),
+        message_id: Some("gone".into()),
+        raw: None,
+        ..due(&h, "lost")
+    };
+    let row_id = h.db.write(move |c| outbox::put(c, &gone)).await.unwrap();
+
+    let drained = outbox_of(&h).send_due(now_millis()).await.unwrap();
+
+    assert!(drained.stuck.is_empty(), "{:?}", drained.stuck);
+    let left = h.db.read(move |c| outbox::find(c, row_id)).await.unwrap();
+    assert!(left.is_none(), "a gone draft counts as sent there");
 }
 
 #[tokio::test]

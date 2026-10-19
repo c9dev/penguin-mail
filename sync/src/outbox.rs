@@ -26,7 +26,7 @@ use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex, PoisonError};
 
 use mailrs_domain::translate::gettext;
-use mailrs_domain::{AccountId, AccountState, EpochMillis, Target};
+use mailrs_domain::{AccountId, AccountState, EpochMillis, MailRoute, Target};
 use mailrs_gmail::GmailError;
 use mailrs_store::messages;
 use mailrs_store::outbox::{self, Queued};
@@ -980,9 +980,11 @@ impl<A: Accounts> Outbox<A> {
     /// what just went out.
     ///
     /// A message tried before may have reached Gmail on a try whose answer
-    /// was lost, so its bytes are looked for in Sent first. A draft that
-    /// has gone never counts as sent: the row stays, and [`problem_of`]
-    /// asks the person to check Sent.
+    /// was lost, so its bytes are looked for in Sent first. A draft is
+    /// checked by the provider: Gmail's API deletes a draft it sends, so a
+    /// draft that has gone counts as sent. On a Gmail account moved to
+    /// IMAP a gone draft never counts as sent: the row stays, and
+    /// [`problem_of`] asks the person to check Sent.
     async fn attempt(&self, message: &Queued) -> Result<String, SyncError> {
         let sync = self
             .accounts
@@ -1022,10 +1024,25 @@ impl<A: Accounts> Outbox<A> {
             // answer was lost, or may have been deleted, or may sit under
             // an id the account no longer uses. Nothing here can tell
             // which, so the row stays and asks the person to check Sent.
-            (None, Some(draft_id)) => sync
-                .send_draft(draft_id)
-                .await?
-                .ok_or_else(|| BackendError::NotFound.into()),
+            (None, Some(draft_id)) => {
+                let sent = sync.send_draft(draft_id).await?;
+                if let Some(sent) = sent {
+                    return Ok(sent);
+                }
+                // Every other route counts a draft that is gone as sent.
+                // A Gmail account on the IMAP route came there through a
+                // move, which cannot tell a sent draft from a deleted one.
+                let id = message.account_id;
+                let on_imap = self
+                    .db
+                    .read(move |c| accounts::mail_route(c, id))
+                    .await
+                    .is_ok_and(|route| route == MailRoute::Imap);
+                match on_imap {
+                    true => Err(BackendError::NotFound.into()),
+                    false => Ok(draft_id.clone()),
+                }
+            }
             (None, None) => Err(BackendError::NotFound.into()),
         }
     }
