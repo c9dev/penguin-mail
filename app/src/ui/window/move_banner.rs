@@ -1,7 +1,7 @@
 //! The banner at the top of the mail list that asks Gmail accounts to
 //! choose a new way to sign in.
 
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 use adw::prelude::*;
@@ -34,6 +34,8 @@ fn show_whole_title(widget: &gtk::Widget) {
 pub struct Bar {
     banner: adw::Banner,
     shown: Rc<RefCell<Option<MoveBanner>>>,
+    /// Moves running now: the button stays off until the last ends.
+    busy: Cell<u32>,
 }
 
 impl Bar {
@@ -51,6 +53,7 @@ impl Bar {
         Bar {
             banner,
             shown: Rc::default(),
+            busy: Cell::new(0),
         }
     }
 
@@ -89,10 +92,17 @@ impl Bar {
         self.shown.replace(wanted);
     }
 
-    /// Turns the button off while a move runs.
+    /// Turns the button off while a move runs. Each `true` needs its
+    /// `false`, so one move ending leaves the button off while another
+    /// still runs.
     pub fn set_busy(&self, busy: bool) {
+        let running = match busy {
+            true => self.busy.get() + 1,
+            false => self.busy.get().saturating_sub(1),
+        };
+        self.busy.set(running);
         if let Some(button) = self.button() {
-            button.set_sensitive(!busy);
+            button.set_sensitive(running == 0);
         }
     }
 

@@ -105,14 +105,21 @@ pub fn build(accounts: &[Account], choose: impl Fn() + 'static) -> Sheet {
         .margin_start(20)
         .margin_end(20)
         .build();
+    // Many accounts scroll, so the buttons stay on a small screen.
+    let scrolled = gtk::ScrolledWindow::builder()
+        .hscrollbar_policy(gtk::PolicyType::Never)
+        .propagate_natural_height(true)
+        .max_content_height(260)
+        .child(&list)
+        .build();
     content.append(&heading);
     content.append(&body);
-    content.append(&list);
+    content.append(&scrolled);
     content.append(&actions);
     // The gaps between the parts, which differ from line to line.
     heading.set_margin_bottom(7);
     body.set_margin_bottom(17);
-    list.set_margin_bottom(20);
+    scrolled.set_margin_bottom(20);
     let dialog = adw::Dialog::builder()
         .title(heading_text.as_str())
         .content_width(WIDTH)

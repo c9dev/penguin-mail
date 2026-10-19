@@ -21,8 +21,8 @@ use crate::route_choice::Platform;
 /// The window action that opens the route choice for one account, by id.
 pub const CHOOSE_ROUTE: &str = "win.account-choose-route";
 
-/// The window action behind "Get Every Feature": the own project setup, or
-/// the route choice where Online Accounts holds the address.
+/// The window action behind "Get Every Feature" and "Set up your own
+/// Google project": the own project setup for the account.
 pub const EVERY_FEATURE: &str = "win.account-every-feature";
 
 /// The window action that moves one account to Online Accounts, by id.
@@ -145,7 +145,7 @@ struct RouteFacts {
 struct RouteRows {
     parent: glib::WeakRef<adw::ExpanderRow>,
     rows: RefCell<Vec<glib::WeakRef<gtk::Widget>>>,
-    facts: RouteFacts,
+    facts: RefCell<RouteFacts>,
     connect: Rc<dyn Fn(AccountId)>,
     contacts: Contacts,
     find_project: FindProject,
@@ -218,14 +218,34 @@ fn register(
     let shown = Rc::new(RouteRows {
         parent: parent.downgrade(),
         rows: RefCell::default(),
-        facts,
+        facts: RefCell::new(facts),
         connect: Rc::clone(connect),
         contacts,
         find_project,
     });
     let added = fill_rows(parent, account, offers, &shown);
     *shown.rows.borrow_mut() = added.iter().map(|w| w.downgrade()).collect();
-    ROUTE_ROWS.with(|all| all.borrow_mut().insert(account.id, shown));
+    ROUTE_ROWS.with(|all| {
+        let mut all = all.borrow_mut();
+        // Rows of a Preferences that has closed, or of an account it no
+        // longer shows, go with their closures.
+        all.retain(|_, rows| rows.parent.upgrade().is_some());
+        all.insert(account.id, shown);
+    });
+}
+
+/// [`refill`] once Online Accounts' list says whether it holds the
+/// account's address. False when no open Preferences shows the account.
+pub fn refill_goa(id: AccountId, account: &Account, offers: Offers, goa_holds: bool) -> bool {
+    let shown = ROUTE_ROWS.with(|all| all.borrow().get(&id).cloned());
+    let Some(shown) = shown else {
+        return false;
+    };
+    if shown.facts.borrow().goa_holds == goa_holds {
+        return true;
+    }
+    shown.facts.borrow_mut().goa_holds = goa_holds;
+    refill(id, account, offers)
 }
 
 /// Fills `account`'s Gmail rows again from what it offers now, in the
@@ -265,8 +285,9 @@ pub fn refill(id: AccountId, account: &Account, offers: Offers) -> bool {
 /// connect can change it.
 pub fn note_calendar_row(id: AccountId, row: &adw::ActionRow, button: &gtk::Button) {
     CALENDAR_ROWS.with(|all| {
-        all.borrow_mut()
-            .insert(id, (row.downgrade(), button.downgrade()));
+        let mut all = all.borrow_mut();
+        all.retain(|_, (row, _)| row.upgrade().is_some());
+        all.insert(id, (row.downgrade(), button.downgrade()));
     });
 }
 
@@ -279,10 +300,11 @@ fn fill_rows(
     offers: Offers,
     shown: &RouteRows,
 ) -> Vec<gtk::Widget> {
+    let facts = shown.facts.borrow().clone();
     let RouteFacts {
         ref sign_in,
         goa_holds,
-    } = shown.facts;
+    } = facts;
     let (connect, contacts) = (&shown.connect, &shown.contacts);
     let mut added: Vec<gtk::Widget> = Vec::new();
     let mut put = |widget: &gtk::Widget| {
@@ -326,8 +348,9 @@ fn fill_rows(
             Line::Limits { text } => {
                 let row = plain_row(&text, None);
                 row.set_title_lines(0);
-                row.add_suffix(&route_button(
+                row.add_suffix(&action_button(
                     &gettext("Set up your own Google project"),
+                    EVERY_FEATURE,
                     account.id,
                 ));
                 put(row.upcast_ref());

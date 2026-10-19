@@ -63,7 +63,12 @@ impl Bar {
     }
 
     /// Shows `wanted`, or hides the banner when nothing is left to say.
+    /// The same notice again changes nothing, so a focused button keeps
+    /// the focus.
     pub fn show(&self, wanted: Option<NoticeContent>) {
+        if *self.shown.borrow() == wanted {
+            return;
+        }
         while let Some(child) = self.buttons.first_child() {
             self.buttons.remove(&child);
         }

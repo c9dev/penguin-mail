@@ -114,6 +114,10 @@ pub struct App {
     /// list reloads only after new mail arrives.
     contacts: Contacts,
     pub(crate) contacts_stale: Cell<bool>,
+    /// The person heard this run that the Calendar API is off in their
+    /// own project. A read that works clears it, so a later switch-off
+    /// is told again.
+    calendar_api_off_told: Cell<bool>,
     /// Contact photos, read from disk as rows and conversations ask. The
     /// files on disk are known whenever the suggestions load.
     photos: Rc<crate::photos::ContactPhotos>,
@@ -202,6 +206,7 @@ impl App {
             settings_broken: RefCell::new(opened.broken),
             contacts: Rc::new(RefCell::new(Rc::new(Vec::new()))),
             contacts_stale: Cell::new(true),
+            calendar_api_off_told: Cell::new(false),
             photos: Rc::new(crate::photos::ContactPhotos::new()),
             pending_sends: Cell::new(0),
             dictionaries: dictionaries::Shared::default(),
@@ -1202,6 +1207,7 @@ impl App {
             }
             match read {
                 Ok(refreshed) => {
+                    this.calendar_api_off_told.set(false);
                     for turned_down in &refreshed.turned_down {
                         tracing::info!(event = %turned_down.event, "a calendar change was turned down");
                     }
@@ -1225,8 +1231,11 @@ impl App {
                 }
                 Err(err) => {
                     // Calendar switched off in the person's own project
-                    // refuses every read until it is turned on.
-                    if let Some((service, url)) = api_off(&err) {
+                    // refuses every read until it is turned on. The person
+                    // hears it once, not at every refresh.
+                    if let Some((service, url)) = api_off(&err)
+                        && !this.calendar_api_off_told.replace(true)
+                    {
                         this.tell_window(Notice::ApiOff {
                             service: &service,
                             enable_url: &url,
