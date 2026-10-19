@@ -18,7 +18,7 @@ use mailrs_sync::now_millis;
 use mailrs_sync::route_move;
 use mailrs_sync::sign_in::goa_link;
 
-use super::{Core, MovePort, Reach, start_again};
+use super::{Core, MoveLeases, MovePort, Reach, start_again};
 use crate::goa_notice::{self, Notice};
 
 /// How long the watch waits before it opens Online Accounts' change stream
@@ -52,6 +52,19 @@ impl GoaState {
             Err(other) => Err(GoaError::Other(other.to_string())),
         };
         *self.list.lock().unwrap_or_else(PoisonError::into_inner) = Some(copy);
+    }
+
+    /// The accounts the last good read listed, or `None`.
+    fn last_accounts(&self) -> Option<Vec<GoaAccount>> {
+        match self
+            .list
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .as_ref()?
+        {
+            Ok(list) => Some(list.clone()),
+            Err(_) => None,
+        }
     }
 
     /// Counts a sign-in request for each linked account that Online
@@ -263,7 +276,14 @@ impl Core {
             demo: None,
         };
         let engine = std::sync::Arc::clone(&self.engine);
+        let leases = self.move_leases.clone();
         self.runtime.spawn(async move {
+            let restarts = Restarts {
+                reach: &reach,
+                engine: &engine,
+                db: &db,
+                leases: &leases,
+            };
             let mut wait = RETRY_FIRST;
             // Whether the last read failed. A linked account that started
             // then has no mail, so it starts again once a read answers.
@@ -276,7 +296,7 @@ impl Core {
                         state.count_attention(&linked, list);
                     }
                     if failed && list.is_ok() {
-                        restart_all(&linked, &reach, &engine, &db).await;
+                        restarts.all(&linked).await;
                     }
                 }
                 failed = list.is_err();
@@ -285,6 +305,7 @@ impl Core {
                     Ok(mut changes) => {
                         wait = RETRY_FIRST;
                         while let Some(change) = changes.next().await {
+                            let before = state.last_accounts();
                             let list = goa.google_accounts().await;
                             state.keep(&list);
                             if let Ok(linked) = linked_accounts(&db).await {
@@ -292,9 +313,9 @@ impl Core {
                                     state.count_attention(&linked, list);
                                 }
                                 if failed && list.is_ok() {
-                                    restart_all(&linked, &reach, &engine, &db).await;
+                                    restarts.all(&linked).await;
                                 } else {
-                                    restart_for(&change, &linked, &reach, &engine, &db).await;
+                                    restarts.for_change(&change, before.as_deref(), &linked).await;
                                 }
                             }
                             failed = list.is_err();
@@ -320,51 +341,85 @@ impl Core {
     }
 }
 
-/// Stops and starts again every linked account, once Online Accounts
-/// answers after it did not.
-async fn restart_all(
-    linked: &[(Account, Option<String>)],
-    reach: &Reach,
-    engine: &super::RunningEngine,
-    db: &Db,
-) {
-    let Some(engine) = engine.current() else {
-        return;
-    };
-    for (account, _) in linked {
-        engine.stop_account(account.id);
-        if let Err(err) = start_again(reach, &engine, db, account, false).await {
-            tracing::warn!(account = account.id, error = %err, "could not start the account again once Online Accounts answered");
+/// What restarting a linked account needs. An account a move holds is
+/// left alone: the move starts it again itself once it ends.
+struct Restarts<'a> {
+    reach: &'a Reach,
+    engine: &'a super::RunningEngine,
+    db: &'a Db,
+    leases: &'a MoveLeases,
+}
+
+impl Restarts<'_> {
+    /// Stops and starts again every linked account, once Online Accounts
+    /// answers after it did not.
+    async fn all(&self, linked: &[(Account, Option<String>)]) {
+        let Some(engine) = self.engine.current() else {
+            return;
+        };
+        for (account, _) in linked {
+            if self.leases.is_held(account.id) {
+                continue;
+            }
+            engine.stop_account(account.id);
+            if let Err(err) = start_again(self.reach, &engine, self.db, account, false).await {
+                tracing::warn!(account = account.id, error = %err, "could not start the account again once Online Accounts answered");
+            }
+        }
+    }
+
+    /// Stops and starts again each linked account `change` is about, when
+    /// something that decides how it reads mail changed. `before` is the
+    /// list read before the change.
+    async fn for_change(
+        &self,
+        change: &GoaChange,
+        before: Option<&[GoaAccount]>,
+        linked: &[(Account, Option<String>)],
+    ) {
+        let Some(engine) = self.engine.current() else {
+            return;
+        };
+        for (account, saved) in linked {
+            if !concerns(change, before, account, saved.as_deref())
+                || self.leases.is_held(account.id)
+            {
+                continue;
+            }
+            engine.stop_account(account.id);
+            if let Err(err) = start_again(self.reach, &engine, self.db, account, false).await {
+                tracing::warn!(account = account.id, error = %err, "could not start the account again after Online Accounts changed");
+            }
         }
     }
 }
 
-/// Stops and starts again each linked account `change` is about.
-async fn restart_for(
+/// Whether `change` should restart `account`, linked to `saved`. A change
+/// to a property the mail does not depend on, such as a token refresh,
+/// does not.
+fn concerns(
     change: &GoaChange,
-    linked: &[(Account, Option<String>)],
-    reach: &Reach,
-    engine: &super::RunningEngine,
-    db: &Db,
-) {
-    let Some(engine) = engine.current() else {
-        return;
-    };
-    for (account, saved) in linked {
-        let about = match change {
-            GoaChange::Added(a) | GoaChange::Changed(a) => {
-                goa::find(std::slice::from_ref(a), saved.as_deref(), &account.email).is_some()
-            }
-            GoaChange::Removed { id } => saved.as_deref() == Some(id.as_str()),
-        };
-        if !about {
-            continue;
+    before: Option<&[GoaAccount]>,
+    account: &Account,
+    saved: Option<&str>,
+) -> bool {
+    match change {
+        GoaChange::Added(a) => goa::find(std::slice::from_ref(a), saved, &account.email).is_some(),
+        GoaChange::Changed(a) => {
+            goa::find(std::slice::from_ref(a), saved, &account.email).is_some()
+                && !before
+                    .and_then(|list| list.iter().find(|old| old.id == a.id))
+                    .is_some_and(|old| same_for_mail(old, a))
         }
-        engine.stop_account(account.id);
-        if let Err(err) = start_again(reach, &engine, db, account, false).await {
-            tracing::warn!(account = account.id, error = %err, "could not start the account again after Online Accounts changed");
-        }
+        GoaChange::Removed { id } => saved == Some(id.as_str()),
     }
+}
+
+/// Whether `old` and `new` read mail the same way.
+fn same_for_mail(old: &GoaAccount, new: &GoaAccount) -> bool {
+    old.identity == new.identity
+        && old.mail_disabled == new.mail_disabled
+        && old.attention_needed == new.attention_needed
 }
 
 #[cfg(test)]

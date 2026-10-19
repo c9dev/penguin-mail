@@ -2068,7 +2068,7 @@ async fn authorize_until_canceled(
 
 /// The accounts with a move running. A lease lasts until its move ends.
 #[derive(Clone, Default)]
-struct MoveLeases(Arc<Mutex<HashSet<AccountId>>>);
+pub(crate) struct MoveLeases(Arc<Mutex<HashSet<AccountId>>>);
 
 struct MoveLease {
     held: Arc<Mutex<HashSet<AccountId>>>,
@@ -2083,6 +2083,15 @@ impl MoveLeases {
             held: Arc::clone(&self.0),
             id,
         })
+    }
+
+    /// Whether a move of `id` runs now. The move starts the account again
+    /// itself once it ends.
+    fn is_held(&self, id: AccountId) -> bool {
+        self.0
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .contains(&id)
     }
 }
 
