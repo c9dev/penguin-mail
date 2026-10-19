@@ -41,7 +41,8 @@ pub(in crate::services::imap) fn is_system(id: &str) -> bool {
 /// The Gmail API label ids that describe a message: its X-GM-LABELS and
 /// flags read as the API would list them, in `at`, with the inbox tab
 /// `tab` when Gmail has sorted it. In Trash or Spam the message carries
-/// that one mailbox label and nothing else of its X-GM-LABELS.
+/// that mailbox's label and keeps its other labels, as Gmail keeps them,
+/// but not the Inbox's.
 pub(in crate::services::imap) fn store_labels(
     meta: &GmailMeta,
     flags: &[String],
@@ -57,20 +58,19 @@ pub(in crate::services::imap) fn store_labels(
     match at {
         GmailPlace::Trash => add("TRASH"),
         GmailPlace::Spam => add("SPAM"),
-        GmailPlace::AllMail => {
-            for label in &meta.labels {
-                match label.as_str() {
-                    "\\Inbox" => add("INBOX"),
-                    "\\Sent" => add("SENT"),
-                    "\\Draft" => add("DRAFT"),
-                    "\\Important" => add("IMPORTANT"),
-                    "\\Starred" => add("STARRED"),
-                    // Another of Gmail's own marks that the store keeps no
-                    // label for.
-                    other if other.starts_with('\\') => {}
-                    name => add(name),
-                }
-            }
+        GmailPlace::AllMail => {}
+    }
+    for label in &meta.labels {
+        match label.as_str() {
+            "\\Inbox" if at == GmailPlace::AllMail => add("INBOX"),
+            "\\Sent" => add("SENT"),
+            "\\Draft" => add("DRAFT"),
+            "\\Important" => add("IMPORTANT"),
+            "\\Starred" => add("STARRED"),
+            // Another of Gmail's own marks that the store keeps no label
+            // for, or the Inbox of a message in Trash or Spam.
+            other if other.starts_with('\\') => {}
+            name => add(name),
         }
     }
     let flagged = flags.iter().any(|f| f.eq_ignore_ascii_case("\\Flagged"));
@@ -164,14 +164,14 @@ mod tests {
     }
 
     #[test]
-    fn a_message_in_trash_keeps_only_the_trash_label() {
+    fn a_message_in_trash_keeps_its_labels_but_not_the_inbox() {
         let got = store_labels(
             &meta(&["\\Inbox", "Work"]),
             &flags(&["\\Seen"]),
             GmailPlace::Trash,
             None,
         );
-        assert_eq!(got, ["TRASH"]);
+        assert_eq!(got, ["TRASH", "Work"]);
     }
 
     #[test]

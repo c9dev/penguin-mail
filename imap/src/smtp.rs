@@ -180,7 +180,9 @@ where
         conn.auth(mechanisms, &credentials).await.map_err(|err| {
             // A rejected token gets a 334 challenge that XOAUTH2 cannot
             // answer, which lettre reports as its own error, not a 535.
-            if login.oauth && err.is_client() {
+            // Any other client-side error is a fault of the exchange, not
+            // of the token.
+            if login.oauth && err.is_client() && err.to_string().contains(XOAUTH2_CHALLENGED) {
                 ImapError::Auth {
                     text: login.hide(&err.to_string()),
                 }
@@ -191,6 +193,10 @@ where
         Ok(conn)
     }
 }
+
+/// What lettre's error says when the server answers an XOAUTH2 token with
+/// a 334 challenge, as Gmail answers a token it refuses.
+const XOAUTH2_CHALLENGED: &str = "does not expect a challenge";
 
 /// MAIL, RCPT for each recipient, DATA, the message and QUIT. lettre's own
 /// `send` copies the whole message before it writes; this hands it the

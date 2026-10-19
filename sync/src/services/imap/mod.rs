@@ -143,7 +143,14 @@ struct Known {
     /// Gmail over IMAP: where the messages met this session were last
     /// seen, by hex id.
     places: gmail::Places,
+    /// Gmail over IMAP: drafts sent this session that Drafts could not
+    /// let go of, by hex id, the latest [`SENT_DRAFTS_KEPT`]. The next
+    /// listing of drafts removes them again and leaves them out.
+    sent_drafts: VecDeque<String>,
 }
+
+/// The most sent drafts [`Known::sent_drafts`] holds.
+const SENT_DRAFTS_KEPT: usize = 64;
 
 /// The most messages [`Known::unreadable`] remembers.
 const UNREADABLE_KEPT: usize = 256;

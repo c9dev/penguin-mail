@@ -309,7 +309,10 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
     }
 
     /// Metadata for `wants` by hex id. A message nobody holds comes back
-    /// gone.
+    /// gone. A location under a UIDVALIDITY the mailbox no longer has
+    /// comes back neither found nor gone: the message may still be there
+    /// under a new UID, and the relisting that follows the change finds
+    /// it.
     pub(in crate::services::imap) async fn gm_fetch(
         &self,
         wants: Vec<Want>,
@@ -317,6 +320,7 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
         let boxes = self.gm_synced().await?;
         let mut found = Found::default();
         let mut left: Vec<String> = Vec::new();
+        let mut renumbered: Vec<String> = Vec::new();
         for want in wants {
             // The engine names a message by where its ref says it sits, as
             // a location, or by its hex id before it has a ref.
@@ -370,6 +374,9 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
                     .partition(|(_, at)| at.uidvalidity == selected.uidvalidity);
                 for (id, _) in stale {
                     self.known().places.forget(&id);
+                    if Location::parse(&id).is_some() {
+                        renumbered.push(id);
+                    }
                 }
                 let place = boxes.place_of(&mailbox);
                 let mut metas: Vec<(String, Location, Fetched)> = Vec::new();
@@ -427,6 +434,7 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
                 }
             }
         }
+        left.retain(|id| !renumbered.contains(id));
         found.gone.extend(left);
         Ok(found)
     }

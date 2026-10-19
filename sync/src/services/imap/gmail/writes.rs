@@ -163,23 +163,24 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
         let at = *at;
         let restores =
             at != GmailPlace::AllMail && (named(remove, "TRASH") || named(remove, "SPAM"));
-        // Labels and flags first, where the message is now. In Trash or
-        // Spam the labels wait for the move back to All Mail; with no move
-        // back, Gmail has nowhere to keep a label of the person's own.
-        if at != GmailPlace::AllMail
-            && !restores
-            && adds
-                .iter()
-                .chain(&removes)
-                .any(|l| !matches!(l.as_str(), "\\Inbox" | "\\Important"))
-        {
-            return Err(BackendError::Unsupported);
-        }
-        if at == GmailPlace::AllMail {
-            self.api.store_labels(mailbox, uids, true, &adds).await?;
-            self.api
-                .store_labels(mailbox, uids, false, &removes)
-                .await?;
+        // Labels and flags first, where the message is now. Gmail keeps a
+        // trashed message's labels, so they change in Trash or Spam too;
+        // a restore's labels wait for the move back to All Mail, and the
+        // Inbox label in Trash or Spam waits for a restore.
+        if at == GmailPlace::AllMail || !restores {
+            let here = |list: &[String]| -> Vec<String> {
+                list.iter()
+                    .filter(|l| at == GmailPlace::AllMail || l.as_str() != "\\Inbox")
+                    .cloned()
+                    .collect()
+            };
+            let (on, off) = (here(&adds), here(&removes));
+            if !on.is_empty() {
+                self.api.store_labels(mailbox, uids, true, &on).await?;
+            }
+            if !off.is_empty() {
+                self.api.store_labels(mailbox, uids, false, &off).await?;
+            }
         }
         let flags = |on: &[String], off: &[String]| -> (Vec<String>, Vec<String>) {
             let mut set = Vec::new();

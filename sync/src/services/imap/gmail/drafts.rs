@@ -148,14 +148,29 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
         let sent = self.submit(&raw).await?;
         if let Err(err) = self.gm_delete_draft(id).await {
             tracing::warn!(%err, "sent the draft, but could not remove it from Drafts");
+            let mut known = self.known();
+            if known.sent_drafts.len() == super::super::SENT_DRAFTS_KEPT {
+                known.sent_drafts.pop_front();
+            }
+            known.sent_drafts.push_back(id.to_string());
         }
         Ok(sent)
     }
 
-    /// Every draft, by hex id.
+    /// Every draft, by hex id. A draft sent this session that Drafts kept
+    /// is removed again and left out, so it does not come back as a draft.
     pub(in crate::services::imap) async fn gm_list_drafts(
         &self,
     ) -> Result<Vec<DraftRef>, BackendError> {
+        let sent: Vec<String> = self.known().sent_drafts.drain(..).collect();
+        let mut kept = Vec::new();
+        for id in sent {
+            match self.gm_delete_draft(&id).await {
+                Ok(()) | Err(BackendError::NotFound) => {}
+                Err(_) => kept.push(id),
+            }
+        }
+        self.known().sent_drafts.extend(kept.iter().cloned());
         let boxes = self.gm_synced().await?;
         let keys = format!("{} UNDELETED", gm_labels(DRAFT)?);
         let selected = self.select(&boxes.all, None).await?;
@@ -165,6 +180,7 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
             .await?
             .into_iter()
             .filter_map(|f| f.gmail)
+            .filter(|g| !kept.contains(&g.id()))
             .map(|g| DraftRef {
                 draft_id: g.id(),
                 message_id: g.id(),
