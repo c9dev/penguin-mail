@@ -26,7 +26,7 @@ pub use check::{CheckError, Checked, check, check_smtp, user_names};
 pub use client::{Dial, IDLE_LIMIT, ImapClient, TlsDial};
 pub use error::ImapError;
 pub use logging::quiet;
-pub use login::Login;
+pub use login::{Login, LoginSource};
 pub use smtp::{SmtpClient, SmtpTls};
 pub use structure::BodyStructure;
 pub use types::{

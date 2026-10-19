@@ -1,6 +1,8 @@
 //! A user name and password for one server.
 
 use std::fmt;
+use std::future::Future;
+use std::pin::Pin;
 
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD as BASE64;
@@ -29,6 +31,27 @@ impl Login {
         let mut login = Self::new(user, token);
         login.oauth = true;
         login
+    }
+}
+
+/// Where a client gets its login, asked again for each connection. A
+/// password never changes, but an access token lasts an hour and a pooled
+/// client outlives it.
+pub trait LoginSource: Send + Sync + fmt::Debug {
+    /// The login to sign in with. `refused` is true only on the one retry
+    /// after the server turned the last login down.
+    fn login(
+        &self,
+        refused: bool,
+    ) -> Pin<Box<dyn Future<Output = Result<Login, crate::ImapError>> + Send + '_>>;
+}
+
+impl LoginSource for Login {
+    fn login(
+        &self,
+        _refused: bool,
+    ) -> Pin<Box<dyn Future<Output = Result<Login, crate::ImapError>> + Send + '_>> {
+        Box::pin(async move { Ok(self.clone()) })
     }
 }
 

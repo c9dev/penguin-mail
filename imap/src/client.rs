@@ -18,7 +18,7 @@ use crate::connection::Conn;
 use crate::guard::PAST_BUDGET;
 use crate::{
     AppendUid, BodyStructure, Capabilities, CopyUid, Fetched, FlagsOf, ImapError, Listed, Login,
-    QuotaUse, Selected, Since, UidSet, Woke,
+    LoginSource, QuotaUse, Selected, Since, UidSet, Woke,
 };
 
 /// The longest a connection stays in IDLE before the client ends it and
@@ -90,7 +90,7 @@ impl<D: Dial> Clone for ImapClient<D> {
 
 struct Inner<D: Dial> {
     dial: D,
-    login: Login,
+    login: Arc<dyn LoginSource>,
     /// One permit per worker connection.
     permits: Arc<Semaphore>,
     /// Worker permits not given up to a connection limit.
@@ -155,10 +155,15 @@ impl ImapClient<TlsDial> {
 
 impl<D: Dial> ImapClient<D> {
     pub fn with_dial(dial: D, login: Login) -> Self {
+        ImapClient::with_source(dial, Arc::new(login))
+    }
+
+    /// A client that asks `source` for a login on each connection it opens.
+    pub fn with_source(dial: D, source: Arc<dyn LoginSource>) -> Self {
         ImapClient {
             inner: Arc::new(Inner {
                 dial,
-                login,
+                login: source,
                 permits: Arc::new(Semaphore::new(WORKERS)),
                 limit: AtomicUsize::new(WORKERS),
                 open: Arc::new(AtomicUsize::new(0)),
@@ -435,8 +440,18 @@ impl<D: Dial> ImapClient<D> {
     }
 
     async fn open(&self) -> Result<Conn<D::Stream>, ImapError> {
+        let login = self.inner.login.login(false).await?;
         let (stream, greeted) = self.inner.dial.dial().await?;
-        let conn = Conn::login(stream, greeted, &self.inner.login).await?;
+        let conn = match Conn::login(stream, greeted, &login).await {
+            // A token the server turned down may only have run out: ask
+            // for a fresh one, once. A password is never tried twice.
+            Err(ImapError::Auth { .. }) if login.oauth => {
+                let login = self.inner.login.login(true).await?;
+                let (stream, greeted) = self.inner.dial.dial().await?;
+                Conn::login(stream, greeted, &login).await?
+            }
+            other => other?,
+        };
         *self
             .inner
             .capabilities
@@ -676,6 +691,112 @@ mod tests {
         ));
         client.list().await.unwrap();
         assert_eq!(dials(&scripts), 1);
+    }
+
+    /// A login source that records what it was asked and answers a bearer
+    /// login named for the call: "old" first, "new" once `refused` is set.
+    #[derive(Debug, Default)]
+    struct Source {
+        asked: Mutex<Vec<bool>>,
+        password: bool,
+    }
+
+    impl crate::LoginSource for Source {
+        fn login(
+            &self,
+            refused: bool,
+        ) -> std::pin::Pin<Box<dyn Future<Output = Result<Login, ImapError>> + Send + '_>> {
+            self.asked.lock().unwrap().push(refused);
+            let login = match (self.password, refused) {
+                (true, _) => Login::new("a@b", "pw"),
+                (false, false) => Login::bearer("a@b", "old"),
+                (false, true) => Login::bearer("a@b", "new"),
+            };
+            Box::pin(async move { Ok(login) })
+        }
+    }
+
+    fn client_from(
+        source: Arc<Source>,
+        servers: Vec<(&'static str, Answer)>,
+    ) -> ImapClient<Arc<Scripts>> {
+        let scripts = Arc::new(Scripts {
+            next: Mutex::new(servers.into()),
+            dials: AtomicUsize::new(0),
+        });
+        ImapClient::with_source(scripts, source)
+    }
+
+    /// A server that refuses a login carrying `refused` and takes any other.
+    fn picky(refused: &'static str) -> Answer {
+        Box::new(move |command: &str| {
+            if command.starts_with("AUTHENTICATE OAUTHBEARER ") {
+                let sent = command.rsplit(' ').next().unwrap();
+                let token = String::from_utf8(
+                    base64::Engine::decode(&base64::engine::general_purpose::STANDARD, sent)
+                        .unwrap(),
+                )
+                .unwrap();
+                if token.contains(refused) {
+                    return vec!["{tag} NO [AUTHENTICATIONFAILED] token expired".into()];
+                }
+                return vec!["{tag} OK signed in".into()];
+            }
+            if command.starts_with("AUTHENTICATE PLAIN ") {
+                return vec!["{tag} NO [AUTHENTICATIONFAILED] bad".into()];
+            }
+            if command == "CAPABILITY" {
+                return vec![
+                    format!("* CAPABILITY IMAP4rev1 {ALL}"),
+                    "{tag} OK done".into(),
+                ];
+            }
+            vec!["{tag} OK".into()]
+        })
+    }
+
+    const BEARER_GREETING: &str = "* OK [CAPABILITY IMAP4rev1 AUTH=PLAIN AUTH=OAUTHBEARER] ready";
+
+    #[tokio::test]
+    async fn a_refused_bearer_login_asks_the_source_again_once() {
+        let source = Arc::new(Source::default());
+        let client = client_from(
+            source.clone(),
+            vec![
+                (BEARER_GREETING, picky("old")),
+                (BEARER_GREETING, picky("old")),
+            ],
+        );
+        assert!(client.capabilities().await.is_ok());
+        assert_eq!(*source.asked.lock().unwrap(), [false, true]);
+    }
+
+    #[tokio::test]
+    async fn a_bearer_login_refused_twice_gives_up_after_the_second_ask() {
+        let source = Arc::new(Source::default());
+        let client = client_from(
+            source.clone(),
+            vec![(BEARER_GREETING, picky("")), (BEARER_GREETING, picky(""))],
+        );
+        assert!(matches!(
+            client.capabilities().await,
+            Err(ImapError::Auth { .. })
+        ));
+        assert_eq!(*source.asked.lock().unwrap(), [false, true]);
+    }
+
+    #[tokio::test]
+    async fn a_password_login_is_not_retried() {
+        let source = Arc::new(Source {
+            password: true,
+            ..Source::default()
+        });
+        let client = client_from(source.clone(), vec![(GREETING, picky(""))]);
+        assert!(matches!(
+            client.capabilities().await,
+            Err(ImapError::Auth { .. })
+        ));
+        assert_eq!(*source.asked.lock().unwrap(), [false]);
     }
 
     #[tokio::test]
