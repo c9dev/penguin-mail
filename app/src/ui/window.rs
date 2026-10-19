@@ -4132,13 +4132,21 @@ impl MainWindow {
         self.preferences.replace(Some(dialog));
     }
 
+    /// Where a Gmail account reads its mail, as the app last read it.
+    fn route_of(&self, id: AccountId) -> Option<mailrs_domain::MailRoute> {
+        let app = self.app.upgrade()?;
+        app.google_sign_in(id).map(|sign_in| sign_in.route)
+    }
+
     fn show_rules(self: &Rc<Self>, account: Account) {
         let labels = self.labels_of(account.id);
         let (grant, email) = (Rc::downgrade(self), account.email.clone());
         let filing = crate::offered::Filing::of([self.offers(account.id)]);
+        let route = self.route_of(account.id);
         super::rules::present(
             &self.core,
             &account,
+            route,
             labels,
             filing,
             &self.window,
@@ -4180,9 +4188,11 @@ impl MainWindow {
     fn show_vacation(self: &Rc<Self>, account: Account) {
         let (grant, saved) = (Rc::downgrade(self), Rc::downgrade(self));
         let email = account.email.clone();
+        let route = self.route_of(account.id);
         super::vacation::present(
             &self.core,
             &account,
+            route,
             &self.window,
             move || {
                 if let Some(win) = grant.upgrade() {
