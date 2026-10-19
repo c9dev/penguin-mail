@@ -374,8 +374,8 @@ impl OwnProject {
         page.choose.grab_focus();
     }
 
-    /// The pasted pair, once both halves have text. Half a pair stays
-    /// quiet until Sign In is pressed.
+    /// The pasted pair, once both halves have text. Half a pair reports
+    /// nothing until Sign In is pressed.
     fn pasted(&self) {
         let (id, secret) = (self.file.id.text(), self.file.secret.text());
         if id.trim().is_empty() || secret.trim().is_empty() {

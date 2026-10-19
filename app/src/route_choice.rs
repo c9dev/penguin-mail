@@ -77,7 +77,8 @@ pub fn goa_state(list: &Result<Vec<GoaAccount>, GoaError>, email: Option<&str>) 
     }
 }
 
-/// What this build can run now. The own-project and password routes are always ready; the caller says whether a project is kept.
+/// What this build can run now. The own-project and password routes are
+/// always ready; the caller says whether a project is kept.
 pub fn ready_now(clients: &Clients, goa: Goa) -> Ready {
     Ready {
         goa,
