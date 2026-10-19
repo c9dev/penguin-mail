@@ -11,9 +11,10 @@ use mailrs_domain::{
 use mailrs_gmail::{Authorized, Granted};
 use mailrs_store::accounts::{self, GoogleSignIn, RouteCommit};
 use mailrs_store::messages::{self, Change};
-use mailrs_store::{Db, drafts, mailboxes, servers};
+use mailrs_store::{Db, drafts, mailboxes, outbox, servers};
 use rusqlite::Connection;
 
+use crate::connect::{STEP_WAIT, read_secret};
 use crate::goa::GoaAccount;
 use crate::passwords::Secrets;
 use crate::sign_in::app_password::NewGmailImap;
@@ -181,7 +182,13 @@ impl<E: MoveEngine, A: Accounts> Mover<'_, E, A> {
             .read(move |c| accounts::mail_route(c, id))
             .await
             .map_err(SyncError::from)?;
-        let route = linked.route();
+        // An account already on IMAP stays there: Online Accounts' token
+        // reads IMAP whatever the probe found, and nothing renames the
+        // stored mail back for the API.
+        let route = match before {
+            MailRoute::Imap => MailRoute::Imap,
+            _ => linked.route(),
+        };
         let changes = before != route;
         if changes && rewrite.is_none() {
             return Err(MoveError::Sync(SyncError::Backend(
@@ -287,9 +294,10 @@ impl<E: MoveEngine, A: Accounts> Mover<'_, E, A> {
         save_passwords(Arc::clone(&self.secrets.passwords), id, password, None)
             .await
             .map_err(SyncError::from)?;
-        let client = self
+        let (client, leaves_goa) = self.client_off_goa(id).await?;
+        let before = self
             .db
-            .read(move |c| accounts::sign_in_client(c, id))
+            .read(move |c| accounts::mail_route(c, id))
             .await
             .map_err(SyncError::from)?;
         let route = RouteCommit {
@@ -299,7 +307,15 @@ impl<E: MoveEngine, A: Accounts> Mover<'_, E, A> {
         };
         commit(self.db, id, route, move |c| {
             servers::save(c, id, &saved)?;
-            rewrite_for_imap(c, id)
+            if leaves_goa {
+                accounts::set_goa_id(c, id, None)?;
+            }
+            // An account already on IMAP (through Online Accounts) has
+            // its mail named for IMAP.
+            match before {
+                MailRoute::Imap => Ok(()),
+                _ => rewrite_for_imap(c, id),
+            }
         })
         .await?;
         let moved = self
@@ -316,9 +332,33 @@ impl<E: MoveEngine, A: Accounts> Mover<'_, E, A> {
     }
 }
 
+impl<E, A: Accounts> Mover<'_, E, A> {
+    /// The client `id` signs in with once it leaves Online Accounts, and
+    /// whether it is on Online Accounts now. An account on another client
+    /// keeps it. One that leaves Online Accounts takes its own project
+    /// when the keyring keeps one for it, else the client built in.
+    async fn client_off_goa(&self, id: AccountId) -> Result<(SignInClient, bool), MoveError> {
+        let client = self
+            .db
+            .read(move |c| accounts::sign_in_client(c, id))
+            .await
+            .map_err(SyncError::from)?;
+        if client != SignInClient::Goa {
+            return Ok((client, false));
+        }
+        let kept = read_secret(Arc::clone(&self.secrets.google_clients), id, STEP_WAIT).await?;
+        let client = match kept {
+            Some(_) => SignInClient::Own,
+            None => SignInClient::BuiltIn,
+        };
+        Ok((client, true))
+    }
+}
+
 /// Renames the account's stored mail for Gmail's IMAP: each user label's
-/// row takes its full name as id, so its mail stays filed, and the
-/// `drafts` rows go, since IMAP has message ids and no draft ids. System
+/// row takes its full name as id, so its mail stays filed, the outbox rows
+/// take their draft's message id, and the `drafts` rows go, since IMAP has
+/// message ids and no draft ids. System
 /// rows, categories and `$muted` stay. With [`API_IDS_MATCH`] false the
 /// account's messages go too, and the first IMAP sync lists them again.
 pub fn rewrite_for_imap(c: &Connection, id: AccountId) -> mailrs_store::Result<()> {
@@ -337,6 +377,7 @@ pub fn rewrite_for_imap(c: &Connection, id: AccountId) -> mailrs_store::Result<(
         };
         mailboxes::rename(c, id, &from, &renamed)?;
     }
+    outbox::draft_ids_to_message_ids(c, id)?;
     drafts::forget_account(c, id)?;
     if !API_IDS_MATCH {
         let mut stmt = c.prepare("SELECT id FROM messages WHERE account_id = ?1")?;

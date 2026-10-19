@@ -87,6 +87,18 @@ pub async fn probe(
     }
 }
 
+/// Refuses an Online Accounts account whose Mail switch is off, or that
+/// Online Accounts wants signed in again.
+pub fn usable(goa_account: &GoaAccount) -> Result<(), LinkError> {
+    if goa_account.mail_disabled {
+        return Err(LinkError::MailOff);
+    }
+    if goa_account.attention_needed {
+        return Err(LinkError::SignInAgain);
+    }
+    Ok(())
+}
+
 /// Links `goa_account` to Penguin Mail. An account Online Accounts has
 /// switched off or wants signed in again is refused. A new address becomes
 /// an account on `Goa`; an address the store already holds is left as it
@@ -97,12 +109,7 @@ pub async fn link(
     gmail_base: &str,
     now: EpochMillis,
 ) -> Result<(Account, Linked), LinkError> {
-    if goa_account.mail_disabled {
-        return Err(LinkError::MailOff);
-    }
-    if goa_account.attention_needed {
-        return Err(LinkError::SignInAgain);
-    }
+    usable(goa_account)?;
     let linked = probe(&connector.goa, goa_account, gmail_base).await?;
     // Google reads an address without regard to case and the store keeps it
     // lower case, as every other sign-in does.

@@ -174,6 +174,11 @@ pub async fn signed_in(
         }
         let id = accounts::insert_account(c, &email, now)?;
         accounts::set_sign_in_client(c, id, client)?;
+        // A sign-in through another client takes the account off Online
+        // Accounts.
+        if client != SignInClient::Goa {
+            accounts::set_goa_id(c, id, None)?;
+        }
         if let Some(granted) = &granted {
             accounts::set_granted(c, id, granted)?;
         }

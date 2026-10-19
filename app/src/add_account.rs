@@ -1321,13 +1321,29 @@ pub fn shows_folder(provider: Provider, role: mailrs_domain::Role) -> bool {
 /// The Gmail accounts a move walks through, one at a time.
 pub struct MoveWalk {
     rest: std::collections::VecDeque<Account>,
+    /// The accounts that read their mail over IMAP. Nothing renames their
+    /// stored mail back for the API, so they are not offered the own
+    /// project.
+    on_imap: std::collections::HashSet<mailrs_domain::AccountId>,
 }
 
 impl MoveWalk {
     pub fn new(accounts: Vec<Account>) -> MoveWalk {
         MoveWalk {
             rest: accounts.into(),
+            on_imap: Default::default(),
         }
+    }
+
+    /// Records which accounts read their mail over IMAP.
+    pub fn set_on_imap(&mut self, on_imap: std::collections::HashSet<mailrs_domain::AccountId>) {
+        self.on_imap = on_imap;
+    }
+
+    /// Whether the account the page is choosing for reads its mail over
+    /// IMAP.
+    pub fn current_on_imap(&self) -> bool {
+        self.current().is_some_and(|a| self.on_imap.contains(&a.id))
     }
 
     /// The account the page is choosing for.

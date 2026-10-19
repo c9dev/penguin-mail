@@ -11,13 +11,13 @@ use std::time::Duration;
 use anyhow::{Result, anyhow, bail};
 use futures::StreamExt;
 use mailrs_domain::translate::gettext;
-use mailrs_domain::{Account, AccountId, SignInClient};
+use mailrs_domain::{Account, AccountId, MailRoute, SignInClient};
 use mailrs_gmail::GMAIL_API_BASE;
 use mailrs_store::{Db, accounts};
 use mailrs_sync::goa::{self, GoaAccount, GoaChange, GoaError};
-use mailrs_sync::route_move::{self, MoveError};
+use mailrs_sync::route_move;
 use mailrs_sync::sign_in::goa_link::{self, Linked};
-use mailrs_sync::{BackendError, SyncError, now_millis};
+use mailrs_sync::now_millis;
 
 use super::{Core, MovePort, Reach, start_again};
 use crate::goa_notice::{self, Notice};
@@ -91,6 +91,24 @@ async fn linked_accounts(
 }
 
 impl Core {
+    /// The Gmail accounts that read their mail over IMAP.
+    pub async fn accounts_on_imap(&self) -> HashSet<AccountId> {
+        let db = self.db.clone();
+        let read = self
+            .call(async move {
+                db.read(|c| {
+                    Ok(accounts::google_sign_ins(c)?
+                        .into_iter()
+                        .filter(|(_, sign_in)| sign_in.route == MailRoute::Imap)
+                        .map(|(id, _)| id)
+                        .collect::<HashSet<_>>())
+                })
+                .await
+            })
+            .await;
+        read.unwrap_or_default()
+    }
+
     /// The Google accounts Online Accounts holds, read now. Answers
     /// `Unreachable` after the daemon fails to answer in time.
     pub async fn goa_accounts(&self) -> Result<Vec<GoaAccount>, GoaError> {
@@ -178,6 +196,9 @@ impl Core {
         if self.demo {
             bail!(gettext("The demo cannot switch accounts."));
         }
+        // Refused as adding an account through Online Accounts is, before
+        // anything stops.
+        goa_link::usable(&goa_account)?;
         let lease = self.move_leases.lease(account.id).ok_or_else(|| {
             anyhow!(gettext(
                 "This account is already moving to its new sign-in."
@@ -213,23 +234,21 @@ impl Core {
                     secrets: &secrets,
                     outbox: &outbox,
                 };
-                // A move that changes the route needs the closure that
-                // renames the stored mail for it. Until the Gmail IMAP
-                // adapter lands there is none, and such a move is refused
-                // before anything stops. Wire its closure in as the
-                // fourth argument.
+                let id = account.id;
+                // The move from the API to IMAP renames the stored mail
+                // for IMAP. An account already on IMAP stays there, so no
+                // other rewrite is needed.
+                let rewrite: route_move::RewriteMail =
+                    Box::new(move |c| route_move::rewrite_for_imap(c, id));
                 let moved = mover
-                    .to_goa(&account, &goa_account, linked, None, || ())
-                    .await;
-                match moved {
-                    Ok(moved) => Ok((moved, linked)),
-                    Err(MoveError::Sync(SyncError::Backend(BackendError::Unsupported))) => {
-                        Err(anyhow!(gettext(
-                            "This account can't switch to this computer's sign-in yet."
-                        )))
-                    }
-                    Err(other) => Err(other.into()),
-                }
+                    .to_goa(&account, &goa_account, linked, Some(rewrite), || ())
+                    .await?;
+                let route = db.read(move |c| accounts::mail_route(c, id)).await?;
+                let linked = match route {
+                    MailRoute::Imap => Linked::Imap,
+                    _ => Linked::Api,
+                };
+                Ok::<_, anyhow::Error>((moved, linked))
             })
             .await?;
         self.finish_google_setup();

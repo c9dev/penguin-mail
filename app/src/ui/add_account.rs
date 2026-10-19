@@ -223,7 +223,14 @@ pub fn present(
         Opening::Move(accounts) => {
             this.moving
                 .replace(Some(add_account::MoveWalk::new(accounts)));
-            this.offer_routes(None);
+            let walk = Rc::clone(&this);
+            glib::spawn_future_local(async move {
+                let on_imap = walk.core.accounts_on_imap().await;
+                if let Some(moving) = walk.moving.borrow_mut().as_mut() {
+                    moving.set_on_imap(on_imap);
+                }
+                walk.offer_routes(None);
+            });
         }
         Opening::Consent(_) => {
             // The closed envelope with no stamp, as the route page has.
@@ -3934,6 +3941,7 @@ impl Dialog {
 
     /// The route page, or the browser page when no row would show.
     fn offer_rows(self: &Rc<Self>, platform: Platform, ready: Ready, expected: Option<String>) {
+        let ready = self.for_move(ready);
         if !any_route(platform, ready) {
             return self.start_browser(Browser::Google, expected);
         }
@@ -3945,13 +3953,31 @@ impl Dialog {
         self.push(route_page::TAG);
     }
 
+    /// `ready` for the account a move walk is choosing for: an account
+    /// that reads its mail over IMAP is not offered its own project.
+    fn for_move(&self, ready: Ready) -> Ready {
+        let on_imap = self
+            .moving
+            .borrow()
+            .as_ref()
+            .is_some_and(add_account::MoveWalk::current_on_imap);
+        if !on_imap {
+            return ready;
+        }
+        Ready {
+            own_project: false,
+            saved_project: false,
+            ..ready
+        }
+    }
+
     /// Fills the route page without showing it.
     fn routes_for(self: &Rc<Self>, platform: Platform, ready: Ready, expected: Option<String>) {
         let saved = self.saved.borrow().is_some();
-        let ready = Ready {
+        let ready = self.for_move(Ready {
             saved_project: ready.saved_project || saved,
             ..ready
-        };
+        });
         self.route_expected.replace(expected);
         self.routes_goa.set(ready.goa);
         let weak = Rc::downgrade(self);
@@ -4122,7 +4148,7 @@ impl Dialog {
             };
             // The Online Accounts row was this page; the rest are the
             // other ways.
-            let ready = ready_now(&mailrs_sync::Clients::current(), state);
+            let ready = this.for_move(ready_now(&mailrs_sync::Clients::current(), state));
             let rows = rows_without_goa(platform, ready);
             if rows.is_empty() {
                 return this.start_browser(Browser::Google, expected);

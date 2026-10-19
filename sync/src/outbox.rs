@@ -66,6 +66,16 @@ fn check_sent() -> String {
     gettext("Penguin Mail could not confirm whether this message went out. Check Sent.")
 }
 
+/// What a row that would not go out says. A message whose bytes live
+/// only in a draft that is gone may or may not have gone out, so it asks
+/// the person to look in Sent.
+fn problem_of(message: &Queued, err: &SyncError) -> String {
+    match err {
+        SyncError::Backend(BackendError::NotFound) if message.raw.is_none() => check_sent(),
+        other => other.to_string(),
+    }
+}
+
 /// When a row's hold lost its answer, and the `Message-ID` it waits to
 /// find the hold by, when it does.
 fn unconfirmed(message: &Queued) -> Option<(EpochMillis, &str)> {
@@ -370,11 +380,12 @@ impl<A: Accounts> Outbox<A> {
             Err(err) => {
                 // A message already waiting keeps its place, so the Outbox
                 // goes on showing it and saying what is wrong with it.
+                let problem = problem_of(&message, &err);
                 if message.id > 0 {
                     message.attempts = MOST_TRIES;
                     self.keep(message, &err).await?;
                 }
-                Ok(Posted::Refused(err.to_string()))
+                Ok(Posted::Refused(problem))
             }
         }
     }
@@ -969,11 +980,9 @@ impl<A: Accounts> Outbox<A> {
     /// what just went out.
     ///
     /// A message tried before may have reached Gmail on a try whose answer
-    /// was lost, so its bytes are looked for in Sent first. A draft is
-    /// checked by the provider: Gmail deletes a draft it sends, so sending
-    /// one that has gone answers that it is gone, which counts as sent;
-    /// IMAP looks in Sent for the draft's Message-ID, and Graph sees that
-    /// the message is no longer a draft.
+    /// was lost, so its bytes are looked for in Sent first. A draft that
+    /// has gone never counts as sent: the row stays, and [`problem_of`]
+    /// asks the person to check Sent.
     async fn attempt(&self, message: &Queued) -> Result<String, SyncError> {
         let sync = self
             .accounts
@@ -1009,10 +1018,14 @@ impl<A: Accounts> Outbox<A> {
                 sync.send(raw.clone(), message.thread_id.clone(), draft_id.clone())
                     .await
             }
-            (None, Some(draft_id)) => Ok(sync
+            // A draft that is gone may have gone out on a try whose
+            // answer was lost, or may have been deleted, or may sit under
+            // an id the account no longer uses. Nothing here can tell
+            // which, so the row stays and asks the person to check Sent.
+            (None, Some(draft_id)) => sync
                 .send_draft(draft_id)
                 .await?
-                .unwrap_or_else(|| draft_id.clone())),
+                .ok_or_else(|| BackendError::NotFound.into()),
             (None, None) => Err(BackendError::NotFound.into()),
         }
     }
@@ -1060,7 +1073,7 @@ impl<A: Accounts> Outbox<A> {
     /// again, and gives back the row as it now stands. `message.attempts`
     /// already counts this try.
     async fn keep(&self, mut message: Queued, err: &SyncError) -> Result<Queued, SyncError> {
-        message.problem = Some(err.to_string());
+        message.problem = Some(problem_of(&message, err));
         message.send_at = now_millis()
             + retry_delay(message.attempts)
                 .unwrap_or_default()
