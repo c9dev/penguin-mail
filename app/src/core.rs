@@ -2253,9 +2253,6 @@ impl Background for Core {
     }
 }
 
-/// Where contact photos are kept: the cache directory, since Google
-/// serves them again whenever they are wanted. Demo photos sit beside the
-/// demo's throwaway store.
 /// The desktop's Online Accounts. The demo holds one Google account of its
 /// own, so the pages that use it can be seen without touching the person's.
 fn online_accounts(demo: bool) -> Arc<dyn mailrs_sync::goa::OnlineAccounts> {
@@ -2273,6 +2270,9 @@ fn online_accounts(demo: bool) -> Arc<dyn mailrs_sync::goa::OnlineAccounts> {
     fake
 }
 
+/// Where contact photos are kept: the cache directory, since Google
+/// serves them again whenever they are wanted. Demo photos sit beside the
+/// demo's throwaway store.
 fn contact_photo_dir(demo: bool, data_dir: &std::path::Path) -> PathBuf {
     if demo {
         return data_dir.join("contact-photos");
