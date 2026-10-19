@@ -25,6 +25,7 @@ app/src/autostart.rs
 app/src/compose.rs
 app/src/contacts.rs
 app/src/core.rs
+app/src/core/goa.rs
 app/src/event_reminders/notice.rs
 app/src/format.rs
 app/src/keyring_plug.rs

@@ -55,19 +55,25 @@ msgstr ""
 "图、邮件中的邀请回复及提醒"
 
 #: app/data/io.github.c9dev.PenguinMail.metainfo.xml:25
+msgid ""
+"Gmail through the Google account your computer's Online Accounts already "
+"holds, on Linux"
+msgstr "在 Linux 上，通过此电脑的“在线账号”中已有的 Google 账号使用 Gmail"
+
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:26
 msgid "Contacts from Google, Outlook and any CardDAV server"
 msgstr "同步 Google、Outlook 和各种 CardDAV 服务器的联系人"
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:26
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:27
 msgid ""
 "A composer that shows formatting as you write, with Undo Send and Send Later"
 msgstr "撰写邮件时实时显示格式，并提供 [取消发送] 和 [定时发送]"
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:27
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:28
 msgid "Flags in seven colors, VIPs, smart mailboxes and reminders"
 msgstr "七种颜色的标记、VIP、智能邮箱及提醒"
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:28
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:29
 msgid ""
 "Rules and automatic replies for every account, kept on Gmail, Outlook or a "
 "Sieve server, or run by the app on its own"
@@ -75,24 +81,24 @@ msgstr ""
 "为各账号设置规则及自动回复，可保存在 Gmail、Outlook 或 Sieve 服务器上，也可由"
 "程序自行运行"
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:29
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:30
 msgid "Plus addresses to give out instead of your own"
 msgstr "提供加号别名地址，代替原本的地址"
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:30
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:31
 msgid "OpenPGP and S/MIME signing and encryption through your own GnuPG"
 msgstr "通过自己的 GnuPG 进行 OpenPGP 与 S/MIME 签名及加密"
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:31
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:32
 msgid "Remote images blocked until you ask for them"
 msgstr "阻止远程图片，直到选择加载为止"
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:32
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:33
 msgid ""
 "An assistant that runs on a local model or on Claude, off until you pick one"
 msgstr "助手可使用本地模型或 Claude，选择模型后才会启用"
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:33
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:34
 msgid ""
 "Every control named for screen readers and reachable from the keyboard, in "
 "American English, British English, French, German, Indonesian, Italian, "
@@ -103,7 +109,7 @@ msgstr ""
 "英语、法语、德语、印度尼西亚语、意大利语、日语、韩语、波兰语、俄语、西班牙"
 "语、欧洲葡萄牙语、简体中文、繁体中文（台湾）、土耳其语和越南语。"
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:35
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:36
 msgid ""
 "Adding a Gmail or Microsoft account takes one sign-in in your browser. "
 "Penguin Mail is built with GTK and libadwaita and fits best on GNOME, but it "
@@ -112,43 +118,43 @@ msgstr ""
 "添加 Gmail 或 Microsoft 账号只需在浏览器中登录一次。Penguin Mail 采用 GTK 和 "
 "libadwaita，最适合 GNOME，也可在任何 Linux 桌面环境中运行。"
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:53
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:54
 msgid "gmail"
 msgstr "gmail"
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:54
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:55
 msgid "email"
 msgstr "电子邮件"
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:55
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:56
 msgid "mail"
 msgstr "邮件"
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:56
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:57
 msgid "inbox"
 msgstr "收件箱"
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:85
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:86
 msgid "All your accounts in one inbox, with a reply open"
 msgstr "所有账号集中在同一收件箱，并打开一封回复"
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:89
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:90
 msgid "The same inbox in dark mode"
 msgstr "深色模式中的同一收件箱"
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:93
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:94
 msgid "The calendar's week, with working hours and where you work"
 msgstr "日历的周视图，显示工作时间和工作地点"
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:97
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:98
 msgid "An invitation in a message, with the hours around the meeting"
 msgstr "邮件中的邀请，显示会议前后的时间安排"
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:101
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:102
 msgid "Replying, with the quoted history folded away"
 msgstr "撰写回复，并折叠先前邮件的引用内容"
 
-#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:105
+#: app/data/io.github.c9dev.PenguinMail.metainfo.xml:106
 msgid "The assistant beside your mail"
 msgstr "邮件旁的助手"
 
@@ -2054,7 +2060,7 @@ msgid "Could not save {count} person to contacts in {account}"
 msgid_plural "Could not save {count} people to contacts in {account}"
 msgstr[0] "无法将 {count} 位联系人保存至 {account} 的联系人"
 
-#: app/src/core.rs:223
+#: app/src/core.rs:231
 msgid ""
 "Another copy of Penguin Mail, or penguin-mail-cli sync, is syncing your "
 "mail. Stop it, then open Penguin Mail again."
@@ -2062,38 +2068,48 @@ msgstr ""
 "另一个 Penguin Mail 或 penguin-mail-cli sync 正在同步邮件。请停止该程序，再重"
 "新打开 Penguin Mail。"
 
-#: app/src/core.rs:235
+#: app/src/core.rs:243
 msgid "Penguin Mail could not update its mail store, and kept the old one."
 msgstr "Penguin Mail 无法更新邮件数据库，已保留旧数据库。"
 
-#: app/src/core.rs:899 app/src/core.rs:991 app/src/core.rs:1120
-#: app/src/core.rs:1134 app/src/core.rs:1199 app/src/core.rs:1295
+#: app/src/core.rs:912 app/src/core.rs:1004 app/src/core.rs:1133
+#: app/src/core.rs:1147 app/src/core.rs:1212 app/src/core.rs:1308
 msgid "Demo mode cannot add real accounts."
 msgstr "演示模式无法添加真实账号。"
 
-#: app/src/core.rs:916 app/src/core.rs:1814 app/src/core.rs:1876
+#: app/src/core.rs:929 app/src/core.rs:1827 app/src/core.rs:1889
 msgid "Canceled."
 msgstr "已取消。"
 
-#: app/src/core.rs:1467 app/src/core.rs:1492
+#: app/src/core.rs:1480 app/src/core.rs:1505
 msgid "This account keeps no password a calendar or contacts server takes."
 msgstr "此账号没有保存日历或联系人服务器接受的密码。"
 
-#: app/src/core.rs:1673 app/src/core.rs:1723 app/src/core.rs:1840
+#: app/src/core.rs:1686 app/src/core.rs:1736 app/src/core.rs:1853
 msgid "The demo cannot switch accounts."
 msgstr "演示模式无法切换账号。"
 
-#: app/src/core.rs:1727
+#: app/src/core.rs:1740
 msgid "This account is already moving to its new sign-in."
 msgstr "此账号已在迁移到新的登录方式。"
 
-#: app/src/core.rs:1794
+#: app/src/core.rs:1807
 msgid "The demo cannot connect a calendar."
 msgstr "演示模式下无法连接日历。"
 
-#: app/src/core.rs:1860
+#: app/src/core.rs:1873
 msgid "Gave up waiting for the browser after five minutes."
 msgstr "已等待浏览器五分钟，停止等待。"
+
+#
+#: app/src/core/goa.rs:128
+msgid "The demo cannot sign in through Online Accounts."
+msgstr "演示版无法通过“在线账号”登录。"
+
+#
+#: app/src/core/goa.rs:228
+msgid "This account can't switch to this computer's sign-in yet."
+msgstr "此账号暂时无法切换为此电脑的登录方式。"
 
 #: app/src/event_reminders/notice.rs:31
 msgid "Join"
@@ -2298,7 +2314,57 @@ msgstr "紫色"
 msgid "Slate"
 msgstr "石板灰色"
 
-#: app/src/keyring_plug.rs:142
+#
+#: app/src/goa_notice.rs:89
+msgid "Sign In Another Way"
+msgstr "用其他方式登录"
+
+#. Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language. {address} is an email address.
+#: app/src/goa_notice.rs:98
+msgid "Sign in to {address} again in Online Accounts."
+msgstr "请在“在线账号”中重新登录 {address}。"
+
+#: app/src/goa_notice.rs:106
+msgid ""
+"Your organization may not allow this. Ask your administrator, or sign in "
+"another way."
+msgstr "您的组织可能不允许这样做。请询问管理员，或用其他方式登录。"
+
+#
+#: app/src/goa_notice.rs:114
+msgid "Add It Again"
+msgstr "重新添加"
+
+#. Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language. {address} is an email address.
+#: app/src/goa_notice.rs:118
+msgid "{address} was removed from Online Accounts. Your mail here is kept."
+msgstr "{address} 已从“在线账号”中移除。您在这里的邮件会保留。"
+
+#. Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language. {address} is an email address.
+#: app/src/goa_notice.rs:126
+msgid "Mail is turned off for {address} in Online Accounts."
+msgstr "“在线账号”中已关闭 {address} 的邮件功能。"
+
+#. Translators: Google and IMAP are names; keep them as they are.
+#: app/src/goa_notice.rs:134
+msgid ""
+"Google refused this computer's sign-in for mail. Is IMAP turned on for this "
+"account?"
+msgstr "Google 拒绝了此电脑用于邮件的登录。此账号是否已开启 IMAP？"
+
+#
+#. Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language.
+#: app/src/goa_notice.rs:138
+msgid "Can't reach Online Accounts on this computer."
+msgstr "无法连接此电脑上的“在线账号”。"
+
+#
+#. Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language.
+#: app/src/goa_notice.rs:145
+msgid "Open Online Accounts"
+msgstr "打开“在线账号”"
+
+#: app/src/keyring_plug.rs:160
 msgid ""
 "Penguin Mail cannot save sign-ins until the snap can reach your keyring. Run "
 "{command} in a terminal, then restart Penguin Mail."
@@ -2310,7 +2376,7 @@ msgstr ""
 msgid "{language} ({country})"
 msgstr "{language}（{country}）"
 
-#: app/src/main.rs:103
+#: app/src/main.rs:104
 msgid ""
 "Usage: penguin-mail [--background] [--demo] [--compose [mailto:ADDRESS]] "
 "[FILE.ics]\n"
@@ -2332,15 +2398,15 @@ msgstr ""
 "  mailto:...     等同于 --compose mailto:...\n"
 "  FILE.ics       打开日历文件，将其中活动加入日历"
 
-#: app/src/main.rs:189
+#: app/src/main.rs:190
 msgid "penguin-mail: unknown option {option}"
 msgstr "penguin-mail：未知选项 {option}"
 
-#: app/src/main.rs:392
+#: app/src/main.rs:393
 msgid "Penguin Mail Could Not Start"
 msgstr "Penguin Mail 无法启动"
 
-#: app/src/main.rs:397 app/src/ui/about.rs:181
+#: app/src/main.rs:398 app/src/ui/about.rs:181
 msgid "Report a Problem"
 msgstr "报告问题"
 
@@ -2374,14 +2440,12 @@ msgid "{count} Gmail account needs a new way to sign in"
 msgid_plural "{count} Gmail accounts need a new way to sign in"
 msgstr[0] "有 {count} 个 Gmail 账号需要新的登录方式"
 
-#. Translators: GNOME Online Accounts is a name; keep it as it is.
-#: app/src/move_banner.rs:101 app/src/route_choice.rs:125
-msgid "Use GNOME Online Accounts"
-msgstr "使用 GNOME 在线账号"
+#
+#: app/src/move_banner.rs:100 app/src/ui/goa_page.rs:299
+msgid "Use This Account"
+msgstr "使用此账号"
 
-#. The GNOME Online Accounts plan replaces this with its
-#. one-click move for an address that GNOME already holds.
-#: app/src/move_banner.rs:103 app/src/ui/preferences/google_route.rs:276
+#: app/src/move_banner.rs:102 app/src/ui/preferences/google_route.rs:316
 msgid "Choose…"
 msgstr "选择…"
 
@@ -3781,8 +3845,8 @@ msgstr "此账号尚未连接。"
 msgid "Could not save: {reason}"
 msgstr "无法保存：{reason}"
 
-#: app/src/protection/draft.rs:212 app/src/ui/window.rs:2738
-#: app/src/ui/window.rs:2761
+#: app/src/protection/draft.rs:212 app/src/ui/window.rs:2832
+#: app/src/ui/window.rs:2855
 msgid "Could not open the draft: {reason}"
 msgstr "无法打开草稿：{reason}"
 
@@ -3974,45 +4038,56 @@ msgid "Deleted by {who} without being read"
 msgstr "{who} 未读即删除"
 
 #. Translators: Gmail is a name; keep it as it is.
-#: app/src/route_choice.rs:81 app/src/ui/move_sheet.rs:63
+#: app/src/route_choice.rs:89 app/src/ui/move_sheet.rs:63
 msgid "Choose how Penguin Mail signs in to Gmail"
 msgstr "选择 Penguin Mail 登录 Gmail 的方式"
 
 #. Translators: Gmail and Google are names; keep them as they are.
-#: app/src/route_choice.rs:117
+#: app/src/route_choice.rs:134
 msgid ""
 "Want every Gmail feature? Your own Google project gives you all of them, "
 "free."
 msgstr "想要 Gmail 的全部功能？使用您自己的 Google 项目即可免费获得全部功能。"
 
-#: app/src/route_choice.rs:127
+#
+#: app/src/route_choice.rs:142 app/src/ui/goa_page.rs:291
+msgid "Use the Google account on this computer"
+msgstr "使用此电脑上的 Google 账号"
+
+#
+#: app/src/route_choice.rs:144 app/src/ui/goa_page.rs:77
+#: app/src/ui/goa_page.rs:337 app/src/ui/goa_page.rs:353
+#: app/src/ui/goa_page.rs:375
+msgid "Add your Google account to this computer"
+msgstr "将您的 Google 账号添加到此电脑"
+
+#: app/src/route_choice.rs:147
 msgid "Already signed in on this computer"
 msgstr "已在此计算机上登录"
 
-#: app/src/route_choice.rs:129
-msgid "Recommended. Every feature, signs in through your desktop."
-msgstr "推荐。全部功能，通过桌面登录。"
+#: app/src/route_choice.rs:149 app/src/ui/preferences/google_route.rs:301
+msgid "Mail, calendar and contacts"
+msgstr "邮件、日历和联系人"
 
 #. Translators: Google is a name; keep it as it is.
-#: app/src/route_choice.rs:139
+#: app/src/route_choice.rs:159
 msgid "Use a password from Google"
 msgstr "使用 Google 的密码"
 
-#: app/src/route_choice.rs:141
+#: app/src/route_choice.rs:161
 msgid "Quick. Mail, calendar and contacts."
 msgstr "快捷。邮件、日历和联系人。"
 
-#: app/src/route_choice.rs:143
+#: app/src/route_choice.rs:163
 msgid "Quickest. About 2 minutes"
 msgstr "最快。约 2 分钟"
 
-#. Translators: Google is a name; keep it as it is.
-#: app/src/route_choice.rs:153
+#: app/src/route_choice.rs:173 app/src/ui/preferences/google_route.rs:323
 msgid "Set up your own Google project"
 msgstr "设置您自己的 Google 项目"
 
 #. Translators: Gmail is a name; keep it as it is.
-#: app/src/route_choice.rs:155
+#: app/src/route_choice.rs:175
 msgid "Every Gmail feature, on any computer. About 10 minutes, once."
 msgstr "全部 Gmail 功能，可在任何计算机上使用。约 10 分钟，只需一次。"
 
@@ -4140,15 +4215,15 @@ msgstr "{host} 拒绝登录：{reason}"
 
 #: app/src/servers.rs:59 app/src/ui/calendar/editor.rs:1219
 #: app/src/ui/calendar/editor.rs:1295 app/src/ui/contacts_prefs.rs:28
-#: app/src/ui/contacts_prefs.rs:350 app/src/ui/preferences/google_route.rs:286
+#: app/src/ui/contacts_prefs.rs:352 app/src/ui/preferences/google_route.rs:345
 #: app/src/ui/sidebar.rs:392 app/src/ui/sidebar.rs:1498
 #: app/src/ui/window/shortcuts.rs:240
 msgid "Calendar"
 msgstr "日历"
 
-#: app/src/servers.rs:64 app/src/ui/contacts_prefs.rs:261
-#: app/src/ui/contacts_prefs.rs:266 app/src/ui/contacts_prefs.rs:275
-#: app/src/ui/preferences/google_route.rs:290
+#: app/src/servers.rs:64 app/src/ui/contacts_prefs.rs:262
+#: app/src/ui/contacts_prefs.rs:267 app/src/ui/contacts_prefs.rs:276
+#: app/src/ui/preferences/google_route.rs:349
 msgid "Contacts"
 msgstr "联系人"
 
@@ -4181,8 +4256,8 @@ msgstr "Anthropic API"
 msgid "Claude Subscription"
 msgstr "Claude 订阅"
 
-#: app/src/settings/mod.rs:227 app/src/ui/window.rs:3495
-#: app/src/ui/window.rs:3575
+#: app/src/settings/mod.rs:227 app/src/ui/window.rs:3598
+#: app/src/ui/window.rs:3678
 msgid "Assistant"
 msgstr "助手"
 
@@ -4536,7 +4611,7 @@ msgstr "打开 Penguin Mail"
 msgid "New Message"
 msgstr "新建邮件"
 
-#: app/src/tray.rs:238 app/src/ui/sidebar.rs:1934 app/src/ui/window.rs:3501
+#: app/src/tray.rs:238 app/src/ui/sidebar.rs:1934 app/src/ui/window.rs:3604
 msgid "Check for Mail"
 msgstr "检查邮件"
 
@@ -4554,7 +4629,7 @@ msgstr "{version} 的新功能"
 msgid "Check for Updates"
 msgstr "检查更新"
 
-#: app/src/tray.rs:254 app/src/ui/window.rs:3514
+#: app/src/tray.rs:254 app/src/ui/window.rs:3617
 #: app/src/ui/window/shortcuts.rs:644
 msgid "Quit"
 msgstr "退出"
@@ -4575,7 +4650,7 @@ msgstr "新功能"
 msgid "Website"
 msgstr "网站"
 
-#: app/src/ui/about.rs:179 app/src/ui/window.rs:3513
+#: app/src/ui/about.rs:179 app/src/ui/window.rs:3616
 msgid "Donate"
 msgstr "捐款"
 
@@ -4583,7 +4658,7 @@ msgstr "捐款"
 msgid "License"
 msgstr "许可证"
 
-#: app/src/ui/about.rs:203 app/src/ui/window.rs:3512
+#: app/src/ui/about.rs:203 app/src/ui/window.rs:3615
 msgid "About Penguin Mail"
 msgstr "关于 Penguin Mail"
 
@@ -4631,116 +4706,116 @@ msgstr "显示日志"
 msgid "The update to {version} failed"
 msgstr "更新至 {version} 失败"
 
-#: app/src/ui/add_account.rs:481 app/src/ui/sandbox_setup.rs:129
-#: app/src/ui/sandbox_setup.rs:136 app/src/ui/window.rs:1415
+#: app/src/ui/add_account.rs:488 app/src/ui/sandbox_setup.rs:129
+#: app/src/ui/sandbox_setup.rs:136 app/src/ui/window.rs:1432
 msgid "Copy Command"
 msgstr "复制命令"
 
-#: app/src/ui/add_account.rs:491 app/src/ui/sandbox_setup.rs:143
-#: app/src/ui/window.rs:1420
+#: app/src/ui/add_account.rs:498 app/src/ui/sandbox_setup.rs:143
+#: app/src/ui/window.rs:1437
 msgid "Command copied"
 msgstr "已复制命令"
 
-#: app/src/ui/add_account.rs:622
+#: app/src/ui/add_account.rs:629
 msgid "Signs in through your browser"
 msgstr "通过浏览器登录"
 
-#: app/src/ui/add_account.rs:633
+#: app/src/ui/add_account.rs:640
 msgid "Enter server settings by hand"
 msgstr "手动输入服务器设置"
 
-#: app/src/ui/add_account.rs:640
+#: app/src/ui/add_account.rs:647
 msgid "Add a calendar without mail"
 msgstr "添加不含邮件的日历"
 
-#: app/src/ui/add_account.rs:655 app/src/ui/add_account.rs:2015
+#: app/src/ui/add_account.rs:662 app/src/ui/add_account.rs:2031
 msgid "Add Account"
 msgstr "添加账号"
 
-#: app/src/ui/add_account.rs:658
+#: app/src/ui/add_account.rs:665
 msgid "Add an account"
 msgstr "添加账号"
 
-#: app/src/ui/add_account.rs:660
+#: app/src/ui/add_account.rs:667
 msgid "Choose where your mail lives."
 msgstr "请选择邮件服务。"
 
-#: app/src/ui/add_account.rs:693
+#: app/src/ui/add_account.rs:700
 msgid "Your Email Address"
 msgstr "电子邮件地址"
 
-#: app/src/ui/add_account.rs:695 app/src/ui/add_account.rs:698
+#: app/src/ui/add_account.rs:702 app/src/ui/add_account.rs:705
 #: app/src/ui/sender_prefs.rs:103
 msgid "Email Address"
 msgstr "电子邮件地址"
 
-#: app/src/ui/add_account.rs:709
+#: app/src/ui/add_account.rs:716
 msgid "Use This Address"
 msgstr "使用此地址"
 
-#: app/src/ui/add_account.rs:726
+#: app/src/ui/add_account.rs:733
 msgid "Continue"
 msgstr "继续"
 
 #. The same full-width secondary button as on the address page.
-#: app/src/ui/add_account.rs:727 app/src/ui/add_account.rs:820
+#: app/src/ui/add_account.rs:734 app/src/ui/add_account.rs:827
 msgid "Enter Server Settings"
 msgstr "输入服务器设置"
 
-#: app/src/ui/add_account.rs:729
+#: app/src/ui/add_account.rs:736
 msgid "Your email address"
 msgstr "电子邮件地址"
 
-#: app/src/ui/add_account.rs:731
+#: app/src/ui/add_account.rs:738
 msgid "Penguin Mail finds the servers for you."
 msgstr "Penguin Mail 会自动寻找服务器。"
 
-#: app/src/ui/add_account.rs:764
+#: app/src/ui/add_account.rs:771
 msgid "Looking Up"
 msgstr "正在查找"
 
-#: app/src/ui/add_account.rs:824
+#: app/src/ui/add_account.rs:831
 msgid "Only the domain leaves this computer, never your full address."
 msgstr "仅会将域名发送至电脑外，不会发送完整地址。"
 
-#: app/src/ui/add_account.rs:879 app/src/ui/add_account.rs:3064
-#: app/src/ui/add_account.rs:3157 app/src/ui/add_account.rs:3677
-#: app/src/ui/add_account.rs:4651
+#: app/src/ui/add_account.rs:886 app/src/ui/add_account.rs:3086
+#: app/src/ui/add_account.rs:3179 app/src/ui/add_account.rs:3699
+#: app/src/ui/add_account.rs:4984
 msgid "Signing In…"
 msgstr "正在登录…"
 
-#: app/src/ui/add_account.rs:881
+#: app/src/ui/add_account.rs:888
 msgid "Moving your account. This takes a moment."
 msgstr "正在迁移您的账号。这需要片刻。"
 
-#: app/src/ui/add_account.rs:903
+#: app/src/ui/add_account.rs:910
 msgid "Sign In in Your Browser"
 msgstr "在浏览器中登录"
 
-#: app/src/ui/add_account.rs:930
+#: app/src/ui/add_account.rs:937
 msgid "Time left"
 msgstr "剩余时间"
 
-#: app/src/ui/add_account.rs:939 app/src/ui/add_account.rs:3837
+#: app/src/ui/add_account.rs:946 app/src/ui/add_account.rs:4170
 msgid "Penguin Mail stops waiting after five minutes."
 msgstr "Penguin Mail 会在五分钟后停止等待。"
 
-#: app/src/ui/add_account.rs:945 app/src/ui/switch_jmap.rs:170
+#: app/src/ui/add_account.rs:952 app/src/ui/switch_jmap.rs:170
 msgid "Open Page Again"
 msgstr "再次打开页面"
 
-#: app/src/ui/add_account.rs:950
+#: app/src/ui/add_account.rs:957
 msgid "Copy Link"
 msgstr "复制链接"
 
-#: app/src/ui/add_account.rs:955 app/src/ui/add_account.rs:1177
+#: app/src/ui/add_account.rs:962 app/src/ui/add_account.rs:1184
 #: app/src/ui/hide_my_email.rs:376 app/src/ui/hide_my_email.rs:380
 #: app/src/ui/key_import.rs:213 app/src/ui/switch_jmap.rs:640
 msgid "Try Again"
 msgstr "重试"
 
-#: app/src/ui/add_account.rs:960 app/src/ui/add_account.rs:4173
-#: app/src/ui/add_account.rs:4242 app/src/ui/assistant_mcp_prefs.rs:365
+#: app/src/ui/add_account.rs:967 app/src/ui/add_account.rs:4506
+#: app/src/ui/add_account.rs:4575 app/src/ui/assistant_mcp_prefs.rs:365
 #: app/src/ui/calendar/editor.rs:186 app/src/ui/calendar/manage.rs:287
 #: app/src/ui/calendar/manage.rs:437 app/src/ui/calendar/manage.rs:488
 #: app/src/ui/calendar/scope.rs:113 app/src/ui/composer/editor.rs:346
@@ -4756,157 +4831,157 @@ msgstr "重试"
 msgid "Cancel"
 msgstr "取消"
 
-#: app/src/ui/add_account.rs:1103 app/src/ui/add_account.rs:1258
-#: app/src/ui/add_account.rs:3072 app/src/ui/add_account.rs:3162
-#: app/src/ui/add_account.rs:3619 app/src/ui/window.rs:1359
+#: app/src/ui/add_account.rs:1110 app/src/ui/add_account.rs:1265
+#: app/src/ui/add_account.rs:3094 app/src/ui/add_account.rs:3184
+#: app/src/ui/add_account.rs:3641 app/src/ui/window.rs:1376
 msgid "Sign In"
 msgstr "登录"
 
-#: app/src/ui/add_account.rs:1108 app/src/ui/add_account.rs:1111
+#: app/src/ui/add_account.rs:1115 app/src/ui/add_account.rs:1118
 msgid "Your Name"
 msgstr "姓名"
 
-#: app/src/ui/add_account.rs:1128 app/src/ui/switch_jmap.rs:123
+#: app/src/ui/add_account.rs:1135 app/src/ui/switch_jmap.rs:123
 #: app/src/ui/switch_jmap.rs:128
 msgid "Sign In With Browser"
 msgstr "使用浏览器登录"
 
-#: app/src/ui/add_account.rs:1146
+#: app/src/ui/add_account.rs:1153
 msgid "Use an API Token Instead"
 msgstr "改用 API 令牌"
 
-#: app/src/ui/add_account.rs:1154 app/src/ui/add_account.rs:1157
+#: app/src/ui/add_account.rs:1161 app/src/ui/add_account.rs:1164
 msgid "Sign In With a Token"
 msgstr "使用令牌登录"
 
-#: app/src/ui/add_account.rs:1160 app/src/ui/add_account.rs:1166
+#: app/src/ui/add_account.rs:1167 app/src/ui/add_account.rs:1173
 msgid "App Password for Calendar"
 msgstr "日历的应用密码"
 
-#: app/src/ui/add_account.rs:1162
+#: app/src/ui/add_account.rs:1169
 msgid ""
 "Optional. Make an app password with calendar access in the provider's "
 "settings."
 msgstr "选填。请在服务商的设置中创建具有日历访问权限的应用密码。"
 
-#: app/src/ui/add_account.rs:1172 app/src/ui/add_account.rs:1801
+#: app/src/ui/add_account.rs:1179 app/src/ui/add_account.rs:1808
 msgid "Server Settings"
 msgstr "服务器设置"
 
-#: app/src/ui/add_account.rs:1196 app/src/ui/add_account.rs:3219
+#: app/src/ui/add_account.rs:1203 app/src/ui/add_account.rs:3241
 msgid "Outgoing"
 msgstr "发件"
 
-#: app/src/ui/add_account.rs:1201
+#: app/src/ui/add_account.rs:1208
 msgid "Keep this account's mail on this computer alone"
 msgstr "仅在此电脑上保留此账号的邮件"
 
-#: app/src/ui/add_account.rs:1206
+#: app/src/ui/add_account.rs:1213
 msgid "Servers"
 msgstr "服务器"
 
-#: app/src/ui/add_account.rs:1211 app/src/ui/add_account.rs:1213
-#: app/src/ui/add_account.rs:2712 app/src/ui/add_account.rs:2716
+#: app/src/ui/add_account.rs:1218 app/src/ui/add_account.rs:1220
+#: app/src/ui/add_account.rs:2734 app/src/ui/add_account.rs:2738
 msgid "Use these servers"
 msgstr "使用这些服务器"
 
-#: app/src/ui/add_account.rs:1215 app/src/ui/add_account.rs:2714
+#: app/src/ui/add_account.rs:1222 app/src/ui/add_account.rs:2736
 msgid ""
 "Penguin Mail guessed these servers. Your password goes to them only after "
 "you check the box."
 msgstr ""
 "Penguin Mail 推测使用这些服务器。勾选复选框后，才会将密码发送至服务器。"
 
-#: app/src/ui/add_account.rs:1221 app/src/ui/add_account.rs:1522
-#: app/src/ui/add_account.rs:1757
+#: app/src/ui/add_account.rs:1228 app/src/ui/add_account.rs:1529
+#: app/src/ui/add_account.rs:1764
 msgid "Server"
 msgstr "服务器"
 
-#: app/src/ui/add_account.rs:1225
+#: app/src/ui/add_account.rs:1232
 msgid "Use IMAP Instead"
 msgstr "改用 IMAP"
 
-#: app/src/ui/add_account.rs:1321
+#: app/src/ui/add_account.rs:1328
 msgid "No Other Mail Apps"
 msgstr "无法使用其他邮件程序"
 
-#: app/src/ui/add_account.rs:1327
+#: app/src/ui/add_account.rs:1334
 msgid "Use another address"
 msgstr "使用其他地址"
 
-#: app/src/ui/add_account.rs:1328
+#: app/src/ui/add_account.rs:1335
 msgid "Change the address and look it up again"
 msgstr "更改地址并重新查找"
 
-#: app/src/ui/add_account.rs:1334
+#: app/src/ui/add_account.rs:1341
 msgid "Choose another provider"
 msgstr "选择其他服务商"
 
-#: app/src/ui/add_account.rs:1335
+#: app/src/ui/add_account.rs:1342
 msgid "Back to the list"
 msgstr "回到列表"
 
-#: app/src/ui/add_account.rs:1381
+#: app/src/ui/add_account.rs:1388
 msgid "Account Added"
 msgstr "已添加账号"
 
-#: app/src/ui/add_account.rs:1404
+#: app/src/ui/add_account.rs:1411
 msgctxt "mailbox"
 msgid "Archive"
 msgstr "归档"
 
-#: app/src/ui/add_account.rs:1438
+#: app/src/ui/add_account.rs:1445
 msgid ""
 "Grant Access opens Google's page again. You can also do it later in "
 "Preferences."
 msgstr "[授予访问权限] 会再次打开 Google 页面。也可以稍后在 [首选项] 中授予。"
 
-#: app/src/ui/add_account.rs:1442
+#: app/src/ui/add_account.rs:1449
 msgid "Open Inbox"
 msgstr "打开收件箱"
 
-#: app/src/ui/add_account.rs:1444
+#: app/src/ui/add_account.rs:1451
 msgid "Add Another Account"
 msgstr "添加其他账号"
 
-#: app/src/ui/add_account.rs:1446 app/src/ui/confirm.rs:46
+#: app/src/ui/add_account.rs:1453 app/src/ui/confirm.rs:46
 #: app/src/ui/route_page.rs:141
 msgid "Not Now"
 msgstr "暂时不要"
 
-#: app/src/ui/add_account.rs:1451 app/src/ui/calendar/editor.rs:1681
-#: app/src/ui/calendar/sidebar.rs:1008 app/src/ui/contacts_prefs.rs:483
+#: app/src/ui/add_account.rs:1458 app/src/ui/calendar/editor.rs:1681
+#: app/src/ui/calendar/sidebar.rs:1008 app/src/ui/contacts_prefs.rs:487
 #: app/src/ui/invitation.rs:490 app/src/ui/permission.rs:42
-#: app/src/ui/permission.rs:66 app/src/ui/window.rs:1490
+#: app/src/ui/permission.rs:66 app/src/ui/window.rs:1507
 msgid "Grant Access"
 msgstr "授予访问权限"
 
-#: app/src/ui/add_account.rs:1525 app/src/ui/add_account.rs:1526
+#: app/src/ui/add_account.rs:1532 app/src/ui/add_account.rs:1533
 msgid "Port"
 msgstr "端口"
 
-#: app/src/ui/add_account.rs:1536 app/src/ui/add_account.rs:1537
+#: app/src/ui/add_account.rs:1543 app/src/ui/add_account.rs:1544
 msgid "Security"
 msgstr "安全性"
 
-#: app/src/ui/add_account.rs:1598
+#: app/src/ui/add_account.rs:1605
 msgid "Mail on the Server"
 msgstr "服务器上的邮件"
 
-#: app/src/ui/add_account.rs:1600
+#: app/src/ui/add_account.rs:1607
 msgid "Penguin Mail keeps every message it downloads on this computer."
 msgstr "Penguin Mail 会在此电脑上保留下载的每封邮件。"
 
-#: app/src/ui/add_account.rs:1605 app/src/ui/add_account.rs:1606
+#: app/src/ui/add_account.rs:1612 app/src/ui/add_account.rs:1613
 #: app/src/ui/preferences.rs:1385
 msgid "Days"
 msgstr "天数"
 
-#: app/src/ui/add_account.rs:1680 app/src/ui/add_account.rs:1758
+#: app/src/ui/add_account.rs:1687 app/src/ui/add_account.rs:1765
 msgid "Incoming User Name"
 msgstr "收件用户名"
 
-#: app/src/ui/add_account.rs:1681
+#: app/src/ui/add_account.rs:1688
 msgid "Outgoing User Name"
 msgstr "发件用户名"
 
@@ -4914,63 +4989,63 @@ msgstr "发件用户名"
 #. text draws over the title. The rule goes in a tooltip, since a
 #. second line under the group would push this row off a 768-pixel
 #. screen.
-#: app/src/ui/add_account.rs:1687
+#: app/src/ui/add_account.rs:1694
 msgid "Leave it empty to use the incoming user name."
 msgstr "留空以使用收件用户名。"
 
-#: app/src/ui/add_account.rs:1690 app/src/ui/add_account.rs:1692
+#: app/src/ui/add_account.rs:1697 app/src/ui/add_account.rs:1699
 msgid "Outgoing Password"
 msgstr "发件密码"
 
-#: app/src/ui/add_account.rs:1694
+#: app/src/ui/add_account.rs:1701
 msgid "Leave it empty to use the password you sign in with."
 msgstr "留空以使用登录时的密码。"
 
-#: app/src/ui/add_account.rs:1697
+#: app/src/ui/add_account.rs:1704
 msgid "Incoming Mail"
 msgstr "收件邮件"
 
-#: app/src/ui/add_account.rs:1706 app/src/ui/add_account.rs:1707
+#: app/src/ui/add_account.rs:1713 app/src/ui/add_account.rs:1714
 msgid "Protocol"
 msgstr "协议"
 
-#: app/src/ui/add_account.rs:1714
+#: app/src/ui/add_account.rs:1721
 msgid "Sign-In"
 msgstr "登录"
 
-#: app/src/ui/add_account.rs:1716 app/src/ui/add_account.rs:1759
+#: app/src/ui/add_account.rs:1723 app/src/ui/add_account.rs:1766
 msgid "Leave the user names empty to sign in with your address."
 msgstr "用户名留空即以电子邮件地址登录。"
 
-#: app/src/ui/add_account.rs:1720
+#: app/src/ui/add_account.rs:1727
 msgid "Outgoing Mail"
 msgstr "发件邮件"
 
-#: app/src/ui/add_account.rs:1752
+#: app/src/ui/add_account.rs:1759
 msgid "Session URL"
 msgstr "会话网址"
 
-#: app/src/ui/add_account.rs:1753 app/src/ui/add_account.rs:1832
+#: app/src/ui/add_account.rs:1760 app/src/ui/add_account.rs:1839
 msgid "User Name"
 msgstr "用户名"
 
-#: app/src/ui/add_account.rs:1754
+#: app/src/ui/add_account.rs:1761
 msgid "Leave the user name empty to sign in with your address."
 msgstr "用户名留空即以电子邮件地址登录。"
 
-#: app/src/ui/add_account.rs:1790 app/src/ui/add_account.rs:3532
+#: app/src/ui/add_account.rs:1797 app/src/ui/add_account.rs:3554
 msgid "Use These Settings"
 msgstr "使用这些设置"
 
-#: app/src/ui/add_account.rs:1830 app/src/ui/assistant_prefs.rs:63
+#: app/src/ui/add_account.rs:1837 app/src/ui/assistant_prefs.rs:63
 msgid "Server Address"
 msgstr "服务器地址"
 
-#: app/src/ui/add_account.rs:1845
+#: app/src/ui/add_account.rs:1852
 msgid "Calendar Server"
 msgstr "日历服务器"
 
-#: app/src/ui/add_account.rs:1847
+#: app/src/ui/add_account.rs:1854
 msgid ""
 "A CalDAV server, such as Nextcloud. Where it uses two-step sign-in, make an "
 "app password for Penguin Mail."
@@ -4978,24 +5053,24 @@ msgstr ""
 "CalDAV 服务器，例如 Nextcloud。若服务器使用两步登录，请为 Penguin Mail 创建应"
 "用密码。"
 
-#: app/src/ui/add_account.rs:1857 app/src/ui/calendar/sidebar.rs:1460
+#: app/src/ui/add_account.rs:1864 app/src/ui/calendar/sidebar.rs:1460
 #: app/src/ui/calendar/sidebar.rs:1471
 msgid "Add Calendar"
 msgstr "添加日历"
 
-#: app/src/ui/add_account.rs:1869
+#: app/src/ui/add_account.rs:1876
 msgid "Add a Calendar"
 msgstr "添加日历"
 
-#: app/src/ui/add_account.rs:2481 app/src/ui/add_account.rs:4580
+#: app/src/ui/add_account.rs:2503 app/src/ui/add_account.rs:4913
 msgid "Looking up {domain}"
 msgstr "正在查找 {domain}"
 
-#: app/src/ui/add_account.rs:2743
+#: app/src/ui/add_account.rs:2765
 msgid "{domain} uses {provider}"
 msgstr "{domain} 使用 {provider}"
 
-#: app/src/ui/add_account.rs:2767
+#: app/src/ui/add_account.rs:2789
 msgid ""
 "Not your {provider} website password. Make one with mail access in "
 "{provider}'s settings and paste it here."
@@ -5003,33 +5078,37 @@ msgstr ""
 "请勿使用 {provider} 网站密码。请在 {provider} 设置中创建具有邮件访问权限的应"
 "用密码，再粘贴至此处。"
 
-#: app/src/ui/add_account.rs:3238
+#: app/src/ui/add_account.rs:3260
 msgid "Could not reach {host}"
 msgstr "无法连接至 {host}"
 
-#: app/src/ui/add_account.rs:3240
+#: app/src/ui/add_account.rs:3262
 msgid "Your password was not sent."
 msgstr "未发送密码。"
 
-#: app/src/ui/add_account.rs:3510
+#: app/src/ui/add_account.rs:3532
 msgid "Looking Up…"
 msgstr "正在查找…"
 
-#: app/src/ui/add_account.rs:3618 app/src/ui/calendar/sidebar.rs:1279
+#: app/src/ui/add_account.rs:3640 app/src/ui/calendar/sidebar.rs:1279
 msgid "Sign In Again"
 msgstr "重新登录"
 
-#: app/src/ui/add_account.rs:3825 app/src/ui/add_account.rs:4223
+#: app/src/ui/add_account.rs:4096
+msgid "Filters, aliases and the automatic reply aren't available this way."
+msgstr "用这种方式无法使用过滤器、别名和自动回复。"
+
+#: app/src/ui/add_account.rs:4158 app/src/ui/add_account.rs:4556
 msgid "Sign in with {provider} in your browser"
 msgstr "在浏览器中以 {provider} 登录"
 
-#: app/src/ui/add_account.rs:3830 app/src/ui/add_account.rs:4228
+#: app/src/ui/add_account.rs:4163 app/src/ui/add_account.rs:4561
 msgid ""
 "{provider}'s sign-in page is open in your browser. When you finish there, "
 "this window moves on."
 msgstr "已在浏览器中打开 {provider} 登录页面。完成登录后，此窗口会继续下一步。"
 
-#: app/src/ui/add_account.rs:3853
+#: app/src/ui/add_account.rs:4186
 msgid ""
 "This copy of Penguin Mail was built without Google sign-in. Get a release "
 "from github.com/c9dev/penguin-mail/releases."
@@ -5037,7 +5116,7 @@ msgstr ""
 "此版本的 Penguin Mail 未包含 Google 登录功能。请从 github.com/c9dev/penguin-"
 "mail/releases 取得发行版本。"
 
-#: app/src/ui/add_account.rs:3856
+#: app/src/ui/add_account.rs:4189
 msgid ""
 "This copy of Penguin Mail was built without Microsoft sign-in. Get a release "
 "from github.com/c9dev/penguin-mail/releases."
@@ -5045,7 +5124,7 @@ msgstr ""
 "此版本的 Penguin Mail 未包含 Microsoft 登录功能。请从 github.com/c9dev/"
 "penguin-mail/releases 取得发行版本。"
 
-#: app/src/ui/add_account.rs:3869
+#: app/src/ui/add_account.rs:4202
 msgid ""
 "Signing in with your own Google client. Google's sign-in page is open in "
 "your browser. When you finish there, this window moves on."
@@ -5053,33 +5132,33 @@ msgstr ""
 "正在使用自己的 Google 客户端登录。Google 登录页面已在浏览器中打开，在该处完成"
 "后，此窗口会继续下一步。"
 
-#: app/src/ui/add_account.rs:4108
+#: app/src/ui/add_account.rs:4441
 msgid "Link copied"
 msgstr "已复制链接"
 
-#: app/src/ui/add_account.rs:4235
+#: app/src/ui/add_account.rs:4568
 msgid "Penguin Mail stops waiting after ten minutes."
 msgstr "Penguin Mail 会在十分钟后停止等待。"
 
-#: app/src/ui/add_account.rs:4258
+#: app/src/ui/add_account.rs:4591
 msgid "Canceling…"
 msgstr "正在取消…"
 
-#: app/src/ui/add_account.rs:4322
+#: app/src/ui/add_account.rs:4655
 msgid "{account} is added"
 msgstr "已添加 {account}"
 
-#: app/src/ui/add_account.rs:4342
+#: app/src/ui/add_account.rs:4675
 msgid "{account} is ready"
 msgstr "{account} 已准备就绪"
 
-#: app/src/ui/add_account.rs:4654
+#: app/src/ui/add_account.rs:4987
 msgid ""
 "This server cannot tell its messages apart, so Penguin Mail cannot download "
 "from it safely."
 msgstr "此服务器无法区分邮件，因此 Penguin Mail 无法安全下载。"
 
-#: app/src/ui/assistant.rs:35 app/src/ui/window.rs:3661
+#: app/src/ui/assistant.rs:35 app/src/ui/window.rs:3764
 msgid "Summarize this conversation"
 msgstr "生成此对话的摘要"
 
@@ -5104,13 +5183,13 @@ msgstr "为打开的对话撰写回复草稿"
 msgid "Choose a Model"
 msgstr "选择模型"
 
-#: app/src/ui/assistant.rs:123 app/src/ui/window.rs:3622
-#: app/src/ui/window.rs:3623
+#: app/src/ui/assistant.rs:123 app/src/ui/window.rs:3725
+#: app/src/ui/window.rs:3726
 msgid "Detach"
 msgstr "分离窗口"
 
 #: app/src/ui/assistant.rs:124 app/src/ui/key_import.rs:213
-#: app/src/ui/key_import.rs:217 app/src/ui/window.rs:4254
+#: app/src/ui/key_import.rs:217 app/src/ui/window.rs:4357
 msgid "Close"
 msgstr "关闭"
 
@@ -5315,7 +5394,7 @@ msgstr "编辑 {server}"
 
 #: app/src/ui/assistant_mcp_prefs.rs:137 app/src/ui/calendar/editor.rs:1726
 #: app/src/ui/composer/mod.rs:2219 app/src/ui/composer/recipients.rs:318
-#: app/src/ui/sender_prefs.rs:149 app/src/ui/window.rs:3258
+#: app/src/ui/sender_prefs.rs:149 app/src/ui/window.rs:3352
 msgid "Remove"
 msgstr "移除"
 
@@ -6920,8 +6999,8 @@ msgstr "授予访问权限以显示共享日历"
 msgid "Penguin Mail cannot see this account's calendars"
 msgstr "Penguin Mail 无法查看此账号的日历"
 
-#: app/src/ui/calendar/sidebar.rs:1016 app/src/ui/contacts_prefs.rs:373
-#: app/src/ui/preferences/google_route.rs:294
+#: app/src/ui/calendar/sidebar.rs:1016 app/src/ui/contacts_prefs.rs:375
+#: app/src/ui/preferences/google_route.rs:353
 msgid "Not connected"
 msgstr "未连接"
 
@@ -6937,17 +7016,17 @@ msgstr "日历选项"
 msgid "Options for {calendar}"
 msgstr "{calendar} 的选项"
 
-#: app/src/ui/calendar/sidebar.rs:1233 app/src/ui/contacts_prefs.rs:376
-#: app/src/ui/preferences/google_route.rs:419
+#: app/src/ui/calendar/sidebar.rs:1233 app/src/ui/contacts_prefs.rs:378
+#: app/src/ui/preferences/google_route.rs:483
 msgid "Connect"
 msgstr "连接"
 
-#: app/src/ui/calendar/sidebar.rs:1240 app/src/ui/contacts_prefs.rs:382
-#: app/src/ui/preferences/google_route.rs:287
+#: app/src/ui/calendar/sidebar.rs:1240 app/src/ui/contacts_prefs.rs:384
+#: app/src/ui/preferences/google_route.rs:346
 msgid "Connect the calendar for {account}"
 msgstr "连接 {account} 的日历"
 
-#: app/src/ui/calendar/sidebar.rs:1259 app/src/ui/contacts_prefs.rs:490
+#: app/src/ui/calendar/sidebar.rs:1259 app/src/ui/contacts_prefs.rs:494
 msgid "Grant Access for {account}"
 msgstr "授予 {account} 访问权限"
 
@@ -7644,11 +7723,11 @@ msgstr "加入 VIP"
 msgid "All Their Mail"
 msgstr "此发件人的所有邮件"
 
-#: app/src/ui/contacts_prefs.rs:56
+#: app/src/ui/contacts_prefs.rs:57
 msgid "Calendar, Contacts and Rules Servers"
 msgstr "日历、联系人与规则服务器"
 
-#: app/src/ui/contacts_prefs.rs:57
+#: app/src/ui/contacts_prefs.rs:58
 msgid ""
 "Penguin Mail looks for these when you add an account, and signs in with the "
 "account's password, or the app password you gave for its calendar."
@@ -7656,24 +7735,24 @@ msgstr ""
 "添加账号时，Penguin Mail 会寻找这些服务器，并以账号的密码或您为其日历提供的应"
 "用密码登录。"
 
-#: app/src/ui/contacts_prefs.rs:135
+#: app/src/ui/contacts_prefs.rs:136 app/src/ui/goa_page.rs:327
 msgid "Use It"
 msgstr "使用"
 
-#: app/src/ui/contacts_prefs.rs:142
+#: app/src/ui/contacts_prefs.rs:143
 msgid "Use {host} for {account}"
 msgstr "使用 {host}（账号：{account}）"
 
-#: app/src/ui/contacts_prefs.rs:170
+#: app/src/ui/contacts_prefs.rs:171
 msgid "Find Again"
 msgstr "再次寻找"
 
-#: app/src/ui/contacts_prefs.rs:174 app/src/ui/conversation.rs:550
+#: app/src/ui/contacts_prefs.rs:175 app/src/ui/conversation.rs:550
 #: app/src/ui/queued.rs:60 app/src/ui/sidebar.rs:1580
 msgid "Edit…"
 msgstr "编辑…"
 
-#: app/src/ui/contacts_prefs.rs:281
+#: app/src/ui/contacts_prefs.rs:282
 msgid ""
 "Penguin Mail can read an account's contacts: names, email addresses, photos, "
 "organizations, and phone numbers. It uses them to suggest recipients, to "
@@ -7685,40 +7764,40 @@ msgstr ""
 "码。这些数据用于推荐收件人、在邮件旁显示照片，以及填写点击发件人姓名后显示的"
 "名片。读取的数据会留在此电脑上，关闭账号的联系人功能时就会删除。"
 
-#: app/src/ui/contacts_prefs.rs:352
+#: app/src/ui/contacts_prefs.rs:354
 msgid ""
 "Penguin Mail shows each account's meetings and reminds you before they start."
 msgstr "Penguin Mail 会显示各账号的会议，并在开始前提醒。"
 
-#: app/src/ui/contacts_prefs.rs:356
+#: app/src/ui/contacts_prefs.rs:358
 msgid "GNOME Online Accounts"
 msgstr "GNOME 在线账号"
 
-#: app/src/ui/contacts_prefs.rs:358
+#: app/src/ui/contacts_prefs.rs:360
 msgid ""
 "Add an account to GNOME Online Accounts to see its meetings in GNOME "
 "Calendar and the clock too."
 msgstr "将账号加入 GNOME 在线账号，即可在 GNOME 日历与时钟中查看会议。"
 
-#: app/src/ui/contacts_prefs.rs:429
+#: app/src/ui/contacts_prefs.rs:431
 msgctxt "an account in Online Accounts"
 msgid "Added"
 msgstr "已添加"
 
-#: app/src/ui/contacts_prefs.rs:431
+#: app/src/ui/contacts_prefs.rs:433
 msgctxt "an account in Online Accounts"
 msgid "Not added"
 msgstr "未添加"
 
-#: app/src/ui/contacts_prefs.rs:433
+#: app/src/ui/contacts_prefs.rs:435
 msgid "Add to Online Accounts…"
 msgstr "添加至在线账号…"
 
-#: app/src/ui/contacts_prefs.rs:439
+#: app/src/ui/contacts_prefs.rs:441
 msgid "Add {account} to GNOME Online Accounts"
 msgstr "将 {account} 加入 GNOME 在线账号"
 
-#: app/src/ui/contacts_prefs.rs:480
+#: app/src/ui/contacts_prefs.rs:484
 msgid "Not allowed when you signed in"
 msgstr "登录时未允许"
 
@@ -7937,7 +8016,7 @@ msgstr "{color}（Ctrl+Alt+{number}）"
 msgid "Clear Flag"
 msgstr "清除标记"
 
-#: app/src/ui/copied.rs:90
+#: app/src/ui/copied.rs:90 app/src/ui/goa_page.rs:206
 msgid "Copied"
 msgstr "已复制"
 
@@ -7982,6 +8061,64 @@ msgstr "上一处匹配"
 #: app/src/ui/find.rs:129 app/src/ui/find.rs:132
 msgid "Next Match"
 msgstr "下一处匹配"
+
+#: app/src/ui/goa_page.rs:120 app/src/ui/goa_page.rs:362
+#: app/src/ui/hide_my_email.rs:828
+msgid "Copy"
+msgstr "复制"
+
+#
+#: app/src/ui/goa_page.rs:131
+msgid "Other ways to sign in"
+msgstr "其他登录方式"
+
+#. Translators: {address} is an email address.
+#: app/src/ui/goa_page.rs:295
+msgid ""
+"This computer is already signed in to <b>{address}</b>. Penguin Mail can "
+"read your mail through it."
+msgstr "此电脑已登录 <b>{address}</b>。Penguin Mail 可以通过它读取您的邮件。"
+
+#
+#: app/src/ui/goa_page.rs:312 app/src/ui/goa_page.rs:347
+msgid "Waiting for {address}…"
+msgstr "正在等待 {address}…"
+
+#: app/src/ui/goa_page.rs:323
+msgid "You added {address}. Use it instead?"
+msgstr "您添加了 {address}。改用它吗？"
+
+#
+#: app/src/ui/goa_page.rs:329
+msgid "Wait for {address}"
+msgstr "等待 {address}"
+
+#. Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language.
+#: app/src/ui/goa_page.rs:341
+msgid ""
+"Open <b>Online Accounts</b> from your applications menu, add your Google "
+"account, and come back."
+msgstr "从应用程序菜单打开<b>“在线账号”</b>，添加您的 Google 账号，然后返回。"
+
+#
+#. Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language.
+#: app/src/ui/goa_page.rs:358
+msgid "Penguin Mail needs permission to use Online Accounts."
+msgstr "Penguin Mail 需要获得使用“在线账号”的权限。"
+
+#. Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language. {address} is an email address.
+#: app/src/ui/goa_page.rs:380
+msgid ""
+"Penguin Mail reads Gmail through your computer's Online Accounts. Add "
+"<b>{address}</b> there, then come back."
+msgstr ""
+"Penguin Mail 通过此电脑的“在线账号”读取 Gmail。请在那里添加 <b>{address}</"
+"b>，然后返回。"
+
+#
+#: app/src/ui/goa_page.rs:403
+msgid "Use {address} instead"
+msgstr "改用 {address}"
 
 #: app/src/ui/hide_my_email.rs:24
 msgid ""
@@ -8117,7 +8254,7 @@ msgstr ""
 msgid "Allow Hide My Email"
 msgstr "允许隐藏电子邮件地址"
 
-#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:3712
+#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:3815
 msgid "Add an account first"
 msgstr "请先添加账号"
 
@@ -8162,10 +8299,6 @@ msgstr ""
 #: app/src/ui/hide_my_email.rs:814
 msgid "Your New Address"
 msgstr "新地址"
-
-#: app/src/ui/hide_my_email.rs:828
-msgid "Copy"
-msgstr "复制"
 
 #: app/src/ui/hide_my_email.rs:866
 msgid "Address Created"
@@ -8530,7 +8663,7 @@ msgstr "这个网址包含可能掩饰目的地的用户名。"
 msgid "This link contains hidden or direction-changing characters."
 msgstr "这个链接包含隐藏字符或更改文本方向的字符。"
 
-#: app/src/ui/mod.rs:503
+#: app/src/ui/mod.rs:504
 msgid "Gray"
 msgstr "灰色"
 
@@ -8584,7 +8717,7 @@ msgstr "已存在"
 msgid "Steps look different?"
 msgstr ""
 
-#: app/src/ui/own_project.rs:362 app/src/ui/window.rs:2136
+#: app/src/ui/own_project.rs:362 app/src/ui/window.rs:2230
 msgid "Open Google Cloud"
 msgstr "打开 Google Cloud"
 
@@ -9150,7 +9283,7 @@ msgstr "将 {account} 下移"
 #: app/src/ui/preferences/dialog.rs:27 app/src/ui/preferences/dialog.rs:33
 #: app/src/ui/preferences/dialog.rs:82 app/src/ui/preferences/dialog.rs:83
 #: app/src/ui/preferences/dialog.rs:353 app/src/ui/preferences/dialog.rs:355
-#: app/src/ui/window.rs:3510 app/src/ui/window/shortcuts.rs:616
+#: app/src/ui/window.rs:3613 app/src/ui/window/shortcuts.rs:616
 msgid "Preferences"
 msgstr "首选项"
 
@@ -9175,44 +9308,56 @@ msgstr "找不到结果"
 msgid "Try a different search"
 msgstr "请尝试其他搜索字词"
 
-#: app/src/ui/preferences/google_route.rs:207
+#: app/src/ui/preferences/google_route.rs:82
+msgid ""
+"Filters, aliases and the automatic reply need Gmail's own connection, which "
+"this computer's Google sign-in doesn't offer."
+msgstr ""
+"过滤器、别名和自动回复需要 Gmail 自己的连接，而此电脑的 Google 登录不提供该连"
+"接。"
+
+#: app/src/ui/preferences/google_route.rs:113
+msgid "Switch {address} to this computer's sign-in?"
+msgstr "将 {address} 切换为此电脑的登录方式吗？"
+
+#: app/src/ui/preferences/google_route.rs:249
 msgid "Connected"
 msgstr "已连接"
 
 #. Translators: a small heading over the Gmail account's rows; Gmail
 #. is a name, keep it as it is.
-#: app/src/ui/preferences/google_route.rs:249
+#: app/src/ui/preferences/google_route.rs:291
 msgid "Gmail"
 msgstr "Gmail"
 
 #. Translators: Gmail is a name; keep it as it is.
-#: app/src/ui/preferences/google_route.rs:255
+#: app/src/ui/preferences/google_route.rs:297
 msgid "Gmail features"
 msgstr "Gmail 功能"
 
-#: app/src/ui/preferences/google_route.rs:257
+#: app/src/ui/preferences/google_route.rs:299
 msgid "Every feature"
 msgstr "全部功能"
 
-#: app/src/ui/preferences/google_route.rs:259
-msgid "Mail, calendar and contacts"
-msgstr "邮件、日历和联系人"
-
-#: app/src/ui/preferences/google_route.rs:268
+#: app/src/ui/preferences/google_route.rs:310
 msgid "Get Every Feature"
 msgstr "获取全部功能"
 
-#: app/src/ui/preferences/google_route.rs:283
+#: app/src/ui/preferences/google_route.rs:332 app/src/ui/switch_jmap.rs:221
+msgid "Switch"
+msgstr "切换"
+
+#: app/src/ui/preferences/google_route.rs:342
 msgid "Calendar and contacts"
 msgstr "日历和联系人"
 
-#: app/src/ui/preferences/google_route.rs:291
+#: app/src/ui/preferences/google_route.rs:350
 msgid "Connect the contacts for {account}"
 msgstr "连接 {account} 的联系人"
 
 #. Translators: a small heading over what only gmail.com does for the
 #. account; gmail.com is a name, keep it as it is.
-#: app/src/ui/preferences/google_route.rs:309
+#: app/src/ui/preferences/google_route.rs:368
 msgid "On gmail.com"
 msgstr "在 gmail.com 上"
 
@@ -9589,7 +9734,7 @@ msgstr "签名…"
 msgid "Rules…"
 msgstr "规则…"
 
-#: app/src/ui/sidebar.rs:1844 app/src/ui/window.rs:3504
+#: app/src/ui/sidebar.rs:1844 app/src/ui/window.rs:3607
 msgid "Hide My Email…"
 msgstr "隐藏电子邮件地址…"
 
@@ -9721,10 +9866,6 @@ msgstr "正在匹配您的邮件…"
 msgid "Finish signing in on {provider}'s page in your browser."
 msgstr "请在浏览器中的 {provider} 页面完成登录。"
 
-#: app/src/ui/switch_jmap.rs:221
-msgid "Switch"
-msgstr "切换"
-
 #: app/src/ui/switch_jmap.rs:239
 msgid "Switch to JMAP"
 msgstr "切换至 JMAP"
@@ -9811,7 +9952,7 @@ msgstr "搜索邮件"
 msgid "VIP"
 msgstr "VIP"
 
-#: app/src/ui/thread_row.rs:127 app/src/ui/window.rs:406
+#: app/src/ui/thread_row.rs:127 app/src/ui/window.rs:408
 msgid "Muted"
 msgstr "已静音"
 
@@ -10020,182 +10161,187 @@ msgid ""
 "Choose where your mail lives. You can add more later from the main menu."
 msgstr "请选择邮件服务。之后可从主菜单添加其他账号。"
 
-#: app/src/ui/window.rs:287
+#: app/src/ui/window.rs:289
 msgid "Deleted forever"
 msgstr "已永久删除"
 
-#: app/src/ui/window.rs:289
+#: app/src/ui/window.rs:291
 msgid "Deleted {count} conversation forever"
 msgid_plural "Deleted {count} conversations forever"
 msgstr[0] "已永久删除 {count} 个对话"
 
-#: app/src/ui/window.rs:295
+#: app/src/ui/window.rs:297
 msgid "Deleted {count} message forever"
 msgid_plural "Deleted {count} messages forever"
 msgstr[0] "已永久删除 {count} 封邮件"
 
-#: app/src/ui/window.rs:308
+#: app/src/ui/window.rs:310
 msgid "{label}, on this mail"
 msgstr "{label}，此邮件已应用"
 
-#: app/src/ui/window.rs:337
+#: app/src/ui/window.rs:339
 msgid "Added {person} to VIPs"
 msgstr "已将 {person} 加入 VIP"
 
-#: app/src/ui/window.rs:338
+#: app/src/ui/window.rs:340
 msgid "Removed {person} from VIPs"
 msgstr "已将 {person} 从 VIP 移除"
 
-#: app/src/ui/window.rs:344
+#: app/src/ui/window.rs:346
 msgid "Could not load mail: {reason}"
 msgstr "无法加载邮件：{reason}"
 
-#: app/src/ui/window.rs:354
+#: app/src/ui/window.rs:356
 msgid "Added {account}. Downloading mail…"
 msgstr "已添加 {account}。正在下载邮件…"
 
-#: app/src/ui/window.rs:358 app/src/ui/window.rs:2930
+#: app/src/ui/window.rs:360 app/src/ui/window.rs:3024
 msgid "{account} is signed in again."
 msgstr "{account} 已重新登录。"
 
-#: app/src/ui/window.rs:377
+#: app/src/ui/window.rs:379
 msgid "Made a folder called “{name}” on {provider} for archived mail"
 msgstr "已创建「{name}」文件夹，位于 {provider}，用于归档邮件"
 
-#: app/src/ui/window.rs:386
+#: app/src/ui/window.rs:388
 msgid "Flagged red"
 msgstr "已加上红色标记"
 
-#: app/src/ui/window.rs:387
+#: app/src/ui/window.rs:389
 msgid "Flagged orange"
 msgstr "已加上橙色标记"
 
-#: app/src/ui/window.rs:388
+#: app/src/ui/window.rs:390
 msgid "Flagged yellow"
 msgstr "已加上黄色标记"
 
-#: app/src/ui/window.rs:389
+#: app/src/ui/window.rs:391
 msgid "Flagged green"
 msgstr "已加上绿色标记"
 
-#: app/src/ui/window.rs:390
+#: app/src/ui/window.rs:392
 msgid "Flagged blue"
 msgstr "已加上蓝色标记"
 
-#: app/src/ui/window.rs:391
+#: app/src/ui/window.rs:393
 msgid "Flagged purple"
 msgstr "已加上紫色标记"
 
-#: app/src/ui/window.rs:392
+#: app/src/ui/window.rs:394
 msgid "Flagged gray"
 msgstr "已加上灰色标记"
 
-#: app/src/ui/window.rs:403 app/src/ui/window.rs:501
+#: app/src/ui/window.rs:405 app/src/ui/window.rs:503
 msgid "Labels changed"
 msgstr "已更改标签"
 
-#: app/src/ui/window.rs:407
+#: app/src/ui/window.rs:409
 msgid "Unmuted"
 msgstr "已取消静音"
 
-#: app/src/ui/window.rs:409
+#: app/src/ui/window.rs:411
 msgid "Muted {count} conversation"
 msgid_plural "Muted {count} conversations"
 msgstr[0] "已将 {count} 个对话静音"
 
-#: app/src/ui/window.rs:415
+#: app/src/ui/window.rs:417
 msgid "Muted {count} message"
 msgid_plural "Muted {count} messages"
 msgstr[0] "已将 {count} 封邮件静音"
 
-#: app/src/ui/window.rs:421
+#: app/src/ui/window.rs:423
 msgid "Unmuted {count} conversation"
 msgid_plural "Unmuted {count} conversations"
 msgstr[0] "已取消 {count} 个对话的静音"
 
-#: app/src/ui/window.rs:427
+#: app/src/ui/window.rs:429
 msgid "Unmuted {count} message"
 msgid_plural "Unmuted {count} messages"
 msgstr[0] "已取消 {count} 封邮件的静音"
 
-#: app/src/ui/window.rs:437
+#: app/src/ui/window.rs:439
 msgid "Dismissed {count} follow-up"
 msgid_plural "Dismissed {count} follow-ups"
 msgstr[0] "已取消 {count} 个跟进"
 
-#: app/src/ui/window.rs:446
+#: app/src/ui/window.rs:448
 msgid "Archived"
 msgstr "已归档"
 
-#: app/src/ui/window.rs:448
+#: app/src/ui/window.rs:450
 msgid "Archived {count} conversation"
 msgid_plural "Archived {count} conversations"
 msgstr[0] "已归档 {count} 个对话"
 
-#: app/src/ui/window.rs:454
+#: app/src/ui/window.rs:456
 msgid "Archived {count} message"
 msgid_plural "Archived {count} messages"
 msgstr[0] "已归档 {count} 封邮件"
 
-#: app/src/ui/window.rs:459
+#: app/src/ui/window.rs:461
 msgid "Moved to Trash"
 msgstr "已移至回收站"
 
-#: app/src/ui/window.rs:461
+#: app/src/ui/window.rs:463
 msgid "Moved {count} conversation to Trash"
 msgid_plural "Moved {count} conversations to Trash"
 msgstr[0] "已将 {count} 个对话移至回收站"
 
-#: app/src/ui/window.rs:467
+#: app/src/ui/window.rs:469
 msgid "Moved {count} message to Trash"
 msgid_plural "Moved {count} messages to Trash"
 msgstr[0] "已将 {count} 封邮件移至回收站"
 
-#: app/src/ui/window.rs:472
+#: app/src/ui/window.rs:474
 msgid "Marked as junk"
 msgstr "已标记为垃圾邮件"
 
-#: app/src/ui/window.rs:474
+#: app/src/ui/window.rs:476
 msgid "Marked {count} conversation as junk"
 msgid_plural "Marked {count} conversations as junk"
 msgstr[0] "已将 {count} 个对话标记为垃圾邮件"
 
-#: app/src/ui/window.rs:480
+#: app/src/ui/window.rs:482
 msgid "Marked {count} message as junk"
 msgid_plural "Marked {count} messages as junk"
 msgstr[0] "已将 {count} 封邮件标记为垃圾邮件"
 
-#: app/src/ui/window.rs:485
+#: app/src/ui/window.rs:487
 msgid "Moved to the Inbox"
 msgstr "已移至收件箱"
 
-#: app/src/ui/window.rs:487
+#: app/src/ui/window.rs:489
 msgid "Moved {count} conversation to the Inbox"
 msgid_plural "Moved {count} conversations to the Inbox"
 msgstr[0] "已将 {count} 个对话移至收件箱"
 
-#: app/src/ui/window.rs:493
+#: app/src/ui/window.rs:495
 msgid "Moved {count} message to the Inbox"
 msgid_plural "Moved {count} messages to the Inbox"
 msgstr[0] "已将 {count} 封邮件移至收件箱"
 
-#: app/src/ui/window.rs:829
+#: app/src/ui/window.rs:833
 msgid "Penguin Mail (Demo)"
 msgstr "Penguin Mail（演示）"
 
-#: app/src/ui/window.rs:1247
+#: app/src/ui/window.rs:1264
 msgid "Could not read accounts: {reason}"
 msgstr "无法读取账号：{reason}"
 
-#: app/src/ui/window.rs:1998
+#
+#: app/src/ui/window.rs:1580
+msgid "Signed in with this computer's sign-in."
+msgstr "已使用此电脑的登录方式登录。"
+
+#: app/src/ui/window.rs:2092
 msgid "Could not delete the mail: {reason}"
 msgstr "无法删除邮件：{reason}"
 
-#: app/src/ui/window.rs:2127
+#: app/src/ui/window.rs:2221
 msgid "Turn On the {service}"
 msgstr "启用 {service}"
 
-#: app/src/ui/window.rs:2130
+#: app/src/ui/window.rs:2224
 msgid ""
 "The Google Cloud project Penguin Mail signs in with has the {service} "
 "switched off, so Google refuses before it can ask for your permission. Turn "
@@ -10204,134 +10350,134 @@ msgstr ""
 "Penguin Mail 登录所使用的 Google Cloud 项目尚未启用 {service}，因此 Google 在"
 "询问权限前就会拒绝。请启用服务，稍候一分钟再试。"
 
-#: app/src/ui/window.rs:2457
+#: app/src/ui/window.rs:2551
 msgid "Select mail from one account to tag it."
 msgstr "请选择同一账号中的邮件以添加类别。"
 
-#: app/src/ui/window.rs:2469
+#: app/src/ui/window.rs:2563
 msgid "This account has no tags yet. Make one in Outlook."
 msgstr "此账号尚无类别。请在 Outlook 中创建。"
 
-#: app/src/ui/window.rs:2636
+#: app/src/ui/window.rs:2730
 msgid "Could not include {file}: {reason}"
 msgstr "无法加入 {file}：{reason}"
 
-#: app/src/ui/window.rs:2717
+#: app/src/ui/window.rs:2811
 msgid "The server had already sent this message."
 msgstr "服务器已经发送这封邮件。"
 
-#: app/src/ui/window.rs:2722
+#: app/src/ui/window.rs:2816
 msgid "This message was canceled in another app and is no longer in Drafts."
 msgstr "这封邮件已在其他应用中取消，且已不在草稿中。"
 
-#: app/src/ui/window.rs:2836
+#: app/src/ui/window.rs:2930
 msgid "Downloading {file}…"
 msgstr "正在下载 {file}…"
 
-#: app/src/ui/window.rs:2857 app/src/ui/window/attachments.rs:231
+#: app/src/ui/window.rs:2951 app/src/ui/window/attachments.rs:231
 msgid "Saved {file} to Downloads"
 msgstr "已将 {file} 保存至下载文件夹"
 
-#: app/src/ui/window.rs:2860
+#: app/src/ui/window.rs:2954
 msgid "Open"
 msgstr "打开"
 
-#: app/src/ui/window.rs:2875 app/src/ui/window/attachments.rs:236
+#: app/src/ui/window.rs:2969 app/src/ui/window/attachments.rs:236
 msgid "Could not save {file}: {reason}"
 msgstr "无法保存 {file}：{reason}"
 
-#: app/src/ui/window.rs:3086
+#: app/src/ui/window.rs:3180
 msgid "Continue in your browser"
 msgstr "请在浏览器中继续"
 
-#: app/src/ui/window.rs:3116
+#: app/src/ui/window.rs:3210
 msgid "This copy of Penguin Mail was built without Google sign-in."
 msgstr "此版本的 Penguin Mail 未包含 Google 登录功能。"
 
-#: app/src/ui/window.rs:3124
+#: app/src/ui/window.rs:3218
 msgid "Get a Release"
 msgstr "取得发行版本"
 
-#: app/src/ui/window.rs:3244
+#: app/src/ui/window.rs:3338
 msgid ""
 "Could not check for messages the server holds to send later, so {account} "
 "stays: {reason}"
 msgstr "无法检查服务器保留待稍后发送的邮件，因此保留 {account}：{reason}"
 
-#: app/src/ui/window.rs:3255
+#: app/src/ui/window.rs:3349
 msgid "Remove {account}?"
 msgstr "是否移除 {account}？"
 
-#: app/src/ui/window.rs:3274
+#: app/src/ui/window.rs:3368
 msgid "Remove Anyway"
 msgstr "仍要移除"
 
-#: app/src/ui/window.rs:3287
+#: app/src/ui/window.rs:3381
 msgid "Removed {account}"
 msgstr "已移除 {account}"
 
-#: app/src/ui/window.rs:3289
+#: app/src/ui/window.rs:3383
 msgid "Could not remove {account}: {reason}"
 msgstr "无法移除 {account}：{reason}"
 
-#: app/src/ui/window.rs:3482
+#: app/src/ui/window.rs:3585
 msgid "Refresh"
 msgstr "刷新"
 
-#: app/src/ui/window.rs:3486
+#: app/src/ui/window.rs:3589
 msgid "Show Declined Events"
 msgstr "显示已拒绝的活动"
 
-#: app/src/ui/window.rs:3502
+#: app/src/ui/window.rs:3605
 msgid "Add Account…"
 msgstr "添加账号…"
 
-#: app/src/ui/window.rs:3503
+#: app/src/ui/window.rs:3606
 msgid "New Smart Mailbox…"
 msgstr "新建智能邮箱…"
 
-#: app/src/ui/window.rs:3511
+#: app/src/ui/window.rs:3614
 msgid "Keyboard Shortcuts"
 msgstr "键盘快捷键"
 
-#: app/src/ui/window.rs:3520 app/src/ui/window.rs:3522
+#: app/src/ui/window.rs:3623 app/src/ui/window.rs:3625
 msgid "Main Menu"
 msgstr "主菜单"
 
-#: app/src/ui/window.rs:3587 app/src/ui/window.rs:3588
+#: app/src/ui/window.rs:3690 app/src/ui/window.rs:3691
 msgid "Dock"
 msgstr "固定到主窗口"
 
-#: app/src/ui/window.rs:3713
+#: app/src/ui/window.rs:3816
 msgid "Add a mail account first"
 msgstr "请先添加邮件账号"
 
 #. Translators: {account} is an email address.
-#: app/src/ui/window.rs:3950
+#: app/src/ui/window.rs:4053
 msgid "The calendar and contacts of {account} are connected."
 msgstr "{account} 的日历和联系人已连接。"
 
-#: app/src/ui/window.rs:4056
+#: app/src/ui/window.rs:4159
 msgid "Open a message from the person first"
 msgstr "请先打开此人的邮件"
 
-#: app/src/ui/window.rs:4137
+#: app/src/ui/window.rs:4240
 msgid "Penguin Mail shows the new language after a restart"
 msgstr "重新启动后，Penguin Mail 会显示新的语言"
 
-#: app/src/ui/window.rs:4139 app/src/update/mod.rs:130
+#: app/src/ui/window.rs:4242 app/src/update/mod.rs:130
 msgid "Restart"
 msgstr "重新启动"
 
-#: app/src/ui/window.rs:4203
+#: app/src/ui/window.rs:4306
 msgid "Show Rules"
 msgstr "显示规则"
 
-#: app/src/ui/window.rs:4229
+#: app/src/ui/window.rs:4332
 msgid "Messages That Will Not Download"
 msgstr "无法下载的邮件"
 
-#: app/src/ui/window.rs:4231
+#: app/src/ui/window.rs:4334
 msgid ""
 "Penguin Mail could not download these from {address}'s server. It tries "
 "again at each check, except for a message too large to download."
@@ -12077,16 +12223,16 @@ msgstr "请指定此规则适用的邮件"
 msgid "Choose what the rule does"
 msgstr "请选择规则运行的操作"
 
-#: sync/src/sign_in.rs:343
+#: sync/src/sign_in.rs:375
 msgid ""
 "You signed in to a different account than {address}, so nothing changed."
 msgstr "您登录的账号不是 {address}，因此未做任何更改。"
 
-#: sync/src/sign_in.rs:350
+#: sync/src/sign_in.rs:382
 msgid "{address} is already in Penguin Mail as a {provider} account."
 msgstr "{address} 已是 Penguin Mail 中的 {provider} 账号。"
 
-#: sync/src/sign_in.rs:512
+#: sync/src/sign_in.rs:544
 msgid ""
 "A calendar account named {name} is already here, for the server at "
 "{address}. Remove it to add this server under that name."
@@ -12094,7 +12240,7 @@ msgstr ""
 "已有名为 {name} 的日历账号，对应位于 {address} 的服务器。请先移除它，才能以这"
 "个名称添加此服务器。"
 
-#: sync/src/sign_in.rs:521
+#: sync/src/sign_in.rs:553
 msgid ""
 "A calendar account named {name} is already here, signed in to this server as "
 "{user}. Type {user} to sign it in again, or remove it to sign in as someone "
@@ -12103,7 +12249,7 @@ msgstr ""
 "已有名为 {name} 的日历账号，以 {user} 的身份登录此服务器。请输入 {user} 来重"
 "新登录，或先移除它，再以其他用户身份登录。"
 
-#: sync/src/sign_in.rs:530
+#: sync/src/sign_in.rs:562
 msgid ""
 "Sign In Again keeps {name} on the server at {address}. To use another server "
 "or user name, add it as a calendar account of its own."
@@ -12153,6 +12299,17 @@ msgid ""
 "Penguin Mail cannot work without access to your mail. Sign in again and "
 "allow it."
 msgstr "Penguin Mail 需要邮件访问权限才能运作。请重新登录并允许访问。"
+
+#. Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language. Google is a name.
+#: sync/src/sign_in/goa_link.rs:54
+msgid "Online Accounts couldn't sign in to Google. Sign in again there."
+msgstr "“在线账号”无法登录 Google。请在那里重新登录。"
+
+#
+#. Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language.
+#: sync/src/sign_in/goa_link.rs:59
+msgid "Mail is turned off for this account in Online Accounts."
+msgstr "“在线账号”中已关闭此账号的邮件功能。"
 
 #: sync/src/sign_in/own_client.rs:87
 msgid ""
@@ -12227,3 +12384,9 @@ msgstr "标记为非垃圾邮件"
 #: sync/src/triage.rs:70
 msgid "Move to {folder}"
 msgstr "移至 {folder}"
+
+#~ msgid "Use GNOME Online Accounts"
+#~ msgstr "使用 GNOME 在线账号"
+
+#~ msgid "Recommended. Every feature, signs in through your desktop."
+#~ msgstr "推荐。全部功能，通过桌面登录。"
