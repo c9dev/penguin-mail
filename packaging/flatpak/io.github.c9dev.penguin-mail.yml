@@ -33,6 +33,10 @@ finish-args:
   - --device=dri
   # The tray icon.
   - --talk-name=org.kde.StatusNotifierWatcher
+  # Online Accounts holds the Google sign-in the app reads mail through.
+  - --talk-name=org.gnome.OnlineAccounts
+  # Settings opens its Online Accounts panel, to add a Google account.
+  - --talk-name=org.gnome.Settings
   # Saved attachments and exports land in Downloads; everything else goes
   # through the file chooser portal.
   - --filesystem=xdg-download
