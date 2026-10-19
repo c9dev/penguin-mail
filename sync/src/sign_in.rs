@@ -9,7 +9,8 @@ pub mod own_client;
 
 pub(crate) use browser::other_address;
 pub use browser::{
-    Browser, BrowserSignInError, SignedIn, Wanted, calendar_consent, google_sign_in, in_browser,
+    Browser, BrowserSignInError, ClientChoice, ClientSource, SignedIn, Wanted, calendar_consent,
+    google_sign_in, in_browser, keep_chosen_project, move_choice,
 };
 pub use browser_grant::{BrowserGrant, browser_grant};
 pub use jmap_browser::{BROWSER_WAIT, BrowserReady, JmapBrowser, browser_ready, jmap_in_browser};
@@ -39,10 +40,12 @@ use own_client::OwnClient;
 /// The client `account` signs in with, from what the store recorded for
 /// it. An own account takes the client `kept` holds under its id, and
 /// one added through the old setup page, with nothing kept, the one in
-/// `config.toml`. An account with no client left, such as an own account
-/// whose `config.toml` is gone, or a built-in account in a build without
-/// the client, is marked as needing a new sign-in and gets `None`. The
-/// engine never starts such an account, so nothing else would mark it.
+/// `config.toml`; a built-in account takes `built_in`. A new sign-in
+/// chooses its client by [`google_sign_in`] instead. An account with no
+/// client left, such as an own account whose `config.toml` is gone, or a
+/// built-in account in a build without the client, is marked as needing a
+/// new sign-in and gets `None`. The engine never starts such an account,
+/// so nothing else would mark it.
 pub async fn account_client<P: PasswordStore + 'static>(
     db: &Db,
     config: &Config,
@@ -70,17 +73,56 @@ pub(crate) async fn client_of<P: PasswordStore + 'static>(
 ) -> Result<Option<OAuthClient>, SyncError> {
     let id = account.id;
     let kind = db.read(move |c| accounts::sign_in_client(c, id)).await?;
-    let own = match kind {
-        SignInClient::Own => read_secret(kept, id, STEP_WAIT)
+    Ok(match kind {
+        SignInClient::Own => own_client_of(config, kept, id)
             .await?
-            .as_deref()
-            .and_then(OwnClient::decode),
-        SignInClient::BuiltIn => None,
-    };
-    Ok(match own {
-        Some(own) => Some(own.oauth()),
-        None => client_for(kind, config, built_in),
+            .map(|own| own.oauth()),
+        SignInClient::BuiltIn => built_in,
     })
+}
+
+/// The own client the Gmail account at `address` signed in with, so that
+/// signing it in again keeps it: the one its keyring entry holds, else the
+/// one in `config.toml`. `None` for a built-in account, an account of
+/// another provider, and an address nobody holds.
+pub async fn kept_own_client(
+    db: &Db,
+    config: &Config,
+    secrets: &Secrets,
+    address: &str,
+) -> Result<Option<OwnClient>, SyncError> {
+    let address = address.to_string();
+    let own = db
+        .read(move |c| match accounts::account_by_email(c, &address)? {
+            Some(held) if held.provider == Provider::Gmail => {
+                Ok((accounts::sign_in_client(c, held.id)? == SignInClient::Own).then_some(held.id))
+            }
+            _ => Ok(None),
+        })
+        .await?;
+    match own {
+        Some(id) => own_client_of(config, Arc::clone(&secrets.google_clients), id).await,
+        None => Ok(None),
+    }
+}
+
+/// An own account's client: the one `kept` holds under `id`, else the one
+/// in `config.toml`.
+async fn own_client_of<P: PasswordStore + 'static>(
+    config: &Config,
+    kept: Arc<P>,
+    id: AccountId,
+) -> Result<Option<OwnClient>, SyncError> {
+    let kept = read_secret(kept, id, STEP_WAIT)
+        .await?
+        .as_deref()
+        .and_then(OwnClient::decode);
+    Ok(kept.or_else(|| {
+        config
+            .oauth
+            .as_ref()
+            .map(|own| OwnClient::new(&own.client_id, &own.client_secret))
+    }))
 }
 
 /// Adds the account `email` signed in as, or finds it when it is already
@@ -1296,6 +1338,7 @@ mod tests {
     use super::*;
     use crate::config::{Config, OAuthConfig};
     use crate::passwords::{MemoryPasswords, Secrets};
+    use crate::{Clients, Connector};
 
     /// A keyring holding no own client for any account.
     fn kept_none() -> Arc<MemoryPasswords> {
@@ -1498,22 +1541,6 @@ mod tests {
             secrets.google.load("dana@gmail.com").unwrap().as_deref(),
             Some("refresh")
         );
-    }
-
-    #[tokio::test]
-    async fn signing_an_own_account_in_again_moves_it_to_the_built_in_client() {
-        let (_dir, db) = store();
-        let own = account(&db, "own@example.com", SignInClient::Own).await;
-        let again = signed_in(&db, "own@example.com", 0, None, "", SignInClient::BuiltIn)
-            .await
-            .unwrap();
-        assert_eq!(again.id, own.id);
-        let id = own.id;
-        let kind = db
-            .read(move |c| accounts::sign_in_client(c, id))
-            .await
-            .unwrap();
-        assert_eq!(kind, SignInClient::BuiltIn);
     }
 
     fn own_client() -> own_client::OwnClient {
@@ -1747,6 +1774,257 @@ mod tests {
             format!("{}/token", server.uri()),
         );
         assert_eq!(client.refresh("rt").await.unwrap().token, "at");
+    }
+
+    /// A connector over `db` and `secrets` whose setup chose `chosen`.
+    fn reach(db: &Db, secrets: &Secrets, chosen: Option<own_client::OwnClient>) -> Connector {
+        Connector {
+            db: db.clone(),
+            config: Config::default(),
+            clients: Clients::default().with_chosen(chosen),
+            secrets: secrets.clone(),
+        }
+    }
+
+    fn authorized(email: &str) -> mailrs_gmail::Authorized {
+        mailrs_gmail::Authorized {
+            email: email.into(),
+            refresh_token: "rt".into(),
+            granted: None,
+        }
+    }
+
+    #[tokio::test]
+    async fn a_setup_sign_in_keeps_the_account_the_project_and_refreshes_after_a_restart() {
+        use wiremock::matchers::{body_string_contains, method, path};
+        use wiremock::{Mock, MockServer, ResponseTemplate};
+
+        let server = MockServer::start().await;
+        Mock::given(method("POST"))
+            .and(path("/token"))
+            .and(body_string_contains(
+                "client_id=own.apps.googleusercontent.com",
+            ))
+            .and(body_string_contains("refresh_token=rt"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "access_token": "at",
+                "expires_in": 3600,
+            })))
+            .expect(1)
+            .mount(&server)
+            .await;
+        let (_dir, db) = store();
+        let secrets = Secrets::memory();
+        let reach = reach(&db, &secrets, Some(own_client()));
+        let choice = google_sign_in(&reach.clients, None).unwrap();
+        assert_eq!(choice.source, ClientSource::Setup);
+        let added = browser::signed_in_through(
+            &reach,
+            &choice,
+            &Wanted::Anyone,
+            authorized("me@gmail.com"),
+        )
+        .await
+        .unwrap();
+        assert_eq!(kind(&db, added.id).await, SignInClient::Own);
+        assert_eq!(
+            kept_id(&secrets, added.id).as_deref(),
+            Some("own.apps.googleusercontent.com")
+        );
+        assert_eq!(
+            own_client::saved_project(&secrets).await.unwrap().id(),
+            "own.apps.googleusercontent.com"
+        );
+        // A restart reads the client from the keyring alone.
+        let client = account_client(
+            &db,
+            &Config::default(),
+            None,
+            Arc::clone(&secrets.google_clients),
+            &added,
+        )
+        .await
+        .unwrap()
+        .expect("the kept client serves a build without the built-in one")
+        .with_endpoints(
+            format!("{}/auth", server.uri()),
+            format!("{}/token", server.uri()),
+        );
+        assert_eq!(client.refresh("rt").await.unwrap().token, "at");
+    }
+
+    #[tokio::test]
+    async fn an_environment_sign_in_keeps_no_project() {
+        let (_dir, db) = store();
+        let secrets = Secrets::memory();
+        let clients = Clients {
+            own_google: Some(Ok(own_client())),
+            ..Clients::default()
+        };
+        let choice = google_sign_in(&clients, None).unwrap();
+        assert_eq!(choice.source, ClientSource::Environment);
+        let added = browser::signed_in_through(
+            &reach(&db, &secrets, None),
+            &choice,
+            &Wanted::Anyone,
+            authorized("me@gmail.com"),
+        )
+        .await
+        .unwrap();
+        assert_eq!(kind(&db, added.id).await, SignInClient::Own);
+        assert!(own_client::saved_project(&secrets).await.is_none());
+    }
+
+    #[tokio::test]
+    async fn a_refused_sign_in_keeps_no_project() {
+        let (_dir, db) = store();
+        let secrets = Secrets::memory();
+        db.write(|c| accounts::insert_imap_account(c, "me@example.com", "Fastmail", 0))
+            .await
+            .unwrap();
+        let reach = reach(&db, &secrets, Some(own_client()));
+        let choice = google_sign_in(&reach.clients, None).unwrap();
+        let refused = browser::signed_in_through(
+            &reach,
+            &choice,
+            &Wanted::Anyone,
+            authorized("me@example.com"),
+        )
+        .await;
+        assert!(
+            matches!(
+                refused,
+                Err(BrowserSignInError::Kept(SignInError::Taken { .. }))
+            ),
+            "{refused:?}"
+        );
+        assert!(own_client::saved_project(&secrets).await.is_none());
+    }
+
+    #[tokio::test]
+    async fn a_sign_in_as_another_address_keeps_no_project() {
+        let (_dir, db) = store();
+        let secrets = Secrets::memory();
+        let reach = reach(&db, &secrets, Some(own_client()));
+        let choice = google_sign_in(&reach.clients, None).unwrap();
+        let refused = browser::signed_in_through(
+            &reach,
+            &choice,
+            &Wanted::Only("you@gmail.com".into()),
+            authorized("me@gmail.com"),
+        )
+        .await;
+        assert!(
+            matches!(refused, Err(BrowserSignInError::OtherAddress { .. })),
+            "{refused:?}"
+        );
+        assert!(own_client::saved_project(&secrets).await.is_none());
+    }
+
+    #[tokio::test]
+    async fn the_kept_own_client_comes_from_the_keyring_then_the_config() {
+        let (_dir, db) = store();
+        let secrets = Secrets::memory();
+        let kept = account(&db, "kept@gmail.com", SignInClient::Own).await;
+        let kept_client = own_client::OwnClient::new("kept.apps.googleusercontent.com", "s");
+        secrets
+            .google_clients
+            .save(kept.id, &kept_client.encode())
+            .unwrap();
+        account(&db, "config@gmail.com", SignInClient::Own).await;
+        let built = account(&db, "built@gmail.com", SignInClient::BuiltIn).await;
+        secrets
+            .google_clients
+            .save(built.id, &own_client().encode())
+            .unwrap();
+        let config = with_own();
+        let id_of = |address: &'static str| {
+            let (db, config, secrets) = (&db, &config, &secrets);
+            async move {
+                kept_own_client(db, config, secrets, address)
+                    .await
+                    .unwrap()
+                    .map(|own| own.id().to_string())
+            }
+        };
+        assert_eq!(
+            id_of("kept@gmail.com").await.as_deref(),
+            Some("kept.apps.googleusercontent.com")
+        );
+        assert_eq!(
+            id_of("config@gmail.com").await.as_deref(),
+            Some("own.apps.googleusercontent.com")
+        );
+        assert_eq!(id_of("built@gmail.com").await, None);
+        assert_eq!(id_of("nobody@gmail.com").await, None);
+    }
+
+    #[tokio::test]
+    async fn an_imap_account_has_no_kept_own_client() {
+        let (_dir, db) = store();
+        let secrets = Secrets::memory();
+        db.write(|c| accounts::insert_imap_account(c, "me@example.com", "Fastmail", 0))
+            .await
+            .unwrap();
+        let found = kept_own_client(&db, &with_own(), &secrets, "me@example.com")
+            .await
+            .unwrap();
+        assert!(found.is_none());
+    }
+
+    #[test]
+    fn a_move_takes_the_setup_client_over_the_environment() {
+        let env = Clients {
+            own_google: Some(Ok(own_client::OwnClient::new("env-cid", "s"))),
+            ..Clients::default()
+        };
+        let chosen = env
+            .clone()
+            .with_chosen(Some(own_client::OwnClient::new("setup-cid", "s")));
+        let choice = move_choice(&chosen).unwrap();
+        assert_eq!(
+            (choice.source, choice.oauth.id()),
+            (ClientSource::Setup, "setup-cid")
+        );
+        let choice = move_choice(&env).unwrap();
+        assert_eq!(
+            (choice.source, choice.oauth.id()),
+            (ClientSource::Environment, "env-cid")
+        );
+        assert!(matches!(
+            move_choice(&Clients::default()),
+            Err(BrowserSignInError::NoClient(Browser::Google))
+        ));
+        let half = own_client::OwnClientError::Half {
+            set: own_client::ID_VAR,
+            missing: own_client::SECRET_VAR,
+        };
+        let halved = Clients {
+            own_google: Some(Err(half.clone())),
+            ..Clients::default()
+        };
+        assert!(matches!(
+            move_choice(&halved),
+            Err(BrowserSignInError::OwnClient(err)) if err == half
+        ));
+    }
+
+    #[tokio::test]
+    async fn only_a_setup_choice_keeps_the_project() {
+        let secrets = Secrets::memory();
+        let env = Clients {
+            own_google: Some(Ok(own_client())),
+            ..Clients::default()
+        };
+        keep_chosen_project(&secrets, &google_sign_in(&env, None).unwrap()).await;
+        assert!(own_client::saved_project(&secrets).await.is_none());
+        let kept = own_client();
+        let choice = google_sign_in(&Clients::default(), Some(&kept)).unwrap();
+        keep_chosen_project(&secrets, &choice).await;
+        assert!(own_client::saved_project(&secrets).await.is_none());
+        let setup = Clients::default().with_chosen(Some(own_client()));
+        keep_chosen_project(&secrets, &google_sign_in(&setup, None).unwrap()).await;
+        assert!(own_client::saved_project(&secrets).await.is_some());
     }
 
     fn new_microsoft(address: &str) -> NewMicrosoft {

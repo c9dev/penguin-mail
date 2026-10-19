@@ -12,7 +12,7 @@ use gtk::{gio, glib};
 use mailrs_domain::translate::{fill, fill_plural, gettext, with_reason};
 use mailrs_domain::{
     Account, AccountId, AccountState, Category, ChangeEvent, EpochMillis, Label, MessageBody,
-    Provider, RemoveSetting, Role, Target, ThreadSummary,
+    Provider, RemoveSetting, Role, SignInClient, Target, ThreadSummary,
 };
 use mailrs_sync::sign_in::{Browser, Wanted};
 use mailrs_sync::{
@@ -3052,8 +3052,19 @@ impl MainWindow {
     /// dialog.
     fn sign_in_in_browser(self: &Rc<Self>, browser: Browser, address: Option<String>) {
         // Without the build's client the browser would open for nothing,
-        // so say why at once. The demo goes on to its own message.
-        if !self.core.demo && !self.core.built_with_sign_in(browser) {
+        // so say why at once. An own account signs in again through its
+        // own client. The demo goes on to its own message.
+        let own_account = address.as_deref().is_some_and(|address| {
+            self.app.upgrade().is_some_and(|app| {
+                app.accounts().iter().any(|account| {
+                    account.email == address
+                        && app
+                            .google_sign_in(account.id)
+                            .is_some_and(|sign_in| sign_in.client == SignInClient::Own)
+                })
+            })
+        });
+        if !self.core.demo && !self.core.built_with_sign_in(browser, own_account) {
             return match browser {
                 Browser::Google => self.no_google_sign_in(),
                 Browser::Microsoft => self.no_sign_in(&gettext(

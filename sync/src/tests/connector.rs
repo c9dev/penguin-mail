@@ -16,7 +16,8 @@ use crate::passwords::{PasswordStore, Secrets};
 use crate::services::{AnyIdentities, AnyMail};
 use crate::sign_in::own_client::{ID_VAR, OwnClient, OwnClientError, SECRET_VAR};
 use crate::sign_in::{
-    Browser, BrowserSignInError, Wanted, calendar_consent, google_sign_in, in_browser,
+    Browser, BrowserSignInError, ClientSource, Wanted, calendar_consent, google_sign_in,
+    google_signed_in, in_browser,
 };
 use crate::{Clients, Connected, Connector, Lacks, WhenGrantEnds};
 
@@ -38,6 +39,7 @@ fn both_clients() -> Clients {
         google: Some(OAuthClient::new("cid", "secret")),
         microsoft: Some(MicrosoftClient::new("00000000-0000-0000-0000-000000000000")),
         own_google: None,
+        chosen_google: None,
     }
 }
 
@@ -989,9 +991,12 @@ async fn page_opened(browser: Browser, wanted: Wanted) -> String {
 
 async fn page_opened_with(clients: Clients, browser: Browser, wanted: Wanted) -> String {
     let (db, _dir) = store().await;
-    let reach = connector(&db, clients);
+    page_opened_by(&connector(&db, clients), browser, wanted).await
+}
+
+async fn page_opened_by(reach: &Connector, browser: Browser, wanted: Wanted) -> String {
     let (tx, rx) = tokio::sync::oneshot::channel();
-    let run = in_browser(&reach, browser, wanted, move |url: &str| {
+    let run = in_browser(reach, browser, wanted, move |url: &str| {
         let _ = tx.send(url.to_string());
     });
     tokio::select! {
@@ -1088,19 +1093,118 @@ async fn half_an_own_client_opens_no_page_and_says_which_value_is_missing() {
 
 #[test]
 fn the_sign_in_says_which_client_it_uses() {
-    let own = Clients {
-        own_google: Some(Ok(OwnClient::new("own-cid", "own-secret"))),
+    let env = Clients {
+        own_google: Some(Ok(OwnClient::new("env-cid", "s"))),
         ..both_clients()
-    };
-    assert_eq!(google_sign_in(&own).unwrap().1, SignInClient::Own);
-    assert_eq!(
-        google_sign_in(&both_clients()).unwrap().1,
-        SignInClient::BuiltIn
-    );
+    }
+    .with_chosen(Some(OwnClient::new("setup-cid", "s")));
+    let kept = OwnClient::new("kept-cid", "s");
+    let setup = both_clients().with_chosen(Some(OwnClient::new("setup-cid", "s")));
+    let cases = [
+        (&env, Some(&kept), ClientSource::Environment, "env-cid"),
+        (&setup, Some(&kept), ClientSource::Setup, "setup-cid"),
+        (&both_clients(), Some(&kept), ClientSource::Kept, "kept-cid"),
+        (&both_clients(), None, ClientSource::BuiltIn, "cid"),
+    ];
+    for (clients, kept, source, id) in cases {
+        let choice = google_sign_in(clients, kept).unwrap();
+        assert_eq!(choice.source, source);
+        assert_eq!(choice.oauth.id(), id, "{source:?}");
+        let kind = match source {
+            ClientSource::BuiltIn => SignInClient::BuiltIn,
+            _ => SignInClient::Own,
+        };
+        assert_eq!(choice.kind(), kind, "{source:?}");
+        assert_eq!(
+            choice.own.is_some(),
+            kind == SignInClient::Own,
+            "{source:?}"
+        );
+    }
     assert!(matches!(
-        google_sign_in(&Clients::default()),
+        google_sign_in(&Clients::default(), None),
         Err(BrowserSignInError::NoClient(Browser::Google))
     ));
+}
+
+/// An own Google account `me@gmail.com` whose kept client is `kept-cid`,
+/// in a store `reach` reads.
+async fn own_account_kept(reach: &Connector) {
+    google_signed_in(
+        &reach.db,
+        &reach.secrets,
+        "me@gmail.com",
+        "rt",
+        0,
+        None,
+        "",
+        Some(&OwnClient::new("kept-cid", "s")),
+    )
+    .await
+    .unwrap();
+}
+
+#[tokio::test]
+async fn signing_an_own_account_in_again_keeps_its_own_client() {
+    let (db, _dir) = store().await;
+    let reach = connector(&db, both_clients());
+    own_account_kept(&reach).await;
+    let url = page_opened_by(&reach, Browser::Google, Wanted::Only("me@gmail.com".into())).await;
+    assert!(url.contains("client_id=kept-cid"), "{url}");
+}
+
+#[tokio::test]
+async fn the_environment_wins_over_a_kept_client() {
+    let (db, _dir) = store().await;
+    let clients = Clients {
+        own_google: Some(Ok(OwnClient::new("env-cid", "s"))),
+        ..both_clients()
+    };
+    let reach = connector(&db, clients);
+    own_account_kept(&reach).await;
+    let url = page_opened_by(&reach, Browser::Google, Wanted::Only("me@gmail.com".into())).await;
+    assert!(url.contains("client_id=env-cid"), "{url}");
+}
+
+#[tokio::test]
+async fn the_setup_client_signs_in_over_the_built_in_one() {
+    let clients = both_clients().with_chosen(Some(OwnClient::new("setup-cid", "s")));
+    let url = page_opened_with(clients, Browser::Google, Wanted::Anyone).await;
+    assert!(url.contains("client_id=setup-cid"), "{url}");
+}
+
+#[tokio::test]
+async fn an_own_client_asks_for_every_permission() {
+    let clients = both_clients().with_chosen(Some(OwnClient::new("setup-cid", "s")));
+    let url = page_opened_with(clients, Browser::Google, Wanted::Anyone).await;
+    assert!(url.contains("https%3A%2F%2Fmail.google.com%2F"), "{url}");
+    assert!(url.contains("gmail.settings.basic"), "{url}");
+}
+
+#[tokio::test]
+async fn an_own_account_signs_in_again_in_a_build_without_the_built_in_client() {
+    let (db, _dir) = store().await;
+    let reach = connector(&db, Clients::default());
+    own_account_kept(&reach).await;
+    let url = page_opened_by(&reach, Browser::Google, Wanted::Only("me@gmail.com".into())).await;
+    assert!(url.contains("client_id=kept-cid"), "{url}");
+}
+
+/// A built-in client that asks for no mail, as a release build carries.
+fn mail_free_built_in() -> Clients {
+    Clients {
+        google: Some(OAuthClient::new("cid", "secret").asking(mailrs_gmail::ScopeList::BuiltIn)),
+        ..both_clients()
+    }
+}
+
+#[tokio::test]
+async fn an_own_account_signs_in_again_beside_a_built_in_client_that_reads_no_mail() {
+    let (db, _dir) = store().await;
+    let reach = connector(&db, mail_free_built_in());
+    own_account_kept(&reach).await;
+    let url = page_opened_by(&reach, Browser::Google, Wanted::Only("me@gmail.com".into())).await;
+    assert!(url.contains("client_id=kept-cid"), "{url}");
 }
 
 /// A switch to JMAP that crashed after saving its secret leaves it under

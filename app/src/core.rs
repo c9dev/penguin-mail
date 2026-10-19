@@ -13,9 +13,7 @@ use std::sync::{Mutex, PoisonError};
 
 use anyhow::{Context, Result, anyhow, bail};
 use mailrs_discover::{Found, JmapFound, Net, RealNet, Security, SrvRecord};
-use mailrs_domain::{
-    Account, AccountId, AccountState, ChangeEvent, Provider, SignInClient, Target,
-};
+use mailrs_domain::{Account, AccountId, AccountState, ChangeEvent, Provider, Target};
 use mailrs_pgp::{Pgp, PgpError};
 use mailrs_smime::{Smime, SmimeError};
 use mailrs_store::services::{FoundService, Miss, ServiceKind};
@@ -25,10 +23,12 @@ use mailrs_sync::lock::{LockError, SyncLock};
 use mailrs_sync::passwords::{PasswordStore, Secrets};
 use mailrs_sync::route_move;
 use mailrs_sync::services::finding;
+use mailrs_sync::sign_in::own_client::OwnClient;
 use mailrs_sync::sign_in::{
-    Browser, BrowserReady, BrowserSignInError, JmapBrowser, NewCalDav, NewImap, NewJmap, NewPop3,
-    Wanted, caldav_signed_in, caldav_signed_in_again, calendar_consent, check_pop3, google_sign_in,
-    imap_signed_in, in_browser, jmap_in_browser, jmap_signed_in, pop3_signed_in,
+    Browser, BrowserReady, BrowserSignInError, ClientSource, JmapBrowser, NewCalDav, NewImap,
+    NewJmap, NewPop3, Wanted, caldav_signed_in, caldav_signed_in_again, calendar_consent,
+    check_pop3, google_sign_in, imap_signed_in, in_browser, jmap_in_browser, jmap_signed_in,
+    keep_chosen_project, move_choice, pop3_signed_in,
 };
 use mailrs_sync::{
     AccountServices, AccountSettings, AccountSync, Accounts, BackendError, Clients, Connector,
@@ -349,25 +349,36 @@ impl Core {
     }
 
     /// Whether this copy has a client for a sign-in on `browser`'s page:
-    /// the build's own, or for Google an own client the environment names.
-    /// A copy built from source without the release values has no built-in
-    /// client. Half an own client counts as one, so the sign-in goes on to
-    /// say which value is missing.
-    pub fn built_with_sign_in(&self, browser: Browser) -> bool {
+    /// the build's own, or for Google an own client the environment names,
+    /// or the one an account signing in again kept, which `own_account`
+    /// says it has. A copy built from source without the release values
+    /// has no built-in client. Half an own client counts as one, so the
+    /// sign-in goes on to say which value is missing.
+    pub fn built_with_sign_in(&self, browser: Browser, own_account: bool) -> bool {
         let clients = Clients::current();
         match browser {
-            Browser::Google => !matches!(
-                google_sign_in(&clients),
-                Err(BrowserSignInError::NoClient(_))
-            ),
+            Browser::Google => {
+                own_account
+                    || !matches!(
+                        google_sign_in(&clients, None),
+                        Err(BrowserSignInError::NoClient(_))
+                    )
+            }
             Browser::Microsoft => clients.microsoft.is_some(),
         }
     }
 
-    /// Which client a Google sign-in started now would go through, or why
-    /// it cannot start. The environment is read again on each call.
-    pub fn google_sign_in_client(&self) -> Result<SignInClient, BrowserSignInError> {
-        google_sign_in(&Clients::current()).map(|(_, kind)| kind)
+    /// Where the client of a Google sign-in started now would come from,
+    /// with `chosen` the setup's client, or why it cannot start. The
+    /// environment is read again on each call. An account's kept client is
+    /// not looked up here, so a sign-in again that would take it reads as
+    /// the built-in one.
+    pub fn google_sign_in_client(
+        &self,
+        chosen: Option<&OwnClient>,
+    ) -> Result<ClientSource, BrowserSignInError> {
+        google_sign_in(&Clients::current().with_chosen(chosen.cloned()), None)
+            .map(|choice| choice.source)
     }
 
     /// What connecting, signing in and forgetting an account needs, with
@@ -1669,6 +1680,7 @@ impl Core {
     pub async fn move_to_own_client(
         &self,
         account: Account,
+        chosen: Option<OwnClient>,
         urls: async_channel::Sender<String>,
         cancel: async_channel::Receiver<()>,
         committed: async_channel::Sender<()>,
@@ -1697,17 +1709,15 @@ impl Core {
         self.call(async move {
             // Held until the move ends, even when the dialog has gone.
             let _lease = lease;
-            // The own-project setup replaces the environment as the source.
-            let own = match Clients::current().own_google {
-                Some(Ok(own)) => own,
-                Some(Err(half)) => return Err(BrowserSignInError::from(half).into()),
-                None => return Err(BrowserSignInError::NoClient(Browser::Google).into()),
-            };
+            let choice = move_choice(&Clients::current().with_chosen(chosen))?;
+            let own = choice
+                .own
+                .clone()
+                .ok_or(BrowserSignInError::NoClient(Browser::Google))?;
             let open = move |url: &str| {
                 let _ = urls.try_send(url.to_string());
             };
-            let oauth = own.oauth();
-            let authorized = authorize_until_canceled(&oauth, open, cancel).await?;
+            let authorized = authorize_until_canceled(&choice.oauth, open, cancel).await?;
             let port = MovePort {
                 engine,
                 reach,
@@ -1722,7 +1732,9 @@ impl Core {
             let moved = mover.to_own_client(&account, &own, authorized, || {
                 let _ = committed.try_send(());
             });
-            Ok::<_, anyhow::Error>(moved.await?)
+            let moved = moved.await?;
+            keep_chosen_project(&secrets, &choice).await;
+            Ok::<_, anyhow::Error>(moved)
         })
         .await
     }

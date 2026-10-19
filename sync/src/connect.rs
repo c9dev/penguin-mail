@@ -103,17 +103,22 @@ pub fn smtp_login(user: &str, password: String, outgoing: Option<String>) -> Log
     Login::new(user, outgoing.unwrap_or(password))
 }
 
-/// The build's own sign-in clients, and the own Google client the
-/// environment names. A copy built from source without the release values
-/// has neither built-in client, and its Google and Microsoft accounts
-/// cannot refresh their tokens unless they signed in with an own client.
+/// The build's own sign-in clients, the own Google client the environment
+/// names, and the one the person's setup chose. A Google sign-in takes the
+/// environment's client first, then the setup's, then the one an account
+/// signing in again kept, then the build's. A copy built from source
+/// without the release values has neither built-in client, and its Google
+/// and Microsoft accounts cannot refresh their tokens unless they signed in
+/// with an own client.
 #[derive(Clone, Default)]
 pub struct Clients {
     pub google: Option<OAuthClient>,
     pub microsoft: Option<MicrosoftClient>,
-    /// The own Google client a new Google sign-in uses in place of
-    /// `google`, or why the environment does not name one.
+    /// The own Google client the environment names, which wins over every
+    /// other, or why the environment does not name one.
     pub own_google: Option<Result<OwnClient, OwnClientError>>,
+    /// The own Google client the person's setup chose for this sign-in.
+    pub chosen_google: Option<OwnClient>,
 }
 
 impl Clients {
@@ -123,6 +128,7 @@ impl Clients {
             google: mailrs_gmail::built_in_client(),
             microsoft: mailrs_graph::built_in_client(),
             own_google: None,
+            chosen_google: None,
         }
     }
 
@@ -133,6 +139,14 @@ impl Clients {
         Clients {
             own_google: own_client::from_env(),
             ..Clients::built_in()
+        }
+    }
+
+    /// These clients with `own` as the one the setup chose.
+    pub fn with_chosen(self, own: Option<OwnClient>) -> Clients {
+        Clients {
+            chosen_google: own,
+            ..self
         }
     }
 }

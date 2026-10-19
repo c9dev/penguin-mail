@@ -6,16 +6,17 @@ use std::sync::Arc;
 
 use mailrs_domain::translate::{fill, gettext};
 use mailrs_domain::{Account, Provider, SignInClient};
-use mailrs_gmail::{GMAIL_API_BASE, GmailError, Granted, OAuthClient, ScopeList};
+use mailrs_gmail::{Authorized, GMAIL_API_BASE, GmailError, Granted, OAuthClient, ScopeList};
 use mailrs_graph::GraphError;
 use mailrs_jmap::JmapError;
 use mailrs_store::accounts::{self, GoogleSignIn};
 
-use super::own_client::OwnClientError;
+use super::own_client::{OwnClient, OwnClientError, keep_project};
 use super::{
     JmapSignInError, MicrosoftSignInError, NewMicrosoft, SignInError, google_signed_in,
-    microsoft_signed_in,
+    kept_own_client, microsoft_signed_in,
 };
+use crate::passwords::Secrets;
 use crate::{
     AccountServices, Clients, Connected, Connector, SyncError, connect_account, connect_microsoft,
     now_millis,
@@ -199,21 +200,97 @@ pub async fn in_browser(
     }
 }
 
-/// The client a new Google sign-in goes through, and which kind it is:
-/// the own client the environment names, over the build's. Half an own
-/// client is an error rather than a quiet fall back to the build's,
-/// which the person set the variables to avoid.
+/// Where the client a Google sign-in goes through came from.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ClientSource {
+    /// The own client the environment names.
+    Environment,
+    /// The own client the person's setup chose.
+    Setup,
+    /// The own client the account signing in again kept.
+    Kept,
+    /// The client compiled into this build.
+    BuiltIn,
+}
+
+/// The client a Google sign-in goes through, the own client behind it,
+/// and where it came from.
+#[derive(Clone)]
+pub struct ClientChoice {
+    pub oauth: OAuthClient,
+    /// `None` only for the built-in client.
+    pub own: Option<OwnClient>,
+    pub source: ClientSource,
+}
+
+impl ClientChoice {
+    fn own(own: &OwnClient, source: ClientSource) -> Self {
+        ClientChoice {
+            oauth: own.oauth(),
+            own: Some(own.clone()),
+            source,
+        }
+    }
+
+    /// The kind of client the account records once signed in.
+    pub fn kind(&self) -> SignInClient {
+        match self.source {
+            ClientSource::BuiltIn => SignInClient::BuiltIn,
+            ClientSource::Environment | ClientSource::Setup | ClientSource::Kept => {
+                SignInClient::Own
+            }
+        }
+    }
+}
+
+/// The client a Google sign-in goes through: the own client the
+/// environment names, then the one the setup chose, then `kept`, the one
+/// the account signing in again kept, then the build's. Half an own client
+/// in the environment is an error rather than a quiet fall back, since the
+/// person set the variables to avoid the others.
 pub fn google_sign_in(
     clients: &Clients,
-) -> Result<(OAuthClient, SignInClient), BrowserSignInError> {
-    match &clients.own_google {
-        Some(Ok(own)) => Ok((own.oauth(), SignInClient::Own)),
-        Some(Err(half)) => Err(half.clone().into()),
-        None => clients
+    kept: Option<&OwnClient>,
+) -> Result<ClientChoice, BrowserSignInError> {
+    match (&clients.own_google, &clients.chosen_google, kept) {
+        (Some(Ok(own)), _, _) => Ok(ClientChoice::own(own, ClientSource::Environment)),
+        (Some(Err(half)), _, _) => Err(half.clone().into()),
+        (None, Some(chosen), _) => Ok(ClientChoice::own(chosen, ClientSource::Setup)),
+        (None, None, Some(kept)) => Ok(ClientChoice::own(kept, ClientSource::Kept)),
+        (None, None, None) => clients
             .google
             .clone()
-            .map(|built_in| (built_in, SignInClient::BuiltIn))
+            .map(|oauth| ClientChoice {
+                oauth,
+                own: None,
+                source: ClientSource::BuiltIn,
+            })
             .ok_or(BrowserSignInError::NoClient(Browser::Google)),
+    }
+}
+
+/// The own client a built-in account moves to: the one the setup chose,
+/// else the one the environment names. Half an own client in the
+/// environment is an error, as for [`google_sign_in`].
+pub fn move_choice(clients: &Clients) -> Result<ClientChoice, BrowserSignInError> {
+    match (&clients.chosen_google, &clients.own_google) {
+        (Some(chosen), _) => Ok(ClientChoice::own(chosen, ClientSource::Setup)),
+        (None, Some(Ok(own))) => Ok(ClientChoice::own(own, ClientSource::Environment)),
+        (None, Some(Err(half))) => Err(half.clone().into()),
+        (None, None) => Err(BrowserSignInError::NoClient(Browser::Google)),
+    }
+}
+
+/// Keeps the setup's client as the person's project, for any later Google
+/// account, once an account signed in through it. A client from the
+/// environment or an account's keyring entry is never kept. A keyring that
+/// refuses is logged and does not fail the sign-in, which already holds.
+pub async fn keep_chosen_project(secrets: &Secrets, choice: &ClientChoice) {
+    let (ClientSource::Setup, Some(own)) = (choice.source, &choice.own) else {
+        return;
+    };
+    if let Err(err) = keep_project(secrets, own).await {
+        tracing::warn!(%err, "could not keep the Google project for later accounts");
     }
 }
 
@@ -224,12 +301,20 @@ async fn with_google(
 ) -> Result<SignedIn, BrowserSignInError> {
     let Connector {
         db,
+        config,
         clients,
         secrets,
-        ..
     } = connector;
-    let (oauth, _) = google_sign_in(clients)?;
-    if oauth.scope_list() == ScopeList::BuiltIn {
+    // An account signing in again keeps its own client. The environment
+    // and the setup win over it, so it is read only when neither is set.
+    let kept = match (&wanted, &clients.own_google, &clients.chosen_google) {
+        (Wanted::Only(address), None, None) => {
+            kept_own_client(db, config, secrets, address).await?
+        }
+        _ => None,
+    };
+    let choice = google_sign_in(clients, kept.as_ref())?;
+    if choice.oauth.scope_list() == ScopeList::BuiltIn {
         // Only a Gmail account that reads its mail over IMAP may sign in
         // here. Any other, and a new address, needs a route first.
         let address = wanted.address().map(str::to_string);
@@ -253,32 +338,41 @@ async fn with_google(
             services,
         });
     }
-    let own = match &clients.own_google {
-        Some(Ok(own)) => Some(own),
-        _ => None,
-    };
-    let authorized = mailrs_gmail::authorize(&oauth, GMAIL_API_BASE, open)
+    let authorized = mailrs_gmail::authorize(&choice.oauth, GMAIL_API_BASE, open)
         .await
         .map_err(BrowserSignInError::Google)?;
-    wanted.check(&authorized.email)?;
-    let granted = authorized.granted.as_ref().map(Granted::to_scope);
-    let account = google_signed_in(
-        db,
-        secrets,
-        &authorized.email,
-        &authorized.refresh_token,
-        now_millis(),
-        granted.as_deref(),
-        &oauth.scopes().join(" "),
-        own,
-    )
-    .await?;
-    let client = connect_account(oauth, Arc::clone(&secrets.google), &account, db).await?;
+    let account = signed_in_through(connector, &choice, &wanted, authorized).await?;
+    let client = connect_account(choice.oauth, Arc::clone(&secrets.google), &account, db).await?;
     Ok(SignedIn {
         account,
         name: None,
         services: Connected::Ready(AccountServices::google(client)),
     })
+}
+
+/// Keeps the account `authorized` signed in as through `choice`, when it
+/// is the one `wanted`, and then the setup's project.
+pub(crate) async fn signed_in_through(
+    connector: &Connector,
+    choice: &ClientChoice,
+    wanted: &Wanted,
+    authorized: Authorized,
+) -> Result<Account, BrowserSignInError> {
+    wanted.check(&authorized.email)?;
+    let granted = authorized.granted.as_ref().map(Granted::to_scope);
+    let account = google_signed_in(
+        &connector.db,
+        &connector.secrets,
+        &authorized.email,
+        &authorized.refresh_token,
+        now_millis(),
+        granted.as_deref(),
+        &choice.oauth.scopes().join(" "),
+        choice.own.as_ref(),
+    )
+    .await?;
+    keep_chosen_project(&connector.secrets, choice).await;
+    Ok(account)
 }
 
 /// Asks Google, through the built-in client, for the calendar, contacts

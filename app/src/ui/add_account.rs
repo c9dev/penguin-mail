@@ -19,9 +19,7 @@ use adw::prelude::*;
 use gtk::{gio, glib, graphene};
 use mailrs_discover::Server;
 use mailrs_domain::translate::{fill, gettext};
-use mailrs_domain::{
-    Account, AccountId, MailSet, Provider, RemoveSetting, Role as MailRole, SignInClient,
-};
+use mailrs_domain::{Account, AccountId, MailSet, Provider, RemoveSetting, Role as MailRole};
 use mailrs_store::{accounts, servers};
 
 use crate::add_account::lookup::{Check, Checks, State};
@@ -38,7 +36,7 @@ use crate::route_choice::{Goa, Platform, Ready, Route, any_route, footer, ready_
 use crate::ui::post_band::PostBand;
 use crate::ui::route_page::{self, ConsentPage, RoutePage};
 use crate::ui::tile_grid::TileGrid;
-use mailrs_sync::sign_in::Wanted;
+use mailrs_sync::sign_in::{ClientSource, Wanted};
 
 /// The dialog's size, the mockup's.
 const WIDTH: i32 = 480;
@@ -1992,7 +1990,7 @@ struct Dialog {
 /// Whether Add Account offers Microsoft: in a build with its client, and
 /// in the demo, which signs in nowhere and shows every tile.
 pub fn signs_in_to_microsoft(core: &Core) -> bool {
-    core.demo || core.built_with_sign_in(Browser::Microsoft)
+    core.demo || core.built_with_sign_in(Browser::Microsoft, false)
 }
 
 impl Dialog {
@@ -3849,7 +3847,7 @@ impl Dialog {
         self.push("browser");
         // Without the build's client the browser would open for nothing,
         // so say why at once. The demo goes on to its own message.
-        if !self.core.demo && !self.core.built_with_sign_in(browser) {
+        if !self.core.demo && !self.core.built_with_sign_in(browser, false) {
             return self.browser_failed(&match browser {
                 Browser::Google => gettext(
                     "This copy of Penguin Mail was built without Google sign-in. Get a release from github.com/c9dev/penguin-mail/releases.",
@@ -3863,12 +3861,14 @@ impl Dialog {
         // the page says which one Google is about to see. Half of one is
         // refused here, before a page opens.
         if !self.core.demo && browser == Browser::Google {
-            match self.core.google_sign_in_client() {
+            match self.core.google_sign_in_client(None) {
                 Err(err) => return self.browser_failed(&err.to_string()),
-                Ok(SignInClient::Own) => page.lede.set_text(&gettext(
+                Ok(ClientSource::BuiltIn) => {}
+                Ok(ClientSource::Environment | ClientSource::Setup | ClientSource::Kept) => {
+                    page.lede.set_text(&gettext(
                     "Signing in with your own Google client. Google's sign-in page is open in your browser. When you finish there, this window moves on.",
-                )),
-                Ok(SignInClient::BuiltIn) => {}
+                ));
+                }
             }
         }
         let ticket = self.asking.ask();
@@ -3918,7 +3918,7 @@ impl Dialog {
                     ));
                     let moved = this
                         .core
-                        .move_to_own_client(account, urls, canceled, committed)
+                        .move_to_own_client(account, None, urls, canceled, committed)
                         .await;
                     ended.set(true);
                     moved.map(|a| (a, None))
