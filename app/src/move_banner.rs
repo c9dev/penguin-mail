@@ -40,11 +40,7 @@ pub fn waiting_for_move(
     }
     accounts
         .iter()
-        .filter(|account| {
-            sign_ins
-                .get(&account.id)
-                .is_some_and(|sign_in| sign_in.needs_move(account.provider))
-        })
+        .filter(|account| needs_move(account, sign_ins.get(&account.id).copied()))
         .map(|account| Waiting {
             account: account.clone(),
             paused: account.state == AccountState::MailPaused,
@@ -115,17 +111,24 @@ pub fn banner(waiting: &[Waiting], holds: impl Fn(&str) -> bool) -> Option<MoveB
     })
 }
 
-/// Whether `account` gets a Grant Access banner. One that waits for a move
-/// gets none: a consent through the built-in client would return a token
-/// without the mail scope and overwrite the working one.
-pub fn grant_banner_wanted(waiting: &[AccountId], account: AccountId) -> bool {
-    !waiting.contains(&account)
+/// Whether `account` needs a move, by how it signs in. Unlike
+/// `waiting_for_move`, this holds whether or not a route is ready.
+fn needs_move(account: &Account, sign_in: Option<GoogleSignIn>) -> bool {
+    sign_in.is_some_and(|sign_in| sign_in.needs_move(account.provider))
+}
+
+/// Whether `account` gets a Grant Access banner. One that needs a move
+/// gets none, even on a build with no route to offer: a consent through
+/// the built-in client would return a token without the mail scope and
+/// overwrite the working one.
+pub fn grant_banner_wanted(account: &Account, sign_in: Option<GoogleSignIn>) -> bool {
+    !needs_move(account, sign_in)
 }
 
 /// Whether `account` gets the Sign In banner: it needs to sign in again and
-/// does not wait for a move, which has its own banner and its own sign-in.
-pub fn sign_in_banner_wanted(account: &Account, waiting: &[AccountId]) -> bool {
-    account.state == AccountState::NeedsReauth && !waiting.contains(&account.id)
+/// does not need a move, which has its own banner and its own sign-in.
+pub fn sign_in_banner_wanted(account: &Account, sign_in: Option<GoogleSignIn>) -> bool {
+    account.state == AccountState::NeedsReauth && !needs_move(account, sign_in)
 }
 
 /// Whether the sheet shows now: it has not shown before, an account
@@ -298,19 +301,39 @@ mod tests {
         assert_eq!(waiting_for_move(&accounts, &sign_ins, false), []);
     }
 
+    const BUILT_IN_API: GoogleSignIn = GoogleSignIn {
+        client: SignInClient::BuiltIn,
+        route: MailRoute::GmailApi,
+    };
+
+    const OWN_API: GoogleSignIn = GoogleSignIn {
+        client: SignInClient::Own,
+        route: MailRoute::GmailApi,
+    };
+
     #[test]
     fn an_account_that_needs_a_move_gets_no_grant_banner() {
-        assert!(!grant_banner_wanted(&[1, 3], 3));
-        assert!(grant_banner_wanted(&[1, 3], 2));
-        assert!(grant_banner_wanted(&[], 1));
+        let dana = account(3, "dana@gmail.com", AccountState::Ok);
+        assert!(!grant_banner_wanted(&dana, Some(BUILT_IN_API)));
+        assert!(grant_banner_wanted(&dana, Some(OWN_API)));
+        assert!(grant_banner_wanted(&dana, None));
+    }
+
+    #[test]
+    fn a_build_with_no_route_still_keeps_the_grant_banner_from_a_move_account() {
+        let dana = account(3, "dana@gmail.com", AccountState::Ok);
+        let sign_ins = HashMap::from([(3, BUILT_IN_API)]);
+        assert_eq!(waiting_for_move(&[dana.clone()], &sign_ins, false), []);
+        assert!(!grant_banner_wanted(&dana, sign_ins.get(&3).copied()));
     }
 
     #[test]
     fn an_account_that_needs_a_move_gets_no_sign_in_banner() {
         let again = account(3, "c@gmail.com", AccountState::NeedsReauth);
-        assert!(!sign_in_banner_wanted(&again, &[3]));
-        assert!(sign_in_banner_wanted(&again, &[1]));
+        assert!(!sign_in_banner_wanted(&again, Some(BUILT_IN_API)));
+        assert!(sign_in_banner_wanted(&again, Some(OWN_API)));
+        assert!(sign_in_banner_wanted(&again, None));
         let fine = account(3, "c@gmail.com", AccountState::Ok);
-        assert!(!sign_in_banner_wanted(&fine, &[]));
+        assert!(!sign_in_banner_wanted(&fine, None));
     }
 }

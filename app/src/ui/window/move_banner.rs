@@ -119,7 +119,8 @@ impl Bar {
 pub(crate) mod checks {
     use super::*;
     use crate::move_banner::{Waiting, banner, grant_banner_wanted, sign_in_banner_wanted};
-    use mailrs_domain::{Account, AccountState, Provider};
+    use mailrs_domain::{Account, AccountState, MailRoute, Provider, SignInClient};
+    use mailrs_store::accounts::GoogleSignIn;
 
     pub fn run() {
         the_banner_keeps_one_widget_as_accounts_join();
@@ -262,12 +263,15 @@ pub(crate) mod checks {
     }
 
     fn a_move_account_gets_no_sign_in_or_grant_banner() {
+        let built_in = Some(GoogleSignIn {
+            client: SignInClient::BuiltIn,
+            route: MailRoute::GmailApi,
+        });
         let again = waiting(7, "g@gmail.com", AccountState::NeedsReauth);
-        let ids = [7];
-        assert!(!sign_in_banner_wanted(&again.account, &ids));
-        assert!(!grant_banner_wanted(&ids, again.account.id));
+        assert!(!sign_in_banner_wanted(&again.account, built_in));
+        assert!(!grant_banner_wanted(&again.account, built_in));
         let other = waiting(8, "h@gmail.com", AccountState::NeedsReauth);
-        assert!(sign_in_banner_wanted(&other.account, &ids));
-        assert!(grant_banner_wanted(&ids, other.account.id));
+        assert!(sign_in_banner_wanted(&other.account, None));
+        assert!(grant_banner_wanted(&other.account, None));
     }
 }

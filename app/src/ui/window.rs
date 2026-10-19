@@ -1074,11 +1074,11 @@ impl MainWindow {
         let weak = Rc::downgrade(&window);
         window.list.banner.connect_button_clicked(move |_| {
             let Some(win) = weak.upgrade() else { return };
-            let waiting = win.waiting_ids();
-            let account = win
-                .accounts()
-                .into_iter()
-                .find(|a| crate::move_banner::sign_in_banner_wanted(a, &waiting));
+            let app = win.app.upgrade();
+            let account = win.accounts().into_iter().find(|a| {
+                let sign_in = app.as_ref().and_then(|app| app.google_sign_in(a.id));
+                crate::move_banner::sign_in_banner_wanted(a, sign_in)
+            });
             match account {
                 Some(account) => win.sign_in_again(account),
                 None => win.authorize(None),
@@ -1256,14 +1256,13 @@ impl MainWindow {
         self.stack.set_visible_child_name(page);
         let live: HashSet<AccountId> = data.iter().map(|(a, _)| a.id).collect();
         // Any account can need to sign in again, a calendar account too.
-        // An account that waits for a move has its own banner, and the
+        // An account that needs a move has its own banner, and the
         // built-in sign-in would hand it a token without its mail scope.
         let waiting = app.waiting_for_move();
-        let waiting_ids: Vec<AccountId> = waiting.iter().map(|w| w.account.id).collect();
         let reauth = data
             .iter()
             .map(|(a, _)| a)
-            .find(|a| crate::move_banner::sign_in_banner_wanted(a, &waiting_ids))
+            .find(|a| crate::move_banner::sign_in_banner_wanted(a, app.google_sign_in(a.id)))
             .cloned();
         // A calendar account has no mailboxes, so the mail sidebar and
         // everything worded by what the accounts offer for mail is built
@@ -1377,7 +1376,7 @@ impl MainWindow {
         // trip of its own and settles with everything else above.
         let mut accounts: Vec<Account> = data.iter().map(|(a, _)| a.clone()).collect();
         self.rebuild_move_banner(&waiting);
-        self.rebuild_grant_banners(&accounts, &app.consent(), &waiting_ids);
+        self.rebuild_grant_banners(&accounts, &app.consent());
         self.rebuild_storage_banners();
         // The mail accounts in the sidebar's order, then the calendar
         // accounts, which the mail sidebar has no place for.
@@ -1436,20 +1435,19 @@ impl MainWindow {
         self: &Rc<Self>,
         accounts: &[Account],
         consent: &HashMap<AccountId, mailrs_store::accounts::Consent>,
-        waiting: &[AccountId],
     ) {
         let wanted: Vec<&Account> = accounts
             .iter()
             .filter(|account| {
-                if !crate::move_banner::grant_banner_wanted(waiting, account.id) {
-                    return false;
-                }
-                let withheld = self.withheld(account.id);
-                let asked = consent.get(&account.id).and_then(|c| c.asked.as_deref());
                 let sign_in = self
                     .app
                     .upgrade()
                     .and_then(|a| a.google_sign_in(account.id));
+                if !crate::move_banner::grant_banner_wanted(account, sign_in) {
+                    return false;
+                }
+                let withheld = self.withheld(account.id);
+                let asked = consent.get(&account.id).and_then(|c| c.asked.as_deref());
                 let own = crate::permission::own_scopes(account.provider, sign_in);
                 crate::permission::wants_banner(withheld, asked, own)
             })
@@ -1537,19 +1535,6 @@ impl MainWindow {
                 });
             }
         });
-    }
-
-    /// The accounts that wait for a move, by id.
-    fn waiting_ids(&self) -> Vec<AccountId> {
-        self.app
-            .upgrade()
-            .map(|app| {
-                app.waiting_for_move()
-                    .iter()
-                    .map(|w| w.account.id)
-                    .collect()
-            })
-            .unwrap_or_default()
     }
 
     /// The banner's button: the route choice for each waiting account in
