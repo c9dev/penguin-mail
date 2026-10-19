@@ -138,13 +138,21 @@ pub struct Contacts {
     pub added: bool,
 }
 
-/// An account's Gmail rows, kept so they can be filled again in place.
-struct Shown {
-    parent: glib::WeakRef<adw::ExpanderRow>,
-    rows: RefCell<Vec<glib::WeakRef<gtk::Widget>>>,
+/// What decides an account's Gmail rows: how it signs in, whether this
+/// build offers the route choice, and whether Online Accounts holds the
+/// address.
+#[derive(Clone, Copy)]
+struct RouteFacts {
     sign_in: GoogleSignIn,
     routes_ready: bool,
     goa_holds: bool,
+}
+
+/// An account's Gmail rows, kept so they can be filled again in place.
+struct RouteRows {
+    parent: glib::WeakRef<adw::ExpanderRow>,
+    rows: RefCell<Vec<glib::WeakRef<gtk::Widget>>>,
+    facts: RouteFacts,
     connect: Rc<dyn Fn(AccountId)>,
     contacts: Contacts,
     find_project: FindProject,
@@ -156,7 +164,7 @@ type CalendarRow = (glib::WeakRef<adw::ActionRow>, glib::WeakRef<gtk::Button>);
 thread_local! {
     /// The open Preferences' Gmail rows by account. Only one Preferences
     /// is open; a new one replaces each entry. The rows are held weakly.
-    static SHOWN: RefCell<HashMap<AccountId, Rc<Shown>>> = RefCell::default();
+    static ROUTE_ROWS: RefCell<HashMap<AccountId, Rc<RouteRows>>> = RefCell::default();
     /// The Calendar page's row for an account that is not connected, with
     /// its Connect button.
     static CALENDAR_ROWS: RefCell<HashMap<AccountId, CalendarRow>> = RefCell::default();
@@ -188,12 +196,15 @@ pub fn rows(
                 }
             });
         });
+        let facts = RouteFacts {
+            sign_in,
+            routes_ready: app.routes_ready(),
+            goa_holds: app.core.goa_holds(&account.email) == Some(true),
+        };
         register(
             parent,
             account,
-            sign_in,
-            app.routes_ready(),
-            app.core.goa_holds(&account.email) == Some(true),
+            facts,
             offers,
             connect,
             contacts,
@@ -203,31 +214,26 @@ pub fn rows(
 }
 
 /// Fills `parent` and keeps the rows for [`refill`].
-#[allow(clippy::too_many_arguments)]
 fn register(
     parent: &adw::ExpanderRow,
     account: &Account,
-    sign_in: GoogleSignIn,
-    routes_ready: bool,
-    goa_holds: bool,
+    facts: RouteFacts,
     offers: Offers,
     connect: &Rc<dyn Fn(AccountId)>,
     contacts: Contacts,
     find_project: FindProject,
 ) {
-    let shown = Rc::new(Shown {
+    let shown = Rc::new(RouteRows {
         parent: parent.downgrade(),
         rows: RefCell::default(),
-        sign_in,
-        routes_ready,
-        goa_holds,
+        facts,
         connect: Rc::clone(connect),
         contacts,
         find_project,
     });
     let added = fill_rows(parent, account, offers, &shown);
     *shown.rows.borrow_mut() = added.iter().map(|w| w.downgrade()).collect();
-    SHOWN.with(|all| all.borrow_mut().insert(account.id, shown));
+    ROUTE_ROWS.with(|all| all.borrow_mut().insert(account.id, shown));
 }
 
 /// Fills `account`'s Gmail rows again from what it offers now, in the
@@ -235,12 +241,12 @@ fn register(
 /// scroll and the other accounts stay as they are. False when no open
 /// Preferences shows the account.
 pub fn refill(id: AccountId, account: &Account, offers: Offers) -> bool {
-    let shown = SHOWN.with(|all| all.borrow().get(&id).cloned());
+    let shown = ROUTE_ROWS.with(|all| all.borrow().get(&id).cloned());
     let Some(shown) = shown else {
         return false;
     };
     let Some(parent) = shown.parent.upgrade() else {
-        SHOWN.with(|all| all.borrow_mut().remove(&id));
+        ROUTE_ROWS.with(|all| all.borrow_mut().remove(&id));
         return false;
     };
     let old = std::mem::take(&mut *shown.rows.borrow_mut());
@@ -279,9 +285,13 @@ fn fill_rows(
     parent: &adw::ExpanderRow,
     account: &Account,
     offers: Offers,
-    shown: &Shown,
+    shown: &RouteRows,
 ) -> Vec<gtk::Widget> {
-    let (sign_in, routes_ready, goa_holds) = (shown.sign_in, shown.routes_ready, shown.goa_holds);
+    let RouteFacts {
+        sign_in,
+        routes_ready,
+        goa_holds,
+    } = shown.facts;
     let (connect, contacts) = (&shown.connect, &shown.contacts);
     let mut added: Vec<gtk::Widget> = Vec::new();
     let mut put = |widget: &gtk::Widget| {

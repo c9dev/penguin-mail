@@ -39,8 +39,9 @@ pub enum Action {
     SignInAnotherWay(AccountId),
 }
 
+/// A notice as the banner shows it: its words and its buttons.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Shown {
+pub struct NoticeContent {
     pub title: String,
     pub buttons: Vec<(Action, String)>,
 }
@@ -83,7 +84,7 @@ pub fn notices(
 
 /// The words and buttons of `notice`. `account` is the one it is about,
 /// for the button that leaves Online Accounts behind.
-pub fn shown(notice: &Notice, account: Option<AccountId>) -> Shown {
+pub fn shown(notice: &Notice, account: Option<AccountId>) -> NoticeContent {
     let another_way = |buttons: &mut Vec<(Action, String)>| {
         if let Some(id) = account {
             buttons.push((Action::SignInAnotherWay(id), gettext("Sign In Another Way")));
@@ -137,7 +138,7 @@ pub fn shown(notice: &Notice, account: Option<AccountId>) -> Shown {
         // Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language.
         Notice::Unreachable => gettext("Can't reach Online Accounts on this computer."),
     };
-    Shown { title, buttons }
+    NoticeContent { title, buttons }
 }
 
 fn open() -> String {

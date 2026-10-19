@@ -447,18 +447,14 @@ pub async fn calendar_consent(
         SignInClient::Goa => SignInClient::Goa,
         _ => SignInClient::BuiltIn,
     };
-    Ok(google_signed_in_as(
-        db,
-        secrets,
-        &account.email,
-        &authorized.refresh_token,
-        now_millis(),
-        granted.as_deref(),
-        &oauth.scopes().join(" "),
-        kept,
-        None,
-    )
-    .await?)
+    let asked = oauth.scopes().join(" ");
+    let token = super::GoogleToken {
+        email: &account.email,
+        refresh_token: &authorized.refresh_token,
+        granted: granted.as_deref(),
+        asked: &asked,
+    };
+    Ok(google_signed_in_as(db, secrets, token, now_millis(), kept, None).await?)
 }
 
 async fn with_microsoft(

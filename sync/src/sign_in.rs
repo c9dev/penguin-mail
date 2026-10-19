@@ -213,35 +213,42 @@ pub async fn google_signed_in(
         Some(_) => SignInClient::Own,
         None => SignInClient::BuiltIn,
     };
-    google_signed_in_as(
-        db,
-        secrets,
+    let token = GoogleToken {
         email,
         refresh_token,
-        now,
         granted,
         asked,
-        kind,
-        own,
-    )
-    .await
+    };
+    google_signed_in_as(db, secrets, token, now, kind, own).await
+}
+
+/// What a Google sign-in brought back: the address, its refresh token,
+/// the scopes Google granted and the ones the sign-in asked for.
+#[derive(Debug, Clone, Copy)]
+pub struct GoogleToken<'a> {
+    pub email: &'a str,
+    pub refresh_token: &'a str,
+    pub granted: Option<&'a str>,
+    pub asked: &'a str,
 }
 
 /// [`google_signed_in`] with the account's client named, for an account
 /// whose token is the built-in client's but whose client stays another:
 /// an Online Accounts account that adds its calendar.
-#[allow(clippy::too_many_arguments)]
 pub async fn google_signed_in_as(
     db: &Db,
     secrets: &Secrets,
-    email: &str,
-    refresh_token: &str,
+    token: GoogleToken<'_>,
     now: EpochMillis,
-    granted: Option<&str>,
-    asked: &str,
     kind: SignInClient,
     own: Option<&OwnClient>,
 ) -> Result<Account, SignInError> {
+    let GoogleToken {
+        email,
+        refresh_token,
+        granted,
+        asked,
+    } = token;
     let address = email.to_string();
     let before = db
         .read(move |c| match accounts::account_by_email(c, &address)? {

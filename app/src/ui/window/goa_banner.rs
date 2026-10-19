@@ -7,7 +7,7 @@ use std::rc::Rc;
 
 use adw::prelude::*;
 
-use crate::goa_notice::{Action, Shown};
+use crate::goa_notice::{Action, NoticeContent};
 
 /// What the banner runs when one of its buttons is pressed.
 type OnPress = Rc<RefCell<Option<Rc<dyn Fn(Action)>>>>;
@@ -16,7 +16,7 @@ pub struct Bar {
     root: gtk::Revealer,
     title: gtk::Label,
     buttons: gtk::Box,
-    shown: Rc<RefCell<Option<Shown>>>,
+    shown: Rc<RefCell<Option<NoticeContent>>>,
     on_press: OnPress,
 }
 
@@ -63,7 +63,7 @@ impl Bar {
     }
 
     /// Shows `wanted`, or hides the banner when nothing is left to say.
-    pub fn show(&self, wanted: Option<Shown>) {
+    pub fn show(&self, wanted: Option<NoticeContent>) {
         while let Some(child) = self.buttons.first_child() {
             self.buttons.remove(&child);
         }
@@ -118,7 +118,7 @@ pub(crate) mod checks {
         a_press_carries_the_button_s_action();
     }
 
-    fn removed() -> Shown {
+    fn removed() -> NoticeContent {
         shown(
             &Notice::Removed {
                 address: "dana@example.com".into(),
