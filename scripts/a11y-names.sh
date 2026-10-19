@@ -1253,7 +1253,14 @@ def walk_own_project(keys):
             return problems + 1
         keys.key(RETURN)
     # Step 6: the key file, through GTK's own chooser.
-    path = os.path.join(os.environ.get("HOME", "/tmp"), "client_secret_123.json")
+    # A folder of the walk's own, removed when the walk ends, so a run
+    # outside the sandbox leaves nothing in the home folder.
+    import atexit
+    import shutil
+    import tempfile
+    folder = tempfile.mkdtemp(prefix="penguin-a11y-")
+    atexit.register(shutil.rmtree, folder, True)
+    path = os.path.join(folder, "client_secret_123.json")
     with open(path, "w") as out:
         out.write(DESKTOP_KEY)
     if focused_name() != "Choose File…":
