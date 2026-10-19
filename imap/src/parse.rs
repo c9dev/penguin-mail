@@ -469,8 +469,28 @@ fn label_strings(list: &[Cow<'_, str>]) -> Result<Vec<String>, ImapError> {
             "the server gave a message {} labels, more than {MAX_FLAGS}",
             list.len()
         ))),
-        false => Ok(list.iter().map(|l| crate::utf7::decode(l)).collect()),
+        false => Ok(list
+            .iter()
+            .map(|l| crate::utf7::decode(&unescaped(l)))
+            .collect()),
     }
+}
+
+/// A label as Gmail meant it. imap-proto hands a quoted label over with
+/// its escapes still in, and Gmail quotes its own labels too:
+/// `X-GM-LABELS ("\\\\Inbox")` on the wire arrives as two backslashes
+/// before `Inbox`, which would match no system label. An atom (`\\Inbox`)
+/// has no escapes to undo.
+fn unescaped(label: &str) -> String {
+    let mut out = String::with_capacity(label.len());
+    let mut chars = label.chars().peekable();
+    while let Some(c) = chars.next() {
+        match (c, chars.peek()) {
+            ('\\', Some('\\' | '"')) => out.extend(chars.next()),
+            _ => out.push(c),
+        }
+    }
+    out
 }
 
 /// The items a FETCH answer carries besides the header section.
@@ -1114,6 +1134,18 @@ pub(crate) mod tests {
         assert_eq!(gmail.labels, ["\\Inbox", "\\Important", "Work Stuff"]);
         assert_eq!(gmail.id(), "11bdfc5cae0c8191");
         assert_eq!(gmail.thread_id(), "11bdfc5cae0c8191");
+    }
+
+    #[test]
+    fn gmails_quoted_system_labels_lose_their_escapes() {
+        // What Gmail itself sends, captured from a live FETCH.
+        let line = format!(
+            "* 1 FETCH (UID 7 X-GM-MSGID 1 X-GM-THRID 1 X-GM-LABELS (\"\\\\Important\" \"\\\\Inbox\" \"say \\\"hi\\\"\") {GMAIL_HEAD}"
+        );
+        assert_eq!(
+            gmail_of(&line).unwrap().labels,
+            ["\\Important", "\\Inbox", "say \"hi\""]
+        );
     }
 
     #[test]

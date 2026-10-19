@@ -492,7 +492,7 @@ mod tests {
     }
 
     #[test]
-    fn gm_labels_quotes_in_utf7_and_leaves_system_labels_bare() {
+    fn gm_labels_quotes_every_label_for_a_search() {
         assert_eq!(
             gm_labels("Fam\u{ed}lia/F\u{e9}rias 2026").unwrap(),
             "X-GM-LABELS \"Fam&AO0-lia/F&AOk-rias 2026\""
