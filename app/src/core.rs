@@ -1661,9 +1661,11 @@ impl Core {
     /// error it starts again as it was.
     ///
     /// Closing the channel behind `cancel` ends the browser wait and
-    /// leaves the account as it was. Once the sign-in returns, `committed`
-    /// gets a message and the move can no longer be cancelled. A second
-    /// move of the same account is refused while one runs.
+    /// leaves the account as it was. A sign-in as another address ends the
+    /// move before the account stops. Once the sign-in returns as the
+    /// account, `committed` gets a message and the move can no longer be
+    /// cancelled. A second move of the same account is refused while one
+    /// runs.
     pub async fn move_to_own_client(
         &self,
         account: Account,
@@ -1706,28 +1708,21 @@ impl Core {
             };
             let oauth = own.oauth();
             let authorized = authorize_until_canceled(&oauth, open, cancel).await?;
-            // From here the move runs to its end.
-            let _ = committed.try_send(());
-            let id = account.id;
-            // Kept past the stop: the drain sends through it.
-            let kept = engine.account(id).ok();
-            engine.stop_account(id);
-            if let Some(sync) = kept {
-                let draining = Outbox::new(Arc::new(route_move::Stopped(Arc::clone(&sync))), db.clone());
-                if !route_move::drain(&sync, &draining, now_millis(), route_move::DRAIN_WAIT).await {
-                    tracing::warn!(account = id, "moving with work still under way on the old sign-in");
-                }
-            }
-            let _held = outbox.hold(id).await;
-            let moved = route_move::to_own_client(&db, &secrets, &account, &own, authorized).await;
-            let now = match &moved {
-                Ok(moved) => Some(moved.clone()),
-                Err(_) => db.read(move |c| accounts::account(c, id)).await.ok().flatten(),
+            let port = MovePort {
+                engine,
+                reach,
+                db: db.clone(),
             };
-            if let Err(err) = start_again(&reach, &engine, &db, &now.unwrap_or(account), false).await {
-                tracing::warn!(account = id, error = %err, "could not start the account again after the move");
-            }
-            Ok::<_, anyhow::Error>(moved?)
+            let mover = route_move::Mover {
+                engine: &port,
+                db: &db,
+                secrets: &secrets,
+                outbox: &outbox,
+            };
+            let moved = mover.to_own_client(&account, &own, authorized, || {
+                let _ = committed.try_send(());
+            });
+            Ok::<_, anyhow::Error>(moved.await?)
         })
         .await
     }
@@ -2058,6 +2053,29 @@ impl Reach {
             mailrs_sync::Connected::Ready(services) => Connected::Ready(services),
             mailrs_sync::Connected::NeedsSignIn(_) => Connected::NeedsSignIn,
         })
+    }
+}
+
+/// The engine a move stops and starts the account on.
+struct MovePort {
+    engine: Arc<SyncEngine>,
+    reach: Reach,
+    db: Db,
+}
+
+impl route_move::MoveEngine for MovePort {
+    fn running(&self, account: AccountId) -> Option<Arc<AccountSync>> {
+        self.engine.account(account).ok()
+    }
+
+    fn stop(&self, account: AccountId) {
+        self.engine.stop_account(account);
+    }
+
+    async fn start_again(&self, account: &Account) {
+        if let Err(err) = start_again(&self.reach, &self.engine, &self.db, account, false).await {
+            tracing::warn!(account = account.id, error = %err, "could not start the account again after the move");
+        }
     }
 }
 

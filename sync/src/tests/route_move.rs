@@ -13,7 +13,9 @@ use mailrs_store::{Db, StoreError, drafts};
 use super::{Connected, Harness, eventually, harness};
 use crate::fake::meta;
 use crate::passwords::{PasswordStore, Secrets};
-use crate::route_move::{DRAIN_WAIT, MoveError, commit, drain, needs_move, to_own_client};
+use crate::route_move::{
+    DRAIN_WAIT, MoveEngine, MoveError, Mover, commit, drain, needs_move, to_own_client,
+};
 use crate::sign_in::own_client::OwnClient;
 use crate::{Outbox, Posted, TriageAction, now_millis};
 
@@ -443,4 +445,110 @@ fn only_built_in_api_gmail_accounts_need_a_move() {
         Provider::Imap,
         sign_in(SignInClient::BuiltIn, MailRoute::GmailApi)
     ));
+}
+
+/// The engine a move drives, writing down what the move asked of it and
+/// which client the store named when the account started again.
+struct Steps {
+    sync: Arc<crate::AccountSync>,
+    db: Db,
+    done: Mutex<Vec<String>>,
+}
+
+impl Steps {
+    fn new(h: &Harness) -> Steps {
+        Steps {
+            sync: Arc::clone(&h.sync),
+            db: h.db.clone(),
+            done: Mutex::default(),
+        }
+    }
+
+    fn note(&self, step: impl Into<String>) {
+        self.done.lock().unwrap().push(step.into());
+    }
+
+    fn done(&self) -> Vec<String> {
+        self.done.lock().unwrap().clone()
+    }
+}
+
+impl MoveEngine for Steps {
+    fn running(&self, account: mailrs_domain::AccountId) -> Option<Arc<crate::AccountSync>> {
+        (account == self.sync.account_id()).then(|| Arc::clone(&self.sync))
+    }
+
+    fn stop(&self, _: mailrs_domain::AccountId) {
+        self.note("stop");
+    }
+
+    async fn start_again(&self, account: &mailrs_domain::Account) {
+        let started = client(&self.db, account.id).await;
+        self.note(format!("start on {started:?}"));
+    }
+}
+
+#[tokio::test]
+async fn a_move_as_another_address_ends_before_the_account_stops() {
+    let h = built_in_account().await;
+    let secrets = Secrets::memory();
+    let steps = Steps::new(&h);
+    let outbox = outbox_of(&h);
+    let mover = Mover {
+        engine: &steps,
+        db: &h.db,
+        secrets: &secrets,
+        outbox: &outbox,
+    };
+
+    let refused = mover
+        .to_own_client(
+            &account(&h).await,
+            &own(),
+            signed_in_as("someone@example.com"),
+            || steps.note("committed"),
+        )
+        .await;
+
+    assert!(matches!(refused, Err(MoveError::OtherAddress { .. })));
+    assert_eq!(steps.done(), Vec::<String>::new());
+    assert_eq!(client(&h.db, h.account_id).await, SignInClient::BuiltIn);
+    assert_eq!(secrets.google.load("me@example.com").unwrap(), None);
+}
+
+#[tokio::test]
+async fn a_move_drains_the_old_route_then_starts_on_the_own_client() {
+    let h = built_in_account().await;
+    queue_due(&h, "Report").await;
+    let secrets = Secrets::memory();
+    let steps = Steps::new(&h);
+    let outbox = outbox_of(&h);
+    let mover = Mover {
+        engine: &steps,
+        db: &h.db,
+        secrets: &secrets,
+        outbox: &outbox,
+    };
+
+    let moved = mover
+        .to_own_client(
+            &account(&h).await,
+            &own(),
+            signed_in_as("Me@Example.com"),
+            || steps.note("committed"),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(moved.id, h.account_id);
+    assert_eq!(steps.done(), ["committed", "stop", "start on Own"]);
+    assert_eq!(
+        h.fake.with(|s| s.sent.len()),
+        1,
+        "the old route sent what was due"
+    );
+    assert_eq!(
+        secrets.google.load("me@example.com").unwrap().as_deref(),
+        Some("own-token")
+    );
 }

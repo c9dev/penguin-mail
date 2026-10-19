@@ -68,6 +68,84 @@ pub async fn drain<A: Accounts>(
     tokio::time::timeout(within, both).await.is_ok()
 }
 
+/// What a move asks of the engine that runs the account.
+pub trait MoveEngine: Send + Sync {
+    /// The running account, which the drain still sends through once it
+    /// has stopped.
+    fn running(&self, account: AccountId) -> Option<Arc<AccountSync>>;
+    fn stop(&self, account: AccountId);
+    /// Starts `account` again on the sign-in the store names for it now.
+    fn start_again(&self, account: &Account) -> impl Future<Output = ()> + Send;
+}
+
+/// What a move runs with: the engine, the store, the keyring and the
+/// app's outbox, which the move holds while the store changes.
+pub struct Mover<'a, E, A: Accounts> {
+    pub engine: &'a E,
+    pub db: &'a Db,
+    pub secrets: &'a Secrets,
+    pub outbox: &'a Outbox<A>,
+}
+
+impl<E: MoveEngine, A: Accounts> Mover<'_, E, A> {
+    /// Moves `account` to `own` once `authorized` came back from the
+    /// browser. A sign-in as another address ends the move before anything
+    /// stops. Otherwise `committed` runs, since the move can no longer be
+    /// cancelled; the account stops, the old route sends what is due and
+    /// finishes its writes, the store takes the new sign-in, and the
+    /// account starts again, on its old sign-in when the store refused the
+    /// new one.
+    pub async fn to_own_client(
+        &self,
+        account: &Account,
+        own: &OwnClient,
+        authorized: Authorized,
+        committed: impl FnOnce(),
+    ) -> Result<Account, MoveError> {
+        same_address(account, &authorized)?;
+        committed();
+        let id = account.id;
+        let kept = self.engine.running(id);
+        self.engine.stop(id);
+        if let Some(sync) = kept {
+            let draining = Outbox::new(Arc::new(Stopped(Arc::clone(&sync))), self.db.clone());
+            if !drain(&sync, &draining, now_millis(), DRAIN_WAIT).await {
+                tracing::warn!(
+                    account = id,
+                    "moving with work still under way on the old sign-in"
+                );
+            }
+        }
+        let _held = self.outbox.hold(id).await;
+        let moved = to_own_client(self.db, self.secrets, account, own, authorized).await;
+        let now = match &moved {
+            Ok(moved) => Some(moved.clone()),
+            Err(_) => self
+                .db
+                .read(move |c| accounts::account(c, id))
+                .await
+                .ok()
+                .flatten(),
+        };
+        self.engine
+            .start_again(now.as_ref().unwrap_or(account))
+            .await;
+        moved
+    }
+}
+
+/// `OtherAddress` unless `authorized` signed in as `account`, whatever the
+/// case.
+fn same_address(account: &Account, authorized: &Authorized) -> Result<(), MoveError> {
+    if authorized.email.eq_ignore_ascii_case(&account.email) {
+        return Ok(());
+    }
+    Err(MoveError::OtherAddress {
+        signed_in: authorized.email.clone(),
+        wanted: account.email.clone(),
+    })
+}
+
 /// Moves `account` to `own`, the client `authorized` signed in through.
 /// The address must be the account's, whatever its case. The route stays
 /// the API's and the sync state stays, so nothing downloads again. On a
@@ -79,12 +157,7 @@ pub async fn to_own_client(
     own: &OwnClient,
     authorized: Authorized,
 ) -> Result<Account, MoveError> {
-    if !authorized.email.eq_ignore_ascii_case(&account.email) {
-        return Err(MoveError::OtherAddress {
-            signed_in: authorized.email,
-            wanted: account.email.clone(),
-        });
-    }
+    same_address(account, &authorized)?;
     let granted = authorized.granted.as_ref().map(Granted::to_scope);
     google_signed_in(
         db,
