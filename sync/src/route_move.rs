@@ -1,17 +1,17 @@
-//! Moving a Gmail account to a new way of signing in, keeping its id and
-//! everything stored. Queued work goes out through the old route first;
-//! the store changes only once the new sign-in succeeded.
+//! Moving a Gmail account to a new way of signing in, keeping its id, its
+//! settings and its outbox. Queued work goes out through the old route
+//! first; the store changes only once the new sign-in succeeded. A move
+//! that stays on the Gmail API keeps the stored mail. A move from the API
+//! to IMAP empties it, and the first IMAP sync lists it all again from
+//! Gmail.
 
 use std::sync::Arc;
 use std::time::Duration;
 
-use mailrs_domain::{
-    Account, AccountId, EpochMillis, MailRoute, MailboxKind, Provider, RemoteMailbox, SignInClient,
-};
+use mailrs_domain::{Account, AccountId, EpochMillis, MailRoute, Provider, SignInClient};
 use mailrs_gmail::{Authorized, Granted};
 use mailrs_store::accounts::{self, GoogleSignIn, RouteCommit};
-use mailrs_store::messages::{self, Change};
-use mailrs_store::{Db, drafts, mailboxes, outbox, servers};
+use mailrs_store::{Db, outbox, servers, switch};
 use rusqlite::Connection;
 
 use crate::connect::{STEP_WAIT, read_secret};
@@ -26,13 +26,6 @@ use crate::{AccountSync, Accounts, BackendError, Outbox, SyncError, now_millis};
 /// How long a move waits for the old route to send what is due and to
 /// finish the writes under way.
 pub const DRAIN_WAIT: Duration = Duration::from_secs(30);
-
-/// Whether X-GM-MSGID in lower-case hex is the Gmail API's message id, as
-/// the probe `penguin-mail-cli gmail-ids` checks on a live account. When it
-/// is, a move to IMAP keeps every stored message. When it is not,
-/// [`rewrite_for_imap`] drops the messages so the first IMAP sync lists
-/// them again under the ids IMAP gives.
-pub const API_IDS_MATCH: bool = true;
 
 /// Whether `provider`'s account, signing in as `sign_in` says, has to move
 /// before its mail arrives again.
@@ -122,7 +115,7 @@ impl<E: MoveEngine, A: Accounts> Mover<'_, E, A> {
     ) -> Result<Account, MoveError> {
         same_address(account, &authorized)?;
         committed();
-        self.run_move(account, || {
+        self.run_move(account, false, || {
             to_own_client(self.db, self.secrets, account, own, authorized)
         })
         .await
@@ -131,8 +124,16 @@ impl<E: MoveEngine, A: Accounts> Mover<'_, E, A> {
     /// Stops `account`, lets the old route send what is due and finish its
     /// writes, holds the outbox while `write` changes the store, and
     /// starts the account again: as `write` left it, or as the store
-    /// holds it when `write` failed.
-    async fn run_move<F, Fut>(&self, account: &Account, write: F) -> Result<Account, MoveError>
+    /// holds it when `write` failed. With `bring_bytes`, a move off the
+    /// Gmail API, each waiting message whose bytes are only in a Gmail
+    /// draft has them copied into the outbox first, so it goes out over
+    /// SMTP from them.
+    async fn run_move<F, Fut>(
+        &self,
+        account: &Account,
+        bring_bytes: bool,
+        write: F,
+    ) -> Result<Account, MoveError>
     where
         F: FnOnce() -> Fut,
         Fut: Future<Output = Result<Account, MoveError>>,
@@ -147,6 +148,9 @@ impl<E: MoveEngine, A: Accounts> Mover<'_, E, A> {
                     account = id,
                     "moving with work still under way on the old sign-in"
                 );
+            }
+            if bring_bytes {
+                self.bring_bytes(&sync, id).await;
             }
         }
         let _held = self.outbox.hold(id).await;
@@ -205,7 +209,7 @@ impl<E: MoveEngine, A: Accounts> Mover<'_, E, A> {
         }
         committed();
         let goa_id = goa_account.id.clone();
-        self.run_move(account, || async move {
+        self.run_move(account, changes, || async move {
             commit(
                 self.db,
                 id,
@@ -254,12 +258,25 @@ impl<E: MoveEngine, A: Accounts> Mover<'_, E, A> {
         committed: impl FnOnce(),
     ) -> Result<Account, MoveError> {
         same_email(account, &new.address)?;
-        committed();
-        self.run_move(account, || self.write_imap(account.id, new))
+        let id = account.id;
+        let before = self
+            .db
+            .read(move |c| accounts::mail_route(c, id))
             .await
+            .map_err(SyncError::from)?;
+        committed();
+        self.run_move(account, before != MailRoute::Imap, || {
+            self.write_imap(id, before, new)
+        })
+        .await
     }
 
-    async fn write_imap(&self, id: AccountId, new: NewGmailImap) -> Result<Account, MoveError> {
+    async fn write_imap(
+        &self,
+        id: AccountId,
+        before: MailRoute,
+        new: NewGmailImap,
+    ) -> Result<Account, MoveError> {
         let NewGmailImap {
             servers: saved,
             password,
@@ -269,26 +286,21 @@ impl<E: MoveEngine, A: Accounts> Mover<'_, E, A> {
             .await
             .map_err(SyncError::from)?;
         let (client, leaves_goa) = self.client_off_goa(id).await?;
-        let before = self
-            .db
-            .read(move |c| accounts::mail_route(c, id))
-            .await
-            .map_err(SyncError::from)?;
         let route = RouteCommit {
             route: MailRoute::Imap,
             client,
-            restart_sync: true,
+            restart_sync: before != MailRoute::Imap,
         };
         commit(self.db, id, route, move |c| {
             servers::save(c, id, &saved)?;
             if leaves_goa {
                 accounts::set_goa_id(c, id, None)?;
             }
-            // An account already on IMAP (through Online Accounts) has
-            // its mail named for IMAP.
+            // An account already on IMAP (through Online Accounts) keeps
+            // its mail.
             match before {
                 MailRoute::Imap => Ok(()),
-                _ => rewrite_for_imap(c, id),
+                _ => empty_for_imap(c, id),
             }
         })
         .await?;
@@ -307,6 +319,36 @@ impl<E: MoveEngine, A: Accounts> Mover<'_, E, A> {
 }
 
 impl<E, A: Accounts> Mover<'_, E, A> {
+    /// Copies into the outbox the bytes of each of `id`'s waiting messages
+    /// that the old route keeps only in a Gmail draft. One that cannot be
+    /// read stays as it is; after the move it is sent from the draft, or
+    /// asks the person to check Sent, and never counts as sent unread.
+    async fn bring_bytes(&self, sync: &AccountSync, id: AccountId) {
+        let waiting = match self.db.read(move |c| outbox::bytes_on_server(c, id)).await {
+            Ok(waiting) => waiting,
+            Err(err) => {
+                tracing::warn!(account = id, error = %err, "could not list the outbox before the move");
+                return;
+            }
+        };
+        for (row, message_id) in waiting {
+            match sync.raw(&message_id).await {
+                Ok(raw) => {
+                    if let Err(err) = self
+                        .db
+                        .write(move |c| outbox::set_raw(c, row, &raw))
+                        .await
+                    {
+                        tracing::warn!(account = id, error = %err, "could not keep a waiting message's bytes");
+                    }
+                }
+                Err(err) => {
+                    tracing::warn!(account = id, error = %err, "could not read a waiting message's draft before the move");
+                }
+            }
+        }
+    }
+
     /// Deletes the app password `id` kept, once nothing reads it. A
     /// keyring that fails leaves it, unread, and says so in the log.
     async fn forget_password(&self, id: AccountId) {
@@ -343,39 +385,13 @@ impl<E, A: Accounts> Mover<'_, E, A> {
     }
 }
 
-/// Renames the account's stored mail for Gmail's IMAP: each user label's
-/// row takes its full name as id, so its mail stays filed, the outbox rows
-/// take their draft's message id, and the `drafts` rows go, since IMAP has
-/// message ids and no draft ids. System
-/// rows, categories and `$muted` stay. With [`API_IDS_MATCH`] false the
-/// account's messages go too, and the first IMAP sync lists them again.
-pub fn rewrite_for_imap(c: &Connection, id: AccountId) -> mailrs_store::Result<()> {
-    let listed = mailboxes::listed(c, id)?;
-    for (from, name) in mailboxes::user_ids_and_names(c, id)? {
-        let Some(old) = listed.iter().find(|mailbox| mailbox.id == from) else {
-            continue;
-        };
-        let renamed = RemoteMailbox {
-            id: name.clone(),
-            name,
-            kind: MailboxKind::Label,
-            role: None,
-            color: old.color.clone(),
-            hidden: old.hidden,
-        };
-        mailboxes::rename(c, id, &from, &renamed)?;
-    }
+/// Empties the account's stored mail for Gmail's IMAP, which lists it all
+/// again, and names each outbox row by its draft's message id, which is
+/// the draft's id on IMAP. The outbox, the local rules and the settings
+/// stay.
+pub fn empty_for_imap(c: &Connection, id: AccountId) -> mailrs_store::Result<()> {
     outbox::draft_ids_to_message_ids(c, id)?;
-    drafts::forget_account(c, id)?;
-    if !API_IDS_MATCH {
-        let mut stmt = c.prepare("SELECT id FROM messages WHERE account_id = ?1")?;
-        let gone: Vec<Change> = stmt
-            .query_map([id], |row| row.get::<_, String>(0))?
-            .map(|message_id| message_id.map(|message_id| Change::Gone { message_id }))
-            .collect::<Result<_, _>>()?;
-        messages::apply(c, id, &gone)?;
-    }
-    Ok(())
+    switch::empty_mail(c, id)
 }
 
 /// `OtherAddress` unless `authorized` signed in as `account`, whatever the
@@ -399,8 +415,8 @@ fn same_email(account: &Account, signed_in: &str) -> Result<(), MoveError> {
 
 /// Moves `account` to `own`, the client `authorized` signed in through.
 /// The address must be the account's, whatever its case. The route stays
-/// the API's and the sync state stays, so nothing downloads again. On a
-/// failure the client, the token and the consent stay as they were.
+/// the API's and so do the sync state and the stored mail. On a failure
+/// the client, the token and the consent stay as they were.
 pub async fn to_own_client(
     db: &Db,
     secrets: &Secrets,
@@ -427,13 +443,8 @@ pub async fn to_own_client(
 /// Writes `commit` for `id` and runs `rewrite` in the same transaction,
 /// so a failure in either leaves the account as it was.
 ///
-/// The move from the API to IMAP passes the closure that rewrites the
-/// stored mail for its new names. That closure must give user `mailboxes`
-/// rows their full name as id, keep the system rows `INBOX`, `SENT`,
-/// `TRASH`, `SPAM`, `DRAFT`, `STARRED` and `IMPORTANT` as they are, delete
-/// the account's `drafts` rows, and leave the `CATEGORY_*` rows and
-/// `$muted` alone. It writes no `remote_refs`: the first IMAP sync writes
-/// them through `RemoteChange::Located`.
+/// The move from the API to IMAP passes [`empty_for_imap`], which empties
+/// the stored mail for the first IMAP sync to list again.
 pub async fn commit(
     db: &Db,
     id: AccountId,

@@ -63,7 +63,7 @@ pub fn build(accounts: &[Account], choose: impl Fn() + 'static) -> Sheet {
     let heading_text = gettext("Choose how Penguin Mail signs in to Gmail");
     // Translators: Google and Gmail are names; keep them as they are.
     let body_text = gettext(
-        "Penguin Mail has new ways to sign in to Google. Pick one for each Gmail account below to keep your mail arriving. Your mail and settings stay as they are, and nothing downloads again.",
+        "Penguin Mail has new ways to sign in to Google. Pick one for each Gmail account below to keep your mail arriving. Your mail and settings stay as they are.",
     );
     let heading = gtk::Label::builder()
         .label(heading_text.as_str())

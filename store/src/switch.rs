@@ -360,3 +360,51 @@ pub fn adopt_jmap(
         rules_off,
     }))
 }
+
+/// Empties a Gmail account's stored mail for a move from the Gmail API to
+/// Gmail's IMAP, which then lists it all again from the server: messages
+/// and threads with everything kept beside them, mailboxes, draft pairs
+/// and server names. The outbox, the local rules (which take each label's
+/// IMAP name, its full name) and the account's settings stay.
+pub fn empty_mail(conn: &Connection, account_id: AccountId) -> Result<()> {
+    let names: HashMap<String, String> = crate::mailboxes::user_ids_and_names(conn, account_id)?
+        .into_iter()
+        .collect();
+    for mut rule in local_rules::list(conn, account_id)? {
+        let mut changed = false;
+        for set in rule
+            .action
+            .add
+            .iter_mut()
+            .chain(rule.action.remove.iter_mut())
+        {
+            if let MailSet::Mailbox(id) = set
+                && let Some(name) = names.get(id.as_str())
+                && name != id
+            {
+                *id = name.clone();
+                changed = true;
+            }
+        }
+        if changed && let Some(id) = rule.id.clone() {
+            local_rules::replace(conn, account_id, &id, &rule)?;
+        }
+    }
+    // Messages and threads take the rows that name them through their
+    // foreign keys; the loose tables go by hand. `local_rules_ran` stays,
+    // so a rule does not run again on mail it ran on.
+    for table in [
+        "drafts",
+        "invitations",
+        "receipts",
+        "messages",
+        "threads",
+        "mailboxes",
+    ] {
+        conn.execute(
+            &format!("DELETE FROM {table} WHERE account_id = ?1"),
+            params![account_id],
+        )?;
+    }
+    Ok(())
+}

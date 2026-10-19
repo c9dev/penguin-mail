@@ -19,8 +19,6 @@ use mailrs_sync::{
 };
 use tokio::io::AsyncWriteExt;
 
-mod gmail_ids;
-
 use mailrs_sync::config::{Config, config_path, data_dir, migrate_old_dirs, secure_dirs};
 use mailrs_sync::lock::{LockError, SyncLock};
 use mailrs_sync::mailbox::Standard;
@@ -74,14 +72,6 @@ enum Command {
     /// Report why a message may look blank, in counts alone. It prints no
     /// mail, so its output is safe to share.
     Diagnose { account: String, thread_id: String },
-    /// Compare Gmail's IMAP message ids with the ones stored from the API.
-    #[command(hide = true)]
-    GmailIds {
-        address: String,
-        /// How many of the newest messages in All Mail to compare.
-        #[arg(long, default_value_t = 20)]
-        count: usize,
-    },
     /// Apply archive, read, unread, star, unstar, trash, label:ID, or unlabel:ID to a thread.
     Triage {
         account: String,
@@ -158,10 +148,6 @@ async fn run() -> Result<()> {
         }
         Command::Diagnose { account, thread_id } => {
             diagnose(&db, &load_config()?, &account, &thread_id).await
-        }
-        Command::GmailIds { address, count } => {
-            let code = gmail_ids::run(&db, &address, count).await?;
-            std::process::exit(i32::from(code));
         }
         Command::Triage {
             account,

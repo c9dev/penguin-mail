@@ -235,11 +235,11 @@ impl Core {
                     outbox: &outbox,
                 };
                 let id = account.id;
-                // The move from the API to IMAP renames the stored mail
-                // for IMAP. An account already on IMAP stays there, so no
-                // other rewrite is needed.
+                // The move from the API to IMAP empties the stored mail,
+                // which the first IMAP sync lists again. An account already
+                // on IMAP stays there and keeps it.
                 let rewrite: route_move::RewriteMail =
-                    Box::new(move |c| route_move::rewrite_for_imap(c, id));
+                    Box::new(move |c| route_move::empty_for_imap(c, id));
                 let moved = mover
                     .to_goa(&account, &goa_account, linked, Some(rewrite), || ())
                     .await?;

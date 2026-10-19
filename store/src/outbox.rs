@@ -362,3 +362,20 @@ pub fn draft_ids_to_message_ids(conn: &Connection, account_id: AccountId) -> Res
     )?;
     Ok(())
 }
+
+/// The account's rows whose bytes are only in a server draft: their row
+/// ids and the draft's message ids.
+pub fn bytes_on_server(conn: &Connection, account_id: AccountId) -> Result<Vec<(i64, String)>> {
+    let mut stmt = conn.prepare(
+        "SELECT id, message_id FROM outbox \
+         WHERE account_id = ?1 AND raw IS NULL AND message_id IS NOT NULL",
+    )?;
+    let rows = stmt.query_map(params![account_id], |row| Ok((row.get(0)?, row.get(1)?)))?;
+    Ok(rows.collect::<std::result::Result<_, _>>()?)
+}
+
+/// Keeps `raw` as the bytes row `id` sends.
+pub fn set_raw(conn: &Connection, id: i64, raw: &[u8]) -> Result<()> {
+    conn.execute("UPDATE outbox SET raw = ?2 WHERE id = ?1", params![id, raw])?;
+    Ok(())
+}
