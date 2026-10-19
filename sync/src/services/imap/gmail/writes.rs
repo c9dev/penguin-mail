@@ -37,6 +37,17 @@ fn runs(placed: Vec<(String, Location)>, limit: usize) -> Vec<Vec<(String, Locat
     runs
 }
 
+/// Whether a message moved back to All Mail from Trash or Spam goes to
+/// the Inbox: when the ops add the Inbox, or name no other label and do
+/// not take the Inbox away.
+fn inbox_on_restore(add: &[String], remove: &[String]) -> bool {
+    let other_label = add
+        .iter()
+        .filter(|l| !matches!(l.as_str(), "TRASH" | "SPAM" | "INBOX" | "IMPORTANT" | "MUTE"))
+        .any(|l| imap_label(l).is_some());
+    add.iter().any(|l| l == "INBOX") || (!other_label && !remove.iter().any(|l| l == "INBOX"))
+}
+
 impl<I: ImapApi, S: Submit> Imap<I, S> {
     /// Applies `ops` to the messages `names`, a run at a time.
     pub(in crate::services::imap) async fn gm_write(
@@ -119,18 +130,19 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
     ) -> Result<(), BackendError> {
         let named = |list: &[String], id: &str| list.iter().any(|l| l == id);
         let moving = |id: &str| !matches!(id, "TRASH" | "SPAM");
-        // Labels and flags first, where the message is now.
+        let adds: Vec<String> = add
+            .iter()
+            .filter(|l| moving(l))
+            .filter_map(|l| imap_label(l))
+            .collect();
+        let removes: Vec<String> = remove
+            .iter()
+            .filter(|l| moving(l))
+            .filter_map(|l| imap_label(l))
+            .collect();
+        // Labels and flags first, where the message is now. In Trash or
+        // Spam the labels wait for the move back to All Mail.
         if at == Where::AllMail {
-            let adds: Vec<String> = add
-                .iter()
-                .filter(|l| moving(l))
-                .filter_map(|l| imap_label(l))
-                .collect();
-            let removes: Vec<String> = remove
-                .iter()
-                .filter(|l| moving(l))
-                .filter_map(|l| imap_label(l))
-                .collect();
             self.api.store_labels(mailbox, uids, true, &adds).await?;
             self.api
                 .store_labels(mailbox, uids, false, &removes)
@@ -173,12 +185,16 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
         if let Some(to) = target {
             let landed = self.gm_move(mailbox, run, uids, to).await?;
             if to == trio.all {
-                // Restoring from Trash or Spam puts the message back in
-                // the Inbox.
+                // Back in All Mail, the message takes the labels the ops
+                // name. A restore that names no label of its own, and
+                // does not archive, puts it back in the Inbox.
                 let back = UidSet::from_uids(landed.iter().map(|(_, at)| at.uid));
-                self.api
-                    .store_labels(to, &back, true, &["\\Inbox".to_string()])
-                    .await?;
+                let mut adds = adds;
+                if inbox_on_restore(add, remove) && !named(&adds, "\\Inbox") {
+                    adds.push("\\Inbox".to_string());
+                }
+                self.api.store_labels(to, &back, true, &adds).await?;
+                self.api.store_labels(to, &back, false, &removes).await?;
             }
             relocated.extend(landed.into_iter().map(|(from, to)| Relocated { from, to }));
         }
