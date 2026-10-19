@@ -159,7 +159,8 @@ async fn a_move_signed_in_as_another_address_changes_nothing() {
     assert_eq!(secrets.google.load("me@example.com").unwrap(), None);
 }
 
-/// Hands out the token it holds and refuses to keep another.
+/// Hands out the token it holds and refuses to keep another. A delete
+/// takes the token away, so a move that deletes it shows.
 struct RefusingTokens(Mutex<Option<String>>);
 
 impl TokenStore for RefusingTokens {
@@ -170,6 +171,7 @@ impl TokenStore for RefusingTokens {
         Err(GmailError::Keyring("locked".into()))
     }
     fn delete(&self, _: &str) -> Result<(), GmailError> {
+        *self.0.lock().unwrap() = None;
         Ok(())
     }
 }

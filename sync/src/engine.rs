@@ -389,6 +389,7 @@ async fn run_account(
                 Failure::Paused => {
                     tracing::warn!(
                         account = sync.account_id(),
+                        error = %err,
                         "Google ended the mail grant; mail is paused"
                     );
                     report(&sync, AccountState::MailPaused).await;

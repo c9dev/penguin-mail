@@ -399,6 +399,47 @@ async fn an_insufficient_permissions_answer_pauses_mail() {
     assert_eq!(stored_state(&s).await, AccountState::MailPaused);
 }
 
+/// What the code logs at warning level while `run` runs, on this thread.
+async fn warnings<F: std::future::Future>(run: F) -> String {
+    #[derive(Clone, Default)]
+    struct Log(Arc<std::sync::Mutex<Vec<u8>>>);
+    impl std::io::Write for Log {
+        fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
+            self.0.lock().unwrap().extend_from_slice(bytes);
+            Ok(bytes.len())
+        }
+        fn flush(&mut self) -> std::io::Result<()> {
+            Ok(())
+        }
+    }
+    let log = Log::default();
+    let writer = log.clone();
+    let subscriber = tracing_subscriber::fmt()
+        .with_max_level(tracing::Level::WARN)
+        .with_ansi(false)
+        .with_writer(move || writer.clone())
+        .finish();
+    let _guard = tracing::subscriber::set_default(subscriber);
+    run.await;
+    String::from_utf8(log.0.lock().unwrap().clone()).unwrap()
+}
+
+#[tokio::test]
+async fn the_pause_line_says_what_google_answered() {
+    let s = setup().await;
+    s.fake.fail_next(GmailError::NeedsReauth);
+    let said = warnings(async {
+        s.engine.start_account(1, built_in_gmail(&s));
+        wait_for(&s.events, reached(AccountState::MailPaused)).await;
+    })
+    .await;
+    let line = said
+        .lines()
+        .find(|line| line.contains("mail is paused"))
+        .unwrap_or_else(|| panic!("no pause line in {said:?}"));
+    assert!(line.contains("error="), "{line}");
+}
+
 #[tokio::test]
 async fn an_invalid_grant_pauses_mail() {
     let s = setup().await;
