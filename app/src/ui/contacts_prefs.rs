@@ -30,7 +30,8 @@ pub fn calendar_page(
         .name("calendar")
         .build();
     let missed = |id, missing| app.core.missed(id, missing);
-    let (calendar, online) = calendar(accounts, &withheld, &missed, grant, calendar_rows);
+    let known = |email: &str| crate::goa::known(&app.core, email);
+    let (calendar, online) = calendar(accounts, &withheld, &missed, &known, grant, calendar_rows);
     page.add(&calendar);
     if let Some(online) = online {
         page.add(&online);
@@ -343,6 +344,7 @@ fn calendar(
     accounts: &[(Account, Offers)],
     withheld: &impl Fn(AccountId) -> Withheld,
     missed: &impl Fn(AccountId, Missing) -> Option<Miss>,
+    known: &impl Fn(&str) -> Option<bool>,
     grant: impl Fn(AccountId) + Clone + 'static,
     settings_rows: &[gtk::Widget],
 ) -> (adw::PreferencesGroup, Option<adw::PreferencesGroup>) {
@@ -415,7 +417,7 @@ fn calendar(
         if !online_accounts {
             continue;
         }
-        let Some(known) = crate::goa::known(&account.email) else {
+        let Some(known) = known(&account.email) else {
             // No Online Accounts on this desktop: there is nothing to add
             // the account to, so the rows would only say so.
             online_accounts = false;
@@ -441,9 +443,11 @@ fn calendar(
                 ),
             );
             add.connect_clicked(|_| {
-                if let Err(err) = crate::goa::open_online_accounts() {
-                    tracing::warn!(error = %err, "could not open Online Accounts");
-                }
+                gtk::glib::spawn_future_local(async {
+                    if let Err(err) = crate::goa::open_online_accounts().await {
+                        tracing::warn!(error = %err, "could not open Online Accounts");
+                    }
+                });
             });
             row.add_suffix(&add);
         }

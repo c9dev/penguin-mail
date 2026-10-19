@@ -2757,6 +2757,7 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "wiremock",
+ "zbus",
 ]
 
 [[package]]

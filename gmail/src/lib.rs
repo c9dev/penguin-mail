@@ -22,7 +22,8 @@ pub use calendar::{
     CALENDARS_SCOPE, google_event,
 };
 pub use client::{
-    Authorized, BATCH_LIMIT, GMAIL_API_BASE, GmailClient, authorize, cost, one_click_unsubscribe,
+    AccessSource, Authorized, BATCH_LIMIT, GMAIL_API_BASE, GmailClient, api_http_client, authorize,
+    authorize_hinted, cost, one_click_unsubscribe,
 };
 pub use convert::{HistoryChange, HistoryPage};
 pub use drive::DRIVE_UPLOAD_BASE;

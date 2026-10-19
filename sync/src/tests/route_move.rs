@@ -15,12 +15,13 @@ use super::{Connected, Harness, eventually, harness};
 use crate::fake::meta;
 use crate::passwords::{MemoryPasswords, PasswordStore, Passwords, Secrets};
 use crate::route_move::{
-    DRAIN_WAIT, MoveEngine, MoveError, Mover, commit, drain, needs_move, rewrite_for_imap,
-    to_own_client,
+    DRAIN_WAIT, MoveEngine, MoveError, Mover, RewriteMail, commit, drain, needs_move,
+    rewrite_for_imap, to_own_client,
 };
 use crate::sign_in::app_password::NewGmailImap;
+use crate::sign_in::goa_link::Linked;
 use crate::sign_in::own_client::OwnClient;
-use crate::{Outbox, Posted, SyncError, TriageAction, now_millis};
+use crate::{BackendError, Outbox, Posted, SyncError, TriageAction, now_millis};
 
 const OLD_GRANTED: &str = "openid email gmail.modify";
 const OLD_ASKED: &str = "openid email gmail.modify calendar";
@@ -740,4 +741,163 @@ async fn a_move_to_imap_whose_keyring_refuses_keeps_the_api_route() {
     assert_eq!(route(&h.db, h.account_id).await, MailRoute::GmailApi);
     assert_eq!(count(&h.db, "drafts").await, kept_drafts);
     assert_eq!(steps.done(), ["stop", "start on BuiltIn"]);
+}
+
+fn goa_dana(identity: &str) -> crate::goa::GoaAccount {
+    crate::goa::GoaAccount {
+        id: "account_1_0".into(),
+        identity: identity.into(),
+        presentation: identity.into(),
+        mail_disabled: false,
+        attention_needed: false,
+    }
+}
+
+async fn goa_id(db: &Db, id: i64) -> Option<String> {
+    db.read(move |c| accounts::goa_id(c, id)).await.unwrap()
+}
+
+/// Rewrites the account's stored mail for its new route, as the move
+/// from the API to IMAP does: here it only drops the draft rows.
+fn drop_drafts(id: i64) -> Option<RewriteMail> {
+    Some(Box::new(move |c| drafts::forget(c, id, "d1")))
+}
+
+#[tokio::test]
+async fn a_built_in_api_account_moves_to_goa_imap_with_the_rewrite_in_one_step() {
+    let h = built_in_account().await;
+    let secrets = Secrets::memory();
+    let steps = Steps::new(&h);
+    let outbox = outbox_of(&h);
+    let mover = Mover {
+        engine: &steps,
+        db: &h.db,
+        secrets: &secrets,
+        outbox: &outbox,
+    };
+
+    let moved = mover
+        .to_goa(
+            &account(&h).await,
+            &goa_dana("me@example.com"),
+            Linked::Imap,
+            drop_drafts(h.account_id),
+            || steps.note("committed"),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(moved.id, h.account_id);
+    assert_eq!(steps.done(), ["committed", "stop", "start on Goa"]);
+    assert_eq!(client(&h.db, h.account_id).await, SignInClient::Goa);
+    assert_eq!(route(&h.db, h.account_id).await, MailRoute::Imap);
+    assert_eq!(sync_state(&h.db, h.account_id).await, None);
+    assert_eq!(count(&h.db, "drafts").await, 0, "the rewrite ran");
+    assert_eq!(
+        goa_id(&h.db, h.account_id).await.as_deref(),
+        Some("account_1_0")
+    );
+}
+
+#[tokio::test]
+async fn a_move_to_goa_without_a_rewrite_for_another_route_stops_nothing() {
+    let h = built_in_account().await;
+    let secrets = Secrets::memory();
+    let steps = Steps::new(&h);
+    let outbox = outbox_of(&h);
+    let mover = Mover {
+        engine: &steps,
+        db: &h.db,
+        secrets: &secrets,
+        outbox: &outbox,
+    };
+
+    let refused = mover
+        .to_goa(
+            &account(&h).await,
+            &goa_dana("me@example.com"),
+            Linked::Imap,
+            None,
+            || steps.note("committed"),
+        )
+        .await;
+
+    assert!(
+        matches!(
+            refused,
+            Err(MoveError::Sync(SyncError::Backend(
+                BackendError::Unsupported
+            )))
+        ),
+        "{:?}",
+        refused.map(|_| ())
+    );
+    assert_eq!(steps.done(), Vec::<String>::new());
+    assert_eq!(client(&h.db, h.account_id).await, SignInClient::BuiltIn);
+    assert_eq!(route(&h.db, h.account_id).await, MailRoute::GmailApi);
+}
+
+#[tokio::test]
+async fn an_app_password_account_moves_to_goa_imap_without_a_resync() {
+    let h = built_in_account().await;
+    let id = h.account_id;
+    h.db.write(move |c| accounts::set_mail_route(c, id, MailRoute::Imap))
+        .await
+        .unwrap();
+    let secrets = Secrets::memory();
+    let steps = Steps::new(&h);
+    let outbox = outbox_of(&h);
+    let mover = Mover {
+        engine: &steps,
+        db: &h.db,
+        secrets: &secrets,
+        outbox: &outbox,
+    };
+
+    mover
+        .to_goa(
+            &account(&h).await,
+            &goa_dana("me@example.com"),
+            Linked::Imap,
+            None,
+            || (),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(client(&h.db, id).await, SignInClient::Goa);
+    assert_eq!(sync_state(&h.db, id).await.as_deref(), Some("777"));
+    assert_eq!(goa_id(&h.db, id).await.as_deref(), Some("account_1_0"));
+}
+
+#[tokio::test]
+async fn a_move_to_another_goa_address_ends_before_the_account_stops() {
+    let h = built_in_account().await;
+    let secrets = Secrets::memory();
+    let steps = Steps::new(&h);
+    let outbox = outbox_of(&h);
+    let mover = Mover {
+        engine: &steps,
+        db: &h.db,
+        secrets: &secrets,
+        outbox: &outbox,
+    };
+
+    let refused = mover
+        .to_goa(
+            &account(&h).await,
+            &goa_dana("other@example.com"),
+            Linked::Imap,
+            drop_drafts(h.account_id),
+            || steps.note("committed"),
+        )
+        .await;
+
+    assert!(matches!(
+        refused,
+        Err(MoveError::OtherAddress { ref signed_in, ref wanted })
+            if signed_in == "other@example.com" && wanted == "me@example.com"
+    ));
+    assert_eq!(steps.done(), Vec::<String>::new());
+    assert_eq!(client(&h.db, h.account_id).await, SignInClient::BuiltIn);
 }

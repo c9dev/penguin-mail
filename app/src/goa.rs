@@ -1,26 +1,16 @@
-//! Whether GNOME already knows an account.
-//!
-//! GNOME Online Accounts signs an address in once and hands it to the rest
-//! of the desktop, which is how GNOME Calendar gets the user's meetings
-//! and the shell clock lists them. Penguin Mail signs in for its own mail
-//! and tells GNOME nothing, so an address added here alone leaves the
-//! calendar empty however many invitations the inbox holds.
-//!
-//! This reads the file GNOME keeps its accounts in rather than asking the
-//! daemon over D-Bus: the answer settles one row in Preferences, and a
-//! file read that fails is an answer of its own.
+//! The desktop's Online Accounts, as the window meets it: which window
+//! opens it on this computer, and whether it holds an address. The D-Bus
+//! client and its tokens live in `mailrs_sync::goa`; the window reaches
+//! them only through `Core`.
 
-use std::path::{Path, PathBuf};
-
-use gtk::gio;
 use gtk::gio::prelude::AppInfoExt;
+use gtk::glib::prelude::ToVariant;
+use gtk::{gio, glib};
 
-/// The file GNOME Online Accounts keeps its accounts in, under the config
-/// directory.
-const ACCOUNTS: &str = "goa-1.0/accounts.conf";
+use crate::core::Core;
+use crate::packaging::Packaging;
 
 /// The desktop files of the app that adds an account, newest name first.
-/// Nothing is offered on a desktop that has neither.
 const SETTINGS: [&str; 2] = [
     "applications/org.gnome.Settings.desktop",
     "applications/gnome-control-center.desktop",
@@ -29,70 +19,137 @@ const SETTINGS: [&str; 2] = [
 /// What GNOME Settings is started with, and the panel to open.
 const PANEL: &str = "gnome-control-center online-accounts";
 
-/// Where `email` stands with GNOME: `None` on a desktop without Online
-/// Accounts, otherwise whether GNOME knows the address.
-pub fn known(email: &str) -> Option<bool> {
-    has_settings().then(|| known_in(&gtk::glib::user_config_dir(), email))
+/// What Linux Mint and other desktops ship to add an account.
+const STANDALONE: &str = "gnome-online-accounts-gtk";
+
+/// How the window opens Online Accounts.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Opener {
+    /// Starts GNOME Settings on its Online Accounts panel.
+    SettingsCommand,
+    /// Asks the running GNOME Settings to open that panel over D-Bus, which
+    /// a Flatpak or a Snap can do without running a program.
+    SettingsAction,
+    /// Starts the standalone window.
+    GoaGtk,
+    /// Nothing to open: the page names the applications menu.
+    Menu,
 }
 
-/// Opens Online Accounts in GNOME Settings.
-pub fn open_online_accounts() -> Result<(), gtk::glib::Error> {
-    let settings =
-        gio::AppInfo::create_from_commandline(PANEL, None, gio::AppInfoCreateFlags::NONE)?;
-    settings.launch(&[], gio::AppLaunchContext::NONE)
+/// Which way opens Online Accounts for a build of `packaging`.
+pub fn opener(packaging: Packaging, settings_installed: bool, goa_gtk_installed: bool) -> Opener {
+    if matches!(packaging, Packaging::Flatpak | Packaging::Snap) {
+        Opener::SettingsAction
+    } else if settings_installed {
+        Opener::SettingsCommand
+    } else if goa_gtk_installed {
+        Opener::GoaGtk
+    } else {
+        Opener::Menu
+    }
+}
+
+/// What opening came to.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Opened {
+    /// A window opened.
+    Window,
+    /// Nothing opened; the person goes to the applications menu.
+    Menu,
+}
+
+/// Opens Online Accounts. A failed D-Bus call from a sandbox falls back to
+/// the menu, since the person can still get there by hand.
+pub async fn open_online_accounts() -> Result<Opened, glib::Error> {
+    let packaging = crate::packaging::BUILT_FOR;
+    match opener(packaging, has_settings(), has_standalone()) {
+        Opener::SettingsCommand => launch(PANEL).map(|()| Opened::Window),
+        Opener::GoaGtk => launch(STANDALONE).map(|()| Opened::Window),
+        Opener::SettingsAction => Ok(match open_panel().await {
+            Ok(()) => Opened::Window,
+            Err(err) => {
+                tracing::warn!(error = %err, "could not open the Online Accounts panel");
+                Opened::Menu
+            }
+        }),
+        Opener::Menu => Ok(Opened::Menu),
+    }
+}
+
+fn launch(command: &str) -> Result<(), glib::Error> {
+    let app = gio::AppInfo::create_from_commandline(command, None, gio::AppInfoCreateFlags::NONE)?;
+    app.launch(&[], gio::AppLaunchContext::NONE)
+}
+
+/// `org.freedesktop.Application.ActivateAction("launch-panel", ...)` on
+/// GNOME Settings, which opens the panel. The call waits at most 20
+/// seconds.
+async fn open_panel() -> Result<(), glib::Error> {
+    let bus = gio::bus_get_future(gio::BusType::Session).await?;
+    let panel = ("online-accounts", Vec::<glib::Variant>::new()).to_variant();
+    let args = vec![panel];
+    let params = ("launch-panel", args, glib::VariantDict::new(None).end()).to_variant();
+    bus.call_future(
+        Some("org.gnome.Settings"),
+        "/org/gnome/Settings",
+        "org.freedesktop.Application",
+        "ActivateAction",
+        Some(&params),
+        None,
+        gio::DBusCallFlags::NONE,
+        20_000,
+    )
+    .await
+    .map(|_| ())
 }
 
 /// Whether this desktop has the app that adds an account.
 fn has_settings() -> bool {
-    let mut dirs = gtk::glib::system_data_dirs();
-    dirs.push(gtk::glib::user_data_dir());
+    let mut dirs = glib::system_data_dirs();
+    dirs.push(glib::user_data_dir());
     dirs.iter()
         .any(|dir| SETTINGS.iter().any(|file| dir.join(file).exists()))
 }
 
-/// Whether the accounts file under `config` names `email`. Every provider
-/// writes the address as an `Identity`, so one key covers Google and the
-/// rest alike. A file that is missing or unreadable names nobody.
-fn known_in(config: &Path, email: &str) -> bool {
-    let Ok(text) = std::fs::read_to_string(PathBuf::from(config).join(ACCOUNTS)) else {
-        return false;
-    };
-    text.lines().any(|line| {
-        line.split_once('=').is_some_and(|(key, value)| {
-            key.trim().ends_with("Identity") && value.trim().eq_ignore_ascii_case(email.trim())
-        })
-    })
+fn has_standalone() -> bool {
+    glib::find_program_in_path(STANDALONE).is_some()
+}
+
+/// Where `email` stands with Online Accounts, from the list `core` last
+/// read: `None` when it could not be reached, otherwise whether it holds
+/// the address.
+pub fn known(core: &Core, email: &str) -> Option<bool> {
+    core.goa_holds(email)
 }
 
 #[cfg(test)]
 mod tests {
-    use super::known_in;
-
-    fn accounts(dir: &std::path::Path, text: &str) {
-        std::fs::create_dir_all(dir.join("goa-1.0")).unwrap();
-        std::fs::write(dir.join(super::ACCOUNTS), text).unwrap();
-    }
+    use super::*;
 
     #[test]
-    fn an_address_gnome_signed_in_is_known() {
-        let dir = tempfile::tempdir().unwrap();
-        accounts(
-            dir.path(),
-            "[Account account_1702051234_0]\n\
-             Provider=google\n\
-             Identity=Dana.Reyes@example.com\n\
-             PresentationIdentity=dana.reyes@example.com\n\
-             CalendarEnabled=true\n",
+    fn a_flatpak_opens_the_panel_through_gnome_settings() {
+        assert_eq!(
+            opener(Packaging::Flatpak, false, false),
+            Opener::SettingsAction
         );
-        assert!(known_in(dir.path(), "dana.reyes@example.com"));
-        assert!(!known_in(dir.path(), "someone@example.com"));
+        assert_eq!(opener(Packaging::Snap, true, true), Opener::SettingsAction);
     }
 
     #[test]
-    fn a_desktop_with_no_online_accounts_knows_nobody() {
-        let dir = tempfile::tempdir().unwrap();
-        assert!(!known_in(dir.path(), "dana.reyes@example.com"));
-        accounts(dir.path(), "not a key file at all");
-        assert!(!known_in(dir.path(), "dana.reyes@example.com"));
+    fn gnome_settings_wins_over_the_standalone_window() {
+        assert_eq!(
+            opener(Packaging::Native, true, true),
+            Opener::SettingsCommand
+        );
+    }
+
+    #[test]
+    fn off_gnome_the_standalone_window_opens() {
+        assert_eq!(opener(Packaging::Arch, false, true), Opener::GoaGtk);
+    }
+
+    #[test]
+    fn with_neither_the_page_names_the_menu() {
+        assert_eq!(opener(Packaging::Rpm, false, false), Opener::Menu);
     }
 }

@@ -154,6 +154,9 @@ pub enum SignInClient {
     Own,
     /// The project's client, compiled into the build.
     BuiltIn,
+    /// The desktop's Online Accounts: its sign-in carries the mail, and
+    /// the built-in client still carries the calendar and contacts.
+    Goa,
 }
 
 impl SignInClient {
@@ -161,6 +164,7 @@ impl SignInClient {
         match self {
             SignInClient::Own => "own",
             SignInClient::BuiltIn => "built_in",
+            SignInClient::Goa => "goa",
         }
     }
 }
@@ -172,6 +176,7 @@ impl FromStr for SignInClient {
         match s {
             "own" => Ok(SignInClient::Own),
             "built_in" => Ok(SignInClient::BuiltIn),
+            "goa" => Ok(SignInClient::Goa),
             other => Err(UnknownVariant(other.to_string())),
         }
     }
@@ -731,6 +736,15 @@ pub(crate) mod tests {
         }
         assert_eq!(MailRoute::default(), MailRoute::GmailApi);
         assert!("pigeon".parse::<MailRoute>().is_err());
+    }
+
+    #[test]
+    fn sign_in_clients_round_trip_through_their_names() {
+        use crate::SignInClient;
+        for client in [SignInClient::Own, SignInClient::BuiltIn, SignInClient::Goa] {
+            assert_eq!(client.as_str().parse::<SignInClient>(), Ok(client));
+        }
+        assert_eq!(SignInClient::Goa.as_str(), "goa");
     }
 
     #[test]

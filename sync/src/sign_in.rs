@@ -5,6 +5,7 @@
 pub mod app_password;
 mod browser;
 mod browser_grant;
+pub mod goa_link;
 mod jmap_browser;
 pub mod own_client;
 
@@ -78,7 +79,9 @@ pub(crate) async fn client_of<P: PasswordStore + 'static>(
         SignInClient::Own => own_client_of(config, kept, id)
             .await?
             .map(|own| own.oauth()),
-        SignInClient::BuiltIn => built_in,
+        // The mail comes from Online Accounts; the calendar, contacts and
+        // Drive come from the built-in client's own token.
+        SignInClient::BuiltIn | SignInClient::Goa => built_in,
     })
 }
 
@@ -205,6 +208,35 @@ pub async fn google_signed_in(
         Some(_) => SignInClient::Own,
         None => SignInClient::BuiltIn,
     };
+    google_signed_in_as(
+        db,
+        secrets,
+        email,
+        refresh_token,
+        now,
+        granted,
+        asked,
+        kind,
+        own,
+    )
+    .await
+}
+
+/// [`google_signed_in`] with the account's client named, for an account
+/// whose token is the built-in client's but whose client stays another:
+/// an Online Accounts account that adds its calendar.
+#[allow(clippy::too_many_arguments)]
+pub async fn google_signed_in_as(
+    db: &Db,
+    secrets: &Secrets,
+    email: &str,
+    refresh_token: &str,
+    now: EpochMillis,
+    granted: Option<&str>,
+    asked: &str,
+    kind: SignInClient,
+    own: Option<&OwnClient>,
+) -> Result<Account, SignInError> {
     let address = email.to_string();
     let before = db
         .read(move |c| match accounts::account_by_email(c, &address)? {
@@ -1765,6 +1797,7 @@ mod tests {
             config: Config::default(),
             clients: Clients::default().with_chosen(chosen),
             secrets: secrets.clone(),
+            goa: crate::goa::session(),
         }
     }
 

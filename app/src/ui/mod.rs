@@ -22,6 +22,7 @@ pub mod dav_edit;
 pub mod disclosure;
 pub mod find;
 pub mod gmail_password_page;
+pub mod goa_page;
 pub mod hide_my_email;
 pub mod ics_file;
 pub mod invitation;

@@ -14,6 +14,7 @@ mod engine;
 mod error;
 pub mod events;
 pub mod export;
+pub mod goa;
 pub mod hidden;
 pub mod invitations;
 pub mod lock;

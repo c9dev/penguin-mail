@@ -4,6 +4,7 @@
 
 use mailrs_domain::translate::gettext;
 use mailrs_sync::Clients;
+use mailrs_sync::goa::{self, GoaAccount, GoaError};
 
 /// Whether the own-project setup flow exists in this build.
 pub const OWN_PROJECT_SETUP: bool = true;
@@ -24,16 +25,12 @@ impl Platform {
     }
 }
 
-/// What GNOME Online Accounts offers for the address being signed in.
+/// What the desktop's Online Accounts offers for the address being signed in.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Goa {
     /// Not on this computer.
     Absent,
     /// On this computer, without the address.
-    #[cfg_attr(
-        not(test),
-        expect(dead_code, reason = "the GNOME Online Accounts plan reads it")
-    )]
     Present,
     /// On this computer and already signed in as the address.
     Holds,
@@ -68,12 +65,22 @@ pub struct RouteRow {
     pub recommended: bool,
 }
 
-/// What this build can run now. The GNOME Online Accounts and password
-/// plans fill their fields; the caller says whether a project is kept,
-/// which takes the keyring.
-pub fn ready_now(clients: &Clients) -> Ready {
+/// Where Online Accounts stands for `email`, from the list it answered:
+/// absent on any error, holding the address when it lists it, else present.
+pub fn goa_state(list: &Result<Vec<GoaAccount>, GoaError>, email: Option<&str>) -> Goa {
+    match list {
+        Err(_) => Goa::Absent,
+        Ok(list) => match email {
+            Some(email) if goa::find(list, None, email).is_some() => Goa::Holds,
+            _ => Goa::Present,
+        },
+    }
+}
+
+/// What this build can run now. The own-project and password routes are always ready; the caller says whether a project is kept.
+pub fn ready_now(clients: &Clients, goa: Goa) -> Ready {
     Ready {
-        goa: Goa::Absent,
+        goa,
         app_password: true,
         own_project: OWN_PROJECT_SETUP || matches!(clients.own_google, Some(Ok(_))),
         saved_project: false,
@@ -113,6 +120,15 @@ pub fn rows(platform: Platform, ready: Ready) -> Vec<RouteRow> {
     rows
 }
 
+/// The rows under "Other ways to sign in": the same list without the
+/// Online Accounts row, which the page before it already offered.
+pub fn rows_without_goa(platform: Platform, ready: Ready) -> Vec<RouteRow> {
+    rows(platform, ready)
+        .into_iter()
+        .filter(|row| row.route != Route::Goa)
+        .collect()
+}
+
 /// Whether any row would show.
 pub fn any_route(platform: Platform, ready: Ready) -> bool {
     !rows(platform, ready).is_empty()
@@ -132,12 +148,15 @@ pub fn footer(platform: Platform, ready: Ready) -> Option<String> {
 fn goa_row(goa: Goa) -> RouteRow {
     RouteRow {
         route: Route::Goa,
-        // Translators: GNOME Online Accounts is a name; keep it as it is.
-        title: gettext("Use GNOME Online Accounts"),
+        title: if goa == Goa::Holds {
+            gettext("Use the Google account on this computer")
+        } else {
+            gettext("Add your Google account to this computer")
+        },
         subtitle: if goa == Goa::Holds {
             gettext("Already signed in on this computer")
         } else {
-            gettext("Recommended. Every feature, signs in through your desktop.")
+            gettext("Mail, calendar and contacts")
         },
         recommended: false,
     }
@@ -242,12 +261,46 @@ mod tests {
     }
 
     #[test]
-    fn goa_present_but_not_holding_the_address_recommends_itself_in_words() {
-        let rows = rows(Platform::Linux, ready(Goa::Present));
-        assert_eq!(
-            rows[0].subtitle,
-            "Recommended. Every feature, signs in through your desktop."
-        );
+    fn the_goa_row_says_this_computer_and_never_gnome() {
+        let holds = rows(Platform::Linux, ready(Goa::Holds));
+        assert_eq!(holds[0].title, "Use the Google account on this computer");
+        let present = rows(Platform::Linux, ready(Goa::Present));
+        assert_eq!(present[0].title, "Add your Google account to this computer");
+        assert_eq!(present[0].subtitle, "Mail, calendar and contacts");
+        for row in holds.iter().chain(&present) {
+            assert!(!row.title.contains("GNOME"), "{}", row.title);
+            assert!(!row.subtitle.contains("GNOME"), "{}", row.subtitle);
+        }
+    }
+
+    #[test]
+    fn other_ways_leave_out_the_goa_row() {
+        let routes: Vec<Route> = rows_without_goa(Platform::Linux, ready(Goa::Holds))
+            .iter()
+            .map(|r| r.route)
+            .collect();
+        assert_eq!(routes, [Route::AppPassword, Route::OwnProject]);
+    }
+
+    #[test]
+    fn an_unreachable_online_accounts_counts_as_absent() {
+        let down = Err(GoaError::Unreachable("x".into()));
+        assert_eq!(goa_state(&down, Some("a@b.com")), Goa::Absent);
+    }
+
+    #[test]
+    fn online_accounts_holds_the_address_or_only_exists() {
+        let dana = GoaAccount {
+            id: "account_1_0".into(),
+            identity: "Dana@Example.com".into(),
+            presentation: "Dana@Example.com".into(),
+            mail_disabled: false,
+            attention_needed: false,
+        };
+        let list = Ok(vec![dana]);
+        assert_eq!(goa_state(&list, Some(" dana@example.com ")), Goa::Holds);
+        assert_eq!(goa_state(&list, Some("other@example.com")), Goa::Present);
+        assert_eq!(goa_state(&list, None), Goa::Present);
     }
 
     #[test]
@@ -320,15 +373,15 @@ mod tests {
     #[test]
     fn this_build_offers_the_own_project_setup_without_any_client() {
         let none = mailrs_sync::Clients::default();
-        assert!(ready_now(&none).own_project);
-        assert!(!ready_now(&none).saved_project);
+        assert!(ready_now(&none, Goa::Absent).own_project);
+        assert!(!ready_now(&none, Goa::Absent).saved_project);
         let named = mailrs_sync::Clients {
             own_google: Some(Ok(mailrs_sync::sign_in::own_client::OwnClient::new(
                 "id", "secret",
             ))),
             ..Default::default()
         };
-        assert!(ready_now(&named).own_project);
+        assert!(ready_now(&named, Goa::Absent).own_project);
         assert_eq!(title(), "Choose how Penguin Mail signs in to Gmail");
     }
 }

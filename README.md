@@ -38,8 +38,9 @@ menu.
 Gmail accounts sign in in up to three ways, and you pick one for each
 account:
 
-- **Use GNOME Online Accounts** (Linux). Every feature, signed in through
-  your desktop.
+- **Use the Google account on this computer** (Linux). Mail, calendar and
+  contacts, signed in through your computer's Online Accounts, with no
+  new password.
 - **Use a password from Google.** Quick. You get mail, calendar and
   contacts.
 - **Set up your own Google project.** Every Gmail feature, on Linux and

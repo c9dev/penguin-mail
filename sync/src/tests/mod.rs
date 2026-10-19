@@ -20,6 +20,7 @@ mod event_change;
 mod event_types;
 mod export;
 mod finding;
+mod goa_connect;
 pub(crate) mod heap;
 mod imap;
 mod imap_services;

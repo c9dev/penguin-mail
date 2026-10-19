@@ -21,7 +21,7 @@ use crate::sign_in::{
 };
 use crate::{Clients, Connected, Connector, Lacks, WhenGrantEnds};
 
-async fn store() -> (Db, tempfile::TempDir) {
+pub(super) async fn store() -> (Db, tempfile::TempDir) {
     let dir = tempfile::tempdir().unwrap();
     let db = Db::open(&dir.path().join("mail.db")).unwrap();
     (db, dir)
@@ -49,6 +49,7 @@ fn connector(db: &Db, clients: Clients) -> Connector {
         config: Config::default(),
         clients,
         secrets: Secrets::memory(),
+        goa: crate::goa::session(),
     }
 }
 
@@ -61,7 +62,7 @@ fn saved(host: &str, port: u16, user: &str) -> Saved {
     }
 }
 
-async fn gmail_account(db: &Db) -> Account {
+pub(super) async fn gmail_account(db: &Db) -> Account {
     db.write(|c| accounts::insert_account(c, "me@gmail.com", 0))
         .await
         .unwrap();
@@ -2317,7 +2318,10 @@ fn id_token(email: &str) -> String {
 /// The built-in client against a token endpoint that answers with an ID
 /// token for `email`. The "browser" is a request to the redirect the
 /// sign-in listens on.
-async fn built_in_clients_answering(server: &wiremock::MockServer, email: &str) -> Clients {
+pub(super) async fn built_in_clients_answering(
+    server: &wiremock::MockServer,
+    email: &str,
+) -> Clients {
     use wiremock::matchers::{method, path};
     wiremock::Mock::given(method("POST"))
         .and(path("/token"))
@@ -2344,7 +2348,7 @@ async fn built_in_clients_answering(server: &wiremock::MockServer, email: &str) 
     }
 }
 
-fn come_back_from_google(consent_url: &str) {
+pub(super) fn come_back_from_google(consent_url: &str) {
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
     let value = |key: &str| {
         let (_, rest) = consent_url.split_once(&format!("{key}=")).unwrap();

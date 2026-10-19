@@ -5,7 +5,7 @@
 use std::collections::HashMap;
 
 use mailrs_domain::translate::{fill, fill_plural, gettext};
-use mailrs_domain::{Account, AccountId, AccountState};
+use mailrs_domain::{Account, AccountId, AccountState, SignInClient};
 use mailrs_store::accounts::GoogleSignIn;
 
 /// A Gmail account that has to choose a route.
@@ -22,7 +22,7 @@ pub struct MoveBanner {
     pub button: String,
     /// The accounts the button leads to, in the order given.
     pub accounts: Vec<AccountId>,
-    /// The button signs the one account in through GNOME Online Accounts.
+    /// The button signs the one account in through Online Accounts.
     pub goa_now: bool,
     /// Some account's mail has stopped, which the banner's tint shows.
     pub paused: bool,
@@ -49,7 +49,7 @@ pub fn waiting_for_move(
 }
 
 /// The banner for `waiting`, or none when nothing waits. `holds` says
-/// whether GNOME Online Accounts is already signed in as an address.
+/// whether Online Accounts is already signed in as an address.
 pub fn banner(waiting: &[Waiting], holds: impl Fn(&str) -> bool) -> Option<MoveBanner> {
     let accounts: Vec<AccountId> = waiting.iter().map(|w| w.account.id).collect();
     let paused = waiting.iter().any(|w| w.paused);
@@ -97,8 +97,7 @@ pub fn banner(waiting: &[Waiting], holds: impl Fn(&str) -> bool) -> Option<MoveB
         }
     };
     let button = if goa_now {
-        // Translators: GNOME Online Accounts is a name; keep it as it is.
-        gettext("Use GNOME Online Accounts")
+        gettext("Use This Account")
     } else {
         gettext("Choose…")
     };
@@ -142,15 +141,22 @@ pub fn path(account: &Account, sign_in: Option<GoogleSignIn>, routes_ready: bool
 /// Whether `account` gets a Grant Access banner. One that needs a move
 /// gets none, even on a build with no route to offer: a consent through
 /// the built-in client would return a token without the mail scope and
-/// overwrite the working one.
+/// overwrite the working one. An Online Accounts account gets none: its
+/// own banners name what Online Accounts needs.
 pub fn grant_banner_wanted(account: &Account, sign_in: Option<GoogleSignIn>) -> bool {
-    !needs_move(account, sign_in)
+    !needs_move(account, sign_in) && !on_online_accounts(sign_in)
+}
+
+fn on_online_accounts(sign_in: Option<GoogleSignIn>) -> bool {
+    sign_in.is_some_and(|sign_in| sign_in.client == SignInClient::Goa)
 }
 
 /// Whether `account` gets the Sign In banner: it needs to sign in again and
 /// does not need a move, which has its own banner and its own sign-in.
 pub fn sign_in_banner_wanted(account: &Account, sign_in: Option<GoogleSignIn>) -> bool {
-    account.state == AccountState::NeedsReauth && !needs_move(account, sign_in)
+    account.state == AccountState::NeedsReauth
+        && !needs_move(account, sign_in)
+        && !on_online_accounts(sign_in)
 }
 
 /// Whether the sheet shows now: it has not shown before, an account
@@ -196,7 +202,7 @@ mod tests {
         use crate::route_choice::{Platform, Route, any_route, ready_now, rows};
         let clients = mailrs_sync::Clients::default();
         for platform in [Platform::Linux, Platform::MacOs] {
-            let ready = ready_now(&clients);
+            let ready = ready_now(&clients, crate::route_choice::Goa::Absent);
             assert!(
                 rows(platform, ready)
                     .iter()
@@ -276,7 +282,7 @@ mod tests {
             email == "dana@gmail.com"
         })
         .unwrap();
-        assert_eq!(banner.button, "Use GNOME Online Accounts");
+        assert_eq!(banner.button, "Use This Account");
         assert!(banner.goa_now);
     }
 
@@ -365,6 +371,18 @@ mod tests {
         client: SignInClient::Own,
         route: MailRoute::GmailApi,
     };
+
+    #[test]
+    fn a_goa_account_gets_no_sign_in_or_grant_banner() {
+        let goa = GoogleSignIn {
+            client: SignInClient::Goa,
+            route: MailRoute::Imap,
+        };
+        let dana = account(3, "dana@gmail.com", AccountState::NeedsReauth);
+        assert!(!sign_in_banner_wanted(&dana, Some(goa)));
+        assert!(!grant_banner_wanted(&dana, Some(goa)));
+        assert!(sign_in_banner_wanted(&dana, Some(OWN_API)));
+    }
 
     #[test]
     fn an_account_that_needs_a_move_gets_no_grant_banner() {

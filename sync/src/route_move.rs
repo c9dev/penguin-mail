@@ -6,7 +6,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use mailrs_domain::{
-    Account, AccountId, EpochMillis, MailRoute, MailboxKind, Provider, RemoteMailbox,
+    Account, AccountId, EpochMillis, MailRoute, MailboxKind, Provider, RemoteMailbox, SignInClient,
 };
 use mailrs_gmail::{Authorized, Granted};
 use mailrs_store::accounts::{self, GoogleSignIn, RouteCommit};
@@ -14,11 +14,13 @@ use mailrs_store::messages::{self, Change};
 use mailrs_store::{Db, drafts, mailboxes, servers};
 use rusqlite::Connection;
 
+use crate::goa::GoaAccount;
 use crate::passwords::Secrets;
 use crate::sign_in::app_password::NewGmailImap;
+use crate::sign_in::goa_link::Linked;
 use crate::sign_in::own_client::OwnClient;
 use crate::sign_in::{BrowserSignInError, google_signed_in, other_address, save_passwords};
-use crate::{AccountSync, Accounts, Outbox, SyncError, now_millis};
+use crate::{AccountSync, Accounts, BackendError, Outbox, SyncError, now_millis};
 
 /// How long a move waits for the old route to send what is due and to
 /// finish the writes under way.
@@ -89,6 +91,10 @@ pub trait MoveEngine: Send + Sync {
     fn start_again(&self, account: &Account) -> impl Future<Output = ()> + Send;
 }
 
+/// Rewrites an account's stored mail for the route it moves to, inside the
+/// move's own transaction.
+pub type RewriteMail = Box<dyn FnOnce(&Connection) -> mailrs_store::Result<()> + Send>;
+
 /// What a move runs with: the engine, the store, the keyring and the
 /// app's outbox, which the move holds while the store changes.
 pub struct Mover<'a, E, A: Accounts> {
@@ -142,6 +148,88 @@ impl<E: MoveEngine, A: Accounts> Mover<'_, E, A> {
             .start_again(now.as_ref().unwrap_or(account))
             .await;
         moved
+    }
+
+    /// Moves `account` to the Online Accounts account `goa_account`, which
+    /// reads its mail `linked`. As [`Mover::to_own_client`], the move ends
+    /// before anything stops when the address differs, and the account
+    /// keeps its id and its stored mail. A change of route needs
+    /// `rewrite`, which renames the stored mail for the new route; with
+    /// none, the move is refused before anything stops. The sync starts
+    /// over only when the route changes.
+    pub async fn to_goa(
+        &self,
+        account: &Account,
+        goa_account: &GoaAccount,
+        linked: Linked,
+        rewrite: Option<RewriteMail>,
+        committed: impl FnOnce(),
+    ) -> Result<Account, MoveError> {
+        if !goa_account
+            .identity
+            .trim()
+            .eq_ignore_ascii_case(account.email.trim())
+        {
+            return Err(MoveError::OtherAddress {
+                signed_in: goa_account.identity.trim().to_string(),
+                wanted: account.email.clone(),
+            });
+        }
+        let id = account.id;
+        let before = self
+            .db
+            .read(move |c| accounts::mail_route(c, id))
+            .await
+            .map_err(SyncError::from)?;
+        let route = linked.route();
+        let changes = before != route;
+        if changes && rewrite.is_none() {
+            return Err(MoveError::Sync(SyncError::Backend(
+                BackendError::Unsupported,
+            )));
+        }
+        committed();
+        let kept = self.engine.running(id);
+        self.engine.stop(id);
+        if let Some(sync) = kept {
+            let draining = Outbox::new(Arc::new(Stopped(Arc::clone(&sync))), self.db.clone());
+            if !drain(&sync, &draining, now_millis(), DRAIN_WAIT).await {
+                tracing::warn!(
+                    account = id,
+                    "moving with work still under way on the old sign-in"
+                );
+            }
+        }
+        let _held = self.outbox.hold(id).await;
+        let goa_id = goa_account.id.clone();
+        let moved = commit(
+            self.db,
+            id,
+            RouteCommit {
+                route,
+                client: SignInClient::Goa,
+                restart_sync: changes,
+            },
+            move |c| {
+                accounts::set_goa_id(c, id, Some(&goa_id))?;
+                match rewrite {
+                    Some(rewrite) if changes => rewrite(c),
+                    _ => Ok(()),
+                }
+            },
+        )
+        .await;
+        let now = self
+            .db
+            .read(move |c| accounts::account(c, id))
+            .await
+            .ok()
+            .flatten();
+        self.engine
+            .start_again(now.as_ref().unwrap_or(account))
+            .await;
+        moved?;
+        now.ok_or_else(|| MoveError::Sync(SyncError::UnknownAccount(id)))
     }
 }
 

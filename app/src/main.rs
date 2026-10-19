@@ -24,6 +24,7 @@ mod exe;
 mod format;
 mod gmail_password;
 mod goa;
+mod goa_notice;
 mod icon_theme;
 mod images;
 mod keyring_plug;

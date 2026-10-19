@@ -57,6 +57,7 @@ mod detached;
 mod export;
 mod flags;
 mod followup;
+pub(crate) mod goa_banner;
 mod hide_my_email;
 mod images;
 mod in_flight;
@@ -135,6 +136,7 @@ pub struct MainWindow {
     /// The one banner above them that asks Gmail accounts to choose a new
     /// way to sign in. It is the first child of `grant_banners`.
     move_banner: move_banner::Bar,
+    goa_banner: goa_banner::Bar,
     /// The banner `grant_banners` holds for each account that wants one,
     /// so a later rebuild changes only what changed rather than tearing
     /// every banner down and putting it back: a screen reader can be
@@ -817,6 +819,8 @@ impl MainWindow {
             let grant_banners = list.grant_bars.clone();
             let move_banner = move_banner::Bar::new();
             grant_banners.prepend(move_banner.widget());
+            let goa_banner = goa_banner::Bar::new();
+            grant_banners.prepend(goa_banner.widget());
             let content = gtk::Box::new(gtk::Orientation::Vertical, 0);
             content.append(&update_banner);
             content.append(&keyring_banner);
@@ -888,6 +892,7 @@ impl MainWindow {
                 keyring_banner,
                 grant_banners,
                 move_banner,
+                goa_banner,
                 grant_banner_widgets: RefCell::new(HashMap::new()),
                 storage_banner_widgets: RefCell::new(HashMap::new()),
                 update_menu: gio::Menu::new(),
@@ -1089,6 +1094,18 @@ impl MainWindow {
         window.move_banner.connect_press(move |press| {
             let Some(win) = weak.upgrade() else { return };
             win.choose_how_to_sign_in(&press);
+        });
+        let weak = Rc::downgrade(&window);
+        window.goa_banner.connect_press(move |action| {
+            if let Some(win) = weak.upgrade() {
+                win.press_goa_banner(action);
+            }
+        });
+        let weak = Rc::downgrade(&window);
+        app.core.watch_goa(move || {
+            if let Some(win) = weak.upgrade() {
+                win.refresh_goa_banner();
+            }
         });
         if let Some(filter) = app.filter() {
             window.conversation.set_filter(filter);
@@ -1506,11 +1523,84 @@ impl MainWindow {
     /// Brings the move banner in line with the accounts that wait for a
     /// move: one banner for all of them, worded for one or several.
     fn rebuild_move_banner(self: &Rc<Self>, waiting: &[crate::move_banner::Waiting]) {
-        // The GNOME Online Accounts plan reads what the desktop holds and
-        // passes it here; until it lands no address counts as held.
-        let shown = crate::move_banner::banner(waiting, |_| false);
+        let core = Rc::clone(&self.core);
+        let shown =
+            crate::move_banner::banner(waiting, |email| core.goa_holds(email) == Some(true));
         self.move_banner.show(shown);
         self.show_move_sheet(waiting);
+        self.refresh_goa_banner();
+    }
+
+    /// Shows the first thing Online Accounts needs for a linked account,
+    /// or hides the banner. The rest show in turn as each clears.
+    fn refresh_goa_banner(self: &Rc<Self>) {
+        let this = Rc::clone(self);
+        glib::spawn_future_local(async move {
+            let notices = this.core.goa_notices().await;
+            let accounts = this.accounts();
+            let shown = notices.first().map(|notice| {
+                let address = match notice {
+                    crate::goa_notice::Notice::SignInAgain { address, .. }
+                    | crate::goa_notice::Notice::Removed { address }
+                    | crate::goa_notice::Notice::MailOff { address }
+                    | crate::goa_notice::Notice::ImapRefused { address } => Some(address),
+                    crate::goa_notice::Notice::Unreachable => None,
+                };
+                let account = address
+                    .and_then(|a| {
+                        accounts
+                            .iter()
+                            .find(|acc| acc.email.eq_ignore_ascii_case(a))
+                    })
+                    .map(|acc| acc.id);
+                crate::goa_notice::shown(notice, account)
+            });
+            this.goa_banner.show(shown);
+        });
+    }
+
+    /// Moves `account` to sign in through the Online Accounts account that
+    /// holds its address, with no dialog.
+    fn switch_to_goa(self: &Rc<Self>, account: Account) {
+        self.move_banner.set_busy(true);
+        let this = Rc::clone(self);
+        glib::spawn_future_local(async move {
+            let list = this.core.goa_accounts().await.unwrap_or_default();
+            let found = mailrs_sync::goa::find(&list, None, &account.email).cloned();
+            let moved = match found {
+                Some(found) => this.core.move_to_goa(account, found).await,
+                None => Err(anyhow::anyhow!(gettext(
+                    // Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language.
+                    "Can't reach Online Accounts on this computer."
+                ))),
+            };
+            this.move_banner.set_busy(false);
+            match moved {
+                Ok(_) => {
+                    this.toast(&gettext("Signed in with this computer's sign-in."));
+                    this.refresh_accounts(Reload::Yes);
+                }
+                Err(err) => this.toast(&err.to_string()),
+            }
+        });
+    }
+
+    /// A button on the Online Accounts banner.
+    fn press_goa_banner(self: &Rc<Self>, action: crate::goa_notice::Action) {
+        match action {
+            crate::goa_notice::Action::OpenOnlineAccounts => {
+                glib::spawn_future_local(async {
+                    if let Err(err) = crate::goa::open_online_accounts().await {
+                        tracing::warn!(error = %err, "could not open Online Accounts");
+                    }
+                });
+            }
+            crate::goa_notice::Action::SignInAnotherWay(id) => {
+                if let Some(account) = self.accounts().into_iter().find(|a| a.id == id) {
+                    self.present_add_account(Opening::Move(vec![account]));
+                }
+            }
+        }
     }
 
     /// Shows the first-launch sheet once. `waiting` is empty while this
@@ -1553,11 +1643,15 @@ impl MainWindow {
             .filter_map(|id| waiting.iter().find(|w| w.account.id == *id))
             .map(|w| w.account.clone())
             .collect();
-        // `press.goa_now` is true only when GNOME Online Accounts holds the
-        // address, which no build reports yet. The GNOME Online Accounts
-        // plan replaces this with its one-click move; until then the same
-        // walk opens.
         self.move_banner.set_busy(true);
+        // One account whose address Online Accounts holds moves with one
+        // press, with no dialog.
+        if press.goa_now
+            && let [account] = accounts.as_slice()
+        {
+            self.switch_to_goa(account.clone());
+            return;
+        }
         let Some(dialog) = self.present_add_account(Opening::Move(accounts)) else {
             self.move_banner.set_busy(false);
             return;
@@ -3415,10 +3509,19 @@ impl MainWindow {
         with_account(
             "account-choose-route",
             Box::new(|win, account| {
-                if win.sign_in_path(&account) == Path::Move {
+                let on_goa = win
+                    .app
+                    .upgrade()
+                    .and_then(|app| app.google_sign_in(account.id))
+                    .is_some_and(|s| s.client == mailrs_domain::SignInClient::Goa);
+                if win.sign_in_path(&account) == Path::Move || on_goa {
                     win.present_add_account(Opening::Move(vec![account]));
                 }
             }),
+        );
+        with_account(
+            "account-switch-goa",
+            Box::new(|win, account| win.switch_to_goa(account)),
         );
         with_account(
             "account-rules",
