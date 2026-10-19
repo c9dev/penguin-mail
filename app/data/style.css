@@ -2054,11 +2054,8 @@ list.post-list row label.tag {
 .app-dark list.post-list row label.tag { background-color: alpha(#ff7a1a, 0.16); }
 .post-route-foot { font-size: 12.5px; color: var(--post-dim); margin-top: 14px; }
 
-/* The first-launch sheet: its list sits midway between the words and the
-   buttons, the way the list in Messages That Will Not Download does, and
-   each address has the accent's dot before it. */
-dialog.alert .move-sheet-list { margin-top: 3px; }
-dialog.alert.short .move-sheet-list { margin-top: 4px; }
+/* The first-launch sheet: each address has the accent's dot before it,
+   and the two buttons are rounded rectangles side by side. */
 .move-sheet-dot {
   min-width: 8px;
   min-height: 8px;
@@ -2067,3 +2064,12 @@ dialog.alert.short .move-sheet-list { margin-top: 4px; }
 }
 .app-dark .move-sheet-dot { background-color: #ff7a1a; }
 .move-sheet-address { font-weight: 700; }
+.move-sheet-heading { font-size: 17px; font-weight: 700; }
+.move-sheet-body { opacity: 0.78; }
+.move-sheet-button {
+  font-weight: 700;
+  border-radius: 12px;
+  padding: 8px 16px;
+  min-width: 80px;
+  min-height: 18px;
+}
