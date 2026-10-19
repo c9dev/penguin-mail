@@ -1034,6 +1034,48 @@ async fn an_online_accounts_account_moves_to_its_own_project_and_syncs_again_ove
 }
 
 #[tokio::test]
+async fn a_send_whose_bytes_stayed_in_an_imap_draft_is_never_counted_sent_on_the_api() {
+    let h = built_in_account().await;
+    set_sign_in(&h, APP_PASSWORD).await;
+    // Send Later on the IMAP route: the bytes are only in the draft, which
+    // the move cannot read.
+    let later = Queued {
+        raw: None,
+        draft_id: Some("INBOX/1/7".into()),
+        message_id: Some("INBOX/1/7".into()),
+        ..due(&h, "later")
+    };
+    let row_id = h.db.write(move |c| outbox::put(c, &later)).await.unwrap();
+    let secrets = Secrets::memory();
+    let steps = Steps::new(&h);
+    let outbox = outbox_of(&h);
+    let mover = Mover {
+        engine: &steps,
+        db: &h.db,
+        secrets: &secrets,
+        outbox: &outbox,
+    };
+
+    mover
+        .to_own_client(
+            &account(&h).await,
+            &own(),
+            signed_in_as("me@example.com"),
+            || {},
+        )
+        .await
+        .unwrap();
+
+    let moved = row(&h, row_id).await;
+    assert_eq!(moved.draft_id, None, "no API draft goes by an IMAP id");
+    assert!(moved.problem.is_some(), "the person checks Sent");
+    outbox.send_due(now_millis()).await.unwrap();
+    let left = row(&h, row_id).await;
+    assert!(left.raw.is_none() && left.problem.is_some());
+    assert!(h.fake.with(|s| s.sent.is_empty()));
+}
+
+#[tokio::test]
 async fn an_app_password_account_moving_to_its_own_project_drops_its_password_and_servers() {
     let h = built_in_account().await;
     let id = h.account_id;

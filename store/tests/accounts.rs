@@ -318,6 +318,45 @@ fn google_sign_ins_list_only_gmail_rows() {
 }
 
 #[test]
+fn a_sign_in_this_build_cannot_read_leaves_the_others_listed() {
+    let conn = open_in_memory().unwrap();
+    let good = accounts::insert_account(&conn, "dana@gmail.com", 1).unwrap();
+    let odd = accounts::insert_account(&conn, "lee@gmail.com", 1).unwrap();
+    conn.execute(
+        "UPDATE accounts SET oauth_client = 'from-a-newer-build' WHERE id = ?1",
+        [odd],
+    )
+    .unwrap();
+    let all = accounts::google_sign_ins(&conn).unwrap();
+    assert_eq!(all.len(), 1);
+    assert_eq!(all[&good], GmailSignIn::BuiltInApi);
+}
+
+#[test]
+fn a_new_online_accounts_id_lands_only_on_the_link_it_replaces() {
+    let conn = open_in_memory().unwrap();
+    let id = accounts::insert_account(&conn, "dana@gmail.com", 1).unwrap();
+    let linked = GmailSignIn::OnlineAccounts {
+        goa_id: "account_1".into(),
+    };
+    accounts::set_gmail_sign_in(&conn, id, &linked).unwrap();
+    accounts::relink_goa(&conn, id, "account_1", "account_2").unwrap();
+    assert_eq!(
+        accounts::gmail_sign_in(&conn, id).unwrap(),
+        GmailSignIn::OnlineAccounts {
+            goa_id: "account_2".into()
+        }
+    );
+    // A move off Online Accounts committed in between keeps its sign-in.
+    accounts::set_gmail_sign_in(&conn, id, &GmailSignIn::OwnProject).unwrap();
+    accounts::relink_goa(&conn, id, "account_2", "account_3").unwrap();
+    assert_eq!(
+        accounts::gmail_sign_in(&conn, id).unwrap(),
+        GmailSignIn::OwnProject
+    );
+}
+
+#[test]
 fn committing_a_sign_in_restarts_the_sync_and_keeps_the_generation() {
     let conn = open_in_memory().unwrap();
     let id = accounts::insert_account(&conn, "dana@gmail.com", 1).unwrap();

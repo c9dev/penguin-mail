@@ -1731,6 +1731,54 @@ mod tests {
         assert_eq!(client.id(), "built.apps.googleusercontent.com");
     }
 
+    #[tokio::test]
+    async fn an_online_accounts_account_from_its_own_project_keeps_the_project() {
+        let (_dir, db) = store();
+        let secrets = Secrets::memory();
+        let linked = account(&db, "goa@example.com", SignInClient::Own).await;
+        let id = linked.id;
+        db.write(move |c| {
+            accounts::set_gmail_sign_in(
+                c,
+                id,
+                &GmailSignIn::OnlineAccounts {
+                    goa_id: "account_1".into(),
+                },
+            )
+        })
+        .await
+        .unwrap();
+        let kept = own_client::OwnClient::new("kept.apps.googleusercontent.com", "GOCSPX-kept");
+        secrets.google_clients.save(id, &kept.encode()).unwrap();
+        let client = account_client(
+            &db,
+            &Config::default(),
+            built_in(),
+            Arc::clone(&secrets.google_clients),
+            &linked,
+        )
+        .await
+        .unwrap()
+        .unwrap();
+        assert_eq!(client.id(), "kept.apps.googleusercontent.com");
+        secrets.google_clients.delete(id).unwrap();
+        let client = account_client(
+            &db,
+            &with_own(),
+            built_in(),
+            Arc::clone(&secrets.google_clients),
+            &linked,
+        )
+        .await
+        .unwrap()
+        .unwrap();
+        assert_eq!(
+            client.id(),
+            "built.apps.googleusercontent.com",
+            "without a kept project it takes the built-in client, not config.toml's"
+        );
+    }
+
     /// The variables are never set in this test: the account's kept
     /// client alone decides which client the refresh goes out under.
     #[tokio::test]

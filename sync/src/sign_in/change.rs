@@ -732,6 +732,49 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn a_new_address_added_meanwhile_is_refused_and_kept() {
+        let dir = tempfile::tempdir().unwrap();
+        let db = Db::open(&dir.path().join("mail.db")).unwrap();
+        let secrets = Secrets::memory();
+        // Another provider's account took the address after the caller
+        // looked.
+        let other = db
+            .write(|c| {
+                let id = accounts::insert_account(c, ADDRESS, 0)?;
+                c.execute(
+                    "UPDATE accounts SET provider = 'imap' WHERE id = ?1",
+                    [id],
+                )?;
+                Ok(id)
+            })
+            .await
+            .unwrap();
+        let whose = Whose::New {
+            email: ADDRESS.into(),
+            now: 0,
+        };
+        let to = Change {
+            password: Some(new_password("new-password")),
+            ..Change::to(APP_PASSWORD)
+        };
+
+        let refused = change_sign_in(&db, &secrets, whose, to).await;
+
+        assert!(
+            matches!(refused, Err(ChangeError::Taken { .. })),
+            "{refused:?}"
+        );
+        let kept = db
+            .read(|c| accounts::account_by_email(c, ADDRESS))
+            .await
+            .unwrap()
+            .expect("the other account stays");
+        assert_eq!(kept.id, other);
+        assert_eq!(kept.provider, mailrs_domain::Provider::Imap);
+        assert_eq!(secrets.passwords.load(other).unwrap(), None);
+    }
+
+    #[tokio::test]
     async fn an_account_leaving_online_accounts_keeps_the_project_the_keyring_keeps() {
         let (_dir, _db, secrets, id) = account_on(&goa()).await;
         secrets.google_clients.save(id, &own().encode()).unwrap();
