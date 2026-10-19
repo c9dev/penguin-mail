@@ -151,20 +151,10 @@ where
     /// A signed-in connection and the login it used. A refused access
     /// token may only have run out, so the source is asked once more.
     async fn open(&self) -> Result<(AsyncSmtpConnection, Login), ImapError> {
-        let login = self.source.login(false).await?;
-        match Box::pin(self.open_with(&login)).await {
-            // Boxed, so the rarely taken retry adds nothing to the size of
-            // every future that opens a connection.
-            Err(ImapError::Auth { .. }) if login.oauth => {
-                Box::pin(async {
-                    let login = self.source.login(true).await?;
-                    let conn = self.open_with(&login).await?;
-                    Ok((conn, login))
-                })
-                .await
-            }
-            other => other.map(|conn| (conn, login)),
-        }
+        crate::login::signed_in(&*self.source, |login| async move {
+            self.open_with(&login).await
+        })
+        .await
     }
 
     async fn open_with(&self, login: &Login) -> Result<AsyncSmtpConnection, ImapError> {

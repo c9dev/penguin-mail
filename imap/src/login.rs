@@ -55,6 +55,31 @@ impl LoginSource for Login {
     }
 }
 
+/// Signs in through `sign_in` with `source`'s login, and answers what it
+/// opened with the login that opened it. A token the server turned down
+/// may only have run out, so the source is asked for a fresh one, once; a
+/// password is never tried twice.
+pub(crate) async fn signed_in<T, F, Fut>(
+    source: &dyn LoginSource,
+    sign_in: F,
+) -> Result<(T, Login), crate::ImapError>
+where
+    F: Fn(Login) -> Fut,
+    Fut: Future<Output = Result<T, crate::ImapError>>,
+{
+    let login = source.login(false).await?;
+    // Boxed to keep this future small: every call that may open a
+    // connection carries it.
+    match Box::pin(sign_in(login.clone())).await {
+        Err(crate::ImapError::Auth { .. }) if login.oauth => {
+            let login = source.login(true).await?;
+            let opened = Box::pin(sign_in(login.clone())).await?;
+            Ok((opened, login))
+        }
+        other => other.map(|opened| (opened, login)),
+    }
+}
+
 /// What stands where the password was.
 const HIDDEN: &str = "<hidden>";
 
