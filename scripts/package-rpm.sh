@@ -51,7 +51,7 @@ Requires:       gtk4 >= 4.20
 Requires:       libadwaita >= 1.8
 Requires:       webkitgtk6.0
 Requires:       gnupg2
-Requires:       gnome-online-accounts
+Recommends:     gnome-online-accounts
 Recommends:     gnome-online-accounts-gtk
 Recommends:     gnupg2-smime
 Recommends:     bubblewrap
