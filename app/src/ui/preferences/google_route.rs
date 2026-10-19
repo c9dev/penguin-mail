@@ -899,7 +899,8 @@ pub(crate) mod checks {
             [
                 "GMAIL",
                 "Gmail features",
-                "Signed in through your own Google project"
+                "Signed in through your own Google project",
+                "Stop using your own Google project"
             ]
         );
         let mut buttons = Vec::new();

@@ -284,8 +284,9 @@ pub(crate) mod checks {
             assert!(row.is_activatable());
             assert!(row.is_focusable());
         }
-        // The own-project row is listed, so the line under the list shows.
-        assert!(page.footer.get_visible());
+        // Online Accounts is listed first, so the line under the list stays
+        // out.
+        assert!(!page.footer.get_visible());
         ActionRowExt::activate(&row_at(&page, 1));
         assert_eq!(*picked.borrow(), [Route::AppPassword]);
     }

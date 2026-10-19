@@ -371,14 +371,14 @@ mod tests {
     }
 
     #[test]
-    fn the_footer_shows_whenever_the_own_project_is_listed() {
+    fn the_footer_shows_when_the_own_project_is_listed_without_online_accounts() {
         let wanted = Some(
             "Want every Gmail feature? Your own Google project gives you all of them, free."
                 .to_string(),
         );
         assert_eq!(footer(Platform::MacOs, ready(Goa::Absent)), wanted);
         assert_eq!(footer(Platform::Linux, ready(Goa::Absent)), wanted);
-        assert_eq!(footer(Platform::Linux, ready(Goa::Present)), wanted);
+        assert_eq!(footer(Platform::Linux, ready(Goa::Present)), None);
         let no_own = Ready {
             own_project: false,
             ..ready(Goa::Absent)
