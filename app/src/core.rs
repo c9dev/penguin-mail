@@ -1884,7 +1884,7 @@ impl Core {
             .engine
             .current()
             .ok_or_else(|| anyhow!("sync is not running"))?;
-        let (db, passwords) = (self.db.clone(), Arc::clone(&self.secrets.passwords));
+        let (db, secrets) = (self.db.clone(), self.secrets.clone());
         let reach = Reach {
             connector: self.connector(),
             demo: self.demo_mail.clone(),
@@ -1897,7 +1897,7 @@ impl Core {
                 servers: checked.servers,
                 password: pasted.secret().to_string(),
             };
-            let account = gmail_imap_signed_in(&db, passwords, new, now_millis()).await?;
+            let account = gmail_imap_signed_in(&db, &secrets, new, now_millis()).await?;
             start_again(&reach, &engine, &db, &account, false).await?;
             Ok::<_, anyhow::Error>(account)
         })

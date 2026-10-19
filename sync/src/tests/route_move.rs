@@ -11,18 +11,17 @@ use mailrs_gmail::{Authorized, GmailError, Granted, TokenStore};
 use mailrs_store::accounts::{self, Consent};
 use mailrs_store::messages::{self, Change};
 use mailrs_store::outbox::{self, Queued};
-use mailrs_store::{Db, StoreError, drafts, mailboxes, servers};
+use mailrs_store::{Db, drafts, mailboxes, servers};
 
 use super::{Connected, Harness, eventually, harness};
 use crate::fake::meta;
 use crate::passwords::{MemoryPasswords, PasswordStore, Passwords, Secrets};
 use crate::route_move::{
-    DRAIN_WAIT, MoveEngine, MoveError, Mover, RewriteMail, commit, drain, empty_for_imap,
-    to_own_client,
+    DRAIN_WAIT, MoveEngine, MoveError, Mover, drain, empty_for_imap, to_own_client,
 };
 use crate::sign_in::app_password::NewGmailImap;
 use crate::sign_in::own_client::OwnClient;
-use crate::{BackendError, Outbox, Posted, SyncError, TriageAction, now_millis};
+use crate::{Outbox, Posted, SyncError, TriageAction, now_millis};
 
 const OLD_GRANTED: &str = "openid email gmail.modify";
 const OLD_ASKED: &str = "openid email gmail.modify calendar";
@@ -232,41 +231,6 @@ async fn a_move_whose_keyring_refuses_keeps_the_built_in_client() {
         None,
         "no own client is left beside the built-in token"
     );
-}
-
-#[tokio::test]
-async fn a_failed_rewrite_leaves_route_client_and_sync_state_as_they_were() {
-    let h = built_in_account().await;
-    let err = commit(&h.db, h.account_id, APP_PASSWORD, true, |_| {
-        Err(StoreError::Corrupt {
-            column: "test",
-            value: String::new(),
-        })
-    })
-    .await;
-
-    assert!(err.is_err());
-    assert_eq!(route(&h.db, h.account_id).await, MailRoute::GmailApi);
-    assert_eq!(client(&h.db, h.account_id).await, SignInClient::BuiltIn);
-    assert_eq!(
-        sync_state(&h.db, h.account_id).await.as_deref(),
-        Some("777")
-    );
-}
-
-#[tokio::test]
-async fn a_commit_writes_the_route_and_its_rewrite_together() {
-    let h = built_in_account().await;
-    let id = h.account_id;
-    commit(&h.db, id, APP_PASSWORD, true, move |c| {
-        drafts::forget(c, id, "d1")
-    })
-    .await
-    .unwrap();
-
-    assert_eq!(route(&h.db, id).await, MailRoute::Imap);
-    assert_eq!(sync_state(&h.db, id).await, None);
-    assert_eq!(count(&h.db, "drafts").await, 0);
 }
 
 #[tokio::test]
@@ -775,14 +739,8 @@ async fn goa_id(db: &Db, id: i64) -> Option<String> {
     sign_in(db, id).await.goa_id().map(str::to_string)
 }
 
-/// Rewrites the account's stored mail for its new route, as the move
-/// from the API to IMAP does: here it only drops the draft rows.
-fn drop_drafts(id: i64) -> Option<RewriteMail> {
-    Some(Box::new(move |c| drafts::forget(c, id, "d1")))
-}
-
 #[tokio::test]
-async fn a_built_in_api_account_moves_to_goa_imap_with_the_rewrite_in_one_step() {
+async fn a_built_in_api_account_moves_to_goa_imap_and_empties_its_mail_in_one_step() {
     let h = built_in_account().await;
     let secrets = Secrets::memory();
     let steps = Steps::new(&h);
@@ -795,12 +753,9 @@ async fn a_built_in_api_account_moves_to_goa_imap_with_the_rewrite_in_one_step()
     };
 
     let moved = mover
-        .to_goa(
-            &account(&h).await,
-            &goa_dana("me@example.com"),
-            drop_drafts(h.account_id),
-            || steps.note("committed"),
-        )
+        .to_goa(&account(&h).await, &goa_dana("me@example.com"), || {
+            steps.note("committed")
+        })
         .await
         .unwrap();
 
@@ -809,48 +764,11 @@ async fn a_built_in_api_account_moves_to_goa_imap_with_the_rewrite_in_one_step()
     assert!(sign_in(&h.db, h.account_id).await.on_online_accounts());
     assert_eq!(route(&h.db, h.account_id).await, MailRoute::Imap);
     assert_eq!(sync_state(&h.db, h.account_id).await, None);
-    assert_eq!(count(&h.db, "drafts").await, 0, "the rewrite ran");
+    assert_eq!(count(&h.db, "drafts").await, 0, "the stored mail went");
     assert_eq!(
         goa_id(&h.db, h.account_id).await.as_deref(),
         Some("account_1_0")
     );
-}
-
-#[tokio::test]
-async fn a_move_to_goa_without_a_rewrite_for_another_route_stops_nothing() {
-    let h = built_in_account().await;
-    let secrets = Secrets::memory();
-    let steps = Steps::new(&h);
-    let outbox = outbox_of(&h);
-    let mover = Mover {
-        engine: &steps,
-        db: &h.db,
-        secrets: &secrets,
-        outbox: &outbox,
-    };
-
-    let refused = mover
-        .to_goa(
-            &account(&h).await,
-            &goa_dana("me@example.com"),
-            None,
-            || steps.note("committed"),
-        )
-        .await;
-
-    assert!(
-        matches!(
-            refused,
-            Err(MoveError::Sync(SyncError::Backend(
-                BackendError::Unsupported
-            )))
-        ),
-        "{:?}",
-        refused.map(|_| ())
-    );
-    assert_eq!(steps.done(), Vec::<String>::new());
-    assert_eq!(client(&h.db, h.account_id).await, SignInClient::BuiltIn);
-    assert_eq!(route(&h.db, h.account_id).await, MailRoute::GmailApi);
 }
 
 #[tokio::test]
@@ -869,7 +787,7 @@ async fn an_app_password_account_moves_to_goa_imap_without_a_resync() {
     };
 
     mover
-        .to_goa(&account(&h).await, &goa_dana("me@example.com"), None, || ())
+        .to_goa(&account(&h).await, &goa_dana("me@example.com"), || ())
         .await
         .unwrap();
 
@@ -892,12 +810,9 @@ async fn a_move_to_another_goa_address_ends_before_the_account_stops() {
     };
 
     let refused = mover
-        .to_goa(
-            &account(&h).await,
-            &goa_dana("other@example.com"),
-            drop_drafts(h.account_id),
-            || steps.note("committed"),
-        )
+        .to_goa(&account(&h).await, &goa_dana("other@example.com"), || {
+            steps.note("committed")
+        })
         .await;
 
     assert!(matches!(
@@ -993,7 +908,7 @@ async fn an_imap_account_moving_to_goa_stays_on_imap() {
     };
 
     mover
-        .to_goa(&account(&h).await, &goa_dana("me@example.com"), None, || ())
+        .to_goa(&account(&h).await, &goa_dana("me@example.com"), || ())
         .await
         .unwrap();
 
@@ -1024,7 +939,7 @@ async fn an_app_password_account_moving_to_goa_drops_its_password_and_servers() 
     };
 
     mover
-        .to_goa(&account(&h).await, &goa_dana("me@example.com"), None, || ())
+        .to_goa(&account(&h).await, &goa_dana("me@example.com"), || ())
         .await
         .unwrap();
 

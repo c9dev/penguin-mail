@@ -430,8 +430,8 @@ pub async fn calendar_consent(
     let granted = authorized.granted.as_ref().map(Granted::to_scope);
     // An Online Accounts account stays on Online Accounts, and any other
     // takes the built-in client.
-    let kept = move |before: GmailSignIn| match before {
-        GmailSignIn::OnlineAccounts { .. } => before,
+    let kept = |before: &GmailSignIn| match before {
+        GmailSignIn::OnlineAccounts { .. } => before.clone(),
         other => other.with_google_token(SignInClient::BuiltIn),
     };
     let asked = oauth.scopes().join(" ");

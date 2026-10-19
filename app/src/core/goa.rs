@@ -224,15 +224,7 @@ impl Core {
                     secrets: &secrets,
                     outbox: &outbox,
                 };
-                let id = account.id;
-                // The move from the API to IMAP empties the stored mail,
-                // which the first IMAP sync lists again. An account already
-                // on IMAP stays there and keeps it.
-                let rewrite: route_move::RewriteMail =
-                    Box::new(move |c| route_move::empty_for_imap(c, id));
-                let moved = mover
-                    .to_goa(&account, &goa_account, Some(rewrite), || ())
-                    .await?;
+                let moved = mover.to_goa(&account, &goa_account, || ()).await?;
                 Ok::<_, anyhow::Error>(moved)
             })
             .await?;

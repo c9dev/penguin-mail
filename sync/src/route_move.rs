@@ -8,21 +8,21 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use mailrs_domain::{Account, AccountId, EpochMillis, GmailSignIn, MailRoute, SignInClient};
+use mailrs_domain::{Account, AccountId, EpochMillis, GmailSignIn};
 use mailrs_gmail::{Authorized, Granted};
-use mailrs_store::accounts;
-use mailrs_store::{Db, outbox, servers, switch};
-use rusqlite::Connection;
+use mailrs_store::{Db, accounts, outbox};
 
-use crate::connect::{STEP_WAIT, read_secret};
 use crate::goa::GoaAccount;
-use crate::passwords::{PasswordStore, Secrets};
+use crate::passwords::Secrets;
 use crate::sign_in::app_password::NewGmailImap;
-use crate::sign_in::own_client::OwnClient;
-use crate::sign_in::{
-    BrowserSignInError, google_signed_in, keep_google_secrets, other_address, save_passwords,
+use crate::sign_in::change::{
+    self, Change, ChangeError, NewPassword, NewToken, Whose, change_sign_in,
 };
-use crate::{AccountSync, Accounts, BackendError, Outbox, SyncError, now_millis};
+use crate::sign_in::own_client::OwnClient;
+use crate::sign_in::{BrowserSignInError, SignInError, other_address};
+use crate::{AccountSync, Accounts, Outbox, SyncError, now_millis};
+
+pub use crate::sign_in::change::empty_for_imap;
 
 /// How long a move waits for the old route to send what is due and to
 /// finish the writes under way.
@@ -37,6 +37,18 @@ pub enum MoveError {
     SignIn(BrowserSignInError),
     #[error(transparent)]
     Sync(#[from] SyncError),
+}
+
+impl From<ChangeError> for MoveError {
+    fn from(err: ChangeError) -> Self {
+        match err {
+            ChangeError::Token(reason) => {
+                MoveError::SignIn(BrowserSignInError::Kept(SignInError::Token(reason)))
+            }
+            ChangeError::Password(err) => MoveError::Sync(SyncError::from(err)),
+            ChangeError::Store(err) => MoveError::Sync(SyncError::from(err)),
+        }
+    }
 }
 
 /// The account a move stopped, which its drain still sends through.
@@ -80,10 +92,6 @@ pub trait MoveEngine: Send + Sync {
     fn start_again(&self, account: &Account) -> impl Future<Output = ()> + Send;
 }
 
-/// Rewrites an account's stored mail for the route it moves to, inside the
-/// move's own transaction.
-pub type RewriteMail = Box<dyn FnOnce(&Connection) -> mailrs_store::Result<()> + Send>;
-
 /// What a move runs with: the engine, the store, the keyring and the
 /// app's outbox, which the move holds while the store changes.
 pub struct Mover<'a, E, A: Accounts> {
@@ -100,7 +108,9 @@ impl<E: MoveEngine, A: Accounts> Mover<'_, E, A> {
     /// cancelled; the account stops, the old route sends what is due and
     /// finishes its writes, the store takes the new sign-in, and the
     /// account starts again, on its old sign-in when the store refused the
-    /// new one.
+    /// new one. From IMAP the move empties the stored mail, which the API
+    /// lists again, ends any Online Accounts link and drops an app
+    /// password.
     pub async fn to_own_client(
         &self,
         account: &Account,
@@ -109,26 +119,75 @@ impl<E: MoveEngine, A: Accounts> Mover<'_, E, A> {
         committed: impl FnOnce(),
     ) -> Result<Account, MoveError> {
         same_address(account, &authorized)?;
-        let id = account.id;
-        let before = self
-            .db
-            .read(move |c| accounts::gmail_sign_in(c, id))
-            .await
-            .map_err(SyncError::from)?;
+        let from = sign_in_of(self.db, account.id).await?;
         committed();
-        let from_imap = before.route() == MailRoute::Imap;
-        self.run_move(account, from_imap, || async move {
-            match from_imap {
-                true => {
-                    let moved =
-                        imap_to_own_client(self.db, self.secrets, account, own, authorized).await?;
-                    if moved.1 {
-                        self.forget_password(id).await;
-                    }
-                    Ok(moved.0)
-                }
-                false => to_own_client(self.db, self.secrets, account, own, authorized).await,
-            }
+        let change = own_project(account, own, authorized);
+        self.run_change(account, from, change).await
+    }
+
+    /// Moves `account` to the Online Accounts account `goa_account`, whose
+    /// token reads Gmail's IMAP and SMTP. As [`Mover::to_own_client`], the
+    /// move ends before anything stops when the address differs, and the
+    /// account keeps its id. A move off the Gmail API empties the stored
+    /// mail for IMAP ([`empty_for_imap`]) and starts the sync over; one
+    /// already on IMAP keeps both. An app password it leaves behind goes
+    /// with its servers.
+    pub async fn to_goa(
+        &self,
+        account: &Account,
+        goa_account: &GoaAccount,
+        committed: impl FnOnce(),
+    ) -> Result<Account, MoveError> {
+        same_email(account, &goa_account.identity)?;
+        let from = sign_in_of(self.db, account.id).await?;
+        committed();
+        let to = GmailSignIn::OnlineAccounts {
+            goa_id: goa_account.id.clone(),
+        };
+        self.run_change(account, from, Change::to(to)).await
+    }
+
+    /// Moves `account` to Gmail's IMAP and SMTP, signed in with the app
+    /// password `new` holds. The steps are those of [`Mover::to_own_client`]:
+    /// a different address ends the move first; then `committed` runs, the
+    /// account stops, the old route sends what is due, and the keyring
+    /// takes the password. Only then does one transaction write the sign-in,
+    /// the servers and the emptied mail. The account starts again either
+    /// way. The calendar token stays, and the client it refreshes through
+    /// is the one [`change::with_app_password`] names.
+    pub async fn to_imap(
+        &self,
+        account: &Account,
+        new: NewGmailImap,
+        committed: impl FnOnce(),
+    ) -> Result<Account, MoveError> {
+        same_email(account, &new.address)?;
+        let from = sign_in_of(self.db, account.id).await?;
+        committed();
+        let to = change::with_app_password(self.secrets, Some(account.id), Some(&from)).await?;
+        let change = Change {
+            password: Some(NewPassword {
+                servers: new.servers,
+                password: new.password,
+            }),
+            ..Change::to(to)
+        };
+        self.run_change(account, from, change).await
+    }
+
+    /// Runs `change` as a move from `from`: bringing the bytes of waiting
+    /// messages along when the route changes.
+    async fn run_change(
+        &self,
+        account: &Account,
+        from: GmailSignIn,
+        change: Change,
+    ) -> Result<Account, MoveError> {
+        let id = account.id;
+        let changes_route = from.route() != change.to.route();
+        self.run_move(account, changes_route, || async move {
+            change_sign_in(self.db, self.secrets, Whose::Held { id, from }, change).await?;
+            account_of(self.db, id).await
         })
         .await
     }
@@ -181,151 +240,6 @@ impl<E: MoveEngine, A: Accounts> Mover<'_, E, A> {
             .await;
         moved
     }
-
-    /// Moves `account` to the Online Accounts account `goa_account`, whose
-    /// token reads Gmail's IMAP and SMTP. As [`Mover::to_own_client`], the
-    /// move ends before anything stops when the address differs, and the
-    /// account keeps its id. A move off the Gmail API needs `rewrite`,
-    /// which empties the stored mail for IMAP; with none, the move is
-    /// refused before anything stops. The sync starts over only when the
-    /// route changes.
-    pub async fn to_goa(
-        &self,
-        account: &Account,
-        goa_account: &GoaAccount,
-        rewrite: Option<RewriteMail>,
-        committed: impl FnOnce(),
-    ) -> Result<Account, MoveError> {
-        same_email(account, &goa_account.identity)?;
-        let id = account.id;
-        let before = self
-            .db
-            .read(move |c| accounts::gmail_sign_in(c, id))
-            .await
-            .map_err(SyncError::from)?;
-        // An app password the move leaves behind goes with its servers.
-        let drops_password = before.on_app_password();
-        let changes = before.route() != MailRoute::Imap;
-        if changes && rewrite.is_none() {
-            return Err(MoveError::Sync(SyncError::Backend(
-                BackendError::Unsupported,
-            )));
-        }
-        committed();
-        let goa_id = goa_account.id.clone();
-        self.run_move(account, changes, || async move {
-            commit(
-                self.db,
-                id,
-                GmailSignIn::OnlineAccounts { goa_id },
-                changes,
-                move |c| {
-                    if drops_password {
-                        servers::forget(c, id)?;
-                    }
-                    match rewrite {
-                        Some(rewrite) if changes => rewrite(c),
-                        _ => Ok(()),
-                    }
-                },
-            )
-            .await?;
-            if drops_password {
-                self.forget_password(id).await;
-            }
-            self.db
-                .read(move |c| accounts::account(c, id))
-                .await
-                .map_err(SyncError::from)?
-                .ok_or(MoveError::Sync(SyncError::UnknownAccount(id)))
-        })
-        .await
-    }
-}
-
-impl<E: MoveEngine, A: Accounts> Mover<'_, E, A> {
-    /// Moves `account` to Gmail's IMAP and SMTP, signed in with the app
-    /// password `new` holds. The steps are those of [`Mover::to_own_client`]:
-    /// a different address ends the move first; then `committed` runs, the
-    /// account stops, the old route sends what is due, and the keyring
-    /// takes the password. Only then does one transaction write the route,
-    /// the servers and the rewritten mail. The account starts again either
-    /// way. The calendar token stays.
-    pub async fn to_imap(
-        &self,
-        account: &Account,
-        new: NewGmailImap,
-        committed: impl FnOnce(),
-    ) -> Result<Account, MoveError> {
-        same_email(account, &new.address)?;
-        let id = account.id;
-        let before = self
-            .db
-            .read(move |c| accounts::gmail_sign_in(c, id))
-            .await
-            .map_err(SyncError::from)?
-            .route();
-        committed();
-        self.run_move(account, before != MailRoute::Imap, || {
-            self.write_imap(id, before, new)
-        })
-        .await
-    }
-
-    async fn write_imap(
-        &self,
-        id: AccountId,
-        before: MailRoute,
-        new: NewGmailImap,
-    ) -> Result<Account, MoveError> {
-        let NewGmailImap {
-            servers: saved,
-            password,
-            ..
-        } = new;
-        // The password the account kept before, put back when the store
-        // refuses the move, so the account starts again as it was.
-        let earlier = self.saved_passwords(id).await?;
-        save_passwords(Arc::clone(&self.secrets.passwords), id, password, None)
-            .await
-            .map_err(SyncError::from)?;
-        let written = self.commit_imap(id, before, saved).await;
-        if written.is_err() {
-            self.put_back_passwords(id, earlier).await;
-        }
-        written
-    }
-
-    async fn commit_imap(
-        &self,
-        id: AccountId,
-        before: MailRoute,
-        saved: servers::Servers,
-    ) -> Result<Account, MoveError> {
-        let google = self.client_for_imap(id).await?;
-        let to = GmailSignIn::AppPassword { google };
-        commit(self.db, id, to, before != MailRoute::Imap, move |c| {
-            servers::save(c, id, &saved)?;
-            // An account already on IMAP (through Online Accounts) keeps
-            // its mail.
-            match before {
-                MailRoute::Imap => Ok(()),
-                _ => empty_for_imap(c, id),
-            }
-        })
-        .await?;
-        let moved = self
-            .db
-            .read(move |c| accounts::account(c, id))
-            .await
-            .map_err(SyncError::from)?;
-        moved.ok_or_else(|| {
-            SyncError::from(mailrs_store::StoreError::Sqlite(
-                rusqlite::Error::QueryReturnedNoRows,
-            ))
-            .into()
-        })
-    }
 }
 
 impl<E, A: Accounts> Mover<'_, E, A> {
@@ -354,145 +268,37 @@ impl<E, A: Accounts> Mover<'_, E, A> {
             }
         }
     }
-
-    /// The incoming and outgoing passwords the keyring keeps for `id`.
-    async fn saved_passwords(
-        &self,
-        id: AccountId,
-    ) -> Result<(Option<String>, Option<String>), MoveError> {
-        let kept = Arc::clone(&self.secrets.passwords);
-        let read = tokio::task::spawn_blocking(move || {
-            Ok::<_, crate::passwords::PasswordError>((kept.load(id)?, kept.load_outgoing(id)?))
-        })
-        .await
-        .map_err(|err| {
-            SyncError::from(crate::passwords::PasswordError::Keyring(err.to_string()))
-        })?;
-        Ok(read.map_err(SyncError::from)?)
-    }
-
-    /// Writes `earlier` back as `id`'s passwords, deleting the ones it
-    /// lacks. A keyring that fails says so in the log.
-    async fn put_back_passwords(&self, id: AccountId, earlier: (Option<String>, Option<String>)) {
-        let kept = Arc::clone(&self.secrets.passwords);
-        let back = tokio::task::spawn_blocking(move || {
-            match &earlier.0 {
-                Some(password) => kept.save(id, password)?,
-                None => kept.delete(id)?,
-            }
-            match &earlier.1 {
-                Some(password) => kept.save_outgoing(id, password),
-                None => kept.delete_outgoing(id),
-            }
-        })
-        .await;
-        if !matches!(back, Ok(Ok(()))) {
-            tracing::warn!(
-                account = id,
-                "could not put back the password a failed move replaced"
-            );
-        }
-    }
-
-    /// Deletes the app password `id` kept, once nothing reads it. A
-    /// keyring that fails leaves it, unread, and says so in the log.
-    async fn forget_password(&self, id: AccountId) {
-        let kept = Arc::clone(&self.secrets.passwords);
-        let gone = tokio::task::spawn_blocking(move || {
-            kept.delete(id)?;
-            kept.delete_outgoing(id)
-        })
-        .await;
-        if !matches!(gone, Ok(Ok(()))) {
-            tracing::warn!(
-                account = id,
-                "could not delete the app password the move left behind"
-            );
-        }
-    }
-
-    /// The client `id` signs in with once it reads Gmail's IMAP with an
-    /// app password. One that
-    /// leaves Online Accounts takes its own project when the keyring keeps
-    /// one for it, else the client built in. One that leaves its own
-    /// project, the only way an own-project account reaches this move,
-    /// takes the client built in for its calendar; the project stays in
-    /// the keyring for a later setup. The built-in client stays.
-    async fn client_for_imap(&self, id: AccountId) -> Result<SignInClient, MoveError> {
-        let sign_in = self
-            .db
-            .read(move |c| accounts::gmail_sign_in(c, id))
-            .await
-            .map_err(SyncError::from)?;
-        if !sign_in.on_online_accounts() {
-            return Ok(SignInClient::BuiltIn);
-        }
-        let kept = read_secret(Arc::clone(&self.secrets.google_clients), id, STEP_WAIT).await?;
-        Ok(match kept {
-            Some(_) => SignInClient::Own,
-            None => SignInClient::BuiltIn,
-        })
-    }
 }
 
-/// Moves `account`, on the IMAP route, to `own` and the Gmail API. The
-/// keyring takes the client and the token first; then one transaction
-/// switches the route to the API and the client to `own`, ends any Online
-/// Accounts link, drops an app password's servers row, and empties the
-/// stored mail, which the API lists again. The outbox, the local rules and
-/// the settings stay. True beside the account when it signed in with an
-/// app password, which the caller then deletes from the keyring.
-async fn imap_to_own_client(
-    db: &Db,
-    secrets: &Secrets,
-    account: &Account,
-    own: &OwnClient,
-    authorized: Authorized,
-) -> Result<(Account, bool), MoveError> {
-    same_address(account, &authorized)?;
-    let id = account.id;
-    let drops_password = !db
+/// How `id` signs in now.
+async fn sign_in_of(db: &Db, id: AccountId) -> Result<GmailSignIn, MoveError> {
+    Ok(db
         .read(move |c| accounts::gmail_sign_in(c, id))
         .await
-        .map_err(SyncError::from)?
-        .on_online_accounts();
-    keep_google_secrets(
-        secrets,
-        id,
-        &account.email,
-        &authorized.refresh_token,
-        Some(own),
-    )
-    .await
-    .map_err(|err| MoveError::SignIn(err.into()))?;
-    let granted = authorized.granted.as_ref().map(Granted::to_scope);
-    let asked = own.oauth().scopes().join(" ");
-    commit(db, id, GmailSignIn::OwnProject, true, move |c| {
-        if let Some(granted) = &granted {
-            accounts::set_granted(c, id, granted)?;
-        }
-        accounts::set_asked(c, id, &asked)?;
-        if drops_password {
-            servers::forget(c, id)?;
-        }
-        switch::empty_mail(c, id)
-    })
-    .await?;
-    let moved = db
-        .read(move |c| accounts::account(c, id))
-        .await
-        .map_err(SyncError::from)?
-        .ok_or(MoveError::Sync(SyncError::UnknownAccount(id)))?;
-    Ok((moved, drops_password))
+        .map_err(SyncError::from)?)
 }
 
-/// Empties the account's stored mail for Gmail's IMAP, which lists it all
-/// again, and names each outbox row by its draft's message id, which is
-/// the draft's id on IMAP. The outbox, the local rules and the settings
-/// stay.
-pub fn empty_for_imap(c: &Connection, id: AccountId) -> mailrs_store::Result<()> {
-    outbox::draft_ids_to_message_ids(c, id)?;
-    switch::empty_mail(c, id)
+/// The account `id` as the store holds it now.
+async fn account_of(db: &Db, id: AccountId) -> Result<Account, MoveError> {
+    db.read(move |c| accounts::account(c, id))
+        .await
+        .map_err(SyncError::from)?
+        .ok_or(MoveError::Sync(SyncError::UnknownAccount(id)))
+}
+
+/// The change to `own`'s project with the token `authorized` holds.
+fn own_project(account: &Account, own: &OwnClient, authorized: Authorized) -> Change {
+    let token = NewToken {
+        email: account.email.clone(),
+        refresh_token: authorized.refresh_token,
+        own: Some(own.clone()),
+        granted: authorized.granted.as_ref().map(Granted::to_scope),
+        asked: own.oauth().scopes().join(" "),
+    };
+    Change {
+        token: Some(token),
+        ..Change::to(GmailSignIn::OwnProject)
+    }
 }
 
 /// `OtherAddress` unless `authorized` signed in as `account`, whatever the
@@ -514,10 +320,11 @@ fn same_email(account: &Account, signed_in: &str) -> Result<(), MoveError> {
     })
 }
 
-/// Moves `account` to `own`, the client `authorized` signed in through.
-/// The address must be the account's, whatever its case. The route stays
-/// the API's and so do the sync state and the stored mail. On a failure
-/// the client, the token and the consent stay as they were.
+/// Moves `account` to `own`, the client `authorized` signed in through,
+/// with no engine to stop: the store and the keyring change as in
+/// [`Mover::to_own_client`]. The address must be the account's, whatever
+/// its case. On a failure the client, the token and the consent stay as
+/// they were.
 pub async fn to_own_client(
     db: &Db,
     secrets: &Secrets,
@@ -526,38 +333,9 @@ pub async fn to_own_client(
     authorized: Authorized,
 ) -> Result<Account, MoveError> {
     same_address(account, &authorized)?;
-    let granted = authorized.granted.as_ref().map(Granted::to_scope);
-    google_signed_in(
-        db,
-        secrets,
-        &account.email,
-        &authorized.refresh_token,
-        now_millis(),
-        granted.as_deref(),
-        &own.oauth().scopes().join(" "),
-        Some(own),
-    )
-    .await
-    .map_err(|err| MoveError::SignIn(err.into()))
-}
-
-/// Writes `sign_in` for `id`, starting its sync over with `restart_sync`,
-/// and runs `rewrite` in the same transaction, so a failure in either
-/// leaves the account as it was.
-///
-/// The move from the API to IMAP passes [`empty_for_imap`], which empties
-/// the stored mail for the first IMAP sync to list again.
-pub async fn commit(
-    db: &Db,
-    id: AccountId,
-    sign_in: GmailSignIn,
-    restart_sync: bool,
-    rewrite: impl FnOnce(&Connection) -> mailrs_store::Result<()> + Send + 'static,
-) -> Result<(), SyncError> {
-    db.write(move |c| {
-        accounts::commit_sign_in(c, id, &sign_in, restart_sync)?;
-        rewrite(c)
-    })
-    .await?;
-    Ok(())
+    let id = account.id;
+    let from = sign_in_of(db, id).await?;
+    let change = own_project(account, own, authorized);
+    change_sign_in(db, secrets, Whose::Held { id, from }, change).await?;
+    account_of(db, id).await
 }

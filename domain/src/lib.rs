@@ -249,6 +249,19 @@ impl GmailSignIn {
         }
     }
 
+    /// The sign-in once the mail signs in with an app password. An account
+    /// already on one keeps its client. One leaving Online Accounts takes
+    /// its own client when `keeps_own` says the keyring still keeps the one
+    /// that issued its Google token; any other takes the built-in client.
+    pub fn with_app_password(&self, keeps_own: bool) -> GmailSignIn {
+        let google = match self {
+            GmailSignIn::AppPassword { google } => *google,
+            GmailSignIn::OnlineAccounts { .. } if keeps_own => SignInClient::Own,
+            _ => SignInClient::BuiltIn,
+        };
+        GmailSignIn::AppPassword { google }
+    }
+
     /// The mail signs in with an app password the keyring keeps beside a
     /// servers row.
     pub fn on_app_password(&self) -> bool {
@@ -839,6 +852,23 @@ pub(crate) mod tests {
         .map(GmailSignIn::waits_to_move)
         .collect();
         assert_eq!(waiting, [true, false, false, false]);
+    }
+
+    #[test]
+    fn an_app_password_keeps_the_client_only_an_online_accounts_account_kept() {
+        use crate::{GmailSignIn, SignInClient};
+        let goa = GmailSignIn::OnlineAccounts {
+            goa_id: "account_1_0".into(),
+        };
+        let own_imap = GmailSignIn::AppPassword {
+            google: SignInClient::Own,
+        };
+        let client = |from: &GmailSignIn, keeps_own| from.with_app_password(keeps_own).client();
+        assert_eq!(client(&goa, true), SignInClient::Own);
+        assert_eq!(client(&goa, false), SignInClient::BuiltIn);
+        assert_eq!(client(&GmailSignIn::OwnProject, true), SignInClient::BuiltIn);
+        assert_eq!(client(&GmailSignIn::BuiltInApi, true), SignInClient::BuiltIn);
+        assert_eq!(client(&own_imap, false), SignInClient::Own);
     }
 
     #[test]

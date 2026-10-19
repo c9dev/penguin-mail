@@ -1,17 +1,14 @@
 //! Signing in to Gmail with an app password: reading what was pasted,
 //! checking Gmail's servers took it, and keeping the account.
 
-use std::sync::Arc;
-
-use mailrs_domain::{
-    Account, AccountState, EpochMillis, GmailSignIn, MailRoute, Provider, SignInClient,
-};
+use mailrs_domain::{Account, EpochMillis, MailRoute, Provider};
 use mailrs_imap::{CheckError, Checked, ImapClient, Login};
-use mailrs_store::servers::{self, Saved, Security, Servers};
+use mailrs_store::servers::{Saved, Security, Servers};
 use mailrs_store::{Db, accounts};
 
-use super::{ImapSignInError, save_passwords, taken_error};
-use crate::passwords::PasswordStore;
+use super::change::{self, Change, NewPassword, Whose, change_sign_in};
+use super::{ImapSignInError, taken_error};
+use crate::passwords::Secrets;
 
 /// What a person pasted, read as Google prints an app password: sixteen
 /// letters, shown in groups of four.
@@ -147,10 +144,12 @@ pub struct NewGmailImap {
 /// on that route holds already is a sign-in again: the new password and
 /// servers replace the old, and Needs Sign-In ends. Any other holder
 /// makes the address taken, a Gmail account on the API route included:
-/// that one changes route through the move.
-pub async fn gmail_imap_signed_in<P: PasswordStore + 'static>(
+/// that one changes route through the move. An account on Online Accounts
+/// leaves it, whose token it would otherwise go on reading, and keeps the
+/// client [`change::with_app_password`] names.
+pub async fn gmail_imap_signed_in(
     db: &Db,
-    passwords: Arc<P>,
+    secrets: &Secrets,
     new: NewGmailImap,
     now: EpochMillis,
 ) -> Result<Account, ImapSignInError> {
@@ -163,57 +162,39 @@ pub async fn gmail_imap_signed_in<P: PasswordStore + 'static>(
     let before = db
         .read(move |c| {
             let held = accounts::account_by_email(c, &email)?;
-            let route = held
+            let sign_in = held
                 .as_ref()
                 .map(|held| accounts::gmail_sign_in(c, held.id))
-                .transpose()?
-                .map(|sign_in| sign_in.route());
-            Ok((held, route))
+                .transpose()?;
+            Ok((held, sign_in))
         })
         .await?;
-    match before {
-        (Some(held), Some(MailRoute::Imap)) if held.provider == Provider::Gmail => {
-            save_passwords(Arc::clone(&passwords), held.id, password, None).await?;
-            let (id, again) = (held.id, held.state);
-            db.write(move |c| {
-                servers::save(c, id, &servers)?;
-                // An app password takes the account off Online Accounts,
-                // whose token it would otherwise go on reading.
-                if accounts::gmail_sign_in(c, id)?.on_online_accounts() {
-                    let password = GmailSignIn::AppPassword {
-                        google: SignInClient::BuiltIn,
-                    };
-                    accounts::set_gmail_sign_in(c, id, &password)?;
-                }
-                if again == AccountState::NeedsReauth {
-                    accounts::set_state(c, id, AccountState::Ok)?;
-                }
-                Ok(())
-            })
-            .await?;
+    let whose = match before {
+        (Some(held), Some(from))
+            if held.provider == Provider::Gmail && from.route() == MailRoute::Imap =>
+        {
+            Whose::Held { id: held.id, from }
         }
         (Some(held), _) => {
             return Err(taken_error(&address, held.provider_name()));
         }
-        (None, _) => {
-            let (email, kept) = (address.clone(), servers);
-            let id = db
-                .write(move |c| {
-                    let id = accounts::insert_account(c, &email, now)?;
-                    let password = GmailSignIn::AppPassword {
-                        google: SignInClient::BuiltIn,
-                    };
-                    accounts::set_gmail_sign_in(c, id, &password)?;
-                    servers::save(c, id, &kept)?;
-                    Ok(id)
-                })
-                .await?;
-            if let Err(err) = save_passwords(Arc::clone(&passwords), id, password, None).await {
-                db.write(move |c| accounts::delete_account(c, id)).await?;
-                return Err(err.into());
-            }
+        (None, _) => Whose::New {
+            email: address.clone(),
+            now,
+        },
+    };
+    let to = match &whose {
+        Whose::Held { id, from } => {
+            change::with_app_password(secrets, Some(*id), Some(from)).await?
         }
-    }
+        Whose::New { .. } => change::with_app_password(secrets, None, None).await?,
+    };
+    let change = Change {
+        password: Some(NewPassword { servers, password }),
+        signed_in_again: true,
+        ..Change::to(to)
+    };
+    change_sign_in(db, secrets, whose, change).await?;
     db.read(move |c| accounts::account_by_email(c, &address))
         .await?
         .ok_or(ImapSignInError::Store(mailrs_store::StoreError::Sqlite(
@@ -226,8 +207,11 @@ mod tests {
     use mailrs_discover::google_servers;
     use mailrs_imap::{Capabilities, Listed, SpecialUse};
 
+    use mailrs_domain::{AccountState, GmailSignIn, SignInClient};
+    use mailrs_store::servers;
+
     use super::*;
-    use crate::passwords::MemoryPasswords;
+    use crate::passwords::{MemoryPasswords, PasswordStore, Passwords};
 
     fn store() -> (tempfile::TempDir, Db) {
         let dir = tempfile::tempdir().unwrap();
@@ -314,29 +298,36 @@ mod tests {
         assert_eq!(found.servers, servers());
     }
 
+    /// The in-memory app password store of `secrets`.
+    fn passwords(secrets: &Secrets) -> &MemoryPasswords {
+        let Passwords::Memory(passwords) = &*secrets.passwords else {
+            unreachable!("Secrets::memory keeps passwords in memory")
+        };
+        passwords
+    }
+
+    async fn sign_in(db: &Db, id: i64) -> GmailSignIn {
+        db.read(move |c| accounts::gmail_sign_in(c, id))
+            .await
+            .unwrap()
+    }
+
     #[tokio::test]
     async fn a_gmail_imap_account_keeps_its_route_servers_and_password() {
         let (_dir, db) = store();
-        let passwords = Arc::new(MemoryPasswords::default());
-        let account =
-            gmail_imap_signed_in(&db, passwords.clone(), new_account("abcdefghijklmnop"), 5)
-                .await
-                .unwrap();
+        let secrets = Secrets::memory();
+        let account = gmail_imap_signed_in(&db, &secrets, new_account("abcdefghijklmnop"), 5)
+            .await
+            .unwrap();
         let id = account.id;
         assert_eq!(account.provider, Provider::Gmail);
-        assert_eq!(
-            db.read(move |c| accounts::gmail_sign_in(c, id))
-                .await
-                .unwrap()
-                .route(),
-            MailRoute::Imap
-        );
+        assert_eq!(sign_in(&db, id).await.route(), MailRoute::Imap);
         assert_eq!(
             db.read(move |c| servers::load(c, id)).await.unwrap(),
             Some(servers())
         );
         assert_eq!(
-            passwords.load(id).unwrap().as_deref(),
+            secrets.passwords.load(id).unwrap().as_deref(),
             Some("abcdefghijklmnop")
         );
     }
@@ -344,22 +335,20 @@ mod tests {
     #[tokio::test]
     async fn signing_in_again_replaces_the_password_and_ends_needs_sign_in() {
         let (_dir, db) = store();
-        let passwords = Arc::new(MemoryPasswords::default());
-        let first =
-            gmail_imap_signed_in(&db, passwords.clone(), new_account("aaaaaaaaaaaaaaaa"), 5)
-                .await
-                .unwrap();
+        let secrets = Secrets::memory();
+        let first = gmail_imap_signed_in(&db, &secrets, new_account("aaaaaaaaaaaaaaaa"), 5)
+            .await
+            .unwrap();
         let id = first.id;
         db.write(move |c| accounts::set_state(c, id, AccountState::NeedsReauth))
             .await
             .unwrap();
-        let again =
-            gmail_imap_signed_in(&db, passwords.clone(), new_account("bbbbbbbbbbbbbbbb"), 6)
-                .await
-                .unwrap();
+        let again = gmail_imap_signed_in(&db, &secrets, new_account("bbbbbbbbbbbbbbbb"), 6)
+            .await
+            .unwrap();
         assert_eq!((again.id, again.state), (id, AccountState::Ok));
         assert_eq!(
-            passwords.load(id).unwrap().as_deref(),
+            secrets.passwords.load(id).unwrap().as_deref(),
             Some("bbbbbbbbbbbbbbbb")
         );
     }
@@ -370,23 +359,18 @@ mod tests {
         db.write(|c| accounts::insert_account(c, "me@gmail.com", 0))
             .await
             .unwrap();
-        let err = gmail_imap_signed_in(
-            &db,
-            Arc::new(MemoryPasswords::default()),
-            new_account("abcdefghijklmnop"),
-            5,
-        )
-        .await
-        .unwrap_err();
+        let err = gmail_imap_signed_in(&db, &Secrets::memory(), new_account("abcdefghijklmnop"), 5)
+            .await
+            .unwrap_err();
         assert!(matches!(err, ImapSignInError::Taken { .. }));
     }
 
     #[tokio::test]
     async fn a_keyring_that_refuses_leaves_no_new_account() {
         let (_dir, db) = store();
-        let passwords = Arc::new(MemoryPasswords::default());
-        passwords.refuse_saves();
-        let err = gmail_imap_signed_in(&db, passwords, new_account("abcdefghijklmnop"), 5)
+        let secrets = Secrets::memory();
+        passwords(&secrets).refuse_saves();
+        let err = gmail_imap_signed_in(&db, &secrets, new_account("abcdefghijklmnop"), 5)
             .await
             .unwrap_err();
         assert!(matches!(err, ImapSignInError::Password(_)));
@@ -395,5 +379,62 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(held, None);
+    }
+
+    /// A Gmail account on Online Accounts, as a link leaves it.
+    async fn on_online_accounts(db: &Db) -> i64 {
+        db.write(|c| {
+            let id = accounts::insert_account(c, "me@gmail.com", 0)?;
+            let goa = GmailSignIn::OnlineAccounts {
+                goa_id: "account_1_0".into(),
+            };
+            accounts::set_gmail_sign_in(c, id, &goa)?;
+            Ok(id)
+        })
+        .await
+        .unwrap()
+    }
+
+    #[tokio::test]
+    async fn an_online_accounts_account_taking_an_app_password_keeps_its_own_project() {
+        let (_dir, db) = store();
+        let secrets = Secrets::memory();
+        let id = on_online_accounts(&db).await;
+        let own = super::super::own_client::OwnClient::new("own-cid", "own-secret");
+        secrets.google_clients.save(id, &own.encode()).unwrap();
+
+        gmail_imap_signed_in(&db, &secrets, new_account("abcdefghijklmnop"), 5)
+            .await
+            .unwrap();
+
+        assert_eq!(
+            sign_in(&db, id).await,
+            GmailSignIn::AppPassword {
+                google: SignInClient::Own
+            }
+        );
+        assert_eq!(
+            secrets.google_clients.load(id).unwrap(),
+            Some(own.encode()),
+            "the project stays for the calendar"
+        );
+    }
+
+    #[tokio::test]
+    async fn an_online_accounts_account_with_no_project_takes_the_built_in_client() {
+        let (_dir, db) = store();
+        let secrets = Secrets::memory();
+        let id = on_online_accounts(&db).await;
+
+        gmail_imap_signed_in(&db, &secrets, new_account("abcdefghijklmnop"), 5)
+            .await
+            .unwrap();
+
+        assert_eq!(
+            sign_in(&db, id).await,
+            GmailSignIn::AppPassword {
+                google: SignInClient::BuiltIn
+            }
+        );
     }
 }

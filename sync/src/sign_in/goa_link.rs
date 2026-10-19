@@ -7,6 +7,7 @@ use mailrs_domain::translate::gettext;
 use mailrs_domain::{Account, EpochMillis, GmailSignIn, Provider};
 use mailrs_store::{StoreError, accounts};
 
+use super::change::{Change, ChangeError, Whose, change_sign_in};
 use crate::Connector;
 use crate::goa::{GoaAccount, GoaError, GoaTokens, OnlineAccounts};
 
@@ -27,6 +28,8 @@ pub enum LinkError {
     Goa(GoaError),
     #[error(transparent)]
     Store(#[from] StoreError),
+    #[error("{0}")]
+    Keyring(String),
 }
 
 fn sign_in_again() -> String {
@@ -86,29 +89,44 @@ pub async fn link(
     // Google reads an address without regard to case and the store keeps it
     // lower case, as every other sign-in does.
     let address = goa_account.identity.trim().to_lowercase();
-    let goa_id = goa_account.id.clone();
-    let kept = connector
+    let email = address.clone();
+    let held = connector
         .db
-        .write(move |c| {
-            if let Some(held) = accounts::account_by_email(c, &address)? {
-                return Ok(match held.provider {
-                    Provider::Gmail => Ok(held),
-                    _ => Err(held.provider_name().to_string()),
-                });
-            }
-            let id = accounts::insert_account(c, &address, now)?;
-            accounts::set_gmail_sign_in(c, id, &GmailSignIn::OnlineAccounts { goa_id })?;
-            // The row was written a line above in the same transaction.
-            let account = accounts::account(c, id)?
-                .ok_or(StoreError::Sqlite(rusqlite::Error::QueryReturnedNoRows))?;
-            Ok(Ok(account))
-        })
+        .read(move |c| accounts::account_by_email(c, &email))
         .await?;
-    match kept {
-        Ok(account) => Ok(account),
-        Err(provider) => Err(LinkError::Taken {
-            address: goa_account.identity.trim().to_string(),
-            provider,
-        }),
+    match held {
+        Some(held) if held.provider == Provider::Gmail => return Ok(held),
+        Some(held) => {
+            return Err(LinkError::Taken {
+                address: goa_account.identity.trim().to_string(),
+                provider: held.provider_name().to_string(),
+            });
+        }
+        None => {}
+    }
+    let to = GmailSignIn::OnlineAccounts {
+        goa_id: goa_account.id.clone(),
+    };
+    let whose = Whose::New {
+        email: address,
+        now,
+    };
+    let id = change_sign_in(&connector.db, &connector.secrets, whose, Change::to(to)).await?;
+    connector
+        .db
+        .read(move |c| accounts::account(c, id))
+        .await?
+        .ok_or(LinkError::Store(StoreError::Sqlite(
+            rusqlite::Error::QueryReturnedNoRows,
+        )))
+}
+
+impl From<ChangeError> for LinkError {
+    fn from(err: ChangeError) -> Self {
+        match err {
+            ChangeError::Store(err) => LinkError::Store(err),
+            // A link brings no secret, so the keyring never refuses one.
+            other => LinkError::Keyring(other.to_string()),
+        }
     }
 }
