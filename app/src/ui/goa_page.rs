@@ -553,11 +553,7 @@ pub(crate) mod checks {
         page.show(PageState::NotInstalled {
             address: "dana@example.com".into(),
         });
-        assert!(
-            page.body
-                .text()
-                .starts_with("Install Online Accounts")
-        );
+        assert!(page.body.text().starts_with("Install Online Accounts"));
         assert!(!page.main.is_visible());
         assert!(page.other_ways.is_visible());
     }

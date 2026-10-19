@@ -47,9 +47,12 @@ impl From<ChangeError> for MoveError {
             }
             ChangeError::Password(err) => MoveError::Sync(SyncError::from(err)),
             ChangeError::Store(err) => MoveError::Sync(SyncError::from(err)),
-            ChangeError::Taken { address, provider } => MoveError::SignIn(
-                BrowserSignInError::Kept(SignInError::Taken { address, provider }),
-            ),
+            ChangeError::Taken { address, provider } => {
+                MoveError::SignIn(BrowserSignInError::Kept(SignInError::Taken {
+                    address,
+                    provider,
+                }))
+            }
         }
     }
 }

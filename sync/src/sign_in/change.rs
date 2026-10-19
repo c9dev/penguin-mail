@@ -741,10 +741,7 @@ mod tests {
         let other = db
             .write(|c| {
                 let id = accounts::insert_account(c, ADDRESS, 0)?;
-                c.execute(
-                    "UPDATE accounts SET provider = 'imap' WHERE id = ?1",
-                    [id],
-                )?;
+                c.execute("UPDATE accounts SET provider = 'imap' WHERE id = ?1", [id])?;
                 Ok(id)
             })
             .await

@@ -599,7 +599,10 @@ fn api_library_links() -> gtk::Box {
             .icon_name("adw-external-link-symbolic")
             .label(name)
             .build();
-        let link = gtk::LinkButton::builder().uri(url).halign(gtk::Align::Start).build();
+        let link = gtk::LinkButton::builder()
+            .uri(url)
+            .halign(gtk::Align::Start)
+            .build();
         link.set_child(Some(&content));
         crate::ui::name(&link, name);
         links.append(&link);

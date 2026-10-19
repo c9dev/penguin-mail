@@ -169,11 +169,10 @@ pub fn present(
     if matches!(&opening, Opening::LeaveOwn(_)) {
         this.leaving_own.set(true);
     }
-    let routes_first = match &opening {
-        Opening::Move(_) | Opening::LeaveOwn(_) => true,
-        Opening::Browser(Browser::Google) => true,
-        _ => false,
-    };
+    let routes_first = matches!(
+        &opening,
+        Opening::Move(_) | Opening::LeaveOwn(_) | Opening::Browser(Browser::Google)
+    );
     let root = match &opening {
         _ if routes_first => route_page::TAG,
         Opening::Move(_) | Opening::LeaveOwn(_) => route_page::TAG,

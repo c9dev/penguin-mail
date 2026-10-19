@@ -575,12 +575,11 @@ async fn a_send_later_draft_that_is_gone_stays_and_asks_to_check_sent() {
     let drained = outbox.send_due(crate::now_millis()).await.unwrap();
 
     assert!(drained.sent.is_empty(), "a gone draft never counts as sent");
-    let kept = h
-        .db
-        .read(move |c| outbox::find(c, row_id))
-        .await
-        .unwrap()
-        .expect("the message still waits");
+    let kept =
+        h.db.read(move |c| outbox::find(c, row_id))
+            .await
+            .unwrap()
+            .expect("the message still waits");
     assert!(
         kept.problem
             .as_deref()

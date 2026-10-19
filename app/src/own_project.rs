@@ -415,12 +415,10 @@ pub fn dropped(paths: &[PathBuf]) -> Option<&Path> {
 /// The client in the key `file` holds. Reads at most one byte past
 /// [`FILE_LIMIT`], so a large file is refused without being read whole.
 pub async fn read_key_file(file: &gio::File) -> Result<OwnClient, FileProblem> {
-    let bytes = read_head(file, FILE_LIMIT + 1)
-        .await
-        .map_err(|err| {
-            tracing::info!(error = %err, "could not read the key file");
-            FileProblem::Unreadable
-        })?;
+    let bytes = read_head(file, FILE_LIMIT + 1).await.map_err(|err| {
+        tracing::info!(error = %err, "could not read the key file");
+        FileProblem::Unreadable
+    })?;
     read_file(&bytes)
 }
 

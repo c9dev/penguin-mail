@@ -455,9 +455,11 @@ pub async fn consent_through_built_in(
         .db
         .read(move |c| accounts::gmail_sign_in(c, id))
         .await?;
-    Ok(consent_own(&connector.config, &connector.secrets, id, &sign_in)
-        .await?
-        .is_none())
+    Ok(
+        consent_own(&connector.config, &connector.secrets, id, &sign_in)
+            .await?
+            .is_none(),
+    )
 }
 
 pub async fn calendar_consent(

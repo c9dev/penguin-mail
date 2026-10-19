@@ -2260,7 +2260,8 @@ impl MainWindow {
             // the API takes its calendar with its mail, so it signs in
             // again, or chooses a route first when its mail has to move.
             let imap = self.route_of(account_id) == Some(mailrs_domain::MailRoute::Imap);
-            if imap && crate::offered::calendar_link(&account, self.offers(account_id)).shows_connect()
+            if imap
+                && crate::offered::calendar_link(&account, self.offers(account_id)).shows_connect()
             {
                 return self.connect_calendar(account);
             }
@@ -3166,8 +3167,8 @@ impl MainWindow {
             self.press_goa_banner(crate::goa_notice::Action::OpenOnlineAccounts);
             return;
         }
-        let imap_route = sign_in
-            .is_some_and(|sign_in| sign_in.route() == mailrs_domain::MailRoute::Imap);
+        let imap_route =
+            sign_in.is_some_and(|sign_in| sign_in.route() == mailrs_domain::MailRoute::Imap);
         if account.provider == Provider::Gmail && imap_route {
             self.present_add_account(Opening::Again(account));
             return;
