@@ -36,6 +36,7 @@ mod notify;
 mod offered;
 mod old_id;
 mod open_thread;
+mod own_project;
 mod packaging;
 mod permission;
 mod pgp;

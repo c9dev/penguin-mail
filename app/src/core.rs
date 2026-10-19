@@ -397,6 +397,38 @@ impl Core {
         self.config.borrow().sync.clone()
     }
 
+    /// The step of the own Google project setup the person reached.
+    #[allow(dead_code, reason = "The setup dialog reads it")]
+    pub fn google_setup_step(&self) -> Option<u8> {
+        self.config.borrow().google_setup_step
+    }
+
+    /// Remembers the setup step reached, or `None` once the setup ends.
+    /// Writes `config.toml`; the demo keeps it in memory. Unlike
+    /// `update_sync` it leaves the engine running.
+    pub fn set_google_setup_step(&self, step: Option<u8>) -> Result<()> {
+        let updated = {
+            let mut config = self.config.borrow_mut();
+            if config.google_setup_step == step {
+                return Ok(());
+            }
+            config.google_setup_step = step;
+            config.clone()
+        };
+        if !self.demo {
+            updated.save(&config_path()?)?;
+        }
+        Ok(())
+    }
+
+    /// Forgets the saved setup step after the setup's client signed an
+    /// account in. A file that will not write is logged; the sign-in holds.
+    fn finish_google_setup(&self) {
+        if let Err(err) = self.set_google_setup_step(None) {
+            tracing::warn!(%err, "could not clear the saved Google setup step");
+        }
+    }
+
     /// Whether the sheet that asks Gmail accounts to choose a sign-in
     /// already showed.
     pub fn google_move_shown(&self) -> bool {
@@ -871,39 +903,45 @@ impl Core {
             .current()
             .ok_or_else(|| anyhow!("sync is not running"))?;
         let connector = self.connector();
+        let setup = connector.clients.chosen_google.is_some();
         let calendar_copy = self.calendar_copy();
         let db = self.db.clone();
-        self.call(async move {
-            let run = in_browser(&connector, browser, wanted, move |url: &str| {
-                let _ = urls.try_send(url.to_string());
-            });
-            let waited = tokio::select! {
-                waited = tokio::time::timeout(BROWSER_WAIT, run) => waited,
-                _ = cancel.recv() => bail!(gettext("Canceled.")),
-            };
-            let signed = waited.map_err(|_| {
-                anyhow!(gettext(
-                    "Gave up waiting for the browser after five minutes."
-                ))
-            })??;
-            match signed.services {
-                mailrs_sync::Connected::Ready(services) => {
-                    engine.start_account(signed.account.id, services)
+        let signed = self
+            .call(async move {
+                let run = in_browser(&connector, browser, wanted, move |url: &str| {
+                    let _ = urls.try_send(url.to_string());
+                });
+                let waited = tokio::select! {
+                    waited = tokio::time::timeout(BROWSER_WAIT, run) => waited,
+                    _ = cancel.recv() => bail!(gettext("Canceled.")),
+                };
+                let signed = waited.map_err(|_| {
+                    anyhow!(gettext(
+                        "Gave up waiting for the browser after five minutes."
+                    ))
+                })??;
+                match signed.services {
+                    mailrs_sync::Connected::Ready(services) => {
+                        engine.start_account(signed.account.id, services)
+                    }
+                    // A Gmail account whose mail route still lacks its secret
+                    // waits for it, as at any start.
+                    mailrs_sync::Connected::NeedsSignIn(_) => {
+                        let id = signed.account.id;
+                        let state = missing_token_state(&db, &signed.account).await?;
+                        db.write(move |c| accounts::set_state(c, id, state)).await?;
+                    }
                 }
-                // A Gmail account whose mail route still lacks its secret
-                // waits for it, as at any start.
-                mailrs_sync::Connected::NeedsSignIn(_) => {
-                    let id = signed.account.id;
-                    let state = missing_token_state(&db, &signed.account).await?;
-                    db.write(move |c| accounts::set_state(c, id, state)).await?;
-                }
-            }
-            // The sign-in may have granted the calendar permission, so the
-            // copy stops waiting out an earlier refusal.
-            calendar_copy.permission_changed(signed.account.id);
-            Ok::<_, anyhow::Error>((signed.account, signed.name))
-        })
-        .await
+                // The sign-in may have granted the calendar permission, so the
+                // copy stops waiting out an earlier refusal.
+                calendar_copy.permission_changed(signed.account.id);
+                Ok::<_, anyhow::Error>((signed.account, signed.name))
+            })
+            .await?;
+        if setup {
+            self.finish_google_setup();
+        }
+        Ok(signed)
     }
 
     /// The servers for `address`, found the way discovery goes: the
@@ -1706,37 +1744,40 @@ impl Core {
             connector: self.connector(),
             demo: self.demo_mail.clone(),
         };
-        self.call(async move {
-            // Held until the move ends, even when the dialog has gone.
-            let _lease = lease;
-            let choice = move_choice(&Clients::current().with_chosen(chosen))?;
-            let own = choice
-                .own
-                .clone()
-                .ok_or(BrowserSignInError::NoClient(Browser::Google))?;
-            let open = move |url: &str| {
-                let _ = urls.try_send(url.to_string());
-            };
-            let authorized = authorize_until_canceled(&choice.oauth, open, cancel).await?;
-            let port = MovePort {
-                engine,
-                reach,
-                db: db.clone(),
-            };
-            let mover = route_move::Mover {
-                engine: &port,
-                db: &db,
-                secrets: &secrets,
-                outbox: &outbox,
-            };
-            let moved = mover.to_own_client(&account, &own, authorized, || {
-                let _ = committed.try_send(());
-            });
-            let moved = moved.await?;
-            keep_chosen_project(&secrets, &choice).await;
-            Ok::<_, anyhow::Error>(moved)
-        })
-        .await
+        let moved = self
+            .call(async move {
+                // Held until the move ends, even when the dialog has gone.
+                let _lease = lease;
+                let choice = move_choice(&Clients::current().with_chosen(chosen))?;
+                let own = choice
+                    .own
+                    .clone()
+                    .ok_or(BrowserSignInError::NoClient(Browser::Google))?;
+                let open = move |url: &str| {
+                    let _ = urls.try_send(url.to_string());
+                };
+                let authorized = authorize_until_canceled(&choice.oauth, open, cancel).await?;
+                let port = MovePort {
+                    engine,
+                    reach,
+                    db: db.clone(),
+                };
+                let mover = route_move::Mover {
+                    engine: &port,
+                    db: &db,
+                    secrets: &secrets,
+                    outbox: &outbox,
+                };
+                let moved = mover.to_own_client(&account, &own, authorized, || {
+                    let _ = committed.try_send(());
+                });
+                let moved = moved.await?;
+                keep_chosen_project(&secrets, &choice).await;
+                Ok::<_, anyhow::Error>(moved)
+            })
+            .await?;
+        self.finish_google_setup();
+        Ok(moved)
     }
 }
 
@@ -2397,6 +2438,17 @@ mod tests {
                 "app".into()
             ))
         );
+    }
+
+    #[test]
+    fn the_setup_step_is_kept_in_memory_in_the_demo_and_cleared_by_none() {
+        let _demo = DEMO.lock().unwrap_or_else(PoisonError::into_inner);
+        let core = Core::open(true).expect("the demo core opens");
+        assert_eq!(core.google_setup_step(), None);
+        core.set_google_setup_step(Some(3)).unwrap();
+        assert_eq!(core.google_setup_step(), Some(3));
+        core.finish_google_setup();
+        assert_eq!(core.google_setup_step(), None);
     }
 
     #[test]

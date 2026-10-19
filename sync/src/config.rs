@@ -47,6 +47,10 @@ pub struct Config {
     /// account to choose how it signs in. It shows once.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub google_move_shown: bool,
+    /// The step of the own Google project setup the person reached, so
+    /// closing the setup partway reopens it there.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub google_setup_step: Option<u8>,
 }
 
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -220,6 +224,19 @@ mod tests {
     use std::time::Duration;
 
     use super::{Config, OAuthConfig, move_old_dir};
+
+    #[test]
+    fn the_setup_step_round_trips_and_is_left_out_when_unset() {
+        let set = Config {
+            google_setup_step: Some(4),
+            ..Config::default()
+        };
+        let text = toml::to_string(&set).unwrap();
+        assert!(text.contains("google_setup_step = 4"), "{text}");
+        assert_eq!(Config::parse(&text).unwrap().google_setup_step, Some(4));
+        let unset = toml::to_string(&Config::default()).unwrap();
+        assert!(!unset.contains("google_setup_step"), "{unset}");
+    }
 
     #[test]
     fn debug_output_leaves_out_an_own_clients_secret() {
