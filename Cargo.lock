@@ -2483,7 +2483,6 @@ dependencies = [
  "async-channel 2.5.0",
  "chrono",
  "clap",
- "mailrs-discover",
  "mailrs-domain",
  "mailrs-gmail",
  "mailrs-graph",
