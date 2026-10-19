@@ -228,7 +228,7 @@ msgstr "Создайте его в настройках {provider}."
 msgid "App Password"
 msgstr "Пароль приложения"
 
-#: app/src/add_account.rs:527 app/src/add_account.rs:1638
+#: app/src/add_account.rs:527 app/src/add_account.rs:1662
 msgid "Password"
 msgstr "Пароль"
 
@@ -326,13 +326,13 @@ msgstr[0] "{count} переписка"
 msgstr[1] "{count} переписки"
 msgstr[2] "{count} переписок"
 
-#: app/src/add_account.rs:799 app/src/add_account.rs:1977
-#: app/src/add_account.rs:2010 app/src/add_account.rs:2039
-#: app/src/add_account.rs:2106
+#: app/src/add_account.rs:799 app/src/add_account.rs:2001
+#: app/src/add_account.rs:2034 app/src/add_account.rs:2063
+#: app/src/add_account.rs:2130
 msgid "Could not sign in"
 msgstr "Не удалось войти"
 
-#: app/src/add_account.rs:812 app/src/add_account.rs:1344
+#: app/src/add_account.rs:812 app/src/add_account.rs:1368
 msgid "Could not sign in: {reason}"
 msgstr "Не удалось войти: {reason}"
 
@@ -447,7 +447,7 @@ msgstr ""
 msgid "Connect Your Keyring"
 msgstr "Подключить связку ключей"
 
-#: app/src/add_account.rs:989 app/src/add_account.rs:2052
+#: app/src/add_account.rs:989 app/src/add_account.rs:2076
 msgid "{provider} refused the password"
 msgstr "{provider} отклонил пароль"
 
@@ -463,7 +463,7 @@ msgstr ""
 "Здесь {provider} требует пароль приложения, а не пароль для сайта. Создайте "
 "его, вставьте выше и нажмите «Войти»."
 
-#: app/src/add_account.rs:1004 app/src/add_account.rs:2053
+#: app/src/add_account.rs:1004 app/src/add_account.rs:2077
 msgid "Check the password, then choose Sign In."
 msgstr "Проверьте пароль и нажмите «Войти»."
 
@@ -491,11 +491,11 @@ msgstr "Введите имя сервера входящей почты."
 msgid "Type the outgoing server's name."
 msgstr "Введите имя сервера исходящей почты."
 
-#: app/src/add_account.rs:1345
+#: app/src/add_account.rs:1369
 msgid "Could not add the calendar: {reason}"
 msgstr "Не удалось добавить календарь: {reason}"
 
-#: app/src/add_account.rs:1360
+#: app/src/add_account.rs:1384
 msgid ""
 "To see this server's calendars there, open Preferences, then Accounts, open "
 "that account, and type this server's address under Calendar, Contacts and "
@@ -505,7 +505,7 @@ msgstr ""
 "записи», выберите нужную запись и введите адрес сервера в разделе «Серверы "
 "календарей, контактов и правил»."
 
-#: app/src/add_account.rs:1373
+#: app/src/add_account.rs:1397
 msgid ""
 "The server did not take that user name and password. Where it uses two-step "
 "sign-in, it needs an app password."
@@ -513,7 +513,7 @@ msgstr ""
 "Сервер не принял это имя пользователя и пароль. Если включена двухэтапная "
 "проверка, нужен пароль приложения."
 
-#: app/src/add_account.rs:1377
+#: app/src/add_account.rs:1401
 msgid ""
 "Penguin Mail could not reach that server. Check the address and your "
 "connection."
@@ -521,19 +521,19 @@ msgstr ""
 "Penguin Mail не смог подключиться к серверу. Проверьте адрес и подключение к "
 "сети."
 
-#: app/src/add_account.rs:1382
+#: app/src/add_account.rs:1406
 msgid "No calendar was found at that address."
 msgstr "По этому адресу не найден календарь."
 
-#: app/src/add_account.rs:1403
+#: app/src/add_account.rs:1427
 msgid "Mail is downloading. You can close this window."
 msgstr "Почта загружается. Это окно можно закрыть."
 
-#: app/src/add_account.rs:1404 app/src/add_account.rs:1433
+#: app/src/add_account.rs:1428 app/src/add_account.rs:1457
 msgid "Your mail is here."
 msgstr "Ваша почта загружена."
 
-#: app/src/add_account.rs:1418
+#: app/src/add_account.rs:1442
 msgid ""
 "Your organization did not allow one of the permissions Penguin Mail asked "
 "for, so this feature stays off:"
@@ -550,7 +550,7 @@ msgstr[2] ""
 "Ваша организация не предоставила {count} разрешений, запрошенных Penguin "
 "Mail, поэтому эти функции выключены:"
 
-#: app/src/add_account.rs:1425
+#: app/src/add_account.rs:1449
 msgid "You left one box unticked on Google's page, so this feature stays off:"
 msgid_plural ""
 "You left {count} boxes unticked on Google's page, so these features stay off:"
@@ -564,11 +564,11 @@ msgstr[2] ""
 "Вы не установили {count} флажков на странице Google, поэтому эти функции "
 "выключены:"
 
-#: app/src/add_account.rs:1432
+#: app/src/add_account.rs:1456
 msgid "Mail is downloading."
 msgstr "Почта загружается."
 
-#: app/src/add_account.rs:1452
+#: app/src/add_account.rs:1476
 msgid ""
 "Newest mail comes first. Older mail keeps coming in the background, even "
 "with the window closed."
@@ -576,11 +576,11 @@ msgstr ""
 "Сначала загружаются новые письма. Старые письма продолжают загружаться в "
 "фоне, даже при закрытом окне."
 
-#: app/src/add_account.rs:1455
+#: app/src/add_account.rs:1479
 msgid "Penguin Mail keeps checking for new mail, even with the window closed."
 msgstr "Penguin Mail продолжает проверять новую почту, даже при закрытом окне."
 
-#: app/src/add_account.rs:1466
+#: app/src/add_account.rs:1490
 msgid ""
 "Penguin Mail downloads the server's mail into Inbox and keeps checking in "
 "the background, even with the window closed. Mail stays on the server."
@@ -588,7 +588,7 @@ msgstr ""
 "Penguin Mail загружает почту с сервера во входящие и продолжает проверять её "
 "в фоне, даже при закрытом окне. Письма остаются на сервере."
 
-#: app/src/add_account.rs:1469
+#: app/src/add_account.rs:1493
 msgid ""
 "Penguin Mail downloads the server's mail into Inbox and keeps checking in "
 "the background, even with the window closed. It removes each message from "
@@ -598,7 +598,7 @@ msgstr ""
 "в фоне, даже при закрытом окне. Каждое письмо удаляется с сервера после "
 "загрузки."
 
-#: app/src/add_account.rs:1472
+#: app/src/add_account.rs:1496
 msgid ""
 "Penguin Mail downloads the server's mail into Inbox and keeps checking in "
 "the background, even with the window closed. It removes each message from "
@@ -620,27 +620,27 @@ msgstr[2] ""
 "в фоне, даже при закрытом окне. Каждое письмо удаляется с сервера через "
 "{days} дней после загрузки."
 
-#: app/src/add_account.rs:1488
+#: app/src/add_account.rs:1512
 msgid "Penguin Mail needs the password for {address} again."
 msgstr "Penguin Mail снова нужен пароль для {address}."
 
-#: app/src/add_account.rs:1497
+#: app/src/add_account.rs:1521
 msgid "Choose Sign In With Browser to sign in to {address} again."
 msgstr "Нажмите «Войти через браузер», чтобы снова войти в {address}."
 
-#: app/src/add_account.rs:1506
+#: app/src/add_account.rs:1530
 msgid "Sign in again through the browser to keep {account} syncing"
 msgstr "Войдите снова через браузер, чтобы продолжить синхронизацию {account}"
 
-#: app/src/add_account.rs:1507
+#: app/src/add_account.rs:1531
 msgid "Sign in again to keep {account} syncing"
 msgstr "Войдите снова, чтобы продолжить синхронизацию {account}"
 
-#: app/src/add_account.rs:1637
+#: app/src/add_account.rs:1661
 msgid "API Token"
 msgstr "Токен API"
 
-#: app/src/add_account.rs:1656
+#: app/src/add_account.rs:1680
 msgid ""
 "Make an API token in {provider}'s settings with this access: {access}. Paste "
 "it here."
@@ -648,43 +648,43 @@ msgstr ""
 "Создайте токен API в настройках {provider} с правами {access}. Вставьте его "
 "сюда."
 
-#: app/src/add_account.rs:1661
+#: app/src/add_account.rs:1685
 msgid "Make an API token in {provider}'s settings and paste it here."
 msgstr "Создайте токен API в настройках {provider} и вставьте его сюда."
 
-#: app/src/add_account.rs:1668
+#: app/src/add_account.rs:1692
 msgid "Tokens need a plan above {plan}."
 msgstr "Для токенов нужен тариф выше {plan}."
 
-#: app/src/add_account.rs:1674 app/src/add_account/post.rs:447
+#: app/src/add_account.rs:1698 app/src/add_account/post.rs:447
 msgid "{provider} signs in with an API token"
 msgstr "{provider} использует токен API для входа"
 
-#: app/src/add_account.rs:1684 app/src/add_account/post.rs:455
+#: app/src/add_account.rs:1708 app/src/add_account/post.rs:455
 msgid "How to Make a Token"
 msgstr "Как создать токен"
 
-#: app/src/add_account.rs:1694
+#: app/src/add_account.rs:1718
 msgid "Sign in to {provider}"
 msgstr "Войти в {provider}"
 
-#: app/src/add_account.rs:1698
+#: app/src/add_account.rs:1722
 msgid "Sign in to {domain}"
 msgstr "Войти в {domain}"
 
-#: app/src/add_account.rs:1707
+#: app/src/add_account.rs:1731
 msgid "The JMAP server you gave."
 msgstr "Указанный вами сервер JMAP."
 
-#: app/src/add_account.rs:1711
+#: app/src/add_account.rs:1735
 msgid "Penguin Mail found {provider}'s JMAP server."
 msgstr "Penguin Mail нашёл сервер JMAP для {provider}."
 
-#: app/src/add_account.rs:1715
+#: app/src/add_account.rs:1739
 msgid "Penguin Mail found a JMAP server for {domain}."
 msgstr "Penguin Mail нашёл сервер JMAP для {domain}."
 
-#: app/src/add_account.rs:1734
+#: app/src/add_account.rs:1758
 msgid ""
 "{host} is outside {domain}. Your token goes there only after you check the "
 "box."
@@ -692,7 +692,7 @@ msgstr ""
 "{host} находится вне {domain}. Токен будет отправлен туда только после "
 "установки флажка."
 
-#: app/src/add_account.rs:1737
+#: app/src/add_account.rs:1761
 msgid ""
 "{host} is outside {domain}. Your password goes there only after you check "
 "the box."
@@ -700,126 +700,126 @@ msgstr ""
 "{host} находится вне {domain}. Пароль будет отправлен туда только после "
 "установки флажка."
 
-#: app/src/add_account.rs:1740
+#: app/src/add_account.rs:1764
 msgid "Use {host}"
 msgstr "Использовать {host}"
 
-#: app/src/add_account.rs:1749
+#: app/src/add_account.rs:1773
 msgid "Sign in with an app password over IMAP and SMTP"
 msgstr "Войти с паролем приложения по IMAP и SMTP"
 
-#: app/src/add_account.rs:1751
+#: app/src/add_account.rs:1775
 msgid "Sign in with your password over IMAP and SMTP"
 msgstr "Войти с вашим паролем по IMAP и SMTP"
 
-#: app/src/add_account.rs:1779
+#: app/src/add_account.rs:1803
 msgid "Enter the server's address or its JMAP session URL."
 msgstr "Введите адрес сервера или URL сеанса JMAP."
 
-#: app/src/add_account.rs:1791
+#: app/src/add_account.rs:1815
 msgid "Penguin Mail reaches JMAP servers over HTTPS only."
 msgstr "Penguin Mail подключается к серверам JMAP только по HTTPS."
 
-#: app/src/add_account.rs:1936
+#: app/src/add_account.rs:1960
 msgid "Sign in on {provider}'s own page instead of making a token."
 msgstr "Войдите на странице {provider} вместо создания токена."
 
-#: app/src/add_account.rs:1944
+#: app/src/add_account.rs:1968
 msgid "Masked Email needs an API token."
 msgstr "Для скрытых адресов нужен токен API."
 
-#: app/src/add_account.rs:1961
+#: app/src/add_account.rs:1985
 msgid "Sign in to {provider} if it asks."
 msgstr "Войдите в {provider}, если потребуется."
 
-#: app/src/add_account.rs:1964
+#: app/src/add_account.rs:1988
 msgid "Read what Penguin Mail asks for and allow it."
 msgstr ""
 "Прочитайте, какие разрешения запрашивает Penguin Mail, и предоставьте их."
 
-#: app/src/add_account.rs:1989
+#: app/src/add_account.rs:2013
 msgid "{provider} refused the sign-in"
 msgstr "{provider} отклонил вход"
 
-#: app/src/add_account.rs:1990
+#: app/src/add_account.rs:2014
 msgid "Choose Sign In With Browser to try again."
 msgstr "Нажмите «Войти через браузер», чтобы повторить попытку."
 
-#: app/src/add_account.rs:1993
+#: app/src/add_account.rs:2017
 msgid "The sign-in was declined"
 msgstr "Вход отклонён"
 
-#: app/src/add_account.rs:1995
+#: app/src/add_account.rs:2019
 msgid "Choose Sign In With Browser and allow access on {provider}'s page."
 msgstr ""
 "Нажмите «Войти через браузер» и разрешите доступ на странице {provider}."
 
-#: app/src/add_account.rs:2000 app/src/add_account.rs:2096
+#: app/src/add_account.rs:2024 app/src/add_account.rs:2120
 msgid "{provider} does not answer"
 msgstr "{provider} не отвечает"
 
-#: app/src/add_account.rs:2001
+#: app/src/add_account.rs:2025
 msgid "Check your connection, then choose Sign In With Browser."
 msgstr "Проверьте подключение и нажмите «Войти через браузер»."
 
-#: app/src/add_account.rs:2005
+#: app/src/add_account.rs:2029
 msgid "Wait a minute, then choose Sign In With Browser."
 msgstr "Подождите минуту и нажмите «Войти через браузер»."
 
-#: app/src/add_account.rs:2012 app/src/add_account.rs:2113
+#: app/src/add_account.rs:2036 app/src/add_account.rs:2137
 msgid "{provider} gave an answer Penguin Mail cannot use. Try again later."
 msgstr ""
 "Penguin Mail не может использовать ответ {provider}. Повторите попытку позже."
 
-#: app/src/add_account.rs:2048
+#: app/src/add_account.rs:2072
 msgid "{provider} refused the token"
 msgstr "{provider} отклонил токен"
 
-#: app/src/add_account.rs:2049
+#: app/src/add_account.rs:2073
 msgid "Check the token and the access it was made with, then choose Sign In."
 msgstr "Проверьте токен и предоставленные ему права, затем нажмите «Войти»."
 
-#: app/src/add_account.rs:2058
+#: app/src/add_account.rs:2082
 msgid "The token holds a character that cannot be sent"
 msgstr "Токен содержит символ, который нельзя отправить"
 
-#: app/src/add_account.rs:2059
+#: app/src/add_account.rs:2083
 msgid "The password holds a character that cannot be sent"
 msgstr "Пароль содержит символ, который нельзя отправить"
 
-#: app/src/add_account.rs:2061
+#: app/src/add_account.rs:2085
 msgid "Paste it again without the line break, then choose Sign In."
 msgstr "Вставьте его снова без переноса строки и нажмите «Войти»."
 
-#: app/src/add_account.rs:2065
+#: app/src/add_account.rs:2089
 msgid "No JMAP server at {host}"
 msgstr "На {host} нет сервера JMAP"
 
-#: app/src/add_account.rs:2069
+#: app/src/add_account.rs:2093
 msgid "Check the session URL in Server Settings, or use IMAP instead."
 msgstr "Проверьте URL сеанса в настройках сервера или используйте IMAP."
 
-#: app/src/add_account.rs:2070
+#: app/src/add_account.rs:2094
 msgid "Check the session URL in Server Settings."
 msgstr "Проверьте URL сеанса в настройках сервера."
 
-#: app/src/add_account.rs:2074
+#: app/src/add_account.rs:2098
 msgid "{provider} offers no mail over JMAP"
 msgstr "{provider} не предоставляет почту по JMAP"
 
-#: app/src/add_account.rs:2076
+#: app/src/add_account.rs:2100
 msgid "Use IMAP for this account instead."
 msgstr "Используйте IMAP для этой учётной записи."
 
-#: app/src/add_account.rs:2077
+#: app/src/add_account.rs:2101
 msgid "Choose IMAP in Server Settings to add this account."
 msgstr "Выберите IMAP в настройках сервера, чтобы добавить эту учётную запись."
 
-#: app/src/add_account.rs:2084
+#: app/src/add_account.rs:2108
 msgid "{host} sends the sign-in elsewhere"
 msgstr "{host} перенаправляет данные для входа"
 
-#: app/src/add_account.rs:2089
+#: app/src/add_account.rs:2113
 msgid ""
 "It tried to pass your sign-in on to {other}, and Penguin Mail refused. If "
 "you trust {other}, enter its session URL in Server Settings."
@@ -828,15 +828,15 @@ msgstr ""
 "отказался. Если вы доверяете {other}, введите его URL сеанса в настройках "
 "сервера."
 
-#: app/src/add_account.rs:2097
+#: app/src/add_account.rs:2121
 msgid "Check your connection, then choose Sign In."
 msgstr "Проверьте подключение и нажмите «Войти»."
 
-#: app/src/add_account.rs:2101
+#: app/src/add_account.rs:2125
 msgid "Wait a minute, then choose Sign In."
 msgstr "Подождите минуту и нажмите «Войти»."
 
-#: app/src/add_account.rs:2110
+#: app/src/add_account.rs:2134
 msgid ""
 "{provider} gave an answer Penguin Mail cannot use. Try again later, or use "
 "IMAP instead."
@@ -1051,7 +1051,7 @@ msgstr "Вход в {provider} через браузер"
 msgid "Continue opens {provider}'s sign-in page in your browser."
 msgstr "«Продолжить» откроет страницу входа {provider} в браузере."
 
-#: app/src/app.rs:416
+#: app/src/app.rs:419
 msgid ""
 "Your preferences could not be read, so Penguin Mail started from the "
 "defaults. The old file is kept as {file}."
@@ -2199,7 +2199,7 @@ msgstr[0] "Не удалось сохранить {count} человека в к
 msgstr[1] "Не удалось сохранить {count} человек в контакты {account}"
 msgstr[2] "Не удалось сохранить {count} человек в контакты {account}"
 
-#: app/src/core.rs:220
+#: app/src/core.rs:223
 msgid ""
 "Another copy of Penguin Mail, or penguin-mail-cli sync, is syncing your "
 "mail. Stop it, then open Penguin Mail again."
@@ -2207,32 +2207,40 @@ msgstr ""
 "Другая копия Penguin Mail или penguin-mail-cli sync синхронизирует вашу "
 "почту. Остановите её и откройте Penguin Mail снова."
 
-#: app/src/core.rs:232
+#: app/src/core.rs:235
 msgid "Penguin Mail could not update its mail store, and kept the old one."
 msgstr "Penguin Mail не смог обновить хранилище почты и сохранил старое."
 
-#: app/src/core.rs:805 app/src/core.rs:883 app/src/core.rs:1012
-#: app/src/core.rs:1026 app/src/core.rs:1091 app/src/core.rs:1187
+#: app/src/core.rs:856 app/src/core.rs:934 app/src/core.rs:1063
+#: app/src/core.rs:1077 app/src/core.rs:1142 app/src/core.rs:1238
 msgid "Demo mode cannot add real accounts."
 msgstr "В демонстрационном режиме нельзя добавлять настоящие учётные записи."
 
-#: app/src/core.rs:819
+#: app/src/core.rs:870 app/src/core.rs:1756 app/src/core.rs:1812
 msgid "Canceled."
 msgstr "Отменено."
 
-#: app/src/core.rs:823
+#: app/src/core.rs:874 app/src/core.rs:1755 app/src/core.rs:1810
 msgid "Gave up waiting for the browser after five minutes."
 msgstr "Ожидание браузера прекращено через пять минут."
 
-#: app/src/core.rs:1357 app/src/core.rs:1382
+#: app/src/core.rs:1408 app/src/core.rs:1433
 msgid "This account keeps no password a calendar or contacts server takes."
 msgstr ""
 "У этой учётной записи нет сохранённого пароля, подходящего для сервера "
 "календарей или контактов."
 
-#: app/src/core.rs:1563 app/src/core.rs:1602
+#: app/src/core.rs:1614 app/src/core.rs:1661 app/src/core.rs:1782
 msgid "The demo cannot switch accounts."
 msgstr "В демонстрационном режиме нельзя переключать учётные записи."
+
+#: app/src/core.rs:1665
+msgid "This account is already moving to its new sign-in."
+msgstr "Эта учётная запись уже переходит на новый способ входа."
+
+#: app/src/core.rs:1736
+msgid "The demo cannot connect a calendar."
+msgstr "В демонстрационном режиме нельзя подключить календарь."
 
 #: app/src/event_reminders/notice.rs:31
 msgid "Join"
@@ -2456,7 +2464,7 @@ msgstr ""
 msgid "{language} ({country})"
 msgstr "{language} ({country})"
 
-#: app/src/main.rs:100
+#: app/src/main.rs:102
 msgid ""
 "Usage: penguin-mail [--background] [--demo] [--compose [mailto:ADDRESS]] "
 "[FILE.ics]\n"
@@ -2481,17 +2489,66 @@ msgstr ""
 "  FILE.ics       открыть файл календаря, чтобы добавить его события в "
 "календарь"
 
-#: app/src/main.rs:186
+#: app/src/main.rs:188
 msgid "penguin-mail: unknown option {option}"
 msgstr "penguin-mail: неизвестный параметр {option}"
 
-#: app/src/main.rs:389
+#: app/src/main.rs:391
 msgid "Penguin Mail Could Not Start"
 msgstr "Не удалось запустить Penguin Mail"
 
-#: app/src/main.rs:394 app/src/ui/about.rs:181
+#: app/src/main.rs:396 app/src/ui/about.rs:181
 msgid "Report a Problem"
 msgstr "Сообщить о проблеме"
+
+#: app/src/move_banner.rs:66
+msgid ""
+"Penguin Mail can't get new mail for {address}. Choose how it signs in to get "
+"your mail back. Nothing on this computer was lost."
+msgstr ""
+"Penguin Mail не может получать новую почту для {address}. Выберите способ "
+"входа, чтобы вернуть почту. На этом компьютере ничего не потеряно."
+
+#: app/src/move_banner.rs:73
+msgid "Choose how {address} signs in to keep your mail arriving."
+msgstr "Выберите способ входа для {address}, чтобы почта продолжала поступать."
+
+#. Translators: Gmail is a name; keep it as it is.
+#: app/src/move_banner.rs:84
+msgid ""
+"{count} Gmail account can't get new mail. Choose how each signs in to get "
+"your mail back. Nothing on this computer was lost."
+msgid_plural ""
+"{count} Gmail accounts can't get new mail. Choose how each signs in to get "
+"your mail back. Nothing on this computer was lost."
+msgstr[0] ""
+"{count} учётная запись Gmail не может получать новую почту. Выберите способ "
+"входа, чтобы вернуть почту. На этом компьютере ничего не потеряно."
+msgstr[1] ""
+"{count} учётные записи Gmail не могут получать новую почту. Выберите способ "
+"входа для каждой, чтобы вернуть почту. На этом компьютере ничего не потеряно."
+msgstr[2] ""
+"{count} учётных записей Gmail не могут получать новую почту. Выберите способ "
+"входа для каждой, чтобы вернуть почту. На этом компьютере ничего не потеряно."
+
+#. Translators: Gmail is a name; keep it as it is.
+#: app/src/move_banner.rs:92
+msgid "{count} Gmail account needs a new way to sign in"
+msgid_plural "{count} Gmail accounts need a new way to sign in"
+msgstr[0] "{count} учётной записи Gmail нужен новый способ входа"
+msgstr[1] "{count} учётным записям Gmail нужен новый способ входа"
+msgstr[2] "{count} учётным записям Gmail нужен новый способ входа"
+
+#. Translators: GNOME Online Accounts is a name; keep it as it is.
+#: app/src/move_banner.rs:103 app/src/route_choice.rs:125
+msgid "Use GNOME Online Accounts"
+msgstr "Использовать сетевые учётные записи GNOME"
+
+#. The GNOME Online Accounts plan replaces this with its
+#. one-click move for an address that GNOME already holds.
+#: app/src/move_banner.rs:105 app/src/ui/preferences/google_route.rs:242
+msgid "Choose…"
+msgstr "Выбрать…"
 
 #: app/src/notify.rs:61 app/src/ui/conversation.rs:410
 #: app/src/ui/conversation.rs:566 app/src/ui/conversation.rs:1080
@@ -2500,7 +2557,7 @@ msgid "Archive"
 msgstr "Архивировать"
 
 #: app/src/notify.rs:62 app/src/ui/conversation.rs:411
-#: app/src/ui/conversation.rs:1124 app/src/ui/preferences.rs:183
+#: app/src/ui/conversation.rs:1124 app/src/ui/preferences.rs:184
 #: app/src/ui/rules.rs:432 app/src/ui/window/message_menu.rs:128
 msgid "Mark as Read"
 msgstr "Отметить прочитанным"
@@ -2535,195 +2592,195 @@ msgstr "Новое письмо"
 msgid "From {senders}"
 msgstr "От {senders}"
 
-#: app/src/offered.rs:286 app/src/ui/window/shortcuts.rs:454
+#: app/src/offered.rs:288 app/src/ui/window/shortcuts.rs:454
 msgid "Labels"
 msgstr "Ярлыки"
 
-#: app/src/offered.rs:287
+#: app/src/offered.rs:289
 msgid "Move to folder"
 msgstr "Переместить в папку"
 
-#: app/src/offered.rs:293
+#: app/src/offered.rs:295
 msgid "Labels…"
 msgstr "Ярлыки…"
 
-#: app/src/offered.rs:294
+#: app/src/offered.rs:296
 msgid "Move to Folder…"
 msgstr "Переместить в папку…"
 
-#: app/src/offered.rs:303
+#: app/src/offered.rs:305
 msgid "Choose Labels"
 msgstr "Выбрать ярлыки"
 
-#: app/src/offered.rs:304
+#: app/src/offered.rs:306
 msgid "Choose a Folder"
 msgstr "Выбрать папку"
 
-#: app/src/offered.rs:311
+#: app/src/offered.rs:313
 msgid "Labels (L)"
 msgstr "Ярлыки (L)"
 
-#: app/src/offered.rs:312
+#: app/src/offered.rs:314
 msgid "Move to Folder (L)"
 msgstr "Переместить в папку (L)"
 
-#: app/src/offered.rs:329
+#: app/src/offered.rs:331
 msgid "New Label…"
 msgstr "Новый ярлык…"
 
-#: app/src/offered.rs:330
+#: app/src/offered.rs:332
 msgid "New Folder…"
 msgstr "Новая папка…"
 
-#: app/src/offered.rs:338
+#: app/src/offered.rs:340
 msgid "New Label Inside…"
 msgstr "Новый вложенный ярлык…"
 
-#: app/src/offered.rs:339
+#: app/src/offered.rs:341
 msgid "New Folder Inside…"
 msgstr "Новая вложенная папка…"
 
-#: app/src/offered.rs:346
+#: app/src/offered.rs:348
 msgid "Label Options for {name}"
 msgstr "Параметры ярлыка {name}"
 
-#: app/src/offered.rs:347
+#: app/src/offered.rs:349
 msgid "Folder Options for {name}"
 msgstr "Параметры папки {name}"
 
-#: app/src/offered.rs:354
+#: app/src/offered.rs:356
 msgid "Label options"
 msgstr "Параметры ярлыка"
 
-#: app/src/offered.rs:355
+#: app/src/offered.rs:357
 msgid "Folder options"
 msgstr "Параметры папки"
 
-#: app/src/offered.rs:362
+#: app/src/offered.rs:364
 msgid "A label cannot go inside a label nested under it"
 msgstr "Нельзя поместить ярлык внутрь его вложенного ярлыка"
 
-#: app/src/offered.rs:363
+#: app/src/offered.rs:365
 msgid "A folder cannot go inside a folder nested under it"
 msgstr "Нельзя поместить папку внутрь её вложенной папки"
 
-#: app/src/offered.rs:372
+#: app/src/offered.rs:374
 msgid "There is a label called “{name}” already"
 msgstr "Ярлык «{name}» уже существует"
 
-#: app/src/offered.rs:376
+#: app/src/offered.rs:378
 msgid "There is a folder called “{name}” already"
 msgstr "Папка «{name}» уже существует"
 
-#: app/src/offered.rs:385
+#: app/src/offered.rs:387
 msgid "New Label"
 msgstr "Новый ярлык"
 
-#: app/src/offered.rs:386
+#: app/src/offered.rs:388
 msgid "New Folder"
 msgstr "Новая папка"
 
-#: app/src/offered.rs:394
+#: app/src/offered.rs:396
 msgid "Could not create the label: {reason}"
 msgstr "Не удалось создать ярлык: {reason}"
 
-#: app/src/offered.rs:395
+#: app/src/offered.rs:397
 msgid "Could not create the folder: {reason}"
 msgstr "Не удалось создать папку: {reason}"
 
-#: app/src/offered.rs:402
+#: app/src/offered.rs:404
 msgid "Open or select mail to label it."
 msgstr "Откройте или выберите письма, чтобы назначить им ярлык."
 
-#: app/src/offered.rs:403
+#: app/src/offered.rs:405
 msgid "Open or select mail to move it."
 msgstr "Откройте или выберите письма, чтобы переместить их."
 
-#: app/src/offered.rs:411
+#: app/src/offered.rs:413
 msgid "Select mail from one account to label it."
 msgstr "Выберите письма одной учётной записи, чтобы назначить им ярлык."
 
-#: app/src/offered.rs:412
+#: app/src/offered.rs:414
 msgid "Select mail from one account to move it."
 msgstr "Выберите письма одной учётной записи, чтобы переместить их."
 
-#: app/src/offered.rs:418
+#: app/src/offered.rs:420
 msgid "Rename Label"
 msgstr "Переименовать ярлык"
 
-#: app/src/offered.rs:419
+#: app/src/offered.rs:421
 msgid "Rename Folder"
 msgstr "Переименовать папку"
 
-#: app/src/offered.rs:425
+#: app/src/offered.rs:427
 msgid "Labels nested under it move along."
 msgstr "Вложенные ярлыки переместятся вместе с ним."
 
-#: app/src/offered.rs:426
+#: app/src/offered.rs:428
 msgid "Folders nested under it move along."
 msgstr "Вложенные папки переместятся вместе с ней."
 
-#: app/src/offered.rs:434
+#: app/src/offered.rs:436
 msgid "Could not rename the label: {reason}"
 msgstr "Не удалось переименовать ярлык: {reason}"
 
-#: app/src/offered.rs:435
+#: app/src/offered.rs:437
 msgid "Could not rename the folder: {reason}"
 msgstr "Не удалось переименовать папку: {reason}"
 
-#: app/src/offered.rs:446
+#: app/src/offered.rs:448
 msgid ""
 "Its mail stays in {provider}, without the label. Nested labels stay too."
 msgstr ""
 "Письма останутся в {provider} без этого ярлыка. Вложенные ярлыки тоже "
 "сохранятся."
 
-#: app/src/offered.rs:451
+#: app/src/offered.rs:453
 msgid ""
 "Its mail stays in the account, without the label. Nested labels stay too."
 msgstr ""
 "Письма останутся в учётной записи без этого ярлыка. Вложенные ярлыки тоже "
 "сохранятся."
 
-#: app/src/offered.rs:453
+#: app/src/offered.rs:455
 msgid "The mail in the folder is deleted with it."
 msgstr "Письма в папке будут удалены вместе с ней."
 
-#: app/src/offered.rs:461
+#: app/src/offered.rs:463
 msgid "Could not delete the label: {reason}"
 msgstr "Не удалось удалить ярлык: {reason}"
 
-#: app/src/offered.rs:462
+#: app/src/offered.rs:464
 msgid "Could not delete the folder: {reason}"
 msgstr "Не удалось удалить папку: {reason}"
 
-#: app/src/offered.rs:469
+#: app/src/offered.rs:471
 msgid "This account has no labels yet."
 msgstr "В этой учётной записи пока нет ярлыков."
 
-#: app/src/offered.rs:470
+#: app/src/offered.rs:472
 msgid "This account has no folders yet."
 msgstr "В этой учётной записи пока нет папок."
 
-#: app/src/offered.rs:486
+#: app/src/offered.rs:488
 msgid "Your organization does not allow Penguin Mail to use this calendar."
 msgstr ""
 "Ваша организация не разрешает Penguin Mail использовать этот календарь."
 
-#: app/src/offered.rs:489
+#: app/src/offered.rs:491
 msgid "Your organization does not allow Penguin Mail to read these contacts."
 msgstr "Ваша организация не разрешает Penguin Mail читать эти контакты."
 
-#: app/src/offered.rs:492
+#: app/src/offered.rs:494
 msgid "Your organization does not allow Penguin Mail to change these rules."
 msgstr "Ваша организация не разрешает Penguin Mail изменять эти правила."
 
-#: app/src/offered.rs:495
+#: app/src/offered.rs:497
 msgid ""
 "Your organization does not allow Penguin Mail to change the automatic reply."
 msgstr "Ваша организация не разрешает Penguin Mail изменять автоответ."
 
-#: app/src/offered.rs:499
+#: app/src/offered.rs:501
 msgid ""
 "{provider} refused the password for calendars. Some providers need an app "
 "password with access to calendars and contacts."
@@ -2731,15 +2788,15 @@ msgstr ""
 "{provider} отклонил пароль для календарей. Некоторым поставщикам нужен "
 "пароль приложения с доступом к календарям и контактам."
 
-#: app/src/offered.rs:503
+#: app/src/offered.rs:505
 msgid "Penguin Mail could not reach the calendar server for {provider}."
 msgstr "Penguin Mail не смог подключиться к серверу календарей {provider}."
 
-#: app/src/offered.rs:506
+#: app/src/offered.rs:508
 msgid "Penguin Mail found no calendar server for {provider}."
 msgstr "Penguin Mail не нашёл сервер календарей {provider}."
 
-#: app/src/offered.rs:511
+#: app/src/offered.rs:513
 msgid ""
 "{provider} refused the password for contacts. Some providers need an app "
 "password with access to calendars and contacts."
@@ -2747,25 +2804,25 @@ msgstr ""
 "{provider} отклонил пароль для контактов. Некоторым поставщикам нужен пароль "
 "приложения с доступом к календарям и контактам."
 
-#: app/src/offered.rs:515
+#: app/src/offered.rs:517
 msgid "Penguin Mail could not reach the contacts server for {provider}."
 msgstr "Penguin Mail не смог подключиться к серверу контактов {provider}."
 
-#: app/src/offered.rs:518
+#: app/src/offered.rs:520
 msgid "Penguin Mail found no contacts server for {provider}."
 msgstr "Penguin Mail не нашёл сервер контактов {provider}."
 
-#: app/src/offered.rs:522
+#: app/src/offered.rs:524
 msgid "{provider} cannot send automatic replies over POP3."
 msgstr "{provider} не может отправлять автоответы по POP3."
 
-#: app/src/offered.rs:525
+#: app/src/offered.rs:527
 msgid "{provider} cannot send automatic replies."
 msgstr "{provider} не может отправлять автоответы."
 
 #. A calendar or contacts server beside a browser sign-in that
 #. refused its token waits for an app password.
-#: app/src/offered.rs:530
+#: app/src/offered.rs:532
 msgid ""
 "{provider}'s calendar server refused the browser sign-in. Choose Sign In "
 "Again and give an app password for the calendar."
@@ -2773,7 +2830,7 @@ msgstr ""
 "Сервер календарей {provider} отклонил вход через браузер. Нажмите «Войти "
 "снова» и укажите пароль приложения для календаря."
 
-#: app/src/offered.rs:533
+#: app/src/offered.rs:535
 msgid ""
 "{provider}'s contacts server refused the browser sign-in. Choose Sign In "
 "Again and give an app password for the calendar."
@@ -2781,49 +2838,70 @@ msgstr ""
 "Сервер контактов {provider} отклонил вход через браузер. Нажмите «Войти "
 "снова» и укажите пароль приложения для календаря."
 
-#: app/src/offered.rs:538
+#: app/src/offered.rs:540
 msgid "Penguin Mail cannot show {provider}'s calendar over JMAP yet."
 msgstr "Penguin Mail пока не может показывать календарь {provider} по JMAP."
 
-#: app/src/offered.rs:541
+#: app/src/offered.rs:543
 msgid "Penguin Mail cannot read {provider}'s contacts over JMAP yet."
 msgstr "Penguin Mail пока не может читать контакты {provider} по JMAP."
 
-#: app/src/offered.rs:544
+#: app/src/offered.rs:546
 msgid "Penguin Mail cannot change {provider}'s rules over JMAP yet."
 msgstr "Penguin Mail пока не может изменять правила {provider} по JMAP."
 
-#: app/src/offered.rs:547
+#: app/src/offered.rs:549
 msgid "Penguin Mail cannot change {provider}'s automatic reply over JMAP yet."
 msgstr "Penguin Mail пока не может изменять автоответ {provider} по JMAP."
 
-#: app/src/offered.rs:549
+#: app/src/offered.rs:551
 msgid "{provider} has no calendar that other apps can reach."
 msgstr "У {provider} нет календаря, доступного другим приложениям."
 
-#: app/src/offered.rs:551
+#: app/src/offered.rs:553
 msgid "{provider} keeps no contacts that other apps can reach."
 msgstr "У {provider} нет контактов, доступных другим приложениям."
 
-#: app/src/offered.rs:553
+#: app/src/offered.rs:555
 msgid "{provider} has no rules that other apps can change."
 msgstr "У {provider} нет правил, которые могут изменять другие приложения."
 
-#: app/src/offered.rs:555
+#: app/src/offered.rs:557
 msgid "{provider} has no automatic reply that other apps can change."
 msgstr "У {provider} нет автоответа, который могут изменять другие приложения."
 
-#: app/src/offered.rs:558
+#: app/src/offered.rs:560
 msgid "{provider} cannot delete mail for good. Delete moves it to the Trash."
 msgstr ""
 "{provider} не поддерживает удаление писем навсегда. Команда «Удалить» "
 "перемещает их в корзину."
 
-#: app/src/offered.rs:560
+#: app/src/offered.rs:562
 msgid "{provider} does not sort the inbox into categories."
 msgstr "{provider} не сортирует входящие по категориям."
 
-#: app/src/offered.rs:598
+#. Translators: Gmail and gmail.com are names; keep them as they are.
+#: app/src/offered.rs:576
+msgid "Your Gmail filters still run. Change them on gmail.com."
+msgstr ""
+"Ваши фильтры Gmail продолжают работать. Изменить их можно на gmail.com."
+
+#. Translators: gmail.com is a name; keep it as it is.
+#: app/src/offered.rs:582
+msgid "Set your automatic reply on gmail.com."
+msgstr "Настройте автоответ на gmail.com."
+
+#. Translators: Gmail is a name; keep it as it is.
+#: app/src/offered.rs:588
+msgid "Open Gmail Filters"
+msgstr "Открыть фильтры Gmail"
+
+#. Translators: Gmail is a name; keep it as it is.
+#: app/src/offered.rs:594
+msgid "Open Gmail Settings"
+msgstr "Открыть настройки Gmail"
+
+#: app/src/offered.rs:694
 msgid ""
 "{provider} does not let an API token change the automatic reply. Sign in "
 "again through the browser to change it here."
@@ -2831,43 +2909,43 @@ msgstr ""
 "{provider} не разрешает изменять автоответ с помощью токена API. Войдите "
 "снова через браузер, чтобы изменять его здесь."
 
-#: app/src/offered.rs:608
+#: app/src/offered.rs:704
 msgid "{address}: {reason}"
 msgstr "{address}: {reason}"
 
-#: app/src/offered.rs:623
+#: app/src/offered.rs:719
 msgid "The server would not hand it over."
 msgstr "Сервер отказался передать письмо."
 
-#: app/src/offered.rs:625
+#: app/src/offered.rs:721
 msgid "The message is larger than Penguin Mail downloads."
 msgstr "Размер письма превышает предел загрузки Penguin Mail."
 
-#: app/src/offered.rs:628
+#: app/src/offered.rs:724
 msgid "Penguin Mail could not read the server's answer."
 msgstr "Penguin Mail не смог прочитать ответ сервера."
 
-#: app/src/offered.rs:631
+#: app/src/offered.rs:727
 msgid "The connection closed while the message downloaded."
 msgstr "Соединение закрылось во время загрузки письма."
 
-#: app/src/offered.rs:637
+#: app/src/offered.rs:733
 msgid "“{subject}” from {sender}: {words}"
 msgstr "«{subject}» от {sender}: {words}"
 
-#: app/src/offered.rs:641
+#: app/src/offered.rs:737
 msgid "“{subject}”: {words}"
 msgstr "«{subject}»: {words}"
 
-#: app/src/offered.rs:645
+#: app/src/offered.rs:741
 msgid "A message from {sender}: {words}"
 msgstr "Письмо от {sender}: {words}"
 
-#: app/src/offered.rs:649
+#: app/src/offered.rs:745
 msgid "Message {number}: {words}"
 msgstr "Письмо {number}: {words}"
 
-#: app/src/offered.rs:665
+#: app/src/offered.rs:761
 msgid ""
 "Removing the account deletes this computer's copy of its mail and the saved "
 "sign-in. Mail still on the server stays there."
@@ -2875,7 +2953,7 @@ msgstr ""
 "Удаление учётной записи удалит копию её почты с этого компьютера и "
 "сохранённые данные для входа. Почта на сервере останется."
 
-#: app/src/offered.rs:669
+#: app/src/offered.rs:765
 msgid ""
 "Mail already removed from the server exists only on this computer, and "
 "removing the account deletes it with the saved sign-in. Mail still on the "
@@ -2885,7 +2963,7 @@ msgstr ""
 "Удаление учётной записи удалит её вместе с сохранёнными данными для входа. "
 "Почта на сервере останется."
 
-#: app/src/offered.rs:674
+#: app/src/offered.rs:770
 msgid ""
 "Its calendars and saved sign-in are deleted from this computer. Nothing "
 "changes on the server."
@@ -2893,7 +2971,7 @@ msgstr ""
 "Календари и сохранённые данные для входа будут удалены с этого компьютера. "
 "На сервере ничего не изменится."
 
-#: app/src/offered.rs:679
+#: app/src/offered.rs:775
 msgid ""
 "Its downloaded mail and saved sign-in are deleted from this computer. "
 "Nothing changes in {provider}."
@@ -2901,7 +2979,7 @@ msgstr ""
 "Загруженная почта и сохранённые данные для входа будут удалены с этого "
 "компьютера. В {provider} ничего не изменится."
 
-#: app/src/offered.rs:693
+#: app/src/offered.rs:789
 msgid ""
 "{count} message waiting in Send Later on the server goes back to Drafts "
 "first."
@@ -2917,7 +2995,7 @@ msgstr[2] ""
 "Сначала {count} писем, ожидающих отложенной отправки на сервере, вернутся в "
 "черновики."
 
-#: app/src/offered.rs:705
+#: app/src/offered.rs:801
 msgid ""
 "Penguin Mail could not call back {count} message waiting on the server. The "
 "server may still send it at its hour."
@@ -2934,7 +3012,7 @@ msgstr[2] ""
 "Penguin Mail не смог отозвать {count} писем, ожидающих на сервере. Сервер "
 "всё ещё может отправить их в назначенное время."
 
-#: app/src/offered.rs:720
+#: app/src/offered.rs:816
 msgid ""
 "Mail from {address} is kept only on this computer. To keep a copy, quit "
 "Penguin Mail, then back up this file."
@@ -2942,21 +3020,21 @@ msgstr ""
 "Почта {address} хранится только на этом компьютере. Чтобы сохранить копию, "
 "закройте Penguin Mail и создайте резервную копию этого файла."
 
-#: app/src/offered.rs:771
+#: app/src/offered.rs:867
 msgid "New mail arrives as it is sent"
 msgstr "Новая почта приходит сразу после отправки"
 
-#: app/src/offered.rs:773
+#: app/src/offered.rs:869
 msgid "{provider} pushes it over JMAP, and you can send from your aliases."
 msgstr ""
 "{provider} доставляет её по JMAP, а вы можете отправлять письма со своих "
 "псевдонимов."
 
-#: app/src/offered.rs:779
+#: app/src/offered.rs:875
 msgid "Mail is matched over JMAP"
 msgstr "Почта сопоставляется по JMAP"
 
-#: app/src/offered.rs:781
+#: app/src/offered.rs:877
 msgid ""
 "Penguin Mail keeps the mail on this computer and downloads again only the "
 "messages it cannot match."
@@ -2964,111 +3042,111 @@ msgstr ""
 "Penguin Mail сохраняет почту на этом компьютере и повторно загружает только "
 "письма, которые не удалось сопоставить."
 
-#: app/src/offered.rs:788
+#: app/src/offered.rs:884
 msgid "Name, color and place"
 msgstr "Имя, цвет и расположение"
 
-#: app/src/offered.rs:790
+#: app/src/offered.rs:886
 msgid "{address} keeps its spot in the sidebar."
 msgstr "{address} сохранит своё место на боковой панели."
 
-#: app/src/offered.rs:796
+#: app/src/offered.rs:892
 msgid "Your own data"
 msgstr "Ваши данные"
 
-#: app/src/offered.rs:797
+#: app/src/offered.rs:893
 msgid "Reminders, follow-ups, flags, rules, VIPs, signatures and drafts."
 msgstr ""
 "Напоминания, ожидание ответов, флажки, правила, важные контакты, подписи и "
 "черновики."
 
-#: app/src/offered.rs:803
+#: app/src/offered.rs:899
 msgid "Calendars are read again where JMAP serves them"
 msgstr "Календари загружаются заново, если JMAP их предоставляет"
 
-#: app/src/offered.rs:806
+#: app/src/offered.rs:902
 msgid ""
 "If {provider} offers calendars over JMAP, Penguin Mail reads them from there."
 msgstr ""
 "Если {provider} предоставляет календари по JMAP, Penguin Mail читает их "
 "оттуда."
 
-#: app/src/offered.rs:815
+#: app/src/offered.rs:911
 msgid "Calendar sign-in"
 msgstr "Вход в календарь"
 
-#: app/src/offered.rs:816
+#: app/src/offered.rs:912
 msgid "The app password you use for calendars stays as it is."
 msgstr ""
 "Пароль приложения, который вы используете для календарей, останется прежним."
 
-#: app/src/offered.rs:847
+#: app/src/offered.rs:943
 msgid "Could not switch to JMAP: {reason}"
 msgstr "Не удалось перейти на JMAP: {reason}"
 
-#: app/src/offered.rs:848
+#: app/src/offered.rs:944
 msgid "Your IMAP account is unchanged."
 msgstr "Ваша учётная запись IMAP не изменилась."
 
-#: app/src/offered.rs:860
+#: app/src/offered.rs:956
 msgid "Something unexpected stopped it."
 msgstr "Операцию прервала непредвиденная ошибка."
 
-#: app/src/offered.rs:865
+#: app/src/offered.rs:961
 msgid "{provider} does not answer."
 msgstr "{provider} не отвечает."
 
-#: app/src/offered.rs:887
+#: app/src/offered.rs:983
 msgid "This account uses JMAP already."
 msgstr "Эта учётная запись уже использует JMAP."
 
-#: app/src/offered.rs:893
+#: app/src/offered.rs:989
 msgid "{provider} did not accept the token."
 msgstr "{provider} не принял токен."
 
-#: app/src/offered.rs:894
+#: app/src/offered.rs:990
 msgid "{provider} did not accept the password."
 msgstr "{provider} не принял пароль."
 
-#: app/src/offered.rs:899
+#: app/src/offered.rs:995
 msgid "You can choose Sign In With Browser instead."
 msgstr "Вы можете выбрать «Войти через браузер»."
 
-#: app/src/offered.rs:905
+#: app/src/offered.rs:1001
 msgid "{provider} signed in to another account, not {address}."
 msgstr "{provider} выполнил вход в другую учётную запись, а не {address}."
 
-#: app/src/offered.rs:909
+#: app/src/offered.rs:1005
 msgid "The token holds a character that cannot be sent."
 msgstr "Токен содержит символ, который нельзя отправить."
 
-#: app/src/offered.rs:910
+#: app/src/offered.rs:1006
 msgid "The password holds a character that cannot be sent."
 msgstr "Пароль содержит символ, который нельзя отправить."
 
-#: app/src/offered.rs:915
+#: app/src/offered.rs:1011
 msgid "{provider} did not give the draft of a message waiting in Send Later."
 msgstr ""
 "{provider} не предоставил черновик письма, ожидающего отложенной отправки."
 
-#: app/src/offered.rs:921
+#: app/src/offered.rs:1017
 msgid "The mail on {provider} kept changing while Penguin Mail matched it."
 msgstr ""
 "Почта на {provider} продолжала меняться, пока Penguin Mail сопоставлял её."
 
-#: app/src/offered.rs:947
+#: app/src/offered.rs:1043
 msgid "{provider} refused the sign-in in the browser."
 msgstr "{provider} отклонил вход в браузере."
 
-#: app/src/offered.rs:951
+#: app/src/offered.rs:1047
 msgid "You did not allow Penguin Mail on {provider}'s page."
 msgstr "Вы не разрешили доступ Penguin Mail на странице {provider}."
 
-#: app/src/offered.rs:969
+#: app/src/offered.rs:1065
 msgid "{address} now uses JMAP"
 msgstr "{address} теперь использует JMAP"
 
-#: app/src/offered.rs:973
+#: app/src/offered.rs:1069
 msgid ""
 "{address} now uses JMAP. {count} rule is off because its folder is not on "
 "the server."
@@ -3132,15 +3210,15 @@ msgstr "Обновления поступают через Nix"
 msgid "Download a new AppImage to update"
 msgstr "Для обновления загрузите новый AppImage"
 
-#: app/src/permission.rs:86
+#: app/src/permission.rs:87
 msgid "Penguin Mail needs permission to change {service} settings"
 msgstr "Penguin Mail нужно разрешение на изменение настроек {service}"
 
-#: app/src/permission.rs:125
+#: app/src/permission.rs:126
 msgid "Allow Changes to {service} Settings"
 msgstr "Разрешить изменение настроек {service}"
 
-#: app/src/permission.rs:129
+#: app/src/permission.rs:130
 msgid ""
 "Penguin Mail needs permission to change {service} settings for {account}. "
 "{company} asks you to confirm in your browser."
@@ -3148,11 +3226,11 @@ msgstr ""
 "Penguin Mail нужно разрешение на изменение настроек {service} для {account}. "
 "{company} просит подтвердить его в браузере."
 
-#: app/src/permission.rs:134
+#: app/src/permission.rs:135
 msgid "Allow Penguin Mail to Delete Mail"
 msgstr "Разрешить Penguin Mail удалять почту"
 
-#: app/src/permission.rs:136
+#: app/src/permission.rs:137
 msgid ""
 "Deleting mail for good needs one more permission for {account}. {company} "
 "asks you to confirm in your browser."
@@ -3160,11 +3238,11 @@ msgstr ""
 "Для удаления почты навсегда нужно ещё одно разрешение для {account}. "
 "{company} просит подтвердить его в браузере."
 
-#: app/src/permission.rs:141
+#: app/src/permission.rs:142
 msgid "Allow Penguin Mail to Read Your Contacts"
 msgstr "Разрешить Penguin Mail читать ваши контакты"
 
-#: app/src/permission.rs:143
+#: app/src/permission.rs:144
 msgid ""
 "Reading the contacts of {account} needs one more permission. {company} asks "
 "you to confirm in your browser. Names and photos stay on this computer."
@@ -3172,11 +3250,11 @@ msgstr ""
 "Для чтения контактов {account} нужно ещё одно разрешение. {company} просит "
 "подтвердить его в браузере. Имена и фотографии останутся на этом компьютере."
 
-#: app/src/permission.rs:149
+#: app/src/permission.rs:150
 msgid "Allow Penguin Mail to Change Your Contacts"
 msgstr "Разрешить Penguin Mail изменять ваши контакты"
 
-#: app/src/permission.rs:151
+#: app/src/permission.rs:152
 msgid ""
 "The assistant needs permission to add and change the contacts of {account}. "
 "{company} asks you to confirm in your browser."
@@ -3184,11 +3262,11 @@ msgstr ""
 "Помощнику нужно разрешение на добавление и изменение контактов {account}. "
 "{company} просит подтвердить его в браузере."
 
-#: app/src/permission.rs:156 app/src/permission.rs:163
+#: app/src/permission.rs:157 app/src/permission.rs:164
 msgid "Allow Penguin Mail to Use Your Calendar"
 msgstr "Разрешить Penguin Mail использовать календарь"
 
-#: app/src/permission.rs:158
+#: app/src/permission.rs:159
 msgid ""
 "The assistant needs permission to read and change events on the calendar for "
 "{account}. {company} asks you to confirm in your browser."
@@ -3196,7 +3274,7 @@ msgstr ""
 "Помощнику нужно разрешение на чтение и изменение событий календаря "
 "{account}. {company} просит подтвердить его в браузере."
 
-#: app/src/permission.rs:165
+#: app/src/permission.rs:166
 msgid ""
 "Your reply went to the organizer as mail. With permission to change events "
 "on the calendar for {account}, the meeting is marked on your own calendar "
@@ -3206,11 +3284,11 @@ msgstr ""
 "событий календаря {account} встреча появится и в вашем календаре. {company} "
 "просит подтвердить разрешение в браузере."
 
-#: app/src/permission.rs:171
+#: app/src/permission.rs:172
 msgid "Allow Penguin Mail to Manage Your Calendars"
 msgstr "Разрешить Penguin Mail управлять календарями"
 
-#: app/src/permission.rs:173
+#: app/src/permission.rs:174
 msgid ""
 "Making, renaming and deleting calendars, and subscribing to one, needs one "
 "more permission for {account}. {company} asks you to confirm in your browser."
@@ -3219,11 +3297,11 @@ msgstr ""
 "ещё одно разрешение для {account}. {company} просит подтвердить его в "
 "браузере."
 
-#: app/src/permission.rs:179
+#: app/src/permission.rs:180
 msgid "Allow Penguin Mail to Add Files to Google Drive"
 msgstr "Разрешить Penguin Mail добавлять файлы на Google Диск"
 
-#: app/src/permission.rs:181
+#: app/src/permission.rs:182
 msgid ""
 "Attaching a file from this computer to an event puts it in Google Drive for "
 "{account}. Penguin Mail can reach only the files it adds there. Google asks "
@@ -3233,99 +3311,99 @@ msgstr ""
 "{account}. Penguin Mail получит доступ только к файлам, которые добавляет "
 "сам. Google просит подтвердить разрешение в браузере."
 
-#: app/src/permission.rs:256
+#: app/src/permission.rs:257
 msgid "change {service} settings"
 msgstr "изменять настройки {service}"
 
-#: app/src/permission.rs:259
+#: app/src/permission.rs:260
 msgid "delete mail for good"
 msgstr "удалять почту навсегда"
 
-#: app/src/permission.rs:260
+#: app/src/permission.rs:261
 msgid "read contacts"
 msgstr "читать контакты"
 
-#: app/src/permission.rs:261
+#: app/src/permission.rs:262
 msgid "add and change contacts"
 msgstr "добавлять и изменять контакты"
 
-#: app/src/permission.rs:262
+#: app/src/permission.rs:263
 msgid "use the calendar"
 msgstr "использовать календарь"
 
-#: app/src/permission.rs:263
+#: app/src/permission.rs:264
 msgid "manage calendars"
 msgstr "управлять календарями"
 
-#: app/src/permission.rs:264
+#: app/src/permission.rs:265
 msgid "add files to Google Drive"
 msgstr "добавлять файлы на Google Диск"
 
-#: app/src/permission.rs:276
+#: app/src/permission.rs:277
 msgid "Change {service} settings"
 msgstr "Изменять настройки {service}"
 
-#: app/src/permission.rs:279
+#: app/src/permission.rs:280
 msgid "Rules and automatic reply"
 msgstr "Правила и автоответ"
 
-#: app/src/permission.rs:282
+#: app/src/permission.rs:283
 msgid "Change Gmail settings"
 msgstr "Изменять настройки Gmail"
 
-#: app/src/permission.rs:283
+#: app/src/permission.rs:284
 msgid "Rules, automatic reply, send-as addresses"
 msgstr "Правила, автоответ, адреса отправителя"
 
-#: app/src/permission.rs:286
+#: app/src/permission.rs:287
 msgid "Delete mail for good"
 msgstr "Удалять почту навсегда"
 
-#: app/src/permission.rs:287
+#: app/src/permission.rs:288
 msgid "Emptying the trash and spam"
 msgstr "Очистка корзины и спама"
 
-#: app/src/permission.rs:290
+#: app/src/permission.rs:291
 msgid "Read contacts"
 msgstr "Читать контакты"
 
-#: app/src/permission.rs:291
+#: app/src/permission.rs:292
 msgid "Names and photos as you write"
 msgstr "Имена и фотографии при написании письма"
 
-#: app/src/permission.rs:294
+#: app/src/permission.rs:295
 msgid "Add and change contacts"
 msgstr "Добавлять и изменять контакты"
 
-#: app/src/permission.rs:295
+#: app/src/permission.rs:296
 msgid "Saving a sender as a contact"
 msgstr "Сохранение отправителя в контакты"
 
-#: app/src/permission.rs:298
+#: app/src/permission.rs:299
 msgid "Use the calendar"
 msgstr "Использовать календарь"
 
-#: app/src/permission.rs:299
+#: app/src/permission.rs:300
 msgid "Events, invitations, reminders"
 msgstr "События, приглашения, напоминания"
 
-#: app/src/permission.rs:302
+#: app/src/permission.rs:303
 msgid "Manage calendars"
 msgstr "Управлять календарями"
 
-#: app/src/permission.rs:303
+#: app/src/permission.rs:304
 msgid "New calendars, colors, subscriptions"
 msgstr "Новые календари, цвета, подписки"
 
-#: app/src/permission.rs:306
+#: app/src/permission.rs:307
 msgid "Add files to Google Drive"
 msgstr "Добавлять файлы на Google Диск"
 
-#: app/src/permission.rs:307
+#: app/src/permission.rs:308
 msgid "Files attached to events"
 msgstr "Файлы, вложенные в события"
 
-#: app/src/permission.rs:331
+#: app/src/permission.rs:332
 msgid "{account} has not allowed Penguin Mail to {missing}"
 msgstr "{account} не разрешает Penguin Mail {missing}"
 
@@ -3702,8 +3780,8 @@ msgstr "Эта учётная запись не подключена."
 msgid "Could not save: {reason}"
 msgstr "Не удалось сохранить: {reason}"
 
-#: app/src/protection/draft.rs:212 app/src/ui/window.rs:2608
-#: app/src/ui/window.rs:2631
+#: app/src/protection/draft.rs:212 app/src/ui/window.rs:2738
+#: app/src/ui/window.rs:2761
 msgid "Could not open the draft: {reason}"
 msgstr "Не удалось открыть черновик: {reason}"
 
@@ -3905,6 +3983,51 @@ msgstr "Прочитано: {who}, {when}"
 msgid "Deleted by {who} without being read"
 msgstr "{who} удалил письмо без прочтения"
 
+#. Translators: Gmail is a name; keep it as it is.
+#: app/src/route_choice.rs:81 app/src/ui/move_sheet.rs:59
+msgid "Choose how Penguin Mail signs in to Gmail"
+msgstr "Выберите, как Penguin Mail входит в Gmail"
+
+#. Translators: Gmail and Google are names; keep them as they are.
+#: app/src/route_choice.rs:117
+msgid ""
+"Want every Gmail feature? Your own Google project gives you all of them, "
+"free."
+msgstr ""
+"Нужны все возможности Gmail? Собственный проект Google даёт их все, "
+"бесплатно."
+
+#: app/src/route_choice.rs:127
+msgid "Already signed in on this computer"
+msgstr "Вход на этом компьютере уже выполнен"
+
+#: app/src/route_choice.rs:129
+msgid "Recommended. Every feature, signs in through your desktop."
+msgstr "Рекомендуется. Все возможности, вход через ваш рабочий стол."
+
+#. Translators: Google is a name; keep it as it is.
+#: app/src/route_choice.rs:139
+msgid "Use a password from Google"
+msgstr "Использовать пароль от Google"
+
+#: app/src/route_choice.rs:141
+msgid "Quick. Mail, calendar and contacts."
+msgstr "Быстро. Почта, календарь и контакты."
+
+#: app/src/route_choice.rs:143
+msgid "Quickest. About 2 minutes"
+msgstr "Быстрее всего. Около 2 минут"
+
+#. Translators: Google is a name; keep it as it is.
+#: app/src/route_choice.rs:153
+msgid "Set up your own Google project"
+msgstr "Настроить собственный проект Google"
+
+#. Translators: Gmail is a name; keep it as it is.
+#: app/src/route_choice.rs:155
+msgid "Every Gmail feature, on any computer. About 10 minutes, once."
+msgstr "Все возможности Gmail на любом компьютере. Около 10 минут, один раз."
+
 #: app/src/rules.rs:13
 msgid "These rules run on this computer while Penguin Mail is open."
 msgstr "Эти правила выполняются на этом компьютере, пока открыт Penguin Mail."
@@ -4034,14 +4157,16 @@ msgid "{host} refused the login: {reason}"
 msgstr "{host} отклонил вход: {reason}"
 
 #: app/src/servers.rs:59 app/src/ui/calendar/editor.rs:1219
-#: app/src/ui/calendar/editor.rs:1295 app/src/ui/contacts_prefs.rs:27
-#: app/src/ui/contacts_prefs.rs:333 app/src/ui/sidebar.rs:392
-#: app/src/ui/sidebar.rs:1497 app/src/ui/window/shortcuts.rs:240
+#: app/src/ui/calendar/editor.rs:1295 app/src/ui/contacts_prefs.rs:28
+#: app/src/ui/contacts_prefs.rs:350 app/src/ui/preferences/google_route.rs:252
+#: app/src/ui/sidebar.rs:392 app/src/ui/sidebar.rs:1497
+#: app/src/ui/window/shortcuts.rs:240
 msgid "Calendar"
 msgstr "Календарь"
 
-#: app/src/servers.rs:64 app/src/ui/contacts_prefs.rs:244
-#: app/src/ui/contacts_prefs.rs:249 app/src/ui/contacts_prefs.rs:258
+#: app/src/servers.rs:64 app/src/ui/contacts_prefs.rs:261
+#: app/src/ui/contacts_prefs.rs:266 app/src/ui/contacts_prefs.rs:275
+#: app/src/ui/preferences/google_route.rs:256
 msgid "Contacts"
 msgstr "Контакты"
 
@@ -4074,12 +4199,12 @@ msgstr "API Anthropic"
 msgid "Claude Subscription"
 msgstr "Подписка Claude"
 
-#: app/src/settings/mod.rs:227 app/src/ui/window.rs:3297
-#: app/src/ui/window.rs:3377
+#: app/src/settings/mod.rs:227 app/src/ui/window.rs:3471
+#: app/src/ui/window.rs:3551
 msgid "Assistant"
 msgstr "Помощник"
 
-#: app/src/settings/mod.rs:228 app/src/ui/preferences.rs:213
+#: app/src/settings/mod.rs:228 app/src/ui/preferences.rs:214
 msgid "Translation"
 msgstr "Перевод"
 
@@ -4447,7 +4572,7 @@ msgstr "Открыть Penguin Mail"
 msgid "New Message"
 msgstr "Новое письмо"
 
-#: app/src/tray.rs:238 app/src/ui/sidebar.rs:1929 app/src/ui/window.rs:3303
+#: app/src/tray.rs:238 app/src/ui/sidebar.rs:1929 app/src/ui/window.rs:3477
 msgid "Check for Mail"
 msgstr "Проверить почту"
 
@@ -4461,11 +4586,11 @@ msgstr "Что нового в {version}"
 
 #: app/src/tray.rs:249 app/src/ui/about.rs:119 app/src/ui/about.rs:227
 #: app/src/ui/about.rs:235 app/src/ui/about.rs:242
-#: app/src/ui/preferences.rs:1030 app/src/update/mod.rs:108
+#: app/src/ui/preferences.rs:1037 app/src/update/mod.rs:108
 msgid "Check for Updates"
 msgstr "Проверить обновления"
 
-#: app/src/tray.rs:254 app/src/ui/window.rs:3316
+#: app/src/tray.rs:254 app/src/ui/window.rs:3490
 #: app/src/ui/window/shortcuts.rs:644
 msgid "Quit"
 msgstr "Выйти"
@@ -4486,7 +4611,7 @@ msgstr "Что нового"
 msgid "Website"
 msgstr "Веб-сайт"
 
-#: app/src/ui/about.rs:179 app/src/ui/window.rs:3315
+#: app/src/ui/about.rs:179 app/src/ui/window.rs:3489
 msgid "Donate"
 msgstr "Пожертвовать"
 
@@ -4494,7 +4619,7 @@ msgstr "Пожертвовать"
 msgid "License"
 msgstr "Лицензия"
 
-#: app/src/ui/about.rs:203 app/src/ui/window.rs:3314
+#: app/src/ui/about.rs:203 app/src/ui/window.rs:3488
 msgid "About Penguin Mail"
 msgstr "О Penguin Mail"
 
@@ -4543,106 +4668,110 @@ msgstr "Показать журнал"
 msgid "The update to {version} failed"
 msgstr "Не удалось обновить до {version}"
 
-#: app/src/ui/add_account.rs:419 app/src/ui/sandbox_setup.rs:129
-#: app/src/ui/sandbox_setup.rs:136 app/src/ui/window.rs:1397
+#: app/src/ui/add_account.rs:483 app/src/ui/sandbox_setup.rs:129
+#: app/src/ui/sandbox_setup.rs:136 app/src/ui/window.rs:1415
 msgid "Copy Command"
 msgstr "Копировать команду"
 
-#: app/src/ui/add_account.rs:429 app/src/ui/sandbox_setup.rs:143
-#: app/src/ui/window.rs:1402
+#: app/src/ui/add_account.rs:493 app/src/ui/sandbox_setup.rs:143
+#: app/src/ui/window.rs:1420
 msgid "Command copied"
 msgstr "Команда скопирована"
 
-#: app/src/ui/add_account.rs:560
+#: app/src/ui/add_account.rs:624
 msgid "Signs in through your browser"
 msgstr "Вход через браузер"
 
-#: app/src/ui/add_account.rs:571
+#: app/src/ui/add_account.rs:635
 msgid "Enter server settings by hand"
 msgstr "Ввести настройки серверов вручную"
 
-#: app/src/ui/add_account.rs:578
+#: app/src/ui/add_account.rs:642
 msgid "Add a calendar without mail"
 msgstr "Добавить календарь без почты"
 
-#: app/src/ui/add_account.rs:593 app/src/ui/add_account.rs:1886
+#: app/src/ui/add_account.rs:657 app/src/ui/add_account.rs:1973
 msgid "Add Account"
 msgstr "Добавить учётную запись"
 
-#: app/src/ui/add_account.rs:596
+#: app/src/ui/add_account.rs:660
 msgid "Add an account"
 msgstr "Добавить учётную запись"
 
-#: app/src/ui/add_account.rs:598
+#: app/src/ui/add_account.rs:662
 msgid "Choose where your mail lives."
 msgstr "Выберите, где хранится ваша почта."
 
-#: app/src/ui/add_account.rs:631
+#: app/src/ui/add_account.rs:695
 msgid "Your Email Address"
 msgstr "Ваш адрес электронной почты"
 
-#: app/src/ui/add_account.rs:633 app/src/ui/add_account.rs:636
+#: app/src/ui/add_account.rs:697 app/src/ui/add_account.rs:700
 #: app/src/ui/sender_prefs.rs:103
 msgid "Email Address"
 msgstr "Адрес электронной почты"
 
-#: app/src/ui/add_account.rs:647
+#: app/src/ui/add_account.rs:711
 msgid "Use This Address"
 msgstr "Использовать этот адрес"
 
-#: app/src/ui/add_account.rs:664
+#: app/src/ui/add_account.rs:728
 msgid "Continue"
 msgstr "Продолжить"
 
 #. The same full-width secondary button as on the address page.
-#: app/src/ui/add_account.rs:665 app/src/ui/add_account.rs:758
+#: app/src/ui/add_account.rs:729 app/src/ui/add_account.rs:822
 msgid "Enter Server Settings"
 msgstr "Ввести настройки серверов"
 
-#: app/src/ui/add_account.rs:667
+#: app/src/ui/add_account.rs:731
 msgid "Your email address"
 msgstr "Ваш адрес электронной почты"
 
-#: app/src/ui/add_account.rs:669
+#: app/src/ui/add_account.rs:733
 msgid "Penguin Mail finds the servers for you."
 msgstr "Penguin Mail найдёт серверы за вас."
 
-#: app/src/ui/add_account.rs:702
+#: app/src/ui/add_account.rs:766
 msgid "Looking Up"
 msgstr "Поиск"
 
-#: app/src/ui/add_account.rs:762
+#: app/src/ui/add_account.rs:826
 msgid "Only the domain leaves this computer, never your full address."
 msgstr "Этот компьютер покидает только домен, а не полный адрес."
 
-#: app/src/ui/add_account.rs:796
+#: app/src/ui/add_account.rs:868
+msgid "Moving your account. This takes a moment."
+msgstr "Перенос учётной записи. Это займёт немного времени."
+
+#: app/src/ui/add_account.rs:873
 msgid "Sign In in Your Browser"
 msgstr "Войдите в браузере"
 
-#: app/src/ui/add_account.rs:813
+#: app/src/ui/add_account.rs:890
 msgid "Time left"
 msgstr "Осталось времени"
 
-#: app/src/ui/add_account.rs:822 app/src/ui/add_account.rs:3585
+#: app/src/ui/add_account.rs:899 app/src/ui/add_account.rs:3793
 msgid "Penguin Mail stops waiting after five minutes."
 msgstr "Penguin Mail прекратит ожидание через пять минут."
 
-#: app/src/ui/add_account.rs:828 app/src/ui/switch_jmap.rs:170
+#: app/src/ui/add_account.rs:905 app/src/ui/switch_jmap.rs:170
 msgid "Open Page Again"
 msgstr "Открыть страницу снова"
 
-#: app/src/ui/add_account.rs:833
+#: app/src/ui/add_account.rs:910
 msgid "Copy Link"
 msgstr "Копировать ссылку"
 
-#: app/src/ui/add_account.rs:838 app/src/ui/add_account.rs:1058
+#: app/src/ui/add_account.rs:915 app/src/ui/add_account.rs:1135
 #: app/src/ui/hide_my_email.rs:376 app/src/ui/hide_my_email.rs:380
 #: app/src/ui/key_import.rs:213 app/src/ui/switch_jmap.rs:640
 msgid "Try Again"
 msgstr "Повторить попытку"
 
-#: app/src/ui/add_account.rs:843 app/src/ui/add_account.rs:3861
-#: app/src/ui/add_account.rs:3930 app/src/ui/assistant_mcp_prefs.rs:365
+#: app/src/ui/add_account.rs:920 app/src/ui/add_account.rs:4120
+#: app/src/ui/add_account.rs:4189 app/src/ui/assistant_mcp_prefs.rs:365
 #: app/src/ui/calendar/editor.rs:186 app/src/ui/calendar/manage.rs:287
 #: app/src/ui/calendar/manage.rs:437 app/src/ui/calendar/manage.rs:488
 #: app/src/ui/calendar/scope.rs:113 app/src/ui/composer/editor.rs:346
@@ -4658,34 +4787,34 @@ msgstr "Повторить попытку"
 msgid "Cancel"
 msgstr "Отмена"
 
-#: app/src/ui/add_account.rs:984 app/src/ui/add_account.rs:1139
-#: app/src/ui/add_account.rs:2918 app/src/ui/add_account.rs:3008
-#: app/src/ui/add_account.rs:3465 app/src/ui/window.rs:1342
+#: app/src/ui/add_account.rs:1061 app/src/ui/add_account.rs:1216
+#: app/src/ui/add_account.rs:3030 app/src/ui/add_account.rs:3120
+#: app/src/ui/add_account.rs:3577 app/src/ui/window.rs:1359
 msgid "Sign In"
 msgstr "Войти"
 
-#: app/src/ui/add_account.rs:989 app/src/ui/add_account.rs:992
+#: app/src/ui/add_account.rs:1066 app/src/ui/add_account.rs:1069
 msgid "Your Name"
 msgstr "Ваше имя"
 
-#: app/src/ui/add_account.rs:1009 app/src/ui/switch_jmap.rs:123
+#: app/src/ui/add_account.rs:1086 app/src/ui/switch_jmap.rs:123
 #: app/src/ui/switch_jmap.rs:128
 msgid "Sign In With Browser"
 msgstr "Войти через браузер"
 
-#: app/src/ui/add_account.rs:1027
+#: app/src/ui/add_account.rs:1104
 msgid "Use an API Token Instead"
 msgstr "Использовать токен API"
 
-#: app/src/ui/add_account.rs:1035 app/src/ui/add_account.rs:1038
+#: app/src/ui/add_account.rs:1112 app/src/ui/add_account.rs:1115
 msgid "Sign In With a Token"
 msgstr "Войти с токеном"
 
-#: app/src/ui/add_account.rs:1041 app/src/ui/add_account.rs:1047
+#: app/src/ui/add_account.rs:1118 app/src/ui/add_account.rs:1124
 msgid "App Password for Calendar"
 msgstr "Пароль приложения для календаря"
 
-#: app/src/ui/add_account.rs:1043
+#: app/src/ui/add_account.rs:1120
 msgid ""
 "Optional. Make an app password with calendar access in the provider's "
 "settings."
@@ -4693,28 +4822,28 @@ msgstr ""
 "Необязательно. Создайте пароль приложения с доступом к календарю в "
 "настройках поставщика."
 
-#: app/src/ui/add_account.rs:1053 app/src/ui/add_account.rs:1682
+#: app/src/ui/add_account.rs:1130 app/src/ui/add_account.rs:1759
 msgid "Server Settings"
 msgstr "Настройки серверов"
 
-#: app/src/ui/add_account.rs:1077 app/src/ui/add_account.rs:3065
+#: app/src/ui/add_account.rs:1154 app/src/ui/add_account.rs:3177
 msgid "Outgoing"
 msgstr "Исходящая почта"
 
-#: app/src/ui/add_account.rs:1082
+#: app/src/ui/add_account.rs:1159
 msgid "Keep this account's mail on this computer alone"
 msgstr "Хранить почту этой учётной записи только на этом компьютере"
 
-#: app/src/ui/add_account.rs:1087
+#: app/src/ui/add_account.rs:1164
 msgid "Servers"
 msgstr "Серверы"
 
-#: app/src/ui/add_account.rs:1092 app/src/ui/add_account.rs:1094
-#: app/src/ui/add_account.rs:2558 app/src/ui/add_account.rs:2562
+#: app/src/ui/add_account.rs:1169 app/src/ui/add_account.rs:1171
+#: app/src/ui/add_account.rs:2670 app/src/ui/add_account.rs:2674
 msgid "Use these servers"
 msgstr "Использовать эти серверы"
 
-#: app/src/ui/add_account.rs:1096 app/src/ui/add_account.rs:2560
+#: app/src/ui/add_account.rs:1173 app/src/ui/add_account.rs:2672
 msgid ""
 "Penguin Mail guessed these servers. Your password goes to them only after "
 "you check the box."
@@ -4722,45 +4851,45 @@ msgstr ""
 "Penguin Mail подобрал эти серверы. Пароль будет отправлен им только после "
 "установки флажка."
 
-#: app/src/ui/add_account.rs:1102 app/src/ui/add_account.rs:1403
-#: app/src/ui/add_account.rs:1638
+#: app/src/ui/add_account.rs:1179 app/src/ui/add_account.rs:1480
+#: app/src/ui/add_account.rs:1715
 msgid "Server"
 msgstr "Сервер"
 
-#: app/src/ui/add_account.rs:1106
+#: app/src/ui/add_account.rs:1183
 msgid "Use IMAP Instead"
 msgstr "Использовать IMAP"
 
-#: app/src/ui/add_account.rs:1202
+#: app/src/ui/add_account.rs:1279
 msgid "No Other Mail Apps"
 msgstr "Другие почтовые приложения недоступны"
 
-#: app/src/ui/add_account.rs:1208
+#: app/src/ui/add_account.rs:1285
 msgid "Use another address"
 msgstr "Использовать другой адрес"
 
-#: app/src/ui/add_account.rs:1209
+#: app/src/ui/add_account.rs:1286
 msgid "Change the address and look it up again"
 msgstr "Изменить адрес и повторить поиск"
 
-#: app/src/ui/add_account.rs:1215
+#: app/src/ui/add_account.rs:1292
 msgid "Choose another provider"
 msgstr "Выбрать другого поставщика"
 
-#: app/src/ui/add_account.rs:1216
+#: app/src/ui/add_account.rs:1293
 msgid "Back to the list"
 msgstr "Вернуться к списку"
 
-#: app/src/ui/add_account.rs:1262
+#: app/src/ui/add_account.rs:1339
 msgid "Account Added"
 msgstr "Учётная запись добавлена"
 
-#: app/src/ui/add_account.rs:1285
+#: app/src/ui/add_account.rs:1362
 msgctxt "mailbox"
 msgid "Archive"
 msgstr "Архив"
 
-#: app/src/ui/add_account.rs:1319
+#: app/src/ui/add_account.rs:1396
 msgid ""
 "Grant Access opens Google's page again. You can also do it later in "
 "Preferences."
@@ -4768,51 +4897,52 @@ msgstr ""
 "«Предоставить доступ» снова откроет страницу Google. Это можно сделать позже "
 "в параметрах."
 
-#: app/src/ui/add_account.rs:1323
+#: app/src/ui/add_account.rs:1400
 msgid "Open Inbox"
 msgstr "Открыть входящие"
 
-#: app/src/ui/add_account.rs:1325
+#: app/src/ui/add_account.rs:1402
 msgid "Add Another Account"
 msgstr "Добавить ещё учётную запись"
 
-#: app/src/ui/add_account.rs:1327 app/src/ui/confirm.rs:46
+#: app/src/ui/add_account.rs:1404 app/src/ui/confirm.rs:46
+#: app/src/ui/route_page.rs:139
 msgid "Not Now"
 msgstr "Не сейчас"
 
-#: app/src/ui/add_account.rs:1332 app/src/ui/calendar/editor.rs:1681
-#: app/src/ui/calendar/sidebar.rs:1003 app/src/ui/contacts_prefs.rs:442
+#: app/src/ui/add_account.rs:1409 app/src/ui/calendar/editor.rs:1681
+#: app/src/ui/calendar/sidebar.rs:1008 app/src/ui/contacts_prefs.rs:483
 #: app/src/ui/invitation.rs:490 app/src/ui/permission.rs:42
-#: app/src/ui/permission.rs:66 app/src/ui/window.rs:1464
+#: app/src/ui/permission.rs:66 app/src/ui/window.rs:1491
 msgid "Grant Access"
 msgstr "Предоставить доступ"
 
-#: app/src/ui/add_account.rs:1406 app/src/ui/add_account.rs:1407
+#: app/src/ui/add_account.rs:1483 app/src/ui/add_account.rs:1484
 msgid "Port"
 msgstr "Порт"
 
-#: app/src/ui/add_account.rs:1417 app/src/ui/add_account.rs:1418
+#: app/src/ui/add_account.rs:1494 app/src/ui/add_account.rs:1495
 msgid "Security"
 msgstr "Защита"
 
-#: app/src/ui/add_account.rs:1479
+#: app/src/ui/add_account.rs:1556
 msgid "Mail on the Server"
 msgstr "Почта на сервере"
 
-#: app/src/ui/add_account.rs:1481
+#: app/src/ui/add_account.rs:1558
 msgid "Penguin Mail keeps every message it downloads on this computer."
 msgstr "Penguin Mail хранит все загруженные письма на этом компьютере."
 
-#: app/src/ui/add_account.rs:1486 app/src/ui/add_account.rs:1487
-#: app/src/ui/preferences.rs:1378
+#: app/src/ui/add_account.rs:1563 app/src/ui/add_account.rs:1564
+#: app/src/ui/preferences.rs:1385
 msgid "Days"
 msgstr "Дни"
 
-#: app/src/ui/add_account.rs:1561 app/src/ui/add_account.rs:1639
+#: app/src/ui/add_account.rs:1638 app/src/ui/add_account.rs:1716
 msgid "Incoming User Name"
 msgstr "Имя пользователя входящей почты"
 
-#: app/src/ui/add_account.rs:1562
+#: app/src/ui/add_account.rs:1639
 msgid "Outgoing User Name"
 msgstr "Имя пользователя исходящей почты"
 
@@ -4820,63 +4950,63 @@ msgstr "Имя пользователя исходящей почты"
 #. text draws over the title. The rule goes in a tooltip, since a
 #. second line under the group would push this row off a 768-pixel
 #. screen.
-#: app/src/ui/add_account.rs:1568
+#: app/src/ui/add_account.rs:1645
 msgid "Leave it empty to use the incoming user name."
 msgstr "Оставьте пустым, чтобы использовать имя пользователя входящей почты."
 
-#: app/src/ui/add_account.rs:1571 app/src/ui/add_account.rs:1573
+#: app/src/ui/add_account.rs:1648 app/src/ui/add_account.rs:1650
 msgid "Outgoing Password"
 msgstr "Пароль исходящей почты"
 
-#: app/src/ui/add_account.rs:1575
+#: app/src/ui/add_account.rs:1652
 msgid "Leave it empty to use the password you sign in with."
 msgstr "Оставьте пустым, чтобы использовать пароль для входа."
 
-#: app/src/ui/add_account.rs:1578
+#: app/src/ui/add_account.rs:1655
 msgid "Incoming Mail"
 msgstr "Входящая почта"
 
-#: app/src/ui/add_account.rs:1587 app/src/ui/add_account.rs:1588
+#: app/src/ui/add_account.rs:1664 app/src/ui/add_account.rs:1665
 msgid "Protocol"
 msgstr "Протокол"
 
-#: app/src/ui/add_account.rs:1595
+#: app/src/ui/add_account.rs:1672
 msgid "Sign-In"
 msgstr "Вход"
 
-#: app/src/ui/add_account.rs:1597 app/src/ui/add_account.rs:1640
+#: app/src/ui/add_account.rs:1674 app/src/ui/add_account.rs:1717
 msgid "Leave the user names empty to sign in with your address."
 msgstr "Оставьте имена пользователей пустыми, чтобы входить с вашим адресом."
 
-#: app/src/ui/add_account.rs:1601
+#: app/src/ui/add_account.rs:1678
 msgid "Outgoing Mail"
 msgstr "Исходящая почта"
 
-#: app/src/ui/add_account.rs:1633
+#: app/src/ui/add_account.rs:1710
 msgid "Session URL"
 msgstr "URL сеанса"
 
-#: app/src/ui/add_account.rs:1634 app/src/ui/add_account.rs:1713
+#: app/src/ui/add_account.rs:1711 app/src/ui/add_account.rs:1790
 msgid "User Name"
 msgstr "Имя пользователя"
 
-#: app/src/ui/add_account.rs:1635
+#: app/src/ui/add_account.rs:1712
 msgid "Leave the user name empty to sign in with your address."
 msgstr "Оставьте имя пользователя пустым, чтобы входить с вашим адресом."
 
-#: app/src/ui/add_account.rs:1671 app/src/ui/add_account.rs:3378
+#: app/src/ui/add_account.rs:1748 app/src/ui/add_account.rs:3490
 msgid "Use These Settings"
 msgstr "Использовать эти настройки"
 
-#: app/src/ui/add_account.rs:1711 app/src/ui/assistant_prefs.rs:63
+#: app/src/ui/add_account.rs:1788 app/src/ui/assistant_prefs.rs:63
 msgid "Server Address"
 msgstr "Адрес сервера"
 
-#: app/src/ui/add_account.rs:1726
+#: app/src/ui/add_account.rs:1803
 msgid "Calendar Server"
 msgstr "Сервер календарей"
 
-#: app/src/ui/add_account.rs:1728
+#: app/src/ui/add_account.rs:1805
 msgid ""
 "A CalDAV server, such as Nextcloud. Where it uses two-step sign-in, make an "
 "app password for Penguin Mail."
@@ -4884,24 +5014,24 @@ msgstr ""
 "Сервер CalDAV, например Nextcloud. При двухэтапной проверке создайте пароль "
 "приложения для Penguin Mail."
 
-#: app/src/ui/add_account.rs:1738 app/src/ui/calendar/sidebar.rs:1431
-#: app/src/ui/calendar/sidebar.rs:1442
+#: app/src/ui/add_account.rs:1815 app/src/ui/calendar/sidebar.rs:1460
+#: app/src/ui/calendar/sidebar.rs:1471
 msgid "Add Calendar"
 msgstr "Добавить календарь"
 
-#: app/src/ui/add_account.rs:1750
+#: app/src/ui/add_account.rs:1827
 msgid "Add a Calendar"
 msgstr "Добавить календарь"
 
-#: app/src/ui/add_account.rs:2327 app/src/ui/add_account.rs:4262
+#: app/src/ui/add_account.rs:2439 app/src/ui/add_account.rs:4521
 msgid "Looking up {domain}"
 msgstr "Поиск {domain}"
 
-#: app/src/ui/add_account.rs:2589
+#: app/src/ui/add_account.rs:2701
 msgid "{domain} uses {provider}"
 msgstr "{domain} использует {provider}"
 
-#: app/src/ui/add_account.rs:2613
+#: app/src/ui/add_account.rs:2725
 msgid ""
 "Not your {provider} website password. Make one with mail access in "
 "{provider}'s settings and paste it here."
@@ -4909,32 +5039,32 @@ msgstr ""
 "Нужен не пароль сайта {provider}. Создайте пароль с доступом к почте в "
 "настройках {provider} и вставьте его сюда."
 
-#: app/src/ui/add_account.rs:2910 app/src/ui/add_account.rs:3003
-#: app/src/ui/add_account.rs:3523 app/src/ui/add_account.rs:4333
+#: app/src/ui/add_account.rs:3022 app/src/ui/add_account.rs:3115
+#: app/src/ui/add_account.rs:3635 app/src/ui/add_account.rs:4592
 msgid "Signing In…"
 msgstr "Вход…"
 
-#: app/src/ui/add_account.rs:3084
+#: app/src/ui/add_account.rs:3196
 msgid "Could not reach {host}"
 msgstr "Не удалось подключиться к {host}"
 
-#: app/src/ui/add_account.rs:3086
+#: app/src/ui/add_account.rs:3198
 msgid "Your password was not sent."
 msgstr "Ваш пароль не был отправлен."
 
-#: app/src/ui/add_account.rs:3356
+#: app/src/ui/add_account.rs:3468
 msgid "Looking Up…"
 msgstr "Поиск…"
 
-#: app/src/ui/add_account.rs:3464 app/src/ui/calendar/sidebar.rs:1250
+#: app/src/ui/add_account.rs:3576 app/src/ui/calendar/sidebar.rs:1279
 msgid "Sign In Again"
 msgstr "Войти снова"
 
-#: app/src/ui/add_account.rs:3573 app/src/ui/add_account.rs:3911
+#: app/src/ui/add_account.rs:3781 app/src/ui/add_account.rs:4170
 msgid "Sign in with {provider} in your browser"
 msgstr "Войдите в {provider} через браузер"
 
-#: app/src/ui/add_account.rs:3578 app/src/ui/add_account.rs:3916
+#: app/src/ui/add_account.rs:3786 app/src/ui/add_account.rs:4175
 msgid ""
 "{provider}'s sign-in page is open in your browser. When you finish there, "
 "this window moves on."
@@ -4942,7 +5072,7 @@ msgstr ""
 "Страница входа {provider} открыта в браузере. После входа это окно перейдёт "
 "к следующему шагу."
 
-#: app/src/ui/add_account.rs:3601
+#: app/src/ui/add_account.rs:3809
 msgid ""
 "This copy of Penguin Mail was built without Google sign-in. Get a release "
 "from github.com/c9dev/penguin-mail/releases."
@@ -4950,7 +5080,7 @@ msgstr ""
 "Эта сборка Penguin Mail не поддерживает вход через Google. Загрузите выпуск "
 "с github.com/c9dev/penguin-mail/releases."
 
-#: app/src/ui/add_account.rs:3604
+#: app/src/ui/add_account.rs:3812
 msgid ""
 "This copy of Penguin Mail was built without Microsoft sign-in. Get a release "
 "from github.com/c9dev/penguin-mail/releases."
@@ -4958,7 +5088,7 @@ msgstr ""
 "Эта сборка Penguin Mail не поддерживает вход через Microsoft. Загрузите "
 "выпуск с github.com/c9dev/penguin-mail/releases."
 
-#: app/src/ui/add_account.rs:3615
+#: app/src/ui/add_account.rs:3823
 msgid ""
 "Signing in with your own Google client. Google's sign-in page is open in "
 "your browser. When you finish there, this window moves on."
@@ -4966,27 +5096,27 @@ msgstr ""
 "Вход с вашим собственным клиентом Google. Страница входа Google открыта в "
 "браузере. После входа это окно перейдёт к следующему шагу."
 
-#: app/src/ui/add_account.rs:3796
+#: app/src/ui/add_account.rs:4055
 msgid "Link copied"
 msgstr "Ссылка скопирована"
 
-#: app/src/ui/add_account.rs:3923
+#: app/src/ui/add_account.rs:4182
 msgid "Penguin Mail stops waiting after ten minutes."
 msgstr "Penguin Mail прекратит ожидание через десять минут."
 
-#: app/src/ui/add_account.rs:3946
+#: app/src/ui/add_account.rs:4205
 msgid "Canceling…"
 msgstr "Отмена…"
 
-#: app/src/ui/add_account.rs:4010
+#: app/src/ui/add_account.rs:4269
 msgid "{account} is added"
 msgstr "{account} добавлена"
 
-#: app/src/ui/add_account.rs:4030
+#: app/src/ui/add_account.rs:4289
 msgid "{account} is ready"
 msgstr "{account} готова"
 
-#: app/src/ui/add_account.rs:4336
+#: app/src/ui/add_account.rs:4595
 msgid ""
 "This server cannot tell its messages apart, so Penguin Mail cannot download "
 "from it safely."
@@ -4994,7 +5124,7 @@ msgstr ""
 "Этот сервер не различает свои письма, поэтому Penguin Mail не может "
 "безопасно загружать их."
 
-#: app/src/ui/assistant.rs:35 app/src/ui/window.rs:3463
+#: app/src/ui/assistant.rs:35 app/src/ui/window.rs:3637
 msgid "Summarize this conversation"
 msgstr "Составь сводку этой переписки"
 
@@ -5019,13 +5149,13 @@ msgstr "Подготовь ответ в открытой переписке"
 msgid "Choose a Model"
 msgstr "Выбрать модель"
 
-#: app/src/ui/assistant.rs:123 app/src/ui/window.rs:3424
-#: app/src/ui/window.rs:3425
+#: app/src/ui/assistant.rs:123 app/src/ui/window.rs:3598
+#: app/src/ui/window.rs:3599
 msgid "Detach"
 msgstr "Открепить"
 
 #: app/src/ui/assistant.rs:124 app/src/ui/key_import.rs:213
-#: app/src/ui/key_import.rs:217 app/src/ui/window.rs:4034
+#: app/src/ui/key_import.rs:217 app/src/ui/window.rs:4230
 msgid "Close"
 msgstr "Закрыть"
 
@@ -5233,7 +5363,7 @@ msgstr "Изменить {server}"
 
 #: app/src/ui/assistant_mcp_prefs.rs:137 app/src/ui/calendar/editor.rs:1726
 #: app/src/ui/composer/mod.rs:2219 app/src/ui/composer/recipients.rs:318
-#: app/src/ui/sender_prefs.rs:149 app/src/ui/window.rs:3068
+#: app/src/ui/sender_prefs.rs:149 app/src/ui/window.rs:3236
 msgid "Remove"
 msgstr "Убрать"
 
@@ -5595,7 +5725,7 @@ msgstr ""
 "выполняются в песочнице без доступа к почте, ключам и домашней папке. "
 "Помощник спрашивает перед каждой командой."
 
-#: app/src/ui/assistant_skills_prefs.rs:33 app/src/ui/preferences.rs:413
+#: app/src/ui/assistant_skills_prefs.rs:33 app/src/ui/preferences.rs:420
 msgid "Not Available"
 msgstr "Недоступно"
 
@@ -5775,7 +5905,7 @@ msgid "Declined"
 msgstr "Отклонено"
 
 #: app/src/ui/calendar/block.rs:613 app/src/ui/calendar/words.rs:190
-#: app/src/ui/preferences.rs:1197
+#: app/src/ui/preferences.rs:1204
 msgid "{start}–{end}"
 msgstr "{start}–{end}"
 
@@ -5889,11 +6019,11 @@ msgstr "Дата окончания"
 msgid "End time"
 msgstr "Время окончания"
 
-#: app/src/ui/calendar/editor.rs:751 app/src/ui/preferences.rs:1330
+#: app/src/ui/calendar/editor.rs:751 app/src/ui/preferences.rs:1337
 msgid "Starts"
 msgstr "Начало"
 
-#: app/src/ui/calendar/editor.rs:754 app/src/ui/preferences.rs:1332
+#: app/src/ui/calendar/editor.rs:754 app/src/ui/preferences.rs:1339
 msgid "Ends"
 msgstr "Окончание"
 
@@ -6059,7 +6189,7 @@ msgid "Only people who can change this calendar see the details"
 msgstr "Подробности видят только те, кто может изменять этот календарь"
 
 #: app/src/ui/calendar/editor.rs:2025 app/src/ui/calendar/manage.rs:412
-#: app/src/ui/calendar/sidebar.rs:1482 app/src/ui/sidebar.rs:1695
+#: app/src/ui/calendar/sidebar.rs:1511 app/src/ui/sidebar.rs:1695
 #: app/src/ui/sidebar.rs:1946
 msgid "Color"
 msgstr "Цвет"
@@ -6072,7 +6202,7 @@ msgstr "Цвет календаря"
 msgid "Add Google Meet"
 msgstr "Добавить Google Meet"
 
-#: app/src/ui/calendar/editor.rs:2124 app/src/ui/calendar/mod.rs:2414
+#: app/src/ui/calendar/editor.rs:2124 app/src/ui/calendar/mod.rs:2415
 #: app/src/ui/calendar/quick.rs:54
 msgid "Event"
 msgstr "Событие"
@@ -6528,7 +6658,7 @@ msgid "View"
 msgstr "Вид"
 
 #: app/src/ui/calendar/mod.rs:372 app/src/ui/calendar/mod.rs:380
-#: app/src/ui/calendar/mod.rs:2399
+#: app/src/ui/calendar/mod.rs:2400
 msgid "New Event (N)"
 msgstr "Новое событие (N)"
 
@@ -6561,63 +6691,63 @@ msgstr "Загрузка старых событий"
 msgid "Go to date"
 msgstr "Перейти к дате"
 
-#: app/src/ui/calendar/mod.rs:1376
+#: app/src/ui/calendar/mod.rs:1377
 msgid "Moved “{title}”"
 msgstr "Событие «{title}» перемещено"
 
-#: app/src/ui/calendar/mod.rs:1377
+#: app/src/ui/calendar/mod.rs:1378
 msgid "Could not move the event: {reason}"
 msgstr "Не удалось переместить событие: {reason}"
 
-#: app/src/ui/calendar/mod.rs:1508
+#: app/src/ui/calendar/mod.rs:1509
 msgid "All-day events"
 msgstr "События на весь день"
 
-#: app/src/ui/calendar/mod.rs:1510
+#: app/src/ui/calendar/mod.rs:1511
 msgid "All-day"
 msgstr "Весь день"
 
-#: app/src/ui/calendar/mod.rs:1794 app/src/ui/calendar/mod.rs:3046
-#: app/src/ui/calendar/sidebar.rs:352 app/src/ui/calendar/words.rs:412
-#: app/src/ui/preferences.rs:1211 app/src/ui/preferences.rs:1386
+#: app/src/ui/calendar/mod.rs:1795 app/src/ui/calendar/mod.rs:3047
+#: app/src/ui/calendar/sidebar.rs:357 app/src/ui/calendar/words.rs:412
+#: app/src/ui/preferences.rs:1218 app/src/ui/preferences.rs:1393
 msgid "%a"
 msgstr "%a"
 
-#: app/src/ui/calendar/mod.rs:2117
+#: app/src/ui/calendar/mod.rs:2118
 msgid "Removed “{title}” from your calendar"
 msgstr "Событие «{title}» удалено из вашего календаря"
 
-#: app/src/ui/calendar/mod.rs:2118
+#: app/src/ui/calendar/mod.rs:2119
 msgid "Deleted “{title}”"
 msgstr "Событие «{title}» удалено"
 
-#: app/src/ui/calendar/mod.rs:2131
+#: app/src/ui/calendar/mod.rs:2132
 msgid "Could not delete the event: {reason}"
 msgstr "Не удалось удалить событие: {reason}"
 
-#: app/src/ui/calendar/mod.rs:2184 app/src/ui/composer/mod.rs:1392
+#: app/src/ui/calendar/mod.rs:2185 app/src/ui/composer/mod.rs:1392
 #: app/src/ui/window/in_flight.rs:244 app/src/ui/window/scheduled.rs:98
 #: app/src/ui/window/shortcuts.rs:462
 msgid "Undo"
 msgstr "Отменить"
 
-#: app/src/ui/calendar/mod.rs:2340
+#: app/src/ui/calendar/mod.rs:2341
 msgid "Could not send your answer: {reason}"
 msgstr "Не удалось отправить ответ: {reason}"
 
-#: app/src/ui/calendar/mod.rs:2403
+#: app/src/ui/calendar/mod.rs:2404
 msgid "None of your calendars take new events"
 msgstr "Ни один из ваших календарей не принимает новые события"
 
-#: app/src/ui/calendar/mod.rs:2415 app/src/ui/calendar/quick.rs:55
+#: app/src/ui/calendar/mod.rs:2416 app/src/ui/calendar/quick.rs:55
 msgid "Focus Time"
 msgstr "Время для сосредоточенной работы"
 
-#: app/src/ui/calendar/mod.rs:2416 app/src/ui/calendar/quick.rs:56
+#: app/src/ui/calendar/mod.rs:2417 app/src/ui/calendar/quick.rs:56
 msgid "Out of Office"
 msgstr "Нет на работе"
 
-#: app/src/ui/calendar/mod.rs:2785
+#: app/src/ui/calendar/mod.rs:2786
 msgid "Could not save the event: {reason}"
 msgstr "Не удалось сохранить событие: {reason}"
 
@@ -6740,7 +6870,7 @@ msgstr "Календарь: {name}"
 msgid "%A %-d"
 msgstr "%A %-d"
 
-#: app/src/ui/calendar/range.rs:115 app/src/ui/calendar/sidebar.rs:949
+#: app/src/ui/calendar/range.rs:115 app/src/ui/calendar/sidebar.rs:954
 msgid "%B %Y"
 msgstr "%B %Y"
 
@@ -6874,113 +7004,128 @@ msgstr "Следующая неделя"
 msgid "Previous Week"
 msgstr "Предыдущая неделя"
 
-#: app/src/ui/calendar/shown.rs:114 app/src/ui/calendar/sidebar.rs:593
+#: app/src/ui/calendar/shown.rs:114 app/src/ui/calendar/sidebar.rs:598
 msgid "Next Month"
 msgstr "Следующий месяц"
 
-#: app/src/ui/calendar/shown.rs:114 app/src/ui/calendar/sidebar.rs:592
+#: app/src/ui/calendar/shown.rs:114 app/src/ui/calendar/sidebar.rs:597
 msgid "Previous Month"
 msgstr "Предыдущий месяц"
 
-#: app/src/ui/calendar/sidebar.rs:685
+#: app/src/ui/calendar/sidebar.rs:690
 msgid "Waiting for your answer"
 msgstr "Ожидает вашего ответа"
 
-#: app/src/ui/calendar/sidebar.rs:846
+#: app/src/ui/calendar/sidebar.rs:851
 msgid "Open mail"
 msgstr "Открыть почту"
 
-#: app/src/ui/calendar/sidebar.rs:993
+#: app/src/ui/calendar/sidebar.rs:998
 msgid "Grant Access to show shared calendars"
 msgstr "Предоставьте доступ для показа общих календарей"
 
-#: app/src/ui/calendar/sidebar.rs:999
+#: app/src/ui/calendar/sidebar.rs:1004
 msgid "Penguin Mail cannot see this account's calendars"
 msgstr "Penguin Mail не видит календари этой учётной записи"
 
-#: app/src/ui/calendar/sidebar.rs:1101
+#: app/src/ui/calendar/sidebar.rs:1016 app/src/ui/contacts_prefs.rs:373
+#: app/src/ui/preferences/google_route.rs:260
+msgid "Not connected"
+msgstr "Не подключено"
+
+#: app/src/ui/calendar/sidebar.rs:1110
 msgid "Show or hide this account's calendars"
 msgstr "Показать или скрыть календари этой учётной записи"
 
-#: app/src/ui/calendar/sidebar.rs:1181
+#: app/src/ui/calendar/sidebar.rs:1190
 msgid "Calendar options"
 msgstr "Параметры календаря"
 
-#: app/src/ui/calendar/sidebar.rs:1186
+#: app/src/ui/calendar/sidebar.rs:1195
 msgid "Options for {calendar}"
 msgstr "Параметры для {calendar}"
 
-#: app/src/ui/calendar/sidebar.rs:1230 app/src/ui/contacts_prefs.rs:449
+#: app/src/ui/calendar/sidebar.rs:1233 app/src/ui/contacts_prefs.rs:376
+#: app/src/ui/preferences/google_route.rs:380
+msgid "Connect"
+msgstr "Подключить"
+
+#: app/src/ui/calendar/sidebar.rs:1240 app/src/ui/contacts_prefs.rs:382
+#: app/src/ui/preferences/google_route.rs:253
+msgid "Connect the calendar for {account}"
+msgstr "Подключить календарь для {account}"
+
+#: app/src/ui/calendar/sidebar.rs:1259 app/src/ui/contacts_prefs.rs:490
 msgid "Grant Access for {account}"
 msgstr "Предоставить доступ для {account}"
 
-#: app/src/ui/calendar/sidebar.rs:1259
+#: app/src/ui/calendar/sidebar.rs:1288
 msgid "Sign in again to {account}"
 msgstr "Снова войти в {account}"
 
-#: app/src/ui/calendar/sidebar.rs:1272 app/src/ui/sidebar.rs:1951
+#: app/src/ui/calendar/sidebar.rs:1301 app/src/ui/sidebar.rs:1951
 msgid "Sign In Again…"
 msgstr "Войти снова…"
 
-#: app/src/ui/calendar/sidebar.rs:1273 app/src/ui/sidebar.rs:1959
+#: app/src/ui/calendar/sidebar.rs:1302 app/src/ui/sidebar.rs:1959
 msgid "Remove Account…"
 msgstr "Удалить учётную запись…"
 
-#: app/src/ui/calendar/sidebar.rs:1287 app/src/ui/sidebar.rs:1966
+#: app/src/ui/calendar/sidebar.rs:1316 app/src/ui/sidebar.rs:1966
 msgid "Account options"
 msgstr "Параметры учётной записи"
 
-#: app/src/ui/calendar/sidebar.rs:1292 app/src/ui/sidebar.rs:1971
+#: app/src/ui/calendar/sidebar.rs:1321 app/src/ui/sidebar.rs:1971
 msgid "Options for {account}"
 msgstr "Параметры для {account}"
 
-#: app/src/ui/calendar/sidebar.rs:1387
+#: app/src/ui/calendar/sidebar.rs:1416
 msgid "{address}. You can only read this calendar"
 msgstr "{address}. Этот календарь доступен только для чтения"
 
-#: app/src/ui/calendar/sidebar.rs:1411
+#: app/src/ui/calendar/sidebar.rs:1440
 msgid "New Calendar…"
 msgstr "Новый календарь…"
 
-#: app/src/ui/calendar/sidebar.rs:1412
+#: app/src/ui/calendar/sidebar.rs:1441
 msgid "Subscribe to Calendar…"
 msgstr "Подписаться на календарь…"
 
-#: app/src/ui/calendar/sidebar.rs:1413
+#: app/src/ui/calendar/sidebar.rs:1442
 msgid "Holiday Calendars…"
 msgstr "Календари праздников…"
 
-#: app/src/ui/calendar/sidebar.rs:1461
+#: app/src/ui/calendar/sidebar.rs:1490
 msgid "Hide from the List"
 msgstr "Скрыть из списка"
 
-#: app/src/ui/calendar/sidebar.rs:1474
+#: app/src/ui/calendar/sidebar.rs:1503
 msgid "Original Color"
 msgstr "Исходный цвет"
 
-#: app/src/ui/calendar/sidebar.rs:1486 app/src/ui/sidebar.rs:1684
+#: app/src/ui/calendar/sidebar.rs:1515 app/src/ui/sidebar.rs:1684
 #: app/src/ui/sidebar.rs:1936
 msgid "Rename…"
 msgstr "Переименовать…"
 
-#: app/src/ui/calendar/sidebar.rs:1487 app/src/ui/sidebar.rs:1582
+#: app/src/ui/calendar/sidebar.rs:1516 app/src/ui/sidebar.rs:1582
 #: app/src/ui/sidebar.rs:1710
 msgid "Delete…"
 msgstr "Удалить…"
 
-#: app/src/ui/calendar/sidebar.rs:1490 app/src/ui/conversation.rs:598
+#: app/src/ui/calendar/sidebar.rs:1519 app/src/ui/conversation.rs:598
 msgid "Unsubscribe…"
 msgstr "Отменить подписку…"
 
-#: app/src/ui/calendar/sidebar.rs:1517
+#: app/src/ui/calendar/sidebar.rs:1546
 msgid "Show {calendar}"
 msgstr "Показать {calendar}"
 
-#: app/src/ui/calendar/sidebar.rs:1535
+#: app/src/ui/calendar/sidebar.rs:1564
 msgid "Hidden Calendars"
 msgstr "Скрытые календари"
 
-#: app/src/ui/calendar/sidebar.rs:1555
+#: app/src/ui/calendar/sidebar.rs:1584
 msgid "{count} hidden calendar"
 msgid_plural "{count} hidden calendars"
 msgstr[0] "{count} скрытый календарь"
@@ -7641,11 +7786,11 @@ msgstr "Добавить в важные контакты"
 msgid "All Their Mail"
 msgstr "Вся почта от контакта"
 
-#: app/src/ui/contacts_prefs.rs:55
+#: app/src/ui/contacts_prefs.rs:56
 msgid "Calendar, Contacts and Rules Servers"
 msgstr "Серверы календарей, контактов и правил"
 
-#: app/src/ui/contacts_prefs.rs:56
+#: app/src/ui/contacts_prefs.rs:57
 msgid ""
 "Penguin Mail looks for these when you add an account, and signs in with the "
 "account's password, or the app password you gave for its calendar."
@@ -7653,24 +7798,24 @@ msgstr ""
 "Penguin Mail ищет их при добавлении учётной записи и входит с паролем "
 "учётной записи или паролем приложения, указанным для календаря."
 
-#: app/src/ui/contacts_prefs.rs:118
+#: app/src/ui/contacts_prefs.rs:135
 msgid "Use It"
 msgstr "Использовать"
 
-#: app/src/ui/contacts_prefs.rs:125
+#: app/src/ui/contacts_prefs.rs:142
 msgid "Use {host} for {account}"
 msgstr "Использовать {host} для {account}"
 
-#: app/src/ui/contacts_prefs.rs:153
+#: app/src/ui/contacts_prefs.rs:170
 msgid "Find Again"
 msgstr "Найти снова"
 
-#: app/src/ui/contacts_prefs.rs:157 app/src/ui/conversation.rs:550
+#: app/src/ui/contacts_prefs.rs:174 app/src/ui/conversation.rs:550
 #: app/src/ui/queued.rs:60 app/src/ui/sidebar.rs:1576
 msgid "Edit…"
 msgstr "Изменить…"
 
-#: app/src/ui/contacts_prefs.rs:264
+#: app/src/ui/contacts_prefs.rs:281
 msgid ""
 "Penguin Mail can read an account's contacts: names, email addresses, photos, "
 "organizations, and phone numbers. It uses them to suggest recipients, to "
@@ -7684,18 +7829,18 @@ msgstr ""
 "отправителя. Прочитанные данные остаются на этом компьютере. Выключение "
 "учётной записи удаляет её контакты."
 
-#: app/src/ui/contacts_prefs.rs:335
+#: app/src/ui/contacts_prefs.rs:352
 msgid ""
 "Penguin Mail shows each account's meetings and reminds you before they start."
 msgstr ""
 "Penguin Mail показывает встречи каждой учётной записи и напоминает о них до "
 "начала."
 
-#: app/src/ui/contacts_prefs.rs:339
+#: app/src/ui/contacts_prefs.rs:356
 msgid "GNOME Online Accounts"
 msgstr "Сетевые учётные записи GNOME"
 
-#: app/src/ui/contacts_prefs.rs:341
+#: app/src/ui/contacts_prefs.rs:358
 msgid ""
 "Add an account to GNOME Online Accounts to see its meetings in GNOME "
 "Calendar and the clock too."
@@ -7703,25 +7848,25 @@ msgstr ""
 "Добавьте учётную запись в сетевые учётные записи GNOME, чтобы видеть встречи "
 "также в Календаре GNOME и часах."
 
-#: app/src/ui/contacts_prefs.rs:388
+#: app/src/ui/contacts_prefs.rs:429
 msgctxt "an account in Online Accounts"
 msgid "Added"
 msgstr "Добавлено"
 
-#: app/src/ui/contacts_prefs.rs:390
+#: app/src/ui/contacts_prefs.rs:431
 msgctxt "an account in Online Accounts"
 msgid "Not added"
 msgstr "Не добавлено"
 
-#: app/src/ui/contacts_prefs.rs:392
+#: app/src/ui/contacts_prefs.rs:433
 msgid "Add to Online Accounts…"
 msgstr "Добавить в сетевые учётные записи…"
 
-#: app/src/ui/contacts_prefs.rs:398
+#: app/src/ui/contacts_prefs.rs:439
 msgid "Add {account} to GNOME Online Accounts"
 msgstr "Добавить {account} в сетевые учётные записи GNOME"
 
-#: app/src/ui/contacts_prefs.rs:439
+#: app/src/ui/contacts_prefs.rs:480
 msgid "Not allowed when you signed in"
 msgstr "Не разрешено при входе"
 
@@ -8129,7 +8274,7 @@ msgstr ""
 msgid "Allow Hide My Email"
 msgstr "Разрешить скрытие адреса"
 
-#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:3514
+#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:3688
 msgid "Add an account first"
 msgstr "Сначала добавьте учётную запись"
 
@@ -8599,9 +8744,28 @@ msgid "This link contains hidden or direction-changing characters."
 msgstr ""
 "Эта ссылка содержит скрытые символы или символы изменения направления текста."
 
-#: app/src/ui/mod.rs:500
+#: app/src/ui/mod.rs:502
 msgid "Gray"
 msgstr "Серый"
+
+#. Translators: Google and Gmail are names; keep them as they are.
+#: app/src/ui/move_sheet.rs:62
+msgid ""
+"Penguin Mail has new ways to sign in to Google. Pick one for each Gmail "
+"account below to keep your mail arriving. Your mail and settings stay as "
+"they are, and nothing downloads again."
+msgstr ""
+"В Penguin Mail появились новые способы входа в Google. Выберите один для "
+"каждой учётной записи Gmail ниже, чтобы почта продолжала поступать. Ваша "
+"почта и настройки останутся как есть, ничего не будет загружено заново."
+
+#: app/src/ui/move_sheet.rs:84
+msgid "Later"
+msgstr "Позже"
+
+#: app/src/ui/move_sheet.rs:88
+msgid "Choose Now"
+msgstr "Выбрать сейчас"
 
 #: app/src/ui/moving.rs:40
 msgid "The mail is already there"
@@ -8631,127 +8795,127 @@ msgstr "Предупреждение"
 msgid "Not checked"
 msgstr "Не проверено"
 
-#: app/src/ui/preferences.rs:140 app/src/ui/window/shortcuts.rs:237
+#: app/src/ui/preferences.rs:141 app/src/ui/window/shortcuts.rs:237
 msgid "Reading"
 msgstr "Чтение"
 
-#: app/src/ui/preferences.rs:149
+#: app/src/ui/preferences.rs:150
 msgid "Group Messages into Conversations"
 msgstr "Группировать письма в переписки"
 
-#: app/src/ui/preferences.rs:151
+#: app/src/ui/preferences.rs:152
 msgid "Show a thread's replies together instead of one row per message"
 msgstr ""
 "Показывать ответы одной переписки вместе, а не отдельной строкой для каждого "
 "письма"
 
-#: app/src/ui/preferences.rs:158
+#: app/src/ui/preferences.rs:159
 msgid "Group Inbox into Categories"
 msgstr "Группировать входящие по категориям"
 
-#: app/src/ui/preferences.rs:160
+#: app/src/ui/preferences.rs:161
 msgid ""
 "Sort the inbox into Primary, Updates, Promotions, and Social, as Gmail does"
 msgstr ""
 "Сортировать входящие по категориям «Основные», «Обновления», «Реклама» и "
 "«Соцсети», как в Gmail"
 
-#: app/src/ui/preferences.rs:167
+#: app/src/ui/preferences.rs:168
 msgid "Open the Inbox On"
 msgstr "Открывать входящие на категории"
 
-#: app/src/ui/preferences.rs:168
+#: app/src/ui/preferences.rs:169
 msgid "Which category the window starts on"
 msgstr "Категория при открытии окна"
 
-#: app/src/ui/preferences.rs:174
+#: app/src/ui/preferences.rs:175
 msgid "Suggest Follow-Ups"
 msgstr "Предлагать напомнить об ответе"
 
-#: app/src/ui/preferences.rs:176
+#: app/src/ui/preferences.rs:177
 msgid "List mail you sent that has had no reply for three days"
 msgstr "Показывать отправленные письма без ответа в течение трёх дней"
 
-#: app/src/ui/preferences.rs:190
+#: app/src/ui/preferences.rs:191
 msgid "Images and Receipts"
 msgstr "Изображения и уведомления о прочтении"
 
-#: app/src/ui/preferences.rs:194
+#: app/src/ui/preferences.rs:195
 msgid "Remote Images"
 msgstr "Внешние изображения"
 
-#: app/src/ui/preferences.rs:196
+#: app/src/ui/preferences.rs:197
 msgid "Loading them can tell senders when you read their mail"
 msgstr "Их загрузка может сообщить отправителям, когда вы прочли письмо"
 
-#: app/src/ui/preferences.rs:204
+#: app/src/ui/preferences.rs:205
 msgid "Read Receipts"
 msgstr "Уведомления о прочтении"
 
-#: app/src/ui/preferences.rs:206
+#: app/src/ui/preferences.rs:207
 msgid "When a sender asks to know you read their message"
 msgstr "Когда отправитель просит сообщить о прочтении письма"
 
-#: app/src/ui/preferences.rs:222
+#: app/src/ui/preferences.rs:223
 msgid "Appearance"
 msgstr "Внешний вид"
 
-#: app/src/ui/preferences.rs:229
+#: app/src/ui/preferences.rs:230
 msgid "Style"
 msgstr "Тема"
 
-#: app/src/ui/preferences.rs:236
+#: app/src/ui/preferences.rs:237
 msgid "Text Size"
 msgstr "Размер текста"
 
-#: app/src/ui/preferences.rs:248 app/src/ui/preferences.rs:253
+#: app/src/ui/preferences.rs:249 app/src/ui/preferences.rs:254
 msgid "Notifications"
 msgstr "Уведомления"
 
-#: app/src/ui/preferences.rs:257
+#: app/src/ui/preferences.rs:258
 msgid "Notify About New Mail"
 msgstr "Уведомлять о новой почте"
 
-#: app/src/ui/preferences.rs:264
+#: app/src/ui/preferences.rs:265
 msgid "Show Sender and Subject"
 msgstr "Показывать отправителя и тему"
 
-#: app/src/ui/preferences.rs:265
+#: app/src/ui/preferences.rs:266
 msgid "Turn off to see only how much mail arrived"
 msgstr "Выключите, чтобы видеть только количество новых писем"
 
-#: app/src/ui/preferences.rs:275
+#: app/src/ui/preferences.rs:276
 msgid "Only for VIPs"
 msgstr "Только для важных контактов"
 
-#: app/src/ui/preferences.rs:276
+#: app/src/ui/preferences.rs:277
 msgid "Stay quiet about mail from everyone else"
 msgstr "Не уведомлять о письмах от остальных"
 
-#: app/src/ui/preferences.rs:286
+#: app/src/ui/preferences.rs:287
 msgid "Buttons"
 msgstr "Кнопки"
 
-#: app/src/ui/preferences.rs:288
+#: app/src/ui/preferences.rs:289
 msgid "What a notification offers besides opening the conversation"
 msgstr "Действия в уведомлении помимо открытия переписки"
 
-#: app/src/ui/preferences.rs:319
+#: app/src/ui/preferences.rs:320
 msgid "Event Reminders"
 msgstr "Напоминания о событиях"
 
-#: app/src/ui/preferences.rs:321
+#: app/src/ui/preferences.rs:322
 msgid ""
 "A notification before each event, at the times the event or its calendar sets"
 msgstr ""
 "Уведомление перед каждым событием во время, заданное событием или календарём"
 
-#: app/src/ui/preferences.rs:343 app/src/ui/preferences.rs:350
+#: app/src/ui/preferences.rs:344 app/src/ui/preferences.rs:351
 #: app/src/ui/sidebar/sections.rs:28 app/src/ui/smart_editor.rs:43
 msgid "Accounts"
 msgstr "Учётные записи"
 
-#: app/src/ui/preferences.rs:351
+#: app/src/ui/preferences.rs:352
 msgid ""
 "Signature, addresses you send from, servers, contacts, and the space the "
 "server reports."
@@ -8759,74 +8923,74 @@ msgstr ""
 "Подпись, адреса отправителя, серверы, контакты и данные об использовании "
 "места на сервере."
 
-#: app/src/ui/preferences.rs:356 app/src/ui/preferences.rs:589
+#: app/src/ui/preferences.rs:357 app/src/ui/preferences.rs:596
 msgid "No Accounts Yet"
 msgstr "Учётных записей пока нет"
 
-#: app/src/ui/preferences.rs:358 app/src/ui/preferences.rs:591
+#: app/src/ui/preferences.rs:359 app/src/ui/preferences.rs:598
 msgid "Add an account to choose a sender and write signatures."
 msgstr "Добавьте учётную запись, чтобы выбрать отправителя и написать подпись."
 
-#: app/src/ui/preferences.rs:398
+#: app/src/ui/preferences.rs:404
 msgid "Mailbox storage is not available through this connection."
 msgstr "Сведения о хранилище почты недоступны при этом подключении."
 
-#: app/src/ui/preferences.rs:400
+#: app/src/ui/preferences.rs:406
 msgid "The server has not reported its storage usage."
 msgstr "Сервер не сообщил об использовании хранилища."
 
-#: app/src/ui/preferences.rs:403
+#: app/src/ui/preferences.rs:409
 msgid "Space on the Server"
 msgstr "Место на сервере"
 
-#: app/src/ui/preferences.rs:471
+#: app/src/ui/preferences.rs:478
 msgid "Signature"
 msgstr "Подпись"
 
-#: app/src/ui/preferences.rs:485
+#: app/src/ui/preferences.rs:492
 msgid ""
 "Added below new messages and above quoted text in replies. Markdown works."
 msgstr ""
 "Добавляется под новыми письмами и над цитатой в ответах. Поддерживается "
 "Markdown."
 
-#: app/src/ui/preferences.rs:492
+#: app/src/ui/preferences.rs:499
 msgid "Signature for {account}"
 msgstr "Подпись для {account}"
 
-#: app/src/ui/preferences.rs:506
+#: app/src/ui/preferences.rs:513
 msgid "Import from Gmail"
 msgstr "Импортировать из Gmail"
 
-#: app/src/ui/preferences.rs:526
+#: app/src/ui/preferences.rs:533
 msgid "This account is not syncing yet"
 msgstr "Эта учётная запись пока не синхронизируется"
 
-#: app/src/ui/preferences.rs:542
+#: app/src/ui/preferences.rs:549
 msgid "Imported the signature from Gmail"
 msgstr "Подпись импортирована из Gmail"
 
-#: app/src/ui/preferences.rs:546
+#: app/src/ui/preferences.rs:553
 msgid "Gmail has no signature for this account"
 msgstr "В Gmail нет подписи для этой учётной записи"
 
-#: app/src/ui/preferences.rs:549
+#: app/src/ui/preferences.rs:556
 msgid "Could not import: {reason}"
 msgstr "Не удалось импортировать: {reason}"
 
-#: app/src/ui/preferences.rs:584 app/src/ui/window/shortcuts.rs:239
+#: app/src/ui/preferences.rs:591 app/src/ui/window/shortcuts.rs:239
 msgid "Writing"
 msgstr "Написание"
 
-#: app/src/ui/preferences.rs:600 app/src/ui/preferences/accounts.rs:188
+#: app/src/ui/preferences.rs:607 app/src/ui/preferences/accounts.rs:188
 msgid "New Messages"
 msgstr "Новые письма"
 
-#: app/src/ui/preferences.rs:604
+#: app/src/ui/preferences.rs:611
 msgid "New Messages Start As"
 msgstr "Формат новых писем"
 
-#: app/src/ui/preferences.rs:606
+#: app/src/ui/preferences.rs:613
 msgid "Rich text styles the words themselves; Markdown shows its marks"
 msgstr ""
 "В форматированном тексте виден результат оформления, а в Markdown видны его "
@@ -8834,29 +8998,29 @@ msgstr ""
 
 #. The seconds change every second and the name stays put, so a
 #. screen reader is not told each one.
-#: app/src/ui/preferences.rs:613 app/src/ui/sidebar.rs:64
+#: app/src/ui/preferences.rs:620 app/src/ui/sidebar.rs:64
 #: app/src/ui/sidebar.rs:77
 msgid "Undo Send"
 msgstr "Отмена отправки"
 
-#: app/src/ui/preferences.rs:615
+#: app/src/ui/preferences.rs:622
 msgid "How long you can take a message back after sending it"
 msgstr "Время, в течение которого можно отменить отправку письма"
 
-#: app/src/ui/preferences.rs:622
+#: app/src/ui/preferences.rs:629
 msgid "Check for Missing Attachments"
 msgstr "Проверять наличие вложений"
 
-#: app/src/ui/preferences.rs:624
+#: app/src/ui/preferences.rs:631
 msgid "Ask before sending a message that promises a file and carries none"
 msgstr ""
 "Спрашивать перед отправкой письма, в котором упомянут файл, но нет вложений"
 
-#: app/src/ui/preferences.rs:658
+#: app/src/ui/preferences.rs:665
 msgid "Signing and Encryption"
 msgstr "Подпись и шифрование"
 
-#: app/src/ui/preferences.rs:660
+#: app/src/ui/preferences.rs:667
 msgid ""
 "Penguin Mail signs and encrypts through GnuPG, which holds your keys and "
 "asks for your passphrase itself."
@@ -8864,51 +9028,51 @@ msgstr ""
 "Penguin Mail подписывает и шифрует через GnuPG, который хранит ваши ключи и "
 "сам запрашивает парольную фразу."
 
-#: app/src/ui/preferences.rs:665
+#: app/src/ui/preferences.rs:672
 msgid "Your OpenPGP Keys"
 msgstr "Ваши ключи OpenPGP"
 
-#: app/src/ui/preferences.rs:666
+#: app/src/ui/preferences.rs:673
 msgid "Asking gpg…"
 msgstr "Запрос к gpg…"
 
-#: app/src/ui/preferences.rs:670
+#: app/src/ui/preferences.rs:677
 msgid "Your S/MIME Certificates"
 msgstr "Ваши сертификаты S/MIME"
 
-#: app/src/ui/preferences.rs:671
+#: app/src/ui/preferences.rs:678
 msgid "Asking gpgsm…"
 msgstr "Запрос к gpgsm…"
 
-#: app/src/ui/preferences.rs:678
+#: app/src/ui/preferences.rs:685
 msgid "Sign My Messages by Default"
 msgstr "Подписывать мои письма по умолчанию"
 
-#: app/src/ui/preferences.rs:679
+#: app/src/ui/preferences.rs:686
 msgid "New messages open with Sign turned on"
 msgstr "Новые письма открываются с включённой подписью"
 
-#: app/src/ui/preferences.rs:685
+#: app/src/ui/preferences.rs:692
 msgid "Encrypt When I Can"
 msgstr "Шифровать при возможности"
 
-#: app/src/ui/preferences.rs:687
+#: app/src/ui/preferences.rs:694
 msgid "Turn Encrypt on as soon as every recipient has a key or a certificate"
 msgstr ""
 "Включать шифрование, как только для каждого получателя есть ключ или "
 "сертификат"
 
-#: app/src/ui/preferences.rs:776
+#: app/src/ui/preferences.rs:783
 msgid "gpg could not be asked: {reason}"
 msgstr "Не удалось обратиться к gpg: {reason}"
 
-#: app/src/ui/preferences.rs:795
+#: app/src/ui/preferences.rs:802
 msgid "gpgsm could not be asked: {reason}"
 msgstr "Не удалось обратиться к gpgsm: {reason}"
 
 #. The verb agrees with the programs: "gpg, which holds" but "gpg and
 #. gpgsm, which hold".
-#: app/src/ui/preferences.rs:804
+#: app/src/ui/preferences.rs:811
 msgid ""
 "Penguin Mail signs and encrypts through {programs}, which holds your keys "
 "and asks for your passphrase itself."
@@ -8925,11 +9089,11 @@ msgstr[2] ""
 "Penguin Mail использует {programs} для подписи и шифрования. Эти программы "
 "хранят ваши ключи и сами запрашивают парольную фразу."
 
-#: app/src/ui/preferences.rs:836 app/src/ui/preferences.rs:849
+#: app/src/ui/preferences.rs:843 app/src/ui/preferences.rs:856
 msgid "Spelling"
 msgstr "Правописание"
 
-#: app/src/ui/preferences.rs:838
+#: app/src/ui/preferences.rs:845
 msgid ""
 "No dictionaries are installed, so Penguin Mail is not checking spelling. "
 "Install a Hunspell dictionary, such as hunspell-en-us or hunspell-pt-pt, and "
@@ -8939,7 +9103,7 @@ msgstr ""
 "Установите словарь Hunspell, например hunspell-en-us или hunspell-pt-pt, и "
 "снова откройте редактор письма."
 
-#: app/src/ui/preferences.rs:851
+#: app/src/ui/preferences.rs:858
 msgid ""
 "The language each account checks spelling in. Dictionaries installed: "
 "{languages}."
@@ -8947,162 +9111,162 @@ msgstr ""
 "Язык проверки правописания для каждой учётной записи. Установленные словари: "
 "{languages}."
 
-#: app/src/ui/preferences.rs:863
+#: app/src/ui/preferences.rs:870
 msgid "System: {language}"
 msgstr "Системный: {language}"
 
-#: app/src/ui/preferences.rs:878
+#: app/src/ui/preferences.rs:885
 msgid "All Installed Languages"
 msgstr "Все установленные языки"
 
-#: app/src/ui/preferences.rs:921
+#: app/src/ui/preferences.rs:928
 msgid "Sync"
 msgstr "Синхронизация"
 
-#: app/src/ui/preferences.rs:929
+#: app/src/ui/preferences.rs:936
 msgid "Checking"
 msgstr "Проверка"
 
-#: app/src/ui/preferences.rs:935
+#: app/src/ui/preferences.rs:942
 msgid "Check for New Mail"
 msgstr "Проверять новую почту"
 
-#: app/src/ui/preferences.rs:944
+#: app/src/ui/preferences.rs:951
 msgid "Storage"
 msgstr "Хранилище"
 
-#: app/src/ui/preferences.rs:952
+#: app/src/ui/preferences.rs:959
 msgid "Keep Mail on This Computer For"
 msgstr "Хранить почту на этом компьютере за"
 
-#: app/src/ui/preferences.rs:973
+#: app/src/ui/preferences.rs:980
 msgid "Bodies of mail you have read, kept for opening offline"
 msgstr "Тексты прочитанных писем для открытия без сети"
 
-#: app/src/ui/preferences.rs:976
+#: app/src/ui/preferences.rs:983
 msgid "Message Cache"
 msgstr "Кэш писем"
 
-#: app/src/ui/preferences.rs:1005
+#: app/src/ui/preferences.rs:1012
 msgid "Startup"
 msgstr "Запуск"
 
-#: app/src/ui/preferences.rs:1008
+#: app/src/ui/preferences.rs:1015
 msgid "Start in the Tray at Login"
 msgstr "Запускать в лотке при входе в систему"
 
-#: app/src/ui/preferences.rs:1023
+#: app/src/ui/preferences.rs:1030
 msgid "Not available in demo mode"
 msgstr "Недоступно в демонстрационном режиме"
 
-#: app/src/ui/preferences.rs:1031
+#: app/src/ui/preferences.rs:1038
 msgid "Look for a new release once a day"
 msgstr "Проверять наличие нового выпуска раз в день"
 
-#: app/src/ui/preferences.rs:1072
+#: app/src/ui/preferences.rs:1079
 msgid "{used} of {limit}"
 msgstr "{used} из {limit}"
 
-#: app/src/ui/preferences.rs:1084
+#: app/src/ui/preferences.rs:1091
 msgid "{amount} · Full"
 msgstr "{amount} · Заполнено"
 
-#: app/src/ui/preferences.rs:1086
+#: app/src/ui/preferences.rs:1093
 msgid "{amount} · Nearly full"
 msgstr "{amount} · Почти заполнено"
 
-#: app/src/ui/preferences.rs:1098
+#: app/src/ui/preferences.rs:1105
 msgid "Senders Who May Load Images"
 msgstr "Отправители с разрешённой загрузкой изображений"
 
-#: app/src/ui/preferences.rs:1099 app/src/ui/preferences.rs:1108
+#: app/src/ui/preferences.rs:1106 app/src/ui/preferences.rs:1115
 msgid "Nobody yet"
 msgstr "Пока никого"
 
-#: app/src/ui/preferences.rs:1110
+#: app/src/ui/preferences.rs:1117
 msgid "{count} sender"
 msgid_plural "{count} senders"
 msgstr[0] "{count} отправитель"
 msgstr[1] "{count} отправителя"
 msgstr[2] "{count} отправителей"
 
-#: app/src/ui/preferences.rs:1120
+#: app/src/ui/preferences.rs:1127
 msgid "Anyone at this domain"
 msgstr "Любой отправитель этого домена"
 
-#: app/src/ui/preferences.rs:1122
+#: app/src/ui/preferences.rs:1129
 msgid "This address"
 msgstr "Этот адрес"
 
-#: app/src/ui/preferences.rs:1127
+#: app/src/ui/preferences.rs:1134
 msgid "Stop Loading Images from This Sender"
 msgstr "Прекратить загрузку изображений от этого отправителя"
 
-#: app/src/ui/preferences.rs:1134
+#: app/src/ui/preferences.rs:1141
 msgid "Stop loading images from {sender}"
 msgstr "Прекратить загрузку изображений от {sender}"
 
-#: app/src/ui/preferences.rs:1204
+#: app/src/ui/preferences.rs:1211
 msgid "Monday to Friday"
 msgstr "С понедельника по пятницу"
 
-#: app/src/ui/preferences.rs:1205
+#: app/src/ui/preferences.rs:1212
 msgid "Every day of the week"
 msgstr "Каждый день недели"
 
-#: app/src/ui/preferences.rs:1206
+#: app/src/ui/preferences.rs:1213
 msgid "No days"
 msgstr "Дни не выбраны"
 
-#: app/src/ui/preferences.rs:1213
+#: app/src/ui/preferences.rs:1220
 msgid ", "
 msgstr ", "
 
-#: app/src/ui/preferences.rs:1216
+#: app/src/ui/preferences.rs:1223
 msgid "{time}, {days}"
 msgstr "{time}, {days}"
 
-#: app/src/ui/preferences.rs:1284
+#: app/src/ui/preferences.rs:1291
 msgid "Week Starts On"
 msgstr "Первый день недели"
 
-#: app/src/ui/preferences.rs:1289
+#: app/src/ui/preferences.rs:1296
 msgid "Automatic follows the locale's own first day of the week"
 msgstr "Автоматический выбор использует первый день недели для текущей локали"
 
-#: app/src/ui/preferences.rs:1303
+#: app/src/ui/preferences.rs:1310
 msgid "Working Hours"
 msgstr "Рабочее время"
 
-#: app/src/ui/preferences.rs:1322
+#: app/src/ui/preferences.rs:1329
 msgid "Hours"
 msgstr "Часы"
 
-#: app/src/ui/preferences.rs:1373
+#: app/src/ui/preferences.rs:1380
 msgid "–"
 msgstr "–"
 
-#: app/src/ui/preferences.rs:1456
+#: app/src/ui/preferences.rs:1463
 msgid "Never Translate"
 msgstr "Никогда не переводить"
 
-#: app/src/ui/preferences.rs:1458
+#: app/src/ui/preferences.rs:1465
 msgid "Messages in these languages get no offer to translate them"
 msgstr "Для писем на этих языках перевод не предлагается"
 
-#: app/src/ui/preferences.rs:1487
+#: app/src/ui/preferences.rs:1494
 msgid "Follow System"
 msgstr "Как в системе"
 
-#: app/src/ui/preferences.rs:1491
+#: app/src/ui/preferences.rs:1498
 msgid "Language"
 msgstr "Язык"
 
-#: app/src/ui/preferences.rs:1492
+#: app/src/ui/preferences.rs:1499
 msgid "Penguin Mail shows a new language after a restart"
 msgstr "Penguin Mail применит новый язык после перезапуска"
 
-#: app/src/ui/preferences.rs:1569
+#: app/src/ui/preferences.rs:1576
 msgid "No signature"
 msgstr "Без подписи"
 
@@ -9197,7 +9361,7 @@ msgstr "Переместить {account} ниже"
 #: app/src/ui/preferences/dialog.rs:27 app/src/ui/preferences/dialog.rs:33
 #: app/src/ui/preferences/dialog.rs:82 app/src/ui/preferences/dialog.rs:83
 #: app/src/ui/preferences/dialog.rs:353 app/src/ui/preferences/dialog.rs:355
-#: app/src/ui/window.rs:3312 app/src/ui/window/shortcuts.rs:616
+#: app/src/ui/window.rs:3486 app/src/ui/window/shortcuts.rs:616
 msgid "Preferences"
 msgstr "Параметры"
 
@@ -9222,6 +9386,47 @@ msgstr "Ничего не найдено"
 msgid "Try a different search"
 msgstr "Попробуйте другой запрос"
 
+#: app/src/ui/preferences/google_route.rs:177
+msgid "Connected"
+msgstr "Подключено"
+
+#. Translators: a small heading over the Gmail account's rows; Gmail is a
+#. name, keep it as it is.
+#: app/src/ui/preferences/google_route.rs:216
+msgid "Gmail"
+msgstr "Gmail"
+
+#. Translators: Gmail is a name; keep it as it is.
+#: app/src/ui/preferences/google_route.rs:221
+msgid "Gmail features"
+msgstr "Возможности Gmail"
+
+#: app/src/ui/preferences/google_route.rs:223
+msgid "Every feature"
+msgstr "Все возможности"
+
+#: app/src/ui/preferences/google_route.rs:225
+msgid "Mail, calendar and contacts"
+msgstr "Почта, календарь и контакты"
+
+#: app/src/ui/preferences/google_route.rs:234
+msgid "Get Every Feature"
+msgstr "Получить все возможности"
+
+#: app/src/ui/preferences/google_route.rs:249
+msgid "Calendar and contacts"
+msgstr "Календарь и контакты"
+
+#: app/src/ui/preferences/google_route.rs:257
+msgid "Connect the contacts for {account}"
+msgstr "Подключить контакты для {account}"
+
+#. Translators: a small heading over what only gmail.com does for the
+#. account; gmail.com is a name, keep it as it is.
+#: app/src/ui/preferences/google_route.rs:275
+msgid "On gmail.com"
+msgstr "На gmail.com"
+
 #: app/src/ui/preferences/space.rs:141
 msgid "Full"
 msgstr "Заполнено"
@@ -9237,6 +9442,41 @@ msgstr "Это письмо не отправлено"
 #: app/src/ui/queued.rs:93
 msgid "This message is waiting to be sent"
 msgstr "Это письмо ожидает отправки"
+
+#. Translators: Google is a name; keep it as it is.
+#: app/src/ui/route_page.rs:109 app/src/ui/route_page.rs:116
+msgid "Add your Google Calendar and contacts?"
+msgstr "Добавить Google Календарь и контакты?"
+
+#. Translators: Google is a name; keep it as it is.
+#: app/src/ui/route_page.rs:121
+msgid ""
+"Penguin Mail asks Google for your calendar, your contacts and the files it "
+"adds to Drive. Google will show its own screen. Your mail is already set up."
+msgstr ""
+"Penguin Mail запрашивает у Google ваш календарь, ваши контакты и файлы, "
+"которые он добавляет на Диск. Google покажет свой экран. Ваша почта уже "
+"настроена."
+
+#. Translators: Google and Penguin Mail are names; keep them as they are. The two
+#. button names are the ones Google's own page shows.
+#: app/src/ui/route_page.rs:130
+msgid ""
+"Google may say \"Google hasn't verified this app\". Click Advanced, then Go "
+"to Penguin Mail (unsafe)."
+msgstr ""
+"Google может показать сообщение «Приложение не проверено Google». Нажмите "
+"«Дополнительные настройки», а затем «Перейти на страницу Penguin Mail "
+"(небезопасно)»."
+
+#. Translators: Google is a name; keep it as it is.
+#: app/src/ui/route_page.rs:144
+msgid "Continue to Google"
+msgstr "Перейти к Google"
+
+#: app/src/ui/route_page.rs:188
+msgid "Recommended"
+msgstr "Рекомендуется"
 
 #: app/src/ui/rules.rs:76 app/src/ui/rules.rs:89 app/src/ui/rules.rs:91
 #: app/src/ui/rules.rs:501
@@ -9579,7 +9819,7 @@ msgstr "Подпись…"
 msgid "Rules…"
 msgstr "Правила…"
 
-#: app/src/ui/sidebar.rs:1840 app/src/ui/window.rs:3306
+#: app/src/ui/sidebar.rs:1840 app/src/ui/window.rs:3480
 msgid "Hide My Email…"
 msgstr "Скрыть мой адрес…"
 
@@ -9624,6 +9864,11 @@ msgid "Syncing stopped after an error; restart Penguin Mail to try again"
 msgstr ""
 "Синхронизация остановлена после ошибки; перезапустите Penguin Mail, чтобы "
 "повторить попытку"
+
+#: app/src/ui/sidebar.rs:2057
+msgid "Choose how this account signs in to get new mail"
+msgstr ""
+"Выберите способ входа для этой учётной записи, чтобы получать новую почту"
 
 #: app/src/ui/sidebar/sections.rs:25
 msgid "Favorites"
@@ -9798,7 +10043,7 @@ msgstr "Поиск почты"
 msgid "VIP"
 msgstr "Важный контакт"
 
-#: app/src/ui/thread_row.rs:127 app/src/ui/window.rs:401
+#: app/src/ui/thread_row.rs:127 app/src/ui/window.rs:405
 msgid "Muted"
 msgstr "Без уведомлений"
 
@@ -10015,212 +10260,212 @@ msgstr ""
 "Выберите, где хранится ваша почта. Позже можно добавить другие записи через "
 "главное меню."
 
-#: app/src/ui/window.rs:282
+#: app/src/ui/window.rs:286
 msgid "Deleted forever"
 msgstr "Удалено навсегда"
 
-#: app/src/ui/window.rs:284
+#: app/src/ui/window.rs:288
 msgid "Deleted {count} conversation forever"
 msgid_plural "Deleted {count} conversations forever"
 msgstr[0] "Навсегда удалена {count} переписка"
 msgstr[1] "Навсегда удалены {count} переписки"
 msgstr[2] "Навсегда удалено {count} переписок"
 
-#: app/src/ui/window.rs:290
+#: app/src/ui/window.rs:294
 msgid "Deleted {count} message forever"
 msgid_plural "Deleted {count} messages forever"
 msgstr[0] "Навсегда удалено {count} письмо"
 msgstr[1] "Навсегда удалены {count} письма"
 msgstr[2] "Навсегда удалено {count} писем"
 
-#: app/src/ui/window.rs:303
+#: app/src/ui/window.rs:307
 msgid "{label}, on this mail"
 msgstr "{label}, назначен этой почте"
 
-#: app/src/ui/window.rs:332
+#: app/src/ui/window.rs:336
 msgid "Added {person} to VIPs"
 msgstr "Контакт {person} добавлен в важные"
 
-#: app/src/ui/window.rs:333
+#: app/src/ui/window.rs:337
 msgid "Removed {person} from VIPs"
 msgstr "Контакт {person} убран из важных"
 
-#: app/src/ui/window.rs:339
+#: app/src/ui/window.rs:343
 msgid "Could not load mail: {reason}"
 msgstr "Не удалось загрузить почту: {reason}"
 
-#: app/src/ui/window.rs:349
+#: app/src/ui/window.rs:353
 msgid "Added {account}. Downloading mail…"
 msgstr "Учётная запись {account} добавлена. Загрузка почты…"
 
-#: app/src/ui/window.rs:353 app/src/ui/window.rs:2793
+#: app/src/ui/window.rs:357 app/src/ui/window.rs:2930
 msgid "{account} is signed in again."
 msgstr "Вход в {account} выполнен снова."
 
-#: app/src/ui/window.rs:372
+#: app/src/ui/window.rs:376
 msgid "Made a folder called “{name}” on {provider} for archived mail"
 msgstr "В {provider} создана папка «{name}» для архивной почты"
 
-#: app/src/ui/window.rs:381
+#: app/src/ui/window.rs:385
 msgid "Flagged red"
 msgstr "Поставлен красный флажок"
 
-#: app/src/ui/window.rs:382
+#: app/src/ui/window.rs:386
 msgid "Flagged orange"
 msgstr "Поставлен оранжевый флажок"
 
-#: app/src/ui/window.rs:383
+#: app/src/ui/window.rs:387
 msgid "Flagged yellow"
 msgstr "Поставлен жёлтый флажок"
 
-#: app/src/ui/window.rs:384
+#: app/src/ui/window.rs:388
 msgid "Flagged green"
 msgstr "Поставлен зелёный флажок"
 
-#: app/src/ui/window.rs:385
+#: app/src/ui/window.rs:389
 msgid "Flagged blue"
 msgstr "Поставлен синий флажок"
 
-#: app/src/ui/window.rs:386
+#: app/src/ui/window.rs:390
 msgid "Flagged purple"
 msgstr "Поставлен фиолетовый флажок"
 
-#: app/src/ui/window.rs:387
+#: app/src/ui/window.rs:391
 msgid "Flagged gray"
 msgstr "Поставлен серый флажок"
 
-#: app/src/ui/window.rs:398 app/src/ui/window.rs:496
+#: app/src/ui/window.rs:402 app/src/ui/window.rs:500
 msgid "Labels changed"
 msgstr "Ярлыки изменены"
 
-#: app/src/ui/window.rs:402
+#: app/src/ui/window.rs:406
 msgid "Unmuted"
 msgstr "Уведомления включены"
 
-#: app/src/ui/window.rs:404
+#: app/src/ui/window.rs:408
 msgid "Muted {count} conversation"
 msgid_plural "Muted {count} conversations"
 msgstr[0] "Уведомления отключены для {count} переписки"
 msgstr[1] "Уведомления отключены для {count} переписок"
 msgstr[2] "Уведомления отключены для {count} переписок"
 
-#: app/src/ui/window.rs:410
+#: app/src/ui/window.rs:414
 msgid "Muted {count} message"
 msgid_plural "Muted {count} messages"
 msgstr[0] "Уведомления отключены для {count} письма"
 msgstr[1] "Уведомления отключены для {count} писем"
 msgstr[2] "Уведомления отключены для {count} писем"
 
-#: app/src/ui/window.rs:416
+#: app/src/ui/window.rs:420
 msgid "Unmuted {count} conversation"
 msgid_plural "Unmuted {count} conversations"
 msgstr[0] "Уведомления включены для {count} переписки"
 msgstr[1] "Уведомления включены для {count} переписок"
 msgstr[2] "Уведомления включены для {count} переписок"
 
-#: app/src/ui/window.rs:422
+#: app/src/ui/window.rs:426
 msgid "Unmuted {count} message"
 msgid_plural "Unmuted {count} messages"
 msgstr[0] "Уведомления включены для {count} письма"
 msgstr[1] "Уведомления включены для {count} писем"
 msgstr[2] "Уведомления включены для {count} писем"
 
-#: app/src/ui/window.rs:432
+#: app/src/ui/window.rs:436
 msgid "Dismissed {count} follow-up"
 msgid_plural "Dismissed {count} follow-ups"
 msgstr[0] "Отклонено {count} напоминание об ответе"
 msgstr[1] "Отклонены {count} напоминания об ответе"
 msgstr[2] "Отклонено {count} напоминаний об ответе"
 
-#: app/src/ui/window.rs:441
+#: app/src/ui/window.rs:445
 msgid "Archived"
 msgstr "Архивировано"
 
-#: app/src/ui/window.rs:443
+#: app/src/ui/window.rs:447
 msgid "Archived {count} conversation"
 msgid_plural "Archived {count} conversations"
 msgstr[0] "Архивирована {count} переписка"
 msgstr[1] "Архивированы {count} переписки"
 msgstr[2] "Архивировано {count} переписок"
 
-#: app/src/ui/window.rs:449
+#: app/src/ui/window.rs:453
 msgid "Archived {count} message"
 msgid_plural "Archived {count} messages"
 msgstr[0] "Архивировано {count} письмо"
 msgstr[1] "Архивированы {count} письма"
 msgstr[2] "Архивировано {count} писем"
 
-#: app/src/ui/window.rs:454
+#: app/src/ui/window.rs:458
 msgid "Moved to Trash"
 msgstr "Перемещено в корзину"
 
-#: app/src/ui/window.rs:456
+#: app/src/ui/window.rs:460
 msgid "Moved {count} conversation to Trash"
 msgid_plural "Moved {count} conversations to Trash"
 msgstr[0] "В корзину перемещена {count} переписка"
 msgstr[1] "В корзину перемещены {count} переписки"
 msgstr[2] "В корзину перемещено {count} переписок"
 
-#: app/src/ui/window.rs:462
+#: app/src/ui/window.rs:466
 msgid "Moved {count} message to Trash"
 msgid_plural "Moved {count} messages to Trash"
 msgstr[0] "В корзину перемещено {count} письмо"
 msgstr[1] "В корзину перемещены {count} письма"
 msgstr[2] "В корзину перемещено {count} писем"
 
-#: app/src/ui/window.rs:467
+#: app/src/ui/window.rs:471
 msgid "Marked as junk"
 msgstr "Отмечено как спам"
 
-#: app/src/ui/window.rs:469
+#: app/src/ui/window.rs:473
 msgid "Marked {count} conversation as junk"
 msgid_plural "Marked {count} conversations as junk"
 msgstr[0] "Как спам отмечена {count} переписка"
 msgstr[1] "Как спам отмечены {count} переписки"
 msgstr[2] "Как спам отмечено {count} переписок"
 
-#: app/src/ui/window.rs:475
+#: app/src/ui/window.rs:479
 msgid "Marked {count} message as junk"
 msgid_plural "Marked {count} messages as junk"
 msgstr[0] "Как спам отмечено {count} письмо"
 msgstr[1] "Как спам отмечены {count} письма"
 msgstr[2] "Как спам отмечено {count} писем"
 
-#: app/src/ui/window.rs:480
+#: app/src/ui/window.rs:484
 msgid "Moved to the Inbox"
 msgstr "Перемещено во входящие"
 
-#: app/src/ui/window.rs:482
+#: app/src/ui/window.rs:486
 msgid "Moved {count} conversation to the Inbox"
 msgid_plural "Moved {count} conversations to the Inbox"
 msgstr[0] "Во входящие перемещена {count} переписка"
 msgstr[1] "Во входящие перемещены {count} переписки"
 msgstr[2] "Во входящие перемещено {count} переписок"
 
-#: app/src/ui/window.rs:488
+#: app/src/ui/window.rs:492
 msgid "Moved {count} message to the Inbox"
 msgid_plural "Moved {count} messages to the Inbox"
 msgstr[0] "Во входящие перемещено {count} письмо"
 msgstr[1] "Во входящие перемещены {count} письма"
 msgstr[2] "Во входящие перемещено {count} писем"
 
-#: app/src/ui/window.rs:822
+#: app/src/ui/window.rs:828
 msgid "Penguin Mail (Demo)"
 msgstr "Penguin Mail (демонстрация)"
 
-#: app/src/ui/window.rs:1233
+#: app/src/ui/window.rs:1246
 msgid "Could not read accounts: {reason}"
 msgstr "Не удалось прочитать учётные записи: {reason}"
 
-#: app/src/ui/window.rs:1905
+#: app/src/ui/window.rs:2012
 msgid "Could not delete the mail: {reason}"
 msgstr "Не удалось удалить почту: {reason}"
 
-#: app/src/ui/window.rs:1997
+#: app/src/ui/window.rs:2127
 msgid "Turn On the {service}"
 msgstr "Включить {service}"
 
-#: app/src/ui/window.rs:2000
+#: app/src/ui/window.rs:2130
 msgid ""
 "The Google Cloud project Penguin Mail signs in with has the {service} "
 "switched off, so Google refuses before it can ask for your permission. Turn "
@@ -10230,61 +10475,61 @@ msgstr ""
 "{service}. Google отказывает ещё до запроса вашего разрешения. Включите его, "
 "подождите минуту и повторите попытку."
 
-#: app/src/ui/window.rs:2006
+#: app/src/ui/window.rs:2136
 msgid "Open Google Cloud"
 msgstr "Открыть Google Cloud"
 
-#: app/src/ui/window.rs:2327
+#: app/src/ui/window.rs:2457
 msgid "Select mail from one account to tag it."
 msgstr "Выберите письма одной учётной записи для назначения меток."
 
-#: app/src/ui/window.rs:2339
+#: app/src/ui/window.rs:2469
 msgid "This account has no tags yet. Make one in Outlook."
 msgstr "В этой учётной записи пока нет меток. Создайте их в Outlook."
 
-#: app/src/ui/window.rs:2506
+#: app/src/ui/window.rs:2636
 msgid "Could not include {file}: {reason}"
 msgstr "Не удалось включить {file}: {reason}"
 
-#: app/src/ui/window.rs:2587
+#: app/src/ui/window.rs:2717
 msgid "The server had already sent this message."
 msgstr "Сервер уже отправил это письмо."
 
-#: app/src/ui/window.rs:2592
+#: app/src/ui/window.rs:2722
 msgid "This message was canceled in another app and is no longer in Drafts."
 msgstr ""
 "Отправка этого письма отменена в другом приложении, и его больше нет в "
 "черновиках."
 
-#: app/src/ui/window.rs:2706
+#: app/src/ui/window.rs:2836
 msgid "Downloading {file}…"
 msgstr "Загрузка {file}…"
 
-#: app/src/ui/window.rs:2727 app/src/ui/window/attachments.rs:231
+#: app/src/ui/window.rs:2857 app/src/ui/window/attachments.rs:231
 msgid "Saved {file} to Downloads"
 msgstr "Файл {file} сохранён в «Загрузки»"
 
-#: app/src/ui/window.rs:2730
+#: app/src/ui/window.rs:2860
 msgid "Open"
 msgstr "Открыть"
 
-#: app/src/ui/window.rs:2745 app/src/ui/window/attachments.rs:236
+#: app/src/ui/window.rs:2875 app/src/ui/window/attachments.rs:236
 msgid "Could not save {file}: {reason}"
 msgstr "Не удалось сохранить {file}: {reason}"
 
-#: app/src/ui/window.rs:2924
+#: app/src/ui/window.rs:3074
 msgid "Continue in your browser"
 msgstr "Продолжите в браузере"
 
-#: app/src/ui/window.rs:2954
+#: app/src/ui/window.rs:3104
 msgid "This copy of Penguin Mail was built without Google sign-in."
 msgstr "Эта сборка Penguin Mail не поддерживает вход через Google."
 
-#: app/src/ui/window.rs:2962
+#: app/src/ui/window.rs:3112
 msgid "Get a Release"
 msgstr "Загрузить выпуск"
 
-#: app/src/ui/window.rs:3054
+#: app/src/ui/window.rs:3222
 msgid ""
 "Could not check for messages the server holds to send later, so {account} "
 "stays: {reason}"
@@ -10292,75 +10537,80 @@ msgstr ""
 "Не удалось проверить письма, отложенные для отправки на сервере, поэтому "
 "{account} не удалена: {reason}"
 
-#: app/src/ui/window.rs:3065
+#: app/src/ui/window.rs:3233
 msgid "Remove {account}?"
 msgstr "Удалить {account}?"
 
-#: app/src/ui/window.rs:3084
+#: app/src/ui/window.rs:3252
 msgid "Remove Anyway"
 msgstr "Всё равно удалить"
 
-#: app/src/ui/window.rs:3097
+#: app/src/ui/window.rs:3265
 msgid "Removed {account}"
 msgstr "Учётная запись {account} удалена"
 
-#: app/src/ui/window.rs:3099
+#: app/src/ui/window.rs:3267
 msgid "Could not remove {account}: {reason}"
 msgstr "Не удалось удалить {account}: {reason}"
 
-#: app/src/ui/window.rs:3284
+#: app/src/ui/window.rs:3458
 msgid "Refresh"
 msgstr "Обновить"
 
-#: app/src/ui/window.rs:3288
+#: app/src/ui/window.rs:3462
 msgid "Show Declined Events"
 msgstr "Показывать отклонённые события"
 
-#: app/src/ui/window.rs:3304
+#: app/src/ui/window.rs:3478
 msgid "Add Account…"
 msgstr "Добавить учётную запись…"
 
-#: app/src/ui/window.rs:3305
+#: app/src/ui/window.rs:3479
 msgid "New Smart Mailbox…"
 msgstr "Новая смарт-папка…"
 
-#: app/src/ui/window.rs:3313
+#: app/src/ui/window.rs:3487
 msgid "Keyboard Shortcuts"
 msgstr "Сочетания клавиш"
 
-#: app/src/ui/window.rs:3322 app/src/ui/window.rs:3324
+#: app/src/ui/window.rs:3496 app/src/ui/window.rs:3498
 msgid "Main Menu"
 msgstr "Главное меню"
 
-#: app/src/ui/window.rs:3389 app/src/ui/window.rs:3390
+#: app/src/ui/window.rs:3563 app/src/ui/window.rs:3564
 msgid "Dock"
 msgstr "Док"
 
-#: app/src/ui/window.rs:3515
+#: app/src/ui/window.rs:3689
 msgid "Add a mail account first"
 msgstr "Сначала добавьте почтовую учётную запись"
 
-#: app/src/ui/window.rs:3836
+#. Translators: {account} is an email address.
+#: app/src/ui/window.rs:3926
+msgid "The calendar and contacts of {account} are connected."
+msgstr "Календарь и контакты для {account} подключены."
+
+#: app/src/ui/window.rs:4032
 msgid "Open a message from the person first"
 msgstr "Сначала откройте письмо от этого человека"
 
-#: app/src/ui/window.rs:3917
+#: app/src/ui/window.rs:4113
 msgid "Penguin Mail shows the new language after a restart"
 msgstr "Penguin Mail применит новый язык после перезапуска"
 
-#: app/src/ui/window.rs:3919 app/src/update/mod.rs:130
+#: app/src/ui/window.rs:4115 app/src/update/mod.rs:130
 msgid "Restart"
 msgstr "Перезапустить"
 
-#: app/src/ui/window.rs:3983
+#: app/src/ui/window.rs:4179
 msgid "Show Rules"
 msgstr "Показать правила"
 
-#: app/src/ui/window.rs:4009
+#: app/src/ui/window.rs:4205
 msgid "Messages That Will Not Download"
 msgstr "Письма, которые не удаётся загрузить"
 
-#: app/src/ui/window.rs:4011
+#: app/src/ui/window.rs:4207
 msgid ""
 "Penguin Mail could not download these from {address}'s server. It tries "
 "again at each check, except for a message too large to download."
@@ -11909,7 +12159,7 @@ msgstr ""
 "Сервер всё ещё хранит письмо, и не удалось запросить его отзыв. Повторите "
 "попытку позже."
 
-#: sync/src/outbox.rs:1670
+#: sync/src/outbox.rs:1729
 msgid "The server could not be asked to let go of the message."
 msgstr "Не удалось запросить у сервера отзыв письма."
 
@@ -12255,19 +12505,19 @@ msgstr "Укажите, к какой почте применяется прав
 msgid "Choose what the rule does"
 msgstr "Выберите действие правила"
 
-#: sync/src/sign_in.rs:267
+#: sync/src/sign_in.rs:287
 msgid ""
 "You signed in to a different account than {address}, so nothing changed."
 msgstr ""
 "Вы вошли в другую учётную запись, а не {address}, поэтому ничего не "
 "изменилось."
 
-#: sync/src/sign_in.rs:274
+#: sync/src/sign_in.rs:294
 msgid "{address} is already in Penguin Mail as a {provider} account."
 msgstr ""
 "Адрес {address} уже добавлен в Penguin Mail как учётная запись {provider}."
 
-#: sync/src/sign_in.rs:436
+#: sync/src/sign_in.rs:456
 msgid ""
 "A calendar account named {name} is already here, for the server at "
 "{address}. Remove it to add this server under that name."
@@ -12275,7 +12525,7 @@ msgstr ""
 "Учётная запись календаря с именем {name} уже существует для сервера "
 "{address}. Удалите её, чтобы добавить этот сервер под таким именем."
 
-#: sync/src/sign_in.rs:445
+#: sync/src/sign_in.rs:465
 msgid ""
 "A calendar account named {name} is already here, signed in to this server as "
 "{user}. Type {user} to sign it in again, or remove it to sign in as someone "
@@ -12285,7 +12535,7 @@ msgstr ""
 "сервер как {user}. Введите {user} для повторного входа или удалите запись "
 "для входа под другим именем."
 
-#: sync/src/sign_in.rs:454
+#: sync/src/sign_in.rs:474
 msgid ""
 "Sign In Again keeps {name} on the server at {address}. To use another server "
 "or user name, add it as a calendar account of its own."
@@ -12295,11 +12545,11 @@ msgstr ""
 "календаря."
 
 #. The JMAP server publishes no sign-in a browser can run.
-#: sync/src/sign_in/browser.rs:105
+#: sync/src/sign_in/browser.rs:106
 msgid "This server does not offer a sign-in in the browser."
 msgstr "Этот сервер не поддерживает вход через браузер."
 
-#: sync/src/sign_in/browser.rs:112
+#: sync/src/sign_in/browser.rs:113
 msgid ""
 "The server did not let Penguin Mail stay signed in. Sign in with a password "
 "or a token instead."
@@ -12307,17 +12557,17 @@ msgstr ""
 "Сервер не разрешил Penguin Mail сохранить вход. Используйте пароль или токен."
 
 #. Nobody came back from the browser within the wait.
-#: sync/src/sign_in/browser.rs:117
+#: sync/src/sign_in/browser.rs:124
 msgid "Gave up waiting for the browser after ten minutes."
 msgstr "Ожидание браузера прекращено через десять минут."
 
-#: sync/src/sign_in/browser.rs:145
+#: sync/src/sign_in/browser.rs:152
 msgid "You signed in as {account}. Choose {wanted} to reconnect that account."
 msgstr ""
 "Вы вошли как {account}. Выберите {wanted}, чтобы снова подключить эту "
 "учётную запись."
 
-#: sync/src/sign_in/browser.rs:155
+#: sync/src/sign_in/browser.rs:162
 msgid ""
 "Penguin Mail cannot work without access to your mail. Sign in again and "
 "leave the Gmail permission ticked."
@@ -12325,11 +12575,11 @@ msgstr ""
 "Penguin Mail не может работать без доступа к почте. Войдите снова и оставьте "
 "разрешение Gmail включённым."
 
-#: sync/src/sign_in/browser.rs:165
+#: sync/src/sign_in/browser.rs:172
 msgid "Your organization's administrator must approve Penguin Mail."
 msgstr "Администратор вашей организации должен одобрить Penguin Mail."
 
-#: sync/src/sign_in/browser.rs:168
+#: sync/src/sign_in/browser.rs:175
 msgid ""
 "Penguin Mail cannot work without access to your mail. Sign in again and "
 "allow it."
