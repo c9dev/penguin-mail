@@ -3061,19 +3061,17 @@ msgstr "モデルで翻訳できませんでした: {reason}"
 
 #: app/src/own_project.rs:154
 msgid "Step {number} of 6"
-msgstr ""
+msgstr "手順 {number}/6"
 
 #. Translators: Google is a name; keep it as it is. "Open Google Cloud" is the button above this line.
 #: app/src/own_project.rs:161
 msgid "Open Google Cloud, then follow the list."
-msgstr ""
+msgstr "Google Cloud を開き、リストに従ってください。"
 
 #. Translators: Google is a name; keep it as it is.
 #: app/src/own_project.rs:167
-#, fuzzy
-#| msgid "Set up your own Google project"
 msgid "Your own Google project"
-msgstr "自分の Google プロジェクトを設定する"
+msgstr "自分の Google プロジェクト"
 
 #. Translators: Google, Penguin Mail and Gmail are names; keep them as they are.
 #: app/src/own_project.rs:172
@@ -3081,6 +3079,8 @@ msgid ""
 "A Google project of your own gives Penguin Mail every Gmail feature. It's "
 "free, just for you, takes about 10 minutes, and you do it once."
 msgstr ""
+"自分の Google プロジェクトがあれば、Penguin Mail で Gmail のすべての機能が使"
+"えます。無料で、あなた専用、所要時間は約 10 分、一度だけの作業です。"
 
 #. Translators: Google and Penguin Mail are names; keep them as they are.
 #: app/src/own_project.rs:176
@@ -3088,50 +3088,48 @@ msgid ""
 "You'll use the Google account you want to read mail from. Penguin Mail opens "
 "each page for you and says what to click."
 msgstr ""
+"メールを読みたい Google アカウントを使います。Penguin Mail が各ページを開き、"
+"どこをクリックするかを案内します。"
 
 #: app/src/own_project.rs:182
 msgid "Make a project"
-msgstr ""
+msgstr "プロジェクトを作成"
 
 #. Translators: Google and Penguin Mail are names; keep them as they are.
 #: app/src/own_project.rs:185
 msgid "Google keeps what Penguin Mail needs in a project of its own."
-msgstr ""
+msgstr "Google は Penguin Mail に必要なものを専用のプロジェクトに保管します。"
 
 #: app/src/own_project.rs:189
 msgid ""
 "If Google asks you to agree to its terms first, choose your country and "
 "agree."
-msgstr ""
+msgstr "最初に利用規約への同意を求められたら、国を選んで同意します。"
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:192
 msgid "In <b>Project name</b>, type <tt>Penguin Mail</tt>."
-msgstr ""
+msgstr "<b>プロジェクト名</b>に <tt>Penguin Mail</tt> と入力します。"
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:194
 msgid "Leave <b>Location</b> as it is and click <b>Create</b>."
-msgstr ""
+msgstr "<b>場所</b>はそのままにして<b>作成</b>をクリックします。"
 
 #: app/src/own_project.rs:195
 msgid "Wait for the bell icon to say the project is ready."
-msgstr ""
+msgstr "ベルのアイコンがプロジェクトの準備完了を知らせるまで待ちます。"
 
 #. Translators: Gmail is a name; keep it as it is.
 #: app/src/own_project.rs:201
-#, fuzzy
-#| msgid "Mail, calendar and contacts"
 msgid "Turn on Gmail, Calendar and Contacts"
-msgstr "メール、カレンダー、連絡先"
+msgstr "Gmail、カレンダー、連絡先をオンにする"
 
 #. Translators: Penguin Mail is a name; keep it as it is.
 #: app/src/own_project.rs:204
-#, fuzzy
-#| msgid "Penguin Mail reaches calendar and contact servers over HTTPS only."
 msgid "Penguin Mail reads your mail, calendar and contacts through these."
 msgstr ""
-"Penguin MailはHTTPS経由でのみカレンダーと連絡先のサーバーに接続します。"
+"Penguin Mail はこれらを通してメール、カレンダー、連絡先を読み込みます。"
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:209
@@ -3139,27 +3137,27 @@ msgid ""
 "Check that the project at the top says <b>Penguin Mail</b>. If not, click it "
 "and pick Penguin Mail."
 msgstr ""
+"上部のプロジェクトが <b>Penguin Mail</b> になっていることを確認します。違う場"
+"合はクリックして Penguin Mail を選びます。"
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:212
 msgid "Click <b>Next</b>, then <b>Enable</b>."
-msgstr ""
+msgstr "<b>次へ</b>、続いて<b>有効にする</b>をクリックします。"
 
 #: app/src/own_project.rs:217
 msgid "Name the sign-in screen"
-msgstr ""
+msgstr "ログイン画面に名前を付ける"
 
 #. Translators: Google is a name; keep it as it is.
 #: app/src/own_project.rs:219
-#, fuzzy
-#| msgid "Not allowed when you signed in"
 msgid "Google shows this name when you sign in."
-msgstr "ログイン時に許可されませんでした"
+msgstr "ログイン時に Google がこの名前を表示します。"
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:222
 msgid "Click <b>Get started</b>."
-msgstr ""
+msgstr "<b>開始</b>をクリックします。"
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:225
@@ -3167,6 +3165,8 @@ msgid ""
 "<b>App name</b>: <tt>Penguin Mail</tt>. <b>User support email</b>: your "
 "address."
 msgstr ""
+"<b>アプリ名</b>: <tt>Penguin Mail</tt>。<b>ユーザー サポートメール</b>: あな"
+"たのアドレス。"
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:229
@@ -3175,24 +3175,27 @@ msgid ""
 "organization may see <b>Internal</b>; that also works and needs no warning "
 "screen later. Pick it if offered.)"
 msgstr ""
+"<b>対象</b>: <b>外部</b>を選びます。(組織に属する職場や学校のアカウントでは"
+"<b>内部</b>が表示されることがあります。それでも使え、あとで警告画面も出ませ"
+"ん。表示されたらそちらを選びます。)"
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:232
 msgid "<b>Contact information</b>: your address again."
-msgstr ""
+msgstr "<b>連絡先情報</b>: もう一度あなたのアドレス。"
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:234
 msgid "Tick the agreement and click <b>Create</b>."
-msgstr ""
+msgstr "同意事項にチェックを入れて<b>作成</b>をクリックします。"
 
 #: app/src/own_project.rs:239
 msgid "Publish it"
-msgstr ""
+msgstr "公開する"
 
 #: app/src/own_project.rs:240
 msgid "Publishing keeps you signed in."
-msgstr ""
+msgstr "公開するとログインしたままになります。"
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:244
@@ -3200,50 +3203,50 @@ msgid ""
 "Under <b>Publishing status</b>, click <b>Publish app</b>, then <b>Confirm</"
 "b>."
 msgstr ""
+"<b>公開ステータス</b>で<b>アプリを公開</b>、続いて<b>確認</b>をクリックしま"
+"す。"
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:247
 msgid "It should now say <b>In production</b>."
-msgstr ""
+msgstr "<b>本番環境</b>と表示されるはずです。"
 
 #. Translators: Google and Penguin Mail are names; keep them as they are.
 #: app/src/own_project.rs:251
 msgid "If you skip this, Google signs you out of Penguin Mail every 7 days."
 msgstr ""
+"これを省くと、Google は 7 日ごとに Penguin Mail からログアウトさせます。"
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:253
 msgid "Chose Internal? Then there's nothing to do here."
-msgstr ""
+msgstr "内部を選びましたか？それならここですることはありません。"
 
 #. Translators: Penguin Mail is a name; keep it as it is.
 #: app/src/own_project.rs:258
-#, fuzzy
-#| msgid "Signed in to Penguin Mail"
 msgid "Make the key for Penguin Mail"
-msgstr "Penguin Mailにログインしました"
+msgstr "Penguin Mail 用のキーを作成"
 
 #. Translators: Penguin Mail is a name; keep it as it is.
 #: app/src/own_project.rs:261
-#, fuzzy
-#| msgid "{tile}, signs in through your browser"
 msgid "The key lets Penguin Mail sign in through your project."
-msgstr "{tile}、ブラウザーでログインします"
+msgstr ""
+"このキーで Penguin Mail があなたのプロジェクトを通してログインできます。"
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:265
 msgid "<b>Application type</b>: choose <b>Desktop app</b>."
-msgstr ""
+msgstr "<b>アプリケーションの種類</b>: <b>デスクトップ アプリ</b>を選びます。"
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:267
 msgid "<b>Name</b>: <tt>Penguin Mail</tt>, then <b>Create</b>."
-msgstr ""
+msgstr "<b>名前</b>: <tt>Penguin Mail</tt>、次に<b>作成</b>。"
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:269
 msgid "On the next screen, click <b>Download JSON</b> before you close it."
-msgstr ""
+msgstr "次の画面で、閉じる前に <b>JSON をダウンロード</b>をクリックします。"
 
 #. Translators: Google is a name; keep it as it is.
 #: app/src/own_project.rs:274
@@ -3251,20 +3254,18 @@ msgid ""
 "Google shows this only once. If you closed it already, delete that key and "
 "make a new one."
 msgstr ""
+"これは一度しか表示されません。すでに閉じた場合は、そのキーを削除して新しく作"
+"成してください。"
 
 #. Translators: Penguin Mail is a name; keep it as it is.
 #: app/src/own_project.rs:280
-#, fuzzy
-#| msgid "Signed in to Penguin Mail"
 msgid "Give the file to Penguin Mail"
-msgstr "Penguin Mailにログインしました"
+msgstr "ファイルを Penguin Mail に渡す"
 
 #: app/src/own_project.rs:287 app/src/ui/own_project.rs:497
-#: app/src/ui/own_project.rs:737
-#, fuzzy
-#| msgid "Join with Google Meet"
+#: app/src/ui/own_project.rs:742
 msgid "Sign in with Google"
-msgstr "Google Meet で参加"
+msgstr "Google でログイン"
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:292
@@ -3274,36 +3275,53 @@ msgid ""
 "<b>Advanced</b>, then <b>Go to Penguin Mail (unsafe)</b>. Then tick every "
 "box so every feature works."
 msgstr ""
+"Google に<b>「このアプリは Google で確認されていません」</b>と表示されます。"
+"これは想定どおりです。アプリはあなた自身のプロジェクトで、使うのはあなただけ"
+"です。<b>詳細</b>、続いて <b>Penguin Mail(安全ではないページ)に移動</b>をク"
+"リックします。その後、すべての機能が動くようにすべてのチェックボックスをオン"
+"にします。"
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:322
 msgid "Did you publish your project? If it still says Testing, go to step 4."
 msgstr ""
+"プロジェクトを公開しましたか？まだ「テスト中」と表示されている場合は手順 4 に"
+"進んでください。"
 
 #. Translators: Google is a name; keep it as it is.
 #: app/src/own_project.rs:345
 msgid ""
 "Google doesn't recognize this key. Make a new one and download it again."
 msgstr ""
+"Google はこのキーを認識しません。新しいキーを作成してもう一度ダウンロードして"
+"ください。"
 
 #. Translators: Gmail is a name; keep it as it is.
 #: app/src/own_project.rs:370
 msgid "Gmail is turned off in your project."
-msgstr ""
+msgstr "プロジェクトで Gmail がオフになっています。"
 
 #: app/src/own_project.rs:372
 msgid "Calendar is turned off in your project."
-msgstr ""
+msgstr "プロジェクトでカレンダーがオフになっています。"
 
 #: app/src/own_project.rs:374
-#, fuzzy
-#| msgid "Continue in your browser"
 msgid "Contacts is turned off in your project."
-msgstr "ブラウザーで続けてください"
+msgstr "プロジェクトで連絡先がオフになっています。"
 
 #: app/src/own_project.rs:376
 msgid "Drive is turned off in your project."
+msgstr "プロジェクトでドライブがオフになっています。"
+
+#: app/src/own_project.rs:426
+msgid ""
+"The Google Cloud project Penguin Mail signs in with has the {service} "
+"switched off, so Google refuses before it can ask for your permission. Turn "
+"it on, wait a minute, and try again."
 msgstr ""
+"Penguin Mailがログインに使うGoogle Cloudプロジェクトで{service}が無効なため、"
+"Googleが権限確認の前に拒否しています。有効にしてから1分待ち、再試行してくださ"
+"い。"
 
 #: app/src/packaging.rs:127
 msgid "Updates come from dnf"
@@ -3888,8 +3906,8 @@ msgstr "そのアカウントは接続されていません。"
 msgid "Could not save: {reason}"
 msgstr "保存できませんでした: {reason}"
 
-#: app/src/protection/draft.rs:212 app/src/ui/window.rs:2738
-#: app/src/ui/window.rs:2761
+#: app/src/protection/draft.rs:212 app/src/ui/window.rs:2731
+#: app/src/ui/window.rs:2754
 msgid "Could not open the draft: {reason}"
 msgstr "下書きを開けませんでした: {reason}"
 
@@ -4120,30 +4138,20 @@ msgstr "最短。約2分"
 
 #. Translators: Google is a name; keep it as it is.
 #: app/src/route_choice.rs:164 app/src/ui/add_account.rs:4023
-#, fuzzy
-#| msgid "Set up your own Google project"
 msgid "Use your Google project again"
-msgstr "自分の Google プロジェクトを設定する"
+msgstr "Google プロジェクトをもう一度使う"
 
 #. Translators: Gmail is a name; keep it as it is.
 #: app/src/route_choice.rs:166
-#, fuzzy
-#| msgid ""
-#| "Want every Gmail feature? Your own Google project gives you all of them, "
-#| "free."
 msgid "Every Gmail feature, with the project you set up before."
-msgstr ""
-"Gmail のすべての機能を使いたいですか？ 自分の Google プロジェクトなら、すべて"
-"無料で使えます。"
+msgstr "以前設定したプロジェクトで Gmail のすべての機能を使います。"
 
 #: app/src/route_choice.rs:175
-#, fuzzy
-#| msgid "Try a different search"
 msgid "Set up a different project"
-msgstr "別の語句で検索してください"
+msgstr "別のプロジェクトを設定"
 
 #. Translators: Google is a name; keep it as it is.
-#: app/src/route_choice.rs:178 app/src/ui/window.rs:3147
+#: app/src/route_choice.rs:178 app/src/ui/window.rs:3140
 msgid "Set up your own Google project"
 msgstr "自分の Google プロジェクトを設定する"
 
@@ -4323,8 +4331,8 @@ msgstr "Anthropic API"
 msgid "Claude Subscription"
 msgstr "Claude サブスクリプション"
 
-#: app/src/settings/mod.rs:227 app/src/ui/window.rs:3537
-#: app/src/ui/window.rs:3617
+#: app/src/settings/mod.rs:227 app/src/ui/window.rs:3530
+#: app/src/ui/window.rs:3610
 msgid "Assistant"
 msgstr "アシスタント"
 
@@ -4691,7 +4699,7 @@ msgstr "Penguin Mail を開く"
 msgid "New Message"
 msgstr "新規メッセージ"
 
-#: app/src/tray.rs:238 app/src/ui/sidebar.rs:1934 app/src/ui/window.rs:3543
+#: app/src/tray.rs:238 app/src/ui/sidebar.rs:1934 app/src/ui/window.rs:3536
 msgid "Check for Mail"
 msgstr "メールを確認"
 
@@ -4709,7 +4717,7 @@ msgstr "{version} の新機能"
 msgid "Check for Updates"
 msgstr "更新を確認"
 
-#: app/src/tray.rs:254 app/src/ui/window.rs:3556
+#: app/src/tray.rs:254 app/src/ui/window.rs:3549
 #: app/src/ui/window/shortcuts.rs:644
 msgid "Quit"
 msgstr "終了"
@@ -4731,7 +4739,7 @@ msgstr "新機能"
 msgid "Website"
 msgstr "ウェブサイト"
 
-#: app/src/ui/about.rs:179 app/src/ui/window.rs:3555
+#: app/src/ui/about.rs:179 app/src/ui/window.rs:3548
 msgid "Donate"
 msgstr "寄付"
 
@@ -4739,7 +4747,7 @@ msgstr "寄付"
 msgid "License"
 msgstr "ライセンス"
 
-#: app/src/ui/about.rs:203 app/src/ui/window.rs:3554
+#: app/src/ui/about.rs:203 app/src/ui/window.rs:3547
 msgid "About Penguin Mail"
 msgstr "Penguin Mail について"
 
@@ -5180,8 +5188,8 @@ msgstr "検索中…"
 msgid "Sign In Again"
 msgstr "再ログイン"
 
-#: app/src/ui/add_account.rs:4042 app/src/ui/own_project.rs:622
-#: app/src/ui/preferences/google_route.rs:288 app/src/ui/window.rs:2136
+#: app/src/ui/add_account.rs:4042 app/src/ui/own_project.rs:627
+#: app/src/ui/preferences/google_route.rs:288 app/src/ui/window.rs:2129
 msgid "Open Google Cloud"
 msgstr "Google Cloudを開く"
 
@@ -5236,7 +5244,7 @@ msgstr "{account} の準備ができました"
 #. Translators: the button that goes back to a step of the Google project setup.
 #: app/src/ui/add_account.rs:4785
 msgid "Go to Step {number}"
-msgstr ""
+msgstr "手順 {number} へ"
 
 #: app/src/ui/add_account.rs:4947
 msgid ""
@@ -5245,7 +5253,7 @@ msgid ""
 msgstr ""
 "このサーバーはメッセージを区別できないため、安全にダウンロードできません。"
 
-#: app/src/ui/assistant.rs:35 app/src/ui/window.rs:3703
+#: app/src/ui/assistant.rs:35 app/src/ui/window.rs:3696
 msgid "Summarize this conversation"
 msgstr "このスレッドを要約して"
 
@@ -5270,13 +5278,13 @@ msgstr "開いているスレッドへの返信を下書きして"
 msgid "Choose a Model"
 msgstr "モデルを選択"
 
-#: app/src/ui/assistant.rs:123 app/src/ui/window.rs:3664
-#: app/src/ui/window.rs:3665
+#: app/src/ui/assistant.rs:123 app/src/ui/window.rs:3657
+#: app/src/ui/window.rs:3658
 msgid "Detach"
 msgstr "切り離す"
 
 #: app/src/ui/assistant.rs:124 app/src/ui/key_import.rs:213
-#: app/src/ui/key_import.rs:217 app/src/ui/window.rs:4296
+#: app/src/ui/key_import.rs:217 app/src/ui/window.rs:4289
 msgid "Close"
 msgstr "閉じる"
 
@@ -5481,7 +5489,7 @@ msgstr "{server} を編集"
 
 #: app/src/ui/assistant_mcp_prefs.rs:137 app/src/ui/calendar/editor.rs:1726
 #: app/src/ui/composer/mod.rs:2219 app/src/ui/composer/recipients.rs:318
-#: app/src/ui/sender_prefs.rs:149 app/src/ui/window.rs:3300
+#: app/src/ui/sender_prefs.rs:149 app/src/ui/window.rs:3293
 msgid "Remove"
 msgstr "削除"
 
@@ -8317,7 +8325,7 @@ msgstr ""
 msgid "Allow Hide My Email"
 msgstr "メールアドレスの非公開を許可"
 
-#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:3754
+#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:3747
 msgid "Add an account first"
 msgstr "先にアカウントを追加してください"
 
@@ -8780,66 +8788,54 @@ msgstr "そこにはメールを移動できません"
 
 #: app/src/ui/own_project.rs:314
 msgid "Key File"
-msgstr ""
+msgstr "キーファイル"
 
 #: app/src/ui/own_project.rs:472
-#, fuzzy
-#| msgid "Starts"
 msgid "Start"
 msgstr "開始"
 
 #: app/src/ui/own_project.rs:473
-#, fuzzy
-#| msgid "Already here"
 msgid "I Already Have a Key"
-msgstr "登録済み"
+msgstr "キーを持っています"
 
 #: app/src/ui/own_project.rs:561
 msgid "Steps look different?"
-msgstr ""
+msgstr "手順の表示が違いますか？"
 
-#: app/src/ui/own_project.rs:639
-#, fuzzy
-#| msgid "Next Day"
+#: app/src/ui/own_project.rs:644
 msgid "Next"
-msgstr "翌日"
+msgstr "次へ"
 
-#: app/src/ui/own_project.rs:644 app/src/ui/own_project.rs:743
-#, fuzzy
-#| msgid "Start date"
+#: app/src/ui/own_project.rs:649 app/src/ui/own_project.rs:748
 msgid "Start over"
-msgstr "開始日"
+msgstr "最初からやり直す"
 
-#: app/src/ui/own_project.rs:667
+#: app/src/ui/own_project.rs:672
 msgid "Drop the file you downloaded here"
-msgstr ""
+msgstr "ダウンロードしたファイルをここにドロップ"
 
-#: app/src/ui/own_project.rs:674
-#, fuzzy
-#| msgid "Choose a Time…"
+#: app/src/ui/own_project.rs:679
 msgid "Choose File…"
-msgstr "日時を選択…"
+msgstr "ファイルを選択…"
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
-#: app/src/ui/own_project.rs:702
+#: app/src/ui/own_project.rs:707
 msgid "Client ID"
-msgstr ""
+msgstr "クライアント ID"
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
-#: app/src/ui/own_project.rs:706
+#: app/src/ui/own_project.rs:711
 msgid "Client secret"
-msgstr ""
+msgstr "クライアント シークレット"
 
-#: app/src/ui/own_project.rs:712
+#: app/src/ui/own_project.rs:717
 msgid "Copy and paste instead"
-msgstr ""
+msgstr "代わりにコピーして貼り付ける"
 
 #. The words are ours; nothing from the file reaches them.
-#: app/src/ui/own_project.rs:733
-#, fuzzy
-#| msgid "Open Penguin Mail"
+#: app/src/ui/own_project.rs:738
 msgid "Ready: Penguin Mail project"
-msgstr "Penguin Mail を開く"
+msgstr "準備完了: Penguin Mail プロジェクト"
 
 #: app/src/ui/pgp.rs:105
 msgid "Checked"
@@ -9397,7 +9393,7 @@ msgstr "{account}を下に移動"
 #: app/src/ui/preferences/dialog.rs:27 app/src/ui/preferences/dialog.rs:33
 #: app/src/ui/preferences/dialog.rs:82 app/src/ui/preferences/dialog.rs:83
 #: app/src/ui/preferences/dialog.rs:353 app/src/ui/preferences/dialog.rs:355
-#: app/src/ui/window.rs:3552 app/src/ui/window/shortcuts.rs:616
+#: app/src/ui/window.rs:3545 app/src/ui/window/shortcuts.rs:616
 msgid "Preferences"
 msgstr "設定"
 
@@ -9451,10 +9447,8 @@ msgstr "すべての機能を使う"
 
 #. Translators: Google is a name; keep it as it is.
 #: app/src/ui/preferences/google_route.rs:287
-#, fuzzy
-#| msgid "Set up your own Google project"
 msgid "Signed in through your own Google project"
-msgstr "自分の Google プロジェクトを設定する"
+msgstr "自分の Google プロジェクトでログイン中"
 
 #: app/src/ui/preferences/google_route.rs:307
 msgid "Calendar and contacts"
@@ -9853,7 +9847,7 @@ msgstr "署名…"
 msgid "Rules…"
 msgstr "ルール…"
 
-#: app/src/ui/sidebar.rs:1844 app/src/ui/window.rs:3546
+#: app/src/ui/sidebar.rs:1844 app/src/ui/window.rs:3539
 msgid "Hide My Email…"
 msgstr "メールアドレスを非公開…"
 
@@ -10330,7 +10324,7 @@ msgstr "メールを読み込めませんでした: {reason}"
 msgid "Added {account}. Downloading mail…"
 msgstr "{account}を追加しました。メールをダウンロード中…"
 
-#: app/src/ui/window.rs:358 app/src/ui/window.rs:2930
+#: app/src/ui/window.rs:358 app/src/ui/window.rs:2923
 msgid "{account} is signed in again."
 msgstr "{account}に再ログインしました。"
 
@@ -10471,65 +10465,55 @@ msgstr "メールを削除できませんでした: {reason}"
 msgid "Turn On the {service}"
 msgstr "{service}を有効にする"
 
-#: app/src/ui/window.rs:2130
-msgid ""
-"The Google Cloud project Penguin Mail signs in with has the {service} "
-"switched off, so Google refuses before it can ask for your permission. Turn "
-"it on, wait a minute, and try again."
-msgstr ""
-"Penguin Mailがログインに使うGoogle Cloudプロジェクトで{service}が無効なため、"
-"Googleが権限確認の前に拒否しています。有効にしてから1分待ち、再試行してくださ"
-"い。"
-
-#: app/src/ui/window.rs:2457
+#: app/src/ui/window.rs:2450
 msgid "Select mail from one account to tag it."
 msgstr "タグを付けるには、1つのアカウントのメールを選んでください。"
 
-#: app/src/ui/window.rs:2469
+#: app/src/ui/window.rs:2462
 msgid "This account has no tags yet. Make one in Outlook."
 msgstr "このアカウントにはタグがありません。Outlookで作成してください。"
 
-#: app/src/ui/window.rs:2636
+#: app/src/ui/window.rs:2629
 msgid "Could not include {file}: {reason}"
 msgstr "{file}を含められませんでした: {reason}"
 
-#: app/src/ui/window.rs:2717
+#: app/src/ui/window.rs:2710
 msgid "The server had already sent this message."
 msgstr "サーバーはこのメッセージを送信済みでした。"
 
-#: app/src/ui/window.rs:2722
+#: app/src/ui/window.rs:2715
 msgid "This message was canceled in another app and is no longer in Drafts."
 msgstr "このメッセージは別のアプリでキャンセルされ、下書きにも残っていません。"
 
-#: app/src/ui/window.rs:2836
+#: app/src/ui/window.rs:2829
 msgid "Downloading {file}…"
 msgstr "{file}をダウンロード中…"
 
-#: app/src/ui/window.rs:2857 app/src/ui/window/attachments.rs:231
+#: app/src/ui/window.rs:2850 app/src/ui/window/attachments.rs:231
 msgid "Saved {file} to Downloads"
 msgstr "{file}をダウンロードフォルダーに保存しました"
 
-#: app/src/ui/window.rs:2860
+#: app/src/ui/window.rs:2853
 msgid "Open"
 msgstr "開く"
 
-#: app/src/ui/window.rs:2875 app/src/ui/window/attachments.rs:236
+#: app/src/ui/window.rs:2868 app/src/ui/window/attachments.rs:236
 msgid "Could not save {file}: {reason}"
 msgstr "{file}を保存できませんでした: {reason}"
 
-#: app/src/ui/window.rs:3094
+#: app/src/ui/window.rs:3087
 msgid "Continue in your browser"
 msgstr "ブラウザーで続けてください"
 
-#: app/src/ui/window.rs:3144
+#: app/src/ui/window.rs:3137
 msgid "This copy of Penguin Mail was built without Google sign-in."
 msgstr "このPenguin Mailは、Googleログイン機能なしでビルドされています。"
 
-#: app/src/ui/window.rs:3166
+#: app/src/ui/window.rs:3159
 msgid "Get a Release"
 msgstr "リリース版を入手"
 
-#: app/src/ui/window.rs:3286
+#: app/src/ui/window.rs:3279
 msgid ""
 "Could not check for messages the server holds to send later, so {account} "
 "stays: {reason}"
@@ -10537,80 +10521,80 @@ msgstr ""
 "サーバーが保持する予約送信メッセージを確認できなかったため、{account}を削除し"
 "ません: {reason}"
 
-#: app/src/ui/window.rs:3297
+#: app/src/ui/window.rs:3290
 msgid "Remove {account}?"
 msgstr "{account}を削除しますか？"
 
-#: app/src/ui/window.rs:3316
+#: app/src/ui/window.rs:3309
 msgid "Remove Anyway"
 msgstr "確認せずに削除"
 
-#: app/src/ui/window.rs:3329
+#: app/src/ui/window.rs:3322
 msgid "Removed {account}"
 msgstr "{account}を削除しました"
 
-#: app/src/ui/window.rs:3331
+#: app/src/ui/window.rs:3324
 msgid "Could not remove {account}: {reason}"
 msgstr "{account}を削除できませんでした: {reason}"
 
-#: app/src/ui/window.rs:3524
+#: app/src/ui/window.rs:3517
 msgid "Refresh"
 msgstr "更新"
 
-#: app/src/ui/window.rs:3528
+#: app/src/ui/window.rs:3521
 msgid "Show Declined Events"
 msgstr "辞退した予定を表示"
 
-#: app/src/ui/window.rs:3544
+#: app/src/ui/window.rs:3537
 msgid "Add Account…"
 msgstr "アカウントを追加…"
 
-#: app/src/ui/window.rs:3545
+#: app/src/ui/window.rs:3538
 msgid "New Smart Mailbox…"
 msgstr "新しいスマートメールボックス…"
 
-#: app/src/ui/window.rs:3553
+#: app/src/ui/window.rs:3546
 msgid "Keyboard Shortcuts"
 msgstr "キーボードショートカット"
 
-#: app/src/ui/window.rs:3562 app/src/ui/window.rs:3564
+#: app/src/ui/window.rs:3555 app/src/ui/window.rs:3557
 msgid "Main Menu"
 msgstr "メインメニュー"
 
-#: app/src/ui/window.rs:3629 app/src/ui/window.rs:3630
+#: app/src/ui/window.rs:3622 app/src/ui/window.rs:3623
 msgid "Dock"
 msgstr "Dock"
 
-#: app/src/ui/window.rs:3755
+#: app/src/ui/window.rs:3748
 msgid "Add a mail account first"
 msgstr "先にメールアカウントを追加してください"
 
 #. Translators: {account} is an email address.
-#: app/src/ui/window.rs:3992
+#: app/src/ui/window.rs:3985
 msgid "The calendar and contacts of {account} are connected."
 msgstr "{account} のカレンダーと連絡先を接続しました。"
 
-#: app/src/ui/window.rs:4098
+#: app/src/ui/window.rs:4091
 msgid "Open a message from the person first"
 msgstr "先にその人からのメッセージを開いてください"
 
-#: app/src/ui/window.rs:4179
+#: app/src/ui/window.rs:4172
 msgid "Penguin Mail shows the new language after a restart"
 msgstr "再起動後に新しい言語で表示します"
 
-#: app/src/ui/window.rs:4181 app/src/update/mod.rs:130
+#: app/src/ui/window.rs:4174 app/src/update/mod.rs:130
 msgid "Restart"
 msgstr "再起動"
 
-#: app/src/ui/window.rs:4245
+#: app/src/ui/window.rs:4238
 msgid "Show Rules"
 msgstr "ルールを表示"
 
-#: app/src/ui/window.rs:4271
+#: app/src/ui/window.rs:4264
 msgid "Messages That Will Not Download"
 msgstr "ダウンロードできないメッセージ"
 
-#: app/src/ui/window.rs:4273
+#: app/src/ui/window.rs:4266
 msgid ""
 "Penguin Mail could not download these from {address}'s server. It tries "
 "again at each check, except for a message too large to download."
@@ -12489,6 +12473,8 @@ msgid ""
 "Penguin Mail can't find your Google project on this computer. Give it the "
 "key again to sign in."
 msgstr ""
+"このコンピューターにあなたの Google プロジェクトが見つかりません。ログインす"
+"るにはキーをもう一度渡してください。"
 
 #: sync/src/sign_in/browser.rs:151
 msgid ""
@@ -12537,27 +12523,33 @@ msgstr ""
 #: sync/src/sign_in/own_client.rs:184
 msgid "This key is for a website. Go back to step 5 and choose Desktop app."
 msgstr ""
+"このキーはウェブサイト用です。手順 5 に戻ってデスクトップ アプリを選んでくだ"
+"さい。"
 
 #: sync/src/sign_in/own_client.rs:186
 msgid "This isn't the file from step 5."
-msgstr ""
+msgstr "これは手順 5 のファイルではありません。"
 
 #: sync/src/sign_in/own_client.rs:188
 msgid ""
 "This file has no secret. Make a new key in step 5 and download it straight "
 "away."
 msgstr ""
+"このファイルにはシークレットがありません。手順 5 で新しいキーを作成し、すぐに"
+"ダウンロードしてください。"
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: sync/src/sign_in/own_client.rs:192
 msgid "Paste both the Client ID and the Client secret"
-msgstr ""
+msgstr "クライアント ID とクライアント シークレットの両方を貼り付けてください"
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: sync/src/sign_in/own_client.rs:196
 msgid ""
 "Copy the Client ID from step 5 again. It ends in .apps.googleusercontent.com."
 msgstr ""
+"手順 5 のクライアント ID をもう一度コピーしてください。末尾"
+"は .apps.googleusercontent.com です。"
 
 #: sync/src/triage.rs:53
 msgid "Mark read"

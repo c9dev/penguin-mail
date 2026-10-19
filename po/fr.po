@@ -3212,19 +3212,17 @@ msgstr "Le modèle n’a pas pu traduire ceci : {reason}"
 
 #: app/src/own_project.rs:154
 msgid "Step {number} of 6"
-msgstr ""
+msgstr "Étape {number} sur 6"
 
 #. Translators: Google is a name; keep it as it is. "Open Google Cloud" is the button above this line.
 #: app/src/own_project.rs:161
 msgid "Open Google Cloud, then follow the list."
-msgstr ""
+msgstr "Ouvrez Google Cloud, puis suivez la liste."
 
 #. Translators: Google is a name; keep it as it is.
 #: app/src/own_project.rs:167
-#, fuzzy
-#| msgid "Set up your own Google project"
 msgid "Your own Google project"
-msgstr "Configurer votre propre projet Google"
+msgstr "Votre propre projet Google"
 
 #. Translators: Google, Penguin Mail and Gmail are names; keep them as they are.
 #: app/src/own_project.rs:172
@@ -3232,6 +3230,9 @@ msgid ""
 "A Google project of your own gives Penguin Mail every Gmail feature. It's "
 "free, just for you, takes about 10 minutes, and you do it once."
 msgstr ""
+"Un projet Google à vous donne à Penguin Mail toutes les fonctions de Gmail. "
+"C’est gratuit, rien que pour vous, cela prend environ 10 minutes, et vous ne "
+"le faites qu’une fois."
 
 #. Translators: Google and Penguin Mail are names; keep them as they are.
 #: app/src/own_project.rs:176
@@ -3239,50 +3240,51 @@ msgid ""
 "You'll use the Google account you want to read mail from. Penguin Mail opens "
 "each page for you and says what to click."
 msgstr ""
+"Vous utiliserez le compte Google dont vous voulez lire les e-mails. Penguin "
+"Mail ouvre chaque page pour vous et indique où cliquer."
 
 #: app/src/own_project.rs:182
 msgid "Make a project"
-msgstr ""
+msgstr "Créer un projet"
 
 #. Translators: Google and Penguin Mail are names; keep them as they are.
 #: app/src/own_project.rs:185
 msgid "Google keeps what Penguin Mail needs in a project of its own."
-msgstr ""
+msgstr "Google garde ce dont Penguin Mail a besoin dans un projet à part."
 
 #: app/src/own_project.rs:189
 msgid ""
 "If Google asks you to agree to its terms first, choose your country and "
 "agree."
 msgstr ""
+"Si Google vous demande d’abord d’accepter ses conditions, choisissez votre "
+"pays et acceptez."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:192
 msgid "In <b>Project name</b>, type <tt>Penguin Mail</tt>."
-msgstr ""
+msgstr "Dans <b>Nom du projet</b>, saisissez <tt>Penguin Mail</tt>."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:194
 msgid "Leave <b>Location</b> as it is and click <b>Create</b>."
-msgstr ""
+msgstr "Laissez <b>Emplacement</b> tel quel et cliquez sur <b>Créer</b>."
 
 #: app/src/own_project.rs:195
 msgid "Wait for the bell icon to say the project is ready."
 msgstr ""
+"Attendez que l’icône en forme de cloche indique que le projet est prêt."
 
 #. Translators: Gmail is a name; keep it as it is.
 #: app/src/own_project.rs:201
-#, fuzzy
-#| msgid "Mail, calendar and contacts"
 msgid "Turn on Gmail, Calendar and Contacts"
-msgstr "Courrier, agenda et contacts"
+msgstr "Activer Gmail, Agenda et Contacts"
 
 #. Translators: Penguin Mail is a name; keep it as it is.
 #: app/src/own_project.rs:204
-#, fuzzy
-#| msgid "Penguin Mail reaches calendar and contact servers over HTTPS only."
 msgid "Penguin Mail reads your mail, calendar and contacts through these."
 msgstr ""
-"Penguin Mail ne joint les serveurs d’agenda et de contacts que via HTTPS."
+"C’est par eux que Penguin Mail lit vos e-mails, votre agenda et vos contacts."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:209
@@ -3290,27 +3292,27 @@ msgid ""
 "Check that the project at the top says <b>Penguin Mail</b>. If not, click it "
 "and pick Penguin Mail."
 msgstr ""
+"Vérifiez que le projet en haut indique <b>Penguin Mail</b>. Sinon, cliquez "
+"dessus et choisissez Penguin Mail."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:212
 msgid "Click <b>Next</b>, then <b>Enable</b>."
-msgstr ""
+msgstr "Cliquez sur <b>Suivant</b>, puis sur <b>Activer</b>."
 
 #: app/src/own_project.rs:217
 msgid "Name the sign-in screen"
-msgstr ""
+msgstr "Nommer l’écran de connexion"
 
 #. Translators: Google is a name; keep it as it is.
 #: app/src/own_project.rs:219
-#, fuzzy
-#| msgid "Not allowed when you signed in"
 msgid "Google shows this name when you sign in."
-msgstr "Non autorisé lors de votre connexion"
+msgstr "Google affiche ce nom lorsque vous vous connectez."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:222
 msgid "Click <b>Get started</b>."
-msgstr ""
+msgstr "Cliquez sur <b>Commencer</b>."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:225
@@ -3318,6 +3320,8 @@ msgid ""
 "<b>App name</b>: <tt>Penguin Mail</tt>. <b>User support email</b>: your "
 "address."
 msgstr ""
+"<b>Nom de l’application</b> : <tt>Penguin Mail</tt>. <b>Adresse e-mail "
+"d’assistance utilisateur</b> : votre adresse."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:229
@@ -3326,24 +3330,28 @@ msgid ""
 "organization may see <b>Internal</b>; that also works and needs no warning "
 "screen later. Pick it if offered.)"
 msgstr ""
+"<b>Cible</b> : choisissez <b>Externe</b>. (Un compte professionnel ou "
+"scolaire rattaché à une organisation peut voir <b>Interne</b> ; cela "
+"fonctionne aussi et n’aura pas d’écran d’avertissement ensuite. Choisissez-"
+"le s’il est proposé.)"
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:232
 msgid "<b>Contact information</b>: your address again."
-msgstr ""
+msgstr "<b>Coordonnées</b> : de nouveau votre adresse."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:234
 msgid "Tick the agreement and click <b>Create</b>."
-msgstr ""
+msgstr "Cochez l’accord et cliquez sur <b>Créer</b>."
 
 #: app/src/own_project.rs:239
 msgid "Publish it"
-msgstr ""
+msgstr "Le publier"
 
 #: app/src/own_project.rs:240
 msgid "Publishing keeps you signed in."
-msgstr ""
+msgstr "La publication vous garde connecté."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:244
@@ -3351,50 +3359,52 @@ msgid ""
 "Under <b>Publishing status</b>, click <b>Publish app</b>, then <b>Confirm</"
 "b>."
 msgstr ""
+"Sous <b>État de publication</b>, cliquez sur <b>Publier l’application</b>, "
+"puis sur <b>Confirmer</b>."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:247
 msgid "It should now say <b>In production</b>."
-msgstr ""
+msgstr "Il doit maintenant indiquer <b>En production</b>."
 
 #. Translators: Google and Penguin Mail are names; keep them as they are.
 #: app/src/own_project.rs:251
 msgid "If you skip this, Google signs you out of Penguin Mail every 7 days."
 msgstr ""
+"Si vous sautez cette étape, Google vous déconnecte de Penguin Mail tous les "
+"7 jours."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:253
 msgid "Chose Internal? Then there's nothing to do here."
-msgstr ""
+msgstr "Vous avez choisi Interne ? Alors il n’y a rien à faire ici."
 
 #. Translators: Penguin Mail is a name; keep it as it is.
 #: app/src/own_project.rs:258
-#, fuzzy
-#| msgid "Signed in to Penguin Mail"
 msgid "Make the key for Penguin Mail"
-msgstr "Connecté à Penguin Mail"
+msgstr "Créer la clé pour Penguin Mail"
 
 #. Translators: Penguin Mail is a name; keep it as it is.
 #: app/src/own_project.rs:261
-#, fuzzy
-#| msgid "{tile}, signs in through your browser"
 msgid "The key lets Penguin Mail sign in through your project."
-msgstr "{tile}, se connecte via votre navigateur"
+msgstr "La clé permet à Penguin Mail de se connecter par votre projet."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:265
 msgid "<b>Application type</b>: choose <b>Desktop app</b>."
-msgstr ""
+msgstr "<b>Type d’application</b> : choisissez <b>Application de bureau</b>."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:267
 msgid "<b>Name</b>: <tt>Penguin Mail</tt>, then <b>Create</b>."
-msgstr ""
+msgstr "<b>Nom</b> : <tt>Penguin Mail</tt>, puis <b>Créer</b>."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:269
 msgid "On the next screen, click <b>Download JSON</b> before you close it."
 msgstr ""
+"Sur l’écran suivant, cliquez sur <b>Télécharger le fichier JSON</b> avant de "
+"le fermer."
 
 #. Translators: Google is a name; keep it as it is.
 #: app/src/own_project.rs:274
@@ -3402,20 +3412,18 @@ msgid ""
 "Google shows this only once. If you closed it already, delete that key and "
 "make a new one."
 msgstr ""
+"Google ne l’affiche qu’une fois. Si vous l’avez déjà fermé, supprimez cette "
+"clé et créez-en une nouvelle."
 
 #. Translators: Penguin Mail is a name; keep it as it is.
 #: app/src/own_project.rs:280
-#, fuzzy
-#| msgid "Signed in to Penguin Mail"
 msgid "Give the file to Penguin Mail"
-msgstr "Connecté à Penguin Mail"
+msgstr "Donner le fichier à Penguin Mail"
 
 #: app/src/own_project.rs:287 app/src/ui/own_project.rs:497
-#: app/src/ui/own_project.rs:737
-#, fuzzy
-#| msgid "Join with Google Meet"
+#: app/src/ui/own_project.rs:742
 msgid "Sign in with Google"
-msgstr "Rejoindre avec Google Meet"
+msgstr "Se connecter avec Google"
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:292
@@ -3425,36 +3433,51 @@ msgid ""
 "<b>Advanced</b>, then <b>Go to Penguin Mail (unsafe)</b>. Then tick every "
 "box so every feature works."
 msgstr ""
+"Google affichera <b>« Google n’a pas validé cette application »</b>. C’est "
+"normal : l’application est votre propre projet, et vous seul l’utilisez. "
+"Cliquez sur <b>Paramètres avancés</b>, puis sur <b>Accéder à Penguin Mail "
+"(non sécurisé)</b>. Cochez ensuite toutes les cases pour que tout fonctionne."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:322
 msgid "Did you publish your project? If it still says Testing, go to step 4."
 msgstr ""
+"Avez-vous publié votre projet ? S’il indique encore Test, allez à l’étape 4."
 
 #. Translators: Google is a name; keep it as it is.
 #: app/src/own_project.rs:345
 msgid ""
 "Google doesn't recognize this key. Make a new one and download it again."
 msgstr ""
+"Google ne reconnaît pas cette clé. Créez-en une nouvelle et téléchargez-la "
+"de nouveau."
 
 #. Translators: Gmail is a name; keep it as it is.
 #: app/src/own_project.rs:370
 msgid "Gmail is turned off in your project."
-msgstr ""
+msgstr "Gmail est désactivé dans votre projet."
 
 #: app/src/own_project.rs:372
 msgid "Calendar is turned off in your project."
-msgstr ""
+msgstr "Agenda est désactivé dans votre projet."
 
 #: app/src/own_project.rs:374
-#, fuzzy
-#| msgid "Continue in your browser"
 msgid "Contacts is turned off in your project."
-msgstr "Continuez dans votre navigateur"
+msgstr "Contacts est désactivé dans votre projet."
 
 #: app/src/own_project.rs:376
 msgid "Drive is turned off in your project."
+msgstr "Drive est désactivé dans votre projet."
+
+#: app/src/own_project.rs:426
+msgid ""
+"The Google Cloud project Penguin Mail signs in with has the {service} "
+"switched off, so Google refuses before it can ask for your permission. Turn "
+"it on, wait a minute, and try again."
 msgstr ""
+"Le projet Google Cloud avec lequel Penguin Mail se connecte a {service} "
+"désactivé, Google refuse donc avant de pouvoir vous demander votre "
+"autorisation. Activez-le, attendez une minute et réessayez."
 
 #: app/src/packaging.rs:127
 msgid "Updates come from dnf"
@@ -4061,8 +4084,8 @@ msgstr "Ce compte n’est pas connecté."
 msgid "Could not save: {reason}"
 msgstr "Impossible d’enregistrer : {reason}"
 
-#: app/src/protection/draft.rs:212 app/src/ui/window.rs:2738
-#: app/src/ui/window.rs:2761
+#: app/src/protection/draft.rs:212 app/src/ui/window.rs:2731
+#: app/src/ui/window.rs:2754
 msgid "Could not open the draft: {reason}"
 msgstr "Impossible d’ouvrir le brouillon : {reason}"
 
@@ -4297,30 +4320,21 @@ msgstr "Le plus rapide. Environ 2 minutes"
 
 #. Translators: Google is a name; keep it as it is.
 #: app/src/route_choice.rs:164 app/src/ui/add_account.rs:4023
-#, fuzzy
-#| msgid "Set up your own Google project"
 msgid "Use your Google project again"
-msgstr "Configurer votre propre projet Google"
+msgstr "Réutiliser votre projet Google"
 
 #. Translators: Gmail is a name; keep it as it is.
 #: app/src/route_choice.rs:166
-#, fuzzy
-#| msgid ""
-#| "Want every Gmail feature? Your own Google project gives you all of them, "
-#| "free."
 msgid "Every Gmail feature, with the project you set up before."
 msgstr ""
-"Vous voulez toutes les fonctions de Gmail ? Votre propre projet Google vous "
-"les donne toutes, gratuitement."
+"Toutes les fonctions de Gmail, avec le projet que vous avez déjà configuré."
 
 #: app/src/route_choice.rs:175
-#, fuzzy
-#| msgid "Try a different search"
 msgid "Set up a different project"
-msgstr "Essayez une autre recherche"
+msgstr "Configurer un autre projet"
 
 #. Translators: Google is a name; keep it as it is.
-#: app/src/route_choice.rs:178 app/src/ui/window.rs:3147
+#: app/src/route_choice.rs:178 app/src/ui/window.rs:3140
 msgid "Set up your own Google project"
 msgstr "Configurer votre propre projet Google"
 
@@ -4503,8 +4517,8 @@ msgstr "API Anthropic"
 msgid "Claude Subscription"
 msgstr "Abonnement Claude"
 
-#: app/src/settings/mod.rs:227 app/src/ui/window.rs:3537
-#: app/src/ui/window.rs:3617
+#: app/src/settings/mod.rs:227 app/src/ui/window.rs:3530
+#: app/src/ui/window.rs:3610
 msgid "Assistant"
 msgstr "Assistant"
 
@@ -4881,7 +4895,7 @@ msgstr "Ouvrir Penguin Mail"
 msgid "New Message"
 msgstr "Nouveau message"
 
-#: app/src/tray.rs:238 app/src/ui/sidebar.rs:1934 app/src/ui/window.rs:3543
+#: app/src/tray.rs:238 app/src/ui/sidebar.rs:1934 app/src/ui/window.rs:3536
 msgid "Check for Mail"
 msgstr "Relever le courrier"
 
@@ -4899,7 +4913,7 @@ msgstr "Nouveautés de la version {version}"
 msgid "Check for Updates"
 msgstr "Rechercher des mises à jour"
 
-#: app/src/tray.rs:254 app/src/ui/window.rs:3556
+#: app/src/tray.rs:254 app/src/ui/window.rs:3549
 #: app/src/ui/window/shortcuts.rs:644
 msgid "Quit"
 msgstr "Quitter"
@@ -4921,7 +4935,7 @@ msgstr "Nouveautés"
 msgid "Website"
 msgstr "Site web"
 
-#: app/src/ui/about.rs:179 app/src/ui/window.rs:3555
+#: app/src/ui/about.rs:179 app/src/ui/window.rs:3548
 msgid "Donate"
 msgstr "Faire un don"
 
@@ -4929,7 +4943,7 @@ msgstr "Faire un don"
 msgid "License"
 msgstr "Licence"
 
-#: app/src/ui/about.rs:203 app/src/ui/window.rs:3554
+#: app/src/ui/about.rs:203 app/src/ui/window.rs:3547
 msgid "About Penguin Mail"
 msgstr "À propos de Penguin Mail"
 
@@ -5372,8 +5386,8 @@ msgstr "Recherche…"
 msgid "Sign In Again"
 msgstr "Se reconnecter"
 
-#: app/src/ui/add_account.rs:4042 app/src/ui/own_project.rs:622
-#: app/src/ui/preferences/google_route.rs:288 app/src/ui/window.rs:2136
+#: app/src/ui/add_account.rs:4042 app/src/ui/own_project.rs:627
+#: app/src/ui/preferences/google_route.rs:288 app/src/ui/window.rs:2129
 msgid "Open Google Cloud"
 msgstr "Ouvrir Google Cloud"
 
@@ -5429,7 +5443,7 @@ msgstr "{account} est prêt"
 #. Translators: the button that goes back to a step of the Google project setup.
 #: app/src/ui/add_account.rs:4785
 msgid "Go to Step {number}"
-msgstr ""
+msgstr "Aller à l’étape {number}"
 
 #: app/src/ui/add_account.rs:4947
 msgid ""
@@ -5439,7 +5453,7 @@ msgstr ""
 "Ce serveur ne sait pas distinguer ses messages, Penguin Mail ne peut donc "
 "pas en télécharger en toute sécurité."
 
-#: app/src/ui/assistant.rs:35 app/src/ui/window.rs:3703
+#: app/src/ui/assistant.rs:35 app/src/ui/window.rs:3696
 msgid "Summarize this conversation"
 msgstr "Résumer cette conversation"
 
@@ -5464,13 +5478,13 @@ msgstr "Rédiger une réponse à la conversation ouverte"
 msgid "Choose a Model"
 msgstr "Choisir un modèle"
 
-#: app/src/ui/assistant.rs:123 app/src/ui/window.rs:3664
-#: app/src/ui/window.rs:3665
+#: app/src/ui/assistant.rs:123 app/src/ui/window.rs:3657
+#: app/src/ui/window.rs:3658
 msgid "Detach"
 msgstr "Détacher"
 
 #: app/src/ui/assistant.rs:124 app/src/ui/key_import.rs:213
-#: app/src/ui/key_import.rs:217 app/src/ui/window.rs:4296
+#: app/src/ui/key_import.rs:217 app/src/ui/window.rs:4289
 msgid "Close"
 msgstr "Fermer"
 
@@ -5682,7 +5696,7 @@ msgstr "Modifier {server}"
 
 #: app/src/ui/assistant_mcp_prefs.rs:137 app/src/ui/calendar/editor.rs:1726
 #: app/src/ui/composer/mod.rs:2219 app/src/ui/composer/recipients.rs:318
-#: app/src/ui/sender_prefs.rs:149 app/src/ui/window.rs:3300
+#: app/src/ui/sender_prefs.rs:149 app/src/ui/window.rs:3293
 msgid "Remove"
 msgstr "Supprimer"
 
@@ -8576,7 +8590,7 @@ msgstr ""
 msgid "Allow Hide My Email"
 msgstr "Autoriser Masquer mon adresse"
 
-#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:3754
+#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:3747
 msgid "Add an account first"
 msgstr "Ajoutez d’abord un compte"
 
@@ -9067,66 +9081,54 @@ msgstr "Le courrier ne peut pas aller là"
 
 #: app/src/ui/own_project.rs:314
 msgid "Key File"
-msgstr ""
+msgstr "Fichier de clé"
 
 #: app/src/ui/own_project.rs:472
-#, fuzzy
-#| msgid "Starts"
 msgid "Start"
-msgstr "Début"
+msgstr "Commencer"
 
 #: app/src/ui/own_project.rs:473
-#, fuzzy
-#| msgid "Already here"
 msgid "I Already Have a Key"
-msgstr "Déjà présent"
+msgstr "J’ai déjà une clé"
 
 #: app/src/ui/own_project.rs:561
 msgid "Steps look different?"
-msgstr ""
+msgstr "Les étapes sont différentes ?"
 
-#: app/src/ui/own_project.rs:639
-#, fuzzy
-#| msgid "Next Day"
+#: app/src/ui/own_project.rs:644
 msgid "Next"
-msgstr "Jour suivant"
+msgstr "Suivant"
 
-#: app/src/ui/own_project.rs:644 app/src/ui/own_project.rs:743
-#, fuzzy
-#| msgid "Start date"
+#: app/src/ui/own_project.rs:649 app/src/ui/own_project.rs:748
 msgid "Start over"
-msgstr "Date de début"
+msgstr "Recommencer"
 
-#: app/src/ui/own_project.rs:667
+#: app/src/ui/own_project.rs:672
 msgid "Drop the file you downloaded here"
-msgstr ""
+msgstr "Déposez ici le fichier téléchargé"
 
-#: app/src/ui/own_project.rs:674
-#, fuzzy
-#| msgid "Choose a Time…"
+#: app/src/ui/own_project.rs:679
 msgid "Choose File…"
-msgstr "Choisir une heure…"
+msgstr "Choisir un fichier…"
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
-#: app/src/ui/own_project.rs:702
+#: app/src/ui/own_project.rs:707
 msgid "Client ID"
-msgstr ""
+msgstr "ID client"
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
-#: app/src/ui/own_project.rs:706
+#: app/src/ui/own_project.rs:711
 msgid "Client secret"
-msgstr ""
+msgstr "Code secret du client"
 
-#: app/src/ui/own_project.rs:712
+#: app/src/ui/own_project.rs:717
 msgid "Copy and paste instead"
-msgstr ""
+msgstr "Copier-coller plutôt"
 
 #. The words are ours; nothing from the file reaches them.
-#: app/src/ui/own_project.rs:733
-#, fuzzy
-#| msgid "Open Penguin Mail"
+#: app/src/ui/own_project.rs:738
 msgid "Ready: Penguin Mail project"
-msgstr "Ouvrir Penguin Mail"
+msgstr "Prêt : projet Penguin Mail"
 
 #: app/src/ui/pgp.rs:105
 msgid "Checked"
@@ -9705,7 +9707,7 @@ msgstr "Déplacer {account} vers le bas"
 #: app/src/ui/preferences/dialog.rs:27 app/src/ui/preferences/dialog.rs:33
 #: app/src/ui/preferences/dialog.rs:82 app/src/ui/preferences/dialog.rs:83
 #: app/src/ui/preferences/dialog.rs:353 app/src/ui/preferences/dialog.rs:355
-#: app/src/ui/window.rs:3552 app/src/ui/window/shortcuts.rs:616
+#: app/src/ui/window.rs:3545 app/src/ui/window/shortcuts.rs:616
 msgid "Preferences"
 msgstr "Préférences"
 
@@ -9759,10 +9761,8 @@ msgstr "Obtenir toutes les fonctions"
 
 #. Translators: Google is a name; keep it as it is.
 #: app/src/ui/preferences/google_route.rs:287
-#, fuzzy
-#| msgid "Set up your own Google project"
 msgid "Signed in through your own Google project"
-msgstr "Configurer votre propre projet Google"
+msgstr "Connecté par votre propre projet Google"
 
 #: app/src/ui/preferences/google_route.rs:307
 msgid "Calendar and contacts"
@@ -10169,7 +10169,7 @@ msgstr "Signature…"
 msgid "Rules…"
 msgstr "Règles…"
 
-#: app/src/ui/sidebar.rs:1844 app/src/ui/window.rs:3546
+#: app/src/ui/sidebar.rs:1844 app/src/ui/window.rs:3539
 msgid "Hide My Email…"
 msgstr "Masquer mon adresse…"
 
@@ -10652,7 +10652,7 @@ msgstr "Impossible de charger le courrier : {reason}"
 msgid "Added {account}. Downloading mail…"
 msgstr "{account} ajouté. Téléchargement du courrier…"
 
-#: app/src/ui/window.rs:358 app/src/ui/window.rs:2930
+#: app/src/ui/window.rs:358 app/src/ui/window.rs:2923
 msgid "{account} is signed in again."
 msgstr "{account} est de nouveau connecté."
 
@@ -10806,68 +10806,58 @@ msgstr "Impossible de supprimer le courrier : {reason}"
 msgid "Turn On the {service}"
 msgstr "Activer {service}"
 
-#: app/src/ui/window.rs:2130
-msgid ""
-"The Google Cloud project Penguin Mail signs in with has the {service} "
-"switched off, so Google refuses before it can ask for your permission. Turn "
-"it on, wait a minute, and try again."
-msgstr ""
-"Le projet Google Cloud avec lequel Penguin Mail se connecte a {service} "
-"désactivé, Google refuse donc avant de pouvoir vous demander votre "
-"autorisation. Activez-le, attendez une minute et réessayez."
-
-#: app/src/ui/window.rs:2457
+#: app/src/ui/window.rs:2450
 msgid "Select mail from one account to tag it."
 msgstr ""
 "Sélectionnez du courrier d’un seul compte pour lui attribuer un mot-clé."
 
-#: app/src/ui/window.rs:2469
+#: app/src/ui/window.rs:2462
 msgid "This account has no tags yet. Make one in Outlook."
 msgstr "Ce compte n’a pas encore de mots-clés. Créez-en un dans Outlook."
 
-#: app/src/ui/window.rs:2636
+#: app/src/ui/window.rs:2629
 msgid "Could not include {file}: {reason}"
 msgstr "Impossible d’inclure {file} : {reason}"
 
-#: app/src/ui/window.rs:2717
+#: app/src/ui/window.rs:2710
 msgid "The server had already sent this message."
 msgstr "Le serveur avait déjà envoyé ce message."
 
-#: app/src/ui/window.rs:2722
+#: app/src/ui/window.rs:2715
 msgid "This message was canceled in another app and is no longer in Drafts."
 msgstr ""
 "Ce message a été annulé dans une autre application et n’est plus dans les "
 "Brouillons."
 
-#: app/src/ui/window.rs:2836
+#: app/src/ui/window.rs:2829
 msgid "Downloading {file}…"
 msgstr "Téléchargement de {file}…"
 
-#: app/src/ui/window.rs:2857 app/src/ui/window/attachments.rs:231
+#: app/src/ui/window.rs:2850 app/src/ui/window/attachments.rs:231
 msgid "Saved {file} to Downloads"
 msgstr "{file} enregistré dans Téléchargements"
 
-#: app/src/ui/window.rs:2860
+#: app/src/ui/window.rs:2853
 msgid "Open"
 msgstr "Ouvrir"
 
-#: app/src/ui/window.rs:2875 app/src/ui/window/attachments.rs:236
+#: app/src/ui/window.rs:2868 app/src/ui/window/attachments.rs:236
 msgid "Could not save {file}: {reason}"
 msgstr "Impossible d’enregistrer {file} : {reason}"
 
-#: app/src/ui/window.rs:3094
+#: app/src/ui/window.rs:3087
 msgid "Continue in your browser"
 msgstr "Continuez dans votre navigateur"
 
-#: app/src/ui/window.rs:3144
+#: app/src/ui/window.rs:3137
 msgid "This copy of Penguin Mail was built without Google sign-in."
 msgstr "Cette version de Penguin Mail a été compilée sans la connexion Google."
 
-#: app/src/ui/window.rs:3166
+#: app/src/ui/window.rs:3159
 msgid "Get a Release"
 msgstr "Obtenir une version publiée"
 
-#: app/src/ui/window.rs:3286
+#: app/src/ui/window.rs:3279
 msgid ""
 "Could not check for messages the server holds to send later, so {account} "
 "stays: {reason}"
@@ -10875,80 +10865,80 @@ msgstr ""
 "Impossible de vérifier les messages que le serveur garde pour un envoi "
 "ultérieur, donc {account} reste : {reason}"
 
-#: app/src/ui/window.rs:3297
+#: app/src/ui/window.rs:3290
 msgid "Remove {account}?"
 msgstr "Supprimer {account} ?"
 
-#: app/src/ui/window.rs:3316
+#: app/src/ui/window.rs:3309
 msgid "Remove Anyway"
 msgstr "Supprimer quand même"
 
-#: app/src/ui/window.rs:3329
+#: app/src/ui/window.rs:3322
 msgid "Removed {account}"
 msgstr "{account} supprimé"
 
-#: app/src/ui/window.rs:3331
+#: app/src/ui/window.rs:3324
 msgid "Could not remove {account}: {reason}"
 msgstr "Impossible de supprimer {account} : {reason}"
 
-#: app/src/ui/window.rs:3524
+#: app/src/ui/window.rs:3517
 msgid "Refresh"
 msgstr "Actualiser"
 
-#: app/src/ui/window.rs:3528
+#: app/src/ui/window.rs:3521
 msgid "Show Declined Events"
 msgstr "Afficher les événements refusés"
 
-#: app/src/ui/window.rs:3544
+#: app/src/ui/window.rs:3537
 msgid "Add Account…"
 msgstr "Ajouter un compte…"
 
-#: app/src/ui/window.rs:3545
+#: app/src/ui/window.rs:3538
 msgid "New Smart Mailbox…"
 msgstr "Nouvelle boîte intelligente…"
 
-#: app/src/ui/window.rs:3553
+#: app/src/ui/window.rs:3546
 msgid "Keyboard Shortcuts"
 msgstr "Raccourcis clavier"
 
-#: app/src/ui/window.rs:3562 app/src/ui/window.rs:3564
+#: app/src/ui/window.rs:3555 app/src/ui/window.rs:3557
 msgid "Main Menu"
 msgstr "Menu principal"
 
-#: app/src/ui/window.rs:3629 app/src/ui/window.rs:3630
+#: app/src/ui/window.rs:3622 app/src/ui/window.rs:3623
 msgid "Dock"
 msgstr "Ancrer"
 
-#: app/src/ui/window.rs:3755
+#: app/src/ui/window.rs:3748
 msgid "Add a mail account first"
 msgstr "Ajoutez d’abord un compte de courrier"
 
 #. Translators: {account} is an email address.
-#: app/src/ui/window.rs:3992
+#: app/src/ui/window.rs:3985
 msgid "The calendar and contacts of {account} are connected."
 msgstr "L’agenda et les contacts de {account} sont connectés."
 
-#: app/src/ui/window.rs:4098
+#: app/src/ui/window.rs:4091
 msgid "Open a message from the person first"
 msgstr "Ouvrez d’abord un message de cette personne"
 
-#: app/src/ui/window.rs:4179
+#: app/src/ui/window.rs:4172
 msgid "Penguin Mail shows the new language after a restart"
 msgstr "Penguin Mail affiche la nouvelle langue après un redémarrage"
 
-#: app/src/ui/window.rs:4181 app/src/update/mod.rs:130
+#: app/src/ui/window.rs:4174 app/src/update/mod.rs:130
 msgid "Restart"
 msgstr "Redémarrer"
 
-#: app/src/ui/window.rs:4245
+#: app/src/ui/window.rs:4238
 msgid "Show Rules"
 msgstr "Afficher les règles"
 
-#: app/src/ui/window.rs:4271
+#: app/src/ui/window.rs:4264
 msgid "Messages That Will Not Download"
 msgstr "Messages qui ne se téléchargent pas"
 
-#: app/src/ui/window.rs:4273
+#: app/src/ui/window.rs:4266
 msgid ""
 "Penguin Mail could not download these from {address}'s server. It tries "
 "again at each check, except for a message too large to download."
@@ -12898,6 +12888,8 @@ msgid ""
 "Penguin Mail can't find your Google project on this computer. Give it the "
 "key again to sign in."
 msgstr ""
+"Penguin Mail ne trouve pas votre projet Google sur cet ordinateur. Redonnez-"
+"lui la clé pour vous connecter."
 
 #: sync/src/sign_in/browser.rs:151
 msgid ""
@@ -12946,27 +12938,33 @@ msgstr ""
 #: sync/src/sign_in/own_client.rs:184
 msgid "This key is for a website. Go back to step 5 and choose Desktop app."
 msgstr ""
+"Cette clé est destinée à un site web. Revenez à l’étape 5 et choisissez "
+"Application de bureau."
 
 #: sync/src/sign_in/own_client.rs:186
 msgid "This isn't the file from step 5."
-msgstr ""
+msgstr "Ce n’est pas le fichier de l’étape 5."
 
 #: sync/src/sign_in/own_client.rs:188
 msgid ""
 "This file has no secret. Make a new key in step 5 and download it straight "
 "away."
 msgstr ""
+"Ce fichier n’a pas de code secret. Créez une nouvelle clé à l’étape 5 et "
+"téléchargez-la tout de suite."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: sync/src/sign_in/own_client.rs:192
 msgid "Paste both the Client ID and the Client secret"
-msgstr ""
+msgstr "Collez l’ID client et le code secret du client"
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: sync/src/sign_in/own_client.rs:196
 msgid ""
 "Copy the Client ID from step 5 again. It ends in .apps.googleusercontent.com."
 msgstr ""
+"Copiez de nouveau l’ID client de l’étape 5. Il se termine "
+"par .apps.googleusercontent.com."
 
 #: sync/src/triage.rs:53
 msgid "Mark read"

@@ -3038,19 +3038,17 @@ msgstr "Mô hình không thể dịch nội dung này: {reason}"
 
 #: app/src/own_project.rs:154
 msgid "Step {number} of 6"
-msgstr ""
+msgstr "Bước {number}/6"
 
 #. Translators: Google is a name; keep it as it is. "Open Google Cloud" is the button above this line.
 #: app/src/own_project.rs:161
 msgid "Open Google Cloud, then follow the list."
-msgstr ""
+msgstr "Mở Google Cloud, rồi làm theo danh sách."
 
 #. Translators: Google is a name; keep it as it is.
 #: app/src/own_project.rs:167
-#, fuzzy
-#| msgid "Set up your own Google project"
 msgid "Your own Google project"
-msgstr "Thiết lập dự án Google của riêng bạn"
+msgstr "Dự án Google của riêng bạn"
 
 #. Translators: Google, Penguin Mail and Gmail are names; keep them as they are.
 #: app/src/own_project.rs:172
@@ -3058,6 +3056,8 @@ msgid ""
 "A Google project of your own gives Penguin Mail every Gmail feature. It's "
 "free, just for you, takes about 10 minutes, and you do it once."
 msgstr ""
+"Một dự án Google của riêng bạn mang lại cho Penguin Mail mọi tính năng của "
+"Gmail. Miễn phí, chỉ dành cho bạn, mất khoảng 10 phút và chỉ làm một lần."
 
 #. Translators: Google and Penguin Mail are names; keep them as they are.
 #: app/src/own_project.rs:176
@@ -3065,49 +3065,49 @@ msgid ""
 "You'll use the Google account you want to read mail from. Penguin Mail opens "
 "each page for you and says what to click."
 msgstr ""
+"Bạn sẽ dùng tài khoản Google mà bạn muốn đọc thư. Penguin Mail mở từng trang "
+"cho bạn và nói cần nhấp vào đâu."
 
 #: app/src/own_project.rs:182
 msgid "Make a project"
-msgstr ""
+msgstr "Tạo một dự án"
 
 #. Translators: Google and Penguin Mail are names; keep them as they are.
 #: app/src/own_project.rs:185
 msgid "Google keeps what Penguin Mail needs in a project of its own."
-msgstr ""
+msgstr "Google giữ những gì Penguin Mail cần trong một dự án riêng."
 
 #: app/src/own_project.rs:189
 msgid ""
 "If Google asks you to agree to its terms first, choose your country and "
 "agree."
 msgstr ""
+"Nếu Google yêu cầu bạn đồng ý với điều khoản trước, hãy chọn quốc gia của "
+"bạn và đồng ý."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:192
 msgid "In <b>Project name</b>, type <tt>Penguin Mail</tt>."
-msgstr ""
+msgstr "Trong <b>Tên dự án</b>, nhập <tt>Penguin Mail</tt>."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:194
 msgid "Leave <b>Location</b> as it is and click <b>Create</b>."
-msgstr ""
+msgstr "Để nguyên <b>Vị trí</b> và nhấp vào <b>Tạo</b>."
 
 #: app/src/own_project.rs:195
 msgid "Wait for the bell icon to say the project is ready."
-msgstr ""
+msgstr "Chờ đến khi biểu tượng chuông báo dự án đã sẵn sàng."
 
 #. Translators: Gmail is a name; keep it as it is.
 #: app/src/own_project.rs:201
-#, fuzzy
-#| msgid "Mail, calendar and contacts"
 msgid "Turn on Gmail, Calendar and Contacts"
-msgstr "Thư, lịch và danh bạ"
+msgstr "Bật Gmail, Lịch và Danh bạ"
 
 #. Translators: Penguin Mail is a name; keep it as it is.
 #: app/src/own_project.rs:204
-#, fuzzy
-#| msgid "Penguin Mail reaches calendar and contact servers over HTTPS only."
 msgid "Penguin Mail reads your mail, calendar and contacts through these."
-msgstr "Penguin Mail chỉ truy cập máy chủ lịch và danh bạ qua HTTPS."
+msgstr "Penguin Mail đọc thư, lịch và danh bạ của bạn qua những dịch vụ này."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:209
@@ -3115,27 +3115,27 @@ msgid ""
 "Check that the project at the top says <b>Penguin Mail</b>. If not, click it "
 "and pick Penguin Mail."
 msgstr ""
+"Kiểm tra rằng dự án ở trên cùng là <b>Penguin Mail</b>. Nếu không, hãy nhấp "
+"vào đó và chọn Penguin Mail."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:212
 msgid "Click <b>Next</b>, then <b>Enable</b>."
-msgstr ""
+msgstr "Nhấp vào <b>Tiếp theo</b>, rồi <b>Bật</b>."
 
 #: app/src/own_project.rs:217
 msgid "Name the sign-in screen"
-msgstr ""
+msgstr "Đặt tên cho màn hình đăng nhập"
 
 #. Translators: Google is a name; keep it as it is.
 #: app/src/own_project.rs:219
-#, fuzzy
-#| msgid "Not allowed when you signed in"
 msgid "Google shows this name when you sign in."
-msgstr "Không được cho phép khi đăng nhập"
+msgstr "Google hiển thị tên này khi bạn đăng nhập."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:222
 msgid "Click <b>Get started</b>."
-msgstr ""
+msgstr "Nhấp vào <b>Bắt đầu</b>."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:225
@@ -3143,6 +3143,8 @@ msgid ""
 "<b>App name</b>: <tt>Penguin Mail</tt>. <b>User support email</b>: your "
 "address."
 msgstr ""
+"<b>Tên ứng dụng</b>: <tt>Penguin Mail</tt>. <b>Email hỗ trợ người dùng</b>: "
+"địa chỉ của bạn."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:229
@@ -3151,24 +3153,27 @@ msgid ""
 "organization may see <b>Internal</b>; that also works and needs no warning "
 "screen later. Pick it if offered.)"
 msgstr ""
+"<b>Đối tượng</b>: chọn <b>Bên ngoài</b>. (Tài khoản công việc hoặc trường "
+"học thuộc một tổ chức có thể thấy <b>Nội bộ</b>; lựa chọn đó cũng dùng được "
+"và sau này không cần màn hình cảnh báo. Hãy chọn nếu có.)"
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:232
 msgid "<b>Contact information</b>: your address again."
-msgstr ""
+msgstr "<b>Thông tin liên hệ</b>: lại là địa chỉ của bạn."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:234
 msgid "Tick the agreement and click <b>Create</b>."
-msgstr ""
+msgstr "Đánh dấu thỏa thuận và nhấp vào <b>Tạo</b>."
 
 #: app/src/own_project.rs:239
 msgid "Publish it"
-msgstr ""
+msgstr "Xuất bản"
 
 #: app/src/own_project.rs:240
 msgid "Publishing keeps you signed in."
-msgstr ""
+msgstr "Xuất bản giúp bạn luôn đăng nhập."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:244
@@ -3176,50 +3181,50 @@ msgid ""
 "Under <b>Publishing status</b>, click <b>Publish app</b>, then <b>Confirm</"
 "b>."
 msgstr ""
+"Trong <b>Trạng thái xuất bản</b>, nhấp vào <b>Xuất bản ứng dụng</b>, rồi "
+"<b>Xác nhận</b>."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:247
 msgid "It should now say <b>In production</b>."
-msgstr ""
+msgstr "Bây giờ nó sẽ ghi <b>Đang sản xuất</b>."
 
 #. Translators: Google and Penguin Mail are names; keep them as they are.
 #: app/src/own_project.rs:251
 msgid "If you skip this, Google signs you out of Penguin Mail every 7 days."
 msgstr ""
+"Nếu bạn bỏ qua bước này, Google sẽ đăng xuất bạn khỏi Penguin Mail mỗi 7 "
+"ngày."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:253
 msgid "Chose Internal? Then there's nothing to do here."
-msgstr ""
+msgstr "Đã chọn Nội bộ? Vậy thì ở đây không cần làm gì."
 
 #. Translators: Penguin Mail is a name; keep it as it is.
 #: app/src/own_project.rs:258
-#, fuzzy
-#| msgid "Signed in to Penguin Mail"
 msgid "Make the key for Penguin Mail"
-msgstr "Đã đăng nhập Penguin Mail"
+msgstr "Tạo khóa cho Penguin Mail"
 
 #. Translators: Penguin Mail is a name; keep it as it is.
 #: app/src/own_project.rs:261
-#, fuzzy
-#| msgid "{tile}, signs in through your browser"
 msgid "The key lets Penguin Mail sign in through your project."
-msgstr "{tile}, đăng nhập qua trình duyệt"
+msgstr "Khóa cho phép Penguin Mail đăng nhập qua dự án của bạn."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:265
 msgid "<b>Application type</b>: choose <b>Desktop app</b>."
-msgstr ""
+msgstr "<b>Loại ứng dụng</b>: chọn <b>Ứng dụng dành cho máy tính</b>."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:267
 msgid "<b>Name</b>: <tt>Penguin Mail</tt>, then <b>Create</b>."
-msgstr ""
+msgstr "<b>Tên</b>: <tt>Penguin Mail</tt>, rồi <b>Tạo</b>."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:269
 msgid "On the next screen, click <b>Download JSON</b> before you close it."
-msgstr ""
+msgstr "Ở màn hình tiếp theo, nhấp vào <b>Tải JSON xuống</b> trước khi đóng."
 
 #. Translators: Google is a name; keep it as it is.
 #: app/src/own_project.rs:274
@@ -3227,20 +3232,18 @@ msgid ""
 "Google shows this only once. If you closed it already, delete that key and "
 "make a new one."
 msgstr ""
+"Google chỉ hiển thị điều này một lần. Nếu bạn đã đóng, hãy xóa khóa đó và "
+"tạo khóa mới."
 
 #. Translators: Penguin Mail is a name; keep it as it is.
 #: app/src/own_project.rs:280
-#, fuzzy
-#| msgid "Signed in to Penguin Mail"
 msgid "Give the file to Penguin Mail"
-msgstr "Đã đăng nhập Penguin Mail"
+msgstr "Đưa tệp cho Penguin Mail"
 
 #: app/src/own_project.rs:287 app/src/ui/own_project.rs:497
-#: app/src/ui/own_project.rs:737
-#, fuzzy
-#| msgid "Join with Google Meet"
+#: app/src/ui/own_project.rs:742
 msgid "Sign in with Google"
-msgstr "Tham gia bằng Google Meet"
+msgstr "Đăng nhập bằng Google"
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:292
@@ -3250,36 +3253,48 @@ msgid ""
 "<b>Advanced</b>, then <b>Go to Penguin Mail (unsafe)</b>. Then tick every "
 "box so every feature works."
 msgstr ""
+"Google sẽ báo <b>\"Google chưa xác minh ứng dụng này\"</b>. Điều đó là bình "
+"thường: ứng dụng là dự án của riêng bạn và chỉ bạn dùng nó. Nhấp vào <b>Nâng "
+"cao</b>, rồi <b>Truy cập Penguin Mail (không an toàn)</b>. Sau đó đánh dấu "
+"mọi ô để mọi tính năng đều hoạt động."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: app/src/own_project.rs:322
 msgid "Did you publish your project? If it still says Testing, go to step 4."
-msgstr ""
+msgstr "Bạn đã xuất bản dự án chưa? Nếu vẫn ghi Thử nghiệm, hãy đến bước 4."
 
 #. Translators: Google is a name; keep it as it is.
 #: app/src/own_project.rs:345
 msgid ""
 "Google doesn't recognize this key. Make a new one and download it again."
-msgstr ""
+msgstr "Google không nhận ra khóa này. Hãy tạo khóa mới và tải xuống lại."
 
 #. Translators: Gmail is a name; keep it as it is.
 #: app/src/own_project.rs:370
 msgid "Gmail is turned off in your project."
-msgstr ""
+msgstr "Gmail đang tắt trong dự án của bạn."
 
 #: app/src/own_project.rs:372
 msgid "Calendar is turned off in your project."
-msgstr ""
+msgstr "Lịch đang tắt trong dự án của bạn."
 
 #: app/src/own_project.rs:374
-#, fuzzy
-#| msgid "Continue in your browser"
 msgid "Contacts is turned off in your project."
-msgstr "Tiếp tục trong trình duyệt"
+msgstr "Danh bạ đang tắt trong dự án của bạn."
 
 #: app/src/own_project.rs:376
 msgid "Drive is turned off in your project."
+msgstr "Drive đang tắt trong dự án của bạn."
+
+#: app/src/own_project.rs:426
+msgid ""
+"The Google Cloud project Penguin Mail signs in with has the {service} "
+"switched off, so Google refuses before it can ask for your permission. Turn "
+"it on, wait a minute, and try again."
 msgstr ""
+"Dự án Google Cloud mà Penguin Mail dùng để đăng nhập đang tắt {service} nên "
+"Google từ chối trước khi hỏi quyền của bạn. Bật dịch vụ, chờ một phút rồi "
+"thử lại."
 
 #: app/src/packaging.rs:127
 msgid "Updates come from dnf"
@@ -3863,8 +3878,8 @@ msgstr "Tài khoản đó chưa kết nối."
 msgid "Could not save: {reason}"
 msgstr "Không thể lưu: {reason}"
 
-#: app/src/protection/draft.rs:212 app/src/ui/window.rs:2738
-#: app/src/ui/window.rs:2761
+#: app/src/protection/draft.rs:212 app/src/ui/window.rs:2731
+#: app/src/ui/window.rs:2754
 msgid "Could not open the draft: {reason}"
 msgstr "Không thể mở thư nháp: {reason}"
 
@@ -4094,30 +4109,20 @@ msgstr "Nhanh nhất. Khoảng 2 phút"
 
 #. Translators: Google is a name; keep it as it is.
 #: app/src/route_choice.rs:164 app/src/ui/add_account.rs:4023
-#, fuzzy
-#| msgid "Set up your own Google project"
 msgid "Use your Google project again"
-msgstr "Thiết lập dự án Google của riêng bạn"
+msgstr "Dùng lại dự án Google của bạn"
 
 #. Translators: Gmail is a name; keep it as it is.
 #: app/src/route_choice.rs:166
-#, fuzzy
-#| msgid ""
-#| "Want every Gmail feature? Your own Google project gives you all of them, "
-#| "free."
 msgid "Every Gmail feature, with the project you set up before."
-msgstr ""
-"Muốn có mọi tính năng của Gmail? Dự án Google của riêng bạn mang lại tất cả, "
-"miễn phí."
+msgstr "Mọi tính năng của Gmail, với dự án bạn đã thiết lập trước đây."
 
 #: app/src/route_choice.rs:175
-#, fuzzy
-#| msgid "Try a different search"
 msgid "Set up a different project"
-msgstr "Thử tìm kiếm khác"
+msgstr "Thiết lập một dự án khác"
 
 #. Translators: Google is a name; keep it as it is.
-#: app/src/route_choice.rs:178 app/src/ui/window.rs:3147
+#: app/src/route_choice.rs:178 app/src/ui/window.rs:3140
 msgid "Set up your own Google project"
 msgstr "Thiết lập dự án Google của riêng bạn"
 
@@ -4295,8 +4300,8 @@ msgstr "API Anthropic"
 msgid "Claude Subscription"
 msgstr "Gói đăng ký Claude"
 
-#: app/src/settings/mod.rs:227 app/src/ui/window.rs:3537
-#: app/src/ui/window.rs:3617
+#: app/src/settings/mod.rs:227 app/src/ui/window.rs:3530
+#: app/src/ui/window.rs:3610
 msgid "Assistant"
 msgstr "Trợ lý"
 
@@ -4653,7 +4658,7 @@ msgstr "Mở Penguin Mail"
 msgid "New Message"
 msgstr "Thư mới"
 
-#: app/src/tray.rs:238 app/src/ui/sidebar.rs:1934 app/src/ui/window.rs:3543
+#: app/src/tray.rs:238 app/src/ui/sidebar.rs:1934 app/src/ui/window.rs:3536
 msgid "Check for Mail"
 msgstr "Kiểm tra thư"
 
@@ -4671,7 +4676,7 @@ msgstr "Điểm mới trong {version}"
 msgid "Check for Updates"
 msgstr "Kiểm tra bản cập nhật"
 
-#: app/src/tray.rs:254 app/src/ui/window.rs:3556
+#: app/src/tray.rs:254 app/src/ui/window.rs:3549
 #: app/src/ui/window/shortcuts.rs:644
 msgid "Quit"
 msgstr "Thoát"
@@ -4692,7 +4697,7 @@ msgstr "Điểm mới"
 msgid "Website"
 msgstr "Trang web"
 
-#: app/src/ui/about.rs:179 app/src/ui/window.rs:3555
+#: app/src/ui/about.rs:179 app/src/ui/window.rs:3548
 msgid "Donate"
 msgstr "Quyên góp"
 
@@ -4700,7 +4705,7 @@ msgstr "Quyên góp"
 msgid "License"
 msgstr "Giấy phép"
 
-#: app/src/ui/about.rs:203 app/src/ui/window.rs:3554
+#: app/src/ui/about.rs:203 app/src/ui/window.rs:3547
 msgid "About Penguin Mail"
 msgstr "Giới thiệu Penguin Mail"
 
@@ -5141,8 +5146,8 @@ msgstr "Đang tra cứu…"
 msgid "Sign In Again"
 msgstr "Đăng nhập lại"
 
-#: app/src/ui/add_account.rs:4042 app/src/ui/own_project.rs:622
-#: app/src/ui/preferences/google_route.rs:288 app/src/ui/window.rs:2136
+#: app/src/ui/add_account.rs:4042 app/src/ui/own_project.rs:627
+#: app/src/ui/preferences/google_route.rs:288 app/src/ui/window.rs:2129
 msgid "Open Google Cloud"
 msgstr "Mở Google Cloud"
 
@@ -5197,7 +5202,7 @@ msgstr "{account} đã sẵn sàng"
 #. Translators: the button that goes back to a step of the Google project setup.
 #: app/src/ui/add_account.rs:4785
 msgid "Go to Step {number}"
-msgstr ""
+msgstr "Đến Bước {number}"
 
 #: app/src/ui/add_account.rs:4947
 msgid ""
@@ -5207,7 +5212,7 @@ msgstr ""
 "Máy chủ này không phân biệt được các thư nên Penguin Mail không thể tải thư "
 "an toàn."
 
-#: app/src/ui/assistant.rs:35 app/src/ui/window.rs:3703
+#: app/src/ui/assistant.rs:35 app/src/ui/window.rs:3696
 msgid "Summarize this conversation"
 msgstr "Tóm tắt cuộc hội thoại này"
 
@@ -5232,13 +5237,13 @@ msgstr "Soạn thư trả lời cho cuộc hội thoại đang mở"
 msgid "Choose a Model"
 msgstr "Chọn mô hình"
 
-#: app/src/ui/assistant.rs:123 app/src/ui/window.rs:3664
-#: app/src/ui/window.rs:3665
+#: app/src/ui/assistant.rs:123 app/src/ui/window.rs:3657
+#: app/src/ui/window.rs:3658
 msgid "Detach"
 msgstr "Tách cửa sổ"
 
 #: app/src/ui/assistant.rs:124 app/src/ui/key_import.rs:213
-#: app/src/ui/key_import.rs:217 app/src/ui/window.rs:4296
+#: app/src/ui/key_import.rs:217 app/src/ui/window.rs:4289
 msgid "Close"
 msgstr "Đóng"
 
@@ -5443,7 +5448,7 @@ msgstr "Sửa {server}"
 
 #: app/src/ui/assistant_mcp_prefs.rs:137 app/src/ui/calendar/editor.rs:1726
 #: app/src/ui/composer/mod.rs:2219 app/src/ui/composer/recipients.rs:318
-#: app/src/ui/sender_prefs.rs:149 app/src/ui/window.rs:3300
+#: app/src/ui/sender_prefs.rs:149 app/src/ui/window.rs:3293
 msgid "Remove"
 msgstr "Xóa"
 
@@ -8283,7 +8288,7 @@ msgstr ""
 msgid "Allow Hide My Email"
 msgstr "Cho phép Ẩn email của tôi"
 
-#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:3754
+#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:3747
 msgid "Add an account first"
 msgstr "Thêm tài khoản trước"
 
@@ -8746,66 +8751,54 @@ msgstr "Không thể chuyển thư tới đó"
 
 #: app/src/ui/own_project.rs:314
 msgid "Key File"
-msgstr ""
+msgstr "Tệp Khóa"
 
 #: app/src/ui/own_project.rs:472
-#, fuzzy
-#| msgid "Starts"
 msgid "Start"
 msgstr "Bắt đầu"
 
 #: app/src/ui/own_project.rs:473
-#, fuzzy
-#| msgid "Already here"
 msgid "I Already Have a Key"
-msgstr "Đã có"
+msgstr "Tôi Đã Có Khóa"
 
 #: app/src/ui/own_project.rs:561
 msgid "Steps look different?"
-msgstr ""
+msgstr "Các bước trông khác?"
 
-#: app/src/ui/own_project.rs:639
-#, fuzzy
-#| msgid "Next Day"
+#: app/src/ui/own_project.rs:644
 msgid "Next"
-msgstr "Ngày sau"
+msgstr "Tiếp theo"
 
-#: app/src/ui/own_project.rs:644 app/src/ui/own_project.rs:743
-#, fuzzy
-#| msgid "Start date"
+#: app/src/ui/own_project.rs:649 app/src/ui/own_project.rs:748
 msgid "Start over"
-msgstr "Ngày bắt đầu"
+msgstr "Làm lại từ đầu"
 
-#: app/src/ui/own_project.rs:667
+#: app/src/ui/own_project.rs:672
 msgid "Drop the file you downloaded here"
-msgstr ""
+msgstr "Thả tệp bạn đã tải xuống vào đây"
 
-#: app/src/ui/own_project.rs:674
-#, fuzzy
-#| msgid "Choose a Time…"
+#: app/src/ui/own_project.rs:679
 msgid "Choose File…"
-msgstr "Chọn thời gian…"
+msgstr "Chọn Tệp…"
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
-#: app/src/ui/own_project.rs:702
+#: app/src/ui/own_project.rs:707
 msgid "Client ID"
-msgstr ""
+msgstr "Mã ứng dụng khách"
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
-#: app/src/ui/own_project.rs:706
+#: app/src/ui/own_project.rs:711
 msgid "Client secret"
-msgstr ""
+msgstr "Mã bí mật của ứng dụng khách"
 
-#: app/src/ui/own_project.rs:712
+#: app/src/ui/own_project.rs:717
 msgid "Copy and paste instead"
-msgstr ""
+msgstr "Sao chép và dán thay vào đó"
 
 #. The words are ours; nothing from the file reaches them.
-#: app/src/ui/own_project.rs:733
-#, fuzzy
-#| msgid "Open Penguin Mail"
+#: app/src/ui/own_project.rs:738
 msgid "Ready: Penguin Mail project"
-msgstr "Mở Penguin Mail"
+msgstr "Sẵn sàng: dự án Penguin Mail"
 
 #: app/src/ui/pgp.rs:105
 msgid "Checked"
@@ -9365,7 +9358,7 @@ msgstr "Di chuyển {account} xuống"
 #: app/src/ui/preferences/dialog.rs:27 app/src/ui/preferences/dialog.rs:33
 #: app/src/ui/preferences/dialog.rs:82 app/src/ui/preferences/dialog.rs:83
 #: app/src/ui/preferences/dialog.rs:353 app/src/ui/preferences/dialog.rs:355
-#: app/src/ui/window.rs:3552 app/src/ui/window/shortcuts.rs:616
+#: app/src/ui/window.rs:3545 app/src/ui/window/shortcuts.rs:616
 msgid "Preferences"
 msgstr "Tùy chọn"
 
@@ -9419,10 +9412,8 @@ msgstr "Nhận mọi tính năng"
 
 #. Translators: Google is a name; keep it as it is.
 #: app/src/ui/preferences/google_route.rs:287
-#, fuzzy
-#| msgid "Set up your own Google project"
 msgid "Signed in through your own Google project"
-msgstr "Thiết lập dự án Google của riêng bạn"
+msgstr "Đã đăng nhập qua dự án Google của riêng bạn"
 
 #: app/src/ui/preferences/google_route.rs:307
 msgid "Calendar and contacts"
@@ -9816,7 +9807,7 @@ msgstr "Chữ ký…"
 msgid "Rules…"
 msgstr "Quy tắc…"
 
-#: app/src/ui/sidebar.rs:1844 app/src/ui/window.rs:3546
+#: app/src/ui/sidebar.rs:1844 app/src/ui/window.rs:3539
 msgid "Hide My Email…"
 msgstr "Ẩn email của tôi…"
 
@@ -10284,7 +10275,7 @@ msgstr "Không thể tải thư: {reason}"
 msgid "Added {account}. Downloading mail…"
 msgstr "Đã thêm {account}. Đang tải thư…"
 
-#: app/src/ui/window.rs:358 app/src/ui/window.rs:2930
+#: app/src/ui/window.rs:358 app/src/ui/window.rs:2923
 msgid "{account} is signed in again."
 msgstr "{account} đã đăng nhập lại."
 
@@ -10425,66 +10416,56 @@ msgstr "Không thể xóa thư: {reason}"
 msgid "Turn On the {service}"
 msgstr "Bật {service}"
 
-#: app/src/ui/window.rs:2130
-msgid ""
-"The Google Cloud project Penguin Mail signs in with has the {service} "
-"switched off, so Google refuses before it can ask for your permission. Turn "
-"it on, wait a minute, and try again."
-msgstr ""
-"Dự án Google Cloud mà Penguin Mail dùng để đăng nhập đang tắt {service} nên "
-"Google từ chối trước khi hỏi quyền của bạn. Bật dịch vụ, chờ một phút rồi "
-"thử lại."
-
-#: app/src/ui/window.rs:2457
+#: app/src/ui/window.rs:2450
 msgid "Select mail from one account to tag it."
 msgstr "Chọn thư từ một tài khoản để gắn thẻ."
 
-#: app/src/ui/window.rs:2469
+#: app/src/ui/window.rs:2462
 msgid "This account has no tags yet. Make one in Outlook."
 msgstr "Tài khoản này chưa có thẻ. Tạo thẻ trong Outlook."
 
-#: app/src/ui/window.rs:2636
+#: app/src/ui/window.rs:2629
 msgid "Could not include {file}: {reason}"
 msgstr "Không thể thêm {file}: {reason}"
 
-#: app/src/ui/window.rs:2717
+#: app/src/ui/window.rs:2710
 msgid "The server had already sent this message."
 msgstr "Máy chủ đã gửi thư này."
 
-#: app/src/ui/window.rs:2722
+#: app/src/ui/window.rs:2715
 msgid "This message was canceled in another app and is no longer in Drafts."
 msgstr "Thư này bị hủy trong ứng dụng khác và không còn trong Thư nháp."
 
-#: app/src/ui/window.rs:2836
+#: app/src/ui/window.rs:2829
 msgid "Downloading {file}…"
 msgstr "Đang tải {file}…"
 
-#: app/src/ui/window.rs:2857 app/src/ui/window/attachments.rs:231
+#: app/src/ui/window.rs:2850 app/src/ui/window/attachments.rs:231
 msgid "Saved {file} to Downloads"
 msgstr "Đã lưu {file} vào Tải xuống"
 
-#: app/src/ui/window.rs:2860
+#: app/src/ui/window.rs:2853
 msgid "Open"
 msgstr "Mở"
 
-#: app/src/ui/window.rs:2875 app/src/ui/window/attachments.rs:236
+#: app/src/ui/window.rs:2868 app/src/ui/window/attachments.rs:236
 msgid "Could not save {file}: {reason}"
 msgstr "Không thể lưu {file}: {reason}"
 
-#: app/src/ui/window.rs:3094
+#: app/src/ui/window.rs:3087
 msgid "Continue in your browser"
 msgstr "Tiếp tục trong trình duyệt"
 
-#: app/src/ui/window.rs:3144
+#: app/src/ui/window.rs:3137
 msgid "This copy of Penguin Mail was built without Google sign-in."
 msgstr ""
 "Bản Penguin Mail này được xây dựng không có chức năng đăng nhập Google."
 
-#: app/src/ui/window.rs:3166
+#: app/src/ui/window.rs:3159
 msgid "Get a Release"
 msgstr "Tải bản phát hành"
 
-#: app/src/ui/window.rs:3286
+#: app/src/ui/window.rs:3279
 msgid ""
 "Could not check for messages the server holds to send later, so {account} "
 "stays: {reason}"
@@ -10492,80 +10473,80 @@ msgstr ""
 "Không thể kiểm tra các thư máy chủ đang giữ để gửi sau, nên tài khoản "
 "{account} được giữ lại: {reason}"
 
-#: app/src/ui/window.rs:3297
+#: app/src/ui/window.rs:3290
 msgid "Remove {account}?"
 msgstr "Xóa {account}?"
 
-#: app/src/ui/window.rs:3316
+#: app/src/ui/window.rs:3309
 msgid "Remove Anyway"
 msgstr "Vẫn xóa"
 
-#: app/src/ui/window.rs:3329
+#: app/src/ui/window.rs:3322
 msgid "Removed {account}"
 msgstr "Đã xóa {account}"
 
-#: app/src/ui/window.rs:3331
+#: app/src/ui/window.rs:3324
 msgid "Could not remove {account}: {reason}"
 msgstr "Không thể xóa {account}: {reason}"
 
-#: app/src/ui/window.rs:3524
+#: app/src/ui/window.rs:3517
 msgid "Refresh"
 msgstr "Làm mới"
 
-#: app/src/ui/window.rs:3528
+#: app/src/ui/window.rs:3521
 msgid "Show Declined Events"
 msgstr "Hiện sự kiện đã từ chối"
 
-#: app/src/ui/window.rs:3544
+#: app/src/ui/window.rs:3537
 msgid "Add Account…"
 msgstr "Thêm tài khoản…"
 
-#: app/src/ui/window.rs:3545
+#: app/src/ui/window.rs:3538
 msgid "New Smart Mailbox…"
 msgstr "Hộp thư thông minh mới…"
 
-#: app/src/ui/window.rs:3553
+#: app/src/ui/window.rs:3546
 msgid "Keyboard Shortcuts"
 msgstr "Phím tắt"
 
-#: app/src/ui/window.rs:3562 app/src/ui/window.rs:3564
+#: app/src/ui/window.rs:3555 app/src/ui/window.rs:3557
 msgid "Main Menu"
 msgstr "Trình đơn chính"
 
-#: app/src/ui/window.rs:3629 app/src/ui/window.rs:3630
+#: app/src/ui/window.rs:3622 app/src/ui/window.rs:3623
 msgid "Dock"
 msgstr "Gắn lại"
 
-#: app/src/ui/window.rs:3755
+#: app/src/ui/window.rs:3748
 msgid "Add a mail account first"
 msgstr "Thêm tài khoản thư trước"
 
 #. Translators: {account} is an email address.
-#: app/src/ui/window.rs:3992
+#: app/src/ui/window.rs:3985
 msgid "The calendar and contacts of {account} are connected."
 msgstr "Lịch và danh bạ của {account} đã được kết nối."
 
-#: app/src/ui/window.rs:4098
+#: app/src/ui/window.rs:4091
 msgid "Open a message from the person first"
 msgstr "Mở thư từ người đó trước"
 
-#: app/src/ui/window.rs:4179
+#: app/src/ui/window.rs:4172
 msgid "Penguin Mail shows the new language after a restart"
 msgstr "Penguin Mail hiển thị ngôn ngữ mới sau khi khởi động lại"
 
-#: app/src/ui/window.rs:4181 app/src/update/mod.rs:130
+#: app/src/ui/window.rs:4174 app/src/update/mod.rs:130
 msgid "Restart"
 msgstr "Khởi động lại"
 
-#: app/src/ui/window.rs:4245
+#: app/src/ui/window.rs:4238
 msgid "Show Rules"
 msgstr "Hiện quy tắc"
 
-#: app/src/ui/window.rs:4271
+#: app/src/ui/window.rs:4264
 msgid "Messages That Will Not Download"
 msgstr "Thư không thể tải"
 
-#: app/src/ui/window.rs:4273
+#: app/src/ui/window.rs:4266
 msgid ""
 "Penguin Mail could not download these from {address}'s server. It tries "
 "again at each check, except for a message too large to download."
@@ -12422,6 +12403,8 @@ msgid ""
 "Penguin Mail can't find your Google project on this computer. Give it the "
 "key again to sign in."
 msgstr ""
+"Penguin Mail không tìm thấy dự án Google của bạn trên máy tính này. Hãy đưa "
+"lại khóa để đăng nhập."
 
 #: sync/src/sign_in/browser.rs:151
 msgid ""
@@ -12468,27 +12451,32 @@ msgstr ""
 #: sync/src/sign_in/own_client.rs:184
 msgid "This key is for a website. Go back to step 5 and choose Desktop app."
 msgstr ""
+"Khóa này dành cho trang web. Hãy quay lại bước 5 và chọn Ứng dụng dành cho "
+"máy tính."
 
 #: sync/src/sign_in/own_client.rs:186
 msgid "This isn't the file from step 5."
-msgstr ""
+msgstr "Đây không phải tệp từ bước 5."
 
 #: sync/src/sign_in/own_client.rs:188
 msgid ""
 "This file has no secret. Make a new key in step 5 and download it straight "
 "away."
 msgstr ""
+"Tệp này không có mã bí mật. Hãy tạo khóa mới ở bước 5 và tải xuống ngay."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: sync/src/sign_in/own_client.rs:192
 msgid "Paste both the Client ID and the Client secret"
-msgstr ""
+msgstr "Dán cả Mã ứng dụng khách và Mã bí mật của ứng dụng khách"
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
 #: sync/src/sign_in/own_client.rs:196
 msgid ""
 "Copy the Client ID from step 5 again. It ends in .apps.googleusercontent.com."
 msgstr ""
+"Sao chép lại Mã ứng dụng khách từ bước 5. Mã kết thúc "
+"bằng .apps.googleusercontent.com."
 
 #: sync/src/triage.rs:53
 msgid "Mark read"
