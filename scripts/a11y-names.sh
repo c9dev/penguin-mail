@@ -265,9 +265,17 @@ class Input:
         hidden display has none, so the focus otherwise stays nowhere."""
         import ctypes
 
+        # XWindowAttributes up to map_state, then room for the rest.
         class Attributes(ctypes.Structure):
             _fields_ = [("x", ctypes.c_int), ("y", ctypes.c_int), ("width", ctypes.c_int),
-                        ("height", ctypes.c_int), ("pad", ctypes.c_char * 256)]
+                        ("height", ctypes.c_int), ("border_width", ctypes.c_int),
+                        ("depth", ctypes.c_int), ("visual", ctypes.c_void_p),
+                        ("root", ctypes.c_ulong), ("klass", ctypes.c_int),
+                        ("bit_gravity", ctypes.c_int), ("win_gravity", ctypes.c_int),
+                        ("backing_store", ctypes.c_int), ("backing_planes", ctypes.c_ulong),
+                        ("backing_pixel", ctypes.c_ulong), ("save_under", ctypes.c_int),
+                        ("colormap", ctypes.c_ulong), ("map_installed", ctypes.c_int),
+                        ("map_state", ctypes.c_int), ("pad", ctypes.c_char * 256)]
 
         self.x11.XDefaultRootWindow.restype = ctypes.c_ulong
         root = self.x11.XDefaultRootWindow(self.display)
@@ -281,7 +289,9 @@ class Input:
             attributes = Attributes()
             self.x11.XGetWindowAttributes(self.display, ctypes.c_ulong(children[index]),
                                           ctypes.byref(attributes))
-            if attributes.width * attributes.height > area:
+            # A window that is not viewable (map_state 2) cannot take the
+            # focus: X answers BadMatch, which ends the walk.
+            if attributes.map_state == 2 and attributes.width * attributes.height > area:
                 best, area = children[index], attributes.width * attributes.height
         if best is not None:
             self.x11.XSetInputFocus(self.display, ctypes.c_ulong(best), 2, 0)
