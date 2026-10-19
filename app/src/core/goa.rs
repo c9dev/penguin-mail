@@ -15,9 +15,9 @@ use mailrs_domain::{Account, AccountId, MailRoute, SignInClient};
 use mailrs_gmail::GMAIL_API_BASE;
 use mailrs_store::{Db, accounts};
 use mailrs_sync::goa::{self, GoaAccount, GoaChange, GoaError};
+use mailrs_sync::now_millis;
 use mailrs_sync::route_move;
 use mailrs_sync::sign_in::goa_link::{self, Linked};
-use mailrs_sync::now_millis;
 
 use super::{Core, MovePort, Reach, start_again};
 use crate::goa_notice::{self, Notice};
