@@ -915,11 +915,7 @@ impl Core {
                     waited = tokio::time::timeout(BROWSER_WAIT, run) => waited,
                     _ = cancel.recv() => bail!(gettext("Canceled.")),
                 };
-                let signed = waited.map_err(|_| {
-                    anyhow!(gettext(
-                        "Gave up waiting for the browser after five minutes."
-                    ))
-                })??;
+                let signed = waited.map_err(|_| BrowserTimedOut)??;
                 match signed.services {
                     mailrs_sync::Connected::Ready(services) => {
                         engine.start_account(signed.account.id, services)
@@ -1814,7 +1810,7 @@ impl Core {
             let consent = calendar_consent(&connector, &account, open);
             let signed = tokio::select! {
                 waited = tokio::time::timeout(BROWSER_WAIT, consent) => waited
-                    .map_err(|_| anyhow!(gettext("Gave up waiting for the browser after five minutes.")))??,
+                    .map_err(|_| BrowserTimedOut)??,
                 _ = cancel.recv() => bail!(gettext("Canceled.")),
             };
             // The account's services read the new token once its loop starts again.
@@ -1858,6 +1854,12 @@ impl Core {
     }
 }
 
+/// Nobody came back from the browser within [`BROWSER_WAIT`]. Its own type
+/// lets the own-project setup tell a wait that ran out from other errors.
+#[derive(Debug, thiserror::Error)]
+#[error("{}", gettext("Gave up waiting for the browser after five minutes."))]
+pub struct BrowserTimedOut;
+
 /// Signs in through the browser for a move, or gives up when `cancel`
 /// closes or the wait runs out. Dropping the sign-in closes its loopback
 /// listener.
@@ -1869,7 +1871,7 @@ async fn authorize_until_canceled(
     let signing = mailrs_gmail::authorize(oauth, mailrs_gmail::GMAIL_API_BASE, open);
     tokio::select! {
         waited = tokio::time::timeout(BROWSER_WAIT, signing) => waited
-            .map_err(|_| anyhow!(gettext("Gave up waiting for the browser after five minutes.")))?
+            .map_err(|_| BrowserTimedOut)?
             .map_err(|err| BrowserSignInError::Google(err).into()),
         _ = cancel.recv() => bail!(gettext("Canceled.")),
     }
