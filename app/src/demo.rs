@@ -19,7 +19,7 @@ use mailrs_domain::{
     AccountId, Address, Attachment, EpochMillis, Filter, FilterAction, FilterCriteria, MailSet,
     MessageBody, MessageMeta, Provenance, Role,
 };
-use mailrs_domain::{MailRoute, SignInClient};
+use mailrs_domain::{GmailSignIn, SignInClient};
 use mailrs_gmail::{LabelColor, RemoteLabel, SendAs};
 use mailrs_store::servers::{self, Saved, Security, Servers};
 use mailrs_store::services::{FoundService, ServiceKind};
@@ -866,14 +866,16 @@ pub async fn seed(db: &Db, now: EpochMillis) -> std::result::Result<DemoMail, Sy
         // The demo's Gmail accounts sign in with their own client, so none
         // waits for a move unless a stage asks for it.
         let stage = MoveStage::asked();
-        if !stage.is_some_and(|stage| stage.waits(index)) {
-            db.write(move |c| accounts::set_sign_in_client(c, account_id, SignInClient::Own))
-                .await?;
-        }
-        if stage == Some(MoveStage::PrefsImap) && index == 0 {
-            db.write(move |c| accounts::set_mail_route(c, account_id, MailRoute::Imap))
-                .await?;
-        }
+        let client = match stage.is_some_and(|stage| stage.waits(index)) {
+            true => SignInClient::BuiltIn,
+            false => SignInClient::Own,
+        };
+        let sign_in = match stage == Some(MoveStage::PrefsImap) && index == 0 {
+            true => GmailSignIn::AppPassword { google: client },
+            false => GmailSignIn::BuiltInApi.with_google_token(client),
+        };
+        db.write(move |c| accounts::set_gmail_sign_in(c, account_id, &sign_in))
+            .await?;
         let fake = Arc::new(account.gmail());
         fake.keep_sent_copies(account_id);
         if index == 2 && std::env::var_os("MAILRS_DEMO_FULL_CONSENT").is_none() {
@@ -3008,9 +3010,10 @@ mod tests {
             let id = demo.account(index).await;
             let client = demo
                 .db
-                .read(move |c| accounts::sign_in_client(c, id))
+                .read(move |c| accounts::gmail_sign_in(c, id))
                 .await
-                .unwrap();
+                .unwrap()
+                .client();
             assert_eq!(client, SignInClient::Own, "account {index}");
         }
         assert!(sheet_shown_at_start(None));

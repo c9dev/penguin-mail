@@ -5,8 +5,7 @@
 use std::collections::HashMap;
 
 use mailrs_domain::translate::{fill, fill_plural, gettext};
-use mailrs_domain::{Account, AccountId, AccountState, SignInClient};
-use mailrs_store::accounts::GoogleSignIn;
+use mailrs_domain::{Account, AccountId, AccountState, GmailSignIn, Provider};
 
 /// A Gmail account that has to choose a route.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -32,7 +31,7 @@ pub struct MoveBanner {
 /// row is ready: a banner with nothing to offer would only worry a person.
 pub fn waiting_for_move(
     accounts: &[Account],
-    sign_ins: &HashMap<AccountId, GoogleSignIn>,
+    sign_ins: &HashMap<AccountId, GmailSignIn>,
     any_route: bool,
 ) -> Vec<Waiting> {
     if !any_route {
@@ -40,7 +39,7 @@ pub fn waiting_for_move(
     }
     accounts
         .iter()
-        .filter(|account| needs_move(account, sign_ins.get(&account.id).copied()))
+        .filter(|account| needs_move(account, sign_ins.get(&account.id)))
         .map(|account| Waiting {
             account: account.clone(),
             paused: account.state == AccountState::MailPaused,
@@ -112,8 +111,8 @@ pub fn banner(waiting: &[Waiting], holds: impl Fn(&str) -> bool) -> Option<MoveB
 
 /// Whether `account` needs a move, by how it signs in. Unlike
 /// `waiting_for_move`, this holds whether or not a route is ready.
-fn needs_move(account: &Account, sign_in: Option<GoogleSignIn>) -> bool {
-    sign_in.is_some_and(|sign_in| sign_in.needs_move(account.provider))
+fn needs_move(account: &Account, sign_in: Option<&GmailSignIn>) -> bool {
+    account.provider == Provider::Gmail && sign_in.is_some_and(GmailSignIn::waits_to_move)
 }
 
 /// Where a press that signs `account` in, or connects its calendar, leads.
@@ -130,7 +129,7 @@ pub enum Path {
 
 /// [`Path`] for `account`. `routes_ready` is the same gate the move
 /// banner and the sheet use.
-pub fn path(account: &Account, sign_in: Option<GoogleSignIn>, routes_ready: bool) -> Path {
+pub fn path(account: &Account, sign_in: Option<&GmailSignIn>, routes_ready: bool) -> Path {
     match (needs_move(account, sign_in), routes_ready) {
         (true, true) => Path::Move,
         (true, false) => Path::Stuck,
@@ -143,17 +142,17 @@ pub fn path(account: &Account, sign_in: Option<GoogleSignIn>, routes_ready: bool
 /// the built-in client would return a token without the mail scope and
 /// overwrite the working one. An Online Accounts account gets none: its
 /// own banners name what Online Accounts needs.
-pub fn grant_banner_wanted(account: &Account, sign_in: Option<GoogleSignIn>) -> bool {
+pub fn grant_banner_wanted(account: &Account, sign_in: Option<&GmailSignIn>) -> bool {
     !needs_move(account, sign_in) && !on_online_accounts(sign_in)
 }
 
-fn on_online_accounts(sign_in: Option<GoogleSignIn>) -> bool {
-    sign_in.is_some_and(|sign_in| sign_in.client == SignInClient::Goa)
+fn on_online_accounts(sign_in: Option<&GmailSignIn>) -> bool {
+    sign_in.is_some_and(GmailSignIn::on_online_accounts)
 }
 
 /// Whether `account` gets the Sign In banner: it needs to sign in again and
 /// does not need a move, which has its own banner and its own sign-in.
-pub fn sign_in_banner_wanted(account: &Account, sign_in: Option<GoogleSignIn>) -> bool {
+pub fn sign_in_banner_wanted(account: &Account, sign_in: Option<&GmailSignIn>) -> bool {
     account.state == AccountState::NeedsReauth
         && !needs_move(account, sign_in)
         && !on_online_accounts(sign_in)
@@ -168,9 +167,7 @@ pub fn sheet_due(shown: bool, waiting: &[Waiting], any_route: bool) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use mailrs_domain::{AccountState, MailRoute, Provider, SignInClient};
-    use mailrs_store::accounts::GoogleSignIn;
-
+    use mailrs_domain::AccountState;
     fn account(id: i64, email: &str, state: AccountState) -> Account {
         Account {
             id,
@@ -208,15 +205,12 @@ mod tests {
                     .iter()
                     .any(|row| row.route == Route::OwnProject)
             );
-            let built_in_api = GoogleSignIn {
-                client: SignInClient::BuiltIn,
-                route: MailRoute::GmailApi,
-            };
+            let built_in_api = GmailSignIn::BuiltInApi;
             for state in [AccountState::Ok, AccountState::MailPaused] {
                 assert_eq!(
                     path(
                         &account(1, "dana@gmail.com", state),
-                        Some(built_in_api),
+                        Some(&built_in_api),
                         any_route(platform, ready)
                     ),
                     Path::Move
@@ -323,19 +317,9 @@ mod tests {
             account(4, "d@outlook.com", AccountState::Ok),
         ];
         let mut sign_ins = std::collections::HashMap::new();
-        let built_in = GoogleSignIn {
-            client: SignInClient::BuiltIn,
-            route: MailRoute::GmailApi,
-        };
-        sign_ins.insert(1, built_in);
-        sign_ins.insert(2, built_in);
-        sign_ins.insert(
-            3,
-            GoogleSignIn {
-                client: SignInClient::Own,
-                route: MailRoute::GmailApi,
-            },
-        );
+        sign_ins.insert(1, GmailSignIn::BuiltInApi);
+        sign_ins.insert(2, GmailSignIn::BuiltInApi);
+        sign_ins.insert(3, GmailSignIn::OwnProject);
         let mut accounts = accounts.to_vec();
         accounts[3].provider = Provider::Microsoft;
         let found = waiting_for_move(&accounts, &sign_ins, true);
@@ -352,35 +336,22 @@ mod tests {
     fn no_account_waits_while_no_route_row_is_ready() {
         let accounts = [account(1, "a@gmail.com", AccountState::Ok)];
         let mut sign_ins = std::collections::HashMap::new();
-        sign_ins.insert(
-            1,
-            GoogleSignIn {
-                client: SignInClient::BuiltIn,
-                route: MailRoute::GmailApi,
-            },
-        );
+        sign_ins.insert(1, GmailSignIn::BuiltInApi);
         assert_eq!(waiting_for_move(&accounts, &sign_ins, false), []);
     }
 
-    const BUILT_IN_API: GoogleSignIn = GoogleSignIn {
-        client: SignInClient::BuiltIn,
-        route: MailRoute::GmailApi,
-    };
+    const BUILT_IN_API: &GmailSignIn = &GmailSignIn::BuiltInApi;
 
-    const OWN_API: GoogleSignIn = GoogleSignIn {
-        client: SignInClient::Own,
-        route: MailRoute::GmailApi,
-    };
+    const OWN_API: &GmailSignIn = &GmailSignIn::OwnProject;
 
     #[test]
     fn a_goa_account_gets_no_sign_in_or_grant_banner() {
-        let goa = GoogleSignIn {
-            client: SignInClient::Goa,
-            route: MailRoute::Imap,
+        let goa = GmailSignIn::OnlineAccounts {
+            goa_id: "account_1_0".into(),
         };
         let dana = account(3, "dana@gmail.com", AccountState::NeedsReauth);
-        assert!(!sign_in_banner_wanted(&dana, Some(goa)));
-        assert!(!grant_banner_wanted(&dana, Some(goa)));
+        assert!(!sign_in_banner_wanted(&dana, Some(&goa)));
+        assert!(!grant_banner_wanted(&dana, Some(&goa)));
         assert!(sign_in_banner_wanted(&dana, Some(OWN_API)));
     }
 
@@ -395,12 +366,12 @@ mod tests {
     #[test]
     fn a_build_with_no_route_still_keeps_the_grant_banner_from_a_move_account() {
         let dana = account(3, "dana@gmail.com", AccountState::Ok);
-        let sign_ins = HashMap::from([(3, BUILT_IN_API)]);
+        let sign_ins = HashMap::from([(3, GmailSignIn::BuiltInApi)]);
         assert_eq!(
             waiting_for_move(std::slice::from_ref(&dana), &sign_ins, false),
             []
         );
-        assert!(!grant_banner_wanted(&dana, sign_ins.get(&3).copied()));
+        assert!(!grant_banner_wanted(&dana, sign_ins.get(&3)));
     }
 
     #[test]

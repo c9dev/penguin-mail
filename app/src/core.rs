@@ -14,7 +14,7 @@ use std::sync::{Mutex, PoisonError};
 use anyhow::{Context, Result, anyhow, bail};
 use mailrs_discover::{Found, JmapFound, Net, RealNet, Security, SrvRecord};
 use mailrs_domain::{
-    Account, AccountId, AccountState, ChangeEvent, Provider, SignInClient, Target,
+    Account, AccountId, AccountState, ChangeEvent, GmailSignIn, Provider, SignInClient, Target,
 };
 use mailrs_pgp::{Pgp, PgpError};
 use mailrs_smime::{Smime, SmimeError};
@@ -447,7 +447,7 @@ impl Core {
                 };
                 Ok(accounts::google_sign_ins(c)?
                     .get(&account.id)
-                    .is_some_and(|sign_in| sign_in.client == SignInClient::Own))
+                    .is_some_and(|sign_in| sign_in.client() == SignInClient::Own))
             })
             .await
             .unwrap_or(false);
@@ -608,11 +608,7 @@ impl Core {
             };
             let moves = all
                 .iter()
-                .filter(|a| {
-                    sign_ins
-                        .get(&a.id)
-                        .is_some_and(|sign_in| sign_in.needs_move(a.provider))
-                })
+                .filter(|a| sign_ins.get(&a.id).is_some_and(GmailSignIn::waits_to_move))
                 .map(|a| a.id)
                 .collect();
             let port = Arc::new(EnginePort {
@@ -2138,11 +2134,11 @@ async fn start_again(
 /// The state of an account that has no token or password to start on:
 /// mail paused when it has to choose a new route, else sign in again.
 async fn missing_token_state(db: &Db, account: &Account) -> Result<AccountState> {
-    let (id, provider) = (account.id, account.provider);
+    let id = account.id;
     let sign_in = db
         .read(move |c| Ok(accounts::google_sign_ins(c)?.remove(&id)))
         .await?;
-    Ok(match sign_in.is_some_and(|s| s.needs_move(provider)) {
+    Ok(match sign_in.is_some_and(|s| s.waits_to_move()) {
         true => AccountState::MailPaused,
         false => AccountState::NeedsReauth,
     })
@@ -2503,7 +2499,7 @@ mod tests {
     use std::sync::{Arc, Mutex, PoisonError};
 
     use super::Core;
-    use mailrs_domain::{AccountState, MailRoute, Provider, SignInClient};
+    use mailrs_domain::{AccountState, GmailSignIn, Provider, SignInClient};
     use mailrs_store::{Db, accounts};
     use mailrs_sync::sign_in::ClientSource;
     use mailrs_sync::sign_in::own_client::OwnClient;
@@ -2525,7 +2521,7 @@ mod tests {
             super::missing_token_state(&db, &account).await.unwrap(),
             AccountState::MailPaused
         );
-        db.write(move |c| accounts::set_sign_in_client(c, id, SignInClient::Own))
+        db.write(move |c| accounts::set_gmail_sign_in(c, id, &GmailSignIn::OwnProject))
             .await
             .unwrap();
         assert_eq!(
@@ -2533,8 +2529,10 @@ mod tests {
             AccountState::NeedsReauth
         );
         db.write(move |c| {
-            accounts::set_sign_in_client(c, id, SignInClient::BuiltIn)?;
-            accounts::set_mail_route(c, id, MailRoute::Imap)
+            let app_password = GmailSignIn::AppPassword {
+                google: SignInClient::BuiltIn,
+            };
+            accounts::set_gmail_sign_in(c, id, &app_password)
         })
         .await
         .unwrap();
@@ -2691,7 +2689,7 @@ mod tests {
         let (id, email) = (gmail.id, gmail.email.clone());
         core.runtime
             .block_on(core.db.write(move |c| {
-                accounts::set_sign_in_client(c, id, SignInClient::Own)?;
+                accounts::set_gmail_sign_in(c, id, &GmailSignIn::OwnProject)?;
                 Ok(())
             }))
             .unwrap();

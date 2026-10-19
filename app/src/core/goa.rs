@@ -11,7 +11,7 @@ use std::time::Duration;
 use anyhow::{Result, anyhow, bail};
 use futures::StreamExt;
 use mailrs_domain::translate::gettext;
-use mailrs_domain::{Account, AccountId, SignInClient};
+use mailrs_domain::{Account, AccountId};
 use mailrs_store::{Db, accounts};
 use mailrs_sync::goa::{self, GoaAccount, GoaChange, GoaError};
 use mailrs_sync::now_millis;
@@ -92,8 +92,9 @@ async fn linked_accounts(
     db.read(|c| {
         let mut linked = Vec::new();
         for account in accounts::list_accounts(c)? {
-            if accounts::sign_in_client(c, account.id)? == SignInClient::Goa {
-                let id = accounts::goa_id(c, account.id)?;
+            let sign_in = accounts::gmail_sign_in(c, account.id)?;
+            if let Some(id) = sign_in.goa_id() {
+                let id = Some(id.to_string());
                 linked.push((account, id));
             }
         }

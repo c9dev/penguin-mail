@@ -6,7 +6,7 @@
 use std::pin::Pin;
 use std::sync::Arc;
 
-use mailrs_domain::Account;
+use mailrs_domain::{Account, GmailSignIn};
 use mailrs_imap::{ImapError, Login, LoginSource};
 use mailrs_store::accounts;
 
@@ -178,7 +178,7 @@ pub(crate) fn goa_imap_sign_in(
 pub(crate) async fn goa_services(
     connector: &Connector,
     account: &Account,
-    goa_id: Option<String>,
+    goa_id: String,
 ) -> Result<Result<AccountServices, Lacks>, SyncError> {
     let list = match connector.goa.google_accounts().await {
         Ok(list) => list,
@@ -191,18 +191,20 @@ pub(crate) async fn goa_services(
             return Ok(Ok(without_mail(connector, account).await?));
         }
     };
-    let Some(found) = goa::find(&list, goa_id.as_deref(), &account.email) else {
+    let Some(found) = goa::find(&list, Some(&goa_id), &account.email) else {
         tracing::info!(
             account = account.id,
             "Online Accounts no longer holds this account"
         );
         return Ok(Ok(without_mail(connector, account).await?));
     };
-    if goa_id.as_deref() != Some(found.id.as_str()) {
+    if goa_id != found.id {
         let (id, new) = (account.id, found.id.clone());
         connector
             .db
-            .write(move |c| accounts::set_goa_id(c, id, Some(&new)))
+            .write(move |c| {
+                accounts::set_gmail_sign_in(c, id, &GmailSignIn::OnlineAccounts { goa_id: new })
+            })
             .await?;
     }
     if found.mail_disabled || found.attention_needed {

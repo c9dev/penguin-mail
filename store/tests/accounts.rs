@@ -1,5 +1,5 @@
-use mailrs_domain::{AccountState, MailRoute, Provider, SignInClient};
-use mailrs_store::accounts::{self, GoogleSignIn, RouteCommit, SyncCursor};
+use mailrs_domain::{AccountState, GmailSignIn, MailRoute, Provider, SignInClient};
+use mailrs_store::accounts::{self, SyncCursor};
 use mailrs_store::{open_connection, open_in_memory, schema_version};
 
 #[test]
@@ -149,25 +149,31 @@ fn a_new_account_signs_in_with_the_built_in_client() {
     let conn = open_in_memory().unwrap();
     let id = accounts::insert_account(&conn, "me@example.com", 0).unwrap();
     assert_eq!(
-        accounts::sign_in_client(&conn, id).unwrap(),
-        SignInClient::BuiltIn
+        accounts::gmail_sign_in(&conn, id).unwrap(),
+        GmailSignIn::BuiltInApi
     );
 }
 
 #[test]
-fn signing_in_again_moves_an_account_to_the_built_in_client() {
+fn every_gmail_sign_in_round_trips_through_the_store() {
     let conn = open_in_memory().unwrap();
     let id = accounts::insert_account(&conn, "me@example.com", 0).unwrap();
-    accounts::set_sign_in_client(&conn, id, SignInClient::Own).unwrap();
-    assert_eq!(
-        accounts::sign_in_client(&conn, id).unwrap(),
-        SignInClient::Own
-    );
-    accounts::set_sign_in_client(&conn, id, SignInClient::BuiltIn).unwrap();
-    assert_eq!(
-        accounts::sign_in_client(&conn, id).unwrap(),
-        SignInClient::BuiltIn
-    );
+    for sign_in in [
+        GmailSignIn::OwnProject,
+        GmailSignIn::AppPassword {
+            google: SignInClient::Own,
+        },
+        GmailSignIn::AppPassword {
+            google: SignInClient::BuiltIn,
+        },
+        GmailSignIn::OnlineAccounts {
+            goa_id: "account_1_0".into(),
+        },
+        GmailSignIn::BuiltInApi,
+    ] {
+        accounts::set_gmail_sign_in(&conn, id, &sign_in).unwrap();
+        assert_eq!(accounts::gmail_sign_in(&conn, id).unwrap(), sign_in);
+    }
 }
 
 #[test]
@@ -287,25 +293,13 @@ fn a_microsoft_account_keeps_its_provider_and_name() {
 }
 
 #[test]
-fn a_mail_route_round_trips() {
-    let conn = open_in_memory().unwrap();
-    let id = accounts::insert_account(&conn, "dana@gmail.com", 1).unwrap();
-    assert_eq!(
-        accounts::mail_route(&conn, id).unwrap(),
-        MailRoute::GmailApi
-    );
-    accounts::set_mail_route(&conn, id, MailRoute::Imap).unwrap();
-    assert_eq!(accounts::mail_route(&conn, id).unwrap(), MailRoute::Imap);
-}
-
-#[test]
 fn a_bad_stored_route_reads_as_corrupt() {
     let conn = open_in_memory().unwrap();
     let id = accounts::insert_account(&conn, "dana@gmail.com", 1).unwrap();
     conn.execute("UPDATE accounts SET mail_route = 'pigeon'", [])
         .unwrap();
     assert!(matches!(
-        accounts::mail_route(&conn, id),
+        accounts::gmail_sign_in(&conn, id),
         Err(mailrs_store::StoreError::Corrupt {
             column: "accounts.mail_route",
             ..
@@ -320,98 +314,68 @@ fn google_sign_ins_list_only_gmail_rows() {
     accounts::insert_imap_account(&conn, "lee@fastmail.com", "Fastmail", 1).unwrap();
     let all = accounts::google_sign_ins(&conn).unwrap();
     assert_eq!(all.len(), 1);
-    assert_eq!(
-        all[&gmail],
-        GoogleSignIn {
-            client: SignInClient::BuiltIn,
-            route: MailRoute::GmailApi
-        }
-    );
+    assert_eq!(all[&gmail], GmailSignIn::BuiltInApi);
 }
 
 #[test]
-fn only_a_built_in_gmail_account_on_the_api_needs_a_move() {
-    let sign_in = |client, route| GoogleSignIn { client, route };
-    let api = sign_in(SignInClient::BuiltIn, MailRoute::GmailApi);
-    assert!(api.needs_move(Provider::Gmail));
-    assert!(!api.needs_move(Provider::Imap));
-    assert!(!sign_in(SignInClient::Own, MailRoute::GmailApi).needs_move(Provider::Gmail));
-    assert!(!sign_in(SignInClient::BuiltIn, MailRoute::Imap).needs_move(Provider::Gmail));
-}
-
-#[test]
-fn committing_a_route_restarts_the_sync_and_keeps_the_generation() {
+fn committing_a_sign_in_restarts_the_sync_and_keeps_the_generation() {
     let conn = open_in_memory().unwrap();
     let id = accounts::insert_account(&conn, "dana@gmail.com", 1).unwrap();
     accounts::set_sync_state(&conn, id, "12345").unwrap();
     let before = accounts::sync_cursor(&conn, id).unwrap().sync_gen;
-    accounts::commit_route(
-        &conn,
-        id,
-        &RouteCommit {
-            route: MailRoute::Imap,
-            client: SignInClient::BuiltIn,
-            restart_sync: true,
-        },
-    )
-    .unwrap();
+    let imap = GmailSignIn::AppPassword {
+        google: SignInClient::BuiltIn,
+    };
+    accounts::commit_sign_in(&conn, id, &imap, true).unwrap();
     let cursor = accounts::sync_cursor(&conn, id).unwrap();
     assert_eq!(cursor.state, None);
     assert_eq!(cursor.sync_gen, before);
-    assert_eq!(accounts::mail_route(&conn, id).unwrap(), MailRoute::Imap);
+    assert_eq!(accounts::gmail_sign_in(&conn, id).unwrap(), imap);
 }
 
 #[test]
-fn committing_a_route_without_a_restart_keeps_the_cursor() {
+fn committing_a_sign_in_without_a_restart_keeps_the_cursor() {
     let conn = open_in_memory().unwrap();
     let id = accounts::insert_account(&conn, "dana@gmail.com", 1).unwrap();
     accounts::set_sync_state(&conn, id, "12345").unwrap();
-    accounts::commit_route(
-        &conn,
-        id,
-        &RouteCommit {
-            route: MailRoute::GmailApi,
-            client: SignInClient::Own,
-            restart_sync: false,
-        },
-    )
-    .unwrap();
+    accounts::commit_sign_in(&conn, id, &GmailSignIn::OwnProject, false).unwrap();
     assert_eq!(
         accounts::sync_cursor(&conn, id).unwrap().state.as_deref(),
         Some("12345")
     );
     assert_eq!(
-        accounts::sign_in_client(&conn, id).unwrap(),
-        SignInClient::Own
+        accounts::gmail_sign_in(&conn, id).unwrap(),
+        GmailSignIn::OwnProject
     );
 }
 
 #[test]
-fn a_goa_account_keeps_its_online_accounts_id() {
+fn leaving_online_accounts_forgets_its_id() {
     let conn = open_in_memory().unwrap();
     let id = accounts::insert_account(&conn, "dana@example.com", 1).unwrap();
-    assert_eq!(accounts::goa_id(&conn, id).unwrap(), None);
-    accounts::set_sign_in_client(&conn, id, SignInClient::Goa).unwrap();
-    accounts::set_goa_id(&conn, id, Some("account_1_0")).unwrap();
-    assert_eq!(
-        accounts::goa_id(&conn, id).unwrap().as_deref(),
-        Some("account_1_0")
-    );
-    assert_eq!(
-        accounts::sign_in_client(&conn, id).unwrap(),
-        SignInClient::Goa
-    );
-    accounts::set_goa_id(&conn, id, None).unwrap();
-    assert_eq!(accounts::goa_id(&conn, id).unwrap(), None);
+    let goa = GmailSignIn::OnlineAccounts {
+        goa_id: "account_1_0".into(),
+    };
+    accounts::set_gmail_sign_in(&conn, id, &goa).unwrap();
+    accounts::set_gmail_sign_in(&conn, id, &GmailSignIn::BuiltInApi).unwrap();
+    let kept: Option<String> = conn
+        .query_row("SELECT goa_id FROM accounts WHERE id = ?1", [id], |row| {
+            row.get(0)
+        })
+        .unwrap();
+    assert_eq!(kept, None);
 }
 
 #[test]
-fn a_goa_account_never_needs_a_move() {
-    for route in [MailRoute::GmailApi, MailRoute::Imap] {
-        let sign_in = GoogleSignIn {
-            client: SignInClient::Goa,
-            route,
-        };
-        assert!(!sign_in.needs_move(Provider::Gmail), "{route:?}");
-    }
+fn an_online_accounts_row_reads_its_mail_over_imap_whatever_its_route_column_says() {
+    let conn = open_in_memory().unwrap();
+    let id = accounts::insert_account(&conn, "dana@example.com", 1).unwrap();
+    conn.execute(
+        "UPDATE accounts SET oauth_client = 'goa', goa_id = 'account_1_0', mail_route = 'gmail_api'",
+        [],
+    )
+    .unwrap();
+    let sign_in = accounts::gmail_sign_in(&conn, id).unwrap();
+    assert_eq!(sign_in.route(), MailRoute::Imap);
+    assert!(!sign_in.waits_to_move());
 }

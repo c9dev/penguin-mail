@@ -1083,7 +1083,7 @@ impl MainWindow {
             let app = win.app.upgrade();
             let account = win.accounts().into_iter().find(|a| {
                 let sign_in = app.as_ref().and_then(|app| app.google_sign_in(a.id));
-                crate::move_banner::sign_in_banner_wanted(a, sign_in)
+                crate::move_banner::sign_in_banner_wanted(a, sign_in.as_ref())
             });
             match account {
                 Some(account) => win.sign_in_again(account),
@@ -1273,13 +1273,15 @@ impl MainWindow {
         let waiting = app.waiting_for_move();
         let linked = data.iter().any(|(a, _)| {
             app.google_sign_in(a.id)
-                .is_some_and(|s| s.client == mailrs_domain::SignInClient::Goa)
+                .is_some_and(|s| s.on_online_accounts())
         });
         self.core.set_goa_linked(linked, self.goa_changed());
         let reauth = data
             .iter()
             .map(|(a, _)| a)
-            .find(|a| crate::move_banner::sign_in_banner_wanted(a, app.google_sign_in(a.id)))
+            .find(|a| {
+                crate::move_banner::sign_in_banner_wanted(a, app.google_sign_in(a.id).as_ref())
+            })
             .cloned();
         // A calendar account has no mailboxes, so the mail sidebar and
         // everything worded by what the accounts offer for mail is built
@@ -1460,12 +1462,12 @@ impl MainWindow {
                     .app
                     .upgrade()
                     .and_then(|a| a.google_sign_in(account.id));
-                if !crate::move_banner::grant_banner_wanted(account, sign_in) {
+                if !crate::move_banner::grant_banner_wanted(account, sign_in.as_ref()) {
                     return false;
                 }
                 let withheld = self.withheld(account.id);
                 let asked = consent.get(&account.id).and_then(|c| c.asked.as_deref());
-                let own = crate::permission::own_scopes(account.provider, sign_in);
+                let own = crate::permission::own_scopes(account.provider, sign_in.as_ref());
                 crate::permission::wants_banner(withheld, asked, own)
             })
             .collect();
@@ -3095,7 +3097,7 @@ impl MainWindow {
         // with a new app password.
         let imap_route = self.app.upgrade().is_some_and(|app| {
             app.google_sign_in(account.id)
-                .is_some_and(|sign_in| sign_in.route == mailrs_domain::MailRoute::Imap)
+                .is_some_and(|sign_in| sign_in.route() == mailrs_domain::MailRoute::Imap)
         });
         if account.provider == Provider::Gmail && imap_route {
             self.present_add_account(Opening::Again(account));
@@ -3181,7 +3183,7 @@ impl MainWindow {
                         account.email == address
                             && app
                                 .google_sign_in(account.id)
-                                .is_some_and(|sign_in| sign_in.client == SignInClient::Own)
+                                .is_some_and(|sign_in| sign_in.client() == SignInClient::Own)
                     })
                 })
             });
@@ -3335,7 +3337,7 @@ impl MainWindow {
             .app
             .upgrade()
             .and_then(|app| app.google_sign_in(account_id))
-            .is_some_and(|sign_in| sign_in.route == mailrs_domain::MailRoute::Imap);
+            .is_some_and(|sign_in| sign_in.route() == mailrs_domain::MailRoute::Imap);
         if self.core.demo && imap {
             return Offers {
                 calendar: false,
@@ -3536,7 +3538,7 @@ impl MainWindow {
                     .app
                     .upgrade()
                     .and_then(|app| app.google_sign_in(account.id))
-                    .is_some_and(|s| s.client == mailrs_domain::SignInClient::Goa);
+                    .is_some_and(|s| s.on_online_accounts());
                 if win.sign_in_path(&account) == Path::Move || on_goa {
                     win.present_add_account(Opening::Move(vec![account]));
                 }
@@ -4179,7 +4181,7 @@ impl MainWindow {
     /// Where a Gmail account reads its mail, as the app last read it.
     fn route_of(&self, id: AccountId) -> Option<mailrs_domain::MailRoute> {
         let app = self.app.upgrade()?;
-        app.google_sign_in(id).map(|sign_in| sign_in.route)
+        app.google_sign_in(id).map(|sign_in| sign_in.route())
     }
 
     fn show_rules(self: &Rc<Self>, account: Account) {

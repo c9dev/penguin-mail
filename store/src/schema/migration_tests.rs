@@ -361,8 +361,8 @@ fn an_account_from_before_the_migration_keeps_its_own_client() {
 
     let conn = open_with(&path, MIGRATIONS).unwrap();
     assert_eq!(
-        crate::accounts::sign_in_client(&conn, id).unwrap(),
-        mailrs_domain::SignInClient::Own
+        crate::accounts::gmail_sign_in(&conn, id).unwrap(),
+        mailrs_domain::GmailSignIn::OwnProject
     );
 }
 
@@ -1445,7 +1445,7 @@ fn an_old_store_reads_every_gmail_account_as_on_the_api() {
         .query_row("SELECT id FROM accounts", [], |r| r.get(0))
         .unwrap();
     assert_eq!(
-        crate::accounts::mail_route(&conn, id).unwrap(),
+        crate::accounts::gmail_sign_in(&conn, id).unwrap().route(),
         MailRoute::GmailApi
     );
 }
@@ -1464,5 +1464,6 @@ fn an_old_store_reads_every_account_as_holding_no_online_accounts_id() {
     let id: i64 = conn
         .query_row("SELECT id FROM accounts", [], |r| r.get(0))
         .unwrap();
-    assert_eq!(crate::accounts::goa_id(&conn, id).unwrap(), None);
+    let sign_in = crate::accounts::gmail_sign_in(&conn, id).unwrap();
+    assert_eq!(sign_in.goa_id(), None);
 }

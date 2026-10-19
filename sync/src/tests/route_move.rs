@@ -4,9 +4,11 @@
 
 use std::sync::{Arc, Mutex};
 
-use mailrs_domain::{AccountState, MailRoute, MailboxKind, Provider, RemoteMailbox, SignInClient};
+use mailrs_domain::{
+    AccountState, GmailSignIn, MailRoute, MailboxKind, RemoteMailbox, SignInClient,
+};
 use mailrs_gmail::{Authorized, GmailError, Granted, TokenStore};
-use mailrs_store::accounts::{self, Consent, GoogleSignIn, RouteCommit};
+use mailrs_store::accounts::{self, Consent};
 use mailrs_store::messages::{self, Change};
 use mailrs_store::outbox::{self, Queued};
 use mailrs_store::{Db, StoreError, drafts, mailboxes, servers};
@@ -16,7 +18,7 @@ use crate::fake::meta;
 use crate::passwords::{MemoryPasswords, PasswordStore, Passwords, Secrets};
 use crate::route_move::{
     DRAIN_WAIT, MoveEngine, MoveError, Mover, RewriteMail, commit, drain, empty_for_imap,
-    needs_move, to_own_client,
+    to_own_client,
 };
 use crate::sign_in::app_password::NewGmailImap;
 use crate::sign_in::own_client::OwnClient;
@@ -57,15 +59,31 @@ fn signed_in_as(email: &str) -> Authorized {
     }
 }
 
-async fn client(db: &Db, id: i64) -> SignInClient {
-    db.read(move |c| accounts::sign_in_client(c, id))
+async fn sign_in(db: &Db, id: i64) -> GmailSignIn {
+    db.read(move |c| accounts::gmail_sign_in(c, id))
         .await
         .unwrap()
 }
 
-async fn route(db: &Db, id: i64) -> MailRoute {
-    db.read(move |c| accounts::mail_route(c, id)).await.unwrap()
+async fn client(db: &Db, id: i64) -> SignInClient {
+    sign_in(db, id).await.client()
 }
+
+async fn route(db: &Db, id: i64) -> MailRoute {
+    sign_in(db, id).await.route()
+}
+
+/// Sets how the account signs in, as a step before the test.
+async fn set_sign_in(h: &Harness, sign_in: GmailSignIn) {
+    let id = h.account_id;
+    h.db.write(move |c| accounts::set_gmail_sign_in(c, id, &sign_in))
+        .await
+        .unwrap();
+}
+
+const APP_PASSWORD: GmailSignIn = GmailSignIn::AppPassword {
+    google: SignInClient::BuiltIn,
+};
 
 async fn sync_state(db: &Db, id: i64) -> Option<String> {
     db.read(move |c| accounts::sync_cursor(c, id))
@@ -219,21 +237,12 @@ async fn a_move_whose_keyring_refuses_keeps_the_built_in_client() {
 #[tokio::test]
 async fn a_failed_rewrite_leaves_route_client_and_sync_state_as_they_were() {
     let h = built_in_account().await;
-    let err = commit(
-        &h.db,
-        h.account_id,
-        RouteCommit {
-            route: MailRoute::Imap,
-            client: SignInClient::BuiltIn,
-            restart_sync: true,
-        },
-        |_| {
-            Err(StoreError::Corrupt {
-                column: "test",
-                value: String::new(),
-            })
-        },
-    )
+    let err = commit(&h.db, h.account_id, APP_PASSWORD, true, |_| {
+        Err(StoreError::Corrupt {
+            column: "test",
+            value: String::new(),
+        })
+    })
     .await;
 
     assert!(err.is_err());
@@ -249,16 +258,9 @@ async fn a_failed_rewrite_leaves_route_client_and_sync_state_as_they_were() {
 async fn a_commit_writes_the_route_and_its_rewrite_together() {
     let h = built_in_account().await;
     let id = h.account_id;
-    commit(
-        &h.db,
-        id,
-        RouteCommit {
-            route: MailRoute::Imap,
-            client: SignInClient::BuiltIn,
-            restart_sync: true,
-        },
-        move |c| drafts::forget(c, id, "d1"),
-    )
+    commit(&h.db, id, APP_PASSWORD, true, move |c| {
+        drafts::forget(c, id, "d1")
+    })
     .await
     .unwrap();
 
@@ -362,10 +364,7 @@ async fn pause(h: &Harness) {
 
 /// What the move leaves: the same account, on an own client.
 async fn moved(h: &Harness) {
-    let id = h.account_id;
-    h.db.write(move |c| accounts::set_sign_in_client(c, id, SignInClient::Own))
-        .await
-        .unwrap();
+    set_sign_in(h, GmailSignIn::OwnProject).await;
 }
 
 #[tokio::test]
@@ -438,20 +437,6 @@ async fn a_send_the_old_route_refuses_waits_for_the_new_one() {
     assert_eq!(h.fake.with(|s| s.sent.len()), 1);
 }
 
-#[test]
-fn only_built_in_api_gmail_accounts_need_a_move() {
-    let sign_in = |client, route| GoogleSignIn { client, route };
-    let gmail = |client, route| needs_move(Provider::Gmail, sign_in(client, route));
-    assert!(gmail(SignInClient::BuiltIn, MailRoute::GmailApi));
-    assert!(!gmail(SignInClient::BuiltIn, MailRoute::Imap));
-    assert!(!gmail(SignInClient::Own, MailRoute::GmailApi));
-    assert!(!gmail(SignInClient::Own, MailRoute::Imap));
-    assert!(!needs_move(
-        Provider::Imap,
-        sign_in(SignInClient::BuiltIn, MailRoute::GmailApi)
-    ));
-}
-
 /// The engine a move drives, writing down what the move asked of it and
 /// which client the store named when the account started again.
 struct Steps {
@@ -488,8 +473,11 @@ impl MoveEngine for Steps {
     }
 
     async fn start_again(&self, account: &mailrs_domain::Account) {
-        let started = client(&self.db, account.id).await;
-        self.note(format!("start on {started:?}"));
+        let started = match sign_in(&self.db, account.id).await {
+            GmailSignIn::OnlineAccounts { .. } => "Goa".to_string(),
+            other => format!("{:?}", other.client()),
+        };
+        self.note(format!("start on {started}"));
     }
 }
 
@@ -784,7 +772,7 @@ fn goa_dana(identity: &str) -> crate::goa::GoaAccount {
 }
 
 async fn goa_id(db: &Db, id: i64) -> Option<String> {
-    db.read(move |c| accounts::goa_id(c, id)).await.unwrap()
+    sign_in(db, id).await.goa_id().map(str::to_string)
 }
 
 /// Rewrites the account's stored mail for its new route, as the move
@@ -818,7 +806,7 @@ async fn a_built_in_api_account_moves_to_goa_imap_with_the_rewrite_in_one_step()
 
     assert_eq!(moved.id, h.account_id);
     assert_eq!(steps.done(), ["committed", "stop", "start on Goa"]);
-    assert_eq!(client(&h.db, h.account_id).await, SignInClient::Goa);
+    assert!(sign_in(&h.db, h.account_id).await.on_online_accounts());
     assert_eq!(route(&h.db, h.account_id).await, MailRoute::Imap);
     assert_eq!(sync_state(&h.db, h.account_id).await, None);
     assert_eq!(count(&h.db, "drafts").await, 0, "the rewrite ran");
@@ -869,9 +857,7 @@ async fn a_move_to_goa_without_a_rewrite_for_another_route_stops_nothing() {
 async fn an_app_password_account_moves_to_goa_imap_without_a_resync() {
     let h = built_in_account().await;
     let id = h.account_id;
-    h.db.write(move |c| accounts::set_mail_route(c, id, MailRoute::Imap))
-        .await
-        .unwrap();
+    set_sign_in(&h, APP_PASSWORD).await;
     let secrets = Secrets::memory();
     let steps = Steps::new(&h);
     let outbox = outbox_of(&h);
@@ -887,7 +873,7 @@ async fn an_app_password_account_moves_to_goa_imap_without_a_resync() {
         .await
         .unwrap();
 
-    assert_eq!(client(&h.db, id).await, SignInClient::Goa);
+    assert!(sign_in(&h.db, id).await.on_online_accounts());
     assert_eq!(sync_state(&h.db, id).await.as_deref(), Some("777"));
     assert_eq!(goa_id(&h.db, id).await.as_deref(), Some("account_1_0"));
 }
@@ -927,9 +913,10 @@ async fn a_move_to_another_goa_address_ends_before_the_account_stops() {
 async fn on_goa_imap(h: &Harness) {
     let id = h.account_id;
     h.db.write(move |c| {
-        accounts::set_mail_route(c, id, MailRoute::Imap)?;
-        accounts::set_sign_in_client(c, id, SignInClient::Goa)?;
-        accounts::set_goa_id(c, id, Some("account_1_0"))
+        let goa = GmailSignIn::OnlineAccounts {
+            goa_id: "account_1_0".into(),
+        };
+        accounts::set_gmail_sign_in(c, id, &goa)
     })
     .await
     .unwrap();
@@ -994,9 +981,7 @@ async fn an_online_accounts_account_with_a_kept_project_moves_to_its_own_client(
 async fn an_imap_account_moving_to_goa_stays_on_imap() {
     let h = built_in_account().await;
     let id = h.account_id;
-    h.db.write(move |c| accounts::set_mail_route(c, id, MailRoute::Imap))
-        .await
-        .unwrap();
+    set_sign_in(&h, APP_PASSWORD).await;
     let secrets = Secrets::memory();
     let steps = Steps::new(&h);
     let outbox = outbox_of(&h);
@@ -1013,7 +998,7 @@ async fn an_imap_account_moving_to_goa_stays_on_imap() {
         .unwrap();
 
     assert_eq!(route(&h.db, id).await, MailRoute::Imap);
-    assert_eq!(client(&h.db, id).await, SignInClient::Goa);
+    assert!(sign_in(&h.db, id).await.on_online_accounts());
 }
 
 #[tokio::test]
@@ -1022,7 +1007,7 @@ async fn an_app_password_account_moving_to_goa_drops_its_password_and_servers() 
     let id = h.account_id;
     let saved = gmail_imap("me@example.com").servers;
     h.db.write(move |c| {
-        accounts::set_mail_route(c, id, MailRoute::Imap)?;
+        accounts::set_gmail_sign_in(c, id, &APP_PASSWORD)?;
         servers::save(c, id, &saved)
     })
     .await
@@ -1139,7 +1124,7 @@ async fn an_app_password_account_moving_to_its_own_project_drops_its_password_an
     let id = h.account_id;
     let saved = gmail_imap("me@example.com").servers;
     h.db.write(move |c| {
-        accounts::set_mail_route(c, id, MailRoute::Imap)?;
+        accounts::set_gmail_sign_in(c, id, &APP_PASSWORD)?;
         servers::save(c, id, &saved)
     })
     .await
@@ -1177,9 +1162,7 @@ async fn an_app_password_account_moving_to_its_own_project_drops_its_password_an
 async fn an_own_project_account_moving_to_an_app_password_signs_in_with_the_built_in_client() {
     let h = built_in_account().await;
     let id = h.account_id;
-    h.db.write(move |c| accounts::set_sign_in_client(c, id, SignInClient::Own))
-        .await
-        .unwrap();
+    set_sign_in(&h, GmailSignIn::OwnProject).await;
     let secrets = Secrets::memory();
     let steps = Steps::new(&h);
     let outbox = outbox_of(&h);

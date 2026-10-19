@@ -22,7 +22,8 @@ use std::sync::Arc;
 use mailrs_discover::Server;
 use mailrs_domain::translate::{fill, gettext};
 use mailrs_domain::{
-    Account, AccountId, AccountState, EpochMillis, Provider, RemoveSetting, SignInClient,
+    Account, AccountId, AccountState, EpochMillis, GmailSignIn, Provider, RemoveSetting,
+    SignInClient,
 };
 use mailrs_gmail::OAuthClient;
 use mailrs_imap::{CheckError, ImapError};
@@ -74,14 +75,14 @@ pub(crate) async fn client_of<P: PasswordStore + 'static>(
     account: &Account,
 ) -> Result<Option<OAuthClient>, SyncError> {
     let id = account.id;
-    let kind = db.read(move |c| accounts::sign_in_client(c, id)).await?;
-    Ok(match kind {
+    let sign_in = db.read(move |c| accounts::gmail_sign_in(c, id)).await?;
+    // An account on Online Accounts takes its mail from there, and its
+    // calendar, contacts and Drive from the built-in client's own token.
+    Ok(match sign_in.client() {
         SignInClient::Own => own_client_of(config, kept, id)
             .await?
             .map(|own| own.oauth()),
-        // The mail comes from Online Accounts; the calendar, contacts and
-        // Drive come from the built-in client's own token.
-        SignInClient::BuiltIn | SignInClient::Goa => built_in,
+        SignInClient::BuiltIn => built_in,
     })
 }
 
@@ -108,7 +109,8 @@ pub async fn kept_own_client(
     let own = db
         .read(move |c| match accounts::account_by_email(c, &address)? {
             Some(held) if held.provider == Provider::Gmail => {
-                Ok((accounts::sign_in_client(c, held.id)? == SignInClient::Own).then_some(held.id))
+                let own = accounts::gmail_sign_in(c, held.id)?.client() == SignInClient::Own;
+                Ok(own.then_some(held.id))
             }
             _ => Ok(None),
         })
@@ -162,6 +164,20 @@ pub async fn signed_in(
     asked: &str,
     client: SignInClient,
 ) -> Result<Account, SignInError> {
+    let to = move |before: GmailSignIn| before.with_google_token(client);
+    signed_in_to(db, email, now, granted, asked, to).await
+}
+
+/// [`signed_in`], with `to` saying what the account's sign-in becomes from
+/// what it was. A new account was the built-in client on the API.
+async fn signed_in_to(
+    db: &Db,
+    email: &str,
+    now: EpochMillis,
+    granted: Option<&str>,
+    asked: &str,
+    to: impl FnOnce(GmailSignIn) -> GmailSignIn + Send + 'static,
+) -> Result<Account, SignInError> {
     let address = email.to_string();
     let email = address.clone();
     let granted = granted.map(str::to_string);
@@ -173,12 +189,8 @@ pub async fn signed_in(
             return Ok(Err(held.provider_name().to_string()));
         }
         let id = accounts::insert_account(c, &email, now)?;
-        accounts::set_sign_in_client(c, id, client)?;
-        // A sign-in through another client takes the account off Online
-        // Accounts.
-        if client != SignInClient::Goa {
-            accounts::set_goa_id(c, id, None)?;
-        }
+        let before = accounts::gmail_sign_in(c, id)?;
+        accounts::set_gmail_sign_in(c, id, &to(before))?;
         if let Some(granted) = &granted {
             accounts::set_granted(c, id, granted)?;
         }
@@ -209,7 +221,7 @@ pub async fn google_signed_in(
     asked: &str,
     own: Option<&OwnClient>,
 ) -> Result<Account, SignInError> {
-    let kind = match own {
+    let client = match own {
         Some(_) => SignInClient::Own,
         None => SignInClient::BuiltIn,
     };
@@ -219,7 +231,8 @@ pub async fn google_signed_in(
         granted,
         asked,
     };
-    google_signed_in_as(db, secrets, token, now, kind, own).await
+    let to = move |before: GmailSignIn| before.with_google_token(client);
+    google_signed_in_as(db, secrets, token, now, to, own).await
 }
 
 /// What a Google sign-in brought back: the address, its refresh token,
@@ -232,15 +245,15 @@ pub struct GoogleToken<'a> {
     pub asked: &'a str,
 }
 
-/// [`google_signed_in`] with the account's client named, for an account
-/// whose token is the built-in client's but whose client stays another:
-/// an Online Accounts account that adds its calendar.
+/// [`google_signed_in`] with `to` saying what the account's sign-in becomes,
+/// for an account whose mail does not sign in with this token: an Online
+/// Accounts account that adds its calendar.
 pub async fn google_signed_in_as(
     db: &Db,
     secrets: &Secrets,
     token: GoogleToken<'_>,
     now: EpochMillis,
-    kind: SignInClient,
+    to: impl FnOnce(GmailSignIn) -> GmailSignIn + Send + 'static,
     own: Option<&OwnClient>,
 ) -> Result<Account, SignInError> {
     let GoogleToken {
@@ -253,13 +266,13 @@ pub async fn google_signed_in_as(
     let before = db
         .read(move |c| match accounts::account_by_email(c, &address)? {
             Some(held) if held.provider == Provider::Gmail => Ok(Some((
-                accounts::sign_in_client(c, held.id)?,
+                accounts::gmail_sign_in(c, held.id)?,
                 accounts::consent(c, held.id)?,
             ))),
             _ => Ok(None),
         })
         .await?;
-    let account = signed_in(db, email, now, granted, asked, kind).await?;
+    let account = signed_in_to(db, email, now, granted, asked, to).await?;
     // The client goes in before the token: a token kept beside the wrong
     // client cannot refresh. On a failure the account signs in as it did,
     // with the consent of its old token, and a new one is not kept.
@@ -267,8 +280,8 @@ pub async fn google_signed_in_as(
     if let Err(err) = kept {
         let id = account.id;
         db.write(move |c| match before {
-            Some((client, consent)) => {
-                accounts::set_sign_in_client(c, id, client)?;
+            Some((sign_in, consent)) => {
+                accounts::set_gmail_sign_in(c, id, &sign_in)?;
                 accounts::set_consent(c, id, &consent)
             }
             None => accounts::delete_account(c, id),
@@ -1420,7 +1433,7 @@ mod tests {
         let email = email.to_string();
         db.write(move |c| {
             let id = accounts::insert_account(c, &email, 0)?;
-            accounts::set_sign_in_client(c, id, client)?;
+            accounts::set_gmail_sign_in(c, id, &GmailSignIn::BuiltInApi.with_google_token(client))?;
             Ok(accounts::account_by_email(c, &email)?.unwrap())
         })
         .await
@@ -1494,7 +1507,7 @@ mod tests {
         .unwrap();
         let id = added.id;
         let kind = db
-            .read(move |c| accounts::sign_in_client(c, id))
+            .read(move |c| Ok(accounts::gmail_sign_in(c, id)?.client()))
             .await
             .unwrap();
         assert_eq!(kind, SignInClient::BuiltIn);
@@ -1574,7 +1587,7 @@ mod tests {
     }
 
     async fn kind(db: &Db, id: mailrs_domain::AccountId) -> SignInClient {
-        db.read(move |c| accounts::sign_in_client(c, id))
+        db.read(move |c| Ok(accounts::gmail_sign_in(c, id)?.client()))
             .await
             .unwrap()
     }

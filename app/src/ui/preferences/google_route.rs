@@ -9,8 +9,7 @@ use std::rc::Rc;
 use adw::prelude::*;
 use gtk::glib;
 use mailrs_domain::translate::{fill, gettext};
-use mailrs_domain::{Account, AccountId, MailRoute, Provider, SignInClient};
-use mailrs_store::accounts::GoogleSignIn;
+use mailrs_domain::{Account, AccountId, GmailSignIn, MailRoute, Provider, SignInClient};
 use mailrs_sync::Offers;
 
 use crate::app::App;
@@ -66,7 +65,7 @@ pub enum Line {
 /// choice, which would have nothing to offer.
 #[cfg(test)]
 pub fn lines(
-    sign_in: GoogleSignIn,
+    sign_in: &GmailSignIn,
     _platform: Platform,
     account: &Account,
     routes_ready: bool,
@@ -76,14 +75,14 @@ pub fn lines(
 
 /// [`lines`], knowing whether Online Accounts holds the account's address.
 pub fn lines_with(
-    sign_in: GoogleSignIn,
+    sign_in: &GmailSignIn,
     account: &Account,
     routes_ready: bool,
     goa_holds: bool,
 ) -> Vec<Line> {
     let mut lines = Vec::new();
-    let on_goa = sign_in.client == SignInClient::Goa;
-    match sign_in.route {
+    let on_goa = sign_in.on_online_accounts();
+    match sign_in.route() {
         MailRoute::GmailApi if routes_ready => lines.push(Line::Features { every: true }),
         MailRoute::GmailApi => {}
         MailRoute::Imap => {
@@ -110,13 +109,13 @@ pub fn lines_with(
             }
         }
     }
-    if sign_in.client == SignInClient::Own {
+    if sign_in.client() == SignInClient::Own {
         lines.push(Line::OwnProject);
         if routes_ready {
             lines.push(Line::StopOwn);
         }
     }
-    if routes_ready && sign_in.needs_move(account.provider) {
+    if routes_ready && account.provider == Provider::Gmail && sign_in.waits_to_move() {
         let waiting = Waiting {
             account: account.clone(),
             paused: account.state == mailrs_domain::AccountState::MailPaused,
@@ -154,9 +153,9 @@ pub struct Contacts {
 /// What decides an account's Gmail rows: how it signs in, whether this
 /// build offers the route choice, and whether Online Accounts holds the
 /// address.
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 struct RouteFacts {
-    sign_in: GoogleSignIn,
+    sign_in: GmailSignIn,
     routes_ready: bool,
     goa_holds: bool,
 }
@@ -301,7 +300,7 @@ fn fill_rows(
     shown: &RouteRows,
 ) -> Vec<gtk::Widget> {
     let RouteFacts {
-        sign_in,
+        ref sign_in,
         routes_ready,
         goa_holds,
     } = shown.facts;
@@ -560,9 +559,7 @@ fn connect_button(name: &str, account: AccountId, connect: &Rc<dyn Fn(AccountId)
 mod tests {
     use super::{Line, lines};
     use crate::route_choice::Platform;
-    use mailrs_domain::{Account, AccountState, MailRoute, Provider, SignInClient};
-    use mailrs_store::accounts::GoogleSignIn;
-
+    use mailrs_domain::{Account, AccountState, GmailSignIn, MailRoute, Provider, SignInClient};
     fn account(state: AccountState) -> Account {
         Account {
             id: 3,
@@ -573,14 +570,17 @@ mod tests {
         }
     }
 
-    fn sign_in(client: SignInClient, route: MailRoute) -> GoogleSignIn {
-        GoogleSignIn { client, route }
+    fn sign_in(client: SignInClient, route: MailRoute) -> GmailSignIn {
+        match route {
+            MailRoute::GmailApi => GmailSignIn::BuiltInApi.with_google_token(client),
+            MailRoute::Imap => GmailSignIn::AppPassword { google: client },
+        }
     }
 
     #[test]
     fn an_api_account_has_every_feature() {
         let found = lines(
-            sign_in(SignInClient::Own, MailRoute::GmailApi),
+            &sign_in(SignInClient::Own, MailRoute::GmailApi),
             Platform::Linux,
             &account(AccountState::Ok),
             true,
@@ -598,14 +598,14 @@ mod tests {
     #[test]
     fn only_an_account_on_its_own_project_says_so() {
         let built_in = lines(
-            sign_in(SignInClient::BuiltIn, MailRoute::Imap),
+            &sign_in(SignInClient::BuiltIn, MailRoute::Imap),
             Platform::Linux,
             &account(AccountState::Ok),
             true,
         );
         assert!(!built_in.contains(&Line::OwnProject));
         let unready = lines(
-            sign_in(SignInClient::Own, MailRoute::GmailApi),
+            &sign_in(SignInClient::Own, MailRoute::GmailApi),
             Platform::Linux,
             &account(AccountState::Ok),
             false,
@@ -616,7 +616,7 @@ mod tests {
     #[test]
     fn an_imap_account_points_filters_and_the_reply_to_gmail() {
         let found = lines(
-            sign_in(SignInClient::BuiltIn, MailRoute::Imap),
+            &sign_in(SignInClient::BuiltIn, MailRoute::Imap),
             Platform::Linux,
             &account(AccountState::Ok),
             true,
@@ -638,7 +638,7 @@ mod tests {
     #[test]
     fn a_built_in_api_account_repeats_the_banner() {
         let found = lines(
-            sign_in(SignInClient::BuiltIn, MailRoute::GmailApi),
+            &sign_in(SignInClient::BuiltIn, MailRoute::GmailApi),
             Platform::Linux,
             &account(AccountState::Ok),
             true,
@@ -658,7 +658,7 @@ mod tests {
     #[test]
     fn a_paused_account_repeats_the_paused_wording() {
         let found = lines(
-            sign_in(SignInClient::BuiltIn, MailRoute::GmailApi),
+            &sign_in(SignInClient::BuiltIn, MailRoute::GmailApi),
             Platform::Linux,
             &account(AccountState::MailPaused),
             true,
@@ -671,7 +671,7 @@ mod tests {
     #[test]
     fn with_no_route_ready_a_built_in_api_account_shows_no_gmail_lines() {
         let found = lines(
-            sign_in(SignInClient::BuiltIn, MailRoute::GmailApi),
+            &sign_in(SignInClient::BuiltIn, MailRoute::GmailApi),
             Platform::Linux,
             &account(AccountState::MailPaused),
             false,
@@ -682,7 +682,7 @@ mod tests {
     #[test]
     fn with_no_route_ready_an_imap_account_keeps_only_what_gmail_com_does() {
         let found = lines(
-            sign_in(SignInClient::BuiltIn, MailRoute::Imap),
+            &sign_in(SignInClient::BuiltIn, MailRoute::Imap),
             Platform::Linux,
             &account(AccountState::Ok),
             false,
@@ -742,7 +742,7 @@ pub(crate) mod checks {
     /// The expander row `fill_rows` filled, and the ids Connect was pressed for.
     fn filled(
         state: AccountState,
-        sign_in: GoogleSignIn,
+        sign_in: GmailSignIn,
         offers: Offers,
     ) -> (adw::ExpanderRow, Rc<RefCell<Vec<AccountId>>>) {
         let pressed = Rc::new(RefCell::new(Vec::new()));
@@ -794,10 +794,9 @@ pub(crate) mod checks {
             .collect()
     }
 
-    fn imap() -> GoogleSignIn {
-        GoogleSignIn {
-            client: SignInClient::BuiltIn,
-            route: MailRoute::Imap,
+    fn imap() -> GmailSignIn {
+        GmailSignIn::AppPassword {
+            google: SignInClient::BuiltIn,
         }
     }
 
@@ -874,11 +873,12 @@ pub(crate) mod checks {
         // The window takes the calendar out of a paused account's offers
         // when Google refused it too, which shows Connect; the move line
         // repeats the banner.
-        let built_in_api = GoogleSignIn {
-            client: SignInClient::BuiltIn,
-            route: MailRoute::GmailApi,
-        };
-        let (paused, _) = filled(AccountState::MailPaused, built_in_api, no_calendar());
+        let built_in_api = GmailSignIn::BuiltInApi;
+        let (paused, _) = filled(
+            AccountState::MailPaused,
+            built_in_api.clone(),
+            no_calendar(),
+        );
         let found = titles(&paused);
         assert!(found.contains(&"Calendar".to_string()), "{found:?}");
         assert!(found.contains(&"Contacts".to_string()), "{found:?}");
@@ -899,10 +899,7 @@ pub(crate) mod checks {
     }
 
     fn an_api_account_shows_its_features_and_nothing_to_connect() {
-        let own = GoogleSignIn {
-            client: SignInClient::Own,
-            route: MailRoute::GmailApi,
-        };
+        let own = GmailSignIn::OwnProject;
         let (parent, _) = filled(AccountState::Ok, own, Offers::EVERYTHING);
         assert_eq!(
             titles(&parent),

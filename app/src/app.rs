@@ -71,7 +71,7 @@ pub struct App {
     /// Grant Access banner never waits on a round trip of its own.
     consent: RefCell<HashMap<AccountId, accounts::Consent>>,
     /// Each Gmail account's client and route, read with the consent.
-    google_sign_ins: RefCell<HashMap<AccountId, accounts::GoogleSignIn>>,
+    google_sign_ins: RefCell<HashMap<AccountId, mailrs_domain::GmailSignIn>>,
     /// The JMAP accounts that signed in through the browser, as
     /// `reload_accounts` last read them, so signing in again says where.
     through_browser: RefCell<HashSet<AccountId>>,
@@ -854,8 +854,8 @@ impl App {
 
     /// How `id` signs in to Google, as `reload_accounts` last read it.
     /// None for an account that is not a Gmail account.
-    pub fn google_sign_in(&self, id: AccountId) -> Option<accounts::GoogleSignIn> {
-        self.google_sign_ins.borrow().get(&id).copied()
+    pub fn google_sign_in(&self, id: AccountId) -> Option<mailrs_domain::GmailSignIn> {
+        self.google_sign_ins.borrow().get(&id).cloned()
     }
 
     /// Whether this build offers a route to choose, the gate in front of
@@ -881,7 +881,7 @@ impl App {
     pub fn sign_in_path(&self, account: &Account) -> crate::move_banner::Path {
         crate::move_banner::path(
             account,
-            self.google_sign_in(account.id),
+            self.google_sign_in(account.id).as_ref(),
             self.routes_ready(),
         )
     }

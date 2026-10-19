@@ -3,7 +3,9 @@
 
 use std::sync::Arc;
 
-use mailrs_domain::{Account, AccountState, EpochMillis, MailRoute, Provider, SignInClient};
+use mailrs_domain::{
+    Account, AccountState, EpochMillis, GmailSignIn, MailRoute, Provider, SignInClient,
+};
 use mailrs_imap::{CheckError, Checked, ImapClient, Login};
 use mailrs_store::servers::{self, Saved, Security, Servers};
 use mailrs_store::{Db, accounts};
@@ -163,8 +165,9 @@ pub async fn gmail_imap_signed_in<P: PasswordStore + 'static>(
             let held = accounts::account_by_email(c, &email)?;
             let route = held
                 .as_ref()
-                .map(|held| accounts::mail_route(c, held.id))
-                .transpose()?;
+                .map(|held| accounts::gmail_sign_in(c, held.id))
+                .transpose()?
+                .map(|sign_in| sign_in.route());
             Ok((held, route))
         })
         .await?;
@@ -176,9 +179,11 @@ pub async fn gmail_imap_signed_in<P: PasswordStore + 'static>(
                 servers::save(c, id, &servers)?;
                 // An app password takes the account off Online Accounts,
                 // whose token it would otherwise go on reading.
-                if accounts::sign_in_client(c, id)? == SignInClient::Goa {
-                    accounts::set_sign_in_client(c, id, SignInClient::BuiltIn)?;
-                    accounts::set_goa_id(c, id, None)?;
+                if accounts::gmail_sign_in(c, id)?.on_online_accounts() {
+                    let password = GmailSignIn::AppPassword {
+                        google: SignInClient::BuiltIn,
+                    };
+                    accounts::set_gmail_sign_in(c, id, &password)?;
                 }
                 if again == AccountState::NeedsReauth {
                     accounts::set_state(c, id, AccountState::Ok)?;
@@ -195,7 +200,10 @@ pub async fn gmail_imap_signed_in<P: PasswordStore + 'static>(
             let id = db
                 .write(move |c| {
                     let id = accounts::insert_account(c, &email, now)?;
-                    accounts::set_mail_route(c, id, MailRoute::Imap)?;
+                    let password = GmailSignIn::AppPassword {
+                        google: SignInClient::BuiltIn,
+                    };
+                    accounts::set_gmail_sign_in(c, id, &password)?;
                     servers::save(c, id, &kept)?;
                     Ok(id)
                 })
@@ -317,7 +325,10 @@ mod tests {
         let id = account.id;
         assert_eq!(account.provider, Provider::Gmail);
         assert_eq!(
-            db.read(move |c| accounts::mail_route(c, id)).await.unwrap(),
+            db.read(move |c| accounts::gmail_sign_in(c, id))
+                .await
+                .unwrap()
+                .route(),
             MailRoute::Imap
         );
         assert_eq!(

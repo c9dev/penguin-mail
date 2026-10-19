@@ -3,7 +3,7 @@
 
 use std::sync::Arc;
 
-use mailrs_domain::{Account, MailRoute, SignInClient};
+use mailrs_domain::{Account, GmailSignIn};
 use mailrs_imap::Login;
 use mailrs_store::{Db, accounts};
 use wiremock::MockServer;
@@ -49,13 +49,23 @@ fn reach(db: &Db, goa: &Arc<FakeAccounts>, clients: Clients) -> Connector {
     }
 }
 
-async fn linked_account(db: &Db, route: MailRoute) -> Account {
+fn on_dana() -> GmailSignIn {
+    GmailSignIn::OnlineAccounts {
+        goa_id: "account_1_0".into(),
+    }
+}
+
+async fn sign_in(db: &Db, id: i64) -> GmailSignIn {
+    db.read(move |c| accounts::gmail_sign_in(c, id))
+        .await
+        .unwrap()
+}
+
+async fn linked_account(db: &Db) -> Account {
     let email = "dana@example.com";
     db.write(move |c| {
         let id = accounts::insert_account(c, email, 0)?;
-        accounts::set_sign_in_client(c, id, SignInClient::Goa)?;
-        accounts::set_mail_route(c, id, route)?;
-        accounts::set_goa_id(c, id, Some("account_1_0"))
+        accounts::set_gmail_sign_in(c, id, &on_dana())
     })
     .await
     .unwrap();
@@ -75,20 +85,7 @@ async fn linking_keeps_a_new_address_on_goa_and_imap() {
         .await
         .unwrap();
 
-    let id = account.id;
-    let (route, client, goa_id) = db
-        .read(move |c| {
-            Ok((
-                accounts::mail_route(c, id)?,
-                accounts::sign_in_client(c, id)?,
-                accounts::goa_id(c, id)?,
-            ))
-        })
-        .await
-        .unwrap();
-    assert_eq!(route, MailRoute::Imap);
-    assert_eq!(client, SignInClient::Goa);
-    assert_eq!(goa_id.as_deref(), Some("account_1_0"));
+    assert_eq!(sign_in(&db, account.id).await, on_dana());
 }
 
 #[tokio::test]
@@ -142,17 +139,11 @@ async fn linking_an_address_the_store_holds_changes_nothing_and_answers_it() {
         .unwrap();
 
     assert_eq!(account.id, held.id);
-    let id = held.id;
-    let (client, goa_id) = db
-        .read(move |c| Ok((accounts::sign_in_client(c, id)?, accounts::goa_id(c, id)?)))
-        .await
-        .unwrap();
     assert_eq!(
-        client,
-        SignInClient::BuiltIn,
+        sign_in(&db, held.id).await,
+        GmailSignIn::BuiltInApi,
         "the move changes it, not the link"
     );
-    assert_eq!(goa_id, None);
 }
 
 #[tokio::test]
@@ -173,7 +164,7 @@ async fn a_goa_account_left_on_the_api_still_reads_its_mail_over_imap() {
     let (db, _dir) = store().await;
     let goa = FakeAccounts::new();
     goa.add(dana());
-    let account = linked_account(&db, MailRoute::GmailApi).await;
+    let account = linked_account(&db).await;
 
     let Connected::Ready(services) = reach(&db, &goa, Clients::default())
         .connect(&account)
@@ -191,7 +182,7 @@ async fn a_goa_imap_account_hands_the_seam_a_token_login() {
     let (db, _dir) = store().await;
     let goa = FakeAccounts::new();
     goa.add(dana());
-    let account = linked_account(&db, MailRoute::Imap).await;
+    let account = linked_account(&db).await;
     let connector = reach(&db, &goa, Clients::default());
 
     let sign_in = goa_imap_sign_in(&connector, &account, &dana());
@@ -210,7 +201,7 @@ async fn a_goa_imap_account_connects_to_gmail_over_imap() {
     let (db, _dir) = store().await;
     let goa = FakeAccounts::new();
     goa.add(dana());
-    let account = linked_account(&db, MailRoute::Imap).await;
+    let account = linked_account(&db).await;
 
     let Connected::Ready(services) = reach(&db, &goa, Clients::default())
         .connect(&account)
@@ -228,7 +219,7 @@ async fn an_imap_login_asked_again_after_a_refusal_renews_the_token_once() {
     let (db, _dir) = store().await;
     let goa = FakeAccounts::new();
     goa.add(dana());
-    let account = linked_account(&db, MailRoute::Imap).await;
+    let account = linked_account(&db).await;
     let connector = reach(&db, &goa, Clients::default());
     let GmailImapSignIn::Token(source) = goa_imap_sign_in(&connector, &account, &dana()) else {
         panic!("a GOA account signs in with a token");
@@ -246,7 +237,7 @@ async fn a_login_refused_by_online_accounts_is_an_auth_error() {
     let (db, _dir) = store().await;
     let goa = FakeAccounts::new();
     goa.add(dana());
-    let account = linked_account(&db, MailRoute::Imap).await;
+    let account = linked_account(&db).await;
     let connector = reach(&db, &goa, Clients::default());
     let GmailImapSignIn::Token(source) = goa_imap_sign_in(&connector, &account, &dana()) else {
         panic!("a GOA account signs in with a token");
@@ -274,7 +265,7 @@ async fn mail_turned_off_keeps_the_calendar_and_stops_the_mail() {
     let (db, _dir) = store().await;
     let goa = FakeAccounts::new();
     goa.add(dana());
-    let account = linked_account(&db, MailRoute::Imap).await;
+    let account = linked_account(&db).await;
     let connector = reach(&db, &goa, built_in());
     keep_calendar_token(&connector);
     goa.set("account_1_0", |a| a.mail_disabled = true);
@@ -295,7 +286,7 @@ async fn a_removed_account_relinks_by_its_address_with_the_new_id() {
         id: "account_9_0".into(),
         ..dana()
     });
-    let account = linked_account(&db, MailRoute::GmailApi).await;
+    let account = linked_account(&db).await;
 
     let connected = reach(&db, &goa, Clients::default())
         .connect(&account)
@@ -303,16 +294,15 @@ async fn a_removed_account_relinks_by_its_address_with_the_new_id() {
         .unwrap();
 
     assert!(matches!(connected, Connected::Ready(_)));
-    let id = account.id;
-    let goa_id = db.read(move |c| accounts::goa_id(c, id)).await.unwrap();
-    assert_eq!(goa_id.as_deref(), Some("account_9_0"));
+    let now = sign_in(&db, account.id).await;
+    assert_eq!(now.goa_id(), Some("account_9_0"));
 }
 
 #[tokio::test]
 async fn a_removed_account_with_no_match_keeps_its_mail_and_calendar() {
     let (db, _dir) = store().await;
     let goa = FakeAccounts::new();
-    let account = linked_account(&db, MailRoute::GmailApi).await;
+    let account = linked_account(&db).await;
     let connector = reach(&db, &goa, built_in());
     keep_calendar_token(&connector);
 
@@ -330,7 +320,7 @@ async fn a_removed_account_with_no_match_keeps_its_mail_and_calendar() {
 async fn an_unreachable_online_accounts_starts_the_account_without_mail() {
     let (db, _dir) = store().await;
     let goa = FakeAccounts::new();
-    let account = linked_account(&db, MailRoute::GmailApi).await;
+    let account = linked_account(&db).await;
     goa.hang(true);
     let connector = reach(&db, &goa, built_in());
     keep_calendar_token(&connector);
@@ -348,13 +338,9 @@ async fn the_calendar_consent_keeps_a_goa_account_on_goa() {
     let (db, _dir) = store().await;
     let me = gmail_account(&db).await;
     let id = me.id;
-    db.write(move |c| {
-        accounts::set_sign_in_client(c, id, SignInClient::Goa)?;
-        accounts::set_mail_route(c, id, MailRoute::Imap)?;
-        accounts::set_goa_id(c, id, Some("account_1_0"))
-    })
-    .await
-    .unwrap();
+    db.write(move |c| accounts::set_gmail_sign_in(c, id, &on_dana()))
+        .await
+        .unwrap();
     let server = MockServer::start().await;
     let goa = FakeAccounts::new();
     let connector = reach(
@@ -372,12 +358,7 @@ async fn the_calendar_consent_keeps_a_goa_account_on_goa() {
     .unwrap();
 
     assert_eq!(signed.id, me.id);
-    let (client, goa_id) = db
-        .read(move |c| Ok((accounts::sign_in_client(c, id)?, accounts::goa_id(c, id)?)))
-        .await
-        .unwrap();
-    assert_eq!(client, SignInClient::Goa);
-    assert_eq!(goa_id.as_deref(), Some("account_1_0"));
+    assert_eq!(sign_in(&db, id).await, on_dana());
     assert_eq!(
         connector
             .secrets
@@ -391,24 +372,4 @@ async fn the_calendar_consent_keeps_a_goa_account_on_goa() {
         hinted.unwrap().contains("login_hint=me%40gmail.com"),
         "the consent names the account"
     );
-}
-
-#[tokio::test]
-async fn the_calendar_consent_opens_for_a_goa_account_on_the_api() {
-    let (db, _dir) = store().await;
-    let me = gmail_account(&db).await;
-    let id = me.id;
-    db.write(move |c| accounts::set_sign_in_client(c, id, SignInClient::Goa))
-        .await
-        .unwrap();
-    let server = MockServer::start().await;
-    let connector = reach(
-        &db,
-        &FakeAccounts::new(),
-        built_in_clients_answering(&server, "me@gmail.com").await,
-    );
-
-    let signed = calendar_consent(&connector, &me, come_back_from_google).await;
-
-    assert!(signed.is_ok(), "{:?}", signed.err());
 }

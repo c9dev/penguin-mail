@@ -149,19 +149,15 @@ pub fn mail_accounts(accounts: &[Account]) -> Vec<Account> {
         .collect()
 }
 
-/// Which Google client an account signed in with. A refresh token only
-/// works with the client that issued it, so an account keeps the one it
-/// signed in through until it signs in again.
+/// Which Google client issued an account's Google token. A refresh token
+/// only works with the client that issued it, so an account keeps the one
+/// it signed in through until it signs in again.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum SignInClient {
-    /// A client the person made in their own Google Cloud project and
-    /// pasted into the old setup page, kept in `config.toml`.
+    /// A client the person made in their own Google Cloud project.
     Own,
     /// The project's client, compiled into the build.
     BuiltIn,
-    /// The desktop's Online Accounts: its sign-in carries the mail, and
-    /// the built-in client still carries the calendar and contacts.
-    Goa,
 }
 
 impl SignInClient {
@@ -169,7 +165,6 @@ impl SignInClient {
         match self {
             SignInClient::Own => "own",
             SignInClient::BuiltIn => "built_in",
-            SignInClient::Goa => "goa",
         }
     }
 }
@@ -181,14 +176,89 @@ impl FromStr for SignInClient {
         match s {
             "own" => Ok(SignInClient::Own),
             "built_in" => Ok(SignInClient::BuiltIn),
-            "goa" => Ok(SignInClient::Goa),
             other => Err(UnknownVariant(other.to_string())),
         }
     }
 }
 
+/// The ways a Gmail account signs in: where its mail comes from, how that
+/// mail signs in, and which client issued the Google token its calendar,
+/// contacts and Drive refresh through. The store reads and writes it as
+/// one value, so the route, the client and the Online Accounts link cannot
+/// disagree.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum GmailSignIn {
+    /// The Gmail API through the built-in client, whose token no longer
+    /// reads mail: the account waits to move.
+    BuiltInApi,
+    /// The Gmail API through the person's own Google project.
+    OwnProject,
+    /// Gmail's IMAP and SMTP with an app password. `google` issued the
+    /// token the calendar, contacts and Drive refresh through.
+    AppPassword { google: SignInClient },
+    /// Gmail's IMAP and SMTP with the token the desktop's Online Accounts
+    /// hands out for `goa_id`. The built-in client's own token carries the
+    /// calendar, contacts and Drive.
+    OnlineAccounts { goa_id: String },
+}
+
+impl GmailSignIn {
+    /// Where the account's mail comes from.
+    pub fn route(&self) -> MailRoute {
+        match self {
+            GmailSignIn::BuiltInApi | GmailSignIn::OwnProject => MailRoute::GmailApi,
+            GmailSignIn::AppPassword { .. } | GmailSignIn::OnlineAccounts { .. } => MailRoute::Imap,
+        }
+    }
+
+    /// The client the account's Google token refreshes through.
+    pub fn client(&self) -> SignInClient {
+        match self {
+            GmailSignIn::OwnProject => SignInClient::Own,
+            GmailSignIn::AppPassword { google } => *google,
+            GmailSignIn::BuiltInApi | GmailSignIn::OnlineAccounts { .. } => SignInClient::BuiltIn,
+        }
+    }
+
+    /// The account has to choose a new route before its mail arrives
+    /// again.
+    pub fn waits_to_move(&self) -> bool {
+        matches!(self, GmailSignIn::BuiltInApi)
+    }
+
+    /// The Online Accounts account the mail reads through, if it does.
+    pub fn goa_id(&self) -> Option<&str> {
+        match self {
+            GmailSignIn::OnlineAccounts { goa_id } => Some(goa_id),
+            _ => None,
+        }
+    }
+
+    pub fn on_online_accounts(&self) -> bool {
+        matches!(self, GmailSignIn::OnlineAccounts { .. })
+    }
+
+    /// The sign-in after a browser sign-in through `client` brought the
+    /// account a Google token. The mail route stays, and an account on
+    /// Online Accounts leaves it.
+    pub fn with_google_token(&self, client: SignInClient) -> GmailSignIn {
+        match (self.route(), client) {
+            (MailRoute::GmailApi, SignInClient::Own) => GmailSignIn::OwnProject,
+            (MailRoute::GmailApi, SignInClient::BuiltIn) => GmailSignIn::BuiltInApi,
+            (MailRoute::Imap, google) => GmailSignIn::AppPassword { google },
+        }
+    }
+
+    /// The mail signs in with an app password the keyring keeps beside a
+    /// servers row.
+    pub fn on_app_password(&self) -> bool {
+        matches!(self, GmailSignIn::AppPassword { .. })
+    }
+}
+
 /// Where a Gmail account's mail comes from. The account stays a Gmail
-/// account either way; [`SignInClient`] still names who issued its token.
+/// account either way; [`SignInClient`] still names who issued its token,
+/// and [`GmailSignIn`] says both together.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum MailRoute {
     /// The Gmail API, as every Gmail account read before routes existed.
@@ -746,10 +816,41 @@ pub(crate) mod tests {
     #[test]
     fn sign_in_clients_round_trip_through_their_names() {
         use crate::SignInClient;
-        for client in [SignInClient::Own, SignInClient::BuiltIn, SignInClient::Goa] {
+        for client in [SignInClient::Own, SignInClient::BuiltIn] {
             assert_eq!(client.as_str().parse::<SignInClient>(), Ok(client));
         }
-        assert_eq!(SignInClient::Goa.as_str(), "goa");
+        assert!("goa".parse::<SignInClient>().is_err());
+    }
+
+    #[test]
+    fn only_the_built_in_client_on_the_api_waits_to_move() {
+        use crate::{GmailSignIn, SignInClient};
+        let waiting: Vec<bool> = [
+            GmailSignIn::BuiltInApi,
+            GmailSignIn::OwnProject,
+            GmailSignIn::AppPassword {
+                google: SignInClient::BuiltIn,
+            },
+            GmailSignIn::OnlineAccounts {
+                goa_id: "account_1_0".into(),
+            },
+        ]
+        .iter()
+        .map(GmailSignIn::waits_to_move)
+        .collect();
+        assert_eq!(waiting, [true, false, false, false]);
+    }
+
+    #[test]
+    fn an_online_accounts_sign_in_refreshes_its_google_token_through_the_built_in_client() {
+        use crate::{GmailSignIn, SignInClient};
+        let goa = GmailSignIn::OnlineAccounts {
+            goa_id: "account_1_0".into(),
+        };
+        assert_eq!(
+            (goa.route(), goa.client(), goa.goa_id()),
+            (MailRoute::Imap, SignInClient::BuiltIn, Some("account_1_0"))
+        );
     }
 
     #[test]

@@ -5,11 +5,11 @@
 use std::sync::Arc;
 
 use mailrs_domain::translate::{fill, gettext};
-use mailrs_domain::{Account, Provider, SignInClient};
+use mailrs_domain::{Account, GmailSignIn, MailRoute, Provider, SignInClient};
 use mailrs_gmail::{Authorized, GMAIL_API_BASE, GmailError, Granted, OAuthClient, ScopeList};
 use mailrs_graph::GraphError;
 use mailrs_jmap::JmapError;
-use mailrs_store::accounts::{self, GoogleSignIn};
+use mailrs_store::accounts;
 
 use super::own_client::{OwnClient, OwnClientError, keep_project};
 use super::{
@@ -413,26 +413,13 @@ pub async fn calendar_consent(
         .clone()
         .ok_or(BrowserSignInError::NoClient(Browser::Google))?;
     let (id, provider) = (account.id, account.provider);
-    let (client, route) = db
-        .read(move |c| {
-            Ok((
-                accounts::sign_in_client(c, id)?,
-                accounts::mail_route(c, id)?,
-            ))
-        })
+    let sign_in = db
+        .read(move |c| accounts::gmail_sign_in(c, id))
         .await
         .map_err(SyncError::from)?;
-    // An Online Accounts account keeps its mail there and never needs a
-    // move. Any other asks the built-in client for this token, so only its
-    // route is in question.
-    let this_sign_in = GoogleSignIn {
-        client: match client {
-            SignInClient::Goa => SignInClient::Goa,
-            _ => SignInClient::BuiltIn,
-        },
-        route,
-    };
-    if provider != Provider::Gmail || this_sign_in.needs_move(provider) {
+    // This token carries no mail, so only an account whose mail comes over
+    // IMAP may take it.
+    if provider != Provider::Gmail || sign_in.route() != MailRoute::Imap {
         return Err(BrowserSignInError::NeedsRoute);
     }
     let authorized =
@@ -441,11 +428,11 @@ pub async fn calendar_consent(
             .map_err(BrowserSignInError::Google)?;
     Wanted::Only(account.email.clone()).check(&authorized.email)?;
     let granted = authorized.granted.as_ref().map(Granted::to_scope);
-    // The account keeps the client it had: an Online Accounts account
-    // stays on Online Accounts, a built-in one on the built-in client.
-    let kept = match client {
-        SignInClient::Goa => SignInClient::Goa,
-        _ => SignInClient::BuiltIn,
+    // An Online Accounts account stays on Online Accounts, and any other
+    // takes the built-in client.
+    let kept = move |before: GmailSignIn| match before {
+        GmailSignIn::OnlineAccounts { .. } => before,
+        other => other.with_google_token(SignInClient::BuiltIn),
     };
     let asked = oauth.scopes().join(" ");
     let token = super::GoogleToken {

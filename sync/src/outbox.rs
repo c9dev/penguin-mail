@@ -26,7 +26,7 @@ use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex, PoisonError};
 
 use mailrs_domain::translate::gettext;
-use mailrs_domain::{AccountId, AccountState, EpochMillis, MailRoute, Target};
+use mailrs_domain::{AccountId, AccountState, EpochMillis, GmailSignIn, MailRoute, Target};
 use mailrs_gmail::GmailError;
 use mailrs_store::messages;
 use mailrs_store::outbox::{self, Queued};
@@ -931,7 +931,7 @@ impl<A: Accounts> Outbox<A> {
                 for account in accounts::list_accounts(c)? {
                     if sign_ins
                         .get(&account.id)
-                        .is_some_and(|s| s.needs_move(account.provider))
+                        .is_some_and(GmailSignIn::waits_to_move)
                     {
                         moving.needs.insert(account.id);
                         if account.state == AccountState::MailPaused {
@@ -1035,9 +1035,9 @@ impl<A: Accounts> Outbox<A> {
                 let id = message.account_id;
                 let on_imap = self
                     .db
-                    .read(move |c| accounts::mail_route(c, id))
+                    .read(move |c| accounts::gmail_sign_in(c, id))
                     .await
-                    .is_ok_and(|route| route == MailRoute::Imap);
+                    .is_ok_and(|sign_in| sign_in.route() == MailRoute::Imap);
                 match on_imap {
                     true => Err(BackendError::NotFound.into()),
                     false => Ok(draft_id.clone()),

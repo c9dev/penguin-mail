@@ -4,7 +4,7 @@
 use std::sync::Arc;
 
 use mailrs_domain::translate::gettext;
-use mailrs_domain::{Account, EpochMillis, MailRoute, Provider, SignInClient};
+use mailrs_domain::{Account, EpochMillis, GmailSignIn, Provider};
 use mailrs_store::{StoreError, accounts};
 
 use crate::Connector;
@@ -97,9 +97,7 @@ pub async fn link(
                 });
             }
             let id = accounts::insert_account(c, &address, now)?;
-            accounts::set_sign_in_client(c, id, SignInClient::Goa)?;
-            accounts::set_mail_route(c, id, MailRoute::Imap)?;
-            accounts::set_goa_id(c, id, Some(&goa_id))?;
+            accounts::set_gmail_sign_in(c, id, &GmailSignIn::OnlineAccounts { goa_id })?;
             // The row was written a line above in the same transaction.
             let account = accounts::account(c, id)?
                 .ok_or(StoreError::Sqlite(rusqlite::Error::QueryReturnedNoRows))?;

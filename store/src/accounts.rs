@@ -1,7 +1,8 @@
 //! Accounts and their sync cursors.
 
 use mailrs_domain::{
-    Account, AccountId, AccountState, EpochMillis, MailRoute, Provider, RemoveSetting, SignInClient,
+    Account, AccountId, AccountState, EpochMillis, GmailSignIn, MailRoute, Provider, RemoveSetting,
+    SignInClient,
 };
 use std::collections::HashMap;
 
@@ -288,145 +289,109 @@ pub fn set_state(conn: &Connection, id: AccountId, state: AccountState) -> Resul
     Ok(())
 }
 
-/// The Google client `id` signs in with.
-pub fn sign_in_client(conn: &Connection, id: AccountId) -> Result<SignInClient> {
-    let value: String = conn.query_row(
-        "SELECT oauth_client FROM accounts WHERE id = ?1",
+/// How the Gmail account `id` signs in. A row of another provider reads as
+/// the columns' defaults, the built-in client on the API.
+pub fn gmail_sign_in(conn: &Connection, id: AccountId) -> Result<GmailSignIn> {
+    let (client, route, goa_id) = conn.query_row(
+        "SELECT oauth_client, mail_route, goa_id FROM accounts WHERE id = ?1",
         params![id],
-        |row| row.get(0),
+        |row| {
+            Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, String>(1)?,
+                row.get::<_, Option<String>>(2)?,
+            ))
+        },
     )?;
-    value.parse().map_err(|_| StoreError::Corrupt {
+    decode_sign_in(client, route, goa_id)
+}
+
+/// The value the `oauth_client` column holds for an account on Online
+/// Accounts. It names no Google client: that account's Google token is the
+/// built-in client's.
+const ON_ONLINE_ACCOUNTS: &str = "goa";
+
+/// Reads the three columns that together say how a Gmail account signs
+/// in. An Online Accounts account reads its mail over IMAP whatever the
+/// route column says, as it always has.
+fn decode_sign_in(client: String, route: String, goa_id: Option<String>) -> Result<GmailSignIn> {
+    if client == ON_ONLINE_ACCOUNTS {
+        let goa_id = goa_id.ok_or_else(|| StoreError::Corrupt {
+            column: "accounts.goa_id",
+            value: String::new(),
+        })?;
+        return Ok(GmailSignIn::OnlineAccounts { goa_id });
+    }
+    let client: SignInClient = client.parse().map_err(|_| StoreError::Corrupt {
         column: "accounts.oauth_client",
-        value: value.clone(),
-    })
-}
-
-/// Records that `id` signed in with `client`.
-pub fn set_sign_in_client(conn: &Connection, id: AccountId, client: SignInClient) -> Result<()> {
-    conn.execute(
-        "UPDATE accounts SET oauth_client = ?2 WHERE id = ?1",
-        params![id, client.as_str()],
-    )?;
-    Ok(())
-}
-
-/// The Online Accounts account `id` reads its mail through, if it was
-/// linked that way.
-pub fn goa_id(conn: &Connection, id: AccountId) -> Result<Option<String>> {
-    Ok(conn.query_row(
-        "SELECT goa_id FROM accounts WHERE id = ?1",
-        params![id],
-        |row| row.get(0),
-    )?)
-}
-
-/// Records the Online Accounts account `id` reads through, or forgets it.
-pub fn set_goa_id(conn: &Connection, id: AccountId, goa_id: Option<&str>) -> Result<()> {
-    conn.execute(
-        "UPDATE accounts SET goa_id = ?2 WHERE id = ?1",
-        params![id, goa_id],
-    )?;
-    Ok(())
-}
-
-/// Where `id`'s Gmail mail comes from. Only a Gmail account reads it.
-pub fn mail_route(conn: &Connection, id: AccountId) -> Result<MailRoute> {
-    let value: String = conn.query_row(
-        "SELECT mail_route FROM accounts WHERE id = ?1",
-        params![id],
-        |row| row.get(0),
-    )?;
-    parse_route(value)
-}
-
-fn parse_route(value: String) -> Result<MailRoute> {
-    value.parse().map_err(|_| StoreError::Corrupt {
+        value: client.clone(),
+    })?;
+    let route: MailRoute = route.parse().map_err(|_| StoreError::Corrupt {
         column: "accounts.mail_route",
-        value,
+        value: route.clone(),
+    })?;
+    Ok(match (route, client) {
+        (MailRoute::GmailApi, SignInClient::BuiltIn) => GmailSignIn::BuiltInApi,
+        (MailRoute::GmailApi, SignInClient::Own) => GmailSignIn::OwnProject,
+        (MailRoute::Imap, google) => GmailSignIn::AppPassword { google },
     })
 }
 
-/// Records where `id`'s Gmail mail comes from.
-pub fn set_mail_route(conn: &Connection, id: AccountId, route: MailRoute) -> Result<()> {
-    conn.execute(
-        "UPDATE accounts SET mail_route = ?2 WHERE id = ?1",
-        params![id, route.as_str()],
-    )?;
-    Ok(())
-}
-
-/// How a Gmail account signs in to Google and where its mail comes from.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct GoogleSignIn {
-    pub client: SignInClient,
-    pub route: MailRoute,
-}
-
-impl GoogleSignIn {
-    /// Whether the account has to choose a new route: a Gmail account on
-    /// the built-in client that still reads its mail through the API.
-    pub fn needs_move(self, provider: Provider) -> bool {
-        provider == Provider::Gmail
-            && self.client == SignInClient::BuiltIn
-            && self.route == MailRoute::GmailApi
+/// The three columns `sign_in` is kept in: the client, the route and the
+/// Online Accounts id.
+fn encode_sign_in(sign_in: &GmailSignIn) -> (&'static str, &'static str, Option<&str>) {
+    let route = sign_in.route().as_str();
+    match sign_in {
+        GmailSignIn::OnlineAccounts { goa_id } => (ON_ONLINE_ACCOUNTS, route, Some(goa_id)),
+        other => (other.client().as_str(), route, None),
     }
 }
 
-/// The client and route of every Gmail account, read in one query.
-pub fn google_sign_ins(conn: &Connection) -> Result<HashMap<AccountId, GoogleSignIn>> {
-    let mut stmt =
-        conn.prepare("SELECT id, oauth_client, mail_route FROM accounts WHERE provider = ?1")?;
+/// Records how `id` signs in, all three columns in one statement. The sync
+/// state stays.
+pub fn set_gmail_sign_in(conn: &Connection, id: AccountId, sign_in: &GmailSignIn) -> Result<()> {
+    commit_sign_in(conn, id, sign_in, false)
+}
+
+/// The sign-in of every Gmail account, read in one query.
+pub fn google_sign_ins(conn: &Connection) -> Result<HashMap<AccountId, GmailSignIn>> {
+    let mut stmt = conn
+        .prepare("SELECT id, oauth_client, mail_route, goa_id FROM accounts WHERE provider = ?1")?;
     let rows = stmt.query_map(params![Provider::Gmail.as_str()], |row| {
         Ok((
             row.get::<_, AccountId>(0)?,
             row.get::<_, String>(1)?,
             row.get::<_, String>(2)?,
+            row.get::<_, Option<String>>(3)?,
         ))
     })?;
     let mut all = HashMap::new();
     for row in rows {
-        let (id, client, route) = row?;
-        let client = client.parse().map_err(|_| StoreError::Corrupt {
-            column: "accounts.oauth_client",
-            value: client,
-        })?;
-        all.insert(
-            id,
-            GoogleSignIn {
-                client,
-                route: parse_route(route)?,
-            },
-        );
+        let (id, client, route, goa_id) = row?;
+        all.insert(id, decode_sign_in(client, route, goa_id)?);
     }
     Ok(all)
 }
 
-/// What a move to another route writes in one step.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct RouteCommit {
-    pub route: MailRoute,
-    pub client: SignInClient,
-    /// Start the account's sync over, because the new route has no cursor
-    /// the old one's would fit. Stored mail stays.
-    pub restart_sync: bool,
-}
-
-/// Writes a route and the client that goes with it in one statement, so a
-/// failure leaves neither half. `sync_gen` stays, as in a switch of folders.
-pub fn commit_route(conn: &Connection, id: AccountId, commit: &RouteCommit) -> Result<()> {
+/// Writes `sign_in` in one statement, so a failure leaves none of its
+/// columns changed. With `restart_sync`, the account's sync starts over,
+/// because a new route has no cursor the old one's would fit; stored mail
+/// stays, and so does `sync_gen`, as in a switch of folders.
+pub fn commit_sign_in(
+    conn: &Connection,
+    id: AccountId,
+    sign_in: &GmailSignIn,
+    restart_sync: bool,
+) -> Result<()> {
+    let (client, route, goa_id) = encode_sign_in(sign_in);
     conn.execute(
-        "UPDATE accounts SET mail_route = ?2, oauth_client = ?3, \
-         sync_state = CASE WHEN ?4 THEN NULL ELSE sync_state END, \
-         backfill_cursor = CASE WHEN ?4 THEN NULL ELSE backfill_cursor END, \
-         backfill_done = CASE WHEN ?4 THEN 0 ELSE backfill_done END, \
-         backfill_extends = CASE WHEN ?4 THEN 0 ELSE backfill_extends END \
+        "UPDATE accounts SET oauth_client = ?2, mail_route = ?3, goa_id = ?4, \
+         sync_state = CASE WHEN ?5 THEN NULL ELSE sync_state END, \
+         backfill_cursor = CASE WHEN ?5 THEN NULL ELSE backfill_cursor END, \
+         backfill_done = CASE WHEN ?5 THEN 0 ELSE backfill_done END, \
+         backfill_extends = CASE WHEN ?5 THEN 0 ELSE backfill_extends END \
          WHERE id = ?1",
-        params![
-            id,
-            commit.route.as_str(),
-            commit.client.as_str(),
-            commit.restart_sync
-        ],
+        params![id, client, route, goa_id, restart_sync],
     )?;
     Ok(())
 }

@@ -3,7 +3,9 @@
 
 use std::sync::Arc;
 
-use mailrs_domain::{Account, AccountState, MailRoute, Provider, RemoveSetting, SignInClient};
+use mailrs_domain::{
+    Account, AccountState, GmailSignIn, MailRoute, Provider, RemoveSetting, SignInClient,
+};
 use mailrs_gmail::OAuthClient;
 use mailrs_graph::MicrosoftClient;
 use mailrs_store::servers::{self, Pop3Servers, Saved, Security, Servers};
@@ -175,7 +177,7 @@ async fn a_gmail_account_on_its_own_client_signs_in_again_when_its_grant_ends() 
     let (db, _dir) = store().await;
     let me = gmail_account(&db).await;
     let id = me.id;
-    db.write(move |c| accounts::set_sign_in_client(c, id, SignInClient::Own))
+    db.write(move |c| accounts::set_gmail_sign_in(c, id, &GmailSignIn::OwnProject))
         .await
         .unwrap();
     let reach = connector(&db, Clients::default());
@@ -196,9 +198,17 @@ async fn a_gmail_account_on_the_imap_route_signs_in_again_when_its_grant_ends() 
     let (db, _dir) = store().await;
     let me = gmail_account(&db).await;
     let id = me.id;
-    db.write(move |c| accounts::set_mail_route(c, id, MailRoute::Imap))
-        .await
-        .unwrap();
+    db.write(move |c| {
+        accounts::set_gmail_sign_in(
+            c,
+            id,
+            &GmailSignIn::AppPassword {
+                google: SignInClient::BuiltIn,
+            },
+        )
+    })
+    .await
+    .unwrap();
     // No servers row and no app password are saved, so the route has no
     // mail to build.
     let connected = connector(&db, both_clients()).connect(&me).await.unwrap();
@@ -211,7 +221,13 @@ async fn a_gmail_account_on_the_imap_route_connects_to_imap_mail() {
     let me = gmail_account(&db).await;
     let id = me.id;
     db.write(move |c| {
-        accounts::set_mail_route(c, id, MailRoute::Imap)?;
+        accounts::set_gmail_sign_in(
+            c,
+            id,
+            &GmailSignIn::AppPassword {
+                google: SignInClient::BuiltIn,
+            },
+        )?;
         servers::save(
             c,
             id,
@@ -481,7 +497,7 @@ async fn a_google_account_with_its_own_client_connects_in_a_build_without_one() 
     let (db, _dir) = store().await;
     let me = gmail_account(&db).await;
     let id = me.id;
-    db.write(move |c| accounts::set_sign_in_client(c, id, SignInClient::Own))
+    db.write(move |c| accounts::set_gmail_sign_in(c, id, &GmailSignIn::OwnProject))
         .await
         .unwrap();
     let reach = connector(&db, Clients::default());
@@ -1230,7 +1246,7 @@ async fn an_own_account_signs_in_again_in_a_build_without_the_built_in_client() 
 async fn gmail_account_of(db: &Db, client: SignInClient) -> Account {
     db.write(move |c| {
         let id = accounts::insert_account(c, "me@gmail.com", 0)?;
-        accounts::set_sign_in_client(c, id, client)?;
+        accounts::set_gmail_sign_in(c, id, &GmailSignIn::BuiltInApi.with_google_token(client))?;
         Ok(accounts::account_by_email(c, "me@gmail.com")?.unwrap())
     })
     .await
@@ -1250,7 +1266,7 @@ async fn an_own_account_whose_key_is_gone_takes_no_other_client() {
     .await;
     assert!(matches!(refused, Err(BrowserSignInError::OwnClientMissing)));
     let client = db
-        .read(move |c| accounts::sign_in_client(c, me.id))
+        .read(move |c| Ok(accounts::gmail_sign_in(c, me.id)?.client()))
         .await
         .unwrap();
     assert_eq!(client, SignInClient::Own);
@@ -2375,9 +2391,17 @@ async fn the_calendar_consent_keeps_the_route_and_records_the_built_in_list() {
     let (db, _dir) = store().await;
     let me = gmail_account(&db).await;
     let id = me.id;
-    db.write(move |c| accounts::set_mail_route(c, id, MailRoute::Imap))
-        .await
-        .unwrap();
+    db.write(move |c| {
+        accounts::set_gmail_sign_in(
+            c,
+            id,
+            &GmailSignIn::AppPassword {
+                google: SignInClient::BuiltIn,
+            },
+        )
+    })
+    .await
+    .unwrap();
     let server = wiremock::MockServer::start().await;
     // The ID token names the address in another case, as Google may.
     let reach = connector(
@@ -2391,8 +2415,8 @@ async fn the_calendar_consent_keeps_the_route_and_records_the_built_in_list() {
     let (route, client, consent) = db
         .read(move |c| {
             Ok((
-                accounts::mail_route(c, id)?,
-                accounts::sign_in_client(c, id)?,
+                accounts::gmail_sign_in(c, id)?.route(),
+                accounts::gmail_sign_in(c, id)?.client(),
                 accounts::consent(c, id)?,
             ))
         })
@@ -2458,9 +2482,17 @@ async fn the_calendar_consent_is_refused_for_another_address() {
     let (db, _dir) = store().await;
     let me = gmail_account(&db).await;
     let id = me.id;
-    db.write(move |c| accounts::set_mail_route(c, id, MailRoute::Imap))
-        .await
-        .unwrap();
+    db.write(move |c| {
+        accounts::set_gmail_sign_in(
+            c,
+            id,
+            &GmailSignIn::AppPassword {
+                google: SignInClient::BuiltIn,
+            },
+        )
+    })
+    .await
+    .unwrap();
     let server = wiremock::MockServer::start().await;
     let reach = connector(
         &db,
@@ -2476,9 +2508,17 @@ async fn the_calendar_consent_is_refused_for_another_address() {
 
 async fn on_imap_route(db: &Db, me: &Account) {
     let id = me.id;
-    db.write(move |c| accounts::set_mail_route(c, id, MailRoute::Imap))
-        .await
-        .unwrap();
+    db.write(move |c| {
+        accounts::set_gmail_sign_in(
+            c,
+            id,
+            &GmailSignIn::AppPassword {
+                google: SignInClient::BuiltIn,
+            },
+        )
+    })
+    .await
+    .unwrap();
 }
 
 #[tokio::test]

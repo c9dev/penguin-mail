@@ -10,9 +10,8 @@
 use std::collections::HashSet;
 
 use mailrs_domain::translate::{fill, gettext};
-use mailrs_domain::{AccountId, MailRoute, Provider, SignInClient};
+use mailrs_domain::{AccountId, GmailSignIn, MailRoute, Provider, SignInClient};
 use mailrs_gmail::{BUILT_IN_SCOPES, FULL_SCOPES};
-use mailrs_store::accounts::GoogleSignIn;
 use mailrs_sync::{Offers, Withheld};
 
 /// A permission sign-in leaves out, or one a caller can find missing.
@@ -343,23 +342,14 @@ pub fn grant_bar_title(account: &str, missing: &[Permission], provider: Provider
 /// whose calendar token comes from the built-in client; every other Gmail
 /// account asks for the full one, as does an account whose sign-in is
 /// unknown.
-pub fn own_scopes(provider: Provider, sign_in: Option<GoogleSignIn>) -> &'static [&'static str] {
+pub fn own_scopes(provider: Provider, sign_in: Option<&GmailSignIn>) -> &'static [&'static str] {
     match (provider, sign_in) {
         (Provider::Microsoft, _) => &mailrs_graph::SCOPES,
-        (
-            _,
-            Some(GoogleSignIn {
-                client: SignInClient::BuiltIn,
-                route: MailRoute::Imap,
-            }),
-        ) => &BUILT_IN_SCOPES,
-        (
-            _,
-            Some(GoogleSignIn {
-                client: SignInClient::Goa,
-                ..
-            }),
-        ) => &BUILT_IN_SCOPES,
+        (_, Some(sign_in))
+            if sign_in.route() == MailRoute::Imap && sign_in.client() == SignInClient::BuiltIn =>
+        {
+            &BUILT_IN_SCOPES
+        }
         _ => &FULL_SCOPES,
     }
 }
@@ -763,37 +753,35 @@ mod tests {
 
     #[test]
     fn each_account_is_compared_with_its_own_clients_list() {
-        let built_in_imap = GoogleSignIn {
-            client: SignInClient::BuiltIn,
-            route: MailRoute::Imap,
+        let built_in_imap = GmailSignIn::AppPassword {
+            google: SignInClient::BuiltIn,
         };
-        let built_in_api = GoogleSignIn {
-            route: MailRoute::GmailApi,
-            ..built_in_imap
-        };
-        let own = GoogleSignIn {
-            client: SignInClient::Own,
-            ..built_in_imap
+        let own_imap = GmailSignIn::AppPassword {
+            google: SignInClient::Own,
         };
         assert_eq!(
-            own_scopes(Provider::Gmail, Some(built_in_imap)),
+            own_scopes(Provider::Gmail, Some(&built_in_imap)),
             BUILT_IN_SCOPES
         );
-        assert_eq!(own_scopes(Provider::Gmail, Some(built_in_api)), FULL_SCOPES);
-        assert_eq!(own_scopes(Provider::Gmail, Some(own)), FULL_SCOPES);
+        assert_eq!(
+            own_scopes(Provider::Gmail, Some(&GmailSignIn::BuiltInApi)),
+            FULL_SCOPES
+        );
+        assert_eq!(own_scopes(Provider::Gmail, Some(&own_imap)), FULL_SCOPES);
+        assert_eq!(
+            own_scopes(Provider::Gmail, Some(&GmailSignIn::OwnProject)),
+            FULL_SCOPES
+        );
         assert_eq!(own_scopes(Provider::Gmail, None), FULL_SCOPES);
         assert_eq!(own_scopes(Provider::Microsoft, None), mailrs_graph::SCOPES);
     }
 
     #[test]
     fn an_online_accounts_account_is_compared_with_the_built_in_list() {
-        for route in [MailRoute::Imap, MailRoute::GmailApi] {
-            let goa = GoogleSignIn {
-                client: SignInClient::Goa,
-                route,
-            };
-            assert_eq!(own_scopes(Provider::Gmail, Some(goa)), BUILT_IN_SCOPES);
-        }
+        let goa = GmailSignIn::OnlineAccounts {
+            goa_id: "account_1_0".into(),
+        };
+        assert_eq!(own_scopes(Provider::Gmail, Some(&goa)), BUILT_IN_SCOPES);
     }
 
     #[test]
