@@ -91,10 +91,31 @@ pub mod cost {
 /// [`GmailClient`] held. See the field's own doc for what it must not do.
 type GrantedHook = std::sync::Arc<dyn Fn(&Granted) + Send + Sync>;
 
+/// Where an access token comes from when the client does not refresh its
+/// own, such as the desktop's Online Accounts.
+pub trait AccessSource: Send + Sync {
+    /// A token to send. `renew` is true only on the one retry after a 401,
+    /// when the last token was refused.
+    fn access(&self, renew: bool) -> futures::future::BoxFuture<'_, Result<String, GmailError>>;
+}
+
+/// How the client gets its tokens.
+enum Access {
+    /// The client's refresh token, exchanged at Google's token endpoint.
+    Refresh {
+        oauth: OAuthClient,
+        refresh_token: String,
+    },
+    /// A token from elsewhere, which keeps no refresh token here.
+    Source {
+        source: std::sync::Arc<dyn AccessSource>,
+        http: reqwest::Client,
+    },
+}
+
 /// A Gmail client for one account.
 pub struct GmailClient {
-    oauth: OAuthClient,
-    refresh_token: String,
+    access_from: Access,
     base_url: String,
     /// The People API, which lives at a host of its own.
     people_url: String,
@@ -124,9 +145,29 @@ impl GmailClient {
     /// clients for one address cannot each spend that address's budget.
     pub fn new(oauth: OAuthClient, refresh_token: String) -> Self {
         let quota = std::sync::Arc::new(AccountQuota::standalone());
+        GmailClient::with_access(
+            Access::Refresh {
+                oauth,
+                refresh_token,
+            },
+            quota,
+        )
+    }
+
+    /// A client that takes its tokens from `source` and sends them over
+    /// `http`. The `on_granted` hook never runs for it: no refresh reports
+    /// scopes.
+    pub fn with_source(
+        source: std::sync::Arc<dyn AccessSource>,
+        http: reqwest::Client,
+        quota: std::sync::Arc<AccountQuota>,
+    ) -> Self {
+        GmailClient::with_access(Access::Source { source, http }, quota)
+    }
+
+    fn with_access(access_from: Access, quota: std::sync::Arc<AccountQuota>) -> Self {
         GmailClient {
-            oauth,
-            refresh_token,
+            access_from,
             base_url: GMAIL_API_BASE.to_string(),
             people_url: people::PEOPLE_API_BASE.to_string(),
             calendar_base_url: crate::calendar::CALENDAR_API_BASE.to_string(),
@@ -761,12 +802,15 @@ impl GmailClient {
     }
 
     pub(crate) fn http(&self) -> &reqwest::Client {
-        self.oauth.http()
+        match &self.access_from {
+            Access::Refresh { oauth, .. } => oauth.http(),
+            Access::Source { http, .. } => http,
+        }
     }
 
     /// The account's access token, refreshed when it is about to run out.
     pub(crate) async fn token(&self) -> Result<String, GmailError> {
-        self.bearer().await
+        self.bearer(false).await
     }
 
     /// Sends the request `build` makes with the account's token and hands
@@ -779,7 +823,7 @@ impl GmailClient {
     ) -> Result<Response, GmailError> {
         let mut retried = false;
         loop {
-            let token = self.bearer().await?;
+            let token = self.bearer(retried).await?;
             let response = build().bearer_auth(&token).send().await?;
             if response.status() == StatusCode::UNAUTHORIZED && !retried {
                 retried = true;
@@ -818,7 +862,16 @@ impl GmailClient {
     }
 
     /// A cached access token with a minute to spare, or a freshly refreshed one.
-    async fn bearer(&self) -> Result<String, GmailError> {
+    /// `renew` is true on the retry after a 401; a source then hands out a
+    /// new token, where a refresh token's cache is already dropped.
+    async fn bearer(&self, renew: bool) -> Result<String, GmailError> {
+        let (oauth, refresh_token) = match &self.access_from {
+            Access::Refresh {
+                oauth,
+                refresh_token,
+            } => (oauth, refresh_token),
+            Access::Source { source, .. } => return source.access(renew).await,
+        };
         let mut cached = self.access.lock().await;
         if let Some(token) = cached
             .as_ref()
@@ -826,7 +879,7 @@ impl GmailClient {
         {
             return Ok(token.token.clone());
         }
-        let fresh = self.oauth.refresh(&self.refresh_token).await?;
+        let fresh = oauth.refresh(refresh_token).await?;
         if let Some(granted) = &fresh.granted {
             let changed = {
                 let mut held = self.granted.lock().expect("client poisoned");
@@ -897,7 +950,7 @@ impl GmailClient {
         self.quota.acquire(units, limiter::priority()).await;
         let mut retried = false;
         loop {
-            let token = self.bearer().await?;
+            let token = self.bearer(retried).await?;
             let response = build().bearer_auth(&token).send().await?;
             let status = response.status();
             if status == StatusCode::UNAUTHORIZED && !retried {
