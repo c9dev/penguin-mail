@@ -349,14 +349,15 @@ pub fn remove_draft(conn: &Connection, account_id: AccountId, draft_id: &str) ->
 /// Names each of the account's rows by its draft's message id instead of
 /// the API's draft id, for an account that moves to Gmail's IMAP, where a
 /// draft's id is its message's. Run it before the account's `drafts`
-/// pairs go: a pair gives the message id, and a row without one falls
-/// back to the message id it holds.
+/// pairs go: a pair gives the message id, a row without one falls back
+/// to the message id it holds, and a row with neither keeps its draft id,
+/// which then finds nothing and asks the person to check Sent.
 pub fn draft_ids_to_message_ids(conn: &Connection, account_id: AccountId) -> Result<()> {
     conn.execute(
         "UPDATE outbox SET draft_id = COALESCE(
              (SELECT d.message_id FROM drafts d
               WHERE d.account_id = outbox.account_id AND d.draft_id = outbox.draft_id),
-             outbox.message_id)
+             outbox.message_id, outbox.draft_id)
          WHERE account_id = ?1 AND draft_id IS NOT NULL",
         params![account_id],
     )?;
