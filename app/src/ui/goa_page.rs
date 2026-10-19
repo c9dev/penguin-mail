@@ -41,6 +41,10 @@ pub enum PageState {
     SnapPlug {
         address: String,
     },
+    /// This computer has no Online Accounts to ask.
+    NotInstalled {
+        address: String,
+    },
 }
 
 type Pick = Rc<RefCell<Option<Rc<dyn Fn(GoaAccount)>>>>;
@@ -342,6 +346,17 @@ impl GoaPage {
                     &[("address", address)],
                 ));
             }
+            PageState::NotInstalled { .. } => {
+                self.title
+                    .set_label(&gettext("Add your Google account to this computer"));
+                self.body.set_visible(true);
+                self.body.set_use_markup(false);
+                // Translators: GNOME Online Accounts is the name of a program; keep it as your distribution's software centre shows it.
+                self.body.set_label(&gettext(
+                    "Install GNOME Online Accounts from your software centre, add your Google account there, and come back.",
+                ));
+                self.main.set_visible(false);
+            }
             PageState::SnapPlug { .. } => {
                 self.title
                     .set_label(&gettext("Add your Google account to this computer"));
@@ -357,7 +372,10 @@ impl GoaPage {
                 crate::ui::name(&self.command_text, ACCOUNTS_COMMAND);
             }
         }
-        if !matches!(state, PageState::SnapPlug { .. }) {
+        if !matches!(
+            state,
+            PageState::SnapPlug { .. } | PageState::NotInstalled { .. }
+        ) {
             self.body.set_use_markup(true);
         }
         *self.state.borrow_mut() = Some(state);

@@ -3965,6 +3965,14 @@ impl Dialog {
                 self.set_band(goa_page::TAG, Step::Address, None, None);
                 self.push(goa_page::TAG);
             }
+            // No Online Accounts on this Linux: say how to get it, with the
+            // other ways to sign in under it.
+            (Goa::Absent, _) if platform == Platform::Linux => {
+                self.goa_address.replace(Some(address.clone()));
+                self.goa.show(PageState::NotInstalled { address });
+                self.set_band(goa_page::TAG, Step::Address, None, None);
+                self.push(goa_page::TAG);
+            }
             _ => self.offer_rows(platform, ready, expected),
         }
     }
@@ -5685,6 +5693,7 @@ fn preview(this: &Rc<Dialog>, stage: &str) {
                     others: Vec::new(),
                 },
                 "goa-missing" => PageState::Missing { address },
+                "goa-not-installed" => PageState::NotInstalled { address },
                 _ => PageState::SnapPlug { address },
             };
             this.goa.show(state);
