@@ -364,6 +364,24 @@ pub fn draft_ids_to_message_ids(conn: &Connection, account_id: AccountId) -> Res
     Ok(())
 }
 
+/// Lets go of the account's draft ids for an account that moves from
+/// Gmail's IMAP to the API, where no draft goes by those ids. A row whose
+/// bytes are only in that draft keeps `problem`, so the outbox never takes
+/// the draft's absence on the API for a sent message and the person
+/// checks Sent. A row the server holds keeps its draft.
+pub fn draft_ids_off_imap(conn: &Connection, account_id: AccountId, problem: &str) -> Result<()> {
+    conn.execute(
+        "UPDATE outbox SET problem = ?2 \
+         WHERE account_id = ?1 AND raw IS NULL AND held IS NULL",
+        params![account_id, problem],
+    )?;
+    conn.execute(
+        "UPDATE outbox SET draft_id = NULL WHERE account_id = ?1 AND held IS NULL",
+        params![account_id],
+    )?;
+    Ok(())
+}
+
 /// The account's rows whose bytes are only in a server draft: their row
 /// ids and the draft's message ids.
 pub fn bytes_on_server(conn: &Connection, account_id: AccountId) -> Result<Vec<(i64, String)>> {

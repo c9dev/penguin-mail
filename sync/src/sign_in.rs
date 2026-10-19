@@ -79,7 +79,17 @@ pub(crate) async fn client_of<P: PasswordStore + 'static>(
     let id = account.id;
     let sign_in = db.read(move |c| accounts::gmail_sign_in(c, id)).await?;
     // An account on Online Accounts takes its mail from there, and its
-    // calendar, contacts and Drive from the built-in client's own token.
+    // calendar, contacts and Drive from the built-in client's own token,
+    // unless it came from its own project: its Google token is that
+    // project's while the keyring keeps the project, since a consent
+    // through the built-in client deletes it.
+    if sign_in.on_online_accounts() {
+        let kept = read_secret(kept, id, STEP_WAIT)
+            .await?
+            .as_deref()
+            .and_then(OwnClient::decode);
+        return Ok(kept.map(|own| own.oauth()).or(built_in));
+    }
     Ok(match sign_in.client() {
         SignInClient::Own => own_client_of(config, kept, id)
             .await?
@@ -260,6 +270,7 @@ impl From<ChangeError> for SignInError {
             ChangeError::Token(reason) => SignInError::Token(reason),
             ChangeError::Password(err) => SignInError::Token(err.to_string()),
             ChangeError::Store(err) => SignInError::Store(err),
+            ChangeError::Taken { address, provider } => SignInError::Taken { address, provider },
         }
     }
 }
@@ -270,6 +281,7 @@ impl From<ChangeError> for ImapSignInError {
             ChangeError::Token(reason) => ImapSignInError::Password(PasswordError::Keyring(reason)),
             ChangeError::Password(err) => ImapSignInError::Password(err),
             ChangeError::Store(err) => ImapSignInError::Store(err),
+            ChangeError::Taken { address, provider } => taken_error(&address, &provider),
         }
     }
 }

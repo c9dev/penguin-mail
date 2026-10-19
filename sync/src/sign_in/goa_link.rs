@@ -125,6 +125,7 @@ impl From<ChangeError> for LinkError {
     fn from(err: ChangeError) -> Self {
         match err {
             ChangeError::Store(err) => LinkError::Store(err),
+            ChangeError::Taken { address, provider } => LinkError::Taken { address, provider },
             // A link brings no secret, so the keyring never refuses one.
             other => LinkError::Keyring(other.to_string()),
         }

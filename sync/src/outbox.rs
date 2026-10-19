@@ -62,7 +62,7 @@ fn mark(since: EpochMillis, message_id: &str) -> String {
 }
 
 /// What the row of a message the server may or may not have sent says.
-fn check_sent() -> String {
+pub(crate) fn check_sent() -> String {
     gettext("Penguin Mail could not confirm whether this message went out. Check Sent.")
 }
 
@@ -990,6 +990,13 @@ impl<A: Accounts> Outbox<A> {
             .accounts
             .account(message.account_id)
             .ok_or(SyncError::UnknownAccount(message.account_id))?;
+        // An account running without mail, as a Gmail account does while
+        // Online Accounts is out, has heard nothing of the message: it
+        // waits as an account still connecting does, with no try counted,
+        // and goes once the account starts again with its mail.
+        if !sync.services().serves_mail() {
+            return Err(SyncError::UnknownAccount(message.account_id));
+        }
         // The try counts before anything goes, so one the app never hears
         // back from, because it stopped, makes the next look in Sent. The
         // caller counts it again on a failure, which writes the same number.

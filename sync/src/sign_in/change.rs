@@ -73,6 +73,10 @@ pub(crate) enum ChangeError {
     /// The keyring refused the app password. Nothing changed.
     #[error(transparent)]
     Password(PasswordError),
+    /// A new address turned out to be held when the change came to write
+    /// it, by the provider named. Nothing changed.
+    #[error("{address} is taken by {provider}")]
+    Taken { address: String, provider: String },
     #[error(transparent)]
     Store(#[from] StoreError),
 }
@@ -106,13 +110,21 @@ pub(crate) async fn change_sign_in(
     match whose {
         Whose::New { email, now } => {
             let stored = Stored::of(None, to, token.as_ref(), password.as_ref(), false);
+            // The check and the insert share the write, so an account added
+            // for the address since the caller looked is refused, never
+            // written over or deleted below.
+            let address = email.clone();
             let id = db
                 .write(move |c| {
+                    if let Some(held) = accounts::account_by_email(c, &email)? {
+                        return Ok(Err(held.provider_name().to_string()));
+                    }
                     let id = accounts::insert_account(c, &email, now)?;
                     stored.write(c, id)?;
-                    Ok(id)
+                    Ok(Ok(id))
                 })
-                .await?;
+                .await?
+                .map_err(|provider| ChangeError::Taken { address, provider })?;
             if let Err(err) = keep_secrets(secrets, id, token, password).await {
                 db.write(move |c| accounts::delete_account(c, id)).await?;
                 return Err(err);
@@ -193,7 +205,10 @@ enum StoredMail {
     Keep,
     /// From the API to IMAP: [`empty_for_imap`].
     ForImap,
-    /// From IMAP to the API, whose ids nothing stored shares.
+    /// From IMAP to the API, whose ids nothing stored shares. The outbox
+    /// lets go of its IMAP draft ids, and a row whose bytes are only in
+    /// such a draft asks the person to check Sent rather than count the
+    /// draft's absence on the API as sent.
     ForApi,
 }
 
@@ -254,7 +269,10 @@ impl Stored {
         match self.mail {
             StoredMail::Keep => {}
             StoredMail::ForImap => empty_for_imap(c, id)?,
-            StoredMail::ForApi => switch::empty_mail(c, id)?,
+            StoredMail::ForApi => {
+                outbox::draft_ids_off_imap(c, id, &crate::outbox::check_sent())?;
+                switch::empty_mail(c, id)?
+            }
         }
         if self.signed_in_again
             && accounts::account(c, id)?.is_some_and(|held| held.state == AccountState::NeedsReauth)
