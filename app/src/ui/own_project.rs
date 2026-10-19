@@ -608,6 +608,11 @@ fn checklist(items: &[String]) -> gtk::ListBox {
             .activatable(false)
             .focusable(false)
             .build();
+        // A list item takes no name from the label inside it.
+        let spoken = gtk::pango::parse_markup(item, '\0')
+            .map(|(_, text, _)| text.to_string())
+            .unwrap_or_default();
+        crate::ui::name(&row, &spoken);
         list.append(&row);
     }
     list
