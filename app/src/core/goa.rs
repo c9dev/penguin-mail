@@ -294,12 +294,21 @@ impl Core {
         let engine = std::sync::Arc::clone(&self.engine);
         self.runtime.spawn(async move {
             let mut wait = RETRY_FIRST;
+            // Whether the last read failed. A linked account that started
+            // then has no mail, so it starts again once a read answers.
+            let mut failed = false;
             loop {
                 let list = goa.google_accounts().await;
                 state.keep(&list);
-                if let (Ok(list), Ok(linked)) = (&list, linked_accounts(&db).await) {
-                    state.count_attention(&linked, list);
+                if let Ok(linked) = linked_accounts(&db).await {
+                    if let Ok(list) = &list {
+                        state.count_attention(&linked, list);
+                    }
+                    if failed && list.is_ok() {
+                        restart_all(&linked, &reach, &engine, &db).await;
+                    }
                 }
+                failed = list.is_err();
                 let _ = tx.send(()).await;
                 match goa.changes().await {
                     Ok(mut changes) => {
@@ -311,14 +320,20 @@ impl Core {
                                 if let Ok(list) = &list {
                                     state.count_attention(&linked, list);
                                 }
-                                restart_for(&change, &linked, &reach, &engine, &db).await;
+                                if failed && list.is_ok() {
+                                    restart_all(&linked, &reach, &engine, &db).await;
+                                } else {
+                                    restart_for(&change, &linked, &reach, &engine, &db).await;
+                                }
                             }
+                            failed = list.is_err();
                             let _ = tx.send(()).await;
                         }
                     }
                     Err(err) => {
                         tracing::debug!(error = %err, "could not follow Online Accounts");
                         state.keep(&Err(err));
+                        failed = true;
                         let _ = tx.send(()).await;
                     }
                 }
@@ -331,6 +346,25 @@ impl Core {
                 on_change();
             }
         });
+    }
+}
+
+/// Stops and starts again every linked account, once Online Accounts
+/// answers after it did not.
+async fn restart_all(
+    linked: &[(Account, Option<String>)],
+    reach: &Reach,
+    engine: &super::RunningEngine,
+    db: &Db,
+) {
+    let Some(engine) = engine.current() else {
+        return;
+    };
+    for (account, _) in linked {
+        engine.stop_account(account.id);
+        if let Err(err) = start_again(reach, &engine, db, account, false).await {
+            tracing::warn!(account = account.id, error = %err, "could not start the account again once Online Accounts answered");
+        }
     }
 }
 
