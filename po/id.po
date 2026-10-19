@@ -2176,7 +2176,7 @@ msgid_plural "Could not save {count} people to contacts in {account}"
 msgstr[0] "Tidak dapat menyimpan {count} orang ke kontak di {account}"
 msgstr[1] "Tidak dapat menyimpan {count} orang ke kontak di {account}"
 
-#: app/src/core.rs:236
+#: app/src/core.rs:240
 msgid ""
 "Another copy of Penguin Mail, or penguin-mail-cli sync, is syncing your "
 "mail. Stop it, then open Penguin Mail again."
@@ -2184,42 +2184,42 @@ msgstr ""
 "Salinan Penguin Mail lain, atau penguin-mail-cli sync, sedang menyinkronkan "
 "email Anda. Hentikan, lalu buka kembali Penguin Mail."
 
-#: app/src/core.rs:248
+#: app/src/core.rs:252
 msgid "Penguin Mail could not update its mail store, and kept the old one."
 msgstr ""
 "Penguin Mail tidak dapat memperbarui penyimpanan email dan mempertahankan "
 "salinan lama."
 
-#: app/src/core.rs:990 app/src/core.rs:1083 app/src/core.rs:1212
-#: app/src/core.rs:1226 app/src/core.rs:1291 app/src/core.rs:1387
-#: app/src/core.rs:1879
+#: app/src/core.rs:996 app/src/core.rs:1089 app/src/core.rs:1218
+#: app/src/core.rs:1232 app/src/core.rs:1297 app/src/core.rs:1393
+#: app/src/core.rs:1885
 msgid "Demo mode cannot add real accounts."
 msgstr "Mode demo tidak dapat menambahkan akun sungguhan."
 
-#: app/src/core.rs:1008 app/src/core.rs:2003 app/src/core.rs:2065
+#: app/src/core.rs:1014 app/src/core.rs:2009 app/src/core.rs:2071
 msgid "Canceled."
 msgstr "Dibatalkan."
 
-#: app/src/core.rs:1559 app/src/core.rs:1584
+#: app/src/core.rs:1565 app/src/core.rs:1590
 msgid "This account keeps no password a calendar or contacts server takes."
 msgstr ""
 "Akun ini tidak menyimpan sandi yang dapat digunakan server kalender atau "
 "kontak."
 
-#: app/src/core.rs:1765 app/src/core.rs:1815 app/src/core.rs:1917
-#: app/src/core.rs:2029
+#: app/src/core.rs:1771 app/src/core.rs:1821 app/src/core.rs:1923
+#: app/src/core.rs:2035
 msgid "The demo cannot switch accounts."
 msgstr "Demo tidak dapat beralih akun."
 
-#: app/src/core.rs:1819 app/src/core.rs:1921
+#: app/src/core.rs:1825 app/src/core.rs:1927
 msgid "This account is already moving to its new sign-in."
 msgstr "Akun ini sudah dipindahkan ke cara masuk yang baru."
 
-#: app/src/core.rs:1983
+#: app/src/core.rs:1989
 msgid "The demo cannot connect a calendar."
 msgstr "Mode demo tidak dapat menghubungkan kalender."
 
-#: app/src/core.rs:2049
+#: app/src/core.rs:2055
 msgid "Gave up waiting for the browser after five minutes."
 msgstr "Berhenti menunggu peramban setelah lima menit."
 
@@ -2469,7 +2469,7 @@ msgstr ""
 
 #: app/src/gmail_password.rs:109
 msgid ""
-"Your organisation turned off this way of signing in. Ask them, or sign in "
+"Your organization turned off this way of signing in. Ask them, or sign in "
 "another way."
 msgstr ""
 "Organisasi Anda mematikan cara masuk ini. Tanyakan kepada mereka, atau masuk "
@@ -2631,7 +2631,7 @@ msgstr[1] "{count} akun Gmail memerlukan cara masuk yang baru"
 msgid "Use This Account"
 msgstr "Pakai Akun Ini"
 
-#: app/src/move_banner.rs:102 app/src/ui/preferences/google_route.rs:341
+#: app/src/move_banner.rs:102 app/src/ui/preferences/google_route.rs:345
 msgid "Choose…"
 msgstr "Pilih…"
 
@@ -2643,7 +2643,7 @@ msgstr "Arsipkan"
 
 #: app/src/notify.rs:62 app/src/ui/conversation.rs:411
 #: app/src/ui/conversation.rs:1124 app/src/ui/preferences.rs:184
-#: app/src/ui/rules.rs:460 app/src/ui/window/message_menu.rs:128
+#: app/src/ui/rules.rs:463 app/src/ui/window/message_menu.rs:128
 msgid "Mark as Read"
 msgstr "Tandai Sudah Dibaca"
 
@@ -3214,7 +3214,7 @@ msgstr "Email di {provider} terus berubah saat Penguin Mail mencocokkannya."
 msgid "{provider} refused the sign-in in the browser."
 msgstr "{provider} menolak masuk melalui peramban."
 
-#: app/src/offered.rs:1062 app/src/own_project.rs:335
+#: app/src/offered.rs:1062 app/src/own_project.rs:356
 msgid "You did not allow Penguin Mail on {provider}'s page."
 msgstr "Anda tidak mengizinkan Penguin Mail di halaman {provider}."
 
@@ -3260,22 +3260,22 @@ msgstr "Model tidak mengembalikan teks untuk dimasukkan ke pesan."
 msgid "The model could not translate this: {reason}"
 msgstr "Model tidak dapat menerjemahkan ini: {reason}"
 
-#: app/src/own_project.rs:154
+#: app/src/own_project.rs:175
 msgid "Step {number} of 6"
 msgstr "Langkah {number} dari 6"
 
 #. Translators: Google is a name; keep it as it is. "Open Google Cloud" is the button above this line.
-#: app/src/own_project.rs:161
+#: app/src/own_project.rs:182
 msgid "Open Google Cloud, then follow the list."
 msgstr "Buka Google Cloud, lalu ikuti daftarnya."
 
 #. Translators: Google is a name; keep it as it is.
-#: app/src/own_project.rs:167
+#: app/src/own_project.rs:188
 msgid "Your own Google project"
 msgstr "Proyek Google Anda sendiri"
 
 #. Translators: Google, Penguin Mail and Gmail are names; keep them as they are.
-#: app/src/own_project.rs:172
+#: app/src/own_project.rs:193
 msgid ""
 "A Google project of your own gives Penguin Mail every Gmail feature. It's "
 "free, just for you, takes about 10 minutes, and you do it once."
@@ -3284,7 +3284,7 @@ msgstr ""
 "Gratis, hanya untuk Anda, butuh sekitar 10 menit, dan cukup sekali."
 
 #. Translators: Google and Penguin Mail are names; keep them as they are.
-#: app/src/own_project.rs:176
+#: app/src/own_project.rs:197
 msgid ""
 "You'll use the Google account you want to read mail from. Penguin Mail opens "
 "each page for you and says what to click."
@@ -3292,16 +3292,16 @@ msgstr ""
 "Anda akan memakai akun Google yang ingin Anda baca emailnya. Penguin Mail "
 "membukakan setiap halaman dan memberi tahu apa yang harus diklik."
 
-#: app/src/own_project.rs:182
+#: app/src/own_project.rs:203
 msgid "Make a project"
 msgstr "Buat proyek"
 
 #. Translators: Google and Penguin Mail are names; keep them as they are.
-#: app/src/own_project.rs:185
+#: app/src/own_project.rs:206
 msgid "Google keeps what Penguin Mail needs in a project of its own."
 msgstr "Google menyimpan yang dibutuhkan Penguin Mail dalam proyeknya sendiri."
 
-#: app/src/own_project.rs:189
+#: app/src/own_project.rs:210
 msgid ""
 "If Google asks you to agree to its terms first, choose your country and "
 "agree."
@@ -3310,31 +3310,31 @@ msgstr ""
 "dan setujui."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
-#: app/src/own_project.rs:192
+#: app/src/own_project.rs:213
 msgid "In <b>Project name</b>, type <tt>Penguin Mail</tt>."
 msgstr "Di <b>Nama project</b>, ketik <tt>Penguin Mail</tt>."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
-#: app/src/own_project.rs:194
+#: app/src/own_project.rs:215
 msgid "Leave <b>Location</b> as it is and click <b>Create</b>."
 msgstr "Biarkan <b>Lokasi</b> apa adanya dan klik <b>Buat</b>."
 
-#: app/src/own_project.rs:195
+#: app/src/own_project.rs:216
 msgid "Wait for the bell icon to say the project is ready."
 msgstr "Tunggu sampai ikon lonceng menyatakan proyek sudah siap."
 
 #. Translators: Gmail is a name; keep it as it is.
-#: app/src/own_project.rs:201
+#: app/src/own_project.rs:222
 msgid "Turn on Gmail, Calendar and Contacts"
 msgstr "Aktifkan Gmail, Kalender, dan Kontak"
 
 #. Translators: Penguin Mail is a name; keep it as it is.
-#: app/src/own_project.rs:204
+#: app/src/own_project.rs:225
 msgid "Penguin Mail reads your mail, calendar and contacts through these."
 msgstr "Melalui ini Penguin Mail membaca email, kalender, dan kontak Anda."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
-#: app/src/own_project.rs:209
+#: app/src/own_project.rs:230
 msgid ""
 "Check that the project at the top says <b>Penguin Mail</b>. If not, click it "
 "and pick Penguin Mail."
@@ -3343,26 +3343,26 @@ msgstr ""
 "klik lalu pilih Penguin Mail."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
-#: app/src/own_project.rs:212
+#: app/src/own_project.rs:233
 msgid "Click <b>Next</b>, then <b>Enable</b>."
 msgstr "Klik <b>Berikutnya</b>, lalu <b>Aktifkan</b>."
 
-#: app/src/own_project.rs:217
+#: app/src/own_project.rs:238
 msgid "Name the sign-in screen"
 msgstr "Beri nama layar masuk"
 
 #. Translators: Google is a name; keep it as it is.
-#: app/src/own_project.rs:219
+#: app/src/own_project.rs:240
 msgid "Google shows this name when you sign in."
 msgstr "Google menampilkan nama ini saat Anda masuk."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
-#: app/src/own_project.rs:222
+#: app/src/own_project.rs:243
 msgid "Click <b>Get started</b>."
 msgstr "Klik <b>Mulai</b>."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
-#: app/src/own_project.rs:225
+#: app/src/own_project.rs:246
 msgid ""
 "<b>App name</b>: <tt>Penguin Mail</tt>. <b>User support email</b>: your "
 "address."
@@ -3371,7 +3371,7 @@ msgstr ""
 "alamat Anda."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
-#: app/src/own_project.rs:229
+#: app/src/own_project.rs:250
 msgid ""
 "<b>Audience</b>: choose <b>External</b>. (A work or school account with an "
 "organization may see <b>Internal</b>; that also works and needs no warning "
@@ -3382,25 +3382,25 @@ msgstr ""
 "perlu layar peringatan. Pilih jika ada.)"
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
-#: app/src/own_project.rs:232
+#: app/src/own_project.rs:253
 msgid "<b>Contact information</b>: your address again."
 msgstr "<b>Informasi kontak</b>: alamat Anda lagi."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
-#: app/src/own_project.rs:234
+#: app/src/own_project.rs:255
 msgid "Tick the agreement and click <b>Create</b>."
 msgstr "Centang perjanjian dan klik <b>Buat</b>."
 
-#: app/src/own_project.rs:239
+#: app/src/own_project.rs:260
 msgid "Publish it"
 msgstr "Publikasikan"
 
-#: app/src/own_project.rs:240
+#: app/src/own_project.rs:261
 msgid "Publishing keeps you signed in."
 msgstr "Memublikasikan membuat Anda tetap masuk."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
-#: app/src/own_project.rs:244
+#: app/src/own_project.rs:265
 msgid ""
 "Under <b>Publishing status</b>, click <b>Publish app</b>, then <b>Confirm</"
 "b>."
@@ -3409,49 +3409,49 @@ msgstr ""
 "<b>Konfirmasi</b>."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
-#: app/src/own_project.rs:247
+#: app/src/own_project.rs:268
 msgid "It should now say <b>In production</b>."
 msgstr "Sekarang seharusnya tertulis <b>Dalam produksi</b>."
 
 #. Translators: Google and Penguin Mail are names; keep them as they are.
-#: app/src/own_project.rs:251
+#: app/src/own_project.rs:272
 msgid "If you skip this, Google signs you out of Penguin Mail every 7 days."
 msgstr ""
 "Jika Anda melewati ini, Google mengeluarkan Anda dari Penguin Mail setiap 7 "
 "hari."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
-#: app/src/own_project.rs:253
+#: app/src/own_project.rs:274
 msgid "Chose Internal? Then there's nothing to do here."
 msgstr "Memilih Internal? Maka tidak ada yang perlu dilakukan di sini."
 
 #. Translators: Penguin Mail is a name; keep it as it is.
-#: app/src/own_project.rs:258
+#: app/src/own_project.rs:279
 msgid "Make the key for Penguin Mail"
 msgstr "Buat kunci untuk Penguin Mail"
 
 #. Translators: Penguin Mail is a name; keep it as it is.
-#: app/src/own_project.rs:261
+#: app/src/own_project.rs:282
 msgid "The key lets Penguin Mail sign in through your project."
 msgstr "Kunci ini membuat Penguin Mail bisa masuk melalui proyek Anda."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
-#: app/src/own_project.rs:265
+#: app/src/own_project.rs:286
 msgid "<b>Application type</b>: choose <b>Desktop app</b>."
 msgstr "<b>Jenis aplikasi</b>: pilih <b>Aplikasi desktop</b>."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
-#: app/src/own_project.rs:267
+#: app/src/own_project.rs:288
 msgid "<b>Name</b>: <tt>Penguin Mail</tt>, then <b>Create</b>."
 msgstr "<b>Nama</b>: <tt>Penguin Mail</tt>, lalu <b>Buat</b>."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
-#: app/src/own_project.rs:269
+#: app/src/own_project.rs:290
 msgid "On the next screen, click <b>Download JSON</b> before you close it."
 msgstr "Di layar berikutnya, klik <b>Download JSON</b> sebelum menutupnya."
 
 #. Translators: Google is a name; keep it as it is.
-#: app/src/own_project.rs:274
+#: app/src/own_project.rs:295
 msgid ""
 "Google shows this only once. If you closed it already, delete that key and "
 "make a new one."
@@ -3460,17 +3460,17 @@ msgstr ""
 "dan buat yang baru."
 
 #. Translators: Penguin Mail is a name; keep it as it is.
-#: app/src/own_project.rs:280
+#: app/src/own_project.rs:301
 msgid "Give the file to Penguin Mail"
 msgstr "Berikan berkas ke Penguin Mail"
 
-#: app/src/own_project.rs:287 app/src/ui/own_project.rs:497
-#: app/src/ui/own_project.rs:742
+#: app/src/own_project.rs:308 app/src/ui/own_project.rs:497
+#: app/src/ui/own_project.rs:771
 msgid "Sign in with Google"
 msgstr "Masuk dengan Google"
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
-#: app/src/own_project.rs:292
+#: app/src/own_project.rs:313
 msgid ""
 "Google will say <b>\"Google hasn't verified this app\"</b>. That's expected: "
 "the app is your own project, and you're the only one using it. Click "
@@ -3483,36 +3483,36 @@ msgstr ""
 "b>. Lalu centang setiap kotak agar semua fitur berjalan."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
-#: app/src/own_project.rs:322
+#: app/src/own_project.rs:343
 msgid "Did you publish your project? If it still says Testing, go to step 4."
 msgstr ""
 "Sudahkah Anda memublikasikan proyek? Jika masih tertulis Pengujian, buka "
 "langkah 4."
 
 #. Translators: Google is a name; keep it as it is.
-#: app/src/own_project.rs:345
+#: app/src/own_project.rs:366
 msgid ""
 "Google doesn't recognize this key. Make a new one and download it again."
 msgstr "Google tidak mengenali kunci ini. Buat yang baru dan unduh lagi."
 
 #. Translators: Gmail is a name; keep it as it is.
-#: app/src/own_project.rs:370
+#: app/src/own_project.rs:391
 msgid "Gmail is turned off in your project."
 msgstr "Gmail dinonaktifkan di proyek Anda."
 
-#: app/src/own_project.rs:372
+#: app/src/own_project.rs:393
 msgid "Calendar is turned off in your project."
 msgstr "Kalender dinonaktifkan di proyek Anda."
 
-#: app/src/own_project.rs:374
+#: app/src/own_project.rs:395
 msgid "Contacts is turned off in your project."
 msgstr "Kontak dinonaktifkan di proyek Anda."
 
-#: app/src/own_project.rs:376
+#: app/src/own_project.rs:397
 msgid "Drive is turned off in your project."
 msgstr "Drive dinonaktifkan di proyek Anda."
 
-#: app/src/own_project.rs:426
+#: app/src/own_project.rs:447
 msgid ""
 "The Google Cloud project Penguin Mail signs in with has the {service} "
 "switched off, so Google refuses before it can ask for your permission. Turn "
@@ -4131,12 +4131,12 @@ msgstr ""
 msgid "That account is not connected."
 msgstr "Akun tersebut tidak terhubung."
 
-#: app/src/protection/draft.rs:165 app/src/ui/vacation.rs:177
+#: app/src/protection/draft.rs:165 app/src/ui/vacation.rs:186
 msgid "Could not save: {reason}"
 msgstr "Tidak dapat menyimpan: {reason}"
 
-#: app/src/protection/draft.rs:212 app/src/ui/window.rs:2825
-#: app/src/ui/window.rs:2848
+#: app/src/protection/draft.rs:212 app/src/ui/window.rs:2834
+#: app/src/ui/window.rs:2857
 msgid "Could not open the draft: {reason}"
 msgstr "Tidak dapat membuka draf: {reason}"
 
@@ -4362,7 +4362,7 @@ msgstr "Tambahkan akun Google Anda ke komputer ini"
 msgid "Already signed in on this computer"
 msgstr "Sudah masuk di komputer ini"
 
-#: app/src/route_choice.rs:161 app/src/ui/preferences/google_route.rs:326
+#: app/src/route_choice.rs:161 app/src/ui/preferences/google_route.rs:330
 msgid "Mail, calendar and contacts"
 msgstr "Email, kalender, dan kontak"
 
@@ -4394,8 +4394,8 @@ msgid "Set up a different project"
 msgstr "Siapkan proyek lain"
 
 #. Translators: Google is a name; keep it as it is.
-#: app/src/route_choice.rs:201 app/src/ui/preferences/google_route.rs:348
-#: app/src/ui/window.rs:3244
+#: app/src/route_choice.rs:201 app/src/ui/preferences/google_route.rs:352
+#: app/src/ui/window.rs:3267
 msgid "Set up your own Google project"
 msgstr "Siapkan proyek Google Anda sendiri"
 
@@ -4469,7 +4469,7 @@ msgstr "Semua email"
 msgid "Delete it"
 msgstr "Hapus pesan"
 
-#: app/src/rules.rs:273 app/src/ui/rules.rs:459
+#: app/src/rules.rs:273 app/src/ui/rules.rs:462
 msgid "Skip the Inbox"
 msgstr "Lewati Kotak Masuk"
 
@@ -4535,7 +4535,7 @@ msgstr "{host} menolak masuk: {reason}"
 
 #: app/src/servers.rs:59 app/src/ui/calendar/editor.rs:1219
 #: app/src/ui/calendar/editor.rs:1295 app/src/ui/contacts_prefs.rs:28
-#: app/src/ui/contacts_prefs.rs:352 app/src/ui/preferences/google_route.rs:402
+#: app/src/ui/contacts_prefs.rs:352 app/src/ui/preferences/google_route.rs:406
 #: app/src/ui/sidebar.rs:392 app/src/ui/sidebar.rs:1505
 #: app/src/ui/window/shortcuts.rs:240
 msgid "Calendar"
@@ -4543,7 +4543,7 @@ msgstr "Kalender"
 
 #: app/src/servers.rs:64 app/src/ui/contacts_prefs.rs:262
 #: app/src/ui/contacts_prefs.rs:267 app/src/ui/contacts_prefs.rs:276
-#: app/src/ui/preferences/google_route.rs:406
+#: app/src/ui/preferences/google_route.rs:410
 msgid "Contacts"
 msgstr "Kontak"
 
@@ -4551,7 +4551,7 @@ msgstr "Kontak"
 msgid "Rules"
 msgstr "Aturan"
 
-#: app/src/servers.rs:71 app/src/ui/rules.rs:306
+#: app/src/servers.rs:71 app/src/ui/rules.rs:309
 msgid "On this computer, while Penguin Mail is open"
 msgstr "Di komputer ini, selama Penguin Mail terbuka"
 
@@ -4576,8 +4576,8 @@ msgstr "API Anthropic"
 msgid "Claude Subscription"
 msgstr "Langganan Claude"
 
-#: app/src/settings/mod.rs:227 app/src/ui/window.rs:3649
-#: app/src/ui/window.rs:3729
+#: app/src/settings/mod.rs:227 app/src/ui/window.rs:3687
+#: app/src/ui/window.rs:3767
 msgid "Assistant"
 msgstr "Asisten"
 
@@ -4952,7 +4952,7 @@ msgstr "Buka Penguin Mail"
 msgid "New Message"
 msgstr "Pesan Baru"
 
-#: app/src/tray.rs:238 app/src/ui/sidebar.rs:1957 app/src/ui/window.rs:3655
+#: app/src/tray.rs:238 app/src/ui/sidebar.rs:1957 app/src/ui/window.rs:3693
 msgid "Check for Mail"
 msgstr "Periksa Email"
 
@@ -4970,7 +4970,7 @@ msgstr "Yang Baru di {version}"
 msgid "Check for Updates"
 msgstr "Periksa Pembaruan"
 
-#: app/src/tray.rs:254 app/src/ui/window.rs:3668
+#: app/src/tray.rs:254 app/src/ui/window.rs:3706
 #: app/src/ui/window/shortcuts.rs:644
 msgid "Quit"
 msgstr "Keluar"
@@ -4991,7 +4991,7 @@ msgstr "Yang Baru"
 msgid "Website"
 msgstr "Situs Web"
 
-#: app/src/ui/about.rs:179 app/src/ui/window.rs:3667
+#: app/src/ui/about.rs:179 app/src/ui/window.rs:3705
 msgid "Donate"
 msgstr "Donasi"
 
@@ -4999,7 +4999,7 @@ msgstr "Donasi"
 msgid "License"
 msgstr "Lisensi"
 
-#: app/src/ui/about.rs:203 app/src/ui/window.rs:3666
+#: app/src/ui/about.rs:203 app/src/ui/window.rs:3704
 msgid "About Penguin Mail"
 msgstr "Tentang Penguin Mail"
 
@@ -5048,12 +5048,12 @@ msgid "The update to {version} failed"
 msgstr "Pembaruan ke {version} gagal"
 
 #: app/src/ui/add_account.rs:555 app/src/ui/sandbox_setup.rs:129
-#: app/src/ui/sandbox_setup.rs:136 app/src/ui/window.rs:1432
+#: app/src/ui/sandbox_setup.rs:136 app/src/ui/window.rs:1431
 msgid "Copy Command"
 msgstr "Salin Perintah"
 
 #: app/src/ui/add_account.rs:565 app/src/ui/sandbox_setup.rs:143
-#: app/src/ui/window.rs:1437
+#: app/src/ui/window.rs:1436
 msgid "Command copied"
 msgstr "Perintah disalin"
 
@@ -5087,7 +5087,7 @@ msgstr "Alamat Email Anda"
 
 #: app/src/ui/add_account.rs:769 app/src/ui/add_account.rs:772
 #: app/src/ui/gmail_password_page.rs:96 app/src/ui/gmail_password_page.rs:99
-#: app/src/ui/sender_prefs.rs:143
+#: app/src/ui/sender_prefs.rs:146
 msgid "Email Address"
 msgstr "Alamat Email"
 
@@ -5157,8 +5157,8 @@ msgstr "Salin Tautan"
 #: app/src/ui/calendar/scope.rs:113 app/src/ui/composer/editor.rs:346
 #: app/src/ui/composer/mod.rs:1978 app/src/ui/composer/mod.rs:2100
 #: app/src/ui/composer/mod.rs:2444 app/src/ui/composer/mod.rs:2898
-#: app/src/ui/confirm.rs:29 app/src/ui/rules.rs:535 app/src/ui/rules.rs:724
-#: app/src/ui/sender_prefs.rs:184 app/src/ui/smart_editor.rs:150
+#: app/src/ui/confirm.rs:29 app/src/ui/rules.rs:538 app/src/ui/rules.rs:727
+#: app/src/ui/sender_prefs.rs:187 app/src/ui/smart_editor.rs:150
 #: app/src/ui/switch_jmap.rs:174 app/src/ui/switch_jmap.rs:225
 #: app/src/ui/templates.rs:240 app/src/ui/unsubscribe.rs:119
 #: app/src/ui/vacation.rs:46 app/src/ui/when.rs:52
@@ -5171,7 +5171,7 @@ msgstr "Batal"
 #: app/src/ui/add_account.rs:3258 app/src/ui/add_account.rs:3348
 #: app/src/ui/add_account.rs:3805 app/src/ui/gmail_password_page.rs:125
 #: app/src/ui/gmail_password_page.rs:130 app/src/ui/gmail_password_page.rs:257
-#: app/src/ui/window.rs:1376
+#: app/src/ui/window.rs:1375
 msgid "Sign In"
 msgstr "Masuk"
 
@@ -5294,7 +5294,7 @@ msgstr "Nanti Saja"
 #: app/src/ui/add_account.rs:1533 app/src/ui/calendar/editor.rs:1681
 #: app/src/ui/calendar/sidebar.rs:1008 app/src/ui/contacts_prefs.rs:487
 #: app/src/ui/invitation.rs:490 app/src/ui/permission.rs:42
-#: app/src/ui/permission.rs:66 app/src/ui/window.rs:1507
+#: app/src/ui/permission.rs:66 app/src/ui/window.rs:1506
 msgid "Grant Access"
 msgstr "Berikan Akses"
 
@@ -5436,8 +5436,8 @@ msgstr "Mencari…"
 msgid "Sign In Again"
 msgstr "Masuk Lagi"
 
-#: app/src/ui/add_account.rs:4003 app/src/ui/own_project.rs:627
-#: app/src/ui/preferences/google_route.rs:366 app/src/ui/window.rs:2223
+#: app/src/ui/add_account.rs:4003 app/src/ui/own_project.rs:653
+#: app/src/ui/preferences/google_route.rs:370 app/src/ui/window.rs:2232
 msgid "Open Google Cloud"
 msgstr "Buka Google Cloud"
 
@@ -5506,7 +5506,7 @@ msgstr ""
 msgid "Filters, aliases and the automatic reply aren't available this way."
 msgstr "Filter, alias, dan balasan otomatis tidak tersedia dengan cara ini."
 
-#: app/src/ui/assistant.rs:35 app/src/ui/window.rs:3815
+#: app/src/ui/assistant.rs:35 app/src/ui/window.rs:3853
 msgid "Summarize this conversation"
 msgstr "Ringkas percakapan ini"
 
@@ -5531,13 +5531,13 @@ msgstr "Buat draf balasan untuk percakapan yang terbuka"
 msgid "Choose a Model"
 msgstr "Pilih Model"
 
-#: app/src/ui/assistant.rs:123 app/src/ui/window.rs:3776
-#: app/src/ui/window.rs:3777
+#: app/src/ui/assistant.rs:123 app/src/ui/window.rs:3814
+#: app/src/ui/window.rs:3815
 msgid "Detach"
 msgstr "Pisahkan"
 
 #: app/src/ui/assistant.rs:124 app/src/ui/key_import.rs:213
-#: app/src/ui/key_import.rs:217 app/src/ui/window.rs:4418
+#: app/src/ui/key_import.rs:217 app/src/ui/window.rs:4456
 msgid "Close"
 msgstr "Tutup"
 
@@ -5748,7 +5748,7 @@ msgstr "Edit {server}"
 
 #: app/src/ui/assistant_mcp_prefs.rs:137 app/src/ui/calendar/editor.rs:1726
 #: app/src/ui/composer/mod.rs:2219 app/src/ui/composer/recipients.rs:318
-#: app/src/ui/sender_prefs.rs:189 app/src/ui/window.rs:3397
+#: app/src/ui/sender_prefs.rs:192 app/src/ui/window.rs:3420
 msgid "Remove"
 msgstr "Hapus"
 
@@ -5827,8 +5827,8 @@ msgstr "Uji"
 #: app/src/ui/assistant_mcp_prefs.rs:359 app/src/ui/calendar/editor.rs:182
 #: app/src/ui/calendar/quick.rs:225 app/src/ui/calendar/scope.rs:150
 #: app/src/ui/composer/editor.rs:346 app/src/ui/composer/mod.rs:2898
-#: app/src/ui/dav_edit.rs:48 app/src/ui/rules.rs:528
-#: app/src/ui/sender_prefs.rs:184 app/src/ui/smart_editor.rs:144
+#: app/src/ui/dav_edit.rs:48 app/src/ui/rules.rs:531
+#: app/src/ui/sender_prefs.rs:187 app/src/ui/smart_editor.rs:144
 #: app/src/ui/templates.rs:234 app/src/ui/vacation.rs:42
 #: app/src/ui/window/arrange.rs:155 app/src/ui/window/save_contacts.rs:112
 msgid "Save"
@@ -6375,7 +6375,7 @@ msgid "New and existing"
 msgstr "Baru dan yang sudah ada"
 
 #: app/src/ui/calendar/editor.rs:632 app/src/ui/composer/mod.rs:585
-#: app/src/ui/vacation.rs:284 app/src/ui/vacation.rs:312
+#: app/src/ui/vacation.rs:293 app/src/ui/vacation.rs:321
 msgid "Message"
 msgstr "Pesan"
 
@@ -6965,7 +6965,7 @@ msgid "New Calendar"
 msgstr "Kalender Baru"
 
 #: app/src/ui/calendar/manage.rs:438 app/src/ui/hide_my_email.rs:701
-#: app/src/ui/rules.rs:529 app/src/ui/smart_editor.rs:146
+#: app/src/ui/rules.rs:532 app/src/ui/smart_editor.rs:146
 #: app/src/ui/templates.rs:236 app/src/ui/window/organize.rs:79
 #: app/src/ui/window/organize.rs:363
 msgid "Create"
@@ -7402,7 +7402,7 @@ msgid "Penguin Mail cannot see this account's calendars"
 msgstr "Penguin Mail tidak dapat melihat kalender akun ini"
 
 #: app/src/ui/calendar/sidebar.rs:1016 app/src/ui/contacts_prefs.rs:375
-#: app/src/ui/preferences/google_route.rs:410
+#: app/src/ui/preferences/google_route.rs:414
 msgid "Not connected"
 msgstr "Tidak terhubung"
 
@@ -7418,13 +7418,13 @@ msgstr "Opsi kalender"
 msgid "Options for {calendar}"
 msgstr "Opsi untuk {calendar}"
 
-#: app/src/ui/calendar/sidebar.rs:1233 app/src/ui/contacts_prefs.rs:378
-#: app/src/ui/preferences/google_route.rs:540
+#: app/src/ui/calendar/sidebar.rs:1230 app/src/ui/contacts_prefs.rs:378
+#: app/src/ui/preferences/google_route.rs:550
 msgid "Connect"
 msgstr "Hubungkan"
 
-#: app/src/ui/calendar/sidebar.rs:1240 app/src/ui/contacts_prefs.rs:384
-#: app/src/ui/preferences/google_route.rs:403
+#: app/src/ui/calendar/sidebar.rs:1237 app/src/ui/contacts_prefs.rs:384
+#: app/src/ui/preferences/google_route.rs:407
 msgid "Connect the calendar for {account}"
 msgstr "Hubungkan kalender untuk {account}"
 
@@ -7777,11 +7777,11 @@ msgid "Masked"
 msgstr "Tersamar"
 
 #: app/src/ui/composer/mod.rs:551 app/src/ui/composer/mod.rs:552
-#: app/src/ui/rules.rs:443
+#: app/src/ui/rules.rs:446
 msgid "From"
 msgstr "Dari"
 
-#: app/src/ui/composer/mod.rs:557 app/src/ui/rules.rs:444
+#: app/src/ui/composer/mod.rs:557 app/src/ui/rules.rs:447
 msgid "To"
 msgstr "Kepada"
 
@@ -7793,8 +7793,8 @@ msgstr "Cc"
 msgid "Bcc"
 msgstr "Bcc"
 
-#: app/src/ui/composer/mod.rs:573 app/src/ui/rules.rs:445
-#: app/src/ui/templates.rs:193 app/src/ui/vacation.rs:273
+#: app/src/ui/composer/mod.rs:573 app/src/ui/rules.rs:448
+#: app/src/ui/templates.rs:193 app/src/ui/vacation.rs:282
 msgid "Subject"
 msgstr "Subjek"
 
@@ -8622,12 +8622,14 @@ msgstr ""
 "Buka <b>Akun Daring</b> dari menu aplikasi, tambahkan akun Google Anda, lalu "
 "kembali."
 
-#. Translators: GNOME Online Accounts is the name of a program; keep it as your distribution's software center shows it.
+#. Translators: "Online Accounts" is the name the software center shows for the gnome-online-accounts-gtk package; use the name it shows in your language.
 #: app/src/ui/goa_page.rs:356
 msgid ""
-"Install GNOME Online Accounts from your software center, add your Google "
-"account there, and come back."
-msgstr "Pasang GNOME Online Accounts dari pusat perangkat lunak Anda, tambahkan akun Google Anda di sana, lalu kembali."
+"Install Online Accounts from your software center, add your Google account "
+"there, and come back."
+msgstr ""
+"Pasang Akun Daring dari pusat perangkat lunak Anda, tambahkan akun Google "
+"Anda di sana, lalu kembali."
 
 #. Translators: "Online Accounts" is the name GNOME and Linux Mint show for this window; use the name your desktop shows in your language.
 #: app/src/ui/goa_page.rs:367
@@ -8785,7 +8787,7 @@ msgstr ""
 msgid "Allow Hide My Email"
 msgstr "Izinkan Sembunyikan Email Saya"
 
-#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:3866
+#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:3904
 msgid "Add an account first"
 msgstr "Tambahkan akun terlebih dahulu"
 
@@ -9275,42 +9277,47 @@ msgstr "Mulai"
 msgid "I Already Have a Key"
 msgstr "Saya Sudah Punya Kunci"
 
-#: app/src/ui/own_project.rs:561
+#. Translators: the services are Google's, switched on one at a time with the four links below, in place of the one button above.
+#: app/src/ui/own_project.rs:570
+msgid "Turn them on one at a time instead"
+msgstr "Aktifkan satu per satu saja"
+
+#: app/src/ui/own_project.rs:587
 msgid "Steps look different?"
 msgstr "Langkahnya terlihat berbeda?"
 
-#: app/src/ui/own_project.rs:644
+#: app/src/ui/own_project.rs:673
 msgid "Next"
 msgstr "Berikutnya"
 
-#: app/src/ui/own_project.rs:649 app/src/ui/own_project.rs:748
+#: app/src/ui/own_project.rs:678 app/src/ui/own_project.rs:777
 msgid "Start over"
 msgstr "Mulai dari awal"
 
-#: app/src/ui/own_project.rs:672
+#: app/src/ui/own_project.rs:701
 msgid "Drop the file you downloaded here"
 msgstr "Letakkan berkas yang Anda unduh di sini"
 
-#: app/src/ui/own_project.rs:679
+#: app/src/ui/own_project.rs:708
 msgid "Choose File…"
 msgstr "Pilih Berkas…"
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
-#: app/src/ui/own_project.rs:707
+#: app/src/ui/own_project.rs:736
 msgid "Client ID"
 msgstr "ID Klien"
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
-#: app/src/ui/own_project.rs:711
+#: app/src/ui/own_project.rs:740
 msgid "Client secret"
 msgstr "Rahasia klien"
 
-#: app/src/ui/own_project.rs:717
+#: app/src/ui/own_project.rs:746
 msgid "Copy and paste instead"
 msgstr "Salin dan tempel saja"
 
 #. The words are ours; nothing from the file reaches them.
-#: app/src/ui/own_project.rs:738
+#: app/src/ui/own_project.rs:767
 msgid "Ready: Penguin Mail project"
 msgstr "Siap: proyek Penguin Mail"
 
@@ -9883,7 +9890,7 @@ msgstr "Pindahkan {account} ke Bawah"
 #: app/src/ui/preferences/dialog.rs:27 app/src/ui/preferences/dialog.rs:33
 #: app/src/ui/preferences/dialog.rs:82 app/src/ui/preferences/dialog.rs:83
 #: app/src/ui/preferences/dialog.rs:353 app/src/ui/preferences/dialog.rs:355
-#: app/src/ui/window.rs:3664 app/src/ui/window/shortcuts.rs:616
+#: app/src/ui/window.rs:3702 app/src/ui/window/shortcuts.rs:616
 msgid "Preferences"
 msgstr "Preferensi"
 
@@ -9904,7 +9911,7 @@ msgstr "Tidak Ada Hasil"
 msgid "Try a different search"
 msgstr "Coba pencarian lain"
 
-#: app/src/ui/preferences/google_route.rs:92
+#: app/src/ui/preferences/google_route.rs:96
 msgid ""
 "Filters, aliases and the automatic reply need Gmail's own connection, which "
 "this computer's Google sign-in doesn't offer."
@@ -9912,60 +9919,60 @@ msgstr ""
 "Filter, alias, dan balasan otomatis memerlukan koneksi milik Gmail sendiri, "
 "yang tidak disediakan akses masuk Google komputer ini."
 
-#: app/src/ui/preferences/google_route.rs:129
+#: app/src/ui/preferences/google_route.rs:133
 msgid "Switch {address} to this computer's sign-in?"
 msgstr "Alihkan {address} ke akses masuk komputer ini?"
 
-#: app/src/ui/preferences/google_route.rs:272
+#: app/src/ui/preferences/google_route.rs:276
 msgid "Connected"
 msgstr "Terhubung"
 
 #. Translators: a small heading over the Gmail account's rows; Gmail
 #. is a name, keep it as it is.
-#: app/src/ui/preferences/google_route.rs:316
+#: app/src/ui/preferences/google_route.rs:320
 msgid "Gmail"
 msgstr "Gmail"
 
 #. Translators: Gmail is a name; keep it as it is.
-#: app/src/ui/preferences/google_route.rs:322
+#: app/src/ui/preferences/google_route.rs:326
 msgid "Gmail features"
 msgstr "Fitur Gmail"
 
-#: app/src/ui/preferences/google_route.rs:324
+#: app/src/ui/preferences/google_route.rs:328
 msgid "Every feature"
 msgstr "Semua fitur"
 
-#: app/src/ui/preferences/google_route.rs:335
-msgid "Get Every Feature"
-msgstr "Dapatkan Semua Fitur"
-
-#: app/src/ui/preferences/google_route.rs:357 app/src/ui/switch_jmap.rs:221
+#: app/src/ui/preferences/google_route.rs:361 app/src/ui/switch_jmap.rs:221
 msgid "Switch"
 msgstr "Beralih"
 
 #. Translators: Google is a name; keep it as it is.
-#: app/src/ui/preferences/google_route.rs:365
+#: app/src/ui/preferences/google_route.rs:369
 msgid "Signed in through your own Google project"
 msgstr "Masuk melalui proyek Google Anda sendiri"
 
 #. Translators: Google is a name; keep it as it is.
-#: app/src/ui/preferences/google_route.rs:383
+#: app/src/ui/preferences/google_route.rs:387
 msgid "Stop using your own Google project"
 msgstr "Berhenti memakai proyek Google Anda sendiri"
 
-#: app/src/ui/preferences/google_route.rs:399
+#: app/src/ui/preferences/google_route.rs:403
 msgid "Calendar and contacts"
 msgstr "Kalender dan kontak"
 
-#: app/src/ui/preferences/google_route.rs:407
+#: app/src/ui/preferences/google_route.rs:411
 msgid "Connect the contacts for {account}"
 msgstr "Hubungkan kontak untuk {account}"
 
 #. Translators: a small heading over what only gmail.com does for the
 #. account; gmail.com is a name, keep it as it is.
-#: app/src/ui/preferences/google_route.rs:425
+#: app/src/ui/preferences/google_route.rs:429
 msgid "On gmail.com"
 msgstr "Di gmail.com"
+
+#: app/src/ui/preferences/google_route.rs:526
+msgid "Get Every Feature"
+msgstr "Dapatkan Semua Fitur"
 
 #: app/src/ui/preferences/space.rs:141
 msgid "Full"
@@ -10018,7 +10025,7 @@ msgid "Recommended"
 msgstr "Disarankan"
 
 #: app/src/ui/rules.rs:78 app/src/ui/rules.rs:91 app/src/ui/rules.rs:93
-#: app/src/ui/rules.rs:529
+#: app/src/ui/rules.rs:532
 msgid "New Rule"
 msgstr "Aturan Baru"
 
@@ -10026,148 +10033,148 @@ msgstr "Aturan Baru"
 msgid "No Rules"
 msgstr "Tidak Ada Aturan"
 
-#: app/src/ui/rules.rs:115
+#: app/src/ui/rules.rs:118
 msgid "Rules for {account}"
 msgstr "Aturan untuk {account}"
 
-#: app/src/ui/rules.rs:202 app/src/ui/vacation.rs:95
+#: app/src/ui/rules.rs:205 app/src/ui/vacation.rs:104
 msgid "This account is not syncing yet."
 msgstr "Akun ini belum menyinkronkan."
 
-#: app/src/ui/rules.rs:256
+#: app/src/ui/rules.rs:259
 msgid "Add Rule"
 msgstr "Tambahkan Aturan"
 
-#: app/src/ui/rules.rs:284
+#: app/src/ui/rules.rs:287
 msgid "Made elsewhere. Change it where you made it."
 msgstr "Dibuat di tempat lain. Ubah di tempat Anda membuatnya."
 
-#: app/src/ui/rules.rs:316
+#: app/src/ui/rules.rs:319
 msgid "Off: its folder is not on this server"
 msgstr "Nonaktif: foldernya tidak ada di server ini"
 
-#: app/src/ui/rules.rs:326
+#: app/src/ui/rules.rs:329
 msgid "Edit the rule for {mail}"
 msgstr "Edit aturan untuk {mail}"
 
-#: app/src/ui/rules.rs:337
+#: app/src/ui/rules.rs:340
 msgid "Delete Rule"
 msgstr "Hapus Aturan"
 
-#: app/src/ui/rules.rs:344
+#: app/src/ui/rules.rs:347
 msgid "Delete the rule for {mail}"
 msgstr "Hapus aturan untuk {mail}"
 
-#: app/src/ui/rules.rs:361
+#: app/src/ui/rules.rs:364
 msgid "Rules Written Elsewhere"
 msgstr "Aturan yang Ditulis di Tempat Lain"
 
-#: app/src/ui/rules.rs:363
+#: app/src/ui/rules.rs:366
 msgid ""
 "Penguin Mail keeps these as they are. Change them where they were written."
 msgstr "Penguin Mail mempertahankan aturan ini. Ubah di tempat aturan ditulis."
 
-#: app/src/ui/rules.rs:394
+#: app/src/ui/rules.rs:397
 msgid "Rule deleted"
 msgstr "Aturan dihapus"
 
-#: app/src/ui/rules.rs:398
+#: app/src/ui/rules.rs:401
 msgid "Could not delete the rule: {reason}"
 msgstr "Tidak dapat menghapus aturan: {reason}"
 
-#: app/src/ui/rules.rs:406
+#: app/src/ui/rules.rs:409
 msgid "Could Not Load the Rules"
 msgstr "Tidak Dapat Memuat Aturan"
 
-#: app/src/ui/rules.rs:415
+#: app/src/ui/rules.rs:418
 msgid "Allow Rules"
 msgstr "Izinkan Aturan"
 
-#: app/src/ui/rules.rs:446
+#: app/src/ui/rules.rs:449
 msgid "Has the Words"
 msgstr "Mengandung Kata"
 
-#: app/src/ui/rules.rs:447
+#: app/src/ui/rules.rs:450
 msgid "Doesn't Have"
 msgstr "Tidak Mengandung"
 
-#: app/src/ui/rules.rs:449
+#: app/src/ui/rules.rs:452
 msgid "Has an Attachment"
 msgstr "Memiliki Lampiran"
 
-#: app/src/ui/rules.rs:451
+#: app/src/ui/rules.rs:454
 msgid "When Mail Matches"
 msgstr "Saat Email Cocok"
 
-#: app/src/ui/rules.rs:461
+#: app/src/ui/rules.rs:464
 msgid "Star It"
 msgstr "Beri Bintang"
 
-#: app/src/ui/rules.rs:462
+#: app/src/ui/rules.rs:465
 msgid "Never Send to Spam"
 msgstr "Jangan Masukkan ke Spam"
 
-#: app/src/ui/rules.rs:463
+#: app/src/ui/rules.rs:466
 msgid "Delete It"
 msgstr "Hapus Pesan"
 
-#: app/src/ui/rules.rs:466
+#: app/src/ui/rules.rs:469
 msgid "Apply Label"
 msgstr "Terapkan Label"
 
-#: app/src/ui/rules.rs:466
+#: app/src/ui/rules.rs:469
 msgid "Don't Apply a Label"
 msgstr "Jangan Terapkan Label"
 
-#: app/src/ui/rules.rs:467
+#: app/src/ui/rules.rs:470
 msgid "Don't Move"
 msgstr "Jangan Pindahkan"
 
-#: app/src/ui/rules.rs:467
+#: app/src/ui/rules.rs:470
 msgid "Move to Folder"
 msgstr "Pindahkan ke Folder"
 
-#: app/src/ui/rules.rs:477
+#: app/src/ui/rules.rs:480
 msgid "Do This"
 msgstr "Lakukan Ini"
 
-#: app/src/ui/rules.rs:517
+#: app/src/ui/rules.rs:520
 msgid "This rule also does things this form can't show. Saving keeps them."
 msgstr ""
 "Aturan ini juga melakukan tindakan yang tidak dapat ditampilkan formulir "
 "ini. Menyimpan akan mempertahankan tindakan tersebut."
 
-#: app/src/ui/rules.rs:528
+#: app/src/ui/rules.rs:531
 msgid "Edit Rule"
 msgstr "Edit Aturan"
 
-#: app/src/ui/rules.rs:605
+#: app/src/ui/rules.rs:608
 msgid "Rule added"
 msgstr "Aturan ditambahkan"
 
-#: app/src/ui/rules.rs:620 app/src/ui/rules.rs:696
+#: app/src/ui/rules.rs:623 app/src/ui/rules.rs:699
 msgid "Could not add the rule: {reason}"
 msgstr "Tidak dapat menambahkan aturan: {reason}"
 
-#: app/src/ui/rules.rs:638
+#: app/src/ui/rules.rs:641
 msgid "Rule saved"
 msgstr "Aturan disimpan"
 
-#: app/src/ui/rules.rs:643
+#: app/src/ui/rules.rs:646
 msgid "Saved, but Gmail kept the old rule too, so both run now: {reason}"
 msgstr ""
 "Disimpan, tetapi Gmail juga mempertahankan aturan lama, sehingga keduanya "
 "berjalan: {reason}"
 
-#: app/src/ui/rules.rs:667
+#: app/src/ui/rules.rs:670
 msgid "Could not save the rule: {reason}"
 msgstr "Tidak dapat menyimpan aturan: {reason}"
 
-#: app/src/ui/rules.rs:717
+#: app/src/ui/rules.rs:720
 msgid "Replace “{script}”?"
 msgstr "Ganti “{script}”?"
 
-#: app/src/ui/rules.rs:719
+#: app/src/ui/rules.rs:722
 msgid ""
 "{provider} runs one set of rules at a time, and it runs “{script}” now. "
 "Penguin Mail's rules would take its place; “{script}” stays on the server, "
@@ -10177,7 +10184,7 @@ msgstr ""
 "menjalankan “{script}”. Aturan Penguin Mail akan menggantikannya; “{script}” "
 "tetap di server dalam keadaan nonaktif."
 
-#: app/src/ui/rules.rs:725
+#: app/src/ui/rules.rs:728
 msgid "Replace"
 msgstr "Ganti"
 
@@ -10239,19 +10246,19 @@ msgstr ""
 msgid "Addresses You Send From"
 msgstr "Alamat Pengirim Anda"
 
-#: app/src/ui/sender_prefs.rs:73
+#: app/src/ui/sender_prefs.rs:76
 msgid "Add Address"
 msgstr "Tambahkan Alamat"
 
-#: app/src/ui/sender_prefs.rs:110 app/src/ui/sender_prefs.rs:152
+#: app/src/ui/sender_prefs.rs:113 app/src/ui/sender_prefs.rs:155
 msgid "Default sender"
 msgstr "Pengirim bawaan"
 
-#: app/src/ui/sender_prefs.rs:136
+#: app/src/ui/sender_prefs.rs:139
 msgid "Sender Address"
 msgstr "Alamat Pengirim"
 
-#: app/src/ui/sender_prefs.rs:137
+#: app/src/ui/sender_prefs.rs:140
 msgid ""
 "Uses this account's outgoing server. Replies use the address the message was "
 "sent to."
@@ -10259,27 +10266,27 @@ msgstr ""
 "Menggunakan server keluar akun ini. Balasan menggunakan alamat tujuan pesan "
 "yang diterima."
 
-#: app/src/ui/sender_prefs.rs:148
+#: app/src/ui/sender_prefs.rs:151
 msgid "Sender Name"
 msgstr "Nama Pengirim"
 
-#: app/src/ui/sender_prefs.rs:156
+#: app/src/ui/sender_prefs.rs:159
 msgid "Allow +suffix"
 msgstr "Izinkan +akhiran"
 
-#: app/src/ui/sender_prefs.rs:157
+#: app/src/ui/sender_prefs.rs:160
 msgid "For example, user+shop@example.com"
 msgstr "Contohnya, user+shop@example.com"
 
-#: app/src/ui/sender_prefs.rs:161
+#: app/src/ui/sender_prefs.rs:164
 msgid "Allow .suffix"
 msgstr "Izinkan .akhiran"
 
-#: app/src/ui/sender_prefs.rs:162
+#: app/src/ui/sender_prefs.rs:165
 msgid "For example, user.shop@example.com"
 msgstr "Contohnya, user.shop@example.com"
 
-#: app/src/ui/sender_prefs.rs:177
+#: app/src/ui/sender_prefs.rs:180
 msgid "Enter a valid address that is not already listed."
 msgstr "Masukkan alamat valid yang belum tercantum."
 
@@ -10363,7 +10370,7 @@ msgstr "Tanda Tangan…"
 msgid "Rules…"
 msgstr "Aturan…"
 
-#: app/src/ui/sidebar.rs:1867 app/src/ui/window.rs:3658
+#: app/src/ui/sidebar.rs:1867 app/src/ui/window.rs:3696
 msgid "Hide My Email…"
 msgstr "Sembunyikan Email Saya…"
 
@@ -10423,7 +10430,9 @@ msgstr "Pilih cara akun ini masuk untuk mendapatkan email baru"
 msgid ""
 "Gmail limits how much mail an app can download each day. Penguin Mail tries "
 "again later."
-msgstr "Gmail membatasi jumlah email yang dapat diunduh aplikasi setiap hari. Penguin Mail akan mencoba lagi nanti."
+msgstr ""
+"Gmail membatasi jumlah email yang dapat diunduh aplikasi setiap hari. "
+"Penguin Mail akan mencoba lagi nanti."
 
 #: app/src/ui/sidebar/sections.rs:25
 msgid "Favorites"
@@ -10739,63 +10748,63 @@ msgstr "Tidak dapat berhenti berlangganan dari {sender}: {reason}"
 msgid "Automatic Reply"
 msgstr "Balasan Otomatis"
 
-#: app/src/ui/vacation.rs:120
+#: app/src/ui/vacation.rs:129
 msgid "Allow Automatic Replies"
 msgstr "Izinkan Balasan Otomatis"
 
-#: app/src/ui/vacation.rs:164
+#: app/src/ui/vacation.rs:173
 msgid "Automatic reply is on"
 msgstr "Balasan otomatis aktif"
 
-#: app/src/ui/vacation.rs:166
+#: app/src/ui/vacation.rs:175
 msgid "Automatic reply is off"
 msgstr "Balasan otomatis nonaktif"
 
-#: app/src/ui/vacation.rs:189
+#: app/src/ui/vacation.rs:198
 msgid "Could Not Load the Automatic Reply"
 msgstr "Tidak Dapat Memuat Balasan Otomatis"
 
-#: app/src/ui/vacation.rs:199
+#: app/src/ui/vacation.rs:208
 msgid "Your mail server"
 msgstr "Server email Anda"
 
-#: app/src/ui/vacation.rs:204
+#: app/src/ui/vacation.rs:213
 msgid ""
 "{provider} answers new mail while you are away, even when this computer is "
 "off"
 msgstr ""
 "{provider} menjawab email baru selama Anda pergi, meskipun komputer ini mati"
 
-#: app/src/ui/vacation.rs:239
+#: app/src/ui/vacation.rs:248
 msgid "Send Automatic Replies"
 msgstr "Kirim Balasan Otomatis"
 
-#: app/src/ui/vacation.rs:254
+#: app/src/ui/vacation.rs:263
 msgid "Only Between These Dates"
 msgstr "Hanya di Antara Tanggal Ini"
 
-#: app/src/ui/vacation.rs:257
+#: app/src/ui/vacation.rs:266
 msgid "First Day"
 msgstr "Hari Pertama"
 
-#: app/src/ui/vacation.rs:258
+#: app/src/ui/vacation.rs:267
 msgid "Last Day"
 msgstr "Hari Terakhir"
 
-#: app/src/ui/vacation.rs:266
+#: app/src/ui/vacation.rs:275
 msgid "Dates"
 msgstr "Tanggal"
 
-#: app/src/ui/vacation.rs:285
+#: app/src/ui/vacation.rs:294
 msgid "The reply people get while you are away"
 msgstr "Balasan yang diterima orang selama Anda pergi"
 
-#: app/src/ui/vacation.rs:319
+#: app/src/ui/vacation.rs:328
 msgid "The same reply goes to people inside and outside your organization."
 msgstr ""
 "Balasan yang sama dikirim kepada orang di dalam dan di luar organisasi Anda."
 
-#: app/src/ui/vacation.rs:326
+#: app/src/ui/vacation.rs:335
 msgid "Only Reply to My Contacts"
 msgstr "Hanya Balas Kontak Saya"
 
@@ -10846,7 +10855,7 @@ msgstr "Tidak dapat memuat email: {reason}"
 msgid "Added {account}. Downloading mail…"
 msgstr "{account} ditambahkan. Mengunduh email…"
 
-#: app/src/ui/window.rs:360 app/src/ui/window.rs:3017
+#: app/src/ui/window.rs:360 app/src/ui/window.rs:3040
 msgid "{account} is signed in again."
 msgstr "{account} sudah masuk kembali."
 
@@ -10989,71 +10998,71 @@ msgstr[1] "{count} pesan dipindahkan ke Kotak Masuk"
 msgid "Penguin Mail (Demo)"
 msgstr "Penguin Mail (Demo)"
 
-#: app/src/ui/window.rs:1264
+#: app/src/ui/window.rs:1258
 msgid "Could not read accounts: {reason}"
 msgstr "Tidak dapat membaca akun: {reason}"
 
-#: app/src/ui/window.rs:1580
+#: app/src/ui/window.rs:1589
 msgid "Signed in with this computer's sign-in."
 msgstr "Masuk dengan akses masuk komputer ini."
 
-#: app/src/ui/window.rs:2092
+#: app/src/ui/window.rs:2101
 msgid "Could not delete the mail: {reason}"
 msgstr "Tidak dapat menghapus email: {reason}"
 
-#: app/src/ui/window.rs:2221
+#: app/src/ui/window.rs:2230
 msgid "Turn On the {service}"
 msgstr "Aktifkan {service}"
 
-#: app/src/ui/window.rs:2544
+#: app/src/ui/window.rs:2553
 msgid "Select mail from one account to tag it."
 msgstr "Pilih email dari satu akun untuk memberinya tag."
 
-#: app/src/ui/window.rs:2556
+#: app/src/ui/window.rs:2565
 msgid "This account has no tags yet. Make one in Outlook."
 msgstr "Akun ini belum memiliki tag. Buat tag di Outlook."
 
-#: app/src/ui/window.rs:2723
+#: app/src/ui/window.rs:2732
 msgid "Could not include {file}: {reason}"
 msgstr "Tidak dapat menyertakan {file}: {reason}"
 
-#: app/src/ui/window.rs:2804
+#: app/src/ui/window.rs:2813
 msgid "The server had already sent this message."
 msgstr "Server sudah mengirim pesan ini."
 
-#: app/src/ui/window.rs:2809
+#: app/src/ui/window.rs:2818
 msgid "This message was canceled in another app and is no longer in Drafts."
 msgstr "Pesan ini dibatalkan di aplikasi lain dan tidak lagi berada di Draf."
 
-#: app/src/ui/window.rs:2923
+#: app/src/ui/window.rs:2932
 msgid "Downloading {file}…"
 msgstr "Mengunduh {file}…"
 
-#: app/src/ui/window.rs:2944 app/src/ui/window/attachments.rs:231
+#: app/src/ui/window.rs:2953 app/src/ui/window/attachments.rs:231
 msgid "Saved {file} to Downloads"
 msgstr "{file} disimpan ke Unduhan"
 
-#: app/src/ui/window.rs:2947
+#: app/src/ui/window.rs:2956
 msgid "Open"
 msgstr "Buka"
 
-#: app/src/ui/window.rs:2962 app/src/ui/window/attachments.rs:236
+#: app/src/ui/window.rs:2971 app/src/ui/window/attachments.rs:236
 msgid "Could not save {file}: {reason}"
 msgstr "Tidak dapat menyimpan {file}: {reason}"
 
-#: app/src/ui/window.rs:3191
+#: app/src/ui/window.rs:3214
 msgid "Continue in your browser"
 msgstr "Lanjutkan di peramban Anda"
 
-#: app/src/ui/window.rs:3241
+#: app/src/ui/window.rs:3264
 msgid "This copy of Penguin Mail was built without Google sign-in."
 msgstr "Salinan Penguin Mail ini dibuat tanpa dukungan masuk Google."
 
-#: app/src/ui/window.rs:3263
+#: app/src/ui/window.rs:3286
 msgid "Get a Release"
 msgstr "Dapatkan Rilis"
 
-#: app/src/ui/window.rs:3383
+#: app/src/ui/window.rs:3406
 msgid ""
 "Could not check for messages the server holds to send later, so {account} "
 "stays: {reason}"
@@ -11061,80 +11070,80 @@ msgstr ""
 "Tidak dapat memeriksa pesan yang ditahan server untuk dikirim nanti, "
 "sehingga {account} tetap ada: {reason}"
 
-#: app/src/ui/window.rs:3394
+#: app/src/ui/window.rs:3417
 msgid "Remove {account}?"
 msgstr "Hapus {account}?"
 
-#: app/src/ui/window.rs:3413
+#: app/src/ui/window.rs:3436
 msgid "Remove Anyway"
 msgstr "Tetap Hapus"
 
-#: app/src/ui/window.rs:3426
+#: app/src/ui/window.rs:3449
 msgid "Removed {account}"
 msgstr "{account} dihapus"
 
-#: app/src/ui/window.rs:3428
+#: app/src/ui/window.rs:3451
 msgid "Could not remove {account}: {reason}"
 msgstr "Tidak dapat menghapus {account}: {reason}"
 
-#: app/src/ui/window.rs:3636
+#: app/src/ui/window.rs:3674
 msgid "Refresh"
 msgstr "Segarkan"
 
-#: app/src/ui/window.rs:3640
+#: app/src/ui/window.rs:3678
 msgid "Show Declined Events"
 msgstr "Tampilkan Acara yang Ditolak"
 
-#: app/src/ui/window.rs:3656
+#: app/src/ui/window.rs:3694
 msgid "Add Account…"
 msgstr "Tambahkan Akun…"
 
-#: app/src/ui/window.rs:3657
+#: app/src/ui/window.rs:3695
 msgid "New Smart Mailbox…"
 msgstr "Kotak Surat Cerdas Baru…"
 
-#: app/src/ui/window.rs:3665
+#: app/src/ui/window.rs:3703
 msgid "Keyboard Shortcuts"
 msgstr "Pintasan Papan Ketik"
 
-#: app/src/ui/window.rs:3674 app/src/ui/window.rs:3676
+#: app/src/ui/window.rs:3712 app/src/ui/window.rs:3714
 msgid "Main Menu"
 msgstr "Menu Utama"
 
-#: app/src/ui/window.rs:3741 app/src/ui/window.rs:3742
+#: app/src/ui/window.rs:3779 app/src/ui/window.rs:3780
 msgid "Dock"
 msgstr "Dock"
 
-#: app/src/ui/window.rs:3867
+#: app/src/ui/window.rs:3905
 msgid "Add a mail account first"
 msgstr "Tambahkan akun email terlebih dahulu"
 
 #. Translators: {account} is an email address.
-#: app/src/ui/window.rs:4104
+#: app/src/ui/window.rs:4142
 msgid "The calendar and contacts of {account} are connected."
 msgstr "Kalender dan kontak {account} telah terhubung."
 
-#: app/src/ui/window.rs:4220
+#: app/src/ui/window.rs:4258
 msgid "Open a message from the person first"
 msgstr "Buka pesan dari orang tersebut terlebih dahulu"
 
-#: app/src/ui/window.rs:4301
+#: app/src/ui/window.rs:4339
 msgid "Penguin Mail shows the new language after a restart"
 msgstr "Penguin Mail menampilkan bahasa baru setelah dimulai ulang"
 
-#: app/src/ui/window.rs:4303 app/src/update/mod.rs:130
+#: app/src/ui/window.rs:4341 app/src/update/mod.rs:130
 msgid "Restart"
 msgstr "Mulai Ulang"
 
-#: app/src/ui/window.rs:4367
+#: app/src/ui/window.rs:4405
 msgid "Show Rules"
 msgstr "Tampilkan Aturan"
 
-#: app/src/ui/window.rs:4393
+#: app/src/ui/window.rs:4431
 msgid "Messages That Will Not Download"
 msgstr "Pesan yang Tidak Dapat Diunduh"
 
-#: app/src/ui/window.rs:4395
+#: app/src/ui/window.rs:4433
 msgid ""
 "Penguin Mail could not download these from {address}'s server. It tries "
 "again at each check, except for a message too large to download."
@@ -12659,7 +12668,7 @@ msgstr ""
 "Server masih menahan pesan ini dan belum dapat diminta melepasnya. Coba lagi "
 "nanti."
 
-#: sync/src/outbox.rs:1742
+#: sync/src/outbox.rs:1759
 msgid "The server could not be asked to let go of the message."
 msgstr "Server tidak dapat diminta melepas pesan."
 

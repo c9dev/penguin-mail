@@ -566,6 +566,7 @@ fn api_library_links() -> gtk::Box {
         .halign(gtk::Align::Start)
         .build();
     links.append(&label(
+        // Translators: the services are Google's, switched on one at a time with the four links below, in place of the one button above.
         &gettext("Turn them on one at a time instead"),
         &["own-note"],
     ));
