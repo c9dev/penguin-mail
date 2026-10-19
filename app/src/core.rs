@@ -861,6 +861,7 @@ impl Core {
             .ok_or_else(|| anyhow!("sync is not running"))?;
         let connector = self.connector();
         let calendar_copy = self.calendar_copy();
+        let db = self.db.clone();
         self.call(async move {
             let run = in_browser(&connector, browser, wanted, move |url: &str| {
                 let _ = urls.try_send(url.to_string());
@@ -874,7 +875,18 @@ impl Core {
                     "Gave up waiting for the browser after five minutes."
                 ))
             })??;
-            engine.start_account(signed.account.id, signed.services);
+            match signed.services {
+                mailrs_sync::Connected::Ready(services) => {
+                    engine.start_account(signed.account.id, services)
+                }
+                // A Gmail account whose mail route still lacks its secret
+                // waits for it, as at any start.
+                mailrs_sync::Connected::NeedsSignIn(_) => {
+                    let id = signed.account.id;
+                    let state = missing_token_state(&db, &signed.account).await?;
+                    db.write(move |c| accounts::set_state(c, id, state)).await?;
+                }
+            }
             // The sign-in may have granted the calendar permission, so the
             // copy stops waiting out an earlier refusal.
             calendar_copy.permission_changed(signed.account.id);
@@ -1251,7 +1263,9 @@ impl Core {
             };
             let signed =
                 jmap_in_browser(&connector, offer, &address, dav_password, open, canceled).await?;
-            engine.start_account(signed.account.id, signed.services);
+            if let mailrs_sync::Connected::Ready(services) = signed.services {
+                engine.start_account(signed.account.id, services);
+            }
             Ok::<_, anyhow::Error>(signed.account)
         })
         .await

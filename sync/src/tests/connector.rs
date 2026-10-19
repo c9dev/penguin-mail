@@ -2220,6 +2220,35 @@ async fn the_calendar_consent_keeps_the_route_and_records_the_built_in_list() {
     );
 }
 
+/// An IMAP-route account signed in through the built-in client starts on
+/// its route's services, never on Gmail API mail over a token that holds
+/// no mail scope. Its route has no mail adapter yet, so it waits for one.
+#[tokio::test]
+async fn the_built_in_sign_in_starts_an_imap_route_account_on_its_route() {
+    let (db, _dir) = store().await;
+    let me = gmail_account(&db).await;
+    on_imap_route(&db, &me).await;
+    let server = wiremock::MockServer::start().await;
+    let reach = connector(
+        &db,
+        built_in_clients_answering(&server, "me@gmail.com").await,
+    );
+    let signed = in_browser(
+        &reach,
+        Browser::Google,
+        Wanted::Only(me.email.clone()),
+        come_back_from_google,
+    )
+    .await
+    .unwrap();
+    assert_eq!(signed.account.id, me.id);
+    assert!(
+        matches!(signed.services, Connected::NeedsSignIn(Lacks::Secret)),
+        "{:?}",
+        matches!(&signed.services, Connected::Ready(s) if matches!(s.mail, AnyMail::Google(_)))
+    );
+}
+
 #[tokio::test]
 async fn the_calendar_consent_refuses_an_api_account_before_the_browser_opens() {
     let (db, _dir) = store().await;

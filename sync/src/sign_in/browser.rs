@@ -17,7 +17,8 @@ use super::{
     microsoft_signed_in,
 };
 use crate::{
-    AccountServices, Clients, Connector, SyncError, connect_account, connect_microsoft, now_millis,
+    AccountServices, Clients, Connected, Connector, SyncError, connect_account, connect_microsoft,
+    now_millis,
 };
 
 /// A sign-in that runs on the provider's page in the browser.
@@ -74,12 +75,12 @@ impl Wanted {
 }
 
 /// An account signed in on its provider's page, with the services to
-/// start its sync on.
+/// start its sync on, or what it still lacks for them.
 pub struct SignedIn {
     pub account: Account,
     /// The name the provider knows the person by. Only Microsoft gives one.
     pub name: Option<String>,
-    pub services: AccountServices,
+    pub services: Connected,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -228,7 +229,7 @@ async fn with_google(
         ..
     } = connector;
     let (oauth, _) = google_sign_in(clients)?;
-    let account = if oauth.scope_list() == ScopeList::BuiltIn {
+    if oauth.scope_list() == ScopeList::BuiltIn {
         // Only a Gmail account that reads its mail over IMAP may sign in
         // here. Any other, and a new address, needs a route first.
         let address = wanted.address().map(str::to_string);
@@ -242,34 +243,41 @@ async fn with_google(
         let held = held
             .filter(|held| held.provider == Provider::Gmail)
             .ok_or(BrowserSignInError::NeedsRoute)?;
-        calendar_consent(connector, &held, open).await?
-    } else {
-        let own = match &clients.own_google {
-            Some(Ok(own)) => Some(own),
-            _ => None,
-        };
-        let authorized = mailrs_gmail::authorize(&oauth, GMAIL_API_BASE, open)
-            .await
-            .map_err(BrowserSignInError::Google)?;
-        wanted.check(&authorized.email)?;
-        let granted = authorized.granted.as_ref().map(Granted::to_scope);
-        google_signed_in(
-            db,
-            secrets,
-            &authorized.email,
-            &authorized.refresh_token,
-            now_millis(),
-            granted.as_deref(),
-            &oauth.scopes().join(" "),
-            own,
-        )
-        .await?
+        let account = calendar_consent(connector, &held, open).await?;
+        // The account's mail stays on its route, so its services come
+        // from the route as at any start.
+        let services = connector.connect(&account).await?;
+        return Ok(SignedIn {
+            account,
+            name: None,
+            services,
+        });
+    }
+    let own = match &clients.own_google {
+        Some(Ok(own)) => Some(own),
+        _ => None,
     };
+    let authorized = mailrs_gmail::authorize(&oauth, GMAIL_API_BASE, open)
+        .await
+        .map_err(BrowserSignInError::Google)?;
+    wanted.check(&authorized.email)?;
+    let granted = authorized.granted.as_ref().map(Granted::to_scope);
+    let account = google_signed_in(
+        db,
+        secrets,
+        &authorized.email,
+        &authorized.refresh_token,
+        now_millis(),
+        granted.as_deref(),
+        &oauth.scopes().join(" "),
+        own,
+    )
+    .await?;
     let client = connect_account(oauth, Arc::clone(&secrets.google), &account, db).await?;
     Ok(SignedIn {
         account,
         name: None,
-        services: AccountServices::google(client),
+        services: Connected::Ready(AccountServices::google(client)),
     })
 }
 
@@ -366,6 +374,6 @@ async fn with_microsoft(
     Ok(SignedIn {
         account,
         name: authorized.name,
-        services,
+        services: Connected::Ready(services),
     })
 }

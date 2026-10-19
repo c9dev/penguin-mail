@@ -348,7 +348,7 @@ pub(crate) async fn signing_in<S: SignInServer>(
     Ok(SignedIn {
         account,
         name: None,
-        services,
+        services: crate::Connected::Ready(services),
     })
 }
 
@@ -692,7 +692,7 @@ mod tests {
             "the new grant clears the mark"
         );
         assert!(
-            matches!(again.services.calendar, Some(crate::AnyCalendar::Dav(_))),
+            matches!(&again.services, crate::Connected::Ready(s) if matches!(s.calendar, Some(crate::AnyCalendar::Dav(_)))),
             "the calendar tries the token again"
         );
     }
@@ -883,7 +883,10 @@ mod tests {
                 .as_deref(),
             Some("r1")
         );
-        assert!(matches!(signed.services.mail, crate::AnyMail::Jmap(_)));
+        assert!(matches!(
+            &signed.services,
+            crate::Connected::Ready(s) if matches!(s.mail, crate::AnyMail::Jmap(_))
+        ));
     }
 
     /// Fastmail takes a loopback redirect on any port only when the client
