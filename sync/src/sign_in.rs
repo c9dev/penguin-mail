@@ -1315,7 +1315,7 @@ async fn save_token<P: PasswordStore + 'static>(
 /// call blocks. Without one, an outgoing password kept from before goes,
 /// so the outgoing server signs in with the incoming password as the
 /// form said it would.
-async fn save_passwords<P: PasswordStore + 'static>(
+pub(crate) async fn save_passwords<P: PasswordStore + 'static>(
     passwords: Arc<P>,
     id: AccountId,
     password: String,
