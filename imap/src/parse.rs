@@ -416,16 +416,38 @@ fn flags_of(attributes: &[AttributeValue<'_>]) -> Option<Result<FlagsOf, ImapErr
     let mut uid = None;
     let mut flags = None;
     let mut modseq = None;
+    let (mut msgid, mut thrid, mut labels) = (None, None, None);
     for attribute in attributes {
         match attribute {
             AttributeValue::Uid(u) => uid = Some(*u),
             AttributeValue::Flags(list) => flags = Some(list),
             AttributeValue::ModSeq(m) => modseq = Some(*m),
+            AttributeValue::GmailMsgId(id) => msgid = Some(*id),
+            AttributeValue::GmailThrId(id) => thrid = Some(*id),
+            AttributeValue::GmailLabels(list) => labels = Some(list),
             _ => {}
         }
     }
     let (uid, flags) = (uid?, flags?);
-    Some(flag_strings(flags).map(|flags| FlagsOf { uid, flags, modseq }))
+    Some(flag_strings(flags).and_then(|flags| {
+        let gmail = match (msgid, thrid) {
+            (Some(msgid), Some(thrid)) => Some(GmailMeta {
+                msgid,
+                thrid,
+                labels: labels
+                    .map(|l| label_strings(l))
+                    .transpose()?
+                    .unwrap_or_default(),
+            }),
+            _ => None,
+        };
+        Ok(FlagsOf {
+            uid,
+            flags,
+            modseq,
+            gmail,
+        })
+    }))
 }
 
 /// A message's flags as strings, refused past [`MAX_FLAGS`].
@@ -1023,7 +1045,8 @@ pub(crate) mod tests {
             [FlagsOf {
                 uid: 117,
                 flags: vec!["\\Seen".into(), "\\Answered".into()],
-                modseq: Some(90060115194045001)
+                modseq: Some(90060115194045001),
+                gmail: None
             }]
         );
     }
@@ -1196,7 +1219,8 @@ pub(crate) mod tests {
             [FlagsOf {
                 uid: 12,
                 flags: vec!["\\Seen".into(), "$Muted".into()],
-                modseq: Some(90)
+                modseq: Some(90),
+                gmail: None
             }]
         );
     }

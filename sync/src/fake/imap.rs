@@ -1110,6 +1110,7 @@ fn flags_of(uid: u32, message: &FakeMessage, condstore: bool) -> FlagsOf {
         uid,
         flags: message.flags.iter().cloned().collect(),
         modseq: condstore.then_some(message.modseq),
+        gmail: None,
     }
 }
 

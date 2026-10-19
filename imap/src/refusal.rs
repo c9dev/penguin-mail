@@ -71,6 +71,11 @@ const MISSING_WORDS: [&str; 5] = [
     "unknown mailbox",
 ];
 
+/// Words servers use when the account is out of quota or bandwidth for
+/// now: RFC 5530's `[OVERQUOTA]`, and Gmail's "exceeded command or
+/// bandwidth limits" alert.
+const OVER_QUOTA_WORDS: [&str; 2] = ["[overquota]", "bandwidth limits"];
+
 /// The class of a refusal. `try_create` is the `[TRYCREATE]` code, which
 /// imap-proto parses out of the text.
 /// The server's text is clipped to [`MAX_ERROR_TEXT`] characters.
@@ -84,6 +89,9 @@ pub(crate) fn refusal(doing: Doing<'_>, how: Refusal, try_create: bool, text: &s
     }
     if signing_in && says(&LIMIT_WORDS) {
         return ImapError::TooManyConnections { text };
+    }
+    if how != Refusal::Bye && says(&OVER_QUOTA_WORDS) {
+        return ImapError::OverQuota { text };
     }
     match (how, doing) {
         (Refusal::Bye, _) => ImapError::Network(text),
@@ -327,13 +335,28 @@ mod tests {
 
     #[test]
     fn any_other_no_is_refused() {
-        let err = refusal(
-            Doing::Into("Sent"),
-            Refusal::No,
-            false,
-            "[OVERQUOTA] Quota exceeded",
-        );
-        assert_eq!(err, ImapError::Refused("[OVERQUOTA] Quota exceeded".into()));
+        let err = refusal(Doing::Into("Sent"), Refusal::No, false, "Message too large");
+        assert_eq!(err, ImapError::Refused("Message too large".into()));
+    }
+
+    #[test]
+    fn overquota_is_its_own_refusal() {
+        for doing in [Doing::Into("Sent"), Doing::Mailbox("INBOX"), Doing::Other] {
+            let err = refusal(doing, Refusal::No, false, "[OVERQUOTA] Quota exceeded");
+            assert_eq!(
+                err,
+                ImapError::OverQuota {
+                    text: "[OVERQUOTA] Quota exceeded".into()
+                }
+            );
+        }
+    }
+
+    #[test]
+    fn a_bandwidth_alert_is_overquota() {
+        let text = "[ALERT] Account exceeded command or bandwidth limits. (Failure)";
+        let err = refusal(Doing::Mailbox("INBOX"), Refusal::No, false, text);
+        assert_eq!(err, ImapError::OverQuota { text: text.into() });
     }
 
     #[test]

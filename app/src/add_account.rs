@@ -931,6 +931,7 @@ fn failure_given(err: &anyhow::Error, proposal: &Proposal, plug: Plug) -> Failur
             Failure::plain(line.clone(), could_not.clone(), line)
         }
         ImapError::Refused(reason) | ImapError::NoMailbox(reason) => could_not_sign_in(reason),
+        ImapError::OverQuota { text } => could_not_sign_in(text),
         ImapError::Unsupported(what) => could_not_sign_in(what),
         // A value the client refused before it went anywhere: the
         // proposal itself could not carry a login, which is not a

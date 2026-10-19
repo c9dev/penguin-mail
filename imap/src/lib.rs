@@ -31,6 +31,6 @@ pub use smtp::{SmtpClient, SmtpTls};
 pub use structure::BodyStructure;
 pub use types::{
     AppendUid, Capabilities, CopyUid, Fetched, FlagsOf, GmailMeta, HEADER_FIELDS, Listed, QuotaUse,
-    Selected, Since, SpecialUse, Woke,
+    Selected, Since, SpecialUse, Woke, gm_labels, gm_msgid, gm_raw, gm_thrid,
 };
 pub use uid_set::UidSet;

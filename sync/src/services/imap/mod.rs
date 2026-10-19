@@ -317,6 +317,9 @@ impl From<ImapError> for BackendError {
             ImapError::Network(detail) => BackendError::Offline(detail),
             ImapError::Auth { .. } | ImapError::ImapDisabled { .. } => BackendError::NeedsReauth,
             ImapError::TooManyConnections { .. } => BackendError::RateLimited(None),
+            ImapError::OverQuota { .. } => {
+                BackendError::RateLimited(Some(Duration::from_secs(3600)))
+            }
             ImapError::NoMailbox(_) => BackendError::NotFound,
             ImapError::Unsupported(_) => BackendError::Unsupported,
             other @ (ImapError::Tls { .. }
