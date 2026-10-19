@@ -128,20 +128,22 @@ pub fn session() -> Arc<dyn OnlineAccounts> {
 }
 
 /// The account for `email`: the saved id first, else the address, trimmed
-/// and without regard to case.
+/// and without regard to case. The saved id counts only while its account
+/// still signs in as `email`, so an id given to another Google account
+/// never reads this one's mail.
 pub fn find<'a>(
     list: &'a [GoaAccount],
     saved_id: Option<&str>,
     email: &str,
 ) -> Option<&'a GoaAccount> {
+    let wanted = email.trim();
+    let same = |a: &GoaAccount| a.identity.trim().eq_ignore_ascii_case(wanted);
     if let Some(id) = saved_id
-        && let Some(found) = list.iter().find(|a| a.id == id)
+        && let Some(found) = list.iter().find(|a| a.id == id && same(a))
     {
         return Some(found);
     }
-    let wanted = email.trim();
-    list.iter()
-        .find(|a| a.identity.trim().eq_ignore_ascii_case(wanted))
+    list.iter().find(|a| same(a))
 }
 
 /// `work`, given up after [`STEP_WAIT`]: a daemon that hangs must not hang
