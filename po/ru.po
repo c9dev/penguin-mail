@@ -1224,7 +1224,7 @@ msgstr "Удалить правило из {account}?"
 msgid "Load remote images from every sender?"
 msgstr "Загружать внешние изображения от всех отправителей?"
 
-#: app/src/assistant/run.rs:1604 app/src/assistant/run/manage.rs:638
+#: app/src/assistant/run.rs:1604 app/src/assistant/run/manage.rs:644
 msgid "Loading a remote image tells the sender when you opened their mail."
 msgstr ""
 "Загрузка внешнего изображения сообщает отправителю, когда вы открыли письмо."
@@ -1675,11 +1675,11 @@ msgstr ""
 "Переименовать ярлык «{label}» в {account} в «{name}»? Вложенные ярлыки "
 "переместятся вместе с ним."
 
-#: app/src/assistant/run/manage.rs:262
+#: app/src/assistant/run/manage.rs:268
 msgid "Color the label “{label}” in {account} {color}?"
 msgstr "Задать ярлыку «{label}» в {account} цвет {color}?"
 
-#: app/src/assistant/run/manage.rs:302
+#: app/src/assistant/run/manage.rs:308
 msgid ""
 "Delete the label “{label}” from {account}? {count} conversation carries it. "
 "The mail stays in the account, without the label."
@@ -1696,7 +1696,7 @@ msgstr[2] ""
 "Удалить ярлык «{label}» из {account}? Он есть у {count} переписок. Письма "
 "останутся в учётной записи без этого ярлыка."
 
-#: app/src/assistant/run/manage.rs:313
+#: app/src/assistant/run/manage.rs:319
 msgid ""
 "Delete the label “{label}” from {account}? {count} conversation carries it. "
 "The mail stays in {provider}, without the label."
@@ -1713,7 +1713,7 @@ msgstr[2] ""
 "Удалить ярлык «{label}» из {account}? Он есть у {count} переписок. Письма "
 "останутся в {provider} без этого ярлыка."
 
-#: app/src/assistant/run/manage.rs:326
+#: app/src/assistant/run/manage.rs:332
 msgid ""
 "Delete the folder “{label}” from {account}? {count} conversation is in it. "
 "The mail in the folder is deleted with it."
@@ -1730,55 +1730,55 @@ msgstr[2] ""
 "Удалить папку «{label}» из {account}? В ней {count} переписок. Письма в "
 "папке будут удалены вместе с ней."
 
-#: app/src/assistant/run/manage.rs:391
+#: app/src/assistant/run/manage.rs:397
 msgid "Delete the smart mailbox “{name}”? The mail it lists stays where it is."
 msgstr "Удалить смарт-папку «{name}»? Письма останутся на своих местах."
 
-#: app/src/assistant/run/manage.rs:452
+#: app/src/assistant/run/manage.rs:458
 msgid "Replace the template “{name}” with this one? The saved one is lost."
 msgstr "Заменить шаблон «{name}» этим? Сохранённый шаблон будет утрачен."
 
-#: app/src/assistant/run/manage.rs:456
+#: app/src/assistant/run/manage.rs:462
 msgid "Save a template called “{name}”?"
 msgstr "Сохранить шаблон с именем «{name}»?"
 
-#: app/src/assistant/run/manage.rs:494
+#: app/src/assistant/run/manage.rs:500
 msgid "Delete the template “{name}”?"
 msgstr "Удалить шаблон «{name}»?"
 
-#: app/src/assistant/run/manage.rs:525
+#: app/src/assistant/run/manage.rs:531
 msgid "Add {contact} to the contacts of {account}?"
 msgstr "Добавить {contact} в контакты {account}?"
 
-#: app/src/assistant/run/manage.rs:569
+#: app/src/assistant/run/manage.rs:575
 msgid "this contact"
 msgstr "этот контакт"
 
-#: app/src/assistant/run/manage.rs:581
+#: app/src/assistant/run/manage.rs:587
 msgid "Change {contact} in the contacts of {account}?"
 msgstr "Изменить {contact} в контактах {account}?"
 
-#: app/src/assistant/run/manage.rs:628
+#: app/src/assistant/run/manage.rs:634
 msgid "Always load images from anyone at {domain}?"
 msgstr "Всегда загружать изображения от всех отправителей домена {domain}?"
 
-#: app/src/assistant/run/manage.rs:632
+#: app/src/assistant/run/manage.rs:638
 msgid "Always load images from {sender}?"
 msgstr "Всегда загружать изображения от {sender}?"
 
-#: app/src/assistant/run/manage.rs:663
+#: app/src/assistant/run/manage.rs:669
 msgid "Stop loading images from {sender}?"
 msgstr "Больше не загружать изображения от {sender}?"
 
-#: app/src/assistant/run/manage.rs:698
+#: app/src/assistant/run/manage.rs:704
 msgid "Export {what} to {file}?"
 msgstr "Экспортировать {what} в {file}?"
 
-#: app/src/assistant/run/manage.rs:704
+#: app/src/assistant/run/manage.rs:710
 msgid "A file with that name is there already, and exporting replaces it."
 msgstr "Файл с таким именем уже существует. Экспорт заменит его."
 
-#: app/src/assistant/run/manage.rs:784
+#: app/src/assistant/run/manage.rs:790
 msgid "the message “{subject}”"
 msgstr "письмо «{subject}»"
 
@@ -2471,7 +2471,7 @@ msgstr "Серый"
 
 #. Translators: App passwords is the name of Google's page; use the words Google's
 #. own page shows in your language.
-#: app/src/gmail_password.rs:53 app/src/ui/gmail_password_page.rs:71
+#: app/src/gmail_password.rs:53 app/src/ui/gmail_password_page.rs:72
 msgid "Open App passwords"
 msgstr "Открыть «Пароли приложений»"
 
@@ -5125,7 +5125,7 @@ msgid "Your Email Address"
 msgstr "Ваш адрес электронной почты"
 
 #: app/src/ui/add_account.rs:734 app/src/ui/add_account.rs:737
-#: app/src/ui/gmail_password_page.rs:95 app/src/ui/gmail_password_page.rs:98
+#: app/src/ui/gmail_password_page.rs:96 app/src/ui/gmail_password_page.rs:99
 #: app/src/ui/sender_prefs.rs:143
 msgid "Email Address"
 msgstr "Адрес электронной почты"
@@ -5161,7 +5161,7 @@ msgstr "Этот компьютер покидает только домен, а
 
 #: app/src/ui/add_account.rs:921 app/src/ui/add_account.rs:3211
 #: app/src/ui/add_account.rs:3304 app/src/ui/add_account.rs:3824
-#: app/src/ui/add_account.rs:5432 app/src/ui/gmail_password_page.rs:249
+#: app/src/ui/add_account.rs:5432 app/src/ui/gmail_password_page.rs:254
 msgid "Signing In…"
 msgstr "Вход…"
 
@@ -5208,8 +5208,8 @@ msgstr "Отмена"
 
 #: app/src/ui/add_account.rs:1150 app/src/ui/add_account.rs:1305
 #: app/src/ui/add_account.rs:3219 app/src/ui/add_account.rs:3309
-#: app/src/ui/add_account.rs:3766 app/src/ui/gmail_password_page.rs:124
-#: app/src/ui/gmail_password_page.rs:129 app/src/ui/gmail_password_page.rs:250
+#: app/src/ui/add_account.rs:3766 app/src/ui/gmail_password_page.rs:125
+#: app/src/ui/gmail_password_page.rs:130 app/src/ui/gmail_password_page.rs:255
 #: app/src/ui/window.rs:1376
 msgid "Sign In"
 msgstr "Войти"
@@ -8567,7 +8567,7 @@ msgid "Sign in with an app password"
 msgstr "Войти с паролем приложения"
 
 #. Translators: Google is a name; keep it as it is.
-#: app/src/ui/gmail_password_page.rs:42
+#: app/src/ui/gmail_password_page.rs:43
 msgid ""
 "Google gives each app its own password. You make one in your Google account "
 "and paste it here. Your Google password stays with Google."
@@ -8577,24 +8577,24 @@ msgstr ""
 
 #. Translators: 2-Step Verification is Google's name for it; use the words Google's
 #. own page shows in your language.
-#: app/src/ui/gmail_password_page.rs:55
+#: app/src/ui/gmail_password_page.rs:56
 msgid "Turn on 2-Step Verification, if it isn't on yet."
 msgstr "Включите двухэтапную аутентификацию, если она ещё не включена."
 
 #. Translators: 2-Step Verification is Google's name for it; use the words Google's
 #. own page shows in your language.
-#: app/src/ui/gmail_password_page.rs:59
+#: app/src/ui/gmail_password_page.rs:60
 msgid "Open 2-Step Verification"
 msgstr "Открыть двухэтапную аутентификацию"
 
 #. Translators: App password and Penguin Mail are names; use the words Google's own
 #. page shows in your language for App passwords.
-#: app/src/ui/gmail_password_page.rs:67
+#: app/src/ui/gmail_password_page.rs:68
 msgid "Make an app password. Name it Penguin Mail."
 msgstr "Создайте пароль приложения. Назовите его Penguin Mail."
 
 #. Translators: Google is a name; keep it as it is.
-#: app/src/ui/gmail_password_page.rs:79
+#: app/src/ui/gmail_password_page.rs:80
 msgid ""
 "Copy the 16 letters Google shows and paste them below. Google shows them "
 "only once."
@@ -8604,7 +8604,7 @@ msgstr ""
 
 #. Translators: Google is a name; keep it as it is. App passwords is the name of
 #. Google's page; use the words Google's own page shows in your language.
-#: app/src/ui/gmail_password_page.rs:88
+#: app/src/ui/gmail_password_page.rs:89
 msgid ""
 "Changing your Google password removes your app passwords. Make a new one to "
 "keep getting mail."
@@ -8614,36 +8614,36 @@ msgstr ""
 
 #. Translators: App password is the name of Google's page; use the words Google's own
 #. page shows in your language.
-#: app/src/ui/gmail_password_page.rs:101
+#: app/src/ui/gmail_password_page.rs:102
 msgid "App password"
 msgstr "Пароль приложения"
 
 #. Translators: App passwords is the name of Google's page; use the words Google's own
 #. page shows in your language.
-#: app/src/ui/gmail_password_page.rs:142
+#: app/src/ui/gmail_password_page.rs:143
 msgid "App passwords page says the setting isn't available?"
 msgstr "На странице «Пароли приложений» написано, что настройка недоступна?"
 
 #. Translators: 2-Step Verification is Google's name for it; use the words Google's
 #. own page shows in your language.
-#: app/src/ui/gmail_password_page.rs:149
+#: app/src/ui/gmail_password_page.rs:150
 msgid "2-Step Verification is off for this account."
 msgstr "Двухэтапная аутентификация для этой учётной записи отключена."
 
 #. Translators: Advanced Protection is Google's name for it; use the words Google's
 #. own page shows in your language.
-#: app/src/ui/gmail_password_page.rs:152
+#: app/src/ui/gmail_password_page.rs:153
 msgid "The account uses Advanced Protection."
 msgstr "Учётная запись участвует в программе дополнительной защиты."
 
 #. Translators: App passwords is the name of Google's page; use the words Google's own
 #. page shows in your language.
-#: app/src/ui/gmail_password_page.rs:155
+#: app/src/ui/gmail_password_page.rs:156
 msgid "A work or school admin turned app passwords off."
 msgstr ""
 "Администратор вашей работы или учебного заведения отключил пароли приложений."
 
-#: app/src/ui/gmail_password_page.rs:165 app/src/ui/gmail_password_page.rs:172
+#: app/src/ui/gmail_password_page.rs:166 app/src/ui/gmail_password_page.rs:173
 msgid "Use another way to sign in"
 msgstr "Войти другим способом"
 
