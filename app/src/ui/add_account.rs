@@ -281,6 +281,23 @@ pub(super) struct Banded {
     pub(super) page: adw::NavigationPage,
     header: adw::HeaderBar,
     pub(super) body: gtk::Box,
+    toolbar: adw::ToolbarView,
+}
+
+impl Banded {
+    /// Puts `child` in a bar under the scroller, so it stays in view
+    /// however short the screen: on a 768-pixel screen the band and a
+    /// long page push a button in the column out of sight. Answers the
+    /// bar, for the page's own style class.
+    pub(super) fn bottom_bar(&self, child: &impl IsA<gtk::Widget>) -> gtk::Box {
+        let bar = gtk::Box::builder()
+            .orientation(gtk::Orientation::Vertical)
+            .css_classes(["post-bottom"])
+            .build();
+        bar.append(child);
+        self.toolbar.add_bottom_bar(&bar);
+        bar
+    }
 }
 
 pub(super) fn banded(tag: &str, title: &str) -> Banded {
@@ -319,7 +336,12 @@ pub(super) fn banded(tag: &str, title: &str) -> Banded {
         .tag(tag)
         .child(&toolbar)
         .build();
-    Banded { page, header, body }
+    Banded {
+        page,
+        header,
+        body,
+        toolbar,
+    }
 }
 
 pub(super) fn label(text: &str, classes: &[&str]) -> gtk::Label {

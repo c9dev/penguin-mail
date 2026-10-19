@@ -2195,6 +2195,11 @@ list.own-paste { margin-top: 12px; }
   min-height: 34px; min-width: 132px; border-radius: 10px; margin-top: 8px; padding: 0 16px;
 }
 .post-body.app-password list.post-field { margin-top: 14px; }
+/* A banded page's bottom bar, which keeps its main button in view. */
+.post-bottom { background-color: var(--dialog-bg-color); padding: 10px 24px 16px; }
+.post-bottom.app-password button.post-wide {
+  min-height: 34px; min-width: 132px; border-radius: 10px; margin-top: 0; padding: 0 16px;
+}
 .post-body.app-password label.app-password-again {
   font-size: 13px; color: var(--window-fg-color); margin-top: 10px;
   padding: 9px 12px; border-radius: 10px; background-color: alpha(#ed5b00, 0.10);

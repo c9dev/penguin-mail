@@ -189,8 +189,9 @@ impl GmailPasswordPage {
         body.append(&note);
         body.append(&error);
         body.append(&error_buttons);
-        body.append(&action);
         body.append(&help_list);
+        // Sign In and its spinner stay in view under the scroller.
+        banded.bottom_bar(&action).add_css_class("app-password");
 
         // A page pushed on top of a focused button leaves the focus nowhere
         // in the view, so the entry that still needs words takes it.
