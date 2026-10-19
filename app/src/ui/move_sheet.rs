@@ -17,6 +17,7 @@ const WIDTH: i32 = 440;
 /// The sheet and the parts a caller or a check reaches.
 pub struct Sheet {
     pub dialog: adw::Dialog,
+    #[cfg_attr(not(test), expect(dead_code, reason = "only the checks press it"))]
     pub later: gtk::Button,
     pub choose: gtk::Button,
 }
