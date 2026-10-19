@@ -394,13 +394,13 @@ sign-in.
 
 ### First run
 
-The first screen signs you in with Google. **Sign In with Google** opens
-Google's sign-in page in your browser, and **Add Account** in the sidebar adds
-each account after that.
+The first window offers **Add your first account**. Pick a provider and
+follow the steps; **Add Account** in the sidebar adds each account after that.
 
-Until Google finishes verifying Penguin Mail, that page warns that Google has
-not verified the app. The warning means Google has not yet reviewed the app's
-request for Gmail access; choose **Advanced**, then continue.
+For a Gmail account, Penguin Mail asks **Choose how Penguin Mail signs in to
+Gmail** and lists the ways it offers. Pick one. If you pick one that opens
+Google's page in your browser, Google may show a warning page first; choose
+**Advanced**, then continue to Penguin Mail.
 
 ### Updates
 

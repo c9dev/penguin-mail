@@ -12,10 +12,10 @@ first, open the main menu and choose **Add Account**. From a terminal,
 
 ### Google
 
-Choose **Google**. Your browser opens Google's sign-in page; sign in and allow
-the permissions Penguin Mail asks for, then come back to the app. Until Google
-finishes verifying the app, the page warns that Google has not verified it.
-Choose **Advanced**, then continue.
+Choose **Google**, then pick how Penguin Mail signs in to Gmail. If you pick a
+way that opens Google's sign-in page, sign in and allow the permissions Penguin
+Mail asks for, then come back to the app. Google may show a warning page first;
+choose **Advanced**, then continue to Penguin Mail.
 
 If Google blocks the sign-in, or your organization allows only apps its
 administrator approved, sign in with a Google client of your own instead; see
