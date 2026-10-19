@@ -3,7 +3,7 @@
 
 use std::sync::Arc;
 
-use mailrs_domain::{Account, AccountState, EpochMillis, MailRoute, Provider};
+use mailrs_domain::{Account, AccountState, EpochMillis, MailRoute, Provider, SignInClient};
 use mailrs_imap::{CheckError, Checked, ImapClient, Login};
 use mailrs_store::servers::{self, Saved, Security, Servers};
 use mailrs_store::{Db, accounts};
@@ -174,6 +174,12 @@ pub async fn gmail_imap_signed_in<P: PasswordStore + 'static>(
             let (id, again) = (held.id, held.state);
             db.write(move |c| {
                 servers::save(c, id, &servers)?;
+                // An app password takes the account off Online Accounts,
+                // whose token it would otherwise go on reading.
+                if accounts::sign_in_client(c, id)? == SignInClient::Goa {
+                    accounts::set_sign_in_client(c, id, SignInClient::BuiltIn)?;
+                    accounts::set_goa_id(c, id, None)?;
+                }
                 if again == AccountState::NeedsReauth {
                     accounts::set_state(c, id, AccountState::Ok)?;
                 }
