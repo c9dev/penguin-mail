@@ -6,7 +6,7 @@ use std::collections::{BTreeMap, HashMap};
 
 use chrono::NaiveDate;
 use mailrs_domain::{Location, MessageMeta};
-use mailrs_imap::{Fetched, UidSet, gm_raw, gm_thrid};
+use mailrs_imap::{Fetched, UidSet, gm_labels, gm_raw, gm_thrid};
 use serde::{Deserialize, Serialize};
 
 use super::labels::{self, GmailPlace, TABS};
@@ -35,8 +35,9 @@ fn all_mail_keys(days: i64, today: NaiveDate) -> String {
         .checked_sub_days(chrono::Days::new(days.unsigned_abs()))
         .unwrap_or(NaiveDate::MIN);
     format!(
-        "UNDELETED OR SINCE {} X-GM-LABELS \\Inbox",
+        "UNDELETED OR SINCE {} {}",
         imap_date(start),
+        gm_labels("\\Inbox").expect("a system label is a valid label"),
     )
 }
 
@@ -111,7 +112,10 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
                         "INBOX" => String::new(),
                         _ => all_mail_keys(days, today),
                     };
-                    vec![(boxes.all.clone(), format!("{since} {key}"))]
+                    vec![(
+                        boxes.all.clone(),
+                        format!("{since} {key}").trim_start().to_string(),
+                    )]
                 }
                 None => Vec::new(),
             },
@@ -269,7 +273,8 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
         if wanted.contains(['"', '\r', '\n', '\\']) {
             return Ok(None);
         }
-        let keys = format!("HEADER Message-ID \"{wanted}\" X-GM-LABELS \\Sent UNDELETED");
+        let sent = gm_labels("\\Sent").expect("a system label is a valid label");
+        let keys = format!("HEADER Message-ID \"{wanted}\" {sent} UNDELETED");
         let (uidvalidity, uids) = self.gm_matching(&boxes.all, &keys).await?;
         Ok(self
             .gm_refs(&boxes.all, uidvalidity, &uids)

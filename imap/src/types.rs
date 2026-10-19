@@ -223,10 +223,17 @@ pub fn gm_thrid(id: u64) -> String {
 }
 
 /// A search key for the messages with one label. Refused for a label no
-/// command can carry, so a name cannot add keys of its own.
+/// command can carry, so a name cannot add keys of its own. Gmail's SEARCH
+/// takes the label as a string only: a system label written as an atom
+/// (`X-GM-LABELS \Inbox`) is answered "Could not parse command", so even
+/// those go quoted here, unlike in STORE.
 pub fn gm_labels(label: &str) -> Result<String, ImapError> {
     check_label(label)?;
-    Ok(format!("X-GM-LABELS {}", label_text(label)))
+    let text = match label.starts_with('\\') {
+        true => quoted(label),
+        false => label_text(label),
+    };
+    Ok(format!("X-GM-LABELS {text}"))
 }
 
 /// A label as a command writes it: a system label (`\\Inbox`) as an
@@ -490,7 +497,7 @@ mod tests {
             gm_labels("Fam\u{ed}lia/F\u{e9}rias 2026").unwrap(),
             "X-GM-LABELS \"Fam&AO0-lia/F&AOk-rias 2026\""
         );
-        assert_eq!(gm_labels("\\Inbox").unwrap(), "X-GM-LABELS \\Inbox");
+        assert_eq!(gm_labels("\\Inbox").unwrap(), "X-GM-LABELS \"\\\\Inbox\"");
         assert_eq!(gm_labels("Work").unwrap(), "X-GM-LABELS \"Work\"");
         assert!(gm_labels("\\Inbox) OR ALL (").is_err());
     }
