@@ -58,8 +58,9 @@ pub struct Google<G> {
     /// Whether only the tray runs, which slows the history polls.
     tray_only: Arc<AtomicBool>,
     /// Changes a fake account adds to what the history answers, for a test
-    /// of how the engine meets a server unlike Gmail.
-    #[cfg(any(test, feature = "fake"))]
+    /// of how the engine meets a server unlike Gmail. Tests only, so no
+    /// Google look in the app takes its lock.
+    #[cfg(test)]
     extra_changes: Arc<Mutex<Vec<crate::RemoteChange>>>,
 }
 
@@ -94,13 +95,13 @@ impl<G> Google<G> {
             handles: Arc::new(Mutex::new(Handles::default())),
             capabilities: None,
             tray_only: Arc::default(),
-            #[cfg(any(test, feature = "fake"))]
+            #[cfg(test)]
             extra_changes: Arc::default(),
         }
     }
 
     /// Adds `changes` to the next answer of the history, once.
-    #[cfg(any(test, feature = "fake"))]
+    #[cfg(test)]
     pub fn report(&self, changes: Vec<crate::RemoteChange>) {
         self.extra_changes
             .lock()
@@ -141,7 +142,7 @@ impl<G> Clone for Google<G> {
             handles: Arc::clone(&self.handles),
             capabilities: self.capabilities,
             tray_only: Arc::clone(&self.tray_only),
-            #[cfg(any(test, feature = "fake"))]
+            #[cfg(test)]
             extra_changes: Arc::clone(&self.extra_changes),
         }
     }
@@ -487,9 +488,9 @@ impl<G: GmailApi> MailBackend for Google<G> {
     }
 
     async fn changes(&self, since: Option<&SyncState>) -> Result<Changes, BackendError> {
-        #[allow(unused_mut)]
+        #[cfg_attr(not(test), allow(unused_mut))]
         let mut found = self.history_changes(since).await?;
-        #[cfg(any(test, feature = "fake"))]
+        #[cfg(test)]
         found.changes.append(
             &mut self
                 .extra_changes
