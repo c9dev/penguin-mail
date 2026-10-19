@@ -863,7 +863,10 @@ impl App {
     /// route choice.
     pub fn routes_ready(&self) -> bool {
         use crate::route_choice::{Platform, any_route, ready_now};
-        let mut ready = ready_now(&mailrs_sync::Clients::current());
+        let mut ready = ready_now(
+            &mailrs_sync::Clients::current(),
+            crate::route_choice::Goa::Absent,
+        );
         // A demo stage that asks for the banner counts the own-project row
         // as ready, so a copy built without its own client can show it.
         if self.core.demo && crate::demo::MoveStage::asked().is_some() {

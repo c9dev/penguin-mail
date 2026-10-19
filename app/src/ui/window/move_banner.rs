@@ -242,7 +242,7 @@ pub(crate) mod checks {
         bar.show(banner(&one, |email| email == "dana@gmail.com"));
         assert_eq!(
             bar.widget().button_label().as_deref(),
-            Some("Use GNOME Online Accounts")
+            Some("Use This Account")
         );
         bar.widget().emit_by_name::<()>("button-clicked", &[]);
         assert_eq!(

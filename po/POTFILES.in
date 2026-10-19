@@ -30,6 +30,7 @@ app/src/format.rs
 app/src/keyring_plug.rs
 app/src/language_names.rs
 app/src/main.rs
+app/src/goa_notice.rs
 app/src/move_banner.rs
 app/src/notify.rs
 app/src/offered.rs

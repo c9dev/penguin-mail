@@ -44,6 +44,8 @@ use crate::demo::{self, DemoMail};
 use crate::starting::{self, Connected, Starting};
 use mailrs_domain::translate::gettext;
 
+mod goa;
+
 /// The store could not be updated to this version, and the copy taken
 /// before the attempt was put back. Startup shows this with a way to
 /// report it, since only a fixed release can open the store again.
@@ -139,6 +141,12 @@ pub struct Core {
     switch_offers: RefCell<HashMap<AccountId, JmapFound>>,
     /// The accounts a move to their own sign-in is running for.
     move_leases: MoveLeases,
+    /// The desktop's Online Accounts, or a stand-in in the demo.
+    goa: Arc<dyn mailrs_sync::goa::OnlineAccounts>,
+    /// What the app last read from it.
+    goa_state: Arc<goa::GoaState>,
+    /// Whether the watch on it runs.
+    goa_watching: Cell<bool>,
     /// The accounts `look_for_jmap` has looked at this run, found or not.
     switch_looked: RefCell<HashSet<AccountId>>,
     /// Where each kind of account keeps what signs it in: the keyring, or
@@ -329,6 +337,9 @@ impl Core {
             misses: RefCell::new(misses),
             switch_offers: RefCell::default(),
             move_leases: MoveLeases::default(),
+            goa: online_accounts(demo),
+            goa_state: Arc::default(),
+            goa_watching: Cell::new(false),
             switch_looked: RefCell::default(),
             secrets: match demo {
                 true => Secrets::memory(),
@@ -389,7 +400,7 @@ impl Core {
             config: self.config.borrow().clone(),
             clients: Clients::current(),
             secrets: self.secrets.clone(),
-            goa: mailrs_sync::goa::session(),
+            goa: self.goa.clone(),
         }
     }
 
@@ -495,7 +506,7 @@ impl Core {
                 config,
                 clients: Clients::built_in(),
                 secrets: self.secrets.clone(),
-                goa: mailrs_sync::goa::session(),
+                goa: self.goa.clone(),
             },
             demo: self.demo_mail.clone(),
         });
@@ -2069,6 +2080,23 @@ impl Background for Core {
 /// Where contact photos are kept: the cache directory, since Google
 /// serves them again whenever they are wanted. Demo photos sit beside the
 /// demo's throwaway store.
+/// The desktop's Online Accounts. The demo holds one Google account of its
+/// own, so the pages that use it can be seen without touching the person's.
+fn online_accounts(demo: bool) -> Arc<dyn mailrs_sync::goa::OnlineAccounts> {
+    if !demo {
+        return mailrs_sync::goa::session();
+    }
+    let fake = mailrs_sync::goa::fake::FakeAccounts::new();
+    fake.add(mailrs_sync::goa::GoaAccount {
+        id: "account_1_0".into(),
+        identity: "dana@example.com".into(),
+        presentation: "dana@example.com".into(),
+        mail_disabled: false,
+        attention_needed: false,
+    });
+    fake
+}
+
 fn contact_photo_dir(demo: bool, data_dir: &std::path::Path) -> PathBuf {
     if demo {
         return data_dir.join("contact-photos");

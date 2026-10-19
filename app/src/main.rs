@@ -23,6 +23,7 @@ mod event_reminders;
 mod exe;
 mod format;
 mod goa;
+mod goa_notice;
 mod icon_theme;
 mod images;
 mod keyring_plug;

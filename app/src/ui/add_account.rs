@@ -225,7 +225,10 @@ fn google_routes() -> (Platform, bool) {
     let platform = Platform::this();
     (
         platform,
-        any_route(platform, ready_now(&mailrs_sync::Clients::current())),
+        any_route(
+            platform,
+            ready_now(&mailrs_sync::Clients::current(), Goa::Absent),
+        ),
     )
 }
 
@@ -3721,7 +3724,7 @@ impl Dialog {
     /// the address typed, when there was one.
     fn offer_routes(self: &Rc<Self>, expected: Option<String>) {
         let platform = Platform::this();
-        let ready = ready_now(&mailrs_sync::Clients::current());
+        let ready = ready_now(&mailrs_sync::Clients::current(), Goa::Absent);
         if !any_route(platform, ready) {
             return self.start_browser(Browser::Google, expected);
         }
@@ -3797,7 +3800,11 @@ impl Dialog {
         // The rows are rebuilt before the page shows again, so the focus
         // lands on a row that stays.
         let platform = Platform::this();
-        self.routes_for(platform, ready_now(&mailrs_sync::Clients::current()), None);
+        self.routes_for(
+            platform,
+            ready_now(&mailrs_sync::Clients::current(), Goa::Absent),
+            None,
+        );
         self.back_to(route_page::TAG);
     }
 
