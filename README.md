@@ -42,8 +42,9 @@ account:
   your desktop.
 - **Use a password from Google.** Quick. You get mail, calendar and
   contacts.
-- **Set up your own Google project.** Every Gmail feature, on any computer.
-  It takes about 10 minutes, once.
+- **Set up your own Google project.** Every Gmail feature, on Linux and
+  macOS. It takes about 10 minutes, once: Penguin Mail opens each Google
+  page for you and says what to click.
 
 Preferences shows what each account has. Get Every Feature there lets an
 account switch to your own Google project later.
