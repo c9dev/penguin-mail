@@ -2125,14 +2125,7 @@ impl MainWindow {
     pub(super) fn explain_api_off(self: &Rc<Self>, service: &str, enable_url: &str) {
         let question = confirm(
             &fill(&gettext("Turn On the {service}"), &[("service", service)]),
-            &fill(
-                &gettext(
-                    "The Google Cloud project Penguin Mail signs in with has the {service} \
-                     switched off, so Google refuses before it can ask for your permission. \
-                     Turn it on, wait a minute, and try again.",
-                ),
-                &[("service", service)],
-            ),
+            &crate::own_project::api_off_body(service),
             &gettext("Open Google Cloud"),
             Tone::Suggested,
         )

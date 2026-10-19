@@ -1244,7 +1244,17 @@ impl App {
                         this.check_event_reminders();
                     }
                 }
-                Err(err) => tracing::warn!(%err, "could not read the calendars"),
+                Err(err) => {
+                    // Calendar switched off in the person's own project
+                    // refuses every read until it is turned on.
+                    if let Some((service, url)) = api_off(&err) {
+                        this.tell_window(Notice::ApiOff {
+                            service: &service,
+                            enable_url: &url,
+                        });
+                    }
+                    tracing::warn!(%err, "could not read the calendars");
+                }
             }
         });
     }

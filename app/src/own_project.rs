@@ -416,6 +416,22 @@ async fn read_head(file: &gio::File, limit: usize) -> Result<Vec<u8>, glib::Erro
     Ok(bytes)
 }
 
+/// The body of the question that offers to turn `service` on: the
+/// words for the person's own project when the service is one Penguin
+/// Mail uses, else what Google named.
+pub fn api_off_body(service: &str) -> String {
+    api_off_words(service).unwrap_or_else(|| {
+        fill(
+            &gettext(
+                "The Google Cloud project Penguin Mail signs in with has the {service} \
+                 switched off, so Google refuses before it can ask for your permission. \
+                 Turn it on, wait a minute, and try again.",
+            ),
+            &[("service", service)],
+        )
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -547,6 +563,15 @@ mod tests {
             Some("Gmail is turned off in your project.")
         );
         assert_eq!(api_off_words("Cloud Pub/Sub API"), None);
+    }
+
+    #[test]
+    fn the_service_off_question_names_the_service_alone() {
+        assert_eq!(
+            api_off_body("People API"),
+            "Contacts is turned off in your project."
+        );
+        assert!(api_off_body("Cloud Pub/Sub API").contains("Cloud Pub/Sub API"));
     }
 
     #[test]
