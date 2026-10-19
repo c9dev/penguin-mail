@@ -344,3 +344,65 @@ async fn reconciling_waits_for_the_window_to_finish_loading() {
     h.sync.reconcile_inbox().await.unwrap();
     assert_eq!(h.fake.usage().calls, 0);
 }
+
+/// Gmail's services claiming an IMAP server's place names beside Gmail's
+/// own labels, as Gmail over IMAP does: messages keep their hex ids and
+/// a ref follows each between mailboxes. `slot` receives the Google
+/// service, so a test can add changes to its feed.
+fn locating(
+    fake: Arc<FakeGmail>,
+    slot: Arc<std::sync::Mutex<Option<crate::services::Google<crate::AnyGmail>>>>,
+) -> AccountServices {
+    let caps = MailCapabilities {
+        renames: true,
+        ..AccountServices::google(Arc::clone(&fake)).capabilities()
+    };
+    let services = AccountServices::fake_with_capabilities(fake, caps);
+    if let crate::AnyMail::Google(google) = &services.mail {
+        *slot.lock().unwrap() = Some(google.clone());
+    }
+    services
+}
+
+#[tokio::test]
+async fn a_located_message_survives_its_old_mailboxs_vanished() {
+    use mailrs_domain::Location;
+    use mailrs_imap::UidSet;
+    use mailrs_store::remote_refs;
+
+    let slot = Arc::default();
+    let h = harness_with(|fake| locating(fake, Arc::clone(&slot))).await;
+    h.fake
+        .seed(meta("18c2f0a1b2c3d4e5", "t1", now_millis(), &["INBOX"]));
+    h.bootstrap_all().await;
+    let place = |mailbox: &str, uid| Location {
+        mailbox: mailbox.into(),
+        uidvalidity: 1,
+        uid,
+    };
+    let (account_id, there) = (h.account_id, place("A", 5));
+    h.db.write(move |c| remote_refs::locate(c, account_id, "18c2f0a1b2c3d4e5", &there))
+        .await
+        .unwrap();
+
+    slot.lock().unwrap().as_ref().unwrap().report(vec![
+        crate::RemoteChange::Located {
+            id: "18c2f0a1b2c3d4e5".into(),
+            at: place("B", 9),
+        },
+        crate::RemoteChange::Vanished {
+            mailbox: "A".into(),
+            uidvalidity: 1,
+            uids: UidSet::from_uids([5]),
+        },
+    ]);
+    h.sync.incremental().await.unwrap();
+
+    assert_eq!(h.all_threads().await, ["t1"]);
+    let moved = h
+        .db
+        .read(move |c| remote_refs::remotes_of(c, account_id, &["18c2f0a1b2c3d4e5".to_string()]))
+        .await
+        .unwrap();
+    assert_eq!(moved["18c2f0a1b2c3d4e5"], "B/1/9");
+}

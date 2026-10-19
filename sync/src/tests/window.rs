@@ -768,3 +768,32 @@ async fn a_long_backfill_holds_about_one_page_whatever_the_mailbox_size() {
         "a page at a time should stay under 2 MB, held {large}"
     );
 }
+
+#[tokio::test]
+async fn a_label_server_with_refs_lists_its_window_per_label() {
+    use crate::MailCapabilities;
+
+    let h = super::harness_with(|fake| {
+        let caps = MailCapabilities {
+            renames: true,
+            ..AccountServices::google(Arc::clone(&fake)).capabilities()
+        };
+        AccountServices::fake_with_capabilities(fake, caps)
+    })
+    .await;
+    h.fake.seed(meta(
+        "18c2f0a1b2c3d4e5",
+        "t1",
+        now_millis(),
+        &["INBOX", "Label_1"],
+    ));
+    h.bootstrap_all().await;
+    // Changed while the history was out of reach, so only the relisting
+    // can find it.
+    h.fake
+        .remote_relabel("18c2f0a1b2c3d4e5", &["Label_2"], &["Label_1"]);
+
+    h.sync.rebootstrap().await.unwrap();
+
+    assert_eq!(h.labels_of("18c2f0a1b2c3d4e5").await, ["INBOX", "Label_2"]);
+}

@@ -253,6 +253,16 @@ pub enum RemoteChange {
         uidvalidity: u32,
         uids: UidSet,
     },
+    /// The message the store holds as `id` sits at `at` now. A server
+    /// whose ids outlive a move (Gmail over IMAP keeps the API's hex id)
+    /// reports where its message went this way, so the ref follows the
+    /// message between mailboxes while its id stays. The engine writes
+    /// every one before it reads refs for `Vanished` and `Holds`, so a
+    /// message that moved is not read as gone.
+    Located {
+        id: String,
+        at: Location,
+    },
     /// The server renumbered `mailbox`, as a new UIDVALIDITY says, and
     /// every name the store holds for its messages is void. The engine
     /// lists that mailbox again, whose UIDs now belong to `uidvalidity`,
