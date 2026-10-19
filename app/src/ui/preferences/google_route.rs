@@ -25,6 +25,10 @@ pub const CHOOSE_ROUTE: &str = "win.account-choose-route";
 /// The window action that moves one account to Online Accounts, by id.
 pub const SWITCH_TO_GOA: &str = "win.account-switch-goa";
 
+/// The window action that opens the route choice, without the own
+/// project, for one account on its own project, by id.
+pub const LEAVE_OWN_PROJECT: &str = "win.account-leave-own-project";
+
 /// One line of a Gmail account's page.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Line {
@@ -42,6 +46,8 @@ pub enum Line {
     Switch { title: String },
     /// The account signs in through the person's own Google project.
     OwnProject,
+    /// The row that leaves the own project for another route.
+    StopOwn,
     /// Something the account does on gmail.com only, with the link.
     Gap {
         text: String,
@@ -102,6 +108,9 @@ pub fn lines_with(
     }
     if sign_in.client == SignInClient::Own {
         lines.push(Line::OwnProject);
+        if routes_ready {
+            lines.push(Line::StopOwn);
+        }
     }
     if routes_ready && sign_in.needs_move(account.provider) {
         let waiting = Waiting {
@@ -367,6 +376,20 @@ fn fill_rows(
                 crate::ui::name(&link, &label);
                 (shown.find_project)(&account.email, &link);
                 row.add_suffix(&link);
+                put(row.upcast_ref());
+            }
+            Line::StopOwn => {
+                // Translators: Google is a name; keep it as it is.
+                let row = plain_row(&gettext("Stop using your own Google project"), None);
+                row.set_activatable(true);
+                row.add_suffix(&gtk::Image::from_icon_name("go-next-symbolic"));
+                let id = account.id;
+                row.connect_activated(move |row| {
+                    if let Err(err) = row.activate_action(LEAVE_OWN_PROJECT, Some(&id.to_variant()))
+                    {
+                        tracing::warn!(account = id, %err, "the window did not take the action");
+                    }
+                });
                 put(row.upcast_ref());
             }
             Line::Gap { .. } => {}

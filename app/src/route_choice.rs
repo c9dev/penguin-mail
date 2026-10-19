@@ -134,11 +134,12 @@ pub fn any_route(platform: Platform, ready: Ready) -> bool {
     !rows(platform, ready).is_empty()
 }
 
-/// The line under the list, whenever the own-project row is listed.
+/// The line under the list, when the own-project row is listed and Online
+/// Accounts is not: on macOS, and on Linux without Online Accounts.
 pub fn footer(platform: Platform, ready: Ready) -> Option<String> {
-    let listed = rows(platform, ready)
-        .iter()
-        .any(|row| row.route == Route::OwnProject);
+    let rows = rows(platform, ready);
+    let listed = rows.iter().any(|row| row.route == Route::OwnProject)
+        && !rows.iter().any(|row| row.route == Route::Goa);
     listed.then(|| {
         // Translators: Gmail and Google are names; keep them as they are.
         gettext("Want every Gmail feature? Your own Google project gives you all of them, free.")
@@ -158,7 +159,9 @@ fn goa_row(goa: Goa) -> RouteRow {
         } else {
             gettext("Mail, calendar and contacts")
         },
-        recommended: false,
+        // Signing in through the desktop is the first choice wherever
+        // Online Accounts runs.
+        recommended: true,
     }
 }
 

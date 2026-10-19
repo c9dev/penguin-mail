@@ -75,6 +75,9 @@ pub enum Opening {
     /// The route page for each of these Gmail accounts in turn, to move
     /// each to its own sign-in. Closing the dialog ends the walk.
     Move(Vec<Account>),
+    /// The route page for this account on its own Google project, without
+    /// the own-project rows, to move it to another route.
+    LeaveOwn(Account),
     /// The page that offers this Gmail account its calendar and contacts,
     /// after its mail works.
     Consent(Account),
@@ -160,14 +163,17 @@ pub fn present(
     }
     this.connect();
     this.load_saved_project();
+    if matches!(&opening, Opening::LeaveOwn(_)) {
+        this.leaving_own.set(true);
+    }
     let routes_first = match &opening {
-        Opening::Move(_) => true,
+        Opening::Move(_) | Opening::LeaveOwn(_) => true,
         Opening::Browser(Browser::Google) => google_routes().1,
         _ => false,
     };
     let root = match &opening {
         _ if routes_first => route_page::TAG,
-        Opening::Move(_) => route_page::TAG,
+        Opening::Move(_) | Opening::LeaveOwn(_) => route_page::TAG,
         Opening::Consent(_) => route_page::CONSENT_TAG,
         Opening::Pick | Opening::Preview(_) => "pick",
         Opening::Tile(_) | Opening::ByHand => "address",
@@ -223,6 +229,11 @@ pub fn present(
         Opening::Move(accounts) => {
             this.moving
                 .replace(Some(add_account::MoveWalk::new(accounts)));
+            this.offer_routes(None);
+        }
+        Opening::LeaveOwn(account) => {
+            this.moving
+                .replace(Some(add_account::MoveWalk::new(vec![account])));
             this.offer_routes(None);
         }
         Opening::Consent(_) => {
@@ -2037,6 +2048,9 @@ struct Dialog {
     count_timer: RefCell<Option<glib::SourceId>>,
     /// The Gmail accounts a move walks through, while one does.
     moving: RefCell<Option<add_account::MoveWalk>>,
+    /// The walk moves an account off its own Google project, so the route
+    /// page leaves the own-project rows out.
+    leaving_own: std::cell::Cell<bool>,
     /// The address typed before the route page, for the sign-in it leads
     /// to.
     route_expected: RefCell<Option<String>>,
@@ -2186,6 +2200,7 @@ impl Dialog {
             granting: Cell::new(None),
             count_timer: RefCell::new(None),
             moving: RefCell::new(None),
+            leaving_own: std::cell::Cell::new(false),
             route_expected: RefCell::new(None),
             pick: pick_page(signs_in_to_microsoft(core)),
             routes: RoutePage::new(),
@@ -3954,8 +3969,22 @@ impl Dialog {
         }
     }
 
+    /// `ready` without the own-project rows while the account leaves its
+    /// own project.
+    fn without_own(&self, ready: Ready) -> Ready {
+        match self.leaving_own.get() {
+            true => Ready {
+                own_project: false,
+                saved_project: false,
+                ..ready
+            },
+            false => ready,
+        }
+    }
+
     /// The route page, or the browser page when no row would show.
     fn offer_rows(self: &Rc<Self>, platform: Platform, ready: Ready, expected: Option<String>) {
+        let ready = self.without_own(ready);
         if !any_route(platform, ready) {
             return self.start_browser(Browser::Google, expected);
         }
@@ -3970,10 +3999,10 @@ impl Dialog {
     /// Fills the route page without showing it.
     fn routes_for(self: &Rc<Self>, platform: Platform, ready: Ready, expected: Option<String>) {
         let saved = self.saved.borrow().is_some();
-        let ready = Ready {
+        let ready = self.without_own(Ready {
             saved_project: ready.saved_project || saved,
             ..ready
-        };
+        });
         self.route_expected.replace(expected);
         self.routes_goa.set(ready.goa);
         let weak = Rc::downgrade(self);

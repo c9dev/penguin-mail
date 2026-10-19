@@ -3520,6 +3520,12 @@ impl MainWindow {
             }),
         );
         with_account(
+            "account-leave-own-project",
+            Box::new(|win, account| {
+                win.present_add_account(Opening::LeaveOwn(account));
+            }),
+        );
+        with_account(
             "account-switch-goa",
             Box::new(|win, account| win.switch_to_goa(account)),
         );

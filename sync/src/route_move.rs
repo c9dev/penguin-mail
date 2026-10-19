@@ -317,7 +317,7 @@ impl<E: MoveEngine, A: Accounts> Mover<'_, E, A> {
         before: MailRoute,
         saved: servers::Servers,
     ) -> Result<Account, MoveError> {
-        let (client, leaves_goa) = self.client_off_goa(id).await?;
+        let (client, leaves_goa) = self.client_for_imap(id).await?;
         let route = RouteCommit {
             route: MailRoute::Imap,
             client,
@@ -433,18 +433,23 @@ impl<E, A: Accounts> Mover<'_, E, A> {
         }
     }
 
-    /// The client `id` signs in with once it leaves Online Accounts, and
-    /// whether it is on Online Accounts now. An account on another client
-    /// keeps it. One that leaves Online Accounts takes its own project
-    /// when the keyring keeps one for it, else the client built in.
-    async fn client_off_goa(&self, id: AccountId) -> Result<(SignInClient, bool), MoveError> {
+    /// The client `id` signs in with once it reads Gmail's IMAP with an
+    /// app password, and whether it is on Online Accounts now. One that
+    /// leaves Online Accounts takes its own project when the keyring keeps
+    /// one for it, else the client built in. One that leaves its own
+    /// project, the only way an own-project account reaches this move,
+    /// takes the client built in for its calendar; the project stays in
+    /// the keyring for a later setup. The built-in client stays.
+    async fn client_for_imap(&self, id: AccountId) -> Result<(SignInClient, bool), MoveError> {
         let client = self
             .db
             .read(move |c| accounts::sign_in_client(c, id))
             .await
             .map_err(SyncError::from)?;
-        if client != SignInClient::Goa {
-            return Ok((client, false));
+        match client {
+            SignInClient::BuiltIn => return Ok((client, false)),
+            SignInClient::Own => return Ok((SignInClient::BuiltIn, false)),
+            SignInClient::Goa => {}
         }
         let kept = read_secret(Arc::clone(&self.secrets.google_clients), id, STEP_WAIT).await?;
         let client = match kept {
