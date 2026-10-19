@@ -229,7 +229,7 @@ async fn a_new_uidvalidity_on_all_mail_downloads_no_body() {
 }
 
 #[tokio::test]
-async fn a_moved_account_keeps_its_rows_and_fetches_no_body() {
+async fn a_moved_account_lists_its_mail_again_from_imap() {
     let imap = FakeImap::gmail();
     let id = imap.deliver_gmail(
         &["\\Inbox", "Work/Clients"],
@@ -238,7 +238,7 @@ async fn a_moved_account_keeps_its_rows_and_fetches_no_body() {
     );
     let h = gmail_on(imap).await;
     // What the Gmail API left in the store: the hex id and its label by
-    // number, then the move's rewrite.
+    // number, then the move, which empties it.
     let account = h.account_id;
     let stored = hex(id);
     h.db.write(move |c| {
@@ -264,7 +264,7 @@ async fn a_moved_account_keeps_its_rows_and_fetches_no_body() {
                 generation: 1,
             }],
         )?;
-        crate::route_move::rewrite_for_imap(c, account)
+        crate::route_move::empty_for_imap(c, account)
     })
     .await
     .unwrap();
@@ -277,7 +277,6 @@ async fn a_moved_account_keeps_its_rows_and_fetches_no_body() {
     let held = mailboxes_of(&h, &hex(id)).await;
     assert!(held.contains(&"Work/Clients".to_string()), "{held:?}");
     assert!(h.location(&hex(id)).await.is_some(), "the first look gave it a ref");
-    assert_eq!(h.imap.calls_to("body"), 0);
 }
 
 #[tokio::test]
@@ -340,6 +339,23 @@ async fn restore_moves_back_to_the_inbox() {
 
     assert_eq!(mailbox_of(&h, id), ALL_MAIL);
     assert!(labels_on(&h, id).contains(&"\\Inbox".to_string()));
+}
+
+#[tokio::test]
+async fn a_move_to_a_label_out_of_trash_keeps_the_label_and_skips_the_inbox() {
+    let (h, id, thread) = one_inbox_message().await;
+    h.sync.triage_thread(&thread, &TriageAction::Trash).await.unwrap();
+
+    let to_work = TriageAction::Relabel {
+        add: vec![mailrs_domain::MailSet::Mailbox("Work".into())],
+        remove: vec![mailrs_domain::MailSet::Role(mailrs_domain::Role::Trash)],
+    };
+    h.sync.triage_thread(&thread, &to_work).await.unwrap();
+
+    assert_eq!(mailbox_of(&h, id), ALL_MAIL);
+    let labels = labels_on(&h, id);
+    assert!(labels.contains(&"Work".to_string()), "{labels:?}");
+    assert!(!labels.contains(&"\\Inbox".to_string()), "{labels:?}");
 }
 
 #[tokio::test]

@@ -758,7 +758,6 @@ pub(crate) mod checks {
             [
                 "GMAIL",
                 "Gmail features",
-                "",
                 "CALENDAR AND CONTACTS",
                 "Calendar",
                 "Contacts",
@@ -795,8 +794,10 @@ pub(crate) mod checks {
             .filter_map(|b| b.label())
             .map(|l| l.to_string())
             .collect();
+        // Every feature needs the own project, which an account on IMAP is
+        // not offered.
         assert!(
-            labels.contains(&"Get Every Feature".to_string()),
+            !labels.contains(&"Get Every Feature".to_string()),
             "{labels:?}"
         );
     }

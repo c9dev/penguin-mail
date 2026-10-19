@@ -600,19 +600,6 @@ async fn label_a_message(h: &Harness) {
     .unwrap();
 }
 
-async fn labels_of_a(h: &Harness) -> Vec<String> {
-    let id = h.account_id;
-    h.db.read(move |c| {
-        let held = messages::memberships_of(c, id, &["a".to_string()])?;
-        Ok(held
-            .get("a")
-            .map(mailrs_gmail::labels::labels)
-            .unwrap_or_default())
-    })
-    .await
-    .unwrap()
-}
-
 #[tokio::test]
 async fn the_imap_move_empties_the_mail_and_keeps_the_outbox_and_the_rules() {
     let h = built_in_account().await;
@@ -688,8 +675,9 @@ async fn a_move_to_imap_takes_send_later_bytes_out_of_the_draft() {
 
     let kept = row(&h, row_id).await;
     assert!(
-        kept.raw.as_deref().is_some_and(|raw| raw.ends_with(b"hello")),
-        "the bytes came home"
+        kept.raw.as_deref().is_some_and(|raw| raw.starts_with(b"Subject: later")),
+        "the bytes came home: {:?}",
+        kept.raw.as_deref().map(String::from_utf8_lossy)
     );
     assert_eq!(kept.draft_id, scheduled.message_id);
 }

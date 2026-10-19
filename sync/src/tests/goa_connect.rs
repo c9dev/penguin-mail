@@ -19,7 +19,7 @@ use crate::passwords::Secrets;
 use crate::services::AnyMail;
 use crate::sign_in::calendar_consent;
 use crate::sign_in::goa_link::{LinkError, Linked, link};
-use crate::{BackendError, Clients, Connected, Connector, SyncError};
+use crate::{Clients, Connected, Connector};
 
 const NOW: i64 = 1_700_000_000_000;
 const PROFILE: &str = "/gmail/v1/users/me/profile";
@@ -430,19 +430,20 @@ async fn a_removed_account_with_no_match_keeps_its_mail_and_calendar() {
 }
 
 #[tokio::test(start_paused = true)]
-async fn an_unreachable_online_accounts_backs_off() {
+async fn an_unreachable_online_accounts_starts_the_account_without_mail() {
     let (db, _dir) = store().await;
     let goa = FakeAccounts::new();
     let account = linked_account(&db, MailRoute::GmailApi).await;
     goa.hang(true);
+    let connector = reach(&db, &goa, built_in());
+    keep_calendar_token(&connector);
 
-    let failed = reach(&db, &goa, Clients::default()).connect(&account).await;
+    let Connected::Ready(services) = connector.connect(&account).await.unwrap() else {
+        panic!("the account should be ready");
+    };
 
-    assert!(
-        matches!(failed, Err(SyncError::Backend(BackendError::Offline(_)))),
-        "{:?}",
-        failed.map(|_| ())
-    );
+    assert!(matches!(services.mail, AnyMail::NoMail(_)));
+    assert!(services.calendar.is_some(), "the calendar keeps running");
 }
 
 #[tokio::test]

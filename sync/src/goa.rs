@@ -253,7 +253,7 @@ mod tests {
     fn find_prefers_the_saved_id_and_falls_back_to_the_identity() {
         let list = [
             account("account_2_0", "dana@example.com"),
-            account("account_1_0", "other@example.com"),
+            account("account_1_0", "dana@example.com"),
         ];
         assert_eq!(
             find(&list, Some("account_1_0"), "dana@example.com").map(|a| a.id.as_str()),
