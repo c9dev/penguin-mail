@@ -2114,34 +2114,34 @@ msgstr ""
 msgid "Penguin Mail could not update its mail store, and kept the old one."
 msgstr "메일 저장소를 업데이트할 수 없어 기존 저장소를 유지했습니다."
 
-#: app/src/core.rs:856 app/src/core.rs:934 app/src/core.rs:1063
-#: app/src/core.rs:1077 app/src/core.rs:1142 app/src/core.rs:1238
+#: app/src/core.rs:856 app/src/core.rs:946 app/src/core.rs:1075
+#: app/src/core.rs:1089 app/src/core.rs:1154 app/src/core.rs:1250
 msgid "Demo mode cannot add real accounts."
 msgstr "데모 모드에서는 실제 계정을 추가할 수 없습니다."
 
-#: app/src/core.rs:870 app/src/core.rs:1756 app/src/core.rs:1812
+#: app/src/core.rs:871 app/src/core.rs:1765 app/src/core.rs:1821
 msgid "Canceled."
 msgstr "취소했습니다."
 
-#: app/src/core.rs:874 app/src/core.rs:1755 app/src/core.rs:1810
+#: app/src/core.rs:875 app/src/core.rs:1764 app/src/core.rs:1819
 msgid "Gave up waiting for the browser after five minutes."
 msgstr "5분 동안 브라우저를 기다린 후 중단했습니다."
 
-#: app/src/core.rs:1408 app/src/core.rs:1433
+#: app/src/core.rs:1422 app/src/core.rs:1447
 msgid "This account keeps no password a calendar or contacts server takes."
 msgstr ""
 "이 계정에는 캘린더나 연락처 서버에서 사용할 수 있는 비밀번호가 저장되어 있지 "
 "않습니다."
 
-#: app/src/core.rs:1614 app/src/core.rs:1661 app/src/core.rs:1782
+#: app/src/core.rs:1628 app/src/core.rs:1677 app/src/core.rs:1791
 msgid "The demo cannot switch accounts."
 msgstr "데모에서는 계정을 전환할 수 없습니다."
 
-#: app/src/core.rs:1665
+#: app/src/core.rs:1681
 msgid "This account is already moving to its new sign-in."
 msgstr "이 계정은 이미 새 로그인 방식으로 옮기는 중입니다."
 
-#: app/src/core.rs:1736
+#: app/src/core.rs:1745
 msgid "The demo cannot connect a calendar."
 msgstr "데모에서는 캘린더를 연결할 수 없습니다."
 
@@ -2783,7 +2783,7 @@ msgstr "Gmail 필터 열기"
 msgid "Open Gmail Settings"
 msgstr "Gmail 설정 열기"
 
-#: app/src/offered.rs:694
+#: app/src/offered.rs:709
 msgid ""
 "{provider} does not let an API token change the automatic reply. Sign in "
 "again through the browser to change it here."
@@ -2791,43 +2791,43 @@ msgstr ""
 "{provider}에서는 API 토큰으로 자동 회신을 변경할 수 없습니다. 여기서 변경하려"
 "면 브라우저에서 다시 로그인하세요."
 
-#: app/src/offered.rs:704
+#: app/src/offered.rs:719
 msgid "{address}: {reason}"
 msgstr "{address}: {reason}"
 
-#: app/src/offered.rs:719
+#: app/src/offered.rs:734
 msgid "The server would not hand it over."
 msgstr "서버에서 전송을 거부했습니다."
 
-#: app/src/offered.rs:721
+#: app/src/offered.rs:736
 msgid "The message is larger than Penguin Mail downloads."
 msgstr "메시지가 Penguin Mail의 다운로드 용량 제한을 초과합니다."
 
-#: app/src/offered.rs:724
+#: app/src/offered.rs:739
 msgid "Penguin Mail could not read the server's answer."
 msgstr "서버의 응답을 읽을 수 없습니다."
 
-#: app/src/offered.rs:727
+#: app/src/offered.rs:742
 msgid "The connection closed while the message downloaded."
 msgstr "메시지 다운로드 중 연결이 끊겼습니다."
 
-#: app/src/offered.rs:733
+#: app/src/offered.rs:748
 msgid "“{subject}” from {sender}: {words}"
 msgstr "{sender}의 \"{subject}\": {words}"
 
-#: app/src/offered.rs:737
+#: app/src/offered.rs:752
 msgid "“{subject}”: {words}"
 msgstr "\"{subject}\": {words}"
 
-#: app/src/offered.rs:741
+#: app/src/offered.rs:756
 msgid "A message from {sender}: {words}"
 msgstr "{sender}의 메시지: {words}"
 
-#: app/src/offered.rs:745
+#: app/src/offered.rs:760
 msgid "Message {number}: {words}"
 msgstr "메시지 {number}: {words}"
 
-#: app/src/offered.rs:761
+#: app/src/offered.rs:776
 msgid ""
 "Removing the account deletes this computer's copy of its mail and the saved "
 "sign-in. Mail still on the server stays there."
@@ -2835,7 +2835,7 @@ msgstr ""
 "계정을 삭제하면 이 컴퓨터에 있는 메일 사본과 저장된 로그인 정보가 삭제됩니"
 "다. 서버에 있는 메일은 유지됩니다."
 
-#: app/src/offered.rs:765
+#: app/src/offered.rs:780
 msgid ""
 "Mail already removed from the server exists only on this computer, and "
 "removing the account deletes it with the saved sign-in. Mail still on the "
@@ -2844,7 +2844,7 @@ msgstr ""
 "서버에서 이미 삭제한 메일은 이 컴퓨터에만 있으며 계정을 삭제하면 저장된 로그"
 "인 정보와 함께 삭제됩니다. 서버에 있는 메일은 유지됩니다."
 
-#: app/src/offered.rs:770
+#: app/src/offered.rs:785
 msgid ""
 "Its calendars and saved sign-in are deleted from this computer. Nothing "
 "changes on the server."
@@ -2852,7 +2852,7 @@ msgstr ""
 "이 컴퓨터에서 캘린더와 저장된 로그인 정보를 삭제합니다. 서버에서는 변경하지 "
 "않습니다."
 
-#: app/src/offered.rs:775
+#: app/src/offered.rs:790
 msgid ""
 "Its downloaded mail and saved sign-in are deleted from this computer. "
 "Nothing changes in {provider}."
@@ -2860,7 +2860,7 @@ msgstr ""
 "이 컴퓨터에서 다운로드한 메일과 저장된 로그인 정보를 삭제합니다. {provider}에"
 "서는 변경하지 않습니다."
 
-#: app/src/offered.rs:789
+#: app/src/offered.rs:804
 msgid ""
 "{count} message waiting in Send Later on the server goes back to Drafts "
 "first."
@@ -2870,7 +2870,7 @@ msgstr[0] ""
 "먼저 서버에서 예약 발송을 기다리는 메시지 {count}개를 임시보관함으로 되돌립니"
 "다."
 
-#: app/src/offered.rs:801
+#: app/src/offered.rs:816
 msgid ""
 "Penguin Mail could not call back {count} message waiting on the server. The "
 "server may still send it at its hour."
@@ -2881,7 +2881,7 @@ msgstr[0] ""
 "서버에서 대기 중인 메시지 {count}개를 회수할 수 없습니다. 서버에서 예약 시간"
 "에 발송할 수 있습니다."
 
-#: app/src/offered.rs:816
+#: app/src/offered.rs:831
 msgid ""
 "Mail from {address} is kept only on this computer. To keep a copy, quit "
 "Penguin Mail, then back up this file."
@@ -2889,126 +2889,126 @@ msgstr ""
 "{address}의 메일은 이 컴퓨터에만 보관합니다. 사본을 보관하려면 Penguin Mail"
 "을 종료한 후 이 파일을 백업하세요."
 
-#: app/src/offered.rs:867
+#: app/src/offered.rs:882
 msgid "New mail arrives as it is sent"
 msgstr "새 메일이 발송되는 즉시 도착합니다"
 
-#: app/src/offered.rs:869
+#: app/src/offered.rs:884
 msgid "{provider} pushes it over JMAP, and you can send from your aliases."
 msgstr ""
 "{provider}에서 JMAP으로 새 메일을 전달하며 별칭 주소로 발송할 수 있습니다."
 
-#: app/src/offered.rs:875
+#: app/src/offered.rs:890
 msgid "Mail is matched over JMAP"
 msgstr "JMAP으로 메일을 대조합니다"
 
-#: app/src/offered.rs:877
+#: app/src/offered.rs:892
 msgid ""
 "Penguin Mail keeps the mail on this computer and downloads again only the "
 "messages it cannot match."
 msgstr ""
 "이 컴퓨터의 메일을 유지하고 대조하지 못한 메시지만 다시 다운로드합니다."
 
-#: app/src/offered.rs:884
+#: app/src/offered.rs:899
 msgid "Name, color and place"
 msgstr "이름, 색과 위치"
 
-#: app/src/offered.rs:886
+#: app/src/offered.rs:901
 msgid "{address} keeps its spot in the sidebar."
 msgstr "{address}는 사이드바에서 현재 위치를 유지합니다."
 
-#: app/src/offered.rs:892
+#: app/src/offered.rs:907
 msgid "Your own data"
 msgstr "내 데이터"
 
-#: app/src/offered.rs:893
+#: app/src/offered.rs:908
 msgid "Reminders, follow-ups, flags, rules, VIPs, signatures and drafts."
 msgstr "알림, 후속 조치, 깃발, 규칙, VIP, 서명과 임시보관 메일."
 
-#: app/src/offered.rs:899
+#: app/src/offered.rs:914
 msgid "Calendars are read again where JMAP serves them"
 msgstr "JMAP에서 제공하는 캘린더를 다시 읽습니다"
 
-#: app/src/offered.rs:902
+#: app/src/offered.rs:917
 msgid ""
 "If {provider} offers calendars over JMAP, Penguin Mail reads them from there."
 msgstr ""
 "{provider}에서 JMAP 캘린더를 제공하면 Penguin Mail이 그곳에서 읽습니다."
 
-#: app/src/offered.rs:911
+#: app/src/offered.rs:926
 msgid "Calendar sign-in"
 msgstr "캘린더 로그인"
 
-#: app/src/offered.rs:912
+#: app/src/offered.rs:927
 msgid "The app password you use for calendars stays as it is."
 msgstr "캘린더에 사용하는 앱 비밀번호를 유지합니다."
 
-#: app/src/offered.rs:943
+#: app/src/offered.rs:958
 msgid "Could not switch to JMAP: {reason}"
 msgstr "JMAP으로 전환할 수 없습니다: {reason}"
 
-#: app/src/offered.rs:944
+#: app/src/offered.rs:959
 msgid "Your IMAP account is unchanged."
 msgstr "IMAP 계정은 변경하지 않았습니다."
 
-#: app/src/offered.rs:956
+#: app/src/offered.rs:971
 msgid "Something unexpected stopped it."
 msgstr "예기치 않은 문제로 중단했습니다."
 
-#: app/src/offered.rs:961
+#: app/src/offered.rs:976
 msgid "{provider} does not answer."
 msgstr "{provider}에서 응답하지 않습니다."
 
-#: app/src/offered.rs:983
+#: app/src/offered.rs:998
 msgid "This account uses JMAP already."
 msgstr "이 계정은 이미 JMAP을 사용합니다."
 
-#: app/src/offered.rs:989
+#: app/src/offered.rs:1004
 msgid "{provider} did not accept the token."
 msgstr "{provider}에서 토큰을 거부했습니다."
 
-#: app/src/offered.rs:990
+#: app/src/offered.rs:1005
 msgid "{provider} did not accept the password."
 msgstr "{provider}에서 비밀번호를 거부했습니다."
 
-#: app/src/offered.rs:995
+#: app/src/offered.rs:1010
 msgid "You can choose Sign In With Browser instead."
 msgstr "브라우저로 로그인을 선택할 수도 있습니다."
 
-#: app/src/offered.rs:1001
+#: app/src/offered.rs:1016
 msgid "{provider} signed in to another account, not {address}."
 msgstr "{provider}에서 {address}가 아닌 다른 계정으로 로그인했습니다."
 
-#: app/src/offered.rs:1005
+#: app/src/offered.rs:1020
 msgid "The token holds a character that cannot be sent."
 msgstr "토큰에 전송할 수 없는 문자가 있습니다."
 
-#: app/src/offered.rs:1006
+#: app/src/offered.rs:1021
 msgid "The password holds a character that cannot be sent."
 msgstr "비밀번호에 전송할 수 없는 문자가 있습니다."
 
-#: app/src/offered.rs:1011
+#: app/src/offered.rs:1026
 msgid "{provider} did not give the draft of a message waiting in Send Later."
 msgstr ""
 "{provider}에서 예약 발송 대기 중인 메시지의 초안을 제공하지 않았습니다."
 
-#: app/src/offered.rs:1017
+#: app/src/offered.rs:1032
 msgid "The mail on {provider} kept changing while Penguin Mail matched it."
 msgstr "메일을 대조하는 동안 {provider}의 메일이 계속 변경되었습니다."
 
-#: app/src/offered.rs:1043
+#: app/src/offered.rs:1058
 msgid "{provider} refused the sign-in in the browser."
 msgstr "{provider}에서 브라우저 로그인을 거부했습니다."
 
-#: app/src/offered.rs:1047
+#: app/src/offered.rs:1062
 msgid "You did not allow Penguin Mail on {provider}'s page."
 msgstr "{provider} 페이지에서 Penguin Mail을 허용하지 않았습니다."
 
-#: app/src/offered.rs:1065
+#: app/src/offered.rs:1080
 msgid "{address} now uses JMAP"
 msgstr "{address}에서 이제 JMAP을 사용합니다"
 
-#: app/src/offered.rs:1069
+#: app/src/offered.rs:1084
 msgid ""
 "{address} now uses JMAP. {count} rule is off because its folder is not on "
 "the server."
@@ -4029,8 +4029,8 @@ msgstr "Anthropic API"
 msgid "Claude Subscription"
 msgstr "Claude 구독"
 
-#: app/src/settings/mod.rs:227 app/src/ui/window.rs:3473
-#: app/src/ui/window.rs:3553
+#: app/src/settings/mod.rs:227 app/src/ui/window.rs:3483
+#: app/src/ui/window.rs:3563
 msgid "Assistant"
 msgstr "도우미"
 
@@ -4389,7 +4389,7 @@ msgstr "Penguin Mail 열기"
 msgid "New Message"
 msgstr "새 메시지"
 
-#: app/src/tray.rs:238 app/src/ui/sidebar.rs:1934 app/src/ui/window.rs:3479
+#: app/src/tray.rs:238 app/src/ui/sidebar.rs:1934 app/src/ui/window.rs:3489
 msgid "Check for Mail"
 msgstr "메일 확인"
 
@@ -4407,7 +4407,7 @@ msgstr "{version}의 새로운 기능"
 msgid "Check for Updates"
 msgstr "업데이트 확인"
 
-#: app/src/tray.rs:254 app/src/ui/window.rs:3492
+#: app/src/tray.rs:254 app/src/ui/window.rs:3502
 #: app/src/ui/window/shortcuts.rs:644
 msgid "Quit"
 msgstr "종료"
@@ -4428,7 +4428,7 @@ msgstr "새로운 기능"
 msgid "Website"
 msgstr "웹사이트"
 
-#: app/src/ui/about.rs:179 app/src/ui/window.rs:3491
+#: app/src/ui/about.rs:179 app/src/ui/window.rs:3501
 msgid "Donate"
 msgstr "기부"
 
@@ -4436,7 +4436,7 @@ msgstr "기부"
 msgid "License"
 msgstr "라이선스"
 
-#: app/src/ui/about.rs:203 app/src/ui/window.rs:3490
+#: app/src/ui/about.rs:203 app/src/ui/window.rs:3500
 msgid "About Penguin Mail"
 msgstr "Penguin Mail 정보"
 
@@ -4558,7 +4558,7 @@ msgstr "도메인만 이 컴퓨터 밖으로 전송하며 전체 주소는 전�
 
 #: app/src/ui/add_account.rs:881 app/src/ui/add_account.rs:3066
 #: app/src/ui/add_account.rs:3159 app/src/ui/add_account.rs:3679
-#: app/src/ui/add_account.rs:4645
+#: app/src/ui/add_account.rs:4651
 msgid "Signing In…"
 msgstr "로그인 중…"
 
@@ -4592,8 +4592,8 @@ msgstr "링크 복사"
 msgid "Try Again"
 msgstr "다시 시도"
 
-#: app/src/ui/add_account.rs:962 app/src/ui/add_account.rs:4167
-#: app/src/ui/add_account.rs:4236 app/src/ui/assistant_mcp_prefs.rs:365
+#: app/src/ui/add_account.rs:962 app/src/ui/add_account.rs:4173
+#: app/src/ui/add_account.rs:4242 app/src/ui/assistant_mcp_prefs.rs:365
 #: app/src/ui/calendar/editor.rs:186 app/src/ui/calendar/manage.rs:287
 #: app/src/ui/calendar/manage.rs:437 app/src/ui/calendar/manage.rs:488
 #: app/src/ui/calendar/scope.rs:113 app/src/ui/composer/editor.rs:346
@@ -4844,7 +4844,7 @@ msgstr "캘린더 추가"
 msgid "Add a Calendar"
 msgstr "캘린더 추가"
 
-#: app/src/ui/add_account.rs:2483 app/src/ui/add_account.rs:4574
+#: app/src/ui/add_account.rs:2483 app/src/ui/add_account.rs:4580
 msgid "Looking up {domain}"
 msgstr "{domain} 조회 중"
 
@@ -4876,11 +4876,11 @@ msgstr "조회 중…"
 msgid "Sign In Again"
 msgstr "다시 로그인"
 
-#: app/src/ui/add_account.rs:3827 app/src/ui/add_account.rs:4217
+#: app/src/ui/add_account.rs:3827 app/src/ui/add_account.rs:4223
 msgid "Sign in with {provider} in your browser"
 msgstr "브라우저에서 {provider}에 로그인"
 
-#: app/src/ui/add_account.rs:3832 app/src/ui/add_account.rs:4222
+#: app/src/ui/add_account.rs:3832 app/src/ui/add_account.rs:4228
 msgid ""
 "{provider}'s sign-in page is open in your browser. When you finish there, "
 "this window moves on."
@@ -4912,33 +4912,33 @@ msgstr ""
 "내 Google 클라이언트로 로그인합니다. 브라우저에서 Google 로그인 페이지를 열었"
 "습니다. 완료하면 이 창에서 다음 단계로 넘어갑니다."
 
-#: app/src/ui/add_account.rs:4102
+#: app/src/ui/add_account.rs:4108
 msgid "Link copied"
 msgstr "링크를 복사했습니다"
 
-#: app/src/ui/add_account.rs:4229
+#: app/src/ui/add_account.rs:4235
 msgid "Penguin Mail stops waiting after ten minutes."
 msgstr "10분 후 기다리기를 중단합니다."
 
-#: app/src/ui/add_account.rs:4252
+#: app/src/ui/add_account.rs:4258
 msgid "Canceling…"
 msgstr "취소 중…"
 
-#: app/src/ui/add_account.rs:4316
+#: app/src/ui/add_account.rs:4322
 msgid "{account} is added"
 msgstr "{account} 추가됨"
 
-#: app/src/ui/add_account.rs:4336
+#: app/src/ui/add_account.rs:4342
 msgid "{account} is ready"
 msgstr "{account} 준비 완료"
 
-#: app/src/ui/add_account.rs:4648
+#: app/src/ui/add_account.rs:4654
 msgid ""
 "This server cannot tell its messages apart, so Penguin Mail cannot download "
 "from it safely."
 msgstr "서버에서 메시지를 구별할 수 없어 안전하게 다운로드할 수 없습니다."
 
-#: app/src/ui/assistant.rs:35 app/src/ui/window.rs:3639
+#: app/src/ui/assistant.rs:35 app/src/ui/window.rs:3649
 msgid "Summarize this conversation"
 msgstr "이 대화 요약"
 
@@ -4963,13 +4963,13 @@ msgstr "열린 대화에 답장 초안 작성"
 msgid "Choose a Model"
 msgstr "모델 선택"
 
-#: app/src/ui/assistant.rs:123 app/src/ui/window.rs:3600
-#: app/src/ui/window.rs:3601
+#: app/src/ui/assistant.rs:123 app/src/ui/window.rs:3610
+#: app/src/ui/window.rs:3611
 msgid "Detach"
 msgstr "분리"
 
 #: app/src/ui/assistant.rs:124 app/src/ui/key_import.rs:213
-#: app/src/ui/key_import.rs:217 app/src/ui/window.rs:4232
+#: app/src/ui/key_import.rs:217 app/src/ui/window.rs:4242
 msgid "Close"
 msgstr "닫기"
 
@@ -5174,7 +5174,7 @@ msgstr "{server} 편집"
 
 #: app/src/ui/assistant_mcp_prefs.rs:137 app/src/ui/calendar/editor.rs:1726
 #: app/src/ui/composer/mod.rs:2219 app/src/ui/composer/recipients.rs:318
-#: app/src/ui/sender_prefs.rs:149 app/src/ui/window.rs:3236
+#: app/src/ui/sender_prefs.rs:149 app/src/ui/window.rs:3246
 msgid "Remove"
 msgstr "제거"
 
@@ -8009,7 +8009,7 @@ msgstr ""
 msgid "Allow Hide My Email"
 msgstr "이메일 가리기 허용"
 
-#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:3690
+#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:3700
 msgid "Add an account first"
 msgstr "먼저 계정을 추가하세요"
 
@@ -9022,7 +9022,7 @@ msgstr "{account} 아래로 이동"
 #: app/src/ui/preferences/dialog.rs:27 app/src/ui/preferences/dialog.rs:33
 #: app/src/ui/preferences/dialog.rs:82 app/src/ui/preferences/dialog.rs:83
 #: app/src/ui/preferences/dialog.rs:353 app/src/ui/preferences/dialog.rs:355
-#: app/src/ui/window.rs:3488 app/src/ui/window/shortcuts.rs:616
+#: app/src/ui/window.rs:3498 app/src/ui/window/shortcuts.rs:616
 msgid "Preferences"
 msgstr "환경설정"
 
@@ -9467,7 +9467,7 @@ msgstr "서명…"
 msgid "Rules…"
 msgstr "규칙…"
 
-#: app/src/ui/sidebar.rs:1844 app/src/ui/window.rs:3482
+#: app/src/ui/sidebar.rs:1844 app/src/ui/window.rs:3492
 msgid "Hide My Email…"
 msgstr "이메일 가리기…"
 
@@ -10141,7 +10141,7 @@ msgstr "이 Penguin Mail 빌드에는 Google 로그인 기능이 없습니다."
 msgid "Get a Release"
 msgstr "출시 버전 받기"
 
-#: app/src/ui/window.rs:3222
+#: app/src/ui/window.rs:3232
 msgid ""
 "Could not check for messages the server holds to send later, so {account} "
 "stays: {reason}"
@@ -10149,80 +10149,80 @@ msgstr ""
 "서버가 나중에 보내려고 보관 중인 메시지를 확인할 수 없어 {account} 계정을 유"
 "지합니다: {reason}"
 
-#: app/src/ui/window.rs:3233
+#: app/src/ui/window.rs:3243
 msgid "Remove {account}?"
 msgstr "{account}을(를) 제거할까요?"
 
-#: app/src/ui/window.rs:3252
+#: app/src/ui/window.rs:3262
 msgid "Remove Anyway"
 msgstr "제거 진행"
 
-#: app/src/ui/window.rs:3265
+#: app/src/ui/window.rs:3275
 msgid "Removed {account}"
 msgstr "{account}을(를) 제거했습니다"
 
-#: app/src/ui/window.rs:3267
+#: app/src/ui/window.rs:3277
 msgid "Could not remove {account}: {reason}"
 msgstr "{account}을(를) 제거할 수 없습니다: {reason}"
 
-#: app/src/ui/window.rs:3460
+#: app/src/ui/window.rs:3470
 msgid "Refresh"
 msgstr "새로 고침"
 
-#: app/src/ui/window.rs:3464
+#: app/src/ui/window.rs:3474
 msgid "Show Declined Events"
 msgstr "거절한 일정 표시"
 
-#: app/src/ui/window.rs:3480
+#: app/src/ui/window.rs:3490
 msgid "Add Account…"
 msgstr "계정 추가…"
 
-#: app/src/ui/window.rs:3481
+#: app/src/ui/window.rs:3491
 msgid "New Smart Mailbox…"
 msgstr "새 스마트 메일함…"
 
-#: app/src/ui/window.rs:3489
+#: app/src/ui/window.rs:3499
 msgid "Keyboard Shortcuts"
 msgstr "키보드 단축키"
 
-#: app/src/ui/window.rs:3498 app/src/ui/window.rs:3500
+#: app/src/ui/window.rs:3508 app/src/ui/window.rs:3510
 msgid "Main Menu"
 msgstr "기본 메뉴"
 
-#: app/src/ui/window.rs:3565 app/src/ui/window.rs:3566
+#: app/src/ui/window.rs:3575 app/src/ui/window.rs:3576
 msgid "Dock"
 msgstr "독"
 
-#: app/src/ui/window.rs:3691
+#: app/src/ui/window.rs:3701
 msgid "Add a mail account first"
 msgstr "먼저 메일 계정을 추가하세요"
 
 #. Translators: {account} is an email address.
-#: app/src/ui/window.rs:3928
+#: app/src/ui/window.rs:3938
 msgid "The calendar and contacts of {account} are connected."
 msgstr "{account}의 캘린더와 연락처가 연결되었습니다."
 
-#: app/src/ui/window.rs:4034
+#: app/src/ui/window.rs:4044
 msgid "Open a message from the person first"
 msgstr "먼저 해당 사람의 메시지를 여세요"
 
-#: app/src/ui/window.rs:4115
+#: app/src/ui/window.rs:4125
 msgid "Penguin Mail shows the new language after a restart"
 msgstr "Penguin Mail을 다시 시작하면 새 언어를 적용합니다"
 
-#: app/src/ui/window.rs:4117 app/src/update/mod.rs:130
+#: app/src/ui/window.rs:4127 app/src/update/mod.rs:130
 msgid "Restart"
 msgstr "다시 시작"
 
-#: app/src/ui/window.rs:4181
+#: app/src/ui/window.rs:4191
 msgid "Show Rules"
 msgstr "규칙 표시"
 
-#: app/src/ui/window.rs:4207
+#: app/src/ui/window.rs:4217
 msgid "Messages That Will Not Download"
 msgstr "다운로드할 수 없는 메시지"
 
-#: app/src/ui/window.rs:4209
+#: app/src/ui/window.rs:4219
 msgid ""
 "Penguin Mail could not download these from {address}'s server. It tries "
 "again at each check, except for a message too large to download."
@@ -12065,11 +12065,11 @@ msgstr ""
 "자 이름을 사용하려면 별도의 캘린더 계정으로 추가하세요."
 
 #. The JMAP server publishes no sign-in a browser can run.
-#: sync/src/sign_in/browser.rs:106
+#: sync/src/sign_in/browser.rs:107
 msgid "This server does not offer a sign-in in the browser."
 msgstr "이 서버는 브라우저 로그인을 제공하지 않습니다."
 
-#: sync/src/sign_in/browser.rs:113
+#: sync/src/sign_in/browser.rs:114
 msgid ""
 "The server did not let Penguin Mail stay signed in. Sign in with a password "
 "or a token instead."
@@ -12078,17 +12078,17 @@ msgstr ""
 "으로 로그인하세요."
 
 #. Nobody came back from the browser within the wait.
-#: sync/src/sign_in/browser.rs:124
+#: sync/src/sign_in/browser.rs:125
 msgid "Gave up waiting for the browser after ten minutes."
 msgstr "10분이 지나 브라우저 응답 대기를 중지했습니다."
 
-#: sync/src/sign_in/browser.rs:152
+#: sync/src/sign_in/browser.rs:153
 msgid "You signed in as {account}. Choose {wanted} to reconnect that account."
 msgstr ""
 "{account}(으)로 로그인했습니다. 해당 계정을 다시 연결하려면 {wanted}을(를) 선"
 "택하세요."
 
-#: sync/src/sign_in/browser.rs:162
+#: sync/src/sign_in/browser.rs:163
 msgid ""
 "Penguin Mail cannot work without access to your mail. Sign in again and "
 "leave the Gmail permission ticked."
@@ -12096,11 +12096,11 @@ msgstr ""
 "Penguin Mail을 사용하려면 메일 접근 권한이 필요합니다. 다시 로그인하고 Gmail "
 "권한을 선택한 상태로 두세요."
 
-#: sync/src/sign_in/browser.rs:172
+#: sync/src/sign_in/browser.rs:173
 msgid "Your organization's administrator must approve Penguin Mail."
 msgstr "조직의 관리자가 Penguin Mail을 승인해야 합니다."
 
-#: sync/src/sign_in/browser.rs:175
+#: sync/src/sign_in/browser.rs:176
 msgid ""
 "Penguin Mail cannot work without access to your mail. Sign in again and "
 "allow it."
@@ -12108,7 +12108,7 @@ msgstr ""
 "Penguin Mail을 사용하려면 메일 접근 권한이 필요합니다. 다시 로그인하고 접근"
 "을 허용하세요."
 
-#: sync/src/sign_in/own_client.rs:68
+#: sync/src/sign_in/own_client.rs:82
 msgid ""
 "{set} is set but {missing} is not. Set both to sign in with your own Google "
 "client, or neither to use Penguin Mail's."
@@ -12116,6 +12116,32 @@ msgstr ""
 "{set}은(는) 설정했지만 {missing}은(는) 설정하지 않았습니다. 자체 Google 클라"
 "이언트로 로그인하려면 둘 다 설정하고, Penguin Mail의 클라이언트를 사용하려면 "
 "둘 다 설정하지 마세요."
+
+#. This is a button on Google's page; use the words Google's page shows in your language.
+#: sync/src/sign_in/own_client.rs:148
+msgid "This key is for a website. Go back to step 5 and choose Desktop app."
+msgstr ""
+
+#: sync/src/sign_in/own_client.rs:150
+msgid "This isn't the file from step 5."
+msgstr ""
+
+#: sync/src/sign_in/own_client.rs:152
+msgid ""
+"This file has no secret. Make a new key in step 5 and download it straight "
+"away."
+msgstr ""
+
+#. This is a button on Google's page; use the words Google's page shows in your language.
+#: sync/src/sign_in/own_client.rs:156
+msgid "Paste both the Client ID and the Client secret"
+msgstr ""
+
+#. This is a button on Google's page; use the words Google's page shows in your language.
+#: sync/src/sign_in/own_client.rs:160
+msgid ""
+"Copy the Client ID from step 5 again. It ends in .apps.googleusercontent.com."
+msgstr ""
 
 #: sync/src/triage.rs:53
 msgid "Mark read"

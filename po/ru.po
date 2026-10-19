@@ -2211,34 +2211,34 @@ msgstr ""
 msgid "Penguin Mail could not update its mail store, and kept the old one."
 msgstr "Penguin Mail не смог обновить хранилище почты и сохранил старое."
 
-#: app/src/core.rs:856 app/src/core.rs:934 app/src/core.rs:1063
-#: app/src/core.rs:1077 app/src/core.rs:1142 app/src/core.rs:1238
+#: app/src/core.rs:856 app/src/core.rs:946 app/src/core.rs:1075
+#: app/src/core.rs:1089 app/src/core.rs:1154 app/src/core.rs:1250
 msgid "Demo mode cannot add real accounts."
 msgstr "В демонстрационном режиме нельзя добавлять настоящие учётные записи."
 
-#: app/src/core.rs:870 app/src/core.rs:1756 app/src/core.rs:1812
+#: app/src/core.rs:871 app/src/core.rs:1765 app/src/core.rs:1821
 msgid "Canceled."
 msgstr "Отменено."
 
-#: app/src/core.rs:874 app/src/core.rs:1755 app/src/core.rs:1810
+#: app/src/core.rs:875 app/src/core.rs:1764 app/src/core.rs:1819
 msgid "Gave up waiting for the browser after five minutes."
 msgstr "Ожидание браузера прекращено через пять минут."
 
-#: app/src/core.rs:1408 app/src/core.rs:1433
+#: app/src/core.rs:1422 app/src/core.rs:1447
 msgid "This account keeps no password a calendar or contacts server takes."
 msgstr ""
 "У этой учётной записи нет сохранённого пароля, подходящего для сервера "
 "календарей или контактов."
 
-#: app/src/core.rs:1614 app/src/core.rs:1661 app/src/core.rs:1782
+#: app/src/core.rs:1628 app/src/core.rs:1677 app/src/core.rs:1791
 msgid "The demo cannot switch accounts."
 msgstr "В демонстрационном режиме нельзя переключать учётные записи."
 
-#: app/src/core.rs:1665
+#: app/src/core.rs:1681
 msgid "This account is already moving to its new sign-in."
 msgstr "Эта учётная запись уже переходит на новый способ входа."
 
-#: app/src/core.rs:1736
+#: app/src/core.rs:1745
 msgid "The demo cannot connect a calendar."
 msgstr "В демонстрационном режиме нельзя подключить календарь."
 
@@ -2901,7 +2901,7 @@ msgstr "Открыть фильтры Gmail"
 msgid "Open Gmail Settings"
 msgstr "Открыть настройки Gmail"
 
-#: app/src/offered.rs:694
+#: app/src/offered.rs:709
 msgid ""
 "{provider} does not let an API token change the automatic reply. Sign in "
 "again through the browser to change it here."
@@ -2909,43 +2909,43 @@ msgstr ""
 "{provider} не разрешает изменять автоответ с помощью токена API. Войдите "
 "снова через браузер, чтобы изменять его здесь."
 
-#: app/src/offered.rs:704
+#: app/src/offered.rs:719
 msgid "{address}: {reason}"
 msgstr "{address}: {reason}"
 
-#: app/src/offered.rs:719
+#: app/src/offered.rs:734
 msgid "The server would not hand it over."
 msgstr "Сервер отказался передать письмо."
 
-#: app/src/offered.rs:721
+#: app/src/offered.rs:736
 msgid "The message is larger than Penguin Mail downloads."
 msgstr "Размер письма превышает предел загрузки Penguin Mail."
 
-#: app/src/offered.rs:724
+#: app/src/offered.rs:739
 msgid "Penguin Mail could not read the server's answer."
 msgstr "Penguin Mail не смог прочитать ответ сервера."
 
-#: app/src/offered.rs:727
+#: app/src/offered.rs:742
 msgid "The connection closed while the message downloaded."
 msgstr "Соединение закрылось во время загрузки письма."
 
-#: app/src/offered.rs:733
+#: app/src/offered.rs:748
 msgid "“{subject}” from {sender}: {words}"
 msgstr "«{subject}» от {sender}: {words}"
 
-#: app/src/offered.rs:737
+#: app/src/offered.rs:752
 msgid "“{subject}”: {words}"
 msgstr "«{subject}»: {words}"
 
-#: app/src/offered.rs:741
+#: app/src/offered.rs:756
 msgid "A message from {sender}: {words}"
 msgstr "Письмо от {sender}: {words}"
 
-#: app/src/offered.rs:745
+#: app/src/offered.rs:760
 msgid "Message {number}: {words}"
 msgstr "Письмо {number}: {words}"
 
-#: app/src/offered.rs:761
+#: app/src/offered.rs:776
 msgid ""
 "Removing the account deletes this computer's copy of its mail and the saved "
 "sign-in. Mail still on the server stays there."
@@ -2953,7 +2953,7 @@ msgstr ""
 "Удаление учётной записи удалит копию её почты с этого компьютера и "
 "сохранённые данные для входа. Почта на сервере останется."
 
-#: app/src/offered.rs:765
+#: app/src/offered.rs:780
 msgid ""
 "Mail already removed from the server exists only on this computer, and "
 "removing the account deletes it with the saved sign-in. Mail still on the "
@@ -2963,7 +2963,7 @@ msgstr ""
 "Удаление учётной записи удалит её вместе с сохранёнными данными для входа. "
 "Почта на сервере останется."
 
-#: app/src/offered.rs:770
+#: app/src/offered.rs:785
 msgid ""
 "Its calendars and saved sign-in are deleted from this computer. Nothing "
 "changes on the server."
@@ -2971,7 +2971,7 @@ msgstr ""
 "Календари и сохранённые данные для входа будут удалены с этого компьютера. "
 "На сервере ничего не изменится."
 
-#: app/src/offered.rs:775
+#: app/src/offered.rs:790
 msgid ""
 "Its downloaded mail and saved sign-in are deleted from this computer. "
 "Nothing changes in {provider}."
@@ -2979,7 +2979,7 @@ msgstr ""
 "Загруженная почта и сохранённые данные для входа будут удалены с этого "
 "компьютера. В {provider} ничего не изменится."
 
-#: app/src/offered.rs:789
+#: app/src/offered.rs:804
 msgid ""
 "{count} message waiting in Send Later on the server goes back to Drafts "
 "first."
@@ -2995,7 +2995,7 @@ msgstr[2] ""
 "Сначала {count} писем, ожидающих отложенной отправки на сервере, вернутся в "
 "черновики."
 
-#: app/src/offered.rs:801
+#: app/src/offered.rs:816
 msgid ""
 "Penguin Mail could not call back {count} message waiting on the server. The "
 "server may still send it at its hour."
@@ -3012,7 +3012,7 @@ msgstr[2] ""
 "Penguin Mail не смог отозвать {count} писем, ожидающих на сервере. Сервер "
 "всё ещё может отправить их в назначенное время."
 
-#: app/src/offered.rs:816
+#: app/src/offered.rs:831
 msgid ""
 "Mail from {address} is kept only on this computer. To keep a copy, quit "
 "Penguin Mail, then back up this file."
@@ -3020,21 +3020,21 @@ msgstr ""
 "Почта {address} хранится только на этом компьютере. Чтобы сохранить копию, "
 "закройте Penguin Mail и создайте резервную копию этого файла."
 
-#: app/src/offered.rs:867
+#: app/src/offered.rs:882
 msgid "New mail arrives as it is sent"
 msgstr "Новая почта приходит сразу после отправки"
 
-#: app/src/offered.rs:869
+#: app/src/offered.rs:884
 msgid "{provider} pushes it over JMAP, and you can send from your aliases."
 msgstr ""
 "{provider} доставляет её по JMAP, а вы можете отправлять письма со своих "
 "псевдонимов."
 
-#: app/src/offered.rs:875
+#: app/src/offered.rs:890
 msgid "Mail is matched over JMAP"
 msgstr "Почта сопоставляется по JMAP"
 
-#: app/src/offered.rs:877
+#: app/src/offered.rs:892
 msgid ""
 "Penguin Mail keeps the mail on this computer and downloads again only the "
 "messages it cannot match."
@@ -3042,111 +3042,111 @@ msgstr ""
 "Penguin Mail сохраняет почту на этом компьютере и повторно загружает только "
 "письма, которые не удалось сопоставить."
 
-#: app/src/offered.rs:884
+#: app/src/offered.rs:899
 msgid "Name, color and place"
 msgstr "Имя, цвет и расположение"
 
-#: app/src/offered.rs:886
+#: app/src/offered.rs:901
 msgid "{address} keeps its spot in the sidebar."
 msgstr "{address} сохранит своё место на боковой панели."
 
-#: app/src/offered.rs:892
+#: app/src/offered.rs:907
 msgid "Your own data"
 msgstr "Ваши данные"
 
-#: app/src/offered.rs:893
+#: app/src/offered.rs:908
 msgid "Reminders, follow-ups, flags, rules, VIPs, signatures and drafts."
 msgstr ""
 "Напоминания, ожидание ответов, флажки, правила, важные контакты, подписи и "
 "черновики."
 
-#: app/src/offered.rs:899
+#: app/src/offered.rs:914
 msgid "Calendars are read again where JMAP serves them"
 msgstr "Календари загружаются заново, если JMAP их предоставляет"
 
-#: app/src/offered.rs:902
+#: app/src/offered.rs:917
 msgid ""
 "If {provider} offers calendars over JMAP, Penguin Mail reads them from there."
 msgstr ""
 "Если {provider} предоставляет календари по JMAP, Penguin Mail читает их "
 "оттуда."
 
-#: app/src/offered.rs:911
+#: app/src/offered.rs:926
 msgid "Calendar sign-in"
 msgstr "Вход в календарь"
 
-#: app/src/offered.rs:912
+#: app/src/offered.rs:927
 msgid "The app password you use for calendars stays as it is."
 msgstr ""
 "Пароль приложения, который вы используете для календарей, останется прежним."
 
-#: app/src/offered.rs:943
+#: app/src/offered.rs:958
 msgid "Could not switch to JMAP: {reason}"
 msgstr "Не удалось перейти на JMAP: {reason}"
 
-#: app/src/offered.rs:944
+#: app/src/offered.rs:959
 msgid "Your IMAP account is unchanged."
 msgstr "Ваша учётная запись IMAP не изменилась."
 
-#: app/src/offered.rs:956
+#: app/src/offered.rs:971
 msgid "Something unexpected stopped it."
 msgstr "Операцию прервала непредвиденная ошибка."
 
-#: app/src/offered.rs:961
+#: app/src/offered.rs:976
 msgid "{provider} does not answer."
 msgstr "{provider} не отвечает."
 
-#: app/src/offered.rs:983
+#: app/src/offered.rs:998
 msgid "This account uses JMAP already."
 msgstr "Эта учётная запись уже использует JMAP."
 
-#: app/src/offered.rs:989
+#: app/src/offered.rs:1004
 msgid "{provider} did not accept the token."
 msgstr "{provider} не принял токен."
 
-#: app/src/offered.rs:990
+#: app/src/offered.rs:1005
 msgid "{provider} did not accept the password."
 msgstr "{provider} не принял пароль."
 
-#: app/src/offered.rs:995
+#: app/src/offered.rs:1010
 msgid "You can choose Sign In With Browser instead."
 msgstr "Вы можете выбрать «Войти через браузер»."
 
-#: app/src/offered.rs:1001
+#: app/src/offered.rs:1016
 msgid "{provider} signed in to another account, not {address}."
 msgstr "{provider} выполнил вход в другую учётную запись, а не {address}."
 
-#: app/src/offered.rs:1005
+#: app/src/offered.rs:1020
 msgid "The token holds a character that cannot be sent."
 msgstr "Токен содержит символ, который нельзя отправить."
 
-#: app/src/offered.rs:1006
+#: app/src/offered.rs:1021
 msgid "The password holds a character that cannot be sent."
 msgstr "Пароль содержит символ, который нельзя отправить."
 
-#: app/src/offered.rs:1011
+#: app/src/offered.rs:1026
 msgid "{provider} did not give the draft of a message waiting in Send Later."
 msgstr ""
 "{provider} не предоставил черновик письма, ожидающего отложенной отправки."
 
-#: app/src/offered.rs:1017
+#: app/src/offered.rs:1032
 msgid "The mail on {provider} kept changing while Penguin Mail matched it."
 msgstr ""
 "Почта на {provider} продолжала меняться, пока Penguin Mail сопоставлял её."
 
-#: app/src/offered.rs:1043
+#: app/src/offered.rs:1058
 msgid "{provider} refused the sign-in in the browser."
 msgstr "{provider} отклонил вход в браузере."
 
-#: app/src/offered.rs:1047
+#: app/src/offered.rs:1062
 msgid "You did not allow Penguin Mail on {provider}'s page."
 msgstr "Вы не разрешили доступ Penguin Mail на странице {provider}."
 
-#: app/src/offered.rs:1065
+#: app/src/offered.rs:1080
 msgid "{address} now uses JMAP"
 msgstr "{address} теперь использует JMAP"
 
-#: app/src/offered.rs:1069
+#: app/src/offered.rs:1084
 msgid ""
 "{address} now uses JMAP. {count} rule is off because its folder is not on "
 "the server."
@@ -4199,8 +4199,8 @@ msgstr "API Anthropic"
 msgid "Claude Subscription"
 msgstr "Подписка Claude"
 
-#: app/src/settings/mod.rs:227 app/src/ui/window.rs:3473
-#: app/src/ui/window.rs:3553
+#: app/src/settings/mod.rs:227 app/src/ui/window.rs:3483
+#: app/src/ui/window.rs:3563
 msgid "Assistant"
 msgstr "Помощник"
 
@@ -4572,7 +4572,7 @@ msgstr "Открыть Penguin Mail"
 msgid "New Message"
 msgstr "Новое письмо"
 
-#: app/src/tray.rs:238 app/src/ui/sidebar.rs:1934 app/src/ui/window.rs:3479
+#: app/src/tray.rs:238 app/src/ui/sidebar.rs:1934 app/src/ui/window.rs:3489
 msgid "Check for Mail"
 msgstr "Проверить почту"
 
@@ -4590,7 +4590,7 @@ msgstr "Что нового в {version}"
 msgid "Check for Updates"
 msgstr "Проверить обновления"
 
-#: app/src/tray.rs:254 app/src/ui/window.rs:3492
+#: app/src/tray.rs:254 app/src/ui/window.rs:3502
 #: app/src/ui/window/shortcuts.rs:644
 msgid "Quit"
 msgstr "Выйти"
@@ -4611,7 +4611,7 @@ msgstr "Что нового"
 msgid "Website"
 msgstr "Веб-сайт"
 
-#: app/src/ui/about.rs:179 app/src/ui/window.rs:3491
+#: app/src/ui/about.rs:179 app/src/ui/window.rs:3501
 msgid "Donate"
 msgstr "Пожертвовать"
 
@@ -4619,7 +4619,7 @@ msgstr "Пожертвовать"
 msgid "License"
 msgstr "Лицензия"
 
-#: app/src/ui/about.rs:203 app/src/ui/window.rs:3490
+#: app/src/ui/about.rs:203 app/src/ui/window.rs:3500
 msgid "About Penguin Mail"
 msgstr "О Penguin Mail"
 
@@ -4742,7 +4742,7 @@ msgstr "Этот компьютер покидает только домен, а
 
 #: app/src/ui/add_account.rs:881 app/src/ui/add_account.rs:3066
 #: app/src/ui/add_account.rs:3159 app/src/ui/add_account.rs:3679
-#: app/src/ui/add_account.rs:4645
+#: app/src/ui/add_account.rs:4651
 msgid "Signing In…"
 msgstr "Вход…"
 
@@ -4776,8 +4776,8 @@ msgstr "Копировать ссылку"
 msgid "Try Again"
 msgstr "Повторить попытку"
 
-#: app/src/ui/add_account.rs:962 app/src/ui/add_account.rs:4167
-#: app/src/ui/add_account.rs:4236 app/src/ui/assistant_mcp_prefs.rs:365
+#: app/src/ui/add_account.rs:962 app/src/ui/add_account.rs:4173
+#: app/src/ui/add_account.rs:4242 app/src/ui/assistant_mcp_prefs.rs:365
 #: app/src/ui/calendar/editor.rs:186 app/src/ui/calendar/manage.rs:287
 #: app/src/ui/calendar/manage.rs:437 app/src/ui/calendar/manage.rs:488
 #: app/src/ui/calendar/scope.rs:113 app/src/ui/composer/editor.rs:346
@@ -5029,7 +5029,7 @@ msgstr "Добавить календарь"
 msgid "Add a Calendar"
 msgstr "Добавить календарь"
 
-#: app/src/ui/add_account.rs:2483 app/src/ui/add_account.rs:4574
+#: app/src/ui/add_account.rs:2483 app/src/ui/add_account.rs:4580
 msgid "Looking up {domain}"
 msgstr "Поиск {domain}"
 
@@ -5061,11 +5061,11 @@ msgstr "Поиск…"
 msgid "Sign In Again"
 msgstr "Войти снова"
 
-#: app/src/ui/add_account.rs:3827 app/src/ui/add_account.rs:4217
+#: app/src/ui/add_account.rs:3827 app/src/ui/add_account.rs:4223
 msgid "Sign in with {provider} in your browser"
 msgstr "Войдите в {provider} через браузер"
 
-#: app/src/ui/add_account.rs:3832 app/src/ui/add_account.rs:4222
+#: app/src/ui/add_account.rs:3832 app/src/ui/add_account.rs:4228
 msgid ""
 "{provider}'s sign-in page is open in your browser. When you finish there, "
 "this window moves on."
@@ -5097,27 +5097,27 @@ msgstr ""
 "Вход с вашим собственным клиентом Google. Страница входа Google открыта в "
 "браузере. После входа это окно перейдёт к следующему шагу."
 
-#: app/src/ui/add_account.rs:4102
+#: app/src/ui/add_account.rs:4108
 msgid "Link copied"
 msgstr "Ссылка скопирована"
 
-#: app/src/ui/add_account.rs:4229
+#: app/src/ui/add_account.rs:4235
 msgid "Penguin Mail stops waiting after ten minutes."
 msgstr "Penguin Mail прекратит ожидание через десять минут."
 
-#: app/src/ui/add_account.rs:4252
+#: app/src/ui/add_account.rs:4258
 msgid "Canceling…"
 msgstr "Отмена…"
 
-#: app/src/ui/add_account.rs:4316
+#: app/src/ui/add_account.rs:4322
 msgid "{account} is added"
 msgstr "{account} добавлена"
 
-#: app/src/ui/add_account.rs:4336
+#: app/src/ui/add_account.rs:4342
 msgid "{account} is ready"
 msgstr "{account} готова"
 
-#: app/src/ui/add_account.rs:4648
+#: app/src/ui/add_account.rs:4654
 msgid ""
 "This server cannot tell its messages apart, so Penguin Mail cannot download "
 "from it safely."
@@ -5125,7 +5125,7 @@ msgstr ""
 "Этот сервер не различает свои письма, поэтому Penguin Mail не может "
 "безопасно загружать их."
 
-#: app/src/ui/assistant.rs:35 app/src/ui/window.rs:3639
+#: app/src/ui/assistant.rs:35 app/src/ui/window.rs:3649
 msgid "Summarize this conversation"
 msgstr "Составь сводку этой переписки"
 
@@ -5150,13 +5150,13 @@ msgstr "Подготовь ответ в открытой переписке"
 msgid "Choose a Model"
 msgstr "Выбрать модель"
 
-#: app/src/ui/assistant.rs:123 app/src/ui/window.rs:3600
-#: app/src/ui/window.rs:3601
+#: app/src/ui/assistant.rs:123 app/src/ui/window.rs:3610
+#: app/src/ui/window.rs:3611
 msgid "Detach"
 msgstr "Открепить"
 
 #: app/src/ui/assistant.rs:124 app/src/ui/key_import.rs:213
-#: app/src/ui/key_import.rs:217 app/src/ui/window.rs:4232
+#: app/src/ui/key_import.rs:217 app/src/ui/window.rs:4242
 msgid "Close"
 msgstr "Закрыть"
 
@@ -5364,7 +5364,7 @@ msgstr "Изменить {server}"
 
 #: app/src/ui/assistant_mcp_prefs.rs:137 app/src/ui/calendar/editor.rs:1726
 #: app/src/ui/composer/mod.rs:2219 app/src/ui/composer/recipients.rs:318
-#: app/src/ui/sender_prefs.rs:149 app/src/ui/window.rs:3236
+#: app/src/ui/sender_prefs.rs:149 app/src/ui/window.rs:3246
 msgid "Remove"
 msgstr "Убрать"
 
@@ -8275,7 +8275,7 @@ msgstr ""
 msgid "Allow Hide My Email"
 msgstr "Разрешить скрытие адреса"
 
-#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:3690
+#: app/src/ui/hide_my_email.rs:652 app/src/ui/window.rs:3700
 msgid "Add an account first"
 msgstr "Сначала добавьте учётную запись"
 
@@ -9362,7 +9362,7 @@ msgstr "Переместить {account} ниже"
 #: app/src/ui/preferences/dialog.rs:27 app/src/ui/preferences/dialog.rs:33
 #: app/src/ui/preferences/dialog.rs:82 app/src/ui/preferences/dialog.rs:83
 #: app/src/ui/preferences/dialog.rs:353 app/src/ui/preferences/dialog.rs:355
-#: app/src/ui/window.rs:3488 app/src/ui/window/shortcuts.rs:616
+#: app/src/ui/window.rs:3498 app/src/ui/window/shortcuts.rs:616
 msgid "Preferences"
 msgstr "Параметры"
 
@@ -9820,7 +9820,7 @@ msgstr "Подпись…"
 msgid "Rules…"
 msgstr "Правила…"
 
-#: app/src/ui/sidebar.rs:1844 app/src/ui/window.rs:3482
+#: app/src/ui/sidebar.rs:1844 app/src/ui/window.rs:3492
 msgid "Hide My Email…"
 msgstr "Скрыть мой адрес…"
 
@@ -10534,7 +10534,7 @@ msgstr "Эта сборка Penguin Mail не поддерживает вход 
 msgid "Get a Release"
 msgstr "Загрузить выпуск"
 
-#: app/src/ui/window.rs:3222
+#: app/src/ui/window.rs:3232
 msgid ""
 "Could not check for messages the server holds to send later, so {account} "
 "stays: {reason}"
@@ -10542,80 +10542,80 @@ msgstr ""
 "Не удалось проверить письма, отложенные для отправки на сервере, поэтому "
 "{account} не удалена: {reason}"
 
-#: app/src/ui/window.rs:3233
+#: app/src/ui/window.rs:3243
 msgid "Remove {account}?"
 msgstr "Удалить {account}?"
 
-#: app/src/ui/window.rs:3252
+#: app/src/ui/window.rs:3262
 msgid "Remove Anyway"
 msgstr "Всё равно удалить"
 
-#: app/src/ui/window.rs:3265
+#: app/src/ui/window.rs:3275
 msgid "Removed {account}"
 msgstr "Учётная запись {account} удалена"
 
-#: app/src/ui/window.rs:3267
+#: app/src/ui/window.rs:3277
 msgid "Could not remove {account}: {reason}"
 msgstr "Не удалось удалить {account}: {reason}"
 
-#: app/src/ui/window.rs:3460
+#: app/src/ui/window.rs:3470
 msgid "Refresh"
 msgstr "Обновить"
 
-#: app/src/ui/window.rs:3464
+#: app/src/ui/window.rs:3474
 msgid "Show Declined Events"
 msgstr "Показывать отклонённые события"
 
-#: app/src/ui/window.rs:3480
+#: app/src/ui/window.rs:3490
 msgid "Add Account…"
 msgstr "Добавить учётную запись…"
 
-#: app/src/ui/window.rs:3481
+#: app/src/ui/window.rs:3491
 msgid "New Smart Mailbox…"
 msgstr "Новая смарт-папка…"
 
-#: app/src/ui/window.rs:3489
+#: app/src/ui/window.rs:3499
 msgid "Keyboard Shortcuts"
 msgstr "Сочетания клавиш"
 
-#: app/src/ui/window.rs:3498 app/src/ui/window.rs:3500
+#: app/src/ui/window.rs:3508 app/src/ui/window.rs:3510
 msgid "Main Menu"
 msgstr "Главное меню"
 
-#: app/src/ui/window.rs:3565 app/src/ui/window.rs:3566
+#: app/src/ui/window.rs:3575 app/src/ui/window.rs:3576
 msgid "Dock"
 msgstr "Док"
 
-#: app/src/ui/window.rs:3691
+#: app/src/ui/window.rs:3701
 msgid "Add a mail account first"
 msgstr "Сначала добавьте почтовую учётную запись"
 
 #. Translators: {account} is an email address.
-#: app/src/ui/window.rs:3928
+#: app/src/ui/window.rs:3938
 msgid "The calendar and contacts of {account} are connected."
 msgstr "Календарь и контакты для {account} подключены."
 
-#: app/src/ui/window.rs:4034
+#: app/src/ui/window.rs:4044
 msgid "Open a message from the person first"
 msgstr "Сначала откройте письмо от этого человека"
 
-#: app/src/ui/window.rs:4115
+#: app/src/ui/window.rs:4125
 msgid "Penguin Mail shows the new language after a restart"
 msgstr "Penguin Mail применит новый язык после перезапуска"
 
-#: app/src/ui/window.rs:4117 app/src/update/mod.rs:130
+#: app/src/ui/window.rs:4127 app/src/update/mod.rs:130
 msgid "Restart"
 msgstr "Перезапустить"
 
-#: app/src/ui/window.rs:4181
+#: app/src/ui/window.rs:4191
 msgid "Show Rules"
 msgstr "Показать правила"
 
-#: app/src/ui/window.rs:4207
+#: app/src/ui/window.rs:4217
 msgid "Messages That Will Not Download"
 msgstr "Письма, которые не удаётся загрузить"
 
-#: app/src/ui/window.rs:4209
+#: app/src/ui/window.rs:4219
 msgid ""
 "Penguin Mail could not download these from {address}'s server. It tries "
 "again at each check, except for a message too large to download."
@@ -12550,11 +12550,11 @@ msgstr ""
 "календаря."
 
 #. The JMAP server publishes no sign-in a browser can run.
-#: sync/src/sign_in/browser.rs:106
+#: sync/src/sign_in/browser.rs:107
 msgid "This server does not offer a sign-in in the browser."
 msgstr "Этот сервер не поддерживает вход через браузер."
 
-#: sync/src/sign_in/browser.rs:113
+#: sync/src/sign_in/browser.rs:114
 msgid ""
 "The server did not let Penguin Mail stay signed in. Sign in with a password "
 "or a token instead."
@@ -12562,17 +12562,17 @@ msgstr ""
 "Сервер не разрешил Penguin Mail сохранить вход. Используйте пароль или токен."
 
 #. Nobody came back from the browser within the wait.
-#: sync/src/sign_in/browser.rs:124
+#: sync/src/sign_in/browser.rs:125
 msgid "Gave up waiting for the browser after ten minutes."
 msgstr "Ожидание браузера прекращено через десять минут."
 
-#: sync/src/sign_in/browser.rs:152
+#: sync/src/sign_in/browser.rs:153
 msgid "You signed in as {account}. Choose {wanted} to reconnect that account."
 msgstr ""
 "Вы вошли как {account}. Выберите {wanted}, чтобы снова подключить эту "
 "учётную запись."
 
-#: sync/src/sign_in/browser.rs:162
+#: sync/src/sign_in/browser.rs:163
 msgid ""
 "Penguin Mail cannot work without access to your mail. Sign in again and "
 "leave the Gmail permission ticked."
@@ -12580,11 +12580,11 @@ msgstr ""
 "Penguin Mail не может работать без доступа к почте. Войдите снова и оставьте "
 "разрешение Gmail включённым."
 
-#: sync/src/sign_in/browser.rs:172
+#: sync/src/sign_in/browser.rs:173
 msgid "Your organization's administrator must approve Penguin Mail."
 msgstr "Администратор вашей организации должен одобрить Penguin Mail."
 
-#: sync/src/sign_in/browser.rs:175
+#: sync/src/sign_in/browser.rs:176
 msgid ""
 "Penguin Mail cannot work without access to your mail. Sign in again and "
 "allow it."
@@ -12592,7 +12592,7 @@ msgstr ""
 "Penguin Mail не может работать без доступа к почте. Войдите снова и "
 "разрешите доступ."
 
-#: sync/src/sign_in/own_client.rs:68
+#: sync/src/sign_in/own_client.rs:82
 msgid ""
 "{set} is set but {missing} is not. Set both to sign in with your own Google "
 "client, or neither to use Penguin Mail's."
@@ -12600,6 +12600,32 @@ msgstr ""
 "Параметр {set} задан, а {missing} нет. Задайте оба для входа через "
 "собственный клиент Google или ни одного для использования клиента Penguin "
 "Mail."
+
+#. This is a button on Google's page; use the words Google's page shows in your language.
+#: sync/src/sign_in/own_client.rs:148
+msgid "This key is for a website. Go back to step 5 and choose Desktop app."
+msgstr ""
+
+#: sync/src/sign_in/own_client.rs:150
+msgid "This isn't the file from step 5."
+msgstr ""
+
+#: sync/src/sign_in/own_client.rs:152
+msgid ""
+"This file has no secret. Make a new key in step 5 and download it straight "
+"away."
+msgstr ""
+
+#. This is a button on Google's page; use the words Google's page shows in your language.
+#: sync/src/sign_in/own_client.rs:156
+msgid "Paste both the Client ID and the Client secret"
+msgstr ""
+
+#. This is a button on Google's page; use the words Google's page shows in your language.
+#: sync/src/sign_in/own_client.rs:160
+msgid ""
+"Copy the Client ID from step 5 again. It ends in .apps.googleusercontent.com."
+msgstr ""
 
 #: sync/src/triage.rs:53
 msgid "Mark read"
