@@ -243,9 +243,10 @@ impl Core {
         // in with the client the build carries.
         let config = if demo {
             // The sheet that asks Gmail accounts to choose a sign-in never
-            // opens over a screenshot; the banner does when a stage asks.
+            // opens over a screenshot unless the `sheet` stage asks; the
+            // banner opens when a stage asks.
             Config {
-                google_move_shown: true,
+                google_move_shown: demo::sheet_shown_at_start(demo::MoveStage::asked()),
                 ..Config::default()
             }
         } else {
@@ -387,14 +388,12 @@ impl Core {
 
     /// Whether the sheet that asks Gmail accounts to choose a sign-in
     /// already showed.
-    #[expect(dead_code, reason = "the move sheet reads it in a later task")]
     pub fn google_move_shown(&self) -> bool {
         self.config.borrow().google_move_shown
     }
 
     /// Records that the sheet showed, so it never shows again. Demo mode
     /// keeps this in memory only.
-    #[expect(dead_code, reason = "the move sheet reads it in a later task")]
     pub fn mark_google_move_shown(&self) -> Result<()> {
         let updated = {
             let mut config = self.config.borrow_mut();

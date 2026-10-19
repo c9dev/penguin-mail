@@ -1511,6 +1511,32 @@ impl MainWindow {
         // passes it here; until it lands no address counts as held.
         let shown = crate::move_banner::banner(waiting, |_| false);
         self.move_banner.show(shown);
+        self.show_move_sheet(waiting);
+    }
+
+    /// Shows the first-launch sheet once. `waiting` is empty while this
+    /// computer offers no route, so the sheet never asks for a choice
+    /// that cannot be made.
+    fn show_move_sheet(self: &Rc<Self>, waiting: &[crate::move_banner::Waiting]) {
+        if !crate::move_banner::sheet_due(self.core.google_move_shown(), waiting, true) {
+            return;
+        }
+        // Marked before it shows, so a crash before an answer still shows
+        // it only once. The banner stays either way.
+        if let Err(err) = self.core.mark_google_move_shown() {
+            tracing::warn!(%err, "could not record that the move sheet showed");
+        }
+        let accounts: Vec<Account> = waiting.iter().map(|w| w.account.clone()).collect();
+        let ids: Vec<AccountId> = accounts.iter().map(|a| a.id).collect();
+        let weak = Rc::downgrade(self);
+        super::move_sheet::present(&self.window, &accounts, move || {
+            if let Some(win) = weak.upgrade() {
+                win.choose_how_to_sign_in(&move_banner::Press {
+                    accounts: ids.clone(),
+                    goa_now: false,
+                });
+            }
+        });
     }
 
     /// The accounts that wait for a move, by id.

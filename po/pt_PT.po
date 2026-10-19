@@ -12207,6 +12207,7 @@ msgstr ""
 #. one that does.
 #. Translators: Gmail is a name; keep it as it is.
 #: app/src/route_choice.rs:100 sync/src/sign_in/browser.rs:121
+#: app/src/ui/move_sheet.rs:18
 msgid "Choose how Penguin Mail signs in to Gmail"
 msgstr "Escolha como o Penguin Mail inicia sessão no Gmail"
 
@@ -12313,6 +12314,26 @@ msgstr "O Penguin Mail não consegue receber correio novo de {address}. Escolha 
 #: app/src/move_banner.rs:105
 msgid "Choose how {address} signs in to keep your mail arriving."
 msgstr "Escolha como {address} inicia sessão para continuar a receber o seu correio."
+
+#. Translators: Google and Gmail are names; keep them as they are.
+#: app/src/ui/move_sheet.rs:21
+msgid ""
+"Penguin Mail has new ways to sign in to Google. Pick one for each Gmail "
+"account below to keep your mail arriving. Your mail and settings stay as "
+"they are, and nothing downloads again."
+msgstr ""
+"O Penguin Mail tem novas formas de iniciar sessão no Google. Escolha uma "
+"para cada conta do Gmail abaixo, para continuar a receber o seu correio. O "
+"seu correio e as suas definições ficam como estão e nada é descarregado "
+"outra vez."
+
+#: app/src/ui/move_sheet.rs:59
+msgid "Later"
+msgstr "Mais tarde"
+
+#: app/src/ui/move_sheet.rs:59
+msgid "Choose Now"
+msgstr "Escolher agora"
 
 #. Translators: GNOME Online Accounts is a name; keep it as it is.
 #: app/src/move_banner.rs:146 app/src/route_choice.rs:141

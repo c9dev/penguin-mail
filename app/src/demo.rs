@@ -805,6 +805,15 @@ pub enum MoveStage {
     /// accounts and would set the state back, so the app words the banner
     /// for a stopped account itself.
     Paused,
+    /// All three Gmail accounts, and the first-launch sheet over the
+    /// window.
+    Sheet,
+}
+
+/// Whether the demo counts the first-launch sheet as shown already. Only
+/// the `sheet` stage leaves it to show.
+pub fn sheet_shown_at_start(stage: Option<MoveStage>) -> bool {
+    stage != Some(MoveStage::Sheet)
 }
 
 impl MoveStage {
@@ -813,6 +822,7 @@ impl MoveStage {
             "banner" => Some(MoveStage::Banner),
             "banner-several" => Some(MoveStage::Several),
             "banner-paused" => Some(MoveStage::Paused),
+            "sheet" => Some(MoveStage::Sheet),
             _ => None,
         }
     }
@@ -827,7 +837,7 @@ impl MoveStage {
     fn waits(self, index: usize) -> bool {
         match self {
             MoveStage::Banner | MoveStage::Paused => index == 0,
-            MoveStage::Several => true,
+            MoveStage::Several | MoveStage::Sheet => true,
         }
     }
 }
@@ -2980,6 +2990,25 @@ mod tests {
         assert_eq!(waiting(MoveStage::Banner), [0]);
         assert_eq!(waiting(MoveStage::Paused), [0]);
         assert_eq!(waiting(MoveStage::Several), [0, 1, 2]);
+    }
+
+    #[tokio::test]
+    async fn the_demo_shows_no_move_unless_asked() {
+        let demo = demo().await;
+        for index in 0..3 {
+            let id = demo.account(index).await;
+            let client = demo
+                .db
+                .read(move |c| accounts::sign_in_client(c, id))
+                .await
+                .unwrap();
+            assert_eq!(client, SignInClient::Own, "account {index}");
+        }
+        assert!(sheet_shown_at_start(None));
+        assert!(sheet_shown_at_start(Some(MoveStage::Banner)));
+        assert!(!sheet_shown_at_start(Some(MoveStage::Sheet)));
+        assert_eq!(MoveStage::parse("sheet"), Some(MoveStage::Sheet));
+        assert!((0..3).all(|i| MoveStage::Sheet.waits(i)));
     }
 
     use mailrs_domain::{Folder, MailSet, Role};

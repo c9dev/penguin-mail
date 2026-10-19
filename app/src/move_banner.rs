@@ -127,10 +127,6 @@ pub fn sign_in_banner_wanted(account: &Account, waiting: &[AccountId]) -> bool {
 
 /// Whether the sheet shows now: it has not shown before, an account
 /// waits, and some route row can be offered.
-#[cfg_attr(
-    not(test),
-    expect(dead_code, reason = "the sheet arrives in a later task")
-)]
 pub fn sheet_due(shown: bool, waiting: &[Waiting], any_route: bool) -> bool {
     !shown && any_route && !waiting.is_empty()
 }
