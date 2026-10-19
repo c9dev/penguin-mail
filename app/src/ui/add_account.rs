@@ -3903,19 +3903,25 @@ impl Dialog {
                     .map(|a| (a, None)),
                 Flow::Move(account) => {
                     let (committed, signed_in) = async_channel::bounded::<()>(1);
+                    let ended = Rc::new(Cell::new(false));
                     let weak = Rc::downgrade(&this);
-                    glib::spawn_future_local(async move {
-                        if signed_in.recv().await.is_ok()
-                            && let Some(this) = weak.upgrade()
-                            && this.asking.wants(ticket)
-                        {
-                            this.finishing_move();
-                        }
-                    });
-                    this.core
+                    glib::spawn_future_local(when_committed(
+                        signed_in,
+                        Rc::clone(&ended),
+                        move || {
+                            if let Some(this) = weak.upgrade()
+                                && this.asking.wants(ticket)
+                            {
+                                this.finishing_move();
+                            }
+                        },
+                    ));
+                    let moved = this
+                        .core
                         .move_to_own_client(account, urls, canceled, committed)
-                        .await
-                        .map(|a| (a, None))
+                        .await;
+                    ended.set(true);
+                    moved.map(|a| (a, None))
                 }
                 Flow::SignIn => {
                     this.core
@@ -4862,6 +4868,20 @@ fn preview(this: &Rc<Dialog>, stage: &str) {
     this.show_band();
 }
 
+/// Runs `finish` once a move says its sign-in came back, unless the move's
+/// result arrived first. The word and the result reach the main loop in
+/// either order, and a page that finished after the result would keep
+/// the dialog from closing.
+async fn when_committed(
+    signed_in: async_channel::Receiver<()>,
+    ended: Rc<Cell<bool>>,
+    finish: impl FnOnce(),
+) {
+    if signed_in.recv().await.is_ok() && !ended.get() {
+        finish();
+    }
+}
+
 /// Checks that need GTK, run from the one test that starts it
 /// (`composer::richbuffer`'s GTK checks).
 #[cfg(test)]
@@ -4949,5 +4969,36 @@ pub(crate) mod checks {
         unfold_token(&page);
         assert!(page.password.get_visible() && page.use_token.get_visible());
         assert!(page.password_list.get_visible() && !page.token_instead.get_visible());
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::cell::Cell;
+    use std::rc::Rc;
+
+    use super::when_committed;
+
+    /// Runs `when_committed` after the move sent its word, and answers
+    /// whether the page went on to finish.
+    fn finished_after(result_first: bool) -> bool {
+        let (committed, signed_in) = async_channel::bounded::<()>(1);
+        committed.try_send(()).unwrap();
+        drop(committed);
+        let ended = Rc::new(Cell::new(result_first));
+        let finished = Rc::new(Cell::new(false));
+        let seen = Rc::clone(&finished);
+        futures::executor::block_on(when_committed(signed_in, ended, move || seen.set(true)));
+        finished.get()
+    }
+
+    #[test]
+    fn a_move_whose_sign_in_came_back_finishes() {
+        assert!(finished_after(false));
+    }
+
+    #[test]
+    fn a_late_word_after_the_move_ended_changes_nothing() {
+        assert!(!finished_after(true));
     }
 }
