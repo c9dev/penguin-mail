@@ -150,8 +150,12 @@ pub struct Core {
     goa: Arc<dyn mailrs_sync::goa::OnlineAccounts>,
     /// What the app last read from it.
     goa_state: Arc<goa::GoaState>,
-    /// Whether the watch on it runs.
-    goa_watching: Cell<bool>,
+    /// The watch on it, while one runs.
+    goa_watch: RefCell<Option<tokio::task::JoinHandle<()>>>,
+    /// Whether an account reads through Online Accounts.
+    goa_linked: Cell<bool>,
+    /// Whether the route choice is open and may offer Online Accounts.
+    goa_choosing: Cell<bool>,
     /// The accounts `look_for_jmap` has looked at this run, found or not.
     switch_looked: RefCell<HashSet<AccountId>>,
     /// Where each kind of account keeps what signs it in: the keyring, or
@@ -344,7 +348,9 @@ impl Core {
             move_leases: MoveLeases::default(),
             goa: online_accounts(demo),
             goa_state: Arc::default(),
-            goa_watching: Cell::new(false),
+            goa_watch: RefCell::new(None),
+            goa_linked: Cell::new(false),
+            goa_choosing: Cell::new(false),
             switch_looked: RefCell::default(),
             secrets: match demo {
                 true => Secrets::memory(),

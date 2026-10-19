@@ -261,14 +261,43 @@ impl Core {
         goa_notice::notices(&linked, list, failures, &twice)
     }
 
-    /// Follows Online Accounts for as long as the app runs, once. When it
-    /// changes under a linked account, that account stops and starts again
-    /// on what it holds now. `on_change` runs on the main loop after each
-    /// change and each failure.
-    pub fn watch_goa(self: &Rc<Self>, on_change: impl Fn() + 'static) {
-        if self.demo || self.goa_watching.replace(true) {
-            return;
+    /// Records whether an account reads through Online Accounts, and
+    /// starts or stops the watch to match.
+    pub fn set_goa_linked(self: &Rc<Self>, linked: bool, on_change: impl Fn() + 'static) {
+        self.goa_linked.set(linked);
+        self.match_goa_watch(on_change);
+    }
+
+    /// Records whether the route choice is open, and starts or stops the
+    /// watch to match.
+    pub fn set_goa_choosing(self: &Rc<Self>, choosing: bool, on_change: impl Fn() + 'static) {
+        self.goa_choosing.set(choosing);
+        self.match_goa_watch(on_change);
+    }
+
+    /// Follows Online Accounts only on Linux, and only while an account
+    /// reads through it or the route choice is open. It stops with the
+    /// last of them, so a person who never uses Online Accounts never
+    /// wakes its daemon. When it changes under a linked account, that
+    /// account stops and starts again on what it holds now. `on_change`
+    /// runs on the main loop after each change and each failure.
+    fn match_goa_watch(self: &Rc<Self>, on_change: impl Fn() + 'static) {
+        let wanted = cfg!(target_os = "linux")
+            && !self.demo
+            && (self.goa_linked.get() || self.goa_choosing.get());
+        let mut watch = self.goa_watch.borrow_mut();
+        match (wanted, watch.is_some()) {
+            (true, false) => *watch = Some(self.watch_goa(on_change)),
+            (false, true) => {
+                if let Some(handle) = watch.take() {
+                    handle.abort();
+                }
+            }
+            _ => {}
         }
+    }
+
+    fn watch_goa(self: &Rc<Self>, on_change: impl Fn() + 'static) -> tokio::task::JoinHandle<()> {
         let (tx, rx) = async_channel::unbounded::<()>();
         let (goa, state, db) = (self.goa.clone(), self.goa_state.clone(), self.db.clone());
         let reach = Reach {
@@ -277,7 +306,7 @@ impl Core {
         };
         let engine = std::sync::Arc::clone(&self.engine);
         let leases = self.move_leases.clone();
-        self.runtime.spawn(async move {
+        let handle = self.runtime.spawn(async move {
             let restarts = Restarts {
                 reach: &reach,
                 engine: &engine,
@@ -340,6 +369,7 @@ impl Core {
                 on_change();
             }
         });
+        handle
     }
 }
 

@@ -1101,12 +1101,6 @@ impl MainWindow {
                 win.press_goa_banner(action);
             }
         });
-        let weak = Rc::downgrade(&window);
-        app.core.watch_goa(move || {
-            if let Some(win) = weak.upgrade() {
-                win.refresh_goa_banner();
-            }
-        });
         if let Some(filter) = app.filter() {
             window.conversation.set_filter(filter);
         }
@@ -1277,6 +1271,11 @@ impl MainWindow {
         // An account that needs a move has its own banner, and the
         // built-in sign-in would hand it a token without its mail scope.
         let waiting = app.waiting_for_move();
+        let linked = data.iter().any(|(a, _)| {
+            app.google_sign_in(a.id)
+                .is_some_and(|s| s.client == mailrs_domain::SignInClient::Goa)
+        });
+        self.core.set_goa_linked(linked, self.goa_changed());
         let reauth = data
             .iter()
             .map(|(a, _)| a)
@@ -1533,6 +1532,16 @@ impl MainWindow {
 
     /// Shows the first thing Online Accounts needs for a linked account,
     /// or hides the banner. The rest show in turn as each clears.
+    /// What the Online Accounts watch calls when something changed.
+    fn goa_changed(self: &Rc<Self>) -> impl Fn() + 'static {
+        let weak = Rc::downgrade(self);
+        move || {
+            if let Some(win) = weak.upgrade() {
+                win.refresh_goa_banner();
+            }
+        }
+    }
+
     fn refresh_goa_banner(self: &Rc<Self>) {
         let this = Rc::clone(self);
         glib::spawn_future_local(async move {
@@ -2980,6 +2989,20 @@ impl MainWindow {
     }
 
     fn present_add_account(self: &Rc<Self>, opening: Opening) -> Option<adw::Dialog> {
+        let dialog = self.present_add_account_dialog(opening);
+        if let Some(dialog) = &dialog {
+            self.core.set_goa_choosing(true, self.goa_changed());
+            let weak = Rc::downgrade(self);
+            dialog.connect_closed(move |_| {
+                if let Some(win) = weak.upgrade() {
+                    win.core.set_goa_choosing(false, win.goa_changed());
+                }
+            });
+        }
+        dialog
+    }
+
+    fn present_add_account_dialog(self: &Rc<Self>, opening: Opening) -> Option<adw::Dialog> {
         let weak = Rc::downgrade(self);
         super::add_account::present(&self.core, &self.window, opening, move |done| {
             let Some(win) = weak.upgrade() else { return };
