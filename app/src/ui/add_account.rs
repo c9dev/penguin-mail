@@ -5601,7 +5601,7 @@ fn preview(this: &Rc<Dialog>, stage: &str) {
         }
         stage if stage.starts_with("gmail-password") => {
             let again = stage == "gmail-password-again";
-            let address = Some("maria.costa@gmail.com").filter(|_| stage != "gmail-password");
+            let address = (stage != "gmail-password").then_some("maria.costa@gmail.com");
             this.open_gmail_password(address.map(str::to_string), again);
             this.push(gmail_password::TAG);
             let page = &this.gmail;

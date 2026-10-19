@@ -184,7 +184,7 @@ async fn a_401_after_one_renewal_asks_for_a_sign_in_in_online_accounts() {
     );
     assert_eq!(goa.ensure_calls(), 1);
     assert!(
-        db.read(|c| accounts::list_accounts(c))
+        db.read(accounts::list_accounts)
             .await
             .unwrap()
             .is_empty(),
@@ -212,7 +212,7 @@ async fn linking_refuses_an_account_with_mail_turned_off() {
 
     assert!(matches!(refused, Err(LinkError::MailOff)), "{refused:?}");
     assert!(
-        db.read(|c| accounts::list_accounts(c))
+        db.read(accounts::list_accounts)
             .await
             .unwrap()
             .is_empty()
@@ -425,7 +425,7 @@ async fn a_removed_account_with_no_match_keeps_its_mail_and_calendar() {
 
     assert!(matches!(services.mail, AnyMail::NoMail(_)));
     assert!(services.calendar.is_some());
-    let still = db.read(|c| accounts::list_accounts(c)).await.unwrap();
+    let still = db.read(accounts::list_accounts).await.unwrap();
     assert_eq!(still.len(), 1, "nothing is deleted");
 }
 

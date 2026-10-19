@@ -261,12 +261,6 @@ impl GoaPage {
         *self.on_other_ways.borrow_mut() = Some(Rc::new(f));
     }
 
-    /// The state the page shows now.
-    #[cfg(test)]
-    pub fn current(&self) -> Option<PageState> {
-        self.state.borrow().clone()
-    }
-
     fn focus_first(&self) {
         if self.main.is_visible() && self.main.is_sensitive() {
             self.main.grab_focus();

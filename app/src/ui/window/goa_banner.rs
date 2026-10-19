@@ -9,12 +9,15 @@ use adw::prelude::*;
 
 use crate::goa_notice::{Action, Shown};
 
+/// What the banner runs when one of its buttons is pressed.
+type OnPress = Rc<RefCell<Option<Rc<dyn Fn(Action)>>>>;
+
 pub struct Bar {
     root: gtk::Revealer,
     title: gtk::Label,
     buttons: gtk::Box,
     shown: Rc<RefCell<Option<Shown>>>,
-    on_press: Rc<RefCell<Option<Rc<dyn Fn(Action)>>>>,
+    on_press: OnPress,
 }
 
 impl Bar {

@@ -16,6 +16,7 @@ use mailrs_sync::Offers;
 use crate::app::App;
 use crate::move_banner::{Waiting, banner};
 use crate::offered::{self, calendar_link};
+#[cfg(test)]
 use crate::route_choice::Platform;
 
 /// The window action that opens the route choice for one account, by id.
@@ -202,6 +203,7 @@ pub fn rows(
 }
 
 /// Fills `parent` and keeps the rows for [`refill`].
+#[allow(clippy::too_many_arguments)]
 fn register(
     parent: &adw::ExpanderRow,
     account: &Account,
@@ -707,6 +709,7 @@ pub(crate) mod checks {
             &account(state),
             sign_in,
             true,
+            false,
             offers,
             &connect,
             kept,

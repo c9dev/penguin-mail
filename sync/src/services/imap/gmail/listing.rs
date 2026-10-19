@@ -77,7 +77,7 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
         uids: &[u32],
     ) -> Result<Vec<RemoteRef>, BackendError> {
         let mut paired = self.gm_pair(mailbox, uidvalidity, uids).await?;
-        paired.sort_unstable_by(|a, b| b.uid.cmp(&a.uid));
+        paired.sort_unstable_by_key(|f| std::cmp::Reverse(f.uid));
         Ok(paired
             .into_iter()
             .filter_map(|flags| flags.gmail)
