@@ -4,9 +4,14 @@
 //! it in the keyring, beside its refresh token, and refreshes through it
 //! from then on, whether or not the variables are set at a later start.
 
+use std::sync::Arc;
+
+use mailrs_domain::AccountId;
 use mailrs_domain::translate::{fill, gettext};
 use mailrs_gmail::OAuthClient;
 use serde::{Deserialize, Serialize};
+
+use crate::passwords::{PasswordError, PasswordStore, Secrets};
 
 /// The variable naming the own client's id. A release build reads the
 /// same name at build time for the built-in client.
@@ -84,6 +89,37 @@ fn half(set: &str, missing: &str) -> String {
         ),
         &[("set", set), ("missing", missing)],
     )
+}
+
+/// The keyring user the person's project sits under. SQLite row ids start
+/// at 1, so no account shares it.
+pub const PROJECT_KEY: AccountId = 0;
+
+/// The project the person set up for an earlier account, if one is kept.
+/// A keyring that fails, or an entry this version cannot read, counts as
+/// none.
+pub async fn saved_project(secrets: &Secrets) -> Option<OwnClient> {
+    let store = Arc::clone(&secrets.google_project);
+    let kept = tokio::task::spawn_blocking(move || store.load(PROJECT_KEY))
+        .await
+        .map_err(|err| err.to_string())
+        .and_then(|read| read.map_err(|err| err.to_string()));
+    match kept {
+        Ok(kept) => kept.as_deref().and_then(OwnClient::decode),
+        Err(reason) => {
+            tracing::warn!(%reason, "could not read the kept Google project");
+            None
+        }
+    }
+}
+
+/// Keeps `own` as the person's project, for any later Google account.
+pub async fn keep_project(secrets: &Secrets, own: &OwnClient) -> Result<(), PasswordError> {
+    let store = Arc::clone(&secrets.google_project);
+    let encoded = own.encode();
+    tokio::task::spawn_blocking(move || store.save(PROJECT_KEY, &encoded))
+        .await
+        .map_err(|err| PasswordError::Keyring(err.to_string()))?
 }
 
 /// The own client two values name: `None` when neither is set, an error
@@ -221,6 +257,31 @@ pub fn from_pasted(id: &str, secret: &str) -> Result<OwnClient, FileProblem> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[tokio::test]
+    async fn a_kept_project_reads_back() {
+        let secrets = Secrets::memory();
+        let own = OwnClient::new("123-abc.apps.googleusercontent.com", "GOCSPX-abc");
+        keep_project(&secrets, &own).await.unwrap();
+        let back = saved_project(&secrets).await.unwrap();
+        assert_eq!(back.id(), "123-abc.apps.googleusercontent.com");
+        // Compared as a bool so a failure never prints the secret.
+        assert!(back.encode() == own.encode());
+    }
+
+    #[tokio::test]
+    async fn no_project_kept_is_none() {
+        assert!(saved_project(&Secrets::memory()).await.is_none());
+    }
+
+    #[tokio::test]
+    async fn a_project_entry_that_does_not_decode_is_none() {
+        let secrets = Secrets::memory();
+        secrets
+            .google_project
+            .save(PROJECT_KEY, "not json")
+            .unwrap();
+        assert!(saved_project(&secrets).await.is_none());
+    }
 
     #[test]
     fn both_values_make_a_client() {
