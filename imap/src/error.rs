@@ -31,11 +31,11 @@ pub enum ImapError {
     /// The call needs an extension the server lacks.
     #[error("the server does not offer {0}")]
     Unsupported(&'static str),
-    /// The server turned a command down because the account used up its
-    /// quota or its bandwidth for now (`[OVERQUOTA]`, Gmail's "bandwidth
-    /// limits" alert). Waiting is the cure, not trying again at once.
+    /// Gmail turned a command down with its "bandwidth limits" alert: the
+    /// account downloaded as much as Gmail lets an app download in a day.
+    /// Waiting is the cure, not trying again at once.
     #[error("the server says the account is over its limit: {text}")]
-    OverQuota { text: String },
+    BandwidthLimit { text: String },
     /// Any other refusal, in the server's words: over quota, a message too
     /// large, a name already taken.
     #[error("the server refused: {0}")]
@@ -74,7 +74,7 @@ impl ImapError {
             ImapError::Protocol(text) => ImapError::Protocol(hide(text)),
             ImapError::NoMailbox(name) => ImapError::NoMailbox(hide(name)),
             ImapError::Unsupported(what) => ImapError::Unsupported(what),
-            ImapError::OverQuota { text } => ImapError::OverQuota { text: hide(text) },
+            ImapError::BandwidthLimit { text } => ImapError::BandwidthLimit { text: hide(text) },
             ImapError::Refused(text) => ImapError::Refused(hide(text)),
             ImapError::Invalid(text) => ImapError::Invalid(hide(text)),
         }
@@ -111,7 +111,7 @@ mod tests {
         );
         assert!(!ImapError::NoMailbox("x".into()).is_transient());
         assert!(
-            !ImapError::OverQuota {
+            !ImapError::BandwidthLimit {
                 text: String::new()
             }
             .is_transient()
@@ -132,7 +132,7 @@ mod tests {
         assert!(!ImapError::NoMailbox("x".into()).drops_connection());
         assert!(!ImapError::Unsupported("MOVE").drops_connection());
         assert!(
-            !ImapError::OverQuota {
+            !ImapError::BandwidthLimit {
                 text: String::new()
             }
             .drops_connection()

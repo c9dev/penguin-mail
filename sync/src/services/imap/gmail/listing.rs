@@ -492,8 +492,9 @@ fn names_term(text: &str, term: &str) -> bool {
         }
     }
     words.push(word);
-    words
-        .iter()
-        .any(|w| w.trim_start_matches('(').trim_end_matches(')').eq_ignore_ascii_case(term))
+    words.iter().any(|w| {
+        w.trim_start_matches('(')
+            .trim_end_matches(')')
+            .eq_ignore_ascii_case(term)
+    })
 }
-

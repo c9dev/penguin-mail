@@ -315,7 +315,9 @@ impl Core {
                                 if failed && list.is_ok() {
                                     restarts.all(&linked).await;
                                 } else {
-                                    restarts.for_change(&change, before.as_deref(), &linked).await;
+                                    restarts
+                                        .for_change(&change, before.as_deref(), &linked)
+                                        .await;
                                 }
                             }
                             failed = list.is_err();

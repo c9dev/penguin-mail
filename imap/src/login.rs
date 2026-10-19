@@ -66,7 +66,10 @@ impl Login {
 
     /// The one message of Google's and Microsoft's XOAUTH2.
     pub(crate) fn xoauth2_response(&self) -> String {
-        format!("user={}\x01auth=Bearer {}\x01\x01", self.user, self.password)
+        format!(
+            "user={}\x01auth=Bearer {}\x01\x01",
+            self.user, self.password
+        )
     }
 
     /// `text` with the password taken out, in every form a server could

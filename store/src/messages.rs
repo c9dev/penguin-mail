@@ -364,7 +364,12 @@ fn upsert_message(conn: &Connection, m: &MessageMeta, sync_gen: i64) -> Result<(
 
 /// Puts back the colour flag a route move kept for `msgid` onto the
 /// message `id` that brought it back, and forgets the kept one.
-fn restore_kept_flag(conn: &Connection, account_id: AccountId, id: &str, msgid: &str) -> Result<()> {
+fn restore_kept_flag(
+    conn: &Connection,
+    account_id: AccountId,
+    id: &str,
+    msgid: &str,
+) -> Result<()> {
     let kept: Option<String> = conn
         .prepare_cached(
             "DELETE FROM kept_flags WHERE account_id = ?1 AND rfc822_msgid = ?2 RETURNING color",

@@ -71,10 +71,10 @@ const MISSING_WORDS: [&str; 5] = [
     "unknown mailbox",
 ];
 
-/// Words servers use when the account is out of quota or bandwidth for
-/// now: RFC 5530's `[OVERQUOTA]`, and Gmail's "exceeded command or
-/// bandwidth limits" alert.
-const OVER_QUOTA_WORDS: [&str; 2] = ["[overquota]", "bandwidth limits"];
+/// Gmail's alert for an account that used up its daily download allowance:
+/// "Account exceeded command or bandwidth limits". RFC 5530's
+/// `[OVERQUOTA]` (a full mailbox elsewhere) stays a plain refusal.
+const BANDWIDTH_WORDS: [&str; 1] = ["bandwidth limits"];
 
 /// The class of a refusal. `try_create` is the `[TRYCREATE]` code, which
 /// imap-proto parses out of the text.
@@ -90,8 +90,8 @@ pub(crate) fn refusal(doing: Doing<'_>, how: Refusal, try_create: bool, text: &s
     if signing_in && says(&LIMIT_WORDS) {
         return ImapError::TooManyConnections { text };
     }
-    if how != Refusal::Bye && says(&OVER_QUOTA_WORDS) {
-        return ImapError::OverQuota { text };
+    if how != Refusal::Bye && says(&BANDWIDTH_WORDS) {
+        return ImapError::BandwidthLimit { text };
     }
     match (how, doing) {
         (Refusal::Bye, _) => ImapError::Network(text),
@@ -335,28 +335,17 @@ mod tests {
 
     #[test]
     fn any_other_no_is_refused() {
-        let err = refusal(Doing::Into("Sent"), Refusal::No, false, "Message too large");
-        assert_eq!(err, ImapError::Refused("Message too large".into()));
-    }
-
-    #[test]
-    fn overquota_is_its_own_refusal() {
-        for doing in [Doing::Into("Sent"), Doing::Mailbox("INBOX"), Doing::Other] {
-            let err = refusal(doing, Refusal::No, false, "[OVERQUOTA] Quota exceeded");
-            assert_eq!(
-                err,
-                ImapError::OverQuota {
-                    text: "[OVERQUOTA] Quota exceeded".into()
-                }
-            );
+        for text in ["Message too large", "[OVERQUOTA] Quota exceeded"] {
+            let err = refusal(Doing::Into("Sent"), Refusal::No, false, text);
+            assert_eq!(err, ImapError::Refused(text.into()));
         }
     }
 
     #[test]
-    fn a_bandwidth_alert_is_overquota() {
+    fn gmails_bandwidth_alert_is_its_own_refusal() {
         let text = "[ALERT] Account exceeded command or bandwidth limits. (Failure)";
         let err = refusal(Doing::Mailbox("INBOX"), Refusal::No, false, text);
-        assert_eq!(err, ImapError::OverQuota { text: text.into() });
+        assert_eq!(err, ImapError::BandwidthLimit { text: text.into() });
     }
 
     #[test]

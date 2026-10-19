@@ -66,10 +66,13 @@ pub enum AccountState {
     /// A Gmail account on the built-in client whose token no longer reads
     /// mail. Stored mail stays, and the window offers the route choice.
     MailPaused,
+    /// A Gmail account on the IMAP route that downloaded as much as Gmail
+    /// allows in a day. It tries again later.
+    DownloadLimit,
 }
 
 impl AccountState {
-    pub const ALL: [AccountState; 8] = [
+    pub const ALL: [AccountState; 9] = [
         AccountState::Ok,
         AccountState::Bootstrapping,
         AccountState::NeedsReauth,
@@ -78,6 +81,7 @@ impl AccountState {
         AccountState::Stopped,
         AccountState::WaitingForKeyring,
         AccountState::MailPaused,
+        AccountState::DownloadLimit,
     ];
 
     pub fn as_str(self) -> &'static str {
@@ -90,6 +94,7 @@ impl AccountState {
             AccountState::Stopped => "stopped",
             AccountState::WaitingForKeyring => "waiting_for_keyring",
             AccountState::MailPaused => "mail_paused",
+            AccountState::DownloadLimit => "download_limit",
         }
     }
 }

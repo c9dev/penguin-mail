@@ -836,11 +836,9 @@ mod tests {
         let heard = Arc::clone(&seen);
         let server: Answer = Box::new(move |command: &str| {
             if let Some(sent) = command.strip_prefix("AUTHENTICATE XOAUTH2 ") {
-                let decoded = base64::Engine::decode(
-                    &base64::engine::general_purpose::STANDARD,
-                    sent.trim(),
-                )
-                .unwrap();
+                let decoded =
+                    base64::Engine::decode(&base64::engine::general_purpose::STANDARD, sent.trim())
+                        .unwrap();
                 heard
                     .lock()
                     .unwrap()
@@ -858,8 +856,7 @@ mod tests {
             }
             vec!["{tag} OK".into()]
         });
-        let greeting =
-            "* OK [CAPABILITY IMAP4rev1 AUTH=XOAUTH2 AUTH=OAUTHBEARER] ready";
+        let greeting = "* OK [CAPABILITY IMAP4rev1 AUTH=XOAUTH2 AUTH=OAUTHBEARER] ready";
         let client = client_from(Arc::new(Source::default()), vec![(greeting, server)]);
         assert!(client.capabilities().await.is_ok());
         assert_eq!(

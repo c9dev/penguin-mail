@@ -245,6 +245,10 @@ fn classify(err: &SyncError, when: WhenGrantEnds) -> Failure {
             state: AccountState::Offline,
             retry_after: None,
         },
+        SyncError::Backend(BackendError::DownloadLimit) => Failure::Retry {
+            state: AccountState::DownloadLimit,
+            retry_after: Some(crate::error::DOWNLOAD_LIMIT_WAIT),
+        },
         SyncError::Backend(BackendError::RateLimited(retry_after)) => Failure::Retry {
             state: AccountState::BackingOff,
             retry_after: *retry_after,

@@ -2105,6 +2105,14 @@ fn status_of(account: &Account, stuck: bool) -> Option<(&'static str, String)> {
             "dialog-warning-symbolic",
             gettext("Choose how this account signs in to get new mail"),
         )),
+        AccountState::DownloadLimit => Some((
+            "network-offline-symbolic",
+            // Translators: the line beside a Gmail account when Gmail
+            // stopped handing out mail for the day.
+            gettext(
+                "Gmail limits how much mail an app can download each day. Penguin Mail tries again later.",
+            ),
+        )),
         AccountState::Ok => None,
     }
 }
