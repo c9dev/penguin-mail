@@ -283,3 +283,28 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::inbox_on_restore;
+
+    fn ids(list: &[&str]) -> Vec<String> {
+        list.iter().map(|s| s.to_string()).collect()
+    }
+
+    #[test]
+    fn a_plain_restore_goes_back_to_the_inbox() {
+        assert!(inbox_on_restore(&[], &ids(&["TRASH"])));
+        assert!(inbox_on_restore(&ids(&["INBOX"]), &ids(&["SPAM"])));
+    }
+
+    #[test]
+    fn a_move_to_a_label_out_of_trash_keeps_it_out_of_the_inbox() {
+        assert!(!inbox_on_restore(&ids(&["Work"]), &ids(&["TRASH"])));
+    }
+
+    #[test]
+    fn not_spam_then_archive_stays_out_of_the_inbox() {
+        assert!(!inbox_on_restore(&[], &ids(&["SPAM", "INBOX"])));
+    }
+}

@@ -194,6 +194,19 @@ mod tests {
     }
 
     #[test]
+    fn a_server_cannot_repeat_the_encoded_xoauth2_message_in_an_error() {
+        let login = Login::bearer("ann@example.com", "sensitive-token");
+        let encoded = base64::Engine::encode(
+            &base64::engine::general_purpose::STANDARD,
+            login.xoauth2_response(),
+        );
+        assert_eq!(
+            login.hide(&format!("NO rejected {encoded}")),
+            "NO rejected <hidden>"
+        );
+    }
+
+    #[test]
     fn hide_takes_out_every_form_of_the_password() {
         let login = Login::new("ann@example.com", "pä\"ss\\word 1");
         for form in forms(&login.user, &login.password) {

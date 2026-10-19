@@ -15,8 +15,8 @@ use super::{Connected, Harness, eventually, harness};
 use crate::fake::meta;
 use crate::passwords::{MemoryPasswords, PasswordStore, Passwords, Secrets};
 use crate::route_move::{
-    DRAIN_WAIT, MoveEngine, MoveError, Mover, RewriteMail, commit, drain, needs_move,
-    rewrite_for_imap, to_own_client,
+    DRAIN_WAIT, MoveEngine, MoveError, Mover, RewriteMail, commit, drain, empty_for_imap,
+    needs_move, to_own_client,
 };
 use crate::sign_in::app_password::NewGmailImap;
 use crate::sign_in::goa_link::Linked;
@@ -614,47 +614,90 @@ async fn labels_of_a(h: &Harness) -> Vec<String> {
 }
 
 #[tokio::test]
-async fn the_imap_rewrite_keys_user_labels_by_name_and_drops_drafts() {
+async fn the_imap_move_empties_the_mail_and_keeps_the_outbox_and_the_rules() {
     let h = built_in_account().await;
     label_a_message(&h).await;
     let id = h.account_id;
-    h.db.write(move |c| {
-        mailboxes::upsert(
-            c,
-            id,
-            &RemoteMailbox {
-                id: "CATEGORY_SOCIAL".into(),
-                name: "Social".into(),
-                kind: MailboxKind::System,
-                role: None,
-                color: None,
-                hidden: false,
-            },
-        )
-    })
-    .await
-    .unwrap();
+    let rule = mailrs_domain::Filter {
+        id: Some("local-1".into()),
+        action: mailrs_domain::FilterAction {
+            add: vec![mailrs_domain::MailSet::Mailbox("Label_3".into())],
+            ..Default::default()
+        },
+        ..mailrs_domain::Filter::default()
+    };
+    let waiting = Queued {
+        draft_id: Some("d1".into()),
+        message_id: Some("a".into()),
+        send_at: now_millis() + 3_600_000,
+        raw: None,
+        ..due(&h, "later")
+    };
+    let row_id = h
+        .db
+        .write(move |c| {
+            mailrs_store::local_rules::add(c, id, &rule)?;
+            outbox::put(c, &waiting)
+        })
+        .await
+        .unwrap();
 
-    h.db.write(move |c| rewrite_for_imap(c, id)).await.unwrap();
+    h.db.write(move |c| empty_for_imap(c, id)).await.unwrap();
 
-    let labels = labels_of_a(&h).await;
-    assert!(labels.contains(&"Work/Clients".to_string()), "{labels:?}");
-    assert!(!labels.contains(&"Label_3".to_string()), "{labels:?}");
-    assert_eq!(count(&h.db, "drafts").await, 0);
-    let kept = h.db.read(move |c| mailboxes::listed(c, id)).await.unwrap();
-    let ids: Vec<&str> = kept.iter().map(|m| m.id.as_str()).collect();
-    assert!(
-        ids.contains(&"INBOX") && ids.contains(&"CATEGORY_SOCIAL"),
-        "{ids:?}"
+    for table in ["messages", "threads", "mailboxes", "drafts", "remote_refs"] {
+        assert_eq!(count(&h.db, table).await, 0, "{table}");
+    }
+    assert_eq!(row(&h, row_id).await.draft_id.as_deref(), Some("a"));
+    let rules = h
+        .db
+        .read(move |c| mailrs_store::local_rules::list(c, id))
+        .await
+        .unwrap();
+    assert_eq!(
+        rules[0].action.add,
+        [mailrs_domain::MailSet::Mailbox("Work/Clients".into())]
     );
-    let work = kept.iter().find(|m| m.id == "Work/Clients").unwrap();
-    assert_eq!(work.color.as_deref(), Some("#ff0000"));
 }
 
 #[tokio::test]
-async fn a_move_to_imap_restarts_sync_and_keeps_the_mail() {
+async fn a_move_to_imap_takes_send_later_bytes_out_of_the_draft() {
     let h = built_in_account().await;
-    let messages_before = count(&h.db, "messages").await;
+    let outbox = outbox_of(&h);
+    let later = Queued {
+        send_at: now_millis() + 3_600_000,
+        ..due(&h, "later")
+    };
+    let Posted::Waiting(row_id) = outbox.schedule(later).await.unwrap() else {
+        panic!("the message should wait for its hour");
+    };
+    let scheduled = row(&h, row_id).await;
+    assert!(scheduled.raw.is_none(), "Gmail holds the bytes");
+    let secrets = Secrets::memory();
+    let steps = Steps::new(&h);
+    let mover = Mover {
+        engine: &steps,
+        db: &h.db,
+        secrets: &secrets,
+        outbox: &outbox,
+    };
+
+    mover
+        .to_imap(&account(&h).await, gmail_imap("me@example.com"), || {})
+        .await
+        .unwrap();
+
+    let kept = row(&h, row_id).await;
+    assert!(
+        kept.raw.as_deref().is_some_and(|raw| raw.ends_with(b"hello")),
+        "the bytes came home"
+    );
+    assert_eq!(kept.draft_id, scheduled.message_id);
+}
+
+#[tokio::test]
+async fn a_move_to_imap_restarts_sync_and_empties_the_mail() {
+    let h = built_in_account().await;
+    assert!(count(&h.db, "messages").await > 0);
     let secrets = Secrets::memory();
     let steps = Steps::new(&h);
     let outbox = outbox_of(&h);
@@ -675,7 +718,7 @@ async fn a_move_to_imap_restarts_sync_and_keeps_the_mail() {
     assert_eq!(moved.id, h.account_id);
     assert_eq!(route(&h.db, h.account_id).await, MailRoute::Imap);
     assert_eq!(sync_state(&h.db, h.account_id).await, None);
-    assert_eq!(count(&h.db, "messages").await, messages_before);
+    assert_eq!(count(&h.db, "messages").await, 0);
     assert_eq!(count(&h.db, "drafts").await, 0);
     assert_eq!(steps.done(), ["committed", "stop", "start on BuiltIn"]);
     assert_eq!(
@@ -900,4 +943,165 @@ async fn a_move_to_another_goa_address_ends_before_the_account_stops() {
     ));
     assert_eq!(steps.done(), Vec::<String>::new());
     assert_eq!(client(&h.db, h.account_id).await, SignInClient::BuiltIn);
+}
+
+/// Puts the account on Online Accounts' IMAP, as linking it does.
+async fn on_goa_imap(h: &Harness) {
+    let id = h.account_id;
+    h.db.write(move |c| {
+        accounts::set_mail_route(c, id, MailRoute::Imap)?;
+        accounts::set_sign_in_client(c, id, SignInClient::Goa)?;
+        accounts::set_goa_id(c, id, Some("account_1_0"))
+    })
+    .await
+    .unwrap();
+}
+
+#[tokio::test]
+async fn an_online_accounts_account_moves_to_an_app_password_and_leaves_online_accounts() {
+    let h = built_in_account().await;
+    on_goa_imap(&h).await;
+    let messages_before = count(&h.db, "messages").await;
+    let secrets = Secrets::memory();
+    let steps = Steps::new(&h);
+    let outbox = outbox_of(&h);
+    let mover = Mover {
+        engine: &steps,
+        db: &h.db,
+        secrets: &secrets,
+        outbox: &outbox,
+    };
+
+    mover
+        .to_imap(&account(&h).await, gmail_imap("me@example.com"), || {})
+        .await
+        .unwrap();
+
+    let id = h.account_id;
+    assert_eq!(client(&h.db, id).await, SignInClient::BuiltIn);
+    assert_eq!(goa_id(&h.db, id).await, None);
+    assert_eq!(route(&h.db, id).await, MailRoute::Imap);
+    assert_eq!(count(&h.db, "messages").await, messages_before);
+    assert_eq!(sync_state(&h.db, id).await.as_deref(), Some("777"));
+}
+
+#[tokio::test]
+async fn an_online_accounts_account_with_a_kept_project_moves_to_its_own_client() {
+    let h = built_in_account().await;
+    on_goa_imap(&h).await;
+    let secrets = Secrets::memory();
+    secrets
+        .google_clients
+        .save(h.account_id, &own().encode())
+        .unwrap();
+    let steps = Steps::new(&h);
+    let outbox = outbox_of(&h);
+    let mover = Mover {
+        engine: &steps,
+        db: &h.db,
+        secrets: &secrets,
+        outbox: &outbox,
+    };
+
+    mover
+        .to_imap(&account(&h).await, gmail_imap("me@example.com"), || {})
+        .await
+        .unwrap();
+
+    assert_eq!(client(&h.db, h.account_id).await, SignInClient::Own);
+    assert_eq!(goa_id(&h.db, h.account_id).await, None);
+}
+
+#[tokio::test]
+async fn an_imap_account_moving_to_goa_stays_on_imap_whatever_the_probe_found() {
+    let h = built_in_account().await;
+    let id = h.account_id;
+    h.db.write(move |c| accounts::set_mail_route(c, id, MailRoute::Imap))
+        .await
+        .unwrap();
+    let secrets = Secrets::memory();
+    let steps = Steps::new(&h);
+    let outbox = outbox_of(&h);
+    let mover = Mover {
+        engine: &steps,
+        db: &h.db,
+        secrets: &secrets,
+        outbox: &outbox,
+    };
+
+    mover
+        .to_goa(
+            &account(&h).await,
+            &goa_dana("me@example.com"),
+            Linked::Api,
+            None,
+            || (),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(route(&h.db, id).await, MailRoute::Imap);
+    assert_eq!(client(&h.db, id).await, SignInClient::Goa);
+}
+
+#[tokio::test]
+async fn an_app_password_account_moving_to_goa_drops_its_password_and_servers() {
+    let h = built_in_account().await;
+    let id = h.account_id;
+    let saved = gmail_imap("me@example.com").servers;
+    h.db.write(move |c| {
+        accounts::set_mail_route(c, id, MailRoute::Imap)?;
+        servers::save(c, id, &saved)
+    })
+    .await
+    .unwrap();
+    let secrets = Secrets::memory();
+    secrets.passwords.save(id, "abcdefghijklmnop").unwrap();
+    let steps = Steps::new(&h);
+    let outbox = outbox_of(&h);
+    let mover = Mover {
+        engine: &steps,
+        db: &h.db,
+        secrets: &secrets,
+        outbox: &outbox,
+    };
+
+    mover
+        .to_goa(
+            &account(&h).await,
+            &goa_dana("me@example.com"),
+            Linked::Imap,
+            None,
+            || (),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(
+        h.db.read(move |c| servers::load(c, id)).await.unwrap(),
+        None
+    );
+    assert_eq!(secrets.passwords.load(id).unwrap(), None);
+}
+
+#[tokio::test]
+async fn a_send_later_message_whose_draft_is_gone_stays_and_asks_to_check_sent() {
+    let h = built_in_account().await;
+    let gone = Queued {
+        draft_id: Some("r-gone".into()),
+        message_id: Some("gone".into()),
+        raw: None,
+        ..due(&h, "lost")
+    };
+    let row_id = h.db.write(move |c| outbox::put(c, &gone)).await.unwrap();
+
+    let drained = outbox_of(&h).send_due(now_millis()).await.unwrap();
+
+    assert!(drained.sent.is_empty(), "a gone draft never counts as sent");
+    let kept = row(&h, row_id).await;
+    assert!(
+        kept.problem.as_deref().is_some_and(|p| p.contains("Check Sent")),
+        "{:?}",
+        kept.problem
+    );
 }

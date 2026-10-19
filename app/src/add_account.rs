@@ -2400,6 +2400,20 @@ mod tests {
     }
 
     #[test]
+    fn the_walk_knows_which_of_its_accounts_read_over_imap() {
+        let first = icloud_account();
+        let second = Account {
+            id: first.id + 1,
+            ..first.clone()
+        };
+        let mut walk = MoveWalk::new(vec![first, second.clone()]);
+        walk.set_on_imap([second.id].into_iter().collect());
+        assert!(!walk.current_on_imap());
+        walk.advance();
+        assert!(walk.current_on_imap());
+    }
+
+    #[test]
     fn a_move_with_no_accounts_has_nothing_to_show() {
         assert!(MoveWalk::new(Vec::new()).current().is_none());
     }

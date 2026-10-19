@@ -831,6 +831,44 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn a_bearer_login_takes_xoauth2_when_the_server_offers_it() {
+        let seen = Arc::new(Mutex::new(Vec::<String>::new()));
+        let heard = Arc::clone(&seen);
+        let server: Answer = Box::new(move |command: &str| {
+            if let Some(sent) = command.strip_prefix("AUTHENTICATE XOAUTH2 ") {
+                let decoded = base64::Engine::decode(
+                    &base64::engine::general_purpose::STANDARD,
+                    sent.trim(),
+                )
+                .unwrap();
+                heard
+                    .lock()
+                    .unwrap()
+                    .push(String::from_utf8(decoded).unwrap());
+                return vec!["{tag} OK signed in".into()];
+            }
+            if command.starts_with("AUTHENTICATE ") {
+                return vec!["{tag} NO [AUTHENTICATIONFAILED] not this one".into()];
+            }
+            if command == "CAPABILITY" {
+                return vec![
+                    format!("* CAPABILITY IMAP4rev1 {ALL}"),
+                    "{tag} OK done".into(),
+                ];
+            }
+            vec!["{tag} OK".into()]
+        });
+        let greeting =
+            "* OK [CAPABILITY IMAP4rev1 AUTH=XOAUTH2 AUTH=OAUTHBEARER] ready";
+        let client = client_from(Arc::new(Source::default()), vec![(greeting, server)]);
+        assert!(client.capabilities().await.is_ok());
+        assert_eq!(
+            *seen.lock().unwrap(),
+            ["user=a@b\x01auth=Bearer old\x01\x01"]
+        );
+    }
+
+    #[tokio::test]
     async fn a_password_login_is_not_retried() {
         let source = Arc::new(Source {
             password: true,

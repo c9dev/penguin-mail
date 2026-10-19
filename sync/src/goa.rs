@@ -221,6 +221,26 @@ mod tests {
     }
 
     #[test]
+    fn a_saved_id_counts_only_while_it_signs_in_as_the_address() {
+        let other = GoaAccount {
+            id: "account_1_0".into(),
+            identity: "someone@example.com".into(),
+            presentation: "someone@example.com".into(),
+            mail_disabled: false,
+            attention_needed: false,
+        };
+        let mine = GoaAccount {
+            id: "account_2_0".into(),
+            identity: "Dana@Example.com".into(),
+            ..other.clone()
+        };
+        let list = [other, mine];
+        let found = super::find(&list, Some("account_1_0"), "dana@example.com");
+        assert_eq!(found.map(|a| a.id.as_str()), Some("account_2_0"));
+        assert!(super::find(&list[..1], Some("account_1_0"), "dana@example.com").is_none());
+    }
+
+    #[test]
     fn find_matches_the_identity_whatever_its_case_and_spaces() {
         let list = [account("account_1_0", "Dana@Example.com")];
         assert_eq!(
