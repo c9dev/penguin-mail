@@ -557,6 +557,31 @@ fn plain_page(step: Step, title: &str) -> Plain {
 }
 
 /// "Steps look different?", the link to the help for `step`.
+/// Four buttons, one per API, for the case that the one link above does
+/// not turn them all on.
+fn api_library_links() -> gtk::Box {
+    let links = gtk::Box::builder()
+        .orientation(gtk::Orientation::Vertical)
+        .spacing(2)
+        .halign(gtk::Align::Start)
+        .build();
+    links.append(&label(
+        &gettext("Turn them on one at a time instead"),
+        &["own-note"],
+    ));
+    for (name, url) in own_project::API_LIBRARY {
+        let content = adw::ButtonContent::builder()
+            .icon_name("adw-external-link-symbolic")
+            .label(name)
+            .build();
+        let link = gtk::LinkButton::builder().uri(url).halign(gtk::Align::Start).build();
+        link.set_child(Some(&content));
+        crate::ui::name(&link, name);
+        links.append(&link);
+    }
+    links
+}
+
 fn help_link(step: Step) -> gtk::LinkButton {
     let text = gettext("Steps look different?");
     let content = adw::ButtonContent::builder()
@@ -637,6 +662,9 @@ fn step_page(step: Step) -> StepPage {
         .build();
     crate::ui::name(&open, &open_text);
     plain.body.append(&open);
+    if step == Step::Apis {
+        plain.body.append(&api_library_links());
+    }
     plain.body.append(&checklist(&words.checklist));
     for note in &words.notes {
         plain.body.append(&label(note, &["own-note"]));

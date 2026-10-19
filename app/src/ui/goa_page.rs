@@ -351,9 +351,9 @@ impl GoaPage {
                     .set_label(&gettext("Add your Google account to this computer"));
                 self.body.set_visible(true);
                 self.body.set_use_markup(false);
-                // Translators: GNOME Online Accounts is the name of a program; keep it as your distribution's software center shows it.
+                // Translators: "Online Accounts" is the name the software center shows for the gnome-online-accounts-gtk package; use the name it shows in your language.
                 self.body.set_label(&gettext(
-                    "Install GNOME Online Accounts from your software center, add your Google account there, and come back.",
+                    "Install Online Accounts from your software center, add your Google account there, and come back.",
                 ));
                 self.main.set_visible(false);
             }
@@ -556,7 +556,7 @@ pub(crate) mod checks {
         assert!(
             page.body
                 .text()
-                .starts_with("Install GNOME Online Accounts")
+                .starts_with("Install Online Accounts")
         );
         assert!(!page.main.is_visible());
         assert!(page.other_ways.is_visible());

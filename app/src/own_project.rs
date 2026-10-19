@@ -135,6 +135,27 @@ pub fn console_url(step: Step) -> Option<&'static str> {
     })
 }
 
+/// The four APIs the account uses, each with its page in Google Cloud's
+/// library: the fallback for the one link of step 2 if Google changes it.
+pub const API_LIBRARY: [(&str, &str); 4] = [
+    (
+        "Gmail API",
+        "https://console.cloud.google.com/apis/library/gmail.googleapis.com",
+    ),
+    (
+        "Google Calendar API",
+        "https://console.cloud.google.com/apis/library/calendar-json.googleapis.com",
+    ),
+    (
+        "People API",
+        "https://console.cloud.google.com/apis/library/people.googleapis.com",
+    ),
+    (
+        "Google Drive API",
+        "https://console.cloud.google.com/apis/library/drive.googleapis.com",
+    ),
+];
+
 /// What a page of the setup says.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Words {
@@ -456,6 +477,15 @@ mod tests {
 
     fn denied() -> anyhow::Error {
         google(GmailError::OAuth("Google returned access_denied".into()))
+    }
+
+    #[test]
+    fn the_library_fallback_covers_each_api_of_the_one_link() {
+        let one = console_url(Step::Apis).unwrap();
+        for (_, url) in API_LIBRARY {
+            let id = url.rsplit('/').next().unwrap();
+            assert!(one.contains(id), "{id}");
+        }
     }
 
     #[test]
