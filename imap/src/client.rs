@@ -217,12 +217,44 @@ impl<D: Dial> ImapClient<D> {
         on_worker!(self, conn => conn.flags(mailbox, uids, changed_since))
     }
 
+    /// [`ImapClient::flags`] with Gmail's ids and labels in each item's
+    /// `gmail` field.
+    pub async fn gmail_flags(
+        &self,
+        mailbox: &str,
+        uids: &UidSet,
+        changed_since: Option<u64>,
+    ) -> Result<Vec<FlagsOf>, ImapError> {
+        on_worker!(self, conn => conn.gmail_flags(mailbox, uids, changed_since))
+    }
+
+    /// `UID STORE` of Gmail labels: `add` or remove `labels` on `uids`.
+    pub async fn store_labels(
+        &self,
+        mailbox: &str,
+        uids: &UidSet,
+        add: bool,
+        labels: &[String],
+    ) -> Result<(), ImapError> {
+        on_worker!(self, conn => conn.store_labels(mailbox, uids, add, labels))
+    }
+
     pub async fn search(&self, mailbox: &str, keys: &str) -> Result<Vec<u32>, ImapError> {
         on_worker!(self, conn => conn.search(mailbox, keys))
     }
 
     pub async fn headers(&self, mailbox: &str, uids: &UidSet) -> Result<Vec<Fetched>, ImapError> {
         on_worker!(self, conn => conn.headers(mailbox, uids))
+    }
+
+    /// [`ImapClient::headers`] with Gmail's ids and labels in each item's
+    /// `gmail` field.
+    pub async fn gmail_headers(
+        &self,
+        mailbox: &str,
+        uids: &UidSet,
+    ) -> Result<Vec<Fetched>, ImapError> {
+        on_worker!(self, conn => conn.gmail_headers(mailbox, uids))
     }
 
     pub async fn body(

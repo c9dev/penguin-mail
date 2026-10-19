@@ -6,7 +6,7 @@
 
 mod changes;
 mod fetch;
-mod writes;
+pub(crate) mod writes;
 
 use std::collections::VecDeque;
 use std::ops::RangeInclusive;
@@ -57,6 +57,10 @@ pub struct Google<G> {
     capabilities: Option<MailCapabilities>,
     /// Whether only the tray runs, which slows the history polls.
     tray_only: Arc<AtomicBool>,
+    /// Changes a fake account adds to what the history answers, for a test
+    /// of how the engine meets a server unlike Gmail.
+    #[cfg(any(test, feature = "fake"))]
+    extra_changes: Arc<Mutex<Vec<crate::RemoteChange>>>,
 }
 
 /// How often the history is read while only the tray runs. With the window
@@ -90,7 +94,18 @@ impl<G> Google<G> {
             handles: Arc::new(Mutex::new(Handles::default())),
             capabilities: None,
             tray_only: Arc::default(),
+            #[cfg(any(test, feature = "fake"))]
+            extra_changes: Arc::default(),
         }
+    }
+
+    /// Adds `changes` to the next answer of the history, once.
+    #[cfg(any(test, feature = "fake"))]
+    pub fn report(&self, changes: Vec<crate::RemoteChange>) {
+        self.extra_changes
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .extend(changes);
     }
 
     /// Answers `caps` instead of Gmail's, for a fake account whose server
@@ -126,6 +141,8 @@ impl<G> Clone for Google<G> {
             handles: Arc::clone(&self.handles),
             capabilities: self.capabilities,
             tray_only: Arc::clone(&self.tray_only),
+            #[cfg(any(test, feature = "fake"))]
+            extra_changes: Arc::clone(&self.extra_changes),
         }
     }
 }
@@ -470,7 +487,16 @@ impl<G: GmailApi> MailBackend for Google<G> {
     }
 
     async fn changes(&self, since: Option<&SyncState>) -> Result<Changes, BackendError> {
-        self.history_changes(since).await
+        #[allow(unused_mut)]
+        let mut found = self.history_changes(since).await?;
+        #[cfg(any(test, feature = "fake"))]
+        found.changes.append(
+            &mut self
+                .extra_changes
+                .lock()
+                .unwrap_or_else(PoisonError::into_inner),
+        );
+        Ok(found)
     }
 
     async fn create_mailbox(&self, name: &str) -> Result<RemoteMailbox, BackendError> {

@@ -4,20 +4,23 @@
 
 use std::sync::{Arc, Mutex};
 
-use mailrs_domain::{AccountState, MailRoute, Provider, SignInClient};
+use mailrs_domain::{AccountState, MailRoute, MailboxKind, Provider, RemoteMailbox, SignInClient};
 use mailrs_gmail::{Authorized, GmailError, Granted, TokenStore};
 use mailrs_store::accounts::{self, Consent, GoogleSignIn, RouteCommit};
+use mailrs_store::messages::{self, Change};
 use mailrs_store::outbox::{self, Queued};
-use mailrs_store::{Db, StoreError, drafts};
+use mailrs_store::{Db, StoreError, drafts, mailboxes, servers};
 
 use super::{Connected, Harness, eventually, harness};
 use crate::fake::meta;
-use crate::passwords::{PasswordStore, Secrets};
+use crate::passwords::{MemoryPasswords, PasswordStore, Passwords, Secrets};
 use crate::route_move::{
-    DRAIN_WAIT, MoveEngine, MoveError, Mover, commit, drain, needs_move, to_own_client,
+    DRAIN_WAIT, MoveEngine, MoveError, Mover, commit, drain, needs_move, rewrite_for_imap,
+    to_own_client,
 };
+use crate::sign_in::app_password::NewGmailImap;
 use crate::sign_in::own_client::OwnClient;
-use crate::{Outbox, Posted, TriageAction, now_millis};
+use crate::{Outbox, Posted, SyncError, TriageAction, now_millis};
 
 const OLD_GRANTED: &str = "openid email gmail.modify";
 const OLD_ASKED: &str = "openid email gmail.modify calendar";
@@ -553,4 +556,188 @@ async fn a_move_drains_the_old_route_then_starts_on_the_own_client() {
         secrets.google.load("me@example.com").unwrap().as_deref(),
         Some("own-token")
     );
+}
+
+fn gmail_imap(address: &str) -> NewGmailImap {
+    let saved = |host: &str, port| mailrs_store::servers::Saved {
+        host: host.into(),
+        port,
+        security: mailrs_store::servers::Security::Tls,
+        user_name: address.into(),
+    };
+    NewGmailImap {
+        address: address.into(),
+        servers: mailrs_store::servers::Servers {
+            imap: saved("imap.gmail.com", 993),
+            smtp: saved("smtp.gmail.com", 465),
+        },
+        password: "abcdefghijklmnop".into(),
+    }
+}
+
+/// Files message "a" under a user label the API named `Label_3`.
+async fn label_a_message(h: &Harness) {
+    let id = h.account_id;
+    h.db.write(move |c| {
+        mailboxes::upsert(
+            c,
+            id,
+            &RemoteMailbox {
+                id: "Label_3".into(),
+                name: "Work/Clients".into(),
+                kind: MailboxKind::Label,
+                role: None,
+                color: Some("#ff0000".into()),
+                hidden: false,
+            },
+        )?;
+        let (membership, _) = mailrs_gmail::labels::membership_of("Label_3");
+        messages::apply(c, id, &[Change::of("a", membership, true)])?;
+        Ok(())
+    })
+    .await
+    .unwrap();
+}
+
+async fn labels_of_a(h: &Harness) -> Vec<String> {
+    let id = h.account_id;
+    h.db.read(move |c| {
+        let held = messages::memberships_of(c, id, &["a".to_string()])?;
+        Ok(held
+            .get("a")
+            .map(mailrs_gmail::labels::labels)
+            .unwrap_or_default())
+    })
+    .await
+    .unwrap()
+}
+
+#[tokio::test]
+async fn the_imap_rewrite_keys_user_labels_by_name_and_drops_drafts() {
+    let h = built_in_account().await;
+    label_a_message(&h).await;
+    let id = h.account_id;
+    h.db.write(move |c| {
+        mailboxes::upsert(
+            c,
+            id,
+            &RemoteMailbox {
+                id: "CATEGORY_SOCIAL".into(),
+                name: "Social".into(),
+                kind: MailboxKind::System,
+                role: None,
+                color: None,
+                hidden: false,
+            },
+        )
+    })
+    .await
+    .unwrap();
+
+    h.db.write(move |c| rewrite_for_imap(c, id)).await.unwrap();
+
+    let labels = labels_of_a(&h).await;
+    assert!(labels.contains(&"Work/Clients".to_string()), "{labels:?}");
+    assert!(!labels.contains(&"Label_3".to_string()), "{labels:?}");
+    assert_eq!(count(&h.db, "drafts").await, 0);
+    let kept = h.db.read(move |c| mailboxes::listed(c, id)).await.unwrap();
+    let ids: Vec<&str> = kept.iter().map(|m| m.id.as_str()).collect();
+    assert!(
+        ids.contains(&"INBOX") && ids.contains(&"CATEGORY_SOCIAL"),
+        "{ids:?}"
+    );
+    let work = kept.iter().find(|m| m.id == "Work/Clients").unwrap();
+    assert_eq!(work.color.as_deref(), Some("#ff0000"));
+}
+
+#[tokio::test]
+async fn a_move_to_imap_restarts_sync_and_keeps_the_mail() {
+    let h = built_in_account().await;
+    let messages_before = count(&h.db, "messages").await;
+    let secrets = Secrets::memory();
+    let steps = Steps::new(&h);
+    let outbox = outbox_of(&h);
+    let mover = Mover {
+        engine: &steps,
+        db: &h.db,
+        secrets: &secrets,
+        outbox: &outbox,
+    };
+
+    let moved = mover
+        .to_imap(&account(&h).await, gmail_imap("Me@Example.com"), || {
+            steps.note("committed")
+        })
+        .await
+        .unwrap();
+
+    assert_eq!(moved.id, h.account_id);
+    assert_eq!(route(&h.db, h.account_id).await, MailRoute::Imap);
+    assert_eq!(sync_state(&h.db, h.account_id).await, None);
+    assert_eq!(count(&h.db, "messages").await, messages_before);
+    assert_eq!(count(&h.db, "drafts").await, 0);
+    assert_eq!(steps.done(), ["committed", "stop", "start on BuiltIn"]);
+    assert_eq!(
+        secrets.passwords.load(h.account_id).unwrap().as_deref(),
+        Some("abcdefghijklmnop")
+    );
+    let id = h.account_id;
+    let servers = h.db.read(move |c| servers::load(c, id)).await.unwrap();
+    assert_eq!(servers.unwrap().imap.host, "imap.gmail.com");
+}
+
+#[tokio::test]
+async fn a_move_to_imap_as_another_address_changes_nothing() {
+    let h = built_in_account().await;
+    let secrets = Secrets::memory();
+    let steps = Steps::new(&h);
+    let outbox = outbox_of(&h);
+    let mover = Mover {
+        engine: &steps,
+        db: &h.db,
+        secrets: &secrets,
+        outbox: &outbox,
+    };
+
+    let refused = mover
+        .to_imap(
+            &account(&h).await,
+            gmail_imap("someone@example.com"),
+            || steps.note("committed"),
+        )
+        .await;
+
+    assert!(matches!(refused, Err(MoveError::OtherAddress { .. })));
+    assert_eq!(steps.done(), Vec::<String>::new());
+    assert_eq!(route(&h.db, h.account_id).await, MailRoute::GmailApi);
+}
+
+#[tokio::test]
+async fn a_move_to_imap_whose_keyring_refuses_keeps_the_api_route() {
+    let h = built_in_account().await;
+    let kept_drafts = count(&h.db, "drafts").await;
+    let memory = Arc::new(MemoryPasswords::default());
+    memory.refuse_saves();
+    let mut secrets = Secrets::memory();
+    secrets.passwords = Arc::new(Passwords::Memory(Arc::try_unwrap(memory).ok().unwrap()));
+    let steps = Steps::new(&h);
+    let outbox = outbox_of(&h);
+    let mover = Mover {
+        engine: &steps,
+        db: &h.db,
+        secrets: &secrets,
+        outbox: &outbox,
+    };
+
+    let refused = mover
+        .to_imap(&account(&h).await, gmail_imap("me@example.com"), || {})
+        .await;
+
+    assert!(matches!(
+        refused,
+        Err(MoveError::Sync(SyncError::Password(_)))
+    ));
+    assert_eq!(route(&h.db, h.account_id).await, MailRoute::GmailApi);
+    assert_eq!(count(&h.db, "drafts").await, kept_drafts);
+    assert_eq!(steps.done(), ["stop", "start on BuiltIn"]);
 }

@@ -164,6 +164,14 @@ impl AccountSync {
                     })
                     .collect();
                 let stored = messages::existing_ids(c, account_id, &named)?;
+                // Where messages sit now comes before any read of the refs,
+                // so a message that moved between mailboxes is not read as
+                // gone from the one it left.
+                for change in &changes {
+                    if let RemoteChange::Located { id, at } = change {
+                        remote_refs::locate(c, account_id, id, at)?;
+                    }
+                }
                 let mut batch = Vec::new();
                 let mut new_mail = Vec::new();
                 for change in &changes {
@@ -251,6 +259,8 @@ impl AccountSync {
                                     .map(|message_id| Change::Gone { message_id }),
                             );
                         }
+                        // Written above.
+                        RemoteChange::Located { .. } => {}
                         // Relisted and compared above.
                         RemoteChange::StateLost { .. } | RemoteChange::CompareKeywords { .. } => {}
                     }

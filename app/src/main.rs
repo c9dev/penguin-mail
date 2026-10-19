@@ -22,6 +22,7 @@ mod drive;
 mod event_reminders;
 mod exe;
 mod format;
+mod gmail_password;
 mod goa;
 mod icon_theme;
 mod images;

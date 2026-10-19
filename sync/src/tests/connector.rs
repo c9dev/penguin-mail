@@ -206,6 +206,37 @@ async fn a_gmail_account_on_the_imap_route_signs_in_again_when_its_grant_ends() 
 }
 
 #[tokio::test]
+async fn a_gmail_account_on_the_imap_route_connects_to_imap_mail() {
+    let (db, _dir) = store().await;
+    let me = gmail_account(&db).await;
+    let id = me.id;
+    db.write(move |c| {
+        accounts::set_mail_route(c, id, MailRoute::Imap)?;
+        servers::save(
+            c,
+            id,
+            &Servers {
+                imap: saved("imap.gmail.com", 993, "me@gmail.com"),
+                smtp: saved("smtp.gmail.com", 465, "me@gmail.com"),
+            },
+        )
+    })
+    .await
+    .unwrap();
+    let reach = connector(&db, both_clients());
+    reach.secrets.passwords.save(id, "abcdefghijklmnop").unwrap();
+
+    let connected = reach.connect(&me).await.unwrap();
+
+    let Connected::Ready(services) = connected else {
+        panic!("the account connects");
+    };
+    assert!(matches!(services.mail, AnyMail::Imap(_)));
+    assert!(services.capabilities().labels);
+    assert!(!services.offers().label_colors);
+}
+
+#[tokio::test]
 async fn accounts_of_other_providers_sign_in_again_when_their_secret_ends() {
     let (db, _dir) = store().await;
     let dana = microsoft_account(&db).await;

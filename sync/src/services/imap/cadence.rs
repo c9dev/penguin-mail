@@ -115,9 +115,19 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
         if !idle {
             return std::future::pending().await;
         }
-        let inbox = self
-            .mailbox_for(Role::Inbox)
-            .unwrap_or_else(|| "INBOX".into());
+        let inbox = match self.gmail() {
+            true => match self.gm_trio().await {
+                Ok(trio) => trio.all,
+                Err(err) => {
+                    tracing::warn!(%err, "could not find All Mail to watch");
+                    tokio::time::sleep(WATCH_RETRY).await;
+                    return;
+                }
+            },
+            false => self
+                .mailbox_for(Role::Inbox)
+                .unwrap_or_else(|| "INBOX".into()),
+        };
         loop {
             match self.api.idle(&inbox, IDLE_FOR).await {
                 Ok(Woke::Dropped) => {

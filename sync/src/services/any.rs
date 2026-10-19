@@ -183,6 +183,14 @@ impl AnyMail {
         !matches!(self, AnyMail::NoMail(_))
     }
 
+    /// A label of the account can take a colour. Gmail's IMAP keeps none.
+    pub fn label_colors(&self) -> bool {
+        match self {
+            AnyMail::Imap(adapter) => !adapter.is_gmail(),
+            _ => true,
+        }
+    }
+
     /// The account's session offers Masked Email.
     pub fn masked_email(&self) -> bool {
         match self {

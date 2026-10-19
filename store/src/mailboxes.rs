@@ -73,6 +73,20 @@ pub fn rename(
     upsert(conn, account_id, to)
 }
 
+/// The id and name of each of the account's own labels, by id.
+pub fn user_ids_and_names(
+    conn: &Connection,
+    account_id: AccountId,
+) -> Result<Vec<(String, String)>> {
+    let mut stmt = conn.prepare(
+        "SELECT id, name FROM mailboxes WHERE account_id = ?1 AND kind = ?2 ORDER BY id",
+    )?;
+    let rows = stmt.query_map(params![account_id, MailboxKind::Label.as_str()], |row| {
+        Ok((row.get(0)?, row.get(1)?))
+    })?;
+    Ok(rows.collect::<std::result::Result<_, _>>()?)
+}
+
 /// Puts the mailboxes `ids` names in that order among their siblings, the
 /// first at position 0. Ids the store lacks are passed over.
 pub fn set_positions(conn: &Connection, account_id: AccountId, ids: &[String]) -> Result<()> {

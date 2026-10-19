@@ -25,6 +25,9 @@ use mailrs_sync::lock::{LockError, SyncLock};
 use mailrs_sync::passwords::{PasswordStore, Secrets};
 use mailrs_sync::route_move;
 use mailrs_sync::services::finding;
+use mailrs_sync::sign_in::app_password::{
+    NewGmailImap, check_gmail, gmail_imap_signed_in, read_pasted,
+};
 use mailrs_sync::sign_in::own_client::{OwnClient, saved_project};
 use mailrs_sync::sign_in::{
     Browser, BrowserReady, BrowserSignInError, ClientSource, JmapBrowser, KeptClient, NewCalDav,
@@ -1850,6 +1853,103 @@ impl Core {
             .await?;
         self.finish_google_setup();
         Ok(moved)
+    }
+}
+
+impl Core {
+    /// Signs in to a Gmail account with the app password `pasted` holds:
+    /// Gmail's servers take the login first, then the account, its servers
+    /// and its password are kept and the account starts. Nothing is kept
+    /// when the login fails.
+    pub async fn sign_in_gmail_password(&self, address: String, pasted: String) -> Result<Account> {
+        if self.demo {
+            bail!(gettext("Demo mode cannot add real accounts."));
+        }
+        let engine = self
+            .engine
+            .current()
+            .ok_or_else(|| anyhow!("sync is not running"))?;
+        let (db, passwords) = (self.db.clone(), Arc::clone(&self.secrets.passwords));
+        let reach = Reach {
+            connector: self.connector(),
+            demo: self.demo_mail.clone(),
+        };
+        self.call(async move {
+            let pasted = read_pasted(&pasted);
+            let checked = check_gmail(&address, pasted.secret()).await?;
+            let new = NewGmailImap {
+                address,
+                servers: checked.servers,
+                password: pasted.secret().to_string(),
+            };
+            let account = gmail_imap_signed_in(&db, passwords, new, now_millis()).await?;
+            start_again(&reach, &engine, &db, &account, false).await?;
+            Ok::<_, anyhow::Error>(account)
+        })
+        .await
+    }
+
+    /// Moves `account`, a Gmail account on the API, to Gmail's IMAP with
+    /// the app password `pasted` holds, keeping its id and its mail. The
+    /// login is checked first and nothing changes until it works. The
+    /// calendar token stays. `committed` gets a message once the move can
+    /// no longer be cancelled.
+    pub async fn move_to_app_password(
+        &self,
+        account: Account,
+        pasted: String,
+        committed: async_channel::Sender<()>,
+    ) -> Result<Account> {
+        if self.demo {
+            bail!(gettext("The demo cannot switch accounts."));
+        }
+        let lease = self.move_leases.lease(account.id).ok_or_else(|| {
+            anyhow!(gettext(
+                "This account is already moving to its new sign-in."
+            ))
+        })?;
+        let engine = self
+            .engine
+            .current()
+            .ok_or_else(|| anyhow!("sync is not running"))?;
+        let (db, secrets, outbox) = (
+            self.db.clone(),
+            self.secrets.clone(),
+            Arc::clone(&self.outbox),
+        );
+        let reach = Reach {
+            connector: self.connector(),
+            demo: self.demo_mail.clone(),
+        };
+        self.call(async move {
+            // Held until the move ends, even when the dialog has gone.
+            let _lease = lease;
+            let pasted = read_pasted(&pasted);
+            let checked = check_gmail(&account.email, pasted.secret()).await?;
+            let new = NewGmailImap {
+                address: account.email.clone(),
+                servers: checked.servers,
+                password: pasted.secret().to_string(),
+            };
+            let port = MovePort {
+                engine,
+                reach,
+                db: db.clone(),
+            };
+            let mover = route_move::Mover {
+                engine: &port,
+                db: &db,
+                secrets: &secrets,
+                outbox: &outbox,
+            };
+            let moved = mover
+                .to_imap(&account, new, || {
+                    let _ = committed.try_send(());
+                })
+                .await?;
+            Ok::<_, anyhow::Error>(moved)
+        })
+        .await
     }
 }
 

@@ -31,9 +31,11 @@ use crate::add_account::{
     Protocol, Removal, Role, Running, Typed,
 };
 use crate::core::Core;
+use crate::gmail_password::{self, Action as GmailAction};
 use crate::own_project::{self, Step as OwnStep};
 use crate::permission::Permission;
 use crate::route_choice::{Goa, Platform, Ready, Route, any_route, footer, ready_now, rows};
+use crate::ui::gmail_password_page::GmailPasswordPage;
 use crate::ui::own_project::{Hooks, OwnProject};
 use crate::ui::post_band::PostBand;
 use crate::ui::route_page::{self, ConsentPage, RoutePage};
@@ -169,6 +171,7 @@ pub fn present(
         Opening::Browser(_) => "browser",
         Opening::Calendar => "calendar",
         Opening::Again(account) if account.provider == Provider::CalDav => "calendar",
+        Opening::Again(account) if account.provider == Provider::Gmail => gmail_password::TAG,
         Opening::Again(_) => "password",
         Opening::OwnProject { .. } => OwnStep::Intro.tag(),
     };
@@ -225,6 +228,9 @@ pub fn present(
         Opening::Calendar => this.open_calendar(),
         Opening::Again(account) if account.provider == Provider::CalDav => {
             this.load_calendar(account)
+        }
+        Opening::Again(account) if account.provider == Provider::Gmail => {
+            this.open_gmail_password(Some(account.email.clone()), true)
         }
         Opening::Again(account) => this.load_saved(account),
         Opening::Preview(stage) => preview(&this, &stage),
@@ -2018,6 +2024,7 @@ struct Dialog {
     pick: PickPage,
     routes: RoutePage,
     consent: ConsentPage,
+    gmail: GmailPasswordPage,
     /// The Gmail account the calendar consent is for, when the dialog
     /// opened on it.
     consenting: RefCell<Option<Account>>,
@@ -2143,6 +2150,7 @@ impl Dialog {
             pick: pick_page(signs_in_to_microsoft(core)),
             routes: RoutePage::new(),
             consent: ConsentPage::new(),
+            gmail: GmailPasswordPage::new(),
             consenting: RefCell::new(None),
             address: address_page(),
             lookup: lookup_page(),
@@ -2160,6 +2168,7 @@ impl Dialog {
             ("pick", self.pick.banded.page.clone()),
             (route_page::TAG, self.routes.page.clone()),
             (route_page::CONSENT_TAG, self.consent.page.clone()),
+            (gmail_password::TAG, self.gmail.page.clone()),
             ("address", self.address.banded.page.clone()),
             ("lookup", self.lookup.banded.page.clone()),
             ("browser", self.browser.banded.page.clone()),
@@ -2343,6 +2352,18 @@ impl Dialog {
             this.window.close();
         });
         self.consent.not_now.connect_clicked(move |_| not_now());
+        let sign_in = on(Dialog::sign_in_gmail);
+        self.gmail.sign_in.connect_clicked(move |_| sign_in());
+        let sign_in = on(Dialog::sign_in_gmail);
+        self.gmail
+            .password
+            .connect_entry_activated(move |_| sign_in());
+        let ready = on(Dialog::update_gmail);
+        self.gmail.password.connect_changed(move |_| ready());
+        let ready = on(Dialog::update_gmail);
+        self.gmail.address.connect_changed(move |_| ready());
+        let another = on(|this| this.gmail_another_way());
+        self.gmail.other_way.connect_clicked(move |_| another());
         let jmap_browser = on(Dialog::start_jmap_browser);
         self.password
             .browser
@@ -3903,8 +3924,22 @@ impl Dialog {
                     None,
                 );
             }
-            // Their plans connect these rows; until then no build lists them.
-            Route::Goa | Route::AppPassword => {}
+            Route::AppPassword => {
+                let account = self
+                    .moving
+                    .borrow()
+                    .as_ref()
+                    .and_then(|w| w.current().cloned());
+                let typed = self.route_expected.borrow().clone();
+                match account {
+                    Some(account) => self.open_gmail_password(Some(account.email), false),
+                    None => self.open_gmail_password(typed, false),
+                }
+                self.push(gmail_password::TAG);
+            }
+            // The GNOME Online Accounts plan connects this row; until then
+            // no build lists it.
+            Route::Goa => {}
         }
     }
 
@@ -3937,6 +3972,125 @@ impl Dialog {
         let platform = Platform::this();
         self.routes_for(platform, ready_now(&mailrs_sync::Clients::current()), None);
         self.back_to(route_page::TAG);
+    }
+
+    // ---- The app password page ---------------------------------------------------
+
+    /// Shows the app password page for a new sign-in, or for `address` to
+    /// sign in again, and clears what an earlier try left on it. A move
+    /// keeps the address of the account that moves.
+    fn open_gmail_password(self: &Rc<Self>, address: Option<String>, again: bool) {
+        let fixed = again || self.moving.borrow().is_some();
+        self.gmail.open(address.as_deref(), fixed);
+        self.gmail.again_line.set_visible(again);
+        self.set_band(gmail_password::TAG, Step::Address, None, None);
+        self.update_gmail();
+        if again {
+            self.push(gmail_password::TAG);
+        }
+    }
+
+    fn update_gmail(self: &Rc<Self>) {
+        self.gmail.show_note();
+        self.gmail.update_sign_in(self.running.is_on());
+    }
+
+    /// Back to the ways of signing in.
+    fn gmail_another_way(self: &Rc<Self>) {
+        match self.nav.find_page(route_page::TAG).is_some() && Platform::this() == Platform::Linux {
+            true => self.back_to(route_page::TAG),
+            false => self.back_to("pick"),
+        }
+    }
+
+    /// The page's Sign In: checks the app password with Gmail, then keeps
+    /// the account, or moves it.
+    fn sign_in_gmail(self: &Rc<Self>) {
+        let address = self.gmail.address.text().trim().to_string();
+        let pasted = self.gmail.password.text().to_string();
+        if !gmail_password::can_sign_in(&address, &pasted, self.running.is_on())
+            || !self.running.begin()
+        {
+            return;
+        }
+        self.gmail.clear_failure();
+        let ticket = self.asking.ask();
+        self.update_gmail();
+        let moving = self
+            .moving
+            .borrow()
+            .as_ref()
+            .and_then(|walk| walk.current().cloned());
+        let this = Rc::clone(self);
+        glib::spawn_future_local(async move {
+            let signed = match moving.clone() {
+                Some(account) => {
+                    let (committed, _) = async_channel::unbounded();
+                    this.core
+                        .move_to_app_password(account, pasted, committed)
+                        .await
+                }
+                None => this.core.sign_in_gmail_password(address, pasted).await,
+            };
+            // Every way out of the run ends here, so Sign In comes back
+            // whether the run signed in, failed or lost its dialog.
+            this.running.end();
+            this.update_gmail();
+            match signed {
+                Ok(account) if moving.is_some() => this.moved(account),
+                Ok(account) => this.gmail_signed_in(account, ticket),
+                Err(err) if this.asking.wants(ticket) => {
+                    let failure = gmail_password::failure(&err);
+                    tracing::info!(?failure, "a Gmail sign-in with an app password failed");
+                    this.show_gmail_failure(&failure);
+                }
+                Err(err) => {
+                    tracing::info!(%err, "a Gmail sign-in failed after its dialog moved on");
+                }
+            }
+        });
+    }
+
+    /// A new Gmail account works: the window hears of it, and the page
+    /// that offers its calendar and contacts follows.
+    fn gmail_signed_in(self: &Rc<Self>, account: Account, ticket: add_account::Ticket) {
+        if self.again.is_some() {
+            return self.finish(Done::SignedInAgain(account));
+        }
+        (self.done)(Done::BrowserAdded {
+            account: account.clone(),
+            name: None,
+        });
+        if !self.asking.wants(ticket) {
+            return;
+        }
+        self.consenting.replace(Some(account));
+        self.set_band(route_page::CONSENT_TAG, Step::Address, None, None);
+        self.push(route_page::CONSENT_TAG);
+        self.window.set_focus(Some(&self.consent.continue_button));
+    }
+
+    fn show_gmail_failure(self: &Rc<Self>, failure: &gmail_password::GmailFailure) {
+        let weak = Rc::downgrade(self);
+        self.gmail.show_failure(failure, move |action| {
+            let Some(this) = weak.upgrade() else {
+                return;
+            };
+            match action {
+                GmailAction::OpenAppPasswords => this.open_link(gmail_password::APP_PASSWORDS_URL),
+                GmailAction::OpenGmailLabels => this.open_link(gmail_password::LABELS_URL),
+                GmailAction::SignInAnotherWay => this.gmail_another_way(),
+                GmailAction::Back => {
+                    this.back_to("pick");
+                }
+                GmailAction::TryAgain => this.sign_in_gmail(),
+            }
+        });
+    }
+
+    /// Opens `url` in the browser.
+    fn open_link(&self, url: &str) {
+        gtk::UriLauncher::new(url).launch(gtk::Window::NONE, gio::Cancellable::NONE, |_| {});
     }
 
     // ---- The browser -------------------------------------------------------------
@@ -5109,6 +5263,28 @@ fn preview(this: &Rc<Dialog>, stage: &str) {
                 this.show_routes(Platform::Linux, everything(Goa::Holds), None);
             } else {
                 this.show_routes(Platform::MacOs, everything(Goa::Absent), None);
+            }
+        }
+        stage if stage.starts_with("gmail-password") => {
+            let again = stage == "gmail-password-again";
+            let address = Some("maria.costa@gmail.com").filter(|_| stage != "gmail-password");
+            this.open_gmail_password(address.map(str::to_string), again);
+            this.push(gmail_password::TAG);
+            let page = &this.gmail;
+            if stage != "gmail-password" && stage != "gmail-password-again" {
+                page.password.set_text("ofmrduyvkabsqgwx");
+            }
+            match stage {
+                "gmail-password-signing" => page.update_sign_in(true),
+                "gmail-password-help" => page.help.set_expanded(true),
+                "gmail-password-refused" => {
+                    this.show_gmail_failure(&gmail_password::GmailFailure::NeedsAppPassword)
+                }
+                "gmail-password-hidden" => {
+                    this.show_gmail_failure(&gmail_password::GmailFailure::AllMailHidden)
+                }
+                "gmail-password-note" => page.password.set_text("hunter2"),
+                _ => {}
             }
         }
         "consent" => {

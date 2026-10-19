@@ -650,6 +650,15 @@ mx = [
   "gmail-smtp-in.l.google.com", "*.gmail-smtp-in.l.google.com",
   "*.googlemail.com",
 ]
+# Gmail over IMAP with an app password. kind stays "google", so a lookup
+# still answers Verdict::Google.
+imap = { host = "imap.gmail.com", port = 993, security = "tls", user_name = "address" }
+smtp = [
+  { host = "smtp.gmail.com", port = 465, security = "tls", user_name = "address" },
+]
+password = "app_password_with_two_step"
+app_password_url = "https://myaccount.google.com/apppasswords"
+files_sent_mail = true
 
 [[provider]]
 id = "microsoft"

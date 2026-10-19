@@ -85,6 +85,7 @@ fn the_caldav_adapter_reads_and_writes_radicale() {
                 provider_name: "Radicale".into(),
                 files_sent_mail: false,
                 window_days: 30,
+                dialect: Default::default(),
             },
         )
         .mail;
