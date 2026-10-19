@@ -351,9 +351,9 @@ impl GoaPage {
                     .set_label(&gettext("Add your Google account to this computer"));
                 self.body.set_visible(true);
                 self.body.set_use_markup(false);
-                // Translators: GNOME Online Accounts is the name of a program; keep it as your distribution's software centre shows it.
+                // Translators: GNOME Online Accounts is the name of a program; keep it as your distribution's software center shows it.
                 self.body.set_label(&gettext(
-                    "Install GNOME Online Accounts from your software centre, add your Google account there, and come back.",
+                    "Install GNOME Online Accounts from your software center, add your Google account there, and come back.",
                 ));
                 self.main.set_visible(false);
             }
