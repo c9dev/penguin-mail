@@ -8698,7 +8698,7 @@ msgid ""
 "account below to keep your mail arriving. Your mail and settings stay as "
 "they are, and nothing downloads again."
 msgstr ""
-"O Penguin Mail tem novas formas de iniciar sessão no Google. Escolha uma "
+"O Penguin Mail tem novas formas de iniciar sessão na Google. Escolha uma "
 "para cada conta do Gmail abaixo, para continuar a receber o seu correio. O "
 "seu correio e as suas definições ficam como estão e nada é descarregado "
 "outra vez."
@@ -9394,8 +9394,8 @@ msgid ""
 "Penguin Mail asks Google for your calendar, your contacts and the files it "
 "adds to Drive. Google will show its own screen. Your mail is already set up."
 msgstr ""
-"O Penguin Mail pede ao Google o seu calendário, os seus contactos e os "
-"ficheiros que adiciona ao Drive. O Google mostra o seu próprio ecrã. O seu "
+"O Penguin Mail pede à Google o seu calendário, os seus contactos e os "
+"ficheiros que adiciona ao Drive. A Google mostra o seu próprio ecrã. O seu "
 "correio já está configurado."
 
 #. Translators: Google and Penguin Mail are names; keep them as they are. The two
@@ -9405,13 +9405,13 @@ msgid ""
 "Google may say \"Google hasn't verified this app\". Click Advanced, then Go "
 "to Penguin Mail (unsafe)."
 msgstr ""
-"O Google pode dizer \"O Google não verificou esta aplicação\". Clique em "
+"A Google pode dizer \"A Google não verificou esta aplicação\". Clique em "
 "Avançadas e depois em Ir para o Penguin Mail (não seguro)."
 
 #. Translators: Google is a name; keep it as it is.
 #: app/src/ui/route_page.rs:144
 msgid "Continue to Google"
-msgstr "Continuar para o Google"
+msgstr "Continuar para a Google"
 
 #: app/src/ui/route_page.rs:188
 msgid "Recommended"

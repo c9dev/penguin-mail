@@ -2913,7 +2913,7 @@ msgstr "{provider} nie dzieli skrzynki odbiorczej na kategorie."
 #. Translators: Gmail and gmail.com are names; keep them as they are.
 #: app/src/offered.rs:576
 msgid "Your Gmail filters still run. Change them on gmail.com."
-msgstr "Twoje filtry Gmail nadal działają. Zmienisz je na gmail.com."
+msgstr "Twoje filtry Gmail nadal działają. Zmień je na gmail.com."
 
 #. Translators: gmail.com is a name; keep it as it is.
 #: app/src/offered.rs:582
