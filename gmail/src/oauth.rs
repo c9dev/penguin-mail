@@ -398,6 +398,18 @@ impl OAuthClient {
         pkce: &Pkce,
         state: &str,
     ) -> Result<String, GmailError> {
+        self.authorize_url_hinted(redirect_uri, pkce, state, None)
+    }
+
+    /// [`Self::authorize_url`] naming the account to sign in, so Google
+    /// does not offer another.
+    pub fn authorize_url_hinted(
+        &self,
+        redirect_uri: &str,
+        pkce: &Pkce,
+        state: &str,
+        login_hint: Option<&str>,
+    ) -> Result<String, GmailError> {
         let mut url = Url::parse(&self.auth_url).map_err(|e| {
             GmailError::OAuth(format!("bad authorization URL {}: {e}", self.auth_url))
         })?;
@@ -412,6 +424,9 @@ impl OAuthClient {
             .append_pair("state", state)
             .append_pair("access_type", "offline")
             .append_pair("prompt", "consent");
+        if let Some(hint) = login_hint {
+            url.query_pairs_mut().append_pair("login_hint", hint);
+        }
         Ok(url.into())
     }
 

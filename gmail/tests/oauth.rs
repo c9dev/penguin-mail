@@ -505,3 +505,24 @@ async fn the_full_list_still_refuses_a_consent_without_mail() {
         "{result:?}"
     );
 }
+
+#[test]
+fn a_hinted_authorize_url_names_the_address_and_an_unhinted_one_does_not() {
+    let client = OAuthClient::new("cid", "secret");
+    let pkce = Pkce::generate();
+    let query = |hint: Option<&str>| -> HashMap<String, String> {
+        let url = client
+            .authorize_url_hinted("http://127.0.0.1:5000", &pkce, "st", hint)
+            .unwrap();
+        url::Url::parse(&url)
+            .unwrap()
+            .query_pairs()
+            .into_owned()
+            .collect()
+    };
+    assert_eq!(
+        query(Some("dana@example.com"))["login_hint"],
+        "dana@example.com"
+    );
+    assert!(!query(None).contains_key("login_hint"));
+}

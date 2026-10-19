@@ -91,6 +91,16 @@ pub mod cost {
 /// [`GmailClient`] held. See the field's own doc for what it must not do.
 type GrantedHook = std::sync::Arc<dyn Fn(&Granted) + Send + Sync>;
 
+/// The HTTP client a [`GmailClient`] built with [`GmailClient::with_source`]
+/// sends through: Google's calls wait at most 30 seconds, as the OAuth
+/// client's do.
+pub fn api_http_client() -> reqwest::Client {
+    reqwest::Client::builder()
+        .timeout(Duration::from_secs(30))
+        .build()
+        .expect("the TLS backend initializes")
+}
+
 /// Where an access token comes from when the client does not refresh its
 /// own, such as the desktop's Online Accounts.
 pub trait AccessSource: Send + Sync {
@@ -1134,11 +1144,22 @@ pub async fn authorize(
     api_base: &str,
     open_browser: impl FnOnce(&str),
 ) -> Result<Authorized, GmailError> {
+    authorize_hinted(oauth, api_base, None, open_browser).await
+}
+
+/// [`authorize`] naming the account to sign in as, with Google's
+/// `login_hint`.
+pub async fn authorize_hinted(
+    oauth: &OAuthClient,
+    api_base: &str,
+    login_hint: Option<&str>,
+    open_browser: impl FnOnce(&str),
+) -> Result<Authorized, GmailError> {
     let listener = LoopbackListener::bind().await?;
     let redirect_uri = listener.redirect_uri.clone();
     let pkce = Pkce::generate();
     let state = random_token(16);
-    open_browser(&oauth.authorize_url(&redirect_uri, &pkce, &state)?);
+    open_browser(&oauth.authorize_url_hinted(&redirect_uri, &pkce, &state, login_hint)?);
     let code = listener.wait_for_code(&state).await?;
     let tokens = oauth.exchange_code(&code, &redirect_uri, &pkce).await?;
     let granted = tokens.access.granted.clone();

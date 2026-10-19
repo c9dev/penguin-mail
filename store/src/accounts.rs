@@ -310,6 +310,25 @@ pub fn set_sign_in_client(conn: &Connection, id: AccountId, client: SignInClient
     Ok(())
 }
 
+/// The Online Accounts account `id` reads its mail through, if it was
+/// linked that way.
+pub fn goa_id(conn: &Connection, id: AccountId) -> Result<Option<String>> {
+    Ok(conn.query_row(
+        "SELECT goa_id FROM accounts WHERE id = ?1",
+        params![id],
+        |row| row.get(0),
+    )?)
+}
+
+/// Records the Online Accounts account `id` reads through, or forgets it.
+pub fn set_goa_id(conn: &Connection, id: AccountId, goa_id: Option<&str>) -> Result<()> {
+    conn.execute(
+        "UPDATE accounts SET goa_id = ?2 WHERE id = ?1",
+        params![id, goa_id],
+    )?;
+    Ok(())
+}
+
 /// Where `id`'s Gmail mail comes from. Only a Gmail account reads it.
 pub fn mail_route(conn: &Connection, id: AccountId) -> Result<MailRoute> {
     let value: String = conn.query_row(

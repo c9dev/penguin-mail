@@ -1449,3 +1449,20 @@ fn an_old_store_reads_every_gmail_account_as_on_the_api() {
         MailRoute::GmailApi
     );
 }
+
+#[test]
+fn an_old_store_reads_every_account_as_holding_no_online_accounts_id() {
+    let mut conn = Connection::open_in_memory().unwrap();
+    configure(&conn).unwrap();
+    migrate(&mut conn, &MIGRATIONS[..65]).unwrap();
+    conn.execute(
+        "INSERT INTO accounts (email, added_at) VALUES ('dana@gmail.com', 1)",
+        [],
+    )
+    .unwrap();
+    migrate(&mut conn, MIGRATIONS).unwrap();
+    let id: i64 = conn
+        .query_row("SELECT id FROM accounts", [], |r| r.get(0))
+        .unwrap();
+    assert_eq!(crate::accounts::goa_id(&conn, id).unwrap(), None);
+}

@@ -7,10 +7,10 @@ fn migrations_run_once_and_record_the_version() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("mail.db");
     let conn = open_connection(&path).unwrap();
-    assert_eq!(schema_version(&conn).unwrap(), 65);
+    assert_eq!(schema_version(&conn).unwrap(), 66);
     drop(conn);
     let conn = open_connection(&path).unwrap();
-    assert_eq!(schema_version(&conn).unwrap(), 65);
+    assert_eq!(schema_version(&conn).unwrap(), 66);
 }
 
 #[test]
@@ -384,4 +384,34 @@ fn committing_a_route_without_a_restart_keeps_the_cursor() {
         accounts::sign_in_client(&conn, id).unwrap(),
         SignInClient::Own
     );
+}
+
+#[test]
+fn a_goa_account_keeps_its_online_accounts_id() {
+    let conn = open_in_memory().unwrap();
+    let id = accounts::insert_account(&conn, "dana@example.com", 1).unwrap();
+    assert_eq!(accounts::goa_id(&conn, id).unwrap(), None);
+    accounts::set_sign_in_client(&conn, id, SignInClient::Goa).unwrap();
+    accounts::set_goa_id(&conn, id, Some("account_1_0")).unwrap();
+    assert_eq!(
+        accounts::goa_id(&conn, id).unwrap().as_deref(),
+        Some("account_1_0")
+    );
+    assert_eq!(
+        accounts::sign_in_client(&conn, id).unwrap(),
+        SignInClient::Goa
+    );
+    accounts::set_goa_id(&conn, id, None).unwrap();
+    assert_eq!(accounts::goa_id(&conn, id).unwrap(), None);
+}
+
+#[test]
+fn a_goa_account_never_needs_a_move() {
+    for route in [MailRoute::GmailApi, MailRoute::Imap] {
+        let sign_in = GoogleSignIn {
+            client: SignInClient::Goa,
+            route,
+        };
+        assert!(!sign_in.needs_move(Provider::Gmail), "{route:?}");
+    }
 }
