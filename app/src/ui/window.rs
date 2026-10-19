@@ -2981,6 +2981,16 @@ impl MainWindow {
             Path::Stuck => return,
             Path::Usual => {}
         }
+        // A Gmail account that reads its mail over IMAP signs in again
+        // with a new app password.
+        let imap_route = self.app.upgrade().is_some_and(|app| {
+            app.google_sign_in(account.id)
+                .is_some_and(|sign_in| sign_in.route == mailrs_domain::MailRoute::Imap)
+        });
+        if account.provider == Provider::Gmail && imap_route {
+            self.present_add_account(Opening::Again(account));
+            return;
+        }
         match Browser::of(account.provider) {
             Some(browser) => self.sign_in_in_browser(browser, Some(account.email)),
             None => {

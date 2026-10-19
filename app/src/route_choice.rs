@@ -70,7 +70,7 @@ pub struct RouteRow {
 pub fn ready_now(clients: &Clients) -> Ready {
     Ready {
         goa: Goa::Absent,
-        app_password: false,
+        app_password: true,
         own_project: OWN_PROJECT_SETUP || matches!(clients.own_google, Some(Ok(_))),
     }
 }
