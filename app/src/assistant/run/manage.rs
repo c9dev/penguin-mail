@@ -252,7 +252,7 @@ impl<A: Accounts> Tools<A> {
         let (account, settings) = self.settings_for(&required(input, "account")?)?;
         if !self.offers(account.id).label_colors {
             return Err(format!(
-                "{} keeps no label colours on this connection.",
+                "{} keeps no label colors on this connection.",
                 account.email
             ));
         }

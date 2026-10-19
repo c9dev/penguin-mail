@@ -1223,9 +1223,6 @@ impl CalendarSidebar {
         row
     }
 
-    /// A Grant Access button, named "Grant Access for {account}" when
-    /// `account` is given, so several such rows read apart, as
-    /// `app/src/ui/contacts_prefs.rs`'s `grant_access_row` does.
     /// Connect, under an account whose calendar has no token: the
     /// window's one path for it, which asks for the consent.
     fn connect_row(&self, account_id: AccountId, account: &str) -> gtk::Button {
@@ -1246,6 +1243,9 @@ impl CalendarSidebar {
         button
     }
 
+    /// A Grant Access button, named "Grant Access for {account}" when
+    /// `account` is given, so several such rows read apart, as
+    /// `app/src/ui/contacts_prefs.rs`'s `grant_access_row` does.
     fn grant_row(&self, account_id: AccountId, label: &str, account: Option<&str>) -> gtk::Button {
         let button = gtk::Button::builder()
             .label(label)
@@ -1474,7 +1474,7 @@ fn add_menu(accounts: &[(AccountId, String, bool)]) -> gtk::MenuButton {
 }
 
 /// A calendar row's menu ([`row_menu`]): Hide from the List, Color with
-/// Gmail's label colours and the calendar's own colour back, and for a
+/// Gmail's label colors and the calendar's own color back, and for a
 /// calendar the account owns, Rename and Delete in a section of their
 /// own.
 fn calendar_menu(

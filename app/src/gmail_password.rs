@@ -106,7 +106,7 @@ impl GmailFailure {
                 gettext("Google didn't accept that app password. Make a new one and paste it here.")
             }
             GmailFailure::Organisation => gettext(
-                "Your organisation turned off this way of signing in. Ask them, or sign in another way.",
+                "Your organization turned off this way of signing in. Ask them, or sign in another way.",
             ),
             // Translators: Gmail is a name; keep it as it is.
             GmailFailure::NotGmail => gettext("This doesn't look like Gmail's server."),
