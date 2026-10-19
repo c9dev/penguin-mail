@@ -234,15 +234,16 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
         Ok(Backfill { refs, next })
     }
 
-    /// A search typed in Gmail's syntax, run by Gmail. A tree has no
-    /// Gmail form here, so the store answers it.
+    /// A search in Gmail's syntax, run by Gmail. A tree prints as the text
+    /// the folders and smart mailboxes sent before they became trees.
     pub(in crate::services::imap) async fn gm_search(
         &self,
         query: &SearchQuery,
         limit: usize,
     ) -> Result<Vec<RemoteRef>, BackendError> {
-        let SearchQuery::Native(text) = query else {
-            return Err(BackendError::Unsupported);
+        let text = &match query {
+            SearchQuery::Native(text) => text.clone(),
+            SearchQuery::Tree(tree) => mailrs_gmail::query::print(tree),
         };
         let trio = self.gm_trio().await?;
         let lower = text.to_lowercase();

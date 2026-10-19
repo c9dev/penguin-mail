@@ -93,6 +93,7 @@ pub(in crate::services::imap) fn imap_label(id: &str) -> Option<String> {
     match id {
         "INBOX" => Some("\\Inbox".into()),
         "IMPORTANT" => Some("\\Important".into()),
+        "MUTE" => Some("\\Muted".into()),
         "SENT" | "DRAFT" | "TRASH" | "SPAM" | "STARRED" | "UNREAD" => None,
         tab if mailrs_gmail::labels::is_category(tab) => None,
         name => Some(name.to_string()),

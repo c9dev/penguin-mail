@@ -475,14 +475,23 @@ impl<I: ImapApi, S: Submit> MailBackend for Imap<I, S> {
     }
 
     async fn create_mailbox(&self, name: &str) -> Result<RemoteMailbox, BackendError> {
+        if self.gmail() {
+            return self.gm_create_label(name).await;
+        }
         self.make_mailbox(name).await
     }
 
     async fn rename_mailbox(&self, id: &str, name: &str) -> Result<RemoteMailbox, BackendError> {
+        if self.gmail() {
+            return self.gm_rename_label(id, name).await;
+        }
         self.rename_mailbox_to(id, name).await
     }
 
     async fn delete_mailbox(&self, id: &str) -> Result<(), BackendError> {
+        if self.gmail() {
+            return self.gm_delete_label(id).await;
+        }
         self.remove_mailbox(id).await
     }
 
@@ -498,6 +507,9 @@ impl<I: ImapApi, S: Submit> MailBackend for Imap<I, S> {
     /// IMAP counts messages, not conversations, so this answers the
     /// messages the mailbox holds.
     async fn mailbox_threads(&self, id: &str) -> Result<u64, BackendError> {
+        if self.gmail() {
+            return self.gm_label_count(id).await;
+        }
         let parent_only = self
             .known()
             .folders
@@ -697,6 +709,9 @@ impl<I: ImapApi, S: Submit> MailBackend for Imap<I, S> {
         messages: &[String],
         ops: &[MailOp],
     ) -> Result<Vec<Relocated>, Unapplied> {
+        if self.gmail() {
+            return self.gm_write(messages, ops).await;
+        }
         self.write(messages, ops).await
     }
 
@@ -712,18 +727,30 @@ impl<I: ImapApi, S: Submit> MailBackend for Imap<I, S> {
         raw: &[u8],
         thread_id: Option<&str>,
     ) -> Result<SavedDraft, BackendError> {
+        if self.gmail() {
+            return self.gm_save_draft(draft_id, raw, thread_id).await;
+        }
         self.save(draft_id, raw, thread_id).await
     }
 
     async fn send_draft(&self, draft_id: &str) -> Result<String, BackendError> {
+        if self.gmail() {
+            return self.gm_send_draft(draft_id).await;
+        }
         self.send_saved(draft_id).await
     }
 
     async fn delete_draft(&self, draft_id: &str) -> Result<(), BackendError> {
+        if self.gmail() {
+            return self.gm_delete_draft(draft_id).await;
+        }
         self.erase(draft_id).await
     }
 
     async fn list_drafts(&self) -> Result<Vec<DraftRef>, BackendError> {
+        if self.gmail() {
+            return self.gm_list_drafts().await;
+        }
         self.drafts().await
     }
 }

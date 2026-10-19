@@ -35,7 +35,7 @@ pub use caldav::CalDav;
 pub use carddav::CardDav;
 pub use clients::{AnyDav, AnyGmail, AnyGraph, AnyImap, AnyJmap, AnyPop3, AnySieve, AnySmtp};
 pub use google::{Google, ID_PAGE_SIZE, LIST_PAGE_SIZE, is_workspace};
-pub use imap::{Imap, ImapApi, ImapSettings, Submit};
+pub use imap::{Dialect, Imap, ImapApi, ImapSettings, Submit};
 pub use jmap::{Jmap, JmapApi, JmapSettings, JmapSieve, SERVER_REPLY_SCRIPT};
 pub use local::LocalRules;
 pub use microsoft::{GraphApi, Microsoft, MicrosoftSettings};
@@ -405,6 +405,32 @@ pub struct Refused {
     pub auto_reply: bool,
 }
 
+/// The mail and identity of a Gmail account that reads its mail over
+/// Gmail's IMAP and sends over its SMTP, on the clients `imap` and `smtp`.
+/// The clients carry the sign-in: `mailrs_imap::Login::new(address,
+/// app_password)` for an app password, `Login::bearer(address, token)` for
+/// an OAuth access token from another source. The account's own address
+/// is `address`.
+pub fn gmail_over_imap(
+    imap: impl Into<AnyImap>,
+    smtp: impl Into<AnySmtp>,
+    address: &str,
+    window_days: i64,
+) -> (AnyMail, AnyIdentities) {
+    let adapter = Imap::new(
+        Arc::new(imap.into()),
+        Arc::new(smtp.into()),
+        ImapSettings {
+            address: address.to_string(),
+            provider_name: "Gmail".to_string(),
+            files_sent_mail: true,
+            window_days,
+            dialect: Dialect::Gmail,
+        },
+    );
+    (AnyMail::Imap(adapter.clone()), AnyIdentities::Imap(adapter))
+}
+
 /// The parts of a Gmail account whose mail comes over IMAP. `google` is
 /// `None` while the account holds no calendar token.
 pub struct GmailImap {
@@ -736,6 +762,7 @@ impl AccountServices {
             focus_time: features.focus_time,
             declines: features.declines,
             masked_email: self.mail.masked_email(),
+            label_colors: caps.labels && self.mail.label_colors(),
         }
     }
 }
@@ -970,6 +997,8 @@ pub struct Offers {
     pub declines: bool,
     /// The account makes masked addresses on its server, as Fastmail does.
     pub masked_email: bool,
+    /// A label can take a colour. Gmail over IMAP keeps none.
+    pub label_colors: bool,
 }
 
 impl Offers {
@@ -1000,6 +1029,7 @@ impl Offers {
         focus_time: false,
         declines: false,
         masked_email: false,
+        label_colors: true,
     };
 
     /// What the account lacks, in the order Preferences lists it.

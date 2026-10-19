@@ -6,7 +6,7 @@
 
 mod changes;
 mod fetch;
-mod writes;
+pub(crate) mod writes;
 
 use std::collections::VecDeque;
 use std::ops::RangeInclusive;

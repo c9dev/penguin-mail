@@ -5,10 +5,12 @@
 //! UID it sits at now live in the store's remote ref. Its labels come from
 //! X-GM-LABELS and are written as the Gmail API labels are.
 
+mod drafts;
 mod feed;
 mod ids;
 pub(super) mod labels;
 mod listing;
+mod writes;
 
 pub(super) use ids::Places;
 
@@ -58,6 +60,17 @@ impl Trio {
     }
 }
 
+fn label_row(name: &str) -> RemoteMailbox {
+    RemoteMailbox {
+        id: name.to_string(),
+        name: name.to_string(),
+        kind: MailboxKind::Label,
+        role: None,
+        color: None,
+        hidden: false,
+    }
+}
+
 /// The system labels the store lists besides a person's own.
 const SYSTEM_LISTED: [&str; 6] = ["INBOX", "SENT", "DRAFT", "TRASH", "SPAM", "IMPORTANT"];
 
@@ -72,6 +85,10 @@ const TABS_LISTED: [&str; 5] = [
 
 impl<I: ImapApi, S: Submit> Imap<I, S> {
     /// Whether this account speaks Gmail's IMAP.
+    pub fn is_gmail(&self) -> bool {
+        self.gmail()
+    }
+
     pub(super) fn gmail(&self) -> bool {
         self.settings.dialect == Dialect::Gmail
     }
@@ -156,6 +173,61 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
             });
         }
         Ok(boxes)
+    }
+
+    /// Makes a label by its full name. Slashes nest it under another.
+    pub(in crate::services::imap) async fn gm_create_label(
+        &self,
+        name: &str,
+    ) -> Result<RemoteMailbox, BackendError> {
+        self.api.create(&mailrs_imap::utf7::encode(name)).await?;
+        self.list_mailboxes().await?;
+        Ok(label_row(name))
+    }
+
+    /// Renames a label. Gmail renames the labels nested under it too, and
+    /// the next listing brings them under their new names.
+    pub(in crate::services::imap) async fn gm_rename_label(
+        &self,
+        id: &str,
+        name: &str,
+    ) -> Result<RemoteMailbox, BackendError> {
+        self.api
+            .rename(
+                &mailrs_imap::utf7::encode(id),
+                &mailrs_imap::utf7::encode(name),
+            )
+            .await?;
+        self.list_mailboxes().await?;
+        Ok(label_row(name))
+    }
+
+    pub(in crate::services::imap) async fn gm_delete_label(
+        &self,
+        id: &str,
+    ) -> Result<(), BackendError> {
+        self.api.delete(&mailrs_imap::utf7::encode(id)).await?;
+        self.list_mailboxes().await?;
+        Ok(())
+    }
+
+    /// How many messages carry the label `id`.
+    pub(in crate::services::imap) async fn gm_label_count(
+        &self,
+        id: &str,
+    ) -> Result<u64, BackendError> {
+        let Some(key) = labels::search_key(id) else {
+            return Ok(0);
+        };
+        let trio = self.gm_trio().await?;
+        let selected = self.select(&trio.all, None).await?;
+        let top = self.top_uid(&trio.all, &selected).await?;
+        let mut count = 0u64;
+        self.search_windows(&trio.all, (1, top), &format!("UNDELETED {key}"), |found| {
+            count += found.len() as u64
+        })
+        .await?;
+        Ok(count)
     }
 
     /// Unread counts from STATUS of the Inbox, Spam and each label's own
