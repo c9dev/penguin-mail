@@ -4237,6 +4237,8 @@ impl Dialog {
             }
             this.asking.forget();
             this.stop_browser();
+            // Translators: said when moving a Gmail account to a new way of signing in
+            // runs past two minutes; the move carries on without the window.
             this.browser_failed(&gettext(
                 "Moving the account is taking too long. It goes on after you close this window.",
             ));
