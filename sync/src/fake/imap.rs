@@ -728,6 +728,54 @@ impl ImapState {
         })
     }
 
+    /// Whether `mailbox` is one of the three Gmail keeps messages in.
+    fn is_gmail_store(&self, mailbox: &str) -> bool {
+        mailbox == self.all_mail()
+            || mailbox == self.trash()
+            || self.mailboxes.get(mailbox).and_then(|m| m.special_use) == Some(SpecialUse::Junk)
+    }
+
+    /// An APPEND to a label's folder on Gmail: the message gets its ids and
+    /// the folder's label, and sits in All Mail as well. The fake keeps the
+    /// folder's own copy too, which a later change to All Mail leaves be.
+    fn gmail_append(
+        &mut self,
+        mailbox: &str,
+        flags: &[String],
+        raw: &[u8],
+    ) -> Option<AppendUid> {
+        let msgid = self.next_msgid;
+        self.next_msgid += 0x1001;
+        let label = match mailbox {
+            "[Gmail]/Drafts" => "\\Draft".to_string(),
+            "[Gmail]/Sent Mail" => "\\Sent".to_string(),
+            "INBOX" => "\\Inbox".to_string(),
+            other => mailrs_imap::utf7::decode(other),
+        };
+        let gmail = FakeGmail {
+            msgid,
+            thrid: msgid,
+            labels: BTreeSet::from([label]),
+            category: None,
+        };
+        let date = Utc::now().timestamp_millis();
+        let flags: BTreeSet<String> = flags.iter().cloned().collect();
+        let all = self.all_mail().to_string();
+        for target in [all.as_str(), mailbox] {
+            let m = self.mailbox_mut(target);
+            let uid = m.add(raw.to_vec(), flags.clone(), date);
+            if let Some(message) = m.messages.get_mut(&uid) {
+                message.gmail = Some(gmail.clone());
+            }
+        }
+        let m = self.mailbox_mut(mailbox);
+        let uid = m.uidnext - 1;
+        Some(AppendUid {
+            uidvalidity: m.uidvalidity,
+            uid,
+        })
+    }
+
     /// STATUS UNSEEN as Gmail answers it: a label's folder counts the
     /// unseen messages carrying that label, whichever mailbox holds them.
     fn gmail_unread(&self, mailbox: &str) -> u32 {
@@ -1288,6 +1336,9 @@ impl ImapApi for FakeImap {
         check_flags(flags)?;
         self.change(format!("append {mailbox} {}", flags.join(" ")), |s| {
             let uidplus = s.capabilities.uidplus;
+            if s.gmail && !s.is_gmail_store(mailbox) {
+                return Ok(s.gmail_append(mailbox, flags, raw).filter(|_| uidplus));
+            }
             let m = s.selectable(mailbox)?;
             // Dovecot's first APPEND into a mailbox it listed but had not
             // made answers a UIDVALIDITY one past what SELECT reports.
@@ -1761,6 +1812,7 @@ fn gm_raw_matches(text: &str, message: &FakeMessage) -> bool {
         .all(|term| match term.split_once(':') {
             Some(("in", "inbox")) => g.labels.contains("\\Inbox"),
             Some(("category", tab)) => g.category.as_deref() == Some(tab),
+        Some(("-category", tab)) => g.category.as_deref() != Some(tab),
             Some(("label", name)) => g.labels.iter().any(|l| spell(l) == spell(name)),
             Some(_) => true,
             None => subject.contains(&term.to_lowercase()),

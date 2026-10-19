@@ -323,10 +323,14 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
         let mut found = Found::default();
         let mut left: Vec<String> = Vec::new();
         for want in wants {
-            match super::ids::msgid_of(&want.id) {
-                Some(_) if !left.contains(&want.id) => left.push(want.id),
-                Some(_) => {}
-                None => found.gone.push(want.id),
+            // The engine names a message by where its ref says it sits, as
+            // a location, or by its hex id before it has a ref.
+            let named = super::ids::msgid_of(&want.id).is_some()
+                || Location::parse(&want.id).is_some();
+            match named {
+                true if !left.contains(&want.id) => left.push(want.id),
+                true => {}
+                false => found.gone.push(want.id),
             }
         }
         for pass in 0..2 {
@@ -337,10 +341,21 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
                 0 => {
                     let known = self.known();
                     left.iter()
-                        .filter_map(|id| known.places.get(id).map(|at| (id.clone(), at)))
+                        .filter_map(|id| {
+                            Location::parse(id)
+                                .or_else(|| known.places.get(id))
+                                .map(|at| (id.clone(), at))
+                        })
                         .collect()
                 }
-                _ => self.gm_find(&left).await?,
+                _ => {
+                    let hex: Vec<String> = left
+                        .iter()
+                        .filter(|id| Location::parse(id).is_none())
+                        .cloned()
+                        .collect();
+                    self.gm_find(&hex).await?
+                }
             };
             let mut by_mailbox: BTreeMap<String, Vec<(String, Location)>> = BTreeMap::new();
             for (id, at) in located {
@@ -373,7 +388,9 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
                             self.known().places.forget(id);
                             continue;
                         };
-                        let right = fetched.gmail.as_ref().is_some_and(|g| g.id() == *id);
+                        let right = fetched.gmail.as_ref().is_some_and(|g| {
+                            Location::parse(id).is_some() || g.id() == *id
+                        });
                         if !right || keywords::is_deleted(&fetched.flags) {
                             self.known().places.forget(id);
                             continue;
