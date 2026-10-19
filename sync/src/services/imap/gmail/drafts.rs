@@ -139,7 +139,7 @@ impl<I: ImapApi, S: Submit> Imap<I, S> {
         id: &str,
     ) -> Result<String, BackendError> {
         let raw = self
-            .raw_messages(&[id.to_string()])
+            .gm_raw_messages(&[id.to_string()])
             .await?
             .into_iter()
             .next()

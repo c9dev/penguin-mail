@@ -521,7 +521,6 @@ pub(crate) async fn connect_imap_within<P: PasswordStore + 'static>(
             provider_name: provider_name.clone(),
             files_sent_mail,
             window_days,
-            dialect: Default::default(),
         },
     );
     let found = confirmed(db, id, &secret, wait).await?;

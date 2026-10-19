@@ -174,7 +174,7 @@ async fn a_goa_account_left_on_the_api_still_reads_its_mail_over_imap() {
         panic!("the account should be ready");
     };
 
-    assert!(matches!(services.mail, AnyMail::Imap(_)));
+    assert!(matches!(services.mail, AnyMail::GmailImap(_)));
 }
 
 #[tokio::test]
@@ -211,7 +211,7 @@ async fn a_goa_imap_account_connects_to_gmail_over_imap() {
         panic!("the account should be ready");
     };
 
-    assert!(matches!(services.mail, AnyMail::Imap(_)));
+    assert!(matches!(services.mail, AnyMail::GmailImap(_)));
 }
 
 #[tokio::test]

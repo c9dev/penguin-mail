@@ -505,7 +505,7 @@ async fn gmail_over_imap_takes_local_rules_and_no_automatic_reply() {
     let h = imap_harness().await;
     let (mail, identities) = gmail_over_imap_mail(&h);
     let gmail = Arc::new(crate::fake::FakeGmail::new());
-    let services = crate::AccountServices::gmail_imap(crate::GmailImap {
+    let services = crate::AccountServices::gmail_imap(crate::GmailImapParts {
         mail,
         identities,
         rules: AnyRules::Local(crate::LocalRules::new(h.db.clone(), h.account_id)),
@@ -525,7 +525,7 @@ async fn gmail_over_imap_takes_local_rules_and_no_automatic_reply() {
 async fn gmail_over_imap_without_a_calendar_token_has_mail_only() {
     let h = imap_harness().await;
     let (mail, identities) = gmail_over_imap_mail(&h);
-    let services = crate::AccountServices::gmail_imap(crate::GmailImap {
+    let services = crate::AccountServices::gmail_imap(crate::GmailImapParts {
         mail,
         identities,
         rules: AnyRules::Local(crate::LocalRules::new(h.db.clone(), h.account_id)),
@@ -545,7 +545,7 @@ async fn gmail_over_imap_withholds_no_mail_scope() {
     gmail.withhold(mailrs_gmail::SETTINGS_SCOPE);
     let google = fake_google(&gmail);
     assert!(google.withheld().settings && google.withheld().delete);
-    let services = crate::AccountServices::gmail_imap(crate::GmailImap {
+    let services = crate::AccountServices::gmail_imap(crate::GmailImapParts {
         mail,
         identities,
         rules: AnyRules::Local(crate::LocalRules::new(h.db.clone(), h.account_id)),

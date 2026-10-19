@@ -10,8 +10,8 @@ use mailrs_store::messages::{self, Change};
 
 use super::{days_ago, message};
 use crate::fake::{FakeImap, FakeSmtp};
-use crate::services::{Dialect, Imap, ImapSettings};
-use crate::tests::{ImapHarness, imap_harness_on};
+use crate::services::{GmailImap, Imap, ImapSettings};
+use crate::tests::{ImapHarness, gmail_imap_harness_on};
 use crate::{MailBackend, MailOp, SearchQuery, TriageAction};
 
 const ALL_MAIL: &str = "[Gmail]/All Mail";
@@ -23,12 +23,11 @@ fn gmail_settings() -> ImapSettings {
         provider_name: "Gmail".into(),
         files_sent_mail: true,
         window_days: crate::DEFAULT_WINDOW_DAYS,
-        dialect: Dialect::Gmail,
     }
 }
 
 async fn gmail_on(imap: FakeImap) -> ImapHarness {
-    imap_harness_on(imap, gmail_settings()).await
+    gmail_imap_harness_on(imap).await
 }
 
 fn hex(msgid: u64) -> String {
@@ -36,13 +35,13 @@ fn hex(msgid: u64) -> String {
 }
 
 /// The Gmail adapter alone on `imap`.
-fn adapter_on(imap: FakeImap) -> (Arc<FakeImap>, Imap<FakeImap, FakeSmtp>) {
+fn adapter_on(imap: FakeImap) -> (Arc<FakeImap>, GmailImap<FakeImap, FakeSmtp>) {
     let imap = Arc::new(imap);
-    let adapter = Imap::new(
+    let adapter = GmailImap::over(Imap::new(
         Arc::clone(&imap),
         Arc::new(FakeSmtp::default()),
         gmail_settings(),
-    );
+    ));
     (imap, adapter)
 }
 
@@ -296,11 +295,6 @@ async fn a_moved_account_lists_its_mail_again_from_imap() {
         h.location(&hex(id)).await.is_some(),
         "the first look gave it a ref"
     );
-}
-
-#[tokio::test]
-async fn the_plain_dialect_answers_as_before() {
-    assert_eq!(Dialect::default(), Dialect::Plain);
 }
 
 // ---- Writes ------------------------------------------------------------------

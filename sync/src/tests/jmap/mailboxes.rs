@@ -73,6 +73,7 @@ async fn the_capabilities_are_jmap_s() {
             focus: false,
             local_mailboxes: false,
             files_muted_replies: false,
+            gone_draft_is_sent: true,
         }
     );
 }

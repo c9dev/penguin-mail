@@ -251,7 +251,7 @@ async fn a_gmail_account_on_the_imap_route_connects_to_imap_mail() {
     let Connected::Ready(services) = connected else {
         panic!("the account connects");
     };
-    assert!(matches!(services.mail, AnyMail::Imap(_)));
+    assert!(matches!(services.mail, AnyMail::GmailImap(_)));
     assert!(services.capabilities().labels);
     assert!(!services.offers().label_colors);
 }

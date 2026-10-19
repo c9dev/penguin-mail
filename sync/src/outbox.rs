@@ -26,7 +26,7 @@ use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex, PoisonError};
 
 use mailrs_domain::translate::gettext;
-use mailrs_domain::{AccountId, AccountState, EpochMillis, GmailSignIn, MailRoute, Target};
+use mailrs_domain::{AccountId, AccountState, EpochMillis, GmailSignIn, Target};
 use mailrs_gmail::GmailError;
 use mailrs_store::messages;
 use mailrs_store::outbox::{self, Queued};
@@ -1029,18 +1029,12 @@ impl<A: Accounts> Outbox<A> {
                 if let Some(sent) = sent {
                     return Ok(sent);
                 }
-                // Every other route counts a draft that is gone as sent.
-                // A Gmail account on the IMAP route came there through a
-                // move, which cannot tell a sent draft from a deleted one.
-                let id = message.account_id;
-                let on_imap = self
-                    .db
-                    .read(move |c| accounts::gmail_sign_in(c, id))
-                    .await
-                    .is_ok_and(|sign_in| sign_in.route() == MailRoute::Imap);
-                match on_imap {
-                    true => Err(BackendError::NotFound.into()),
-                    false => Ok(draft_id.clone()),
+                // The adapter says whether a draft that is gone counts as
+                // sent: Gmail over IMAP cannot tell a sent draft from one
+                // a move left deleted.
+                match sync.gone_draft_is_sent() {
+                    true => Ok(draft_id.clone()),
+                    false => Err(BackendError::NotFound.into()),
                 }
             }
             (None, None) => Err(BackendError::NotFound.into()),

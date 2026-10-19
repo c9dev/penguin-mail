@@ -86,6 +86,7 @@ const GMAIL: MailCapabilities = MailCapabilities {
     focus: false,
     local_mailboxes: false,
     files_muted_replies: true,
+    gone_draft_is_sent: true,
 };
 
 impl<G> Google<G> {
@@ -895,6 +896,7 @@ mod tests {
                 focus: false,
                 local_mailboxes: false,
                 files_muted_replies: true,
+                gone_draft_is_sent: true,
             }
         );
     }

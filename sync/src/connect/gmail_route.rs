@@ -17,7 +17,7 @@ use mailrs_store::servers;
 use super::{Connector, Lacks, STEP_WAIT, bounded, connect_account, read_secret, server_of};
 use crate::goa::{self, GoaAccount, GoaError, GoaTokens};
 use crate::services::{
-    AnyCalendar, AnyContacts, AnyGmail, AnyIdentities, AnyMail, GmailImap, Google, NoMail,
+    AnyCalendar, AnyContacts, AnyGmail, AnyIdentities, AnyMail, GmailImapParts, Google, NoMail,
     gmail_over_imap,
 };
 use crate::sign_in::client_of;
@@ -106,7 +106,7 @@ async fn imap_services(
         return Ok(Err(Lacks::Secret));
     };
     let google = google_side(connector, account).await?;
-    Ok(Ok(AccountServices::gmail_imap(GmailImap {
+    Ok(Ok(AccountServices::gmail_imap(GmailImapParts {
         mail,
         identities,
         rules: AnyRules::Local(LocalRules::new(connector.db.clone(), account.id)),

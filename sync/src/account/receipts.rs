@@ -262,9 +262,8 @@ impl AccountSync {
         // Gmail over IMAP keeps no such keyword either.
         if !matches!(
             self.mail.untranslated(),
-            AnyMail::Imap(adapter) if !adapter.is_gmail()
-        ) && !matches!(self.mail.untranslated(), AnyMail::Jmap(_))
-        {
+            AnyMail::Imap(_) | AnyMail::Jmap(_)
+        ) {
             return;
         }
         let op = MailOp::SetKeyword {

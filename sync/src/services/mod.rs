@@ -35,7 +35,7 @@ pub use caldav::CalDav;
 pub use carddav::CardDav;
 pub use clients::{AnyDav, AnyGmail, AnyGraph, AnyImap, AnyJmap, AnyPop3, AnySieve, AnySmtp};
 pub use google::{Google, ID_PAGE_SIZE, LIST_PAGE_SIZE, is_workspace};
-pub use imap::{Dialect, Imap, ImapApi, ImapSettings, Submit};
+pub use imap::{GmailImap, Imap, ImapApi, ImapSettings, Submit};
 pub use jmap::{Jmap, JmapApi, JmapSettings, JmapSieve, SERVER_REPLY_SCRIPT};
 pub use local::LocalRules;
 pub use microsoft::{GraphApi, Microsoft, MicrosoftSettings};
@@ -136,6 +136,10 @@ pub struct MailCapabilities {
     /// filter does. Without it the engine files each one as it arrives,
     /// which works only while Penguin Mail runs.
     pub files_muted_replies: bool,
+    /// A draft the server no longer holds by its id went out. Where it
+    /// may have been deleted instead, the outbox keeps the message and
+    /// asks the person to check Sent.
+    pub gone_draft_is_sent: bool,
 }
 
 /// How far a write got before the server refused the rest: the first
@@ -417,7 +421,7 @@ pub fn gmail_over_imap(
     address: &str,
     window_days: i64,
 ) -> (AnyMail, AnyIdentities) {
-    let adapter = Imap::new(
+    let adapter = GmailImap::over(Imap::new(
         Arc::new(imap.into()),
         Arc::new(smtp.into()),
         ImapSettings {
@@ -425,15 +429,17 @@ pub fn gmail_over_imap(
             provider_name: "Gmail".to_string(),
             files_sent_mail: true,
             window_days,
-            dialect: Dialect::Gmail,
         },
-    );
-    (AnyMail::Imap(adapter.clone()), AnyIdentities::Imap(adapter))
+    ));
+    (
+        AnyMail::GmailImap(adapter.clone()),
+        AnyIdentities::GmailImap(adapter),
+    )
 }
 
 /// The parts of a Gmail account whose mail comes over IMAP. `google` is
 /// `None` while the account holds no calendar token.
-pub struct GmailImap {
+pub struct GmailImapParts {
     pub mail: AnyMail,
     pub identities: AnyIdentities,
     pub rules: AnyRules,
@@ -488,8 +494,8 @@ impl AccountServices {
     /// address from `parts`, rules kept on this computer, and the
     /// calendar and contacts of `parts.google` when the account holds a
     /// calendar token. Google keeps no automatic reply for it here.
-    pub fn gmail_imap(parts: GmailImap) -> Self {
-        let GmailImap {
+    pub fn gmail_imap(parts: GmailImapParts) -> Self {
+        let GmailImapParts {
             mail,
             identities,
             rules,
@@ -671,7 +677,6 @@ impl AccountServices {
             provider_name: "Fastmail".into(),
             files_sent_mail: false,
             window_days: crate::DEFAULT_WINDOW_DAYS,
-            dialect: Default::default(),
         };
         AccountServices::imap(imap, smtp, settings)
     }
@@ -1829,6 +1834,7 @@ mod tests {
                 focus: false,
                 local_mailboxes: false,
                 files_muted_replies: true,
+                gone_draft_is_sent: true,
             }
         );
     }

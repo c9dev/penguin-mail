@@ -50,7 +50,6 @@ mod tests {
             provider_name: "Dovecot".into(),
             files_sent_mail: false,
             window_days: 30,
-            dialect: Default::default(),
         };
         Imap::new(Arc::clone(imap), Arc::new(FakeSmtp::default()), settings)
     }

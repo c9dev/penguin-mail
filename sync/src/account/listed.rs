@@ -67,7 +67,10 @@ impl AccountSync {
             // IMAP does not sync Junk or Trash until they are followed,
             // so their listings must ask the server even for recent mail.
             SearchQuery::Tree(Query::Term(Term::In(MailSet::Role(Role::Junk | Role::Trash))))
-                if matches!(&self.services.mail, AnyMail::Imap(_)) =>
+                if matches!(
+                    &self.services.mail,
+                    AnyMail::Imap(_) | AnyMail::GmailImap(_)
+                ) =>
             {
                 self.mail.search(query, limit).await?
             }

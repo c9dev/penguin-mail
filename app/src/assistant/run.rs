@@ -646,7 +646,7 @@ impl<A: Accounts> Tools<A> {
             .modules
             .accounts
             .services(account.id)
-            .is_some_and(|services| matches!(services.mail, mailrs_sync::AnyMail::Imap(_)));
+            .is_some_and(|services| matches!(services.mail, mailrs_sync::AnyMail::GmailImap(_)));
         let route = match over_imap {
             true => mailrs_domain::MailRoute::Imap,
             false => mailrs_domain::MailRoute::GmailApi,

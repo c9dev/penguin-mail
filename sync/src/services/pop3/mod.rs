@@ -404,6 +404,7 @@ impl<S: Submit, P: Pop3Api> MailBackend for Pop3<S, P> {
             focus: false,
             local_mailboxes: true,
             files_muted_replies: false,
+            gone_draft_is_sent: true,
         }
     }
 
