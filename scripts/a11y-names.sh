@@ -16,7 +16,7 @@
 # Account on its tiles and its Other page, opens Switch to JMAP from the
 # Fastmail account's menu, and walks the calendar. Then it starts the demo
 # again for the Add Account page for a calendar without mail, the Gmail
-# route and consent pages, the first-launch sheet, the move banner and the
+# route, app password and consent pages, the first-launch sheet, the move banner and the
 # Gmail rows in Preferences, and reads each.
 #
 # The hidden display needs Xvfb, dbus-run-session, at-spi2-core, python3
@@ -1269,6 +1269,9 @@ walk_demo() {
 walk_demo MAILRS_DEMO_CALENDAR_ACCOUNT=1 --menus && WALK_SPACE=calendar walk_demo MAILRS_DEMO_ADD_ACCOUNT=calendar --calendar-page \
     && walk_demo MAILRS_DEMO_ADD_ACCOUNT=routes --shown 'list item' 'Use GNOME Online Accounts' \
     && walk_demo MAILRS_DEMO_ADD_ACCOUNT=consent --shown 'button' 'Continue to Google' \
+    && walk_demo MAILRS_DEMO_ADD_ACCOUNT=gmail-password-filled --shown 'link' 'Open App passwords' \
+    && walk_demo MAILRS_DEMO_ADD_ACCOUNT=gmail-password-help --shown 'button' 'Use another way to sign in' \
+    && walk_demo MAILRS_DEMO_ADD_ACCOUNT=gmail-password-refused --shown 'button' 'Open App passwords' \
     && walk_demo MAILRS_DEMO_GOOGLE_MOVE=sheet --shown 'button' 'Choose Now' \
     && walk_demo MAILRS_DEMO_GOOGLE_MOVE=banner-several --shown 'button' 'Choose…' \
     && walk_demo MAILRS_DEMO_GOOGLE_MOVE=banner-paused --shown 'button' 'Choose…' \
