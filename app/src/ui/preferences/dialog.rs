@@ -293,6 +293,13 @@ impl Dialog {
         }
     }
 
+    /// The name of the page on show.
+    pub fn visible_page_name(&self) -> Option<String> {
+        let row = self.list.selected_row()?;
+        let page = self.pages.borrow().get(row.index() as usize)?.clone();
+        page.name().map(|name| name.to_string())
+    }
+
     pub fn set_visible_page_name(&self, name: &str) {
         let page = self
             .pages

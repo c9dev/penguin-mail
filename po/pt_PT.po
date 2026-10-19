@@ -12486,6 +12486,22 @@ msgstr "O calendário e os contactos de {account} estão ligados."
 msgid "The demo cannot connect a calendar."
 msgstr "A demonstração não pode ligar um calendário."
 
+#. Translators: a small heading over the Gmail account's rows; Gmail is a
+#. name, keep it as it is.
+#: app/src/ui/preferences/google_route.rs
+msgid "Gmail"
+msgstr "Gmail"
+
+#: app/src/ui/preferences/google_route.rs
+msgid "Calendar and contacts"
+msgstr "Calendário e contactos"
+
+#. Translators: a small heading over what only gmail.com does for the
+#. account; gmail.com is a name, keep it as it is.
+#: app/src/ui/preferences/google_route.rs
+msgid "On gmail.com"
+msgstr "No gmail.com"
+
 #~ msgid "Install Bubblewrap"
 #~ msgstr "Instalar o Bubblewrap"
 

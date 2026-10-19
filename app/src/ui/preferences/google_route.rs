@@ -101,6 +101,9 @@ fn fill_rows(
     let (gaps, own): (Vec<Line>, Vec<Line>) = lines(sign_in, Platform::this(), account)
         .into_iter()
         .partition(|line| matches!(line, Line::Gap { .. }));
+    // Translators: a small heading over the Gmail account's rows; Gmail is a
+    // name, keep it as it is.
+    parent.add_row(&heading(&gettext("Gmail")));
     for line in own {
         match line {
             Line::Features { every } => {
@@ -133,6 +136,7 @@ fn fill_rows(
         }
     }
     if calendar_link(account, offers).shows_connect() {
+        parent.add_row(&heading(&gettext("Calendar and contacts")));
         for (title, name) in [
             (
                 gettext("Calendar"),
@@ -152,11 +156,38 @@ fn fill_rows(
             parent.add_row(&row);
         }
     }
+    if !gaps.is_empty() {
+        // Translators: a small heading over what only gmail.com does for the
+        // account; gmail.com is a name, keep it as it is.
+        parent.add_row(&heading(&gettext("On gmail.com")));
+    }
     for gap in gaps {
         if let Line::Gap { text, link, label } = gap {
             parent.add_row(&gap_row(&text, link, &label));
         }
     }
+}
+
+/// A small heading over a group of the account's rows, in capitals as the
+/// mockup draws it. An expander's rows have no group titles of their own.
+fn heading(text: &str) -> adw::PreferencesRow {
+    let words = text.to_uppercase();
+    let label = gtk::Label::builder()
+        .label(&words)
+        .xalign(0.0)
+        .css_classes(["gmail-heading"])
+        .build();
+    label.set_accessible_role(gtk::AccessibleRole::Heading);
+    adw::PreferencesRow::builder()
+        .title(&words)
+        .use_markup(false)
+        .activatable(false)
+        .focusable(false)
+        // Nothing to press, so the pointer passes over it with no hover.
+        .can_target(false)
+        .child(&label)
+        .css_classes(["gmail-heading-row"])
+        .build()
 }
 
 /// A sentence with its link under it, the link bold and followed by the
@@ -336,6 +367,7 @@ pub(crate) mod checks {
         an_imap_account_reads_in_the_mockups_order();
         connect_asks_for_the_account_and_a_paused_one_gets_it_too();
         an_api_account_shows_its_features_and_nothing_to_connect();
+        rows_built_again_after_a_connect_read_as_connected();
     }
 
     fn account(state: AccountState) -> Account {
@@ -415,10 +447,13 @@ pub(crate) mod checks {
         assert_eq!(
             found,
             [
+                "GMAIL",
                 "Gmail features",
                 "",
+                "CALENDAR AND CONTACTS",
                 "Calendar",
                 "Contacts",
+                "ON GMAIL.COM",
                 "Your Gmail filters still run. Change them on gmail.com.",
                 "Set your automatic reply on gmail.com.",
             ]
@@ -481,6 +516,29 @@ pub(crate) mod checks {
             route: MailRoute::GmailApi,
         };
         let (parent, _) = filled(AccountState::Ok, own, Offers::EVERYTHING);
-        assert_eq!(titles(&parent), ["Gmail features"]);
+        assert_eq!(titles(&parent), ["GMAIL", "Gmail features"]);
+    }
+
+    /// What the window does after the calendar consent: the rows are built
+    /// again from what the restarted account offers.
+    fn rows_built_again_after_a_connect_read_as_connected() {
+        let (before, _) = filled(AccountState::Ok, imap(), no_calendar());
+        assert!(titles(&before).contains(&"CALENDAR AND CONTACTS".to_string()));
+        let (after, _) = filled(AccountState::Ok, imap(), Offers::EVERYTHING);
+        let mut rows = Vec::new();
+        rows_of(after.upcast_ref(), &mut rows);
+        let said: Vec<String> = rows
+            .iter()
+            .filter_map(|row| row.downcast_ref::<adw::ActionRow>())
+            .filter_map(|row| row.subtitle())
+            .map(|subtitle| subtitle.to_string())
+            .collect();
+        assert!(!said.contains(&"Not connected".to_string()), "{said:?}");
+        let found = titles(&after);
+        assert!(!found.contains(&"Calendar".to_string()), "{found:?}");
+        assert!(
+            !found.contains(&"CALENDAR AND CONTACTS".to_string()),
+            "{found:?}"
+        );
     }
 }

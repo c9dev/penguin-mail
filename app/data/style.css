@@ -895,6 +895,8 @@ levelbar.server-space.full block.filled { background-color: #a51d2d; }
    follow, where a link button's own padding would push them in. */
 .account-note button.link { padding: 2px 0; min-height: 0; }
 button.link.gmail-link { padding: 2px 0; min-height: 0; font-weight: 700; }
+row.gmail-heading-row { background: none; }
+label.gmail-heading { font-size: 11px; font-weight: 700; letter-spacing: 0.5px; opacity: 0.6; margin: 14px 12px 4px; }
 button.link.gmail-link image { -gtk-icon-size: 12px; }
 
 /* Calendar. The grid is a card on the window background; hairlines only
