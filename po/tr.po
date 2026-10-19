@@ -3092,7 +3092,7 @@ msgstr ""
 msgid "{provider} refused the sign-in in the browser."
 msgstr "{provider}, tarayıcıda oturum açmayı reddetti."
 
-#: app/src/offered.rs:1062 app/src/own_project.rs:315
+#: app/src/offered.rs:1062 app/src/own_project.rs:319
 msgid "You did not allow Penguin Mail on {provider}'s page."
 msgstr "{provider} sayfasında Penguin Mail'e izin vermediniz."
 
@@ -3138,74 +3138,74 @@ msgstr "Model, iletiye eklenecek bir metin döndürmedi."
 msgid "The model could not translate this: {reason}"
 msgstr "Model bunu çeviremedi: {reason}"
 
-#: app/src/own_project.rs:134
+#: app/src/own_project.rs:138
 msgid "Step {number} of 6"
 msgstr ""
 
 #. Translators: Google is a name; keep it as it is. "Open Google Cloud" is the button above this line.
-#: app/src/own_project.rs:141
+#: app/src/own_project.rs:145
 msgid "Open Google Cloud, then follow the list."
 msgstr ""
 
 #. Translators: Google is a name; keep it as it is.
-#: app/src/own_project.rs:147
+#: app/src/own_project.rs:151
 #, fuzzy
 #| msgid "Set up your own Google project"
 msgid "Your own Google project"
 msgstr "Kendi Google projenizi kurun"
 
 #. Translators: Google, Penguin Mail and Gmail are names; keep them as they are.
-#: app/src/own_project.rs:152
+#: app/src/own_project.rs:156
 msgid ""
 "A Google project of your own gives Penguin Mail every Gmail feature. It's "
 "free, just for you, takes about 10 minutes, and you do it once."
 msgstr ""
 
 #. Translators: Google and Penguin Mail are names; keep them as they are.
-#: app/src/own_project.rs:156
+#: app/src/own_project.rs:160
 msgid ""
 "You'll use the Google account you want to read mail from. Penguin Mail opens "
 "each page for you and says what to click."
 msgstr ""
 
-#: app/src/own_project.rs:162
+#: app/src/own_project.rs:166
 msgid "Make a project"
 msgstr ""
 
 #. Translators: Google and Penguin Mail are names; keep them as they are.
-#: app/src/own_project.rs:165
+#: app/src/own_project.rs:169
 msgid "Google keeps what Penguin Mail needs in a project of its own."
 msgstr ""
 
-#: app/src/own_project.rs:169
+#: app/src/own_project.rs:173
 msgid ""
 "If Google asks you to agree to its terms first, choose your country and "
 "agree."
 msgstr ""
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
-#: app/src/own_project.rs:172
+#: app/src/own_project.rs:176
 msgid "In <b>Project name</b>, type <tt>Penguin Mail</tt>."
 msgstr ""
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
-#: app/src/own_project.rs:174
+#: app/src/own_project.rs:178
 msgid "Leave <b>Location</b> as it is and click <b>Create</b>."
 msgstr ""
 
-#: app/src/own_project.rs:175
+#: app/src/own_project.rs:179
 msgid "Wait for the bell icon to say the project is ready."
 msgstr ""
 
 #. Translators: Gmail is a name; keep it as it is.
-#: app/src/own_project.rs:181
+#: app/src/own_project.rs:185
 #, fuzzy
 #| msgid "Mail, calendar and contacts"
 msgid "Turn on Gmail, Calendar and Contacts"
 msgstr "Posta, takvim ve kişiler"
 
 #. Translators: Penguin Mail is a name; keep it as it is.
-#: app/src/own_project.rs:184
+#: app/src/own_project.rs:188
 #, fuzzy
 #| msgid "Penguin Mail reaches calendar and contact servers over HTTPS only."
 msgid "Penguin Mail reads your mail, calendar and contacts through these."
@@ -3213,42 +3213,42 @@ msgstr ""
 "Penguin Mail, takvim ve kişi sunucularına yalnızca HTTPS üzerinden erişir."
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
-#: app/src/own_project.rs:189
+#: app/src/own_project.rs:193
 msgid ""
 "Check that the project at the top says <b>Penguin Mail</b>. If not, click it "
 "and pick Penguin Mail."
 msgstr ""
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
-#: app/src/own_project.rs:192
+#: app/src/own_project.rs:196
 msgid "Click <b>Next</b>, then <b>Enable</b>."
 msgstr ""
 
-#: app/src/own_project.rs:197
+#: app/src/own_project.rs:201
 msgid "Name the sign-in screen"
 msgstr ""
 
 #. Translators: Google is a name; keep it as it is.
-#: app/src/own_project.rs:199
+#: app/src/own_project.rs:203
 #, fuzzy
 #| msgid "Not allowed when you signed in"
 msgid "Google shows this name when you sign in."
 msgstr "Oturum açarken izin verilmedi"
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
-#: app/src/own_project.rs:202
+#: app/src/own_project.rs:206
 msgid "Click <b>Get started</b>."
 msgstr ""
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
-#: app/src/own_project.rs:205
+#: app/src/own_project.rs:209
 msgid ""
 "<b>App name</b>: <tt>Penguin Mail</tt>. <b>User support email</b>: your "
 "address."
 msgstr ""
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
-#: app/src/own_project.rs:209
+#: app/src/own_project.rs:213
 msgid ""
 "<b>Audience</b>: choose <b>External</b>. (A work or school account with an "
 "organization may see <b>Internal</b>; that also works and needs no warning "
@@ -3256,97 +3256,96 @@ msgid ""
 msgstr ""
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
-#: app/src/own_project.rs:212
+#: app/src/own_project.rs:216
 msgid "<b>Contact information</b>: your address again."
 msgstr ""
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
-#: app/src/own_project.rs:214
+#: app/src/own_project.rs:218
 msgid "Tick the agreement and click <b>Create</b>."
 msgstr ""
 
-#: app/src/own_project.rs:219
+#: app/src/own_project.rs:223
 msgid "Publish it"
 msgstr ""
 
-#: app/src/own_project.rs:220
+#: app/src/own_project.rs:224
 msgid "Publishing keeps you signed in."
 msgstr ""
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
-#: app/src/own_project.rs:224
+#: app/src/own_project.rs:228
 msgid ""
 "Under <b>Publishing status</b>, click <b>Publish app</b>, then <b>Confirm</"
 "b>."
 msgstr ""
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
-#: app/src/own_project.rs:227
+#: app/src/own_project.rs:231
 msgid "It should now say <b>In production</b>."
 msgstr ""
 
 #. Translators: Google and Penguin Mail are names; keep them as they are.
-#: app/src/own_project.rs:231
+#: app/src/own_project.rs:235
 msgid "If you skip this, Google signs you out of Penguin Mail every 7 days."
 msgstr ""
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
-#: app/src/own_project.rs:233
+#: app/src/own_project.rs:237
 msgid "Chose Internal? Then there's nothing to do here."
 msgstr ""
 
 #. Translators: Penguin Mail is a name; keep it as it is.
-#: app/src/own_project.rs:238
+#: app/src/own_project.rs:242
 #, fuzzy
 #| msgid "Signed in to Penguin Mail"
 msgid "Make the key for Penguin Mail"
 msgstr "Penguin Mail oturumu açıldı"
 
 #. Translators: Penguin Mail is a name; keep it as it is.
-#: app/src/own_project.rs:241
+#: app/src/own_project.rs:245
 #, fuzzy
 #| msgid "{tile}, signs in through your browser"
 msgid "The key lets Penguin Mail sign in through your project."
 msgstr "{tile}, tarayıcınız üzerinden oturum açar"
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
-#: app/src/own_project.rs:245
+#: app/src/own_project.rs:249
 msgid "<b>Application type</b>: choose <b>Desktop app</b>."
 msgstr ""
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
-#: app/src/own_project.rs:247
+#: app/src/own_project.rs:251
 msgid "<b>Name</b>: <tt>Penguin Mail</tt>, then <b>Create</b>."
 msgstr ""
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
-#: app/src/own_project.rs:249
+#: app/src/own_project.rs:253
 msgid "On the next screen, click <b>Download JSON</b> before you close it."
 msgstr ""
 
 #. Translators: Google is a name; keep it as it is.
-#: app/src/own_project.rs:254
+#: app/src/own_project.rs:258
 msgid ""
 "Google shows this only once. If you closed it already, delete that key and "
 "make a new one."
 msgstr ""
 
 #. Translators: Penguin Mail is a name; keep it as it is.
-#: app/src/own_project.rs:260
+#: app/src/own_project.rs:264
 #, fuzzy
 #| msgid "Signed in to Penguin Mail"
 msgid "Give the file to Penguin Mail"
 msgstr "Penguin Mail oturumu açıldı"
 
-#. Translators: Google is a name; keep it as it is.
-#: app/src/own_project.rs:267
+#: app/src/own_project.rs:271 app/src/ui/own_project.rs:657
 #, fuzzy
 #| msgid "Join with Google Meet"
 msgid "Sign in with Google"
 msgstr "Google Meet ile Katıl"
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
-#: app/src/own_project.rs:272
+#: app/src/own_project.rs:276
 msgid ""
 "Google will say <b>\"Google hasn't verified this app\"</b>. That's expected: "
 "the app is your own project, and you're the only one using it. Click "
@@ -3355,32 +3354,32 @@ msgid ""
 msgstr ""
 
 #. This is a button on Google's page; use the words Google's page shows in your language.
-#: app/src/own_project.rs:302
+#: app/src/own_project.rs:306
 msgid "Did you publish your project? If it still says Testing, go to step 4."
 msgstr ""
 
 #. Translators: Google is a name; keep it as it is.
-#: app/src/own_project.rs:325
+#: app/src/own_project.rs:329
 msgid ""
 "Google doesn't recognize this key. Make a new one and download it again."
 msgstr ""
 
 #. Translators: Gmail is a name; keep it as it is.
-#: app/src/own_project.rs:350
+#: app/src/own_project.rs:354
 msgid "Gmail is turned off in your project."
 msgstr ""
 
-#: app/src/own_project.rs:352
+#: app/src/own_project.rs:356
 msgid "Calendar is turned off in your project."
 msgstr ""
 
-#: app/src/own_project.rs:354
+#: app/src/own_project.rs:358
 #, fuzzy
 #| msgid "Continue in your browser"
 msgid "Contacts is turned off in your project."
 msgstr "Tarayıcınızda devam edin"
 
-#: app/src/own_project.rs:356
+#: app/src/own_project.rs:360
 msgid "Drive is turned off in your project."
 msgstr ""
 
@@ -8900,37 +8899,72 @@ msgstr "Posta zaten Tüm Postalar'da"
 msgid "Mail cannot go there"
 msgstr "Posta oraya taşınamaz"
 
-#: app/src/ui/own_project.rs:235
+#: app/src/ui/own_project.rs:260
+msgid "Key File"
+msgstr ""
+
+#: app/src/ui/own_project.rs:415
 #, fuzzy
 #| msgid "Starts"
 msgid "Start"
 msgstr "Başlangıç"
 
-#: app/src/ui/own_project.rs:236
+#: app/src/ui/own_project.rs:416
 #, fuzzy
 #| msgid "Already here"
 msgid "I Already Have a Key"
 msgstr "Zaten burada"
 
-#: app/src/ui/own_project.rs:301
+#: app/src/ui/own_project.rs:481
 msgid "Steps look different?"
 msgstr ""
 
-#: app/src/ui/own_project.rs:362 app/src/ui/window.rs:2136
+#: app/src/ui/own_project.rs:542 app/src/ui/window.rs:2136
 msgid "Open Google Cloud"
 msgstr "Google Cloud'u Aç"
 
-#: app/src/ui/own_project.rs:379
+#: app/src/ui/own_project.rs:559
 #, fuzzy
 #| msgid "Next Day"
 msgid "Next"
 msgstr "Sonraki Gün"
 
-#: app/src/ui/own_project.rs:384
+#: app/src/ui/own_project.rs:564 app/src/ui/own_project.rs:663
 #, fuzzy
 #| msgid "Start date"
 msgid "Start over"
 msgstr "Başlangıç tarihi"
+
+#: app/src/ui/own_project.rs:587
+msgid "Drop the file you downloaded here"
+msgstr ""
+
+#: app/src/ui/own_project.rs:594
+#, fuzzy
+#| msgid "Choose a Time…"
+msgid "Choose File…"
+msgstr "Zaman Seç…"
+
+#. This is a button on Google's page; use the words Google's page shows in your language.
+#: app/src/ui/own_project.rs:622
+msgid "Client ID"
+msgstr ""
+
+#. This is a button on Google's page; use the words Google's page shows in your language.
+#: app/src/ui/own_project.rs:626
+msgid "Client secret"
+msgstr ""
+
+#: app/src/ui/own_project.rs:632
+msgid "Copy and paste instead"
+msgstr ""
+
+#. The words are ours; nothing from the file reaches them.
+#: app/src/ui/own_project.rs:653
+#, fuzzy
+#| msgid "Open Penguin Mail"
+msgid "Ready: Penguin Mail project"
+msgstr "Penguin Mail'i Aç"
 
 #: app/src/ui/pgp.rs:105
 msgid "Checked"

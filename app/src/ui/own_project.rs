@@ -6,8 +6,9 @@ use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 use adw::prelude::*;
+use gtk::{gdk, gio, glib};
 use mailrs_domain::translate::gettext;
-use mailrs_sync::sign_in::own_client::OwnClient;
+use mailrs_sync::sign_in::own_client::{FileProblem, OwnClient, from_pasted};
 
 use super::add_account::{banded, heading, label};
 use crate::core::Core;
@@ -37,6 +38,22 @@ struct StepPage {
     start_over: gtk::Button,
 }
 
+/// Step 6: the key file, dropped, chosen or pasted.
+struct FilePage {
+    page: adw::NavigationPage,
+    drop: gtk::Box,
+    drop_icon: gtk::Image,
+    drop_inside: gtk::Box,
+    choose: gtk::Button,
+    problem: gtk::Label,
+    paste: adw::ExpanderRow,
+    id: adw::EntryRow,
+    secret: adw::PasswordEntryRow,
+    ready: gtk::Box,
+    sign_in: gtk::Button,
+    start_over: gtk::Button,
+}
+
 /// The setup's pages, built once.
 pub struct OwnProject {
     core: Rc<Core>,
@@ -49,6 +66,9 @@ pub struct OwnProject {
     resumed: Cell<bool>,
     intro: IntroPage,
     steps: Vec<StepPage>,
+    file: FilePage,
+    /// The client step 6 read, which the sign-in goes through.
+    found: RefCell<Option<OwnClient>>,
 }
 
 /// The five steps done on Google Cloud.
@@ -69,6 +89,8 @@ impl OwnProject {
             resumed: Cell::new(false),
             intro: intro_page(),
             steps: CLOUD_STEPS.into_iter().map(step_page).collect(),
+            file: file_page(),
+            found: RefCell::new(None),
         });
         this.connect();
         this
@@ -83,6 +105,7 @@ impl OwnProject {
                 .iter()
                 .map(|shown| (shown.step.tag(), shown.page.clone())),
         );
+        pages.push((Step::File.tag(), self.file.page.clone()));
         pages
     }
 
@@ -97,9 +120,7 @@ impl OwnProject {
     ) {
         self.nav.replace(Some((nav.clone(), root)));
         self.resumed.set(resumed);
-        for shown in &self.steps {
-            shown.start_over.set_visible(resumed);
-        }
+        self.show_start_over(resumed);
         self.go(at);
     }
 
@@ -128,9 +149,7 @@ impl OwnProject {
             tracing::warn!(%err, "could not forget the Google setup step");
         }
         self.resumed.set(false);
-        for shown in &self.steps {
-            shown.start_over.set_visible(false);
-        }
+        self.show_start_over(false);
         let Some((nav, root)) = self.nav.borrow().clone() else {
             return;
         };
@@ -142,6 +161,7 @@ impl OwnProject {
     }
 
     fn connect(self: &Rc<Self>) {
+        self.connect_file();
         let start = weakly(self, |this| this.go(Step::Project));
         self.intro.start.connect_clicked(move |_| start());
         let have_key = weakly(self, |this| this.go(Step::File));
@@ -172,6 +192,166 @@ impl OwnProject {
                 }
                 reached();
             });
+        }
+    }
+
+    fn show_start_over(&self, shown: bool) {
+        for page in &self.steps {
+            page.start_over.set_visible(shown);
+        }
+        self.file.start_over.set_visible(shown);
+    }
+
+    fn connect_file(self: &Rc<Self>) {
+        let page = &self.file;
+        let choose = weakly(self, |this| this.choose_file());
+        page.choose.connect_clicked(move |_| choose());
+        let over = weakly(self, |this| this.start_over());
+        page.start_over.connect_clicked(move |_| over());
+        let sign_in = weakly(self, |this| this.sign_in_pressed());
+        page.sign_in.connect_clicked(move |_| sign_in());
+        let typed = weakly(self, |this| this.pasted());
+        page.id.connect_changed(move |_| typed());
+        let typed = weakly(self, |this| this.pasted());
+        page.secret.connect_changed(move |_| typed());
+        let shown = weakly(self, |this| this.update_sign_in());
+        page.paste.connect_expanded_notify(move |_| shown());
+        // A drop carries files, or text such as a link from a browser's
+        // download bar, which is answered rather than refused unseen.
+        let target = gtk::DropTarget::new(glib::Type::INVALID, gdk::DragAction::COPY);
+        target.set_types(&[gdk::FileList::static_type(), glib::Type::STRING]);
+        let weak = Rc::downgrade(self);
+        target.connect_drop(move |_, value, _, _| {
+            let Some(this) = weak.upgrade() else {
+                return false;
+            };
+            let paths: Vec<std::path::PathBuf> = value
+                .get::<gdk::FileList>()
+                .map(|list| list.files().iter().filter_map(|file| file.path()).collect())
+                .unwrap_or_default();
+            match own_project::dropped(&paths) {
+                Some(path) => this.read(gio::File::for_path(path)),
+                None => this.refused(FileProblem::NotTheFile),
+            }
+            true
+        });
+        page.drop.add_controller(target);
+        let weak = Rc::downgrade(self);
+        page.page.connect_shown(move |_| {
+            let Some(this) = weak.upgrade() else { return };
+            this.reached(Step::File);
+            this.focus_main();
+        });
+    }
+
+    /// Focuses Sign In once a key is found, and Choose File before.
+    fn focus_main(&self) {
+        let found = self.found.borrow().is_some();
+        if found {
+            self.file.sign_in.grab_focus();
+        } else {
+            self.file.choose.grab_focus();
+        }
+    }
+
+    /// Opens the file chooser in Downloads, where the browser put the key.
+    fn choose_file(self: &Rc<Self>) {
+        let json = gtk::FileFilter::new();
+        json.set_name(Some(&gettext("Key File")));
+        json.add_pattern("*.json");
+        json.add_mime_type("application/json");
+        let filters = gio::ListStore::new::<gtk::FileFilter>();
+        filters.append(&json);
+        let dialog = gtk::FileDialog::builder()
+            .modal(true)
+            .filters(&filters)
+            .default_filter(&json)
+            .build();
+        if let Some(downloads) = glib::user_special_dir(glib::UserDirectory::Downloads) {
+            dialog.set_initial_folder(Some(&gio::File::for_path(downloads)));
+        }
+        let window = self.file.page.root().and_downcast::<gtk::Window>();
+        let this = Rc::clone(self);
+        glib::spawn_future_local(async move {
+            // Closing the chooser picks nothing and says nothing.
+            if let Ok(file) = dialog.open_future(window.as_ref()).await {
+                this.read(file);
+            }
+        });
+    }
+
+    /// Reads the key in `file`, then shows what it found or why not.
+    fn read(self: &Rc<Self>, file: gio::File) {
+        let this = Rc::clone(self);
+        glib::spawn_future_local(async move {
+            match own_project::read_key_file(&file).await {
+                Ok(own) => this.found_key(own),
+                Err(problem) => this.refused(problem),
+            }
+        });
+    }
+
+    fn found_key(&self, own: OwnClient) {
+        self.found.replace(Some(own));
+        let page = &self.file;
+        page.problem.set_visible(false);
+        page.ready.set_visible(true);
+        page.drop.add_css_class("own-drop-found");
+        page.drop_icon.set_visible(false);
+        page.drop_inside
+            .set_orientation(gtk::Orientation::Horizontal);
+        page.choose.remove_css_class("suggested-action");
+        self.update_sign_in();
+        page.sign_in.grab_focus();
+    }
+
+    /// Says why the file or the pasted pair made no key, and leaves the
+    /// person on Choose File to try another.
+    fn refused(&self, problem: FileProblem) {
+        let page = &self.file;
+        page.problem.set_text(&problem.to_string());
+        page.problem.set_visible(true);
+        page.choose.grab_focus();
+    }
+
+    /// The pasted pair, once both halves have text. Half a pair stays
+    /// quiet until Sign In is pressed.
+    fn pasted(&self) {
+        let (id, secret) = (self.file.id.text(), self.file.secret.text());
+        if id.trim().is_empty() || secret.trim().is_empty() {
+            return;
+        }
+        if let Ok(own) = from_pasted(&id, &secret) {
+            self.found.replace(Some(own));
+            self.file.problem.set_visible(false);
+            self.file.ready.set_visible(true);
+            self.update_sign_in();
+        }
+    }
+
+    /// Sign In shows once a key is found or the pasted rows are open.
+    fn update_sign_in(&self) {
+        let found = self.found.borrow().is_some();
+        let shown = found || self.file.paste.is_expanded();
+        self.file.sign_in.set_visible(shown);
+        if !found {
+            self.file.choose.add_css_class("suggested-action");
+        }
+    }
+
+    fn sign_in_pressed(&self) {
+        let found = self.found.borrow().clone();
+        if found.is_some() {
+            self.go(Step::Warning);
+            return;
+        }
+        let (id, secret) = (self.file.id.text(), self.file.secret.text());
+        if id.trim().is_empty() && secret.trim().is_empty() {
+            self.file.choose.grab_focus();
+            return;
+        }
+        if let Err(problem) = from_pasted(&id, &secret) {
+            self.refused(problem);
         }
     }
 
@@ -391,6 +571,112 @@ fn step_page(step: Step) -> StepPage {
         page: plain.page,
         open,
         next,
+        start_over,
+    }
+}
+
+fn file_page() -> FilePage {
+    let words = own_project::words(Step::File);
+    let plain = plain_page(Step::File, &words.heading);
+    let icon = gtk::Image::builder()
+        .icon_name("document-save-symbolic")
+        .pixel_size(44)
+        .css_classes(["own-drop-icon"])
+        .build();
+    let hint = label(
+        &gettext("Drop the file you downloaded here"),
+        &["own-drop-text"],
+    );
+    hint.set_xalign(0.5);
+    hint.set_justify(gtk::Justification::Center);
+    hint.set_hexpand(false);
+    let choose = gtk::Button::builder()
+        .label(gettext("Choose File…"))
+        .halign(gtk::Align::Center)
+        .valign(gtk::Align::Center)
+        .css_classes(["own-button", "suggested-action"])
+        .build();
+    let drop = gtk::Box::builder()
+        .orientation(gtk::Orientation::Vertical)
+        .halign(gtk::Align::Fill)
+        .css_classes(["own-drop"])
+        .build();
+    let inside = gtk::Box::builder()
+        .orientation(gtk::Orientation::Vertical)
+        .halign(gtk::Align::Center)
+        .css_classes(["own-drop-inside"])
+        .build();
+    inside.append(&hint);
+    inside.append(&choose);
+    drop.append(&icon);
+    drop.append(&inside);
+    plain.body.append(&drop);
+    let problem = gtk::Label::builder()
+        .wrap(true)
+        .xalign(0.0)
+        .visible(false)
+        .css_classes(["error", "own-problem"])
+        .build();
+    plain.body.append(&problem);
+    // This is a button on Google's page; use the words Google's page shows in your language.
+    let id_title = gettext("Client ID");
+    let id = adw::EntryRow::builder().title(&id_title).build();
+    crate::ui::name(&id, &id_title);
+    // This is a button on Google's page; use the words Google's page shows in your language.
+    let secret_title = gettext("Client secret");
+    let secret = adw::PasswordEntryRow::builder()
+        .title(&secret_title)
+        .build();
+    crate::ui::name(&secret, &secret_title);
+    let paste = adw::ExpanderRow::builder()
+        .title(gettext("Copy and paste instead"))
+        .use_markup(false)
+        .build();
+    paste.add_row(&id);
+    paste.add_row(&secret);
+    let list = gtk::ListBox::builder()
+        .selection_mode(gtk::SelectionMode::None)
+        .css_classes(["boxed-list", "own-paste"])
+        .build();
+    list.append(&paste);
+    plain.body.append(&list);
+    let ready = gtk::Box::builder()
+        .spacing(9)
+        .visible(false)
+        .css_classes(["own-ready"])
+        .build();
+    let tick = gtk::Image::builder()
+        .icon_name("object-select-symbolic")
+        .css_classes(["own-ready-icon"])
+        .build();
+    // The words are ours; nothing from the file reaches them.
+    let found = label(&gettext("Ready: Penguin Mail project"), &["own-ready-text"]);
+    ready.append(&tick);
+    ready.append(&found);
+    plain.body.append(&ready);
+    let sign_in = button(&gettext("Sign in with Google"), true);
+    sign_in.set_halign(gtk::Align::Center);
+    sign_in.set_visible(false);
+    plain.foot.append(&sign_in);
+    plain.foot.append(&help_link(Step::File));
+    let start_over = gtk::Button::builder()
+        .label(gettext("Start over"))
+        .visible(false)
+        .css_classes(["flat"])
+        .build();
+    plain.header.pack_start(&start_over);
+    FilePage {
+        page: plain.page,
+        drop,
+        drop_icon: icon,
+        drop_inside: inside,
+        choose,
+        problem,
+        paste,
+        id,
+        secret,
+        ready,
+        sign_in,
         start_over,
     }
 }

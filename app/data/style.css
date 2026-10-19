@@ -2148,3 +2148,24 @@ list.own-list > row { padding: 0; min-height: 0; }
 button.own-help { padding: 2px 4px; min-height: 0; font-size: 12.5px; font-weight: 600; color: var(--post-acc); }
 button.own-help buttoncontent image { -gtk-icon-size: 11px; }
 button.own-help buttoncontent > box { border-spacing: 5px; }
+/* Step 6: the dashed drop area, which folds to one line once a key is
+   found, the pasted pair under it, and the line that says it is ready. */
+.own-drop {
+  margin-top: 16px; padding: 22px 16px 20px;
+  border: 2px dashed var(--post-line); border-radius: 14px;
+  background-color: var(--card-bg-color);
+}
+.app-dark .own-drop { border-color: #55555d; }
+.own-drop-icon { color: var(--post-faint); margin-bottom: 4px; }
+.own-drop-inside { border-spacing: 16px; }
+.own-drop:not(.own-drop-found) .own-drop-inside { border-spacing: 0; }
+.own-drop-text { font-size: 14.5px; font-weight: 700; }
+.own-drop:not(.own-drop-found) button.own-button { margin-top: 16px; }
+.own-drop.own-drop-found { padding: 14px 16px; }
+.own-drop-found .own-drop-text { font-size: 14px; }
+list.own-paste { margin-top: 12px; }
+.own-problem { margin-top: 12px; }
+.own-ready { margin-top: 14px; }
+.own-ready-icon { color: #2f7d4f; }
+.app-dark .own-ready-icon { color: #7fd1a0; }
+.own-ready-text { font-size: 14px; font-weight: 700; }

@@ -3,6 +3,10 @@
 
 use mailrs_domain::translate::{fill, gettext};
 use mailrs_gmail::GmailError;
+use std::path::{Path, PathBuf};
+
+use gtk::{gio, glib, prelude::*};
+use mailrs_sync::sign_in::own_client::{FILE_LIMIT, FileProblem, OwnClient, read_file};
 use mailrs_sync::sign_in::{BrowserSignInError, ClientSource};
 
 use crate::core::BrowserTimedOut;
@@ -359,6 +363,43 @@ pub fn api_off_words(service: &str) -> Option<String> {
     })
 }
 
+/// The file to read from a drop: the first one named `.json`, in any
+/// case. A drop of text arrives as no paths and reads nothing.
+pub fn dropped(paths: &[PathBuf]) -> Option<&Path> {
+    paths
+        .iter()
+        .find(|path| {
+            path.extension()
+                .is_some_and(|ext| ext.eq_ignore_ascii_case("json"))
+        })
+        .map(PathBuf::as_path)
+}
+
+/// The client in the key `file` holds. Reads at most one byte past
+/// [`FILE_LIMIT`], so a large file is refused without being read whole.
+pub async fn read_key_file(file: &gio::File) -> Result<OwnClient, FileProblem> {
+    let bytes = read_head(file, FILE_LIMIT + 1)
+        .await
+        .map_err(|_| FileProblem::NotTheFile)?;
+    read_file(&bytes)
+}
+
+/// The first `limit` bytes of `file`, or all of a shorter one.
+async fn read_head(file: &gio::File, limit: usize) -> Result<Vec<u8>, glib::Error> {
+    let stream = file.read_future(glib::Priority::DEFAULT).await?;
+    let mut bytes = Vec::new();
+    while bytes.len() < limit {
+        let chunk = stream
+            .read_bytes_future(limit - bytes.len(), glib::Priority::DEFAULT)
+            .await?;
+        if chunk.is_empty() {
+            break;
+        }
+        bytes.extend_from_slice(&chunk);
+    }
+    Ok(bytes)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -621,6 +662,70 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn a_drop_reads_its_first_json_file() {
+        let paths = [
+            PathBuf::from("/d/notes.txt"),
+            PathBuf::from("/d/client_secret_123.JSON"),
+            PathBuf::from("/d/b.json"),
+        ];
+        assert_eq!(
+            dropped(&paths),
+            Some(Path::new("/d/client_secret_123.JSON"))
+        );
+    }
+
+    #[test]
+    fn a_drop_without_a_json_file_reads_nothing() {
+        assert_eq!(dropped(&[PathBuf::from("/d/notes.txt")]), None);
+    }
+
+    #[test]
+    fn a_drop_of_text_reads_nothing() {
+        // Text, such as a link dragged from a browser's download bar,
+        // reaches the page as no paths at all.
+        assert_eq!(dropped(&[]), None);
+    }
+
+    const DESKTOP_KEY: &str = r#"{"installed":{"client_id":"123-abc.apps.googleusercontent.com","project_id":"penguin-mail-4711","client_secret":"GOCSPX-abc"}}"#;
+
+    #[test]
+    fn a_key_file_reads_into_its_client() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("client_secret.json");
+        std::fs::write(&path, DESKTOP_KEY).unwrap();
+        let file = gtk::gio::File::for_path(&path);
+        let read = gtk::glib::MainContext::new().block_on(read_key_file(&file));
+        let Ok(own) = read else {
+            panic!("the key file did not read");
+        };
+        assert_eq!(own.id(), "123-abc.apps.googleusercontent.com");
+        assert_eq!(own.project_id(), Some("penguin-mail-4711"));
+    }
+
+    #[test]
+    fn a_large_file_is_never_read_whole() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("big.json");
+        // A valid key followed by spaces past the limit: read whole, it
+        // would parse.
+        let mut big = DESKTOP_KEY.to_string();
+        big.push_str(&" ".repeat(FILE_LIMIT * 2));
+        std::fs::write(&path, big).unwrap();
+        let file = gtk::gio::File::for_path(&path);
+        let head = gtk::glib::MainContext::new().block_on(read_head(&file, FILE_LIMIT + 1));
+        assert_eq!(head.map(|bytes| bytes.len()).ok(), Some(FILE_LIMIT + 1));
+        let read = gtk::glib::MainContext::new().block_on(read_key_file(&file));
+        assert_eq!(read.err(), Some(FileProblem::NotTheFile));
+    }
+
+    #[test]
+    fn a_file_that_cannot_be_read_is_not_the_file() {
+        let file = gtk::gio::File::for_path("/nonexistent/penguin/key.json");
+        let read = gtk::glib::MainContext::new().block_on(read_key_file(&file));
+        assert_eq!(read.err(), Some(FileProblem::NotTheFile));
     }
 
     #[test]
