@@ -1791,6 +1791,20 @@ impl Core {
 }
 
 impl Core {
+    /// Whether the calendar consent of `account` meets Google through the
+    /// built-in client. False in the demo and when the store cannot say.
+    pub async fn consent_through_built_in(&self, account: Account) -> bool {
+        if self.demo {
+            return false;
+        }
+        let connector = self.connector();
+        self.call(async move {
+            mailrs_sync::sign_in::consent_through_built_in(&connector, &account).await
+        })
+        .await
+        .unwrap_or(false)
+    }
+
     /// Asks Google, through the built-in client, for the calendar,
     /// contacts and Drive access of `account`, a Gmail account whose mail
     /// comes over IMAP, and starts the account again with them. Its mail
@@ -2725,7 +2739,7 @@ mod tests {
     /// Cancel before the browser answers ends the move and closes the
     /// loopback listener the sign-in page would have come back to.
     #[tokio::test]
-    async fn a_move_cancelled_before_the_browser_answers_closes_its_listener() {
+    async fn a_move_canceled_before_the_browser_answers_closes_its_listener() {
         let oauth = mailrs_gmail::OAuthClient::new("id.apps.googleusercontent.com", "secret");
         let (urls, opened) = async_channel::unbounded::<String>();
         let (cancel, canceled) = async_channel::bounded::<()>(1);
@@ -2762,7 +2776,7 @@ mod tests {
             tokio::net::TcpStream::connect(("127.0.0.1", port))
                 .await
                 .is_err(),
-            "nothing listens once the move is cancelled"
+            "nothing listens once the move is canceled"
         );
     }
 

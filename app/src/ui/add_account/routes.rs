@@ -234,14 +234,17 @@ impl Dialog {
         self.goa_before
             .replace(list.iter().map(|a| a.id.clone()).collect());
         self.route_expected.replace(expected);
+        // A move takes only the account that holds its own address, so it
+        // offers no other.
+        let others = match self.moving.borrow().is_some() {
+            true => Vec::new(),
+            false => list.to_vec(),
+        };
         match goa::find(list, None, &address) {
             Some(account) => self.goa.show(PageState::Holds {
                 account: account.clone(),
             }),
-            None => self.goa.show(PageState::Add {
-                address,
-                others: list.to_vec(),
-            }),
+            None => self.goa.show(PageState::Add { address, others }),
         }
         self.set_band(
             goa_page::TAG,
@@ -358,6 +361,9 @@ impl Dialog {
             });
             return;
         }
+        if self.moving.borrow().is_some() {
+            return;
+        }
         let before = self.goa_before.borrow().clone();
         if let Some(added) = list.iter().find(|a| !before.contains(&a.id)) {
             self.stop_goa_wait();
@@ -454,16 +460,30 @@ impl Dialog {
             .moving
             .borrow_mut()
             .as_mut()
-            .and_then(|walk| walk.advance().map(|a| a.id));
-        if next.is_none() {
+            .and_then(|walk| walk.advance().map(|a| a.email.clone()));
+        let Some(email) = next else {
             self.window.close();
             return;
-        }
+        };
+        // Leaving an own project names one account; the next keeps its
+        // own-project rows.
+        self.leaving_own.set(false);
         // The rows are rebuilt before the page shows again, so the focus
-        // lands on a row that stays.
+        // lands on a row that stays. On Linux they follow what Online
+        // Accounts holds for the next account's address.
         let platform = Platform::this();
-        self.routes_for(platform, ready_now(Goa::Absent), None);
-        self.back_to(route_page::TAG);
+        if platform != Platform::Linux {
+            self.routes_for(platform, ready_now(Goa::Absent), None);
+            self.back_to(route_page::TAG);
+            return;
+        }
+        let this = Rc::clone(self);
+        glib::spawn_future_local(async move {
+            let list = this.core.goa_accounts().await;
+            let goa = route_choice::goa_state(&list, Some(&email));
+            this.routes_for(platform, ready_now(goa), None);
+            this.back_to(route_page::TAG);
+        });
     }
 
     // ---- The app password page ---------------------------------------------------
@@ -487,8 +507,14 @@ impl Dialog {
         self.gmail.update_sign_in(self.running.is_on());
     }
 
-    /// Back to the ways of signing in.
+    /// Back to the ways of signing in. A dialog that opened on the app
+    /// password page, to sign in again, has filled no route page yet, so
+    /// it offers the routes for the address now.
     pub(super) fn gmail_another_way(self: &Rc<Self>) {
+        if self.again.is_some() || self.routes.first_row().is_none() {
+            let address = self.gmail.address.text().trim().to_string();
+            return self.offer_routes((!address.is_empty()).then_some(address));
+        }
         match self.nav.find_page(route_page::TAG).is_some() && Platform::this() == Platform::Linux {
             true => self.back_to(route_page::TAG),
             false => self.back_to("pick"),
@@ -551,6 +577,7 @@ impl Dialog {
         if !self.asking.wants(ticket) {
             return;
         }
+        self.fit_consent_note(&account);
         self.consenting.replace(Some(account));
         self.set_band(route_page::CONSENT_TAG, Step::Address, None, None);
         self.push(route_page::CONSENT_TAG);
@@ -567,11 +594,24 @@ impl Dialog {
                 GmailAction::OpenAppPasswords => this.open_link(gmail_password::APP_PASSWORDS_URL),
                 GmailAction::OpenGmailLabels => this.open_link(gmail_password::LABELS_URL),
                 GmailAction::SignInAnotherWay => this.gmail_another_way(),
+                // The page the person came from: the route page, or the
+                // providers.
                 GmailAction::Back => {
-                    this.back_to("pick");
+                    this.nav.pop();
                 }
                 GmailAction::TryAgain => this.sign_in_gmail(),
             }
+        });
+    }
+
+    /// Fits the consent page's note to `account`: hidden until the store
+    /// says whether its consent meets Google through the built-in client.
+    pub(super) fn fit_consent_note(self: &Rc<Self>, account: &Account) {
+        self.consent.fit_note(false);
+        let (this, account) = (Rc::clone(self), account.clone());
+        glib::spawn_future_local(async move {
+            let built_in = this.core.consent_through_built_in(account).await;
+            this.consent.fit_note(built_in);
         });
     }
 

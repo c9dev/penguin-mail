@@ -13,7 +13,7 @@ pub mod own_client;
 pub(crate) use browser::other_address;
 pub use browser::{
     Browser, BrowserSignInError, ClientChoice, ClientSource, SignedIn, Wanted, calendar_consent,
-    google_sign_in, in_browser, keep_chosen_project, move_choice,
+    consent_through_built_in, google_sign_in, in_browser, keep_chosen_project, move_choice,
 };
 pub use browser_grant::{BrowserGrant, browser_grant};
 pub use jmap_browser::{BROWSER_WAIT, BrowserReady, JmapBrowser, browser_ready, jmap_in_browser};
@@ -84,10 +84,7 @@ pub(crate) async fn client_of<P: PasswordStore + 'static>(
     // project's while the keyring keeps the project, since a consent
     // through the built-in client deletes it.
     if sign_in.on_online_accounts() {
-        let kept = read_secret(kept, id, STEP_WAIT)
-            .await?
-            .as_deref()
-            .and_then(OwnClient::decode);
+        let kept = kept_own(kept, id).await?;
         return Ok(kept.map(|own| own.oauth()).or(built_in));
     }
     Ok(match sign_in.client() {
@@ -140,6 +137,19 @@ pub async fn kept_own_client(
 
 /// An own account's client: the one `kept` holds under `id`, else the one
 /// in `config.toml`.
+/// The own client the keyring keeps for `id`, without the `config.toml`
+/// fallback: for an account on Online Accounts, whose Google token is an
+/// own project's only while the keyring keeps the project.
+pub(crate) async fn kept_own<P: PasswordStore + 'static>(
+    kept: Arc<P>,
+    id: AccountId,
+) -> Result<Option<OwnClient>, SyncError> {
+    Ok(read_secret(kept, id, STEP_WAIT)
+        .await?
+        .as_deref()
+        .and_then(OwnClient::decode))
+}
+
 async fn own_client_of<P: PasswordStore + 'static>(
     config: &Config,
     kept: Arc<P>,

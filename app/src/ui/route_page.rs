@@ -97,25 +97,32 @@ pub struct ConsentPage {
     pub title: gtk::Label,
     #[cfg_attr(not(test), expect(dead_code, reason = "only the checks read it"))]
     pub body: gtk::Label,
-    #[cfg_attr(not(test), expect(dead_code, reason = "only the checks read it"))]
     pub note: gtk::Label,
     pub continue_button: gtk::Button,
     pub not_now: gtk::Button,
 }
 
 impl ConsentPage {
+    /// Shows the note about Google's warning screen only to an account
+    /// whose consent goes through the built-in client, while that client
+    /// is unverified. It stays hidden until the account is known.
+    pub fn fit_note(&self, built_in: bool) {
+        let verified = option_env!("PENGUIN_MAIL_GOOGLE_VERIFIED").is_some();
+        self.note.set_visible(built_in && note_shown(verified));
+    }
+
     pub fn new() -> ConsentPage {
         let banded = banded(
             CONSENT_TAG,
             &gettext("Add your Google Calendar and contacts?"),
         );
-        let centred = |label: &gtk::Label| {
+        let centered = |label: &gtk::Label| {
             label.set_xalign(0.5);
             label.set_justify(gtk::Justification::Center);
         };
         // Translators: Google is a name; keep it as it is.
         let title = heading(&gettext("Add your Google Calendar and contacts?"));
-        centred(&title);
+        centered(&title);
         title.add_css_class("post-route-title");
         let body = label(
             // Translators: Google is a name; keep it as it is.
@@ -124,7 +131,7 @@ impl ConsentPage {
             ),
             &["post-lede", "post-consent-text"],
         );
-        centred(&body);
+        centered(&body);
         let note = label(
             // Translators: Google and Penguin Mail are names; keep them as they are. The two
             // button names are the ones Google's own page shows.
@@ -133,7 +140,7 @@ impl ConsentPage {
             ),
             &["post-lede", "post-consent-text", "post-consent-note"],
         );
-        centred(&note);
+        centered(&note);
         note.set_visible(note_shown(
             option_env!("PENGUIN_MAIL_GOOGLE_VERIFIED").is_some(),
         ));

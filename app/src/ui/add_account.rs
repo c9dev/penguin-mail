@@ -161,6 +161,7 @@ pub fn present(
     };
     let this = Dialog::new(core, again, Box::new(done));
     if let Opening::Consent(account) = &opening {
+        this.fit_consent_note(account);
         this.consenting.replace(Some(account.clone()));
     }
     this.connect();
@@ -4132,6 +4133,7 @@ impl Dialog {
                     let (committed, signed_in) = async_channel::bounded::<()>(1);
                     let ended = Rc::new(Cell::new(false));
                     let weak = Rc::downgrade(&this);
+                    let still = Rc::clone(&ended);
                     glib::spawn_future_local(when_committed(
                         signed_in,
                         Rc::clone(&ended),
@@ -4140,6 +4142,7 @@ impl Dialog {
                                 && this.asking.wants(ticket)
                             {
                                 this.finishing_move();
+                                this.limit_finish(ticket, still);
                             }
                         },
                     ));
@@ -4219,6 +4222,24 @@ impl Dialog {
                     tracing::info!(kind, "a browser sign-in ended after its dialog moved on");
                 }
             }
+        });
+    }
+
+    /// Gives the dialog back with a failure when a finishing move has not
+    /// ended after [`FINISH_LIMIT`]. The move goes on, and the window
+    /// hears of it when it ends, as it does once the dialog has moved on.
+    fn limit_finish(self: &Rc<Self>, ticket: add_account::Ticket, ended: Rc<Cell<bool>>) {
+        let weak = Rc::downgrade(self);
+        glib::timeout_add_local_once(FINISH_LIMIT, move || {
+            let Some(this) = weak.upgrade() else { return };
+            if ended.get() || !this.asking.wants(ticket) {
+                return;
+            }
+            this.asking.forget();
+            this.stop_browser();
+            this.browser_failed(&gettext(
+                "Moving the account is taking too long. It goes on after you close this window.",
+            ));
         });
     }
 
@@ -5214,6 +5235,10 @@ fn preview(this: &Rc<Dialog>, stage: &str) {
 /// result arrived first. The word and the result reach the main loop in
 /// either order, and a page that finished after the result would keep
 /// the dialog from closing.
+/// How long a move may finish, once the browser sign-in came back, before
+/// the dialog gives its ways out back.
+const FINISH_LIMIT: Duration = Duration::from_secs(120);
+
 async fn when_committed(
     signed_in: async_channel::Receiver<()>,
     ended: Rc<Cell<bool>>,

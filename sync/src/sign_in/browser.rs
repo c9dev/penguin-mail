@@ -426,6 +426,40 @@ async fn held_on_imap(
 /// project issued asks that project again, so the project stays in the
 /// keyring. Any other, and one whose project is no longer on this
 /// computer, asks the built-in client.
+/// The own client a calendar consent for `id`, which signs in as
+/// `sign_in`, goes through, or `None` for the built-in client. An account
+/// on Online Accounts that came from its own project keeps the project
+/// while the keyring keeps it.
+async fn consent_own(
+    config: &super::Config,
+    secrets: &Secrets,
+    id: mailrs_domain::AccountId,
+    sign_in: &GmailSignIn,
+) -> Result<Option<OwnClient>, SyncError> {
+    let kept = Arc::clone(&secrets.google_clients);
+    match (sign_in.on_online_accounts(), sign_in.client()) {
+        (true, _) => super::kept_own(kept, id).await,
+        (false, SignInClient::Own) => own_client_of(config, kept, id).await,
+        (false, SignInClient::BuiltIn) => Ok(None),
+    }
+}
+
+/// Whether [`calendar_consent`] for `account` goes through the built-in
+/// client, so Google shows the built-in client's consent screen.
+pub async fn consent_through_built_in(
+    connector: &Connector,
+    account: &Account,
+) -> Result<bool, SyncError> {
+    let id = account.id;
+    let sign_in = connector
+        .db
+        .read(move |c| accounts::gmail_sign_in(c, id))
+        .await?;
+    Ok(consent_own(&connector.config, &connector.secrets, id, &sign_in)
+        .await?
+        .is_none())
+}
+
 pub async fn calendar_consent(
     connector: &Connector,
     account: &Account,
@@ -448,10 +482,7 @@ pub async fn calendar_consent(
     if provider != Provider::Gmail || sign_in.route() != MailRoute::Imap {
         return Err(BrowserSignInError::NeedsRoute);
     }
-    let own = match sign_in.client() {
-        SignInClient::Own => own_client_of(config, Arc::clone(&secrets.google_clients), id).await?,
-        SignInClient::BuiltIn => None,
-    };
+    let own = consent_own(config, secrets, id, &sign_in).await?;
     let (oauth, client) = match &own {
         Some(own) => (own.oauth(), SignInClient::Own),
         None => (
